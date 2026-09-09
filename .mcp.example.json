@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "research-zotero": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "zotero-mcp-server==0.9.1",
+        "zotero-mcp-server",
+        "serve"
+      ],
+      "env": {
+        "ZOTERO_LOCAL": "true",
+        "ZOTERO_MCP_TOOLSETS": "none"
+      },
+      "blockedTools": [
+        "zotero_delete_item",
+        "zotero_delete_collection",
+        "zotero_delete_annotation"
+      ],
+      "source": "https://github.com/54yyyu/zotero-mcp",
+      "license": "MIT",
+      "version": "0.9.1"
+    },
+    "research-obsidian": {
+      "command": "node",
+      "args": [
+        "<path-to-mcpvault-server.js>",
+        "<independent-vault-path>"
+      ],
+      "vaultWritePolicy": "managed-block-only"
+    }
+  }
+}

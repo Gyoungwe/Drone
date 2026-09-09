@@ -1,0 +1,13 @@
+{
+  "extensions": [
+    "./extensions/subagent-research.mjs",
+    "./extensions/obsidian-workbench.mjs",
+    "./extensions/source-archive.mjs",
+    "./extensions/workspace-config.mjs"
+  ],
+  "packages": [
+    "npm:pi-subagents",
+    "npm:pi-web-access",
+    "npm:pi-mcp-adapter"
+  ]
+}
