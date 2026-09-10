@@ -1,6 +1,7 @@
 export * from "./errors";
 export * from "./ipc";
 export * from "./lan";
+export * from "./mcp";
 export * from "./marquee-motion";
 export * from "./packages";
 export * from "./session";

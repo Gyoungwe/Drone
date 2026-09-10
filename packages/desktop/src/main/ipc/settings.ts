@@ -6,10 +6,19 @@ import type {
 	PermissionAnswer,
 } from "@percho/shared";
 import { IpcChannels } from "@percho/shared";
-import { ipcMain } from "electron";
+import { shell, ipcMain } from "electron";
 
-/** 设置域：provider 设置 + 权限门控配置 + 项目信任应答 */
+/** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
 export function registerSettingsIpc(backend: PiBackend): void {
+	ipcMain.handle(IpcChannels.McpGetStatus, () => backend.getMcpStatus());
+	ipcMain.handle(IpcChannels.McpGetConfig, () => backend.getMcpConfig());
+	ipcMain.handle(IpcChannels.McpSetServerEnabled, (_e, name: string, enabled: boolean) =>
+		backend.setMcpServerEnabled(name, enabled),
+	);
+	ipcMain.handle(IpcChannels.McpOpenConfig, async () => {
+		const config = await backend.getMcpConfig();
+		await shell.openPath(config.path);
+	});
 	ipcMain.handle(IpcChannels.SettingsListProviders, (_e, options?: ListProvidersOptions) =>
 		backend.settings.listProviders(options),
 	);

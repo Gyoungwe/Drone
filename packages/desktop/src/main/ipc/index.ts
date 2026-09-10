@@ -56,6 +56,9 @@ export function registerIpc(
 	backend.onLoginEvent((payload) => {
 		sendToRenderer(IpcChannels.SettingsLoginEvent, payload);
 	});
+	backend.onMcpStatus((status) => {
+		sendToRenderer(IpcChannels.McpEvent, status);
+	});
 	onUpdateState((state) => {
 		sendToRenderer(IpcChannels.UpdateEvent, state);
 	});

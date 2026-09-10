@@ -46,6 +46,18 @@ const api: PiApi = {
 	getTodos: (sessionId) => ipcRenderer.invoke(IpcChannels.SessionGetTodos, sessionId),
 	listModels: () => ipcRenderer.invoke(IpcChannels.ModelsList),
 	listProviders: (options) => ipcRenderer.invoke(IpcChannels.SettingsListProviders, options),
+	getMcpStatus: () => ipcRenderer.invoke(IpcChannels.McpGetStatus),
+	getMcpConfig: () => ipcRenderer.invoke(IpcChannels.McpGetConfig),
+	setMcpServerEnabled: (name, enabled) =>
+		ipcRenderer.invoke(IpcChannels.McpSetServerEnabled, name, enabled),
+	openMcpConfig: async () => {
+		await ipcRenderer.invoke(IpcChannels.McpOpenConfig);
+	},
+	onMcpEvent: (cb) => {
+		const listener = (_event: unknown, status: Parameters<typeof cb>[0]) => cb(status);
+		ipcRenderer.on(IpcChannels.McpEvent, listener);
+		return () => ipcRenderer.removeListener(IpcChannels.McpEvent, listener);
+	},
 	saveApiKey: (providerId, key) => ipcRenderer.invoke(IpcChannels.SettingsSaveApiKey, providerId, key),
 	removeCredential: (providerId) => ipcRenderer.invoke(IpcChannels.SettingsRemoveCredential, providerId),
 	addCustomProvider: (input) => ipcRenderer.invoke(IpcChannels.SettingsAddCustomProvider, input),

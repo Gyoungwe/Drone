@@ -23,6 +23,8 @@ import type {
 	ImageInput,
 	LoadedResources,
 	LoginEventPayload,
+	McpConfigSnapshot,
+	McpStatus,
 	ModelPrefs,
 	PermissionAnswer,
 	PermissionMode,
@@ -46,6 +48,7 @@ import {
 	type TodoItem,
 } from "@percho/shared";
 import { createLogger } from "./log";
+import { McpService } from "./mcp/service";
 import { PackageAdmin } from "./packages/admin";
 import { loadPermissionConfig } from "./permissions";
 import {
@@ -133,6 +136,7 @@ type PermissionHandler = (req: PermissionRequest) => void;
 type PermissionResolvedHandler = (result: PermissionResolved) => void;
 type TrustHandler = (req: TrustRequest) => void;
 type LoginHandler = (payload: LoginEventPayload) => void;
+type McpHandler = (status: McpStatus) => void;
 
 /**
  * PiBackend：pi SDK 的唯一适配层（门面）。不依赖 Electron，
@@ -152,6 +156,8 @@ export class PiBackend {
 	private readonly permissionResolvedHandlers = new Set<PermissionResolvedHandler>();
 	private readonly trustHandlers = new Set<TrustHandler>();
 	private readonly loginHandlers = new Set<LoginHandler>();
+	private readonly mcpHandlers = new Set<McpHandler>();
+	readonly mcp = new McpService();
 	private readonly gates = new Map<string, PermissionGate>();
 	/** 按会话权限模式（default 缺省；fullAccess = 一切放行 + 高危审计）：会话创建时随工厂注入，关会话/重启归零 */
 	private readonly permissionModes = new Map<string, PermissionModeRef>();
@@ -237,7 +243,14 @@ export class PiBackend {
 			| ReturnType<typeof makeTodoReminderExtension>
 			| ReturnType<typeof makeChannelWatchExtension>
 			| ReturnType<typeof makeEvapExtension>
+			| ((pi: { events: { on(event: string, handler: (payload: unknown) => void): void } }) => void)
 		> = [];
+		factories.push((pi: { events: { on(event: string, handler: (payload: unknown) => void): void } }) => {
+			pi.events.on("pi-mcp-adapter/status/v1", (payload) => {
+				if (!payload || typeof payload !== "object") return;
+				this.setMcpStatus(payload as McpStatus);
+			});
+		});
 		if (this.options.permissionGates !== false && this.options.permissionExtension !== false) {
 			// confirm 直接桥到 PermissionGate（携带 kind/suggestDir 元数据，驱动「允许此目录」）；
 			// 未提供时扩展自行回退 ctx.ui.confirm（无元数据）；modeRef 同款闭包注入（D1：
@@ -713,7 +726,31 @@ export class PiBackend {
 		return this.packages.removePackage(source, scope);
 	}
 
-	/** 设置会话显示名（触发 session_info_changed 事件） */
+	async getMcpStatus(): Promise<McpStatus> {
+		return this.mcp.getStatus();
+	}
+
+	async getMcpConfig(): Promise<McpConfigSnapshot> {
+		return this.mcp.getConfig();
+	}
+
+	async setMcpServerEnabled(name: string, enabled: boolean): Promise<McpConfigSnapshot> {
+		const snapshot = await this.mcp.setServerEnabled(name, enabled);
+		// Existing sessions observe the adapter's config on their next reload; the UI
+		// refreshes its config immediately while avoiding a hidden agent turn.
+		return snapshot;
+	}
+
+	onMcpStatus(handler: McpHandler): () => void {
+		this.mcpHandlers.add(handler);
+		return () => this.mcpHandlers.delete(handler);
+	}
+
+	setMcpStatus(status: McpStatus): void {
+		this.mcp.setStatus(status);
+		for (const handler of this.mcpHandlers) handler(status);
+	}
+
 	async setSessionName(sessionId: string, name: string): Promise<void> {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Cannot rename a read-only subagent transcript");

@@ -1,4 +1,5 @@
 import type { LanStatus } from "./lan";
+import type { McpConfigSnapshot, McpStatus } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "./packages";
 import type {
 	AppInfo,
@@ -78,6 +79,12 @@ export const IpcChannels = {
 	FileSaveDialog: "file:saveDialog",
 	ModelsList: "models:list",
 	SettingsListProviders: "settings:listProviders",
+	/** MCP server 状态与用户级配置 */
+	McpGetStatus: "mcp:getStatus",
+	McpGetConfig: "mcp:getConfig",
+	McpSetServerEnabled: "mcp:setServerEnabled",
+	McpOpenConfig: "mcp:openConfig",
+	McpEvent: "mcp:event",
 	SettingsSaveApiKey: "settings:saveApiKey",
 	SettingsRemoveCredential: "settings:removeCredential",
 	SettingsAddCustomProvider: "settings:addCustomProvider",
@@ -239,6 +246,11 @@ export interface PiApi {
 	listModels(): Promise<import("./session").AvailableModel[]>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
 	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
+	getMcpStatus(): Promise<McpStatus>;
+	getMcpConfig(): Promise<McpConfigSnapshot>;
+	setMcpServerEnabled(name: string, enabled: boolean): Promise<McpConfigSnapshot>;
+	openMcpConfig(): Promise<void>;
+	onMcpEvent(cb: (status: McpStatus) => void): () => void;
 	saveApiKey(providerId: string, key: string): Promise<void>;
 	removeCredential(providerId: string): Promise<void>;
 	addCustomProvider(input: CustomProviderInput): Promise<void>;
