@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { Model, ThinkingLevel } from "@earendil-works/pi-ai";
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
 import {
@@ -736,9 +736,25 @@ export class PiBackend {
 
 	async setMcpServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot> {
 		const snapshot = await this.mcp.setServerEnabled(name, enabled, cwd);
-		// Existing sessions observe the adapter's config on their next reload; the UI
-		// refreshes its config immediately while avoiding a hidden agent turn.
+		await this.reloadMcpSessions(cwd);
 		return snapshot;
+	}
+
+	/** MCP 配置变更后热重载同项目的空闲会话，对齐 CLI /reload。 */
+	private async reloadMcpSessions(cwd?: string): Promise<void> {
+		const target = resolve(cwd || this.options.defaultCwd || process.cwd());
+		for (const entry of this.registry.list()) {
+			if (resolve(entry.cwd) !== target) continue;
+			if (entry.session.isStreaming || entry.session.isCompacting) {
+				log.info("skip MCP reload while session busy", entry.session.sessionId, { cwd: target });
+				continue;
+			}
+			try {
+				await entry.session.reload();
+			} catch (err) {
+				log.warn("MCP session reload failed", entry.session.sessionId, err);
+			}
+		}
 	}
 
 	onMcpStatus(handler: McpHandler): () => void {

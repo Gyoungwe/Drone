@@ -362,6 +362,7 @@ export const en: Messages = {
 		},
 		mcp: {
 			title: "MCP",
+			hint: "Manage MCP servers, connection status, and tools available to the current project. Project configuration overrides matching user servers.",
 			status: "Status",
 			servers: "Servers",
 			tools: "Tools",
@@ -373,7 +374,10 @@ export const en: Messages = {
 			notConnected: "Not connected",
 			disabled: "Disabled",
 			empty: "No MCP servers configured",
+			emptyHint: "Add servers through the current project or user MCP configuration.",
+			serverList: "Servers",
 			configPath: "Config file",
+			noConfig: "No configuration file found",
 			openConfig: "Open config file",
 			enable: "Enable",
 			disable: "Disable",

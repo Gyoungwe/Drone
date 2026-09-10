@@ -352,6 +352,7 @@ export const zh = {
 		},
 		mcp: {
 			title: "MCP",
+			hint: "管理当前项目可用的 MCP 服务器、连接状态与工具能力。项目级配置会覆盖同名用户配置。",
 			status: "状态",
 			servers: "服务器",
 			tools: "工具",
@@ -363,7 +364,10 @@ export const zh = {
 			notConnected: "未连接",
 			disabled: "已禁用",
 			empty: "尚未配置 MCP 服务器",
+			emptyHint: "可通过当前项目或用户级 MCP 配置添加服务器。",
+			serverList: "服务器",
 			configPath: "配置文件",
+			noConfig: "未找到配置文件",
 			openConfig: "打开配置文件",
 			enable: "启用",
 			disable: "禁用",
