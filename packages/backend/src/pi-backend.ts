@@ -136,7 +136,7 @@ type PermissionHandler = (req: PermissionRequest) => void;
 type PermissionResolvedHandler = (result: PermissionResolved) => void;
 type TrustHandler = (req: TrustRequest) => void;
 type LoginHandler = (payload: LoginEventPayload) => void;
-type McpHandler = (status: McpStatus) => void;
+type McpHandler = (cwd: string, status: McpStatus) => void;
 
 /**
  * PiBackend：pi SDK 的唯一适配层（门面）。不依赖 Electron，
@@ -248,7 +248,7 @@ export class PiBackend {
 		factories.push((pi: { events: { on(event: string, handler: (payload: unknown) => void): void } }) => {
 			pi.events.on("pi-mcp-adapter/status/v1", (payload) => {
 				if (!payload || typeof payload !== "object") return;
-				this.setMcpStatus(payload as McpStatus);
+				this.setMcpStatus(cwd, payload as McpStatus);
 			});
 		});
 		if (this.options.permissionGates !== false && this.options.permissionExtension !== false) {
@@ -726,16 +726,16 @@ export class PiBackend {
 		return this.packages.removePackage(source, scope);
 	}
 
-	async getMcpStatus(): Promise<McpStatus> {
-		return this.mcp.getStatus();
+	async getMcpStatus(cwd?: string): Promise<McpStatus> {
+		return this.mcp.getStatus(cwd);
 	}
 
-	async getMcpConfig(): Promise<McpConfigSnapshot> {
-		return this.mcp.getConfig();
+	async getMcpConfig(cwd?: string): Promise<McpConfigSnapshot> {
+		return this.mcp.getConfig(cwd);
 	}
 
-	async setMcpServerEnabled(name: string, enabled: boolean): Promise<McpConfigSnapshot> {
-		const snapshot = await this.mcp.setServerEnabled(name, enabled);
+	async setMcpServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot> {
+		const snapshot = await this.mcp.setServerEnabled(name, enabled, cwd);
 		// Existing sessions observe the adapter's config on their next reload; the UI
 		// refreshes its config immediately while avoiding a hidden agent turn.
 		return snapshot;
@@ -746,9 +746,9 @@ export class PiBackend {
 		return () => this.mcpHandlers.delete(handler);
 	}
 
-	setMcpStatus(status: McpStatus): void {
-		this.mcp.setStatus(status);
-		for (const handler of this.mcpHandlers) handler(status);
+	setMcpStatus(cwd: string, status: McpStatus): void {
+		this.mcp.setStatus(status, cwd);
+		for (const handler of this.mcpHandlers) handler(cwd, status);
 	}
 
 	async setSessionName(sessionId: string, name: string): Promise<void> {

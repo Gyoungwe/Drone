@@ -369,6 +369,10 @@ export const zh = {
 			disable: "禁用",
 			reload: "刷新",
 			error: "无法读取 MCP 配置",
+			scope: {
+				user: "用户",
+				project: "项目",
+			},
 		},
 		extensions: {
 			title: "扩展",

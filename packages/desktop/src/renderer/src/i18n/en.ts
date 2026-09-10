@@ -379,6 +379,10 @@ export const en: Messages = {
 			disable: "Disable",
 			reload: "Refresh",
 			error: "Unable to read MCP configuration",
+			scope: {
+				user: "User",
+				project: "Project",
+			},
 		},
 		extensions: {
 			title: "Extensions",

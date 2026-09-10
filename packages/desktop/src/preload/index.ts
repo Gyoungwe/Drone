@@ -46,12 +46,12 @@ const api: PiApi = {
 	getTodos: (sessionId) => ipcRenderer.invoke(IpcChannels.SessionGetTodos, sessionId),
 	listModels: () => ipcRenderer.invoke(IpcChannels.ModelsList),
 	listProviders: (options) => ipcRenderer.invoke(IpcChannels.SettingsListProviders, options),
-	getMcpStatus: () => ipcRenderer.invoke(IpcChannels.McpGetStatus),
-	getMcpConfig: () => ipcRenderer.invoke(IpcChannels.McpGetConfig),
-	setMcpServerEnabled: (name, enabled) =>
-		ipcRenderer.invoke(IpcChannels.McpSetServerEnabled, name, enabled),
-	openMcpConfig: async () => {
-		await ipcRenderer.invoke(IpcChannels.McpOpenConfig);
+	getMcpStatus: (cwd) => ipcRenderer.invoke(IpcChannels.McpGetStatus, cwd),
+	getMcpConfig: (cwd) => ipcRenderer.invoke(IpcChannels.McpGetConfig, cwd),
+	setMcpServerEnabled: (name, enabled, cwd) =>
+		ipcRenderer.invoke(IpcChannels.McpSetServerEnabled, name, enabled, cwd),
+	openMcpConfig: async (cwd) => {
+		await ipcRenderer.invoke(IpcChannels.McpOpenConfig, cwd);
 	},
 	onMcpEvent: (cb) => {
 		const listener = (_event: unknown, status: Parameters<typeof cb>[0]) => cb(status);

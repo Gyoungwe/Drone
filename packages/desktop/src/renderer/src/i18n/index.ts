@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { create } from "zustand";
 import { en } from "./en";
 import { type Messages, zh } from "./zh";
@@ -55,5 +56,8 @@ export function translate(
 /** 组件内使用：const t = useT(); t("settings.title") / t("permission.queued", { count: 2 }) */
 export function useT() {
 	const language = useI18nStore((s) => s.language);
-	return (key: MessageKey, params?: Record<string, string | number>) => translate(language, key, params);
+	return useCallback(
+		(key: MessageKey, params?: Record<string, string | number>) => translate(language, key, params),
+		[language],
+	);
 }

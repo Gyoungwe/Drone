@@ -1,13 +1,32 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import type { McpConfigServer, McpConfigSnapshot, McpStatus } from "@percho/shared";
 
 type RawServer = Record<string, unknown>;
+type McpScope = McpConfigServer["scope"];
 
-function configPath(): string {
-	return join(getAgentDir(), "mcp.json");
+interface ConfigSource {
+	path: string;
+	scope: McpScope;
+}
+
+interface McpServiceOptions {
+	agentDir?: string;
+	homeDir?: string;
+}
+
+function emptyStatus(): McpStatus {
+	return {
+		version: 1,
+		servers: [],
+		totalTools: 0,
+		totalResources: 0,
+		connectedCount: 0,
+		disabledCount: 0,
+	};
 }
 
 function transportOf(server: RawServer): McpConfigServer["transport"] {
@@ -17,62 +36,132 @@ function transportOf(server: RawServer): McpConfigServer["transport"] {
 	return "unknown";
 }
 
-async function readRaw(): Promise<{ path: string; value: Record<string, unknown> }> {
-	const path = configPath();
-	if (!existsSync(path)) return { path, value: { mcpServers: {} } };
+function serverMap(value: Record<string, unknown>): Record<string, unknown> {
+	const servers = value.mcpServers ?? value["mcp-servers"];
+	return servers && typeof servers === "object" && !Array.isArray(servers)
+		? servers as Record<string, unknown>
+		: {};
+}
+
+async function readRaw(path: string): Promise<Record<string, unknown>> {
+	if (!existsSync(path)) return {};
 	const text = await readFile(path, "utf8");
 	const value: unknown = JSON.parse(text);
-	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("mcp.json must contain an object");
-	return { path, value: value as Record<string, unknown> };
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
+		throw new Error(`${path} must contain an object`);
+	}
+	return value as Record<string, unknown>;
+}
+
+function mergeServer(base: RawServer | undefined, next: RawServer): RawServer {
+	const merged = { ...base, ...next };
+	if (typeof next.command === "string") {
+		delete merged.url;
+		delete merged.socket;
+	} else if (typeof next.url === "string") {
+		delete merged.command;
+		delete merged.socket;
+	} else if (typeof next.socket === "string") {
+		delete merged.command;
+		delete merged.url;
+	}
+	return merged;
 }
 
 export class McpService {
-	private status: McpStatus = {
-		version: 1,
-		servers: [],
-		totalTools: 0,
-		totalResources: 0,
-		connectedCount: 0,
-		disabledCount: 0,
-	};
+	private readonly agentDir: string;
+	private readonly homeDir: string;
+	private lastStatus = emptyStatus();
+	private readonly statusByCwd = new Map<string, McpStatus>();
 
-	setStatus(status: McpStatus): void {
-		this.status = status;
+	constructor(options: McpServiceOptions = {}) {
+		this.agentDir = options.agentDir ?? getAgentDir();
+		this.homeDir = options.homeDir ?? homedir();
 	}
 
-	getStatus(): McpStatus {
-		return structuredClone(this.status);
+	private sources(cwd?: string): ConfigSource[] {
+		const sources: ConfigSource[] = [
+			{ path: join(this.homeDir, ".config", "mcp", "mcp.json"), scope: "user" },
+			{ path: join(this.homeDir, ".agents", "mcp.json"), scope: "user" },
+			{ path: join(this.homeDir, ".agents", "mcp", "mcp.json"), scope: "user" },
+			{ path: join(this.agentDir, "mcp.json"), scope: "user" },
+		];
+		if (cwd) {
+			const project = resolve(cwd);
+			sources.push(
+				{ path: join(project, ".mcp.json"), scope: "project" },
+				{ path: join(project, ".pi", "mcp.json"), scope: "project" },
+			);
+		}
+		return sources;
 	}
 
-	async getConfig(): Promise<McpConfigSnapshot> {
-		const { path, value } = await readRaw();
-		const servers = value.mcpServers && typeof value.mcpServers === "object" && !Array.isArray(value.mcpServers)
-			? Object.entries(value.mcpServers as Record<string, unknown>).map(([name, raw]) => {
-					const server = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as RawServer : {};
-					return {
-						name,
-						transport: transportOf(server),
-						...(typeof server.command === "string" ? { command: server.command } : {}),
-						...(typeof server.url === "string" ? { url: server.url } : {}),
-						disabled: server.disabled === true,
-					};
-				})
-			: [];
-		return { path, servers };
+	private writePath(cwd?: string): string {
+		return cwd ? join(resolve(cwd), ".pi", "mcp.json") : join(this.agentDir, "mcp.json");
 	}
 
-	async setServerEnabled(name: string, enabled: boolean): Promise<McpConfigSnapshot> {
-		const { path, value } = await readRaw();
-		const servers = value.mcpServers;
-		if (!servers || typeof servers !== "object" || Array.isArray(servers)) throw new Error("mcpServers must be an object");
-		const server = (servers as Record<string, unknown>)[name];
-		if (!server || typeof server !== "object" || Array.isArray(server)) throw new Error(`MCP server not found: ${name}`);
-		const next = { ...(server as RawServer) };
-		if (enabled) delete next.disabled;
-		else next.disabled = true;
-		(servers as Record<string, unknown>)[name] = next;
+	setStatus(status: McpStatus, cwd?: string): void {
+		this.lastStatus = structuredClone(status);
+		if (cwd) this.statusByCwd.set(resolve(cwd), structuredClone(status));
+	}
+
+	getStatus(cwd?: string): McpStatus {
+		if (!cwd) return structuredClone(this.lastStatus);
+		return structuredClone(this.statusByCwd.get(resolve(cwd)) ?? emptyStatus());
+	}
+
+	async getConfig(cwd?: string): Promise<McpConfigSnapshot> {
+		const sources = this.sources(cwd);
+		const merged = new Map<string, { server: RawServer; source: ConfigSource }>();
+
+		for (const source of sources) {
+			const value = await readRaw(source.path);
+			for (const [name, raw] of Object.entries(serverMap(value))) {
+				if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+				const previous = merged.get(name);
+				merged.set(name, {
+					server: mergeServer(previous?.server, raw as RawServer),
+					source,
+				});
+			}
+		}
+
+		const preferredPath = [...sources].reverse().find((source) => existsSync(source.path))?.path
+			?? (cwd ? join(resolve(cwd), ".mcp.json") : join(this.agentDir, "mcp.json"));
+		const servers = [...merged.entries()].map(([name, { server, source }]) => ({
+			name,
+			transport: transportOf(server),
+			...(typeof server.command === "string" ? { command: server.command } : {}),
+			...(typeof server.url === "string" ? { url: server.url } : {}),
+			disabled: server.disabled === true,
+			scope: source.scope,
+			sourcePath: source.path,
+		}));
+		return { path: preferredPath, cwd: cwd ? resolve(cwd) : null, servers };
+	}
+
+	async setServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot> {
+		const effective = await this.getConfig(cwd);
+		if (!effective.servers.some((server) => server.name === name)) {
+			throw new Error(`MCP server not found: ${name}`);
+		}
+
+		const path = this.writePath(cwd);
+		const value = await readRaw(path);
+		const key = value["mcp-servers"] !== undefined && value.mcpServers === undefined ? "mcp-servers" : "mcpServers";
+		const servers = serverMap(value);
+		const raw = servers[name];
+		if (raw !== undefined && (!raw || typeof raw !== "object" || Array.isArray(raw))) {
+			throw new Error(`MCP server must be an object: ${name}`);
+		}
+		servers[name] = { ...(raw as RawServer | undefined), disabled: !enabled };
+		value[key] = servers;
+
 		await mkdir(dirname(path), { recursive: true });
-		await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-		return this.getConfig();
+		const tempPath = `${path}.${process.pid}.tmp`;
+		await writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+		await chmod(tempPath, 0o600);
+		await rename(tempPath, path);
+		return this.getConfig(cwd);
 	}
 }

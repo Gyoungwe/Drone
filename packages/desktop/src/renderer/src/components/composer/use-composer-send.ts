@@ -105,6 +105,12 @@ export function useComposerSend(options: UseComposerSendOptions) {
 			case "settings":
 				useSettingsStore.getState().openWith();
 				return true;
+			case "mcp":
+				if (!arg || arg === "status") {
+					useSettingsStore.getState().openWith("mcp");
+					return true;
+				}
+				return false;
 			default:
 				// 模板/skill/扩展命令由 SDK 原生处理，原样透传
 				return false;
@@ -152,7 +158,10 @@ export function useComposerSend(options: UseComposerSendOptions) {
 			options.setQuotes([]);
 			try {
 				const handled = await runSlashCommand(content, sessionId);
-				if (handled) return;
+				if (handled) {
+					setError(null);
+					return;
+				}
 			} catch (err) {
 				setError(err instanceof Error ? err.message : String(err));
 				return;

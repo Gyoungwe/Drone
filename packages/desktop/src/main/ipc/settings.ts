@@ -10,13 +10,13 @@ import { shell, ipcMain } from "electron";
 
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
 export function registerSettingsIpc(backend: PiBackend): void {
-	ipcMain.handle(IpcChannels.McpGetStatus, () => backend.getMcpStatus());
-	ipcMain.handle(IpcChannels.McpGetConfig, () => backend.getMcpConfig());
-	ipcMain.handle(IpcChannels.McpSetServerEnabled, (_e, name: string, enabled: boolean) =>
-		backend.setMcpServerEnabled(name, enabled),
+	ipcMain.handle(IpcChannels.McpGetStatus, (_e, cwd?: string) => backend.getMcpStatus(cwd));
+	ipcMain.handle(IpcChannels.McpGetConfig, (_e, cwd?: string) => backend.getMcpConfig(cwd));
+	ipcMain.handle(IpcChannels.McpSetServerEnabled, (_e, name: string, enabled: boolean, cwd?: string) =>
+		backend.setMcpServerEnabled(name, enabled, cwd),
 	);
-	ipcMain.handle(IpcChannels.McpOpenConfig, async () => {
-		const config = await backend.getMcpConfig();
+	ipcMain.handle(IpcChannels.McpOpenConfig, async (_e, cwd?: string) => {
+		const config = await backend.getMcpConfig(cwd);
 		await shell.openPath(config.path);
 	});
 	ipcMain.handle(IpcChannels.SettingsListProviders, (_e, options?: ListProvidersOptions) =>

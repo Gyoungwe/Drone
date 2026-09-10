@@ -32,9 +32,17 @@ export interface McpConfigServer {
 	command?: string;
 	url?: string;
 	disabled: boolean;
+	scope: "user" | "project";
+	sourcePath: string;
 }
 
 export interface McpConfigSnapshot {
 	path: string;
+	cwd: string | null;
 	servers: McpConfigServer[];
+}
+
+export interface McpStatusEvent {
+	cwd: string;
+	status: McpStatus;
 }
