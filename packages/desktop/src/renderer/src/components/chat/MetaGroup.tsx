@@ -53,13 +53,14 @@ function dotClass(state: MetaDot["state"]): string {
  * 语言切换不受影响：useT/i18n 订阅在组件内部，父级 memo 拦不住也不需要拦。
  */
 function metaGroupPropsEqual(
-	a: { items: MetaItem[]; working: boolean; endImmediately?: boolean; subagentCount?: number },
-	b: { items: MetaItem[]; working: boolean; endImmediately?: boolean; subagentCount?: number },
+	a: { items: MetaItem[]; working: boolean; endImmediately?: boolean; subagentCount?: number; statusText?: string },
+	b: { items: MetaItem[]; working: boolean; endImmediately?: boolean; subagentCount?: number; statusText?: string },
 ): boolean {
 	if (
 		a.working !== b.working ||
 		a.endImmediately !== b.endImmediately ||
 		a.subagentCount !== b.subagentCount ||
+		a.statusText !== b.statusText ||
 		a.items.length !== b.items.length
 	)
 		return false;
@@ -74,12 +75,15 @@ export const MetaGroup = memo(function MetaGroup({
 	working,
 	endImmediately = false,
 	subagentCount = 0,
+	statusText,
 }: {
 	items: MetaItem[];
 	working: boolean;
 	endImmediately?: boolean;
 	/** 该组派生的子代理数（统计行正向显示「子代理 ×N」；由 MessageList 按组归属计算） */
 	subagentCount?: number;
+	/** Agent 自报 / 宿主真实工具校验后的 live 状态文案。 */
+	statusText?: string;
 }) {
 	const t = useT();
 	const count = items.reduce((n, item) => n + (item.thinking ? 1 : 0) + item.tools.length, 0);
@@ -161,7 +165,7 @@ export const MetaGroup = memo(function MetaGroup({
 										ref={labelRef}
 										className="sweep-target text-[14px] font-bold text-ink-working transition-colors group-hover/row:text-ink"
 									>
-										{t(labelKey)}
+										{statusText || t(labelKey)}
 									</span>
 								</div>
 								{/* 实时预览内联进标题行（单行截断，展开组时隐藏） */}

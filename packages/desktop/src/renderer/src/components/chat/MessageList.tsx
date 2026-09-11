@@ -171,6 +171,7 @@ export function MessageList() {
 					working={row.working}
 					endImmediately={row.endImmediately}
 					subagentCount={row.subagentCount}
+					statusText={row.statusText}
 				/>,
 			);
 			return;

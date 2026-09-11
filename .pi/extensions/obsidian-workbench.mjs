@@ -54,7 +54,7 @@ export default function obsidianWorkbench(pi) {
   pi.on('before_agent_start', async (event, ctx) => {
     const status = await obsidianStatus(ctx.cwd);
     const guidance = status.state === 'ready'
-      ? `Paired Obsidian vault: ${status.vault}. Use MCP server research-obsidian for local knowledge retrieval. Only the parent session publishes knowledge; subagents return evidence. Use wiki links, preserve human review outside pi-agent managed blocks, and keep large artifacts under results. Finalize runs through research_summarize_run. The fixture research_loop is a demonstration, not real literature search.`
+      ? `Paired Obsidian vault: ${status.vault}. Use MCP server research-obsidian for local knowledge retrieval. Only the parent session publishes knowledge; subagents return evidence. Use wiki links, preserve human review outside pi-agent managed blocks, and keep large artifacts under results. Finalize runs through research_summarize_run only after the persistent research_loop evidence gate is answerable.`
       : `Obsidian setup is incomplete (${status.state}). Configure the independent vault with research_setup_obsidian before knowledge writes. Do not claim knowledge has been saved.`;
     const outputGuidance = 'For research subagents, resolve output files to absolute paths under the chosen run directory before passing the subagent output argument. Relative output paths can be redirected into session artifacts by pi-subagents. Read the actual returned file and use research_summarize_run output paths in the final report, rather than copying paths from input evidence.';
     return { systemPrompt: `${event.systemPrompt}\n\n${guidance}\n${outputGuidance}` };

@@ -1764,3 +1764,111 @@ code {
 		animation: none;
 	}
 }
+
+/* ---- 统一资源侧栏：链接 / 本地文件与 Git Diff 共用同一物理侧栏 ---- */
+.resource-back,
+.resource-open {
+	flex: none;
+	border-radius: 7px;
+	padding: 4px 7px;
+	font-size: 11px;
+	color: var(--color-ink-dim);
+	transition: background-color 0.15s, color 0.15s;
+}
+.resource-back:hover,
+.resource-open:hover {
+	background: var(--color-hover);
+	color: var(--color-ink);
+}
+.resource-title {
+	min-width: 0;
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--color-ink);
+}
+.resource-address {
+	flex: none;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	border-bottom: 1px solid var(--color-border);
+	padding: 6px 14px 8px;
+	font-size: 10.5px;
+	color: var(--color-ink-faint);
+}
+.resource-body {
+	min-height: 0;
+	flex: 1;
+	overflow: auto;
+	background: var(--color-canvas);
+}
+.resource-frame {
+	display: block;
+	width: 100%;
+	height: 100%;
+	min-height: 100%;
+	border: 0;
+	background: white;
+}
+.resource-media {
+	display: flex;
+	min-height: 100%;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 16px;
+}
+.resource-media img {
+	max-width: 100%;
+	max-height: calc(100vh - 170px);
+	border-radius: 8px;
+	object-fit: contain;
+}
+.resource-text {
+	min-height: 100%;
+	margin: 0;
+	padding: 14px;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	font: 11.5px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	color: var(--color-ink-2);
+	user-select: text;
+}
+.resource-empty {
+	display: flex;
+	min-height: 220px;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	padding: 28px;
+	text-align: center;
+	font-size: 12px;
+	color: var(--color-ink-faint);
+}
+.resource-primary {
+	border-radius: 8px;
+	background: var(--color-hover);
+	padding: 6px 10px;
+	font-size: 11px;
+	color: var(--color-ink-2);
+}
+.resource-error {
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	font: 10.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	color: var(--color-err);
+}
+.resource-meta {
+	display: flex;
+	flex: none;
+	flex-wrap: wrap;
+	gap: 5px 10px;
+	border-top: 1px solid var(--color-border);
+	padding: 7px 12px;
+	font-size: 10px;
+	color: var(--color-ink-faint);
+}

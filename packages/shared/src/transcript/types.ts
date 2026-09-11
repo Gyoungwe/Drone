@@ -4,6 +4,19 @@ import type { SkillInvocationDisplay } from "../skill-invocation";
 import type { TodoItem } from "../todo";
 
 /** SDK 自动重试（auto_retry_start）即时信息：状态行文案 + 出现/清除时机都来自事件流 */
+export interface AgentStatus {
+	text: string;
+	phase?: string;
+	source: "agent" | "host";
+	toolName?: string;
+	toolCallId?: string;
+}
+
+export interface ResearchStatusState {
+	agent: AgentStatus | null;
+	host: AgentStatus | null;
+}
+
 export interface RetryInfo {
 	attempt: number;
 	maxAttempts: number;
@@ -173,6 +186,8 @@ export interface SessionTranscriptState {
 	 * —— SDK 每个 retry 轮都发 turn_end(error)，立即落卡会在重试场景产多张卡且成功后残留，
 	 * 违背「只有最终失败才落卡」）。清空时机：agent_end/agent_settled/stream_guard_tripped。 */
 	pendingLlmError: UiError | null;
+	/** Agent 自报状态 + 宿主真实工具覆盖；仅 live session 运行态，不进入历史消息。 */
+	researchStatus: ResearchStatusState;
 	/** SDK 自动重试瞬时信息（auto_retry_start → 状态行；auto_retry_end/turn_start/agent_settled 清） */
 	retrying: RetryInfo | null;
 	/** 最近一次 agent run 的固化结束时刻（agent_end willRetry=false / agent_settled 盖戳，agent_start 清）；
@@ -192,5 +207,6 @@ export function emptyTranscript(): SessionTranscriptState {
 		todos: [],
 		pendingLlmError: null,
 		retrying: null,
+		researchStatus: { agent: null, host: null },
 	};
 }

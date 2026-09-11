@@ -76,6 +76,7 @@ import { autoNameSession } from "./session/naming";
 import { EventRateTracker } from "./session/rates";
 import { type EventForwarder, SessionRegistry } from "./session/registry";
 import { StreamGuard } from "./session/stream-guard";
+import { makeStatusTool } from "./tools/status";
 import { TraceRecorder } from "./session/trace";
 import { SessionTraces } from "./session/traces";
 import { makeUiContext } from "./session/ui-context";
@@ -197,7 +198,7 @@ export class PiBackend {
 		});
 	}
 
-	/** 自定义工具 = 调用方传入的 + 内置 webfetch（webFetch:false 关闭）+ show_image + todo + subagent */
+	/** 自定义工具 = 调用方传入的 + 内置 webfetch（webFetch:false 关闭）+ show_image + set_status + todo + subagent */
 	private buildCustomTools(gate: PermissionGate): ToolDefinition[] {
 		const tools = [...(this.options.customTools ?? [])];
 		const webFetch = this.options.webFetch;
@@ -205,6 +206,7 @@ export class PiBackend {
 			tools.push(makeWebFetchTool(typeof webFetch === "object" ? webFetch : undefined));
 		}
 		tools.push(makeShowImageTool());
+		tools.push(makeStatusTool());
 		tools.push(makeTodoTool());
 		if (this.options.subagentPreferBuiltin !== false) {
 			tools.push(

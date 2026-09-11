@@ -2,11 +2,14 @@ import { deriveTurnChanges, type TurnChanges } from "@percho/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { RegionHost } from "../../plugins/RegionHost";
+import { UI_REGIONS } from "../../plugins/slots";
 import { useSessionsStore } from "../../stores/sessions";
 import { useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { CloseIcon } from "../icons";
 import { DiffFileCard } from "./DiffFileCard";
+import { ResourceSidebar } from "./ResourceSidebar";
 
 /** 空 turn 列表稳定引用（selector/useMemo 缺省，禁内联新数组） */
 const EMPTY_TURNS: TurnChanges[] = [];
@@ -97,6 +100,7 @@ function BranchRow() {
 export function DiffSidebar() {
 	const t = useT();
 	const open = useUiStore((s) => s.diffSidebarOpen);
+	const resourcePreview = useUiStore((s) => s.resourcePreview);
 	const setOpen = useUiStore((s) => s.setDiffSidebarOpen);
 	const diffFocus = useUiStore((s) => s.diffFocus);
 	const clearDiffFocus = useUiStore((s) => s.clearDiffFocus);
@@ -146,6 +150,10 @@ export function DiffSidebar() {
 	return (
 		<aside className={`diff-sidebar${open ? " open" : ""}`} aria-hidden={!open}>
 			<div className="diff-sidebar-in">
+				{resourcePreview ? (
+					<ResourceSidebar target={resourcePreview} />
+				) : (
+					<>
 				<div className="diff-side-head">
 					<span className="diff-side-title">{t("diff.title")}</span>
 					<span className="diff-side-sum">
@@ -175,6 +183,7 @@ export function DiffSidebar() {
 					</button>
 				</div>
 				<BranchRow />
+				<RegionHost region={UI_REGIONS.DiffSidebar} />
 				<div className="diff-side-scroll" ref={bodyRef}>
 					{totalFiles === 0 ? (
 						<div className="diff-side-empty">{t("diff.empty")}</div>
@@ -200,6 +209,8 @@ export function DiffSidebar() {
 						))
 					)}
 				</div>
+					</>
+				)}
 			</div>
 		</aside>
 	);

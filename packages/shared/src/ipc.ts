@@ -42,6 +42,18 @@ import type { TodoItem } from "./todo";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
 
+
+export interface ResourcePreviewResult {
+	path: string;
+	name: string;
+	mimeType: string;
+	size: number;
+	kind: "text" | "image" | "pdf" | "binary";
+	text?: string;
+	data?: string;
+	truncated?: boolean;
+}
+
 /** IPC 通道名常量 */
 export const IpcChannels = {
 	SessionCreate: "session:create",
@@ -77,6 +89,8 @@ export const IpcChannels = {
 	PackagesRemove: "packages:remove",
 	PackagesListConfigured: "packages:listConfigured",
 	FileSaveDialog: "file:saveDialog",
+	FilePreview: "file:preview",
+	ResourceOpenExternal: "resource:openExternal",
 	ModelsList: "models:list",
 	SettingsListProviders: "settings:listProviders",
 	/** MCP server 状态与用户级配置 */
@@ -243,6 +257,10 @@ export interface PiApi {
 	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
 	/** 弹保存对话框并写文件；用户取消返回 null，成功返回写入路径 */
 	saveFileDialog(defaultName: string, content: string): Promise<string | null>;
+	/** 读取本地文件供右侧资源栏预览；路径可相对 cwd。大文本会截断，大二进制只返回元数据。 */
+	previewFile(target: string, cwd?: string): Promise<ResourcePreviewResult>;
+	/** 使用系统默认应用打开资源：HTTP(S) 用浏览器，本地路径用系统文件关联。 */
+	openResourceExternal(target: string, cwd?: string): Promise<void>;
 	listModels(): Promise<import("./session").AvailableModel[]>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
 	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;

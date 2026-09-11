@@ -91,6 +91,8 @@ export function RegionHost({ region }: { region: RegionName }) {
 					{list.map(renderContribution)}
 				</div>
 			);
+		case UI_REGIONS.DiffSidebar:
+			return <>{list.map(renderContribution)}</>;
 		default:
 			// settings.panel 不走 RegionHost（SettingsDialog 动态分类直接读 registry 渲染）
 			return null;

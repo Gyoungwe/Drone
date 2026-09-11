@@ -216,7 +216,7 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 		}
 		if (raw.role === "assistant") {
 			const content = Array.isArray(raw.content) ? raw.content : [];
-			const toolBlocks = blockToolCalls(content);
+			const toolBlocks = blockToolCalls(content).filter((block) => block.tool.name !== "set_status");
 			const tools = toolBlocks.map((b) => b.tool);
 			for (const tool of tools) toolById.set(tool.id, tool);
 			const text = blockText(raw.content);

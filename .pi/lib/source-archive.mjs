@@ -210,7 +210,7 @@ export async function archiveSource({ cwd = process.cwd(), run_dir, url, categor
   if (local_file != null) {
     try {
       if (human_verified !== true) throw new Error("local_file imports require explicit human_verified=true");
-      const downloadRoot = resolve(cwd, ".pi", "browser-downloads");
+      const downloadRoot = await realpath(resolve(cwd, ".pi", "browser-downloads"));
       const canonical = await realpath(resolve(cwd, local_file));
       if (!isWithin(downloadRoot, canonical)) throw new Error("local_file must be inside .pi/browser-downloads");
       const bytes = new Uint8Array(await readFile(canonical));

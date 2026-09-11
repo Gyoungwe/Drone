@@ -1,7 +1,9 @@
 import MarkdownRender, { type SmoothMarkdownStreamOptions } from "markstream-react";
 import "markstream-react/index.css";
-import { useRef } from "react";
+import { type MouseEvent, useCallback, useRef } from "react";
+import { useSessionsStore } from "../../stores/sessions";
 import { useThemeStore } from "../../stores/theme";
+import { useUiStore } from "../../stores/ui";
 
 /**
  * 平滑输出速率参数（markstream 内置 smooth streaming controller，grapheme 级 pacing）：
@@ -67,6 +69,24 @@ const REDUCED_MOTION =
  */
 export function Markdown({ text, streaming }: { text: string; streaming?: boolean }) {
 	const isDark = useThemeStore((s) => s.resolved === "dark");
+	const cwd = useSessionsStore((s) => s.cwd);
+	const openResourcePreview = useUiStore((s) => s.openResourcePreview);
+	const handleClick = useCallback(
+		(event: MouseEvent<HTMLDivElement>) => {
+			const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
+			if (!(target instanceof HTMLAnchorElement)) return;
+			const href = target.getAttribute("href");
+			if (!href || href.startsWith("#")) return;
+			event.preventDefault();
+			event.stopPropagation();
+			openResourcePreview({
+				href,
+				label: target.textContent?.trim() || href,
+				cwd: cwd ?? undefined,
+			});
+		},
+		[cwd, openResourcePreview],
+	);
 	// 挂载初值锁定：流式中挂载 → 本次生命周期始终启用平滑（含固化后追平）；历史消息挂载 → 永不启用
 	const smoothableRef = useRef<boolean>(Boolean(streaming) && !REDUCED_MOTION);
 	return (
@@ -76,6 +96,7 @@ export function Markdown({ text, streaming }: { text: string; streaming?: boolea
 			    re-render（非虚拟化路径）；流式期间靠内容更新顺带刷新，流一停占位条就永久残留。 */}
 			<MarkdownRender
 				content={text}
+				onClick={handleClick}
 				final={!streaming}
 				fade={false}
 				smoothStreaming={smoothableRef.current}

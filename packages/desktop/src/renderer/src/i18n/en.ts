@@ -164,6 +164,15 @@ export const en: Messages = {
 			mutex: "Detected subagent extension {path}; built-in subagent took over: {tools}",
 		},
 	},
+	resource: {
+		backToChanges: "← Changes",
+		openExternal: "Open externally",
+		externalProtocol: "This link needs to be opened by a system application.",
+		previewFailed: "This resource cannot be previewed in the sidebar",
+		loading: "Loading resource…",
+		binaryHint: "Inline preview is not available for this file type. Open it with the system application instead.",
+		truncated: "Preview truncated",
+	},
 	diff: {
 		toggle: "Changes sidebar",
 		title: "Changes",
@@ -465,6 +474,7 @@ export const en: Messages = {
 			regionCornerTopRight: "Chat top-right",
 			regionCornerBottomLeft: "Chat bottom-left",
 			regionCornerBottomRight: "Chat bottom-right",
+			regionDiffSidebar: "Right sidebar",
 			regionSettingsPanel: "Settings panel",
 			assignmentTitle: "Slot assignment",
 			assignmentHint: "Multiple plugins declare this slot; pick which one takes effect",

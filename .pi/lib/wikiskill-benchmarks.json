@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "research-workflow": [
+    {"id":"local-first","prompt":"For a substantive literature question, state the retrieval order when paired local knowledge and web search are available, and when web search should be used.","mustInclude":["local","web"]},
+    {"id":"child-write-boundary","prompt":"A research subagent found useful evidence. State whether it may write the main Obsidian Vault and which session owns knowledge writes.","mustInclude":["parent","write"]},
+    {"id":"browser-failure","prompt":"A source retrieval returns browser_required. State whether this counts as verified evidence or successful retrieval.","mustInclude":["not","success"]},
+    {"id":"answer-gate","prompt":"State what must happen before a substantive research run can be summarized as answerable.","mustInclude":["evidence","claim"]},
+    {"id":"wiki-authority","prompt":"An agent-maintained research Wiki page contains a scientific claim. State how it may be used and what must support the final claim.","mustInclude":["source","not"]}
+  ],
+  "research-vault": [
+    {"id":"managed-block","prompt":"When updating an existing Obsidian research note, state which part the agent may overwrite and what it must preserve.","mustInclude":["managed","preserve"]},
+    {"id":"human-review","prompt":"State how agent writes should treat the Human review section of a research note.","mustInclude":["human","preserve"]},
+    {"id":"traceability","prompt":"What identifiers or links must a persisted research object retain before a Vault update is complete?","mustInclude":["source","identifier"]},
+    {"id":"large-artifacts","prompt":"Where should large research artifacts live relative to the Obsidian Vault?","mustInclude":["result"]}
+  ]
+}

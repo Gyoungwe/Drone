@@ -18,6 +18,47 @@ import {
 } from "./helpers";
 import type { CompactionUiState, SessionTranscriptState, SubagentRunUi, UIMessage } from "./types";
 
+
+const STATUS_TOOL_NAME = "set_status";
+
+function cleanStatusText(value: unknown): string | null {
+	if (typeof value !== "string") return null;
+	const text = value.replace(/\s+/g, " ").trim();
+	if (!text) return null;
+	return [...text].slice(0, 30).join("");
+}
+
+function inferHostResearchStatus(toolName: string, args?: unknown): { text: string; phase: string } | null {
+	const payload = args && typeof args === "object" ? (args as { tool?: unknown; server?: unknown }) : {};
+	const candidates = [toolName, payload.tool, payload.server]
+		.filter((value): value is string => typeof value === "string")
+		.map((value) => value.toLowerCase().replaceAll("_", "-"));
+	const identity = candidates.join(" ");
+	if (identity.includes("research-zotero")) return { text: "正在检索 Zotero 文献库…", phase: "literature-search" };
+	if (identity.includes("research-obsidian")) return { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" };
+	if (toolName === "web_search" || toolName.includes("web_search")) return { text: "正在联网检索相关研究…", phase: "web-search" };
+	if (toolName === "fetch_content" || toolName.includes("fetch")) return { text: "正在读取并核对原始来源…", phase: "reading" };
+	if (toolName === "research_loop") return { text: "正在检查研究证据链…", phase: "verification" };
+	if (toolName.startsWith("research_wiki_navigate")) return { text: "正在检索研究 Wiki…", phase: "knowledge-search" };
+	if (toolName.startsWith("research_wiki_build")) return { text: "正在沉淀研究知识…", phase: "deposit" };
+	if (toolName.startsWith("research_wikiskill_record")) return { text: "正在总结研究经验…", phase: "synthesis" };
+	if (toolName.startsWith("research_wikiskill_propose")) return { text: "正在改进研究策略…", phase: "skill-evolution" };
+	if (toolName.startsWith("research_wikiskill_gate")) return { text: "正在验证新的研究策略…", phase: "verification" };
+	if (toolName.startsWith("research_wikiskill_status")) return { text: "正在检查研究策略状态…", phase: "verification" };
+	if (toolName.startsWith("research_source") || toolName.includes("archive")) return { text: "正在归档研究证据…", phase: "archive" };
+	return null;
+}
+
+function removeControlTool(streaming: NonNullable<SessionTranscriptState["streaming"]>, toolCallId: string) {
+	const target = streaming.tools.find((tool) => tool.id === toolCallId);
+	const blockIndex = target?.blockIndex;
+	return {
+		...streaming,
+		tools: streaming.tools.filter((tool) => tool.id !== toolCallId),
+		activity: blockIndex == null ? streaming.activity : streaming.activity.filter((item) => item.id !== `c${blockIndex}`),
+	};
+}
+
 function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptState {
 	const { streaming, messages } = state;
 	if (!streaming) return state;
@@ -145,6 +186,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				streaming: emptyStreaming(),
 				// 新 run 开工：上一 run 的定格戳作废（防旧戳被 max 到新轮）
 				runEndedAt: undefined,
+				researchStatus: { agent: null, host: null },
 			};
 		case "turn_start": {
 			// 每轮新的 assistant 消息（多轮工具循环）前重置累积容器并回到 streaming；
@@ -305,6 +347,28 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 		case "tool_execution_start": {
 			const streaming = state.streaming;
 			if (!streaming) return state;
+			if (event.toolName === STATUS_TOOL_NAME) {
+				const args = (event.args ?? {}) as { text?: unknown; phase?: unknown };
+				const text = cleanStatusText(args.text);
+				return {
+					...state,
+					researchStatus: {
+						...state.researchStatus,
+						agent: text ? { text, phase: typeof args.phase === "string" ? args.phase : undefined, source: "agent" } : null,
+					},
+					streaming: removeControlTool(streaming, event.toolCallId),
+				};
+			}
+			const hostStatus = inferHostResearchStatus(event.toolName, event.args);
+			if (hostStatus) {
+				state = {
+					...state,
+					researchStatus: {
+						...state.researchStatus,
+						host: { ...hostStatus, source: "host", toolName: event.toolName, toolCallId: event.toolCallId },
+					},
+				};
+			}
 			// subagent：单代理或 parallel tasks 都从折叠区移出建独立工作中行；
 			// management（action）/workflowScript（可能后台）/subagent_wait 不走独立行。
 			const startArgs = (event.args ?? {}) as {
@@ -402,6 +466,10 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 			return { ...state, streaming: { ...streaming, tools, rawToolOutputs, subagentRuns } };
 		}
 		case "tool_execution_end": {
+			if (event.toolName === STATUS_TOOL_NAME) return state;
+			if (state.researchStatus.host?.toolCallId === event.toolCallId) {
+				state = { ...state, researchStatus: { ...state.researchStatus, host: null } };
+			}
 			// todo 工具：全量替换会话任务列表（含空数组=清空）。不随 turn_end 清理、
 			// 不被 loadHistory 重置 —— 在 streaming 守卫之前处理，容错无流式容器的情况
 			let next = state;
@@ -504,7 +572,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				agentActive: event.willRetry ? state.agentActive : false,
 				// run 真正终结（非重试中）才盖定格戳：agent_end 晚于最后一条消息落地，
 				// 取 max 后保证计时单调不回退
-				...(event.willRetry ? {} : { runEndedAt: Date.now() }),
+				...(event.willRetry ? {} : { runEndedAt: Date.now(), researchStatus: { agent: null, host: null } }),
 			});
 			// 决策 D1：willRetry=true → 继续重试，丢弃本轮的 pending 错误卡；
 			// willRetry=false → 最终失败，落卡（位置 = 该轮 assistant 消息之后）
@@ -519,6 +587,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				phase: "idle",
 				agentActive: false,
 				retrying: null,
+				researchStatus: { agent: null, host: null },
 				runEndedAt: Date.now(),
 			});
 			return final.pendingLlmError ? commitLlmErrorCard(final, final.pendingLlmError) : final;

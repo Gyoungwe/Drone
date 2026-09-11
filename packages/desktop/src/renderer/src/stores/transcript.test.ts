@@ -1499,3 +1499,107 @@ describe("transcript store unseenCompletion", () => {
 		expect(entry("s1")?.todos).toEqual([]);
 	});
 });
+
+describe("live research status", () => {
+	function toolCallState(name: string, id = "status-1") {
+		let state = reduceEvent(emptyTranscript(), ev("agent_start"));
+		state = reduceEvent(
+			state,
+			{
+				type: "message_update",
+				assistantMessageEvent: {
+					type: "toolcall_start",
+					contentIndex: 0,
+					partial: { content: [{ type: "toolCall", name }] },
+				},
+			} as unknown as AgentSessionEvent,
+		);
+		state = reduceEvent(
+			state,
+			{
+				type: "message_update",
+				assistantMessageEvent: {
+					type: "toolcall_end",
+					contentIndex: 0,
+					toolCall: { id, name, arguments: {} },
+				},
+			} as unknown as AgentSessionEvent,
+		);
+		return state;
+	}
+
+	it("set_status updates live status and disappears from tool cards", () => {
+		let state = toolCallState("set_status");
+		state = reduceEvent(
+			state,
+			{
+				type: "tool_execution_start",
+				toolCallId: "status-1",
+				toolName: "set_status",
+				args: { text: "正在比较系统发育证据…", phase: "verification" },
+			} as unknown as AgentSessionEvent,
+		);
+		expect(state.researchStatus.agent).toMatchObject({
+			text: "正在比较系统发育证据…",
+			phase: "verification",
+			source: "agent",
+		});
+		expect(state.streaming?.tools).toHaveLength(0);
+		expect(state.streaming?.activity).toHaveLength(0);
+	});
+
+	it("real research tool temporarily overrides agent status and restores it on end", () => {
+		let state = toolCallState("set_status");
+		state = reduceEvent(
+			state,
+			{
+				type: "tool_execution_start",
+				toolCallId: "status-1",
+				toolName: "set_status",
+				args: { text: "正在整理神经行为证据…", phase: "synthesis" },
+			} as unknown as AgentSessionEvent,
+		);
+		state = reduceEvent(
+			state,
+			{
+				type: "tool_execution_start",
+				toolCallId: "obs-1",
+				toolName: "research-obsidian_search_notes",
+				args: { query: "autotomy" },
+			} as unknown as AgentSessionEvent,
+		);
+		expect(state.researchStatus.host).toMatchObject({
+			text: "正在搜索 Obsidian 知识库…",
+			phase: "knowledge-search",
+			source: "host",
+			toolCallId: "obs-1",
+		});
+		state = reduceEvent(
+			state,
+			{
+				type: "tool_execution_end",
+				toolCallId: "obs-1",
+				toolName: "research-obsidian_search_notes",
+				result: { content: [] },
+				isError: false,
+			} as unknown as AgentSessionEvent,
+		);
+		expect(state.researchStatus.host).toBeNull();
+		expect(state.researchStatus.agent?.text).toBe("正在整理神经行为证据…");
+	});
+
+	it("agent_end clears both status layers", () => {
+		let state = toolCallState("set_status");
+		state = reduceEvent(
+			state,
+			{
+				type: "tool_execution_start",
+				toolCallId: "status-1",
+				toolName: "set_status",
+				args: { text: "正在制定研究策略…", phase: "planning" },
+			} as unknown as AgentSessionEvent,
+		);
+		state = reduceEvent(state, ev("agent_end", { willRetry: false, messages: [] }));
+		expect(state.researchStatus).toEqual({ agent: null, host: null });
+	});
+});

@@ -67,7 +67,7 @@ export function TurnDiffChip({
 	entering: boolean;
 }) {
 	const t = useT();
-	const setDiffSidebarOpen = useUiStore((s) => s.setDiffSidebarOpen);
+	const showDiffSidebar = useUiStore((s) => s.showDiffSidebar);
 	const setDiffFocus = useUiStore((s) => s.setDiffFocus);
 	const enterCls = entering ? " turn-diff-enter" : "";
 
@@ -81,7 +81,7 @@ export function TurnDiffChip({
 	}
 
 	const jumpTo = (sectionKey?: string) => {
-		setDiffSidebarOpen(true);
+		showDiffSidebar();
 		if (sectionKey) setDiffFocus(sectionKey);
 	};
 	const fileCount = changes.files.length;

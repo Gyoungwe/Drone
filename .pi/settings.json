@@ -3,7 +3,10 @@
     "./extensions/subagent-research.mjs",
     "./extensions/obsidian-workbench.mjs",
     "./extensions/source-archive.mjs",
-    "./extensions/workspace-config.mjs"
+    "./extensions/workspace-config.mjs",
+    "./extensions/research-wikiloop.mjs",
+    "./extensions/research-loop.mjs",
+    "./extensions/research-wikiskill.mjs"
   ],
   "packages": [
     "npm:pi-subagents",

@@ -159,6 +159,15 @@ export const zh = {
 			mutex: "检测到 subagent 扩展 {path}，其工具已由内置 subagent 接管：{tools}",
 		},
 	},
+	resource: {
+		backToChanges: "← 变更",
+		openExternal: "外部打开",
+		externalProtocol: "此链接需要交给系统应用打开。",
+		previewFailed: "无法在侧栏预览此资源",
+		loading: "正在加载资源…",
+		binaryHint: "此文件类型暂不支持内嵌预览，可使用系统默认应用打开。",
+		truncated: "预览已截断",
+	},
 	diff: {
 		toggle: "变更侧栏",
 		title: "变更",
@@ -452,6 +461,7 @@ export const zh = {
 			regionCornerTopRight: "聊天区右上角",
 			regionCornerBottomLeft: "聊天区左下角",
 			regionCornerBottomRight: "聊天区右下角",
+			regionDiffSidebar: "右侧扩展栏",
 			regionSettingsPanel: "设置面板",
 			assignmentTitle: "槽位指派",
 			assignmentHint: "多个插件声明同一槽位时，选择生效的插件",

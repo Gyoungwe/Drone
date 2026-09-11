@@ -42,6 +42,8 @@ const api: PiApi = {
 	listConfiguredPackages: () => ipcRenderer.invoke(IpcChannels.PackagesListConfigured),
 	saveFileDialog: (defaultName, content) =>
 		ipcRenderer.invoke(IpcChannels.FileSaveDialog, defaultName, content),
+	previewFile: (target, cwd) => ipcRenderer.invoke(IpcChannels.FilePreview, target, cwd),
+	openResourceExternal: (target, cwd) => ipcRenderer.invoke(IpcChannels.ResourceOpenExternal, target, cwd),
 	getSessionMessages: (sessionId) => ipcRenderer.invoke(IpcChannels.SessionGetMessages, sessionId),
 	getTodos: (sessionId) => ipcRenderer.invoke(IpcChannels.SessionGetTodos, sessionId),
 	listModels: () => ipcRenderer.invoke(IpcChannels.ModelsList),

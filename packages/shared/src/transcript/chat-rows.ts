@@ -28,6 +28,8 @@ export type ChatRow =
 			/** 正文在输出或 run 已终结 → working 消失时立即结束，不做滞后缓冲 */
 			endImmediately: boolean;
 			subagentCount: number;
+			/** live 工作状态：宿主真实工具状态优先，其次 Agent 自报。 */
+			statusText?: string;
 	  }
 	| {
 			kind: "message";
@@ -128,6 +130,9 @@ export function buildChatRows(
 	const flushMeta = (isLatest = false, forceEmpty = false, subagentCount = 0): void => {
 		if (metaItems.length === 0 && !forceEmpty && subagentCount === 0) return;
 		const endImmediately = Boolean(streaming?.text) || !transcript.agentActive;
+		const statusText = isLatest
+			? (transcript.researchStatus.host?.text ?? transcript.researchStatus.agent?.text)
+			: undefined;
 		rows.push({
 			kind: "metaGroup",
 			key: `meta-${sessionId}-g${groupIndex++}`,
@@ -135,6 +140,7 @@ export function buildChatRows(
 			working: isLatest && agentWorking,
 			endImmediately,
 			subagentCount,
+			...(statusText ? { statusText } : {}),
 		});
 		metaItems = [];
 	};

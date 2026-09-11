@@ -154,6 +154,7 @@ Slot 是「替换」，Region/Contribution 是「新增」：插件可以在宿�
 | `app.background` | App 根、内容列之前 | 绝对填充 z-0 | 动态背景 |
 | `app.overlay` | App 根、内容列之后、弹窗之前 | 每贡献一个 `fixed inset-0 z-20` 容器 + anchor 九宫格对齐 | 桌宠、悬浮物 |
 | `chat.corner.top-left` / `top-right` / `bottom-left` / `bottom-right` | 聊天区 main 内 | `absolute z-20` 同角纵向堆叠（顺序=启用先后） | 小部件 |
+| `chat.diff-sidebar` | 宿主 Git Diff 右侧扩展栏 | 跟随 420px push 式侧栏，普通文档流堆叠 | 图片图库、仓库辅助面板 |
 | `settings.panel` | 设置弹窗 | 独立分类页（分类标题 = `title`） | 插件配置页 |
 
 z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全屏预览 50。**插件层永在弹窗之下**。
@@ -186,6 +187,7 @@ z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全�
 
 - `chat.corner.top-right` 与任务列表面板（TodoPanel）同角：宿主容器已预留 `pt-12` 偏移，贡献堆在面板下方；面板展开（完整列表）时可能遮挡贡献，属预期；
 - 同角多贡献纵向堆叠，顺序 = 启用先后（先启用的在上）；
+- `chat.diff-sidebar` 贡献直接进入宿主 Git Diff 右侧栏；可通过 `useUiStore((s) => s.setDiffSidebarOpen)` 打开该栏，不要再创建第二套悬浮侧栏；
 - `settings.panel` 贡献渲染为设置弹窗的独立分类（分类 id `plugin:<name>:<cid>`，标题 = `title`），随插件启停自动增删；
 - 排查：贡献根元素外层的宿主容器挂 `data-plugin="<name>"` 属性（插件无需自己做）；
 - **内置插件**：`resources/ui-plugins/builtin/` 随包分发，应用首次启动/升级时导出到用户插件目录（与用户插件同一条扫描/构建/热重载路径，面板带「内置」badge、启用免二次确认）。**直接改内置副本会在下次升级被覆盖——魔改请把目录改名另存**（`plugin.json` 的 `name` 同步改）；手动删除的目录本版本内不会回来，下次升级重新导出；
