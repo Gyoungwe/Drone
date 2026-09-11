@@ -1,4 +1,4 @@
-import type { TrustRequest } from "@percho/shared";
+import type { AskRequest, AskResponse, TrustRequest } from "@percho/shared";
 import { useCallback, useEffect, useState } from "react";
 import { getPi } from "./api";
 import { EmptyState } from "./components/chat/EmptyState";
@@ -7,6 +7,7 @@ import { TodoPanel } from "./components/chat/TodoPanel";
 import { DiffSidebar } from "./components/diff/DiffSidebar";
 import { ProjectPage } from "./components/projects/ProjectPage";
 import { ApprovalDock } from "./components/session/ApprovalDock";
+import { AskDialog } from "./components/session/AskDialog";
 import { SessionRail } from "./components/session/SessionRail";
 import { SessionTabBar } from "./components/session/SessionTabBar";
 import { TrustDialog } from "./components/session/TrustDialog";
@@ -42,12 +43,17 @@ export default function App() {
 		return !entry || (entry.messages.length === 0 && !entry.streaming);
 	});
 	const [trustRequests, setTrustRequests] = useState<TrustRequest[]>([]);
+	const [askRequests, setAskRequests] = useState<AskRequest[]>([]);
 
 	// 事件桥：conflator 装配 + 事件/权限/信任订阅（回调稳定引用，桥只订阅一次不重挂）
 	const pushTrustRequest = useCallback((req: TrustRequest) => {
 		setTrustRequests((prev) => [...prev, req]);
 	}, []);
 	useSessionEventBridge({ onTrustRequest: pushTrustRequest });
+
+	useEffect(() => getPi().onAskRequest((request) => {
+		setAskRequests((current) => current.some((item) => item.id === request.id) ? current : [...current, request]);
+	}), []);
 
 	// 一次性 bootstrap：开屏就绪信号 + 更新状态 + UI 插件加载
 	useEffect(() => {
@@ -62,6 +68,11 @@ export default function App() {
 		// UI 插件加载链路（总开关关时只订阅事件，零开销）
 		void initUiPlugins();
 	}, []);
+
+	const respondAsk = async (requestId: string, response: AskResponse) => {
+		await getPi().respondAsk(requestId, response);
+		setAskRequests((current) => current.filter((request) => request.id !== requestId));
+	};
 
 	const respondTrust = (requestId: string, optionIndex: number) => {
 		void getPi().respondTrust(requestId, optionIndex);
@@ -112,6 +123,7 @@ export default function App() {
 			{/* 悬浮贡献层：内容列之后、设置弹窗之前（z-20 < z-40，插件层永在弹窗之下） */}
 			<RegionHost region={UI_REGIONS.AppOverlay} />
 			<SettingsDialog />
+			<AskDialog requests={askRequests} onRespond={respondAsk} />
 			<TrustDialog requests={trustRequests} onRespond={respondTrust} />
 			<Toaster />
 		</div>

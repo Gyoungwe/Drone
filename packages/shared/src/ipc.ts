@@ -1,3 +1,4 @@
+import type { AskRequest, AskResponse } from "./ask";
 import type { LanStatus } from "./lan";
 import type { McpConfigSnapshot, McpStatus, McpStatusEvent } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "./packages";
@@ -128,6 +129,8 @@ export const IpcChannels = {
 	LanSetEnabled: "lan:setEnabled",
 	/** 局域网远程控制二级开关（M2；默认关闭，开观察 ≠ 开控制）。 */
 	LanSetRemoteControl: "lan:setRemoteControl",
+	AskRequest: "ask:request",
+	AskRespond: "ask:respond",
 	PermissionRespond: "permission:respond",
 	/** 权限门控配置（enabled 解析保留，UI 无入口；chip 逃生舱禁用态感知用） */
 	PermissionGetConfig: "permission:getConfig",
@@ -312,6 +315,8 @@ export interface PiApi {
 	lanSetEnabled(enabled: boolean): Promise<LanStatus>;
 	/** 设置远程控制开关（独立于观察开关；未开观察时允许配置但不生效）。 */
 	lanSetRemoteControl(enabled: boolean): Promise<LanStatus>;
+	respondAsk(requestId: string, response: AskResponse): Promise<void>;
+	onAskRequest(cb: (req: AskRequest) => void): () => void;
 	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;
 	/** 读取权限门控配置（enabled=false = 手改 permissions.json 的隐藏逃生舱态，chip 禁用提示用） */
 	getPermissionConfig(): Promise<PermissionConfigInfo>;

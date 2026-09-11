@@ -1,5 +1,6 @@
 import type { PiBackend } from "@percho/backend";
 import type {
+	AskResponse,
 	CustomProviderInput,
 	CustomProviderUpdateInput,
 	ListProvidersOptions,
@@ -67,6 +68,7 @@ export function registerSettingsIpc(backend: PiBackend): void {
 	ipcMain.handle(IpcChannels.SettingsLoginRespond, (_e, loginId: string, promptId: string, value: string) =>
 		backend.login.respond(loginId, promptId, value),
 	);
+	ipcMain.handle(IpcChannels.AskRespond, (_e, requestId: string, response: AskResponse) => backend.respondAsk(requestId, response));
 	ipcMain.handle(IpcChannels.PermissionRespond, (_e, requestId: string, answer: PermissionAnswer) =>
 		backend.respondPermission(requestId, answer),
 	);

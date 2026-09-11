@@ -13,6 +13,8 @@ import {
 	type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import type {
+	AskRequest,
+	AskResponse,
 	AvailableModel,
 	CatalogPackageType,
 	CatalogSearchResult,
@@ -61,6 +63,7 @@ import { walkProjectFiles } from "./project/files";
 import { TrustGate } from "./project/trust";
 import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
+import { AskGate } from "./session/ask-gate";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
 import {
 	assignEntryIds,
@@ -76,6 +79,7 @@ import { autoNameSession } from "./session/naming";
 import { EventRateTracker } from "./session/rates";
 import { type EventForwarder, SessionRegistry } from "./session/registry";
 import { StreamGuard } from "./session/stream-guard";
+import { makeAskUserTool } from "./tools/ask-user";
 import { makeStatusTool } from "./tools/status";
 import { TraceRecorder } from "./session/trace";
 import { SessionTraces } from "./session/traces";
@@ -133,6 +137,7 @@ export interface PiBackendOptions {
 }
 
 type EventHandler = (sessionId: string, event: SessionEvent) => void;
+type AskHandler = (req: AskRequest) => void;
 type PermissionHandler = (req: PermissionRequest) => void;
 type PermissionResolvedHandler = (result: PermissionResolved) => void;
 type TrustHandler = (req: TrustRequest) => void;
@@ -153,6 +158,7 @@ type McpHandler = (cwd: string, status: McpStatus) => void;
 export class PiBackend {
 	private readonly registry = new SessionRegistry();
 	private readonly eventHandlers = new Set<EventHandler>();
+	private readonly askHandlers = new Set<AskHandler>();
 	private readonly permissionHandlers = new Set<PermissionHandler>();
 	private readonly permissionResolvedHandlers = new Set<PermissionResolvedHandler>();
 	private readonly trustHandlers = new Set<TrustHandler>();
@@ -165,6 +171,7 @@ export class PiBackend {
 	}>();
 	readonly mcp = new McpService();
 	private readonly gates = new Map<string, PermissionGate>();
+	private readonly askGates = new Map<string, AskGate>();
 	/** 按会话权限模式（default 缺省；fullAccess = 一切放行 + 高危审计）：会话创建时随工厂注入，关会话/重启归零 */
 	private readonly permissionModes = new Map<string, PermissionModeRef>();
 	/** 项目信任决策记录（~/.pi/agent/trust.json，与 CLI 共享）+ 信任请求门控 */
@@ -204,12 +211,14 @@ export class PiBackend {
 	}
 
 	/** 自定义工具 = 调用方传入的 + 内置 webfetch（webFetch:false 关闭）+ show_image + set_status + todo + subagent */
-	private buildCustomTools(gate: PermissionGate): ToolDefinition[] {
+	private buildCustomTools(gate: PermissionGate, askGate: AskGate): ToolDefinition[] {
 		const tools = [...(this.options.customTools ?? [])];
 		const webFetch = this.options.webFetch;
 		if (webFetch !== false) {
 			tools.push(makeWebFetchTool(typeof webFetch === "object" ? webFetch : undefined));
 		}
+		// Desktop-native ask_user intentionally overrides the TUI-only pi-ask tool while preserving its public contract.
+		tools.push(makeAskUserTool({ ask: (request, signal) => askGate.ask(request, signal) }));
 		tools.push(makeShowImageTool());
 		tools.push(makeStatusTool());
 		tools.push(makeTodoTool());
@@ -361,6 +370,7 @@ export class PiBackend {
 			options.provider && options.modelId ? runtime.getModel(options.provider, options.modelId) : undefined;
 
 		const gate = new PermissionGate((req) => this.dispatchPermissionRequest(req));
+		const askGate = new AskGate((req) => this.dispatchAskRequest(req));
 		// 权限扩展的确认通道直接桥到 gate（携带 kind/suggestDir 元数据，驱动「允许此目录」/持久化）
 		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
 		// 会话权限模式引用：新会话一律 default 起步（D1：不落盘、不继承），随工厂闭包注入求值链
@@ -376,7 +386,7 @@ export class PiBackend {
 			model,
 			thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
 			tools: this.options.tools,
-			customTools: this.buildCustomTools(gate),
+			customTools: this.buildCustomTools(gate, askGate),
 			sessionManager: SessionManager.create(cwd),
 			settingsManager,
 			resourceLoader,
@@ -394,7 +404,9 @@ export class PiBackend {
 		}
 
 		gate.bindSession(session.sessionId);
+		askGate.bindSession(session.sessionId);
 		this.gates.set(session.sessionId, gate);
+		this.askGates.set(session.sessionId, askGate);
 		this.permissionModes.set(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
 			await session.bindExtensions({
@@ -419,6 +431,7 @@ export class PiBackend {
 		const sessionManager = SessionManager.open(filePath);
 		const cwd = sessionManager.getCwd() || process.cwd();
 		const gate = new PermissionGate((req) => this.dispatchPermissionRequest(req));
+		const askGate = new AskGate((req) => this.dispatchAskRequest(req));
 		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
 		// 重开历史会话同样 default 起步（D1：模式不随会话文件继承）
 		const modeRef: PermissionModeRef = { current: "default" };
@@ -431,7 +444,7 @@ export class PiBackend {
 			modelRuntime: runtime,
 			settingsManager,
 			resourceLoader,
-			customTools: this.buildCustomTools(gate),
+			customTools: this.buildCustomTools(gate, askGate),
 		});
 		const mutex = applySubagentMutex(session, extensionsResult, this.options.subagentPreferBuiltin !== false);
 		if (mutex.shadowed.length > 0) {
@@ -445,7 +458,9 @@ export class PiBackend {
 			}
 		}
 		gate.bindSession(session.sessionId);
+		askGate.bindSession(session.sessionId);
 		this.gates.set(session.sessionId, gate);
+		this.askGates.set(session.sessionId, askGate);
 		this.permissionModes.set(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
 			await session.bindExtensions({ uiContext: makeUiContext(gate), mode: "tui" });
@@ -507,6 +522,8 @@ export class PiBackend {
 		entry.session.dispose();
 		this.gates.get(sessionId)?.dispose();
 		this.gates.delete(sessionId);
+		this.askGates.get(sessionId)?.dispose();
+		this.askGates.delete(sessionId);
 		this.permissionModes.delete(sessionId);
 		this.streamGuard.cleanup(sessionId);
 		this.eventRates.delete(sessionId);
@@ -1005,6 +1022,18 @@ export class PiBackend {
 		return () => this.eventHandlers.delete(handler);
 	}
 
+	onAskRequest(handler: AskHandler): () => void {
+		this.askHandlers.add(handler);
+		return () => this.askHandlers.delete(handler);
+	}
+
+	respondAsk(requestId: string, response: AskResponse): void {
+		for (const gate of this.askGates.values()) {
+			if (gate.respond(requestId, response)) return;
+		}
+		throw new Error("Ask request is no longer pending");
+	}
+
 	onPermissionRequest(handler: PermissionHandler): () => void {
 		this.permissionHandlers.add(handler);
 		return () => this.permissionHandlers.delete(handler);
@@ -1137,6 +1166,12 @@ export class PiBackend {
 		const entry = this.registry.get(sessionId);
 		if (!entry) throw new Error(`Session not found: ${sessionId}`);
 		return this.registry.toMeta(entry);
+	}
+
+	private dispatchAskRequest(req: AskRequest): boolean {
+		if (this.askHandlers.size === 0) return false;
+		for (const handler of this.askHandlers) handler(req);
+		return true;
 	}
 
 	private dispatchPermissionRequest(req: PermissionRequest): void {

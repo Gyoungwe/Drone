@@ -92,6 +92,12 @@ const api: PiApi = {
 		ipcRenderer.on(IpcChannels.SettingsLoginEvent, listener);
 		return () => ipcRenderer.removeListener(IpcChannels.SettingsLoginEvent, listener);
 	},
+	respondAsk: (requestId, response) => ipcRenderer.invoke(IpcChannels.AskRespond, requestId, response),
+	onAskRequest: (cb) => {
+		const listener = (_event: unknown, req: Parameters<typeof cb>[0]) => cb(req);
+		ipcRenderer.on(IpcChannels.AskRequest, listener);
+		return () => ipcRenderer.removeListener(IpcChannels.AskRequest, listener);
+	},
 	respondPermission: (requestId, answer) =>
 		ipcRenderer.invoke(IpcChannels.PermissionRespond, requestId, answer),
 	getPermissionConfig: () => ipcRenderer.invoke(IpcChannels.PermissionGetConfig),

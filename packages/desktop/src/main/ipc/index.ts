@@ -1,5 +1,5 @@
 import type { PiBackend } from "@percho/backend";
-import type { PermissionRequest, PermissionResolved, TrustRequest } from "@percho/shared";
+import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@percho/shared";
 import { IpcChannels } from "@percho/shared";
 import { BrowserWindow } from "electron";
 import type { LanObserverHandle } from "../lan";
@@ -42,6 +42,9 @@ export function registerIpc(
 
 	backend.onEvent((sessionId, event) => {
 		sendToRenderer(IpcChannels.Event, { sessionId, event });
+	});
+	backend.onAskRequest((req: AskRequest) => {
+		sendToRenderer(IpcChannels.AskRequest, req);
 	});
 	backend.onPermissionRequest((req: PermissionRequest) => {
 		sendToRenderer(IpcChannels.PermissionRequest, req);
