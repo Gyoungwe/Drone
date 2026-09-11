@@ -163,6 +163,10 @@ export type SlashCommandSource = "builtin" | "template" | "skill" | "extension";
 
 /** 斜杠命令条目（补全面板展示用） */
 export interface SlashCommandInfo {
+	/** Display/search aliases; canonical name is still the exact SDK invocation. */
+	aliases?: string[];
+	/** Owning skill for a first-party action; not another standalone setup workflow. */
+	ownerSkill?: string;
 	/** 命令名，不含前导 / */
 	name: string;
 	description: string;

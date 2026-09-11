@@ -1,4 +1,4 @@
-import type { SlashCommandInfo } from "@percho/shared";
+import { getSkillCategory, type SlashCommandInfo, skillCatalogSearchText } from "@percho/shared";
 
 export const SOURCE_ORDER: SlashCommandInfo["source"][] = ["builtin", "template", "skill", "extension"];
 
@@ -35,21 +35,84 @@ export function removeSlashToken(text: string, token: SlashToken): string {
 	return before + after;
 }
 
-/** 过滤后的命令列表（按来源分组顺序拍平；skill 子串命中排在最后）
- *  非 skill 命令维持前缀匹配；skill 命令额外支持去 skill: 前缀后的前缀/子串匹配 */
-export function filterCommands(commands: SlashCommandInfo[], query: string): SlashCommandInfo[] {
-	if (!query) return commands;
-	const rest = commands.filter((c) => c.source !== "skill" && c.name.startsWith(query));
+/** 过滤后的命令列表（按来源分组顺序拍平；skill 名称优先、描述命中兜底）
+ *  非 skill 命令维持前缀匹配；skill 命令支持去 skill: 前缀后的前缀/子串匹配，以及描述关键词匹配 */
+export function isSpecializedCommand(command: SlashCommandInfo): boolean {
+	return command.source === "skill" && ["setup", "support"].includes(getSkillCategory(command.name));
+}
+export function filterCommands(
+	commands: SlashCommandInfo[],
+	query: string,
+	showSpecialized = false,
+): SlashCommandInfo[] {
+	if (!query)
+		return showSpecialized ? commands : commands.filter((command) => !isSpecializedCommand(command));
+	const needle = query.toLocaleLowerCase();
+	const rest = commands.filter(
+		(c) =>
+			c.source !== "skill" &&
+			(c.name.toLocaleLowerCase().startsWith(needle) ||
+				c.aliases?.some((alias) => alias.toLocaleLowerCase().startsWith(needle))),
+	);
+	// A setup query should not list its owning skill again as a second setup workflow.
+	const actionOwners = new Set(
+		rest
+			.filter(
+				(command) =>
+					command.ownerSkill &&
+					(command.name.toLocaleLowerCase() === needle ||
+						command.aliases?.some((alias) => alias.toLocaleLowerCase().startsWith(needle))),
+			)
+			.map((command) => `skill:${command.ownerSkill}`),
+	);
 	const prefixSkills: SlashCommandInfo[] = [];
 	const substringSkills: SlashCommandInfo[] = [];
+	const descriptionSkills: SlashCommandInfo[] = [];
+	const descriptionQuery = query.toLocaleLowerCase();
 	for (const skill of commands) {
-		if (skill.source !== "skill") continue;
+		if (skill.source !== "skill" || actionOwners.has(skill.name)) continue;
 		const bare = skill.name.startsWith(SKILL_PREFIX) ? skill.name.slice(SKILL_PREFIX.length) : skill.name;
-		if (skill.name.startsWith(query) || bare.startsWith(query)) {
+		if (skill.name.toLocaleLowerCase().startsWith(needle) || bare.toLocaleLowerCase().startsWith(needle)) {
 			prefixSkills.push(skill);
-		} else if (bare.includes(query)) {
+		} else if (bare.toLocaleLowerCase().includes(needle)) {
 			substringSkills.push(skill);
+		} else if (
+			`${skill.description} ${skillCatalogSearchText(skill.name)}`
+				.toLocaleLowerCase()
+				.includes(descriptionQuery)
+		) {
+			descriptionSkills.push(skill);
 		}
 	}
-	return [...rest, ...prefixSkills, ...substringSkills];
+	return [...rest, ...prefixSkills, ...substringSkills, ...descriptionSkills];
+}
+
+export type SlashMenuGroup = SlashCommandInfo["source"] | "setup" | "support";
+const MENU_GROUP_ORDER: SlashMenuGroup[] = [...SOURCE_ORDER, "setup", "support"];
+/** A single ordering function for DOM, keyboard Enter and Tab; no visual/runtime index mismatch. */
+export function groupCommands(
+	commands: SlashCommandInfo[],
+	query: string,
+	showSpecialized = false,
+): Array<{ source: SlashMenuGroup; items: SlashCommandInfo[] }> {
+	const buckets = new Map<SlashMenuGroup, SlashCommandInfo[]>();
+	for (const command of filterCommands(commands, query, showSpecialized)) {
+		const source: SlashMenuGroup = isSpecializedCommand(command)
+			? (getSkillCategory(command.name) as "setup" | "support")
+			: command.source;
+		const items = buckets.get(source) ?? [];
+		items.push(command);
+		buckets.set(source, items);
+	}
+	return MENU_GROUP_ORDER.filter((source) => buckets.has(source)).map((source) => ({
+		source,
+		items: buckets.get(source) ?? [],
+	}));
+}
+export function menuCommands(
+	commands: SlashCommandInfo[],
+	query: string,
+	showSpecialized = false,
+): SlashCommandInfo[] {
+	return groupCommands(commands, query, showSpecialized).flatMap((group) => group.items);
 }

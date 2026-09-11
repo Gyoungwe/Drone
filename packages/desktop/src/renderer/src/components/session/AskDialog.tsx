@@ -53,17 +53,18 @@ export function AskDialog({ requests, onRespond }: { requests: AskRequest[]; onR
 						const draft = drafts[question.id] ?? {};
 						const selected = draft.values ?? [];
 						const multi = question.type === "multi";
+						const textOnly = question.type === "text";
 						return (
 							<section key={question.id} className="space-y-2.5">
 								<div className="flex items-start gap-2">
 									<span className="mt-0.5 rounded-md bg-hover px-1.5 py-0.5 text-[10px] font-medium text-ink-faint">{question.label || `Q${questionIndex + 1}`}</span>
 									<div className="min-w-0 flex-1">
 										<p className="text-[13px] font-medium leading-relaxed text-ink">{question.prompt}</p>
-										<p className="mt-0.5 text-[10px] text-ink-faint">{multi ? t("ask.multiHint") : t("ask.singleHint")}{question.required ? ` · ${t("ask.required")}` : ""}</p>
+										{!textOnly && <p className="mt-0.5 text-[10px] text-ink-faint">{multi ? t("ask.multiHint") : t("ask.singleHint")}{question.required ? ` · ${t("ask.required")}` : ""}</p>}
 									</div>
 								</div>
 								<div className="grid gap-1.5 pl-8">
-									{question.options.map((option) => {
+									{!textOnly && question.options.map((option) => {
 										const active = selected.includes(option.value);
 										return (
 											<button key={option.value} type="button" onClick={() => toggle(question.id, option.value, multi)} className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${active ? "border-accent bg-accent/8" : "border-border bg-surface hover:bg-hover"}`}>

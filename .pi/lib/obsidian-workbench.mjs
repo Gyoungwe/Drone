@@ -1,14 +1,17 @@
-import { access, mkdir, readdir, readFile, writeFile, rename, realpath } from 'node:fs/promises';
+import { knowledgeDirectory, readKnowledgeBinding, saveKnowledgeBinding } from './knowledge/config.mjs';
+import { getKnowledgeService, notifyKnowledgeChange } from './knowledge/service.mjs';
+import { initializeSharedNavigation, initializeProjectContext } from './knowledge/layout.mjs';
+import { access, mkdir, readdir, readFile, writeFile, rename, realpath, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { pathToFileURL, fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { initializeVault, loadWorkspaceConfig, saveWorkspaceConfig } from '../extensions/workspace-config.mjs';
 import { LAYOUT, renderTemplate } from './vault-layout.mjs';
+import { getVaultProfile, listVaultProfiles } from './vault-profiles.mjs';
 
 export const SERVER_NAME = 'research-obsidian';
+export const OBSIDIAN_READ_TOOLS = ['read_note', 'read_multiple_notes', 'search_notes', 'list_directory', 'get_notes_info', 'get_frontmatter', 'get_vault_stats', 'list_all_tags', 'wiki_link', 'get_note_outline', 'read_note_lines'];
 
-const PROJECT_TYPES = [...LAYOUT.projectTypes, 'Software', 'Methods'];
-const LIBRARY_TYPES = LAYOUT.libraryTypes;
 const MANAGED_START = '<!-- pi-agent:managed:start -->';
 const MANAGED_END = '<!-- pi-agent:managed:end -->';
 const PROJECT_TEMPLATE = `---\ntype: project\nproject: "{{project_slug}}"\ntitle: {{project_title_yaml}}\ncreated_at: "{{created_at}}"\n---\n\n# {{project_title}}\n\n[[Home]] | [[Projects/Index]] | [[Library/Index]]\n\n## Research question\n\n## Goals\n\n## Next steps\n\n${MANAGED_START}\n{{project_content}}\n${MANAGED_END}\n\n## Human review\n\n`;
@@ -26,7 +29,7 @@ async function configuredVault(cwd) {
   if (!obsidianVault) throw new Error('Obsidian vault must be configured first');
   // Summaries may be the first writer in a freshly configured test or vault;
   // initializeVault will add the directory structure below.
-  await mkdir(obsidianVault, { recursive: true });
+  if (!knowledgeDirectory()) await mkdir(obsidianVault, { recursive: true });
   return canonical(obsidianVault);
 }
 
@@ -71,6 +74,7 @@ async function writeManagedIndex(file, heading, body) {
   const temporary = `${file}.${randomUUID()}.tmp`;
   await writeFile(temporary, updated, 'utf8');
   await rename(temporary, file);
+  if (knowledgeDirectory()) await notifyKnowledgeChange(file);
 }
 
 async function childEntries(directory) {
@@ -111,14 +115,25 @@ async function ensureTemplate(vault) {
   return template;
 }
 
-async function refreshIndexes(vault, project = null, refreshAll = false) {
+async function refreshIndexes(vault, project = null, refreshAll = false, profileId = 'hybrid') {
+  if (knowledgeDirectory()) {
+    const binding = await readKnowledgeBinding();
+    if (binding?.vault === vault) {
+      const service = await getKnowledgeService(binding);
+      const index = await service.request('enqueueNavigation', { project });
+      return { maintenance: 'queued', scope: 'application', index };
+    }
+  }
+  const profile = getVaultProfile(profileId);
+  const projectTypes = profile.projectTypes;
+  const libraryTypes = profile.libraryTypes;
   const projectRoot = await vaultPath(vault, 'Projects');
   const projects = (await childEntries(projectRoot)).filter(entry => entry.isDirectory() && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(entry.name)).map(entry => entry.name).sort();
   const projectIndexes = [];
   for (const slug of projects) {
     const index = await vaultPath(vault, 'Projects', slug, 'Index.md');
     if (refreshAll || project === slug || await readText(index) === null) {
-      const body = await categorizedLinks(vault, `Projects/${slug}`, PROJECT_TYPES);
+      const body = await categorizedLinks(vault, `Projects/${slug}`, projectTypes);
       await writeManagedIndex(index, `---\ntype: project\nproject: ${JSON.stringify(slug)}\n---\n\n# ${slug}\n\n[[Home]] | [[Projects/Index]] | [[Library/Index]]`, body);
     }
     projectIndexes.push(index);
@@ -129,24 +144,29 @@ async function refreshIndexes(vault, project = null, refreshAll = false) {
   const libraryIndex = await vaultPath(vault, 'Library', 'Index.md');
   await writeManagedIndex(projectsIndex, '# Projects\n\n[[Home]]', links);
   await writeManagedIndex(legacyIndex, '# Projects', links);
-  await writeManagedIndex(libraryIndex, '# Library\n\n[[Home]]', await categorizedLinks(vault, 'Library', LIBRARY_TYPES));
+  await writeManagedIndex(libraryIndex, '# Library\n\n[[Home]]', await categorizedLinks(vault, 'Library', libraryTypes));
   const knowledgeIndex = await vaultPath(vault, 'Indexes', 'Knowledge.md');
   await writeManagedIndex(knowledgeIndex, '# Knowledge', [links, '[[Library/Index]]'].filter(Boolean).join('\n\n'));
   return { projectsIndex, legacyIndex, libraryIndex, knowledgeIndex, projectIndexes };
 }
 
 export async function installProjectTemplate({ cwd = process.cwd() } = {}) {
-  return updateVault(cwd, async vault => ({ vault, template: await ensureTemplate(vault), ...await refreshIndexes(vault) }));
+  const config = await loadWorkspaceConfig(cwd);
+  const profile = getVaultProfile(config.knowledgeProfile).id;
+  return updateVault(cwd, async vault => ({ vault, template: await ensureTemplate(vault), ...await refreshIndexes(vault, null, true, profile) }));
 }
 
 export async function refreshProjectIndexes({ cwd = process.cwd(), project = null } = {}) {
   if (project !== null) validateProject(project);
-  return updateVault(cwd, async vault => ({ vault, ...await refreshIndexes(vault, project, project === null) }));
+  const config = await loadWorkspaceConfig(cwd);
+  const profile = getVaultProfile(config.knowledgeProfile).id;
+  return updateVault(cwd, async vault => ({ vault, ...await refreshIndexes(vault, project, project === null, profile) }));
 }
 
 export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) {
   const config = await loadWorkspaceConfig(cwd);
   if (!config.obsidianVault) return { obsidian_note: null, knowledge_status: 'not-configured' };
+  if (config.knowledgeDepositMode === 'run-only') return { obsidian_note: null, knowledge_status: 'disabled-run-only' };
   if (entry.status !== 'downloaded' || !/^[a-f0-9]{64}$/.test(entry.sha256)) throw new Error('Only verified downloads can be indexed');
   if (!contains(await canonical(config.resultsRoot), await canonical(runDir)) || !contains(await canonical(runDir), await canonical(entry.path))) throw new Error('Source must remain inside its research run');
   if (createHash('sha256').update(await readFile(entry.path)).digest('hex') !== entry.sha256) throw new Error('Source hash changed before indexing');
@@ -168,15 +188,17 @@ export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) 
 
 export async function createObsidianProject({ cwd = process.cwd(), project, title = project } = {}) {
   validateProject(project);
+  const config = await loadWorkspaceConfig(cwd);
+  const profile = getVaultProfile(config.knowledgeProfile);
   if (typeof title !== 'string' || !title.trim() || title.length > 200 || /[\r\n\x00-\x1f]/.test(title)) throw new Error('Project title must be a single non-empty line of at most 200 characters');
   return updateVault(cwd, async vault => {
     const template = await ensureTemplate(vault);
     const directory = await vaultPath(vault, 'Projects', project);
     const index = await vaultPath(vault, 'Projects', project, 'Index.md');
     const created = await readText(index) === null;
-    for (const type of PROJECT_TYPES) await mkdir(await vaultPath(vault, 'Projects', project, type), { recursive: true });
+    for (const type of profile.projectTypes) await mkdir(await vaultPath(vault, 'Projects', project, type), { recursive: true });
     if (created) {
-      const body = await categorizedLinks(vault, `Projects/${project}`, PROJECT_TYPES);
+      const body = await categorizedLinks(vault, `Projects/${project}`, profile.projectTypes);
       await createOnly(index, renderProjectTemplate(await readFile(template, 'utf8'), project, title.trim(), body));
       const copyDefaults = async (parts = []) => {
         const source = await vaultPath(vault, 'Projects', '_template', ...parts);
@@ -193,7 +215,8 @@ export async function createObsidianProject({ cwd = process.cwd(), project, titl
       };
       await copyDefaults();
     }
-    const indexes = await refreshIndexes(vault, project);
+    if (knowledgeDirectory()) await initializeProjectContext(vault, project);
+    const indexes = await refreshIndexes(vault, project, false, config.knowledgeProfile);
     return { vault, project, directory, index, template, created, ...indexes };
   });
 }
@@ -236,8 +259,82 @@ function contains(root, child) {
   return !rel || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + sep));
 }
 
+export function researchSetupOptions() {
+  return {
+    profiles: listVaultProfiles(),
+    depositModes: [
+      { id: 'run-only', label: '仅运行摘要', description: '只沉淀完成的 run summary，最保守。' },
+      { id: 'verified', label: '已验证证据（推荐）', description: '沉淀运行摘要、已归档来源、证据、支持性 claim 与研究决策。' },
+      { id: 'rich', label: '丰富知识沉淀', description: '在 verified 基础上，也沉淀可跨项目复用的概念/实体。' },
+    ],
+    subagentMcpPolicies: [
+      { id: 'none', label: '禁用', description: '子智能体不访问 Obsidian MCP。' },
+      { id: 'read-local', label: '只读本地知识库（推荐）', description: '子智能体可搜索/读取 Obsidian，但无法写入、移动或删除笔记。' },
+    ],
+  };
+}
+
+function knowledgeSlug(title) {
+  const normalized = String(title || '').normalize('NFKC').trim();
+  if (!normalized || normalized.length > 200 || /[\r\n\x00-\x1f]/.test(normalized)) throw new Error('Knowledge title must be a single non-empty line');
+  const ascii = normalized.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 72);
+  return ascii || `note-${createHash('sha256').update(normalized).digest('hex').slice(0, 16)}`;
+}
+
+export async function depositKnowledge({ cwd = process.cwd(), project, type, title, markdown, sourceLinks = [], status = 'verified', targetScope = 'project' } = {}) {
+  const config = await loadWorkspaceConfig(cwd);
+  if (!config.obsidianVault) throw new Error('Obsidian vault must be configured first');
+  if (config.knowledgeDepositMode === 'run-only') throw new Error('Knowledge deposition is disabled by run-only mode');
+  project = validateProject(project || 'research-workbench');
+  const profile = getVaultProfile(config.knowledgeProfile);
+  const kind = String(type || '').toLowerCase();
+  if (knowledgeDirectory() && kind === 'wiki') throw new Error('Application Wiki changes require research_propose_wiki_update and user /obsidian-review; direct Wiki deposition is disabled');
+  const routes = {
+    question: ['project', 'Questions'], evidence: ['project', 'Evidence'], claim: ['project', 'Claims'],
+    decision: ['project', 'Decisions'], wiki: ['project', 'Wiki'], paper: ['library', 'Papers'],
+    method: ['library', 'Methods'], software: ['library', 'Software'], entity: ['library', 'Entities'], concept: ['library', 'Concepts'],
+  };
+  const route = routes[kind];
+  if (!route) throw new Error(`Unsupported knowledge type: ${type}`);
+  if (['claim', 'evidence'].includes(kind) && (!Array.isArray(sourceLinks) || sourceLinks.length === 0)) {
+    throw new Error(`${kind} deposition requires at least one source link`);
+  }
+  if (['concept', 'entity'].includes(kind) && config.knowledgeDepositMode !== 'rich') {
+    throw new Error(`${kind} deposition requires rich knowledge mode`);
+  }
+  let [scope, folder] = route;
+  if (knowledgeDirectory() && kind === 'wiki' && targetScope === 'shared') scope = 'shared';
+  if (scope === 'library' && !profile.libraryTypes.includes(folder)) {
+    if (profile.projectTypes.includes(folder)) scope = 'project';
+    else throw new Error(`${folder} is not enabled by knowledge profile ${profile.id}`);
+  }
+  if (scope === 'project' && !profile.projectTypes.includes(folder)) throw new Error(`${folder} is not enabled by knowledge profile ${profile.id}`);
+  const slug = knowledgeSlug(title);
+  return updateVault(cwd, async vault => {
+    if (!knowledgeDirectory()) await initializeVault(vault, project, config.knowledgeProfile);
+    const relativeNote = scope === 'shared' ? join('Wiki', `${slug}.md`) : scope === 'library' ? join('Library', folder, `${slug}.md`) : join('Projects', project, folder, `${slug}.md`);
+    const note = await vaultPath(vault, relativeNote);
+    const links = (Array.isArray(sourceLinks) ? sourceLinks : []).map(link => `- ${String(link)}`).join('\n');
+    const body = [String(markdown || '').trim(), links ? `## Sources\n\n${links}` : ''].filter(Boolean).join('\n\n');
+    const heading = `---\nid: pi-${randomUUID()}\ntype: ${kind}\nproject: ${JSON.stringify(project)}\nstatus: ${JSON.stringify(status)}\nupdated: ${JSON.stringify(new Date().toISOString())}\n---\n\n# ${String(title).trim()}`;
+    await writeManagedIndex(note, heading, body);
+    const indexes = await refreshIndexes(vault, project, false, config.knowledgeProfile);
+    return { note, scope, type: kind, project, profile: profile.id, depositMode: config.knowledgeDepositMode, indexes };
+  });
+}
+
 export async function obsidianStatus(cwd) {
   try {
+    if (knowledgeDirectory()) {
+      const binding = await readKnowledgeBinding();
+      if (!binding) return { state: 'needs-setup', vault: null, scope: 'application' };
+      try { if (!(await stat(binding.vault)).isDirectory()) throw new Error('not a directory'); }
+      catch { return { state: 'missing-vault', vault: binding.vault, scope: 'application' }; }
+      return { state: 'ready', scope: 'application', accessMode: 'application-index', vault: binding.vault,
+        vaultId: binding.vaultId, bindingRevision: binding.revision, profile: binding.profile,
+        depositMode: binding.depositMode, subagentMcpPolicy: binding.subagentPolicy,
+        home: join(binding.vault,'Home.md'), connectionVerified: false };
+    }
     const config = await loadWorkspaceConfig(cwd);
     const vault = config.obsidianVault;
     if (!vault) return { state: 'needs-setup', vault: null };
@@ -250,33 +347,80 @@ export async function obsidianStatus(cwd) {
     try { await access(server.args[0]); if (server.args[0].endsWith('vault-mcp-proxy.mjs')) await access(server.args[1]); }
     catch { return { state: 'missing-server', vault }; }
     const home = join(vault, 'Home.md');
-    return { state: 'ready', vault, server: SERVER_NAME, home, uri: `obsidian://open?path=${encodeURIComponent(home.replaceAll('\\', '/'))}` };
+    return { state: 'ready', vault, server: SERVER_NAME, profile: config.knowledgeProfile, depositMode: config.knowledgeDepositMode, subagentMcpPolicy: config.subagentMcpPolicy, home, uri: `obsidian://open?path=${encodeURIComponent(home.replaceAll('\\', '/'))}` };
   } catch (error) { return { state: 'config-error', error: error.message }; }
 }
 
-export async function configureObsidian({ cwd, vault, project = null, server }) {
+// Resolve runtime code separately from ctx.cwd: a globally installed extension
+// serves many projects, and those projects do not each contain its npm runtime.
+export async function resolveObsidianRuntime({ cwd, server, existing, installationRoot = fileURLToPath(new URL('../../', import.meta.url)) }) {
+  const runtimeFromConfig = (entry, root) => {
+    const args = Array.isArray(entry?.args) ? entry.args : [];
+    const path = typeof args[0] === 'string' && args[0].endsWith('vault-mcp-proxy.mjs') ? args[1] : args[0];
+    return typeof path === 'string' ? { path: resolve(root, path), command: entry.command } : null;
+  };
+  const candidates = [];
+  if (server) candidates.push({ path: resolve(cwd, server), command: existing?.command });
+  else {
+    candidates.push(runtimeFromConfig(existing, cwd));
+    if (process.env.PI_OBSIDIAN_MCP_SERVER) candidates.push({ path: resolve(process.env.PI_OBSIDIAN_MCP_SERVER) });
+    candidates.push({ path: join(cwd, '.pi/npm/node_modules/@bitbonsai/mcpvault/dist/server.js') });
+    if (resolve(installationRoot) !== resolve(cwd)) {
+      // Reuse only the installed extension's runtime location/launcher, never
+      // another project's Vault, MCP permissions, environment, or credentials.
+      const installed = await readJson(join(installationRoot, '.mcp.json'));
+      candidates.push(runtimeFromConfig(installed.mcpServers?.[SERVER_NAME], installationRoot));
+    }
+    candidates.push({ path: join(installationRoot, '.pi/npm/node_modules/@bitbonsai/mcpvault/dist/server.js') });
+    candidates.push({ path: join(installationRoot, 'node_modules/@bitbonsai/mcpvault/dist/server.js') });
+  }
+  for (const candidate of candidates.filter(Boolean)) {
+    try {
+      if (!(await stat(candidate.path)).isFile()) continue;
+      return { server: await realpath(candidate.path), command: candidate.command || process.env.PI_MCP_NODE_PATH || process.execPath };
+    } catch (error) { if (!['ENOENT', 'ENOTDIR'].includes(error.code)) throw error; }
+  }
+  throw new Error('MCPVault runtime was not found. Install/configure it for the workbench or set PI_OBSIDIAN_MCP_SERVER; no Vault was initialized.');
+}
+
+export async function configureObsidian({ cwd, vault, project = null, server, profile = 'hybrid', depositMode = 'verified', subagentMcpPolicy = 'read-local', expectedRevision = null }) {
   if (process.env.PI_RESEARCH_DESKTOP_CONFIG) throw new Error('Use desktop settings to initialize or bind a Vault');
   if (typeof vault !== 'string' || !vault.trim()) throw new Error('Vault path is required');
   cwd = await canonical(resolve(cwd));
   vault = await canonical(resolve(cwd, vault));
   if (contains(cwd, vault) || contains(vault, cwd)) throw new Error('Vault must be independent from the code workspace');
   if (project !== null) validateProject(project);
-  server = resolve(server || join(cwd, '.pi/npm/node_modules/@bitbonsai/mcpvault/dist/server.js'));
+  getVaultProfile(profile);
+  if (!['run-only', 'verified', 'rich'].includes(depositMode)) throw new Error('Invalid knowledge deposit mode');
+  if (!['none', 'read-local'].includes(subagentMcpPolicy)) throw new Error('Invalid subagent MCP policy');
+  if (knowledgeDirectory()) {
+    const current = await readKnowledgeBinding({ fresh: true });
+    if (expectedRevision !== null && (current?.revision || 0) !== expectedRevision) throw new Error('Knowledge binding changed before setup; review again');
+    const appDir = await canonical(knowledgeDirectory());
+    if (contains(vault, appDir) || contains(appDir, vault)) throw new Error('Vault must be independent from application indexes');
+    await initializeVault(vault, project, profile);
+    await initializeSharedNavigation(vault);
+    const binding = await saveKnowledgeBinding({ vault, profile, depositMode, subagentPolicy: subagentMcpPolicy }, expectedRevision ?? (current?.revision || 0));
+    if (project) { await saveWorkspaceConfig(cwd, { knowledgeProjectId: project }); await createObsidianProject({ cwd, project }); }
+    return { ...await obsidianStatus(cwd), workspace: cwd, project, connectionVerified: false,
+      reloadRequired: false, bindingRevision: binding.revision, rawMcpUnchanged: true };
+  }
   const mcpPath = join(cwd, '.mcp.json');
   const mcp = await readJson(mcpPath);
   if (mcp.mcpServers && (typeof mcp.mcpServers !== 'object' || Array.isArray(mcp.mcpServers))) throw new Error('Invalid JSON mcpServers');
-  const proxy = fileURLToPath(new URL('./vault-mcp-proxy.mjs', import.meta.url));
   const existing = mcp.mcpServers?.[SERVER_NAME];
-  if (existing && existing.args?.[0] !== server && existing.args?.[0] !== proxy) throw new Error('research-obsidian is already configured by another server');
-  await initializeVault(vault, project);
-  await saveWorkspaceConfig(cwd, { obsidianVault: vault });
+  const runtime = await resolveObsidianRuntime({ cwd, server, existing });
+  await initializeVault(vault, project, profile);
+  await saveWorkspaceConfig(cwd, { obsidianVault: vault, knowledgeProfile: profile, knowledgeDepositMode: depositMode, subagentMcpPolicy });
   mcp.mcpServers = { ...mcp.mcpServers, [SERVER_NAME]: {
-    command: process.env.PI_MCP_NODE_PATH || process.execPath,
-    args: [proxy, server, join(cwd, '.pi/research-workspace.json'), vault], cwd,
-    lifecycle: 'lazy',
+    ...(existing && typeof existing === 'object' ? existing : {}),
+    command: runtime.command,
+    args: [runtime.server, vault], cwd, disabled: false, lifecycle: existing?.lifecycle || 'lazy',
+    includeTools: OBSIDIAN_READ_TOOLS,
+    vaultWritePolicy: 'controlled-deposit-only',
   } };
   await atomicJson(mcpPath, mcp);
   if (project) await createObsidianProject({ cwd, project });
   await refreshProjectIndexes({ cwd });
-  return obsidianStatus(cwd);
+  return { ...await obsidianStatus(cwd), workspace: cwd, project, connectionVerified: false, reloadRequired: true };
 }

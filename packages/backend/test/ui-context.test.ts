@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { AskRequest } from "@percho/shared";
+import { AskGate } from "../src/session/ask-gate";
 import type { PermissionGate } from "../src/permissions/gate";
 import { makeUiContext } from "../src/session/ui-context";
 
@@ -81,5 +83,65 @@ describe("makeUiContext — ui.theme 契约", () => {
 		for (const color of colors) {
 			expect(ui.theme.fg(color, "t")).toContain("t");
 		}
+	});
+});
+
+
+describe("makeUiContext — native setup questions", () => {
+	function bridge() {
+		const send = vi.fn((_request: AskRequest) => true);
+		const gate = new AskGate(send);
+		gate.bindSession("setup-session");
+		return { gate, send, ui: makeUiContext(fakeGate(), gate) };
+	}
+
+	it("input uses a text-only question and returns the custom answer", async () => {
+		const { ui, gate, send } = bridge();
+		const pending = ui.input("Vault path", "/path/to/Vault");
+		const request = send.mock.calls[0][0];
+		expect(request.sessionId).toBe("setup-session");
+		expect(request.questions[0]).toMatchObject({ type: "text", options: [], prompt: "/path/to/Vault" });
+		gate.respond(request.id, { kind: "answer", answers: { value: { customText: "  /my/Vault  " } } });
+		await expect(pending).resolves.toBe("/my/Vault");
+	});
+
+	it("multiline selection keeps a short heading and the full proposal in the prompt", async () => {
+		const { ui, gate, send } = bridge();
+		const pending = ui.select("Apply setup\n\nWorkspace: /project\nVault: /vault", ["Apply", "Cancel"]);
+		const request = send.mock.calls[0][0];
+		expect(request.title).toBe("Apply setup");
+		expect(request.questions[0].prompt).toContain("Workspace: /project");
+		gate.respond(request.id, { kind: "answer", answers: { value: { values: ["Apply"] } } });
+		await expect(pending).resolves.toBe("Apply");
+	});
+
+	it("cancellation does not invent an answer", async () => {
+		const { ui, gate, send } = bridge();
+		const pending = ui.input("Vault");
+		gate.respond(send.mock.calls[0][0].id, { kind: "cancel" });
+		await expect(pending).resolves.toBeUndefined();
+	});
+
+	it("forwards a selection abort to the ask gate", async () => {
+		const { ui, send } = bridge();
+		const controller = new AbortController();
+		const pending = ui.select("Apply", ["Yes", "No"], { signal: controller.signal });
+		expect(send).toHaveBeenCalledOnce();
+		controller.abort();
+		await expect(pending).resolves.toBeUndefined();
+	});
+
+	it("does not display input that was already aborted", async () => {
+		const { ui, send } = bridge();
+		const controller = new AbortController();
+		controller.abort();
+		await expect(ui.input("Vault", "", { signal: controller.signal })).resolves.toBeUndefined();
+		expect(send).not.toHaveBeenCalled();
+	});
+
+	it("no question transport or no choices returns cancellation", async () => {
+		const ui = makeUiContext(fakeGate());
+		await expect(ui.input("Vault")).resolves.toBeUndefined();
+		await expect(ui.select("Profile", [])).resolves.toBeUndefined();
 	});
 });

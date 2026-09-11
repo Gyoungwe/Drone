@@ -1,3 +1,4 @@
+import type { KnowledgeApi } from "./knowledge";
 import type { AskRequest, AskResponse } from "./ask";
 import type { LanStatus } from "./lan";
 import type { McpConfigSnapshot, McpStatus, McpStatusEvent } from "./mcp";
@@ -57,6 +58,19 @@ export interface ResourcePreviewResult {
 
 /** IPC 通道名常量 */
 export const IpcChannels = {
+	KnowledgeOverview: "knowledge:overview",
+	KnowledgeSetupPreview: "knowledge:setupPreview",
+	KnowledgeSetupStart: "knowledge:setupStart",
+	KnowledgeJobs: "knowledge:jobs",
+	KnowledgeReviews: "knowledge:reviews",
+	KnowledgeReviewPreview: "knowledge:reviewPreview",
+	KnowledgeReviewDecide: "knowledge:reviewDecide",
+	KnowledgeReadNote: "knowledge:readNote",
+	KnowledgeMaintain: "knowledge:maintain",
+	KnowledgeOpen: "knowledge:open",
+	KnowledgeResume: "knowledge:resume",
+	KnowledgeEvent: "knowledge:event",
+
 	SessionCreate: "session:create",
 	SessionList: "session:list",
 	SessionListAll: "session:listAll",
@@ -202,7 +216,7 @@ export const IpcChannels = {
 } as const;
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
-export interface PiApi {
+export interface PiApi extends KnowledgeApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	createSession(options: CreateSessionOptions): Promise<SessionMeta>;
@@ -315,7 +329,7 @@ export interface PiApi {
 	lanSetEnabled(enabled: boolean): Promise<LanStatus>;
 	/** 设置远程控制开关（独立于观察开关；未开观察时允许配置但不生效）。 */
 	lanSetRemoteControl(enabled: boolean): Promise<LanStatus>;
-	respondAsk(requestId: string, response: AskResponse): Promise<void>;
+	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
 	onAskRequest(cb: (req: AskRequest) => void): () => void;
 	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;
 	/** 读取权限门控配置（enabled=false = 手改 permissions.json 的隐藏逃生舱态，chip 禁用提示用） */

@@ -34,6 +34,7 @@ export class ProjectResourceLoader {
 			desktopIntegration?: {
 				appendSystemPrompt: string[];
 				additionalSkillPaths: string[];
+				additionalExtensionPaths?: string[];
 			};
 		},
 	) {}

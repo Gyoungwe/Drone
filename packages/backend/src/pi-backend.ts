@@ -1,3 +1,4 @@
+import { KnowledgeUiService } from "./knowledge/ui";
 import { existsSync } from "node:fs";
 import { readFile, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -64,6 +65,7 @@ import { TrustGate } from "./project/trust";
 import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { AskGate } from "./session/ask-gate";
+import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "./session/knowledge-publication";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
 import {
 	assignEntryIds,
@@ -87,7 +89,7 @@ import { makeUiContext } from "./session/ui-context";
 import { LoginService } from "./settings/login";
 import { ModelPrefsService } from "./settings/model-prefs";
 import { SettingsService } from "./settings/settings";
-import { slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
+import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
 import {
 	makeChannelWatchExtension,
 	readChannelWatchEnabled,
@@ -133,6 +135,7 @@ export interface PiBackendOptions {
 	desktopIntegration?: {
 		appendSystemPrompt: string[];
 		additionalSkillPaths: string[];
+		additionalExtensionPaths?: string[];
 	};
 }
 
@@ -156,6 +159,7 @@ type McpHandler = (cwd: string, status: McpStatus) => void;
  * - session-trace.ts      会话事件 trace 生命周期
  */
 export class PiBackend {
+	readonly knowledge = new KnowledgeUiService();
 	private readonly registry = new SessionRegistry();
 	private readonly eventHandlers = new Set<EventHandler>();
 	private readonly askHandlers = new Set<AskHandler>();
@@ -171,7 +175,7 @@ export class PiBackend {
 	}>();
 	readonly mcp = new McpService();
 	private readonly gates = new Map<string, PermissionGate>();
-	private readonly askGates = new Map<string, AskGate>();
+	private readonly askGates = new Map<string, Set<AskGate>>();
 	/** 按会话权限模式（default 缺省；fullAccess = 一切放行 + 高危审计）：会话创建时随工厂注入，关会话/重启归零 */
 	private readonly permissionModes = new Map<string, PermissionModeRef>();
 	/** 项目信任决策记录（~/.pi/agent/trust.json，与 CLI 共享）+ 信任请求门控 */
@@ -343,6 +347,9 @@ export class PiBackend {
 			}
 			return;
 		}
+		const publishedEvent = projectKnowledgeEvent(event);
+		if (!publishedEvent) return;
+		event = publishedEvent;
 		if (event.type !== "subagent_mutex" && event.type !== "stream_guard_tripped")
 			this.traces.record(sessionId, event);
 		for (const handler of this.eventHandlers) {
@@ -355,6 +362,7 @@ export class PiBackend {
 	}
 
 	async init(): Promise<void> {
+		await this.knowledge.connect();
 		await this.getModelRuntime();
 	}
 
@@ -406,11 +414,11 @@ export class PiBackend {
 		gate.bindSession(session.sessionId);
 		askGate.bindSession(session.sessionId);
 		this.gates.set(session.sessionId, gate);
-		this.askGates.set(session.sessionId, askGate);
+		this.registerAskGate(session.sessionId, askGate);
 		this.permissionModes.set(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
 			await session.bindExtensions({
-				uiContext: makeUiContext(gate),
+				uiContext: makeUiContext(gate, askGate, (text, type) => { void this.knowledge.notify(text, type, session.sessionId).catch(() => {}); }),
 				mode: "tui",
 			});
 		}
@@ -460,10 +468,10 @@ export class PiBackend {
 		gate.bindSession(session.sessionId);
 		askGate.bindSession(session.sessionId);
 		this.gates.set(session.sessionId, gate);
-		this.askGates.set(session.sessionId, askGate);
+		this.registerAskGate(session.sessionId, askGate);
 		this.permissionModes.set(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
-			await session.bindExtensions({ uiContext: makeUiContext(gate), mode: "tui" });
+			await session.bindExtensions({ uiContext: makeUiContext(gate, askGate, (text, type) => { void this.knowledge.notify(text, type, session.sessionId).catch(() => {}); }), mode: "tui" });
 		}
 		const unsubscribe = session.subscribe((event) => {
 			autoNameSession(session, event);
@@ -522,7 +530,7 @@ export class PiBackend {
 		entry.session.dispose();
 		this.gates.get(sessionId)?.dispose();
 		this.gates.delete(sessionId);
-		this.askGates.get(sessionId)?.dispose();
+		for (const askGate of this.askGates.get(sessionId) ?? []) askGate.dispose();
 		this.askGates.delete(sessionId);
 		this.permissionModes.delete(sessionId);
 		this.streamGuard.cleanup(sessionId);
@@ -542,6 +550,18 @@ export class PiBackend {
 		await unlink(file);
 		if (sessionDir) await TraceRecorder.removeAll(sessionDir, sessionId);
 		log.info("session deleted", sessionId);
+	}
+
+	async startKnowledgeSetup(input: { sessionId: string; path?: string }): Promise<void> {
+		const entry = this.requireSession(input.sessionId);
+		if (entry.readOnly || entry.session.isStreaming) throw new Error("Wait for the current task to finish before setup");
+		if (input.path && (typeof input.path !== "string" || input.path.length > 4096)) throw new Error("Invalid Vault path");
+		await this.prompt(input.sessionId, "/obsidian-setup " + (input.path ? JSON.stringify({ vaultPath: input.path }) : ""));
+	}
+	async resumeKnowledgeCheck(sessionId: string): Promise<void> {
+		const entry = this.requireSession(sessionId);
+		if (entry.readOnly || entry.session.isStreaming) throw new Error("Wait for the current task to finish");
+		await this.prompt(sessionId, "请继续完成上一任务的知识库检查：重新准备导航，按需阅读 Wiki、检索并阅读实际引用来源，然后发布回答。不要把界面阅读当作模型已经阅读，也不要绕过失败的检查。");
 	}
 
 	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<void> {
@@ -724,7 +744,7 @@ export class PiBackend {
 				hidden: ext.hidden === true,
 				toolsCount: ext.tools.size,
 				tools: [...ext.tools.keys()],
-				commands: [...ext.commands.keys()],
+				commands: presentExtensionCommands([...ext.commands.values()].map(command => ({ ...command, invocationName: command.name }))).map(command => command.name),
 				flagsCount: ext.flags.size,
 				shortcutsCount: ext.shortcuts.size,
 			})),
@@ -828,7 +848,10 @@ export class PiBackend {
 	/** 读取会话历史消息（打开历史会话时回放给 UI） */
 	async getSessionMessages(sessionId: string): Promise<SessionMessage[]> {
 		const entry = this.requireSession(sessionId);
-		const messages = toSessionMessages(entry.session.messages);
+		const persisted = entry.session.sessionManager.getBranch()
+			.filter((item): item is Extract<SessionEntry, { type: "message" }> => item.type === "message")
+			.map(item => item.message as RawMessage);
+		const messages = toSessionMessages(projectKnowledgeSnapshot(entry.session.messages as RawMessage[], persisted));
 		// 配对消息与会话树 entry id（assistant 供 fork 定位、user 供撤回定位）
 		assignEntryIds(messages, entry.session.sessionManager.getBranch());
 		return messages;
@@ -1027,11 +1050,13 @@ export class PiBackend {
 		return () => this.askHandlers.delete(handler);
 	}
 
-	respondAsk(requestId: string, response: AskResponse): void {
-		for (const gate of this.askGates.values()) {
-			if (gate.respond(requestId, response)) return;
+	respondAsk(requestId: string, response: AskResponse): boolean {
+		for (const gates of this.askGates.values()) {
+			for (const gate of gates) {
+				if (gate.respond(requestId, response)) return true;
+			}
 		}
-		throw new Error("Ask request is no longer pending");
+		return false;
 	}
 
 	onPermissionRequest(handler: PermissionHandler): () => void {
@@ -1146,6 +1171,7 @@ export class PiBackend {
 	}
 
 	dispose(): void {
+		this.knowledge.dispose();
 		this.registry.disposeAll();
 		this.eventHandlers.clear();
 		this.permissionHandlers.clear();
@@ -1166,6 +1192,12 @@ export class PiBackend {
 		const entry = this.registry.get(sessionId);
 		if (!entry) throw new Error(`Session not found: ${sessionId}`);
 		return this.registry.toMeta(entry);
+	}
+
+	private registerAskGate(sessionId: string, gate: AskGate): void {
+		const gates = this.askGates.get(sessionId) ?? new Set<AskGate>();
+		gates.add(gate);
+		this.askGates.set(sessionId, gates);
 	}
 
 	private dispatchAskRequest(req: AskRequest): boolean {

@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { Model } from "@earendil-works/pi-ai";
 import type { AgentSessionEvent, AgentToolResult, ModelRuntime, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import {
@@ -14,10 +16,11 @@ import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
 import type { SessionTraces } from "../../session/traces";
 import { makeUiContext } from "../../session/ui-context";
+import { projectKnowledgeEvent } from "../../session/knowledge-publication";
 import { makeStatusTool } from "../status";
 import { makeWebFetchTool } from "../webfetch";
 import { Type } from "typebox";
-import type { SubagentDefinition } from "./agents";
+import type { SubagentDefinition, SubagentMcpAccess } from "./agents";
 
 export interface SubagentUsage {
 	input: number;
@@ -251,6 +254,29 @@ const supervisorParams = Type.Object({
 	message: Type.String({ minLength: 1, maxLength: 2000 }),
 });
 
+
+export async function resolveSubagentMcpAccess(
+	cwd: string,
+	agent: Pick<SubagentDefinition, "mcpAccess">,
+	projectTrusted = true,
+): Promise<SubagentMcpAccess> {
+	if (!projectTrusted) return "none";
+	let workspacePolicy: SubagentMcpAccess = "none";
+	try {
+		if (process.env.PERCHO_KNOWLEDGE_DIR) {
+			const binding = JSON.parse(await readFile(join(process.env.PERCHO_KNOWLEDGE_DIR, "binding.json"), "utf8")) as { version?: number; subagentPolicy?: unknown };
+			if (binding.version === 1 && binding.subagentPolicy === "read-local") workspacePolicy = "read-local";
+		} else {
+			const raw = JSON.parse(await readFile(join(cwd, ".pi", "research-workspace.json"), "utf8")) as { subagentMcpPolicy?: unknown };
+			if (raw.subagentMcpPolicy === "read-local") workspacePolicy = "read-local";
+		}
+	} catch {
+		return "none";
+	}
+	if (workspacePolicy === "none" || agent.mcpAccess === "none") return "none";
+	return agent.mcpAccess === "read-local" || agent.mcpAccess === undefined ? "read-local" : "none";
+}
+
 /** 在共享 ModelRuntime 上运行一个隔离的、深度固定为 1 的子会话。 */
 export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput): Promise<SingleResult> {
 	const runtime = await deps.getModelRuntime();
@@ -310,6 +336,32 @@ export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput
 	};
 	const customTools: ToolDefinition[] = [makeStatusTool(), contactSupervisorTool];
 	if (safeTools.includes("webfetch")) customTools.push(makeWebFetchTool());
+	const mcpAccess = await resolveSubagentMcpAccess(input.cwd, input.agent, input.projectTrusted);
+	const readonlyMcpExtension = process.env.PERCHO_RESEARCH_WORKBENCH_ROOT
+		? join(process.env.PERCHO_RESEARCH_WORKBENCH_ROOT, "extensions", "subagent-mcp-readonly.mjs") : fileURLToPath(
+		new URL("../../../../../.pi/extensions/subagent-mcp-readonly.mjs", import.meta.url),
+	);
+	const childExtensionFactories = [
+		makePermissionGateExtension(agentDir, {
+			projectRoot: input.cwd,
+			confirm: childGateConfirm,
+		}),
+	];
+	if (mcpAccess === "read-local" && existsSync(readonlyMcpExtension)) {
+		const readonlyMcp = await import(pathToFileURL(readonlyMcpExtension).href) as {
+			makeSubagentReadonlyMcp: (cwd: string) => (pi: unknown) => void;
+		};
+		childExtensionFactories.push(readonlyMcp.makeSubagentReadonlyMcp(input.cwd) as never);
+	} else if (process.env.PERCHO_KNOWLEDGE_DIR) {
+		// Children without Vault permission return labeled material, not a checked parent answer.
+		const modulePath = process.env.PERCHO_RESEARCH_WORKBENCH_ROOT
+			? join(process.env.PERCHO_RESEARCH_WORKBENCH_ROOT, "lib", "knowledge", "publication.mjs")
+			: fileURLToPath(new URL("../../../../../.pi/lib/knowledge/publication.mjs", import.meta.url));
+		const publication = await import(pathToFileURL(modulePath).href) as {
+			registerAnswerPublication: (pi: unknown, options: { getCurrent: () => null; evidenceOnly: boolean }) => { begin(required: boolean): void };
+		};
+		childExtensionFactories.push(((pi: unknown) => publication.registerAnswerPublication(pi, { getCurrent: () => null, evidenceOnly: true }).begin(false)) as never);
+	}
 	const resourceLoader = new DefaultResourceLoader({
 		cwd: input.cwd,
 		agentDir,
@@ -322,12 +374,7 @@ export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput
 			"For multi-step work, use set_status when the current activity meaningfully changes. Keep status short, concrete, present-tense, and user-visible; never include hidden reasoning, conclusions, confidence, or percentages.",
 			"You have a live supervisor channel. Use contact_supervisor(reason=progress_update) only for meaningful discoveries that change the plan. Use need_decision when blocked and interview_request when structured clarification is required. Do not wait silently when a decision is required.",
 		],
-		extensionFactories: [
-			makePermissionGateExtension(agentDir, {
-				projectRoot: input.cwd,
-				confirm: childGateConfirm,
-			}),
-		],
+		extensionFactories: childExtensionFactories,
 	});
 	await resourceLoader.reload();
 
@@ -394,7 +441,10 @@ export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput
 	const endPromise = new Promise<void>((resolve) => {
 		unsubscribeEvents = session.subscribe((event: AgentSessionEvent) => {
 			if (deps.onEvent) deps.onEvent(session.sessionId, event);
-			else deps.traces.record(session.sessionId, event);
+			else {
+				const published = projectKnowledgeEvent(event);
+				if (published) deps.traces.record(session.sessionId, published as AgentSessionEvent);
+			}
 			if (event.type === "tool_execution_start") {
 				const args = (event.args ?? {}) as Record<string, unknown>;
 				if (event.toolName === "set_status") {

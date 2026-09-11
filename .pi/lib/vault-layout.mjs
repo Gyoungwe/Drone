@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { mkdir, writeFile, realpath, lstat, link, unlink } from 'node:fs/promises';
 import { dirname, basename, resolve, relative, isAbsolute, sep, join, parse } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { getVaultProfile } from './vault-profiles.mjs';
 
 export const LAYOUT = JSON.parse(readFileSync(new URL('./vault-layout.json', import.meta.url), 'utf8'));
 export const MANAGED_START = '<!-- pi-agent:managed:start -->';
@@ -60,13 +61,14 @@ export async function createOnly(path, content) {
   } finally { await unlink(temporary); }
 }
 
-export async function initializeVaultLayout(input, { excluded = [], project = null } = {}) {
+export async function initializeVaultLayout(input, { excluded = [], project = null, profile = "hybrid" } = {}) {
   const vault = await validateVaultPath(input, excluded);
   if (project !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(project)) throw new Error('Invalid project slug');
+  const selected = getVaultProfile(profile);
   const directories = ['Projects', 'Templates', 'Indexes', 'Attachments', '.obsidian',
-    ...LAYOUT.libraryTypes.map(type => `Library/${type}`),
-    ...LAYOUT.projectTypes.map(type => `Projects/_template/${type}`),
-    ...(project ? LAYOUT.projectTypes.map(type => `Projects/${project}/${type}`) : [])];
+    ...selected.libraryTypes.map(type => `Library/${type}`),
+    ...selected.projectTypes.map(type => `Projects/_template/${type}`),
+    ...(project ? selected.projectTypes.map(type => `Projects/${project}/${type}`) : [])];
   // Validate every destination before any filesystem mutation.
   for (const dir of directories) await containedFile(vault, dir);
   const notes = Object.fromEntries(Object.entries(LAYOUT.templates).map(([name, type]) => [`Templates/${name}.md`, LAYOUT.noteTemplate.replace('{{type}}', type)]));
@@ -82,5 +84,5 @@ export async function initializeVaultLayout(input, { excluded = [], project = nu
   for (const file of Object.keys(notes)) await containedFile(vault, file);
   for (const dir of directories) await mkdir(join(vault, dir), { recursive: true });
   for (const [file, content] of Object.entries(notes)) await createOnly(join(vault, file), content);
-  return { vault, directories: directories.map(dir => join(vault, dir)), templateVersion: LAYOUT.version };
+  return { vault, directories: directories.map(dir => join(vault, dir)), templateVersion: LAYOUT.version, profile: selected };
 }

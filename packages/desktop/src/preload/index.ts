@@ -8,6 +8,22 @@ import {
 import { contextBridge, ipcRenderer } from "electron";
 
 const api: PiApi = {
+	getKnowledgeOverview: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeOverview, input),
+	previewKnowledgeSetup: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeSetupPreview, input),
+	startKnowledgeSetup: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeSetupStart, input),
+	getKnowledgeJobs: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeJobs, input),
+	getKnowledgeReviews: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReviews, input),
+	previewKnowledgeReview: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReviewPreview, input),
+	decideKnowledgeReview: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReviewDecide, input),
+	readKnowledgeNote: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReadNote, input),
+	maintainKnowledge: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeMaintain, input),
+	openKnowledgeTarget: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeOpen, input),
+	resumeKnowledgeCheck: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeResume, input),
+	onKnowledgeEvent: (cb) => {
+		const listener = (_event: unknown, value: Parameters<typeof cb>[0]) => cb(value);
+		ipcRenderer.on(IpcChannels.KnowledgeEvent, listener);
+		return () => ipcRenderer.removeListener(IpcChannels.KnowledgeEvent, listener);
+	},
 	platform: process.platform,
 	createSession: (options) => ipcRenderer.invoke(IpcChannels.SessionCreate, options),
 	listSessions: (cwd) => ipcRenderer.invoke(IpcChannels.SessionList, cwd),

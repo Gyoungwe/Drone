@@ -37,6 +37,18 @@ extraResources:
   # 内置协作 skill（channel-pickup/design-handoff）：additionalSkillPaths 扫描，与 UI 插件目录分列
   - from: "resources/skills"
     to: "skills"
+  # Obsidian MCP extension and its bound skill ship together.
+  - from: "../../.pi/skills/research-vault"
+    to: "research-workbench/skills/research-vault"
+  # Research workbench extension: globally available in every desktop project.
+  - from: "../../.pi/extensions/obsidian-workbench.mjs"
+    to: "research-workbench/extensions/obsidian-workbench.mjs"
+  - from: "../../.pi/extensions/workspace-config.mjs"
+    to: "research-workbench/extensions/workspace-config.mjs"
+  - from: "../../.pi/extensions/subagent-mcp-readonly.mjs"
+    to: "research-workbench/extensions/subagent-mcp-readonly.mjs"
+  - from: "../../.pi/lib"
+    to: "research-workbench/lib"
 mac:
   category: public.app-category.developer-tools
   # adhoc 临时签名整个 bundle：Gatekeeper 从「已损坏（无绕过）」→「无法验证开发者（可右键打开）」

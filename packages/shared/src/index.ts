@@ -13,3 +13,7 @@ export * from "./todo";
 export * from "./transcript";
 export * from "./ui-plugins";
 export * from "./update";
+
+export * from "./knowledge";
+
+export * from "./skill-catalog";

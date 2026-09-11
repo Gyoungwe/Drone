@@ -39,8 +39,8 @@ function normalizeQuestions(params: RawParams): AskQuestion[] {
 	});
 }
 
-function resultFromResponse(params: RawParams, questions: AskQuestion[], response: AskResponse) {
-	if (response.kind === "cancel") return { title: params.title, cancelled: true, mode: "submit" as const, questions: questions.map(summary), answers: {} };
+function resultFromResponse(params: RawParams, questions: AskQuestion[], response: AskResponse | undefined) {
+	if (!response || response.kind === "cancel") return { title: params.title, cancelled: true, mode: "submit" as const, questions: questions.map(summary), answers: {} };
 	const answers: Record<string, { values: string[]; labels: string[]; indices: number[]; customText?: string; note?: string; optionNotes?: Record<string, string> }> = {};
 	for (const [id, input] of Object.entries(response.answers)) {
 		const question = questions.find((q) => q.id === id);

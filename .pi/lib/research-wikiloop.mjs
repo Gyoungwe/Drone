@@ -1,3 +1,4 @@
+import { knowledgeDirectory } from './knowledge/config.mjs';
 import { appendFile, mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
@@ -130,6 +131,7 @@ function rankFor(result, path) {
 }
 
 export async function buildResearchWikiPage({ cwd = process.cwd(), project, slug, title, content, sourceRefs = [], relatedPages = [], validationQuery } = {}) {
+  if (knowledgeDirectory()) throw new Error('Application Wiki changes require research_propose_wiki_update and user /obsidian-review; the legacy Wiki writer is disabled');
   project = validateSegment(project, "project");
   slug = validateSegment(slug, "slug");
   if (typeof title !== "string" || !title.trim()) throw new Error("title is required");

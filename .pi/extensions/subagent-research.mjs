@@ -4,10 +4,10 @@ import { loadWorkspaceConfig } from "./workspace-config.mjs";
 export const MAX_CONCURRENT_SUBAGENTS = 3;
 
 export const ROLE_MAP = Object.freeze({
-  scout: { purpose: "快速定位本地代码、数据和已有知识", writes: "none" },
-  planner: { purpose: "提出竞争假设、证据缺口和可执行计划", writes: "plan.md" },
-  analyst: { purpose: "在单次运行目录内执行 Python/R 分析并保存可复现产物", writes: "run-directory-only" },
-  reviewer: { purpose: "检查证据链、反例、可复现性和过度结论", writes: "none" },
+  scout: { purpose: "快速定位本地代码、数据和已有知识", writes: "none", mcp: "read-local" },
+  planner: { purpose: "提出竞争假设、证据缺口和可执行计划", writes: "plan.md", mcp: "read-local" },
+  analyst: { purpose: "在单次运行目录内执行 Python/R 分析并保存可复现产物", writes: "run-directory-only", mcp: "read-local" },
+  reviewer: { purpose: "检查证据链、反例、可复现性和过度结论", writes: "none", mcp: "read-local" },
 });
 
 function isRunDirectory(resultsRoot, candidate) {
@@ -43,7 +43,7 @@ export function registerResearchSubagents(pi, options = {}) {
         ...role,
         run_dir: runDir,
         run_dir_allowed: Boolean(runDirAllowed),
-        main_session_owns_obsidian_writes: true,
+        main_session_owns_obsidian_writes: true, subagent_mcp_is_read_only: true,
       };
       return { content: [{ type: "text", text: JSON.stringify(details, null, 2) }], details };
     },

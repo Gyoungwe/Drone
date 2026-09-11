@@ -46,3 +46,27 @@ describe("filterCommands", () => {
 		expect(filterCommands(commands, "zzzz")).toEqual([]);
 	});
 });
+
+describe("Obsidian MCP skill discovery", () => {
+	const skill: SlashCommandInfo = {
+		name: "skill:research-vault", source: "skill", supported: true,
+		description: "Obsidian MCP · research-vault：初始化、检索和受控知识沉淀",
+	};
+	const setup = cmd("obsidian-setup", "extension");
+	it("searching obsidian finds the setup command and its bound skill", () => {
+		expect(filterCommands([skill, setup], "obsidian")).toEqual([setup, skill]);
+	});
+	it("skill descriptions are searchable without case sensitivity", () => {
+		expect(filterCommands([skill, setup], "mcp")).toEqual([skill]);
+		expect(filterCommands([skill, setup], "初始化")).toEqual([skill]);
+	});
+	it("name matches precede description-only matches without duplicates", () => {
+		const named = cmd("skill:obsidian-notes", "skill");
+		expect(filterCommands([skill, named, setup], "obsidian")).toEqual([setup, named, skill]);
+		expect(filterCommands([skill], "research")).toEqual([skill]);
+	});
+	it("does not broaden non-skill commands to description matching", () => {
+		const unrelated = { ...cmd("help", "extension"), description: "Obsidian helper" };
+		expect(filterCommands([unrelated], "obsidian")).toEqual([]);
+	});
+});

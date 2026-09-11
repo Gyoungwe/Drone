@@ -1,0 +1,81 @@
+import {app,BrowserWindow,ipcMain} from 'electron';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import assert from 'node:assert/strict';
+import {KnowledgeUiService} from '../../packages/backend/src/knowledge/ui.ts';
+import {registerKnowledgeIpc} from '../../packages/desktop/src/main/ipc/knowledge.ts';
+import {IpcChannels} from '../../packages/shared/src/ipc.ts';
+const root=process.env.PERCHO_UI_FIXTURE,repo=process.env.PERCHO_UI_REPO;
+process.env.PERCHO_KNOWLEDGE_DIR=join(root,'app-state');process.env.PERCHO_RESEARCH_WORKBENCH_ROOT=join(repo,'.pi');
+delete process.env.PI_RESEARCH_DESKTOP_CONFIG;app.setPath('userData',join(root,'electron-profile'));app.setName('Percho Knowledge UI Fixture');
+const runtime=async name=>import(pathToFileURL(join(repo,'.pi/lib',name+'.mjs')).href);
+let window,services;const checks=[],errors=[],actions=[];const screenshots=join(root,'screenshots');
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+async function run(){
+try{
+ console.log('Electron ready; preparing isolated knowledge fixtures');
+ const work=await runtime('obsidian-workbench');services=await runtime('knowledge/service');const review=await runtime('knowledge/wiki-review');const state=await runtime('knowledge/ui-state');
+ const cwd=join(root,'project'),vault=join(root,'Research Vault');await mkdir(cwd);await mkdir(screenshots);
+ const bound=await work.configureObsidian({cwd,vault,project:'project-a'});
+ await writeFile(join(vault,'Wiki/Index.md'),'# 研究主题\n\n[[Wiki/Topic]]\n');
+ await writeFile(join(vault,'Wiki/Topic.md'),'# 自切行为研究\n\n人工背景：不同物种需要分别验证。\n\n<!-- pi-agent:managed:start -->\n现有记录尚不足以作出机制结论。\n<!-- pi-agent:managed:end -->\n\n## Human review\n保留人工复核：先核对实验条件。\n');
+ await writeFile(join(vault,'Library/Papers/source.md'),'# 自切观察记录\n\n限定条件下的行为观察；不能直接推广到所有物种。\n\n## Human review\n证据仍需原文核对。\n');
+ for(let i=0;i<25;i++)await writeFile(join(vault,`Library/Papers/fixture-${i}.md`),`# 隔离材料 ${i}\n仅供界面测试。\n`);
+ const service=await services.getKnowledgeService();let prep=await service.prepare({cwd,project:'project-a',query:'自切'});await service.request('reconcile');
+ await service.read(prep.ticket,cwd,{path:'Wiki/Topic.md'});await service.read(prep.ticket,cwd,{path:'Library/Papers/source.md'});
+ const proposal=title=>review.stageWikiProposal(service,prep.ticket,cwd,{path:'Wiki/Topic.md',title,markdown:'## 当前认识\n\n在限定实验条件下观察到自切行为。\n\n## 适用范围与未知\n\n尚不能据此确定具体神经机制，需要继续核对原文。',rationale:'把新观察与原先的证据不足状态并列，保留适用范围。',source_paths:['Library/Papers/source.md']});
+ const accept=await proposal('候选 A：补充观察范围'),reject=await proposal('候选 B：待拒绝候选');
+ const knowledge=new KnowledgeUiService();await knowledge.connect();
+ const backend={knowledge,startKnowledgeSetup:async input=>actions.push({action:'setup',input}),resumeKnowledgeCheck:async input=>actions.push({action:'resume',input})};
+ app.dock?.hide();registerKnowledgeIpc(backend);
+ ipcMain.handle(IpcChannels.ProjectPickDirectory,()=>join(root,'New Vault'));
+ ipcMain.handle('knowledge-fixture:info',()=>({cwd,accept:accept.id,reject:reject.id}));
+ window=new BrowserWindow({width:1200,height:960,show:false,webPreferences:{preload:join(root,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:false,offscreen:true,backgroundThrottling:false}});
+ window.webContents.on('console-message',event=>{if(event.level==='error')errors.push(event.message);});
+ window.webContents.on('render-process-gone',(_event,detail)=>errors.push('renderer gone: '+detail.reason));
+ const js=code=>window.webContents.executeJavaScript(code,true);
+ const wait=async(test,label)=>{for(let i=0;i<160;i++){if(await js(test))return;await pause(50);}throw new Error('UI timeout: '+label+' / '+await js('document.body.innerText.slice(0,3000)'));};
+ const click=async(text,scope='document')=>{const ok=await js(`(()=>{const root=${scope};const button=[...root.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)}&&!b.disabled);if(!button)return false;button.click();return true;})()`);assert(ok,'Enabled button: '+text);};
+ const capture=async(name)=>{await pause(120);await writeFile(join(screenshots,name+'.png'),(await window.webContents.capturePage()).toPNG());};
+ await window.loadFile(join(root,'dist/index.html'));
+ await wait("document.body.innerText.includes('Research Vault')",'real overview');await pause(900);
+ assert(await js(`document.body.innerText.includes(${JSON.stringify(vault)})`));checks.push('actual Vault and indexed counts rendered');
+ await capture('01-overview-light');
+ await click('选择文件夹');await click('预览目录与模板');await wait("document.body.innerText.includes('内置模板预览')",'directory preview');
+ await assert.rejects(readFile(join(root,'New Vault','Home.md')));checks.push('folder selection and read-only template preview');
+ await click('开始初始化问答');assert.equal(actions[0].action,'setup');assert.equal(actions[0].input.path,join(root,'New Vault'));checks.push('setup UI routes selected path into the bound skill entry');
+ await click('索引与维护');await wait("document.querySelector('[data-testid=knowledge-maintenance]')&&document.body.innerText.includes('隔离')",'maintenance tab');await pause(150);
+ await click('下一页');checks.push('maintenance page navigation');
+ await click('核对目录 / 重试索引');await wait("document.body.innerText.includes('维护操作已完成')",'real maintenance');checks.push('real backend reconciliation completed');
+ await click('Wiki 审核');await wait("document.body.innerText.includes('候选 A')",'proposal list');
+ // Candidate selection is a real DOM click, not an application-state override.
+ await js("[...document.querySelectorAll('button')].find(b=>b.textContent.includes('候选 A')).click()");
+ await wait("document.body.innerText.includes('修改前托管区')||document.body.innerText.includes('现有记录尚不足')",'diff loaded');await pause(400);
+ assert(await js("[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='应用已查看的候选').disabled"));checks.push('approval disabled before explicit review acknowledgment');
+ await capture('02-wiki-diff-light');
+ await click('受保护的人工内容');assert(await js("document.body.innerText.includes('保留人工复核')"));checks.push('human text visibly protected');
+ await click('修改差异');await click('读取来源');await wait("document.querySelector('[data-testid=knowledge-note]')&&document.body.innerText.includes('证据仍需原文核对')",'source reader');checks.push('actual source lines and human review loaded');
+ checks.push('graphical smoke stops before approval; write/conflict paths are covered by isolated backend tests');
+ state.requestWikiReviewUi({sessionId:'fixture'},'');await wait("document.querySelector('[role=dialog]')",'command opens dedicated modal');
+ await js("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");await wait("!document.querySelector('[role=dialog]')",'escape closes review');checks.push('command-to-panel bridge and Escape close');
+ // Real reads/search/validation feed the same host UI state bridge.
+ await service.request('reconcile');await pause(500);prep=await service.prepare({cwd,project:'project-a',query:'自切'});
+ const ctx={sessionId:'fixture'};state.beginKnowledgeFlow(ctx,{vaultId:bound.vaultId,revision:bound.bindingRevision,vault});
+ state.updateKnowledgeFlow(ctx,{phase:'navigation',project:'project-a',navigation:prep.navigation.map(p=>({path:p.path,hash:p.hash,startLine:p.startLine,endLine:p.endLine,missing:!!p.missing}))});
+ state.noteKnowledgeRead(ctx,await service.read(prep.ticket,cwd,{path:'Wiki/Topic.md'}));
+ const search=await service.search(prep.ticket,cwd,{query:'自切'});state.updateKnowledgeFlow(ctx,{phase:'searching',search:{query:'自切',wikiOnly:false,hits:search.hits.length,complete:search.complete,coverage:search.coverage,revision:search.revision}});
+ state.noteKnowledgeRead(ctx,await service.read(prep.ticket,cwd,{path:'Library/Papers/source.md'}));
+ state.updateKnowledgeFlow(ctx,{phase:'checking'});const proof=await service.validateAnswer(prep.ticket,cwd,'限定条件的记录 [[Library/Papers/source]]');state.publicationKnowledgeFlow(ctx,{...proof,status:'released'});
+ await wait("document.querySelector('[data-testid=knowledge-flow-card]')&&document.body.innerText.includes('发布检查通过')",'flow card');await js("document.querySelector('[data-testid=knowledge-flow-card] button[aria-expanded]').click()");await capture('03-flow-light');checks.push('actual read-search-publication phases and evidence records rendered');
+ await js("document.documentElement.dataset.theme='dark'");await capture('04-dark');checks.push('dark theme screenshot');
+ window.setSize(520,900);await pause(200);
+ assert(await js('document.documentElement.scrollWidth<=window.innerWidth+1'),'no horizontal overflow at narrow width');await capture('05-narrow');checks.push('narrow layout without document overflow');
+ assert.equal(errors.length,0,'renderer errors');
+ await writeFile(join(root,'validation.json'),JSON.stringify({passed:true,writeApprovalClicked:false,checks,consoleErrors:errors,screenshots,setupProviderCalled:false,folderPicker:'scripted selection; actual UI and backend preview',realKnowledgeApis:true,realElectron:true},null,2));
+ assert.equal(errors.length,0,'renderer errors');console.log(JSON.stringify({passed:true,checks,root,screenshots}));
+ knowledge.dispose();await services.closeKnowledgeServices();window.destroy();app.quit();
+}catch(error){console.error(error.stack||error);try{await writeFile(join(root,'failure.json'),JSON.stringify({error:String(error),checks,errors},null,2));if(window)await writeFile(join(root,'failure.png'),(await window.webContents.capturePage()).toPNG());}catch{}await services?.closeKnowledgeServices?.();app.exit(1);}
+
+}
+app.whenReady().then(run).catch(error=>{console.error(error);app.exit(1);});

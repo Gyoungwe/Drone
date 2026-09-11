@@ -1,7 +1,9 @@
 import type { Model } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import { describeSubagentActivity, resolveSubagentModel, subagentSessionName } from "../src/tools/subagent/runner";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { describeSubagentActivity, resolveSubagentMcpAccess, resolveSubagentModel, subagentSessionName } from "../src/tools/subagent/runner";
 
 const fallback = { provider: "main", id: "slow" } as Model<any>;
 const configured = { provider: "fast", id: "flash" } as Model<any>;
@@ -38,6 +40,19 @@ describe("subagent runner model and title", () => {
 		expect(describeSubagentActivity("research-obsidian_search_notes", { query: "autotomy" })).toBe(
 			"正在检索 Obsidian：“autotomy”",
 		);
+	});
+
+	it("子智能体 MCP 权限受 workspace 上限和 agent 覆盖共同约束", async () => {
+		const cwd = await mkdtemp("/tmp/percho-subagent-mcp-");
+		try {
+			await mkdir(join(cwd, ".pi"), { recursive: true });
+			await writeFile(join(cwd, ".pi", "research-workspace.json"), JSON.stringify({ subagentMcpPolicy: "read-local" }));
+			expect(await resolveSubagentMcpAccess(cwd, {}, true)).toBe("read-local");
+			expect(await resolveSubagentMcpAccess(cwd, { mcpAccess: "none" }, true)).toBe("none");
+			expect(await resolveSubagentMcpAccess(cwd, { mcpAccess: "read-local" }, false)).toBe("none");
+		} finally {
+			await rm(cwd, { recursive: true, force: true });
+		}
 	});
 
 });

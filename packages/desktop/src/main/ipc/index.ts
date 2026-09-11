@@ -1,3 +1,4 @@
+import { registerKnowledgeIpc } from "./knowledge";
 import type { PiBackend } from "@percho/backend";
 import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@percho/shared";
 import { IpcChannels } from "@percho/shared";
@@ -31,6 +32,7 @@ export function registerIpc(
 ): void {
 	registerSessionsIpc(backend);
 	registerSettingsIpc(backend);
+	registerKnowledgeIpc(backend);
 	registerPackagesIpc(backend);
 	registerAppIpc(backend);
 	registerUiPluginsIpc(uiPluginsManager);

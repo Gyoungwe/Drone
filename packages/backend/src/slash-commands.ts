@@ -1,4 +1,9 @@
-import type { AgentSession, Extension, ResourceLoader } from "@earendil-works/pi-coding-agent";
+import type {
+	AgentSession,
+	Extension,
+	ResolvedCommand,
+	ResourceLoader,
+} from "@earendil-works/pi-coding-agent";
 import type { SlashCommandInfo } from "@percho/shared";
 
 /**
@@ -61,6 +66,45 @@ function skillCommands(loader: ResourceLoader): SlashCommandInfo[] {
 	}));
 }
 
+type MenuMetadata = { version: 1; canonical: string; skill: string; role: "primary" | "alias" };
+function menuMetadata(command: ResolvedCommand): MenuMetadata | undefined {
+	const value = (command as ResolvedCommand & { perchoMenu?: MenuMetadata }).perchoMenu;
+	if (
+		value?.version !== 1 ||
+		value.canonical !== "obsidian-setup" ||
+		value.skill !== "research-vault" ||
+		!["primary", "alias"].includes(value.role)
+	)
+		return undefined;
+	return value;
+}
+/** Fold only explicitly owned sibling aliases; do not hide other extensions' setup commands. */
+export function presentExtensionCommands(commands: readonly ResolvedCommand[]): SlashCommandInfo[] {
+	const primaries = commands.filter(
+		(c) => menuMetadata(c)?.role === "primary" && c.name === menuMetadata(c)?.canonical,
+	);
+	const primaryFor = (command: ResolvedCommand) => {
+		const meta = menuMetadata(command);
+		return meta?.role === "alias"
+			? primaries.find((p) => p.sourceInfo === command.sourceInfo && p.name === meta.canonical)
+			: undefined;
+	};
+	return commands
+		.filter((command) => !primaryFor(command))
+		.map((command) => {
+			const meta = menuMetadata(command);
+			const aliases = commands.filter((c) => primaryFor(c) === command).map((c) => c.invocationName);
+			return {
+				name: command.invocationName,
+				description: command.description ?? "",
+				source: "extension",
+				supported: true,
+				...(meta?.role === "primary" ? { ownerSkill: meta.skill } : {}),
+				...(aliases.length ? { aliases } : {}),
+			};
+		});
+}
+
 /**
  * 无会话扩展命令清单（draft 用）：命令在扩展加载期就注册进 ext.commands
  * （注册类扩展 API 无需 bindExtensions），重名命令复刻 SDK
@@ -72,7 +116,7 @@ function extensionCommands(extensions: Extension[]): SlashCommandInfo[] {
 	for (const command of all) counts.set(command.name, (counts.get(command.name) ?? 0) + 1);
 	const seen = new Map<string, number>();
 	const taken = new Set<string>();
-	return all.map((command) => {
+	const resolved = all.map((command) => {
 		const occurrence = (seen.get(command.name) ?? 0) + 1;
 		seen.set(command.name, occurrence);
 		let invocationName = (counts.get(command.name) ?? 0) > 1 ? `${command.name}:${occurrence}` : command.name;
@@ -84,23 +128,14 @@ function extensionCommands(extensions: Extension[]): SlashCommandInfo[] {
 			} while (taken.has(invocationName));
 		}
 		taken.add(invocationName);
-		return {
-			name: invocationName,
-			description: command.description ?? "",
-			source: "extension",
-			supported: true,
-		};
+		return { ...command, invocationName };
 	});
+	return presentExtensionCommands(resolved);
 }
 
 /** 会话态清单：内置 + 模板 + skill + 扩展命令（runner 反映 bindExtensions 后的运行时注册与重名去重） */
 export function slashCommandsForSession(session: AgentSession): SlashCommandInfo[] {
-	const extensions: SlashCommandInfo[] = session.extensionRunner.getRegisteredCommands().map((command) => ({
-		name: command.invocationName,
-		description: command.description ?? "",
-		source: "extension",
-		supported: true,
-	}));
+	const extensions = presentExtensionCommands(session.extensionRunner.getRegisteredCommands());
 	return [
 		...BUILTIN_SLASH_COMMANDS,
 		...templateCommands(session.resourceLoader),

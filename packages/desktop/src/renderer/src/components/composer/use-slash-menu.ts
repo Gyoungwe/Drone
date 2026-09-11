@@ -3,7 +3,7 @@ import { type RefObject, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { isDraftSessionId } from "../../stores/sessions";
-import { extractSlashToken, filterCommands, removeSlashToken, type SlashToken } from "./slash-filter";
+import { extractSlashToken, menuCommands, removeSlashToken, type SlashToken } from "./slash-filter";
 
 export interface UseSlashMenuOptions {
 	activeSessionId: string | null;
@@ -30,6 +30,7 @@ export interface UseSlashMenuOptions {
 export function useSlashMenu(options: UseSlashMenuOptions) {
 	const t = useT();
 	const [slashSelected, setSlashSelected] = useState(0);
+	const [showSpecialized, setShowSpecialized] = useState(false);
 	const [slashCommands, setSlashCommands] = useState<SlashCommandInfo[]>([]);
 	/** 点击面板外部后隐藏菜单（保留文本，再次输入时恢复） */
 	const [slashDismissed, setSlashDismissed] = useState(false);
@@ -132,8 +133,8 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 
 	/** 按下标选中菜单项（无匹配时落回正常发送） */
 	const handleSlashPickByIndex = (index: number) => {
-		const flat = filterCommands(slashCommands, slashQuery);
-		const command = flat[Math.min(index, flat.length - 1)] ?? undefined;
+		const flat = menuCommands(slashCommands, slashQuery, showSpecialized);
+		const command = flat[Math.max(0, Math.min(index, flat.length - 1))] ?? undefined;
 		if (command) {
 			void confirmCommand(command);
 		} else {
@@ -143,8 +144,8 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 
 	/** Tab 补全：确认选中命令为胶囊（不触发内置立即执行），菜单随之关闭 */
 	const handleSlashTabComplete = () => {
-		const flat = filterCommands(slashCommands, slashQuery);
-		const command = flat[Math.min(slashSelected, flat.length - 1)] ?? flat[0];
+		const flat = menuCommands(slashCommands, slashQuery, showSpecialized);
+		const command = flat[Math.max(0, Math.min(slashSelected, flat.length - 1))] ?? flat[0];
 		if (!command) return;
 		void confirmCommand(command, { allowInline: false });
 	};
@@ -177,12 +178,14 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 		}
 		if (e.key === "ArrowDown") {
 			e.preventDefault();
-			setSlashSelected((s) => s + 1);
+			setSlashSelected((s) =>
+				Math.max(0, Math.min(s + 1, menuCommands(slashCommands, slashQuery, showSpecialized).length - 1)),
+			);
 			return true;
 		}
 		if (e.key === "ArrowUp") {
 			e.preventDefault();
-			setSlashSelected((s) => s - 1);
+			setSlashSelected((s) => Math.max(0, s - 1));
 			return true;
 		}
 		if (e.key === "Escape") {
@@ -200,6 +203,11 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 
 	return {
 		slashCommands,
+		showSpecialized,
+		toggleSpecialized: () => {
+			setShowSpecialized((value) => !value);
+			setSlashSelected(0);
+		},
 		slashSelected,
 		setSlashSelected,
 		slashOpen,

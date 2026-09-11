@@ -1,3 +1,4 @@
+import { knowledgeDirectory, readKnowledgeBinding, projectIdentity } from '../lib/knowledge/config.mjs';
 import { readFile, writeFile, mkdir, rename, access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -5,13 +6,17 @@ import { pathToFileURL } from "node:url";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { initializeVaultLayout, containedFile } from "../lib/vault-layout.mjs";
-const initializeVault = (path, project = null) => initializeVaultLayout(path, { project });
+import { DEFAULT_VAULT_PROFILE, getVaultProfile, SUBAGENT_MCP_POLICIES } from "../lib/vault-profiles.mjs";
+const initializeVault = (path, project = null, profile = DEFAULT_VAULT_PROFILE) => initializeVaultLayout(path, { project, profile });
 
 export const DEFAULT_WORKSPACE_CONFIG = Object.freeze({
   resultsRoot: "./results",
   obsidianVault: null,
   maxConcurrentSubagents: 3,
   timezone: "Asia/Shanghai",
+  knowledgeProfile: DEFAULT_VAULT_PROFILE,
+  knowledgeDepositMode: "verified",
+  subagentMcpPolicy: "read-local",
 });
 
 const CONFIG_NAME = ".pi/research-workspace.json";
@@ -36,6 +41,13 @@ function validatePatch(config) {
   if (typeof config.resultsRoot !== "string" || !config.resultsRoot.trim()) {
     throw new Error("resultsRoot must be a non-empty path");
   }
+  getVaultProfile(config.knowledgeProfile);
+  if (!["run-only", "verified", "rich"].includes(config.knowledgeDepositMode)) {
+    throw new Error("knowledgeDepositMode must be run-only, verified, or rich");
+  }
+  if (!SUBAGENT_MCP_POLICIES.includes(config.subagentMcpPolicy)) {
+    throw new Error("subagentMcpPolicy must be none or read-local");
+  }
 }
 
 export async function loadWorkspaceConfig(cwd = process.cwd()) {
@@ -51,6 +63,18 @@ export async function loadWorkspaceConfig(cwd = process.cwd()) {
     if (error.code !== "ENOENT") raw = {};
   }
   const merged = { ...DEFAULT_WORKSPACE_CONFIG, ...raw };
+  if (knowledgeDirectory()) {
+    const binding = await readKnowledgeBinding();
+    return { ...DEFAULT_WORKSPACE_CONFIG,
+      resultsRoot: resolveConfiguredPath(projectRoot, typeof raw.resultsRoot === "string" && raw.resultsRoot.trim() ? raw.resultsRoot : DEFAULT_WORKSPACE_CONFIG.resultsRoot),
+      obsidianVault: binding?.vault || null,
+      knowledgeProfile: binding?.profile || "hybrid", knowledgeDepositMode: binding?.depositMode || "verified",
+      subagentMcpPolicy: binding?.subagentPolicy || "none", knowledgeScope: "application",
+      knowledgeProjectId: projectIdentity(projectRoot, raw.knowledgeProjectId), knowledgeBindingRevision: binding?.revision || 0,
+      legacyProjectVault: raw.obsidianVault || null,
+      maxConcurrentSubagents: [1,2,3].includes(raw.maxConcurrentSubagents) ? raw.maxConcurrentSubagents : DEFAULT_WORKSPACE_CONFIG.maxConcurrentSubagents,
+    };
+  }
   try {
     validatePatch(merged);
   } catch {
@@ -76,6 +100,9 @@ function storedPath(cwd, value) {
 
 export async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
   const projectRoot = resolve(cwd);
+  if (knowledgeDirectory() && ["obsidianVault","knowledgeProfile","knowledgeDepositMode","subagentMcpPolicy"].some(key => key in patch)) {
+    throw new Error("Vault policies are application-wide; use /obsidian-setup rather than a project override");
+  }
   const current = await loadWorkspaceConfig(projectRoot);
   const merged = {
     ...current,
@@ -89,7 +116,14 @@ export async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
     obsidianVault: storedPath(projectRoot, merged.obsidianVault),
     maxConcurrentSubagents: merged.maxConcurrentSubagents,
     timezone: merged.timezone,
+    knowledgeProfile: merged.knowledgeProfile,
+    knowledgeDepositMode: merged.knowledgeDepositMode,
+    subagentMcpPolicy: merged.subagentMcpPolicy,
   };
+  if (knowledgeDirectory()) {
+    delete payload.obsidianVault; delete payload.knowledgeProfile; delete payload.knowledgeDepositMode; delete payload.subagentMcpPolicy;
+    payload.knowledgeProjectId = projectIdentity(projectRoot, patch.knowledgeProjectId || merged.knowledgeProjectId);
+  }
   const target = configPath(projectRoot);
   await mkdir(dirname(target), { recursive: true });
   const temporary = `${target}.${process.pid}.tmp`;
@@ -201,12 +235,14 @@ export function registerWorkspaceConfig(pi, options = {}) {
     description: "Create the new Obsidian knowledge vault structure without overwriting files.",
     parameters: {
       type: "object",
-      properties: { path: { type: "string" }, project: { type: "string" } },
+      properties: { path: { type: "string" }, project: { type: "string" }, profile: { type: "string", enum: ["project", "literature", "hybrid"] } },
       required: ["path"],
     },
     async execute(_id, params) {
-      const result = await initializeVaultLayout(params.path, { project: params.project || null, excluded: [baseCwd, (await loadWorkspaceConfig(baseCwd)).resultsRoot] });
-      const config = await saveWorkspaceConfig(baseCwd, { obsidianVault: result.vault });
+      if (knowledgeDirectory()) throw new Error("Use /obsidian-setup for confirmed application-wide initialization");
+      const profile = params.profile || (await loadWorkspaceConfig(baseCwd)).knowledgeProfile;
+      const result = await initializeVaultLayout(params.path, { project: params.project || null, profile, excluded: [baseCwd, (await loadWorkspaceConfig(baseCwd)).resultsRoot] });
+      const config = await saveWorkspaceConfig(baseCwd, { obsidianVault: result.vault, knowledgeProfile: profile });
       return { content: [{ type: "text", text: `Initialized Obsidian vault at ${result.vault}` }], details: { result, config } };
     },
   });

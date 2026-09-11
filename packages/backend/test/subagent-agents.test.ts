@@ -12,13 +12,14 @@ afterEach(async () => {
 describe("subagent agent definitions", () => {
 	it("parses frontmatter and body", () => {
 		const agent = parseAgentMarkdown(
-			`---\nname: scout\ndescription: Code scout\ntools: read, grep, find\nmodel: provider/model # optional\n---\n\nInspect files only.`,
+			`---\nname: scout\ndescription: Code scout\ntools: read, grep, find\nmodel: provider/model # optional\nmcp: read-local\n---\n\nInspect files only.`,
 		);
 		expect(agent).toMatchObject({
 			name: "scout",
 			description: "Code scout",
 			tools: ["read", "grep", "find"],
 			model: "provider/model",
+			mcpAccess: "read-local",
 			systemPrompt: "Inspect files only.",
 		});
 	});

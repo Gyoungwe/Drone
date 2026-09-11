@@ -279,6 +279,8 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 				{slash.slashOpen && (
 					<SlashMenu
 						commands={slash.slashCommands}
+						showSpecialized={slash.showSpecialized}
+						onToggleSpecialized={slash.toggleSpecialized}
 						query={slash.slashQuery}
 						selectedIndex={slash.slashSelected}
 						onSelectedIndexChange={slash.setSlashSelected}

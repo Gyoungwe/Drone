@@ -1,6 +1,7 @@
 import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { Theme } from "@earendil-works/pi-coding-agent";
 import type { PermissionGate } from "../permissions/gate";
+import type { AskGate } from "./ask-gate";
 
 /**
  * 提供给扩展的契约 Theme 实例（中性暗色盘，truecolor）。
@@ -75,17 +76,35 @@ const EXTENSION_THEME = new Theme(
 );
 
 /**
- * ExtensionUIContext 全量 no-op 实现：只桥接权限确认（confirm），其余保持默认。
+ * ExtensionUIContext：select/input 通过 AskGate 桥接原生问答，confirm 通过权限门控。
+ * 其余终端专用 UI 方法保持 no-op。
  * SDK 接口变化时在这里补齐新成员，别在 PiBackend 里重写。
  */
-export function makeUiContext(gate: PermissionGate): ExtensionUIContext {
+export function makeUiContext(gate: PermissionGate, askGate?: AskGate, notify?: (message: string, type: "info" | "warning" | "error") => void): ExtensionUIContext {
 	return {
-		// SDK 契约：select/input 的 undefined = 用户取消（types.d.ts），合法返回值；GUI 无对应
-		// 交互 UI，一律取消，不伪造「第一项/空串」当作用户输入（D8）
-		select: (_title, _options) => Promise.resolve(undefined),
+		select: async (title, options, dialogOptions) => {
+			if (!askGate || options.length === 0) return undefined;
+			const [heading = title, ...description] = title.split("\n\n");
+			const response = await askGate.ask({
+				toolCallId: `extension-ui-select:${heading}`,
+				title: heading,
+				questions: [{ id: "value", label: heading, prompt: description.join("\n\n") || title, type: "single", required: true, options: options.map((value) => ({ value, label: value })) }],
+			}, dialogOptions?.signal);
+			if (response.kind === "cancel") return undefined;
+			return response.answers.value?.values?.[0];
+		},
 		confirm: (title, message) => gate.confirm(title, message),
-		input: (_title) => Promise.resolve(undefined),
-		notify: () => {},
+		input: async (title, placeholder, dialogOptions) => {
+			if (!askGate) return undefined;
+			const response = await askGate.ask({
+				toolCallId: `extension-ui-input:${title}`,
+				title,
+				questions: [{ id: "value", label: title, prompt: placeholder || title, type: "text", required: true, options: [] }],
+			}, dialogOptions?.signal);
+			if (response.kind === "cancel") return undefined;
+			return response.answers.value?.customText?.trim() || undefined;
+		},
+		notify: (message, type) => notify?.(message, type ?? "info"),
 		onTerminalInput: () => () => {},
 		setStatus: () => {},
 		setWorkingMessage: () => {},

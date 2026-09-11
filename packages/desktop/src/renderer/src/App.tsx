@@ -1,3 +1,5 @@
+import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
+import { KnowledgeFlowCard } from "./components/knowledge/KnowledgeFlowCard";
 import type { AskRequest, AskResponse, TrustRequest } from "@percho/shared";
 import { useCallback, useEffect, useState } from "react";
 import { getPi } from "./api";
@@ -70,7 +72,8 @@ export default function App() {
 	}, []);
 
 	const respondAsk = async (requestId: string, response: AskResponse) => {
-		await getPi().respondAsk(requestId, response);
+		const accepted = await getPi().respondAsk(requestId, response);
+		if (!accepted) throw new Error("This question is no longer pending. Please retry the action that opened it.");
 		setAskRequests((current) => current.filter((request) => request.id !== requestId));
 	};
 
@@ -104,6 +107,7 @@ export default function App() {
 					   外层 flex-row：末尾挂 DiffSidebar（push 式，聊天列自然压缩） */
 					<div className="relative flex min-h-0 flex-1">
 						<div className="relative flex min-w-0 flex-1 flex-col">
+							<KnowledgeFlowCard sessionId={activeSessionId} />
 							<main className="relative min-h-0 flex-1">
 								{showEmpty ? <EmptyState /> : <MessageList />}
 								<Slot name={UI_SLOTS.TodoPanel} props={{}} fallback={TodoPanel} />
@@ -123,6 +127,7 @@ export default function App() {
 			{/* 悬浮贡献层：内容列之后、设置弹窗之前（z-20 < z-40，插件层永在弹窗之下） */}
 			<RegionHost region={UI_REGIONS.AppOverlay} />
 			<SettingsDialog />
+			<KnowledgeUiRoot />
 			<AskDialog requests={askRequests} onRespond={respondAsk} />
 			<TrustDialog requests={trustRequests} onRespond={respondTrust} />
 			<Toaster />

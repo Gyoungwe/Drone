@@ -21,6 +21,7 @@ export type SettingsCategory =
 	| "models"
 	| "skills"
 	| "mcp"
+	| "knowledge"
 	| "extensions"
 	| "lan"
 	| "about"

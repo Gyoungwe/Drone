@@ -34,6 +34,11 @@ function inferHostResearchStatus(toolName: string, args?: unknown): { text: stri
 		.filter((value): value is string => typeof value === "string")
 		.map((value) => value.toLowerCase().replaceAll("_", "-"));
 	const identity = candidates.join(" ");
+	if (toolName === "research_prepare_knowledge") return { text: "正在读取知识库导航与项目背景…", phase: "knowledge-search" };
+	if (toolName === "research_read_knowledge") return { text: "正在阅读 Wiki 与知识证据…", phase: "reading" };
+	if (toolName === "research_search_knowledge") return { text: "正在检索知识库索引…", phase: "knowledge-search" };
+	if (toolName === "research_propose_wiki_update") return { text: "正在准备待审核的 Wiki 修改…", phase: "deposit" };
+	if (toolName === "research_maintain_knowledge") return { text: "正在维护知识库索引…", phase: "verification" };
 	if (identity.includes("research-zotero")) return { text: "正在检索 Zotero 文献库…", phase: "literature-search" };
 	if (identity.includes("research-obsidian")) return { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" };
 	if (toolName === "web_search" || toolName.includes("web_search")) return { text: "正在联网检索相关研究…", phase: "web-search" };

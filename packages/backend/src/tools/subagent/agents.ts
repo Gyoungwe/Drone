@@ -5,11 +5,14 @@ import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 export type AgentSource = "builtin" | "user" | "project";
 
+export type SubagentMcpAccess = "none" | "read-local";
+
 export interface SubagentDefinition {
 	name: string;
 	description: string;
 	tools: string[];
 	model?: string;
+	mcpAccess?: SubagentMcpAccess;
 	systemPrompt: string;
 	source: AgentSource;
 	path?: string;
@@ -24,6 +27,7 @@ const BUILTIN_SCOUT: SubagentDefinition = {
 	name: "scout",
 	description: "快速代码侦察，读取并总结项目上下文，不修改文件。",
 	tools: ["read", "grep", "find", "ls", "webfetch"],
+	mcpAccess: "read-local",
 	systemPrompt:
 		"You are scout, a read-only reconnaissance agent. Inspect files and answer the assigned task concisely. Never modify files or run mutating commands.",
 	source: "builtin",
@@ -79,11 +83,14 @@ export function parseAgentMarkdown(
 	const description = parseScalar(metadata.get("description") ?? "");
 	const tools = parseTools(metadata.get("tools") ?? "read");
 	const model = parseScalar(metadata.get("model") ?? "") || undefined;
+	const mcpRaw = parseScalar(metadata.get("mcp") ?? "") || undefined;
+	const mcpAccess = mcpRaw === "none" || mcpRaw === "read-local" ? mcpRaw : undefined;
 	return {
 		name,
 		description,
 		tools,
 		model,
+		mcpAccess,
 		systemPrompt: lines
 			.slice(end + 1)
 			.join("\n")
