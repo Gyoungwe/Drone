@@ -1,7 +1,7 @@
 import type { Model } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import { resolveSubagentModel, subagentSessionName } from "../src/tools/subagent/runner";
+import { describeSubagentActivity, resolveSubagentModel, subagentSessionName } from "../src/tools/subagent/runner";
 
 const fallback = { provider: "main", id: "slow" } as Model<any>;
 const configured = { provider: "fast", id: "flash" } as Model<any>;
@@ -29,4 +29,15 @@ describe("subagent runner model and title", () => {
 		expect(subagentSessionName("scout", "检查 runner\n忽略这行")).toBe("scout: 检查 runner");
 		expect(subagentSessionName("scout", "x".repeat(31))).toBe(`scout: ${"x".repeat(30)}…`);
 	});
+	it("可观察动作包含真实对象而不是泛化阶段", () => {
+		expect(describeSubagentActivity("read", { path: "/tmp/paper.md" })).toBe("正在阅读 /tmp/paper.md");
+		expect(describeSubagentActivity("bash", { command: "npm test -- --run foo" })).toContain("npm test");
+		expect(describeSubagentActivity("research-zotero_zotero_semantic_search", { query: "mantispidae autotomy" })).toBe(
+			"正在检索 Zotero：“mantispidae autotomy”",
+		);
+		expect(describeSubagentActivity("research-obsidian_search_notes", { query: "autotomy" })).toBe(
+			"正在检索 Obsidian：“autotomy”",
+		);
+	});
+
 });

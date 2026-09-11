@@ -1,7 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import type { Model } from "@earendil-works/pi-ai";
-import type { AgentSessionEvent, ModelRuntime } from "@earendil-works/pi-coding-agent";
+import type { AgentSessionEvent, AgentToolResult, ModelRuntime, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import {
 	createAgentSession,
 	DefaultResourceLoader,
@@ -13,7 +14,9 @@ import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
 import type { SessionTraces } from "../../session/traces";
 import { makeUiContext } from "../../session/ui-context";
+import { makeStatusTool } from "../status";
 import { makeWebFetchTool } from "../webfetch";
+import { Type } from "typebox";
 import type { SubagentDefinition } from "./agents";
 
 export interface SubagentUsage {
@@ -27,6 +30,8 @@ export interface SubagentUsage {
 
 export interface SingleResult {
 	agent: string;
+	/** 子会话 id：父 UI 内联展开时绑定实时 transcript */
+	sessionId?: string;
 	task: string;
 	model?: string;
 	exitCode: number;
@@ -34,6 +39,20 @@ export interface SingleResult {
 	content?: string;
 	usage: SubagentUsage;
 	artifactPaths: { jsonlPath?: string };
+	/** Live user-visible status propagated to the parent subagent card. */
+	statusText?: string;
+	statusPhase?: string;
+	/** Observable current activity derived from actual tool execution. */
+	currentAction?: string;
+	currentTool?: string;
+	startedAt?: number;
+	lastSteerAt?: number;
+	supervisorRequest?: {
+		id: string;
+		reason: "need_decision" | "interview_request" | "progress_update";
+		message: string;
+		expectsReply: boolean;
+	} | null;
 }
 
 export interface RunSubagentInput {
@@ -55,6 +74,11 @@ export interface RunSubagentDeps {
 	traces: SessionTraces;
 	/** 把运行中子会话事件转发给宿主；未提供时只写 trace（供非桌面宿主使用）。 */
 	onEvent?: (sessionId: string, event: AgentSessionEvent) => void;
+	/** Register/unregister a live child so the host can steer it or answer supervisor requests. */
+	registerLiveChild?: (sessionId: string, control: {
+		steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
+		reply: (requestId: string, message: string) => boolean;
+	}) => () => void;
 }
 
 const EMPTY_USAGE: SubagentUsage = {
@@ -167,6 +191,66 @@ function modelLabel(model: Model<any> | undefined): string | undefined {
 	return model ? `${model.provider}/${model.id}` : undefined;
 }
 
+function compactText(value: unknown, max = 96): string | undefined {
+	if (typeof value !== "string") return undefined;
+	const text = value.replace(/\s+/g, " ").trim();
+	if (!text) return undefined;
+	return [...text].slice(0, max).join("");
+}
+
+function firstString(args: Record<string, unknown>, keys: string[]): string | undefined {
+	for (const key of keys) {
+		const value = compactText(args[key]);
+		if (value) return value;
+	}
+	return undefined;
+}
+
+/** Observable activity only: derived from tool name/arguments, never hidden reasoning. */
+export function describeSubagentActivity(toolName: string, args: Record<string, unknown>): string {
+	const nested = args.args && typeof args.args === "object" ? args.args as Record<string, unknown> : {};
+	const visibleArgs = { ...nested, ...args };
+	const descriptor = `${toolName} ${JSON.stringify(args)}`.toLowerCase();
+	if (toolName === "read") {
+		const path = firstString(visibleArgs, ["path", "file", "filePath"]);
+		return path ? `正在阅读 ${path}` : "正在阅读文件";
+	}
+	if (toolName === "bash") {
+		const command = firstString(visibleArgs, ["command", "cmd"]);
+		return command ? `正在运行命令：${command}` : "正在运行命令";
+	}
+	if (descriptor.includes("research-zotero") || descriptor.includes("research_zotero") || descriptor.includes("zotero")) {
+		const query = firstString(visibleArgs, ["query", "q", "search", "search_text", "text"]);
+		return query ? `正在检索 Zotero：“${query}”` : "正在检索 Zotero 文献库";
+	}
+	if (descriptor.includes("research-obsidian") || descriptor.includes("research_obsidian") || descriptor.includes("obsidian")) {
+		const query = firstString(visibleArgs, ["query", "q", "search", "text", "path"]);
+		return query ? `正在检索 Obsidian：“${query}”` : "正在检索 Obsidian 知识库";
+	}
+	if (descriptor.includes("web_search") || descriptor.includes("web-search")) {
+		const query = firstString(visibleArgs, ["query", "q", "search", "text"]);
+		return query ? `正在联网搜索：“${query}”` : "正在联网搜索";
+	}
+	if (descriptor.includes("fetch")) {
+		const target = firstString(visibleArgs, ["url", "target", "path"]);
+		return target ? `正在读取来源：${target}` : "正在读取并核对来源";
+	}
+	if (descriptor.includes("search") || descriptor.includes("grep")) {
+		const query = firstString(visibleArgs, ["query", "pattern", "q", "text"]);
+		return query ? `正在搜索：“${query}”` : `正在执行 ${toolName}`;
+	}
+	return `正在执行 ${toolName}`;
+}
+
+const supervisorParams = Type.Object({
+	reason: Type.Union([
+		Type.Literal("need_decision"),
+		Type.Literal("interview_request"),
+		Type.Literal("progress_update"),
+	]),
+	message: Type.String({ minLength: 1, maxLength: 2000 }),
+});
+
 /** 在共享 ModelRuntime 上运行一个隔离的、深度固定为 1 的子会话。 */
 export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput): Promise<SingleResult> {
 	const runtime = await deps.getModelRuntime();
@@ -184,7 +268,48 @@ export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput
 		projectTrusted: input.projectTrusted,
 	});
 	const safeTools = input.agent.tools.filter((name) => name !== "subagent" && !name.startsWith("subagent_"));
-	const customTools = safeTools.includes("webfetch") ? [makeWebFetchTool()] : [];
+	const pendingSupervisor = new Map<string, { resolve: (message: string) => void; reject: (error: Error) => void }>();
+	let resultRef: SingleResult | undefined;
+	const contactSupervisorTool: ToolDefinition<typeof supervisorParams> = {
+		name: "contact_supervisor",
+		label: "Contact Supervisor",
+		description:
+			"Contact the parent supervisor during execution. Use progress_update only when a meaningful discovery changes what the parent should know. Use need_decision when blocked on a decision and interview_request for structured clarification. Do not use for routine completion handoffs.",
+		promptSnippet: "contact_supervisor({reason,message})",
+		parameters: supervisorParams,
+		execute: async (_id, params, signal): Promise<AgentToolResult<{ requestId: string; reason: string }>> => {
+			const id = randomUUID();
+			const expectsReply = params.reason !== "progress_update";
+			const request = { id, reason: params.reason, message: params.message.trim(), expectsReply };
+			if (resultRef) {
+				resultRef.supervisorRequest = request;
+				resultRef.currentAction = expectsReply ? "正在等待主会话回复" : request.message;
+				resultRef.currentTool = "contact_supervisor";
+				input.onProgress?.(resultRef);
+			}
+			if (!expectsReply) {
+				return { content: [{ type: "text", text: "Progress update delivered to the supervisor." }], details: { requestId: id, reason: params.reason } };
+			}
+			const reply = await new Promise<string>((resolveReply, rejectReply) => {
+				pendingSupervisor.set(id, { resolve: resolveReply, reject: rejectReply });
+				const abort = () => {
+					pendingSupervisor.delete(id);
+					rejectReply(new Error("Supervisor request cancelled"));
+				};
+				if (signal?.aborted) abort();
+				else signal?.addEventListener("abort", abort, { once: true });
+			});
+			if (resultRef?.supervisorRequest?.id === id) resultRef.supervisorRequest = null;
+			if (resultRef) {
+				resultRef.currentAction = "已收到主会话回复，正在继续任务";
+				resultRef.currentTool = "";
+				input.onProgress?.(resultRef);
+			}
+			return { content: [{ type: "text", text: `Supervisor reply: ${reply}` }], details: { requestId: id, reason: params.reason } };
+		},
+	};
+	const customTools: ToolDefinition[] = [makeStatusTool(), contactSupervisorTool];
+	if (safeTools.includes("webfetch")) customTools.push(makeWebFetchTool());
 	const resourceLoader = new DefaultResourceLoader({
 		cwd: input.cwd,
 		agentDir,
@@ -192,7 +317,11 @@ export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput
 		noExtensions: true,
 		noSkills: true,
 		noPromptTemplates: true,
-		appendSystemPrompt: [input.agent.systemPrompt],
+		appendSystemPrompt: [
+			input.agent.systemPrompt,
+			"For multi-step work, use set_status when the current activity meaningfully changes. Keep status short, concrete, present-tense, and user-visible; never include hidden reasoning, conclusions, confidence, or percentages.",
+			"You have a live supervisor channel. Use contact_supervisor(reason=progress_update) only for meaningful discoveries that change the plan. Use need_decision when blocked and interview_request when structured clarification is required. Do not wait silently when a decision is required.",
+		],
 		extensionFactories: [
 			makePermissionGateExtension(agentDir, {
 				projectRoot: input.cwd,
@@ -219,22 +348,94 @@ export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput
 	await session.bindExtensions({ uiContext: makeUiContext(deps.gate), mode: "tui" });
 	const result: SingleResult = {
 		agent: input.agent.name,
+		sessionId: session.sessionId,
 		task: input.task,
 		model: modelLabel(session.model),
 		exitCode: -1,
 		usage: structuredClone(EMPTY_USAGE),
 		artifactPaths: { jsonlPath: session.sessionFile },
+		startedAt: Date.now(),
 	};
+	resultRef = result;
 	let settled = false;
 	let failure: string | undefined;
 	let unsubscribeEvents: (() => void) | undefined;
+	let agentStatus: { text: string; phase?: string } | null = null;
+	let hostStatus: { text: string; phase?: string; toolCallId: string } | null = null;
+	const publishStatus = () => {
+		const current = hostStatus ?? agentStatus;
+		if (current) {
+			result.statusText = current.text;
+			result.statusPhase = current.phase;
+		} else {
+			delete result.statusText;
+			delete result.statusPhase;
+		}
+		input.onProgress?.(result);
+	};
+	const unregisterLiveChild = deps.registerLiveChild?.(session.sessionId, {
+		steer: async (message, mode = "steer") => {
+			if (mode === "followUp") await session.followUp(message);
+			else await session.steer(message);
+			result.lastSteerAt = Date.now();
+			result.currentAction = "已收到主会话指导，正在调整执行";
+			input.onProgress?.(result);
+		},
+		reply: (requestId, message) => {
+			const pending = pendingSupervisor.get(requestId);
+			if (!pending) return false;
+			pendingSupervisor.delete(requestId);
+			pending.resolve(message);
+			return true;
+		},
+	});
 	// 等待 agent_settled 而非 agent_end：_runAgentPrompt 的 finally 保证 settled 在全部路径
 	// （正常结束 / 异常逃逸 / abort）都触发；agent_end 在 overflow 重试（willRetry）或异常时不算终结。
 	const endPromise = new Promise<void>((resolve) => {
 		unsubscribeEvents = session.subscribe((event: AgentSessionEvent) => {
 			if (deps.onEvent) deps.onEvent(session.sessionId, event);
 			else deps.traces.record(session.sessionId, event);
-			if (event.type === "message_end") addUsage(result.usage, usageFromMessage(event.message));
+			if (event.type === "tool_execution_start") {
+				const args = (event.args ?? {}) as Record<string, unknown>;
+				if (event.toolName === "set_status") {
+					const text = typeof args.text === "string" ? args.text.replace(/\s+/g, " ").trim() : "";
+					if (text) {
+						agentStatus = { text: [...text].slice(0, 30).join(""), phase: typeof args.phase === "string" ? args.phase : undefined };
+						publishStatus();
+					}
+				} else if (event.toolName !== "contact_supervisor") {
+					result.currentTool = event.toolName;
+					result.currentAction = describeSubagentActivity(event.toolName, args);
+					input.onProgress?.(result);
+					const descriptor = `${event.toolName} ${JSON.stringify(args)}`.toLowerCase();
+					const inferred = descriptor.includes("research-zotero") || descriptor.includes("research_zotero")
+						? { text: "正在检索 Zotero 文献库…", phase: "literature-search" }
+						: descriptor.includes("research-obsidian") || descriptor.includes("research_obsidian")
+							? { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" }
+							: descriptor.includes("web_search") || descriptor.includes("web-search")
+								? { text: "正在联网检索相关研究…", phase: "web-search" }
+								: descriptor.includes("fetch")
+									? { text: "正在读取并核对原始来源…", phase: "reading" }
+									: null;
+					if (inferred) {
+						hostStatus = { ...inferred, toolCallId: event.toolCallId };
+						publishStatus();
+					}
+				}
+			}
+			if (event.type === "tool_execution_end" && hostStatus?.toolCallId === event.toolCallId) {
+				hostStatus = null;
+				publishStatus();
+			}
+			if (event.type === "tool_execution_end" && result.currentTool === event.toolName && event.toolName !== "contact_supervisor") {
+				result.currentTool = "";
+				result.currentAction = agentStatus?.text ?? "正在继续任务";
+				input.onProgress?.(result);
+			}
+			if (event.type === "message_end") {
+				addUsage(result.usage, usageFromMessage(event.message));
+				input.onProgress?.(result);
+			}
 			if (event.type === "agent_settled") {
 				settled = true;
 				resolve();
@@ -273,6 +474,9 @@ export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput
 		result.error = failure;
 	} finally {
 		unsubscribeEvents?.();
+		unregisterLiveChild?.();
+		for (const pending of pendingSupervisor.values()) pending.reject(new Error("Subagent finished before supervisor reply"));
+		pendingSupervisor.clear();
 		input.signal?.removeEventListener("abort", abort);
 		await deps.traces.stop(session.sessionId);
 		session.dispose();

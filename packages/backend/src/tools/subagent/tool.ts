@@ -6,6 +6,7 @@ import type {
 	ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { type Static, Type } from "typebox";
+import { normalizeSubagentLaunchInputs } from "@percho/shared";
 import type { PermissionGate } from "../../permissions/gate";
 import type { SessionTraces } from "../../session/traces";
 import { discoverAgents, findAgent } from "./agents";
@@ -53,6 +54,10 @@ export interface MakeSubagentToolDeps {
 	traces: SessionTraces;
 	/** 把运行中子会话事件转发给桌面会话订阅方。 */
 	onEvent?: (sessionId: string, event: AgentSessionEvent) => void;
+	registerLiveChild?: (sessionId: string, control: {
+		steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
+		reply: (requestId: string, message: string) => boolean;
+	}) => () => void;
 }
 
 interface SubagentDetails {
@@ -167,19 +172,12 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 			void toolCallId;
 			const params = rawParams as Static<typeof subagentParams>;
 			// 原 Union 的互斥约束运行时兜底：tasks 非空 → parallel，否则 agent+task 必填
-			const parallelTasks = params.tasks?.length ? params.tasks : undefined;
-			let tasks: Array<Static<typeof taskSchema>>;
-			if (parallelTasks) {
-				tasks = parallelTasks;
-			} else {
-				if (!params.agent || !params.task) {
-					throw new Error(
-						'Missing "agent"/"task": pass { agent, task } for one run or { tasks: [...] } for parallel',
-					);
-				}
-				tasks = [{ agent: params.agent, task: params.task, ...(params.cwd ? { cwd: params.cwd } : {}) }];
+			const normalized = normalizeSubagentLaunchInputs(params);
+			if (normalized.length === 0 || normalized.some((item) => !item.task)) {
+				throw new Error('Missing "agent"/"task": pass { agent, task }, { tasks: [...] }, or both for merged fanout');
 			}
-			const mode: SubagentDetails["mode"] = parallelTasks ? "parallel" : "single";
+			const tasks = normalized as Array<Static<typeof taskSchema>>;
+			const mode: SubagentDetails["mode"] = tasks.length > 1 ? "parallel" : "single";
 			const shouldConfirm = params.confirmProjectAgents !== false;
 			const projectTrusted = ctx.isProjectTrusted();
 			const definitions = await Promise.all(

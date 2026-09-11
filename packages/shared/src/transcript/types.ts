@@ -30,6 +30,8 @@ export interface SubagentRunUi {
 	/** 本地稳定标识（React key 用） */
 	key: string;
 	agent: string;
+	/** 子会话 id：内联展开绑定实时 transcript */
+	sessionId?: string;
 	task?: string;
 	status: "running" | "done" | "error";
 	model?: string;
@@ -38,6 +40,20 @@ export interface SubagentRunUi {
 	artifactsDir?: string;
 	/** 子代理会话文件路径（点击打开完整对话） */
 	sessionFile?: string;
+	/** 子代理运行中的短状态；父会话实时展示，不进入最终回答。 */
+	statusText?: string;
+	statusPhase?: string;
+	/** Observable child activity (not hidden reasoning). */
+	currentAction?: string;
+	currentTool?: string;
+	startedAt?: number;
+	lastSteerAt?: number;
+	supervisorRequest?: {
+		id: string;
+		reason: "need_decision" | "interview_request" | "progress_update";
+		message: string;
+		expectsReply: boolean;
+	} | null;
 }
 
 /** 单条 UI 消息 */

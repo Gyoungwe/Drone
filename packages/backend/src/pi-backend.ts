@@ -158,6 +158,11 @@ export class PiBackend {
 	private readonly trustHandlers = new Set<TrustHandler>();
 	private readonly loginHandlers = new Set<LoginHandler>();
 	private readonly mcpHandlers = new Set<McpHandler>();
+	/** Live child controls for supervisor-aware foreground subagents. */
+	private readonly liveSubagents = new Map<string, {
+		steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
+		reply: (requestId: string, message: string) => boolean;
+	}>();
 	readonly mcp = new McpService();
 	private readonly gates = new Map<string, PermissionGate>();
 	/** 按会话权限模式（default 缺省；fullAccess = 一切放行 + 高危审计）：会话创建时随工厂注入，关会话/重启归零 */
@@ -216,6 +221,12 @@ export class PiBackend {
 					gate,
 					traces: this.traces,
 					onEvent: (sessionId, event) => this.emitEvent(sessionId, event),
+					registerLiveChild: (sessionId, control) => {
+						this.liveSubagents.set(sessionId, control);
+						return () => {
+							if (this.liveSubagents.get(sessionId) === control) this.liveSubagents.delete(sessionId);
+						};
+					},
 				}),
 			);
 		}
@@ -769,6 +780,22 @@ export class PiBackend {
 		for (const handler of this.mcpHandlers) handler(cwd, status);
 	}
 
+	async steerSubagent(sessionId: string, message: string, mode: "steer" | "followUp" = "steer"): Promise<void> {
+		const control = this.liveSubagents.get(sessionId);
+		if (!control) throw new Error("Subagent is no longer running");
+		const text = message.trim();
+		if (!text) throw new Error("Steer message cannot be empty");
+		await control.steer(text, mode);
+	}
+
+	replySubagentSupervisor(sessionId: string, requestId: string, message: string): void {
+		const control = this.liveSubagents.get(sessionId);
+		if (!control) throw new Error("Subagent is no longer running");
+		const text = message.trim();
+		if (!text) throw new Error("Supervisor reply cannot be empty");
+		if (!control.reply(requestId, text)) throw new Error("Supervisor request is no longer pending");
+	}
+
 	async setSessionName(sessionId: string, name: string): Promise<void> {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Cannot rename a read-only subagent transcript");
@@ -788,6 +815,16 @@ export class PiBackend {
 		// 配对消息与会话树 entry id（assistant 供 fork 定位、user 供撤回定位）
 		assignEntryIds(messages, entry.session.sessionManager.getBranch());
 		return messages;
+	}
+
+	/**
+	 * 桌面端子智能体内联预览：按 sessionFile 纯读取 jsonl，不注册 SessionManager，
+	 * 不创建 tab，不改变父会话。只允许 sessions-subagents 根目录，防任意文件读取。
+	 */
+	async peekSubagentMessages(filePath: string): Promise<SessionMessage[]> {
+		if (!isSubagentSessionPath(filePath)) throw new Error("Not a subagent session file");
+		const content = await readFile(filePath, "utf8");
+		return readSessionMessagesFromContent(content);
 	}
 
 	/**

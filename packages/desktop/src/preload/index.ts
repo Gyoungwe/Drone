@@ -45,6 +45,10 @@ const api: PiApi = {
 	previewFile: (target, cwd) => ipcRenderer.invoke(IpcChannels.FilePreview, target, cwd),
 	openResourceExternal: (target, cwd) => ipcRenderer.invoke(IpcChannels.ResourceOpenExternal, target, cwd),
 	getSessionMessages: (sessionId) => ipcRenderer.invoke(IpcChannels.SessionGetMessages, sessionId),
+	peekSubagentMessages: (filePath) => ipcRenderer.invoke(IpcChannels.SessionPeekSubagentMessages, filePath),
+	steerSubagent: (sessionId, message, mode) => ipcRenderer.invoke(IpcChannels.SessionSteerSubagent, sessionId, message, mode),
+	replySubagentSupervisor: (sessionId, requestId, message) =>
+		ipcRenderer.invoke(IpcChannels.SessionReplySubagentSupervisor, sessionId, requestId, message),
 	getTodos: (sessionId) => ipcRenderer.invoke(IpcChannels.SessionGetTodos, sessionId),
 	listModels: () => ipcRenderer.invoke(IpcChannels.ModelsList),
 	listProviders: (options) => ipcRenderer.invoke(IpcChannels.SettingsListProviders, options),

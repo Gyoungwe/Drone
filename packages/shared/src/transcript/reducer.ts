@@ -1,7 +1,7 @@
 import { buildLlmUiError, buildStreamGuardUiError, isUserAbortError, type UiError } from "../errors";
 import type { ImageInput, SessionEvent } from "../session";
 import { parseExpandedSkillInvocation } from "../skill-invocation";
-import { extractSubagentRuns } from "../subagent";
+import { extractSubagentRuns, normalizeSubagentLaunchInputs } from "../subagent";
 import { extractTodos, TODO_TOOL_NAME } from "../todo";
 import {
 	emptyStreaming,
@@ -371,19 +371,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 			}
 			// subagent：单代理或 parallel tasks 都从折叠区移出建独立工作中行；
 			// management（action）/workflowScript（可能后台）/subagent_wait 不走独立行。
-			const startArgs = (event.args ?? {}) as {
-				action?: unknown;
-				agent?: unknown;
-				task?: unknown;
-				tasks?: Array<{ agent?: unknown; task?: unknown }>;
-			};
-			const parallelTasks = Array.isArray(startArgs.tasks) ? startArgs.tasks : [];
-			const runInputs =
-				event.toolName === "subagent" && startArgs.action == null
-					? typeof startArgs.agent === "string"
-						? [{ agent: startArgs.agent, task: startArgs.task }]
-						: parallelTasks.filter((task) => typeof task.agent === "string")
-					: [];
+			const runInputs = event.toolName === "subagent" ? normalizeSubagentLaunchInputs(event.args) : [];
 			if (runInputs.length > 0) {
 				const start = streaming.subagentRuns.length;
 				const runs: SubagentRunUi[] = runInputs.map((input, index) => ({
@@ -432,17 +420,31 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				// 保住 running 状态（其 exitCode=-1，不能被 extract 的 error 判定覆盖）。
 				const next = [...subagentRuns];
 				for (const update of progress) {
-					if (!update.sessionFile) continue;
+					if (
+						!update.sessionId && !update.sessionFile && !update.statusText && !update.statusPhase &&
+						!update.currentAction && !update.currentTool && update.startedAt == null &&
+						update.lastSteerAt == null && update.supervisorRequest === undefined
+					) continue;
 					const index = next.findIndex(
 						(run, i) =>
 							i >= placement.start &&
 							i < placement.start + placement.count &&
-							run.sessionFile == null &&
 							run.agent === update.agent &&
-							(update.task == null || run.task === update.task),
+							(update.task != null ? run.task === update.task : update.sessionFile != null ? run.sessionFile === update.sessionFile : false),
 					);
 					const current = index >= 0 ? next[index] : undefined;
-					if (current) next[index] = { ...current, sessionFile: update.sessionFile };
+					if (current) next[index] = {
+						...current,
+						...(update.sessionId ? { sessionId: update.sessionId } : {}),
+						...(update.sessionFile ? { sessionFile: update.sessionFile } : {}),
+						...(update.statusText ? { statusText: update.statusText } : {}),
+						...(update.statusPhase ? { statusPhase: update.statusPhase } : {}),
+						...(update.currentAction !== undefined ? { currentAction: update.currentAction } : {}),
+						...(update.currentTool !== undefined ? { currentTool: update.currentTool } : {}),
+						...(update.startedAt != null ? { startedAt: update.startedAt } : {}),
+						...(update.lastSteerAt != null ? { lastSteerAt: update.lastSteerAt } : {}),
+						...(update.supervisorRequest !== undefined ? { supervisorRequest: update.supervisorRequest ?? undefined } : {}),
+					};
 				}
 				subagentRuns = next;
 			}

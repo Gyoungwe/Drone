@@ -64,6 +64,15 @@ export function registerSessionsIpc(backend: PiBackend): void {
 	ipcMain.handle(IpcChannels.SessionGetMessages, (_e, sessionId: string) =>
 		backend.getSessionMessages(sessionId),
 	);
+	ipcMain.handle(IpcChannels.SessionPeekSubagentMessages, (_e, filePath: string) =>
+		backend.peekSubagentMessages(filePath),
+	);
+	ipcMain.handle(IpcChannels.SessionSteerSubagent, (_e, sessionId: string, message: string, mode?: "steer" | "followUp") =>
+		backend.steerSubagent(sessionId, message, mode),
+	);
+	ipcMain.handle(IpcChannels.SessionReplySubagentSupervisor, (_e, sessionId: string, requestId: string, message: string) =>
+		backend.replySubagentSupervisor(sessionId, requestId, message),
+	);
 	ipcMain.handle(IpcChannels.SessionGetTodos, (_e, sessionId: string) => backend.getTodos(sessionId));
 	ipcMain.handle(IpcChannels.ModelsList, () => backend.listModels());
 	ipcMain.handle(IpcChannels.ProjectListFiles, (_e, cwd?: string) => backend.listProjectFiles(cwd));

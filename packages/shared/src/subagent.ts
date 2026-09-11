@@ -1,3 +1,48 @@
+
+export interface SubagentLaunchInput {
+	agent: string;
+	/** 子会话 id（live progress / 内联 transcript 绑定） */
+	sessionId?: string;
+	task?: string;
+	cwd?: string;
+}
+
+/**
+ * Normalize model-emitted subagent launch args. Models occasionally emit both a direct
+ * agent/task and a tasks[] fanout even though the schema describes them as exclusive.
+ * Treat that shape as intentional fanout, merge both sources, and de-duplicate exact lanes.
+ */
+export function normalizeSubagentLaunchInputs(args: unknown): SubagentLaunchInput[] {
+	const raw = (args ?? {}) as {
+		action?: unknown; agent?: unknown; task?: unknown; cwd?: unknown;
+		tasks?: Array<{ agent?: unknown; task?: unknown; cwd?: unknown }>;
+	};
+	if (raw.action != null) return [];
+	const candidates: SubagentLaunchInput[] = [];
+	if (typeof raw.agent === "string" && raw.agent.length > 0) {
+		candidates.push({
+			agent: raw.agent,
+			...(typeof raw.task === "string" ? { task: raw.task } : {}),
+			...(typeof raw.cwd === "string" ? { cwd: raw.cwd } : {}),
+		});
+	}
+	for (const item of Array.isArray(raw.tasks) ? raw.tasks : []) {
+		if (typeof item.agent !== "string" || item.agent.length === 0) continue;
+		candidates.push({
+			agent: item.agent,
+			...(typeof item.task === "string" ? { task: item.task } : {}),
+			...(typeof item.cwd === "string" ? { cwd: item.cwd } : {}),
+		});
+	}
+	const seen = new Set<string>();
+	return candidates.filter((item) => {
+		const key = `${item.agent}\u0000${item.task ?? ""}\u0000${item.cwd ?? ""}`;
+		if (seen.has(key)) return false;
+		seen.add(key);
+		return true;
+	});
+}
+
 /**
  * 子代理运行数据提取（跨进程共用）：从 subagent 工具结果的 details 结构检测运行组。
  * 从 session.ts 拆出（session.ts 回归纯类型 + 消息 union 定义）。
@@ -6,6 +51,8 @@
 export interface SubagentRunData {
 	/** 子代理名（如 reviewer / scout） */
 	agent: string;
+	/** 子会话 id（live progress / 内联 transcript 绑定） */
+	sessionId?: string;
 	task?: string;
 	status: "done" | "error";
 	model?: string;
@@ -17,6 +64,19 @@ export interface SubagentRunData {
 	artifactsDir?: string;
 	/** 子代理会话文件路径（点击可打开完整对话） */
 	sessionFile?: string;
+	/** 运行中的用户可见状态（仅 live progress 携带） */
+	statusText?: string;
+	statusPhase?: string;
+	currentAction?: string;
+	currentTool?: string;
+	startedAt?: number;
+	lastSteerAt?: number;
+	supervisorRequest?: {
+		id: string;
+		reason: "need_decision" | "interview_request" | "progress_update";
+		message: string;
+		expectsReply: boolean;
+	} | null;
 }
 
 /**
@@ -50,12 +110,20 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 	const pushRun = (
 		agent: unknown,
 		rest: {
+				sessionId?: unknown;
 			task?: unknown;
 			model?: unknown;
 			exitCode?: unknown;
 			error?: unknown;
 			sessionFile?: unknown;
 			tokens?: unknown;
+			statusText?: unknown;
+			statusPhase?: unknown;
+			currentAction?: unknown;
+			currentTool?: unknown;
+			startedAt?: unknown;
+			lastSteerAt?: unknown;
+			supervisorRequest?: unknown;
 		},
 	) => {
 		if (typeof agent !== "string") return;
@@ -65,6 +133,7 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 		const error = typeof rest.error === "string" && rest.error.length > 0 ? rest.error : undefined;
 		runs.push({
 			agent,
+			sessionId: typeof rest.sessionId === "string" ? rest.sessionId : undefined,
 			task,
 			status: exitCode != null && exitCode !== 0 ? "error" : error ? "error" : "done",
 			model: typeof rest.model === "string" ? rest.model : undefined,
@@ -72,6 +141,20 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 			exitCode,
 			artifactsDir,
 			sessionFile,
+			statusText: typeof rest.statusText === "string" ? rest.statusText : undefined,
+			statusPhase: typeof rest.statusPhase === "string" ? rest.statusPhase : undefined,
+			currentAction: typeof rest.currentAction === "string" ? rest.currentAction : undefined,
+			currentTool: typeof rest.currentTool === "string" ? rest.currentTool : undefined,
+			startedAt: typeof rest.startedAt === "number" ? rest.startedAt : undefined,
+			lastSteerAt: typeof rest.lastSteerAt === "number" ? rest.lastSteerAt : undefined,
+			supervisorRequest: (() => {
+				if (rest.supervisorRequest === null) return null;
+				const value = rest.supervisorRequest as Record<string, unknown> | undefined;
+				if (!value || typeof value.id !== "string" || typeof value.message !== "string") return undefined;
+				const reason = value.reason;
+				if (reason !== "need_decision" && reason !== "interview_request" && reason !== "progress_update") return undefined;
+				return { id: value.id, reason, message: value.message, expectsReply: value.expectsReply === true };
+			})(),
 		});
 	};
 
@@ -129,6 +212,7 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 		const exitCode = typeof r.exitCode === "number" ? r.exitCode : undefined;
 		const error = typeof r.error === "string" && r.error.length > 0 ? r.error : undefined;
 		pushRun(agent ?? sessionFile ?? "subagent", {
+			sessionId: r.sessionId,
 			task: r.task,
 			model: r.model,
 			exitCode,
@@ -136,6 +220,13 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 			sessionFile:
 				sessionFile ?? (typeof artifactPaths?.jsonlPath === "string" ? artifactPaths.jsonlPath : undefined),
 			tokens: tokenValue,
+			statusText: r.statusText,
+			statusPhase: r.statusPhase,
+			currentAction: r.currentAction,
+			currentTool: r.currentTool,
+			startedAt: r.startedAt,
+			lastSteerAt: r.lastSteerAt,
+			supervisorRequest: r.supervisorRequest,
 		});
 	}
 	return runs.length > 0 ? runs : null;

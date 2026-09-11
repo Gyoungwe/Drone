@@ -67,6 +67,10 @@ export const IpcChannels = {
 	SessionSetModel: "session:setModel",
 	SessionSetThinkingLevel: "session:setThinkingLevel",
 	SessionGetMessages: "session:getMessages",
+	/** 只读预览子智能体会话文件，不注册/打开顶栏会话 */
+	SessionPeekSubagentMessages: "session:peekSubagentMessages",
+	SessionSteerSubagent: "session:steerSubagent",
+	SessionReplySubagentSupervisor: "session:replySubagentSupervisor",
 	SessionGetTodos: "session:getTodos",
 	SessionCompact: "session:compact",
 	SessionStats: "session:stats",
@@ -213,6 +217,12 @@ export interface PiApi {
 	setThinkingLevel(sessionId: string, level: string): Promise<void>;
 	/** 读取会话历史消息（打开历史会话时回放） */
 	getSessionMessages(sessionId: string): Promise<SessionMessage[]>;
+	/** 只读预览 sessions-subagents 下的会话文件；非法路径抛错 */
+	peekSubagentMessages(filePath: string): Promise<SessionMessage[]>;
+	/** Send live guidance to a running child session without opening it as a tab. */
+	steerSubagent(sessionId: string, message: string, mode?: "steer" | "followUp"): Promise<void>;
+	/** Resolve a child contact_supervisor request. */
+	replySubagentSupervisor(sessionId: string, requestId: string, message: string): Promise<void>;
 	/** 读取会话当前 todo 列表（最后一条 todo 工具结果，或 compaction 后恢复的 reminder 消息；无则空数组） */
 	getTodos(sessionId: string): Promise<TodoItem[]>;
 	compact(sessionId: string, customInstructions?: string): Promise<void>;
