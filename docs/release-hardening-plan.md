@@ -28,6 +28,7 @@ Updated: 2026-09-12
   - Push-triggered runs were not created on this fork, so `workflow_dispatch` remains the explicit reproducible fallback; Actions itself is enabled and the manual runs used GitHub-hosted runners normally.
 - [ ] 9. Create and push the matching `v*` tag, verify GitHub Release artifacts, and record final release checks.
   - Storage isolation: `Ywei-pi` currently holds ~22.3 GB Actions artifacts plus ~4.78 GB caches. Percho Release now uploads build outputs directly to a draft GitHub Release instead of Actions artifact storage, then verifies required assets before publishing.
+  - Fork push/tag events did not create workflow runs automatically; Release now also supports `workflow_dispatch(tag)` and validates/checks out that existing tag before building, so v0.6.0 can be recovered without moving the tag.
 
 ## Guardrails
 
