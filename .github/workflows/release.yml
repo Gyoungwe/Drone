@@ -66,16 +66,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mapfile -t ASSETS < <(find packages/desktop/dist -maxdepth 1 -type f \
+          ASSET_LIST="$(mktemp)"
+          find packages/desktop/dist -maxdepth 1 -type f \
             ! -name 'builder-debug.yml' \
-            -print | sort)
-          if [ "${#ASSETS[@]}" -eq 0 ]; then
+            -print | sort > "$ASSET_LIST"
+          if [ ! -s "$ASSET_LIST" ]; then
             echo "No release assets were produced." >&2
             exit 1
           fi
-          printf 'Uploading %s\n' "${ASSETS[@]}"
-          gh release upload "$RELEASE_TAG" "${ASSETS[@]}" \
-            -R "${{ github.repository }}" --clobber
+          while IFS= read -r ASSET; do
+            echo "Uploading $ASSET"
+            gh release upload "$RELEASE_TAG" "$ASSET" \
+              -R "${{ github.repository }}" --clobber
+          done < "$ASSET_LIST"
+          rm -f "$ASSET_LIST"
 
   publish:
     needs: build
