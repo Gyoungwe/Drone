@@ -14,6 +14,11 @@ function safeSlug(value, label) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text)) throw new Error(`${label} must be lowercase kebab-case`);
   return text;
 }
+export function topicIdFromResultSlug(value) {
+  const slug=safeSlug(value||'research-question','result_slug');
+  const stable=slug.replace(/-20\d{6}(?:\d{6})?$/,'').replace(/-run-\d+$/,'');
+  return stable||slug;
+}
 
 function within(root, target) {
   const rel = relative(resolve(root), resolve(target));
@@ -75,7 +80,7 @@ export async function startResearchRun({ cwd = process.cwd(), project, resultSlu
   const runDir = join(config.resultsRoot, resultSlug, runId);
   const now = new Date().toISOString();
   const metadata = {
-    run_id: runId, project, result_slug: resultSlug, query: query.trim(), status: "running", started_at: now,
+    run_id: runId, project, result_slug: resultSlug, topic_id: topicIdFromResultSlug(resultSlug), query: query.trim(), status: "running", started_at: now,
     evidence_gate: { stage: "created", status: "ok", answerable: false, events: [{ type: "created", at: now }], claim_refs: [], source_refs: [], archive_count: 0 },
   };
   await mkdir(runDir, { recursive: true });

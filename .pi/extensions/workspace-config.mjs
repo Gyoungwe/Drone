@@ -1,5 +1,5 @@
 import { knowledgeDirectory, readKnowledgeBinding, projectIdentity } from '../lib/knowledge/config.mjs';
-import { readFile, writeFile, mkdir, rename, access } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rename, access, realpath } from "node:fs/promises";
 import { constants } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -191,7 +191,7 @@ async function syncRunNote(vault, project, resultSlug, runDir, summary) {
   try { metadata = JSON.parse(await readFile(metadataPath, "utf8")); } catch { /* handled by frontmatter defaults */ }
   const runId = safeSegment(metadata.run_id || runPath.split(sep).at(-1), "run_id");
   const note = await containedFile(vault, join("Projects", safeProject, "Runs", `${safeSlug}-${runId}.md`));
-  await initializeVault(vault, safeProject);
+  if (!knowledgeDirectory()) await initializeVault(vault, safeProject);
   const frontmatter = [
     "---",
     `id: pi-${randomUUID()}`,
@@ -199,6 +199,7 @@ async function syncRunNote(vault, project, resultSlug, runDir, summary) {
     "type: run",
     `project: ${JSON.stringify(safeProject)}`,
     `result_slug: ${JSON.stringify(safeSlug)}`,
+    `topic_id: ${JSON.stringify(metadata.topic_id || safeSlug.replace(/-20\d{6}(?:\d{6})?$/,''))}`,
     `result_path: ${JSON.stringify(runPath)}`,
     `status: ${JSON.stringify(metadata.status || "unknown")}`,
     `created_at: ${JSON.stringify(metadata.started_at || "")}`,
@@ -224,8 +225,8 @@ export function registerWorkspaceConfig(pi, options = {}) {
     label: "Research workspace status",
     description: "Show result and Obsidian workspace configuration.",
     parameters: { type: "object", properties: {} },
-    async execute() {
-      const config = await loadWorkspaceConfig(baseCwd);
+    async execute(_id, _params, _signal, _update, ctx) {
+      const config = await loadWorkspaceConfig(ctx?.cwd || baseCwd);
       return { content: [{ type: "text", text: JSON.stringify(config, null, 2) }], details: config };
     },
   });
@@ -255,11 +256,12 @@ export function registerWorkspaceConfig(pi, options = {}) {
       properties: { run_dir: { type: "string" }, summary_markdown: { type: "string" }, project: { type: "string" }, result_slug: { type: "string" } },
       required: ["run_dir", "summary_markdown"],
     },
-    async execute(_id, params) {
-      const cwd = baseCwd;
+    async execute(_id, params, _signal, _update, ctx) {
+      const cwd = ctx?.cwd || baseCwd;
       const config = await loadWorkspaceConfig(cwd);
       const runDir = resolve(cwd, params.run_dir);
       if (!isWithin(config.resultsRoot, runDir)) throw new Error("run_dir must be inside the configured results root");
+      if (!isWithin(await realpath(config.resultsRoot), await realpath(runDir))) throw new Error("run_dir escapes results root through a link");
       const relativeRun = relative(config.resultsRoot, runDir);
       if (!relativeRun || relativeRun.startsWith(".." + sep) || relativeRun.split(sep).length !== 2 || !relativeRun.split(sep)[1].startsWith("run-")) {
         throw new Error("run_dir must point to a run directory directly inside a result slug");
@@ -273,23 +275,27 @@ export function registerWorkspaceConfig(pi, options = {}) {
         throw new Error("Evidence gate is closed: research_loop must complete retrieval, inspection, archiving and claim binding before summarization");
       }
       const outputs = await writeSummary(runDir, params.summary_markdown, "succeeded");
-      let note = null;
-      let indexes = null;
+      let note = null, indexes = null, obsidianError = null, indexError = null;
       if (config.obsidianVault) {
         const project = params.project || metadata.project;
-        note = await syncRunNote(config.obsidianVault, project, params.result_slug || metadata.result_slug, runDir, params.summary_markdown);
-        // Keep the dependency lazy: this module owns config persistence while the
-        // workbench library imports it for vault setup.
-        const { refreshProjectIndexes } = await import('../lib/obsidian-workbench.mjs');
-        indexes = await refreshProjectIndexes({ cwd, project });
+        try { note = await syncRunNote(config.obsidianVault, project, params.result_slug || metadata.result_slug, runDir, params.summary_markdown); }
+        catch(error) { obsidianError=String(error.message).slice(0,600); }
+        if(note) {
+          try {
+            const { refreshProjectIndexes } = await import('../lib/obsidian-workbench.mjs');
+            indexes = await refreshProjectIndexes({ cwd, project });
+          }catch(error){ indexError=String(error.message).slice(0,600); }
+        }
       }
-      return { content: [{ type: "text", text: JSON.stringify({ ...outputs, obsidian_note: note, indexes }, null, 2) }], details: { ...outputs, obsidian_note: note, indexes } };
+      const result={...outputs,obsidian_note:note,indexes,summary_saved:true,
+        partial:Boolean(obsidianError||indexError),obsidian_error:obsidianError,index_error:indexError};
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
     },
   });
   pi.registerCommand("research-workspace", {
     description: "Show the configured result and Obsidian workspace",
     handler: async (_args, ctx) => {
-      const config = await loadWorkspaceConfig(baseCwd);
+      const config = await loadWorkspaceConfig(ctx.cwd);
       ctx.ui.notify(`Results: ${config.resultsRoot}; Obsidian: ${config.obsidianVault || "not configured"}`, "info");
     },
   });

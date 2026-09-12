@@ -95,10 +95,10 @@ export class KnowledgeService {
     }
     return page;
   }
-  async search(ticket,cwd,{query,wikiOnly=false,limit=5}) {
+  async search(ticket,cwd,{query,wikiOnly=false,explainerOnly=false,limit=5}) {
     const state = await this.check(ticket,cwd);
-    if (!wikiOnly) state.answerSearch = null; // a newer failed attempt cannot reuse old success
-    if (!wikiOnly && state.linkedWiki.length) {
+    if (!wikiOnly && !explainerOnly) state.answerSearch = null; // a newer failed evidence attempt cannot reuse old success
+    if (!wikiOnly && !explainerOnly && state.linkedWiki.length) {
       let currentWiki = false;
       for (const [path,receipt] of state.readWiki) {
         const latest = await this.request('read',{path,project:state.project,maxChars:200});
@@ -107,8 +107,8 @@ export class KnowledgeService {
       }
       if (!currentWiki) throw new Error('Read a current linked or discovered Wiki page with research_read_knowledge before searching evidence. Wiki discovery search is still allowed.');
     }
-    const result = await this.request('search',{query,wikiOnly,limit,project:state.project});
-    if (!wikiOnly) state.answerSearch = Object.freeze({query, revision:result.revision, complete:result.complete===true,
+    const result = await this.request('search',{query,wikiOnly,explainerOnly,limit,project:state.project});
+    if (!wikiOnly && !explainerOnly) state.answerSearch = Object.freeze({query, revision:result.revision, complete:result.complete===true,
       hitCount:result.hits.length, hits:result.hits.map(hit=>({path:hit.path,hash:hit.hash})), at:Date.now()});
     if (wikiOnly) {
       // A discovery hit is a candidate, not a read. The candidate must still be opened.
@@ -128,6 +128,7 @@ export class KnowledgeService {
     const sources = [];
     for (const path of paths) {
       validateNote(path);
+      if (path.startsWith('Library/Explainers/')) throw new Error(`Explainer is presentation-only and cannot be used as evidence: ${path}`);
       const receipt = state.reads.get(path);
       if (!receipt) throw new Error(`Source was not read this turn: ${path}`);
       const latest = await this.request('read',{path,project:state.project,maxChars:200});
@@ -135,6 +136,19 @@ export class KnowledgeService {
       sources.push({...receipt});
     }
     return { project:state.project, sources };
+  }
+  async currentReadEvidence(ticket,cwd,{limit=12}={}) {
+    const state = await this.check(ticket,cwd);
+    const cap = Math.max(1,Math.min(12,Number(limit)||12));
+    const sources = [];
+    for (const [path,receipt] of [...state.reads].reverse()) {
+      if (/(?:^|\/)(?:Explainers|Runs)\//i.test(path) || /(?:^|\/)Wiki\//.test(path) || /(?:^|\/)(?:Home|Index|Context)\.md$/.test(path)) continue;
+      const latest = await this.request('read',{path,project:state.project,maxChars:200});
+      if (latest.missing || latest.hash !== receipt.hash) continue;
+      sources.push({...receipt});
+      if (sources.length >= cap) break;
+    }
+    return {project:state.project,sources};
   }
   async validateAnswer(ticket,cwd,text) {
     const state = await this.check(ticket,cwd);

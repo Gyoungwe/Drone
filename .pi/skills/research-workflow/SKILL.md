@@ -19,3 +19,26 @@ Use this skill for substantive research requests, literature discovery, source c
 Do not weaken evidence standards to make an answer, Wiki page, or Skill look successful. Never invent citations, downloads, tool calls, archive state, or validation scores.
 
 For application-mode Wiki maintenance, first read current source notes and the target Wiki, then stage `research_propose_wiki_update`. The user reviews the exact change with `/obsidian-review`. A staged or user-approved synthesis is not independently verified scientific evidence. Never bypass this through the old Wiki builder, raw MCP, shell, or `research_deposit_knowledge(type=wiki)`. Source checks and final-answer validation remain separate from Wiki write approval.
+
+## User-facing delivery
+
+Load the relevant delivery sections of `research-vault` for a paper/software/manual task. “Download the manual” includes the version-specific CLI reference, arguments, input/output and runnable example explanations, not just the homepage or a bibliographic entry. Capture substantive paper methods/claims and software principles/usage in reusable source-grounded notes. A generated run summary is an operational record; its successful save is not scientific verification.
+
+Use the loaded show-me skill after source reading for a focused explainer, linked in the normal final text answer. For software, distinguish documented performance from local measured tests (or explicitly “not tested”); for research, explain the main viewpoint, methods, evidence and limitations. Never substitute the UI progress status for delivery or treat file download as comprehension.
+
+After `research_summarize_run` succeeds in application mode, the host automatically stages one shared topic Wiki candidate when the summary is substantial and at least one current-version non-Wiki evidence note was actually read this turn. The candidate is generated from the saved summary, stored outside the live Vault, and remains unverified until the user reviews it. Do not create a duplicate proposal unless the host reports that automatic staging was skipped or failed; if an existing topic requires a fresh read, read it and then propose the correction explicitly.
+
+
+## Show Me in the knowledge base
+
+After generating a source-grounded Show Me HTML/Markdown file under the configured results root, call `research_archive_explainer` with the active research run `metadata.topic_id` (reuse it across rounds), title, short summary, and 1–12 underlying evidence note paths that were actually read this turn. The host copies the visual artifact into `Attachments/Explainers/<topic-id>/`, maintains `Library/Explainers/<topic-id>.md` as the searchable latest/history pointer, and preserves human review text. Explainers are presentation-only: they may help a human navigate and understand a topic, but they are excluded from evidence receipts, automatic Wiki source selection, and scientific verification. Never cite an older explainer instead of the paper/software/manual sources it summarizes.
+
+## Knowledge-service specialists
+
+The desktop host may automatically dispatch `knowledge-navigator` for knowledge-oriented requests, and `knowledge-evidence-curator` for comparisons with multiple located sources. After a successful parent research summary it may invoke `knowledge-wiki-editor` and `knowledge-explainer`. These are bounded isolated model calls, not four agents for every chat message. The application has automatic/manual/off modes and a read-local permission ceiling; respect disabled modes and do not bypass them with generic subagents.
+
+Each child receives only its current task, bounded selected notes and (for the explainer only) the actually loaded show-me skill. No parent transcript, general filesystem/shell tools, raw MCP writes, network-fetch capability, recursive delegation or approval tool is available. Parent handoffs are compact unverified summaries with current source ranges. They do not mint parent read/search receipts: read the originals needed for the final answer through native tools. A source record is not full-paper/manual comprehension.
+
+Do not duplicate the host's post-summary Show Me or Wiki work in automatic mode. Use `research_delegate_knowledge` for explicit scoped tasks when appropriate; Wiki delegation requires a target and parent-read sources, and explainer delegation requires an existing research run and stable topic id. The child submits content, while the parent host stages a Wiki candidate or saves an explainer only after checking policy, source versions and path constraints. Actual Wiki approval remains exclusively human. Presentation artifacts remain outside the evidence layer.
+
+No raw child transcript or model reasoning is returned to the parent. Longer Wiki/HTML content remains on the host and is surfaced through a candidate/artifact link; visible progress includes role, model, observed activity, token usage and failures. At most four role calls per user turn (one per role), two concurrent knowledge specialists, three total native children with lower per-project ceilings respected, 120-second per-call deadlines and no unbounded retries. New user turns and cancellation invalidate pending work. Failures or missing show-me must be stated, not reported as completed output.

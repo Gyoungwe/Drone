@@ -3,12 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { configureObsidian, depositKnowledge, publishSourceNote } from '../../../.pi/lib/obsidian-workbench.mjs';
+import { configureObsidian, depositKnowledge, publishSourceNote, publishExplainer } from '../../../.pi/lib/obsidian-workbench.mjs';
 import { loadWorkspaceConfig, saveWorkspaceConfig } from '../../../.pi/extensions/workspace-config.mjs';
 import { readKnowledgeBinding, saveKnowledgeBinding, withKnowledgeBinding } from '../../../.pi/lib/knowledge/config.mjs';
 import { closeKnowledgeServices, getKnowledgeService } from '../../../.pi/lib/knowledge/service.mjs';
 import { runNavigationMaintenance } from '../../../.pi/lib/knowledge/maintenance.mjs';
 import { registerKnowledgeInterface } from '../../../.pi/lib/knowledge/extension.mjs';
+import { listWikiProposals } from '../../../.pi/lib/knowledge/wiki-review.mjs';
 import { resolveSubagentMcpAccess } from '../src/tools/subagent/runner';
 
 let root, a, b, vault, app;
@@ -168,12 +169,57 @@ describe('read-first incremental knowledge service',()=>{
 });
 
 
+describe('Show Me presentation layer',()=>{
+  it('archives versioned explainers in the Vault while keeping them out of evidence receipts',async()=>{
+    const {service,prep}=await prepared();
+    await service.read(prep.ticket,a,{path:'Library/Papers/source.md'});
+    const receipts=await service.evidenceReceipts(prep.ticket,a,['Library/Papers/source.md']);
+    const out=join(a,'results','autotomy','run-20260912113000-test','show.html');await mkdir(join(out,'..'),{recursive:true});
+    await writeFile(out,'<!doctype html><title>Autotomy explainer</title><h1>Round one</h1>');
+    const first=await publishExplainer({cwd:a,project:'project-a',topicId:'autotomy',title:'Autotomy explainer',artifactPath:out,summary:'A source-grounded visual explanation.',sources:receipts.sources});
+    expect(first.knowledge_status).toBe('written');expect(first.evidenceRole).toBe('presentation-only');
+    expect(await readFile(first.attachment,'utf8')).toContain('Round one');
+    let noteText=await readFile(first.note,'utf8');expect(noteText).toContain('展示层，不是科学证据');expect(noteText).toContain('[[Library/Papers/source]]');
+    await service.request('reconcile');
+    const turn=await service.prepare({cwd:a,project:'project-a',query:'Autotomy explainer'});
+    const page=await service.read(turn.ticket,a,{path:'Library/Explainers/autotomy.md'});expect(page.text).toContain('presentation-only');
+    expect((await service.search(turn.ticket,a,{query:'source-grounded visual explanation',explainerOnly:true})).hits[0].kind).toBe('explainer');
+    await service.read(turn.ticket,a,{path:'Wiki/Autotomy.md'});
+    expect((await service.search(turn.ticket,a,{query:'source-grounded visual explanation'})).hits).toEqual([]);
+    await expect(service.evidenceReceipts(turn.ticket,a,['Library/Explainers/autotomy.md'])).rejects.toThrow('presentation-only');
+    expect((await service.currentReadEvidence(turn.ticket,a)).sources.some(x=>x.path==='Library/Explainers/autotomy.md')).toBe(false);
+    await writeFile(out,'<!doctype html><title>Autotomy explainer</title><h1>Round two</h1>');
+    const second=await publishExplainer({cwd:a,project:'project-a',topicId:'autotomy',title:'Autotomy explainer',artifactPath:out,summary:'Updated explanation.',sources:receipts.sources});
+    expect(second.note).toBe(first.note);noteText=await readFile(second.note,'utf8');
+    expect((noteText.match(/\[打开讲解\]/g)||[]).length).toBe(2);expect(noteText).toContain('Updated explanation.');
+  });
+});
+
 describe('navigation delivery and bounded maintenance',()=>{
   function harness(readOnly=false){
     const tools=new Map(),events=new Map();
     const api={registerCommand:()=>{},registerTool:t=>tools.set(t.name,t),on:(name,fn)=>events.set(name,fn)};
     return {tools,events,interface:registerKnowledgeInterface(api,{readOnly})};
   }
+  it('auto-stages one shared topic candidate after a successful evidence-gated run summary',async()=>{
+    await prepared({wiki:false});const h=harness();const ctx={cwd:a,sessionId:'auto-topic'};
+    await h.interface.beforeStart({prompt:'介绍这组研究文献并沉淀可复用主题'},ctx);
+    await h.tools.get('research_read_knowledge').execute('read',{path:'Library/Papers/source.md'},undefined,undefined,ctx);
+    const summary='# Insect autotomy evidence\n\nThis completed run compares the observed behavior, its method, scope, evidence limits, and what remains unknown. It is reusable across future literature review while preserving species-specific applicability.';
+    await h.events.get('tool_execution_start')({toolCallId:'sum',toolName:'research_summarize_run',args:{run_dir:'results/insect-autotomy-20260912/run-fixture',result_slug:'insect-autotomy-20260912',summary_markdown:summary}},ctx);
+    await h.events.get('tool_execution_end')({toolCallId:'sum',toolName:'research_summarize_run',isError:false,result:{details:{summary_saved:true,run:'/tmp/SUMMARY.md'}}},ctx);
+    const pending=await listWikiProposals(await getKnowledgeService(),'project-a');
+    expect(pending.items).toHaveLength(1);expect(pending.items[0].path).toBe('Wiki/insect-autotomy.md');
+    expect(pending.items[0].title).toBe('Insect autotomy evidence');
+    await expect(access(join(vault,'Wiki/insect-autotomy.md'))).rejects.toMatchObject({code:'ENOENT'});
+  });
+  it('does not fabricate an auto topic when no current evidence note was actually read',async()=>{
+    await prepared({wiki:false});const h=harness();const ctx={cwd:a,sessionId:'auto-topic-empty'};
+    await h.interface.beforeStart({prompt:'介绍研究并沉淀'},ctx);
+    await h.events.get('tool_execution_start')({toolCallId:'sum2',toolName:'research_summarize_run',args:{result_slug:'empty-topic-20260912',summary_markdown:'# Empty topic\n\nThis is deliberately long enough to pass the summary size check but it has no actual knowledge-note read receipt, so the host must not turn it into a topic candidate.'}},ctx);
+    await h.events.get('tool_execution_end')({toolCallId:'sum2',toolName:'research_summarize_run',isError:false,result:{details:{summary_saved:true}}},ctx);
+    expect((await listWikiProposals(await getKnowledgeService(),'project-a')).items).toEqual([]);
+  });
   it('automatically delivers current navigation and keeps only one context copy',async()=>{
     await prepared();const h=harness();const ctx={cwd:a};
     const start=await h.interface.beforeStart({prompt:'自切的知识有哪些？'},ctx);
@@ -226,7 +272,7 @@ describe('navigation delivery and bounded maintenance',()=>{
 it('FTS-first query plan does not enumerate all notes through the scope index',async()=>{
   const source=await readFile(new URL('../../../.pi/lib/knowledge/worker.mjs',import.meta.url),'utf8');
   const schema=source.match(/db\.exec\(`([\s\S]*?)`\);/)[1];
-  const query=source.match(/const rows = db\.prepare\(`([\s\S]*?)`\)\.all\(expression/)[1].replace('${wiki}','');
+  const query=source.match(/const rows = db\.prepare\(`([\s\S]*?)`\)\.all\(expression/)[1].replace('${wiki}','').replace('${kindFilter}',"AND n.kind!='explainer'");
   const db=new DatabaseSync(':memory:');
   try {
     db.exec(schema);

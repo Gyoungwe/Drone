@@ -32,6 +32,7 @@ export class KnowledgeUiService {
  private async call(name: string, input: unknown) {
   await this.connect(); const mod = await this.module("ui-service"); return mod[name](input);
  }
+ specialistSettings(input: Parameters<KnowledgeApi["setKnowledgeSpecialistSettings"]>[0]): ReturnType<KnowledgeApi["setKnowledgeSpecialistSettings"]> { return this.call("knowledgeSpecialistSettings", input); }
  overview(input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0]) : ReturnType<KnowledgeApi["getKnowledgeOverview"]> { return this.call("knowledgeOverview", input); }
  setupPreview(input: Parameters<KnowledgeApi["previewKnowledgeSetup"]>[0]): ReturnType<KnowledgeApi["previewKnowledgeSetup"]> { return this.call("knowledgeSetupPreview", input); }
  jobs(input: Parameters<KnowledgeApi["getKnowledgeJobs"]>[0]): ReturnType<KnowledgeApi["getKnowledgeJobs"]> { return this.call("knowledgeJobs", input); }

@@ -13,6 +13,7 @@ export function registerKnowledgeIpc(backend: PiBackend): void {
    return fn(input);
   });
  };
+ handle(IpcChannels.KnowledgeSpecialistsSettings, input => backend.knowledge.specialistSettings(input));
  handle(IpcChannels.KnowledgeOverview, input => backend.knowledge.overview(input));
  handle(IpcChannels.KnowledgeSetupPreview, input => backend.knowledge.setupPreview(input));
  handle(IpcChannels.KnowledgeSetupStart, input => backend.startKnowledgeSetup(input));

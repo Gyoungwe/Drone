@@ -112,7 +112,7 @@ async function updatePath(path, force = false) {
         return statements.get.get(path);
       }
       const title = file.text.match(/^#\s+(.+)$/m)?.[1]?.trim() || path.split('/').at(-1).slice(0,-3);
-      const kind = /(?:^|\/)(?:Index|Context|Home)\.md$/i.test(path) ? 'navigation' : /(?:^|\/)Wiki\//.test(path) ? 'wiki' : 'note';
+      const kind = /(?:^|\/)(?:Index|Context|Home)\.md$/i.test(path) ? 'navigation' : /(?:^|\/)Wiki\//.test(path) ? 'wiki' : path.startsWith('Library/Explainers/') ? 'explainer' : 'note';
       db.exec('BEGIN IMMEDIATE');
       try {
         if (previous) statements.removeFts.run(previous.id);
@@ -229,11 +229,11 @@ async function search(args) {
   await flushDirty();
   const expression = queryExpression(args.query);
   const limit = Math.max(1,Math.min(12,Math.floor(args.limit || 5)));
-  const wiki = args.wikiOnly ? "AND n.kind='wiki'" : '';
+  const kindFilter = args.wikiOnly ? "AND n.kind='wiki'" : args.explainerOnly ? "AND n.kind='explainer'" : "AND n.kind!='explainer'";
   // Keep selective FTS matches as the outer loop; a scope-first join probes FTS once per note.
   const rows = db.prepare(`SELECT n.path,n.title,n.hash,n.kind,n.body,bm25(search,6.0,1.0) rank
     FROM search CROSS JOIN notes n ON n.id=search.rowid
-    WHERE search MATCH ? AND (n.scope='shared' OR n.scope=?) ${wiki}
+    WHERE search MATCH ? AND (n.scope='shared' OR n.scope=?) ${kindFilter}
     ORDER BY rank,n.path LIMIT ?`).all(expression,args.project || '',limit*2);
   const hits = []; let staleCandidates = 0;
   for (const item of rows) {

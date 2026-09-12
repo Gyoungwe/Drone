@@ -8,6 +8,7 @@ import {
 import { contextBridge, ipcRenderer } from "electron";
 
 const api: PiApi = {
+	setKnowledgeSpecialistSettings: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeSpecialistsSettings, input),
 	getKnowledgeOverview: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeOverview, input),
 	previewKnowledgeSetup: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeSetupPreview, input),
 	startKnowledgeSetup: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeSetupStart, input),

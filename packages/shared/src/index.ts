@@ -17,3 +17,7 @@ export * from "./update";
 export * from "./knowledge";
 
 export * from "./skill-catalog";
+
+export * from "./knowledge-links";
+
+export * from "./knowledge-specialists";

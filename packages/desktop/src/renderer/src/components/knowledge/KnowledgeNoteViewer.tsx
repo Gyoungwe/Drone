@@ -1,3 +1,4 @@
+import { Markdown } from "../chat/Markdown";
 import { useEffect, useState } from "react";
 import type { KnowledgeNote } from "@percho/shared";
 import { getPi } from "../../api";
@@ -16,7 +17,8 @@ export function KnowledgeNoteViewer({cwd,revision,path,onClose}:{cwd:string|null
   {loading&&<p role="status" className="text-xs">{t('loading')}</p>}
   {error&&<p role="alert" className="whitespace-pre-wrap break-words text-xs text-err">{error}</p>}
   {note?.missing&&<p className="text-xs text-warn">{t('missing')}</p>}
-  {note?.text&&<><p className="mb-1 font-mono text-[10px] text-ink-faint">L{note.startLine}–{note.endLine} · {note.hash?.slice(0,12)} {note.truncated?' · '+t('truncated'):''}</p><pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-[12px] leading-relaxed">{note.text}</pre></>}
+  {note?.text&&<><p className="mb-1 font-mono text-[10px] text-ink-faint">L{note.startLine}–{note.endLine} · {note.hash?.slice(0,12)} {note.truncated?' · '+t('truncated'):''}</p><div className="max-h-80 overflow-auto rounded-lg bg-hover p-3"><Markdown text={note.displayText||note.text}/></div></>}
+  {note?.displayLinkBase&&<p className="my-2 break-words text-[10px] text-ink-faint">{t('linkPreviewOnly')} {note.displayLinkBase}</p>}
   {note?.humanReview?.text&&<details className="mt-2 text-xs"><summary className="cursor-pointer font-medium">{t('humanReview')}</summary><pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap break-words text-ink-2">{note.humanReview.text}</pre></details>}
   <div className="mt-2 flex flex-wrap gap-1">
    {line>1&&<Button size="sm" onClick={()=>setLine(1)}>{t('readBack')}</Button>}

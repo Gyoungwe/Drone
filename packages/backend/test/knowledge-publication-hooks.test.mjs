@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { registerAnswerPublication, projectKnowledgeEvent } from '../../../.pi/lib/knowledge/publication.mjs';
-function harness(validate=async()=>({status:'ready',sources:[],scientificallyVerified:false}),evidenceOnly=false){
+function harness(validate=async()=>({status:'ready',sources:[],scientificallyVerified:false}),evidenceOnly=false,getDeliveryFooter=null){
  const events=new Map(),called=vi.fn(validate);
  const gate=registerAnswerPublication({on:(name,handler)=>events.set(name,handler)},
-  {getCurrent:()=>({service:{validateAnswer:called},ticket:'host-owned'}),evidenceOnly});
+  {getCurrent:()=>({service:{validateAnswer:called},ticket:'host-owned'}),evidenceOnly,getDeliveryFooter});
  gate.begin(true);return {gate,called,end:message=>events.get('message_end')({message},{cwd:'/fixture'})};
 }
 const message=(text='UNCHECKED_FIXTURE')=>({role:'assistant',content:[{type:'text',text}],timestamp:1,stopReason:'stop'});
@@ -44,4 +44,42 @@ it('legacy streaming is unchanged outside application mode',()=>{
 it('unconfigured replies do not claim a completed knowledge check',async()=>{
  const h=harness();h.gate.begin(false);const result=await h.end(message('Configure a Vault first.'));
  expect(result.message.knowledgePublication.status).toBe('unconfigured');expect(h.called).not.toHaveBeenCalled();
+});
+
+it('controlled setup completes with a fixed receipt, not research citation requirements',async()=>{
+ const h=harness(async()=>{throw new Error('No evidence search for setup completion');});
+ h.gate.recordSetup({state:'ready',scope:'application',vault:'/fixture/Vault',project:'project-a',profile:'hybrid',depositMode:'verified',subagentMcpPolicy:'read-local',vaultId:'v',bindingRevision:1});
+ const result=await h.end(message('ARBITRARY_UNVERIFIED_CLAIM'));
+ expect(result.message.knowledgePublication.status).toBe('setup-complete');
+ expect(result.message.content[0].text).toContain('知识库初始化已完成');
+ expect(result.message.content[0].text).toContain('不代表论文已经下载');
+ expect(JSON.stringify(result)).not.toContain('ARBITRARY_UNVERIFIED_CLAIM');expect(h.called).not.toHaveBeenCalled();
+});
+it('setup receipt is single-use and does not grant future research permission',async()=>{
+ const h=harness();h.gate.recordSetup({state:'ready',scope:'application',vault:'/fixture/Vault'});
+ await h.end(message());await h.end(message('normal question'));expect(h.called).toHaveBeenCalledOnce();
+ h.gate.recordSetup({state:'ready',scope:'application',vault:'/fixture/Vault'});h.gate.begin(true);
+ await h.end(message('new turn'));expect(h.called).toHaveBeenCalledTimes(2);
+});
+it.each([{cancelled:true},{state:'failed',scope:'application'},{state:'ready',scope:'project'}])('failed or unrelated setup cannot mint a completion receipt: %j',async result=>{
+ const h=harness();h.gate.recordSetup(result);await h.end(message('unrelated'));expect(h.called).toHaveBeenCalledOnce();
+});
+
+it('a terminal empty reply becomes an explicit host notice, never a silent success',async()=>{
+ const h=harness();h.gate.begin(false);const result=await h.end(message('   '));
+ expect(result.message.knowledgePublication.reason).toBe('empty-answer');expect(result.message.content[0].text).toContain('没有生成可显示的回复');
+});
+
+it('setup completion does not claim the old Vault is current after a concurrent switch',async()=>{
+ const h=harness();h.gate.recordSetup({state:'ready',scope:'application',vault:'/old'},async()=>{throw new Error('changed');});
+ const result=await h.end(message('UNVERIFIED'));expect(result.message.knowledgePublication.reason).toBe('binding-changed');
+ expect(JSON.stringify(result)).not.toContain('UNVERIFIED');
+});
+
+it('appends only the host delivery footer after the answer itself passes validation',async()=>{
+ const h=harness(undefined,false,()=> '主题知识：已生成待审核候选；尚未进入正式知识。');
+ const result=await h.end(message('Checked answer body'));
+ expect(result.message.knowledgePublication.status).toBe('released');
+ expect(result.message.content.map(b=>b.text).join('')).toContain('待审核候选');
+ expect(h.called).toHaveBeenCalledOnce();
 });

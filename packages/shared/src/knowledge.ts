@@ -1,9 +1,12 @@
+import type { KnowledgeSpecialistRun, KnowledgeSpecialistSettings, KnowledgeSpecialistMode } from "./knowledge-specialists";
 /** Host-owned knowledge UI protocol. Reading in the UI never earns model evidence receipts. */
-export interface KnowledgeReadRecord { path: string; hash: string | null; startLine: number; endLine: number; missing?: boolean; truncated?: boolean; kind?: string }
+export interface KnowledgeReadRecord { path: string; title?: string; excerpt?: string; hash: string | null; startLine: number; endLine: number; missing?: boolean; truncated?: boolean; kind?: string }
 export interface KnowledgeFlow {
+ specialists?: KnowledgeSpecialistRun[];
  sessionId: string; turnId: string; vaultId: string | null; bindingRevision: number | null; vault: string | null; project: string | null;
+ artifacts?: { key: string; title: string; path: string | null; status: string; detail: string }[];
  phase: string; updatedAt: number; navigation: KnowledgeReadRecord[]; reads: KnowledgeReadRecord[];
- search: { query: string; wikiOnly: boolean; hits: number; complete: boolean; coverage: string; revision: number } | null;
+ search: { query: string; wikiOnly: boolean; hits: number; complete: boolean; coverage: string; revision: number; previews?: KnowledgeReadRecord[] } | null;
  publication: { status: string; reason: string | null; scientificallyVerified: false } | null; error?: string | null;
 }
 export type KnowledgeUiEvent = (
@@ -18,6 +21,7 @@ export interface KnowledgeIndexStatus {
  lastReconciledAt: string | null; problems: { path: string; message: string }[];
 }
 export interface KnowledgeOverview {
+ specialistSettings?: KnowledgeSpecialistSettings; specialistSettingsError?: string;
  enabled: boolean; bound: boolean; scope: "application"; binding?: KnowledgeBinding; cwd: string | null; project: string | null;
  legacyProjectVault: string | null; projectError?: string; index?: KnowledgeIndexStatus | null; error?: string | null; flow: KnowledgeFlow | null;
 }
@@ -31,17 +35,19 @@ export interface WikiReviewPreview {
  reviewToken: string; tokenExpiresAt: number; vault: string; bindingRevision: number; scientificallyVerified: false;
 }
 export interface WikiReviewResult { id: string; status: string; vaultWritten?: boolean; indexed?: boolean; reviewRecorded?: boolean; recordError?: string | null; indexError?: string | null; alreadyReviewed?: boolean; path?: string }
-export interface KnowledgeNote extends KnowledgeReadRecord { text?: string; totalLines?: number; humanReview?: { text: string; truncated: boolean } | null }
+export interface KnowledgeNote extends KnowledgeReadRecord { displayText?: string; displayLinkBase?: string; text?: string; totalLines?: number; humanReview?: { text: string; truncated: boolean } | null }
 export interface KnowledgeSetupPreview {
- path: string; scope: "application"; bindingRevision: number; warning: string;
- context: { workspace: KnowledgeDirectory; vault: KnowledgeDirectory };
- options: { profiles: { id: string; label: string; description: string; projectTypes: string[]; libraryTypes: string[] }[] };
+ path: string | null; scope: "application"; bindingRevision: number; warning: string;
+ context: { workspace: KnowledgeDirectory | null; vault: KnowledgeDirectory | null };
+ templateSamples: { path: string; text: string }[];
+ options: { profiles: { id: string; label: string; description: string; projectTypes: string[]; libraryTypes: string[]; directories: string[] }[] };
 }
 export interface KnowledgeDirectory { path: string; exists: boolean; truncated: boolean; entries: { path: string; type: string }[] }
 export interface KnowledgePageRequest { cwd?: string | null; offset?: number; limit?: number; revision?: number }
 export interface KnowledgeApi {
+ setKnowledgeSpecialistSettings(input: { mode: KnowledgeSpecialistMode; revision: number; bindingRevision: number }): Promise<KnowledgeSpecialistSettings>;
  getKnowledgeOverview(input?: { cwd?: string | null; sessionId?: string | null }): Promise<KnowledgeOverview>;
- previewKnowledgeSetup(input: { cwd: string; path: string }): Promise<KnowledgeSetupPreview>;
+ previewKnowledgeSetup(input: { cwd?: string | null; path?: string | null }): Promise<KnowledgeSetupPreview>;
  startKnowledgeSetup(input: { sessionId: string; path?: string }): Promise<void>;
  getKnowledgeJobs(input?: KnowledgePageRequest): Promise<KnowledgePage<KnowledgeJob>>;
  getKnowledgeReviews(input: KnowledgePageRequest): Promise<KnowledgePage<WikiReviewItem>>;

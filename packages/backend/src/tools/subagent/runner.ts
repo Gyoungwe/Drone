@@ -1,3 +1,5 @@
+import { withNativeSubagentSlot } from "./slots";
+import { KNOWLEDGE_SPECIALISTS } from "@percho/shared";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -279,6 +281,12 @@ export async function resolveSubagentMcpAccess(
 
 /** 在共享 ModelRuntime 上运行一个隔离的、深度固定为 1 的子会话。 */
 export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput): Promise<SingleResult> {
+	if (KNOWLEDGE_SPECIALISTS.some(agent => agent.name === input.agent.name))
+		throw new Error("Knowledge specialists use research_delegate_knowledge and its capability broker, not the generic subagent runner");
+	return withNativeSubagentSlot(input.cwd,input.signal,()=>runSubagentInSlot(deps,input));
+}
+
+async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Promise<SingleResult> {
 	const runtime = await deps.getModelRuntime();
 	const model = await resolveSubagentModel(
 		runtime,

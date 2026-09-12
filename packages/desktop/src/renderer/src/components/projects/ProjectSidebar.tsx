@@ -4,7 +4,7 @@ import { useT } from "../../i18n";
 import { getDailyDirCached } from "../../lib/daily";
 import { deriveProjects, useProjectsStore } from "../../stores/projects";
 import { useSettingsStore } from "../../stores/settings";
-import { CloseIcon, CoffeeIcon, GearIcon, HelpIcon, PlusIcon } from "../icons";
+import { CloseIcon, CoffeeIcon, GearIcon, ObsidianIcon, HelpIcon, PlusIcon } from "../icons";
 import { Tooltip } from "../ui/Tooltip";
 
 /** 项目仓库地址（帮助按钮跳转） */
@@ -71,6 +71,11 @@ export function ProjectSidebar() {
 					<GearIcon />
 					{t("tabbar.settings")}
 				</button>
+                <Tooltip label="Obsidian">
+                 <button type="button" aria-label="Obsidian" title="Obsidian" data-testid="obsidian-shortcut"
+                  className="my-1 flex h-8 w-8 items-center justify-center rounded-lg text-accent transition-colors hover:bg-hover"
+                  onClick={()=>useSettingsStore.getState().openWith("knowledge")}><ObsidianIcon size={18}/></button>
+                </Tooltip>
 				<button
 					type="button"
 					className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-ink-dim transition-colors hover:bg-hover hover:text-ink"

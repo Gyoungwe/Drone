@@ -1,3 +1,4 @@
+import { emptyTranscript, reduceEvent } from '@percho/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -54,6 +55,7 @@ describe('same checked result across stream, history, LAN polling and exports',(
   expect(JSON.stringify(session.messages)).not.toContain('UNCHECKED_SECRET_ANSWER');
   const history=await backend.getSessionMessages(sid);
   expect(JSON.stringify(history)).toContain('知识库检查未通过');
+  expect(JSON.stringify(events.reduce(reduceEvent,emptyTranscript()).messages)).toContain('知识库检查未通过');
   expect(JSON.stringify(await backend.peekSessionMessages(sid))).not.toContain('UNCHECKED_SECRET_ANSWER');
   const jsonl=await readFile(await backend.exportSession(sid,'jsonl'),'utf8'),html=await readFile(await backend.exportSession(sid,'html'),'utf8');
   expect(jsonl).not.toContain('UNCHECKED_SECRET_ANSWER');expect(html).not.toContain('UNCHECKED_SECRET_ANSWER');
@@ -67,6 +69,7 @@ describe('same checked result across stream, history, LAN polling and exports',(
   const final=events.filter(event=>event.type==='message_end'&&event.message.role==='assistant').at(-1).message;
   expect(final.content[0].text).toContain('Released conditional observation');
   expect(final.knowledgePublication.status).toBe('released');
+  expect(JSON.stringify(events.reduce(reduceEvent,emptyTranscript()).messages)).toContain('Released conditional observation');
   expect(final.knowledgePublication.scientificallyVerified).toBe(false);
   expect(events.some(event=>event.type==='message_update')).toBe(false);
   expect(JSON.stringify(await backend.getSessionMessages(sid))).toContain('Released conditional observation');

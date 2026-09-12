@@ -97,6 +97,7 @@ export default function obsidianWorkbench(pi) {
         subagentMcpPolicy: params.subagent_mcp,
         expectedRevision: knowledgeDirectory() ? priorBinding?.revision || 0 : null,
       });
+      knowledge.setupCompleted(ctx, result);
       return {
         content: [{ type: 'text', text: `${JSON.stringify(result, null, 2)}\n${result.scope === 'application' ? 'Application binding is active for subsequent turns. Indexed reads are native; no raw MCP connection is claimed.' : 'Run /reload before using the refreshed MCP connection.'}` }],
         details: result,

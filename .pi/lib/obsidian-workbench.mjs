@@ -1,3 +1,4 @@
+import { normalizeSourceLinks, onlineSourceLink } from './knowledge/source-links.mjs';
 import { knowledgeDirectory, readKnowledgeBinding, saveKnowledgeBinding } from './knowledge/config.mjs';
 import { getKnowledgeService, notifyKnowledgeChange } from './knowledge/service.mjs';
 import { initializeSharedNavigation, initializeProjectContext } from './knowledge/layout.mjs';
@@ -179,10 +180,57 @@ export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) 
     const note = await vaultPath(vault, 'Library', category, `${slug}.md`);
     const projectNote = await vaultPath(vault, 'Projects', project, category, `${slug}.md`);
     const provenance = JSON.stringify({ url: entry.url, final_url: entry.final_url, downloaded_at: entry.downloaded_at, sha256: entry.sha256, size_bytes: entry.size_bytes, metadata: entry.metadata }, null, 2).replaceAll('<', '\\u003c');
-    const body = `[[Projects/${project}/Index]] | [[Library/Index]]\n\n[Original file](${pathToFileURL(entry.path).href})\n\n## Provenance\n\n\`\`\`json\n${provenance}\n\`\`\`\n\n## Evidence status\n\nArchived source; scientific claims have not been independently verified.`;
+    const online=onlineSourceLink(entry.final_url||entry.url,'官方/原始来源');
+    const doi=entry.metadata?.doi?onlineSourceLink('https://doi.org/'+entry.metadata.doi,'DOI'):'';
+    const chapters=(entry.manualCoverage?.candidates||[]).map(c=>'- '+onlineSourceLink(c.url,c.title||c.url)).join('\n');
+    const body = `[[Projects/${project}/Index]] | [[Library/Index]]\n\n${online}${doi?' | '+doi:''}\n\n[Original file](${pathToFileURL(entry.path).href})\n\n## Provenance\n\n\`\`\`json\n${provenance}\n\`\`\`\n\n## Evidence status\n\nArchived source only; scientific claims have not been independently verified. This note is a source record, not a completed paper explanation or command reference.\n\n${entry.manualCoverage ? `Manual coverage: ${entry.manualCoverage.status}. Commands and parameters require reading the appropriate reference chapters; a landing page is not a complete manual.` : ''}${chapters?'\n\n## Reference chapters (not yet archived)\n\n'+chapters:''}`;
     await writeManagedIndex(note, `---\nid: pi-${randomUUID()}\ntype: ${category === 'Papers' ? 'paper' : 'software'}\nsource_sha256: ${entry.sha256}\n---\n\n# ${title}`, body);
     await writeManagedIndex(projectNote, `# ${title}`, `[[Library/${category}/${slug}]]\n\n[Run files](${pathToFileURL(runDir).href})`);
     return { obsidian_note: note, project_note: projectNote, knowledge_status: 'written', indexes: await refreshIndexes(vault, project) };
+  });
+}
+
+
+export async function publishExplainer({ cwd = process.cwd(), project, topicId, title, artifactPath, summary = '', sources = [] } = {}) {
+  const config = await loadWorkspaceConfig(cwd);
+  if (!config.obsidianVault) throw new Error('Obsidian vault must be configured first');
+  if (config.knowledgeDepositMode === 'run-only') return { knowledge_status: 'disabled-run-only', scientificallyVerified: false };
+  project = validateProject(project || config.knowledgeProjectId || 'research-workbench');
+  topicId = String(topicId || '').normalize('NFKC').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 96);
+  if (!topicId) throw new Error('Explainer topic_id must resolve to a non-empty kebab-case id');
+  title = String(title || '').replace(/[<>\r\n\x00-\x1f]/g, ' ').trim().slice(0, 200);
+  if (!title) throw new Error('Explainer title is required');
+  if (typeof artifactPath !== 'string' || !artifactPath.trim()) throw new Error('Explainer result_file is required');
+  const root = await canonical(config.resultsRoot), artifact = await realpath(resolve(cwd, artifactPath));
+  if (!contains(root, artifact)) throw new Error('Explainer file must stay inside the configured results root');
+  const info = await stat(artifact);
+  if (!info.isFile() || info.size < 1 || info.size > 4 * 1024 * 1024) throw new Error('Explainer must be a regular file between 1 byte and 4 MiB');
+  const ext = /\.md$/i.test(artifact) ? '.md' : /\.html?$/i.test(artifact) ? '.html' : null;
+  if (!ext) throw new Error('Explainer must be HTML or Markdown');
+  const bytes = await readFile(artifact), digest = createHash('sha256').update(bytes).digest('hex');
+  const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
+  return updateVault(cwd, async vault => {
+    const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest.slice(0, 12)}${ext}`;
+    const attachment = await vaultPath(vault, ...attachmentRel.split('/'));
+    await mkdir(dirname(attachment), { recursive: true });
+    try { await writeFile(attachment, bytes, { flag: 'wx' }); } catch (error) { if (error.code !== 'EEXIST') throw error; }
+    const note = await vaultPath(vault, 'Library', 'Explainers', `${topicId}.md`);
+    const previous = await readText(note) || '';
+    const oldVersions = (previous.match(/^- .*?\[打开讲解\]\([^\n]+\)[^\n]*$/gm) || []).slice(-19);
+    const relLink = `../../${attachmentRel}`;
+    const sourceLines = sources.slice(0, 12).map(source => `- [[${String(source.path).replace(/\.md$/,'')}]] · lines ${source.startLine}–${source.endLine} · sha256 ${source.hash}`).join('\n');
+    const versionLine = `- ${new Date().toISOString()} · [打开讲解](${relLink}) · sha256 ${digest}`;
+    const body = [
+      '> [!warning] 展示层，不是科学证据\n> 此页面由 Show Me / 模型根据已读来源生成，用于解释与导航。不能作为 Wiki 提案或科研结论的证据来源。',
+      `## 最新讲解\n\n[打开 Show Me 页面](${relLink})\n\n${String(summary || '').trim().slice(0, 4000)}`,
+      sourceLines ? `## 本轮依据\n\n${sourceLines}` : '',
+      `## Versions\n\n${[...oldVersions, versionLine].join('\n')}`,
+    ].filter(Boolean).join('\n\n');
+    const heading = `---\nid: pi-${randomUUID()}\ntype: explainer\ntopic_id: ${JSON.stringify(topicId)}\nproject: ${JSON.stringify(project)}\nstatus: generated\nevidence_role: presentation-only\nupdated: ${JSON.stringify(new Date().toISOString())}\n---\n\n# ${title}`;
+    await writeManagedIndex(note, heading, body);
+    const indexes = await refreshIndexes(vault, project, false, config.knowledgeProfile);
+    return { note, attachment, attachment_relative: attachmentRel, topicId, project, sha256: digest, bytes: info.size,
+      sourceCount: sources.length, knowledge_status: 'written', evidenceRole: 'presentation-only', scientificallyVerified: false, indexes };
   });
 }
 
@@ -314,12 +362,13 @@ export async function depositKnowledge({ cwd = process.cwd(), project, type, tit
     if (!knowledgeDirectory()) await initializeVault(vault, project, config.knowledgeProfile);
     const relativeNote = scope === 'shared' ? join('Wiki', `${slug}.md`) : scope === 'library' ? join('Library', folder, `${slug}.md`) : join('Projects', project, folder, `${slug}.md`);
     const note = await vaultPath(vault, relativeNote);
-    const links = (Array.isArray(sourceLinks) ? sourceLinks : []).map(link => `- ${String(link)}`).join('\n');
+    const normalizedSources = await normalizeSourceLinks(sourceLinks,{cwd,vault,resultsRoot:config.resultsRoot,project});
+    const links = normalizedSources.links.map(link=>`- ${link}`).join('\n');
     const body = [String(markdown || '').trim(), links ? `## Sources\n\n${links}` : ''].filter(Boolean).join('\n\n');
     const heading = `---\nid: pi-${randomUUID()}\ntype: ${kind}\nproject: ${JSON.stringify(project)}\nstatus: ${JSON.stringify(status)}\nupdated: ${JSON.stringify(new Date().toISOString())}\n---\n\n# ${String(title).trim()}`;
     await writeManagedIndex(note, heading, body);
     const indexes = await refreshIndexes(vault, project, false, config.knowledgeProfile);
-    return { note, scope, type: kind, project, profile: profile.id, depositMode: config.knowledgeDepositMode, indexes };
+    return { note, scope, type: kind, project, profile: profile.id, depositMode: config.knowledgeDepositMode, unresolvedSources:normalizedSources.unresolved, scientificallyVerified:false, indexes };
   });
 }
 

@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ChannelWatcher, parseWatchFilename } from "../src/tools/channel-watch/watcher";
 
 let testRoot: string;
@@ -73,17 +73,19 @@ describe("ChannelWatcher（fs.watch 模式）", () => {
 			debounceMs: 150,
 		});
 		await w.start();
-		await mkdir(join(root, "t2"), { recursive: true });
-		await writeFile(join(root, "t2/A.md"), "a", { flag: "w" });
-		await sleep(300); // A 防抖窗口过
-		await writeFile(join(root, "t2/B.md"), "b", { flag: "w" });
-		await sleep(400);
-		expect(events.filter((x) => x === "t2/A.md")).toHaveLength(1);
-		expect(events.filter((x) => x === "t2/B.md")).toHaveLength(1);
-		w.stop();
-		await writeFile(join(root, "t2/C.md"), "c", { flag: "w" });
-		await sleep(400);
-		expect(events.some((x) => x === "t2/C.md")).toBe(false);
+		try {
+			await mkdir(join(root, "t2"), { recursive: true });
+			await writeFile(join(root, "t2/A.md"), "a", { flag: "w" });
+			// Wait for the actual debounced event rather than assuming fs.watch latency under concurrent builds.
+			await vi.waitFor(() => expect(events.filter((x) => x === "t2/A.md")).toHaveLength(1), { timeout: 2000 });
+			await writeFile(join(root, "t2/B.md"), "b", { flag: "w" });
+			await vi.waitFor(() => expect(events.filter((x) => x === "t2/B.md")).toHaveLength(1), { timeout: 2000 });
+			expect(events.filter((x) => x === "t2/A.md")).toHaveLength(1);
+			w.stop();
+			await writeFile(join(root, "t2/C.md"), "c", { flag: "w" });
+			await sleep(400);
+			expect(events.some((x) => x === "t2/C.md")).toBe(false);
+		} finally { w.stop(); }
 	});
 });
 

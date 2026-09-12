@@ -1,4 +1,4 @@
-import { stageWikiProposal, previewWikiProposal, listWikiProposals, decideWikiProposal } from '../../../.pi/lib/knowledge/wiki-review.mjs';
+import { stageWikiProposal, mergeWikiProposal, previewWikiProposal, listWikiProposals, decideWikiProposal } from '../../../.pi/lib/knowledge/wiki-review.mjs';
 import { registerKnowledgeInterface } from '../../../.pi/lib/knowledge/extension.mjs';
 import { buildResearchWikiPage } from '../../../.pi/lib/research-wikiloop.mjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -63,6 +63,27 @@ describe('versioned, explicitly reviewed Wiki promotion',()=>{
  it('requires reading the existing target before proposing its replacement',async()=>{
   await service.read(prep.ticket,cwd,{path:'Library/Papers/source.md'});
   await expect(stageWikiProposal(service,prep.ticket,cwd,input())).rejects.toThrow('not read');
+ });
+ it('accumulates a second research round into the same pending candidate',async()=>{
+  const staged=await candidate({markdown:'Round one synthesis.'});
+  await note('Library/Papers/source-two.md','# Source two\nSecond-round evidence.\n');
+  prep=await service.prepare({cwd,project:'project-a',query:'Autotomy second round'});
+  await service.request('reconcile');
+  await service.read(prep.ticket,cwd,{path:'Library/Papers/source-two.md'});
+  const merged=await mergeWikiProposal(service,prep.ticket,cwd,staged.id,{markdown:'Round two adds another bounded observation.',rationale:'second round',source_paths:['Library/Papers/source-two.md']});
+  expect(merged.id).toBe(staged.id);expect(merged.merged).toBe(true);expect(merged.sources).toHaveLength(2);
+  const pending=await listWikiProposals(service,'project-a');expect(pending.items).toHaveLength(1);
+  const preview=await previewWikiProposal(service,staged.id,'project-a');
+  expect(preview.after).toContain('Round one synthesis.');expect(preview.after).toContain('Round two adds another bounded observation.');
+  expect(preview.sources.map(s=>s.path).sort()).toEqual(['Library/Papers/source-two.md','Library/Papers/source.md'].sort());
+ });
+ it('refuses to merge when an earlier source changed',async()=>{
+  const staged=await candidate();await note('Library/Papers/source.md','# changed after round one');
+  await note('Library/Papers/source-two.md','# Source two\nSecond-round evidence.\n');
+  prep=await service.prepare({cwd,project:'project-a',query:'Autotomy second round'});await service.request('reconcile');
+  await service.read(prep.ticket,cwd,{path:'Library/Papers/source-two.md'});
+  await expect(mergeWikiProposal(service,prep.ticket,cwd,staged.id,{markdown:'Round two.',rationale:'second round',source_paths:['Library/Papers/source-two.md']})).rejects.toThrow('Source changed');
+  expect((await listWikiProposals(service,'project-a')).items).toHaveLength(1);
  });
  it('stages outside the Vault; a candidate never appears in normal search',async()=>{
   const before=await readFile(join(vault,'Wiki/Autotomy.md'),'utf8');

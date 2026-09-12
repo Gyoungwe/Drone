@@ -88,6 +88,42 @@ export async function stageWikiProposal(service,ticket,cwd,input) {
       vaultWritten:false,scientificallyVerified:false,next:'User: run /obsidian-review to review the exact proposed change.'};
   });
 }
+
+// Host-only accumulation for repeated research rounds on the exact same topic.
+// It keeps one pending candidate, revalidates all earlier source versions, and
+// invalidates any stale UI preview by changing the proposal hash.
+export async function mergeWikiProposal(service,ticket,cwd,id,{markdown,rationale,source_paths}={}) {
+  return withKnowledgeBinding(service.binding,async()=>{
+    checkId(id);
+    const {project,sources:newSources}=await service.evidenceReceipts(ticket,cwd,source_paths);
+    const p=await loadProposal(service,id,project);
+    if(p.status!=='pending')throw new Error('Only a pending Wiki candidate can accumulate another research round');
+    if(Date.now()>p.createdAt+MAX_AGE)throw new Error('Pending Wiki candidate expired; review or replace it before accumulating more rounds');
+    const target=await currentNote(service,p.path);
+    if((target?.hash??null)!==p.beforeHash)throw new Error('Wiki changed since the pending candidate was created');
+    await verifySources(service,p);
+    const byPath=new Map(p.sources.map(source=>[source.path,source]));
+    for(const source of newSources)byPath.set(source.path,source);
+    const sources=[...byPath.values()];
+    if(sources.length>12)throw new Error('Pending topic reached the 12-source review budget; review it before adding another round');
+    if(typeof markdown!=='string'||!markdown.trim()||markdown.length>12000||markdown.includes('<!-- pi-agent:managed:'))throw new Error('Incremental topic summary must contain 1–12000 characters and no managed markers');
+    if(typeof rationale!=='string'||!rationale.trim()||rationale.length>1000)throw new Error('A concise merge rationale is required');
+    const prior=managedParts(p.after).body.replace(/\n\n## Sources\n[\s\S]*$/,'').trim();
+    const update=`## Research update · ${new Date().toISOString()}\n\n${markdown.trim()}`;
+    const merged=[prior,update].filter(Boolean).join('\n\n');
+    if(merged.length>22000)throw new Error('Pending topic synthesis is too large; review it before adding another round');
+    const refs=sources.map(source=>`- [[${source.path.slice(0,-3)}]] · lines ${source.startLine}–${source.endLine} · sha256 ${source.hash}`).join('\n');
+    const after=proposedText(p.before,p.title,`${merged}\n\n## Sources\n${refs}`);
+    const updated={...p,createdAt:Date.now(),rationale:`${p.rationale}\n\nAccumulated research round: ${rationale.trim()}`.slice(0,1000),sources,after,afterHash:digest(after)};
+    updated.proposalHash=immutableHash(updated);
+    if(Buffer.byteLength(JSON.stringify(updated,null,2))+1>256*1024)throw new Error('Merged Wiki proposal exceeds the bounded review storage size');
+    await exclusive(rootFor(service),()=>atomicJson(join(rootFor(service),'pending',p.id+'.json'),updated));
+    invalidateKnowledgeUi();
+    return {id:p.id,status:'pending',path:p.path,project,proposalHash:updated.proposalHash,sources,
+      merged:true,roundAdded:true,vaultWritten:false,scientificallyVerified:false,next:'User: review the accumulated exact change in Wiki review.'};
+  });
+}
+
 export async function previewWikiProposal(service,id,project) {
   return withKnowledgeBinding(service.binding,async()=>{
     const p=await loadProposal(service,id,project);

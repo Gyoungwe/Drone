@@ -59,6 +59,7 @@ export interface ResourcePreviewResult {
 /** IPC 通道名常量 */
 export const IpcChannels = {
 	KnowledgeOverview: "knowledge:overview",
+	KnowledgeSpecialistsSettings: "knowledge:specialistsSettings",
 	KnowledgeSetupPreview: "knowledge:setupPreview",
 	KnowledgeSetupStart: "knowledge:setupStart",
 	KnowledgeJobs: "knowledge:jobs",

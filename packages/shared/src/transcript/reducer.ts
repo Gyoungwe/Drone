@@ -129,6 +129,32 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 	};
 }
 
+/** Consume the authoritative public snapshot even when the host withholds all deltas.
+ * Never read private provider state: this is the same checked event used by history/LAN.
+ */
+function acceptFinalSnapshot(state: SessionTranscriptState, raw: unknown): SessionTranscriptState {
+ if (!raw || typeof raw !== "object") return state;
+ const message = raw as { role?: string; content?: unknown; knowledgePublication?: unknown };
+ if (message.role !== "assistant" || !Array.isArray(message.content)) return state;
+ // Some older callers send an empty placeholder at turn_end. Preserve their streamed text.
+ if (!message.content.length && !message.knowledgePublication) return state;
+ const blocks = message.content as Array<{ type?: string; text?: string; thinking?: string; id?: string; name?: string; arguments?: unknown }>;
+ const streaming = state.streaming ?? emptyStreaming();
+ const tools = [...streaming.tools];
+ for (const [index,block] of blocks.entries()) {
+  if (block.type !== "toolCall" || !block.id || !block.name || block.name === STATUS_TOOL_NAME || streaming.subagentByToolCallId[block.id]) continue;
+  const existing = tools.findIndex(t=>t.id===block.id);
+  const item = {key:existing>=0 ? tools[existing]?.key ?? newToolKey() : newToolKey(), id:block.id,name:block.name,
+   args:parseArgs(block.arguments),output:existing>=0 ? tools[existing]?.output ?? "" : "",
+   state:existing>=0 ? tools[existing]?.state ?? "running" as const : "running" as const,blockIndex:index};
+  if(existing>=0) tools[existing]={...tools[existing],...item}; else tools.push(item);
+ }
+ const text = blocks.filter(b=>b.type==="text").map(b=>b.text??"").join("");
+ return {...state,streaming:{...streaming,text,
+  thinking:blocks.filter(b=>b.type==="thinking").map(b=>b.thinking??"").join(""),tools,
+  textBlockIndex:text?Math.max(0,blocks.findIndex(b=>b.type==="text")):null}};
+}
+
 /** 错误卡落地 + 清 pending（agent_end 最终失败 / agent_settled 竞底 / guard trip 共用） */
 function commitLlmErrorCard(state: SessionTranscriptState, error: UiError): SessionTranscriptState {
 	return {
@@ -248,6 +274,8 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				],
 			};
 		}
+		case "message_end":
+			return acceptFinalSnapshot(state, event.message);
 		case "message_update": {
 			const streaming = state.streaming;
 			if (!streaming) return state;
@@ -555,7 +583,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 		case "auto_retry_end":
 			return { ...state, retrying: null };
 		case "turn_end": {
-			const final = finalizeStreaming({ ...state, phase: "idle" });
+			const final = finalizeStreaming({ ...acceptFinalSnapshot(state, event.message), phase: "idle" });
 			// LLM 错误轮：不当场落卡，挂 pending 等 agent_end 的 willRetry 判定（决策 D1：
 			// SDK 每个 retry 轮都发 turn_end(error)，只有最终失败才落卡）
 			const message = event.message as { role?: unknown; stopReason?: unknown; errorMessage?: unknown };

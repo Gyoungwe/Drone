@@ -1,3 +1,4 @@
+import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { getPi } from "../../api";
@@ -44,7 +45,7 @@ export function KnowledgeUiRoot(){
   {dialog&&createPortal(<div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/25 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={t('title')}>
    <div ref={box} className="flex max-h-[88vh] w-full max-w-[1120px] flex-col overflow-hidden rounded-2xl border border-border bg-surface text-ink shadow-dialog">
     <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-3"><p className="text-xs font-medium">Obsidian · {t('title')}</p><Button size="sm" onClick={close} aria-label={t('close')}>×</Button></div>
-    <div className="min-h-0 overflow-auto p-4 sm:p-5"><KnowledgePanel context={dialog}/></div>
+    <div className="min-h-0 overflow-auto p-4 sm:p-5"><div>{dialog.note&&dialog.noteRevision?<KnowledgeNoteViewer cwd={dialog.cwd} path={dialog.note} revision={dialog.noteRevision} onClose={close}/>:<KnowledgePanel context={dialog}/>}</div></div>
    </div>
   </div>,document.body)}
   {notice&&createPortal(<div role={notice.severity==='error'?'alert':'status'} className="fixed bottom-5 right-4 z-[80] w-[min(420px,calc(100vw-32px))] rounded-xl border border-border bg-surface p-4 text-ink shadow-dialog" data-testid="knowledge-notice">

@@ -1,6 +1,6 @@
 import type { KnowledgeFlow, KnowledgeUiEvent } from "@percho/shared";
 import { create } from "zustand";
-export interface KnowledgeDialogContext { cwd: string | null; sessionId: string | null; tab: "overview" | "reviews" | "maintenance"; id?: string }
+export interface KnowledgeDialogContext { cwd: string | null; sessionId: string | null; tab: "overview" | "reviews" | "maintenance"; id?: string; note?: string; noteRevision?: number }
 interface State {
  flows: Record<string, KnowledgeFlow>; revision: number; dialog: KnowledgeDialogContext | null;
  notice: Extract<KnowledgeUiEvent, { kind: "notice" }> | null;

@@ -21,6 +21,7 @@ const notices={
  'interrupted':'本次请求已中断，未完成的回答没有发布。',
  'check-timeout':'回答前检查超时，草稿没有发布。',
  'check-failed':'回答前检查发生错误，草稿没有发布。',
+ 'empty-answer':'任务已结束，但模型没有生成可显示的回复。请查看本轮产物或要求继续交付说明。',
  'answer-too-large':'本次回答超出单次检查的大小上限，请分段完成。',
  'protocol-budget':'本轮工具上下文超过安全缓存上限，请开启新一轮任务。',
 };
@@ -50,7 +51,7 @@ function blocked(message,code='check-failed',turnId=null) {
 function isSealed(message,restore=false) {
  const proof=message?.[FIELD];
  return proof?.version===1 && (state.proofs.has(proof)||restore) &&
-  ['released','no-hits','blocked','tool-only','unconfigured','evidence-only'].includes(proof.status) && proof.contentHash===hash(message.content);
+  ['released','no-hits','blocked','tool-only','unconfigured','evidence-only','setup-complete'].includes(proof.status) && proof.contentHash===hash(message.content);
 }
 function inplace(target,source){for(const name of Object.keys(target))delete target[name];Object.assign(target,source);return target;}
 export function projectKnowledgeEvent(event) {
@@ -77,8 +78,8 @@ export function projectKnowledgeSnapshot(messages,persisted=[]) {
 }
 state.projectEvent=projectKnowledgeEvent;state.projectSnapshot=projectKnowledgeSnapshot;
 
-export function registerAnswerPublication(pi,{getCurrent,evidenceOnly=false}) {
- let turnId=null, required=true, started=false, protocolBytes=0;
+export function registerAnswerPublication(pi,{getCurrent,evidenceOnly=false,getDeliveryFooter=null}) {
+ let turnId=null, required=true, started=false, protocolBytes=0, setupReceipt=null;
  const protocol=new Map();
  // Keep signed model protocol blocks unchanged in live provider context, not in public history.
  pi.on('context',async(event)=>({messages:event.messages.map(message=>{
@@ -101,6 +102,21 @@ export function registerAnswerPublication(pi,{getCurrent,evidenceOnly=false}) {
   }
   if(['error','aborted','length','pending'].includes(message.stopReason)||ctx.signal?.aborted)return report(blocked(message,'interrupted',turnId));
   const content=blocks.filter(b=>b.type==='text');
+  // Only the controlled setup writer can set this receipt. Never whitelist model-written claims.
+  if(setupReceipt) {
+    const done=setupReceipt;setupReceipt=null;
+    try { await done.checkCurrent?.(); } catch { return report(blocked(message,'binding-changed',turnId)); }
+    return report(seal(message,[{type:'text',text:[
+      '知识库初始化已完成。',
+      `当前知识库：${done.vault}`,
+      `作用范围：整个 Percho；当前项目：${done.project || '尚未创建项目分区'}。`,
+      `结构：${done.profile}；沉淀策略：${done.depositMode}；子智能体访问：${done.subagentMcpPolicy}。`,
+      '已保存绑定并创建缺失的导航和模板，未搬迁或删除已有笔记。',
+      '这只是初始化完成，不代表论文已经下载、知识已经整理或原始 MCP 已连接。',
+      '接下来可以要求检索或下载资料；论文应交付主要观点与方法，软件应交付版本对应的命令、参数与示例。'
+    ].join('\n\n')}],{status:'setup-complete',turnId,vaultId:done.vaultId,bindingRevision:done.bindingRevision,scientificallyVerified:false}));
+  }
+  if(!content.some(block=>block.text?.trim()))return report(blocked(message,'empty-answer',turnId));
   if(evidenceOnly)return {message:seal(message,[{type:'text',text:'【子智能体待核验材料】以下不是主会话已核验的最终结论。\n\n'},...content],{status:'evidence-only',turnId,scientificallyVerified:false})};
   if(!started)return report(blocked(message,'not-prepared',turnId));
   if(!required)return report(seal(message,content,{status:'unconfigured',turnId,scientificallyVerified:false}));
@@ -117,13 +133,16 @@ export function registerAnswerPublication(pi,{getCurrent,evidenceOnly=false}) {
    const published=proof.status==='no-hits'
     ? [{type:'text',text:'【知识库检索无命中】本轮查询未找到匹配条目；下文不是基于本库证据的结论，也不表示全库不存在相关知识。\n\n'},...content]
     : content;
-   return report(seal(message,published,{...proof,status:proof.status==='ready'?'released':'no-hits',turnId}));
+   const footer=typeof getDeliveryFooter==='function'?getDeliveryFooter(ctx):null;
+   const visible=footer?[...published,{type:'text',text:`\n\n${String(footer).slice(0,2000)}`}]:published;
+   return report(seal(message,visible,{...proof,status:proof.status==='ready'?'released':'no-hits',turnId}));
   }catch(error){return report(blocked(message,reason(error),turnId));
   }finally{if(timer)clearTimeout(timer);}
  });
  return {
-  begin(isRequired=true,newTurn=true){started=true;required=isRequired;if(newTurn){turnId=randomUUID();protocol.clear();protocolBytes=0;}},
-  invalidate(){started=false;required=true;turnId=null;protocol.clear();protocolBytes=0;},
+  recordSetup(result,checkCurrent){if(result?.state==='ready'&&result.scope==='application')setupReceipt={vault:result.vault,project:result.project,profile:result.profile,depositMode:result.depositMode,subagentMcpPolicy:result.subagentMcpPolicy,vaultId:result.vaultId,bindingRevision:result.bindingRevision,checkCurrent};},
+  begin(isRequired=true,newTurn=true){started=true;required=isRequired;if(newTurn){turnId=randomUUID();protocol.clear();protocolBytes=0;setupReceipt=null;}},
+  invalidate(){started=false;required=true;turnId=null;protocol.clear();protocolBytes=0;setupReceipt=null;},
   guidance:'Answer publication is host-checked. Before a final text answer, use the native knowledge search, read the cited current sources, and include Vault-relative [[path]] citations. Tool-turn narrative is withheld. An empty successful search is explicitly labeled, not scientific validation. A failed check publishes only a host notice; do not retry endlessly or use tool outputs as a substitute answer.',
  };
 }

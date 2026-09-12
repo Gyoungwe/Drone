@@ -1,3 +1,4 @@
+import { makeKnowledgeSpecialistBridge } from "./knowledge/specialist-bridge";
 import { KnowledgeUiService } from "./knowledge/ui";
 import { existsSync } from "node:fs";
 import { readFile, unlink } from "node:fs/promises";
@@ -289,6 +290,10 @@ export class PiBackend {
 				}),
 			);
 		}
+		if (this.options.subagentPreferBuiltin !== false) factories.push(makeKnowledgeSpecialistBridge({
+			getRuntime: () => this.getModelRuntime(),
+			getModelPreference: (name) => this.modelPrefs.getSubagentModel(name),
+		}));
 		// 上下文蒸发（默认开启：缺省 mode=evaporation；钩子实时读派生 mode，
 		// 设置页切换后 ≤2s 生效，无需重开会话）。
 		// 批次上报双通道：log（快速 grep）+ trace_custom 行（灰度分析脚本直读，

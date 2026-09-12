@@ -10,6 +10,9 @@ export function allowedSegment(name) {
 export function validateNote(path) {
   if (typeof path !== 'string' || isAbsolute(path) || path.includes('\\') || !path.endsWith('.md') ||
       !path.split('/').every(allowedSegment)) throw new Error('Expected an allowed Vault-relative Markdown path');
+  const reserved=['Projects','Library','Wiki','Attachments','Templates','Indexes','Inbox'];
+  const first=path.split('/')[0];
+  if(reserved.some(name=>name.toLowerCase()===first.toLowerCase()&&name!==first))throw new Error('Reserved Vault directories require canonical casing');
   return path;
 }
 export function noteScope(path) { return path.startsWith('Projects/') && path.split('/').length > 2 ? path.split('/')[1] : 'shared'; }

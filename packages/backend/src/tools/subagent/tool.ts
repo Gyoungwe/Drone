@@ -13,7 +13,7 @@ import { discoverAgents, findAgent } from "./agents";
 import { runSubagent, type SingleResult } from "./runner";
 
 const MAX_TASKS = 8;
-const MAX_CONCURRENCY = 4;
+const MAX_CONCURRENCY = 3;
 const MAX_CONTENT = 50_000;
 
 const taskSchema = Type.Object({
@@ -160,7 +160,7 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 		name: "subagent",
 		label: "Subagent",
 		description:
-			"Delegate a self-contained read-only or project-scoped task to an isolated subagent session. Use {agent, task} for one run or {tasks:[{agent, task}, ...]} for parallel exploration (up to 8 tasks, 4 at once). Built-in agent: scout. More agents may be defined in ~/.pi/agent/agents/. The subagent returns only its final conclusion while its full session remains available from the result card.",
+			"Delegate a self-contained read-only or project-scoped task to an isolated subagent session. Use {agent, task} for one run or {tasks:[{agent, task}, ...]} for parallel exploration (up to 8 tasks, 3 native agents at once). Built-in general agent: scout. Knowledge specialist identities use research_delegate_knowledge and its scoped broker instead of this tool. More agents may be defined in ~/.pi/agent/agents/. The subagent returns only its final conclusion while its full session remains available from the result card.",
 		parameters: subagentParams,
 		execute: async (
 			toolCallId,

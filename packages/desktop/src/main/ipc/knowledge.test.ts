@@ -8,3 +8,14 @@ beforeEach(()=>{mocks.handlers.clear();mocks.from.mockReturnValue(mocks.window);
 it('rejects requests from child frames and non-application windows',()=>{const frame={};const handler=mocks.handlers.get(IpcChannels.KnowledgeReviewDecide)!;expect(()=>handler({sender:{mainFrame:frame},senderFrame:{}},{token:'x'})).toThrow('main frame');mocks.from.mockReturnValue(null);expect(()=>handler({sender:{mainFrame:frame},senderFrame:frame},{token:'x'})).toThrow('main frame');expect(backend.knowledge.decide).not.toHaveBeenCalled();});
 it('passes the exact preview capability to the host API',async()=>{const frame={},input={cwd:'/fixture',token:'exact-preview',decision:'apply'};await mocks.handlers.get(IpcChannels.KnowledgeReviewDecide)!({sender:{mainFrame:frame},senderFrame:frame},input);expect(backend.knowledge.decide).toHaveBeenCalledWith(input);});
 it('opens only backend-resolved knowledge paths',async()=>{const frame={};await mocks.handlers.get(IpcChannels.KnowledgeOpen)!({sender:{mainFrame:frame},senderFrame:frame},{path:'note.md',revision:1});expect(mocks.openExternal).toHaveBeenCalledWith('obsidian://open?path=%2Ffixture%2FVault%2Fnote.md');});
+
+it('specialist mode writes require the same main-frame restriction as approvals',()=>{
+ const frame={};const handler=mocks.handlers.get(IpcChannels.KnowledgeSpecialistsSettings)!;
+ expect(()=>handler({sender:{mainFrame:frame},senderFrame:{}},{mode:'automatic',revision:0,bindingRevision:1})).toThrow('main frame');
+});
+it('passes explicit specialist settings and both versions to the human host API',async()=>{
+ backend.knowledge.specialistSettings=vi.fn(async()=>({mode:'off',revision:1}));
+ const frame={},input={mode:'off',revision:0,bindingRevision:1};
+ await mocks.handlers.get(IpcChannels.KnowledgeSpecialistsSettings)!({sender:{mainFrame:frame},senderFrame:frame},input);
+ expect(backend.knowledge.specialistSettings).toHaveBeenCalledWith(input);
+});

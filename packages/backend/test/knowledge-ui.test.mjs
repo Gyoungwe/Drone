@@ -38,6 +38,15 @@ describe('real human-facing knowledge APIs',()=>{
   expect(note.humanReview.text).toContain('Keep limits');
   await expect(service.evidenceReceipts(prep.ticket,cwd,['Library/Papers/source.md'])).rejects.toThrow('not read');
  });
+ it('human preview resolves generated explainer attachments without changing stored Markdown',async()=>{
+  const attachment=join(vault,'Attachments','Explainers','topic','20260912-demo.html');await mkdir(join(attachment,'..'),{recursive:true});await writeFile(attachment,'<h1>demo</h1>');
+  await note('Library/Explainers/topic.md','# Topic explainer\n\n[打开 Show Me 页面](../../Attachments/Explainers/topic/20260912-demo.html)\n');
+  await service.request('reconcile');
+  const raw=await readFile(join(vault,'Library/Explainers/topic.md'),'utf8');expect(raw).toContain('../../Attachments/Explainers/');
+  const shown=await ui.knowledgeReadNote({cwd,path:'Library/Explainers/topic.md',revision});
+  expect(shown.displayText).toContain('file://');expect(shown.displayText).not.toContain('](../../Attachments/Explainers/');
+  expect(await readFile(join(vault,'Library/Explainers/topic.md'),'utf8')).toBe(raw);
+ });
  it('human reads and open targets reject traversal, other-project notes and stale bindings',async()=>{
   await expect(ui.knowledgeReadNote({cwd,path:'../private.md',revision})).rejects.toThrow('allowed');
   await note('Projects/other/Evidence/private.md','# private');
@@ -99,12 +108,12 @@ describe('real human-facing knowledge APIs',()=>{
  });
 });
 describe('host-owned step events',()=>{
- it('records bounded paths and versions without source text or draft answers',()=>{
+ it('records bounded read excerpts and versions without full bodies or draft answers',()=>{
   const events=[],off=subscribeKnowledgeUi(e=>events.push(e)),ctx={sessionId:'ui-fixture'};
   try{beginKnowledgeFlow(ctx,{vaultId:'fixture',revision:1,vault});updateKnowledgeFlow(ctx,{phase:'searching'});
-   noteKnowledgeRead(ctx,{path:'Wiki/Topic.md',text:'PRIVATE_NOTE_BODY',hash:'123',startLine:1,endLine:2});
+   noteKnowledgeRead(ctx,{path:'Wiki/Topic.md',text:'READ_EXCERPT '+ 'x'.repeat(2000)+'HIDDEN_TAIL',hash:'123',startLine:1,endLine:2});
    publicationKnowledgeFlow(ctx,{status:'blocked',reason:'source-changed'});
-   expect(flowFor('ui-fixture').phase).toBe('blocked');expect(JSON.stringify(events)).not.toContain('PRIVATE_NOTE_BODY');
+   expect(flowFor('ui-fixture').phase).toBe('blocked');expect(JSON.stringify(events)).toContain('READ_EXCERPT');expect(JSON.stringify(events)).not.toContain('HIDDEN_TAIL');expect(flowFor('ui-fixture').reads[0].excerpt.length).toBeLessThanOrEqual(320);
    expect(events.some(e=>e.flow?.phase==='reading-wiki')).toBe(true);
   }finally{off();}
  });
@@ -112,4 +121,27 @@ describe('host-owned step events',()=>{
   const ctx={sessionId:'snapshot-test'};beginKnowledgeFlow(ctx,null);const value=flowFor('snapshot-test');value.phase='released';
   expect(flowFor('snapshot-test').phase).toBe('unconfigured');
  });
+});
+
+it('no-path preview uses the current Vault and always includes actual template content',async()=>{
+ const value=await ui.knowledgeSetupPreview({cwd});
+ expect(value.path).toBe(vault);expect(value.options.profiles[0].directories).toContain('Home.md');
+ expect(value.templateSamples.find(x=>x.path==='Templates/Source.md').text).toContain('<!-- pi-agent:managed:start -->');
+});
+it('template-only preview works without a project, binding or destination',async()=>{
+ vi.stubEnv('PERCHO_KNOWLEDGE_DIR',join(root,'unbound-app'));
+ const value=await ui.knowledgeSetupPreview({});
+ expect(value.context.vault).toBeNull();expect(value.context.workspace).toBeNull();
+ expect(value.options.profiles).toHaveLength(3);expect(value.templateSamples.length).toBeGreaterThan(0);
+});
+
+it('existing bare results paths become display-only links, without rewriting the stored note',async()=>{
+ const results=join(cwd,'results','old-run');await mkdir(results,{recursive:true});await writeFile(join(results,'paper.pdf'),'fixture only');
+ const original='---\nproject: "project-a"\n---\n# Note\n\n## Sources\n- results/old-run/paper.pdf\n';
+ await note('Library/Methods/legacy.md',original);
+ const value=await ui.knowledgeReadNote({cwd,path:'Library/Methods/legacy.md',revision});
+ expect(value.displayText).toContain('](<file:');expect(value.text).toBe(original);
+ expect(await readFile(join(vault,'Library/Methods/legacy.md'),'utf8')).toBe(original);
+ const other=join(root,'other-workspace');await mkdir(other);
+ expect((await ui.knowledgeReadNote({cwd:other,path:'Library/Methods/legacy.md',revision})).displayText).toBeUndefined();
 });

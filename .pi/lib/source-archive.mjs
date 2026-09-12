@@ -1,3 +1,4 @@
+import { assessManualPage } from './source-delivery.mjs';
 import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -197,7 +198,7 @@ export async function archiveSource({ cwd = process.cwd(), run_dir, url, categor
       await rename(temporary, outputPath);
     }
     const downloadedAt = new Date().toISOString();
-    const entry = { id: randomUUID(), status: "downloaded", category, url, final_url: resolvedUrl, downloaded_at: downloadedAt, path: outputPath, local_path: outputPath, relative_path: relative(cwd, outputPath).replaceAll(sep, "/"), size_bytes: bytes.byteLength, sha256, content_type: contentType, human_verified: Boolean(verified), metadata: normaliseMetadata(metadata) };
+    const entry = { ...(category === "manuals" ? {manualCoverage:assessManualPage(bytes,contentType,resolvedUrl)} : {}), id: randomUUID(), status: "downloaded", category, url, final_url: resolvedUrl, downloaded_at: downloadedAt, path: outputPath, local_path: outputPath, relative_path: relative(cwd, outputPath).replaceAll(sep, "/"), size_bytes: bytes.byteLength, sha256, content_type: contentType, human_verified: Boolean(verified), metadata: normaliseMetadata(metadata) };
     const manifest = await readManifest(manifestPath, runDir);
     manifest.updated_at = downloadedAt;
     manifest.items = [...manifest.items, entry];

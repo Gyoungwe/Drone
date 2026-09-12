@@ -1,7 +1,33 @@
 {
   "version": 3,
-  "projectTypes": ["Questions", "Concepts", "Entities", "Papers", "Sources", "Evidence", "Claims", "Decisions", "Runs", "Artifacts", "Wiki"],
-  "libraryTypes": ["Papers", "Methods", "Concepts", "Software", "Entities"],
-  "templates": {"Project": "project", "Question": "question", "Source": "source", "Claim": "claim", "Evidence": "evidence", "Run": "run"},
+  "projectTypes": [
+    "Questions",
+    "Concepts",
+    "Entities",
+    "Papers",
+    "Sources",
+    "Evidence",
+    "Claims",
+    "Decisions",
+    "Runs",
+    "Artifacts",
+    "Wiki"
+  ],
+  "libraryTypes": [
+    "Papers",
+    "Methods",
+    "Concepts",
+    "Software",
+    "Entities",
+    "Explainers"
+  ],
+  "templates": {
+    "Project": "project",
+    "Question": "question",
+    "Source": "source",
+    "Claim": "claim",
+    "Evidence": "evidence",
+    "Run": "run"
+  },
   "noteTemplate": "---\nid: \"pi-{{uuid}}\"\ntype: {{type}}\nproject: \"{{project_slug}}\"\nstatus: draft\ncreated: \"{{date}}\"\nupdated: \"{{date}}\"\ntags: []\n---\n\n# {{title}}\n\n<!-- pi-agent:managed:start -->\n{{project_content}}\n<!-- pi-agent:managed:end -->\n\n## Human review\n"
 }

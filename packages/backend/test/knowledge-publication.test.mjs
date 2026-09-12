@@ -21,7 +21,8 @@ afterEach(async()=>{await closeKnowledgeServices();vi.unstubAllEnvs();await rm(r
 const answer='Evidence is conditional. [[Library/Papers/source]]';
 async function searchAndRead(){
  await service.read(prep.ticket,cwd,{path:'Wiki/Autotomy.md'});
- await service.search(prep.ticket,cwd,{query:'Autotomy'});
+ // This helper establishes a *complete* baseline before testing later invalidation.
+ await vi.waitFor(async()=>expect((await service.search(prep.ticket,cwd,{query:'Autotomy'})).complete).toBe(true),{timeout:2000});
  await service.read(prep.ticket,cwd,{path:'Library/Papers/source.md'});
 }
 describe('native answer readiness, not model self-certification',()=>{
