@@ -1,3 +1,5 @@
+import type { ProgressDisplay } from "./progress-display";
+import type { ReportedUsage } from "./usage-display";
 import type { AgentSessionEvent as PiAgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { SkillInvocationDisplay } from "./skill-invocation";
 import type { SubagentRunData } from "./subagent";
@@ -61,6 +63,9 @@ export interface SessionMeta {
 }
 
 export interface SessionStats {
+ /** Existing SDK getSessionStats fields, forwarded without another billing engine. */
+ cacheReadTokens?: number; cacheWriteTokens?: number; totalTokens?: number; requests?: number;
+ scope?: "sdk-session";
 	/** 累计 token 用量 */
 	inputTokens: number;
 	outputTokens: number;
@@ -70,6 +75,7 @@ export interface SessionStats {
 
 /** 历史会话中的一次工具调用（渲染用） */
 export interface SessionToolCall {
+ blockIndex?:number;
 	id: string;
 	name: string;
 	/** 参数（JSON 字符串） */
@@ -102,6 +108,9 @@ export interface SessionUserMessage {
 
 /** 历史 assistant 消息（打开历史会话时回放用；不依赖 pi 内部类型） */
 export interface SessionAssistantMessage {
+ cycleId?:string;
+ usage?: ReportedUsage;
+ progress?: ProgressDisplay;
 	role: "assistant";
 	text: string;
 	thinking: string;

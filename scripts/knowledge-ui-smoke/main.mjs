@@ -30,6 +30,7 @@ try{
  const backend={knowledge,startKnowledgeSetup:async input=>actions.push({action:'setup',input}),resumeKnowledgeCheck:async input=>actions.push({action:'resume',input})};
  app.dock?.hide();registerKnowledgeIpc(backend);
  ipcMain.handle(IpcChannels.ProjectPickDirectory,()=>join(root,'New Vault'));
+ let usageReads=0;ipcMain.handle(IpcChannels.SessionStats,()=>{usageReads++;return {inputTokens:200,outputTokens:100,cacheReadTokens:800,cacheWriteTokens:0,totalTokens:1100,requests:1,cost:0,scope:'sdk-session'};});
  ipcMain.handle('knowledge-fixture:info',()=>({cwd,accept:accept.id,reject:reject.id}));
  window=new BrowserWindow({width:1200,height:960,show:false,webPreferences:{preload:join(root,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:false,offscreen:true,backgroundThrottling:false}});
  window.webContents.on('console-message',event=>{if(event.level==='error')errors.push(event.message);});
@@ -52,6 +53,13 @@ try{
  await wait("document.querySelector('[data-testid=knowledge-specialists-settings] select').value==='automatic'&&!document.querySelector('[data-testid=knowledge-specialists-settings] select').disabled",'restore automatic mode');
  checks.push('four specialist roles, explicit model-cost and permission information; real IPC mode change persists without calling a model');
  await capture('06-specialist-settings');
+ await wait("document.querySelector('[data-testid=session-usage]').innerText.includes('80.0%')",'SDK cumulative usage footer');
+ assert(usageReads>=1);assert(await js("document.querySelector('[data-testid=turn-usage]').innerText.includes('80.0%')"));
+ await js("document.querySelector('[data-testid=turn-usage]').open=true;document.querySelector('[data-testid=session-usage]').open=true;document.querySelector('[data-testid=usage-progress-fixture]').scrollIntoView({block:'center'});true");
+ await wait("document.querySelector('[data-testid=session-usage]').innerText.includes('未提供有效计价')",'zero cost not mistaken for free');
+ await capture('08-usage-and-public-progress');
+ checks.push('per-turn settlement and cumulative SDK stats IPC render correct 80% token-weighted cache ratio; zero cost is not called free; public progress is visibly separate (usage fixture data)');
+
 
  await click('预览目录与模板');await wait("document.body.innerText.includes('笔记模板正文')&&document.body.innerText.includes('Templates/Source.md')",'preview without a new path');checks.push('existing binding supplies default preview and actual template bodies');
  await click('选择文件夹');await click('预览目录与模板');await wait("document.body.innerText.includes('内置模板预览')",'directory preview');
@@ -97,6 +105,26 @@ try{
  assert(!(await js("document.body.innerText.includes('DO_NOT_RENDER_THOUGHTS')")));
  checks.push('compact specialist stage, result and usage render without hidden reasoning (scripted worker event; real UI)');
  await capture('07-specialist-runs-narrow');
+
+ window.setSize(1200,960);await js("document.documentElement.dataset.theme='light';document.querySelector('#stage-timeline-fixture').style.display='block';window.stageTimelineFixture.start();window.stageTimelineFixture.first();true");
+ await wait("document.querySelector('#stage-timeline-fixture [data-testid=progress-note]')?.innerText.includes('先定位主题')",'public stage visible before its tools finish');
+ const timelineOrder=()=>js("[...document.querySelector('#stage-timeline-fixture').querySelectorAll('[data-testid=progress-note],[data-testid=tool-phase-group]')].map(n=>n.dataset.testid==='progress-note'?'stage:'+n.querySelector('p').textContent:'tools')");
+ assert.deepEqual(await timelineOrder(),['stage:先定位主题和已有证据','tools']);
+ await js("window.stageTimelineFixture.next();true");
+ await wait("document.querySelectorAll('#stage-timeline-fixture [data-testid=progress-note]').length===2",'next stage visible without waiting for entire run');
+ assert.deepEqual(await timelineOrder(),['stage:先定位主题和已有证据','tools','stage:补查缺失的软件参数','tools']);
+ await js("window.stageTimelineFixture.done();document.querySelector('#stage-timeline-fixture').scrollIntoView({block:'center'});true");
+ await wait("document.querySelector('#stage-timeline-fixture').innerText.includes('本轮交付说明')",'final reply remains after phase summary');
+ const expectedTimeline=['stage:先定位主题和已有证据','tools','stage:补查缺失的软件参数','tools','stage:本阶段小结：明确已知与缺口'];
+ assert.deepEqual(await timelineOrder(),expectedTimeline);
+ await js("document.querySelectorAll('#stage-timeline-fixture [data-testid=tool-phase-group] details').forEach(n=>n.open=true);true");
+ assert.deepEqual(await timelineOrder(),expectedTimeline);
+ await js("(()=>{const root=document.querySelector('#stage-timeline-fixture');for(const node of root.parentElement.children)if(node!==root)node.style.display='none';for(const group of root.querySelectorAll('[data-testid=tool-phase-group]')){const details=[...group.querySelectorAll('details')];details.forEach(d=>d.open=false);if(details.length>1)details[0].open=true;}root.scrollIntoView({block:'start'});const scroll=root.querySelector('.chat-scrollbar');if(scroll){scroll.scrollTop=0;scroll.dispatchEvent(new Event('scroll'));}return true;})()");
+ await capture('09-ordered-stage-timeline');
+ window.setSize(520,980);await pause(400);await js("document.querySelector('#stage-timeline-fixture').scrollIntoView({block:'center'});true");
+ assert(await js('document.documentElement.scrollWidth<=window.innerWidth+1'),'timeline no horizontal overflow');
+ assert.deepEqual(await timelineOrder(),expectedTimeline);await capture('10-ordered-stage-timeline-narrow');
+ checks.push('actual MessageList shows live completed public summary before its tools, then next summary/tools and stage summary; finalization, expand/collapse and narrow width preserve order (scripted public tool results, no raw reasoning)');
  assert.equal(errors.length,0,'renderer errors');
  await writeFile(join(root,'validation.json'),JSON.stringify({passed:true,writeApprovalClicked:false,checks,consoleErrors:errors,screenshots,setupProviderCalled:false,folderPicker:'scripted selection; actual UI and backend preview',realKnowledgeApis:true,realElectron:true},null,2));
  assert.equal(errors.length,0,'renderer errors');console.log(JSON.stringify({passed:true,checks,root,screenshots}));

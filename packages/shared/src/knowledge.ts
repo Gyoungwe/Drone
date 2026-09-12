@@ -7,7 +7,7 @@ export interface KnowledgeFlow {
  artifacts?: { key: string; title: string; path: string | null; status: string; detail: string }[];
  phase: string; updatedAt: number; navigation: KnowledgeReadRecord[]; reads: KnowledgeReadRecord[];
  search: { query: string; wikiOnly: boolean; hits: number; complete: boolean; coverage: string; revision: number; previews?: KnowledgeReadRecord[] } | null;
- publication: { status: string; reason: string | null; scientificallyVerified: false } | null; error?: string | null;
+ publication: { status: string; reason: string | null; paths?: string[]; scientificallyVerified: false } | null; error?: string | null;
 }
 export type KnowledgeUiEvent = (
  | { kind: "flow"; flow: KnowledgeFlow }

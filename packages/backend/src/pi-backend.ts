@@ -659,6 +659,11 @@ export class PiBackend {
 		return {
 			inputTokens: stats.tokens.input,
 			outputTokens: stats.tokens.output,
+			cacheReadTokens: stats.tokens.cacheRead,
+			cacheWriteTokens: stats.tokens.cacheWrite,
+			totalTokens: stats.tokens.total,
+			requests: stats.assistantMessages,
+			scope: "sdk-session",
 			cost: stats.cost,
 		};
 	}

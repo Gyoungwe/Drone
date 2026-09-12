@@ -3,6 +3,10 @@
  * 按 navigator.language 选择，en 为兜底。
  */
 const zh = {
+ "stage.plan":"阶段说明 · Agent 公开摘要",
+ "stage.update":"进展说明 · Agent 公开摘要",
+ "stage.summary":"阶段小结 · Agent 公开摘要",
+ "stage.next":"接下来：",
 	"app.eyebrow": "Percho · 局域网",
 	"list.title": "会话",
 	"list.sectionActive": "正在运行",
@@ -68,6 +72,10 @@ const zh = {
 };
 
 const en: Record<keyof typeof zh, string> = {
+ "stage.plan":"Stage plan · agent public summary",
+ "stage.update":"Progress update · agent public summary",
+ "stage.summary":"Stage summary · agent public summary",
+ "stage.next":"Next: ",
 	"app.eyebrow": "Percho · LAN",
 	"list.title": "Sessions",
 	"list.sectionActive": "Running",

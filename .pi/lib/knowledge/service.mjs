@@ -150,9 +150,18 @@ export class KnowledgeService {
     }
     return {project:state.project,sources};
   }
-  async validateAnswer(ticket,cwd,text) {
+  /** A delivery receipt confirms a generated link, not that its text is evidence. Host-only API. */
+  async deliveryReceipt(ticket,cwd,absolutePath) {
+    const state=await this.check(ticket,cwd);
+    const path=relative(this.binding.vault,resolve(absolutePath)).split(sep).join('/');validateNote(path);
+    if(!canRead(path,state.project)||!(path.startsWith('Library/Explainers/')||path.startsWith(`Projects/${state.project}/Runs/`)))throw new Error('Not an allowed presentation/run delivery');
+    const file=await this.request('read',{path,project:state.project,maxChars:200});
+    if(file.missing||!file.hash)throw new Error('Delivered note is unavailable');
+    return {path,hash:file.hash,vaultId:this.binding.vaultId,bindingRevision:this.binding.revision,role:'delivery-only'};
+  }
+  async validateAnswer(ticket,cwd,text,{deliveries=[]}={}) {
     const state = await this.check(ticket,cwd);
-    const fail=(code,message)=>{throw Object.assign(new Error(message),{code});};
+    const fail=(code,message,paths=[])=>{throw Object.assign(new Error(message),{code,paths});};
     const searched=state.answerSearch;
     if (!searched) fail('search-required','Complete a real evidence search this turn before answering');
     if (!searched.complete) fail('coverage-incomplete','The last search did not have complete index coverage');
@@ -172,20 +181,27 @@ export class KnowledgeService {
     }
     if(cited.length>12)fail('citation-budget','Limit one checked answer to 12 distinct citations');
     if(searched.hitCount && !cited.length)fail('citation-required','A citation to a read source using [[Vault/relative/path]] is required after search hits');
-    const sources=[];
+    const sources=[],outputs=[];
     for(const path of cited) {
+      const output=deliveries.find(item=>item.path===path&&item.role==='delivery-only'&&item.vaultId===this.binding.vaultId&&item.bindingRevision===this.binding.revision);
+      if(output){
+        const file=await this.request('read',{path,project:state.project,maxChars:200});
+        if(file.missing||file.hash!==output.hash)fail('delivery-changed','A generated output changed after it was saved',[path]);
+        outputs.push(output);continue;
+      }
       const receipt=state.reads.get(path);
-      if(!receipt)fail('source-unread',`Cited source was not read this turn: ${path}`);
+      if(!receipt)fail('source-unread',`Cited source was not read this turn: ${path}`,[path]);
       const latest=await this.request('read',{path,project:state.project,maxChars:200});
-      if(latest.missing||latest.hash!==receipt.hash)fail('source-changed','A cited source changed since its actual read');
+      if(latest.missing||latest.hash!==receipt.hash)fail('source-changed','A cited source changed since its actual read',[path]);
       sources.push({...receipt});
     }
+    if(searched.hitCount&&!sources.length)fail('citation-required','Generated output links are not scientific evidence; cite a source read this turn');
     const latest=await this.request('status');
     if(latest.coverage!=='ready'||latest.pendingChanges||latest.problems.length)fail('coverage-incomplete','Index coverage is not complete at publication');
     if(latest.revision!==searched.revision)fail('search-stale','Index revision changed after the search; search again');
     await withKnowledgeBinding(this.binding,async()=>{});
     return {status:searched.hitCount?'ready':'no-hits',vaultId:this.binding.vaultId,bindingRevision:this.binding.revision,
-      queryHash:state.queryHash,searchQuery:searched.query,indexRevision:searched.revision,sources,scientificallyVerified:false};
+      queryHash:state.queryHash,searchQuery:searched.query,indexRevision:searched.revision,sources,deliveries:outputs,scientificallyVerified:false};
   }
   async close() {
     if (this.closed) return;

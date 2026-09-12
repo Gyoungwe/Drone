@@ -34,7 +34,7 @@ export function noteKnowledgeRead(ctx,page){
 export function publicationKnowledgeFlow(ctx,proof){
  const id=sessionId(ctx);if(!state.flows.has(id))return;
  const phase=proof.status==='setup-complete'?'setup-complete':proof.status==='released'?'released':proof.status==='no-hits'?'no-hits':proof.status==='blocked'?'blocked':proof.status==='evidence-only'?'evidence-only':proof.status==='unconfigured'?'unconfigured':'checking';
- updateKnowledgeFlow(ctx,{phase,publication:{status:proof.status,reason:proof.reason||null,scientificallyVerified:false}});
+ updateKnowledgeFlow(ctx,{phase,publication:{status:proof.status,reason:proof.reason||null,paths:Array.isArray(proof.paths)?proof.paths.slice(0,6):[],scientificallyVerified:false}});
 }
 export function requestWikiReviewUi(ctx,id=''){
  if(!state.listeners.size||!sessionId(ctx))return false;

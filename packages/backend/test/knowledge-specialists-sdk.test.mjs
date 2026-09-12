@@ -56,10 +56,11 @@ it('real SDK dispatches four isolated roles by stage; parent still reads evidenc
    await new Promise(resolve=>setTimeout(resolve,220));
    await vi.waitFor(async()=>expect((await service.request("status")).pendingChanges).toBe(0));
   }
+  const finalDraft='Checked final reply with bounded sources. [[Library/Papers/a]] [[Library/Papers/b]]\nDeliverables: [[Library/Explainers/topic]] [[Projects/project-a/Runs/topic-run-fixture]]';
   return [tool('research_read_knowledge',{path:'Wiki/topic.md'}),tool('research_search_knowledge',{query:'Evidence'}),
    reply([call('research_read_knowledge',{path:source}),call('research_read_knowledge',{path:second})],{stopReason:'toolUse'}),
    tool('research_summarize_run',{run_dir:run,result_slug:'topic',summary_markdown:'# Evidence comparison\n\n'+long}),
-   tool('research_search_knowledge',{query:'Evidence'}),reply('Checked final reply with bounded sources. [[Library/Papers/a]] [[Library/Papers/b]]')][n];
+   tool('research_search_knowledge',{query:'Evidence'}),tool('research_check_answer',{draft:finalDraft}),reply(finalDraft)][n];
  };
  faux.setResponses(Array.from({length:20},()=>router));
  session.agent.state.messages=[{role:'user',content:[{type:'text',text:'PARENT_HISTORY_SECRET'}],timestamp:1}];
@@ -71,6 +72,8 @@ it('real SDK dispatches four isolated roles by stage; parent still reads evidenc
  expect(JSON.stringify(parentRequests[0])).not.toContain('knowledge_submit');
  expect(JSON.stringify(parentRequests)).not.toContain('<!doctype html>');
  const final=session.messages.filter(m=>m.role==='assistant').at(-1);
+ const preflight=session.messages.find(m=>m.role==='toolResult'&&m.toolName==='research_check_answer');expect(preflight.details.ok).toBe(true);
+ expect(final.knowledgePublication.deliveries).toHaveLength(2);
  expect(final.knowledgePublication.status).toBe('released');expect(JSON.stringify(final)).toContain('Checked final reply');expect(JSON.stringify(final)).toContain('待审核');
  const proposals=await listWikiProposals(service,'project-a');expect(proposals.items).toHaveLength(1);
  expect(await readFile(join(vault,'Library/Explainers/topic.md'),'utf8')).toContain('展示层');

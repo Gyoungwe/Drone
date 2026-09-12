@@ -1,3 +1,6 @@
+import { publicTimeline, type PublicProgressStep } from "@percho/shared";
+import { progressDisplay } from "@percho/shared";
+import { reportedUsage } from "@percho/shared";
 import {
 	parseSessionEntries,
 	type SessionEntry,
@@ -89,6 +92,7 @@ export function blockToolCalls(
 		.filter(({ c }) => c.type === "toolCall" && c.id)
 		.map(({ c, index }) => ({
 			tool: {
+                blockIndex:index,
 				id: c.id ?? "",
 				name: c.name ?? "tool",
 				args: JSON.stringify(c.arguments ?? {}),
@@ -199,6 +203,25 @@ export function readSessionMessagesFromContent(content: string): SessionMessage[
 export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessage[] {
 	const out: SessionMessage[] = [];
 	const toolById = new Map<string, SessionToolCall>();
+    // Pair completed public status with its declaring assistant, not result arrival order.
+    // A later user turn cannot supply a result for an older status call.
+    const progressByMessage=new WeakMap<RawMessage,PublicProgressStep[]>();
+    const owners=new Map<string,{message:RawMessage;blockIndex:number}>();
+    const pairedStatuses=new Set<RawMessage>();
+    for(const raw of rawMessages as RawMessage[]){
+        if(raw.role==='user')owners.clear();
+        if(raw.role==='assistant'&&Array.isArray(raw.content))for(const [blockIndex,block] of raw.content.entries()){
+            if(block.type==='toolCall'&&block.name==='set_status'&&block.id)owners.set(block.id,{message:raw,blockIndex});
+        }
+        if(raw.role!=='toolResult'||raw.toolName!=='set_status'||!raw.toolCallId)continue;
+        const owner=owners.get(raw.toolCallId);if(!owner)continue;pairedStatuses.add(raw);
+        const progress=raw.isError?undefined:progressDisplay(raw.details);
+        const existing=(progressByMessage.get(owner.message)||[]).filter(step=>step.id!==raw.toolCallId);
+        if(progress)existing.push({id:raw.toolCallId,blockIndex:owner.blockIndex,progress});
+        progressByMessage.set(owner.message,existing);
+    }
+    let responseIndex=0;
+
 	for (const raw of rawMessages as RawMessage[]) {
 		if (raw.role === "user") {
 			const sourceText = blockText(raw.content);
@@ -215,6 +238,8 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 			continue;
 		}
 		if (raw.role === "assistant") {
+            const usage=reportedUsage(raw);
+            const cycleId=`response-${responseIndex++}`;
 			const content = Array.isArray(raw.content) ? raw.content : [];
 			const toolBlocks = blockToolCalls(content).filter((block) => block.tool.name !== "set_status");
 			const tools = toolBlocks.map((b) => b.tool);
@@ -223,6 +248,18 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 			// 正文后的工具（块序在首个 text 块之后，同 turn 内 text→toolCall 交错）：拆成独立 meta 消息
 			// 排在正文消息之后，与 renderer finalizeStreaming 的拆分一致——否则渲染时会被倒挂到正文上方
 			const textIndex = content.findIndex((c) => c?.type === "text" && c.text);
+            const steps=progressByMessage.get(raw);
+            if(steps?.length){
+                const parts=publicTimeline({text,thinking:blockThinking(content),tools,steps,textBlockIndex:textIndex<0?null:textIndex});
+                for(const [index,part] of parts.entries())out.push({role:'assistant',cycleId,
+                    text:part.kind==='text'?part.text:'',thinking:part.kind==='meta'?part.thinking:'',
+                    tools:part.kind==='meta'?part.tools:[],images:[],timestamp:raw.timestamp??Date.now(),
+                    ...(part.kind==='progress'?{progress:part.progress}:{}),...(index===0&&usage?{usage}:{}),
+                    ...(index===parts.length-1&&raw.stopReason?{stopReason:raw.stopReason}:{}),
+                    ...(index===parts.length-1&&raw.errorMessage?{errorMessage:raw.errorMessage}:{})});
+                continue;
+            }
+
 			const postBlocks = text && textIndex >= 0 ? toolBlocks.filter((b) => b.index > textIndex) : [];
 			if (postBlocks.length > 0) {
 				const preTools = toolBlocks.filter((b) => b.index < textIndex).map((b) => b.tool);
@@ -230,6 +267,7 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 				if (text || preTools.length > 0) {
 					out.push({
 						role: "assistant",
+                        ...(usage?{usage}:{}),cycleId,
 						text,
 						thinking: blockThinking(content),
 						tools: preTools,
@@ -241,7 +279,7 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 					role: "assistant",
 					text: "",
 					thinking: "",
-					tools: postBlocks.map((b) => b.tool),
+					cycleId,tools: postBlocks.map((b) => b.tool),
 					images: [],
 					timestamp,
 				});
@@ -249,6 +287,7 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 			}
 			const message: SessionMessage = {
 				role: "assistant",
+                ...(usage?{usage}:{}),cycleId,
 				text,
 				thinking: blockThinking(content),
 				tools,
@@ -261,12 +300,16 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 			};
 			// 错误轮次（LLM 请求失败）text/thinking/tools 全空，但错误信息必须在回放中可见——
 			// 否则历史回放产不出错误卡（live 产卡与回放必须一致，spec §2 原则 1）
-			if (message.text || message.thinking || message.tools.length > 0 || message.stopReason === "error") {
+			if (message.text || message.thinking || message.tools.length > 0 || message.stopReason === "error" || message.usage) {
 				out.push(message);
 			}
 			continue;
 		}
-		if (raw.role === "toolResult") {
+        if (raw.role === "toolResult") {
+            if(raw.toolName==='set_status'&&!raw.isError&&!pairedStatuses.has(raw)){
+                const progress=progressDisplay(raw.details);
+                if(progress)out.push({role:'assistant',text:'',thinking:'',tools:[],images:[],timestamp:raw.timestamp??Date.now(),progress});
+            }
 			const tool = raw.toolCallId ? toolById.get(raw.toolCallId) : undefined;
 			if (tool) {
 				tool.output = blockText(raw.content);

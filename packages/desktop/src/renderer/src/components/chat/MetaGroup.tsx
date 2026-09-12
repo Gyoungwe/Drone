@@ -147,12 +147,12 @@ export const MetaGroup = memo(function MetaGroup({
 	// 纯子代理调用不带普通 tool/thinking，仍须保留折叠状态行作为卡片的时间锚点。
 	const showWrapper = count >= 2 || shownWorking || subagentCount > 0;
 	if (!showWrapper) {
-		return <div className="-mb-4 flex flex-col gap-1.5">{rows}</div>;
+		return <div data-testid="tool-phase-group" className="-mb-4 flex flex-col gap-1.5">{rows}</div>;
 	}
 
 	return (
 		// -mb-4：抵消容器 gap-6 的一部分，折叠行与后续正文净距 8px（成组与单行一致）
-		<div className="-mb-4">
+		<div data-testid="tool-phase-group" className="-mb-4">
 			<details className="group/outer peer drawer-details">
 				<summary className="group/row flex cursor-pointer select-none flex-col [&::-webkit-details-marker]:hidden">
 					{/* min-h-6：与内联预览行（h-6）等高，working/worked 切换首行行高不变 */}

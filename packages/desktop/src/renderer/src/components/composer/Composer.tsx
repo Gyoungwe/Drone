@@ -1,3 +1,4 @@
+import { SessionUsageFooter } from "../chat/UsageSettlement";
 import type { ImageInput } from "@percho/shared";
 import { useEffect, useRef, useState } from "react";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
@@ -409,6 +410,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						)}
 					</div>
 				</div>
+                <SessionUsageFooter sessionId={activeSessionId}/>
 			</div>
 			{previewImage && <ImagePreviewOverlay image={previewImage} onClose={() => setPreviewImage(null)} />}
 		</div>

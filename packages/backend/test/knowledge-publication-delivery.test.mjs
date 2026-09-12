@@ -1,4 +1,4 @@
-import { emptyTranscript, reduceEvent } from '@percho/shared';
+import { emptyTranscript, reduceEvent, buildChatRows, messagesToUIMessages, deriveTurnUsage } from '@percho/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -54,6 +54,7 @@ describe('same checked result across stream, history, LAN polling and exports',(
   expect(JSON.stringify(events)).not.toContain('UNCHECKED_SECRET_ANSWER');
   expect(JSON.stringify(session.messages)).not.toContain('UNCHECKED_SECRET_ANSWER');
   const history=await backend.getSessionMessages(sid);
+  const stats=await backend.getStats(sid);expect(stats.scope).toBe('sdk-session');expect(stats.totalTokens).toBe(stats.inputTokens+stats.outputTokens+stats.cacheReadTokens+stats.cacheWriteTokens);
   expect(JSON.stringify(history)).toContain('知识库检查未通过');
   expect(JSON.stringify(events.reduce(reduceEvent,emptyTranscript()).messages)).toContain('知识库检查未通过');
   expect(JSON.stringify(await backend.peekSessionMessages(sid))).not.toContain('UNCHECKED_SECRET_ANSWER');
@@ -153,4 +154,27 @@ describe('live-run edges and provider protocol compatibility',()=>{
   expect(JSON.stringify(events)).not.toContain('IPC_PATH_BYPASS');
   expect(JSON.stringify(await backend.peekSessionMessages(sid))).toContain('知识库检查未通过');
  });
+});
+
+
+it('real SDK displays public stage → tools → next stage → tools → summary before the checked final answer',async()=>{
+ const steps=[
+  reply([call('set_status',{text:'STAGE_ONE',kind:'plan',detail:'Read the Wiki before searching evidence.'}),call('research_read_knowledge',{path:'Wiki/Autotomy.md'})],{stopReason:'toolUse'}),
+  reply([call('set_status',{text:'STAGE_TWO',kind:'update',detail:'Locate the evidence that the Wiki points to.'}),call('research_search_knowledge',{query:'Autotomy'})],{stopReason:'toolUse'}),
+  reply([call('set_status',{text:'STAGE_THREE',kind:'plan',detail:'Read the actual source range.'}),call('research_read_knowledge',{path:'Library/Papers/source.md'})],{stopReason:'toolUse'}),
+  tool('set_status',{text:'STAGE_SUMMARY',kind:'summary',detail:'The cited source was read; publication remains independently checked.'}),
+  reply('FINAL_STAGE_DELIVERY [[Library/Papers/source]]'),
+ ];
+ await run(steps);
+ const labels=state=>buildChatRows(state,'fixture').flatMap(row=>row.kind==='metaGroup'?row.items.flatMap(i=>i.tools.map(t=>t.name)):
+  row.kind==='message'&&row.message.kind==='assistant'?[row.message.progress?.text||row.message.text]:[]);
+ const expected=['STAGE_ONE','research_read_knowledge','STAGE_TWO','research_search_knowledge','STAGE_THREE','research_read_knowledge','STAGE_SUMMARY','FINAL_STAGE_DELIVERY [[Library/Papers/source]]'];
+ const live=events.reduce(reduceEvent,emptyTranscript());
+ const history={...emptyTranscript(),messages:messagesToUIMessages(await backend.getSessionMessages(sid))};
+ expect(labels(live)).toEqual(expected);expect(labels(history)).toEqual(expected);
+ expect(deriveTurnUsage(live.messages)[0].requests).toBe(5);expect(deriveTurnUsage(history.messages)[0].requests).toBe(5);
+ expect(session.messages.filter(m=>m.role==='assistant').at(-1).knowledgePublication.status).toBe('released');
+ expect(events.some(e=>e.type==='message_update')).toBe(false);
+ const exported=readSessionMessagesFromContent(await readFile(await backend.exportSession(sid,'jsonl'),'utf8'));
+ expect(labels({...emptyTranscript(),messages:messagesToUIMessages(exported)})).toEqual(expected);
 });

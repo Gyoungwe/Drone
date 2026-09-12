@@ -46,6 +46,7 @@ export function KnowledgeFlowCard({sessionId}:{sessionId:string|null}){
    <div className="space-y-1">{records.map((row:KnowledgeReadRecord,i)=><div key={`${row.path}:${i}`} className="flex items-center justify-between gap-2 text-[10px]"><div className="min-w-0"><span className="block truncate font-mono" title={row.path}>{row.path}</span>{row.excerpt&&<p className="my-1 line-clamp-2 break-words text-ink-dim">{row.excerpt}</p>}<span className="text-ink-faint">{row.missing?t('missing'):`L${row.startLine}–${row.endLine} · ${row.hash?.slice(0,12)||'—'}`}{row.truncated?' · '+t('truncated'):''}</span></div><Button size="sm" disabled={!!row.missing||!flow.bindingRevision} onClick={()=>setPath(row.path)}>{t('openSource')}</Button></div>)}</div>
    {path&&flow.bindingRevision&&<div className="mt-3"><KnowledgeNoteViewer cwd={cwd} path={path} revision={flow.bindingRevision} onClose={()=>setPath(null)}/></div>}
    <p className="mt-3 text-[10px] text-ink-dim">{t('checksNotFacts')}</p>
+   {!!flow.publication?.paths?.length&&<div className="my-2 text-[11px] text-warn">{flow.publication.paths.map(p=><code key={p} className="block break-all">{p}</code>)}</div>}
    {flow.phase==='blocked'&&<div className="mt-2"><div className="flex flex-wrap gap-2"><Button size="sm" onClick={()=>manage('maintenance')}>{t('maintenance')}</Button><Button size="sm" disabled={resuming} onClick={()=>void resume()}>{t('resume')}</Button></div><p className="mt-1 text-[10px] text-ink-faint">{t('resumeHint')}</p></div>}
   </div>}
  </section>;

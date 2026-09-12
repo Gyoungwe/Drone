@@ -1,3 +1,6 @@
+import { ProgressNote } from "./ProgressNote";
+import { deriveTurnUsage } from "@percho/shared";
+import { UsageSettlement } from "./UsageSettlement";
 import { buildChatRows, deriveTurnChanges, deriveTurnTimings, isAgentWorking } from "@percho/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
@@ -20,7 +23,7 @@ const BOTTOM_THRESHOLD = 48;
 
 /**
  * 中央消息流：最大宽度 760px 居中。
- * 合并规则：assistant 消息的思考/工具全部并入一个折叠组，正文（text）是边界——
+ * 合并规则：公开阶段说明、正文和模型响应轮次分别界定工具组——
  * 正文出现时组关闭、正文作为独立块渲染（与 working 定义一致：用户消息 → 下一次正文之间）。
  *
  * 底部跟随：ResizeObserver 监听内容/容器尺寸（流式追加、图片加载、窗口缩放），
@@ -117,6 +120,7 @@ export function MessageList() {
 	// 轮次数据：文件变更 + 计时。进场动画只给「本会话查看期间新出现的最后一轮」播：基线在切会话/
 	// 历史重建时对齐，不随渲染更新（防 turn_end 紧随的二次渲染摘掉动画类）；行定位/上提规则全部在
 	// shared buildChatRows 内完成（opts 传入，与 lan-web 同一分组大脑）
+	const turnUsages=useMemo(()=>deriveTurnUsage(transcript.messages),[transcript.messages]);
 	const turnChanges = useMemo(() => deriveTurnChanges(transcript.messages), [transcript.messages]);
 	const turnTimings = useMemo(
 		() => deriveTurnTimings(transcript.messages, transcript.runEndedAt),
@@ -159,6 +163,7 @@ export function MessageList() {
 						running={row.running}
 						entering={row.entering}
 					/>
+                    {!row.running&&row.timing&&<UsageSettlement usage={turnUsages[row.timing.turnIndex]}/>}
 				</div>,
 			);
 			return;
@@ -187,6 +192,7 @@ export function MessageList() {
 			);
 			return;
 		}
+        if(row.kind==='message'&&row.message.kind==='assistant'&&row.message.progress&&!row.message.text){items.push(<ProgressNote key={row.key} progress={row.message.progress}/>);return;}
 		items.push(
 			<MessageItem
 				key={row.key}

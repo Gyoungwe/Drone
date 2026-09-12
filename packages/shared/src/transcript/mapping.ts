@@ -62,6 +62,7 @@ export function messagesToUIMessages(messages: SessionMessage[]): UIMessage[] {
 		const sourceText = m.sourceText;
 		const tools: UIToolCall[] = m.tools.map((tool) => ({
 			key: tool.id || newToolKey(),
+            ...(tool.blockIndex!==undefined?{blockIndex:tool.blockIndex}:{}),
 			id: tool.id,
 			name: tool.name,
 			args: tool.args,
@@ -72,6 +73,8 @@ export function messagesToUIMessages(messages: SessionMessage[]): UIMessage[] {
 		}));
 		const assistant: UIMessage = {
 			kind: "assistant",
+            ...(m.cycleId?{cycleId:m.cycleId}:{}),            ...(m.usage?{usage:m.usage}:{}),
+            ...(m.progress?{progress:m.progress}:{}),
 			id,
 			text,
 			thinking: m.thinking,
@@ -89,7 +92,7 @@ export function messagesToUIMessages(messages: SessionMessage[]): UIMessage[] {
 			!isUserAbortError(m.errorMessage)
 		) {
 			pendingError = buildLlmUiError(m.errorMessage, m.timestamp);
-			if (text || m.thinking.length > 0 || tools.length > 0) ui.push(assistant);
+			if (text || m.thinking.length > 0 || tools.length > 0 || m.usage || m.progress) ui.push(assistant);
 			continue;
 		}
 		flushError();

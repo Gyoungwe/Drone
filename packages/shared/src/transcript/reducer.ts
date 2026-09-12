@@ -1,3 +1,6 @@
+import { stageMessages } from "./stage-messages";
+import { progressDisplay } from "../progress-display";
+import { reportedUsage } from "../usage-display";
 import { buildLlmUiError, buildStreamGuardUiError, isUserAbortError, type UiError } from "../errors";
 import type { ImageInput, SessionEvent } from "../session";
 import { parseExpandedSkillInvocation } from "../skill-invocation";
@@ -59,6 +62,7 @@ function removeControlTool(streaming: NonNullable<SessionTranscriptState["stream
 	const blockIndex = target?.blockIndex;
 	return {
 		...streaming,
+        progressPositions: {...streaming.progressPositions, [toolCallId]:blockIndex??streaming.progressPositions?.[toolCallId]??(Math.max(-1,...streaming.tools.map(t=>t.blockIndex??-1))+1)},
 		tools: streaming.tools.filter((tool) => tool.id !== toolCallId),
 		activity: blockIndex == null ? streaming.activity : streaming.activity.filter((item) => item.id !== `c${blockIndex}`),
 	};
@@ -87,7 +91,9 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 		paths: img.paths,
 		timestamp: Date.now(),
 	}));
-	const hasContent = streaming.text.length > 0 || streaming.thinking.length > 0 || streaming.tools.length > 0;
+	const stages=stageMessages(streaming,Date.now());
+    if(stages)return {...state,messages:[...messages,...stages,...subagents,...images],streaming:null};
+	const hasContent = streaming.text.length > 0 || streaming.thinking.length > 0 || streaming.tools.length > 0 || !!streaming.usage || !!streaming.progress;
 	if (!hasContent) {
 		return images.length > 0 || subagents.length > 0
 			? { ...state, messages: [...messages, ...subagents, ...images], streaming: null }
@@ -101,11 +107,14 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 	const preTools =
 		textIdx == null ? streaming.tools : streaming.tools.filter((t) => (t.blockIndex ?? 0) < textIdx);
 	const assistantMessages: UIMessage[] = [];
-	if (streaming.text || streaming.thinking || preTools.length > 0) {
+	if (streaming.text || streaming.thinking || preTools.length > 0 || streaming.usage || streaming.progress) {
 		assistantMessages.push({
 			kind: "assistant",
+            ...(streaming.usage?{usage:streaming.usage}:{}),
+            ...(streaming.progress?{progress:streaming.progress}:{}),
 			// 复用流式容器预生成的 id（key 稳定 → 不 remount，见 StreamingState.id 注释）
 			id: streaming.id,
+            cycleId:streaming.id,
 			text: streaming.text,
 			thinking: streaming.thinking,
 			tools: preTools,
@@ -116,6 +125,7 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 		assistantMessages.push({
 			kind: "assistant",
 			id: newMessageId(),
+            cycleId:streaming.id,
 			text: "",
 			thinking: "",
 			tools: postTools,
@@ -137,11 +147,14 @@ function acceptFinalSnapshot(state: SessionTranscriptState, raw: unknown): Sessi
  const message = raw as { role?: string; content?: unknown; knowledgePublication?: unknown };
  if (message.role !== "assistant" || !Array.isArray(message.content)) return state;
  // Some older callers send an empty placeholder at turn_end. Preserve their streamed text.
- if (!message.content.length && !message.knowledgePublication) return state;
+ if (!message.content.length && !message.knowledgePublication) {const usage=reportedUsage(raw);return usage?{...state,streaming:{...(state.streaming??emptyStreaming()),usage}}:state;}
  const blocks = message.content as Array<{ type?: string; text?: string; thinking?: string; id?: string; name?: string; arguments?: unknown }>;
  const streaming = state.streaming ?? emptyStreaming();
+ const usage=reportedUsage(raw);
  const tools = [...streaming.tools];
+ const progressPositions={...streaming.progressPositions};
  for (const [index,block] of blocks.entries()) {
+  if(block.type==="toolCall"&&block.id&&block.name===STATUS_TOOL_NAME){progressPositions[block.id]=index;continue;}
   if (block.type !== "toolCall" || !block.id || !block.name || block.name === STATUS_TOOL_NAME || streaming.subagentByToolCallId[block.id]) continue;
   const existing = tools.findIndex(t=>t.id===block.id);
   const item = {key:existing>=0 ? tools[existing]?.key ?? newToolKey() : newToolKey(), id:block.id,name:block.name,
@@ -150,7 +163,7 @@ function acceptFinalSnapshot(state: SessionTranscriptState, raw: unknown): Sessi
   if(existing>=0) tools[existing]={...tools[existing],...item}; else tools.push(item);
  }
  const text = blocks.filter(b=>b.type==="text").map(b=>b.text??"").join("");
- return {...state,streaming:{...streaming,text,
+ return {...state,streaming:{...streaming,text,cycleId:streaming.id,progressPositions,...(usage?{usage}:{}),
   thinking:blocks.filter(b=>b.type==="thinking").map(b=>b.thinking??"").join(""),tools,
   textBlockIndex:text?Math.max(0,blocks.findIndex(b=>b.type==="text")):null}};
 }
@@ -501,7 +514,16 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 			return { ...state, streaming: { ...streaming, tools, rawToolOutputs, subagentRuns } };
 		}
 		case "tool_execution_end": {
-			if (event.toolName === STATUS_TOOL_NAME) return state;
+            if(event.toolName===STATUS_TOOL_NAME){
+                if(event.isError)return state;
+                const progress=progressDisplay((event.result as {details?:unknown})?.details);
+                if(!progress)return state;
+                const streaming=state.streaming??emptyStreaming();
+                if(streaming.cycleId&&streaming.progressPositions?.[event.toolCallId]===undefined)return state; // Stale completion from another response is not this stage.
+                const step={id:event.toolCallId,blockIndex:streaming.progressPositions?.[event.toolCallId]??(Math.max(-1,...streaming.tools.map(t=>t.blockIndex??-1))+1),progress};
+                const progressEntries=[...(streaming.progressEntries||[]).filter(item=>item.id!==step.id),step];
+                return {...state,streaming:{...streaming,progressEntries}};
+            }
 			if (state.researchStatus.host?.toolCallId === event.toolCallId) {
 				state = { ...state, researchStatus: { ...state.researchStatus, host: null } };
 			}
