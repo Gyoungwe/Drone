@@ -8,7 +8,26 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          NOTES="docs/releases/${TAG}.md"
+          if gh release view "$TAG" -R "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; reusing it for this workflow run."
+          elif [ -f "$NOTES" ]; then
+            gh release create "$TAG" -R "${{ github.repository }}" --draft --title "$TAG" --notes-file "$NOTES"
+          else
+            gh release create "$TAG" -R "${{ github.repository }}" --draft --title "$TAG" --generate-notes
+          fi
+
   build:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -25,40 +44,44 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run dist -w packages/desktop -- --publish never
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist-${{ matrix.os }}
-          path: |
-            packages/desktop/dist/*
-            !packages/desktop/dist/mac
-            !packages/desktop/dist/mac-arm64
-            !packages/desktop/dist/win-unpacked
-          if-no-files-found: error
+      - name: Upload build outputs directly to draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mapfile -t ASSETS < <(find packages/desktop/dist -maxdepth 1 -type f \
+            ! -name 'builder-debug.yml' \
+            -print | sort)
+          if [ "${#ASSETS[@]}" -eq 0 ]; then
+            echo "No release assets were produced." >&2
+            exit 1
+          fi
+          printf 'Uploading %s\n' "${ASSETS[@]}"
+          gh release upload "${{ github.ref_name }}" "${ASSETS[@]}" \
+            -R "${{ github.repository }}" --clobber
+
   publish:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-      - name: Create GitHub release
+      - name: Verify required assets and publish draft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NOTES="docs/releases/${{ github.ref_name }}.md"
-          if [ -f "$NOTES" ]; then
-            gh release create "${{ github.ref_name }}" artifacts/* \
-              -R "${{ github.repository }}" \
-              --title "${{ github.ref_name }}" \
-              --notes-file "$NOTES"
-          else
-            gh release create "${{ github.ref_name }}" artifacts/* \
-              -R "${{ github.repository }}" \
-              --title "${{ github.ref_name }}" \
-              --generate-notes
-          fi
+          TAG="${{ github.ref_name }}"
+          ASSETS="$(gh release view "$TAG" -R "${{ github.repository }}" --json assets --jq '.assets[].name')"
+          for REQUIRED in \
+            percho-mac-arm64.dmg \
+            percho-mac-x64.dmg \
+            percho-windows-x64.exe \
+            percho-windows-x64.zip; do
+            if ! grep -Fxq "$REQUIRED" <<<"$ASSETS"; then
+              echo "Missing required release asset: $REQUIRED" >&2
+              exit 1
+            fi
+          done
+          gh release edit "$TAG" -R "${{ github.repository }}" --draft=false
+
   # 刷新官网（percho-website，Cloudflare Pages）：触发 Deploy Hook 重建，同步版本号与 changelog。
   # 需要 repo secret CF_PAGES_DEPLOY_HOOK（Cloudflare Pages → Settings → Builds → Deploy hooks 创建）；未配置时跳过不影响发布
   website:
