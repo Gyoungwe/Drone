@@ -1,4 +1,4 @@
-import { buildChatRows } from "@percho/shared";
+import { buildChatRows, deriveRunInspectors, deriveTurnTimings, deriveTurnUsage } from "@percho/shared";
 import { useCallback, useEffect, useRef } from "react";
 import { t } from "../i18n";
 import { useLanStore } from "../store";
@@ -8,6 +8,7 @@ import { Markdown } from "./Markdown";
 import { MessageItem } from "./MessageItem";
 import { MetaGroup } from "./MetaGroup";
 import { PermissionCard } from "./PermissionCard";
+import { RunInspector } from "./RunInspector";
 import { SubagentCard } from "./SubagentCard";
 import { TodoStrip } from "./TodoStrip";
 
@@ -92,7 +93,10 @@ export function ChatView({
 		return <div className="empty">{t("chat.loading")}</div>;
 	}
 
-	const rows = buildChatRows(transcript, sessionId);
+	const turnTimings = deriveTurnTimings(transcript.messages, transcript.runEndedAt);
+	const turnUsages = deriveTurnUsage(transcript.messages);
+	const turnInspectors = deriveRunInspectors(transcript.messages);
+	const rows = buildChatRows(transcript, sessionId, Date.now(), { turnTimings });
 	const permCount = perms?.length ?? 0;
 
 	return (
@@ -120,9 +124,10 @@ export function ChatView({
 							</div>
 						);
 					}
-					// 运行时 guard：本端 buildChatRows 不传 turnChanges（桌面专用行 lan-web 永不生成），
-					// 但 shared 行模型后续可能新增 kind——未知行型渲染 null 兑底，防 fall-through 到
-					// MessageItem 读 message 字段崩溃（R2）
+					if (row.kind === "turnDiff") {
+						if (row.running || !row.timing) return null;
+						return <RunInspector key={row.key} run={turnInspectors[row.timing.turnIndex]} timing={row.timing} usage={turnUsages[row.timing.turnIndex]} />;
+					}
 					if (row.kind !== "message") return null;
 					return (
 						<MessageItem

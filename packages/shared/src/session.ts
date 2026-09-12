@@ -1,3 +1,4 @@
+import type { CapabilityState } from "./capabilities";
 import type { AgentSessionEvent as PiAgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import type { ProgressDisplay } from "./progress-display";
 import type { SkillInvocationDisplay } from "./skill-invocation";
@@ -350,6 +351,8 @@ export interface LoadedResources {
 	skillDiagnostics: ResourceDiagnosticInfo[];
 	extensions: LoadedExtension[];
 	extensionErrors: { path: string; error: string }[];
+	/** 当前会话模型实际可见的按需能力/工具/skill 与 schema footprint；关闭 lazyCapabilities 时省略。 */
+	capabilities?: CapabilityState;
 }
 
 /** Percho 自己产生的会话 UI 事件（不进入 pi 子会话 trace）。 */

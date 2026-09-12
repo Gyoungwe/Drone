@@ -293,6 +293,7 @@ export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false })
 				endedAt: Date.now(),
 				...answer.usage,
 				model: answer.model,
+				thinkingLevel: answer.thinkingLevel,
 				sourceCount: answer.refs.length,
 				sources: answer.refs.map((ref) => ({ ...ref, excerpt: ref.excerpt.slice(0, 280) })),
 				summary: answer.data.summary.slice(0, 500),

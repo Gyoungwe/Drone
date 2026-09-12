@@ -1,4 +1,5 @@
 import type {
+	CapabilityState,
 	ContextManagerMode,
 	CustomProviderInput,
 	CustomProviderUpdateInput,
@@ -51,6 +52,8 @@ interface SettingsStore {
 	/** 当前活跃会话已加载的 skills（null = 未加载/无会话） */
 	skills: LoadedSkill[] | null;
 	skillDiagnostics: ResourceDiagnosticInfo[];
+	/** 当前会话按需工具/skill 能力与 schema footprint。 */
+	capabilities: CapabilityState | null;
 	/** 当前活跃会话已加载的扩展（null = 未加载/无会话） */
 	extensions: LoadedExtension[] | null;
 	extensionErrors: { path: string; error: string }[];
@@ -75,6 +78,7 @@ interface SettingsStore {
 	setModelHidden: (provider: string, modelId: string, hidden: boolean) => Promise<void>;
 	setModelsHidden: (provider: string, modelIds: string[], hidden: boolean) => Promise<void>;
 	setSubagentModel: (agent: string, modelRef: string | null) => Promise<void>;
+	setSubagentThinking: (agent: string, level: import("@percho/shared").SubagentThinkingLevel | null) => Promise<void>;
 	setContextManagerMode: (mode: ContextManagerMode) => Promise<void>;
 	setChannelWatchEnabled: (enabled: boolean) => Promise<void>;
 	refreshLanStatus: () => Promise<void>;
@@ -104,6 +108,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 		lanSaving: false,
 		skills: null,
 		skillDiagnostics: [],
+		capabilities: null,
 		extensions: null,
 		extensionErrors: [],
 		testResults: {},
@@ -159,12 +164,13 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 						set({
 							skills: resources.skills,
 							skillDiagnostics: resources.skillDiagnostics,
+							capabilities: resources.capabilities ?? null,
 							extensions: resources.extensions,
 							extensionErrors: resources.extensionErrors,
 						});
 					}
 				} else {
-					set({ skills: null, skillDiagnostics: [], extensions: null, extensionErrors: [] });
+					set({ skills: null, skillDiagnostics: [], capabilities: null, extensions: null, extensionErrors: [] });
 				}
 			} catch (error) {
 				set({ loading: false, error: error instanceof Error ? error.message : String(error) });
@@ -296,7 +302,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 
 		setModelHidden: async (provider, modelId, hidden) => {
 			const previous = get().modelPrefs;
-			const base: ModelPrefs = previous ?? { hiddenModels: {}, subagentModels: {} };
+			const base: ModelPrefs = previous ?? { hiddenModels: {}, subagentModels: {}, subagentThinking: {} };
 			const ids = new Set(base.hiddenModels[provider] ?? []);
 			if (hidden) ids.add(modelId);
 			else ids.delete(modelId);
@@ -318,7 +324,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 
 		setModelsHidden: async (provider, modelIds, hidden) => {
 			const previous = get().modelPrefs;
-			const base: ModelPrefs = previous ?? { hiddenModels: {}, subagentModels: {} };
+			const base: ModelPrefs = previous ?? { hiddenModels: {}, subagentModels: {}, subagentThinking: {} };
 			const hiddenSet = new Set(base.hiddenModels[provider] ?? []);
 			for (const id of modelIds) {
 				if (hidden) hiddenSet.add(id);
@@ -344,6 +350,16 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 			const previous = get().modelPrefs;
 			try {
 				const modelPrefs = await getPi().setSubagentModel(agent, modelRef);
+				set({ modelPrefs });
+			} catch (error) {
+				set({ modelPrefs: previous, error: error instanceof Error ? error.message : String(error) });
+			}
+		},
+
+		setSubagentThinking: async (agent, level) => {
+			const previous = get().modelPrefs;
+			try {
+				const modelPrefs = await getPi().setSubagentThinking(agent, level);
 				set({ modelPrefs });
 			} catch (error) {
 				set({ modelPrefs: previous, error: error instanceof Error ? error.message : String(error) });

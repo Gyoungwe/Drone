@@ -3,6 +3,7 @@ import {
 	deriveTurnChanges,
 	deriveTurnTimings,
 	deriveTurnUsage,
+	deriveRunInspectors,
 	isAgentWorking,
 } from "@percho/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +18,7 @@ import { MessageItem } from "./MessageItem";
 import { MetaGroup } from "./MetaGroup";
 import { ProgressNote } from "./ProgressNote";
 import { RetryNote } from "./RetryNote";
+import { RunInspector } from "./RunInspector";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { TurnDiffChip } from "./TurnDiffChip";
@@ -126,6 +128,7 @@ export function MessageList() {
 	// 历史重建时对齐，不随渲染更新（防 turn_end 紧随的二次渲染摘掉动画类）；行定位/上提规则全部在
 	// shared buildChatRows 内完成（opts 传入，与 lan-web 同一分组大脑）
 	const turnUsages = useMemo(() => deriveTurnUsage(transcript.messages), [transcript.messages]);
+	const turnInspectors = useMemo(() => deriveRunInspectors(transcript.messages), [transcript.messages]);
 	const turnChanges = useMemo(() => deriveTurnChanges(transcript.messages), [transcript.messages]);
 	const turnTimings = useMemo(
 		() => deriveTurnTimings(transcript.messages, transcript.runEndedAt),
@@ -168,7 +171,10 @@ export function MessageList() {
 						running={row.running}
 						entering={row.entering}
 					/>
-					{!row.running && row.timing && <UsageSettlement usage={turnUsages[row.timing.turnIndex]} />}
+					{!row.running && row.timing && <>
+						<UsageSettlement usage={turnUsages[row.timing.turnIndex]} />
+						<RunInspector run={turnInspectors[row.timing.turnIndex]} timing={row.timing} usage={turnUsages[row.timing.turnIndex]} />
+					</>}
 				</div>,
 			);
 			return;

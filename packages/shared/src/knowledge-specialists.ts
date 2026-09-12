@@ -65,10 +65,15 @@ export interface KnowledgeSpecialistRun {
 	status: "queued" | "running" | "completed" | "failed" | "cancelled" | "skipped";
 	action?: string;
 	model?: string;
+	thinkingLevel?: string;
 	startedAt?: number;
 	endedAt?: number;
 	inputTokens?: number;
 	outputTokens?: number;
+	cacheReadTokens?: number;
+	cacheWriteTokens?: number;
+	reasoningTokens?: number;
+	totalTokens?: number;
 	cost?: number;
 	sourceCount?: number;
 	summary?: string;

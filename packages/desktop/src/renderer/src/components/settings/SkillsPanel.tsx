@@ -1,4 +1,5 @@
 import {
+	CAPABILITY_CATALOG,
 	getSkillCategory,
 	groupSkillCatalog,
 	type LoadedSkill,
@@ -56,6 +57,60 @@ function SkillRow({ skill }: { skill: LoadedSkill }) {
 	);
 }
 
+
+function formatBytes(value: number): string {
+	if (value < 1024) return `${value} B`;
+	return `${(value / 1024).toFixed(1)} KB`;
+}
+
+function ToolsOverview() {
+	const t = useT();
+	const language = useI18nStore((state) => state.language);
+	const capabilities = useSettingsStore((state) => state.capabilities);
+	const extensions = useSettingsStore((state) => state.extensions);
+	if (!capabilities) return null;
+	const sourceFor = (name: string) => extensions?.find((extension) => extension.tools.includes(name));
+	const footprint = capabilities.footprint;
+	return (
+		<section className="mb-5" data-testid="tools-skills-overview">
+			<div className="flex flex-wrap items-baseline justify-between gap-2">
+				<div>
+					<h3 className="text-[13px] font-medium text-ink">{t("settings.tools.title")}</h3>
+					<p className="mt-1 text-[11px] text-ink-faint">{t("settings.tools.hint")}</p>
+				</div>
+				<span className="rounded-full bg-hover px-2 py-1 text-[10px] text-ink-dim">{Math.round(footprint.reductionRatio * 100)}% {t("settings.tools.schemaSaved")}</span>
+			</div>
+			<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+				{[
+					[t("settings.tools.activeTools"), `${footprint.activeTools}/${footprint.allTools}`],
+					[t("settings.tools.schema"), `${formatBytes(footprint.activeToolSchemaBytes)} / ${formatBytes(footprint.allToolSchemaBytes)}`],
+					[t("settings.tools.visibleSkills"), `${footprint.visibleSkills}/${footprint.totalSkills}`],
+					[t("settings.tools.capabilities"), String(capabilities.activeCapabilities.length)],
+				].map(([label, value]) => <div key={label} className="rounded-lg border border-border p-2"><p className="text-[9px] text-ink-faint">{label}</p><p className="mt-1 text-[12px] font-medium text-ink">{value}</p></div>)}
+			</div>
+			<div className="mt-3 flex flex-wrap gap-1.5">
+				{CAPABILITY_CATALOG.map((item) => {
+					const active = capabilities.activeCapabilities.includes(item.id);
+					return <span key={item.id} title={item.summary} className={`rounded-full border px-2 py-1 text-[10px] ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-ink-faint"}`}>{item.label[language === "zh" ? "zh" : "en"]}</span>;
+				})}
+			</div>
+			<details className="mt-3 rounded-lg border border-border" open>
+				<summary className="cursor-pointer px-3 py-2 text-[11px] font-medium text-ink">{t("settings.tools.registeredTools")} · {capabilities.tools.length}</summary>
+				<ul className="divide-y divide-border px-3">
+					{capabilities.tools.map((tool) => {
+						const source = sourceFor(tool.name);
+						const mode = tool.alwaysOn ? t("settings.tools.alwaysOn") : tool.active ? t("settings.tools.loaded") : t("settings.tools.lazy");
+						return <li key={tool.name} className="py-2 text-[10px]">
+							<div className="flex flex-wrap items-center gap-2"><code className="text-[11px] text-ink">{tool.name}</code><span className={`rounded px-1.5 py-0.5 ${tool.active ? "bg-accent/10 text-accent" : "bg-hover text-ink-faint"}`}>{mode}</span><span className="ml-auto text-ink-faint">{formatBytes(tool.schemaBytes)}</span></div>
+							<div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-ink-faint"><span>{source ? `${source.source} · ${source.name}` : t("settings.tools.sessionSource")}</span><span>{tool.capabilities.length ? tool.capabilities.join(" · ") : "core"}</span><span>{t("settings.tools.calls")}: {tool.invocations}</span>{tool.lastUsedAt && <span>{t("settings.tools.lastUsed")}: {new Date(tool.lastUsedAt).toLocaleTimeString()}</span>}</div>
+						</li>;
+					})}
+				</ul>
+			</details>
+		</section>
+	);
+}
+
 /** One browse surface for every loaded skill; grouping does not alter invocation or installation. */
 export function SkillsPanel() {
 	const t = useT();
@@ -93,6 +148,7 @@ export function SkillsPanel() {
 		);
 	return (
 		<div>
+			<ToolsOverview />
 			<h3 className="text-[13px] font-medium text-ink">{t("settings.skills.title")}</h3>
 			<p className="mt-1 text-[11px] text-ink-faint">
 				{t("skillsCatalog.count", { count: skills.length, groups: allGroups.length })}

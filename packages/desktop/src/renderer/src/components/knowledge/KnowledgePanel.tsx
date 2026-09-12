@@ -165,6 +165,7 @@ export function KnowledgePanel({
 							bindingRevision={binding.revision}
 							permitted={binding.subagentPolicy === "read-local"}
 							refresh={refresh}
+							runs={data.flow?.specialists ?? []}
 						/>
 					)}
 					{data?.specialistSettingsError && (

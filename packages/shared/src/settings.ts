@@ -22,10 +22,16 @@ export interface ListProvidersOptions {
 }
 
 /** 用户级模型偏好（<agentDir>/model-prefs.json）。 */
+export const SUBAGENT_THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
+export type SubagentThinkingLevel = (typeof SUBAGENT_THINKING_LEVELS)[number];
+
 export interface ModelPrefs {
 	/** 隐藏的模型 id（provider → modelId 列表）；隐藏不影响已经选中的会话运行 */
 	hiddenModels: Record<string, string[]>;
+	/** provider/model；缺省 = 跟随主会话模型。 */
 	subagentModels: Record<string, string>;
+	/** 缺省 = 跟随主会话 thinking；显式值必须被目标模型支持。 */
+	subagentThinking: Record<string, SubagentThinkingLevel>;
 }
 
 /** 设置页可配置的子代理（仅内置与用户级定义，不含项目级）。 */

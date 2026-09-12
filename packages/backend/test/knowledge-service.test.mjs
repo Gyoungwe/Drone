@@ -7,7 +7,7 @@ import { loadWorkspaceConfig, saveWorkspaceConfig } from "../../../.pi/extension
 import { readKnowledgeBinding, saveKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
 import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension.mjs";
 import { runNavigationMaintenance } from "../../../.pi/lib/knowledge/maintenance.mjs";
-import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
+import { closeKnowledgeServices, getKnowledgeService, KnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
 import { listWikiProposals } from "../../../.pi/lib/knowledge/wiki-review.mjs";
 import {
 	configureObsidian,
@@ -476,4 +476,28 @@ it("FTS-first query plan does not enumerate all notes through the scope index", 
 	} finally {
 		db.close();
 	}
+});
+
+describe("optional semantic candidate retrieval", () => {
+	it("treats semantic retrieval as candidate generation only and still requires an actual read receipt", async () => {
+		await setup();
+		await note("Library/Papers/semantic-only.md", "# Mechanosensory escape circuit\n\nThis note intentionally omits the lexical query token.\n");
+		const binding = await readKnowledgeBinding();
+		const semantic = new KnowledgeService(binding, app, {
+			semanticCandidateProvider: async ({ query }) => query === "nomatchinguniquetoken" ? [{ path: "Library/Papers/semantic-only.md", score: 0.98 }] : [],
+		});
+		try {
+			const prep = await semantic.prepare({ cwd: a, project: "project-a", query: "nomatchinguniquetoken" });
+			await semantic.request("reconcile");
+			const found = await semantic.search(prep.ticket, a, { query: "nomatchinguniquetoken", limit: 5 });
+			expect(found.semantic).toMatchObject({ enabled: true, candidateCount: 1, acceptedCount: 1 });
+			expect(found.hits).toEqual(expect.arrayContaining([expect.objectContaining({ path: "Library/Papers/semantic-only.md", retrieval: "semantic-candidate" })]));
+			await expect(semantic.evidenceReceipts(prep.ticket, a, ["Library/Papers/semantic-only.md"])).rejects.toThrow("not read");
+			await semantic.read(prep.ticket, a, { path: "Library/Papers/semantic-only.md" });
+			const receipts = await semantic.evidenceReceipts(prep.ticket, a, ["Library/Papers/semantic-only.md"]);
+			expect(receipts.sources[0]?.path).toBe("Library/Papers/semantic-only.md");
+		} finally {
+			await semantic.close();
+		}
+	});
 });

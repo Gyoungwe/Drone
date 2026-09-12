@@ -158,12 +158,10 @@ async function run() {
 			"document.querySelector('[data-testid=knowledge-specialists-settings] select')",
 			"specialist policy controls",
 		);
-		await js("document.querySelector('[data-testid=knowledge-specialists-settings] details').open=true");
-		assert(
-			await js(
-				"document.querySelector('[data-testid=knowledge-specialists-settings]').innerText.includes('knowledge-wiki-editor')",
-			),
-		);
+		await wait("document.querySelectorAll('[data-testid=knowledge-specialist-cards] article').length===5", "five protected specialist cards");
+		assert(await js("document.querySelector('[data-testid=knowledge-specialists-settings]').innerText.includes('knowledge-wiki-editor')"));
+		assert(await js("document.querySelector('[data-testid=knowledge-specialists-settings]').innerText.includes('fixture/research-model')||[...document.querySelectorAll('[data-testid=knowledge-specialists-settings] select')].some(s=>s.value==='fixture/research-model')"));
+		assert(await js("[...document.querySelectorAll('[data-testid=knowledge-specialists-settings] select')].some(s=>s.value==='high')"));
 		await js(
 			"(()=>{const select=document.querySelector('[data-testid=knowledge-specialists-settings] select');select.value='off';select.dispatchEvent(new Event('change',{bubbles:true}));})()",
 		);
@@ -183,6 +181,18 @@ async function run() {
 			"four specialist roles, explicit model-cost and permission information; real IPC mode change persists without calling a model",
 		);
 		await capture("06-specialist-settings");
+		await wait("document.querySelector('[data-testid=tools-skills-overview]')", "Tools & Skills capability overview");
+		assert(await js("document.querySelector('[data-testid=tools-skills-overview]').innerText.includes('23%')"));
+		assert(await js("document.querySelector('[data-testid=tools-skills-fixture]').innerText.includes('research_search_knowledge')"));
+		checks.push("Tools & Skills shows active/lazy/always-on registry metadata and measured schema footprint");
+		await capture("07-tools-skills");
+		await wait("document.querySelector('[data-testid=run-inspector]')", "Run Inspector");
+		await js("document.querySelector('[data-testid=run-inspector]').open=true");
+		assert(await js("document.querySelector('[data-testid=run-inspector]').innerText.includes('research_check_answer')"));
+		assert(await js("document.querySelector('[data-testid=run-inspector]').innerText.includes('Library/Papers/source.md')"));
+		assert(await js("!document.querySelector('[data-testid=run-inspector]').innerText.includes('PRIVATE_CHAIN')"));
+		checks.push("Run Inspector shows observable models/stages/tools/subagents/reads/artifacts/publication gate without private thinking");
+		await capture("07-run-inspector");
 		await wait(
 			"document.querySelector('[data-testid=session-usage]').innerText.includes('80.0%')",
 			"SDK cumulative usage footer",

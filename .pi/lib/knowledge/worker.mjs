@@ -437,10 +437,31 @@ async function search(args) {
 			coverage === "ready" ? null : "Index is still being reconciled; zero hits are not proof of absence.",
 	};
 }
+
+async function hydrateCandidates(args) {
+	const paths = Array.isArray(args.paths) ? [...new Set(args.paths)].slice(0, 24) : [];
+	const limit = Math.max(1, Math.min(12, Math.floor(args.limit || 5)));
+	const hits = [];
+	for (const raw of paths) {
+		if (hits.length >= limit || typeof raw !== "string") break;
+		let path;
+		try {
+			path = validateNote(raw);
+			if (!canRead(path, args.project)) continue;
+		} catch { continue; }
+		let current;
+		try { current = await updatePath(path); } catch { continue; }
+		if (!current || current.kind === "explainer") continue;
+		const part = snippet(current.body, { startLine: 1, maxChars: 1600 });
+		hits.push({ path, title: current.title, hash: current.hash, kind: current.kind, rank: null, ...part });
+	}
+	return { hits };
+}
 async function dispatch(op, args) {
 	if (op === "status") return status();
 	if (op === "read") return read(args.path, args.project, args);
 	if (op === "search") return search(args);
+	if (op === "hydrateCandidates") return hydrateCandidates(args);
 	if (op === "warm") {
 		void beginReconcile();
 		return status();

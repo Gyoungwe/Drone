@@ -45,7 +45,12 @@ export class ProjectResourceLoader {
 	 */
 	async load(
 		cwd: string,
-		options?: { askTrust?: boolean; confirm?: PermissionConfirm; modeRef?: PermissionModeRef },
+		options?: {
+			askTrust?: boolean;
+			confirm?: PermissionConfirm;
+			modeRef?: PermissionModeRef;
+			extensionFactories?: InlineExtension[];
+		},
 	): Promise<{
 		settingsManager: SettingsManager;
 		resourceLoader: DefaultResourceLoader;
@@ -56,7 +61,10 @@ export class ProjectResourceLoader {
 			cwd,
 			agentDir,
 			settingsManager,
-			extensionFactories: this.deps.buildExtensions(cwd, options?.confirm, options?.modeRef),
+			extensionFactories: [
+				...this.deps.buildExtensions(cwd, options?.confirm, options?.modeRef),
+				...(options?.extensionFactories ?? []),
+			],
 			...this.deps.desktopIntegration,
 		});
 		if (this.deps.projectTrust === false) {

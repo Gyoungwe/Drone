@@ -1,4 +1,4 @@
-import type { ModelPrefs } from "@percho/shared";
+import { SUBAGENT_THINKING_LEVELS, type ModelPrefs, type SubagentThinkingLevel } from "@percho/shared";
 import { JsonStore } from "../json-store";
 
 function copyPrefs(prefs: ModelPrefs): ModelPrefs {
@@ -7,6 +7,7 @@ function copyPrefs(prefs: ModelPrefs): ModelPrefs {
 			Object.entries(prefs.hiddenModels).map(([provider, ids]) => [provider, [...ids]]),
 		),
 		subagentModels: { ...prefs.subagentModels },
+		subagentThinking: { ...prefs.subagentThinking },
 	};
 }
 
@@ -54,9 +55,16 @@ export class ModelPrefsService {
 		if (this.cache) return this.cache;
 		// 损坏/缺失回退空配置（JsonStore 保证）；字段级规整仍在服务层
 		const data = await this.store().read();
+		const rawThinking = normalizeStringMap(data.subagentThinking);
+		const subagentThinking = Object.fromEntries(
+			Object.entries(rawThinking).filter((entry): entry is [string, SubagentThinkingLevel] =>
+				SUBAGENT_THINKING_LEVELS.includes(entry[1] as SubagentThinkingLevel),
+			),
+		);
 		const prefs: ModelPrefs = {
 			hiddenModels: normalizeHiddenModels(data.hiddenModels),
 			subagentModels: normalizeStringMap(data.subagentModels),
+			subagentThinking,
 		};
 		this.cache = prefs;
 		return prefs;
@@ -120,5 +128,20 @@ export class ModelPrefsService {
 
 	async getSubagentModel(agent: string): Promise<string | undefined> {
 		return (await this.read()).subagentModels[agent];
+	}
+
+	async setSubagentThinking(agent: string, level: SubagentThinkingLevel | null): Promise<ModelPrefs> {
+		const cleanAgent = agent.trim();
+		if (!cleanAgent) throw new Error("agent is required");
+		if (level !== null && !SUBAGENT_THINKING_LEVELS.includes(level)) throw new Error("invalid subagent thinking level");
+		const prefs = copyPrefs(await this.read());
+		if (level) prefs.subagentThinking[cleanAgent] = level;
+		else delete prefs.subagentThinking[cleanAgent];
+		await this.write(prefs);
+		return copyPrefs(prefs);
+	}
+
+	async getSubagentThinking(agent: string): Promise<SubagentThinkingLevel | undefined> {
+		return (await this.read()).subagentThinking[agent];
 	}
 }

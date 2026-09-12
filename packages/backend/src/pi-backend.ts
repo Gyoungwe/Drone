@@ -51,6 +51,9 @@ import {
 	TODO_TOOL_NAME,
 	type TodoItem,
 } from "@percho/shared";
+import { makeCapabilityExtension } from "./capabilities/extension";
+import { CapabilityResourceLoader, SkillVisibility, allSkillsFromLoader } from "./capabilities/resource-loader";
+import { CapabilityRuntime } from "./capabilities/runtime";
 import { makeKnowledgeSpecialistBridge } from "./knowledge/specialist-bridge";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
 import { KnowledgeUiService } from "./knowledge/ui";
@@ -93,6 +96,7 @@ import { ModelPrefsService } from "./settings/model-prefs";
 import { SettingsService } from "./settings/settings";
 import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
 import { makeAskUserTool } from "./tools/ask-user";
+import { makeCapabilityLoadTool } from "./tools/capability-load";
 import {
 	makeChannelWatchExtension,
 	readChannelWatchEnabled,
@@ -122,6 +126,8 @@ export interface PiBackendOptions {
 	tools?: string[];
 	/** 额外自定义工具 */
 	customTools?: ToolDefinition[];
+	/** Tool/Skill 能力按需暴露（默认 true）；false 保留 SDK 全量工具行为，供兼容/测试。 */
+	lazyCapabilities?: boolean;
 	/** 是否启用权限确认门控（false 时 confirm 直接通过） */
 	permissionGates?: boolean;
 	/** 是否注册内置权限门控扩展（false 时逐工具规则不生效；用户换用自己的权限扩展时关闭）。permissionGates=false 时强制不注册 */
@@ -182,6 +188,8 @@ export class PiBackend {
 		}
 	>();
 	readonly mcp = new McpService();
+	/** 每会话按需 Tool/Skill 能力视图；注册表完整，只有模型可见 active subset 会变化。 */
+	private readonly capabilityRuntimes = new Map<string, CapabilityRuntime>();
 	private readonly gates = new Map<string, PermissionGate>();
 	private readonly askGates = new Map<string, Set<AskGate>>();
 	/** 按会话权限模式（default 缺省；fullAccess = 一切放行 + 高危审计）：会话创建时随工厂注入，关会话/重启归零 */
@@ -211,7 +219,11 @@ export class PiBackend {
 	private readonly projectLoader: ProjectResourceLoader;
 
 	constructor(private readonly options: PiBackendOptions = {}) {
-		this.packages = new PackageAdmin({ registry: this.registry, defaultCwd: options.defaultCwd });
+		this.packages = new PackageAdmin({
+			registry: this.registry,
+			defaultCwd: options.defaultCwd,
+			onSessionReloaded: (sessionId) => this.reapplyCapabilities(sessionId),
+		});
 		this.projectLoader = new ProjectResourceLoader({
 			trustStore: this.trustStore,
 			ask: (dir, opts) => this.trustGate.ask(dir, opts),
@@ -223,7 +235,7 @@ export class PiBackend {
 	}
 
 	/** 自定义工具 = 调用方传入的 + 内置 webfetch（webFetch:false 关闭）+ show_image + set_status + todo + subagent */
-	private buildCustomTools(gate: PermissionGate, askGate: AskGate): ToolDefinition[] {
+	private buildCustomTools(gate: PermissionGate, askGate: AskGate, capabilities?: CapabilityRuntime): ToolDefinition[] {
 		const tools = [...(this.options.customTools ?? [])];
 		const webFetch = this.options.webFetch;
 		if (webFetch !== false) {
@@ -231,6 +243,7 @@ export class PiBackend {
 		}
 		// Desktop-native ask_user intentionally overrides the TUI-only pi-ask tool while preserving its public contract.
 		tools.push(makeAskUserTool({ ask: (request, signal) => askGate.ask(request, signal) }));
+		if (capabilities) tools.push(makeCapabilityLoadTool(capabilities));
 		tools.push(makeShowImageTool());
 		tools.push(makeStatusTool());
 		tools.push(makeTodoTool());
@@ -302,6 +315,7 @@ export class PiBackend {
 				makeKnowledgeSpecialistBridge({
 					getRuntime: () => this.getModelRuntime(),
 					getModelPreference: (name) => this.modelPrefs.getSubagentModel(name),
+					getThinkingPreference: (name) => this.modelPrefs.getSubagentThinking(name),
 				}),
 			);
 		// 上下文蒸发（默认开启：缺省 mode=evaporation；钩子实时读派生 mode，
@@ -399,17 +413,23 @@ export class PiBackend {
 		// 会话权限模式引用：新会话一律 default 起步（D1：不落盘、不继承），随工厂闭包注入求值链
 		const modeRef: PermissionModeRef = { current: "default" };
 
-		const { settingsManager, resourceLoader } = await this.projectLoader.load(cwd, {
+		const skillVisibility = new SkillVisibility();
+		const capabilities = this.options.lazyCapabilities === false ? undefined : new CapabilityRuntime(skillVisibility);
+		const { settingsManager, resourceLoader: baseResourceLoader } = await this.projectLoader.load(cwd, {
 			confirm: confirmBridge,
 			modeRef,
+			...(capabilities ? { extensionFactories: [makeCapabilityExtension(capabilities)] } : {}),
 		});
+		const resourceLoader = capabilities
+			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
+			: baseResourceLoader;
 		const { session, extensionsResult } = await createAgentSession({
 			cwd,
 			modelRuntime: runtime,
 			model,
 			thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
 			tools: this.options.tools,
-			customTools: this.buildCustomTools(gate, askGate),
+			customTools: this.buildCustomTools(gate, askGate, capabilities),
 			sessionManager: SessionManager.create(cwd),
 			settingsManager,
 			resourceLoader,
@@ -424,6 +444,14 @@ export class PiBackend {
 					tools: shadowed.tools,
 				});
 			}
+		}
+
+		if (capabilities) {
+			capabilities.bind(session, {
+				excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
+				extraAlwaysOn: this.options.tools ?? [],
+			});
+			this.capabilityRuntimes.set(session.sessionId, capabilities);
 		}
 
 		gate.bindSession(session.sessionId);
@@ -460,16 +488,22 @@ export class PiBackend {
 		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
 		// 重开历史会话同样 default 起步（D1：模式不随会话文件继承）
 		const modeRef: PermissionModeRef = { current: "default" };
-		const { settingsManager, resourceLoader } = await this.projectLoader.load(cwd, {
+		const skillVisibility = new SkillVisibility();
+		const capabilities = this.options.lazyCapabilities === false ? undefined : new CapabilityRuntime(skillVisibility);
+		const { settingsManager, resourceLoader: baseResourceLoader } = await this.projectLoader.load(cwd, {
 			confirm: confirmBridge,
 			modeRef,
+			...(capabilities ? { extensionFactories: [makeCapabilityExtension(capabilities)] } : {}),
 		});
+		const resourceLoader = capabilities
+			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
+			: baseResourceLoader;
 		const { session, extensionsResult } = await createAgentSession({
 			sessionManager,
 			modelRuntime: runtime,
 			settingsManager,
 			resourceLoader,
-			customTools: this.buildCustomTools(gate, askGate),
+			customTools: this.buildCustomTools(gate, askGate, capabilities),
 		});
 		const mutex = applySubagentMutex(session, extensionsResult, this.options.subagentPreferBuiltin !== false);
 		if (mutex.shadowed.length > 0) {
@@ -482,6 +516,15 @@ export class PiBackend {
 				});
 			}
 		}
+
+		if (capabilities) {
+			capabilities.bind(session, {
+				excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
+				extraAlwaysOn: this.options.tools ?? [],
+			});
+			this.capabilityRuntimes.set(session.sessionId, capabilities);
+		}
+
 		gate.bindSession(session.sessionId);
 		askGate.bindSession(session.sessionId);
 		this.gates.set(session.sessionId, gate);
@@ -546,6 +589,18 @@ export class PiBackend {
 			}));
 	}
 
+	private reapplyCapabilities(sessionId: string): void {
+		const runtime = this.capabilityRuntimes.get(sessionId);
+		const entry = this.registry.get(sessionId);
+		if (!runtime || !entry) return;
+		const changed = runtime.activate([]);
+		log.info("capability tools reapplied after reload", sessionId, {
+			activeTools: changed.state.footprint.activeTools,
+			allTools: changed.state.footprint.allTools,
+			reduction: Number(changed.state.footprint.reductionRatio.toFixed(3)),
+		});
+	}
+
 	async closeSession(sessionId: string): Promise<void> {
 		for (const run of this.modelReviews.values()) if (run.sessionId === sessionId) run.controller.abort();
 		const entry = this.registry.get(sessionId);
@@ -556,6 +611,7 @@ export class PiBackend {
 		for (const askGate of this.askGates.get(sessionId) ?? []) askGate.dispose();
 		this.askGates.delete(sessionId);
 		this.permissionModes.delete(sessionId);
+		this.capabilityRuntimes.delete(sessionId);
 		this.streamGuard.cleanup(sessionId);
 		this.eventRates.delete(sessionId);
 		this.registry.delete(sessionId);
@@ -606,8 +662,9 @@ export class PiBackend {
 							{
 								getRuntime: () => this.getModelRuntime(),
 								getModelPreference: (name) => this.modelPrefs.getSubagentModel(name),
+								getThinkingPreference: (name) => this.modelPrefs.getSubagentThinking(name),
 							},
-							{ ...request, parentModel: entry.session.model, signal: controller.signal },
+							{ ...request, parentModel: entry.session.model, parentThinkingLevel: entry.session.thinkingLevel, signal: controller.signal },
 						),
 					),
 			});
@@ -808,7 +865,7 @@ export class PiBackend {
 	async getLoadedResources(sessionId: string): Promise<LoadedResources> {
 		const entry = this.requireSession(sessionId);
 		const session = entry.session;
-		const skillResult = session.resourceLoader.getSkills();
+		const skillResult = allSkillsFromLoader(session.resourceLoader);
 		const extResult = session.resourceLoader.getExtensions();
 		return {
 			skills: skillResult.skills.map((skill) => ({
@@ -839,6 +896,9 @@ export class PiBackend {
 				shortcutsCount: ext.shortcuts.size,
 			})),
 			extensionErrors: extResult.errors,
+			...(this.capabilityRuntimes.get(sessionId)
+				? { capabilities: this.capabilityRuntimes.get(sessionId)?.state() }
+				: {}),
 		};
 	}
 
@@ -891,6 +951,7 @@ export class PiBackend {
 			}
 			try {
 				await entry.session.reload();
+				this.reapplyCapabilities(entry.session.sessionId);
 			} catch (err) {
 				log.warn("MCP session reload failed", entry.session.sessionId, err);
 			}
@@ -1124,6 +1185,10 @@ export class PiBackend {
 
 	async setSubagentModel(agent: string, modelRef: string | null): Promise<ModelPrefs> {
 		return this.modelPrefs.setSubagentModel(agent, modelRef);
+	}
+
+	async setSubagentThinking(agent: string, level: import("@percho/shared").SubagentThinkingLevel | null): Promise<ModelPrefs> {
+		return this.modelPrefs.setSubagentThinking(agent, level);
 	}
 
 	async listSubagents(): Promise<SubagentInfo[]> {

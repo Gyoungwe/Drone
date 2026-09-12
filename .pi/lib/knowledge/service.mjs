@@ -11,8 +11,9 @@ const pool = globalThis[poolKey];
 const MAX_TICKETS = 128;
 
 export class KnowledgeService {
-	constructor(binding, directory = knowledgeDirectory()) {
+	constructor(binding, directory = knowledgeDirectory(), options = {}) {
 		this.binding = binding;
+		this.semanticCandidateProvider = typeof options.semanticCandidateProvider === "function" ? options.semanticCandidateProvider : null;
 		this.tickets = new Map();
 		this.pending = new Map();
 		this.next = 0;
@@ -181,13 +182,36 @@ export class KnowledgeService {
 					"Read a current linked or discovered Wiki page with research_read_knowledge before searching evidence. Wiki discovery search is still allowed.",
 				);
 		}
-		const result = await this.request("search", {
+		let result = await this.request("search", {
 			query,
 			wikiOnly,
 			explainerOnly,
 			limit,
 			project: state.project,
 		});
+		if (!wikiOnly && !explainerOnly && this.semanticCandidateProvider && result.hits.length < limit) {
+			let semantic = { enabled: true, candidateCount: 0, acceptedCount: 0 };
+			try {
+				const candidates = await Promise.race([
+					Promise.resolve(this.semanticCandidateProvider({ query, project: state.project, limit, vault: this.binding.vault })),
+					new Promise((_, reject) => setTimeout(() => reject(new Error("semantic candidate provider timed out")), 1500)),
+				]);
+				const paths = Array.isArray(candidates)
+					? [...new Set(candidates.map((item) => typeof item === "string" ? item : item?.path).filter((path) => typeof path === "string" && path.length > 0))].slice(0, 24)
+					: [];
+				semantic.candidateCount = paths.length;
+				const existing = new Set(result.hits.map((hit) => hit.path));
+				const semanticPaths = paths.filter((path) => !existing.has(path)).slice(0, Math.max(0, limit - result.hits.length));
+				if (semanticPaths.length) {
+					const hydrated = await this.request("hydrateCandidates", { paths: semanticPaths, project: state.project, limit: limit - result.hits.length });
+					semantic.acceptedCount = hydrated.hits.length;
+					result = { ...result, hits: [...result.hits, ...hydrated.hits.map((hit) => ({ ...hit, retrieval: "semantic-candidate" }))] };
+				}
+			} catch (error) {
+				semantic = { ...semantic, error: String(error?.message || error).slice(0, 240) };
+			}
+			result = { ...result, semantic };
+		}
 		if (!wikiOnly && !explainerOnly)
 			state.answerSearch = Object.freeze({
 				query,

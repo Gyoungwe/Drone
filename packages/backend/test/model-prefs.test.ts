@@ -16,16 +16,26 @@ async function makeService() {
 describe("ModelPrefsService", () => {
 	it("读写隐藏模型与子代理模型，删除配置后回到继承", async () => {
 		const { service } = await makeService();
-		expect(await service.getPrefs()).toEqual({ hiddenModels: {}, subagentModels: {} });
+		expect(await service.getPrefs()).toEqual({ hiddenModels: {}, subagentModels: {}, subagentThinking: {} });
 		await service.setModelHidden("deepseek", "v4-flash", true);
 		await service.setSubagentModel("scout", "deepseek/v4-flash");
+		await service.setSubagentThinking("scout", "high");
 		expect(await service.getPrefs()).toEqual({
 			hiddenModels: { deepseek: ["v4-flash"] },
 			subagentModels: { scout: "deepseek/v4-flash" },
+			subagentThinking: { scout: "high" },
 		});
 		await service.setModelHidden("deepseek", "v4-flash", false);
 		await service.setSubagentModel("scout", null);
-		expect(await service.getPrefs()).toEqual({ hiddenModels: {}, subagentModels: {} });
+		await service.setSubagentThinking("scout", null);
+		expect(await service.getPrefs()).toEqual({ hiddenModels: {}, subagentModels: {}, subagentThinking: {} });
+	});
+
+	it("拒绝非法 Thinking 档位并规整旧文件", async () => {
+		const { path, service } = await makeService();
+		await writeFile(path, JSON.stringify({ subagentThinking: { scout: "ultra", reviewer: "medium" } }), "utf8");
+		expect((await service.getPrefs()).subagentThinking).toEqual({ reviewer: "medium" });
+		await expect(service.setSubagentThinking("scout", "ultra" as never)).rejects.toThrow("invalid subagent thinking level");
 	});
 
 	it("原子写不遗留临时文件", async () => {
@@ -37,6 +47,6 @@ describe("ModelPrefsService", () => {
 	it("损坏文件安全回退为空配置", async () => {
 		const { path, service } = await makeService();
 		await writeFile(path, "{broken", "utf8");
-		expect(await service.getPrefs()).toEqual({ hiddenModels: {}, subagentModels: {} });
+		expect(await service.getPrefs()).toEqual({ hiddenModels: {}, subagentModels: {}, subagentThinking: {} });
 	});
 });

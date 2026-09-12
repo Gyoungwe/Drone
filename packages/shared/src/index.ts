@@ -1,4 +1,5 @@
 export * from "./ask";
+export * from "./capabilities";
 export * from "./errors";
 export * from "./ipc";
 export * from "./knowledge";
@@ -20,3 +21,5 @@ export * from "./transcript";
 export * from "./ui-plugins";
 export * from "./update";
 export * from "./usage-display";
+
+export * from "./transcript/run-inspector";

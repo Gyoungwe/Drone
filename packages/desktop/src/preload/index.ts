@@ -102,6 +102,8 @@ const api: PiApi = {
 		ipcRenderer.invoke(IpcChannels.SettingsSetModelsHidden, provider, modelIds, hidden),
 	setSubagentModel: (agent, modelRef) =>
 		ipcRenderer.invoke(IpcChannels.SettingsSetSubagentModel, agent, modelRef),
+	setSubagentThinking: (agent, level) =>
+		ipcRenderer.invoke(IpcChannels.SettingsSetSubagentThinking, agent, level),
 	listSubagents: () => ipcRenderer.invoke(IpcChannels.SettingsListSubagents),
 	startProviderLogin: (loginId, providerId) =>
 		ipcRenderer.invoke(IpcChannels.SettingsLoginStart, loginId, providerId),

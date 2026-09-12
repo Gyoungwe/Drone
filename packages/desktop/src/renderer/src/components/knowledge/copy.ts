@@ -44,6 +44,15 @@ export const knowledgeZh = {
 	specialistLimits:
 		"每轮最多 4 次，知识子智能体全应用最多并发 2 个；单个最长 120 秒。无 shell、网络抓取、递归委派、正式 Wiki 写入或批准权限。",
 	specialistModels: "配置子智能体模型",
+	specialistModel: "模型",
+	specialistThinking: "Thinking",
+	specialistFollowMain: "跟随主会话",
+	specialistUnavailable: "当前不可用",
+	specialistBudget: "预算",
+	specialistLastRun: "最近运行",
+	specialistNeverRun: "当前会话尚未运行",
+	specialistTriggerReview: "仅人工触发审核",
+
 	specialist_navigator: "知识导航员",
 	specialist_navigator_hint: "知识请求开始时读导航、找相关 Wiki 与证据；返回少量入口。",
 	specialist_evidence: "证据整理员",
@@ -248,6 +257,15 @@ const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
 	specialistLimits:
 		"Up to 4 calls per turn, 2 knowledge specialists concurrently across the app, 120 seconds each. No shell, network fetch, recursive delegation, live Wiki writes or approval.",
 	specialistModels: "Configure specialist models",
+	specialistModel: "Model",
+	specialistThinking: "Thinking",
+	specialistFollowMain: "Follow main session",
+	specialistUnavailable: "currently unavailable",
+	specialistBudget: "Budget",
+	specialistLastRun: "Last run",
+	specialistNeverRun: "Not run in this session",
+	specialistTriggerReview: "Human-triggered review only",
+
 	specialist_navigator: "Knowledge navigator",
 	specialist_navigator_hint:
 		"Read navigation, locate relevant Wiki and evidence at the start of knowledge tasks.",

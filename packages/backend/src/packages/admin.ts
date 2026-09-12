@@ -42,6 +42,7 @@ export class PackageAdmin {
 		private readonly deps: {
 			registry: SessionRegistry;
 			defaultCwd?: string;
+			onSessionReloaded?: (sessionId: string) => void;
 		},
 	) {}
 
@@ -112,6 +113,7 @@ export class PackageAdmin {
 			}
 			try {
 				await entry.session.reload();
+				this.deps.onSessionReloaded?.(entry.session.sessionId);
 			} catch (err) {
 				log.warn("session reload failed", entry.session.sessionId, err);
 			}

@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { ProgressNote } from "../../packages/desktop/src/renderer/src/components/chat/ProgressNote";
+import { RunInspector } from "../../packages/desktop/src/renderer/src/components/chat/RunInspector";
 import {
 	SessionUsageFooter,
 	UsageSettlement,
@@ -7,7 +8,9 @@ import {
 import { KnowledgeFlowCard } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgeFlowCard";
 import { KnowledgePanel } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgePanel";
 import { KnowledgeUiRoot } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgeUiRoot";
+import { SkillsPanel } from "../../packages/desktop/src/renderer/src/components/settings/SkillsPanel";
 import { useSessionsStore } from "../../packages/desktop/src/renderer/src/stores/sessions";
+import { useSettingsStore } from "../../packages/desktop/src/renderer/src/stores/settings";
 import { useTranscriptStore } from "../../packages/desktop/src/renderer/src/stores/transcript";
 import { reportedUsage, sumReportedUsage } from "../../packages/shared/src/usage-display";
 import { SidebarActionsFixture } from "./sidebar";
@@ -17,6 +20,7 @@ const info = await (window as any).knowledgeTest.info();
 useSessionsStore.setState({
 	cwd: info.cwd,
 	activeSessionId: "fixture",
+	models: [{ provider: "fixture", providerName: "Fixture", id: "research-model", label: "Research Model", authed: true, thinkingLevels: ["off", "low", "medium", "high"] }],
 	sessions: [
 		{
 			sessionId: "fixture",
@@ -28,6 +32,38 @@ useSessionsStore.setState({
 		},
 	],
 });
+useSettingsStore.setState({
+	modelPrefs: { hiddenModels: {}, subagentModels: { "knowledge-wiki-editor": "fixture/research-model" }, subagentThinking: { "knowledge-wiki-editor": "high" } },
+	capabilities: {
+		activeCapabilities: ["knowledge", "research"],
+		activeTools: ["ask_user", "capability_load", "read", "research_search_knowledge"],
+		visibleSkills: ["research-vault", "research-workflow"],
+		footprint: { allToolSchemaBytes: 27854, activeToolSchemaBytes: 21494, reductionRatio: 0.2283, allTools: 45, activeTools: 37, totalSkills: 64, visibleSkills: 24 },
+		tools: [
+			{ name: "ask_user", capabilities: [], schemaBytes: 640, active: true, alwaysOn: true, invocations: 1, lastUsedAt: Date.now() - 1000 },
+			{ name: "research_search_knowledge", capabilities: ["knowledge", "research"], schemaBytes: 980, active: true, alwaysOn: false, invocations: 2, lastUsedAt: Date.now() },
+			{ name: "bash", capabilities: ["coding"], schemaBytes: 1200, active: false, alwaysOn: false, invocations: 0 },
+		],
+	},
+	skills: [
+		{ name: "research-vault", description: "Evidence-aware Vault workflow", scope: "temporary", source: "research-workbench", path: "/fixture/research-vault/SKILL.md", disableModelInvocation: false },
+		{ name: "research-workflow", description: "Research workflow", scope: "temporary", source: "research-workbench", path: "/fixture/research-workflow/SKILL.md", disableModelInvocation: false },
+	],
+	skillDiagnostics: [],
+	extensions: [{ name: "knowledge.mjs", path: "/fixture/knowledge.mjs", scope: "temporary", source: "research-workbench", hidden: false, toolsCount: 1, tools: ["research_search_knowledge"], commands: [], flagsCount: 0, shortcutsCount: 0 }],
+	extensionErrors: [],
+});
+
+const runFixture = {
+	turnIndex: 0,
+	models: [{ provider: "fixture", model: "research-model", responses: 2 }],
+	publicStages: [{ text: "已定位相关来源", detail: "读取当前版本后进入预检", next: "检查最终答案" }],
+	tools: [{ key: "read", name: "read", state: "done" as const }, { key: "gate", name: "research_check_answer", state: "done" as const }],
+	subagents: [{ key: "nav", agent: "knowledge-navigator", status: "done" as const, model: "fixture/research-model", tokens: 420 }],
+	sourcePaths: ["Library/Papers/source.md"], artifacts: ["results/show-me.html"],
+	publication: { status: "passed" as const }, skill: "research-workflow", errors: 0,
+};
+
 const usage = sumReportedUsage([
 	reportedUsage({
 		responseId: "fixture",
@@ -46,6 +82,12 @@ createRoot(document.getElementById("root")!).render(
 		<KnowledgeFlowCard sessionId="fixture" />
 		<div className="rounded-2xl border border-border bg-surface p-4">
 			<KnowledgePanel context={{ cwd: info.cwd, sessionId: "fixture" }} />
+		</div>
+		<div className="mt-4 rounded-2xl border border-border bg-surface p-4" data-testid="tools-skills-fixture">
+			<SkillsPanel />
+		</div>
+		<div className="mt-4" data-testid="run-inspector-fixture">
+			<RunInspector run={runFixture} timing={{ turnIndex: 0, startedAt: 1000, endedAt: 4500 }} usage={usage} />
 		</div>
 		<div className="mt-4 space-y-3" data-testid="usage-progress-fixture">
 			<ProgressNote

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { Context, Message, Model, Tool } from "@earendil-works/pi-ai";
-import { validateToolArguments } from "@earendil-works/pi-ai";
+import type { Context, Message, Model, Tool, ModelThinkingLevel } from "@earendil-works/pi-ai";
+import { getSupportedThinkingLevels, validateToolArguments } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { type KnowledgeSpecialistRole, PROTECTED_KNOWLEDGE_AGENTS } from "@percho/shared";
 import { Type } from "typebox";
@@ -14,11 +14,12 @@ export interface SpecialistRequest {
 	packet: string;
 	skillText?: string;
 	parentModel?: Model<any>;
+	parentThinkingLevel?: ModelThinkingLevel;
 	capabilities: SpecialistCapability[];
 	signal?: AbortSignal;
 	timeoutMs?: number;
 	check(): Promise<void>;
-	progress(value: { action?: string; model?: string }): void;
+	progress(value: { action?: string; model?: string; thinkingLevel?: string }): void;
 }
 export interface SpecialistAnswer {
 	summary: string;
@@ -39,11 +40,22 @@ export interface SpecialistAnswer {
 export interface SpecialistResult {
 	data: SpecialistAnswer;
 	model: string;
-	usage: { inputTokens: number; outputTokens: number; cost: number };
+	thinkingLevel: ModelThinkingLevel;
+	usage: {
+		inputTokens: number;
+		outputTokens: number;
+		cacheReadTokens: number;
+		cacheWriteTokens: number;
+		reasoningTokens: number;
+		totalTokens: number;
+		cost: number;
+	};
 }
 export interface SpecialistRunnerDeps {
 	getRuntime(): Promise<ModelRuntime>;
 	getModelPreference(name: string): Promise<string | undefined>;
+	/** Optional for compatibility runtimes; production Pi ModelRuntime supplies this preference service. */
+	getThinkingPreference?(name: string): Promise<ModelThinkingLevel | undefined>;
 }
 const ROLES: Record<KnowledgeSpecialistRole, string> = {
 	reviewer:
@@ -159,7 +171,7 @@ export async function runKnowledgeSpecialist(
 		await request.check();
 		controller.signal.throwIfAborted();
 	};
-	const usage = { inputTokens: 0, outputTokens: 0, cost: 0 };
+	const usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, totalTokens: 0, cost: 0 };
 	const cacheSessionId = `knowledge-${profile.role}-${randomUUID()}`;
 	try {
 		await checked();
@@ -177,8 +189,24 @@ export async function runKnowledgeSpecialist(
 			model = choices[0];
 		}
 		if (!model) throw new Error("No model is configured for this knowledge specialist");
+		// Real Pi ModelRuntime exposes hasConfiguredAuth; lightweight compatibility/test runtimes may not.
+		// Never weaken production fail-closed behavior when the runtime can verify credentials.
+		if (typeof runtime.hasConfiguredAuth === "function" && !runtime.hasConfiguredAuth(model.provider))
+			throw new Error("Configured specialist model has no usable credentials; no provider fallback was used");
+		const explicitThinking = await deps.getThinkingPreference?.(profile.name);
+		const supported = getSupportedThinkingLevels(model);
+		let thinkingLevel: ModelThinkingLevel = "off";
+		if (explicitThinking) {
+			if (!supported.includes(explicitThinking))
+				throw new Error(`Configured specialist thinking level ${explicitThinking} is unavailable for ${model.provider}/${model.id}`);
+			thinkingLevel = explicitThinking;
+		} else if (model.reasoning && request.parentThinkingLevel && supported.includes(request.parentThinkingLevel)) {
+			thinkingLevel = request.parentThinkingLevel;
+		} else if (model.reasoning) {
+			thinkingLevel = supported.includes("medium") ? "medium" : (supported[0] ?? "off");
+		}
 		const modelRef = `${model.provider}/${model.id}`;
-		request.progress({ model: modelRef });
+		request.progress({ model: modelRef, thinkingLevel });
 		const messages: Message[] = [
 			{
 				role: "user",
@@ -211,11 +239,16 @@ export async function runKnowledgeSpecialist(
 					signal: controller.signal,
 					maxTokens: profile.maxTokens,
 					sessionId: cacheSessionId,
+					...(model.reasoning && thinkingLevel !== "off" ? { reasoning: thinkingLevel } : {}),
 				}),
 				abortPromise,
 			]);
 			usage.inputTokens += reply.usage?.input || 0;
 			usage.outputTokens += reply.usage?.output || 0;
+			usage.cacheReadTokens += reply.usage?.cacheRead || 0;
+			usage.cacheWriteTokens += reply.usage?.cacheWrite || 0;
+			usage.reasoningTokens += reply.usage?.reasoning || 0;
+			usage.totalTokens += reply.usage?.totalTokens || 0;
 			usage.cost += reply.usage?.cost?.total || 0;
 			if (["error", "aborted", "length"].includes(reply.stopReason))
 				throw new Error(`Specialist model did not complete (${reply.stopReason})`);
@@ -232,7 +265,7 @@ export async function runKnowledgeSpecialist(
 				await checked();
 				if (call.name === "knowledge_submit") {
 					if (requested.at(-1) !== call) throw new Error("Result submission must finish the tool batch");
-					return { data: args as unknown as SpecialistAnswer, model: modelRef, usage };
+					return { data: args as unknown as SpecialistAnswer, model: modelRef, thinkingLevel, usage };
 				}
 				request.progress({ action: call.name });
 				const value = await Promise.race([
