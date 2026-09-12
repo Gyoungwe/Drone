@@ -22,7 +22,7 @@ Built-in skills are `research-vault`, `research-workflow` and `research-show-me`
 
 Optional tested adapter versions are recorded in the manifest, not silently installed into the application or granted credentials: pi-web-access 0.28.0 and pi-mcp-adapter 2.32.1. Different models, access plans and local executables can change what tasks are achievable; shipping the code cannot give another user the owner's credentials or exactly the same results.
 
-The fork's configured update feed and release-page link now target `Gyoungwe/percho`, rather than the upstream `Jaxton07/percho`. Copyright/creator attribution remains unchanged. No release tag, version bump, upload, remote push or installer replacement was performed in this iteration.
+The fork's configured update feed and release-page link target `Gyoungwe/percho`, rather than the upstream `Jaxton07/percho`. Copyright/creator attribution remains unchanged. Release `v0.6.0` is now published from the verified tag; the macOS updater remains manual for adhoc-signed builds.
 
 ## Data boundaries
 
@@ -32,4 +32,4 @@ Release resources are code and named first-party skill directories, not the user
 
 Use `node scripts/check-knowledge-package.mjs`, also under the actual Electron Node runtime, to test copied package resources in an unrelated project with no ambient user skills. The test proves native resource availability and scoped indexing, not external service connectivity or successful installation on every OS. SDK model-review tests are offline with a scripted provider.
 
-The existing repository-wide lint gate is not clean. A source-only archive of baseline commit `abe8e42` already fails Biome (281 errors, 54 warnings in this local check); no rules or CI checks were disabled. A clean release should resolve lint and run real target-platform installer checks before publishing. Passing tests/build/resource smoke alone is not an assertion that the entire release pipeline is green.
+The repository lint gate was cleaned without disabling rules. Before v0.6.0, local lint/typecheck/build and 1,102 tests passed; remote GitHub CI repeated npm ci, lint, typecheck, tests and build successfully. A real arm64 DMG was mounted/copied/launched with isolated HOME/userData/agentDir/knowledgeDir, and the final GitHub Release workflow built both macOS architectures plus Windows, verified required assets, and published v0.6.0.
