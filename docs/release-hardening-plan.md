@@ -23,9 +23,9 @@ Updated: 2026-09-12
 - [x] 7. Finalize release version and changelog after the packaged-app and live-review checks pass.
   - Final version: `v0.6.0`; desktop package and package-lock agree. Added `CHANGELOG.md` plus `docs/releases/v0.6.0.md`; release workflow consumes tag-specific notes.
   - Re-verified lint, typecheck, 1,102 tests, build, workflow YAML parse, and packaged-resource smoke.
-- [ ] 8. Push `main` to `origin` and verify the branch CI workflow is green.
-  - First remote validation: manual CI run `34693203619` completed successfully on `5613871` (npm ci, lint, typecheck, 1,102 tests, build).
-  - Push-triggered runs were not created on this fork, so `workflow_dispatch` was added as an explicit reproducible fallback; latest HEAD must still pass before this item is checked.
+- [x] 8. Push `main` to `origin` and verify the branch CI workflow is green.
+  - Remote CI run `34693203619` passed on `5613871`; final storage-isolated HEAD `f62616d` passed run `34693582584` (npm ci, lint, typecheck, 1,102 tests, build).
+  - Push-triggered runs were not created on this fork, so `workflow_dispatch` remains the explicit reproducible fallback; Actions itself is enabled and the manual runs used GitHub-hosted runners normally.
 - [ ] 9. Create and push the matching `v*` tag, verify GitHub Release artifacts, and record final release checks.
   - Storage isolation: `Ywei-pi` currently holds ~22.3 GB Actions artifacts plus ~4.78 GB caches. Percho Release now uploads build outputs directly to a draft GitHub Release instead of Actions artifact storage, then verifies required assets before publishing.
 
