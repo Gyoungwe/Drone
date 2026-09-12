@@ -49,7 +49,9 @@ describe("filterCommands", () => {
 
 describe("Obsidian MCP skill discovery", () => {
 	const skill: SlashCommandInfo = {
-		name: "skill:research-vault", source: "skill", supported: true,
+		name: "skill:research-vault",
+		source: "skill",
+		supported: true,
 		description: "Obsidian MCP · research-vault：初始化、检索和受控知识沉淀",
 	};
 	const setup = cmd("obsidian-setup", "extension");

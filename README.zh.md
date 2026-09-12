@@ -6,11 +6,11 @@
   高度自定义的 <a href="https://www.npmjs.com/package/@earendil-works/pi-coding-agent">Pi coding agent</a> 桌面端 GUI —— 与 Pi CLI 同源同引擎，干净清爽的视觉界面。多会话聊天、可视化工具审批、内置子代理、UI 插件、自定义主题。
 </p>
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Jaxton07/percho?style=flat-square" alt="License"></a>
-  <a href="https://github.com/Jaxton07/percho/releases"><img src="https://img.shields.io/github/v/release/Jaxton07/percho?style=flat-square" alt="Release"></a>
-  <a href="https://github.com/Jaxton07/percho/releases"><img src="https://img.shields.io/github/downloads/Jaxton07/percho/total?style=flat-square" alt="Downloads"></a>
-  <a href="https://github.com/Jaxton07/percho/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Jaxton07/percho/ci.yml?style=flat-square" alt="CI"></a>
-  <a href="https://github.com/Jaxton07/percho"><img src="https://img.shields.io/github/stars/Jaxton07/percho?style=flat-square" alt="Stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Gyoungwe/percho?style=flat-square" alt="License"></a>
+  <a href="https://github.com/Gyoungwe/percho/releases"><img src="https://img.shields.io/github/v/release/Gyoungwe/percho?style=flat-square" alt="Release"></a>
+  <a href="https://github.com/Gyoungwe/percho/releases"><img src="https://img.shields.io/github/downloads/Gyoungwe/percho/total?style=flat-square" alt="Downloads"></a>
+  <a href="https://github.com/Gyoungwe/percho/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Gyoungwe/percho/ci.yml?style=flat-square" alt="CI"></a>
+  <a href="https://github.com/Gyoungwe/percho"><img src="https://img.shields.io/github/stars/Gyoungwe/percho?style=flat-square" alt="Stars"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=nodedotjs&style=flat-square" alt="Node >=22.19">
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-blue?style=flat-square" alt="macOS | Windows">
 </p>
@@ -63,7 +63,7 @@ percho 把官方 Pi SDK（`@earendil-works/pi-coding-agent`）跑在 Electron �
 
 ## 下载
 
-预编译安装包发布在 [Releases](https://github.com/Jaxton07/percho/releases) 页面。
+预编译安装包发布在 [Releases](https://github.com/Gyoungwe/percho/releases) 页面。
 
 | 平台 | 下载 |
 | --- | --- |

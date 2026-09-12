@@ -1,10 +1,10 @@
-import type { PublicProgressStep } from "../public-timeline";
-import type { ProgressDisplay } from "../progress-display";
-import type { ReportedUsage } from "../usage-display";
 import type { UiError } from "../errors";
+import type { ProgressDisplay } from "../progress-display";
+import type { PublicProgressStep } from "../public-timeline";
 import type { ImageInput } from "../session";
 import type { SkillInvocationDisplay } from "../skill-invocation";
 import type { TodoItem } from "../todo";
+import type { ReportedUsage } from "../usage-display";
 
 /** SDK 自动重试（auto_retry_start）即时信息：状态行文案 + 出现/清除时机都来自事件流 */
 export interface AgentStatus {
@@ -76,9 +76,9 @@ export type UIMessage =
 	  }
 	| {
 			kind: "assistant";
-            cycleId?: string;
-            usage?: ReportedUsage;
-            progress?: ProgressDisplay;
+			cycleId?: string;
+			usage?: ReportedUsage;
+			progress?: ProgressDisplay;
 			id: string;
 			text: string;
 			thinking: string;
@@ -162,11 +162,11 @@ export type ActivityEntry =
 
 /** 进行中的流式累积 */
 export interface StreamingState {
- progressEntries?: PublicProgressStep[];
- progressPositions?: Record<string,number>;
- cycleId?: string;
- usage?: ReportedUsage;
- progress?: ProgressDisplay;
+	progressEntries?: PublicProgressStep[];
+	progressPositions?: Record<string, number>;
+	cycleId?: string;
+	usage?: ReportedUsage;
+	progress?: ProgressDisplay;
 	/** 消息 id：容器创建时预生成，turn_end 固化时复用同一个 id —— 流式与固化后的 MessageItem key 一致，
 	 * 组件不 remount，Markdown 的平滑输出 controller 得以存活续播（否则固化瞬间平滑被打断、整段跳变） */
 	id: string;

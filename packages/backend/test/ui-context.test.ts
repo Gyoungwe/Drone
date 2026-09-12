@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
 import type { AskRequest } from "@percho/shared";
-import { AskGate } from "../src/session/ask-gate";
+import { describe, expect, it, vi } from "vitest";
 import type { PermissionGate } from "../src/permissions/gate";
+import { AskGate } from "../src/session/ask-gate";
 import { makeUiContext } from "../src/session/ui-context";
 
 /** issue #28 回归：ctx.ui.theme 必须是契约 Theme 对象（方法可调用），不能是空对象/字符串 */
@@ -85,7 +85,6 @@ describe("makeUiContext — ui.theme 契约", () => {
 		}
 	});
 });
-
 
 describe("makeUiContext — native setup questions", () => {
 	function bridge() {

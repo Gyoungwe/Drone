@@ -1,4 +1,3 @@
-
 export interface SubagentLaunchInput {
 	agent: string;
 	/** 子会话 id（live progress / 内联 transcript 绑定） */
@@ -14,7 +13,10 @@ export interface SubagentLaunchInput {
  */
 export function normalizeSubagentLaunchInputs(args: unknown): SubagentLaunchInput[] {
 	const raw = (args ?? {}) as {
-		action?: unknown; agent?: unknown; task?: unknown; cwd?: unknown;
+		action?: unknown;
+		agent?: unknown;
+		task?: unknown;
+		cwd?: unknown;
 		tasks?: Array<{ agent?: unknown; task?: unknown; cwd?: unknown }>;
 	};
 	if (raw.action != null) return [];
@@ -110,7 +112,7 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 	const pushRun = (
 		agent: unknown,
 		rest: {
-				sessionId?: unknown;
+			sessionId?: unknown;
 			task?: unknown;
 			model?: unknown;
 			exitCode?: unknown;
@@ -152,7 +154,8 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 				const value = rest.supervisorRequest as Record<string, unknown> | undefined;
 				if (!value || typeof value.id !== "string" || typeof value.message !== "string") return undefined;
 				const reason = value.reason;
-				if (reason !== "need_decision" && reason !== "interview_request" && reason !== "progress_update") return undefined;
+				if (reason !== "need_decision" && reason !== "interview_request" && reason !== "progress_update")
+					return undefined;
 				return { id: value.id, reason, message: value.message, expectsReply: value.expectsReply === true };
 			})(),
 		});

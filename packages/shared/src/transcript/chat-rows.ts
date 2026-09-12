@@ -108,7 +108,7 @@ export function buildChatRows(
 	const agentWorking = isAgentWorking(transcript);
 	const rows: ChatRow[] = [];
 	let metaItems: MetaItem[] = [];
-    let lastCycle:string|undefined;
+	let lastCycle: string | undefined;
 
 	/**
 	 * 轮次末段正文 id 集合：以 user 消息为轮次边界，每轮（agent 一次回复）只给最后一段正文
@@ -147,18 +147,37 @@ export function buildChatRows(
 		metaItems = [];
 	};
 
-
-    const appendAssistant=(message:Extract<UIMessage,{kind:'assistant'}>,live=false)=>{
-        if(message.cycleId&&lastCycle&&message.cycleId!==lastCycle)flushMeta();
-        if(message.cycleId)lastCycle=message.cycleId;
-        // Progress is a successful public explanation; it is never moved below its own tools.
-        if(message.progress){
-            flushMeta();
-            rows.push({kind:'message',key:`${message.id}:progress`,message:!message.text&&!message.thinking&&!message.tools.length?message:{...message,text:'',thinking:'',tools:[]},metaInGroup:true,showActions:false,streaming:false});
-        }
-        if(message.thinking||message.tools.length)metaItems.push(committedMetaItem(message));
-        if(message.text){flushMeta();rows.push({kind:'message',key:message.id,message:message.progress?{...message,progress:undefined}:message,metaInGroup:true,showActions:!live&&turnFinalTextIds.has(message.id),streaming:live});}
-    };
+	const appendAssistant = (message: Extract<UIMessage, { kind: "assistant" }>, live = false) => {
+		if (message.cycleId && lastCycle && message.cycleId !== lastCycle) flushMeta();
+		if (message.cycleId) lastCycle = message.cycleId;
+		// Progress is a successful public explanation; it is never moved below its own tools.
+		if (message.progress) {
+			flushMeta();
+			rows.push({
+				kind: "message",
+				key: `${message.id}:progress`,
+				message:
+					!message.text && !message.thinking && !message.tools.length
+						? message
+						: { ...message, text: "", thinking: "", tools: [] },
+				metaInGroup: true,
+				showActions: false,
+				streaming: false,
+			});
+		}
+		if (message.thinking || message.tools.length) metaItems.push(committedMetaItem(message));
+		if (message.text) {
+			flushMeta();
+			rows.push({
+				kind: "message",
+				key: message.id,
+				message: message.progress ? { ...message, progress: undefined } : message,
+				metaInGroup: true,
+				showActions: !live && turnFinalTextIds.has(message.id),
+				streaming: live,
+			});
+		}
+	};
 
 	// 轮末行（桌面路径）：位置式插入——turn i 的行插到第 i+1 条 user 行之前，最后一轮追加到行序列末尾。
 	// （不锚消息行：轮末 assistant 无正文时会被吸进折叠组，没有独立行可锚。streaming 中的轮次工具未固化
@@ -217,10 +236,11 @@ export function buildChatRows(
 		appendAssistant(message);
 	}
 
-    const liveStages=streaming?stageMessages(streaming,now):null;
-    if(liveStages){for(const message of liveStages)appendAssistant(message,true);}
-	else if (streaming) {
-        if(streaming.cycleId&&lastCycle&&streaming.cycleId!==lastCycle)flushMeta();
+	const liveStages = streaming ? stageMessages(streaming, now) : null;
+	if (liveStages) {
+		for (const message of liveStages) appendAssistant(message, true);
+	} else if (streaming) {
+		if (streaming.cycleId && lastCycle && streaming.cycleId !== lastCycle) flushMeta();
 		// 正文起点锚：同 turn 的工具按 blockIndex 分「正文前/正文后」两组，保住 text→toolCall 交错时序
 		//（与 finalizeStreaming 的拆分一致）；正文出现后 pre 组立即结束，post 组成为最新组接收 working 信号
 		const textIdx = streaming.textBlockIndex;

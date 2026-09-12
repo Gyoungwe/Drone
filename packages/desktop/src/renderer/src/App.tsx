@@ -1,5 +1,3 @@
-import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
-import { KnowledgeFlowCard } from "./components/knowledge/KnowledgeFlowCard";
 import type { AskRequest, AskResponse, TrustRequest } from "@percho/shared";
 import { useCallback, useEffect, useState } from "react";
 import { getPi } from "./api";
@@ -7,6 +5,8 @@ import { EmptyState } from "./components/chat/EmptyState";
 import { MessageList } from "./components/chat/MessageList";
 import { TodoPanel } from "./components/chat/TodoPanel";
 import { DiffSidebar } from "./components/diff/DiffSidebar";
+import { KnowledgeFlowCard } from "./components/knowledge/KnowledgeFlowCard";
+import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
 import { ProjectPage } from "./components/projects/ProjectPage";
 import { ApprovalDock } from "./components/session/ApprovalDock";
 import { AskDialog } from "./components/session/AskDialog";
@@ -53,9 +53,15 @@ export default function App() {
 	}, []);
 	useSessionEventBridge({ onTrustRequest: pushTrustRequest });
 
-	useEffect(() => getPi().onAskRequest((request) => {
-		setAskRequests((current) => current.some((item) => item.id === request.id) ? current : [...current, request]);
-	}), []);
+	useEffect(
+		() =>
+			getPi().onAskRequest((request) => {
+				setAskRequests((current) =>
+					current.some((item) => item.id === request.id) ? current : [...current, request],
+				);
+			}),
+		[],
+	);
 
 	// 一次性 bootstrap：开屏就绪信号 + 更新状态 + UI 插件加载
 	useEffect(() => {
@@ -73,7 +79,8 @@ export default function App() {
 
 	const respondAsk = async (requestId: string, response: AskResponse) => {
 		const accepted = await getPi().respondAsk(requestId, response);
-		if (!accepted) throw new Error("This question is no longer pending. Please retry the action that opened it.");
+		if (!accepted)
+			throw new Error("This question is no longer pending. Please retry the action that opened it.");
 		setAskRequests((current) => current.filter((request) => request.id !== requestId));
 	};
 

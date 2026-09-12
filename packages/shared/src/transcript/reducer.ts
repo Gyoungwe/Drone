@@ -1,11 +1,10 @@
-import { stageMessages } from "./stage-messages";
-import { progressDisplay } from "../progress-display";
-import { reportedUsage } from "../usage-display";
 import { buildLlmUiError, buildStreamGuardUiError, isUserAbortError, type UiError } from "../errors";
+import { progressDisplay } from "../progress-display";
 import type { ImageInput, SessionEvent } from "../session";
 import { parseExpandedSkillInvocation } from "../skill-invocation";
 import { extractSubagentRuns, normalizeSubagentLaunchInputs } from "../subagent";
 import { extractTodos, TODO_TOOL_NAME } from "../todo";
+import { reportedUsage } from "../usage-display";
 import {
 	emptyStreaming,
 	extractEditPatch,
@@ -19,8 +18,8 @@ import {
 	updateThinkingActivity,
 	updateToolActivity,
 } from "./helpers";
+import { stageMessages } from "./stage-messages";
 import type { CompactionUiState, SessionTranscriptState, SubagentRunUi, UIMessage } from "./types";
-
 
 const STATUS_TOOL_NAME = "set_status";
 
@@ -37,23 +36,37 @@ function inferHostResearchStatus(toolName: string, args?: unknown): { text: stri
 		.filter((value): value is string => typeof value === "string")
 		.map((value) => value.toLowerCase().replaceAll("_", "-"));
 	const identity = candidates.join(" ");
-	if (toolName === "research_prepare_knowledge") return { text: "正在读取知识库导航与项目背景…", phase: "knowledge-search" };
+	if (toolName === "research_prepare_knowledge")
+		return { text: "正在读取知识库导航与项目背景…", phase: "knowledge-search" };
 	if (toolName === "research_read_knowledge") return { text: "正在阅读 Wiki 与知识证据…", phase: "reading" };
-	if (toolName === "research_search_knowledge") return { text: "正在检索知识库索引…", phase: "knowledge-search" };
-	if (toolName === "research_propose_wiki_update") return { text: "正在准备待审核的 Wiki 修改…", phase: "deposit" };
-	if (toolName === "research_maintain_knowledge") return { text: "正在维护知识库索引…", phase: "verification" };
-	if (identity.includes("research-zotero")) return { text: "正在检索 Zotero 文献库…", phase: "literature-search" };
-	if (identity.includes("research-obsidian")) return { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" };
-	if (toolName === "web_search" || toolName.includes("web_search")) return { text: "正在联网检索相关研究…", phase: "web-search" };
-	if (toolName === "fetch_content" || toolName.includes("fetch")) return { text: "正在读取并核对原始来源…", phase: "reading" };
+	if (toolName === "research_search_knowledge")
+		return { text: "正在检索知识库索引…", phase: "knowledge-search" };
+	if (toolName === "research_propose_wiki_update")
+		return { text: "正在准备待审核的 Wiki 修改…", phase: "deposit" };
+	if (toolName === "research_maintain_knowledge")
+		return { text: "正在维护知识库索引…", phase: "verification" };
+	if (identity.includes("research-zotero"))
+		return { text: "正在检索 Zotero 文献库…", phase: "literature-search" };
+	if (identity.includes("research-obsidian"))
+		return { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" };
+	if (toolName === "web_search" || toolName.includes("web_search"))
+		return { text: "正在联网检索相关研究…", phase: "web-search" };
+	if (toolName === "fetch_content" || toolName.includes("fetch"))
+		return { text: "正在读取并核对原始来源…", phase: "reading" };
 	if (toolName === "research_loop") return { text: "正在检查研究证据链…", phase: "verification" };
-	if (toolName.startsWith("research_wiki_navigate")) return { text: "正在检索研究 Wiki…", phase: "knowledge-search" };
+	if (toolName.startsWith("research_wiki_navigate"))
+		return { text: "正在检索研究 Wiki…", phase: "knowledge-search" };
 	if (toolName.startsWith("research_wiki_build")) return { text: "正在沉淀研究知识…", phase: "deposit" };
-	if (toolName.startsWith("research_wikiskill_record")) return { text: "正在总结研究经验…", phase: "synthesis" };
-	if (toolName.startsWith("research_wikiskill_propose")) return { text: "正在改进研究策略…", phase: "skill-evolution" };
-	if (toolName.startsWith("research_wikiskill_gate")) return { text: "正在验证新的研究策略…", phase: "verification" };
-	if (toolName.startsWith("research_wikiskill_status")) return { text: "正在检查研究策略状态…", phase: "verification" };
-	if (toolName.startsWith("research_source") || toolName.includes("archive")) return { text: "正在归档研究证据…", phase: "archive" };
+	if (toolName.startsWith("research_wikiskill_record"))
+		return { text: "正在总结研究经验…", phase: "synthesis" };
+	if (toolName.startsWith("research_wikiskill_propose"))
+		return { text: "正在改进研究策略…", phase: "skill-evolution" };
+	if (toolName.startsWith("research_wikiskill_gate"))
+		return { text: "正在验证新的研究策略…", phase: "verification" };
+	if (toolName.startsWith("research_wikiskill_status"))
+		return { text: "正在检查研究策略状态…", phase: "verification" };
+	if (toolName.startsWith("research_source") || toolName.includes("archive"))
+		return { text: "正在归档研究证据…", phase: "archive" };
 	return null;
 }
 
@@ -62,9 +75,18 @@ function removeControlTool(streaming: NonNullable<SessionTranscriptState["stream
 	const blockIndex = target?.blockIndex;
 	return {
 		...streaming,
-        progressPositions: {...streaming.progressPositions, [toolCallId]:blockIndex??streaming.progressPositions?.[toolCallId]??(Math.max(-1,...streaming.tools.map(t=>t.blockIndex??-1))+1)},
+		progressPositions: {
+			...streaming.progressPositions,
+			[toolCallId]:
+				blockIndex ??
+				streaming.progressPositions?.[toolCallId] ??
+				Math.max(-1, ...streaming.tools.map((t) => t.blockIndex ?? -1)) + 1,
+		},
 		tools: streaming.tools.filter((tool) => tool.id !== toolCallId),
-		activity: blockIndex == null ? streaming.activity : streaming.activity.filter((item) => item.id !== `c${blockIndex}`),
+		activity:
+			blockIndex == null
+				? streaming.activity
+				: streaming.activity.filter((item) => item.id !== `c${blockIndex}`),
 	};
 }
 
@@ -91,9 +113,15 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 		paths: img.paths,
 		timestamp: Date.now(),
 	}));
-	const stages=stageMessages(streaming,Date.now());
-    if(stages)return {...state,messages:[...messages,...stages,...subagents,...images],streaming:null};
-	const hasContent = streaming.text.length > 0 || streaming.thinking.length > 0 || streaming.tools.length > 0 || !!streaming.usage || !!streaming.progress;
+	const stages = stageMessages(streaming, Date.now());
+	if (stages)
+		return { ...state, messages: [...messages, ...stages, ...subagents, ...images], streaming: null };
+	const hasContent =
+		streaming.text.length > 0 ||
+		streaming.thinking.length > 0 ||
+		streaming.tools.length > 0 ||
+		!!streaming.usage ||
+		!!streaming.progress;
 	if (!hasContent) {
 		return images.length > 0 || subagents.length > 0
 			? { ...state, messages: [...messages, ...subagents, ...images], streaming: null }
@@ -110,11 +138,11 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 	if (streaming.text || streaming.thinking || preTools.length > 0 || streaming.usage || streaming.progress) {
 		assistantMessages.push({
 			kind: "assistant",
-            ...(streaming.usage?{usage:streaming.usage}:{}),
-            ...(streaming.progress?{progress:streaming.progress}:{}),
+			...(streaming.usage ? { usage: streaming.usage } : {}),
+			...(streaming.progress ? { progress: streaming.progress } : {}),
 			// 复用流式容器预生成的 id（key 稳定 → 不 remount，见 StreamingState.id 注释）
 			id: streaming.id,
-            cycleId:streaming.id,
+			cycleId: streaming.id,
 			text: streaming.text,
 			thinking: streaming.thinking,
 			tools: preTools,
@@ -125,7 +153,7 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 		assistantMessages.push({
 			kind: "assistant",
 			id: newMessageId(),
-            cycleId:streaming.id,
+			cycleId: streaming.id,
 			text: "",
 			thinking: "",
 			tools: postTools,
@@ -143,29 +171,77 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
  * Never read private provider state: this is the same checked event used by history/LAN.
  */
 function acceptFinalSnapshot(state: SessionTranscriptState, raw: unknown): SessionTranscriptState {
- if (!raw || typeof raw !== "object") return state;
- const message = raw as { role?: string; content?: unknown; knowledgePublication?: unknown };
- if (message.role !== "assistant" || !Array.isArray(message.content)) return state;
- // Some older callers send an empty placeholder at turn_end. Preserve their streamed text.
- if (!message.content.length && !message.knowledgePublication) {const usage=reportedUsage(raw);return usage?{...state,streaming:{...(state.streaming??emptyStreaming()),usage}}:state;}
- const blocks = message.content as Array<{ type?: string; text?: string; thinking?: string; id?: string; name?: string; arguments?: unknown }>;
- const streaming = state.streaming ?? emptyStreaming();
- const usage=reportedUsage(raw);
- const tools = [...streaming.tools];
- const progressPositions={...streaming.progressPositions};
- for (const [index,block] of blocks.entries()) {
-  if(block.type==="toolCall"&&block.id&&block.name===STATUS_TOOL_NAME){progressPositions[block.id]=index;continue;}
-  if (block.type !== "toolCall" || !block.id || !block.name || block.name === STATUS_TOOL_NAME || streaming.subagentByToolCallId[block.id]) continue;
-  const existing = tools.findIndex(t=>t.id===block.id);
-  const item = {key:existing>=0 ? tools[existing]?.key ?? newToolKey() : newToolKey(), id:block.id,name:block.name,
-   args:parseArgs(block.arguments),output:existing>=0 ? tools[existing]?.output ?? "" : "",
-   state:existing>=0 ? tools[existing]?.state ?? "running" as const : "running" as const,blockIndex:index};
-  if(existing>=0) tools[existing]={...tools[existing],...item}; else tools.push(item);
- }
- const text = blocks.filter(b=>b.type==="text").map(b=>b.text??"").join("");
- return {...state,streaming:{...streaming,text,cycleId:streaming.id,progressPositions,...(usage?{usage}:{}),
-  thinking:blocks.filter(b=>b.type==="thinking").map(b=>b.thinking??"").join(""),tools,
-  textBlockIndex:text?Math.max(0,blocks.findIndex(b=>b.type==="text")):null}};
+	if (!raw || typeof raw !== "object") return state;
+	const message = raw as { role?: string; content?: unknown; knowledgePublication?: unknown };
+	if (message.role !== "assistant" || !Array.isArray(message.content)) return state;
+	// Some older callers send an empty placeholder at turn_end. Preserve their streamed text.
+	if (!message.content.length && !message.knowledgePublication) {
+		const usage = reportedUsage(raw);
+		return usage ? { ...state, streaming: { ...(state.streaming ?? emptyStreaming()), usage } } : state;
+	}
+	const blocks = message.content as Array<{
+		type?: string;
+		text?: string;
+		thinking?: string;
+		id?: string;
+		name?: string;
+		arguments?: unknown;
+	}>;
+	const streaming = state.streaming ?? emptyStreaming();
+	const usage = reportedUsage(raw);
+	const tools = [...streaming.tools];
+	const progressPositions = { ...streaming.progressPositions };
+	for (const [index, block] of blocks.entries()) {
+		if (block.type === "toolCall" && block.id && block.name === STATUS_TOOL_NAME) {
+			progressPositions[block.id] = index;
+			continue;
+		}
+		if (
+			block.type !== "toolCall" ||
+			!block.id ||
+			!block.name ||
+			block.name === STATUS_TOOL_NAME ||
+			streaming.subagentByToolCallId[block.id]
+		)
+			continue;
+		const existing = tools.findIndex((t) => t.id === block.id);
+		const item = {
+			key: existing >= 0 ? (tools[existing]?.key ?? newToolKey()) : newToolKey(),
+			id: block.id,
+			name: block.name,
+			args: parseArgs(block.arguments),
+			output: existing >= 0 ? (tools[existing]?.output ?? "") : "",
+			state: existing >= 0 ? (tools[existing]?.state ?? ("running" as const)) : ("running" as const),
+			blockIndex: index,
+		};
+		if (existing >= 0) tools[existing] = { ...tools[existing], ...item };
+		else tools.push(item);
+	}
+	const text = blocks
+		.filter((b) => b.type === "text")
+		.map((b) => b.text ?? "")
+		.join("");
+	return {
+		...state,
+		streaming: {
+			...streaming,
+			text,
+			cycleId: streaming.id,
+			progressPositions,
+			...(usage ? { usage } : {}),
+			thinking: blocks
+				.filter((b) => b.type === "thinking")
+				.map((b) => b.thinking ?? "")
+				.join(""),
+			tools,
+			textBlockIndex: text
+				? Math.max(
+						0,
+						blocks.findIndex((b) => b.type === "text"),
+					)
+				: null,
+		},
+	};
 }
 
 /** 错误卡落地 + 清 pending（agent_end 最终失败 / agent_settled 竞底 / guard trip 共用） */
@@ -400,7 +476,9 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 					...state,
 					researchStatus: {
 						...state.researchStatus,
-						agent: text ? { text, phase: typeof args.phase === "string" ? args.phase : undefined, source: "agent" } : null,
+						agent: text
+							? { text, phase: typeof args.phase === "string" ? args.phase : undefined, source: "agent" }
+							: null,
 					},
 					streaming: removeControlTool(streaming, event.toolCallId),
 				};
@@ -467,30 +545,44 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				const next = [...subagentRuns];
 				for (const update of progress) {
 					if (
-						!update.sessionId && !update.sessionFile && !update.statusText && !update.statusPhase &&
-						!update.currentAction && !update.currentTool && update.startedAt == null &&
-						update.lastSteerAt == null && update.supervisorRequest === undefined
-					) continue;
+						!update.sessionId &&
+						!update.sessionFile &&
+						!update.statusText &&
+						!update.statusPhase &&
+						!update.currentAction &&
+						!update.currentTool &&
+						update.startedAt == null &&
+						update.lastSteerAt == null &&
+						update.supervisorRequest === undefined
+					)
+						continue;
 					const index = next.findIndex(
 						(run, i) =>
 							i >= placement.start &&
 							i < placement.start + placement.count &&
 							run.agent === update.agent &&
-							(update.task != null ? run.task === update.task : update.sessionFile != null ? run.sessionFile === update.sessionFile : false),
+							(update.task != null
+								? run.task === update.task
+								: update.sessionFile != null
+									? run.sessionFile === update.sessionFile
+									: false),
 					);
 					const current = index >= 0 ? next[index] : undefined;
-					if (current) next[index] = {
-						...current,
-						...(update.sessionId ? { sessionId: update.sessionId } : {}),
-						...(update.sessionFile ? { sessionFile: update.sessionFile } : {}),
-						...(update.statusText ? { statusText: update.statusText } : {}),
-						...(update.statusPhase ? { statusPhase: update.statusPhase } : {}),
-						...(update.currentAction !== undefined ? { currentAction: update.currentAction } : {}),
-						...(update.currentTool !== undefined ? { currentTool: update.currentTool } : {}),
-						...(update.startedAt != null ? { startedAt: update.startedAt } : {}),
-						...(update.lastSteerAt != null ? { lastSteerAt: update.lastSteerAt } : {}),
-						...(update.supervisorRequest !== undefined ? { supervisorRequest: update.supervisorRequest ?? undefined } : {}),
-					};
+					if (current)
+						next[index] = {
+							...current,
+							...(update.sessionId ? { sessionId: update.sessionId } : {}),
+							...(update.sessionFile ? { sessionFile: update.sessionFile } : {}),
+							...(update.statusText ? { statusText: update.statusText } : {}),
+							...(update.statusPhase ? { statusPhase: update.statusPhase } : {}),
+							...(update.currentAction !== undefined ? { currentAction: update.currentAction } : {}),
+							...(update.currentTool !== undefined ? { currentTool: update.currentTool } : {}),
+							...(update.startedAt != null ? { startedAt: update.startedAt } : {}),
+							...(update.lastSteerAt != null ? { lastSteerAt: update.lastSteerAt } : {}),
+							...(update.supervisorRequest !== undefined
+								? { supervisorRequest: update.supervisorRequest ?? undefined }
+								: {}),
+						};
 				}
 				subagentRuns = next;
 			}
@@ -514,16 +606,25 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 			return { ...state, streaming: { ...streaming, tools, rawToolOutputs, subagentRuns } };
 		}
 		case "tool_execution_end": {
-            if(event.toolName===STATUS_TOOL_NAME){
-                if(event.isError)return state;
-                const progress=progressDisplay((event.result as {details?:unknown})?.details);
-                if(!progress)return state;
-                const streaming=state.streaming??emptyStreaming();
-                if(streaming.cycleId&&streaming.progressPositions?.[event.toolCallId]===undefined)return state; // Stale completion from another response is not this stage.
-                const step={id:event.toolCallId,blockIndex:streaming.progressPositions?.[event.toolCallId]??(Math.max(-1,...streaming.tools.map(t=>t.blockIndex??-1))+1),progress};
-                const progressEntries=[...(streaming.progressEntries||[]).filter(item=>item.id!==step.id),step];
-                return {...state,streaming:{...streaming,progressEntries}};
-            }
+			if (event.toolName === STATUS_TOOL_NAME) {
+				if (event.isError) return state;
+				const progress = progressDisplay((event.result as { details?: unknown })?.details);
+				if (!progress) return state;
+				const streaming = state.streaming ?? emptyStreaming();
+				if (streaming.cycleId && streaming.progressPositions?.[event.toolCallId] === undefined) return state; // Stale completion from another response is not this stage.
+				const step = {
+					id: event.toolCallId,
+					blockIndex:
+						streaming.progressPositions?.[event.toolCallId] ??
+						Math.max(-1, ...streaming.tools.map((t) => t.blockIndex ?? -1)) + 1,
+					progress,
+				};
+				const progressEntries = [
+					...(streaming.progressEntries || []).filter((item) => item.id !== step.id),
+					step,
+				];
+				return { ...state, streaming: { ...streaming, progressEntries } };
+			}
 			if (state.researchStatus.host?.toolCallId === event.toolCallId) {
 				state = { ...state, researchStatus: { ...state.researchStatus, host: null } };
 			}

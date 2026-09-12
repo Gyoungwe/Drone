@@ -61,31 +61,48 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 				<button type="button" className="resource-back" onClick={showDiff}>
 					{t("resource.backToChanges")}
 				</button>
-				<span className="resource-title" title={title}>{title}</span>
-				<button type="button" className="resource-open" onClick={openExternal}>{t("resource.openExternal")}</button>
-				<button type="button" className="diff-side-close" onClick={() => setOpen(false)} aria-label={t("common.close")}>
+				<span className="resource-title" title={title}>
+					{title}
+				</span>
+				<button type="button" className="resource-open" onClick={openExternal}>
+					{t("resource.openExternal")}
+				</button>
+				<button
+					type="button"
+					className="diff-side-close"
+					onClick={() => setOpen(false)}
+					aria-label={t("common.close")}
+				>
 					<CloseIcon />
 				</button>
 			</div>
-			<div className="resource-address" title={target.href}>{target.href}</div>
+			<div className="resource-address" title={target.href}>
+				{target.href}
+			</div>
 			<div className="resource-body">
 				{web ? (
 					<iframe className="resource-frame" src={target.href} title={title} referrerPolicy="no-referrer" />
 				) : externalProtocol ? (
 					<div className="resource-empty">
 						<div>{t("resource.externalProtocol")}</div>
-						<button type="button" className="resource-primary" onClick={openExternal}>{t("resource.openExternal")}</button>
+						<button type="button" className="resource-primary" onClick={openExternal}>
+							{t("resource.openExternal")}
+						</button>
 					</div>
 				) : error ? (
 					<div className="resource-empty">
 						<div>{t("resource.previewFailed")}</div>
 						<div className="resource-error">{error}</div>
-						<button type="button" className="resource-primary" onClick={openExternal}>{t("resource.openExternal")}</button>
+						<button type="button" className="resource-primary" onClick={openExternal}>
+							{t("resource.openExternal")}
+						</button>
 					</div>
 				) : !result ? (
 					<div className="resource-empty">{t("resource.loading")}</div>
 				) : result.kind === "image" && src ? (
-					<div className="resource-media"><img src={src} alt={result.name} /></div>
+					<div className="resource-media">
+						<img src={src} alt={result.name} />
+					</div>
 				) : result.kind === "pdf" && src ? (
 					<iframe className="resource-frame" src={src} title={result.name} />
 				) : result.kind === "text" ? (
@@ -96,7 +113,9 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 			</div>
 			{result && (
 				<div className="resource-meta">
-					<span>{result.name}</span><span>{formatBytes(result.size)}</span><span>{result.mimeType}</span>
+					<span>{result.name}</span>
+					<span>{formatBytes(result.size)}</span>
+					<span>{result.mimeType}</span>
 					{result.truncated && <span>{t("resource.truncated")}</span>}
 				</div>
 			)}

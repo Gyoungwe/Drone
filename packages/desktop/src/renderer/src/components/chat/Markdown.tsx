@@ -1,8 +1,8 @@
 import { knowledgeLinksForDisplay, parseKnowledgeHref } from "@percho/shared";
+import MarkdownRender, { type SmoothMarkdownStreamOptions } from "markstream-react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { reportKnowledgeError } from "../knowledge/hooks";
-import MarkdownRender, { type SmoothMarkdownStreamOptions } from "markstream-react";
 import "markstream-react/index.css";
 import { type MouseEvent, useCallback, useMemo, useRef } from "react";
 import { useSessionsStore } from "../../stores/sessions";
@@ -75,22 +75,33 @@ export function Markdown({ text, streaming }: { text: string; streaming?: boolea
 	const isDark = useThemeStore((s) => s.resolved === "dark");
 	const cwd = useSessionsStore((s) => s.cwd);
 	const openResourcePreview = useUiStore((s) => s.openResourcePreview);
- const displayText=useMemo(()=>knowledgeLinksForDisplay(text),[text]);
+	const displayText = useMemo(() => knowledgeLinksForDisplay(text), [text]);
 	const handleClick = useCallback(
 		(event: MouseEvent<HTMLDivElement>) => {
 			const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
 			if (!(target instanceof HTMLAnchorElement)) return;
 			const href = target.getAttribute("href");
 			if (!href) return;
-            const notePath=parseKnowledgeHref(href);
-            if(notePath){
-             event.preventDefault();event.stopPropagation();
-             void getPi().getKnowledgeOverview({cwd}).then(overview=>{
-              if(!overview.binding)throw new Error("No knowledge Vault is bound");
-              useKnowledgeStore.getState().open({cwd,sessionId:useSessionsStore.getState().activeSessionId,tab:"overview",note:notePath,noteRevision:overview.binding.revision});
-             }).catch(reportKnowledgeError);return;
-            }
-            if(href.startsWith("#"))return;
+			const notePath = parseKnowledgeHref(href);
+			if (notePath) {
+				event.preventDefault();
+				event.stopPropagation();
+				void getPi()
+					.getKnowledgeOverview({ cwd })
+					.then((overview) => {
+						if (!overview.binding) throw new Error("No knowledge Vault is bound");
+						useKnowledgeStore.getState().open({
+							cwd,
+							sessionId: useSessionsStore.getState().activeSessionId,
+							tab: "overview",
+							note: notePath,
+							noteRevision: overview.binding.revision,
+						});
+					})
+					.catch(reportKnowledgeError);
+				return;
+			}
+			if (href.startsWith("#")) return;
 			event.preventDefault();
 			event.stopPropagation();
 			openResourcePreview({

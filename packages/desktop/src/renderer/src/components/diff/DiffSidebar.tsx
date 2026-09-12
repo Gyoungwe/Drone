@@ -154,61 +154,61 @@ export function DiffSidebar() {
 					<ResourceSidebar target={resourcePreview} />
 				) : (
 					<>
-				<div className="diff-side-head">
-					<span className="diff-side-title">{t("diff.title")}</span>
-					<span className="diff-side-sum">
-						{t("diff.filesSummary", { count: totalFiles })} ·{" "}
-						<span className="turn-diff-added">+{totalAdded}</span>{" "}
-						<span className="turn-diff-removed">−{totalRemoved}</span>
-					</span>
-					<div className="diff-seg" role="tablist">
-						<button type="button" className={scope === "all" ? "on" : ""} onClick={() => setScope("all")}>
-							{t("diff.scopeAll")}
-						</button>
-						<button
-							type="button"
-							className={scope === "latest" ? "on" : ""}
-							onClick={() => setScope("latest")}
-						>
-							{t("diff.scopeLatest")}
-						</button>
-					</div>
-					<button
-						type="button"
-						className="diff-side-close"
-						onClick={() => setOpen(false)}
-						aria-label={t("common.close")}
-					>
-						<CloseIcon />
-					</button>
-				</div>
-				<BranchRow />
-				<RegionHost region={UI_REGIONS.DiffSidebar} />
-				<div className="diff-side-scroll" ref={bodyRef}>
-					{totalFiles === 0 ? (
-						<div className="diff-side-empty">{t("diff.empty")}</div>
-					) : (
-						groups.map((tc, gi) => (
-							<div className="diff-turn-group" key={tc.turnIndex}>
-								<div className="diff-tg-head">
-									<span className="diff-tg-title">{t("diff.turnLabel", { n: tc.turnIndex + 1 })}</span>
-									<span className="diff-tg-sum">
-										<span className="turn-diff-added">+{tc.totalAdded}</span>{" "}
-										<span className="turn-diff-removed">−{tc.totalRemoved}</span>
-									</span>
-								</div>
-								{tc.files.map((f, fi) => (
-									<DiffFileCard
-										key={`${tc.turnIndex}:${f.path}`}
-										file={f}
-										/* 默认只展开「最近一轮组的第一张卡」，其余收起 */
-										defaultOpen={gi === 0 && fi === 0}
-									/>
-								))}
+						<div className="diff-side-head">
+							<span className="diff-side-title">{t("diff.title")}</span>
+							<span className="diff-side-sum">
+								{t("diff.filesSummary", { count: totalFiles })} ·{" "}
+								<span className="turn-diff-added">+{totalAdded}</span>{" "}
+								<span className="turn-diff-removed">−{totalRemoved}</span>
+							</span>
+							<div className="diff-seg" role="tablist">
+								<button type="button" className={scope === "all" ? "on" : ""} onClick={() => setScope("all")}>
+									{t("diff.scopeAll")}
+								</button>
+								<button
+									type="button"
+									className={scope === "latest" ? "on" : ""}
+									onClick={() => setScope("latest")}
+								>
+									{t("diff.scopeLatest")}
+								</button>
 							</div>
-						))
-					)}
-				</div>
+							<button
+								type="button"
+								className="diff-side-close"
+								onClick={() => setOpen(false)}
+								aria-label={t("common.close")}
+							>
+								<CloseIcon />
+							</button>
+						</div>
+						<BranchRow />
+						<RegionHost region={UI_REGIONS.DiffSidebar} />
+						<div className="diff-side-scroll" ref={bodyRef}>
+							{totalFiles === 0 ? (
+								<div className="diff-side-empty">{t("diff.empty")}</div>
+							) : (
+								groups.map((tc, gi) => (
+									<div className="diff-turn-group" key={tc.turnIndex}>
+										<div className="diff-tg-head">
+											<span className="diff-tg-title">{t("diff.turnLabel", { n: tc.turnIndex + 1 })}</span>
+											<span className="diff-tg-sum">
+												<span className="turn-diff-added">+{tc.totalAdded}</span>{" "}
+												<span className="turn-diff-removed">−{tc.totalRemoved}</span>
+											</span>
+										</div>
+										{tc.files.map((f, fi) => (
+											<DiffFileCard
+												key={`${tc.turnIndex}:${f.path}`}
+												file={f}
+												/* 默认只展开「最近一轮组的第一张卡」，其余收起 */
+												defaultOpen={gi === 0 && fi === 0}
+											/>
+										))}
+									</div>
+								))
+							)}
+						</div>
 					</>
 				)}
 			</div>

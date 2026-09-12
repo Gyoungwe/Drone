@@ -122,3 +122,11 @@ Do not assume `rg` or `apply_patch` is installed. Prefer the supplied read/write
 ## Public execution timeline
 
 For each meaningful stage, provide a brief user-facing plan with `set_status(kind=plan or update, text, detail, next)` before its associated tool calls. After examining their results, provide `kind=summary` with observed findings, failures or remaining gaps before starting the next stage. The UI orders these successful public summaries by their declared tool-call positions, even when parallel tools finish out of order. Do not expose raw private chain-of-thought, manufacture intermediate summaries for old work, repeat empty status calls, or imply that a public progress statement is a verified final answer. Final scientific claims still go through the publication check.
+
+## User-delegated model review
+
+The Wiki review UI also offers **模型自动审核** for one selected candidate. It is not an agent tool and must never be called or authorized on the user's behalf. The user first acknowledges the separate model request; default is advice only. A separate unchecked-by-default option may authorize host application of this exact candidate if the independent reviewer and all host checks pass. This is not a persistent background policy.
+
+The reviewer sees only the exact candidate, protected human text and recorded source ranges. It cannot search, write, approve through a tool, or borrow the main conversation's context. Missing evidence, unresolved cautions, version changes and cancellation prevent automatic application. Records distinguish `reviewMethod=model`, `humanReviewed=false` and `scientificallyVerified=false`; do not describe model-approved knowledge as human-verified or scientifically proven.
+
+A clean installation ships first-party `research-vault`, `research-workflow` and `research-show-me`. Prefer the user's loaded `show-me` when available, otherwise identify the bundled research-show-me fallback honestly. User-installed third-party skills, MCP credentials and literature subscriptions are not included in a release.

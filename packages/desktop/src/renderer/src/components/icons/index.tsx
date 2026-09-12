@@ -640,6 +640,12 @@ export function ClockIcon({ size = 12, className }: IconProps) {
 }
 
 /** Faceted crystal shortcut for the Obsidian knowledge workspace. */
-export function ObsidianIcon({size=16,className}:IconProps){
- return <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true"><path fill="currentColor" d="M14 2 5 7 3 16l6 6 10-4 2-10z"/><path fill="white" opacity=".24" d="m14 2-5 8 10 8 2-10z"/><path fill="white" opacity=".4" d="m9 10-4-3-2 9 6 6z"/></svg>;
+export function ObsidianIcon({ size = 16, className }: IconProps) {
+	return (
+		<svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+			<path fill="currentColor" d="M14 2 5 7 3 16l6 6 10-4 2-10z" />
+			<path fill="white" opacity=".24" d="m14 2-5 8 10 8 2-10z" />
+			<path fill="white" opacity=".4" d="m9 10-4-3-2 9 6 6z" />
+		</svg>
+	);
 }

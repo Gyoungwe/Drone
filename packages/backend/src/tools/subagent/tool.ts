@@ -5,8 +5,8 @@ import type {
 	ModelRuntime,
 	ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import { type Static, Type } from "typebox";
 import { normalizeSubagentLaunchInputs } from "@percho/shared";
+import { type Static, Type } from "typebox";
 import type { PermissionGate } from "../../permissions/gate";
 import type { SessionTraces } from "../../session/traces";
 import { discoverAgents, findAgent } from "./agents";
@@ -54,10 +54,13 @@ export interface MakeSubagentToolDeps {
 	traces: SessionTraces;
 	/** 把运行中子会话事件转发给桌面会话订阅方。 */
 	onEvent?: (sessionId: string, event: AgentSessionEvent) => void;
-	registerLiveChild?: (sessionId: string, control: {
-		steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
-		reply: (requestId: string, message: string) => boolean;
-	}) => () => void;
+	registerLiveChild?: (
+		sessionId: string,
+		control: {
+			steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
+			reply: (requestId: string, message: string) => boolean;
+		},
+	) => () => void;
 }
 
 interface SubagentDetails {
@@ -174,7 +177,9 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 			// 原 Union 的互斥约束运行时兜底：tasks 非空 → parallel，否则 agent+task 必填
 			const normalized = normalizeSubagentLaunchInputs(params);
 			if (normalized.length === 0 || normalized.some((item) => !item.task)) {
-				throw new Error('Missing "agent"/"task": pass { agent, task }, { tasks: [...] }, or both for merged fanout');
+				throw new Error(
+					'Missing "agent"/"task": pass { agent, task }, { tasks: [...] }, or both for merged fanout',
+				);
 			}
 			const tasks = normalized as Array<Static<typeof taskSchema>>;
 			const mode: SubagentDetails["mode"] = tasks.length > 1 ? "parallel" : "single";

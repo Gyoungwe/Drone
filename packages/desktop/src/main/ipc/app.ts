@@ -12,15 +12,50 @@ import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
 import { checkForUpdates, downloadUpdate, installUpdate } from "../updater";
 
-
 const TEXT_EXTENSIONS = new Set([
-	".txt", ".md", ".mdx", ".json", ".jsonl", ".yaml", ".yml", ".toml", ".csv", ".tsv",
-	".js", ".jsx", ".ts", ".tsx", ".css", ".scss", ".html", ".htm", ".xml", ".svg", ".py",
-	".r", ".go", ".rs", ".java", ".c", ".h", ".cpp", ".hpp", ".sh", ".zsh", ".fish", ".sql",
+	".txt",
+	".md",
+	".mdx",
+	".json",
+	".jsonl",
+	".yaml",
+	".yml",
+	".toml",
+	".csv",
+	".tsv",
+	".js",
+	".jsx",
+	".ts",
+	".tsx",
+	".css",
+	".scss",
+	".html",
+	".htm",
+	".xml",
+	".svg",
+	".py",
+	".r",
+	".go",
+	".rs",
+	".java",
+	".c",
+	".h",
+	".cpp",
+	".hpp",
+	".sh",
+	".zsh",
+	".fish",
+	".sql",
 ]);
 const IMAGE_MIME: Record<string, string> = {
-	".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
-	".webp": "image/webp", ".bmp": "image/bmp", ".ico": "image/x-icon", ".svg": "image/svg+xml",
+	".png": "image/png",
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".gif": "image/gif",
+	".webp": "image/webp",
+	".bmp": "image/bmp",
+	".ico": "image/x-icon",
+	".svg": "image/svg+xml",
 };
 const TEXT_PREVIEW_LIMIT = 2 * 1024 * 1024;
 const BINARY_PREVIEW_LIMIT = 16 * 1024 * 1024;
@@ -42,7 +77,7 @@ function resolveResourcePath(target: string, cwd?: string): string {
 }
 
 /** 项目仓库地址（帮助跳转 + 关于页） */
-const REPO_URL = "https://github.com/Jaxton07/percho";
+const REPO_URL = "https://github.com/Gyoungwe/percho";
 
 /**
  * 应用域：窗口级功能（不依赖 PiBackend 会话状态的部分也在此，backend 参数仅为对齐签名）。
@@ -54,7 +89,11 @@ export function registerAppIpc(_backend: PiBackend): void {
 		if (typeof url === "string" && /^https?:\/\//.test(url)) return shell.openExternal(url);
 	});
 	ipcMain.handle(IpcChannels.FilePreview, async (_e, target: string, cwd?: string) => {
-		if (typeof target !== "string" || !target || (/^[a-z][a-z0-9+.-]*:/i.test(target) && !target.startsWith("file://"))) {
+		if (
+			typeof target !== "string" ||
+			!target ||
+			(/^[a-z][a-z0-9+.-]*:/i.test(target) && !target.startsWith("file://"))
+		) {
 			throw new Error("not a local file target");
 		}
 		const path = resolveResourcePath(target, cwd);
@@ -64,19 +103,44 @@ export function registerAppIpc(_backend: PiBackend): void {
 		const mimeType = IMAGE_MIME[ext] ?? (ext === ".pdf" ? "application/pdf" : "text/plain");
 		if (ext === ".svg" || TEXT_EXTENSIONS.has(ext)) {
 			const bytes = await readPrefix(path, TEXT_PREVIEW_LIMIT);
-			return { path, name: basename(path), mimeType, size: info.size, kind: ext === ".svg" ? "image" : "text",
+			return {
+				path,
+				name: basename(path),
+				mimeType,
+				size: info.size,
+				kind: ext === ".svg" ? "image" : "text",
 				...(ext === ".svg" ? { data: bytes.toString("base64") } : { text: bytes.toString("utf-8") }),
-				truncated: info.size > bytes.length };
+				truncated: info.size > bytes.length,
+			};
 		}
 		if (IMAGE_MIME[ext] || ext === ".pdf") {
 			if (info.size > BINARY_PREVIEW_LIMIT) {
-				return { path, name: basename(path), mimeType, size: info.size, kind: ext === ".pdf" ? "pdf" : "image", truncated: true };
+				return {
+					path,
+					name: basename(path),
+					mimeType,
+					size: info.size,
+					kind: ext === ".pdf" ? "pdf" : "image",
+					truncated: true,
+				};
 			}
 			const bytes = await readPrefix(path, BINARY_PREVIEW_LIMIT);
-			return { path, name: basename(path), mimeType, size: info.size, kind: ext === ".pdf" ? "pdf" : "image",
-				data: bytes.toString("base64") };
+			return {
+				path,
+				name: basename(path),
+				mimeType,
+				size: info.size,
+				kind: ext === ".pdf" ? "pdf" : "image",
+				data: bytes.toString("base64"),
+			};
 		}
-		return { path, name: basename(path), mimeType: "application/octet-stream", size: info.size, kind: "binary" };
+		return {
+			path,
+			name: basename(path),
+			mimeType: "application/octet-stream",
+			size: info.size,
+			kind: "binary",
+		};
 	});
 	ipcMain.handle(IpcChannels.ResourceOpenExternal, async (_e, target: string, cwd?: string) => {
 		if (typeof target !== "string" || !target) return;

@@ -1,12 +1,15 @@
-import { withNativeSubagentSlot } from "./slots";
-import { KNOWLEDGE_SPECIALISTS } from "@percho/shared";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { Model } from "@earendil-works/pi-ai";
-import type { AgentSessionEvent, AgentToolResult, ModelRuntime, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type {
+	AgentSessionEvent,
+	AgentToolResult,
+	ModelRuntime,
+	ToolDefinition,
+} from "@earendil-works/pi-coding-agent";
 import {
 	createAgentSession,
 	DefaultResourceLoader,
@@ -14,15 +17,17 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import { PROTECTED_KNOWLEDGE_AGENTS } from "@percho/shared";
+import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
+import { projectKnowledgeEvent } from "../../session/knowledge-publication";
 import type { SessionTraces } from "../../session/traces";
 import { makeUiContext } from "../../session/ui-context";
-import { projectKnowledgeEvent } from "../../session/knowledge-publication";
 import { makeStatusTool } from "../status";
 import { makeWebFetchTool } from "../webfetch";
-import { Type } from "typebox";
 import type { SubagentDefinition, SubagentMcpAccess } from "./agents";
+import { withNativeSubagentSlot } from "./slots";
 
 export interface SubagentUsage {
 	input: number;
@@ -80,10 +85,13 @@ export interface RunSubagentDeps {
 	/** 把运行中子会话事件转发给宿主；未提供时只写 trace（供非桌面宿主使用）。 */
 	onEvent?: (sessionId: string, event: AgentSessionEvent) => void;
 	/** Register/unregister a live child so the host can steer it or answer supervisor requests. */
-	registerLiveChild?: (sessionId: string, control: {
-		steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
-		reply: (requestId: string, message: string) => boolean;
-	}) => () => void;
+	registerLiveChild?: (
+		sessionId: string,
+		control: {
+			steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
+			reply: (requestId: string, message: string) => boolean;
+		},
+	) => () => void;
 }
 
 const EMPTY_USAGE: SubagentUsage = {
@@ -213,7 +221,7 @@ function firstString(args: Record<string, unknown>, keys: string[]): string | un
 
 /** Observable activity only: derived from tool name/arguments, never hidden reasoning. */
 export function describeSubagentActivity(toolName: string, args: Record<string, unknown>): string {
-	const nested = args.args && typeof args.args === "object" ? args.args as Record<string, unknown> : {};
+	const nested = args.args && typeof args.args === "object" ? (args.args as Record<string, unknown>) : {};
 	const visibleArgs = { ...nested, ...args };
 	const descriptor = `${toolName} ${JSON.stringify(args)}`.toLowerCase();
 	if (toolName === "read") {
@@ -224,11 +232,19 @@ export function describeSubagentActivity(toolName: string, args: Record<string, 
 		const command = firstString(visibleArgs, ["command", "cmd"]);
 		return command ? `正在运行命令：${command}` : "正在运行命令";
 	}
-	if (descriptor.includes("research-zotero") || descriptor.includes("research_zotero") || descriptor.includes("zotero")) {
+	if (
+		descriptor.includes("research-zotero") ||
+		descriptor.includes("research_zotero") ||
+		descriptor.includes("zotero")
+	) {
 		const query = firstString(visibleArgs, ["query", "q", "search", "search_text", "text"]);
 		return query ? `正在检索 Zotero：“${query}”` : "正在检索 Zotero 文献库";
 	}
-	if (descriptor.includes("research-obsidian") || descriptor.includes("research_obsidian") || descriptor.includes("obsidian")) {
+	if (
+		descriptor.includes("research-obsidian") ||
+		descriptor.includes("research_obsidian") ||
+		descriptor.includes("obsidian")
+	) {
 		const query = firstString(visibleArgs, ["query", "q", "search", "text", "path"]);
 		return query ? `正在检索 Obsidian：“${query}”` : "正在检索 Obsidian 知识库";
 	}
@@ -256,7 +272,6 @@ const supervisorParams = Type.Object({
 	message: Type.String({ minLength: 1, maxLength: 2000 }),
 });
 
-
 export async function resolveSubagentMcpAccess(
 	cwd: string,
 	agent: Pick<SubagentDefinition, "mcpAccess">,
@@ -266,10 +281,14 @@ export async function resolveSubagentMcpAccess(
 	let workspacePolicy: SubagentMcpAccess = "none";
 	try {
 		if (process.env.PERCHO_KNOWLEDGE_DIR) {
-			const binding = JSON.parse(await readFile(join(process.env.PERCHO_KNOWLEDGE_DIR, "binding.json"), "utf8")) as { version?: number; subagentPolicy?: unknown };
+			const binding = JSON.parse(
+				await readFile(join(process.env.PERCHO_KNOWLEDGE_DIR, "binding.json"), "utf8"),
+			) as { version?: number; subagentPolicy?: unknown };
 			if (binding.version === 1 && binding.subagentPolicy === "read-local") workspacePolicy = "read-local";
 		} else {
-			const raw = JSON.parse(await readFile(join(cwd, ".pi", "research-workspace.json"), "utf8")) as { subagentMcpPolicy?: unknown };
+			const raw = JSON.parse(await readFile(join(cwd, ".pi", "research-workspace.json"), "utf8")) as {
+				subagentMcpPolicy?: unknown;
+			};
 			if (raw.subagentMcpPolicy === "read-local") workspacePolicy = "read-local";
 		}
 	} catch {
@@ -281,12 +300,14 @@ export async function resolveSubagentMcpAccess(
 
 /** 在共享 ModelRuntime 上运行一个隔离的、深度固定为 1 的子会话。 */
 export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput): Promise<SingleResult> {
-	if (KNOWLEDGE_SPECIALISTS.some(agent => agent.name === input.agent.name))
-		throw new Error("Knowledge specialists use research_delegate_knowledge and its capability broker, not the generic subagent runner");
-	return withNativeSubagentSlot(input.cwd,input.signal,()=>runSubagentInSlot(deps,input));
+	if (PROTECTED_KNOWLEDGE_AGENTS.some((agent) => agent.name === input.agent.name))
+		throw new Error(
+			"Knowledge specialists use research_delegate_knowledge and its capability broker, not the generic subagent runner",
+		);
+	return withNativeSubagentSlot(input.cwd, input.signal, () => runSubagentInSlot(deps, input));
 }
 
-async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Promise<SingleResult> {
+async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput): Promise<SingleResult> {
 	const runtime = await deps.getModelRuntime();
 	const model = await resolveSubagentModel(
 		runtime,
@@ -302,7 +323,10 @@ async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Pr
 		projectTrusted: input.projectTrusted,
 	});
 	const safeTools = input.agent.tools.filter((name) => name !== "subagent" && !name.startsWith("subagent_"));
-	const pendingSupervisor = new Map<string, { resolve: (message: string) => void; reject: (error: Error) => void }>();
+	const pendingSupervisor = new Map<
+		string,
+		{ resolve: (message: string) => void; reject: (error: Error) => void }
+	>();
 	let resultRef: SingleResult | undefined;
 	const contactSupervisorTool: ToolDefinition<typeof supervisorParams> = {
 		name: "contact_supervisor",
@@ -322,7 +346,10 @@ async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Pr
 				input.onProgress?.(resultRef);
 			}
 			if (!expectsReply) {
-				return { content: [{ type: "text", text: "Progress update delivered to the supervisor." }], details: { requestId: id, reason: params.reason } };
+				return {
+					content: [{ type: "text", text: "Progress update delivered to the supervisor." }],
+					details: { requestId: id, reason: params.reason },
+				};
 			}
 			const reply = await new Promise<string>((resolveReply, rejectReply) => {
 				pendingSupervisor.set(id, { resolve: resolveReply, reject: rejectReply });
@@ -339,16 +366,18 @@ async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Pr
 				resultRef.currentTool = "";
 				input.onProgress?.(resultRef);
 			}
-			return { content: [{ type: "text", text: `Supervisor reply: ${reply}` }], details: { requestId: id, reason: params.reason } };
+			return {
+				content: [{ type: "text", text: `Supervisor reply: ${reply}` }],
+				details: { requestId: id, reason: params.reason },
+			};
 		},
 	};
 	const customTools: ToolDefinition[] = [makeStatusTool(), contactSupervisorTool];
 	if (safeTools.includes("webfetch")) customTools.push(makeWebFetchTool());
 	const mcpAccess = await resolveSubagentMcpAccess(input.cwd, input.agent, input.projectTrusted);
 	const readonlyMcpExtension = process.env.PERCHO_RESEARCH_WORKBENCH_ROOT
-		? join(process.env.PERCHO_RESEARCH_WORKBENCH_ROOT, "extensions", "subagent-mcp-readonly.mjs") : fileURLToPath(
-		new URL("../../../../../.pi/extensions/subagent-mcp-readonly.mjs", import.meta.url),
-	);
+		? join(process.env.PERCHO_RESEARCH_WORKBENCH_ROOT, "extensions", "subagent-mcp-readonly.mjs")
+		: fileURLToPath(new URL("../../../../../.pi/extensions/subagent-mcp-readonly.mjs", import.meta.url));
 	const childExtensionFactories = [
 		makePermissionGateExtension(agentDir, {
 			projectRoot: input.cwd,
@@ -356,7 +385,7 @@ async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Pr
 		}),
 	];
 	if (mcpAccess === "read-local" && existsSync(readonlyMcpExtension)) {
-		const readonlyMcp = await import(pathToFileURL(readonlyMcpExtension).href) as {
+		const readonlyMcp = (await import(pathToFileURL(readonlyMcpExtension).href)) as {
 			makeSubagentReadonlyMcp: (cwd: string) => (pi: unknown) => void;
 		};
 		childExtensionFactories.push(readonlyMcp.makeSubagentReadonlyMcp(input.cwd) as never);
@@ -365,10 +394,16 @@ async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Pr
 		const modulePath = process.env.PERCHO_RESEARCH_WORKBENCH_ROOT
 			? join(process.env.PERCHO_RESEARCH_WORKBENCH_ROOT, "lib", "knowledge", "publication.mjs")
 			: fileURLToPath(new URL("../../../../../.pi/lib/knowledge/publication.mjs", import.meta.url));
-		const publication = await import(pathToFileURL(modulePath).href) as {
-			registerAnswerPublication: (pi: unknown, options: { getCurrent: () => null; evidenceOnly: boolean }) => { begin(required: boolean): void };
+		const publication = (await import(pathToFileURL(modulePath).href)) as {
+			registerAnswerPublication: (
+				pi: unknown,
+				options: { getCurrent: () => null; evidenceOnly: boolean },
+			) => { begin(required: boolean): void };
 		};
-		childExtensionFactories.push(((pi: unknown) => publication.registerAnswerPublication(pi, { getCurrent: () => null, evidenceOnly: true }).begin(false)) as never);
+		childExtensionFactories.push(((pi: unknown) =>
+			publication
+				.registerAnswerPublication(pi, { getCurrent: () => null, evidenceOnly: true })
+				.begin(false)) as never);
 	}
 	const resourceLoader = new DefaultResourceLoader({
 		cwd: input.cwd,
@@ -458,7 +493,10 @@ async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Pr
 				if (event.toolName === "set_status") {
 					const text = typeof args.text === "string" ? args.text.replace(/\s+/g, " ").trim() : "";
 					if (text) {
-						agentStatus = { text: [...text].slice(0, 30).join(""), phase: typeof args.phase === "string" ? args.phase : undefined };
+						agentStatus = {
+							text: [...text].slice(0, 30).join(""),
+							phase: typeof args.phase === "string" ? args.phase : undefined,
+						};
 						publishStatus();
 					}
 				} else if (event.toolName !== "contact_supervisor") {
@@ -466,15 +504,16 @@ async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Pr
 					result.currentAction = describeSubagentActivity(event.toolName, args);
 					input.onProgress?.(result);
 					const descriptor = `${event.toolName} ${JSON.stringify(args)}`.toLowerCase();
-					const inferred = descriptor.includes("research-zotero") || descriptor.includes("research_zotero")
-						? { text: "正在检索 Zotero 文献库…", phase: "literature-search" }
-						: descriptor.includes("research-obsidian") || descriptor.includes("research_obsidian")
-							? { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" }
-							: descriptor.includes("web_search") || descriptor.includes("web-search")
-								? { text: "正在联网检索相关研究…", phase: "web-search" }
-								: descriptor.includes("fetch")
-									? { text: "正在读取并核对原始来源…", phase: "reading" }
-									: null;
+					const inferred =
+						descriptor.includes("research-zotero") || descriptor.includes("research_zotero")
+							? { text: "正在检索 Zotero 文献库…", phase: "literature-search" }
+							: descriptor.includes("research-obsidian") || descriptor.includes("research_obsidian")
+								? { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" }
+								: descriptor.includes("web_search") || descriptor.includes("web-search")
+									? { text: "正在联网检索相关研究…", phase: "web-search" }
+									: descriptor.includes("fetch")
+										? { text: "正在读取并核对原始来源…", phase: "reading" }
+										: null;
 					if (inferred) {
 						hostStatus = { ...inferred, toolCallId: event.toolCallId };
 						publishStatus();
@@ -485,7 +524,11 @@ async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Pr
 				hostStatus = null;
 				publishStatus();
 			}
-			if (event.type === "tool_execution_end" && result.currentTool === event.toolName && event.toolName !== "contact_supervisor") {
+			if (
+				event.type === "tool_execution_end" &&
+				result.currentTool === event.toolName &&
+				event.toolName !== "contact_supervisor"
+			) {
 				result.currentTool = "";
 				result.currentAction = agentStatus?.text ?? "正在继续任务";
 				input.onProgress?.(result);
@@ -533,7 +576,8 @@ async function runSubagentInSlot(deps:RunSubagentDeps,input:RunSubagentInput):Pr
 	} finally {
 		unsubscribeEvents?.();
 		unregisterLiveChild?.();
-		for (const pending of pendingSupervisor.values()) pending.reject(new Error("Subagent finished before supervisor reply"));
+		for (const pending of pendingSupervisor.values())
+			pending.reject(new Error("Subagent finished before supervisor reply"));
 		pendingSupervisor.clear();
 		input.signal?.removeEventListener("abort", abort);
 		await deps.traces.stop(session.sessionId);

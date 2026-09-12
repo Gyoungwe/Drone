@@ -1773,7 +1773,9 @@ code {
 	padding: 4px 7px;
 	font-size: 11px;
 	color: var(--color-ink-dim);
-	transition: background-color 0.15s, color 0.15s;
+	transition:
+		background-color 0.15s,
+		color 0.15s;
 }
 .resource-back:hover,
 .resource-open:hover {
@@ -1833,7 +1835,13 @@ code {
 	padding: 14px;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
-	font: 11.5px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font:
+		11.5px / 1.65 ui-monospace,
+		SFMono-Regular,
+		Menlo,
+		Monaco,
+		Consolas,
+		monospace;
 	color: var(--color-ink-2);
 	user-select: text;
 }
@@ -1859,7 +1867,13 @@ code {
 .resource-error {
 	max-width: 100%;
 	overflow-wrap: anywhere;
-	font: 10.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font:
+		10.5px / 1.5 ui-monospace,
+		SFMono-Regular,
+		Menlo,
+		Monaco,
+		Consolas,
+		monospace;
 	color: var(--color-err);
 }
 .resource-meta {

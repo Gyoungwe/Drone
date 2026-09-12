@@ -5,11 +5,16 @@ export type AskRequestSender = (request: AskRequest) => boolean;
 
 export class AskGate {
 	private sessionId = "";
-	private readonly pending = new Map<string, { resolve: (response: AskResponse) => void; cleanup: () => void }>();
+	private readonly pending = new Map<
+		string,
+		{ resolve: (response: AskResponse) => void; cleanup: () => void }
+	>();
 
 	constructor(private readonly send: AskRequestSender) {}
 
-	bindSession(sessionId: string): void { this.sessionId = sessionId; }
+	bindSession(sessionId: string): void {
+		this.sessionId = sessionId;
+	}
 
 	ask(input: Omit<AskRequest, "id" | "sessionId">, signal?: AbortSignal): Promise<AskResponse> {
 		if (!this.sessionId) throw new Error("Ask UI is not bound to a session");

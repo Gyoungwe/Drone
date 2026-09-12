@@ -111,12 +111,37 @@ export function MessageItem({
 				</div>
 			);
 		case "assistant":
-            if(message.progress&&!message.text)return <aside className="m-assistant" data-testid="progress-note" style={{borderLeft:'2px solid currentColor',padding:'8px 12px',fontSize:12,overflowWrap:'anywhere'}}>
-                <div style={{opacity:.65,fontSize:10}}>{t(message.progress.kind==='summary'?'stage.summary':message.progress.kind==='update'?'stage.update':'stage.plan')}</div>
-                <strong>{message.progress.text}</strong>
-                {message.progress.detail&&<p>{message.progress.detail}</p>}
-                {message.progress.next&&<p>{t('stage.next')}{message.progress.next}</p>}
-            </aside>;
+			if (message.progress && !message.text)
+				return (
+					<aside
+						className="m-assistant"
+						data-testid="progress-note"
+						style={{
+							borderLeft: "2px solid currentColor",
+							padding: "8px 12px",
+							fontSize: 12,
+							overflowWrap: "anywhere",
+						}}
+					>
+						<div style={{ opacity: 0.65, fontSize: 10 }}>
+							{t(
+								message.progress.kind === "summary"
+									? "stage.summary"
+									: message.progress.kind === "update"
+										? "stage.update"
+										: "stage.plan",
+							)}
+						</div>
+						<strong>{message.progress.text}</strong>
+						{message.progress.detail && <p>{message.progress.detail}</p>}
+						{message.progress.next && (
+							<p>
+								{t("stage.next")}
+								{message.progress.next}
+							</p>
+						)}
+					</aside>
+				);
 			return (
 				<div className={`m-assistant${cls}`}>
 					{!metaInGroup && <ThinkingBlock text={message.thinking} />}

@@ -48,7 +48,15 @@ function phaseLabel(t: ReturnType<typeof useT>, phase?: string): string | null {
 	return key ? t(key) : phase;
 }
 
-function InlineMessage({ message, streaming, metaInGroup }: { message: UIMessage; streaming?: boolean; metaInGroup?: boolean }) {
+function InlineMessage({
+	message,
+	streaming,
+	metaInGroup,
+}: {
+	message: UIMessage;
+	streaming?: boolean;
+	metaInGroup?: boolean;
+}) {
 	const t = useT();
 	if (message.kind === "user") return <UserMessage message={message} />;
 	if (message.kind === "assistant") {
@@ -63,7 +71,8 @@ function InlineMessage({ message, streaming, metaInGroup }: { message: UIMessage
 		);
 	}
 	if (message.kind === "system") return <SystemMessage message={message} />;
-	if (message.kind === "error") return <ErrorNote sessionId={null} cardId={message.id} error={message.error} />;
+	if (message.kind === "error")
+		return <ErrorNote sessionId={null} cardId={message.id} error={message.error} />;
 	if (message.kind === "image") {
 		return (
 			<div className="flex flex-wrap gap-2">
@@ -80,7 +89,11 @@ function InlineMessage({ message, streaming, metaInGroup }: { message: UIMessage
 		);
 	}
 	if (message.kind === "subagent") {
-		return <div className="text-[11px] text-ink-faint">{t("message.summarySubagents", { n: message.runs.length })}</div>;
+		return (
+			<div className="text-[11px] text-ink-faint">
+				{t("message.summarySubagents", { n: message.runs.length })}
+			</div>
+		);
 	}
 	return null;
 }
@@ -124,10 +137,16 @@ function InlineSubagentTranscript({ run }: { run: SubagentRunUi }) {
 	);
 
 	if (loading && rows.length === 0) {
-		return <div className="px-3 py-3 text-[11px] text-ink-faint">{t("message.subagent.loadingTranscript")}</div>;
+		return (
+			<div className="px-3 py-3 text-[11px] text-ink-faint">{t("message.subagent.loadingTranscript")}</div>
+		);
 	}
 	if (error && rows.length === 0) {
-		return <div className="px-3 py-3 text-[11px] text-err">{t("message.subagent.transcriptError")}: {error}</div>;
+		return (
+			<div className="px-3 py-3 text-[11px] text-err">
+				{t("message.subagent.transcriptError")}: {error}
+			</div>
+		);
 	}
 	if (rows.length === 0) {
 		return <div className="px-3 py-3 text-[11px] text-ink-faint">{t("message.subagent.noTranscript")}</div>;
@@ -151,7 +170,11 @@ function InlineSubagentTranscript({ run }: { run: SubagentRunUi }) {
 						);
 					}
 					if (row.kind === "streamingSubagents") {
-						return <div key={row.key} className="text-[11px] text-ink-faint">{t("message.summarySubagents", { n: row.runs.length })}</div>;
+						return (
+							<div key={row.key} className="text-[11px] text-ink-faint">
+								{t("message.summarySubagents", { n: row.runs.length })}
+							</div>
+						);
 					}
 					return (
 						<InlineMessage
@@ -194,9 +217,12 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 	const expandable = run.sessionFile != null;
 	const canControl = run.status === "running" && run.sessionId != null;
 	const request = run.supervisorRequest ?? null;
-	const stateLabel = run.status === "running"
-		? t("message.subagent.running")
-		: run.status === "error" ? t("message.subagent.failed") : t("message.subagent.done");
+	const stateLabel =
+		run.status === "running"
+			? t("message.subagent.running")
+			: run.status === "error"
+				? t("message.subagent.failed")
+				: t("message.subagent.done");
 	const phase = phaseLabel(t, run.statusPhase);
 	const current = run.currentAction ?? run.statusText ?? stateLabel;
 
@@ -241,7 +267,9 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 				disabled={!expandable}
 				onClick={() => expandable && setExpanded((value) => !value)}
 				aria-expanded={expanded}
-				title={expandable ? (expanded ? t("message.subagent.collapse") : t("message.subagent.expand")) : undefined}
+				title={
+					expandable ? (expanded ? t("message.subagent.collapse") : t("message.subagent.expand")) : undefined
+				}
 				className={`w-full px-3 py-2.5 text-left transition-colors ${expandable ? "cursor-pointer hover:bg-hover" : "cursor-default"}`}
 			>
 				<div className="flex min-w-0 items-center gap-2">
@@ -253,22 +281,40 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
 					)}
 					<span className="truncate text-[13px] font-semibold text-ink">{displayName(run.agent)}</span>
-					<span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-faint">{stateLabel}</span>
-					{phase && <span className="shrink-0 rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] text-ink-dim">{phase}</span>}
-					{request?.expectsReply && <span className="shrink-0 rounded-full bg-warn/10 px-1.5 py-0.5 text-[10px] font-medium text-warn">{t("message.subagent.replyNeeded")}</span>}
-					{expandable && <ChevronDownIcon className={`ml-auto shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />}
+					<span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-faint">
+						{stateLabel}
+					</span>
+					{phase && (
+						<span className="shrink-0 rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] text-ink-dim">
+							{phase}
+						</span>
+					)}
+					{request?.expectsReply && (
+						<span className="shrink-0 rounded-full bg-warn/10 px-1.5 py-0.5 text-[10px] font-medium text-warn">
+							{t("message.subagent.replyNeeded")}
+						</span>
+					)}
+					{expandable && (
+						<ChevronDownIcon
+							className={`ml-auto shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
+						/>
+					)}
 				</div>
 
 				<div className="mt-2 grid gap-1.5 text-[11px]">
 					{run.task && (
 						<div className="flex min-w-0 gap-2">
 							<span className="shrink-0 text-ink-faint">{t("message.subagent.goal")}</span>
-							<span className="truncate text-ink-2" title={run.task}>{run.task}</span>
+							<span className="truncate text-ink-2" title={run.task}>
+								{run.task}
+							</span>
 						</div>
 					)}
 					<div className="flex min-w-0 gap-2">
 						<span className="shrink-0 text-ink-faint">{t("message.subagent.current")}</span>
-						<span className="truncate font-medium text-ink-2" title={current}>{current}</span>
+						<span className="truncate font-medium text-ink-2" title={current}>
+							{current}
+						</span>
 					</div>
 					{run.currentTool && (
 						<div className="flex min-w-0 gap-2">
@@ -280,20 +326,47 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 
 				<div className="mt-2 flex min-w-0 items-center gap-2 text-[10px] text-ink-faint">
 					{run.model && <span className="min-w-0 truncate font-mono">{run.model}</span>}
-					{run.tokens != null && run.tokens > 0 && <span className="shrink-0">{t("message.subagent.tokens", { n: formatTokens(run.tokens) })}</span>}
-					{run.startedAt != null && <span className="shrink-0">{t("message.subagent.runtime", { n: formatDuration(now - run.startedAt) })}</span>}
-					{expandable && <span className="ml-auto shrink-0">{expanded ? t("message.subagent.collapse") : t("message.subagent.expand")}</span>}
+					{run.tokens != null && run.tokens > 0 && (
+						<span className="shrink-0">{t("message.subagent.tokens", { n: formatTokens(run.tokens) })}</span>
+					)}
+					{run.startedAt != null && (
+						<span className="shrink-0">
+							{t("message.subagent.runtime", { n: formatDuration(now - run.startedAt) })}
+						</span>
+					)}
+					{expandable && (
+						<span className="ml-auto shrink-0">
+							{expanded ? t("message.subagent.collapse") : t("message.subagent.expand")}
+						</span>
+					)}
 				</div>
 			</button>
 
 			{request && (
-				<div className={`mx-3 mb-2 rounded-lg border px-2.5 py-2 text-[11px] ${request.expectsReply ? "border-warn/30 bg-warn/5" : "border-border/60 bg-surface-2/40"}`}>
+				<div
+					className={`mx-3 mb-2 rounded-lg border px-2.5 py-2 text-[11px] ${request.expectsReply ? "border-warn/30 bg-warn/5" : "border-border/60 bg-surface-2/40"}`}
+				>
 					<div className="font-medium text-ink-2">{supervisorReasonLabel(t, request.reason)}</div>
 					<div className="mt-1 whitespace-pre-wrap text-ink-dim">{request.message}</div>
 					{request.expectsReply && canControl && (
 						<div className="mt-2 flex gap-1.5">
-							<input value={reply} onChange={(e) => setReply(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) void sendReply(); }} placeholder={t("message.subagent.replyPlaceholder")} className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] text-ink outline-none focus:border-accent" />
-							<button type="button" disabled={sending || !reply.trim()} onClick={() => void sendReply()} className="rounded-md bg-accent px-2.5 py-1.5 text-[11px] font-medium text-white disabled:opacity-40">{t("message.subagent.reply")}</button>
+							<input
+								value={reply}
+								onChange={(e) => setReply(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" && !e.shiftKey) void sendReply();
+								}}
+								placeholder={t("message.subagent.replyPlaceholder")}
+								className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] text-ink outline-none focus:border-accent"
+							/>
+							<button
+								type="button"
+								disabled={sending || !reply.trim()}
+								onClick={() => void sendReply()}
+								className="rounded-md bg-accent px-2.5 py-1.5 text-[11px] font-medium text-white disabled:opacity-40"
+							>
+								{t("message.subagent.reply")}
+							</button>
 						</div>
 					)}
 				</div>
@@ -301,8 +374,23 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 
 			{canControl && (
 				<div className="mx-3 mb-2 flex gap-1.5">
-					<input value={guide} onChange={(e) => setGuide(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) void sendGuide(); }} placeholder={t("message.subagent.guidePlaceholder")} className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] text-ink outline-none focus:border-accent" />
-					<button type="button" disabled={sending || !guide.trim()} onClick={() => void sendGuide()} className="rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[11px] font-medium text-ink-2 hover:bg-hover disabled:opacity-40">{t("message.subagent.send")}</button>
+					<input
+						value={guide}
+						onChange={(e) => setGuide(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" && !e.shiftKey) void sendGuide();
+						}}
+						placeholder={t("message.subagent.guidePlaceholder")}
+						className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] text-ink outline-none focus:border-accent"
+					/>
+					<button
+						type="button"
+						disabled={sending || !guide.trim()}
+						onClick={() => void sendGuide()}
+						className="rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[11px] font-medium text-ink-2 hover:bg-hover disabled:opacity-40"
+					>
+						{t("message.subagent.send")}
+					</button>
 				</div>
 			)}
 			{controlError && <div className="mx-3 mb-2 text-[10px] text-err">{controlError}</div>}
@@ -315,8 +403,14 @@ export function SubagentRunCard({ runs }: { runs: SubagentRunUi[] }) {
 	const t = useT();
 	return (
 		<div className="mt-1 space-y-1.5">
-			{runs.length > 1 && <div className="px-1 text-[11px] font-medium text-ink-faint">{t("message.summarySubagents", { n: runs.length })}</div>}
-			{runs.map((run) => <SubagentRunRow key={run.key} run={run} />)}
+			{runs.length > 1 && (
+				<div className="px-1 text-[11px] font-medium text-ink-faint">
+					{t("message.summarySubagents", { n: runs.length })}
+				</div>
+			)}
+			{runs.map((run) => (
+				<SubagentRunRow key={run.key} run={run} />
+			))}
 		</div>
 	);
 }

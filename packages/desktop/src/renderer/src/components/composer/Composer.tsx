@@ -1,4 +1,3 @@
-import { SessionUsageFooter } from "../chat/UsageSettlement";
 import type { ImageInput } from "@percho/shared";
 import { useEffect, useRef, useState } from "react";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
@@ -8,6 +7,7 @@ import { useSessionsStore } from "../../stores/sessions";
 import { pushToast } from "../../stores/toasts";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { ImagePreviewOverlay } from "../chat/ImagePreview";
+import { SessionUsageFooter } from "../chat/UsageSettlement";
 import { ArrowUpIcon, PlusIcon, StopIcon } from "../icons";
 import { AtMenu } from "./AtMenu";
 import { AttachmentChip } from "./AttachmentChip";
@@ -410,7 +410,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						)}
 					</div>
 				</div>
-                <SessionUsageFooter sessionId={activeSessionId}/>
+				<SessionUsageFooter sessionId={activeSessionId} />
 			</div>
 			{previewImage && <ImagePreviewOverlay image={previewImage} onClose={() => setPreviewImage(null)} />}
 		</div>

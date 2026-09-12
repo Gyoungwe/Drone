@@ -1,5 +1,3 @@
-import { makeKnowledgeSpecialistBridge } from "./knowledge/specialist-bridge";
-import { KnowledgeUiService } from "./knowledge/ui";
 import { existsSync } from "node:fs";
 import { readFile, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -42,6 +40,8 @@ import type {
 	SubagentInfo,
 	TrustAnswer,
 	TrustRequest,
+	WikiModelReviewInput,
+	WikiModelReviewResult,
 } from "@percho/shared";
 import {
 	extractTodos,
@@ -51,6 +51,9 @@ import {
 	TODO_TOOL_NAME,
 	type TodoItem,
 } from "@percho/shared";
+import { makeKnowledgeSpecialistBridge } from "./knowledge/specialist-bridge";
+import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
+import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
 import { McpService } from "./mcp/service";
 import { PackageAdmin } from "./packages/admin";
@@ -66,8 +69,8 @@ import { TrustGate } from "./project/trust";
 import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { AskGate } from "./session/ask-gate";
-import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "./session/knowledge-publication";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
+import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "./session/knowledge-publication";
 import {
 	assignEntryIds,
 	blockImages,
@@ -82,8 +85,6 @@ import { autoNameSession } from "./session/naming";
 import { EventRateTracker } from "./session/rates";
 import { type EventForwarder, SessionRegistry } from "./session/registry";
 import { StreamGuard } from "./session/stream-guard";
-import { makeAskUserTool } from "./tools/ask-user";
-import { makeStatusTool } from "./tools/status";
 import { TraceRecorder } from "./session/trace";
 import { SessionTraces } from "./session/traces";
 import { makeUiContext } from "./session/ui-context";
@@ -91,6 +92,7 @@ import { LoginService } from "./settings/login";
 import { ModelPrefsService } from "./settings/model-prefs";
 import { SettingsService } from "./settings/settings";
 import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
+import { makeAskUserTool } from "./tools/ask-user";
 import {
 	makeChannelWatchExtension,
 	readChannelWatchEnabled,
@@ -103,8 +105,10 @@ import {
 	writeContextManagerMode,
 } from "./tools/context-evaporation";
 import { makeShowImageTool } from "./tools/show-image";
+import { makeStatusTool } from "./tools/status";
 import { discoverAgents, isSubagentSessionPath, makeSubagentTool } from "./tools/subagent";
 import { applySubagentMutex } from "./tools/subagent/mutex";
+import { withNativeSubagentSlot } from "./tools/subagent/slots";
 import { makeTodoTool } from "./tools/todo";
 import { makeTodoReminderExtension } from "./tools/todo-reminder";
 import { makeWebFetchTool } from "./tools/webfetch";
@@ -170,10 +174,13 @@ export class PiBackend {
 	private readonly loginHandlers = new Set<LoginHandler>();
 	private readonly mcpHandlers = new Set<McpHandler>();
 	/** Live child controls for supervisor-aware foreground subagents. */
-	private readonly liveSubagents = new Map<string, {
-		steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
-		reply: (requestId: string, message: string) => boolean;
-	}>();
+	private readonly liveSubagents = new Map<
+		string,
+		{
+			steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
+			reply: (requestId: string, message: string) => boolean;
+		}
+	>();
 	readonly mcp = new McpService();
 	private readonly gates = new Map<string, PermissionGate>();
 	private readonly askGates = new Map<string, Set<AskGate>>();
@@ -290,10 +297,13 @@ export class PiBackend {
 				}),
 			);
 		}
-		if (this.options.subagentPreferBuiltin !== false) factories.push(makeKnowledgeSpecialistBridge({
-			getRuntime: () => this.getModelRuntime(),
-			getModelPreference: (name) => this.modelPrefs.getSubagentModel(name),
-		}));
+		if (this.options.subagentPreferBuiltin !== false)
+			factories.push(
+				makeKnowledgeSpecialistBridge({
+					getRuntime: () => this.getModelRuntime(),
+					getModelPreference: (name) => this.modelPrefs.getSubagentModel(name),
+				}),
+			);
 		// 上下文蒸发（默认开启：缺省 mode=evaporation；钩子实时读派生 mode，
 		// 设置页切换后 ≤2s 生效，无需重开会话）。
 		// 批次上报双通道：log（快速 grep）+ trace_custom 行（灰度分析脚本直读，
@@ -423,7 +433,9 @@ export class PiBackend {
 		this.permissionModes.set(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
 			await session.bindExtensions({
-				uiContext: makeUiContext(gate, askGate, (text, type) => { void this.knowledge.notify(text, type, session.sessionId).catch(() => {}); }),
+				uiContext: makeUiContext(gate, askGate, (text, type) => {
+					void this.knowledge.notify(text, type, session.sessionId).catch(() => {});
+				}),
 				mode: "tui",
 			});
 		}
@@ -476,7 +488,12 @@ export class PiBackend {
 		this.registerAskGate(session.sessionId, askGate);
 		this.permissionModes.set(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
-			await session.bindExtensions({ uiContext: makeUiContext(gate, askGate, (text, type) => { void this.knowledge.notify(text, type, session.sessionId).catch(() => {}); }), mode: "tui" });
+			await session.bindExtensions({
+				uiContext: makeUiContext(gate, askGate, (text, type) => {
+					void this.knowledge.notify(text, type, session.sessionId).catch(() => {});
+				}),
+				mode: "tui",
+			});
 		}
 		const unsubscribe = session.subscribe((event) => {
 			autoNameSession(session, event);
@@ -530,6 +547,7 @@ export class PiBackend {
 	}
 
 	async closeSession(sessionId: string): Promise<void> {
+		for (const run of this.modelReviews.values()) if (run.sessionId === sessionId) run.controller.abort();
 		const entry = this.registry.get(sessionId);
 		if (!entry) return;
 		entry.session.dispose();
@@ -557,16 +575,76 @@ export class PiBackend {
 		log.info("session deleted", sessionId);
 	}
 
+	private modelReviews = new Map<string, { sessionId: string; controller: AbortController }>();
+	async reviewKnowledgeWithModel(input: WikiModelReviewInput): Promise<WikiModelReviewResult> {
+		if (!input || !/^[0-9a-f-]{36}$/i.test(input.requestId))
+			throw new Error("Invalid model review request id");
+		const entry = this.requireSession(input.sessionId);
+		if (entry.readOnly || entry.cwd !== input.cwd)
+			throw new Error("Open the candidate's originating project in a writable session");
+		if (entry.session.isStreaming)
+			throw new Error("Wait for the current conversation to finish before model review");
+		if (this.modelReviews.has(input.requestId) || this.modelReviews.size >= 2)
+			throw new Error("Model review is already running; wait or cancel it");
+		if (!entry.session.model) throw new Error("Select a model before review");
+		const controller = new AbortController(),
+			check = async () => {
+				controller.signal.throwIfAborted();
+				if (this.registry.get(input.sessionId) !== entry || !entry.session.settingsManager.isProjectTrusted())
+					throw new Error("Session closed or project is not trusted for model review");
+			};
+		this.modelReviews.set(input.requestId, { sessionId: input.sessionId, controller }); // Reserve before awaiting trust checks.
+		const timer = setTimeout(() => controller.abort(), 120000);
+		try {
+			await check();
+			return await this.knowledge.reviewWithModel(input, {
+				signal: controller.signal,
+				check,
+				evaluate: (request: SpecialistRequest) =>
+					withNativeSubagentSlot(entry.cwd, controller.signal, () =>
+						runKnowledgeSpecialist(
+							{
+								getRuntime: () => this.getModelRuntime(),
+								getModelPreference: (name) => this.modelPrefs.getSubagentModel(name),
+							},
+							{ ...request, parentModel: entry.session.model, signal: controller.signal },
+						),
+					),
+			});
+		} finally {
+			clearTimeout(timer);
+			this.modelReviews.delete(input.requestId);
+		}
+	}
+	async cancelKnowledgeModelReview({
+		sessionId,
+		requestId,
+	}: {
+		sessionId: string;
+		requestId: string;
+	}): Promise<void> {
+		const run = this.modelReviews.get(requestId);
+		if (run?.sessionId === sessionId) run.controller.abort();
+	}
+
 	async startKnowledgeSetup(input: { sessionId: string; path?: string }): Promise<void> {
 		const entry = this.requireSession(input.sessionId);
-		if (entry.readOnly || entry.session.isStreaming) throw new Error("Wait for the current task to finish before setup");
-		if (input.path && (typeof input.path !== "string" || input.path.length > 4096)) throw new Error("Invalid Vault path");
-		await this.prompt(input.sessionId, "/obsidian-setup " + (input.path ? JSON.stringify({ vaultPath: input.path }) : ""));
+		if (entry.readOnly || entry.session.isStreaming)
+			throw new Error("Wait for the current task to finish before setup");
+		if (input.path && (typeof input.path !== "string" || input.path.length > 4096))
+			throw new Error("Invalid Vault path");
+		await this.prompt(
+			input.sessionId,
+			`/obsidian-setup ${input.path ? JSON.stringify({ vaultPath: input.path }) : ""}`,
+		);
 	}
 	async resumeKnowledgeCheck(sessionId: string): Promise<void> {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly || entry.session.isStreaming) throw new Error("Wait for the current task to finish");
-		await this.prompt(sessionId, "请继续完成上一任务的知识库检查：重新准备导航，按需阅读 Wiki、检索并阅读实际引用来源，然后发布回答。不要把界面阅读当作模型已经阅读，也不要绕过失败的检查。");
+		await this.prompt(
+			sessionId,
+			"请继续完成上一任务的知识库检查：重新准备导航，按需阅读 Wiki、检索并阅读实际引用来源，然后发布回答。不要把界面阅读当作模型已经阅读，也不要绕过失败的检查。",
+		);
 	}
 
 	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<void> {
@@ -754,7 +832,9 @@ export class PiBackend {
 				hidden: ext.hidden === true,
 				toolsCount: ext.tools.size,
 				tools: [...ext.tools.keys()],
-				commands: presentExtensionCommands([...ext.commands.values()].map(command => ({ ...command, invocationName: command.name }))).map(command => command.name),
+				commands: presentExtensionCommands(
+					[...ext.commands.values()].map((command) => ({ ...command, invocationName: command.name })),
+				).map((command) => command.name),
 				flagsCount: ext.flags.size,
 				shortcutsCount: ext.shortcuts.size,
 			})),
@@ -827,7 +907,11 @@ export class PiBackend {
 		for (const handler of this.mcpHandlers) handler(cwd, status);
 	}
 
-	async steerSubagent(sessionId: string, message: string, mode: "steer" | "followUp" = "steer"): Promise<void> {
+	async steerSubagent(
+		sessionId: string,
+		message: string,
+		mode: "steer" | "followUp" = "steer",
+	): Promise<void> {
 		const control = this.liveSubagents.get(sessionId);
 		if (!control) throw new Error("Subagent is no longer running");
 		const text = message.trim();
@@ -858,10 +942,13 @@ export class PiBackend {
 	/** 读取会话历史消息（打开历史会话时回放给 UI） */
 	async getSessionMessages(sessionId: string): Promise<SessionMessage[]> {
 		const entry = this.requireSession(sessionId);
-		const persisted = entry.session.sessionManager.getBranch()
+		const persisted = entry.session.sessionManager
+			.getBranch()
 			.filter((item): item is Extract<SessionEntry, { type: "message" }> => item.type === "message")
-			.map(item => item.message as RawMessage);
-		const messages = toSessionMessages(projectKnowledgeSnapshot(entry.session.messages as RawMessage[], persisted));
+			.map((item) => item.message as RawMessage);
+		const messages = toSessionMessages(
+			projectKnowledgeSnapshot(entry.session.messages as RawMessage[], persisted),
+		);
 		// 配对消息与会话树 entry id（assistant 供 fork 定位、user 供撤回定位）
 		assignEntryIds(messages, entry.session.sessionManager.getBranch());
 		return messages;
@@ -1181,6 +1268,8 @@ export class PiBackend {
 	}
 
 	dispose(): void {
+		for (const run of this.modelReviews.values()) run.controller.abort();
+		this.modelReviews.clear();
 		this.knowledge.dispose();
 		this.registry.disposeAll();
 		this.eventHandlers.clear();

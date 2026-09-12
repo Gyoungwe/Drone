@@ -8,13 +8,16 @@ import {
 import { contextBridge, ipcRenderer } from "electron";
 
 const api: PiApi = {
-	setKnowledgeSpecialistSettings: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeSpecialistsSettings, input),
+	setKnowledgeSpecialistSettings: (input) =>
+		ipcRenderer.invoke(IpcChannels.KnowledgeSpecialistsSettings, input),
 	getKnowledgeOverview: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeOverview, input),
 	previewKnowledgeSetup: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeSetupPreview, input),
 	startKnowledgeSetup: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeSetupStart, input),
 	getKnowledgeJobs: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeJobs, input),
 	getKnowledgeReviews: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReviews, input),
 	previewKnowledgeReview: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReviewPreview, input),
+	reviewKnowledgeWithModel: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReviewModel, input),
+	cancelKnowledgeModelReview: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReviewModelCancel, input),
 	decideKnowledgeReview: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReviewDecide, input),
 	readKnowledgeNote: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeReadNote, input),
 	maintainKnowledge: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeMaintain, input),
@@ -63,7 +66,8 @@ const api: PiApi = {
 	openResourceExternal: (target, cwd) => ipcRenderer.invoke(IpcChannels.ResourceOpenExternal, target, cwd),
 	getSessionMessages: (sessionId) => ipcRenderer.invoke(IpcChannels.SessionGetMessages, sessionId),
 	peekSubagentMessages: (filePath) => ipcRenderer.invoke(IpcChannels.SessionPeekSubagentMessages, filePath),
-	steerSubagent: (sessionId, message, mode) => ipcRenderer.invoke(IpcChannels.SessionSteerSubagent, sessionId, message, mode),
+	steerSubagent: (sessionId, message, mode) =>
+		ipcRenderer.invoke(IpcChannels.SessionSteerSubagent, sessionId, message, mode),
 	replySubagentSupervisor: (sessionId, requestId, message) =>
 		ipcRenderer.invoke(IpcChannels.SessionReplySubagentSupervisor, sessionId, requestId, message),
 	getTodos: (sessionId) => ipcRenderer.invoke(IpcChannels.SessionGetTodos, sessionId),

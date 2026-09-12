@@ -17,13 +17,16 @@ it("global Obsidian setup has one visible owner in an unrelated project", async 
 	try {
 		await backend.init();
 		const commands = await backend.listSlashCommandsForCwd(cwd);
-		const setup = commands.filter(command => command.name === "obsidian-setup" || command.name === "setup" || command.name === "research-setup");
-		expect(setup.map(command => command.name).sort()).toEqual(["obsidian-setup"]);
+		const setup = commands.filter(
+			(command) =>
+				command.name === "obsidian-setup" || command.name === "setup" || command.name === "research-setup",
+		);
+		expect(setup.map((command) => command.name).sort()).toEqual(["obsidian-setup"]);
 		expect(setup[0]?.aliases).toEqual(["setup", "research-setup"]);
 		expect(setup[0]?.ownerSkill).toBe("research-vault");
-		expect(setup.every(command => command.source === "extension" && command.supported)).toBe(true);
-		expect(setup.every(command => command.description.includes("research-vault"))).toBe(true);
-		expect(commands.filter(command => command.name === "skill:research-vault")).toHaveLength(1);
+		expect(setup.every((command) => command.source === "extension" && command.supported)).toBe(true);
+		expect(setup.every((command) => command.description.includes("research-vault"))).toBe(true);
+		expect(commands.filter((command) => command.name === "skill:research-vault")).toHaveLength(1);
 	} finally {
 		backend.dispose();
 		await rm(cwd, { recursive: true, force: true });

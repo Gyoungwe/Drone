@@ -1,4 +1,3 @@
-import { registerKnowledgeIpc } from "./knowledge";
 import type { PiBackend } from "@percho/backend";
 import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@percho/shared";
 import { IpcChannels } from "@percho/shared";
@@ -7,6 +6,7 @@ import type { LanObserverHandle } from "../lan";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
+import { registerKnowledgeIpc } from "./knowledge";
 import { registerLanIpc } from "./lan";
 import { registerPackagesIpc } from "./packages";
 import { registerSessionsIpc } from "./sessions";

@@ -1,7 +1,10 @@
-import { ProgressNote } from "./ProgressNote";
-import { deriveTurnUsage } from "@percho/shared";
-import { UsageSettlement } from "./UsageSettlement";
-import { buildChatRows, deriveTurnChanges, deriveTurnTimings, isAgentWorking } from "@percho/shared";
+import {
+	buildChatRows,
+	deriveTurnChanges,
+	deriveTurnTimings,
+	deriveTurnUsage,
+	isAgentWorking,
+} from "@percho/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
@@ -12,10 +15,12 @@ import { useUiPreferencesStore } from "../../stores/ui-preferences";
 import { CenterOrb } from "./CenterOrb";
 import { MessageItem } from "./MessageItem";
 import { MetaGroup } from "./MetaGroup";
+import { ProgressNote } from "./ProgressNote";
 import { RetryNote } from "./RetryNote";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { TurnDiffChip } from "./TurnDiffChip";
+import { UsageSettlement } from "./UsageSettlement";
 import { useShownWorking } from "./use-shown-working";
 
 /** 距底 ≤ 此值视为「在底部」，自动恢复跟随 */
@@ -120,7 +125,7 @@ export function MessageList() {
 	// 轮次数据：文件变更 + 计时。进场动画只给「本会话查看期间新出现的最后一轮」播：基线在切会话/
 	// 历史重建时对齐，不随渲染更新（防 turn_end 紧随的二次渲染摘掉动画类）；行定位/上提规则全部在
 	// shared buildChatRows 内完成（opts 传入，与 lan-web 同一分组大脑）
-	const turnUsages=useMemo(()=>deriveTurnUsage(transcript.messages),[transcript.messages]);
+	const turnUsages = useMemo(() => deriveTurnUsage(transcript.messages), [transcript.messages]);
 	const turnChanges = useMemo(() => deriveTurnChanges(transcript.messages), [transcript.messages]);
 	const turnTimings = useMemo(
 		() => deriveTurnTimings(transcript.messages, transcript.runEndedAt),
@@ -163,7 +168,7 @@ export function MessageList() {
 						running={row.running}
 						entering={row.entering}
 					/>
-                    {!row.running&&row.timing&&<UsageSettlement usage={turnUsages[row.timing.turnIndex]}/>}
+					{!row.running && row.timing && <UsageSettlement usage={turnUsages[row.timing.turnIndex]} />}
 				</div>,
 			);
 			return;
@@ -192,7 +197,15 @@ export function MessageList() {
 			);
 			return;
 		}
-        if(row.kind==='message'&&row.message.kind==='assistant'&&row.message.progress&&!row.message.text){items.push(<ProgressNote key={row.key} progress={row.message.progress}/>);return;}
+		if (
+			row.kind === "message" &&
+			row.message.kind === "assistant" &&
+			row.message.progress &&
+			!row.message.text
+		) {
+			items.push(<ProgressNote key={row.key} progress={row.message.progress} />);
+			return;
+		}
 		items.push(
 			<MessageItem
 				key={row.key}

@@ -1,4 +1,3 @@
-import { KnowledgePanel } from "../knowledge/KnowledgePanel";
 import type { ComponentType } from "react";
 import { useMemo } from "react";
 import { useT } from "../../i18n";
@@ -8,6 +7,7 @@ import { type Contribution, useUiPluginRegistry } from "../../plugins/registry";
 import { UI_REGIONS } from "../../plugins/slots";
 import { type SettingsCategory, useSettingsStore } from "../../stores/settings";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
+import { KnowledgePanel } from "../knowledge/KnowledgePanel";
 import { AboutPanel } from "./AboutPanel";
 import { AppearancePanel } from "./AppearancePanel";
 import { ExtensionsPanel } from "./extensions/ExtensionsPanel";

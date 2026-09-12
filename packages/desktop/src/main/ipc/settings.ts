@@ -7,7 +7,7 @@ import type {
 	PermissionAnswer,
 } from "@percho/shared";
 import { IpcChannels } from "@percho/shared";
-import { shell, ipcMain } from "electron";
+import { ipcMain, shell } from "electron";
 
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
 export function registerSettingsIpc(backend: PiBackend): void {
@@ -68,7 +68,9 @@ export function registerSettingsIpc(backend: PiBackend): void {
 	ipcMain.handle(IpcChannels.SettingsLoginRespond, (_e, loginId: string, promptId: string, value: string) =>
 		backend.login.respond(loginId, promptId, value),
 	);
-	ipcMain.handle(IpcChannels.AskRespond, (_e, requestId: string, response: AskResponse) => backend.respondAsk(requestId, response));
+	ipcMain.handle(IpcChannels.AskRespond, (_e, requestId: string, response: AskResponse) =>
+		backend.respondAsk(requestId, response),
+	);
 	ipcMain.handle(IpcChannels.PermissionRespond, (_e, requestId: string, answer: PermissionAnswer) =>
 		backend.respondPermission(requestId, answer),
 	);

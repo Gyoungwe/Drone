@@ -66,6 +66,8 @@ describe("ChannelWatcher（fs.watch 模式）", () => {
 	it("两文件互不干扰防抖；stop 后不再触发", async () => {
 		const root = join(testRoot, "w2");
 		await mkdir(root, { recursive: true });
+		// This case tests independent file debounce; create the topic before fs.watch attaches.
+		await mkdir(join(root, "t2"), { recursive: true });
 		const events: string[] = [];
 		const w = new ChannelWatcher({
 			channelRoot: root,
@@ -74,18 +76,23 @@ describe("ChannelWatcher（fs.watch 模式）", () => {
 		});
 		await w.start();
 		try {
-			await mkdir(join(root, "t2"), { recursive: true });
 			await writeFile(join(root, "t2/A.md"), "a", { flag: "w" });
 			// Wait for the actual debounced event rather than assuming fs.watch latency under concurrent builds.
-			await vi.waitFor(() => expect(events.filter((x) => x === "t2/A.md")).toHaveLength(1), { timeout: 2000 });
+			await vi.waitFor(() => expect(events.filter((x) => x === "t2/A.md")).toHaveLength(1), {
+				timeout: 2000,
+			});
 			await writeFile(join(root, "t2/B.md"), "b", { flag: "w" });
-			await vi.waitFor(() => expect(events.filter((x) => x === "t2/B.md")).toHaveLength(1), { timeout: 2000 });
+			await vi.waitFor(() => expect(events.filter((x) => x === "t2/B.md")).toHaveLength(1), {
+				timeout: 2000,
+			});
 			expect(events.filter((x) => x === "t2/A.md")).toHaveLength(1);
 			w.stop();
 			await writeFile(join(root, "t2/C.md"), "c", { flag: "w" });
 			await sleep(400);
 			expect(events.some((x) => x === "t2/C.md")).toBe(false);
-		} finally { w.stop(); }
+		} finally {
+			w.stop();
+		}
 	});
 });
 

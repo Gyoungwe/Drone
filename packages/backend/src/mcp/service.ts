@@ -39,7 +39,7 @@ function transportOf(server: RawServer): McpConfigServer["transport"] {
 function serverMap(value: Record<string, unknown>): Record<string, unknown> {
 	const servers = value.mcpServers ?? value["mcp-servers"];
 	return servers && typeof servers === "object" && !Array.isArray(servers)
-		? servers as Record<string, unknown>
+		? (servers as Record<string, unknown>)
 		: {};
 }
 
@@ -126,8 +126,9 @@ export class McpService {
 			}
 		}
 
-		const preferredPath = [...sources].reverse().find((source) => existsSync(source.path))?.path
-			?? (cwd ? join(resolve(cwd), ".mcp.json") : join(this.agentDir, "mcp.json"));
+		const preferredPath =
+			[...sources].reverse().find((source) => existsSync(source.path))?.path ??
+			(cwd ? join(resolve(cwd), ".mcp.json") : join(this.agentDir, "mcp.json"));
 		const servers = [...merged.entries()].map(([name, { server, source }]) => ({
 			name,
 			transport: transportOf(server),
@@ -148,7 +149,8 @@ export class McpService {
 
 		const path = this.writePath(cwd);
 		const value = await readRaw(path);
-		const key = value["mcp-servers"] !== undefined && value.mcpServers === undefined ? "mcp-servers" : "mcpServers";
+		const key =
+			value["mcp-servers"] !== undefined && value.mcpServers === undefined ? "mcp-servers" : "mcpServers";
 		const servers = serverMap(value);
 		const raw = servers[name];
 		if (raw !== undefined && (!raw || typeof raw !== "object" || Array.isArray(raw))) {

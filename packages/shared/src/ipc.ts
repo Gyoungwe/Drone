@@ -1,5 +1,5 @@
-import type { KnowledgeApi } from "./knowledge";
 import type { AskRequest, AskResponse } from "./ask";
+import type { KnowledgeApi } from "./knowledge";
 import type { LanStatus } from "./lan";
 import type { McpConfigSnapshot, McpStatus, McpStatusEvent } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "./packages";
@@ -44,7 +44,6 @@ import type { TodoItem } from "./todo";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
 
-
 export interface ResourcePreviewResult {
 	path: string;
 	name: string;
@@ -65,6 +64,8 @@ export const IpcChannels = {
 	KnowledgeJobs: "knowledge:jobs",
 	KnowledgeReviews: "knowledge:reviews",
 	KnowledgeReviewPreview: "knowledge:reviewPreview",
+	KnowledgeReviewModel: "knowledge:reviewModel",
+	KnowledgeReviewModelCancel: "knowledge:reviewModelCancel",
 	KnowledgeReviewDecide: "knowledge:reviewDecide",
 	KnowledgeReadNote: "knowledge:readNote",
 	KnowledgeMaintain: "knowledge:maintain",

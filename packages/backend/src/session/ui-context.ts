@@ -80,27 +80,55 @@ const EXTENSION_THEME = new Theme(
  * 其余终端专用 UI 方法保持 no-op。
  * SDK 接口变化时在这里补齐新成员，别在 PiBackend 里重写。
  */
-export function makeUiContext(gate: PermissionGate, askGate?: AskGate, notify?: (message: string, type: "info" | "warning" | "error") => void): ExtensionUIContext {
+export function makeUiContext(
+	gate: PermissionGate,
+	askGate?: AskGate,
+	notify?: (message: string, type: "info" | "warning" | "error") => void,
+): ExtensionUIContext {
 	return {
 		select: async (title, options, dialogOptions) => {
 			if (!askGate || options.length === 0) return undefined;
 			const [heading = title, ...description] = title.split("\n\n");
-			const response = await askGate.ask({
-				toolCallId: `extension-ui-select:${heading}`,
-				title: heading,
-				questions: [{ id: "value", label: heading, prompt: description.join("\n\n") || title, type: "single", required: true, options: options.map((value) => ({ value, label: value })) }],
-			}, dialogOptions?.signal);
+			const response = await askGate.ask(
+				{
+					toolCallId: `extension-ui-select:${heading}`,
+					title: heading,
+					questions: [
+						{
+							id: "value",
+							label: heading,
+							prompt: description.join("\n\n") || title,
+							type: "single",
+							required: true,
+							options: options.map((value) => ({ value, label: value })),
+						},
+					],
+				},
+				dialogOptions?.signal,
+			);
 			if (response.kind === "cancel") return undefined;
 			return response.answers.value?.values?.[0];
 		},
 		confirm: (title, message) => gate.confirm(title, message),
 		input: async (title, placeholder, dialogOptions) => {
 			if (!askGate) return undefined;
-			const response = await askGate.ask({
-				toolCallId: `extension-ui-input:${title}`,
-				title,
-				questions: [{ id: "value", label: title, prompt: placeholder || title, type: "text", required: true, options: [] }],
-			}, dialogOptions?.signal);
+			const response = await askGate.ask(
+				{
+					toolCallId: `extension-ui-input:${title}`,
+					title,
+					questions: [
+						{
+							id: "value",
+							label: title,
+							prompt: placeholder || title,
+							type: "text",
+							required: true,
+							options: [],
+						},
+					],
+				},
+				dialogOptions?.signal,
+			);
 			if (response.kind === "cancel") return undefined;
 			return response.answers.value?.customText?.trim() || undefined;
 		},

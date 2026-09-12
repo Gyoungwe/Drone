@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import { McpService } from "../src/mcp/service";
 
 const agentDir = await mkdtemp(join(tmpdir(), "percho-mcp-service-"));
@@ -26,30 +26,48 @@ describe("McpService", () => {
 	});
 
 	it("reads configured servers without exposing secrets", async () => {
-		await writeFile(join(agentDir, "mcp.json"), JSON.stringify({ mcpServers: {
-			docs: { command: "node", args: ["server.js"], env: { TOKEN: "secret" } },
-		}, settings: { token: "hidden" } }));
+		await writeFile(
+			join(agentDir, "mcp.json"),
+			JSON.stringify({
+				mcpServers: {
+					docs: { command: "node", args: ["server.js"], env: { TOKEN: "secret" } },
+				},
+				settings: { token: "hidden" },
+			}),
+		);
 		const result = await new McpService({ agentDir, homeDir }).getConfig();
-		expect(result.servers).toEqual([{
-			name: "docs",
-			transport: "stdio",
-			command: "node",
-			disabled: false,
-			scope: "user",
-			sourcePath: join(agentDir, "mcp.json"),
-		}]);
+		expect(result.servers).toEqual([
+			{
+				name: "docs",
+				transport: "stdio",
+				command: "node",
+				disabled: false,
+				scope: "user",
+				sourcePath: join(agentDir, "mcp.json"),
+			},
+		]);
 		expect(JSON.stringify(result)).not.toContain("secret");
 	});
 
 	it("merges project config after user config and reports its source", async () => {
 		const cwd = await mkdtemp(join(tmpdir(), "percho-mcp-project-"));
-		await writeFile(join(agentDir, "mcp.json"), JSON.stringify({ mcpServers: {
-			docs: { command: "node", args: ["user.js"], disabled: true },
-		} }));
-		await writeFile(join(cwd, ".mcp.json"), JSON.stringify({ mcpServers: {
-			docs: { command: "bun", args: ["project.ts"] },
-			vault: { url: "http://127.0.0.1:3000" },
-		} }));
+		await writeFile(
+			join(agentDir, "mcp.json"),
+			JSON.stringify({
+				mcpServers: {
+					docs: { command: "node", args: ["user.js"], disabled: true },
+				},
+			}),
+		);
+		await writeFile(
+			join(cwd, ".mcp.json"),
+			JSON.stringify({
+				mcpServers: {
+					docs: { command: "bun", args: ["project.ts"] },
+					vault: { url: "http://127.0.0.1:3000" },
+				},
+			}),
+		);
 
 		const result = await new McpService({ agentDir, homeDir }).getConfig(cwd);
 		expect(result.path).toBe(join(cwd, ".mcp.json"));
@@ -91,12 +109,22 @@ describe("McpService", () => {
 
 	it("enables a server disabled by a lower-precedence user config", async () => {
 		const cwd = await mkdtemp(join(tmpdir(), "percho-mcp-project-"));
-		await writeFile(join(agentDir, "mcp.json"), JSON.stringify({ mcpServers: {
-			docs: { command: "node", disabled: true },
-		} }));
-		await writeFile(join(cwd, ".mcp.json"), JSON.stringify({ mcpServers: {
-			docs: { command: "node" },
-		} }));
+		await writeFile(
+			join(agentDir, "mcp.json"),
+			JSON.stringify({
+				mcpServers: {
+					docs: { command: "node", disabled: true },
+				},
+			}),
+		);
+		await writeFile(
+			join(cwd, ".mcp.json"),
+			JSON.stringify({
+				mcpServers: {
+					docs: { command: "node" },
+				},
+			}),
+		);
 		await mkdir(join(cwd, ".pi"), { recursive: true });
 
 		const result = await new McpService({ agentDir, homeDir }).setServerEnabled("docs", true, cwd);

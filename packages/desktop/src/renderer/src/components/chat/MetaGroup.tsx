@@ -53,8 +53,20 @@ function dotClass(state: MetaDot["state"]): string {
  * 语言切换不受影响：useT/i18n 订阅在组件内部，父级 memo 拦不住也不需要拦。
  */
 function metaGroupPropsEqual(
-	a: { items: MetaItem[]; working: boolean; endImmediately?: boolean; subagentCount?: number; statusText?: string },
-	b: { items: MetaItem[]; working: boolean; endImmediately?: boolean; subagentCount?: number; statusText?: string },
+	a: {
+		items: MetaItem[];
+		working: boolean;
+		endImmediately?: boolean;
+		subagentCount?: number;
+		statusText?: string;
+	},
+	b: {
+		items: MetaItem[];
+		working: boolean;
+		endImmediately?: boolean;
+		subagentCount?: number;
+		statusText?: string;
+	},
 ): boolean {
 	if (
 		a.working !== b.working ||
@@ -147,7 +159,11 @@ export const MetaGroup = memo(function MetaGroup({
 	// 纯子代理调用不带普通 tool/thinking，仍须保留折叠状态行作为卡片的时间锚点。
 	const showWrapper = count >= 2 || shownWorking || subagentCount > 0;
 	if (!showWrapper) {
-		return <div data-testid="tool-phase-group" className="-mb-4 flex flex-col gap-1.5">{rows}</div>;
+		return (
+			<div data-testid="tool-phase-group" className="-mb-4 flex flex-col gap-1.5">
+				{rows}
+			</div>
+		);
 	}
 
 	return (

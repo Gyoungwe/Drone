@@ -1,0 +1,38 @@
+{
+	"version": 1,
+	"extensions": [
+		"obsidian-workbench.mjs",
+		"workspace-config.mjs",
+		"source-archive.mjs",
+		"research-loop.mjs",
+		"research-wikiloop.mjs",
+		"research-wikiskill.mjs",
+		"subagent-research.mjs"
+	],
+	"skills": ["research-vault", "research-workflow", "research-show-me"],
+	"requiredTools": [
+		"research_prepare_knowledge",
+		"research_read_knowledge",
+		"research_search_knowledge",
+		"research_check_answer",
+		"research_task_status",
+		"research_archive_source",
+		"research_source_status",
+		"research_loop",
+		"research_summarize_run",
+		"research_archive_explainer",
+		"research_propose_wiki_update"
+	],
+	"optionalPackages": [
+		{
+			"package": "pi-web-access",
+			"testedVersion": "0.28.0",
+			"purpose": "External search and readable page fetch; provider setup may be needed"
+		},
+		{
+			"package": "pi-mcp-adapter",
+			"testedVersion": "2.32.1",
+			"purpose": "External MCP servers; configure endpoints and credentials yourself"
+		}
+	]
+}

@@ -785,12 +785,23 @@ describe("transcript reducer", () => {
 			partialResult: {
 				details: {
 					mode: "single",
-					results: [{ agent: "scout", task: "research", exitCode: -1, statusText: "正在检索文献", statusPhase: "literature-search" }],
+					results: [
+						{
+							agent: "scout",
+							task: "research",
+							exitCode: -1,
+							statusText: "正在检索文献",
+							statusPhase: "literature-search",
+						},
+					],
 				},
 			},
 		} as unknown as AgentSessionEvent);
 		expect(state.streaming?.subagentRuns[0]).toMatchObject({
-			agent: "scout", status: "running", statusText: "正在检索文献", statusPhase: "literature-search",
+			agent: "scout",
+			status: "running",
+			statusText: "正在检索文献",
+			statusPhase: "literature-search",
 		});
 	});
 
@@ -801,15 +812,23 @@ describe("transcript reducer", () => {
 			type: "tool_execution_start",
 			toolCallId: "parallel-status",
 			toolName: "subagent",
-			args: { tasks: [{ agent: "scout", task: "one" }, { agent: "reviewer", task: "two" }] },
+			args: {
+				tasks: [
+					{ agent: "scout", task: "one" },
+					{ agent: "reviewer", task: "two" },
+				],
+			},
 		} as unknown as AgentSessionEvent);
 		state = reduceEvent(state, {
 			type: "tool_execution_update",
 			toolCallId: "parallel-status",
 			toolName: "subagent",
-			partialResult: { details: { mode: "parallel", results: [
-				{ agent: "reviewer", task: "two", exitCode: -1, statusText: "正在核对证据" },
-			] } },
+			partialResult: {
+				details: {
+					mode: "parallel",
+					results: [{ agent: "reviewer", task: "two", exitCode: -1, statusText: "正在核对证据" }],
+				},
+			},
 		} as unknown as AgentSessionEvent);
 		expect(state.streaming?.subagentRuns[0]?.statusText).toBeUndefined();
 		expect(state.streaming?.subagentRuns[1]?.statusText).toBe("正在核对证据");
@@ -926,36 +945,99 @@ describe("transcript reducer", () => {
 			},
 		} as unknown as AgentSessionEvent);
 		expect(state.streaming?.subagentRuns.map((run) => run.task)).toEqual(["structure", "obsidian", "zotero"]);
-		expect(state.streaming?.subagentRuns.map((run) => run.key)).toEqual(["mixed-1:0", "mixed-1:1", "mixed-1:2"]);
+		expect(state.streaming?.subagentRuns.map((run) => run.key)).toEqual([
+			"mixed-1:0",
+			"mixed-1:1",
+			"mixed-1:2",
+		]);
 	});
 
 	it("subagent：同名并行 lane 的 progress 按 task 精确更新，不串到第一个", () => {
 		let state = emptyTranscript();
 		state = reduceEvent(state, ev("agent_start"));
 		state = reduceEvent(state, {
-			type: "tool_execution_start", toolCallId: "mixed-progress", toolName: "subagent",
-			args: { tasks: [
-				{ agent: "scout", task: "structure" },
-				{ agent: "scout", task: "obsidian" },
-				{ agent: "scout", task: "zotero" },
-			] },
+			type: "tool_execution_start",
+			toolCallId: "mixed-progress",
+			toolName: "subagent",
+			args: {
+				tasks: [
+					{ agent: "scout", task: "structure" },
+					{ agent: "scout", task: "obsidian" },
+					{ agent: "scout", task: "zotero" },
+				],
+			},
 		} as unknown as AgentSessionEvent);
 		state = reduceEvent(state, {
-			type: "tool_execution_update", toolCallId: "mixed-progress", toolName: "subagent",
-			partialResult: { details: { mode: "parallel", results: [
-				{ agent: "scout", task: "structure", exitCode: -1, statusText: "扫描目录", statusPhase: "knowledge-search", currentAction: "正在阅读 /repo/README.md", currentTool: "read", startedAt: 100, artifactPaths: { jsonlPath: "/a.jsonl" } },
-				{ agent: "scout", task: "obsidian", exitCode: -1, statusText: "检查 Obsidian", statusPhase: "knowledge-search", currentAction: "正在检索 Obsidian：“vault”", currentTool: "research-obsidian_search_notes", startedAt: 200, artifactPaths: { jsonlPath: "/b.jsonl" } },
-				{ agent: "scout", task: "zotero", exitCode: -1, statusText: "检查 Zotero", statusPhase: "literature-search", currentAction: "正在等待主会话回复", currentTool: "contact_supervisor", startedAt: 300, supervisorRequest: { id: "req-z", reason: "need_decision", message: "优先核对本地库还是云同步？", expectsReply: true }, artifactPaths: { jsonlPath: "/c.jsonl" } },
-			] } },
+			type: "tool_execution_update",
+			toolCallId: "mixed-progress",
+			toolName: "subagent",
+			partialResult: {
+				details: {
+					mode: "parallel",
+					results: [
+						{
+							agent: "scout",
+							task: "structure",
+							exitCode: -1,
+							statusText: "扫描目录",
+							statusPhase: "knowledge-search",
+							currentAction: "正在阅读 /repo/README.md",
+							currentTool: "read",
+							startedAt: 100,
+							artifactPaths: { jsonlPath: "/a.jsonl" },
+						},
+						{
+							agent: "scout",
+							task: "obsidian",
+							exitCode: -1,
+							statusText: "检查 Obsidian",
+							statusPhase: "knowledge-search",
+							currentAction: "正在检索 Obsidian：“vault”",
+							currentTool: "research-obsidian_search_notes",
+							startedAt: 200,
+							artifactPaths: { jsonlPath: "/b.jsonl" },
+						},
+						{
+							agent: "scout",
+							task: "zotero",
+							exitCode: -1,
+							statusText: "检查 Zotero",
+							statusPhase: "literature-search",
+							currentAction: "正在等待主会话回复",
+							currentTool: "contact_supervisor",
+							startedAt: 300,
+							supervisorRequest: {
+								id: "req-z",
+								reason: "need_decision",
+								message: "优先核对本地库还是云同步？",
+								expectsReply: true,
+							},
+							artifactPaths: { jsonlPath: "/c.jsonl" },
+						},
+					],
+				},
+			},
 		} as unknown as AgentSessionEvent);
-		expect(state.streaming?.subagentRuns.map((run) => run.statusText)).toEqual(["扫描目录", "检查 Obsidian", "检查 Zotero"]);
-		expect(state.streaming?.subagentRuns.map((run) => run.sessionFile)).toEqual(["/a.jsonl", "/b.jsonl", "/c.jsonl"]);
+		expect(state.streaming?.subagentRuns.map((run) => run.statusText)).toEqual([
+			"扫描目录",
+			"检查 Obsidian",
+			"检查 Zotero",
+		]);
+		expect(state.streaming?.subagentRuns.map((run) => run.sessionFile)).toEqual([
+			"/a.jsonl",
+			"/b.jsonl",
+			"/c.jsonl",
+		]);
 		expect(state.streaming?.subagentRuns.map((run) => run.currentAction)).toEqual([
 			"正在阅读 /repo/README.md",
 			"正在检索 Obsidian：“vault”",
 			"正在等待主会话回复",
 		]);
-		expect(state.streaming?.subagentRuns[2]?.supervisorRequest).toMatchObject({ id: "req-z", reason: "need_decision", expectsReply: true });
+		expect(state.streaming?.subagentRuns[2]?.supervisorRequest).toMatchObject({
+			id: "req-z",
+			reason: "need_decision",
+			expectsReply: true,
+		});
 	});
 
 	it("subagent：parallel tasks 建多个占位并整体替换，不残留占位", () => {
@@ -1598,42 +1680,33 @@ describe("transcript store unseenCompletion", () => {
 describe("live research status", () => {
 	function toolCallState(name: string, id = "status-1") {
 		let state = reduceEvent(emptyTranscript(), ev("agent_start"));
-		state = reduceEvent(
-			state,
-			{
-				type: "message_update",
-				assistantMessageEvent: {
-					type: "toolcall_start",
-					contentIndex: 0,
-					partial: { content: [{ type: "toolCall", name }] },
-				},
-			} as unknown as AgentSessionEvent,
-		);
-		state = reduceEvent(
-			state,
-			{
-				type: "message_update",
-				assistantMessageEvent: {
-					type: "toolcall_end",
-					contentIndex: 0,
-					toolCall: { id, name, arguments: {} },
-				},
-			} as unknown as AgentSessionEvent,
-		);
+		state = reduceEvent(state, {
+			type: "message_update",
+			assistantMessageEvent: {
+				type: "toolcall_start",
+				contentIndex: 0,
+				partial: { content: [{ type: "toolCall", name }] },
+			},
+		} as unknown as AgentSessionEvent);
+		state = reduceEvent(state, {
+			type: "message_update",
+			assistantMessageEvent: {
+				type: "toolcall_end",
+				contentIndex: 0,
+				toolCall: { id, name, arguments: {} },
+			},
+		} as unknown as AgentSessionEvent);
 		return state;
 	}
 
 	it("set_status updates live status and disappears from tool cards", () => {
 		let state = toolCallState("set_status");
-		state = reduceEvent(
-			state,
-			{
-				type: "tool_execution_start",
-				toolCallId: "status-1",
-				toolName: "set_status",
-				args: { text: "正在比较系统发育证据…", phase: "verification" },
-			} as unknown as AgentSessionEvent,
-		);
+		state = reduceEvent(state, {
+			type: "tool_execution_start",
+			toolCallId: "status-1",
+			toolName: "set_status",
+			args: { text: "正在比较系统发育证据…", phase: "verification" },
+		} as unknown as AgentSessionEvent);
 		expect(state.researchStatus.agent).toMatchObject({
 			text: "正在比较系统发育证据…",
 			phase: "verification",
@@ -1645,55 +1718,43 @@ describe("live research status", () => {
 
 	it("real research tool temporarily overrides agent status and restores it on end", () => {
 		let state = toolCallState("set_status");
-		state = reduceEvent(
-			state,
-			{
-				type: "tool_execution_start",
-				toolCallId: "status-1",
-				toolName: "set_status",
-				args: { text: "正在整理神经行为证据…", phase: "synthesis" },
-			} as unknown as AgentSessionEvent,
-		);
-		state = reduceEvent(
-			state,
-			{
-				type: "tool_execution_start",
-				toolCallId: "obs-1",
-				toolName: "research-obsidian_search_notes",
-				args: { query: "autotomy" },
-			} as unknown as AgentSessionEvent,
-		);
+		state = reduceEvent(state, {
+			type: "tool_execution_start",
+			toolCallId: "status-1",
+			toolName: "set_status",
+			args: { text: "正在整理神经行为证据…", phase: "synthesis" },
+		} as unknown as AgentSessionEvent);
+		state = reduceEvent(state, {
+			type: "tool_execution_start",
+			toolCallId: "obs-1",
+			toolName: "research-obsidian_search_notes",
+			args: { query: "autotomy" },
+		} as unknown as AgentSessionEvent);
 		expect(state.researchStatus.host).toMatchObject({
 			text: "正在搜索 Obsidian 知识库…",
 			phase: "knowledge-search",
 			source: "host",
 			toolCallId: "obs-1",
 		});
-		state = reduceEvent(
-			state,
-			{
-				type: "tool_execution_end",
-				toolCallId: "obs-1",
-				toolName: "research-obsidian_search_notes",
-				result: { content: [] },
-				isError: false,
-			} as unknown as AgentSessionEvent,
-		);
+		state = reduceEvent(state, {
+			type: "tool_execution_end",
+			toolCallId: "obs-1",
+			toolName: "research-obsidian_search_notes",
+			result: { content: [] },
+			isError: false,
+		} as unknown as AgentSessionEvent);
 		expect(state.researchStatus.host).toBeNull();
 		expect(state.researchStatus.agent?.text).toBe("正在整理神经行为证据…");
 	});
 
 	it("agent_end clears both status layers", () => {
 		let state = toolCallState("set_status");
-		state = reduceEvent(
-			state,
-			{
-				type: "tool_execution_start",
-				toolCallId: "status-1",
-				toolName: "set_status",
-				args: { text: "正在制定研究策略…", phase: "planning" },
-			} as unknown as AgentSessionEvent,
-		);
+		state = reduceEvent(state, {
+			type: "tool_execution_start",
+			toolCallId: "status-1",
+			toolName: "set_status",
+			args: { text: "正在制定研究策略…", phase: "planning" },
+		} as unknown as AgentSessionEvent);
 		state = reduceEvent(state, ev("agent_end", { willRetry: false, messages: [] }));
 		expect(state.researchStatus).toEqual({ agent: null, host: null });
 	});

@@ -1,8 +1,8 @@
-import { KNOWLEDGE_SPECIALISTS } from "@percho/shared";
 import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { PROTECTED_KNOWLEDGE_AGENTS } from "@percho/shared";
 
 export type AgentSource = "builtin" | "user" | "project";
 
@@ -139,10 +139,15 @@ export async function discoverAgents(
 		for (const agent of projectAgents) byName.set(agent.name, agent);
 	}
 	// Reserved capability profiles cannot be replaced by ambient user/project files.
-	for (const agent of KNOWLEDGE_SPECIALISTS) byName.set(agent.name, {
-		name: agent.name, description: agent.description, tools: [...agent.permissions],
-		mcpAccess: "read-local", source: "builtin", systemPrompt: "Use the protected knowledge-service dispatcher; no generic runner access.",
-	});
+	for (const agent of PROTECTED_KNOWLEDGE_AGENTS)
+		byName.set(agent.name, {
+			name: agent.name,
+			description: agent.description,
+			tools: [...agent.permissions],
+			mcpAccess: "read-local",
+			source: "builtin",
+			systemPrompt: "Use the protected knowledge-service dispatcher; no generic runner access.",
+		});
 	return [...byName.values()];
 }
 

@@ -1,3 +1,4 @@
+import { researchBundlePaths } from "./research-bundle";
 import "./pi-package-dir";
 import "./dev-agent-dir";
 import "./fix-path";
@@ -179,7 +180,9 @@ app.whenReady().then(async () => {
 
 	process.env.PERCHO_KNOWLEDGE_DIR ||= join(app.getPath("userData"), "knowledge");
 	process.env.PERCHO_RESEARCH_WORKBENCH_ROOT = app.isPackaged
-		? join(process.resourcesPath, "research-workbench") : join(__dirname, "../../../../.pi");
+		? join(process.resourcesPath, "research-workbench")
+		: join(__dirname, "../../../../.pi");
+	const researchBundle = researchBundlePaths(process.env.PERCHO_RESEARCH_WORKBENCH_ROOT);
 	backend = new PiBackend({
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
@@ -188,16 +191,9 @@ app.whenReady().then(async () => {
 				join(uiPluginsResourcesDir(), "skills"),
 				// 内置协作 skill（channel-pickup/design-handoff）：语义上与 UI 插件无关，独立目录分发
 				app.isPackaged ? join(process.resourcesPath, "skills") : join(__dirname, "../../resources/skills"),
-				// Obsidian MCP 初始化命令与 research-vault skill 一起加载。
-				app.isPackaged
-					? join(process.resourcesPath, "research-workbench", "skills", "research-vault", "SKILL.md")
-					: join(__dirname, "../../../../.pi/skills/research-vault/SKILL.md"),
+				...researchBundle.additionalSkillPaths,
 			],
-			additionalExtensionPaths: [
-				app.isPackaged
-					? join(process.resourcesPath, "research-workbench", "extensions", "obsidian-workbench.mjs")
-					: join(__dirname, "../../../../.pi/extensions/obsidian-workbench.mjs"),
-			],
+			additionalExtensionPaths: researchBundle.additionalExtensionPaths,
 		},
 	});
 	await backend.init();

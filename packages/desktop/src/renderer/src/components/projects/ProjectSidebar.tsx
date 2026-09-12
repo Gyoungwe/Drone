@@ -4,11 +4,15 @@ import { useT } from "../../i18n";
 import { getDailyDirCached } from "../../lib/daily";
 import { deriveProjects, useProjectsStore } from "../../stores/projects";
 import { useSettingsStore } from "../../stores/settings";
-import { CloseIcon, CoffeeIcon, GearIcon, ObsidianIcon, HelpIcon, PlusIcon } from "../icons";
+import { CloseIcon, CoffeeIcon, GearIcon, HelpIcon, ObsidianIcon, PlusIcon } from "../icons";
 import { Tooltip } from "../ui/Tooltip";
 
 /** 项目仓库地址（帮助按钮跳转） */
-const APP_REPO_URL = "https://github.com/Jaxton07/percho";
+const APP_REPO_URL = "https://github.com/Gyoungwe/percho";
+
+/** Shared geometry keeps the three footer actions aligned, including their full-row hit targets. */
+const FOOTER_ACTION_CLASS =
+	"flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-ink-dim transition-colors hover:bg-hover hover:text-ink";
 
 /** 项目列表侧栏：项目项 + 底部设置/帮助入口 */
 export function ProjectSidebar() {
@@ -62,27 +66,27 @@ export function ProjectSidebar() {
 					/>
 				))}
 			</div>
-			<div className="shrink-0 px-3 py-3">
-				<button
-					type="button"
-					className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-ink-dim transition-colors hover:bg-hover hover:text-ink"
-					onClick={() => openSettings(true)}
-				>
-					<GearIcon />
-					{t("tabbar.settings")}
+			<div className="shrink-0 px-3 py-3" data-testid="project-sidebar-actions">
+				<button type="button" className={FOOTER_ACTION_CLASS} onClick={() => openSettings(true)}>
+					<GearIcon className="shrink-0" />
+					<span>{t("tabbar.settings")}</span>
 				</button>
-                <Tooltip label="Obsidian">
-                 <button type="button" aria-label="Obsidian" title="Obsidian" data-testid="obsidian-shortcut"
-                  className="my-1 flex h-8 w-8 items-center justify-center rounded-lg text-accent transition-colors hover:bg-hover"
-                  onClick={()=>useSettingsStore.getState().openWith("knowledge")}><ObsidianIcon size={18}/></button>
-                </Tooltip>
 				<button
 					type="button"
-					className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+					className={FOOTER_ACTION_CLASS}
+					data-testid="obsidian-shortcut"
+					onClick={() => useSettingsStore.getState().openWith("knowledge")}
+				>
+					<ObsidianIcon size={14} className="shrink-0 text-accent" />
+					<span>Obsidian</span>
+				</button>
+				<button
+					type="button"
+					className={FOOTER_ACTION_CLASS}
 					onClick={() => void getPi().openExternal(APP_REPO_URL)}
 				>
-					<HelpIcon />
-					{t("projects.help")}
+					<HelpIcon className="shrink-0" />
+					<span>{t("projects.help")}</span>
 				</button>
 			</div>
 		</aside>

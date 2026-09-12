@@ -22,3 +22,10 @@ npm-debug.log*
 .idea/
 .vscode/
 .agents/
+
+# Private research workspace state and generated outputs (not a release capability bundle)
+.pi/research-workspace.json
+.pi/browser-downloads/
+/results/
+/packages/backend/pi-session-*.html
+/packages/backend/pi-session-*.jsonl
