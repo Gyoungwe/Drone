@@ -77,9 +77,6 @@ linux:
   category: Development
   # workspace 包名是 @percho/desktop；AppImage/deb 需要安全的可执行文件名
   executableName: percho
-  desktop:
-    Name: Percho
-    Categories: Development
   target:
     - target: AppImage
       arch: [x64]
