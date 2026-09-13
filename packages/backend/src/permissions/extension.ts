@@ -142,12 +142,13 @@ export function makePermissionGateExtension(
 						patternText = abs;
 						if (!inside) {
 							outside = true;
-							// 读写分离：界外读默认放行（拦读不换安全只损效率），界外写确认
+							// 读写分离：界外读默认放行（拦读不换安全只损效率），界外写确认。
+							// write/edit 默认已是 ask 时仍标注 boundary，便于 fullAccess 审计区分规则 ask 与越界。
 							if (action === "allow") {
 								action = READ_TOOLS.has(event.toolName) ? config.outside.read : config.outside.write;
-								if (action !== "allow")
-									boundary = READ_TOOLS.has(event.toolName) ? "outside-read" : "outside-write";
 							}
+							if (action !== "allow")
+								boundary = READ_TOOLS.has(event.toolName) ? "outside-read" : "outside-write";
 						}
 					}
 				}

@@ -14,6 +14,7 @@ import { getKnowledgeService } from "./service.mjs";
 import { saveSpecialistExplainer } from "./specialist-delivery.mjs";
 import { createKnowledgeSpecialists } from "./specialists.mjs";
 import { createTaskFeedback, guardResearchToolResult } from "./task-feedback.mjs";
+import { createToolBudget } from "./tool-budget.mjs";
 import { autoTopicCandidate } from "./topic-candidate.mjs";
 import { createTopicMemory, topicRunHash } from "./topic-memory.mjs";
 import {
@@ -93,6 +94,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 	};
 	const toolInputs = new Map();
 	const specialists = createKnowledgeSpecialists(pi, { getCurrent: (ctx) => requireTurn(ctx), readOnly });
+	const toolBudget = createToolBudget();
 	let explainerArchived = false;
 	const feedback = createTaskFeedback();
 	const publication = registerAnswerPublication(pi, {
@@ -529,6 +531,8 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 		},
 		execute: async (_id, p, _s, _u, ctx) => {
 			const c = requireTurn(ctx);
+			const blocked = toolBudget.consume("read", p.path);
+			if (blocked) return result(blocked);
 			try {
 				updateKnowledgeFlow(ctx, {
 					phase: /(?:^|\/)Wiki\//.test(p.path) ? "reading-wiki" : "reading-evidence",
@@ -562,6 +566,8 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 		},
 		execute: async (_id, p, _s, _u, ctx) => {
 			const c = requireTurn(ctx);
+			const blocked = toolBudget.consume("search", p.query);
+			if (blocked) return result(blocked);
 			updateKnowledgeFlow(ctx, { phase: "searching", error: null });
 			try {
 				const found = await c.service.search(c.ticket, ctx.cwd, {
@@ -957,9 +963,11 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 		explainerArchived = false;
 		toolInputs.clear();
 		publication.begin(true);
+		toolBudget.reset();
 		try {
 			const binding = await readKnowledgeBinding();
 			publication.begin(!!binding);
+			toolBudget.reset();
 			beginKnowledgeFlow(ctx, binding);
 			if (binding) {
 				specialists.begin(query);
@@ -1073,6 +1081,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			try {
 				const binding = await readKnowledgeBinding();
 				publication.begin(!!binding);
+				toolBudget.reset();
 				beginKnowledgeFlow(ctx, binding);
 				if (!binding)
 					return {

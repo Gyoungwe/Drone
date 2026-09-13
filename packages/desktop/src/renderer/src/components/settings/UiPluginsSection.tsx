@@ -28,23 +28,37 @@ const REGION_KEYS: Record<string, MessageKey> = {
 
 const REGION_NAMES = new Set(KNOWN_UI_REGIONS);
 
-/** 行内启用按钮：未信任时先二次确认（照 ExtensionsPanel UninstallButton 模式，3s 恢复） */
+/** 行内启用按钮：内置插件一键启用；第三方先二次确认（3s 恢复，不因 mouseleave 取消） */
 function EnableButton({ plugin }: { plugin: UiPluginInfo }) {
 	const t = useT();
 	const [confirming, setConfirming] = useState(false);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const setPluginEnabled = useUiPluginsStore((s) => s.setPluginEnabled);
 
+	const enable = () => {
+		clearTimeout(timerRef.current);
+		setConfirming(false);
+		void setPluginEnabled(plugin.name, true);
+	};
+
+	if (plugin.builtin) {
+		return (
+			<button
+				type="button"
+				className="rounded-lg px-2 py-1 text-[12px] font-medium text-ink-2 transition-colors hover:bg-hover"
+				onClick={enable}
+			>
+				{t("settings.uiPlugins.enable")}
+			</button>
+		);
+	}
+
 	if (confirming) {
 		return (
 			<button
 				type="button"
 				className="rounded-lg px-2 py-1 text-[12px] font-medium text-err transition-colors hover:bg-hover"
-				onClick={() => {
-					clearTimeout(timerRef.current);
-					void setPluginEnabled(plugin.name, true);
-				}}
-				onMouseLeave={() => setConfirming(false)}
+				onClick={enable}
 			>
 				{t("settings.uiPlugins.confirmEnable")}
 			</button>

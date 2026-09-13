@@ -4,6 +4,7 @@ import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useT } from "../../i18n";
 import { COMPOSER_FOCUS_EVENT, EMPTY_DRAFT, NEW_SESSION_DRAFT_KEY, useDraftStore } from "../../stores/drafts";
 import { useSessionsStore } from "../../stores/sessions";
+import { useSettingsStore } from "../../stores/settings";
 import { pushToast } from "../../stores/toasts";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { ImagePreviewOverlay } from "../chat/ImagePreview";
@@ -39,6 +40,8 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	const trustVersion = useSessionsStore((s) => s.trustVersion);
 	/** 图片门控数据源：会话覆写模型 ?? 全局默认 → models 表查 imageInput（ModelPicker 同款解析） */
 	const models = useSessionsStore((s) => s.models);
+	const noModel = models.length === 0;
+	const openSettings = useSettingsStore((s) => s.openWith);
 	const currentModel = useSessionsStore((s) => s.currentModel);
 	const activeModel = useSessionsStore(
 		(s) => s.sessions.find((x) => x.sessionId === s.activeSessionId)?.model,
@@ -307,6 +310,15 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 					onPreview={setPreviewImage}
 					onRemove={(index) => setImages((prev) => prev.filter((_, i) => i !== index))}
 				/>
+				{noModel && !readOnly && (
+					<button
+						type="button"
+						className="mb-2 w-full rounded-xl border border-border bg-hover px-3 py-2 text-left text-[12px] text-ink-2"
+						onClick={() => openSettings("models")}
+					>
+						{t("composer.noModelHint")}
+					</button>
+				)}
 				<div className="rounded-[20px] border-[0.5px] border-border bg-surface shadow-soft">
 					{/* 引用胶囊区：独占顶部一行贴边（专为选中引用留的位置，不占正文宽度） */}
 					{quotes.length > 0 && (
@@ -401,8 +413,14 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 							<button
 								type="button"
 								className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-on-ink transition-colors hover:bg-ink-2 disabled:opacity-30"
-								disabled={readOnly || !hasContent || sending}
-								onClick={() => void handleSend()}
+								disabled={readOnly || !hasContent || sending || noModel}
+								onClick={() => {
+									if (noModel) {
+										openSettings("models");
+										return;
+									}
+									void handleSend();
+								}}
 								aria-label={t("composer.send")}
 							>
 								<ArrowUpIcon size={20} />

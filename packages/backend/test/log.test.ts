@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatTimestamp } from "../src/log";
+import { formatTimestamp, safeStdoutWrite } from "../src/log";
 
 /** sweepOldLogs 的文件名过滤正则（实现内联常量，这里镜像断言其不变量） */
 const LOG_FILENAME_RE = /^main-\d{4}-\d{2}-\d{2}\.log$/;
@@ -40,5 +40,27 @@ describe("formatTimestamp", () => {
 		const filename = `main-${formatTimestamp(d).slice(0, 10)}.log`;
 		expect(filename).toBe("main-2026-08-27.log");
 		expect(LOG_FILENAME_RE.test(filename)).toBe(true);
+	});
+});
+
+describe("safeStdoutWrite", () => {
+	it("swallows EPIPE and EIO from stdout.write", () => {
+		const orig = process.stdout.write;
+		try {
+			process.stdout.write = (() => {
+				const err = new Error("broken pipe") as NodeJS.ErrnoException;
+				err.code = "EPIPE";
+				throw err;
+			}) as typeof process.stdout.write;
+			expect(() => safeStdoutWrite("hi\n")).not.toThrow();
+			process.stdout.write = (() => {
+				const err = new Error("io") as NodeJS.ErrnoException;
+				err.code = "EIO";
+				throw err;
+			}) as typeof process.stdout.write;
+			expect(() => safeStdoutWrite("hi\n")).not.toThrow();
+		} finally {
+			process.stdout.write = orig;
+		}
 	});
 });

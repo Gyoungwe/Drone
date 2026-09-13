@@ -33,9 +33,16 @@ export function registerUiPluginsIpc(manager: UiPluginManager): void {
 
 	// 启用=信任：enabled=true 时 trusted 一并落盘
 	ipcMain.handle(IpcChannels.UiPluginsSetPluginEnabled, async (_e, name: string, enabled: boolean) => {
-		if (typeof name !== "string" || typeof enabled !== "boolean") return;
+		if (typeof name !== "string" || typeof enabled !== "boolean") {
+			throw new Error("invalid plugin enable arguments");
+		}
+		if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
+			throw new Error(`invalid plugin name: ${name}`);
+		}
 		const info = manager.info(name);
-		if (!info || info.invalidReason) return;
+		if (enabled && info?.invalidReason) {
+			throw new Error(info.invalidReason);
+		}
 		const config = await loadUiPluginsConfig();
 		const prev = config.plugins[name];
 		const patch: Partial<UiPluginsConfig> = {
