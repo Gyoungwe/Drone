@@ -73,6 +73,15 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+linux:
+  category: Development
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  # 产物名与 productName 解耦：保持 percho-linux-* 兼容 README 下载表
+  artifactName: percho-linux-${arch}.${ext}
 publish:
   provider: github
   owner: Gyoungwe
