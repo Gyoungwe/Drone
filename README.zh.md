@@ -12,7 +12,7 @@
   <a href="https://github.com/Gyoungwe/percho/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Gyoungwe/percho/ci.yml?style=flat-square" alt="CI"></a>
   <a href="https://github.com/Gyoungwe/percho"><img src="https://img.shields.io/github/stars/Gyoungwe/percho?style=flat-square" alt="Stars"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=nodedotjs&style=flat-square" alt="Node >=22.19">
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-blue?style=flat-square" alt="macOS | Windows">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue?style=flat-square" alt="macOS | Windows | Linux">
 </p>
 <p align="center">
   <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a>
@@ -70,7 +70,10 @@ percho 把官方 Pi SDK（`@earendil-works/pi-coding-agent`）跑在 Electron �
 | macOS (Apple Silicon) | `percho-mac-arm64.dmg` |
 | macOS (Intel) | `percho-mac-x64.dmg` |
 | Windows | `percho-windows-x64.exe`（安装器）或 `percho-windows-x64.zip` |
+| Linux (x64) | `percho-linux-x64.AppImage` 或 `percho-linux-x64.deb` |
 
+> Linux 包未签名。AppImage 需先 `chmod +x percho-linux-x64.AppImage` 再运行。
+>
 > 构建为 adhoc 临时签名（无 Developer ID 证书）。macOS 下载后首次打开可能提示**「Apple 无法验证 Percho 是否包含危害 Mac 安全或泄漏隐私的恶意软件」**—— 这是 Gatekeeper 拦截未公证的 App。按以下方式放行：
 >
 > 1. **系统设置 → 隐私与安全性** → 滚动到底部 → 在 Percho 条目旁点**「仍要打开」**，然后输入密码或 Touch ID 确认（推荐）。
