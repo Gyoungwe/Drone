@@ -3,7 +3,10 @@
 	"version": "0.7.0",
 	"private": true,
 	"description": "Desktop GUI for the Pi coding agent",
-	"author": "Jaxton07",
+	"author": {
+		"name": "Yangwei Gao",
+		"email": "974283650@qq.com"
+	},
 	"license": "MIT",
 	"type": "module",
 	"main": "./out/main/index.js",
@@ -51,5 +54,6 @@
 		"vite": "^7.0.0",
 		"vite-plugin-singlefile": "^2.3.3",
 		"vitest": "^3.2.0"
-	}
+	},
+	"homepage": "https://github.com/Gyoungwe/percho#readme"
 }
