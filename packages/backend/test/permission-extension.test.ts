@@ -478,10 +478,9 @@ describe("权限模式（fullAccess = 一切放行 + 高危审计）", () => {
 		expect(entries[0]).toMatchObject({
 			tool: "write",
 			action: "ask",
+			boundary: "outside-write",
 			text: resolve(root, "../../../escape-audit.ts"),
 		});
-		// write 默认已是 ask，边界改写只作用于 allow，不再标 outside-write
-		expect(entries[0].boundary).toBeUndefined();
 		expect(entries[1]).toMatchObject({ tool: "bash", action: "ask", text: "npm run build" });
 	});
 
