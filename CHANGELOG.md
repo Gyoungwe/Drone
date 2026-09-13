@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1 — 2026-09-13
+
+- Default mode asks before edit/write (approval dock).
+- UI plugin enable state persists; builtin one-click enable.
+- Vault/AskDialog submit hang fixed; Knowledge tool-loop budget.
+- Linux install docs, Scout docs, empty-model CTA, EPIPE log quieting.
+
+
 ## 0.7.0 — 2026-09-13
 
 ### Added
