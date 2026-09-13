@@ -144,20 +144,25 @@ export function loadPermissionConfig(agentDir: string): PermissionConfig {
 	}
 }
 
-/** mtime 缓存的配置读取：扩展在每次 tool_call 前调用，开关/规则修改即时生效 */
+/** mtime+size 缓存的配置读取：扩展在每次 tool_call 前调用，开关/规则修改即时生效。
+ * 只看 mtime 会在同一毫秒内连续写 permissions.json 时吃到旧规则（测试和热改都踩过）。 */
 export function createPermissionConfigLoader(agentDir: string): () => PermissionConfig {
-	let cached: { mtimeMs: number | null; config: PermissionConfig } | undefined;
+	let cached: { mtimeMs: number | null; size: number | null; config: PermissionConfig } | undefined;
 	return () => {
 		const path = permissionConfigPath(agentDir);
 		let mtimeMs: number | null = null;
+		let size: number | null = null;
 		try {
-			mtimeMs = statSync(path).mtimeMs;
+			const st = statSync(path);
+			mtimeMs = st.mtimeMs;
+			size = st.size;
 		} catch {
 			mtimeMs = null;
+			size = null;
 		}
-		if (cached && cached.mtimeMs === mtimeMs) return cached.config;
+		if (cached && cached.mtimeMs === mtimeMs && cached.size === size) return cached.config;
 		const config = loadPermissionConfig(agentDir);
-		cached = { mtimeMs, config };
+		cached = { mtimeMs, size, config };
 		return config;
 	};
 }
