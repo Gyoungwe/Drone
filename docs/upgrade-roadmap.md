@@ -59,15 +59,62 @@ Status: implemented for Desktop and LAN.
 - Desktop and LAN derive from the same shared transcript function.
 - Only observable public summaries/tools/receipts are displayed. Private chain-of-thought is never exposed.
 
-## P5 — Optional semantic candidate retrieval
+## P5 — Hybrid semantic knowledge retrieval
 
-Status: experimental interface implemented; no embedding provider enabled by default.
+Status: implemented; embedding remains opt-in and disabled by default.
 
-- SQLite FTS remains the deterministic lexical retrieval layer.
-- `KnowledgeService` may receive an optional `semanticCandidateProvider` that returns candidate note paths only.
-- Candidate paths are revalidated against Vault/project scope, hydrated from current source files, deduplicated with FTS hits and explicitly marked `retrieval: semantic-candidate`.
-- Candidate generation has a 1.5 s bound and fails open to lexical results.
+- SQLite FTS and semantic vector retrieval run independently and are fused deterministically; the injectable candidate provider remains for compatibility/tests.
+- Ollama and OpenAI-compatible adapters are bounded, abortable, opt-in, and validate endpoint/credential/vector safety.
+- Vector chunks are stored incrementally by current source hash and provider/model/chunk fingerprint; changed/deleted sources are invalidated and incompatible fingerprints are never reused.
+- Semantic candidates are rehydrated through current Vault/project ACL and a configurable similarity floor (default 0.45), then deduplicated/fused with lexical candidates. Provider failures fall back to FTS with structured retrieval diagnostics.
 - A semantic hit never creates a read/evidence receipt. The parent must still read the current source before evidence publication; regression tests enforce this.
+
+## P6 — Long-session reliability and observable recovery
+
+Status: implemented.
+
+- Deterministic 20/50-turn replay and concurrent/cancelled specialist stress tests.
+- Separate no-evidence, provider failure, permission denial and exhausted budgets.
+- Current read targets must not be inferred from links in retrieved text; replayed response/tool IDs are deduplicated.
+- Session usage refreshes at completed-response/run boundaries, not per token delta.
+- Synthetic replay results are not presented as live-model quality or cost measurements.
+
+## P7 — Knowledge lifecycle
+
+Status: implemented.
+
+- Extend existing evidence-gated summary -> pending topic proposal/merge flow, never duplicate it.
+- Idempotent repeated runs; additions, potential conflicts and changed-source/stale markers.
+- Keep original sources, current read receipts, proposal and Show Me/run references traceable.
+- No automatic overwrite of human-authored Wiki text; reviewed publication remains separate.
+
+## P8 — Cross-session topic continuity
+
+Status: implemented.
+
+- Bounded versioned topic records scoped by Vault and project; no full transcript copying.
+- Explicit topic ID/name or a unique match resumes context; ambiguity returns selectable candidates.
+- Summaries/entities/open questions provide navigation context only, never evidence or instructions.
+- Revalidate current source hashes, binding and project scope across restart and topic switches.
+
+## P9 — Bounded adaptive specialist orchestration
+
+Status: implemented.
+
+- Auditable deterministic run/skip decisions based on task needs, evidence and remaining budgets.
+- Preserve Automatic/Manual/Off policy, explicit models/Thinking and immutable role permissions.
+- Reserve before asynchronous dispatch; cap queue/concurrency/run/token/tool budgets and release on cancellation.
+- Parent-facing receipts explain why work stopped and what remains; missing usage is unknown, not zero cost.
+
+## P10 — Release hardening / 0.7 candidate
+
+Status: implemented and locally validated for the 0.7.0 release candidate.
+
+- Additive persistence migrations and refusal to overwrite corrupt or unknown future schemas.
+- Legacy sessions/settings/Vaults remain readable with semantic retrieval disabled by default.
+- Run shared + backend + desktop tests, stress/benchmark fixtures, lint/typecheck/build, isolated Electron smoke and package audits.
+- Validate the locally built macOS package without accessing the real Vault, credentials or session data.
+- Report platform/signing/live-provider checks separately; a local build does not claim cross-platform or public release success.
 
 ## Acceptance criteria
 

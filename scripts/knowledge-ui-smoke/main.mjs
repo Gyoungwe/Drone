@@ -104,8 +104,8 @@ async function run() {
 				outputTokens: 100,
 				cacheReadTokens: 800,
 				cacheWriteTokens: 0,
-				totalTokens: 1100,
-				requests: 1,
+				totalTokens: usageReads > 1 ? 2200 : 1100,
+				requests: usageReads > 1 ? 2 : 1,
 				cost: 0,
 				scope: "sdk-session",
 			};
@@ -158,10 +158,25 @@ async function run() {
 			"document.querySelector('[data-testid=knowledge-specialists-settings] select')",
 			"specialist policy controls",
 		);
-		await wait("document.querySelectorAll('[data-testid=knowledge-specialist-cards] article').length===5", "five protected specialist cards");
-		assert(await js("document.querySelector('[data-testid=knowledge-specialists-settings]').innerText.includes('knowledge-wiki-editor')"));
-		assert(await js("document.querySelector('[data-testid=knowledge-specialists-settings]').innerText.includes('fixture/research-model')||[...document.querySelectorAll('[data-testid=knowledge-specialists-settings] select')].some(s=>s.value==='fixture/research-model')"));
-		assert(await js("[...document.querySelectorAll('[data-testid=knowledge-specialists-settings] select')].some(s=>s.value==='high')"));
+		await wait(
+			"document.querySelectorAll('[data-testid=knowledge-specialist-cards] article').length===5",
+			"five protected specialist cards",
+		);
+		assert(
+			await js(
+				"document.querySelector('[data-testid=knowledge-specialists-settings]').innerText.includes('knowledge-wiki-editor')",
+			),
+		);
+		assert(
+			await js(
+				"document.querySelector('[data-testid=knowledge-specialists-settings]').innerText.includes('fixture/research-model')||[...document.querySelectorAll('[data-testid=knowledge-specialists-settings] select')].some(s=>s.value==='fixture/research-model')",
+			),
+		);
+		assert(
+			await js(
+				"[...document.querySelectorAll('[data-testid=knowledge-specialists-settings] select')].some(s=>s.value==='high')",
+			),
+		);
 		await js(
 			"(()=>{const select=document.querySelector('[data-testid=knowledge-specialists-settings] select');select.value='off';select.dispatchEvent(new Event('change',{bubbles:true}));})()",
 		);
@@ -181,23 +196,58 @@ async function run() {
 			"four specialist roles, explicit model-cost and permission information; real IPC mode change persists without calling a model",
 		);
 		await capture("06-specialist-settings");
-		await wait("document.querySelector('[data-testid=tools-skills-overview]')", "Tools & Skills capability overview");
-		assert(await js("document.querySelector('[data-testid=tools-skills-overview]').innerText.includes('23%')"));
-		assert(await js("document.querySelector('[data-testid=tools-skills-fixture]').innerText.includes('research_search_knowledge')"));
+		await wait(
+			"document.querySelector('[data-testid=tools-skills-overview]')",
+			"Tools & Skills capability overview",
+		);
+		assert(
+			await js("document.querySelector('[data-testid=tools-skills-overview]').innerText.includes('23%')"),
+		);
+		assert(
+			await js(
+				"document.querySelector('[data-testid=tools-skills-fixture]').innerText.includes('research_search_knowledge')",
+			),
+		);
 		checks.push("Tools & Skills shows active/lazy/always-on registry metadata and measured schema footprint");
 		await capture("07-tools-skills");
 		await wait("document.querySelector('[data-testid=run-inspector]')", "Run Inspector");
 		await js("document.querySelector('[data-testid=run-inspector]').open=true");
-		assert(await js("document.querySelector('[data-testid=run-inspector]').innerText.includes('research_check_answer')"));
-		assert(await js("document.querySelector('[data-testid=run-inspector]').innerText.includes('Library/Papers/source.md')"));
-		assert(await js("!document.querySelector('[data-testid=run-inspector]').innerText.includes('PRIVATE_CHAIN')"));
-		checks.push("Run Inspector shows observable models/stages/tools/subagents/reads/artifacts/publication gate without private thinking");
+		assert(
+			await js(
+				"document.querySelector('[data-testid=run-inspector]').innerText.includes('research_check_answer')",
+			),
+		);
+		assert(
+			await js(
+				"document.querySelector('[data-testid=run-inspector]').innerText.includes('Library/Papers/source.md')",
+			),
+		);
+		assert(
+			await js("!document.querySelector('[data-testid=run-inspector]').innerText.includes('PRIVATE_CHAIN')"),
+		);
+		assert(await js("document.querySelector('[data-testid=run-retrievals]').innerText.includes('词法候选')"));
+		assert(
+			await js(
+				"document.querySelector('[data-testid=run-diagnostics]').innerText.includes('session-token-budget')",
+			),
+		);
+		checks.push(
+			"Run Inspector shows observable models/stages/tools/subagents/reads/artifacts/publication gate without private thinking",
+		);
 		await capture("07-run-inspector");
 		await wait(
 			"document.querySelector('[data-testid=session-usage]').innerText.includes('80.0%')",
 			"SDK cumulative usage footer",
 		);
 		assert(usageReads >= 1);
+		const initialUsageReads = usageReads;
+		await js("window.knowledgeUsageBoundary();true");
+		await wait(
+			"document.querySelector('[data-testid=session-usage]').innerText.includes('2.2k')",
+			"same-session completed-response usage refresh",
+		);
+		assert(usageReads > initialUsageReads, "stats IPC refreshed without changing session ID");
+		checks.push("session total refreshes at a new committed response within the same session");
 		assert(await js("document.querySelector('[data-testid=turn-usage]').innerText.includes('80.0%')"));
 		await js(
 			"document.querySelector('[data-testid=turn-usage]').open=true;document.querySelector('[data-testid=session-usage]').open=true;document.querySelector('[data-testid=usage-progress-fixture]').scrollIntoView({block:'center'});true",

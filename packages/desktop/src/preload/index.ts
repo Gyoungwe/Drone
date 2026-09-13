@@ -7,6 +7,9 @@ import {
 } from "@percho/shared";
 import { contextBridge, ipcRenderer } from "electron";
 
+const knowledgeUpgradeChannel = (key: string, fallback: string) =>
+	(IpcChannels as unknown as Record<string, string>)[key] || fallback;
+
 const api: PiApi = {
 	setKnowledgeSpecialistSettings: (input) =>
 		ipcRenderer.invoke(IpcChannels.KnowledgeSpecialistsSettings, input),
@@ -23,6 +26,29 @@ const api: PiApi = {
 	maintainKnowledge: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeMaintain, input),
 	openKnowledgeTarget: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeOpen, input),
 	resumeKnowledgeCheck: (input) => ipcRenderer.invoke(IpcChannels.KnowledgeResume, input),
+	getKnowledgeSemanticStatus: (input) =>
+		ipcRenderer.invoke(knowledgeUpgradeChannel("KnowledgeSemanticStatus", "knowledge:semanticStatus"), input),
+	saveKnowledgeSemanticSettings: (input) =>
+		ipcRenderer.invoke(
+			knowledgeUpgradeChannel("KnowledgeSemanticSettingsSave", "knowledge:semanticSettingsSave"),
+			input,
+		),
+	testKnowledgeSemanticProvider: (input) =>
+		ipcRenderer.invoke(
+			knowledgeUpgradeChannel("KnowledgeSemanticProviderTest", "knowledge:semanticProviderTest"),
+			input,
+		),
+	indexKnowledgeSemantic: (input) =>
+		ipcRenderer.invoke(knowledgeUpgradeChannel("KnowledgeSemanticIndex", "knowledge:semanticIndex"), input),
+	cancelKnowledgeSemanticIndex: (input) =>
+		ipcRenderer.invoke(
+			knowledgeUpgradeChannel("KnowledgeSemanticIndexCancel", "knowledge:semanticIndexCancel"),
+			input,
+		),
+	getKnowledgeTopics: (input) =>
+		ipcRenderer.invoke(knowledgeUpgradeChannel("KnowledgeTopics", "knowledge:topics"), input),
+	archiveKnowledgeTopic: (input) =>
+		ipcRenderer.invoke(knowledgeUpgradeChannel("KnowledgeTopicArchive", "knowledge:topicArchive"), input),
 	onKnowledgeEvent: (cb) => {
 		const listener = (_event: unknown, value: Parameters<typeof cb>[0]) => cb(value);
 		ipcRenderer.on(IpcChannels.KnowledgeEvent, listener);

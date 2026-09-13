@@ -3,6 +3,37 @@ import type {
 	KnowledgeSpecialistRun,
 	KnowledgeSpecialistSettings,
 } from "./knowledge-specialists";
+import type {
+	KnowledgeSemanticIndexCancelRequest,
+	KnowledgeSemanticIndexRequest,
+	KnowledgeSemanticIndexResult,
+	KnowledgeSemanticProviderRequest,
+	KnowledgeSemanticProviderResult,
+	KnowledgeSemanticSettings,
+	KnowledgeSemanticSettingsRequest,
+	KnowledgeSemanticStatus,
+	KnowledgeTopicArchiveRequest,
+	KnowledgeTopicListResult,
+	KnowledgeTopicsRequest,
+} from "./knowledge-upgrade";
+
+export type {
+	KnowledgeSemanticConfig,
+	KnowledgeSemanticIndexCancelRequest,
+	KnowledgeSemanticIndexRequest,
+	KnowledgeSemanticIndexResult,
+	KnowledgeSemanticProvider,
+	KnowledgeSemanticProviderRequest,
+	KnowledgeSemanticProviderResult,
+	KnowledgeSemanticSettings,
+	KnowledgeSemanticSettingsRequest,
+	KnowledgeSemanticStatus,
+	KnowledgeTopic,
+	KnowledgeTopicArchiveRequest,
+	KnowledgeTopicListResult,
+	KnowledgeTopicSource,
+	KnowledgeTopicsRequest,
+} from "./knowledge-upgrade";
 /** Host-owned knowledge UI protocol. Reading in the UI never earns model evidence receipts. */
 export interface KnowledgeReadRecord {
 	path: string;
@@ -224,12 +255,35 @@ export interface WikiModelReviewResult {
 	sources?: { path: string; hash: string; startLine: number; endLine: number }[];
 }
 export interface KnowledgeApi {
+	getKnowledgeSemanticStatus(input?: {
+		cwd?: string | null;
+		bindingRevision?: number;
+	}): Promise<KnowledgeSemanticStatus>;
+	saveKnowledgeSemanticSettings(input: KnowledgeSemanticSettingsRequest): Promise<KnowledgeSemanticSettings>;
+	testKnowledgeSemanticProvider(
+		input: KnowledgeSemanticProviderRequest,
+	): Promise<KnowledgeSemanticProviderResult>;
+	indexKnowledgeSemantic(input: KnowledgeSemanticIndexRequest): Promise<KnowledgeSemanticIndexResult>;
+	cancelKnowledgeSemanticIndex(input: KnowledgeSemanticIndexCancelRequest): Promise<void>;
+	getKnowledgeTopics(input: KnowledgeTopicsRequest): Promise<KnowledgeTopicListResult>;
+	archiveKnowledgeTopic(input: KnowledgeTopicArchiveRequest): Promise<unknown>;
 	reviewKnowledgeWithModel(input: WikiModelReviewInput): Promise<WikiModelReviewResult>;
 	cancelKnowledgeModelReview(input: { sessionId: string; requestId: string }): Promise<void>;
 	setKnowledgeSpecialistSettings(input: {
 		mode: KnowledgeSpecialistMode;
 		revision: number;
 		bindingRevision: number;
+		maxRunsPerTurn?: number;
+		maxRunsPerSession?: number;
+		maxToolOperations?: number;
+		concurrency?: number;
+		queueLimit?: number;
+		queueWaitMs?: number;
+		timeoutMs?: number;
+		maxTokensPerTurn?: number;
+		maxTokensPerSession?: number;
+		maxCostPerTurn?: number;
+		maxCostPerSession?: number;
 	}): Promise<KnowledgeSpecialistSettings>;
 	getKnowledgeOverview(input?: {
 		cwd?: string | null;

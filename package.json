@@ -20,7 +20,9 @@
 		"typecheck": "npm run typecheck --workspaces",
 		"test": "npm run test --workspaces --if-present",
 		"dist": "npm run dist -w packages/desktop",
-		"lint": "biome check ."
+		"lint": "biome check .",
+		"test:upgrade": "node scripts/check-upgrade-release.mjs --fixtures-only",
+		"validate:upgrade": "node scripts/check-upgrade-release.mjs --ui"
 	},
 	"engines": {
 		"node": ">=22.19"

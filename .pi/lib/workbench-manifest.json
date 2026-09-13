@@ -21,7 +21,11 @@
 		"research_loop",
 		"research_summarize_run",
 		"research_archive_explainer",
-		"research_propose_wiki_update"
+		"research_propose_wiki_update",
+		"research_topics",
+		"research_resume_topic",
+		"research_update_topic",
+		"research_archive_topic"
 	],
 	"optionalPackages": [
 		{

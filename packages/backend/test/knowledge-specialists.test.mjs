@@ -195,6 +195,28 @@ describe("isolated capability runner", () => {
 		);
 		expect(r.completeSimple).not.toHaveBeenCalled();
 	});
+	it("keeps invalid or missing provider usage fields unknown instead of inventing zero-valued receipts", async () => {
+		const response = submit();
+		response.usage = {
+			input: 10,
+			output: 4,
+			cacheRead: Number.NaN,
+			cacheWrite: -1,
+			totalTokens: undefined,
+			cost: {},
+		};
+		const seen = [];
+		const result = await runKnowledgeSpecialist(
+			deps(runtime([response])),
+			request({ onUsage: (usage) => seen.push(usage) }),
+		);
+		expect(result.usage.reported).toBe(true);
+		expect(result.usage.reportedFields).toEqual(expect.arrayContaining(["inputTokens", "outputTokens"]));
+		expect(result.usage.reportedFields).not.toContain("totalTokens");
+		expect(result.usage.reportedFields).not.toContain("cost");
+		expect(result.usage.reportedFields).not.toContain("cacheReadTokens");
+		expect(seen[0].reportedFields).not.toContain("cacheWriteTokens");
+	});
 });
 let root, cwd, vault, current, ctx, service, coordinator, unregister, hostCalls;
 async function note(path, text) {

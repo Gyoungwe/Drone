@@ -16,6 +16,9 @@ vi.mock("electron", () => ({
 import { IpcChannels } from "@percho/shared";
 import { registerKnowledgeIpc } from "./knowledge";
 
+const channel = (key: string, fallback: string) =>
+	(IpcChannels as unknown as Record<string, string>)[key] || fallback;
+
 let backend: any;
 beforeEach(() => {
 	mocks.handlers.clear();
@@ -31,6 +34,13 @@ beforeEach(() => {
 			read: vi.fn(),
 			maintain: vi.fn(),
 			openTarget: vi.fn(async () => ({ kind: "note", path: "/fixture/Vault/note.md" })),
+			semanticStatus: vi.fn(async () => ({ settings: {}, index: {} })),
+			saveSemanticSettings: vi.fn(async (input: unknown) => input),
+			testSemanticProvider: vi.fn(async () => ({ ok: true })),
+			indexSemantic: vi.fn(async () => ({ enabled: true })),
+			cancelSemanticIndex: vi.fn(async () => {}),
+			topics: vi.fn(async () => ({ revision: 1, topics: [] })),
+			archiveTopic: vi.fn(async () => ({ status: "archived" })),
 			subscribe: vi.fn(),
 		},
 		startKnowledgeSetup: vi.fn(),
@@ -95,6 +105,28 @@ it("model review and cancellation remain restricted to the application main fram
 		expect(() => mocks.handlers.get(name)?.({ sender: { mainFrame: frame }, senderFrame: {} }, {})).toThrow(
 			"main frame",
 		);
+});
+
+it("guards and forwards semantic and topic human actions exactly", async () => {
+	const frame = {};
+	const input = { cwd: "/fixture", bindingRevision: 4, requestId: "r-1", limit: 8 };
+	await mocks.handlers.get(channel("KnowledgeSemanticIndex", "knowledge:semanticIndex"))?.(
+		{ sender: { mainFrame: frame }, senderFrame: frame },
+		input,
+	);
+	expect(backend.knowledge.indexSemantic).toHaveBeenCalledWith(input);
+	expect(() =>
+		mocks.handlers.get(channel("KnowledgeTopics", "knowledge:topics"))?.(
+			{ sender: { mainFrame: frame }, senderFrame: {} },
+			input,
+		),
+	).toThrow("main frame");
+	const topicInput = { cwd: "/fixture", bindingRevision: 4, id: "topic-1", expectedRevision: 9 };
+	await mocks.handlers.get(channel("KnowledgeTopicArchive", "knowledge:topicArchive"))?.(
+		{ sender: { mainFrame: frame }, senderFrame: frame },
+		topicInput,
+	);
+	expect(backend.knowledge.archiveTopic).toHaveBeenCalledWith(topicInput);
 });
 it("forwards explicit one-shot model review choices, never granting a model tool approval", async () => {
 	backend.reviewKnowledgeWithModel = vi.fn(async () => ({ applied: false }));

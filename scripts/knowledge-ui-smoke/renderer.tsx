@@ -20,7 +20,16 @@ const info = await (window as any).knowledgeTest.info();
 useSessionsStore.setState({
 	cwd: info.cwd,
 	activeSessionId: "fixture",
-	models: [{ provider: "fixture", providerName: "Fixture", id: "research-model", label: "Research Model", authed: true, thinkingLevels: ["off", "low", "medium", "high"] }],
+	models: [
+		{
+			provider: "fixture",
+			providerName: "Fixture",
+			id: "research-model",
+			label: "Research Model",
+			authed: true,
+			thinkingLevels: ["off", "low", "medium", "high"],
+		},
+	],
 	sessions: [
 		{
 			sessionId: "fixture",
@@ -33,35 +42,131 @@ useSessionsStore.setState({
 	],
 });
 useSettingsStore.setState({
-	modelPrefs: { hiddenModels: {}, subagentModels: { "knowledge-wiki-editor": "fixture/research-model" }, subagentThinking: { "knowledge-wiki-editor": "high" } },
+	modelPrefs: {
+		hiddenModels: {},
+		subagentModels: { "knowledge-wiki-editor": "fixture/research-model" },
+		subagentThinking: { "knowledge-wiki-editor": "high" },
+	},
 	capabilities: {
 		activeCapabilities: ["knowledge", "research"],
 		activeTools: ["ask_user", "capability_load", "read", "research_search_knowledge"],
 		visibleSkills: ["research-vault", "research-workflow"],
-		footprint: { allToolSchemaBytes: 27854, activeToolSchemaBytes: 21494, reductionRatio: 0.2283, allTools: 45, activeTools: 37, totalSkills: 64, visibleSkills: 24 },
+		footprint: {
+			allToolSchemaBytes: 27854,
+			activeToolSchemaBytes: 21494,
+			reductionRatio: 0.2283,
+			allTools: 45,
+			activeTools: 37,
+			totalSkills: 64,
+			visibleSkills: 24,
+		},
 		tools: [
-			{ name: "ask_user", capabilities: [], schemaBytes: 640, active: true, alwaysOn: true, invocations: 1, lastUsedAt: Date.now() - 1000 },
-			{ name: "research_search_knowledge", capabilities: ["knowledge", "research"], schemaBytes: 980, active: true, alwaysOn: false, invocations: 2, lastUsedAt: Date.now() },
-			{ name: "bash", capabilities: ["coding"], schemaBytes: 1200, active: false, alwaysOn: false, invocations: 0 },
+			{
+				name: "ask_user",
+				capabilities: [],
+				schemaBytes: 640,
+				active: true,
+				alwaysOn: true,
+				invocations: 1,
+				lastUsedAt: Date.now() - 1000,
+			},
+			{
+				name: "research_search_knowledge",
+				capabilities: ["knowledge", "research"],
+				schemaBytes: 980,
+				active: true,
+				alwaysOn: false,
+				invocations: 2,
+				lastUsedAt: Date.now(),
+			},
+			{
+				name: "bash",
+				capabilities: ["coding"],
+				schemaBytes: 1200,
+				active: false,
+				alwaysOn: false,
+				invocations: 0,
+			},
 		],
 	},
 	skills: [
-		{ name: "research-vault", description: "Evidence-aware Vault workflow", scope: "temporary", source: "research-workbench", path: "/fixture/research-vault/SKILL.md", disableModelInvocation: false },
-		{ name: "research-workflow", description: "Research workflow", scope: "temporary", source: "research-workbench", path: "/fixture/research-workflow/SKILL.md", disableModelInvocation: false },
+		{
+			name: "research-vault",
+			description: "Evidence-aware Vault workflow",
+			scope: "temporary",
+			source: "research-workbench",
+			path: "/fixture/research-vault/SKILL.md",
+			disableModelInvocation: false,
+		},
+		{
+			name: "research-workflow",
+			description: "Research workflow",
+			scope: "temporary",
+			source: "research-workbench",
+			path: "/fixture/research-workflow/SKILL.md",
+			disableModelInvocation: false,
+		},
 	],
 	skillDiagnostics: [],
-	extensions: [{ name: "knowledge.mjs", path: "/fixture/knowledge.mjs", scope: "temporary", source: "research-workbench", hidden: false, toolsCount: 1, tools: ["research_search_knowledge"], commands: [], flagsCount: 0, shortcutsCount: 0 }],
+	extensions: [
+		{
+			name: "knowledge.mjs",
+			path: "/fixture/knowledge.mjs",
+			scope: "temporary",
+			source: "research-workbench",
+			hidden: false,
+			toolsCount: 1,
+			tools: ["research_search_knowledge"],
+			commands: [],
+			flagsCount: 0,
+			shortcutsCount: 0,
+		},
+	],
 	extensionErrors: [],
 });
 
 const runFixture = {
 	turnIndex: 0,
+	retrievals: [
+		{
+			toolId: "fixture-search",
+			query: "螳蛉自切神经机制",
+			mode: "hybrid",
+			lexicalCandidates: 5,
+			semanticCandidates: 4,
+			mergedCandidates: 7,
+			elapsedMs: 12,
+			fallbackReason: null,
+		},
+	],
+	diagnostics: [
+		{
+			tool: "research_delegate_knowledge",
+			status: "skipped",
+			reason: "session-token-budget",
+			nextAction: "Summarize current evidence",
+		},
+	],
 	models: [{ provider: "fixture", model: "research-model", responses: 2 }],
 	publicStages: [{ text: "已定位相关来源", detail: "读取当前版本后进入预检", next: "检查最终答案" }],
-	tools: [{ key: "read", name: "read", state: "done" as const }, { key: "gate", name: "research_check_answer", state: "done" as const }],
-	subagents: [{ key: "nav", agent: "knowledge-navigator", status: "done" as const, model: "fixture/research-model", tokens: 420 }],
-	sourcePaths: ["Library/Papers/source.md"], artifacts: ["results/show-me.html"],
-	publication: { status: "passed" as const }, skill: "research-workflow", errors: 0,
+	tools: [
+		{ key: "read", name: "read", state: "done" as const },
+		{ key: "gate", name: "research_check_answer", state: "done" as const },
+	],
+	subagents: [
+		{
+			key: "nav",
+			agent: "knowledge-navigator",
+			status: "done" as const,
+			model: "fixture/research-model",
+			tokens: 420,
+		},
+	],
+	sourcePaths: ["Library/Papers/source.md"],
+	artifacts: ["results/show-me.html"],
+	publication: { status: "passed" as const },
+	skill: "research-workflow",
+	errors: 0,
 };
 
 const usage = sumReportedUsage([
@@ -74,6 +179,19 @@ const usage = sumReportedUsage([
 useTranscriptStore
 	.getState()
 	.loadHistory("fixture", [{ kind: "user", id: "fixture-user", text: "Fixture", images: [], timestamp: 1 }]);
+// Test-only committed-response boundary; it never touches a real session.
+(window as any).knowledgeUsageBoundary = () =>
+	useTranscriptStore.getState().loadHistory("fixture", [
+		{ kind: "user", id: "fixture-user", text: "Fixture", images: [], timestamp: 1 },
+		{
+			kind: "assistant",
+			id: "fixture-response-2",
+			text: "Completed fixture response",
+			thinking: "",
+			tools: [],
+			timestamp: 2,
+		},
+	]);
 createRoot(document.getElementById("root")!).render(
 	<div style={{ maxWidth: 1080, margin: "0 auto", padding: 16 }}>
 		<div className="mb-3 text-[10px] tracking-wider text-ink-dim">
@@ -87,7 +205,11 @@ createRoot(document.getElementById("root")!).render(
 			<SkillsPanel />
 		</div>
 		<div className="mt-4" data-testid="run-inspector-fixture">
-			<RunInspector run={runFixture} timing={{ turnIndex: 0, startedAt: 1000, endedAt: 4500 }} usage={usage} />
+			<RunInspector
+				run={runFixture}
+				timing={{ turnIndex: 0, startedAt: 1000, endedAt: 4500 }}
+				usage={usage}
+			/>
 		</div>
 		<div className="mt-4 space-y-3" data-testid="usage-progress-fixture">
 			<ProgressNote

@@ -33,18 +33,38 @@ export class CapabilityResourceLoader implements ResourceLoader {
 		const result = this.inner.getSkills();
 		return { ...result, skills: result.skills.filter((skill) => this.visibility.has(skill.name)) };
 	}
-	getPrompts(): ReturnType<ResourceLoader["getPrompts"]> { return this.inner.getPrompts(); }
-	getThemes(): ReturnType<ResourceLoader["getThemes"]> { return this.inner.getThemes(); }
-	getAgentsFiles(): ReturnType<ResourceLoader["getAgentsFiles"]> { return this.inner.getAgentsFiles(); }
-	getSystemPrompt(): ReturnType<ResourceLoader["getSystemPrompt"]> { return this.inner.getSystemPrompt(); }
-	getSystemPromptSource(): ReturnType<ResourceLoader["getSystemPromptSource"]> { return this.inner.getSystemPromptSource(); }
-	getAppendSystemPrompt(): ReturnType<ResourceLoader["getAppendSystemPrompt"]> { return this.inner.getAppendSystemPrompt(); }
-	getAppendSystemPromptSources(): ReturnType<ResourceLoader["getAppendSystemPromptSources"]> { return this.inner.getAppendSystemPromptSources(); }
-	extendResources(paths: Parameters<ResourceLoader["extendResources"]>[0]): void { this.inner.extendResources(paths); }
-	async reload(options?: Parameters<ResourceLoader["reload"]>[0]): Promise<void> { await this.inner.reload(options); }
+	getPrompts(): ReturnType<ResourceLoader["getPrompts"]> {
+		return this.inner.getPrompts();
+	}
+	getThemes(): ReturnType<ResourceLoader["getThemes"]> {
+		return this.inner.getThemes();
+	}
+	getAgentsFiles(): ReturnType<ResourceLoader["getAgentsFiles"]> {
+		return this.inner.getAgentsFiles();
+	}
+	getSystemPrompt(): ReturnType<ResourceLoader["getSystemPrompt"]> {
+		return this.inner.getSystemPrompt();
+	}
+	getSystemPromptSource(): ReturnType<ResourceLoader["getSystemPromptSource"]> {
+		return this.inner.getSystemPromptSource();
+	}
+	getAppendSystemPrompt(): ReturnType<ResourceLoader["getAppendSystemPrompt"]> {
+		return this.inner.getAppendSystemPrompt();
+	}
+	getAppendSystemPromptSources(): ReturnType<ResourceLoader["getAppendSystemPromptSources"]> {
+		return this.inner.getAppendSystemPromptSources();
+	}
+	extendResources(paths: Parameters<ResourceLoader["extendResources"]>[0]): void {
+		this.inner.extendResources(paths);
+	}
+	async reload(options?: Parameters<ResourceLoader["reload"]>[0]): Promise<void> {
+		await this.inner.reload(options);
+	}
 }
 
 export function allSkillsFromLoader(loader: ResourceLoader): ReturnType<ResourceLoader["getSkills"]> {
-	const candidate = loader as ResourceLoader & { getAllSkills?: () => ReturnType<ResourceLoader["getSkills"]> };
+	const candidate = loader as ResourceLoader & {
+		getAllSkills?: () => ReturnType<ResourceLoader["getSkills"]>;
+	};
 	return candidate.getAllSkills?.() ?? loader.getSkills();
 }

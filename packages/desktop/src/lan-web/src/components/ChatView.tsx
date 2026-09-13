@@ -126,7 +126,14 @@ export function ChatView({
 					}
 					if (row.kind === "turnDiff") {
 						if (row.running || !row.timing) return null;
-						return <RunInspector key={row.key} run={turnInspectors[row.timing.turnIndex]} timing={row.timing} usage={turnUsages[row.timing.turnIndex]} />;
+						return (
+							<RunInspector
+								key={row.key}
+								run={turnInspectors[row.timing.turnIndex]}
+								timing={row.timing}
+								usage={turnUsages[row.timing.turnIndex]}
+							/>
+						);
 					}
 					if (row.kind !== "message") return null;
 					return (

@@ -4,6 +4,25 @@ import { IpcChannels } from "@percho/shared";
 import type { IpcMainInvokeEvent } from "electron";
 import { BrowserWindow, ipcMain, shell } from "electron";
 
+const upgradeChannels = {
+	semanticStatus:
+		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticStatus ?? "knowledge:semanticStatus",
+	semanticSettingsSave:
+		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticSettingsSave ??
+		"knowledge:semanticSettingsSave",
+	semanticProviderTest:
+		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticProviderTest ??
+		"knowledge:semanticProviderTest",
+	semanticIndex:
+		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticIndex ?? "knowledge:semanticIndex",
+	semanticIndexCancel:
+		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticIndexCancel ??
+		"knowledge:semanticIndexCancel",
+	topics: (IpcChannels as unknown as Record<string, string>).KnowledgeTopics ?? "knowledge:topics",
+	topicArchive:
+		(IpcChannels as unknown as Record<string, string>).KnowledgeTopicArchive ?? "knowledge:topicArchive",
+};
+
 /** Deliberately desktop-only: approvals are not a model tool or an unauthenticated LAN route. */
 export function registerKnowledgeIpc(backend: PiBackend): void {
 	const handle = (channel: string, fn: (input: any) => unknown) => {
@@ -35,6 +54,13 @@ export function registerKnowledgeIpc(backend: PiBackend): void {
 			if (error) throw new Error(error);
 		}
 	});
+	handle(upgradeChannels.semanticStatus, (input) => backend.knowledge.semanticStatus(input));
+	handle(upgradeChannels.semanticSettingsSave, (input) => backend.knowledge.saveSemanticSettings(input));
+	handle(upgradeChannels.semanticProviderTest, (input) => backend.knowledge.testSemanticProvider(input));
+	handle(upgradeChannels.semanticIndex, (input) => backend.knowledge.indexSemantic(input));
+	handle(upgradeChannels.semanticIndexCancel, (input) => backend.knowledge.cancelSemanticIndex(input));
+	handle(upgradeChannels.topics, (input) => backend.knowledge.topics(input));
+	handle(upgradeChannels.topicArchive, (input) => backend.knowledge.archiveTopic(input));
 	backend.knowledge.subscribe((event) => {
 		for (const window of BrowserWindow.getAllWindows()) {
 			if (!window.isDestroyed()) window.webContents.send(IpcChannels.KnowledgeEvent, event);

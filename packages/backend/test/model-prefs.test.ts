@@ -33,9 +33,15 @@ describe("ModelPrefsService", () => {
 
 	it("拒绝非法 Thinking 档位并规整旧文件", async () => {
 		const { path, service } = await makeService();
-		await writeFile(path, JSON.stringify({ subagentThinking: { scout: "ultra", reviewer: "medium" } }), "utf8");
+		await writeFile(
+			path,
+			JSON.stringify({ subagentThinking: { scout: "ultra", reviewer: "medium" } }),
+			"utf8",
+		);
 		expect((await service.getPrefs()).subagentThinking).toEqual({ reviewer: "medium" });
-		await expect(service.setSubagentThinking("scout", "ultra" as never)).rejects.toThrow("invalid subagent thinking level");
+		await expect(service.setSubagentThinking("scout", "ultra" as never)).rejects.toThrow(
+			"invalid subagent thinking level",
+		);
 	});
 
 	it("原子写不遗留临时文件", async () => {

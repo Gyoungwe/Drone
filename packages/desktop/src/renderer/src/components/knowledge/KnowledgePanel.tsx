@@ -7,6 +7,8 @@ import { useKnowledgeText } from "./copy";
 import { launchKnowledgeSetup, reportKnowledgeError, useKnowledgeOverview } from "./hooks";
 import { KnowledgeMaintenance } from "./KnowledgeMaintenance";
 import { KnowledgeSpecialists } from "./KnowledgeSpecialists";
+import { SemanticManagement } from "./SemanticManagement";
+import { TopicManagement } from "./TopicManagement";
 import { WikiReviewPanel } from "./WikiReviewPanel";
 export function KnowledgePanel({
 	context,
@@ -14,7 +16,7 @@ export function KnowledgePanel({
 	context?: {
 		cwd: string | null;
 		sessionId: string | null;
-		tab?: "overview" | "reviews" | "maintenance";
+		tab?: "overview" | "reviews" | "maintenance" | "semantic" | "topics";
 		id?: string;
 	};
 }) {
@@ -24,7 +26,9 @@ export function KnowledgePanel({
 		sessionId = context ? context.sessionId : activeSession,
 		t = useKnowledgeText();
 	const { data, error, loading, refresh } = useKnowledgeOverview(cwd, sessionId);
-	const [tab, setTab] = useState<"overview" | "reviews" | "maintenance">(context?.tab || "overview");
+	const [tab, setTab] = useState<"overview" | "reviews" | "maintenance" | "semantic" | "topics">(
+		context?.tab || "overview",
+	);
 	const [path, setPath] = useState(""),
 		[preview, setPreview] = useState<KnowledgeSetupPreview | null>(null),
 		[busy, setBusy] = useState(false),
@@ -87,7 +91,7 @@ export function KnowledgePanel({
 				role="tablist"
 				aria-label={t("title")}
 			>
-				{(["overview", "reviews", "maintenance"] as const).map((item) => (
+				{(["overview", "reviews", "maintenance", "semantic", "topics"] as const).map((item) => (
 					<button
 						key={item}
 						type="button"
@@ -317,6 +321,10 @@ export function KnowledgePanel({
 			)}
 			{tab === "maintenance" && binding && (
 				<KnowledgeMaintenance cwd={cwd} revision={binding.revision} index={index} />
+			)}
+			{tab === "semantic" && binding && <SemanticManagement cwd={cwd} bindingRevision={binding.revision} />}
+			{tab === "topics" && binding && (
+				<TopicManagement cwd={cwd} bindingRevision={binding.revision} sessionId={sessionId} />
 			)}
 		</div>
 	);

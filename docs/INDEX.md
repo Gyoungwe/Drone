@@ -65,6 +65,17 @@ packages/
 | `src/update.ts` | `UpdateState` | 自动更新事件载荷（`available.manual=true` = 当前构建无法自动安装，跳 release 页） |
 | `src/marquee-motion.ts` | `tailOffsetForWidths` | 流式正文 tail-follow 位移纯函数（无 DOM，可单测） |
 
+## P5–P10 knowledge / reliability map
+
+| Area | Files | Responsibility |
+|---|---|---|
+| Hybrid retrieval | `.pi/lib/knowledge/{service,worker,semantic-provider,semantic-settings}.mjs` | FTS + semantic fusion, HTTP embedding adapters, incremental fingerprinted SQLite vectors, fallback metrics; semantic hits never mint evidence |
+| Topic lifecycle | `.pi/lib/knowledge/{topic-memory,extension}.mjs` | bounded Vault+project topic memory, continuation/resume, stale-source checks, proposal/artifact linkage; memory is navigation only |
+| Specialist orchestration | `.pi/lib/knowledge/{specialists,specialist-host,orchestration-policy}.mjs` + `backend/src/knowledge/specialist-runner.ts` | deterministic dispatch decisions, queue/concurrency/run/tool/token/reported-cost budgets, cancellation-safe isolated workers |
+| Human management | `knowledge/ui-service.mjs` + desktop knowledge IPC/preload + `SemanticManagement.tsx` / `TopicManagement.tsx` | opt-in semantic settings/index batches and project-scoped topic browsing/archive/resume |
+| Observability | `shared/src/transcript/run-inspector.ts` + Desktop/LAN `RunInspector` | retrieval counts/fallbacks, public specialist stop reasons, actual read paths; no private chain-of-thought |
+| Release gates | `scripts/{benchmark-semantic,stress-knowledge,check-upgrade-release,check-packaged-desktop}.mjs` | synthetic stress, production-pipeline benchmark, consolidated gate, isolated packaged-app smoke |
+
 ## packages/backend — pi SDK 适配层
 
 纯 Node，不依赖 Electron。唯一 import pi SDK 的包，import 收敛在 `pi-backend.ts`。

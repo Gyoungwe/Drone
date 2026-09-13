@@ -1,9 +1,9 @@
 import {
 	buildChatRows,
+	deriveRunInspectors,
 	deriveTurnChanges,
 	deriveTurnTimings,
 	deriveTurnUsage,
-	deriveRunInspectors,
 	isAgentWorking,
 } from "@percho/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -171,10 +171,16 @@ export function MessageList() {
 						running={row.running}
 						entering={row.entering}
 					/>
-					{!row.running && row.timing && <>
-						<UsageSettlement usage={turnUsages[row.timing.turnIndex]} />
-						<RunInspector run={turnInspectors[row.timing.turnIndex]} timing={row.timing} usage={turnUsages[row.timing.turnIndex]} />
-					</>}
+					{!row.running && row.timing && (
+						<>
+							<UsageSettlement usage={turnUsages[row.timing.turnIndex]} />
+							<RunInspector
+								run={turnInspectors[row.timing.turnIndex]}
+								timing={row.timing}
+								usage={turnUsages[row.timing.turnIndex]}
+							/>
+						</>
+					)}
 				</div>,
 			);
 			return;

@@ -23,7 +23,8 @@ import { decideWikiProposal, listWikiProposals, previewWikiProposal } from "./wi
 
 const previews = new Map(),
 	MAX_PREVIEWS = 64,
-	maintenance = new Set();
+	maintenance = new Set(),
+	semanticJobs = new Map();
 function pathCwd(cwd) {
 	if (cwd !== null && cwd !== undefined && (typeof cwd !== "string" || !isAbsolute(cwd)))
 		throw new Error("Workspace must be an absolute path");
@@ -322,3 +323,99 @@ export async function knowledgeOpenTarget({ cwd = null, path = null, revision })
 }
 
 export const knowledgeSpecialistSettings = (input) => setSpecialistSettings(input);
+
+function requireProject(projectInfo) {
+	if (projectInfo.projectError) throw new Error(projectInfo.projectError);
+	if (!projectInfo.project) throw new Error("Choose a project workspace first");
+	return projectInfo.project;
+}
+
+export async function knowledgeSemanticStatus({ cwd = null, bindingRevision } = {}) {
+	const { service } = await bound(bindingRevision),
+		{ project, projectError } = await projectAt(cwd);
+	if (projectError) throw new Error(projectError);
+	return service.semanticStatus({ project: project || undefined });
+}
+
+export async function saveKnowledgeSemanticSettings({
+	config,
+	bindingRevision,
+	expectedSettingsRevision,
+} = {}) {
+	if (!Number.isSafeInteger(bindingRevision) || !Number.isSafeInteger(expectedSettingsRevision))
+		throw new Error("Binding and settings revisions are required");
+	const { binding, service } = await bound(bindingRevision);
+	return withKnowledgeBinding(binding, () =>
+		service.saveSemanticSettings(config, bindingRevision, expectedSettingsRevision),
+	);
+}
+
+export async function testKnowledgeSemanticProvider({ config, bindingRevision } = {}) {
+	if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
+	const { binding, service } = await bound(bindingRevision);
+	if (!config?.enabled || config.provider === "none")
+		return { ok: true, provider: "none", model: config?.model || "", dimension: 0 };
+	return withKnowledgeBinding(binding, () => service.testSemanticProvider(config, bindingRevision, {}));
+}
+
+export async function indexKnowledgeSemantic({ cwd, bindingRevision, requestId, limit = 8 } = {}) {
+	if (typeof cwd !== "string" || !cwd) throw new Error("Project cwd is required for semantic indexing");
+	if (typeof requestId !== "string" || !requestId) throw new Error("Index request id is required");
+	if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
+	if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16)
+		throw new Error("Semantic index limit must be 1–16");
+	const { binding, service } = await bound(bindingRevision),
+		projectInfo = await projectAt(cwd),
+		project = requireProject(projectInfo),
+		key = `${binding.vaultId}:${project}`;
+	if (semanticJobs.has(key)) throw new Error("Semantic indexing is already running for this project");
+	const controller = new AbortController(),
+		job = { requestId, controller };
+	semanticJobs.set(key, job);
+	try {
+		return await withKnowledgeBinding(binding, () =>
+			service.rebuildSemanticIndex({
+				limit: Math.max(1, Math.min(16, limit)),
+				project,
+				signal: controller.signal,
+			}),
+		);
+	} finally {
+		if (semanticJobs.get(key) === job) semanticJobs.delete(key);
+	}
+}
+
+export async function cancelKnowledgeSemanticIndex({ cwd, bindingRevision, requestId } = {}) {
+	if (typeof cwd !== "string" || !cwd) throw new Error("Project cwd is required for semantic indexing");
+	if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
+	const { binding } = await bound(bindingRevision),
+		project = requireProject(await projectAt(cwd)),
+		key = `${binding.vaultId}:${project}`,
+		job = semanticJobs.get(key);
+	if (!job || job.requestId !== requestId) throw new Error("No matching semantic index request is running");
+	job.controller.abort();
+}
+
+export async function getKnowledgeTopics({ cwd, bindingRevision, query = "" } = {}) {
+	if (typeof cwd !== "string" || !cwd) throw new Error("Project cwd is required for topics");
+	if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
+	const { binding } = await bound(bindingRevision),
+		project = requireProject(await projectAt(cwd)),
+		mod = await import("./topic-memory.mjs"),
+		memory = await mod.createTopicMemory({ binding, project });
+	return withKnowledgeBinding(binding, () =>
+		memory.list(typeof query === "string" ? query.slice(0, 200) : "", { includeArchived: true }),
+	);
+}
+
+export async function archiveKnowledgeTopic({ cwd, bindingRevision, id, expectedRevision } = {}) {
+	if (typeof cwd !== "string" || !cwd) throw new Error("Project cwd is required for topics");
+	if (!Number.isSafeInteger(bindingRevision) || !Number.isSafeInteger(expectedRevision))
+		throw new Error("Binding and topic revisions are required");
+	if (typeof id !== "string" || !id) throw new Error("Topic id is required");
+	const { binding } = await bound(bindingRevision),
+		project = requireProject(await projectAt(cwd)),
+		mod = await import("./topic-memory.mjs"),
+		memory = await mod.createTopicMemory({ binding, project });
+	return withKnowledgeBinding(binding, () => memory.archive(id, expectedRevision));
+}

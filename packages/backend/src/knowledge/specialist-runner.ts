@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Context, Message, Model, Tool, ModelThinkingLevel } from "@earendil-works/pi-ai";
+import type { Context, Message, Model, ModelThinkingLevel, Tool } from "@earendil-works/pi-ai";
 import { getSupportedThinkingLevels, validateToolArguments } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { type KnowledgeSpecialistRole, PROTECTED_KNOWLEDGE_AGENTS } from "@percho/shared";
@@ -19,6 +19,8 @@ export interface SpecialistRequest {
 	signal?: AbortSignal;
 	timeoutMs?: number;
 	check(): Promise<void>;
+	/** Charge provider-reported usage immediately; may throw to stop before another SDK call. */
+	onUsage?(usage: SpecialistResult["usage"]): Promise<void> | void;
 	progress(value: { action?: string; model?: string; thinkingLevel?: string }): void;
 }
 export interface SpecialistAnswer {
@@ -49,7 +51,11 @@ export interface SpecialistResult {
 		reasoningTokens: number;
 		totalTokens: number;
 		cost: number;
+		/** False when the provider omitted all usage/cost telemetry; zeroes are internal accumulators, not estimates. */
+		reported: boolean;
+		reportedFields: string[];
 	};
+	elapsedMs?: number;
 }
 export interface SpecialistRunnerDeps {
 	getRuntime(): Promise<ModelRuntime>;
@@ -171,7 +177,18 @@ export async function runKnowledgeSpecialist(
 		await request.check();
 		controller.signal.throwIfAborted();
 	};
-	const usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, totalTokens: 0, cost: 0 };
+	const startedAt = Date.now();
+	const usage: SpecialistResult["usage"] = {
+		inputTokens: 0,
+		outputTokens: 0,
+		cacheReadTokens: 0,
+		cacheWriteTokens: 0,
+		reasoningTokens: 0,
+		totalTokens: 0,
+		cost: 0,
+		reported: false,
+		reportedFields: [],
+	};
 	const cacheSessionId = `knowledge-${profile.role}-${randomUUID()}`;
 	try {
 		await checked();
@@ -198,9 +215,15 @@ export async function runKnowledgeSpecialist(
 		let thinkingLevel: ModelThinkingLevel = "off";
 		if (explicitThinking) {
 			if (!supported.includes(explicitThinking))
-				throw new Error(`Configured specialist thinking level ${explicitThinking} is unavailable for ${model.provider}/${model.id}`);
+				throw new Error(
+					`Configured specialist thinking level ${explicitThinking} is unavailable for ${model.provider}/${model.id}`,
+				);
 			thinkingLevel = explicitThinking;
-		} else if (model.reasoning && request.parentThinkingLevel && supported.includes(request.parentThinkingLevel)) {
+		} else if (
+			model.reasoning &&
+			request.parentThinkingLevel &&
+			supported.includes(request.parentThinkingLevel)
+		) {
 			thinkingLevel = request.parentThinkingLevel;
 		} else if (model.reasoning) {
 			thinkingLevel = supported.includes("medium") ? "medium" : (supported[0] ?? "off");
@@ -243,13 +266,44 @@ export async function runKnowledgeSpecialist(
 				}),
 				abortPromise,
 			]);
-			usage.inputTokens += reply.usage?.input || 0;
-			usage.outputTokens += reply.usage?.output || 0;
-			usage.cacheReadTokens += reply.usage?.cacheRead || 0;
-			usage.cacheWriteTokens += reply.usage?.cacheWrite || 0;
-			usage.reasoningTokens += reply.usage?.reasoning || 0;
-			usage.totalTokens += reply.usage?.totalTokens || 0;
-			usage.cost += reply.usage?.cost?.total || 0;
+			const reportedNumber = (value: unknown): number | null =>
+				typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+			const observed = {
+				inputTokens: reportedNumber(reply.usage?.input),
+				outputTokens: reportedNumber(reply.usage?.output),
+				cacheReadTokens: reportedNumber(reply.usage?.cacheRead),
+				cacheWriteTokens: reportedNumber(reply.usage?.cacheWrite),
+				reasoningTokens: reportedNumber(reply.usage?.reasoning),
+				totalTokens: reportedNumber(reply.usage?.totalTokens),
+				cost: reportedNumber(reply.usage?.cost?.total),
+			};
+			const reportedFields = Object.entries(observed)
+				.filter(([, value]) => value !== null)
+				.map(([key]) => key);
+			const reportedUsage = reportedFields.length > 0;
+			if (reportedUsage) {
+				usage.reported = true;
+				usage.reportedFields = [...new Set([...usage.reportedFields, ...reportedFields])];
+			}
+			const delta = {
+				inputTokens: observed.inputTokens ?? 0,
+				outputTokens: observed.outputTokens ?? 0,
+				cacheReadTokens: observed.cacheReadTokens ?? 0,
+				cacheWriteTokens: observed.cacheWriteTokens ?? 0,
+				reasoningTokens: observed.reasoningTokens ?? 0,
+				totalTokens: observed.totalTokens ?? 0,
+				cost: observed.cost ?? 0,
+				reported: reportedUsage,
+				reportedFields,
+			};
+			usage.inputTokens += delta.inputTokens;
+			usage.outputTokens += delta.outputTokens;
+			usage.cacheReadTokens += delta.cacheReadTokens;
+			usage.cacheWriteTokens += delta.cacheWriteTokens;
+			usage.reasoningTokens += delta.reasoningTokens;
+			usage.totalTokens += delta.totalTokens;
+			usage.cost += delta.cost;
+			if (reportedUsage) await request.onUsage?.(delta);
 			if (["error", "aborted", "length"].includes(reply.stopReason))
 				throw new Error(`Specialist model did not complete (${reply.stopReason})`);
 			await checked();
@@ -265,7 +319,13 @@ export async function runKnowledgeSpecialist(
 				await checked();
 				if (call.name === "knowledge_submit") {
 					if (requested.at(-1) !== call) throw new Error("Result submission must finish the tool batch");
-					return { data: args as unknown as SpecialistAnswer, model: modelRef, thinkingLevel, usage };
+					return {
+						data: args as unknown as SpecialistAnswer,
+						model: modelRef,
+						thinkingLevel,
+						usage,
+						elapsedMs: Math.max(0, Date.now() - startedAt),
+					};
 				}
 				request.progress({ action: call.name });
 				const value = await Promise.race([

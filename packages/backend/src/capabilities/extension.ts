@@ -6,9 +6,12 @@ function messageText(message: unknown): string {
 	const candidate = message as { role?: unknown; content?: unknown };
 	if (candidate.role !== "user" || !Array.isArray(candidate.content)) return "";
 	return candidate.content
-		.filter((part): part is { type: "text"; text: string } =>
-			!!part && typeof part === "object" && (part as { type?: unknown }).type === "text" &&
-			typeof (part as { text?: unknown }).text === "string",
+		.filter(
+			(part): part is { type: "text"; text: string } =>
+				!!part &&
+				typeof part === "object" &&
+				(part as { type?: unknown }).type === "text" &&
+				typeof (part as { text?: unknown }).text === "string",
 		)
 		.map((part) => part.text)
 		.join("\n");

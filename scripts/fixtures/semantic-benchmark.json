@@ -1,0 +1,12 @@
+{
+	"documents": [
+		{ "id": "lepidoptera", "text": "Lepidoptera wing scales are used to classify butterflies." },
+		{ "id": "chinese", "text": "蝴蝶的翅膀鳞片有助于分类。 butterfly wing scales." },
+		{ "id": "distractor", "text": "A fish scale survey measured water quality." }
+	],
+	"queries": [
+		{ "query": "butterfly classification", "relevant": ["lepidoptera", "chinese"] },
+		{ "query": "蝴蝶分类", "relevant": ["lepidoptera", "chinese"] },
+		{ "query": "unrelated astronomy question", "relevant": [] }
+	]
+}

@@ -110,6 +110,41 @@ export class KnowledgeUiService {
 	): Promise<{ path: string; kind: "note" | "vault" }> {
 		return this.call("knowledgeOpenTarget", input);
 	}
+	semanticStatus(
+		input: Parameters<KnowledgeApi["getKnowledgeSemanticStatus"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeSemanticStatus"]> {
+		return this.call("knowledgeSemanticStatus", input);
+	}
+	saveSemanticSettings(
+		input: Parameters<KnowledgeApi["saveKnowledgeSemanticSettings"]>[0],
+	): ReturnType<KnowledgeApi["saveKnowledgeSemanticSettings"]> {
+		return this.call("saveKnowledgeSemanticSettings", input);
+	}
+	testSemanticProvider(
+		input: Parameters<KnowledgeApi["testKnowledgeSemanticProvider"]>[0],
+	): ReturnType<KnowledgeApi["testKnowledgeSemanticProvider"]> {
+		return this.call("testKnowledgeSemanticProvider", input);
+	}
+	indexSemantic(
+		input: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>[0],
+	): ReturnType<KnowledgeApi["indexKnowledgeSemantic"]> {
+		return this.call("indexKnowledgeSemantic", input);
+	}
+	cancelSemanticIndex(
+		input: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>[0],
+	): ReturnType<KnowledgeApi["cancelKnowledgeSemanticIndex"]> {
+		return this.call("cancelKnowledgeSemanticIndex", input);
+	}
+	topics(
+		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeTopics"]> {
+		return this.call("getKnowledgeTopics", input);
+	}
+	archiveTopic(
+		input: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>[0],
+	): ReturnType<KnowledgeApi["archiveKnowledgeTopic"]> {
+		return this.call("archiveKnowledgeTopic", input);
+	}
 	dispose(): void {
 		this.disposed = true;
 		this.unsubscribe?.();

@@ -3,17 +3,68 @@ import { join, relative, resolve, sep } from "node:path";
 import { Worker } from "node:worker_threads";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import { canRead, validateNote } from "./files.mjs";
+import { embedTexts, validateSemanticConfig } from "./semantic-provider.mjs";
+import { readSemanticSettings, saveSemanticSettings } from "./semantic-settings.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
 const poolKey = Symbol.for("percho.knowledge.worker-pool.v1");
 globalThis[poolKey] ??= new Map();
 const pool = globalThis[poolKey];
 const MAX_TICKETS = 128;
+const semanticLockKey = Symbol.for("percho.knowledge.semantic-lock.v1");
+globalThis[semanticLockKey] ??= new Map();
+const semanticLocks = globalThis[semanticLockKey];
+
+function queueSemantic(key, task) {
+	const previous = semanticLocks.get(key) || Promise.resolve();
+	const current = previous.catch(() => {}).then(task);
+	const held = current
+		.catch(() => {})
+		.finally(() => {
+			if (semanticLocks.get(key) === held) semanticLocks.delete(key);
+		});
+	semanticLocks.set(key, held);
+	return current;
+}
+function providerConfig(settings) {
+	return {
+		enabled: settings.enabled,
+		provider: settings.provider,
+		baseUrl: settings.baseUrl,
+		model: settings.model,
+		credentialEnv: settings.credentialEnv,
+		remoteConsent: settings.remoteConsent,
+		timeoutMs: settings.timeoutMs,
+		chunkChars: settings.chunkChars,
+		minSimilarity: settings.minSimilarity,
+	};
+}
+function fingerprintFor(settings) {
+	return createHash("sha256")
+		.update(`${settings.provider}\0${settings.baseUrl}\0${settings.model}\0${settings.chunkChars || 1200}`)
+		.digest("hex");
+}
+function awaitSemanticDeadline(operation, controller) {
+	let onAbort;
+	const aborted = new Promise((_, reject) => {
+		onAbort = () => reject(new Error("semantic candidate provider timed out"));
+		controller.signal.addEventListener("abort", onAbort, { once: true });
+	});
+	return Promise.race([Promise.resolve(operation), aborted]).finally(() =>
+		controller.signal.removeEventListener("abort", onAbort),
+	);
+}
+async function assertBinding(binding) {
+	const current = await readKnowledgeBinding({ fresh: true });
+	if (!current || current.vaultId !== binding.vaultId || current.revision !== binding.revision)
+		throw new Error("Knowledge binding changed; start a new turn before reading or writing");
+}
 
 export class KnowledgeService {
 	constructor(binding, directory = knowledgeDirectory(), options = {}) {
 		this.binding = binding;
-		this.semanticCandidateProvider = typeof options.semanticCandidateProvider === "function" ? options.semanticCandidateProvider : null;
+		this.semanticCandidateProvider =
+			typeof options.semanticCandidateProvider === "function" ? options.semanticCandidateProvider : null;
 		this.tickets = new Map();
 		this.pending = new Map();
 		this.next = 0;
@@ -164,7 +215,11 @@ export class KnowledgeService {
 		}
 		return page;
 	}
-	async search(ticket, cwd, { query, wikiOnly = false, explainerOnly = false, limit = 5 }) {
+	async search(
+		ticket,
+		cwd,
+		{ query, context = null, wikiOnly = false, explainerOnly = false, limit = 5, signal } = {},
+	) {
 		const state = await this.check(ticket, cwd);
 		if (!wikiOnly && !explainerOnly) state.answerSearch = null; // a newer failed evidence attempt cannot reuse old success
 		if (!wikiOnly && !explainerOnly && state.linkedWiki.length) {
@@ -182,36 +237,157 @@ export class KnowledgeService {
 					"Read a current linked or discovered Wiki page with research_read_knowledge before searching evidence. Wiki discovery search is still allowed.",
 				);
 		}
-		let result = await this.request("search", {
+		const lexical = await this.request("search", {
 			query,
 			wikiOnly,
 			explainerOnly,
 			limit,
 			project: state.project,
 		});
-		if (!wikiOnly && !explainerOnly && this.semanticCandidateProvider && result.hits.length < limit) {
-			let semantic = { enabled: true, candidateCount: 0, acceptedCount: 0 };
+		let result = lexical;
+		const contextText =
+			typeof context === "string"
+				? context.slice(0, 1000)
+				: context && typeof context === "object"
+					? [
+							context.title,
+							context.summary,
+							Array.isArray(context.entities) ? context.entities.join(", ") : context.entities,
+						]
+							.filter((value) => typeof value === "string")
+							.join(" ")
+							.slice(0, 1000)
+					: "";
+		const semanticQuery = [String(query), contextText].filter(Boolean).join(" ").slice(0, 2000);
+		const metrics = {
+			mode: wikiOnly || explainerOnly ? "lexical-only" : "hybrid",
+			lexicalCandidates: lexical.hits.length,
+			semanticCandidates: 0,
+			mergedCandidates: lexical.hits.length,
+			query: String(query).slice(0, 2000),
+			elapsedMs: 0,
+			fallbackReason: null,
+			index: { coverage: lexical.coverage, revision: lexical.revision, semantic: lexical.semantic },
+		};
+		const started = Date.now();
+		if (!wikiOnly && !explainerOnly) {
+			let semanticItems = [];
+			let semanticError = null;
+			let semanticEnabled = !!this.semanticCandidateProvider;
+			const semanticController = new AbortController();
+			const semanticTimer = setTimeout(
+				() => semanticController.abort(new Error("semantic deadline exceeded")),
+				1500,
+			);
+			const relayAbort = () => semanticController.abort(signal.reason);
+			if (signal) {
+				if (signal.aborted) semanticController.abort(signal.reason);
+				else signal.addEventListener("abort", relayAbort, { once: true });
+			}
 			try {
-				const candidates = await Promise.race([
-					Promise.resolve(this.semanticCandidateProvider({ query, project: state.project, limit, vault: this.binding.vault })),
-					new Promise((_, reject) => setTimeout(() => reject(new Error("semantic candidate provider timed out")), 1500)),
-				]);
-				const paths = Array.isArray(candidates)
-					? [...new Set(candidates.map((item) => typeof item === "string" ? item : item?.path).filter((path) => typeof path === "string" && path.length > 0))].slice(0, 24)
-					: [];
-				semantic.candidateCount = paths.length;
-				const existing = new Set(result.hits.map((hit) => hit.path));
-				const semanticPaths = paths.filter((path) => !existing.has(path)).slice(0, Math.max(0, limit - result.hits.length));
-				if (semanticPaths.length) {
-					const hydrated = await this.request("hydrateCandidates", { paths: semanticPaths, project: state.project, limit: limit - result.hits.length });
-					semantic.acceptedCount = hydrated.hits.length;
-					result = { ...result, hits: [...result.hits, ...hydrated.hits.map((hit) => ({ ...hit, retrieval: "semantic-candidate" }))] };
+				if (this.semanticCandidateProvider) {
+					const candidates = await awaitSemanticDeadline(
+						this.semanticCandidateProvider({
+							query: semanticQuery,
+							project: state.project,
+							limit,
+							vault: this.binding.vault,
+							signal: semanticController.signal,
+						}),
+						semanticController,
+					);
+					semanticItems = Array.isArray(candidates)
+						? candidates
+								.map((item, index) => ({
+									path: typeof item === "string" ? item : item?.path,
+									score:
+										typeof item === "object" && typeof item?.score === "number" && Number.isFinite(item.score)
+											? item.score
+											: 0,
+									hash: typeof item === "object" ? item?.hash : undefined,
+									rank: index + 1,
+									legacyCandidate: true,
+								}))
+								.filter(
+									(item) =>
+										typeof item.path === "string" &&
+										item.path.length > 0 &&
+										!/(?:^|\/)(?:Runs|Explainers)\//i.test(item.path),
+								)
+								.slice(0, 24)
+						: [];
+				} else {
+					const settings = await readSemanticSettings(this.binding.vaultId);
+					semanticEnabled = settings.enabled;
+					if (settings.enabled) {
+						const embedded = await awaitSemanticDeadline(
+							embedTexts(providerConfig(settings), [semanticQuery], { signal: semanticController.signal }),
+							semanticController,
+						);
+						const fingerprint = fingerprintFor(settings);
+						const candidateResult = await this.request("semanticCandidates", {
+							vector: embedded.vectors[0],
+							fingerprint,
+							project: state.project,
+							limit: 24,
+							minSimilarity: settings.minSimilarity,
+						});
+						semanticItems = (
+							Array.isArray(candidateResult) ? candidateResult : candidateResult.items || []
+						).map((item, index) => ({ ...item, rank: index + 1 }));
+						if (candidateResult?.partial) metrics.index.semanticPartial = true;
+					}
 				}
 			} catch (error) {
-				semantic = { ...semantic, error: String(error?.message || error).slice(0, 240) };
+				semanticError = String(error?.message || error).slice(0, 240);
+				metrics.fallbackReason = semanticError;
+			} finally {
+				clearTimeout(semanticTimer);
+				if (signal) signal.removeEventListener("abort", relayAbort);
 			}
-			result = { ...result, semantic };
+			if (!semanticEnabled) metrics.mode = "lexical-only";
+			metrics.semanticCandidates = semanticItems.length;
+			const semanticCandidates = semanticItems.filter(
+				(item, index, all) => all.findIndex((other) => other.path === item.path) === index,
+			);
+			let hydrated = { hits: [] };
+			if (semanticCandidates.length)
+				hydrated = await this.request("hydrateCandidates", {
+					candidates: semanticCandidates,
+					project: state.project,
+					limit: 24,
+				});
+			const lexicalRank = new Map(lexical.hits.map((hit, index) => [hit.path, index + 1]));
+			const semanticRank = new Map(semanticItems.map((item, index) => [item.path, item.rank || index + 1]));
+			const byPath = new Map([...lexical.hits, ...hydrated.hits].map((hit) => [hit.path, hit]));
+			const merged = [...byPath.values()]
+				.map((hit) => {
+					const lr = lexicalRank.get(hit.path),
+						sr = semanticRank.get(hit.path);
+					const score = (lr ? 1 / (60 + lr) : 0) + (sr ? 1 / (60 + sr) : 0);
+					const legacy = semanticItems.some((item) => item.path === hit.path && item.legacyCandidate);
+					return {
+						...hit,
+						retrieval: lr && sr ? "hybrid" : legacy ? "semantic-candidate" : sr ? "semantic" : "lexical",
+						fusionScore: score,
+					};
+				})
+				.sort((a, b) => b.fusionScore - a.fusionScore || a.path.localeCompare(b.path))
+				.slice(0, Math.max(1, Math.min(12, Number(limit) || 5)));
+			result = {
+				...lexical,
+				hits: merged,
+				semantic: {
+					enabled: semanticEnabled,
+					candidateCount: semanticItems.length,
+					acceptedCount: hydrated.hits.length,
+					...(semanticError ? { error: semanticError } : {}),
+				},
+			};
+			metrics.mergedCandidates = merged.length;
 		}
+		metrics.elapsedMs = Date.now() - started;
+		result = { ...result, retrievalMetrics: metrics, retrieval: metrics };
 		if (!wikiOnly && !explainerOnly)
 			state.answerSearch = Object.freeze({
 				query,
@@ -232,6 +408,83 @@ export class KnowledgeService {
 			}
 		}
 		return result;
+	}
+	async semanticStatus({ project = null } = {}) {
+		await withKnowledgeBinding(this.binding, async () => {});
+		const settings = await readSemanticSettings(this.binding.vaultId);
+		const index = await this.request("status", {
+			fingerprint: settings.enabled ? fingerprintFor(settings) : null,
+			project,
+		});
+		const activeSemantic = settings.enabled
+			? (index.semanticScoped ?? { vectors: 0, paths: 0, coverage: "unconfigured" })
+			: { ...index.semantic, coverage: "disabled" };
+		return {
+			settings,
+			index: {
+				...index,
+				semanticAll: index.semantic,
+				semantic: activeSemantic,
+			},
+		};
+	}
+	async getSemanticSettings() {
+		await withKnowledgeBinding(this.binding, async () => {});
+		return readSemanticSettings(this.binding.vaultId);
+	}
+	async saveSemanticSettings(input, expectedBindingRevision, expectedSettingsRevision) {
+		return queueSemantic(this.binding.vaultId, async () => {
+			await assertBinding(this.binding);
+			if (expectedBindingRevision !== this.binding.revision)
+				throw new Error("Semantic settings binding revision is stale");
+			validateSemanticConfig(input);
+			const value = await saveSemanticSettings(this.binding.vaultId, input, expectedSettingsRevision);
+			await assertBinding(this.binding);
+			return { ...value, credentialEnv: value.credentialEnv };
+		});
+	}
+	async testSemanticProvider(input, expectedBindingRevision, options = {}) {
+		await assertBinding(this.binding);
+		if (expectedBindingRevision !== this.binding.revision)
+			throw new Error("Semantic provider binding revision is stale");
+		const config = validateSemanticConfig(input);
+		const result = await embedTexts(config, ["percho semantic provider test"], options);
+		await assertBinding(this.binding);
+		return { ok: true, provider: result.provider, model: result.model, dimension: result.dimension };
+	}
+	async rebuildSemanticIndex({ limit = 8, project = null, signal } = {}) {
+		await assertBinding(this.binding);
+		const settings = await readSemanticSettings(this.binding.vaultId);
+		if (!settings.enabled) return { enabled: false, status: await this.request("status") };
+		const fingerprint = fingerprintFor(settings);
+		const batch = await this.request("semanticBatch", {
+			fingerprint,
+			project,
+			limit,
+			chunkChars: settings.chunkChars,
+		});
+		if (!batch.items.length)
+			return { enabled: true, processed: 0, partial: batch.partial, status: await this.request("status") };
+		const embedded = await embedTexts(
+			providerConfig(settings),
+			batch.items.map((item) => item.text),
+			{ signal },
+		);
+		await assertBinding(this.binding);
+		const latest = await readSemanticSettings(this.binding.vaultId);
+		if (!latest.enabled || fingerprintFor(latest) !== fingerprint)
+			throw new Error("Semantic settings changed during indexing");
+		await this.request("semanticStore", {
+			fingerprint,
+			items: batch.items.map((item, index) => ({ ...item, vector: embedded.vectors[index] })),
+		});
+		return {
+			enabled: true,
+			processed: batch.items.length,
+			partial: batch.partial,
+			dimension: embedded.dimension,
+			status: await this.request("status"),
+		};
 	}
 	async evidenceReceipts(ticket, cwd, paths) {
 		const state = await this.check(ticket, cwd);

@@ -1545,9 +1545,79 @@ body {
 }
 
 /* Run Inspector: compact read-only LAN mirror of the desktop per-turn inspector. */
-.lan-run-inspector{margin:2px 0 8px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font-size:11px;color:var(--text-dim)}
-.lan-run-inspector>summary{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:8px 10px;cursor:pointer;list-style:none}
-.lan-run-inspector>summary::-webkit-details-marker{display:none}.lan-run-inspector .run-expand{margin-left:auto;color:var(--text-faint)}
-.lan-run-body{display:grid;gap:10px;border-top:1px solid var(--border);padding:10px}.lan-run-body section{display:grid;gap:5px}.lan-run-body b{color:var(--text);font-weight:600}
-.run-chips{display:flex;flex-wrap:wrap;gap:5px}.run-chips code,.lan-run-body section>code{border-radius:5px;background:var(--hover);padding:2px 5px;font-size:10px;overflow-wrap:anywhere}
-.run-chips code[data-state="error"],.run-warn{color:var(--danger)}.run-path{display:block;white-space:normal;word-break:break-all}.lan-run-body ol{margin:0;padding-left:18px}.lan-run-body small{color:var(--text-faint);line-height:1.4}
+.lan-run-inspector {
+	margin: 2px 0 8px;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--surface);
+	font-size: 11px;
+	color: var(--text-dim);
+}
+.lan-run-inspector > summary {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 12px;
+	align-items: center;
+	padding: 8px 10px;
+	cursor: pointer;
+	list-style: none;
+}
+.lan-run-inspector > summary::-webkit-details-marker {
+	display: none;
+}
+.lan-run-inspector .run-expand {
+	margin-left: auto;
+	color: var(--text-faint);
+}
+.lan-run-body {
+	display: grid;
+	gap: 10px;
+	border-top: 1px solid var(--border);
+	padding: 10px;
+}
+.lan-run-body section {
+	display: grid;
+	gap: 5px;
+}
+.lan-run-body b {
+	color: var(--text);
+	font-weight: 600;
+}
+.run-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+}
+.run-chips code,
+.lan-run-body section > code {
+	border-radius: 5px;
+	background: var(--hover);
+	padding: 2px 5px;
+	font-size: 10px;
+	overflow-wrap: anywhere;
+}
+.run-chips code[data-state="error"],
+.run-warn {
+	color: var(--danger);
+}
+.run-path {
+	display: block;
+	white-space: normal;
+	word-break: break-all;
+}
+.lan-run-body ol {
+	margin: 0;
+	padding-left: 18px;
+}
+.lan-run-body small {
+	color: var(--text-faint);
+	line-height: 1.4;
+}
+
+.lan-run-inspector .run-observation {
+	margin-top: 6px;
+	padding: 6px 8px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	overflow-wrap: anywhere;
+}

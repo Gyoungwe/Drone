@@ -17,15 +17,34 @@ export interface CapabilityDefinition {
 }
 
 export const CAPABILITY_CATALOG: readonly CapabilityDefinition[] = [
-	{ id: "knowledge", label: { zh: "知识库", en: "Knowledge" }, summary: "Vault/Wiki navigation, evidence reading and publication checks" },
-	{ id: "research", label: { zh: "科研", en: "Research" }, summary: "literature, source archiving and evidence workflows" },
-	{ id: "coding", label: { zh: "工程", en: "Coding" }, summary: "code inspection, shell execution and file edits" },
+	{
+		id: "knowledge",
+		label: { zh: "知识库", en: "Knowledge" },
+		summary: "Vault/Wiki navigation, evidence reading and publication checks",
+	},
+	{
+		id: "research",
+		label: { zh: "科研", en: "Research" },
+		summary: "literature, source archiving and evidence workflows",
+	},
+	{
+		id: "coding",
+		label: { zh: "工程", en: "Coding" },
+		summary: "code inspection, shell execution and file edits",
+	},
 	{ id: "web", label: { zh: "网络", en: "Web" }, summary: "web retrieval and network-backed lookup" },
 	{ id: "files", label: { zh: "文件", en: "Files" }, summary: "local file and document reading" },
-	{ id: "visualization", label: { zh: "可视化", en: "Visualization" }, summary: "images, figures and presentation artifacts" },
-	{ id: "external", label: { zh: "外部能力", en: "External apps" }, summary: "MCP, plugins, channels and uncategorized extension tools" },
+	{
+		id: "visualization",
+		label: { zh: "可视化", en: "Visualization" },
+		summary: "images, figures and presentation artifacts",
+	},
+	{
+		id: "external",
+		label: { zh: "外部能力", en: "External apps" },
+		summary: "MCP, plugins, channels and uncategorized extension tools",
+	},
 ] as const;
-
 
 export interface CapabilityToolInfo {
 	name: string;

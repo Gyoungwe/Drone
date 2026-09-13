@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.7.0 — 2026-09-13
+
+### Added
+
+- Opt-in hybrid FTS + semantic knowledge retrieval with Ollama/OpenAI-compatible embedding adapters, bounded incremental SQLite vector indexing, configurable minimum similarity, and Desktop management UI.
+- Versioned project-scoped topic memory with exact/unique resume, bounded continuation context, stale-source detection, lifecycle receipts, and explicit archive controls.
+- Deterministic specialist orchestration receipts and bounded per-turn/session run, queue, tool, token, and reported-cost budgets.
+- P5–P10 regression tooling: 20/50-turn synthetic replay, orchestration stress fixture, production-pipeline semantic benchmark, release gate, actual packaged-resource audit, and isolated packaged-app first-launch smoke.
+- Run Inspector retrieval/fallback/stop diagnostics on Desktop and LAN without exposing private chain-of-thought.
+
+### Changed
+
+- Semantic hits remain navigation candidates only: current parent reads and the existing publication gate are still required before evidence-backed answers.
+- Specialist usage accounting now preserves which fields the provider actually reported; missing cost/token fields remain unknown rather than being inferred as free or zero.
+- Session usage refreshes at committed response boundaries, and replayed response/tool IDs are deduplicated in usage and Run Inspector projections.
+- The research-workbench package manifest now audits topic-memory tools in packaged builds.
+
+### Validation
+
+See [`docs/releases/v0.7.0.md`](docs/releases/v0.7.0.md) and [`docs/p5-p10-acceptance.md`](docs/p5-p10-acceptance.md). This entry describes the local 0.7.0 release candidate; public tag/Release publication is a separate step.
+
 ## 0.6.0 — 2026-09-12
 
 ### Added

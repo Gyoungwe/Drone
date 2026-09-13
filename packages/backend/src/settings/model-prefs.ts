@@ -1,4 +1,4 @@
-import { SUBAGENT_THINKING_LEVELS, type ModelPrefs, type SubagentThinkingLevel } from "@percho/shared";
+import { type ModelPrefs, SUBAGENT_THINKING_LEVELS, type SubagentThinkingLevel } from "@percho/shared";
 import { JsonStore } from "../json-store";
 
 function copyPrefs(prefs: ModelPrefs): ModelPrefs {
@@ -133,7 +133,8 @@ export class ModelPrefsService {
 	async setSubagentThinking(agent: string, level: SubagentThinkingLevel | null): Promise<ModelPrefs> {
 		const cleanAgent = agent.trim();
 		if (!cleanAgent) throw new Error("agent is required");
-		if (level !== null && !SUBAGENT_THINKING_LEVELS.includes(level)) throw new Error("invalid subagent thinking level");
+		if (level !== null && !SUBAGENT_THINKING_LEVELS.includes(level))
+			throw new Error("invalid subagent thinking level");
 		const prefs = copyPrefs(await this.read());
 		if (level) prefs.subagentThinking[cleanAgent] = level;
 		else delete prefs.subagentThinking[cleanAgent];

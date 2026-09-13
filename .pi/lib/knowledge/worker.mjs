@@ -16,6 +16,9 @@ import {
 
 await mkdir(dirname(workerData.database), { recursive: true, mode: 0o700 });
 const db = new DatabaseSync(workerData.database, { timeout: 1500 });
+const priorSchemaVersion = Number(db.prepare("PRAGMA user_version").get().user_version ?? 0);
+if (!Number.isInteger(priorSchemaVersion) || priorSchemaVersion > 1)
+	throw new Error("Knowledge database schema is newer than this worker");
 db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=1500; PRAGMA synchronous=NORMAL;
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 INSERT OR IGNORE INTO meta VALUES('revision',0);
@@ -31,7 +34,34 @@ CREATE TABLE IF NOT EXISTS jobs(key TEXT PRIMARY KEY, kind TEXT NOT NULL, path T
 CREATE INDEX IF NOT EXISTS jobs_scope_updated ON jobs(scope,updated DESC);
 CREATE INDEX IF NOT EXISTS jobs_scope_kind_updated ON jobs(scope,kind,updated DESC);
 CREATE TABLE IF NOT EXISTS problems(path TEXT PRIMARY KEY, message TEXT NOT NULL);
-PRAGMA user_version=1;`);
+CREATE TABLE IF NOT EXISTS semantic_chunks(
+ path TEXT NOT NULL, chunk_index INTEGER NOT NULL, hash TEXT NOT NULL, fingerprint TEXT NOT NULL,
+ mtime TEXT NOT NULL, vector TEXT NOT NULL, dimension INTEGER NOT NULL,
+ PRIMARY KEY(path,chunk_index,hash,fingerprint)
+);
+CREATE INDEX IF NOT EXISTS semantic_chunks_lookup ON semantic_chunks(fingerprint,hash,path);
+CREATE TABLE IF NOT EXISTS semantic_meta(fingerprint TEXT PRIMARY KEY, dimension INTEGER NOT NULL);
+`);
+if (priorSchemaVersion < 1) db.exec("PRAGMA user_version=1;");
+const semanticColumns = db
+	.prepare("PRAGMA table_info(semantic_chunks)")
+	.all()
+	.map((column) => column.name);
+if (semanticColumns.includes("text")) {
+	db.exec(`BEGIN IMMEDIATE;
+DROP INDEX IF EXISTS semantic_chunks_lookup;
+ALTER TABLE semantic_chunks RENAME TO semantic_chunks_legacy;
+CREATE TABLE semantic_chunks(
+ path TEXT NOT NULL, chunk_index INTEGER NOT NULL, hash TEXT NOT NULL, fingerprint TEXT NOT NULL,
+ mtime TEXT NOT NULL, vector TEXT NOT NULL, dimension INTEGER NOT NULL,
+ PRIMARY KEY(path,chunk_index,hash,fingerprint)
+);
+INSERT INTO semantic_chunks(path,chunk_index,hash,fingerprint,mtime,vector,dimension)
+ SELECT path,chunk_index,hash,fingerprint,mtime,vector,dimension FROM semantic_chunks_legacy;
+DROP TABLE semantic_chunks_legacy;
+CREATE INDEX IF NOT EXISTS semantic_chunks_lookup ON semantic_chunks(fingerprint,hash,path);
+COMMIT;`);
+}
 let revision = Number(db.prepare("SELECT value FROM meta WHERE key='revision'").get().value);
 let scan = null,
 	coverage = "uninitialized",
@@ -42,6 +72,7 @@ let scan = null,
 let fullScanRequested = false;
 const dirty = new Set(),
 	inflight = new Map();
+const semanticCursors = new Map();
 const stats = { bodyReads: 0, metadataChecks: 0, reconciliations: 0, changes: 0, searches: 0 };
 const statements = {
 	get: db.prepare("SELECT * FROM notes WHERE path=?"),
@@ -52,6 +83,7 @@ const statements = {
 	addLink: db.prepare("INSERT OR IGNORE INTO links VALUES(?,?)"),
 	problem: db.prepare("INSERT OR REPLACE INTO problems VALUES(?,?)"),
 	clearProblem: db.prepare("DELETE FROM problems WHERE path=?"),
+	semanticDelete: db.prepare("DELETE FROM semantic_chunks WHERE path=?"),
 	job: db.prepare(
 		"INSERT INTO jobs VALUES(?,?,?,?,?,?) ON CONFLICT(key) DO UPDATE SET revision=excluded.revision,updated=excluded.updated",
 	),
@@ -171,6 +203,8 @@ async function updatePath(path, force = false) {
 			db.exec("BEGIN IMMEDIATE");
 			try {
 				if (previous) statements.removeFts.run(previous.id);
+				if (previous && (previous.hash !== file.hash || previous.signature !== file.signature))
+					statements.semanticDelete.run(path);
 				db.prepare(`INSERT INTO notes(path,title,body,hash,signature,scope,kind,bytes) VALUES(?,?,?,?,?,?,?,?)
           ON CONFLICT(path) DO UPDATE SET title=excluded.title,body=excluded.body,hash=excluded.hash,
           signature=excluded.signature,scope=excluded.scope,kind=excluded.kind,bytes=excluded.bytes`).run(
@@ -208,6 +242,7 @@ async function updatePath(path, force = false) {
 				try {
 					statements.removeFts.run(previous.id);
 					statements.remove.run(path);
+					statements.semanticDelete.run(path);
 					statements.links.run(path);
 					bump();
 					changed(path, previous);
@@ -344,7 +379,21 @@ function status() {
 		jobs: Number(db.prepare("SELECT count(*) count FROM jobs").get().count),
 		problems: db.prepare("SELECT * FROM problems ORDER BY path LIMIT 20").all(),
 		stats: { ...stats },
+		semantic: {
+			vectors: Number(db.prepare("SELECT count(*) count FROM semantic_chunks").get().count),
+			paths: Number(db.prepare("SELECT count(DISTINCT path) count FROM semantic_chunks").get().count),
+		},
 	};
+}
+function semanticStatus(fingerprint = null, project = null) {
+	if (!fingerprint) return { vectors: 0, paths: 0, coverage: "unconfigured" };
+	const scope = project || "";
+	const row = db
+		.prepare(`SELECT count(*) vectors,count(DISTINCT s.path) paths
+    FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash
+    WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind NOT IN ('navigation','explainer')`)
+		.get(fingerprint, scope);
+	return { vectors: Number(row.vectors), paths: Number(row.paths), fingerprint, project: scope };
 }
 function pending(project, limit = 20, kind = null) {
 	return db
@@ -439,29 +488,216 @@ async function search(args) {
 }
 
 async function hydrateCandidates(args) {
-	const paths = Array.isArray(args.paths) ? [...new Set(args.paths)].slice(0, 24) : [];
+	const candidates = Array.isArray(args.candidates)
+		? args.candidates.slice(0, 24)
+		: Array.isArray(args.paths)
+			? [...new Set(args.paths)].slice(0, 24).map((path) => ({ path }))
+			: [];
 	const limit = Math.max(1, Math.min(12, Math.floor(args.limit || 5)));
 	const hits = [];
-	for (const raw of paths) {
-		if (hits.length >= limit || typeof raw !== "string") break;
+	for (const candidate of candidates) {
+		if (hits.length >= limit || typeof candidate?.path !== "string") break;
 		let path;
 		try {
-			path = validateNote(raw);
+			path = validateNote(candidate.path);
 			if (!canRead(path, args.project)) continue;
-		} catch { continue; }
+		} catch {
+			continue;
+		}
 		let current;
-		try { current = await updatePath(path); } catch { continue; }
-		if (!current || current.kind === "explainer") continue;
+		try {
+			current = await updatePath(path);
+		} catch {
+			continue;
+		}
+		if (!current || current.kind === "explainer" || (candidate.hash && candidate.hash !== current.hash))
+			continue;
 		const part = snippet(current.body, { startLine: 1, maxChars: 1600 });
 		hits.push({ path, title: current.title, hash: current.hash, kind: current.kind, rank: null, ...part });
 	}
 	return { hits };
 }
+function splitChunks(text, maxChars = 1200) {
+	const chunks = [];
+	for (let start = 0; start < text.length && chunks.length < 64; start += maxChars)
+		chunks.push(text.slice(start, start + maxChars));
+	return chunks;
+}
+async function semanticBatch(args) {
+	const fingerprint = String(args.fingerprint || "");
+	if (!fingerprint || fingerprint.length > 300) throw new Error("Invalid semantic fingerprint");
+	const limit = Math.max(1, Math.min(16, Math.floor(args.limit || 8)));
+	const chunkChars = Math.max(256, Math.min(8_000, Math.floor(args.chunkChars || 1200)));
+	const scope = args.project || "";
+	const cursorKey = `${fingerprint}\0${scope}`;
+	const cursor = typeof args.cursor === "string" ? args.cursor : semanticCursors.get(cursorKey) || "";
+	const rows = db
+		.prepare(`SELECT path,title,body,hash,signature,scope,kind FROM notes
+    WHERE path>? AND (scope='shared' OR scope=?) AND kind NOT IN ('navigation','explainer') ORDER BY path LIMIT 256`)
+		.all(cursor, scope);
+	const items = [];
+	for (const row of rows) {
+		let current;
+		try {
+			if (!canRead(row.path, args.project)) continue;
+			if (/(?:^|\/)(?:Runs|Explainers)\//i.test(row.path)) continue;
+			current = await updatePath(row.path);
+			if (!current || current.hash !== row.hash || current.signature !== row.signature) continue;
+		} catch {
+			continue;
+		}
+		const chunks = splitChunks(current.body, chunkChars);
+		for (let index = 0; index < chunks.length; index++) {
+			const chunk = chunks[index];
+			const found = db
+				.prepare(
+					"SELECT 1 FROM semantic_chunks WHERE path=? AND chunk_index=? AND hash=? AND fingerprint=? LIMIT 1",
+				)
+				.get(row.path, index, row.hash, fingerprint);
+			if (found) continue;
+			if (items.length >= limit) {
+				return { items, partial: true, nextCursor: row.path };
+			}
+			items.push({
+				path: row.path,
+				chunkIndex: index,
+				hash: current.hash,
+				mtime: current.signature,
+				text: chunk,
+			});
+		}
+	}
+	const nextCursor = rows.at(-1)?.path || null;
+	if (nextCursor) semanticCursors.set(cursorKey, nextCursor);
+	return { items, partial: rows.length === 256, nextCursor };
+}
+function semanticStore(args) {
+	const fingerprint = String(args.fingerprint || "");
+	if (!fingerprint || fingerprint.length > 300 || !Array.isArray(args.items) || args.items.length > 32)
+		throw new Error("Invalid semantic storage request");
+	let dimension = null;
+	db.exec("BEGIN IMMEDIATE");
+	try {
+		for (const item of args.items) {
+			const row = statements.get.get(item.path);
+			if (
+				!row ||
+				row.hash !== item.hash ||
+				row.signature !== item.mtime ||
+				!Array.isArray(item.vector) ||
+				!Number.isInteger(item.chunkIndex) ||
+				item.chunkIndex < 0
+			)
+				throw new Error("Semantic batch is stale");
+			const vector = item.vector;
+			if (
+				!vector.length ||
+				vector.length > 16_384 ||
+				vector.some((n) => typeof n !== "number" || !Number.isFinite(n) || Math.abs(n) > 1_000_000)
+			)
+				throw new Error("Invalid semantic vector");
+			let norm = 0;
+			for (const value of vector) {
+				norm += value * value;
+				if (!Number.isFinite(norm) || norm > 1e18) throw new Error("Invalid semantic vector norm");
+			}
+			if (!(norm > 0)) throw new Error("Invalid semantic vector norm");
+			if (dimension === null) dimension = vector.length;
+			if (vector.length !== dimension) throw new Error("Semantic batch dimensions do not match");
+			const meta = db.prepare("SELECT dimension FROM semantic_meta WHERE fingerprint=?").get(fingerprint);
+			if (meta && Number(meta.dimension) !== vector.length)
+				throw new Error("Semantic fingerprint dimension mismatch");
+			db.prepare(
+				"INSERT OR REPLACE INTO semantic_chunks(path,chunk_index,hash,fingerprint,mtime,vector,dimension) VALUES(?,?,?,?,?,?,?)",
+			).run(
+				item.path,
+				item.chunkIndex,
+				item.hash,
+				fingerprint,
+				item.mtime,
+				JSON.stringify(vector),
+				vector.length,
+			);
+		}
+		if (dimension !== null)
+			db.prepare(
+				"INSERT INTO semantic_meta(fingerprint,dimension) VALUES(?,?) ON CONFLICT(fingerprint) DO UPDATE SET dimension=excluded.dimension",
+			).run(fingerprint, dimension);
+		db.exec("COMMIT");
+	} catch (error) {
+		db.exec("ROLLBACK");
+		throw error;
+	}
+	return status();
+}
+function semanticCandidates(args) {
+	if (
+		!Array.isArray(args.vector) ||
+		!args.vector.length ||
+		args.vector.some((n) => typeof n !== "number" || !Number.isFinite(n) || Math.abs(n) > 1_000_000)
+	)
+		throw new Error("Invalid semantic query vector");
+	const fingerprint = String(args.fingerprint || "");
+	if (!fingerprint || fingerprint.length > 300) throw new Error("Invalid semantic fingerprint");
+	const minSimilarity = args.minSimilarity === undefined ? 0.45 : args.minSimilarity;
+	if (
+		typeof minSimilarity !== "number" ||
+		!Number.isFinite(minSimilarity) ||
+		minSimilarity < 0 ||
+		minSimilarity > 1
+	)
+		throw new Error("Invalid semantic similarity threshold");
+	const query = args.vector,
+		limit = Math.max(1, Math.min(12, Math.floor(args.limit || 5)));
+	const rows = db
+		.prepare(
+			"SELECT s.path,s.hash,s.vector,s.dimension,n.title,n.kind FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer' ORDER BY s.path LIMIT 5000",
+		)
+		.all(fingerprint, args.project || "");
+	const best = new Map();
+	for (const row of rows) {
+		if (row.dimension !== query.length) continue;
+		let vector;
+		try {
+			vector = JSON.parse(row.vector);
+		} catch {
+			continue;
+		}
+		if (!Array.isArray(vector) || vector.length !== query.length) continue;
+		let dot = 0,
+			qa = 0,
+			va = 0;
+		for (let i = 0; i < query.length; i++) {
+			const q = query[i],
+				v = vector[i];
+			if (typeof v !== "number" || !Number.isFinite(v)) {
+				va = Number.NaN;
+				break;
+			}
+			dot += q * v;
+			qa += q * q;
+			va += v * v;
+		}
+		const score = dot / Math.sqrt(qa * va);
+		if (!Number.isFinite(score) || score < minSimilarity) continue;
+		const current = best.get(row.path);
+		if (!current || score > current.score)
+			best.set(row.path, { path: row.path, title: row.title, hash: row.hash, kind: row.kind, score });
+	}
+	const result = [...best.values()]
+		.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path))
+		.slice(0, limit);
+	Object.defineProperty(result, "partial", { value: rows.length >= 5000, enumerable: false });
+	return result;
+}
 async function dispatch(op, args) {
-	if (op === "status") return status();
+	if (op === "status") return { ...status(), semanticScoped: semanticStatus(args.fingerprint, args.project) };
 	if (op === "read") return read(args.path, args.project, args);
 	if (op === "search") return search(args);
 	if (op === "hydrateCandidates") return hydrateCandidates(args);
+	if (op === "semanticBatch") return semanticBatch(args);
+	if (op === "semanticStore") return semanticStore(args);
+	if (op === "semanticCandidates") return semanticCandidates(args);
 	if (op === "warm") {
 		void beginReconcile();
 		return status();
@@ -473,7 +709,13 @@ async function dispatch(op, args) {
 	}
 	if (op === "changed") {
 		for (const path of args.paths.slice(0, 100)) {
-			await updatePath(path);
+			const previous = statements.get.get(path);
+			let signature = null;
+			try {
+				signature = (await inspectNote(workerData.vault, path)).signature;
+			} catch {}
+			if (previous?.signature === signature && signature) continue;
+			await updatePath(path, true);
 			dirty.delete(path);
 		}
 		return status();

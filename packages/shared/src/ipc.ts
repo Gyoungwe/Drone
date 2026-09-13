@@ -72,6 +72,13 @@ export const IpcChannels = {
 	KnowledgeOpen: "knowledge:open",
 	KnowledgeResume: "knowledge:resume",
 	KnowledgeEvent: "knowledge:event",
+	KnowledgeSemanticStatus: "knowledge:semanticStatus",
+	KnowledgeSemanticSettingsSave: "knowledge:semanticSettingsSave",
+	KnowledgeSemanticProviderTest: "knowledge:semanticProviderTest",
+	KnowledgeSemanticIndex: "knowledge:semanticIndex",
+	KnowledgeSemanticIndexCancel: "knowledge:semanticIndexCancel",
+	KnowledgeTopics: "knowledge:topics",
+	KnowledgeTopicArchive: "knowledge:topicArchive",
 
 	SessionCreate: "session:create",
 	SessionList: "session:list",
@@ -317,7 +324,10 @@ export interface PiApi extends KnowledgeApi {
 	/** 为子代理指定 provider/model；null = 继承父会话模型 */
 	setSubagentModel(agent: string, modelRef: string | null): Promise<ModelPrefs>;
 	/** 为子代理指定 thinking；null = 跟随父会话 thinking。 */
-	setSubagentThinking(agent: string, level: import("./settings").SubagentThinkingLevel | null): Promise<ModelPrefs>;
+	setSubagentThinking(
+		agent: string,
+		level: import("./settings").SubagentThinkingLevel | null,
+	): Promise<ModelPrefs>;
 	/** 列内置与用户级 subagent 定义（不读项目级定义） */
 	listSubagents(): Promise<SubagentInfo[]>;
 	/** 启动 provider 交互登录（OAuth 浏览器/设备码流 · api_key 提示/选择流）；事件经 onProviderLoginEvent 推送，promise 在流程结束时 resolve（取消不算错误） */

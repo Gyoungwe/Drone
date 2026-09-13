@@ -52,7 +52,11 @@ import {
 	type TodoItem,
 } from "@percho/shared";
 import { makeCapabilityExtension } from "./capabilities/extension";
-import { CapabilityResourceLoader, SkillVisibility, allSkillsFromLoader } from "./capabilities/resource-loader";
+import {
+	allSkillsFromLoader,
+	CapabilityResourceLoader,
+	SkillVisibility,
+} from "./capabilities/resource-loader";
 import { CapabilityRuntime } from "./capabilities/runtime";
 import { makeKnowledgeSpecialistBridge } from "./knowledge/specialist-bridge";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
@@ -235,7 +239,11 @@ export class PiBackend {
 	}
 
 	/** 自定义工具 = 调用方传入的 + 内置 webfetch（webFetch:false 关闭）+ show_image + set_status + todo + subagent */
-	private buildCustomTools(gate: PermissionGate, askGate: AskGate, capabilities?: CapabilityRuntime): ToolDefinition[] {
+	private buildCustomTools(
+		gate: PermissionGate,
+		askGate: AskGate,
+		capabilities?: CapabilityRuntime,
+	): ToolDefinition[] {
 		const tools = [...(this.options.customTools ?? [])];
 		const webFetch = this.options.webFetch;
 		if (webFetch !== false) {
@@ -414,7 +422,8 @@ export class PiBackend {
 		const modeRef: PermissionModeRef = { current: "default" };
 
 		const skillVisibility = new SkillVisibility();
-		const capabilities = this.options.lazyCapabilities === false ? undefined : new CapabilityRuntime(skillVisibility);
+		const capabilities =
+			this.options.lazyCapabilities === false ? undefined : new CapabilityRuntime(skillVisibility);
 		const { settingsManager, resourceLoader: baseResourceLoader } = await this.projectLoader.load(cwd, {
 			confirm: confirmBridge,
 			modeRef,
@@ -489,7 +498,8 @@ export class PiBackend {
 		// 重开历史会话同样 default 起步（D1：模式不随会话文件继承）
 		const modeRef: PermissionModeRef = { current: "default" };
 		const skillVisibility = new SkillVisibility();
-		const capabilities = this.options.lazyCapabilities === false ? undefined : new CapabilityRuntime(skillVisibility);
+		const capabilities =
+			this.options.lazyCapabilities === false ? undefined : new CapabilityRuntime(skillVisibility);
 		const { settingsManager, resourceLoader: baseResourceLoader } = await this.projectLoader.load(cwd, {
 			confirm: confirmBridge,
 			modeRef,
@@ -664,7 +674,12 @@ export class PiBackend {
 								getModelPreference: (name) => this.modelPrefs.getSubagentModel(name),
 								getThinkingPreference: (name) => this.modelPrefs.getSubagentThinking(name),
 							},
-							{ ...request, parentModel: entry.session.model, parentThinkingLevel: entry.session.thinkingLevel, signal: controller.signal },
+							{
+								...request,
+								parentModel: entry.session.model,
+								parentThinkingLevel: entry.session.thinkingLevel,
+								signal: controller.signal,
+							},
 						),
 					),
 			});
@@ -1187,7 +1202,10 @@ export class PiBackend {
 		return this.modelPrefs.setSubagentModel(agent, modelRef);
 	}
 
-	async setSubagentThinking(agent: string, level: import("@percho/shared").SubagentThinkingLevel | null): Promise<ModelPrefs> {
+	async setSubagentThinking(
+		agent: string,
+		level: import("@percho/shared").SubagentThinkingLevel | null,
+	): Promise<ModelPrefs> {
 		return this.modelPrefs.setSubagentThinking(agent, level);
 	}
 

@@ -1,5 +1,5 @@
 import type { SessionStats, UsageDisplayTotal } from "@percho/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { useI18nStore } from "../../i18n";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
@@ -119,13 +119,21 @@ function sdkTotal(stats: SessionStats): UsageDisplayTotal {
 /** Query the existing SDK stats IPC at completed-response/settled boundaries, never for token deltas. */
 export function SessionUsageFooter({ sessionId }: { sessionId: string | null }) {
 	const transcript = useTranscriptStore((s) => selectTranscript(s, sessionId));
-	const count = transcript.messages.length,
-		_ended = transcript.runEndedAt;
+	const count = transcript.messages.length;
+	// Stable at committed-response/run boundaries; token deltas never trigger stats IPC.
+	const statsRequest = useMemo(
+		() =>
+			sessionId && !sessionId.startsWith("draft:") && count > 0
+				? { sessionId, count, endedAt: transcript.runEndedAt }
+				: null,
+		[sessionId, count, transcript.runEndedAt],
+	);
 	const [data, setData] = useState<{ id: string; usage: UsageDisplayTotal } | null>(null),
 		[error, setError] = useState(false),
 		[pending, setPending] = useState(false);
 	useEffect(() => {
-		if (!sessionId || sessionId.startsWith("draft:")) return;
+		if (!statsRequest) return;
+		const sessionId = statsRequest.sessionId;
 		let live = true;
 		const timer = setTimeout(() => {
 			setPending(true);
@@ -150,7 +158,7 @@ export function SessionUsageFooter({ sessionId }: { sessionId: string | null }) 
 			live = false;
 			clearTimeout(timer);
 		};
-	}, [sessionId]);
+	}, [statsRequest]);
 	if (!sessionId || !count) return null;
 	return (
 		<div className="mt-2">

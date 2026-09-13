@@ -5,6 +5,7 @@ export * from "./ipc";
 export * from "./knowledge";
 export * from "./knowledge-links";
 export * from "./knowledge-specialists";
+export * from "./knowledge-upgrade";
 export * from "./lan";
 export * from "./marquee-motion";
 export * from "./mcp";
@@ -18,8 +19,7 @@ export * from "./skill-invocation";
 export * from "./subagent";
 export * from "./todo";
 export * from "./transcript";
+export * from "./transcript/run-inspector";
 export * from "./ui-plugins";
 export * from "./update";
 export * from "./usage-display";
-
-export * from "./transcript/run-inspector";

@@ -54,8 +54,16 @@ export interface KnowledgeSpecialistSettings {
 	mode: KnowledgeSpecialistMode;
 	revision: number;
 	maxRunsPerTurn: number;
+	maxRunsPerSession: number;
+	maxToolOperations: number;
 	concurrency: number;
+	queueLimit: number;
+	queueWaitMs: number;
 	timeoutMs: number;
+	maxTokensPerTurn: number;
+	maxTokensPerSession: number;
+	maxCostPerTurn: number;
+	maxCostPerSession: number;
 }
 export interface KnowledgeSpecialistRun {
 	id: string;
@@ -75,6 +83,13 @@ export interface KnowledgeSpecialistRun {
 	reasoningTokens?: number;
 	totalTokens?: number;
 	cost?: number;
+	usageReported?: boolean;
+	reportedFields?: string[];
+	decision?: "run" | "skip" | "wait" | "ask-user";
+	reasonCode?: string;
+	nextAction?: string;
+	elapsedMs?: number;
+	budget?: Record<string, number>;
 	sourceCount?: number;
 	summary?: string;
 	error?: string;

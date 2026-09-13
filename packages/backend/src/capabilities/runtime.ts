@@ -11,16 +11,31 @@ import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
 const ALWAYS_ON = new Set(["ask_user", "set_status", "todo", "capability_load"]);
 
 const PATTERNS: Record<CapabilityId, RegExp[]> = {
-	knowledge: [/(?:knowledge|wiki|obsidian|vault|evidence|知识库|知识图谱|维基|证据|来源)/i],
-	research: [/(?:research|paper|literature|citation|experiment|scientific|methodology|transcriptom|genom|phylogen|species|biology|bioinformatics|论文|文献|科研|研究|实验|转录组|基因组|系统发育|物种|生物信息)/i],
-	coding: [/(?:\bcode\b|coding|repo(?:sitory)?|git|commit|push|pull request|build|compile|typecheck|test(?:ing)?|debug|bug|implement|refactor|代码|仓库|提交|构建|编译|测试|调试|修复|实现|重构)/i],
-	web: [/(?:https?:\/\/|\bweb\b|website|internet|online|latest|search (?:the )?web|网页|网站|联网|网上|最新|搜一下|搜索网络)/i],
-	files: [/(?:\bfile\b|folder|directory|path|pdf|docx?|xlsx?|csv|spreadsheet|document|文件|文件夹|目录|路径|文档|表格)/i],
-	visualization: [/(?:image|figure|plot|chart|diagram|visuali[sz]|show[ -]?me|slide|ppt|图片|图像|绘图|图表|可视化|流程图|幻灯片)/i],
-	external: [/(?:mcp|plugin|connector|github|gitlab|slack|drive|notion|zotero|channel|外部应用|插件|连接器)/i],
+	knowledge: [
+		/(?:knowledge|wiki|obsidian|vault|evidence|知识库|知识图谱|维基|证据|来源|主题记忆|恢复主题|resume topic|topic memory)/i,
+	],
+	research: [
+		/(?:research|paper|literature|citation|experiment|scientific|methodology|transcriptom|genom|phylogen|species|biology|bioinformatics|论文|文献|科研|研究|实验|转录组|基因组|系统发育|物种|生物信息)/i,
+	],
+	coding: [
+		/(?:\bcode\b|coding|repo(?:sitory)?|git|commit|push|pull request|build|compile|typecheck|test(?:ing)?|debug|bug|implement|refactor|代码|仓库|提交|构建|编译|测试|调试|修复|实现|重构)/i,
+	],
+	web: [
+		/(?:https?:\/\/|\bweb\b|website|internet|online|latest|search (?:the )?web|网页|网站|联网|网上|最新|搜一下|搜索网络)/i,
+	],
+	files: [
+		/(?:\bfile\b|folder|directory|path|pdf|docx?|xlsx?|csv|spreadsheet|document|文件|文件夹|目录|路径|文档|表格)/i,
+	],
+	visualization: [
+		/(?:image|figure|plot|chart|diagram|visuali[sz]|show[ -]?me|slide|ppt|图片|图像|绘图|图表|可视化|流程图|幻灯片)/i,
+	],
+	external: [
+		/(?:mcp|plugin|connector|github|gitlab|slack|drive|notion|zotero|channel|外部应用|插件|连接器)/i,
+	],
 };
 
-const KNOWLEDGE_TOOL = /^research_(?:prepare_knowledge|read_knowledge|search_knowledge|search_explainers|knowledge_status|maintain_knowledge|delegate_knowledge|propose_wiki_update|wiki_|check_answer|task_status|deposit_knowledge)/;
+const KNOWLEDGE_TOOL =
+	/^research_(?:prepare_knowledge|read_knowledge|search_knowledge|search_explainers|knowledge_status|maintain_knowledge|delegate_knowledge|propose_wiki_update|wiki_|check_answer|task_status|deposit_knowledge|topics|resume_topic|update_topic|archive_topic)/;
 const VISUAL_TOOL = /(?:show_image|explainer|show_me|figure|plot|chart|image)/i;
 
 export function detectCapabilities(text: string): CapabilityId[] {
@@ -55,27 +70,42 @@ export function toolCapabilities(name: string): CapabilityId[] {
 	return VISUAL_TOOL.test(name) ? ["visualization", "external"] : ["external"];
 }
 
-function skillMatches(name: string, capabilities: ReadonlySet<CapabilityId>, forced: ReadonlySet<string>): boolean {
+function skillMatches(
+	name: string,
+	capabilities: ReadonlySet<CapabilityId>,
+	forced: ReadonlySet<string>,
+): boolean {
 	if (forced.has(name)) return true;
 	const category = getSkillCategory(name);
 	if (category === "knowledge") return capabilities.has("knowledge") || capabilities.has("research");
 	if (category === "research" || category === "writing") return capabilities.has("research");
 	if (category === "presentation") return capabilities.has("visualization");
 	if (category === "engineering" || category === "setup") return capabilities.has("coding");
-	if (category === "collaboration" || category === "support" || category === "other") return capabilities.has("external");
+	if (category === "collaboration" || category === "support" || category === "other")
+		return capabilities.has("external");
 	return false;
 }
 
-function schemaBytes(tool: { name: string; description?: string; parameters?: unknown; promptGuidelines?: string[] }): number {
-	return Buffer.byteLength(JSON.stringify({
-		name: tool.name,
-		description: tool.description ?? "",
-		parameters: tool.parameters ?? {},
-		promptGuidelines: tool.promptGuidelines ?? [],
-	}));
+function schemaBytes(tool: {
+	name: string;
+	description?: string;
+	parameters?: unknown;
+	promptGuidelines?: string[];
+}): number {
+	return Buffer.byteLength(
+		JSON.stringify({
+			name: tool.name,
+			description: tool.description ?? "",
+			parameters: tool.parameters ?? {},
+			promptGuidelines: tool.promptGuidelines ?? [],
+		}),
+	);
 }
 
-type RuntimeSession = Pick<AgentSession, "getAllTools" | "getActiveToolNames" | "setActiveToolsByName" | "resourceLoader">;
+type RuntimeSession = Pick<
+	AgentSession,
+	"getAllTools" | "getActiveToolNames" | "setActiveToolsByName" | "resourceLoader"
+>;
 
 export interface CapabilityChange {
 	changed: boolean;
@@ -92,7 +122,10 @@ export class CapabilityRuntime {
 
 	constructor(private readonly skillVisibility: SkillVisibility) {}
 
-	bind(session: RuntimeSession, options?: { excludedToolNames?: Iterable<string>; extraAlwaysOn?: Iterable<string> }): CapabilityChange {
+	bind(
+		session: RuntimeSession,
+		options?: { excludedToolNames?: Iterable<string>; extraAlwaysOn?: Iterable<string> },
+	): CapabilityChange {
 		this.session = session;
 		for (const name of options?.excludedToolNames ?? []) this.excludedTools.add(name);
 		for (const name of options?.extraAlwaysOn ?? []) this.extraAlwaysOn.add(name);
@@ -122,28 +155,47 @@ export class CapabilityRuntime {
 	}
 
 	state(): CapabilityState {
-		if (!this.session) return {
-			activeCapabilities: [], activeTools: [], tools: [], visibleSkills: [],
-			footprint: { allToolSchemaBytes: 0, activeToolSchemaBytes: 0, reductionRatio: 0, allTools: 0, activeTools: 0, totalSkills: 0, visibleSkills: 0 },
-		};
+		if (!this.session)
+			return {
+				activeCapabilities: [],
+				activeTools: [],
+				tools: [],
+				visibleSkills: [],
+				footprint: {
+					allToolSchemaBytes: 0,
+					activeToolSchemaBytes: 0,
+					reductionRatio: 0,
+					allTools: 0,
+					activeTools: 0,
+					totalSkills: 0,
+					visibleSkills: 0,
+				},
+			};
 		const allTools = this.session.getAllTools();
 		const activeNames = new Set(this.session.getActiveToolNames());
-		const toolInfo = allTools.map((tool) => {
-			const usage = this.toolUsage.get(tool.name);
-			return {
-				name: tool.name,
-				capabilities: toolCapabilities(tool.name),
-				schemaBytes: schemaBytes(tool),
-				active: activeNames.has(tool.name),
-				alwaysOn: ALWAYS_ON.has(tool.name) || this.extraAlwaysOn.has(tool.name),
-				invocations: usage?.invocations ?? 0,
-				...(usage ? { lastUsedAt: usage.lastUsedAt } : {}),
-			};
-		}).sort((a, b) => a.name.localeCompare(b.name));
+		const toolInfo = allTools
+			.map((tool) => {
+				const usage = this.toolUsage.get(tool.name);
+				return {
+					name: tool.name,
+					capabilities: toolCapabilities(tool.name),
+					schemaBytes: schemaBytes(tool),
+					active: activeNames.has(tool.name),
+					alwaysOn: ALWAYS_ON.has(tool.name) || this.extraAlwaysOn.has(tool.name),
+					invocations: usage?.invocations ?? 0,
+					...(usage ? { lastUsedAt: usage.lastUsedAt } : {}),
+				};
+			})
+			.sort((a, b) => a.name.localeCompare(b.name));
 		const allBytes = allTools.reduce((sum, tool) => sum + schemaBytes(tool), 0);
-		const activeBytes = allTools.filter((tool) => activeNames.has(tool.name)).reduce((sum, tool) => sum + schemaBytes(tool), 0);
+		const activeBytes = allTools
+			.filter((tool) => activeNames.has(tool.name))
+			.reduce((sum, tool) => sum + schemaBytes(tool), 0);
 		const allSkills = allSkillsFromLoader(this.session.resourceLoader).skills;
-		const visibleSkills = allSkills.filter((skill) => this.skillVisibility.has(skill.name)).map((skill) => skill.name).sort();
+		const visibleSkills = allSkills
+			.filter((skill) => this.skillVisibility.has(skill.name))
+			.map((skill) => skill.name)
+			.sort();
 		return {
 			activeCapabilities: CAPABILITY_IDS.filter((id) => this.active.has(id)),
 			activeTools: [...activeNames].sort(),
@@ -166,7 +218,11 @@ export class CapabilityRuntime {
 		const beforeTools = this.session.getActiveToolNames().slice().sort().join("\0");
 		const beforeSkills = this.skillVisibility.list().join("\0");
 		const allSkills = allSkillsFromLoader(this.session.resourceLoader).skills;
-		this.skillVisibility.set(allSkills.filter((skill) => skillMatches(skill.name, this.active, this.forcedSkills)).map((skill) => skill.name));
+		this.skillVisibility.set(
+			allSkills
+				.filter((skill) => skillMatches(skill.name, this.active, this.forcedSkills))
+				.map((skill) => skill.name),
+		);
 		const selected = new Set<string>([...ALWAYS_ON, ...this.extraAlwaysOn]);
 		for (const tool of this.session.getAllTools()) {
 			if (this.excludedTools.has(tool.name)) continue;

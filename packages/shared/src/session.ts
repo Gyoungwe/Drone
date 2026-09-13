@@ -1,5 +1,5 @@
-import type { CapabilityState } from "./capabilities";
 import type { AgentSessionEvent as PiAgentSessionEvent } from "@earendil-works/pi-coding-agent";
+import type { CapabilityState } from "./capabilities";
 import type { ProgressDisplay } from "./progress-display";
 import type { SkillInvocationDisplay } from "./skill-invocation";
 import type { SubagentRunData } from "./subagent";

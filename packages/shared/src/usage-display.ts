@@ -63,7 +63,11 @@ export function reportedUsage(raw: unknown): ReportedUsage | undefined {
 	};
 }
 export function sumReportedUsage(items: readonly ReportedUsage[]): UsageDisplayTotal {
-	const unique = [...new Map(items.map((item) => [item.id, item])).values()];
+	const unique = [
+		...new Map(
+			items.map((item) => [`${item.provider ?? ""}\0${item.model ?? ""}\0${item.id}`, item]),
+		).values(),
+	];
 	const sum = (key: "input" | "output" | "cacheRead" | "cacheWrite") =>
 		unique.reduce((n, u) => n + (u[key] ?? 0), 0);
 	const input = sum("input"),
