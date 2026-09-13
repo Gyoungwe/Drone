@@ -90,6 +90,19 @@ export interface Logger {
 	error(message: string, ...args: unknown[]): void;
 }
 
+/** stdout write that ignores broken-pipe / IO errors (AppImage / redirected logs). */
+export function safeStdoutWrite(chunk: string): void {
+	try {
+		if (!process.stdout.writable) return;
+		process.stdout.write(chunk);
+	} catch (err) {
+		const code =
+			err && typeof err === "object" && "code" in err ? (err as NodeJS.ErrnoException).code : undefined;
+		if (code === "EPIPE" || code === "EIO") return;
+		throw err;
+	}
+}
+
 /** 创建带模块 tag 的 logger */
 export function createLogger(tag: string): Logger {
 	const write = (level: Level, message: string, args: unknown[]) => {
@@ -97,9 +110,9 @@ export function createLogger(tag: string): Logger {
 		const ts = formatTimestamp(new Date());
 		const line = `${ts} ${level.padEnd(5)} [${tag}] ${message}${args.length > 0 ? ` ${formatArgs(args)}` : ""}`;
 		if (process.stdout.isTTY) {
-			process.stdout.write(`${COLOR[level]}${line}${RESET}\n`);
+			safeStdoutWrite(`${COLOR[level]}${line}${RESET}\n`);
 		} else {
-			process.stdout.write(`${line}\n`);
+			safeStdoutWrite(`${line}\n`);
 		}
 		if (logFilePath) {
 			try {

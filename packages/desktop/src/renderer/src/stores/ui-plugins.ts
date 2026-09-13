@@ -1,6 +1,7 @@
 import type { UiPluginInfo, UiPluginsConfig } from "@percho/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
+import { pushToast } from "./toasts";
 
 /** 空插件列表稳定引用（selector 缺省用，禁内联新数组） */
 export const EMPTY_PLUGINS: UiPluginInfo[] = [];
@@ -42,8 +43,13 @@ export const useUiPluginsStore = create<UiPluginsStore>((set, get) => ({
 		await get().loadAll();
 	},
 	setPluginEnabled: async (name, enabled) => {
-		await getPi().uiPluginsSetPluginEnabled(name, enabled);
-		await get().loadAll();
+		try {
+			await getPi().uiPluginsSetPluginEnabled(name, enabled);
+			await get().loadAll();
+		} catch (err) {
+			pushToast("error", "settings.uiPlugins.enableFailed", err instanceof Error ? err.message : String(err));
+			throw err;
+		}
 	},
 	assignSlot: async (slot, pluginName) => {
 		await getPi().uiPluginsAssignSlot(slot, pluginName);

@@ -49,6 +49,7 @@ export const en: Messages = {
 		customPlaceholder: "Or enter your own answer…",
 		submit: "Submit answers",
 		submitting: "Submitting…",
+		timeout: "Submit timed out — retry or cancel",
 		footerHint: "Your answers go directly back to the current agent",
 		queued: "{count} more question form(s) waiting",
 	},
@@ -95,6 +96,8 @@ export const en: Messages = {
 		hint: "Enter to send · Shift+Enter for newline",
 		modelDefault: "Select model",
 		modelSwitch: "Switch model",
+		noModelHint: "No model is configured. Open Settings to add a provider, then send.",
+		configureProvider: "Configure provider",
 		thinkingSwitch: "Switch thinking level",
 		addImage: "Add image",
 		imageUnsupported:
@@ -110,7 +113,8 @@ export const en: Messages = {
 		permissionDefault: "Default",
 		permissionFullAccess: "Full access",
 		permissionDefaultTitle: "Default",
-		permissionDefaultDesc: "High-risk operations ask for confirmation per permission rules",
+		permissionDefaultDesc:
+			"Write-sensitive tools ask in the approval dock; reads and listings still auto-run",
 		permissionFullAccessTitle: "Full access",
 		permissionFullAccessDesc:
 			"Nothing is blocked; high-risk command runs are written to an audit log — current session only",
@@ -559,6 +563,7 @@ export const en: Messages = {
 				"Ask percho (agent) to write a plugin per the SPEC, or drop one into the plugin directory and enable it here",
 			openDir: "Open folder",
 			enable: "Enable",
+			enableFailed: "Failed to enable plugin",
 			confirmEnable: "Enable? This plugin's code will run inside the app",
 			disable: "Disable",
 			rebuild: "Rebuild",

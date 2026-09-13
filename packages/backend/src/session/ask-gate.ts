@@ -39,7 +39,9 @@ export class AskGate {
 	respond(requestId: string, response: AskResponse): boolean {
 		const pending = this.pending.get(requestId);
 		if (!pending) return false;
-		pending.resolve(response);
+		// Defer resolve so the IPC reply can return before the agent continues
+		// (next ui.select / ask must not land while the previous dialog is still sending).
+		setImmediate(() => pending.resolve(response));
 		return true;
 	}
 

@@ -51,7 +51,7 @@ percho 把官方 Pi SDK（`@earendil-works/pi-coding-agent`）跑在 Electron �
 - 高度自定义界面 —— UI 插件可替换工具调用卡、添加桌宠浮层（内置鲸鱼娘 + Q 版两只）、扩展设置面板
 - 可视化权限审批 —— 在底部审批坞里逐个批准/拒绝工具调用，背后是逐工具的规则引擎
 - 多会话顶栏标签（可拖拽排序，可选左侧会话轨道）、逐会话输入草稿、可撤销的跟进消息队列
-- 内置子代理 —— 自带 scout 与自定义 agent 定义、并行任务拆分，点开运行卡片即可只读检视子会话
+- 内置子代理 —— 自带 scout 与自定义 agent 定义、并行任务拆分，点开运行卡片即可只读检视子会话。自然语言如「侦察一下代码库」/ “scout the repo” 会启动 Scout；输入框状态显示「子代理 x1」，完成后显示「Scout 已完成」
 - 上下文蒸发（默认开启）—— 到龄的工具输出自动蒸发为紧凑 stub，长会话不超预算
 - 视觉代理 —— 纯文本模型遇到图片时，由视觉模型先识别成描述再交给 LLM
 - 统一报错系统 —— 对话内错误卡一键重试、自动重试状态行、全屏崩坏兜底
@@ -74,6 +74,10 @@ percho 把官方 Pi SDK（`@earendil-works/pi-coding-agent`）跑在 Electron �
 
 > Linux 包未签名。AppImage 需先 `chmod +x percho-linux-x64.AppImage` 再运行。
 >
+> AppImage 需要 FUSE 2（`libfuse2`）。若运行报 FUSE 错误，可安装 fuse2（Debian/Ubuntu：`sudo apt install libfuse2`），或不用 FUSE：`APPIMAGE_EXTRACT_AND_RUN=1 ./percho-linux-x64.AppImage`。
+>
+> `.deb` 安装包需要 `libsecret-1-0` 来存凭证（`sudo apt install libsecret-1-0`）。
+>
 > 构建为 adhoc 临时签名（无 Developer ID 证书）。macOS 下载后首次打开可能提示**「Apple 无法验证 Percho 是否包含危害 Mac 安全或泄漏隐私的恶意软件」**—— 这是 Gatekeeper 拦截未公证的 App。按以下方式放行：
 >
 > 1. **系统设置 → 隐私与安全性** → 滚动到底部 → 在 Percho 条目旁点**「仍要打开」**，然后输入密码或 Touch ID 确认（推荐）。
@@ -87,6 +91,8 @@ percho 把官方 Pi SDK（`@earendil-works/pi-coding-agent`）跑在 Electron �
 ## 配置
 
 API key 不会存入本仓库，也不会打进安装包。`~/.pi/agent/models.json` 通过环境变量引用（如 `$AI_OPS_API_KEY`），key 只存在于你的 shell 环境中。如果你已经在用 Pi CLI，现有配置开箱即用。
+
+内置 DeepSeek 模型在目录里显示为 **V4 Flash** 这类名称，而不是 API id `deepseek-chat`。模型选择器为空时，打开「设置 → 模型」配置 Provider。
 
 ## 开发
 

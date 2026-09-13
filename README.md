@@ -51,7 +51,7 @@ And for those who prefer a GUI over a TUI:
 - Highly customizable UI — swap tool-call cards, drop in desk-pet overlays (two whale-maid pets ship built in), or extend the settings panel via UI plugins
 - Visual permission gates — approve or deny each tool call from a dock, backed by a per-tool rule engine
 - Draggable multi-session tabs (plus an optional session rail), per-session composer drafts, follow-up queue with undo
-- Built-in subagents — a scout plus your own agent definitions, parallel task fan-outs, and run cards you can click to inspect the sub-session read-only
+- Built-in subagents — a scout plus your own agent definitions, parallel task fan-outs, and run cards you can click to inspect the sub-session read-only. Natural language such as “scout the repo” / “侦察一下代码库” starts Scout; the composer shows “子代理 x1” while it runs and “Scout 已完成” when it finishes
 - Context evaporation (on by default) — stale tool outputs age into compact stubs, keeping long sessions within budget
 - Unified error system — in-chat error cards with one-click retry, an auto-retry status line, and a crash-proof renderer
 - Solid session workspace — fork any message, recall your own message back into the composer, todo panel, per-turn diff sidebar, slash-command menu and @-file completion
@@ -73,6 +73,10 @@ Prebuilt installers are published on the [Releases](https://github.com/Gyoungwe/
 
 > Linux packages are unsigned. Make the AppImage executable (`chmod +x percho-linux-x64.AppImage`) before running.
 >
+> The AppImage needs FUSE 2 (`libfuse2`). If `./percho-linux-x64.AppImage` fails with a FUSE error, either install fuse2 (`sudo apt install libfuse2` on Debian/Ubuntu) or run without FUSE: `APPIMAGE_EXTRACT_AND_RUN=1 ./percho-linux-x64.AppImage`.
+>
+> The `.deb` package needs `libsecret-1-0` for credential storage (`sudo apt install libsecret-1-0`).
+>
 > Builds are ad-hoc signed (no Developer ID certificate). On macOS, the first launch after a download may show **"Apple cannot verify Percho is free from malware"** — that's Gatekeeper blocking an un-notarized app. To open it:
 >
 > 1. **System Settings → Privacy & Security** → scroll to the bottom → click **Open Anyway** next to the Percho entry, then confirm with your password or Touch ID (recommended).
@@ -86,6 +90,8 @@ Prebuilt installers are published on the [Releases](https://github.com/Gyoungwe/
 ## Configuration
 
 API keys are never stored in this repo or written into the app bundle. `~/.pi/agent/models.json` references environment variables (e.g. `$AI_OPS_API_KEY`) and keys stay in your shell environment. If you already use the Pi CLI, your existing setup just works.
+
+Built-in DeepSeek models use catalog display names such as **V4 Flash**, not the API id `deepseek-chat`. If the model picker is empty, open Settings → Models and add a provider key.
 
 ## Development
 

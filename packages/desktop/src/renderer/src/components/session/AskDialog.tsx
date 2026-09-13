@@ -18,11 +18,13 @@ export function AskDialog({
 	const [sending, setSending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	// request.id 变化必须清 sending：连续 ask 不会卸载对话框，否则会卡在「提交中…」
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset when the ask id changes, even though the effect only uses setters
 	useEffect(() => {
 		setDrafts({});
 		setError(null);
 		setSending(false);
-	}, []);
+	}, [request?.id]);
 	const answered = useMemo(
 		() =>
 			request?.questions.filter((q) => {
@@ -66,12 +68,21 @@ export function AskDialog({
 			},
 		}));
 	const respond = async (response: AskResponse) => {
+		if (sending && response.kind !== "cancel") return;
 		setSending(true);
 		setError(null);
+		let timer: ReturnType<typeof setTimeout> | undefined;
 		try {
-			await onRespond(request.id, response);
+			await Promise.race([
+				Promise.resolve(onRespond(request.id, response)),
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(() => reject(new Error(t("ask.timeout"))), 15_000);
+				}),
+			]);
 		} catch (cause) {
 			setError(cause instanceof Error ? cause.message : String(cause));
+		} finally {
+			if (timer) clearTimeout(timer);
 			setSending(false);
 		}
 	};
@@ -170,9 +181,7 @@ export function AskDialog({
 							{requests.length > 1 ? t("ask.queued", { count: requests.length - 1 }) : t("ask.footerHint")}
 						</span>
 						<div className="flex gap-2">
-							<Button disabled={sending} onClick={() => void respond({ kind: "cancel" })}>
-								{t("common.cancel")}
-							</Button>
+							<Button onClick={() => void respond({ kind: "cancel" })}>{t("common.cancel")}</Button>
 							<Button
 								variant="primary"
 								disabled={sending || !canSubmit}

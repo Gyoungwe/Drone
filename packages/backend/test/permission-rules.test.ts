@@ -70,7 +70,8 @@ describe("evaluateRules", () => {
 	it("默认配置：宽松 + 高危兜底", () => {
 		const rules = DEFAULT_PERMISSION_CONFIG.rules;
 		expect(evaluateRules(rules, "read", "/etc/passwd")).toBe("allow");
-		expect(evaluateRules(rules, "edit", "/tmp/a.ts")).toBe("allow");
+		expect(evaluateRules(rules, "edit", "/tmp/a.ts")).toBe("ask");
+		expect(evaluateRules(rules, "write", "/workspace/note-from-agent.txt")).toBe("ask");
 		expect(evaluateRules(rules, "bash", "npm test")).toBe("allow");
 		expect(evaluateRules(rules, "bash", "rm -rf /tmp/x")).toBe("ask");
 		expect(evaluateRules(rules, "bash", "sudo apt install x")).toBe("ask");
@@ -86,8 +87,8 @@ describe("evaluateRules", () => {
 		expect(evaluateRules(rules, "bash", "rm workspaces.json")).toBe("ask");
 		expect(evaluateRules(rules, "edit", "/some/dir/trust.json")).toBe("ask");
 		expect(evaluateRules(rules, "write", "/x/auth.json")).toBe("ask");
-		// 相似但不匹配的名字不受影响
-		expect(evaluateRules(rules, "edit", "/x/auth.json.bak")).toBe("allow");
+		// 默认档全部 write/edit 都 ask（含相似文件名）
+		expect(evaluateRules(rules, "edit", "/x/auth.json.bak")).toBe("ask");
 		expect(evaluateRules(rules, "bash", "cat package.json")).toBe("allow");
 	});
 

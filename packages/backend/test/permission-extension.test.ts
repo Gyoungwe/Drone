@@ -94,11 +94,12 @@ function makeHarness(
 }
 
 describe("permission-gate 扩展", () => {
-	it("默认规则：普通 bash/文件工具直接放行，不弹窗", async () => {
-		const { call, confirms } = makeHarness(makeAgentDir());
+	it("默认规则：普通 bash/读工具直接放行；edit/write 走审批坞", async () => {
+		const { call, confirms } = makeHarness(makeAgentDir(), false);
 		await expect(call("bash", { command: "npm test" })).resolves.toBeUndefined();
-		await expect(call("edit", { path: "/tmp/a.ts" })).resolves.toBeUndefined();
-		expect(confirms).toHaveLength(0);
+		await expect(call("read", { path: "/tmp/a.ts" })).resolves.toBeUndefined();
+		await expect(call("edit", { path: "/tmp/a.ts" })).resolves.toMatchObject({ block: true });
+		expect(confirms).toHaveLength(1);
 	});
 
 	it("高危命令弹窗；用户允许则放行", async () => {
@@ -156,28 +157,29 @@ describe("permission-gate 扩展", () => {
 		expect(confirms).toHaveLength(2);
 	});
 
-	it("项目边界：界外写确认（含 ../../ 相对逃逸），界内与不设边界放行", async () => {
+	it("项目边界：界外写确认（含 ../../ 相对逃逸）；默认档 edit/write 一律确认", async () => {
 		const dir = makeAgentDir();
 		const root = join(dir, "proj");
 		mkdirSync(root, { recursive: true });
 		const { call, confirms } = makeHarness(dir, false, { projectRoot: root });
-		// 根内绝对/相对路径直接放行
-		await expect(call("edit", { path: join(root, "a.ts") })).resolves.toBeUndefined();
+		// 根内 edit 也确认（Default 写敏感工具走审批坞）；读仍放行
+		await expect(call("edit", { path: join(root, "a.ts") })).resolves.toMatchObject({ block: true });
 		await expect(call("read", { path: "src/b.ts" })).resolves.toBeUndefined();
-		// 根外绝对路径与相对逃逸都确认（confirmAnswer=false → block）；沙箱在 tmpdir 下，
-		// 逃逸深度 +1 才能落出临时区（../../escape.ts 落入 T 根，会被 temporary=allow 豁免）
+		// 根外绝对路径与相对逃逸都确认（confirmAnswer=false → block）
 		await expect(call("edit", { path: "/etc/hosts" })).resolves.toMatchObject({ block: true });
 		const escapePath = resolve(root, "../../../escape.ts");
 		const escapeResult = await call("write", { path: "../../../escape.ts" });
 		expect(escapeResult).toMatchObject({ block: true });
-		// 标题 = 记忆模式键：macOS 的临时区有父目录，按目录授权；Linux 会逃到 /，
-		// 根目录过宽时降级为精确文件授权。
 		const expectedEscapeTitle =
 			dirname(escapePath) === sep ? `write: ${escapePath}` : `write: ${dirname(escapePath)}${sep}*`;
-		expect(confirms.map((c) => c.title)).toEqual(["edit: /etc/*", expectedEscapeTitle]);
-		// 不传 projectRoot → 无边界检查，任意路径放行
+		expect(confirms.map((c) => c.title)).toEqual([
+			`edit: ${root}${sep}*`,
+			"edit: /etc/*",
+			expectedEscapeTitle,
+		]);
+		// 不传 projectRoot → 无边界检查，但 write/edit 仍 ask
 		const open = makeHarness(dir, false);
-		await expect(open.call("edit", { path: "/etc/hosts" })).resolves.toBeUndefined();
+		await expect(open.call("edit", { path: "/etc/hosts" })).resolves.toMatchObject({ block: true });
 		// bash 无法路径约束，不受边界影响
 		await expect(call("bash", { command: "ls /etc" })).resolves.toBeUndefined();
 	});
@@ -215,12 +217,12 @@ describe("permission-gate 扩展", () => {
 			JSON.stringify({ version: 1, projects: { [root]: { roots: [other], allowed: [] } } }),
 		);
 		const { call, confirms } = makeHarness(dir, false, { projectRoot: root });
-		// other 根内读写均放行（界内规则：默认 allow）
-		await expect(call("edit", { path: join(other, "src", "a.ts") })).resolves.toBeUndefined();
+		// other 根内读放行；edit 默认 ask
+		await expect(call("edit", { path: join(other, "src", "a.ts") })).resolves.toMatchObject({ block: true });
 		await expect(call("read", { path: join(other, "README.md") })).resolves.toBeUndefined();
 		// 仍在全部根之外 → 确认
 		await expect(call("edit", { path: "/etc/hosts" })).resolves.toMatchObject({ block: true });
-		expect(confirms).toHaveLength(1);
+		expect(confirms).toHaveLength(2);
 	});
 
 	it("项目记忆（allowAlways 持久化）：allowed 模式命中不再弹窗；deny 不可被记忆覆盖", async () => {
@@ -322,19 +324,21 @@ describe("permission-gate 扩展", () => {
 		expect(confirms).toEqual(["bash: npm test*", "bash: npm run*"]);
 	});
 
-	it("临时区默认放行：write/edit 落 tmp 不弹窗；rm 删 tmp 目标跳过兜底；穿越/混合目标仍确认", async () => {
+	it("临时区：rm 删 tmp 目标跳过兜底；write/edit 默认 ask 不被 temporary 放松", async () => {
 		const { call, confirms } = makeHarness(makeAgentDir(), false);
-		await expect(call("write", { path: `${resolve(tmpdir())}/x.ts` })).resolves.toBeUndefined();
-		await expect(call("edit", { path: "/tmp/y.ts" })).resolves.toBeUndefined();
+		await expect(call("write", { path: `${resolve(tmpdir())}/x.ts` })).resolves.toMatchObject({
+			block: true,
+		});
+		await expect(call("edit", { path: "/tmp/y.ts" })).resolves.toMatchObject({ block: true });
 		await expect(call("bash", { command: `rm -rf ${resolve(tmpdir())}/sub/` })).resolves.toBeUndefined();
 		await expect(call("bash", { command: "rm -rf /tmp/a /tmp/b" })).resolves.toBeUndefined();
-		expect(confirms).toHaveLength(0);
+		expect(confirms).toHaveLength(2);
 		// 路径穿越与混合目标不被豁免（fail-safe）
 		await expect(call("bash", { command: "rm -rf /tmp/../etc/perm-test" })).resolves.toMatchObject({
 			block: true,
 		});
 		await expect(call("bash", { command: "rm -rf /tmp/a /etc/b" })).resolves.toMatchObject({ block: true });
-		expect(confirms.map((c) => c.title)).toEqual(["bash: rm -rf*", "bash: rm -rf*"]);
+		expect(confirms.map((c) => c.title).slice(2)).toEqual(["bash: rm -rf*", "bash: rm -rf*"]);
 	});
 
 	it("自保护规则不受临时区影响：tmp 下的 permissions.json 写入仍确认（显式 ask 不被放松）", async () => {
@@ -401,6 +405,18 @@ describe("permission-gate 扩展", () => {
 	});
 });
 
+it("default：工作区内 write 走审批坞；fullAccess 自动放行并审计", async () => {
+	const dir = makeAgentDir();
+	const { call, confirms } = makeHarness(dir, true);
+	await expect(call("write", { path: join(dir, "note-from-agent.txt") })).resolves.toBeUndefined();
+	expect(confirms).toHaveLength(1);
+	const fa = makeHarness(dir, false, { mode: { current: "fullAccess" } });
+	await expect(fa.call("write", { path: join(dir, "approve-test-2.txt") })).resolves.toBeUndefined();
+	expect(fa.confirms).toHaveLength(0);
+	const entries = readAudit(dir);
+	expect(entries.some((e) => e.tool === "write" && e.action === "ask")).toBe(true);
+});
+
 describe("权限模式（fullAccess = 一切放行 + 高危审计）", () => {
 	it("fullAccess：ask 规则（rm -rf）放行并审计命中段；不弹窗", async () => {
 		const dir = makeAgentDir();
@@ -462,9 +478,10 @@ describe("权限模式（fullAccess = 一切放行 + 高危审计）", () => {
 		expect(entries[0]).toMatchObject({
 			tool: "write",
 			action: "ask",
-			boundary: "outside-write",
 			text: resolve(root, "../../../escape-audit.ts"),
 		});
+		// write 默认已是 ask，边界改写只作用于 allow，不再标 outside-write
+		expect(entries[0].boundary).toBeUndefined();
 		expect(entries[1]).toMatchObject({ tool: "bash", action: "ask", text: "npm run build" });
 	});
 

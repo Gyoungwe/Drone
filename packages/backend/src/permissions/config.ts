@@ -21,14 +21,12 @@ export interface PermissionConfig {
 
 const ACTIONS: ReadonlySet<string> = new Set(["allow", "ask", "deny"]);
 
-/** agent 自身权限/信任/凭证配置的文件名（默认规则自保护：改动这些文件必须确认） */
-const PROTECTED_FILES = ["permissions.json", "workspaces.json", "auth.json", "trust.json"] as const;
-
 /**
- * 默认配置：宽松 + 高危兜底（coding agent 效率优先）。
- * 只读工具/编辑/自定义工具默认 allow；bash 默认 allow，枚举的高危命令 ask；
- * 读写分离：路径工具越界时读放行、写确认；系统临时区（tmpdir ∪ /tmp）默认放行
- * （temporary 动作，rm 兜底同理豁免）；agent 自身权限/信任/凭证配置改动必确认。
+ * 默认配置：宽松读 + 写敏感工具走审批坞（Default 档）。
+ * 只读/自定义工具默认 allow；edit/write 默认 ask（含改权限/信任/凭证文件）；
+ * bash 默认 allow，枚举的高危命令 ask；
+ * 读写分离：路径工具越界时读放行、写确认；系统临时区（tmpdir ∪ /tmp）对 allow 放行
+ * （temporary 动作，rm 兜底同理豁免；永不放松显式 ask）。
  */
 export const DEFAULT_PERMISSION_CONFIG: PermissionConfig = {
 	enabled: true,
@@ -62,13 +60,9 @@ export const DEFAULT_PERMISSION_CONFIG: PermissionConfig = {
 			"*auth.json*": "ask",
 			"*trust.json*": "ask",
 		},
-		// 同自保护：edit/write 改权限/信任/凭证文件必确认（路径模式尾缀匹配）
-		...Object.fromEntries(
-			["edit", "write"].map((tool) => [
-				tool,
-				Object.fromEntries(PROTECTED_FILES.map((file) => [`*${file}`, "ask"] as const)),
-			]),
-		),
+		// 写敏感工具默认走审批坞（含改权限/信任/凭证文件）；* 兜底仍 allow 以便 read/ls/todo 等放行
+		edit: "ask",
+		write: "ask",
 	},
 };
 
