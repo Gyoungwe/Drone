@@ -17,9 +17,13 @@
 - Session usage refreshes at committed response boundaries, and replayed response/tool IDs are deduplicated in usage and Run Inspector projections.
 - The research-workbench package manifest now audits topic-memory tools in packaged builds.
 
+### Fixed
+
+- Permission config loader cache key is now `mtimeMs + size`, so a same-millisecond rewrite of `permissions.json` invalidates stale ask rules and loads deny overlays correctly.
+
 ### Validation
 
-See [`docs/releases/v0.7.0.md`](docs/releases/v0.7.0.md) and [`docs/p5-p10-acceptance.md`](docs/p5-p10-acceptance.md). This entry describes the local 0.7.0 release candidate; public tag/Release publication is a separate step.
+See [`docs/releases/v0.7.0.md`](docs/releases/v0.7.0.md) and [`docs/p5-p10-acceptance.md`](docs/p5-p10-acceptance.md).
 
 ## 0.6.0 — 2026-09-12
 
