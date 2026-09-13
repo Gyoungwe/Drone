@@ -75,13 +75,18 @@ nsis:
   allowToChangeInstallationDirectory: true
 linux:
   category: Development
+  # workspace 包名是 @percho/desktop；AppImage/deb 需要安全的可执行文件名
+  executableName: percho
+  desktop:
+    Name: Percho
+    Categories: Development
   target:
     - target: AppImage
       arch: [x64]
     - target: deb
       arch: [x64]
-  # 产物名与 productName 解耦：保持 percho-linux-* 兼容 README 下载表
-  artifactName: percho-linux-${arch}.${ext}
+  # 固定 x64 文件名：electron-builder 对 AppImage 会把 arch 扩成 x86_64
+  artifactName: percho-linux-x64.${ext}
 publish:
   provider: github
   owner: Gyoungwe
