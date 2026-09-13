@@ -46,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     env:
       # 无开发者证书：mac 显式走 adhoc 签名（identity: "-"），禁用 runner 上的证书自动发现
@@ -95,7 +95,9 @@ jobs:
             percho-mac-arm64.dmg \
             percho-mac-x64.dmg \
             percho-windows-x64.exe \
-            percho-windows-x64.zip; do
+            percho-windows-x64.zip \
+            percho-linux-x64.AppImage \
+            percho-linux-x64.deb; do
             if ! grep -Fxq "$REQUIRED" <<<"$ASSETS"; then
               echo "Missing required release asset: $REQUIRED" >&2
               exit 1
