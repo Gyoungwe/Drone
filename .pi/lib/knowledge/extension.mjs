@@ -13,8 +13,8 @@ import { registerAnswerPublication } from "./publication.mjs";
 import { getKnowledgeService } from "./service.mjs";
 import { saveSpecialistExplainer } from "./specialist-delivery.mjs";
 import { createKnowledgeSpecialists } from "./specialists.mjs";
-import { createToolBudget } from "./tool-budget.mjs";
 import { createTaskFeedback, guardResearchToolResult } from "./task-feedback.mjs";
+import { createToolBudget } from "./tool-budget.mjs";
 import { autoTopicCandidate } from "./topic-candidate.mjs";
 import { createTopicMemory, topicRunHash } from "./topic-memory.mjs";
 import {
