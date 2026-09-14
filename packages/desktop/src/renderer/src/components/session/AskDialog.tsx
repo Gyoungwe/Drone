@@ -1,5 +1,5 @@
 import type { AskAnswer, AskRequest, AskResponse } from "@percho/shared";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { Button } from "../ui/Button";
 
@@ -14,6 +14,7 @@ export function AskDialog({
 }) {
 	const t = useT();
 	const request = requests[0];
+	const dialogRef = useRef<HTMLDivElement>(null);
 	const [drafts, setDrafts] = useState<Drafts>({});
 	const [sending, setSending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -24,6 +25,12 @@ export function AskDialog({
 		setDrafts({});
 		setError(null);
 		setSending(false);
+	}, [request?.id]);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: focus when the ask id changes
+	useEffect(() => {
+		if (!request) return;
+		const node = dialogRef.current?.querySelector<HTMLElement>("input, button");
+		node?.focus();
 	}, [request?.id]);
 	const answered = useMemo(
 		() =>
@@ -89,6 +96,7 @@ export function AskDialog({
 
 	return (
 		<div
+			ref={dialogRef}
 			className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/25 p-6"
 			role="dialog"
 			aria-modal

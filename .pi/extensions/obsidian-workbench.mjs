@@ -41,10 +41,14 @@ async function startSetup(pi, args, ctx) {
 	if (!input) return;
 	const vault = resolveSetupVault(input, ctx.cwd);
 	const context = await inspectObsidianSetup({ cwd: ctx.cwd, vault });
-	pi.sendUserMessage(setupAgentMessage({ context, current, preferences: args || "" }), {
-		deliverAs: "followUp",
-		expandPromptTemplates: true,
-	});
+	const payload = setupAgentMessage({ context, current, preferences: args || "" });
+	const options = { deliverAs: "followUp", expandPromptTemplates: true };
+	// sendUserMessage → session.prompt() nested inside this slash handler. If we
+	// await it here, the outer prompt() never reaches preflightResult until the
+	// whole model turn ends, so the composer stays in sending and looks frozen.
+	setTimeout(() => {
+		void pi.sendUserMessage(payload, options);
+	}, 0);
 }
 
 export default function obsidianWorkbench(pi) {

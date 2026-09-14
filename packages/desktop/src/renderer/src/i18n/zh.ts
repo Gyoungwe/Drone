@@ -90,7 +90,7 @@ export const zh = {
 		compacting: "正在压缩上下文，完成后再发送",
 		stop: "停止",
 		send: "发送",
-		hint: "Enter 发送 · Shift+Enter 换行",
+		hint: "Enter 发送 · Shift+Enter 换行 · Esc 停止",
 		modelDefault: "选择模型",
 		modelSwitch: "切换模型",
 		noModelHint: "还没有可用模型。点这里打开设置，配置 Provider 后再发送。",

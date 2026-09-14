@@ -27,6 +27,7 @@
 | 报错文案悬在空态页不消失、切新会话还在 | 四 · store 级 error 字段永不清理（已修：改 toast + 乐观回滚） |
 | Google Vertex 填了 key 仍 401「API keys are not supported by this API」 | 二 · Vertex 只支持 ADC/服务账号（api_key 路径必败，桥接层已剔除 api-key 选项） |
 | 随便说「你好」就弹出「知识库检查未通过（interrupted）」 | 二 · 知识发布门禁把 LLM 失败误报成知识检查失败 |
+| `/obsidian-setup` 等斜杠技能填完路径后输入框像卡死 | 二 · 扩展命令里嵌套 await sendUserMessage 会占住 sending |
 
 ## 一、事故复盘（含可复用诊断手法）
 
@@ -84,6 +85,14 @@ glm-5.3 流式输出病态空白 thinking（纯 `\n    ` 洪流永不终止）�
 已修：`stopReason=error` 不再发布知识检查文案；正文留空，保留脱敏后的 `errorMessage` 给 LLM 错误卡。`aborted`/`length`/`pending` 仍走 interrupted。
 
 诊断：`~/.pi/agent/sessions/*/traces/trace-*.jsonl` 看 `message_start` 的 `provider`/`model`/`stopReason`；用同一 `auth.json`/`models.json` 对 SDK `streamSimple` 打一次即可拿到被盖掉的原文。
+
+### 扩展命令里嵌套 await sendUserMessage 会占住 sending（2026-09-14）
+
+症状：输入 `/obsidian-setup`（或同类扩展斜杠命令），弹出 Vault 路径问答后，再在输入框打字/回车，界面像卡死：发不出去，停止钮也常被输入内容顶掉。
+
+原因：SDK 对扩展命令是 `await handler()` 之后才 `preflightResult(true)`。`/obsidian-setup` 在 handler 里直接 `sendUserMessage(..., { expandPromptTemplates: true })`，而这条消息以 `/skill:research-vault` 开头，会再嵌套一整轮 `session.prompt()` / `_runAgentPrompt`。桌面端 `sending` 一直为 true，直到整轮模型结束；输入框看起来像冻住。
+
+已修：setup 问答结束后用 `setTimeout(0)` 再交接模型回合，让斜杠命令 IPC 先返回；问答弹窗打开时把焦点收进对话框，sending 期间禁用 composer textarea。
 
 `Model` 有 `name` 无 `label`；`model.provider` 是字符串。
 

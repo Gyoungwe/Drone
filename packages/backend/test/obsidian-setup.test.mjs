@@ -58,6 +58,7 @@ const setupParams = () => ({
 	subagent_mcp: "read-local",
 });
 const execute = (tool, params, ctx, signal) => tool.execute("setup-test", params, signal, undefined, ctx);
+const flushSetupHandoff = () => new Promise((resolve) => setTimeout(resolve, 0));
 async function expectNoSetupWrites() {
 	await expect(access(vault)).rejects.toMatchObject({ code: "ENOENT" });
 	await expect(access(join(cwd, ".pi/research-workspace.json"))).rejects.toMatchObject({ code: "ENOENT" });
@@ -119,6 +120,8 @@ describe("slash command to current-model handoff", () => {
 		const h = harness();
 		await h.commands.get("setup").handler("保留现有文献分类", h.ctx);
 		expect(h.ctx.ui.input).toHaveBeenCalledOnce();
+		expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
+		await flushSetupHandoff();
 		expect(h.pi.sendUserMessage).toHaveBeenCalledOnce();
 		const [message, options] = h.pi.sendUserMessage.mock.calls[0];
 		expect(message).toContain("actual-project");
@@ -135,6 +138,7 @@ describe("slash command to current-model handoff", () => {
 		const h = harness({ input: undefined });
 		h.ctx.ui.input.mockResolvedValue(undefined);
 		await h.commands.get("setup").handler("", h.ctx);
+		await flushSetupHandoff();
 		expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
 		await expectNoSetupWrites();
 	});
@@ -262,7 +266,7 @@ describe("runtime location is independent of the user project", () => {
 			}),
 		);
 		const runtime = await resolveObsidianRuntime({ cwd, installationRoot });
-		expect(runtime.server).toMatch(/installed-workbench\/server.js$/);
+		expect(runtime.server).toMatch(/installed-workbench[\\/]server\.js$/);
 		expect(runtime.command).toBe("node");
 		expect(Object.keys(runtime).sort()).toEqual(["command", "server"]);
 		expect(JSON.stringify(runtime)).not.toContain("do-not-copy");
@@ -287,6 +291,7 @@ describe("Obsidian MCP skill binding", () => {
 		h.pi.getCommands.mockReturnValue([]);
 		await expect(h.commands.get("setup").handler("", h.ctx)).rejects.toThrow("research-vault");
 		expect(h.ctx.ui.input).not.toHaveBeenCalled();
+		await flushSetupHandoff();
 		expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
 		await expectNoSetupWrites();
 	});
@@ -295,6 +300,8 @@ describe("Obsidian MCP skill binding", () => {
 		async (name) => {
 			const h = harness();
 			await h.commands.get(name).handler("保留已有结构", h.ctx);
+			expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
+			await flushSetupHandoff();
 			const [message, options] = h.pi.sendUserMessage.mock.calls[0];
 			expect(message).toMatch(/^\/skill:research-vault setup/);
 			expect(message).toContain("保留已有结构");

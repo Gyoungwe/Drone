@@ -13,6 +13,7 @@ import { ArrowUpIcon, PlusIcon, StopIcon } from "../icons";
 import { AtMenu } from "./AtMenu";
 import { AttachmentChip } from "./AttachmentChip";
 import { ContextRing } from "./ContextRing";
+import { composerRunActive } from "./composer-run";
 import { ImageTray } from "./ImageTray";
 import { ModelPicker } from "./ModelPicker";
 import { PermissionPicker } from "./PermissionPicker";
@@ -26,7 +27,7 @@ import { useComposerSend } from "./use-composer-send";
 import { useSlashMenu } from "./use-slash-menu";
 
 /**
- * 底部输入框：自动增高、Enter 发送、生成中变停止；centered 用于空态居中布局。
+ * 底部输入框：自动增高、Enter 发送、生成中显示停止（输入中仍可排队发送）；centered 用于空态居中布局。
  * 逻辑域拆在同目录 hooks（use-composer-send / use-slash-menu / use-at-completion），
  * 本组件只做装配与键盘事件的分发组合。
  */
@@ -90,7 +91,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	const followUpQueue = transcript.followUpQueue;
 	/** 压缩进行中：禁发（SDK 拒绝压缩中的 prompt；提前拦截保住草稿，warn 提示代替报错丢文本） */
 	const compacting = transcript.compacting;
-	/** 输入框有内容：streaming 中按钮从停止切回发送（入队后文本清空自动切回停止） */
+	/** 输入框有内容：运行中停止钮仍保留，发送钮用于 follow-up 排队 */
 	const hasContent =
 		Boolean(text.trim()) ||
 		images.length > 0 ||
@@ -118,7 +119,11 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	const { sending, error, setError, feedback, showFeedback, ensureSession, runSlashCommand, handleSend } =
 		send;
 	const focusTextarea = () => textareaRef.current?.focus();
-	const isStreaming = transcript.phase === "streaming" || sending;
+	const isStreaming = composerRunActive({
+		sending,
+		agentActive: transcript.agentActive,
+		phase: transcript.phase,
+	});
 	const placeholder = readOnly
 		? t("composer.placeholderReadOnly")
 		: compacting
@@ -205,6 +210,11 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		// 胶囊撤销：Esc（任意文本态，菜单未消费时）；空文本 Backspace/Delete 先 @ 胶囊后 slash 胶囊
 		if (slashCommand && e.key === "Escape") {
 			slash.restoreSlashPill(e);
+			return;
+		}
+		if (e.key === "Escape" && isStreaming) {
+			e.preventDefault();
+			void send.handleStop();
 			return;
 		}
 		if (text === "" && (e.key === "Backspace" || e.key === "Delete")) {
@@ -359,7 +369,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 								placeholder={slashCommand ? t("slash.argPlaceholder") : placeholder}
 								value={text}
 								rows={1}
-								disabled={readOnly}
+								disabled={readOnly || sending}
 								onChange={handleTextChange}
 								onKeyDown={handleKeyDown}
 								onSelect={handleSelect}
@@ -400,16 +410,18 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						<div className={readOnly ? "pointer-events-none opacity-40" : undefined}>
 							<ThinkingPicker />
 						</div>
-						{isStreaming && !hasContent ? (
+						{isStreaming ? (
 							<button
 								type="button"
 								className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-on-ink transition-colors hover:bg-red-600"
 								onClick={() => void send.handleStop()}
 								aria-label={t("composer.stop")}
+								title={t("composer.stop")}
 							>
 								<StopIcon />
 							</button>
-						) : (
+						) : null}
+						{!isStreaming || hasContent ? (
 							<button
 								type="button"
 								className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-on-ink transition-colors hover:bg-ink-2 disabled:opacity-30"
@@ -422,10 +434,11 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 									void handleSend();
 								}}
 								aria-label={t("composer.send")}
+								title={t("composer.send")}
 							>
 								<ArrowUpIcon size={20} />
 							</button>
-						)}
+						) : null}
 					</div>
 				</div>
 				<SessionUsageFooter sessionId={activeSessionId} />
