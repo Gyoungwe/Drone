@@ -102,9 +102,10 @@ export function publicationKnowledgeFlow(ctx, proof) {
 	});
 }
 export function requestWikiReviewUi(ctx, id = "") {
-	if (!state.listeners.size || !sessionId(ctx)) return false;
-	emitKnowledgeUi({ kind: "open-review", sessionId: sessionId(ctx), id });
-	return true;
+	const sid = sessionId(ctx);
+	if (!sid) return false;
+	emitKnowledgeUi({ kind: "open-review", sessionId: sid, id: String(id || "") });
+	return state.listeners.size > 0;
 }
 export function notifyKnowledgeUi(text, severity = "info", id = null) {
 	if (typeof text !== "string" || !text.trim()) return;

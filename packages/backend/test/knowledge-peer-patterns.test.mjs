@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension.mjs";
 import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
+import { subscribeKnowledgeUi } from "../../../.pi/lib/knowledge/ui-state.mjs";
 import {
 	decideWikiProposal,
 	listWikiProposals,
@@ -266,6 +267,26 @@ describe("human-only review surface", () => {
 		await h.commands.get("obsidian-review").handler(staged.id, { cwd, hasUI: true, ui: { select } });
 		expect(select.mock.calls[0][0]).toContain("原托管区");
 		expect(h.pi.sendMessage.mock.calls[0][0].content).toContain('"vaultWritten": true');
+	});
+	it("desktop review opens a non-blocking popup instead of waiting on select", async () => {
+		const staged = await candidate(),
+			h = harness(),
+			events = [];
+		const off = subscribeKnowledgeUi((event) => events.push(event));
+		try {
+			const select = vi.fn(async () => "确认应用此候选");
+			await h.commands.get("obsidian-review").handler(staged.id, {
+				cwd,
+				hasUI: true,
+				sessionId: "review-session",
+				ui: { select },
+			});
+			expect(select).not.toHaveBeenCalled();
+			expect(events.some((event) => event.kind === "open-review" && event.id === staged.id)).toBe(true);
+			expect((await listWikiProposals(service, "project-a")).items).toHaveLength(1);
+		} finally {
+			off();
+		}
 	});
 });
 

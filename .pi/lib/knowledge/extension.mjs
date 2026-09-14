@@ -346,6 +346,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 				return;
 			}
 			const staged = await stageWikiProposal(current.service, current.ticket, ctx.cwd, candidate.input);
+			requestWikiReviewUi(ctx, staged.id);
 			if (topicMemory && activeTopic?.id)
 				await topicMemory.link(activeTopic.id, { proposalIds: [staged.id], artifacts: [staged.path] });
 			explicitTopicProposal = true;
@@ -777,6 +778,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 						source_paths: answer.data.source_paths,
 					});
 					explicitTopicProposal = true;
+					requestWikiReviewUi(ctx, staged.id);
 					noteKnowledgeOperation(ctx, {
 						toolName: "research_propose_wiki_update",
 						toolCallId: _id,
@@ -861,7 +863,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			},
 			execute: async (_id, p, _signal, _update, ctx) => {
 				const c = requireTurn(ctx);
-				return result(await stageWikiProposal(c.service, c.ticket, ctx.cwd, p));
+				const staged = await stageWikiProposal(c.service, c.ticket, ctx.cwd, p);
+				requestWikiReviewUi(ctx, staged.id);
+				return result(staged);
 			},
 		});
 		pi.registerTool({
@@ -884,6 +888,14 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			handler: async (args, ctx) => {
 				if (!ctx.hasUI) throw new Error("Wiki review requires an interactive UI");
 				if (requestWikiReviewUi(ctx, args.trim())) return;
+				if (ctx.sessionManager?.getSessionId?.() && process.env.PERCHO_KNOWLEDGE_DIR) {
+					notifyKnowledgeUi(
+						"请在 Wiki 审核弹窗中确认或拒绝候选。对话可以继续。",
+						"info",
+						ctx.sessionManager.getSessionId(),
+					);
+					return;
+				}
 				const binding = await readKnowledgeBinding();
 				if (!binding) throw new Error("No application Vault is bound");
 				const service = await getKnowledgeService(binding),
