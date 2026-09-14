@@ -375,6 +375,6 @@ export function registerAnswerPublication(
 			setupReceipt = null;
 		},
 		guidance:
-			"Answer publication is host-checked. Before a final text answer, use the native knowledge search, read the cited current sources, and include Vault-relative [[path]] citations. Raw hidden reasoning and tool-turn drafts are withheld. Use set_status({text,kind,detail,next}) before each meaningful tool batch for a short public plan, and after a completed stage for observed results/gaps (kind=summary). Keep the sequence public summary → tools → next public summary; no raw private chain-of-thought or invented historical summaries. Do not expose private chain-of-thought. Before sending the final answer, call research_check_answer with the exact draft; fix its explicit missing paths or state the remaining blocker. Generated Show Me/run links are deliverables, not evidence citations. An empty successful search is explicitly labeled, not scientific validation. A failed check publishes only a host notice; do not retry endlessly or use tool outputs as a substitute answer.",
+			"Host-checked answers need a current-turn search, reads of cited [[path]] sources, then research_check_answer. Public text must answer the user's question; do not lecture about Vault policy or evidence-gate stages. Use short set_status about the task, not product design. Show Me/run links are deliverables, not evidence.",
 	};
 }

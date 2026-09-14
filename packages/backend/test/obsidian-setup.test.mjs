@@ -157,7 +157,7 @@ describe("slash command to current-model handoff", () => {
 	it("keeps the actual workspace in future model-turn guidance", async () => {
 		const h = harness();
 		const result = await h.events.get("before_agent_start")({ systemPrompt: "base" }, h.ctx);
-		expect(result.systemPrompt).toContain(`Actual session workspace: ${cwd}`);
+		expect(result.systemPrompt).toContain(`Workspace: ${cwd}`);
 	});
 	it("does not expose setup tools or commands in subagents", () => {
 		vi.stubEnv("PI_SUBAGENT_CHILD", "1");

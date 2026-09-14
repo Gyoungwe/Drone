@@ -283,6 +283,7 @@ export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false })
 					prepared = await c.service.prepare({ cwd: ctx.cwd, project: c.project, query: task });
 					const allowed = new Set(prepared.linkedWiki),
 						readPages = new Map();
+					for (const page of prepared.navigation || []) if (page?.path) allowed.add(page.path);
 					let readCount = 0,
 						searchCount = 0,
 						lastSearch = null;
