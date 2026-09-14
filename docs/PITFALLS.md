@@ -26,6 +26,7 @@
 | onDragStart 里拿不到拖拽尺寸（`active.rect.current.initial` 恒 null） | 四 · dnd-kit rect ref 填充晚于 onDragStart |
 | 报错文案悬在空态页不消失、切新会话还在 | 四 · store 级 error 字段永不清理（已修：改 toast + 乐观回滚） |
 | Google Vertex 填了 key 仍 401「API keys are not supported by this API」 | 二 · Vertex 只支持 ADC/服务账号（api_key 路径必败，桥接层已剔除 api-key 选项） |
+| 随便说「你好」就弹出「知识库检查未通过（interrupted）」 | 二 · 知识发布门禁把 LLM 失败误报成知识检查失败 |
 
 ## 一、事故复盘（含可复用诊断手法）
 
@@ -68,6 +69,21 @@ glm-5.3 流式输出病态空白 thinking（纯 `\n    ` 洪流永不终止）�
 已修（2026-09-05）：`LoginService` 放宽为支持 api_key 交互登录，`login.ts` 的 `filterAuthSelectOptions` 对 `google-vertex` 剔除必败的 `api-key` 选项；ProviderRow 对 `apiKeyLogin` 标记的内置 provider 显示「登录」入口。复现/验证脚本：`scripts/verify-vertex-auth.mts`（401 事实）与 `scripts/verify-vertex-login.mts`（ADC 交互落盘→configured）。
 
 补充坑：**「已配置」徽章 = auth.json 有条目，不等于凭证真正可用**（pi CodingAgent `getProviderAuthStatus` 的 `storedProviders` 优先判定，不 resolve；CLI 同语义）。Vertex 输错凭据文件路径时列表仍显示「已配置」，发请求才失败——引导用户用「测试」按钮真实验证。
+
+### 知识发布门禁把 LLM 失败误报成知识检查失败（2026-09-14）
+
+症状：Windows 安装包读到了 `~/.pi/agent` 的本地 provider，但对话立刻返回「【知识库检查未通过】本轮的最终回答尚未完成发布（interrupted）」。会话 jsonl 里 `usage` 全 0、`stopReason:"error"`，真实 `errorMessage` 被换成「请求出错；未经检查的回答没有发布。」
+
+原因：桌面端始终设置 `PERCHO_KNOWLEDGE_DIR`，`publication.mjs` 把 `stopReason` 为 `error`/`aborted`/`length`/`pending` 一律当成知识检查 `interrupted`，并剥掉 provider 错误。两条常见失败都会撞上这条：
+
+1. 会话落到未配置的 Pi 默认模型（`auth.json` 里没有对应 key）
+2. 已配置的自定义网关返回 502/503（`Upstream service temporarily unavailable`）
+
+错误卡系统本来会展示 `errorMessage`，但门禁先把它盖掉了。
+
+已修：`stopReason=error` 不再发布知识检查文案；正文留空，保留脱敏后的 `errorMessage` 给 LLM 错误卡。`aborted`/`length`/`pending` 仍走 interrupted。
+
+诊断：`~/.pi/agent/sessions/*/traces/trace-*.jsonl` 看 `message_start` 的 `provider`/`model`/`stopReason`；用同一 `auth.json`/`models.json` 对 SDK `streamSimple` 打一次即可拿到被盖掉的原文。
 
 `Model` 有 `name` 无 `label`；`model.provider` 是字符串。
 

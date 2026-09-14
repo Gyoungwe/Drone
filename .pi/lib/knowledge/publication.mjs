@@ -24,6 +24,7 @@ const notices = {
 	"navigation-changed": "本轮导航已失效，请重新读取导航并完成检索。",
 	"not-prepared": "知识库准备步骤尚未完成，回答没有发布。",
 	interrupted: "本次请求已中断，未完成的回答没有发布。",
+	"model-error": "模型请求失败，未完成的回答没有发布。",
 	"check-timeout": "回答前检查超时，草稿没有发布。",
 	"check-failed": "回答前检查发生错误，草稿没有发布。",
 	"empty-answer": "任务已结束，但模型没有生成可显示的回复。请查看本轮产物或要求继续交付说明。",
@@ -38,8 +39,21 @@ function reason(error) {
 	if (/navigation|prepare_knowledge/i.test(text)) return "not-prepared";
 	return "check-failed";
 }
+function sanitizeError(text) {
+	return [...String(text || "")]
+		.map((char) => (char.charCodeAt(0) < 32 ? " " : char))
+		.join("")
+		.replace(/(?:bearer\s+|api[_-]?key[=:]\s*)[^\s]+/gi, "[redacted]")
+		.trim()
+		.slice(0, 4096);
+}
 function base(message, content) {
-	// Do not retain unvalidated provider error strings or auxiliary content snapshots.
+	// Draft/thinking snapshots stay out of public history. Provider errors are not
+	// published as answer text; a sanitized errorMessage is kept for the LLM error card.
+	const errorMessage =
+		message.stopReason === "error" && typeof message.errorMessage === "string"
+			? sanitizeError(message.errorMessage)
+			: "";
 	return {
 		role: "assistant",
 		content,
@@ -50,7 +64,7 @@ function base(message, content) {
 		timestamp: message.timestamp,
 		stopReason: message.stopReason,
 		...(message.responseId ? { responseId: message.responseId } : {}),
-		...(message.stopReason === "error" ? { errorMessage: "请求出错；未经检查的回答没有发布。" } : {}),
+		...(errorMessage ? { errorMessage } : {}),
 	};
 }
 function seal(message, content, detail) {
@@ -168,7 +182,8 @@ export function registerAnswerPublication(
 		const message = event.message;
 		if (message.role !== "assistant") return;
 		const report = (message) => {
-			if (message[FIELD]?.status !== "tool-only") publicationKnowledgeFlow(ctx, message[FIELD]);
+			if (message[FIELD]?.status !== "tool-only" && message[FIELD]?.reason !== "model-error")
+				publicationKnowledgeFlow(ctx, message[FIELD]);
 			return { message };
 		};
 		const blocks = Array.isArray(message.content) ? message.content : [];
@@ -185,7 +200,16 @@ export function registerAnswerPublication(
 			protocolBytes += bytes;
 			return report(safe);
 		}
-		if (["error", "aborted", "length", "pending"].includes(message.stopReason) || ctx.signal?.aborted)
+		if (message.stopReason === "error")
+			return report(
+				seal(message, [], {
+					status: "blocked",
+					reason: "model-error",
+					turnId,
+					scientificallyVerified: false,
+				}),
+			);
+		if (["aborted", "length", "pending"].includes(message.stopReason) || ctx.signal?.aborted)
 			return report(failure(message, { code: "interrupted" }));
 		const content = blocks.filter((b) => b.type === "text");
 		// Only the controlled setup writer can set this receipt. Never whitelist model-written claims.

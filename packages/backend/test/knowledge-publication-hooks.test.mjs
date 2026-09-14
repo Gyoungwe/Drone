@@ -48,16 +48,41 @@ it("a timeout publishes a host notice and never retries", async () => {
 	expect(result.message.knowledgePublication.reason).toBe("check-timeout");
 	expect(h.called).toHaveBeenCalledOnce();
 });
-it.each(["error", "aborted", "length", "pending"])(
-	"%s never publishes a partial answer",
-	async (stopReason) => {
-		const h = harness(),
-			result = await h.end({ ...message(), stopReason, errorMessage: "ERROR_BODY_FIXTURE" });
-		expect(result.message.knowledgePublication.reason).toBe("interrupted");
-		expect(JSON.stringify(result)).not.toContain("FIXTURE");
-		expect(h.called).not.toHaveBeenCalled();
-	},
-);
+it.each(["aborted", "length", "pending"])("%s never publishes a partial answer", async (stopReason) => {
+	const h = harness(),
+		result = await h.end({ ...message(), stopReason, errorMessage: "ERROR_BODY_FIXTURE" });
+	expect(result.message.knowledgePublication.reason).toBe("interrupted");
+	expect(JSON.stringify(result.message.content)).not.toContain("FIXTURE");
+	expect(JSON.stringify(result.message.content)).not.toContain("ERROR_BODY");
+	expect(h.called).not.toHaveBeenCalled();
+});
+it("model request errors keep a sanitized provider error for the error card, not a knowledge-check notice", async () => {
+	const h = harness(),
+		result = await h.end({
+			...message("UNCHECKED_FIXTURE"),
+			stopReason: "error",
+			errorMessage: "OpenAI API error (502): Upstream service temporarily unavailable",
+		});
+	expect(result.message.knowledgePublication.status).toBe("blocked");
+	expect(result.message.knowledgePublication.reason).toBe("model-error");
+	expect(result.message.stopReason).toBe("error");
+	expect(result.message.errorMessage).toContain("502");
+	expect(result.message.errorMessage).toContain("Upstream service temporarily unavailable");
+	expect(JSON.stringify(result.message.content)).not.toContain("UNCHECKED_FIXTURE");
+	expect(JSON.stringify(result.message.content)).not.toContain("知识库检查未通过");
+	expect(h.called).not.toHaveBeenCalled();
+});
+it("model error messages redact credential-shaped tokens", async () => {
+	const h = harness(),
+		result = await h.end({
+			...message("UNCHECKED_FIXTURE"),
+			stopReason: "error",
+			errorMessage: "401 invalid api_key=sk-secret-token-here",
+		});
+	expect(result.message.errorMessage).toContain("[redacted]");
+	expect(result.message.errorMessage).not.toContain("sk-secret-token-here");
+	expect(JSON.stringify(result.message.content)).not.toContain("UNCHECKED_FIXTURE");
+});
 it("oversized final text is refused before validation", async () => {
 	const h = harness(),
 		result = await h.end(message("x".repeat(128 * 1024 + 1)));

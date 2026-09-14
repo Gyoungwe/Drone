@@ -279,6 +279,26 @@ describe("live-run edges and provider protocol compatibility", () => {
 		expect(JSON.stringify(events)).not.toContain("IPC_PATH_BYPASS");
 		expect(JSON.stringify(await backend.peekSessionMessages(sid))).toContain("知识库检查未通过");
 	});
+	it("provider request errors surface as LLM errors, not knowledge publication notices", async () => {
+		await run([
+			reply([], {
+				stopReason: "error",
+				errorMessage: "OpenAI API error (502): Upstream service temporarily unavailable",
+			}),
+		]);
+		const dumped = JSON.stringify(events);
+		expect(dumped).not.toContain("知识库检查未通过");
+		const firstError = events.find(
+			(event) => event.type === "turn_end" && event.message?.stopReason === "error",
+		)?.message;
+		expect(firstError.errorMessage).toContain("502");
+		expect(firstError.content).toEqual([]);
+		const transcript = events.reduce(reduceEvent, emptyTranscript());
+		const cards = transcript.messages.filter((m) => m.kind === "error");
+		expect(cards).toHaveLength(1);
+		expect(cards[0].error.detail).not.toContain("知识库检查未通过");
+		expect(cards[0].error.detail).toMatch(/502|No more faux responses queued/);
+	});
 });
 
 it("real SDK displays public stage → tools → next stage → tools → summary before the checked final answer", async () => {

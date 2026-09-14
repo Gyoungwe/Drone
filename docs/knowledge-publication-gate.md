@@ -19,7 +19,7 @@ Source search relevance, whether the stated claim follows from the cited section
 
 ## Failures and limits
 
-Blocked drafts are replaced by short host-generated Chinese notices with a reason; draft content and arbitrary provider/check exception strings are not echoed. The gate has a five-second validation budget, a 128 KiB parent final-text limit, and no automatic retry/model-repair loop. An interrupted/overlong/pending model answer is not released as a finished answer. User follow-up/steering messages drained inside one SDK run reset receipts; they do not reuse the prior question's publication permission.
+Blocked drafts are replaced by short host-generated Chinese notices with a reason; draft content is not echoed. The gate has a five-second validation budget, a 128 KiB parent final-text limit, and no automatic retry/model-repair loop. An interrupted/overlong/pending model answer is not released as a finished answer. A provider/model request failure (`stopReason=error`) is not a knowledge-check failure: the host keeps an empty unpublished body and preserves a sanitized `errorMessage` for the existing LLM error card. User follow-up/steering messages drained inside one SDK run reset receipts; they do not reuse the prior question's publication permission.
 
 Unsigned or tampered in-process final metadata fails closed. Persisted records are trusted as local user-owned history, not an adversarial signed database. Previously recorded legacy answers are not retrospectively certified or removed.
 
