@@ -12,6 +12,7 @@ const command = (name: string, source: "skill" | "extension" = "skill", extra = 
 describe("one browse catalog for all loaded skills", () => {
 	it("separates knowledge setup from engineering setup and internal references", () => {
 		expect(getSkillCategory("research-vault")).toBe("knowledge");
+		expect(getSkillCategory("zotero-literature")).toBe("research");
 		expect(getSkillCategory("setup-pre-commit")).toBe("setup");
 		expect(getSkillCategory("setup-ts-deep-modules")).toBe("setup");
 		expect(getSkillCategory("nature-shared")).toBe("support");

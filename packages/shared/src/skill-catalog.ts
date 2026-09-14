@@ -15,6 +15,7 @@ const groups: Partial<Record<SkillCategory, readonly string[]>> = {
 	knowledge: ["research-vault", "nature-experiment-log"],
 	research: [
 		"research-workflow",
+		"zotero-literature",
 		"research",
 		"nature-academic-search",
 		"nature-downloader",
@@ -105,6 +106,7 @@ export function getSkillCategory(name: string): SkillCategory {
 const labels: Record<string, { zh: string; en: string }> = {
 	"research-vault": { zh: "Obsidian 知识库", en: "Obsidian knowledge" },
 	"research-workflow": { zh: "研究与证据工作流", en: "Research and evidence workflow" },
+	"zotero-literature": { zh: "Zotero 文献库", en: "Zotero literature" },
 	"setup-matt-pocock-skills": {
 		zh: "工程技能配置 · 议题与项目文档",
 		en: "Engineering skills · issues and project docs",

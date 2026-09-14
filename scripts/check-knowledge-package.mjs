@@ -60,7 +60,9 @@ try {
 	await loader.reload();
 	assert.deepEqual(loader.getExtensions().errors, []);
 	assert(loader.getExtensions().extensions.some((extension) => extension.commands.has("obsidian-setup")));
+	assert(loader.getExtensions().extensions.some((extension) => extension.commands.has("zotero-setup")));
 	assert.equal(loader.getSkills().skills.filter((skill) => skill.name === "research-vault").length, 1);
+	assert.equal(loader.getSkills().skills.filter((skill) => skill.name === "zotero-literature").length, 1);
 	const toolNames = loader.getExtensions().extensions.flatMap((extension) => [...extension.tools.keys()]);
 	for (const name of manifest.requiredTools)
 		assert(toolNames.includes(name), `Missing bundled tool: ${name}`);
@@ -82,9 +84,21 @@ try {
 	const service = await serviceModule.getKnowledgeService();
 	const prepared = await service.prepare({ cwd: b, project: "project-b", query: "packagedmarker" });
 	await service.request("reconcile");
-	const result = await service.search(prepared.ticket, b, { query: "packagedmarker" });
-	assert(result.hits.some((hit) => hit.path === "Library/Papers/fixture.md"));
-	assert.equal(result.complete, true);
+	let result = await service.search(prepared.ticket, b, { query: "packagedmarker" });
+	const settleStarted = Date.now();
+	while (result.complete !== true && Date.now() - settleStarted < 5000) {
+		await new Promise((resolve) => setTimeout(resolve, 200));
+		result = await service.search(prepared.ticket, b, { query: "packagedmarker" });
+	}
+	assert(
+		result.hits.some((hit) => hit.path === "Library/Papers/fixture.md"),
+		`missing fixture hit: ${JSON.stringify({ hits: result.hits, complete: result.complete, coverage: result.coverage, problems: result.problems })}`,
+	);
+	assert.equal(
+		result.complete,
+		true,
+		`incomplete search: ${JSON.stringify({ complete: result.complete, coverage: result.coverage, problems: result.problems })}`,
+	);
 	console.log(
 		JSON.stringify({
 			passed: true,

@@ -18,7 +18,7 @@ export const zh = {
 		supportHint: "作为其他技能的参考依赖保留，不作为独立工作流推荐。",
 		owner: "Obsidian 统一入口",
 		ownerHint:
-			"初始化只用 /obsidian-setup；审核用 /obsidian-review。旧 /setup、/research-setup 继续兼容，不再单列。",
+			"初始化只用 /obsidian-setup；审核用 /obsidian-review；文献库用 /zotero-setup。旧 /setup、/research-setup 继续兼容，不再单列。",
 		manage: "管理知识库",
 		noMatch: "没有匹配的技能",
 		details: "查看说明与来源",
@@ -479,7 +479,8 @@ export const zh = {
 			notConnected: "未连接",
 			disabled: "已禁用",
 			empty: "尚未配置 MCP 服务器",
-			emptyHint: "可通过当前项目或用户级 MCP 配置添加服务器。",
+			emptyHint:
+				"可通过当前项目或用户级 MCP 配置添加服务器。Zotero 文献库请先用 /zotero-setup：可从零安装 CLI，默认走 zotero-cli，MCP 可选且默认关闭。",
 			serverList: "服务器",
 			configPath: "配置文件",
 			noConfig: "未找到配置文件",
@@ -629,6 +630,7 @@ export const zh = {
 		modelsLoadFailed: "加载模型列表失败",
 		modelSwitchFailed: "切换模型失败",
 		thinkingSwitchFailed: "切换思考深度失败",
+		knowledgeSetupFailed: "初始化失败",
 	},
 };
 

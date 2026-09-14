@@ -4,6 +4,14 @@ import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
+import { pushToast } from "../../stores/toasts";
+import { useUiStore } from "../../stores/ui";
+
+function errText(error: unknown): string {
+	const raw = error instanceof Error ? error.message : String(error);
+	return raw.replace(/^Error invoking remote method '[^']+': Error:\s*/i, "").split("\n")[0] ?? raw;
+}
+
 export function useKnowledgeOverview(cwd: string | null, sessionId: string | null = null) {
 	const revision = useKnowledgeStore((s) => s.revision),
 		epoch = useRef(0);
@@ -49,7 +57,12 @@ export function useKnowledgeOverview(cwd: string | null, sessionId: string | nul
 	}, [data, refresh]);
 	return { data, error, loading, refresh };
 }
-export async function launchKnowledgeSetup(cwd: string | null, sessionId: string | null, path?: string) {
+export async function launchKnowledgeSetup(
+	cwd: string | null,
+	sessionId: string | null,
+	path?: string,
+	options?: { includeLiterature?: boolean },
+) {
 	if (!cwd) throw new Error("Select a workspace before setup");
 	let id = sessionId;
 	if (!id || isDraftSessionId(id)) {
@@ -57,16 +70,48 @@ export async function launchKnowledgeSetup(cwd: string | null, sessionId: string
 		id = useSessionsStore.getState().activeSessionId;
 	}
 	if (!id || isDraftSessionId(id)) throw new Error("Could not create the setup session");
-	useSettingsStore.getState().setOpen(false);
-	useKnowledgeStore.getState().close();
-	await getPi().startKnowledgeSetup({ sessionId: id, ...(path ? { path } : {}) });
+	try {
+		// Keep settings open until the slash command is accepted so confirm dialogs
+		// and failures stay visible instead of dumping the user into a blank chat.
+		await getPi().startKnowledgeSetup({
+			sessionId: id,
+			...(path ? { path } : {}),
+			...(options?.includeLiterature ? { includeLiterature: true } : {}),
+		});
+		useSettingsStore.getState().setOpen(false);
+		useUiStore.getState().setView("chat");
+		useKnowledgeStore.getState().close();
+	} catch (error) {
+		pushToast("error", "toast.knowledgeSetupFailed", errText(error));
+		throw error;
+	}
+}
+export async function launchZoteroSetup(cwd: string | null, sessionId: string | null) {
+	if (!cwd) throw new Error("Select a workspace before setup");
+	let id = sessionId;
+	if (!id || isDraftSessionId(id)) {
+		await useSessionsStore.getState().createSession(cwd, id ?? undefined);
+		id = useSessionsStore.getState().activeSessionId;
+	}
+	if (!id || isDraftSessionId(id)) throw new Error("Could not create the setup session");
+	try {
+		await getPi().prompt(id, "/zotero-setup");
+		useSettingsStore.getState().setOpen(false);
+		useUiStore.getState().setView("chat");
+		useKnowledgeStore.getState().close();
+	} catch (error) {
+		pushToast("error", "toast.knowledgeSetupFailed", errText(error));
+		throw error;
+	}
 }
 export function reportKnowledgeError(error: unknown) {
+	const text = errText(error);
+	pushToast("error", "toast.knowledgeSetupFailed", text);
 	useKnowledgeStore.getState().apply({
 		kind: "notice",
 		id: String(Date.now()),
 		sessionId: null,
 		severity: "error",
-		text: error instanceof Error ? error.message : String(error),
+		text,
 	});
 }

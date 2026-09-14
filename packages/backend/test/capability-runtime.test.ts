@@ -134,6 +134,9 @@ describe("lazy capability runtime", () => {
 		);
 		expect(detectCapabilities("帮我构建并调试这个仓库")).toContain("coding");
 		expect(detectCapabilities("画一个流程图并展示图片")).toContain("visualization");
+		expect(detectCapabilities("在 zotero 里检索这篇论文")).toEqual(
+			expect.arrayContaining(["research", "external"]),
+		);
 	});
 
 	it("starts with only control tools and materially reduces tool schema", () => {

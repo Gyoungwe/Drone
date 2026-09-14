@@ -55,6 +55,9 @@ function errText(error: unknown): string | undefined {
 	return message.length > 140 ? `${message.slice(0, 140)}…` : message;
 }
 
+/** 并发恢复互斥：StrictMode 下 bootstrap effect 会并行调用 restoreTabs */
+let restoreTabsInflight: Promise<void> | null = null;
+
 /** 顶栏打开的会话持久化（重启恢复用）；由主进程写 userData/tabs.json，不依赖 renderer localStorage */
 function persistTabs(state: Pick<SessionsStore, "sessions" | "activeSessionId">): void {
 	try {
@@ -319,43 +322,56 @@ export const useSessionsStore = create<SessionsStore>((set, get) => ({
 	},
 
 	restoreTabs: async () => {
-		const saved: SavedTabs | null = await getPi().loadTabs();
-		if (!saved || saved.files.length === 0) return;
-		const opened: SessionMeta[] = [];
-		const seen = new Set<string>();
-		let activeId: string | null = null;
-		for (const file of saved.files) {
+		// React StrictMode double-mounts bootstrap effects; parallel restoreTabs used to
+		// open the same session file twice and leave the renderer with an empty session list.
+		if (restoreTabsInflight) return restoreTabsInflight;
+		restoreTabsInflight = (async () => {
 			try {
-				const meta = await getPi().openSession(file);
-				if (seen.has(meta.sessionId)) continue;
-				seen.add(meta.sessionId);
-				opened.push(meta);
-				if (meta.sessionFile === saved.activeFile) activeId = meta.sessionId;
-			} catch {
-				// 会话文件已被删除等：跳过
-			}
-		}
-		// 每个会话三件套并行取（原先 3×N 次串行往返，首启时长期占住主线程 → 开屏掉帧）
-		await Promise.all(
-			opened.map(async (meta) => {
-				try {
-					await loadSessionBundle(meta.sessionId);
-				} catch {
-					// 单会话数据取不到不影响其它 tab 恢复
+				const saved: SavedTabs | null = await getPi().loadTabs();
+				if (!saved || saved.files.length === 0) return;
+				const opened: SessionMeta[] = [];
+				const seen = new Set<string>();
+				const seenFiles = new Set<string>();
+				let activeId: string | null = null;
+				for (const file of saved.files) {
+					if (seenFiles.has(file)) continue;
+					seenFiles.add(file);
+					try {
+						const meta = await getPi().openSession(file);
+						if (seen.has(meta.sessionId)) continue;
+						seen.add(meta.sessionId);
+						opened.push(meta);
+						if (meta.sessionFile === saved.activeFile) activeId = meta.sessionId;
+					} catch {
+						// 会话文件已被删除等：跳过
+					}
 				}
-			}),
-		);
-		if (opened.length === 0) return;
-		const lastOpened = opened[opened.length - 1];
-		if (!lastOpened) return;
-		set((state) => {
-			const existing = state.sessions.filter((s) => !opened.some((o) => o.sessionId === s.sessionId));
-			const sessions = [...existing, ...opened];
-			const activeSessionId = activeId ?? lastOpened.sessionId;
-			const cwd = sessions.find((s) => s.sessionId === activeSessionId)?.cwd ?? null;
-			return { sessions, activeSessionId, cwd };
-		});
-		persistTabs(get());
+				// 每个会话三件套并行取（原先 3×N 次串行往返，首启时长期占住主线程 → 开屏掉帧）
+				await Promise.all(
+					opened.map(async (meta) => {
+						try {
+							await loadSessionBundle(meta.sessionId);
+						} catch {
+							// 单会话数据取不到不影响其它 tab 恢复
+						}
+					}),
+				);
+				if (opened.length === 0) return;
+				const lastOpened = opened[opened.length - 1];
+				if (!lastOpened) return;
+				set((state) => {
+					const existing = state.sessions.filter((s) => !opened.some((o) => o.sessionId === s.sessionId));
+					const sessions = [...existing, ...opened];
+					const activeSessionId = activeId ?? lastOpened.sessionId;
+					const cwd = sessions.find((s) => s.sessionId === activeSessionId)?.cwd ?? null;
+					return { sessions, activeSessionId, cwd };
+				});
+				persistTabs(get());
+			} finally {
+				restoreTabsInflight = null;
+			}
+		})();
+		return restoreTabsInflight;
 	},
 
 	pickDirectory: async () => {

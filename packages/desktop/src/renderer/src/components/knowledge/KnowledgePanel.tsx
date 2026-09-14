@@ -4,7 +4,7 @@ import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
-import { launchKnowledgeSetup, reportKnowledgeError, useKnowledgeOverview } from "./hooks";
+import { launchKnowledgeSetup, launchZoteroSetup, reportKnowledgeError, useKnowledgeOverview } from "./hooks";
 import { KnowledgeMaintenance } from "./KnowledgeMaintenance";
 import { KnowledgeSpecialists } from "./KnowledgeSpecialists";
 import { SemanticManagement } from "./SemanticManagement";
@@ -72,8 +72,11 @@ export function KnowledgePanel({
 			setBusy(false);
 		}
 	}
-	function setup(target?: string) {
-		void launchKnowledgeSetup(cwd, sessionId, target).catch(reportKnowledgeError);
+	function setup(target?: string, includeLiterature = false) {
+		void launchKnowledgeSetup(cwd, sessionId, target, { includeLiterature }).catch(reportKnowledgeError);
+	}
+	function zoteroSetup() {
+		void launchZoteroSetup(cwd, sessionId).catch(reportKnowledgeError);
 	}
 	return (
 		<div className="text-ink" data-testid="knowledge-panel">
@@ -157,12 +160,32 @@ export function KnowledgePanel({
 								>
 									{t("openVault")}
 								</Button>
-								<Button size="sm" disabled={!cwd} onClick={() => setup(binding.vault)}>
+								<Button size="sm" disabled={!cwd} onClick={() => setup(binding.vault, false)}>
 									{t("adjust")}
 								</Button>
 							</div>
 						</section>
 					)}
+					<section className="rounded-xl border border-border p-4">
+						<div className="flex flex-wrap items-center justify-between gap-2">
+							<h3 className="text-xs font-semibold">{t("literature")}</h3>
+							<span className="rounded-full bg-hover px-2 py-0.5 text-[10px] text-ink-dim">{t("literatureBound")}</span>
+						</div>
+						<p className="mt-2 text-xs leading-relaxed text-ink-dim">{t("literatureHint")}</p>
+						<div className="mt-3 grid gap-2 text-[11px] text-ink-dim sm:grid-cols-2">
+							<p className="rounded-lg bg-hover p-2">{t("literatureSteps")}</p>
+							<p className="rounded-lg bg-hover p-2">{t("literatureCheck")}</p>
+						</div>
+						<p className="mt-2 text-[10px] text-ink-faint">{t("literatureStatus")}</p>
+						<div className="mt-3 flex flex-wrap gap-1">
+							<Button size="sm" disabled={!cwd} onClick={() => zoteroSetup()}>
+								{t("literatureSetup")}
+							</Button>
+							<Button size="sm" onClick={() => void getPi().openExternal("https://www.zotero.org/download").catch(reportKnowledgeError)}>
+								{t("literatureDownload")}
+							</Button>
+						</div>
+					</section>
 					{binding && (
 						<KnowledgeSpecialists
 							settings={data.specialistSettings}
@@ -307,7 +330,7 @@ export function KnowledgePanel({
 							<Button
 								variant="primary"
 								disabled={!cwd || !data?.enabled || busy}
-								onClick={() => setup(path.trim() || undefined)}
+								onClick={() => setup(path.trim() || undefined, true)}
 							>
 								{t("setup")}
 							</Button>

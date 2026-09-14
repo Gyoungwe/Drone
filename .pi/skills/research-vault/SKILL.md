@@ -15,7 +15,7 @@ Use the bound Vault as the durable knowledge layer for research. In the desktop 
 
 In desktop application mode, setup creates or binds the **application-wide** Vault. First clarify its cross-project purpose; the current project is only an optional knowledge partition, not the owner of the Vault. Other projects inherit the binding and retain their own results directories.
 
-The launcher asks for a Vault path, gathers a bounded read-only overview of the **current session's actual project directory**, and expands this skill through the native skill-command mechanism. The skill/extension installation directory is never the research workspace. This Setup section is the source of workflow instructions, not a second independent command wizard.
+The launcher hands off to a model turn immediately (same pattern as `/zotero-setup`). When the desktop already supplied a Vault path it is reused; otherwise this skill asks via `ask_user` in the conversation. The main desktop “setup interview” button also bootstraps Zotero first (host install confirms) and, after this Vault setup turn finishes, automatically continues with `/skill:zotero-literature setup`. The launcher also gathers a bounded read-only overview of the **current session's actual project directory** and expands this skill through the native skill-command mechanism. The skill/extension installation directory is never the research workspace. This Setup section is the source of workflow instructions, not a second independent command wizard.
 
 When this skill receives a setup/initialization task (including an Obsidian MCP natural-language request), execute the workflow below directly. Do not restart the launcher or execute slash commands in a shell. If a Vault path was supplied by the launcher or earlier conversation, reuse it; otherwise call `research_setup_options` to check the current binding and use `ask_user` to obtain the missing path. Already answered questions must not be repeated. Cancellation stops the workflow without initialization.
 
@@ -81,6 +81,10 @@ If the last successful query returned zero hits, the host labels the answer as n
 Tool execution is still visible, but unvalidated assistant prefaces and streamed answer fragments are not published. Do not use arbitrary tool arguments/results or custom messages as an alternative answer channel. Children return explicitly labeled unreviewed material; the parent must independently complete its own knowledge-read checks. Unconfigured application replies and historical legacy messages are not certified as knowledge-checked.
 
 Successful publication verifies native retrieval and current citation paths, not claim entailment, all external source provenance, or the full research archive gate. Keep the existing scientific research workflow and its evidence checks. Saved historical answers are not retroactively revalidated whenever the Vault changes.
+
+## Literature versus knowledge
+
+Zotero (skill `zotero-literature`, `/zotero-setup`) owns PDFs, bibliographic identity and annotations. This Vault owns interpreted notes, evidence and Wiki. After reading a Zotero item, deposit `type=paper` into `Library/Papers` with `zotero_key` and then read that note; CLI/MCP output is not a publication receipt. Do not dump the Zotero library or PDF binaries into the Vault.
 
 ## Deliver useful knowledge, not just archived files
 

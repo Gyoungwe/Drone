@@ -489,6 +489,9 @@ export class PiBackend {
 	}
 
 	async openSession(filePath: string): Promise<SessionMeta> {
+		// Idempotent: StrictMode / duplicate restore must not bind the same jsonl twice.
+		const already = this.registry.list().find((entry) => entry.session.sessionFile === filePath);
+		if (already) return this.registry.toMeta(already);
 		const runtime = await this.getModelRuntime();
 		const sessionManager = SessionManager.open(filePath);
 		const cwd = sessionManager.getCwd() || process.cwd();
@@ -699,16 +702,21 @@ export class PiBackend {
 		if (run?.sessionId === sessionId) run.controller.abort();
 	}
 
-	async startKnowledgeSetup(input: { sessionId: string; path?: string }): Promise<void> {
+	async startKnowledgeSetup(input: {
+		sessionId: string;
+		path?: string;
+		includeLiterature?: boolean;
+	}): Promise<void> {
 		const entry = this.requireSession(input.sessionId);
 		if (entry.readOnly || entry.session.isStreaming)
 			throw new Error("Wait for the current task to finish before setup");
 		if (input.path && (typeof input.path !== "string" || input.path.length > 4096))
 			throw new Error("Invalid Vault path");
-		await this.prompt(
-			input.sessionId,
-			`/obsidian-setup ${input.path ? JSON.stringify({ vaultPath: input.path }) : ""}`,
-		);
+		const payload: { vaultPath?: string; includeLiterature?: boolean } = {};
+		if (input.path) payload.vaultPath = input.path;
+		if (input.includeLiterature) payload.includeLiterature = true;
+		const args = Object.keys(payload).length ? JSON.stringify(payload) : "";
+		await this.prompt(input.sessionId, `/obsidian-setup ${args}`);
 	}
 	async resumeKnowledgeCheck(sessionId: string): Promise<void> {
 		const entry = this.requireSession(sessionId);
@@ -723,6 +731,9 @@ export class PiBackend {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
 		log.info("prompt", sessionId, { text: text.slice(0, 120), images: images?.length ?? 0 });
+		// Extension commands execute before the SDK emits `input`, so lazy capability loading
+		// must happen here as well; otherwise /obsidian-setup cannot see research-vault.
+		this.capabilityRuntimes.get(sessionId)?.prepareForPrompt(text, entry.session.isStreaming);
 		// session.prompt() 非流式路径会 await 整个 run（直到 agent_settled）；渲染端只需要
 		// “已受理/已入队”回执——用 preflightResult 提前返回，否则 IPC 挂一整轮，渲染端
 		// sending 状态被占住，运行中的 followUp 排队发送被防重发守卫静默拦截。

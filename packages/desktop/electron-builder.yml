@@ -48,6 +48,8 @@ extraResources:
     to: "research-workbench/skills/research-workflow"
   - from: "../../.pi/skills/research-show-me"
     to: "research-workbench/skills/research-show-me"
+  - from: "../../.pi/skills/zotero-literature"
+    to: "research-workbench/skills/zotero-literature"
   - from: "../../.pi/lib"
     to: "research-workbench/lib"
 mac:

@@ -75,3 +75,11 @@ it("both first-party skills have parseable frontmatter and distinct responsibili
 		expect(text).toContain("/obsidian-setup");
 	}
 });
+it("zotero-literature is a literature skill, not a second Vault initializer", async () => {
+	const text = await readFile(new URL("../../../.pi/skills/zotero-literature/SKILL.md", import.meta.url), "utf8");
+	const metadata = parse(text.match(/^---\r?\n([\s\S]*?)\r?\n---/)[1]);
+	expect(metadata.name).toBe("zotero-literature");
+	expect(text).toContain("/zotero-setup");
+	expect(text).toContain("research-vault");
+	expect(text).toContain("still own the Vault");
+});

@@ -14,41 +14,75 @@ import {
 	researchSetupOptions,
 } from "../lib/obsidian-workbench.mjs";
 import { USER_QUESTION_FOCUS } from "../lib/reply-focus.mjs";
+import {
+	bootstrapZotero,
+	setupZoteroAgentMessage,
+	ZOTERO_SETUP_BINDING,
+} from "../lib/zotero-setup.mjs";
 
 async function startSetup(pi, args, ctx) {
 	if (!ctx.hasUI) throw new Error("Obsidian MCP /obsidian-setup requires an interactive desktop UI");
-	const skillCommand = `skill:${OBSIDIAN_SETUP_BINDING.skill}`;
-	if (!pi.getCommands().some((command) => command.source === "skill" && command.name === skillCommand)) {
-		throw new Error(
-			"Obsidian MCP setup requires the research-vault skill. Load the bundled skill and run /reload before retrying /obsidian-setup.",
-		);
-	}
 	const current = await obsidianStatus(ctx.cwd);
 	let selectedPath = null;
-	if (args?.trim().startsWith("{")) {
+	let includeLiterature = false;
+	let preferences = typeof args === "string" ? args : "";
+	if (preferences.trim().startsWith("{")) {
 		try {
-			const supplied = JSON.parse(args);
-			if (typeof supplied.vaultPath === "string") {
-				selectedPath = supplied.vaultPath;
-				args = "";
-			}
+			const supplied = JSON.parse(preferences);
+			if (typeof supplied.vaultPath === "string") selectedPath = supplied.vaultPath;
+			if (supplied.includeLiterature === true) includeLiterature = true;
+			if (typeof supplied.vaultPath === "string" || supplied.includeLiterature === true) preferences = "";
 		} catch {
 			/* ordinary user preferences */
 		}
 	}
-	const input =
-		selectedPath ||
-		(await ctx.ui.input("Obsidian · Vault 路径", current.vault || "/absolute/path/to/your/Obsidian Vault"));
-	if (!input) return;
-	const vault = resolveSetupVault(input, ctx.cwd);
+	// Like /zotero-setup: hand off to the model immediately. Only resolve a Vault when
+	// the desktop already supplied one; otherwise the skill asks via ask_user in-chat.
+	const vault = selectedPath ? resolveSetupVault(selectedPath, ctx.cwd) : null;
 	const context = await inspectObsidianSetup({ cwd: ctx.cwd, vault });
-	const payload = setupAgentMessage({ context, current, preferences: args || "" });
+	const vaultPayload = setupAgentMessage({ context, current, preferences });
 	const options = { deliverAs: "followUp", expandPromptTemplates: true };
-	// sendUserMessage → session.prompt() nested inside this slash handler. If we
-	// await it here, the outer prompt() never reaches preflightResult until the
-	// whole model turn ends, so the composer stays in sending and looks frozen.
+	// Critical: do NOT await bootstrap or sendUserMessage inside this slash turn.
+	// Run host installation and model handoffs only after this slash command returns
+	// and the session is idle. Combined setup deploys Zotero before the Vault interview.
 	setTimeout(() => {
-		void pi.sendUserMessage(payload, options);
+		void (async () => {
+			try {
+				// Start the Vault model turn first so the user sees thinking immediately.
+				// Host-side Zotero preparation may involve a slow installer and must not
+				// block the interactive setup interview.
+				await pi.sendUserMessage(vaultPayload, options);
+
+				let literatureBootstrap = null;
+				if (includeLiterature) {
+					literatureBootstrap = await bootstrapZotero({
+						confirm: (title, message) => ctx.ui.confirm(title, message),
+					});
+					if (
+						literatureBootstrap.cancelled &&
+						literatureBootstrap.steps.length === 0 &&
+						!literatureBootstrap.status.commands.zoteroMcp
+					) {
+						ctx.ui.notify?.("已取消安装 zotero-mcp-server；继续知识库初始化", "warning");
+						literatureBootstrap = null;
+					} else if (literatureBootstrap.steps.some((step) => step.action === "install")) {
+						ctx.ui.notify?.("已安装 zotero-mcp-server；可选 MCP 已写入用户配置（默认关闭）");
+					}
+				}
+				if (!literatureBootstrap) return;
+				await pi.sendUserMessage(
+					setupZoteroAgentMessage({
+						status: literatureBootstrap.status,
+						bootstrap: literatureBootstrap,
+						preferences: "",
+					}),
+					options,
+				);
+			} catch (error) {
+				const text = error instanceof Error ? error.message : String(error);
+				ctx.ui.notify?.(`初始化交接失败：${text}`, "error");
+			}
+		})();
 	}, 0);
 }
 
@@ -214,6 +248,14 @@ export default function obsidianWorkbench(pi) {
 					enum: ["project", "shared"],
 					description: "For Wiki only: shared publishes a cross-project topic.",
 				},
+				zotero_key: {
+					type: "string",
+					description: "8-character Zotero item key for paper notes. Not a publication receipt.",
+				},
+				zotero_citekey: {
+					type: "string",
+					description: "Optional Better BibTeX citekey for paper notes.",
+				},
 			},
 			required: ["project", "type", "title", "markdown"],
 		},
@@ -228,6 +270,8 @@ export default function obsidianWorkbench(pi) {
 					sourceLinks: params.source_links || [],
 					status: params.status || "verified",
 					targetScope: params.scope || "project",
+					zoteroKey: params.zotero_key || null,
+					zoteroCitekey: params.zotero_citekey || null,
 				}),
 			);
 			return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };

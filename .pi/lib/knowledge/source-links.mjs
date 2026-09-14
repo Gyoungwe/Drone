@@ -34,6 +34,11 @@ export async function normalizeSourceLinks(values, { cwd, vault, resultsRoot, pr
 			links.push(onlineSourceLink(raw, title || raw));
 			continue;
 		}
+		const zotero = raw.match(/^zotero:([A-Za-z0-9]{8})$/i);
+		if (zotero) {
+			links.push(`[Zotero ${zotero[1]}](zotero://select/library/items/${zotero[1]})`);
+			continue;
+		}
 		const wiki = raw.match(/^\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]$/);
 		const notePath = `${(wiki?.[1] || raw).replace(/\.md$/, "")}.md`;
 		if (/^(?:Wiki|Library|Projects|Inbox|Indexes)\//.test(notePath)) {
