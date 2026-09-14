@@ -24,6 +24,7 @@ const notices = {
 	"navigation-changed": "本轮导航已失效，请重新读取导航并完成检索。",
 	"not-prepared": "知识库准备步骤尚未完成，回答没有发布。",
 	interrupted: "本次请求已中断，未完成的回答没有发布。",
+	"model-error": "模型请求失败，未完成的回答没有发布。",
 	"check-timeout": "回答前检查超时，草稿没有发布。",
 	"check-failed": "回答前检查发生错误，草稿没有发布。",
 	"empty-answer": "任务已结束，但模型没有生成可显示的回复。请查看本轮产物或要求继续交付说明。",
@@ -38,8 +39,21 @@ function reason(error) {
 	if (/navigation|prepare_knowledge/i.test(text)) return "not-prepared";
 	return "check-failed";
 }
+function sanitizeError(text) {
+	return [...String(text || "")]
+		.map((char) => (char.charCodeAt(0) < 32 ? " " : char))
+		.join("")
+		.replace(/(?:bearer\s+|api[_-]?key[=:]\s*)[^\s]+/gi, "[redacted]")
+		.trim()
+		.slice(0, 4096);
+}
 function base(message, content) {
-	// Do not retain unvalidated provider error strings or auxiliary content snapshots.
+	// Draft/thinking snapshots stay out of public history. Provider errors are not
+	// published as answer text; a sanitized errorMessage is kept for the LLM error card.
+	const errorMessage =
+		message.stopReason === "error" && typeof message.errorMessage === "string"
+			? sanitizeError(message.errorMessage)
+			: "";
 	return {
 		role: "assistant",
 		content,
@@ -50,7 +64,7 @@ function base(message, content) {
 		timestamp: message.timestamp,
 		stopReason: message.stopReason,
 		...(message.responseId ? { responseId: message.responseId } : {}),
-		...(message.stopReason === "error" ? { errorMessage: "请求出错；未经检查的回答没有发布。" } : {}),
+		...(errorMessage ? { errorMessage } : {}),
 	};
 }
 function seal(message, content, detail) {
@@ -168,7 +182,8 @@ export function registerAnswerPublication(
 		const message = event.message;
 		if (message.role !== "assistant") return;
 		const report = (message) => {
-			if (message[FIELD]?.status !== "tool-only") publicationKnowledgeFlow(ctx, message[FIELD]);
+			if (message[FIELD]?.status !== "tool-only" && message[FIELD]?.reason !== "model-error")
+				publicationKnowledgeFlow(ctx, message[FIELD]);
 			return { message };
 		};
 		const blocks = Array.isArray(message.content) ? message.content : [];
@@ -185,7 +200,16 @@ export function registerAnswerPublication(
 			protocolBytes += bytes;
 			return report(safe);
 		}
-		if (["error", "aborted", "length", "pending"].includes(message.stopReason) || ctx.signal?.aborted)
+		if (message.stopReason === "error")
+			return report(
+				seal(message, [], {
+					status: "blocked",
+					reason: "model-error",
+					turnId,
+					scientificallyVerified: false,
+				}),
+			);
+		if (["aborted", "length", "pending"].includes(message.stopReason) || ctx.signal?.aborted)
 			return report(failure(message, { code: "interrupted" }));
 		const content = blocks.filter((b) => b.type === "text");
 		// Only the controlled setup writer can set this receipt. Never whitelist model-written claims.
@@ -247,8 +271,22 @@ export function registerAnswerPublication(
 		try {
 			const c = getCurrent(ctx);
 			if (!c) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
+			let publishText = text;
+			let publishContent = content;
+			if (typeof c.service.materializeCitations === "function") {
+				const paths = await c.service.materializeCitations(c.ticket, ctx.cwd, c.query);
+				if (paths.length && !/\[\[[^\]]+\]\]/.test(text)) {
+					const suffix = `\n\n依据：${paths.map((path) => `[[${path.replace(/\.md$/i, "")}]]`).join(" ")}`;
+					publishText = `${text}${suffix}`;
+					publishContent = content.map((block, index) =>
+						block.type === "text" && index === content.length - 1
+							? { ...block, text: `${block.text}${suffix}` }
+							: block,
+					);
+				}
+			}
 			const proof = await Promise.race([
-				c.service.validateAnswer(c.ticket, ctx.cwd, text, { deliveries: [...deliveries.values()] }),
+				c.service.validateAnswer(c.ticket, ctx.cwd, publishText, { deliveries: [...deliveries.values()] }),
 				new Promise((_, reject) => {
 					timer = setTimeout(
 						() => reject(Object.assign(new Error("check timeout"), { code: "check-timeout" })),
@@ -264,9 +302,9 @@ export function registerAnswerPublication(
 								type: "text",
 								text: "【知识库检索无命中】本轮查询未找到匹配条目；下文不是基于本库证据的结论，也不表示全库不存在相关知识。\n\n",
 							},
-							...content,
+							...publishContent,
 						]
-					: content;
+					: publishContent;
 			const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(ctx) : null;
 			const visible = footer
 				? [...published, { type: "text", text: `\n\n${String(footer).slice(0, 2000)}` }]
@@ -351,6 +389,6 @@ export function registerAnswerPublication(
 			setupReceipt = null;
 		},
 		guidance:
-			"Answer publication is host-checked. Before a final text answer, use the native knowledge search, read the cited current sources, and include Vault-relative [[path]] citations. Raw hidden reasoning and tool-turn drafts are withheld. Use set_status({text,kind,detail,next}) before each meaningful tool batch for a short public plan, and after a completed stage for observed results/gaps (kind=summary). Keep the sequence public summary → tools → next public summary; no raw private chain-of-thought or invented historical summaries. Do not expose private chain-of-thought. Before sending the final answer, call research_check_answer with the exact draft; fix its explicit missing paths or state the remaining blocker. Generated Show Me/run links are deliverables, not evidence citations. An empty successful search is explicitly labeled, not scientific validation. A failed check publishes only a host notice; do not retry endlessly or use tool outputs as a substitute answer.",
+			"Host-checked answers need a current-turn search, reads of cited [[path]] sources, then research_check_answer. Public text must answer the user's question; do not lecture about Vault policy or evidence-gate stages. Use short set_status about the task, not product design. Show Me/run links are deliverables, not evidence.",
 	};
 }

@@ -215,6 +215,68 @@ export class KnowledgeService {
 		}
 		return page;
 	}
+	/** Actual current-turn Wiki reads, not a skipped stage. Bounded so the model is not blocked on serial babysitting. */
+	async ensureCurrentWikiRead(ticket, cwd, state) {
+		if (!state.linkedWiki.length) return true;
+		for (const [path, receipt] of state.readWiki) {
+			const latest = await this.request("read", { path, project: state.project, maxChars: 200 });
+			if (!latest.missing && latest.hash === receipt.hash) return true;
+			state.readWiki.delete(path);
+		}
+		for (const path of state.linkedWiki.slice(0, 4)) {
+			try {
+				await this.read(ticket, cwd, { path, maxChars: 5000 });
+			} catch {
+				/* missing wiki is not a current read */
+			}
+			if (state.readWiki.has(path)) return true;
+		}
+		return false;
+	}
+	async citationCandidates(ticket, cwd) {
+		const state = await this.check(ticket, cwd);
+		const searched = state.answerSearch;
+		if (!searched?.hitCount) return [];
+		const skip = (path) => /(?:^|\/)(?:Runs|Explainers)\//i.test(path);
+		const seen = new Set();
+		const out = [];
+		const push = (path) => {
+			if (!path || seen.has(path) || skip(path) || !state.reads.has(path)) return;
+			seen.add(path);
+			out.push(path);
+		};
+		for (const hit of searched.hits || []) push(hit.path);
+		for (const path of state.readWiki.keys()) push(path);
+		for (const path of state.reads.keys()) push(path);
+		return out.slice(0, 6);
+	}
+	async ensureAnswerSearch(ticket, cwd, query = "") {
+		const state = await this.check(ticket, cwd);
+		if (state.answerSearch) return state.answerSearch;
+		const q = String(query || "").trim().slice(0, 2000);
+		if (!q)
+			throw Object.assign(new Error("Complete a real evidence search this turn before answering"), {
+				code: "search-required",
+			});
+		await this.search(ticket, cwd, { query: q, limit: 5 });
+		return (await this.check(ticket, cwd)).answerSearch;
+	}
+	async materializeCitations(ticket, cwd, query = "") {
+		await this.ensureAnswerSearch(ticket, cwd, query);
+		const existing = await this.citationCandidates(ticket, cwd);
+		if (existing.length) return existing;
+		const state = await this.check(ticket, cwd);
+		if (!state.answerSearch?.hitCount) return [];
+		for (const hit of (state.answerSearch.hits || []).slice(0, 3)) {
+			if (!hit?.path || state.reads.has(hit.path)) continue;
+			try {
+				await this.read(ticket, cwd, { path: hit.path, maxChars: 4000 });
+			} catch {
+				/* a failed hit read does not invent a receipt */
+			}
+		}
+		return this.citationCandidates(ticket, cwd);
+	}
 	async search(
 		ticket,
 		cwd,
@@ -223,16 +285,7 @@ export class KnowledgeService {
 		const state = await this.check(ticket, cwd);
 		if (!wikiOnly && !explainerOnly) state.answerSearch = null; // a newer failed evidence attempt cannot reuse old success
 		if (!wikiOnly && !explainerOnly && state.linkedWiki.length) {
-			let currentWiki = false;
-			for (const [path, receipt] of state.readWiki) {
-				const latest = await this.request("read", { path, project: state.project, maxChars: 200 });
-				if (!latest.missing && latest.hash === receipt.hash) {
-					currentWiki = true;
-					break;
-				}
-				state.readWiki.delete(path);
-			}
-			if (!currentWiki)
+			if (!(await this.ensureCurrentWikiRead(ticket, cwd, state)))
 				throw new Error(
 					"Read a current linked or discovered Wiki page with research_read_knowledge before searching evidence. Wiki discovery search is still allowed.",
 				);

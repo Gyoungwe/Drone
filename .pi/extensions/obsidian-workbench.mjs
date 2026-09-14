@@ -13,6 +13,7 @@ import {
 	obsidianStatus,
 	researchSetupOptions,
 } from "../lib/obsidian-workbench.mjs";
+import { USER_QUESTION_FOCUS } from "../lib/reply-focus.mjs";
 
 async function startSetup(pi, args, ctx) {
 	if (!ctx.hasUI) throw new Error("Obsidian MCP /obsidian-setup requires an interactive desktop UI");
@@ -41,10 +42,14 @@ async function startSetup(pi, args, ctx) {
 	if (!input) return;
 	const vault = resolveSetupVault(input, ctx.cwd);
 	const context = await inspectObsidianSetup({ cwd: ctx.cwd, vault });
-	pi.sendUserMessage(setupAgentMessage({ context, current, preferences: args || "" }), {
-		deliverAs: "followUp",
-		expandPromptTemplates: true,
-	});
+	const payload = setupAgentMessage({ context, current, preferences: args || "" });
+	const options = { deliverAs: "followUp", expandPromptTemplates: true };
+	// sendUserMessage → session.prompt() nested inside this slash handler. If we
+	// await it here, the outer prompt() never reaches preflightResult until the
+	// whole model turn ends, so the composer stays in sending and looks frozen.
+	setTimeout(() => {
+		void pi.sendUserMessage(payload, options);
+	}, 0);
 }
 
 export default function obsidianWorkbench(pi) {
@@ -272,12 +277,12 @@ export default function obsidianWorkbench(pi) {
 		const status = await obsidianStatus(ctx.cwd);
 		const guidance =
 			status.state === "ready"
-				? `Paired Obsidian vault: ${status.vault}. Profile: ${status.profile || "hybrid"}; deposition: ${status.depositMode || "verified"}; subagent MCP: ${status.subagentMcpPolicy || "read-local"}. Use application research_read_knowledge / research_search_knowledge when application knowledge is enabled; legacy research-obsidian is retrieval-only. Raw MCP writes are intentionally disabled. The parent session publishes persistent knowledge only through research_deposit_knowledge and research_summarize_run, which preserve human review outside pi-agent managed blocks. Subagents may receive read-only local MCP access according to policy but never publish knowledge. Keep large artifacts under results. Finalize runs only after the research_loop evidence gate is answerable.`
-				: `Obsidian setup is incomplete (${status.state}). Run /obsidian-setup with the research-vault skill and finish research_setup_obsidian before knowledge writes. Do not claim knowledge has been saved.`;
-		const outputGuidance = `Actual session workspace: ${ctx.cwd}. Never substitute the extension installation directory for this project. For research subagents, resolve output files to absolute paths under the chosen run directory. Subagents return evidence and may query local knowledge read-only; they never own persistent Vault writes.`;
+				? `Vault: ${status.vault}. Read with research_read_knowledge, then search with research_search_knowledge.`
+				: `Obsidian setup is incomplete (${status.state}). Run /obsidian-setup before claiming knowledge was saved.`;
+		const outputGuidance = `Workspace: ${ctx.cwd}.`;
 		return {
 			...(preparation.message ? { message: preparation.message } : {}),
-			systemPrompt: `${event.systemPrompt}\n\n${guidance}\n${outputGuidance}\n${preparation.guidance || ""}`,
+			systemPrompt: `${event.systemPrompt}\n\n${guidance}\n${outputGuidance}\n${USER_QUESTION_FOCUS}\n${preparation.guidance || ""}`,
 		};
 	});
 }

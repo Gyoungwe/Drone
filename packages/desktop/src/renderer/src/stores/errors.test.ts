@@ -53,6 +53,10 @@ describe("classifyLlmError — 模式表按序首命中", () => {
 			"fetch failed",
 			"network error",
 			"request timeout after 30000ms",
+			'OpenAI API error (502): {"message":"Upstream service temporarily unavailable"}',
+			'OpenAI API error (503): {"message":"Service temporarily unavailable"}',
+			"502 Bad Gateway",
+			"503 Service Unavailable",
 		]) {
 			expect(classifyLlmError(text)).toEqual({
 				titleKey: "error.title.llmNetwork",

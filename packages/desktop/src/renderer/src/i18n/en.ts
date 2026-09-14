@@ -93,7 +93,7 @@ export const en: Messages = {
 		compacting: "Compacting context — send when it finishes",
 		stop: "Stop",
 		send: "Send",
-		hint: "Enter to send · Shift+Enter for newline",
+		hint: "Enter to send · Shift+Enter for newline · Esc to stop",
 		modelDefault: "Select model",
 		modelSwitch: "Switch model",
 		noModelHint: "No model is configured. Open Settings to add a provider, then send.",

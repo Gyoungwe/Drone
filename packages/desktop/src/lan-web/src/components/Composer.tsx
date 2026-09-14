@@ -7,8 +7,7 @@ import { ArrowUpIcon, StopIcon } from "./icons";
  * 远程输入区（M2）：remoteControl 开启时才由 App 渲染。
  * 发送：agent 运行中由后端 followUp 排队（发送即“已受理/已入队”回执）。
  * 停止：运行中才可用。readOnly（subagent 产物）会话整区禁用。
- * UX v3：悬浮毛玻璃条 + 同位单按钮状态切换（与桌面端同构）：运行中且无输入 → 停止
- * （黑白钮 + 实心方块，与发送同色同位）；有输入文本 → 发送（followUp 排队）。
+ * UX：运行中始终显示停止；有输入文本时同时显示发送（followUp 排队）。与桌面端同构。
  */
 export function Composer({ sessionId }: { sessionId: string }) {
 	const sendPrompt = useLanStore((s) => s.sendPrompt);
@@ -80,8 +79,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
 	}
 
 	const canSend = !sending && Boolean(text.trim());
-	// 同位单按钮（与桌面端同构）：运行中且无输入 → 停止；否则发送（运行中发送 = followUp 排队）
-	const showStop = agentActive && !canSend;
+	const running = sending || agentActive;
 	return (
 		<div className="composer-zone">
 			{notice && <div className="queue-hint">{notice}</div>}
@@ -105,26 +103,29 @@ export function Composer({ sessionId }: { sessionId: string }) {
 						}
 					}}
 				/>
-				{showStop ? (
+				{running ? (
 					<button
 						type="button"
 						className="c-btn send stop"
 						onClick={() => void abort()}
 						aria-label={t("composer.stop")}
+						title={t("composer.stop")}
 					>
 						<StopIcon size={11} />
 					</button>
-				) : (
+				) : null}
+				{!running || canSend ? (
 					<button
 						type="button"
 						className={`c-btn send${canSend ? "" : " off"}`}
 						disabled={!canSend}
 						onClick={() => void send()}
 						aria-label={t("composer.send")}
+						title={t("composer.send")}
 					>
 						<ArrowUpIcon size={16} />
 					</button>
-				)}
+				) : null}
 			</div>
 		</div>
 	);

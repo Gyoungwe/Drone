@@ -45,12 +45,36 @@ describe("native answer readiness, not model self-certification", () => {
 	it("rejects a direct answer after navigation alone", async () => {
 		await expect(service.validateAnswer(prep.ticket, cwd, answer)).rejects.toThrow("search");
 	});
-	it("rejects discovery-only search and search results that were not read", async () => {
+	it("host search from the turn query records evidence before citation checks", async () => {
+		await expect(service.validateAnswer(prep.ticket, cwd, "no citations")).rejects.toThrow("search");
+		await vi.waitFor(
+			async () => expect((await service.ensureAnswerSearch(prep.ticket, cwd, "Autotomy")).complete).toBe(true),
+			{ timeout: 2000 },
+		);
+		await expect(service.validateAnswer(prep.ticket, cwd, "no citations")).rejects.toThrow("citation");
+		const paths = await service.materializeCitations(prep.ticket, cwd, "Autotomy");
+		expect(paths.length).toBeGreaterThan(0);
+		expect(
+			(
+				await service.validateAnswer(
+					prep.ticket,
+					cwd,
+					`Conditional.\n\n依据：${paths.map((path) => `[[${path.replace(/\.md$/i, "")}]]`).join(" ")}`,
+				)
+			).status,
+		).toBe("ready");
+	});
+	it("rejects discovery-only search and unread evidence citations", async () => {
 		await service.search(prep.ticket, cwd, { query: "Autotomy", wikiOnly: true });
 		await expect(service.validateAnswer(prep.ticket, cwd, answer)).rejects.toThrow("search");
-		await service.read(prep.ticket, cwd, { path: "Wiki/Autotomy.md" });
-		await service.search(prep.ticket, cwd, { query: "Autotomy" });
+		await vi.waitFor(
+			async () =>
+				expect((await service.search(prep.ticket, cwd, { query: "Autotomy" })).complete).toBe(true),
+			{ timeout: 2000 },
+		);
 		await expect(service.validateAnswer(prep.ticket, cwd, answer)).rejects.toThrow("read");
+		await service.read(prep.ticket, cwd, { path: "Library/Papers/source.md" });
+		expect((await service.validateAnswer(prep.ticket, cwd, answer)).status).toBe("ready");
 	});
 	it("accepts a current cited source only after actual search and read", async () => {
 		await searchAndRead();
@@ -68,6 +92,26 @@ describe("native answer readiness, not model self-certification", () => {
 			service.validateAnswer(prep.ticket, cwd, "A confident claim without provenance."),
 		).rejects.toThrow("citation");
 	});
+	it("evidence search opens linked Wiki and top hits so citations can be attached", async () => {
+		const found = await vi.waitFor(
+			async () => {
+				const value = await service.search(prep.ticket, cwd, { query: "Autotomy" });
+				expect(value.complete).toBe(true);
+				return value;
+			},
+			{ timeout: 2000 },
+		);
+		expect(found.hits.length).toBeGreaterThan(0);
+		const paths = await service.citationCandidates(prep.ticket, cwd);
+		expect(paths).toContain("Wiki/Autotomy.md");
+		const proof = await service.validateAnswer(
+			prep.ticket,
+			cwd,
+			`Conditional observation.\n\n依据：${paths.map((path) => `[[${path.replace(/\.md$/i, "")}]]`).join(" ")}`,
+		);
+		expect(proof.status).toBe("ready");
+		expect(proof.scientificallyVerified).toBe(false);
+	});
 	it("rejects changed sources even when a model repeats the old claim", async () => {
 		await searchAndRead();
 		await note("Library/Papers/source.md", "# Corrected observation\n");
@@ -81,7 +125,13 @@ describe("native answer readiness, not model self-certification", () => {
 	});
 	it("distinguishes complete zero hits from missing/partial coverage", async () => {
 		await service.read(prep.ticket, cwd, { path: "Wiki/Autotomy.md" });
-		await service.search(prep.ticket, cwd, { query: "notpresentuniquetoken" });
+		await vi.waitFor(
+			async () =>
+				expect(
+					(await service.search(prep.ticket, cwd, { query: "notpresentuniquetoken" })).complete,
+				).toBe(true),
+			{ timeout: 2000 },
+		);
 		expect(
 			(await service.validateAnswer(prep.ticket, cwd, "There were no hits for this query.")).status,
 		).toBe("no-hits");

@@ -1,3 +1,4 @@
+import { USER_QUESTION_FOCUS } from "../lib/reply-focus.mjs";
 import {
 	archiveSource,
 	DEFAULT_MAX_BYTES,
@@ -48,6 +49,6 @@ export default function sourceArchive(pi) {
 		},
 	});
 	pi.on("before_agent_start", async (event) => ({
-		systemPrompt: `${event.systemPrompt}\n\nEvidence policy (mandatory for substantive scientific, software and technical factual answers): query the configured local knowledge base first and record the lookup; use external search only when local evidence is absent, incomplete, stale or conflicting; inspect original content before citing it; archive selected papers, manuals and software with research_archive_source and verify research_source_status. Distinguish Observed, Supported interpretation, Hypothesis, Unknown, Conflict and Unverified. Never invent citations, downloads, tool calls or evidence. A browser_required, unavailable or failed result is not success and may only produce a limitation and next-step plan. User-provided files require a hash and provenance record before supporting claims. For software, include available official README, manual, LICENSE, CITATION and dependency specifications; no full Git history. Preserve DOI/PMID/commit/version/license metadata, never execute downloaded code, and inspect research_source_status after downloads. Successful files are linked to categorized Obsidian notes with managed indexes; check knowledge_status and report any publication failure separately from the download. If the tool returns browser_required, use the configured research-browser/Computer Use browser for the URL, ask the user to complete any challenge or login manually, then retry with local_file inside .pi/browser-downloads and human_verified=true. Do not claim a challenge was bypassed.`,
+		systemPrompt: `${event.systemPrompt}\n\nArchive papers, manuals and software with research_archive_source into the active run. Do not invent citations or treat browser_required/failed downloads as evidence. ${USER_QUESTION_FOCUS}`,
 	}));
 }

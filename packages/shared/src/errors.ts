@@ -98,7 +98,8 @@ const LLM_ERROR_PATTERNS: ReadonlyArray<{ pattern: RegExp; cls: LlmErrorClass }>
 	},
 	{
 		// 网络/超时
-		pattern: /ETIMEDOUT|ECONNREFUSED|ENOTFOUND|fetch\s+failed|\bnetwork\b|\btimeout\b/i,
+		pattern:
+			/ETIMEDOUT|ECONNREFUSED|ENOTFOUND|fetch\s+failed|\bnetwork\b|\btimeout\b|\b50[234]\b|upstream(?:_error)?|service\s+temporarily\s+unavailable|bad\s+gateway/i,
 		cls: {
 			titleKey: "error.title.llmNetwork",
 			hintKey: "error.hint.network",

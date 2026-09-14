@@ -182,6 +182,8 @@ export async function updateResearchLoop({
 		if (gate.archive_count < 1 || gate.claim_refs.length < 1)
 			throw new Error("archive verification and claim binding are required before answerable");
 		gate = advance({ ...gate, status: "ok", answerable: true }, "answerable", detail);
+	} else if (action === "complete") {
+		return completeResearchGate({ cwd, runDir, claimRefs });
 	} else {
 		throw new Error(`unknown research_loop action: ${action}`);
 	}
@@ -189,4 +191,117 @@ export async function updateResearchLoop({
 	metadata.updated_at = new Date().toISOString();
 	await atomicJson(metadataPath, metadata);
 	return { run_dir: path, evidence_gate: gate };
+}
+
+function isWikiPath(path) {
+	return /(?:^|[\\/])Wiki[\\/]/i.test(String(path || ""));
+}
+
+async function ensureStage(cwd, runDir, stage, fill) {
+	const current = await updateResearchLoop({ cwd, runDir, action: "status" });
+	if (RESEARCH_STAGES.indexOf(current.evidence_gate.stage) >= RESEARCH_STAGES.indexOf(stage)) return current;
+	return fill();
+}
+
+/** Host-owned serial close: verify archive, bind claims from real refs if needed, finalize. */
+export async function completeResearchGate({ cwd = process.cwd(), runDir, claimRefs = [] } = {}) {
+	let status = await updateResearchLoop({ cwd, runDir, action: "status" });
+	let gate = status.evidence_gate;
+	if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_inspected"))
+		throw new Error("research loop must inspect sources before complete");
+	if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_archived"))
+		status = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+	gate = status.evidence_gate;
+	const refs =
+		(Array.isArray(claimRefs) && claimRefs.length ? claimRefs : null) ||
+		(gate.claim_refs.length ? gate.claim_refs : (gate.source_refs || []).map((ref) => `Observed: ${ref}`));
+	if (!refs.length) throw new Error("claim_refs must contain at least one traceable claim binding");
+	if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("claims_bound"))
+		status = await updateResearchLoop({ cwd, runDir, action: "bind_claims", claimRefs: refs });
+	gate = status.evidence_gate;
+	if (gate.stage !== "answerable") status = await updateResearchLoop({ cwd, runDir, action: "finalize" });
+	return status;
+}
+
+/**
+ * Advance the gate from a successful tool receipt. Missing runs or out-of-order
+ * receipts are ignored; the host never throws into the tool pipeline.
+ */
+export async function observeResearchReceipt({
+	cwd = process.cwd(),
+	runDir,
+	toolName,
+	args = {},
+	details = {},
+	isError = false,
+} = {}) {
+	if (isError || !runDir || !toolName) return null;
+	try {
+		const query = String(args.query || details.query || "").trim();
+		if (toolName === "research_search_knowledge" && query && details.complete !== false)
+			return await updateResearchLoop({ cwd, runDir, action: "record_local", query });
+		if (["webfetch", "fetch_content", "web_search"].includes(toolName)) {
+			const url = String(args.url || details.url || query).trim();
+			if (!url) return null;
+			await ensureStage(cwd, runDir, "local_query_recorded", () =>
+				updateResearchLoop({ cwd, runDir, action: "record_local", query: url }),
+			);
+			return await updateResearchLoop({
+				cwd,
+				runDir,
+				action: "record_external",
+				query: url,
+				notes: String(details.title || ""),
+			});
+		}
+		if (toolName === "research_read_knowledge") {
+			const path = String(args.path || details.path || "");
+			if (!path || isWikiPath(path) || details.missing === true) return null;
+			await ensureStage(cwd, runDir, "local_query_recorded", () =>
+				updateResearchLoop({ cwd, runDir, action: "record_local", query: path }),
+			);
+			await ensureStage(cwd, runDir, "external_search_recorded", () =>
+				updateResearchLoop({
+					cwd,
+					runDir,
+					action: "record_external",
+					notes: "Host: no extra web search before inspecting current sources.",
+				}),
+			);
+			return await updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [path] });
+		}
+		if (toolName === "research_archive_source" && details.status === "downloaded") {
+			const ref = String(details.path || details.url || args.url || "");
+			if (!ref) return null;
+			await ensureStage(cwd, runDir, "local_query_recorded", () =>
+				updateResearchLoop({ cwd, runDir, action: "record_local", query: ref }),
+			);
+			await ensureStage(cwd, runDir, "external_search_recorded", () =>
+				updateResearchLoop({
+					cwd,
+					runDir,
+					action: "record_external",
+					query: String(args.url || details.url || ref),
+					notes: "Host recorded the archived source URL as the external lookup.",
+				}),
+			);
+			await updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [ref] });
+			const archived = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+			try {
+				return await completeResearchGate({ cwd, runDir });
+			} catch {
+				return archived;
+			}
+		}
+		if (toolName === "research_deposit_knowledge" && details.type === "claim" && details.note)
+			return await updateResearchLoop({
+				cwd,
+				runDir,
+				action: "bind_claims",
+				claimRefs: [details.note],
+			});
+		return null;
+	} catch {
+		return null;
+	}
 }

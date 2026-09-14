@@ -109,6 +109,41 @@ describe("generated links are delivery receipts, not scientific citations", () =
 			service.deliveryReceipt(prep.ticket, cwd, join(vault, "Projects/other/Runs/x.md")),
 		).rejects.toThrow();
 	});
+	it("runs a host evidence search before blocking on search-required", async () => {
+		const events = new Map();
+		const gate = registerAnswerPublication(
+			{ on: (name, fn) => events.set(name, fn) },
+			{ getCurrent: () => ({ service, ticket: prep.ticket, query: "Evidence" }) },
+		);
+		gate.begin();
+		await vi.waitFor(async () => expect((await service.request("status")).coverage).toBe("ready"), {
+			timeout: 2000,
+		});
+		const final = await events.get("message_end")(
+			{ message: msg("请核对该版本的安装命令与参数。") },
+			{ cwd },
+		);
+		expect(["released", "no-hits"]).toContain(final.message.knowledgePublication.status);
+		expect(JSON.stringify(final.message.content)).toContain("请核对该版本的安装命令与参数");
+		expect(JSON.stringify(final.message.content)).not.toContain("知识库检查未通过");
+	});
+	it("releases an uncited user-facing answer by attaching this-turn read citations", async () => {
+		const events = new Map();
+		const gate = registerAnswerPublication(
+			{ on: (name, fn) => events.set(name, fn) },
+			{ getCurrent: () => ({ service, ticket: prep.ticket }) },
+		);
+		gate.begin();
+		await ready();
+		const final = await events.get("message_end")(
+			{ message: msg("证据只在限定条件下成立。") },
+			{ cwd },
+		);
+		expect(final.message.knowledgePublication.status).toBe("released");
+		expect(JSON.stringify(final.message.content)).toContain("证据只在限定条件下成立");
+		expect(JSON.stringify(final.message.content)).toContain("Library/Software/source");
+		expect(JSON.stringify(final.message.content)).not.toContain("知识库检查未通过");
+	});
 	it("preflight gives the main agent a specific missing path and does not bypass the final gate", async () => {
 		const events = new Map(),
 			feedback = createTaskFeedback();
