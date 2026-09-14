@@ -7,12 +7,16 @@ import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
 import { KnowledgePanel } from "./KnowledgePanel";
+import { WikiReviewDialog } from "./WikiReviewDialog";
 export function KnowledgeUiRoot() {
 	const t = useKnowledgeText(),
 		dialog = useKnowledgeStore((s) => s.dialog),
+		review = useKnowledgeStore((s) => s.review),
+		reviewQueue = useKnowledgeStore((s) => s.reviewQueue),
 		notice = useKnowledgeStore((s) => s.notice);
 	const box = useRef<HTMLDivElement>(null),
 		close = useKnowledgeStore((s) => s.close),
+		deferReview = useKnowledgeStore((s) => s.deferReview),
 		dismiss = useKnowledgeStore((s) => s.dismiss);
 	useEffect(() => {
 		let timer: ReturnType<typeof setTimeout> | null = null;
@@ -29,8 +33,13 @@ export function KnowledgeUiRoot() {
 			if (event.kind === "open-review") {
 				const sessions = useSessionsStore.getState();
 				const source = sessions.sessions.find((s) => s.sessionId === event.sessionId);
-				const cwd = source?.cwd || null;
-				if (cwd) store.open({ cwd, sessionId: event.sessionId, tab: "reviews", id: event.id || undefined });
+				const cwd = source?.cwd || sessions.cwd;
+				if (cwd)
+					store.openReview({
+						cwd,
+						sessionId: event.sessionId,
+						id: event.id || "",
+					});
 				return;
 			}
 			store.apply(event);
@@ -52,6 +61,7 @@ export function KnowledgeUiRoot() {
 		const raf = requestAnimationFrame(focus);
 		const key = (event: KeyboardEvent) => {
 			if (event.key === "Escape") {
+				if (useKnowledgeStore.getState().review) return;
 				event.preventDefault();
 				close();
 				return;
@@ -82,10 +92,13 @@ export function KnowledgeUiRoot() {
 	}, [close, dialog]);
 	return (
 		<>
+			{review && (
+				<WikiReviewDialog cwd={review.cwd} id={review.id} queued={reviewQueue.length} onLater={deferReview} />
+			)}
 			{dialog &&
 				createPortal(
 					<div
-						className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/25 p-3 sm:p-6"
+						className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/25 p-6"
 						role="dialog"
 						aria-modal="true"
 						aria-label={t("title")}
