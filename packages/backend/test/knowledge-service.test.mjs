@@ -125,14 +125,13 @@ describe("read-first incremental knowledge service", () => {
 		expect(await getKnowledgeService()).toBe(service);
 		await expect(service.search("invented", a, { query: "自切" })).rejects.toThrow("navigation");
 	});
-	it("requires reading Wiki before evidence search; returns human review with the note", async () => {
+	it("opens current Wiki during evidence search and returns human review with the note", async () => {
 		const { service, prep } = await prepared();
-		await expect(service.search(prep.ticket, a, { query: "自切" })).rejects.toThrow("Wiki");
-		const wiki = await service.read(prep.ticket, a, { path: "Wiki/Autotomy.md" });
-		expect(wiki.humanReview.text).toContain("取样条件需要核对");
 		const result = await service.search(prep.ticket, a, { query: "自切" });
 		expect(result.hits.some((hit) => hit.path === "Library/Papers/source.md")).toBe(true);
 		expect(result.coverage).toBe("ready");
+		const wiki = await service.read(prep.ticket, a, { path: "Wiki/Autotomy.md" });
+		expect(wiki.humanReview.text).toContain("取样条件需要核对");
 	});
 	it("does not reread every body or reconcile on repeated hot searches", async () => {
 		const { service, prep } = await prepared({ wiki: false });

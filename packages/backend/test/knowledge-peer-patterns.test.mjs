@@ -44,26 +44,38 @@ afterEach(async () => {
 });
 
 describe("actual current Wiki reads, not checkbox memory", () => {
-	it("an unrelated page cannot unlock linked-Wiki evidence search", async () => {
+	it("evidence search opens the linked Wiki even if only an unrelated page was read", async () => {
 		await service.read(prep.ticket, cwd, { path: "Wiki/Unrelated.md" });
-		await expect(service.search(prep.ticket, cwd, { query: "Source" })).rejects.toThrow("Wiki");
+		expect((await service.search(prep.ticket, cwd, { query: "Source" })).hits.length).toBeGreaterThan(0);
+		const paths = await service.citationCandidates(prep.ticket, cwd);
+		expect(paths).toContain("Wiki/Autotomy.md");
 	});
-	it("an out-of-range empty read cannot unlock evidence search", async () => {
+	it("an out-of-range empty read is not reused; the host opens the current linked Wiki", async () => {
 		await service.read(prep.ticket, cwd, { path: "Wiki/Autotomy.md", startLine: 999 });
-		await expect(service.search(prep.ticket, cwd, { query: "Source" })).rejects.toThrow("Wiki");
+		expect((await service.search(prep.ticket, cwd, { query: "Source" })).hits.length).toBeGreaterThan(0);
+		expect(await service.citationCandidates(prep.ticket, cwd)).toContain("Wiki/Autotomy.md");
 	});
-	it("a changed Wiki requires a new read even when its navigation link did not change", async () => {
+	it("a changed Wiki is re-read by the host before evidence search", async () => {
 		await service.read(prep.ticket, cwd, { path: "Wiki/Autotomy.md" });
 		await note("Wiki/Autotomy.md", "# Autotomy\nNew contradictory evidence requires review.\n");
-		await expect(service.search(prep.ticket, cwd, { query: "Source" })).rejects.toThrow("Wiki");
-		await service.read(prep.ticket, cwd, { path: "Wiki/Autotomy.md" });
-		expect((await service.search(prep.ticket, cwd, { query: "Source" })).hits.length).toBeGreaterThan(0);
+		await vi.waitFor(
+			async () => expect((await service.search(prep.ticket, cwd, { query: "Source" })).complete).toBe(true),
+			{ timeout: 2000 },
+		);
+		const proof = await service.validateAnswer(prep.ticket, cwd, "Updated. [[Wiki/Autotomy]]");
+		expect(proof.status).toBe("ready");
 	});
-	it("discovered Wiki hits must be read before moving to evidence search", async () => {
+	it("discovered Wiki hits are opened before evidence search", async () => {
 		await note("Wiki/Index.md", "# Topics\nNo explicit links yet.\n");
 		prep = await service.prepare({ cwd, project: "project-a", query: "Autotomy" });
 		const found = await service.search(prep.ticket, cwd, { query: "Autotomy", wikiOnly: true });
 		expect(found.hits.some((hit) => hit.path === "Wiki/Autotomy.md")).toBe(true);
+		expect((await service.search(prep.ticket, cwd, { query: "Source" })).hits.length).toBeGreaterThan(0);
+		expect(await service.citationCandidates(prep.ticket, cwd)).toContain("Wiki/Autotomy.md");
+	});
+	it("a missing linked Wiki still cannot unlock evidence search", async () => {
+		await note("Wiki/Index.md", "# Topics\n[[Wiki/DoesNotExist]]\n");
+		prep = await service.prepare({ cwd, project: "project-a", query: "Autotomy" });
 		await expect(service.search(prep.ticket, cwd, { query: "Source" })).rejects.toThrow("Wiki");
 	});
 });

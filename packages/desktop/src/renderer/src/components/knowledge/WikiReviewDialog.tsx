@@ -6,6 +6,7 @@ import { useKnowledgeStore } from "../../stores/knowledge";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { knowledgeLineDiff } from "./line-diff";
+import { WikiModelReview } from "./WikiModelReview";
 
 const overlayClass = "fixed inset-0 z-[70] flex items-center justify-center bg-ink/25 p-6";
 const sheetClass =
@@ -31,12 +32,16 @@ export function WikiReviewDialog({
 	const [pending, setPending] = useState(false);
 	const [tick, setTick] = useState(0);
 	const [view, setView] = useState<"diff" | "both" | "protected">("diff");
+	const [reviewing, setReviewing] = useState(false);
+	const [verdict, setVerdict] = useState<string | null>(null);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reload when the binding invalidates or the user retries
 	useEffect(() => {
 		let live = true;
 		setPreview(null);
 		setError(null);
 		setView("diff");
+		setReviewing(false);
+		setVerdict(null);
 		setPending(true);
 		void getPi()
 			.getKnowledgeOverview({ cwd })
@@ -85,7 +90,6 @@ export function WikiReviewDialog({
 	}, [onLater, pending, preview]);
 	const lines = useMemo(() => knowledgeLineDiff(preview?.before || "", preview?.after || ""), [preview]);
 	const visible = lines.slice(0, 200);
-	const deciding = pending && !!preview;
 	async function decide(decision: "apply" | "reject") {
 		if (!preview || pending) return;
 		setPending(true);
@@ -230,6 +234,37 @@ export function WikiReviewDialog({
 									</Button>
 								</p>
 							)}
+							<WikiModelReview
+								cwd={cwd}
+								preview={preview}
+								adviceOnly
+								defaultExpanded
+								disabled={pending || blocked || reviewing}
+								onBusy={setReviewing}
+								onFailure={() => {}}
+								onComplete={async (value) => {
+									setVerdict(
+										value.applied
+											? t("modelReviewApplied")
+											: value.verdict === "approve"
+												? t("modelReviewPass")
+												: value.verdict === "reject"
+													? t("modelReviewReject")
+													: t("modelReviewHuman"),
+									);
+									if (value.applied) {
+										useKnowledgeStore.getState().invalidate();
+										useKnowledgeStore.getState().apply({
+											kind: "notice",
+											id: String(Date.now()),
+											sessionId: null,
+											severity: "info",
+											text: t("modelReviewApplied"),
+										});
+										onLater();
+									}
+								}}
+							/>
 							<p className="text-[11px] text-ink-dim">{t("notScience")}</p>
 						</>
 					)}
@@ -237,18 +272,23 @@ export function WikiReviewDialog({
 				<div className="shrink-0 border-t border-border px-5 py-3">
 					<div className="flex items-center justify-between gap-3">
 						<p className="min-w-0 truncate text-[10px] text-ink-faint">
-							{queued > 0 ? t("reviewQueued").replace("{count}", String(queued)) : t("reviewLaterHint")}
+							{verdict ||
+								(queued > 0 ? t("reviewQueued").replace("{count}", String(queued)) : t("reviewLaterHint"))}
 						</p>
 						<div className="flex shrink-0 gap-2">
-							<Button disabled={deciding} onClick={onLater}>
+							<Button disabled={pending && !!preview} onClick={onLater}>
 								{t("later")}
 							</Button>
-							<Button tone="danger" disabled={pending || !preview} onClick={() => void decide("reject")}>
+							<Button
+								tone="danger"
+								disabled={pending || reviewing || !preview}
+								onClick={() => void decide("reject")}
+							>
 								{t("reject")}
 							</Button>
 							<Button
 								variant="primary"
-								disabled={pending || !preview || blocked}
+								disabled={pending || reviewing || !preview || blocked}
 								onClick={() => void decide("apply")}
 							>
 								{pending && preview ? t("applying") : t("apply")}

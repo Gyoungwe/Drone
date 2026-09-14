@@ -271,8 +271,22 @@ export function registerAnswerPublication(
 		try {
 			const c = getCurrent(ctx);
 			if (!c) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
+			let publishText = text;
+			let publishContent = content;
+			if (typeof c.service.materializeCitations === "function") {
+				const paths = await c.service.materializeCitations(c.ticket, ctx.cwd, c.query);
+				if (paths.length && !/\[\[[^\]]+\]\]/.test(text)) {
+					const suffix = `\n\n依据：${paths.map((path) => `[[${path.replace(/\.md$/i, "")}]]`).join(" ")}`;
+					publishText = `${text}${suffix}`;
+					publishContent = content.map((block, index) =>
+						block.type === "text" && index === content.length - 1
+							? { ...block, text: `${block.text}${suffix}` }
+							: block,
+					);
+				}
+			}
 			const proof = await Promise.race([
-				c.service.validateAnswer(c.ticket, ctx.cwd, text, { deliveries: [...deliveries.values()] }),
+				c.service.validateAnswer(c.ticket, ctx.cwd, publishText, { deliveries: [...deliveries.values()] }),
 				new Promise((_, reject) => {
 					timer = setTimeout(
 						() => reject(Object.assign(new Error("check timeout"), { code: "check-timeout" })),
@@ -288,9 +302,9 @@ export function registerAnswerPublication(
 								type: "text",
 								text: "【知识库检索无命中】本轮查询未找到匹配条目；下文不是基于本库证据的结论，也不表示全库不存在相关知识。\n\n",
 							},
-							...content,
+							...publishContent,
 						]
-					: content;
+					: publishContent;
 			const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(ctx) : null;
 			const visible = footer
 				? [...published, { type: "text", text: `\n\n${String(footer).slice(0, 2000)}` }]

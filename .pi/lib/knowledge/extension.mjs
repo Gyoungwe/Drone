@@ -441,6 +441,20 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			throw Object.assign(new Error("Call research_prepare_knowledge first"), { code: "not-prepared" });
 		return current;
 	}
+	let preparing = null;
+	async function ensureTurn(ctx, query = "") {
+		const cwd = resolve(ctx.cwd);
+		if (current && current.cwd === cwd) return current;
+		if (preparing) await preparing;
+		if (current && current.cwd === cwd) return current;
+		preparing = prepare(ctx, query).finally(() => {
+			preparing = null;
+		});
+		await preparing;
+		if (!current || current.cwd !== cwd)
+			throw Object.assign(new Error("Call research_prepare_knowledge first"), { code: "not-prepared" });
+		return current;
+	}
 	async function requireTopicTurn(ctx) {
 		if (typeof ctx?.isProjectTrusted === "function" && ctx.isProjectTrusted() !== true)
 			throw new Error("Project trust was revoked; topic memory access is blocked");
@@ -531,7 +545,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			required: ["path"],
 		},
 		execute: async (_id, p, _s, _u, ctx) => {
-			const c = requireTurn(ctx);
+			const c = await ensureTurn(ctx);
 			const blocked = toolBudget.consume("read", p.path);
 			if (blocked) return result(blocked);
 			try {
@@ -566,7 +580,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			required: ["query"],
 		},
 		execute: async (_id, p, _s, _u, ctx) => {
-			const c = requireTurn(ctx);
+			const c = await ensureTurn(ctx, p.query);
 			const blocked = toolBudget.consume("search", p.query);
 			if (blocked) return result(blocked);
 			updateKnowledgeFlow(ctx, { phase: "searching", error: null });
@@ -601,7 +615,10 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			properties: { draft: { type: "string", maxLength: 100000 } },
 			required: ["draft"],
 		},
-		execute: async (_id, p, _s, _u, ctx) => result(await publication.preflight(ctx, p.draft)),
+		execute: async (_id, p, _s, _u, ctx) => {
+			await ensureTurn(ctx);
+			return result(await publication.preflight(ctx, p.draft));
+		},
 	});
 	pi.registerTool({
 		name: "research_task_status",
@@ -629,7 +646,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			required: ["query"],
 		},
 		execute: async (_id, p, _s, _u, ctx) => {
-			const c = requireTurn(ctx);
+			const c = await ensureTurn(ctx, p.query);
 			const found = await c.service.search(c.ticket, ctx.cwd, {
 				query: p.query,
 				explainerOnly: true,

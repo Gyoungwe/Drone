@@ -19,6 +19,8 @@ export function WikiModelReview({
 	onBusy,
 	onComplete,
 	onFailure,
+	adviceOnly = false,
+	defaultExpanded = false,
 }: {
 	cwd: string;
 	preview: WikiReviewPreview;
@@ -26,13 +28,15 @@ export function WikiModelReview({
 	onBusy: (v: boolean) => void;
 	onComplete: (v: WikiModelReviewResult) => Promise<void>;
 	onFailure: () => void;
+	adviceOnly?: boolean;
+	defaultExpanded?: boolean;
 }) {
 	const t = useKnowledgeText(),
 		sessionId = useSessionsStore((s) => s.activeSessionId),
 		sessions = useSessionsStore((s) => s.sessions);
 	const chosen = sessions.find((s) => s.sessionId === sessionId && s.cwd === cwd);
 	const pref = useSettingsStore((s) => s.modelPrefs?.subagentModels?.["knowledge-wiki-reviewer"]);
-	const [expanded, setExpanded] = useState(false),
+	const [expanded, setExpanded] = useState(defaultExpanded || adviceOnly),
 		[ack, setAck] = useState(false),
 		[auto, setAuto] = useState(false),
 		[busy, setBusy] = useState(false),
@@ -44,7 +48,7 @@ export function WikiModelReview({
 		generation.current++;
 		setAck(false);
 		setAuto(false);
-		setExpanded(false);
+		setExpanded(defaultExpanded || adviceOnly);
 		setReport(preview.modelReview || null);
 		setError(null);
 		return () => {
@@ -56,7 +60,7 @@ export function WikiModelReview({
 				active.current = null;
 			}
 		};
-	}, [preview.modelReview]);
+	}, [preview.modelReview, adviceOnly, defaultExpanded]);
 	async function review() {
 		if (!ack || !chosen || !sessionId || busy || disabled) return;
 		const epoch = generation.current;
@@ -71,7 +75,7 @@ export function WikiModelReview({
 				...request,
 				token: preview.reviewToken,
 				acknowledged: true,
-				autoApply: auto,
+				autoApply: adviceOnly ? false : auto,
 			});
 			if (epoch !== generation.current) return;
 			setReport(value);
@@ -92,34 +96,44 @@ export function WikiModelReview({
 	return (
 		<section className="space-y-2 rounded-xl border border-border p-3" data-testid="wiki-model-review">
 			<div className="flex flex-wrap items-center justify-between gap-2">
-				<Button
-					disabled={disabled || busy || preview.status !== "pending"}
-					onClick={() => setExpanded(!expanded)}
-				>
-					{t("modelReviewButton")}
-				</Button>
+				{adviceOnly ? (
+					<p className="text-xs font-medium">{t("modelReviewPreflight")}</p>
+				) : (
+					<Button
+						disabled={disabled || busy || preview.status !== "pending"}
+						onClick={() => setExpanded(!expanded)}
+					>
+						{t("modelReviewButton")}
+					</Button>
+				)}
 				<span className="break-all text-[10px] text-ink-dim">
 					{t("modelReviewModel")}：{pref || t("modelReviewInherit")}
 				</span>
 			</div>
 			{!chosen && <p className="text-[11px] text-warn">{t("modelReviewSession")}</p>}
-			{expanded && (
+			{(adviceOnly || expanded) && (
 				<div className="space-y-2 text-xs">
-					<p className="leading-relaxed text-ink-dim">{t("modelReviewHint")}</p>
+					<p className="leading-relaxed text-ink-dim">
+						{adviceOnly ? t("modelReviewAdviceHint") : t("modelReviewHint")}
+					</p>
 					<label className="flex items-start gap-2">
 						<input type="checkbox" checked={ack} disabled={busy} onChange={(e) => setAck(e.target.checked)} />
 						{t("modelReviewAck")}
 					</label>
-					<label className="flex items-start gap-2">
-						<input
-							type="checkbox"
-							checked={auto}
-							disabled={busy}
-							onChange={(e) => setAuto(e.target.checked)}
-						/>
-						{t("modelReviewAutoApply")}
-					</label>
-					<p className="text-[10px] text-ink-dim">{t("modelReviewWriteHint")}</p>
+					{!adviceOnly && (
+						<label className="flex items-start gap-2">
+							<input
+								type="checkbox"
+								checked={auto}
+								disabled={busy}
+								onChange={(e) => setAuto(e.target.checked)}
+							/>
+							{t("modelReviewAutoApply")}
+						</label>
+					)}
+					<p className="text-[10px] text-ink-dim">
+						{adviceOnly ? t("modelReviewNotHuman") : t("modelReviewWriteHint")}
+					</p>
 					<div className="flex gap-2">
 						<Button disabled={!ack || !chosen || busy || disabled} onClick={() => void review()}>
 							{t("modelReviewStart")}
