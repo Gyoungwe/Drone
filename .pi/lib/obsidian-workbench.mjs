@@ -455,7 +455,7 @@ export async function createObsidianProject({ cwd = process.cwd(), project, titl
 
 async function readJson(file) {
 	try {
-		const data = JSON.parse(await readFile(file, "utf8"));
+		const data = JSON.parse((await readFile(file, "utf8")).replace(/^\uFEFF/, ""));
 		if (!data || typeof data !== "object" || Array.isArray(data))
 			throw new Error(`Invalid JSON object: ${file}`);
 		return data;
@@ -537,6 +537,19 @@ function knowledgeSlug(title) {
 	return ascii || `note-${createHash("sha256").update(normalized).digest("hex").slice(0, 16)}`;
 }
 
+function zoteroItemKey(value) {
+	const key = String(value || "").trim();
+	if (!/^[A-Za-z0-9]{8}$/.test(key)) throw new Error("zotero_key must be an 8-character Zotero item key");
+	return key;
+}
+
+function zoteroCitekey(value) {
+	const key = String(value || "").trim();
+	if (!key || key.length > 80 || hasControlCharacter(key) || /[\s:]/.test(key))
+		throw new Error("zotero_citekey must be a single token without spaces or colons");
+	return key;
+}
+
 export async function depositKnowledge({
 	cwd = process.cwd(),
 	project,
@@ -546,6 +559,8 @@ export async function depositKnowledge({
 	sourceLinks = [],
 	status = "verified",
 	targetScope = "project",
+	zoteroKey = null,
+	zoteroCitekey: citekey = null,
 } = {}) {
 	const config = await loadWorkspaceConfig(cwd);
 	if (!config.obsidianVault) throw new Error("Obsidian vault must be configured first");
@@ -587,6 +602,11 @@ export async function depositKnowledge({
 	if (scope === "project" && !profile.projectTypes.includes(folder))
 		throw new Error(`${folder} is not enabled by knowledge profile ${profile.id}`);
 	const slug = knowledgeSlug(title);
+	const itemKey = zoteroKey ? zoteroItemKey(zoteroKey) : null;
+	const betterCitekey = citekey ? zoteroCitekey(citekey) : null;
+	if ((itemKey || betterCitekey) && kind !== "paper")
+		throw new Error("Zotero identity can only be attached to paper notes");
+	const depositSources = itemKey ? [`zotero:${itemKey}`, ...sourceLinks] : sourceLinks;
 	return updateVault(cwd, async (vault) => {
 		if (!knowledgeDirectory()) await initializeVault(vault, project, config.knowledgeProfile);
 		const relativeNote =
@@ -596,7 +616,7 @@ export async function depositKnowledge({
 					? join("Library", folder, `${slug}.md`)
 					: join("Projects", project, folder, `${slug}.md`);
 		const note = await vaultPath(vault, relativeNote);
-		const normalizedSources = await normalizeSourceLinks(sourceLinks, {
+		const normalizedSources = await normalizeSourceLinks(depositSources, {
 			cwd,
 			vault,
 			resultsRoot: config.resultsRoot,
@@ -606,7 +626,14 @@ export async function depositKnowledge({
 		const body = [String(markdown || "").trim(), links ? `## Sources\n\n${links}` : ""]
 			.filter(Boolean)
 			.join("\n\n");
-		const heading = `---\nid: pi-${randomUUID()}\ntype: ${kind}\nproject: ${JSON.stringify(project)}\nstatus: ${JSON.stringify(status)}\nupdated: ${JSON.stringify(new Date().toISOString())}\n---\n\n# ${String(title).trim()}`;
+		const identity = [
+			itemKey ? `zotero_key: ${JSON.stringify(itemKey)}` : "",
+			betterCitekey ? `zotero_citekey: ${JSON.stringify(betterCitekey)}` : "",
+		]
+			.filter(Boolean)
+			.map((line) => `${line}\n`)
+			.join("");
+		const heading = `---\nid: pi-${randomUUID()}\ntype: ${kind}\nproject: ${JSON.stringify(project)}\nstatus: ${JSON.stringify(status)}\n${identity}updated: ${JSON.stringify(new Date().toISOString())}\n---\n\n# ${String(title).trim()}`;
 		await writeManagedIndex(note, heading, body);
 		const indexes = await refreshIndexes(vault, project, false, config.knowledgeProfile);
 		return {

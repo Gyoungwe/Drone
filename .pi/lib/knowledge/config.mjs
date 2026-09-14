@@ -30,7 +30,7 @@ export async function readKnowledgeBinding({ fresh = false } = {}) {
 	if (!dir) return null;
 	let value;
 	try {
-		value = JSON.parse(await readFile(join(dir, "binding.json"), "utf8"));
+		value = JSON.parse((await readFile(join(dir, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
 	} catch (error) {
 		if (error.code === "ENOENT") return null;
 		throw new Error(`Knowledge binding cannot be read: ${error.message}`);

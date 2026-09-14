@@ -290,7 +290,12 @@ export interface KnowledgeApi {
 		sessionId?: string | null;
 	}): Promise<KnowledgeOverview>;
 	previewKnowledgeSetup(input: { cwd?: string | null; path?: string | null }): Promise<KnowledgeSetupPreview>;
-	startKnowledgeSetup(input: { sessionId: string; path?: string }): Promise<void>;
+	startKnowledgeSetup(input: {
+		sessionId: string;
+		path?: string;
+		/** When true (default for the main setup button), also run Zotero after Vault setup. */
+		includeLiterature?: boolean;
+	}): Promise<void>;
 	getKnowledgeJobs(input?: KnowledgePageRequest): Promise<KnowledgePage<KnowledgeJob>>;
 	getKnowledgeReviews(input: KnowledgePageRequest): Promise<KnowledgePage<WikiReviewItem>>;
 	previewKnowledgeReview(input: { cwd: string; id: string; revision: number }): Promise<WikiReviewPreview>;

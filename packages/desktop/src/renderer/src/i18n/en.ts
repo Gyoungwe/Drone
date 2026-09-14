@@ -21,7 +21,7 @@ export const en: Messages = {
 		supportHint: "Retained as dependencies for other skills, not recommended as standalone workflows.",
 		owner: "One Obsidian entry point",
 		ownerHint:
-			"Use /obsidian-setup to initialize and /obsidian-review to review. /setup and /research-setup remain compatibility aliases, not separate entries.",
+			"Use /obsidian-setup to initialize, /obsidian-review to review, and /zotero-setup for the literature library. /setup and /research-setup remain compatibility aliases, not separate entries.",
 		manage: "Manage knowledge",
 		noMatch: "No matching skills",
 		details: "Description and source",
@@ -492,7 +492,8 @@ export const en: Messages = {
 			notConnected: "Not connected",
 			disabled: "Disabled",
 			empty: "No MCP servers configured",
-			emptyHint: "Add servers through the current project or user MCP configuration.",
+			emptyHint:
+				"Add servers through the current project or user MCP configuration. For Zotero, run /zotero-setup first: it can install the CLI from zero; zotero-cli is preferred; MCP is optional and disabled by default.",
 			serverList: "Servers",
 			configPath: "Config file",
 			noConfig: "No configuration file found",
@@ -645,5 +646,6 @@ export const en: Messages = {
 		modelsLoadFailed: "Failed to load models",
 		modelSwitchFailed: "Failed to switch model",
 		thinkingSwitchFailed: "Failed to switch thinking level",
+		knowledgeSetupFailed: "Setup failed",
 	},
 };

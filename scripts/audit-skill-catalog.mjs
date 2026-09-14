@@ -29,6 +29,7 @@ const loader = new DefaultResourceLoader({
 		join(repo, "packages/desktop/resources/ui-plugins/skills"),
 		join(repo, "packages/desktop/resources/skills"),
 		join(repo, ".pi/skills/research-vault/SKILL.md"),
+		join(repo, ".pi/skills/zotero-literature/SKILL.md"),
 	],
 	additionalExtensionPaths: [join(repo, ".pi/extensions/obsidian-workbench.mjs")],
 });

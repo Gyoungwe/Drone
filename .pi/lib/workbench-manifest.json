@@ -7,9 +7,10 @@
 		"research-loop.mjs",
 		"research-wikiloop.mjs",
 		"research-wikiskill.mjs",
-		"subagent-research.mjs"
+		"subagent-research.mjs",
+		"zotero-literature.mjs"
 	],
-	"skills": ["research-vault", "research-workflow", "research-show-me"],
+	"skills": ["research-vault", "research-workflow", "research-show-me", "zotero-literature"],
 	"requiredTools": [
 		"research_prepare_knowledge",
 		"research_read_knowledge",

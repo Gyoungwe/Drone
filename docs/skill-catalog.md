@@ -24,7 +24,7 @@ The renderer and Enter/Tab keyboard handler now consume the same grouped orderin
 
 First-party commands explicitly declare presentation metadata. Aliases fold only when their primary is registered by the same source object; unrelated `setup` commands, orphan aliases and the SDK's conflict suffixes stay intact. The SDK dispatch table is never rewritten by catalog presentation.
 
-`research-vault` owns setup/read/maintenance/Wiki review. `research-workflow` handles full research runs, not another initializer. Its previously invalid unquoted YAML description contained a colon and failed loading; the header is now valid. It remains project-scoped and checks tool availability rather than promising a global research toolchain.
+`research-vault` owns setup/read/maintenance/Wiki review. `zotero-literature` owns `/zotero-setup` and Zotero CLI access; it does not initialize the Vault. `research-workflow` handles full research runs, not another initializer. Its previously invalid unquoted YAML description contained a colon and failed loading; the header is now valid. It remains project-scoped and checks tool availability rather than promising a global research toolchain.
 
 A local metadata audit after this repair found 70 skills in the tested development project: knowledge 2, research 9, writing 13, presentation 6, engineering 24, collaboration 12, specialized setup 3, references 1. These are a local snapshot, not a shipped mandatory inventory. No source under the user's shared `.agents/skills` directory was modified, and no package was uninstalled.
 

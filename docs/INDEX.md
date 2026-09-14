@@ -69,7 +69,7 @@ packages/
 
 | Area | Files | Responsibility |
 |---|---|---|
-| Hybrid retrieval | `.pi/lib/knowledge/{service,worker,semantic-provider,semantic-settings}.mjs` | FTS + semantic fusion, HTTP embedding adapters, incremental fingerprinted SQLite vectors, fallback metrics; semantic hits never mint evidence |
+| Zotero literature | `.pi/lib/zotero-setup.mjs` + `extensions/zotero-literature.mjs` + `skills/zotero-literature` | Zotero owns PDFs/metadata; Vault `Library/Papers` notes are citable knowledge; CLI preferred, MCP optional/disabled |
 | Topic lifecycle | `.pi/lib/knowledge/{topic-memory,extension}.mjs` | bounded Vault+project topic memory, continuation/resume, stale-source checks, proposal/artifact linkage; memory is navigation only |
 | Specialist orchestration | `.pi/lib/knowledge/{specialists,specialist-host,orchestration-policy}.mjs` + `backend/src/knowledge/specialist-runner.ts` | deterministic dispatch decisions, queue/concurrency/run/tool/token/reported-cost budgets, cancellation-safe isolated workers |
 | Human management | `knowledge/ui-service.mjs` + desktop knowledge IPC/preload + `SemanticManagement.tsx` / `TopicManagement.tsx` | opt-in semantic settings/index batches and project-scoped topic browsing/archive/resume |
@@ -213,6 +213,7 @@ src/
 | show_image 发图 | 工具本体 `backend/src/tools/show-image.ts`；实时 = shared reducer（pendingImages 缓冲，turn_end 固化排 assistant 之后）；历史 = `toSessionMessages` 的 `role:"image"`；渲染 = MessageItem image 分支（缩略图按数量分档） |
 | subagent 独立行 | 工具 `backend/src/tools/subagent/`；提取 shared `src/subagent.ts`（extractSubagentRuns，结构检测不依赖工具名）；互斥通知 `subagent_mutex` → reducer system 消息（dedup by extensionPath）；渲染 `chat/SubagentRunCard.tsx` |
 | 斜杠命令 | 面板 `composer/SlashMenu.tsx` + `slash-filter.ts` + `use-slash-menu.ts`；命令表 backend `slash-commands.ts`（draft 态走 listSlashCommandsForCwd）；**模板/skill/扩展命令 SDK 原生展开无需代码**；`/settings` 定位走 settings store `openWith()` |
+| Zotero 文献库 | 架构 `docs/zotero-literature.md`；实现 `.pi/lib/zotero-setup.mjs` + `extensions/zotero-literature.mjs` + `skills/zotero-literature`；UI 知识库总览「接入 Zotero」；MCP 默认关闭 |
 | 上下文压缩 UI | compaction_start/end → shared reducer 生成 system 消息 + compacting 位（**压缩期间 Composer 禁发**，SDK 拒绝压缩中的 prompt）；渲染 `chat/SystemMessage.tsx`（分割线，done 可展开摘要）；手动 `/compact [focus]`（focus 拼入摘要 prompt）；**压缩后 UI 历史完整保留**（SDK 只裁 LLM 上下文，jsonl 完整，reducer 只追加分界线） |
 | 上下文蒸发 | backend `tools/context-evaporation/`（见 backend 表）；开关 = 设置 GeneralPanel 二态（默认蒸发，写 settings.json 单 key，2s 生效免重开）；调参 `scripts/replay-evaporation.mts`；观测 = log `context-evaporation` 行 + trace_custom |
 | 上下文用量圆环 | `composer/ContextRing.tsx` + `hooks/use-context-usage.ts`（事件驱动刷新，与插件 host API 共用）→ IPC getContextUsage → SDK `session.getContextUsage()`（percent null 或无消息不渲染；<60% 灰 / 60-85% 琥珀 / >85% 红） |

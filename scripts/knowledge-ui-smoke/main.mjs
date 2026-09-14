@@ -66,6 +66,7 @@ async function run() {
 			knowledge,
 			startKnowledgeSetup: async (input) => actions.push({ action: "setup", input }),
 			resumeKnowledgeCheck: async (input) => actions.push({ action: "resume", input }),
+			prompt: async (sessionId, text) => actions.push({ action: "prompt", sessionId, text }),
 		};
 		// Real review host/IPC with a scripted model result. No provider request and no live Wiki approval in this GUI fixture.
 		backend.reviewKnowledgeWithModel = async (input) =>
@@ -152,7 +153,9 @@ async function run() {
 		await wait("document.body.innerText.includes('Research Vault')", "real overview");
 		await pause(900);
 		assert(await js(`document.body.innerText.includes(${JSON.stringify(vault)})`));
+		assert(await js("document.body.innerText.includes('文献库 · Zotero')"));
 		checks.push("actual Vault and indexed counts rendered");
+		checks.push("Zotero literature card is visible on knowledge overview");
 		await capture("01-overview-light");
 		await wait(
 			"document.querySelector('[data-testid=knowledge-specialists-settings] select')",

@@ -35,7 +35,10 @@ function harness({ input = vault, confirmed = true, hasUI = true } = {}) {
 		on: (name, handler) => events.set(name, handler),
 		sendUserMessage: vi.fn(),
 		sendMessage: vi.fn(),
-		getCommands: vi.fn(() => [{ name: "skill:research-vault", source: "skill" }]),
+		getCommands: vi.fn(() => [
+			{ name: "skill:research-vault", source: "skill" },
+			{ name: "skill:zotero-literature", source: "skill" },
+		]),
 	};
 	const ctx = {
 		cwd,
@@ -43,7 +46,7 @@ function harness({ input = vault, confirmed = true, hasUI = true } = {}) {
 		ui: {
 			input: vi.fn(async () => input),
 			select: vi.fn(async () => (confirmed ? "确认应用此方案" : "取消，不做修改")),
-			confirm: vi.fn(),
+			confirm: vi.fn(async () => false),
 			notify: vi.fn(),
 		},
 	};
@@ -58,7 +61,11 @@ const setupParams = () => ({
 	subagent_mcp: "read-local",
 });
 const execute = (tool, params, ctx, signal) => tool.execute("setup-test", params, signal, undefined, ctx);
-const flushSetupHandoff = () => new Promise((resolve) => setTimeout(resolve, 0));
+const flushSetupHandoff = async () => {
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	await Promise.resolve();
+	await new Promise((resolve) => setTimeout(resolve, 0));
+};
 async function expectNoSetupWrites() {
 	await expect(access(vault)).rejects.toMatchObject({ code: "ENOENT" });
 	await expect(access(join(cwd, ".pi/research-workspace.json"))).rejects.toMatchObject({ code: "ENOENT" });
@@ -101,8 +108,9 @@ describe("read-only project-aware setup discovery", () => {
 		expect(result.truncated).toBe(true);
 	});
 	it("expands home paths and rejects ambiguous relative paths", () => {
-		expect(resolveSetupVault("~/My Vault", cwd)).toBe(join(homedir(), "My Vault"));
-		expect(() => resolveSetupVault("My Vault", cwd)).toThrow("absolute");
+		 expect(resolveSetupVault("~/My Vault", cwd)).toBe(join(homedir(), "My Vault"));
+		 expect(resolveSetupVault("在我的文档下面创建一个叫test的目录", cwd)).toBe(join(homedir(), "Documents", "test"));
+		 expect(() => resolveSetupVault("My Vault", cwd)).toThrow("absolute");
 	});
 });
 
@@ -115,31 +123,52 @@ describe("slash command to current-model handoff", () => {
 			expect(command.description).toContain("research-vault");
 		}
 	});
-	it("sends current project and user preferences to the model without initialization", async () => {
+	it("starts a model turn immediately without a preflight path dialog", async () => {
 		await writeFile(join(cwd, "README.md"), "not automatically read");
 		const h = harness();
 		await h.commands.get("setup").handler("保留现有文献分类", h.ctx);
-		expect(h.ctx.ui.input).toHaveBeenCalledOnce();
+		expect(h.ctx.ui.input).not.toHaveBeenCalled();
 		expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
 		await flushSetupHandoff();
 		expect(h.pi.sendUserMessage).toHaveBeenCalledOnce();
 		const [message, options] = h.pi.sendUserMessage.mock.calls[0];
 		expect(message).toContain("actual-project");
-		expect(message).toContain("User Knowledge Vault");
 		expect(message).toContain("保留现有文献分类");
 		expect(message).toMatch(/^\/skill:research-vault setup/);
 		expect(message).toContain("/obsidian-setup");
+		expect(message).toContain("ask_user");
 		expect(message).not.toContain("not automatically read");
 		expect(options).toEqual({ deliverAs: "followUp", expandPromptTemplates: true });
 		expect(h.ctx.ui.confirm).not.toHaveBeenCalled();
 		await expectNoSetupWrites();
 	});
-	it("does not start a model turn after path input is cancelled", async () => {
-		const h = harness({ input: undefined });
-		h.ctx.ui.input.mockResolvedValue(undefined);
-		await h.commands.get("setup").handler("", h.ctx);
+	it("reuses a desktop-supplied Vault path and still hands off to the model", async () => {
+		const h = harness();
+		await h.commands.get("setup").handler(JSON.stringify({ vaultPath: vault }), h.ctx);
+		expect(h.ctx.ui.input).not.toHaveBeenCalled();
 		await flushSetupHandoff();
+		expect(h.pi.sendUserMessage).toHaveBeenCalledOnce();
+		const [message] = h.pi.sendUserMessage.mock.calls[0];
+		expect(message).toContain("User Knowledge Vault");
+		expect(message).toContain("Vault 路径已由用户提供");
+		await expectNoSetupWrites();
+	});
+	it("combined init runs Vault then Zotero model handoffs after the slash returns", async () => {
+		const h = harness();
+		h.ctx.ui.confirm.mockResolvedValue(true);
+		await h.commands.get("obsidian-setup").handler(
+			JSON.stringify({ vaultPath: vault, includeLiterature: true }),
+			h.ctx,
+		);
+		expect(h.ctx.ui.input).not.toHaveBeenCalled();
 		expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
+		await vi.waitFor(() => expect(h.pi.sendUserMessage).toHaveBeenCalled(), { timeout: 8000 });
+		expect(h.pi.sendUserMessage.mock.calls[0][0]).toMatch(/^\/skill:research-vault setup/);
+		expect(h.pi.sendUserMessage.mock.calls[0][0]).toContain("User Knowledge Vault");
+		await vi.waitFor(() => expect(h.pi.sendUserMessage).toHaveBeenCalledTimes(2), { timeout: 8000 });
+		const [zoteroMessage] = h.pi.sendUserMessage.mock.calls[1];
+		expect(zoteroMessage).toMatch(/^\/skill:zotero-literature setup/);
+		expect(zoteroMessage).toContain("/zotero-setup");
 		await expectNoSetupWrites();
 	});
 	it("discovery tool returns current project context and all three templates without writes", async () => {
@@ -286,13 +315,14 @@ describe("runtime location is independent of the user project", () => {
 });
 
 describe("Obsidian MCP skill binding", () => {
-	it("fails before asking for a path when the bound skill is missing", async () => {
+	it("hands off even when the bound skill is not yet in the command catalog", async () => {
 		const h = harness();
 		h.pi.getCommands.mockReturnValue([]);
-		await expect(h.commands.get("setup").handler("", h.ctx)).rejects.toThrow("research-vault");
+		await h.commands.get("setup").handler("", h.ctx);
 		expect(h.ctx.ui.input).not.toHaveBeenCalled();
 		await flushSetupHandoff();
-		expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
+		expect(h.pi.sendUserMessage).toHaveBeenCalledOnce();
+		expect(h.pi.sendUserMessage.mock.calls[0][0]).toMatch(/^\/skill:research-vault setup/);
 		await expectNoSetupWrites();
 	});
 	it.each(["obsidian-setup", "setup", "research-setup"])(
@@ -300,6 +330,7 @@ describe("Obsidian MCP skill binding", () => {
 		async (name) => {
 			const h = harness();
 			await h.commands.get(name).handler("保留已有结构", h.ctx);
+			expect(h.ctx.ui.input).not.toHaveBeenCalled();
 			expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
 			await flushSetupHandoff();
 			const [message, options] = h.pi.sendUserMessage.mock.calls[0];

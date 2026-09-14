@@ -83,6 +83,7 @@ it("sources become actual file, DOI and Vault hyperlinks without linking an unsa
 			"results/topic/run-fixture/source with spaces.txt",
 			"10.1093/example",
 			"Library/Papers/source",
+			"zotero:ABCD1234",
 			"/etc/passwd",
 			"fixture:unresolved",
 		],
@@ -92,8 +93,9 @@ it("sources become actual file, DOI and Vault hyperlinks without linking an unsa
 	expect(result.links[0]).toContain("source%20with%20spaces.txt");
 	expect(result.links[1]).toContain("https://doi.org/10.1093/example");
 	expect(result.links[2]).toBe("[[Library/Papers/source]]");
+	expect(result.links[3]).toBe("[Zotero ABCD1234](zotero://select/library/items/ABCD1234)");
 	expect(result.unresolved).toEqual(["/etc/passwd", "fixture:unresolved"]);
-	expect(result.links[3]).not.toContain("file:");
+	expect(result.links[4]).not.toContain("file:");
 });
 it("new non-Wiki deposits contain clickable existing local sources", async () => {
 	await writeFile(join(runDir, "manual.txt"), "fixture command reference");

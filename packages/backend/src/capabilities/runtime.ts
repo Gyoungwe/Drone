@@ -15,7 +15,7 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 		/(?:knowledge|wiki|obsidian|vault|evidence|知识库|知识图谱|维基|证据|来源|主题记忆|恢复主题|resume topic|topic memory)/i,
 	],
 	research: [
-		/(?:research|paper|literature|citation|experiment|scientific|methodology|transcriptom|genom|phylogen|species|biology|bioinformatics|论文|文献|科研|研究|实验|转录组|基因组|系统发育|物种|生物信息)/i,
+		/(?:research|paper|literature|citation|zotero|experiment|scientific|methodology|transcriptom|genom|phylogen|species|biology|bioinformatics|论文|文献|科研|研究|实验|转录组|基因组|系统发育|物种|生物信息)/i,
 	],
 	coding: [
 		/(?:\bcode\b|coding|repo(?:sitory)?|git|commit|push|pull request|build|compile|typecheck|test(?:ing)?|debug|bug|implement|refactor|代码|仓库|提交|构建|编译|测试|调试|修复|实现|重构)/i,
@@ -36,6 +36,7 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 
 const KNOWLEDGE_TOOL =
 	/^research_(?:prepare_knowledge|read_knowledge|search_knowledge|search_explainers|knowledge_status|maintain_knowledge|delegate_knowledge|propose_wiki_update|wiki_|check_answer|task_status|deposit_knowledge|topics|resume_topic|update_topic|archive_topic)/;
+const ZOTERO_TOOL = /^research_(?:zotero_status|setup_zotero)$/;
 const VISUAL_TOOL = /(?:show_image|explainer|show_me|figure|plot|chart|image)/i;
 
 export function detectCapabilities(text: string): CapabilityId[] {
@@ -63,6 +64,7 @@ export function toolCapabilities(name: string): CapabilityId[] {
 	if (name.startsWith("research_")) {
 		const result: CapabilityId[] = ["research"];
 		if (KNOWLEDGE_TOOL.test(name)) result.push("knowledge");
+		if (ZOTERO_TOOL.test(name)) result.push("external");
 		if (VISUAL_TOOL.test(name)) result.push("visualization");
 		return result;
 	}
