@@ -2,7 +2,7 @@ import type { KnowledgeTopic, KnowledgeTopicListResult } from "@percho/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";
-import { useTranscriptStore } from "../../stores/transcript";
+import { useAgentActive } from "../session/session-status";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 
@@ -22,9 +22,7 @@ export function TopicManagement({
 	const [busy, setBusy] = useState(false);
 	const epoch = useRef(0);
 	const session = useSessionsStore((s) => s.sessions.find((item) => item.sessionId === sessionId));
-	const streaming = useTranscriptStore((s) =>
-		sessionId ? s.bySession[sessionId]?.agentActive === true : false,
-	);
+	const streaming = useAgentActive(sessionId);
 	const load = useCallback(
 		async (filter = "") => {
 			if (!cwd) return;

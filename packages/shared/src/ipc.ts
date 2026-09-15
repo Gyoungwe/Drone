@@ -225,7 +225,15 @@ export const IpcChannels = {
 	TrustRequest: "pi:trust-request",
 } as const;
 
-/** Prompt preflight receipt: tells the renderer whether this input owns an agent run. */
+/**
+ * Prompt preflight receipt: tells the renderer whether this input owns an agent run.
+ *
+ * NOT a running-state authority. SDK events (agent_start/agent_end/agent_settled)
+ * own agentActive; this ack can resolve *after* agent_settled on a fast completion,
+ * so driving running-state from it would revive an already-finished run (the exact
+ * v0.7.2 regression). Consumers must keep using `sending` for preflight and SDK
+ * events for the live run — do not set agentActive from this value.
+ */
 export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
