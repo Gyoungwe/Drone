@@ -691,7 +691,12 @@ function semanticCandidates(args) {
 	return result;
 }
 async function dispatch(op, args) {
-	if (op === "status") return { ...status(), semanticScoped: semanticStatus(args.fingerprint, args.project) };
+	if (op === "status") {
+		// Publication rechecks at most one dirty batch. Duplicate watcher notifications
+		// should not reject unchanged evidence; actual changes still advance revision.
+		if (args.flushPending) await flushDirty();
+		return { ...status(), semanticScoped: semanticStatus(args.fingerprint, args.project) };
+	}
 	if (op === "read") return read(args.path, args.project, args);
 	if (op === "search") return search(args);
 	if (op === "hydrateCandidates") return hydrateCandidates(args);

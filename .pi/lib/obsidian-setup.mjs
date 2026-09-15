@@ -27,7 +27,9 @@ export function resolveSetupVault(value, cwd) {
 		/(?:create|make)\s+(?:a\s+)?(?:folder|directory)\s+(?:named|called)\s+["']?([^"']+?)["']?\s*$/i,
 	);
 	if (english?.[1]?.trim()) return resolve(join(homedir(), "Documents", english[1].trim()));
-	throw new Error("Please provide an absolute Vault path (or ~/...), or say to create a folder under Documents");
+	throw new Error(
+		"Please provide an absolute Vault path (or ~/...), or say to create a folder under Documents",
+	);
 }
 
 // Only names/types are collected. No file contents, symlink traversal, writes,

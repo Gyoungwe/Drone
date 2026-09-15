@@ -108,9 +108,11 @@ describe("read-only project-aware setup discovery", () => {
 		expect(result.truncated).toBe(true);
 	});
 	it("expands home paths and rejects ambiguous relative paths", () => {
-		 expect(resolveSetupVault("~/My Vault", cwd)).toBe(join(homedir(), "My Vault"));
-		 expect(resolveSetupVault("在我的文档下面创建一个叫test的目录", cwd)).toBe(join(homedir(), "Documents", "test"));
-		 expect(() => resolveSetupVault("My Vault", cwd)).toThrow("absolute");
+		expect(resolveSetupVault("~/My Vault", cwd)).toBe(join(homedir(), "My Vault"));
+		expect(resolveSetupVault("在我的文档下面创建一个叫test的目录", cwd)).toBe(
+			join(homedir(), "Documents", "test"),
+		);
+		expect(() => resolveSetupVault("My Vault", cwd)).toThrow("absolute");
 	});
 });
 
@@ -156,10 +158,9 @@ describe("slash command to current-model handoff", () => {
 	it("combined init runs Vault then Zotero model handoffs after the slash returns", async () => {
 		const h = harness();
 		h.ctx.ui.confirm.mockResolvedValue(true);
-		await h.commands.get("obsidian-setup").handler(
-			JSON.stringify({ vaultPath: vault, includeLiterature: true }),
-			h.ctx,
-		);
+		await h.commands
+			.get("obsidian-setup")
+			.handler(JSON.stringify({ vaultPath: vault, includeLiterature: true }), h.ctx);
 		expect(h.ctx.ui.input).not.toHaveBeenCalled();
 		expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
 		await vi.waitFor(() => expect(h.pi.sendUserMessage).toHaveBeenCalled(), { timeout: 8000 });

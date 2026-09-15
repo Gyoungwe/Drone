@@ -135,10 +135,7 @@ describe("generated links are delivery receipts, not scientific citations", () =
 		);
 		gate.begin();
 		await ready();
-		const final = await events.get("message_end")(
-			{ message: msg("证据只在限定条件下成立。") },
-			{ cwd },
-		);
+		const final = await events.get("message_end")({ message: msg("证据只在限定条件下成立。") }, { cwd });
 		expect(final.message.knowledgePublication.status).toBe("released");
 		expect(JSON.stringify(final.message.content)).toContain("证据只在限定条件下成立");
 		expect(JSON.stringify(final.message.content)).toContain("Library/Software/source");

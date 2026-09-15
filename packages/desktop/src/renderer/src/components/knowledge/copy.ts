@@ -419,7 +419,8 @@ const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
 	literatureSteps: "Preparation: install Zotero desktop → enable local communication → connect the CLI",
 	literatureStatus: "The confirmation, result, and any error will appear in the current session.",
 	literatureDownload: "Download Zotero",
-	literatureCheck: "After setup: CLI available, MCP registered (disabled by default), and local API reachable.",
+	literatureCheck:
+		"After setup: CLI available, MCP registered (disabled by default), and local API reachable.",
 	empty: "No items",
 	previous: "Previous",
 	next: "Next",

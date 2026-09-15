@@ -20,6 +20,7 @@ type JsonObject = Record<string, unknown>;
 
 /** 联网刷新模型目录的整体超时（SDK fetchWithRetry 默认无超时，网络不可达时会一直挂） */
 const NETWORK_REFRESH_TIMEOUT_MS = 15_000;
+const PROVIDER_TEST_TIMEOUT_MS = 15_000;
 
 /** models.json 支持 JSONC 注释；写入时统一输出纯 JSON */
 function stripJsonComments(raw: string): string {
@@ -365,13 +366,38 @@ export class SettingsService {
 		if (!model) {
 			return { ok: false, error: "该 provider 下没有可用模型" };
 		}
+		const controller = new AbortController();
+		let timeout: ReturnType<typeof setTimeout> | undefined;
+		const deadline = new Promise<never>((_resolve, reject) => {
+			timeout = setTimeout(() => {
+				controller.abort();
+				reject(new Error("连接测试超时（15 秒）"));
+			}, PROVIDER_TEST_TIMEOUT_MS);
+		});
 		try {
-			await runtime.completeSimple(model, {
-				messages: [{ role: "user", content: "ping", timestamp: Date.now() }],
-			});
+			const response = await Promise.race([
+				runtime.completeSimple(
+					model,
+					{ messages: [{ role: "user", content: "ping", timestamp: Date.now() }] },
+					{ signal: controller.signal, timeoutMs: PROVIDER_TEST_TIMEOUT_MS, maxRetries: 0 },
+				),
+				deadline,
+			]);
+			if (controller.signal.aborted) return { ok: false, modelId: model.id, error: "连接测试超时（15 秒）" };
+			if (response.stopReason === "aborted") return { ok: false, modelId: model.id, error: "模型请求已中断" };
+			if (response.stopReason === "error") {
+				return { ok: false, modelId: model.id, error: response.errorMessage || "模型请求失败" };
+			}
 			return { ok: true, modelId: model.id };
 		} catch (error) {
-			return { ok: false, modelId: model.id, error: error instanceof Error ? error.message : String(error) };
+			const message = controller.signal.aborted
+				? "连接测试超时（15 秒）"
+				: error instanceof Error
+					? error.message
+					: String(error);
+			return { ok: false, modelId: model.id, error: message };
+		} finally {
+			clearTimeout(timeout);
 		}
 	}
 }

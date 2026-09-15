@@ -32,6 +32,7 @@ import type {
 	PermissionMode,
 	PermissionRequest,
 	PermissionResolved,
+	PromptReceipt,
 	SessionEvent,
 	SessionMessage,
 	SessionMeta,
@@ -727,13 +728,23 @@ export class PiBackend {
 		);
 	}
 
-	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<void> {
+	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt> {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
 		log.info("prompt", sessionId, { text: text.slice(0, 120), images: images?.length ?? 0 });
 		// Extension commands execute before the SDK emits `input`, so lazy capability loading
 		// must happen here as well; otherwise /obsidian-setup cannot see research-vault.
 		this.capabilityRuntimes.get(sessionId)?.prepareForPrompt(text, entry.session.isStreaming);
+		// Own prompt lifecycle classification at this seam. The renderer cannot know which
+		// slash commands are extension commands, and extension commands emit no agent events.
+		const spaceIndex = text.indexOf(" ");
+		const commandName = text.startsWith("/") ? text.slice(1, spaceIndex === -1 ? undefined : spaceIndex) : "";
+		const isExtensionCommand = !!commandName && !!entry.session.extensionRunner.getCommand(commandName);
+		const receipt: PromptReceipt = isExtensionCommand
+			? { kind: "command" }
+			: entry.session.isStreaming
+				? { kind: "queued" }
+				: { kind: "agent" };
 		// session.prompt() 非流式路径会 await 整个 run（直到 agent_settled）；渲染端只需要
 		// “已受理/已入队”回执——用 preflightResult 提前返回，否则 IPC 挂一整轮，渲染端
 		// sending 状态被占住，运行中的 followUp 排队发送被防重发守卫静默拦截。
@@ -760,6 +771,7 @@ export class PiBackend {
 					(err) => reject(err),
 				);
 		});
+		return receipt;
 	}
 
 	async abort(sessionId: string): Promise<void> {

@@ -17,6 +17,7 @@ import {
 } from "@percho/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
+import { subscribeKnowledgeUi } from "../../../.pi/lib/knowledge/ui-state.mjs";
 import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 import { PiBackend } from "../src/pi-backend";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/knowledge-publication";
@@ -69,6 +70,9 @@ beforeEach(async () => {
 	const meta = await backend.createSession({ cwd, provider: faux.provider.id, modelId: faux.getModel().id });
 	sid = meta.sessionId;
 	session = backend.registry.get(sid).session;
+	// Session startup can enqueue navigation/index maintenance after the fixture's first scan.
+	// Settle that host-side work before asserting publication semantics.
+	await (await getKnowledgeService()).request("reconcile");
 	const exportJson = session.exportToJsonl.bind(session),
 		exportHtml = session.exportToHtml.bind(session);
 	vi.spyOn(session, "exportToJsonl").mockImplementation(() => exportJson(join(root, "export.jsonl")));
@@ -93,28 +97,46 @@ async function run(responses, prompt = "Explain Autotomy with current knowledge.
 	faux.setResponses(responses);
 	await session.prompt(prompt, { expandPromptTemplates: false });
 }
+function exportedHtmlSessionData(html) {
+	const match = html.match(/<script id="session-data" type="application\/json">([^<]+)<\/script>/);
+	if (!match?.[1]) throw new Error("HTML export is missing embedded session data");
+	return JSON.parse(Buffer.from(match[1], "base64").toString("utf8"));
+}
 describe("same checked result across stream, history, LAN polling and exports", () => {
-	it("blocks direct answer text before any public event, state or history persistence", async () => {
-		await run([reply("UNCHECKED_SECRET_ANSWER")]);
+	it("host-materializes a current-turn search and citation before the first public answer is sealed", async () => {
+		await run([reply("HOST_MATERIALIZED_ANSWER")]);
 		expect(faux.state.callCount).toBe(1);
-		expect(JSON.stringify(events)).not.toContain("UNCHECKED_SECRET_ANSWER");
-		expect(JSON.stringify(session.messages)).not.toContain("UNCHECKED_SECRET_ANSWER");
+		const starts = events.filter(
+			(event) => event.type === "message_start" && event.message?.role === "assistant",
+		);
+		expect(starts.every((event) => event.message.content.length === 0)).toBe(true);
+		const final = events
+			.filter((event) => event.type === "message_end" && event.message?.role === "assistant")
+			.at(-1)?.message;
+		expect(final.content[0].text).toContain("HOST_MATERIALIZED_ANSWER");
+		expect(final.content[0].text).toContain("[[");
+		expect(final.knowledgePublication).toMatchObject({
+			status: "released",
+			searchQuery: "Explain Autotomy with current knowledge.",
+			scientificallyVerified: false,
+		});
+		expect(final.knowledgePublication.sources.length).toBeGreaterThan(0);
 		const history = await backend.getSessionMessages(sid);
 		const stats = await backend.getStats(sid);
 		expect(stats.scope).toBe("sdk-session");
 		expect(stats.totalTokens).toBe(
 			stats.inputTokens + stats.outputTokens + stats.cacheReadTokens + stats.cacheWriteTokens,
 		);
-		expect(JSON.stringify(history)).toContain("知识库检查未通过");
+		expect(JSON.stringify(history)).toContain("HOST_MATERIALIZED_ANSWER");
 		expect(JSON.stringify(events.reduce(reduceEvent, emptyTranscript()).messages)).toContain(
-			"知识库检查未通过",
+			"HOST_MATERIALIZED_ANSWER",
 		);
-		expect(JSON.stringify(await backend.peekSessionMessages(sid))).not.toContain("UNCHECKED_SECRET_ANSWER");
+		expect(JSON.stringify(await backend.peekSessionMessages(sid))).toContain("HOST_MATERIALIZED_ANSWER");
 		const jsonl = await readFile(await backend.exportSession(sid, "jsonl"), "utf8"),
 			html = await readFile(await backend.exportSession(sid, "html"), "utf8");
-		expect(jsonl).not.toContain("UNCHECKED_SECRET_ANSWER");
-		expect(html).not.toContain("UNCHECKED_SECRET_ANSWER");
-		expect(JSON.stringify(readSessionMessagesFromContent(jsonl))).toContain("知识库检查未通过");
+		expect(jsonl).toContain("HOST_MATERIALIZED_ANSWER");
+		expect(JSON.stringify(exportedHtmlSessionData(html))).toContain("HOST_MATERIALIZED_ANSWER");
+		expect(JSON.stringify(readSessionMessagesFromContent(jsonl))).toContain("HOST_MATERIALIZED_ANSWER");
 	});
 	it("allows exact final text after read-search-read and citations; never streams the earlier preface", async () => {
 		await run(steps());
@@ -138,12 +160,20 @@ describe("same checked result across stream, history, LAN polling and exports", 
 			"Released conditional observation",
 		);
 	});
-	it("does not reuse prior turn search receipts for a new question", async () => {
+	it("does not reuse prior turn receipts when host-materializing a new question", async () => {
 		await run(steps());
+		const first = session.messages.filter((message) => message.role === "assistant").at(-1);
 		events.length = 0;
-		await run([reply("SECOND_QUESTION_BYPASS")], "Now answer a different research question.");
-		expect(JSON.stringify(events)).not.toContain("SECOND_QUESTION_BYPASS");
-		expect(JSON.stringify(session.messages)).not.toContain("SECOND_QUESTION_BYPASS");
+		await run([reply("SECOND_QUESTION_CURRENT_PROOF")], "Now answer a different research question.");
+		const second = session.messages.filter((message) => message.role === "assistant").at(-1);
+		expect(second.content[0].text).toContain("SECOND_QUESTION_CURRENT_PROOF");
+		expect(second.content[0].text).toContain("[[");
+		expect(second.knowledgePublication).toMatchObject({
+			status: "released",
+			searchQuery: "Now answer a different research question.",
+		});
+		expect(second.knowledgePublication.queryHash).not.toBe(first.knowledgePublication.queryHash);
+		expect(second.knowledgePublication.turnId).not.toBe(first.knowledgePublication.turnId);
 	});
 	it("labels a complete zero-hit result instead of claiming knowledge validation", async () => {
 		await run([
@@ -260,24 +290,42 @@ describe("live-run edges and provider protocol compatibility", () => {
 		expect(exported).not.toContain("PRIVATE_PROTOCOL_CONTENT");
 		expect(exported).toContain("Protocol-safe answer");
 	});
-	it("queued follow-up questions inside one run cannot inherit previous answer permissions", async () => {
+	it("queued follow-up questions receive fresh host proof instead of inheriting prior permissions", async () => {
+		const queuedQuestion = "A new question after the completed evidence check.";
 		const scripted = steps();
 		scripted[3] = async () => {
-			await session.followUp("A new question after the completed evidence check.");
+			await session.followUp(queuedQuestion);
 			return reply("First response. [[Library/Papers/source]]");
 		};
-		scripted.push(reply("QUEUED_QUESTION_BYPASS"));
+		scripted.push(reply("QUEUED_QUESTION_CURRENT_PROOF"));
 		await run(scripted);
 		expect(faux.state.callCount).toBe(5);
-		expect(JSON.stringify(events)).not.toContain("QUEUED_QUESTION_BYPASS");
-		expect(JSON.stringify(session.messages)).not.toContain("QUEUED_QUESTION_BYPASS");
+		const finals = session.messages.filter(
+			(message) => message.role === "assistant" && message.knowledgePublication?.status === "released",
+		);
+		const first = finals.find((message) =>
+			message.content.some((block) => block.text?.includes("First response")),
+		);
+		const queued = finals.find((message) =>
+			message.content.some((block) => block.text?.includes("QUEUED_QUESTION_CURRENT_PROOF")),
+		);
+		expect(queued.content[0].text).toContain("[[");
+		expect(queued.knowledgePublication.searchQuery).toBe(queuedQuestion);
+		expect(queued.knowledgePublication.queryHash).not.toBe(first.knowledgePublication.queryHash);
+		expect(queued.knowledgePublication.turnId).not.toBe(first.knowledgePublication.turnId);
 	});
-	it("backend prompt acknowledgement and later event delivery apply the same gate", async () => {
-		faux.setResponses([reply("IPC_PATH_BYPASS")]);
-		await backend.prompt(sid, "A normal desktop or LAN question.");
+	it("backend prompt acknowledgement and event delivery expose the same sealed current-turn proof", async () => {
+		const prompt = "A normal desktop or LAN question.";
+		faux.setResponses([reply("IPC_PATH_CURRENT_PROOF")]);
+		await expect(backend.prompt(sid, prompt)).resolves.toEqual({ kind: "agent" });
 		await vi.waitFor(() => expect(events.some((e) => e.type === "agent_settled")).toBe(true));
-		expect(JSON.stringify(events)).not.toContain("IPC_PATH_BYPASS");
-		expect(JSON.stringify(await backend.peekSessionMessages(sid))).toContain("知识库检查未通过");
+		const final = events
+			.filter((event) => event.type === "message_end" && event.message?.role === "assistant")
+			.at(-1)?.message;
+		expect(final.content[0].text).toContain("IPC_PATH_CURRENT_PROOF");
+		expect(final.content[0].text).toContain("[[");
+		expect(final.knowledgePublication).toMatchObject({ status: "released", searchQuery: prompt });
+		expect(JSON.stringify(await backend.peekSessionMessages(sid))).toContain("IPC_PATH_CURRENT_PROOF");
 	});
 	it("provider request errors surface as LLM errors, not knowledge publication notices", async () => {
 		await run([
@@ -375,4 +423,24 @@ it("real SDK displays public stage → tools → next stage → tools → summar
 		await readFile(await backend.exportSession(sid, "jsonl"), "utf8"),
 	);
 	expect(labels({ ...emptyTranscript(), messages: messagesToUIMessages(exported) })).toEqual(expected);
+});
+
+it("real SDK repeated review commands open UI without model calls or fabricated run events", async () => {
+	const notifications = [];
+	const unsubscribe = subscribeKnowledgeUi((event) => notifications.push(event));
+	const before = session.messages.length;
+	try {
+		for (let i = 0; i < 3; i++) {
+			await expect(backend.prompt(sid, "/obsidian-review")).resolves.toEqual({ kind: "command" });
+			expect(session.isStreaming).toBe(false);
+		}
+		expect(faux.state.callCount).toBe(0);
+		expect(events.some((event) => event.type === "agent_start")).toBe(false);
+		expect(session.messages.length).toBe(before);
+		expect(
+			notifications.filter((event) => event.kind === "open-review" && event.sessionId === sid),
+		).toHaveLength(3);
+	} finally {
+		unsubscribe();
+	}
 });

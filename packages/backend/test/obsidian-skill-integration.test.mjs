@@ -96,11 +96,9 @@ it("Obsidian command expands its skill, bridges questions and gates fixture Vaul
 		expect(commands.filter((command) => command.name === "obsidian-setup")).toHaveLength(1);
 		expect(commands.filter((command) => command.name === "skill:research-vault")).toHaveLength(1);
 		const modelPrompt = vi.spyOn(session.agent, "prompt").mockResolvedValue(undefined);
-		const kickoff = session.prompt("/obsidian-setup 保留已有文献分类");
-		await vi.waitFor(() => expect(requests).toHaveLength(1));
-		expect(requests[0].questions[0].type).toBe("text");
-		askGate.respond(requests[0].id, { kind: "answer", answers: { value: { customText: vault } } });
-		await kickoff;
+		await session.prompt("/obsidian-setup 保留已有文献分类");
+		// Setup now hands off to the model immediately; the skill asks for the Vault in-chat.
+		expect(requests).toHaveLength(0);
 		await vi.waitFor(() => expect(modelPrompt).toHaveBeenCalledOnce());
 		const expanded = JSON.stringify(modelPrompt.mock.calls[0][0]);
 		expect(expanded).toContain('<skill name=\\"research-vault\\"');
@@ -128,9 +126,9 @@ it("Obsidian command expands its skill, bridges questions and gates fixture Vaul
 			title: "Obsidian MCP · 项目知识结构",
 			questions,
 		});
-		await vi.waitFor(() => expect(requests).toHaveLength(2));
-		expect(requests[1].questions).toHaveLength(3);
-		askGate.respond(requests[1].id, {
+		await vi.waitFor(() => expect(requests).toHaveLength(1));
+		expect(requests[0].questions).toHaveLength(3);
+		askGate.respond(requests[0].id, {
 			kind: "answer",
 			answers: Object.fromEntries(Object.entries(choices).map(([id, value]) => [id, { values: [value] }])),
 		});
@@ -140,10 +138,10 @@ it("Obsidian command expands its skill, bridges questions and gates fixture Vaul
 			project: "fixture-research",
 			...choices,
 		});
-		await vi.waitFor(() => expect(requests).toHaveLength(3));
-		expect(requests[2].questions[0].prompt).toContain(cwd);
+		await vi.waitFor(() => expect(requests).toHaveLength(2));
+		expect(requests[1].questions[0].prompt).toContain(cwd);
 		await expect(access(workspaceFile)).rejects.toMatchObject({ code: "ENOENT" });
-		askGate.respond(requests[2].id, { kind: "answer", answers: { value: { values: ["确认应用此方案"] } } });
+		askGate.respond(requests[1].id, { kind: "answer", answers: { value: { values: ["确认应用此方案"] } } });
 		const result = await applying;
 		expect(result.details.state).toBe("ready");
 		expect(result.details.connectionVerified).toBe(false);

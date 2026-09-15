@@ -48,7 +48,8 @@ describe("native answer readiness, not model self-certification", () => {
 	it("host search from the turn query records evidence before citation checks", async () => {
 		await expect(service.validateAnswer(prep.ticket, cwd, "no citations")).rejects.toThrow("search");
 		await vi.waitFor(
-			async () => expect((await service.ensureAnswerSearch(prep.ticket, cwd, "Autotomy")).complete).toBe(true),
+			async () =>
+				expect((await service.ensureAnswerSearch(prep.ticket, cwd, "Autotomy")).complete).toBe(true),
 			{ timeout: 2000 },
 		);
 		await expect(service.validateAnswer(prep.ticket, cwd, "no citations")).rejects.toThrow("citation");
@@ -68,8 +69,7 @@ describe("native answer readiness, not model self-certification", () => {
 		await service.search(prep.ticket, cwd, { query: "Autotomy", wikiOnly: true });
 		await expect(service.validateAnswer(prep.ticket, cwd, answer)).rejects.toThrow("search");
 		await vi.waitFor(
-			async () =>
-				expect((await service.search(prep.ticket, cwd, { query: "Autotomy" })).complete).toBe(true),
+			async () => expect((await service.search(prep.ticket, cwd, { query: "Autotomy" })).complete).toBe(true),
 			{ timeout: 2000 },
 		);
 		await expect(service.validateAnswer(prep.ticket, cwd, answer)).rejects.toThrow("read");
@@ -117,19 +117,49 @@ describe("native answer readiness, not model self-certification", () => {
 		await note("Library/Papers/source.md", "# Corrected observation\n");
 		await expect(service.validateAnswer(prep.ticket, cwd, answer)).rejects.toThrow(/changed|revision/);
 	});
+	it("drains redundant watcher notifications without accepting a new index revision", async () => {
+		await searchAndRead();
+		const before = (await service.request("status")).revision;
+		await note("Library/Papers/source.md", "# Autotomy evidence\nObservation under specific conditions.\n");
+		await vi.waitFor(
+			async () => {
+				const proof = await service.validateAnswer(prep.ticket, cwd, answer);
+				expect(proof.status).toBe("ready");
+				expect(proof.indexRevision).toBe(before);
+			},
+			{ timeout: 2000 },
+		);
+	});
+
 	it("rejects old search receipts after new indexed evidence arrives", async () => {
 		await searchAndRead();
 		await note("Library/Papers/new.md", "# New contradictory Autotomy evidence\n");
 		await service.request("changed", { paths: ["Library/Papers/new.md"] });
 		await expect(service.validateAnswer(prep.ticket, cwd, answer)).rejects.toThrow("revision");
 	});
+	it("host materialization can refresh a stale current-turn search without weakening strict validation", async () => {
+		await searchAndRead();
+		const before = await service.validateAnswer(prep.ticket, cwd, answer);
+		await note("Library/Papers/new.md", "# New Autotomy evidence\nA later indexed observation.\n");
+		await service.request("changed", { paths: ["Library/Papers/new.md"] });
+		// Let the filesystem watcher coalesce its duplicate notification so this test exercises
+		// stale-search refresh, not scheduler timing. Publication-level tests cover the late-event race.
+		await new Promise((resolve) => setTimeout(resolve, 250));
+		await vi.waitFor(async () => expect((await service.request("status")).pendingChanges).toBe(0));
+		await expect(service.validateAnswer(prep.ticket, cwd, answer)).rejects.toThrow("revision");
+		const paths = await service.materializeCitations(prep.ticket, cwd, "Autotomy", { refresh: true });
+		expect(paths.length).toBeGreaterThan(0);
+		const after = await service.validateAnswer(prep.ticket, cwd, answer);
+		expect(after.status).toBe("ready");
+		expect(after.indexRevision).toBeGreaterThan(before.indexRevision);
+	});
 	it("distinguishes complete zero hits from missing/partial coverage", async () => {
 		await service.read(prep.ticket, cwd, { path: "Wiki/Autotomy.md" });
 		await vi.waitFor(
 			async () =>
-				expect(
-					(await service.search(prep.ticket, cwd, { query: "notpresentuniquetoken" })).complete,
-				).toBe(true),
+				expect((await service.search(prep.ticket, cwd, { query: "notpresentuniquetoken" })).complete).toBe(
+					true,
+				),
 			{ timeout: 2000 },
 		);
 		expect(

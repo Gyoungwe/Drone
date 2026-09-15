@@ -166,6 +166,86 @@ describe("SettingsService provider mutations", () => {
 		).rejects.toThrow("contextWindow");
 	});
 
+	it("bounds provider connection tests and aborts the underlying request", async () => {
+		vi.useFakeTimers();
+		try {
+			let observedSignal: AbortSignal | undefined;
+			const completeSimple = vi.fn(
+				(
+					_model: unknown,
+					_context: unknown,
+					options?: { signal?: AbortSignal; timeoutMs?: number; maxRetries?: number },
+				) =>
+					new Promise((_, reject) => {
+						observedSignal = options?.signal;
+						options?.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+					}),
+			);
+			const runtime = {
+				getProviderAuthStatus: () => ({ configured: true }),
+				getModel: () => ({ id: "model", provider: "provider" }),
+				getModels: () => [],
+				completeSimple,
+			};
+			const settings = new SettingsService(async () => runtime as unknown as ModelRuntime);
+
+			const resultPromise = settings.testProvider("provider", "model");
+			await vi.advanceTimersByTimeAsync(15_000);
+			await expect(resultPromise).resolves.toEqual({
+				ok: false,
+				modelId: "model",
+				error: "连接测试超时（15 秒）",
+			});
+			expect(observedSignal?.aborted).toBe(true);
+			expect(completeSimple).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.anything(),
+				expect.objectContaining({ timeoutMs: 15_000, maxRetries: 0 }),
+			);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it.each(["stop", "error", "aborted"])(
+		"provider probe handles SDK %s results and releases its timer",
+		async (stopReason) => {
+			vi.useFakeTimers();
+			try {
+				const runtime = {
+					getProviderAuthStatus: () => ({ configured: true }),
+					getModel: () => ({ id: "model", provider: "provider" }),
+					getModels: () => [],
+					completeSimple: vi.fn().mockResolvedValue({ stopReason, errorMessage: "probe failure" }),
+				};
+				const settings = new SettingsService(async () => runtime as unknown as ModelRuntime);
+				const result = await settings.testProvider("provider", "model");
+				expect(result.ok).toBe(stopReason === "stop");
+				expect(vi.getTimerCount()).toBe(0);
+			} finally {
+				vi.useRealTimers();
+			}
+		},
+	);
+	it("returns the deadline even when a provider adapter ignores cancellation", async () => {
+		vi.useFakeTimers();
+		try {
+			const runtime = {
+				getProviderAuthStatus: () => ({ configured: true }),
+				getModel: () => ({ id: "model", provider: "provider" }),
+				getModels: () => [],
+				completeSimple: vi.fn(() => new Promise(() => {})),
+			};
+			const settings = new SettingsService(async () => runtime as unknown as ModelRuntime);
+			const pending = settings.testProvider("provider", "model");
+			await vi.advanceTimersByTimeAsync(15_000);
+			await expect(pending).resolves.toMatchObject({ ok: false, error: "连接测试超时（15 秒）" });
+			expect(vi.getTimerCount()).toBe(0);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it("rejects update for unknown or invalid input", async () => {
 		const { settings } = await seedProxy();
 		await expect(

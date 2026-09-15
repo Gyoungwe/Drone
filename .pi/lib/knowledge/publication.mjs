@@ -267,33 +267,52 @@ export function registerAnswerPublication(
 		if (Buffer.byteLength(text, "utf8") > 128 * 1024)
 			return report(blocked(message, "answer-too-large", turnId));
 		updateKnowledgeFlow(ctx, { phase: "checking" });
-		let timer;
 		try {
 			const c = getCurrent(ctx);
 			if (!c) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
 			let publishText = text;
 			let publishContent = content;
-			if (typeof c.service.materializeCitations === "function") {
-				const paths = await c.service.materializeCitations(c.ticket, ctx.cwd, c.query);
-				if (paths.length && !/\[\[[^\]]+\]\]/.test(text)) {
-					const suffix = `\n\n依据：${paths.map((path) => `[[${path.replace(/\.md$/i, "")}]]`).join(" ")}`;
-					publishText = `${text}${suffix}`;
-					publishContent = content.map((block, index) =>
-						block.type === "text" && index === content.length - 1
-							? { ...block, text: `${block.text}${suffix}` }
-							: block,
-					);
+			const attachMaterializedCitations = async (refresh = false) => {
+				if (typeof c.service.materializeCitations !== "function") return;
+				const paths = await c.service.materializeCitations(c.ticket, ctx.cwd, c.query, { refresh });
+				if (!paths.length || /\[\[[^\]]+\]\]/.test(publishText)) return;
+				const suffix = `\n\n依据：${paths.map((path) => `[[${path.replace(/\.md$/i, "")}]]`).join(" ")}`;
+				publishText = `${publishText}${suffix}`;
+				publishContent = publishContent.map((block, index) =>
+					block.type === "text" && index === publishContent.length - 1
+						? { ...block, text: `${block.text}${suffix}` }
+						: block,
+				);
+			};
+			const validateWithTimeout = async () => {
+				let timer;
+				try {
+					return await Promise.race([
+						c.service.validateAnswer(c.ticket, ctx.cwd, publishText, {
+							deliveries: [...deliveries.values()],
+						}),
+						new Promise((_, reject) => {
+							timer = setTimeout(
+								() => reject(Object.assign(new Error("check timeout"), { code: "check-timeout" })),
+								5000,
+							);
+						}),
+					]);
+				} finally {
+					if (timer) clearTimeout(timer);
 				}
+			};
+			await attachMaterializedCitations();
+			let proof;
+			try {
+				proof = await validateWithTimeout();
+			} catch (error) {
+				if (!["coverage-incomplete", "search-stale"].includes(error?.code)) throw error;
+				// A late watcher event can invalidate an otherwise current search. Refresh exactly once;
+				// strict validation still decides whether the answer is publishable.
+				await attachMaterializedCitations(true);
+				proof = await validateWithTimeout();
 			}
-			const proof = await Promise.race([
-				c.service.validateAnswer(c.ticket, ctx.cwd, publishText, { deliveries: [...deliveries.values()] }),
-				new Promise((_, reject) => {
-					timer = setTimeout(
-						() => reject(Object.assign(new Error("check timeout"), { code: "check-timeout" })),
-						5000,
-					);
-				}),
-			]);
 			if (ctx.signal?.aborted) return report(failure(message, { code: "interrupted" }));
 			const published =
 				proof.status === "no-hits"
@@ -318,8 +337,6 @@ export function registerAnswerPublication(
 			);
 		} catch (error) {
 			return report(failure(message, error));
-		} finally {
-			if (timer) clearTimeout(timer);
 		}
 	});
 	return {

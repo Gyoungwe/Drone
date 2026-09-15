@@ -225,6 +225,9 @@ export const IpcChannels = {
 	TrustRequest: "pi:trust-request",
 } as const;
 
+/** Prompt preflight receipt: tells the renderer whether this input owns an agent run. */
+export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
+
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
 export interface PiApi extends KnowledgeApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
@@ -238,7 +241,7 @@ export interface PiApi extends KnowledgeApi {
 	/** 删除会话（含磁盘 jsonl 文件，不可恢复） */
 	deleteSession(sessionId: string, sessionFile?: string): Promise<void>;
 	/** 发送消息；images 为随消息附带的图片（base64） */
-	prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<void>;
+	prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt>;
 	abort(sessionId: string): Promise<void>;
 	setModel(sessionId: string, provider: string, modelId: string): Promise<void>;
 	setThinkingLevel(sessionId: string, level: string): Promise<void>;

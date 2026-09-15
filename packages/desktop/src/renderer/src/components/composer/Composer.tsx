@@ -108,7 +108,6 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		slashCommand,
 		followUpQueue,
 		compacting,
-		agentActive: transcript.agentActive,
 		imagesSupported,
 		setText,
 		setImages,

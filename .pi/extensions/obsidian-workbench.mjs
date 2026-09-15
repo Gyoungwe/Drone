@@ -14,11 +14,7 @@ import {
 	researchSetupOptions,
 } from "../lib/obsidian-workbench.mjs";
 import { USER_QUESTION_FOCUS } from "../lib/reply-focus.mjs";
-import {
-	bootstrapZotero,
-	setupZoteroAgentMessage,
-	ZOTERO_SETUP_BINDING,
-} from "../lib/zotero-setup.mjs";
+import { bootstrapZotero, setupZoteroAgentMessage, ZOTERO_SETUP_BINDING } from "../lib/zotero-setup.mjs";
 
 async function startSetup(pi, args, ctx) {
 	if (!ctx.hasUI) throw new Error("Obsidian MCP /obsidian-setup requires an interactive desktop UI");

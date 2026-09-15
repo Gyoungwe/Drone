@@ -21,8 +21,6 @@ export interface UseComposerSendOptions {
 	compacting: boolean;
 	/** 当前模型是否支持图片输入（fail-open：未知按支持）；false 且草稿有图时拦截发送 */
 	imagesSupported: boolean;
-	/** 发送前会话是否已在运行（排队失败不回滚工作中状态） */
-	agentActive: boolean;
 	setText: (updater: string | ((prev: string) => string)) => void;
 	setImages: (updater: ImageInput[] | ((prev: ImageInput[]) => ImageInput[])) => void;
 	setAttachments: (updater: string[] | ((prev: string[]) => string[])) => void;
@@ -118,8 +116,7 @@ export function useComposerSend(options: UseComposerSendOptions) {
 	};
 
 	const handleSend = async () => {
-		const { text, images, attachments, quotes, slashCommand, followUpQueue, compacting, agentActive } =
-			options;
+		const { text, images, attachments, quotes, slashCommand, followUpQueue, compacting } = options;
 		// 引用胶囊逐条转 blockquote 段落；@ 引用胶囊拼回文本。引用置最前（先给上下文），正文在后
 		const quoteBlock = buildQuoteBlock(quotes);
 		const atText = attachments.map((p) => `@${p}`).join(" ");
@@ -144,7 +141,6 @@ export function useComposerSend(options: UseComposerSendOptions) {
 			showFeedback(t("composer.queueFull"), "warn");
 			return;
 		}
-		const wasActive = agentActive;
 
 		let sessionId = options.activeSessionId;
 		if (content.startsWith("/") && images.length === 0) {
@@ -184,12 +180,11 @@ export function useComposerSend(options: UseComposerSendOptions) {
 		options.setImages([]);
 		options.setAttachments([]);
 		options.setQuotes([]);
-		// 乐观置工作中：agent_start 事件到达前立即显示，失败后回滚
-		useTranscriptStore.getState().markAgentActive(sessionId, true);
 		try {
 			await getPi().prompt(sessionId, content, sentImages.length > 0 ? sentImages : undefined);
+			// SDK events own agent activity. An acknowledgement can arrive after agent_settled,
+			// and UI-only commands need not emit any agent events. sending covers preflight.
 		} catch (err) {
-			useTranscriptStore.getState().markAgentActive(sessionId, wasActive);
 			setError(err instanceof Error ? err.message : String(err));
 			options.setImages(sentImages);
 			options.setAttachments(sentAttachments);

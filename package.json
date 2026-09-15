@@ -1,38 +1,38 @@
 {
-  "name": "percho",
-  "private": true,
-  "version": "0.7.1",
-  "description": "Desktop GUI for the Pi coding agent, built with Electron",
-  "license": "MIT",
-  "author": "Jaxton07",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Gyoungwe/percho.git"
-  },
-  "bugs": "https://github.com/Gyoungwe/percho/issues",
-  "workspaces": [
-    "packages/*"
-  ],
-  "scripts": {
-    "dev": "npm run dev -w packages/desktop",
-    "postinstall": "patch-package",
-    "build": "npm run build -w packages/desktop",
-    "typecheck": "npm run typecheck --workspaces",
-    "test": "npm run test --workspaces --if-present",
-    "dist": "npm run dist -w packages/desktop",
-    "lint": "biome check .",
-    "test:upgrade": "node scripts/check-upgrade-release.mjs --fixtures-only",
-    "validate:upgrade": "node scripts/check-upgrade-release.mjs --ui"
-  },
-  "engines": {
-    "node": ">=22.19"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.0",
-    "patch-package": "^8.0.1"
-  },
-  "allowScripts": {
-    "electron@43.3.0": true
-  },
-  "homepage": "https://github.com/Gyoungwe/percho#readme"
+	"name": "percho",
+	"private": true,
+	"version": "0.7.2",
+	"description": "Desktop GUI for the Pi coding agent, built with Electron",
+	"license": "MIT",
+	"author": "Jaxton07",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Gyoungwe/percho.git"
+	},
+	"bugs": "https://github.com/Gyoungwe/percho/issues",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "npm run dev -w packages/desktop",
+		"postinstall": "patch-package",
+		"build": "npm run build -w packages/desktop",
+		"typecheck": "npm run typecheck --workspaces",
+		"test": "npm run test --workspaces --if-present",
+		"dist": "npm run dist -w packages/desktop",
+		"lint": "biome check .",
+		"test:upgrade": "node scripts/check-upgrade-release.mjs --fixtures-only",
+		"validate:upgrade": "node scripts/check-upgrade-release.mjs --ui"
+	},
+	"engines": {
+		"node": ">=22.19"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.0",
+		"patch-package": "^8.0.1"
+	},
+	"allowScripts": {
+		"electron@43.3.0": true
+	},
+	"homepage": "https://github.com/Gyoungwe/percho#readme"
 }

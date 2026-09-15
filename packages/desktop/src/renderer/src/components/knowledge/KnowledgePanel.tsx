@@ -169,7 +169,9 @@ export function KnowledgePanel({
 					<section className="rounded-xl border border-border p-4">
 						<div className="flex flex-wrap items-center justify-between gap-2">
 							<h3 className="text-xs font-semibold">{t("literature")}</h3>
-							<span className="rounded-full bg-hover px-2 py-0.5 text-[10px] text-ink-dim">{t("literatureBound")}</span>
+							<span className="rounded-full bg-hover px-2 py-0.5 text-[10px] text-ink-dim">
+								{t("literatureBound")}
+							</span>
 						</div>
 						<p className="mt-2 text-xs leading-relaxed text-ink-dim">{t("literatureHint")}</p>
 						<div className="mt-3 grid gap-2 text-[11px] text-ink-dim sm:grid-cols-2">
@@ -181,7 +183,12 @@ export function KnowledgePanel({
 							<Button size="sm" disabled={!cwd} onClick={() => zoteroSetup()}>
 								{t("literatureSetup")}
 							</Button>
-							<Button size="sm" onClick={() => void getPi().openExternal("https://www.zotero.org/download").catch(reportKnowledgeError)}>
+							<Button
+								size="sm"
+								onClick={() =>
+									void getPi().openExternal("https://www.zotero.org/download").catch(reportKnowledgeError)
+								}
+							>
 								{t("literatureDownload")}
 							</Button>
 						</div>

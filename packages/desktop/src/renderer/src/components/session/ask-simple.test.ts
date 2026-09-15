@@ -34,6 +34,20 @@ it("treats a two-choice setup confirm as a simple dialog", () => {
 	expect(isDangerAskOption({ value: "取消，不做修改", label: "取消，不做修改" })).toBe(true);
 });
 
+it("keeps ordinary configuration choices in the full form even with three options", () => {
+	const configuration = request({
+		title: "Obsidian · 选择知识库模板",
+		questions: [
+			confirmQuestion([
+				{ value: "hybrid", label: "混合研究模板" },
+				{ value: "literature", label: "文献模板" },
+				{ value: "custom", label: "自定义" },
+			]),
+		],
+	});
+	expect(isSimpleConfirm(configuration)).toBe(false);
+});
+
 it("keeps a three-choice confirm compact and puts confirm last", () => {
 	const three = request({
 		questions: [
@@ -64,4 +78,28 @@ it("keeps questionnaires with previews or many questions in the long form", () =
 		questions: [confirmQuestion([{ value: "确认应用此方案", label: "确认应用此方案", preview: "long" }])],
 	});
 	expect(isSimpleConfirm(preview)).toBe(false);
+});
+
+it("keeps custom choices editable even alongside confirm and cancel", () => {
+	const ask = request({
+		questions: [
+			confirmQuestion([
+				{ value: "yes", label: "确认" },
+				{ value: "no", label: "取消" },
+				{ value: "custom", label: "自定义" },
+			]),
+		],
+	});
+	expect(isSimpleConfirm(ask)).toBe(false);
+});
+it("does not interpret an embedded English substring as confirmation", () => {
+	const ask = request({
+		questions: [
+			confirmQuestion([
+				{ value: "book", label: "Book" },
+				{ value: "cancel", label: "Cancel" },
+			]),
+		],
+	});
+	expect(isSimpleConfirm(ask)).toBe(false);
 });

@@ -8,12 +8,23 @@ interface PromptOptions {
 }
 type PromptFn = (text: string, options?: PromptOptions) => Promise<void>;
 
+interface StubSessionOptions {
+	isStreaming?: boolean;
+	extensionCommands?: string[];
+}
+
 /** 注入 stub session 到私有 registry（prompt 路径不触网/不依赖 SDK） */
-function makeBackend(sessionId: string, prompt: PromptFn): PiBackend {
+function makeBackend(sessionId: string, prompt: PromptFn, options: StubSessionOptions = {}): PiBackend {
 	const backend = new PiBackend({ projectTrust: false, permissionGates: false });
 	const registry = (backend as unknown as { registry: SessionRegistry }).registry;
+	const commands = new Set(options.extensionCommands ?? []);
 	registry.add({
-		session: { sessionId, prompt } as unknown as AgentSession,
+		session: {
+			sessionId,
+			prompt,
+			isStreaming: options.isStreaming ?? false,
+			extensionRunner: { getCommand: (name: string) => (commands.has(name) ? { name } : undefined) },
+		} as unknown as AgentSession,
 		unsubscribe: () => {},
 		cwd: "/tmp",
 	});
@@ -31,13 +42,13 @@ describe("PiBackend.prompt 受理回执", () => {
 			return runGate; // run 永不结束也不影响返回
 		});
 
-		await expect(backend.prompt("s1", "hi")).resolves.toBeUndefined();
+		await expect(backend.prompt("s1", "hi")).resolves.toEqual({ kind: "agent" });
 		releaseRun();
 	});
 
 	it("无 preflight 直接返回（SDK if (!messages) return 保险路径）也放行", async () => {
 		const backend = makeBackend("s1", async () => {});
-		await expect(backend.prompt("s1", "hi")).resolves.toBeUndefined();
+		await expect(backend.prompt("s1", "hi")).resolves.toEqual({ kind: "agent" });
 	});
 
 	it("preflight 前抛错：reject 传真实错误（非泛化 preflight 文案）", async () => {
@@ -55,7 +66,31 @@ describe("PiBackend.prompt 受理回执", () => {
 			return Promise.reject(new Error("run failed"));
 		});
 
-		await expect(backend.prompt("s1", "hi")).resolves.toBeUndefined();
+		await expect(backend.prompt("s1", "hi")).resolves.toEqual({ kind: "agent" });
+	});
+
+	it("extension command 返回 command receipt，不伪造 agent run", async () => {
+		const backend = makeBackend(
+			"s1",
+			async (_text, options) => {
+				options?.preflightResult?.(true);
+			},
+			{ extensionCommands: ["obsidian-review"] },
+		);
+
+		await expect(backend.prompt("s1", "/obsidian-review")).resolves.toEqual({ kind: "command" });
+	});
+
+	it("streaming 中普通消息返回 queued receipt", async () => {
+		const backend = makeBackend(
+			"s1",
+			async (_text, options) => {
+				options?.preflightResult?.(true);
+			},
+			{ isStreaming: true },
+		);
+
+		await expect(backend.prompt("s1", "follow up")).resolves.toEqual({ kind: "queued" });
 	});
 
 	it("无会话直接抛错", async () => {

@@ -1,6 +1,6 @@
 {
-  "resultsRoot": "./results",
-  "maxConcurrentSubagents": 3,
-  "timezone": "Asia/Shanghai",
-  "knowledgeProjectId": "percho"
+	"resultsRoot": "./results",
+	"maxConcurrentSubagents": 3,
+	"timezone": "Asia/Shanghai",
+	"knowledgeProjectId": "percho"
 }

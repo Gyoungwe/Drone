@@ -253,7 +253,9 @@ export class KnowledgeService {
 	async ensureAnswerSearch(ticket, cwd, query = "") {
 		const state = await this.check(ticket, cwd);
 		if (state.answerSearch) return state.answerSearch;
-		const q = String(query || "").trim().slice(0, 2000);
+		const q = String(query || "")
+			.trim()
+			.slice(0, 2000);
 		if (!q)
 			throw Object.assign(new Error("Complete a real evidence search this turn before answering"), {
 				code: "search-required",
@@ -261,21 +263,47 @@ export class KnowledgeService {
 		await this.search(ticket, cwd, { query: q, limit: 5 });
 		return (await this.check(ticket, cwd)).answerSearch;
 	}
-	async materializeCitations(ticket, cwd, query = "") {
-		await this.ensureAnswerSearch(ticket, cwd, query);
-		const existing = await this.citationCandidates(ticket, cwd);
-		if (existing.length) return existing;
+	async materializeCitations(ticket, cwd, query = "", { refresh = false } = {}) {
 		const state = await this.check(ticket, cwd);
-		if (!state.answerSearch?.hitCount) return [];
-		for (const hit of (state.answerSearch.hits || []).slice(0, 3)) {
-			if (!hit?.path || state.reads.has(hit.path)) continue;
-			try {
-				await this.read(ticket, cwd, { path: hit.path, maxChars: 4000 });
-			} catch {
-				/* a failed hit read does not invent a receipt */
-			}
+		const searchQuery = String(state.answerSearch?.query || query || "")
+			.trim()
+			.slice(0, 2000);
+		if (refresh) {
+			if (!searchQuery)
+				throw Object.assign(new Error("Complete a real evidence search this turn before answering"), {
+					code: "search-required",
+				});
+			await this.search(ticket, cwd, { query: searchQuery, limit: 5 });
+		} else {
+			await this.ensureAnswerSearch(ticket, cwd, searchQuery);
 		}
-		return this.citationCandidates(ticket, cwd);
+		let citations = await this.citationCandidates(ticket, cwd);
+		const current = await this.check(ticket, cwd);
+		if (!citations.length && current.answerSearch?.hitCount) {
+			for (const hit of (current.answerSearch.hits || []).slice(0, 3)) {
+				if (!hit?.path || current.reads.has(hit.path)) continue;
+				try {
+					await this.read(ticket, cwd, { path: hit.path, maxChars: 4000 });
+				} catch {
+					/* a failed hit read does not invent a receipt */
+				}
+			}
+			citations = await this.citationCandidates(ticket, cwd);
+		}
+		// Watchers can report a file change just after search() drains its queue. A materialized
+		// publication snapshot should therefore self-stabilize once; validateAnswer remains strict.
+		const checked = await this.check(ticket, cwd);
+		const latest = await this.request("status");
+		if (
+			!refresh &&
+			checked.answerSearch &&
+			(latest.coverage !== "ready" ||
+				latest.pendingChanges ||
+				latest.problems.length ||
+				latest.revision !== checked.answerSearch.revision)
+		)
+			return this.materializeCitations(ticket, cwd, searchQuery, { refresh: true });
+		return citations;
 	}
 	async search(
 		ticket,
@@ -662,11 +690,11 @@ export class KnowledgeService {
 				"citation-required",
 				"Generated output links are not scientific evidence; cite a source read this turn",
 			);
-		const latest = await this.request("status");
-		if (latest.coverage !== "ready" || latest.pendingChanges || latest.problems.length)
-			fail("coverage-incomplete", "Index coverage is not complete at publication");
+		const latest = await this.request("status", { flushPending: true });
 		if (latest.revision !== searched.revision)
 			fail("search-stale", "Index revision changed after the search; search again");
+		if (latest.coverage !== "ready" || latest.pendingChanges || latest.problems.length)
+			fail("coverage-incomplete", "Index coverage is not complete at publication");
 		await withKnowledgeBinding(this.binding, async () => {});
 		return {
 			status: searched.hitCount ? "ready" : "no-hits",
