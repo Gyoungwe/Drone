@@ -92,7 +92,11 @@ describe("TraceRecorder", () => {
 		for (const f of files) {
 			const { size } = await stat(join(dir, "traces", f));
 			// 不变量：单文件 ≤ 轮转阈值 + 单批上限（轮转在整批 append 后触发），远高事故的 12.7GB 无界增长
-			expect(size).toBeLessThan(1024 + 128 * 128);
+			const maxTickLineBytes = Buffer.byteLength(
+				`${JSON.stringify({ ts: Date.now(), type: "tick", i: 128 * 12 - 1, pad: "y".repeat(32) })}\n`,
+				"utf-8",
+			);
+			expect(size).toBeLessThan(1024 + 128 * maxTickLineBytes);
 		}
 		// 轮转按实际 flush 块而非固定 128 条切分：异步 flush 的边界可落在批中，
 		// 因此保留的 5 个归档不保证刚好是 5 个完整测试批次。

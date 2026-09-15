@@ -30,6 +30,8 @@ const notices = {
 	"empty-answer": "任务已结束，但模型没有生成可显示的回复。请查看本轮产物或要求继续交付说明。",
 	"answer-too-large": "本次回答超出单次检查的大小上限，请分段完成。",
 	"protocol-budget": "本轮工具上下文超过安全缓存上限，请开启新一轮任务。",
+	"tool-loop-stopped":
+		"【本轮已自动结束】助手在本轮内反复调用知识库工具却始终没有作答，为避免继续消耗上下文，已停止本轮。可以直接再发一条消息继续对话（无需新建对话）；如果反复出现，建议换用能力更强的模型再试。",
 };
 function reason(error) {
 	if (notices[error?.code]) return error.code;
@@ -157,12 +159,13 @@ state.projectSnapshot = projectKnowledgeSnapshot;
 
 export function registerAnswerPublication(
 	pi,
-	{ getCurrent, evidenceOnly = false, getDeliveryFooter = null, getTaskFeedback = null },
+	{ getCurrent, evidenceOnly = false, getDeliveryFooter = null, getTaskFeedback = null, maxToolRounds = 24 },
 ) {
 	let turnId = null,
 		required = true,
 		started = false,
 		protocolBytes = 0,
+		toolRounds = 0,
 		setupReceipt = null;
 	const protocol = new Map(),
 		deliveries = new Map();
@@ -189,9 +192,13 @@ export function registerAnswerPublication(
 		const blocks = Array.isArray(message.content) ? message.content : [];
 		const tools = blocks.filter((b) => b.type === "toolCall");
 		if (tools.length) {
+			toolRounds += 1;
 			const bytes = Buffer.byteLength(JSON.stringify(blocks), "utf8");
-			if (protocolBytes + bytes > 4 * 1024 * 1024 || protocol.size >= 64) {
-				const denied = blocked(message, "protocol-budget", turnId);
+			// 熔断：软预算（tool-budget 的 read/search 上限）只是建议，弱模型会无视并空转。
+			// 这里在本轮工具轮次超过硬上限（或字节/条数兜底）时强制结束本轮——早于旧的 64 轮/4MB，
+			// 把「转几分钟还不作答」压到 ~1 分钟，并给出可操作提示而非「知识库检查未通过」。
+			if (toolRounds > maxToolRounds || protocolBytes + bytes > 4 * 1024 * 1024 || protocol.size >= 64) {
+				const denied = blocked(message, "tool-loop-stopped", turnId, notices["tool-loop-stopped"]);
 				denied.stopReason = "stop";
 				return report(denied);
 			}
@@ -393,6 +400,7 @@ export function registerAnswerPublication(
 				protocol.clear();
 				deliveries.clear();
 				protocolBytes = 0;
+				toolRounds = 0;
 				setupReceipt = null;
 			}
 		},
@@ -403,6 +411,7 @@ export function registerAnswerPublication(
 			protocol.clear();
 			deliveries.clear();
 			protocolBytes = 0;
+			toolRounds = 0;
 			setupReceipt = null;
 		},
 		guidance:

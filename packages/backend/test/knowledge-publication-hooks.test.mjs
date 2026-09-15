@@ -39,6 +39,25 @@ it("validation exceptions are fail-closed without echoing arbitrary error conten
 	expect(JSON.stringify(result)).not.toContain("FIXTURE");
 	expect(h.called).toHaveBeenCalledOnce();
 });
+it("force-stops a runaway tool-loop turn well before the byte cap, with an actionable notice", async () => {
+	const h = harness();
+	const toolMsg = () => ({
+		role: "assistant",
+		content: [{ type: "toolCall", toolName: "research_read_knowledge", args: {} }],
+		timestamp: 1,
+		stopReason: "toolUse",
+	});
+	let last;
+	// default maxToolRounds = 24; keep looping past it (far below the old 64/4MB caps)
+	for (let i = 0; i < 30; i++) last = await h.end(toolMsg());
+	expect(last.message.knowledgePublication.reason).toBe("tool-loop-stopped");
+	expect(last.message.stopReason).toBe("stop");
+	// accurate + actionable, and it must not misblame the knowledge base
+	expect(JSON.stringify(last.message.content)).not.toContain("知识库检查未通过");
+	expect(JSON.stringify(last.message.content)).toContain("无需新建对话");
+	// the validator is never even reached while looping on tool calls
+	expect(h.called).not.toHaveBeenCalled();
+});
 it("a timeout publishes a host notice and never retries", async () => {
 	vi.useFakeTimers();
 	const h = harness(() => new Promise(() => {})),

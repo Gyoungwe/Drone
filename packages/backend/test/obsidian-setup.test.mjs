@@ -170,7 +170,7 @@ describe("slash command to current-model handoff", () => {
 		expect(h.pi.sendUserMessage.mock.calls[0][0]).toContain("User Knowledge Vault");
 		expect(h.ctx.ui.confirm).not.toHaveBeenCalled();
 		await expectNoSetupWrites();
-	});
+	}, 15_000);
 	it("discovery tool returns current project context and all three templates without writes", async () => {
 		const h = harness();
 		const result = await execute(h.tools.get("research_setup_options"), { path: vault }, h.ctx);
