@@ -225,7 +225,15 @@ export const IpcChannels = {
 	TrustRequest: "pi:trust-request",
 } as const;
 
-/** Prompt preflight receipt: tells the renderer whether this input owns an agent run. */
+/**
+ * Prompt preflight receipt: tells the renderer whether this input owns an agent run.
+ *
+ * NOT a running-state authority. SDK events (agent_start/agent_end/agent_settled)
+ * own agentActive; this ack can resolve *after* agent_settled on a fast completion,
+ * so driving running-state from it would revive an already-finished run (the exact
+ * v0.7.2 regression). Consumers must keep using `sending` for preflight and SDK
+ * events for the live run — do not set agentActive from this value.
+ */
 export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
@@ -424,3 +432,178 @@ export interface PiApi extends KnowledgeApi {
 	/** 订阅项目信任请求；返回取消函数 */
 	onTrustRequest(cb: (req: TrustRequest) => void): () => void;
 }
+
+type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
+
+/**
+ * invoke 型 PiApi 方法 → IPC 通道的单一事实源（渲染端 preload 与主进程 sessions 注册器共用）。
+ *
+ * 只收录「渲染端 `ipcRenderer.invoke(channel, ...args)` 直返结果」的方法——即 preload 里
+ * 一行透传那批。刻意排除三类各有其形的成员，它们仍在 preload/注册器里显式书写：
+ * - 事件订阅（onX，`ipcRenderer.on` + 退订，另一种 adapter 形态）；
+ * - `platform`（同步值，非函数）；
+ * - `openMcpConfig`（await 后返回 void 的包装）。
+ *
+ * `satisfies Partial<Record<keyof PiApi, IpcChannel>>` 保证键是真实 PiApi 方法名、值是真实通道常量：
+ * 拼错方法名或通道名都在编译期报错。preload 端 `api: PiApi` 再兜底方法覆盖完整性。
+ */
+export const INVOKE_ROUTES = {
+	// Knowledge（KnowledgeApi）
+	setKnowledgeSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
+	getKnowledgeOverview: IpcChannels.KnowledgeOverview,
+	previewKnowledgeSetup: IpcChannels.KnowledgeSetupPreview,
+	startKnowledgeSetup: IpcChannels.KnowledgeSetupStart,
+	getKnowledgeJobs: IpcChannels.KnowledgeJobs,
+	getKnowledgeReviews: IpcChannels.KnowledgeReviews,
+	previewKnowledgeReview: IpcChannels.KnowledgeReviewPreview,
+	reviewKnowledgeWithModel: IpcChannels.KnowledgeReviewModel,
+	cancelKnowledgeModelReview: IpcChannels.KnowledgeReviewModelCancel,
+	decideKnowledgeReview: IpcChannels.KnowledgeReviewDecide,
+	readKnowledgeNote: IpcChannels.KnowledgeReadNote,
+	maintainKnowledge: IpcChannels.KnowledgeMaintain,
+	openKnowledgeTarget: IpcChannels.KnowledgeOpen,
+	resumeKnowledgeCheck: IpcChannels.KnowledgeResume,
+	getKnowledgeSemanticStatus: IpcChannels.KnowledgeSemanticStatus,
+	saveKnowledgeSemanticSettings: IpcChannels.KnowledgeSemanticSettingsSave,
+	testKnowledgeSemanticProvider: IpcChannels.KnowledgeSemanticProviderTest,
+	indexKnowledgeSemantic: IpcChannels.KnowledgeSemanticIndex,
+	cancelKnowledgeSemanticIndex: IpcChannels.KnowledgeSemanticIndexCancel,
+	getKnowledgeTopics: IpcChannels.KnowledgeTopics,
+	archiveKnowledgeTopic: IpcChannels.KnowledgeTopicArchive,
+	// Session（sessions 注册器亦按 SESSION_INVOKE_METHODS 消费本组）
+	createSession: IpcChannels.SessionCreate,
+	listSessions: IpcChannels.SessionList,
+	listAllSessions: IpcChannels.SessionListAll,
+	openSession: IpcChannels.SessionOpen,
+	closeSession: IpcChannels.SessionClose,
+	deleteSession: IpcChannels.SessionDelete,
+	prompt: IpcChannels.SessionPrompt,
+	abort: IpcChannels.SessionAbort,
+	setModel: IpcChannels.SessionSetModel,
+	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
+	compact: IpcChannels.SessionCompact,
+	getStats: IpcChannels.SessionStats,
+	getContextUsage: IpcChannels.SessionGetContextUsage,
+	clearQueue: IpcChannels.SessionClearQueue,
+	getFollowUpMessages: IpcChannels.SessionGetFollowUpMessages,
+	listSlashCommands: IpcChannels.SessionListSlashCommands,
+	listSlashCommandsForCwd: IpcChannels.SessionListSlashCommandsForCwd,
+	setSessionName: IpcChannels.SessionSetName,
+	exportSession: IpcChannels.SessionExport,
+	forkSession: IpcChannels.SessionFork,
+	recallMessage: IpcChannels.SessionRecall,
+	getLoadedResources: IpcChannels.SessionGetLoadedResources,
+	getSessionMessages: IpcChannels.SessionGetMessages,
+	peekSubagentMessages: IpcChannels.SessionPeekSubagentMessages,
+	steerSubagent: IpcChannels.SessionSteerSubagent,
+	replySubagentSupervisor: IpcChannels.SessionReplySubagentSupervisor,
+	getTodos: IpcChannels.SessionGetTodos,
+	// Packages / 文件 / 资源
+	searchCatalog: IpcChannels.PackagesSearchCatalog,
+	installPackage: IpcChannels.PackagesInstall,
+	removePackage: IpcChannels.PackagesRemove,
+	listConfiguredPackages: IpcChannels.PackagesListConfigured,
+	saveFileDialog: IpcChannels.FileSaveDialog,
+	previewFile: IpcChannels.FilePreview,
+	openResourceExternal: IpcChannels.ResourceOpenExternal,
+	// 模型 / provider / MCP
+	listModels: IpcChannels.ModelsList,
+	listProviders: IpcChannels.SettingsListProviders,
+	getMcpStatus: IpcChannels.McpGetStatus,
+	getMcpConfig: IpcChannels.McpGetConfig,
+	setMcpServerEnabled: IpcChannels.McpSetServerEnabled,
+	// Settings
+	saveApiKey: IpcChannels.SettingsSaveApiKey,
+	removeCredential: IpcChannels.SettingsRemoveCredential,
+	addCustomProvider: IpcChannels.SettingsAddCustomProvider,
+	updateCustomProvider: IpcChannels.SettingsUpdateCustomProvider,
+	removeCustomProvider: IpcChannels.SettingsRemoveCustomProvider,
+	setProviderBaseUrl: IpcChannels.SettingsSetProviderBaseUrl,
+	testProvider: IpcChannels.SettingsTestProvider,
+	getModelPrefs: IpcChannels.SettingsGetModelPrefs,
+	setModelHidden: IpcChannels.SettingsSetModelHidden,
+	setModelsHidden: IpcChannels.SettingsSetModelsHidden,
+	setSubagentModel: IpcChannels.SettingsSetSubagentModel,
+	setSubagentThinking: IpcChannels.SettingsSetSubagentThinking,
+	listSubagents: IpcChannels.SettingsListSubagents,
+	startProviderLogin: IpcChannels.SettingsLoginStart,
+	cancelProviderLogin: IpcChannels.SettingsLoginCancel,
+	respondProviderLogin: IpcChannels.SettingsLoginRespond,
+	// Ask / 权限 / 上下文 / channel-watch
+	respondAsk: IpcChannels.AskRespond,
+	respondPermission: IpcChannels.PermissionRespond,
+	getPermissionConfig: IpcChannels.PermissionGetConfig,
+	getPermissionMode: IpcChannels.PermissionGetMode,
+	setPermissionMode: IpcChannels.PermissionSetMode,
+	getContextManagerConfig: IpcChannels.ContextManagerGetConfig,
+	setContextManagerMode: IpcChannels.ContextManagerSetMode,
+	getChannelWatchConfig: IpcChannels.ChannelWatchGetConfig,
+	setChannelWatchEnabled: IpcChannels.ChannelWatchSetEnabled,
+	// LAN
+	lanGetStatus: IpcChannels.LanGetStatus,
+	lanSetEnabled: IpcChannels.LanSetEnabled,
+	lanSetRemoteControl: IpcChannels.LanSetRemoteControl,
+	// Trust / 项目
+	respondTrust: IpcChannels.TrustRespond,
+	ensureProjectTrust: IpcChannels.ProjectEnsureTrust,
+	pickDirectory: IpcChannels.ProjectPickDirectory,
+	listProjectFiles: IpcChannels.ProjectListFiles,
+	getGitBranch: IpcChannels.ProjectGetGitBranch,
+	listGitBranches: IpcChannels.ProjectListGitBranches,
+	checkoutBranch: IpcChannels.ProjectCheckoutBranch,
+	// 应用 / tabs / ui-state / 背景 / 更新
+	openExternal: IpcChannels.AppOpenExternal,
+	getAppInfo: IpcChannels.AppGetInfo,
+	getDailyDir: IpcChannels.AppGetDailyDir,
+	loadTabs: IpcChannels.TabsLoad,
+	saveTabs: IpcChannels.TabsSave,
+	loadUiState: IpcChannels.UiStateLoad,
+	saveUiState: IpcChannels.UiStateSave,
+	pickBackgroundImage: IpcChannels.BackgroundPick,
+	checkForUpdates: IpcChannels.UpdateCheck,
+	downloadUpdate: IpcChannels.UpdateDownload,
+	installUpdate: IpcChannels.UpdateInstall,
+	// UI 插件
+	uiPluginsGetConfig: IpcChannels.UiPluginsGetConfig,
+	uiPluginsSetEnabled: IpcChannels.UiPluginsSetEnabled,
+	uiPluginsList: IpcChannels.UiPluginsList,
+	uiPluginsReadCode: IpcChannels.UiPluginsReadCode,
+	uiPluginsSetPluginEnabled: IpcChannels.UiPluginsSetPluginEnabled,
+	uiPluginsAssignSlot: IpcChannels.UiPluginsAssignSlot,
+	uiPluginsRebuild: IpcChannels.UiPluginsRebuild,
+	uiPluginsOpenDir: IpcChannels.UiPluginsOpenDir,
+} satisfies Partial<Record<keyof PiApi, IpcChannel>>;
+
+/** invoke 契约里由 sessions 注册器（main）负责的方法：全部 1:1 转发 `backend[method]`（同名）。 */
+export const SESSION_INVOKE_METHODS = [
+	"createSession",
+	"listSessions",
+	"listAllSessions",
+	"openSession",
+	"closeSession",
+	"deleteSession",
+	"prompt",
+	"abort",
+	"setModel",
+	"setThinkingLevel",
+	"compact",
+	"getStats",
+	"getContextUsage",
+	"clearQueue",
+	"getFollowUpMessages",
+	"listSlashCommands",
+	"listSlashCommandsForCwd",
+	"setSessionName",
+	"exportSession",
+	"forkSession",
+	"recallMessage",
+	"getLoadedResources",
+	"getSessionMessages",
+	"peekSubagentMessages",
+	"steerSubagent",
+	"replySubagentSupervisor",
+	"getTodos",
+	"listModels",
+	"listProjectFiles",
+	"ensureProjectTrust",
+] as const satisfies ReadonlyArray<keyof typeof INVOKE_ROUTES>;

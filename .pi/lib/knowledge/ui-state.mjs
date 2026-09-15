@@ -53,8 +53,21 @@ export function updateKnowledgeFlow(ctx, patch) {
 		old = state.flows.get(id);
 	if (!old) return;
 	const next = { ...old, ...patch, updatedAt: Date.now() };
+	next.stages = deriveStages(next);
 	state.flows.set(id, next);
 	emitKnowledgeUi({ kind: "flow", flow: next });
+}
+/**
+ * 门控四阶段进度的**单一派生点**（导航/Wiki/检索/发布）：从权威 flow 数据算出布尔，
+ * 随 flow 一并下发。渲染端只读展示、不再自行重算——同一份判定，不会 UI 与后端各说各话。
+ */
+function deriveStages(flow) {
+	return {
+		navigation: (flow.navigation || []).some((p) => !p.missing),
+		wiki: (flow.reads || []).some((p) => p.kind === "wiki" && !p.missing && p.endLine >= p.startLine),
+		search: !!flow.search && !flow.search.wikiOnly,
+		publication: ["released", "no-hits"].includes(flow.publication?.status || ""),
+	};
 }
 export function noteKnowledgeRead(ctx, page) {
 	const id = sessionId(ctx),

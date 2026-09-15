@@ -17,6 +17,15 @@ export function useSessionStatus(sessionId: string): SessionStatus {
 	});
 }
 
+/**
+ * 该会话的 agent 运行是否存活：SDK 事件驱动的权威态 `agentActive`
+ * （agent_start→true，agent_end/agent_settled→false）。id 为空 → false。
+ * 多个组件（呼吸灯/转圈/话题面板）此前各自内联同一 selector，统一到此一处读取。
+ */
+export function useAgentActive(sessionId: string | null): boolean {
+	return useTranscriptStore((s) => (sessionId ? (s.bySession[sessionId]?.agentActive ?? false) : false));
+}
+
 /** 会话显示标题：用户设置/自动生成名 → 项目目录末级（日常空间 → 本地化「日常」）→ 未命名占位 */
 export function sessionTitle(session: SessionMeta, untitledLabel: string, dailyLabel?: string): string {
 	return (

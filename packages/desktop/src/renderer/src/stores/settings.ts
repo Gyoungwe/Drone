@@ -14,6 +14,7 @@ import type {
 } from "@percho/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
+import { optimisticUpdate } from "../lib/optimistic";
 import { isDraftSessionId, useSessionsStore } from "./sessions";
 
 export type SettingsCategory =
@@ -200,28 +201,22 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 
 		setContextManagerMode: async (mode) => {
 			const previous = get().contextManagerMode;
-			set({ contextManagerMode: mode });
-			try {
-				await getPi().setContextManagerMode(mode);
-			} catch (error) {
-				set({
-					contextManagerMode: previous,
-					error: error instanceof Error ? error.message : String(error),
-				});
-			}
+			await optimisticUpdate({
+				apply: () => set({ contextManagerMode: mode }),
+				sync: () => getPi().setContextManagerMode(mode),
+				revert: () => set({ contextManagerMode: previous }),
+				onError: (error) => set({ error: error instanceof Error ? error.message : String(error) }),
+			});
 		},
 
 		setChannelWatchEnabled: async (enabled) => {
 			const previous = get().channelWatchEnabled;
-			set({ channelWatchEnabled: enabled });
-			try {
-				await getPi().setChannelWatchEnabled(enabled);
-			} catch (error) {
-				set({
-					channelWatchEnabled: previous,
-					error: error instanceof Error ? error.message : String(error),
-				});
-			}
+			await optimisticUpdate({
+				apply: () => set({ channelWatchEnabled: enabled }),
+				sync: () => getPi().setChannelWatchEnabled(enabled),
+				revert: () => set({ channelWatchEnabled: previous }),
+				onError: (error) => set({ error: error instanceof Error ? error.message : String(error) }),
+			});
 		},
 
 		refreshLanStatus: async () => {
@@ -319,16 +314,20 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 			if (ids.size) hiddenModels[provider] = [...ids];
 			else delete hiddenModels[provider];
 			// 先本地更新，开关圆点不必等待 Electron IPC 往返；失败时以磁盘实际状态回滚。
-			set({ modelPrefs: { ...base, hiddenModels } });
-			try {
-				await getPi().setModelHidden(provider, modelId, hidden);
-				await useSessionsStore.getState().loadModels();
-			} catch (error) {
-				const modelPrefs = await getPi()
-					.getModelPrefs()
-					.catch(() => previous);
-				set({ modelPrefs, error: error instanceof Error ? error.message : String(error) });
-			}
+			await optimisticUpdate({
+				apply: () => set({ modelPrefs: { ...base, hiddenModels } }),
+				sync: async () => {
+					await getPi().setModelHidden(provider, modelId, hidden);
+					await useSessionsStore.getState().loadModels();
+				},
+				revert: async () => {
+					const modelPrefs = await getPi()
+						.getModelPrefs()
+						.catch(() => previous);
+					set({ modelPrefs });
+				},
+				onError: (error) => set({ error: error instanceof Error ? error.message : String(error) }),
+			});
 		},
 
 		setModelsHidden: async (provider, modelIds, hidden) => {
@@ -343,16 +342,20 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 			if (hiddenSet.size) hiddenModels[provider] = [...hiddenSet];
 			else delete hiddenModels[provider];
 			// 先本地更新（一次 IPC 写盘，不逐个往返）；失败时以磁盘实际状态回滚。
-			set({ modelPrefs: { ...base, hiddenModels } });
-			try {
-				await getPi().setModelsHidden(provider, modelIds, hidden);
-				await useSessionsStore.getState().loadModels();
-			} catch (error) {
-				const modelPrefs = await getPi()
-					.getModelPrefs()
-					.catch(() => previous);
-				set({ modelPrefs, error: error instanceof Error ? error.message : String(error) });
-			}
+			await optimisticUpdate({
+				apply: () => set({ modelPrefs: { ...base, hiddenModels } }),
+				sync: async () => {
+					await getPi().setModelsHidden(provider, modelIds, hidden);
+					await useSessionsStore.getState().loadModels();
+				},
+				revert: async () => {
+					const modelPrefs = await getPi()
+						.getModelPrefs()
+						.catch(() => previous);
+					set({ modelPrefs });
+				},
+				onError: (error) => set({ error: error instanceof Error ? error.message : String(error) }),
+			});
 		},
 
 		setSubagentModel: async (agent, modelRef) => {

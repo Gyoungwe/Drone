@@ -4,6 +4,7 @@ import { useSessionsStore } from "../../stores/sessions";
 import { EMPTY_TODOS, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { TodoCompleteIcon, TodoPendingIcon, TodoSpinnerIcon } from "../icons";
+import { useAgentActive } from "../session/session-status";
 
 /** 进度环几何参数（r=8，周长用于 dashoffset 弹性推进） */
 const RING_R = 8;
@@ -74,9 +75,7 @@ export function TodoPanel() {
 	const toggle = useUiStore((s) => s.toggleTodoExpanded);
 	/** agent 是否在工作中（agent_start→true，agent_end/agent_settled→false；排队追问不影响）。
 		停止时呼吸灯 / 转圈动画定格变淡，恢复工作时自动继续 */
-	const agentActive = useTranscriptStore((s) =>
-		activeSessionId ? (s.bySession[activeSessionId]?.agentActive ?? false) : false,
-	);
+	const agentActive = useAgentActive(activeSessionId);
 	const t = useT();
 
 	if (todos.length === 0 || !activeSessionId) return null;
