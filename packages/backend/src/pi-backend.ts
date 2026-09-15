@@ -121,6 +121,7 @@ import { withNativeSubagentSlot } from "./tools/subagent/slots";
 import { makeTodoTool } from "./tools/todo";
 import { makeTodoReminderExtension } from "./tools/todo-reminder";
 import { makeWebFetchTool } from "./tools/webfetch";
+import { getZoteroStatus } from "./zotero/status";
 
 const log = createLogger("backend");
 
@@ -703,21 +704,19 @@ export class PiBackend {
 		if (run?.sessionId === sessionId) run.controller.abort();
 	}
 
-	async startKnowledgeSetup(input: {
-		sessionId: string;
-		path?: string;
-		includeLiterature?: boolean;
-	}): Promise<void> {
+	async startKnowledgeSetup(input: { sessionId: string; path?: string }): Promise<void> {
 		const entry = this.requireSession(input.sessionId);
 		if (entry.readOnly || entry.session.isStreaming)
 			throw new Error("Wait for the current task to finish before setup");
 		if (input.path && (typeof input.path !== "string" || input.path.length > 4096))
 			throw new Error("Invalid Vault path");
-		const payload: { vaultPath?: string; includeLiterature?: boolean } = {};
-		if (input.path) payload.vaultPath = input.path;
-		if (input.includeLiterature) payload.includeLiterature = true;
-		const args = Object.keys(payload).length ? JSON.stringify(payload) : "";
+		// Vault-only：Zotero 文献接入已拆到独立的 /zotero-setup + Zotero 面板，这里不再夹带
+		const args = input.path ? JSON.stringify({ vaultPath: input.path }) : "";
 		await this.prompt(input.sessionId, `/obsidian-setup ${args}`);
+	}
+
+	async getZoteroStatus(): ReturnType<typeof getZoteroStatus> {
+		return getZoteroStatus();
 	}
 	async resumeKnowledgeCheck(sessionId: string): Promise<void> {
 		const entry = this.requireSession(sessionId);

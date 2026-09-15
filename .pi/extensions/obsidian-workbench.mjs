@@ -14,66 +14,33 @@ import {
 	researchSetupOptions,
 } from "../lib/obsidian-workbench.mjs";
 import { USER_QUESTION_FOCUS } from "../lib/reply-focus.mjs";
-import { bootstrapZotero, setupZoteroAgentMessage, ZOTERO_SETUP_BINDING } from "../lib/zotero-setup.mjs";
 
 async function startSetup(pi, args, ctx) {
 	if (!ctx.hasUI) throw new Error("Obsidian MCP /obsidian-setup requires an interactive desktop UI");
 	const current = await obsidianStatus(ctx.cwd);
 	let selectedPath = null;
-	let includeLiterature = false;
 	let preferences = typeof args === "string" ? args : "";
 	if (preferences.trim().startsWith("{")) {
 		try {
 			const supplied = JSON.parse(preferences);
 			if (typeof supplied.vaultPath === "string") selectedPath = supplied.vaultPath;
-			if (supplied.includeLiterature === true) includeLiterature = true;
-			if (typeof supplied.vaultPath === "string" || supplied.includeLiterature === true) preferences = "";
+			if (typeof supplied.vaultPath === "string") preferences = "";
 		} catch {
 			/* ordinary user preferences */
 		}
 	}
-	// Like /zotero-setup: hand off to the model immediately. Only resolve a Vault when
-	// the desktop already supplied one; otherwise the skill asks via ask_user in-chat.
+	// Vault-only. Zotero literature is a separate flow now (/zotero-setup + the Zotero panel);
+	// this setup no longer installs or bootstraps Zotero. Hand off to the model immediately.
 	const vault = selectedPath ? resolveSetupVault(selectedPath, ctx.cwd) : null;
 	const context = await inspectObsidianSetup({ cwd: ctx.cwd, vault });
 	const vaultPayload = setupAgentMessage({ context, current, preferences });
 	const options = { deliverAs: "followUp", expandPromptTemplates: true };
-	// Critical: do NOT await bootstrap or sendUserMessage inside this slash turn.
-	// Run host installation and model handoffs only after this slash command returns
-	// and the session is idle. Combined setup deploys Zotero before the Vault interview.
+	// Critical: do NOT await sendUserMessage inside this slash turn; run the model handoff
+	// only after the slash command returns and the session is idle.
 	setTimeout(() => {
 		void (async () => {
 			try {
-				// Start the Vault model turn first so the user sees thinking immediately.
-				// Host-side Zotero preparation may involve a slow installer and must not
-				// block the interactive setup interview.
 				await pi.sendUserMessage(vaultPayload, options);
-
-				let literatureBootstrap = null;
-				if (includeLiterature) {
-					literatureBootstrap = await bootstrapZotero({
-						confirm: (title, message) => ctx.ui.confirm(title, message),
-					});
-					if (
-						literatureBootstrap.cancelled &&
-						literatureBootstrap.steps.length === 0 &&
-						!literatureBootstrap.status.commands.zoteroMcp
-					) {
-						ctx.ui.notify?.("已取消安装 zotero-mcp-server；继续知识库初始化", "warning");
-						literatureBootstrap = null;
-					} else if (literatureBootstrap.steps.some((step) => step.action === "install")) {
-						ctx.ui.notify?.("已安装 zotero-mcp-server；可选 MCP 已写入用户配置（默认关闭）");
-					}
-				}
-				if (!literatureBootstrap) return;
-				await pi.sendUserMessage(
-					setupZoteroAgentMessage({
-						status: literatureBootstrap.status,
-						bootstrap: literatureBootstrap,
-						preferences: "",
-					}),
-					options,
-				);
 			} catch (error) {
 				const text = error instanceof Error ? error.message : String(error);
 				ctx.ui.notify?.(`初始化交接失败：${text}`, "error");

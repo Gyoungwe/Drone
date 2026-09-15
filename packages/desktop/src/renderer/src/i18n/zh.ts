@@ -297,6 +297,7 @@ export const zh = {
 		comingSoon: "该分类的设置将在后续版本提供。",
 		category: {
 			knowledge: "知识库",
+			zotero: "Zotero",
 			general: "通用",
 			appearance: "外观",
 			models: "模型",

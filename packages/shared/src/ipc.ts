@@ -43,6 +43,7 @@ import type {
 import type { TodoItem } from "./todo";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
+import type { ZoteroStatus } from "./zotero";
 
 export interface ResourcePreviewResult {
 	path: string;
@@ -79,6 +80,9 @@ export const IpcChannels = {
 	KnowledgeSemanticIndexCancel: "knowledge:semanticIndexCancel",
 	KnowledgeTopics: "knowledge:topics",
 	KnowledgeTopicArchive: "knowledge:topicArchive",
+
+	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
+	ZoteroStatus: "zotero:status",
 
 	SessionCreate: "session:create",
 	SessionList: "session:list",
@@ -317,6 +321,8 @@ export interface PiApi extends KnowledgeApi {
 	setMcpServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot>;
 	openMcpConfig(cwd?: string): Promise<void>;
 	onMcpEvent(cb: (event: McpStatusEvent) => void): () => void;
+	/** Zotero 文献库接入状态（注册/启用/本机 API 可达/桌面端检测）；面板用，只读 */
+	getZoteroStatus(): Promise<ZoteroStatus>;
 	saveApiKey(providerId: string, key: string): Promise<void>;
 	removeCredential(providerId: string): Promise<void>;
 	addCustomProvider(input: CustomProviderInput): Promise<void>;
@@ -512,6 +518,7 @@ export const INVOKE_ROUTES = {
 	getMcpStatus: IpcChannels.McpGetStatus,
 	getMcpConfig: IpcChannels.McpGetConfig,
 	setMcpServerEnabled: IpcChannels.McpSetServerEnabled,
+	getZoteroStatus: IpcChannels.ZoteroStatus,
 	// Settings
 	saveApiKey: IpcChannels.SettingsSaveApiKey,
 	removeCredential: IpcChannels.SettingsRemoveCredential,

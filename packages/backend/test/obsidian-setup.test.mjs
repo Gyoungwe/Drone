@@ -155,7 +155,7 @@ describe("slash command to current-model handoff", () => {
 		expect(message).toContain("Vault 路径已由用户提供");
 		await expectNoSetupWrites();
 	});
-	it("combined init runs Vault then Zotero model handoffs after the slash returns", async () => {
+	it("vault-only: /obsidian-setup no longer runs Zotero (includeLiterature ignored)", async () => {
 		const h = harness();
 		h.ctx.ui.confirm.mockResolvedValue(true);
 		await h.commands
@@ -163,13 +163,12 @@ describe("slash command to current-model handoff", () => {
 			.handler(JSON.stringify({ vaultPath: vault, includeLiterature: true }), h.ctx);
 		expect(h.ctx.ui.input).not.toHaveBeenCalled();
 		expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
-		await vi.waitFor(() => expect(h.pi.sendUserMessage).toHaveBeenCalled(), { timeout: 8000 });
+		await flushSetupHandoff();
+		// Only the Vault model turn is handed off; no Zotero bootstrap/confirm/second message.
+		expect(h.pi.sendUserMessage).toHaveBeenCalledOnce();
 		expect(h.pi.sendUserMessage.mock.calls[0][0]).toMatch(/^\/skill:research-vault setup/);
 		expect(h.pi.sendUserMessage.mock.calls[0][0]).toContain("User Knowledge Vault");
-		await vi.waitFor(() => expect(h.pi.sendUserMessage).toHaveBeenCalledTimes(2), { timeout: 8000 });
-		const [zoteroMessage] = h.pi.sendUserMessage.mock.calls[1];
-		expect(zoteroMessage).toMatch(/^\/skill:zotero-literature setup/);
-		expect(zoteroMessage).toContain("/zotero-setup");
+		expect(h.ctx.ui.confirm).not.toHaveBeenCalled();
 		await expectNoSetupWrites();
 	}, 15_000);
 	it("discovery tool returns current project context and all three templates without writes", async () => {
