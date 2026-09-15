@@ -55,11 +55,12 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 	const title = activeSpecialist
 		? `${t(`specialist_${activeSpecialist.role}`)} · ${t(`worker_${activeSpecialist.status}`)}`
 		: t(phases[flow.phase] || "flow");
+	// 阶段进度由后端 flow 单点派生（flow.stages）；渲染端只读展示，不再自行重算（旧 flow 缺省则全未完成）
 	const stages: [keyof typeof knowledgeZh, boolean][] = [
-		["navigation", flow.navigation.some((p) => !p.missing)],
-		["wiki", flow.reads.some((p) => p.kind === "wiki" && !p.missing && p.endLine >= p.startLine)],
-		["search", !!flow.search && !flow.search.wikiOnly],
-		["publication", ["released", "no-hits"].includes(flow.publication?.status || "")],
+		["navigation", flow.stages?.navigation ?? false],
+		["wiki", flow.stages?.wiki ?? false],
+		["search", flow.stages?.search ?? false],
+		["publication", flow.stages?.publication ?? false],
 	];
 	function manage(tab: "overview" | "reviews" | "maintenance" = "overview") {
 		useKnowledgeStore.getState().open({ cwd, sessionId, tab });

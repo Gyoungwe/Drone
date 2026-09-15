@@ -74,6 +74,16 @@ export interface KnowledgeFlow {
 		paths?: string[];
 		scientificallyVerified: false;
 	} | null;
+	/**
+	 * 门控四阶段进度（导航/Wiki/检索/发布），由后端 flow 生产端从权威 flow 数据单点派生。
+	 * 渲染端只读展示、不再自行重算，避免与后端判定漂移。旧 flow 可能缺省。
+	 */
+	stages?: {
+		navigation: boolean;
+		wiki: boolean;
+		search: boolean;
+		publication: boolean;
+	};
 	error?: string | null;
 }
 export type KnowledgeUiEvent = (
