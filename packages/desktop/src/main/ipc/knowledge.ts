@@ -61,6 +61,7 @@ export function registerKnowledgeIpc(backend: PiBackend): void {
 	handle(upgradeChannels.semanticIndexCancel, (input) => backend.knowledge.cancelSemanticIndex(input));
 	handle(upgradeChannels.topics, (input) => backend.knowledge.topics(input));
 	handle(upgradeChannels.topicArchive, (input) => backend.knowledge.archiveTopic(input));
+	handle(IpcChannels.ZoteroStatus, () => backend.getZoteroStatus());
 	backend.knowledge.subscribe((event) => {
 		for (const window of BrowserWindow.getAllWindows()) {
 			if (!window.isDestroyed()) window.webContents.send(IpcChannels.KnowledgeEvent, event);

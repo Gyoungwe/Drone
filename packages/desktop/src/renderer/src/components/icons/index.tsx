@@ -649,3 +649,13 @@ export function ObsidianIcon({ size = 16, className }: IconProps) {
 		</svg>
 	);
 }
+
+/** Rounded-square "Z" shortcut for the Zotero literature library. */
+export function ZoteroIcon({ size = 16, className }: IconProps) {
+	return (
+		<svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
+			<rect x="3" y="3" width="18" height="18" rx="4" fill="currentColor" />
+			<path fill="white" d="M8 7h8v1.8l-5.1 6.4H16V17H8v-1.8l5.1-6.4H8z" />
+		</svg>
+	);
+}

@@ -305,6 +305,7 @@ export const en: Messages = {
 		comingSoon: "Settings for this category are coming in a future release.",
 		category: {
 			knowledge: "Knowledge",
+			zotero: "Zotero",
 			general: "General",
 			appearance: "Appearance",
 			models: "Models",

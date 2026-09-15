@@ -57,12 +57,7 @@ export function useKnowledgeOverview(cwd: string | null, sessionId: string | nul
 	}, [data, refresh]);
 	return { data, error, loading, refresh };
 }
-export async function launchKnowledgeSetup(
-	cwd: string | null,
-	sessionId: string | null,
-	path?: string,
-	options?: { includeLiterature?: boolean },
-) {
+export async function launchKnowledgeSetup(cwd: string | null, sessionId: string | null, path?: string) {
 	if (!cwd) throw new Error("Select a workspace before setup");
 	let id = sessionId;
 	if (!id || isDraftSessionId(id)) {
@@ -76,7 +71,6 @@ export async function launchKnowledgeSetup(
 		await getPi().startKnowledgeSetup({
 			sessionId: id,
 			...(path ? { path } : {}),
-			...(options?.includeLiterature ? { includeLiterature: true } : {}),
 		});
 		useSettingsStore.getState().setOpen(false);
 		useUiStore.getState().setView("chat");

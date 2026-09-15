@@ -24,6 +24,7 @@ export type SettingsCategory =
 	| "skills"
 	| "mcp"
 	| "knowledge"
+	| "zotero"
 	| "extensions"
 	| "lan"
 	| "about"

@@ -4,7 +4,7 @@ import { useT } from "../../i18n";
 import { getDailyDirCached } from "../../lib/daily";
 import { deriveProjects, useProjectsStore } from "../../stores/projects";
 import { useSettingsStore } from "../../stores/settings";
-import { CloseIcon, CoffeeIcon, GearIcon, HelpIcon, ObsidianIcon, PlusIcon } from "../icons";
+import { CloseIcon, CoffeeIcon, GearIcon, HelpIcon, ObsidianIcon, PlusIcon, ZoteroIcon } from "../icons";
 import { Tooltip } from "../ui/Tooltip";
 
 /** 项目仓库地址（帮助按钮跳转） */
@@ -79,6 +79,15 @@ export function ProjectSidebar() {
 				>
 					<ObsidianIcon size={14} className="shrink-0 text-accent" />
 					<span>Obsidian</span>
+				</button>
+				<button
+					type="button"
+					className={FOOTER_ACTION_CLASS}
+					data-testid="zotero-shortcut"
+					onClick={() => useSettingsStore.getState().openWith("zotero")}
+				>
+					<ZoteroIcon size={14} className="shrink-0 text-accent" />
+					<span>Zotero</span>
 				</button>
 				<button
 					type="button"
