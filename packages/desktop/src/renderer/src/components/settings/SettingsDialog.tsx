@@ -8,6 +8,7 @@ import { UI_REGIONS } from "../../plugins/slots";
 import { type SettingsCategory, useSettingsStore } from "../../stores/settings";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
 import { KnowledgePanel } from "../knowledge/KnowledgePanel";
+import { ZoteroPanel } from "../knowledge/ZoteroPanel";
 import { AboutPanel } from "./AboutPanel";
 import { AppearancePanel } from "./AppearancePanel";
 import { ExtensionsPanel } from "./extensions/ExtensionsPanel";
@@ -24,6 +25,7 @@ const STATIC_CATEGORIES = [
 	"skills",
 	"mcp",
 	"knowledge",
+	"zotero",
 	"extensions",
 	"lan",
 	"about",
@@ -37,6 +39,7 @@ const PANELS: Partial<Record<SettingsCategory, ComponentType>> = {
 	skills: SkillsPanel,
 	mcp: McpPanel,
 	knowledge: KnowledgePanel,
+	zotero: ZoteroPanel,
 	extensions: ExtensionsPanel,
 	lan: LanObserverPanel,
 	about: AboutPanel,

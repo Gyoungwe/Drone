@@ -23,3 +23,4 @@ export * from "./transcript/run-inspector";
 export * from "./ui-plugins";
 export * from "./update";
 export * from "./usage-display";
+export * from "./zotero";

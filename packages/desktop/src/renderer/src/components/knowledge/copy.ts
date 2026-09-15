@@ -119,9 +119,10 @@ export const knowledgeZh = {
 	pathPlaceholder: "输入独立的 Vault 绝对路径，或选择文件夹",
 	preview: "预览目录与模板",
 	previewOnly: "以下仅为目录和模板预览，不会写入。真实方案由 research-vault skill 理解项目、问答后单独确认。",
-	skillBound: "一次初始化：先 /obsidian-setup（research-vault），再自动 /zotero-setup（zotero-literature）",
+	skillBound:
+		"知识库初始化：/obsidian-setup（research-vault）。文献接入独立进行（Zotero 面板 / /zotero-setup）。",
 	globalSwitch:
-		"点一次会先完成知识库初始化问答，再自动接入 Zotero。仅重装文献库可用下方独立按钮。切换 Vault 将影响全应用后续任务；正在运行的旧任务不会静默写入新库。",
+		"点一次会完成知识库初始化问答（仅 Vault）。文献接入请到独立的 Zotero 面板。切换 Vault 将影响全应用后续任务；正在运行的旧任务不会静默写入新库。",
 	selectProject: "请先选择一个项目或打开会话，作为初始化问答的上下文。",
 	pathRequired: "请输入或选择 Vault 路径。",
 	existing: "已有目录",
@@ -135,8 +136,8 @@ export const knowledgeZh = {
 	notMcp: "原生知识索引，不代表原始 MCP 已连接",
 	literature: "文献库 · Zotero",
 	literatureHint:
-		"Zotero 管 PDF、条目和标注；Obsidian 管可引用的 Library/Papers 笔记、证据和 Wiki。/zotero-setup 可从零安装 zotero-mcp-server（需确认联网）。不要把整个文献库倒进知识库。优先 zotero-cli；MCP 可选且默认关闭。",
-	literatureSetup: "接入 / 从零安装 Zotero",
+		"Zotero 管 PDF、条目和标注；Obsidian 管可引用的 Library/Papers 笔记、证据和 Wiki。文献接入与 MCP 启用现在在独立的 Zotero 面板里完成。",
+	literatureSetup: "打开 Zotero 面板",
 	literatureBound: "入口 /zotero-setup · 可安装 CLI",
 	literatureSteps: "准备步骤：安装 Zotero 桌面端 → 打开本机通信 → 接入 CLI",
 	literatureStatus: "安装流程会在当前会话中显示确认、结果和错误信息。",
@@ -397,9 +398,10 @@ const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
 	preview: "Preview folders & templates",
 	previewOnly:
 		"This is a read-only directory/template preview. The research-vault skill will inspect context, ask questions and separately confirm the actual plan.",
-	skillBound: "One setup: /obsidian-setup (research-vault), then automatic /zotero-setup (zotero-literature)",
+	skillBound:
+		"Knowledge setup: /obsidian-setup (research-vault). Literature is set up separately (Zotero panel / /zotero-setup).",
 	globalSwitch:
-		"One click runs the Vault setup interview, then continues into Zotero. Use the separate literature button to reinstall Zotero only. Switching the Vault affects later application tasks; an existing task is never silently redirected into the new Vault.",
+		"One click runs the Vault setup interview (Vault only). Set up literature in the separate Zotero panel. Switching the Vault affects later application tasks; an existing task is never silently redirected into the new Vault.",
 	selectProject: "Select a project or open a session as the setup interview context.",
 	pathRequired: "Enter or select a Vault path.",
 	existing: "Existing directory",
@@ -413,8 +415,8 @@ const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
 	notMcp: "Native knowledge index; not proof of a raw MCP connection",
 	literature: "Literature · Zotero",
 	literatureHint:
-		"Zotero holds PDFs, items and annotations. Obsidian holds citable Library/Papers notes, evidence and Wiki. /zotero-setup can install zotero-mcp-server from zero after confirm. Do not dump the library into the Vault. Prefer zotero-cli; MCP is optional and disabled by default.",
-	literatureSetup: "Connect / install Zotero from zero",
+		"Zotero holds PDFs, items and annotations. Obsidian holds citable Library/Papers notes, evidence and Wiki. Literature setup and MCP enable now live in the separate Zotero panel.",
+	literatureSetup: "Open the Zotero panel",
 	literatureBound: "Entry /zotero-setup · can install the CLI",
 	literatureSteps: "Preparation: install Zotero desktop → enable local communication → connect the CLI",
 	literatureStatus: "The confirmation, result, and any error will appear in the current session.",
