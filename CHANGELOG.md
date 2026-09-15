@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.4 — 2026-09-16
+
+- Zotero gets a dedicated UI panel with its own sidebar entry (next to Obsidian): live status, an enable/disable toggle for the Zotero MCP server, one-click connect/install, and open Zotero/docs — backed by a new read-only `getZoteroStatus` IPC.
+- Obsidian and Zotero setup are untangled: the Obsidian setup button is Vault-only (the combined `includeLiterature` path is removed), with cross-reference guidance to the Zotero panel.
+- Knowledge gate now circuit-breaks a runaway tool-loop far earlier (per-turn tool-round cap) and replaces the misleading "知识库检查未通过 … 请开启新一轮任务" with an accurate, actionable notice.
+
 ## 0.7.3 — 2026-09-15
 
 - Internal architecture deepening (no user-facing behaviour change): shared `optimisticUpdate` helper for renderer store mutations; single `INVOKE_ROUTES` source of truth generating the preload invoke surface and sessions IPC registrar (mapping byte-identical to v0.7.2).
