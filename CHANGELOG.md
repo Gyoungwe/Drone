@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.3 — 2026-09-15
+
+- Internal architecture deepening (no user-facing behaviour change): shared `optimisticUpdate` helper for renderer store mutations; single `INVOKE_ROUTES` source of truth generating the preload invoke surface and sessions IPC registrar (mapping byte-identical to v0.7.2).
+- Knowledge publication fail-closed projection is drift-safe (neutralizes by event shape, not an enumerated type list) and its bridge-absent fallback is now tested.
+- Knowledge gate stage progress derived once in the backend flow and rendered verbatim; running-state `phase` seam type-locked and `agentActive` reads unified behind `useAgentActive`.
+
 ## 0.7.1 — 2026-09-13
 
 - Default mode asks before edit/write (approval dock).
