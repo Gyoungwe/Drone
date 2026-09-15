@@ -1,13 +1,14 @@
-import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { publishExplainer } from "../obsidian-workbench.mjs";
 import { deliveryContract } from "../source-delivery.mjs";
+import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import {
-	knowledgeDirectory,
-	projectIdentity,
-	readKnowledgeBinding,
-	withKnowledgeBinding,
-} from "./config.mjs";
+	continuesTopic,
+	currentProject,
+	explainerTopicId,
+	result,
+	sessionIdentity,
+} from "./extension-helpers.mjs";
 import { runNavigationMaintenance } from "./maintenance.mjs";
 import { registerAnswerPublication } from "./publication.mjs";
 import { getKnowledgeService } from "./service.mjs";
@@ -35,45 +36,6 @@ import {
 	stageWikiProposal,
 } from "./wiki-review.mjs";
 
-const result = (data) => ({
-	content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-	details: data,
-});
-async function currentProject(cwd) {
-	let value;
-	try {
-		value = JSON.parse(await readFile(join(cwd, ".pi/research-workspace.json"), "utf8")).knowledgeProjectId;
-	} catch {
-		/* stable fallback */
-	}
-	return projectIdentity(cwd, value);
-}
-function explainerTopicId(value, title = "research-topic") {
-	const base = String(value || title)
-		.normalize("NFKC")
-		.toLowerCase()
-		.replace(/[-_]20\d{6,14}$/, "")
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-|-$/g, "")
-		.slice(0, 96);
-	return base || "research-topic";
-}
-const sessionIdentity = (ctx) => ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || null;
-const continuationHint = (value) =>
-	/(?:previous|prior|last|earlier|continue|resume|what about|how about|why|then|it|that|those|之前|上个|继续|刚才|它|那个|那它|为什么|怎么|如何|还有|然后)/i.test(
-		String(value || ""),
-	);
-function continuesTopic(prompt, topic) {
-	if (!topic) return false;
-	const text = String(prompt || "").trim();
-	if (!text) return true;
-	if (/(?:switch|new topic|different topic|换个|另一个|新的主题|切换主题)/i.test(text)) return false;
-	if (continuationHint(text)) return true;
-	const lower = text.toLowerCase();
-	return [topic.id, topic.title, ...(topic.aliases || []), ...(topic.entities || [])]
-		.filter((value) => typeof value === "string" && value.trim().length >= 2)
-		.some((value) => lower.includes(value.toLowerCase()));
-}
 export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 	if (!knowledgeDirectory())
 		return {
