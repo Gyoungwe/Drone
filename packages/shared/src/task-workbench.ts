@@ -57,6 +57,16 @@ export interface WorkbenchTask {
 	reason: string | null;
 	stage: number;
 	planApproved?: boolean;
+	authorizationRequired?: boolean;
+	authorizationSummary?: string;
+	writeRoots?: string[];
+	executionConsent?: {
+		version: 1;
+		contractHash: string;
+		approvedAt: string;
+		maxCalls: number;
+		maxAutoResumes: number;
+	};
 	archivedFrom?: TaskState;
 	archivedAt?: string;
 	budget: { calls: number; stageCalls: number };
@@ -107,6 +117,18 @@ export function decodeTaskView(value: unknown): TaskView | undefined {
 				typeof t.goal === "string" &&
 				t.goal.length <= 180 &&
 				states.has(t.state) &&
+				(t.authorizationSummary === undefined ||
+					(typeof t.authorizationSummary === "string" && t.authorizationSummary.length <= 1200)) &&
+				(t.writeRoots === undefined ||
+					(Array.isArray(t.writeRoots) &&
+						t.writeRoots.length <= 8 &&
+						t.writeRoots.every((p) => typeof p === "string" && p.length <= 512))) &&
+				(t.executionConsent === undefined ||
+					(t.executionConsent?.version === 1 &&
+						t.executionConsent.maxCalls === 192 &&
+						t.executionConsent.maxAutoResumes === 3 &&
+						typeof t.executionConsent.approvedAt === "string" &&
+						/^[a-f0-9]{64}$/.test(t.executionConsent.contractHash))) &&
 				!!t.budget &&
 				Number.isFinite(t.budget.calls) &&
 				Array.isArray(t.milestones) &&
@@ -164,6 +186,10 @@ export const TASK_STATE_LABELS: Record<TaskState, string> = {
 };
 /** Human-readable explanation with a next step for host reason codes; unknown codes fall back to the code. Mirrors `.pi/lib/tasks/workbench.mjs` REASON_TEXT. */
 export const TASK_REASON_TEXT: Record<string, string> = {
+	"task-authorization-required": "方案已准备好，请一次确认本任务的范围、可写目录和完成标准。",
+	"automatic-recovery": "正在按已确认的任务授权自动续作，无需重复确认阶段。",
+	"automatic-stage-checkpoint": "已保存执行进展，正在原授权和总预算内继续下一阶段。",
+	"total-budget": "本任务已到达总调用上限，已保留结果，不会自动扩大预算。",
 	"stage-budget": "本阶段的工具调用次数已用完，已暂停并保留进度。点“确认下一阶段预算”可继续。",
 	"budget-review-required": "工具调用预算已用完。请查看当前结果；确认后可开启下一阶段。",
 	"reconcile-before-retry":

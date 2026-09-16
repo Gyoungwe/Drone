@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, open, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import { contractHash, hasTaskConsent, MAX_AUTO_RESUMES } from "./consent.mjs";
 import { readPdfIdentity } from "./pdf-identity.mjs";
 
 export const WORKBENCH_ENTRY = "percho-task-workbench-v2";
@@ -46,7 +47,11 @@ const readOnly = (name) =>
 const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
 /** User-facing explanation and next step for each machine reason code. Codes stay stable for tests/UI. */
 export const REASON_TEXT = Object.freeze({
-	"stage-budget": "本阶段的工具调用次数已用完，已暂停并保留进度。要继续，请在任务面板点“确认下一阶段预算”。",
+	"task-authorization-required": "方案已准备好。请一次确认本任务的范围、可写目录和完成标准，之后自动推进。",
+	"automatic-recovery": "已按本任务授权从检查点自动继续，无需再次确认阶段。",
+	"automatic-stage-checkpoint": "已保存执行进展，正在原授权和总预算内继续下一阶段。",
+	"total-budget": "已到达本任务总调用上限，现有结果已保留。不会自动扩大预算或反复要求确认。",
+	"stage-budget": "阶段暂未取得足够新进展，已保留结果。已授权任务不会重复要求确认阶段预算。",
 	"budget-review-required": "工具调用预算已用完。请查看当前结果；确认后可在任务面板开启下一阶段。",
 	"reconcile-before-retry":
 		"有操作在上次运行中没有得到结果（例如写入、安装、上传）。请先点“只读核对产物”确认实际情况，避免重复执行。",
@@ -167,6 +172,7 @@ export function createTaskWorkbench({
 	getWikiStatus = async () => null,
 	getZoteroStatus = async () => ({ state: "unavailable" }),
 	onCheckpoint = () => {},
+	requireAuthorization = false,
 } = {}) {
 	let book = {
 			version: 2,
@@ -271,7 +277,12 @@ export function createTaskWorkbench({
 			reason: null,
 			stage: 1,
 			stageProgress: 0,
-			budget: { calls: 0, stageCalls: 0, recoveries: 0, bytes: 0 },
+			authorizationRequired: requireAuthorization,
+			progressCount: 0,
+			stageStartProgress: 0,
+			progressKeys: [],
+			pendingObservations: [],
+			budget: { calls: 0, stageCalls: 0, recoveries: 0, bytes: 0, autoResumes: 0 },
 			milestones: [],
 			actions: [],
 			operations: [],
@@ -334,6 +345,10 @@ export function createTaskWorkbench({
 			t.state = "blocked";
 			t.reason = "reconcile-before-retry";
 		} else if (t.actions.some((a) => a.state === "pending")) t.state = "waiting_user";
+		else if (t.milestones.length && !t.planApproved) {
+			t.state = "waiting_user";
+			t.reason = "task-authorization-required";
+		} else if (t.budget.stageCalls >= LIMITS.stageCalls && advanceStage()) t.state = "running";
 		else if (t.budget.calls >= LIMITS.totalCalls || t.budget.stageCalls >= LIMITS.stageCalls) {
 			t.state = "blocked";
 			t.reason = "budget-review-required";
@@ -390,8 +405,13 @@ export function createTaskWorkbench({
 				evidence: null,
 			};
 		});
+		if (input.goal) t.goal = clean(input.goal);
+		t.authorizationSummary = clean(input.summary || t.goal, 1200);
+		t.writeRoots = [...(input.writeRoots || [])];
 		t.milestones = milestones;
 		t.planApproved = false;
+		t.state = "waiting_user";
+		t.reason = "task-authorization-required";
 		save();
 		return clone(milestones);
 	}
@@ -453,7 +473,29 @@ export function createTaskWorkbench({
 		const t = checkRevision(input.taskId, input.revision);
 		if (book.tasks.some((x) => x.operations.some((o) => o.state === "started")))
 			throw error("task-busy", "Stop the running agent before changing task state.");
-		if (input.action === "approve-plan") {
+		if (input.action === "authorize-task") {
+			if (terminal(t.state) || !t.milestones.length)
+				throw error("plan-required", "Review a non-empty task plan before authorizing execution.");
+			if (!hasTaskConsent(t, LIMITS.totalCalls)) {
+				t.executionConsent = {
+					version: 1,
+					contractHash: contractHash(t),
+					approvedAt: now(),
+					maxCalls: LIMITS.totalCalls,
+					maxAutoResumes: MAX_AUTO_RESUMES,
+				};
+				t.stage++;
+				t.budget.stageCalls = 0;
+				t.stageStartProgress = t.progressCount || 0;
+			}
+			t.planApproved = true;
+			t.planApprovedAt = t.executionConsent.approvedAt;
+			book.activeTaskId = t.id;
+			book.selectionRequired = false;
+			pinned = true;
+			t.state = "partial";
+			t.reason = null;
+		} else if (input.action === "approve-plan") {
 			t.planApproved = true;
 			t.planApprovedAt = now();
 		} else if (input.action === "select") {
@@ -669,22 +711,85 @@ export function createTaskWorkbench({
 			t.state = "partial";
 		else t.state = "partial";
 	}
-	function advanceStage() {
+	/** Readback may inspect approved output roots even while an effect needs reconciliation.
+	 * The caller must still apply CURRENT read permissions. This never grants a write. */
+	function readRoots() {
+		const t = active();
+		return t &&
+			hasTaskConsent(t, LIMITS.totalCalls) &&
+			!["cancelled", "archived"].includes(t.state) &&
+			!book.selectionRequired &&
+			t.reason !== "binding-changed"
+			? [...(t.writeRoots || [])]
+			: [];
+	}
+	function authorization(forWrite = false) {
 		const t = active();
 		if (
 			!t ||
-			!t.planApproved ||
+			!hasTaskConsent(t, LIMITS.totalCalls) ||
+			terminal(t.state) ||
+			book.selectionRequired ||
+			t.reason === "binding-changed" ||
+			t.state === "waiting_user" ||
+			t.operations.some((o) =>
+				(forWrite ? ["unknown", "changed"] : ["started", "unknown", "changed"]).includes(o.state),
+			)
+		)
+			return null;
+		return { taskId: t.id, writeRoots: [...(t.writeRoots || [])], ...t.executionConsent };
+	}
+	/** A bounded host-observed recovery, not a new user message or a bigger budget. */
+	function reserveContinuation(reason) {
+		const t = active();
+		const recoverable = new Set([
+			"tool-loop-stopped",
+			"source-unread",
+			"source-changed",
+			"search-required",
+			"search-stale",
+			"citation-required",
+			"check-timeout",
+		]);
+		if (
+			!authorization() ||
+			!recoverable.has(reason) ||
+			t.budget.calls >= LIMITS.totalCalls ||
+			(t.budget.autoResumes || 0) >= MAX_AUTO_RESUMES ||
+			t.actions.some((a) => a.state === "pending") ||
+			(t.progressCount || 0) <= (t.lastResumeProgress || 0)
+		)
+			return false;
+		t.budget.autoResumes = (t.budget.autoResumes || 0) + 1;
+		t.lastResumeProgress = t.progressCount;
+		t.stage++;
+		t.budget.stageCalls = 0;
+		t.stageStartProgress = t.progressCount;
+		t.reason = "automatic-recovery";
+		t.state = "partial";
+		save();
+		return true;
+	}
+	function advanceStage() {
+		const t = active();
+		if (
+			!t?.planApproved ||
 			t.budget.calls >= LIMITS.totalCalls ||
 			t.operations.some((o) => ["started", "unknown"].includes(o.state))
 		)
 			return false;
 		const count = t.milestones.filter((m) => m.state === "completed").length;
-		if (count <= (t.stageProgress || 0)) return false;
+		const automatic =
+			hasTaskConsent(t, LIMITS.totalCalls) &&
+			(t.progressCount || 0) > (t.stageStartProgress || 0) &&
+			!t.actions.some((a) => a.state === "pending");
+		if (!automatic && count <= (t.stageProgress || 0)) return false;
+		t.stageStartProgress = t.progressCount || 0;
 		t.stageProgress = count;
 		t.stage++;
 		t.budget.stageCalls = 0;
 		t.state = "partial";
-		t.reason = "verified-stage-checkpoint";
+		t.reason = automatic ? "automatic-stage-checkpoint" : "verified-stage-checkpoint";
 		save();
 		onCheckpoint();
 		return true;
@@ -693,16 +798,46 @@ export function createTaskWorkbench({
 		const t = requireTask();
 		if (t.budget.stageCalls >= LIMITS.stageCalls) advanceStage();
 		if (event.toolName === "task_status") return null;
+		// A single immutable proposal remains possible after a read-only preflight hits a stage limit.
+		if (
+			event.toolName === "task_plan" &&
+			t.authorizationRequired &&
+			!t.milestones.length &&
+			!terminal(t.state)
+		)
+			return null;
 		if (terminal(t.state) || book.selectionRequired)
 			return { block: true, reason: "Select an unfinished task before starting tools." };
-		if (t.budget.calls >= LIMITS.totalCalls || t.budget.stageCalls >= LIMITS.stageCalls) {
-			t.state = "blocked";
-			t.reason = "stage-budget";
+		// Knowledge-vault tools (research_*) are host-governed: run-dir scoped, evidence-gated and
+		// Wiki-reviewed. They never touch user files or run commands, so an ordinary research answer
+		// must not require the one-task authorization card. Commands/file writes still do.
+		const vaultTool = /^research_/.test(event.toolName);
+		if (
+			t.authorizationRequired &&
+			!hasTaskConsent(t, LIMITS.totalCalls) &&
+			!controls.has(event.toolName) &&
+			!readOnly(event.toolName) &&
+			!vaultTool &&
+			event.toolName !== "ask_user"
+		) {
+			t.state = "waiting_user";
+			t.reason = "task-authorization-required";
 			save();
 			return {
 				block: true,
 				reason:
-					"Stage tool budget reached; the host paused the task and kept progress. Give the user your best answer from what you already have, state what remains, and tell them they can continue from the task panel (“确认下一阶段预算”). Do not call more tools.",
+					"Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables. The user authorizes that single card. Do not start commands/writes or ask for separate stage approvals.",
+			};
+		}
+		if (t.budget.calls >= LIMITS.totalCalls || t.budget.stageCalls >= LIMITS.stageCalls) {
+			t.state = "blocked";
+			t.reason = t.budget.calls >= LIMITS.totalCalls ? "total-budget" : "stage-budget";
+			save();
+			return {
+				block: true,
+				reason: hasTaskConsent(t, LIMITS.totalCalls)
+					? "The approved task reached a hard limit or made no new progress. Deliver observed results, remaining work and the specific blocker. Do not request routine stage approval or silently reset the total budget."
+					: "The host kept the checkpoint. Propose one task_plan covering execution and acceptance for the user to authorize. Do not repeatedly request stage budgets.",
 			};
 		}
 		if (t.reason === "binding-changed")
@@ -750,6 +885,11 @@ export function createTaskWorkbench({
 			};
 		t.budget.calls++;
 		t.budget.stageCalls++;
+		if (!controls.has(event.toolName) && event.toolCallId) {
+			t.pendingObservations ||= [];
+			t.pendingObservations.push(clean(event.toolCallId, 100));
+			t.pendingObservations = t.pendingObservations.slice(-LIMITS.totalCalls);
+		}
 		if (effect) {
 			const op = {
 				id: clean(event.toolCallId, 100),
@@ -791,8 +931,26 @@ export function createTaskWorkbench({
 			save();
 			return;
 		}
+		const bad =
+			event.isError ||
+			event.details?.ok === false ||
+			["failed", "blocked", "budget-exhausted"].includes(event.details?.status);
+		const observedCall = t.pendingObservations?.includes(clean(event.toolCallId, 100));
+		t.pendingObservations = (t.pendingObservations || []).filter((id) => id !== clean(event.toolCallId, 100));
+		if (observedCall && !bad && !controls.has(event.toolName) && event.toolName !== "ask_user") {
+			const progressKey = hash(`${event.toolName}\0${stable(event.input || {})}`);
+			t.progressKeys ||= [];
+			if (!t.progressKeys.includes(progressKey)) {
+				t.progressKeys.push(progressKey);
+				t.progressKeys = t.progressKeys.slice(-64);
+				t.progressCount = (t.progressCount || 0) + 1;
+			}
+		}
 		const op = t.operations.find((o) => o.id === event.toolCallId);
-		if (!op) return;
+		if (!op) {
+			save();
+			return;
+		}
 		const details = event.details || {},
 			text = (event.content || [])
 				.filter((b) => b.type === "text")
@@ -871,7 +1029,7 @@ export function createTaskWorkbench({
 			revision: book.revision,
 			activeTaskId: book.activeTaskId,
 			selectionRequired: book.selectionRequired,
-			tasks: book.tasks.map((t) => ({
+			tasks: book.tasks.map(({ progressKeys, pendingObservations, ...t }) => ({
 				...t,
 				operations: t.operations.map(({ key, ...op }) => op),
 				waitMs:
@@ -912,6 +1070,9 @@ export function createTaskWorkbench({
 	}
 	return {
 		advanceStage,
+		authorization,
+		readRoots,
+		reserveContinuation,
 		attach,
 		begin,
 		plan,

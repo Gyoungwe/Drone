@@ -1,9 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
-import { resolve } from "node:path";
+import { realpath } from "node:fs/promises";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { readKnowledgeBinding } from "../knowledge/config.mjs";
 import { currentProject } from "../knowledge/extension-helpers.mjs";
 import { getKnowledgeService } from "../knowledge/service.mjs";
 import { previewWikiProposal } from "../knowledge/wiki-review.mjs";
+import { resolveWriteRoots } from "./consent.mjs";
 import { createEvidenceRecovery } from "./evidence.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
 import { createZoteroReconciler } from "./zotero-reconcile.mjs";
@@ -34,9 +36,21 @@ export function registerWorkbench(pi) {
 	};
 	const inspect = async (cwd, path, expected) => {
 		await authorize(cwd, path);
+		const full = resolve(cwd, path);
+		const root = journal.readRoots().find((candidate) => {
+			const rel = relative(candidate, full);
+			return !isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`);
+		});
+		if (root) {
+			if (relative(root, await realpath(root)) !== "")
+				throw new Error("Approved directory identity changed.");
+			const artifact = await inspectTaskFile(root, full, expected);
+			return { ...artifact, path: (isAbsolute(path) ? full : relative(cwd, full)).replaceAll("\\", "/") };
+		}
 		return inspectTaskFile(cwd, path, expected);
 	};
 	const journal = createTaskWorkbench({
+		requireAuthorization: true,
 		persist: (snapshot) => pi.appendEntry(WORKBENCH_ENTRY, snapshot),
 		onCheckpoint: () => send(),
 		getZoteroStatus: createZoteroReconciler(),
@@ -67,16 +81,103 @@ export function registerWorkbench(pi) {
 		const b = await readKnowledgeBinding();
 		return b ? `${b.vaultId}:${b.revision}` : null;
 	};
-	const send = () =>
+	const send = (content = journal.render()) =>
 		pi.sendMessage(
 			{
 				customType: "percho-task-status",
 				display: true,
-				content: journal.render(),
+				content,
 				details: { operational: true, reportId: randomUUID(), taskView: journal.view() },
 			},
 			{ triggerTurn: false },
 		);
+	let handoffGeneration = 0;
+	let handoffTimer;
+	let automaticTurn = false;
+	let continuationToken = null;
+	journal.isAutoContinuation = (message) =>
+		!!(
+			message?.role === "custom" &&
+			message.customType === "percho-task-autocontinue" &&
+			continuationToken &&
+			message.details?.nonce === continuationToken &&
+			message.details?.taskId === journal.snapshot()?.id &&
+			journal.authorization()
+		);
+	const cancelHandoff = () => {
+		handoffGeneration++;
+		clearTimeout(handoffTimer);
+		automaticTurn = false;
+		continuationToken = null;
+	};
+	const continueAuthorized = (ctx) => {
+		const taskId = journal.snapshot()?.id;
+		const generation = ++handoffGeneration;
+		let idleChecks = 0;
+		const handoff = async () => {
+			if (
+				generation !== handoffGeneration ||
+				context !== ctx ||
+				journal.snapshot()?.id !== taskId ||
+				!journal.authorization()
+			)
+				return;
+			if (ctx.isIdle && !ctx.isIdle()) {
+				if (++idleChecks < 40) handoffTimer = setTimeout(() => void handoff(), 25);
+				else {
+					journal.pause("auto-handoff-not-idle");
+					send();
+				}
+				return;
+			}
+			try {
+				const binding = await bindingKey();
+				if (generation !== handoffGeneration || context !== ctx || journal.snapshot()?.id !== taskId) return;
+				const result = journal.begin("继续", [], binding);
+				if (
+					result.blocked ||
+					["blocked", "waiting_user"].includes(journal.snapshot()?.state) ||
+					!journal.authorization()
+				) {
+					send();
+					return;
+				}
+				prepared = true;
+				automaticTurn = true;
+				continuationToken = randomUUID();
+				pi.sendMessage(
+					{
+						customType: "percho-task-autocontinue",
+						display: false,
+						details: { taskId, nonce: continuationToken },
+						content: `Continue the user-authorized task: ${journal.snapshot().goal}. Scope: ${journal.snapshot().authorizationSummary}. Use saved results, verify uncertain effects before any retry, and complete the remaining deliverables. Do not request routine stage approval. Respect declined installs and all permission/validation gates. If blocked, clearly deliver what exists and the one real blocker instead of silently extending scope.`,
+					},
+					{ triggerTurn: true, deliverAs: "followUp" },
+				);
+			} catch (e) {
+				if (
+					generation !== handoffGeneration ||
+					context !== ctx ||
+					journal.snapshot()?.id !== taskId ||
+					["completed", "cancelled", "archived"].includes(journal.snapshot()?.state)
+				)
+					return;
+				journal.pause("auto-handoff-failed");
+				send(`自动续作未启动：${clean(e.message)}。已保留原结果，没有重复执行。`);
+			}
+		};
+		handoffTimer = setTimeout(() => void handoff(), 0);
+	};
+	pi.on("session_shutdown", cancelHandoff);
+	// Current task consent is exposed only to the existing permission adapter, never to model tool inputs.
+	pi.events?.on?.("percho:task-write-consent", (request) => {
+		if (
+			context &&
+			request.cwd === context.cwd &&
+			request.sessionId === context.sessionManager?.getSessionId?.()
+		)
+			request.respond?.(journal.authorization(true));
+	});
 	const prepare = async (query, ctx) => {
 		attach(ctx);
 		const entries = ctx.sessionManager?.getBranch?.() || [];
@@ -89,16 +190,19 @@ export function registerWorkbench(pi) {
 		return result;
 	};
 	pi.on("session_start", (_event, ctx) => {
+		cancelHandoff();
 		attach(ctx, true);
 		prepared = false;
 		awaitingUser = false;
 	});
 	pi.on("session_tree", (_event, ctx) => {
+		cancelHandoff();
 		attach(ctx, true);
 		prepared = false;
 		halted = false;
 	});
 	pi.on("input", async (event, ctx) => {
+		cancelHandoff();
 		if (ctx.isIdle && !ctx.isIdle()) return { action: "continue" };
 		try {
 			const result = await prepare(event.text, ctx);
@@ -131,16 +235,25 @@ export function registerWorkbench(pi) {
 			}
 		}
 		prepared = false;
-		awaitingUser = true;
+		awaitingUser = !automaticTurn;
+		automaticTurn = false;
 		return {
 			message: {
 				customType: "percho-task-context",
 				display: false,
-				content: `${journal.render()}\nHost observations only. Use task_plan to propose bounded milestones/acceptance and task_wait for human actions. Only host readback or explicit scoped review can satisfy milestones. Unknown effects must be reconciled, not retried. Stage limits cannot be reset with status messages. task_status delivers host-only results.`,
+				content: `${journal.render()}\nHost observations only. For substantial execution, first do read-only preparation, consolidate necessary choices/assumptions and call task_plan ONCE with the original user goal, a plain-language scope summary, existing write directories, and file-based deliverables. This card is the single approval for task execution, directory writes, acceptance and automatic stage continuation. Do not request separate approval via ask_user/task_wait or ask users to keep saying continue. Stop after presenting the plan until it is authorized. Within approved scope, perform routine steps and bounded recovery autonomously; only new risk/scope, credentials, genuinely unavailable user data or actual required human review need intervention. Never claim human/scientific review happened automatically. Prefer machine-checkable deliverables over unnecessary human-review milestones. Preserve prior refusals. File/command denies, sensitive files, unknown effects, total call budget and provenance checks remain binding. task_status delivers host-only results.`,
 			},
 		};
 	});
 	pi.on("message_start", async (event, ctx) => {
+		if (journal.isAutoContinuation(event.message)) {
+			prepared = false;
+			automaticTurn = false;
+			awaitingUser = false;
+			const result = journal.begin("继续", [], await bindingKey());
+			halted = !!result.blocked;
+			return;
+		}
 		if (event.message.role !== "user") return;
 		if (awaitingUser) {
 			awaitingUser = false;
@@ -185,10 +298,35 @@ export function registerWorkbench(pi) {
 	pi.events?.on?.("percho:context-evicted", (event) => {
 		if (event.sessionId === context?.sessionManager?.getSessionId?.()) evidence.evict(event.toolCallIds);
 	});
-	pi.on("agent_end", (event) => {
+	pi.on("agent_end", async (event, ctx) => {
 		const last = [...(event.messages || [])].reverse().find((m) => m.role === "assistant");
-		if (last?.stopReason === "aborted") journal.pause("user-aborted");
-		else journal.settle();
+		if (
+			last?.stopReason === "aborted" ||
+			ctx?.signal?.aborted ||
+			/was aborted|request aborted/i.test(last?.errorMessage || "")
+		) {
+			cancelHandoff();
+			journal.pause("user-aborted");
+			send();
+			return;
+		}
+		journal.settle();
+		if (journal.authorization()) {
+			try {
+				await journal.reconcile(context.cwd);
+			} catch {
+				/* no consent or proof is fabricated */
+			}
+			if (
+				last?.knowledgePublication?.status === "blocked" &&
+				last.stopReason !== "error" &&
+				journal.reserveContinuation(last.knowledgePublication.reason)
+			) {
+				send("已按本任务授权自动续作：沿用已保存结果，先核对再继续，无需再次确认阶段。");
+				continueAuthorized(context);
+				return;
+			}
+		}
 		send();
 	});
 	const tool = (name, description, properties, required, execute) =>
@@ -219,8 +357,11 @@ export function registerWorkbench(pi) {
 	);
 	tool(
 		"task_plan",
-		"Propose immutable milestones and dependencies. The user must approve acceptance conditions. Model completion labels are never accepted.",
+		"Prepare ONE task authorization after read-only discovery: original goal, understandable scope, existing write directories, and immutable deliverables. Bundle necessary choices here instead of asking about each step. The user authorizes once; normal stages and bounded recovery then proceed automatically. No authorization of new risks, arbitrary commands, credentials or scientific conclusions.",
 		{
+			goal: { ...str, maxLength: 180 },
+			summary: { type: "string", minLength: 1, maxLength: 1200 },
+			writeDirectories: { type: "array", maxItems: 8, items: str },
 			milestones: {
 				type: "array",
 				minItems: 1,
@@ -250,8 +391,13 @@ export function registerWorkbench(pi) {
 				},
 			},
 		},
-		["milestones"],
-		(input) => journal.plan(input),
+		["summary", "milestones"],
+		async (input, ctx) => {
+			const writeRoots = await resolveWriteRoots(ctx.cwd, input.writeDirectories || []);
+			const result = journal.plan({ ...input, writeRoots });
+			send("方案已准备好。请确认这一次任务授权；之后我会在确认范围内自动推进并交付结果。");
+			return result;
+		},
 	);
 	tool(
 		"task_wait",
@@ -294,11 +440,18 @@ export function registerWorkbench(pi) {
 	pi.registerCommand("task-action", {
 		description: "任务面板的版本化用户操作；不授予新权限",
 		handler: async (args, ctx) => {
+			cancelHandoff();
 			attach(ctx);
 			if (ctx.isIdle && !ctx.isIdle())
 				throw new Error("Stop the agent before changing tasks or inspecting recovery files.");
 			if (args.length > 6000) throw new Error("Task command too large.");
 			const input = JSON.parse(Buffer.from(args.trim(), "base64url").toString("utf8"));
+			if (input.action === "authorize-task") {
+				journal.command(input);
+				send("已确认本任务授权。我会自动推进并交付结果；你可随时停止，新的风险或范围变更仍需确认。");
+				continueAuthorized(ctx);
+				return;
+			}
 			if (input.action === "file") await journal.acceptFile(input, ctx.cwd);
 			else if (input.action === "refresh") {
 				journal.command({ ...input, action: "select" });

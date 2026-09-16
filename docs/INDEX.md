@@ -15,6 +15,8 @@
 - 新增 renderer hook/store 要暴露给插件 = 源模块 + `plugins/host-api.ts` + `plugins/env.d.ts`（PerchoUiApi）+ `main/ui-plugins/build.ts` SHIM + `resources/percho-ui.d.ts`（必要时 SPEC.md 导出清单）五处同步
 - JSON 持久化一律走 backend `JsonStore`（原子写 + 损坏语义），不自写 fs
 
+任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
+
 ## 总览
 
 npm workspaces monorepo，3 个包：

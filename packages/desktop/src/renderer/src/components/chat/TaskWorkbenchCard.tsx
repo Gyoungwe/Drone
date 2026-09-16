@@ -8,9 +8,11 @@ import {
 } from "@percho/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
+import { useT } from "../../i18n";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 
 export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; sessionId: string | null }) {
+	const t = useT();
 	const [busy, setBusy] = useState(false),
 		[error, setError] = useState("");
 	const [paths, setPaths] = useState<Record<string, string>>({});
@@ -79,59 +81,98 @@ export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; session
 							{explainTaskReason(task.reason)}
 						</p>
 					)}
-					<div className="mt-3 flex flex-wrap gap-2">
-						<button
-							type="button"
-							disabled={disabled}
-							className={button}
-							onClick={() => act(task.id, "select")}
-						>
-							选择此任务
-						</button>
-						<button
-							type="button"
-							disabled={disabled}
-							className={button}
-							onClick={() => act(task.id, "refresh")}
-						>
-							只读核对产物
-						</button>
-						<button
-							type="button"
-							disabled={disabled || TERMINAL_TASK_STATES.has(task.state)}
-							className={button}
-							onClick={() => act(task.id, "resume")}
-						>
-							从检查点继续
-						</button>
-						<button
-							type="button"
-							disabled={disabled || TERMINAL_TASK_STATES.has(task.state)}
-							className={button}
-							onClick={() => act(task.id, "next-stage")}
-						>
-							确认下一阶段预算
-						</button>
-						<button
-							type="button"
-							disabled={disabled || TERMINAL_TASK_STATES.has(task.state)}
-							className={button}
-							onClick={() => act(task.id, "cancel")}
-						>
-							取消任务
-						</button>
-						{task.state !== "archived" && (
+					{!!task.milestones.length && !TERMINAL_TASK_STATES.has(task.state) && (
+						<div className="mt-3 rounded-lg border border-border bg-surface p-3" data-testid="task-consent">
+							<h5 className="text-sm font-medium">
+								{t(task.executionConsent ? "taskConsent.active" : "taskConsent.title")}
+							</h5>
+							<p className="mt-2 whitespace-pre-wrap text-sm">{task.authorizationSummary || task.goal}</p>
+							<p className="mt-2 text-xs text-ink-dim">
+								{t("taskConsent.limits", { calls: view.limits.totalCalls })}
+							</p>
+							<p className="mt-2 text-xs">{t("taskConsent.directories")}</p>
+							{task.writeRoots?.length ? (
+								<ul className="mt-1 space-y-1 text-xs">
+									{task.writeRoots.map((root) => (
+										<li key={root} className="break-all">
+											<code>{root}</code>
+										</li>
+									))}
+								</ul>
+							) : (
+								<p className="mt-1 text-xs text-ink-dim">{t("taskConsent.noDirectories")}</p>
+							)}
+							<p className="mt-2 text-xs text-ink-dim">{t("taskConsent.boundary")}</p>
+							{!task.executionConsent && (
+								<button
+									type="button"
+									disabled={disabled}
+									className={`${button} mt-3`}
+									onClick={() => act(task.id, "authorize-task")}
+								>
+									{t("taskConsent.approve")}
+								</button>
+							)}
+						</div>
+					)}
+					<details className="mt-3 text-xs">
+						<summary className="cursor-pointer text-ink-dim">{t("taskConsent.manual")}</summary>
+						<div className="mt-3 flex flex-wrap gap-2">
 							<button
 								type="button"
-								disabled={disabled || !canArchiveTask(task)}
+								disabled={disabled}
 								className={button}
-								title="归档后不再计入可继续任务；历史满时最早的归档任务会被移除，请先导出检查点"
-								onClick={() => act(task.id, "archive")}
+								onClick={() => act(task.id, "select")}
 							>
-								归档任务
+								选择此任务
 							</button>
-						)}
-					</div>
+							<button
+								type="button"
+								disabled={disabled}
+								className={button}
+								onClick={() => act(task.id, "refresh")}
+							>
+								只读核对产物
+							</button>
+							<button
+								type="button"
+								disabled={disabled || TERMINAL_TASK_STATES.has(task.state)}
+								className={button}
+								onClick={() => act(task.id, "resume")}
+							>
+								从检查点继续
+							</button>
+							{!task.executionConsent && !task.authorizationRequired && (
+								<button
+									type="button"
+									disabled={disabled || TERMINAL_TASK_STATES.has(task.state)}
+									className={button}
+									onClick={() => act(task.id, "next-stage")}
+								>
+									确认下一阶段预算
+								</button>
+							)}
+							<button
+								type="button"
+								disabled={disabled || TERMINAL_TASK_STATES.has(task.state)}
+								className={button}
+								onClick={() => act(task.id, "cancel")}
+							>
+								取消任务
+							</button>
+							{task.state !== "archived" && (
+								<button
+									type="button"
+									disabled={disabled || !canArchiveTask(task)}
+									className={button}
+									title="归档后不再计入可继续任务；历史满时最早的归档任务会被移除，请先导出检查点"
+									onClick={() => act(task.id, "archive")}
+								>
+									归档任务
+								</button>
+							)}
+						</div>
+					</details>
 					<details open={task.id === view.activeTaskId} className="mt-3 text-xs">
 						<summary className="cursor-pointer text-ink-dim">验收、人工介入与操作账本</summary>
 						{!!task.milestones.length && (
@@ -155,16 +196,6 @@ export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; session
 										</li>
 									))}
 								</ol>
-								{!task.planApproved && (
-									<button
-										type="button"
-										disabled={disabled}
-										className={`${button} mt-2`}
-										onClick={() => act(task.id, "approve-plan")}
-									>
-										确认这些验收条件
-									</button>
-								)}
 							</div>
 						)}
 						{task.actions

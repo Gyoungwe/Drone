@@ -2,6 +2,18 @@ import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
+	taskConsent: {
+		manual: "Manual controls and diagnostics (optional)",
+		title: "Authorize this task once",
+		active: "Task authorized · automatic stages",
+		limits:
+			"At most {calls} tool calls and 3 automatic recoveries for this task. The budget will not expand automatically.",
+		directories: "Directories approved for ordinary writes, including subdirectories:",
+		noDirectories: "No additional write directories requested; existing permissions apply.",
+		boundary:
+			"This also approves the acceptance plan below. Commands retain existing permissions. Deletion, sensitive files, out-of-scope actions, new risks and actual human review are not automatically approved. You can stop at any time.",
+		approve: "Authorize once and run to delivery",
+	},
 	common: {
 		save: "Save",
 		cancel: "Cancel",

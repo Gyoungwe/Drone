@@ -14,6 +14,7 @@ import {
 } from ".";
 import { type PermissionAuditEntry, PermissionAuditLog, permissionAuditPath } from "./audit";
 import type { PermissionRequestMeta } from "./gate";
+import { taskWriteAllowed } from "./task-consent";
 import { isRmSegment, isTemporaryPath, rmSegmentExempt } from "./tmp-zone";
 
 const log = createLogger("permission-gate");
@@ -162,6 +163,35 @@ export function makePermissionGateExtension(
 				if (projectRoot) {
 					const allowed = loadWorkspaces().projects[projectRoot]?.allowed ?? [];
 					if (allowed.some((pattern) => patternMatchesToolCall(pattern, event.toolName, patternText))) {
+						return;
+					}
+				}
+
+				// Only replace the default whole-tool write/edit ask with an explicit task directory grant.
+				// Pattern-specific asks, denies, commands, credentials and other tools retain their existing gates.
+				if (
+					action === "ask" &&
+					["write", "edit"].includes(event.toolName) &&
+					patternText &&
+					config.rules[event.toolName] === "ask"
+				) {
+					let roots: unknown;
+					await pi.events?.emit?.("percho:task-write-consent", {
+						cwd: ctx.cwd,
+						sessionId: ctx.sessionManager?.getSessionId(),
+						respond: (grant: { writeRoots?: unknown } | null) => {
+							roots = grant?.writeRoots;
+						},
+					});
+					if (await taskWriteAllowed(roots, patternText)) {
+						audit.record({
+							t: new Date().toISOString(),
+							sessionId: ctx.sessionManager?.getSessionId(),
+							tool: event.toolName,
+							action: "ask",
+							text: `[task-directory-consent] ${patternText}`.slice(0, 500),
+							cwd: ctx.cwd,
+						});
 						return;
 					}
 				}

@@ -1055,20 +1055,25 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 	// Follow-up/steering user messages drained inside one SDK run do not necessarily
 	// emit before_agent_start. They must not inherit the previous question's receipts.
 	pi.on("message_start", async (event, ctx) => {
-		if (event.message.role !== "user") return;
-		if (awaitingUserStart) {
+		// SDK custom-message turns bypass before_agent_start. Only the host-minted
+		// continuation nonce may reset publication/read budgets; source text cannot.
+		const automatic = taskRuntime?.isAutoContinuation?.(event.message) === true;
+		if (event.message.role !== "user" && !automatic) return;
+		if (awaitingUserStart && !automatic) {
 			awaitingUserStart = false;
 			return;
 		}
 		const content = event.message.content;
-		const query =
-			typeof content === "string"
+		if (automatic) awaitingUserStart = false;
+		const query = automatic
+			? taskRuntime.snapshot().goal
+			: typeof content === "string"
 				? content
 				: (content || [])
 						.filter((b) => b.type === "text")
 						.map((b) => b.text)
 						.join("\n");
-		const continuation = continuesTopic(query, activeTopic);
+		const continuation = automatic || continuesTopic(query, activeTopic);
 		current = null;
 		bootstrap = null;
 		if (activeTopic && !continuation) activeTopic = null;
