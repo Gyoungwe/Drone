@@ -21,6 +21,12 @@ import {
 } from "../../../.pi/lib/obsidian-workbench.mjs";
 import { resolveSubagentMcpAccess } from "../src/tools/subagent/runner";
 
+// These are real filesystem + worker/SQLite integration tests, not 5-second unit tests.
+// Hosted Windows can take >6 seconds for a cold fixture. A premature Vitest timeout
+// does not cancel the async body and can race worker creation against SQLite cleanup.
+// Keep a finite integration deadline and allow closeKnowledgeServices() to join workers.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
+
 let root, a, b, vault, app;
 beforeEach(async () => {
 	root = await realpath(await mkdtemp(join(tmpdir(), "percho-knowledge-test-")));
