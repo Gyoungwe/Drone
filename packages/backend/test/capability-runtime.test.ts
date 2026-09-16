@@ -1,3 +1,4 @@
+import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 import { makeCapabilityExtension } from "../src/capabilities/extension";
 import { CapabilityResourceLoader, SkillVisibility } from "../src/capabilities/resource-loader";
@@ -227,4 +228,63 @@ describe("lazy capability runtime", () => {
 		expect(state.activeCapabilities).toEqual(expect.arrayContaining(["coding", "web"]));
 		expect(state.activeTools).toEqual(expect.arrayContaining(["bash", "edit", "write", "webfetch"]));
 	});
+});
+
+describe("generic task continuations", () => {
+	it.each(["继续", "下好了", "continue", "/task-status", "完成到哪了"])(
+		"preserves required tools without adding authority: %s",
+		(query) => {
+			const visibility = new SkillVisibility();
+			const loader = new CapabilityResourceLoader(makeLoader(), visibility);
+			const session = makeSession(loader);
+			const runtime = new CapabilityRuntime(visibility);
+			runtime.bind(session as any);
+			runtime.prepareForPrompt("配置代码运行环境并分析实验文件", false);
+			runtime.activate(["visualization"]);
+			const tools = runtime.state().activeTools;
+			runtime.prepareForPrompt(query, false);
+			expect(runtime.state().activeTools).toEqual(tools);
+			runtime.prepareForPrompt("你好", false);
+			expect(runtime.state().activeTools).not.toContain("bash");
+		},
+	);
+	it("excluded tools stay excluded across continuation", () => {
+		const visibility = new SkillVisibility();
+		const loader = new CapabilityResourceLoader(makeLoader(), visibility);
+		const runtime = new CapabilityRuntime(visibility);
+		runtime.bind(makeSession(loader) as any, { excludedToolNames: ["bash"] });
+		runtime.prepareForPrompt("修改代码", false);
+		runtime.prepareForPrompt("继续", false);
+		expect(runtime.state().activeTools).not.toContain("bash");
+	});
+});
+it("recovers same-session routing after restart under current exclusions, not old permissions", () => {
+	const manager = SessionManager.inMemory("/fixture");
+	const visibility = new SkillVisibility();
+	const loader = new CapabilityResourceLoader(makeLoader(), visibility);
+	const first = new CapabilityRuntime(visibility);
+	first.bind({ ...makeSession(loader), sessionManager: manager } as any);
+	first.prepareForPrompt("修改代码并运行分析", false);
+	first.activate(["visualization"]);
+	const restored = new CapabilityRuntime(visibility);
+	restored.bind({ ...makeSession(loader), sessionManager: manager } as any, { excludedToolNames: ["bash"] });
+	restored.prepareForPrompt("继续", false);
+	expect(restored.state().activeCapabilities).toEqual(expect.arrayContaining(["coding", "visualization"]));
+	expect(restored.state().activeTools).not.toContain("bash");
+	restored.prepareForPrompt("你好", false);
+	expect(restored.state().activeCapabilities).toEqual([]);
+});
+it("does not import capability visibility from another session", () => {
+	const manager = SessionManager.inMemory("/fixture");
+	manager.appendCustomEntry("percho-capability-checkpoint-v1", {
+		scope: "other-session",
+		capabilities: ["coding"],
+		skills: ["research-workflow"],
+	});
+	const visibility = new SkillVisibility();
+	const loader = new CapabilityResourceLoader(makeLoader(), visibility);
+	const runtime = new CapabilityRuntime(visibility);
+	runtime.bind({ ...makeSession(loader), sessionManager: manager } as any);
+	expect(runtime.state().activeCapabilities).toEqual([]);
+	expect(runtime.state().activeTools).not.toContain("bash");
 });

@@ -116,6 +116,7 @@ export interface SessionAssistantMessage {
 	usage?: ReportedUsage;
 	progress?: ProgressDisplay;
 	role: "assistant";
+	hostStatus?: true;
 	text: string;
 	thinking: string;
 	tools: SessionToolCall[];

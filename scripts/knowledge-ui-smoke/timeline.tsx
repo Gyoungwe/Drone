@@ -59,6 +59,19 @@ const result = (id: string, name: string, details: Record<string, unknown> = {})
 		result: { details, content: [{ type: "text", text: "Observed fixture result" }] },
 	});
 (window as any).stageTimelineFixture = {
+	status(text: string) {
+		useTranscriptStore.getState().resetSession("fixture");
+		event("message_end", {
+			message: {
+				role: "custom",
+				customType: "percho-task-status",
+				display: true,
+				content: text,
+				timestamp: Date.now(),
+				details: { reportId: "ui-status-1" },
+			},
+		});
+	},
 	start() {
 		useTranscriptStore.getState().resetSession("fixture");
 		event("agent_start");

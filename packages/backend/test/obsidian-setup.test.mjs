@@ -119,8 +119,14 @@ describe("read-only project-aware setup discovery", () => {
 describe("slash command to current-model handoff", () => {
 	it("binds the canonical Obsidian command and compatibility aliases to research-vault", () => {
 		const h = harness();
-		expect([...h.commands.keys()].sort()).toEqual(["obsidian-setup", "research-setup", "setup"]);
-		for (const command of h.commands.values()) {
+		expect([...h.commands.keys()].sort()).toEqual([
+			"obsidian-setup",
+			"research-setup",
+			"setup",
+			"task-status",
+		]);
+		for (const name of ["obsidian-setup", "research-setup", "setup"]) {
+			const command = h.commands.get(name);
 			expect(command.description).toContain("Obsidian MCP");
 			expect(command.description).toContain("research-vault");
 		}

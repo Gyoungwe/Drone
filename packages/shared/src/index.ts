@@ -17,6 +17,7 @@ export * from "./settings";
 export * from "./skill-catalog";
 export * from "./skill-invocation";
 export * from "./subagent";
+export * from "./task-status";
 export * from "./todo";
 export * from "./transcript";
 export * from "./transcript/run-inspector";

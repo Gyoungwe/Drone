@@ -3,6 +3,7 @@ import { progressDisplay } from "../progress-display";
 import type { ImageInput, SessionEvent } from "../session";
 import { parseExpandedSkillInvocation } from "../skill-invocation";
 import { extractSubagentRuns, normalizeSubagentLaunchInputs } from "../subagent";
+import { taskStatusDisplay } from "../task-status";
 import { extractTodos, TODO_TOOL_NAME } from "../todo";
 import { reportedUsage } from "../usage-display";
 import {
@@ -363,8 +364,17 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				],
 			};
 		}
-		case "message_end":
+		case "message_end": {
+			const report = taskStatusDisplay(event.message);
+			if (report) {
+				if (state.messages.some((message) => message.id === report.id)) return state;
+				return {
+					...state,
+					messages: [...state.messages, { kind: "assistant", ...report, thinking: "", tools: [] }],
+				};
+			}
 			return acceptFinalSnapshot(state, event.message);
+		}
 		case "message_update": {
 			const streaming = state.streaming;
 			if (!streaming) return state;

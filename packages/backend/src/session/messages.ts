@@ -1,9 +1,4 @@
-import {
-	parseSessionEntries,
-	type SessionEntry,
-	type SessionManager,
-	type SessionMessageEntry,
-} from "@earendil-works/pi-coding-agent";
+import { parseSessionEntries, type SessionEntry, type SessionManager } from "@earendil-works/pi-coding-agent";
 import {
 	extractSubagentRuns,
 	type ImageInput,
@@ -14,6 +9,7 @@ import {
 	reportedUsage,
 	type SessionMessage,
 	type SessionToolCall,
+	taskStatusDisplay,
 } from "@percho/shared";
 
 /**
@@ -191,9 +187,12 @@ export function readSessionMessagesFromContent(content: string): SessionMessage[
 		branch.unshift(cursor);
 		cursor = cursor.parentId ? (byId.get(cursor.parentId) ?? null) : null;
 	}
-	const raw = branch
-		.filter((entry): entry is SessionMessageEntry => entry.type === "message")
-		.map((entry) => entry.message);
+	const raw = branch.flatMap((entry): unknown[] => {
+		if (entry.type === "message") return [entry.message];
+		if (entry.type === "custom_message")
+			return [{ ...entry, role: "custom", timestamp: new Date(entry.timestamp).getTime() }];
+		return [];
+	});
 	return toSessionMessages(raw);
 }
 
@@ -230,6 +229,19 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 	let responseIndex = 0;
 
 	for (const raw of rawMessages as RawMessage[]) {
+		const report = taskStatusDisplay(raw);
+		if (report) {
+			out.push({
+				role: "assistant",
+				hostStatus: true,
+				text: report.text,
+				timestamp: report.timestamp,
+				thinking: "",
+				tools: [],
+				images: [],
+			});
+			continue;
+		}
 		if (raw.role === "user") {
 			const sourceText = blockText(raw.content);
 			const invocation = parseExpandedSkillInvocation(sourceText);
@@ -412,7 +424,7 @@ export function assignEntryIds(messages: SessionMessage[], branch: readonly Sess
 		// 无正文的拆分消息（同 turn 正文后的工具组）不参与配对：无 fork 按钮不消费 entry 队列，
 		// 避免挤占后续正文消息的 entryId（同 ms timestamp 碰撞时）
 		if (message.role === "assistant") {
-			if (!message.text) continue;
+			if (!message.text || message.hostStatus) continue;
 			const id = assistantByTimestamp.get(message.timestamp)?.shift();
 			if (id) message.entryId = id;
 			continue;

@@ -31,7 +31,7 @@ const notices = {
 	"answer-too-large": "本次回答超出单次检查的大小上限，请分段完成。",
 	"protocol-budget": "本轮工具上下文超过安全缓存上限，请开启新一轮任务。",
 	"tool-loop-stopped":
-		"【本轮已自动结束】助手在本轮内反复调用知识库工具却始终没有作答，为避免继续消耗上下文，已停止本轮。可以直接再发一条消息继续对话（无需新建对话）；如果反复出现，建议换用能力更强的模型再试。",
+		"【任务阶段已暂停】本阶段达到工具或上下文安全预算。已保存的结果不会因此删除；查看任务执行记录后可继续，无需新建对话。继续前先核对结果未知的操作，不要重复安装、导入或上传。",
 };
 function reason(error) {
 	if (notices[error?.code]) return error.code;
@@ -125,6 +125,7 @@ function isSealed(message, restore = false) {
 			"unconfigured",
 			"evidence-only",
 			"setup-complete",
+			"operational",
 		].includes(proof.status) &&
 		proof.contentHash === hash(message.content)
 	);
@@ -169,7 +170,14 @@ state.projectSnapshot = projectKnowledgeSnapshot;
 
 export function registerAnswerPublication(
 	pi,
-	{ getCurrent, evidenceOnly = false, getDeliveryFooter = null, getTaskFeedback = null, maxToolRounds = 24 },
+	{
+		getCurrent,
+		evidenceOnly = false,
+		getDeliveryFooter = null,
+		getTaskFeedback = null,
+		getTaskRuntime = null,
+		maxToolRounds = 24,
+	},
 ) {
 	let turnId = null,
 		required = true,
@@ -181,7 +189,11 @@ export function registerAnswerPublication(
 		deliveries = new Map();
 	const failure = (message, error) => {
 		const info = knowledgeFailure(error);
-		const report = getTaskFeedback?.()?.report(info.code, info.message, info.paths);
+		const task = getTaskRuntime?.();
+		if (task?.snapshot()) task.pause(info.code);
+		const report = task?.snapshot()
+			? `${task.render()}\n\n研究说明尚未发布：${info.message}`
+			: getTaskFeedback?.()?.report(info.code, info.message, info.paths);
 		return blocked(message, info.code, turnId, report, info.paths);
 	};
 	// Keep signed model protocol blocks unchanged in live provider context, not in public history.
@@ -208,7 +220,25 @@ export function registerAnswerPublication(
 			// 这里在本轮工具轮次超过硬上限（或字节/条数兜底）时强制结束本轮——早于旧的 64 轮/4MB，
 			// 把「转几分钟还不作答」压到 ~1 分钟，并给出可操作提示而非「知识库检查未通过」。
 			if (toolRounds > maxToolRounds || protocolBytes + bytes > 4 * 1024 * 1024 || protocol.size >= 64) {
-				const denied = blocked(message, "tool-loop-stopped", turnId, notices["tool-loop-stopped"]);
+				const limit =
+					toolRounds > maxToolRounds
+						? "tool-round-limit"
+						: protocolBytes + bytes > 4 * 1024 * 1024
+							? "protocol-byte-limit"
+							: "protocol-entry-limit";
+				const task = getTaskRuntime?.();
+				task?.pause(limit);
+				const reportText = [notices["tool-loop-stopped"], task?.snapshot() ? task.render() : null]
+					.filter(Boolean)
+					.join("\n\n");
+				const denied = blocked(message, "tool-loop-stopped", turnId, reportText);
+				denied[FIELD].limit = {
+					kind: limit,
+					toolRounds,
+					maxToolRounds,
+					protocolBytes,
+					entries: protocol.size,
+				};
 				denied.stopReason = "stop";
 				return report(denied);
 			}
@@ -233,6 +263,15 @@ export function registerAnswerPublication(
 		)
 			return report(failure(message, { code: "interrupted" }));
 		const content = blocks.filter((b) => b.type === "text");
+		const operational = !evidenceOnly && getTaskRuntime?.()?.takeReport();
+		if (operational)
+			return report(
+				seal(message, [{ type: "text", text: operational }], {
+					status: "operational",
+					turnId,
+					scientificallyVerified: false,
+				}),
+			);
 		// Only the controlled setup writer can set this receipt. Never whitelist model-written claims.
 		if (setupReceipt) {
 			const done = setupReceipt;
@@ -386,7 +425,7 @@ export function registerAnswerPublication(
 				return {
 					ok: false,
 					...info,
-					next: "Read the listed evidence paths or repair the reported stage, then call research_check_answer again. Do not redownload existing artifacts or cite a presentation as evidence.",
+					next: "For operational progress, call task_status and deliver its host receipt without unrelated citations. For scientific claims, read the listed evidence or repair the reported stage, then check again. Never retry a write merely because output was lost.",
 					task: getTaskFeedback?.()?.facts(),
 				};
 			} finally {
@@ -429,6 +468,6 @@ export function registerAnswerPublication(
 			setupReceipt = null;
 		},
 		guidance:
-			"Host-checked answers need a current-turn search, reads of cited [[path]] sources, then research_check_answer. Public text must answer the user's question; do not lecture about Vault policy or evidence-gate stages. Use short set_status about the task, not product design. Show Me/run links are deliverables, not evidence.",
+			"For execution progress in ANY task (analysis, code, environment, experiments, writing), use task_status; its host-generated report needs no research citations. Never add irrelevant sources to an operational report. Scientific host-checked answers need a current-turn search, reads of cited [[path]] sources, then research_check_answer. Public text must answer the user's question; do not lecture about Vault policy or evidence-gate stages. Use short set_status about the task, not product design. Show Me/run links are deliverables, not evidence.",
 	};
 }

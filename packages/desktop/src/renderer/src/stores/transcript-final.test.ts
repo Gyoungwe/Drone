@@ -46,3 +46,24 @@ describe("authoritative non-streaming final snapshots", () => {
 		expect(s.streaming?.text).toBe("");
 	});
 });
+it("task status command is visible without a model turn and does not replace an active response", () => {
+	const message = {
+		role: "custom",
+		customType: "percho-task-status",
+		display: true,
+		content: "数据处理执行检查点",
+		timestamp: 43,
+		details: { reportId: "report-1" },
+	};
+	const initial = reduceEvent(emptyTranscript(), ev("turn_start"));
+	let state = reduceEvent(initial, ev("message_end", { message }));
+	expect(state.messages.at(-1)).toMatchObject({ kind: "assistant", text: "数据处理执行检查点" });
+	expect(state.streaming).toBe(initial.streaming);
+	state = reduceEvent(state, ev("message_end", { message }));
+	expect(state.messages).toHaveLength(1);
+	const hidden = reduceEvent(
+		state,
+		ev("message_end", { message: { ...message, display: false, content: "PRIVATE_CONTEXT" } }),
+	);
+	expect(hidden).toBe(state);
+});

@@ -145,7 +145,9 @@ describe("Tier 1 snip 规则", () => {
 		const lines = bigBash.split("\n");
 		const head15 = lines.slice(0, 15).join("\n");
 		const tail25 = lines.slice(-25).join("\n");
-		expect(text).toBe(`${head15}\n…（已截断 60 行，共 100 行，完整输出可用相同命令重跑）\n${tail25}`);
+		expect(text).toBe(
+			`${head15}\n…（已截断 60 行，共 100 行，请查看保存的日志或执行回执；不要为恢复输出重跑命令）\n${tail25}`,
+		);
 	});
 
 	it("bash ≤4096B 不截断（headTailThreshold）", () => {
@@ -235,7 +237,7 @@ describe("Tier 2 stub 格式（三类模板逐字符锁定）", () => {
 		const { messages } = evap(wire, state, windowFor(wire, 90));
 		const tail5 = bigBash.split("\n").slice(-5).join("\n");
 		expect(resultText(messages, 3)).toBe(
-			`${tail5}\n[以上为尾部输出，完整 100 行 / ${(bigBash.length / 1024).toFixed(1)}KB 已淘汰，可用相同命令重跑获取]`,
+			`${tail5}\n[以上为尾部输出，完整 100 行 / ${(bigBash.length / 1024).toFixed(1)}KB 已淘汰，请查看日志或执行回执，不要重跑可能有副作用的命令]`,
 		);
 	});
 
@@ -259,7 +261,7 @@ describe("Tier 2 stub 格式（三类模板逐字符锁定）", () => {
 		);
 	});
 
-	it("mcp 等其他 external：同 webfetch 形态但提示改为重新调用", () => {
+	it("mcp 等其他 external：提示安全核对回执而非重放副作用", () => {
 		const fetched = ["result header", ...Array.from({ length: 50 }, (_, i) => `row ${i} yyyyy`)].join("\n");
 		const wire = [
 			ballast(20000),
@@ -273,7 +275,7 @@ describe("Tier 2 stub 格式（三类模板逐字符锁定）", () => {
 		const state = createEvapState();
 		const { messages } = evap(wire, state, windowFor(wire, 90));
 		expect(resultText(messages, 3)).toBe(
-			`[输出已淘汰：${(fetched.length / 1024).toFixed(1)}KB。首行：“result header”。可用相同参数重新调用获取]`,
+			`[输出已淘汰：${(fetched.length / 1024).toFixed(1)}KB。首行：“result header”。请查询保存的结果或回执；仅在确认只读时重新获取]`,
 		);
 	});
 

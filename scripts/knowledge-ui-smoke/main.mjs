@@ -651,6 +651,29 @@ async function run() {
 		await js("window.sidebarFixture.end();true");
 		window.webContents.debugger.detach();
 
+		const tasks = await runtime("tasks/runtime");
+		const journal = tasks.createTaskJournal();
+		journal.attach("isolated-ui");
+		journal.begin("分析实验数据并交付 CSV；不代表实验结论已验证");
+		await writeFile(join(cwd, "analysis.csv"), "sample,value\nfixture,1\n");
+		await journal.observe(
+			{ toolName: "write", toolCallId: "fixture-write", input: { path: "analysis.csv" } },
+			cwd,
+		);
+		journal.pause("fixture-user-stop");
+		await js(
+			`document.querySelector('#sidebar-actions-fixture')?.style && (document.querySelector('#sidebar-actions-fixture').style.display='none');document.querySelector('#stage-timeline-fixture').style.display='block';window.stageTimelineFixture.status(${JSON.stringify(journal.render())});true`,
+		);
+		await wait(
+			"document.querySelector('#stage-timeline-fixture').innerText.includes('analysis.csv')",
+			"host task checkpoint displayed without model turn",
+		);
+		assert(await js("document.querySelector('#stage-timeline-fixture').innerText.includes('不是科研结论')"));
+		await js("document.querySelector('#stage-timeline-fixture').scrollIntoView({block:'start'});true");
+		await capture("13-generic-task-checkpoint");
+		checks.push(
+			"generic data/file checkpoint: real host readback + actual MessageList, no model invocation or scientific completion claim",
+		);
 		assert.equal(errors.length, 0, "renderer errors");
 		await writeFile(
 			join(root, "validation.json"),

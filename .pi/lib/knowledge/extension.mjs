@@ -1,6 +1,7 @@
 import { join, resolve } from "node:path";
 import { publishExplainer } from "../obsidian-workbench.mjs";
 import { deliveryContract } from "../source-delivery.mjs";
+import { registerTaskRuntime } from "../tasks/runtime.mjs";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import {
 	continuesTopic,
@@ -37,6 +38,7 @@ import {
 } from "./wiki-review.mjs";
 
 export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
+	const taskRuntime = readOnly ? null : registerTaskRuntime(pi);
 	if (!knowledgeDirectory())
 		return {
 			setupCompleted: () => {},
@@ -64,6 +66,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 		evidenceOnly: readOnly,
 		getDeliveryFooter: () => deliveryFooter,
 		getTaskFeedback: () => feedback,
+		getTaskRuntime: () => taskRuntime,
 	});
 	pi.on("tool_result", async (event, ctx) => {
 		const guarded = guardResearchToolResult(event);
@@ -508,7 +511,10 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 		},
 		execute: async (_id, p, _s, _u, ctx) => {
 			const c = await ensureTurn(ctx);
-			const blocked = toolBudget.consume("read", p.path);
+			const blocked = toolBudget.consume(
+				"read",
+				JSON.stringify([p.path, p.start_line ?? 1, p.max_chars ?? 5000]),
+			);
 			if (blocked) return result(blocked);
 			try {
 				updateKnowledgeFlow(ctx, {
@@ -805,7 +811,14 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 					topic_id: { type: "string" },
 					title: { type: "string" },
 					summary: { type: "string", maxLength: 4000 },
-					source_paths: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 12 },
+					source_paths: {
+						type: "array",
+						description:
+							"Vault-relative Markdown SOURCE notes read this turn, e.g. Library/Papers/source.md. Never results/*.pdf or URLs.",
+						items: { type: "string" },
+						minItems: 1,
+						maxItems: 12,
+					},
 				},
 				required: ["result_file", "title", "source_paths"],
 			},
@@ -828,15 +841,25 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			name: "research_propose_wiki_update",
 			label: "Obsidian · 提议 Wiki 更新（待审核）",
 			description:
-				"Stage a bounded Wiki candidate outside the Vault. Source paths must have actual current-turn read receipts. No live Wiki write; only the user command /obsidian-review can apply the exact preview.",
+				"Stage a bounded Wiki candidate outside the Vault. source_paths must be Vault-relative .md notes with actual current-turn read receipts, NOT downloaded PDFs, URLs, or workspace results paths. No live Wiki write; only the user command /obsidian-review can apply the exact preview.",
 			parameters: {
 				type: "object",
 				properties: {
-					path: { type: "string" },
+					path: {
+						type: "string",
+						description: "Target Wiki Markdown path, e.g. Wiki/topic.md; distinct from source_paths.",
+					},
 					title: { type: "string" },
 					markdown: { type: "string", maxLength: 24000 },
 					rationale: { type: "string", maxLength: 1000 },
-					source_paths: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 12 },
+					source_paths: {
+						type: "array",
+						description:
+							"Vault-relative Markdown SOURCE notes read this turn, e.g. Library/Papers/source.md. Never results/*.pdf or URLs.",
+						items: { type: "string" },
+						minItems: 1,
+						maxItems: 12,
+					},
 				},
 				required: ["path", "title", "markdown", "rationale", "source_paths"],
 			},

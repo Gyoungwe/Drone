@@ -5,9 +5,11 @@ import type { Model } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 import {
+	assertSubagentTools,
 	describeSubagentActivity,
 	resolveSubagentMcpAccess,
 	resolveSubagentModel,
+	runSubagent,
 	subagentSessionName,
 } from "../src/tools/subagent/runner";
 
@@ -63,4 +65,19 @@ describe("subagent runner model and title", () => {
 			await rm(cwd, { recursive: true, force: true });
 		}
 	});
+});
+it("rejects incompatible generic compute delegation before starting a model", async () => {
+	expect(() => assertSubagentTools(["read", "grep"], ["bash"])).toThrow("subagent-capability-mismatch");
+	expect(() => assertSubagentTools(["read", "bash"], ["bash"])).not.toThrow();
+	await expect(
+		runSubagent(
+			{} as any,
+			{
+				agent: { name: "scout", tools: ["read"] },
+				requiredTools: ["bash"],
+				cwd: "/fixture",
+				task: "Run data processing",
+			} as any,
+		),
+	).rejects.toThrow("missing required tools: bash");
 });

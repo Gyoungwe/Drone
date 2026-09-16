@@ -434,7 +434,9 @@ function renderCmdSnip(text: string, config: EvapConfig, external: boolean): str
 	const head = lines.slice(0, config.headLines);
 	const tail = lines.slice(-config.tailLines);
 	const cut = lines.length - head.length - tail.length;
-	const hint = external ? "需要时可用相同参数重新获取" : "完整输出可用相同命令重跑";
+	const hint = external
+		? "需要时查看保存的回执或只读查询结果；不要重放写入操作"
+		: "请查看保存的日志或执行回执；不要为恢复输出重跑命令";
 	return `${head.join("\n")}\n…（已截断 ${cut} 行，共 ${lines.length} 行，${hint}）\n${tail.join("\n")}`;
 }
 
@@ -448,7 +450,7 @@ function renderReadStub(text: string): string {
 function renderCmdStub(text: string): string {
 	const lines = text.split("\n");
 	const tail = lines.slice(-STUB_TAIL);
-	return `${tail.join("\n")}\n[以上为尾部输出，完整 ${lines.length} 行 / ${kb(text.length)} 已淘汰，可用相同命令重跑获取]`;
+	return `${tail.join("\n")}\n[以上为尾部输出，完整 ${lines.length} 行 / ${kb(text.length)} 已淘汰，请查看日志或执行回执，不要重跑可能有副作用的命令]`;
 }
 
 /** external 类 Tier 2 stub：保留标题/首行 + 来源提示（spec §6 模板；非 webfetch 措辞微调） */
@@ -457,7 +459,7 @@ function renderExternalStub(text: string, toolName: string | undefined): string 
 	if (toolName === "webfetch") {
 		return `[输出已淘汰：${kb(text.length)}。标题/首行：“${first}”。URL 见上方调用参数，可重新 fetch（内容可能已变化）]`;
 	}
-	return `[输出已淘汰：${kb(text.length)}。首行：“${first}”。可用相同参数重新调用获取]`;
+	return `[输出已淘汰：${kb(text.length)}。首行：“${first}”。请查询保存的结果或回执；仅在确认只读时重新获取]`;
 }
 
 /** editWrite 类 Tier 2 stub：尾 5 行 + 标记（恢复方式 = 重读文件） */

@@ -220,3 +220,100 @@ it("appends only the host delivery footer after the answer itself passes validat
 	expect(result.message.content.map((b) => b.text).join("")).toContain("待审核候选");
 	expect(h.called).toHaveBeenCalledOnce();
 });
+
+it("operational reports use only host text, never a model claimed mode or research draft", async () => {
+	const events = new Map();
+	const validate = vi.fn();
+	let requested = true;
+	const runtime = {
+		snapshot: () => null,
+		takeReport: () => {
+			if (!requested) return null;
+			requested = false;
+			return "命令已返回；业务结果待核验";
+		},
+	};
+	const gate = registerAnswerPublication(
+		{ on: (n, h) => events.set(n, h) },
+		{ getCurrent: () => ({ service: { validateAnswer: validate } }), getTaskRuntime: () => runtime },
+	);
+	gate.begin(true);
+	const result = await events.get("message_end")(
+		{ message: { ...message("FAKE_SCIENTIFIC_CLAIM"), mode: "operational" } },
+		{ cwd: "/fixture" },
+	);
+	expect(result.message.knowledgePublication.status).toBe("operational");
+	expect(result.message.knowledgePublication.scientificallyVerified).toBe(false);
+	expect(JSON.stringify(result)).not.toContain("FAKE_SCIENTIFIC_CLAIM");
+	expect(validate).not.toHaveBeenCalled();
+	const forged = await events.get("message_end")(
+		{ message: { ...message("I am operational"), mode: "operational" } },
+		{ cwd: "/fixture" },
+	);
+	expect(validate).toHaveBeenCalledOnce();
+	expect(forged.message.knowledgePublication.status).toBe("blocked");
+});
+it("all-tool budget yields a checkpoint with an exact limit, not a claim of repeated research", async () => {
+	const events = new Map();
+	const pause = vi.fn();
+	const runtime = {
+		pause,
+		snapshot: () => ({ id: "task" }),
+		render: () => "analysis.csv 已回读；安装操作结果未知",
+	};
+	const gate = registerAnswerPublication(
+		{ on: (n, h) => events.set(n, h) },
+		{ getCurrent: () => null, getTaskRuntime: () => runtime, maxToolRounds: 2 },
+	);
+	gate.begin(true);
+	let result;
+	for (let i = 0; i < 3; i++)
+		result = await events.get("message_end")(
+			{
+				message: {
+					...message(),
+					content: [
+						{
+							type: "toolCall",
+							id: String(i),
+							name: "bash",
+							arguments: { command: `different-command-${i}` },
+						},
+					],
+					stopReason: "toolUse",
+				},
+			},
+			{ cwd: "/fixture" },
+		);
+	expect(result.message.knowledgePublication.limit.kind).toBe("tool-round-limit");
+	expect(pause).toHaveBeenCalledWith("tool-round-limit");
+	expect(result.message.content[0].text).toContain("analysis.csv");
+	expect(result.message.content[0].text).not.toContain("换用能力更强");
+});
+it("a failed research draft still delivers observed task state without publishing that draft", async () => {
+	const events = new Map();
+	const runtime = {
+		pause() {},
+		snapshot: () => ({ id: "t" }),
+		render: () => "数据文件已保存，分析结论未核验",
+		takeReport: () => null,
+	};
+	const gate = registerAnswerPublication(
+		{ on: (n, h) => events.set(n, h) },
+		{
+			getCurrent: () => ({
+				service: {
+					validateAnswer: async () => {
+						throw { code: "source-unread" };
+					},
+				},
+			}),
+			getTaskRuntime: () => runtime,
+		},
+	);
+	gate.begin(true);
+	const result = await events.get("message_end")({ message: message("FAKE_RESEARCH") }, { cwd: "/fixture" });
+	expect(result.message.knowledgePublication.status).toBe("blocked");
+	expect(result.message.content[0].text).toContain("数据文件已保存");
+	expect(JSON.stringify(result)).not.toContain("FAKE_RESEARCH");
+});

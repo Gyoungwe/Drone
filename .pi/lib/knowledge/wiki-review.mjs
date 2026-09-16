@@ -127,7 +127,27 @@ async function loadProposal(service, id, project) {
 		throw new Error("Wiki proposal content changed");
 	return p;
 }
+export function validateWikiSourcePaths(paths) {
+	if (!Array.isArray(paths) || !paths.length || paths.length > 12)
+		throw Object.assign(
+			new Error("source_paths: supply 1–12 Vault-relative Markdown notes already read this turn"),
+			{ code: "source-note-required", field: "source_paths" },
+		);
+	for (let index = 0; index < paths.length; index++) {
+		try {
+			validateNote(paths[index]);
+		} catch {
+			throw Object.assign(
+				new Error(
+					`source_paths[${index}]: expected a Vault-relative Markdown source note (for example Library/Papers/source.md), not a workspace PDF or URL. Read the corresponding source note first; changing the Wiki target path cannot fix this field.`,
+				),
+				{ code: "source-note-required", field: `source_paths[${index}]`, retryable: false },
+			);
+		}
+	}
+}
 export async function stageWikiProposal(service, ticket, cwd, input) {
+	validateWikiSourcePaths(input.source_paths);
 	return withKnowledgeBinding(service.binding, async () => {
 		if (service.binding.depositMode === "run-only")
 			throw new Error("Wiki proposals are disabled by run-only mode");

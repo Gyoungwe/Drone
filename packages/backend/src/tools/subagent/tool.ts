@@ -20,6 +20,13 @@ const taskSchema = Type.Object({
 	agent: Type.String({ minLength: 1, description: "Agent definition name, e.g. scout" }),
 	task: Type.String({ minLength: 1, description: "Self-contained task for the subagent" }),
 	cwd: Type.Optional(Type.String({ minLength: 1, description: "Optional working directory" })),
+	required_tools: Type.Optional(
+		Type.Array(Type.String({ minLength: 1, maxLength: 80 }), {
+			maxItems: 16,
+			description:
+				"Required native tools. Checked against the selected agent before a model starts; never grants missing tools or permissions.",
+		}),
+	),
 });
 
 /**
@@ -37,6 +44,13 @@ export const subagentParams = Type.Object({
 		Type.String({ minLength: 1, description: "Self-contained task for the subagent (single run)" }),
 	),
 	cwd: Type.Optional(Type.String({ minLength: 1, description: "Optional working directory" })),
+	required_tools: Type.Optional(
+		Type.Array(Type.String({ minLength: 1, maxLength: 80 }), {
+			maxItems: 16,
+			description:
+				"Required native tools. Checked against the selected agent before a model starts; never grants missing tools or permissions.",
+		}),
+	),
 	tasks: Type.Optional(
 		Type.Array(taskSchema, {
 			minItems: 1,
@@ -163,7 +177,7 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 		name: "subagent",
 		label: "Subagent",
 		description:
-			"Delegate a self-contained read-only or project-scoped task to an isolated subagent session. Use {agent, task} for one run or {tasks:[{agent, task}, ...]} for parallel exploration (up to 8 tasks, 3 native agents at once). Built-in general agent: scout. Knowledge specialist identities use research_delegate_knowledge and its scoped broker instead of this tool. More agents may be defined in ~/.pi/agent/agents/. The subagent returns only its final conclusion while its full session remains available from the result card.",
+			"Delegate a self-contained read-only or project-scoped task to an isolated subagent session. Use {agent, task} for one run or {tasks:[{agent, task}, ...]} for parallel exploration (up to 8 tasks, 3 native agents at once). Built-in scout is read-only and has no shell: do not assign CLI, installation or data-processing commands to it. Declare required_tools for executable tasks; the host rejects unavailable requirements without starting a model. Knowledge specialist identities use research_delegate_knowledge and its scoped broker instead of this tool. More agents may be defined in ~/.pi/agent/agents/. The subagent returns only its final conclusion while its full session remains available from the result card.",
 		parameters: subagentParams,
 		execute: async (
 			toolCallId,
@@ -208,6 +222,7 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 					result = await runSubagent(deps, {
 						agent,
 						task: task.task,
+						requiredTools: task.required_tools,
 						cwd,
 						projectTrusted,
 						model: ctx.model,

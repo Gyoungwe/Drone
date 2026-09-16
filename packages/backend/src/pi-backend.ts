@@ -58,7 +58,7 @@ import {
 	CapabilityResourceLoader,
 	SkillVisibility,
 } from "./capabilities/resource-loader";
-import { CapabilityRuntime } from "./capabilities/runtime";
+import { CapabilityRuntime, isTaskStatusQuery } from "./capabilities/runtime";
 import { makeKnowledgeSpecialistBridge } from "./knowledge/specialist-bridge";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
 import { KnowledgeUiService } from "./knowledge/ui";
@@ -730,6 +730,8 @@ export class PiBackend {
 	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt> {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
+		if (!images?.length && isTaskStatusQuery(text) && entry.session.extensionRunner.getCommand("task-status"))
+			text = "/task-status";
 		log.info("prompt", sessionId, { text: text.slice(0, 120), images: images?.length ?? 0 });
 		// Extension commands execute before the SDK emits `input`, so lazy capability loading
 		// must happen here as well; otherwise /obsidian-setup cannot see research-vault.

@@ -66,6 +66,7 @@ export interface SingleResult {
 }
 
 export interface RunSubagentInput {
+	requiredTools?: string[];
 	agent: SubagentDefinition;
 	task: string;
 	cwd: string;
@@ -299,7 +300,17 @@ export async function resolveSubagentMcpAccess(
 }
 
 /** 在共享 ModelRuntime 上运行一个隔离的、深度固定为 1 的子会话。 */
+export function assertSubagentTools(available: readonly string[], required: readonly string[] = []): void {
+	const missing = required.filter(
+		(name) => !available.includes(name) || name === "subagent" || name.startsWith("subagent_"),
+	);
+	if (missing.length)
+		throw new Error(
+			`subagent-capability-mismatch: missing required tools: ${missing.join(", ")}. Select a suitable existing agent or collect data in the parent; no permissions were expanded.`,
+		);
+}
 export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput): Promise<SingleResult> {
+	assertSubagentTools(input.agent.tools, input.requiredTools);
 	if (PROTECTED_KNOWLEDGE_AGENTS.some((agent) => agent.name === input.agent.name))
 		throw new Error(
 			"Knowledge specialists use research_delegate_knowledge and its capability broker, not the generic subagent runner",

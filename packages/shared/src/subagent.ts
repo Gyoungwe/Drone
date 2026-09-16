@@ -1,4 +1,5 @@
 export interface SubagentLaunchInput {
+	required_tools?: string[];
 	agent: string;
 	/** 子会话 id（live progress / 内联 transcript 绑定） */
 	sessionId?: string;
@@ -17,7 +18,8 @@ export function normalizeSubagentLaunchInputs(args: unknown): SubagentLaunchInpu
 		agent?: unknown;
 		task?: unknown;
 		cwd?: unknown;
-		tasks?: Array<{ agent?: unknown; task?: unknown; cwd?: unknown }>;
+		required_tools?: unknown;
+		tasks?: Array<{ agent?: unknown; task?: unknown; cwd?: unknown; required_tools?: unknown }>;
 	};
 	if (raw.action != null) return [];
 	const candidates: SubagentLaunchInput[] = [];
@@ -26,6 +28,9 @@ export function normalizeSubagentLaunchInputs(args: unknown): SubagentLaunchInpu
 			agent: raw.agent,
 			...(typeof raw.task === "string" ? { task: raw.task } : {}),
 			...(typeof raw.cwd === "string" ? { cwd: raw.cwd } : {}),
+			...(Array.isArray(raw.required_tools)
+				? { required_tools: raw.required_tools.filter((name): name is string => typeof name === "string") }
+				: {}),
 		});
 	}
 	for (const item of Array.isArray(raw.tasks) ? raw.tasks : []) {
@@ -34,11 +39,14 @@ export function normalizeSubagentLaunchInputs(args: unknown): SubagentLaunchInpu
 			agent: item.agent,
 			...(typeof item.task === "string" ? { task: item.task } : {}),
 			...(typeof item.cwd === "string" ? { cwd: item.cwd } : {}),
+			...(Array.isArray(item.required_tools)
+				? { required_tools: item.required_tools.filter((name): name is string => typeof name === "string") }
+				: {}),
 		});
 	}
 	const seen = new Set<string>();
 	return candidates.filter((item) => {
-		const key = `${item.agent}\u0000${item.task ?? ""}\u0000${item.cwd ?? ""}`;
+		const key = `${item.agent}\u0000${item.task ?? ""}\u0000${item.cwd ?? ""}\u0000${[...(item.required_tools || [])].sort().join(",")}`;
 		if (seen.has(key)) return false;
 		seen.add(key);
 		return true;
