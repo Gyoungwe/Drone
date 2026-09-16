@@ -16,6 +16,7 @@ import {
 	useSortable,
 } from "@dnd-kit/sortable";
 import type { SessionMeta } from "@drone/shared";
+import { taskNeedsUser } from "@drone/shared";
 import type { ComponentProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
@@ -24,7 +25,15 @@ import { isDailyCwd } from "../../lib/daily";
 import { useSessionsStore } from "../../stores/sessions";
 import { useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
-import { CloseIcon, CoffeeIcon, DiffIcon, PlusIcon, ProjectsIcon, SubagentIcon } from "../icons";
+import {
+	CloseIcon,
+	CoffeeIcon,
+	DiffIcon,
+	PlusIcon,
+	ProjectsIcon,
+	SubagentIcon,
+	TaskBoardIcon,
+} from "../icons";
 import { sessionLetter, sessionTitle, useSessionStatus } from "./session-status";
 import { UpdateButton } from "./UpdateButton";
 
@@ -201,6 +210,20 @@ export function SessionTabBar() {
 	const view = useUiStore((s) => s.view);
 	const setView = useUiStore((s) => s.setView);
 	const diffSidebarOpen = useUiStore((s) => s.diffSidebarOpen);
+	const taskSidebarOpen = useUiStore((s) => s.taskSidebarOpen);
+	const toggleTaskSidebar = useUiStore((s) => s.toggleTaskSidebar);
+	// 提示点：最新一份 TaskView 里是否有任务在等用户拍板。
+	// 只从 selector 返回布尔值——订阅 transcript 对象会随每条流式 delta 全量级联重渲染整条 tab bar。
+	const taskAwaiting = useTranscriptStore((s) => {
+		if (!activeSessionId) return false;
+		const messages = s.bySession[activeSessionId]?.messages;
+		if (!messages) return false;
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const m = messages[i];
+			if (m?.kind === "assistant" && m.taskView) return m.taskView.tasks.some(taskNeedsUser);
+		}
+		return false;
+	});
 	const toggleDiffSidebar = useUiStore((s) => s.toggleDiffSidebar);
 	const scrollerRef = useRef<HTMLDivElement>(null);
 	const [activeId, setActiveId] = useState<string | null>(null);
@@ -338,6 +361,20 @@ export function SessionTabBar() {
 					aria-label={t("diff.toggle")}
 				>
 					<DiffIcon size={16} />
+				</button>
+			)}
+			{/* 任务工作台侧栏开关：与 diff 同栏位互斥；有任务等用户时右上角红点提示 */}
+			{view !== "projects" && (
+				<button
+					type="button"
+					className={`no-drag relative shrink-0 rounded-lg p-1.5 transition-colors ${
+						taskSidebarOpen ? "bg-hover text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
+					}`}
+					onClick={toggleTaskSidebar}
+					aria-label="任务工作台"
+				>
+					<TaskBoardIcon size={16} />
+					{taskAwaiting && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-500" />}
 				</button>
 			)}
 		</div>

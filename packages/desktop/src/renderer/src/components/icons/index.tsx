@@ -243,6 +243,26 @@ export function DiffIcon({ size = 15, className }: IconProps) {
 		</svg>
 	);
 }
+/** 任务工作台：列表条目 + 进度感（纯 rect/line，避开 path 语法风险） */
+export function TaskBoardIcon({ size = 15, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			{...strokeProps}
+			strokeWidth={1.8}
+			strokeLinecap="round"
+			aria-hidden="true"
+		>
+			<rect x="2.8" y="3.8" width="18.4" height="16.4" rx="2.5" />
+			<line x1="6.6" y1="8.6" x2="12.4" y2="8.6" />
+			<line x1="6.6" y1="12" x2="17.4" y2="12" />
+			<line x1="6.6" y1="15.4" x2="14.6" y2="15.4" />
+		</svg>
+	);
+}
 
 /** 加号 */
 export function PlusIcon({ size = 14, className }: IconProps) {

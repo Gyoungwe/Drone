@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getPi } from "./api";
 import { EmptyState } from "./components/chat/EmptyState";
 import { MessageList } from "./components/chat/MessageList";
+import { TaskSidebar } from "./components/chat/TaskSidebar";
 import { TodoPanel } from "./components/chat/TodoPanel";
 import { DiffSidebar } from "./components/diff/DiffSidebar";
 import { KnowledgeFlowCard } from "./components/knowledge/KnowledgeFlowCard";
@@ -128,6 +129,7 @@ export default function App() {
 							<SessionRail />
 						</div>
 						<DiffSidebar />
+						<TaskSidebar />
 					</div>
 				)}
 			</div>

@@ -5,14 +5,31 @@ import {
 	type TaskView,
 	TERMINAL_TASK_STATES,
 	taskActionCommand,
+	taskNeedsUser,
+	type WorkbenchTask,
 } from "@drone/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 
-export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; sessionId: string | null }) {
+/**
+ * 流内工作台卡。`tasks` 是调用方筛过的子集（见 tasksForTranscript）——
+ * 进度类任务不进流，由右侧工作台侧栏承载，这里只渲染要用户拍板的和已收尾的。
+ */
+export function TaskWorkbenchCard({
+	view,
+	sessionId,
+	tasks,
+}: {
+	view: TaskView;
+	sessionId: string | null;
+	tasks?: WorkbenchTask[];
+}) {
 	const t = useT();
+	const shown = tasks ?? view.tasks;
+	// 有任何一项在等用户 → 整张卡走强调态（左侧强调条 + 实心底），避免混在流里被划过去
+	const awaiting = shown.some(taskNeedsUser);
 	const [busy, setBusy] = useState(false),
 		[error, setError] = useState("");
 	const [paths, setPaths] = useState<Record<string, string>>({});
@@ -36,12 +53,19 @@ export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; session
 	return (
 		<section
 			data-testid="task-workbench"
-			className="my-3 overflow-hidden rounded-xl border border-border bg-surface/50 text-ink"
+			data-awaiting={awaiting || undefined}
+			className={`my-3 overflow-hidden rounded-xl border text-ink ${
+				awaiting ? "border-l-4 border-amber-500 bg-surface shadow-soft" : "border-border bg-surface/50"
+			}`}
 		>
 			<header className="flex items-center justify-between gap-3 border-b border-border p-4">
 				<div>
-					<h3 className="text-sm font-semibold">任务工作台</h3>
-					<p className="mt-1 text-xs text-ink-dim">执行、验收与待你处理 · 不代表科研结论已验证</p>
+					<h3 className="text-sm font-semibold">{awaiting ? "需要你确认" : "任务工作台"}</h3>
+					<p className="mt-1 text-xs text-ink-dim">
+						{awaiting
+							? "不处理则任务停在此处 · 不代表科研结论已验证"
+							: "执行、验收与待你处理 · 不代表科研结论已验证"}
+					</p>
 				</div>
 				<button
 					type="button"
@@ -60,10 +84,10 @@ export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; session
 					有多个任务可以继续。请选择一个，不会自动猜测或启动写操作。
 				</p>
 			)}
-			{view.tasks.length === 0 && (
+			{shown.length === 0 && (
 				<p className="p-4 text-sm text-ink-dim">尚无任务。发送具体需求后会建立宿主任务记录。</p>
 			)}
-			{view.tasks.map((task) => (
+			{shown.map((task) => (
 				<article key={task.id} data-task-id={task.id} className="border-b border-border p-4 last:border-0">
 					<div className="flex flex-wrap items-center justify-between gap-2">
 						<h4 className="min-w-0 break-words text-sm font-medium">{task.goal}</h4>

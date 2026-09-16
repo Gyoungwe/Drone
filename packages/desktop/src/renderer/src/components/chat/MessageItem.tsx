@@ -1,3 +1,4 @@
+import { tasksForTranscript } from "@drone/shared";
 import { memo, useState } from "react";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
@@ -87,7 +88,12 @@ export const MessageItem = memo(function MessageItem({
 		return <SystemMessage message={message} />;
 	}
 
-	if (message.taskView) return <TaskWorkbenchCard view={message.taskView} sessionId={sessionId} />;
+	if (message.taskView) {
+		// 纯进度刷新不进流（侧栏已常驻显示最新一份），只留要用户拍板的和已收尾的
+		const shown = tasksForTranscript(message.taskView);
+		if (!shown.length && !message.taskView.selectionRequired) return null;
+		return <TaskWorkbenchCard view={message.taskView} sessionId={sessionId} tasks={shown} />;
+	}
 	return (
 		<div className="group">
 			<AssistantMessage

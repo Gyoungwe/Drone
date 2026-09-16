@@ -23,9 +23,13 @@ interface UiStore {
 	toggleTodoExpanded: (sessionId: string) => void;
 	/** 右侧资源/变更栏开关（内存态，不持久化——重启统一关闭） */
 	diffSidebarOpen: boolean;
+	/** 任务工作台侧栏：进度/预算/操作流水常驻显示，与 diff 侧栏互斥占位。 */
+	taskSidebarOpen: boolean;
 	/** 当前资源预览；null 表示展示 Git Diff。 */
 	resourcePreview: ResourcePreviewTarget | null;
 	setDiffSidebarOpen: (open: boolean) => void;
+	setTaskSidebarOpen: (open: boolean) => void;
+	toggleTaskSidebar: () => void;
 	showDiffSidebar: () => void;
 	openResourcePreview: (target: ResourcePreviewTarget) => void;
 	clearResourcePreview: () => void;
@@ -45,16 +49,25 @@ export const useUiStore = create<UiStore>((set) => ({
 			todoExpanded: { ...state.todoExpanded, [sessionId]: !state.todoExpanded[sessionId] },
 		})),
 	diffSidebarOpen: false,
+	taskSidebarOpen: false,
 	resourcePreview: null,
 	setDiffSidebarOpen: (open) => set({ diffSidebarOpen: open }),
-	showDiffSidebar: () => set({ diffSidebarOpen: true, resourcePreview: null }),
-	openResourcePreview: (target) => set({ diffSidebarOpen: true, resourcePreview: target }),
+	// 两个侧栏共用右侧栏位，开一个即关另一个（同时展开会把聊天列挤到不可读）
+	setTaskSidebarOpen: (open) =>
+		set(open ? { taskSidebarOpen: true, diffSidebarOpen: false } : { taskSidebarOpen: false }),
+	toggleTaskSidebar: () =>
+		set((state) =>
+			state.taskSidebarOpen ? { taskSidebarOpen: false } : { taskSidebarOpen: true, diffSidebarOpen: false },
+		),
+	showDiffSidebar: () => set({ diffSidebarOpen: true, resourcePreview: null, taskSidebarOpen: false }),
+	openResourcePreview: (target) =>
+		set({ diffSidebarOpen: true, resourcePreview: target, taskSidebarOpen: false }),
 	clearResourcePreview: () => set({ resourcePreview: null }),
 	toggleDiffSidebar: () =>
 		set((state) =>
 			state.diffSidebarOpen && state.resourcePreview === null
 				? { diffSidebarOpen: false }
-				: { diffSidebarOpen: true, resourcePreview: null },
+				: { diffSidebarOpen: true, resourcePreview: null, taskSidebarOpen: false },
 		),
 	diffFocus: null,
 	setDiffFocus: (sectionKey) =>

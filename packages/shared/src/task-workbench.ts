@@ -218,3 +218,31 @@ export function canArchiveTask(task: WorkbenchTask): boolean {
 		!task.actions.some((a) => a.state === "pending")
 	);
 }
+/**
+ * 一张工作台卡是否值得占用聊天流的位置。
+ *
+ * 流里只保留两类：等待用户决定的（授权/待选/阻塞——不点就推进不下去），
+ * 以及任务收尾的终态。纯进度刷新（阶段推进、调用计数、操作流水）留给侧栏，
+ * 否则一个任务跑下来会在流里堆十几张内容高度重复的卡。
+ *
+ * 授权卡必须留在流里：用户批准的是「当时那一份契约」，契约变化即失效，
+ * 它是时间线上的审计记录，不能收进一个始终悬浮、脱离上下文的侧栏。
+ */
+export function taskNeedsUser(task: WorkbenchTask): boolean {
+	if (task.authorizationRequired && !task.executionConsent) return true;
+	if (task.state === "waiting_user" || task.state === "blocked") return true;
+	return task.actions.some((a) => a.kind === "authorization" && a.state === "pending");
+}
+
+/** 终态：任务已收尾，流里留一张交代结果（partial 也算收尾，它不会再自行推进）。 */
+export function taskIsTerminal(task: WorkbenchTask): boolean {
+	return TERMINAL_TASK_STATES.has(task.state) || task.state === "partial";
+}
+
+/**
+ * 流内应渲染的任务子集。空数组表示这条 taskView 消息整条不必上屏
+ * （数据仍在 store 里，侧栏照常读取最新一份）。
+ */
+export function tasksForTranscript(view: TaskView): WorkbenchTask[] {
+	return view.tasks.filter((t) => taskNeedsUser(t) || taskIsTerminal(t));
+}
