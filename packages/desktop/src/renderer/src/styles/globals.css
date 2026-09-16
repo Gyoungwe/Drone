@@ -1284,6 +1284,20 @@ code {
 		box-shadow: var(--shadow-soft);
 	}
 }
+/* 任务卡跳转定位（侧栏「点此跳转」）：琥珀描边，与待确认强调态同色 */
+[data-task-id].jump-flash {
+	animation: task-jump-flash 1.15s ease-out;
+	border-radius: 0.5rem;
+}
+@keyframes task-jump-flash {
+	0%,
+	40% {
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-warning, #f59e0b) 45%, transparent);
+	}
+	100% {
+		box-shadow: none;
+	}
+}
 .diff-file-head {
 	display: flex;
 	align-items: center;

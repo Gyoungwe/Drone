@@ -12,6 +12,7 @@ import { useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
+import { CheckIcon } from "../icons";
 
 /**
  * 流内工作台卡。`tasks` 是调用方筛过的子集（见 tasksForTranscript）——
@@ -50,6 +51,10 @@ export function TaskWorkbenchCard({
 		}
 	};
 	const button = "rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-surface disabled:opacity-40";
+	// 主操作：唯一推进任务的按钮，必须一眼可见——实心琥珀、加大点击区、focus 环。
+	// 次要动作（归档/取消/继续）沿用上面的幽灵样式，层级差拉开才不会让用户猜该点哪个。
+	const primaryButton =
+		"inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-amber-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 disabled:opacity-40 disabled:hover:bg-amber-500";
 	return (
 		<section
 			data-testid="task-workbench"
@@ -104,6 +109,22 @@ export function TaskWorkbenchCard({
 						<p className="mt-1 text-xs" data-testid="task-reason">
 							{explainTaskReason(task.reason)}
 						</p>
+					)}
+					{/* 停住的任务：恢复入口原先只藏在「手动操作」折叠里，默认收起 → 用户找不到。
+					    这里提到顶部固定成一行主操作。授权块有 milestones 前提，覆盖不到这种情况。 */}
+					{!task.authorizationRequired && (task.state === "waiting_user" || task.state === "blocked") && (
+						<div className="mt-3 border-t border-border pt-3">
+							<button
+								type="button"
+								disabled={disabled}
+								className={primaryButton}
+								onClick={() => act(task.id, "resume")}
+							>
+								<CheckIcon size={15} />
+								继续执行
+							</button>
+							<p className="mt-2 text-[11px] text-ink-dim">任务已停在此处，点击后从最近的检查点继续</p>
+						</div>
 					)}
 					{!!task.milestones.length && !TERMINAL_TASK_STATES.has(task.state) && (
 						<div className="mt-3 rounded-lg border border-border bg-surface p-3" data-testid="task-consent">

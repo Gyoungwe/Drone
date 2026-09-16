@@ -50,9 +50,25 @@ function TaskRow({ task, limits }: { task: WorkbenchTask; limits: TaskView["limi
 			)}
 			{reason && <p className="mt-2 text-[11px] text-ink-dim">{reason}</p>}
 			{taskNeedsUser(task) && (
-				<p className="mt-2 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-600 dark:text-amber-400">
-					等待你在消息流中确认
-				</p>
+				/* 可点击：长对话里那张卡早被滚过去了，给一个回到它的入口 */
+				<button
+					type="button"
+					className="mt-2 w-full rounded-md bg-amber-500/10 px-2 py-1 text-left text-[11px] text-amber-600 hover:bg-amber-500/20 dark:text-amber-400"
+					onClick={() => {
+						const el = document.querySelector(`[data-task-id="${CSS.escape(task.id)}"]`);
+						if (!el) return;
+						el.scrollIntoView({
+							block: "center",
+							behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+						});
+						el.classList.remove("jump-flash");
+						void (el as HTMLElement).offsetWidth; // reflow 重播动画
+						el.classList.add("jump-flash");
+						setTimeout(() => el.classList.remove("jump-flash"), 1200);
+					}}
+				>
+					等待你确认 · 点此跳转 →
+				</button>
 			)}
 			{!!task.milestones.length && (
 				<ul className="mt-2 space-y-1">
