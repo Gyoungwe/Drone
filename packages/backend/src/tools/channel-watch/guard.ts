@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { normalize, resolve } from "node:path";
 import { createLogger } from "../../log";
 
 const log = createLogger("channel-watch-guard");
@@ -56,11 +57,22 @@ export class LoopGuard {
 		this.now = options.now ?? Date.now;
 	}
 
+	/** Canonicalize paths across POSIX and Windows watcher events. */
+	private canonicalPath(path: string): string {
+		// fs.watch may report either separator style (and tests can replay paths from
+		// another platform), so normalize separators before resolving.
+		const portable = path.replace(/[\\/]+/g, "/");
+		const normalized = normalize(resolve(portable)).replace(/\\/g, "/");
+		return process.platform === "win32" || /^[A-Za-z]:\//.test(normalized)
+			? normalized.toLowerCase()
+			: normalized;
+	}
+
 	// --- 层 1：自写抑制 ---
 
 	/** tool_call 钩子记录本进程 write/edit 的目标文件 */
 	markSelfWrite(absPath: string): void {
-		this.selfWrites.set(absPath, this.now());
+		this.selfWrites.set(this.canonicalPath(absPath), this.now());
 		// 上限防泄漏（长会话海量写入）
 		if (this.selfWrites.size > 1000) {
 			const cutoff = this.now() - SELF_WRITE_WINDOW_MS;
@@ -73,10 +85,11 @@ export class LoopGuard {
 	/** 事件目标（绝对路径）是否命中 <10s 自写窗口（含父目录写入命中子文件事件的场景） */
 	isSelfWrite(absPath: string): boolean {
 		const at = this.now();
+		const target = this.canonicalPath(absPath);
 		for (const [p, t] of this.selfWrites) {
 			if (at - t >= SELF_WRITE_WINDOW_MS) continue;
 			// 精确命中，或自写的是该文件的父目录（写父目录内容也算写文件）
-			if (p === absPath || absPath.startsWith(`${p}/`)) return true;
+			if (p === target || target.startsWith(`${p}/`)) return true;
 		}
 		return false;
 	}

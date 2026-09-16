@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.6 — 2026-09-16
+
+- Fixed session export saving the generated file path instead of its contents.
+- Fixed cancelled requests being reported as failed knowledge checks.
+- Fixed Windows path normalization for channel self-write suppression and permission patterns.
+- Fixed incremental semantic indexing, matched-chunk hydration, and Windows SQLite cleanup.
+- Updated knowledge UI smoke coverage for the combined knowledge and Zotero setup flow.
+
 ## 0.7.5 — 2026-09-16
 
 - Fixed the About page update flow so an available release can be downloaded in-app instead of triggering another check.

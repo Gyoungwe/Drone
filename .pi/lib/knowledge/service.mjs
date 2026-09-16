@@ -710,6 +710,13 @@ export class KnowledgeService {
 	}
 	async close() {
 		if (this.closed) return;
+		// Close SQLite and the recursive watcher inside the worker before terminating it.
+		// Windows keeps WAL files locked briefly when a worker is terminated abruptly.
+		try {
+			await this.request("close");
+		} catch {
+			/* the worker may already have exited; termination below remains the fallback */
+		}
 		this.closed = true;
 		for (const item of this.pending.values()) {
 			clearTimeout(item.timer);

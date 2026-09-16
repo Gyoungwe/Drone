@@ -275,7 +275,13 @@ async function run() {
 		await wait("document.body.innerText.includes('内置模板预览')", "directory preview");
 		await assert.rejects(readFile(join(root, "New Vault", "Home.md")));
 		checks.push("folder selection and read-only template preview");
-		await click("开始初始化问答");
+		// Preview and its busy flag settle in separate React updates. Wait for the
+		// actual action button to become enabled instead of racing the final state.
+		await wait(
+			"[...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='开始初始化问答（知识库 + Zotero）'&&!b.disabled)",
+			"setup action enabled",
+		);
+		await click("开始初始化问答（知识库 + Zotero）");
 		assert.equal(actions[0].action, "setup");
 		assert.equal(actions[0].input.path, join(root, "New Vault"));
 		checks.push("setup UI routes selected path into the bound skill entry");
@@ -307,8 +313,17 @@ async function run() {
 		checks.push("approval disabled before explicit review acknowledgment");
 		await capture("02-wiki-diff-light");
 		// Real background index invalidation may make the preview stale; exercise the visible refresh rather than bypass it.
-		if (await js("document.querySelector('[data-testid=wiki-model-review] button').disabled"))
+		for (let attempt = 0; attempt < 4; attempt++) {
+			if (
+				await js(
+					"document.querySelector('[data-testid=wiki-model-review] button')&&!document.querySelector('[data-testid=wiki-model-review] button').disabled",
+				)
+			)
+				break;
+			if (attempt === 3) throw new Error("UI timeout: fresh model-review preview");
 			await click("重新加载预览");
+			await pause(250);
+		}
 		await wait(
 			"document.querySelector('[data-testid=wiki-model-review] button')&&!document.querySelector('[data-testid=wiki-model-review] button').disabled",
 			"fresh model-review preview",
@@ -546,7 +561,7 @@ async function run() {
 				"[...document.querySelector('[data-testid=project-sidebar-actions]').children].map(b=>{const r=b.getBoundingClientRect(),i=b.querySelector('svg').getBoundingClientRect(),t=b.querySelector('span').getBoundingClientRect();return {tag:b.tagName,label:b.textContent.trim(),x:r.x,y:r.y,width:r.width,height:r.height,iconX:i.x,iconWidth:i.width,textX:t.x};})",
 			);
 		const aligned = (rows) => {
-			assert.equal(rows.length, 3);
+			assert.equal(rows.length, 4);
 			for (const row of rows) {
 				assert.equal(row.tag, "BUTTON");
 				assert(row.width > 180 && row.height >= 28, "sidebar row must be visible and full width");
@@ -554,6 +569,7 @@ async function run() {
 					assert(Math.abs(row[k] - rows[0][k]) < 0.5, `equal sidebar ${k}`);
 			}
 			assert.equal(rows[1].label, "Obsidian");
+			assert.equal(rows[2].label, "Zotero");
 		};
 		aligned(await actionGeometry());
 		// Offscreen windows are not OS-focused. Drive Chromium's real input with focus emulation; do not steal the user's active application.

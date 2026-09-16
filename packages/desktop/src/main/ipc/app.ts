@@ -11,6 +11,7 @@ import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
 import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
 import { checkForUpdates, downloadUpdate, installUpdate } from "../updater";
+import { materializeSaveContent } from "./save-content";
 
 const TEXT_EXTENSIONS = new Set([
 	".txt",
@@ -183,7 +184,7 @@ export function registerAppIpc(_backend: PiBackend): void {
 			? await dialog.showSaveDialog(window, options)
 			: await dialog.showSaveDialog(options);
 		if (result.canceled || !result.filePath) return null;
-		await writeFile(result.filePath, content, "utf-8");
+		await writeFile(result.filePath, await materializeSaveContent(content), "utf-8");
 		return result.filePath;
 	});
 	ipcMain.handle(IpcChannels.ProjectPickDirectory, async () => {

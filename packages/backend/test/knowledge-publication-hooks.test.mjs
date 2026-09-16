@@ -91,6 +91,19 @@ it("model request errors keep a sanitized provider error for the error card, not
 	expect(JSON.stringify(result.message.content)).not.toContain("知识库检查未通过");
 	expect(h.called).not.toHaveBeenCalled();
 });
+it("user cancellation reported as an error is marked interrupted, not model-error", async () => {
+	const h = harness();
+	const result = await h.end({
+		...message("UNCHECKED_FIXTURE"),
+		stopReason: "error",
+		errorMessage: "This operation was aborted",
+	});
+	expect(result.message.knowledgePublication.reason).toBe("interrupted");
+	expect(result.message.knowledgePublication.status).toBe("blocked");
+	expect(result.message.content[0].text).toContain("本次请求已中断");
+	expect(result.message.content[0].text).not.toContain("知识库检查未通过");
+	expect(h.called).not.toHaveBeenCalled();
+});
 it("model error messages redact credential-shaped tokens", async () => {
 	const h = harness(),
 		result = await h.end({

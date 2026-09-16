@@ -163,7 +163,15 @@ function tooBroadDir(dir: string, home: string): boolean {
  */
 function pathToolPattern(toolName: string, path: string, home: string): string {
 	const dir = dirname(path);
-	return tooBroadDir(dir, home) ? `${toolName}: ${path}` : `${toolName}: ${dir}${sep}*`;
+	if (tooBroadDir(dir, home)) return `${toolName}: ${path}`;
+	// Keep the separator style supplied by the path. Windows' `dirname()`
+	// preserves POSIX-looking paths as `/x/y`, while `sep` is always `\\`;
+	// concatenating the latter produced mixed `/x/y\\*` patterns that could
+	// neither be displayed nor matched consistently.
+	const slash = path.lastIndexOf("/"),
+		backslash = path.lastIndexOf("\\");
+	const separator = slash > backslash ? "/" : "\\";
+	return `${toolName}: ${dir}${separator}*`;
 }
 
 /** matchText 是文件路径的工具（路径目录化记忆；与 permission-extension 的边界检查工具集对应） */

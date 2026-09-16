@@ -214,6 +214,95 @@ describe("semantic settings concurrency and safety", () => {
 });
 
 describe("worker-owned hybrid retrieval", () => {
+	it("re-scans semantic batches so new paths and remaining chunks are never skipped", async () => {
+		await configureObsidian({ cwd, vault, project: "project-a" });
+		await note("Library/Papers/z-last.md", `# Last\n${"z".repeat(700)}`);
+		const service = new KnowledgeService(await readKnowledgeBinding(), app);
+		try {
+			await service.request("reconcile");
+			const fingerprint = "cursor-regression";
+			const first = await service.request("semanticBatch", {
+				fingerprint,
+				project: "project-a",
+				limit: 1,
+				chunkChars: 256,
+			});
+			expect(first.items).toHaveLength(1);
+			await service.request("semanticStore", {
+				fingerprint,
+				items: first.items.map((item) => ({ ...item, vector: [1, 0] })),
+			});
+			const seen = [];
+			for (let i = 0; i < 12 && !seen.some((item) => item.path === "Library/Papers/z-last.md" && item.chunkIndex === 1); i++) {
+				const next = await service.request("semanticBatch", {
+					fingerprint,
+					project: "project-a",
+					limit: 1,
+					chunkChars: 256,
+				});
+				if (!next.items.length) break;
+				seen.push(next.items[0]);
+				await service.request("semanticStore", {
+					fingerprint,
+					items: next.items.map((item) => ({ ...item, vector: [1, 0] })),
+				});
+			}
+			expect(seen).toContainEqual(expect.objectContaining({ path: "Library/Papers/z-last.md", chunkIndex: 1 }));
+			await note("Library/Papers/a-new.md", "# New\nnewly added evidence");
+			await service.request("changed", { paths: ["Library/Papers/a-new.md"] });
+			const added = await service.request("semanticBatch", {
+				fingerprint,
+				project: "project-a",
+				limit: 4,
+				chunkChars: 256,
+			});
+			expect(added.items.map((item) => item.path)).toContain("Library/Papers/a-new.md");
+		} finally {
+			await service.close();
+		}
+	});
+
+	it("hydrates semantic candidates around the matched chunk", async () => {
+		await configureObsidian({ cwd, vault, project: "project-a" });
+		const lines = Array.from({ length: 40 }, (_, i) =>
+			i === 30 ? "MATCHED_POLLEN_BEHAVIOR evidence" : `line-${i} ${"x".repeat(24)}`,
+		).join("\n");
+		await note("Library/Papers/chunked.md", `# Chunked\n${lines}`);
+		const service = new KnowledgeService(await readKnowledgeBinding(), app);
+		try {
+			await service.request("reconcile");
+			const fingerprint = "hydrate-regression";
+			const batch = await service.request("semanticBatch", {
+				fingerprint,
+				project: "project-a",
+				limit: 16,
+				chunkChars: 256,
+			});
+			const match = batch.items.find((item) => item.text.includes("MATCHED_POLLEN_BEHAVIOR"));
+			expect(match).toBeTruthy();
+			await service.request("semanticStore", {
+				fingerprint,
+				items: [{ ...match, vector: [1, 0] }],
+			});
+			const candidates = await service.request("semanticCandidates", {
+				fingerprint,
+				project: "project-a",
+				vector: [1, 0],
+				minSimilarity: 0.9,
+			});
+			expect(candidates[0]).toMatchObject({ chunkIndex: match.chunkIndex });
+			const hydrated = await service.request("hydrateCandidates", {
+				project: "project-a",
+				candidates,
+				limit: 1,
+			});
+			expect(hydrated.hits[0].startLine).toBeGreaterThan(1);
+			expect(hydrated.hits[0].text).toContain("MATCHED_POLLEN_BEHAVIOR");
+		} finally {
+			await service.close();
+		}
+	});
+
 	it("runs injected semantic candidates even when FTS fills top-k, fuses/dedupes, and does not mint receipts", async () => {
 		await configureObsidian({ cwd, vault, project: "project-a" });
 		await note("Library/Papers/lexical.md", "# butterfly\nlexical butterfly evidence");

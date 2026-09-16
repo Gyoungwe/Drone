@@ -49,6 +49,12 @@ function sanitizeError(text) {
 		.trim()
 		.slice(0, 4096);
 }
+// The SDK reports a user stop as stopReason="error" for an in-flight request.
+// Keep this in the publication boundary so an ordinary cancellation cannot be
+// replaced with a misleading knowledge-check failure notice.
+function isUserAbortError(message) {
+	return /was aborted|request aborted/i.test(String(message?.errorMessage || ""));
+}
 function base(message, content) {
 	// Draft/thinking snapshots stay out of public history. Provider errors are not
 	// published as answer text; a sanitized errorMessage is kept for the LLM error card.
@@ -80,7 +86,11 @@ function blocked(message, code = "check-failed", turnId = null, operational = nu
 		[
 			{
 				type: "text",
-				text: operational || `【知识库检查未通过】${notices[code] || notices["check-failed"]}`,
+				text:
+					operational ||
+					(code === "interrupted"
+						? notices.interrupted
+						: `【知识库检查未通过】${notices[code] || notices["check-failed"]}`),
 			},
 		],
 		{
@@ -207,7 +217,7 @@ export function registerAnswerPublication(
 			protocolBytes += bytes;
 			return report(safe);
 		}
-		if (message.stopReason === "error")
+		if (message.stopReason === "error" && !isUserAbortError(message))
 			return report(
 				seal(message, [], {
 					status: "blocked",
@@ -216,7 +226,11 @@ export function registerAnswerPublication(
 					scientificallyVerified: false,
 				}),
 			);
-		if (["aborted", "length", "pending"].includes(message.stopReason) || ctx.signal?.aborted)
+		if (
+			["aborted", "length", "pending"].includes(message.stopReason) ||
+			ctx.signal?.aborted ||
+			isUserAbortError(message)
+		)
 			return report(failure(message, { code: "interrupted" }));
 		const content = blocks.filter((b) => b.type === "text");
 		// Only the controlled setup writer can set this receipt. Never whitelist model-written claims.
