@@ -11,7 +11,7 @@ export const en: Messages = {
 		directories: "Directories approved for ordinary writes, including subdirectories:",
 		noDirectories: "No additional write directories requested; existing permissions apply.",
 		boundary:
-			"This also approves the acceptance plan below. Commands retain existing permissions. Deletion, sensitive files, out-of-scope actions, new risks and actual human review are not automatically approved. You can stop at any time.",
+			"This also approves the acceptance plan below. Commands retain existing permissions — if a command prompt still appears, choose “Allow all for this task” to stop further prompts. Deletion, sensitive files, out-of-scope actions, new risks and actual human review are not automatically approved. You can stop at any time.",
 		approve: "Authorize once and run to delivery",
 	},
 	common: {

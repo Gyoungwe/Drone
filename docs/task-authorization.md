@@ -8,6 +8,8 @@ New workbench tasks use one consent card after bounded read-only discovery. The 
 - Ordinary write/edit operations under the displayed canonical directories and their children. Output readback may use these explicitly approved roots even when data lives outside the session cwd; CURRENT read permissions and canonical directory identity are still checked. Missing output subdirectories are allowed; the approved project directory must already exist.
 - Existing command permissions, not a new arbitrary-shell/fullAccess privilege. The plan must state planned installations and preserve previous refusals.
 
+If a command confirmation still appears during an authorized task, the approval card offers **本次任务全部允许 / Allow all for this task** (`allowRun`, shortcut `T`): it auto-approves every remaining confirm in the current agent run, drains the queue, and expires at `agent_end`. It is not persisted, is not remembered by pattern, and never overrides `deny` rules. Together the two mechanisms give the user at most one authorization card plus at most one command prompt per task.
+
 ## What is not authorized
 
 Explicit deny rules, pattern-specific asks, sensitive files (credentials, permission/trust/model configuration, private keys, VCS internals), canonical path/symlink escape, hard-linked write targets, new risks or unrelated scope, unreviewed Wiki changes, genuine manual review and uncertain side effects retain their gates. Task consent is not scientific certification. Confirmation cannot increase the total call ceiling or reset failed-effect deduplication.
@@ -28,6 +30,8 @@ Hard limits, missing credentials, absent necessary user data and unrecoverable e
 - `.pi/lib/tasks/workbench.mjs`: revision-checked consent, bounded progress and continuation reservations.
 - `.pi/lib/tasks/register.mjs`: authorization card, cancellable SDK handoff and permission-adapter bridge.
 - `backend/src/permissions/task-consent.ts`: canonical target checks for scoped ordinary writes; called only after existing deny evaluation.
+- `backend/src/permissions/gate.ts`: `allowRun` answer (run-scoped blanket approval for the remaining confirms; cleared on `agent_end` by `PiBackend.emitEvent`).
+- `.pi/skills/research-workflow/SKILL.md` § Interruption budget: front-load all user decisions into one message; decide mid-task with defaults and report them under 我替你决定的.
 - `desktop/.../TaskWorkbenchCard.tsx` and shared task types: one localized approval action; no recurring stage-budget control for new tasks.
 
 This is source-level behavior. Rebuild/restart the desktop app to load changed bundled code/resources. No old conversation, research artifact, credential store or installed application is rewritten as part of this implementation.
