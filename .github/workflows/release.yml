@@ -4,20 +4,77 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing v* tag to publish
-        required: true
+        description: v* tag to publish. Leave empty to derive v<version> from packages/desktop/package.json on this ref and create the tag if missing.
+        required: false
+        default: ""
         type: string
   push:
     tags: ["v*"]
-
-env:
-  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    branches: [main]
+    paths:
+      - packages/desktop/package.json
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  # Resolve the release tag once. Sources, in order: explicit dispatch input, pushed v* tag,
+  # or v<version> from packages/desktop/package.json (main push / empty dispatch input).
+  # For the derived case the tag is created on the current commit only when it does not exist yet,
+  # so an ordinary main push without a version bump is a no-op.
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.pick.outputs.tag }}
+      release: ${{ steps.pick.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: pick
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "workflow_dispatch" ] && [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+            git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "Tag $TAG does not exist" >&2; exit 1; }
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"; echo "release=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ "$EVENT" = "push" ] && [ "$REF_TYPE" = "tag" ]; then
+            echo "tag=$REF_NAME" >> "$GITHUB_OUTPUT"; echo "release=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          TAG="v$(node -p "require('./packages/desktop/package.json').version")"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            if [ "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$(git rev-parse HEAD)" ]; then
+              echo "Tag $TAG already points at HEAD; re-running release for it."
+              echo "tag=$TAG" >> "$GITHUB_OUTPUT"; echo "release=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "Tag $TAG already exists on another commit; nothing to release."
+              echo "tag=$TAG" >> "$GITHUB_OUTPUT"; echo "release=false" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
+          [ -f "docs/releases/$TAG.md" ] || echo "::warning::docs/releases/$TAG.md not found; release notes will be auto-generated."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "refs/tags/$TAG"
+          echo "Created and pushed $TAG at $(git rev-parse --short HEAD)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"; echo "release=true" >> "$GITHUB_OUTPUT"
+
   validate:
+    needs: resolve
+    if: needs.resolve.outputs.release == 'true'
+    env:
+      RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,7 +95,9 @@ jobs:
       - run: npm run test:upgrade
 
   prepare:
-    needs: validate
+    needs: [resolve, validate]
+    env:
+      RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,13 +122,14 @@ jobs:
           fi
 
   build:
-    needs: prepare
+    needs: [resolve, prepare]
     strategy:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     env:
+      RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
       # 无开发者证书：mac 显式走 adhoc 签名（identity: "-"），禁用 runner 上的证书自动发现
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
@@ -103,7 +163,9 @@ jobs:
           rm -f "$ASSET_LIST"
 
   publish:
-    needs: build
+    needs: [resolve, build]
+    env:
+      RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
     runs-on: ubuntu-latest
     steps:
       - name: Verify required assets and publish draft
