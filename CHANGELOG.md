@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0 — 2026-09-17
+
+- Renamed the project from Percho to Drone: app id `io.github.gyoungwe.drone`, product name Drone, executable `drone`, packages `drone` and `@drone/{backend,shared,desktop}`, environment variables `DRONE_*`, user directory `~/.drone`, plugin API `window.DroneUI` / `DroneUiApi` / manifest `droneUi` / `drone-ui.d.ts` / skill `drone-ui-plugin`, and release artifacts `drone-*`. The repository moved to `Gyoungwe/Drone`.
+- Changed the user data location: the new app id means a new userData directory, so previous sessions, settings and installed plugins are not carried over. On first launch `~/.percho/daily` is moved to `~/.drone/daily` when the target does not exist, falling back to a link to the old path on a cross-device or locked rename; failures are logged without blocking startup and the original data stays in `~/.percho`. `~/.percho/ui-plugins` is not migrated because it links into the old userData directory.
+- Fixed a task dead-ending with `400: Messages with role 'tool' must be a response to a preceding message with 'tool_calls'`, which every Continue click reproduced. A stage checkpoint firing from the `tool_call` hook could insert a status card between an assistant message carrying `tool_calls` and its tool results, so the provider rejected the turn at the entry point and the stage counter never reset. Status cards are now held while any tool result is outstanding and flushed once the last one is paired or at `agent_end`, and the counter resets at the start and end of a turn so an aborted turn cannot strand a held card.
+
 ## 0.9.0 — 2026-09-17
 
 - Added one task authorization: after bounded read-only discovery `task_plan` proposes the goal, a plain-language scope summary, existing write directories and immutable acceptance milestones at once, and the single 确认一次，执行到交付 action approves the acceptance criteria and the execution budget and starts the task without a second Continue click. Consent is bound to an immutable contract hash over the task id, goal, binding, scope summary, directory list and milestones, so it never transfers to another task, session or changed contract.

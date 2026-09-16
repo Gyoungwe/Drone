@@ -1,7 +1,7 @@
 {
 	"name": "drone",
 	"private": true,
-	"version": "0.9.0",
+	"version": "0.10.0",
 	"description": "Desktop GUI for the Pi coding agent, built with Electron",
 	"license": "MIT",
 	"author": "Jaxton07",
