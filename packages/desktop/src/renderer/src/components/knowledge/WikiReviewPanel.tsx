@@ -1,4 +1,4 @@
-import type { KnowledgePage, WikiReviewItem, WikiReviewPreview } from "@percho/shared";
+import type { KnowledgePage, WikiReviewItem, WikiReviewPreview } from "@drone/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";

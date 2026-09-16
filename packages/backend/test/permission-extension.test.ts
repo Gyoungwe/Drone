@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
+import type { PermissionMode } from "@drone/shared";
 import type {
 	ExtensionAPI,
 	ExtensionContext,
@@ -8,7 +9,6 @@ import type {
 	ToolCallEvent,
 	ToolCallEventResult,
 } from "@earendil-works/pi-coding-agent";
-import type { PermissionMode } from "@percho/shared";
 import { describe, expect, it } from "vitest";
 import type { PermissionAuditEntry } from "../src/permissions/audit";
 import { permissionAuditPath } from "../src/permissions/audit";

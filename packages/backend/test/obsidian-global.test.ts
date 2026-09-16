@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 
 it("global Obsidian setup has one visible owner in an unrelated project", async () => {
-	const cwd = await mkdtemp(join(tmpdir(), "percho-global-setup-"));
+	const cwd = await mkdtemp(join(tmpdir(), "drone-global-setup-"));
 	const backend = new PiBackend({
 		projectTrust: false,
 		desktopIntegration: {

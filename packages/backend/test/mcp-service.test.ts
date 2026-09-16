@@ -4,9 +4,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { McpService } from "../src/mcp/service";
 
-const agentDir = await mkdtemp(join(tmpdir(), "percho-mcp-service-"));
+const agentDir = await mkdtemp(join(tmpdir(), "drone-mcp-service-"));
 process.env.PI_CODING_AGENT_DIR = agentDir;
-const homeDir = await mkdtemp(join(tmpdir(), "percho-mcp-home-"));
+const homeDir = await mkdtemp(join(tmpdir(), "drone-mcp-home-"));
 
 describe("McpService", () => {
 	it("keeps runtime status isolated by project", () => {
@@ -50,7 +50,7 @@ describe("McpService", () => {
 	});
 
 	it("merges project config after user config and reports its source", async () => {
-		const cwd = await mkdtemp(join(tmpdir(), "percho-mcp-project-"));
+		const cwd = await mkdtemp(join(tmpdir(), "drone-mcp-project-"));
 		await writeFile(
 			join(agentDir, "mcp.json"),
 			JSON.stringify({
@@ -92,7 +92,7 @@ describe("McpService", () => {
 	});
 
 	it("writes a project-only disabled override without modifying shared config", async () => {
-		const cwd = await mkdtemp(join(tmpdir(), "percho-mcp-project-"));
+		const cwd = await mkdtemp(join(tmpdir(), "drone-mcp-project-"));
 		const sharedPath = join(cwd, ".mcp.json");
 		const shared = { mcpServers: { docs: { command: "node", env: { TOKEN: "secret" } } } };
 		await writeFile(sharedPath, JSON.stringify(shared));
@@ -108,7 +108,7 @@ describe("McpService", () => {
 	});
 
 	it("enables a server disabled by a lower-precedence user config", async () => {
-		const cwd = await mkdtemp(join(tmpdir(), "percho-mcp-project-"));
+		const cwd = await mkdtemp(join(tmpdir(), "drone-mcp-project-"));
 		await writeFile(
 			join(agentDir, "mcp.json"),
 			JSON.stringify({

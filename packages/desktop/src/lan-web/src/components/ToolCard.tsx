@@ -1,4 +1,4 @@
-import type { UIToolCall } from "@percho/shared";
+import type { UIToolCall } from "@drone/shared";
 import { ChevronRightIcon } from "./icons";
 
 /** 与桌面端 ToolCallCard.summarizeArgs 同逻辑：优先 command/filePath/url 字段，容忍流式不完整 JSON */

@@ -1,4 +1,4 @@
-import { useLanguage, useSessionsStore, useTranscriptStore } from "@percho/plugin-api";
+import { useLanguage, useSessionsStore, useTranscriptStore } from "@drone/plugin-api";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import blinkUrl from "./assets/blink.png";
 import happyUrl from "./assets/happy.png";

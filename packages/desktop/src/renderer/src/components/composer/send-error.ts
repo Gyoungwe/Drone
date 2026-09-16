@@ -1,4 +1,4 @@
-import { buildLlmUiError, classifyLlmError, DETAIL_MAX_LENGTH, type UiError } from "@percho/shared";
+import { buildLlmUiError, classifyLlmError, DETAIL_MAX_LENGTH, type UiError } from "@drone/shared";
 
 /**
  * 发送路径失败 → UiError（Composer 内联条 data 源）。

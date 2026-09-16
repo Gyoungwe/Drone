@@ -1,4 +1,4 @@
-import type { WikiModelReviewResult, WikiReviewPreview } from "@percho/shared";
+import type { WikiModelReviewResult, WikiReviewPreview } from "@drone/shared";
 import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";

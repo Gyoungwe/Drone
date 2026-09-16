@@ -5,7 +5,7 @@ import {
 	deriveTurnTimings,
 	deriveTurnUsage,
 	isAgentWorking,
-} from "@percho/shared";
+} from "@drone/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";

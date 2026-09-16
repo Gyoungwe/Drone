@@ -1,4 +1,4 @@
-import { buildLlmUiError, classifyLlmError, DETAIL_MAX_LENGTH, type UiError } from "@percho/shared";
+import { buildLlmUiError, classifyLlmError, DETAIL_MAX_LENGTH, type UiError } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 describe("classifyLlmError — 模式表按序首命中", () => {

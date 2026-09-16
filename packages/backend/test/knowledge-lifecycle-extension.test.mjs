@@ -10,12 +10,12 @@ import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
 let root, project, vault, app;
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-topic-extension-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-topic-extension-")));
 	project = join(root, "project");
 	vault = join(root, "Vault");
 	app = join(root, "app");
 	await mkdir(project);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", app);
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", app);
 	await configureObsidian({ cwd: project, vault, project: "project" });
 	await writeFile(join(vault, "Library", "evidence.md"), "# Evidence\nA source for the topic.\n");
 });
@@ -55,7 +55,7 @@ describe("topic memory extension lifecycle", () => {
 			.execute("resume", { topic: "topic" }, undefined, undefined, ctx);
 		expect(resumed.details.status).toBe("selected");
 		const context = await events.get("context")({ messages: [] }, ctx);
-		expect(context.messages.some((message) => message.customType === "percho-knowledge-topic-memory")).toBe(
+		expect(context.messages.some((message) => message.customType === "drone-knowledge-topic-memory")).toBe(
 			true,
 		);
 		expect([...tools.keys()]).toContain("research_topics");
@@ -88,13 +88,13 @@ describe("topic memory extension lifecycle", () => {
 		await tools.get("research_resume_topic").execute("resume", { topic: "larva" }, undefined, undefined, ctx);
 		await events.get("message_start")({ message: { role: "user", content: "那它的幼虫呢" } }, ctx);
 		const packet = await events.get("context")({ messages: [] }, ctx);
-		expect(packet.messages.some((m) => m.customType === "percho-knowledge-topic-memory")).toBe(true);
+		expect(packet.messages.some((m) => m.customType === "drone-knowledge-topic-memory")).toBe(true);
 		await events.get("message_start")(
 			{ message: { role: "user", content: "switch to a different topic" } },
 			ctx,
 		);
 		const cleared = await events.get("context")({ messages: [] }, ctx);
-		expect(cleared.messages.some((m) => m.customType === "percho-knowledge-topic-memory")).toBe(false);
+		expect(cleared.messages.some((m) => m.customType === "drone-knowledge-topic-memory")).toBe(false);
 	});
 	it("returns bounded candidates for an ambiguous Chinese topic request", async () => {
 		const tools = new Map();
@@ -167,14 +167,14 @@ describe("topic memory extension lifecycle", () => {
 		await tools.get("research_resume_topic").execute("resume", { topic: "larva" }, undefined, undefined, ctx);
 		let packet = await events.get("context")({ messages: [] }, ctx);
 		const topicMessage = packet.messages.find(
-			(message) => message.customType === "percho-knowledge-topic-memory",
+			(message) => message.customType === "drone-knowledge-topic-memory",
 		);
 		expect(topicMessage).toBeDefined();
 		expect(topicMessage.content.length).toBeLessThan(2800);
 
 		await api.beforeStart({ prompt: "switch to a different topic about geology" }, ctx);
 		packet = await events.get("context")({ messages: [] }, ctx);
-		expect(packet.messages.some((message) => message.customType === "percho-knowledge-topic-memory")).toBe(
+		expect(packet.messages.some((message) => message.customType === "drone-knowledge-topic-memory")).toBe(
 			false,
 		);
 

@@ -1,4 +1,4 @@
-import type { SessionEvent } from "@percho/shared";
+import type { SessionEvent } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { slimBulkyEvent, slimMessageUpdate } from "../src/session/event-slim";
 
@@ -59,7 +59,7 @@ describe("slimMessageUpdate", () => {
 	});
 
 	it("瘦身后事件可直接被 reducer 消费（回放/实时同构）", async () => {
-		const { emptyTranscript, reduceEvent } = await import("@percho/shared");
+		const { emptyTranscript, reduceEvent } = await import("@drone/shared");
 		const start = { type: "message_start", message: { role: "assistant", content: [] } };
 		let state = reduceEvent(emptyTranscript(), start as never);
 		const deltas = ["你", "好", "，", "世", "界"];

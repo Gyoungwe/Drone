@@ -1,5 +1,5 @@
-import type { AgentSessionEvent, SessionMessage } from "@percho/shared";
-import { emptyTranscript, messagesToUIMessages, reduceEvent } from "@percho/shared";
+import type { AgentSessionEvent, SessionMessage } from "@drone/shared";
+import { emptyTranscript, messagesToUIMessages, reduceEvent } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 type Event = AgentSessionEvent;

@@ -1,4 +1,4 @@
-import type { CustomProviderModelInput } from "@percho/shared";
+import type { CustomProviderModelInput } from "@drone/shared";
 
 /** 模型行编辑器的一行：数字字段保留原文（支持 k 后缀），提交时才解析 */
 export interface ModelRow {

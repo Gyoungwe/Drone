@@ -1,4 +1,4 @@
-import type { KnowledgeSetupPreview } from "@percho/shared";
+import type { KnowledgeSetupPreview } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";

@@ -29,7 +29,7 @@ export function registerWorkbench(pi) {
 					handled = true;
 				},
 			};
-			pi.events.emit("percho:task-read-check", request);
+			pi.events.emit("drone:task-read-check", request);
 			if (!handled) resolveResult(false);
 		});
 		if (!allowed) throw new Error("Current permission policy denied this read.");
@@ -67,7 +67,7 @@ export function registerWorkbench(pi) {
 	});
 	const evidence = createEvidenceRecovery({
 		authorize,
-		persist: (data) => pi.appendEntry("percho-task-evidence-v1", data),
+		persist: (data) => pi.appendEntry("drone-task-evidence-v1", data),
 	});
 	const attach = (ctx, force = false) => {
 		context = ctx;
@@ -84,7 +84,7 @@ export function registerWorkbench(pi) {
 	const send = (content = journal.render()) =>
 		pi.sendMessage(
 			{
-				customType: "percho-task-status",
+				customType: "drone-task-status",
 				display: true,
 				content,
 				details: { operational: true, reportId: randomUUID(), taskView: journal.view() },
@@ -98,7 +98,7 @@ export function registerWorkbench(pi) {
 	journal.isAutoContinuation = (message) =>
 		!!(
 			message?.role === "custom" &&
-			message.customType === "percho-task-autocontinue" &&
+			message.customType === "drone-task-autocontinue" &&
 			continuationToken &&
 			message.details?.nonce === continuationToken &&
 			message.details?.taskId === journal.snapshot()?.id &&
@@ -147,7 +147,7 @@ export function registerWorkbench(pi) {
 				continuationToken = randomUUID();
 				pi.sendMessage(
 					{
-						customType: "percho-task-autocontinue",
+						customType: "drone-task-autocontinue",
 						display: false,
 						details: { taskId, nonce: continuationToken },
 						content: `Continue the user-authorized task: ${journal.snapshot().goal}. Scope: ${journal.snapshot().authorizationSummary}. Use saved results, verify uncertain effects before any retry, and complete the remaining deliverables. Do not request routine stage approval. Respect declined installs and all permission/validation gates. If blocked, clearly deliver what exists and the one real blocker instead of silently extending scope.`,
@@ -170,7 +170,7 @@ export function registerWorkbench(pi) {
 	};
 	pi.on("session_shutdown", cancelHandoff);
 	// Current task consent is exposed only to the existing permission adapter, never to model tool inputs.
-	pi.events?.on?.("percho:task-write-consent", (request) => {
+	pi.events?.on?.("drone:task-write-consent", (request) => {
 		if (
 			context &&
 			request.cwd === context.cwd &&
@@ -182,7 +182,7 @@ export function registerWorkbench(pi) {
 		attach(ctx);
 		const entries = ctx.sessionManager?.getBranch?.() || [];
 		const caps =
-			[...entries].reverse().find((e) => e.customType === "percho-capability-checkpoint-v1")?.data
+			[...entries].reverse().find((e) => e.customType === "drone-capability-checkpoint-v1")?.data
 				?.capabilities || [];
 		const result = journal.begin(query, caps, await bindingKey());
 		evidence.attach(evidence.scope(), journal.snapshot()?.id, entries);
@@ -215,7 +215,7 @@ export function registerWorkbench(pi) {
 			halted = true;
 			pi.sendMessage(
 				{
-					customType: "percho-task-status",
+					customType: "drone-task-status",
 					display: true,
 					content: `任务未开始：${clean(e.message)}\n${journal.render()}`,
 					details: { reportId: randomUUID(), taskView: journal.view() },
@@ -239,7 +239,7 @@ export function registerWorkbench(pi) {
 		automaticTurn = false;
 		return {
 			message: {
-				customType: "percho-task-context",
+				customType: "drone-task-context",
 				display: false,
 				content: `${journal.render()}\nHost observations only. For substantial execution, first do read-only preparation, consolidate necessary choices/assumptions and call task_plan ONCE with the original user goal, a plain-language scope summary, existing write directories, and file-based deliverables. This card is the single approval for task execution, directory writes, acceptance and automatic stage continuation. Do not request separate approval via ask_user/task_wait or ask users to keep saying continue. Stop after presenting the plan until it is authorized. Within approved scope, perform routine steps and bounded recovery autonomously; only new risk/scope, credentials, genuinely unavailable user data or actual required human review need intervention. Never claim human/scientific review happened automatically. Prefer machine-checkable deliverables over unnecessary human-review milestones. Preserve prior refusals. File/command denies, sensitive files, unknown effects, total call budget and provenance checks remain binding. task_status delivers host-only results.`,
 			},
@@ -295,7 +295,7 @@ export function registerWorkbench(pi) {
 		if (event.toolName === "read" && !event.isError)
 			await evidence.capture(event, ctx.cwd, await bindingKey());
 	});
-	pi.events?.on?.("percho:context-evicted", (event) => {
+	pi.events?.on?.("drone:context-evicted", (event) => {
 		if (event.sessionId === context?.sessionManager?.getSessionId?.()) evidence.evict(event.toolCallIds);
 	});
 	pi.on("agent_end", async (event, ctx) => {

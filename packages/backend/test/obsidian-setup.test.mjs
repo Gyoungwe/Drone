@@ -15,7 +15,7 @@ beforeEach(async () => {
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_OBSIDIAN_MCP_SERVER", undefined);
-	root = await mkdtemp(join(tmpdir(), "percho-obsidian-setup-"));
+	root = await mkdtemp(join(tmpdir(), "drone-obsidian-setup-"));
 	cwd = join(root, "actual-project");
 	vault = join(root, "User Knowledge Vault");
 	await mkdir(cwd);

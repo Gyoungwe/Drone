@@ -4,7 +4,7 @@ import {
 	emptyTranscript,
 	messagesToUIMessages,
 	reduceEvent,
-} from "@percho/shared";
+} from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { toSessionMessages } from "../src/session/messages";
 import { makeStatusTool } from "../src/tools/status";

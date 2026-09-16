@@ -14,7 +14,7 @@ it("loads the same first-party extensions and skills in all desktop projects", (
 	expect(paths.additionalExtensionPaths.length).toBe(new Set(paths.additionalExtensionPaths).size);
 });
 it("refuses escaping or invalid manifest paths", () => {
-	const root = mkdtempSync(join(tmpdir(), "percho-manifest-"));
+	const root = mkdtempSync(join(tmpdir(), "drone-manifest-"));
 	mkdirSync(join(root, "lib"));
 	try {
 		writeFileSync(

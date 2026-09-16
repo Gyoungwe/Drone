@@ -1,4 +1,4 @@
-import type { ProviderInfo } from "@percho/shared";
+import type { ProviderInfo } from "@drone/shared";
 import { useState } from "react";
 import { useT } from "../../../i18n";
 import { useProviderLoginStore } from "../../../stores/provider-login";

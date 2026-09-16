@@ -1,4 +1,4 @@
-import type { SessionEvent } from "@percho/shared";
+import type { SessionEvent } from "@drone/shared";
 
 /**
  * 渲染端事件合流（conflation）：流式 delta 在进入 transcript store 前按帧合并。

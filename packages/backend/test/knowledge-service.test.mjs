@@ -29,14 +29,14 @@ vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 let root, a, b, vault, app;
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-knowledge-test-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-test-")));
 	a = join(root, "project-a");
 	b = join(root, "project-b");
 	vault = join(root, "Vault");
 	app = join(root, "app-state");
 	await mkdir(a);
 	await mkdir(b);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", app);
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", app);
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
 });
@@ -405,10 +405,10 @@ describe("navigation delivery and bounded maintenance", () => {
 		expect(start.message.content).not.toContain('"ticket"');
 		const messages = [
 			{ role: "user", content: "question" },
-			{ role: "custom", customType: "percho-knowledge-navigation", content: "OLD" },
+			{ role: "custom", customType: "drone-knowledge-navigation", content: "OLD" },
 		];
 		const output = await h.events.get("context")({ messages });
-		expect(output.messages.filter((m) => m.customType === "percho-knowledge-navigation")).toHaveLength(1);
+		expect(output.messages.filter((m) => m.customType === "drone-knowledge-navigation")).toHaveLength(1);
 		expect(JSON.stringify(output.messages)).not.toContain("OLD");
 	});
 	it("removes the old navigation payload when the application binding changes", async () => {

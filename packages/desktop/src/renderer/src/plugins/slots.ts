@@ -1,4 +1,4 @@
-import type { SubagentRunUi, UIToolCall } from "@percho/shared";
+import type { SubagentRunUi, UIToolCall } from "@drone/shared";
 
 /**
  * 槽位目录 v1：槽位名与 props 契约的单一来源（spec §4）。

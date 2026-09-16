@@ -4,7 +4,7 @@ import {
 	messagesToUIMessages,
 	type SessionTranscriptState,
 	type UIMessage,
-} from "@percho/shared";
+} from "@drone/shared";
 import { useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";

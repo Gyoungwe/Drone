@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
+import { CAPABILITY_IDS, type CapabilityId, type CapabilityState, getSkillCategory } from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
-import { CAPABILITY_IDS, type CapabilityId, type CapabilityState, getSkillCategory } from "@percho/shared";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
 
 const ALWAYS_ON = new Set(["ask_user", "set_status", "todo", "capability_load", "task_status"]);
@@ -236,7 +236,7 @@ export class CapabilityRuntime {
 			.update(`${manager.getSessionId()}\0${resolve(manager.getCwd())}`)
 			.digest("hex");
 		for (const entry of [...manager.getBranch()].reverse()) {
-			if (entry.type !== "custom" || entry.customType !== "percho-task-workbench-v2") continue;
+			if (entry.type !== "custom" || entry.customType !== "drone-task-workbench-v2") continue;
 			const b = entry.data as {
 				scope?: string;
 				activeTaskId?: string;
@@ -258,7 +258,7 @@ export class CapabilityRuntime {
 			for (const id of task.capabilities || [])
 				if (CAPABILITY_IDS.includes(id as CapabilityId)) this.active.add(id as CapabilityId);
 		for (const entry of manager.getBranch()) {
-			if (entry.type !== "custom" || entry.customType !== "percho-capability-checkpoint-v1") continue;
+			if (entry.type !== "custom" || entry.customType !== "drone-capability-checkpoint-v1") continue;
 			const data = entry.data as {
 				scope?: unknown;
 				taskId?: unknown;
@@ -293,7 +293,7 @@ export class CapabilityRuntime {
 		};
 		const encoded = JSON.stringify(data);
 		if (encoded === this.lastCheckpoint) return;
-		manager.appendCustomEntry("percho-capability-checkpoint-v1", data);
+		manager.appendCustomEntry("drone-capability-checkpoint-v1", data);
 		this.lastCheckpoint = encoded;
 	}
 	private apply(): CapabilityChange {

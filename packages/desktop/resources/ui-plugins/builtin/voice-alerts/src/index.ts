@@ -1,4 +1,4 @@
-import { stores } from "@percho/plugin-api";
+import { stores } from "@drone/plugin-api";
 import approvalUrl from "./assets/approval.mp3";
 import doneUrl from "./assets/done.mp3";
 

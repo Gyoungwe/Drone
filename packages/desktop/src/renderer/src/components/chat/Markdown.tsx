@@ -1,4 +1,4 @@
-import { knowledgeLinksForDisplay, parseKnowledgeHref } from "@percho/shared";
+import { knowledgeLinksForDisplay, parseKnowledgeHref } from "@drone/shared";
 import MarkdownRender, { type SmoothMarkdownStreamOptions } from "markstream-react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";

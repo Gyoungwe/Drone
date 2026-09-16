@@ -1,4 +1,4 @@
-import type { SessionEvent, PermissionRequest as SharedPermissionRequest, TodoItem } from "@percho/shared";
+import type { SessionEvent, PermissionRequest as SharedPermissionRequest, TodoItem } from "@drone/shared";
 import {
 	type ActivityEntry,
 	emptyTranscript,
@@ -9,7 +9,7 @@ import {
 	type SubagentRunUi,
 	type UIMessage,
 	type UIToolCall,
-} from "@percho/shared";
+} from "@drone/shared";
 import { create } from "zustand";
 
 export type { ActivityEntry, SessionPhase, StreamingState, SubagentRunUi, UIMessage, UIToolCall };

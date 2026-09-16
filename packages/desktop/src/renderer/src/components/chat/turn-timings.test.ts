@@ -4,7 +4,7 @@ import {
 	emptyTranscript,
 	type UIMessage,
 	type UIToolCall,
-} from "@percho/shared";
+} from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 /** noUncheckedIndexedAccess 下的数组取值断言 */

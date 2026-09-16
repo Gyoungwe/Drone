@@ -14,8 +14,8 @@ import type { useTranscriptStore } from "../stores/transcript";
 import type { useUiStore } from "../stores/ui";
 import type { useUiPreferencesStore } from "../stores/ui-preferences";
 
-/** window.PerchoUI 的类型（插件与宿主自身代码共用；与 host-api.ts 的挂载内容一一对应） */
-export interface PerchoUiApi {
+/** window.DroneUI 的类型（插件与宿主自身代码共用；与 host-api.ts 的挂载内容一一对应） */
+export interface DroneUiApi {
 	version: 1;
 	/** 完整命名空间对象（与宿主同一 React 实例） */
 	React: typeof import("react");
@@ -49,6 +49,6 @@ export interface PerchoUiApi {
 
 declare global {
 	interface Window {
-		PerchoUI: PerchoUiApi;
+		DroneUI: DroneUiApi;
 	}
 }

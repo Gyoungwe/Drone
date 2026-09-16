@@ -1,4 +1,4 @@
-import { formatSkillCommand } from "@percho/shared";
+import { formatSkillCommand } from "@drone/shared";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import type { UIMessage } from "../../stores/transcript";

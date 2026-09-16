@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, BrowserWindow } from "electron";
 
-const root = process.env.PERCHO_CATALOG_FIXTURE;
+const root = process.env.DRONE_CATALOG_FIXTURE;
 app.setPath("userData", join(root, "profile"));
 let window;
 const checks = [],

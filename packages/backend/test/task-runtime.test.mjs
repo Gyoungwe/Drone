@@ -118,7 +118,7 @@ it("status command is read-only and never starts a model turn", async () => {
 	});
 	await commands["task-status"].handler("", { cwd: "/fixture", sessionId: "a" });
 	expect(sendMessage).toHaveBeenCalledWith(
-		expect.objectContaining({ customType: "percho-task-status", display: true }),
+		expect.objectContaining({ customType: "drone-task-status", display: true }),
 		{ triggerTurn: false },
 	);
 	expect(tools.task_status).toBeDefined();

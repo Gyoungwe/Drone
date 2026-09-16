@@ -1,4 +1,4 @@
-import type { KnowledgeTopic, KnowledgeTopicListResult } from "@percho/shared";
+import type { KnowledgeTopic, KnowledgeTopicListResult } from "@drone/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";

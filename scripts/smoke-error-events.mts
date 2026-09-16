@@ -39,7 +39,7 @@ function waitFor(cond: () => boolean, timeoutMs: number, label: string): Promise
 }
 
 async function main(): Promise<void> {
-	const agentDir = mkdtempSync(join(tmpdir(), "percho-smoke-errors-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "drone-smoke-errors-"));
 	process.env.PI_CODING_AGENT_DIR = agentDir;
 	process.env.PI_LOG_LEVEL = "warn";
 	console.log(`[setup] temp agent dir: ${agentDir}`);

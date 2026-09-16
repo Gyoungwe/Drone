@@ -12,13 +12,13 @@ import { PiBackend } from "../src/pi-backend";
 
 let root, cwd, vault, backend, session, sid, faux, preview;
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-review-sdk-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-review-sdk-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
 	const agentDir = join(root, "agent");
 	await mkdir(cwd);
 	await mkdir(agentDir);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	const bound = await configureObsidian({ cwd, vault, project: "a" });

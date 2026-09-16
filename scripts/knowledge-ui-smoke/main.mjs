@@ -7,13 +7,13 @@ import { KnowledgeUiService } from "../../packages/backend/src/knowledge/ui.ts";
 import { registerKnowledgeIpc } from "../../packages/desktop/src/main/ipc/knowledge.ts";
 import { IpcChannels } from "../../packages/shared/src/ipc.ts";
 
-const root = process.env.PERCHO_UI_FIXTURE,
-	repo = process.env.PERCHO_UI_REPO;
-process.env.PERCHO_KNOWLEDGE_DIR = join(root, "app-state");
-process.env.PERCHO_RESEARCH_WORKBENCH_ROOT = join(repo, ".pi");
+const root = process.env.DRONE_UI_FIXTURE,
+	repo = process.env.DRONE_UI_REPO;
+process.env.DRONE_KNOWLEDGE_DIR = join(root, "app-state");
+process.env.DRONE_RESEARCH_WORKBENCH_ROOT = join(repo, ".pi");
 delete process.env.PI_RESEARCH_DESKTOP_CONFIG;
 app.setPath("userData", join(root, "electron-profile"));
-app.setName("Percho Knowledge UI Fixture");
+app.setName("Drone Knowledge UI Fixture");
 const runtime = async (name) => import(pathToFileURL(join(repo, ".pi/lib", `${name}.mjs`)).href);
 let window, services;
 const checks = [],

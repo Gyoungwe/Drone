@@ -1,4 +1,4 @@
-import { INVOKE_ROUTES, IpcChannels, type PiApi } from "@percho/shared";
+import { INVOKE_ROUTES, IpcChannels, type PiApi } from "@drone/shared";
 import { contextBridge, ipcRenderer } from "electron";
 
 // invoke 半区：从 INVOKE_ROUTES 单一事实源批量生成透传函数，不再逐条手抄。

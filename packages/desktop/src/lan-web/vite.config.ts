@@ -24,7 +24,7 @@ export default defineConfig({
 			{ find: /^katex.*$/, replacement: stub },
 			{ find: /^@antv\/infographic$/, replacement: stub },
 			{ find: /^@terrastruct\/d2$/, replacement: stub },
-			{ find: "@percho/shared", replacement: r("../../../shared/src/index.ts") },
+			{ find: "@drone/shared", replacement: r("../../../shared/src/index.ts") },
 		],
 	},
 	build: {

@@ -1,4 +1,4 @@
-import type { TodoItem } from "@percho/shared";
+import type { TodoItem } from "@drone/shared";
 import { t } from "../i18n";
 import { CheckIcon, ChevronRightIcon, CircleIcon, HalfIcon, ListIcon } from "./icons";
 

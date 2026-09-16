@@ -77,7 +77,7 @@ function Fixture() {
 	});
 	return (
 		<div className="mx-auto max-w-[900px] space-y-4 p-5">
-			<p className="text-[11px] text-ink-faint">PERCHO / SKILL CATALOG · 隔离界面测试，不执行初始化</p>
+			<p className="text-[11px] text-ink-faint">DRONE / SKILL CATALOG · 隔离界面测试，不执行初始化</p>
 			<button type="button" id="lang" onClick={() => useI18nStore.getState().setLanguage("en")}>
 				English
 			</button>

@@ -2,7 +2,7 @@ import { getPi } from "../api";
 
 /**
  * 日常空间目录的 renderer 侧缓存：App 启动时 init 一次，之后同步读。
- * 日常空间 = 固定工作台 cwd（main 侧 ~/.percho/daily，懒创建），所有日常会话按 cwd 归属该空间；
+ * 日常空间 = 固定工作台 cwd（main 侧 ~/.drone/daily，懒创建），所有日常会话按 cwd 归属该空间；
  * 项目页/空态/胶囊统一经 isDailyCwd 判定，不在各处散落路径字符串。
  */
 let dailyDir: string | null = null;

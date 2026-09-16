@@ -1,4 +1,4 @@
-import type { PermissionRequest } from "@percho/shared";
+import type { PermissionRequest } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { PermissionGate } from "../src/permissions/gate";
 

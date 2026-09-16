@@ -1,4 +1,4 @@
-import { IpcChannels } from "@percho/shared";
+import { IpcChannels } from "@drone/shared";
 import { ipcMain } from "electron";
 import type { LanObserverHandle } from "../lan";
 

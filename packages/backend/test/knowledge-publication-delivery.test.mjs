@@ -2,19 +2,19 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
+	buildChatRows,
+	deriveTurnUsage,
+	emptyTranscript,
+	messagesToUIMessages,
+	reduceEvent,
+} from "@drone/shared";
+import {
 	fauxToolCall as call,
 	fauxProvider,
 	fauxText,
 	fauxAssistantMessage as reply,
 } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import {
-	buildChatRows,
-	deriveTurnUsage,
-	emptyTranscript,
-	messagesToUIMessages,
-	reduceEvent,
-} from "@percho/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
 import { subscribeKnowledgeUi } from "../../../.pi/lib/knowledge/ui-state.mjs";
@@ -29,13 +29,13 @@ async function note(path, text) {
 	await writeFile(join(vault, path), text);
 }
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-publication-delivery-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-publication-delivery-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
 	const agentDir = join(root, "agent");
 	await mkdir(cwd);
 	await mkdir(agentDir);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
@@ -202,7 +202,7 @@ describe("same checked result across stream, history, LAN polling and exports", 
 		expect(JSON.stringify(message)).not.toContain("FORGED_UNCHECKED");
 	});
 	it("fails closed if the dynamically loaded bridge is unavailable", () => {
-		const key = Symbol.for("percho.knowledge.publication.v1"),
+		const key = Symbol.for("drone.knowledge.publication.v1"),
 			saved = globalThis[key];
 		delete globalThis[key];
 		try {

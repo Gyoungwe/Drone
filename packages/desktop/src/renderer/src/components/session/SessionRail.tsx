@@ -1,4 +1,4 @@
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { isDailyCwd } from "../../lib/daily";

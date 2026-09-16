@@ -363,7 +363,7 @@ export interface LoadedResources {
 	capabilities?: CapabilityState;
 }
 
-/** Percho 自己产生的会话 UI 事件（不进入 pi 子会话 trace）。 */
+/** Drone 自己产生的会话 UI 事件（不进入 pi 子会话 trace）。 */
 export interface SubagentMutexEvent {
 	type: "subagent_mutex";
 	extensionPath: string;
@@ -377,7 +377,7 @@ export interface StreamGuardTrippedEvent {
 	verdict: string;
 }
 
-/** pi 事件 + Percho UI 事件，跨 IPC 统一转发。 */
+/** pi 事件 + Drone UI 事件，跨 IPC 统一转发。 */
 export type { PiAgentSessionEvent as AgentSessionEvent };
 export type SessionEvent = PiAgentSessionEvent | SubagentMutexEvent | StreamGuardTrippedEvent;
 

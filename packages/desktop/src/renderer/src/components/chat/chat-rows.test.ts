@@ -7,7 +7,7 @@ import {
 	type TurnChanges,
 	type UIMessage,
 	type UIToolCall,
-} from "@percho/shared";
+} from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 /** buildChatRows 契约：与桌面 MessageList 原内联循环逐行为等价（重构时人工比对 + 本测试固化）。 */

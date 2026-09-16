@@ -1,11 +1,11 @@
 /**
- * Percho UI 插件 API 类型声明。
+ * Drone UI 插件 API 类型声明。
  * ⚠️ 与宿主 `packages/desktop/src/main/ui-plugins/build.ts` 的 SHIMS、`plugins/host-api.ts`
  * 的挂载内容**逐名一致**（三处不可漂移）——agent 写代码时类型来源就是本文件，
  * 少一个名字 agent 就会写出跑不起来的插件。宿主侧新增暴露时同步本文件。
  */
 
-/* ---------- react（虚拟模块，构建时重写到 window.PerchoUI.React） ---------- */
+/* ---------- react（虚拟模块，构建时重写到 window.DroneUI.React） ---------- */
 
 declare module "react" {
 	export type ReactNode = unknown;
@@ -63,9 +63,9 @@ declare module "react-dom" {
 	export default ReactDOM;
 }
 
-/* ---------- @percho/plugin-api（虚拟模块，构建时重写到 window.PerchoUI） ---------- */
+/* ---------- @drone/plugin-api（虚拟模块，构建时重写到 window.DroneUI） ---------- */
 
-declare module "@percho/plugin-api" {
+declare module "@drone/plugin-api" {
 	export const version: number;
 
 	/** 槽位 props 契约（与 SPEC §2 表一致） */
@@ -152,7 +152,7 @@ declare module "@percho/plugin-api" {
 		/** 应用级 UI 偏好（ui-state.json 持久化）：sessionRailEnabled / centerOrbEnabled 等 */
 		useUiPreferencesStore: unknown;
 	};
-	// store hooks 顶层便捷导出（与 shim 解构一致，例：import { useSessionsStore } from "@percho/plugin-api"）
+	// store hooks 顶层便捷导出（与 shim 解构一致，例：import { useSessionsStore } from "@drone/plugin-api"）
 	export const useTranscriptStore: unknown;
 	export const useSessionsStore: unknown;
 	export const useUiStore: unknown;

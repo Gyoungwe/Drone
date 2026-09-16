@@ -27,13 +27,13 @@ afterEach(async () => {
 });
 const tool = (name, args) => reply([call(name, args)], { stopReason: "toolUse" });
 it("real SDK dispatches four isolated roles by stage; parent still reads evidence and final answer is visible", async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-specialists-sdk-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-specialists-sdk-")));
 	const cwd = join(root, "project"),
 		vault = join(root, "Vault"),
 		agentDir = join(root, "agent");
 	await mkdir(cwd);
 	await mkdir(agentDir);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);

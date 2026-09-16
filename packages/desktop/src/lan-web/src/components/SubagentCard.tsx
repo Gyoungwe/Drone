@@ -1,4 +1,4 @@
-import type { SubagentRunUi } from "@percho/shared";
+import type { SubagentRunUi } from "@drone/shared";
 import { t } from "../i18n";
 
 /** 子代理卡（props 版移植；lan-web 不打开子会话 —— 历史会话本就只读列表）。

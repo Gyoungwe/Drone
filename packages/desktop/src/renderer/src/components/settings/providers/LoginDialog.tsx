@@ -1,4 +1,4 @@
-import type { LoginAuthPrompt } from "@percho/shared";
+import type { LoginAuthPrompt } from "@drone/shared";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../../i18n";
 import { useProviderLoginStore } from "../../../stores/provider-login";

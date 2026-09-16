@@ -15,7 +15,7 @@ import {
 	sortableKeyboardCoordinates,
 	useSortable,
 } from "@dnd-kit/sortable";
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 import type { ComponentProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";

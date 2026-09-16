@@ -156,7 +156,7 @@ async function sceneSettings() {
 
 	// 打开设置（store 直达，动画由 React 过渡产生）
 	await ev(
-		`(() => { const s = window.PerchoUI.stores.useSettingsStore.getState(); s.setOpen(true); s.setCategory('models'); return true; })()`,
+		`(() => { const s = window.DroneUI.stores.useSettingsStore.getState(); s.setOpen(true); s.setCategory('models'); return true; })()`,
 	);
 	await sleep(500);
 	await frame("open");
@@ -172,21 +172,21 @@ async function sceneSettings() {
 
 	// 通用面板（上下文管理二态 + 权限 + 频道开关）
 	await ev(
-		`(() => { const s = window.PerchoUI.stores.useSettingsStore.getState(); s.setCategory('general'); return true; })()`,
+		`(() => { const s = window.DroneUI.stores.useSettingsStore.getState(); s.setCategory('general'); return true; })()`,
 	);
 	await sleep(600);
 	await frame("general");
 
 	// 局域网观察
 	await ev(
-		`(() => { const s = window.PerchoUI.stores.useSettingsStore.getState(); s.setCategory('lan'); return true; })()`,
+		`(() => { const s = window.DroneUI.stores.useSettingsStore.getState(); s.setCategory('lan'); return true; })()`,
 	);
 	await sleep(600);
 	await frame("lan");
 
 	// 关闭
 	await ev(
-		`(() => { const s = window.PerchoUI.stores.useSettingsStore.getState(); s.setOpen(false); return true; })()`,
+		`(() => { const s = window.DroneUI.stores.useSettingsStore.getState(); s.setOpen(false); return true; })()`,
 	);
 	await sleep(300);
 	await frame("closing");

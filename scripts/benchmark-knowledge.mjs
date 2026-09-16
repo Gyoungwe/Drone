@@ -13,14 +13,14 @@ if (!sizes.length) sizes.push(1000, 10000);
 if (sizes.some((n) => !Number.isSafeInteger(n) || n < 1 || n > 50000))
 	throw new Error("Use sizes from 1 through 50000");
 const rows = [];
-const original = process.env.PERCHO_KNOWLEDGE_DIR,
+const original = process.env.DRONE_KNOWLEDGE_DIR,
 	desktop = process.env.PI_RESEARCH_DESKTOP_CONFIG;
 try {
 	for (const count of sizes) {
-		const root = await realpath(await mkdtemp(join(tmpdir(), "percho-kb-bench-")));
+		const root = await realpath(await mkdtemp(join(tmpdir(), "drone-kb-bench-")));
 		const cwd = join(root, "project"),
 			vault = join(root, "Vault");
-		process.env.PERCHO_KNOWLEDGE_DIR = join(root, "app");
+		process.env.DRONE_KNOWLEDGE_DIR = join(root, "app");
 		delete process.env.PI_RESEARCH_DESKTOP_CONFIG;
 		try {
 			await mkdir(cwd);
@@ -127,8 +127,8 @@ try {
 		}
 	}
 } finally {
-	if (original === undefined) delete process.env.PERCHO_KNOWLEDGE_DIR;
-	else process.env.PERCHO_KNOWLEDGE_DIR = original;
+	if (original === undefined) delete process.env.DRONE_KNOWLEDGE_DIR;
+	else process.env.DRONE_KNOWLEDGE_DIR = original;
 	if (desktop === undefined) delete process.env.PI_RESEARCH_DESKTOP_CONFIG;
 	else process.env.PI_RESEARCH_DESKTOP_CONFIG = desktop;
 }

@@ -1,4 +1,4 @@
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { sessionLetter, sessionProjectDir, sessionTitle } from "./session-status";
 
@@ -12,7 +12,7 @@ describe("sessionTitle", () => {
 	});
 
 	it("无标题回落项目目录末级", () => {
-		expect(sessionTitle(meta({ cwd: "/work/code/ai/percho" }), "未命名会话")).toBe("percho");
+		expect(sessionTitle(meta({ cwd: "/work/code/ai/drone" }), "未命名会话")).toBe("drone");
 	});
 
 	it("无目录时回落未命名占位", () => {

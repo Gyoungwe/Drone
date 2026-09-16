@@ -1,4 +1,4 @@
-import type { PermissionRequest } from "@percho/shared";
+import type { PermissionRequest } from "@drone/shared";
 import { useState } from "react";
 import { t } from "../i18n";
 import { ShieldIcon } from "./icons";

@@ -1,4 +1,4 @@
-import type { WikiReviewPreview } from "@percho/shared";
+import type { WikiReviewPreview } from "@drone/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getPi } from "../../api";

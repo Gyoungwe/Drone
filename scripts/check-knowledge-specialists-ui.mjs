@@ -1,4 +1,4 @@
-// Reproducible isolated GUI validation. Does not touch the user Vault or restart Percho.
+// Reproducible isolated GUI validation. Does not touch the user Vault or restart Drone.
 
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
@@ -11,7 +11,7 @@ import { build as bundle } from "esbuild";
 import { build } from "vite";
 
 const repo = resolve(import.meta.dirname, "..");
-const root = await realpath(await mkdtemp(join(tmpdir(), "percho-specialists-ui-")));
+const root = await realpath(await mkdtemp(join(tmpdir(), "drone-specialists-ui-")));
 console.log("Isolated fixture:", root);
 await writeFile(
 	join(root, "index.html"),
@@ -32,7 +32,7 @@ await writeFile(
 		"\n",
 	),
 );
-const alias = { "@percho/shared": join(repo, "packages/shared/src/index.ts") };
+const alias = { "@drone/shared": join(repo, "packages/shared/src/index.ts") };
 await bundle({
 	entryPoints: [join(repo, "scripts/knowledge-ui-smoke/main.mjs")],
 	outfile: join(root, "main.mjs"),
@@ -62,7 +62,7 @@ await build({
 });
 const _output = await new Promise((res, rej) => {
 	const child = spawn(electron, [join(root, "main.mjs")], {
-		env: { ...process.env, PERCHO_UI_FIXTURE: root, PERCHO_UI_REPO: repo },
+		env: { ...process.env, DRONE_UI_FIXTURE: root, DRONE_UI_REPO: repo },
 		stdio: ["ignore", "pipe", "pipe"],
 	});
 	let text = "";
@@ -88,4 +88,4 @@ const _output = await new Promise((res, rej) => {
 	});
 });
 console.log(await readFile(join(root, "validation.json"), "utf8"));
-await writeFile("/tmp/percho-specialists-ui-result.json", await readFile(join(root, "validation.json")));
+await writeFile("/tmp/drone-specialists-ui-result.json", await readFile(join(root, "validation.json")));

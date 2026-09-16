@@ -1,6 +1,6 @@
 import { isAbsolute, relative, resolve } from "node:path";
+import type { PermissionMode } from "@drone/shared";
 import type { ExtensionContext, InlineExtension, ToolCallEvent } from "@earendil-works/pi-coding-agent";
-import type { PermissionMode } from "@percho/shared";
 import { createLogger } from "../log";
 import { createWorkspacesLoader, suggestRootCandidate } from "../project/workspace-store";
 import {
@@ -176,7 +176,7 @@ export function makePermissionGateExtension(
 					config.rules[event.toolName] === "ask"
 				) {
 					let roots: unknown;
-					await pi.events?.emit?.("percho:task-write-consent", {
+					await pi.events?.emit?.("drone:task-write-consent", {
 						cwd: ctx.cwd,
 						sessionId: ctx.sessionManager?.getSessionId(),
 						respond: (grant: { writeRoots?: unknown } | null) => {
@@ -246,7 +246,7 @@ export function makePermissionGateExtension(
 			pi.on("session_start", (_event, ctx) => {
 				taskContext = ctx;
 			});
-			pi.events?.on?.("percho:task-read-check", (raw: unknown) => {
+			pi.events?.on?.("drone:task-read-check", (raw: unknown) => {
 				const request = raw as {
 					cwd?: string;
 					path?: string;

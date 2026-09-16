@@ -13,12 +13,12 @@ import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
 import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
 it("real SDK delivers global navigation before model invocation in an unrelated project", async () => {
-	const root = await realpath(await mkdtemp(join(tmpdir(), "percho-knowledge-sdk-")));
+	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-sdk-")));
 	const a = join(root, "A"),
 		b = join(root, "B"),
 		agentDir = join(root, "agent");
 	let session;
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
 	try {
@@ -73,20 +73,20 @@ it("real SDK delivers global navigation before model invocation in an unrelated 
 		await session.prompt("/task-status");
 		expect(model).not.toHaveBeenCalled();
 		const status = events.find(
-			(event) => event.type === "message_end" && event.message.customType === "percho-task-status",
+			(event) => event.type === "message_end" && event.message.customType === "drone-task-status",
 		);
 		expect(status?.message).toMatchObject({ role: "custom", display: true });
 		expect(status.message.content).toContain("暂无本会话");
-		expect(session.messages.some((message) => message.customType === "percho-task-status")).toBe(true);
+		expect(session.messages.some((message) => message.customType === "drone-task-status")).toBe(true);
 		await session.prompt("请先了解当前知识库，再解释研究流程。", { expandPromptTemplates: false });
 		expect(model).toHaveBeenCalledOnce();
 		const payload = JSON.stringify(model.mock.calls[0][0]);
-		expect(payload).toContain("percho-knowledge-navigation");
-		expect(payload).toContain("percho-task-context");
+		expect(payload).toContain("drone-knowledge-navigation");
+		expect(payload).toContain("drone-task-context");
 		expect(payload).toContain("Wiki/Index.md");
 		// Navigation embeds JSON inside a custom message; decode it before comparing paths.
 		const navigation = model.mock.calls[0][0].find(
-			(message) => message.customType === "percho-knowledge-navigation",
+			(message) => message.customType === "drone-knowledge-navigation",
 		);
 		expect(navigation).toBeDefined();
 		const content = navigation.content;

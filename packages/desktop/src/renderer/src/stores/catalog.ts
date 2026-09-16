@@ -1,4 +1,4 @@
-import type { CatalogPackage, CatalogPackageType, ConfiguredPackageInfo } from "@percho/shared";
+import type { CatalogPackage, CatalogPackageType, ConfiguredPackageInfo } from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
 import { useSettingsStore } from "./settings";

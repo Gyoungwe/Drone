@@ -1,5 +1,5 @@
+import { CAPABILITY_CATALOG, CAPABILITY_IDS, type CapabilityId, type CapabilityState } from "@drone/shared";
 import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-agent";
-import { CAPABILITY_CATALOG, CAPABILITY_IDS, type CapabilityId, type CapabilityState } from "@percho/shared";
 import { Type } from "typebox";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 

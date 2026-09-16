@@ -20,10 +20,10 @@ afterEach(async () => {
 });
 
 describe("ui-plugins build", () => {
-	it("引用 react 的 tsx 构建成功，产物无裸导入（已重写为 window.PerchoUI shim）", async () => {
+	it("引用 react 的 tsx 构建成功，产物无裸导入（已重写为 window.DroneUI shim）", async () => {
 		const dir = await makePlugin(`
 import { useState } from "react";
-import { Button, useT } from "@percho/plugin-api";
+import { Button, useT } from "@drone/plugin-api";
 
 export function ToolCallCard({ tool }: { tool: { name: string } }) {
 	const [n, setN] = useState(0);
@@ -37,10 +37,10 @@ export function ToolCallCard({ tool }: { tool: { name: string } }) {
 		// 产物是自包含 ESM：无 require、无任何裸 import（react/plugin-api 已被重写成 shim）
 		expect(out).not.toContain("require(");
 		expect(out).not.toContain('from "react"');
-		expect(out).not.toContain('from "@percho/plugin-api"');
-		// shim 确实以 window.PerchoUI 为源；JSX 经 automatic runtime → 被重写的 jsx-runtime
-		expect(out).toContain("window.PerchoUI");
-		expect(out).toContain("window.PerchoUI.jsxRuntime");
+		expect(out).not.toContain('from "@drone/plugin-api"');
+		// shim 确实以 window.DroneUI 为源；JSX 经 automatic runtime → 被重写的 jsx-runtime
+		expect(out).toContain("window.DroneUI");
+		expect(out).toContain("window.DroneUI.jsxRuntime");
 	});
 
 	it("jsx automatic 产物使用被重写的 jsx-runtime（无 react/jsx-runtime 裸导入）", async () => {
@@ -51,7 +51,7 @@ export function Card() { return <div className="x">hi</div>; }
 		expect(res).toEqual({ ok: true });
 		const out = await readFile(join(dir, "dist/index.js"), "utf-8");
 		expect(out).not.toContain('from "react/jsx-runtime"');
-		expect(out).toContain("window.PerchoUI.jsxRuntime");
+		expect(out).toContain("window.DroneUI.jsxRuntime");
 	});
 
 	it("图片资产经 dataurl loader 内联（data:image/png;base64 进产物）", async () => {

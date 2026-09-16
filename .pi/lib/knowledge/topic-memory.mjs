@@ -18,7 +18,7 @@ export const TOPIC_MEMORY_LIMITS = Object.freeze({
 	maxFileBytes: 512 * 1024,
 });
 
-const queueKey = Symbol.for("percho.knowledge.topic-memory-queues.v1");
+const queueKey = Symbol.for("drone.knowledge.topic-memory-queues.v1");
 if (!globalThis[queueKey]) globalThis[queueKey] = new Map();
 const queues = globalThis[queueKey];
 const digest = (value) => createHash("sha256").update(String(value)).digest("hex");

@@ -1,5 +1,5 @@
-import type { CatalogPackage, LoadedExtension, ResourceScope } from "@percho/shared";
-import { isSubagentPackage, isSubagentToolName, NPM_NOT_FOUND_SENTINEL } from "@percho/shared";
+import type { CatalogPackage, LoadedExtension, ResourceScope } from "@drone/shared";
+import { isSubagentPackage, isSubagentToolName, NPM_NOT_FOUND_SENTINEL } from "@drone/shared";
 import { useRef, useState } from "react";
 import { useT } from "../../../i18n";
 import { useCatalogStore } from "../../../stores/catalog";

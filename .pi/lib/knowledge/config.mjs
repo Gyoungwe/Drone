@@ -4,13 +4,13 @@ import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
-const stateKey = Symbol.for("percho.knowledge.binding.v1");
+const stateKey = Symbol.for("drone.knowledge.binding.v1");
 globalThis[stateKey] ??= { local: new AsyncLocalStorage(), queues: new Map() };
 const state = globalThis[stateKey];
 export function knowledgeDirectory() {
-	const value = process.env.PERCHO_KNOWLEDGE_DIR;
+	const value = process.env.DRONE_KNOWLEDGE_DIR;
 	if (!value) return null; // CLI/legacy projects do not silently mutate desktop state.
-	if (!isAbsolute(value)) throw new Error("PERCHO_KNOWLEDGE_DIR must be absolute");
+	if (!isAbsolute(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
 	return resolve(value);
 }
 export function projectIdentity(cwd, configured) {

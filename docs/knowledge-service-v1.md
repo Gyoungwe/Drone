@@ -4,7 +4,7 @@ This is a local implementation snapshot, not a claim that the complete research/
 
 ## Ownership and setup
 
-Desktop startup sets `PERCHO_KNOWLEDGE_DIR` to its isolated application user-data `knowledge/` directory. `binding.json` is authoritative for the active Vault and policies. Project files retain results settings and a stable `knowledgeProjectId`, never a competing Vault override. Legacy project Vaults are reported but not silently adopted or migrated. CLI usage without this environment variable retains the older project configuration.
+Desktop startup sets `DRONE_KNOWLEDGE_DIR` to its isolated application user-data `knowledge/` directory. `binding.json` is authoritative for the active Vault and policies. Project files retain results settings and a stable `knowledgeProjectId`, never a competing Vault override. Legacy project Vaults are reported but not silently adopted or migrated. CLI usage without this environment variable retains the older project configuration.
 
 `/obsidian-setup` remains bound to `research-vault`. The write confirmation explicitly says the Vault serves the application and navigation will be supplied to the selected model. Existing human notes are not moved. Setup creates missing shared Wiki/Inbox navigation and optional project context. Application mode uses native indexed reads, not an automatically reconfigured raw MCP connection.
 

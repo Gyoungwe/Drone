@@ -5,7 +5,7 @@ import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 
 export default defineConfig({
 	main: {
-		plugins: [externalizeDepsPlugin({ exclude: ["@percho/backend", "@percho/shared"] })],
+		plugins: [externalizeDepsPlugin({ exclude: ["@drone/backend", "@drone/shared"] })],
 		build: {
 			rollupOptions: {
 				external: ["@earendil-works/pi-coding-agent"],
@@ -13,13 +13,13 @@ export default defineConfig({
 		},
 		resolve: {
 			alias: {
-				"@percho/backend": resolve(__dirname, "../backend/src/index.ts"),
-				"@percho/shared": resolve(__dirname, "../shared/src/index.ts"),
+				"@drone/backend": resolve(__dirname, "../backend/src/index.ts"),
+				"@drone/shared": resolve(__dirname, "../shared/src/index.ts"),
 			},
 		},
 	},
 	preload: {
-		plugins: [externalizeDepsPlugin({ exclude: ["@percho/shared"] })],
+		plugins: [externalizeDepsPlugin({ exclude: ["@drone/shared"] })],
 		build: {
 			rollupOptions: {
 				output: {
@@ -30,14 +30,14 @@ export default defineConfig({
 		},
 		resolve: {
 			alias: {
-				"@percho/shared": resolve(__dirname, "../shared/src/index.ts"),
+				"@drone/shared": resolve(__dirname, "../shared/src/index.ts"),
 			},
 		},
 	},
 	renderer: {
 		resolve: {
 			alias: {
-				"@percho/shared": resolve(__dirname, "../shared/src/index.ts"),
+				"@drone/shared": resolve(__dirname, "../shared/src/index.ts"),
 				"@renderer": resolve(__dirname, "src/renderer/src"),
 			},
 		},

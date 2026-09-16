@@ -1,4 +1,4 @@
-import type { TodoItem } from "@percho/shared";
+import type { TodoItem } from "@drone/shared";
 import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
 import { EMPTY_TODOS, useTranscriptStore } from "../../stores/transcript";

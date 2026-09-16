@@ -1,5 +1,5 @@
-import type { AgentSessionEvent } from "@percho/shared";
-import { emptyTranscript, messagesToUIMessages, reduceEvent } from "@percho/shared";
+import type { AgentSessionEvent } from "@drone/shared";
+import { emptyTranscript, messagesToUIMessages, reduceEvent } from "@drone/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useTranscriptStore } from "./transcript";
 

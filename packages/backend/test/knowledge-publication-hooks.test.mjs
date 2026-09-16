@@ -25,7 +25,7 @@ const message = (text = "UNCHECKED_FIXTURE") => ({
 	timestamp: 1,
 	stopReason: "stop",
 });
-beforeEach(() => vi.stubEnv("PERCHO_KNOWLEDGE_DIR", "/fixture/app"));
+beforeEach(() => vi.stubEnv("DRONE_KNOWLEDGE_DIR", "/fixture/app"));
 afterEach(() => {
 	vi.useRealTimers();
 	vi.unstubAllEnvs();
@@ -139,7 +139,7 @@ it("a tampered finalized body loses its host proof", async () => {
 	).not.toContain("TAMPERED_BODY");
 });
 it("legacy streaming is unchanged outside application mode", () => {
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", undefined);
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", undefined);
 	const event = { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "legacy" } };
 	expect(projectKnowledgeEvent(event)).toBe(event);
 });

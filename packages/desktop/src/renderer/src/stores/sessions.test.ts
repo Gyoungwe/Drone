@@ -1,4 +1,4 @@
-import type { SessionEvent, SessionMeta } from "@percho/shared";
+import type { SessionEvent, SessionMeta } from "@drone/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /** window.pi 的 mock：sessions store 经 getPi() 访问，测试环境无 preload 注入 */

@@ -1,12 +1,12 @@
-import type { PiBackend } from "@percho/backend";
+import type { PiBackend } from "@drone/backend";
 import type {
 	AskResponse,
 	CustomProviderInput,
 	CustomProviderUpdateInput,
 	ListProvidersOptions,
 	PermissionAnswer,
-} from "@percho/shared";
-import { IpcChannels } from "@percho/shared";
+} from "@drone/shared";
+import { IpcChannels } from "@drone/shared";
 import { ipcMain, shell } from "electron";
 
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */

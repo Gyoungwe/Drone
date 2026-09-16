@@ -1,4 +1,4 @@
-import type { UpdateState } from "@percho/shared";
+import type { UpdateState } from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
 

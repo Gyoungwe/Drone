@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
-const key = Symbol.for("percho.knowledge.specialists.v1");
+const key = Symbol.for("drone.knowledge.specialists.v1");
 globalThis[key] ??= {
 	hosts: new Map(),
 	active: 0,

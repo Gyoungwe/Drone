@@ -72,7 +72,7 @@ const EXTENSION_THEME = new Theme(
 		toolErrorBg: "#2d202a",
 	},
 	"truecolor",
-	{ name: "percho-desktop" },
+	{ name: "drone-desktop" },
 );
 
 /**

@@ -1,4 +1,4 @@
-import { tailOffsetForWidths } from "@percho/shared";
+import { tailOffsetForWidths } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 describe("streaming preview tail-follow motion", () => {

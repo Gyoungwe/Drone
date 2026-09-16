@@ -1,9 +1,9 @@
 import { open, stat, writeFile } from "node:fs/promises";
 import { basename, extname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { PiBackend } from "@percho/backend";
-import type { SavedTabs, UiState } from "@percho/shared";
-import { IpcChannels } from "@percho/shared";
+import type { PiBackend } from "@drone/backend";
+import type { SavedTabs, UiState } from "@drone/shared";
+import { IpcChannels } from "@drone/shared";
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
 import { pickBackgroundImage } from "../background";
 import { ensureDailyDir } from "../daily";
@@ -78,7 +78,7 @@ function resolveResourcePath(target: string, cwd?: string): string {
 }
 
 /** 项目仓库地址（帮助跳转 + 关于页） */
-const REPO_URL = "https://github.com/Gyoungwe/percho";
+const REPO_URL = "https://github.com/Gyoungwe/Drone";
 
 /**
  * 应用域：窗口级功能（不依赖 PiBackend 会话状态的部分也在此，backend 参数仅为对齐签名）。

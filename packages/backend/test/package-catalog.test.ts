@@ -1,4 +1,4 @@
-import { isSubagentPackage } from "@percho/shared";
+import { isSubagentPackage } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { decodeHtmlEntities, parseCatalogHtml } from "../src/packages/catalog";
 

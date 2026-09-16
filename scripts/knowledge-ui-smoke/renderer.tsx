@@ -195,7 +195,7 @@ useTranscriptStore
 createRoot(document.getElementById("root")!).render(
 	<div style={{ maxWidth: 1080, margin: "0 auto", padding: 16 }}>
 		<div className="mb-3 text-[10px] tracking-wider text-ink-dim">
-			PERCHO / KNOWLEDGE · 隔离测试库，不是用户正式笔记
+			DRONE / KNOWLEDGE · 隔离测试库，不是用户正式笔记
 		</div>
 		<KnowledgeFlowCard sessionId="fixture" />
 		<div className="rounded-2xl border border-border bg-surface p-4">

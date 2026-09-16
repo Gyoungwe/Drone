@@ -10,8 +10,8 @@ Semantic hits, topic memory, UI previews and child-agent reads are navigation da
 
 - `npm run test:upgrade`: deterministic orchestration stress, actual hybrid/SQLite fixture benchmark and packaged-resource audit. No paid models or real Vaults.
 - `npm run validate:upgrade`: lint, typecheck, all workspace tests (including shared transcript tests), the above fixtures, production build and isolated Electron UI checks.
-- `node scripts/check-knowledge-package.mjs --resources /path/Percho.app/Contents/Resources/research-workbench`: audit the actual shipped resource tree and exercise it against a disposable Vault.
-- `node scripts/check-packaged-desktop.mjs /path/Percho.app`: real packaged first launch with isolated HOME, profile, agent directory and knowledge directory. No inherited credentials.
+- `node scripts/check-knowledge-package.mjs --resources /path/Drone.app/Contents/Resources/research-workbench`: audit the actual shipped resource tree and exercise it against a disposable Vault.
+- `node scripts/check-packaged-desktop.mjs /path/Drone.app`: real packaged first launch with isolated HOME, profile, agent directory and knowledge directory. No inherited credentials.
 - `node scripts/benchmark-semantic.mjs --live-local`: opt-in real local embedding fixture; requires explicit local endpoint and model environment variables. It is not run by default in CI.
 
 Logs and machine-readable receipts stay under ignored `.local/release-validation/` or explicitly printed temporary fixture paths. They do not ship with installers. Test fixtures contain no private research materials.
@@ -33,7 +33,7 @@ On 2026-09-13, the consolidated gate passed: repository lint; all-workspace type
 
 A real local `embeddinggemma` check was also run only against the disposable benchmark Vault and the production persistent-vector path. It confirmed cross-language/synonym retrieval on that tiny labelled fixture and motivated the conservative default cosine floor of 0.45; this is not a general retrieval-accuracy claim.
 
-An arm64 `Percho.app` was then built ad-hoc and launched with isolated HOME, userData, agentDir and knowledgeDir. The packaged renderer/CJS preload mounted, application knowledge was enabled but unbound, semantic/topic IPC was present, bundled research/Obsidian commands were available in an unrelated empty project, and fresh auth/model stores were empty. The actual packaged `research-workbench` resource tree also passed the private-file/package audit. macOS notarization, Intel macOS, Windows and public GitHub Release publication were not performed here.
+An arm64 `Drone.app` was then built ad-hoc and launched with isolated HOME, userData, agentDir and knowledgeDir. The packaged renderer/CJS preload mounted, application knowledge was enabled but unbound, semantic/topic IPC was present, bundled research/Obsidian commands were available in an unrelated empty project, and fresh auth/model stores were empty. The actual packaged `research-workbench` resource tree also passed the private-file/package audit. macOS notarization, Intel macOS, Windows and public GitHub Release publication were not performed here.
 
 ## Limits on claims
 

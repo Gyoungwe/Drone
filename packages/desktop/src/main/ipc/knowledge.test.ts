@@ -13,7 +13,7 @@ vi.mock("electron", () => ({
 	shell: { openPath: mocks.openPath, openExternal: mocks.openExternal },
 }));
 
-import { IpcChannels } from "@percho/shared";
+import { IpcChannels } from "@drone/shared";
 import { registerKnowledgeIpc } from "./knowledge";
 
 const channel = (key: string, fallback: string) =>

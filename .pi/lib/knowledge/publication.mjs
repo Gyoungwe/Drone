@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { publicationKnowledgeFlow, updateKnowledgeFlow } from "./ui-state.mjs";
 
-const key = Symbol.for("percho.knowledge.publication.v1");
+const key = Symbol.for("drone.knowledge.publication.v1");
 globalThis[key] ??= { proofs: new WeakSet() };
 const state = globalThis[key];
 const FIELD = "knowledgePublication";
@@ -136,7 +136,7 @@ function inplace(target, source) {
 	return target;
 }
 export function projectKnowledgeEvent(event) {
-	if (!process.env.PERCHO_KNOWLEDGE_DIR) return event;
+	if (!process.env.DRONE_KNOWLEDGE_DIR) return event;
 	if (event.type === "message_update") return null; // no draft text/thinking/partial snapshots cross the delivery boundary
 	if (event.type === "message_start" && event.message?.role === "assistant")
 		return { ...event, message: base(event.message, []) };
@@ -154,7 +154,7 @@ export function projectKnowledgeEvent(event) {
 	return event;
 }
 export function projectKnowledgeSnapshot(messages, persisted = []) {
-	if (!process.env.PERCHO_KNOWLEDGE_DIR) return messages;
+	if (!process.env.DRONE_KNOWLEDGE_DIR) return messages;
 	const known = new Set(
 		persisted.filter((m) => m.role === "assistant").map((m) => `${m.timestamp}:${hash(m.content)}`),
 	);
@@ -291,7 +291,7 @@ export function registerAnswerPublication(
 							text: [
 								"知识库初始化已完成。",
 								`当前知识库：${done.vault}`,
-								`作用范围：整个 Percho；当前项目：${done.project || "尚未创建项目分区"}。`,
+								`作用范围：整个 Drone；当前项目：${done.project || "尚未创建项目分区"}。`,
 								`结构：${done.profile}；沉淀策略：${done.depositMode}；子智能体访问：${done.subagentMcpPolicy}。`,
 								"已保存绑定并创建缺失的导航和模板，未搬迁或删除已有笔记。",
 								"这只是初始化完成，不代表论文已经下载、知识已经整理或原始 MCP 已连接。",

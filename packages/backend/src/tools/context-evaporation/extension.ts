@@ -132,7 +132,7 @@ export function makeEvapExtension(options: EvapExtensionOptions): InlineExtensio
 							.map((message) => (message as unknown as { toolCallId?: string }).toolCallId)
 							.filter(Boolean);
 						if (evicted.length)
-							pi.events?.emit?.("percho:context-evicted", {
+							pi.events?.emit?.("drone:context-evicted", {
 								sessionId: currentSessionId,
 								toolCallIds: evicted.slice(0, 64),
 							});

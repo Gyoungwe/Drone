@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { createRequire } from "node:module";
-import { createLogger } from "@percho/backend";
-import type { UpdateState } from "@percho/shared";
+import { createLogger } from "@drone/backend";
+import type { UpdateState } from "@drone/shared";
 import { app } from "electron";
 import { nextUpdateAction } from "./update-policy";
 

@@ -4,7 +4,7 @@ Semantic retrieval is opt-in. With no `semantic.json`, no embedding request is m
 
 ## Integration API
 
-`KnowledgeService` provides `getSemanticSettings()`, `saveSemanticSettings(input, bindingRevision, settingsRevision)`, `testSemanticProvider(input, bindingRevision)`, `semanticStatus()`, and `rebuildSemanticIndex({limit, project, signal})`. Save and test reject a stale binding revision. Settings are atomically stored at `PERCHO_KNOWLEDGE_DIR/<vaultId>/semantic.json`; they contain only a credential environment-variable name, never a credential value.
+`KnowledgeService` provides `getSemanticSettings()`, `saveSemanticSettings(input, bindingRevision, settingsRevision)`, `testSemanticProvider(input, bindingRevision)`, `semanticStatus()`, and `rebuildSemanticIndex({limit, project, signal})`. Save and test reject a stale binding revision. Settings are atomically stored at `DRONE_KNOWLEDGE_DIR/<vaultId>/semantic.json`; they contain only a credential environment-variable name, never a credential value.
 
 Supported adapters are `ollama` and `openai-compatible`. Ollama sends `POST /api/embed` with `{model,input:[texts],truncate:false}`. The compatible adapter sends `POST /v1/embeddings` with `{model,input,encoding_format:"float"}`. Model names are sent unchanged. The exact provider contracts are documented by [Ollama](https://docs.ollama.com/api/embed) and [OpenAI-compatible embeddings](https://developers.openai.com/api/reference/resources/embeddings/methods/create).
 
@@ -22,4 +22,4 @@ Every regular search includes `retrievalMetrics`: mode, lexical/semantic/merged 
 
 `node scripts/benchmark-semantic.mjs` creates a disposable Vault and a deterministic local fake HTTP embedding server, then runs the production SQLite FTS baseline, production semantic adapter/index/candidate path, and production hybrid fusion for labelled synonym, Chinese-English, no-answer, and distractor cases. Its output is only a fixture regression signal and makes no general accuracy claim.
 
-`node scripts/benchmark-semantic.mjs --live-local` is a separate optional measurement against a local provider. It requires `PERCHO_BENCHMARK_EMBED_BASE_URL` and `PERCHO_BENCHMARK_EMBED_MODEL`; no credentials are read by the script. Live output is not deterministic and must not be compared as an accuracy claim without a documented evaluation protocol.
+`node scripts/benchmark-semantic.mjs --live-local` is a separate optional measurement against a local provider. It requires `DRONE_BENCHMARK_EMBED_BASE_URL` and `DRONE_BENCHMARK_EMBED_MODEL`; no credentials are read by the script. Live output is not deterministic and must not be compared as an accuracy claim without a documented evaluation protocol.

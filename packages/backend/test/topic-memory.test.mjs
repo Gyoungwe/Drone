@@ -9,7 +9,7 @@ const source = (path, fill = "a") => ({ path, hash: fill.repeat(64).slice(0, 64)
 
 describe("bounded topic memory", () => {
 	it("persists by vault and project, deduplicates identical runs, and reopens", async () => {
-		const root = await mkdtemp(join(tmpdir(), "percho-topic-memory-"));
+		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
 		const store = createTopicMemory({ binding, project: "project-a", directory: root });
 		const first = await store.record({
 			topicId: "autotomy",
@@ -33,7 +33,7 @@ describe("bounded topic memory", () => {
 		expect((await other.list()).topics).toEqual([]);
 	});
 	it("rejects stale revisions, corrupt/future documents and path escapes", async () => {
-		const root = await mkdtemp(join(tmpdir(), "percho-topic-memory-"));
+		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
 		const store = createTopicMemory({ binding, project: "project-a", directory: root });
 		const created = await store.update({ id: "topic", title: "Topic" }, 0);
 		await expect(store.update({ id: "topic", title: "Changed" }, 0)).rejects.toThrow("revision changed");
@@ -56,7 +56,7 @@ describe("bounded topic memory", () => {
 		expect(persisted.version).toBe(99);
 	});
 	it("marks changed source stale and never follows a symlinked memory directory", async () => {
-		const root = await mkdtemp(join(tmpdir(), "percho-topic-memory-"));
+		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
 		const store = createTopicMemory({ binding, project: "project-a", directory: root });
 		const hashA = source("Library/Papers/a.md", "a");
 		await store.record({
@@ -74,14 +74,14 @@ describe("bounded topic memory", () => {
 			runHash: "2".repeat(64),
 		});
 		expect(stale.classification).toBe("stale");
-		const root2 = await mkdtemp(join(tmpdir(), "percho-topic-memory-"));
-		const outside = await mkdtemp(join(tmpdir(), "percho-topic-outside-"));
+		const root2 = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
+		const outside = await mkdtemp(join(tmpdir(), "drone-topic-outside-"));
 		await symlink(outside, join(root2, binding.vaultId));
 		const linked = createTopicMemory({ binding, project: "project-b", directory: root2 });
 		await expect(linked.list()).rejects.toThrow();
 	});
 	it("bounds compact context, rejects unsafe sources, and requires metadata CAS", async () => {
-		const root = await mkdtemp(join(tmpdir(), "percho-topic-memory-"));
+		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
 		const store = createTopicMemory({ binding, project: "project-a", directory: root });
 		await expect(
 			store.record({ topicId: "topic", title: "Topic", sources: [source("Projects/other/evidence.md")] }),
@@ -105,7 +105,7 @@ describe("bounded topic memory", () => {
 		);
 	});
 	it("serializes concurrent records and deduplicates an older run fingerprint", async () => {
-		const root = await mkdtemp(join(tmpdir(), "percho-topic-memory-"));
+		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
 		const a = createTopicMemory({ binding, project: "project-a", directory: root });
 		await a.record({
 			topicId: "topic",
@@ -127,10 +127,10 @@ describe("bounded topic memory", () => {
 		expect((await a.read()).revision).toBe(3);
 	});
 	it("refreshes source hashes without creating evidence receipts", async () => {
-		const vault = await mkdtemp(join(tmpdir(), "percho-topic-vault-"));
+		const vault = await mkdtemp(join(tmpdir(), "drone-topic-vault-"));
 		await mkdir(join(vault, "Library"));
 		await writeFile(join(vault, "Library", "a.md"), "old");
-		const root = await mkdtemp(join(tmpdir(), "percho-topic-memory-"));
+		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
 		const hash = (await import("node:crypto")).createHash("sha256").update("old").digest("hex");
 		const store = createTopicMemory({
 			binding: { ...binding, vault },
@@ -149,7 +149,7 @@ describe("bounded topic memory", () => {
 		expect((await store.refreshSourceCheck("topic")).stale[0].reason).toMatch(/missing/);
 	});
 	it("retains bounded history and rejects a leaf memory symlink after ten turns", async () => {
-		const root = await mkdtemp(join(tmpdir(), "percho-topic-memory-"));
+		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
 		const store = createTopicMemory({ binding, project: "project-a", directory: root });
 		for (let i = 0; i < 10; i++)
 			await store.record({
@@ -166,7 +166,7 @@ describe("bounded topic memory", () => {
 		expect(topic.history.length).toBeLessThanOrEqual(8);
 		expect(topic.keyFindings.length).toBe(10);
 		const path = join(root, binding.vaultId, "topic-memory", "project-a.json");
-		const outside = await mkdtemp(join(tmpdir(), "percho-topic-outside-"));
+		const outside = await mkdtemp(join(tmpdir(), "drone-topic-outside-"));
 		await unlink(path);
 		await symlink(join(outside, "memory.json"), path);
 		await expect(store.list()).rejects.toThrow(/symlink|regular file/);

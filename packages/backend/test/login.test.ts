@@ -1,4 +1,4 @@
-import type { LoginEventPayload } from "@percho/shared";
+import type { LoginEventPayload } from "@drone/shared";
 import { describe, expect, it, vi } from "vitest";
 import { filterAuthSelectOptions, LoginService, type LoginServiceDeps } from "../src/settings/login";
 

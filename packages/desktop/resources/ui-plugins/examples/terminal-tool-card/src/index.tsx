@@ -1,9 +1,9 @@
-import { useT } from "@percho/plugin-api";
+import { useT } from "@drone/plugin-api";
 import { memo } from "react";
 
 /**
  * 终端风工具卡（随包示例，agent 写插件的起点）：
- * - 只 import react / @percho/plugin-api 两个虚拟模块（其余 npm 包禁止）
+ * - 只 import react / @drone/plugin-api 两个虚拟模块（其余 npm 包禁止）
  * - memo 包裹（槽位在每条消息的热路径上）
  * - 样式一律语义 token（bg-canvas/text-ink/…），深浅主题自适应
  */

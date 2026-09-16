@@ -21,13 +21,13 @@ import { detectCapabilities, toolCapabilities } from "../src/capabilities/runtim
 
 let root, cwd, vault, agentDir;
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-zotero-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-zotero-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
 	agentDir = join(root, "agent");
 	await mkdir(cwd);
 	await mkdir(agentDir);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
 	await configureObsidian({ cwd, vault, project: "project-a" });
 });

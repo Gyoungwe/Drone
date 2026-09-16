@@ -1,4 +1,4 @@
-import type { ContextManagerMode } from "@percho/shared";
+import type { ContextManagerMode } from "@drone/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /** window.pi 的 mock：settings store 经 getPi() 访问，测试环境无 preload 注入 */

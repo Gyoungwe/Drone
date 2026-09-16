@@ -16,7 +16,7 @@ import { makeAskUserTool } from "../src/tools/ask-user";
 
 // Real SDK + AskGate; model output is simulated and no provider is contacted.
 it("Obsidian command expands its skill, bridges questions and gates fixture Vault writes", async () => {
-	const root = await mkdtemp(join(tmpdir(), "percho-obsidian-skill-sdk-"));
+	const root = await mkdtemp(join(tmpdir(), "drone-obsidian-skill-sdk-"));
 	const cwd = join(root, "actual-project"),
 		vault = join(root, "Knowledge Vault");
 	const agentDir = join(root, "agent");

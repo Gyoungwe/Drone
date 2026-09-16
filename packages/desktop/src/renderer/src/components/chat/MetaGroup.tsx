@@ -1,4 +1,4 @@
-import { dotsFromItems, type MetaDot, type MetaItem, summarizeCategories } from "@percho/shared";
+import { dotsFromItems, type MetaDot, type MetaItem, summarizeCategories } from "@drone/shared";
 import { Fragment, memo, useMemo } from "react";
 import type { OrbState } from "thinking-orbs";
 import { ThinkingOrb } from "thinking-orbs";

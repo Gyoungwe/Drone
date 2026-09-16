@@ -1,17 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { Model, ThinkingLevel } from "@earendil-works/pi-ai";
-import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
-import {
-	createAgentSession,
-	getAgentDir,
-	ModelRuntime,
-	ProjectTrustStore,
-	type SessionEntry,
-	SessionManager,
-	type ToolDefinition,
-} from "@earendil-works/pi-coding-agent";
 import type {
 	AskRequest,
 	AskResponse,
@@ -43,7 +32,7 @@ import type {
 	TrustRequest,
 	WikiModelReviewInput,
 	WikiModelReviewResult,
-} from "@percho/shared";
+} from "@drone/shared";
 import {
 	extractTodos,
 	formatSkillCommand,
@@ -51,7 +40,18 @@ import {
 	TODO_REMINDER_CUSTOM_TYPE,
 	TODO_TOOL_NAME,
 	type TodoItem,
-} from "@percho/shared";
+} from "@drone/shared";
+import type { Model, ThinkingLevel } from "@earendil-works/pi-ai";
+import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
+import {
+	createAgentSession,
+	getAgentDir,
+	ModelRuntime,
+	ProjectTrustStore,
+	type SessionEntry,
+	SessionManager,
+	type ToolDefinition,
+} from "@earendil-works/pi-coding-agent";
 import { makeCapabilityExtension } from "./capabilities/extension";
 import {
 	allSkillsFromLoader,
@@ -146,8 +146,8 @@ export interface PiBackendOptions {
 	subagentPreferBuiltin?: boolean;
 	/**
 	 * 桌面端集成（Electron 专用；纯 CLI 环境不传）：
-	 * appendSystemPrompt = 追加进每次会话系统提示词的段落（如「你运行在 Percho 桌面端，界面可被 UI 插件定制」）；
-	 * additionalSkillPaths = 额外技能目录（如随包分发的 percho-ui-plugin skill，描述原生进可用技能清单）。
+	 * appendSystemPrompt = 追加进每次会话系统提示词的段落（如「你运行在 Drone 桌面端，界面可被 UI 插件定制」）；
+	 * additionalSkillPaths = 额外技能目录（如随包分发的 drone-ui-plugin skill，描述原生进可用技能清单）。
 	 */
 	desktopIntegration?: {
 		appendSystemPrompt: string[];
@@ -1230,7 +1230,7 @@ export class PiBackend {
 
 	async setSubagentThinking(
 		agent: string,
-		level: import("@percho/shared").SubagentThinkingLevel | null,
+		level: import("@drone/shared").SubagentThinkingLevel | null,
 	): Promise<ModelPrefs> {
 		return this.modelPrefs.setSubagentThinking(agent, level);
 	}

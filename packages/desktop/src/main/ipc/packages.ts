@@ -1,6 +1,6 @@
-import type { PiBackend } from "@percho/backend";
-import type { CatalogPackageType } from "@percho/shared";
-import { IpcChannels } from "@percho/shared";
+import type { PiBackend } from "@drone/backend";
+import type { CatalogPackageType } from "@drone/shared";
+import { IpcChannels } from "@drone/shared";
 import { ipcMain } from "electron";
 
 /** 社区包域：pi.dev 目录搜索 + 安装/卸载 + 已配置清单 */

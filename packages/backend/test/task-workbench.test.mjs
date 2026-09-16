@@ -16,7 +16,7 @@ afterEach(async () => {
 	for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true });
 });
 async function fixture() {
-	const dir = await mkdtemp(join(tmpdir(), "percho-task-v2-"));
+	const dir = await mkdtemp(join(tmpdir(), "drone-task-v2-"));
 	dirs.push(dir);
 	return dir;
 }
@@ -275,7 +275,7 @@ it("private files, stale versions and changed binding do not inherit verificatio
 it("legacy checkpoints migrate as unreviewed without changing original records", () => {
 	const entries = [
 		{
-			customType: "percho-task-checkpoint-v1",
+			customType: "drone-task-checkpoint-v1",
 			data: { scope: "a", goal: "old task", receipts: [{ id: "old", tool: "bash", state: "verified" }] },
 		},
 	];

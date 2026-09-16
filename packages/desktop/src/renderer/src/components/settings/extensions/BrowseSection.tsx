@@ -1,4 +1,4 @@
-import type { CatalogPackageType } from "@percho/shared";
+import type { CatalogPackageType } from "@drone/shared";
 import { useEffect, useMemo } from "react";
 import { useT } from "../../../i18n";
 import { useCatalogStore } from "../../../stores/catalog";

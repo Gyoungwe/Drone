@@ -5,7 +5,7 @@ import {
 	PROTECTED_KNOWLEDGE_AGENTS,
 	SUBAGENT_THINKING_LEVELS,
 	type SubagentThinkingLevel,
-} from "@percho/shared";
+} from "@drone/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";

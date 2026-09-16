@@ -1,5 +1,5 @@
 {
-	"name": "percho",
+	"name": "drone",
 	"private": true,
 	"version": "0.9.0",
 	"description": "Desktop GUI for the Pi coding agent, built with Electron",
@@ -7,9 +7,9 @@
 	"author": "Jaxton07",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/Gyoungwe/percho.git"
+		"url": "git+https://github.com/Gyoungwe/Drone.git"
 	},
-	"bugs": "https://github.com/Gyoungwe/percho/issues",
+	"bugs": "https://github.com/Gyoungwe/Drone/issues",
 	"workspaces": [
 		"packages/*"
 	],
@@ -34,5 +34,5 @@
 	"allowScripts": {
 		"electron@43.3.0": true
 	},
-	"homepage": "https://github.com/Gyoungwe/percho#readme"
+	"homepage": "https://github.com/Gyoungwe/Drone#readme"
 }

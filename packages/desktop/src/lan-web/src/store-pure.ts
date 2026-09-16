@@ -10,7 +10,7 @@ import {
 	reduceEvent,
 	type SessionEvent,
 	type SessionTranscriptState,
-} from "@percho/shared";
+} from "@drone/shared";
 
 /**
  * lan-web 数据层纯函数：snapshot 种子 + SSE 帧迁移，驱动 shared transcript reducer

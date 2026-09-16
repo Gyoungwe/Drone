@@ -11,7 +11,7 @@ import type {
 	ProviderTestResult,
 	ResourceDiagnosticInfo,
 	SubagentInfo,
-} from "@percho/shared";
+} from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
 import { optimisticUpdate } from "../lib/optimistic";
@@ -82,7 +82,7 @@ interface SettingsStore {
 	setSubagentModel: (agent: string, modelRef: string | null) => Promise<void>;
 	setSubagentThinking: (
 		agent: string,
-		level: import("@percho/shared").SubagentThinkingLevel | null,
+		level: import("@drone/shared").SubagentThinkingLevel | null,
 	) => Promise<void>;
 	setContextManagerMode: (mode: ContextManagerMode) => Promise<void>;
 	setChannelWatchEnabled: (enabled: boolean) => Promise<void>;

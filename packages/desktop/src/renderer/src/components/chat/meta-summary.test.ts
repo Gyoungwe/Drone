@@ -1,5 +1,5 @@
-import type { UIToolCall } from "@percho/shared";
-import { categoryOf, dotsFromItems, summarizeCategories } from "@percho/shared";
+import type { UIToolCall } from "@drone/shared";
+import { categoryOf, dotsFromItems, summarizeCategories } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 function tool(name: string, state: UIToolCall["state"] = "done", key = name): UIToolCall {

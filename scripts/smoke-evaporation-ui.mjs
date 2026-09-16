@@ -78,11 +78,11 @@ writeFileSync(settingsFile, "{}\n");
 await sleep(2500);
 
 // 1. 打开通用设置面板 + 重拉 store（全新 key 应派生默认 evaporation）
-await evalJs(`window.PerchoUI.stores.useSettingsStore.getState().openWith("general")`);
+await evalJs(`window.DroneUI.stores.useSettingsStore.getState().openWith("general")`);
 await sleep(800);
-await evalJs(`window.PerchoUI.stores.useSettingsStore.getState().refresh()`);
+await evalJs(`window.DroneUI.stores.useSettingsStore.getState().refresh()`);
 await sleep(400);
-const mode0 = await evalJs(`window.PerchoUI.stores.useSettingsStore.getState().contextManagerMode`);
+const mode0 = await evalJs(`window.DroneUI.stores.useSettingsStore.getState().contextManagerMode`);
 check("store 初始 mode = evaporation（全新 key 新默认）", mode0 === "evaporation", `got ${mode0}`);
 
 // 2. 二态控件渲染：2 个按钮 + 初始选中蒸发
@@ -94,7 +94,7 @@ check(
 );
 
 // 3. 切 off（走完整 IPC → backend → 原子写）
-await evalJs(`window.PerchoUI.stores.useSettingsStore.getState().setContextManagerMode("off")`);
+await evalJs(`window.DroneUI.stores.useSettingsStore.getState().setContextManagerMode("off")`);
 await sleep(600);
 const keys1 = readKeys();
 check(
@@ -105,7 +105,7 @@ check(
 
 // 4. UI 选中态 + hint 切换
 const ui1 = await readRow();
-const mode1 = await evalJs(`window.PerchoUI.stores.useSettingsStore.getState().contextManagerMode`);
+const mode1 = await evalJs(`window.DroneUI.stores.useSettingsStore.getState().contextManagerMode`);
 check("store mode = off", mode1 === "off", `got ${mode1}`);
 check(
 	"UI 选中态切到关闭 + hint 切换",
@@ -114,7 +114,7 @@ check(
 );
 
 // 5. 切回 evaporation
-await evalJs(`window.PerchoUI.stores.useSettingsStore.getState().setContextManagerMode("evaporation")`);
+await evalJs(`window.DroneUI.stores.useSettingsStore.getState().setContextManagerMode("evaporation")`);
 await sleep(600);
 const keys2 = readKeys();
 check(
@@ -122,11 +122,11 @@ check(
 	keys2.evap === true && keys2.acp === "(absent)",
 	JSON.stringify(keys2),
 );
-const mode2 = await evalJs(`window.PerchoUI.stores.useSettingsStore.getState().contextManagerMode`);
+const mode2 = await evalJs(`window.DroneUI.stores.useSettingsStore.getState().contextManagerMode`);
 check("store 回读 evaporation（派生读与写入一致）", mode2 === "evaporation", `got ${mode2}`);
 
 // 6. 关闭面板 + 恢复现场
-await evalJs(`window.PerchoUI.stores.useSettingsStore.getState().setOpen(false)`);
+await evalJs(`window.DroneUI.stores.useSettingsStore.getState().setOpen(false)`);
 if (existsSync(backupFile)) {
 	copyFileSync(backupFile, settingsFile);
 	unlinkSync(backupFile);

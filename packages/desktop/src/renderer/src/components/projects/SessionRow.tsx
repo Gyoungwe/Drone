@@ -1,4 +1,4 @@
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";

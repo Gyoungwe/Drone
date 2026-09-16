@@ -1,11 +1,11 @@
-import { knowledgeLinksForDisplay, parseKnowledgeHref } from "@percho/shared";
+import { knowledgeLinksForDisplay, parseKnowledgeHref } from "@drone/shared";
 import { expect, it } from "vitest";
 
 it("turns Vault aliases and Unicode paths into actual display links", () => {
 	const result = knowledgeLinksForDisplay("See [[Library/Papers/文献|文章]] and [[Wiki/Topic.md]].");
-	expect(result).toContain("[文章](#percho-note=");
+	expect(result).toContain("[文章](#drone-note=");
 	expect(result).not.toContain("[[");
-	expect(parseKnowledgeHref(`#percho-note=${encodeURIComponent("Library/Papers/文献.md")}`)).toBe(
+	expect(parseKnowledgeHref(`#drone-note=${encodeURIComponent("Library/Papers/文献.md")}`)).toBe(
 		"Library/Papers/文献.md",
 	);
 });
@@ -19,5 +19,5 @@ it("keeps inline and fenced code unchanged", () => {
 it("does not make unknown, traversal or malformed targets clickable", () => {
 	for (const text of ["[[javascript:alert(1)]]", "[[Wiki/../../secret]]", "[[OtherUnknown]]"])
 		expect(knowledgeLinksForDisplay(text)).toBe(text);
-	expect(parseKnowledgeHref("#percho-note=%ZZ")).toBeNull();
+	expect(parseKnowledgeHref("#drone-note=%ZZ")).toBeNull();
 });

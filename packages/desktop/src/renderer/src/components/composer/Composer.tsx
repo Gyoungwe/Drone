@@ -1,4 +1,4 @@
-import type { ImageInput } from "@percho/shared";
+import type { ImageInput } from "@drone/shared";
 import { useEffect, useRef, useState } from "react";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useT } from "../../i18n";

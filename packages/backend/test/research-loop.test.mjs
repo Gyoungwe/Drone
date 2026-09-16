@@ -11,7 +11,7 @@ import {
 
 let cwd, runDir;
 beforeEach(async () => {
-	cwd = await realpath(await mkdtemp(join(tmpdir(), "percho-research-loop-")));
+	cwd = await realpath(await mkdtemp(join(tmpdir(), "drone-research-loop-")));
 	await mkdir(join(cwd, "results"), { recursive: true });
 	const started = await startResearchRun({
 		cwd,

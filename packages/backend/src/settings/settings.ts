@@ -1,19 +1,19 @@
 import { join } from "node:path";
-import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
-import { getAgentDir, type ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type {
 	CustomProviderInput,
 	CustomProviderUpdateInput,
 	ListProvidersOptions,
 	ProviderInfo,
 	ProviderTestResult,
-} from "@percho/shared";
+} from "@drone/shared";
+import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
+import { getAgentDir, type ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { JsonStore } from "../json-store";
 
 /** 内置 provider id 集合：models.json 里配置的 ID 命中它 = 「覆写内置」（有官方模型列表可共享），否则是全新自定义 provider */
 const BUILTIN_PROVIDER_IDS = new Set(builtinProviders().map((p) => p.id));
 
-/** percho 表单管理的字段（用户输入决定，可被清空删除）；其余顶层字段（pi 手写的 apiKey/headers/compat 等）更新时保留，防编辑丢配置 */
+/** drone 表单管理的字段（用户输入决定，可被清空删除）；其余顶层字段（pi 手写的 apiKey/headers/compat 等）更新时保留，防编辑丢配置 */
 const MANAGED_PROVIDER_FIELDS = ["name", "baseUrl", "api", "models"] as const;
 
 type JsonObject = Record<string, unknown>;

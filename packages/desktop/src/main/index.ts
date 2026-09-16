@@ -4,7 +4,7 @@ import "./dev-agent-dir";
 import "./fix-path";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createLogger, initLogging, PiBackend } from "@percho/backend";
+import { createLogger, initLogging, PiBackend } from "@drone/backend";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
@@ -22,12 +22,12 @@ let lanObserver: LanObserverHandle | undefined;
 
 /**
  * 追加进每次会话系统提示词的桌面端段落（每次调用都付费，保持精简）。
- * 让 agent 知道自己跑在 Percho 桌面端、界面可被 UI 插件定制、以及定制流程与信任门。
+ * 让 agent 知道自己跑在 Drone 桌面端、界面可被 UI 插件定制、以及定制流程与信任门。
  */
 const UI_PLUGIN_PROMPT: string[] = [
-	"你运行在 Percho 桌面端（Electron 图形界面），用户通过图形聊天界面与你交互，不是 CLI 终端。",
-	"Percho 的界面可以用 UI 插件定制：当前可替换「工具调用卡 / 子代理卡 / 任务列表面板」三处组件。",
-	"用户想改界面、或问「界面能改什么」时：读 ~/.percho/ui-plugins/SPEC.md（示例在 _examples/ 目录），按规范写一个插件，保存即自动热重载。",
+	"你运行在 Drone 桌面端（Electron 图形界面），用户通过图形聊天界面与你交互，不是 CLI 终端。",
+	"Drone 的界面可以用 UI 插件定制：当前可替换「工具调用卡 / 子代理卡 / 任务列表面板」三处组件。",
+	"用户想改界面、或问「界面能改什么」时：读 ~/.drone/ui-plugins/SPEC.md（示例在 _examples/ 目录），按规范写一个插件，保存即自动热重载。",
 	"写完引导用户去「设置 → UI 插件」打开总开关并启用（信任门：agent 不能代劳）。",
 ];
 
@@ -124,7 +124,7 @@ app.whenReady().then(async () => {
 				const win = BrowserWindow.fromWebContents(contents);
 				const options: Electron.MessageBoxOptions = {
 					type: "error",
-					title: "Percho",
+					title: "Drone",
 					message: "界面进程反复崩溃",
 					detail: "自动恢复已暂停，避免崩溃循环。可重试加载或退出（后台任务不受影响）。",
 					buttons: ["重新加载", "退出"],
@@ -178,11 +178,11 @@ app.whenReady().then(async () => {
 		log.error("unhandled rejection", reason);
 	});
 
-	process.env.PERCHO_KNOWLEDGE_DIR ||= join(app.getPath("userData"), "knowledge");
-	process.env.PERCHO_RESEARCH_WORKBENCH_ROOT = app.isPackaged
+	process.env.DRONE_KNOWLEDGE_DIR ||= join(app.getPath("userData"), "knowledge");
+	process.env.DRONE_RESEARCH_WORKBENCH_ROOT = app.isPackaged
 		? join(process.resourcesPath, "research-workbench")
 		: join(__dirname, "../../../../.pi");
-	const researchBundle = researchBundlePaths(process.env.PERCHO_RESEARCH_WORKBENCH_ROOT);
+	const researchBundle = researchBundlePaths(process.env.DRONE_RESEARCH_WORKBENCH_ROOT);
 	backend = new PiBackend({
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {

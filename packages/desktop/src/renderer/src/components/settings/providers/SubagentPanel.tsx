@@ -2,7 +2,7 @@ import {
 	PROTECTED_KNOWLEDGE_AGENTS,
 	SUBAGENT_THINKING_LEVELS,
 	type SubagentThinkingLevel,
-} from "@percho/shared";
+} from "@drone/shared";
 import { useT } from "../../../i18n";
 import { useSessionsStore } from "../../../stores/sessions";
 import { useSettingsStore } from "../../../stores/settings";

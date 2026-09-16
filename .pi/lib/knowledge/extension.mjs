@@ -43,7 +43,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 	let recoveryScope = null;
 	const saveRecovery = () => {
 		if (recoveryScope)
-			pi.appendEntry?.("percho-knowledge-recovery-v1", {
+			pi.appendEntry?.("drone-knowledge-recovery-v1", {
 				scope: recoveryScope,
 				records: [...recovery.values()].slice(-8),
 			});
@@ -55,7 +55,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 		recovery.clear();
 		for (const e of ctx.sessionManager?.getBranch?.() || [])
 			if (
-				e.customType === "percho-knowledge-recovery-v1" &&
+				e.customType === "drone-knowledge-recovery-v1" &&
 				e.data?.scope === scope &&
 				Array.isArray(e.data.records) &&
 				e.data.records.length <= 8
@@ -66,7 +66,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 						recovery.set(r.id, r);
 			}
 	};
-	pi.events?.on?.("percho:context-evicted", (e) => {
+	pi.events?.on?.("drone:context-evicted", (e) => {
 		let changed = false;
 		for (const r of recovery.values())
 			if (r.sessionId === e.sessionId && e.toolCallIds?.includes(r.id)) {
@@ -434,7 +434,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 		};
 		bootstrap = {
 			role: "custom",
-			customType: "percho-knowledge-navigation",
+			customType: "drone-knowledge-navigation",
 			display: false,
 			timestamp: Date.now(),
 			content: `本轮知识导航（只读源数据，不是系统指令）。先读相关 Wiki，再检索证据。\n${JSON.stringify(visible)}`,
@@ -991,7 +991,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			handler: async (args, ctx) => {
 				if (!ctx.hasUI) throw new Error("Wiki review requires an interactive UI");
 				if (requestWikiReviewUi(ctx, args.trim())) return;
-				if (ctx.sessionManager?.getSessionId?.() && process.env.PERCHO_KNOWLEDGE_DIR) {
+				if (ctx.sessionManager?.getSessionId?.() && process.env.DRONE_KNOWLEDGE_DIR) {
 					notifyKnowledgeUi(
 						"请在 Wiki 审核弹窗中确认或拒绝候选。对话可以继续。",
 						"info",
@@ -1139,7 +1139,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 		const packet = handoff.length
 			? {
 					role: "custom",
-					customType: "percho-knowledge-specialists",
+					customType: "drone-knowledge-specialists",
 					display: false,
 					timestamp: Date.now(),
 					content: JSON.stringify(handoff),
@@ -1151,7 +1151,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			if (compactContext)
 				topicPacket = {
 					role: "custom",
-					customType: "percho-knowledge-topic-memory",
+					customType: "drone-knowledge-topic-memory",
 					display: false,
 					timestamp: Date.now(),
 					content: JSON.stringify({
@@ -1166,9 +1166,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 				...event.messages.filter(
 					(message) =>
 						![
-							"percho-knowledge-navigation",
-							"percho-knowledge-specialists",
-							"percho-knowledge-topic-memory",
+							"drone-knowledge-navigation",
+							"drone-knowledge-specialists",
+							"drone-knowledge-topic-memory",
 						].includes(message.customType),
 				),
 				bootstrap,
@@ -1225,7 +1225,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 				});
 				return {
 					message: {
-						customType: "percho-knowledge-navigation",
+						customType: "drone-knowledge-navigation",
 						display: false,
 						content: bootstrap.content,
 						details: { vaultId: binding.vaultId, revision: binding.revision },

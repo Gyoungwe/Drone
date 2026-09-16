@@ -1,5 +1,5 @@
+import type { LoginAuthEvent, LoginAuthPrompt, LoginEventPayload, LoginResult } from "@drone/shared";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import type { LoginAuthEvent, LoginAuthPrompt, LoginEventPayload, LoginResult } from "@percho/shared";
 
 /**
  * SDK AuthInteraction.prompt 的入参结构（pi-ai 未通过公开导出暴露 AuthPrompt 类型，

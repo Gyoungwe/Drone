@@ -5,7 +5,7 @@ import {
 	type TaskView,
 	TERMINAL_TASK_STATES,
 	taskActionCommand,
-} from "@percho/shared";
+} from "@drone/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";

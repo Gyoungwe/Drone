@@ -26,7 +26,7 @@ describe("subagent agent definitions", () => {
 	});
 
 	it("applies builtin → user → trusted project precedence", async () => {
-		const root = await mkdtemp(join(tmpdir(), "percho-subagent-agents-"));
+		const root = await mkdtemp(join(tmpdir(), "drone-subagent-agents-"));
 		tempDirs.push(root);
 		const agentDir = join(root, "agent");
 		await mkdir(join(agentDir, "agents"), { recursive: true });
@@ -56,7 +56,7 @@ describe("subagent agent definitions", () => {
 describe("isSubagentSessionPath", () => {
 	it("识别 sessions-subagents 目录下的会话文件（防 .. 绕判）", async () => {
 		const { isSubagentSessionPath, subagentSessionsRoot } = await import("../src/tools/subagent");
-		const root = join(tmpdir(), "percho-agent-dir");
+		const root = join(tmpdir(), "drone-agent-dir");
 		expect(isSubagentSessionPath(`${root}/sessions-subagents/proj/abc.jsonl`, root)).toBe(true);
 		expect(isSubagentSessionPath(`${root}/sessions/proj/abc.jsonl`, root)).toBe(false);
 		expect(isSubagentSessionPath(`${root}/sessions-subagents/../sessions/x.jsonl`, root)).toBe(false);

@@ -1,4 +1,4 @@
-import type { UiPluginInfo, UiPluginsConfig } from "@percho/shared";
+import type { UiPluginInfo, UiPluginsConfig } from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
 import { pushToast } from "./toasts";

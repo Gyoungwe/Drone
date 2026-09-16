@@ -12,7 +12,7 @@ afterEach(async () => {
 
 describe("materializeSaveContent", () => {
 	it("reads SDK export paths before writing the chosen destination", async () => {
-		root = await mkdtemp(join(tmpdir(), "percho-export-"));
+		root = await mkdtemp(join(tmpdir(), "drone-export-"));
 		const source = join(root, "session.jsonl");
 		await writeFile(source, '{"role":"user","content":"hello"}\n', "utf8");
 		expect(await materializeSaveContent(source)).toContain('"hello"');

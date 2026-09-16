@@ -62,7 +62,7 @@ it.each(["default", "deny", "pattern-ask", "outside"])(
 			events: {
 				on: vi.fn(),
 				emit: async (n: string, request: any) => {
-					if (n === "percho:task-write-consent") request.respond({ writeRoots: [root] });
+					if (n === "drone:task-write-consent") request.respond({ writeRoots: [root] });
 				},
 			},
 		};

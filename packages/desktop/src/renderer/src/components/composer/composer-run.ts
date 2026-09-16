@@ -1,4 +1,4 @@
-import type { SessionPhase } from "@percho/shared";
+import type { SessionPhase } from "@drone/shared";
 
 /** Whether the composer should expose Stop (abort the in-flight run). */
 export function composerRunActive(input: {

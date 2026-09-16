@@ -1,4 +1,4 @@
-import type { UiPluginsConfig } from "@percho/shared";
+import type { UiPluginsConfig } from "@drone/shared";
 
 /** 配置损坏/缺失时返回的默认值（首次发布保守默认：总开关关、无插件、无指派） */
 export function defaultUiPluginsConfig(): UiPluginsConfig {

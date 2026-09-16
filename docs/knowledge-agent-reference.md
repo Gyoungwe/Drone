@@ -13,12 +13,12 @@ Scope: primary public documentation, not an independent product benchmark or a c
 
 ## What is documented; what we choose
 
-| Peer | Documented pattern | Percho decision |
+| Peer | Documented pattern | Drone decision |
 |---|---|---|
 | Marvis (马维斯) | Computer-hosted assistant with integrated local-file understanding/search and efficiency/local-privacy modes. | Keep one application knowledge service and disclose when selected snippets are supplied to a cloud model. Local storage/indexing is not a promise of zero cloud transfer. The reviewed public pages do not establish Marvis database internals, refresh algorithms or mandatory read-before-answer enforcement. |
 | Hermes | Bounded core/profile memory, frozen session-start snapshot, on-demand history search; configurable staging/approval for writes. | Keep compact navigation, separate diagnostics and detailed retrieval. Stage Wiki changes before publication. Do not copy frozen stale evidence, unrestricted memory writes, multiple writers to one profile home, or automatic post-turn model reviews by default. |
-| Letta | System memory versus on-demand shared repository files; temporary session and persistent agent attachments are distinct. | Separate shared storage ownership from content actually supplied to the current model. Preserve Percho application binding and project scoping. Do not introduce a cloud repository dependency. |
-| OpenClaw memory-wiki | Active memory and synthesized Wiki are distinct; provenance/claims, configurable global/agent scope, compiled views and preservation of human blocks. | Keep evidence and synthesis distinct; retain source versions and human edits; review candidates rather than promoting conversations into scientific facts. Retain Percho navigation-first ordering rather than claiming every peer uses that order. |
+| Letta | System memory versus on-demand shared repository files; temporary session and persistent agent attachments are distinct. | Separate shared storage ownership from content actually supplied to the current model. Preserve Drone application binding and project scoping. Do not introduce a cloud repository dependency. |
+| OpenClaw memory-wiki | Active memory and synthesized Wiki are distinct; provenance/claims, configurable global/agent scope, compiled views and preservation of human blocks. | Keep evidence and synthesis distinct; retain source versions and human edits; review candidates rather than promoting conversations into scientific facts. Retain Drone navigation-first ordering rather than claiming every peer uses that order. |
 
 ## Changes actually made in this iteration
 

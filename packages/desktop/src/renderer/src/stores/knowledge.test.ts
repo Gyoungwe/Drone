@@ -1,4 +1,4 @@
-import type { KnowledgeFlow } from "@percho/shared";
+import type { KnowledgeFlow } from "@drone/shared";
 import { beforeEach, expect, it } from "vitest";
 import { useKnowledgeStore } from "./knowledge";
 

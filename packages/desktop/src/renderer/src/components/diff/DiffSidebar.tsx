@@ -1,4 +1,4 @@
-import { deriveTurnChanges, type TurnChanges } from "@percho/shared";
+import { deriveTurnChanges, type TurnChanges } from "@drone/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";

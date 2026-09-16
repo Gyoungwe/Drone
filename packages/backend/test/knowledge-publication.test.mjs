@@ -11,11 +11,11 @@ async function note(path, text) {
 	await writeFile(join(vault, path), text);
 }
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-publication-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-publication-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
 	await mkdir(cwd);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
 	await configureObsidian({ cwd, vault, project: "project-a" });

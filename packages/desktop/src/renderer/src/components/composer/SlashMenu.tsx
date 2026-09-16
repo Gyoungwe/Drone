@@ -1,4 +1,4 @@
-import { type SlashCommandInfo, skillDisplayName } from "@percho/shared";
+import { type SlashCommandInfo, skillDisplayName } from "@drone/shared";
 import { useEffect, useRef } from "react";
 import { useI18nStore, useT } from "../../i18n";
 import { groupCommands, isSpecializedCommand } from "./slash-filter";

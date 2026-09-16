@@ -51,7 +51,7 @@ describe("subagent runner model and title", () => {
 	});
 
 	it("子智能体 MCP 权限受 workspace 上限和 agent 覆盖共同约束", async () => {
-		const cwd = await mkdtemp(join(tmpdir(), "percho-subagent-mcp-"));
+		const cwd = await mkdtemp(join(tmpdir(), "drone-subagent-mcp-"));
 		try {
 			await mkdir(join(cwd, ".pi"), { recursive: true });
 			await writeFile(

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ContextManagerMode } from "@percho/shared";
+import type { ContextManagerMode } from "@drone/shared";
 import { JsonStore } from "../../json-store";
 import { createLogger } from "../../log";
 import { DEFAULT_EVAP_CONFIG, type EvapConfig } from "./types";

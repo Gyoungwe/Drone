@@ -1,4 +1,4 @@
-import { type ModelPrefs, SUBAGENT_THINKING_LEVELS, type SubagentThinkingLevel } from "@percho/shared";
+import { type ModelPrefs, SUBAGENT_THINKING_LEVELS, type SubagentThinkingLevel } from "@drone/shared";
 import { JsonStore } from "../json-store";
 
 function copyPrefs(prefs: ModelPrefs): ModelPrefs {

@@ -7,7 +7,7 @@ import {
 	reportedUsage,
 	type SessionEvent,
 	sumReportedUsage,
-} from "@percho/shared";
+} from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 const ev = (type: string, extra: Record<string, unknown> = {}) => ({ type, ...extra }) as SessionEvent;

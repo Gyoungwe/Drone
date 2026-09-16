@@ -104,7 +104,7 @@ async function makeSession(
 	options?: { modelSpec?: string; projectTrusted?: boolean },
 ): Promise<SmokeSession & { loader: InstanceType<typeof DefaultResourceLoader> }> {
 	// tools 传 undefined = 正式桌面路径：无白名单，扩展工具自动激活
-	const tempRoot = await mkdtemp(join("/tmp", "percho-smoke-cw-"));
+	const tempRoot = await mkdtemp(join("/tmp", "drone-smoke-cw-"));
 	const model = pickModel(runtime, options?.modelSpec ?? "deepseek/deepseek-v4-flash");
 	const settingsManager = SettingsManager.create(cwd, agentDir, { projectTrusted: false });
 	const loader = new DefaultResourceLoader({
@@ -149,7 +149,7 @@ async function makeSession(
 // ---------- V4：fs.watch recursive 连写不丢 ----------
 
 async function phaseV4() {
-	const root = await mkdtemp(join("/tmp", "percho-smoke-cw-watch-"));
+	const root = await mkdtemp(join("/tmp", "drone-smoke-cw-watch-"));
 	const target = join(root, "channel", "topic-A");
 	await mkdir(target, { recursive: true });
 	const file = join(target, "IMPL-NOTES.md");
@@ -203,7 +203,7 @@ async function phaseV5() {
 		"utf8",
 	);
 	try {
-		const tmpCwd = await mkdtemp(join("/tmp", "percho-smoke-cw-v5-"));
+		const tmpCwd = await mkdtemp(join("/tmp", "drone-smoke-cw-v5-"));
 		try {
 			const loader = new DefaultResourceLoader({
 				cwd: tmpCwd,
@@ -404,7 +404,7 @@ async function phaseV3(runtime: InstanceType<typeof ModelRuntime>) {
 	// 新会话打开同文件读回
 	if (!sessionFile) throw new Error("V3: unreachable");
 	const probe2 = makeProbe();
-	const tempRoot2 = await mkdtemp(join("/tmp", "percho-smoke-cw-v3-"));
+	const tempRoot2 = await mkdtemp(join("/tmp", "drone-smoke-cw-v3-"));
 	try {
 		const sessionManager = SessionManager.open(sessionFile);
 		const loader = new DefaultResourceLoader({

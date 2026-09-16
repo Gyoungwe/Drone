@@ -8,9 +8,9 @@ import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
 let root, bindingRevision;
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-knowledge-upgrade-ui-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-upgrade-ui-")));
 	await mkdir(join(root, "project"));
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	const configured = await configureObsidian({
 		cwd: join(root, "project"),
 		vault: join(root, "vault"),
