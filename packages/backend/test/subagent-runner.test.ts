@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Model } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
@@ -48,7 +49,7 @@ describe("subagent runner model and title", () => {
 	});
 
 	it("子智能体 MCP 权限受 workspace 上限和 agent 覆盖共同约束", async () => {
-		const cwd = await mkdtemp("/tmp/percho-subagent-mcp-");
+		const cwd = await mkdtemp(join(tmpdir(), "percho-subagent-mcp-"));
 		try {
 			await mkdir(join(cwd, ".pi"), { recursive: true });
 			await writeFile(

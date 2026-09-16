@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -6,7 +6,8 @@ import { KnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
 
 let root, vault, service;
 beforeEach(async () => {
-	root = await mkdtemp(join(tmpdir(), "knowledge-lifecycle-"));
+	// Production bindings canonicalize the Vault; Windows CI TEMP may use an 8.3 alias.
+	root = await realpath(await mkdtemp(join(tmpdir(), "knowledge-lifecycle-")));
 	vault = join(root, "Vault");
 	await mkdir(vault);
 	await Promise.all(
@@ -40,6 +41,7 @@ it("reconcile waits for pending directory scans before reporting ready", async (
 	await mkdir(join(vault, "new-notes"));
 	await writeFile(join(vault, "new-notes", "new.md"), "# New evidence\n");
 	const status = await service.request("reconcile");
+	expect(status.problems).toEqual([]);
 	expect(status.coverage).toBe("ready");
 	expect(status.noteCount).toBe(81);
 });
