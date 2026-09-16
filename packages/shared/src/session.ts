@@ -3,6 +3,7 @@ import type { CapabilityState } from "./capabilities";
 import type { ProgressDisplay } from "./progress-display";
 import type { SkillInvocationDisplay } from "./skill-invocation";
 import type { SubagentRunData } from "./subagent";
+import type { TaskView } from "./task-workbench";
 import type { ReportedUsage } from "./usage-display";
 
 /** 顶栏打开的会话持久化（重启恢复用，由主进程写入 userData/tabs.json） */
@@ -117,6 +118,7 @@ export interface SessionAssistantMessage {
 	progress?: ProgressDisplay;
 	role: "assistant";
 	hostStatus?: true;
+	taskView?: TaskView;
 	text: string;
 	thinking: string;
 	tools: SessionToolCall[];

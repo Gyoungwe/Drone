@@ -215,6 +215,7 @@ export function registerAnswerPublication(
 		const tools = blocks.filter((b) => b.type === "toolCall");
 		if (tools.length) {
 			toolRounds += 1;
+			if (toolRounds > maxToolRounds && getTaskRuntime?.()?.advanceStage?.()) toolRounds = 1;
 			const bytes = Buffer.byteLength(JSON.stringify(blocks), "utf8");
 			// 熔断：软预算（tool-budget 的 read/search 上限）只是建议，弱模型会无视并空转。
 			// 这里在本轮工具轮次超过硬上限（或字节/条数兜底）时强制结束本轮——早于旧的 64 轮/4MB，

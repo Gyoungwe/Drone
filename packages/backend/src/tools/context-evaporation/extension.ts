@@ -124,6 +124,18 @@ export function makeEvapExtension(options: EvapExtensionOptions): InlineExtensio
 					});
 					if (result.batch.snipped + result.batch.pruned > 0) {
 						report(currentSessionId, result.batch);
+						const evicted = result.messages
+							.filter(
+								(message, index) =>
+									message.role === "toolResult" && JSON.stringify(message) !== JSON.stringify(wire[index]),
+							)
+							.map((message) => (message as unknown as { toolCallId?: string }).toolCallId)
+							.filter(Boolean);
+						if (evicted.length)
+							pi.events?.emit?.("percho:context-evicted", {
+								sessionId: currentSessionId,
+								toolCallIds: evicted.slice(0, 64),
+							});
 					}
 					// 无变化（Tier 0 或零决策）→ undefined 原样放行，零干扰
 					if (result.messages === wire) return undefined;

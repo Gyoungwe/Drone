@@ -6,15 +6,18 @@ export function createToolBudget(options = {}) {
 	const maxRepeats = options.maxRepeats ?? 2;
 	let reads = 0;
 	let searches = 0;
+	let recoveries = 0;
 	const repeats = new Map();
 
 	function reset() {
 		reads = 0;
 		searches = 0;
+		recoveries = 0;
 		repeats.clear();
 	}
 
-	function consume(kind, key) {
+	function consume(kind, key, { recovery = false } = {}) {
+		const recoveryAllowed = recovery && kind === "read" && ++recoveries <= 2;
 		const normalized = String(key ?? "").trim();
 		const repeatKey = `${kind}:${normalized}`;
 		const seen = (repeats.get(repeatKey) ?? 0) + 1;
@@ -24,7 +27,7 @@ export function createToolBudget(options = {}) {
 
 		const overReads = kind === "read" && reads > maxReads;
 		const overSearches = kind === "search" && searches > maxSearches;
-		const overRepeat = seen > maxRepeats;
+		const overRepeat = seen > maxRepeats && !recoveryAllowed;
 		if (!overReads && !overSearches && !overRepeat) return null;
 		return {
 			status: "budget-exhausted",

@@ -1,6 +1,7 @@
 export * from "./ask";
 export * from "./capabilities";
 export * from "./errors";
+export * from "./evidence-labels";
 export * from "./ipc";
 export * from "./knowledge";
 export * from "./knowledge-links";
@@ -18,6 +19,7 @@ export * from "./skill-catalog";
 export * from "./skill-invocation";
 export * from "./subagent";
 export * from "./task-status";
+export * from "./task-workbench";
 export * from "./todo";
 export * from "./transcript";
 export * from "./transcript/run-inspector";

@@ -73,6 +73,7 @@ export function messagesToUIMessages(messages: SessionMessage[]): UIMessage[] {
 		}));
 		const assistant: UIMessage = {
 			kind: "assistant",
+			...(m.taskView ? { taskView: m.taskView } : {}),
 			...(m.cycleId ? { cycleId: m.cycleId } : {}),
 			...(m.usage ? { usage: m.usage } : {}),
 			...(m.progress ? { progress: m.progress } : {}),

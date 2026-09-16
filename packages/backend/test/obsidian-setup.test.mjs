@@ -123,6 +123,7 @@ describe("slash command to current-model handoff", () => {
 			"obsidian-setup",
 			"research-setup",
 			"setup",
+			"task-action",
 			"task-status",
 		]);
 		for (const name of ["obsidian-setup", "research-setup", "setup"]) {

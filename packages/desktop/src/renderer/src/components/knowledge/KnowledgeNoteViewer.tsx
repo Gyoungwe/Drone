@@ -1,4 +1,5 @@
 import type { KnowledgeNote } from "@percho/shared";
+import { legacyEvidenceNotice } from "@percho/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { Markdown } from "../chat/Markdown";
@@ -77,6 +78,14 @@ export function KnowledgeNoteViewer({
 						{note.truncated ? ` · ${t("truncated")}` : ""}
 					</p>
 					<div className="max-h-80 overflow-auto rounded-lg bg-hover p-3">
+						{legacyEvidenceNotice(note.text) && (
+							<p
+								data-testid="legacy-evidence-status"
+								className="mb-2 rounded border border-border p-2 text-xs text-warn"
+							>
+								{legacyEvidenceNotice(note.text)}
+							</p>
+						)}
 						<Markdown text={note.displayText || note.text} />
 					</div>
 				</>

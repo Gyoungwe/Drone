@@ -9,6 +9,7 @@ import { ImagePreviewOverlay, imageSrc } from "./ImagePreview";
 import { CopyButton, ForkButton } from "./message-actions";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { SystemMessage } from "./SystemMessage";
+import { TaskWorkbenchCard } from "./TaskWorkbenchCard";
 import { UserMessage } from "./UserMessage";
 
 /** 单条消息：按类型分发（用户气泡 / 图片块 / 子代理卡 / 错误卡 / 系统分割线 / 助手消息体） */
@@ -86,6 +87,7 @@ export const MessageItem = memo(function MessageItem({
 		return <SystemMessage message={message} />;
 	}
 
+	if (message.taskView) return <TaskWorkbenchCard view={message.taskView} sessionId={sessionId} />;
 	return (
 		<div className="group">
 			<AssistantMessage

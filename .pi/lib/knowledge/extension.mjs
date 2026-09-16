@@ -39,6 +39,46 @@ import {
 
 export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 	const taskRuntime = readOnly ? null : registerTaskRuntime(pi);
+	const recovery = new Map();
+	let recoveryScope = null;
+	const saveRecovery = () => {
+		if (recoveryScope)
+			pi.appendEntry?.("percho-knowledge-recovery-v1", {
+				scope: recoveryScope,
+				records: [...recovery.values()].slice(-8),
+			});
+	};
+	const attachRecovery = (ctx) => {
+		const scope = `${sessionIdentity(ctx)}:${resolve(ctx.cwd)}`;
+		if (scope === recoveryScope) return;
+		recoveryScope = scope;
+		recovery.clear();
+		for (const e of ctx.sessionManager?.getBranch?.() || [])
+			if (
+				e.customType === "percho-knowledge-recovery-v1" &&
+				e.data?.scope === scope &&
+				Array.isArray(e.data.records) &&
+				e.data.records.length <= 8
+			) {
+				recovery.clear();
+				for (const r of e.data.records)
+					if (typeof r?.id === "string" && typeof r.path === "string" && /^[a-f0-9]{64}$/.test(r.hash))
+						recovery.set(r.id, r);
+			}
+	};
+	pi.events?.on?.("percho:context-evicted", (e) => {
+		let changed = false;
+		for (const r of recovery.values())
+			if (r.sessionId === e.sessionId && e.toolCallIds?.includes(r.id)) {
+				r.evicted = true;
+				changed = true;
+			}
+		if (changed) saveRecovery();
+	});
+	pi.on("session_tree", (_e, ctx) => {
+		recoveryScope = null;
+		attachRecovery(ctx);
+	});
 	if (!knowledgeDirectory())
 		return {
 			setupCompleted: () => {},
@@ -526,11 +566,72 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 					maxChars: p.max_chars,
 				});
 				noteKnowledgeRead(ctx, page);
+				attachRecovery(ctx);
+				if (page.hash && page.text) {
+					recovery.set(_id, {
+						id: _id,
+						sessionId: sessionIdentity(ctx),
+						taskId: taskRuntime?.snapshot()?.id || null,
+						path: p.path,
+						hash: page.hash,
+						startLine: p.start_line || 1,
+						maxChars: p.max_chars || 5000,
+						vaultId: c.binding.vaultId,
+						bindingRevision: c.binding.revision,
+						evicted: false,
+						used: false,
+					});
+					while (recovery.size > 8) recovery.delete(recovery.keys().next().value);
+					saveRecovery();
+				}
 				return result(page);
 			} catch (error) {
 				updateKnowledgeFlow(ctx, { phase: "blocked", error: String(error.message).slice(0, 400) });
 				throw error;
 			}
+		},
+	});
+	pi.registerTool({
+		name: "research_restore_evidence",
+		label: "恢复被压缩的证据窗口",
+		description:
+			"Recover a host-recorded actually evicted Markdown window once, with unchanged source/binding and current-turn validation. Counts against the read and task budgets; cannot resurrect old publication permission.",
+		parameters: {
+			type: "object",
+			properties: { receipt_id: { type: "string", maxLength: 100 } },
+			required: ["receipt_id"],
+			additionalProperties: false,
+		},
+		execute: async (_id, input, _s, _u, ctx) => {
+			attachRecovery(ctx);
+			const r = recovery.get(input.receipt_id),
+				c = await ensureTurn(ctx);
+			if (
+				!r ||
+				!r.evicted ||
+				r.used ||
+				r.taskId !== (taskRuntime?.snapshot()?.id || null) ||
+				r.vaultId !== c.binding.vaultId ||
+				r.bindingRevision !== c.binding.revision
+			)
+				throw new Error(
+					"evidence-recovery-unavailable: current task, evicted window and unchanged binding required",
+				);
+			const blocked = toolBudget.consume("read", JSON.stringify([r.path, r.startLine, r.maxChars]), {
+				recovery: true,
+			});
+			if (blocked) return result(blocked);
+			const page = await c.service.read(c.ticket, ctx.cwd, {
+				path: r.path,
+				startLine: r.startLine,
+				maxChars: r.maxChars,
+				expectedHash: r.hash,
+			});
+			r.used = true;
+			r.evicted = false;
+			saveRecovery();
+			noteKnowledgeRead(ctx, page);
+			return result(page);
 		},
 	});
 	pi.registerTool({

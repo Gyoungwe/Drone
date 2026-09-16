@@ -3,6 +3,7 @@ import type { ProgressDisplay } from "../progress-display";
 import type { PublicProgressStep } from "../public-timeline";
 import type { ImageInput } from "../session";
 import type { SkillInvocationDisplay } from "../skill-invocation";
+import type { TaskView } from "../task-workbench";
 import type { TodoItem } from "../todo";
 import type { ReportedUsage } from "../usage-display";
 
@@ -76,6 +77,7 @@ export type UIMessage =
 	  }
 	| {
 			kind: "assistant";
+			taskView?: TaskView;
 			cycleId?: string;
 			usage?: ReportedUsage;
 			progress?: ProgressDisplay;

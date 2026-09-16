@@ -32,6 +32,7 @@
 		"esbuild": "0.25.12",
 		"markstream-react": "^0.0.55",
 		"monaco-editor": "^0.55.1",
+		"pdfjs-dist": "6.3.289",
 		"qrcode": "^1.5.4",
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",

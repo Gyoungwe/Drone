@@ -1,5 +1,5 @@
 import { isAbsolute, relative, resolve } from "node:path";
-import type { InlineExtension } from "@earendil-works/pi-coding-agent";
+import type { ExtensionContext, InlineExtension, ToolCallEvent } from "@earendil-works/pi-coding-agent";
 import type { PermissionMode } from "@percho/shared";
 import { createLogger } from "../log";
 import { createWorkspacesLoader, suggestRootCandidate } from "../project/workspace-store";
@@ -70,7 +70,7 @@ export function makePermissionGateExtension(
 			const loadConfig = createPermissionConfigLoader(agentDir);
 			const loadWorkspaces = createWorkspacesLoader(agentDir);
 			const audit = new PermissionAuditLog(permissionAuditPath(agentDir));
-			pi.on("tool_call", async (event, ctx) => {
+			const check = async (event: ToolCallEvent, ctx: ExtensionContext) => {
 				const config = loadConfig();
 				if (!config.enabled) return;
 				// fullAccess：一切放行 + 高危留痕（每次 tool_call 实时读，切换即时生效）
@@ -210,6 +210,44 @@ export function makePermissionGateExtension(
 					block: true,
 					reason: `User denied this ${event.toolName} call (${title}). Do not retry the same action; ask the user or find another approach.`,
 				};
+			};
+			pi.on("tool_call", check);
+			let taskContext: ExtensionContext | undefined;
+			pi.on("session_start", (_event, ctx) => {
+				taskContext = ctx;
+			});
+			pi.events?.on?.("percho:task-read-check", (raw: unknown) => {
+				const request = raw as {
+					cwd?: string;
+					path?: string;
+					sessionId?: string;
+					claim?: () => void;
+					resolve?: (allowed: boolean) => void;
+				};
+				if (
+					!request ||
+					!taskContext ||
+					request.sessionId !== taskContext.sessionManager?.getSessionId() ||
+					request.cwd !== taskContext.cwd ||
+					typeof request.path !== "string" ||
+					typeof request.claim !== "function" ||
+					typeof request.resolve !== "function"
+				)
+					return;
+				request.claim();
+				const complete = request.resolve;
+				void check(
+					{
+						type: "tool_call",
+						toolName: "read",
+						toolCallId: "host-task-read",
+						input: { path: request.path },
+					} as ToolCallEvent,
+					taskContext,
+				).then(
+					(result) => complete(!result?.block),
+					() => complete(false),
+				);
 			});
 		},
 	};

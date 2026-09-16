@@ -194,7 +194,7 @@ export class KnowledgeService {
 		}
 		return state;
 	}
-	async read(ticket, cwd, { path, startLine = 1, maxChars = 5000 }) {
+	async read(ticket, cwd, { path, startLine = 1, maxChars = 5000, expectedHash = null }) {
 		const state = await this.check(ticket, cwd);
 		const page = await this.request("read", {
 			path,
@@ -202,6 +202,8 @@ export class KnowledgeService {
 			startLine,
 			maxChars: Math.max(200, Math.min(8000, Number(maxChars) || 5000)),
 		});
+		if (expectedHash && page.hash !== expectedHash)
+			throw new Error("source-version-changed: recovery did not create a new read receipt");
 		// Only returned, non-empty content earns a receipt; title hits and empty ranges do not.
 		if (!page.missing && page.text?.trim() && page.endLine >= page.startLine) {
 			const receipt = {

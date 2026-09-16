@@ -234,6 +234,7 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 			out.push({
 				role: "assistant",
 				hostStatus: true,
+				...(report.taskView ? { taskView: report.taskView } : {}),
 				text: report.text,
 				timestamp: report.timestamp,
 				thinking: "",

@@ -32,7 +32,7 @@ export function makeCapabilityExtension(runtime: CapabilityRuntime): InlineExten
 		});
 		pi.on("message_start", (event) => {
 			const text = messageText(event.message);
-			if (text) runtime.prepareForPrompt(text, true);
+			if (text) runtime.prepareForPrompt(text, false);
 		});
 		pi.on("tool_call", (event) => {
 			runtime.noteToolInvocation(event.toolName);

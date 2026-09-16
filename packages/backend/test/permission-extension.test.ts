@@ -295,8 +295,8 @@ describe("permission-gate 扩展", () => {
 		if (typeof extension === "function" || !("factory" in extension)) throw new Error("unexpected");
 		let handler: ToolCallHandler | undefined;
 		extension.factory({
-			on: (_event: string, h: ToolCallHandler) => {
-				handler = h;
+			on: (event: string, h: ToolCallHandler) => {
+				if (event === "tool_call") handler = h;
 			},
 		} as unknown as ExtensionAPI);
 

@@ -392,7 +392,7 @@ it("real SDK displays public stage → tools → next stage → tools → summar
 		buildChatRows(state, "fixture").flatMap((row) =>
 			row.kind === "metaGroup"
 				? row.items.flatMap((i) => i.tools.map((t) => t.name))
-				: row.kind === "message" && row.message.kind === "assistant"
+				: row.kind === "message" && row.message.kind === "assistant" && !row.message.taskView
 					? [row.message.progress?.text || row.message.text]
 					: [],
 		);
@@ -411,6 +411,7 @@ it("real SDK displays public stage → tools → next stage → tools → summar
 		...emptyTranscript(),
 		messages: messagesToUIMessages(await backend.getSessionMessages(sid)),
 	};
+	expect(live.messages.some((m) => m.kind === "assistant" && m.taskView?.version === 2)).toBe(true);
 	expect(labels(live)).toEqual(expected);
 	expect(labels(history)).toEqual(expected);
 	expect(deriveTurnUsage(live.messages)[0].requests).toBe(5);

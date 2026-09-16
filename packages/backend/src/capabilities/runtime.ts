@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { resolve } from "node:path";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { CAPABILITY_IDS, type CapabilityId, type CapabilityState, getSkillCategory } from "@percho/shared";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
@@ -35,6 +37,7 @@ const VISUAL_TOOL = /(?:show_image|explainer|show_me|figure|plot|chart|image)/i;
 
 /** Continuations preserve tool visibility only, never permissions or evidence receipts. */
 export function isTaskContinuation(text: string): boolean {
+	if (/^(?:also\b|and\b|补充)/i.test(text.trim())) return true;
 	return /^(?:继续(?:吧|执行|处理|完成|上一任务)?|接着(?:做|处理)?|下好了|下载好了|我下载了(?:，?手动的那几篇)?|完成到哪了|进度(?:如何|怎么样)?|查看(?:任务)?进度|任务状态|continue|resume|done|status|what(?:'s| is) the status)[\s,.!？，。！?]*$/i.test(
 		text.trim(),
 	);
@@ -143,7 +146,7 @@ export class CapabilityRuntime {
 	}
 
 	prepareForPrompt(text: string, streaming: boolean): CapabilityChange {
-		if (text.trim() === "/task-status") return this.apply();
+		if (text.trim() === "/task-status" || text.startsWith("/task-action ")) return this.apply();
 		if (!streaming && isTaskContinuation(text)) this.restoreCheckpoint();
 		const detected = detectCapabilities(text);
 		const directSkill = text.match(/^\/skill:([a-z0-9-]+)/i)?.[1];
@@ -226,18 +229,46 @@ export class CapabilityRuntime {
 	}
 
 	/** Only restore routing visibility; never permission grants, tools or executable code. */
+	private activeTaskRouting(): { id: string; capabilities: string[] } | null {
+		const manager = this.session?.sessionManager;
+		if (!manager) return null;
+		const scope = createHash("sha256")
+			.update(`${manager.getSessionId()}\0${resolve(manager.getCwd())}`)
+			.digest("hex");
+		for (const entry of [...manager.getBranch()].reverse()) {
+			if (entry.type !== "custom" || entry.customType !== "percho-task-workbench-v2") continue;
+			const b = entry.data as {
+				scope?: string;
+				activeTaskId?: string;
+				tasks?: { id: string; capabilities: string[] }[];
+			};
+			if (b?.scope !== scope || !Array.isArray(b.tasks)) continue;
+			return b.tasks.find((t) => t.id === b.activeTaskId) || null;
+		}
+		return null;
+	}
 	private restoreCheckpoint(): void {
 		const manager = this.session?.sessionManager;
 		if (!manager) return;
 		this.active.clear();
 		this.forcedSkills.clear();
 		const scope = `${manager.getSessionId()}\0${manager.getCwd()}`;
+		const task = this.activeTaskRouting();
+		if (task)
+			for (const id of task.capabilities || [])
+				if (CAPABILITY_IDS.includes(id as CapabilityId)) this.active.add(id as CapabilityId);
 		for (const entry of manager.getBranch()) {
 			if (entry.type !== "custom" || entry.customType !== "percho-capability-checkpoint-v1") continue;
-			const data = entry.data as { scope?: unknown; capabilities?: unknown; skills?: unknown } | null;
+			const data = entry.data as {
+				scope?: unknown;
+				taskId?: unknown;
+				capabilities?: unknown;
+				skills?: unknown;
+			} | null;
 			if (
 				!data ||
 				data.scope !== scope ||
+				(task && data.taskId !== task.id) ||
 				!Array.isArray(data.capabilities) ||
 				data.capabilities.length > 16 ||
 				!Array.isArray(data.skills) ||
@@ -255,6 +286,7 @@ export class CapabilityRuntime {
 		const manager = this.session?.sessionManager;
 		if (!manager) return;
 		const data = {
+			taskId: this.activeTaskRouting()?.id || null,
 			scope: `${manager.getSessionId()}\0${manager.getCwd()}`,
 			capabilities: [...this.active].sort(),
 			skills: [...this.forcedSkills].sort().slice(0, 32),

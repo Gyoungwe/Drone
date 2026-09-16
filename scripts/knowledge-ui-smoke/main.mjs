@@ -674,6 +674,97 @@ async function run() {
 		checks.push(
 			"generic data/file checkpoint: real host readback + actual MessageList, no model invocation or scientific completion claim",
 		);
+
+		const { createTaskWorkbench, WORKBENCH_ENTRY } = await runtime("tasks/workbench");
+		const entries = [];
+		let workbench = createTaskWorkbench({
+			persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }),
+		});
+		workbench.attach("isolated-ui-v2");
+		workbench.begin("实验数据交付与人工复核");
+		const taskId = workbench.snapshot().id;
+		workbench.plan({
+			milestones: [
+				{ id: "data", title: "CSV 文件读回", acceptance: { kind: "file", path: "analysis.csv" } },
+				{
+					id: "review",
+					title: "人工核对交付文件",
+					dependsOn: ["data"],
+					acceptance: { kind: "human_review" },
+				},
+			],
+		});
+		workbench.wait({
+			kind: "file",
+			title: "请核对实验数据文件",
+			reason: "只核对这份交付物，不验证科研结论",
+			milestoneId: "review",
+		});
+		const pushTask = async () =>
+			js(`window.stageTimelineFixture.status("宿主任务记录", ${JSON.stringify(workbench.view())});true`);
+		const taskActions = [];
+		ipcMain.handle(IpcChannels.SessionPrompt, async (_event, _session, text) => {
+			assert(text.startsWith("/task-action "));
+			const action = JSON.parse(Buffer.from(text.slice(13), "base64url").toString("utf8"));
+			taskActions.push(action.action);
+			if (action.action === "file") await workbench.acceptFile(action, cwd);
+			else if (action.action === "refresh") {
+				workbench.command(action);
+				await workbench.reconcile(cwd);
+			} else workbench.command(action);
+			await pushTask();
+			return { kind: "command" };
+		});
+		await pushTask();
+		await wait(
+			"!!document.querySelector('[data-testid=task-workbench]')",
+			"v2 structured task card live reducer",
+		);
+		const taskClick = async (label) => {
+			await js(
+				`(() => { const b=[...document.querySelector('[data-task-id="${taskId}"]').querySelectorAll('button')].find(b=>b.textContent.includes(${JSON.stringify(label)})); if(!b || b.disabled) throw Error('task button unavailable'); b.click(); return true; })()`,
+			);
+		};
+		await taskClick("确认这些验收条件");
+		await wait(
+			"!document.querySelector('[data-testid=task-workbench]').innerText.includes('模型提案，待你确认')",
+			"user approves explicit plan through IPC",
+		);
+		await taskClick("只读核对产物");
+		await wait(
+			"document.querySelector('[data-testid=task-workbench]').innerText.includes('✓ CSV 文件读回')",
+			"host file readback updates selected criterion",
+		);
+		await js(
+			`(() => {const i=document.querySelector('[data-testid=task-workbench] input'); const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; setter.call(i,'analysis.csv'); i.dispatchEvent(new Event('input',{bubbles:true}));return true;})()`,
+		);
+		await taskClick("核对这个文件");
+		await wait(
+			"document.querySelector('[data-testid=task-workbench]').innerText.includes('文件已检查：analysis.csv')",
+			"manual file inspection through actual preload IPC",
+		);
+		await taskClick("我已核对这一事项");
+		await wait(
+			"!document.querySelector('[data-testid=task-workbench]').innerText.includes('请核对实验数据文件')",
+			"scoped acknowledgment resolves only its action",
+		);
+		workbench = createTaskWorkbench();
+		workbench.attach("isolated-ui-v2", entries);
+		await workbench.reconcile(cwd);
+		await pushTask();
+		await wait(
+			"document.querySelector('[data-testid=task-workbench]').innerText.includes('记录的验收已满足')",
+			"restart restores approved file and human review receipts",
+		);
+		assert(
+			taskActions.includes("file") &&
+				taskActions.includes("acknowledge") &&
+				taskActions.includes("approve-plan"),
+		);
+		await capture("14-task-workbench-ipc-recovery");
+		checks.push(
+			"v2 task workbench: actual Electron/preload IPC plan approval, file inspection, scoped review, durable ledger restart and no model completion claims",
+		);
 		assert.equal(errors.length, 0, "renderer errors");
 		await writeFile(
 			join(root, "validation.json"),

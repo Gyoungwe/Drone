@@ -59,7 +59,7 @@ const result = (id: string, name: string, details: Record<string, unknown> = {})
 		result: { details, content: [{ type: "text", text: "Observed fixture result" }] },
 	});
 (window as any).stageTimelineFixture = {
-	status(text: string) {
+	status(text: string, taskView?: unknown) {
 		useTranscriptStore.getState().resetSession("fixture");
 		event("message_end", {
 			message: {
@@ -68,7 +68,7 @@ const result = (id: string, name: string, details: Record<string, unknown> = {})
 				display: true,
 				content: text,
 				timestamp: Date.now(),
-				details: { reportId: "ui-status-1" },
+				details: { reportId: "ui-status-1", taskView },
 			},
 		});
 	},

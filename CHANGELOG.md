@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — task workbench (v0.8.0 preview)
+
+- Added the structured task workbench (`.pi/lib/tasks/workbench.mjs`, `register.mjs`): model-proposed milestones/acceptance require explicit user approval, human-review waits are scoped to their own action, and the durable ledger is restored on restart without replaying unknown side effects. Legacy runtime remains available with `PERCHO_TASK_WORKBENCH=off`.
+- Added host-side evidence recovery, isolated PDF identity extraction (pdf.js in a bounded worker; title/DOI checked, never extension alone) and read-only Zotero reconciliation (item counts never become import completion).
+- Added the `TaskWorkbenchCard` renderer, shared `task-workbench` / `evidence-labels` types, and `taskView` decoding in task-status messages.
+- Fixed the PDF worker on Windows: pdf.js requires a trailing-slash file URL for `standardFontDataUrl`, and `destroy()` now falls back to the loading task for pdf.js v6.
+- Fixed the knowledge UI smoke script shadowing the module-level `actions` array with a task-scoped one.
+- Verification (Windows): lint 0 errors, typecheck, 1,324 tests (backend 915, desktop 396, shared 13), build.
+
+## 0.7.8 — 2026-09-16
+
+- Task checkpoints and safe continuation for generic research tasks; see `docs/releases/v0.7.8.md`.
+
 ## 0.7.7 — 2026-09-16
 
 - Fixed Windows test fixtures to use native temporary paths and platform-appropriate file mode assertions without weakening production path handling.
