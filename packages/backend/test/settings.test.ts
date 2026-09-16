@@ -1,7 +1,9 @@
+import { join } from "node:path";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const files = new Map<string, string>();
+const agentDir = vi.hoisted(() => (process.platform === "win32" ? "C:\\agent" : "/agent"));
 
 vi.mock("node:fs/promises", () => ({
 	readFile: vi.fn(async (path: string) => {
@@ -24,7 +26,7 @@ vi.mock("node:fs/promises", () => ({
 }));
 
 vi.mock("@earendil-works/pi-coding-agent", () => ({
-	getAgentDir: () => "/agent",
+	getAgentDir: () => agentDir,
 }));
 
 import { SettingsService } from "../src/settings/settings";
@@ -46,7 +48,7 @@ describe("SettingsService provider mutations", () => {
 
 		expect(refresh).toHaveBeenCalledOnce();
 		expect(refresh).toHaveBeenCalledWith({ allowNetwork: false });
-		expect(JSON.parse(files.get("/agent/models.json") ?? "{}").providers.proxy).toMatchObject({
+		expect(JSON.parse(files.get(join(agentDir, "models.json")) ?? "{}").providers.proxy).toMatchObject({
 			baseUrl: "https://proxy.example/v1",
 			api: "openai-codex-responses",
 		});
@@ -83,14 +85,14 @@ describe("SettingsService provider mutations", () => {
 			models: [{ id: "gpt-5" }, { id: "gpt-5-mini" }],
 		});
 
-		expect(JSON.parse(files.get("/agent/models.json") ?? "{}").providers.proxy).toMatchObject({
+		expect(JSON.parse(files.get(join(agentDir, "models.json")) ?? "{}").providers.proxy).toMatchObject({
 			name: "Proxy 2",
 			baseUrl: "https://proxy2.example/v1",
 			api: "openai-responses",
 			models: [{ id: "gpt-5" }, { id: "gpt-5-mini" }],
 		});
 		// key 留空 = auth.json 原样保留
-		expect(JSON.parse(files.get("/agent/auth.json") ?? "{}").proxy).toEqual({
+		expect(JSON.parse(files.get(join(agentDir, "auth.json")) ?? "{}").proxy).toEqual({
 			type: "api_key",
 			key: "secret",
 		});
@@ -105,7 +107,7 @@ describe("SettingsService provider mutations", () => {
 			api: "openai-completions",
 			models: [{ id: "gpt-5" }],
 		});
-		const entry = JSON.parse(files.get("/agent/models.json") ?? "{}").providers.proxy;
+		const entry = JSON.parse(files.get(join(agentDir, "models.json")) ?? "{}").providers.proxy;
 		expect(entry).not.toHaveProperty("name");
 	});
 
@@ -119,7 +121,7 @@ describe("SettingsService provider mutations", () => {
 			models: [{ id: "gpt-5" }],
 			apiKey: "new-secret",
 		});
-		expect(JSON.parse(files.get("/agent/auth.json") ?? "{}").proxy.key).toBe("new-secret");
+		expect(JSON.parse(files.get(join(agentDir, "auth.json")) ?? "{}").proxy.key).toBe("new-secret");
 
 		// 不传 key = 保持不变（删除凭证走 removeCredential/removeCustomProvider）
 		await settings.updateCustomProvider({
@@ -128,7 +130,7 @@ describe("SettingsService provider mutations", () => {
 			api: "openai-completions",
 			models: [{ id: "gpt-5" }],
 		});
-		expect(JSON.parse(files.get("/agent/auth.json") ?? "{}").proxy.key).toBe("new-secret");
+		expect(JSON.parse(files.get(join(agentDir, "auth.json")) ?? "{}").proxy.key).toBe("new-secret");
 	});
 
 	it("writes per-model metadata (reasoning/contextWindow/maxTokens/input) when provided", async () => {
@@ -142,7 +144,7 @@ describe("SettingsService provider mutations", () => {
 				{ id: "gpt-5-mini" },
 			],
 		});
-		const providers = JSON.parse(files.get("/agent/models.json") ?? "{}").providers;
+		const providers = JSON.parse(files.get(join(agentDir, "models.json")) ?? "{}").providers;
 		expect(providers.relay.models[0]).toEqual({
 			id: "gpt-5.6-terra",
 			reasoning: true,

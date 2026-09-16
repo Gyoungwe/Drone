@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { basename, isAbsolute as isPathAbsolute, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { isRmSegment, isTemporaryPath, rmSegmentExempt, temporaryRoots } from "../src/permissions/tmp-zone";
 
@@ -16,8 +16,8 @@ describe("temporaryRoots", () => {
 		expect(temporaryRoots()).toBe(roots);
 		// 无重复
 		expect(new Set(roots).size).toBe(roots.length);
-		// 全部是绝对路径
-		expect(roots.every((r) => r.startsWith("/"))).toBe(true);
+		// 全部是绝对路径；Windows 临时根使用盘符路径，POSIX 根使用 `/`。
+		expect(roots.every((r) => isPathAbsolute(r) || r.startsWith("/"))).toBe(true);
 	});
 
 	it("macOS：额外包含两处 realpath 拼写（/private 前缀形态）", () => {
@@ -55,7 +55,7 @@ describe("isTemporaryPath", () => {
 		expect(isTemporaryPath("/tmp/../etc")).toBe(false);
 		expect(isTemporaryPath("/tmp/a/../../etc")).toBe(false);
 		expect(isTemporaryPath("/tmp/a/../b")).toBe(true);
-		expect(isTemporaryPath(`${tmpdir()}/../${tmpdir().split("/").pop() ?? "T"}/x`)).toBe(true);
+		expect(isTemporaryPath(resolve(tmpdir(), "..", basename(tmpdir()), "x"))).toBe(true);
 	});
 });
 

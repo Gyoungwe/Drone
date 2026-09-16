@@ -1,0 +1,4 @@
+# Keep source files identical across Windows and POSIX checkouts.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf

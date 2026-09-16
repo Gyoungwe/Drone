@@ -69,6 +69,8 @@ export class KnowledgeService {
 		this.pending = new Map();
 		this.next = 0;
 		this.closed = false;
+		this.closing = false;
+		this.closePromise = null;
 		this.worker = new Worker(new URL("./worker.mjs", import.meta.url), {
 			workerData: { vault: binding.vault, database: join(directory, binding.vaultId, "index.sqlite") },
 			execArgv: process.execArgv.filter(
@@ -105,7 +107,8 @@ export class KnowledgeService {
 		this.worker.unref();
 	}
 	request(op, args = {}) {
-		if (this.closed) return Promise.reject(new Error("Knowledge service is closed"));
+		if (this.closed || (this.closing && op !== "close"))
+			return Promise.reject(new Error("Knowledge service is closed"));
 		const id = ++this.next;
 		this.worker.ref();
 		return new Promise((resolvePromise, reject) => {
@@ -708,23 +711,39 @@ export class KnowledgeService {
 			scientificallyVerified: false,
 		};
 	}
-	async close() {
-		if (this.closed) return;
-		// Close SQLite and the recursive watcher inside the worker before terminating it.
-		// Windows keeps WAL files locked briefly when a worker is terminated abruptly.
-		try {
-			await this.request("close");
-		} catch {
-			/* the worker may already have exited; termination below remains the fallback */
-		}
-		this.closed = true;
-		for (const item of this.pending.values()) {
-			clearTimeout(item.timer);
-			item.reject(new Error("Knowledge service closed"));
-		}
-		this.pending.clear();
-		this.tickets.clear();
-		await this.worker.terminate();
+	close() {
+		if (this.closePromise) return this.closePromise;
+		this.closing = true;
+		this.closePromise = (async () => {
+			const exited = new Promise((resolve) => {
+				if (this.worker.threadId === -1) resolve();
+				else this.worker.once("exit", resolve);
+			});
+			try {
+				if (!this.closed) await this.request("close");
+			} catch {
+				// Failed workers still need to be joined so their file handles are released.
+				await this.worker.terminate();
+			} finally {
+				this.closed = true;
+				for (const item of this.pending.values()) {
+					clearTimeout(item.timer);
+					item.reject(new Error("Knowledge service closed"));
+				}
+				this.pending.clear();
+				this.tickets.clear();
+				this.worker.ref();
+				const fallback = setTimeout(() => {
+					void this.worker.terminate();
+				}, 5000);
+				try {
+					await exited;
+				} finally {
+					clearTimeout(fallback);
+				}
+			}
+		})();
+		return this.closePromise;
 	}
 }
 export async function getKnowledgeService(binding = null) {

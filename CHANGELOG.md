@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.7 — 2026-09-16
+
+- Fixed Windows test fixtures to use native temporary paths and platform-appropriate file mode assertions without weakening production path handling.
+- Fixed knowledge worker shutdown to drain scans, requests, and dirty-file batches before closing SQLite; concurrent closes now wait for the same worker exit.
+- Fixed reconciliation returning while a follow-up directory scan was still running.
+- Added SQLite lifecycle regression tests and bounded Windows backend test concurrency.
+- Enforced LF source checkouts with Git attributes and corrected formatting errors.
+- Added Windows CI coverage and mandatory Windows/Linux validation before preparing a release.
+
 ## 0.7.6 — 2026-09-16
 
 - Fixed session export saving the generated file path instead of its contents.

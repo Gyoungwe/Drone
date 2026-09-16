@@ -77,14 +77,20 @@ describe("JsonStore async", () => {
 		expect(await s.read()).toEqual({ n: 10 });
 	});
 
-	it("mode 选项落盘到文件权限", async () => {
+	it("mode 选项保留读写能力，并在 POSIX 上限制为 0600", async () => {
 		const s = new JsonStore<Record<string, unknown>>({
 			path,
 			defaultValue: () => ({}),
 			mode: 0o600,
 		});
 		await s.write({ k: "v" });
-		expect(statSync(path).mode & 0o777).toBe(0o600);
+		expect(await s.read()).toEqual({ k: "v" });
+		// Windows uses inherited ACLs; POSIX group/other mode bits are not supported.
+		if (process.platform === "win32") {
+			expect(statSync(path).mode & 0o600).toBe(0o600);
+		} else {
+			expect(statSync(path).mode & 0o777).toBe(0o600);
+		}
 	});
 
 	it("parse 钩子支持 JSONC 注释读取", async () => {

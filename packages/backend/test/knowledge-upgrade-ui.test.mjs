@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
 import * as ui from "../../../.pi/lib/knowledge/ui-service.mjs";
 import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
@@ -18,6 +19,7 @@ beforeEach(async () => {
 	bindingRevision = configured.bindingRevision;
 });
 afterEach(async () => {
+	await closeKnowledgeServices();
 	vi.unstubAllEnvs();
 	await rm(root, { recursive: true, force: true });
 });

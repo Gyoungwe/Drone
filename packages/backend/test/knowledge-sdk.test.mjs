@@ -73,7 +73,13 @@ it("real SDK delivers global navigation before model invocation in an unrelated 
 		const payload = JSON.stringify(model.mock.calls[0][0]);
 		expect(payload).toContain("percho-knowledge-navigation");
 		expect(payload).toContain("Wiki/Index.md");
-		expect(payload).toContain(bound.vault);
+		// Navigation embeds JSON inside a custom message; decode it before comparing paths.
+		const navigation = model.mock.calls[0][0].find(
+			(message) => message.customType === "percho-knowledge-navigation",
+		);
+		expect(navigation).toBeDefined();
+		const content = navigation.content;
+		expect(JSON.parse(content.slice(content.indexOf("\n") + 1)).binding.vault).toBe(bound.vault);
 		expect(payload).not.toContain('"ticket"');
 		expect(session.getActiveToolNames()).toContain("research_search_knowledge");
 		expect(errors).toEqual([]);

@@ -121,7 +121,9 @@ export function makePermissionGateExtension(
 				if (isPath && matchText) {
 					// 绝对路径直接用；相对按 base resolve；无 base 无从判定（保持原样，不进任一地理分支）
 					const abs = isAbsolute(matchText)
-						? matchText
+						? /^[A-Za-z]:[\\/]/.test(matchText)
+							? resolve(matchText)
+							: matchText
 						: base !== undefined
 							? resolve(base, matchText)
 							: null;

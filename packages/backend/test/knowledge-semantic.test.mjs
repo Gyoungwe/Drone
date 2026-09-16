@@ -233,7 +233,11 @@ describe("worker-owned hybrid retrieval", () => {
 				items: first.items.map((item) => ({ ...item, vector: [1, 0] })),
 			});
 			const seen = [];
-			for (let i = 0; i < 12 && !seen.some((item) => item.path === "Library/Papers/z-last.md" && item.chunkIndex === 1); i++) {
+			for (
+				let i = 0;
+				i < 12 && !seen.some((item) => item.path === "Library/Papers/z-last.md" && item.chunkIndex === 1);
+				i++
+			) {
 				const next = await service.request("semanticBatch", {
 					fingerprint,
 					project: "project-a",
@@ -247,7 +251,9 @@ describe("worker-owned hybrid retrieval", () => {
 					items: next.items.map((item) => ({ ...item, vector: [1, 0] })),
 				});
 			}
-			expect(seen).toContainEqual(expect.objectContaining({ path: "Library/Papers/z-last.md", chunkIndex: 1 }));
+			expect(seen).toContainEqual(
+				expect.objectContaining({ path: "Library/Papers/z-last.md", chunkIndex: 1 }),
+			);
 			await note("Library/Papers/a-new.md", "# New\nnewly added evidence");
 			await service.request("changed", { paths: ["Library/Papers/a-new.md"] });
 			const added = await service.request("semanticBatch", {

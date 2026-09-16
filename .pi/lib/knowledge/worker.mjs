@@ -48,7 +48,8 @@ const semanticColumns = db
 	.prepare("PRAGMA table_info(semantic_chunks)")
 	.all()
 	.map((column) => column.name);
-if (!semanticColumns.includes("start_char")) db.exec("ALTER TABLE semantic_chunks ADD COLUMN start_char INTEGER");
+if (!semanticColumns.includes("start_char"))
+	db.exec("ALTER TABLE semantic_chunks ADD COLUMN start_char INTEGER");
 if (!semanticColumns.includes("end_char")) db.exec("ALTER TABLE semantic_chunks ADD COLUMN end_char INTEGER");
 if (semanticColumns.includes("text")) {
 	db.exec(`BEGIN IMMEDIATE;
@@ -74,6 +75,9 @@ let scan = null,
 	timer = null,
 	_closed = false;
 let fullScanRequested = false;
+const activeRequests = new Set();
+const flushes = new Set();
+let closePromise;
 const dirty = new Set(),
 	inflight = new Map();
 const stats = { bodyReads: 0, metadataChecks: 0, reconciliations: 0, changes: 0, searches: 0 };
@@ -127,7 +131,7 @@ function job(kind, path, scope) {
 }
 let uiTimer = null;
 function signalUiChange() {
-	if (uiTimer) return;
+	if (_closed || uiTimer) return;
 	uiTimer = setTimeout(() => {
 		uiTimer = null;
 		parentPort.postMessage({ uiChanged: true });
@@ -277,6 +281,7 @@ async function* walk(directory, prefix = "") {
 	}
 }
 function beginReconcile(force = false) {
+	if (_closed) return Promise.resolve();
 	if (scan) return scan;
 	coverage = "indexing";
 	stats.reconciliations++;
@@ -318,7 +323,17 @@ function beginReconcile(force = false) {
 	});
 	return scan;
 }
-async function flushDirty(limit = 32) {
+function flushDirty(limit = 32) {
+	if (_closed) return Promise.resolve();
+	const task = flushDirtyBatch(limit);
+	flushes.add(task);
+	void task.then(
+		() => flushes.delete(task),
+		() => flushes.delete(task),
+	);
+	return task;
+}
+async function flushDirtyBatch(limit) {
 	// Debounced batches are coalesced by path. Requests yield between notes.
 	const paths = [...dirty].slice(0, limit);
 	for (let i = 0; i < paths.length; i++) {
@@ -337,7 +352,7 @@ async function flushDirty(limit = 32) {
 	}
 }
 function schedule() {
-	if (timer) return;
+	if (_closed || timer) return;
 	timer = setTimeout(() => {
 		timer = null;
 		void flushDirty();
@@ -347,6 +362,7 @@ function schedule() {
 let watcher;
 try {
 	watcher = watch(workerData.vault, { recursive: true, persistent: false }, (_event, name) => {
+		if (_closed) return;
 		const path = name?.toString().replaceAll("\\", "/");
 		if (path?.endsWith(".md")) {
 			try {
@@ -359,6 +375,7 @@ try {
 		schedule();
 	});
 	watcher.on("error", (error) => {
+		if (_closed) return;
 		watching = false;
 		statements.problem.run("<watcher>", String(error.message));
 	});
@@ -371,14 +388,21 @@ const reconcileTimer = setInterval(() => {
 }, workerData.reconcileMs || 120000);
 reconcileTimer.unref();
 function closeWorker() {
-	if (_closed) return;
+	if (closePromise) return closePromise;
 	_closed = true;
 	if (timer) clearTimeout(timer);
 	if (uiTimer) clearTimeout(uiTimer);
 	clearInterval(reconcileTimer);
 	watcher?.close();
 	watching = false;
-	db.close();
+	fullScanRequested = false;
+	closePromise = (async () => {
+		// Stop accepting work, then drain every SQLite user before releasing WAL handles.
+		await Promise.allSettled([...activeRequests, ...flushes, ...inflight.values(), scan]);
+		dirty.clear();
+		db.close();
+	})();
+	return closePromise;
 }
 function status() {
 	revision = Number(db.prepare("SELECT value FROM meta WHERE key='revision'").get().value);
@@ -727,10 +751,6 @@ function semanticCandidates(args) {
 	return result;
 }
 async function dispatch(op, args) {
-	if (op === "close") {
-		closeWorker();
-		return { closed: true };
-	}
 	if (op === "status") {
 		// Publication rechecks at most one dirty batch. Duplicate watcher notifications
 		// should not reject unchanged evidence; actual changes still advance revision.
@@ -748,8 +768,11 @@ async function dispatch(op, args) {
 		return status();
 	}
 	if (op === "reconcile") {
+		fullScanRequested = false;
 		await beginReconcile(!!args.force);
 		await flushDirty();
+		// A directory notification can start a follow-up scan during the dirty flush.
+		if (scan) await scan;
 		return status();
 	}
 	if (op === "changed") {
@@ -803,11 +826,29 @@ async function dispatch(op, args) {
 	throw new Error("Unknown knowledge operation");
 }
 parentPort.on("message", async ({ id, op, args = {} }) => {
+	if (op === "close") {
+		try {
+			await closeWorker();
+			parentPort.postMessage({ id, result: { closed: true } });
+			parentPort.close();
+		} catch (error) {
+			parentPort.postMessage({ id, error: String(error.message) });
+		}
+		return;
+	}
+	if (_closed) {
+		parentPort.postMessage({ id, error: "Knowledge worker is closing" });
+		return;
+	}
+	const task = dispatch(op, args);
+	activeRequests.add(task);
 	try {
-		const result = await dispatch(op, args);
+		const result = await task;
 		parentPort.postMessage({ id, result });
 	} catch (error) {
 		parentPort.postMessage({ id, error: String(error.message) });
+	} finally {
+		activeRequests.delete(task);
 	}
 });
 parentPort.postMessage({ ready: true });

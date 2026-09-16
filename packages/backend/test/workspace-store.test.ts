@@ -19,40 +19,53 @@ function makeAgentDir(): string {
 	return dir;
 }
 
+function projectRoot(dir: string): string {
+	return join(dir, "proj");
+}
+
+function otherRoot(dir: string, suffix = "other"): string {
+	return join(dir, suffix);
+}
+
 describe("workspace-store", () => {
 	it("无文件 → 空配置；写后 roundtrip", () => {
 		const dir = makeAgentDir();
 		expect(loadWorkspaces(dir)).toEqual(emptyWorkspaces());
-		addWorkspaceRoot(dir, "/proj", "/other/repo");
+		const project = projectRoot(dir);
+		const root = join(otherRoot(dir), "repo");
+		addWorkspaceRoot(dir, project, root);
 		expect(loadWorkspaces(dir)).toEqual({
 			version: 1,
-			projects: { "/proj": { roots: ["/other/repo"], allowed: [] } },
+			projects: { [project]: { roots: [root], allowed: [] } },
 		});
 	});
 
 	it("根去重；移除后空条目回收", () => {
 		const dir = makeAgentDir();
-		addWorkspaceRoot(dir, "/proj", "/other");
-		addWorkspaceRoot(dir, "/proj", "/other"); // 去重
-		addAllowedPattern(dir, "/proj", "bash: git push*");
-		expect(loadWorkspaces(dir).projects["/proj"].roots).toEqual(["/other"]);
-		removeWorkspaceRoot(dir, "/proj", "/other");
+		const project = projectRoot(dir);
+		const root = otherRoot(dir);
+		addWorkspaceRoot(dir, project, root);
+		addWorkspaceRoot(dir, project, root); // 去重
+		addAllowedPattern(dir, project, "bash: git push*");
+		expect(loadWorkspaces(dir).projects[project].roots).toEqual([root]);
+		removeWorkspaceRoot(dir, project, root);
 		const afterRemove = loadWorkspaces(dir);
-		expect(afterRemove.projects["/proj"]).toEqual({ roots: [], allowed: ["bash: git push*"] });
+		expect(afterRemove.projects[project]).toEqual({ roots: [], allowed: ["bash: git push*"] });
 		// 移除最后记忆后条目整体回收
 		const raw = JSON.parse(readFileSync(workspaceConfigPath(dir), "utf-8"));
-		raw.projects["/proj"] = { roots: [], allowed: [] };
+		raw.projects[project] = { roots: [], allowed: [] };
 		writeFileSync(workspaceConfigPath(dir), JSON.stringify(raw));
-		removeWorkspaceRoot(dir, "/proj", "/nonexistent");
-		expect(loadWorkspaces(dir).projects["/proj"]).toBeUndefined();
+		removeWorkspaceRoot(dir, project, join(dir, "nonexistent"));
+		expect(loadWorkspaces(dir).projects[project]).toBeUndefined();
 	});
 
 	it("记忆去重后移到末尾（LRU 语义）；非法文件回退空配置", () => {
 		const dir = makeAgentDir();
-		addAllowedPattern(dir, "/p", "a*");
-		addAllowedPattern(dir, "/p", "b*");
-		addAllowedPattern(dir, "/p", "a*");
-		expect(loadWorkspaces(dir).projects["/p"].allowed).toEqual(["b*", "a*"]);
+		const project = projectRoot(dir);
+		addAllowedPattern(dir, project, "a*");
+		addAllowedPattern(dir, project, "b*");
+		addAllowedPattern(dir, project, "a*");
+		expect(loadWorkspaces(dir).projects[project].allowed).toEqual(["b*", "a*"]);
 		writeFileSync(workspaceConfigPath(dir), "{broken");
 		expect(loadWorkspaces(dir)).toEqual(emptyWorkspaces());
 	});
@@ -61,8 +74,10 @@ describe("workspace-store", () => {
 		const dir = makeAgentDir();
 		const load = createWorkspacesLoader(dir);
 		expect(load()).toEqual(emptyWorkspaces());
-		addWorkspaceRoot(dir, "/proj", "/other");
-		expect(load().projects["/proj"]).toEqual({ roots: ["/other"], allowed: [] });
+		const project = projectRoot(dir);
+		const root = otherRoot(dir);
+		addWorkspaceRoot(dir, project, root);
+		expect(load().projects[project]).toEqual({ roots: [root], allowed: [] });
 	});
 });
 
