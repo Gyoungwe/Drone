@@ -1,5 +1,6 @@
 import {
 	canArchiveTask,
+	explainTaskReason,
 	TASK_STATE_LABELS,
 	type TaskView,
 	TERMINAL_TASK_STATES,
@@ -72,9 +73,12 @@ export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; session
 						{task.id === view.activeTaskId ? "当前任务 · " : ""}阶段 {task.stage} · 调用 {task.budget.calls}/
 						{view.limits.totalCalls} · 等待 {Math.floor(task.waitMs / 60000)} 分钟
 					</p>
-					<p className="mt-1 text-xs text-ink-dim">
-						上次记录：{task.updatedAt} {task.reason && ` · ${task.reason}`}
-					</p>
+					<p className="mt-1 text-xs text-ink-dim">上次记录：{task.updatedAt}</p>
+					{task.reason && (
+						<p className="mt-1 text-xs" data-testid="task-reason">
+							{explainTaskReason(task.reason)}
+						</p>
+					)}
 					<div className="mt-3 flex flex-wrap gap-2">
 						<button
 							type="button"

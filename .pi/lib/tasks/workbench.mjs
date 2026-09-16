@@ -44,6 +44,24 @@ const readOnly = (name) =>
 		name,
 	);
 const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
+/** User-facing explanation and next step for each machine reason code. Codes stay stable for tests/UI. */
+export const REASON_TEXT = Object.freeze({
+	"stage-budget": "本阶段的工具调用次数已用完，已暂停并保留进度。要继续，请在任务面板点“确认下一阶段预算”。",
+	"budget-review-required": "工具调用预算已用完。请查看当前结果；确认后可在任务面板开启下一阶段。",
+	"reconcile-before-retry":
+		"有操作在上次运行中没有得到结果（例如写入、安装、上传）。请先点“只读核对产物”确认实际情况，避免重复执行。",
+	"binding-changed": "知识库绑定已更改，旧任务的证据和权限不能沿用。请重新描述需求以开始新任务。",
+	"tool-failure": "上一步工具调用失败，任务保留为部分完成。可以直接继续，或查看下方记录了解失败原因。",
+	"user-cancelled-choice-not-consent": "你取消了一个选择。任务在等待你的决定，不会按默认选项继续。",
+	"user-action-cancelled": "你跳过了一个需要人工处理的事项，任务暂停。需要时可重新描述需求。",
+	"wiki-rejected-or-stale": "Wiki 候选被拒绝或来源已变化，相关验收条件未满足。",
+	"verified-stage-checkpoint": "已核实一个验收条件，进入下一阶段。",
+	"session-restored": "会话已恢复，进度从上次保存点继续。",
+	"legacy-checkpoint-unreviewed": "这是旧版本记录导入的任务，历史操作尚未复核。",
+	"user-cancelled": "任务已由你取消。",
+	"user-archived": "任务已归档。",
+});
+export const explainReason = (code) => (code ? REASON_TEXT[code] || code : null);
 const error = (code, message) => Object.assign(new Error(message), { code });
 const stable = (value) =>
 	JSON.stringify(value, (_key, v) =>
@@ -683,7 +701,8 @@ export function createTaskWorkbench({
 			save();
 			return {
 				block: true,
-				reason: "Task stage/absolute budget reached. Deliver task_status; no automatic next stage.",
+				reason:
+					"Stage tool budget reached; the host paused the task and kept progress. Give the user your best answer from what you already have, state what remains, and tell them they can continue from the task panel (“确认下一阶段预算”). Do not call more tools.",
 			};
 		}
 		if (t.reason === "binding-changed")
@@ -882,11 +901,11 @@ export function createTaskWorkbench({
 			...t.receipts
 				.slice(-3)
 				.map((r) => `- ${r.tool}：${r.state}${r.artifact ? `；${r.artifact.path}` : ""}`),
-			t.reason ? `阻碍：${t.reason}` : null,
+			t.reason ? `说明：${explainReason(t.reason)}` : null,
 			book.selectionRequired
 				? "有多个可继续任务，请先在任务面板选择。"
 				: "详情中可核对产物、等待事项和下一阶段。",
-			"这是宿主观察的执行状态，不是科研结论或整体科学正确性的证明；权限与科研证据必须按当前环境重新核验。",
+			"以上是程序观察到的执行情况，不是科研结论，也不代表结果已经过科学验证。",
 		]
 			.filter(Boolean)
 			.join("\n");

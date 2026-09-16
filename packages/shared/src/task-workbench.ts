@@ -162,6 +162,26 @@ export const TASK_STATE_LABELS: Record<TaskState, string> = {
 	cancelled: "已取消",
 	archived: "已归档",
 };
+/** Human-readable explanation with a next step for host reason codes; unknown codes fall back to the code. Mirrors `.pi/lib/tasks/workbench.mjs` REASON_TEXT. */
+export const TASK_REASON_TEXT: Record<string, string> = {
+	"stage-budget": "本阶段的工具调用次数已用完，已暂停并保留进度。点“确认下一阶段预算”可继续。",
+	"budget-review-required": "工具调用预算已用完。请查看当前结果；确认后可开启下一阶段。",
+	"reconcile-before-retry":
+		"有操作在上次运行中没有得到结果（例如写入、安装、上传）。请先点“只读核对产物”确认实际情况，避免重复执行。",
+	"binding-changed": "知识库绑定已更改，旧任务的证据和权限不能沿用。请重新描述需求以开始新任务。",
+	"tool-failure": "上一步工具调用失败，任务保留为部分完成。可以直接继续，或查看下方记录了解原因。",
+	"user-cancelled-choice-not-consent": "你取消了一个选择。任务在等待你的决定，不会按默认选项继续。",
+	"user-action-cancelled": "你跳过了一个需要人工处理的事项，任务暂停。需要时可重新描述需求。",
+	"wiki-rejected-or-stale": "Wiki 候选被拒绝或来源已变化，相关验收条件未满足。",
+	"verified-stage-checkpoint": "已核实一个验收条件，进入下一阶段。",
+	"session-restored": "会话已恢复，进度从上次保存点继续。",
+	"legacy-checkpoint-unreviewed": "这是旧版本记录导入的任务，历史操作尚未复核。",
+	"user-cancelled": "任务已由你取消。",
+	"user-archived": "任务已归档。",
+};
+export function explainTaskReason(code: string | null | undefined): string | null {
+	return code ? TASK_REASON_TEXT[code] || code : null;
+}
 /** Task states with no further agent continuation; the UI hides resume/stage/cancel for them. */
 export const TERMINAL_TASK_STATES: ReadonlySet<TaskState> = new Set(["completed", "cancelled", "archived"]);
 /** Archiving requires an explicitly closed or paused task with nothing pending; mirrors the host ledger rule. */
