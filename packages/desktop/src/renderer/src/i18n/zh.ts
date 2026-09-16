@@ -168,6 +168,8 @@ export const zh = {
 		deny: "拒绝",
 		allowAlways: "本项目总是允许",
 		allowOnce: "允许一次",
+		allowRun: "本次任务全部允许",
+		allowRunHint: "这一轮任务内不再逐次确认；任务结束（你下次发消息前）自动失效，不写入任何长期规则",
 		allowDir: "允许此目录",
 		allowDirHint: "把 {dir} 加入本项目工作区：目录内读写不再逐次确认（持久化到 workspaces.json）",
 		queued: "还有 {count} 个请求排队",

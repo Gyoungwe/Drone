@@ -174,6 +174,9 @@ export const en: Messages = {
 		deny: "Deny",
 		allowAlways: "Always allow (this project)",
 		allowOnce: "Allow once",
+		allowRun: "Allow all for this task",
+		allowRunHint:
+			"No more prompts for the rest of this run; expires automatically when the task finishes (before your next message) and writes no long-term rule",
 		allowDir: "Allow this directory",
 		allowDirHint:
 			"Add {dir} to this project's workspace: reads and writes inside it no longer prompt (persisted to workspaces.json)",

@@ -229,7 +229,12 @@ export interface PermissionRequest {
 	suggestDir?: string;
 }
 
-export type PermissionAnswer = "allow" | "deny" | "allowAlways" | "allowDir";
+/**
+ * allow=仅本次调用；allowAlways=本项目持久记忆（按标题）；allowDir=把建议根加入工作区；
+ * allowRun=本次运行（本条用户消息触发的 agent run）内全部放行：会话内存态，agent_end 自动失效，
+ * 不落盘、不跨 run 继承——「一次授权跑到底」而不放松长期边界。
+ */
+export type PermissionAnswer = "allow" | "deny" | "allowAlways" | "allowDir" | "allowRun";
 
 /** 权限请求已裁决（answered=true 为批准/拒绝，false 为取消/过期）。 */
 export interface PermissionResolved {

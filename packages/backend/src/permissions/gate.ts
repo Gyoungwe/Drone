@@ -22,6 +22,8 @@ export class PermissionGate {
 	>();
 	private readonly titles = new Map<string, string>();
 	private readonly alwaysAllowed = new Set<string>();
+	/** 本次 run 全放行（allowRun）：endRun（agent_end）归零 */
+	private runAllowed = false;
 
 	private sessionId = "";
 
@@ -34,7 +36,7 @@ export class PermissionGate {
 
 	/** 实现 ExtensionUIContext.confirm 的语义；meta 由内置权限扩展携带（kind/suggestDir） */
 	confirm(title: string, message: string, meta?: PermissionRequestMeta): Promise<boolean> {
-		if (this.alwaysAllowed.has(title)) {
+		if (this.runAllowed || this.alwaysAllowed.has(title)) {
 			return Promise.resolve(true);
 		}
 		const id = `perm-${this.sessionId}-${nextId++}`;
@@ -84,10 +86,30 @@ export class PermissionGate {
 		if (answer === "allowAlways" && title) {
 			this.alwaysAllowed.add(title);
 		}
-		entry.resolve(answer === "allow" || answer === "allowAlways" || answer === "allowDir");
+		entry.resolve(answer !== "deny");
+		if (answer === "allowRun") {
+			// 本次 run 内后续确认直接通过；已排队的请求一并放行（用户语义：这一趟别再问了）
+			this.runAllowed = true;
+			for (const [id, queued] of this.pending) {
+				this.pending.delete(id);
+				this.titles.delete(id);
+				queued.resolve(true);
+			}
+		}
+	}
+
+	/** 本次 run 是否处于全放行态 */
+	isRunAllowed(): boolean {
+		return this.runAllowed;
+	}
+
+	/** run 结束（agent_end）：allowRun 失效，下一条用户消息重新按规则审批 */
+	endRun(): void {
+		this.runAllowed = false;
 	}
 
 	dispose(): void {
+		this.runAllowed = false;
 		for (const { resolve } of this.pending.values()) resolve(false);
 		this.pending.clear();
 		this.titles.clear();

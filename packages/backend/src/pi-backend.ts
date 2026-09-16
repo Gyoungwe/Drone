@@ -369,6 +369,8 @@ export class PiBackend {
 		event = slimBulkyEvent(event);
 		// 流式熔断：病态输出（空白洪流/超量）trip 后 abort 会话，并丢弃后续增量（trace 与转发同步止血）
 		const verdict = this.streamGuard.inspect(sessionId, event);
+		// allowRun 生命周期 = 一次 agent run：run 结束即失效（下一条消息重新审批）
+		if (event.type === "agent_end") this.gates.get(sessionId)?.endRun();
 		if (verdict !== "pass") {
 			if (verdict !== "suppress") {
 				log.error("stream guard tripped, aborting session", sessionId, { verdict });
@@ -1315,8 +1317,13 @@ export class PiBackend {
 		}
 		for (const gate of this.gates.values()) {
 			if (!gate.getRequest(requestId)) continue;
+			const drained = answer === "allowRun" ? gate.listPending().map((p) => p.id) : [requestId];
 			gate.respond(requestId, answer);
-			this.dispatchPermissionResolved({ sessionId: gate.getSessionId(), requestId, answered: true });
+			// allowRun 连带放行了排队中的请求，逐个通知观察者撤卡
+			for (const id of drained) {
+				this.dispatchPermissionResolved({ sessionId: gate.getSessionId(), requestId: id, answered: true });
+			}
+			if (answer === "allowRun") log.info("permission allowRun", gate.getSessionId(), { requestId });
 		}
 	}
 

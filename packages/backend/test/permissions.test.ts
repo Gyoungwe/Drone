@@ -76,4 +76,39 @@ describe("PermissionGate", () => {
 		await expect(promise).resolves.toBe(false);
 		expect(requests).toHaveLength(1);
 	});
+
+	it("allowRun：本次 run 内全部放行（含排队请求），endRun 后恢复审批", async () => {
+		const { gate, requests } = makeGate();
+		const first = gate.confirm("bash: rm *", "rm a");
+		const queued = gate.confirm("edit: /x/*", "/x/b");
+		expect(requests).toHaveLength(2);
+		expect(gate.isRunAllowed()).toBe(false);
+
+		gate.respond(requests[0].id, "allowRun");
+		await expect(first).resolves.toBe(true);
+		// 排队中的请求一并放行，不再等待用户
+		await expect(queued).resolves.toBe(true);
+		expect(gate.listPending()).toHaveLength(0);
+		expect(gate.isRunAllowed()).toBe(true);
+
+		// 不同 title 也直接通过，不产生新请求
+		await expect(gate.confirm("write: /y/*", "/y/c")).resolves.toBe(true);
+		expect(requests).toHaveLength(2);
+
+		// run 结束失效：下一次重新弹确认；且不像 allowAlways 那样按 title 记忆
+		gate.endRun();
+		expect(gate.isRunAllowed()).toBe(false);
+		const again = gate.confirm("bash: rm *", "rm d");
+		expect(requests).toHaveLength(3);
+		gate.respond(requests[2].id, "deny");
+		await expect(again).resolves.toBe(false);
+	});
+
+	it("dispose 时未决请求全部拒绝（原用例）", async () => {
+		const { gate, requests } = makeGate();
+		const promise = gate.confirm("x", "y");
+		gate.dispose();
+		await expect(promise).resolves.toBe(false);
+		expect(requests).toHaveLength(1);
+	});
 });

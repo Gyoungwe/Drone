@@ -53,7 +53,7 @@ export function ApprovalDock({
 
 	// 应答链：await IPC 成功才移除 UI（失败保留请求，agent 不丢审批）；按钮与快捷键共用
 	const respond = useCallback(
-		async (answer: "allow" | "deny" | "allowAlways" | "allowDir") => {
+		async (answer: "allow" | "deny" | "allowAlways" | "allowDir" | "allowRun") => {
 			if (!shown || leaving || !sessionId || sending) return;
 			setSending(true);
 			setError(null);
@@ -69,7 +69,7 @@ export function ApprovalDock({
 		[shown, leaving, sessionId, sending, resolvePermission],
 	);
 
-	// 键盘快捷键：Enter=允许一次，A=本项目总是允许，D=允许此目录（仅越界路径类有），Esc=拒绝
+	// 键盘快捷键：Enter=允许一次，T=本次任务全部允许，A=本项目总是允许，D=允许此目录（仅越界路径类有），Esc=拒绝
 	useEffect(() => {
 		if (!shown || leaving || !sessionId) return;
 		const onKeyDown = (e: KeyboardEvent) => {
@@ -80,9 +80,11 @@ export function ApprovalDock({
 						? "deny"
 						: e.key === "a" || e.key === "A"
 							? "allowAlways"
-							: (e.key === "d" || e.key === "D") && shown.suggestDir
-								? "allowDir"
-								: null;
+							: e.key === "t" || e.key === "T"
+								? "allowRun"
+								: (e.key === "d" || e.key === "D") && shown.suggestDir
+									? "allowDir"
+									: null;
 			if (!answer) return;
 			e.preventDefault();
 			void respond(answer);
@@ -148,6 +150,12 @@ export function ApprovalDock({
 							{t("permission.allowAlways")}
 							<kbd className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[10px] text-ink-faint">A</kbd>
 						</Button>
+						<Tooltip label={t("permission.allowRunHint")}>
+							<Button onClick={() => respond("allowRun")} data-testid="permission-allow-run">
+								{t("permission.allowRun")}
+								<kbd className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[10px] text-ink-faint">T</kbd>
+							</Button>
+						</Tooltip>
 						<Button variant="primary" onClick={() => respond("allow")}>
 							{t("permission.allowOnce")}
 							<kbd className="ml-1.5 rounded bg-on-ink/15 px-1 py-0.5 text-[10px] text-on-ink/80">Enter</kbd>
