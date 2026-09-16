@@ -226,7 +226,7 @@ it("a status card held during the turn is still delivered at agent_end", async (
 	// 回合结束：挂起的卡片必须补发，内容不丢
 	idle.value = true;
 	await events.agent_end({ messages: [{ role: "assistant", stopReason: "endTurn" }] }, ctx);
-	const cards = pi.sendMessage.mock.calls.filter(([m]) => m?.customType === "percho-task-status");
+	const cards = pi.sendMessage.mock.calls.filter(([m]) => m?.customType === "drone-task-status");
 	expect(cards.length).toBeGreaterThan(0);
 });
 it.each(["input", "session_shutdown", "abort"])(

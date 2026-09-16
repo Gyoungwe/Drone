@@ -10,6 +10,7 @@ import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
 import { registerIpc } from "./ipc";
 import { initLanObserver, type LanObserverHandle } from "./lan";
+import { migrateLegacyUserDir } from "./legacy-migration";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
 import { loadUiState } from "./ui-state";
 import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
@@ -87,6 +88,9 @@ nativeTheme.on("updated", () => applyChromeTheme(nativeTheme.themeSource));
 app.whenReady().then(async () => {
 	initLogging(join(app.getPath("userData"), "logs"));
 	log.info("app ready", { version: app.getVersion(), userData: app.getPath("userData") });
+
+	// percho → Drone 更名：一次性把旧 ~/.percho 的 daily 工作区接过来（失败不阻断启动）
+	await migrateLegacyUserDir();
 
 	// 自定义背景图协议：pi-bg://background/<文件名> → userData/backgrounds/<文件名>（文件名白名单防路径穿越）
 	protocol.handle(BG_PROTOCOL, (request) => {
