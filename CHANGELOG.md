@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0 — 2026-09-17
+
+- Added one task authorization: after bounded read-only discovery `task_plan` proposes the goal, a plain-language scope summary, existing write directories and immutable acceptance milestones at once, and the single 确认一次，执行到交付 action approves the acceptance criteria and the execution budget and starts the task without a second Continue click. Consent is bound to an immutable contract hash over the task id, goal, binding, scope summary, directory list and milestones, so it never transfers to another task, session or changed contract.
+- Added scoped write consent: ordinary `write`/`edit` calls under the approved canonical directories and their children are allowed without a prompt. Only the default whole-tool `ask` is replaced; explicit deny rules, pattern-specific asks, command gates, credentials, permission/trust/model configuration, private keys and VCS internals keep their existing gates, and canonical path resolution rejects symlink escape and hard-linked write targets.
+- Added automatic stage progress: stage checkpoints advance on observed progress only, with at most 3 host-triggered recovery turns inside the unchanged 192-call lifetime ceiling. Status spam, failed checks and fabricated result events do not count as progress, and a recoverable blocked publication continues through a nonce-checked host message rather than a forged user turn.
+- Added 本次任务全部允许 / Allow all for this task (`allowRun`, shortcut `T`) to the approval dock: it approves every remaining confirmation in the current agent run, drains the queued requests and expires at `agent_end`. It is not persisted, is not remembered by pattern and never overrides a `deny` rule. Together with the authorization card the user sees at most one card plus at most one command prompt per task.
+- Added the `研究工作流` interruption budget: all user decisions are front-loaded into one message, mid-task choices use documented defaults, and the defaults taken are reported under 我替你决定的.
+- Added `docs/task-authorization.md` describing what one authorization does and does not cover, the automatic progress and recovery limits, and the code map for the permission path.
+
 ## 0.8.1 — 2026-09-16
 
 - Research answers are written for the researcher: the recommendation and its key reasons come first, decisions the user must make come second with defaults, and run directories, hashes, wiki links and failed downloads are collapsed into a final `依据与记录` section. Evidence and publication rules are unchanged.
