@@ -67,6 +67,7 @@ export const zh = {
 		checking: "正在检查更新…",
 		available: "发现新版本 {version}，点击下载",
 		availableManual: "发现新版本 {version}，点击前往下载页",
+		download: "下载更新",
 		goDownload: "前往下载",
 		downloading: "下载中 {percent}%",
 		downloaded: "已下载，重启后安装",

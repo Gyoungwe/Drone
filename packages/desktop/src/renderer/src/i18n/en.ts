@@ -70,6 +70,7 @@ export const en: Messages = {
 		checking: "Checking for updates…",
 		available: "Version {version} available, click to download",
 		availableManual: "Version {version} available, click to open the download page",
+		download: "Download update",
 		goDownload: "Download",
 		downloading: "Downloading {percent}%",
 		downloaded: "Downloaded, installs on restart",
