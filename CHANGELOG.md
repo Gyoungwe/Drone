@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.5 — 2026-09-16
+
+- Fixed the About page update flow so an available release can be downloaded in-app instead of triggering another check.
+- Added explicit download-update labels in the Chinese and English UI.
+
 ## 0.7.4 — 2026-09-16
 
 - Zotero gets a dedicated UI panel with its own sidebar entry (next to Obsidian): live status, an enable/disable toggle for the Zotero MCP server, one-click connect/install, and open Zotero/docs — backed by a new read-only `getZoteroStatus` IPC.
