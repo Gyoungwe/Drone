@@ -43,7 +43,7 @@ const readOnly = (name) =>
 	/^research_(?:read_|search_|check_answer$|wiki_navigate$|knowledge_status$|zotero_status$|restore_evidence$|wiki_review_status$|list_wiki)/.test(
 		name,
 	);
-const terminal = (state) => ["completed", "cancelled"].includes(state);
+const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
 const error = (code, message) => Object.assign(new Error(message), { code });
 const stable = (value) =>
 	JSON.stringify(value, (_key, v) =>
@@ -279,10 +279,15 @@ export function createTaskWorkbench({
 			if (!active() && eligible.length === 1) book.activeTaskId = eligible[0].id;
 		} else {
 			const t = make(query);
+			if (book.tasks.length >= LIMITS.tasks) {
+				// Archived tasks are already exported/closed; drop the oldest one to make room, never an open task.
+				const archived = book.tasks.filter((x) => x.state === "archived");
+				if (archived.length) book.tasks.splice(book.tasks.indexOf(archived[0]), 1);
+			}
 			if (book.tasks.length >= LIMITS.tasks)
 				throw error(
 					"task-capacity",
-					"Task history is full. Finish or export/archive a task explicitly; no history is silently discarded.",
+					"Task history is full. Archive a finished task from the task panel (export first if needed); no open task is silently discarded.",
 				);
 			if (active()?.state === "running") active().state = "partial";
 			book.tasks.push(t);
@@ -305,7 +310,7 @@ export function createTaskWorkbench({
 		if (terminal(t.state))
 			throw error(
 				"task-terminal",
-				"Start a new task rather than silently reopening a completed/cancelled one.",
+				"Start a new task rather than silently reopening a completed/cancelled/archived one.",
 			);
 		if (t.operations.some((o) => ["started", "unknown"].includes(o.state))) {
 			t.state = "blocked";
@@ -444,6 +449,25 @@ export function createTaskWorkbench({
 			t.reason = "user-cancelled";
 			for (const a of t.actions) if (a.state === "pending") a.state = "cancelled";
 			settleWait(t);
+		} else if (input.action === "archive") {
+			if (!["completed", "cancelled", "partial", "blocked"].includes(t.state))
+				throw error("archive-state", "Cancel or finish the task before archiving it.");
+			if (t.operations.some((o) => ["started", "unknown"].includes(o.state)))
+				throw error(
+					"archive-unknown",
+					"Reconcile unknown effects before archiving; archiving is not confirmation.",
+				);
+			if (t.actions.some((a) => a.state === "pending"))
+				throw error("archive-pending", "Resolve or dismiss pending user actions before archiving.");
+			t.archivedFrom = t.state;
+			t.state = "archived";
+			t.reason = "user-archived";
+			t.archivedAt = now();
+			settleWait(t);
+			if (book.activeTaskId === t.id) {
+				book.activeTaskId = null;
+				pinned = false;
+			}
 		} else if (input.action === "next-stage") {
 			if (t.budget.calls >= LIMITS.totalCalls)
 				throw error(
@@ -607,7 +631,7 @@ export function createTaskWorkbench({
 		return view();
 	}
 	function derive(t) {
-		if (t.state === "cancelled") return;
+		if (terminal(t.state) && t.state !== "completed") return;
 		if (t.operations.some((o) => ["unknown", "started", "changed"].includes(o.state))) {
 			t.state = "blocked";
 			t.reason = "reconcile-before-retry";
@@ -848,6 +872,7 @@ export function createTaskWorkbench({
 			partial: "部分完成",
 			completed: "已满足记录的验收条件",
 			cancelled: "已取消",
+			archived: "已归档",
 		};
 		return [
 			"### 任务执行记录",

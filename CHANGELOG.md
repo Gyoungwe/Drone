@@ -1,13 +1,14 @@
 # Changelog
 
-## Unreleased — task workbench (v0.8.0 preview)
+## 0.8.0 — 2026-09-16
 
-- Added the structured task workbench (`.pi/lib/tasks/workbench.mjs`, `register.mjs`): model-proposed milestones/acceptance require explicit user approval, human-review waits are scoped to their own action, and the durable ledger is restored on restart without replaying unknown side effects. Legacy runtime remains available with `PERCHO_TASK_WORKBENCH=off`.
+- Added the structured task workbench (`.pi/lib/tasks/workbench.mjs`, `register.mjs`): model-proposed milestones with dependencies require explicit user approval; acceptance is only satisfied by host file readback, scoped human review, Wiki review records or read-only Zotero item identity. Human-review waits resolve only their own action, and the durable ledger is restored on restart without replaying unknown side effects. The v0.7.8 runtime remains available with `PERCHO_TASK_WORKBENCH=off`.
+- Added cross-task selection: continuation phrases with several open tasks require an explicit choice; task switches cannot steal in-flight operations.
+- Added task archiving: a closed or paused task with no unknown effects and no pending user actions can be archived from the task panel; archived tasks never resume and the oldest archived task is the only thing dropped when task history is full. Open tasks are never discarded.
 - Added host-side evidence recovery, isolated PDF identity extraction (pdf.js in a bounded worker; title/DOI checked, never extension alone) and read-only Zotero reconciliation (item counts never become import completion).
-- Added the `TaskWorkbenchCard` renderer, shared `task-workbench` / `evidence-labels` types, and `taskView` decoding in task-status messages.
+- Added the Desktop `TaskWorkbenchCard`, a read-only LAN task card projected from the same `taskView`, and shared `task-workbench` / `evidence-labels` types.
 - Fixed the PDF worker on Windows: pdf.js requires a trailing-slash file URL for `standardFontDataUrl`, and `destroy()` now falls back to the loading task for pdf.js v6.
 - Fixed the knowledge UI smoke script shadowing the module-level `actions` array with a task-scoped one.
-- Verification (Windows): lint 0 errors, typecheck, 1,324 tests (backend 915, desktop 396, shared 13), build.
 
 ## 0.7.8 — 2026-09-16
 

@@ -196,6 +196,44 @@ it("waiting time is separate and cancellation is not consent", () => {
 	expect(j.snapshot().state).toBe("blocked");
 	expect(j.snapshot().actions[0].state).toBe("cancelled");
 });
+it("archiving requires an explicitly closed task with nothing pending and frees history capacity", () => {
+	const { j, entries } = setup();
+	const first = j.snapshot().id;
+	// Running task with a pending user action cannot be archived; archiving is not consent or confirmation.
+	const a = j.wait({ kind: "authorization", title: "选择写入方式", reason: "需要用户选择" });
+	expect(() => act(j, "archive")).toThrow("Cancel or finish");
+	act(j, "dismiss", { actionId: a.id });
+	expect(j.snapshot().state).toBe("blocked");
+	// Unknown effects must be reconciled first.
+	j.guard(effect("w-unknown"));
+	j.pause("user-aborted");
+	expect(j.snapshot().operations[0].state).toBe("unknown");
+	expect(() => act(j, "archive")).toThrow("Reconcile unknown effects");
+	act(j, "confirm-outcome", { operationId: j.snapshot().operations[0].id });
+	act(j, "archive");
+	const archived = j.view().tasks.find((t) => t.id === first);
+	expect(archived.state).toBe("archived");
+	expect(archived.archivedFrom).toBe("partial");
+	expect(j.view().activeTaskId).toBeNull();
+	// Archived tasks are never resumed by a continuation and do not count toward the selection prompt.
+	j.begin("新的任务");
+	expect(j.begin("继续").taskId).not.toBe(first);
+	expect(() => j.command({ taskId: first, revision: j.view().revision, action: "archive" })).toThrow(
+		"Cancel or finish",
+	);
+	// Capacity: with the book full, only the oldest archived task is dropped; open tasks are never discarded.
+	for (let i = j.view().tasks.length; i < LIMITS.tasks; i++) j.begin(`任务 ${i}`);
+	expect(j.view().tasks).toHaveLength(LIMITS.tasks);
+	j.begin("再来一个");
+	expect(j.view().tasks).toHaveLength(LIMITS.tasks);
+	expect(j.view().tasks.some((t) => t.id === first)).toBe(false);
+	expect(() => j.begin("超出容量")).toThrow("Archive a finished task");
+	// Durable: the archived state survives restart from the persisted ledger.
+	const restored = createTaskWorkbench();
+	restored.attach("scope-a", entries);
+	expect(restored.view().tasks).toHaveLength(LIMITS.tasks);
+	expect(restored.view().tasks.some((t) => t.id === first)).toBe(false);
+});
 it("action links reject credentials and executable protocols", () => {
 	const { j } = setup();
 	for (const url of [

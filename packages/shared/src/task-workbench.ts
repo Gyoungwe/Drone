@@ -5,7 +5,8 @@ export type TaskState =
 	| "blocked"
 	| "partial"
 	| "completed"
-	| "cancelled";
+	| "cancelled"
+	| "archived";
 export interface TaskArtifact {
 	path: string;
 	bytes: number;
@@ -56,6 +57,8 @@ export interface WorkbenchTask {
 	reason: string | null;
 	stage: number;
 	planApproved?: boolean;
+	archivedFrom?: TaskState;
+	archivedAt?: string;
 	budget: { calls: number; stageCalls: number };
 	waitMs: number;
 	capabilities: string[];
@@ -79,6 +82,7 @@ const states = new Set([
 	"partial",
 	"completed",
 	"cancelled",
+	"archived",
 ]);
 /** Presentation-only whitelist; it never authorizes a mutation or certifies a conclusion. */
 export function decodeTaskView(value: unknown): TaskView | undefined {
@@ -156,4 +160,15 @@ export const TASK_STATE_LABELS: Record<TaskState, string> = {
 	partial: "部分完成",
 	completed: "记录的验收已满足",
 	cancelled: "已取消",
+	archived: "已归档",
 };
+/** Task states with no further agent continuation; the UI hides resume/stage/cancel for them. */
+export const TERMINAL_TASK_STATES: ReadonlySet<TaskState> = new Set(["completed", "cancelled", "archived"]);
+/** Archiving requires an explicitly closed or paused task with nothing pending; mirrors the host ledger rule. */
+export function canArchiveTask(task: WorkbenchTask): boolean {
+	return (
+		["completed", "cancelled", "partial", "blocked"].includes(task.state) &&
+		!task.operations.some((o) => o.state === "started" || o.state === "unknown") &&
+		!task.actions.some((a) => a.state === "pending")
+	);
+}

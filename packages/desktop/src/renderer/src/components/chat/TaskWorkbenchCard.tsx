@@ -1,4 +1,10 @@
-import { TASK_STATE_LABELS, type TaskView, taskActionCommand } from "@percho/shared";
+import {
+	canArchiveTask,
+	TASK_STATE_LABELS,
+	type TaskView,
+	TERMINAL_TASK_STATES,
+	taskActionCommand,
+} from "@percho/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
@@ -88,7 +94,7 @@ export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; session
 						</button>
 						<button
 							type="button"
-							disabled={disabled || ["completed", "cancelled"].includes(task.state)}
+							disabled={disabled || TERMINAL_TASK_STATES.has(task.state)}
 							className={button}
 							onClick={() => act(task.id, "resume")}
 						>
@@ -96,7 +102,7 @@ export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; session
 						</button>
 						<button
 							type="button"
-							disabled={disabled || ["completed", "cancelled"].includes(task.state)}
+							disabled={disabled || TERMINAL_TASK_STATES.has(task.state)}
 							className={button}
 							onClick={() => act(task.id, "next-stage")}
 						>
@@ -104,12 +110,23 @@ export function TaskWorkbenchCard({ view, sessionId }: { view: TaskView; session
 						</button>
 						<button
 							type="button"
-							disabled={disabled || ["completed", "cancelled"].includes(task.state)}
+							disabled={disabled || TERMINAL_TASK_STATES.has(task.state)}
 							className={button}
 							onClick={() => act(task.id, "cancel")}
 						>
 							取消任务
 						</button>
+						{task.state !== "archived" && (
+							<button
+								type="button"
+								disabled={disabled || !canArchiveTask(task)}
+								className={button}
+								title="归档后不再计入可继续任务；历史满时最早的归档任务会被移除，请先导出检查点"
+								onClick={() => act(task.id, "archive")}
+							>
+								归档任务
+							</button>
+						)}
 					</div>
 					<details open={task.id === view.activeTaskId} className="mt-3 text-xs">
 						<summary className="cursor-pointer text-ink-dim">验收、人工介入与操作账本</summary>

@@ -3,6 +3,7 @@ import { type LanI18nKey, t } from "../i18n";
 import { ChevronRightIcon, ImageIcon } from "./icons";
 import { Markdown } from "./Markdown";
 import { SubagentCard } from "./SubagentCard";
+import { TaskCard } from "./TaskCard";
 import { ToolCard } from "./ToolCard";
 
 /** 图片占位块（sanitize 后 data 为哨兵值；lan-web 不传输 base64 图片）。UX v2：🖼 emoji → SVG。 */
@@ -111,6 +112,7 @@ export function MessageItem({
 				</div>
 			);
 		case "assistant":
+			if (message.taskView) return <TaskCard view={message.taskView} />;
 			if (message.progress && !message.text)
 				return (
 					<aside
