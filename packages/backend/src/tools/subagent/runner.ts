@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { PROTECTED_KNOWLEDGE_AGENTS } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
 import type {
 	AgentSessionEvent,
@@ -17,7 +18,6 @@ import {
 	SessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { PROTECTED_KNOWLEDGE_AGENTS } from "@percho/shared";
 import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
@@ -281,9 +281,9 @@ export async function resolveSubagentMcpAccess(
 	if (!projectTrusted) return "none";
 	let workspacePolicy: SubagentMcpAccess = "none";
 	try {
-		if (process.env.PERCHO_KNOWLEDGE_DIR) {
+		if (process.env.DRONE_KNOWLEDGE_DIR) {
 			const binding = JSON.parse(
-				await readFile(join(process.env.PERCHO_KNOWLEDGE_DIR, "binding.json"), "utf8"),
+				await readFile(join(process.env.DRONE_KNOWLEDGE_DIR, "binding.json"), "utf8"),
 			) as { version?: number; subagentPolicy?: unknown };
 			if (binding.version === 1 && binding.subagentPolicy === "read-local") workspacePolicy = "read-local";
 		} else {
@@ -386,8 +386,8 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 	const customTools: ToolDefinition[] = [makeStatusTool(), contactSupervisorTool];
 	if (safeTools.includes("webfetch")) customTools.push(makeWebFetchTool());
 	const mcpAccess = await resolveSubagentMcpAccess(input.cwd, input.agent, input.projectTrusted);
-	const readonlyMcpExtension = process.env.PERCHO_RESEARCH_WORKBENCH_ROOT
-		? join(process.env.PERCHO_RESEARCH_WORKBENCH_ROOT, "extensions", "subagent-mcp-readonly.mjs")
+	const readonlyMcpExtension = process.env.DRONE_RESEARCH_WORKBENCH_ROOT
+		? join(process.env.DRONE_RESEARCH_WORKBENCH_ROOT, "extensions", "subagent-mcp-readonly.mjs")
 		: fileURLToPath(new URL("../../../../../.pi/extensions/subagent-mcp-readonly.mjs", import.meta.url));
 	const childExtensionFactories = [
 		makePermissionGateExtension(agentDir, {
@@ -400,10 +400,10 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 			makeSubagentReadonlyMcp: (cwd: string) => (pi: unknown) => void;
 		};
 		childExtensionFactories.push(readonlyMcp.makeSubagentReadonlyMcp(input.cwd) as never);
-	} else if (process.env.PERCHO_KNOWLEDGE_DIR) {
+	} else if (process.env.DRONE_KNOWLEDGE_DIR) {
 		// Children without Vault permission return labeled material, not a checked parent answer.
-		const modulePath = process.env.PERCHO_RESEARCH_WORKBENCH_ROOT
-			? join(process.env.PERCHO_RESEARCH_WORKBENCH_ROOT, "lib", "knowledge", "publication.mjs")
+		const modulePath = process.env.DRONE_RESEARCH_WORKBENCH_ROOT
+			? join(process.env.DRONE_RESEARCH_WORKBENCH_ROOT, "lib", "knowledge", "publication.mjs")
 			: fileURLToPath(new URL("../../../../../.pi/lib/knowledge/publication.mjs", import.meta.url));
 		const publication = (await import(pathToFileURL(modulePath).href)) as {
 			registerAnswerPublication: (

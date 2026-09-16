@@ -1,4 +1,4 @@
-import type { KnowledgeOverview } from "@percho/shared";
+import type { KnowledgeOverview } from "@drone/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";

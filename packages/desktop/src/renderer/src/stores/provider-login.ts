@@ -1,4 +1,4 @@
-import type { LoginAuthPrompt, ProviderInfo } from "@percho/shared";
+import type { LoginAuthPrompt, ProviderInfo } from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
 import { useSessionsStore } from "./sessions";

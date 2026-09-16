@@ -1,10 +1,10 @@
-import { taskStatusDisplay } from "@percho/shared";
+import { taskStatusDisplay } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { assignEntryIds, readSessionMessagesFromContent, toSessionMessages } from "../src/session/messages";
 
 const status = {
 	role: "custom",
-	customType: "percho-task-status",
+	customType: "drone-task-status",
 	content: "任务执行记录：文件已回读，不是科研结论",
 	display: true,
 	timestamp: 100,
@@ -18,7 +18,7 @@ describe("host task status history", () => {
 	});
 	it.each([
 		{ ...status, display: false },
-		{ ...status, customType: "percho-task-context" },
+		{ ...status, customType: "drone-task-context" },
 		{ ...status, role: "assistant" },
 		{ ...status, details: {} },
 		{ ...status, content: "x".repeat(16001) },

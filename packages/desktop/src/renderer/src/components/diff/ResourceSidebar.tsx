@@ -1,4 +1,4 @@
-import type { ResourcePreviewResult } from "@percho/shared";
+import type { ResourcePreviewResult } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";

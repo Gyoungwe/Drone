@@ -1,4 +1,4 @@
-import { buildChatRows, deriveRunInspectors, deriveTurnTimings, deriveTurnUsage } from "@percho/shared";
+import { buildChatRows, deriveRunInspectors, deriveTurnTimings, deriveTurnUsage } from "@drone/shared";
 import { useCallback, useEffect, useRef } from "react";
 import { t } from "../i18n";
 import { useLanStore } from "../store";

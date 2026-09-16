@@ -1,4 +1,4 @@
-import { IpcChannels, KNOWN_UI_SLOTS, type UiPluginsConfig } from "@percho/shared";
+import { IpcChannels, KNOWN_UI_SLOTS, type UiPluginsConfig } from "@drone/shared";
 import { ipcMain, shell } from "electron";
 import { loadUiPluginsConfig } from "../ui-plugins/config";
 import type { UiPluginManager } from "../ui-plugins/manager";

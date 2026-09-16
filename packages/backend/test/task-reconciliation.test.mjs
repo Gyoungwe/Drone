@@ -29,7 +29,7 @@ function pdf(text) {
 	return output;
 }
 it("actual isolated PDF parser checks requested title and DOI, not extension alone", async () => {
-	const dir = await mkdtemp(join(tmpdir(), "percho-pdf-identity-"));
+	const dir = await mkdtemp(join(tmpdir(), "drone-pdf-identity-"));
 	try {
 		await writeFile(join(dir, "paper.pdf"), pdf("An isolated developmental study DOI 10.1234/fixture"));
 		const expected = { kind: "pdf", title: "An isolated developmental study", doi: "10.1234/fixture" };
@@ -44,7 +44,7 @@ it("actual isolated PDF parser checks requested title and DOI, not extension alo
 	}
 });
 it("native write timeout reconciles existing expected bytes without replay", async () => {
-	const dir = await mkdtemp(join(tmpdir(), "percho-task-timeout-"));
+	const dir = await mkdtemp(join(tmpdir(), "drone-task-timeout-"));
 	try {
 		const entries = [],
 			j = createTaskWorkbench({ persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }) });

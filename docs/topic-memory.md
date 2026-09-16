@@ -1,7 +1,7 @@
 # Topic memory
 
 Topic memory is bounded navigation metadata stored outside the configured Vault at
-`<PERCHO_KNOWLEDGE_DIR>/<vaultId>/topic-memory/<project>.json`. The scope is the
+`<DRONE_KNOWLEDGE_DIR>/<vaultId>/topic-memory/<project>.json`. The scope is the
 validated application binding (`vaultId`) and the current project; records never
 cross either boundary.
 

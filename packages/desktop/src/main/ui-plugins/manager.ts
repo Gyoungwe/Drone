@@ -13,7 +13,7 @@ import {
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { createLogger } from "@percho/backend";
+import { createLogger } from "@drone/backend";
 import {
 	KNOWN_UI_REGIONS,
 	KNOWN_UI_SLOTS,
@@ -22,7 +22,7 @@ import {
 	type UiPluginInfo,
 	type UiPluginManifest,
 	type UiPluginsConfig,
-} from "@percho/shared";
+} from "@drone/shared";
 import { app } from "electron";
 import { buildPlugin } from "./build";
 import { defaultUiPluginsConfig, loadUiPluginsConfig, saveUiPluginsConfig } from "./config";
@@ -87,15 +87,15 @@ export function uiPluginsResourcesDir(): string {
 }
 
 /**
- * 分发 agent 规范三件套：SPEC.md / percho-ui.d.ts 是**宿主管理的契约文档**（agent 按它写插件），
+ * 分发 agent 规范三件套：SPEC.md / drone-ui.d.ts 是**宿主管理的契约文档**（agent 按它写插件），
  * 始终更新到随包版本（内容一致跳过避免无谓写入），用户不应手改——这不是用户配置。
  * examples/ 整体拷为 `_examples/`（下划线开头过不了 NAME_RE，scanAll 天然忽略、不会当插件扫描）；
- * 并确保 symlink ~/.percho/ui-plugins → userData/ui-plugins（给 agent 一个不随 dev/prod 漂移的稳定路径）。
+ * 并确保 symlink ~/.drone/ui-plugins → userData/ui-plugins（给 agent 一个不随 dev/prod 漂移的稳定路径）。
  * 任一步失败只告警不致命（插件加载不受影响）。
  */
 async function seedDocs(): Promise<void> {
 	const root = pluginsDir();
-	for (const file of ["SPEC.md", "percho-ui.d.ts"]) {
+	for (const file of ["SPEC.md", "drone-ui.d.ts"]) {
 		try {
 			const [src, dst] = await Promise.all([
 				readFile(join(uiPluginsResourcesDir(), file)),
@@ -109,17 +109,17 @@ async function seedDocs(): Promise<void> {
 	}
 	// examples 示例插件目录（拷成 _examples 防被 scanAll 当插件扫描）
 	await copyTree(join(uiPluginsResourcesDir(), "examples"), join(root, "_examples"));
-	const link = join(homedir(), ".percho", "ui-plugins");
+	const link = join(homedir(), ".drone", "ui-plugins");
 	try {
 		const existing = await lstat(link).catch(() => null);
 		if (existing?.isSymbolicLink()) {
 			if ((await realpath(link)) !== root) {
-				log.warn("~/.percho/ui-plugins symlink 指向其他位置，跳过");
+				log.warn("~/.drone/ui-plugins symlink 指向其他位置，跳过");
 			}
 		} else if (existing) {
-			log.warn("~/.percho/ui-plugins 已存在且非 symlink，跳过");
+			log.warn("~/.drone/ui-plugins 已存在且非 symlink，跳过");
 		} else {
-			await mkdir(join(homedir(), ".percho"), { recursive: true });
+			await mkdir(join(homedir(), ".drone"), { recursive: true });
 			// Windows 普通用户建符号链接需管理员/开发者模式（EPERM 必现，#28 附报）；
 			// junction 目录联接不需提权，行为等价（目录型链接、跟随重定向）；
 			// 其他平台保持真 symlink（lstat/realpath 判定与上面一致，junction 在 POSIX 不可用）
@@ -127,8 +127,8 @@ async function seedDocs(): Promise<void> {
 		}
 	} catch (err) {
 		// 链接失败只告警：插件功能不受影响（真实目录在 userData/ui-plugins），
-		// 只是 agent 按规范路径 ~/.percho/ui-plugins 读不到，提示真实路径便于排查
-		log.error(`symlink ~/.percho/ui-plugins failed（真实插件目录：${root}）`, err);
+		// 只是 agent 按规范路径 ~/.drone/ui-plugins 读不到，提示真实路径便于排查
+		log.error(`symlink ~/.drone/ui-plugins failed（真实插件目录：${root}）`, err);
 	}
 }
 
@@ -138,7 +138,7 @@ function validateManifest(dirName: string, m: Partial<UiPluginManifest>): string
 	if (typeof m.name !== "string" || !NAME_RE.test(m.name) || m.name !== dirName) {
 		return `name 非法（须匹配 ${NAME_RE.source} 且与目录名一致）`;
 	}
-	if (m.perchoUi !== 1) return "perchoUi 版本不匹配（当前只接受 1）";
+	if (m.droneUi !== 1) return "droneUi 版本不匹配（当前只接受 1）";
 	if (typeof m.main !== "string" || m.main.includes("..") || !MAIN_RE.test(m.main)) {
 		return "main 非法（须为目录内相对路径，禁止 .. 穿越，后缀 .ts/.tsx/.js/.jsx）";
 	}
@@ -311,7 +311,7 @@ export class UiPluginManager {
 			displayName: typeof manifest?.displayName === "string" ? manifest.displayName : undefined,
 			description: typeof manifest?.description === "string" ? manifest.description : undefined,
 			version: typeof manifest?.version === "string" ? manifest.version : undefined,
-			perchoUi: manifest?.perchoUi,
+			droneUi: manifest?.droneUi,
 			slots: manifest?.slots ?? {},
 			contributions: filterContributions(manifest?.contributions),
 			headless: manifest?.headless === true ? true : undefined,

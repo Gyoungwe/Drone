@@ -1,4 +1,4 @@
-import type { TrustOption, TrustRequest } from "@percho/shared";
+import type { TrustOption, TrustRequest } from "@drone/shared";
 import { useT } from "../../i18n";
 import { Button } from "../ui/Button";
 

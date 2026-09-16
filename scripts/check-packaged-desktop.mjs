@@ -11,16 +11,16 @@ import { join, resolve } from "node:path";
 
 if (process.argv.includes("--help")) {
 	console.log(
-		"node scripts/check-packaged-desktop.mjs /absolute/path/Percho.app\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used.",
+		"node scripts/check-packaged-desktop.mjs /absolute/path/Drone.app\nLaunches only the specified package with isolated HOME/userData/agentDir/knowledgeDir. Leaves screenshots and a JSON validation receipt in a temporary folder. No real credentials, Vaults or model requests are used.",
 	);
 	process.exit(0);
 }
 if (process.platform !== "darwin") throw new Error("This package smoke currently validates macOS only");
-if (!process.argv[2]) throw new Error("A built Percho.app path is required");
+if (!process.argv[2]) throw new Error("A built Drone.app path is required");
 const bundle = await realpath(resolve(process.argv[2]));
-const executable = join(bundle, "Contents/MacOS/Percho");
+const executable = join(bundle, "Contents/MacOS/Drone");
 await access(executable);
-const root = await realpath(await mkdtemp(join(tmpdir(), "percho-fresh-package-")));
+const root = await realpath(await mkdtemp(join(tmpdir(), "drone-fresh-package-")));
 const home = join(root, "home"),
 	profile = join(root, "profile"),
 	agent = join(root, "agent"),
@@ -43,14 +43,14 @@ const child = spawn(
 		env: {
 			PATH: process.env.PATH || "/usr/bin:/bin",
 			HOME: home,
-			USER: "percho-fixture",
-			LOGNAME: "percho-fixture",
+			USER: "drone-fixture",
+			LOGNAME: "drone-fixture",
 			LANG: "en_US.UTF-8",
 			TMPDIR: join(root, "tmp"),
 			XDG_CONFIG_HOME: join(home, ".config"),
 			XDG_CACHE_HOME: join(home, ".cache"),
 			PI_CODING_AGENT_DIR: agent,
-			PERCHO_KNOWLEDGE_DIR: knowledge,
+			DRONE_KNOWLEDGE_DIR: knowledge,
 		},
 	},
 );

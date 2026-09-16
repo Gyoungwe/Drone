@@ -1,4 +1,4 @@
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
 import { initDailyDir, isDailyCwd } from "../lib/daily";

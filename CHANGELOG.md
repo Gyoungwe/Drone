@@ -17,7 +17,7 @@
 
 ## 0.8.0 — 2026-09-16
 
-- Added the structured task workbench (`.pi/lib/tasks/workbench.mjs`, `register.mjs`): model-proposed milestones with dependencies require explicit user approval; acceptance is only satisfied by host file readback, scoped human review, Wiki review records or read-only Zotero item identity. Human-review waits resolve only their own action, and the durable ledger is restored on restart without replaying unknown side effects. The v0.7.8 runtime remains available with `PERCHO_TASK_WORKBENCH=off`.
+- Added the structured task workbench (`.pi/lib/tasks/workbench.mjs`, `register.mjs`): model-proposed milestones with dependencies require explicit user approval; acceptance is only satisfied by host file readback, scoped human review, Wiki review records or read-only Zotero item identity. Human-review waits resolve only their own action, and the durable ledger is restored on restart without replaying unknown side effects. The v0.7.8 runtime remains available with `DRONE_TASK_WORKBENCH=off`.
 - Added cross-task selection: continuation phrases with several open tasks require an explicit choice; task switches cannot steal in-flight operations.
 - Added task archiving: a closed or paused task with no unknown effects and no pending user actions can be archived from the task panel; archived tasks never resume and the oldest archived task is the only thing dropped when task history is full. Open tasks are never discarded.
 - Added host-side evidence recovery, isolated PDF identity extraction (pdf.js in a bounded worker; title/DOI checked, never extension alone) and read-only Zotero reconciliation (item counts never become import completion).
@@ -113,7 +113,7 @@ See [`docs/releases/v0.7.0.md`](docs/releases/v0.7.0.md) and [`docs/p5-p10-accep
 
 - Research source/software/manual delivery now records stronger provenance and separates metadata, readable evidence, presentation artifacts, and scientific claims.
 - Sidebar Obsidian entry now matches Settings/Help hit targets and includes a visible label.
-- Public repository, update, release, issue, and security links now target `Gyoungwe/percho` while preserving original author attribution.
+- Public repository, update, release, issue, and security links now target `Gyoungwe/Drone` while preserving original author attribution.
 - Repository Biome checks were normalized so lint, typecheck, tests, and build can pass the release gate.
 
 ### Validation

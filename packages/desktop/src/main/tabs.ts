@@ -1,6 +1,6 @@
 import { join } from "node:path";
-import { createLogger, JsonStore } from "@percho/backend";
-import type { SavedTabs } from "@percho/shared";
+import { createLogger, JsonStore } from "@drone/backend";
+import type { SavedTabs } from "@drone/shared";
 import { app } from "electron";
 
 const log = createLogger("tabs");

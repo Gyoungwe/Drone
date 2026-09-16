@@ -1,5 +1,5 @@
+import { isSubagentToolName } from "@drone/shared";
 import type { AgentSession, LoadExtensionsResult } from "@earendil-works/pi-coding-agent";
-import { isSubagentToolName } from "@percho/shared";
 
 export interface ShadowedSubagentExtension {
 	extensionPath: string;

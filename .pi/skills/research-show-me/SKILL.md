@@ -4,7 +4,7 @@ description: First-party portable Show Me fallback for evidence-based paper and 
 ---
 # Research Show Me
 
-This first-party presentation skill ships with Percho; it is not a copy of the optional third-party show-me skill. Use it when that skill is unavailable. Work only with sources actually supplied or read. A bibliographic record is not a full paper, and a manual homepage is not a complete command reference.
+This first-party presentation skill ships with Drone; it is not a copy of the optional third-party show-me skill. Use it when that skill is unavailable. Work only with sources actually supplied or read. A bibliographic record is not a full paper, and a manual homepage is not a complete command reference.
 
 ## Paper explanation
 Explain the research question, main claims, methods, supporting observations, assumptions and limitations. Include a small comparison table when comparing papers. Distinguish observations from inference; clearly identify unread full text, missing supplements and pending Wiki knowledge. Do not create a mechanism claim from an unrelated species or experimental condition.

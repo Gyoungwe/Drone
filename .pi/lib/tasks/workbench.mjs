@@ -4,7 +4,7 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import { contractHash, hasTaskConsent, MAX_AUTO_RESUMES } from "./consent.mjs";
 import { readPdfIdentity } from "./pdf-identity.mjs";
 
-export const WORKBENCH_ENTRY = "percho-task-workbench-v2";
+export const WORKBENCH_ENTRY = "drone-task-workbench-v2";
 export const LIMITS = Object.freeze({
 	tasks: 12,
 	operations: 64,
@@ -229,7 +229,7 @@ export function createTaskWorkbench({
 				.reverse()
 				.find(
 					(e) =>
-						e.customType === "percho-task-checkpoint-v1" &&
+						e.customType === "drone-task-checkpoint-v1" &&
 						e.data?.scope === scope &&
 						typeof e.data?.goal === "string",
 				);

@@ -1,12 +1,12 @@
-# Percho UI 插件开发规范（SPEC）
+# Drone UI 插件开发规范（SPEC）
 
-> 本文件随 Percho 分发（`userData/ui-plugins/SPEC.md`），是 agent 编写 UI 插件的唯一权威依据。
-> 配套类型声明：同目录 `percho-ui.d.ts`（与宿主 `window.PerchoUI` 暴露清单**逐名一致**）。
+> 本文件随 Drone 分发（`userData/ui-plugins/SPEC.md`），是 agent 编写 UI 插件的唯一权威依据。
+> 配套类型声明：同目录 `drone-ui.d.ts`（与宿主 `window.DroneUI` 暴露清单**逐名一致**）。
 > 完整示例：`examples/terminal-tool-card/`。槽位契约设计见宿主仓库 `.local/docs/design/spec/ui-plugin-system.md`。
 
 ## 1. 什么是 UI 插件
 
-Percho 的某些前端组件是**可替换的命名槽位（Slot）**。插件 = `userData/ui-plugins/<name>/` 目录下的一个 TSX 包，构建在宿主 main 进程完成，产物在应用内运行，替换默认组件渲染。插件与宿主**共享同一个 React 实例**。
+Drone 的某些前端组件是**可替换的命名槽位（Slot）**。插件 = `userData/ui-plugins/<name>/` 目录下的一个 TSX 包，构建在宿主 main 进程完成，产物在应用内运行，替换默认组件渲染。插件与宿主**共享同一个 React 实例**。
 
 ```
 my-plugin/
@@ -55,7 +55,7 @@ interface SubagentRunUi {
 	"version": "0.1.0",
 	"displayName": "终端风工具卡",
 	"description": "把工具调用卡改成终端样式",
-	"perchoUi": 1,
+	"droneUi": 1,
 	"main": "src/index.tsx",
 	"slots": { "chat.tool-call-card": "ToolCallCard" }
 }
@@ -63,7 +63,7 @@ interface SubagentRunUi {
 
 字段规则（任一不满足 → 插件标记「清单无效」，不加载）：
 - `name`：必填，`/^[a-z0-9][a-z0-9-]*$/`，**必须与目录名一致**；
-- `perchoUi`：必填，宿主契约版本，当前只接受 `1`；
+- `droneUi`：必填，宿主契约版本，当前只接受 `1`；
 - `main`：必填，插件目录内相对路径，**禁止 `..` 穿越**；后缀 `.ts/.tsx/.js/.jsx`；
 - `slots`：必填非空对象，key 必须是上表槽位名，value 是具名导出名；
 - `version` / `displayName` / `description`：可选展示字段。
@@ -74,7 +74,7 @@ interface SubagentRunUi {
 
 ```ts
 import { useState, memo } from "react";                 // react（含 react/jsx-runtime，JSX 自动使用）
-import { Button, useT } from "@percho/plugin-api";      // 宿主 API（见 §4）
+import { Button, useT } from "@drone/plugin-api";      // 宿主 API（见 §4）
 import idleUrl from "./assets/idle.png";                // 插件目录内图片资产（见下）
 ```
 
@@ -90,10 +90,10 @@ import idleUrl from "./assets/idle.png";                // 插件目录内图片
 - ❌ 禁止 import 任何其他 npm 包（构建器只重写上述四个 specifier，其余裸导入构建直接失败）；
 - ❌ 禁止 Node API（`process`/`fs`/`path`/`require` 等都不存在——代码跑在浏览器沙箱渲染进程）；
 - ❌ 禁止 `fetch`/网络请求、`localStorage`（宿主未授权，且 CSP 会拦）；
-- ❌ 禁止直接访问 `window.pi` 做任何 IPC 调用（信任模型边界，插件只准用 `window.PerchoUI` 暴露的能力）；
-- ✅ 允许 `window.PerchoUI` 的 hooks 取宿主 store 数据（如 todo 面板替换）。
+- ❌ 禁止直接访问 `window.pi` 做任何 IPC 调用（信任模型边界，插件只准用 `window.DroneUI` 暴露的能力）；
+- ✅ 允许 `window.DroneUI` 的 hooks 取宿主 store 数据（如 todo 面板替换）。
 
-## 4. `@percho/plugin-api` 导出清单
+## 4. `@drone/plugin-api` 导出清单
 
 ```ts
 export const version;                       // 宿主 API 版本（1）
@@ -113,7 +113,7 @@ export const stores: {                      // 宿主 zustand store（与宿主�
 };
 ```
 
-`react` 的完整导出（`Children`/`Component`/`memo`/`useEffect` 等全部 hooks）也可用，见 `percho-ui.d.ts`。
+`react` 的完整导出（`Children`/`Component`/`memo`/`useEffect` 等全部 hooks）也可用，见 `drone-ui.d.ts`。
 
 ## 5. 样式纪律（强制）
 
@@ -137,15 +137,15 @@ export const stores: {                      // 宿主 zustand store（与宿主�
 
 ## 9. 交付闭环（agent 标准流程）
 
-1. 读本 SPEC + `percho-ui.d.ts`；
-2. 在 `~/.percho/ui-plugins/<name>/`（=`userData/ui-plugins/<name>/`，宿主已建 symlink）scaffold：`plugin.json` + `src/index.tsx`；
+1. 读本 SPEC + `drone-ui.d.ts`；
+2. 在 `~/.drone/ui-plugins/<name>/`（=`userData/ui-plugins/<name>/`，宿主已建 symlink）scaffold：`plugin.json` + `src/index.tsx`；
 3. 保存 → 宿主自动构建（面板若显示「构建失败」则修语法/导入问题）；
 4. **引导用户去 设置 → UI 插件 面板启用**（总开关 + 插件启用带二次确认，agent 无权代劳——这是信任门）；
 5. 用户确认替换生效后，迭代样式时直接改 `src/index.tsx` 保存即可热替换。
 
 ## 10. Region/Contribution：往页面加挂新组件（Phase 3）
 
-Slot 是「替换」，Region/Contribution 是「新增」：插件可以在宿主界面的固定「区域」加挂组件（桌宠 / token 仪表盘 / 氛围光效 / 插件自带设置页）。一个区域可挂 N 个贡献（堆叠），同一插件可同时声明 `slots` 与 `contributions`。贡献**无 props**，数据一律从 `window.PerchoUI.stores` / `hooks` 自取（store 连接型）。
+Slot 是「替换」，Region/Contribution 是「新增」：插件可以在宿主界面的固定「区域」加挂组件（桌宠 / token 仪表盘 / 氛围光效 / 插件自带设置页）。一个区域可挂 N 个贡献（堆叠），同一插件可同时声明 `slots` 与 `contributions`。贡献**无 props**，数据一律从 `window.DroneUI.stores` / `hooks` 自取（store 连接型）。
 
 ### 10.1 区域目录 v1 与 manifest
 
@@ -162,7 +162,7 @@ z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全�
 ```json
 {
 	"name": "my-pet",
-	"perchoUi": 1,
+	"droneUi": 1,
 	"main": "src/index.tsx",
 	"contributions": [
 		{ "id": "pet", "region": "app.overlay", "anchor": "bottom-right", "export": "Pet", "title": "桌宠" }
@@ -191,7 +191,7 @@ z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全�
 - `settings.panel` 贡献渲染为设置弹窗的独立分类（分类 id `plugin:<name>:<cid>`，标题 = `title`），随插件启停自动增删；
 - 排查：贡献根元素外层的宿主容器挂 `data-plugin="<name>"` 属性（插件无需自己做）；
 - **内置插件**：`resources/ui-plugins/builtin/` 随包分发，应用首次启动/升级时导出到用户插件目录（与用户插件同一条扫描/构建/热重载路径，面板带「内置」badge、启用免二次确认）。**直接改内置副本会在下次升级被覆盖——魔改请把目录改名另存**（`plugin.json` 的 `name` 同步改）；手动删除的目录本版本内不会回来，下次升级重新导出；
-- 新 hooks（`percho-ui.d.ts` 已声明）：`useContextUsage(sessionId)` 返回 `{ tokens, contextWindow, percent }`（事件驱动刷新，token 仪表盘用）；`useLanguage()` 返回 `"zh" | "en"`（插件自有文案跟随中英）。
+- 新 hooks（`drone-ui.d.ts` 已声明）：`useContextUsage(sessionId)` 返回 `{ tokens, contextWindow, percent }`（事件驱动刷新，token 仪表盘用）；`useLanguage()` 返回 `"zh" | "en"`（插件自有文案跟随中英）。
 
 ### 10.4 示例
 
@@ -204,7 +204,7 @@ Slot 是「替换组件」，Contribution 是「加挂组件」，Headless 是�
 ```json
 {
 	"name": "voice-alerts",
-	"perchoUi": 1,
+	"droneUi": 1,
 	"main": "src/index.ts",
 	"headless": true
 }
@@ -213,7 +213,7 @@ Slot 是「替换组件」，Contribution 是「加挂组件」，Headless 是�
 入口导出 `activate(): (() => void) | void`：插件加载（含热重载重载）时调用；返回的清理函数在**禁用/卸载/热重载替换**时调用（无返回值则无清理）：
 
 ```ts
-import { stores } from "@percho/plugin-api";
+import { stores } from "@drone/plugin-api";
 
 export function activate() {
 	// 命令式访问宿主 store（无头插件没有组件，不用 hook）

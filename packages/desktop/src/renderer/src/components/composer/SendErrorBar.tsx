@@ -1,4 +1,4 @@
-import type { UiError } from "@percho/shared";
+import type { UiError } from "@drone/shared";
 import { type MessageKey, useT } from "../../i18n";
 import { ErrorCircleIcon, RefreshIcon } from "../icons";
 

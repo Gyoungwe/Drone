@@ -1,4 +1,4 @@
-import { LAN_IMAGE_PLACEHOLDER, type SessionEvent, type SessionMessage } from "@percho/shared";
+import { LAN_IMAGE_PLACEHOLDER, type SessionEvent, type SessionMessage } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { sanitizeSessionEvent, sanitizeSessionMessage } from "../src/lan/sanitize";
 

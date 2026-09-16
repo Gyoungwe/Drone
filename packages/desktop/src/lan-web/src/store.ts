@@ -1,4 +1,4 @@
-import type { LanSseFrame, LanTranscript } from "@percho/shared";
+import type { LanSseFrame, LanTranscript } from "@drone/shared";
 import { create } from "zustand";
 import {
 	applyFrame,
@@ -11,7 +11,7 @@ import {
 
 export type { LanAppState } from "./store-pure";
 
-const TOKEN_KEY = "percho-lan-token";
+const TOKEN_KEY = "drone-lan-token";
 
 interface LanStore extends LanAppState {
 	/** 401 → 清 token 回输入页，并置 authFailed（TokenGate 展示「令牌无效」）。 */

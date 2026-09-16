@@ -1,4 +1,4 @@
-import type { PermissionMode } from "@percho/shared";
+import type { PermissionMode } from "@drone/shared";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";

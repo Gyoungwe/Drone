@@ -1,4 +1,4 @@
-import type { BackgroundSettings, ThemeMode } from "@percho/shared";
+import type { BackgroundSettings, ThemeMode } from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
 

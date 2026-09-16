@@ -1,5 +1,5 @@
-import type { UiPluginContribution, UiPluginManifest } from "@percho/shared";
-import { KNOWN_UI_REGIONS, KNOWN_UI_SLOTS } from "@percho/shared";
+import type { UiPluginContribution, UiPluginManifest } from "@drone/shared";
+import { KNOWN_UI_REGIONS, KNOWN_UI_SLOTS } from "@drone/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useUiPluginRegistry } from "./registry";
 import { UI_REGIONS, UI_SLOTS } from "./slots";
@@ -19,7 +19,7 @@ function manifest(
 	name = "test-plugin",
 	contributions?: UiPluginContribution[],
 ): UiPluginManifest {
-	return { name, perchoUi: 1, main: "src/index.tsx", slots, contributions };
+	return { name, droneUi: 1, main: "src/index.tsx", slots, contributions };
 }
 
 const noop = () => null;
@@ -295,7 +295,7 @@ describe("ui plugin registry", () => {
 describe("headless plugins", () => {
 	const headlessManifest = (): UiPluginManifest => ({
 		name: "headless-plugin",
-		perchoUi: 1,
+		droneUi: 1,
 		main: "src/index.ts",
 		headless: true,
 	});

@@ -1,5 +1,5 @@
-import type { PiBackend } from "@percho/backend";
-import { SESSION_INVOKE_METHODS } from "@percho/shared";
+import type { PiBackend } from "@drone/backend";
+import { SESSION_INVOKE_METHODS } from "@drone/shared";
 import { registerInvokers } from "./register-invokers";
 
 /**

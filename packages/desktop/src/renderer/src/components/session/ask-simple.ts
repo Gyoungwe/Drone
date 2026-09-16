@@ -1,4 +1,4 @@
-import type { AskOption, AskRequest } from "@percho/shared";
+import type { AskOption, AskRequest } from "@drone/shared";
 
 const CONFIRM = /确认|应用|\b(?:allow|apply|yes|ok|confirm)\b/i;
 const CUSTOM = /自定义|其他|\b(?:custom|other)\b/i;

@@ -1,4 +1,4 @@
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 
 /**
  * 会话诊断信息文本（spec log-trace-hardening 决策 6）：纯文本，用户一键复制直接贴给
@@ -13,7 +13,7 @@ export function buildDiagnosticsText(
 	const dir = sessionFile.includes("/") ? sessionFile.slice(0, sessionFile.lastIndexOf("/")) : "";
 	const traceFile = dir ? `${dir}/traces/trace-${session.sessionId}.jsonl` : "(内存会话)";
 	return [
-		"Percho 诊断信息",
+		"Drone 诊断信息",
 		`sessionId: ${session.sessionId}`,
 		`name: ${session.name ?? "(未命名)"}`,
 		`sessionFile: ${sessionFile}`,

@@ -1,6 +1,6 @@
-import type { PiBackend } from "@percho/backend";
-import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@percho/shared";
-import { IpcChannels } from "@percho/shared";
+import type { PiBackend } from "@drone/backend";
+import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@drone/shared";
+import { IpcChannels } from "@drone/shared";
 import { BrowserWindow } from "electron";
 import type { LanObserverHandle } from "../lan";
 import type { UiPluginManager } from "../ui-plugins/manager";

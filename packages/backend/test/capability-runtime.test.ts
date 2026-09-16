@@ -276,7 +276,7 @@ it("recovers same-session routing after restart under current exclusions, not ol
 });
 it("does not import capability visibility from another session", () => {
 	const manager = SessionManager.inMemory("/fixture");
-	manager.appendCustomEntry("percho-capability-checkpoint-v1", {
+	manager.appendCustomEntry("drone-capability-checkpoint-v1", {
 		scope: "other-session",
 		capabilities: ["coding"],
 		skills: ["research-workflow"],

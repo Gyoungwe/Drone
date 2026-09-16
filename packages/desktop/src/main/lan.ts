@@ -1,6 +1,6 @@
 import { networkInterfaces } from "node:os";
-import { LanConfigService, LanObserverServer, type PiBackend } from "@percho/backend";
-import type { LanStatus } from "@percho/shared";
+import { LanConfigService, LanObserverServer, type PiBackend } from "@drone/backend";
+import type { LanStatus } from "@drone/shared";
 import * as QRCode from "qrcode";
 // lan-web 单文件产物（vite-plugin-singlefile；需先跑 build:lan-web，dev/build 脚本已前置）
 import lanWebHtml from "../lan-web/dist/lan-web/index.html?raw";
@@ -16,8 +16,8 @@ export interface LanObserverHandle {
 
 /** PWA 轻量壳清单（「添加到主屏」全屏）；token 不进 start_url，页面自行从 localStorage 恢复。 */
 const PWA_MANIFEST = JSON.stringify({
-	name: "Percho Remote",
-	short_name: "Percho",
+	name: "Drone Remote",
+	short_name: "Drone",
 	start_url: "./",
 	scope: "./",
 	display: "standalone",

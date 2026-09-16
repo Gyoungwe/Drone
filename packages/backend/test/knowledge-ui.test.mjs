@@ -21,11 +21,11 @@ async function note(path, text) {
 	await writeFile(join(vault, path), text);
 }
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-knowledge-ui-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-ui-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
 	await mkdir(cwd);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	const result = await configureObsidian({ cwd, vault, project: "project-a" });
 	revision = result.bindingRevision;
@@ -232,7 +232,7 @@ it("no-path preview uses the current Vault and always includes actual template c
 	);
 });
 it("template-only preview works without a project, binding or destination", async () => {
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "unbound-app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "unbound-app"));
 	const value = await ui.knowledgeSetupPreview({});
 	expect(value.context.vault).toBeNull();
 	expect(value.context.workspace).toBeNull();

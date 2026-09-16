@@ -1,4 +1,4 @@
-import type { ImageInput, UiError } from "@percho/shared";
+import type { ImageInput, UiError } from "@drone/shared";
 import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";

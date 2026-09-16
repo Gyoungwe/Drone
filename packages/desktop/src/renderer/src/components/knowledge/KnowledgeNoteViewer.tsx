@@ -1,5 +1,5 @@
-import type { KnowledgeNote } from "@percho/shared";
-import { legacyEvidenceNotice } from "@percho/shared";
+import type { KnowledgeNote } from "@drone/shared";
+import { legacyEvidenceNotice } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { Markdown } from "../chat/Markdown";

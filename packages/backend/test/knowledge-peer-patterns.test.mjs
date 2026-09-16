@@ -21,11 +21,11 @@ async function note(path, body) {
 	await writeFile(join(vault, path), body);
 }
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-peer-memory-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-peer-memory-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
 	await mkdir(cwd);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
 	await configureObsidian({ cwd, vault, project: "project-a" });

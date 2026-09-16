@@ -1,5 +1,5 @@
+import type { AskQuestion, AskRequest, AskResponse } from "@drone/shared";
 import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-agent";
-import type { AskQuestion, AskRequest, AskResponse } from "@percho/shared";
 import { Type } from "typebox";
 
 const optionSchema = Type.Object({
@@ -151,8 +151,7 @@ export function makeAskUserTool(deps: AskUserToolDeps): ToolDefinition<typeof pa
 	return {
 		name: "ask_user",
 		label: "Ask User",
-		description:
-			"Ask the user structured clarification questions in the Percho desktop UI before proceeding.",
+		description: "Ask the user structured clarification questions in the Drone desktop UI before proceeding.",
 		promptSnippet:
 			"Clarify ambiguous or preference-sensitive decisions with a short interactive interview before proceeding",
 		parameters: paramsSchema,

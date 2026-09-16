@@ -7,7 +7,7 @@ import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
 const START = "<!-- pi-agent:managed:start -->",
 	END = "<!-- pi-agent:managed:end -->";
-const queueKey = Symbol.for("percho.knowledge.wiki-review-locks.v1");
+const queueKey = Symbol.for("drone.knowledge.wiki-review-locks.v1");
 globalThis[queueKey] ??= new Map();
 const queues = globalThis[queueKey];
 const digest = (text) => createHash("sha256").update(text).digest("hex");

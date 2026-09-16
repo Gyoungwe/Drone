@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { KNOWLEDGE_SPECIALISTS } from "@drone/shared";
 import { fauxToolCall as call, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
-import { KNOWLEDGE_SPECIALISTS } from "@percho/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
 import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
@@ -224,11 +224,11 @@ async function note(path, text) {
 	await writeFile(join(vault, path), text);
 }
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-specialists-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-specialists-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
 	await mkdir(cwd);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
 	await configureObsidian({ cwd, vault, project: "project-a" });

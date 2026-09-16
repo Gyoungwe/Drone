@@ -13,7 +13,7 @@ The knowledge-service index still excludes attachments, hidden files, symlinks a
 
 ## What “original text” means here
 
-The original *document* stays in Zotero. The original *knowledge object* that Percho can cite is a bounded Markdown literature note:
+The original *document* stays in Zotero. The original *knowledge object* that Drone can cite is a bounded Markdown literature note:
 
 - Path: `Library/Papers/<slug>.md` (`research_deposit_knowledge` `type=paper`)
 - Frontmatter identity: `type: paper` plus optional `zotero_key` / `zotero_citekey`
@@ -26,7 +26,7 @@ A download, Zotero search hit, MCP tool result, or unread PDF is a source record
 
 [zotero-mcp](https://github.com/54yyyu/zotero-mcp) exposes two routes that share one install (`zotero-mcp-server`) and one config:
 
-1. **Preferred: `zotero-cli` + first-party skill `zotero-literature`.** Shell-capable Percho sessions load a small skill instead of 30+ MCP tool schemas on every request.
+1. **Preferred: `zotero-cli` + first-party skill `zotero-literature`.** Shell-capable Drone sessions load a small skill instead of 30+ MCP tool schemas on every request.
 2. **Optional: MCP server `zotero`.** `/zotero-setup` can register it in the user `mcp.json` **disabled by default**. Enable it in Settings → MCP only when the CLI path is insufficient. Lazy External Apps still gates MCP tools.
 
 `/zotero-setup` can install `zotero-mcp-server` from zero after a native confirm (uv, pipx, or `python -m pip`; otherwise the official uv script). It does not install Zotero desktop, does not write Claude Desktop config, and does not copy the library into the Vault.
@@ -39,6 +39,6 @@ Wiki proposals still require actual Vault source paths. A `zotero:` link in a pa
 
 ## Setup
 
-- Percho `/zotero-setup` (skill `zotero-literature`): confirm → install `zotero-mcp-server` if missing → register optional MCP (disabled).
+- Drone `/zotero-setup` (skill `zotero-literature`): confirm → install `zotero-mcp-server` if missing → register optional MCP (disabled).
 - User still installs/starts Zotero 7+ and enables the local-API checkbox. The host cannot click that setting.
 - Knowledge UI explains the split and launches the same command. `/obsidian-setup` still owns the Vault.

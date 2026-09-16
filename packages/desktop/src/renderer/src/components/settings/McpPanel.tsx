@@ -1,4 +1,4 @@
-import type { McpConfigSnapshot, McpServerStatus, McpStatus } from "@percho/shared";
+import type { McpConfigSnapshot, McpServerStatus, McpStatus } from "@drone/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GearIcon, RefreshIcon } from "../../components/icons";
 import { useT } from "../../i18n";

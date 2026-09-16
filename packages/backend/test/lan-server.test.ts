@@ -49,7 +49,7 @@ async function start(
 	observer: LanObserverBackend = backend(),
 	options: { auditPath?: string; remoteControl?: boolean; pingMs?: number } = {},
 ): Promise<LanObserverServer> {
-	const dir = await mkdtemp(join(tmpdir(), "percho-lan-"));
+	const dir = await mkdtemp(join(tmpdir(), "drone-lan-"));
 	dirs.push(dir);
 	const config = new LanConfigService(join(dir, "lan-observer.json"));
 	await config.save({ enabled: true, port, token, remoteControl: options.remoteControl ?? false });
@@ -432,7 +432,7 @@ describe("LanObserverServer", () => {
 		servers.splice(servers.indexOf(off), 1);
 
 		// remoteControl 开启
-		const auditDir = await mkdtemp(join(tmpdir(), "percho-lan-audit-"));
+		const auditDir = await mkdtemp(join(tmpdir(), "drone-lan-audit-"));
 		dirs.push(auditDir);
 		const auditPath = join(auditDir, "lan-audit.jsonl");
 		const server = await start(0, observer, { auditPath, remoteControl: true });

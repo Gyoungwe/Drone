@@ -1,4 +1,4 @@
-import type { PiApi } from "@percho/shared";
+import type { PiApi } from "@drone/shared";
 
 declare global {
 	interface Window {

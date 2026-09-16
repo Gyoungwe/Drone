@@ -1,10 +1,10 @@
-import { NPM_NOT_FOUND_SENTINEL } from "@percho/shared";
+import { NPM_NOT_FOUND_SENTINEL } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { isNpmSpawnEnoent } from "../src/packages/admin";
 
 /**
  * npm ENOENT 错误识别（issue #18：GUI 启动 PATH 不含 npm → spawn npm ENOENT）。
- * 命中时抛带 PERCHO_NPM_NOT_FOUND 哨兵的可读错误，renderer 映射为 i18n 文案。
+ * 命中时抛带 DRONE_NPM_NOT_FOUND 哨兵的可读错误，renderer 映射为 i18n 文案。
  */
 
 describe("isNpmSpawnEnoent", () => {
@@ -45,6 +45,6 @@ describe("isNpmSpawnEnoent", () => {
 
 describe("NPM_NOT_FOUND_SENTINEL", () => {
 	it("哨兵值稳定（renderer 依赖此前缀做 i18n 映射）", () => {
-		expect(NPM_NOT_FOUND_SENTINEL).toBe("PERCHO_NPM_NOT_FOUND");
+		expect(NPM_NOT_FOUND_SENTINEL).toBe("DRONE_NPM_NOT_FOUND");
 	});
 });

@@ -5,25 +5,25 @@ import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/
 type E = Parameters<typeof projectKnowledgeEvent>[0];
 type M = Parameters<typeof projectKnowledgeSnapshot>[0][number];
 const ev = (o: unknown): E => o as E;
-const KEY = Symbol.for("percho.knowledge.publication.v1");
+const KEY = Symbol.for("drone.knowledge.publication.v1");
 const NOTICE = "发布检查未加载";
 
 describe("knowledge-publication fallback（bridge 缺失）", () => {
-	const prevDir = process.env.PERCHO_KNOWLEDGE_DIR;
+	const prevDir = process.env.DRONE_KNOWLEDGE_DIR;
 	const prevBridge = (globalThis as Record<symbol, unknown>)[KEY];
 	beforeEach(() => {
-		process.env.PERCHO_KNOWLEDGE_DIR = "/tmp/vault";
+		process.env.DRONE_KNOWLEDGE_DIR = "/tmp/vault";
 		delete (globalThis as Record<symbol, unknown>)[KEY];
 	});
 	afterEach(() => {
-		if (prevDir === undefined) delete process.env.PERCHO_KNOWLEDGE_DIR;
-		else process.env.PERCHO_KNOWLEDGE_DIR = prevDir;
+		if (prevDir === undefined) delete process.env.DRONE_KNOWLEDGE_DIR;
+		else process.env.DRONE_KNOWLEDGE_DIR = prevDir;
 		if (prevBridge === undefined) delete (globalThis as Record<symbol, unknown>)[KEY];
 		else (globalThis as Record<symbol, unknown>)[KEY] = prevBridge;
 	});
 
-	it("PERCHO_KNOWLEDGE_DIR 未设时原样透传", () => {
-		delete process.env.PERCHO_KNOWLEDGE_DIR;
+	it("DRONE_KNOWLEDGE_DIR 未设时原样透传", () => {
+		delete process.env.DRONE_KNOWLEDGE_DIR;
 		const e = ev({
 			type: "message_end",
 			message: { role: "assistant", content: [{ type: "text", text: "draft" }] },

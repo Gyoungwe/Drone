@@ -7,7 +7,7 @@ import { TraceRecorder } from "../src/session/trace";
 const dirs: string[] = [];
 
 async function tmpDir(): Promise<string> {
-	const dir = await mkdtemp(join(tmpdir(), "percho-trace-"));
+	const dir = await mkdtemp(join(tmpdir(), "drone-trace-"));
 	dirs.push(dir);
 	return dir;
 }
@@ -117,7 +117,7 @@ describe("TraceRecorder", () => {
 		recorder.record({ type: "message_update", huge: "x".repeat(50 * 1024) });
 		await recorder.close();
 		const [line] = await allLines(dir, "s5");
-		const { emptyTranscript, reduceEvent } = await import("@percho/shared");
+		const { emptyTranscript, reduceEvent } = await import("@drone/shared");
 		const streaming = reduceEvent(emptyTranscript(), { type: "agent_start" } as never);
 		// reducer message_update 分支会直接解引用 assistantMessageEvent——标记行必须走 default no-op
 		expect(reduceEvent(streaming, JSON.parse(line ?? "{}") as never)).toBe(streaming);
@@ -159,7 +159,7 @@ describe("TraceRecorder", () => {
 		expect(custom.ts).toBeGreaterThan(0);
 
 		// reducer 消费：trace_custom 行 no-op（state 引用不变），replay-trace.mts 同路径安全
-		const { emptyTranscript, reduceEvent } = await import("@percho/shared");
+		const { emptyTranscript, reduceEvent } = await import("@drone/shared");
 		const state = reduceEvent(emptyTranscript(), { type: "agent_start" } as never);
 		const nextState = reduceEvent(state, { type: "turn_start" } as never);
 		expect(reduceEvent(nextState, JSON.parse(lines[1] ?? "{}") as never)).toBe(nextState);

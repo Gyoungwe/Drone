@@ -1,4 +1,4 @@
-import type { ContextManagerMode } from "@percho/shared";
+import type { ContextManagerMode } from "@drone/shared";
 import type { Language } from "../../i18n";
 import { useI18nStore, useT } from "../../i18n";
 import { useSettingsStore } from "../../stores/settings";

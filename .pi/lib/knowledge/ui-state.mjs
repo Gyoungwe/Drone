@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-const key = Symbol.for("percho.knowledge.ui.v1");
+const key = Symbol.for("drone.knowledge.ui.v1");
 globalThis[key] ??= { listeners: new Set(), flows: new Map(), seq: 0 };
 const state = globalThis[key];
 const MAX_SESSIONS = 64,

@@ -1,4 +1,4 @@
-import type { AskRequest } from "@percho/shared";
+import type { AskRequest } from "@drone/shared";
 import { describe, expect, it, vi } from "vitest";
 import type { PermissionGate } from "../src/permissions/gate";
 import { AskGate } from "../src/session/ask-gate";

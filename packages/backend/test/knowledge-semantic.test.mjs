@@ -11,12 +11,12 @@ import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
 let root, vault, cwd, app;
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-semantic-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-semantic-")));
 	vault = join(root, "Vault");
 	cwd = join(root, "project");
 	app = join(root, "app");
 	await mkdir(cwd);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", app);
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", app);
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 });
 afterEach(async () => {

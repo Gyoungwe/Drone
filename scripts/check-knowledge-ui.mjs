@@ -11,7 +11,7 @@ import { build as bundle } from "esbuild";
 import { build as viteBuild } from "vite";
 
 const repo = resolve("."),
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-knowledge-ui-smoke-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-ui-smoke-")));
 await mkdir(join(root, "electron-profile"));
 console.log("Isolated fixture:", root);
 await writeFile(
@@ -62,7 +62,7 @@ await bundle({
 	external: ["electron"],
 	logLevel: "warning",
 });
-const env = { ...process.env, PERCHO_UI_FIXTURE: root, PERCHO_UI_REPO: repo };
+const env = { ...process.env, DRONE_UI_FIXTURE: root, DRONE_UI_REPO: repo };
 delete env.ELECTRON_RUN_AS_NODE;
 const child = spawn(electron, [join(root, "main.mjs")], { env, stdio: "inherit" });
 const watchdog = setTimeout(() => {

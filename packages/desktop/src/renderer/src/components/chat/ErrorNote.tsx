@@ -1,4 +1,4 @@
-import type { UIMessage, UiError } from "@percho/shared";
+import type { UIMessage, UiError } from "@drone/shared";
 import { useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { type MessageKey, useT } from "../../i18n";

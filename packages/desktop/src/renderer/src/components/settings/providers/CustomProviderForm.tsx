@@ -1,4 +1,4 @@
-import { type CustomProviderInput, KNOWN_APIS, type ProviderInfo } from "@percho/shared";
+import { type CustomProviderInput, KNOWN_APIS, type ProviderInfo } from "@drone/shared";
 import { useState } from "react";
 import { useT } from "../../../i18n";
 import { useSettingsStore } from "../../../stores/settings";

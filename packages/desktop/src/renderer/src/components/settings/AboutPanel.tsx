@@ -1,4 +1,4 @@
-import type { AppInfo } from "@percho/shared";
+import type { AppInfo } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -62,7 +62,7 @@ export function AboutPanel() {
 			<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink text-[16px] font-bold text-on-ink">
 				P
 			</div>
-			<p className="mt-2 text-[14px] font-semibold text-ink">{info?.name ?? "Percho"}</p>
+			<p className="mt-2 text-[14px] font-semibold text-ink">{info?.name ?? "Drone"}</p>
 			<p className="text-[11px] text-ink-faint">{t("settings.about.poweredBy")}</p>
 			<p className="mt-2 font-mono text-[12px] text-ink-dim">
 				{t("settings.about.version")} {info?.version ?? "…"}

@@ -1,6 +1,6 @@
+import type { ProviderInfo } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import type { ProviderInfo } from "@percho/shared";
 import { describe, expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 

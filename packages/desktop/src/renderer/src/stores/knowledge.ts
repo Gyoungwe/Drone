@@ -1,4 +1,4 @@
-import type { KnowledgeFlow, KnowledgeUiEvent } from "@percho/shared";
+import type { KnowledgeFlow, KnowledgeUiEvent } from "@drone/shared";
 import { create } from "zustand";
 export interface KnowledgeDialogContext {
 	cwd: string | null;

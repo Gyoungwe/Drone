@@ -1,4 +1,4 @@
-import type { SlashCommandInfo } from "@percho/shared";
+import type { SlashCommandInfo } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { filterCommands } from "./slash-filter";
 

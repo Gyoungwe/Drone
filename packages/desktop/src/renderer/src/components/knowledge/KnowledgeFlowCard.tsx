@@ -1,4 +1,4 @@
-import type { KnowledgeReadRecord } from "@percho/shared";
+import type { KnowledgeReadRecord } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";

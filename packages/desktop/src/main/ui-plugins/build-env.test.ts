@@ -20,7 +20,7 @@ vi.mock("node:fs", async (importOriginal) => {
 
 function fakePackagedEnv() {
 	Object.defineProperty(process, "resourcesPath", {
-		value: "/fake/Percho.app/Contents/Resources",
+		value: "/fake/Drone.app/Contents/Resources",
 		configurable: true,
 		writable: true,
 	});

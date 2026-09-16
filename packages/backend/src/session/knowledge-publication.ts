@@ -1,4 +1,4 @@
-import type { SessionEvent } from "@percho/shared";
+import type { SessionEvent } from "@drone/shared";
 import type { RawMessage } from "./messages";
 
 /**
@@ -13,7 +13,7 @@ interface PublicationBridge {
 	projectEvent?: (event: SessionEvent) => SessionEvent | null;
 	projectSnapshot?: (messages: RawMessage[], persisted: RawMessage[]) => RawMessage[];
 }
-const key = Symbol.for("percho.knowledge.publication.v1");
+const key = Symbol.for("drone.knowledge.publication.v1");
 function bridge(): PublicationBridge | undefined {
 	return (globalThis as unknown as Record<symbol, PublicationBridge>)[key];
 }
@@ -71,7 +71,7 @@ function failClosedEvent(event: SessionEvent): SessionEvent | null {
 
 /** Shared delivery boundary: desktop, LAN and trace consumers all receive the same projected event. */
 export function projectKnowledgeEvent(event: SessionEvent): SessionEvent | null {
-	if (!process.env.PERCHO_KNOWLEDGE_DIR) return event;
+	if (!process.env.DRONE_KNOWLEDGE_DIR) return event;
 	try {
 		const fn = bridge()?.projectEvent;
 		if (fn) return fn(event);
@@ -83,7 +83,7 @@ export function projectKnowledgeEvent(event: SessionEvent): SessionEvent | null 
 
 /** Live polling cannot reveal the assistant object while async validation is still pending. */
 export function projectKnowledgeSnapshot(messages: RawMessage[], persisted: RawMessage[]): RawMessage[] {
-	if (!process.env.PERCHO_KNOWLEDGE_DIR) return messages;
+	if (!process.env.DRONE_KNOWLEDGE_DIR) return messages;
 	try {
 		const fn = bridge()?.projectSnapshot;
 		if (fn) return fn(messages, persisted);

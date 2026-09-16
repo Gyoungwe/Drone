@@ -38,15 +38,15 @@ export function loadEsbuild(): Promise<typeof import("esbuild")> {
 }
 
 /**
- * 宿主 API 暴露面（四个虚拟模块的 shim 重写目标 = window.PerchoUI）。
- * 与 renderer 的 plugins/host-api.ts、Phase 2 的 resources/ui-plugins/percho-ui.d.ts
- * **逐名一致**（agent 写代码的类型来源就是 percho-ui.d.ts，错一个名字 agent 就会写出跑不起来的插件）。
- * 新增暴露 = 改这三处 + host-api.ts + shim + percho-ui.d.ts，同步进行。
+ * 宿主 API 暴露面（四个虚拟模块的 shim 重写目标 = window.DroneUI）。
+ * 与 renderer 的 plugins/host-api.ts、Phase 2 的 resources/ui-plugins/drone-ui.d.ts
+ * **逐名一致**（agent 写代码的类型来源就是 drone-ui.d.ts，错一个名字 agent 就会写出跑不起来的插件）。
+ * 新增暴露 = 改这三处 + host-api.ts + shim + drone-ui.d.ts，同步进行。
  */
 const SHIMS: Record<string, string> = {
 	// react：整个命名空间对象给到插件（与宿主同一实例）
 	react: `
-const R = window.PerchoUI.React;
+const R = window.DroneUI.React;
 export default R;
 export const { Children, Component, Fragment, PureComponent, StrictMode, Suspense,
   cloneElement, createContext, createElement, createRef, forwardRef, isValidElement,
@@ -56,16 +56,16 @@ export const { Children, Component, Fragment, PureComponent, StrictMode, Suspens
   useState, useSyncExternalStore, useTransition, version } = R;`,
 	// react/jsx-runtime：jsx automatic runtime 自动 import 这个 specifier，同样被重写
 	"react/jsx-runtime": `
-const J = window.PerchoUI.jsxRuntime;
+const J = window.DroneUI.jsxRuntime;
 export const { jsx, jsxs, Fragment } = J;`,
 	// react-dom（一般不需要；给了 createPortal 足以做弹层）
 	"react-dom": `
-const D = window.PerchoUI.ReactDOM;
+const D = window.DroneUI.ReactDOM;
 export default D;
 export const { createPortal, flushSync } = D;`,
-	// @percho/plugin-api：宿主精选子集
-	"@percho/plugin-api": `
-const A = window.PerchoUI;
+	// @drone/plugin-api：宿主精选子集
+	"@drone/plugin-api": `
+const A = window.DroneUI;
 export default A;
 export const { version, components, helpers, hooks, stores } = A;
 export const { Button, Dropdown, Tooltip, Markdown, ImagePreview } = A.components;
@@ -75,18 +75,18 @@ export const { useTranscriptStore, useSessionsStore, useUiStore, useProjectsStor
 };
 
 /**
- * externals 重写：react / react/jsx-runtime / react-dom / @percho/plugin-api
- * 重定向到 percho-external namespace，onLoad 返回从 window.PerchoUI 再导出的 shim。
+ * externals 重写：react / react/jsx-runtime / react-dom / @drone/plugin-api
+ * 重定向到 drone-external namespace，onLoad 返回从 window.DroneUI 再导出的 shim。
  * 产物里不允许出现任何裸导入符（sandbox renderer 无 import map、无 node_modules 解析）。
  */
-const perchoExternalsPlugin: Plugin = {
-	name: "percho-externals",
+const droneExternalsPlugin: Plugin = {
+	name: "drone-externals",
 	setup(build) {
-		build.onResolve({ filter: /^(react|react\/jsx-runtime|react-dom|@percho\/plugin-api)$/ }, (args) => ({
+		build.onResolve({ filter: /^(react|react\/jsx-runtime|react-dom|@drone\/plugin-api)$/ }, (args) => ({
 			path: args.path,
-			namespace: "percho-external",
+			namespace: "drone-external",
 		}));
-		build.onLoad({ filter: /.*/, namespace: "percho-external" }, (args) => ({
+		build.onLoad({ filter: /.*/, namespace: "drone-external" }, (args) => ({
 			contents: SHIMS[args.path],
 			loader: "js",
 		}));
@@ -137,7 +137,7 @@ export async function buildPlugin(
 			minify: false, // 方便用户/排查
 			logLevel: "silent", // 错误由我们捕获结构化，不打 console
 			loader: ASSET_LOADERS,
-			plugins: [perchoExternalsPlugin],
+			plugins: [droneExternalsPlugin],
 		});
 		return { ok: true };
 	} catch (err) {

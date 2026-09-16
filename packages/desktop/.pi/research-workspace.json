@@ -2,5 +2,5 @@
 	"resultsRoot": "./results",
 	"maxConcurrentSubagents": 3,
 	"timezone": "Asia/Shanghai",
-	"knowledgeProjectId": "percho"
+	"knowledgeProjectId": "drone"
 }

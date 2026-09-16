@@ -12,7 +12,7 @@ import type {
 	SessionEvent,
 	SessionMessage,
 	SessionMeta,
-} from "@percho/shared";
+} from "@drone/shared";
 import { LanAuditLog } from "./audit";
 import type { LanConfigService } from "./config";
 import {

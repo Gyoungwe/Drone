@@ -1,4 +1,4 @@
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 
 export type DateGroupKey = "today" | "yesterday" | "earlier";
 

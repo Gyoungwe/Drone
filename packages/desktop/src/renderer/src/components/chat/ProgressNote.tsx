@@ -1,4 +1,4 @@
-import type { ProgressDisplay } from "@percho/shared";
+import type { ProgressDisplay } from "@drone/shared";
 import { useI18nStore } from "../../i18n";
 export function ProgressNote({ progress }: { progress: ProgressDisplay }) {
 	const zh = useI18nStore((s) => s.language) === "zh";

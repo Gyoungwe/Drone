@@ -122,14 +122,14 @@ it("unknown writes and pending human actions prevent automatic recovery", async 
 	expect(restored.authorization(true)).toBeNull();
 });
 it("write directories must be actual project directories, not missing paths or a filesystem root", async () => {
-	const dir = await mkdtemp(join(tmpdir(), "percho-consent-"));
+	const dir = await mkdtemp(join(tmpdir(), "drone-consent-"));
 	dirs.push(dir);
 	expect(await resolveWriteRoots(dir, [".", "."])).toHaveLength(1);
 	await expect(resolveWriteRoots(dir, ["does-not-exist"])).rejects.toThrow();
 	await expect(resolveWriteRoots(dir, [process.platform === "win32" ? "C:/" : "/"])).rejects.toThrow();
 });
 async function registered() {
-	const dir = await mkdtemp(join(tmpdir(), "percho-consent-ui-"));
+	const dir = await mkdtemp(join(tmpdir(), "drone-consent-ui-"));
 	dirs.push(dir);
 	const events = {},
 		commands = {},
@@ -175,7 +175,7 @@ it("one card approval starts one hidden host continuation, not a forged user rep
 	await vi.runOnlyPendingTimersAsync();
 	const runs = pi.sendMessage.mock.calls.filter(([, o]) => o?.triggerTurn);
 	expect(runs).toHaveLength(1);
-	expect(runs[0][0]).toMatchObject({ customType: "percho-task-autocontinue", display: false });
+	expect(runs[0][0]).toMatchObject({ customType: "drone-task-autocontinue", display: false });
 	expect(pi.sendUserMessage).not.toHaveBeenCalled();
 	expect(j.snapshot().id).toBe(id);
 	expect(j.isAutoContinuation({ ...runs[0][0], role: "custom" })).toBe(true);
@@ -277,7 +277,7 @@ it("readback can verify a user-approved data directory outside the session cwd, 
 		events: {
 			on() {},
 			emit(name, request) {
-				if (name === "percho:task-read-check") {
+				if (name === "drone:task-read-check") {
 					readChecks++;
 					request.claim();
 					request.resolve(true);
@@ -300,7 +300,7 @@ it("readback can verify a user-approved data directory outside the session cwd, 
 	expect(j.snapshot().milestones[0].state).toBe("completed");
 	expect(j.snapshot().milestones[0].evidence.kind).toBe("file-observed");
 	pi.events.emit = (name, request) => {
-		if (name === "percho:task-read-check") {
+		if (name === "drone:task-read-check") {
 			request.claim();
 			request.resolve(false);
 		}

@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import type { McpConfigServer, McpConfigSnapshot, McpStatus } from "@drone/shared";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import type { McpConfigServer, McpConfigSnapshot, McpStatus } from "@percho/shared";
 
 type RawServer = Record<string, unknown>;
 type McpScope = McpConfigServer["scope"];

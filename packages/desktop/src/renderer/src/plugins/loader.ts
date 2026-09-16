@@ -3,7 +3,7 @@ import {
 	type UiPluginInfo,
 	type UiPluginManifest,
 	type UiPluginsConfig,
-} from "@percho/shared";
+} from "@drone/shared";
 import { getPi } from "../api";
 import { useUiPluginsStore } from "../stores/ui-plugins";
 import { useUiPluginRegistry } from "./registry";

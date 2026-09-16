@@ -1,4 +1,4 @@
-import type { UiPluginAnchor, UiPluginManifest } from "@percho/shared";
+import type { UiPluginAnchor, UiPluginManifest } from "@drone/shared";
 import type { ComponentType } from "react";
 import { create } from "zustand";
 import type { SlotName } from "./slots";

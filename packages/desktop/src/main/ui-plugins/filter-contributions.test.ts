@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { UiPluginContribution } from "@percho/shared";
+import type { UiPluginContribution } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { filterContributions } from "./manager";
 

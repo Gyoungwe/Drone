@@ -1,4 +1,4 @@
-import type { SessionEvent } from "@percho/shared";
+import type { SessionEvent } from "@drone/shared";
 
 /**
  * message_update 瘦身：SDK 的每条 delta 事件都携带**两份全量累积快照**

@@ -1,5 +1,5 @@
 {
-	"name": "@percho/desktop",
+	"name": "@drone/desktop",
 	"version": "0.9.0",
 	"private": true,
 	"description": "Desktop GUI for the Pi coding agent",
@@ -26,8 +26,8 @@
 		"@dnd-kit/sortable": "^10.0.0",
 		"@earendil-works/pi-ai": "0.84.3",
 		"@earendil-works/pi-coding-agent": "0.84.3",
-		"@percho/backend": "*",
-		"@percho/shared": "*",
+		"@drone/backend": "*",
+		"@drone/shared": "*",
 		"electron-updater": "^6.8.9",
 		"esbuild": "0.25.12",
 		"markstream-react": "^0.0.55",
@@ -56,5 +56,5 @@
 		"vite-plugin-singlefile": "^2.3.3",
 		"vitest": "^3.2.0"
 	},
-	"homepage": "https://github.com/Gyoungwe/percho#readme"
+	"homepage": "https://github.com/Gyoungwe/Drone#readme"
 }

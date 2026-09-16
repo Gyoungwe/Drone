@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { KnowledgeApi, KnowledgeUiEvent } from "@percho/shared";
+import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
 
 type Handler = (event: KnowledgeUiEvent) => void;
 /** Dynamic resource boundary works in source and electron-builder layouts. */
@@ -11,7 +11,7 @@ export class KnowledgeUiService {
 	private loading: Promise<void> | null = null;
 	private root() {
 		return (
-			process.env.PERCHO_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url))
+			process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url))
 		);
 	}
 	private async module(name: string) {
@@ -20,7 +20,7 @@ export class KnowledgeUiService {
 		);
 	}
 	async connect(): Promise<void> {
-		if (!process.env.PERCHO_KNOWLEDGE_DIR || this.unsubscribe || this.disposed) return;
+		if (!process.env.DRONE_KNOWLEDGE_DIR || this.unsubscribe || this.disposed) return;
 		if (!this.loading)
 			this.loading = this.module("ui-state")
 				.then((mod) => {

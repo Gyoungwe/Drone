@@ -1,4 +1,4 @@
-import type { AskRequest, AskResponse, TrustRequest } from "@percho/shared";
+import type { AskRequest, AskResponse, TrustRequest } from "@drone/shared";
 import { useCallback, useEffect, useState } from "react";
 import { getPi } from "./api";
 import { EmptyState } from "./components/chat/EmptyState";

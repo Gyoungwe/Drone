@@ -1,4 +1,4 @@
-import { KNOWN_UI_REGIONS, KNOWN_UI_SLOTS, type UiPluginInfo } from "@percho/shared";
+import { KNOWN_UI_REGIONS, KNOWN_UI_SLOTS, type UiPluginInfo } from "@drone/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { type MessageKey, useT } from "../../i18n";
 import { useUiPluginsStore } from "../../stores/ui-plugins";

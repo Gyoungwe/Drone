@@ -12,7 +12,7 @@ const resourceArg = process.argv.indexOf("--resources");
 if (resourceArg >= 0 && !process.argv[resourceArg + 1])
 	throw new Error("--resources requires a packaged research-workbench directory");
 const suppliedResources = resourceArg >= 0 ? await realpath(resolve(process.argv[resourceArg + 1])) : null;
-const root = await realpath(await mkdtemp(join(tmpdir(), "percho-knowledge-package-")));
+const root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-package-")));
 let serviceModule;
 try {
 	const config = parse(await readFile("packages/desktop/electron-builder.yml", "utf8"));
@@ -41,8 +41,8 @@ try {
 	}
 	await audit(resources);
 	await Promise.all([mkdir(a), mkdir(b), mkdir(agentDir)]);
-	process.env.PERCHO_KNOWLEDGE_DIR = join(root, "app");
-	process.env.PERCHO_RESEARCH_WORKBENCH_ROOT = resources;
+	process.env.DRONE_KNOWLEDGE_DIR = join(root, "app");
+	process.env.DRONE_RESEARCH_WORKBENCH_ROOT = resources;
 	delete process.env.PI_RESEARCH_DESKTOP_CONFIG;
 	const workbench = await import(pathToFileURL(join(resources, "lib/obsidian-workbench.mjs")));
 	serviceModule = await import(pathToFileURL(join(resources, "lib/knowledge/service.mjs")));

@@ -1,4 +1,4 @@
-import type { ImageInput } from "@percho/shared";
+import type { ImageInput } from "@drone/shared";
 import { useT } from "../../i18n";
 import { imageSrc } from "../chat/ImagePreview";
 import { CloseIcon } from "../icons";

@@ -1,4 +1,4 @@
-import type { AskQuestion, AskRequest } from "@percho/shared";
+import type { AskQuestion, AskRequest } from "@drone/shared";
 import { expect, it } from "vitest";
 import { confirmOptionIndex, isDangerAskOption, isSimpleConfirm, orderedAskOptions } from "./ask-simple";
 

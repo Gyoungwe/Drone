@@ -1,6 +1,6 @@
 import { join } from "node:path";
-import { createLogger, JsonStore } from "@percho/backend";
-import type { UiPluginsConfig } from "@percho/shared";
+import { createLogger, JsonStore } from "@drone/backend";
+import type { UiPluginsConfig } from "@drone/shared";
 import { app } from "electron";
 import { applyUiPluginsPatch, defaultUiPluginsConfig, normalizeUiPluginsConfig } from "./config-merge";
 

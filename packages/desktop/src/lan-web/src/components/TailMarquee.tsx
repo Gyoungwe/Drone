@@ -1,4 +1,4 @@
-import { tailOffsetForWidths } from "@percho/shared";
+import { tailOffsetForWidths } from "@drone/shared";
 import { useLayoutEffect, useRef } from "react";
 
 /**

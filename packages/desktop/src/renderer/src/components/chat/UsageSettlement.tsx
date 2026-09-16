@@ -1,4 +1,4 @@
-import type { SessionStats, UsageDisplayTotal } from "@percho/shared";
+import type { SessionStats, UsageDisplayTotal } from "@drone/shared";
 import { useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { useI18nStore } from "../../i18n";

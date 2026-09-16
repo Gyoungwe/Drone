@@ -1,6 +1,6 @@
 import { statSync } from "node:fs";
+import type { SessionMeta } from "@drone/shared";
 import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
-import type { SessionMeta } from "@percho/shared";
 
 export interface RegisteredSession {
 	session: AgentSession;

@@ -1,4 +1,4 @@
-import type { RunInspectorTurn, TurnTiming, UsageDisplayTotal } from "@percho/shared";
+import type { RunInspectorTurn, TurnTiming, UsageDisplayTotal } from "@drone/shared";
 import { t } from "../i18n";
 
 const compact = (n: number) =>

@@ -1,8 +1,8 @@
 import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { PROTECTED_KNOWLEDGE_AGENTS } from "@drone/shared";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { PROTECTED_KNOWLEDGE_AGENTS } from "@percho/shared";
 
 export type AgentSource = "builtin" | "user" | "project";
 

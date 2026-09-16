@@ -1,4 +1,4 @@
-import type { RetryInfo } from "@percho/shared";
+import type { RetryInfo } from "@drone/shared";
 import { useT } from "../../i18n";
 import { RefreshIcon } from "../icons";
 

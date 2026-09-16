@@ -13,7 +13,7 @@ const entry = (name: string, role?: string, sourceInfo = origin, invocationName 
 	invocationName,
 	description: name,
 	sourceInfo,
-	...(role ? { perchoMenu: { version: 1, canonical: "obsidian-setup", skill: "research-vault", role } } : {}),
+	...(role ? { droneMenu: { version: 1, canonical: "obsidian-setup", skill: "research-vault", role } } : {}),
 });
 const commands = () => [
 	entry("obsidian-setup", "primary"),

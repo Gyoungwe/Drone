@@ -51,7 +51,7 @@ function thirdPartySubagentExtension() {
 
 describe("subagent tool shadowing（真实 SDK 语义）", () => {
 	it("内置 customTool 覆盖同名扩展工具，mutex 停用家族工具", async () => {
-		const root = await mkdtemp(join(tmpdir(), "percho-subagent-shadow-"));
+		const root = await mkdtemp(join(tmpdir(), "drone-subagent-shadow-"));
 		tempDirs.push(root);
 		const agentDir = join(root, "agent");
 		const cwd = join(root, "project");

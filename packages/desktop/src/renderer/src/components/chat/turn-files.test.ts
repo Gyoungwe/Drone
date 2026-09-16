@@ -1,4 +1,4 @@
-import { deriveTurnChanges, type UIMessage, type UIToolCall } from "@percho/shared";
+import { deriveTurnChanges, type UIMessage, type UIToolCall } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 /** noUncheckedIndexedAccess 下的数组取值断言 */

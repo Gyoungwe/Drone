@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { AskRequest, AskResponse } from "@percho/shared";
+import type { AskRequest, AskResponse } from "@drone/shared";
 
 export type AskRequestSender = (request: AskRequest) => boolean;
 

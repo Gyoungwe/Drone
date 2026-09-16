@@ -1,6 +1,6 @@
 # Agent capability and observability upgrade
 
-This upgrade borrows mature agent-product patterns without replacing Percho's evidence-aware research architecture. Markdown/original sources remain the source of truth; reviewed Wiki, evidence receipts, protected human text, publication checks and Show Me retain their existing semantics.
+This upgrade borrows mature agent-product patterns without replacing Drone's evidence-aware research architecture. Markdown/original sources remain the source of truth; reviewed Wiki, evidence receipts, protected human text, publication checks and Show Me retain their existing semantics.
 
 ## P0 — Lazy Tools and Skills
 

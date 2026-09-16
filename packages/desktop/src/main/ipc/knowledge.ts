@@ -1,6 +1,6 @@
-import type { PiBackend } from "@percho/backend";
-import type { KnowledgeApi } from "@percho/shared";
-import { IpcChannels } from "@percho/shared";
+import type { PiBackend } from "@drone/backend";
+import type { KnowledgeApi } from "@drone/shared";
+import { IpcChannels } from "@drone/shared";
 import type { IpcMainInvokeEvent } from "electron";
 import { BrowserWindow, ipcMain, shell } from "electron";
 

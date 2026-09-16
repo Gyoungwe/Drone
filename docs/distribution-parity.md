@@ -4,7 +4,7 @@
 
 A source commit pushed to this fork is available to source users after they obtain that commit, install dependencies and rebuild. A normal main-branch push runs CI; `.github/workflows/release.yml` creates installers only on a `v*` tag push. Downloading an older Release asset does not acquire unbuilt source changes.
 
-The first-party release manifest is `.pi/lib/workbench-manifest.json`. Desktop startup in both source and packaged modes uses it to load the same extensions and skills in every project, not only when working in the Percho repository. Packaging now includes the source archive, research loop, workspace summary and related research extensions previously available only through project settings. The package smoke checks unique workbench tool registrations and the required core paths against copied release resources, with empty agent data and ambient extensions/skills disabled.
+The first-party release manifest is `.pi/lib/workbench-manifest.json`. Desktop startup in both source and packaged modes uses it to load the same extensions and skills in every project, not only when working in the Drone repository. Packaging now includes the source archive, research loop, workspace summary and related research extensions previously available only through project settings. The package smoke checks unique workbench tool registrations and the required core paths against copied release resources, with empty agent data and ambient extensions/skills disabled.
 
 Built-in skills are `research-vault`, `research-workflow`, `research-show-me` and `zotero-literature`, alongside existing desktop collaboration/UI skills. `research-show-me` is new first-party content, not a copy of a third-party user's installation. The user's `show-me` takes priority when present; the fallback identity is retained when absent. Original-paper reading, commands and actual local performance are never invented just because a presentation skill exists.
 
@@ -22,7 +22,7 @@ Built-in skills are `research-vault`, `research-workflow`, `research-show-me` an
 
 Optional tested adapter versions are recorded in the manifest, not silently installed into the application or granted credentials: pi-web-access 0.28.0 and pi-mcp-adapter 2.32.1. Different models, access plans and local executables can change what tasks are achievable; shipping the code cannot give another user the owner's credentials or exactly the same results.
 
-The fork's configured update feed and release-page link target `Gyoungwe/percho`, rather than the upstream `Jaxton07/percho`. Copyright/creator attribution remains unchanged. Release `v0.6.0` is now published from the verified tag; the macOS updater remains manual for adhoc-signed builds.
+The fork's configured update feed and release-page link target `Gyoungwe/Drone`, rather than the upstream `Jaxton07/drone`. Copyright/creator attribution remains unchanged. Release `v0.6.0` is now published from the verified tag; the macOS updater remains manual for adhoc-signed builds.
 
 ## Data boundaries
 

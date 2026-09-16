@@ -1,4 +1,4 @@
-import { parsePatch, patchStat } from "@percho/shared";
+import { parsePatch, patchStat } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 /** noUncheckedIndexedAccess 下的数组取值断言 */

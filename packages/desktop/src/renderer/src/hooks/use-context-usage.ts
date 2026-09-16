@@ -1,4 +1,4 @@
-import type { ContextUsageInfo } from "@percho/shared";
+import type { ContextUsageInfo } from "@drone/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPi } from "../api";
 import { isDraftSessionId } from "../stores/sessions";

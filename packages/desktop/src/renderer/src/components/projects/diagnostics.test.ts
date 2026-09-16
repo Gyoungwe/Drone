@@ -1,4 +1,4 @@
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { buildDiagnosticsText } from "./diagnostics";
 

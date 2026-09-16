@@ -1,4 +1,4 @@
-import { LAN_IMAGE_PLACEHOLDER, type SessionEvent, type SessionMessage } from "@percho/shared";
+import { LAN_IMAGE_PLACEHOLDER, type SessionEvent, type SessionMessage } from "@drone/shared";
 
 /**
  * LAN 白名单投影（spec §5.5）：剥除手机端不需要且敏感的字段——

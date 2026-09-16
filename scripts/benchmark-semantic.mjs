@@ -13,8 +13,8 @@ const fixture = JSON.parse(
 	await readFile(new URL("./fixtures/semantic-benchmark.json", import.meta.url), "utf8"),
 );
 const live = process.argv.includes("--live-local");
-if (live && (!process.env.PERCHO_BENCHMARK_EMBED_BASE_URL || !process.env.PERCHO_BENCHMARK_EMBED_MODEL))
-	throw new Error("--live-local requires PERCHO_BENCHMARK_EMBED_BASE_URL and PERCHO_BENCHMARK_EMBED_MODEL");
+if (live && (!process.env.DRONE_BENCHMARK_EMBED_BASE_URL || !process.env.DRONE_BENCHMARK_EMBED_MODEL))
+	throw new Error("--live-local requires DRONE_BENCHMARK_EMBED_BASE_URL and DRONE_BENCHMARK_EMBED_MODEL");
 
 const aliases = new Map([
 	["butterfly", "wing"],
@@ -81,12 +81,12 @@ function summarize(mode, query, returned, retrieval, started) {
 	};
 }
 
-const root = await realpath(await mkdtemp(join(tmpdir(), "percho-semantic-benchmark-")));
+const root = await realpath(await mkdtemp(join(tmpdir(), "drone-semantic-benchmark-")));
 const vault = join(root, "Vault"),
 	cwd = join(root, "project"),
 	app = join(root, "app");
 await mkdir(cwd, { recursive: true });
-process.env.PERCHO_KNOWLEDGE_DIR = app;
+process.env.DRONE_KNOWLEDGE_DIR = app;
 const paths = fixture.documents.map((doc) => `Library/Papers/${doc.id}.md`);
 for (let i = 0; i < fixture.documents.length; i++) {
 	await mkdir(join(vault, "Library/Papers"), { recursive: true });
@@ -111,9 +111,9 @@ try {
 	fake = live ? null : await fakeEmbeddingServer();
 	const config = {
 		enabled: true,
-		provider: process.env.PERCHO_BENCHMARK_EMBED_PROVIDER || "ollama",
-		baseUrl: live ? process.env.PERCHO_BENCHMARK_EMBED_BASE_URL : fake.baseUrl,
-		model: live ? process.env.PERCHO_BENCHMARK_EMBED_MODEL : "deterministic-fixture-embedding",
+		provider: process.env.DRONE_BENCHMARK_EMBED_PROVIDER || "ollama",
+		baseUrl: live ? process.env.DRONE_BENCHMARK_EMBED_BASE_URL : fake.baseUrl,
+		model: live ? process.env.DRONE_BENCHMARK_EMBED_MODEL : "deterministic-fixture-embedding",
 		credentialEnv: "",
 		remoteConsent: false,
 		chunkChars: 1200,

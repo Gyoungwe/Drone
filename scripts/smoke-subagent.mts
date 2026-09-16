@@ -18,7 +18,7 @@ const cwd = resolve(process.cwd());
 const agentDir = process.env.PI_CODING_AGENT_DIR;
 if (!agentDir) throw new Error("PI_CODING_AGENT_DIR is required");
 
-const tempRoot = await mkdtemp(join("/tmp", "percho-smoke-subagent-"));
+const tempRoot = await mkdtemp(join("/tmp", "drone-smoke-subagent-"));
 const childSessionDir = join(tempRoot, "subagents");
 const injectedPrompt = "你是 scout，只读侦察。";
 let session: InstanceType<typeof import("@earendil-works/pi-coding-agent").AgentSession> | undefined;

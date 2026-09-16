@@ -1,4 +1,4 @@
-import { getSkillCategory, groupSkillCatalog } from "@percho/shared";
+import { getSkillCategory, groupSkillCatalog } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { filterCommands, groupCommands, menuCommands } from "./slash-filter";
 

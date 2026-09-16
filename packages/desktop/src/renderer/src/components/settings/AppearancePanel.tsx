@@ -1,4 +1,4 @@
-import type { ThemeMode } from "@percho/shared";
+import type { ThemeMode } from "@drone/shared";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { backgroundImageUrl, useThemeStore } from "../../stores/theme";

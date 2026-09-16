@@ -1,6 +1,6 @@
 // Isolated fixture drives actual reducer + MessageList; no live provider or user session mutation.
 
-import type { SessionEvent } from "@percho/shared";
+import type { SessionEvent } from "@drone/shared";
 import { MessageList } from "../../packages/desktop/src/renderer/src/components/chat/MessageList";
 import { useTranscriptStore } from "../../packages/desktop/src/renderer/src/stores/transcript";
 
@@ -64,7 +64,7 @@ const result = (id: string, name: string, details: Record<string, unknown> = {})
 		event("message_end", {
 			message: {
 				role: "custom",
-				customType: "percho-task-status",
+				customType: "drone-task-status",
 				display: true,
 				content: text,
 				timestamp: Date.now(),

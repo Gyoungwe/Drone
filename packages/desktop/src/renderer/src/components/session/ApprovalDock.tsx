@@ -1,4 +1,4 @@
-import type { PermissionRequest } from "@percho/shared";
+import type { PermissionRequest } from "@drone/shared";
 import { useCallback, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";

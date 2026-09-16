@@ -1,5 +1,5 @@
+import { extractTodos, TODO_REMINDER_CUSTOM_TYPE, TODO_TOOL_NAME, type TodoItem } from "@drone/shared";
 import type { InlineExtension } from "@earendil-works/pi-coding-agent";
-import { extractTodos, TODO_REMINDER_CUSTOM_TYPE, TODO_TOOL_NAME, type TodoItem } from "@percho/shared";
 import { formatTodoList } from "./todo";
 
 /**

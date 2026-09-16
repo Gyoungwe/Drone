@@ -1,6 +1,6 @@
+import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "@drone/shared";
+import { NPM_NOT_FOUND_SENTINEL } from "@drone/shared";
 import { DefaultPackageManager, getAgentDir, SettingsManager } from "@earendil-works/pi-coding-agent";
-import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "@percho/shared";
-import { NPM_NOT_FOUND_SENTINEL } from "@percho/shared";
 import { createLogger } from "../log";
 import type { SessionRegistry } from "../session/registry";
 import { fetchPackageCatalog } from "./catalog";

@@ -7,7 +7,7 @@ import {
 	type SkillCategory,
 	skillCatalogSearchText,
 	skillDisplayName,
-} from "@percho/shared";
+} from "@drone/shared";
 import { useMemo, useState } from "react";
 import { useI18nStore, useT } from "../../i18n";
 import { useSettingsStore } from "../../stores/settings";

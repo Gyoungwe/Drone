@@ -16,11 +16,11 @@ import { assessManualPage, deliveryContract } from "../../../.pi/lib/source-deli
 
 let root, cwd, vault, runDir;
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-round2-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-round2-")));
 	cwd = join(root, "actual-project");
 	vault = join(root, "Vault");
 	await mkdir(cwd);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	await configureObsidian({ cwd, vault, project: "project-a" });
 	runDir = join(cwd, "results", "topic", "run-fixture");

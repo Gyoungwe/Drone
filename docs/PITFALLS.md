@@ -1,4 +1,4 @@
-# Percho 踩坑记录（来之不易，勿重踩）
+# Drone 踩坑记录（来之不易，勿重踩）
 
 > **遇到怪问题先来这里查**：疑难 bug、构建/打包异常、SDK 行为反直觉——先按下方「症状快速索引」找条目，再决定要不要自己踩一遍。
 > 配套阅读：`docs/INDEX.md`（项目索引，「想改 X 改哪里」）；AGENTS.md「UI 截图调试」「常用命令·本地内测打包」两节还有各自的实操坑。
@@ -41,7 +41,7 @@ glm-5.3 流式输出病态空白 thinking（纯 `\n    ` 洪流永不终止）�
 2. `session/stream-guard.ts` 熔断（连续空白 >8KB / 单消息 >2MB → abort+丢弃后续）
 3. `session/trace.ts` 加固（巨事件截断标记、join 失败丢批不重试、flush 后按字节轮转、缓冲兑底）
 
-**教训**：任何转发模型流式事件的中间层，都必须先瘦身再分发。诊断现场在正式版 `~/Library/Application Support/@percho/desktop/logs/` + `~/.pi/agent/sessions/*/traces/`。
+**教训**：任何转发模型流式事件的中间层，都必须先瘦身再分发。诊断现场在正式版 `~/Library/Application Support/@drone/desktop/logs/` + `~/.pi/agent/sessions/*/traces/`。
 
 ### 0.5.0 流式期间反复白屏（2026-08-24，React #185）
 
@@ -75,7 +75,7 @@ glm-5.3 流式输出病态空白 thinking（纯 `\n    ` 洪流永不终止）�
 
 症状：Windows 安装包读到了 `~/.pi/agent` 的本地 provider，但对话立刻返回「【知识库检查未通过】本轮的最终回答尚未完成发布（interrupted）」。会话 jsonl 里 `usage` 全 0、`stopReason:"error"`，真实 `errorMessage` 被换成「请求出错；未经检查的回答没有发布。」
 
-原因：桌面端始终设置 `PERCHO_KNOWLEDGE_DIR`，`publication.mjs` 把 `stopReason` 为 `error`/`aborted`/`length`/`pending` 一律当成知识检查 `interrupted`，并剥掉 provider 错误。两条常见失败都会撞上这条：
+原因：桌面端始终设置 `DRONE_KNOWLEDGE_DIR`，`publication.mjs` 把 `stopReason` 为 `error`/`aborted`/`length`/`pending` 一律当成知识检查 `interrupted`，并剥掉 provider 错误。两条常见失败都会撞上这条：
 
 1. 会话落到未配置的 Pi 默认模型（`auth.json` 里没有对应 key）
 2. 已配置的自定义网关返回 502/503（`Upstream service temporarily unavailable`）
@@ -128,7 +128,7 @@ sandbox 下渲染进程不加载 electron-vite 默认的 ESM 产物。config 强
 
 ### `externalizeDepsPlugin` 会把 workspace 依赖也外部化
 
-main config 用 `exclude: ["@percho/backend", "@percho/shared"]` 并 alias 到源码；pi SDK 保持 external。
+main config 用 `exclude: ["@drone/backend", "@drone/shared"]` 并 alias 到源码；pi SDK 保持 external。
 
 ### Node >= 22.19。npm 11 默认阻止 Electron postinstall（需 `npm approve-scripts electron`）
 
@@ -184,6 +184,6 @@ pi SDK 必须声明进 `packages/desktop/package.json` dependencies（electron-b
 
 `models.json` 用环境变量引用（`$AI_OPS_API_KEY`），key 由用户自持。
 
-### 已开源：github.com/Jaxton07/percho
+### 已开源：github.com/Jaxton07/drone
 
 git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保护（PR + CI `check` 必过 + squash merge），Release 由 tag 触发（`.github/workflows/release.yml`）。

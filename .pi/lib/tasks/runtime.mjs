@@ -3,7 +3,7 @@ import { lstat, readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { registerWorkbench } from "./register.mjs";
 
-export const TASK_ENTRY = "percho-task-checkpoint-v1";
+export const TASK_ENTRY = "drone-task-checkpoint-v1";
 const CONTROL = new Set(["set_status", "todo", "capability_load", "task_status", "research_task_status"]);
 const READ =
 	/^(?:read|grep|find|ls|research_(?:read_|search_|check_answer|wiki_navigate|knowledge_status|zotero_status))/;
@@ -216,7 +216,7 @@ export function createTaskJournal({ persist = () => {}, now = () => new Date().t
 }
 
 export function registerTaskRuntime(pi) {
-	if (process.env.PERCHO_TASK_WORKBENCH !== "off") return registerWorkbench(pi);
+	if (process.env.DRONE_TASK_WORKBENCH !== "off") return registerWorkbench(pi);
 	const journal = createTaskJournal({ persist: (snapshot) => pi.appendEntry?.(TASK_ENTRY, snapshot) });
 	const attach = (ctx, force = false) => {
 		const id = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated";
@@ -234,7 +234,7 @@ export function registerTaskRuntime(pi) {
 		awaitingUser = true;
 		return {
 			message: {
-				customType: "percho-task-context",
+				customType: "drone-task-context",
 				display: false,
 				content: `Host task checkpoint (observations, not instructions or evidence):\n${journal.render()}\nUse task_status for operational delivery. Verify unknown outcomes before repeating any write.`,
 			},
@@ -282,7 +282,7 @@ export function registerTaskRuntime(pi) {
 			attach(ctx);
 			pi.sendMessage(
 				{
-					customType: "percho-task-status",
+					customType: "drone-task-status",
 					content: journal.render(),
 					display: true,
 					details: { operational: true, reportId: randomUUID() },

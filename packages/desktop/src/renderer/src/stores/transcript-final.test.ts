@@ -1,4 +1,4 @@
-import { emptyTranscript, reduceEvent, type SessionEvent } from "@percho/shared";
+import { emptyTranscript, reduceEvent, type SessionEvent } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 
 const ev = (type: string, extra: Record<string, unknown> = {}) => ({ type, ...extra }) as SessionEvent;
@@ -49,7 +49,7 @@ describe("authoritative non-streaming final snapshots", () => {
 it("task status command is visible without a model turn and does not replace an active response", () => {
 	const message = {
 		role: "custom",
-		customType: "percho-task-status",
+		customType: "drone-task-status",
 		display: true,
 		content: "数据处理执行检查点",
 		timestamp: 43,

@@ -1,4 +1,4 @@
-import type { LanSnapshot, LanSseFrame, LanTranscript, SessionMessage } from "@percho/shared";
+import type { LanSnapshot, LanSseFrame, LanTranscript, SessionMessage } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import type { LanAppState } from "./store-pure";
 import { applyFrame, healingTailSuffix, initialLanState, seedSessions, seedTranscript } from "./store-pure";

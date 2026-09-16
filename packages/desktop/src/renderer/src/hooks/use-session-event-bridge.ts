@@ -1,4 +1,4 @@
-import type { SessionEvent, TrustRequest } from "@percho/shared";
+import type { SessionEvent, TrustRequest } from "@drone/shared";
 import { useEffect } from "react";
 import { getPi } from "../api";
 import { EventConflator } from "../stores/event-conflator";

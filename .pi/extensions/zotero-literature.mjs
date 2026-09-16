@@ -94,7 +94,7 @@ export default function zoteroLiterature(pi) {
 	});
 
 	pi.registerCommand(ZOTERO_SETUP_BINDING.command, {
-		perchoMenu: {
+		droneMenu: {
 			version: 1,
 			canonical: ZOTERO_SETUP_BINDING.command,
 			skill: ZOTERO_SETUP_BINDING.skill,

@@ -1,6 +1,6 @@
 ---
 name: research-workflow
-description: "Bounded personal research workflow for Percho: local knowledge first, Web fallback, evidence verification, and parent-session-only knowledge writes."
+description: "Bounded personal research workflow for Drone: local knowledge first, Web fallback, evidence verification, and parent-session-only knowledge writes."
 ---
 
 # Research Workflow

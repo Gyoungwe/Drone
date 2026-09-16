@@ -1,5 +1,5 @@
-import type { AvailableModel, PermissionMode, SavedTabs, SessionMeta } from "@percho/shared";
-import { messagesToUIMessages } from "@percho/shared";
+import type { AvailableModel, PermissionMode, SavedTabs, SessionMeta } from "@drone/shared";
+import { messagesToUIMessages } from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
 import { optimisticUpdate } from "../lib/optimistic";

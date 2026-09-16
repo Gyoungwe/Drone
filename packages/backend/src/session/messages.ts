@@ -1,4 +1,3 @@
-import { parseSessionEntries, type SessionEntry, type SessionManager } from "@earendil-works/pi-coding-agent";
 import {
 	extractSubagentRuns,
 	type ImageInput,
@@ -10,7 +9,8 @@ import {
 	type SessionMessage,
 	type SessionToolCall,
 	taskStatusDisplay,
-} from "@percho/shared";
+} from "@drone/shared";
+import { parseSessionEntries, type SessionEntry, type SessionManager } from "@earendil-works/pi-coding-agent";
 
 /**
  * pi 消息 → 中立 SessionMessage 的纯函数集（历史回放 / fork / recall / 导出共用）。

@@ -117,7 +117,7 @@ export default function obsidianWorkbench(pi) {
 				`知识沉淀：${params.deposit_mode}`,
 				`子智能体 MCP：${params.subagent_mcp}`,
 				knowledgeDirectory()
-					? "作用范围：整个 Percho。所有项目与新会话使用此知识库；导航内容将提供给当前选择的模型。仅当前项目标识留在项目配置中。"
+					? "作用范围：整个 Drone。所有项目与新会话使用此知识库；导航内容将提供给当前选择的模型。仅当前项目标识留在项目配置中。"
 					: "将创建缺失的目录/模板并更新当前项目的 .pi/research-workspace.json 与 .mcp.json。",
 				"不搬迁/删除已有笔记；索引仅更新 pi-agent 托管区块。",
 			].join("\n");
@@ -245,7 +245,7 @@ export default function obsidianWorkbench(pi) {
 	for (const name of [setupCommand, ...aliases]) {
 		pi.registerCommand(name, {
 			// Presentation metadata only. The SDK still registers old names for compatibility.
-			perchoMenu: {
+			droneMenu: {
 				version: 1,
 				canonical: setupCommand,
 				skill,

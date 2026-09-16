@@ -13,9 +13,9 @@ export function makeKnowledgeSpecialistBridge(deps: SpecialistRunnerDeps) {
 		let unregister: (() => void) | undefined;
 		const active = new Set<AbortController>();
 		async function connect(_event: unknown, ctx: ExtensionContext) {
-			if (!process.env.PERCHO_KNOWLEDGE_DIR) return;
+			if (!process.env.DRONE_KNOWLEDGE_DIR) return;
 			const root =
-				process.env.PERCHO_RESEARCH_WORKBENCH_ROOT ??
+				process.env.DRONE_RESEARCH_WORKBENCH_ROOT ??
 				fileURLToPath(new URL("../../../../.pi", import.meta.url));
 			const module = await import(
 				/* @vite-ignore */ pathToFileURL(join(root, "lib/knowledge/specialist-host.mjs")).href

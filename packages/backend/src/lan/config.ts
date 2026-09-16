@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { LanObserverConfig } from "@percho/shared";
+import type { LanObserverConfig } from "@drone/shared";
 import { JsonStore } from "../json-store";
 
 const DEFAULT_CONFIG: LanObserverConfig = { enabled: false, port: 7331, token: null, remoteControl: false };

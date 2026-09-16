@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { createLogger } from "@percho/backend";
+import { createLogger } from "@drone/backend";
 
 const log = createLogger("fix-path");
 

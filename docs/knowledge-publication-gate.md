@@ -2,7 +2,7 @@
 
 ## Implemented scope
 
-Application mode is selected by `PERCHO_KNOWLEDGE_DIR`. When a Vault is bound, the parent assistant final text is published only after its host-owned current-turn navigation/search/read records are validated. CLI legacy behavior remains unchanged. Unconfigured application responses are marked `unconfigured`, not certified as knowledge-grounded.
+Application mode is selected by `DRONE_KNOWLEDGE_DIR`. When a Vault is bound, the parent assistant final text is published only after its host-owned current-turn navigation/search/read records are validated. CLI legacy behavior remains unchanged. Unconfigured application responses are marked `unconfigured`, not certified as knowledge-grounded.
 
 The application publication module uses the pinned SDK message_end replacement contract. A replacement occurs before SessionManager persistence. PiBackend applies a fail-closed projection before trace/desktop/LAN fanout; it suppresses incremental assistant message payloads and sanitizes start/final/turn/agent snapshots. Live history polling uses the same publication state and cannot expose an in-flight draft while asynchronous validation is pending. JSONL/HTML exports use finalized persistence. No UI-only hiding is treated as the security boundary.
 

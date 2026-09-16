@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import type { ThemeMode } from "@percho/shared";
+import type { ThemeMode } from "@drone/shared";
 import { BrowserWindow, nativeTheme, shell } from "electron";
 
 const __dirname = import.meta.dirname;

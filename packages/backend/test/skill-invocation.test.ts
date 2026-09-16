@@ -1,6 +1,6 @@
+import { formatSkillCommand, parseExpandedSkillInvocation, type SkillInvocation } from "@drone/shared";
 import type { Message } from "@earendil-works/pi-ai";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
-import { formatSkillCommand, parseExpandedSkillInvocation, type SkillInvocation } from "@percho/shared";
 import { describe, expect, it } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 import { toSessionMessages } from "../src/session/messages";

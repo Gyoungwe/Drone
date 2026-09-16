@@ -5,7 +5,7 @@ import {
 	type MetaItem,
 	type SummarySegment,
 	summarizeCategories,
-} from "@percho/shared";
+} from "@drone/shared";
 import { useMemo } from "react";
 import { t } from "../i18n";
 import { ChevronRightIcon } from "./icons";

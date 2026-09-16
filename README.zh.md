@@ -1,16 +1,16 @@
 <p align="center">
-  <img src="docs/icon.svg" alt="percho logo" width="128">
+  <img src="docs/icon.svg" alt="Drone logo" width="128">
 </p>
-<h1 align="center">percho</h1>
+<h1 align="center">Drone</h1>
 <p align="center">
-  高度自定义的 <a href="https://www.npmjs.com/package/@earendil-works/pi-coding-agent">Pi coding agent</a> 桌面端 GUI —— 与 Pi CLI 同源同引擎，干净清爽的视觉界面。多会话聊天、可视化工具审批、内置子代理、UI 插件、自定义主题。
+  桌面端的自主研究工作台。一次确认任务的范围、写入目录与验收标准，Drone 就执行到交付，而不是每一步都来打断你。基于 <a href="https://www.npmjs.com/package/@earendil-works/pi-coding-agent">Pi coding agent</a> 构建，与 Pi CLI 同源同引擎。
 </p>
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Gyoungwe/percho?style=flat-square" alt="License"></a>
-  <a href="https://github.com/Gyoungwe/percho/releases"><img src="https://img.shields.io/github/v/release/Gyoungwe/percho?style=flat-square" alt="Release"></a>
-  <a href="https://github.com/Gyoungwe/percho/releases"><img src="https://img.shields.io/github/downloads/Gyoungwe/percho/total?style=flat-square" alt="Downloads"></a>
-  <a href="https://github.com/Gyoungwe/percho/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Gyoungwe/percho/ci.yml?style=flat-square" alt="CI"></a>
-  <a href="https://github.com/Gyoungwe/percho"><img src="https://img.shields.io/github/stars/Gyoungwe/percho?style=flat-square" alt="Stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Gyoungwe/Drone?style=flat-square" alt="License"></a>
+  <a href="https://github.com/Gyoungwe/Drone/releases"><img src="https://img.shields.io/github/v/release/Gyoungwe/Drone?style=flat-square" alt="Release"></a>
+  <a href="https://github.com/Gyoungwe/Drone/releases"><img src="https://img.shields.io/github/downloads/Gyoungwe/Drone/total?style=flat-square" alt="Downloads"></a>
+  <a href="https://github.com/Gyoungwe/Drone/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Gyoungwe/Drone/ci.yml?style=flat-square" alt="CI"></a>
+  <a href="https://github.com/Gyoungwe/Drone"><img src="https://img.shields.io/github/stars/Gyoungwe/Drone?style=flat-square" alt="Stars"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=nodedotjs&style=flat-square" alt="Node >=22.19">
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue?style=flat-square" alt="macOS | Windows | Linux">
 </p>
@@ -22,9 +22,9 @@
 
 ## 演示
 
-![percho 欢迎页与鲸鱼娘桌宠](docs/assets/img/percho_pet.png)
+![drone 欢迎页与鲸鱼娘桌宠](docs/assets/img/drone_pet.png)
 
-![设置 —— UI 插件管理，内置鲸鱼娘桌宠](docs/assets/img/percho_ui_plugins.png)
+![设置 —— UI 插件管理，内置鲸鱼娘桌宠](docs/assets/img/drone_ui_plugins.png)
 
 **聊天页**
 
@@ -38,9 +38,22 @@
 
 ![设置页演示](docs/assets/img/demo-settings.gif)
 
-## 为什么选择 percho？
+## 为什么选择 Drone？
 
-percho 把官方 Pi SDK（`@earendil-works/pi-coding-agent`）跑在 Electron 主进程里。**不是 fork，也不是重新实现** —— 它和 Pi CLI 用的是同一套引擎，完整继承 Pi 的原生优势：
+大多数 agent 图形界面会为每一次写入、每一条命令、每一个阶段向你确认。Drone 只问**一次**。
+
+任务从有限的只读调研开始，然后给出一张授权卡：目标、大白话的范围说明、确切的写入目录、不可变的验收标准。点一次 **确认一次，执行到交付**，即批准验收合同与执行预算，任务一路跑到交付。
+
+- **一个任务一次授权** —— 同意被绑定到任务 id、目标、范围、目录清单与验收里程碑的不可变合同哈希上。合同一改，授权即失效；它不会迁移到另一个任务、会话或分支。
+- **是范围授权，不是无限授权** —— 自动放行仅限你在卡片上看到的规范化目录。显式 deny 规则、凭据、权限/信任/模型配置、私钥、版本库内部文件、符号链接逃逸与硬链接目标，一律保留原有门控。这不是 fullAccess 开关。
+- **进度可审计** —— 阶段只凭可观测进度推进：宿主放行的、互不相同的调用的成功结果。状态刷屏与失败检查不算数。恢复轮次上限 3 次，且在固定的 192 次调用上限之内。
+- **结构化任务工作台** —— 模型提出带依赖的里程碑，验收只认宿主文件回读、范围内人工复核或只读 Zotero 身份。持久化账本重启后恢复，且不会重放未知副作用。
+
+完整边界见 [docs/task-authorization.md](docs/task-authorization.md)。
+
+## 基于 Pi 构建
+
+Drone 把官方 Pi SDK（`@earendil-works/pi-coding-agent`）跑在 Electron 主进程里。**不是 fork，也不是重新实现** —— 它和 Pi CLI 用的是同一套引擎，完整继承 Pi 的原生优势：
 
 - **可扩展性** —— 为 Pi CLI 安装的 TypeScript 扩展、Skills、Prompt 模板在这里同样生效，包括项目级资源（加载前会有信任确认）。让 Pi 适应你的工作流，无需 fork。
 - **配置共享** —— 与 CLI 共用 `~/.pi/agent/` 目录：会话、认证、模型配置全部互通。终端里开的会话，可以在 GUI 里继续。
@@ -63,28 +76,28 @@ percho 把官方 Pi SDK（`@earendil-works/pi-coding-agent`）跑在 Electron �
 
 ## 下载
 
-预编译安装包发布在 [Releases](https://github.com/Gyoungwe/percho/releases) 页面。
+预编译安装包发布在 [Releases](https://github.com/Gyoungwe/Drone/releases) 页面。
 
 | 平台 | 下载 |
 | --- | --- |
-| macOS (Apple Silicon) | `percho-mac-arm64.dmg` |
-| macOS (Intel) | `percho-mac-x64.dmg` |
-| Windows | `percho-windows-x64.exe`（安装器）或 `percho-windows-x64.zip` |
-| Linux (x64) | `percho-linux-x64.AppImage` 或 `percho-linux-x64.deb` |
+| macOS (Apple Silicon) | `drone-mac-arm64.dmg` |
+| macOS (Intel) | `drone-mac-x64.dmg` |
+| Windows | `drone-windows-x64.exe`（安装器）或 `drone-windows-x64.zip` |
+| Linux (x64) | `drone-linux-x64.AppImage` 或 `drone-linux-x64.deb` |
 
-> Linux 包未签名。AppImage 需先 `chmod +x percho-linux-x64.AppImage` 再运行。
+> Linux 包未签名。AppImage 需先 `chmod +x drone-linux-x64.AppImage` 再运行。
 >
-> AppImage 需要 FUSE 2（`libfuse2`）。若运行报 FUSE 错误，可安装 fuse2（Debian/Ubuntu：`sudo apt install libfuse2`），或不用 FUSE：`APPIMAGE_EXTRACT_AND_RUN=1 ./percho-linux-x64.AppImage`。
+> AppImage 需要 FUSE 2（`libfuse2`）。若运行报 FUSE 错误，可安装 fuse2（Debian/Ubuntu：`sudo apt install libfuse2`），或不用 FUSE：`APPIMAGE_EXTRACT_AND_RUN=1 ./drone-linux-x64.AppImage`。
 >
 > `.deb` 安装包需要 `libsecret-1-0` 来存凭证（`sudo apt install libsecret-1-0`）。
 >
-> 构建为 adhoc 临时签名（无 Developer ID 证书）。macOS 下载后首次打开可能提示**「Apple 无法验证 Percho 是否包含危害 Mac 安全或泄漏隐私的恶意软件」**—— 这是 Gatekeeper 拦截未公证的 App。按以下方式放行：
+> 构建为 adhoc 临时签名（无 Developer ID 证书）。macOS 下载后首次打开可能提示**「Apple 无法验证 Drone 是否包含危害 Mac 安全或泄漏隐私的恶意软件」**—— 这是 Gatekeeper 拦截未公证的 App。按以下方式放行：
 >
-> 1. **系统设置 → 隐私与安全性** → 滚动到底部 → 在 Percho 条目旁点**「仍要打开」**，然后输入密码或 Touch ID 确认（推荐）。
+> 1. **系统设置 → 隐私与安全性** → 滚动到底部 → 在 Drone 条目旁点**「仍要打开」**，然后输入密码或 Touch ID 确认（推荐）。
 >
->    ![macOS「仍要打开」](docs/assets/img/percho_mac_permission.png)
+>    ![macOS「仍要打开」](docs/assets/img/drone_mac_permission.png)
 >
-> 2. 或在终端执行：`xattr -cr "/Applications/Percho.app"`。
+> 2. 或在终端执行：`xattr -cr "/Applications/Drone.app"`。
 >
 > 更新在应用内检查。Windows 上也在应用内下载安装（点下载，再点重启）；macOS 上 adhoc 签名的构建无法自动安装，点击会跳到 Releases 页 —— 新下载的版本首次打开还会再被 Gatekeeper 拦一次。Windows 上 SmartScreen 提示时点「更多信息」→「仍要运行」。
 
@@ -109,7 +122,7 @@ npm workspaces monorepo，三个包：`packages/shared`（IPC 契约）、`packa
 
 ## 声明
 
-percho 是社区项目，**并非** Pi 团队（earendil-works）官方出品，也与其无任何隶属关系。
+drone 是社区项目，**并非** Pi 团队（earendil-works）官方出品，也与其无任何隶属关系。
 
 ## License
 

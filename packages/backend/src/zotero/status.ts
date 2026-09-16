@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { ZoteroStatus } from "@drone/shared";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import type { ZoteroStatus } from "@percho/shared";
 
 /**
  * Zotero 接入状态（Zotero 面板用）。刻意在后端 TS 里独立实现少量探测逻辑，

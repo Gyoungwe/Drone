@@ -184,7 +184,7 @@ export const IpcChannels = {
 	AppOpenExternal: "app:openExternal",
 	/** 应用信息（版本/运行时版本/仓库地址，设置关于页用） */
 	AppGetInfo: "app:getInfo",
-	/** 日常空间工作台目录（~/.percho/daily；懒创建后返回，日常会话的固定 cwd） */
+	/** 日常空间工作台目录（~/.drone/daily；懒创建后返回，日常会话的固定 cwd） */
 	AppGetDailyDir: "app:getDailyDir",
 	/** 顶栏 tabs 持久化（userData/tabs.json，不依赖 renderer localStorage） */
 	TabsLoad: "tabs:load",

@@ -1,4 +1,4 @@
-import type { SessionEvent } from "@percho/shared";
+import type { SessionEvent } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { StreamGuard } from "../src/session/stream-guard";
 

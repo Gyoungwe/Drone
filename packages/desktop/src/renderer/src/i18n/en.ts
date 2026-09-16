@@ -544,7 +544,7 @@ export const en: Messages = {
 			installing: "Installing…",
 			installed: "Installed",
 			npmNotFound:
-				"npm (Node.js package manager) not found. Install Node.js (e.g. brew install node) and restart Percho; if npm lives in a non-standard path, add it to the system PATH and restart.",
+				"npm (Node.js package manager) not found. Install Node.js (e.g. brew install node) and restart Drone; if npm lives in a non-standard path, add it to the system PATH and restart.",
 			uninstall: "Uninstall",
 			confirmUninstall: "Uninstall?",
 			removing: "Removing…",
@@ -564,7 +564,7 @@ export const en: Messages = {
 			flags: "{count} flags",
 			shortcuts: "{count} shortcuts",
 			subagentInstallWarning:
-				"This package provides subagent capabilities. Percho already includes a deeply integrated built-in subagent; its same-named tools will be taken over after installation.",
+				"This package provides subagent capabilities. Drone already includes a deeply integrated built-in subagent; its same-named tools will be taken over after installation.",
 			subagentInstallConfirm: "Built-in takes over — install anyway",
 			subagentBuiltin: "subagent handled by built-in",
 			loadErrors: "{count} extensions failed to load",
@@ -578,7 +578,7 @@ export const en: Messages = {
 			empty:
 				"No plugins yet. The plugin directory lives under ui-plugins in the user data directory (ask an agent to write one following the SPEC)",
 			agentHint:
-				"Ask percho (agent) to write a plugin per the SPEC, or drop one into the plugin directory and enable it here",
+				"Ask drone (agent) to write a plugin per the SPEC, or drop one into the plugin directory and enable it here",
 			openDir: "Open folder",
 			enable: "Enable",
 			enableFailed: "Failed to enable plugin",

@@ -1,4 +1,4 @@
-import type { UiPluginAnchor } from "@percho/shared";
+import type { UiPluginAnchor } from "@drone/shared";
 import type { ComponentType } from "react";
 import { useUiPluginsStore } from "../stores/ui-plugins";
 import { PluginBoundary } from "./PluginBoundary";

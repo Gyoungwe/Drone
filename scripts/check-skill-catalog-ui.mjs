@@ -9,7 +9,7 @@ import electron from "electron";
 import { build } from "vite";
 
 const repo = resolve("."),
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-skill-catalog-ui-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-skill-catalog-ui-")));
 await mkdir(join(root, "profile"));
 console.log("Isolated skill UI fixture:", root);
 await writeFile(
@@ -36,7 +36,7 @@ await build({
 	},
 });
 await copyFile(join(repo, "scripts/skill-catalog-smoke/main.mjs"), join(root, "main.mjs"));
-const env = { ...process.env, PERCHO_CATALOG_FIXTURE: root };
+const env = { ...process.env, DRONE_CATALOG_FIXTURE: root };
 delete env.ELECTRON_RUN_AS_NODE;
 const child = spawn(electron, [join(root, "main.mjs")], { env, stdio: "inherit" });
 const timer = setTimeout(() => child.kill("SIGTERM"), 60000);

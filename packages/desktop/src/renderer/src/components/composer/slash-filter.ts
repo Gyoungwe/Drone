@@ -1,4 +1,4 @@
-import { getSkillCategory, type SlashCommandInfo, skillCatalogSearchText } from "@percho/shared";
+import { getSkillCategory, type SlashCommandInfo, skillCatalogSearchText } from "@drone/shared";
 
 export const SOURCE_ORDER: SlashCommandInfo["source"][] = ["builtin", "template", "skill", "extension"];
 

@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { KNOWLEDGE_REVIEWER, PROTECTED_KNOWLEDGE_AGENTS } from "@drone/shared";
 import { fauxToolCall as call, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
-import { KNOWLEDGE_REVIEWER, PROTECTED_KNOWLEDGE_AGENTS } from "@percho/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
 import { setSpecialistSettings, specialistSettings } from "../../../.pi/lib/knowledge/specialist-host.mjs";
@@ -40,11 +40,11 @@ const valid = (patch) => ({
 	...patch,
 });
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-model-review-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-model-review-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
 	await mkdir(cwd);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "app"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "app"));
 	vi.stubEnv("PI_RESEARCH_DESKTOP_CONFIG", undefined);
 	vi.stubEnv("PI_SUBAGENT_CHILD", undefined);
 	const bound = await configureObsidian({ cwd, vault, project: "a" });

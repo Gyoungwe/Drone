@@ -1,4 +1,4 @@
-import type { SessionEvent } from "@percho/shared";
+import type { SessionEvent } from "@drone/shared";
 
 /** 熔断判定结果：pass=放行；suppress=已熔断丢弃本条；trip_*=本次触发熔断（调用方应 abort 会话） */
 export type StreamGuardVerdict = "pass" | "suppress" | "trip_whitespace" | "trip_oversize";

@@ -1,10 +1,10 @@
+import type { SlashCommandInfo } from "@drone/shared";
 import type {
 	AgentSession,
 	Extension,
 	ResolvedCommand,
 	ResourceLoader,
 } from "@earendil-works/pi-coding-agent";
-import type { SlashCommandInfo } from "@percho/shared";
 import { allSkillsFromLoader } from "./capabilities/resource-loader";
 
 /**
@@ -69,7 +69,7 @@ function skillCommands(loader: ResourceLoader): SlashCommandInfo[] {
 
 type MenuMetadata = { version: 1; canonical: string; skill: string; role: "primary" | "alias" };
 function menuMetadata(command: ResolvedCommand): MenuMetadata | undefined {
-	const value = (command as ResolvedCommand & { perchoMenu?: MenuMetadata }).perchoMenu;
+	const value = (command as ResolvedCommand & { droneMenu?: MenuMetadata }).droneMenu;
 	if (
 		value?.version !== 1 ||
 		value.canonical !== "obsidian-setup" ||

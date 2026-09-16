@@ -8,7 +8,7 @@ import { CloseIcon, CoffeeIcon, GearIcon, HelpIcon, ObsidianIcon, PlusIcon, Zote
 import { Tooltip } from "../ui/Tooltip";
 
 /** 项目仓库地址（帮助按钮跳转） */
-const APP_REPO_URL = "https://github.com/Gyoungwe/percho";
+const APP_REPO_URL = "https://github.com/Gyoungwe/Drone";
 
 /** Shared geometry keeps the three footer actions aligned, including their full-row hit targets. */
 const FOOTER_ACTION_CLASS =

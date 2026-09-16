@@ -57,7 +57,7 @@ export interface UiPluginManifest {
 	/** 必填：/^[a-z0-9][a-z0-9-]*$/ 且必须与目录名一致 */
 	name: string;
 	/** 必填：宿主契约版本，当前只接受 1 */
-	perchoUi: number;
+	droneUi: number;
 	/** 必填：插件目录内相对路径，禁止 .. 穿越；后缀 .ts/.tsx/.js/.jsx */
 	main: string;
 	/** 槽位 → 入口 bundle 的具名导出名（key 必须是已知槽位名）；slots 与 contributions 至少其一非空 */
@@ -78,7 +78,7 @@ export interface UiPluginInfo {
 	displayName?: string;
 	description?: string;
 	version?: string;
-	perchoUi?: number;
+	droneUi?: number;
 	/** manifest 声明的槽位 → 导出名 */
 	slots: Record<string, string>;
 	/** manifest 声明的区域贡献（未知 region 条目已过滤） */

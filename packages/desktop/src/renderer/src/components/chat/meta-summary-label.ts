@@ -1,4 +1,4 @@
-import type { SummarySegment } from "@percho/shared";
+import type { SummarySegment } from "@drone/shared";
 import type { useT } from "../../i18n";
 import { displayName } from "./ToolCallCard";
 

@@ -46,7 +46,7 @@ const groups: Partial<Record<SkillCategory, readonly string[]>> = {
 		"nature-figure",
 		"nature-image2ppt",
 		"nature-paper2ppt",
-		"percho-ui-plugin",
+		"drone-ui-plugin",
 	],
 	engineering: [
 		"code-review",

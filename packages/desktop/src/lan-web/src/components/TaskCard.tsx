@@ -1,4 +1,4 @@
-import { TASK_STATE_LABELS, type TaskView } from "@percho/shared";
+import { TASK_STATE_LABELS, type TaskView } from "@drone/shared";
 import { t } from "../i18n";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "./icons";
 

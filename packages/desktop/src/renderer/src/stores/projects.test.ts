@@ -1,4 +1,4 @@
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { setDailyDirForTest } from "../lib/daily";
 import { deriveProjects } from "./projects";
@@ -16,7 +16,7 @@ function session(cwd: string, modifiedAt: number): SessionMeta {
 	};
 }
 
-const DAILY = "/Users/test/.percho/daily";
+const DAILY = "/Users/test/.drone/daily";
 
 describe("deriveProjects", () => {
 	it("手动添加的按添加时间倒排（最新在前）", () => {

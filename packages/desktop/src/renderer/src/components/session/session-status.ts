@@ -1,4 +1,4 @@
-import type { SessionMeta } from "@percho/shared";
+import type { SessionMeta } from "@drone/shared";
 import { isDailyCwd } from "../../lib/daily";
 import { useTranscriptStore } from "../../stores/transcript";
 

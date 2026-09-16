@@ -8,13 +8,13 @@ import { PiBackend } from "../src/pi-backend";
 
 let root, cwd, agentDir, backend, sid;
 beforeEach(async () => {
-	root = await realpath(await mkdtemp(join(tmpdir(), "percho-capability-footprint-")));
+	root = await realpath(await mkdtemp(join(tmpdir(), "drone-capability-footprint-")));
 	cwd = join(root, "project");
 	agentDir = join(root, "agent");
 	await mkdir(cwd);
 	await mkdir(agentDir);
 	vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
-	vi.stubEnv("PERCHO_KNOWLEDGE_DIR", join(root, "knowledge"));
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", join(root, "knowledge"));
 	const runtime = await ModelRuntime.create({
 		authPath: join(agentDir, "auth.json"),
 		modelsPath: null,

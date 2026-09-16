@@ -7,11 +7,11 @@ import { embedTexts, validateSemanticConfig } from "./semantic-provider.mjs";
 import { readSemanticSettings, saveSemanticSettings } from "./semantic-settings.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
-const poolKey = Symbol.for("percho.knowledge.worker-pool.v1");
+const poolKey = Symbol.for("drone.knowledge.worker-pool.v1");
 globalThis[poolKey] ??= new Map();
 const pool = globalThis[poolKey];
 const MAX_TICKETS = 128;
-const semanticLockKey = Symbol.for("percho.knowledge.semantic-lock.v1");
+const semanticLockKey = Symbol.for("drone.knowledge.semantic-lock.v1");
 globalThis[semanticLockKey] ??= new Map();
 const semanticLocks = globalThis[semanticLockKey];
 
@@ -534,7 +534,7 @@ export class KnowledgeService {
 		if (expectedBindingRevision !== this.binding.revision)
 			throw new Error("Semantic provider binding revision is stale");
 		const config = validateSemanticConfig(input);
-		const result = await embedTexts(config, ["percho semantic provider test"], options);
+		const result = await embedTexts(config, ["drone semantic provider test"], options);
 		await assertBinding(this.binding);
 		return { ok: true, provider: result.provider, model: result.model, dimension: result.dimension };
 	}

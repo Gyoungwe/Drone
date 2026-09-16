@@ -175,12 +175,12 @@ jobs:
           TAG="$RELEASE_TAG"
           ASSETS="$(gh release view "$TAG" -R "${{ github.repository }}" --json assets --jq '.assets[].name')"
           for REQUIRED in \
-            percho-mac-arm64.dmg \
-            percho-mac-x64.dmg \
-            percho-windows-x64.exe \
-            percho-windows-x64.zip \
-            percho-linux-x64.AppImage \
-            percho-linux-x64.deb; do
+            drone-mac-arm64.dmg \
+            drone-mac-x64.dmg \
+            drone-windows-x64.exe \
+            drone-windows-x64.zip \
+            drone-linux-x64.AppImage \
+            drone-linux-x64.deb; do
             if ! grep -Fxq "$REQUIRED" <<<"$ASSETS"; then
               echo "Missing required release asset: $REQUIRED" >&2
               exit 1
@@ -188,7 +188,7 @@ jobs:
           done
           gh release edit "$TAG" -R "${{ github.repository }}" --draft=false
 
-  # 刷新官网（percho-website，Cloudflare Pages）：触发 Deploy Hook 重建，同步版本号与 changelog。
+  # 刷新官网（drone-website，Cloudflare Pages）：触发 Deploy Hook 重建，同步版本号与 changelog。
   # 需要 repo secret CF_PAGES_DEPLOY_HOOK（Cloudflare Pages → Settings → Builds → Deploy hooks 创建）；未配置时跳过不影响发布
   website:
     needs: publish

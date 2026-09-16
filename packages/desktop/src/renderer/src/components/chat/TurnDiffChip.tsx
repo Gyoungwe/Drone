@@ -1,4 +1,4 @@
-import type { TurnChanges, TurnTiming } from "@percho/shared";
+import type { TurnChanges, TurnTiming } from "@drone/shared";
 import { useEffect, useReducer } from "react";
 import { useT } from "../../i18n";
 import { useUiStore } from "../../stores/ui";

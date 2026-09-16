@@ -1,4 +1,4 @@
-import type { ZoteroStatus } from "@percho/shared";
+import type { ZoteroStatus } from "@drone/shared";
 import { useCallback, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";

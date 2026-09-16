@@ -19,7 +19,7 @@ export function createEvidenceRecovery({ authorize, persist = () => {} }) {
 			used = 0;
 			for (const e of entries)
 				if (
-					e.customType === "percho-task-evidence-v1" &&
+					e.customType === "drone-task-evidence-v1" &&
 					e.data?.scope === scope &&
 					e.data.taskId === taskId &&
 					Array.isArray(e.data.records) &&

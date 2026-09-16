@@ -1,5 +1,5 @@
 /** Display-only conversion: never change saved content or code examples. */
-const PREFIX = "#percho-note=";
+const PREFIX = "#drone-note=";
 export function parseKnowledgeHref(href: string): string | null {
 	if (!href.startsWith(PREFIX)) return null;
 	try {

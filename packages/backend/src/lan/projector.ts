@@ -6,7 +6,7 @@ import {
 	type SessionMeta,
 	type SessionStats,
 	type TodoItem,
-} from "@percho/shared";
+} from "@drone/shared";
 
 const TAIL_LIMIT = 2048;
 

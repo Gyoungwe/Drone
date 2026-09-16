@@ -2,7 +2,7 @@ import type {
 	KnowledgeSemanticConfig,
 	KnowledgeSemanticIndexResult,
 	KnowledgeSemanticStatus,
-} from "@percho/shared";
+} from "@drone/shared";
 import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { Button } from "../ui/Button";

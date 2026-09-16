@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { ModelPrefsService } from "../src/settings/model-prefs";
 
 async function makeService() {
-	const dir = await mkdtemp(join(tmpdir(), "percho-model-prefs-"));
+	const dir = await mkdtemp(join(tmpdir(), "drone-model-prefs-"));
 	return {
 		dir,
 		path: join(dir, "model-prefs.json"),

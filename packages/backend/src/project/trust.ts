@@ -1,12 +1,12 @@
 import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
+import type { TrustOption, TrustRequest } from "@drone/shared";
 import {
 	type DefaultProjectTrust,
 	hasTrustRequiringProjectResources,
 	type ProjectTrustStore,
 	type ProjectTrustUpdate,
 } from "@earendil-works/pi-coding-agent";
-import type { TrustOption, TrustRequest } from "@percho/shared";
 
 /** 信任选项（含写 trust.json 所需的 updates；key 发给 renderer 展示） */
 export interface TrustOptionInternal {

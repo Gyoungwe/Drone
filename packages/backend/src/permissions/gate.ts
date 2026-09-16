@@ -1,4 +1,4 @@
-import type { PermissionAnswer, PermissionRequest, PermissionRequestKind } from "@percho/shared";
+import type { PermissionAnswer, PermissionRequest, PermissionRequestKind } from "@drone/shared";
 
 export type PermissionResponder = (req: PermissionRequest) => void;
 

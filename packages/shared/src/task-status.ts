@@ -14,7 +14,7 @@ export function taskStatusDisplay(
 	};
 	if (
 		message.role !== "custom" ||
-		message.customType !== "percho-task-status" ||
+		message.customType !== "drone-task-status" ||
 		message.display !== true ||
 		typeof message.content !== "string" ||
 		message.content.length > 16000 ||

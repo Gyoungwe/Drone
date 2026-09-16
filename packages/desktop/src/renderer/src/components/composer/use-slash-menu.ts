@@ -1,4 +1,4 @@
-import type { SlashCommandInfo } from "@percho/shared";
+import type { SlashCommandInfo } from "@drone/shared";
 import { type RefObject, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
