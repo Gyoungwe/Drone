@@ -53,7 +53,9 @@ export function AboutPanel() {
 			? t("update.installNow")
 			: state?.phase === "available" && state.manual
 				? t("update.goDownload")
-				: t("update.checkForUpdates");
+				: state?.phase === "available"
+					? t("update.download")
+					: t("update.checkForUpdates");
 
 	return (
 		<div className="flex flex-col items-center gap-1.5 py-10 text-center">
@@ -72,6 +74,7 @@ export function AboutPanel() {
 					onClick={() => {
 						if (state?.phase === "downloaded") void getPi().installUpdate();
 						else if (state?.phase === "available" && state.manual) void openReleasePage(state.version);
+						else if (state?.phase === "available") void getPi().downloadUpdate();
 						else void getPi().checkForUpdates();
 					}}
 				>
