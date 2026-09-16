@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1 — 2026-09-16
+
+- Research answers are written for the researcher: the recommendation and its key reasons come first, decisions the user must make come second with defaults, and run directories, hashes, wiki links and failed downloads are collapsed into a final `依据与记录` section. Evidence and publication rules are unchanged.
+- Task workbench reason codes (for example `stage-budget`, `reconcile-before-retry`) are shown as plain-language explanations with the next step, in the host status card and the Desktop task card.
+- When a stage budget is reached the model is told to answer from what it already has and point the user to the task panel instead of ending abruptly.
+
 ## 0.8.0 — 2026-09-16
 
 - Added the structured task workbench (`.pi/lib/tasks/workbench.mjs`, `register.mjs`): model-proposed milestones with dependencies require explicit user approval; acceptance is only satisfied by host file readback, scoped human review, Wiki review records or read-only Zotero item identity. Human-review waits resolve only their own action, and the durable ledger is restored on restart without replaying unknown side effects. The v0.7.8 runtime remains available with `PERCHO_TASK_WORKBENCH=off`.
