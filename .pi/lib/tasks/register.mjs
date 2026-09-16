@@ -15,6 +15,11 @@ export function registerWorkbench(pi) {
 		prepared = false,
 		awaitingUser = false,
 		halted = false;
+	// 回合执行中被挂起的状态卡内容；由 agent_end 补发。见 send()。
+	let pendingStatus = null;
+	// 已发出但结果尚未写回的 tool_call 数。>0 表示当前正处于
+	// assistant(tool_calls) 与其 tool 结果之间，此窗口内禁止注入 custom 消息。
+	let unpairedToolCalls = 0;
 	const authorize = async (cwd, path) => {
 		if (!context || !pi.events?.emit)
 			throw new Error("Current read-permission adapter unavailable; refusing recovery read.");
@@ -81,8 +86,25 @@ export function registerWorkbench(pi) {
 		const b = await readKnowledgeBinding();
 		return b ? `${b.vaultId}:${b.revision}` : null;
 	};
-	const send = (content = journal.render()) =>
-		pi.sendMessage(
+	/**
+	 * 状态卡只能在回合边界注入。
+	 *
+	 * tool_call 钩子触发的 advanceStage → onCheckpoint → send() 会落在
+	 * 「模型已发出 tool_calls、tool 结果尚未写回」的窗口内。此刻插入 custom
+	 * 消息会把 assistant(tool_calls) 与其 tool 结果拆开，OpenAI 兼容协议据此
+	 * 判非法，整轮 400「Messages with role 'tool' must be a response to a
+	 * preceding message with 'tool_calls'」；且 stageCalls 不复位，用户每次
+	 * 「继续」都会复现，形成死局。
+	 *
+	 * 非空闲时挂起，agent_end 统一补发，卡片内容不丢失。
+	 */
+	const send = (content = journal.render()) => {
+		if (unpairedToolCalls > 0) {
+			pendingStatus = content;
+			return;
+		}
+		pendingStatus = null;
+		return pi.sendMessage(
 			{
 				customType: "percho-task-status",
 				display: true,
@@ -91,6 +113,7 @@ export function registerWorkbench(pi) {
 			},
 			{ triggerTurn: false },
 		);
+	};
 	let handoffGeneration = 0;
 	let handoffTimer;
 	let automaticTurn = false;
@@ -227,6 +250,8 @@ export function registerWorkbench(pi) {
 		return { action: "continue" };
 	});
 	pi.on("before_agent_start", async (event, ctx) => {
+		// 新回合开始：配对计数归零，避免上一回合残留导致状态卡永久挂起
+		unpairedToolCalls = 0;
 		if (!prepared) {
 			try {
 				await prepare(event.prompt, ctx);
@@ -278,6 +303,8 @@ export function registerWorkbench(pi) {
 		}
 	});
 	pi.on("tool_call", (event) => {
+		// 结果写回前，任何 custom 注入都会拆散 assistant(tool_calls)/tool 配对
+		unpairedToolCalls++;
 		if (halted && event.toolName !== "task_status")
 			return {
 				block: true,
@@ -291,15 +318,28 @@ export function registerWorkbench(pi) {
 		}
 	});
 	pi.on("tool_result", async (event, ctx) => {
+		if (unpairedToolCalls > 0) unpairedToolCalls--;
 		await journal.observe(event, ctx.cwd);
 		if (event.toolName === "read" && !event.isError)
 			await evidence.capture(event, ctx.cwd, await bindingKey());
+		// 全部结果已配对：补发执行中被挂起的状态卡（阶段推进卡不因此丢失）
+		if (unpairedToolCalls === 0 && pendingStatus !== null) {
+			const held = pendingStatus;
+			pendingStatus = null;
+			send(held);
+		}
 	});
 	pi.events?.on?.("percho:context-evicted", (event) => {
 		if (event.sessionId === context?.sessionManager?.getSessionId?.()) evidence.evict(event.toolCallIds);
 	});
 	pi.on("agent_end", async (event, ctx) => {
 		const last = [...(event.messages || [])].reverse().find((m) => m.role === "assistant");
+		// 回合结束：清零配对计数（错误/中断回合可能留下未配对项，否则状态卡将永久挂起），
+		// 再释放执行中被挂起的卡片。
+		unpairedToolCalls = 0;
+		const held = pendingStatus;
+		pendingStatus = null;
+		if (held) send(held);
 		if (
 			last?.stopReason === "aborted" ||
 			ctx?.signal?.aborted ||

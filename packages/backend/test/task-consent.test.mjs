@@ -134,6 +134,8 @@ async function registered() {
 	const events = {},
 		commands = {},
 		entries = [];
+	// 可切换的空闲状态：回合执行中为 false（模型已发出 tool_calls，结果未回）
+	const idle = { value: true };
 	const pi = {
 		on: (name, cb) => {
 			events[name] = cb;
@@ -149,7 +151,7 @@ async function registered() {
 	};
 	const ctx = {
 		cwd: dir,
-		isIdle: () => true,
+		isIdle: () => idle.value,
 		sessionManager: { getSessionId: () => "session-a", getBranch: () => entries },
 	};
 	const j = registerWorkbench(pi);
@@ -163,7 +165,7 @@ async function registered() {
 			).toString("base64url"),
 			ctx,
 		);
-	return { j, pi, ctx, events, commands, approve };
+	return { j, pi, ctx, events, commands, approve, idle };
 }
 it("one card approval starts one hidden host continuation, not a forged user reply", async () => {
 	const { j, pi, approve } = await registered();
@@ -180,6 +182,52 @@ it("one card approval starts one hidden host continuation, not a forged user rep
 	expect(
 		j.isAutoContinuation({ ...runs[0][0], role: "custom", details: { taskId: id, nonce: "forged" } }),
 	).toBe(false);
+});
+it("no status card is injected between tool_calls and their results (400 invalid_request regression)", async () => {
+	const { pi, ctx, events, approve, idle } = await registered();
+	vi.useFakeTimers();
+	await approve();
+	await vi.runOnlyPendingTimersAsync();
+	pi.sendMessage.mockClear();
+	// 回合执行中：模型已发出 tool_calls，tool 结果尚未写回
+	idle.value = false;
+	// tool_call 钩子内触发阶段推进 → onCheckpoint → send()
+	events.tool_call({ toolName: "read", toolCallId: "call_a", input: { path: "a.txt" } });
+	await events.tool_result(
+		{
+			toolName: "read",
+			toolCallId: "call_a",
+			content: [{ type: "text", text: "fixture" }],
+		},
+		ctx,
+	);
+	// 关键断言：执行窗口内一条 custom 消息都不能注入，否则 assistant(tool_calls)
+	// 与 tool 结果被拆开，DeepSeek/OpenAI 兼容端点返回 400。
+	expect(pi.sendMessage).not.toHaveBeenCalled();
+});
+it("a status card held during the turn is still delivered at agent_end", async () => {
+	const { pi, ctx, events, approve, idle } = await registered();
+	vi.useFakeTimers();
+	await approve();
+	await vi.runOnlyPendingTimersAsync();
+	pi.sendMessage.mockClear();
+	idle.value = false;
+	// 执行窗口内触发阶段推进：卡片被挂起，不得注入
+	events.tool_call({ toolName: "read", toolCallId: "call_h", input: { path: "h.txt" } });
+	await events.tool_result(
+		{
+			toolName: "read",
+			toolCallId: "call_h",
+			content: [{ type: "text", text: "fixture" }],
+		},
+		ctx,
+	);
+	expect(pi.sendMessage).not.toHaveBeenCalled();
+	// 回合结束：挂起的卡片必须补发，内容不丢
+	idle.value = true;
+	await events.agent_end({ messages: [{ role: "assistant", stopReason: "endTurn" }] }, ctx);
+	const cards = pi.sendMessage.mock.calls.filter(([m]) => m?.customType === "percho-task-status");
+	expect(cards.length).toBeGreaterThan(0);
 });
 it.each(["input", "session_shutdown", "abort"])(
 	"%s cancels queued automatic continuation",
