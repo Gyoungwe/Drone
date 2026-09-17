@@ -16,6 +16,9 @@ import {
 	taskProgressContext,
 	toolResultFailed,
 } from "./failure-feedback.mjs";
+import { createTaskProgression } from "./progress-action.mjs";
+import { singleFlightCommand } from "./single-flight.mjs";
+import { restoreTaskToolOrder } from "./tool-protocol.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
 import { createZoteroReconciler } from "./zotero-reconcile.mjs";
 
@@ -24,11 +27,10 @@ export function registerWorkbench(pi) {
 		prepared = false,
 		awaitingUser = false,
 		halted = false;
-	// 回合执行中被挂起的状态卡内容；由 agent_end 补发。见 send()。
+	// A tool_result hook runs BEFORE the SDK appends its toolResult message.
+	// Lock the entire provider turn, including future calls in a sequential batch.
 	let pendingStatus = null;
-	// 已发出但结果尚未写回的 tool_call 数。>0 表示当前正处于
-	// assistant(tool_calls) 与其 tool 结果之间，此窗口内禁止注入 custom 消息。
-	let unpairedToolCalls = 0;
+	let providerTurnOpen = false;
 	const authorize = async (cwd, path) => {
 		if (!context || !pi.events?.emit)
 			throw new Error("Current read-permission adapter unavailable; refusing recovery read.");
@@ -96,20 +98,9 @@ export function registerWorkbench(pi) {
 		const b = await readKnowledgeBinding();
 		return b ? `${b.vaultId}:${b.revision}` : null;
 	};
-	/**
-	 * 状态卡只能在回合边界注入。
-	 *
-	 * tool_call 钩子触发的 advanceStage → onCheckpoint → send() 会落在
-	 * 「模型已发出 tool_calls、tool 结果尚未写回」的窗口内。此刻插入 custom
-	 * 消息会把 assistant(tool_calls) 与其 tool 结果拆开，OpenAI 兼容协议据此
-	 * 判非法，整轮 400「Messages with role 'tool' must be a response to a
-	 * preceding message with 'tool_calls'」；且 stageCalls 不复位，用户每次
-	 * 「继续」都会复现，形成死局。
-	 *
-	 * 非空闲时挂起，agent_end 统一补发，卡片内容不丢失。
-	 */
+	// Status messages enter history only after the complete SDK tool batch is appended.
 	const send = (content = journal.render()) => {
-		if (unpairedToolCalls > 0) {
+		if (providerTurnOpen) {
 			pendingStatus = content;
 			return;
 		}
@@ -155,8 +146,16 @@ export function registerWorkbench(pi) {
 				!journal.authorization()
 			)
 				return;
-			if (ctx.isIdle && !ctx.isIdle()) {
-				if (++idleChecks < 40) handoffTimer = setTimeout(() => void handoff(), 25);
+			let idle;
+			try {
+				idle = !ctx.isIdle || ctx.isIdle();
+			} catch {
+				// SDK contexts expire on session replacement/disposal; never resume through one.
+				cancelHandoff();
+				return;
+			}
+			if (!idle) {
+				if (++idleChecks < 40) handoffTimer = setTimeout(() => void handoff().catch(cancelHandoff), 25);
 				else {
 					journal.pause("auto-handoff-not-idle");
 					send();
@@ -183,7 +182,7 @@ export function registerWorkbench(pi) {
 						customType: "drone-task-autocontinue",
 						display: false,
 						details: { taskId, nonce: continuationToken },
-						content: `Continue the user-authorized task: ${journal.snapshot().goal}. Scope: ${journal.snapshot().authorizationSummary}. Use saved results, verify uncertain effects before any retry, and complete the remaining deliverables. Do not request routine stage approval. Respect declined installs and all permission/validation gates. If blocked, clearly deliver what exists and the one real blocker instead of silently extending scope.`,
+						content: `Continue the user-authorized task: ${journal.snapshot().goal}. Scope: ${journal.snapshot().authorizationSummary}. Use saved results, verify uncertain effects before any retry, and complete the remaining deliverables. Do not request routine stage approval. Respect declined installs and all permission/validation gates. If blocked, explain each remaining deliverable: actual evidence, confirmed blocker (or explicitly unknown cause), next action, and whether the user must decide. Use task_status for the latest remaining summary. Resolve routine gaps autonomously; create a specific task_wait only for genuinely needed input/approval. Never change acceptance criteria or mark an item complete to fill the progress bar.`,
 					},
 					{ triggerTurn: true, deliverAs: "followUp" },
 				);
@@ -199,7 +198,7 @@ export function registerWorkbench(pi) {
 				send(`自动续作未启动：${clean(e.message)}。已保留原结果，没有重复执行。`);
 			}
 		};
-		handoffTimer = setTimeout(() => void handoff(), 0);
+		handoffTimer = setTimeout(() => void handoff().catch(cancelHandoff), 0);
 	};
 	pi.on("session_shutdown", cancelHandoff);
 	// Current task consent is exposed only to the existing permission adapter, never to model tool inputs.
@@ -224,12 +223,16 @@ export function registerWorkbench(pi) {
 	};
 	pi.on("session_start", (_event, ctx) => {
 		cancelHandoff();
+		providerTurnOpen = false;
+		pendingStatus = null;
 		attach(ctx, true);
 		prepared = false;
 		awaitingUser = false;
 	});
 	pi.on("session_tree", (_event, ctx) => {
 		cancelHandoff();
+		providerTurnOpen = false;
+		pendingStatus = null;
 		attach(ctx, true);
 		prepared = false;
 		halted = false;
@@ -260,8 +263,7 @@ export function registerWorkbench(pi) {
 		return { action: "continue" };
 	});
 	pi.on("before_agent_start", async (event, ctx) => {
-		// 新回合开始：配对计数归零，避免上一回合残留导致状态卡永久挂起
-		unpairedToolCalls = 0;
+		providerTurnOpen = true;
 		if (!prepared) {
 			try {
 				await prepare(event.prompt, ctx);
@@ -313,9 +315,16 @@ export function registerWorkbench(pi) {
 			halted = true;
 		}
 	});
+	pi.on("context", async (event) => ({ messages: restoreTaskToolOrder(event.messages) }));
+	pi.on("turn_start", () => {
+		providerTurnOpen = true;
+	});
+	pi.on("turn_end", () => {
+		providerTurnOpen = false;
+		if (pendingStatus !== null) send(pendingStatus);
+	});
 	pi.on("tool_call", (event) => {
-		// 结果写回前，任何 custom 注入都会拆散 assistant(tool_calls)/tool 配对
-		unpairedToolCalls++;
+		providerTurnOpen = true;
 		if (halted && event.toolName !== "task_status")
 			return {
 				block: true,
@@ -329,16 +338,9 @@ export function registerWorkbench(pi) {
 		}
 	});
 	pi.on("tool_result", async (event, ctx) => {
-		if (unpairedToolCalls > 0) unpairedToolCalls--;
 		await journal.observe(event, ctx.cwd);
 		if (event.toolName === "read" && !event.isError)
 			await evidence.capture(event, ctx.cwd, await bindingKey());
-		// 全部结果已配对：补发执行中被挂起的状态卡（阶段推进卡不因此丢失）
-		if (unpairedToolCalls === 0 && pendingStatus !== null) {
-			const held = pendingStatus;
-			pendingStatus = null;
-			send(held);
-		}
 		if (toolResultFailed(event)) {
 			const context = failureContext(journal.snapshot(), failureObservation(event, new Date().toISOString()));
 			return { content: [...(event.content || []), { type: "text", text: context }] };
@@ -349,9 +351,8 @@ export function registerWorkbench(pi) {
 	});
 	pi.on("agent_end", async (event, ctx) => {
 		const last = [...(event.messages || [])].reverse().find((m) => m.role === "assistant");
-		// 回合结束：清零配对计数（错误/中断回合可能留下未配对项，否则状态卡将永久挂起），
-		// 再释放执行中被挂起的卡片。
-		unpairedToolCalls = 0;
+		// Fallback for errors/aborts that end without a normal turn_end.
+		providerTurnOpen = false;
 		const held = pendingStatus;
 		pendingStatus = null;
 		if (held) send(held);
@@ -537,15 +538,27 @@ export function registerWorkbench(pi) {
 			send();
 		},
 	});
+	const progressTask = createTaskProgression(journal, {
+		getGeneration: () => handoffGeneration,
+		askAuthorization,
+		checkBinding: bindingKey,
+		continueAuthorized,
+		prepareRemaining: () => pi.sendUserMessage("继续", { expandPromptTemplates: false }),
+		send,
+	});
 	pi.registerCommand("task-action", {
 		description: "任务面板的版本化用户操作；不授予新权限",
-		handler: async (args, ctx) => {
+		handler: singleFlightCommand(async (args, ctx) => {
 			cancelHandoff();
 			attach(ctx);
 			if (ctx.isIdle && !ctx.isIdle())
 				throw new Error("Stop the agent before changing tasks or inspecting recovery files.");
 			if (args.length > 6000) throw new Error("Task command too large.");
 			const input = JSON.parse(Buffer.from(args.trim(), "base64url").toString("utf8"));
+			if (input.action === "progress") {
+				await progressTask(input, ctx);
+				return;
+			}
 			if (input.action === "authorize-task") {
 				if (!(await askAuthorization(input, ctx))) {
 					send("尚未授权。可稍后通过 ask_user 重新确认。");
@@ -560,6 +573,10 @@ export function registerWorkbench(pi) {
 			if (["approve-plan", "next-stage", "ask-authorization", "confirm-outcome"].includes(input.action)) {
 				const accepted = await askAuthorization(input, ctx);
 				send(accepted ? "ask_user：已记录本次确认。" : "ask_user：未确认，状态和授权不变。");
+				if (accepted) {
+					journal.command({ taskId: input.taskId, revision: journal.view().revision, action: "select" });
+					continueAuthorized(ctx);
+				}
 				return;
 			}
 			if (input.action === "acknowledge") {
@@ -568,8 +585,12 @@ export function registerWorkbench(pi) {
 					.tasks.find((t) => t.id === input.taskId)
 					?.actions.find((a) => a.id === input.actionId);
 				if (action?.kind === "authorization") {
-					await askAuthorization({ ...input, action: "ask-authorization" }, ctx);
+					const accepted = await askAuthorization({ ...input, action: "ask-authorization" }, ctx);
 					send();
+					if (accepted) {
+						journal.command({ taskId: input.taskId, revision: journal.view().revision, action: "select" });
+						continueAuthorized(ctx);
+					}
 					return;
 				}
 			}
@@ -593,7 +614,7 @@ export function registerWorkbench(pi) {
 				return;
 			} else journal.command(input);
 			send();
-		},
+		}),
 	});
 	return journal;
 }

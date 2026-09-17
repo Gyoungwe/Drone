@@ -108,7 +108,8 @@ export function makeUiContext(
 			);
 			if (response.kind !== "answer" || response.mode === "elaborate") return undefined;
 			const values = response.answers.value?.values;
-			return values?.length === 1 && options.includes(values[0]!) ? values[0] : undefined;
+			const selected = values?.length === 1 ? values[0] : undefined;
+			return typeof selected === "string" && options.includes(selected) ? selected : undefined;
 		},
 		confirm: (title, message) => gate.confirm(title, message),
 		input: async (title, placeholder, dialogOptions) => {
@@ -130,7 +131,7 @@ export function makeUiContext(
 				},
 				dialogOptions?.signal,
 			);
-			if (response.kind === "cancel") return undefined;
+			if (response.kind !== "answer" || response.mode === "elaborate") return undefined;
 			return response.answers.value?.customText?.trim() || undefined;
 		},
 		notify: (message, type) => notify?.(message, type ?? "info"),

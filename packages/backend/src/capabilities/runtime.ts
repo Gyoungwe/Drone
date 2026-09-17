@@ -4,7 +4,17 @@ import { CAPABILITY_IDS, type CapabilityId, type CapabilityState, getSkillCatego
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
 
-const ALWAYS_ON = new Set(["ask_user", "set_status", "todo", "capability_load", "task_status"]);
+const ALWAYS_ON = new Set([
+	"ask_user",
+	"set_status",
+	"todo",
+	"capability_load",
+	"task_status",
+	"task_plan",
+	"task_wait",
+	"task_reconcile",
+	"task_evidence_restore",
+]);
 
 const PATTERNS: Record<CapabilityId, RegExp[]> = {
 	knowledge: [
