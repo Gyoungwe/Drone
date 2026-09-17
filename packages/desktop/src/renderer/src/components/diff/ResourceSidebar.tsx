@@ -1,11 +1,11 @@
 import "./resource-reader.css";
 import {
 	filePreviewDirectory,
-	splitResourceLink,
-	resourceHeadingId,
 	isLocalResourceTarget,
 	type ResourcePreviewResult,
 	resourceFormat,
+	resourceHeadingId,
+	splitResourceLink,
 } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";

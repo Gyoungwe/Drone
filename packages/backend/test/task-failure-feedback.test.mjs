@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
 	diagnosticText,
 	FAILURE_EXPLANATION_POLICY,
-	failureContext, taskProgressContext, TASK_HANDOFF_POLICY,
+	failureContext,
 	failureObservation,
 	failureReceipt,
+	TASK_HANDOFF_POLICY,
+	taskProgressContext,
 	toolResultFailed,
 } from "../../../.pi/lib/tasks/failure-feedback.mjs";
 import { createTaskWorkbench, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
@@ -168,10 +170,29 @@ it("redacts command flags and truncated quoted credentials before showing the di
 	expect(diagnosticText('password="' + "secret word ".repeat(1000))).not.toContain("secret word");
 	expect(diagnosticText("line\nwith\u0000controls")).toBe("line with controls");
 });
-it("a normal partial task supplies remaining milestones even without a failed tool result",()=>{
- const task={id:"task",goal:"analysis",state:"partial",stage:2,milestones:[{id:"script",state:"completed",acceptance:{path:"analysis.R"}},{id:"deposit",state:"blocked",acceptance:{path:"Library/note.md"},evidence:{code:"ENOENT",at:"now"}}]};
- expect(failureContext(task)).toBe("");const context=taskProgressContext(task);
- expect(context).toContain("task_progress_context");expect(context).toContain('"evidenceCode":"ENOENT"');expect(context).toContain('"executionStage":2');
- expect(context).toContain('"historicalErrorDetailMissing":false');expect(context).toContain("not-determined-by-host");
- expect(TASK_HANDOFF_POLICY).toContain("generated script from executed analysis");expect(TASK_HANDOFF_POLICY).toContain("next concrete action");
+it("a normal partial task supplies remaining milestones even without a failed tool result", () => {
+	const task = {
+		id: "task",
+		goal: "analysis",
+		state: "partial",
+		stage: 2,
+		milestones: [
+			{ id: "script", state: "completed", acceptance: { path: "analysis.R" } },
+			{
+				id: "deposit",
+				state: "blocked",
+				acceptance: { path: "Library/note.md" },
+				evidence: { code: "ENOENT", at: "now" },
+			},
+		],
+	};
+	expect(failureContext(task)).toBe("");
+	const context = taskProgressContext(task);
+	expect(context).toContain("task_progress_context");
+	expect(context).toContain('"evidenceCode":"ENOENT"');
+	expect(context).toContain('"executionStage":2');
+	expect(context).toContain('"historicalErrorDetailMissing":false');
+	expect(context).toContain("not-determined-by-host");
+	expect(TASK_HANDOFF_POLICY).toContain("generated script from executed analysis");
+	expect(TASK_HANDOFF_POLICY).toContain("next concrete action");
 });

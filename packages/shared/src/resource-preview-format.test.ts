@@ -124,6 +124,16 @@ describe("bounded resource format previews", () => {
 		expect(sequencePreview("not-a-title\nACG", "fastq").records).toHaveLength(0);
 	});
 });
-it.each([["x.r","r"],["x.R","r"],["x.py","python"],["x.PY","python"],["x.Py","python"],["x.pyi","python"],["x.PYW","python"],[".Rprofile","r"],["x.RSCRIPT","r"]])("case-insensitive script grammar for %s",(path,language)=>{
- expect(resourceFormat(path)).toMatchObject({kind:"code",language,supported:true});
+it.each([
+	["x.r", "r"],
+	["x.R", "r"],
+	["x.py", "python"],
+	["x.PY", "python"],
+	["x.Py", "python"],
+	["x.pyi", "python"],
+	["x.PYW", "python"],
+	[".Rprofile", "r"],
+	["x.RSCRIPT", "r"],
+])("case-insensitive script grammar for %s", (path, language) => {
+	expect(resourceFormat(path)).toMatchObject({ kind: "code", language, supported: true });
 });

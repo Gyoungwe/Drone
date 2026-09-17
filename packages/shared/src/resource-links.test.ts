@@ -26,10 +26,14 @@ describe("artifact resource routing", () => {
 	});
 });
 
-import { splitResourceLink, resourceHeadingId } from "./resource-links";
+import { resourceHeadingId, splitResourceLink } from "./resource-links";
+
 it("separates cross-document anchors without corrupting an encoded hash in the filename", () => {
- expect(splitResourceLink("./methods.md#analysis")).toEqual({ href: "./methods.md", fragment: "analysis" });
- expect(splitResourceLink("./methods%23v2.md#%E6%96%B9%E6%B3%95")).toEqual({ href: "./methods%23v2.md", fragment: "方法" });
- expect(resourceHeadingId("Data Analysis")).toBe("resource-heading-data-analysis");
- expect(splitResourceLink("./report.md")).toEqual({ href: "./report.md" });
+	expect(splitResourceLink("./methods.md#analysis")).toEqual({ href: "./methods.md", fragment: "analysis" });
+	expect(splitResourceLink("./methods%23v2.md#%E6%96%B9%E6%B3%95")).toEqual({
+		href: "./methods%23v2.md",
+		fragment: "方法",
+	});
+	expect(resourceHeadingId("Data Analysis")).toBe("resource-heading-data-analysis");
+	expect(splitResourceLink("./report.md")).toEqual({ href: "./report.md" });
 });

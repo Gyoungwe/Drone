@@ -345,15 +345,32 @@ it("host delivery does not link unexecuted crash-time write intents", () => {
 	j.pause("user-stop");
 	expect(j.render()).not.toContain("](./data.csv)");
 });
-it("matches a host-observed absolute artifact to its agreed relative milestone immediately",async()=>{
- const cwd=await fixture(),path=join(cwd,"data.csv");await writeFile(path,"value\n1");
- const {j}=setup({inspect:async()=>({path:path.replaceAll("\\","/"),bytes:7,sha256:"a".repeat(64)})});plan(j);
- const event=effect("absolute",path);expect(j.guard(event)).toBeNull();await j.observe(event,cwd);
- expect(j.snapshot().milestones[0].state).toBe("completed");
+it("matches a host-observed absolute artifact to its agreed relative milestone immediately", async () => {
+	const cwd = await fixture(),
+		path = join(cwd, "data.csv");
+	await writeFile(path, "value\n1");
+	const { j } = setup({
+		inspect: async () => ({ path: path.replaceAll("\\", "/"), bytes: 7, sha256: "a".repeat(64) }),
+	});
+	plan(j);
+	const event = effect("absolute", path);
+	expect(j.guard(event)).toBeNull();
+	await j.observe(event, cwd);
+	expect(j.snapshot().milestones[0].state).toBe("completed");
 });
-it("does not match same-named files from a different directory",async()=>{
- const cwd=await fixture(),other=await fixture();
- const {j}=setup({inspect:async()=>({path:join(other,"data.csv").replaceAll("\\","/"),bytes:7,sha256:"a".repeat(64)})});plan(j);
- const event=effect("wrong",join(other,"data.csv"));j.guard(event);await j.observe(event,cwd);
- expect(j.snapshot().milestones[0].state).not.toBe("completed");
+it("does not match same-named files from a different directory", async () => {
+	const cwd = await fixture(),
+		other = await fixture();
+	const { j } = setup({
+		inspect: async () => ({
+			path: join(other, "data.csv").replaceAll("\\", "/"),
+			bytes: 7,
+			sha256: "a".repeat(64),
+		}),
+	});
+	plan(j);
+	const event = effect("wrong", join(other, "data.csv"));
+	j.guard(event);
+	await j.observe(event, cwd);
+	expect(j.snapshot().milestones[0].state).not.toBe("completed");
 });

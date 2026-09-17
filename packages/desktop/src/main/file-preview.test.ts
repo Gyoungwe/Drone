@@ -132,8 +132,14 @@ describe("local bounded file reads without Electron or scientific validation", (
 		expect(small.data).toBeTruthy();
 	});
 });
-it.each(["lower.r","upper.R","lower.py","upper.PY","mixed.Py",".Rprofile","stub.PYI"])("reads %s as bounded source, never executes it",async(name)=>{
- const source="# SCRIPT_READ_ONLY\nprint(1)\n";const path=await fixture(name,source);
- const result=await previewLocalFile(pathToFileURL(path).href,root);
- expect(result.kind).toBe("text");expect(result.text).toBe(source);expect(await readdir(root)).toEqual([name]);
-});
+it.each(["lower.r", "upper.R", "lower.py", "upper.PY", "mixed.Py", ".Rprofile", "stub.PYI"])(
+	"reads %s as bounded source, never executes it",
+	async (name) => {
+		const source = "# SCRIPT_READ_ONLY\nprint(1)\n";
+		const path = await fixture(name, source);
+		const result = await previewLocalFile(pathToFileURL(path).href, root);
+		expect(result.kind).toBe("text");
+		expect(result.text).toBe(source);
+		expect(await readdir(root)).toEqual([name]);
+	},
+);

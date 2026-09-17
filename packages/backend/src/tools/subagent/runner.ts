@@ -196,9 +196,10 @@ export function addSubagentUsage(target: SubagentUsage, delta: UsageDelta): void
 	target.cacheWrite += delta.cacheWrite ?? 0;
 	target.cost += delta.cost ?? 0;
 	// totalTokens 是单条消息的累计上下文量：优先使用正 totalTokens，否则用组件求和
-	const reqTotal = typeof delta.totalTokens === "number" && Number.isFinite(delta.totalTokens) && delta.totalTokens > 0
-		? delta.totalTokens
-		: (delta.input ?? 0)+(delta.output ?? 0)+(delta.cacheRead ?? 0)+(delta.cacheWrite ?? 0);
+	const reqTotal =
+		typeof delta.totalTokens === "number" && Number.isFinite(delta.totalTokens) && delta.totalTokens > 0
+			? delta.totalTokens
+			: (delta.input ?? 0) + (delta.output ?? 0) + (delta.cacheRead ?? 0) + (delta.cacheWrite ?? 0);
 	if (reqTotal > 0) target.totalTokens.tokens += reqTotal;
 }
 

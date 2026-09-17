@@ -1,9 +1,9 @@
-import { readReviewMode } from "./review-policy.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { join, relative, resolve, sep } from "node:path";
 import { Worker } from "node:worker_threads";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import { canRead, validateNote } from "./files.mjs";
+import { readReviewMode } from "./review-policy.mjs";
 import { embedTexts, validateSemanticConfig } from "./semantic-provider.mjs";
 import { readSemanticSettings, saveSemanticSettings } from "./semantic-settings.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";

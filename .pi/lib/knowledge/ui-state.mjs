@@ -279,7 +279,9 @@ export function noteKnowledgeOperation(ctx, event) {
 				"Wiki proposal",
 				d.path,
 				d.status === "applied" ? "已保存" : "待确认",
-				d.status === "applied" ? "Saved with history; not scientific verification." : "Not yet part of live Wiki knowledge.",
+				d.status === "applied"
+					? "Saved with history; not scientific verification."
+					: "Not yet part of live Wiki knowledge.",
 			),
 		);
 	const artifacts = [...(old.artifacts || [])];

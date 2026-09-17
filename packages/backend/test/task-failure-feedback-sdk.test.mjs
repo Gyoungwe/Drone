@@ -54,17 +54,20 @@ it("real SDK failure → task_status → natural handoff keeps pairing and does 
 		const answer =
 			"读取 missing.csv 时发现文件不存在，因此还不能分析这份输入；我会先核对文件路径，不重跑其他已完成步骤。";
 		faux.setResponses([
-   ()=>reply([call("read",{path:"missing.csv"})],{stopReason:"toolUse"}),
-   ()=>reply([call("task_status",{})],{stopReason:"toolUse"}),
-   context=>{captured=context;return reply(answer);},
-  ]);
+			() => reply([call("read", { path: "missing.csv" })], { stopReason: "toolUse" }),
+			() => reply([call("task_status", {})], { stopReason: "toolUse" }),
+			(context) => {
+				captured = context;
+				return reply(answer);
+			},
+		]);
 		await session.prompt("读取 missing.csv，并说明任何失败对结果的影响和下一步。", {
 			expandPromptTemplates: false,
 		});
 		expect(faux.state.callCount).toBe(3);
 		expect(network).not.toHaveBeenCalled();
-  expect(captured.messages.some(m=>m.role==="toolResult" && m.toolName==="task_status")).toBe(true);
-  expect(captured.systemPrompt).toContain("not a copied task ledger");
+		expect(captured.messages.some((m) => m.role === "toolResult" && m.toolName === "task_status")).toBe(true);
+		expect(captured.systemPrompt).toContain("not a copied task ledger");
 		expect(captured.systemPrompt).toContain("which concrete step/file/service failed");
 		expect(captured.systemPrompt).toContain("impact not yet known");
 		const index = captured.messages.findIndex((m) => m.role === "toolResult" && m.toolName === "read");

@@ -19,13 +19,21 @@ export function localResourceHref(path: string): string | undefined {
 
 /** Split a Markdown link before decoding: %23 is a filename character, # starts a fragment. */
 export function splitResourceLink(href: string): { href: string; fragment?: string } {
- const at = href.indexOf("#");
- if (at < 0) return { href };
- const raw = href.slice(at + 1);
- let fragment = raw;
- try { fragment = decodeURIComponent(raw); } catch { /* preserve malformed literal fragment */ }
- return { href: href.slice(0, at), fragment };
+	const at = href.indexOf("#");
+	if (at < 0) return { href };
+	const raw = href.slice(at + 1);
+	let fragment = raw;
+	try {
+		fragment = decodeURIComponent(raw);
+	} catch {
+		/* preserve malformed literal fragment */
+	}
+	return { href: href.slice(0, at), fragment };
 }
 export function resourceHeadingId(fragment: string): string {
- return `resource-heading-${fragment.toLowerCase().replace(/[^\p{L}\p{N}_-]+/gu, "-").replace(/^-|-$/g, "").slice(0, 120)}`;
+	return `resource-heading-${fragment
+		.toLowerCase()
+		.replace(/[^\p{L}\p{N}_-]+/gu, "-")
+		.replace(/^-|-$/g, "")
+		.slice(0, 120)}`;
 }

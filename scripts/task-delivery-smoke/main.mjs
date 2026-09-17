@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { registerAppIpc } from "../../packages/desktop/src/main/ipc/app.ts";
 import { IpcChannels } from "../../packages/shared/src/ipc.ts";
-import { verifyScriptReaders } from "./script-checks.mjs";
 import { verifyResourceReaders } from "./resource-checks.mjs";
+import { verifyScriptReaders } from "./script-checks.mjs";
 
 const root = process.env.DRONE_UI_FIXTURE;
 app.setPath("userData", join(root, "electron-profile"));
@@ -157,7 +157,7 @@ async function run() {
 			"pending human action remains visible; rendering/preview never grants consent or resumes a model",
 		);
 		await verifyResourceReaders({ window, js, wait, cwd, root, checks, networkRequests });
-  await verifyScriptReaders({js,wait,cwd,checks});
+		await verifyScriptReaders({ js, wait, cwd, checks });
 		assert.equal(prompts, 0);
 		assert.deepEqual(networkRequests, []);
 		assert.deepEqual(errors, []);

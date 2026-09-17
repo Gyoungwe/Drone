@@ -120,8 +120,8 @@ export interface KnowledgeIndexStatus {
 	problems: { path: string; message: string }[];
 }
 export interface KnowledgeOverview {
- reviewMode?: "automatic" | "strict";
- wikiHistory?: { id: string; path: string; afterHash: string; reviewedAt: number; reviewMethod: string }[];
+	reviewMode?: "automatic" | "strict";
+	wikiHistory?: { id: string; path: string; afterHash: string; reviewedAt: number; reviewMethod: string }[];
 	specialistSettings?: KnowledgeSpecialistSettings;
 	specialistSettingsError?: string;
 	enabled: boolean;

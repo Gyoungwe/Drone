@@ -11,7 +11,10 @@ function harness(
 	const gate = registerAnswerPublication(
 		{ on: (name, handler) => events.set(name, handler) },
 		{
-			getCurrent: () => ({ service: { validateAnswer: called, check: async () => ({}) }, ticket: "host-owned" }),
+			getCurrent: () => ({
+				service: { validateAnswer: called, check: async () => ({}) },
+				ticket: "host-owned",
+			}),
 			evidenceOnly,
 			getDeliveryFooter,
 		},
@@ -25,7 +28,10 @@ const message = (text = "UNCHECKED_FIXTURE") => ({
 	timestamp: 1,
 	stopReason: "stop",
 });
-beforeEach(() => { vi.stubEnv("DRONE_KNOWLEDGE_DIR", "/fixture/app"); vi.stubEnv("DRONE_REVIEW_MODE", "strict"); });
+beforeEach(() => {
+	vi.stubEnv("DRONE_KNOWLEDGE_DIR", "/fixture/app");
+	vi.stubEnv("DRONE_REVIEW_MODE", "strict");
+});
 afterEach(() => {
 	vi.useRealTimers();
 	vi.unstubAllEnvs();
@@ -318,34 +324,53 @@ it("a failed research draft still delivers observed task state without publishin
 	expect(JSON.stringify(result)).not.toContain("FAKE_RESEARCH");
 });
 
-it.each(["search-required", "citation-required", "source-unread", "search-stale"])("automatic %s is an advisory without retries", async code => {
- vi.stubEnv("DRONE_REVIEW_MODE", "automatic");
- const h = harness(async () => { throw Object.assign(new Error("bounded evidence issue"), { code }); });
- const result = await h.end(message("Useful answer with limited evidence"));
- expect(result.message.knowledgePublication.status).toBe("released");
- expect(result.message.knowledgePublication.scientificallyVerified).not.toBe(true);
- expect(result.message.knowledgePublication.warnings[0].code).toBe(code);
- expect(result.message.content[0].text).toContain("Useful answer");
- expect(h.called).toHaveBeenCalledOnce();
- expect((await h.gate.preflight({ cwd: "/fixture" }, "draft")).ok).toBe(true);
-});
+it.each(["search-required", "citation-required", "source-unread", "search-stale"])(
+	"automatic %s is an advisory without retries",
+	async (code) => {
+		vi.stubEnv("DRONE_REVIEW_MODE", "automatic");
+		const h = harness(async () => {
+			throw Object.assign(new Error("bounded evidence issue"), { code });
+		});
+		const result = await h.end(message("Useful answer with limited evidence"));
+		expect(result.message.knowledgePublication.status).toBe("released");
+		expect(result.message.knowledgePublication.scientificallyVerified).not.toBe(true);
+		expect(result.message.knowledgePublication.warnings[0].code).toBe(code);
+		expect(result.message.content[0].text).toContain("Useful answer");
+		expect(h.called).toHaveBeenCalledOnce();
+		expect((await h.gate.preflight({ cwd: "/fixture" }, "draft")).ok).toBe(true);
+	},
+);
 it("automatic mode still fails closed on authority and unknown errors", async () => {
- vi.stubEnv("DRONE_REVIEW_MODE", "automatic");
- for (const code of ["binding-changed", "scope-denied", "ticket-invalid", "unexpected-storage-error"]) {
-  const h = harness(async () => { throw Object.assign(new Error("secret error body"), { code }); });
-  const result = await h.end(message("untrusted draft"));
-  expect(result.message.knowledgePublication.status).toBe("blocked");
-  expect(JSON.stringify(result)).not.toContain("secret error body");
- }
+	vi.stubEnv("DRONE_REVIEW_MODE", "automatic");
+	for (const code of ["binding-changed", "scope-denied", "ticket-invalid", "unexpected-storage-error"]) {
+		const h = harness(async () => {
+			throw Object.assign(new Error("secret error body"), { code });
+		});
+		const result = await h.end(message("untrusted draft"));
+		expect(result.message.knowledgePublication.status).toBe("blocked");
+		expect(JSON.stringify(result)).not.toContain("secret error body");
+	}
 });
-it("a legacy task status request no longer eats a normally validated natural-language handoff",async()=>{
- const events=new Map(),validate=vi.fn(async()=>({status:"ready",sources:[],scientificallyVerified:false}));
- const drain=vi.fn(()=>"STALE HOST LEDGER: 0/6");
- const gate=registerAnswerPublication({on:(n,h)=>events.set(n,h)},{getCurrent:()=>({service:{validateAnswer:validate,check:async()=>({})},ticket:"host-owned"}),getTaskRuntime:()=>({takeReport:drain})});
- gate.begin(true);
- const answer="已生成脚本但尚未运行分析；存档路径仍需核对，下一步先检查返回的实际位置，不重复写入。";
- const result=await events.get("message_end")({message:message(answer)},{cwd:"/fixture"});
- expect(validate).toHaveBeenCalledOnce();expect(drain).toHaveBeenCalledOnce();
- expect(result.message.knowledgePublication.status).toBe("released");
- expect(JSON.stringify(result)).toContain(answer);expect(JSON.stringify(result)).not.toContain("STALE HOST LEDGER");
+it("a legacy task status request no longer eats a normally validated natural-language handoff", async () => {
+	const events = new Map(),
+		validate = vi.fn(async () => ({ status: "ready", sources: [], scientificallyVerified: false }));
+	const drain = vi.fn(() => "STALE HOST LEDGER: 0/6");
+	const gate = registerAnswerPublication(
+		{ on: (n, h) => events.set(n, h) },
+		{
+			getCurrent: () => ({
+				service: { validateAnswer: validate, check: async () => ({}) },
+				ticket: "host-owned",
+			}),
+			getTaskRuntime: () => ({ takeReport: drain }),
+		},
+	);
+	gate.begin(true);
+	const answer = "已生成脚本但尚未运行分析；存档路径仍需核对，下一步先检查返回的实际位置，不重复写入。";
+	const result = await events.get("message_end")({ message: message(answer) }, { cwd: "/fixture" });
+	expect(validate).toHaveBeenCalledOnce();
+	expect(drain).toHaveBeenCalledOnce();
+	expect(result.message.knowledgePublication.status).toBe("released");
+	expect(JSON.stringify(result)).toContain(answer);
+	expect(JSON.stringify(result)).not.toContain("STALE HOST LEDGER");
 });

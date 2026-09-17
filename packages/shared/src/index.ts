@@ -13,7 +13,12 @@ export * from "./mcp";
 export * from "./packages";
 export * from "./progress-display";
 export * from "./public-timeline";
-export { isLocalResourceTarget, localResourceHref } from "./resource-links";
+export {
+	isLocalResourceTarget,
+	localResourceHref,
+	resourceHeadingId,
+	splitResourceLink,
+} from "./resource-links";
 export {
 	filePreviewDirectory,
 	PREVIEW_COLUMNS,
@@ -38,5 +43,3 @@ export * from "./ui-plugins";
 export * from "./update";
 export * from "./usage-display";
 export * from "./zotero";
-
-export { splitResourceLink, resourceHeadingId } from "./resource-links";

@@ -315,11 +315,14 @@ it("a late preparation failure cannot reopen a task cancelled during the async h
 	vi.useFakeTimers();
 	let rejectBinding;
 	// Authorization checks the binding before and after the user answer; the third read is the handoff under test.
-	readKnowledgeBinding.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockReturnValueOnce(
-		new Promise((_resolve, reject) => {
-			rejectBinding = reject;
-		}),
-	);
+	readKnowledgeBinding
+		.mockResolvedValueOnce(null)
+		.mockResolvedValueOnce(null)
+		.mockReturnValueOnce(
+			new Promise((_resolve, reject) => {
+				rejectBinding = reject;
+			}),
+		);
 	await approve();
 	vi.advanceTimersByTime(0);
 	await commands["task-action"].handler(
@@ -336,20 +339,37 @@ it("a late preparation failure cannot reopen a task cancelled during the async h
 	expect(pi.sendMessage.mock.calls.filter(([, o]) => o?.triggerTurn)).toHaveLength(0);
 });
 
-it.each([true, false])("task_plan opens ask_user immediately; approved=%s", async approved => {
- const { j, pi, ctx } = await registered({ withPlan: false });
- ctx.ui.select.mockResolvedValue(approved ? "同意本次请求" : undefined);
- const tool = pi.registerTool.mock.calls.map(([tool]) => tool).find(tool => tool.name === "task_plan");
- const result = await tool.execute("plan", { summary: "Create report", milestones: [{ id: "report", title: "Report", acceptance: { kind: "file", path: "report.csv" } }] }, undefined, undefined, ctx);
- expect(ctx.ui.select).toHaveBeenCalledOnce();
- expect(JSON.parse(result.content[0].text).authorized).toBe(approved);
- expect(!!j.authorization()).toBe(approved);
- expect(pi.sendUserMessage).not.toHaveBeenCalled();
+it.each([true, false])("task_plan opens ask_user immediately; approved=%s", async (approved) => {
+	const { j, pi, ctx } = await registered({ withPlan: false });
+	ctx.ui.select.mockResolvedValue(approved ? "同意本次请求" : undefined);
+	const tool = pi.registerTool.mock.calls.map(([tool]) => tool).find((tool) => tool.name === "task_plan");
+	const result = await tool.execute(
+		"plan",
+		{
+			summary: "Create report",
+			milestones: [{ id: "report", title: "Report", acceptance: { kind: "file", path: "report.csv" } }],
+		},
+		undefined,
+		undefined,
+		ctx,
+	);
+	expect(ctx.ui.select).toHaveBeenCalledOnce();
+	expect(JSON.parse(result.content[0].text).authorized).toBe(approved);
+	expect(!!j.authorization()).toBe(approved);
+	expect(pi.sendUserMessage).not.toHaveBeenCalled();
 });
 it("task_wait authorization opens ask_user rather than leaving an inert authorization card", async () => {
- const { j, pi, ctx } = await registered(); ctx.ui.select.mockResolvedValue(undefined);
- const tool = pi.registerTool.mock.calls.map(([tool]) => tool).find(tool => tool.name === "task_wait");
- await tool.execute("wait", { kind: "authorization", title: "A bounded action", reason: "Needs explicit user consent" }, undefined, undefined, ctx);
- expect(ctx.ui.select).toHaveBeenCalledOnce(); expect(j.snapshot().actions[0].state).toBe("pending");
- expect(j.authorization()).toBeFalsy();
+	const { j, pi, ctx } = await registered();
+	ctx.ui.select.mockResolvedValue(undefined);
+	const tool = pi.registerTool.mock.calls.map(([tool]) => tool).find((tool) => tool.name === "task_wait");
+	await tool.execute(
+		"wait",
+		{ kind: "authorization", title: "A bounded action", reason: "Needs explicit user consent" },
+		undefined,
+		undefined,
+		ctx,
+	);
+	expect(ctx.ui.select).toHaveBeenCalledOnce();
+	expect(j.snapshot().actions[0].state).toBe("pending");
+	expect(j.authorization()).toBeFalsy();
 });

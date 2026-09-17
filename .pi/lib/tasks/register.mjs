@@ -1,5 +1,3 @@
-import { FAILURE_EXPLANATION_POLICY, TASK_HANDOFF_POLICY, failureContext, failureObservation, toolResultFailed, taskProgressContext } from "./failure-feedback.mjs";
-import { createTaskAuthorization } from "./ask-authorization.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
@@ -7,8 +5,17 @@ import { readKnowledgeBinding } from "../knowledge/config.mjs";
 import { currentProject } from "../knowledge/extension-helpers.mjs";
 import { getKnowledgeService } from "../knowledge/service.mjs";
 import { previewWikiProposal } from "../knowledge/wiki-review.mjs";
+import { createTaskAuthorization } from "./ask-authorization.mjs";
 import { resolveWriteRoots } from "./consent.mjs";
 import { createEvidenceRecovery } from "./evidence.mjs";
+import {
+	FAILURE_EXPLANATION_POLICY,
+	failureContext,
+	failureObservation,
+	TASK_HANDOFF_POLICY,
+	taskProgressContext,
+	toolResultFailed,
+} from "./failure-feedback.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
 import { createZoteroReconciler } from "./zotero-reconcile.mjs";
 
@@ -401,10 +408,14 @@ export function registerWorkbench(pi) {
 		async (_input, ctx) => {
 			let notice = "";
 			if (journal.authorization()) {
-				try { await journal.reconcile(ctx.cwd); }
-				catch (e) { notice = `\n本次只读核对未完成：${String(e.message).replace(/\s+/g," ").slice(0,120)}。下列信息可能仍是上一次观察，不能当作本次已确认。`; }
+				try {
+					await journal.reconcile(ctx.cwd);
+				} catch (e) {
+					notice = `\n本次只读核对未完成：${String(e.message).replace(/\s+/g, " ").slice(0, 120)}。下列信息可能仍是上一次观察，不能当作本次已确认。`;
+				}
 			} else {
-				notice = "\n本次只返回已保存的观察，未进行新的文件核对；这不表示需要重新授权或重复执行。请结合当前权限、待办和未确定操作说明下一步。";
+				notice =
+					"\n本次只返回已保存的观察，未进行新的文件核对；这不表示需要重新授权或重复执行。请结合当前权限、待办和未确定操作说明下一步。";
 			}
 			return `${journal.render()}${notice}${taskProgressContext(journal.snapshot())}`;
 		},
@@ -450,9 +461,23 @@ export function registerWorkbench(pi) {
 			const writeRoots = await resolveWriteRoots(ctx.cwd, input.writeDirectories || []);
 			const result = journal.plan({ ...input, writeRoots });
 			send("方案已准备好，授权通过 ask_user 提问；任务卡仅展示状态，不会直接授予权限。");
-			const authorized = await askAuthorization({ taskId: journal.snapshot().id, revision: journal.view().revision, action: "authorize-task" }, ctx, signal);
-			send(authorized ? "ask_user：已同意所示任务范围，可以继续执行。" : "ask_user：尚未授权，任务保留在检查点；不执行写入。");
-			return { milestones: result, authorized, next: authorized ? "Continue within the approved scope." : "Stop and retain the checkpoint. Do not repeat the authorization question." };
+			const authorized = await askAuthorization(
+				{ taskId: journal.snapshot().id, revision: journal.view().revision, action: "authorize-task" },
+				ctx,
+				signal,
+			);
+			send(
+				authorized
+					? "ask_user：已同意所示任务范围，可以继续执行。"
+					: "ask_user：尚未授权，任务保留在检查点；不执行写入。",
+			);
+			return {
+				milestones: result,
+				authorized,
+				next: authorized
+					? "Continue within the approved scope."
+					: "Stop and retain the checkpoint. Do not repeat the authorization question.",
+			};
 		},
 	);
 	tool(
@@ -471,8 +496,21 @@ export function registerWorkbench(pi) {
 		async (input, ctx, signal) => {
 			const action = journal.wait(input);
 			if (action.kind !== "authorization") return action;
-			const authorized = await askAuthorization({ taskId: journal.snapshot().id, revision: journal.view().revision, action: "ask-authorization", actionId: action.id }, ctx, signal);
-			send(authorized ? "ask_user：已记录此次范围确认；具体操作仍受权限检查约束。" : "ask_user：未授权，保留待处理事项；不会默认同意。");
+			const authorized = await askAuthorization(
+				{
+					taskId: journal.snapshot().id,
+					revision: journal.view().revision,
+					action: "ask-authorization",
+					actionId: action.id,
+				},
+				ctx,
+				signal,
+			);
+			send(
+				authorized
+					? "ask_user：已记录此次范围确认；具体操作仍受权限检查约束。"
+					: "ask_user：未授权，保留待处理事项；不会默认同意。",
+			);
 			return { ...action, state: authorized ? "acknowledged" : "pending", authorized };
 		},
 	);
@@ -509,8 +547,13 @@ export function registerWorkbench(pi) {
 			if (args.length > 6000) throw new Error("Task command too large.");
 			const input = JSON.parse(Buffer.from(args.trim(), "base64url").toString("utf8"));
 			if (input.action === "authorize-task") {
-				if (!(await askAuthorization(input, ctx))) { send("尚未授权。可稍后通过 ask_user 重新确认。"); return; }
-				send("已通过 ask_user 确认本任务授权。我会自动推进并交付结果；你可随时停止，新的风险或范围变更仍需确认。");
+				if (!(await askAuthorization(input, ctx))) {
+					send("尚未授权。可稍后通过 ask_user 重新确认。");
+					return;
+				}
+				send(
+					"已通过 ask_user 确认本任务授权。我会自动推进并交付结果；你可随时停止，新的风险或范围变更仍需确认。",
+				);
 				continueAuthorized(ctx);
 				return;
 			}
@@ -520,9 +563,14 @@ export function registerWorkbench(pi) {
 				return;
 			}
 			if (input.action === "acknowledge") {
-				const action = journal.view().tasks.find(t => t.id === input.taskId)?.actions.find(a => a.id === input.actionId);
+				const action = journal
+					.view()
+					.tasks.find((t) => t.id === input.taskId)
+					?.actions.find((a) => a.id === input.actionId);
 				if (action?.kind === "authorization") {
-					await askAuthorization({ ...input, action: "ask-authorization" }, ctx); send(); return;
+					await askAuthorization({ ...input, action: "ask-authorization" }, ctx);
+					send();
+					return;
 				}
 			}
 			if (input.action === "file") await journal.acceptFile(input, ctx.cwd);

@@ -4,9 +4,13 @@ export const PREVIEW_ROWS = 200;
 export const PREVIEW_COLUMNS = 60;
 const languages: Record<string, string> = {
 	py: "python",
- pyi:"python", pyw:"python", ipy:"python",
+	pyi: "python",
+	pyw: "python",
+	ipy: "python",
 	r: "r",
- rprofile:"r", rhistory:"r", rscript:"r",
+	rprofile: "r",
+	rhistory: "r",
+	rscript: "r",
 	rmd: "markdown",
 	js: "javascript",
 	jsx: "jsx",

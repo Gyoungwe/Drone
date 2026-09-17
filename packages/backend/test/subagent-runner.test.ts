@@ -83,20 +83,37 @@ it("rejects incompatible generic compute delegation before starting a model", as
 	).rejects.toThrow("missing required tools: bash");
 });
 
-it("subagent total sums completed requests rather than keeping a context peak",()=>{
- const usage={input:0,output:0,cacheRead:0,cacheWrite:0,cost:0,totalTokens:{tokens:0}};
- addSubagentUsage(usage,{input:200,output:100,cacheRead:800,cacheWrite:0,totalTokens:1100,cost:0.01});
- addSubagentUsage(usage,{input:400,output:200,cacheRead:1600,cacheWrite:0,totalTokens:2200,cost:0.02});
- expect(usage.totalTokens.tokens).toBe(3300);expect(usage.input+usage.output+usage.cacheRead+usage.cacheWrite).toBe(3300);expect(usage.cost).toBeCloseTo(0.03);
+it("subagent total sums completed requests rather than keeping a context peak", () => {
+	const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, totalTokens: { tokens: 0 } };
+	addSubagentUsage(usage, {
+		input: 200,
+		output: 100,
+		cacheRead: 800,
+		cacheWrite: 0,
+		totalTokens: 1100,
+		cost: 0.01,
+	});
+	addSubagentUsage(usage, {
+		input: 400,
+		output: 200,
+		cacheRead: 1600,
+		cacheWrite: 0,
+		totalTokens: 2200,
+		cost: 0.02,
+	});
+	expect(usage.totalTokens.tokens).toBe(3300);
+	expect(usage.input + usage.output + usage.cacheRead + usage.cacheWrite).toBe(3300);
+	expect(usage.cost).toBeCloseTo(0.03);
 });
-it("subagent missing per-request total falls back to input/output plus cache",()=>{
- const usage={input:0,output:0,cacheRead:0,cacheWrite:0,cost:0,totalTokens:{tokens:0}};
- addSubagentUsage(usage,{input:20,output:10,cacheRead:70,cacheWrite:30});
- addSubagentUsage(usage,{input:10,output:10,cacheRead:80,totalTokens:100});expect(usage.totalTokens.tokens).toBe(230);
+it("subagent missing per-request total falls back to input/output plus cache", () => {
+	const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, totalTokens: { tokens: 0 } };
+	addSubagentUsage(usage, { input: 20, output: 10, cacheRead: 70, cacheWrite: 30 });
+	addSubagentUsage(usage, { input: 10, output: 10, cacheRead: 80, totalTokens: 100 });
+	expect(usage.totalTokens.tokens).toBe(230);
 });
-it("zero total on one request cannot hide its reported components among other requests",()=>{
- const usage={input:0,output:0,cacheRead:0,cacheWrite:0,cost:0,totalTokens:{tokens:0}};
- addSubagentUsage(usage,{input:20,output:10,cacheRead:70,cacheWrite:30,totalTokens:0});
- addSubagentUsage(usage,{input:10,output:10,cacheRead:80,totalTokens:100});
- expect(usage.totalTokens.tokens).toBe(230);
+it("zero total on one request cannot hide its reported components among other requests", () => {
+	const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, totalTokens: { tokens: 0 } };
+	addSubagentUsage(usage, { input: 20, output: 10, cacheRead: 70, cacheWrite: 30, totalTokens: 0 });
+	addSubagentUsage(usage, { input: 10, output: 10, cacheRead: 80, totalTokens: 100 });
+	expect(usage.totalTokens.tokens).toBe(230);
 });

@@ -1,5 +1,3 @@
-import { readReviewMode, saveReviewMode } from "./review-policy.mjs";
-import { wikiHistory, undoWikiUpdate } from "./wiki-review.mjs";
 // Human-facing host API; no model calls, no new approval tool.
 import { randomUUID } from "node:crypto";
 import { lstat, readFile, realpath, stat } from "node:fs/promises";
@@ -17,11 +15,18 @@ import {
 } from "./config.mjs";
 import { safeNotePath } from "./files.mjs";
 import { runNavigationMaintenance } from "./maintenance.mjs";
+import { readReviewMode, saveReviewMode } from "./review-policy.mjs";
 import { getKnowledgeService } from "./service.mjs";
 import { normalizeSourceLinks } from "./source-links.mjs";
 import { setSpecialistSettings, specialistSettings } from "./specialist-host.mjs";
 import { flowFor, invalidateKnowledgeUi } from "./ui-state.mjs";
-import { decideWikiProposal, listWikiProposals, previewWikiProposal } from "./wiki-review.mjs";
+import {
+	decideWikiProposal,
+	listWikiProposals,
+	previewWikiProposal,
+	undoWikiUpdate,
+	wikiHistory,
+} from "./wiki-review.mjs";
 
 const previews = new Map(),
 	MAX_PREVIEWS = 64,
@@ -122,7 +127,10 @@ export async function knowledgeOverview({ cwd = null, sessionId = null } = {}) {
 		enabled: true,
 		bound: true,
 		reviewMode: await readReviewMode(),
-		wikiHistory: project.project && !error ? (await wikiHistory(await getKnowledgeService(binding), project.project)).slice(0, 10) : [],
+		wikiHistory:
+			project.project && !error
+				? (await wikiHistory(await getKnowledgeService(binding), project.project)).slice(0, 10)
+				: [],
 		scope: "application",
 		binding,
 		...project,
@@ -297,10 +305,12 @@ export async function knowledgeReadNote({ cwd = null, path, startLine = 1, revis
 export async function knowledgeMaintenance({ cwd = null, action, revision, id, expectedHash }) {
 	const { binding, service } = await bound(revision),
 		{ project } = await projectAt(cwd);
-	if (!Number.isSafeInteger(revision) || revision < 1) throw new Error("Refresh binding before changing review settings");
+	if (!Number.isSafeInteger(revision) || revision < 1)
+		throw new Error("Refresh binding before changing review settings");
 	if (["review-automatic", "review-strict"].includes(action)) {
 		const result = await withKnowledgeBinding(binding, () => saveReviewMode(action.slice(7)));
-		invalidateKnowledgeUi(); return result;
+		invalidateKnowledgeUi();
+		return result;
 	}
 	if (action === "undo-wiki") {
 		if (!project) throw new Error("Choose a project before undo");

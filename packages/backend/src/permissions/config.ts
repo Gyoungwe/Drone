@@ -80,7 +80,9 @@ export const DEFAULT_PERMISSION_CONFIG: PermissionConfig = {
 export function mergeWithDefaults(config: Partial<PermissionConfig>): PermissionConfig {
 	return {
 		enabled: config.enabled ?? true,
-		autoApproveProjectEdits: config.autoApproveProjectEdits ?? !(config.rules && ("edit" in config.rules || "write" in config.rules)),
+		autoApproveProjectEdits:
+			config.autoApproveProjectEdits ??
+			!(config.rules && ("edit" in config.rules || "write" in config.rules)),
 		outside: {
 			read: config.outside?.read ?? DEFAULT_PERMISSION_CONFIG.outside.read,
 			write: config.outside?.write ?? DEFAULT_PERMISSION_CONFIG.outside.write,

@@ -47,11 +47,15 @@ const readOnly = (name) =>
 	);
 const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
 const sameArtifactPath = (cwd, declared, observed) => {
- const normalize = path => {
-  const absolute=resolve(cwd || process.cwd(),path);
-  return process.platform === "win32" ? absolute.toLowerCase() : absolute;
- };
- return typeof declared === "string" && typeof observed === "string" && normalize(declared) === normalize(observed);
+	const normalize = (path) => {
+		const absolute = resolve(cwd || process.cwd(), path);
+		return process.platform === "win32" ? absolute.toLowerCase() : absolute;
+	};
+	return (
+		typeof declared === "string" &&
+		typeof observed === "string" &&
+		normalize(declared) === normalize(observed)
+	);
 };
 /** User-facing explanation and next step for each machine reason code. Codes stay stable for tests/UI. */
 export const REASON_TEXT = Object.freeze({
