@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.10.2 — 2026-09-17
+
+- Fixed task status messages being inserted between a tool call and its result, which made OpenAI-compatible endpoints return 400. Previously recorded but misordered messages in old sessions are repaired before the context is sent, without fabricating results or replaying operations.
+- Kept the task planning and authorization tools visible instead of letting capability filtering hide them.
+- Merged concurrent requests from the same task button at the command entry point so a double click no longer cancels the original continuation; an explicit retry is still available after a cancel.
+- Stopped treating a supplementary note in a file input as a formal submission, and stopped cancels, stale contexts and closed sessions from starting a continuation by mistake.
+- Carried an existing valid task authorization through continuations confirmed from the original authorization entry.
+- Changed the workbench progress bar to accepted deliverables over total deliverables rather than tool-call budget consumption; the call budget is shown separately.
+- Added remaining deliverables, known reasons and next steps, distinguishing a missing acceptance record, a file absent from the agreed path, a blocked prerequisite and required manual handling instead of asserting that work is incomplete.
+- Added native `ask_user` quick actions to the sidebar and the task card: continue within the original scope, read-only verification, submit a missing file, or confirm a completed manual review.
+
+## 0.10.1 — 2026-09-17
+
+- Restored the real `ask_user` authorization flow for task plans, additional authorization requests, stage budgets and outcome confirmations. Closing or cancelling a question never grants consent, and stale task revisions and changed bindings are rejected.
+- Connected task failure feedback to the live SDK flow so failures report concrete impact and next steps without breaking tool-call/result pairing.
+- Improved task sidebar progress, artifact links and contextual usage refresh. Task state stays distinct from scientific validation.
+- Added bounded Markdown, code, scientific-text, gzip, image and PDF previews. Script previews do not execute code, and Markdown cross-file section links preserve encoded filename characters.
+- Defaulted routine knowledge checks to nonblocking reminders, kept optional strict review and protected permission boundaries, and added safe AI Wiki history and undo.
+
 ## 0.10.0 — 2026-09-17
 
 - Renamed the project from Percho to Drone: app id `io.github.gyoungwe.drone`, product name Drone, executable `drone`, packages `drone` and `@drone/{backend,shared,desktop}`, environment variables `DRONE_*`, user directory `~/.drone`, plugin API `window.DroneUI` / `DroneUiApi` / manifest `droneUi` / `drone-ui.d.ts` / skill `drone-ui-plugin`, and release artifacts `drone-*`. The repository moved to `Gyoungwe/Drone`.
