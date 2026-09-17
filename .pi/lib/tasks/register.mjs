@@ -17,6 +17,7 @@ import {
 	toolResultFailed,
 } from "./failure-feedback.mjs";
 import { createTaskProgression } from "./progress-action.mjs";
+import { singleFlightCommand } from "./single-flight.mjs";
 import { restoreTaskToolOrder } from "./tool-protocol.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
 import { createZoteroReconciler } from "./zotero-reconcile.mjs";
@@ -145,8 +146,16 @@ export function registerWorkbench(pi) {
 				!journal.authorization()
 			)
 				return;
-			if (ctx.isIdle && !ctx.isIdle()) {
-				if (++idleChecks < 40) handoffTimer = setTimeout(() => void handoff(), 25);
+			let idle;
+			try {
+				idle = !ctx.isIdle || ctx.isIdle();
+			} catch {
+				// SDK contexts expire on session replacement/disposal; never resume through one.
+				cancelHandoff();
+				return;
+			}
+			if (!idle) {
+				if (++idleChecks < 40) handoffTimer = setTimeout(() => void handoff().catch(cancelHandoff), 25);
 				else {
 					journal.pause("auto-handoff-not-idle");
 					send();
@@ -189,7 +198,7 @@ export function registerWorkbench(pi) {
 				send(`自动续作未启动：${clean(e.message)}。已保留原结果，没有重复执行。`);
 			}
 		};
-		handoffTimer = setTimeout(() => void handoff(), 0);
+		handoffTimer = setTimeout(() => void handoff().catch(cancelHandoff), 0);
 	};
 	pi.on("session_shutdown", cancelHandoff);
 	// Current task consent is exposed only to the existing permission adapter, never to model tool inputs.
@@ -539,7 +548,7 @@ export function registerWorkbench(pi) {
 	});
 	pi.registerCommand("task-action", {
 		description: "任务面板的版本化用户操作；不授予新权限",
-		handler: async (args, ctx) => {
+		handler: singleFlightCommand(async (args, ctx) => {
 			cancelHandoff();
 			attach(ctx);
 			if (ctx.isIdle && !ctx.isIdle())
@@ -605,7 +614,7 @@ export function registerWorkbench(pi) {
 				return;
 			} else journal.command(input);
 			send();
-		},
+		}),
 	});
 	return journal;
 }
