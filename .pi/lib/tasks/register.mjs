@@ -19,6 +19,7 @@ import {
 import { createTaskProgression } from "./progress-action.mjs";
 import { singleFlightCommand } from "./single-flight.mjs";
 import { restoreTaskToolOrder } from "./tool-protocol.mjs";
+import { shouldAskToContinue } from "./turn-end-prompt.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
 import { createZoteroReconciler } from "./zotero-reconcile.mjs";
 
@@ -380,6 +381,22 @@ export function registerWorkbench(pi) {
 			) {
 				send("已按本任务授权自动续作：沿用已保存结果，先核对再继续，无需再次确认阶段。");
 				continueAuthorized(context);
+				return;
+			}
+			// 授权过但停在半路（tool-failure 等原因不在 reserveContinuation 白名单里）：
+			// 主动问一次，而不是只刷一张卡让用户自己去侧栏发现任务停了。
+			const snapshot = journal.snapshot();
+			if (
+				last?.stopReason !== "error" &&
+				!ctx?.signal?.aborted &&
+				shouldAskToContinue(snapshot ? journal.view().tasks.find((t) => t.id === snapshot.id) : null)
+			) {
+				send();
+				try {
+					await progressTask({ taskId: snapshot.id, revision: journal.view().revision }, context);
+				} catch {
+					/* 弹窗失败不应吃掉回合结束；状态卡已发出 */
+				}
 				return;
 			}
 		}

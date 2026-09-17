@@ -168,6 +168,56 @@ async function registered({ withPlan = true } = {}) {
 		);
 	return { j, pi, ctx, events, commands, approve, idle };
 }
++it("授权后停在半路：agent_end 主动弹窗问去留，而不是只刷一张卡", async () => {
+	const { ctx, events, approve } = await registered({ withPlan: true });
+	vi.useFakeTimers();
+	await approve();
+	await vi.runOnlyPendingTimersAsync();
+	// 本回合确实干了活（progressCount 增长），但里程碑仍未验收
+	events.tool_call({ toolName: "read", toolCallId: "call_p", input: { path: "p.txt" } });
+	await events.tool_result(
+		{ toolName: "read", toolCallId: "call_p", result: { content: [{ type: "text", text: "ok" }] } },
+		ctx,
+	);
+	ctx.ui.select.mockClear();
+	ctx.ui.select.mockImplementation(async () => "暂不处理");
+	await events.agent_end({ messages: [{ role: "assistant", stopReason: "endTurn" }] }, ctx);
+	await vi.runOnlyPendingTimersAsync();
+	expect(ctx.ui.select).toHaveBeenCalled();
+	const [report, choices] = ctx.ui.select.mock.calls[0];
+	expect(report).toContain("推进剩余事项");
+	expect(choices).toContain("仅核对已有产物");
+});
+
+it("未授权的任务不会在回合结束时被打断", async () => {
+	const { ctx, events } = await registered({ withPlan: true });
+	vi.useFakeTimers();
+	events.tool_call({ toolName: "read", toolCallId: "call_n", input: { path: "n.txt" } });
+	await events.tool_result(
+		{ toolName: "read", toolCallId: "call_n", result: { content: [{ type: "text", text: "ok" }] } },
+		ctx,
+	);
+	ctx.ui.select.mockClear();
+	await events.agent_end({ messages: [{ role: "assistant", stopReason: "endTurn" }] }, ctx);
+	await vi.runOnlyPendingTimersAsync();
+	expect(ctx.ui.select).not.toHaveBeenCalled();
+});
+
+it("回合以错误结束时不弹窗（错误自有反馈路径，不该再要用户决策）", async () => {
+	const { ctx, events, approve } = await registered({ withPlan: true });
+	vi.useFakeTimers();
+	await approve();
+	await vi.runOnlyPendingTimersAsync();
+	events.tool_call({ toolName: "read", toolCallId: "call_e", input: { path: "e.txt" } });
+	await events.tool_result(
+		{ toolName: "read", toolCallId: "call_e", result: { content: [{ type: "text", text: "ok" }] } },
+		ctx,
+	);
+	ctx.ui.select.mockClear();
+	await events.agent_end({ messages: [{ role: "assistant", stopReason: "error" }] }, ctx);
+	await vi.runOnlyPendingTimersAsync();
+	expect(ctx.ui.select).not.toHaveBeenCalled();
+});
 it("one card approval starts one hidden host continuation, not a forged user reply", async () => {
 	const { j, pi, approve } = await registered();
 	vi.useFakeTimers();
