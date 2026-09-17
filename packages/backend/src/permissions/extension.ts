@@ -1,3 +1,4 @@
+import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import type { PermissionMode } from "@drone/shared";
 import type { ExtensionContext, InlineExtension, ToolCallEvent } from "@earendil-works/pi-coding-agent";
@@ -166,7 +167,11 @@ export function makePermissionGateExtension(
 					patternText &&
 					(!isTemporaryPath(patternText) || config.outside.temporary === "allow") &&
 					config.rules[event.toolName] === "ask" &&
-					(await taskWriteAllowed([projectRoot], patternText))
+					// Windows project roots may use an 8.3 alias; compare both sides canonically.
+					(await realpath(projectRoot).then(
+						(root) => taskWriteAllowed([root], patternText),
+						() => false,
+					))
 				) {
 					audit.record({
 						t: new Date().toISOString(),
