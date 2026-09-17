@@ -125,6 +125,9 @@ jobs:
     needs: [resolve, prepare]
     strategy:
       fail-fast: false
+      # GitHub release asset storage is sensitive to concurrent multi-hundred-MB uploads.
+      # Serialize platform build/upload jobs so one release never receives three large streams at once.
+      max-parallel: 1
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
