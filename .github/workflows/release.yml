@@ -163,8 +163,18 @@ jobs:
           fi
           while IFS= read -r ASSET; do
             echo "Uploading $ASSET"
-            gh release upload "$RELEASE_TAG" "$ASSET" \
-              -R "${{ github.repository }}" --clobber
+            ATTEMPT=1
+            until gh release upload "$RELEASE_TAG" "$ASSET" \
+              -R "${{ github.repository }}" --clobber; do
+              if [ "$ATTEMPT" -ge 3 ]; then
+                echo "Failed to upload $ASSET after $ATTEMPT attempts." >&2
+                exit 1
+              fi
+              SLEEP_SECONDS=$((ATTEMPT * 15))
+              echo "Upload failed for $ASSET (attempt $ATTEMPT). Retrying in ${SLEEP_SECONDS}s..." >&2
+              sleep "$SLEEP_SECONDS"
+              ATTEMPT=$((ATTEMPT + 1))
+            done
           done < "$ASSET_LIST"
           rm -f "$ASSET_LIST"
 
