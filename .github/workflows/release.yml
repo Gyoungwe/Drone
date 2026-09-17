@@ -206,5 +206,3 @@ jobs:
           else
             echo "CF_PAGES_DEPLOY_HOOK not set, skipping"
           fi
-
-
