@@ -143,9 +143,12 @@ jobs:
       - run: npm ci
       - run: npm run dist -w packages/desktop -- --publish never
       - name: Upload build outputs directly to draft release
+        timeout-minutes: 10
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Bound the upload and avoid stalled HTTP/2 streams in the Go-based gh client.
+          GODEBUG: http2client=0
         run: |
           ASSET_LIST="$(mktemp)"
           find packages/desktop/dist -maxdepth 1 -type f \
