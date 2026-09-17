@@ -35,7 +35,6 @@ export function TaskRow({
 	sessionId: string | null;
 	agentActive: boolean;
 }) {
-	const limits = view.limits;
 	const [busy, setBusy] = useState(false),
 		[error, setError] = useState("");
 	const done = task.milestones.filter((m) => m.state === "completed").length;
@@ -50,7 +49,7 @@ export function TaskRow({
 				</span>
 			</div>
 			<p className="mt-1 text-[11px] text-ink-dim">
-				执行检查点 {task.stage} · 已用调用预算 {task.budget.calls}/{limits.totalCalls}
+				已执行 {task.budget.calls} 步
 				{task.milestones.length > 0 && ` · 已验收 ${done}/${task.milestones.length}`}
 			</p>
 			{task.milestones.length > 0 && (
@@ -75,8 +74,8 @@ export function TaskRow({
 			<p className="mt-2 whitespace-pre-wrap text-[11px] leading-5" data-testid="task-remaining-summary">
 				{task.remainingSummary ||
 					(task.milestones.length
-						? "剩余项尚未验收；旧记录未说明原因，请先核对已有产物，不要重复生成。"
-						: "尚未约定交付项，暂不计算完成百分比。")}
+						? "还有几项没确认完成；这是较早的记录，先核对一下已有结果，别重复生成。"
+						: "还没约定要交付什么，暂不显示进度。")}
 			</p>
 			{!TERMINAL_TASK_STATES.has(task.state) && (
 				<button
@@ -96,7 +95,7 @@ export function TaskRow({
 						}
 					}}
 				>
-					通过 ask_user 推进剩余事项
+					继续做剩下的
 				</button>
 			)}
 			{error && (

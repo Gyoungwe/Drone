@@ -36,9 +36,9 @@ function render(value = task, active = false) {
 it("progress means accepted deliverables, not 191/192 spent calls", () => {
 	const html = render();
 	expect(html).toContain('aria-valuenow="50"');
-	expect(html).toContain("已用调用预算");
+	expect(html).toContain("已执行");
 	expect(html).toContain("原因：尚未验收");
-	expect(html).toContain("通过 ask_user 推进剩余事项");
+	expect(html).toContain("继续做剩下的");
 });
 it("no milestones does not invent a percentage", () =>
 	expect(render({ ...task, milestones: [], remainingSummary: undefined })).not.toContain(
@@ -51,7 +51,7 @@ it("completed deliverables show full progress and no reopening button", () => {
 		milestones: task.milestones.map((m) => ({ ...m, state: "completed" })),
 	});
 	expect(html).toContain('aria-valuenow="100"');
-	expect(html).not.toContain("通过 ask_user 推进剩余事项");
+	expect(html).not.toContain("继续做剩下的");
 });
 it("running agent disables the quick-action entry", () =>
 	expect(render(task, true)).toContain('disabled=""'));

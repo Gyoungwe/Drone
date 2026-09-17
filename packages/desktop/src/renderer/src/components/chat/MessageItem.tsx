@@ -1,17 +1,14 @@
-import { tasksForTranscript } from "@drone/shared";
 import { memo, useState } from "react";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import type { UIMessage } from "../../stores/transcript";
-import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { AssistantMessage } from "./AssistantMessage";
 import { ErrorNote } from "./ErrorNote";
 import { ImagePreviewOverlay, imageSrc } from "./ImagePreview";
 import { CopyButton, ForkButton } from "./message-actions";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { SystemMessage } from "./SystemMessage";
-import { TaskWorkbenchCard } from "./TaskWorkbenchCard";
 import { UserMessage } from "./UserMessage";
 
 /** 单条消息：按类型分发（用户气泡 / 图片块 / 子代理卡 / 错误卡 / 系统分割线 / 助手消息体） */
@@ -89,12 +86,8 @@ export const MessageItem = memo(function MessageItem({
 		return <SystemMessage message={message} />;
 	}
 
-	if (message.taskView) {
-		// 纯进度刷新不进流（侧栏已常驻显示最新一份），只留要用户拍板的和已收尾的
-		const shown = tasksForTranscript(message.taskView);
-		if (!shown.length && !message.taskView.selectionRequired) return null;
-		return <LatestTaskCard message={message} sessionId={sessionId} />;
-	}
+	// 任务不进聊天流：状态看右侧工作台侧栏，要用户拍板的一律走 ask_user 弹窗。
+	if (message.taskView) return null;
 	return (
 		<div className="group">
 			<AssistantMessage
@@ -114,21 +107,3 @@ export const MessageItem = memo(function MessageItem({
 		</div>
 	);
 });
-function LatestTaskCard({
-	message,
-	sessionId,
-}: {
-	message: { id: string; taskView?: import("@drone/shared").TaskView };
-	sessionId: string | null;
-}) {
-	const messages = useTranscriptStore((s) => selectTranscript(s, sessionId).messages);
-	const latest = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
-	if (!message.taskView || (latest && latest.id !== message.id)) return null;
-	return (
-		<TaskWorkbenchCard
-			view={message.taskView}
-			sessionId={sessionId}
-			tasks={tasksForTranscript(message.taskView)}
-		/>
-	);
-}

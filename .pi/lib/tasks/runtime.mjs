@@ -169,18 +169,18 @@ export function createTaskJournal({ persist = () => {}, now = () => new Date().t
 		}
 	}
 	function render() {
-		if (!task) return "暂无本会话的任务执行记录。旧会话不会被自动标记为已完成。";
+		if (!task) return "这个会话还没有任务记录。";
 		const lines = [
-			"### 任务执行记录",
+			"### 任务进展",
 			`任务：${safe(task.goal)}`,
-			`状态：${({ running: "执行中", waiting_user: "等待用户", partial: "部分受阻", paused: "已暂停", interrupted: "结果待核对", checkpoint: "阶段记录已保存" })[task.state] || "待核对"}；最近记录：${safe(task.updatedAt, 60)}`,
+			`状态：${({ running: "执行中", waiting_user: "等你决定", partial: "部分受阻", paused: "已暂停", interrupted: "结果待核对", checkpoint: "进度已保存" })[task.state] || "待核对"}；更新于 ${safe(task.updatedAt, 60)}`,
 		];
 		const labels = {
-			returned: "工具已返回，业务结果未独立核验",
+			returned: "已执行，结果待核对",
 			failed: "工具报告失败",
 			cancelled: "用户取消了选择，未授予新权限",
-			"file-observed": "文件已回读，内容结论未核验",
-			awaiting_review: "候选已提交，尚待审核",
+			"file-observed": "文件已生成并读到内容",
+			awaiting_review: "已提交，等你审阅",
 		};
 		for (const r of task.receipts.slice(-8))
 			lines.push(
@@ -189,10 +189,7 @@ export function createTaskJournal({ persist = () => {}, now = () => new Date().t
 		if (task.proposedNext) lines.push(`模型计划的下一步（不是完成证明）：${safe(task.proposedNext)}`);
 		if (task.reason) lines.push(`暂停原因：${safe(task.reason, 80)}。`);
 		if (task.pending.length)
-			lines.push("有已发起但结果未确认的操作；继续前必须先查询结果，不得直接重复写入、安装或上传。");
-		lines.push(
-			"这是宿主保存的执行检查点，不是科研结论或整体完成证明。继续沿用原权限；旧记录须按上述时间理解，外部结果变化后需要重新核对。",
-		);
+			lines.push("有操作上次没等到结果；继续前先查一下它做没做成，不得直接重复写入、安装或上传。");
 		return lines.join("\n");
 	}
 	return {

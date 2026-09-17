@@ -1,6 +1,8 @@
 # One task authorization
 
-New workbench tasks use one consent card after bounded read-only discovery. The agent supplies the original goal, a plain-language scope summary, existing write directories and immutable acceptance milestones with `task_plan`. The single **确认一次，执行到交付** action approves those acceptance criteria and the task execution budget and starts the task without a second Continue click.
+New workbench tasks use one native authorization dialog after bounded read-only discovery. The agent supplies the required goal, a plain-language scope summary, existing write directories and immutable acceptance milestones with `task_plan`. The explicit approval action approves those acceptance criteria and the task execution budget and starts the task without a second Continue click.
+
+Ordinary chat does not create tasks. `task_plan` fills an unfinished task that has no plan, or creates a new task when the active task already has an immutable plan. The previous task stays partial and resumable; its consent and budget do not transfer. Invalid plans leave existing task state unchanged. Desktop and LAN transcripts hide task status messages, while the desktop sidebar shows task progress.
 
 ## What is authorized
 
@@ -8,7 +10,7 @@ New workbench tasks use one consent card after bounded read-only discovery. The 
 - Ordinary write/edit operations under the displayed canonical directories and their children. Output readback may use these explicitly approved roots even when data lives outside the session cwd; CURRENT read permissions and canonical directory identity are still checked. Missing output subdirectories are allowed; the approved project directory must already exist.
 - Existing command permissions, not a new arbitrary-shell/fullAccess privilege. The plan must state planned installations and preserve previous refusals.
 
-If a command confirmation still appears during an authorized task, the approval card offers **本次任务全部允许 / Allow all for this task** (`allowRun`, shortcut `T`): it auto-approves every remaining confirm in the current agent run, drains the queue, and expires at `agent_end`. It is not persisted, is not remembered by pattern, and never overrides `deny` rules. Together the two mechanisms give the user at most one authorization card plus at most one command prompt per task.
+If a command confirmation still appears during an authorized task, the approval card offers **本次任务全部允许 / Allow all for this task** (`allowRun`, shortcut `T`): it auto-approves every remaining confirm in the current agent run, drains the queue, and expires at `agent_end`. It is not persisted, is not remembered by pattern, and never overrides `deny` rules.
 
 ## What is not authorized
 
@@ -28,10 +30,10 @@ Hard limits, missing credentials, absent necessary user data and unrecoverable e
 
 - `.pi/lib/tasks/consent.mjs`: contract hash and canonical directory proposals.
 - `.pi/lib/tasks/workbench.mjs`: revision-checked consent, bounded progress and continuation reservations.
-- `.pi/lib/tasks/register.mjs`: authorization card, cancellable SDK handoff and permission-adapter bridge.
+- `.pi/lib/tasks/register.mjs` and `ask-authorization.mjs`: native authorization dialog, cancellable SDK handoff and permission-adapter bridge.
 - `backend/src/permissions/task-consent.ts`: canonical target checks for scoped ordinary writes; called only after existing deny evaluation.
 - `backend/src/permissions/gate.ts`: `allowRun` answer (run-scoped blanket approval for the remaining confirms; cleared on `agent_end` by `PiBackend.emitEvent`).
 - `.pi/skills/research-workflow/SKILL.md` § Interruption budget: front-load all user decisions into one message; decide mid-task with defaults and report them under 我替你决定的.
-- `desktop/.../TaskWorkbenchCard.tsx` and shared task types: one localized approval action; no recurring stage-budget control for new tasks.
+- `desktop/.../TaskSidebar.tsx`, `TaskWorkbenchCard.tsx` and shared task types: sidebar progress and localized task actions; no task cards in the transcript.
 
 This is source-level behavior. Rebuild/restart the desktop app to load changed bundled code/resources. No old conversation, research artifact, credential store or installed application is rewritten as part of this implementation.

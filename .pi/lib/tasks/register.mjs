@@ -196,7 +196,7 @@ export function registerWorkbench(pi) {
 				)
 					return;
 				journal.pause("auto-handoff-failed");
-				send(`自动续作未启动：${clean(e.message)}。已保留原结果，没有重复执行。`);
+				send(`没能自动接着做：${clean(e.message)}。已有的结果都在，没有重复执行任何操作。`);
 			}
 		};
 		handoffTimer = setTimeout(() => void handoff().catch(cancelHandoff), 0);
@@ -379,7 +379,7 @@ export function registerWorkbench(pi) {
 				last.stopReason !== "error" &&
 				journal.reserveContinuation(last.knowledgePublication.reason)
 			) {
-				send("已按本任务授权自动续作：沿用已保存结果，先核对再继续，无需再次确认阶段。");
+				send("刚才停了一下，正在按你之前的授权接着做：先核对已有结果，再继续剩下的部分，不用你再确认。");
 				continueAuthorized(context);
 				return;
 			}
@@ -440,7 +440,7 @@ export function registerWorkbench(pi) {
 	);
 	tool(
 		"task_plan",
-		"Prepare ONE task authorization after read-only discovery: original goal, understandable scope, existing write directories, and immutable deliverables. Bundle necessary choices here instead of asking about each step. The host opens ask_user automatically; only its explicit approval authorizes the shown task revision. The user authorizes once; normal stages and bounded recovery then proceed automatically. No authorization of new risks, arbitrary commands, credentials or scientific conclusions.",
+		"Prepare one task authorization per contract after read-only discovery: original goal, understandable scope, existing write directories, and immutable deliverables. Bundle necessary choices here instead of asking about each step. Call task_plan again only for a separate goal; that opens a new task and preserves the previous checkpoint. The host opens ask_user automatically; only its explicit approval authorizes the shown task revision. The user authorizes once per task; normal stages and bounded recovery then proceed automatically. No authorization of new risks, arbitrary commands, credentials or scientific conclusions.",
 		{
 			goal: { ...str, maxLength: 180 },
 			summary: { type: "string", minLength: 1, maxLength: 1200 },
@@ -474,21 +474,17 @@ export function registerWorkbench(pi) {
 				},
 			},
 		},
-		["summary", "milestones"],
+		["goal", "summary", "milestones"],
 		async (input, ctx, signal) => {
 			const writeRoots = await resolveWriteRoots(ctx.cwd, input.writeDirectories || []);
 			const result = journal.plan({ ...input, writeRoots });
-			send("方案已准备好，授权通过 ask_user 提问；任务卡仅展示状态，不会直接授予权限。");
+			send("计划已经准备好，马上会弹出一个确认框，同意后开始执行。");
 			const authorized = await askAuthorization(
 				{ taskId: journal.snapshot().id, revision: journal.view().revision, action: "authorize-task" },
 				ctx,
 				signal,
 			);
-			send(
-				authorized
-					? "ask_user：已同意所示任务范围，可以继续执行。"
-					: "ask_user：尚未授权，任务保留在检查点；不执行写入。",
-			);
+			send(authorized ? "你已确认，开始执行这个任务。" : "你没有确认，任务先停在原地，不会改动任何文件。");
 			return {
 				milestones: result,
 				authorized,
@@ -524,11 +520,7 @@ export function registerWorkbench(pi) {
 				ctx,
 				signal,
 			);
-			send(
-				authorized
-					? "ask_user：已记录此次范围确认；具体操作仍受权限检查约束。"
-					: "ask_user：未授权，保留待处理事项；不会默认同意。",
-			);
+			send(authorized ? "好的，这项已经你确认，继续往下做。" : "你没有确认，这项先留着，不会替你做决定。");
 			return { ...action, state: authorized ? "acknowledged" : "pending", authorized };
 		},
 	);
@@ -578,18 +570,16 @@ export function registerWorkbench(pi) {
 			}
 			if (input.action === "authorize-task") {
 				if (!(await askAuthorization(input, ctx))) {
-					send("尚未授权。可稍后通过 ask_user 重新确认。");
+					send("你没有确认，任务不会开始。想执行的时候再点一次就行。");
 					return;
 				}
-				send(
-					"已通过 ask_user 确认本任务授权。我会自动推进并交付结果；你可随时停止，新的风险或范围变更仍需确认。",
-				);
+				send("已确认，接下来会自动做完并交付结果。你随时可以停；要做计划之外的事仍会先问你。");
 				continueAuthorized(ctx);
 				return;
 			}
 			if (["approve-plan", "next-stage", "ask-authorization", "confirm-outcome"].includes(input.action)) {
 				const accepted = await askAuthorization(input, ctx);
-				send(accepted ? "ask_user：已记录本次确认。" : "ask_user：未确认，状态和授权不变。");
+				send(accepted ? "已记录你的确认。" : "你没有确认，一切保持原样。");
 				if (accepted) {
 					journal.command({ taskId: input.taskId, revision: journal.view().revision, action: "select" });
 					continueAuthorized(ctx);

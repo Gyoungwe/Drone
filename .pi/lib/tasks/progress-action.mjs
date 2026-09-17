@@ -25,16 +25,16 @@ export function createTaskProgression(
 					ctx.signal?.aborted ||
 					(ctx.isIdle && !ctx.isIdle())
 				)
-					throw new Error("任务或权限上下文已变化，请刷新后再推进。");
+					throw new Error("任务的情况刚发生了变化，请刷新看一下最新状态再操作。");
 				if (["completed", "cancelled", "archived"].includes(task.state))
-					throw new Error("任务已结束，不会重新执行；请查看已交付结果。");
+					throw new Error("这个任务已经结束了，去看看交付的结果吧；想再做类似的事就重新描述一次需求。");
 				return task;
 			};
 			const task = await validate();
 			if (!ctx.ui?.select) return;
 			if (!task.executionConsent && task.milestones.length) {
 				if (await askAuthorization({ ...input, action: "authorize-task" }, ctx)) {
-					send("已确认任务范围，继续完成剩余交付项。");
+					send("你已确认，接着完成剩下的交付。");
 					continueAuthorized(ctx);
 				}
 				return;
@@ -43,12 +43,12 @@ export function createTaskProgression(
 			if (action?.kind === "authorization") {
 				if (await askAuthorization({ ...input, action: "ask-authorization", actionId: action.id }, ctx)) {
 					journal.command({ taskId: task.id, revision: journal.view().revision, action: "select" });
-					send("新增范围已确认，继续核对并推进剩余事项。");
+					send("你已同意这项新增的内容，继续往下做。");
 					continueAuthorized(ctx);
 				}
 				return;
 			}
-			const report = `ask_user · 推进剩余事项\n\n${remainingExplanation(task)}\n\n${task.reason ? `当前状态原因：${explainReason(task.reason)}\n` : ""}仅处理当前任务，不改验收标准、不提高预算、不重做已完成操作。`;
+			const report = `ask_user · 推进剩余事项\n\n${remainingExplanation(task)}\n\n${task.reason ? `目前的情况：${explainReason(task.reason)}\n` : ""}只处理这个任务剩下的部分；已经做完的不会重做，完成标准也不会变。`;
 			const uncertain = task.operations.some((o) => ["started", "unknown"].includes(o.state));
 			const file = action && ["file", "download"].includes(action.kind) && !uncertain;
 			const review =
@@ -58,10 +58,10 @@ export function createTaskProgression(
 			const proceed = file
 				? "提交所需文件"
 				: review
-					? "我已完成所列人工审阅"
+					? "我已亲自看过这些内容"
 					: uncertain
-						? "只读核对不确定的操作结果"
-						: "按原范围继续完成剩余事项";
+						? "先核对上次没结果的操作"
+						: "接着做完剩下的";
 			const unsupportedReview =
 				(action?.kind === "review" && !review) || ["binding-changed", "total-budget"].includes(task.reason);
 			const choices = unsupportedReview
@@ -73,7 +73,7 @@ export function createTaskProgression(
 			let path;
 			if (file && selected === proceed) {
 				path = await ctx.ui.input(
-					`ask_user · 提交文件\n\n${action.title}\n${action.reason}\n请输入已有文件的完整路径。提交表示你确认它是此事项所需的文件；程序仍会检查当前读取权限与文件身份。`,
+					`ask_user · 提交文件\n\n${action.title}\n${action.reason}\n请把文件的完整路径填在下面。程序会自己核对这份文件对不对，不会盲目采用。`,
 					"完整文件路径",
 					{ signal: ctx.signal },
 				);

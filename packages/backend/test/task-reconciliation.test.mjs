@@ -49,7 +49,7 @@ it("native write timeout reconciles existing expected bytes without replay", asy
 		const entries = [],
 			j = createTaskWorkbench({ persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }) });
 		j.attach("s");
-		j.begin("produce data");
+		j.openTask("produce data");
 		j.guard({ toolName: "write", toolCallId: "w", input: { path: "out.csv", content: "value\n1" } });
 		await writeFile(join(dir, "out.csv"), "value\n1");
 		const recovered = createTaskWorkbench();
@@ -70,11 +70,11 @@ it("native write timeout reconciles existing expected bytes without replay", asy
 it("changing task IDs cannot replay another task's unknown side effect", () => {
 	const j = createTaskWorkbench();
 	j.attach("s");
-	j.begin("A");
+	j.openTask("A");
 	const event = { toolName: "bash", toolCallId: "a", input: { command: "import items" } };
 	j.guard(event);
 	j.pause("interrupted");
-	j.begin("B");
+	j.openTask("B");
 	expect(j.guard({ ...event, toolCallId: "b" })).toMatchObject({ block: true });
 });
 it("Zotero lookup is exact, read-only and distinguishes attachment metadata from contents", async () => {

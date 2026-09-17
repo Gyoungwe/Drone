@@ -91,12 +91,15 @@ describe("流内工作台卡的取舍", () => {
 		}
 	});
 
-	it("终态但仍等用户拍板时照样上屏（blocked 未收尾，不能被终态规则吞掉）", () => {
-		const blocked = task({ state: "blocked" });
-		expect(tasksForTranscript(view([blocked]))).toHaveLength(1);
+	it("等用户拍板的也不进流：决策走 ask_user 弹窗，不靠一张要自己去找的卡", () => {
+		expect(tasksForTranscript(view([task({ state: "blocked" })]))).toEqual([]);
+		expect(tasksForTranscript(view([task({ state: "waiting_user" })]))).toEqual([]);
+		expect(
+			tasksForTranscript(view([task({ authorizationRequired: true, executionConsent: undefined })])),
+		).toEqual([]);
 	});
 
-	it("混合场景只挑出该上屏的那些", () => {
+	it("任何组合下聊天流都不出任务卡", () => {
 		const shown = tasksForTranscript(
 			view([
 				task({ id: "running", state: "running" }),
@@ -104,6 +107,6 @@ describe("流内工作台卡的取舍", () => {
 				task({ id: "done", state: "completed" }),
 			]),
 		);
-		expect(shown.map((t) => t.id)).toEqual(["needs"]);
+		expect(shown).toEqual([]);
 	});
 });

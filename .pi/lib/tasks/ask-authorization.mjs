@@ -31,23 +31,33 @@ export function createTaskAuthorization(journal, checkBinding = async () => null
 			const binding = await checkBinding();
 			const allow = "同意本次请求",
 				deny = "暂不授权";
+			// ask_user·AskGate 兼容锚点：标题保留 "ask_user" 供审计与测试识别弹窗来源，
+			// 但正文全部用用户视角的语言，不出现 UUID/revision/预算等内部记账概念。
 			const title =
 				input.action === "next-stage"
-					? "ask_user · 确认下一阶段预算"
+					? "ask_user · 继续下一阶段？"
 					: input.action === "confirm-outcome"
-						? "ask_user · 核对操作结果"
-						: "ask_user · 任务授权";
+						? "ask_user · 确认这一步的结果"
+						: "ask_user · 开始执行这个任务？";
+			const acceptanceLabel = (m) =>
+				m.acceptance.kind === "file"
+					? `生成文件 ${m.acceptance.path || ""}`.trim()
+					: m.acceptance.kind === "zotero_item"
+						? `文献进入 Zotero${m.acceptance.doi ? `（${m.acceptance.doi}）` : ""}`
+						: m.acceptance.kind === "wiki_review"
+							? "Wiki 更新经你在审阅页确认"
+							: "由你亲自确认完成";
 			const details = [
-				`任务：${task.goal}`,
-				`版本：${view.revision} · 任务 ID：${task.id}`,
+				`要做的事：${task.goal}`,
 				action ? `${action.title}\n${action.reason}` : task.authorizationSummary || task.goal,
-				`可写目录：${(task.writeRoots || []).join("、") || "未授予目录写入"}`,
-				`任务调用上限：${view.limits.totalCalls}；已用 ${task.budget.calls}。不提高绝对预算。`,
-				`完成标准：\n${task.milestones.map((m) => `- ${m.title} (${m.acceptance.kind}: ${m.acceptance.path || m.acceptance.doi || "人工核对"})`).join("\n")}`,
+				(task.writeRoots || []).length
+					? `会写入这些文件夹（包括子文件夹）：\n${task.writeRoots.map((r) => `- ${r}`).join("\n")}`
+					: "不会新增可写文件夹；改动文件仍按你现有的权限设置逐项确认。",
+				`做完的标准：\n${task.milestones.map((m) => `- ${m.title}：${acceptanceLabel(m)}`).join("\n")}`,
 				input.action === "confirm-outcome"
-					? `仅记录你对操作 ${input.operationId} 的核对声明；不重试、不代表科学验证。`
-					: "只同意所示任务范围。敏感操作、显式拒绝、外部发布、Wiki 人工内容和费用边界仍由各自权限检查保护。",
-				"关闭、取消、自定义文字都不视为同意。",
+					? "这里只记录你已核对过这一步的结果，不会重新执行它。"
+					: "同意后它会自己做完这些事，中途不再反复问你；做别的、删东西或碰敏感文件仍会先征得你同意。你随时可以停止。",
+				"不想继续就选“暂不授权”或直接关掉，都不会开始执行。",
 			].join("\n\n");
 			const selected = await ctx.ui.select(`${title}\n\n${details}`, [deny, allow], { signal });
 			if (selected !== allow || signal?.aborted) return false;

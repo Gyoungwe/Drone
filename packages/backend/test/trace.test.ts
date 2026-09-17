@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TraceRecorder } from "../src/session/trace";
 
 const dirs: string[] = [];
@@ -75,14 +75,22 @@ describe("TraceRecorder", () => {
 		const sessionId = "s3";
 		// rotate=1KB、批次 128 条：持续 record 会跨多次 flush 轮转
 		const recorder = await TraceRecorder.create(dir, sessionId, {
-			flushIntervalMs: 60_000,
+			flushIntervalMs: 20,
 			rotateSizeBytes: 1024,
 		});
 		for (let i = 0; i < 128 * 12; i++) {
 			recorder.record({ type: "tick", i, pad: "y".repeat(32) });
 			if (i % 128 === 127) {
-				// record 触发的 void flush 是异步的，等它完成再继续
-				await new Promise((resolve) => setTimeout(resolve, 10));
+				// 等本批实际落盘再继续；固定 sleep 会在慢磁盘上把多批合并，破坏尺寸断言。
+				await vi.waitFor(
+					async () => {
+						const lines = await allLines(dir, sessionId);
+						expect(lines.map((line) => JSON.parse(line))).toContainEqual(
+							expect.objectContaining({ type: "tick", i }),
+						);
+					},
+					{ timeout: 5_000, interval: 20 },
+				);
 			}
 		}
 		await recorder.close();

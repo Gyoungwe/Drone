@@ -48,7 +48,8 @@ it("new tasks require one explicit consent before commands and writes, but allow
 	expect(j.authorization()).toBeNull();
 	act(j, "authorize-task");
 	expect(j.authorization()).toMatchObject({ version: 1, maxCalls: 192, maxAutoResumes: 3 });
-	expect(j.snapshot().budget.calls).toBe(1);
+	// Read-only preparation happens before task_plan opens the task, so it is not billed to it.
+	expect(j.snapshot().budget.calls).toBe(0);
 	expect(
 		j.guard({ toolName: "write", toolCallId: "w", input: { path: "report.csv", content: "x" } }),
 	).toBeNull();
@@ -66,6 +67,36 @@ it("one consent crosses normal stages without more user actions, preserving tota
 	act(j, "authorize-task");
 	expect(j.snapshot().budget.calls).toBe(192);
 	expect(j.reserveContinuation("tool-loop-stopped")).toBe(false);
+});
+it("闲聊、追问和纠正不会各自变成一个任务", async () => {
+	const { j } = setup();
+	// 三轮普通对话：既没有 task_plan，就不该凭空长出任务
+	j.begin("那个路径改成 D 盘");
+	j.begin("不对，是第二篇");
+	j.begin("用只读方式");
+	expect(j.view().tasks).toHaveLength(0);
+	expect(j.snapshot()).toBeNull();
+	// 只读准备照常放行，不计入任何任务
+	expect(j.guard({ toolName: "read", toolCallId: "r1", input: { path: "a.txt" } })).toBeNull();
+	// 但没有契约就想动命令/写盘，仍然拦住
+	expect(j.guard({ toolName: "bash", toolCallId: "c1", input: { command: "echo x" } })).toMatchObject({
+		block: true,
+	});
+	// 真正立契约时才出现第一个任务
+	plan(j);
+	expect(j.view().tasks).toHaveLength(1);
+	// 立契约之后继续对话，也不会再分裂出第二个任务
+	j.begin("顺便说一下，标题用中文");
+	expect(j.view().tasks).toHaveLength(1);
+});
+it("task_plan inherits the binding selected during the read-only preflight turn", () => {
+	const { j } = setup();
+	j.attach("session-a");
+	j.begin("准备知识库结果", [], "vault-a:7");
+	plan(j);
+	expect(j.snapshot().binding).toBe("vault-a:7");
+	expect(j.begin("继续", [], "vault-a:7")).toMatchObject({ taskId: j.snapshot().id });
+	expect(j.snapshot().reason).toBe("task-authorization-required");
 });
 it("status spam and fabricated result events cannot buy automatic stages", async () => {
 	const { j } = setup();
@@ -107,7 +138,8 @@ it("consent does not transfer to another goal, binding or cancelled task", () =>
 	expect(j.authorization()).toBeNull();
 	act(j, "cancel");
 	expect(j.authorization()).toBeNull();
-	j.begin("另一个项目");
+	// 换一个目标就是另一份契约：必须重新开任务，旧授权不跟着走。
+	j.openTask("另一个项目");
 	expect(j.authorization()).toBeNull();
 });
 it("unknown writes and pending human actions prevent automatic recovery", async () => {
@@ -304,7 +336,9 @@ it("the single authorization proposal is available after bounded preflight, with
 		block: true,
 	});
 	act(j, "authorize-task");
-	expect(j.snapshot().budget.calls).toBe(LIMITS.stageCalls);
+	// Preflight ran before the task existed, so the authorized task starts on a clean budget
+	// rather than inheriting the cost of preparation.
+	expect(j.snapshot().budget.calls).toBe(0);
 	await read(j, "execution");
 });
 it("readback can verify a user-approved data directory outside the session cwd, but still checks read policy", async () => {
@@ -393,9 +427,11 @@ it.each([true, false])("task_plan opens ask_user immediately; approved=%s", asyn
 	const { j, pi, ctx } = await registered({ withPlan: false });
 	ctx.ui.select.mockResolvedValue(approved ? "同意本次请求" : undefined);
 	const tool = pi.registerTool.mock.calls.map(([tool]) => tool).find((tool) => tool.name === "task_plan");
+	expect(tool.parameters.required).toEqual(expect.arrayContaining(["goal", "summary", "milestones"]));
 	const result = await tool.execute(
 		"plan",
 		{
+			goal: "Create report",
 			summary: "Create report",
 			milestones: [{ id: "report", title: "Report", acceptance: { kind: "file", path: "report.csv" } }],
 		},
@@ -407,6 +443,53 @@ it.each([true, false])("task_plan opens ask_user immediately; approved=%s", asyn
 	expect(JSON.parse(result.content[0].text).authorized).toBe(approved);
 	expect(!!j.authorization()).toBe(approved);
 	expect(pi.sendUserMessage).not.toHaveBeenCalled();
+});
+it.each([false, true])(
+	"a second production task_plan opens a new task; old stage exhausted=%s",
+	async (exhausted) => {
+		const { j, pi, ctx, events } = await registered({ withPlan: false });
+		let prompts = 0;
+		ctx.ui.select.mockImplementation(async () => (++prompts === 1 ? "同意本次请求" : undefined));
+		const tool = pi.registerTool.mock.calls.map(([tool]) => tool).find((tool) => tool.name === "task_plan");
+		const input = (goal) => ({
+			goal,
+			summary: goal,
+			milestones: [{ id: "report", title: "Report", acceptance: { kind: "file", path: `${goal}.csv` } }],
+		});
+		await tool.execute("plan-a", input("First report"), undefined, undefined, ctx);
+		const first = j.view().tasks[0];
+		if (exhausted)
+			for (let i = 0; i < LIMITS.stageCalls; i++)
+				expect(
+					events.tool_call({ toolName: "set_status", toolCallId: `status-${i}`, input: {} }),
+				).toBeUndefined();
+		const previous = j.snapshot();
+		expect(
+			events.tool_call({ toolName: "task_plan", toolCallId: "plan-b", input: input("Second report") }),
+		).toBeUndefined();
+		await tool.execute("plan-b", input("Second report"), undefined, undefined, ctx);
+		const tasks = j.view().tasks;
+		expect(tasks).toHaveLength(2);
+		expect(tasks.find((task) => task.id === first.id)).toMatchObject({
+			goal: "First report",
+			state: "partial",
+		});
+		expect(j.snapshot()).toMatchObject({ goal: "Second report", state: "waiting_user" });
+		expect(j.authorization()).toBeNull();
+		expect(tasks[0].milestones).toEqual(previous.milestones);
+		expect(tasks[0].budget).toEqual(previous.budget);
+		expect(tasks[0].executionConsent).toEqual(previous.executionConsent);
+		j.command({ taskId: first.id, revision: j.view().revision, action: "select" });
+		expect(j.snapshot().id).toBe(first.id);
+		expect(prompts).toBe(2);
+	},
+);
+it("an invalid second plan keeps the existing task and checkpoint unchanged", () => {
+	const { j } = setup();
+	plan(j);
+	const before = j.view();
+	expect(() => j.plan({ goal: "Another report", milestones: [] })).toThrow("Plan needs");
+	expect(j.view()).toEqual(before);
 });
 it("task_wait authorization opens ask_user rather than leaving an inert authorization card", async () => {
 	const { j, pi, ctx } = await registered();
