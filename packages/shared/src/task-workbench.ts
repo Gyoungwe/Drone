@@ -50,6 +50,7 @@ export interface TaskOperation {
 	artifact?: TaskArtifact;
 }
 export interface WorkbenchTask {
+	remainingSummary?: string;
 	id: string;
 	goal: string;
 	state: TaskState;
@@ -117,6 +118,8 @@ export function decodeTaskView(value: unknown): TaskView | undefined {
 				typeof t.goal === "string" &&
 				t.goal.length <= 180 &&
 				states.has(t.state) &&
+				(t.remainingSummary === undefined ||
+					(typeof t.remainingSummary === "string" && t.remainingSummary.length <= 10000)) &&
 				(t.authorizationSummary === undefined ||
 					(typeof t.authorizationSummary === "string" && t.authorizationSummary.length <= 1200)) &&
 				(t.writeRoots === undefined ||

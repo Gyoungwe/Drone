@@ -16,6 +16,7 @@ import {
 	taskProgressContext,
 	toolResultFailed,
 } from "./failure-feedback.mjs";
+import { createTaskProgression } from "./progress-action.mjs";
 import { restoreTaskToolOrder } from "./tool-protocol.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
 import { createZoteroReconciler } from "./zotero-reconcile.mjs";
@@ -172,7 +173,7 @@ export function registerWorkbench(pi) {
 						customType: "drone-task-autocontinue",
 						display: false,
 						details: { taskId, nonce: continuationToken },
-						content: `Continue the user-authorized task: ${journal.snapshot().goal}. Scope: ${journal.snapshot().authorizationSummary}. Use saved results, verify uncertain effects before any retry, and complete the remaining deliverables. Do not request routine stage approval. Respect declined installs and all permission/validation gates. If blocked, clearly deliver what exists and the one real blocker instead of silently extending scope.`,
+						content: `Continue the user-authorized task: ${journal.snapshot().goal}. Scope: ${journal.snapshot().authorizationSummary}. Use saved results, verify uncertain effects before any retry, and complete the remaining deliverables. Do not request routine stage approval. Respect declined installs and all permission/validation gates. If blocked, explain each remaining deliverable: actual evidence, confirmed blocker (or explicitly unknown cause), next action, and whether the user must decide. Use task_status for the latest remaining summary. Resolve routine gaps autonomously; create a specific task_wait only for genuinely needed input/approval. Never change acceptance criteria or mark an item complete to fill the progress bar.`,
 					},
 					{ triggerTurn: true, deliverAs: "followUp" },
 				);
@@ -528,6 +529,14 @@ export function registerWorkbench(pi) {
 			send();
 		},
 	});
+	const progressTask = createTaskProgression(journal, {
+		getGeneration: () => handoffGeneration,
+		askAuthorization,
+		checkBinding: bindingKey,
+		continueAuthorized,
+		prepareRemaining: () => pi.sendUserMessage("继续", { expandPromptTemplates: false }),
+		send,
+	});
 	pi.registerCommand("task-action", {
 		description: "任务面板的版本化用户操作；不授予新权限",
 		handler: async (args, ctx) => {
@@ -537,6 +546,10 @@ export function registerWorkbench(pi) {
 				throw new Error("Stop the agent before changing tasks or inspecting recovery files.");
 			if (args.length > 6000) throw new Error("Task command too large.");
 			const input = JSON.parse(Buffer.from(args.trim(), "base64url").toString("utf8"));
+			if (input.action === "progress") {
+				await progressTask(input, ctx);
+				return;
+			}
 			if (input.action === "authorize-task") {
 				if (!(await askAuthorization(input, ctx))) {
 					send("尚未授权。可稍后通过 ask_user 重新确认。");
@@ -551,6 +564,10 @@ export function registerWorkbench(pi) {
 			if (["approve-plan", "next-stage", "ask-authorization", "confirm-outcome"].includes(input.action)) {
 				const accepted = await askAuthorization(input, ctx);
 				send(accepted ? "ask_user：已记录本次确认。" : "ask_user：未确认，状态和授权不变。");
+				if (accepted) {
+					journal.command({ taskId: input.taskId, revision: journal.view().revision, action: "select" });
+					continueAuthorized(ctx);
+				}
 				return;
 			}
 			if (input.action === "acknowledge") {
@@ -559,8 +576,12 @@ export function registerWorkbench(pi) {
 					.tasks.find((t) => t.id === input.taskId)
 					?.actions.find((a) => a.id === input.actionId);
 				if (action?.kind === "authorization") {
-					await askAuthorization({ ...input, action: "ask-authorization" }, ctx);
+					const accepted = await askAuthorization({ ...input, action: "ask-authorization" }, ctx);
 					send();
+					if (accepted) {
+						journal.command({ taskId: input.taskId, revision: journal.view().revision, action: "select" });
+						continueAuthorized(ctx);
+					}
 					return;
 				}
 			}

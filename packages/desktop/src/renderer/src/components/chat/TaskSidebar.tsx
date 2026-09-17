@@ -4,7 +4,6 @@ import {
 	type TaskView,
 	TERMINAL_TASK_STATES,
 	taskActionCommand,
-	taskNeedsUser,
 	type WorkbenchTask,
 } from "@drone/shared";
 import { useState } from "react";
@@ -25,7 +24,7 @@ import { TaskArtifactLinks } from "./TaskArtifactLinks";
  *
  * 授权入口只触发 ask_user，绝不直接同意；宿主问题展示并绑定准确的任务契约版本。
  */
-function TaskRow({
+export function TaskRow({
 	task,
 	view,
 	sessionId,
@@ -39,12 +38,8 @@ function TaskRow({
 	const limits = view.limits;
 	const [busy, setBusy] = useState(false),
 		[error, setError] = useState("");
-	const pendingAuthorization = task.actions.find((a) => a.kind === "authorization" && a.state === "pending");
-	const needsPlan =
-		!!task.milestones.length && !task.executionConsent && !TERMINAL_TASK_STATES.has(task.state);
-	const canAsk = !!pendingAuthorization || needsPlan || task.reason === "stage-budget";
-	const pct = Math.min(100, Math.round((task.budget.calls / Math.max(1, limits.totalCalls)) * 100));
 	const done = task.milestones.filter((m) => m.state === "completed").length;
+	const pct = task.milestones.length ? Math.round((done / task.milestones.length) * 100) : 0;
 	const reason = explainTaskReason(task.reason);
 	return (
 		<article className="border-b border-border p-3 last:border-0">
@@ -55,52 +50,55 @@ function TaskRow({
 				</span>
 			</div>
 			<p className="mt-1 text-[11px] text-ink-dim">
-				阶段 {task.stage} · 调用 {task.budget.calls}/{limits.totalCalls}
-				{task.milestones.length > 0 && ` · 里程碑 ${done}/${task.milestones.length}`}
+				执行检查点 {task.stage} · 已用调用预算 {task.budget.calls}/{limits.totalCalls}
+				{task.milestones.length > 0 && ` · 已验收 ${done}/${task.milestones.length}`}
 			</p>
-			{!TERMINAL_TASK_STATES.has(task.state) && (
-				<div className="mt-2 h-1 overflow-hidden rounded-full bg-hover" aria-hidden="true">
+			{task.milestones.length > 0 && (
+				<div
+					className="mt-2 h-1 overflow-hidden rounded-full bg-hover"
+					role="progressbar"
+					aria-label="交付验收进度"
+					aria-valuemin={0}
+					aria-valuemax={100}
+					aria-valuenow={pct}
+					aria-valuetext={`已验收 ${done}/${task.milestones.length} 项`}
+				>
 					<div
 						className={`h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${
-							pct >= 85 ? "bg-amber-500" : "bg-green-500"
+							pct < 100 ? "bg-amber-500" : "bg-green-500"
 						}`}
 						style={{ width: `${pct}%` }}
 					/>
 				</div>
 			)}
 			{reason && <p className="mt-2 text-[11px] text-ink-dim">{reason}</p>}
-			{taskNeedsUser(task) &&
-				(canAsk ? (
-					<button
-						type="button"
-						disabled={busy || agentActive || !sessionId}
-						className="mt-2 w-full rounded-md bg-amber-500/10 px-2 py-1 text-left text-[11px] text-amber-600 disabled:opacity-40"
-						onClick={async () => {
-							if (!sessionId) return;
-							setBusy(true);
-							setError("");
-							try {
-								await getPi().prompt(
-									sessionId,
-									taskActionCommand(
-										view,
-										task.id,
-										pendingAuthorization ? "ask-authorization" : needsPlan ? "authorize-task" : "next-stage",
-										pendingAuthorization ? { actionId: pendingAuthorization.id } : {},
-									),
-								);
-							} catch (e) {
-								setError(String(e));
-							} finally {
-								setBusy(false);
-							}
-						}}
-					>
-						打开 ask_user 确认请求
-					</button>
-				) : (
-					<p className="mt-2 text-[11px] text-ink-dim">等待文件或人工核对；请在聊天中的任务记录处理。</p>
-				))}
+			<p className="mt-2 whitespace-pre-wrap text-[11px] leading-5" data-testid="task-remaining-summary">
+				{task.remainingSummary ||
+					(task.milestones.length
+						? "剩余项尚未验收；旧记录未说明原因，请先核对已有产物，不要重复生成。"
+						: "尚未约定交付项，暂不计算完成百分比。")}
+			</p>
+			{!TERMINAL_TASK_STATES.has(task.state) && (
+				<button
+					type="button"
+					disabled={busy || agentActive || !sessionId}
+					className="mt-2 w-full rounded-md bg-amber-500/10 px-2 py-2 text-left text-xs text-amber-600 disabled:opacity-40"
+					onClick={async () => {
+						if (!sessionId) return;
+						setBusy(true);
+						setError("");
+						try {
+							await getPi().prompt(sessionId, taskActionCommand(view, task.id, "progress"));
+						} catch (e) {
+							setError(String(e));
+						} finally {
+							setBusy(false);
+						}
+					}}
+				>
+					通过 ask_user 推进剩余事项
+				</button>
+			)}
 			{error && (
 				<p role="alert" className="text-xs text-red-500">
 					{error}

@@ -4,6 +4,7 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import { contractHash, hasTaskConsent, MAX_AUTO_RESUMES } from "./consent.mjs";
 import { failureObservation, failureReceipt, toolResultFailed } from "./failure-feedback.mjs";
 import { readPdfIdentity } from "./pdf-identity.mjs";
+import { remainingExplanation } from "./remaining.mjs";
 
 export const WORKBENCH_ENTRY = "drone-task-workbench-v2";
 export const LIMITS = Object.freeze({
@@ -1049,6 +1050,7 @@ export function createTaskWorkbench({
 			selectionRequired: book.selectionRequired,
 			tasks: book.tasks.map(({ progressKeys, pendingObservations, ...t }) => ({
 				...t,
+				remainingSummary: remainingExplanation(t),
 				operations: t.operations.map(({ key, ...op }) => op),
 				waitMs:
 					t.waitMs + (t.waitStartedAt ? Math.max(0, Date.parse(now()) - Date.parse(t.waitStartedAt)) : 0),
@@ -1096,6 +1098,7 @@ export function createTaskWorkbench({
 					const label = (path.split("/").pop() || "产物").replace(/[[\]\\]/g, "\\$&");
 					return `- 文件：[${label}](${href}) · ${o.state === "changed" ? "版本已变化，需重新核对" : o.state}`;
 				}),
+			remainingExplanation(t),
 			t.reason ? `说明：${t.reason === "tool-failure" ? failureReceipt(t) : explainReason(t.reason)}` : null,
 			book.selectionRequired
 				? "有多个可继续任务，请先在任务面板选择。"

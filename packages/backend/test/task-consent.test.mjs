@@ -373,3 +373,22 @@ it("task_wait authorization opens ask_user rather than leaving an inert authoriz
 	expect(j.snapshot().actions[0].state).toBe("pending");
 	expect(j.authorization()).toBeFalsy();
 });
+
+it.each(["ask-authorization", "acknowledge"])(
+	"legacy %s entry also continues after native confirmation",
+	async (action) => {
+		const { j, pi, ctx, commands, approve } = await registered();
+		vi.useFakeTimers();
+		await approve();
+		await vi.runOnlyPendingTimersAsync();
+		pi.sendMessage.mockClear();
+		ctx.ui.select.mockClear();
+		const pending = j.wait({ kind: "authorization", title: "新增范围确认", reason: "只确认这一项" });
+		const input = { taskId: j.snapshot().id, revision: j.view().revision, action, actionId: pending.id };
+		await commands["task-action"].handler(Buffer.from(JSON.stringify(input)).toString("base64url"), ctx);
+		await vi.runOnlyPendingTimersAsync();
+		expect(ctx.ui.select).toHaveBeenCalledOnce();
+		expect(j.snapshot().actions.find((a) => a.id === pending.id).state).toBe("acknowledged");
+		expect(pi.sendMessage.mock.calls.filter(([, options]) => options?.triggerTurn)).toHaveLength(1);
+	},
+);

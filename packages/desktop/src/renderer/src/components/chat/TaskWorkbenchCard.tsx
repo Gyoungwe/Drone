@@ -84,6 +84,24 @@ export function TaskWorkbenchCard({
 						查看任务侧栏
 					</button>
 				</div>
+				{!stale &&
+					shown
+						.filter((task) => task.state === "partial")
+						.map((task) => (
+							<div key={task.id} className="mt-2" data-testid="task-remaining-compact">
+								<p className="whitespace-pre-wrap text-xs">
+									{task.remainingSummary || "仍有交付项未验收，请先核对已有结果。"}
+								</p>
+								<button
+									type="button"
+									className={`${button} mt-2`}
+									disabled={disabled}
+									onClick={() => act(task.id, "progress")}
+								>
+									通过 ask_user 推进剩余事项
+								</button>
+							</div>
+						))}
 				{!stale && shown.map((task) => <TaskArtifactLinks key={task.id} task={task} sessionId={sessionId} />)}
 				<details className="mt-2" onToggle={(event) => setDetailsOpen(event.currentTarget.open)}>
 					<summary className="cursor-pointer text-ink-dim">验收与操作详情（非科研核验）</summary>
@@ -147,6 +165,28 @@ export function TaskWorkbenchCard({
 						{view.limits.totalCalls} · 等待 {Math.floor(task.waitMs / 60000)} 分钟
 					</p>
 					<p className="mt-1 text-xs text-ink-dim">上次记录：{task.updatedAt}</p>
+					<div className="mt-3 rounded-lg border border-border bg-surface p-3" data-testid="task-remaining">
+						<h5 className="text-sm font-medium">交付验收与剩余事项</h5>
+						<p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed">
+							{task.remainingSummary ||
+								`已验收 ${task.milestones.filter((m) => m.state === "completed").length}/${task.milestones.length} 项。旧记录没有剩余原因说明，请先只读核对产物；未验收不等于没有生成。`}
+						</p>
+						{!TERMINAL_TASK_STATES.has(task.state) && (
+							<button
+								type="button"
+								disabled={disabled}
+								className={`${primaryButton} mt-3`}
+								onClick={() => act(task.id, "progress")}
+							>
+								通过 ask_user 推进剩余事项
+							</button>
+						)}
+						{!TERMINAL_TASK_STATES.has(task.state) && (
+							<p className="mt-2 text-[11px] text-ink-dim">
+								根据当前缺项确认下一步；已授权步骤不重复授权，取消不改变任务。
+							</p>
+						)}
+					</div>
 					{task.reason && (
 						<p className="mt-1 text-xs" data-testid="task-reason">
 							{explainTaskReason(task.reason)}
