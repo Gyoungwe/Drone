@@ -143,7 +143,8 @@ jobs:
       - run: npm ci
       - run: npm run dist -w packages/desktop -- --publish never
       - name: Upload build outputs directly to draft release
-        timeout-minutes: 60`r`n        shell: bash
+        timeout-minutes: 60
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Bound the upload and avoid stalled HTTP/2 streams in the Go-based gh client.
@@ -205,4 +206,5 @@ jobs:
           else
             echo "CF_PAGES_DEPLOY_HOOK not set, skipping"
           fi
+
 
