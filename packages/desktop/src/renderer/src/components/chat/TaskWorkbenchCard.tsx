@@ -89,9 +89,19 @@ export function TaskWorkbenchCard({
 						.filter((task) => task.state === "partial")
 						.map((task) => (
 							<div key={task.id} className="mt-2" data-testid="task-remaining-compact">
-								<p className="whitespace-pre-wrap text-xs">
-									{task.remainingSummary || "仍有交付项未验收，请先核对已有结果。"}
+								{/* 只露第一行（“已验收 N/M；剩余 K 项”），其余收进折叠。
+								    remainingSummary 是逐项的「原因/下一步」多行清单，整段摊在流里就是刷屏。 */}
+								<p className="text-xs">
+									{(task.remainingSummary || "仍有交付项未验收，请先核对已有结果。").split("\n")[0]}
 								</p>
+								{(task.remainingSummary || "").includes("\n") && (
+									<details className="mt-1">
+										<summary className="cursor-pointer text-[11px] text-ink-dim">逐项原因与下一步</summary>
+										<p className="mt-1 whitespace-pre-wrap text-[11px] text-ink-dim">
+											{task.remainingSummary}
+										</p>
+									</details>
+								)}
 								<button
 									type="button"
 									className={`${button} mt-2`}
