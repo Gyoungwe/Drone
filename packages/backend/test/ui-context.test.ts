@@ -144,3 +144,12 @@ describe("makeUiContext — native setup questions", () => {
 		await expect(ui.select("Profile", [])).resolves.toBeUndefined();
 	});
 });
+
+it("elaboration is not confirmation of an extension authorization", async () => {
+ const requests: AskRequest[] = [];
+ const gate = new AskGate(request => requests.push(request)); gate.bindSession("session");
+ const ui = makeUiContext(fakeGate(), gate);
+ const pending = ui.select("ask_user · 任务授权", ["暂不授权", "同意本次请求"]);
+ gate.respond(requests[0]!.id, { kind: "answer", mode: "elaborate", answers: { value: { values: ["同意本次请求"] } } });
+ expect(await pending).toBeUndefined(); gate.dispose();
+});

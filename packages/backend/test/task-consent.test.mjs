@@ -128,7 +128,7 @@ it("write directories must be actual project directories, not missing paths or a
 	await expect(resolveWriteRoots(dir, ["does-not-exist"])).rejects.toThrow();
 	await expect(resolveWriteRoots(dir, [process.platform === "win32" ? "C:/" : "/"])).rejects.toThrow();
 });
-async function registered() {
+async function registered({ withPlan = true } = {}) {
 	const dir = await mkdtemp(join(tmpdir(), "drone-consent-ui-"));
 	dirs.push(dir);
 	const events = {},
@@ -151,13 +151,14 @@ async function registered() {
 	};
 	const ctx = {
 		cwd: dir,
+		ui: { select: vi.fn(async () => "同意本次请求") },
 		isIdle: () => idle.value,
 		sessionManager: { getSessionId: () => "session-a", getBranch: () => entries },
 	};
 	const j = registerWorkbench(pi);
 	events.session_start({}, ctx);
 	j.begin("分析数据");
-	plan(j);
+	if (withPlan) plan(j);
 	const approve = () =>
 		commands["task-action"].handler(
 			Buffer.from(
@@ -313,7 +314,8 @@ it("a late preparation failure cannot reopen a task cancelled during the async h
 	const { j, pi, ctx, commands, approve } = await registered();
 	vi.useFakeTimers();
 	let rejectBinding;
-	readKnowledgeBinding.mockReturnValueOnce(
+	// Authorization checks the binding before and after the user answer; the third read is the handoff under test.
+	readKnowledgeBinding.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockReturnValueOnce(
 		new Promise((_resolve, reject) => {
 			rejectBinding = reject;
 		}),
@@ -332,4 +334,22 @@ it("a late preparation failure cannot reopen a task cancelled during the async h
 	expect(j.snapshot().state).toBe("cancelled");
 	expect(j.snapshot().reason).toBe("user-cancelled");
 	expect(pi.sendMessage.mock.calls.filter(([, o]) => o?.triggerTurn)).toHaveLength(0);
+});
+
+it.each([true, false])("task_plan opens ask_user immediately; approved=%s", async approved => {
+ const { j, pi, ctx } = await registered({ withPlan: false });
+ ctx.ui.select.mockResolvedValue(approved ? "同意本次请求" : undefined);
+ const tool = pi.registerTool.mock.calls.map(([tool]) => tool).find(tool => tool.name === "task_plan");
+ const result = await tool.execute("plan", { summary: "Create report", milestones: [{ id: "report", title: "Report", acceptance: { kind: "file", path: "report.csv" } }] }, undefined, undefined, ctx);
+ expect(ctx.ui.select).toHaveBeenCalledOnce();
+ expect(JSON.parse(result.content[0].text).authorized).toBe(approved);
+ expect(!!j.authorization()).toBe(approved);
+ expect(pi.sendUserMessage).not.toHaveBeenCalled();
+});
+it("task_wait authorization opens ask_user rather than leaving an inert authorization card", async () => {
+ const { j, pi, ctx } = await registered(); ctx.ui.select.mockResolvedValue(undefined);
+ const tool = pi.registerTool.mock.calls.map(([tool]) => tool).find(tool => tool.name === "task_wait");
+ await tool.execute("wait", { kind: "authorization", title: "A bounded action", reason: "Needs explicit user consent" }, undefined, undefined, ctx);
+ expect(ctx.ui.select).toHaveBeenCalledOnce(); expect(j.snapshot().actions[0].state).toBe("pending");
+ expect(j.authorization()).toBeFalsy();
 });

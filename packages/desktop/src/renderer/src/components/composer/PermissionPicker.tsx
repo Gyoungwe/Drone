@@ -7,7 +7,7 @@ import { CheckIcon, ShieldIcon, WarningIcon } from "../icons";
 import { Tooltip } from "../ui/Tooltip";
 
 /** 档位定义：glyph / 标题 / 描述（spec permission-mode §6） */
-const MODES: PermissionMode[] = ["default", "fullAccess"];
+const MODES: PermissionMode[] = ["default", "strict", "fullAccess"];
 
 /**
  * 会话权限档位 chip（仿 ModelPicker：按钮 + 上弹层 + 外部点击/Esc 关闭）。
@@ -51,7 +51,7 @@ export function PermissionPicker() {
 		>
 			{mode === "fullAccess" ? <WarningIcon size={12} /> : <ShieldIcon size={12} />}
 			<span>
-				{mode === "fullAccess" ? t("composer.permissionFullAccess") : t("composer.permissionDefault")}
+				{mode === "fullAccess" ? t("composer.permissionFullAccess") : mode === "strict" ? "严格确认" : "自动执行"}
 			</span>
 		</button>
 	);
@@ -90,12 +90,12 @@ export function PermissionPicker() {
 									<span className="block text-xs font-medium">
 										{m === "fullAccess"
 											? t("composer.permissionFullAccessTitle")
-											: t("composer.permissionDefaultTitle")}
+											: m === "strict" ? "严格确认" : "自动执行（推荐）"}
 									</span>
 									<span className="mt-0.5 block text-[11px] leading-relaxed text-ink-faint">
 										{m === "fullAccess"
 											? t("composer.permissionFullAccessDesc")
-											: t("composer.permissionDefaultDesc")}
+											: m === "strict" ? "常规文件写入也需确认；仍可按任务授权。" : "项目内常规编辑自动执行；敏感文件、越界写入、删除和发布仍需确认。"}
 									</span>
 								</span>
 								{selected && <CheckIcon size={12} className="mt-1 shrink-0" />}

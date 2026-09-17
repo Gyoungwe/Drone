@@ -148,7 +148,10 @@ export function DiffSidebar() {
 	}, [diffFocus, visibleTurns, clearDiffFocus]);
 
 	return (
-		<aside className={`diff-sidebar${open ? " open" : ""}`} aria-hidden={!open}>
+		<aside
+			className={`diff-sidebar${open ? " open" : ""}${resourcePreview ? " resource-sidebar" : ""}`}
+			aria-hidden={!open}
+		>
 			<div className="diff-sidebar-in">
 				{resourcePreview ? (
 					<ResourceSidebar target={resourcePreview} />

@@ -13,6 +13,7 @@ const log = createLogger("permission-rules");
 
 export interface PermissionConfig {
 	enabled: boolean;
+	autoApproveProjectEdits: boolean;
 	/** 路径工具落在全部工作区根之外时的动作（读写分离：观察默认放行，变更默认确认）；
 	 * temporary 为路径/删除目标落在系统临时区时的动作（默认 allow，agent 临时工作流免打断） */
 	outside: PermissionOutside;
@@ -30,12 +31,21 @@ const ACTIONS: ReadonlySet<string> = new Set(["allow", "ask", "deny"]);
  */
 export const DEFAULT_PERMISSION_CONFIG: PermissionConfig = {
 	enabled: true,
+	autoApproveProjectEdits: true,
 	outside: { read: "allow", write: "ask", temporary: "allow" },
 	rules: {
 		"*": "allow",
 		bash: {
 			"*": "allow",
 			"sudo *": "ask",
+			"*review-policy.json*": "ask",
+			"git push*": "ask",
+			"npm publish*": "ask",
+			"pnpm publish*": "ask",
+			"Remove-Item *": "ask",
+			"remove-item *": "ask",
+			"del *": "ask",
+			"rmdir *": "ask",
 			"rm -rf *": "ask",
 			"rm -fr *": "ask",
 			"rm -r *": "ask",
@@ -70,6 +80,7 @@ export const DEFAULT_PERMISSION_CONFIG: PermissionConfig = {
 export function mergeWithDefaults(config: Partial<PermissionConfig>): PermissionConfig {
 	return {
 		enabled: config.enabled ?? true,
+		autoApproveProjectEdits: config.autoApproveProjectEdits ?? !(config.rules && ("edit" in config.rules || "write" in config.rules)),
 		outside: {
 			read: config.outside?.read ?? DEFAULT_PERMISSION_CONFIG.outside.read,
 			write: config.outside?.write ?? DEFAULT_PERMISSION_CONFIG.outside.write,

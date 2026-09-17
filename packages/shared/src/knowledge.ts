@@ -70,6 +70,7 @@ export interface KnowledgeFlow {
 	} | null;
 	publication: {
 		status: string;
+		warnings?: { code: string; message: string }[];
 		reason: string | null;
 		paths?: string[];
 		scientificallyVerified: false;
@@ -119,6 +120,8 @@ export interface KnowledgeIndexStatus {
 	problems: { path: string; message: string }[];
 }
 export interface KnowledgeOverview {
+ reviewMode?: "automatic" | "strict";
+ wikiHistory?: { id: string; path: string; afterHash: string; reviewedAt: number; reviewMethod: string }[];
 	specialistSettings?: KnowledgeSpecialistSettings;
 	specialistSettingsError?: string;
 	enabled: boolean;
@@ -317,7 +320,9 @@ export interface KnowledgeApi {
 	}): Promise<KnowledgeNote>;
 	maintainKnowledge(input: {
 		cwd?: string | null;
-		action: "reconcile" | "refresh-navigation";
+		action: "reconcile" | "refresh-navigation" | "review-automatic" | "review-strict" | "undo-wiki";
+		id?: string;
+		expectedHash?: string;
 		revision: number;
 	}): Promise<unknown>;
 	openKnowledgeTarget(input: { cwd?: string | null; path?: string | null; revision: number }): Promise<void>;

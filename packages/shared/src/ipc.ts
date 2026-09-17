@@ -46,6 +46,8 @@ import type { UpdateState } from "./update";
 import type { ZoteroStatus } from "./zotero";
 
 export interface ResourcePreviewResult {
+	encoding?: string;
+	compression?: "gzip";
 	path: string;
 	name: string;
 	mimeType: string;

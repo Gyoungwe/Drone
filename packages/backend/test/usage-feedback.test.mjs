@@ -15,6 +15,8 @@ async function note(path, text) {
 	await writeFile(join(vault, path), text);
 }
 beforeEach(async () => {
+	// Prior mandatory-review behavior remains covered as optional strict mode.
+	vi.stubEnv("DRONE_REVIEW_MODE", "strict");
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-usage-feedback-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");

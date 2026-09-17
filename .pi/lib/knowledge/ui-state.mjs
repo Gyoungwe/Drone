@@ -108,6 +108,7 @@ export function publicationKnowledgeFlow(ctx, proof) {
 		phase,
 		publication: {
 			status: proof.status,
+			warnings: Array.isArray(proof.warnings) ? proof.warnings.slice(0, 6) : [],
 			reason: proof.reason || null,
 			paths: Array.isArray(proof.paths) ? proof.paths.slice(0, 6) : [],
 			scientificallyVerified: false,
@@ -277,8 +278,8 @@ export function noteKnowledgeOperation(ctx, event) {
 				d.id || event.toolCallId,
 				"Wiki proposal",
 				d.path,
-				"pending-review",
-				"Not yet part of live Wiki knowledge.",
+				d.status === "applied" ? "已保存" : "待确认",
+				d.status === "applied" ? "Saved with history; not scientific verification." : "Not yet part of live Wiki knowledge.",
 			),
 		);
 	const artifacts = [...(old.artifacts || [])];

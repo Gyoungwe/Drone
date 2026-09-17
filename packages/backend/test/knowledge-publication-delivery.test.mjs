@@ -29,6 +29,8 @@ async function note(path, text) {
 	await writeFile(join(vault, path), text);
 }
 beforeEach(async () => {
+	// Preserve the prior mandatory workflow as explicit strict-mode coverage.
+	vi.stubEnv("DRONE_REVIEW_MODE", "strict");
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-publication-delivery-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");
@@ -444,4 +446,16 @@ it("real SDK repeated review commands open UI without model calls or fabricated 
 	} finally {
 		unsubscribe();
 	}
+});
+
+it("automatic SDK delivery preserves the answer and its nonblocking reminder without extra model rounds", async () => {
+ vi.stubEnv("DRONE_REVIEW_MODE", "automatic");
+ await run([reply("AUTOMATIC_DIRECT_ANSWER with explicitly limited evidence.")]);
+ expect(faux.state.callCount).toBe(1);
+ const final = session.messages.filter(m => m.role === "assistant").at(-1);
+ expect(final.content[0].text).toContain("AUTOMATIC_DIRECT_ANSWER");
+ expect(final.knowledgePublication.status).toBe("released");
+ expect(final.knowledgePublication.warnings.length).toBeGreaterThan(0);
+ expect(final.knowledgePublication.scientificallyVerified).toBe(false);
+ expect(JSON.stringify(await backend.getSessionMessages(sid))).toContain("AUTOMATIC_DIRECT_ANSWER");
 });

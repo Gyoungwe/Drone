@@ -1,3 +1,4 @@
+import { readReviewMode, advisoryCodes } from "./review-policy.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { publicationKnowledgeFlow, updateKnowledgeFlow } from "./ui-state.mjs";
 
@@ -264,15 +265,9 @@ export function registerAnswerPublication(
 		)
 			return report(failure(message, { code: "interrupted" }));
 		const content = blocks.filter((b) => b.type === "text");
-		const operational = !evidenceOnly && getTaskRuntime?.()?.takeReport();
-		if (operational)
-			return report(
-				seal(message, [{ type: "text", text: operational }], {
-					status: "operational",
-					turnId,
-					scientificallyVerified: false,
-				}),
-			);
+		// A status query must not replace the model's explanation with a stale host snapshot.
+  // Drain legacy requests, but never use them to bypass the normal publication/evidence checks.
+  if (!evidenceOnly) getTaskRuntime?.()?.takeReport();
 		// Only the controlled setup writer can set this receipt. Never whitelist model-written claims.
 		if (setupReceipt) {
 			const done = setupReceipt;
@@ -363,12 +358,13 @@ export function registerAnswerPublication(
 					if (timer) clearTimeout(timer);
 				}
 			};
-			await attachMaterializedCitations();
+			const automatic = (await readReviewMode()) === "automatic";
+			if (!automatic) await attachMaterializedCitations();
 			let proof;
 			try {
 				proof = await validateWithTimeout();
 			} catch (error) {
-				if (!["coverage-incomplete", "search-stale"].includes(error?.code)) throw error;
+				if (automatic || !["coverage-incomplete", "search-stale"].includes(error?.code)) throw error;
 				// A late watcher event can invalidate an otherwise current search. Refresh exactly once;
 				// strict validation still decides whether the answer is publishable.
 				await attachMaterializedCitations(true);
@@ -397,6 +393,16 @@ export function registerAnswerPublication(
 				}),
 			);
 		} catch (error) {
+			const info = knowledgeFailure(error);
+			if ((await readReviewMode()) === "automatic" && advisoryCodes.has(info.code) && !ctx.signal?.aborted) {
+				try {
+					const current = getCurrent(ctx);
+					await current.service.check(current.ticket, ctx.cwd);
+				} catch (authorityError) { return report(failure(message, authorityError)); }
+				return report(seal(message, [...content, { type: "text", text: `\n\n【有提醒】${info.message} 内容已保留；来源与科学事实尚未完成核验，无需反复检查才能继续。` }], {
+					status: "released", reviewMode: "automatic", warnings: [info], turnId, scientificallyVerified: false,
+				}));
+			}
 			return report(failure(message, error));
 		}
 	});
@@ -423,6 +429,14 @@ export function registerAnswerPublication(
 				return { ok: true, proof };
 			} catch (error) {
 				const info = knowledgeFailure(error);
+				if ((await readReviewMode()) === "automatic" && advisoryCodes.has(info.code)) {
+					try {
+						const current = getCurrent(ctx);
+						await current.service.check(current.ticket, ctx.cwd);
+					} catch { return { ok: false, code: "binding-changed", message: "Refresh the current knowledge binding before continuing." }; }
+					return { ok: true, status: "warning", warnings: [info], scientificallyVerified: false,
+						next: "Deliver the answer with its limitations. Do not repeat read/search/check solely to clear this advisory." };
+				}
 				return {
 					ok: false,
 					...info,
@@ -468,7 +482,8 @@ export function registerAnswerPublication(
 			toolRounds = 0;
 			setupReceipt = null;
 		},
-		guidance:
-			"For execution progress in ANY task (analysis, code, environment, experiments, writing), use task_status; its host-generated report needs no research citations. Never add irrelevant sources to an operational report. Scientific host-checked answers need a current-turn search, reads of cited [[path]] sources, then research_check_answer. Public text must answer the user's question; do not lecture about Vault policy or evidence-gate stages. Use short set_status about the task, not product design. Show Me/run links are deliverables, not evidence.",
+		get guidance() { return readReviewMode() === "automatic"
+			? "Answer the user's question directly. Use actual evidence where needed, acknowledge uncertainty, and save useful knowledge. Evidence quality reminders are nonblocking: do not run repeated read/search/check just to clear them. Never claim scientific verification. Host permission, binding, abort and spending limits still apply; human Wiki edits require confirmation."
+			: "For execution progress in ANY task (analysis, code, environment, experiments, writing), use task_status; its host-generated report needs no research citations. Never add irrelevant sources to an operational report. Scientific host-checked answers need a current-turn search, reads of cited [[path]] sources, then research_check_answer. Public text must answer the user's question; do not lecture about Vault policy or evidence-gate stages. Use short set_status about the task, not product design. Show Me/run links are deliverables, not evidence."; },
 	};
 }

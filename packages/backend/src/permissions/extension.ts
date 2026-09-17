@@ -156,6 +156,14 @@ export function makePermissionGateExtension(
 					}
 				}
 
+				if (action === "ask" && config.autoApproveProjectEdits && options?.getMode?.() !== "strict" &&
+					projectRoot && !outside && WRITE_TOOLS.has(event.toolName) && patternText &&
+					(!isTemporaryPath(patternText) || config.outside.temporary === "allow") &&
+					config.rules[event.toolName] === "ask" && await taskWriteAllowed([projectRoot], patternText)) {
+					audit.record({ t: new Date().toISOString(), sessionId: ctx.sessionManager?.getSessionId(),
+						tool: event.toolName, action: "ask", text: `[automatic-project-edit] ${patternText}`.slice(0, 500), cwd: ctx.cwd });
+					return;
+				}
 				if (action === "allow") return;
 
 				// 项目级记忆（allowAlways 持久化）：ask 可被覆盖，deny 已在上面返回；

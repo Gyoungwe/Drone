@@ -1,3 +1,4 @@
+import { readReviewMode } from "./review-policy.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { join, relative, resolve, sep } from "node:path";
 import { Worker } from "node:worker_threads";
@@ -317,7 +318,7 @@ export class KnowledgeService {
 	) {
 		const state = await this.check(ticket, cwd);
 		if (!wikiOnly && !explainerOnly) state.answerSearch = null; // a newer failed evidence attempt cannot reuse old success
-		if (!wikiOnly && !explainerOnly && state.linkedWiki.length) {
+		if (!wikiOnly && !explainerOnly && state.linkedWiki.length && (await readReviewMode()) === "strict") {
 			if (!(await this.ensureCurrentWikiRead(ticket, cwd, state)))
 				throw new Error(
 					"Read a current linked or discovered Wiki page with research_read_knowledge before searching evidence. Wiki discovery search is still allowed.",
@@ -638,7 +639,7 @@ export class KnowledgeService {
 		if (!searched) fail("search-required", "Complete a real evidence search this turn before answering");
 		if (!searched.complete)
 			fail("coverage-incomplete", "The last search did not have complete index coverage");
-		if (state.linkedWiki.length) {
+		if (state.linkedWiki.length && readReviewMode() === "strict") {
 			let valid = false;
 			for (const [path, receipt] of state.readWiki) {
 				const latest = await this.request("read", { path, project: state.project, maxChars: 200 });

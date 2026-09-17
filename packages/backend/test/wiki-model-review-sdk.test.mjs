@@ -12,6 +12,8 @@ import { PiBackend } from "../src/pi-backend";
 
 let root, cwd, vault, backend, session, sid, faux, preview;
 beforeEach(async () => {
+	// Prior mandatory-review behavior remains covered as optional strict mode.
+	vi.stubEnv("DRONE_REVIEW_MODE", "strict");
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-review-sdk-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");

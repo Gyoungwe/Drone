@@ -3,28 +3,48 @@ import {
 	TASK_STATE_LABELS,
 	type TaskView,
 	TERMINAL_TASK_STATES,
+	taskActionCommand,
 	taskNeedsUser,
 	type WorkbenchTask,
 } from "@drone/shared";
+import { useState } from "react";
+import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { CloseIcon } from "../icons";
+import { TaskArtifactLinks } from "./TaskArtifactLinks";
 
 /**
  * 任务工作台侧栏：常驻显示「最新一份」TaskView 的进度面。
  *
  * 与聊天流里的工作台卡是同一份数据的两个投影：
  * - 流内卡只在需要用户拍板或任务收尾时出现，是时间线上的审计记录（授权绑定契约哈希）
- * - 本侧栏只读，展示随时在变的进度：阶段、调用预算、里程碑、操作流水
+ * - 本侧栏展示随时在变的进度：阶段、调用预算、里程碑、操作流水
  *
- * 只读是有意的：这里不放任何授权入口。一个脱离上下文、始终悬浮的「同意」按钮
- * 会让用户无法回答「我当时批准的是哪一份契约」。
+ * 授权入口只触发 ask_user，绝不直接同意；宿主问题展示并绑定准确的任务契约版本。
  */
-function TaskRow({ task, limits }: { task: WorkbenchTask; limits: TaskView["limits"] }) {
+function TaskRow({
+	task,
+	view,
+	sessionId,
+	agentActive,
+}: {
+	task: WorkbenchTask;
+	view: TaskView;
+	sessionId: string | null;
+	agentActive: boolean;
+}) {
+	const limits = view.limits;
+	const [busy, setBusy] = useState(false),
+		[error, setError] = useState("");
+	const pendingAuthorization = task.actions.find((a) => a.kind === "authorization" && a.state === "pending");
+	const needsPlan =
+		!!task.milestones.length && !task.executionConsent && !TERMINAL_TASK_STATES.has(task.state);
+	const canAsk = !!pendingAuthorization || needsPlan || task.reason === "stage-budget";
 	const pct = Math.min(100, Math.round((task.budget.calls / Math.max(1, limits.totalCalls)) * 100));
-	const done = task.milestones.filter((m) => m.state === "done").length;
+	const done = task.milestones.filter((m) => m.state === "completed").length;
 	const reason = explainTaskReason(task.reason);
 	return (
 		<article className="border-b border-border p-3 last:border-0">
@@ -49,35 +69,52 @@ function TaskRow({ task, limits }: { task: WorkbenchTask; limits: TaskView["limi
 				</div>
 			)}
 			{reason && <p className="mt-2 text-[11px] text-ink-dim">{reason}</p>}
-			{taskNeedsUser(task) && (
-				/* 可点击：长对话里那张卡早被滚过去了，给一个回到它的入口 */
-				<button
-					type="button"
-					className="mt-2 w-full rounded-md bg-amber-500/10 px-2 py-1 text-left text-[11px] text-amber-600 hover:bg-amber-500/20 dark:text-amber-400"
-					onClick={() => {
-						const el = document.querySelector(`[data-task-id="${CSS.escape(task.id)}"]`);
-						if (!el) return;
-						el.scrollIntoView({
-							block: "center",
-							behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-						});
-						el.classList.remove("jump-flash");
-						void (el as HTMLElement).offsetWidth; // reflow 重播动画
-						el.classList.add("jump-flash");
-						setTimeout(() => el.classList.remove("jump-flash"), 1200);
-					}}
-				>
-					等待你确认 · 点此跳转 →
-				</button>
+			{taskNeedsUser(task) &&
+				(canAsk ? (
+					<button
+						type="button"
+						disabled={busy || agentActive || !sessionId}
+						className="mt-2 w-full rounded-md bg-amber-500/10 px-2 py-1 text-left text-[11px] text-amber-600 disabled:opacity-40"
+						onClick={async () => {
+							if (!sessionId) return;
+							setBusy(true);
+							setError("");
+							try {
+								await getPi().prompt(
+									sessionId,
+									taskActionCommand(
+										view,
+										task.id,
+										pendingAuthorization ? "ask-authorization" : needsPlan ? "authorize-task" : "next-stage",
+										pendingAuthorization ? { actionId: pendingAuthorization.id } : {},
+									),
+								);
+							} catch (e) {
+								setError(String(e));
+							} finally {
+								setBusy(false);
+							}
+						}}
+					>
+						打开 ask_user 确认请求
+					</button>
+				) : (
+					<p className="mt-2 text-[11px] text-ink-dim">等待文件或人工核对；请在聊天中的任务记录处理。</p>
+				))}
+			{error && (
+				<p role="alert" className="text-xs text-red-500">
+					{error}
+				</p>
 			)}
+			<TaskArtifactLinks task={task} sessionId={sessionId} />
 			{!!task.milestones.length && (
 				<ul className="mt-2 space-y-1">
 					{task.milestones.map((m) => (
 						<li key={m.id} className="flex items-start gap-1.5 text-[11px] leading-4">
-							<span className={m.state === "done" ? "text-green-500" : "text-ink-dim"}>
-								{m.state === "done" ? "\u2713" : "\u25cb"}
+							<span className={m.state === "completed" ? "text-green-500" : "text-ink-dim"}>
+								{m.state === "completed" ? "\u2713" : "\u25cb"}
 							</span>
-							<span className={m.state === "done" ? "text-ink-dim line-through" : ""}>{m.title}</span>
+							<span className={m.state === "completed" ? "text-ink-dim line-through" : ""}>{m.title}</span>
 						</li>
 					))}
 				</ul>
@@ -110,7 +147,12 @@ export function TaskSidebar() {
 	const latestMessage = [...transcript.messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
 	const latest = latestMessage?.kind === "assistant" ? latestMessage.taskView : undefined;
 	return (
-		<aside className={`diff-sidebar${open ? " open" : ""}`} aria-hidden={!open} data-testid="task-sidebar">
+		<aside
+			id="task-workbench-sidebar"
+			className={`diff-sidebar${open ? " open" : ""}`}
+			aria-hidden={!open}
+			data-testid="task-sidebar"
+		>
 			<div className="diff-sidebar-in">
 				<div className="diff-side-head">
 					<span className="diff-side-title">任务工作台</span>
@@ -129,7 +171,13 @@ export function TaskSidebar() {
 						<div className="diff-side-empty">尚无任务。发送具体需求后会建立宿主任务记录。</div>
 					) : (
 						latest.tasks.map((task: WorkbenchTask) => (
-							<TaskRow key={task.id} task={task} limits={latest.limits} />
+							<TaskRow
+								key={task.id}
+								task={task}
+								view={latest}
+								sessionId={activeSessionId}
+								agentActive={transcript.agentActive}
+							/>
 						))
 					)}
 				</div>

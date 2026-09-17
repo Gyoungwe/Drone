@@ -82,7 +82,7 @@ export function registerSettingsIpc(backend: PiBackend): void {
 		backend.getSessionPermissionMode(sessionId),
 	);
 	ipcMain.handle(IpcChannels.PermissionSetMode, (_e, sessionId: string, mode: unknown) => {
-		if (mode !== "default" && mode !== "fullAccess") {
+		if (mode !== "default" && mode !== "strict" && mode !== "fullAccess") {
 			throw new Error(`invalid permission mode: ${String(mode)}`);
 		}
 		backend.setSessionPermissionMode(sessionId, mode);

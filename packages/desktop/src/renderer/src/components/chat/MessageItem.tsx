@@ -4,6 +4,7 @@ import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import type { UIMessage } from "../../stores/transcript";
+import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { AssistantMessage } from "./AssistantMessage";
 import { ErrorNote } from "./ErrorNote";
 import { ImagePreviewOverlay, imageSrc } from "./ImagePreview";
@@ -92,7 +93,7 @@ export const MessageItem = memo(function MessageItem({
 		// 纯进度刷新不进流（侧栏已常驻显示最新一份），只留要用户拍板的和已收尾的
 		const shown = tasksForTranscript(message.taskView);
 		if (!shown.length && !message.taskView.selectionRequired) return null;
-		return <TaskWorkbenchCard view={message.taskView} sessionId={sessionId} tasks={shown} />;
+		return <LatestTaskCard message={message} sessionId={sessionId} />;
 	}
 	return (
 		<div className="group">
@@ -113,3 +114,21 @@ export const MessageItem = memo(function MessageItem({
 		</div>
 	);
 });
+function LatestTaskCard({
+	message,
+	sessionId,
+}: {
+	message: { id: string; taskView?: import("@drone/shared").TaskView };
+	sessionId: string | null;
+}) {
+	const messages = useTranscriptStore((s) => selectTranscript(s, sessionId).messages);
+	const latest = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
+	if (!message.taskView || (latest && latest.id !== message.id)) return null;
+	return (
+		<TaskWorkbenchCard
+			view={message.taskView}
+			sessionId={sessionId}
+			tasks={tasksForTranscript(message.taskView)}
+		/>
+	);
+}

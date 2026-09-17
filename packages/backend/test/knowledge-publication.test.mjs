@@ -11,6 +11,8 @@ async function note(path, text) {
 	await writeFile(join(vault, path), text);
 }
 beforeEach(async () => {
+	// Preserve the prior mandatory workflow as explicit strict-mode coverage.
+	vi.stubEnv("DRONE_REVIEW_MODE", "strict");
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-publication-")));
 	cwd = join(root, "project");
 	vault = join(root, "Vault");

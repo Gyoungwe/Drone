@@ -7,7 +7,7 @@ function protectedPath(path: string): boolean {
 	return (
 		parts.some((p) => [".git", ".ssh", ".gnupg", ".aws", ".azure"].includes(p)) ||
 		parts.some((p, i) => p === ".pi" && ["agent", "agent-dev"].includes(parts[i + 1] || "")) ||
-		/^(?:\.env(?:\..*)?|\.npmrc|\.netrc|\.git-credentials|auth\.json|permissions\.json|workspaces\.json|trust\.json|models\.json|.*credentials.*|.*secrets?.*|\.?mcp.*\.json|id_(?:rsa|ed25519).*)$/i.test(
+		/^(?:\.env(?:\..*)?|\.npmrc|\.netrc|\.git-credentials|auth\.json|review-policy\.json|permissions\.json|workspaces\.json|trust\.json|models\.json|.*credentials.*|.*secrets?.*|\.?mcp.*\.json|id_(?:rsa|ed25519).*)$/i.test(
 			name,
 		) ||
 		/\.(?:pem|key|p12|pfx)$/i.test(name) ||
