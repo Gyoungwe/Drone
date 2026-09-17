@@ -3,16 +3,16 @@ import type { Messages } from "./zh";
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
 	taskConsent: {
-		manual: "Manual controls and diagnostics (optional)",
-		title: "Authorize this task once",
-		active: "Task authorized · automatic stages",
+		manual: "More controls (expand if needed)",
+		title: "Confirm once, let it finish the job",
+		active: "Confirmed · running to delivery",
 		limits:
-			"At most {calls} tool calls and 3 automatic recoveries for this task. The budget will not expand automatically.",
-		directories: "Directories approved for ordinary writes, including subdirectories:",
-		noDirectories: "No additional write directories requested; existing permissions apply.",
+			"It will take at most {calls} steps on its own, and recover from interruptions at most 3 times, then stop and check with you.",
+		directories: "It will write into these folders (including subfolders):",
+		noDirectories: "No new writable folders; file changes still follow your existing permission settings.",
 		boundary:
-			"This also approves the acceptance plan below. Commands retain existing permissions — if a command prompt still appears, choose “Allow all for this task” to stop further prompts. Deletion, sensitive files, out-of-scope actions, new risks and actual human review are not automatically approved. You can stop at any time.",
-		approve: "Authorize once and run to delivery",
+			"Once you confirm, it follows the plan below on its own. If a command prompt still pops up during the run, pick “Allow all for this task” to stop repeated prompts. Deleting files, touching sensitive content or going beyond the plan will still ask you first — and you can stop any time.",
+		approve: "Confirm once and run to delivery",
 	},
 	common: {
 		save: "Save",

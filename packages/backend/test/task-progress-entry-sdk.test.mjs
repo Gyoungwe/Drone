@@ -88,6 +88,7 @@ it.each(["double", "cancel-retry"])(
 					reply(
 						[
 							call("task_plan", {
+								goal: "Write one bounded result",
 								summary: "Write one bounded result",
 								writeDirectories: ["."],
 								milestones: [
@@ -135,7 +136,7 @@ it.each(["double", "cancel-retry"])(
 			backend.respondAsk(pendingAsk.id, {
 				kind: "answer",
 				mode: "submit",
-				answers: { value: { values: ["按原范围继续完成剩余事项"] } },
+				answers: { value: { values: ["接着做完剩下的"] } },
 			});
 			expect(await first).not.toBeInstanceOf(Error);
 			if (second) expect(await second).not.toBeInstanceOf(Error);

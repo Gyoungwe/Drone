@@ -278,7 +278,7 @@ export class CapabilityRuntime {
 			if (
 				!data ||
 				data.scope !== scope ||
-				(task && data.taskId !== task.id) ||
+				(task && data.taskId != null && data.taskId !== task.id) ||
 				!Array.isArray(data.capabilities) ||
 				data.capabilities.length > 16 ||
 				!Array.isArray(data.skills) ||

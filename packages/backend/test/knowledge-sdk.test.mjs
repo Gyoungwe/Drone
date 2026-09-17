@@ -76,7 +76,7 @@ it("real SDK delivers global navigation before model invocation in an unrelated 
 			(event) => event.type === "message_end" && event.message.customType === "drone-task-status",
 		);
 		expect(status?.message).toMatchObject({ role: "custom", display: true });
-		expect(status.message.content).toContain("暂无本会话");
+		expect(status.message.content).toContain("还没有任务记录");
 		expect(session.messages.some((message) => message.customType === "drone-task-status")).toBe(true);
 		await session.prompt("请先了解当前知识库，再解释研究流程。", { expandPromptTemplates: false });
 		expect(model).toHaveBeenCalledOnce();

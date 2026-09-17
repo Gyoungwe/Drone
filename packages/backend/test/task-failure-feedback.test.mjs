@@ -20,6 +20,8 @@ function setup() {
 	});
 	j.attach("session-A");
 	j.begin("分析实验数据并交付报告");
+	// 任务只由 task_plan 开启；这些用例关心任务已存在之后的失败记录行为。
+	j.openTask("分析实验数据并交付报告");
 	return { j, entries };
 }
 const failure = (event) => ({
@@ -109,12 +111,12 @@ describe("evidence-grounded failure feedback", () => {
 		const { j } = setup();
 		const e = call("old-read");
 		j.guard(e);
-		j.begin("另一个任务");
+		j.openTask("另一个任务");
 		await j.observe(failure(e));
 		expect(j.snapshot().failures).toBeUndefined();
 	});
 	it("marks missing historical errors as unknown instead of fabricating a cause", () => {
-		expect(failureReceipt({ reason: "tool-failure" })).toContain("未保留具体错误");
+		expect(failureReceipt({ reason: "tool-failure" })).toContain("没保留下来");
 		expect(failureContext({ reason: "tool-failure" })).toContain('"historicalErrorDetailMissing":true');
 		expect(failureObservation({ ...call("x"), isError: true }, "now").error).toContain("没有提供具体错误");
 	});

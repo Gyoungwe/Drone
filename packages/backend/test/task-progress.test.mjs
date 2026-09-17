@@ -65,7 +65,7 @@ it.each([undefined, "暂不处理", "自由文字"])(
 it("one proceed decision preserves consent and schedules continuation without marking completion", async () => {
 	const f = fixture(),
 		consent = f.j.authorization();
-	f.ctx.ui.select.mockResolvedValue("按原范围继续完成剩余事项");
+	f.ctx.ui.select.mockResolvedValue("接着做完剩下的");
 	await f.run(f.input(), f.ctx);
 	expect(f.next).toHaveBeenCalledOnce();
 	expect(f.ctx.ui.select).toHaveBeenCalledOnce();
@@ -90,9 +90,9 @@ it("stale revision after the popup is rejected", async () => {
 	const f = fixture();
 	f.ctx.ui.select.mockImplementation(async () => {
 		f.j.pause("external-change");
-		return "按原范围继续完成剩余事项";
+		return "接着做完剩下的";
 	});
-	await expect(f.run(f.input(), f.ctx)).rejects.toThrow("已变化");
+	await expect(f.run(f.input(), f.ctx)).rejects.toThrow("变化");
 	expect(f.next).not.toHaveBeenCalled();
 });
 it("changed binding after the popup is rejected", async () => {
@@ -101,9 +101,9 @@ it("changed binding after the popup is rejected", async () => {
 	f.checkBinding.mockImplementation(async () => binding);
 	f.ctx.ui.select.mockImplementation(async () => {
 		binding = "other-vault";
-		return "按原范围继续完成剩余事项";
+		return "接着做完剩下的";
 	});
-	await expect(f.run(f.input(), f.ctx)).rejects.toThrow("已变化");
+	await expect(f.run(f.input(), f.ctx)).rejects.toThrow("变化");
 	expect(f.next).not.toHaveBeenCalled();
 });
 it("double click shares one native question and one continuation", async () => {
@@ -119,7 +119,7 @@ it("double click shares one native question and one continuation", async () => {
 	const a = f.run(input, f.ctx),
 		b = f.run(input, f.ctx);
 	await vi.waitFor(() => expect(choose).toBeTypeOf("function"));
-	choose("按原范围继续完成剩余事项");
+	choose("接着做完剩下的");
 	await Promise.all([a, b]);
 	expect(f.ctx.ui.select).toHaveBeenCalledOnce();
 	expect(f.next).toHaveBeenCalledOnce();
@@ -155,7 +155,7 @@ it("failed file inspection never acknowledges the file or resumes", async () => 
 it("only explicit actual human review satisfies the corresponding criterion", async () => {
 	const f = fixture(true, "human_review");
 	f.j.wait({ kind: "review", title: "审阅报告", reason: "核对报告内容", milestoneId: "report" });
-	f.ctx.ui.select.mockResolvedValue("我已完成所列人工审阅");
+	f.ctx.ui.select.mockResolvedValue("我已亲自看过这些内容");
 	await f.run(f.input(), f.ctx);
 	expect(f.j.snapshot().milestones[0].state).toBe("completed");
 	expect(f.j.snapshot().milestones[0].evidence.kind).toBe("human-review");
@@ -164,7 +164,7 @@ it("only explicit actual human review satisfies the corresponding criterion", as
 it("hard budget checkpoint does not offer an execution bypass", async () => {
 	const f = fixture();
 	f.j.pause("total-budget");
-	f.ctx.ui.select.mockResolvedValue("按原范围继续完成剩余事项");
+	f.ctx.ui.select.mockResolvedValue("接着做完剩下的");
 	const before = f.j.view();
 	await f.run(f.input(), f.ctx);
 	expect(f.ctx.ui.select.mock.calls[0][1]).toEqual(["暂不处理", "仅核对已有产物"]);

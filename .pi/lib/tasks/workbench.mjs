@@ -26,11 +26,6 @@ export const clean = (value, max = 180) =>
 		.slice(0, max);
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const clone = (value) => structuredClone(value);
-const continuation = (text) =>
-	/^(?:also\b|and\b|补充)/i.test(String(text).trim()) ||
-	/^(?:继续(?:吧|执行|处理|完成|上一任务)?|接着(?:做|处理)?|下好了|下载好了|我下载了(?:，?手动的那几篇)?|continue|resume|done)[\s,.!？，。！?]*$/i.test(
-		String(text).trim(),
-	);
 const controls = new Set([
 	"set_status",
 	"todo",
@@ -60,23 +55,23 @@ const sameArtifactPath = (cwd, declared, observed) => {
 };
 /** User-facing explanation and next step for each machine reason code. Codes stay stable for tests/UI. */
 export const REASON_TEXT = Object.freeze({
-	"task-authorization-required": "方案已准备好。请一次确认本任务的范围、可写目录和完成标准，之后自动推进。",
-	"automatic-recovery": "已按本任务授权从检查点自动继续，无需再次确认阶段。",
-	"automatic-stage-checkpoint": "已保存执行进展，正在原授权和总预算内继续下一阶段。",
-	"total-budget": "已到达本任务总调用上限，现有结果已保留。不会自动扩大预算或反复要求确认。",
-	"stage-budget": "阶段暂未取得足够新进展，已保留结果。已授权任务不会重复要求确认阶段预算。",
-	"budget-review-required": "工具调用预算已用完。请查看当前结果；确认后可在任务面板开启下一阶段。",
+	"task-authorization-required": "计划已经准备好，等你点头。确认一次，后面就自动做完，不再反复打扰。",
+	"automatic-recovery": "刚才中断了一下，已经从上次保存的地方接着做，不用你操作。",
+	"automatic-stage-checkpoint": "进展已保存，正在接着做下一部分。",
+	"total-budget": "这个任务的步数已经用完，做出来的结果都保留着。想继续做，请重新描述需求开一个新任务。",
+	"stage-budget": "最近一段没有做出新进展，先停下来保留结果，避免空转。",
+	"budget-review-required": "这一段的步数用完了。先看看目前的结果，确认后可以在任务面板继续。",
 	"reconcile-before-retry":
-		"有操作在上次运行中没有得到结果（例如写入、安装、上传）。请先点“只读核对产物”确认实际情况，避免重复执行。",
-	"binding-changed": "知识库绑定已更改，旧任务的证据和权限不能沿用。请重新描述需求以开始新任务。",
-	"tool-failure": "任务中有失败记录；是否影响结果、是否需要重试，应结合具体错误和后续证据判断。",
-	"user-cancelled-choice-not-consent": "你取消了一个选择。任务在等待你的决定，不会按默认选项继续。",
-	"user-action-cancelled": "你跳过了一个需要人工处理的事项，任务暂停。需要时可重新描述需求。",
-	"wiki-rejected-or-stale": "Wiki 候选被拒绝或来源已变化，相关验收条件未满足。",
-	"verified-stage-checkpoint": "已核实一个验收条件，进入下一阶段。",
-	"session-restored": "会话已恢复，进度从上次保存点继续。",
-	"legacy-checkpoint-unreviewed": "这是旧版本记录导入的任务，历史操作尚未复核。",
-	"user-cancelled": "任务已由你取消。",
+		"上次有操作没等到结果就中断了（比如写文件、安装、上传），现在不确定它做没做成。请先点“核对已有结果”看一下实际情况，别让它盲目重做一遍。",
+	"binding-changed": "知识库换了，旧任务里查到的内容不能继续用。请重新描述需求，开一个新任务。",
+	"tool-failure": "中间有一步出错了。具体是哪一步、影不影响结果，看下面的记录。",
+	"user-cancelled-choice-not-consent": "你取消了刚才的选择。任务停在原地等你决定，不会自作主张继续。",
+	"user-action-cancelled": "你跳过了一个需要你处理的事项，任务先停着。想继续时再说一声就行。",
+	"wiki-rejected-or-stale": "Wiki 修改没有通过审阅（或者来源内容变了），这一项还不算完成。",
+	"verified-stage-checkpoint": "有一项交付已经确认完成，接着做下一项。",
+	"session-restored": "会话已恢复，从上次保存的进度接着来。",
+	"legacy-checkpoint-unreviewed": "这是从旧版本带过来的任务记录，之前做了什么还没核对过。",
+	"user-cancelled": "你已取消这个任务。",
 	"user-archived": "任务已归档。",
 });
 export const explainReason = (code) => (code ? REASON_TEXT[code] || code : null);
@@ -196,7 +191,9 @@ export function createTaskWorkbench({
 			tasks: [],
 		},
 		requested = false,
-		pinned = false;
+		pinned = false,
+		turnCapabilities = [],
+		turnBinding = null;
 	const active = () => book.tasks.find((t) => t.id === book.activeTaskId) || null;
 	const save = () => {
 		book.revision++;
@@ -209,6 +206,8 @@ export function createTaskWorkbench({
 		book = { version: 2, scope, revision: 0, activeTaskId: null, selectionRequired: false, tasks: [] };
 		requested = false;
 		pinned = false;
+		turnCapabilities = [];
+		turnBinding = null;
 		for (const entry of entries) {
 			const data = entry.data;
 			if (
@@ -310,38 +309,28 @@ export function createTaskWorkbench({
 		if (!t || book.selectionRequired) throw error("task-selection-required", "Select a task first.");
 		return t;
 	}
-	function begin(query, capabilities = [], binding = null) {
+	/** Turn arrival never creates a task: ordinary chat, clarifications and corrections are not tasks.
+	 *  A task exists only once the model commits to a contract via task_plan (see openTask).
+	 *  Here we only resume the task already in flight. */
+	function begin(_query, capabilities = [], binding = null) {
+		// Remember the turn's capability routing so a task opened later this turn (via task_plan)
+		// still records it; reopening the session restores tool visibility from the task itself.
+		turnCapabilities = capabilities.filter((c) => typeof c === "string").slice(0, 16);
+		turnBinding = binding;
 		const eligible = book.tasks.filter((t) => !terminal(t.state));
-		if (continuation(query)) {
-			if (eligible.length > 1 && !pinned) {
-				book.selectionRequired = true;
-				save();
-				return { selectionRequired: true };
-			}
-			if (!active() && eligible.length === 1) book.activeTaskId = eligible[0].id;
-		} else {
-			const t = make(query);
-			if (book.tasks.length >= LIMITS.tasks) {
-				// Archived tasks are already exported/closed; drop the oldest one to make room, never an open task.
-				const archived = book.tasks.filter((x) => x.state === "archived");
-				if (archived.length) book.tasks.splice(book.tasks.indexOf(archived[0]), 1);
-			}
-			if (book.tasks.length >= LIMITS.tasks)
-				throw error(
-					"task-capacity",
-					"Task history is full. Archive a finished task from the task panel (export first if needed); no open task is silently discarded.",
-				);
-			if (active()?.state === "running") active().state = "partial";
-			book.tasks.push(t);
-			book.activeTaskId = t.id;
-			pinned = false;
+		if (!active() && eligible.length === 1) book.activeTaskId = eligible[0].id;
+		if (!active() && eligible.length > 1 && !pinned) {
+			book.selectionRequired = true;
+			save();
+			return { selectionRequired: true };
 		}
-		if (!active()) {
-			const t = make(query);
-			book.tasks.push(t);
-			book.activeTaskId = t.id;
+		const t = active();
+		if (!t) {
+			// No open task and none being planned yet - nothing to track for this turn.
+			save();
+			return { idle: true };
 		}
-		const t = requireTask();
+		if (book.selectionRequired) return { selectionRequired: true };
 		if (t.binding === undefined) t.binding = binding;
 		if (t.binding !== binding) {
 			t.state = "blocked";
@@ -349,11 +338,13 @@ export function createTaskWorkbench({
 			save();
 			return { blocked: true };
 		}
-		if (terminal(t.state))
-			throw error(
-				"task-terminal",
-				"Start a new task rather than silently reopening a completed/cancelled/archived one.",
-			);
+		if (terminal(t.state)) {
+			// 任务已收尾就让它留在原地：后续回合是普通对话（或一份新契约），
+			// 不该被上一个任务的终态卡住，也不该悄悄把它重新打开。
+			book.activeTaskId = null;
+			save();
+			return { idle: true };
+		}
 		if (t.operations.some((o) => ["started", "unknown"].includes(o.state))) {
 			t.state = "blocked";
 			t.reason = "reconcile-before-retry";
@@ -373,13 +364,31 @@ export function createTaskWorkbench({
 		save();
 		return { taskId: t.id };
 	}
-	function plan(input) {
-		const t = requireTask();
-		if (t.milestones.length)
+	/** Creates the task that task_plan is about to fill in, evicting archived rows if the book is full. */
+	function openTask(query, binding = turnBinding) {
+		if (book.tasks.length >= LIMITS.tasks) {
+			// Archived tasks are already exported/closed; drop the oldest one to make room, never an open task.
+			const archived = book.tasks.filter((x) => x.state === "archived");
+			if (archived.length) book.tasks.splice(book.tasks.indexOf(archived[0]), 1);
+		}
+		if (book.tasks.length >= LIMITS.tasks)
 			throw error(
-				"plan-exists",
-				"Existing acceptance criteria are immutable; use a new task for a changed contract.",
+				"task-capacity",
+				"Task history is full. Archive a finished task from the task panel (export first if needed); no open task is silently discarded.",
 			);
+		if (active()?.state === "running") active().state = "partial";
+		const t = make(query);
+		t.binding = binding;
+		t.capabilities = [...turnCapabilities];
+		book.tasks.push(t);
+		book.activeTaskId = t.id;
+		pinned = false;
+		save();
+		return t;
+	}
+	function plan(input) {
+		// task_plan is the only entry point that may open a task, so a turn that never plans stays task-free.
+		if (book.selectionRequired) throw error("task-selection-required", "Select a task first.");
 		if (
 			!Array.isArray(input.milestones) ||
 			!input.milestones.length ||
@@ -418,6 +427,15 @@ export function createTaskWorkbench({
 				evidence: null,
 			};
 		});
+		// Validate the contract before opening or switching tasks; failed proposals
+		// must not leave empty tasks or mutate the previous checkpoint.
+		const current = active();
+		const t =
+			current && !terminal(current.state) && !current.milestones.length
+				? current
+				: openTask(input.goal || "任务", turnBinding);
+		if (t !== current && current && current.milestones.length && !terminal(current.state))
+			current.state = "partial";
 		if (input.goal) t.goal = clean(input.goal);
 		t.authorizationSummary = clean(input.summary || t.goal, 1200);
 		t.writeRoots = [...(input.writeRoots || [])];
@@ -808,17 +826,32 @@ export function createTaskWorkbench({
 		return true;
 	}
 	function guard(event) {
-		const t = requireTask();
+		// 待用户在多个未完成任务之间选一个时，任何工具调用都先中止；这一步必须排在
+		// 「没有任务就放行只读」之前，否则选择提示会被静默绕过。
+		if (book.selectionRequired) throw error("task-selection-required", "Select a task first.");
+		// A new contract has its own consent and budget; proposing it must not
+		// spend or be blocked by the previous task's budget.
+		if (event.toolName === "task_plan") return null;
+		const t = active();
+		if (!t || terminal(t.state)) {
+			// 普通对话回合（方案3）：没有进行中的任务是常态，不是错误。
+			// 只读准备、控制类工具和知识库工具照常放行且不计入任何任务预算；
+			// 命令/写盘等副作用必须先经 task_plan 立契约并由 ask_user 授权。
+			if (
+				controls.has(event.toolName) ||
+				readOnly(event.toolName) ||
+				/^research_/.test(event.toolName) ||
+				event.toolName === "ask_user"
+			)
+				return null;
+			return {
+				block: true,
+				reason:
+					"No authorized task contract exists. Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables; the host opens ask_user for that exact contract. Commands and writes stay blocked until it is approved.",
+			};
+		}
 		if (t.budget.stageCalls >= LIMITS.stageCalls) advanceStage();
 		if (event.toolName === "task_status") return null;
-		// A single immutable proposal remains possible after a read-only preflight hits a stage limit.
-		if (
-			event.toolName === "task_plan" &&
-			t.authorizationRequired &&
-			!t.milestones.length &&
-			!terminal(t.state)
-		)
-			return null;
 		if (terminal(t.state) || book.selectionRequired)
 			return { block: true, reason: "Select an unfinished task before starting tools." };
 		// Knowledge-vault tools (research_*) are host-governed: run-dir scoped, evidence-gated and
@@ -1060,22 +1093,22 @@ export function createTaskWorkbench({
 	}
 	function render() {
 		const t = active();
-		if (!t) return "暂无本会话的任务执行记录。旧会话不会被自动标记为已完成。";
+		if (!t) return "这个会话还没有任务记录。";
 		const labels = {
 			pending: "待开始",
 			running: "执行中",
-			waiting_user: "等待用户",
+			waiting_user: "等你决定",
 			blocked: "受阻",
 			partial: "部分完成",
-			completed: "已满足记录的验收条件",
+			completed: "已完成",
 			cancelled: "已取消",
 			archived: "已归档",
 		};
 		return [
-			"### 任务执行记录",
+			"### 任务进展",
 			`任务：${t.goal}`,
-			`状态：${labels[t.state]}；上次确认：${t.updatedAt}`,
-			`已满足验收：${t.milestones.filter((m) => m.state === "completed").length}/${t.milestones.length}；阶段 ${t.stage}；调用 ${t.budget.calls}/${LIMITS.totalCalls}`,
+			`状态：${labels[t.state]}；更新于 ${t.updatedAt}`,
+			`交付：已完成 ${t.milestones.filter((m) => m.state === "completed").length}/${t.milestones.length} 项`,
 			...[
 				...new Map(
 					t.operations
@@ -1096,18 +1129,19 @@ export function createTaskWorkbench({
 							? `file://${encoded}`
 							: `./${encoded}`;
 					const label = (path.split("/").pop() || "产物").replace(/[[\]\\]/g, "\\$&");
-					return `- 文件：[${label}](${href}) · ${o.state === "changed" ? "版本已变化，需重新核对" : o.state}`;
+					const stateLabel =
+						o.state === "changed"
+							? "内容后来变过，需要再看一眼"
+							: o.state === "verified"
+								? "已生成并核对"
+								: o.state === "returned"
+									? "已生成"
+									: o.state;
+					return `- 文件：[${label}](${href}) · ${stateLabel}`;
 				}),
 			remainingExplanation(t),
 			t.reason ? `说明：${t.reason === "tool-failure" ? failureReceipt(t) : explainReason(t.reason)}` : null,
-			book.selectionRequired
-				? "有多个可继续任务，请先在任务面板选择。"
-				: t.reason === "tool-failure"
-					? null
-					: "详情中可核对产物、等待事项和下一阶段。",
-			t.reason === "tool-failure"
-				? null
-				: "以上是程序观察到的执行情况，不是科研结论，也不代表结果已经过科学验证。",
+			book.selectionRequired ? "有多个任务可以继续，请先在任务面板选一个。" : null,
 		]
 			.filter(Boolean)
 			.join("\n");
@@ -1121,6 +1155,7 @@ export function createTaskWorkbench({
 		attach,
 		begin,
 		plan,
+		openTask,
 		wait,
 		guard,
 		observe,

@@ -68,7 +68,7 @@ it.each([true, false])(
 							? {
 									kind: "answer",
 									mode: "submit",
-									answers: { value: { values: [asks === 1 ? "同意本次请求" : "按原范围继续完成剩余事项"] } },
+									answers: { value: { values: [asks === 1 ? "同意本次请求" : "接着做完剩下的"] } },
 								}
 							: { kind: "cancel" },
 					),
@@ -90,6 +90,7 @@ it.each([true, false])(
 					reply(
 						[
 							call("task_plan", {
+								goal: "Write one bounded result",
 								summary: "Write one bounded result",
 								writeDirectories: ["."],
 								milestones: [

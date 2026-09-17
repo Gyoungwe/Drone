@@ -96,7 +96,9 @@ export function TaskWorkbenchCard({
 								</p>
 								{(task.remainingSummary || "").includes("\n") && (
 									<details className="mt-1">
-										<summary className="cursor-pointer text-[11px] text-ink-dim">逐项原因与下一步</summary>
+										<summary className="cursor-pointer text-[11px] text-ink-dim">
+											每一项差在哪、下一步做什么
+										</summary>
 										<p className="mt-1 whitespace-pre-wrap text-[11px] text-ink-dim">
 											{task.remainingSummary}
 										</p>
@@ -108,13 +110,13 @@ export function TaskWorkbenchCard({
 									disabled={disabled}
 									onClick={() => act(task.id, "progress")}
 								>
-									通过 ask_user 推进剩余事项
+									继续做剩下的
 								</button>
 							</div>
 						))}
 				{!stale && shown.map((task) => <TaskArtifactLinks key={task.id} task={task} sessionId={sessionId} />)}
 				<details className="mt-2" onToggle={(event) => setDetailsOpen(event.currentTarget.open)}>
-					<summary className="cursor-pointer text-ink-dim">验收与操作详情（非科研核验）</summary>
+					<summary className="cursor-pointer text-ink-dim">任务详情</summary>
 					{detailsOpen && <TaskWorkbenchCard view={view} sessionId={sessionId} tasks={shown} expanded />}
 				</details>
 			</section>
@@ -137,9 +139,7 @@ export function TaskWorkbenchCard({
 							: "任务工作台"}
 					</h3>
 					<p className="mt-1 text-xs text-ink-dim">
-						{awaiting
-							? "待处理事项不等于需要重新授权 · 已有授权不会因查看此卡而重置"
-							: "执行、验收与待你处理 · 不代表科研结论已验证"}
+						{awaiting ? "看看下面哪一项在等你" : "任务的进展、交付和需要你做的事都在这里"}
 					</p>
 				</div>
 				<button
@@ -151,16 +151,16 @@ export function TaskWorkbenchCard({
 							.catch((e) => setError(String(e.message || e)))
 					}
 				>
-					导出检查点 · v{view.revision}
+					导出任务记录
 				</button>
 			</header>
 			{view.selectionRequired && (
 				<p role="status" className="border-b border-border p-3 text-sm">
-					有多个任务可以继续。请选择一个，不会自动猜测或启动写操作。
+					有多个任务可以继续，请先选一个，避免弄混。
 				</p>
 			)}
 			{shown.length === 0 && (
-				<p className="p-4 text-sm text-ink-dim">尚无任务。发送具体需求后会建立宿主任务记录。</p>
+				<p className="p-4 text-sm text-ink-dim">还没有任务。说说你想做什么，确认计划后就会出现在这里。</p>
 			)}
 			{shown.map((task) => (
 				<article key={task.id} data-task-id={task.id} className="border-b border-border p-4 last:border-0">
@@ -171,15 +171,15 @@ export function TaskWorkbenchCard({
 						</span>
 					</div>
 					<p className="mt-1 text-xs text-ink-dim">
-						{task.id === view.activeTaskId ? "当前任务 · " : ""}阶段 {task.stage} · 调用 {task.budget.calls}/
-						{view.limits.totalCalls} · 等待 {Math.floor(task.waitMs / 60000)} 分钟
+						{task.id === view.activeTaskId ? "当前任务 · " : ""}已执行 {task.budget.calls} 步
+						{task.waitMs >= 60000 ? ` · 等你 ${Math.floor(task.waitMs / 60000)} 分钟` : ""}
 					</p>
-					<p className="mt-1 text-xs text-ink-dim">上次记录：{task.updatedAt}</p>
+					<p className="mt-1 text-xs text-ink-dim">更新于 {task.updatedAt}</p>
 					<div className="mt-3 rounded-lg border border-border bg-surface p-3" data-testid="task-remaining">
-						<h5 className="text-sm font-medium">交付验收与剩余事项</h5>
+						<h5 className="text-sm font-medium">交付进度</h5>
 						<p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed">
 							{task.remainingSummary ||
-								`已验收 ${task.milestones.filter((m) => m.state === "completed").length}/${task.milestones.length} 项。旧记录没有剩余原因说明，请先只读核对产物；未验收不等于没有生成。`}
+								`已验收 ${task.milestones.filter((m) => m.state === "completed").length}/${task.milestones.length} 项。这是较早的记录，没写剩下为什么没完成；先核对一下已有结果——没标完成不一定是没做出来。`}
 						</p>
 						{!TERMINAL_TASK_STATES.has(task.state) && (
 							<button
@@ -188,12 +188,12 @@ export function TaskWorkbenchCard({
 								className={`${primaryButton} mt-3`}
 								onClick={() => act(task.id, "progress")}
 							>
-								通过 ask_user 推进剩余事项
+								继续做剩下的
 							</button>
 						)}
 						{!TERMINAL_TASK_STATES.has(task.state) && (
 							<p className="mt-2 text-[11px] text-ink-dim">
-								根据当前缺项确认下一步；已授权步骤不重复授权，取消不改变任务。
+								会先弹一个确认框告诉你接下来做什么；取消不影响任务。
 							</p>
 						)}
 					</div>
@@ -215,7 +215,7 @@ export function TaskWorkbenchCard({
 								<CheckIcon size={15} />
 								继续执行
 							</button>
-							<p className="mt-2 text-[11px] text-ink-dim">任务已停在此处，点击后从最近的检查点继续</p>
+							<p className="mt-2 text-[11px] text-ink-dim">任务停在这里了，点一下从停下的地方接着做</p>
 						</div>
 					)}
 					{!!task.milestones.length && !task.executionConsent && !TERMINAL_TASK_STATES.has(task.state) && (
@@ -247,7 +247,7 @@ export function TaskWorkbenchCard({
 									className={`${button} mt-3`}
 									onClick={() => act(task.id, "authorize-task")}
 								>
-									通过 ask_user 确认任务授权
+									确认并开始执行
 								</button>
 							)}
 						</div>
@@ -269,7 +269,7 @@ export function TaskWorkbenchCard({
 								className={button}
 								onClick={() => act(task.id, "refresh")}
 							>
-								只读核对产物
+								核对已有结果
 							</button>
 							<button
 								type="button"
@@ -277,7 +277,7 @@ export function TaskWorkbenchCard({
 								className={button}
 								onClick={() => act(task.id, "resume")}
 							>
-								从检查点继续
+								从上次停的地方继续
 							</button>
 							{!task.executionConsent && !task.authorizationRequired && (
 								<button
@@ -286,7 +286,7 @@ export function TaskWorkbenchCard({
 									className={button}
 									onClick={() => act(task.id, "next-stage")}
 								>
-									通过 ask_user 确认阶段预算
+									确认继续下一阶段
 								</button>
 							)}
 							<button
@@ -302,7 +302,7 @@ export function TaskWorkbenchCard({
 									type="button"
 									disabled={disabled || !canArchiveTask(task)}
 									className={button}
-									title="归档后不再计入可继续任务；历史满时最早的归档任务会被移除，请先导出检查点"
+									title="归档表示这个任务彻底结束。记录太多时最早归档的会被清掉，重要的先导出"
 									onClick={() => act(task.id, "archive")}
 								>
 									归档任务
@@ -312,10 +312,10 @@ export function TaskWorkbenchCard({
 					</details>
 					<TaskArtifactLinks task={task} sessionId={sessionId} />
 					<details open={!stale && task.actions.some((a) => a.state === "pending")} className="mt-3 text-xs">
-						<summary className="cursor-pointer text-ink-dim">验收、人工介入与操作账本</summary>
+						<summary className="cursor-pointer text-ink-dim">完成标准和操作记录</summary>
 						{!!task.milestones.length && (
 							<div className="mt-3">
-								<h5 className="font-medium">验收条件{!task.planApproved && "（模型提案，待你确认）"}</h5>
+								<h5 className="font-medium">完成标准{!task.planApproved && "（待你确认）"}</h5>
 								<ol className="mt-2 space-y-2">
 									{task.milestones.map((m) => (
 										<li key={m.id} className="rounded border border-border p-2">

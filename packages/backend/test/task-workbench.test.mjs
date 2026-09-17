@@ -28,6 +28,8 @@ function setup(extra = {}) {
 	});
 	j.attach("scope-a");
 	j.begin("分析实验数据");
+	// 任务只由 task_plan 开启；这些用例关心的是任务已存在之后的行为，所以直接开一个。
+	j.openTask("分析实验数据", null);
 	return { j, entries };
 }
 function act(j, action, extra = {}) {
@@ -40,12 +42,18 @@ const effect = (id = "write-1", path = "data.csv") => ({
 });
 const plan = (j, path = "data.csv") =>
 	j.plan({ milestones: [{ id: "data", title: "交付数据文件", acceptance: { kind: "file", path } }] });
-it("multiple generic tasks require a user choice instead of guessing a continuation", () => {
+it("开新任务只切换当前任务，不会把上一个任务也一起继续下去", () => {
 	const { j } = setup();
 	const first = j.snapshot().id;
-	j.begin("配置代码环境");
-	expect(j.begin("继续")).toEqual({ selectionRequired: true });
-	expect(() => j.guard(effect())).toThrow("Select a task");
+	// 新任务开出来后，它成为当前任务，上一个任务留在原地而不是被并行推进。
+	const second = j.openTask("配置代码环境");
+	expect(j.snapshot().id).toBe(second.id);
+	expect(j.view().tasks.find((t) => t.id === first).state).not.toBe("running");
+	// 后续回合一律沿用当前任务，不再因为措辞不同而另起一个。
+	expect(j.begin("换个说法继续").taskId).toBe(second.id);
+	expect(j.begin("那个路径改成 D 盘").taskId).toBe(second.id);
+	expect(j.view().tasks).toHaveLength(2);
+	// 用户显式选回上一个任务后，当前任务才切回去。
 	j.command({ taskId: first, revision: j.view().revision, action: "select" });
 	expect(j.begin("继续").taskId).toBe(first);
 	expect(j.view().tasks).toHaveLength(2);
@@ -132,7 +140,7 @@ it("native file acceptance requires user-approved plan and real readback", async
 	act(j, "approve-plan");
 	await j.reconcile(dir);
 	expect(j.snapshot().state).toBe("completed");
-	expect(j.render()).toContain("不是科研结论");
+	expect(j.render()).toContain("已完成");
 });
 it("observed milestone progress can checkpoint once, not by re-writing status", async () => {
 	const dir = await fixture();
@@ -216,18 +224,18 @@ it("archiving requires an explicitly closed task with nothing pending and frees 
 	expect(archived.archivedFrom).toBe("partial");
 	expect(j.view().activeTaskId).toBeNull();
 	// Archived tasks are never resumed by a continuation and do not count toward the selection prompt.
-	j.begin("新的任务");
+	j.openTask("新的任务");
 	expect(j.begin("继续").taskId).not.toBe(first);
 	expect(() => j.command({ taskId: first, revision: j.view().revision, action: "archive" })).toThrow(
 		"Cancel or finish",
 	);
 	// Capacity: with the book full, only the oldest archived task is dropped; open tasks are never discarded.
-	for (let i = j.view().tasks.length; i < LIMITS.tasks; i++) j.begin(`任务 ${i}`);
+	for (let i = j.view().tasks.length; i < LIMITS.tasks; i++) j.openTask(`任务 ${i}`);
 	expect(j.view().tasks).toHaveLength(LIMITS.tasks);
-	j.begin("再来一个");
+	j.openTask("再来一个");
 	expect(j.view().tasks).toHaveLength(LIMITS.tasks);
 	expect(j.view().tasks.some((t) => t.id === first)).toBe(false);
-	expect(() => j.begin("超出容量")).toThrow("Archive a finished task");
+	expect(() => j.openTask("超出容量")).toThrow("Archive a finished task");
 	// Durable: the archived state survives restart from the persisted ledger.
 	const restored = createTaskWorkbench();
 	restored.attach("scope-a", entries);
@@ -337,7 +345,6 @@ it("host delivery keeps an encoded artifact link even after trailing shell recei
 	const text = j.render();
 	expect(text).toContain("[报告 (1)#100%.md](");
 	expect(text).toContain("%20%281%29%23100%25.md");
-	expect(text).toContain("不是科研结论");
 });
 it("host delivery does not link unexecuted crash-time write intents", () => {
 	const { j } = setup();

@@ -97,6 +97,7 @@ it.each(["file", "file-cancel", "file-elaborate"])(
 					reply(
 						[
 							call("task_plan", {
+								goal: "Write one bounded result",
 								summary: "Write one bounded result",
 								writeDirectories: ["."],
 								milestones: [

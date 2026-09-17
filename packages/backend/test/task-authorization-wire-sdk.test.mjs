@@ -91,6 +91,7 @@ it.each([
 					reply(
 						[
 							call("task_plan", {
+								goal: "Write one bounded result",
 								summary: "Write one bounded result",
 								writeDirectories: ["."],
 								milestones: [
@@ -140,8 +141,12 @@ it.each([
 				expect(
 					session.messages.filter((m) => m.role === "toolResult" && m.toolName === "write"),
 				).toHaveLength(1);
-				// A completed task is not silently reopened by "continue".
-				expect(faux.state.callCount).toBe(4);
+				// A completed task is not silently reopened by "continue": the turn is answered as
+				// ordinary conversation, and crucially no second authorization and no second write happen.
+				expect(faux.state.callCount).toBe(5);
+				expect(
+					session.messages.filter((m) => m.role === "toolResult" && m.toolName === "write"),
+				).toHaveLength(1);
 				// Seed the exact legacy interleaving and verify the next provider context is repaired.
 				const history = session.agent.state.messages;
 				const statusIndex = history.findIndex(

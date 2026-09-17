@@ -8,8 +8,8 @@ export function remainingExplanation(task) {
 		remaining = milestones.filter((m) => m.state !== "completed");
 	const lines = [
 		milestones.length
-			? `已验收 ${milestones.length - remaining.length}/${milestones.length} 项；剩余 ${remaining.length} 项。进度按交付项验收计算，不按调用次数计算。`
-			: "尚未约定可验收的交付项，暂不计算完成百分比；下一步先明确交付物和完成标准。",
+			? `已验收 ${milestones.length - remaining.length}/${milestones.length} 项；剩余 ${remaining.length} 项。`
+			: "还没约定要交付什么，暂不计算完成百分比；先说清楚想要什么结果、做到什么程度算完成。",
 	];
 	for (const m of remaining) {
 		const deps = (m.dependsOn || [])
@@ -22,40 +22,39 @@ export function remainingExplanation(task) {
 		let reason, next;
 		if (deps.length) {
 			reason = `前置项尚未验收：${deps.map((d) => text(d.title, 70)).join("、")}`;
-			next = "先完成前置项，再核对本项";
+			next = "先把前面这几项做完，这一项自然会跟上";
 		} else if (action) {
 			reason = `等待你处理：${text(action.title)}；${text(action.reason)}`;
 			next =
 				action.kind === "authorization"
-					? "通过 ask_user 确认此次新增范围"
+					? "在弹出的确认框里点同意"
 					: action.kind === "file" || action.kind === "download"
-						? "提交已有文件路径，由程序核对，不重复下载"
-						: "完成所列人工审阅后再明确确认";
+						? "把已有文件的路径填进来，程序会核对，不用重新下载"
+						: "亲自看过之后回来确认一下";
 		} else if (m.acceptance.kind === "wiki_review") {
-			reason = "尚未记录有效的 Wiki 审阅通过结果";
-			next = "在原 Wiki 审阅入口核对候选与差异，不能用普通任务确认代替";
+			reason = "Wiki 上的修改还没经过你审阅通过";
+			next = "去 Wiki 审阅页看一下这次改了什么，通过或打回都在那里操作";
 		} else if (m.acceptance.kind === "human_review") {
-			reason = "尚未记录所需人工审阅";
-			next = "说明具体审阅内容，实际审阅后再确认；Agent 不代替人工证明";
+			reason = "这一项约定要你亲自看过才算数，目前还没有";
+			next = "内容准备好后请过目一遍，看完确认即可";
 		} else if (recorded) {
-			reason = "已有产物记录，但本项验收尚未通过";
-			next = "先核对实际路径、文件版本和完成标准，不要重复生成";
+			reason = "已有产物记录，但和约定的标准还没对上";
+			next = "先看看已生成的文件对不对（位置、版本、内容），别急着重新生成";
 		} else if (m.evidence?.code === "ENOENT") {
-			reason = "最近一次验收在约定路径未找到文件，不代表其他位置没有产物";
-			next = `先核对约定路径 ${text(m.acceptance.path, 140)} 与实际保存位置，再决定是否补做`;
+			reason = "在约定的位置没找到文件——也可能是存到别处了";
+			next = `看一下 ${text(m.acceptance.path, 140)} 和实际保存的位置是不是同一个，确实没有再补做`;
 		} else {
-			reason = "尚无通过验收的记录；不能据此断言文件不存在或工作未做";
-			next = `先核对${text(m.acceptance.path || m.acceptance.doi || "现有结果", 140)}，确实缺少时再在已授权范围内补齐`;
+			reason = "这一项还没确认完成；不能据此断言文件不存在或工作未做";
+			next = `先看看${text(m.acceptance.path || m.acceptance.doi || "现有结果", 140)}，确实缺了再补`;
 		}
 		lines.push(`• ${text(m.title)}\n  原因：${reason}\n  下一步：${next}。`);
 	}
 	if ((task.operations || []).some((o) => ["started", "unknown"].includes(o.state)))
-		lines.push("有操作结果不确定：先只读核对实际结果，不能直接重试写入。");
+		lines.push("有操作上次没等到结果：先核对它实际做没做成，别直接重来一遍。");
 	for (const a of (task.actions || []).filter(
 		(a) => a.state === "pending" && !remaining.some((m) => m.id === a.milestoneId),
 	))
 		lines.push(`需要你：${text(a.title)}；${text(a.reason)}。`);
-	if (milestones.length && !remaining.length)
-		lines.push("记录中的交付项均已验收；如仍有待处理事项，以其实际状态为准，不自动扩大任务范围。");
+	if (milestones.length && !remaining.length) lines.push("约定的交付都已确认完成。还想做别的，直接说就行。");
 	return lines.join("\n").slice(0, 10000);
 }

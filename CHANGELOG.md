@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.3 — 2026-09-18
+
+- Create tasks only when the agent explicitly calls `task_plan`; ordinary chat and follow-up corrections no longer create extra tasks.
+- Start a separate task when another plan is proposed after the active task already has an immutable plan, retaining the previous task as partial and resumable. Require a goal and validate the plan before changing task state; preserve task bindings, budgets and consent boundaries.
+- Open task authorization in the native question dialog and keep task progress in the sidebar. Desktop and LAN transcripts no longer render task status cards.
+- Ask how to proceed when an authorized task stops with unfinished deliverables, and make remaining work and next actions easier to understand.
+- Stabilize the trace rotation test by waiting for recorded events to reach disk instead of assuming a fixed 10 ms write latency.
+
 ## 0.10.2 — 2026-09-17
 
 - Fixed task status messages being inserted between a tool call and its result, which made OpenAI-compatible endpoints return 400. Previously recorded but misordered messages in old sessions are repaired before the context is sent, without fabricating results or replaying operations.

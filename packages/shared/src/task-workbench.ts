@@ -189,23 +189,23 @@ export const TASK_STATE_LABELS: Record<TaskState, string> = {
 };
 /** Human-readable explanation with a next step for host reason codes; unknown codes fall back to the code. Mirrors `.pi/lib/tasks/workbench.mjs` REASON_TEXT. */
 export const TASK_REASON_TEXT: Record<string, string> = {
-	"task-authorization-required": "方案已准备好，请一次确认本任务的范围、可写目录和完成标准。",
-	"automatic-recovery": "正在按已确认的任务授权自动续作，无需重复确认阶段。",
-	"automatic-stage-checkpoint": "已保存执行进展，正在原授权和总预算内继续下一阶段。",
-	"total-budget": "本任务已到达总调用上限，已保留结果，不会自动扩大预算。",
-	"stage-budget": "本阶段的工具调用次数已用完，已暂停并保留进度。点“确认下一阶段预算”可继续。",
-	"budget-review-required": "工具调用预算已用完。请查看当前结果；确认后可开启下一阶段。",
+	"task-authorization-required": "计划已经准备好，等你点头。确认一次，后面就自动做完，不再反复打扰。",
+	"automatic-recovery": "刚才中断了一下，已经从上次保存的地方接着做，不用你操作。",
+	"automatic-stage-checkpoint": "进展已保存，正在接着做下一部分。",
+	"total-budget": "这个任务的步数已经用完，做出来的结果都保留着。想继续做，请重新描述需求开一个新任务。",
+	"stage-budget": "最近一段没有做出新进展，先停下来保留结果，避免空转。",
+	"budget-review-required": "这一段的步数用完了。先看看目前的结果，确认后可以继续。",
 	"reconcile-before-retry":
-		"有操作在上次运行中没有得到结果（例如写入、安装、上传）。请先点“只读核对产物”确认实际情况，避免重复执行。",
-	"binding-changed": "知识库绑定已更改，旧任务的证据和权限不能沿用。请重新描述需求以开始新任务。",
-	"tool-failure": "上一步工具调用失败，任务保留为部分完成。可以直接继续，或查看下方记录了解原因。",
-	"user-cancelled-choice-not-consent": "你取消了一个选择。任务在等待你的决定，不会按默认选项继续。",
-	"user-action-cancelled": "你跳过了一个需要人工处理的事项，任务暂停。需要时可重新描述需求。",
-	"wiki-rejected-or-stale": "Wiki 候选被拒绝或来源已变化，相关验收条件未满足。",
-	"verified-stage-checkpoint": "已核实一个验收条件，进入下一阶段。",
-	"session-restored": "会话已恢复，进度从上次保存点继续。",
-	"legacy-checkpoint-unreviewed": "这是旧版本记录导入的任务，历史操作尚未复核。",
-	"user-cancelled": "任务已由你取消。",
+		"上次有操作没等到结果就中断了（比如写文件、安装、上传），现在不确定它做没做成。请先点“核对已有结果”看一下实际情况，别让它盲目重做一遍。",
+	"binding-changed": "知识库换了，旧任务里查到的内容不能继续用。请重新描述需求，开一个新任务。",
+	"tool-failure": "中间有一步出错了。具体是哪一步、影不影响结果，看下面的记录。",
+	"user-cancelled-choice-not-consent": "你取消了刚才的选择。任务停在原地等你决定，不会自作主张继续。",
+	"user-action-cancelled": "你跳过了一个需要你处理的事项，任务先停着。想继续时再说一声就行。",
+	"wiki-rejected-or-stale": "Wiki 修改没有通过审阅（或者来源内容变了），这一项还不算完成。",
+	"verified-stage-checkpoint": "有一项交付已经确认完成，接着做下一项。",
+	"session-restored": "会话已恢复，从上次保存的进度接着来。",
+	"legacy-checkpoint-unreviewed": "这是从旧版本带过来的任务记录，之前做了什么还没核对过。",
+	"user-cancelled": "你已取消这个任务。",
 	"user-archived": "任务已归档。",
 };
 export function explainTaskReason(code: string | null | undefined): string | null {
@@ -222,14 +222,10 @@ export function canArchiveTask(task: WorkbenchTask): boolean {
 	);
 }
 /**
- * 一张工作台卡是否值得占用聊天流的位置。
+ * 保留任务是否需要用户处理的判定，供侧栏和会话标签等调用方复用。
  *
- * 流里只保留一类：等待用户决定的（授权/待选/阻塞——不点就推进不下去）。
- * 其余全部交给侧栏，包括终态——任务完成与否属于"状态"，
- * 状态该有一个常驻的地方可查，而不是在对话里再复述一遍。
- *
- * 授权卡必须留在流里：用户批准的是「当时那一份契约」，契约变化即失效，
- * 它是时间线上的审计记录，不能收进一个始终悬浮、脱离上下文的侧栏。
+ * 任务状态不渲染为聊天流卡片；授权契约由宿主的 ask_user 弹窗当场征询，
+ * 任务状态则由侧栏常驻展示。
  */
 export function taskNeedsUser(task: WorkbenchTask): boolean {
 	if (task.authorizationRequired && !task.executionConsent) return true;
@@ -237,15 +233,18 @@ export function taskNeedsUser(task: WorkbenchTask): boolean {
 	return task.actions.some((a) => a.kind === "authorization" && a.state === "pending");
 }
 
-/** 终态：任务已收尾，流里留一张交代结果（partial 也算收尾，它不会再自行推进）。 */
+/** 展示时视作已停下的状态；partial 的已有结果仍可在侧栏查看和恢复。 */
 export function taskIsTerminal(task: WorkbenchTask): boolean {
 	return TERMINAL_TASK_STATES.has(task.state) || task.state === "partial";
 }
 
 /**
- * 流内应渲染的任务子集。空数组表示这条 taskView 消息整条不必上屏
- * （数据仍在 store 里，侧栏照常读取最新一份）。
+ * 流内应渲染的任务子集 —— 恒为空。
+ *
+ * 任务的「状态」归侧栏与 TodoPanel，任务的「决策」归 ask_user 弹窗，
+ * 聊天流只承载对话本身。保留此函数是为了让调用方继续有一个明确的语义入口，
+ * 也便于日后若要放开某一类卡片时只改这一处。
  */
-export function tasksForTranscript(view: TaskView): WorkbenchTask[] {
-	return view.tasks.filter(taskNeedsUser);
+export function tasksForTranscript(_view: TaskView): WorkbenchTask[] {
+	return [];
 }

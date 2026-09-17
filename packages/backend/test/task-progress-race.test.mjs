@@ -50,7 +50,7 @@ it.each(["generation", "task", "binding", "abort"])(
 				cwd: "/fixture",
 				signal: controller.signal,
 				isIdle: () => true,
-				ui: { select: async () => "按原范围继续完成剩余事项" },
+				ui: { select: async () => "接着做完剩下的" },
 			},
 		);
 		expect(j.reconcile).toHaveBeenCalledOnce();
