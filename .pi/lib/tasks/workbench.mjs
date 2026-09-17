@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { lstat, open, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { contractHash, hasTaskConsent, MAX_AUTO_RESUMES } from "./consent.mjs";
+import { failureObservation, failureReceipt, toolResultFailed } from "./failure-feedback.mjs";
 import { readPdfIdentity } from "./pdf-identity.mjs";
 
 export const WORKBENCH_ENTRY = "drone-task-workbench-v2";
@@ -45,6 +46,17 @@ const readOnly = (name) =>
 		name,
 	);
 const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
+const sameArtifactPath = (cwd, declared, observed) => {
+	const normalize = (path) => {
+		const absolute = resolve(cwd || process.cwd(), path);
+		return process.platform === "win32" ? absolute.toLowerCase() : absolute;
+	};
+	return (
+		typeof declared === "string" &&
+		typeof observed === "string" &&
+		normalize(declared) === normalize(observed)
+	);
+};
 /** User-facing explanation and next step for each machine reason code. Codes stay stable for tests/UI. */
 export const REASON_TEXT = Object.freeze({
 	"task-authorization-required": "方案已准备好。请一次确认本任务的范围、可写目录和完成标准，之后自动推进。",
@@ -56,7 +68,7 @@ export const REASON_TEXT = Object.freeze({
 	"reconcile-before-retry":
 		"有操作在上次运行中没有得到结果（例如写入、安装、上传）。请先点“只读核对产物”确认实际情况，避免重复执行。",
 	"binding-changed": "知识库绑定已更改，旧任务的证据和权限不能沿用。请重新描述需求以开始新任务。",
-	"tool-failure": "上一步工具调用失败，任务保留为部分完成。可以直接继续，或查看下方记录了解失败原因。",
+	"tool-failure": "任务中有失败记录；是否影响结果、是否需要重试，应结合具体错误和后续证据判断。",
 	"user-cancelled-choice-not-consent": "你取消了一个选择。任务在等待你的决定，不会按默认选项继续。",
 	"user-action-cancelled": "你跳过了一个需要人工处理的事项，任务暂停。需要时可重新描述需求。",
 	"wiki-rejected-or-stale": "Wiki 候选被拒绝或来源已变化，相关验收条件未满足。",
@@ -826,7 +838,7 @@ export function createTaskWorkbench({
 			return {
 				block: true,
 				reason:
-					"Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables. The user authorizes that single card. Do not start commands/writes or ask for separate stage approvals.",
+					"Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables. The host opens ask_user for that exact task contract; the card alone never authorizes it. Do not start commands/writes or ask for separate stage approvals.",
 			};
 		}
 		if (t.budget.calls >= LIMITS.totalCalls || t.budget.stageCalls >= LIMITS.stageCalls) {
@@ -931,10 +943,7 @@ export function createTaskWorkbench({
 			save();
 			return;
 		}
-		const bad =
-			event.isError ||
-			event.details?.ok === false ||
-			["failed", "blocked", "budget-exhausted"].includes(event.details?.status);
+		const bad = toolResultFailed(event);
 		const observedCall = t.pendingObservations?.includes(clean(event.toolCallId, 100));
 		t.pendingObservations = (t.pendingObservations || []).filter((id) => id !== clean(event.toolCallId, 100));
 		if (observedCall && !bad && !controls.has(event.toolName) && event.toolName !== "ask_user") {
@@ -947,6 +956,15 @@ export function createTaskWorkbench({
 			}
 		}
 		const op = t.operations.find((o) => o.id === event.toolCallId);
+		if (bad && (observedCall || op?.state === "started")) {
+			const failure = failureObservation(event, now());
+			t.failures = [...(t.failures || []).filter((f) => f.id !== failure.id), failure].slice(-4);
+			// Failed reads also deserve an explanation, but do not discard pending permission/reconciliation gates.
+			if (!op && !terminal(t.state) && !["blocked", "waiting_user"].includes(t.state)) {
+				t.state = "partial";
+				t.reason = "tool-failure";
+			}
+		}
 		if (!op) {
 			save();
 			return;
@@ -956,7 +974,7 @@ export function createTaskWorkbench({
 				.filter((b) => b.type === "text")
 				.map((b) => b.text)
 				.join(" ");
-		const failed = event.isError || ["failed", "blocked"].includes(details.status);
+		const failed = bad;
 		const cancelled =
 			event.toolName === "ask_user" && (details.cancelled || /cancelled|canceled/i.test(text));
 		op.state = failed ? "failed" : cancelled ? "cancelled" : "returned";
@@ -969,7 +987,7 @@ export function createTaskWorkbench({
 				for (const m of t.milestones)
 					if (
 						m.acceptance.kind === "file" &&
-						m.acceptance.path.replaceAll("\\", "/") === op.artifact.path &&
+						sameArtifactPath(cwd, m.acceptance.path, op.artifact.path) &&
 						(!m.acceptance.sha256 || m.acceptance.sha256 === op.artifact.sha256) &&
 						m.dependsOn.every((dep) => t.milestones.find((x) => x.id === dep)?.state === "completed")
 					) {
@@ -1056,14 +1074,37 @@ export function createTaskWorkbench({
 			`任务：${t.goal}`,
 			`状态：${labels[t.state]}；上次确认：${t.updatedAt}`,
 			`已满足验收：${t.milestones.filter((m) => m.state === "completed").length}/${t.milestones.length}；阶段 ${t.stage}；调用 ${t.budget.calls}/${LIMITS.totalCalls}`,
-			...t.receipts
-				.slice(-3)
-				.map((r) => `- ${r.tool}：${r.state}${r.artifact ? `；${r.artifact.path}` : ""}`),
-			t.reason ? `说明：${explainReason(t.reason)}` : null,
+			...[
+				...new Map(
+					t.operations
+						.filter((o) => o.artifact && !o.artifact.intentOnly && o.state !== "started")
+						.map((o) => [o.artifact.path, o]),
+				).values(),
+			]
+				.slice(-6)
+				.map((o) => {
+					const path = o.artifact.path.replaceAll("\\", "/");
+					const encoded = path
+						.split("/")
+						.map((p) => encodeURIComponent(p).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16)}`))
+						.join("/");
+					const href = /^[a-z]:\//i.test(path)
+						? `file:///${path.slice(0, 2)}${encoded.slice(4)}`
+						: path.startsWith("/")
+							? `file://${encoded}`
+							: `./${encoded}`;
+					const label = (path.split("/").pop() || "产物").replace(/[[\]\\]/g, "\\$&");
+					return `- 文件：[${label}](${href}) · ${o.state === "changed" ? "版本已变化，需重新核对" : o.state}`;
+				}),
+			t.reason ? `说明：${t.reason === "tool-failure" ? failureReceipt(t) : explainReason(t.reason)}` : null,
 			book.selectionRequired
 				? "有多个可继续任务，请先在任务面板选择。"
-				: "详情中可核对产物、等待事项和下一阶段。",
-			"以上是程序观察到的执行情况，不是科研结论，也不代表结果已经过科学验证。",
+				: t.reason === "tool-failure"
+					? null
+					: "详情中可核对产物、等待事项和下一阶段。",
+			t.reason === "tool-failure"
+				? null
+				: "以上是程序观察到的执行情况，不是科研结论，也不代表结果已经过科学验证。",
 		]
 			.filter(Boolean)
 			.join("\n");
@@ -1071,6 +1112,7 @@ export function createTaskWorkbench({
 	return {
 		advanceStage,
 		authorization,
+		scope: () => book.scope,
 		readRoots,
 		reserveContinuation,
 		attach,

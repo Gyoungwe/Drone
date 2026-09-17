@@ -3,8 +3,10 @@ import { link, lstat, mkdir, readdir, readFile, rename, unlink, writeFile } from
 import { basename, dirname, join } from "node:path";
 import { knowledgeDirectory, withKnowledgeBinding } from "./config.mjs";
 import { canRead, readNoteFile, validateNote } from "./files.mjs";
+import { readReviewMode } from "./review-policy.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
+const AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
 const START = "<!-- pi-agent:managed:start -->",
 	END = "<!-- pi-agent:managed:end -->";
 const queueKey = Symbol.for("drone.knowledge.wiki-review-locks.v1");
@@ -219,6 +221,16 @@ export async function stageWikiProposal(service, ticket, cwd, input) {
 			await atomicJson(join(directory, `${proposal.id}.json`), proposal);
 		});
 		invalidateKnowledgeUi();
+		if ((await readReviewMode()) === "automatic") {
+			try {
+				return await decideWikiProposal(service, proposal.id, project, proposal.proposalHash, "apply", {
+					actor: "automatic",
+					authority: AUTOMATIC_AUTHORITY,
+				});
+			} catch {
+				// Keep the exact candidate pending. Never overwrite human edits or retry an uncertain write.
+			}
+		}
 		return {
 			id: proposal.id,
 			status: "pending",
@@ -456,7 +468,8 @@ export async function decideWikiProposal(
 ) {
 	checkId(id);
 	if (
-		!["human", "model"].includes(review.actor) ||
+		!["human", "model", "automatic"].includes(review.actor) ||
+		(review.actor === "automatic" && review.authority !== AUTOMATIC_AUTHORITY) ||
 		(review.actor === "model" &&
 			(!review.auditId || review.verdict !== "approve" || typeof review.checkCurrent !== "function"))
 	)
@@ -480,6 +493,12 @@ export async function decideWikiProposal(
 			return exclusive(`${service.binding.vault}:wiki:${p.path}`, async () => {
 				const current = await currentNote(service, p.path);
 				const recovered = current?.hash === p.afterHash;
+				if (review.actor === "automatic") {
+					if ((await readReviewMode()) !== "automatic")
+						throw new Error("Strict review requires confirmation");
+					if (!recovered && current && !(await knownGeneratedPage(service, p.project, p.path, current.hash)))
+						throw new Error("Existing or human-edited page requires confirmation");
+				}
 				if (!recovered) {
 					if ((current?.hash ?? null) !== p.beforeHash)
 						throw new Error("Wiki changed after preview; no user edits were overwritten");
@@ -534,6 +553,75 @@ export async function decideWikiProposal(
 					reviewMethod: review.actor,
 					maintenance: "queued",
 				};
+			});
+		}),
+	);
+}
+
+// History contains exact before/after content; ownership is proven by a prior applied hash,
+// not by a marker a human may have typed into a page.
+export async function wikiHistory(service, project) {
+	return withKnowledgeBinding(service.binding, async () => {
+		let names;
+		try {
+			names = await readdir(join(rootFor(service), "reviewed"));
+		} catch (error) {
+			if (error.code === "ENOENT") return [];
+			throw error;
+		}
+		const items = [];
+		for (const name of names.filter((n) => /^[0-9a-f-]{36}\.json$/.test(n))) {
+			let p;
+			try {
+				p = await loadProposal(service, name.slice(0, -5), project);
+			} catch {
+				continue;
+			}
+			if (p.status !== "applied") continue;
+			items.push({
+				id: p.id,
+				path: p.path,
+				afterHash: p.afterHash,
+				reviewedAt: p.reviewedAt,
+				reviewMethod: p.reviewMethod,
+			});
+		}
+		return items.sort((a, b) => b.reviewedAt - a.reviewedAt);
+	});
+}
+async function knownGeneratedPage(service, project, path, hash) {
+	return (await wikiHistory(service, project)).some((p) => p.path === path && p.afterHash === hash);
+}
+// Host UI only; compare-and-swap protects edits made after the saved version.
+export async function undoWikiUpdate(service, project, id, expectedHash) {
+	checkId(id);
+	return exclusive(`${rootFor(service)}:${id}`, () =>
+		withKnowledgeBinding(service.binding, async () => {
+			const p = await loadProposal(service, id, project);
+			if (p.status !== "applied" || p.afterHash !== expectedHash)
+				throw new Error("Refresh Wiki history before undo");
+			return exclusive(`${service.binding.vault}:wiki:${p.path}`, async () => {
+				const current = await currentNote(service, p.path);
+				if (current?.hash !== p.afterHash)
+					throw new Error("Wiki changed since saving; undo would overwrite edits");
+				const full = join(service.binding.vault, p.path);
+				if (p.before === null) await unlink(full);
+				else {
+					const temp = join(dirname(full), `.${randomUUID()}.tmp`);
+					try {
+						await writeFile(temp, p.before, { flag: "wx", mode: (await lstat(full)).mode & 0o777 });
+						if ((await currentNote(service, p.path))?.hash !== p.afterHash)
+							throw new Error("Wiki changed during undo");
+						await rename(temp, full);
+					} finally {
+						await unlink(temp).catch((e) => {
+							if (e.code !== "ENOENT") throw e;
+						});
+					}
+				}
+				await finish(service, p, "reverted");
+				await service.request("changed", { paths: [p.path] });
+				return { status: "reverted", path: p.path };
 			});
 		}),
 	);

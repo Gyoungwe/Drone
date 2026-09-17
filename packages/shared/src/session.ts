@@ -249,7 +249,7 @@ export interface PermissionConfigInfo {
 }
 
 /** 会话权限模式：default = 按规则审批；fullAccess = 一切放行 + 高危调用写审计。按会话内存态，不落盘、不跨会话继承、重启归零。 */
-export type PermissionMode = "default" | "fullAccess";
+export type PermissionMode = "default" | "strict" | "fullAccess";
 
 /** 上下文管理模式（二态；缺省 evaporation。
  * 物理存储 = settings.json 单一决策 key contextEvaporation.enabled

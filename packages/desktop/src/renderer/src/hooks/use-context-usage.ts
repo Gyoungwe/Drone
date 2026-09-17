@@ -1,63 +1,36 @@
 import type { ContextUsageInfo } from "@drone/shared";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getPi } from "../api";
 import { isDraftSessionId } from "../stores/sessions";
+import { createContextUsageRefresh } from "./context-usage-refresh";
 
-/** 触发刷新的事件类型（流式 delta 类高频事件不刷新） */
 const REFRESH_EVENTS = new Set([
 	"message_end",
 	"tool_execution_end",
 	"turn_end",
 	"agent_settled",
 	"compaction_end",
+	"auto_compaction_end",
 	"session_info_changed",
 ]);
 
-/** 刷新事件类型集合的类型收窄 */
-function isRefreshEvent(type: string): boolean {
-	return REFRESH_EVENTS.has(type);
-}
-
-/**
- * 上下文使用量 hook（事件驱动刷新）：给定会话 id，返回 { tokens, contextWindow, percent }。
- * sessionId 为 null / draft（后端无此会话）时返回 null。ContextRing 与插件 host API 共用，
- * 抽自 ContextRing（行为零变化）。
- */
+/** SDK context estimates, not cumulative usage. Discard old-session and out-of-order responses. */
 export function useContextUsage(sessionId: string | null): ContextUsageInfo | null {
-	const [usage, setUsage] = useState<ContextUsageInfo | null>(null);
-	// 取消标志：sessionId 切换后旧请求的迟到回写不再生效（防闪旧会话数据）
-	const cancelledRef = useRef(false);
-
-	const refresh = useCallback(async () => {
-		// draft 在后端不存在，无上下文用量可查
-		if (!sessionId || isDraftSessionId(sessionId)) {
-			setUsage(null);
-			return;
-		}
-		try {
-			const next = await getPi().getContextUsage(sessionId);
-			if (!cancelledRef.current) setUsage(next);
-		} catch {
-			if (!cancelledRef.current) setUsage(null);
-		}
-	}, [sessionId]);
-
+	const [data, setData] = useState<{ id: string; value: ContextUsageInfo | null } | null>(null);
 	useEffect(() => {
-		cancelledRef.current = false;
-		void refresh();
-		return () => {
-			cancelledRef.current = true;
-		};
-	}, [refresh]);
-
-	// 事件驱动刷新：每轮结束/工具完成后取一次
-	useEffect(() => {
+		if (!sessionId || isDraftSessionId(sessionId)) return;
+		const reader = createContextUsageRefresh(
+			() => getPi().getContextUsage(sessionId),
+			(value) => setData({ id: sessionId, value }),
+		);
+		void reader.refresh();
 		const off = getPi().onEvent(({ sessionId: sid, event }) => {
-			if (sid !== sessionId || !isRefreshEvent(event.type)) return;
-			void refresh();
+			if (sid === sessionId && REFRESH_EVENTS.has(event.type)) void reader.refresh();
 		});
-		return off;
-	}, [sessionId, refresh]);
-
-	return usage;
+		return () => {
+			reader.dispose();
+			off();
+		};
+	}, [sessionId]);
+	return sessionId && !isDraftSessionId(sessionId) && data?.id === sessionId ? data.value : null;
 }

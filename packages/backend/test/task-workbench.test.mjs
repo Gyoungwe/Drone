@@ -321,3 +321,56 @@ it("revoked permission or changed bytes invalidate recovery instead of reusing a
 		"differs",
 	);
 });
+it("host delivery keeps an encoded artifact link even after trailing shell receipts", async () => {
+	const cwd = await fixture(),
+		path = "报告 (1)#100%.md";
+	const { j } = setup();
+	const e = effect("file", path);
+	j.guard(e);
+	await writeFile(join(cwd, path), "value\n1");
+	await j.observe({ ...e, isError: false }, cwd);
+	for (let i = 0; i < 4; i++) {
+		const shell = { toolName: "bash", toolCallId: `read-${i}`, input: { command: `echo ${i}` } };
+		j.guard(shell);
+		await j.observe({ ...shell, isError: false }, cwd);
+	}
+	const text = j.render();
+	expect(text).toContain("[报告 (1)#100%.md](");
+	expect(text).toContain("%20%281%29%23100%25.md");
+	expect(text).toContain("不是科研结论");
+});
+it("host delivery does not link unexecuted crash-time write intents", () => {
+	const { j } = setup();
+	j.guard(effect());
+	j.pause("user-stop");
+	expect(j.render()).not.toContain("](./data.csv)");
+});
+it("matches a host-observed absolute artifact to its agreed relative milestone immediately", async () => {
+	const cwd = await fixture(),
+		path = join(cwd, "data.csv");
+	await writeFile(path, "value\n1");
+	const { j } = setup({
+		inspect: async () => ({ path: path.replaceAll("\\", "/"), bytes: 7, sha256: "a".repeat(64) }),
+	});
+	plan(j);
+	const event = effect("absolute", path);
+	expect(j.guard(event)).toBeNull();
+	await j.observe(event, cwd);
+	expect(j.snapshot().milestones[0].state).toBe("completed");
+});
+it("does not match same-named files from a different directory", async () => {
+	const cwd = await fixture(),
+		other = await fixture();
+	const { j } = setup({
+		inspect: async () => ({
+			path: join(other, "data.csv").replaceAll("\\", "/"),
+			bytes: 7,
+			sha256: "a".repeat(64),
+		}),
+	});
+	plan(j);
+	const event = effect("wrong", join(other, "data.csv"));
+	j.guard(event);
+	await j.observe(event, cwd);
+	expect(j.snapshot().milestones[0].state).not.toBe("completed");
+});

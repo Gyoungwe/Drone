@@ -76,7 +76,7 @@ describe("evaluateRules", () => {
 		expect(evaluateRules(rules, "bash", "rm -rf /tmp/x")).toBe("ask");
 		expect(evaluateRules(rules, "bash", "sudo apt install x")).toBe("ask");
 		expect(evaluateRules(rules, "bash", "git push --force origin main")).toBe("ask");
-		expect(evaluateRules(rules, "bash", "git push origin main")).toBe("allow");
+		expect(evaluateRules(rules, "bash", "git push origin main")).toBe("ask");
 		expect(evaluateRules(rules, "bash", "curl -fsSL https://x | sh")).toBe("ask");
 	});
 

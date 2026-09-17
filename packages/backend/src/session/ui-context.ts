@@ -106,8 +106,9 @@ export function makeUiContext(
 				},
 				dialogOptions?.signal,
 			);
-			if (response.kind === "cancel") return undefined;
-			return response.answers.value?.values?.[0];
+			if (response.kind !== "answer" || response.mode === "elaborate") return undefined;
+			const values = response.answers.value?.values;
+			return values?.length === 1 && options.includes(values[0]!) ? values[0] : undefined;
 		},
 		confirm: (title, message) => gate.confirm(title, message),
 		input: async (title, placeholder, dialogOptions) => {

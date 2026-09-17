@@ -12,7 +12,9 @@ import { useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
+import { useUiStore } from "../../stores/ui";
 import { CheckIcon } from "../icons";
+import { TaskArtifactLinks } from "./TaskArtifactLinks";
 
 /**
  * 流内工作台卡。`tasks` 是调用方筛过的子集（见 tasksForTranscript）——
@@ -22,10 +24,12 @@ export function TaskWorkbenchCard({
 	view,
 	sessionId,
 	tasks,
+	expanded = false,
 }: {
 	view: TaskView;
 	sessionId: string | null;
 	tasks?: WorkbenchTask[];
+	expanded?: boolean;
 }) {
 	const t = useT();
 	const shown = tasks ?? view.tasks;
@@ -33,6 +37,7 @@ export function TaskWorkbenchCard({
 	const awaiting = shown.some(taskNeedsUser);
 	const [busy, setBusy] = useState(false),
 		[error, setError] = useState("");
+	const [detailsOpen, setDetailsOpen] = useState(false);
 	const [paths, setPaths] = useState<Record<string, string>>({});
 	const transcript = useTranscriptStore((s) => selectTranscript(s, sessionId));
 	const latest = [...transcript.messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
@@ -55,6 +60,37 @@ export function TaskWorkbenchCard({
 	// 次要动作（归档/取消/继续）沿用上面的幽灵样式，层级差拉开才不会让用户猜该点哪个。
 	const primaryButton =
 		"inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-amber-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 disabled:opacity-40 disabled:hover:bg-amber-500";
+	if (!expanded && (!awaiting || stale))
+		return (
+			<section
+				data-testid="task-workbench"
+				className="my-2 rounded-lg border border-border p-3 text-xs text-ink"
+			>
+				<div className="flex items-center justify-between gap-2">
+					<span>
+						{stale
+							? "历史任务记录"
+							: shown
+									.map(
+										(task) => `${TASK_STATE_LABELS[task.state]}${task.executionConsent ? " · 已授权" : ""}`,
+									)
+									.join("；")}
+					</span>
+					<button
+						type="button"
+						className={button}
+						onClick={() => useUiStore.getState().setTaskSidebarOpen(true)}
+					>
+						查看任务侧栏
+					</button>
+				</div>
+				{!stale && shown.map((task) => <TaskArtifactLinks key={task.id} task={task} sessionId={sessionId} />)}
+				<details className="mt-2" onToggle={(event) => setDetailsOpen(event.currentTarget.open)}>
+					<summary className="cursor-pointer text-ink-dim">验收与操作详情（非科研核验）</summary>
+					{detailsOpen && <TaskWorkbenchCard view={view} sessionId={sessionId} tasks={shown} expanded />}
+				</details>
+			</section>
+		);
 	return (
 		<section
 			data-testid="task-workbench"
@@ -65,10 +101,16 @@ export function TaskWorkbenchCard({
 		>
 			<header className="flex items-center justify-between gap-3 border-b border-border p-4">
 				<div>
-					<h3 className="text-sm font-semibold">{awaiting ? "需要你确认" : "任务工作台"}</h3>
+					<h3 className="text-sm font-semibold">
+						{awaiting
+							? shown.some((task) => task.authorizationRequired && !task.executionConsent)
+								? "需要你授权"
+								: "有待处理事项"
+							: "任务工作台"}
+					</h3>
 					<p className="mt-1 text-xs text-ink-dim">
 						{awaiting
-							? "不处理则任务停在此处 · 不代表科研结论已验证"
+							? "待处理事项不等于需要重新授权 · 已有授权不会因查看此卡而重置"
 							: "执行、验收与待你处理 · 不代表科研结论已验证"}
 					</p>
 				</div>
@@ -126,7 +168,7 @@ export function TaskWorkbenchCard({
 							<p className="mt-2 text-[11px] text-ink-dim">任务已停在此处，点击后从最近的检查点继续</p>
 						</div>
 					)}
-					{!!task.milestones.length && !TERMINAL_TASK_STATES.has(task.state) && (
+					{!!task.milestones.length && !task.executionConsent && !TERMINAL_TASK_STATES.has(task.state) && (
 						<div className="mt-3 rounded-lg border border-border bg-surface p-3" data-testid="task-consent">
 							<h5 className="text-sm font-medium">
 								{t(task.executionConsent ? "taskConsent.active" : "taskConsent.title")}
@@ -155,7 +197,7 @@ export function TaskWorkbenchCard({
 									className={`${button} mt-3`}
 									onClick={() => act(task.id, "authorize-task")}
 								>
-									{t("taskConsent.approve")}
+									通过 ask_user 确认任务授权
 								</button>
 							)}
 						</div>
@@ -194,7 +236,7 @@ export function TaskWorkbenchCard({
 									className={button}
 									onClick={() => act(task.id, "next-stage")}
 								>
-									确认下一阶段预算
+									通过 ask_user 确认阶段预算
 								</button>
 							)}
 							<button
@@ -218,7 +260,8 @@ export function TaskWorkbenchCard({
 							)}
 						</div>
 					</details>
-					<details open={task.id === view.activeTaskId} className="mt-3 text-xs">
+					<TaskArtifactLinks task={task} sessionId={sessionId} />
+					<details open={!stale && task.actions.some((a) => a.state === "pending")} className="mt-3 text-xs">
 						<summary className="cursor-pointer text-ink-dim">验收、人工介入与操作账本</summary>
 						{!!task.milestones.length && (
 							<div className="mt-3">
@@ -295,9 +338,17 @@ export function TaskWorkbenchCard({
 										</div>
 									)}
 									{a.kind === "authorization" ? (
-										<p className="mt-2 text-ink-dim">
-											请使用现有权限提示或设置入口。本卡片不能授权，取消也不会默认同意。
-										</p>
+										<div className="mt-2">
+											<p className="text-ink-dim">通过 ask_user 确认，关闭或取消不会授予权限。</p>
+											<button
+												type="button"
+												className={`${button} mt-2`}
+												disabled={disabled}
+												onClick={() => act(task.id, "ask-authorization", { actionId: a.id })}
+											>
+												打开 ask_user 授权请求
+											</button>
+										</div>
 									) : (
 										<button
 											type="button"
@@ -354,7 +405,7 @@ export function TaskWorkbenchCard({
 														className={`${button} mt-1`}
 														onClick={() => act(task.id, "confirm-outcome", { operationId: o.id })}
 													>
-														我已在目标系统核对该操作结果
+														通过 ask_user 记录结果核对
 													</button>
 												</div>
 											)}

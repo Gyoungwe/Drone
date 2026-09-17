@@ -5,6 +5,7 @@ export type AppView = "chat" | "projects";
 /** chip → 侧栏跳转目标（nonce 保证重复跳同文件也重触发） */
 export interface ResourcePreviewTarget {
 	href: string;
+	fragment?: string;
 	label?: string;
 	cwd?: string;
 }

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
@@ -189,16 +189,18 @@ function usageFromMessage(message: unknown): UsageDelta {
 	};
 }
 
-function addUsage(target: SubagentUsage, delta: UsageDelta): void {
+export function addSubagentUsage(target: SubagentUsage, delta: UsageDelta): void {
 	target.input += delta.input ?? 0;
 	target.output += delta.output ?? 0;
 	target.cacheRead += delta.cacheRead ?? 0;
 	target.cacheWrite += delta.cacheWrite ?? 0;
 	target.cost += delta.cost ?? 0;
-	// totalTokens 是单条消息的累计上下文量（非增量）：取峰值而非求和，求和会重复计数
-	if (typeof delta.totalTokens === "number") {
-		target.totalTokens.tokens = Math.max(target.totalTokens.tokens, delta.totalTokens);
-	}
+	// totalTokens 是单条消息的累计上下文量：优先使用正 totalTokens，否则用组件求和
+	const reqTotal =
+		typeof delta.totalTokens === "number" && Number.isFinite(delta.totalTokens) && delta.totalTokens > 0
+			? delta.totalTokens
+			: (delta.input ?? 0) + (delta.output ?? 0) + (delta.cacheRead ?? 0) + (delta.cacheWrite ?? 0);
+	if (reqTotal > 0) target.totalTokens.tokens += reqTotal;
 }
 
 function modelLabel(model: Model<any> | undefined): string | undefined {
@@ -545,7 +547,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 				input.onProgress?.(result);
 			}
 			if (event.type === "message_end") {
-				addUsage(result.usage, usageFromMessage(event.message));
+				addSubagentUsage(result.usage, usageFromMessage(event.message));
 				input.onProgress?.(result);
 			}
 			if (event.type === "agent_settled") {

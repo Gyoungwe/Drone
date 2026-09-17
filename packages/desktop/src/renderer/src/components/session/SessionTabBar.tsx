@@ -372,6 +372,9 @@ export function SessionTabBar() {
 					}`}
 					onClick={toggleTaskSidebar}
 					aria-label="任务工作台"
+					aria-expanded={taskSidebarOpen}
+					aria-controls="task-workbench-sidebar"
+					title={taskSidebarOpen ? "关闭任务工作台" : "查看任务进度和待处理请求"}
 				>
 					<TaskBoardIcon size={16} />
 					{taskAwaiting && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-500" />}

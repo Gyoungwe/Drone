@@ -29,6 +29,8 @@ vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 let root, a, b, vault, app;
 beforeEach(async () => {
+	// Preserve the prior mandatory workflow as explicit strict-mode coverage.
+	vi.stubEnv("DRONE_REVIEW_MODE", "strict");
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-test-")));
 	a = join(root, "project-a");
 	b = join(root, "project-b");

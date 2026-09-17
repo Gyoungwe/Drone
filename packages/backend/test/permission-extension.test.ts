@@ -157,13 +157,13 @@ describe("permission-gate 扩展", () => {
 		expect(confirms).toHaveLength(2);
 	});
 
-	it("项目边界：界外写确认（含 ../../ 相对逃逸）；默认档 edit/write 一律确认", async () => {
+	it("项目边界：界外写确认（含 ../../ 相对逃逸）；默认档项目内编辑自动执行", async () => {
 		const dir = makeAgentDir();
 		const root = join(dir, "proj");
 		mkdirSync(root, { recursive: true });
 		const { call, confirms } = makeHarness(dir, false, { projectRoot: root });
-		// 根内 edit 也确认（Default 写敏感工具走审批坞）；读仍放行
-		await expect(call("edit", { path: join(root, "a.ts") })).resolves.toMatchObject({ block: true });
+		// 普通项目编辑自动执行，界外和敏感路径仍确认。
+		await expect(call("edit", { path: join(root, "a.ts") })).resolves.toBeUndefined();
 		await expect(call("read", { path: "src/b.ts" })).resolves.toBeUndefined();
 		// 根外绝对路径与相对逃逸都确认（confirmAnswer=false → block）
 		await expect(call("edit", { path: "/etc/hosts" })).resolves.toMatchObject({ block: true });
@@ -172,11 +172,7 @@ describe("permission-gate 扩展", () => {
 		expect(escapeResult).toMatchObject({ block: true });
 		const expectedEscapeTitle =
 			dirname(escapePath) === sep ? `write: ${escapePath}` : `write: ${dirname(escapePath)}${sep}*`;
-		expect(confirms.map((c) => c.title)).toEqual([
-			`edit: ${root}${sep}*`,
-			"edit: /etc/*",
-			expectedEscapeTitle,
-		]);
+		expect(confirms.map((c) => c.title)).toEqual(["edit: /etc/*", expectedEscapeTitle]);
 		// 不传 projectRoot → 无边界检查，但 write/edit 仍 ask
 		const open = makeHarness(dir, false);
 		await expect(open.call("edit", { path: "/etc/hosts" })).resolves.toMatchObject({ block: true });
@@ -518,5 +514,23 @@ describe("权限模式（fullAccess = 一切放行 + 高危审计）", () => {
 		const entries = readAudit(dir);
 		expect(entries).toHaveLength(1);
 		expect(entries[0]).toMatchObject({ action: "ask", tool: "bash" });
+	});
+});
+
+it("automatic edits preserve strict mode, explicit rules and credential protection", async () => {
+	const dir = makeAgentDir(),
+		root = join(dir, "project");
+	mkdirSync(root);
+	const mode: PermissionModeRef = { current: "default" };
+	const { call, confirms } = makeHarness(dir, false, { projectRoot: root, mode });
+	await expect(call("write", { path: join(root, "new.ts") })).resolves.toBeUndefined();
+	await expect(call("write", { path: join(root, ".env") })).resolves.toMatchObject({ block: true });
+	mode.current = "strict";
+	await expect(call("edit", { path: join(root, "ordinary.ts") })).resolves.toMatchObject({ block: true });
+	expect(confirms).toHaveLength(2);
+	writeFileSync(join(dir, "permissions.json"), JSON.stringify({ rules: { edit: "ask" } }));
+	const explicit = makeHarness(dir, false, { projectRoot: root });
+	await expect(explicit.call("edit", { path: join(root, "ordinary.ts") })).resolves.toMatchObject({
+		block: true,
 	});
 });
