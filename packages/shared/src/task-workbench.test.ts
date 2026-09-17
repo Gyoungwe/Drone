@@ -84,11 +84,16 @@ describe("流内工作台卡的取舍", () => {
 		expect(taskNeedsUser(done)).toBe(false);
 	});
 
-	it("终态留一张交代结果；partial 也算收尾", () => {
+	it("终态不再占用流：完成与否属于状态，侧栏常驻可查", () => {
 		for (const state of ["completed", "cancelled", "archived", "partial"] as const) {
 			expect(taskIsTerminal(task({ state }))).toBe(true);
-			expect(tasksForTranscript(view([task({ state })]))).toHaveLength(1);
+			expect(tasksForTranscript(view([task({ state })]))).toEqual([]);
 		}
+	});
+
+	it("终态但仍等用户拍板时照样上屏（blocked 未收尾，不能被终态规则吞掉）", () => {
+		const blocked = task({ state: "blocked" });
+		expect(tasksForTranscript(view([blocked]))).toHaveLength(1);
 	});
 
 	it("混合场景只挑出该上屏的那些", () => {
@@ -99,6 +104,6 @@ describe("流内工作台卡的取舍", () => {
 				task({ id: "done", state: "completed" }),
 			]),
 		);
-		expect(shown.map((t) => t.id)).toEqual(["needs", "done"]);
+		expect(shown.map((t) => t.id)).toEqual(["needs"]);
 	});
 });

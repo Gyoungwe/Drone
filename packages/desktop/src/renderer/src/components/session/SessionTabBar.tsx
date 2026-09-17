@@ -220,7 +220,10 @@ export function SessionTabBar() {
 		if (!messages) return false;
 		for (let i = messages.length - 1; i >= 0; i--) {
 			const m = messages[i];
-			if (m?.kind === "assistant" && m.taskView) return m.taskView.tasks.some(taskNeedsUser);
+			if (m?.kind === "assistant" && m.taskView)
+				// 终态卡不再进聊天流，所以「任务停在半路」只剩这个点能提示；
+				// partial = 干到一半停了，不亮点的话用户完全不会知道。
+				return m.taskView.tasks.some((t) => taskNeedsUser(t) || t.state === "partial");
 		}
 		return false;
 	});

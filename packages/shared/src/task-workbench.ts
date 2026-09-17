@@ -224,9 +224,9 @@ export function canArchiveTask(task: WorkbenchTask): boolean {
 /**
  * 一张工作台卡是否值得占用聊天流的位置。
  *
- * 流里只保留两类：等待用户决定的（授权/待选/阻塞——不点就推进不下去），
- * 以及任务收尾的终态。纯进度刷新（阶段推进、调用计数、操作流水）留给侧栏，
- * 否则一个任务跑下来会在流里堆十几张内容高度重复的卡。
+ * 流里只保留一类：等待用户决定的（授权/待选/阻塞——不点就推进不下去）。
+ * 其余全部交给侧栏，包括终态——任务完成与否属于"状态"，
+ * 状态该有一个常驻的地方可查，而不是在对话里再复述一遍。
  *
  * 授权卡必须留在流里：用户批准的是「当时那一份契约」，契约变化即失效，
  * 它是时间线上的审计记录，不能收进一个始终悬浮、脱离上下文的侧栏。
@@ -247,5 +247,5 @@ export function taskIsTerminal(task: WorkbenchTask): boolean {
  * （数据仍在 store 里，侧栏照常读取最新一份）。
  */
 export function tasksForTranscript(view: TaskView): WorkbenchTask[] {
-	return view.tasks.filter((t) => taskNeedsUser(t) || taskIsTerminal(t));
+	return view.tasks.filter(taskNeedsUser);
 }
