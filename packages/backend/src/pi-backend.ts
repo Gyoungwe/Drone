@@ -37,6 +37,7 @@ import {
 	extractTodos,
 	formatSkillCommand,
 	parseExpandedSkillInvocation,
+	sanitizeProviderError,
 	TODO_REMINDER_CUSTOM_TYPE,
 	TODO_TOOL_NAME,
 	type TodoItem,
@@ -89,8 +90,10 @@ import {
 	resolveRecallEntryId,
 	toSessionMessages,
 } from "./session/messages";
+import { ModelWaitMonitor } from "./session/model-wait";
 import { autoNameSession } from "./session/naming";
 import { EventRateTracker } from "./session/rates";
+import { SessionRecovery } from "./session/recovery";
 import { type EventForwarder, SessionRegistry } from "./session/registry";
 import { StreamGuard } from "./session/stream-guard";
 import { TraceRecorder } from "./session/trace";
@@ -206,6 +209,11 @@ export class PiBackend {
 	/** 会话事件 trace（JSONL，离线可重放） */
 	private readonly traces = new SessionTraces();
 	private readonly streamGuard = new StreamGuard();
+	private readonly recovery = new SessionRecovery();
+	private readonly modelWait = new ModelWaitMonitor(
+		(sessionId, event) => this.emitEvent(sessionId, event),
+		(sessionId) => this.abort(sessionId),
+	);
 	/** 每会话事件速率（60s 窗口；心跳/临终快照数据源） */
 	private readonly eventRates = new EventRateTracker();
 	private modelRuntime: ModelRuntime | undefined;
@@ -359,6 +367,9 @@ export class PiBackend {
 	}
 
 	private emitEvent(sessionId: string, event: SessionEvent): void {
+		this.modelWait.inspect(sessionId, event);
+		if (event.type === "auto_retry_start")
+			event = { ...event, errorMessage: sanitizeProviderError(event.errorMessage || "") };
 		this.eventRates.tick(sessionId);
 		// 会话标题全量落一行日志（决策 7：不截断）：用户拿 UI 里看到的标题（含自动命名的 …）
 		// 能直接 grep 主日志定位会话，不再只靠 prompt 行的 120 字符截断
@@ -391,7 +402,11 @@ export class PiBackend {
 		const publishedEvent = projectKnowledgeEvent(event);
 		if (!publishedEvent) return;
 		event = publishedEvent;
-		if (event.type !== "subagent_mutex" && event.type !== "stream_guard_tripped")
+		if (
+			event.type !== "subagent_mutex" &&
+			event.type !== "stream_guard_tripped" &&
+			event.type !== "model_wait"
+		)
 			this.traces.record(sessionId, event);
 		for (const handler of this.eventHandlers) {
 			try {
@@ -619,6 +634,7 @@ export class PiBackend {
 	}
 
 	async closeSession(sessionId: string): Promise<void> {
+		this.modelWait.cleanup(sessionId);
 		for (const run of this.modelReviews.values()) if (run.sessionId === sessionId) run.controller.abort();
 		const entry = this.registry.get(sessionId);
 		if (!entry) return;
@@ -732,6 +748,8 @@ export class PiBackend {
 	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt> {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
+		if (this.recovery.isRecovering(sessionId))
+			throw new Error("Wait for answer recovery to finish or stop it before sending a new task");
 		if (!images?.length && isTaskStatusQuery(text) && entry.session.extensionRunner.getCommand("task-status"))
 			text = "/task-status";
 		log.info("prompt", sessionId, { text: text.slice(0, 120), images: images?.length ?? 0 });
@@ -777,7 +795,14 @@ export class PiBackend {
 		return receipt;
 	}
 
+	async retry(sessionId: string, requestId: string, expectedUserTimestamp?: number): Promise<PromptReceipt> {
+		const entry = this.requireSession(sessionId);
+		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
+		return this.recovery.retry(entry.session, requestId, expectedUserTimestamp);
+	}
+
 	async abort(sessionId: string): Promise<void> {
+		this.modelWait.cleanup(sessionId);
 		const entry = this.registry.get(sessionId);
 		if (!entry) return;
 		log.info("abort", sessionId);
@@ -1382,6 +1407,7 @@ export class PiBackend {
 	}
 
 	dispose(): void {
+		this.modelWait.dispose();
 		for (const run of this.modelReviews.values()) run.controller.abort();
 		this.modelReviews.clear();
 		this.knowledge.dispose();

@@ -97,6 +97,18 @@ describe("reducer — LLM 错误卡（决策 D1：agent_end 落卡）", () => {
 });
 
 describe("reducer — auto_retry 瞬时状态（retrying）", () => {
+	it("preserves the failure cause while removing credentials", () => {
+		const state = reduceEvent(emptyTranscript(), {
+			type: "auto_retry_start",
+			attempt: 1,
+			maxAttempts: 2,
+			delayMs: 1000,
+			errorMessage:
+				"server_error 502 api_key=fixture-secret https://name:pass@example.test/model?token=private",
+		});
+		expect(state.retrying?.errorMessage).toContain("server_error 502");
+		expect(state.retrying?.errorMessage).not.toMatch(/fixture-secret|name:pass|token=private/);
+	});
 	it("auto_retry_start → 状态行数据齐全；auto_retry_end 清除", () => {
 		let s = reduceEvent(emptyTranscript(), {
 			type: "auto_retry_start",
@@ -105,7 +117,7 @@ describe("reducer — auto_retry 瞬时状态（retrying）", () => {
 			delayMs: 8000,
 			errorMessage: "429: x",
 		});
-		expect(s.retrying).toEqual({ attempt: 1, maxAttempts: 2, delayMs: 8000 });
+		expect(s.retrying).toEqual({ attempt: 1, maxAttempts: 2, delayMs: 8000, errorMessage: "429: x" });
 		s = reduceEvent(s, { type: "auto_retry_end", success: true, attempt: 1, finalError: undefined });
 		expect(s.retrying).toBeNull();
 	});
@@ -132,6 +144,34 @@ describe("reducer — auto_retry 瞬时状态（retrying）", () => {
 		});
 		s = reduceEvent(s, settled);
 		expect(s.retrying).toBeNull();
+	});
+});
+
+describe("model response wait feedback", () => {
+	const waiting = {
+		type: "model_wait" as const,
+		status: "waiting" as const,
+		lastActivityAt: 1,
+		timeoutMs: 300_000,
+	};
+	it("clears a transient warning on response recovery without creating an error", () => {
+		let state = reduceEvent(emptyTranscript(), waiting);
+		expect(state.modelWait).toEqual(waiting);
+		state = reduceEvent(state, { ...waiting, status: "resumed" });
+		expect(state.modelWait).toBeNull();
+		expect(errorCards(state)).toHaveLength(0);
+	});
+	it("keeps the timeout explanation when the cancelled provider reports aborted", () => {
+		let state = reduceEvent(emptyTranscript(), { type: "agent_start" });
+		state = reduceEvent(state, waiting);
+		state = reduceEvent(state, { ...waiting, status: "timed-out" });
+		state = reduceEvent(state, turnEnd("aborted"));
+		state = reduceEvent(state, agentEnd(false));
+		state = reduceEvent(state, settled);
+		expect(state.agentActive).toBe(false);
+		expect(state.modelWait).toBeNull();
+		expect(errorCards(state)).toHaveLength(1);
+		expect(errorCards(state)[0]?.error?.titleKey).toBe("error.title.modelTimeout");
 	});
 });
 

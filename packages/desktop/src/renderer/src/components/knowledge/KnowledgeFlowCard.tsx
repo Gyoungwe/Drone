@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
+import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { Button } from "../ui/Button";
+import { mergeKnowledgeArtifacts } from "./artifacts";
 import { type knowledgeZh, useKnowledgeText } from "./copy";
 import { reportKnowledgeError } from "./hooks";
 import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
@@ -28,6 +30,13 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 	const t = useKnowledgeText(),
 		cwd = useSessionsStore((s) => s.cwd);
 	const flow = useKnowledgeStore((s) => (sessionId ? s.flows[sessionId] : undefined));
+	const transcript = useTranscriptStore((s) => selectTranscript(s, sessionId));
+	const latest = [...transcript.messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
+	const artifacts = mergeKnowledgeArtifacts(
+		flow?.artifacts || [],
+		latest?.kind === "assistant" ? latest.taskView?.tasks || [] : [],
+		cwd || "",
+	);
 	const [open, setOpen] = useState(false),
 		[path, setPath] = useState<string | null>(null),
 		[resuming, setResuming] = useState(false);
@@ -47,7 +56,36 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 			live = false;
 		};
 	}, [sessionId, cwd]);
-	if (!sessionId || !flow) return null;
+	if (!sessionId) return null;
+	// Flow events are transient; persisted observed task artifacts must survive a reload.
+	if (!flow)
+		return artifacts.length ? (
+			<section
+				className="mx-4 my-2 rounded-xl border border-border bg-surface p-3 text-xs"
+				data-testid="knowledge-flow-card"
+			>
+				<p>
+					{t("outputs")} {artifacts.length}
+				</p>
+				{artifacts.map(
+					(item) =>
+						item.path && (
+							<button
+								key={item.key}
+								type="button"
+								className="mt-1 block break-all text-left underline"
+								onClick={() =>
+									useUiStore
+										.getState()
+										.openResourcePreview({ href: item.path || "", label: item.title, cwd: cwd || undefined })
+								}
+							>
+								{item.title}
+							</button>
+						),
+				)}
+			</section>
+		) : null;
 	const records = [...flow.navigation, ...flow.reads];
 	const activeSpecialist = flow.specialists?.find(
 		(agent) => agent.status === "running" || agent.status === "queued",
@@ -101,7 +139,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 					<span className="text-[10px] text-ink-faint">{open ? "▴" : "▾"}</span>
 				</button>
 				<span className="text-[10px] text-ink-faint">
-					{t("matched")} {flow.search?.hits ?? 0} · {t("outputs")} {flow.artifacts?.length ?? 0}
+					{t("matched")} {flow.search?.hits ?? 0} · {t("outputs")} {artifacts.length}
 				</span>
 			</div>
 			{open && (
@@ -177,10 +215,10 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 					))}
 					{!flow.search?.hits && <p className="mb-2 text-[11px] text-ink-dim">{t("noFindings")}</p>}
 					<p className="mb-3 text-[10px] text-ink-faint">{t("candidateHint")}</p>
-					{!!flow.artifacts?.length && (
+					{!!artifacts.length && (
 						<div className="mb-3">
 							<h4 className="mb-1 text-[11px] font-semibold">{t("outputs")}</h4>
-							{flow.artifacts.map((item) => (
+							{artifacts.map((item) => (
 								<div key={item.key} className="mb-1 rounded-lg bg-hover p-2 text-[11px]">
 									<div className="flex items-start justify-between gap-2">
 										<span className="min-w-0 break-words">

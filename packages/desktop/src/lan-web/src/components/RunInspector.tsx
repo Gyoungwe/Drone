@@ -25,6 +25,7 @@ export function RunInspector({
 				<span>{t("run.tools", { count: run.tools.length })}</span>
 				<span>{t("run.responses", { count: run.models.reduce((n, m) => n + m.responses, 0) })}</span>
 				<span className="run-expand">{t("run.expand")} ▾</span>
+				<span className="run-collapse">{t("run.collapse")} ▴</span>
 			</summary>
 			<div className="lan-run-body">
 				<section>

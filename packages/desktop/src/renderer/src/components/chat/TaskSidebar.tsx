@@ -1,9 +1,8 @@
 import {
 	explainTaskReason,
-	TASK_STATE_LABELS,
 	type TaskView,
-	TERMINAL_TASK_STATES,
 	taskActionCommand,
+	taskDeliveryPresentation,
 	type WorkbenchTask,
 } from "@drone/shared";
 import { useState } from "react";
@@ -18,9 +17,8 @@ import { TaskArtifactLinks } from "./TaskArtifactLinks";
 /**
  * 任务工作台侧栏：常驻显示「最新一份」TaskView 的进度面。
  *
- * 与聊天流里的工作台卡是同一份数据的两个投影：
- * - 流内卡只在需要用户拍板或任务收尾时出现，是时间线上的审计记录（授权绑定契约哈希）
- * - 本侧栏展示随时在变的进度：阶段、调用预算、里程碑、操作流水
+ * 聊天流隐藏 task status 消息；本侧栏展示阶段、调用预算、里程碑、操作流水。
+ * task_plan 显式建立任务契约；用户授权通过弹窗完成。
  *
  * 授权入口只触发 ask_user，绝不直接同意；宿主问题展示并绑定准确的任务契约版本。
  */
@@ -40,12 +38,13 @@ export function TaskRow({
 	const done = task.milestones.filter((m) => m.state === "completed").length;
 	const pct = task.milestones.length ? Math.round((done / task.milestones.length) * 100) : 0;
 	const reason = explainTaskReason(task.reason);
+	const presentation = taskDeliveryPresentation(task, agentActive);
 	return (
 		<article className="border-b border-border p-3 last:border-0">
 			<div className="flex items-start justify-between gap-2">
 				<h4 className="min-w-0 break-words text-[13px] font-medium leading-5">{task.goal}</h4>
 				<span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px]">
-					{TASK_STATE_LABELS[task.state]}
+					{presentation.label}
 				</span>
 			</div>
 			<p className="mt-1 text-[11px] text-ink-dim">
@@ -72,12 +71,12 @@ export function TaskRow({
 			)}
 			{reason && <p className="mt-2 text-[11px] text-ink-dim">{reason}</p>}
 			<p className="mt-2 whitespace-pre-wrap text-[11px] leading-5" data-testid="task-remaining-summary">
-				{task.remainingSummary ||
+				{(agentActive ? "任务仍在执行；验收进度会随结果更新，无需重复发起。" : task.remainingSummary) ||
 					(task.milestones.length
 						? "还有几项没确认完成；这是较早的记录，先核对一下已有结果，别重复生成。"
 						: "还没约定要交付什么，暂不显示进度。")}
 			</p>
-			{!TERMINAL_TASK_STATES.has(task.state) && (
+			{presentation.canContinue && (
 				<button
 					type="button"
 					disabled={busy || agentActive || !sessionId}
@@ -165,7 +164,7 @@ export function TaskSidebar() {
 				</div>
 				<div className="diff-side-scroll">
 					{!latest || latest.tasks.length === 0 ? (
-						<div className="diff-side-empty">尚无任务。发送具体需求后会建立宿主任务记录。</div>
+						<div className="diff-side-empty">尚无任务。模型制定执行计划后，任务进度会显示在这里。</div>
 					) : (
 						latest.tasks.map((task: WorkbenchTask) => (
 							<TaskRow

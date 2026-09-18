@@ -17,6 +17,13 @@ export function RetryNote({ info }: { info: RetryInfo }) {
 					maxAttempts: info.maxAttempts,
 					delay: Math.ceil(info.delayMs / 1000),
 				})}
+				{info.errorMessage && (
+					<span className="r-detail" title={info.errorMessage}>
+						{" "}
+						· {info.errorMessage.slice(0, 240)}
+						{info.errorMessage.length > 240 ? "…" : ""}
+					</span>
+				)}
 			</span>
 		</div>
 	);

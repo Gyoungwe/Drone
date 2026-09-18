@@ -1,3 +1,4 @@
+import { literatureRecoverySummary } from "@drone/shared";
 import { useEffect, useRef, useState } from "react";
 import type { UIToolCall } from "../../stores/transcript";
 import { ExpandArrowIcon } from "../icons";
@@ -27,7 +28,11 @@ export const displayName = (name: string) => name.charAt(0).toUpperCase() + name
 
 /** 工具调用行：无边框、默认折叠；折叠态 = 工具名 + 执行对象（单行渐变截断），展开显示完整参数与结果 */
 export function ToolCallCard({ tool }: { tool: UIToolCall }) {
-	const summary = summarizeArgs(tool.args);
+	const recovery =
+		tool.name === "research_reconcile_literature"
+			? literatureRecoverySummary(tool.output || "", navigator.language)
+			: [];
+	const summary = recovery.length ? recovery.slice(0, 2).join(" · ") : summarizeArgs(tool.args);
 	/** 内容是否超过一行（决定渐变 + 箭头是否贴行尾） */
 	const [overflowing, setOverflowing] = useState(false);
 	const textRef = useRef<HTMLSpanElement>(null);
@@ -89,6 +94,13 @@ export function ToolCallCard({ tool }: { tool: UIToolCall }) {
 					<pre className="max-h-56 overflow-y-auto font-mono text-[12px] leading-relaxed break-all whitespace-pre-wrap text-ink-dim select-text">
 						{tool.args}
 					</pre>
+				)}
+				{recovery.length > 0 && (
+					<div role="status">
+						{recovery.map((line) => (
+							<p key={line}>{line}</p>
+						))}
+					</div>
 				)}
 				{tool.output && (
 					<pre className="max-h-56 overflow-y-auto font-mono text-[12px] leading-relaxed break-all whitespace-pre-wrap text-ink-2 select-text">

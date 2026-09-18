@@ -1,4 +1,4 @@
-import type { AskQuestion, AskRequest, AskResponse } from "@drone/shared";
+import type { AskQuestion, AskRecommendation, AskRequest, AskResponse } from "@drone/shared";
 import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
@@ -9,13 +9,45 @@ const optionSchema = Type.Object({
 	preview: Type.Optional(Type.String()),
 	recommended: Type.Optional(Type.Boolean()),
 });
+const recommendationSchema = Type.Object({
+	value: Type.String({
+		minLength: 1,
+		description: "The option the model recommends for this user's current context.",
+	}),
+	reason: Type.String({
+		minLength: 1,
+		description:
+			"A concise, user-facing explanation grounded in the current request, evidence, constraints, or observed state.",
+	}),
+	confidence: Type.Optional(Type.Union([Type.Literal("high"), Type.Literal("medium"), Type.Literal("low")])),
+	basedOn: Type.Optional(
+		Type.Array(
+			Type.String({
+				minLength: 1,
+				description: "A short evidence or context item supporting the recommendation.",
+			}),
+			{
+				maxItems: 8,
+			},
+		),
+	),
+});
 const questionSchema = Type.Object({
 	id: Type.String(),
 	label: Type.Optional(Type.String()),
 	prompt: Type.String(),
-	type: Type.Optional(Type.Union([Type.Literal("single"), Type.Literal("multi"), Type.Literal("preview")])),
+	type: Type.Optional(
+		Type.Union([
+			Type.Literal("single"),
+			Type.Literal("multi"),
+			Type.Literal("preview"),
+			Type.Literal("text"),
+		]),
+	),
 	required: Type.Optional(Type.Boolean()),
-	options: Type.Array(optionSchema, { minItems: 1 }),
+	options: Type.Array(optionSchema),
+	recommendation: Type.Optional(recommendationSchema),
+	allowCustomText: Type.Optional(Type.Boolean()),
 });
 const paramsSchema = Type.Object({
 	title: Type.Optional(Type.String()),
@@ -31,6 +63,8 @@ type RawParams = {
 		type?: AskQuestion["type"];
 		required?: boolean;
 		options: AskQuestion["options"];
+		recommendation?: AskQuestion["recommendation"];
+		allowCustomText?: boolean;
 	}>;
 };
 
@@ -60,15 +94,39 @@ function normalizeQuestions(params: RawParams): AskQuestion[] {
 			};
 		});
 		const type = q.type ?? "single";
+		if (type !== "text" && options.length === 0)
+			throw new Error(`Question ${index + 1}: at least one option is required unless type is text`);
 		if (type === "preview" && options.some((option) => !option.preview))
 			throw new Error(`Question ${index + 1}: preview questions require preview text for every option`);
+		let recommendation: AskRecommendation | undefined;
+		if (q.recommendation) {
+			const value = q.recommendation.value.trim();
+			if (!value || !options.some((option) => option.value === value))
+				throw new Error(`Question ${index + 1}: recommendation must point to an available option`);
+			recommendation = {
+				value,
+				reason: q.recommendation.reason.trim(),
+				...(q.recommendation.confidence ? { confidence: q.recommendation.confidence } : {}),
+				...(q.recommendation.basedOn?.length
+					? { basedOn: q.recommendation.basedOn.map((item) => item.trim()).filter(Boolean) }
+					: {}),
+			};
+			if (!recommendation.reason) throw new Error(`Question ${index + 1}: recommendation reason is required`);
+		}
+		const displayOptions = recommendation
+			? options.map((option) =>
+					option.value === recommendation.value ? { ...option, recommended: true } : option,
+				)
+			: options;
 		return {
 			id,
 			label: q.label?.trim() || `Q${index + 1}`,
 			prompt: q.prompt.trim(),
 			type,
 			required: q.required ?? false,
-			options,
+			options: displayOptions,
+			...(recommendation ? { recommendation } : {}),
+			...(q.allowCustomText === undefined ? {} : { allowCustomText: q.allowCustomText }),
 		};
 	});
 }
@@ -91,6 +149,7 @@ function resultFromResponse(params: RawParams, questions: AskQuestion[], respons
 			customText?: string;
 			note?: string;
 			optionNotes?: Record<string, string>;
+			recommendation?: AskRecommendation;
 		}
 	> = {};
 	for (const [id, input] of Object.entries(response.answers)) {
@@ -121,6 +180,7 @@ function resultFromResponse(params: RawParams, questions: AskQuestion[], respons
 			...(customText ? { customText } : {}),
 			...(input.note?.trim() ? { note: input.note } : {}),
 			...(selectedNotes && Object.keys(selectedNotes).length ? { optionNotes: selectedNotes } : {}),
+			...(question.recommendation ? { recommendation: question.recommendation } : {}),
 		};
 	}
 	return {
@@ -133,7 +193,14 @@ function resultFromResponse(params: RawParams, questions: AskQuestion[], respons
 }
 
 function summary(q: AskQuestion) {
-	return { id: q.id, label: q.label, prompt: q.prompt, type: q.type };
+	return {
+		id: q.id,
+		label: q.label,
+		prompt: q.prompt,
+		type: q.type,
+		...(q.recommendation ? { recommendation: q.recommendation } : {}),
+		...(q.allowCustomText === undefined ? {} : { allowCustomText: q.allowCustomText }),
+	};
 }
 function textResult(result: ReturnType<typeof resultFromResponse>): string {
 	if (result.cancelled) return "User cancelled the clarification form.";
@@ -141,7 +208,6 @@ function textResult(result: ReturnType<typeof resultFromResponse>): string {
 		const answer = result.answers[q.id];
 		if (!answer) return `${q.label}: (no answer)`;
 		const parts = [...answer.labels];
-		if (answer.customText) parts.push(answer.customText);
 		return `${q.label}: ${parts.length ? parts.join(", ") : "(no answer)"}`;
 	});
 	return lines.join("\n");
@@ -151,9 +217,10 @@ export function makeAskUserTool(deps: AskUserToolDeps): ToolDefinition<typeof pa
 	return {
 		name: "ask_user",
 		label: "Ask User",
-		description: "Ask the user structured clarification questions in the Drone desktop UI before proceeding.",
+		description:
+			"Ask the user structured clarification questions in the Drone desktop UI before proceeding. For preference, scope, method, or input decisions, derive a recommendation from the current request and observed context instead of using a fixed/default answer: set recommendation.value to one offered option, explain the choice in recommendation.reason, and include confidence/basedOn when useful. The recommendation is advice; the user can choose another option or enter custom text.",
 		promptSnippet:
-			"Clarify ambiguous or preference-sensitive decisions with a short interactive interview before proceeding",
+			"Clarify ambiguous or preference-sensitive decisions with a short interactive interview before proceeding; provide a context-grounded model recommendation when a choice can be made safely",
 		parameters: paramsSchema,
 		async execute(toolCallId, params, signal): Promise<AgentToolResult<unknown>> {
 			const raw = params as RawParams;

@@ -1,4 +1,4 @@
-import type { AskAnswer, AskRequest, AskResponse } from "@drone/shared";
+import type { AskAnswer, AskQuestion, AskRequest, AskResponse } from "@drone/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { Button } from "../ui/Button";
@@ -9,6 +9,35 @@ type Drafts = Record<string, AskAnswer>;
 const overlayClass = "fixed inset-0 z-[70] flex items-center justify-center bg-ink/25 p-6";
 const sheetClass =
 	"flex max-h-[82vh] w-[min(680px,92vw)] flex-col overflow-hidden rounded-2xl border border-border bg-surface text-ink shadow-dialog";
+
+function Recommendation({ question, t }: { question: AskQuestion; t: ReturnType<typeof useT> }) {
+	const recommendation = question.recommendation;
+	if (!recommendation) return null;
+	const label =
+		question.options.find((option) => option.value === recommendation.value)?.label ?? recommendation.value;
+	return (
+		<div
+			className="mt-3 rounded-xl border border-accent/25 bg-accent/5 px-3 py-2.5"
+			data-testid="ask-recommendation"
+		>
+			<div className="flex flex-wrap items-center gap-2 text-[11px]">
+				<span className="font-semibold text-accent">{t("ask.modelRecommendation")}</span>
+				<span className="rounded-full bg-accent/10 px-1.5 py-0.5 font-medium text-accent">{label}</span>
+				{recommendation.confidence && (
+					<span className="text-[10px] text-ink-faint">
+						{t("ask.confidence", { value: recommendation.confidence })}
+					</span>
+				)}
+			</div>
+			<p className="mt-1 text-[11px] leading-relaxed text-ink-2">{recommendation.reason}</p>
+			{recommendation.basedOn?.length ? (
+				<p className="mt-1 text-[10px] leading-relaxed text-ink-dim">
+					{t("ask.basedOn", { value: recommendation.basedOn.join(" · ") })}
+				</p>
+			) : null}
+		</div>
+	);
+}
 
 export function AskDialog({
 	requests,
@@ -100,6 +129,7 @@ export function AskDialog({
 						<p className="whitespace-pre-wrap break-words rounded-lg bg-hover px-3 py-2.5 text-[13px] leading-relaxed text-ink select-text">
 							{question.prompt}
 						</p>
+						<Recommendation question={question} t={t} />
 						{error && <p className="mt-3 text-[11px] text-err">{error}</p>}
 					</div>
 					<div className="border-t border-border px-5 py-3">
@@ -201,6 +231,7 @@ export function AskDialog({
 										)}
 									</div>
 								</div>
+								<Recommendation question={item} t={t} />
 								<div className="grid gap-1.5 pl-8">
 									{!textOnly &&
 										item.options.map((option) => {
@@ -238,12 +269,14 @@ export function AskDialog({
 												</button>
 											);
 										})}
-									<input
-										value={draft.customText ?? ""}
-										onChange={(event) => setCustom(item.id, event.target.value, multi)}
-										placeholder={t("ask.customPlaceholder")}
-										className="mt-0.5 w-full rounded-lg border border-border bg-surface px-3 py-2 text-[12px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-									/>
+									{(item.allowCustomText ?? true) && (
+										<input
+											value={draft.customText ?? ""}
+											onChange={(event) => setCustom(item.id, event.target.value, multi)}
+											placeholder={t("ask.customPlaceholder")}
+											className="mt-0.5 w-full rounded-lg border border-border bg-surface px-3 py-2 text-[12px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+										/>
+									)}
 								</div>
 							</section>
 						);

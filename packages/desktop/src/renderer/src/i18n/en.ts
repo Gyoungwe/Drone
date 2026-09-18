@@ -2,6 +2,12 @@ import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
+	runInspector: {
+		title: "Run Inspector",
+		label: "Run details: tools, sources and model responses",
+		expand: "View details",
+		collapse: "Hide details",
+	},
 	taskConsent: {
 		manual: "More controls (expand if needed)",
 		title: "Confirm once, let it finish the job",
@@ -58,6 +64,9 @@ export const en: Messages = {
 		multiHint: "Choose any that apply, or enter your own answer",
 		required: "Important",
 		recommended: "Recommended",
+		modelRecommendation: "Model recommendation",
+		confidence: "Confidence: {value}",
+		basedOn: "Based on: {value}",
 		customPlaceholder: "Or enter your own answer…",
 		submit: "Submit answers",
 		submitting: "Submitting…",
@@ -635,6 +644,7 @@ export const en: Messages = {
 			llmOverflow: "Model request failed: context limit exceeded",
 			llmNetwork: "Model request failed: network error",
 			llmGeneric: "Model request failed",
+			modelTimeout: "Model stopped responding; request stopped",
 			streamGuard: "Reply aborted by safety guard",
 			sendFailed: "Failed to send",
 			sendReadOnly: "Session is read-only, cannot send",
@@ -645,8 +655,14 @@ export const en: Messages = {
 			compact: "Context is too long. Run /compact to compress, or fork from here to start a new session.",
 			network: "Network connection issue; check your connection and retry.",
 			streamGuard: "Abnormal model output (pathological stream) was aborted by the safety guard.",
+			modelTimeout:
+				"No new model events for 5 minutes. Check your model service or continue the remaining work in this conversation. Completed tool operations are not automatically repeated.",
 		},
 		retrying: "Auto-retrying · attempt {attempt}/{maxAttempts} · waiting {delay}s",
+		modelWaiting:
+			"No new model events for over 60 seconds. Still waiting; the request will stop after {minutes} minutes of silence.",
+		modelStopping: "Model silent; requesting stop. Completion is not confirmed yet.",
+		modelStopFailed: "Stop failed; the task may still be running. Try stopping again or check the service.",
 		retryDone: "Retry succeeded",
 		retryFailed: "Retry failed",
 	},

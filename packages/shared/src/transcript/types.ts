@@ -1,7 +1,7 @@
 import type { UiError } from "../errors";
 import type { ProgressDisplay } from "../progress-display";
 import type { PublicProgressStep } from "../public-timeline";
-import type { ImageInput } from "../session";
+import type { ImageInput, ModelWaitEvent } from "../session";
 import type { SkillInvocationDisplay } from "../skill-invocation";
 import type { TaskView } from "../task-workbench";
 import type { TodoItem } from "../todo";
@@ -25,6 +25,7 @@ export interface RetryInfo {
 	attempt: number;
 	maxAttempts: number;
 	delayMs: number;
+	errorMessage?: string;
 }
 
 /** 会话 UI 态类型（transcript reducer 的状态形状） */
@@ -217,8 +218,9 @@ export interface SessionTranscriptState {
 	pendingLlmError: UiError | null;
 	/** Agent 自报状态 + 宿主真实工具覆盖；仅 live session 运行态，不进入历史消息。 */
 	researchStatus: ResearchStatusState;
-	/** SDK 自动重试瞬时信息（auto_retry_start → 状态行；auto_retry_end/turn_start/agent_settled 清） */
+	/** SDK 自动重试瞬时信息（auto_retry_start → 状态行；auto_retry_end/agent_settled 清） */
 	retrying: RetryInfo | null;
+	modelWait: ModelWaitEvent | null;
 	/** 最近一次 agent run 的固化结束时刻（agent_end willRetry=false / agent_settled 盖戳，agent_start 清）；
 	 * 最后一轮计时定格用——晚于最后一条消息落地，取 max 防「运行中末帧 > 定格值」回退 */
 	runEndedAt?: number;
@@ -236,6 +238,7 @@ export function emptyTranscript(): SessionTranscriptState {
 		todos: [],
 		pendingLlmError: null,
 		retrying: null,
+		modelWait: null,
 		researchStatus: { agent: null, host: null },
 	};
 }

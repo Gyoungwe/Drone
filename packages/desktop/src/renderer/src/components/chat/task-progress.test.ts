@@ -53,5 +53,9 @@ it("completed deliverables show full progress and no reopening button", () => {
 	expect(html).toContain('aria-valuenow="100"');
 	expect(html).not.toContain("继续做剩下的");
 });
-it("running agent disables the quick-action entry", () =>
-	expect(render(task, true)).toContain('disabled=""'));
+it("running agent withholds the quick-action entry instead of offering a retry", () => {
+	const html = render(task, true);
+	// Withholding the entry is stronger than rendering it disabled.
+	expect(html).not.toContain("继续做剩下的");
+	expect(html).toContain("任务仍在执行");
+});

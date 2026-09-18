@@ -1679,6 +1679,16 @@ code {
 	gap: 7px;
 	font-size: 12px;
 	color: var(--color-ink-faint);
+	overflow-wrap: anywhere;
+}
+.model-wait-note {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--color-warn);
+	padding: 8px 0;
 }
 .retry-note svg {
 	width: 12px;

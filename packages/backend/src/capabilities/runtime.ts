@@ -16,6 +16,31 @@ const ALWAYS_ON = new Set([
 	"task_evidence_restore",
 ]);
 
+export const READ_ONLY_LIBRARY_TOOLS = new Set([
+	"set_status",
+	"read",
+	"research_prepare_knowledge",
+	"research_wiki_navigate",
+	"research_read_knowledge",
+	"research_search_knowledge",
+	"research_verify_literature",
+	"research_loop",
+	"research_reconcile_literature",
+	"research_check_answer",
+	"research_knowledge_status",
+	"research_source_status",
+	"research_task_status",
+	"research_workspace_status",
+	"research_zotero_status",
+]);
+export function isReadOnlyLibraryRequest(text: string): boolean {
+	return (
+		/只读|read[- ]only/i.test(text) &&
+		/复用|既有|已有|reuse|existing/i.test(text) &&
+		/文献|论文|笔记|literature|papers?|notes?/i.test(text) &&
+		!/(?:修复|重构|实现|修改).{0,8}(?:代码|模块|系统)|\b(?:fix|refactor|implement)\b/i.test(text)
+	);
+}
 const PATTERNS: Record<CapabilityId, RegExp[]> = {
 	knowledge: [
 		/(?:knowledge|wiki|obsidian|vault|evidence|知识库|知识图谱|维基|证据|来源|主题记忆|恢复主题|resume topic|topic memory)/i,
@@ -136,6 +161,7 @@ export interface CapabilityChange {
 export class CapabilityRuntime {
 	private session?: RuntimeSession;
 	private lastCheckpoint = "";
+	private readOnlyLibrary = false;
 	private readonly active = new Set<CapabilityId>();
 	private readonly forcedSkills = new Set<string>();
 	private readonly excludedTools = new Set<string>();
@@ -158,6 +184,7 @@ export class CapabilityRuntime {
 	prepareForPrompt(text: string, streaming: boolean): CapabilityChange {
 		if (text.trim() === "/task-status" || text.startsWith("/task-action ")) return this.apply();
 		if (!streaming && isTaskContinuation(text)) this.restoreCheckpoint();
+		if (!streaming && !isTaskContinuation(text)) this.readOnlyLibrary = isReadOnlyLibraryRequest(text);
 		const detected = detectCapabilities(text);
 		const directSkill = text.match(/^\/skill:([a-z0-9-]+)/i)?.[1];
 		if (!streaming && !isTaskContinuation(text)) {
@@ -174,6 +201,28 @@ export class CapabilityRuntime {
 		return this.apply();
 	}
 
+	isReadOnlyLibrary(): boolean {
+		return this.readOnlyLibrary;
+	}
+	guardTool(name: string, input: Record<string, unknown> = {}) {
+		if (!this.readOnlyLibrary) return undefined;
+		if (!READ_ONLY_LIBRARY_TOOLS.has(name))
+			return {
+				block: true,
+				reason:
+					"This is read-only existing-literature reuse. Use native knowledge/identity tools and research_loop.start; no task_plan, shell, downloads or library writes are needed.",
+			};
+		if (
+			name === "read" &&
+			!/(?:^|[\\/])skills[\\/][^\\/]+[\\/]SKILL\.md$/i.test(String(input.path || input.filePath || ""))
+		)
+			return {
+				block: true,
+				reason:
+					"Read paper notes with research_read_knowledge; do not search filesystem run directories. research_loop.start creates the correct run directory.",
+			};
+		return undefined;
+	}
 	noteToolInvocation(name: string, at = Date.now()): void {
 		const previous = this.toolUsage.get(name);
 		this.toolUsage.set(name, { lastUsedAt: at, invocations: (previous?.invocations ?? 0) + 1 });
@@ -274,6 +323,7 @@ export class CapabilityRuntime {
 				taskId?: unknown;
 				capabilities?: unknown;
 				skills?: unknown;
+				readOnlyLibrary?: boolean;
 			} | null;
 			if (
 				!data ||
@@ -287,6 +337,7 @@ export class CapabilityRuntime {
 				continue;
 			this.active.clear();
 			this.forcedSkills.clear();
+			this.readOnlyLibrary = data.readOnlyLibrary === true;
 			for (const id of data.capabilities) if (CAPABILITY_IDS.includes(id)) this.active.add(id);
 			for (const name of data.skills)
 				if (typeof name === "string" && /^[a-z0-9-]{1,100}$/.test(name)) this.forcedSkills.add(name);
@@ -299,6 +350,7 @@ export class CapabilityRuntime {
 			taskId: this.activeTaskRouting()?.id || null,
 			scope: `${manager.getSessionId()}\0${manager.getCwd()}`,
 			capabilities: [...this.active].sort(),
+			readOnlyLibrary: this.readOnlyLibrary,
 			skills: [...this.forcedSkills].sort().slice(0, 32),
 		};
 		const encoded = JSON.stringify(data);
@@ -313,7 +365,13 @@ export class CapabilityRuntime {
 		const allSkills = allSkillsFromLoader(this.session.resourceLoader).skills;
 		this.skillVisibility.set(
 			allSkills
-				.filter((skill) => skillMatches(skill.name, this.active, this.forcedSkills))
+				.filter(
+					(skill) =>
+						skillMatches(skill.name, this.active, this.forcedSkills) &&
+						(!this.readOnlyLibrary ||
+							["research-vault", "research-workflow", "zotero-literature"].includes(skill.name) ||
+							this.forcedSkills.has(skill.name)),
+				)
 				.map((skill) => skill.name),
 		);
 		const selected = new Set<string>([...ALWAYS_ON, ...this.extraAlwaysOn]);
@@ -321,7 +379,12 @@ export class CapabilityRuntime {
 			if (this.excludedTools.has(tool.name)) continue;
 			if (toolCapabilities(tool.name).some((id) => this.active.has(id))) selected.add(tool.name);
 		}
-		this.session.setActiveToolsByName([...selected].filter((name) => !this.excludedTools.has(name)));
+		this.session.setActiveToolsByName(
+			[...selected].filter(
+				(name) =>
+					!this.excludedTools.has(name) && (!this.readOnlyLibrary || READ_ONLY_LIBRARY_TOOLS.has(name)),
+			),
+		);
 		this.saveCheckpoint();
 		const state = this.state();
 		const afterTools = state.activeTools.join("\0");

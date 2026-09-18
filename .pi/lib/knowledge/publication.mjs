@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { diagnosticText } from "../tasks/failure-feedback.mjs";
 import { advisoryCodes, readReviewMode } from "./review-policy.mjs";
 import { publicationKnowledgeFlow, updateKnowledgeFlow } from "./ui-state.mjs";
 
@@ -11,6 +12,8 @@ const hash = (content) =>
 		.update(JSON.stringify(content ?? []))
 		.digest("hex");
 const notices = {
+	"paper-citation-required":
+		"本次研究回答缺少具体论文依据；Wiki 或报告链接不能替代本轮读过的文献笔记。请标明证据缺口，不要反复检索只为消除提醒。",
 	"search-required": "本轮尚未完成知识库检索。请先检索，再阅读需要引用的内容。",
 	"coverage-incomplete": "知识索引尚未完整可用。请检查索引状态或故障，不能将此情况当作无命中。",
 	"citation-required": "检索有命中，但回答没有引用本轮读过的知识条目。",
@@ -34,6 +37,53 @@ const notices = {
 	"tool-loop-stopped":
 		"【任务阶段已暂停】本阶段达到工具或上下文安全预算。已保存的结果不会因此删除；查看任务执行记录后可继续，无需新建对话。继续前先核对结果未知的操作，不要重复安装、导入或上传。",
 };
+// Nonblocking advisories are shown next to a delivered answer, so they must read as an
+// explanation to the reader. The `notices` table above is instruction text aimed at the
+// model and is kept for blocking failures, where the model must act on it.
+const advisoryNotices = {
+	"paper-citation-required":
+		"这份回答没有引用具体的原始论文，主要依据是 Wiki 或已生成的报告。内容已保留，但请把它当作待查证的线索。",
+	"citation-budget": "这份回答引用的来源超过了单次核验上限。内容已完整保留。",
+	"citation-required": "这份回答没有引用本轮读过的知识条目，未能建立来源对应关系。内容已保留。",
+	"citation-invalid": "这份回答里有格式不合法的知识库引用，该引用未被核验。内容已保留。",
+	"source-unread": "这份回答引用了本轮没有实际打开过的条目，该引用未被核验。内容已保留。",
+	"source-changed": "引用的内容在本轮读取后发生了变化，核验结果可能已过期。内容已保留。",
+	"delivery-changed": "本轮生成的产物在保存后发生了变化，其回执未被采用。内容已保留。",
+	"wiki-changed": "相关 Wiki 在本轮读取后发生了变化，核验结果可能已过期。内容已保留。",
+	"search-required": "本轮没有完成知识库检索，检索覆盖情况尚未确认。内容已保留。",
+	"search-stale": "检索完成后知识库索引发生了变化，核验结果可能已过期。内容已保留。",
+	"coverage-incomplete": "知识库索引本轮未完整就绪，这不代表库中没有相关内容。内容已保留。",
+	"check-timeout": "回答前的核验超时，本次未完成核验。内容已保留。",
+	"not-prepared": "知识库准备步骤未完成，本次未做核验。内容已保留。",
+};
+/** User-facing copy for a nonblocking advisory; falls back to the model-facing notice. */
+export function advisoryNotice(code) {
+	return advisoryNotices[code] || notices[code] || notices["check-failed"];
+}
+/**
+ * One reader-facing advisory line: what happened, then what was actually verified.
+ * Counts come from the check itself, so the sentence cannot overstate verification.
+ */
+export function advisoryLine(code, error) {
+	const verified = error?.verified;
+	const sources = Array.isArray(verified?.sources) ? verified.sources.length : 0;
+	const deliveries = Array.isArray(verified?.deliveries) ? verified.deliveries.length : 0;
+	const cited =
+		verified?.unverifiedCitationCount ??
+		(Array.isArray(verified?.unverifiedCitations) ? verified.unverifiedCitations.length : 0);
+	const notice =
+		code === "citation-budget" &&
+		Number.isInteger(verified?.citationCount) &&
+		Number.isInteger(verified?.citationLimit)
+			? `这份回答引用了 ${verified.citationCount} 处来源，超过单次核验上限（${verified.citationLimit} 处）。内容已完整保留。`
+			: advisoryNotice(code);
+	const parts = [];
+	if (sources) parts.push(`已核对 ${sources} 处来源的读取记录与当前版本`);
+	if (deliveries) parts.push(`已核对 ${deliveries} 份本轮产物`);
+	if (cited) parts.push(`${sources ? "另有" : "共"} ${cited} 处引用未逐条核验`);
+	const detail = parts.length ? `${parts.join("、")}。` : "";
+	return `${notice}${detail ? ` ${detail}` : ""}${sources || deliveries ? " 来源核对不代表科学结论已获验证。" : ""}`;
+}
 function reason(error) {
 	if (notices[error?.code]) return error.code;
 	const text = String(error?.message || "");
@@ -43,12 +93,7 @@ function reason(error) {
 	return "check-failed";
 }
 function sanitizeError(text) {
-	return [...String(text || "")]
-		.map((char) => (char.charCodeAt(0) < 32 ? " " : char))
-		.join("")
-		.replace(/(?:bearer\s+|api[_-]?key[=:]\s*)[^\s]+/gi, "[redacted]")
-		.trim()
-		.slice(0, 4096);
+	return diagnosticText(text, 4096).trim();
 }
 // The SDK reports a user stop as stopReason="error" for an in-flight request.
 // Keep this in the publication boundary so an ordinary cancellation cannot be
@@ -112,6 +157,20 @@ export function knowledgeFailure(error) {
 	}
 	return { code, message: notices[code] || notices["check-failed"], paths };
 }
+/**
+ * Evidence a failed check had already verified before it raised an advisory.
+ * Only plain verification metadata is forwarded; never error text or stack data.
+ */
+function verifiedEvidence(error) {
+	const verified = error?.verified;
+	if (!verified || typeof verified !== "object") return {};
+	const { sources, deliveries, ...rest } = verified;
+	return {
+		...rest,
+		sources: Array.isArray(sources) ? sources : [],
+		deliveries: Array.isArray(deliveries) ? deliveries : [],
+	};
+}
 
 function isSealed(message, restore = false) {
 	const proof = message?.[FIELD];
@@ -136,21 +195,28 @@ function inplace(target, source) {
 	Object.assign(target, source);
 	return target;
 }
+function projectUnsealed(message) {
+	if (message.stopReason === "error" && !isUserAbortError(message))
+		return seal(message, [], { status: "blocked", reason: "model-error", scientificallyVerified: false });
+	if (["aborted", "length", "pending"].includes(message.stopReason) || isUserAbortError(message))
+		return blocked(message, "interrupted");
+	return blocked(message);
+}
 export function projectKnowledgeEvent(event) {
 	if (!process.env.DRONE_KNOWLEDGE_DIR) return event;
 	if (event.type === "message_update") return null; // no draft text/thinking/partial snapshots cross the delivery boundary
 	if (event.type === "message_start" && event.message?.role === "assistant")
 		return { ...event, message: base(event.message, []) };
 	if (event.type === "message_end" && event.message?.role === "assistant") {
-		if (!isSealed(event.message)) inplace(event.message, blocked(event.message)); // runs before SDK persistence
+		if (!isSealed(event.message)) inplace(event.message, projectUnsealed(event.message)); // runs before SDK persistence
 		return event;
 	}
 	if (event.type === "turn_end" && event.message?.role === "assistant")
-		return { ...event, message: isSealed(event.message) ? event.message : blocked(event.message) };
+		return { ...event, message: isSealed(event.message) ? event.message : projectUnsealed(event.message) };
 	if (event.type === "agent_end")
 		return {
 			...event,
-			messages: event.messages.map((m) => (m.role === "assistant" && !isSealed(m) ? blocked(m) : m)),
+			messages: event.messages.map((m) => (m.role === "assistant" && !isSealed(m) ? projectUnsealed(m) : m)),
 		};
 	return event;
 }
@@ -163,7 +229,7 @@ export function projectKnowledgeSnapshot(messages, persisted = []) {
 		if (m.role !== "assistant" || isSealed(m)) return m;
 		const saved = known.has(`${m.timestamp}:${hash(m.content)}`);
 		if (saved && (!m[FIELD] || isSealed(m, true))) return m; // legacy history is not retroactively certified
-		return blocked(m);
+		return projectUnsealed(m);
 	});
 }
 state.projectEvent = projectKnowledgeEvent;
@@ -188,6 +254,12 @@ export function registerAnswerPublication(
 		setupReceipt = null;
 	const protocol = new Map(),
 		deliveries = new Map();
+	// A nonblocking advisory must not hide host-generated delivery notices
+	// (saved artifacts, pending Wiki candidates) from the published answer.
+	const advisoryFooter = (ctx) => {
+		const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(ctx) : null;
+		return footer ? [{ type: "text", text: `\n\n${String(footer).slice(0, 2000)}` }] : [];
+	};
 	const failure = (message, error) => {
 		const info = knowledgeFailure(error);
 		const task = getTaskRuntime?.();
@@ -408,12 +480,14 @@ export function registerAnswerPublication(
 							...content,
 							{
 								type: "text",
-								text: `\n\n【有提醒】${info.message} 内容已保留；来源与科学事实尚未完成核验，无需反复检查才能继续。`,
+								text: `\n\n【有提醒】${advisoryLine(info.code, error)}`,
 							},
+							...advisoryFooter(ctx),
 						],
 						{
 							status: "released",
 							reviewMode: "automatic",
+							...verifiedEvidence(error),
 							warnings: [info],
 							turnId,
 							scientificallyVerified: false,
@@ -461,6 +535,7 @@ export function registerAnswerPublication(
 					return {
 						ok: true,
 						status: "warning",
+						...verifiedEvidence(error),
 						warnings: [info],
 						scientificallyVerified: false,
 						next: "Deliver the answer with its limitations. Do not repeat read/search/check solely to clear this advisory.",
@@ -513,7 +588,7 @@ export function registerAnswerPublication(
 		},
 		get guidance() {
 			return readReviewMode() === "automatic"
-				? "Answer the user's question directly. Use actual evidence where needed, acknowledge uncertainty, and save useful knowledge. Evidence quality reminders are nonblocking: do not run repeated read/search/check just to clear them. Never claim scientific verification. Host permission, binding, abort and spending limits still apply; human Wiki edits require confirmation."
+				? "Answer the user's question directly. For a planning request, first provide a concise provisional framework with explicit assumptions, then deepen only the evidence needed. Cite scientific claims inline using exact [[path]] citations from research_read_knowledge results read this turn; a saved report link is a deliverable, not an evidence citation. Reuse successful read receipts instead of reading the same source through both generic read and research_read_knowledge. Do not invent citations or cite a source merely to clear a warning. Label suggested sample sizes as design heuristics, not universal statistical thresholds. Acknowledge uncertainty and save useful knowledge. Evidence quality reminders are nonblocking: do not run repeated read/search/check just to clear them. Never claim scientific verification. Host permission, binding, abort and spending limits still apply; human Wiki edits require confirmation."
 				: "For execution progress in ANY task (analysis, code, environment, experiments, writing), use task_status; its host-generated report needs no research citations. Never add irrelevant sources to an operational report. Scientific host-checked answers need a current-turn search, reads of cited [[path]] sources, then research_check_answer. Public text must answer the user's question; do not lecture about Vault policy or evidence-gate stages. Use short set_status about the task, not product design. Show Me/run links are deliverables, not evidence.";
 		},
 	};

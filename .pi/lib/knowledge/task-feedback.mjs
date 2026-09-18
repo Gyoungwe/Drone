@@ -86,10 +86,13 @@ export function createTaskFeedback() {
 		};
 	}
 	function report(reason, message, paths = []) {
+		const interrupted = reason === "interrupted";
 		const d = facts(),
 			lines = [
-				`【知识库检查未通过】本轮的最终回答尚未完成发布（${clean(reason, 60)}）。`,
-				clean(message, 450),
+				interrupted
+					? "本次请求已中断，未完成的回答没有发布。"
+					: `【知识库检查未通过】本轮的最终回答尚未完成发布（${clean(reason, 60)}）。`,
+				...(interrupted ? [] : [clean(message, 450)]),
 			];
 		if (paths.length)
 			lines.push(
@@ -117,7 +120,9 @@ export function createTaskFeedback() {
 						.join("\n"),
 			);
 		lines.push(
-			"接下来应根据具体检查原因补读或修正引用，再预检回答；不需要重新下载已经保存的资料。这里报告的是执行状态，不是对未发布研究结论的认可。",
+			interrupted
+				? "已记录的工具结果仍可在本会话查看。可以继续剩余工作；不需要重新下载已经保存的资料。"
+				: "接下来应根据具体检查原因补读或修正引用，再预检回答；不需要重新下载已经保存的资料。这里报告的是执行状态，不是对未发布研究结论的认可。",
 		);
 		return lines.join("\n\n");
 	}

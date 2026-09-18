@@ -123,6 +123,33 @@ export function TopicManagement({
 						<dt className="text-ink-dim">{t("topicArtifacts")}</dt>
 						<dd>{topic.artifacts.join(", ") || "—"}</dd>
 					</dl>
+					{topic.conflicts?.length ? (
+						<details
+							className="mt-3 rounded-lg border border-warn/30 bg-warn/5 p-2.5"
+							open={topic.status === "conflict-candidate"}
+						>
+							<summary className="cursor-pointer text-xs font-medium text-warn">
+								{t("topicConflicts")} · {topic.conflicts.length}
+							</summary>
+							<p className="mt-1 text-[10px] leading-relaxed text-ink-dim">{t("topicConflictHint")}</p>
+							<ul className="mt-2 space-y-2">
+								{topic.conflicts.slice(-4).map((conflict) => (
+									<li
+										key={`${conflict.detectedAt}-${conflict.previousSourcePath}-${conflict.incomingSourcePath}-${conflict.relation}`}
+										className="text-[11px] leading-relaxed"
+									>
+										<div className="font-medium text-ink-2">
+											{conflict.relation} · {conflict.confidence}
+										</div>
+										<div className="mt-0.5 break-words text-ink-dim">{conflict.reason}</div>
+										<div className="mt-0.5 break-all font-mono text-[10px] text-ink-faint">
+											{conflict.previousSourcePath} ↔ {conflict.incomingSourcePath}
+										</div>
+									</li>
+								))}
+							</ul>
+						</details>
+					) : null}
 				</article>
 			))}
 			{data && data.topics.length === 0 && <p className="text-xs text-ink-dim">{t("empty")}</p>}

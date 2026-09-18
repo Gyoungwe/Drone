@@ -128,6 +128,19 @@ describe("application-wide knowledge ownership", () => {
 	});
 });
 describe("read-first incremental knowledge service", () => {
+	it("does not automatically read an unrelated Wiki from navigation for a new research topic", async () => {
+		const { service } = await prepared();
+		const prep = await service.prepare({ cwd: a, project: "project-a", query: "昆虫翅发育基因比较基因组" });
+		await service.search(prep.ticket, a, { query: "昆虫翅发育基因比较基因组" });
+		const state = await service.check(prep.ticket, a);
+		expect([...state.readWiki.keys()]).not.toContain("Wiki/Autotomy.md");
+		expect(prep.linkedWiki).not.toContain("Wiki/Autotomy.md");
+		// Explicitly returning to that topic still finds and reads its Wiki.
+		const related = await service.prepare({ cwd: a, project: "project-a", query: "自切" });
+		expect(related.linkedWiki).toContain("Wiki/Autotomy.md");
+		await service.search(related.ticket, a, { query: "自切" });
+		expect([...(await service.check(related.ticket, a)).readWiki.keys()]).toContain("Wiki/Autotomy.md");
+	});
 	it("shares one service across projects and requires a real navigation ticket", async () => {
 		const { service } = await prepared();
 		expect(await getKnowledgeService()).toBe(service);

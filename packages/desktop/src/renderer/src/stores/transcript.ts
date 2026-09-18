@@ -151,6 +151,7 @@ export const useTranscriptStore = create<TranscriptStore>((set) => ({
 						// 错误卡派生自消息流本身，pending 状态不穿越回放
 						pendingLlmError: null,
 						retrying: null,
+						modelWait: null,
 						researchStatus: { agent: null, host: null },
 						pendingPermissions: current?.pendingPermissions ?? [],
 					},

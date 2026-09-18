@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadWorkspaceConfig } from "../extensions/workspace-config.mjs";
+import { claimBindingRefs, validateClaimBindings } from "./claim-bindings.mjs";
+import { verifyLiteratureReceipt } from "./literature-receipt.mjs";
 import { sourceStatus } from "./source-archive.mjs";
 
 export const RESEARCH_STAGES = Object.freeze([
@@ -10,9 +12,97 @@ export const RESEARCH_STAGES = Object.freeze([
 	"external_search_recorded",
 	"sources_inspected",
 	"sources_archived",
+	"sources_reused",
 	"claims_bound",
 	"answerable",
 ]);
+
+// Current-turn, host-observed receipts only; model tool arguments cannot populate this ledger.
+const receiptLedger = new Map();
+const receiptQueues = new Map();
+const runKey = (cwd, runDir) => resolve(cwd, runDir);
+function ledger(cwd, runDir) {
+	const key = runKey(cwd, runDir);
+	if (!receiptLedger.has(key)) {
+		if (receiptLedger.size >= 128) receiptLedger.delete(receiptLedger.keys().next().value);
+		receiptLedger.set(key, { reads: new Map(), verified: new Map() });
+	}
+	return receiptLedger.get(key);
+}
+export async function flushResearchReceipts({ cwd = process.cwd(), runDir } = {}) {
+	await receiptQueues.get(runKey(cwd, runDir));
+}
+export function resetResearchReceipts({ cwd = process.cwd(), runDir } = {}) {
+	if (runDir) receiptLedger.delete(runKey(cwd, runDir));
+}
+async function reusableSources(cwd, runDir) {
+	const config = await loadWorkspaceConfig(cwd);
+	if (!config.obsidianVault) return [];
+	const root = await realpath(config.obsidianVault);
+	const state = ledger(cwd, runDir),
+		result = [];
+	for (const [path, proof] of state.verified) {
+		const read = state.reads.get(path);
+		if (
+			!read ||
+			read.hash !== proof.obsidian?.hash ||
+			read.vault !== root ||
+			read.revision !== (config.knowledgeBindingRevision || 0) ||
+			proof.obsidian?.vault !== root
+		)
+			continue;
+		const current = await verifyLiteratureReceipt({
+			doi: proof.doi,
+			zotero_key: proof.zoteroKey,
+			note_path: path,
+			vault: root,
+		});
+		if (current.status !== "both-verified" || current.obsidian.hash !== read.hash) continue;
+		result.push({
+			path,
+			hash: read.hash,
+			doi: current.doi,
+			zotero_key: current.zoteroKey,
+			startLine: read.startLine,
+			endLine: read.endLine,
+			basis: "current-turn-literature-note-read-and-identity-check",
+			fulltext_status: current.zotero.fulltextStatus,
+			originalFulltextReadThisTurn: false,
+			evidence_profile: {
+				identity: "both-verified",
+				acquisition: current.zotero.fulltextStatus,
+				reading: {
+					kind: "literature-note",
+					scope: "current-turn",
+					startLine: read.startLine,
+					endLine: read.endLine,
+				},
+				claimSupport: "not-assessed",
+			},
+		});
+	}
+	return result;
+}
+async function validateReuse(cwd, runDir, gate) {
+	if (!gate.reuse_count) return;
+	const fresh = await reusableSources(cwd, runDir);
+	if (
+		gate.reused_sources.length !== gate.reuse_count ||
+		gate.reused_sources.some(
+			(old) =>
+				!fresh.some(
+					(now) =>
+						now.path === old.path &&
+						now.hash === old.hash &&
+						now.doi === old.doi &&
+						now.zotero_key === old.zotero_key,
+				),
+		)
+	)
+		throw new Error(
+			"Reused source changed or current-turn receipt is missing; re-read and verify the existing note, do not re-import it",
+		);
+}
 
 function safeSlug(value, label) {
 	const text = String(value ?? "").trim();
@@ -53,8 +143,16 @@ function gateOf(metadata) {
 		answerable: gate.answerable === true,
 		events: Array.isArray(gate.events) ? gate.events : [],
 		claim_refs: Array.isArray(gate.claim_refs) ? gate.claim_refs : [],
+		claim_bindings: Array.isArray(gate.claim_bindings) ? gate.claim_bindings : [],
+		warnings:
+			gate.claim_refs?.length && !gate.claim_bindings?.length
+				? ["legacy-unstructured-claims: support not assessed"]
+				: [],
 		source_refs: Array.isArray(gate.source_refs) ? gate.source_refs : [],
 		archive_count: Number(gate.archive_count) || 0,
+		reuse_count: Number(gate.reuse_count) || 0,
+		reused_sources: Array.isArray(gate.reused_sources) ? gate.reused_sources : [],
+		scientificallyVerified: false,
 	};
 }
 
@@ -129,6 +227,7 @@ export async function updateResearchLoop({
 	query,
 	sourceRefs = [],
 	claimRefs = [],
+	claimBindings = [],
 	outcome,
 	notes,
 } = {}) {
@@ -166,12 +265,38 @@ export async function updateResearchLoop({
 		requireStage("sources_inspected");
 		const archive = await sourceStatus({ cwd, run_dir: path });
 		const downloaded = (archive.manifest?.items || []).filter((item) => item.status === "downloaded");
-		if (downloaded.length === 0) throw new Error("no verified archived source is present for this run");
-		gate = advance({ ...gate, archive_count: downloaded.length }, "sources_archived", {
-			archived: downloaded.map((item) => ({ id: item.id, sha256: item.sha256, path: item.path })),
-		});
+		const reused = await reusableSources(cwd, runDir);
+		if (!downloaded.length && !reused.length)
+			throw new Error(
+				"No available source: read an existing Library/Papers note this turn and verify its DOI/key with research_verify_literature, or archive an authorized new source. Do not repeat imports to clear this gate.",
+			);
+		gate = advance(
+			{ ...gate, archive_count: downloaded.length, reuse_count: reused.length, reused_sources: reused },
+			downloaded.length ? "sources_archived" : "sources_reused",
+			{
+				archived: downloaded.map((item) => ({ id: item.id, sha256: item.sha256, path: item.path })),
+				reused_sources: reused,
+				scientificallyVerified: false,
+			},
+		);
 	} else if (action === "bind_claims") {
+		if (gate.stage === "sources_inspected") {
+			const available = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+			gate = available.evidence_gate;
+		}
 		requireStage("sources_archived");
+		await validateReuse(cwd, runDir, gate);
+		if (claimBindings.length) {
+			const checked = validateClaimBindings(
+				claimBindings,
+				await reusableSources(cwd, runDir),
+				ledger(cwd, runDir).reads,
+			);
+			gate = { ...gate, claim_bindings: checked, warnings: [] };
+			claimRefs = claimBindingRefs(checked);
+		} else if (gate.claim_bindings.length && claimRefs.length) {
+			gate = { ...gate, claim_bindings: [] };
+		}
 		if (!Array.isArray(claimRefs) || claimRefs.length === 0)
 			throw new Error("claim_refs must contain at least one traceable claim binding");
 		gate = advance({ ...gate, claim_refs: [...new Set(claimRefs.map(String))] }, "claims_bound", {
@@ -179,11 +304,12 @@ export async function updateResearchLoop({
 		});
 	} else if (action === "finalize") {
 		requireStage("claims_bound");
-		if (gate.archive_count < 1 || gate.claim_refs.length < 1)
+		await validateReuse(cwd, runDir, gate);
+		if (gate.archive_count + gate.reuse_count < 1 || gate.claim_refs.length < 1)
 			throw new Error("archive verification and claim binding are required before answerable");
 		gate = advance({ ...gate, status: "ok", answerable: true }, "answerable", detail);
 	} else if (action === "complete") {
-		return completeResearchGate({ cwd, runDir, claimRefs });
+		return completeResearchGate({ cwd, runDir, claimRefs, claimBindings });
 	} else {
 		throw new Error(`unknown research_loop action: ${action}`);
 	}
@@ -204,20 +330,29 @@ async function ensureStage(cwd, runDir, stage, fill) {
 }
 
 /** Host-owned serial close: verify archive, bind claims from real refs if needed, finalize. */
-export async function completeResearchGate({ cwd = process.cwd(), runDir, claimRefs = [] } = {}) {
+export async function completeResearchGate({
+	cwd = process.cwd(),
+	runDir,
+	claimRefs = [],
+	claimBindings = [],
+} = {}) {
 	let status = await updateResearchLoop({ cwd, runDir, action: "status" });
 	let gate = status.evidence_gate;
+	await validateReuse(cwd, runDir, gate);
 	if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_inspected"))
 		throw new Error("research loop must inspect sources before complete");
 	if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_archived"))
 		status = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
 	gate = status.evidence_gate;
-	const refs =
-		(Array.isArray(claimRefs) && claimRefs.length ? claimRefs : null) ||
-		(gate.claim_refs.length ? gate.claim_refs : (gate.source_refs || []).map((ref) => `Observed: ${ref}`));
-	if (!refs.length) throw new Error("claim_refs must contain at least one traceable claim binding");
-	if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("claims_bound"))
-		status = await updateResearchLoop({ cwd, runDir, action: "bind_claims", claimRefs: refs });
+	if (!claimBindings.length && !claimRefs.length && !gate.claim_refs.length)
+		throw new Error(
+			"Provide explicit claim_refs; downloading or identity verification alone does not bind scientific claims",
+		);
+	const refs = (Array.isArray(claimRefs) && claimRefs.length ? claimRefs : null) || gate.claim_refs;
+	if (!refs.length && !claimBindings.length)
+		throw new Error("claim_refs must contain at least one traceable claim binding");
+	if (claimBindings.length || RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("claims_bound"))
+		status = await updateResearchLoop({ cwd, runDir, action: "bind_claims", claimRefs: refs, claimBindings });
 	gate = status.evidence_gate;
 	if (gate.stage !== "answerable") status = await updateResearchLoop({ cwd, runDir, action: "finalize" });
 	return status;
@@ -227,16 +362,40 @@ export async function completeResearchGate({ cwd = process.cwd(), runDir, claimR
  * Advance the gate from a successful tool receipt. Missing runs or out-of-order
  * receipts are ignored; the host never throws into the tool pipeline.
  */
-export async function observeResearchReceipt({
+export function observeResearchReceipt(options = {}) {
+	if (!options.runDir) return Promise.resolve(null);
+	const key = runKey(options.cwd || process.cwd(), options.runDir);
+	const work = (receiptQueues.get(key) || Promise.resolve())
+		.catch(() => {})
+		.then(() => observeReceipt(options));
+	receiptQueues.set(key, work);
+	void work
+		.finally(() => {
+			if (receiptQueues.get(key) === work) receiptQueues.delete(key);
+		})
+		.catch(() => {});
+	return work;
+}
+async function observeReceipt({
 	cwd = process.cwd(),
 	runDir,
 	toolName,
 	args = {},
 	details = {},
 	isError = false,
+	readBinding,
 } = {}) {
 	if (isError || !runDir || !toolName) return null;
 	try {
+		if (toolName === "research_reconcile_literature")
+			return observeReceipt({
+				cwd,
+				runDir,
+				toolName: "research_verify_literature",
+				args,
+				details: details.receipt || {},
+				isError,
+			});
 		const query = String(args.query || details.query || "").trim();
 		if (toolName === "research_search_knowledge" && query && details.complete !== false)
 			return await updateResearchLoop({ cwd, runDir, action: "record_local", query });
@@ -268,7 +427,47 @@ export async function observeResearchReceipt({
 					notes: "Host: no extra web search before inspecting current sources.",
 				}),
 			);
-			return await updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [path] });
+			if (
+				/^Library\/Papers\/.+\.md$/.test(path) &&
+				/^[a-f0-9]{64}$/i.test(details.hash || "") &&
+				typeof details.text === "string" &&
+				details.text.trim() &&
+				Number.isInteger(details.startLine) &&
+				details.endLine >= details.startLine
+			) {
+				const config = await loadWorkspaceConfig(cwd);
+				if (config.obsidianVault)
+					ledger(cwd, runDir).reads.set(path, {
+						hash: details.hash,
+						text: details.text,
+						vault: readBinding ? readBinding.vault : await realpath(config.obsidianVault),
+						revision: readBinding ? readBinding.revision : config.knowledgeBindingRevision || 0,
+						startLine: details.startLine,
+						endLine: details.endLine,
+					});
+			}
+			const inspected = await updateResearchLoop({
+				cwd,
+				runDir,
+				action: "inspect_sources",
+				sourceRefs: [path],
+			});
+			if ((await reusableSources(cwd, runDir)).length)
+				return await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+			return inspected;
+		}
+		if (
+			toolName === "research_verify_literature" &&
+			details.status === "both-verified" &&
+			details.obsidian?.status === "verified" &&
+			details.zotero?.status === "verified"
+		) {
+			const path = details.obsidian.path;
+			if (!/^Library\/Papers\/.+\.md$/.test(path || "")) return null;
+			ledger(cwd, runDir).verified.set(path, structuredClone(details));
+			if ((await reusableSources(cwd, runDir)).length)
+				return await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+			return null;
 		}
 		if (toolName === "research_archive_source" && details.status === "downloaded") {
 			const ref = String(details.path || details.url || args.url || "");
@@ -287,11 +486,8 @@ export async function observeResearchReceipt({
 			);
 			await updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [ref] });
 			const archived = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
-			try {
-				return await completeResearchGate({ cwd, runDir });
-			} catch {
-				return archived;
-			}
+			// Download success is acquisition, never automatic scientific claim support.
+			return archived;
 		}
 		if (toolName === "research_deposit_knowledge" && details.type === "claim" && details.note)
 			return await updateResearchLoop({

@@ -318,7 +318,8 @@ export function registerWorkspaceConfig(pi, options = {}) {
 	pi.registerTool({
 		name: "research_summarize_run",
 		label: "Summarize research run",
-		description: "Write one parent-session summary to the run result and configured Obsidian vault.",
+		description:
+			"Write one parent-session summary to the run result and configured Obsidian vault. Before calling, extract the material evidence-backed observations into claims so later topic-memory updates can compare new knowledge with prior knowledge. Each claim must name the subject, predicate, source note/hash and whether it is an observation, interpretation, or hypothesis; never invent claims from an unverified summary.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -326,6 +327,30 @@ export function registerWorkspaceConfig(pi, options = {}) {
 				summary_markdown: { type: "string" },
 				project: { type: "string" },
 				result_slug: { type: "string" },
+				claims: {
+					type: "array",
+					description:
+						"Structured evidence-backed claims for topic-memory conflict detection. Include only claims supported by sources actually read this turn; preserve different organisms, tissues, stages and methods as separate conditions. Omit this field only when the run contains no substantive claims.",
+					maxItems: 24,
+					items: {
+						type: "object",
+						properties: {
+							claim: { type: "string", maxLength: 1200 },
+							subject: { type: "string", maxLength: 180 },
+							predicate: { type: "string", maxLength: 180 },
+							value: { type: "string", maxLength: 600 },
+							organism: { type: "string", maxLength: 180 },
+							tissue: { type: "string", maxLength: 180 },
+							stage: { type: "string", maxLength: 180 },
+							method: { type: "string", maxLength: 180 },
+							sourcePath: { type: "string", maxLength: 240 },
+							sourceHash: { type: "string", minLength: 64, maxLength: 64 },
+							location: { type: "string", maxLength: 120 },
+							relation: { type: "string", enum: ["observation", "interpretation", "hypothesis"] },
+						},
+						required: ["claim", "subject", "predicate", "sourcePath", "sourceHash", "relation"],
+					},
+				},
 			},
 			required: ["run_dir", "summary_markdown"],
 		},
@@ -396,6 +421,7 @@ export function registerWorkspaceConfig(pi, options = {}) {
 			}
 			const result = {
 				...outputs,
+				claims: Array.isArray(params.claims) ? params.claims : [],
 				obsidian_note: note,
 				indexes,
 				summary_saved: true,

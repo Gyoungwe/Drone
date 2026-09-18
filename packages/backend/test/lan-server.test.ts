@@ -504,3 +504,30 @@ describe("LanObserverServer", () => {
 		expect(lines[0]).toMatchObject({ ip: expect.any(String), t: expect.any(String) });
 	});
 });
+
+it("read-only recovery endpoint keeps token, remote-control and session-write gates", async () => {
+	const calls = [];
+	const b = {
+		...backend(),
+		retry: async (...args) => {
+			calls.push(args);
+			return { kind: "agent" };
+		},
+	};
+	const auth = { Authorization: `Bearer ${token}` };
+	const off = await start(0, b);
+	const offUrl = `http://127.0.0.1:${off.status().port}/api/sessions/session-1/retry`;
+	expect((await post(offUrl, { requestId: "card" }, auth)).status).toBe(403);
+	const on = await start(0, b, { remoteControl: true });
+	const url = `http://127.0.0.1:${on.status().port}/api/sessions/session-1/retry`;
+	expect((await post(url, { requestId: "card" })).status).toBe(401);
+	expect((await post(url, { requestId: "", expectedUserTimestamp: 1 }, auth)).status).toBe(400);
+	expect((await post(url, { requestId: "card", expectedUserTimestamp: 1 }, auth)).status).toBe(200);
+	expect(calls).toEqual([["session-1", "card", 1]]);
+	const ro = await start(0, { ...b, checkSessionWritable: () => "read_only" }, { remoteControl: true });
+	expect(
+		(await post(`http://127.0.0.1:${ro.status().port}/api/sessions/sub/retry`, { requestId: "card" }, auth))
+			.status,
+	).toBe(403);
+	expect(calls).toHaveLength(1);
+});

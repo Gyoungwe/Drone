@@ -1,5 +1,11 @@
 /** 中文语言包（作为 key 的结构定义，en.ts 与之同形） */
 export const zh = {
+	runInspector: {
+		title: "运行记录",
+		label: "运行记录：工具、来源与模型响应",
+		expand: "查看明细",
+		collapse: "收起明细",
+	},
 	taskConsent: {
 		manual: "更多操作（需要时展开）",
 		title: "确认一次，交给它做完",
@@ -54,6 +60,9 @@ export const zh = {
 		multiHint: "可多选，也可以填写自己的答案",
 		required: "重要问题",
 		recommended: "推荐",
+		modelRecommendation: "模型建议",
+		confidence: "置信度：{value}",
+		basedOn: "依据：{value}",
 		customPlaceholder: "或输入自己的答案…",
 		submit: "提交答案",
 		submitting: "提交中…",
@@ -617,6 +626,7 @@ export const zh = {
 			llmOverflow: "模型请求失败：上下文超限",
 			llmNetwork: "模型请求失败：网络错误",
 			llmGeneric: "模型请求失败",
+			modelTimeout: "模型长时间未响应，本次请求已停止",
 			streamGuard: "回复已被安全机制中止",
 			sendFailed: "发送失败",
 			sendReadOnly: "会话是只读的，无法发送",
@@ -627,8 +637,13 @@ export const zh = {
 			compact: "会话过长。可执行 /compact 压缩上下文，或从此处分叉开启新会话。",
 			network: "网络连接异常，请检查网络后重试。",
 			streamGuard: "模型输出异常（病态流），已被安全机制中止。",
+			modelTimeout:
+				"连续 5 分钟未收到模型新事件。可检查模型服务，或在本会话继续剩余工作。已完成的工具操作不会自动重跑。",
 		},
 		retrying: "自动重试中 · 第 {attempt}/{maxAttempts} 次 · 等待 {delay}s",
+		modelWaiting: "超过 60 秒未收到模型新事件，仍在等待响应。连续 {minutes} 分钟无响应将自动停止。",
+		modelStopping: "模型长时间无响应，正在请求停止；尚未确认结束。",
+		modelStopFailed: "停止请求失败，任务可能仍在运行。请再次停止或检查服务。",
 		retryDone: "重试成功",
 		retryFailed: "重试失败",
 	},

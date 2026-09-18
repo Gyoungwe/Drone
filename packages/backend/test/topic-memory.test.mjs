@@ -171,4 +171,41 @@ describe("bounded topic memory", () => {
 		await symlink(join(outside, "memory.json"), path);
 		await expect(store.list()).rejects.toThrow(/symlink|regular file/);
 	});
+	it("stores both claims and a pending conflict record without replacing the old claim", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
+		const store = createTopicMemory({ binding, project: "project-a", directory: root });
+		const oldClaim = {
+			claim: "Wg activates wing-margin growth",
+			subject: "Wg",
+			predicate: "activates",
+			value: "wing-margin growth",
+			organism: "Drosophila melanogaster",
+			tissue: "wing disc",
+			stage: "third instar",
+			method: "RNAi",
+			sourcePath: "Library/Papers/a.md",
+			sourceHash: "a".repeat(64),
+			relation: "observation",
+		};
+		await store.record({ topicId: "wing", title: "Wing", summary: "wing", claims: [oldClaim] });
+		const next = await store.record({
+			topicId: "wing",
+			title: "Wing",
+			summary: "wing",
+			claims: [
+				{
+					...oldClaim,
+					claim: "Wg does not activate wing-margin growth",
+					value: "does not activate wing-margin growth",
+					sourcePath: "Library/Papers/b.md",
+					sourceHash: "b".repeat(64),
+				},
+			],
+		});
+		expect(next.classification).toBe("conflict-candidate");
+		expect(next.conflicts[0]).toMatchObject({ relation: "contradicts", blocking: true });
+		const topic = (await store.get("wing")).matches[0];
+		expect(topic.claims).toHaveLength(2);
+		expect(topic.conflicts[0].relation).toBe("contradicts");
+	});
 });

@@ -17,8 +17,7 @@ import { CheckIcon } from "../icons";
 import { TaskArtifactLinks } from "./TaskArtifactLinks";
 
 /**
- * 流内工作台卡。`tasks` 是调用方筛过的子集（见 tasksForTranscript）——
- * 进度类任务不进流，由右侧工作台侧栏承载，这里只渲染要用户拍板的和已收尾的。
+ * 工作台详情的兼容组件。当前聊天流隐藏全部 taskView，进度由右侧任务栏承载，授权走弹窗。
  */
 export function TaskWorkbenchCard({
 	view,

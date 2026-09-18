@@ -379,7 +379,19 @@ export interface StreamGuardTrippedEvent {
 
 /** pi 事件 + Drone UI 事件，跨 IPC 统一转发。 */
 export type { PiAgentSessionEvent as AgentSessionEvent };
-export type SessionEvent = PiAgentSessionEvent | SubagentMutexEvent | StreamGuardTrippedEvent;
+export interface ModelWaitEvent {
+	type: "model_wait";
+	status: "waiting" | "resumed" | "stopping" | "stop-failed" | "timed-out";
+	errorMessage?: string;
+	lastActivityAt: number;
+	timeoutMs: number;
+}
+
+export type SessionEvent =
+	| PiAgentSessionEvent
+	| SubagentMutexEvent
+	| StreamGuardTrippedEvent
+	| ModelWaitEvent;
 
 /** 渲染进程收到的统一事件包络 */
 export interface SessionEventEnvelope {

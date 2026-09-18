@@ -34,8 +34,18 @@ export function makeCapabilityExtension(runtime: CapabilityRuntime): InlineExten
 			const text = messageText(event.message);
 			if (text) runtime.prepareForPrompt(text, false);
 		});
+		pi.on("before_agent_start", (event) =>
+			runtime.isReadOnlyLibrary()
+				? {
+						systemPrompt:
+							event.systemPrompt +
+							"\nScope: read-only existing-literature reuse. Do not create task_plan or ask for execution consent. Native research_loop.start creates the correctly scoped run metadata automatically; do not locate old run directories with filesystem/shell tools. Read notes and verify identities, then submit structured claim_bindings and reconcile destinations. No downloads, Vault writes or imports.",
+					}
+				: undefined,
+		);
 		pi.on("tool_call", (event) => {
 			runtime.noteToolInvocation(event.toolName);
+			return runtime.guardTool(event.toolName, event.input);
 		});
 	};
 }

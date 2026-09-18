@@ -91,6 +91,32 @@ export interface KnowledgeTopicSource {
 	hash: string;
 }
 
+export type KnowledgeClaimRelation = "observation" | "interpretation" | "hypothesis";
+
+export interface KnowledgeClaim {
+	claim: string;
+	subject: string;
+	predicate: string;
+	value?: string;
+	organism?: string;
+	tissue?: string;
+	stage?: string;
+	method?: string;
+	sourcePath: string;
+	sourceHash: string;
+	location?: string;
+	relation: KnowledgeClaimRelation;
+}
+
+export interface KnowledgeConflictRecord {
+	relation: "supports" | "refines" | "supersedes" | "contradicts" | "unresolved";
+	confidence: "high" | "medium" | "low";
+	reason: string;
+	previousSourcePath: string;
+	incomingSourcePath: string;
+	detectedAt: string;
+}
+
 export interface KnowledgeTopic {
 	id: string;
 	title: string;
@@ -104,6 +130,8 @@ export interface KnowledgeTopic {
 	updatedAt: string;
 	lastRunId?: string;
 	proposalIds?: string[];
+	claims?: KnowledgeClaim[];
+	conflicts?: KnowledgeConflictRecord[];
 }
 
 export interface KnowledgeTopicListResult {

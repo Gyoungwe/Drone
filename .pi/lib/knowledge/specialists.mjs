@@ -35,7 +35,11 @@ const brief = (page) => ({
 });
 const readSchema = {
 	type: "object",
-	properties: { path: { type: "string", maxLength: 512 }, start_line: { type: "integer", minimum: 1 } },
+	properties: {
+		path: { type: "string", maxLength: 512 },
+		start_line: { type: "integer", minimum: 1 },
+		startLine: { type: "integer", minimum: 1, description: "Compatibility alias; prefer start_line" },
+	},
 	required: ["path"],
 	additionalProperties: false,
 };
@@ -45,9 +49,22 @@ const searchSchema = {
 	required: ["query"],
 	additionalProperties: false,
 };
+export function knowledgeReadStart({ start_line, startLine } = {}) {
+	if (start_line !== undefined && startLine !== undefined && start_line !== startLine)
+		throw new Error("Conflicting read ranges");
+	const value = start_line ?? startLine ?? 1;
+	if (!Number.isInteger(value) || value < 1) throw new Error("Invalid read start line");
+	return value;
+}
 export function shouldOrientKnowledge(prompt) {
 	const text = String(prompt || "").trim();
 	if (!text || text.startsWith("/") || /初始化|取消任务|停止任务/.test(text)) return false;
+	if (
+		/只读|read[- ]only/i.test(text) &&
+		/复用|既有|已有|reuse|existing/i.test(text) &&
+		!/调用.{0,8}子代理|委派|delegate|specialist/i.test(text)
+	)
+		return false;
 	return (
 		!!deliveryContract(text) ||
 		(/比较|对比|分析|综述|compare|analy[sz]|review/i.test(text) &&
@@ -281,7 +298,8 @@ export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false })
 					await check();
 					publish({ status: "running", action: "navigation" });
 					prepared = await c.service.prepare({ cwd: ctx.cwd, project: c.project, query: task });
-					const allowed = new Set(prepared.linkedWiki),
+					// Discoverable navigation paths remain readable; they are not mandatory evidence.
+					const allowed = new Set([...prepared.linkedWiki, ...(prepared.navigationLinks || [])]),
 						readPages = new Map();
 					for (const page of prepared.navigation || []) if (page?.path) allowed.add(page.path);
 					let readCount = 0,
@@ -299,7 +317,8 @@ export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false })
 							throw new Error("Wiki target is outside the permitted scope");
 						allowed.add(targetPath);
 					}
-					const read = async ({ path, start_line = 1 }) => {
+					const read = async ({ path, start_line, startLine }) => {
+						const firstLine = knowledgeReadStart({ start_line, startLine });
 						await check();
 						if (!budget.addToolOperation() || ++readCount > 8)
 							throw new Error("Specialist read budget exhausted");
@@ -308,7 +327,7 @@ export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false })
 							throw new Error("Knowledge specialist may read only supplied or discovered paths");
 						const page = await c.service.read(prepared.ticket, ctx.cwd, {
 							path,
-							startLine: start_line,
+							startLine: firstLine,
 							maxChars: 3000,
 						});
 						if (page.text?.trim()) readPages.set(path, page);
@@ -372,10 +391,11 @@ export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false })
 							text: (page.text || "").slice(0, 1000),
 						})),
 						linkedWiki: prepared.linkedWiki.slice(0, 12),
+						navigationLinks: (prepared.navigationLinks || []).slice(0, 12),
 						sources,
 						target,
 						summary,
-						warning: "Read-only data. Draft outputs are unverified.",
+						warning: `Read-only data. Draft outputs are unverified. ${prepared.warning}`,
 					});
 					const result = await host({
 						role,

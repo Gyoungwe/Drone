@@ -17,6 +17,7 @@ import { useUiPreferencesStore } from "../../stores/ui-preferences";
 import { CenterOrb } from "./CenterOrb";
 import { MessageItem } from "./MessageItem";
 import { MetaGroup } from "./MetaGroup";
+import { ModelWaitNote } from "./ModelWaitNote";
 import { ProgressNote } from "./ProgressNote";
 import { RetryNote } from "./RetryNote";
 import { RunInspector } from "./RunInspector";
@@ -72,7 +73,12 @@ export function MessageList() {
 
 	const pinToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
 		const el = scrollRef.current;
-		if (el) el.scrollTo({ top: el.scrollHeight, behavior });
+		if (el) {
+			el.scrollTo({ top: el.scrollHeight, behavior });
+			// Layout clamping/programmatic scrolling is not an upward user gesture.
+			lastScrollTopRef.current = el.scrollTop;
+			lastScrollHeightRef.current = el.scrollHeight;
+		}
 	}, []);
 
 	// 尺寸变化（流式追加、图片加载、窗口缩放）→ 跟随中保持贴底
@@ -88,9 +94,8 @@ export function MessageList() {
 		return () => observer.disconnect();
 	}, [pinToBottom]);
 
-	// 用户发出新消息（末条变为 user）→ 立即回底并恢复跟随
-	const lastMessage = transcript.messages[transcript.messages.length - 1];
-	const lastUserMessageId = lastMessage?.kind === "user" ? lastMessage.id : null;
+	// Find the latest user even when React batches it with the first assistant update.
+	const lastUserMessageId = transcript.messages.findLast((message) => message.kind === "user")?.id;
 	useEffect(() => {
 		if (!lastUserMessageId) return;
 		updateFollowing(true);
@@ -103,6 +108,16 @@ export function MessageList() {
 		updateFollowing(true);
 		pinToBottom();
 	}, [activeSessionId, pinToBottom, updateFollowing]);
+
+	// Settle after the final answer replaces streaming content. ResizeObserver keeps
+	// following later Markdown/image layout; an intentional scroll-up stays untouched.
+	useEffect(() => {
+		if (transcript.agentActive || !transcript.runEndedAt) return;
+		const frame = requestAnimationFrame(() => {
+			if (followingRef.current) pinToBottom();
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [transcript.agentActive, transcript.runEndedAt, pinToBottom]);
 
 	// 仅「向上滚动」脱离跟随（程序性向下贴底/平滑回底不中断跟随）；到达底部恢复。
 	// 压缩/消息重建会让内容变矮、浏览器把 scrollTop 往下钳——高度收缩导致的 top 下降
@@ -263,6 +278,9 @@ export function MessageList() {
 				<div ref={contentRef} className="mx-auto flex max-w-[760px] flex-col gap-6 px-6 pt-8 pb-16">
 					{items}
 					{transcript.retrying && <RetryNote info={transcript.retrying} />}
+					{transcript.modelWait && activeSessionId && (
+						<ModelWaitNote key={activeSessionId} info={transcript.modelWait} sessionId={activeSessionId} />
+					)}
 				</div>
 			</div>
 			{/* 选中文字浮出菜单：定位在滚动容器内以便判断选区归属（fixed 定位不受父级影响） */}

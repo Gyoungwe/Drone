@@ -25,6 +25,10 @@ const FORWARDABLE_EVENTS = new Set([
 	"compaction_start",
 	"compaction_end",
 	"subagent_mutex",
+	"model_wait",
+	"stream_guard_tripped",
+	"auto_retry_start",
+	"auto_retry_end",
 ]);
 
 function placeholderImages(images: unknown): { data: string; mimeType: string }[] {

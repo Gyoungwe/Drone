@@ -27,6 +27,7 @@ export async function saveReviewMode(mode) {
 	return { mode: await readReviewMode() };
 }
 export const advisoryCodes = new Set([
+	"paper-citation-required",
 	"search-required",
 	"coverage-incomplete",
 	"wiki-changed",

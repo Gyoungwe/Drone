@@ -8,6 +8,7 @@ export * from "./knowledge-links";
 export * from "./knowledge-specialists";
 export * from "./knowledge-upgrade";
 export * from "./lan";
+export { literatureRecoverySummary } from "./literature-recovery";
 export * from "./marquee-motion";
 export * from "./mcp";
 export * from "./packages";

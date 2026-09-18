@@ -1,4 +1,5 @@
 import type { UIToolCall } from "@drone/shared";
+import { literatureRecoverySummary } from "@drone/shared";
 import { ChevronRightIcon } from "./icons";
 
 /** 与桌面端 ToolCallCard.summarizeArgs 同逻辑：优先 command/filePath/url 字段，容忍流式不完整 JSON */
@@ -26,7 +27,11 @@ const displayName = (name: string) => name.charAt(0).toUpperCase() + name.slice(
 
 /** 工具调用卡（桌面 ToolCallCard 的纯 CSS 移植版）：默认折叠，折叠态 = 名 + 参数摘要单行截断 */
 export function ToolCard({ tool }: { tool: UIToolCall }) {
-	const summary = summarizeArgs(tool.args);
+	const recovery =
+		tool.name === "research_reconcile_literature"
+			? literatureRecoverySummary(tool.output || "", navigator.language)
+			: [];
+	const summary = recovery.length ? recovery.slice(0, 2).join(" · ") : summarizeArgs(tool.args);
 	return (
 		<div className="tool-row">
 			<details className="drawer-details">
@@ -41,6 +46,13 @@ export function ToolCard({ tool }: { tool: UIToolCall }) {
 					<ChevronRightIcon size={12} className="tool-arrow" />
 				</summary>
 				<div className="tool-detail">
+					{recovery.length > 0 && (
+						<div role="status">
+							{recovery.map((line) => (
+								<p key={line}>{line}</p>
+							))}
+						</div>
+					)}
 					{tool.args && <pre>{tool.args}</pre>}
 					{tool.output && <pre>{tool.output}</pre>}
 				</div>

@@ -94,6 +94,7 @@ export const IpcChannels = {
 	SessionDelete: "session:delete",
 	SessionPrompt: "session:prompt",
 	SessionAbort: "session:abort",
+	SessionRetry: "session:retry",
 	SessionSetModel: "session:setModel",
 	SessionSetThinkingLevel: "session:setThinkingLevel",
 	SessionGetMessages: "session:getMessages",
@@ -257,6 +258,7 @@ export interface PiApi extends KnowledgeApi {
 	/** 发送消息；images 为随消息附带的图片（base64） */
 	prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt>;
 	abort(sessionId: string): Promise<void>;
+	retry(sessionId: string, requestId: string, expectedUserTimestamp?: number): Promise<PromptReceipt>;
 	setModel(sessionId: string, provider: string, modelId: string): Promise<void>;
 	setThinkingLevel(sessionId: string, level: string): Promise<void>;
 	/** 读取会话历史消息（打开历史会话时回放） */
@@ -487,6 +489,7 @@ export const INVOKE_ROUTES = {
 	deleteSession: IpcChannels.SessionDelete,
 	prompt: IpcChannels.SessionPrompt,
 	abort: IpcChannels.SessionAbort,
+	retry: IpcChannels.SessionRetry,
 	setModel: IpcChannels.SessionSetModel,
 	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
 	compact: IpcChannels.SessionCompact,
@@ -593,6 +596,7 @@ export const SESSION_INVOKE_METHODS = [
 	"deleteSession",
 	"prompt",
 	"abort",
+	"retry",
 	"setModel",
 	"setThinkingLevel",
 	"compact",

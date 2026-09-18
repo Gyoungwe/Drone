@@ -90,4 +90,25 @@ describe("knowledge-publication fallback（bridge 缺失）", () => {
 		expect(JSON.stringify(out)).not.toContain("secret");
 		expect(JSON.stringify(out)).toContain(NOTICE);
 	});
+	it("retains the provider failure without exposing the unpublished draft or credentials", () => {
+		const message = {
+			role: "assistant",
+			content: [{ type: "text", text: "UNPUBLISHED_DRAFT" }],
+			stopReason: "error",
+			errorMessage: "server_error 502 api_key=fixture-secret",
+		};
+		projectKnowledgeEvent(ev({ type: "message_end", message }));
+		expect(message.errorMessage).toContain("server_error 502");
+		expect(JSON.stringify(message)).not.toMatch(/UNPUBLISHED_DRAFT|fixture-secret|知识库检查未通过/);
+	});
+	it("reports cancellation consistently in event and history fallback", () => {
+		const message = {
+			role: "assistant",
+			content: [{ type: "text", text: "UNPUBLISHED_DRAFT" }],
+			stopReason: "aborted",
+		} as M;
+		const out = projectKnowledgeSnapshot([message], []);
+		expect(JSON.stringify(out)).toContain("本次请求已中断");
+		expect(JSON.stringify(out)).not.toMatch(/UNPUBLISHED_DRAFT|知识库检查未通过/);
+	});
 });

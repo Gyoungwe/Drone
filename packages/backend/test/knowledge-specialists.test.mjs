@@ -15,6 +15,7 @@ import {
 } from "../../../.pi/lib/knowledge/specialist-host.mjs";
 import {
 	createKnowledgeSpecialists,
+	knowledgeReadStart,
 	shouldOrientKnowledge,
 } from "../../../.pi/lib/knowledge/specialists.mjs";
 import {
@@ -603,4 +604,16 @@ it("uses and identifies the bundled research-show-me fallback without a user ski
 	expect(result.status).toBe("completed");
 	expect(result.skillName).toBe("research-show-me");
 	expect(sent.skillText).toContain("First-party portable");
+});
+
+it("read-only existing-literature reuse avoids automatic child-model work", () => {
+	expect(shouldOrientKnowledge("只读复用既有三篇文献，给比较基因组研究方案")).toBe(false);
+	expect(shouldOrientKnowledge("Read-only reuse of existing literature")).toBe(false);
+	expect(shouldOrientKnowledge("只读复用已有文献，委派子代理比较证据")).toBe(true);
+});
+it("specialist read ranges accept the observed camelCase alias without ignoring it", () => {
+	expect(knowledgeReadStart({ startLine: 12 })).toBe(12);
+	expect(knowledgeReadStart({ start_line: 3 })).toBe(3);
+	expect(() => knowledgeReadStart({ start_line: 3, startLine: 4 })).toThrow("Conflicting");
+	expect(() => knowledgeReadStart({ startLine: 0 })).toThrow("Invalid");
 });

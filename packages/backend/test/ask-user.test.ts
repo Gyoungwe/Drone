@@ -14,6 +14,13 @@ const params = {
 				{ value: "zotero", label: "Zotero", recommended: true },
 				{ value: "web", label: "Web" },
 			],
+			recommendation: {
+				value: "zotero",
+				reason: "本地证据先可核验，缺口再扩大检索范围。",
+				confidence: "high" as const,
+				basedOn: ["当前 Vault 已有相关来源", "任务要求可复现"],
+			},
+			allowCustomText: true,
 		},
 	],
 };
@@ -36,9 +43,31 @@ describe("desktop ask_user", () => {
 					labels: ["Zotero", "local first"],
 					indices: [1],
 					customText: "local first",
+					recommendation: params.questions[0].recommendation,
 				},
 			},
 		});
+	});
+
+	it("keeps the model recommendation snapshot and rejects a recommendation outside the options", async () => {
+		const tool = makeAskUserTool({
+			ask: async () => ({ kind: "answer", answers: { source: { values: ["zotero"] } } }),
+		});
+		const result = await tool.execute("tc-recommendation", params, undefined, () => {}, {} as never);
+		expect(result.details.questions[0]).toMatchObject({ recommendation: params.questions[0].recommendation });
+		expect(result.details.answers.source.recommendation).toEqual(params.questions[0].recommendation);
+		await expect(
+			tool.execute(
+				"tc-invalid-recommendation",
+				{
+					...params,
+					questions: [{ ...params.questions[0], recommendation: { value: "missing", reason: "x" } }],
+				},
+				undefined,
+				() => {},
+				{} as never,
+			),
+		).rejects.toThrow(/recommendation.*option/i);
 	});
 
 	it("accepts a custom-only single answer without an option selection", async () => {

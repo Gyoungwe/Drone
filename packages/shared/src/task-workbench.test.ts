@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	type TaskView,
+	taskDeliveryPresentation,
 	taskIsTerminal,
 	taskNeedsUser,
 	tasksForTranscript,
@@ -35,6 +36,44 @@ function view(tasks: WorkbenchTask[]): TaskView {
 		limits: { stageCalls: 40, totalCalls: 192 },
 	};
 }
+
+describe("delivery presentation", () => {
+	const accepted = [
+		{ id: "m", title: "output", dependsOn: [], acceptance: { kind: "file" as const }, state: "completed" },
+	];
+	it("shows completed delivery with a historical warning, without resume", () => {
+		const value = taskDeliveryPresentation(
+			task({ state: "partial", reason: "tool-failure", milestones: accepted }),
+			false,
+		);
+		expect(value).toMatchObject({ label: "交付已完成 · 有提醒", canContinue: false });
+	});
+	it("does not offer continuation while the agent is running", () => {
+		expect(taskDeliveryPresentation(task({ state: "partial" }), true)).toMatchObject({
+			label: "执行中",
+			canContinue: false,
+		});
+	});
+	it("does not infer completion from zero milestones", () => {
+		expect(taskDeliveryPresentation(task({ state: "partial" }), false).canContinue).toBe(true);
+	});
+	it("keeps unknown operations visible even when every milestone passed", () => {
+		const value = taskDeliveryPresentation(
+			task({
+				state: "partial",
+				milestones: accepted,
+				operations: [{ id: "o", tool: "write", state: "unknown", at: "now" }],
+			}),
+			false,
+		);
+		expect(value.deliveryComplete).toBe(false);
+		expect(value.label).toContain("待核对");
+	});
+	it("preserves cancelled and archived states", () => {
+		for (const state of ["cancelled", "archived"] as const)
+			expect(taskDeliveryPresentation(task({ state, milestones: accepted }), false).canContinue).toBe(false);
+	});
+});
 
 describe("流内工作台卡的取舍", () => {
 	it("纯进度任务不进流：一个任务跑一趟会刷出十几份 revision，全渲染就是刷屏", () => {

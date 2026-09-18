@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { projectKnowledgeEvent, registerAnswerPublication } from "../../../.pi/lib/knowledge/publication.mjs";
+import { createTaskFeedback } from "../../../.pi/lib/knowledge/task-feedback.mjs";
 
 function harness(
 	validate = async () => ({ status: "ready", sources: [], scientificallyVerified: false }),
 	evidenceOnly = false,
 	getDeliveryFooter = null,
+	getTaskFeedback = null,
 ) {
 	const events = new Map(),
 		called = vi.fn(validate);
@@ -17,6 +19,7 @@ function harness(
 			}),
 			evidenceOnly,
 			getDeliveryFooter,
+			getTaskFeedback,
 		},
 	);
 	gate.begin(true);
@@ -109,6 +112,24 @@ it("user cancellation reported as an error is marked interrupted, not model-erro
 	expect(result.message.content[0].text).toContain("本次请求已中断");
 	expect(result.message.content[0].text).not.toContain("知识库检查未通过");
 	expect(h.called).not.toHaveBeenCalled();
+});
+it("production task feedback reports interruption without blaming knowledge validation", async () => {
+	const feedback = createTaskFeedback();
+	const h = harness(undefined, false, null, () => feedback);
+	const result = await h.end({ ...message(), stopReason: "aborted" });
+	expect(result.message.content[0].text).toContain("本次请求已中断");
+	expect(result.message.content[0].text).not.toMatch(/知识库检查未通过|根据具体检查原因补读/);
+	expect(h.called).not.toHaveBeenCalled();
+});
+it.each([
+	["error", "server_error 502", "model-error"],
+	["aborted", "Request aborted", "interrupted"],
+])("projection of an unsealed %s keeps the actual failure category", (stopReason, errorMessage, reason) => {
+	const unsealed = { ...message(), stopReason, errorMessage };
+	const event = projectKnowledgeEvent({ type: "message_end", message: unsealed });
+	expect(event.message.knowledgePublication.reason).toBe(reason);
+	expect(event.message.errorMessage || "").not.toContain("知识库检查未通过");
+	expect(JSON.stringify(event.message.content)).not.toMatch(/UNCHECKED_FIXTURE|知识库检查未通过/);
 });
 it("model error messages redact credential-shaped tokens", async () => {
 	const h = harness(),
@@ -373,4 +394,58 @@ it("a legacy task status request no longer eats a normally validated natural-lan
 	expect(result.message.knowledgePublication.status).toBe("released");
 	expect(JSON.stringify(result)).toContain(answer);
 	expect(JSON.stringify(result)).not.toContain("STALE HOST LEDGER");
+});
+
+// Regression: a nonblocking advisory must publish the evidence the check already
+// verified. Losing it left released answers with an empty provenance record.
+it.each(["paper-citation-required", "citation-budget", "search-stale", "source-unread"])(
+	"advisory %s keeps verified evidence in the published proof",
+	async (code) => {
+		vi.stubEnv("DRONE_REVIEW_MODE", "automatic");
+		const verified = {
+			vaultId: "vault-fixture",
+			bindingRevision: 3,
+			searchQuery: "wing development",
+			indexRevision: 42,
+			sources: [{ path: "Library/Papers/a.md", hash: "h1" }],
+			deliveries: [{ path: "Library/Explainers/t.md", hash: "h2", role: "delivery-only" }],
+			scientificallyVerified: false,
+		};
+		const h = harness(async () => {
+			throw Object.assign(new Error("bounded evidence issue"), { code, verified });
+		});
+		const proof = (await h.end(message("Answer with real evidence"))).message.knowledgePublication;
+		expect(proof.status).toBe("released");
+		expect(proof.warnings[0].code).toBe(code);
+		expect(proof.sources).toHaveLength(1);
+		expect(proof.deliveries).toHaveLength(1);
+		expect(proof.vaultId).toBe("vault-fixture");
+		expect(proof.indexRevision).toBe(42);
+		// The advisory never upgrades an answer to scientifically verified.
+		expect(proof.scientificallyVerified).not.toBe(true);
+		const pre = await h.gate.preflight({ cwd: "/fixture" }, "draft");
+		expect(pre.ok).toBe(true);
+		expect(pre.sources).toHaveLength(1);
+	},
+);
+it("an advisory raised before evidence collection still records what was cited", async () => {
+	vi.stubEnv("DRONE_REVIEW_MODE", "automatic");
+	const h = harness(async () => {
+		throw Object.assign(new Error("too many citations"), {
+			code: "citation-budget",
+			verified: {
+				vaultId: "vault-fixture",
+				sources: [],
+				deliveries: [],
+				unverifiedCitations: ["Library/Papers/a.md", "Library/Papers/b.md"],
+				scientificallyVerified: false,
+			},
+		});
+	});
+	const proof = (await h.end(message("Answer citing many sources"))).message.knowledgePublication;
+	expect(proof.status).toBe("released");
+	expect(proof.sources).toEqual([]);
+	// Parsed-but-unchecked citations are auditable, never presented as verified.
+	expect(proof.unverifiedCitations).toEqual(["Library/Papers/a.md", "Library/Papers/b.md"]);
+	expect(proof.scientificallyVerified).not.toBe(true);
 });

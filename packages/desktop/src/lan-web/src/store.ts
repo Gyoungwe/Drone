@@ -23,6 +23,11 @@ interface LanStore extends LanAppState {
 	/** M2 写操作。返回 null = 成功，string = 错误提示。401 自动 logout。 */
 	sendPrompt: (sessionId: string, text: string) => Promise<string | null>;
 	abortSession: (sessionId: string) => Promise<string | null>;
+	recoverAnswer: (
+		sessionId: string,
+		requestId: string,
+		expectedUserTimestamp?: number,
+	) => Promise<string | null>;
 	respondPermission: (requestId: string, answer: "allowOnce" | "deny") => Promise<string | null>;
 }
 
@@ -62,6 +67,8 @@ export const useLanStore = create<LanStore>((set) => ({
 		const res = await postApi(`/api/sessions/${encodeURIComponent(sessionId)}/prompt`, { text });
 		return res;
 	},
+	recoverAnswer: (sessionId, requestId, expectedUserTimestamp) =>
+		postApi(`/api/sessions/${encodeURIComponent(sessionId)}/retry`, { requestId, expectedUserTimestamp }),
 	abortSession: async (sessionId) => {
 		const res = await postApi(`/api/sessions/${encodeURIComponent(sessionId)}/abort`, {});
 		return res;
