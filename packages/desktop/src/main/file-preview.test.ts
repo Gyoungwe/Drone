@@ -30,6 +30,12 @@ describe("local bounded file reads without Electron or scientific validation", (
 		const path = await fixture("data space.csv", "a,b\n1,2");
 		expect((await previewLocalFile("./data%20space.csv", root)).path).toBe(path);
 	});
+	it("resolves a Windows path whose separators were percent-encoded by a Markdown producer", async () => {
+		const path = await fixture("encoded-separators.tsv", "sample\tvalue\nA\t1");
+		const encoded = path.replaceAll("\\", "%5C");
+		expect(resolveResourcePath(encoded)).toBe(path);
+		expect((await previewLocalFile(encoded)).path).toBe(path);
+	});
 	it.each(["https://example.org/a", "javascript:alert(1)", "data:text/plain,x", "a\u0000b"])(
 		"rejects nonlocal target %s",
 		async (target) => {

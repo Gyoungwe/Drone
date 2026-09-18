@@ -1,7 +1,25 @@
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { CAPABILITY_IDS, type CapabilityId, type CapabilityState, getSkillCategory } from "@drone/shared";
+import {
+	CAPABILITY_IDS,
+	type CapabilityId,
+	type CapabilityState,
+	formatSkillCommand,
+	getSkillCategory,
+	parseExpandedSkillInvocation,
+	researchSkillProfile,
+} from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
+import {
+	changesResearchWorkflow,
+	detectResearchIntent,
+	EMPTY_RESEARCH_INTENT,
+	isResearchWorkflowSkill,
+	mergeResearchIntent,
+	normalizeResearchIntent,
+	type ResearchSkillIntent,
+	selectResearchSkills,
+} from "./research-skill-router";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
 
 const ALWAYS_ON = new Set([
@@ -61,7 +79,7 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 		/(?:image|figure|plot|chart|diagram|visuali[sz]|show[ -]?me|slide|ppt|图片|图像|绘图|图表|可视化|流程图|幻灯片)/i,
 	],
 	external: [
-		/(?:mcp|plugin|connector|github|gitlab|slack|drive|notion|zotero|channel|外部应用|插件|连接器)/i,
+		/(?:mcp|plugin|connector|github|gitlab|slack|drive|notion|zotero|channel|ssh|远程主机|服务器|外部应用|插件|连接器)/i,
 	],
 };
 
@@ -84,6 +102,8 @@ export function isTaskStatusQuery(text: string): boolean {
 }
 export function detectCapabilities(text: string): CapabilityId[] {
 	const found = new Set<CapabilityId>();
+	const intent = detectResearchIntent(text);
+	if (intent.topics.length || intent.named.length) found.add("research");
 	for (const id of CAPABILITY_IDS) if (PATTERNS[id].some((pattern) => pattern.test(text))) found.add(id);
 	const directSkill = text.match(/^\/skill:([a-z0-9-]+)/i)?.[1];
 	if (directSkill) {
@@ -119,8 +139,10 @@ function skillMatches(
 	name: string,
 	capabilities: ReadonlySet<CapabilityId>,
 	forced: ReadonlySet<string>,
+	selectedResearch: ReadonlySet<string>,
 ): boolean {
 	if (forced.has(name)) return true;
+	if (researchSkillProfile(name)) return selectedResearch.has(name);
 	const category = getSkillCategory(name);
 	if (category === "knowledge") return capabilities.has("knowledge") || capabilities.has("research");
 	if (category === "research" || category === "writing") return capabilities.has("research");
@@ -162,6 +184,9 @@ export class CapabilityRuntime {
 	private session?: RuntimeSession;
 	private lastCheckpoint = "";
 	private readOnlyLibrary = false;
+	private researchIntent: ResearchSkillIntent = EMPTY_RESEARCH_INTENT;
+	private academicManaged = false;
+	private academicEnabled = false;
 	private readonly active = new Set<CapabilityId>();
 	private readonly forcedSkills = new Set<string>();
 	private readonly excludedTools = new Set<string>();
@@ -181,7 +206,45 @@ export class CapabilityRuntime {
 		return this.apply();
 	}
 
+	manageAcademic(): void {
+		this.academicManaged = true;
+	}
+	skillPath(name: string): string | undefined {
+		return this.session
+			? allSkillsFromLoader(this.session.resourceLoader).skills.find((s) => s.name === name)?.filePath
+			: undefined;
+	}
+	setAcademicMode(enabled: boolean): CapabilityChange {
+		this.academicEnabled = enabled;
+		if (!enabled) this.clearAcademicSelection();
+		return this.apply();
+	}
+	private clearAcademicSelection(): void {
+		for (const name of this.forcedSkills)
+			if (researchSkillProfile(name)?.source === "academic") this.forcedSkills.delete(name);
+		this.researchIntent = normalizeResearchIntent({
+			...this.researchIntent,
+			named: this.researchIntent.named.filter((n) => researchSkillProfile(n)?.source !== "academic"),
+			primary:
+				researchSkillProfile(this.researchIntent.primary ?? "")?.source === "academic"
+					? undefined
+					: this.researchIntent.primary,
+		});
+	}
+	restoreRouting(academicEnabled = this.academicEnabled): CapabilityChange {
+		this.academicEnabled = academicEnabled;
+		this.restoreCheckpoint();
+		if (!academicEnabled && this.academicManaged) this.clearAcademicSelection();
+		return this.apply();
+	}
+	isResearchComparison(): boolean {
+		return this.researchIntent.comparison === true;
+	}
 	prepareForPrompt(text: string, streaming: boolean): CapabilityChange {
+		// Never route on expanded third-party skill instructions as if they were user intent.
+		const invocation = parseExpandedSkillInvocation(text);
+		if (invocation) text = formatSkillCommand(invocation);
+		if (/^\/ars-pi-(?:start|stop|doctor)(?:\s|$)/.test(text.trim())) return this.apply();
 		if (text.trim() === "/task-status" || text.startsWith("/task-action ")) return this.apply();
 		if (!streaming && isTaskContinuation(text)) this.restoreCheckpoint();
 		if (!streaming && !isTaskContinuation(text)) this.readOnlyLibrary = isReadOnlyLibraryRequest(text);
@@ -190,13 +253,26 @@ export class CapabilityRuntime {
 		if (!streaming && !isTaskContinuation(text)) {
 			this.active.clear();
 			this.forcedSkills.clear();
+			this.researchIntent = EMPTY_RESEARCH_INTENT;
 		}
+		const incomingResearch = detectResearchIntent(text);
+		if (changesResearchWorkflow(incomingResearch)) {
+			for (const name of this.forcedSkills) if (isResearchWorkflowSkill(name)) this.forcedSkills.delete(name);
+		}
+		this.researchIntent = mergeResearchIntent(this.researchIntent, incomingResearch);
 		for (const id of detected) this.active.add(id);
 		if (directSkill) this.forcedSkills.add(directSkill);
 		return this.apply();
 	}
 
-	activate(capabilities: readonly CapabilityId[]): CapabilityChange {
+	activate(capabilities: readonly CapabilityId[], task?: string): CapabilityChange {
+		if (task) {
+			const incoming = detectResearchIntent(task);
+			if (changesResearchWorkflow(incoming))
+				for (const name of this.forcedSkills)
+					if (isResearchWorkflowSkill(name)) this.forcedSkills.delete(name);
+			this.researchIntent = mergeResearchIntent(this.researchIntent, incoming);
+		}
 		for (const id of capabilities) this.active.add(id);
 		return this.apply();
 	}
@@ -311,6 +387,7 @@ export class CapabilityRuntime {
 		if (!manager) return;
 		this.active.clear();
 		this.forcedSkills.clear();
+		this.researchIntent = EMPTY_RESEARCH_INTENT;
 		const scope = `${manager.getSessionId()}\0${manager.getCwd()}`;
 		const task = this.activeTaskRouting();
 		if (task)
@@ -324,6 +401,7 @@ export class CapabilityRuntime {
 				capabilities?: unknown;
 				skills?: unknown;
 				readOnlyLibrary?: boolean;
+				researchIntent?: unknown;
 			} | null;
 			if (
 				!data ||
@@ -338,6 +416,7 @@ export class CapabilityRuntime {
 			this.active.clear();
 			this.forcedSkills.clear();
 			this.readOnlyLibrary = data.readOnlyLibrary === true;
+			this.researchIntent = normalizeResearchIntent(data.researchIntent);
 			for (const id of data.capabilities) if (CAPABILITY_IDS.includes(id)) this.active.add(id);
 			for (const name of data.skills)
 				if (typeof name === "string" && /^[a-z0-9-]{1,100}$/.test(name)) this.forcedSkills.add(name);
@@ -351,6 +430,7 @@ export class CapabilityRuntime {
 			scope: `${manager.getSessionId()}\0${manager.getCwd()}`,
 			capabilities: [...this.active].sort(),
 			readOnlyLibrary: this.readOnlyLibrary,
+			researchIntent: this.researchIntent,
 			skills: [...this.forcedSkills].sort().slice(0, 32),
 		};
 		const encoded = JSON.stringify(data);
@@ -363,11 +443,19 @@ export class CapabilityRuntime {
 		const beforeTools = this.session.getActiveToolNames().slice().sort().join("\0");
 		const beforeSkills = this.skillVisibility.list().join("\0");
 		const allSkills = allSkillsFromLoader(this.session.resourceLoader).skills;
+		const selectedResearch = new Set(
+			selectResearchSkills(allSkills, this.active, this.researchIntent, {
+				academicEnabled: this.academicEnabled,
+			}).names,
+		);
 		this.skillVisibility.set(
 			allSkills
 				.filter(
 					(skill) =>
-						skillMatches(skill.name, this.active, this.forcedSkills) &&
+						(researchSkillProfile(skill.name)?.source !== "academic" ||
+							!this.academicManaged ||
+							this.academicEnabled) &&
+						skillMatches(skill.name, this.active, this.forcedSkills, selectedResearch) &&
 						(!this.readOnlyLibrary ||
 							["research-vault", "research-workflow", "zotero-literature"].includes(skill.name) ||
 							this.forcedSkills.has(skill.name)),

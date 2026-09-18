@@ -370,6 +370,20 @@ export const en: Messages = {
 		channelWatch: "Cross-session channel collaboration (channel-watch)",
 		channelWatchHint:
 			"After a session subscribes to a channel it watches .local/agent-work/channel/<topic>/ for file updates; writes from another session wake this session to pick them up (per the HANDOFF.md protocol). Subscriptions persist via appendEntry and restore on session reopen; built-in loop protection. On by default, fully effective for trusted projects.",
+		sshGuard: {
+			title: "SSH guard",
+			description:
+				"The agent may start an SSH connection attempt, but it pauses for your approval before reading a local key.",
+			enabled: "Enabled",
+			approvalLabel: "Access policy",
+			approval: "Approval required by default",
+			keysLabel: "Key source",
+			keys: "Local OpenSSH keys only",
+			scopeLabel: "Grant scope",
+			scope: "One call by default; remember only explicitly",
+			defaultHint:
+				"The approval request and execution result remain in session history. If you deny it, the agent can continue steps that do not need SSH.",
+		},
 		sessionRail: "Left session rail",
 		sessionRailHint:
 			"Shows a vertically centered track of session lines on the left of the chat view; hover or focus a line and it grows into a floating capsule (project icon + title) — click to switch. The top tab bar stays unchanged; turn off to hide it.",

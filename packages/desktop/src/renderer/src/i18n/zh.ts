@@ -360,6 +360,18 @@ export const zh = {
 		channelWatch: "跨会话频道协作（channel-watch）",
 		channelWatchHint:
 			"会话订阅频道后自动监听 .local/agent-work/channel/<主题>/ 的文件更新，另一会话写入时唤醒本会话查收（按 HANDOFF.md 沟通协议）。订阅经 appendEntry 持久化，重开会话自动恢复；内置防环保护。默认开启，对已信任项目完全生效。",
+		sshGuard: {
+			title: "SSH 守卫",
+			description: "Agent 可以发起 SSH 连接尝试，但读取本机密钥前会停下来请求你的确认。",
+			enabled: "已启用",
+			approvalLabel: "访问策略",
+			approval: "默认每次确认",
+			keysLabel: "密钥来源",
+			keys: "仅使用本机 OpenSSH 密钥",
+			scopeLabel: "授权范围",
+			scope: "默认单次，可显式记住",
+			defaultHint: "审批请求与执行结果会留在会话记录中；拒绝后 Agent 仍可继续其他不需要 SSH 的步骤。",
+		},
 		sessionRail: "左侧会话轨道",
 		sessionRailHint:
 			"在聊天页左侧居中显示一列会话短线：悬停或聚焦时短线展开为悬浮胶囊（项目图标 + 会话标题），点击快速切换。顶栏会话胶囊保持不变，关闭后完全隐藏。",

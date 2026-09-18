@@ -35,6 +35,8 @@ export class ProjectResourceLoader {
 				appendSystemPrompt: string[];
 				additionalSkillPaths: string[];
 				additionalExtensionPaths?: string[];
+				additionalPromptTemplatePaths?: string[];
+				academicPiRoot?: string;
 			};
 		},
 	) {}
@@ -70,6 +72,7 @@ export class ProjectResourceLoader {
 		if (this.deps.projectTrust === false) {
 			settingsManager.setProjectTrusted(true);
 			await resourceLoader.reload();
+			this.assertAcademicOwner(resourceLoader);
 			return { settingsManager, resourceLoader };
 		}
 		await resourceLoader.reload({
@@ -87,7 +90,19 @@ export class ProjectResourceLoader {
 				return trusted;
 			},
 		});
+		this.assertAcademicOwner(resourceLoader);
 		return { settingsManager, resourceLoader };
+	}
+
+	private assertAcademicOwner(loader: DefaultResourceLoader): void {
+		if (!this.deps.desktopIntegration?.academicPiRoot) return;
+		const duplicate = loader
+			.getExtensions()
+			.extensions.find((e) => !e.path.startsWith("<inline:") && e.commands.has("ars-pi-start"));
+		if (duplicate)
+			throw new Error(
+				`ARS is already registered by ${duplicate.path}. Do not run the standalone wrapper alongside the Drone ARS bridge; remove one installation explicitly.`,
+			);
 	}
 
 	/**

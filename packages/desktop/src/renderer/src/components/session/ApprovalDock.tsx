@@ -104,11 +104,11 @@ export function ApprovalDock({
 
 	return (
 		// z-20 同上：审批卡在下方时缩略图 × 同样会伸出容器顶
-		<div className="relative z-20 shrink-0 px-6 pb-3">
+		<div className="relative z-20 shrink-0 px-4 pb-2">
 			<div className="mx-auto max-w-[760px]">
 				<div
 					key={shown.id}
-					className={`rounded-2xl border-[0.5px] border-border border-l-2 border-l-amber-400 bg-surface px-4 py-3 shadow-soft ${
+					className={`rounded-xl border-[0.5px] border-border border-l-2 border-l-amber-400 bg-surface px-3 py-2 shadow-soft ${
 						leaving ? "approval-exit" : "approval-enter"
 					}`}
 					role="dialog"
@@ -127,13 +127,13 @@ export function ApprovalDock({
 							</span>
 						)}
 					</div>
-					<p className="mt-2 max-h-32 overflow-y-auto rounded-lg bg-hover p-2.5 font-mono text-[12px] leading-relaxed break-all whitespace-pre-wrap text-ink-2 select-text">
+					<p className="mt-1.5 max-h-24 overflow-y-auto rounded-lg bg-hover p-2 font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap text-ink-2 select-text">
 						{shown.message}
 					</p>
 					{error && (
 						<p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[12px] break-all text-red-600">{error}</p>
 					)}
-					<div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+					<div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
 						<Button onClick={() => respond("deny")}>
 							{t("permission.deny")}
 							<kbd className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[10px] text-ink-faint">Esc</kbd>

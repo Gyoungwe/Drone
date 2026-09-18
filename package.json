@@ -21,6 +21,8 @@
 		"test": "npm run test --workspaces --if-present",
 		"dist": "npm run dist -w packages/desktop",
 		"lint": "biome check .",
+		"skills:sync": "python scripts/sync-research-skills.py",
+		"skills:check": "python scripts/sync-research-skills.py --check",
 		"test:upgrade": "node scripts/check-upgrade-release.mjs --fixtures-only",
 		"validate:upgrade": "node scripts/check-upgrade-release.mjs --ui"
 	},

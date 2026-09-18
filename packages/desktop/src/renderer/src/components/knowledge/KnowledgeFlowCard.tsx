@@ -61,29 +61,33 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 	if (!flow)
 		return artifacts.length ? (
 			<section
-				className="mx-4 my-2 rounded-xl border border-border bg-surface p-3 text-xs"
+				className="mx-3 my-0.5 rounded-lg border border-border bg-surface px-2 py-1 text-xs"
 				data-testid="knowledge-flow-card"
 			>
-				<p>
-					{t("outputs")} {artifacts.length}
-				</p>
-				{artifacts.map(
-					(item) =>
-						item.path && (
-							<button
-								key={item.key}
-								type="button"
-								className="mt-1 block break-all text-left underline"
-								onClick={() =>
-									useUiStore
-										.getState()
-										.openResourcePreview({ href: item.path || "", label: item.title, cwd: cwd || undefined })
-								}
-							>
-								{item.title}
-							</button>
-						),
-				)}
+				<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+					<p className="text-[11px] font-medium text-ink-dim">
+						{t("outputs")} {artifacts.length}
+					</p>
+					{artifacts.map(
+						(item) =>
+							item.path && (
+								<button
+									key={item.key}
+									type="button"
+									className="block max-w-full truncate text-left text-[11px] underline underline-offset-2"
+									onClick={() =>
+										useUiStore.getState().openResourcePreview({
+											href: item.path || "",
+											label: item.title,
+											cwd: cwd || undefined,
+										})
+									}
+								>
+									{item.title}
+								</button>
+							),
+					)}
+				</div>
 			</section>
 		) : null;
 	const records = [...flow.navigation, ...flow.reads];
@@ -106,10 +110,10 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 		useKnowledgeStore.getState().open({ cwd, sessionId, tab });
 	}
 	async function resume() {
-		if (resuming) return;
+		if (resuming || !sessionId) return;
 		setResuming(true);
 		try {
-			await getPi().resumeKnowledgeCheck(sessionId!);
+			await getPi().resumeKnowledgeCheck(sessionId);
 		} catch (e) {
 			reportKnowledgeError(e);
 		} finally {
@@ -118,11 +122,11 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 	}
 	return (
 		<section
-			className="mx-4 mb-2 mt-2 shrink-0 rounded-xl border border-border bg-surface text-ink"
+			className="mx-3 mb-0.5 mt-0.5 shrink-0 rounded-lg border border-border bg-surface text-ink"
 			data-testid="knowledge-flow-card"
 			aria-label={t("flow")}
 		>
-			<div className="flex items-center justify-between gap-2 px-3 py-2">
+			<div className="flex items-center justify-between gap-2 px-2 py-1">
 				<button
 					type="button"
 					aria-expanded={open}
@@ -133,17 +137,21 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 						className={`h-1.5 w-1.5 shrink-0 rounded-full ${flow.phase === "blocked" ? "bg-warn" : flow.phase === "released" ? "bg-ok" : "bg-accent"}`}
 						aria-hidden
 					/>
-					<span className="truncate text-[11px] font-medium" role="status" aria-live="polite">
+					<span
+						className="truncate text-[11px] font-medium tracking-[-0.01em]"
+						role="status"
+						aria-live="polite"
+					>
 						{title}
 					</span>
 					<span className="text-[10px] text-ink-faint">{open ? "▴" : "▾"}</span>
 				</button>
-				<span className="text-[10px] text-ink-faint">
+				<span className="shrink-0 text-[10px] tabular-nums text-ink-faint">
 					{t("matched")} {flow.search?.hits ?? 0} · {t("outputs")} {artifacts.length}
 				</span>
 			</div>
 			{open && (
-				<div className="max-h-[36vh] overflow-auto border-t border-border px-3 py-3">
+				<div className="max-h-[28vh] overflow-auto border-t border-border px-2 py-1.5">
 					<div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
 						{stages.map(([label, done]) => (
 							<div key={label} className="rounded-lg bg-hover px-2 py-1.5 text-[10px]">

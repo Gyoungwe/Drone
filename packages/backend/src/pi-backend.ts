@@ -117,6 +117,7 @@ import {
 	writeContextManagerMode,
 } from "./tools/context-evaporation";
 import { makeShowImageTool } from "./tools/show-image";
+import { makeSshTool } from "./tools/ssh";
 import { makeStatusTool } from "./tools/status";
 import { discoverAgents, isSubagentSessionPath, makeSubagentTool } from "./tools/subagent";
 import { applySubagentMutex } from "./tools/subagent/mutex";
@@ -156,6 +157,8 @@ export interface PiBackendOptions {
 		appendSystemPrompt: string[];
 		additionalSkillPaths: string[];
 		additionalExtensionPaths?: string[];
+		additionalPromptTemplatePaths?: string[];
+		academicPiRoot?: string;
 	};
 }
 
@@ -263,6 +266,14 @@ export class PiBackend {
 		tools.push(makeAskUserTool({ ask: (request, signal) => askGate.ask(request, signal) }));
 		if (capabilities) tools.push(makeCapabilityLoadTool(capabilities));
 		tools.push(makeShowImageTool());
+		// SSH is always guarded in the tool itself: the approval request is emitted just
+		// before OpenSSH starts, so a model can propose a connection without gaining
+		// access to the local key or network until the user approves it.
+		tools.push(
+			makeSshTool({
+				confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
+			}) as ToolDefinition,
+		);
 		tools.push(makeStatusTool());
 		tools.push(makeTodoTool());
 		if (this.options.subagentPreferBuiltin !== false) {
@@ -442,11 +453,19 @@ export class PiBackend {
 
 		const skillVisibility = new SkillVisibility();
 		const capabilities =
-			this.options.lazyCapabilities === false ? undefined : new CapabilityRuntime(skillVisibility);
+			this.options.lazyCapabilities === false && !this.options.desktopIntegration?.academicPiRoot
+				? undefined
+				: new CapabilityRuntime(skillVisibility);
 		const { settingsManager, resourceLoader: baseResourceLoader } = await this.projectLoader.load(cwd, {
 			confirm: confirmBridge,
 			modeRef,
-			...(capabilities ? { extensionFactories: [makeCapabilityExtension(capabilities)] } : {}),
+			...(capabilities
+				? {
+						extensionFactories: [
+							makeCapabilityExtension(capabilities, this.options.desktopIntegration?.academicPiRoot),
+						],
+					}
+				: {}),
 		});
 		const resourceLoader = capabilities
 			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
@@ -521,11 +540,19 @@ export class PiBackend {
 		const modeRef: PermissionModeRef = { current: "default" };
 		const skillVisibility = new SkillVisibility();
 		const capabilities =
-			this.options.lazyCapabilities === false ? undefined : new CapabilityRuntime(skillVisibility);
+			this.options.lazyCapabilities === false && !this.options.desktopIntegration?.academicPiRoot
+				? undefined
+				: new CapabilityRuntime(skillVisibility);
 		const { settingsManager, resourceLoader: baseResourceLoader } = await this.projectLoader.load(cwd, {
 			confirm: confirmBridge,
 			modeRef,
-			...(capabilities ? { extensionFactories: [makeCapabilityExtension(capabilities)] } : {}),
+			...(capabilities
+				? {
+						extensionFactories: [
+							makeCapabilityExtension(capabilities, this.options.desktopIntegration?.academicPiRoot),
+						],
+					}
+				: {}),
 		});
 		const resourceLoader = capabilities
 			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)

@@ -1,0 +1,11 @@
+# SSH agent access
+
+Drone exposes one `ssh` custom tool through the same session tool registry as the other desktop tools. The tool builds an argument vector for the system OpenSSH client and starts it with `shell: false`, no stdin, `BatchMode=yes`, `RequestTTY=no`, a bounded timeout, and a 128 KiB output cap. The remote command is passed as one trailing argument, so shell metacharacters are interpreted by the remote shell only when the user explicitly approves that command.
+
+The guard is placed immediately before `spawn("ssh", ...)`. The desktop session supplies the existing `PermissionGate.confirm` callback, so the request appears in the existing approval dock with the destination, port, command, and identity source. A missing callback denies the call. The generic permission extension leaves the tool at its normal `*` allow default to avoid presenting the same request twice; SSH's tool-level guard is the single approval boundary. `allowAlways` and `allowRun` remain explicit user choices in the existing dock.
+
+By default OpenSSH resolves the user's configured identities and agent through the host environment. An optional `keyPath` is accepted only below `~/.ssh`; private key contents never enter the model context. Host, username, port, and command are validated before approval, and destination arguments cannot begin with an option. Subagents receive the tool only when their declared tool list includes `ssh`, and they use the parent session's approval dock through the same callback.
+
+The settings panel now shows the SSH guard as enabled, approval-once by default, local OpenSSH key usage, and one-call scope. The panel is descriptive because approval is intentionally per call; changing the security posture stays in the existing approval controls rather than adding a second toggle that could drift from the session gate. The approval request and tool result remain visible in the session history. The exact command is part of the approval title, so an explicit "always allow" choice is bound to that command.
+
+The resource preview fix follows the same boundary: percent-encoded Windows separators such as `C:%5CUsers%5C...` are decoded for local-target classification before the existing path resolver runs. This keeps Markdown-produced links in the in-app reader and prevents them from being misclassified as unsupported protocols.

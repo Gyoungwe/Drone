@@ -32,6 +32,7 @@ export {
 } from "./resource-preview-format";
 export * from "./session";
 export * from "./settings";
+export * from "./research-skills";
 export * from "./skill-catalog";
 export * from "./skill-invocation";
 export * from "./subagent";

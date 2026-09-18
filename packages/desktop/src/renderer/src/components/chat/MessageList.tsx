@@ -7,7 +7,6 @@ import {
 	isAgentWorking,
 } from "@drone/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
@@ -248,19 +247,6 @@ export function MessageList() {
 
 	return (
 		<div className="relative h-full">
-			{activeSessionId && (
-				<button
-					type="button"
-					className="absolute right-4 top-2 z-30 rounded-lg border border-border bg-canvas px-3 py-1.5 text-xs text-ink"
-					onClick={() =>
-						void getPi()
-							.prompt(activeSessionId, "/task-status")
-							.catch(() => {})
-					}
-				>
-					任务工作台
-				</button>
-			)}
 			{/* 中央状态动画：z-20 在文字层（z-10 滚动容器）之上——canvas 一体遮罩压住身后文字、
 			    凸显动画本体（用户规格：工作中不看文字）；pointer-events-none 不拦截交互 */}
 			{centerOrbEnabled && <CenterOrb visible={shownWorking} />}
@@ -275,7 +261,7 @@ export function MessageList() {
 				onClickCapture={handleSummaryToggle}
 				className="chat-scrollbar relative z-10 h-full overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable]"
 			>
-				<div ref={contentRef} className="mx-auto flex max-w-[760px] flex-col gap-6 px-6 pt-8 pb-16">
+				<div ref={contentRef} className="mx-auto flex max-w-[760px] flex-col gap-4 px-4 pt-5 pb-10">
 					{items}
 					{transcript.retrying && <RetryNote info={transcript.retrying} />}
 					{transcript.modelWait && activeSessionId && (

@@ -1,4 +1,5 @@
 import { researchBundlePaths } from "./research-bundle";
+import { researchSkillPackPaths } from "./research-skill-packs";
 import "./pi-package-dir";
 import "./dev-agent-dir";
 import "./fix-path";
@@ -187,6 +188,13 @@ app.whenReady().then(async () => {
 		? join(process.resourcesPath, "research-workbench")
 		: join(__dirname, "../../../../.pi");
 	const researchBundle = researchBundlePaths(process.env.DRONE_RESEARCH_WORKBENCH_ROOT);
+	const researchSkillPacks = researchSkillPackPaths(
+		app.isPackaged
+			? join(process.resourcesPath, "research-skills")
+			: join(__dirname, "../../resources/research-skills"),
+		{ includeAcademic: true },
+	);
+	for (const warning of researchSkillPacks.warnings) log.warn(warning);
 	backend = new PiBackend({
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
@@ -196,8 +204,11 @@ app.whenReady().then(async () => {
 				// 内置协作 skill（channel-pickup/design-handoff）：语义上与 UI 插件无关，独立目录分发
 				app.isPackaged ? join(process.resourcesPath, "skills") : join(__dirname, "../../resources/skills"),
 				...researchBundle.additionalSkillPaths,
+				...researchSkillPacks.paths,
 			],
 			additionalExtensionPaths: researchBundle.additionalExtensionPaths,
+			additionalPromptTemplatePaths: researchSkillPacks.promptPaths,
+			academicPiRoot: researchSkillPacks.academicPiRoot,
 		},
 	});
 	await backend.init();

@@ -24,6 +24,7 @@ import type { PermissionGate, PermissionRequestMeta } from "../../permissions/ga
 import { projectKnowledgeEvent } from "../../session/knowledge-publication";
 import type { SessionTraces } from "../../session/traces";
 import { makeUiContext } from "../../session/ui-context";
+import { makeSshTool } from "../ssh";
 import { makeStatusTool } from "../status";
 import { makeWebFetchTool } from "../webfetch";
 import type { SubagentDefinition, SubagentMcpAccess } from "./agents";
@@ -387,6 +388,12 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 	};
 	const customTools: ToolDefinition[] = [makeStatusTool(), contactSupervisorTool];
 	if (safeTools.includes("webfetch")) customTools.push(makeWebFetchTool());
+	if (safeTools.includes("ssh"))
+		customTools.push(
+			makeSshTool({
+				confirm: (title, message) => childGateConfirm(title, message, { kind: "command" }),
+			}) as ToolDefinition,
+		);
 	const mcpAccess = await resolveSubagentMcpAccess(input.cwd, input.agent, input.projectTrusted);
 	const readonlyMcpExtension = process.env.DRONE_RESEARCH_WORKBENCH_ROOT
 		? join(process.env.DRONE_RESEARCH_WORKBENCH_ROOT, "extensions", "subagent-mcp-readonly.mjs")

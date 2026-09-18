@@ -1059,6 +1059,9 @@ code {
 	width: min(420px, 38vw);
 	border-left-color: var(--color-border);
 }
+.diff-sidebar.task-sidebar.open {
+	width: min(320px, 29vw);
+}
 .diff-sidebar-in {
 	width: min(420px, 38vw);
 	height: 100%;
@@ -1070,6 +1073,9 @@ code {
 	transition:
 		opacity 0.3s 0.08s,
 		transform 0.38s 0.06s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.task-sidebar .diff-sidebar-in {
+	width: min(320px, 29vw);
 }
 .diff-sidebar.open .diff-sidebar-in {
 	opacity: 1;
@@ -1217,11 +1223,130 @@ code {
 	overflow-x: hidden;
 	padding: 10px 12px 24px;
 }
+.task-sidebar .diff-side-head {
+	padding: 8px 10px 5px;
+}
+.task-sidebar .diff-side-scroll {
+	padding: 6px 8px 14px;
+}
+.task-sidebar .diff-side-title {
+	font-size: 12px;
+}
+.task-sidebar .diff-side-sum {
+	font-size: 10px;
+}
 .diff-side-empty {
 	padding: 40px 20px;
 	text-align: center;
 	color: var(--color-ink-faint);
 	font-size: 12px;
+}
+
+/* ---- 紧凑设置行：标题、单行提示和控件保持在同一层级 ---- */
+.settings-rows {
+	display: flex;
+	flex-direction: column;
+	border-top: 1px solid var(--color-border);
+}
+.settings-row {
+	display: flex;
+	min-height: 44px;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 7px 2px;
+	border-bottom: 1px solid var(--color-border);
+}
+.settings-row-title {
+	font-size: 12px;
+	font-weight: 550;
+	line-height: 1.35;
+	color: var(--color-ink);
+}
+.settings-row-hint {
+	max-width: min(560px, 58vw);
+	overflow: hidden;
+	margin-top: 2px;
+	font-size: 10px;
+	line-height: 1.35;
+	color: var(--color-ink-faint);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.settings-row-column {
+	align-items: stretch;
+	flex-direction: column;
+	gap: 4px;
+}
+.settings-row-sub {
+	width: min(360px, 100%);
+	margin-left: auto;
+}
+.settings-disclosure {
+	border-bottom: 1px solid var(--color-border);
+}
+.settings-disclosure-summary {
+	display: flex;
+	min-height: 44px;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 7px 2px;
+	cursor: pointer;
+	list-style: none;
+}
+.settings-disclosure-summary::-webkit-details-marker {
+	display: none;
+}
+.settings-disclosure-summary:hover {
+	background: var(--color-hover);
+}
+.settings-disclosure-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	color: var(--color-ink-faint);
+	transition: transform 0.16s ease;
+}
+.settings-disclosure[open] .settings-disclosure-chevron {
+	transform: rotate(180deg);
+}
+.settings-disclosure-body {
+	padding: 0 2px 9px;
+}
+.settings-disclosure-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+}
+.settings-disclosure-grid > div {
+	min-width: 0;
+	border-radius: 7px;
+	background: var(--color-hover);
+	padding: 7px 8px;
+	font-size: 10px;
+}
+.settings-disclosure-grid dt {
+	color: var(--color-ink-faint);
+}
+.settings-disclosure-grid dd {
+	overflow: hidden;
+	margin-top: 2px;
+	color: var(--color-ink-dim);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.settings-disclosure-hint {
+	margin-top: 7px;
+	font-size: 10px;
+	line-height: 1.4;
+	color: var(--color-ink-faint);
+}
+@media (prefers-reduced-motion: reduce) {
+	.settings-disclosure-chevron {
+		transition: none;
+	}
 }
 
 /* 轮次分组 */

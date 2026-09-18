@@ -1,0 +1,73 @@
+# Verification — 2026-09-19 SSH/UI/resource update
+
+Changed branch/field:
+- Resource routing: `isLocalResourceTarget()` now decodes percent-encoded path separators for classification, so `C:%5CUsers%5C...` follows the local preview path.
+- SSH tool: approval callback runs once immediately before OpenSSH spawn; missing callback denies; exact destination and command are part of the approval title.
+- UI: duplicate floating task-workbench placeholder removed; Wiki report strip and task sidebar compacted; General settings shows the SSH guard state.
+
+Four required artifacts:
+- MODIFIED_FILE: `C:\Users\Administrator\Documents\Shuncode\percho\upgrade-audit\2026-09-19-ssh-ui\MODIFIED_FILE.resource-links.ts`
+- DIFF_FILE: `C:\Users\Administrator\Documents\Shuncode\percho\upgrade-audit\2026-09-19-ssh-ui\DIFF_FILE.patch`
+- VERIFICATION.txt: `C:\Users\Administrator\Documents\Shuncode\percho\upgrade-audit\2026-09-19-ssh-ui\VERIFICATION.txt`
+- executable ROLLBACK.sh: `C:\Users\Administrator\Documents\Shuncode\percho\upgrade-audit\2026-09-19-ssh-ui\ROLLBACK.sh`
+
+Original hash:
+- `git rev-parse HEAD:packages/shared/src/resource-links.ts` → `ca552d14fff3bdf82e95adce4aa08c6df20ba4a5` (exit 0)
+- MODIFIED_FILE SHA-256 → `62E8AE8DD5ABF10E7DD017AE145330B18188EE11486DDAF1A90E82A3A0A756DA`
+- BASELINE_FILE SHA-256 → `0B32DA653CD055811D46A3F7817E6342D8B6CA4DB2AA4D228C672E64A8C5DE65`
+- modified differs from baseline → `True`
+
+BASELINE:
+- Command: `npx vitest run --root C:\Users\Administrator\Documents\Shuncode\percho\upgrade-audit\2026-09-19-ssh-ui\baseline-shared resource-links.test.ts`
+- Input: HEAD versions of `resource-links.ts` and `resource-links.test.ts` copied into `baseline-shared`
+- Literal output/result:
+
+  RUN  v3.2.7 C:/Users/Administrator/Documents/Shuncode/percho/upgrade-audit/2026-09-19-ssh-ui/baseline-shared
+
+   ✓ resource-links.test.ts (14 tests) 8ms
+   Test Files  1 passed (1)
+   Tests  14 passed (14)
+   Start at 02:06:18
+   Duration 325ms (transform 51ms, setup 0ms, collect 58ms, tests 8ms, prepare 105ms)
+
+- Exit status: `0`
+
+MODIFIED:
+- Command: `npm test -w packages/shared -- --run src/resource-links.test.ts`
+- Input: current modified `packages/shared/src/resource-links.ts` and `resource-links.test.ts`, including the encoded-Windows-separator regression case
+- Literal output/result:
+
+  > @drone/shared@0.1.0 test
+  > vitest run --run src/resource-links.test.ts
+
+   RUN  v3.2.7 C:/Users/Administrator/Documents/Shuncode/percho/packages/shared
+
+   ✓ src/resource-links.test.ts (15 tests) 4ms
+   Test Files  1 passed (1)
+   Tests  15 passed (15)
+   Start at 02:06:28
+   Duration 376ms (transform 36ms, setup 0ms, collect 37ms, tests 4ms, prepare 101ms)
+
+- Exit status: `0`
+
+ROLLBACK:
+- Command: `C:\Program Files\Git\usr\bin\bash.exe -lc "C:/Users/Administrator/Documents/Shuncode/percho/upgrade-audit/2026-09-19-ssh-ui/ROLLBACK.sh C:/Users/Administrator/Documents/Shuncode/percho/upgrade-audit/2026-09-19-ssh-ui/ROLLBACK_TEST_COPY.resource-links.ts C:/Users/Administrator/Documents/Shuncode/percho/upgrade-audit/2026-09-19-ssh-ui/BASELINE_FILE.resource-links.ts"`
+- Input: ROLLBACK_TEST_COPY.resource-links.ts (modified copy) and BASELINE_FILE.resource-links.ts (baseline copy)
+- Literal output/result:
+
+  rollback restored C:/Users/Administrator/Documents/Shuncode/percho/upgrade-audit/2026-09-19-ssh-ui/ROLLBACK_TEST_COPY.resource-links.ts from C:/Users/Administrator/Documents/Shuncode/percho/upgrade-audit/2026-09-19-ssh-ui/BASELINE_FILE.resource-links.ts
+  baseline_hash=0B32DA653CD055811D46A3F7817E6342D8B6CA4DB2AA4D228C672E64A8C5DE65
+  rollback_copy_hash=0B32DA653CD055811D46A3F7817E6342D8B6CA4DB2AA4D228C672E64A8C5DE65
+  hash_match=True
+
+- Exit status: `0`
+- Restored behavior/status: rollback copy hash matches baseline; MODIFIED_FILE remains changed.
+
+Additional focused validation:
+- `npm test -w packages/backend -- --run test/ssh.test.ts` → 5 tests passed, exit 0.
+- `npm run typecheck -w packages/shared` → exit 0.
+- `npm run typecheck -w packages/backend` → exit 0.
+- `npm run typecheck -w packages/desktop` → exit 0.
+- `npm test -w packages/desktop -- --run src/main/file-preview.test.ts` → 24 tests passed, exit 0.
+- `npm test -w packages/desktop -- --run src/renderer/src/stores/task-sidebar.test.ts src/renderer/src/components/chat/chat-rows.test.ts` → 18 tests passed, exit 0.
+- `npm run build -w packages/desktop` → production build completed, exit 0.
