@@ -65,7 +65,7 @@ npm run skills:check                # offline: validate every acquired file hash
 
 The first acquisition downloads commit-pinned GitHub archives (Scientific's full archive is about 234 MB, despite the selected skill files being much smaller). There are no runtime network fetches. Downloads have size bounds, locked SHA-256 checksums, path/type checks and staged publication. An existing changed/stale destination is **not overwritten**; move it aside explicitly before resync. The script never executes upstream code or reads credentials. Skill scripts remain inert until a separately authorized agent task requests execution.
 
-Generated sources live in `packages/desktop/resources/research-skills/`, intentionally gitignored. Keep the source lock, installer and routing code in Git rather than vendoring huge repositories. `npm run dist -w packages/desktop` verifies all three sources before building. The electron-builder `beforePack` hook repeats the fail-closed check, including when invoked directly. A fresh checkout must acquire Nature/Scientific and explicitly install ARS with applicable separate permission. Missing ARS, stale hashes or a noncommercial-only receipt fail the release check. Runtime missing/stale packs fail closed with a diagnostic warning; first-party skills remain available.
+Generated sources live in `packages/desktop/resources/research-skills/`, intentionally gitignored. Keep the source lock, installer and routing code in Git rather than vendoring huge repositories. `npm run dist -w packages/desktop` verifies all three sources before building. The electron-builder `beforePack` hook repeats the fail-closed check, including when invoked directly. A fresh checkout must acquire Nature/Scientific and explicitly install ARS with applicable separate permission. Missing ARS, stale hashes, a noncommercial-only receipt, redirected resources or unreceipted extra files fail the release check. Runtime missing/stale packs fail closed with a diagnostic warning; first-party skills remain available.
 
 **ARS acquisition**, only under an applicable license basis. Noncommercial local use (not the release profile):
 
@@ -134,3 +134,9 @@ Typical commands after reloading the development app:
 - `packages/desktop/src/main/research-skill-packs.test.ts`: fail-closed integrity/license checks, prompt registration and ARS packaging inclusion and mandatory release preflight.
 
 The two ARS integration suites explicitly skip when an authorized local ARS pack is absent. Run them after an authorized installation; a skipped suite is not an acceptance pass. No paid model, remote research service or production session is needed for these checks.
+
+### Resource-copy verification and consolidation proposal
+
+`python scripts/test-research-release.py` exercises release-gate failures without network access. `node scripts/check-research-packaging.cjs` uses electron-builder's actual resource matcher/copier in a temporary directory and verifies every copied source file against its receipt. Builder-util skips `.gitkeep` during directory traversal, so four exact ARS file mappings preserve these pinned placeholders. This check does not build, sign, publish or install the application.
+
+See `research-skill-consolidation.md` and `research-skill-consolidation.csv` for the assessment of 197 source/project skills and the six-direction proposal. The consolidation is a proposal only: no skill body, original command name or source directory has been removed or rewritten.
