@@ -2,6 +2,22 @@ import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
+	workflows: {
+	  "title": "Six workflow directions",
+	  "hint": "Choose the task and current stage. One primary workflow per stage; specialists load on demand. Browsing does not enable tools or run tasks.",
+	  "advanced": "Advanced: all original skills ({count})",
+	  "compact": "Back to six directions",
+	  "back": "Back to directions",
+	  "chooseStage": "Choose a stage →",
+	  "unavailable": "No eligible command registered in this session",
+	  "direction": "Task direction",
+	  "internal": "Internal governance and shared dependencies",
+	  "count": "{count} registered modules",
+	  "stageHint": "Stages resolve existing skills only. Type / in chat, choose the same direction and stage, then add your task. Original command names remain searchable.",
+	  "checkCommand": "Check ARS command availability in the chat slash menu",
+	  "inspect": "Inspect all registered modules in this direction",
+	  "visible": "Currently model-visible: {count} skills (not the full inventory)"
+	},
 	runInspector: {
 		title: "Run Inspector",
 		label: "Run details: tools, sources and model responses",
@@ -85,6 +101,47 @@ export const en: Messages = {
 		untitled: "New session",
 		settings: "Settings",
 		close: "Close session (keep on disk)",
+	},
+	workbench: {
+		nav: {
+			title: "Research workbench navigation",
+			chat: "Chat",
+			research: "Research",
+			knowledge: "Knowledge",
+			tools: "Tools",
+			extensions: "Extensions",
+			settings: "Settings",
+			help: "Help",
+		},
+		agentReady: "Agent ready",
+		modelNotSelected: "No model selected",
+		approvalRequired: "Approval required",
+		sshSummary: "The agent may start an SSH attempt, but pauses for approval before reading a local key.",
+		localOpenSsh: "Local OpenSSH keys only",
+		reviewGuard: "Review SSH guard settings",
+		online: "Tools online",
+		ready: "Ready",
+		model: "Model",
+		tools: "Tools",
+		modelTools: "Model & tools",
+		controlTitle: "Agents work for you",
+		controlHint: "Sensitive actions pause for approval; sources, files, and key access stay visible.",
+		task: {
+			title: "Task workbench",
+			count: "tasks",
+		},
+		skills: {
+			title: "Research skills",
+			loading: "Loading skills for this session…",
+		},
+		wikiReport: "Wiki report",
+		wikiDescription: "The research report is organized into stages and updates as the agent works.",
+		openInWiki: "Open in Wiki",
+		stage: {
+			completed: "Completed",
+			inProgress: "In progress",
+			pending: "Pending",
+		},
 	},
 	update: {
 		checkForUpdates: "Check for updates",

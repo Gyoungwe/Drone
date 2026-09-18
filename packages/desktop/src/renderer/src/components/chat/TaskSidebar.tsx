@@ -9,9 +9,10 @@ import { useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
+import { useSettingsStore } from "../../stores/settings";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
-import { CloseIcon } from "../icons";
+import { ChevronDownIcon, CloseIcon, ShieldIcon, SubagentIcon, TaskBoardIcon } from "../icons";
 import { TaskArtifactLinks } from "./TaskArtifactLinks";
 
 /**
@@ -153,10 +154,23 @@ export function TaskSidebar() {
 	const open = useUiStore((s) => s.taskSidebarOpen);
 	const setOpen = useUiStore((s) => s.setTaskSidebarOpen);
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
+	const activeSession = useSessionsStore((s) =>
+		s.sessions.find((session) => session.sessionId === s.activeSessionId),
+	);
+	const currentModel = useSessionsStore((s) => s.currentModel);
+	const models = useSessionsStore((s) => s.models);
+	const skills = useSettingsStore((s) => s.skills);
+	const capabilities = useSettingsStore((s) => s.capabilities);
 	const transcript = useTranscriptStore((s) => selectTranscript(s, activeSessionId));
 	// 只取最新一份：TaskView 每次 revision 都是全量快照，历史版本没有展示价值
 	const latestMessage = [...transcript.messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
 	const latest = latestMessage?.kind === "assistant" ? latestMessage.taskView : undefined;
+	const effectiveModel = activeSession?.model ?? currentModel;
+	const modelLabel = effectiveModel
+		? (models.find(
+				(model) => model.provider === effectiveModel.provider && model.id === effectiveModel.modelId,
+			)?.label ?? effectiveModel.modelId)
+		: t("workbench.modelNotSelected");
 	return (
 		<aside
 			id="task-workbench-sidebar"
@@ -164,10 +178,19 @@ export function TaskSidebar() {
 			aria-hidden={!open}
 			data-testid="task-sidebar"
 		>
-			<div className="diff-sidebar-in">
-				<div className="diff-side-head">
-					<span className="diff-side-title">任务工作台</span>
-					{latest && <span className="diff-side-sum">v{latest.revision}</span>}
+			<div className="diff-sidebar-in sunburst-sidebar-in">
+				<div className="diff-side-head sunburst-sidebar-head">
+					<div className="min-w-0">
+						<div className="flex items-center gap-2">
+							<TaskBoardIcon size={15} />
+							<span className="diff-side-title">{t("workbench.task.title")}</span>
+						</div>
+						{latest && (
+							<span className="diff-side-sum">
+								{latest.tasks.length} {t("workbench.task.count")}
+							</span>
+						)}
+					</div>
 					<button
 						type="button"
 						className="diff-side-close"
@@ -177,20 +200,113 @@ export function TaskSidebar() {
 						<CloseIcon />
 					</button>
 				</div>
-				<div className="diff-side-scroll">
-					{!latest || latest.tasks.length === 0 ? (
-						<div className="diff-side-empty">尚无任务。模型制定执行计划后，任务进度会显示在这里。</div>
-					) : (
-						latest.tasks.map((task: WorkbenchTask) => (
-							<TaskRow
-								key={task.id}
-								task={task}
-								view={latest}
-								sessionId={activeSessionId}
-								agentActive={transcript.agentActive}
-							/>
-						))
-					)}
+				<div className="diff-side-scroll sunburst-sidebar-scroll">
+					<section className="sunburst-card">
+						<div className="sunburst-card-head">
+							<span>{t("workbench.task.title")}</span>
+							{latest && <span className="sunburst-card-meta">v{latest.revision}</span>}
+						</div>
+						<div className="sunburst-card-body p-0">
+							{!latest || latest.tasks.length === 0 ? (
+								<div className="diff-side-empty">尚无任务。模型制定执行计划后，任务进度会显示在这里。</div>
+							) : (
+								latest.tasks.map((task: WorkbenchTask) => (
+									<TaskRow
+										key={task.id}
+										task={task}
+										view={latest}
+										sessionId={activeSessionId}
+										agentActive={transcript.agentActive}
+									/>
+								))
+							)}
+						</div>
+					</section>
+
+					<section className="sunburst-card sunburst-ssh-card">
+						<button
+							type="button"
+							className="sunburst-card-head w-full text-left"
+							onClick={() => useSettingsStore.getState().openWith("general")}
+						>
+							<span className="flex items-center gap-2">
+								<ShieldIcon size={15} />
+								{t("settings.sshGuard.title")}
+							</span>
+							<span className="sunburst-status-warn">{t("workbench.approvalRequired")}</span>
+							<ChevronDownIcon size={11} />
+						</button>
+						<div className="sunburst-card-body">
+							<p className="text-[11px] leading-4 text-ink-dim">{t("workbench.sshSummary")}</p>
+							<div className="sunburst-ssh-detail">
+								<span>{t("settings.sshGuard.keys")}</span>
+								<strong>{t("workbench.localOpenSsh")}</strong>
+							</div>
+							<button
+								type="button"
+								className="sunburst-link"
+								onClick={() => useSettingsStore.getState().openWith("general")}
+							>
+								{t("workbench.reviewGuard")}
+							</button>
+						</div>
+					</section>
+
+					<section className="sunburst-card">
+						<button
+							type="button"
+							className="sunburst-card-head w-full text-left"
+							onClick={() => useSettingsStore.getState().openWith("skills")}
+						>
+							<span className="flex items-center gap-2">
+								<SubagentIcon size={15} />
+								{t("workbench.skills.title")}
+							</span>
+							<span className="sunburst-card-meta">{skills ? skills.length : "—"}</span>
+						</button>
+						<div className="sunburst-card-body">
+							<div className="sunburst-chip-list">
+								{skills?.slice(0, 6).map((skill) => (
+									<span key={skill.name}>{skill.name}</span>
+								))}
+								{!skills && <span>{t("workbench.skills.loading")}</span>}
+								{skills && skills.length > 6 && <span>+{skills.length - 6}</span>}
+							</div>
+						</div>
+					</section>
+
+					<section className="sunburst-card">
+						<button
+							type="button"
+							className="sunburst-card-head w-full text-left"
+							onClick={() => useSettingsStore.getState().openWith("models")}
+						>
+							<span>{t("workbench.modelTools")}</span>
+							<span className="sunburst-status-ok">
+								{capabilities ? t("workbench.online") : t("workbench.ready")}
+							</span>
+						</button>
+						<div className="sunburst-card-body grid grid-cols-2 gap-2">
+							<div>
+								<span className="sunburst-label">{t("workbench.model")}</span>
+								<strong className="truncate" title={modelLabel}>
+									{modelLabel}
+								</strong>
+							</div>
+							<div>
+								<span className="sunburst-label">{t("workbench.tools")}</span>
+								<strong>{capabilities?.tools.length ?? "—"}</strong>
+							</div>
+						</div>
+					</section>
+
+					<div className="sunburst-note-card">
+						<div className="flex items-center gap-2 font-medium text-ink">
+							<ShieldIcon size={14} />
+							{t("workbench.controlTitle")}
+						</div>
+						<p className="mt-1 text-[10px] leading-4 text-ink-dim">{t("workbench.controlHint")}</p>
+					</div>
 				</div>
 			</div>
 		</aside>

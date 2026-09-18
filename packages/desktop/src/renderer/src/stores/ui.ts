@@ -50,7 +50,8 @@ export const useUiStore = create<UiStore>((set) => ({
 			todoExpanded: { ...state.todoExpanded, [sessionId]: !state.todoExpanded[sessionId] },
 		})),
 	diffSidebarOpen: false,
-	taskSidebarOpen: false,
+	// Sunburst 工作台默认保留右侧上下文栏；仍可用顶栏按钮收起。
+	taskSidebarOpen: true,
 	resourcePreview: null,
 	setDiffSidebarOpen: (open) => set({ diffSidebarOpen: open }),
 	// 两个侧栏共用右侧栏位，开一个即关另一个（同时展开会把聊天列挤到不可读）

@@ -278,6 +278,15 @@ export function SessionTabBar() {
 		<div
 			className={`${dragging ? "" : "drag-region"} flex h-12 shrink-0 items-center gap-1 border-b border-border bg-canvas ${chromePadding}`}
 		>
+			<div className="workbench-brand hidden shrink-0 items-center gap-2 lg:flex">
+				<span className="workbench-brand-mark" aria-hidden="true">
+					S
+				</span>
+				<span className="min-w-0">
+					<strong>Shuncode / Percho</strong>
+					<span>Research workbench</span>
+				</span>
+			</div>
 			<button
 				type="button"
 				className={`no-drag shrink-0 rounded-lg p-1.5 transition-colors ${

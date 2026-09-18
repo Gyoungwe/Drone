@@ -1,10 +1,12 @@
 import type { KnowledgeReadRecord } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
+import { useT } from "../../i18n";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
+import { ChevronDownIcon, ObsidianIcon } from "../icons";
 import { Button } from "../ui/Button";
 import { mergeKnowledgeArtifacts } from "./artifacts";
 import { type knowledgeZh, useKnowledgeText } from "./copy";
@@ -28,6 +30,7 @@ const phases: Record<string, keyof typeof knowledgeZh> = {
 };
 export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 	const t = useKnowledgeText(),
+		appT = useT(),
 		cwd = useSessionsStore((s) => s.cwd);
 	const flow = useKnowledgeStore((s) => (sessionId ? s.flows[sessionId] : undefined));
 	const transcript = useTranscriptStore((s) => selectTranscript(s, sessionId));
@@ -106,6 +109,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 		["search", flow.stages?.search ?? false],
 		["publication", flow.stages?.publication ?? false],
 	];
+	const activeStage = stages.findIndex(([, done]) => !done);
 	function manage(tab: "overview" | "reviews" | "maintenance" = "overview") {
 		useKnowledgeStore.getState().open({ cwd, sessionId, tab });
 	}
@@ -122,44 +126,59 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 	}
 	return (
 		<section
-			className="mx-3 mb-0.5 mt-0.5 shrink-0 rounded-lg border border-border bg-surface text-ink"
+			className="sunburst-flow-card mx-3 mb-1 mt-1 shrink-0 rounded-xl border border-border bg-surface text-ink"
 			data-testid="knowledge-flow-card"
 			aria-label={t("flow")}
 		>
-			<div className="flex items-center justify-between gap-2 px-2 py-1">
+			<div className="sunburst-flow-head">
 				<button
 					type="button"
 					aria-expanded={open}
 					onClick={() => setOpen(!open)}
-					className="flex min-w-0 items-center gap-2 text-left"
+					className="sunburst-flow-title"
 				>
-					<span
-						className={`h-1.5 w-1.5 shrink-0 rounded-full ${flow.phase === "blocked" ? "bg-warn" : flow.phase === "released" ? "bg-ok" : "bg-accent"}`}
-						aria-hidden
-					/>
-					<span
-						className="truncate text-[11px] font-medium tracking-[-0.01em]"
-						role="status"
-						aria-live="polite"
-					>
-						{title}
+					<span className="sunburst-flow-icon">
+						<ObsidianIcon size={16} />
 					</span>
-					<span className="text-[10px] text-ink-faint">{open ? "▴" : "▾"}</span>
+					<span className="min-w-0">
+						<strong>{appT("workbench.wikiReport")}</strong>
+						<span>{appT("workbench.wikiDescription")}</span>
+					</span>
+					<span className="sunburst-flow-chevron">
+						<ChevronDownIcon size={11} />
+					</span>
 				</button>
-				<span className="shrink-0 text-[10px] tabular-nums text-ink-faint">
-					{t("matched")} {flow.search?.hits ?? 0} · {t("outputs")} {artifacts.length}
-				</span>
+				<div className="sunburst-flow-meta">
+					<button type="button" onClick={() => manage("overview")}>
+						{appT("workbench.openInWiki")} <span aria-hidden>→</span>
+					</button>
+					<span role="status" aria-live="polite">
+						{title} · {t("matched")} {flow.search?.hits ?? 0}
+					</span>
+				</div>
+			</div>
+			<div className="sunburst-stage-grid">
+				{stages.map(([label, done], index) => {
+					const active = !done && index === activeStage;
+					return (
+						<div key={label} className={`sunburst-stage ${done ? "is-done" : active ? "is-active" : ""}`}>
+							<span className="sunburst-stage-mark">{done ? "✓" : index + 1}</span>
+							<span className="min-w-0">
+								<strong>{t(label)}</strong>
+								<span>
+									{done
+										? appT("workbench.stage.completed")
+										: active
+											? appT("workbench.stage.inProgress")
+											: appT("workbench.stage.pending")}
+								</span>
+							</span>
+						</div>
+					);
+				})}
 			</div>
 			{open && (
 				<div className="max-h-[28vh] overflow-auto border-t border-border px-2 py-1.5">
-					<div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-						{stages.map(([label, done]) => (
-							<div key={label} className="rounded-lg bg-hover px-2 py-1.5 text-[10px]">
-								<span aria-hidden>{done ? "✓" : "○"} </span>
-								{t(label)}
-							</div>
-						))}
-					</div>
 					{flow.vault && <p className="mb-2 break-all font-mono text-[10px] text-ink-dim">{flow.vault}</p>}
 					{flow.search && (
 						<p className="mb-2 break-words text-[11px]">
