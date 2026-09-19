@@ -22,20 +22,37 @@ import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { isDailyCwd } from "../../lib/daily";
-import { useSessionsStore } from "../../stores/sessions";
+import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
+import { pushToast } from "../../stores/toasts";
 import { useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
-import {
-	CloseIcon,
-	CoffeeIcon,
-	DiffIcon,
-	PlusIcon,
-	ProjectsIcon,
-	SubagentIcon,
-	TaskBoardIcon,
-} from "../icons";
+import { CloseIcon, CoffeeIcon, ListIcon, PanelRightIcon, PlusIcon, SubagentIcon } from "../icons";
 import { sessionLetter, sessionTitle, useSessionStatus } from "./session-status";
 import { UpdateButton } from "./UpdateButton";
+
+/** 同名会话的区分后缀：createdAt 的 月/日 时:分（标题相同的两个会话至少能靠时间分辨） */
+function timeSuffix(createdAt: number): string {
+	const d = new Date(createdAt);
+	const hh = String(d.getHours()).padStart(2, "0");
+	const mm = String(d.getMinutes()).padStart(2, "0");
+	return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
+}
+
+/** 标题去重：出现 ≥2 次的标题返回后缀映射（sessionId → 时间后缀） */
+function useTitleSuffixes(sessions: SessionMeta[], untitled: string, daily: string): Map<string, string> {
+	const counts = new Map<string, number>();
+	for (const session of sessions) {
+		const title = sessionTitle(session, untitled, daily);
+		counts.set(title, (counts.get(title) ?? 0) + 1);
+	}
+	const out = new Map<string, string>();
+	for (const session of sessions) {
+		if ((counts.get(sessionTitle(session, untitled, daily)) ?? 0) > 1) {
+			out.set(session.sessionId, timeSuffix(session.createdAt));
+		}
+	}
+	return out;
+}
 
 /** 拖拽让位/落位的减速曲线（浏览器标签同款手感） */
 const SORT_EASE = "cubic-bezier(0.2, 0, 0, 1)";
@@ -66,9 +83,13 @@ function TabPill({
 	hidden = false,
 	ghostWidth,
 	buttonProps,
+	suffix,
+	onRename,
 }: {
 	session: SessionMeta;
 	isActive: boolean;
+	/** 同名会话的区分后缀（时间） */
+	suffix?: string;
 	/** DragOverlay ghost：拾起视觉，无交互 */
 	ghost?: boolean;
 	/** 真实胶囊正被 ghost 接管：隐藏本体但保留布局槽位（邻居让位计算依赖它） */
@@ -77,6 +98,8 @@ function TabPill({
 	    不回弹到 max-w-52 最大形态（标签多被压窄时，变大会显得很跳） */
 	ghostWidth?: number | null;
 	buttonProps?: ComponentProps<"button">;
+	/** 双击进入重命名（只读子会话 / draft 不提供） */
+	onRename?: () => void;
 }) {
 	const t = useT();
 	const closeSession = useSessionsStore((s) => s.closeSession);
@@ -97,6 +120,7 @@ function TabPill({
 					: isActive
 						? "bg-ink text-on-ink"
 						: "bg-ink-faint text-on-ink";
+	const title = sessionTitle(session, t("tabbar.untitled"), t("projects.daily"));
 	return (
 		<button
 			type="button"
@@ -110,9 +134,11 @@ function TabPill({
 				isActive ? "bg-bubble text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
 			} ${ghost ? "tab-dragging" : ""}`}
 			onClick={ghost ? undefined : buttonProps?.onClick}
+			onDoubleClick={ghost || !onRename ? undefined : onRename}
+			title={ghost ? undefined : onRename ? `${title} · ${t("tabbar.renameHint")}` : title}
 		>
 			<span
-				className={`relative flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-semibold ${avatarClass}`}
+				className={`relative flex h-4 w-4 shrink-0 items-center justify-center rounded text-[11px] font-semibold ${avatarClass}`}
 			>
 				{session.readOnly ? (
 					<SubagentIcon size={11} />
@@ -127,7 +153,8 @@ function TabPill({
 			</span>
 			<span className="relative min-w-0 flex-1">
 				<span className="block truncate text-left">
-					{sessionTitle(session, t("tabbar.untitled"), t("projects.daily"))}
+					{title}
+					{suffix && <span className="tab-pill-suffix">{suffix}</span>}
 				</span>
 				{!ghost && (
 					<>
@@ -143,6 +170,7 @@ function TabPill({
 						<span
 							className="invisible absolute right-0 top-1/2 -translate-y-1/2 p-1 text-ink-dim opacity-0 transition-opacity hover:text-ink group-hover:visible group-hover:opacity-100"
 							aria-hidden="true"
+							title={t("tabbar.close")}
 							onClick={(e) => {
 								e.stopPropagation();
 								void closeSession(session.sessionId);
@@ -157,14 +185,82 @@ function TabPill({
 	);
 }
 
+/** 胶囊内联重命名：Enter 提交 / Esc 取消 / 失焦提交；乐观更新本地标题，后端失败则回滚并 toast */
+function TabRenameInput({ session, onDone }: { session: SessionMeta; onDone: () => void }) {
+	const t = useT();
+	const [value, setValue] = useState(
+		session.name ?? sessionTitle(session, t("tabbar.untitled"), t("projects.daily")),
+	);
+	const inputRef = useRef<HTMLInputElement>(null);
+	const settledRef = useRef(false);
+
+	useEffect(() => {
+		inputRef.current?.select();
+	}, []);
+
+	const finish = (commit: boolean) => {
+		if (settledRef.current) return;
+		settledRef.current = true;
+		const next = value.trim();
+		const previous = session.name;
+		if (commit && next && next !== (previous ?? "")) {
+			const store = useSessionsStore.getState();
+			store.updateSessionName(session.sessionId, next);
+			void getPi()
+				.setSessionName(session.sessionId, next)
+				.catch((error: unknown) => {
+					useSessionsStore.getState().updateSessionName(session.sessionId, previous);
+					pushToast("error", "tabbar.renameFailed", String((error as Error)?.message ?? error));
+				});
+		}
+		onDone();
+	};
+
+	return (
+		<input
+			ref={inputRef}
+			className="no-drag w-full rounded-lg bg-bubble px-2.5 py-1.5 text-sm text-ink outline-none ring-1 ring-accent"
+			value={value}
+			spellCheck={false}
+			aria-label={t("tabbar.rename")}
+			onChange={(e) => setValue(e.target.value)}
+			onPointerDown={(e) => e.stopPropagation()}
+			onKeyDown={(e) => {
+				// 不让按键冒泡：dnd-kit 键盘传感器（Space 拾起）与全局 Esc 处理都不该响应输入中的按键
+				e.stopPropagation();
+				if (e.key === "Enter") {
+					e.preventDefault();
+					finish(true);
+				} else if (e.key === "Escape") {
+					e.preventDefault();
+					finish(false);
+				}
+			}}
+			onBlur={() => finish(true)}
+		/>
+	);
+}
+
 /** 单个会话 tab：几何层（useSortable 的 transform/transition）在 wrapper div 上按 dnd-kit 协议
  *  原样应用——transition 含 "none" 帧时绝不能覆盖成动画，那是 FLIP 布点帧（覆盖会造成落位回闪）；
  *  拖拽本体隐藏、由 DragOverlay 的 ghost 跟随指针（见 DRAG_MODIFIERS 注释） */
-function SessionTab({ session, isActive }: { session: SessionMeta; isActive: boolean }) {
+function SessionTab({
+	session,
+	isActive,
+	suffix,
+}: {
+	session: SessionMeta;
+	isActive: boolean;
+	suffix?: string;
+}) {
 	const switchSession = useSessionsStore((s) => s.switchSession);
 	const setView = useUiStore((s) => s.setView);
+	const [renaming, setRenaming] = useState(false);
+	// draft 还没有后端会话、只读子会话名字由父任务决定：两者都不开放重命名
+	const canRename = !session.readOnly && !isDraftSessionId(session.sessionId);
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
 		id: session.sessionId,
+		disabled: renaming,
 		// 自定义让位/落位节奏；reduced-motion 传 null = dnd-kit 不再给出过渡串
 		transition: prefersReducedMotion() ? null : { duration: 220, easing: SORT_EASE },
 	});
@@ -174,26 +270,72 @@ function SessionTab({ session, isActive }: { session: SessionMeta; isActive: boo
 		<div
 			ref={setNodeRef}
 			data-tab-id={session.sessionId}
-			className="min-w-24 max-w-52 flex-1"
+			className="min-w-28 max-w-56 flex-1"
 			style={{
 				transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
 				transition: transition || undefined,
 			}}
 		>
-			<TabPill
-				session={session}
-				isActive={isActive}
-				hidden={isDragging}
-				buttonProps={{
-					...attributes,
-					...listeners,
-					onClick: () => {
-						switchSession(session.sessionId);
-						setView("chat");
-					},
-				}}
-			/>
+			{renaming ? (
+				<TabRenameInput session={session} onDone={() => setRenaming(false)} />
+			) : (
+				<TabPill
+					session={session}
+					isActive={isActive}
+					suffix={suffix}
+					hidden={isDragging}
+					onRename={canRename ? () => setRenaming(true) : undefined}
+					buttonProps={{
+						...attributes,
+						...listeners,
+						onClick: () => {
+							switchSession(session.sessionId);
+							setView("chat");
+						},
+					}}
+				/>
+			)}
 		</div>
+	);
+}
+
+/** 会话列表菜单项：状态点 + 标题（+ 同名后缀）+ 项目目录 */
+function SessionListItem({
+	session,
+	isActive,
+	suffix,
+	onPick,
+}: {
+	session: SessionMeta;
+	isActive: boolean;
+	suffix?: string;
+	onPick: () => void;
+}) {
+	const t = useT();
+	const status = useSessionStatus(session.sessionId);
+	const dot =
+		status === "attention"
+			? "bg-amber-500"
+			: status === "working"
+				? "bg-violet-500"
+				: status === "done"
+					? "bg-emerald-500"
+					: "bg-ink-faint";
+	return (
+		<button
+			type="button"
+			role="menuitem"
+			className={`session-list-item${isActive ? " on" : ""}`}
+			onClick={onPick}
+			title={session.cwd}
+		>
+			<span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+			<span className="min-w-0 flex-1 truncate">
+				{sessionTitle(session, t("tabbar.untitled"), t("projects.daily"))}
+				{suffix && <span className="tab-pill-suffix">{suffix}</span>}
+			</span>
+			<span className="shrink-0 text-[11px] text-ink-faint">{timeSuffix(session.createdAt)}</span>
+		</button>
 	);
 }
 
@@ -209,14 +351,21 @@ export function SessionTabBar() {
 	const cwd = useSessionsStore((s) => s.cwd);
 	const view = useUiStore((s) => s.view);
 	const setView = useUiStore((s) => s.setView);
-	const diffSidebarOpen = useUiStore((s) => s.diffSidebarOpen);
-	const taskSidebarOpen = useUiStore((s) => s.taskSidebarOpen);
-	const toggleTaskSidebar = useUiStore((s) => s.toggleTaskSidebar);
-	// 提示点：最新一份 TaskView 里是否有任务在等用户拍板。
+	const panelOpen = useUiStore((s) => s.panelOpen);
+	const togglePanel = useUiStore((s) => s.togglePanel);
+	const agentActive = useTranscriptStore((s) =>
+		activeSessionId ? (s.bySession[activeSessionId]?.agentActive ?? false) : false,
+	);
+	const suffixes = useTitleSuffixes(sessions, t("tabbar.untitled"), t("projects.daily"));
+	const [listOpen, setListOpen] = useState(false);
+	const listRef = useRef<HTMLDivElement>(null);
+	// 提示点：最新一份 TaskView 里是否有任务在等用户拍板，或有权限请求挂起。
 	// 只从 selector 返回布尔值——订阅 transcript 对象会随每条流式 delta 全量级联重渲染整条 tab bar。
 	const taskAwaiting = useTranscriptStore((s) => {
 		if (!activeSessionId) return false;
-		const messages = s.bySession[activeSessionId]?.messages;
+		const entry = s.bySession[activeSessionId];
+		if (entry && entry.pendingPermissions.length > 0) return true;
+		const messages = entry?.messages;
 		if (!messages) return false;
 		for (let i = messages.length - 1; i >= 0; i--) {
 			const m = messages[i];
@@ -227,7 +376,6 @@ export function SessionTabBar() {
 		}
 		return false;
 	});
-	const toggleDiffSidebar = useUiStore((s) => s.toggleDiffSidebar);
 	const scrollerRef = useRef<HTMLDivElement>(null);
 	const [activeId, setActiveId] = useState<string | null>(null);
 	/** 被拖胶囊拾起时的实测宽度（px）：ghost 全程沿用，保持原胶囊尺寸。
@@ -254,6 +402,23 @@ export function SessionTabBar() {
 		}
 	}, [activeSessionId, view]);
 
+	// 会话列表菜单：点击外部 / Esc 关闭
+	useEffect(() => {
+		if (!listOpen) return;
+		const onPointerDown = (e: PointerEvent) => {
+			if (listRef.current && !listRef.current.contains(e.target as Node)) setListOpen(false);
+		};
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setListOpen(false);
+		};
+		window.addEventListener("pointerdown", onPointerDown);
+		window.addEventListener("keydown", onKeyDown);
+		return () => {
+			window.removeEventListener("pointerdown", onPointerDown);
+			window.removeEventListener("keydown", onKeyDown);
+		};
+	}, [listOpen]);
+
 	// 鼠标滚轮（垂直）→ tab 横向滚动
 	useEffect(() => {
 		const el = scrollerRef.current;
@@ -276,27 +441,8 @@ export function SessionTabBar() {
 
 	return (
 		<div
-			className={`${dragging ? "" : "drag-region"} flex h-12 shrink-0 items-center gap-1 border-b border-border bg-canvas ${chromePadding}`}
+			className={`${dragging ? "" : "drag-region"} flex h-11 shrink-0 items-center gap-1 border-b border-border bg-canvas ${chromePadding}`}
 		>
-			<div className="workbench-brand hidden shrink-0 items-center gap-2 lg:flex">
-				<span className="workbench-brand-mark" aria-hidden="true">
-					S
-				</span>
-				<span className="min-w-0">
-					<strong>Shuncode / Percho</strong>
-					<span>Research workbench</span>
-				</span>
-			</div>
-			<button
-				type="button"
-				className={`no-drag shrink-0 rounded-lg p-1.5 transition-colors ${
-					view === "projects" ? "bg-bubble text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
-				}`}
-				onClick={() => setView(view === "projects" ? "chat" : "projects")}
-				aria-label={t("projects.title")}
-			>
-				<ProjectsIcon />
-			</button>
 			<div
 				ref={scrollerRef}
 				className="flex min-w-0 flex-1 items-center gap-1 overflow-x-scroll [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -327,6 +473,7 @@ export function SessionTabBar() {
 								key={session.sessionId}
 								session={session}
 								isActive={session.sessionId === activeSessionId}
+								suffix={suffixes.get(session.sessionId)}
 							/>
 						))}
 					</SortableContext>
@@ -347,48 +494,68 @@ export function SessionTabBar() {
 					</DragOverlay>
 				</DndContext>
 			</div>
+			{/* 全部会话菜单：胶囊被压窄/滚出视野时的兜底入口（状态点 + 标题 + 时间） */}
+			{sessions.length > 0 && (
+				<div ref={listRef} className="no-drag relative shrink-0">
+					<button
+						type="button"
+						className={`no-drag shrink-0 rounded-lg p-1.5 transition-colors ${
+							listOpen ? "bg-hover text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
+						}`}
+						onClick={() => setListOpen((v) => !v)}
+						aria-label={t("tabbar.allSessions")}
+						aria-expanded={listOpen}
+						title={t("tabbar.allSessions")}
+					>
+						<ListIcon size={16} />
+					</button>
+					{listOpen && (
+						<div className="session-list-pop" role="menu">
+							{sessions.map((session) => (
+								<SessionListItem
+									key={session.sessionId}
+									session={session}
+									isActive={session.sessionId === activeSessionId}
+									suffix={suffixes.get(session.sessionId)}
+									onPick={() => {
+										setListOpen(false);
+										useSessionsStore.getState().switchSession(session.sessionId);
+										setView("chat");
+									}}
+								/>
+							))}
+						</div>
+					)}
+				</div>
+			)}
+			<button
+				type="button"
+				className="no-drag shrink-0 rounded-lg p-1.5 text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+				onClick={() => {
+					// 只建内存 draft tab（空 tab 重启自动消失）；发送首条消息时才真正创建后端会话
+					createDraftSession();
+					setView("chat");
+				}}
+				aria-label={cwd ? t("tabbar.newSession") : t("tabbar.pickProjectFirst")}
+				title={cwd ? t("tabbar.newSession") : t("tabbar.pickProjectFirst")}
+			>
+				<PlusIcon size={18} />
+			</button>
 			<UpdateButton />
-			{view !== "projects" && (
-				<button
-					type="button"
-					className="no-drag shrink-0 rounded-lg p-1.5 text-ink-dim transition-colors hover:bg-hover hover:text-ink"
-					onClick={() => {
-						// 只建内存 draft tab（空 tab 重启自动消失）；发送首条消息时才真正创建后端会话
-						createDraftSession();
-						setView("chat");
-					}}
-					aria-label={cwd ? t("tabbar.newSession") : t("tabbar.pickProjectFirst")}
-				>
-					<PlusIcon size={18} />
-				</button>
-			)}
-			{/* diff 侧栏开关：新会话按钮之后，active 态底色区分 */}
-			{view !== "projects" && (
+			{/* 右侧上下文面板开关（唯一右栏）：有任务等用户 / 权限挂起时琥珀点提示 */}
+			{view === "chat" && (
 				<button
 					type="button"
 					className={`no-drag relative shrink-0 rounded-lg p-1.5 transition-colors ${
-						diffSidebarOpen ? "bg-hover text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
+						panelOpen ? "bg-hover text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
 					}`}
-					onClick={toggleDiffSidebar}
-					aria-label={t("diff.toggle")}
+					onClick={() => togglePanel(agentActive)}
+					aria-label={t("tabbar.panel")}
+					aria-expanded={panelOpen}
+					aria-controls="context-panel"
+					title={panelOpen ? t("panel.collapse") : t("panel.expand")}
 				>
-					<DiffIcon size={16} />
-				</button>
-			)}
-			{/* 任务工作台侧栏开关：与 diff 同栏位互斥；有任务等用户时右上角红点提示 */}
-			{view !== "projects" && (
-				<button
-					type="button"
-					className={`no-drag relative shrink-0 rounded-lg p-1.5 transition-colors ${
-						taskSidebarOpen ? "bg-hover text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
-					}`}
-					onClick={toggleTaskSidebar}
-					aria-label="任务工作台"
-					aria-expanded={taskSidebarOpen}
-					aria-controls="task-workbench-sidebar"
-					title={taskSidebarOpen ? "关闭任务工作台" : "查看任务进度和待处理请求"}
-				>
-					<TaskBoardIcon size={16} />
+					<PanelRightIcon size={16} />
 					{taskAwaiting && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-500" />}
 				</button>
 			)}

@@ -169,13 +169,13 @@ const runFixture = {
 	errors: 0,
 };
 
-const usage = sumReportedUsage([
-	reportedUsage({
-		responseId: "fixture",
-		timestamp: 1,
-		usage: { input: 200, output: 100, cacheRead: 800, cacheWrite: 0, cost: { total: 0 } },
-	})!,
-]);
+const fixtureUsage = reportedUsage({
+	responseId: "fixture",
+	timestamp: 1,
+	usage: { input: 200, output: 100, cacheRead: 800, cacheWrite: 0, cost: { total: 0 } },
+});
+if (!fixtureUsage) throw new Error("knowledge-ui-smoke: fixture usage rejected by reportedUsage()");
+const usage = sumReportedUsage([fixtureUsage]);
 useTranscriptStore
 	.getState()
 	.loadHistory("fixture", [{ kind: "user", id: "fixture-user", text: "Fixture", images: [], timestamp: 1 }]);
@@ -192,7 +192,9 @@ useTranscriptStore
 			timestamp: 2,
 		},
 	]);
-createRoot(document.getElementById("root")!).render(
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("knowledge-ui-smoke: #root missing");
+createRoot(rootEl).render(
 	<div style={{ maxWidth: 1080, margin: "0 auto", padding: 16 }}>
 		<div className="mb-3 text-[10px] tracking-wider text-ink-dim">
 			DRONE / KNOWLEDGE · 隔离测试库，不是用户正式笔记

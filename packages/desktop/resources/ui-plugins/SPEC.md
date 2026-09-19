@@ -185,9 +185,9 @@ z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全�
 
 ### 10.3 其他约定
 
-- `chat.corner.top-right` 与任务列表面板（TodoPanel）同角：宿主容器已预留 `pt-12` 偏移，贡献堆在面板下方；面板展开（完整列表）时可能遮挡贡献，属预期；
+- `chat.corner.top-right` 现为空角（UI v3 起任务列表并入右侧上下文面板「任务」页签，聊天区四角不再有宿主悬浮层）；
 - 同角多贡献纵向堆叠，顺序 = 启用先后（先启用的在上）；
-- `chat.diff-sidebar` 贡献直接进入宿主 Git Diff 右侧栏；可通过 `useUiStore((s) => s.setDiffSidebarOpen)` 打开该栏，不要再创建第二套悬浮侧栏；
+- `chat.diff-sidebar` 贡献直接进入右侧上下文面板的「变更」页签；可通过 `useUiStore((s) => s.showDiffSidebar)()` 打开该页签，不要再创建第二套悬浮侧栏；
 - `settings.panel` 贡献渲染为设置弹窗的独立分类（分类 id `plugin:<name>:<cid>`，标题 = `title`），随插件启停自动增删；
 - 排查：贡献根元素外层的宿主容器挂 `data-plugin="<name>"` 属性（插件无需自己做）；
 - **内置插件**：`resources/ui-plugins/builtin/` 随包分发，应用首次启动/升级时导出到用户插件目录（与用户插件同一条扫描/构建/热重载路径，面板带「内置」badge、启用免二次确认）。**直接改内置副本会在下次升级被覆盖——魔改请把目录改名另存**（`plugin.json` 的 `name` 同步改）；手动删除的目录本版本内不会回来，下次升级重新导出；

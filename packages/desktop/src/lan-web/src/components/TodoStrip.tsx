@@ -2,7 +2,7 @@ import type { TodoItem } from "@drone/shared";
 import { t } from "../i18n";
 import { CheckIcon, ChevronRightIcon, CircleIcon, HalfIcon, ListIcon } from "./icons";
 
-/** todo 折叠条（桌面 TodoPanel 的精简 props 版）。
+/** todo 折叠条（桌面右侧面板「任务」页签任务卡的精简 props 版）。
  *  UX v2：summary 行 = list 图标 + 标题 + done/total 计数 + chevron；下方常驻渐变进度条
  * （宽 = done/total，流光动画）；展开项 ✓◐○ 字符 → check/half/circle SVG。 */
 export function TodoStrip({ todos }: { todos: TodoItem[] }) {

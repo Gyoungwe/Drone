@@ -1,5 +1,6 @@
 import type { KnowledgeFlow, KnowledgeUiEvent } from "@drone/shared";
 import { create } from "zustand";
+import { useUiStore } from "./ui";
 export interface KnowledgeDialogContext {
 	cwd: string | null;
 	sessionId: string | null;
@@ -54,7 +55,11 @@ export const useKnowledgeStore = create<State>((set) => ({
 		if (event.kind === "notice") set({ notice: event });
 	},
 	invalidate: () => set((state) => ({ revision: state.revision + 1 })),
-	open: (dialog) => set({ dialog }),
+	// 知识库 / 研究工作台是全屏视图（不再是弹窗）：open 同时切 view，close 回到聊天
+	open: (dialog) => {
+		useUiStore.getState().setView(dialog.tab === "overview" ? "research" : "knowledge");
+		set({ dialog });
+	},
 	openReview: (request) =>
 		set((state) => {
 			if (state.review && sameReview(state.review, request)) return state;
@@ -67,6 +72,10 @@ export const useKnowledgeStore = create<State>((set) => ({
 			review: state.reviewQueue[0] ?? null,
 			reviewQueue: state.reviewQueue.slice(1),
 		})),
-	close: () => set({ dialog: null }),
+	close: () => {
+		const ui = useUiStore.getState();
+		if (ui.view === "research" || ui.view === "knowledge") ui.setView("chat");
+		set({ dialog: null });
+	},
 	dismiss: () => set({ notice: null }),
 }));

@@ -149,7 +149,7 @@ declare module "@drone/plugin-api" {
 		useUiStore: unknown;
 		useProjectsStore: unknown;
 		useSettingsStore: unknown;
-		/** 应用级 UI 偏好（ui-state.json 持久化）：sessionRailEnabled / centerOrbEnabled 等 */
+		/** 应用级 UI 偏好（ui-state.json 持久化）：centerOrbEnabled 等 */
 		useUiPreferencesStore: unknown;
 	};
 	// store hooks 顶层便捷导出（与 shim 解构一致，例：import { useSessionsStore } from "@drone/plugin-api"）

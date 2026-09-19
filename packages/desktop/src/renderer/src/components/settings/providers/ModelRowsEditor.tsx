@@ -59,7 +59,7 @@ export function ModelRowsEditor({
 		<button
 			type="button"
 			aria-pressed={active}
-			className={`shrink-0 rounded-md border px-1.5 py-1 text-[10px] transition-colors ${
+			className={`shrink-0 rounded-md border px-1.5 py-1 text-[11px] transition-colors ${
 				active ? "border-ink-faint bg-hover text-ink" : "border-border text-ink-faint hover:text-ink-dim"
 			}`}
 			onClick={onToggle}
@@ -127,11 +127,11 @@ export function ModelRowsEditor({
 					</button>
 				)}
 			</div>
-			<p className="mt-1 text-[10px] leading-relaxed text-ink-faint">
+			<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
 				{t("settings.providers.customModelsHint")}
 			</p>
 			{rows.every((row) => !row.id.trim()) && (
-				<p className="mt-1 text-[10px] leading-relaxed text-ink-dim">
+				<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">
 					{t("settings.providers.customModelsEmptyHint")}
 				</p>
 			)}

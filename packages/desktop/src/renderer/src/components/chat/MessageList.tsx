@@ -1,9 +1,11 @@
 import {
 	buildChatRows,
+	type ChatRow,
 	deriveRunInspectors,
 	deriveTurnChanges,
 	deriveTurnTimings,
 	deriveTurnUsage,
+	groupProcessRows,
 	isAgentWorking,
 } from "@drone/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,13 +19,12 @@ import { CenterOrb } from "./CenterOrb";
 import { MessageItem } from "./MessageItem";
 import { MetaGroup } from "./MetaGroup";
 import { ModelWaitNote } from "./ModelWaitNote";
+import { ProcessBlock } from "./ProcessBlock";
 import { ProgressNote } from "./ProgressNote";
 import { RetryNote } from "./RetryNote";
-import { RunInspector } from "./RunInspector";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { SubagentRunCard } from "./SubagentRunCard";
-import { TurnDiffChip } from "./TurnDiffChip";
-import { UsageSettlement } from "./UsageSettlement";
+import { TurnFooter } from "./TurnFooter";
 import { useShownWorking } from "./use-shown-working";
 
 /** 距底 ≤ 此值视为「在底部」，自动恢复跟随 */
@@ -171,37 +172,28 @@ export function MessageList() {
 		[transcript, activeSessionId, turnChanges, turnTimings, enteringTurn],
 	);
 
-	const items: React.ReactNode[] = [];
-	rows.forEach((row) => {
+	// 行 → JSX：过程行（阶段说明 / 折叠工具组）先由 shared groupProcessRows 折成过程块，
+	// 消息流只留结论；块内子行仍按原规则渲染（MetaGroup 的实时行为不变）。
+	const renderRow = (row: ChatRow): React.ReactNode => {
 		if (row.kind === "turnDiff") {
-			// 已完成轮次保留上提 16px，和普通消息的 8px 净距对齐；两条不上提：
-			// ① 当前运行轮（running）——MetaGroup 的圆点仍会实时追加，上提会贴到圆点行上；
-			// ② 前面紧邻的是折叠组（afterMetaGroup，纯工具轮 / 被打断轮无正文，组自带 -mb-4 对消 gap）——
-			//    再上提 16px 会与组的圆点行重叠 8px（组结束圆点仍冻结原位）。
-			items.push(
+			// 已完成轮次保留上提 16px，和普通消息的 8px 净距对齐；运行轮 / 紧邻折叠组的轮不上提
+			const turnIndex = row.timing?.turnIndex ?? row.changes?.turnIndex ?? -1;
+			return (
 				<div key={row.key} className={row.running || row.afterMetaGroup ? undefined : "-mt-4"}>
-					<TurnDiffChip
+					<TurnFooter
+						turnIndex={turnIndex}
 						changes={row.changes}
 						timing={row.timing}
+						usage={turnIndex >= 0 ? turnUsages[turnIndex] : undefined}
+						run={turnIndex >= 0 ? turnInspectors[turnIndex] : undefined}
 						running={row.running}
 						entering={row.entering}
 					/>
-					{!row.running && row.timing && (
-						<>
-							<UsageSettlement usage={turnUsages[row.timing.turnIndex]} />
-							<RunInspector
-								run={turnInspectors[row.timing.turnIndex]}
-								timing={row.timing}
-								usage={turnUsages[row.timing.turnIndex]}
-							/>
-						</>
-					)}
-				</div>,
+				</div>
 			);
-			return;
 		}
 		if (row.kind === "metaGroup") {
-			items.push(
+			return (
 				<MetaGroup
 					key={row.key}
 					items={row.items}
@@ -209,31 +201,23 @@ export function MessageList() {
 					endImmediately={row.endImmediately}
 					subagentCount={row.subagentCount}
 					statusText={row.statusText}
-				/>,
+				/>
 			);
-			return;
 		}
 		if (row.kind === "streamingSubagents") {
-			items.push(
+			return (
 				<Slot
 					key={row.key}
 					name={UI_SLOTS.SubagentCard}
 					props={{ runs: row.runs }}
 					fallback={SubagentRunCard}
-				/>,
+				/>
 			);
-			return;
 		}
-		if (
-			row.kind === "message" &&
-			row.message.kind === "assistant" &&
-			row.message.progress &&
-			!row.message.text
-		) {
-			items.push(<ProgressNote key={row.key} progress={row.message.progress} />);
-			return;
+		if (row.message.kind === "assistant" && row.message.progress && !row.message.text) {
+			return <ProgressNote key={row.key} progress={row.message.progress} />;
 		}
-		items.push(
+		return (
 			<MessageItem
 				key={row.key}
 				message={row.message}
@@ -241,9 +225,19 @@ export function MessageList() {
 				showActions={row.showActions}
 				streaming={row.streaming}
 				sessionId={activeSessionId}
-			/>,
+			/>
 		);
-	});
+	};
+	const grouped = useMemo(() => groupProcessRows(rows), [rows]);
+	const items: React.ReactNode[] = grouped.map((row) =>
+		row.kind === "process" ? (
+			<ProcessBlock key={row.key} segment={row}>
+				{row.rows.map(renderRow)}
+			</ProcessBlock>
+		) : (
+			renderRow(row)
+		),
+	);
 
 	return (
 		<div className="relative h-full">

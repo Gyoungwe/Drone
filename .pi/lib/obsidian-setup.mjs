@@ -14,7 +14,7 @@ const PRIVATE = /^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i;
 const REFERENCE =
 	/^(?:readme(?:\.[^.]+)?|agents\.md|project\.md|package\.json|pyproject\.toml|environment\.ya?ml|description)$/i;
 
-export function resolveSetupVault(value, cwd) {
+export function resolveSetupVault(value, _cwd) {
 	if (typeof value !== "string" || !value.trim()) throw new Error("Vault path is required");
 	const text = value.trim();
 	const expanded = text === "~" ? homedir() : /^~[/\\]/.test(text) ? join(homedir(), text.slice(2)) : text;

@@ -1,6 +1,5 @@
 import {
 	type CapabilityId,
-	researchSkillProfile,
 	WORKFLOW_OWNER_NAMES,
 	WORKFLOW_PROFILES,
 	workflowProfile,

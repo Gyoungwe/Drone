@@ -174,9 +174,9 @@ export function WikiReviewPanel({
 								className={`w-full rounded-lg border p-2.5 text-left transition-colors ${selected === item.id ? "border-accent bg-accent/5" : "border-border hover:bg-hover"}`}
 							>
 								<span className="block break-words text-xs font-medium">{item.title}</span>
-								<span className="mt-1 block break-all font-mono text-[10px] text-ink-dim">{item.path}</span>
+								<span className="mt-1 block break-all font-mono text-[11px] text-ink-dim">{item.path}</span>
 								{(item.expired || item.bindingChanged) && (
-									<span className="mt-1 block text-[10px] text-warn">
+									<span className="mt-1 block text-[11px] text-warn">
 										{item.expired ? t("expired") : t("stalePreview")}
 									</span>
 								)}
@@ -223,7 +223,7 @@ export function WikiReviewPanel({
 						<div className="space-y-3">
 							<div>
 								<h3 className="break-words text-sm font-semibold">{preview.title}</h3>
-								<p className="mt-1 break-all font-mono text-[10px] text-ink-dim">{preview.path}</p>
+								<p className="mt-1 break-all font-mono text-[11px] text-ink-dim">{preview.path}</p>
 								<p className="mt-2 whitespace-pre-wrap break-words text-xs">
 									{t("reason")}：{preview.rationale}
 								</p>
@@ -291,7 +291,7 @@ export function WikiReviewPanel({
 										>
 											<div className="min-w-0">
 												<p className="break-all text-[11px]">{source.path}</p>
-												<p className="font-mono text-[10px] text-ink-faint">
+												<p className="font-mono text-[11px] text-ink-faint">
 													L{source.startLine}–{source.endLine} · {source.hash?.slice(0, 12)}
 												</p>
 												{source.changed && <p className="text-[11px] text-warn">{t("sourceChanged")}</p>}

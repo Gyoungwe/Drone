@@ -25,7 +25,7 @@ function ScopeBadge({ scope }: { scope: ResourceScope }) {
 				: "settings.skills.scopeUser";
 	return (
 		<span
-			className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"}`}
+			className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"}`}
 		>
 			{t(key)}
 		</span>
@@ -42,17 +42,17 @@ function SkillRow({ skill }: { skill: LoadedSkill }) {
 					{title}
 				</span>
 				{skill.disableModelInvocation && (
-					<span className="shrink-0 text-[10px] text-ink-faint">{t("settings.skills.manualOnly")}</span>
+					<span className="shrink-0 text-[11px] text-ink-faint">{t("settings.skills.manualOnly")}</span>
 				)}
 				<ScopeBadge scope={skill.scope} />
 			</div>
-			<p className="mt-1 break-all font-mono text-[10px] text-ink-dim">/skill:{skill.name}</p>
+			<p className="mt-1 break-all font-mono text-[11px] text-ink-dim">/skill:{skill.name}</p>
 			<details className="mt-1 text-[11px] text-ink-dim">
 				<summary className="cursor-pointer rounded py-1 focus-visible:outline focus-visible:outline-accent">
 					{t("skillsCatalog.details")}
 				</summary>
 				<p className="mt-1 whitespace-pre-wrap leading-relaxed">{skill.description}</p>
-				<p className="mt-2 break-all font-mono text-[10px] text-ink-faint">
+				<p className="mt-2 break-all font-mono text-[11px] text-ink-faint">
 					{skill.source} · {skill.path}
 				</p>
 			</details>
@@ -80,7 +80,7 @@ function ToolsOverview() {
 					<h3 className="text-[13px] font-medium text-ink">{t("settings.tools.title")}</h3>
 					<p className="mt-1 text-[11px] text-ink-faint">{t("settings.tools.hint")}</p>
 				</div>
-				<span className="rounded-full bg-hover px-2 py-1 text-[10px] text-ink-dim">
+				<span className="rounded-full bg-hover px-2 py-1 text-[11px] text-ink-dim">
 					{Math.round(footprint.reductionRatio * 100)}% {t("settings.tools.schemaSaved")}
 				</span>
 			</div>
@@ -95,7 +95,7 @@ function ToolsOverview() {
 					[t("settings.tools.capabilities"), String(capabilities.activeCapabilities.length)],
 				].map(([label, value]) => (
 					<div key={label} className="rounded-lg border border-border p-2">
-						<p className="text-[9px] text-ink-faint">{label}</p>
+						<p className="text-[11px] text-ink-faint">{label}</p>
 						<p className="mt-1 text-[12px] font-medium text-ink">{value}</p>
 					</div>
 				))}
@@ -107,7 +107,7 @@ function ToolsOverview() {
 						<span
 							key={item.id}
 							title={item.summary}
-							className={`rounded-full border px-2 py-1 text-[10px] ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-ink-faint"}`}
+							className={`rounded-full border px-2 py-1 text-[11px] ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-ink-faint"}`}
 						>
 							{item.label[language === "zh" ? "zh" : "en"]}
 						</span>
@@ -127,7 +127,7 @@ function ToolsOverview() {
 								? t("settings.tools.loaded")
 								: t("settings.tools.lazy");
 						return (
-							<li key={tool.name} className="py-2 text-[10px]">
+							<li key={tool.name} className="py-2 text-[11px]">
 								<div className="flex flex-wrap items-center gap-2">
 									<code className="text-[11px] text-ink">{tool.name}</code>
 									<span

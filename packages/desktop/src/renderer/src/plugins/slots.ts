@@ -8,6 +8,7 @@ import type { SubagentRunUi, UIToolCall } from "@drone/shared";
 export const UI_SLOTS = {
 	ToolCallCard: "chat.tool-call-card",
 	SubagentCard: "chat.subagent-card",
+	/** 待办卡：现渲染在右侧上下文面板「任务」页签内（TasksPane），不再是聊天区悬浮胶囊 */
 	TodoPanel: "chat.todo-panel",
 } as const;
 export type SlotName = (typeof UI_SLOTS)[keyof typeof UI_SLOTS];
@@ -24,6 +25,7 @@ export const UI_REGIONS = {
 	CornerTopRight: "chat.corner.top-right",
 	CornerBottomLeft: "chat.corner.bottom-left",
 	CornerBottomRight: "chat.corner.bottom-right",
+	/** 变更区域：现挂在右侧上下文面板「变更」页签底部（ChangesPane） */
 	DiffSidebar: "chat.diff-sidebar",
 	SettingsPanel: "settings.panel",
 } as const;

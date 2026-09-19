@@ -5,7 +5,6 @@ import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } fro
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
 import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
-import { FAILURE_EXPLANATION_POLICY, TASK_HANDOFF_POLICY } from "../../../.pi/lib/tasks/failure-feedback.mjs";
 import { PiBackend } from "../src/pi-backend";
 
 // Actual SDK/provider/tool-result transport, but an in-memory fake model: no paid model or user credentials.

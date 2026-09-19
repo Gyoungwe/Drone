@@ -9,14 +9,15 @@ export function ContextRing() {
 	const usage = useContextUsage(activeSessionId);
 	const zh = useI18nStore((s) => s.language) === "zh";
 	if (!usage || !hasMessages) return null;
-	const known = usage.tokens !== null && usage.percent !== null && Number.isFinite(usage.percent);
-	const percent = known ? usage.percent! : 0;
-	const pct = Math.max(0, Math.min(100, percent));
+	const tokens = usage.tokens;
+	const percent = usage.percent !== null && Number.isFinite(usage.percent) ? usage.percent : null;
+	const known = tokens !== null && percent !== null;
+	const pct = Math.max(0, Math.min(100, percent ?? 0));
 	const color = pct < 60 ? "stroke-ink-faint" : pct < 85 ? "stroke-amber-500" : "stroke-red-500";
 	const r = 7,
 		c = 2 * Math.PI * r;
 	const label = known
-		? `${zh ? "上下文估计占用" : "Estimated context"} ${percent.toFixed(1)}%`
+		? `${zh ? "上下文估计占用" : "Estimated context"} ${pct.toFixed(1)}%`
 		: zh
 			? "上下文用量暂未知"
 			: "Context usage unknown";
@@ -36,8 +37,8 @@ export function ContextRing() {
 			</svg>
 			<div className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 rounded-md border border-border bg-surface px-2 py-1 text-[11px] whitespace-nowrap text-ink-2 opacity-0 shadow-pop transition-opacity group-hover:opacity-100">
 				<div>
-					{known
-						? `${zh ? "上下文估计" : "Estimated context"} ${formatTokens(usage.tokens!)} / ${formatTokens(usage.contextWindow)} tokens · ${percent.toFixed(1)}%`
+					{tokens !== null && percent !== null
+						? `${zh ? "上下文估计" : "Estimated context"} ${formatTokens(tokens)} / ${formatTokens(usage.contextWindow)} tokens · ${percent.toFixed(1)}%`
 						: label}
 				</div>
 				<div className="text-ink-dim">

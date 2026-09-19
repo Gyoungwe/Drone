@@ -179,7 +179,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 			</div>
 			{open && (
 				<div className="max-h-[28vh] overflow-auto border-t border-border px-2 py-1.5">
-					{flow.vault && <p className="mb-2 break-all font-mono text-[10px] text-ink-dim">{flow.vault}</p>}
+					{flow.vault && <p className="mb-2 break-all font-mono text-[11px] text-ink-dim">{flow.vault}</p>}
 					{flow.search && (
 						<p className="mb-2 break-words text-[11px]">
 							{t("search")}：{flow.search.query} · {t("matched")} {flow.search.hits} ·{" "}
@@ -195,7 +195,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 										<strong>{t(`specialist_${agent.role}`)}</strong>
 										<span>{t(`worker_${agent.status}`)}</span>
 									</div>
-									<p className="mt-1 break-all text-[10px] text-ink-faint">
+									<p className="mt-1 break-all text-[11px] text-ink-faint">
 										{agent.model || agent.name}
 										{agent.action ? ` · ${agent.action}` : ""}
 									</p>
@@ -204,25 +204,25 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 									{agent.sources?.map((ref) => (
 										<div key={ref.path} className="mt-2 border-t border-border pt-1">
 											<div className="flex items-center justify-between gap-2">
-												<span className="min-w-0 truncate font-mono text-[10px]" title={ref.path}>
+												<span className="min-w-0 truncate font-mono text-[11px]" title={ref.path}>
 													{ref.path} · L{ref.startLine}–{ref.endLine}
 												</span>
 												<Button size="sm" onClick={() => setPath(ref.path)}>
 													{t("openSource")}
 												</Button>
 											</div>
-											{ref.excerpt && <p className="break-words text-[10px] text-ink-dim">{ref.excerpt}</p>}
+											{ref.excerpt && <p className="break-words text-[11px] text-ink-dim">{ref.excerpt}</p>}
 										</div>
 									))}
 									{agent.inputTokens !== undefined && (
-										<p className="mt-1 text-[10px] text-ink-dim">
+										<p className="mt-1 text-[11px] text-ink-dim">
 											{t("specialistUsage")} {agent.inputTokens} / {agent.outputTokens ?? 0} · {t("sources")}{" "}
 											{agent.sourceCount ?? 0}
 										</p>
 									)}
 								</div>
 							))}
-							<p className="text-[10px] text-ink-faint">{t("specialistUnverified")}</p>
+							<p className="text-[11px] text-ink-faint">{t("specialistUnverified")}</p>
 						</div>
 					)}
 					<h4 className="mb-2 text-[11px] font-semibold">{t("findings")}</h4>
@@ -235,13 +235,13 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 								</Button>
 							</div>
 							<p className="whitespace-pre-wrap break-words text-ink-dim">{row.excerpt}</p>
-							<p className="mt-1 break-all font-mono text-[10px] text-ink-faint">
+							<p className="mt-1 break-all font-mono text-[11px] text-ink-faint">
 								{row.path} · L{row.startLine}–{row.endLine}
 							</p>
 						</div>
 					))}
 					{!flow.search?.hits && <p className="mb-2 text-[11px] text-ink-dim">{t("noFindings")}</p>}
-					<p className="mb-3 text-[10px] text-ink-faint">{t("candidateHint")}</p>
+					<p className="mb-3 text-[11px] text-ink-faint">{t("candidateHint")}</p>
 					{!!artifacts.length && (
 						<div className="mb-3">
 							<h4 className="mb-1 text-[11px] font-semibold">{t("outputs")}</h4>
@@ -285,7 +285,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 						{records.map((row: KnowledgeReadRecord) => (
 							<div
 								key={`${row.path}:${row.startLine}:${row.endLine}:${row.hash ?? "missing"}`}
-								className="flex items-center justify-between gap-2 text-[10px]"
+								className="flex items-center justify-between gap-2 text-[11px]"
 							>
 								<div className="min-w-0">
 									<span className="block truncate font-mono" title={row.path}>
@@ -319,7 +319,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 							/>
 						</div>
 					)}
-					<p className="mt-3 text-[10px] text-ink-dim">{t("checksNotFacts")}</p>
+					<p className="mt-3 text-[11px] text-ink-dim">{t("checksNotFacts")}</p>
 					{!!flow.publication?.paths?.length && (
 						<div className="my-2 text-[11px] text-warn">
 							{flow.publication.paths.map((p) => (
@@ -339,7 +339,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 									{t("resume")}
 								</Button>
 							</div>
-							<p className="mt-1 text-[10px] text-ink-faint">{t("resumeHint")}</p>
+							<p className="mt-1 text-[11px] text-ink-faint">{t("resumeHint")}</p>
 						</div>
 					)}
 				</div>

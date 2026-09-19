@@ -3,15 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { getPi } from "./api";
 import { EmptyState } from "./components/chat/EmptyState";
 import { MessageList } from "./components/chat/MessageList";
-import { TaskSidebar } from "./components/chat/TaskSidebar";
-import { TodoPanel } from "./components/chat/TodoPanel";
-import { DiffSidebar } from "./components/diff/DiffSidebar";
-import { KnowledgeFlowCard } from "./components/knowledge/KnowledgeFlowCard";
 import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
+import { KnowledgeView } from "./components/knowledge/KnowledgeView";
+import { ContextPanel } from "./components/panel/ContextPanel";
 import { ProjectPage } from "./components/projects/ProjectPage";
 import { ApprovalDock } from "./components/session/ApprovalDock";
 import { AskDialog } from "./components/session/AskDialog";
-import { SessionRail } from "./components/session/SessionRail";
 import { SessionTabBar } from "./components/session/SessionTabBar";
 import { TrustDialog } from "./components/session/TrustDialog";
 import { SettingsDialog } from "./components/settings/SettingsDialog";
@@ -21,8 +18,7 @@ import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
 import { initDailyDir } from "./lib/daily";
 import { initUiPlugins } from "./plugins/loader";
 import { RegionHost } from "./plugins/RegionHost";
-import { Slot } from "./plugins/Slot";
-import { UI_REGIONS, UI_SLOTS } from "./plugins/slots";
+import { UI_REGIONS } from "./plugins/slots";
 import { finishSplash } from "./splash";
 import { useSessionsStore } from "./stores/sessions";
 import { backgroundImageUrl, useThemeStore } from "./stores/theme";
@@ -106,34 +102,33 @@ export default function App() {
 			<RegionHost region={UI_REGIONS.AppBackground} />
 			<div className="relative z-10 flex h-full flex-col">
 				<SessionTabBar />
-				{view === "projects" ? (
-					<div className="min-h-0 flex-1">
-						<ProjectPage />
-					</div>
-				) : (
-					/* SessionRail 以整列（tab bar 以下全视口）为定位基准：不在 main 内，
-					   否则输入框（ApprovalDock）高度变化会压缩 main，轨道垂直居中随之漂移。
-					   外层 flex-row：末尾挂 DiffSidebar（push 式，聊天列自然压缩） */
-					<div className="relative flex min-h-0 flex-1">
-						<WorkbenchNav />
-						<div className="relative flex min-w-0 flex-1 flex-col">
-							<KnowledgeFlowCard sessionId={activeSessionId} />
-							<main className="relative min-h-0 flex-1">
-								{showEmpty ? <EmptyState /> : <MessageList />}
-								<Slot name={UI_SLOTS.TodoPanel} props={{}} fallback={TodoPanel} />
-								{/* 聊天区四角贡献层（top-right 与 TodoPanel 同角，容器已预留 pt-12） */}
-								<RegionHost region={UI_REGIONS.CornerTopLeft} />
-								<RegionHost region={UI_REGIONS.CornerTopRight} />
-								<RegionHost region={UI_REGIONS.CornerBottomLeft} />
-								<RegionHost region={UI_REGIONS.CornerBottomRight} />
-							</main>
-							<ApprovalDock sessionId={activeSessionId} hideComposer={showEmpty} />
-							<SessionRail />
+				{/* 固定三栏：左导航（56px）· 主区 · 右侧上下文面板（chat 视图，push 式收展）。
+				    研究工作台 / 知识库 / 空间 是主区全屏视图，不再叠弹窗。 */}
+				<div className="relative flex min-h-0 flex-1">
+					<WorkbenchNav />
+					{view === "projects" ? (
+						<div className="min-h-0 min-w-0 flex-1">
+							<ProjectPage />
 						</div>
-						<DiffSidebar />
-						<TaskSidebar />
-					</div>
-				)}
+					) : view === "research" || view === "knowledge" ? (
+						<KnowledgeView mode={view} />
+					) : (
+						<>
+							<div className="relative flex min-w-0 flex-1 flex-col">
+								<main className="relative min-h-0 flex-1">
+									{showEmpty ? <EmptyState /> : <MessageList />}
+									{/* 聊天区四角贡献层（TodoPanel 悬浮胶囊已并入右侧面板「任务」页签） */}
+									<RegionHost region={UI_REGIONS.CornerTopLeft} />
+									<RegionHost region={UI_REGIONS.CornerTopRight} />
+									<RegionHost region={UI_REGIONS.CornerBottomLeft} />
+									<RegionHost region={UI_REGIONS.CornerBottomRight} />
+								</main>
+								<ApprovalDock sessionId={activeSessionId} hideComposer={showEmpty} />
+							</div>
+							<ContextPanel />
+						</>
+					)}
+				</div>
 			</div>
 			{/* 悬浮贡献层：内容列之后、设置弹窗之前（z-20 < z-40，插件层永在弹窗之下） */}
 			<RegionHost region={UI_REGIONS.AppOverlay} />

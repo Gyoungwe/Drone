@@ -25,7 +25,8 @@ async function projectLimit(cwd: string): Promise<number> {
 }
 function drain() {
 	for (let i = 0; i < queue.length && active < MAX_ACTIVE; ) {
-		const item = queue[i]!;
+		const item = queue[i];
+		if (!item) break;
 		if ((byProject.get(item.key) || 0) >= item.limit) {
 			i++;
 			continue;

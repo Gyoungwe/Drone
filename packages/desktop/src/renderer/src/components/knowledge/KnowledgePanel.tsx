@@ -13,6 +13,7 @@ import { TopicManagement } from "./TopicManagement";
 import { WikiReviewPanel } from "./WikiReviewPanel";
 export function KnowledgePanel({
 	context,
+	headless = false,
 }: {
 	context?: {
 		cwd: string | null;
@@ -20,6 +21,8 @@ export function KnowledgePanel({
 		tab?: "overview" | "reviews" | "maintenance" | "semantic" | "topics";
 		id?: string;
 	};
+	/** 嵌入全屏视图（KnowledgeView 自带标题栏）时不再重复渲染标题，只保留刷新按钮 */
+	headless?: boolean;
 }) {
 	const activeCwd = useSessionsStore((s) => s.cwd),
 		activeSession = useSessionsStore((s) => s.activeSessionId);
@@ -78,11 +81,13 @@ export function KnowledgePanel({
 	}
 	return (
 		<div className="text-ink" data-testid="knowledge-panel">
-			<header className="flex items-start justify-between gap-3">
-				<div>
-					<h2 className="text-base font-semibold">{t("title")}</h2>
-					<p className="mt-1 text-[11px] text-ink-dim">{t("subtitle")}</p>
-				</div>
+			<header className={`flex items-start gap-3 ${headless ? "justify-end" : "justify-between"}`}>
+				{!headless && (
+					<div>
+						<h2 className="text-base font-semibold">{t("title")}</h2>
+						<p className="mt-1 text-[11px] text-ink-dim">{t("subtitle")}</p>
+					</div>
+				)}
 				<Button size="sm" disabled={loading || busy} onClick={() => void refresh()}>
 					{t("refresh")}
 				</Button>
@@ -131,12 +136,12 @@ export function KnowledgePanel({
 						<section className="rounded-xl border border-border p-4">
 							<div className="flex flex-wrap items-center gap-2">
 								<h3 className="text-xs font-semibold">{t("vault")}</h3>
-								<span className="rounded-full bg-accent/8 px-2 py-0.5 text-[10px] text-accent">
+								<span className="rounded-full bg-accent/8 px-2 py-0.5 text-[11px] text-accent">
 									{t("scopeValue")}
 								</span>
 							</div>
 							<p className="mt-2 break-all font-mono text-xs">{binding.vault}</p>
-							<p className="mt-1 text-[10px] text-ink-faint">{t("notMcp")}</p>
+							<p className="mt-1 text-[11px] text-ink-faint">{t("notMcp")}</p>
 							<dl className="my-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
 								<dt className="text-ink-dim">{t("project")}</dt>
 								<dd className="break-all">{data.project || t("noProject")}</dd>
@@ -167,7 +172,7 @@ export function KnowledgePanel({
 					<section className="rounded-xl border border-border p-4">
 						<div className="flex flex-wrap items-center justify-between gap-2">
 							<h3 className="text-xs font-semibold">{t("literature")}</h3>
-							<span className="rounded-full bg-hover px-2 py-0.5 text-[10px] text-ink-dim">
+							<span className="rounded-full bg-hover px-2 py-0.5 text-[11px] text-ink-dim">
 								{t("literatureBound")}
 							</span>
 						</div>
@@ -297,17 +302,17 @@ export function KnowledgePanel({
 									[t("jobs"), index?.jobs],
 								].map(([label, value]) => (
 									<div key={String(label)} className="rounded-lg bg-hover px-3 py-2">
-										<p className="text-[10px] text-ink-dim">{label}</p>
+										<p className="text-[11px] text-ink-dim">{label}</p>
 										<p className="mt-1 text-lg font-medium tabular-nums">{value ?? "—"}</p>
 									</div>
 								))}
 							</div>
-							<p className="mt-2 text-[10px] text-ink-dim">
+							<p className="mt-2 text-[11px] text-ink-dim">
 								{t("lastChecked")}：
 								{index?.lastReconciledAt ? new Date(index.lastReconciledAt).toLocaleString() : t("unknown")}
 							</p>
 							{index && (
-								<p className={`mt-1 text-[10px] ${index.watching ? "text-ink-dim" : "text-warn"}`}>
+								<p className={`mt-1 text-[11px] ${index.watching ? "text-ink-dim" : "text-warn"}`}>
 									{index.watching ? t("watching") : t("notWatching")}
 								</p>
 							)}
@@ -330,7 +335,7 @@ export function KnowledgePanel({
 					)}
 					<section className="rounded-xl border border-border p-4">
 						<h3 className="text-xs font-semibold">{t("newPath")}</h3>
-						<p className="mt-1 text-[10px] text-ink-dim">{t("skillBound")}</p>
+						<p className="mt-1 text-[11px] text-ink-dim">{t("skillBound")}</p>
 						<p className="my-2 text-[11px] leading-relaxed text-ink-dim">{t("globalSwitch")}</p>
 						<label className="block text-[11px] text-ink-dim">
 							{t("vault")}
@@ -372,7 +377,7 @@ export function KnowledgePanel({
 											.join("\n") || t("emptyPreview")}
 									</pre>
 									{preview.context.vault?.truncated && (
-										<p className="text-[10px] text-warn">{t("truncated")}</p>
+										<p className="text-[11px] text-warn">{t("truncated")}</p>
 									)}
 								</div>
 								<div>

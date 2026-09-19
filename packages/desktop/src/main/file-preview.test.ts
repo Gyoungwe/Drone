@@ -47,7 +47,7 @@ describe("local bounded file reads without Electron or scientific validation", (
 		await expect(previewLocalFile(join(root, "missing.md"))).rejects.toThrow();
 	});
 	it("caps a large text file at 128 KiB", async () => {
-		const path = await fixture("huge.fa", ">seq\n" + "A".repeat(TEXT_PREVIEW_BYTES * 4));
+		const path = await fixture("huge.fa", `>seq\n${"A".repeat(TEXT_PREVIEW_BYTES * 4)}`);
 		const p = await previewLocalFile(path);
 		expect(p.truncated).toBe(true);
 		expect(Buffer.byteLength(p.text || "")).toBe(TEXT_PREVIEW_BYTES);

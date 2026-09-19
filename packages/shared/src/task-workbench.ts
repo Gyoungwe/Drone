@@ -265,7 +265,7 @@ export function taskIsTerminal(task: WorkbenchTask): boolean {
 /**
  * 流内应渲染的任务子集 —— 恒为空。
  *
- * 任务的「状态」归侧栏与 TodoPanel，任务的「决策」归 ask_user 弹窗，
+ * 任务的「状态」归右侧上下文面板「任务」页签，任务的「决策」归 ask_user 弹窗，
  * 聊天流只承载对话本身。保留此函数是为了让调用方继续有一个明确的语义入口，
  * 也便于日后若要放开某一类卡片时只改这一处。
  */

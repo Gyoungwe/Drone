@@ -42,7 +42,11 @@ export function reportedUsage(raw: unknown): ReportedUsage | undefined {
 		content?: Array<{ type?: string; id?: string }>;
 	};
 	const u = message.usage;
-	if (!u || count(u.input) === null || count(u.output) === null) return;
+	if (!u) return;
+	const input = count(u.input);
+	const output = count(u.output);
+	if (input === null || output === null) return;
+	const reasoning = count(u.reasoning);
 	const toolId = Array.isArray(message.content)
 		? message.content.find((b) => b.type === "toolCall")?.id
 		: undefined;
@@ -52,11 +56,11 @@ export function reportedUsage(raw: unknown): ReportedUsage | undefined {
 		`${message.provider || ""}/${message.model || ""}:${message.timestamp ?? 0}:${toolId || ""}`;
 	return {
 		id,
-		input: count(u.input)!,
-		output: count(u.output)!,
+		input,
+		output,
 		cacheRead: count(u.cacheRead),
 		cacheWrite: count(u.cacheWrite),
-		...(count(u.reasoning) !== null ? { reasoning: count(u.reasoning)! } : {}),
+		...(reasoning !== null ? { reasoning } : {}),
 		cost: count(u.cost?.total),
 		provider: message.provider,
 		model: message.model,

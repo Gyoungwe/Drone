@@ -9,7 +9,7 @@ import { ChevronRightIcon, CopyIcon, ErrorCircleIcon, GearIcon, RefreshIcon } fr
 
 /**
  * 会话内错误条（error-system 画板 ①②③）：无边框悬浮卡片 + severity 一枚 glyph + 幽灵动作。
- * v2 语言：rounded-xl bg-surface shadow-soft（QueueBar/TodoPanel 同款），默认折叠。
+ * v2 语言：rounded-xl bg-surface shadow-soft（QueueBar/面板卡片同款），默认折叠。
  *
  * 动作行：
  * - retry：只读恢复未完成回答，不重发原问题或进入 followUp 队列；

@@ -129,7 +129,7 @@ describe("bounded synthetic long-session transcript replay", () => {
 	it("bounds failure and retrieval summaries even in pathological tool-heavy turns", () => {
 		const messages = fixture(1);
 		const first = messages.find((m) => m.kind === "assistant");
-		if (!first || first.kind !== "assistant") throw new Error("fixture missing");
+		if (first?.kind !== "assistant") throw new Error("fixture missing");
 		const source = first.tools[0];
 		if (!source) throw new Error("fixture tool missing");
 		first.tools = Array.from({ length: 1000 }, (_, i) => ({

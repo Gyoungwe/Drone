@@ -679,3 +679,64 @@ export function ZoteroIcon({ size = 16, className }: IconProps) {
 		</svg>
 	);
 }
+
+/** 右侧面板开关（lucide panel-right 风格）：顶栏 ⇥ 按钮与面板头共用 */
+export function PanelRightIcon({ size = 14, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			{...strokeProps}
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<rect x="3" y="4" width="18" height="16" rx="3" />
+			<path d="M15 4v16" />
+		</svg>
+	);
+}
+
+/** 过程/时间线 glyph（面板「过程」页签） */
+export function TimelineIcon({ size = 14, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			{...strokeProps}
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<path d="M6 4v16" />
+			<circle cx="6" cy="8" r="1.6" fill="currentColor" stroke="none" />
+			<circle cx="6" cy="16" r="1.6" fill="currentColor" stroke="none" />
+			<path d="M10 8h9M10 16h6" />
+		</svg>
+	);
+}
+
+/** 会话列表（顶栏溢出菜单） */
+export function ListIcon({ size = 14, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			{...strokeProps}
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<path d="M8 6h12M8 12h12M8 18h12" />
+			<circle cx="4" cy="6" r="1" fill="currentColor" stroke="none" />
+			<circle cx="4" cy="12" r="1" fill="currentColor" stroke="none" />
+			<circle cx="4" cy="18" r="1" fill="currentColor" stroke="none" />
+		</svg>
+	);
+}

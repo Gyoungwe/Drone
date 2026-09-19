@@ -833,6 +833,70 @@ body {
 .meta-group[open] > summary .meta-caret {
 	transform: rotate(90deg);
 }
+/* ---- 过程块：一轮的阶段说明 + 工具组收成一行（与桌面同一 shared 分段规则） ---- */
+.process-block {
+	align-self: stretch;
+	margin: 2px 0 6px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	font-size: 12px;
+}
+.process-block.open {
+	border-color: var(--hairline);
+	background: var(--surface-2);
+}
+.process-head {
+	display: flex;
+	width: 100%;
+	min-width: 0;
+	align-items: center;
+	gap: 7px;
+	padding: 6px 8px;
+	border: 0;
+	border-radius: 9px;
+	background: none;
+	font: inherit;
+	text-align: left;
+	color: var(--dim);
+	cursor: pointer;
+}
+.process-head .meta-caret.open {
+	transform: rotate(90deg);
+}
+.process-label {
+	flex: none;
+	font-weight: 600;
+	color: var(--ink-2);
+}
+.process-block.working .process-label {
+	color: var(--ink);
+}
+.process-meta {
+	flex: none;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.process-stage {
+	min-width: 0;
+	margin-left: auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 11px;
+	color: var(--faint);
+}
+.process-block.working .process-stage {
+	color: var(--dim);
+	animation: breathe 2.2s ease-in-out infinite;
+}
+.process-body {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 2px;
+	border-top: 1px solid var(--hairline);
+	padding: 6px 8px 8px 12px;
+}
 .meta-body {
 	display: flex;
 	flex-direction: column;
@@ -1102,45 +1166,6 @@ body {
 	color: var(--ok);
 }
 .todo-item.todo .t-ic {
-	color: var(--faint);
-}
-
-/* ---- 只读任务工作台（LAN） ---- */
-.task-card .cnt {
-	font-weight: 400;
-}
-.task-note {
-	font-size: 11.5px;
-	color: var(--faint);
-}
-.task-row {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	padding: 6px 0;
-	border-top: 1px solid var(--hairline);
-}
-.task-head {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 8px;
-}
-.task-goal {
-	font-size: 13px;
-	color: var(--ink);
-	overflow-wrap: anywhere;
-}
-.task-state {
-	flex: none;
-	font-size: 11px;
-	color: var(--ink-2);
-	border: 1px solid var(--hairline);
-	border-radius: 999px;
-	padding: 1px 8px;
-}
-.task-meta {
-	font-size: 11.5px;
 	color: var(--faint);
 }
 

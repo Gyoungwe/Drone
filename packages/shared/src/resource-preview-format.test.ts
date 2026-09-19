@@ -52,10 +52,10 @@ describe("bounded resource format previews", () => {
 	});
 	it("bounds rows, columns and individual cells with explicit clipping", () => {
 		expect(
-			tablePreview("id\n" + Array.from({ length: 250 }, (_, i) => String(i)).join("\n"), "csv"),
+			tablePreview(`id\n${Array.from({ length: 250 }, (_, i) => String(i)).join("\n")}`, "csv"),
 		).toMatchObject({ clipped: true });
 		expect(
-			tablePreview("id\n" + Array.from({ length: 250 }, (_, i) => String(i)).join("\n"), "csv").rows,
+			tablePreview(`id\n${Array.from({ length: 250 }, (_, i) => String(i)).join("\n")}`, "csv").rows,
 		).toHaveLength(200);
 		const columns = tablePreview(Array(65).fill("x").join("\t"), "tsv", false);
 		expect(columns.headers).toHaveLength(60);
@@ -90,17 +90,17 @@ describe("bounded resource format previews", () => {
 		const missing = tablePreview("1\t7\t.\tA\tT", "vcf");
 		expect(missing.headers[0]).toBe("列 1");
 		expect(missing.warnings.join()).toContain("#CHROM");
-		expect(tablePreview("#CHROM\t" + Array(61).fill("sample").join("\t"), "vcf").clipped).toBe(true);
+		expect(tablePreview(`#CHROM\t${Array(61).fill("sample").join("\t")}`, "vcf").clipped).toBe(true);
 	});
 	it("does not treat a SAM quality string's opening quote as CSV quoting", () => {
 		const row = 'read\t0\tchr1\t1\t60\t3M\t*\t0\t0\tACG\t"II';
-		const p = tablePreview("@HD\tVN:1.6\n" + row + "\n" + row, "sam");
+		const p = tablePreview(`@HD\tVN:1.6\n${row}\n${row}`, "sam");
 		expect(p.rows).toHaveLength(2);
 		expect(p.rows[0]?.[10]).toBe('"II');
 		expect(p.warnings).toEqual([]);
 	});
 	it("keeps only bounded FASTA snippets and labels clipping, without computing whole-file lengths", () => {
-		const p = sequencePreview(">seq1\n" + "ACGT".repeat(200) + "\n>seq2\nNNN\n", "fasta");
+		const p = sequencePreview(`>seq1\n${"ACGT".repeat(200)}\n>seq2\nNNN\n`, "fasta");
 		expect(p.records[0]).toMatchObject({ name: "seq1", length: 800 });
 		expect(p.records[0]?.sequence).toHaveLength(600);
 		expect(p.clipped).toBe(true);

@@ -58,7 +58,7 @@ it("records the real research-workbench lazy schema footprint", async () => {
 		research: research.footprint,
 		activeCapabilities: research.activeCapabilities,
 	};
-	console.log("CAPABILITY_FOOTPRINT=" + JSON.stringify(report));
+	console.log(`CAPABILITY_FOOTPRINT=${JSON.stringify(report)}`);
 	expect(research.activeCapabilities).toEqual(expect.arrayContaining(["knowledge", "research"]));
 	expect(research.footprint.activeToolSchemaBytes).toBeLessThan(research.footprint.allToolSchemaBytes);
 });

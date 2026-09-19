@@ -194,7 +194,7 @@ export function SemanticManagement({
 					onChange={(e) => update("minSimilarity", Number(e.target.value))}
 					className="mt-1 w-full rounded-lg border border-border bg-surface px-2 py-2 text-xs text-ink"
 				/>
-				<span className="mt-1 block text-[10px] text-ink-faint">{t("semanticMinSimilarityHint")}</span>
+				<span className="mt-1 block text-[11px] text-ink-faint">{t("semanticMinSimilarityHint")}</span>
 			</label>
 			<label className="block text-xs text-ink-dim">
 				{t("credentialEnv")}
@@ -213,7 +213,7 @@ export function SemanticManagement({
 				/>
 				<span>{t("remoteConsent")}</span>
 			</label>
-			<p className="text-[10px] text-ink-dim">{t("testSemanticHint")}</p>
+			<p className="text-[11px] text-ink-dim">{t("testSemanticHint")}</p>
 			<div className="flex flex-wrap gap-1">
 				<Button size="sm" disabled={busy} onClick={() => void save()}>
 					{t("saveSemantic")}
@@ -227,7 +227,7 @@ export function SemanticManagement({
 				</Button>
 			</div>
 			<div className="border-t border-border pt-3">
-				<p className="text-[10px] text-ink-dim">{t("semanticIndexHint")}</p>
+				<p className="text-[11px] text-ink-dim">{t("semanticIndexHint")}</p>
 				<div className="mt-2 flex flex-wrap gap-1">
 					<Button
 						size="sm"
@@ -241,10 +241,10 @@ export function SemanticManagement({
 						{t("semanticCancel")}
 					</Button>
 				</div>
-				{(!config.enabled || !saved) && <p className="mt-2 text-[10px] text-warn">{t("semanticDisabled")}</p>}
+				{(!config.enabled || !saved) && <p className="mt-2 text-[11px] text-warn">{t("semanticDisabled")}</p>}
 			</div>
 			{status?.index && (
-				<p className="text-[10px] text-ink-dim">
+				<p className="text-[11px] text-ink-dim">
 					{t("topicStatus")}: {String(status.index.coverage ?? status.index.status ?? t("unknown"))}
 					{status.index.semantic?.vectors !== undefined
 						? ` · ${t("processed")}: ${status.index.semantic.vectors}`
@@ -252,7 +252,7 @@ export function SemanticManagement({
 				</p>
 			)}
 			{result && (
-				<p className="text-[10px] text-ink-dim">
+				<p className="text-[11px] text-ink-dim">
 					{t("processed")}: {result.processed ?? "—"}
 					{result.dimension ? ` · ${t("semanticDimension")}: ${result.dimension}` : ""}.{" "}
 					{t("semanticFallback")}

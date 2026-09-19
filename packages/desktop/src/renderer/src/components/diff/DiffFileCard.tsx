@@ -119,7 +119,7 @@ function WriteView({ content }: { content: string }) {
  * 文件卡片（手风琴）：头部 = mono path + 增删统计 + chevron；体 = sections 逐个渲染
  * （同轮同文件多次 edit 为多段，段间细分割线）。
  * <details> 非受控（drawer-details 抽屉动画）；内容体每次展开重挂（key=openCount）让行 stagger 重播。
- * chip 跳转由 DiffSidebar 直接操作 DOM（open=true + scrollIntoView + jump-flash），不经 props。
+ * 轮末页脚跳转由 ChangesPane 直接操作 DOM（open=true + scrollIntoView + jump-flash），不经 props。
  */
 export function DiffFileCard({ file, defaultOpen }: { file: TurnFileChange; defaultOpen: boolean }) {
 	const ref = useRef<HTMLDetailsElement>(null);

@@ -5,7 +5,7 @@ import { memo } from "react";
  * Token 迷你仪表盘（随包示例）：
  * - useContextUsage(sessionId)：事件驱动刷新（message_end/tool_execution_end/turn_end/…），
  *   sessionId 为 null/draft 时返回 null（自动隐藏）
- * - chat.corner.top-right 与 TodoPanel 同角：容器已预留 pt-12，贡献堆在面板下方
+ * - chat.corner.top-right：聊天区右上角（UI v3 起该角无宿主悬浮层，贡献直接贴角）
  */
 export const TokenMeter = memo(function TokenMeter() {
 	const sessionId = useSessionsStore((s) => s.activeSessionId);

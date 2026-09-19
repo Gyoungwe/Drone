@@ -14,7 +14,7 @@ export async function readPdfIdentity(bytes) {
 		worker.once("message", (result) => {
 			clearTimeout(timer);
 			void worker.terminate();
-			if (result.error) reject(new Error("PDF identity requires manual inspection: " + result.error));
+			if (result.error) reject(new Error(`PDF identity requires manual inspection: ${result.error}`));
 			else resolve(result);
 		});
 		worker.once("error", () => {

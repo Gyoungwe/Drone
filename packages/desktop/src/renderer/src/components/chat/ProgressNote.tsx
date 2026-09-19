@@ -1,36 +1,38 @@
 import type { ProgressDisplay } from "@drone/shared";
 import { useI18nStore } from "../../i18n";
+
+/**
+ * 阶段说明（Agent 公开摘要）：过程块内的一条「阶段行」——标题 + 可选说明 + 下一步。
+ * 只讲发生了什么，不带外壳标签（「阶段说明 · Agent 公开摘要」之类的元信息已由过程块头承担）。
+ */
 export function ProgressNote({ progress }: { progress: ProgressDisplay }) {
 	const zh = useI18nStore((s) => s.language) === "zh";
-	const label =
+	const kindLabel =
 		progress.kind === "summary"
 			? zh
-				? "阶段小结"
-				: "Stage summary"
+				? "小结"
+				: "Summary"
 			: progress.kind === "update"
-				? zh
-					? "进展说明"
-					: "Progress update"
+				? null
 				: zh
-					? "阶段说明"
-					: "Stage plan";
+					? "计划"
+					: "Plan";
 	return (
-		<aside
-			className="rounded-lg border-l-2 border-border bg-hover/50 px-3 py-2 text-xs text-ink-dim"
-			data-testid="progress-note"
-			data-stage-kind={progress.kind || "plan"}
-		>
-			<div className="mb-1 text-[10px] text-ink-faint">
-				{label} · {zh ? "Agent 公开摘要" : "agent public summary"}
-			</div>
-			<p className="font-medium text-ink-2">{progress.text}</p>
-			{progress.detail && <p className="mt-1 leading-relaxed">{progress.detail}</p>}
-			{progress.next && (
-				<p className="mt-1">
-					{zh ? "接下来：" : "Next: "}
-					{progress.next}
+		<div className="progress-stage" data-testid="progress-note" data-stage-kind={progress.kind || "plan"}>
+			<span className="progress-stage-dot" aria-hidden="true" />
+			<div className="min-w-0 flex-1">
+				<p className="progress-stage-title">
+					{progress.text}
+					{kindLabel && <span className="progress-stage-kind">{kindLabel}</span>}
 				</p>
-			)}
-		</aside>
+				{progress.detail && <p className="progress-stage-detail">{progress.detail}</p>}
+				{progress.next && (
+					<p className="progress-stage-next">
+						{zh ? "接下来：" : "Next: "}
+						{progress.next}
+					</p>
+				)}
+			</div>
+		</div>
 	);
 }

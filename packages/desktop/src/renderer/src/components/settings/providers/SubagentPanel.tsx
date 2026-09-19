@@ -52,9 +52,9 @@ export function SubagentPanel() {
 									<p className="truncate text-[13px] font-medium text-ink">
 										{protectedProfile?.label ?? agent.name}
 									</p>
-									<p className="break-all font-mono text-[10px] text-ink-faint">{agent.name}</p>
+									<p className="break-all font-mono text-[11px] text-ink-faint">{agent.name}</p>
 								</div>
-								<span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[9px] text-ink-faint">
+								<span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px] text-ink-faint">
 									{protectedProfile ? t("settings.models.protected") : agent.source}
 								</span>
 							</div>
@@ -62,7 +62,7 @@ export function SubagentPanel() {
 								<p className="mt-1.5 text-[11px] leading-relaxed text-ink-dim">{agent.description}</p>
 							)}
 							<div className="mt-3 grid gap-2 sm:grid-cols-2">
-								<label className="text-[10px] text-ink-faint">
+								<label className="text-[11px] text-ink-faint">
 									<span className="mb-1 block">{t("settings.models.agentModel")}</span>
 									<select
 										className="w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-ink-faint"
@@ -82,7 +82,7 @@ export function SubagentPanel() {
 										))}
 									</select>
 								</label>
-								<label className="text-[10px] text-ink-faint">
+								<label className="text-[11px] text-ink-faint">
 									<span className="mb-1 block">{t("settings.models.agentThinking")}</span>
 									<select
 										className="w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-ink-faint"
@@ -111,7 +111,7 @@ export function SubagentPanel() {
 								</label>
 							</div>
 							{protectedProfile && (
-								<div className="mt-3 rounded-lg bg-hover p-2 text-[10px] text-ink-faint">
+								<div className="mt-3 rounded-lg bg-hover p-2 text-[11px] text-ink-faint">
 									<div>
 										{t("settings.models.permissions")}:{" "}
 										<span className="font-mono">{protectedProfile.permissions.join(" · ")}</span>

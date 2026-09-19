@@ -35,7 +35,11 @@ export function LoginDialog() {
 	const prompt = pendingPrompt?.prompt;
 
 	return (
-		<div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/20" role="dialog" aria-modal>
+		<div
+			className="fixed inset-0 z-(--z-dialog-top) flex items-center justify-center bg-ink/20"
+			role="dialog"
+			aria-modal
+		>
 			<div className="w-[440px] rounded-xl border border-border bg-surface p-4 shadow-dialog">
 				<h3 className="text-sm font-semibold text-ink">
 					{t(login.loginKind === "apiKey" ? "settings.login.apiKeyTitle" : "settings.login.title", {
@@ -58,7 +62,7 @@ export function LoginDialog() {
 							{deviceCode.verificationUri}
 						</button>
 						{deviceCode.expiresInSeconds ? (
-							<p className="mt-1 text-center text-[10px] text-ink-faint">
+							<p className="mt-1 text-center text-[11px] text-ink-faint">
 								{t("settings.login.deviceCodeExpires", {
 									minutes: Math.ceil(deviceCode.expiresInSeconds / 60),
 								})}
@@ -80,7 +84,7 @@ export function LoginDialog() {
 							{authUrl.url}
 						</button>
 						{authUrl.instructions && (
-							<p className="mt-1 text-[10px] text-ink-faint">{authUrl.instructions}</p>
+							<p className="mt-1 text-[11px] text-ink-faint">{authUrl.instructions}</p>
 						)}
 					</div>
 				)}

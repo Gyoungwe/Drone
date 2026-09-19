@@ -74,7 +74,7 @@ export function ModelPicker() {
 					)}
 					{groups.map((group) => (
 						<div key={group.name}>
-							<div className="px-2 pt-2 pb-1 text-[10px] font-medium tracking-wide text-ink-faint uppercase">
+							<div className="px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-ink-faint uppercase">
 								{group.name}
 							</div>
 							{group.items.map((m) => {

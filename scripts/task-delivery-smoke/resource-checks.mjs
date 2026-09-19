@@ -39,11 +39,11 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 	await writeFile(join(reports, "data table.csv"), "sample,note\nfrom-report-folder,relative-link-ok\n");
 	await writeFile(
 		join(cwd, "paged.csv"),
-		"sample,value\n" + Array.from({ length: 250 }, (_, i) => `sample-${i},${i}`).join("\n"),
+		`sample,value\n${Array.from({ length: 250 }, (_, i) => `sample-${i},${i}`).join("\n")}`,
 	);
 	await writeFile(
 		join(cwd, "genome.fa"),
-		">chromosome_1 example fragment\n" + "ACGTN".repeat(40) + "\n>protein_1\nMKWVTFISLLFLFSSAYS\n",
+		`>chromosome_1 example fragment\n${"ACGTN".repeat(40)}\n>protein_1\nMKWVTFISLLFLFSSAYS\n`,
 	);
 	await writeFile(join(cwd, "reads.fastq"), "@read1\nACG\nTAC\n+read1\n@+I\nIII\n@incomplete\nACGT\n+\nII\n");
 	await writeFile(
@@ -52,7 +52,7 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 			"##fileformat=VCFv4.3\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSample-A\nchr1\t42\t.\tA\tT\t.\tPASS\t.\tGT\t0/1\n",
 		),
 	);
-	await writeFile(join(cwd, "large.fa.gz"), gzipSync(">large\n" + "ACGT".repeat(2 * 1024 * 1024)));
+	await writeFile(join(cwd, "large.fa.gz"), gzipSync(`>large\n${"ACGT".repeat(2 * 1024 * 1024)}`));
 	await writeFile(join(cwd, "genes.gff3"), "##gff-version 3\nchr1\ttest\tgene\t1\t12\t.\t+\t.\tID=gene1\n");
 	await writeFile(join(cwd, "intervals.bed"), "chr1\t0\t12\n");
 	await writeFile(
@@ -60,7 +60,7 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 		JSON.stringify({ sample: "A", count: 2, files: ["reads.fastq.gz"] }),
 	);
 	await writeFile(join(cwd, "invalid.json"), '{"sample":');
-	await writeFile(join(cwd, "too-deep.json"), "[".repeat(40) + "0" + "]".repeat(40));
+	await writeFile(join(cwd, "too-deep.json"), `${"[".repeat(40)}0${"]".repeat(40)}`);
 	await writeFile(join(cwd, "data.bam"), Buffer.from("BAM\x01"));
 	await writeFile(
 		join(cwd, "chart.svg"),
@@ -100,7 +100,7 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 	};
 	const button = async (scope, text) =>
 		js(
-			`[...document.querySelectorAll(${JSON.stringify(scope + " button")})].find(e=>e.textContent.trim()===${JSON.stringify(text)}).click();true`,
+			`[...document.querySelectorAll(${JSON.stringify(`${scope} button`)})].find(e=>e.textContent.trim()===${JSON.stringify(text)}).click();true`,
 		);
 	const query = async (value) =>
 		js(

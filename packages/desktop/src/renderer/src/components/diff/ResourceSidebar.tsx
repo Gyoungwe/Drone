@@ -36,7 +36,7 @@ function formatBytes(size: number): string {
 
 export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 	const t = useT();
-	const setOpen = useUiStore((s) => s.setDiffSidebarOpen);
+	const setPanelOpen = useUiStore((s) => s.setPanelOpen);
 	const showDiff = useUiStore((s) => s.showDiffSidebar);
 	const openPreview = useUiStore((s) => s.openResourcePreview);
 	const [mode, setMode] = useState<"preview" | "source">("preview");
@@ -106,7 +106,7 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 				<button
 					type="button"
 					className="diff-side-close"
-					onClick={() => setOpen(false)}
+					onClick={() => setPanelOpen(false)}
 					aria-label={t("common.close")}
 				>
 					<CloseIcon />

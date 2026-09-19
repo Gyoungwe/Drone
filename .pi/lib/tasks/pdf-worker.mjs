@@ -30,11 +30,10 @@ try {
 	const pages = Math.min(totalPages, 3);
 	for (let page = 1; page <= pages; page++) {
 		const content = await (await doc.getPage(page)).getTextContent();
-		text +=
-			content.items
-				.map((item) => item.str || "")
-				.join(" ")
-				.slice(0, 30000) + "\n";
+		text += `${content.items
+			.map((item) => item.str || "")
+			.join(" ")
+			.slice(0, 30000)}\n`;
 	}
 	await (typeof doc.destroy === "function" ? doc.destroy() : loading.destroy());
 	parentPort.postMessage({ text, pages, partial: totalPages > pages });

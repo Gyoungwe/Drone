@@ -10,10 +10,16 @@ export function RunInspector({
 	run,
 	timing,
 	usage,
+	defaultOpen = false,
+	embedded = false,
 }: {
 	run?: RunInspectorTurn;
 	timing?: TurnTiming;
 	usage?: UsageDisplayTotal;
+	/** 初始展开（右侧面板「过程」页签给最新一轮） */
+	defaultOpen?: boolean;
+	/** 嵌入面板卡片内：去掉外框与上边距 */
+	embedded?: boolean;
 }) {
 	const zh = useI18nStore((s) => s.language) === "zh";
 	const t = useT();
@@ -36,8 +42,13 @@ export function RunInspector({
 						: "not run";
 	return (
 		<details
-			className="group mt-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink-dim"
+			className={
+				embedded
+					? "group mt-1 text-xs text-ink-dim"
+					: "group mt-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink-dim"
+			}
 			data-testid="run-inspector"
+			open={defaultOpen || undefined}
 		>
 			<summary
 				className="flex min-h-8 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 rounded focus-visible:outline-2 focus-visible:outline-accent"
@@ -66,7 +77,7 @@ export function RunInspector({
 							run.models.map((m) => (
 								<span
 									key={`${m.provider}/${m.model}`}
-									className="rounded bg-hover px-1.5 py-0.5 font-mono text-[10px]"
+									className="rounded bg-hover px-1.5 py-0.5 font-mono text-[11px]"
 								>
 									{m.provider || "?"}/{m.model || "?"} · {m.responses}
 								</span>
@@ -102,7 +113,7 @@ export function RunInspector({
 							run.tools.map((tool) => (
 								<span
 									key={tool.key}
-									className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${tool.state === "error" ? "bg-err/10 text-err" : "bg-hover"}`}
+									className={`rounded px-1.5 py-0.5 font-mono text-[11px] ${tool.state === "error" ? "bg-err/10 text-err" : "bg-hover"}`}
 								>
 									{tool.name} · {tool.state}
 								</span>
@@ -131,7 +142,7 @@ export function RunInspector({
 						<p className="font-medium text-ink-2">{zh ? "本轮实际读取路径" : "Observed read paths"}</p>
 						<div className="mt-1 space-y-1">
 							{run.sourcePaths.slice(0, 12).map((path) => (
-								<div key={path} className="break-all font-mono text-[10px] text-ink-faint">
+								<div key={path} className="break-all font-mono text-[11px] text-ink-faint">
 									{path}
 								</div>
 							))}
@@ -142,7 +153,7 @@ export function RunInspector({
 					<section>
 						<p className="font-medium text-ink-2">{zh ? "产物" : "Artifacts"}</p>
 						{run.artifacts.map((path) => (
-							<div key={path} className="break-all font-mono text-[10px] text-ink-faint">
+							<div key={path} className="break-all font-mono text-[11px] text-ink-faint">
 								{path}
 							</div>
 						))}
@@ -210,7 +221,7 @@ export function RunInspector({
 				{run.skill && (
 					<section>
 						<p className="font-medium text-ink-2">Skill</p>
-						<code className="text-[10px]">/skill:{run.skill}</code>
+						<code className="text-[11px]">/skill:{run.skill}</code>
 					</section>
 				)}
 				{run.errors > 0 && (
@@ -218,7 +229,7 @@ export function RunInspector({
 						{zh ? `本轮 ${run.errors} 个错误卡` : `${run.errors} error card(s) in this turn`}
 					</p>
 				)}
-				<p className="text-[10px] text-ink-faint">
+				<p className="text-[11px] text-ink-faint">
 					{zh
 						? "这里展示可观察的公开摘要、工具和回执，不展示模型私有思考链。"
 						: "Shows observable public summaries, tools and receipts; private chain-of-thought is not displayed."}

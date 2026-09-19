@@ -17,7 +17,9 @@ export {
 	type ToolCategory,
 } from "./meta-summary";
 export { type PatchHunk, type PatchLine, parsePatch, patchStat } from "./parse-patch";
+export { type ChatRowOrProcess, groupProcessRows, type ProcessSegment } from "./process-rows";
 export { reduceEvent } from "./reducer";
+export { summarizeToolArgs } from "./tool-summary";
 export {
 	type DiffSection,
 	deriveTurnChanges,

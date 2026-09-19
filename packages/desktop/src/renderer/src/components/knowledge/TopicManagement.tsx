@@ -89,7 +89,7 @@ export function TopicManagement({
 					<div className="flex items-start justify-between gap-2">
 						<div>
 							<h3 className="text-sm font-medium">{topic.title}</h3>
-							<p className="mt-1 text-[10px] text-ink-dim">
+							<p className="mt-1 text-[11px] text-ink-dim">
 								{t("topicStatus")}: {topic.status} · {topic.updatedAt}
 							</p>
 						</div>
@@ -131,7 +131,7 @@ export function TopicManagement({
 							<summary className="cursor-pointer text-xs font-medium text-warn">
 								{t("topicConflicts")} · {topic.conflicts.length}
 							</summary>
-							<p className="mt-1 text-[10px] leading-relaxed text-ink-dim">{t("topicConflictHint")}</p>
+							<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">{t("topicConflictHint")}</p>
 							<ul className="mt-2 space-y-2">
 								{topic.conflicts.slice(-4).map((conflict) => (
 									<li
@@ -142,7 +142,7 @@ export function TopicManagement({
 											{conflict.relation} · {conflict.confidence}
 										</div>
 										<div className="mt-0.5 break-words text-ink-dim">{conflict.reason}</div>
-										<div className="mt-0.5 break-all font-mono text-[10px] text-ink-faint">
+										<div className="mt-0.5 break-all font-mono text-[11px] text-ink-faint">
 											{conflict.previousSourcePath} ↔ {conflict.incomingSourcePath}
 										</div>
 									</li>

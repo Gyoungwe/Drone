@@ -177,4 +177,6 @@ function Fixture() {
 		</div>
 	);
 }
-createRoot(document.getElementById("root")!).render(<Fixture />);
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("workflow-catalog-smoke: #root missing");
+createRoot(rootEl).render(<Fixture />);

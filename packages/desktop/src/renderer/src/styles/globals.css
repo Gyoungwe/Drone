@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* 应用壳层（导航栏 / 上下文面板 / 过程块 / 全屏视图）样式，与 globals 同一 Tailwind 管线 */
+@import "./shell.css";
 
 /* dark: 工具类挂到 data-theme（手动切换），不走 prefers-color-scheme */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
@@ -52,6 +54,14 @@
 	--color-on-ink: #ffffff;
 	--color-accent: #7c3aed;
 	--color-on-accent: #ffffff;
+	/* z-index 六档：内容层 < 面板内浮层 < 下拉 < 对话框 < 叠加对话框/工具提示 < 提示条。
+	   Tailwind 侧用 z-(--z-xxx) 引用；禁止再出现 z-[60]/z-[70]/z-[80] 之类散值 */
+	--z-content: 10;
+	--z-float: 20;
+	--z-dropdown: 30;
+	--z-dialog: 40;
+	--z-dialog-top: 50;
+	--z-toast: 60;
 	/* 首页字标（手稿构造版 WordmarkConstruct）：字描边 / 主构造线 / 次级虚线 / 标注文字 */
 	--lg-ol: #a1a1aa;
 	--lg-c1: #c9c9d1;
@@ -248,33 +258,6 @@
 	}
 }
 
-/* todo 折叠态呼吸灯：颜色取 ink-dim（弱化存在感的中性灰，深浅主题各自反色），仅透明度 + 缩放起伏 */
-.todo-breath-dot {
-	width: 7px;
-	height: 7px;
-	flex-shrink: 0;
-	border-radius: 9999px;
-	background: var(--color-ink-dim);
-	animation: todo-breath 2.2s ease-in-out infinite;
-	transition: opacity 0.3s;
-}
-/* 工作停止（agentActive false）：呼吸定格 + 变淡成静态暗点，恢复工作自动继续 */
-.todo-breath-dot-paused {
-	animation-play-state: paused;
-	opacity: 0.3;
-}
-@keyframes todo-breath {
-	0%,
-	100% {
-		opacity: 1;
-		transform: scale(1);
-	}
-	50% {
-		opacity: 0.3;
-		transform: scale(0.72);
-	}
-}
-
 /* todo 完成对勾描边绘制：仅新挂载的行触发（React 复用 DOM 节点不会重放动画） */
 .todo-check-path {
 	stroke-dasharray: 16;
@@ -287,25 +270,7 @@
 	}
 }
 
-/* todo 展开列表：极细滚动条（3px，track 透明） */
-.todo-thin-scroll::-webkit-scrollbar {
-	width: 3px;
-}
-.todo-thin-scroll::-webkit-scrollbar-thumb {
-	background: var(--scrollbar-thumb);
-	border-radius: 2px;
-}
-.todo-thin-scroll::-webkit-scrollbar-thumb:hover {
-	background: var(--scrollbar-thumb-hover);
-}
-.todo-thin-scroll::-webkit-scrollbar-track {
-	background: transparent;
-}
-
 @media (prefers-reduced-motion: reduce) {
-	.todo-breath-dot {
-		animation: none;
-	}
 	.todo-check-path {
 		animation: none;
 		stroke-dashoffset: 0;
@@ -379,167 +344,6 @@
 	}
 	.tab-dragging {
 		transform: none;
-	}
-}
-
-/* 左侧会话轨道（设置 → 外观开关，可选交互）：聊天页左侧垂直居中一列**直角细线**（codex 风），
-   悬停/聚焦时原地「变形」为悬浮胶囊，上下邻居按行距分级跟涨成**半大/迷你胶囊**（dock 波浪：
-   展开 208×32 → ±1 胶囊 104×24（内容可见、标题裁断） → ±2 迷你空胶囊 44×14 → 细线），
-   状态类 is-expanded/is-near-1/is-near-2 由 JS 按行距下发（比 :has 链易控：呼吸/内容显隐按距离精确开关）。
-   **行高同步分级撑开（16 → 40/32/20 = 胶囊 + 留白）**：按钮在文档流内，行一撑上下邻居自然让位，
-   胶囊各行其道互不叠压；行高与胶囊同时长同曲线伸缩，任何时刻胶囊都不会超出行。
-   变形是两阶段时序（transition 取「目标态」的定义，正反向可分别配时序）：
-   展开/跟涨 = 先在小尺寸上 90ms 翻色/翻圆角（深色线 → 白胶囊），再回弹放大（340/300/280ms 随档位递减）；
-   收起 = 先 260ms 收缩（仍是白胶囊），颜色/圆角延迟 150ms 到接近尾声才变回细线。
-   避免旧版「深色线拉长到一半才闪白」的颜色逆变闪烁。 */
-/* 行高波浪：transition 同样取目标态定义（收起走基线 260ms） */
-.session-rail-item {
-	transition: height 260ms cubic-bezier(0.34, 1.15, 0.64, 1);
-}
-.session-rail-item.is-expanded {
-	height: 40px;
-	transition: height 340ms cubic-bezier(0.34, 1.25, 0.64, 1);
-}
-.session-rail-item.is-near-1 {
-	height: 32px;
-	transition: height 300ms cubic-bezier(0.34, 1.25, 0.64, 1);
-}
-.session-rail-item.is-near-2 {
-	height: 20px;
-	transition: height 280ms cubic-bezier(0.34, 1.25, 0.64, 1);
-}
-.session-rail-item .rail-capsule {
-	position: absolute;
-	left: 6px;
-	top: 50%;
-	display: flex;
-	align-items: center;
-	/* 无 padding：否则 border-box 下收起态高度被 padding 撑成 12px，就不是一条线了。
-	   内距在内容包裹层（JSX 的 px-2.5），收起时随内容一起被 overflow 裁掉 */
-	border-radius: 0;
-	overflow: hidden;
-	transform: translateY(-50%);
-	/* 收起（目标态 = 细线）：尺寸先走，颜色/圆角延迟到收缩近尾声再翻 */
-	transition:
-		width 260ms cubic-bezier(0.34, 1.15, 0.64, 1),
-		height 260ms cubic-bezier(0.34, 1.15, 0.64, 1),
-		background-color 80ms ease 150ms,
-		border-radius 80ms ease 150ms,
-		box-shadow 120ms ease;
-}
-/* 波浪档位 z 序：展开浮最上，±1 压 ±2 压细线（胶囊比行距大，会覆盖邻行） */
-.session-rail-item.is-expanded {
-	z-index: 10;
-}
-.session-rail-item.is-near-1 {
-	z-index: 6;
-}
-.session-rail-item.is-near-2 {
-	z-index: 4;
-}
-.session-rail-item.is-expanded .rail-capsule {
-	/* 与顶栏胶囊同宽（w-52）；窄窗口按视口收缩，不越过右缘 */
-	width: min(208px, calc(100vw - 40px));
-	height: 32px;
-	border-radius: 9999px;
-	background-color: var(--color-surface);
-	box-shadow: var(--shadow-pop);
-	/* 展开（目标态 = 胶囊）：颜色/圆角 90ms 先行（趁尺寸还小），尺寸随后 340ms 回弹放大，阴影最后到 */
-	transition:
-		width 340ms cubic-bezier(0.34, 1.25, 0.64, 1),
-		height 340ms cubic-bezier(0.34, 1.25, 0.64, 1),
-		background-color 90ms ease,
-		border-radius 90ms ease,
-		box-shadow 220ms ease 80ms;
-}
-/* ±1：一半大的胶囊（104×24），头像+标题可见（裁断出预览感），柔阴影 */
-.session-rail-item.is-near-1 .rail-capsule {
-	width: 104px;
-	height: 24px;
-	border-radius: 9999px;
-	background-color: var(--color-surface);
-	box-shadow: var(--shadow-soft);
-	transition:
-		width 300ms cubic-bezier(0.34, 1.25, 0.64, 1),
-		height 300ms cubic-bezier(0.34, 1.25, 0.64, 1),
-		background-color 90ms ease 20ms,
-		border-radius 90ms ease 20ms,
-		box-shadow 180ms ease 60ms;
-}
-/* ±2：迷你空胶囊（44×14），纯波形过渡元素，不显示内容 */
-.session-rail-item.is-near-2 .rail-capsule {
-	width: 44px;
-	height: 14px;
-	border-radius: 9999px;
-	background-color: var(--color-surface);
-	box-shadow: var(--shadow-soft);
-	transition:
-		width 280ms cubic-bezier(0.34, 1.25, 0.64, 1),
-		height 280ms cubic-bezier(0.34, 1.25, 0.64, 1),
-		background-color 90ms ease 20ms,
-		border-radius 90ms ease 20ms,
-		box-shadow 150ms ease 50ms;
-}
-/* 胶囊内容（图标 + 标题）：展开/±1 时等翻色完成后渐入，配合裁剪逐步揭示；
-   收起/进 ±2 时 120ms 淡出（快于收缩），不留空胶囊 */
-.session-rail-item .rail-capsule > * {
-	opacity: 0;
-	transition: opacity 120ms ease;
-}
-.session-rail-item.is-expanded .rail-capsule > * {
-	opacity: 1;
-	transition: opacity 180ms ease 110ms;
-}
-.session-rail-item.is-near-1 .rail-capsule > * {
-	opacity: 1;
-	transition: opacity 160ms ease 70ms;
-}
-/* 胶囊末尾的关闭 ×：仅展开态可见可点（同顶栏 group-hover 语义；±1/±2 只是波浪预览不给操作），
-   点击 stopPropagation 不触发切换；closeSession 后顶栏/轨道同读 sessions 数组，天然双向同步。
-   宽度 0→16 与胶囊同曲线「长出来」（margin-left 负值抵消 gap），±1 预览标题不被挤占 */
-.session-rail-item .rail-close {
-	width: 0;
-	margin-left: -8px;
-	opacity: 0;
-	pointer-events: none;
-	transition:
-		width 260ms cubic-bezier(0.34, 1.15, 0.64, 1),
-		margin-left 260ms cubic-bezier(0.34, 1.15, 0.64, 1),
-		opacity 100ms ease;
-}
-.session-rail-item.is-expanded .rail-close {
-	width: 16px;
-	margin-left: 0;
-	opacity: 1;
-	pointer-events: auto;
-	transition:
-		width 340ms cubic-bezier(0.34, 1.25, 0.64, 1),
-		margin-left 340ms cubic-bezier(0.34, 1.25, 0.64, 1),
-		opacity 180ms ease 110ms;
-}
-/* 呼吸只作用于收起态的细线；展开/跟涨成白胶囊后由内部头像的 tab-avatar-working 承担（整个白胶囊闪透明度会像故障） */
-.session-rail-item:not(.is-expanded):not(.is-near-1):not(.is-near-2) .rail-working {
-	animation: avatar-breathe 3.2s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-	/* 各档位 transition 定义在更高优先级的状态选择器里，必须逐档同优先级覆盖才压得住 */
-	.session-rail-item,
-	.session-rail-item.is-expanded,
-	.session-rail-item.is-near-1,
-	.session-rail-item.is-near-2,
-	.session-rail-item .rail-capsule,
-	.session-rail-item.is-expanded .rail-capsule,
-	.session-rail-item.is-near-1 .rail-capsule,
-	.session-rail-item.is-near-2 .rail-capsule,
-	.session-rail-item .rail-capsule > *,
-	.session-rail-item.is-expanded .rail-capsule > *,
-	.session-rail-item.is-near-1 .rail-capsule > *,
-	.session-rail-item .rail-close,
-	.session-rail-item.is-expanded .rail-close {
-		transition: none;
-	}
-	.session-rail-item:not(.is-expanded):not(.is-near-1):not(.is-near-2) .rail-working {
-		animation: none;
 	}
 }
 
@@ -747,7 +551,7 @@ code {
 	text-decoration-color: var(--markdown-link-decoration);
 	text-underline-offset: auto;
 }
-/* 代码块容器：无边框悬浮卡片（设计语言 rounded-xl bg-surface shadow-soft 同 QueueBar/TodoPanel；
+/* 代码块容器：无边框悬浮卡片（设计语言 rounded-xl bg-surface shadow-soft 同 QueueBar/面板卡片；
    编辑器底色即卡片面，浅色=vitesse-light 白/深色=主题深底）。库自带 border 工具类 +
    inline borderColor，此处 border:none 以更高优先级压掉宽度；--ms-radius 抬到 12px（rounded-xl）。
    左右各收 8px：shadow-soft 外扩约 12px，卡片与正文同宽时阴影左右被溢出感挤压（贴边生硬），
@@ -843,7 +647,7 @@ code {
    补齐等宽字体与主题色表面，加载瞬间不突兀 */
 .markdown-body .code-fallback-plain {
 	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-	font-size: 12.5px;
+	font-size: 13px;
 	padding: 0.75rem 1rem;
 }
 .markdown-body .inline-code {
@@ -851,7 +655,7 @@ code {
 	border-radius: 0.25rem;
 	background: var(--markdown-code-bg);
 	color: var(--markdown-code-text);
-	font-size: 12.5px;
+	font-size: 13px;
 }
 .markdown-body .table-node {
 	font-size: 13px;
@@ -893,8 +697,8 @@ code {
 }
 
 /* ============================================================
-   turn-diff：轮末文件变更 chip + 右侧 diff 栏
-   设计稿：.local/design/ux/turn_diff/index.html（动画/配色以此为准）
+   turn-diff：轮末页脚（TurnFooter）的计时/增删统计 + 右侧「变更」页签 diff 配色
+   历史设计稿：.local/design/ux/turn_diff/index.html（动画/配色以此为准）
    ============================================================ */
 :root {
 	--diff-add: #16a34a;
@@ -913,32 +717,8 @@ code {
 	--diff-del-gutter: rgba(248, 113, 113, 0.12);
 }
 
-/* ---- 轮末 chip ---- */
-.turn-diff {
-	font-size: 12.5px;
-}
-/* 纯计时行（无文件变更轮）：幽灵文字，非交互 */
-.turn-diff-plain {
-	font-size: 12.5px;
-	display: flex;
-}
-.turn-diff-head {
-	display: inline-flex;
-	align-items: center;
-	gap: 7px;
-	cursor: pointer;
-	user-select: none;
-	list-style: none;
-	color: var(--color-ink-dim);
-	transition: color 0.15s;
-}
-.turn-diff-head:hover {
-	color: var(--color-ink);
-}
-.turn-diff-head::-webkit-details-marker {
-	display: none;
-}
-/* 轮次计时：chip 首位；运行中数字呼吸，结束后随 head 同色定格 */
+/* ---- 轮末页脚：计时 + 增删统计（TurnFooter / DiffFileCard / ChangesPane 共用） ---- */
+/* 轮次计时：页脚首位；运行中数字呼吸，结束后定格 */
 .turn-diff-timer {
 	display: inline-flex;
 	align-items: center;
@@ -965,9 +745,6 @@ code {
 		opacity: 0.45;
 	}
 }
-.turn-diff-sep {
-	color: var(--color-ink-faint);
-}
 .turn-diff-stat {
 	font-variant-numeric: tabular-nums;
 	font-weight: 600;
@@ -977,13 +754,6 @@ code {
 }
 .turn-diff-removed {
 	color: var(--diff-del);
-}
-.turn-diff-chev {
-	display: flex;
-	transition: transform 0.25s;
-}
-.turn-diff[open] .turn-diff-chev {
-	transform: rotate(90deg);
 }
 /* 进场：turn_end 后 pop（上浮 6px + scale 0.97 + 去模糊） */
 .turn-diff-enter {
@@ -1001,155 +771,18 @@ code {
 		filter: none;
 	}
 }
-/* chip 内联文件列表 */
-.turn-diff-files {
-	display: flex;
-	flex-direction: column;
-	gap: 1px;
-	padding: 4px 0 2px 8px;
-}
-.turn-diff-file {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 3px 8px;
-	border-radius: 6px;
-	border: none;
-	background: none;
-	cursor: pointer;
-	font-family: inherit;
-	font-size: 12px;
-	color: var(--color-ink-2);
-	transition: background 0.12s;
-	text-align: left;
-	width: fit-content;
-	max-width: 100%;
-}
-.turn-diff-file:hover {
-	background: var(--color-hover);
-}
 /* mono path RTL 截断：优先保留文件名端 */
-.turn-diff-path,
 .diff-file-path {
 	font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-	font-size: 11.5px;
+	font-size: 12px;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	direction: rtl;
 	text-align: left;
 }
-.turn-diff-path {
-	max-width: 420px;
-}
 
-/* ---- chip ---- */
-
-/* ---- 右侧 diff 栏（push 式宽度过渡 + 内容错峰淡入） ---- */
-.diff-sidebar {
-	flex: none;
-	width: 0;
-	overflow: hidden;
-	border-left: 1px solid transparent;
-	transition:
-		width 0.42s cubic-bezier(0.32, 0.72, 0, 1),
-		border-color 0.2s;
-}
-.diff-sidebar.open {
-	width: min(420px, 38vw);
-	border-left-color: var(--color-border);
-}
-.diff-sidebar.task-sidebar.open {
-	width: min(320px, 29vw);
-}
-.diff-sidebar-in {
-	width: min(420px, 38vw);
-	height: 100%;
-	display: flex;
-	flex-direction: column;
-	background: var(--color-canvas);
-	opacity: 0;
-	transform: translateX(28px);
-	transition:
-		opacity 0.3s 0.08s,
-		transform 0.38s 0.06s cubic-bezier(0.32, 0.72, 0, 1);
-}
-.task-sidebar .diff-sidebar-in {
-	width: min(320px, 29vw);
-}
-.diff-sidebar.open .diff-sidebar-in {
-	opacity: 1;
-	transform: none;
-}
-
-/* ---- Sunburst 科研工作台：左侧导航、Wiki 阶段条与右侧上下文卡 ---- */
-.workbench-nav {
-	background: color-mix(in srgb, var(--color-surface) 94%, var(--color-canvas));
-}
-.workbench-brand {
-	max-width: 190px;
-	border-right: 1px solid var(--color-border);
-	padding: 0 14px 0 4px;
-}
-.workbench-brand-mark {
-	display: flex;
-	height: 24px;
-	width: 24px;
-	flex: none;
-	align-items: center;
-	justify-content: center;
-	border-radius: 6px;
-	background: var(--color-accent);
-	font-size: 13px;
-	font-weight: 700;
-	color: var(--color-on-accent);
-}
-.workbench-brand strong,
-.workbench-brand span:last-child {
-	display: block;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-.workbench-brand strong {
-	font-size: 11px;
-	font-weight: 650;
-	color: var(--color-ink);
-}
-.workbench-brand span:last-child {
-	margin-top: 1px;
-	font-size: 10px;
-	color: var(--color-ink-faint);
-}
-.workbench-nav-item {
-	display: flex;
-	width: 100%;
-	align-items: center;
-	gap: 10px;
-	border-radius: 8px;
-	padding: 8px 10px;
-	font-size: 12px;
-	color: var(--color-ink-dim);
-	text-align: left;
-	transition:
-		background-color 0.16s ease,
-		color 0.16s ease;
-}
-.workbench-nav-item:hover {
-	background: var(--color-hover);
-	color: var(--color-ink);
-}
-.workbench-nav-item.is-active {
-	background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
-	color: var(--color-accent);
-	font-weight: 600;
-}
-.workbench-agent-status {
-	border: 1px solid var(--color-border);
-	border-radius: 10px;
-	background: color-mix(in srgb, var(--color-surface) 92%, var(--color-hover));
-	padding: 10px;
-}
+/* ---- Sunburst 科研工作台：Wiki 阶段条（KnowledgeFlowCard）；导航栏样式见 shell.css ---- */
 .sunburst-flow-card {
 	box-shadow: var(--shadow-soft);
 	overflow: hidden;
@@ -1207,7 +840,7 @@ code {
 	flex-direction: column;
 	align-items: flex-end;
 	gap: 4px;
-	font-size: 10px;
+	font-size: 11px;
 	color: var(--color-ink-faint);
 }
 .sunburst-flow-meta button,
@@ -1263,7 +896,7 @@ code {
 }
 .sunburst-stage span:last-child {
 	margin-top: 3px;
-	font-size: 10px;
+	font-size: 11px;
 	color: var(--color-ink-faint);
 }
 .sunburst-stage.is-done .sunburst-stage-mark {
@@ -1281,115 +914,6 @@ code {
 }
 .sunburst-stage.is-active span:last-child {
 	color: var(--color-accent);
-}
-.sunburst-sidebar-in {
-	background: var(--color-canvas);
-}
-.sunburst-sidebar-head {
-	min-height: 62px;
-	padding: 12px 12px 8px;
-	border-bottom: 1px solid var(--color-border);
-}
-.sunburst-sidebar-head .diff-side-title {
-	font-size: 14px;
-}
-.sunburst-sidebar-scroll {
-	padding: 12px;
-	background: color-mix(in srgb, var(--color-canvas) 94%, var(--color-hover));
-}
-.sunburst-card {
-	margin-bottom: 10px;
-	overflow: hidden;
-	border: 1px solid var(--color-border);
-	border-radius: 12px;
-	background: var(--color-surface);
-	box-shadow: var(--shadow-soft);
-}
-.sunburst-card-head {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 11px 12px;
-	font-size: 12px;
-	font-weight: 650;
-	color: var(--color-ink);
-}
-.sunburst-card-head:hover {
-	background: var(--color-hover);
-}
-.sunburst-card-head > :nth-child(2) {
-	margin-left: auto;
-}
-.sunburst-card-head > svg:last-child {
-	color: var(--color-ink-faint);
-}
-.sunburst-card-meta,
-.sunburst-label {
-	font-size: 10px;
-	font-weight: 450;
-	color: var(--color-ink-faint);
-}
-.sunburst-card-body {
-	border-top: 1px solid var(--color-border);
-	padding: 10px 12px;
-}
-.sunburst-status-warn,
-.sunburst-status-ok {
-	border-radius: 999px;
-	padding: 3px 7px;
-	font-size: 10px;
-	font-weight: 550;
-}
-.sunburst-status-warn {
-	background: color-mix(in srgb, var(--color-warn) 12%, var(--color-surface));
-	color: var(--color-warn);
-}
-.sunburst-status-ok {
-	background: color-mix(in srgb, var(--color-ok) 12%, var(--color-surface));
-	color: var(--color-ok);
-}
-.sunburst-ssh-detail {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	margin-top: 9px;
-	border: 1px solid var(--color-border);
-	border-radius: 8px;
-	padding: 8px;
-	font-size: 10px;
-	color: var(--color-ink-faint);
-}
-.sunburst-ssh-detail strong {
-	font-size: 10px;
-	font-weight: 550;
-	color: var(--color-ink-2);
-}
-.sunburst-chip-list {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 5px;
-}
-.sunburst-chip-list span {
-	border: 1px solid var(--color-border);
-	border-radius: 999px;
-	padding: 4px 7px;
-	font-size: 10px;
-	color: var(--color-ink-dim);
-}
-.sunburst-card-body strong {
-	display: block;
-	margin-top: 4px;
-	font-size: 11px;
-	font-weight: 550;
-	color: var(--color-ink-2);
-}
-.sunburst-note-card {
-	margin-top: 2px;
-	border-radius: 10px;
-	background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface));
-	padding: 10px;
-	font-size: 11px;
 }
 @media (max-width: 1180px) {
 	.sunburst-stage-grid {
@@ -1438,7 +962,7 @@ code {
 	max-width: 100%;
 	padding: 3px 6px;
 	border-radius: 6px;
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--color-ink-faint);
 	transition:
 		color 0.15s,
@@ -1500,7 +1024,7 @@ code {
 	white-space: nowrap;
 }
 .diff-side-sum {
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--color-ink-dim);
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
@@ -1554,18 +1078,6 @@ code {
 	overflow-x: hidden;
 	padding: 10px 12px 24px;
 }
-.task-sidebar .diff-side-head {
-	padding: 8px 10px 5px;
-}
-.task-sidebar .diff-side-scroll {
-	padding: 6px 8px 14px;
-}
-.task-sidebar .diff-side-title {
-	font-size: 12px;
-}
-.task-sidebar .diff-side-sum {
-	font-size: 10px;
-}
 .diff-side-empty {
 	padding: 40px 20px;
 	text-align: center;
@@ -1598,7 +1110,7 @@ code {
 	max-width: min(560px, 58vw);
 	overflow: hidden;
 	margin-top: 2px;
-	font-size: 10px;
+	font-size: 11px;
 	line-height: 1.35;
 	color: var(--color-ink-faint);
 	text-overflow: ellipsis;
@@ -1656,7 +1168,7 @@ code {
 	border-radius: 7px;
 	background: var(--color-hover);
 	padding: 7px 8px;
-	font-size: 10px;
+	font-size: 11px;
 }
 .settings-disclosure-grid dt {
 	color: var(--color-ink-faint);
@@ -1670,7 +1182,7 @@ code {
 }
 .settings-disclosure-hint {
 	margin-top: 7px;
-	font-size: 10px;
+	font-size: 11px;
 	line-height: 1.4;
 	color: var(--color-ink-faint);
 }
@@ -1700,7 +1212,7 @@ code {
 	align-items: baseline;
 	gap: 8px;
 	padding: 2px 4px 6px;
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--color-ink-faint);
 }
 .diff-tg-title {
@@ -1811,7 +1323,8 @@ code {
 	display: grid;
 	grid-template-columns: 34px 34px minmax(0, 1fr);
 }
-.diff-line > span {
+.diff-g,
+.diff-code {
 	padding: 0 6px;
 	white-space: pre;
 }
@@ -1819,7 +1332,7 @@ code {
 	text-align: right;
 	color: var(--color-ink-faint);
 	user-select: none;
-	font-size: 10px;
+	font-size: 11px;
 	padding-right: 6px;
 	background: color-mix(in srgb, var(--color-hover) 55%, transparent);
 }
@@ -1856,7 +1369,7 @@ code {
 .diff-hunk {
 	background: color-mix(in srgb, var(--color-hover) 70%, transparent);
 	color: var(--color-ink-faint);
-	font-size: 10px;
+	font-size: 11px;
 	padding: 2px 10px;
 	user-select: none;
 }
@@ -1883,7 +1396,7 @@ code {
 	border-top: 1px dashed var(--color-border);
 	background: none;
 	font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-	font-size: 10.5px;
+	font-size: 11px;
 	color: var(--color-ink-faint);
 	padding: 5px;
 	cursor: pointer;
@@ -1911,10 +1424,9 @@ code {
 	.diff-file-card.jump-flash {
 		animation: none;
 	}
-	.diff-sidebar,
-	.diff-sidebar-in,
-	.turn-diff-head,
-	.turn-diff-chev,
+	.context-panel,
+	.context-panel-in,
+	.process-block-chevron,
 	.diff-file-chev {
 		transition: none;
 	}
@@ -1926,7 +1438,7 @@ code {
 /* ============================================================
    error-system：统一报错（会话内错误条 / Composer 内联条 / 重试瞬态）
    设计稿：.local/design/ux/error-system/index.html（v2 定稿）
-   —— 无边框悬浮卡片（rounded-xl + bg-surface + shadow-soft，QueueBar/TodoPanel 同款）；
+   —— 无边框悬浮卡片（rounded-xl + bg-surface + shadow-soft，QueueBar/面板卡片同款）；
    severity 只由一枚 14px 着色 glyph 表达；操作是幽灵文字按钮
    ============================================================ */
 
@@ -2007,7 +1519,7 @@ code {
 }
 .error-note-detail {
 	font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-	font-size: 11.5px;
+	font-size: 12px;
 	line-height: 1.7;
 	color: var(--color-ink-dim);
 	background: var(--color-hover);
@@ -2208,7 +1720,7 @@ code {
 	display: block;
 }
 .toast .t-title {
-	font-size: 12.5px;
+	font-size: 13px;
 	font-weight: 500;
 	color: var(--color-ink-2);
 	line-height: 1.45;
@@ -2279,7 +1791,7 @@ code {
 	white-space: nowrap;
 	border-bottom: 1px solid var(--color-border);
 	padding: 6px 14px 8px;
-	font-size: 10.5px;
+	font-size: 11px;
 	color: var(--color-ink-faint);
 }
 .resource-body {
@@ -2363,6 +1875,6 @@ code {
 	gap: 5px 10px;
 	border-top: 1px solid var(--color-border);
 	padding: 7px 12px;
-	font-size: 10px;
+	font-size: 11px;
 	color: var(--color-ink-faint);
 }

@@ -57,7 +57,7 @@ export function BuiltinProviderEditForm({
 					onChange={(e) => setKey(e.target.value)}
 				/>
 			</div>
-			<p className="mt-2 text-[10px] leading-relaxed text-ink-faint">{t("settings.providers.builtinHint")}</p>
+			<p className="mt-2 text-[11px] leading-relaxed text-ink-faint">{t("settings.providers.builtinHint")}</p>
 			<div className="mt-2 flex justify-end gap-2">
 				<button
 					type="button"

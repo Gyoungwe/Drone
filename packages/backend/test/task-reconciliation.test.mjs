@@ -24,7 +24,7 @@ function pdf(text) {
 	const start = Buffer.byteLength(output);
 	output += `xref\n0 6\n0000000000 65535 f \n${offsets
 		.slice(1)
-		.map((o) => String(o).padStart(10, "0") + " 00000 n ")
+		.map((o) => `${String(o).padStart(10, "0")} 00000 n `)
 		.join("\n")}\ntrailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${start}\n%%EOF\n`;
 	return output;
 }

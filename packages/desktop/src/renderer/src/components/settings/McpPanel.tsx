@@ -75,17 +75,17 @@ export function McpPanel() {
 
 			<div className="mt-4 grid grid-cols-3 gap-2">
 				<div className="rounded-lg bg-hover/70 px-3 py-2.5">
-					<p className="text-[10px] text-ink-faint">{t("settings.mcp.servers")}</p>
+					<p className="text-[11px] text-ink-faint">{t("settings.mcp.servers")}</p>
 					<p className="mt-0.5 text-[16px] font-medium tabular-nums text-ink">{servers.length}</p>
 				</div>
 				<div className="rounded-lg bg-hover/70 px-3 py-2.5">
-					<p className="text-[10px] text-ink-faint">{t("settings.mcp.connected")}</p>
+					<p className="text-[11px] text-ink-faint">{t("settings.mcp.connected")}</p>
 					<p className="mt-0.5 text-[16px] font-medium tabular-nums text-ink">
 						{status?.connectedCount ?? 0}
 					</p>
 				</div>
 				<div className="rounded-lg bg-hover/70 px-3 py-2.5">
-					<p className="text-[10px] text-ink-faint">{t("settings.mcp.tools")}</p>
+					<p className="text-[11px] text-ink-faint">{t("settings.mcp.tools")}</p>
 					<p className="mt-0.5 text-[16px] font-medium tabular-nums text-ink">{status?.totalTools ?? 0}</p>
 				</div>
 			</div>
@@ -100,7 +100,7 @@ export function McpPanel() {
 				<div className="flex items-center justify-between gap-3">
 					<div className="min-w-0">
 						<p className="text-[12px] font-medium text-ink-2">{t("settings.mcp.configPath")}</p>
-						<p className="mt-0.5 truncate font-mono text-[10px] text-ink-faint" title={config?.path ?? ""}>
+						<p className="mt-0.5 truncate font-mono text-[11px] text-ink-faint" title={config?.path ?? ""}>
 							{config?.path ?? t("settings.mcp.noConfig")}
 						</p>
 					</div>
@@ -117,7 +117,7 @@ export function McpPanel() {
 			<div className="mt-5">
 				<div className="flex items-center justify-between">
 					<h4 className="text-[12px] font-medium text-ink-2">{t("settings.mcp.serverList")}</h4>
-					{loading ? <span className="text-[10px] text-ink-faint">{t("settings.loading")}</span> : null}
+					{loading ? <span className="text-[11px] text-ink-faint">{t("settings.loading")}</span> : null}
 				</div>
 				{!loading && servers.length === 0 ? (
 					<div className="mt-2 rounded-xl border border-dashed border-border px-4 py-8 text-center">
@@ -139,12 +139,12 @@ export function McpPanel() {
 										<div className="flex items-center gap-2">
 											<span className="truncate text-[13px] font-medium text-ink">{server.name}</span>
 											<span
-												className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${statusTone(displayStatus)}`}
+												className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${statusTone(displayStatus)}`}
 											>
 												{statusLabel(t, displayStatus)}
 											</span>
 										</div>
-										<div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-ink-faint">
+										<div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-ink-faint">
 											<span
 												className={
 													server.scope === "project"
@@ -165,7 +165,7 @@ export function McpPanel() {
 											) : null}
 										</div>
 										<p
-											className="mt-1 truncate font-mono text-[9px] text-ink-faint/80"
+											className="mt-1 truncate font-mono text-[11px] text-ink-faint/80"
 											title={server.sourcePath}
 										>
 											{server.sourcePath}

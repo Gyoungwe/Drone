@@ -8,7 +8,7 @@ import { useKnowledgeText } from "./copy";
 import { knowledgeLineDiff } from "./line-diff";
 import { WikiModelReview } from "./WikiModelReview";
 
-const overlayClass = "fixed inset-0 z-[70] flex items-center justify-center bg-ink/25 p-6";
+const overlayClass = "fixed inset-0 z-(--z-dialog-top) flex items-center justify-center bg-ink/25 p-6";
 const sheetClass =
 	"flex max-h-[82vh] w-[min(680px,92vw)] flex-col overflow-hidden rounded-2xl border border-border bg-surface text-ink shadow-dialog";
 
@@ -188,7 +188,7 @@ export function WikiReviewDialog({
 										</div>
 									))}
 									{lines.length > 200 && (
-										<p className="px-2 py-2 text-[10px] text-ink-faint">{t("truncated")}</p>
+										<p className="px-2 py-2 text-[11px] text-ink-faint">{t("truncated")}</p>
 									)}
 								</section>
 							)}
@@ -217,7 +217,7 @@ export function WikiReviewDialog({
 									{preview.sources.map((source) => (
 										<div key={source.path} className="rounded-lg border border-border px-2 py-1.5">
 											<p className="break-all text-[11px]">{source.path}</p>
-											<p className="font-mono text-[10px] text-ink-faint">
+											<p className="font-mono text-[11px] text-ink-faint">
 												L{source.startLine}–{source.endLine}
 												{source.hash ? ` · ${source.hash.slice(0, 12)}` : ""}
 											</p>
@@ -271,7 +271,7 @@ export function WikiReviewDialog({
 				</div>
 				<div className="shrink-0 border-t border-border px-5 py-3">
 					<div className="flex items-center justify-between gap-3">
-						<p className="min-w-0 truncate text-[10px] text-ink-faint">
+						<p className="min-w-0 truncate text-[11px] text-ink-faint">
 							{verdict ||
 								(queued > 0 ? t("reviewQueued").replace("{count}", String(queued)) : t("reviewLaterHint"))}
 						</p>

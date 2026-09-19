@@ -169,7 +169,7 @@ it("redacts command flags and truncated quoted credentials before showing the di
 	const r = diagnosticText('command --password "two secret words" --token value-here');
 	expect(r).not.toContain("two secret words");
 	expect(r).not.toContain("value-here");
-	expect(diagnosticText('password="' + "secret word ".repeat(1000))).not.toContain("secret word");
+	expect(diagnosticText(`password="${"secret word ".repeat(1000)}`)).not.toContain("secret word");
 	expect(diagnosticText("line\nwith\u0000controls")).toBe("line with controls");
 });
 it("a normal partial task supplies remaining milestones even without a failed tool result", () => {

@@ -151,9 +151,9 @@ export function KnowledgeMaintenance({
 											? t("wikiReview")
 											: t("evidenceReview")}
 								</p>
-								<p className="mt-1 break-all font-mono text-[10px] text-ink-dim">{item.path}</p>
+								<p className="mt-1 break-all font-mono text-[11px] text-ink-dim">{item.path}</p>
 								{item.kind !== "navigation" && (
-									<p className="mt-1 text-[10px] text-ink-faint">{t("manualReview")}</p>
+									<p className="mt-1 text-[11px] text-ink-faint">{t("manualReview")}</p>
 								)}
 							</div>
 							<Button size="sm" onClick={() => setPath(item.path)}>

@@ -92,9 +92,9 @@ export function KnowledgeSpecialists({
 							<div className="flex items-start justify-between gap-2">
 								<div>
 									<strong className="text-[12px]">{t(`specialist_${agent.role}`)}</strong>
-									<p className="font-mono text-[9px] text-ink-faint">{agent.name}</p>
+									<p className="font-mono text-[11px] text-ink-faint">{agent.name}</p>
 								</div>
-								<span className="rounded-full border border-border px-2 py-0.5 text-[9px] text-ink-faint">
+								<span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-ink-faint">
 									{trigger}
 								</span>
 							</div>
@@ -102,7 +102,7 @@ export function KnowledgeSpecialists({
 								{agent.role === "reviewer" ? agent.description : t(`specialist_${agent.role}_hint`)}
 							</p>
 							<div className="mt-2 grid gap-2 sm:grid-cols-2">
-								<label className="text-[9px] text-ink-faint">
+								<label className="text-[11px] text-ink-faint">
 									<span className="mb-1 block">{t("specialistModel")}</span>
 									<select
 										value={selected}
@@ -122,7 +122,7 @@ export function KnowledgeSpecialists({
 										))}
 									</select>
 								</label>
-								<label className="text-[9px] text-ink-faint">
+								<label className="text-[11px] text-ink-faint">
 									<span className="mb-1 block">{t("specialistThinking")}</span>
 									<select
 										value={selectedThinking}
@@ -150,7 +150,7 @@ export function KnowledgeSpecialists({
 									</select>
 								</label>
 							</div>
-							<div className="mt-2 rounded-lg bg-surface/70 p-2 text-[9px] text-ink-faint">
+							<div className="mt-2 rounded-lg bg-surface/70 p-2 text-[11px] text-ink-faint">
 								<div>
 									{t("specialistPermissions")}:{" "}
 									<span className="font-mono">{agent.permissions.join(" · ")}</span>
@@ -160,7 +160,7 @@ export function KnowledgeSpecialists({
 									tokens · {settings?.timeoutMs ? `${Math.round(settings.timeoutMs / 1000)}s` : "120s"}
 								</div>
 							</div>
-							<div className="mt-2 text-[9px] text-ink-faint">
+							<div className="mt-2 text-[11px] text-ink-faint">
 								{t("specialistLastRun")}:{" "}
 								{last
 									? `${t(`worker_${last.status}`)}${last.model ? ` · ${last.model}` : ""}${last.thinkingLevel ? ` · ${last.thinkingLevel}` : ""}${last.totalTokens !== undefined ? ` · ${last.totalTokens.toLocaleString()} tokens` : ""}`
@@ -170,7 +170,7 @@ export function KnowledgeSpecialists({
 					);
 				})}
 			</div>
-			<p className="mt-3 text-[10px] text-ink-dim">{t("specialistLimits")}</p>
+			<p className="mt-3 text-[11px] text-ink-dim">{t("specialistLimits")}</p>
 			<Button
 				size="sm"
 				className="mt-2"

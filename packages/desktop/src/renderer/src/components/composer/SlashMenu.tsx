@@ -128,12 +128,12 @@ export function SlashMenu({
 												: `/${command.name}`)}
 									</span>
 									{!direction && !unsupported && (isSpecializedCommand(command) || !!stage) && (
-										<span className="block truncate font-mono text-[10px] text-ink-faint">
+										<span className="block truncate font-mono text-[11px] text-ink-faint">
 											/{command.name}
 										</span>
 									)}
 									{command.aliases?.length ? (
-										<span className="block truncate text-[10px] text-ink-faint">
+										<span className="block truncate text-[11px] text-ink-faint">
 											{t("skillsCatalog.aliases")} {command.aliases.map((alias) => `/${alias}`).join(" · ")}
 										</span>
 									) : null}

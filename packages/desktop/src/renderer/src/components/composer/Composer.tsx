@@ -8,7 +8,6 @@ import { useSettingsStore } from "../../stores/settings";
 import { pushToast } from "../../stores/toasts";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { ImagePreviewOverlay } from "../chat/ImagePreview";
-import { SessionUsageFooter } from "../chat/UsageSettlement";
 import { ArrowUpIcon, PlusIcon, StopIcon } from "../icons";
 import { AtMenu } from "./AtMenu";
 import { AttachmentChip } from "./AttachmentChip";
@@ -400,17 +399,20 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						>
 							<PlusIcon size={18} />
 						</button>
+						<div className="flex-1" />
+						{/* 右侧控件组（一处一事）：[模型 · 强度] [权限] [上下文环] [发送]；会话用量在右侧面板「过程」页签 */}
+						<div
+							className={`composer-model-group${readOnly ? " pointer-events-none opacity-40" : ""}`}
+							title={t("composer.modelGroupHint")}
+						>
+							<ModelPicker />
+							<span className="composer-model-sep" aria-hidden="true" />
+							<ThinkingPicker />
+						</div>
 						<div className={readOnly ? "pointer-events-none opacity-40" : undefined}>
 							<PermissionPicker />
 						</div>
-						<div className="flex-1" />
 						<ContextRing />
-						<div className={readOnly ? "pointer-events-none opacity-40" : undefined}>
-							<ModelPicker />
-						</div>
-						<div className={readOnly ? "pointer-events-none opacity-40" : undefined}>
-							<ThinkingPicker />
-						</div>
 						{isStreaming ? (
 							<button
 								type="button"
@@ -442,7 +444,6 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						) : null}
 					</div>
 				</div>
-				<SessionUsageFooter sessionId={activeSessionId} />
 			</div>
 			{previewImage && <ImagePreviewOverlay image={previewImage} onClose={() => setPreviewImage(null)} />}
 		</div>

@@ -281,16 +281,16 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
 					)}
 					<span className="truncate text-[13px] font-semibold text-ink">{displayName(run.agent)}</span>
-					<span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-faint">
+					<span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-ink-faint">
 						{stateLabel}
 					</span>
 					{phase && (
-						<span className="shrink-0 rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] text-ink-dim">
+						<span className="shrink-0 rounded-full border border-border/60 px-1.5 py-0.5 text-[11px] text-ink-dim">
 							{phase}
 						</span>
 					)}
 					{request?.expectsReply && (
-						<span className="shrink-0 rounded-full bg-warn/10 px-1.5 py-0.5 text-[10px] font-medium text-warn">
+						<span className="shrink-0 rounded-full bg-warn/10 px-1.5 py-0.5 text-[11px] font-medium text-warn">
 							{t("message.subagent.replyNeeded")}
 						</span>
 					)}
@@ -319,12 +319,12 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 					{run.currentTool && (
 						<div className="flex min-w-0 gap-2">
 							<span className="shrink-0 text-ink-faint">{t("message.subagent.tool")}</span>
-							<span className="truncate font-mono text-[10px] text-ink-dim">{run.currentTool}</span>
+							<span className="truncate font-mono text-[11px] text-ink-dim">{run.currentTool}</span>
 						</div>
 					)}
 				</div>
 
-				<div className="mt-2 flex min-w-0 items-center gap-2 text-[10px] text-ink-faint">
+				<div className="mt-2 flex min-w-0 items-center gap-2 text-[11px] text-ink-faint">
 					{run.model && <span className="min-w-0 truncate font-mono">{run.model}</span>}
 					{run.tokens != null && run.tokens > 0 && (
 						<span className="shrink-0">{t("message.subagent.tokens", { n: formatTokens(run.tokens) })}</span>
@@ -393,7 +393,7 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 					</button>
 				</div>
 			)}
-			{controlError && <div className="mx-3 mb-2 text-[10px] text-err">{controlError}</div>}
+			{controlError && <div className="mx-3 mb-2 text-[11px] text-err">{controlError}</div>}
 			{expanded && expandable && <InlineSubagentTranscript run={run} />}
 		</div>
 	);

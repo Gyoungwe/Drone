@@ -22,7 +22,7 @@ export async function verifyScriptReaders({ js, wait, cwd, checks }) {
 			`[...document.querySelectorAll('#conversation .markdown-body a')].find(a=>a.textContent===${JSON.stringify(label)}).click();true`,
 		);
 		await wait(
-			`document.querySelector('[data-testid=resource-code] .resource-code-tools')?.innerText.startsWith(${JSON.stringify(language + " ·")})`,
+			`document.querySelector('[data-testid=resource-code] .resource-code-tools')?.innerText.startsWith(${JSON.stringify(`${language} ·`)})`,
 		);
 		await wait("!!document.querySelector('[data-testid=resource-code] code span[style*=color]')");
 		assert(

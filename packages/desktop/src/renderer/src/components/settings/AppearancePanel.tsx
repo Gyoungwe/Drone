@@ -30,8 +30,6 @@ function AppearanceBasics() {
 	const pickBackground = useThemeStore((s) => s.pickBackground);
 	const clearBackground = useThemeStore((s) => s.clearBackground);
 	const setBackgroundDim = useThemeStore((s) => s.setBackgroundDim);
-	const sessionRailEnabled = useUiPreferencesStore((s) => s.sessionRailEnabled);
-	const setSessionRailEnabled = useUiPreferencesStore((s) => s.setSessionRailEnabled);
 	const centerOrbEnabled = useUiPreferencesStore((s) => s.centerOrbEnabled);
 	const setCenterOrbEnabled = useUiPreferencesStore((s) => s.setCenterOrbEnabled);
 
@@ -77,7 +75,7 @@ function AppearanceBasics() {
 								className="h-10 w-16 rounded-md border border-border object-cover"
 							/>
 						) : (
-							<div className="flex h-10 w-16 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-ink-faint">
+							<div className="flex h-10 w-16 items-center justify-center rounded-md border border-dashed border-border text-[11px] text-ink-faint">
 								—
 							</div>
 						)}
@@ -103,7 +101,7 @@ function AppearanceBasics() {
 				</div>
 				{background.image && (
 					<div className="settings-row-sub mt-2 flex items-center gap-2">
-						<span className="w-16 shrink-0 text-[10px] text-ink-dim">{t("settings.backgroundDim")}</span>
+						<span className="w-16 shrink-0 text-[11px] text-ink-dim">{t("settings.backgroundDim")}</span>
 						<input
 							type="range"
 							min={20}
@@ -113,15 +111,12 @@ function AppearanceBasics() {
 							className="h-1 flex-1 accent-[#7c3aed]"
 							aria-label={t("settings.backgroundDim")}
 						/>
-						<span className="w-8 shrink-0 text-right text-[10px] tabular-nums text-ink-dim">
+						<span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-ink-dim">
 							{Math.round(background.dim * 100)}%
 						</span>
 					</div>
 				)}
 			</div>
-			<SettingsRow title={t("settings.sessionRail")} hint={t("settings.sessionRailHint")}>
-				<Switch checked={sessionRailEnabled} onCheckedChange={setSessionRailEnabled} />
-			</SettingsRow>
 			<SettingsRow title={t("settings.centerOrb")} hint={t("settings.centerOrbHint")}>
 				<Switch checked={centerOrbEnabled} onCheckedChange={setCenterOrbEnabled} />
 			</SettingsRow>

@@ -54,7 +54,7 @@ function ProjectPicker() {
 							<CoffeeIcon size={10} />
 						</span>
 					) : (
-						<span className="flex h-4.5 w-4.5 items-center justify-center rounded bg-ink text-[10px] font-semibold text-on-ink">
+						<span className="flex h-4.5 w-4.5 items-center justify-center rounded bg-ink text-[11px] font-semibold text-on-ink">
 							{(name?.[0] ?? "P").toUpperCase()}
 						</span>
 					)}
@@ -98,12 +98,12 @@ function ProjectPicker() {
 								close();
 							}}
 						>
-							<span className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded bg-ink-faint text-[10px] font-semibold text-on-ink">
+							<span className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded bg-ink-faint text-[11px] font-semibold text-on-ink">
 								{(project.name[0] ?? "P").toUpperCase()}
 							</span>
 							<span className="min-w-0 text-left">
 								<span className="block truncate">{project.name}</span>
-								<span className="block break-all text-[10px] text-ink-dim">{project.cwd}</span>
+								<span className="block break-all text-[11px] text-ink-dim">{project.cwd}</span>
 							</span>
 						</button>
 					))}

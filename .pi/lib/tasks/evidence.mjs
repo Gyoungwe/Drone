@@ -63,7 +63,7 @@ export function createEvidenceRecovery({ authorize, persist = () => {} }) {
 		},
 		async restore(input, cwd, bindingProvider) {
 			const record = records.find((r) => r.id === input.receiptId);
-			if (!record || !record.evicted || used >= 2 || input.path !== record.path)
+			if (!record?.evicted || used >= 2 || input.path !== record.path)
 				throw new Error(
 					"recovery-unavailable: only recorded evicted windows, twice per task; normal read budget remains active.",
 				);

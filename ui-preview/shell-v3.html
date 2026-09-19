@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drone shell v3 preview</title>
+  <style>
+    :root { color-scheme: light; --canvas:#f6f7f9; --surface:#fff; --hover:#f1f3f6; --border:#e3e7ec; --hairline:#eceff3; --ink:#1d242c; --ink-2:#3a4552; --dim:#64707c; --faint:#8d98a5; --accent:#4569d5; --ok:#218a5b; --warn:#b8791b; --add:#16a34a; --del:#dc2626; font-family:Inter,"SF Pro Text","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+    * { box-sizing:border-box; } body { margin:0; overflow:hidden; background:var(--canvas); color:var(--ink); font-size:14px; }
+    .page { width:100%; height:100vh; padding:22px 25px; } .eyebrow { margin:0 0 6px; color:var(--faint); font-size:11px; letter-spacing:.08em; text-transform:uppercase; } h1 { margin:0; font-size:21px; letter-spacing:-.02em; } .sub { margin:6px 0 14px; color:var(--dim); font-size:12px; }
+    .app { height:calc(100vh - 128px); display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--border); border-radius:14px; background:var(--surface); box-shadow:0 16px 38px rgba(30,38,52,.1); }
+    /* 42px 顶栏：标签条 + 右侧动作 */
+    .topbar { height:42px; flex:none; display:flex; align-items:center; gap:8px; padding:0 12px 0 14px; border-bottom:1px solid var(--border); }
+    .brand { width:38px; color:var(--faint); font-size:11px; letter-spacing:.06em; }
+    .tabs { display:flex; align-items:center; gap:4px; min-width:0; flex:1; }
+    .tab { display:flex; align-items:center; gap:7px; height:28px; padding:0 10px 0 8px; border-radius:8px; color:var(--dim); font-size:12px; white-space:nowrap; }
+    .tab.active { background:var(--hover); color:var(--ink); font-weight:600; }
+    .tab .av { width:16px; height:16px; border-radius:5px; background:#dfe6f7; color:var(--accent); font-size:11px; font-weight:600; display:grid; place-items:center; }
+    .tab .av.run { background:#e3f3ea; color:var(--ok); }
+    .tab .suffix { color:var(--faint); font-weight:400; font-size:11px; }
+    .tab.add { width:28px; padding:0; justify-content:center; color:var(--faint); font-size:16px; }
+    .top-actions { display:flex; align-items:center; gap:10px; color:var(--faint); font-size:12px; } .top-actions .pill { border:1px solid var(--border); border-radius:999px; padding:2px 9px; font-size:11px; }
+    .body { display:flex; min-height:0; flex:1; }
+    /* 56px 图标轨道 */
+    .rail { width:56px; flex:none; border-right:1px solid var(--border); display:flex; flex-direction:column; align-items:center; padding:10px 0; gap:6px; }
+    .rail-btn { width:40px; height:40px; border-radius:10px; display:grid; place-items:center; color:var(--dim); font-size:11px; }
+    .rail-btn.active { background:var(--hover); color:var(--ink); font-weight:600; }
+    .rail-btn i { display:block; width:18px; height:18px; border-radius:5px; border:1.5px solid currentColor; margin:0 auto 3px; }
+    .rail .spacer { flex:1; }
+    /* 聊天列 */
+    .main { min-width:0; flex:1; display:flex; flex-direction:column; }
+    .stream { min-height:0; flex:1; overflow:hidden; padding:18px 28px 8px; }
+    .msg { max-width:720px; margin:0 auto 16px; font-size:14px; line-height:1.7; color:var(--ink); }
+    .msg.user { display:flex; justify-content:flex-end; } .msg.user span { background:var(--hover); border-radius:14px; padding:8px 14px; color:var(--ink-2); font-size:14px; }
+    .msg p { margin:0 0 8px; } .msg ul { margin:0; padding-left:20px; } .msg li + li { margin-top:3px; }
+    /* ProcessBlock：一轮所有工具调用/进度折叠为一行 */
+    .process { max-width:720px; margin:0 auto 12px; border-radius:10px; background:var(--surface); box-shadow:0 1px 2px rgba(30,38,52,.06), 0 0 0 1px var(--hairline); }
+    .process-head { display:flex; align-items:center; gap:8px; padding:7px 10px; color:var(--dim); font-size:12px; }
+    .process-head .chev { color:var(--faint); font-size:11px; transform:rotate(90deg); display:inline-block; }
+    .process-head b { color:var(--ink-2); font-weight:600; }
+    .process-rows { border-top:1px solid var(--hairline); padding:4px 8px 6px; }
+    .row { display:grid; grid-template-columns:16px minmax(0,1fr) auto; align-items:center; gap:8px; padding:3px 4px; font-size:12px; color:var(--ink-2); }
+    .row .k { color:var(--faint); font-size:11px; text-align:center; } .row .r { color:var(--faint); font-size:11px; font-variant-numeric:tabular-nums; }
+    .row code { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:12px; color:var(--dim); }
+    .row.ok .k { color:var(--ok); } .row.run .k { color:var(--accent); }
+    /* TurnFooter：一行讲完 用了多久 · 改了什么 · 花了多少 · 干了几步 */
+    .turn-footer { max-width:720px; margin:0 auto 22px; display:flex; align-items:center; gap:10px; color:var(--faint); font-size:12px; font-variant-numeric:tabular-nums; }
+    .turn-footer .add { color:var(--add); font-weight:600; } .turn-footer .del { color:var(--del); font-weight:600; } .turn-footer .sep { color:var(--border); }
+    .turn-footer .link { color:var(--dim); border-bottom:1px dotted var(--faint); }
+    /* Composer：一处一事 */
+    .composer { padding:8px 28px 14px; }
+    .composer-box { max-width:720px; margin:0 auto; border:1px solid var(--border); border-radius:14px; background:#fbfcfd; padding:10px 12px 8px; box-shadow:0 1px 2px rgba(30,38,52,.04); }
+    .composer-input { color:var(--faint); font-size:14px; min-height:22px; margin-bottom:8px; }
+    .composer-ctl { display:flex; align-items:center; gap:8px; }
+    .composer-ctl .plus { width:28px; height:28px; border-radius:8px; display:grid; place-items:center; color:var(--dim); font-size:18px; }
+    .composer-ctl .grow { flex:1; }
+    .composer-ctl .grp { display:flex; align-items:center; gap:6px; border:1px solid var(--border); border-radius:8px; padding:3px 8px; font-size:12px; color:var(--ink-2); }
+    .composer-ctl .grp .sep { width:1px; height:12px; background:var(--border); }
+    .composer-ctl .perm { font-size:12px; color:var(--dim); border:1px solid var(--border); border-radius:8px; padding:3px 8px; }
+    .composer-ctl .ring { width:17px; height:17px; border-radius:50%; border:2.5px solid var(--border); border-top-color:var(--faint); border-right-color:var(--faint); }
+    .composer-ctl .send { width:32px; height:32px; border-radius:50%; background:var(--ink); color:#fff; display:grid; place-items:center; font-size:16px; }
+    /* 372px 上下文面板：任务 / 过程 / 变更 / 产物 */
+    .panel { width:372px; flex:none; border-left:1px solid var(--border); background:#fbfcfd; display:flex; flex-direction:column; }
+    .panel-tabs { display:flex; align-items:center; gap:2px; padding:8px 10px 0; border-bottom:1px solid var(--border); }
+    .panel-tab { padding:6px 10px 8px; font-size:12px; color:var(--dim); border-bottom:2px solid transparent; margin-bottom:-1px; display:flex; align-items:center; gap:5px; }
+    .panel-tab.active { color:var(--ink); font-weight:600; border-bottom-color:var(--ink); }
+    .panel-tab .n { color:var(--faint); font-size:11px; font-weight:400; }
+    .panel-tab .live { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+    .panel-tabs .grow { flex:1; } .panel-tabs .close { color:var(--faint); font-size:12px; padding:0 4px 6px; }
+    .panel-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+    .card { border-radius:10px; background:var(--surface); box-shadow:0 1px 2px rgba(30,38,52,.06), 0 0 0 1px var(--hairline); padding:10px 12px; }
+    .card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; } .card-head strong { font-size:13px; } .card-head .card-meta { font-size:11px; color:var(--faint); }
+    .todo { display:flex; align-items:flex-start; gap:8px; padding:5px 0; font-size:12px; color:var(--ink-2); border-top:1px solid var(--hairline); }
+    .todo:first-of-type { border-top:none; }
+    .todo .ck { width:14px; height:14px; flex:none; border-radius:50%; border:1.5px solid var(--faint); margin-top:2px; }
+    .todo.done .ck { background:var(--ok); border-color:var(--ok); } .todo.done { color:var(--faint); text-decoration:line-through; }
+    .todo.doing .ck { border-color:var(--accent); background:linear-gradient(90deg,var(--accent) 50%,transparent 50%); }
+    .prog { height:3px; border-radius:2px; background:var(--hover); margin:2px 0 8px; overflow:hidden; } .prog i { display:block; width:40%; height:100%; background:var(--ok); }
+    .task-goal { font-size:13px; color:var(--ink); margin-bottom:4px; } .task-meta { font-size:11px; color:var(--faint); display:flex; gap:8px; }
+    .task-state { flex:none; font-size:11px; color:var(--ink-2); border:1px solid var(--border); border-radius:999px; padding:1px 8px; }
+    .ms { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-2); padding:4px 0; border-top:1px solid var(--hairline); }
+    .ms .dot { width:7px; height:7px; border-radius:50%; background:var(--ok); } .ms .dot.todo { background:var(--border); }
+    .ms .r { margin-left:auto; color:var(--faint); font-size:11px; }
+    .panel-foot { margin-top:auto; padding:8px 12px 10px; color:var(--faint); font-size:11px; border-top:1px solid var(--border); display:flex; justify-content:space-between; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <p class="eyebrow">Drone · desktop shell v3</p>
+    <h1>三栏工作台</h1>
+    <p class="sub">42px 顶栏 + 56px 图标轨道 + 聊天列 + 372px 上下文面板（任务 / 过程 / 变更 / 产物）；过程折叠为 ProcessBlock，轮末一行 TurnFooter，悬浮层 ≤ 2。</p>
+    <section class="app" aria-label="三栏工作台预览">
+      <header class="topbar">
+        <span class="brand">Drone</span>
+        <nav class="tabs">
+          <span class="tab active"><i class="av run">W</i>wing_reference_genes <span class="suffix">14:02</span></span>
+          <span class="tab"><i class="av">W</i>wing_reference_genes <span class="suffix">09:31</span></span>
+          <span class="tab"><i class="av">P</i>Pfam 家族统计</span>
+          <span class="tab"><i class="av">D</i>daily · 09-19</span>
+          <span class="tab add">+</span>
+        </nav>
+        <div class="top-actions"><span class="pill">全部会话 · 12</span><span>⚙</span></div>
+      </header>
+      <div class="body">
+        <aside class="rail">
+          <div class="rail-btn active"><i></i>聊天</div>
+          <div class="rail-btn"><i></i>项目</div>
+          <div class="rail-btn"><i></i>研究</div>
+          <div class="rail-btn"><i></i>知识</div>
+          <div class="spacer"></div>
+          <div class="rail-btn"><i></i>设置</div>
+        </aside>
+        <div class="main">
+          <div class="stream">
+            <div class="msg user"><span>把 9 个关键家族的 Pfam 编码整理成表，并核对翅型参考基因的注释。</span></div>
+            <section class="process">
+              <div class="process-head"><span class="chev">›</span><b>12 步</b><span>· 读取 6 · 编辑 3 · 命令 2 · 子代理 1</span><span style="margin-left:auto">1 分 48 秒</span></div>
+              <div class="process-rows">
+                <div class="row ok"><span class="k">✓</span><span>读取 <code>data/pfam_families.tsv</code></span><span class="r">312 行</span></div>
+                <div class="row ok"><span class="k">✓</span><span>运行 <code>python scripts/annotate.py --check</code></span><span class="r">exit 0</span></div>
+                <div class="row ok"><span class="k">✓</span><span>编辑 <code>results/wing_reference_genes.tsv</code></span><span class="r">+42 −7</span></div>
+                <div class="row run"><span class="k">●</span><span>子代理 · 文献核对（HOX / Dll / vg）</span><span class="r">进行中</span></div>
+              </div>
+            </section>
+            <article class="msg">
+              <p>9 个关键家族的 Pfam 编码已整理完成，翅型参考基因注释核对了 27 条，其中 3 条与本地注释不一致：</p>
+              <ul><li><b>vestigial (vg)</b>：本地缺少 PF08138 域标注，已按 Pfam 37.0 补齐。</li><li><b>Distal-less (Dll)</b>：Homeobox 域坐标偏移 4 aa，已修正。</li><li><b>Ultrabithorax (Ubx)</b>：注释一致，无改动。</li></ul>
+              <p>本机没有这些物种的全基因组，跨物种「家族大小」的绝对数量需谨慎解释；详细依据见右侧「产物」页签。</p>
+            </article>
+            <div class="turn-footer"><span>1 分 48 秒</span><span class="sep">|</span><span class="link">3 个文件</span><span class="add">+42</span><span class="del">−7</span><span class="sep">|</span><span>$0.043</span><span class="sep">|</span><span class="link">12 步</span></div>
+          </div>
+          <footer class="composer">
+            <div class="composer-box">
+              <div class="composer-input">输入消息，或让 Agent 继续当前任务…</div>
+              <div class="composer-ctl">
+                <span class="plus">+</span><span class="grow"></span>
+                <span class="grp">claude-sonnet-4.5<span class="sep"></span>中</span>
+                <span class="perm">询问</span>
+                <span class="ring"></span>
+                <span class="send">↑</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+        <aside class="panel">
+          <div class="panel-tabs">
+            <span class="panel-tab active">任务 <span class="n">2/5</span></span>
+            <span class="panel-tab">过程 <span class="live"></span></span>
+            <span class="panel-tab">变更 <span class="n">3</span></span>
+            <span class="panel-tab">产物 <span class="n">4</span></span>
+            <span class="grow"></span><span class="close">›|</span>
+          </div>
+          <div class="panel-body">
+            <section class="card">
+              <div class="card-head"><strong>任务清单</strong><span class="card-meta">2 / 5</span></div>
+              <div class="prog"><i></i></div>
+              <div class="todo done"><span class="ck"></span>整理 9 个关键家族的 Pfam 编码</div>
+              <div class="todo done"><span class="ck"></span>核对翅型参考基因注释（27 条）</div>
+              <div class="todo doing"><span class="ck"></span>文献核对 HOX / Dll / vg 的域边界</div>
+              <div class="todo"><span class="ck"></span>生成 wing_reference_genes.tsv 终版</div>
+              <div class="todo"><span class="ck"></span>写入 Wiki「翅型参考基因」条目</div>
+            </section>
+            <section class="card">
+              <div class="card-head"><strong>当前任务</strong><span class="task-state">执行中 · 12/192 步</span></div>
+              <div class="task-goal">翅型参考基因表：Pfam 编码整理 + 注释核对</div>
+              <div class="task-meta"><span>验收 1/3</span><span>写入范围 results/ · wiki/</span></div>
+              <div style="height:6px"></div>
+              <div class="ms"><span class="dot"></span>Pfam 编码表齐全且可复核<span class="r">已通过</span></div>
+              <div class="ms"><span class="dot todo"></span>参考基因注释差异有来源<span class="r">待验收</span></div>
+              <div class="ms"><span class="dot todo"></span>Wiki 条目经审阅入口提交<span class="r">待验收</span></div>
+            </section>
+          </div>
+          <div class="panel-foot"><span>面板状态与页签跨重启记忆</span><span>⌘ ]</span></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

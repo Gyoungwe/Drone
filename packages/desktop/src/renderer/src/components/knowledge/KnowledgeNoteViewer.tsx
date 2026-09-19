@@ -73,7 +73,7 @@ export function KnowledgeNoteViewer({
 			{note?.missing && <p className="text-xs text-warn">{t("missing")}</p>}
 			{note?.text && (
 				<>
-					<p className="mb-1 font-mono text-[10px] text-ink-faint">
+					<p className="mb-1 font-mono text-[11px] text-ink-faint">
 						L{note.startLine}–{note.endLine} · {note.hash?.slice(0, 12)}{" "}
 						{note.truncated ? ` · ${t("truncated")}` : ""}
 					</p>
@@ -91,7 +91,7 @@ export function KnowledgeNoteViewer({
 				</>
 			)}
 			{note?.displayLinkBase && (
-				<p className="my-2 break-words text-[10px] text-ink-faint">
+				<p className="my-2 break-words text-[11px] text-ink-faint">
 					{t("linkPreviewOnly")} {note.displayLinkBase}
 				</p>
 			)}

@@ -108,8 +108,8 @@ export function ZoteroPanel() {
 							/>
 							<span>{t("enableLabel")}</span>
 						</label>
-						{!status.registered && <p className="mt-2 text-[10px] text-warn">{t("enableHintNeedSetup")}</p>}
-						<p className="mt-2 text-[10px] text-ink-faint">{t("reloadHint")}</p>
+						{!status.registered && <p className="mt-2 text-[11px] text-warn">{t("enableHintNeedSetup")}</p>}
+						<p className="mt-2 text-[11px] text-ink-faint">{t("reloadHint")}</p>
 					</section>
 
 					{/* 一键接入 / 安装 + 打开 Zotero / 文档 */}
@@ -117,7 +117,7 @@ export function ZoteroPanel() {
 						<h3 className="text-xs font-semibold">{t("setupTitle")}</h3>
 						<p className="mt-2 text-xs leading-relaxed text-ink-dim">{t("setupHint")}</p>
 						<p className="mt-2 rounded-lg bg-hover p-2 text-[11px] text-ink-dim">{t("setupSteps")}</p>
-						{!cwd && <p className="mt-2 text-[10px] text-warn">{t("setupNoCwd")}</p>}
+						{!cwd && <p className="mt-2 text-[11px] text-warn">{t("setupNoCwd")}</p>}
 						<div className="mt-3 flex flex-wrap gap-1">
 							<Button
 								size="sm"

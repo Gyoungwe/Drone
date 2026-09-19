@@ -2,7 +2,7 @@ import type { TaskView, WorkbenchTask } from "@drone/shared";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, expect, it, vi } from "vitest";
-import { TaskRow } from "./TaskSidebar";
+import { TaskRow } from "./TaskRow";
 
 vi.mock("../../i18n", () => ({ useT: () => (key: string) => key }));
 vi.stubGlobal("React", React);

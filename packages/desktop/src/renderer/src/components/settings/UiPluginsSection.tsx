@@ -116,7 +116,7 @@ function PluginRow({ plugin }: { plugin: UiPluginInfo }) {
 				<span className={`h-2 w-2 shrink-0 rounded-full ${statusDot}`} />
 				<span className="truncate text-[13px] font-medium text-ink">{plugin.displayName ?? plugin.name}</span>
 				{plugin.builtin && (
-					<span className="shrink-0 rounded-md border border-border px-1 text-[10px] leading-[15px] text-ink-faint">
+					<span className="shrink-0 rounded-md border border-border px-1 text-[11px] leading-[15px] text-ink-faint">
 						{t("settings.uiPlugins.builtinBadge")}
 					</span>
 				)}

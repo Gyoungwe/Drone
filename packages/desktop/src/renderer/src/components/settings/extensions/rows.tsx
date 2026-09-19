@@ -82,7 +82,7 @@ function ScopeBadge({ scope }: { scope: ResourceScope }) {
 				: "settings.extensions.scopeUser";
 	return (
 		<span
-			className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+			className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${
 				scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"
 			}`}
 		>
@@ -92,7 +92,7 @@ function ScopeBadge({ scope }: { scope: ResourceScope }) {
 }
 
 function Stat({ label }: { label: string }) {
-	return <span className="text-[10px] text-ink-faint">{label}</span>;
+	return <span className="text-[11px] text-ink-faint">{label}</span>;
 }
 
 export function ExtensionRow({
@@ -108,12 +108,12 @@ export function ExtensionRow({
 			<div className="flex items-center gap-2">
 				<span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">{extension.name}</span>
 				{extension.hidden && (
-					<span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-ink-faint">
+					<span className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-ink-faint">
 						{t("settings.extensions.hidden")}
 					</span>
 				)}
 				{extension.tools.some(isSubagentToolName) && (
-					<span className="shrink-0 rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">
+					<span className="shrink-0 rounded bg-accent/10 px-1.5 py-0.5 text-[11px] text-accent">
 						{t("settings.extensions.subagentBuiltin")}
 					</span>
 				)}
@@ -134,7 +134,7 @@ export function ExtensionRow({
 					<Stat label={t("settings.extensions.shortcuts", { count: extension.shortcutsCount })} />
 				)}
 			</div>
-			<p className="mt-1 truncate font-mono text-[10px] text-ink-faint">{extension.path}</p>
+			<p className="mt-1 truncate font-mono text-[11px] text-ink-faint">{extension.path}</p>
 		</li>
 	);
 }
@@ -143,7 +143,7 @@ export function ExtensionRow({
 function TypeBadge({ type }: { type: string }) {
 	return (
 		<span
-			className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+			className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${
 				type === "extension" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"
 			}`}
 		>
@@ -190,7 +190,7 @@ export function CatalogRow({
 				{pkg.description && (
 					<p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-ink-dim">{pkg.description}</p>
 				)}
-				<div className="mt-1 flex items-center gap-2 text-[10px] text-ink-faint">
+				<div className="mt-1 flex items-center gap-2 text-[11px] text-ink-faint">
 					{pkg.author && <span>{pkg.author}</span>}
 					{pkg.author && <span aria-hidden>·</span>}
 					<span>{t("settings.extensions.downloadsPerMonth", { count: formatDownloads(pkg.downloads) })}</span>

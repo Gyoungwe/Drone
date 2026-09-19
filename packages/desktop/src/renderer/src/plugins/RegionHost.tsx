@@ -21,10 +21,10 @@ const OVERLAY_ANCHOR_CLASSES: Record<UiPluginAnchor, string> = {
 	"bottom-right": "items-end justify-end",
 };
 
-/** 聊天区四角定位（与 TodoPanel 同语义不重叠；top-right 与 TodoPanel 同角，预留 pt-12 堆在其下） */
+/** 聊天区四角定位（待办卡已并入右侧面板，四角不再预留避让空间） */
 const CORNER_POS_CLASSES: Partial<Record<RegionName, string>> = {
 	[UI_REGIONS.CornerTopLeft]: "top-2 left-4",
-	[UI_REGIONS.CornerTopRight]: "top-2 right-4 pt-12",
+	[UI_REGIONS.CornerTopRight]: "top-2 right-4",
 	[UI_REGIONS.CornerBottomLeft]: "bottom-2 left-4",
 	[UI_REGIONS.CornerBottomRight]: "bottom-2 right-4",
 };
@@ -34,7 +34,7 @@ const CORNER_POS_CLASSES: Partial<Record<RegionName, string>> = {
  * 容器语义（层级/pointer-events/anchor 对齐/堆叠方向）由本组件负责，插件只管渲染自己的内容：
  * - app.background：绝对填充 z-0，与自定义背景图同层同规则（界面默认不透明时不可见）；
  * - app.overlay：每贡献一个 fixed inset-0 z-20 pointer-events-none 容器 + anchor 对齐类；
- * - chat.corner.*：absolute z-20 flex-col 同角纵向堆叠（top-right 预留 pt-12 避开 TodoPanel）。
+ * - chat.corner.*：absolute z-20 flex-col 同角纵向堆叠。
  * 贡献崩溃 → PluginBoundary 兜底 null（没有默认可回退，spec §15）。
  */
 export function RegionHost({ region }: { region: RegionName }) {

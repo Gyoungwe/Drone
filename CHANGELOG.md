@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Reorganized the desktop shell into three columns: a 42px title bar, a 56px icon rail (chat / projects / research / knowledge), the chat column, and a 372px context panel with 任务 / 过程 / 变更 / 产物 tabs. The panel replaces the floating todo capsule, the task sidebar and the diff sidebar, and remembers its open state and last tab across restarts.
+- Collapsed each turn's tool calls, progress notes and subagent runs into one ProcessBlock in the Desktop and LAN transcripts, and replaced the per-turn diff chip and usage settlement with a single TurnFooter line (duration · files changed · cost · steps) whose parts open the matching panel tab.
+- Made research and knowledge full-screen views selected from the icon rail. The composer keeps one control per job — attach, model · thinking, permission, context ring, send/stop — and session usage moved to the 过程 tab.
+- Added double-click rename for session tabs (persisted through `setSessionName`, rolled back with a toast if the backend rejects it), a time suffix for same-name tabs, and an all-sessions dropdown when tabs overflow.
+- Put every overlay on one z-index scale (`--z-content` … `--z-toast`) and every font size on four tiers (14 / 13 / 12 / 11 px); nothing below 11 px remains in the desktop renderer.
+- Removed the optional session rail preference (`ui.sessionRail`, ignored if present in an old ui-state.json), the orphaned TaskWorkbenchCard and LAN TaskCard components, their CSS, and about 70 unused i18n keys. The `chat.todo-panel` slot and `chat.diff-sidebar` region keep their names and now render inside the context panel.
+- Tooling: `biome check` is clean (0 warnings); `noNonNullAssertion` is disabled only for test files, and desktop vitest no longer picks up the `node:test` files under `resources/`.
+
 ## 0.10.4 — 2026-09-19
 
 - Reworked research answers to lead with the scientific conclusion, evidence level, default recommendation and explicit evidence boundaries.

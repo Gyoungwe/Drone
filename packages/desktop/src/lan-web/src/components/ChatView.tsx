@@ -1,4 +1,11 @@
-import { buildChatRows, deriveRunInspectors, deriveTurnTimings, deriveTurnUsage } from "@drone/shared";
+import {
+	buildChatRows,
+	type ChatRow,
+	deriveRunInspectors,
+	deriveTurnTimings,
+	deriveTurnUsage,
+	groupProcessRows,
+} from "@drone/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useLanStore } from "../store";
@@ -8,6 +15,7 @@ import { Markdown } from "./Markdown";
 import { MessageItem } from "./MessageItem";
 import { MetaGroup } from "./MetaGroup";
 import { PermissionCard } from "./PermissionCard";
+import { ProcessBlock } from "./ProcessBlock";
 import { RunInspector } from "./RunInspector";
 import { SubagentCard } from "./SubagentCard";
 import { TodoStrip } from "./TodoStrip";
@@ -127,55 +135,65 @@ export function ChatView({
 	const turnInspectors = deriveRunInspectors(transcript.messages);
 	const rows = buildChatRows(transcript, sessionId, Date.now(), { turnTimings });
 	const permCount = perms?.length ?? 0;
+	// 行 → JSX：过程行先经 shared groupProcessRows 折成过程块（与桌面 MessageList 同一规则），消息流只留结论
+	const renderRow = (row: ChatRow) => {
+		if (row.kind === "metaGroup") {
+			return (
+				<MetaGroup
+					key={row.key}
+					items={row.items}
+					working={row.working}
+					endImmediately={row.endImmediately}
+					subagentCount={row.subagentCount}
+					isDark={isDark}
+				/>
+			);
+		}
+		if (row.kind === "streamingSubagents") {
+			return (
+				<div key={row.key} className="msg-assistant">
+					<SubagentCard runs={row.runs} />
+				</div>
+			);
+		}
+		if (row.kind === "turnDiff") {
+			if (row.running || !row.timing) return null;
+			return (
+				<RunInspector
+					key={row.key}
+					run={turnInspectors[row.timing.turnIndex]}
+					timing={row.timing}
+					usage={turnUsages[row.timing.turnIndex]}
+				/>
+			);
+		}
+		if (row.kind !== "message") return null;
+		return (
+			<MessageItem
+				key={row.key}
+				message={row.message}
+				isDark={isDark}
+				enter={false}
+				streaming={row.streaming}
+				metaInGroup={row.metaInGroup}
+			/>
+		);
+	};
 
 	return (
 		<div className="chat-scroll" ref={scrollRef} onScroll={onScroll}>
 			<div ref={contentRef} className="chat-content">
 				{truncated && <div className="truncated-note">{t("chat.truncated")}</div>}
 				{transcript.todos.length > 0 && <TodoStrip todos={transcript.todos} />}
-				{rows.map((row) => {
-					if (row.kind === "metaGroup") {
-						return (
-							<MetaGroup
-								key={row.key}
-								items={row.items}
-								working={row.working}
-								endImmediately={row.endImmediately}
-								subagentCount={row.subagentCount}
-								isDark={isDark}
-							/>
-						);
-					}
-					if (row.kind === "streamingSubagents") {
-						return (
-							<div key={row.key} className="msg-assistant">
-								<SubagentCard runs={row.runs} />
-							</div>
-						);
-					}
-					if (row.kind === "turnDiff") {
-						if (row.running || !row.timing) return null;
-						return (
-							<RunInspector
-								key={row.key}
-								run={turnInspectors[row.timing.turnIndex]}
-								timing={row.timing}
-								usage={turnUsages[row.timing.turnIndex]}
-							/>
-						);
-					}
-					if (row.kind !== "message") return null;
-					return (
-						<MessageItem
-							key={row.key}
-							message={row.message}
-							isDark={isDark}
-							enter={false}
-							streaming={row.streaming}
-							metaInGroup={row.metaInGroup}
-						/>
-					);
-				})}
+				{groupProcessRows(rows).map((row) =>
+					row.kind === "process" ? (
+						<ProcessBlock key={row.key} segment={row}>
+							{row.rows.map(renderRow)}
+						</ProcessBlock>
+					) : (
+						renderRow(row)
+					),
+				)}
 				{remoteControl && !readOnly && lastError && lastUser && (
 					<div className="run-status-note">
 						<button

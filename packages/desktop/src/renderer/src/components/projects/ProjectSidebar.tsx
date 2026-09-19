@@ -1,20 +1,11 @@
 import { useMemo, useState } from "react";
-import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { getDailyDirCached } from "../../lib/daily";
 import { deriveProjects, useProjectsStore } from "../../stores/projects";
-import { useSettingsStore } from "../../stores/settings";
-import { CloseIcon, CoffeeIcon, GearIcon, HelpIcon, ObsidianIcon, PlusIcon, ZoteroIcon } from "../icons";
+import { CloseIcon, CoffeeIcon, PlusIcon } from "../icons";
 import { Tooltip } from "../ui/Tooltip";
 
-/** 项目仓库地址（帮助按钮跳转） */
-const APP_REPO_URL = "https://github.com/Gyoungwe/Drone";
-
-/** Shared geometry keeps the three footer actions aligned, including their full-row hit targets. */
-const FOOTER_ACTION_CLASS =
-	"flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-ink-dim transition-colors hover:bg-hover hover:text-ink";
-
-/** 项目列表侧栏：项目项 + 底部设置/帮助入口 */
+/** 项目列表侧栏：日常空间 + 项目项。设置 / 帮助 / Obsidian / Zotero 入口统一在左侧导航栏与设置页，不再重复 */
 export function ProjectSidebar() {
 	const t = useT();
 	const allSessions = useProjectsStore((s) => s.allSessions);
@@ -27,7 +18,6 @@ export function ProjectSidebar() {
 	const select = useProjectsStore((s) => s.select);
 	const addProject = useProjectsStore((s) => s.addProject);
 	const deleteProject = useProjectsStore((s) => s.deleteProject);
-	const openSettings = useSettingsStore((s) => s.setOpen);
 	// 模块缓存（load() 已 await 初始化；此处随 allSessions 更新重渲染即拿到非空值）
 	const dailyDir = getDailyDirCached();
 
@@ -65,38 +55,6 @@ export function ProjectSidebar() {
 						onDelete={() => void deleteProject(project.cwd)}
 					/>
 				))}
-			</div>
-			<div className="shrink-0 px-3 py-3" data-testid="project-sidebar-actions">
-				<button type="button" className={FOOTER_ACTION_CLASS} onClick={() => openSettings(true)}>
-					<GearIcon className="shrink-0" />
-					<span>{t("tabbar.settings")}</span>
-				</button>
-				<button
-					type="button"
-					className={FOOTER_ACTION_CLASS}
-					data-testid="obsidian-shortcut"
-					onClick={() => useSettingsStore.getState().openWith("knowledge")}
-				>
-					<ObsidianIcon size={14} className="shrink-0 text-accent" />
-					<span>Obsidian</span>
-				</button>
-				<button
-					type="button"
-					className={FOOTER_ACTION_CLASS}
-					data-testid="zotero-shortcut"
-					onClick={() => useSettingsStore.getState().openWith("zotero")}
-				>
-					<ZoteroIcon size={14} className="shrink-0 text-accent" />
-					<span>Zotero</span>
-				</button>
-				<button
-					type="button"
-					className={FOOTER_ACTION_CLASS}
-					onClick={() => void getPi().openExternal(APP_REPO_URL)}
-				>
-					<HelpIcon className="shrink-0" />
-					<span>{t("projects.help")}</span>
-				</button>
 			</div>
 		</aside>
 	);

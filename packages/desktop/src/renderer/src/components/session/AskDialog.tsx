@@ -6,7 +6,7 @@ import { confirmOptionIndex, isDangerAskOption, isSimpleConfirm, orderedAskOptio
 
 type Drafts = Record<string, AskAnswer>;
 
-const overlayClass = "fixed inset-0 z-[70] flex items-center justify-center bg-ink/25 p-6";
+const overlayClass = "fixed inset-0 z-(--z-dialog-top) flex items-center justify-center bg-ink/25 p-6";
 const sheetClass =
 	"flex max-h-[82vh] w-[min(680px,92vw)] flex-col overflow-hidden rounded-2xl border border-border bg-surface text-ink shadow-dialog";
 
@@ -24,14 +24,14 @@ function Recommendation({ question, t }: { question: AskQuestion; t: ReturnType<
 				<span className="font-semibold text-accent">{t("ask.modelRecommendation")}</span>
 				<span className="rounded-full bg-accent/10 px-1.5 py-0.5 font-medium text-accent">{label}</span>
 				{recommendation.confidence && (
-					<span className="text-[10px] text-ink-faint">
+					<span className="text-[11px] text-ink-faint">
 						{t("ask.confidence", { value: recommendation.confidence })}
 					</span>
 				)}
 			</div>
 			<p className="mt-1 text-[11px] leading-relaxed text-ink-2">{recommendation.reason}</p>
 			{recommendation.basedOn?.length ? (
-				<p className="mt-1 text-[10px] leading-relaxed text-ink-dim">
+				<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">
 					{t("ask.basedOn", { value: recommendation.basedOn.join(" · ") })}
 				</p>
 			) : null}
@@ -134,7 +134,7 @@ export function AskDialog({
 					</div>
 					<div className="border-t border-border px-5 py-3">
 						<div className="flex items-center justify-between gap-3">
-							<span className="min-w-0 truncate text-[10px] text-ink-faint">
+							<span className="min-w-0 truncate text-[11px] text-ink-faint">
 								{requests.length > 1 ? t("ask.queued", { count: requests.length - 1 }) : t("ask.footerHint")}
 							</span>
 							<div className="flex shrink-0 gap-2">
@@ -218,13 +218,13 @@ export function AskDialog({
 						return (
 							<section key={item.id} className="space-y-2.5">
 								<div className="flex items-start gap-2">
-									<span className="mt-0.5 rounded-md bg-hover px-1.5 py-0.5 text-[10px] font-medium text-ink-faint">
+									<span className="mt-0.5 rounded-md bg-hover px-1.5 py-0.5 text-[11px] font-medium text-ink-faint">
 										{item.label || `Q${questionIndex + 1}`}
 									</span>
 									<div className="min-w-0 flex-1">
 										<p className="text-[13px] font-medium leading-relaxed text-ink">{item.prompt}</p>
 										{!textOnly && (
-											<p className="mt-0.5 text-[10px] text-ink-faint">
+											<p className="mt-0.5 text-[11px] text-ink-faint">
 												{multi ? t("ask.multiHint") : t("ask.singleHint")}
 												{item.required ? ` · ${t("ask.required")}` : ""}
 											</p>
@@ -251,7 +251,7 @@ export function AskDialog({
 														</span>
 														<span className="text-[12px] font-medium text-ink-2">{option.label}</span>
 														{option.recommended && (
-															<span className="rounded-full bg-warn/10 px-1.5 py-0.5 text-[10px] font-medium text-warn">
+															<span className="rounded-full bg-warn/10 px-1.5 py-0.5 text-[11px] font-medium text-warn">
 																{t("ask.recommended")}
 															</span>
 														)}
@@ -262,7 +262,7 @@ export function AskDialog({
 														</p>
 													)}
 													{option.preview && (
-														<pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-hover p-2 text-[10px] leading-relaxed text-ink-2">
+														<pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-hover p-2 text-[11px] leading-relaxed text-ink-2">
 															{option.preview}
 														</pre>
 													)}
@@ -285,7 +285,7 @@ export function AskDialog({
 				<div className="border-t border-border px-5 py-3">
 					{error && <p className="mb-2 text-[11px] text-err">{error}</p>}
 					<div className="flex items-center justify-between gap-3">
-						<span className="min-w-0 truncate text-[10px] text-ink-faint">
+						<span className="min-w-0 truncate text-[11px] text-ink-faint">
 							{requests.length > 1 ? t("ask.queued", { count: requests.length - 1 }) : t("ask.footerHint")}
 						</span>
 						<div className="flex shrink-0 gap-2">
