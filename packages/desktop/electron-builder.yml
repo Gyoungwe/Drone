@@ -38,7 +38,7 @@ extraResources:
   # 内置协作 skill（channel-pickup/design-handoff）：additionalSkillPaths 扫描，与 UI 插件目录分列
   - from: "resources/skills"
     to: "skills"
-  # Reviewed release sources. ARS redistribution uses separately held permission; preflight is mandatory.
+  # Reviewed release sources. ARS ships under its CC BY-NC 4.0 NonCommercial grant (noncommercial distribution only); preflight is mandatory.
   - from: "resources/research-skills/nature"
     to: "research-skills/nature"
     filter: ["**/*", ".drone-pack.json"]

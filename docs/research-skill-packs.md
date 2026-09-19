@@ -46,11 +46,11 @@ New independent turns reset the selected topics; `继续` / `continue` restores 
 | --- | --- | ---: | ---: |
 | [Nature Skills](https://github.com/Yuan1z0825/nature-skills) | `2375e0abdf42158ef149256f2c64b1f759a0d274` | 20 | 20 |
 | [Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills) | `330c8e764435a731eff571e3efdda70b363d0792` | 166 | 148 |
-| [Academic Research Skills](https://github.com/Imbad0202/academic-research-skills) | `3c546bc08c56f79e0068f1ea4f0acedf5bf69b5e` | 4 | 4 (separate permission) |
+| [Academic Research Skills](https://github.com/Imbad0202/academic-research-skills) | `3c546bc08c56f79e0068f1ea4f0acedf5bf69b5e` | 4 | 4 (CC BY-NC 4.0, noncommercial distribution) |
 
 Nature has Apache-2.0 root licensing (some individual headers say MIT). Scientific has MIT root licensing, **but its individual skill metadata is mixed**. We conservatively exclude 18 entries from default redistribution: `biopython`, `bioservices`, `cobrapy`, `deepspot-m`, `docx`, `etetoolkit`, `glycoengineering`, `imaging-data-commons`, `matplotlib`, `pdf`, `phylogenetics`, `polars`, `pptx`, `primekg`, `rowan`, `sympy`, `what-if-oracle`, `xlsx`. These have copyleft, restrictive, unknown, URL-only or otherwise unresolved per-skill declarations. Some headers may describe the documented software rather than the documentation itself; exclusion is precautionary, not a legal determination. Enabling them for redistribution requires a separate license review and a reviewed lock change. Existing independently installed user skills are not uninstalled or relicensed.
 
-ARS upstream remains **CC BY-NC 4.0**. At the product owner's explicit request, this release profile now includes the complete ARS pack using separately held permission. This is a distribution configuration decision, not a change to the upstream license or a grant to downstream users. The distributor must ensure the separate agreement covers the intended recipients and distribution. Local noncommercial installation remains possible but cannot satisfy release preflight. This change does not assert a commercial license clearance for the external libraries, databases or assets described by any skill.
+ARS upstream remains **CC BY-NC 4.0** (© Cheng-I Wu). Drone is distributed free of charge for noncommercial use, so the release profile includes the complete ARS pack under the license's own grant to reproduce and Share the material for NonCommercial purposes, with the original LICENSE/NOTICE, an unmodified hash-pinned tree and this attribution. This is a distribution configuration decision, not a change to the upstream license: every recipient receives ARS under the same CC BY-NC 4.0 terms and may not use it for commercial purposes, and Drone's MIT license does not cover it. Anyone redistributing Drone or its ARS resources for commercial advantage must remove the pack or obtain separate permission from the upstream author (recorded with `--acknowledge-commercial-permission`). This does not assert a license clearance for the external libraries, databases or assets described by any skill.
 
 Original license files and directory structure are preserved. The Nature `nature-proposal-writer` directory declares the SDK name **`researchwrite`**; we keep that actual name instead of inventing a rename. Academic's four skills live at the repository root, not the `skills/` symlink facade. The importer now preserves the complete ordinary-file repository (2,737 files at this pin), including pi/, commands/, MODE_REGISTRY.md, shared agents, scripts and references. Only four redundant skills/* symlink facades are omitted for Windows portability. The host registers the four real skill entries, 16 original prompt templates, and one reviewed bridge. Claude hooks, other repository extensions and scripts are not automatically registered or executed.
 
@@ -65,16 +65,16 @@ npm run skills:check                # offline: validate every acquired file hash
 
 The first acquisition downloads commit-pinned GitHub archives (Scientific's full archive is about 234 MB, despite the selected skill files being much smaller). There are no runtime network fetches. Downloads have size bounds, locked SHA-256 checksums, path/type checks and staged publication. An existing changed/stale destination is **not overwritten**; move it aside explicitly before resync. The script never executes upstream code or reads credentials. Skill scripts remain inert until a separately authorized agent task requests execution.
 
-Generated sources live in `packages/desktop/resources/research-skills/`, intentionally gitignored. Keep the source lock, installer and routing code in Git rather than vendoring huge repositories. `npm run dist -w packages/desktop` verifies all three sources before building. The electron-builder `beforePack` hook repeats the fail-closed check, including when invoked directly. A fresh checkout must acquire Nature/Scientific and explicitly install ARS with applicable separate permission. Missing ARS, stale hashes, a noncommercial-only receipt, redirected resources or unreceipted extra files fail the release check. Runtime missing/stale packs fail closed with a diagnostic warning; first-party skills remain available.
+Generated sources live in `packages/desktop/resources/research-skills/`, intentionally gitignored. Keep the source lock, installer and routing code in Git rather than vendoring huge repositories. `npm run dist -w packages/desktop` verifies all three sources before building. The electron-builder `beforePack` hook repeats the fail-closed check, including when invoked directly. A fresh checkout — including the Release workflow — must acquire Nature/Scientific and explicitly install ARS with an acknowledged license basis; the Release workflow uses `--acknowledge-noncommercial`. Missing ARS, stale hashes, a receipt without an explicit license basis, redirected resources or unreceipted extra files fail the release check. Runtime missing/stale packs fail closed with a diagnostic warning; first-party skills remain available.
 
-**ARS acquisition**, only under an applicable license basis. Noncommercial local use (not the release profile):
+**ARS acquisition**, only under an applicable license basis. Noncommercial use under CC BY-NC 4.0 (this is also the release profile):
 
 ```sh
 python scripts/sync-research-skills.py --sources academic --acknowledge-noncommercial
 python scripts/sync-research-skills.py --sources academic --acknowledge-noncommercial --check
 ```
 
-If a separate permission already covers your commercial **local use**, record that explicit attestation instead (this flag does not grant a license):
+If you hold a separate permission from the upstream author that covers commercial use or distribution, record that explicit attestation instead (this flag does not grant a license):
 
 ```sh
 python scripts/sync-research-skills.py --sources academic --acknowledge-commercial-permission
@@ -89,7 +89,7 @@ Release preflight (offline, no build or publish):
 python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
 ```
 
-The release check requires `licenseAuthorization=separate-permission`, based on the distributor's existing agreement and explicit redistribution instruction; a receipt is an attestation, not the agreement itself. Do not embed private license contracts or credentials in the resources. Neither this configuration nor the app's MIT license relicenses upstream ARS or its external dependencies.
+The release check requires an explicit `licenseAuthorization` on the ARS receipt: `noncommercial` (the CC BY-NC 4.0 grant, used by the Release workflow) or `separate-permission` (a separately held agreement). A receipt records the distributor's basis; it is neither the license nor the agreement itself. Do not embed private license contracts or credentials in the resources. Neither this configuration nor the app's MIT license relicenses upstream ARS or its external dependencies.
 
 After installation or changing source paths, reload/restart the development app at a convenient time. This work does not forcibly restart the current user session.
 

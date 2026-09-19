@@ -34,16 +34,18 @@ class ReleaseGateTests(unittest.TestCase):
         (self.root / ".drone-pack.json").write_text(json.dumps(self.receipt), encoding="utf-8")
     def test_separate_permission_passes(self):
         self.assertEqual(sync.verify(self.source, self.destination, for_release=True), (1, 3))
-    def test_noncommercial_local_only(self):
+    def test_noncommercial_is_a_release_basis(self):
         self.receipt["licenseAuthorization"] = "noncommercial"
         self.save()
         self.assertEqual(sync.verify(self.source, self.destination), (1, 3))
-        with self.assertRaisesRegex(ValueError, "redistribution permission"):
-            sync.verify(self.source, self.destination, for_release=True)
+        self.assertEqual(sync.verify(self.source, self.destination, for_release=True), (1, 3))
     def test_no_acknowledgment_fails(self):
         self.receipt["licenseAuthorization"] = ""
         self.save()
-        with self.assertRaises(ValueError): sync.verify(self.source, self.destination, for_release=True)
+        with self.assertRaisesRegex(ValueError, "ARS requires --acknowledge"):
+            sync.verify(self.source, self.destination, for_release=True)
+        with self.assertRaisesRegex(ValueError, "ARS requires --acknowledge"):
+            sync.verify(self.source, self.destination)
     def test_unreceipted_file_cannot_ship(self):
         (self.root / ".env").write_text("fixture-not-a-real-secret", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "Unreceipted release files"):

@@ -130,3 +130,7 @@ Drone is a community project. It is **not** built by or affiliated with the Pi t
 ## Research workbench distribution
 
 Drone bundles the native knowledge service and research workflow across projects, plus a first-party presentation fallback. Model credentials, optional external search/MCP adapters, private Vaults and locally installed scientific software remain user setup. See [distribution capability boundaries](docs/distribution-parity.md) and [model-assisted Wiki review](docs/wiki-model-review.md). A main-branch push updates source; a version-tagged Release is needed for updated installers.
+
+### Third-party research skill packs
+
+Installers bundle three commit-pinned upstream skill packs, unmodified and with their license files: [Nature Skills](https://github.com/Yuan1z0825/nature-skills) (Apache-2.0), a license-filtered subset of [Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills) (MIT) and [Academic Research Skills](https://github.com/Imbad0202/academic-research-skills) © Cheng-I Wu, licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Drone itself is MIT-licensed and distributed free of charge; the Academic Research Skills pack may only be used for noncommercial purposes and is not covered by Drone's MIT license. Details: [docs/research-skill-packs.md](docs/research-skill-packs.md).
