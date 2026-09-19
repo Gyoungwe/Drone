@@ -28,6 +28,20 @@ First-party commands explicitly declare presentation metadata. Aliases fold only
 
 A local metadata audit after this repair found 70 skills in the tested development project: knowledge 2, research 9, writing 13, presentation 6, engineering 24, collaboration 12, specialized setup 3, references 1. These are a local snapshot, not a shipped mandatory inventory. No source under the user's shared `.agents/skills` directory was modified, and no package was uninstalled.
 
+## Pinned skills: `alwaysWith`
+
+Which skills stay visible to the model is decided by SKILL.md frontmatter, not by skill names inside the backend. A skill that declares
+
+```yaml
+---
+name: zotero-literature
+description: …
+alwaysWith: research          # or: [knowledge, research]
+---
+```
+
+is pinned to those capability ids (`knowledge`, `research`, `coding`, `web`, `files`, `visualization`, `external`): it is visible whenever one of them is active, it bypasses the research workflow router, and in read-only existing-literature reuse it is one of the skills that remain listed (only skills pinned to `research` plus explicitly invoked `/skill:` names survive that mode). A pinned skill's visibility is fully determined by its declaration; unknown ids are ignored, and `always-with` is accepted as an alias. The first-party `research-vault` (`[knowledge, research]`), `research-workflow` and `zotero-literature` (`research`) use exactly this mechanism, so a third-party literature or knowledge skill gets the same treatment by adding one line to its own SKILL.md. Skills without the key keep the previous behaviour: catalog workflows go through the research router, everything else maps by category. The backend reads the file lazily and re-parses it when its mtime changes (`packages/backend/src/capabilities/skill-frontmatter.ts`); explicit `/skill:` invocation still wins over every declaration, and pinning never grants tools or permissions.
+
 ## Checks and inspection
 
 - `scripts/audit-skill-catalog.mjs <cwd> <agentDir> [--trusted-project]` loads the resource catalog, not a model or setup command. Project-local resources default to untrusted; use the explicit flag only for an authorized project. As with normal SDK loading, extension modules may run registration code.

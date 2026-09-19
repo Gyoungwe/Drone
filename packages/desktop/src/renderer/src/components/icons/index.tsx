@@ -161,6 +161,25 @@ export function SubagentIcon({ size = 12, className }: IconProps) {
 	);
 }
 
+/** 插件贡献的导航视图（rail.view，挂钩 4）：拼图块 */
+export function PuzzleIcon({ size = 15, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			{...strokeProps}
+			strokeWidth={2}
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<path d="M10 3.5a2 2 0 1 1 4 0V5h3a1 1 0 0 1 1 1v3h1.5a2 2 0 1 1 0 4H18v3a1 1 0 0 1-1 1h-3v1.5a2 2 0 1 1-4 0V17H7a1 1 0 0 1-1-1v-3H4.5a2 2 0 1 1 0-4H6V6a1 1 0 0 1 1-1h3V3.5Z" />
+		</svg>
+	);
+}
+
 /** 项目总览（顶栏切换项目管理页）：田字格（右上格为斜置方块）；设计稿 .local/design/icons/menu.svg */
 export function ProjectsIcon({ size = 15, className }: IconProps) {
 	return (

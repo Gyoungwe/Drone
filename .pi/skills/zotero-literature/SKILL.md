@@ -1,6 +1,7 @@
 ---
 name: zotero-literature
 description: Zotero literature manager. Use for Zotero 文献库 setup、zotero-cli search/read/annotations, and depositing interpreted Library/Papers notes into the Obsidian Vault. Bound command /zotero-setup. Zotero is not the knowledge base; MCP tool schemas are optional.
+alwaysWith: research
 ---
 
 # Zotero literature · not the Vault

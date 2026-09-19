@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as jsxRuntime from "react/jsx-runtime";
 import * as ReactDOM from "react-dom";
+import { getPi } from "../api";
 import { ImagePreviewOverlay } from "../components/chat/ImagePreview";
 import { Markdown } from "../components/chat/Markdown";
 import { displayName, summarizeArgs } from "../components/chat/ToolCallCard";
@@ -9,7 +10,8 @@ import { Dropdown } from "../components/ui/Dropdown";
 import { Tooltip } from "../components/ui/Tooltip";
 import { useContextUsage } from "../hooks/use-context-usage";
 import { useLanguage } from "../hooks/use-language";
-import { useT } from "../i18n";
+import { registerPluginMessages, useT } from "../i18n";
+import { useKnowledgeStore } from "../stores/knowledge";
 import { useProjectsStore } from "../stores/projects";
 import { useSessionsStore } from "../stores/sessions";
 import { useSettingsStore } from "../stores/settings";
@@ -40,6 +42,9 @@ window.DroneUI = {
 	helpers: {
 		summarizeArgs,
 		displayToolName: displayName,
+		// 挂钩 4：插件用宿主通道打开外部资源（zotero:// / obsidian:// 等自定义协议经主进程白名单）与普通链接
+		openResourceExternal: (target: string, cwd?: string) => getPi().openResourceExternal(target, cwd),
+		openExternal: (url: string) => getPi().openExternal(url),
 	},
 	hooks: {
 		useT,
@@ -53,5 +58,8 @@ window.DroneUI = {
 		useProjectsStore,
 		useSettingsStore,
 		useUiPreferencesStore,
+		useKnowledgeStore,
 	},
+	// 挂钩 4：插件自带 i18n 条目（flow.status.* / 自定义键），无头插件 activate() 里注册、返回的清理函数里注销
+	i18n: { registerMessages: registerPluginMessages },
 } satisfies DroneUiApi;

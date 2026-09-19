@@ -1724,11 +1724,13 @@ describe("live research status", () => {
 			toolName: "set_status",
 			args: { text: "正在整理神经行为证据…", phase: "synthesis" },
 		} as unknown as AgentSessionEvent);
+		// 宿主状态条文案由后端按工具清单（drone.activity）盖章在事件上；reducer 不再按工具名猜测
 		state = reduceEvent(state, {
 			type: "tool_execution_start",
 			toolCallId: "obs-1",
 			toolName: "research-obsidian_search_notes",
 			args: { query: "autotomy" },
+			hostActivity: { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" },
 		} as unknown as AgentSessionEvent);
 		expect(state.researchStatus.host).toMatchObject({
 			text: "正在搜索 Obsidian 知识库…",
@@ -1736,6 +1738,14 @@ describe("live research status", () => {
 			source: "host",
 			toolCallId: "obs-1",
 		});
+		// 未盖章的工具不产生宿主状态
+		const untouched = reduceEvent(state, {
+			type: "tool_execution_start",
+			toolCallId: "plain-1",
+			toolName: "research-obsidian_read_note",
+			args: { path: "Wiki/x.md" },
+		} as unknown as AgentSessionEvent);
+		expect(untouched.researchStatus.host?.toolCallId).toBe("obs-1");
 		state = reduceEvent(state, {
 			type: "tool_execution_end",
 			toolCallId: "obs-1",

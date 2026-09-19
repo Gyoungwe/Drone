@@ -1,6 +1,8 @@
 import { deriveTurnChanges } from "@drone/shared";
 import { useEffect, useMemo, useRef } from "react";
 import { useT } from "../../i18n";
+import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "../../plugins/PluginRegions";
+import { UI_REGIONS } from "../../plugins/slots";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { EMPTY_TODOS, selectTranscript, useTranscriptStore } from "../../stores/transcript";
@@ -32,6 +34,12 @@ export function ContextPanel() {
 	const onRunStart = useUiStore((s) => s.onRunStart);
 	const onRunEnd = useUiStore((s) => s.onRunEnd);
 	const agentActive = useTranscriptStore((s) => selectTranscript(s, activeSessionId).agentActive);
+	// 插件页签（panel.tab 区域贡献，挂钩 4）：被禁用/卸载后若仍选中，回到「任务」
+	const pluginTabs = usePluginEntries(UI_REGIONS.PanelTab);
+	const pluginTab = pluginTabs.find((entry) => entry.id === tab);
+	useEffect(() => {
+		if (isPluginEntryId(tab) && !pluginTab) setTab("tasks");
+	}, [tab, pluginTab, setTab]);
 
 	// 运行边界驱动自动展开/回落；切会话时重置基线（不把别的会话的状态翻转当成边界）
 	const activeRef = useRef<{ sid: string | null; active: boolean }>({
@@ -61,6 +69,7 @@ export function ContextPanel() {
 					{tab === "process" && <ProcessPane sessionId={activeSessionId} />}
 					{tab === "changes" && <ChangesPane sessionId={activeSessionId} />}
 					{tab === "artifacts" && <ArtifactsPane sessionId={activeSessionId} />}
+					{pluginTab && <PluginEntryHost entry={pluginTab} />}
 				</div>
 				<PanelFooter />
 			</div>
@@ -87,7 +96,7 @@ function useTabBadges(sessionId: string | null): Partial<Record<PanelTab, string
 		}
 		const files = deriveTurnChanges(messages).reduce((sum, tc) => sum + tc.files.length, 0);
 		if (files > 0) badges.changes = String(files);
-		const artifacts = mergeKnowledgeArtifacts(flow?.artifacts || [], tasks, cwd || "");
+		const artifacts = mergeKnowledgeArtifacts(flow?.cards || [], tasks, cwd || "");
 		if (artifacts.length > 0) badges.artifacts = String(artifacts.length);
 		return badges;
 	}, [todos, messages, flow, cwd]);
@@ -108,6 +117,7 @@ function PanelHeader({
 }) {
 	const t = useT();
 	const badges = useTabBadges(sessionId);
+	const pluginTabs = usePluginEntries(UI_REGIONS.PanelTab);
 	return (
 		<div className="context-panel-head">
 			<div className="flex items-center gap-2">
@@ -133,6 +143,19 @@ function PanelHeader({
 					>
 						<span>{t(`panel.tabs.${key}`)}</span>
 						{badges[key] && <span className="context-panel-badge">{badges[key]}</span>}
+					</button>
+				))}
+				{pluginTabs.map((entry) => (
+					<button
+						key={entry.id}
+						type="button"
+						role="tab"
+						aria-selected={tab === entry.id}
+						className={tab === entry.id ? "on" : ""}
+						onClick={() => onTab(entry.id as PanelTab)}
+						data-plugin={entry.pluginName}
+					>
+						<span>{entry.title}</span>
 					</button>
 				))}
 			</div>

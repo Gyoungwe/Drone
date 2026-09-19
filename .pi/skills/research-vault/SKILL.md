@@ -1,6 +1,7 @@
 ---
 name: research-vault
 description: Obsidian MCP · research-vault. Use for Obsidian 知识库初始化/setup、检索、整理和知识沉淀; also create, update, audit, or link persistent research knowledge. Bound setup command /obsidian-setup; retrieval server research-obsidian is read-only and persistent writes are controlled.
+alwaysWith: [knowledge, research]
 ---
 
 # Obsidian MCP · Research Vault

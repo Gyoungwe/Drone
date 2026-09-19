@@ -1,12 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import { isReadOnlyTool } from "../tool-manifest.mjs";
 import { registerWorkbench } from "./register.mjs";
 
 export const TASK_ENTRY = "drone-task-checkpoint-v1";
 const CONTROL = new Set(["set_status", "todo", "capability_load", "task_status", "research_task_status"]);
-const READ =
-	/^(?:read|grep|find|ls|research_(?:read_|search_|check_answer|wiki_navigate|knowledge_status|zotero_status))/;
+// 只读判定来自工具清单（挂钩 1）：扩展在 registerTool 的 drone.readOnly 声明，核心不再按名字枚举。
+const READ = { test: (name) => isReadOnlyTool(name) };
 const safe = (value, length = 180) =>
 	String(value ?? "")
 		.replace(/(?:bearer\s+|(?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s,;]+/gi, "[redacted]")

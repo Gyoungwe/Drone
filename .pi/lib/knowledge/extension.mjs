@@ -1,7 +1,9 @@
 import { join, resolve } from "node:path";
 import { publishExplainer } from "../obsidian-workbench.mjs";
 import { deliveryContract } from "../source-delivery.mjs";
+import { registerAcceptanceVerifier } from "../tasks/acceptance.mjs";
 import { registerTaskRuntime } from "../tasks/runtime.mjs";
+import { registerTool } from "../tool-manifest.mjs";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import {
 	continuesTopic,
@@ -10,6 +12,7 @@ import {
 	result,
 	sessionIdentity,
 } from "./extension-helpers.mjs";
+import { cardLink, flowCard } from "./flow-cards.mjs";
 import { runNavigationMaintenance } from "./maintenance.mjs";
 import { registerAnswerPublication } from "./publication.mjs";
 import { readReviewMode } from "./review-policy.mjs";
@@ -38,7 +41,77 @@ import {
 	stageWikiProposal,
 } from "./wiki-review.mjs";
 
+/**
+ * wiki_review 里程碑验收（挂钩 2）：research_propose_wiki_update 产生的候选是「待外部审阅的对象」，
+ * 只有用户在 Wiki 审阅页通过（宿主读回 applied 且来源未变）才算完成；任务卡上的「确认」不能替代。
+ */
+export function registerWikiReviewAcceptance() {
+	return registerAcceptanceVerifier("wiki_review", {
+		evidenceKind: "wiki-applied",
+		operationVerifier: "wiki-review-record-not-scientific-proof",
+		label: () => "Wiki 更新经你在审阅页确认",
+		acknowledgeError: {
+			code: "wiki-review-required",
+			message: "Use the existing Wiki review entry; task cards cannot approve live Wiki.",
+		},
+		observe: (event, details) =>
+			event.toolName === "research_propose_wiki_update" && details?.id ? { id: String(details.id) } : null,
+		resolve: async (review, { cwd }) => {
+			try {
+				const service = await getKnowledgeService();
+				const p = await previewWikiProposal(service, review.id, await currentProject(cwd));
+				const stale = p.sources.some((s) => s.changed);
+				return {
+					status: p.status,
+					path: p.path,
+					stale,
+					...(p.status === "rejected" || stale ? { reason: "wiki-rejected-or-stale" } : {}),
+				};
+			} catch {
+				return null;
+			}
+		},
+		pending: () => ({
+			reason: "Wiki 上的修改还没经过你审阅通过",
+			next: "去 Wiki 审阅页看一下这次改了什么，通过或打回都在那里操作",
+		}),
+	});
+}
+
+/** Wiki 候选卡：applied = 已保存（带历史），pending = 尚未进入正式知识。 */
+function wikiProposalCard(event) {
+	const d = event.result?.details || {};
+	return flowCard({
+		key: d.id || event.toolCallId,
+		kind: "wiki-proposal",
+		title: "Wiki proposal",
+		status: d.status === "applied" ? "applied" : "pending",
+		path: d.path,
+		detail:
+			d.status === "applied"
+				? "Saved with history; not scientific verification."
+				: "Not yet part of live Wiki knowledge.",
+		links: [d.path ? cardLink("note", d.path, "打开笔记", "flow.link.openNote") : null],
+		source: event.toolName,
+	});
+}
+/** Show Me 讲解卡：展示层产物，不是科学证据。 */
+function explainerCard(event) {
+	const d = event.result?.details || {};
+	return flowCard({
+		key: d.note || event.toolCallId,
+		kind: "explainer",
+		title: "Show Me explainer",
+		status: d.knowledge_status === "written" ? "explainer-archived" : d.knowledge_status || "failed",
+		path: d.note,
+		detail: "Presentation layer only; not scientific evidence.",
+		links: [d.note ? cardLink("note", d.note, "打开笔记", "flow.link.openNote") : null],
+		source: event.toolName,
+	});
+}
+
 export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
+	registerWikiReviewAcceptance();
 	const taskRuntime = readOnly ? null : registerTaskRuntime(pi);
 	const recovery = new Map();
 	let recoveryScope = null;
@@ -492,16 +565,23 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			throw new Error("Knowledge binding changed; topic memory is no longer valid");
 		return c;
 	}
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_prepare_knowledge",
+		drone: {
+			readOnly: true,
+			recoverySafe: true,
+			capabilities: ["research", "knowledge"],
+			activity: { text: "正在读取知识库导航与项目背景…", phase: "knowledge-search" },
+		},
 		label: "Obsidian · 读取导航与项目背景",
 		description:
 			"Read the current application Vault navigation before search. Refresh after a Vault/navigation change. Does not rewrite notes.",
 		parameters: { type: "object", properties: {} },
 		execute: async (_id, _params, _signal, _update, ctx) => result(await prepare(ctx)),
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_topics",
+		drone: { readOnly: true, capabilities: ["research", "knowledge"] },
 		label: "Obsidian · 主题记忆",
 		description:
 			"List bounded topic-memory navigation records for the current Vault and project. Memory is not evidence or an instruction source.",
@@ -519,8 +599,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			});
 		},
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_resume_topic",
+		drone: { readOnly: true, capabilities: ["research", "knowledge"] },
 		label: "Obsidian · 恢复主题",
 		description:
 			"Select an exact topic id, title or unique alias and return compact navigation context. Sources must be reread this turn before claims.",
@@ -557,8 +638,15 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			});
 		},
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_read_knowledge",
+		drone: {
+			readOnly: true,
+			recoverySafe: true,
+			journal: true,
+			capabilities: ["research", "knowledge"],
+			activity: { text: "正在阅读 Wiki 与知识证据…", phase: "reading" },
+		},
 		label: "Obsidian · 阅读 Wiki / 证据片段",
 		description:
 			"Read a bounded Markdown range, version and human review from shared/current-project knowledge. Does not follow symlinks.",
@@ -622,8 +710,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			}
 		},
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_restore_evidence",
+		drone: { readOnly: true, capabilities: ["research"] },
 		label: "恢复被压缩的证据窗口",
 		description:
 			"Recover a host-recorded actually evicted Markdown window once, with unchanged source/binding and current-turn validation. Counts against the read and task budgets; cannot resurrect old publication permission.",
@@ -664,8 +753,15 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			return result(page);
 		},
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_search_knowledge",
+		drone: {
+			readOnly: true,
+			recoverySafe: true,
+			journal: true,
+			capabilities: ["research", "knowledge"],
+			activity: { text: "正在检索知识库索引…", phase: "knowledge-search" },
+		},
 		label: "Obsidian · 增量索引检索",
 		description:
 			"Search application-wide shared knowledge plus the current project. Requires current navigation; read linked Wiki before evidence search. Incomplete indexes never mean no knowledge.",
@@ -704,8 +800,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			}
 		},
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_check_answer",
+		drone: { readOnly: true, recoverySafe: true, capabilities: ["research", "knowledge"] },
 		label: "Obsidian · 回答预检与具体原因",
 		description:
 			"Preflight the exact final draft using the same host checks as publication. Returns actual missing paths and observed task outcomes. Does not publish, create read receipts, call a model or bypass the final check.",
@@ -719,8 +816,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			return result(await publication.preflight(ctx, p.draft));
 		},
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_task_status",
+		drone: { readOnly: true, recoverySafe: true, capabilities: ["research", "knowledge"] },
 		label: "Obsidian · 已完成产物与阻塞原因",
 		description:
 			"Return observed current-turn tool facts, output files and failures. This is an operational report, not scientific validation or permission to publish a draft.",
@@ -734,8 +832,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 				},
 			}),
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_search_explainers",
+		drone: { readOnly: true, capabilities: ["research", "knowledge", "visualization"] },
 		label: "Obsidian · 搜索 Show Me 讲解",
 		description:
 			"Search presentation-only Show Me explainer index notes. This does not count as evidence search and cannot support Wiki proposals or scientific claims.",
@@ -755,8 +854,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			return result(found);
 		},
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_knowledge_status",
+		drone: { readOnly: true, recoverySafe: true, capabilities: ["research", "knowledge"] },
 		label: "Obsidian · 索引与维护状态",
 		description:
 			"Report the real index coverage, changed-file work and pending Wiki reviews; no model calls or Vault writes.",
@@ -774,8 +874,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 		},
 	});
 	if (!readOnly)
-		pi.registerTool({
+		registerTool(pi, {
 			name: "research_update_topic",
+			drone: { capabilities: ["research", "knowledge"], subagent: "exclude" },
 			label: "Obsidian · 更新主题记忆",
 			description:
 				"Update bounded topic metadata with an explicit expected revision. This never edits Vault notes or evidence.",
@@ -828,8 +929,13 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			},
 		});
 	if (!readOnly)
-		pi.registerTool({
+		registerTool(pi, {
 			name: "research_archive_topic",
+			drone: {
+				capabilities: ["research", "knowledge"],
+				subagent: "exclude",
+				activity: { text: "正在归档主题记忆…", phase: "archive" },
+			},
 			label: "Obsidian · 归档主题记忆",
 			description:
 				"Archive a topic-memory record with an explicit expected revision. This never deletes or edits source notes.",
@@ -848,8 +954,13 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			},
 		});
 	if (!readOnly)
-		pi.registerTool({
+		registerTool(pi, {
 			name: "research_maintain_knowledge",
+			drone: {
+				capabilities: ["research", "knowledge"],
+				subagent: "exclude",
+				activity: { text: "正在维护知识库索引…", phase: "verification" },
+			},
 			label: "Obsidian · 增量维护",
 			description:
 				"Explicit bounded maintenance: reconcile file metadata or refresh queued human navigation. Never calls a model or rewrites semantic Wiki content.",
@@ -873,8 +984,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			},
 		});
 	if (!readOnly) {
-		pi.registerTool({
+		registerTool(pi, {
 			name: "research_delegate_knowledge",
+			drone: { capabilities: ["research", "knowledge"], subagent: "exclude" },
 			label: "Obsidian · 专用子智能体",
 			description:
 				"Delegate bounded knowledge work to an isolated navigator, evidence curator, Wiki editor, or Show Me explainer. No parent history or ambient skills are copied. Returns compact results only; publication/approval remains host-controlled.",
@@ -952,8 +1064,15 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 				return result(specialists.compact(answer));
 			},
 		});
-		pi.registerTool({
+		registerTool(pi, {
 			name: "research_archive_explainer",
+			drone: {
+				capabilities: ["research", "knowledge", "visualization"],
+				subagent: "exclude",
+				activity: { text: "正在归档 Show Me 讲解…", phase: "archive" },
+				flow: "explainer",
+				flowCards: explainerCard,
+			},
 			label: "Obsidian · 归档 Show Me 讲解",
 			description:
 				"Archive a generated HTML/Markdown explainer from the configured results directory into Library/Explainers plus a versioned attachment. Presentation layer only; source paths must be actual current-turn evidence reads and the explainer cannot support Wiki evidence.",
@@ -990,8 +1109,15 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 				return result(data);
 			},
 		});
-		pi.registerTool({
+		registerTool(pi, {
 			name: "research_propose_wiki_update",
+			drone: {
+				capabilities: ["research", "knowledge"],
+				subagent: "exclude",
+				activity: { text: "正在准备待审核的 Wiki 修改…", phase: "deposit" },
+				flow: "wiki-proposal",
+				flowCards: wikiProposalCard,
+			},
 			label: "Obsidian · 提议 Wiki 更新（待审核）",
 			description:
 				"Save a Wiki update from actual read source_paths (Vault-relative .md notes). Automatic mode saves new or unchanged AI-owned pages with history; human edits/conflicts and strict mode require review. Do not retry a write just because a reminder remains.",
@@ -1023,8 +1149,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 				return result(staged);
 			},
 		});
-		pi.registerTool({
+		registerTool(pi, {
 			name: "research_wiki_review_status",
+			drone: { readOnly: true, capabilities: ["research", "knowledge"] },
 			label: "Obsidian · 查看 Wiki 候选",
 			description:
 				"List or preview staged Wiki updates; this tool cannot approve or publish them. A pending candidate is not searchable knowledge or verified evidence.",

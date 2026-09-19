@@ -2,6 +2,7 @@ import { CLAIM_BINDING_SCHEMA } from "../lib/claim-bindings.mjs";
 import { USER_QUESTION_FOCUS } from "../lib/reply-focus.mjs";
 import { startResearchRun, updateResearchLoop } from "../lib/research-loop.mjs";
 import { createResearchReceiptJournal } from "../lib/research-receipt-journal.mjs";
+import { registerTool } from "../lib/tool-manifest.mjs";
 
 export default function researchLoop(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
@@ -15,9 +16,16 @@ export default function researchLoop(pi) {
 			journals.set(key, createResearchReceiptJournal(ctx.cwd, { sessionId: sessionKey(ctx) }));
 		return journals.get(key);
 	};
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_loop",
 		label: "Research evidence loop",
+		drone: {
+			// 创建 / 推进运行目录有副作用，但只读文献复用与只读恢复都需要 research_loop.start / status
+			libraryMode: true,
+			recoverySafe: true,
+			capabilities: ["research"],
+			activity: { text: "正在检查研究证据链…", phase: "verification" },
+		},
 		description:
 			"Create or inspect a scientific evidence gate. Prefer start and status; the host advances search, inspection, archive, claims and finalize from successful tools. Use complete to close the gate in one host-serial step, or record_external with a skip reason.",
 		parameters: {

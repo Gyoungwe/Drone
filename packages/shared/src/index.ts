@@ -39,6 +39,7 @@ export * from "./subagent";
 export * from "./task-status";
 export * from "./task-workbench";
 export * from "./todo";
+export * from "./tool-manifest";
 export * from "./transcript";
 export * from "./transcript/run-inspector";
 export * from "./ui-plugins";

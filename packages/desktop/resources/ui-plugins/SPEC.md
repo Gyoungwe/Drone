@@ -22,6 +22,8 @@ my-plugin/
 | `chat.tool-call-card` | `{ tool: UIToolCall }` | 工具调用卡（折叠行：工具名 + 参数摘要 + 输出） |
 | `chat.subagent-card` | `{ runs: SubagentRunUi[] }` | 子代理独立行（状态点 + 名称 + 点击打开子会话） |
 | `chat.todo-panel` | `{}` | 任务列表面板（右上角胶囊，内部自行取数） |
+| `panel.artifacts.card` | `{ card: KnowledgeFlowCard; sessionId; renderDefault(): ReactNode }` | 「产物」页签的一张通用回执卡（归档 / 文献 / Wiki 候选…按 `card.kind` 区分；只想接管某些 kind 时其余 `return renderDefault()`） |
+| `panel.task.milestone-evidence` | `{ milestone: TaskMilestone; task: WorkbenchTask; sessionId; renderDefault(): ReactNode }` | 任务卡里一个验收项下方的证据行（`milestone.acceptance.kind` 为扩展验收种类时才有内容，如 `zotero_item`） |
 
 ```ts
 interface UIToolCall {
@@ -44,6 +46,15 @@ interface SubagentRunUi {
 	exitCode?: number;
 	artifactsDir?: string;
 	sessionFile?: string;
+}
+
+/** 通用回执卡（扩展在 .pi 侧用 drone.flowCards / details.cards 贡献；见 packages/shared/src/knowledge.ts） */
+interface KnowledgeFlowCard {
+	key: string; kind: string; title: string; subtitle?: string | null;
+	status: string; tone?: "ok" | "warn" | "error" | "muted"; detail?: string | null; path?: string | null;
+	fields?: { label: string; i18n?: string; value: string; status?: boolean; code?: string | null; note?: string | null; tone?: string }[];
+	links?: { label: string; i18n?: string; kind: "external" | "resource" | "note" | "path"; target: string }[];
+	source?: string | null; at: number;
 }
 ```
 
@@ -103,6 +114,8 @@ export const components: {                  // 宿主精选组件（复用，不
 export const helpers: {
 	summarizeArgs(args: string): string;    // 参数摘要（取 command/path/url，流式容错）
 	displayToolName(name: string): string;  // 工具名首字母大写
+	openResourceExternal(target: string, cwd?: string): Promise<void>; // 经主进程白名单打开 zotero:// obsidian:// 等资源
+	openExternal(url: string): Promise<void>;                          // 系统浏览器打开 http(s) 链接
 };
 export const hooks: {
 	useT(): (key: string, params?) => string; // i18n（key 用宿主既有字典，如 "message.working"）
@@ -110,6 +123,11 @@ export const hooks: {
 export const stores: {                      // 宿主 zustand store（与宿主同一实例）
 	useTranscriptStore; useSessionsStore; useUiStore; useProjectsStore; useSettingsStore;
 	useUiPreferencesStore;                   // 应用级 UI 偏好（ui-state.json 持久化：轨道/中央动画等开关）
+	useKnowledgeStore;                       // 知识流（flows[sessionId].cards 等）
+};
+export const i18n: {
+	// 插件自带文案：注册后 useT()(key) 在核心字典找不到时回落到这里（如 flow.status.<自定义记号>）；返回注销函数
+	registerMessages(namespace: string, messages: { zh?: object; en?: object }): () => void;
 };
 ```
 
@@ -156,6 +174,8 @@ Slot 是「替换」，Region/Contribution 是「新增」：插件可以在宿�
 | `chat.corner.top-left` / `top-right` / `bottom-left` / `bottom-right` | 聊天区 main 内 | `absolute z-20` 同角纵向堆叠（顺序=启用先后） | 小部件 |
 | `chat.diff-sidebar` | 宿主 Git Diff 右侧扩展栏 | 跟随 420px push 式侧栏，普通文档流堆叠 | 图片图库、仓库辅助面板 |
 | `settings.panel` | 设置弹窗 | 独立分类页（分类标题 = `title`） | 插件配置页 |
+| `panel.tab` | 右侧上下文面板页签栏 | 每贡献一个页签（标签 = `title`，id `plugin:<name>:<cid>`），选中时贡献组件占满面板体 | 领域面板（如文献库、实验记录） |
+| `rail.view` | 左侧导航栏 | 每贡献一个入口（标签 = `title`，拼图图标），选中时贡献组件占满主区（与研究工作台 / 知识库同级全屏视图） | 插件自带的全屏工作台 |
 
 z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全屏预览 50。**插件层永在弹窗之下**。
 
@@ -175,7 +195,7 @@ z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全�
 - `region`：必填，∈ 上表区域；未知区域由宿主告警并忽略该条（不判无效）；
 - `export`：必填，入口 bundle 的具名导出名；
 - `anchor`：仅 `app.overlay` 有意义，九宫格枚举 `top-left/top-center/top-right/center-left/center/center-right/bottom-left/bottom-center/bottom-right`，缺省 `bottom-right`；其他区域忽略该字段；
-- `title`：可选展示名（`settings.panel` 用作设置分类标题）。
+- `title`：可选展示名（`settings.panel` 用作设置分类标题；`panel.tab` / `rail.view` 用作页签 / 导航标签，缺省用 `id`）。
 
 ### 10.2 三条硬纪律
 
@@ -189,6 +209,7 @@ z 序：背景 0 < 内容 10 < overlay 20 < 设置弹窗 40 < 信任弹窗/全�
 - 同角多贡献纵向堆叠，顺序 = 启用先后（先启用的在上）；
 - `chat.diff-sidebar` 贡献直接进入右侧上下文面板的「变更」页签；可通过 `useUiStore((s) => s.showDiffSidebar)()` 打开该页签，不要再创建第二套悬浮侧栏；
 - `settings.panel` 贡献渲染为设置弹窗的独立分类（分类 id `plugin:<name>:<cid>`，标题 = `title`），随插件启停自动增删；
+- `panel.tab` / `rail.view` 贡献同样随插件启停自动增删：正选中的页签 / 视图所属插件被禁用时，面板回到「任务」、主区回到聊天；
 - 排查：贡献根元素外层的宿主容器挂 `data-plugin="<name>"` 属性（插件无需自己做）；
 - **内置插件**：`resources/ui-plugins/builtin/` 随包分发，应用首次启动/升级时导出到用户插件目录（与用户插件同一条扫描/构建/热重载路径，面板带「内置」badge、启用免二次确认）。**直接改内置副本会在下次升级被覆盖——魔改请把目录改名另存**（`plugin.json` 的 `name` 同步改）；手动删除的目录本版本内不会回来，下次升级重新导出；
 - 新 hooks（`drone-ui.d.ts` 已声明）：`useContextUsage(sessionId)` 返回 `{ tokens, contextWindow, percent }`（事件驱动刷新，token 仪表盘用）；`useLanguage()` 返回 `"zh" | "en"`（插件自有文案跟随中英）。

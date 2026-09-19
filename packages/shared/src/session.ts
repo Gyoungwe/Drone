@@ -385,8 +385,18 @@ export interface ModelWaitEvent {
 	timeoutMs: number;
 }
 
+/** 宿主状态条文案：后端在 tool_execution_start 上按工具清单（drone.activity，挂钩 1）盖章，渲染层不再按工具名猜测。 */
+export interface HostActivityStamp {
+	text: string;
+	phase: string;
+}
+export type ToolExecutionStartEvent = Extract<PiAgentSessionEvent, { type: "tool_execution_start" }> & {
+	hostActivity?: HostActivityStamp;
+};
+
 export type SessionEvent =
-	| PiAgentSessionEvent
+	| Exclude<PiAgentSessionEvent, { type: "tool_execution_start" }>
+	| ToolExecutionStartEvent
 	| SubagentMutexEvent
 	| StreamGuardTrippedEvent
 	| ModelWaitEvent;

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { Model } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
+import { ToolManifest } from "../src/tools/manifest";
 import {
 	addSubagentUsage,
 	assertSubagentTools,
@@ -41,14 +42,58 @@ describe("subagent runner model and title", () => {
 		expect(subagentSessionName("scout", "x".repeat(31))).toBe(`scout: ${"x".repeat(30)}…`);
 	});
 	it("可观察动作包含真实对象而不是泛化阶段", () => {
+		// 领域文案来自扩展声明的工具家族（挂钩 1）：这里用一个假会话模拟 zotero / obsidian 扩展的 drone.families
+		const families = {
+			research_zotero_status: {
+				drone: {
+					families: [
+						{
+							match: "research-zotero",
+							activity: {
+								text: "正在检索 Zotero 文献库…",
+								phase: "literature-search",
+								verb: "正在检索 Zotero",
+							},
+						},
+					],
+				},
+			},
+			research_setup_options: {
+				drone: {
+					families: [
+						{
+							match: "research-obsidian",
+							activity: {
+								text: "正在搜索 Obsidian 知识库…",
+								phase: "knowledge-search",
+								verb: "正在检索 Obsidian",
+							},
+						},
+					],
+				},
+			},
+		} as Record<string, unknown>;
+		const manifest = new ToolManifest({
+			getAllTools: () => Object.keys(families).map((name) => ({ name })),
+			getToolDefinition: (name) => families[name],
+		});
 		expect(describeSubagentActivity("read", { path: "/tmp/paper.md" })).toBe("正在阅读 /tmp/paper.md");
 		expect(describeSubagentActivity("bash", { command: "npm test -- --run foo" })).toContain("npm test");
 		expect(
-			describeSubagentActivity("research-zotero_zotero_semantic_search", { query: "mantispidae autotomy" }),
+			describeSubagentActivity(
+				"research-zotero_zotero_semantic_search",
+				{ query: "mantispidae autotomy" },
+				manifest,
+			),
 		).toBe("正在检索 Zotero：“mantispidae autotomy”");
-		expect(describeSubagentActivity("research-obsidian_search_notes", { query: "autotomy" })).toBe(
+		expect(describeSubagentActivity("research-obsidian_search_notes", { query: "autotomy" }, manifest)).toBe(
 			"正在检索 Obsidian：“autotomy”",
 		);
+		// 核心只认 read / bash / 通用联网：没有声明时不产生领域文案
+		expect(describeSubagentActivity("research-zotero_zotero_semantic_search", { query: "x" })).toBe(
+			"正在搜索：“x”",
+		);
+		expect(manifest.activity("research-obsidian_read_note", {})).toMatchObject({ phase: "knowledge-search" });
 	});
 
 	it("子智能体 MCP 权限受 workspace 上限和 agent 覆盖共同约束", async () => {

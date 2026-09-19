@@ -8,21 +8,12 @@ import {
 	updateResearchLoop,
 } from "./research-loop.mjs";
 import { observeExecutionReceipt } from "./run-provenance.mjs";
+import { toolMeta } from "./tool-manifest.mjs";
 
 const owners = new Map();
-const TOOLS = new Set([
-	"bash",
-	"powershell",
-	"research_search_knowledge",
-	"research_read_knowledge",
-	"research_verify_literature",
-	"research_reconcile_literature",
-	"webfetch",
-	"fetch_content",
-	"web_search",
-	"research_archive_source",
-	"research_deposit_knowledge",
-]);
+// 核心执行 / 联网原语固定记账；扩展工具经 drone.journal 声明加入（挂钩 1）。
+const CORE_TOOLS = new Set(["bash", "powershell", "webfetch", "fetch_content", "web_search"]);
+const TOOLS = { has: (name) => CORE_TOOLS.has(name) || toolMeta(name)?.journal === true };
 
 // One journal per host session/agent turn. Never exposed as model tool parameters.
 export function createResearchReceiptJournal(cwd, { sessionId = null } = {}) {

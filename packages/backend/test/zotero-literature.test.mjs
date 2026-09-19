@@ -263,12 +263,20 @@ describe("from-zero zotero-mcp-server install", () => {
 
 describe("capability routing", () => {
 	it("loads research plus external for Zotero requests without treating CLI as knowledge evidence", () => {
+		// 能力来自扩展 registerTool 的 drone.capabilities 声明（挂钩 1）
+		zoteroLiterature({
+			registerTool: () => {},
+			registerCommand: () => {},
+			getCommands: () => [],
+			events: { on: () => {}, emit: async () => {} },
+		});
 		expect(detectCapabilities("在 zotero 里找这篇论文")).toEqual(
 			expect.arrayContaining(["research", "external"]),
 		);
 		expect(toolCapabilities("research_zotero_status")).toEqual(["research", "external"]);
 		expect(toolCapabilities("research_setup_zotero")).toEqual(["research", "external"]);
-		expect(toolCapabilities("research_deposit_knowledge")).toEqual(["research", "knowledge"]);
+		// 未声明能力的 research_* 工具退回核心启发式
+		expect(toolCapabilities("research_undeclared_probe")).toEqual(["research"]);
 	});
 });
 
@@ -291,6 +299,8 @@ it("ships a parseable zotero-literature skill", async () => {
 	expect(frontmatter).not.toBeNull();
 	const metadata = parse(frontmatter[1]);
 	expect(metadata.name).toBe("zotero-literature");
+	// 挂钩 5：常驻声明写在 SKILL.md，核心不再硬编码技能名
+	expect(metadata.alwaysWith).toBe("research");
 	expect(text).toContain("/zotero-setup");
 	expect(text).toContain("zotero-cli");
 	expect(text).toContain("not a receipt");

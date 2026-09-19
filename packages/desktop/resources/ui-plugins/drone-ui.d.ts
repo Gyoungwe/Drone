@@ -73,6 +73,19 @@ declare module "@drone/plugin-api" {
 		"chat.tool-call-card": { tool: UIToolCall };
 		"chat.subagent-card": { runs: SubagentRunUi[] };
 		"chat.todo-panel": Record<string, never>;
+		/** 「产物」页签的一张通用回执卡；只想接管某些 kind 时其余 return renderDefault() */
+		"panel.artifacts.card": {
+			card: KnowledgeFlowCard;
+			sessionId: string | null;
+			renderDefault: () => unknown;
+		};
+		/** 任务卡验收项下方的证据行（扩展验收种类，如 zotero_item / wiki_review） */
+		"panel.task.milestone-evidence": {
+			milestone: TaskMilestone;
+			task: WorkbenchTask;
+			sessionId: string | null;
+			renderDefault: () => unknown;
+		};
 	}
 
 	/** 上下文使用量（useContextUsage 返回值；percent/tokens 为 null 表示未知） */
@@ -102,6 +115,67 @@ declare module "@drone/plugin-api" {
 		exitCode?: number;
 		artifactsDir?: string;
 		sessionFile?: string;
+	}
+
+	/** 通用回执卡动作链接（external 浏览器 / resource 自定义协议 / note Vault 笔记 / path 本地文件预览） */
+	export interface KnowledgeFlowCardLink {
+		label: string;
+		i18n?: string;
+		kind: "external" | "resource" | "note" | "path";
+		target: string;
+	}
+	export interface KnowledgeFlowCardField {
+		label: string;
+		i18n?: string;
+		value: string;
+		status?: boolean;
+		code?: string | null;
+		note?: string | null;
+		tone?: "ok" | "warn" | "error" | "muted";
+	}
+	/** 通用回执卡（KnowledgeFlow.cards[]；由 .pi 扩展的 drone.flowCards / details.cards 贡献） */
+	export interface KnowledgeFlowCard {
+		key: string;
+		kind: string;
+		title: string;
+		subtitle?: string | null;
+		status: string;
+		tone?: "ok" | "warn" | "error" | "muted";
+		detail?: string | null;
+		path?: string | null;
+		fields?: KnowledgeFlowCardField[];
+		links?: KnowledgeFlowCardLink[];
+		source?: string | null;
+		at: number;
+	}
+	/** 任务里程碑（acceptance.kind 为扩展验收种类时，evidence 带验收器写入的 summary / note / links） */
+	export interface TaskMilestone {
+		id: string;
+		title: string;
+		dependsOn: string[];
+		acceptance: {
+			kind: string;
+			path?: string | null;
+			sha256?: string | null;
+			[field: string]: string | null | undefined;
+		};
+		state: string;
+		evidence?: {
+			kind?: string;
+			state?: string;
+			reason?: string;
+			summary?: string | null;
+			note?: string | null;
+			links?: KnowledgeFlowCardLink[];
+			[key: string]: unknown;
+		} | null;
+	}
+	export interface WorkbenchTask {
+		id: string;
+		goal: string;
+		state: string;
+		milestones: TaskMilestone[];
+		[key: string]: unknown;
 	}
 
 	/** 宿主精选组件 props（宽松化：与宿主内部类型同构，不逐字段绑定） */
@@ -135,6 +209,10 @@ declare module "@drone/plugin-api" {
 	export const helpers: {
 		summarizeArgs(args: string): string;
 		displayToolName(name: string): string;
+		/** 经主进程白名单打开 zotero:// obsidian:// 等资源（cwd 供相对路径解析） */
+		openResourceExternal(target: string, cwd?: string): Promise<void>;
+		/** 系统浏览器打开 http(s) 链接 */
+		openExternal(url: string): Promise<void>;
 	};
 	export const hooks: {
 		useT(): (key: string, params?: Record<string, string | number>) => string;
@@ -151,6 +229,15 @@ declare module "@drone/plugin-api" {
 		useSettingsStore: unknown;
 		/** 应用级 UI 偏好（ui-state.json 持久化）：centerOrbEnabled 等 */
 		useUiPreferencesStore: unknown;
+		/** 知识流：flows[sessionId] 含 cards[]（通用回执卡）、phase、publication 等 */
+		useKnowledgeStore: unknown;
+	};
+	/** 插件自带文案：注册后 useT()(key) 在核心字典找不到时回落到这里；返回注销函数（无头插件在 activate 里注册、清理函数里注销） */
+	export const i18n: {
+		registerMessages(
+			namespace: string,
+			messages: { zh?: Record<string, unknown>; en?: Record<string, unknown> },
+		): () => void;
 	};
 	// store hooks 顶层便捷导出（与 shim 解构一致，例：import { useSessionsStore } from "@drone/plugin-api"）
 	export const useTranscriptStore: unknown;
@@ -159,6 +246,13 @@ declare module "@drone/plugin-api" {
 	export const useProjectsStore: unknown;
 	export const useSettingsStore: unknown;
 	export const useUiPreferencesStore: unknown;
+	export const useKnowledgeStore: unknown;
+	export const openResourceExternal: (target: string, cwd?: string) => Promise<void>;
+	export const openExternal: (url: string) => Promise<void>;
+	export const registerMessages: (
+		namespace: string,
+		messages: { zh?: Record<string, unknown>; en?: Record<string, unknown> },
+	) => () => void;
 	declare const api: unknown;
 	export default api;
 }

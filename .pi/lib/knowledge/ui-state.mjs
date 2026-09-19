@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { flowCardBuilder, toolMeta } from "../tool-manifest.mjs";
+import { failureCard, flowCard } from "./flow-cards.mjs";
 
 const key = Symbol.for("drone.knowledge.ui.v1");
 globalThis[key] ??= { listeners: new Set(), flows: new Map(), seq: 0 };
@@ -41,8 +43,7 @@ export function beginKnowledgeFlow(ctx, binding) {
 		reads: [],
 		search: null,
 		publication: null,
-		artifacts: [],
-		literature: [],
+		cards: [],
 	};
 	state.flows.delete(id);
 	state.flows.set(id, flow);
@@ -170,202 +171,85 @@ export function noteKnowledgeSearch(ctx, found, wikiOnly = false) {
 		},
 	});
 }
-const LITERATURE_TOOLS = new Set([
-	"research_zotero_save",
-	"research_verify_literature",
-	"research_reconcile_literature",
-]);
-const MAX_LITERATURE = 24;
-function literatureRow(event) {
-	const d = event.result?.details || {};
-	const text = (value, max = 200) => (typeof value === "string" && value ? value.slice(0, max) : null);
-	if (event.toolName === "research_zotero_save") {
-		const doi = text(d.doi, 300);
-		if (!doi) return null;
-		return {
-			key: `doi:${doi}`,
-			doi,
-			title: text(d.title),
-			zoteroKey: text(d.zoteroKey, 8),
-			zotero: d.status === "saved" || d.status === "reused" ? "verified" : text(d.status) || "unavailable",
-			obsidian: "unknown",
-			notePath: null,
-			fulltextStatus: text(d.fulltextStatus, 64),
-			channel: text(d.channel, 16),
-			library: text(d.library?.name),
-			status: text(d.status, 32) || "unknown",
-			source: "zotero-save",
-			at: Date.now(),
+const MAX_CARDS = 32;
+const empty = (value) => value === null || value === undefined || value === "" || value === "unknown";
+/** 同键合并：新卡覆盖旧卡，但空值 / unknown 不抹掉已知事实（例如后来的核对不会丢掉已知笔记路径）。 */
+function mergeCard(previous, next) {
+	if (!previous) return next;
+	const fields = [...(previous.fields || [])];
+	for (const field of next.fields || []) {
+		const at = fields.findIndex((f) => f.label === field.label);
+		if (at < 0) {
+			fields.push(field);
+			continue;
+		}
+		const old = fields[at];
+		fields[at] = {
+			...old,
+			...field,
+			value: empty(field.value) ? old.value : field.value,
+			tone: empty(field.value) ? old.tone : field.tone,
+			code: empty(field.code) ? (old.code ?? null) : field.code,
+			note: empty(field.note) ? (old.note ?? null) : field.note,
 		};
 	}
-	const receipt = event.toolName === "research_reconcile_literature" ? d.receipt || {} : d;
-	const doi = text(receipt.doi, 300);
-	if (!doi) return null;
+	const links = [...(previous.links || [])];
+	for (const link of next.links || [])
+		if (!links.some((l) => l.kind === link.kind && l.target === link.target)) links.push(link);
 	return {
-		key: `doi:${doi}`,
-		doi,
-		title: text(receipt.zotero?.title),
-		zoteroKey: text(receipt.zoteroKey, 8),
-		zotero: text(receipt.zotero?.status, 32) || "unavailable",
-		obsidian: text(receipt.obsidian?.status, 32) || "unavailable",
-		notePath: text(receipt.obsidian?.path, 4096),
-		fulltextStatus: text(receipt.zotero?.fulltextStatus, 64),
-		channel: null,
-		library: null,
-		status: text(d.status, 32) || text(receipt.status, 32) || "partial",
-		source: event.toolName === "research_verify_literature" ? "verify" : "reconcile",
-		at: Date.now(),
+		...previous,
+		...next,
+		title:
+			next.provisionalTitle && previous.title && !previous.provisionalTitle ? previous.title : next.title,
+		provisionalTitle: !!next.provisionalTitle && previous.provisionalTitle !== false,
+		subtitle: next.subtitle ?? previous.subtitle ?? null,
+		detail: next.detail ?? previous.detail ?? null,
+		path: next.path ?? previous.path ?? null,
+		fields,
+		links,
 	};
 }
-/** Literature receipts are merged per DOI so the panel shows one card per paper; a newer verify never erases a known note path. */
-export function noteLiteratureReceipt(ctx, event) {
-	const id = sessionId(ctx),
-		old = state.flows.get(id);
-	if (!old || event.isError || !LITERATURE_TOOLS.has(event.toolName)) return;
-	const next = literatureRow(event);
-	if (!next) return;
-	const previous = (old.literature || []).find((row) => row.key === next.key);
-	const merged = previous
-		? {
-				...previous,
-				...next,
-				title: next.title || previous.title,
-				zoteroKey: next.zoteroKey || previous.zoteroKey,
-				notePath: next.notePath || previous.notePath,
-				obsidian: next.obsidian === "unknown" ? previous.obsidian : next.obsidian,
-				fulltextStatus: next.fulltextStatus || previous.fulltextStatus,
-				channel: next.channel || previous.channel,
-				library: next.library || previous.library,
-			}
-		: next;
-	const literature = [...(old.literature || []).filter((row) => row.key !== next.key), merged].slice(
-		-MAX_LITERATURE,
-	);
-	updateKnowledgeFlow(ctx, { literature });
+function validCard(card) {
+	if (!card || typeof card !== "object" || typeof card.key !== "string" || !card.key) return null;
+	return flowCard({ ...card, fields: card.fields, links: card.links });
 }
+/**
+ * 挂钩 3 单一入口：工具结束后把它贡献的回执卡合并进 flow.cards。
+ * 卡片来源：① 工具结果 `details.cards[]`；② 工具元数据 `drone.flowCards(event)`；
+ * ③ 声明了 `drone.flow` 的工具出错时的失败卡。核心不再按工具名分支。
+ */
 export function noteKnowledgeOperation(ctx, event) {
 	const id = sessionId(ctx),
 		old = state.flows.get(id);
-	if (!old) return;
-	noteLiteratureReceipt(ctx, event);
-	const names = new Set([
-		"research_setup_obsidian",
-		"research_archive_source",
-		"research_deposit_knowledge",
-		"research_summarize_run",
-		"research_propose_wiki_update",
-		"research_archive_explainer",
-		"research_source_status",
-	]);
-	if (!names.has(event.toolName)) return;
-	const d = event.result?.details || {},
-		rows = [];
-	const row = (key, title, path, status, detail = "") => ({
-		key,
-		title: String(title || "").slice(0, 200),
-		path: typeof path === "string" ? path.slice(0, 4096) : null,
-		status,
-		detail: String(detail).slice(0, 400),
-	});
+	if (!old || !event?.toolName) return;
+	const meta = toolMeta(event.toolName);
+	const builder = flowCardBuilder(event.toolName);
+	const produced = [];
 	if (event.isError) {
-		rows.push(
-			row(
-				event.toolCallId,
-				event.toolName,
-				null,
-				"failed",
-				(event.result?.content || [])
-					.filter((b) => b.type === "text")
-					.map((b) => b.text)
-					.join(" "),
-			),
-		);
-	} else if (event.toolName === "research_source_status") {
-		for (const item of (d.manifest?.items || []).slice(-20))
-			rows.push(
-				row(
-					item.path || item.id,
-					item.metadata?.title || item.category,
-					item.path,
-					item.status,
-					"Source archived; interpretation and manual coverage are separate.",
-				),
-			);
-		for (const item of (d.manifest?.failures || []).slice(-6))
-			rows.push(row(item.url, item.url, null, "failed", item.reason));
-	} else if (event.toolName === "research_archive_source")
-		rows.push(
-			row(
-				d.path || d.url || event.toolCallId,
-				d.metadata?.title || d.category || event.toolName,
-				d.path,
-				d.status,
-				d.knowledge_status === "written"
-					? "Source note saved; not a full manual or reviewed synthesis."
-					: d.reason || d.obsidian_error || d.knowledge_status,
-			),
-		);
-	else if (event.toolName === "research_deposit_knowledge")
-		rows.push(
-			row(
-				d.note || event.toolCallId,
-				d.type || event.toolName,
-				d.note,
-				d.note ? "note-written" : "failed",
-				d.scope,
-			),
-		);
-	else if (event.toolName === "research_summarize_run")
-		rows.push(
-			row(
-				d.run || event.toolCallId,
-				"Run summary",
-				d.run,
-				d.partial ? "partial" : d.run ? "summary-written" : "failed",
-				d.obsidian_error ||
-					d.index_error ||
-					(d.obsidian_note ? "Vault run note saved." : "No Vault run note."),
-			),
-		);
-	else if (event.toolName === "research_archive_explainer")
-		rows.push(
-			row(
-				d.note || event.toolCallId,
-				"Show Me explainer",
-				d.note,
-				d.knowledge_status === "written" ? "explainer-archived" : d.knowledge_status || "failed",
-				"Presentation layer only; not scientific evidence.",
-			),
-		);
-	else if (event.toolName === "research_setup_obsidian")
-		rows.push(
-			row(
-				event.toolCallId,
-				"Obsidian setup",
-				d.vault,
-				d.cancelled ? "cancelled" : d.state === "ready" ? "setup-complete" : "failed",
-				"Global binding and missing structure only.",
-			),
-		);
-	else
-		rows.push(
-			row(
-				d.id || event.toolCallId,
-				"Wiki proposal",
-				d.path,
-				d.status === "applied" ? "已保存" : "待确认",
-				d.status === "applied"
-					? "Saved with history; not scientific verification."
-					: "Not yet part of live Wiki knowledge.",
-			),
-		);
-	const artifacts = [...(old.artifacts || [])];
-	for (const item of rows) {
-		const at = artifacts.findIndex((x) => x.key === item.key);
-		if (at < 0) artifacts.push(item);
-		else artifacts[at] = item;
+		if (meta?.flow || builder) produced.push(failureCard(event));
+	} else {
+		const declared = event.result?.details?.cards;
+		if (Array.isArray(declared)) produced.push(...declared);
+		if (builder) {
+			try {
+				const built = builder(event);
+				if (Array.isArray(built)) produced.push(...built);
+				else if (built) produced.push(built);
+			} catch {
+				/* a card builder must never fail the tool result */
+			}
+		}
 	}
-	updateKnowledgeFlow(ctx, { artifacts: artifacts.slice(-24) });
+	const cards = produced.map(validCard).filter(Boolean);
+	if (!cards.length) return;
+	const next = [...(old.cards || [])];
+	for (const card of cards) {
+		const at = next.findIndex((x) => x.key === card.key);
+		const merged = mergeCard(at < 0 ? null : next[at], card);
+		if (at < 0) next.push(merged);
+		else next.splice(at, 1, merged);
+	}
+	updateKnowledgeFlow(ctx, { cards: next.slice(-MAX_CARDS) });
 }
 
 // Compact specialist status; never copy its raw model/chain/tool transcript into the parent UI.

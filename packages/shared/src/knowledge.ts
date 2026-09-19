@@ -46,23 +46,51 @@ export interface KnowledgeReadRecord {
 	truncated?: boolean;
 	kind?: string;
 }
-/** One DOI's dual-library receipt as observed by the host (Zotero write/read-back, Vault note identity). */
-export interface KnowledgeLiteratureRow {
+/** 通用回执卡字段：label 为展示名（可附 i18n 键），value 为状态记号或短文本；tone 由生产端按事实给出。 */
+export interface KnowledgeFlowCardField {
+	label: string;
+	/** 可选 i18n 键；渲染端字典里存在时优先使用 */
+	i18n?: string;
+	value: string;
+	/** value 是否为状态记号（渲染端可查 flow.status.* 字典本地化） */
+	status?: boolean;
+	/** 等宽附注（Zotero key / 笔记路径等） */
+	code?: string | null;
+	/** 附加说明（渠道 / 库名等） */
+	note?: string | null;
+	tone?: "ok" | "warn" | "error" | "muted";
+}
+/** 通用回执卡动作：external = 系统浏览器；resource = 宿主 openResourceExternal（自定义协议）；note = Vault 笔记查看器；path = 本地文件预览。 */
+export interface KnowledgeFlowCardLink {
+	label: string;
+	i18n?: string;
+	kind: "external" | "resource" | "note" | "path";
+	target: string;
+}
+/**
+ * KnowledgeFlow 通用回执卡（挂钩 3）：归档 / 入库 / 总结 / 文献回执统一用它表达，
+ * 由工具结果 `details.cards[]` 或工具元数据 `drone.flowCards(event)` 贡献；渲染端只有一个通用卡组件。
+ * 只呈现宿主观察到的事实，不代表科学结论已核验。
+ */
+export interface KnowledgeFlowCard {
+	/** 合并键（同键后来者覆盖，空值不覆盖旧值） */
 	key: string;
-	doi: string;
-	title: string | null;
-	zoteroKey: string | null;
-	/** verified | unverified | identity-mismatch | failed | ambiguous | blocked | cancelled | unavailable */
-	zotero: string;
-	/** verified | missing | identity-mismatch | unavailable | unknown */
-	obsidian: string;
-	notePath: string | null;
-	/** attachment-indexed-not-read | metadata-only | unavailable | null */
-	fulltextStatus: string | null;
-	channel: string | null;
-	library: string | null;
+	/** 卡片种类：artifact / literature / wiki-proposal / setup / summary / … 由生产端定义 */
+	kind: string;
+	title: string;
+	/** title 只是占位（例如仅有 DOI）：合并时不覆盖已知标题 */
+	provisionalTitle?: boolean;
+	subtitle?: string | null;
+	/** 状态记号（渲染端按 flow.status.* 字典本地化，缺省显示原文） */
 	status: string;
-	source: "zotero-save" | "verify" | "reconcile";
+	tone?: "ok" | "warn" | "error" | "muted";
+	detail?: string | null;
+	/** 主产物路径（Vault 相对或本地文件），供「打开」动作 */
+	path?: string | null;
+	fields?: KnowledgeFlowCardField[];
+	links?: KnowledgeFlowCardLink[];
+	/** 来源工具名（审计用） */
+	source?: string | null;
 	at: number;
 }
 export interface KnowledgeFlow {
@@ -73,8 +101,8 @@ export interface KnowledgeFlow {
 	bindingRevision: number | null;
 	vault: string | null;
 	project: string | null;
-	artifacts?: { key: string; title: string; path: string | null; status: string; detail: string }[];
-	literature?: KnowledgeLiteratureRow[];
+	/** 通用回执卡（归档 / 入库 / 总结 / 文献……），见 KnowledgeFlowCard */
+	cards?: KnowledgeFlowCard[];
 	phase: string;
 	updatedAt: number;
 	navigation: KnowledgeReadRecord[];

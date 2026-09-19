@@ -1,22 +1,18 @@
 import type { PromptReceipt } from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
+import { ToolManifest } from "../tools/manifest";
 
-// Explicit allow-list: resuming an answer must never replay an import, shell command or Vault write.
-export const RECOVERY_READ_TOOLS = new Set([
-	"research_prepare_knowledge",
-	"research_wiki_navigate",
-	"research_reconcile_literature",
-	"research_read_knowledge",
-	"research_search_knowledge",
-	"research_verify_literature",
-	"research_loop",
-	"research_source_status",
-	"research_task_status",
-	"research_knowledge_status",
-	"research_check_answer",
-	"research_read_source",
-	"set_status",
-]);
+/**
+ * Explicit allow-list: resuming an answer must never replay an import, shell command or Vault write.
+ * 名单来自工具清单（挂钩 1）：只有在 registerTool 时声明 `drone.recoverySafe: true` 的工具才会被重放。
+ */
+export function recoveryReadTools(
+	session: Partial<Pick<AgentSession, "getAllTools" | "getToolDefinition">>,
+	names: readonly string[],
+): Set<string> {
+	const manifest = new ToolManifest(session);
+	return new Set(names.filter((name) => manifest.recoverySafe(name)));
+}
 export class SessionRecovery {
 	private readonly requests = new Map<string, Promise<PromptReceipt>>();
 	private readonly active = new Set<string>();
@@ -49,6 +45,7 @@ export class SessionRecovery {
 			);
 		this.active.add(session.sessionId);
 		const originalTools = session.getActiveToolNames();
+		const recoverySafe = recoveryReadTools(session, originalTools);
 		const receipt: PromptReceipt = { kind: "agent" };
 		const pending = new Promise<PromptReceipt>((resolve, reject) => {
 			let accepted = false;
@@ -67,7 +64,7 @@ export class SessionRecovery {
 				}
 			};
 			try {
-				session.setActiveToolsByName(originalTools.filter((name) => RECOVERY_READ_TOOLS.has(name)));
+				session.setActiveToolsByName(originalTools.filter((name) => recoverySafe.has(name)));
 				const checkpoint = messages
 					.slice(messages.lastIndexOf(user))
 					.filter((m) => m.role === "toolResult" && !m.isError);

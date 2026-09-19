@@ -1,5 +1,9 @@
+import { cardLink, literatureCard } from "../lib/knowledge/flow-cards.mjs";
 import { recordZoteroWrite } from "../lib/literature-operations.mjs";
 import { normalizeDoi } from "../lib/literature-receipt.mjs";
+import { registerAcceptanceVerifier } from "../lib/tasks/acceptance.mjs";
+import { registerTool } from "../lib/tool-manifest.mjs";
+import { createCompositeZoteroReconciler } from "../lib/zotero-reconcile.mjs";
 import {
 	bootstrapZotero,
 	inspectZotero,
@@ -18,6 +22,69 @@ import {
 const SAVE_ALLOW = "同意写入 Zotero",
 	SAVE_DENY = "暂不写入";
 
+const ZOTERO_KEY = /^[A-Z0-9]{8}$/;
+/** 把只读读回结果补成通用证据行（摘要 / 附注 / 动作链接）：桌面端不认识 Zotero，措辞与链接都在这里。 */
+export function describeZoteroEvidence(result) {
+	const key = ZOTERO_KEY.test(result?.itemId || "") ? result.itemId : null;
+	const state = result?.state || "unknown";
+	const summary =
+		state === "found" && key
+			? `Zotero 已找到条目 ${key}`
+			: state === "not-found"
+				? "Zotero 中未找到该 DOI"
+				: state === "ambiguous"
+					? "Zotero 中有多条同 DOI 条目"
+					: `Zotero 暂不可核对：${result?.reason || state}`;
+	const via =
+		result?.verifier === "zotero-local-api-item-identity" ? "本机" : result?.verifier ? "云端" : null;
+	const pdf = (result?.attachments || []).some((a) => a?.contentType === "application/pdf");
+	const note = [via, state === "found" ? (pdf ? "有 PDF 附件（未读）" : "仅元数据") : null]
+		.filter(Boolean)
+		.join(" · ");
+	return {
+		...result,
+		summary,
+		note: note || null,
+		links: key
+			? [
+					cardLink(
+						"resource",
+						`zotero://select/library/items/${key}`,
+						"在 Zotero 中打开",
+						"flow.link.openInZotero",
+					),
+				]
+			: [],
+	};
+}
+
+/**
+ * zotero_item 里程碑验收（挂钩 2）：只读回 Zotero 条目身份（DOI → item key / 附件元数据），
+ * 不写入、不代表读过全文。同意决策仍在宿主任务工作台。
+ */
+export function registerZoteroAcceptance() {
+	const reconcile = createCompositeZoteroReconciler();
+	return registerAcceptanceVerifier("zotero_item", {
+		fields: ["doi", "libraryId", "collection"],
+		evidenceKind: "zotero-read-only-item-identity",
+		label: (acceptance) => `文献进入 Zotero${acceptance.doi ? `（${acceptance.doi}）` : ""}`,
+		verify: async (acceptance) => describeZoteroEvidence(await reconcile(acceptance)),
+		// 已批准契约里点名的 DOI：写入同意可复用任务授权，不再弹第二张卡
+		consent: (acceptance) =>
+			acceptance.doi
+				? {
+						doi: acceptance.doi,
+						libraryId: acceptance.libraryId || null,
+						collection: acceptance.collection || null,
+					}
+				: null,
+		pending: (m) => ({
+			reason: `Zotero 里还没有读回这条文献${m.acceptance.doi ? `（${m.acceptance.doi}）` : ""}的身份`,
+			next: "先用 research_zotero_save / research_verify_literature 写入并核对，再继续",
+		}),
+	});
+}
+
 /** Task-level consent covers only DOIs named by zotero_item milestones of an authorized, unchanged plan. */
 async function taskConsentFor(pi, ctx, doi) {
 	let grant = null;
@@ -28,8 +95,8 @@ async function taskConsentFor(pi, ctx, doi) {
 			grant = value;
 		},
 	});
-	const items = Array.isArray(grant?.zoteroItems) ? grant.zoteroItems : [];
-	const match = items.find((entry) => normalizeDoi(entry?.doi) === doi);
+	const items = Array.isArray(grant?.acceptances) ? grant.acceptances : [];
+	const match = items.find((entry) => entry?.kind === "zotero_item" && normalizeDoi(entry?.doi) === doi);
 	return match ? { taskId: grant.taskId || null, milestoneId: match.milestoneId || null } : null;
 }
 // Same desktop AskGate/AskDialog as ask_user and task authorization; only an exact host-owned choice writes.
@@ -98,10 +165,31 @@ async function startSetup(pi, args, ctx) {
 
 export default function zoteroLiterature(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
+	registerZoteroAcceptance();
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_zotero_status",
 		label: "Zotero literature status",
+		drone: {
+			readOnly: true,
+			capabilities: ["research", "external"],
+			activity: { text: "正在检查 Zotero 接入状态…", phase: "verification" },
+			// MCP 代理工具 research-zotero_*（含子代理只读通道）的状态条 / 动作文案由这里声明
+			families: [
+				{
+					match: "research-zotero",
+					label: "Zotero",
+					readOnly: true,
+					capabilities: ["research", "external"],
+					activity: {
+						text: "正在检索 Zotero 文献库…",
+						phase: "literature-search",
+						verb: "正在检索 Zotero",
+						queryKeys: ["query", "q", "search", "search_text", "text"],
+					},
+				},
+			],
+		},
 		description:
 			"Read-only: report zotero-cli/zotero-mcp paths, installer availability, local Zotero API reachability, and MCP registration. Does not install software or write the Vault.",
 		parameters: { type: "object", properties: {} },
@@ -111,9 +199,14 @@ export default function zoteroLiterature(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_setup_zotero",
 		label: "Install Zotero CLI and register optional MCP",
+		drone: {
+			capabilities: ["research", "external"],
+			subagent: "exclude",
+			activity: { text: "正在配置 Zotero 接入…", phase: "setup" },
+		},
 		description:
 			"Host-owned from-zero setup: optionally install zotero-mcp-server with a fixed uv/pip/pipx command after UI confirm, then register the optional MCP server (disabled by default). Does not install Zotero desktop, does not enable the local API checkbox, and does not copy the library into the Vault.",
 		parameters: {
@@ -163,9 +256,16 @@ export default function zoteroLiterature(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_zotero_save",
 		label: "Save one paper to Zotero (host-controlled)",
+		drone: {
+			capabilities: ["research", "external"],
+			subagent: "exclude",
+			activity: { text: "正在写入 Zotero 文献库…", phase: "literature-write" },
+			flow: "literature",
+			flowCards: (event) => literatureCard(event, { write: true }),
+		},
 		description:
 			"Write ONE bibliographic item into the user's Zotero library, keyed by exact DOI. Host-controlled: dedups by DOI first (an existing item is reused, never duplicated), asks the user on a native card unless an authorized task plan lists this DOI as a zotero_item milestone, writes once through Zotero desktop (connector, preferred) or the Zotero Web API (write-scoped ZOTERO_API_KEY from the environment), then reads the item back by DOI. Never retries, deletes, merges or moves items. Attachments are URL-based only: Zotero desktop downloads attachment_url itself; the Web API records it as a linked URL. Returns the receipt (status, zoteroKey, library, fulltextStatus). Follow with research_deposit_knowledge type=paper and research_verify_literature; the Vault note stays the citable object.",
 		parameters: {

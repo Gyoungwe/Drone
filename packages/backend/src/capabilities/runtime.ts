@@ -11,6 +11,7 @@ import {
 	workflowProfile,
 } from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
+import { globalToolManifest, ToolManifest } from "../tools/manifest";
 import {
 	changesResearchWorkflow,
 	detectResearchIntent,
@@ -21,6 +22,7 @@ import {
 	selectResearchSkills,
 } from "./research-skill-router";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
+import { type SkillLike, skillAlwaysWith } from "./skill-frontmatter";
 
 const ALWAYS_ON = new Set([
 	"ask_user",
@@ -34,23 +36,10 @@ const ALWAYS_ON = new Set([
 	"task_evidence_restore",
 ]);
 
-export const READ_ONLY_LIBRARY_TOOLS = new Set([
-	"set_status",
-	"read",
-	"research_prepare_knowledge",
-	"research_wiki_navigate",
-	"research_read_knowledge",
-	"research_search_knowledge",
-	"research_verify_literature",
-	"research_loop",
-	"research_reconcile_literature",
-	"research_check_answer",
-	"research_knowledge_status",
-	"research_source_status",
-	"research_task_status",
-	"research_workspace_status",
-	"research_zotero_status",
-]);
+/** 只读文献复用模式下可用的工具：由工具清单（drone.readOnly / drone.libraryMode）决定，核心不再枚举。 */
+export function isReadOnlyLibraryTool(name: string, manifest: ToolManifest = globalToolManifest): boolean {
+	return manifest.allowedInLibraryMode(name);
+}
 export function isReadOnlyLibraryRequest(text: string): boolean {
 	return (
 		/只读|read[- ]only/i.test(text) &&
@@ -83,11 +72,6 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 	],
 };
 
-const KNOWLEDGE_TOOL =
-	/^research_(?:prepare_knowledge|read_knowledge|search_knowledge|search_explainers|knowledge_status|maintain_knowledge|delegate_knowledge|propose_wiki_update|wiki_|check_answer|task_status|deposit_knowledge|topics|resume_topic|update_topic|archive_topic)/;
-const ZOTERO_TOOL = /^research_(?:zotero_status|setup_zotero|zotero_save)$/;
-const VISUAL_TOOL = /(?:show_image|explainer|show_me|figure|plot|chart|image)/i;
-
 /** Continuations preserve tool visibility only, never permissions or evidence receipts. */
 export function isTaskContinuation(text: string): boolean {
 	if (/^(?:also\b|and\b|补充)/i.test(text.trim())) return true;
@@ -117,33 +101,31 @@ export function detectCapabilities(text: string): CapabilityId[] {
 	return CAPABILITY_IDS.filter((id) => found.has(id));
 }
 
-export function toolCapabilities(name: string): CapabilityId[] {
+/** 工具 → 能力：读工具清单的 drone.capabilities（挂钩 1）；常驻控制工具恒为空。 */
+export function toolCapabilities(name: string, manifest: ToolManifest = globalToolManifest): CapabilityId[] {
 	if (ALWAYS_ON.has(name)) return [];
-	if (name === "read") return ["files", "coding", "knowledge", "research", "visualization"];
-	if (["bash", "edit", "write"].includes(name)) return ["coding"];
-	if (name === "webfetch") return ["web", "research"];
-	if (name === "show_image") return ["visualization"];
-	if (name === "subagent") return ["coding", "research"];
-	if (name.startsWith("research_")) {
-		const result: CapabilityId[] = ["research"];
-		if (KNOWLEDGE_TOOL.test(name)) result.push("knowledge");
-		if (ZOTERO_TOOL.test(name)) result.push("external");
-		if (VISUAL_TOOL.test(name)) result.push("visualization");
-		return result;
-	}
-	if (/^(?:channel_|contact_supervisor$|scout$)/.test(name)) return ["external"];
-	return VISUAL_TOOL.test(name) ? ["visualization", "external"] : ["external"];
+	return manifest.capabilities(name);
 }
 
+/**
+ * 技能可见性：显式 /skill: 优先；随后看 SKILL.md 的 `alwaysWith` 常驻声明（挂钩 5）——
+ * 声明了常驻能力的技能，其可见性只由这些能力是否激活决定（不经研究技能路由）；
+ * 其余研究工作流技能由路由选择，普通技能按目录分类映射到能力。
+ */
 function skillMatches(
-	name: string,
+	skill: SkillLike,
 	capabilities: ReadonlySet<CapabilityId>,
 	forced: ReadonlySet<string>,
 	selectedResearch: ReadonlySet<string>,
 ): boolean {
+	const name = skill.name;
 	if (forced.has(name)) return true;
-	if (workflowProfile(name) && !["research-vault", "research-workflow", "zotero-literature"].includes(name))
-		return selectedResearch.has(name);
+	const pinned = skillAlwaysWith(skill);
+	if (pinned.size) {
+		for (const id of pinned) if (capabilities.has(id)) return true;
+		return false;
+	}
+	if (workflowProfile(name)) return selectedResearch.has(name);
 	const category = getSkillCategory(name);
 	if (category === "knowledge") return capabilities.has("knowledge") || capabilities.has("research");
 	if (category === "research" || category === "writing") return capabilities.has("research");
@@ -174,7 +156,7 @@ type RuntimeSession = Pick<
 	AgentSession,
 	"getAllTools" | "getActiveToolNames" | "setActiveToolsByName" | "resourceLoader"
 > &
-	Partial<Pick<AgentSession, "sessionManager">>;
+	Partial<Pick<AgentSession, "sessionManager" | "getToolDefinition">>;
 
 export interface CapabilityChange {
 	changed: boolean;
@@ -183,6 +165,11 @@ export interface CapabilityChange {
 
 export class CapabilityRuntime {
 	private session?: RuntimeSession;
+	private manifest: ToolManifest = globalToolManifest;
+	/** 本会话的工具清单（注册声明 → 运行时桥 → 核心默认）。 */
+	get tools(): ToolManifest {
+		return this.manifest;
+	}
 	private lastCheckpoint = "";
 	private readOnlyLibrary = false;
 	private researchIntent: ResearchSkillIntent = EMPTY_RESEARCH_INTENT;
@@ -201,6 +188,7 @@ export class CapabilityRuntime {
 		options?: { excludedToolNames?: Iterable<string>; extraAlwaysOn?: Iterable<string> },
 	): CapabilityChange {
 		this.session = session;
+		this.manifest = new ToolManifest(session);
 		for (const name of options?.excludedToolNames ?? []) this.excludedTools.add(name);
 		for (const name of options?.extraAlwaysOn ?? []) this.extraAlwaysOn.add(name);
 		this.restoreCheckpoint();
@@ -294,7 +282,7 @@ export class CapabilityRuntime {
 	}
 	guardTool(name: string, input: Record<string, unknown> = {}) {
 		if (!this.readOnlyLibrary) return undefined;
-		if (!READ_ONLY_LIBRARY_TOOLS.has(name))
+		if (!this.manifest.allowedInLibraryMode(name))
 			return {
 				block: true,
 				reason:
@@ -340,7 +328,7 @@ export class CapabilityRuntime {
 				const usage = this.toolUsage.get(tool.name);
 				return {
 					name: tool.name,
-					capabilities: toolCapabilities(tool.name),
+					capabilities: toolCapabilities(tool.name, this.manifest),
 					schemaBytes: schemaBytes(tool),
 					active: activeNames.has(tool.name),
 					alwaysOn: ALWAYS_ON.has(tool.name) || this.extraAlwaysOn.has(tool.name),
@@ -467,9 +455,10 @@ export class CapabilityRuntime {
 						(researchSkillProfile(skill.name)?.source !== "academic" ||
 							!this.academicManaged ||
 							this.academicEnabled) &&
-						skillMatches(skill.name, this.active, this.forcedSkills, selectedResearch) &&
+						skillMatches(skill, this.active, this.forcedSkills, selectedResearch) &&
 						(!this.readOnlyLibrary ||
-							["research-vault", "research-workflow", "zotero-literature"].includes(skill.name) ||
+							// 只读文献复用：仅保留声明 `alwaysWith: research` 的技能与显式 /skill: 技能
+							skillAlwaysWith(skill).has("research") ||
 							this.forcedSkills.has(skill.name)),
 				)
 				.map((skill) => skill.name),
@@ -477,12 +466,14 @@ export class CapabilityRuntime {
 		const selected = new Set<string>([...ALWAYS_ON, ...this.extraAlwaysOn]);
 		for (const tool of this.session.getAllTools()) {
 			if (this.excludedTools.has(tool.name)) continue;
-			if (toolCapabilities(tool.name).some((id) => this.active.has(id))) selected.add(tool.name);
+			if (toolCapabilities(tool.name, this.manifest).some((id) => this.active.has(id)))
+				selected.add(tool.name);
 		}
 		this.session.setActiveToolsByName(
 			[...selected].filter(
 				(name) =>
-					!this.excludedTools.has(name) && (!this.readOnlyLibrary || READ_ONLY_LIBRARY_TOOLS.has(name)),
+					!this.excludedTools.has(name) &&
+					(!this.readOnlyLibrary || this.manifest.allowedInLibraryMode(name)),
 			),
 		);
 		this.saveCheckpoint();

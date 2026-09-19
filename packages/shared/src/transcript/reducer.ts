@@ -37,46 +37,6 @@ function cleanStatusText(value: unknown): string | null {
 	return [...text].slice(0, 30).join("");
 }
 
-function inferHostResearchStatus(toolName: string, args?: unknown): { text: string; phase: string } | null {
-	const payload = args && typeof args === "object" ? (args as { tool?: unknown; server?: unknown }) : {};
-	const candidates = [toolName, payload.tool, payload.server]
-		.filter((value): value is string => typeof value === "string")
-		.map((value) => value.toLowerCase().replaceAll("_", "-"));
-	const identity = candidates.join(" ");
-	if (toolName === "research_prepare_knowledge")
-		return { text: "正在读取知识库导航与项目背景…", phase: "knowledge-search" };
-	if (toolName === "research_read_knowledge") return { text: "正在阅读 Wiki 与知识证据…", phase: "reading" };
-	if (toolName === "research_search_knowledge")
-		return { text: "正在检索知识库索引…", phase: "knowledge-search" };
-	if (toolName === "research_propose_wiki_update")
-		return { text: "正在准备待审核的 Wiki 修改…", phase: "deposit" };
-	if (toolName === "research_maintain_knowledge")
-		return { text: "正在维护知识库索引…", phase: "verification" };
-	if (identity.includes("research-zotero"))
-		return { text: "正在检索 Zotero 文献库…", phase: "literature-search" };
-	if (identity.includes("research-obsidian"))
-		return { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" };
-	if (toolName === "web_search" || toolName.includes("web_search"))
-		return { text: "正在联网检索相关研究…", phase: "web-search" };
-	if (toolName === "fetch_content" || toolName.includes("fetch"))
-		return { text: "正在读取并核对原始来源…", phase: "reading" };
-	if (toolName === "research_loop") return { text: "正在检查研究证据链…", phase: "verification" };
-	if (toolName.startsWith("research_wiki_navigate"))
-		return { text: "正在检索研究 Wiki…", phase: "knowledge-search" };
-	if (toolName.startsWith("research_wiki_build")) return { text: "正在沉淀研究知识…", phase: "deposit" };
-	if (toolName.startsWith("research_wikiskill_record"))
-		return { text: "正在总结研究经验…", phase: "synthesis" };
-	if (toolName.startsWith("research_wikiskill_propose"))
-		return { text: "正在改进研究策略…", phase: "skill-evolution" };
-	if (toolName.startsWith("research_wikiskill_gate"))
-		return { text: "正在验证新的研究策略…", phase: "verification" };
-	if (toolName.startsWith("research_wikiskill_status"))
-		return { text: "正在检查研究策略状态…", phase: "verification" };
-	if (toolName.startsWith("research_source") || toolName.includes("archive"))
-		return { text: "正在归档研究证据…", phase: "archive" };
-	return null;
-}
-
 function removeControlTool(streaming: NonNullable<SessionTranscriptState["streaming"]>, toolCallId: string) {
 	const target = streaming.tools.find((tool) => tool.id === toolCallId);
 	const blockIndex = target?.blockIndex;
@@ -517,7 +477,8 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 					streaming: removeControlTool(streaming, event.toolCallId),
 				};
 			}
-			const hostStatus = inferHostResearchStatus(event.toolName, event.args);
+			// 宿主状态条文案由后端按工具清单盖章（挂钩 1）；reducer 只消费，不再按工具名猜测
+			const hostStatus = event.hostActivity ?? null;
 			if (hostStatus) {
 				state = {
 					...state,

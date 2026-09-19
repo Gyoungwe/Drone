@@ -1,6 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, open, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import { isReadOnlyTool } from "../tool-manifest.mjs";
+import {
+	acceptanceKinds,
+	CORE_ACCEPTANCE_KINDS,
+	normalizeAcceptance,
+	acceptanceVerifier as registeredVerifier,
+	acceptanceVerifiers as registeredVerifiers,
+} from "./acceptance.mjs";
 import { contractHash, hasTaskConsent, MAX_AUTO_RESUMES } from "./consent.mjs";
 import { failureObservation, failureReceipt, toolResultFailed } from "./failure-feedback.mjs";
 import { readPdfIdentity } from "./pdf-identity.mjs";
@@ -36,11 +44,8 @@ const controls = new Set([
 	"task_reconcile",
 	"task_evidence_restore",
 ]);
-const readOnly = (name) =>
-	/^(?:read|grep|find|ls|webfetch|websearch)$/.test(name) ||
-	/^research_(?:read_|search_|check_answer$|wiki_navigate$|knowledge_status$|zotero_status$|restore_evidence$|wiki_review_status$|list_wiki)/.test(
-		name,
-	);
+// 只读判定来自工具清单（挂钩 1）：核心只读原语 + 扩展声明的 drone.readOnly / 只读工具家族。
+const readOnly = (name) => isReadOnlyTool(name);
 const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
 const sameArtifactPath = (cwd, declared, observed) => {
 	const normalize = (path) => {
@@ -177,11 +182,32 @@ export function createTaskWorkbench({
 	persist = () => {},
 	now = () => new Date().toISOString(),
 	inspect = inspectTaskFile,
-	getWikiStatus = async () => null,
-	getZoteroStatus = async () => ({ state: "unavailable" }),
+	// 验收器（挂钩 2）：默认读扩展登记表；测试可按 kind 注入覆盖 { kind: definition | null }
+	verifiers = null,
 	onCheckpoint = () => {},
 	requireAuthorization = false,
 } = {}) {
+	const verifierFor = (kind) => {
+		if (verifiers && Object.hasOwn(verifiers, kind))
+			return verifiers[kind]
+				? {
+						fields: [],
+						evidenceKind: `${kind}-verified`,
+						operationVerifier: `${kind}-record-not-scientific-proof`,
+						...verifiers[kind],
+						kind,
+					}
+				: null;
+		return registeredVerifier(kind);
+	};
+	const allVerifiers = () => {
+		const kinds = new Set([...registeredVerifiers().map((v) => v.kind), ...Object.keys(verifiers || {})]);
+		return [...kinds].map(verifierFor).filter(Boolean);
+	};
+	const knownKinds = () =>
+		new Set([...CORE_ACCEPTANCE_KINDS, ...acceptanceKinds(), ...Object.keys(verifiers || {})]);
+	const depsDone = (t, m) =>
+		m.dependsOn.every((dep) => t.milestones.find((x) => x.id === dep)?.state === "completed");
 	let book = {
 			version: 2,
 			scope: null,
@@ -405,24 +431,17 @@ export function createTaskWorkbench({
 					"plan-dependency",
 					"Dependencies must refer to earlier milestones, not cycles or missing IDs.",
 				);
-			if (!["file", "human_review", "wiki_review", "zotero_item"].includes(m.acceptance?.kind))
+			if (!knownKinds().has(m.acceptance?.kind))
 				throw error(
 					"acceptance-required",
-					"Acceptance must be an observed file, explicit human review, or Wiki review; model labels cannot complete it.",
+					`Acceptance must be one of ${[...knownKinds()].join(" | ")} (observed by the host or confirmed by the user); model labels cannot complete it.`,
 				);
 			seen.add(m.id);
 			return {
 				id: m.id,
 				title: clean(m.title),
 				dependsOn: [...(m.dependsOn || [])],
-				acceptance: {
-					kind: m.acceptance.kind,
-					path: clean(m.acceptance.path, 512),
-					doi: clean(m.acceptance.doi),
-					libraryId: clean(m.acceptance.libraryId),
-					collection: clean(m.acceptance.collection),
-					sha256: /^[a-f0-9]{64}$/.test(m.acceptance.sha256 || "") ? m.acceptance.sha256 : null,
-				},
+				acceptance: normalizeAcceptance(m.acceptance, clean, { get: verifierFor }),
 				state: "pending",
 				evidence: null,
 			};
@@ -586,16 +605,11 @@ export function createTaskWorkbench({
 			if (input.action === "acknowledge" && ["download", "file"].includes(a.kind) && !a.file)
 				throw error("file-required", "Inspect the selected file first.");
 			// Acknowledgment only dismisses coordination; the current permission gate still decides every tool call.
-			if (
-				input.action === "acknowledge" &&
-				a.kind === "review" &&
-				a.milestoneId &&
-				t.milestones.find((m) => m.id === a.milestoneId)?.acceptance.kind === "wiki_review"
-			)
-				throw error(
-					"wiki-review-required",
-					"Use the existing Wiki review entry; task cards cannot approve live Wiki.",
-				);
+			if (input.action === "acknowledge" && a.kind === "review" && a.milestoneId) {
+				const kind = t.milestones.find((m) => m.id === a.milestoneId)?.acceptance.kind;
+				const refusal = verifierFor(kind)?.acknowledgeError;
+				if (refusal) throw error(refusal.code, refusal.message);
+			}
 			a.state = input.action === "dismiss" ? "cancelled" : "acknowledged";
 			a.resolvedAt = now();
 			if (a.file) a.file.identity = a.file.identity === "hash-matched" ? "hash-matched" : "human-confirmed";
@@ -649,15 +663,19 @@ export function createTaskWorkbench({
 			id = t.id,
 			revision = book.revision;
 		const updates = [];
-		for (const m of t.milestones.filter((m) => m.acceptance.kind === "zotero_item")) {
-			const result = await getZoteroStatus(m.acceptance);
+		// 扩展登记的里程碑级验收（挂钩 2）：只读回身份，不写入，不代表科学结论
+		for (const m of t.milestones) {
+			const verifier = verifierFor(m.acceptance.kind);
+			if (!verifier?.verify) continue;
+			let result;
+			try {
+				result = (await verifier.verify(m.acceptance, { cwd, task: clone(t) })) || { state: "unknown" };
+			} catch (e) {
+				result = { state: "unknown", reason: clean(e?.message || "verifier-failed") };
+			}
 			checkRevision(id, revision);
-			m.state =
-				result.state === "found" &&
-				m.dependsOn.every((dep) => t.milestones.find((x) => x.id === dep)?.state === "completed")
-					? "completed"
-					: "blocked";
-			m.evidence = { ...result, kind: "zotero-read-only-item-identity", at: now() };
+			m.state = result.state === "found" && depsDone(t, m) ? "completed" : "blocked";
+			m.evidence = { ...result, kind: verifier.evidenceKind, at: now() };
 		}
 		for (const m of t.milestones) {
 			if (m.acceptance.kind !== "file") continue;
@@ -694,26 +712,34 @@ export function createTaskWorkbench({
 			}
 		}
 		checkRevision(id, revision);
-		for (const op of t.operations.filter((o) => o.state === "awaiting-review" && o.candidateId)) {
-			const result = await getWikiStatus(op.candidateId);
+		// 操作级审阅（挂钩 2）：工具结果产生的待审对象由登记它的验收器读回
+		for (const op of t.operations.filter((o) => o.state === "awaiting-review" && o.review?.id)) {
+			const verifier = verifierFor(op.review.kind);
+			if (!verifier?.resolve) continue;
+			let result = null;
+			try {
+				result = await verifier.resolve(op.review, { cwd });
+			} catch {
+				result = null;
+			}
 			checkRevision(id, revision);
 			if (!result) continue;
 			op.checkedAt = now();
 			if (result.status === "applied" && !result.stale) {
 				op.state = "verified";
-				op.verifier = "wiki-review-record-not-scientific-proof";
+				op.verifier = verifier.operationVerifier;
 				for (const m of t.milestones)
 					if (
-						m.acceptance.kind === "wiki_review" &&
-						m.acceptance.path === result.path &&
-						m.dependsOn.every((dep) => t.milestones.find((x) => x.id === dep)?.state === "completed")
+						m.acceptance.kind === op.review.kind &&
+						(!m.acceptance.path || !result.path || m.acceptance.path === result.path) &&
+						depsDone(t, m)
 					) {
 						m.state = "completed";
-						m.evidence = { kind: "wiki-applied", candidateId: op.candidateId, at: now() };
+						m.evidence = { kind: verifier.evidenceKind, candidateId: op.review.id, at: now() };
 					}
 			} else if (result.status === "rejected" || result.stale) {
 				op.state = "failed";
-				t.reason = "wiki-rejected-or-stale";
+				t.reason = result.reason || `${op.review.kind.replaceAll("_", "-")}-rejected-or-stale`;
 			}
 		}
 		t.lastReconciledAt = now();
@@ -768,16 +794,15 @@ export function createTaskWorkbench({
 			)
 		)
 			return null;
-		// zotero_item milestones are part of the approved contract hash, so their DOIs are covered by this consent.
-		const zoteroItems = (t.milestones || [])
-			.filter((m) => m.acceptance?.kind === "zotero_item" && m.acceptance.doi)
-			.map((m) => ({
-				milestoneId: m.id,
-				doi: m.acceptance.doi,
-				libraryId: m.acceptance.libraryId || null,
-				collection: m.acceptance.collection || null,
-			}));
-		return { taskId: t.id, writeRoots: [...(t.writeRoots || [])], ...t.executionConsent, zoteroItems };
+		// 里程碑验收是已批准契约哈希的一部分：把扩展声明的验收条目（如 DOI）作为通用清单暴露给写入同意匹配（挂钩 2）
+		const acceptances = [];
+		for (const m of t.milestones || []) {
+			const verifier = verifierFor(m.acceptance?.kind);
+			if (!verifier?.consent) continue;
+			const entry = verifier.consent(m.acceptance);
+			if (entry) acceptances.push({ milestoneId: m.id, kind: m.acceptance.kind, ...entry });
+		}
+		return { taskId: t.id, writeRoots: [...(t.writeRoots || [])], ...t.executionConsent, acceptances };
 	}
 	/** A bounded host-observed recovery, not a new user message or a bigger budget. */
 	function reserveContinuation(reason) {
@@ -1041,9 +1066,22 @@ export function createTaskWorkbench({
 				/* Unverified remains returned. */
 			}
 		}
-		if (!failed && event.toolName === "research_propose_wiki_update") {
-			op.state = "awaiting-review";
-			op.candidateId = clean(details.id);
+		if (!failed) {
+			// 待外部审阅的对象由登记了 observe 的验收器识别（挂钩 2），核心不再认工具名
+			for (const verifier of allVerifiers()) {
+				if (!verifier.observe) continue;
+				let review = null;
+				try {
+					review = verifier.observe(event, details);
+				} catch {
+					review = null;
+				}
+				if (!review?.id) continue;
+				op.state = "awaiting-review";
+				op.candidateId = clean(review.id);
+				op.review = { kind: verifier.kind, id: clean(review.id), path: clean(review.path, 512) || null };
+				break;
+			}
 		}
 		t.receipts.push({
 			id: op.id,

@@ -67,11 +67,12 @@ export const { createPortal, flushSync } = D;`,
 	"@drone/plugin-api": `
 const A = window.DroneUI;
 export default A;
-export const { version, components, helpers, hooks, stores } = A;
+export const { version, components, helpers, hooks, stores, i18n } = A;
 export const { Button, Dropdown, Tooltip, Markdown, ImagePreview } = A.components;
-export const { summarizeArgs, displayToolName } = A.helpers;
+export const { summarizeArgs, displayToolName, openResourceExternal, openExternal } = A.helpers;
 export const { useT, useContextUsage, useLanguage } = A.hooks;
-export const { useTranscriptStore, useSessionsStore, useUiStore, useProjectsStore, useSettingsStore, useUiPreferencesStore } = A.stores;`,
+export const { useTranscriptStore, useSessionsStore, useUiStore, useProjectsStore, useSettingsStore, useUiPreferencesStore, useKnowledgeStore } = A.stores;
+export const { registerMessages } = A.i18n;`,
 };
 
 /**

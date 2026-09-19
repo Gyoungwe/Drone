@@ -35,6 +35,13 @@ function setup(extra = {}) {
 function act(j, action, extra = {}) {
 	return j.command({ taskId: j.snapshot().id, revision: j.view().revision, action, ...extra });
 }
+const wikiVerifier = (resolve) => ({
+	evidenceKind: "wiki-applied",
+	operationVerifier: "wiki-review-record-not-scientific-proof",
+	observe: (event, details) =>
+		event.toolName === "research_propose_wiki_update" && details?.id ? { id: details.id } : null,
+	resolve,
+});
 const effect = (id = "write-1", path = "data.csv") => ({
 	toolName: "write",
 	toolCallId: id,
@@ -164,7 +171,8 @@ it("dependencies reject missing IDs and cycles before any plan is saved", () => 
 	expect(j.snapshot().milestones).toEqual([]);
 });
 it("unresolved Wiki candidate is never completed by a model flag", async () => {
-	const { j } = setup();
+	// wiki_review 验收器由知识扩展登记（挂钩 2）：这里注入同形定义，只识别候选、不读回结果
+	const { j } = setup({ verifiers: { wiki_review: wikiVerifier(async () => null) } });
 	j.guard({ toolName: "research_propose_wiki_update", toolCallId: "wiki", input: {} });
 	await j.observe({
 		toolName: "research_propose_wiki_update",
@@ -173,11 +181,14 @@ it("unresolved Wiki candidate is never completed by a model flag", async () => {
 	});
 	j.settle();
 	expect(j.snapshot().operations[0].state).toBe("awaiting-review");
+	expect(j.snapshot().operations[0].review).toEqual({ kind: "wiki_review", id: "candidate-1", path: null });
 	expect(j.snapshot().state).not.toBe("completed");
 });
 it("only scoped Wiki review records satisfy a Wiki milestone", async () => {
 	const { j } = setup({
-		getWikiStatus: async () => ({ status: "applied", path: "Wiki/Topic.md", stale: false }),
+		verifiers: {
+			wiki_review: wikiVerifier(async () => ({ status: "applied", path: "Wiki/Topic.md", stale: false })),
+		},
 	});
 	j.plan({
 		milestones: [
@@ -193,6 +204,55 @@ it("only scoped Wiki review records satisfy a Wiki milestone", async () => {
 	});
 	await j.reconcile("/unused");
 	expect(j.snapshot().state).toBe("completed");
+	expect(j.snapshot().milestones[0].evidence).toMatchObject({
+		kind: "wiki-applied",
+		candidateId: "candidate-1",
+	});
+	expect(j.snapshot().operations[0].verifier).toBe("wiki-review-record-not-scientific-proof");
+});
+it("unregistered acceptance kinds are rejected at plan time and plugin kinds verify read-only", async () => {
+	const j = createTaskWorkbench({
+		requireAuthorization: true,
+		verifiers: {
+			zotero_item: {
+				fields: ["doi"],
+				evidenceKind: "zotero-read-only-item-identity",
+				verify: async (acceptance) =>
+					acceptance.doi === "10.1/ok" ? { state: "found", itemId: "ABCD1234" } : { state: "not-found" },
+				consent: (acceptance) => (acceptance.doi ? { doi: acceptance.doi } : null),
+			},
+		},
+	});
+	j.attach("scope-acceptance");
+	j.begin("把两篇文献收进 Zotero");
+	expect(() =>
+		j.plan({ milestones: [{ id: "x", title: "X", acceptance: { kind: "mystery", path: "a" } }] }),
+	).toThrow("Acceptance must be one of file | human_review | zotero_item");
+	j.plan({
+		milestones: [
+			{ id: "ok", title: "入库", acceptance: { kind: "zotero_item", doi: "10.1/ok", collection: "dropped" } },
+			{ id: "miss", title: "缺失", acceptance: { kind: "zotero_item", doi: "10.1/missing" } },
+		],
+	});
+	// 未声明的字段不会进入契约
+	expect(j.snapshot().milestones[0].acceptance).toEqual({
+		kind: "zotero_item",
+		path: "",
+		sha256: null,
+		doi: "10.1/ok",
+	});
+	act(j, "authorize-task");
+	expect(j.authorization(true).acceptances).toEqual([
+		{ milestoneId: "ok", kind: "zotero_item", doi: "10.1/ok" },
+		{ milestoneId: "miss", kind: "zotero_item", doi: "10.1/missing" },
+	]);
+	await j.reconcile("/unused");
+	const [ok, miss] = j.snapshot().milestones;
+	expect(ok).toMatchObject({
+		state: "completed",
+		evidence: { kind: "zotero-read-only-item-identity", itemId: "ABCD1234" },
+	});
+	expect(miss).toMatchObject({ state: "blocked", evidence: { state: "not-found" } });
 });
 it("waiting time is separate and cancellation is not consent", () => {
 	let clock = 0;
