@@ -768,7 +768,16 @@ export function createTaskWorkbench({
 			)
 		)
 			return null;
-		return { taskId: t.id, writeRoots: [...(t.writeRoots || [])], ...t.executionConsent };
+		// zotero_item milestones are part of the approved contract hash, so their DOIs are covered by this consent.
+		const zoteroItems = (t.milestones || [])
+			.filter((m) => m.acceptance?.kind === "zotero_item" && m.acceptance.doi)
+			.map((m) => ({
+				milestoneId: m.id,
+				doi: m.acceptance.doi,
+				libraryId: m.acceptance.libraryId || null,
+				collection: m.acceptance.collection || null,
+			}));
+		return { taskId: t.id, writeRoots: [...(t.writeRoots || [])], ...t.executionConsent, zoteroItems };
 	}
 	/** A bounded host-observed recovery, not a new user message or a bigger budget. */
 	function reserveContinuation(reason) {

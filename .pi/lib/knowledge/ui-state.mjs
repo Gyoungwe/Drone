@@ -42,6 +42,7 @@ export function beginKnowledgeFlow(ctx, binding) {
 		search: null,
 		publication: null,
 		artifacts: [],
+		literature: [],
 	};
 	state.flows.delete(id);
 	state.flows.set(id, flow);
@@ -169,10 +170,84 @@ export function noteKnowledgeSearch(ctx, found, wikiOnly = false) {
 		},
 	});
 }
+const LITERATURE_TOOLS = new Set([
+	"research_zotero_save",
+	"research_verify_literature",
+	"research_reconcile_literature",
+]);
+const MAX_LITERATURE = 24;
+function literatureRow(event) {
+	const d = event.result?.details || {};
+	const text = (value, max = 200) => (typeof value === "string" && value ? value.slice(0, max) : null);
+	if (event.toolName === "research_zotero_save") {
+		const doi = text(d.doi, 300);
+		if (!doi) return null;
+		return {
+			key: `doi:${doi}`,
+			doi,
+			title: text(d.title),
+			zoteroKey: text(d.zoteroKey, 8),
+			zotero: d.status === "saved" || d.status === "reused" ? "verified" : text(d.status) || "unavailable",
+			obsidian: "unknown",
+			notePath: null,
+			fulltextStatus: text(d.fulltextStatus, 64),
+			channel: text(d.channel, 16),
+			library: text(d.library?.name),
+			status: text(d.status, 32) || "unknown",
+			source: "zotero-save",
+			at: Date.now(),
+		};
+	}
+	const receipt = event.toolName === "research_reconcile_literature" ? d.receipt || {} : d;
+	const doi = text(receipt.doi, 300);
+	if (!doi) return null;
+	return {
+		key: `doi:${doi}`,
+		doi,
+		title: text(receipt.zotero?.title),
+		zoteroKey: text(receipt.zoteroKey, 8),
+		zotero: text(receipt.zotero?.status, 32) || "unavailable",
+		obsidian: text(receipt.obsidian?.status, 32) || "unavailable",
+		notePath: text(receipt.obsidian?.path, 4096),
+		fulltextStatus: text(receipt.zotero?.fulltextStatus, 64),
+		channel: null,
+		library: null,
+		status: text(d.status, 32) || text(receipt.status, 32) || "partial",
+		source: event.toolName === "research_verify_literature" ? "verify" : "reconcile",
+		at: Date.now(),
+	};
+}
+/** Literature receipts are merged per DOI so the panel shows one card per paper; a newer verify never erases a known note path. */
+export function noteLiteratureReceipt(ctx, event) {
+	const id = sessionId(ctx),
+		old = state.flows.get(id);
+	if (!old || event.isError || !LITERATURE_TOOLS.has(event.toolName)) return;
+	const next = literatureRow(event);
+	if (!next) return;
+	const previous = (old.literature || []).find((row) => row.key === next.key);
+	const merged = previous
+		? {
+				...previous,
+				...next,
+				title: next.title || previous.title,
+				zoteroKey: next.zoteroKey || previous.zoteroKey,
+				notePath: next.notePath || previous.notePath,
+				obsidian: next.obsidian === "unknown" ? previous.obsidian : next.obsidian,
+				fulltextStatus: next.fulltextStatus || previous.fulltextStatus,
+				channel: next.channel || previous.channel,
+				library: next.library || previous.library,
+			}
+		: next;
+	const literature = [...(old.literature || []).filter((row) => row.key !== next.key), merged].slice(
+		-MAX_LITERATURE,
+	);
+	updateKnowledgeFlow(ctx, { literature });
+}
 export function noteKnowledgeOperation(ctx, event) {
 	const id = sessionId(ctx),
 		old = state.flows.get(id);
 	if (!old) return;
+	noteLiteratureReceipt(ctx, event);
 	const names = new Set([
 		"research_setup_obsidian",
 		"research_archive_source",

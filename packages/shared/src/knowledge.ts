@@ -46,6 +46,25 @@ export interface KnowledgeReadRecord {
 	truncated?: boolean;
 	kind?: string;
 }
+/** One DOI's dual-library receipt as observed by the host (Zotero write/read-back, Vault note identity). */
+export interface KnowledgeLiteratureRow {
+	key: string;
+	doi: string;
+	title: string | null;
+	zoteroKey: string | null;
+	/** verified | unverified | identity-mismatch | failed | ambiguous | blocked | cancelled | unavailable */
+	zotero: string;
+	/** verified | missing | identity-mismatch | unavailable | unknown */
+	obsidian: string;
+	notePath: string | null;
+	/** attachment-indexed-not-read | metadata-only | unavailable | null */
+	fulltextStatus: string | null;
+	channel: string | null;
+	library: string | null;
+	status: string;
+	source: "zotero-save" | "verify" | "reconcile";
+	at: number;
+}
 export interface KnowledgeFlow {
 	specialists?: KnowledgeSpecialistRun[];
 	sessionId: string;
@@ -55,6 +74,7 @@ export interface KnowledgeFlow {
 	vault: string | null;
 	project: string | null;
 	artifacts?: { key: string; title: string; path: string | null; status: string; detail: string }[];
+	literature?: KnowledgeLiteratureRow[];
 	phase: string;
 	updatedAt: number;
 	navigation: KnowledgeReadRecord[];

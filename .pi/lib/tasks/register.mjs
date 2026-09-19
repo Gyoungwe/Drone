@@ -21,7 +21,7 @@ import { singleFlightCommand } from "./single-flight.mjs";
 import { restoreTaskToolOrder } from "./tool-protocol.mjs";
 import { shouldAskToContinue } from "./turn-end-prompt.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
-import { createZoteroReconciler } from "./zotero-reconcile.mjs";
+import { createCompositeZoteroReconciler } from "./zotero-reconcile.mjs";
 
 export function registerWorkbench(pi) {
 	let context,
@@ -70,7 +70,7 @@ export function registerWorkbench(pi) {
 		requireAuthorization: true,
 		persist: (snapshot) => pi.appendEntry(WORKBENCH_ENTRY, snapshot),
 		onCheckpoint: () => send(),
-		getZoteroStatus: createZoteroReconciler(),
+		getZoteroStatus: createCompositeZoteroReconciler(),
 		getWikiStatus: async (id) => {
 			try {
 				const service = await getKnowledgeService();

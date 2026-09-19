@@ -7,7 +7,72 @@ import {
 } from "@drone/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
+import { useT } from "../../i18n";
+import { literatureTone } from "../panel/literature-status";
 import { TaskArtifactLinks } from "./TaskArtifactLinks";
+
+const ZOTERO_KEY = /^[A-Z0-9]{8}$/;
+/** zotero_item 验收项的证据行：宿主只读读回的条目身份（本机 / 云端），可直接在 Zotero 中打开。 */
+function ZoteroEvidence({
+	milestone,
+	onError,
+}: {
+	milestone: WorkbenchTask["milestones"][number];
+	onError: (message: string) => void;
+}) {
+	const t = useT();
+	if (milestone.acceptance.kind !== "zotero_item") return null;
+	const evidence = milestone.evidence;
+	const key = evidence?.itemId && ZOTERO_KEY.test(evidence.itemId) ? evidence.itemId : null;
+	const doi = milestone.acceptance.doi || evidence?.doi || "";
+	const state = milestone.state === "completed" && key ? "found" : evidence?.state || "pending";
+	const text =
+		state === "found" && key
+			? t("panel.zoteroEvidence.found", { key })
+			: state === "not-found"
+				? t("panel.zoteroEvidence.notFound")
+				: state === "ambiguous"
+					? t("panel.zoteroEvidence.ambiguous")
+					: state === "unavailable" || state === "blocked" || state === "unknown"
+						? t("panel.zoteroEvidence.unavailable", { reason: evidence?.reason || state })
+						: t("panel.zoteroEvidence.pending");
+	const via =
+		evidence?.verifier === "zotero-local-api-item-identity"
+			? t("panel.zoteroEvidence.local")
+			: evidence?.verifier
+				? t("panel.zoteroEvidence.web")
+				: "";
+	const pdf = evidence?.attachments?.some((a) => a.contentType === "application/pdf");
+	return (
+		<div className="ml-5 mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-ink-dim">
+			<span
+				className={literatureTone(state === "found" ? "verified" : state === "pending" ? "unknown" : state)}
+			>
+				{text}
+			</span>
+			{via ? <span className="text-ink-faint">{via}</span> : null}
+			{state === "found" ? (
+				<span className="text-ink-faint">
+					{t(pdf ? "panel.lit.attachmentIndexed" : "panel.lit.metadataOnly")}
+				</span>
+			) : null}
+			{doi ? <code className="break-all text-ink-faint">{doi}</code> : null}
+			{key ? (
+				<button
+					type="button"
+					className="text-accent hover:underline"
+					onClick={() =>
+						void getPi()
+							.openResourceExternal(`zotero://select/library/items/${key}`)
+							.catch((e: unknown) => onError(String((e as Error)?.message || e)))
+					}
+				>
+					{t("panel.lit.openInZotero")}
+				</button>
+			) : null}
+		</div>
+	);
+}
 
 /**
  * 任务卡：一份 TaskView 里的单个任务（目标 / 交付状态 / 验收进度 / 继续做剩下的 / 产物链接 / 验收项 / 操作记录）。
@@ -113,11 +178,16 @@ export function TaskRow({
 					</summary>
 					<ul className="mt-1 space-y-0.5">
 						{task.milestones.map((m) => (
-							<li key={m.id} className="flex items-start gap-1.5 text-[11px] leading-4">
-								<span className={m.state === "completed" ? "text-green-500" : "text-ink-dim"}>
-									{m.state === "completed" ? "\u2713" : "\u25cb"}
-								</span>
-								<span className={m.state === "completed" ? "text-ink-dim line-through" : ""}>{m.title}</span>
+							<li key={m.id} className="text-[11px] leading-4">
+								<div className="flex items-start gap-1.5">
+									<span className={m.state === "completed" ? "text-green-500" : "text-ink-dim"}>
+										{m.state === "completed" ? "\u2713" : "\u25cb"}
+									</span>
+									<span className={m.state === "completed" ? "text-ink-dim line-through" : ""}>
+										{m.title}
+									</span>
+								</div>
+								<ZoteroEvidence milestone={m} onError={setError} />
 							</li>
 						))}
 					</ul>

@@ -85,7 +85,7 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 
 const KNOWLEDGE_TOOL =
 	/^research_(?:prepare_knowledge|read_knowledge|search_knowledge|search_explainers|knowledge_status|maintain_knowledge|delegate_knowledge|propose_wiki_update|wiki_|check_answer|task_status|deposit_knowledge|topics|resume_topic|update_topic|archive_topic)/;
-const ZOTERO_TOOL = /^research_(?:zotero_status|setup_zotero)$/;
+const ZOTERO_TOOL = /^research_(?:zotero_status|setup_zotero|zotero_save)$/;
 const VISUAL_TOOL = /(?:show_image|explainer|show_me|figure|plot|chart|image)/i;
 
 /** Continuations preserve tool visibility only, never permissions or evidence receipts. */

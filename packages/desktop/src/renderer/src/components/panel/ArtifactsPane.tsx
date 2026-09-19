@@ -6,10 +6,11 @@ import { TaskArtifactLinks, taskArtifactLinks } from "../chat/TaskArtifactLinks"
 import { ObsidianIcon, SearchIcon } from "../icons";
 import { mergeKnowledgeArtifacts } from "../knowledge/artifacts";
 import { KnowledgeFlowCard } from "../knowledge/KnowledgeFlowCard";
+import { LiteratureReceipts } from "./LiteratureReceipts";
 
 /**
  * 「产物」页签：知识流状态卡（原聊天区顶部横条 KnowledgeFlowCard，含阶段/产物/继续检查/管理）
- * + 任务产物链接 + 研究工作台 / 知识库 全屏视图入口。
+ * + 文献回执卡（DOI / Zotero key / Vault 笔记 / 全文状态）+ 任务产物链接 + 研究工作台 / 知识库 全屏视图入口。
  */
 export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 	const t = useT();
@@ -21,13 +22,15 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 	const view = latestMessage?.kind === "assistant" ? latestMessage.taskView : undefined;
 	const tasksWithArtifacts = (view?.tasks ?? []).filter((task) => taskArtifactLinks(task).length > 0);
 	const artifacts = mergeKnowledgeArtifacts(flow?.artifacts || [], view?.tasks ?? [], cwd || "");
-	const empty = !flow && artifacts.length === 0 && tasksWithArtifacts.length === 0;
+	const literature = flow?.literature?.length ?? 0;
+	const empty = !flow && artifacts.length === 0 && tasksWithArtifacts.length === 0 && literature === 0;
 
 	return (
 		<div className="context-pane">
 			<div className="panel-flow">
 				<KnowledgeFlowCard sessionId={sessionId} />
 			</div>
+			<LiteratureReceipts sessionId={sessionId} />
 			{tasksWithArtifacts.length > 0 && (
 				<section className="panel-card">
 					<header className="text-[12px] font-medium text-ink">{t("panel.taskArtifacts")}</header>

@@ -26,7 +26,20 @@ export interface TaskMilestone {
 		collection?: string;
 	};
 	state: string;
-	evidence?: { kind?: string; path?: string; at?: string } | null;
+	evidence?: {
+		kind?: string;
+		path?: string;
+		at?: string;
+		/** zotero_item milestones: the read-only identity observation that completed them. */
+		state?: string;
+		reason?: string;
+		itemId?: string;
+		libraryType?: string;
+		libraryId?: string;
+		doi?: string;
+		verifier?: string;
+		attachments?: { key: string; contentType?: string; metadataOnly?: boolean }[];
+	} | null;
 }
 export interface TaskUserAction {
 	id: string;
