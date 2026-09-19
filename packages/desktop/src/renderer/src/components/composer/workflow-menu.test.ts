@@ -1,4 +1,6 @@
 import {
+	EXAMPLE_TASKS,
+	exampleTaskCommand,
 	RESEARCH_SKILL_SOURCES,
 	type SlashCommandInfo,
 	WORKFLOW_PROFILES,
@@ -69,6 +71,27 @@ describe("six-direction command navigation", () => {
 					expect(menuCommands(commands, query, advanced, direction)).toEqual(
 						groupCommands(commands, query, advanced, direction).flatMap((g) => g.items),
 					);
+	});
+	it("each direction view ends with exactly one example row that reuses the opening stage's real command", () => {
+		for (const example of EXAMPLE_TASKS) {
+			const list = workflowMenuItems(commands, example.direction);
+			const rows = list.filter((c) => c.exampleTask);
+			expect(rows).toHaveLength(1);
+			expect(list[list.length - 1]?.exampleTask).toBe(example.id);
+			expect(rows[0]?.name).toBe(exampleTaskCommand(example));
+			expect(rows[0]?.supported).toBe(true);
+			expect(rows[0]?.workflowStage).toBeUndefined();
+		}
+		// The top level lists directions only; examples never leak into the flat/search views.
+		expect(menuCommands(commands, "").some((c) => c.exampleTask)).toBe(false);
+		expect(menuCommands(commands, "hypothesis").some((c) => c.exampleTask)).toBe(false);
+		expect(menuCommands(commands, "", true).some((c) => c.exampleTask)).toBe(false);
+		// Without the skill the row stays visible but disabled, like a missing stage.
+		const absent = workflowMenuItems(
+			commands.filter((c) => c.name !== "skill:hypothesis-generation"),
+			"planning",
+		).find((c) => c.exampleTask);
+		expect(absent?.supported).toBe(false);
 	});
 	it("does not invent directions or usable stages for an empty SDK catalog", () => {
 		expect(workflowMenuItems([])).toEqual([]);

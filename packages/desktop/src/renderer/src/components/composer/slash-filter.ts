@@ -1,4 +1,6 @@
 import {
+	exampleTaskCommand,
+	exampleTaskForDirection,
 	getSkillCategory,
 	resolveWorkflowStage,
 	type SlashCommandInfo,
@@ -104,24 +106,41 @@ export function filterCommands(
 export interface WorkflowMenuCommand extends SlashCommandInfo {
 	workflowNavigation?: WorkflowDirection;
 	workflowStage?: string;
+	/** Built-in example task id: picking it opens the example dialog instead of inserting a command. */
+	exampleTask?: string;
+}
+/** The direction's example row: same real command as its opening stage, disabled when that skill is absent. */
+function exampleMenuItems(commands: SlashCommandInfo[], direction: WorkflowDirection): WorkflowMenuCommand[] {
+	const example = exampleTaskForDirection(direction);
+	if (!example) return [];
+	const name = exampleTaskCommand(example);
+	const actual = commands.find((c) => c.name === name && c.supported && c.source === "skill");
+	return [
+		actual
+			? { ...actual, exampleTask: example.id }
+			: { name, source: "skill", supported: false, description: "", exampleTask: example.id },
+	];
 }
 export function workflowMenuItems(
 	commands: SlashCommandInfo[],
 	direction?: WorkflowDirection | null,
 ): WorkflowMenuCommand[] {
 	if (direction)
-		return WORKFLOW_STAGES.filter((s) => s.direction === direction).map((stage) => {
-			const actual = resolveWorkflowStage(stage, commands);
-			return actual
-				? { ...actual, workflowStage: stage.id }
-				: {
-						name: `unavailable:${stage.id}`,
-						source: "extension",
-						supported: false,
-						description: "",
-						workflowStage: stage.id,
-					};
-		});
+		return [
+			...WORKFLOW_STAGES.filter((s) => s.direction === direction).map((stage): WorkflowMenuCommand => {
+				const actual = resolveWorkflowStage(stage, commands);
+				return actual
+					? { ...actual, workflowStage: stage.id }
+					: {
+							name: `unavailable:${stage.id}`,
+							source: "extension",
+							supported: false,
+							description: "",
+							workflowStage: stage.id,
+						};
+			}),
+			...exampleMenuItems(commands, direction),
+		];
 	// An empty/unrelated SDK catalog must not pretend that the integration is installed.
 	if (
 		!commands.some(

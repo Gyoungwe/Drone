@@ -73,6 +73,18 @@ export function registerAppIpc(_backend: PiBackend): void {
 		await writeFile(result.filePath, await materializeSaveContent(content), "utf-8");
 		return result.filePath;
 	});
+	ipcMain.handle(IpcChannels.FilePickPath, async (_e, kind: "file" | "directory", defaultPath?: string) => {
+		const window = BrowserWindow.getAllWindows()[0];
+		// 只返回用户选中的路径；不读内容、不写入。Windows/Linux 的打开对话框一次只能选文件或文件夹之一。
+		const options: Electron.OpenDialogOptions = {
+			properties: kind === "directory" ? ["openDirectory"] : ["openFile"],
+			...(defaultPath ? { defaultPath } : {}),
+		};
+		const result = window
+			? await dialog.showOpenDialog(window, options)
+			: await dialog.showOpenDialog(options);
+		return result.canceled ? null : (result.filePaths[0] ?? null);
+	});
 	ipcMain.handle(IpcChannels.ProjectPickDirectory, async () => {
 		const window = BrowserWindow.getAllWindows()[0];
 		const options: Electron.OpenDialogOptions = { properties: ["openDirectory", "createDirectory"] };

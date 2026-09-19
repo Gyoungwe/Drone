@@ -124,6 +124,7 @@ export const IpcChannels = {
 	PackagesRemove: "packages:remove",
 	PackagesListConfigured: "packages:listConfigured",
 	FileSaveDialog: "file:saveDialog",
+	FilePickPath: "file:pickPath",
 	FilePreview: "file:preview",
 	ResourceOpenExternal: "resource:openExternal",
 	ModelsList: "models:list",
@@ -313,6 +314,8 @@ export interface PiApi extends KnowledgeApi {
 	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
 	/** 弹保存对话框并写文件；用户取消返回 null，成功返回写入路径 */
 	saveFileDialog(defaultName: string, content: string): Promise<string | null>;
+	/** 弹打开对话框选文件或文件夹（示例任务表单的路径输入）；用户取消返回 null，不读文件内容 */
+	pickPath(kind: "file" | "directory", defaultPath?: string): Promise<string | null>;
 	/** 读取本地文件供右侧资源栏预览；路径可相对 cwd。大文本会截断，大二进制只返回元数据。 */
 	previewFile(target: string, cwd?: string): Promise<ResourcePreviewResult>;
 	/** 使用系统默认应用打开资源：HTTP(S) 用浏览器，本地路径用系统文件关联。 */
@@ -515,6 +518,7 @@ export const INVOKE_ROUTES = {
 	removePackage: IpcChannels.PackagesRemove,
 	listConfiguredPackages: IpcChannels.PackagesListConfigured,
 	saveFileDialog: IpcChannels.FileSaveDialog,
+	pickPath: IpcChannels.FilePickPath,
 	previewFile: IpcChannels.FilePreview,
 	openResourceExternal: IpcChannels.ResourceOpenExternal,
 	// 模型 / provider / MCP

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added six built-in example tasks, one per workflow direction (planning → hypotheses, evidence → literature and evidence cards, analysis → data quality and tests, writing → one section plus review, presentation → figures and slides, engineering → resource inventory and handoff). They appear as cards in the empty 任务 tab and as an “Example: …” row at the end of each direction in the `/` menu; a small dialog collects the inputs (required fields, native file/folder pickers, read-only milestone preview and the confirmations to expect) and then sends one ordinary first message — `/skill:… ` plus goal, inputs, a `task_plan` request with numbered milestones and the stage boundary — through the same path as the composer. Examples never pre-create a task, write a file or run anything; `task_plan` and the authorization card stay the only entry. Data lives in `packages/shared/src/example-tasks.json` (`docs/example-tasks.md` explains how to add one).
 - Release builds ship the Academic Research Skills pack under its own CC BY-NC 4.0 NonCommercial grant: the Release workflow acquires the three pinned packs before packaging and records `licenseAuthorization: noncommercial` for ARS, and the release preflight accepts that basis instead of demanding a separately held permission the project does not hold. Drone is distributed free of charge for noncommercial use; recipients are bound by the same ARS terms (README notice, `docs/research-skill-packs.md`).
 
 ## 0.10.5 — 2026-09-19

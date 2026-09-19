@@ -29,6 +29,31 @@ export interface UseComposerSendOptions {
 }
 
 /**
+ * 确保有活跃会话（无会话或 draft 时用其 cwd 真正创建，draft tab 原地转正），返回 sessionId。
+ * 输入框发送与示例任务发起共用这一条路径（后者在 Composer 之外，因此放在 hook 外）。
+ */
+export async function ensureActiveSession(): Promise<string | null> {
+	const state = useSessionsStore.getState();
+	const current = state.activeSessionId;
+	if (current && !isDraftSessionId(current)) return current;
+	const draftCwd = current ? state.sessions.find((s) => s.sessionId === current)?.cwd : undefined;
+	// draft 态选过的权限模式：转正后应用到新会话（后端新会话一律 default 起步）
+	const pendingMode = current ? state.permissionModes[current] : undefined;
+	const targetCwd = draftCwd ?? state.cwd;
+	if (!targetCwd) return null;
+	await useSessionsStore.getState().createSession(targetCwd, current ?? undefined);
+	const created = useSessionsStore.getState().activeSessionId;
+	if (created && !isDraftSessionId(created)) {
+		// 失败仅 toast（store 内已提示+回滚），不阻塞发送
+		if (pendingMode && pendingMode !== "default") {
+			await useSessionsStore.getState().setSessionPermissionMode(created, pendingMode);
+		}
+		return created;
+	}
+	return null;
+}
+
+/**
  * 发送域：会话确保/建链、发送（含斜杠命令分发）、停止、排队取回。
  * sending/error/feedback 状态也在此（与发送动作同生命周期）。
  */
@@ -48,27 +73,8 @@ export function useComposerSend(options: UseComposerSendOptions) {
 		feedbackTimer.current = setTimeout(() => setFeedback(null), 2500);
 	};
 
-	/** 确保有活跃会话（无会话或 draft 时用其 cwd 真正创建，draft tab 原地转正），返回 sessionId */
-	const ensureSession = async (): Promise<string | null> => {
-		const state = useSessionsStore.getState();
-		const current = state.activeSessionId;
-		if (current && !isDraftSessionId(current)) return current;
-		const draftCwd = current ? state.sessions.find((s) => s.sessionId === current)?.cwd : undefined;
-		// draft 态选过的权限模式：转正后应用到新会话（后端新会话一律 default 起步）
-		const pendingMode = current ? state.permissionModes[current] : undefined;
-		const targetCwd = draftCwd ?? state.cwd;
-		if (!targetCwd) return null;
-		await useSessionsStore.getState().createSession(targetCwd, current ?? undefined);
-		const created = useSessionsStore.getState().activeSessionId;
-		if (created && !isDraftSessionId(created)) {
-			// 失败仅 toast（store 内已提示+回滚），不阻塞发送
-			if (pendingMode && pendingMode !== "default") {
-				await useSessionsStore.getState().setSessionPermissionMode(created, pendingMode);
-			}
-			return created;
-		}
-		return null;
-	};
+	/** 确保有活跃会话（见 ensureActiveSession；保留在返回值里供斜杠菜单与 Composer 使用） */
+	const ensureSession = ensureActiveSession;
 
 	/** 执行内置命令（发送以 / 开头文本时的分发；未匹配则透传给 SDK 原生处理模板/skill/扩展命令） */
 	const runSlashCommand = async (content: string, sessionId: string): Promise<boolean> => {

@@ -1,4 +1,5 @@
 import {
+	exampleTask,
 	type SlashCommandInfo,
 	skillDisplayName,
 	WORKFLOW_DIRECTIONS,
@@ -105,13 +106,17 @@ export function SlashMenu({
 						const direction = command.workflowNavigation
 							? WORKFLOW_DIRECTIONS.find((d) => d.id === command.workflowNavigation)
 							: undefined;
-						const title = direction?.label[language] ?? stage?.label[language];
+						const example = command.exampleTask ? exampleTask(command.exampleTask) : undefined;
+						const title = example
+							? t("examples.menuItem", { title: example.title[language] })
+							: (direction?.label[language] ?? stage?.label[language]);
 						return (
 							<button
-								key={`${command.source}:${command.name}:${command.workflowStage ?? ""}`}
+								key={`${command.source}:${command.name}:${command.workflowStage ?? ""}:${command.exampleTask ?? ""}`}
 								type="button"
 								data-index={index}
 								data-command={command.name}
+								data-example-task={command.exampleTask}
 								disabled={unsupported}
 								onMouseDown={(event) => event.preventDefault()}
 								className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] transition-colors ${
@@ -127,7 +132,7 @@ export function SlashMenu({
 												? skillDisplayName(command.name, language)
 												: `/${command.name}`)}
 									</span>
-									{!direction && !unsupported && (isSpecializedCommand(command) || !!stage) && (
+									{!direction && !unsupported && (isSpecializedCommand(command) || !!stage || !!example) && (
 										<span className="block truncate font-mono text-[11px] text-ink-faint">
 											/{command.name}
 										</span>
@@ -143,7 +148,9 @@ export function SlashMenu({
 										? t("workflows.unavailable")
 										: direction
 											? t("workflows.chooseStage")
-											: command.description}
+											: example
+												? example.goal[language]
+												: command.description}
 								</span>
 								{command.argumentHint && (
 									<span className="shrink-0 font-mono text-[11px] text-border-strong">

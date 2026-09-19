@@ -2,6 +2,7 @@ export * from "./ask";
 export * from "./capabilities";
 export * from "./errors";
 export * from "./evidence-labels";
+export * from "./example-tasks";
 export * from "./ipc";
 export * from "./knowledge";
 export * from "./knowledge-links";
