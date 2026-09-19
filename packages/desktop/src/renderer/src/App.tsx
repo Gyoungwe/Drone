@@ -13,6 +13,7 @@ import { SessionTabBar } from "./components/session/SessionTabBar";
 import { TrustDialog } from "./components/session/TrustDialog";
 import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { Toaster } from "./components/Toaster";
+import { ExampleTaskDialog } from "./components/tasks/ExampleTaskDialog";
 import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
 import { initDailyDir } from "./lib/daily";
@@ -145,6 +146,7 @@ export default function App() {
 			<KnowledgeUiRoot />
 			<AskDialog requests={askRequests} onRespond={respondAsk} />
 			<TrustDialog requests={trustRequests} onRespond={respondTrust} />
+			<ExampleTaskDialog />
 			<Toaster />
 		</div>
 	);

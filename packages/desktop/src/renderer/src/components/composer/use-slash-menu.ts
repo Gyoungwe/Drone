@@ -2,6 +2,7 @@ import type { SlashCommandInfo, WorkflowDirection } from "@drone/shared";
 import { type RefObject, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { useExampleTaskStore } from "../../stores/example-tasks";
 import { isDraftSessionId } from "../../stores/sessions";
 import {
 	extractSlashToken,
@@ -110,6 +111,16 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 			setWorkflowDirection(command.workflowNavigation);
 			setSlashSelected(0);
 			options.textareaRef.current?.focus();
+			return;
+		}
+		if (command.exampleTask) {
+			// 示例项不落胶囊：收掉触发 token，打开示例对话框（发起/插入由对话框决定）
+			const token = slashToken;
+			setWorkflowDirection(null);
+			setSlashToken(null);
+			if (token) options.setText(removeSlashToken(text, token));
+			setSlashDismissed(true);
+			useExampleTaskStore.getState().open(command.exampleTask);
 			return;
 		}
 		setWorkflowDirection(null);

@@ -1,0 +1,591 @@
+[
+	{
+		"id": "planning-hypotheses",
+		"direction": "planning",
+		"stages": ["ideation", "methods"],
+		"command": "skill:hypothesis-generation",
+		"title": {
+			"zh": "从研究问题到可判别假设",
+			"en": "From a research question to testable hypotheses"
+		},
+		"goal": {
+			"zh": "把一个研究问题澄清为若干竞争假设，列出能区分它们的证据，并给出实验设计草案。",
+			"en": "Turn one research question into rival hypotheses, list the evidence that discriminates between them, and draft an experimental design."
+		},
+		"inputs": [
+			{
+				"key": "question",
+				"label": {
+					"zh": "研究问题",
+					"en": "Research question"
+				},
+				"placeholder": {
+					"zh": "例如：睡眠剥夺是否通过炎症通路影响工作记忆？",
+					"en": "e.g. Does sleep deprivation impair working memory through inflammatory pathways?"
+				},
+				"required": true,
+				"kind": "text"
+			},
+			{
+				"key": "background",
+				"label": {
+					"zh": "背景材料路径",
+					"en": "Background material path"
+				},
+				"placeholder": {
+					"zh": "可选：综述、笔记或数据说明所在的文件或文件夹",
+					"en": "Optional: a review, notes or a data description file or folder"
+				},
+				"required": false,
+				"kind": "path",
+				"pathKind": "any"
+			}
+		],
+		"milestones": [
+			{
+				"title": {
+					"zh": "问题澄清与边界",
+					"en": "Clarified question and scope"
+				},
+				"acceptance": {
+					"kind": "human_review"
+				}
+			},
+			{
+				"title": {
+					"zh": "竞争假设与判别证据清单",
+					"en": "Rival hypotheses and discriminating evidence"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "hypotheses.md"
+				}
+			},
+			{
+				"title": {
+					"zh": "实验设计草案",
+					"en": "Experimental design draft"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "design.md"
+				}
+			}
+		],
+		"authorizations": ["task"],
+		"artifacts": [
+			{
+				"zh": "hypotheses.md（假设与判别证据）",
+				"en": "hypotheses.md (hypotheses and discriminating evidence)"
+			},
+			{
+				"zh": "design.md（实验设计草案）",
+				"en": "design.md (experimental design draft)"
+			}
+		],
+		"contractNotes": {
+			"zh": "不声称已完成任何实验",
+			"en": "Never claim that any experiment has been completed"
+		}
+	},
+	{
+		"id": "evidence-literature",
+		"direction": "evidence",
+		"stages": ["search", "reading", "library"],
+		"command": "skill:nature-academic-search",
+		"title": {
+			"zh": "主题文献检索与精读证据卡",
+			"en": "Topic search and evidence cards from close reading"
+		},
+		"goal": {
+			"zh": "围绕一个主题做有边界的检索，精读 2–3 篇并写成证据卡；如需要，再把文献放入 Zotero。",
+			"en": "Run a bounded search on one topic, read 2–3 papers closely into evidence cards and, if wanted, file them in Zotero."
+		},
+		"inputs": [
+			{
+				"key": "topic",
+				"label": {
+					"zh": "主题 / 关键词",
+					"en": "Topic / keywords"
+				},
+				"placeholder": {
+					"zh": "例如：肠道菌群与帕金森病早期诊断",
+					"en": "e.g. gut microbiome and early Parkinson's diagnosis"
+				},
+				"required": true,
+				"kind": "text"
+			},
+			{
+				"key": "years",
+				"label": {
+					"zh": "时间范围",
+					"en": "Time range"
+				},
+				"placeholder": {
+					"zh": "可选：例如 2019–2025",
+					"en": "Optional: e.g. 2019–2025"
+				},
+				"required": false,
+				"kind": "text"
+			},
+			{
+				"key": "zotero",
+				"label": {
+					"zh": "是否放入 Zotero",
+					"en": "File in Zotero"
+				},
+				"required": false,
+				"kind": "select",
+				"options": [
+					{
+						"value": "no",
+						"label": {
+							"zh": "否，只要证据卡",
+							"en": "No, evidence cards only"
+						}
+					},
+					{
+						"value": "yes",
+						"label": {
+							"zh": "是，精读后写入 Zotero",
+							"en": "Yes, save the read papers to Zotero"
+						}
+					}
+				],
+				"defaultValue": "no"
+			}
+		],
+		"milestones": [
+			{
+				"title": {
+					"zh": "检索范围与命中清单",
+					"en": "Search scope and hit list"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "search-log.md"
+				}
+			},
+			{
+				"title": {
+					"zh": "精读 2–3 篇的证据卡",
+					"en": "Evidence cards for 2–3 closely read papers"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "evidence-cards.md"
+				}
+			},
+			{
+				"title": {
+					"zh": "精读文献进入 Zotero",
+					"en": "Read papers filed in Zotero"
+				},
+				"acceptance": {
+					"kind": "zotero_item"
+				},
+				"when": {
+					"input": "zotero",
+					"equals": "yes"
+				}
+			}
+		],
+		"authorizations": ["task", "zotero-write"],
+		"artifacts": [
+			{
+				"zh": "search-log.md（检索范围、来源与失败记录）",
+				"en": "search-log.md (scope, provenance and failures)"
+			},
+			{
+				"zh": "evidence-cards.md（逐篇证据卡）",
+				"en": "evidence-cards.md (one card per paper)"
+			}
+		],
+		"contractNotes": {
+			"zh": "命中不等于已读；Zotero 写入需要单独同意",
+			"en": "A search hit is not a source read; writing to Zotero needs its own consent"
+		}
+	},
+	{
+		"id": "analysis-explore",
+		"direction": "analysis",
+		"stages": ["explore", "statistics"],
+		"command": "skill:exploratory-data-analysis",
+		"title": {
+			"zh": "数据质量检查到统计检验",
+			"en": "From data quality checks to statistical tests"
+		},
+		"goal": {
+			"zh": "先检查一份数据的质量与结构，再按研究问题制定分析计划并执行检验，最后一起确认结果解读。",
+			"en": "Check the quality and structure of one dataset, plan and run the tests the research question needs, then confirm the interpretation together."
+		},
+		"inputs": [
+			{
+				"key": "data",
+				"label": {
+					"zh": "数据文件路径",
+					"en": "Data file path"
+				},
+				"placeholder": {
+					"zh": "CSV / TSV / Excel 等本地文件",
+					"en": "A local CSV / TSV / Excel file"
+				},
+				"required": true,
+				"kind": "path",
+				"pathKind": "file"
+			},
+			{
+				"key": "question",
+				"label": {
+					"zh": "研究问题 / 分组变量",
+					"en": "Research question / grouping variable"
+				},
+				"placeholder": {
+					"zh": "例如：treatment 组与 control 组的 score 是否有差异",
+					"en": "e.g. does score differ between treatment and control"
+				},
+				"required": true,
+				"kind": "text"
+			}
+		],
+		"milestones": [
+			{
+				"title": {
+					"zh": "数据质量报告",
+					"en": "Data quality report"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "data-quality.md"
+				}
+			},
+			{
+				"title": {
+					"zh": "分析计划与检验结果",
+					"en": "Analysis plan and test results"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "analysis.md"
+				}
+			},
+			{
+				"title": {
+					"zh": "结果解读确认",
+					"en": "Interpretation confirmed"
+				},
+				"acceptance": {
+					"kind": "human_review"
+				}
+			}
+		],
+		"authorizations": ["task"],
+		"artifacts": [
+			{
+				"zh": "data-quality.md（缺失、分布、异常值）",
+				"en": "data-quality.md (missingness, distributions, outliers)"
+			},
+			{
+				"zh": "analysis.md（计划、检验、效应量与不确定性）",
+				"en": "analysis.md (plan, tests, effect sizes and uncertainty)"
+			}
+		],
+		"contractNotes": {
+			"zh": "只披露实际执行过的检查",
+			"en": "Report only checks that were actually executed"
+		}
+	},
+	{
+		"id": "writing-section",
+		"direction": "writing",
+		"stages": ["writing", "review"],
+		"command": "skill:scientific-writing",
+		"title": {
+			"zh": "起草一个章节并做证据受限审校",
+			"en": "Draft one section and review it within its evidence"
+		},
+		"goal": {
+			"zh": "只写所请求的章节，基于已有素材起草，再按证据边界审校，改动由你确认。",
+			"en": "Write only the requested section from the supplied material, review it within its evidence limits, and let you confirm the changes."
+		},
+		"inputs": [
+			{
+				"key": "section",
+				"label": {
+					"zh": "章节",
+					"en": "Section"
+				},
+				"placeholder": {
+					"zh": "例如：Introduction / Methods / Discussion",
+					"en": "e.g. Introduction / Methods / Discussion"
+				},
+				"required": true,
+				"kind": "text"
+			},
+			{
+				"key": "material",
+				"label": {
+					"zh": "素材 / 证据卡路径",
+					"en": "Material / evidence card path"
+				},
+				"placeholder": {
+					"zh": "可选：笔记、结果或证据卡所在文件或文件夹",
+					"en": "Optional: notes, results or evidence cards"
+				},
+				"required": false,
+				"kind": "path",
+				"pathKind": "any"
+			},
+			{
+				"key": "venue",
+				"label": {
+					"zh": "目标期刊",
+					"en": "Target journal"
+				},
+				"placeholder": {
+					"zh": "可选：例如 Nature Communications",
+					"en": "Optional: e.g. Nature Communications"
+				},
+				"required": false,
+				"kind": "text"
+			}
+		],
+		"milestones": [
+			{
+				"title": {
+					"zh": "章节初稿",
+					"en": "Section draft"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "draft.md"
+				}
+			},
+			{
+				"title": {
+					"zh": "审校意见（证据受限）",
+					"en": "Review notes (evidence-bounded)"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "review.md"
+				}
+			},
+			{
+				"title": {
+					"zh": "用户确认修改",
+					"en": "Revisions confirmed"
+				},
+				"acceptance": {
+					"kind": "human_review"
+				}
+			}
+		],
+		"authorizations": ["task"],
+		"artifacts": [
+			{
+				"zh": "draft.md（章节初稿）",
+				"en": "draft.md (section draft)"
+			},
+			{
+				"zh": "review.md（审校意见）",
+				"en": "review.md (review notes)"
+			}
+		],
+		"contractNotes": {
+			"zh": "只完成所请求的章节，不强行走完整流程",
+			"en": "Complete the requested section only; do not force a full pipeline"
+		}
+	},
+	{
+		"id": "presentation-figures",
+		"direction": "presentation",
+		"stages": ["figures", "slides"],
+		"command": "skill:scientific-visualization",
+		"title": {
+			"zh": "真实数据图到汇报幻灯片",
+			"en": "From data-backed figures to a talk deck"
+		},
+		"goal": {
+			"zh": "用真实结果数据画出带不确定性的图，再组织成汇报幻灯片，并做一次交付检查。",
+			"en": "Plot the real results with their uncertainty, build them into a talk deck, and run a delivery check."
+		},
+		"inputs": [
+			{
+				"key": "results",
+				"label": {
+					"zh": "结果 / 数据文件",
+					"en": "Results / data file"
+				},
+				"placeholder": {
+					"zh": "结果表或数据文件路径",
+					"en": "Path to a results table or data file"
+				},
+				"required": true,
+				"kind": "path",
+				"pathKind": "file"
+			},
+			{
+				"key": "format",
+				"label": {
+					"zh": "目标格式",
+					"en": "Target format"
+				},
+				"required": false,
+				"kind": "select",
+				"options": [
+					{
+						"value": "pptx",
+						"label": {
+							"zh": "pptx",
+							"en": "pptx"
+						}
+					},
+					{
+						"value": "pdf",
+						"label": {
+							"zh": "pdf",
+							"en": "pdf"
+						}
+					}
+				],
+				"defaultValue": "pptx"
+			}
+		],
+		"milestones": [
+			{
+				"title": {
+					"zh": "真实数据图（含不确定性）",
+					"en": "Data-backed figures with uncertainty"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "figures/"
+				}
+			},
+			{
+				"title": {
+					"zh": "汇报幻灯片",
+					"en": "Talk deck"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "slides.pptx"
+				}
+			},
+			{
+				"title": {
+					"zh": "交付检查",
+					"en": "Delivery check"
+				},
+				"acceptance": {
+					"kind": "human_review"
+				}
+			}
+		],
+		"authorizations": ["task"],
+		"artifacts": [
+			{
+				"zh": "figures/（图与生成脚本）",
+				"en": "figures/ (plots and the scripts that made them)"
+			},
+			{
+				"zh": "slides.pptx 或 slides.pdf",
+				"en": "slides.pptx or slides.pdf"
+			}
+		],
+		"contractNotes": {
+			"zh": "AI 示意图不是数据图",
+			"en": "AI diagrams are not data plots"
+		}
+	},
+	{
+		"id": "engineering-handoff",
+		"direction": "engineering",
+		"stages": ["resources", "handoff"],
+		"command": "skill:get-available-resources",
+		"title": {
+			"zh": "盘点资源并写交接文档",
+			"en": "Inventory resources and write a handoff"
+		},
+		"goal": {
+			"zh": "只盘点当前项目可用的计算资源，写出 spec / plan / HANDOFF，并确认没有安装、付费或外发。",
+			"en": "Inventory the compute available to this project, write spec / plan / HANDOFF, and confirm nothing was installed, paid for or sent out."
+		},
+		"inputs": [
+			{
+				"key": "project",
+				"label": {
+					"zh": "项目路径",
+					"en": "Project path"
+				},
+				"placeholder": {
+					"zh": "要盘点与交接的项目文件夹",
+					"en": "The project folder to inventory and hand off"
+				},
+				"required": true,
+				"kind": "path",
+				"pathKind": "directory"
+			},
+			{
+				"key": "recipient",
+				"label": {
+					"zh": "交接对象",
+					"en": "Handoff recipient"
+				},
+				"placeholder": {
+					"zh": "可选：接手的人或团队",
+					"en": "Optional: the person or team taking over"
+				},
+				"required": false,
+				"kind": "text"
+			}
+		],
+		"milestones": [
+			{
+				"title": {
+					"zh": "计算资源清单（只盘点）",
+					"en": "Compute inventory (inventory only)"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "resources.md"
+				}
+			},
+			{
+				"title": {
+					"zh": "spec / plan / HANDOFF",
+					"en": "spec / plan / HANDOFF"
+				},
+				"acceptance": {
+					"kind": "file",
+					"hint": "HANDOFF.md"
+				}
+			},
+			{
+				"title": {
+					"zh": "确认无安装、付费、外发",
+					"en": "Confirmed: nothing installed, paid for or sent out"
+				},
+				"acceptance": {
+					"kind": "human_review"
+				}
+			}
+		],
+		"authorizations": ["task"],
+		"artifacts": [
+			{
+				"zh": "resources.md（资源清单）",
+				"en": "resources.md (resource inventory)"
+			},
+			{
+				"zh": "spec.md / plan.md / HANDOFF.md",
+				"en": "spec.md / plan.md / HANDOFF.md"
+			}
+		],
+		"contractNotes": {
+			"zh": "不安装、不预订资源、不外发",
+			"en": "No installation, no resource reservation, no outbound delivery"
+		}
+	}
+]

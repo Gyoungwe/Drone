@@ -67,6 +67,7 @@ packages/
 | `src/subagent.ts` | `SubagentRunData`、`extractSubagentRuns`、`isSubagentToolName` | 子代理结果提取（结构检测不依赖工具名；single/parallel/management 三形态），backend 历史映射与 renderer 共用 |
 | `src/skill-invocation.ts` | `parseExpandedSkillInvocation`、`formatSkillCommand` | 成功展开的 skill 调用展示投影：严格匹配 SDK canonical producer 格式，提取安全 name/args；backend 命名/撤回与 renderer 实时映射共用 |
 | `src/todo.ts` | `TodoItem`、`TODO_TOOL_NAME`、`extractTodos` | todo 工具契约（backend 注入与 renderer 面板共用） |
+| `src/example-tasks.ts` + `.json` | `EXAMPLE_TASKS`、`exampleTaskForDirection`、`composeExampleTaskPrompt`、`missingExampleTaskInputs` | 六方向内置示例任务（数据 + 首条消息组装纯函数；不建任务、不写文件）；说明与新增方法见 [example-tasks.md](example-tasks.md) |
 | `src/update.ts` | `UpdateState` | 自动更新事件载荷（`available.manual=true` = 当前构建无法自动安装，跳 release 页） |
 | `src/marquee-motion.ts` | `tailOffsetForWidths` | 流式正文 tail-follow 位移纯函数（无 DOM，可单测） |
 
@@ -247,6 +248,7 @@ src/
 | 新增 IPC 通道 | 见硬约束「四处同步」 |
 | 新增设置面板分类 | 面板文件 + `settings/SettingsDialog.tsx` 的 `PANELS`（插件 settings.panel 贡献不用登记，registry 动态拼接） |
 | 文案 | `i18n/zh.ts` + `en.ts` |
+| 示例任务（任务页签空态卡 / `/` 菜单「示例：…」/ 表单对话框） | 数据 shared `example-tasks.ts/json`；UI `components/tasks/ExampleTaskCards.tsx` + `ExampleTaskDialog.tsx` + `stores/example-tasks.ts`；菜单项 `composer/slash-filter.ts`（`exampleTask` 字段）；发送复用 `use-composer-send.ts` 的 `ensureActiveSession` + `prompt`；路径选择 IPC `file:pickPath`；文档 [example-tasks.md](example-tasks.md) |
 
 ## 本地文档（`.local/`，不入库，会定期清理——引用可能失效）
 

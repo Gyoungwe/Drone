@@ -1,4 +1,5 @@
 import type { TodoItem } from "@drone/shared";
+import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
@@ -7,6 +8,7 @@ import { EMPTY_TODOS, selectTranscript, useTranscriptStore } from "../../stores/
 import { TaskRow } from "../chat/TaskRow";
 import { TodoCompleteIcon, TodoPendingIcon, TodoSpinnerIcon } from "../icons";
 import { useAgentActive } from "../session/session-status";
+import { ExampleTaskCards } from "../tasks/ExampleTaskCards";
 
 function TodoLine({ todo, spinnerPaused }: { todo: TodoItem; spinnerPaused: boolean }) {
 	if (todo.status === "completed") {
@@ -80,6 +82,7 @@ export function TodoCard() {
 /**
  * 「任务」页签：待确认提示 → 任务清单（todo，带进度条）→ 任务契约（最新一份 TaskView 的任务卡）。
  * 审批本身仍在输入框位置的 ApprovalDock 决策（一处一事），这里只给指向。
+ * 空态给六方向示例卡（只读会话除外）：点击只打开示例对话框，任务仍由 task_plan + 授权卡建立。
  */
 export function TasksPane({ sessionId }: { sessionId: string | null }) {
 	const t = useT();
@@ -87,6 +90,7 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 	const pendingCount = useTranscriptStore((s) => selectTranscript(s, sessionId).pendingPermissions.length);
 	const messages = useTranscriptStore((s) => selectTranscript(s, sessionId).messages);
 	const agentActive = useAgentActive(sessionId);
+	const readOnly = useSessionReadOnly();
 	const latestMessage = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
 	const view = latestMessage?.kind === "assistant" ? latestMessage.taskView : undefined;
 	const empty = todoCount === 0 && !(view && view.tasks.length > 0);
@@ -118,7 +122,7 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 					</div>
 				</section>
 			)}
-			{empty && <p className="panel-empty">{t("panel.tasksEmpty")}</p>}
+			{empty && (readOnly ? <p className="panel-empty">{t("panel.tasksEmpty")}</p> : <ExampleTaskCards />)}
 		</div>
 	);
 }
