@@ -1,10 +1,10 @@
 import {
 	type LoadedSkill,
+	resolveWorkflowStage,
 	WORKFLOW_DIRECTIONS,
 	WORKFLOW_STAGES,
-	workflowProfile,
-	resolveWorkflowStage,
 	type WorkflowDirection,
+	workflowProfile,
 } from "@drone/shared";
 import { useState } from "react";
 import { useI18nStore, useT } from "../../i18n";

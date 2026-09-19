@@ -1,11 +1,11 @@
 import {
 	type CapabilityId,
-	WORKFLOW_PROFILES,
+	researchSkillProfile,
 	WORKFLOW_OWNER_NAMES,
+	WORKFLOW_PROFILES,
 	workflowProfile,
 	workflowStage,
 	workflowStageForSkill,
-	researchSkillProfile,
 } from "@drone/shared";
 
 /** Topic IDs, not raw user prompts, are persisted in the session checkpoint. */

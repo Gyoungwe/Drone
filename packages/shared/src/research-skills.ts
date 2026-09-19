@@ -1,6 +1,6 @@
-import { workflowProfile } from "./workflow-catalog";
 import sources from "./research-skill-sources.json";
 import type { SkillCategory } from "./skill-catalog";
+import { workflowProfile } from "./workflow-catalog";
 
 /** Data only: importing this catalog never installs a package or grants tool permissions. */
 export const RESEARCH_SKILL_SOURCES = sources.sources;

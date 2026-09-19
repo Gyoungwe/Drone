@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { RESEARCH_SKILL_SOURCES } from "./research-skills";
 import {
+	resolveWorkflowStage,
 	WORKFLOW_DIRECTIONS,
 	WORKFLOW_PROFILES,
 	WORKFLOW_STAGES,
 	workflowProfile,
-	resolveWorkflowStage,
 } from "./workflow-catalog";
+
 describe("reviewed six-direction catalog", () => {
 	it("covers every locked skill plus exactly seven first-party skills, without deleting or renaming sources", () => {
 		expect(WORKFLOW_DIRECTIONS).toHaveLength(6);

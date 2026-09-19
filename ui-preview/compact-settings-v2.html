@@ -30,13 +30,13 @@
     <section class="dialog" aria-label="紧凑设置面板">
       <header class="header"><h2>设置</h2><span class="close">×</span></header>
       <div class="body">
-        <nav class="nav" aria-label="设置分类"><button class="active">通用</button><button>外观</button><button>模型</button><button>技能</button><button>MCP</button><button>知识库</button><button>Zotero</button><button>扩展</button><button>局域网</button><button>关于</button></nav>
+        <nav class="nav" aria-label="设置分类"><button type="button" class="active">通用</button><button type="button">外观</button><button type="button">模型</button><button type="button">技能</button><button type="button">MCP</button><button type="button">知识库</button><button type="button">Zotero</button><button type="button">扩展</button><button type="button">局域网</button><button type="button">关于</button></nav>
         <div class="content">
           <div class="content-title"><h3>通用</h3><span>3 个基础设置 · 1 个访问守卫</span></div>
           <div class="rows">
             <div class="row"><div class="row-main"><div class="row-title">语言</div><div class="row-summary">界面语言</div></div><div class="segmented"><span>中文</span><span class="selected">English</span></div></div>
             <div class="row"><div class="row-main"><div class="row-title">上下文管理</div><div class="row-summary">自动收缩较早上下文，保持当前任务连贯</div></div><div class="segmented"><span class="selected">自动</span><span>关闭</span></div></div>
-            <div class="row"><div class="row-main"><div class="row-title">频道监听</div><div class="row-summary">跨会话更新会唤醒当前会话</div></div><span class="switch" aria-label="已启用"></span></div>
+            <div class="row"><div class="row-main"><div class="row-title">频道监听</div><div class="row-summary">跨会话更新会唤醒当前会话</div></div><span class="switch" role="img" aria-label="已启用"></span></div>
             <details open><summary><div class="row-main"><div class="row-title">SSH 守卫</div><div class="row-summary">本机密钥 · 默认每次确认 · 单次授权</div></div><div><span class="badge">已启用</span><span class="chevron">⌃</span></div></summary><div class="details"><div class="detail"><b>访问策略</b><span>默认每次确认</span></div><div class="detail"><b>密钥来源</b><span>本机 OpenSSH</span></div><div class="detail"><b>授权范围</b><span>单次，可显式记住</span></div></div></details>
           </div>
           <p class="note">审批请求与执行结果会保留在会话记录中。完整说明只在展开 SSH 守卫时出现。</p>

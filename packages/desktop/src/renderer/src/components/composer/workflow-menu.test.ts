@@ -1,11 +1,12 @@
-import { describe, expect, it } from "vitest";
 import {
-	WORKFLOW_PROFILES,
-	WORKFLOW_STAGES,
 	RESEARCH_SKILL_SOURCES,
 	type SlashCommandInfo,
+	WORKFLOW_PROFILES,
+	WORKFLOW_STAGES,
 } from "@drone/shared";
+import { describe, expect, it } from "vitest";
 import { groupCommands, menuCommands, workflowMenuItems } from "./slash-filter";
+
 const blocked = new Set(
 	RESEARCH_SKILL_SOURCES.flatMap((s) => s.skills.filter((k) => !k.bundled).map((k) => k.name)),
 );

@@ -14,6 +14,7 @@ export * from "./mcp";
 export * from "./packages";
 export * from "./progress-display";
 export * from "./public-timeline";
+export * from "./research-skills";
 export {
 	isLocalResourceTarget,
 	localResourceHref,
@@ -32,7 +33,6 @@ export {
 } from "./resource-preview-format";
 export * from "./session";
 export * from "./settings";
-export * from "./research-skills";
 export * from "./skill-catalog";
 export * from "./skill-invocation";
 export * from "./subagent";
@@ -44,6 +44,5 @@ export * from "./transcript/run-inspector";
 export * from "./ui-plugins";
 export * from "./update";
 export * from "./usage-display";
-export * from "./zotero";
-
 export * from "./workflow-catalog";
+export * from "./zotero";

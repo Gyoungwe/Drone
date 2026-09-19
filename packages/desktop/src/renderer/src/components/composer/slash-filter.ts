@@ -1,12 +1,12 @@
 import {
 	getSkillCategory,
+	resolveWorkflowStage,
 	type SlashCommandInfo,
 	skillCatalogSearchText,
 	WORKFLOW_DIRECTIONS,
 	WORKFLOW_STAGES,
-	workflowProfile,
-	resolveWorkflowStage,
 	type WorkflowDirection,
+	workflowProfile,
 } from "@drone/shared";
 
 export const SOURCE_ORDER: SlashCommandInfo["source"][] = ["builtin", "template", "skill", "extension"];

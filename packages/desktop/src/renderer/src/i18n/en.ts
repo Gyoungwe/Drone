@@ -3,20 +3,21 @@ import type { Messages } from "./zh";
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
 	workflows: {
-	  "title": "Six workflow directions",
-	  "hint": "Choose the task and current stage. One primary workflow per stage; specialists load on demand. Browsing does not enable tools or run tasks.",
-	  "advanced": "Advanced: all original skills ({count})",
-	  "compact": "Back to six directions",
-	  "back": "Back to directions",
-	  "chooseStage": "Choose a stage →",
-	  "unavailable": "No eligible command registered in this session",
-	  "direction": "Task direction",
-	  "internal": "Internal governance and shared dependencies",
-	  "count": "{count} registered modules",
-	  "stageHint": "Stages resolve existing skills only. Type / in chat, choose the same direction and stage, then add your task. Original command names remain searchable.",
-	  "checkCommand": "Check ARS command availability in the chat slash menu",
-	  "inspect": "Inspect all registered modules in this direction",
-	  "visible": "Currently model-visible: {count} skills (not the full inventory)"
+		title: "Six workflow directions",
+		hint: "Choose the task and current stage. One primary workflow per stage; specialists load on demand. Browsing does not enable tools or run tasks.",
+		advanced: "Advanced: all original skills ({count})",
+		compact: "Back to six directions",
+		back: "Back to directions",
+		chooseStage: "Choose a stage →",
+		unavailable: "No eligible command registered in this session",
+		direction: "Task direction",
+		internal: "Internal governance and shared dependencies",
+		count: "{count} registered modules",
+		stageHint:
+			"Stages resolve existing skills only. Type / in chat, choose the same direction and stage, then add your task. Original command names remain searchable.",
+		checkCommand: "Check ARS command availability in the chat slash menu",
+		inspect: "Inspect all registered modules in this direction",
+		visible: "Currently model-visible: {count} skills (not the full inventory)",
 	},
 	runInspector: {
 		title: "Run Inspector",

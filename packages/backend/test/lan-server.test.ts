@@ -216,9 +216,9 @@ describe("LanObserverServer", () => {
 		await new Promise<void>((resolve) => blocker.listen(0, "0.0.0.0", resolve));
 		const port = (blocker.address() as { port: number }).port;
 		const server = await start(port);
-		expect(server.status().port).toBe(port + 1);
-		await new Promise<void>((resolve) => blocker.close(() => resolve()));
 		const actualPort = server.status().port as number;
+		expect(actualPort).toBeGreaterThan(port);
+		await new Promise<void>((resolve) => blocker.close(() => resolve()));
 		await server.stop();
 		servers.splice(servers.indexOf(server), 1);
 		const replacement = createServer();

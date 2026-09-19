@@ -1,12 +1,13 @@
-import { describe, expect, it } from "vitest";
 import { WORKFLOW_PROFILES, WORKFLOW_STAGES } from "@drone/shared";
+import { describe, expect, it } from "vitest";
 import {
 	detectResearchIntent,
-	selectResearchSkills,
 	mergeResearchIntent,
+	selectResearchSkills,
 } from "../src/capabilities/research-skill-router";
+import { CapabilityResourceLoader, SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime } from "../src/capabilities/runtime";
-import { SkillVisibility, CapabilityResourceLoader } from "../src/capabilities/resource-loader";
+
 const skills = WORKFLOW_PROFILES.map((p) => ({
 	name: p.name,
 	description: p.name,

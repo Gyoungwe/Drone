@@ -2,8 +2,8 @@ import {
 	type SlashCommandInfo,
 	skillDisplayName,
 	WORKFLOW_DIRECTIONS,
-	workflowStage,
 	type WorkflowDirection,
+	workflowStage,
 } from "@drone/shared";
 import { useEffect, useRef } from "react";
 import { useI18nStore, useT } from "../../i18n";
@@ -54,7 +54,7 @@ export function SlashMenu({
 		} else if (iRect.bottom > cRect.bottom) {
 			container.scrollTop += iRect.bottom - cRect.bottom;
 		}
-	}, [active, workflowDirection, query, showSpecialized]);
+	}, [active]);
 
 	if (flat.length === 0 && (query || !specializedCount)) {
 		return (

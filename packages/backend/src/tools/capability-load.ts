@@ -6,7 +6,13 @@ import type { CapabilityRuntime } from "../capabilities/runtime";
 const capabilityLiteral = Type.Union(CAPABILITY_IDS.map((id) => Type.Literal(id)));
 const params = Type.Object({
 	capabilities: Type.Array(capabilityLiteral, { minItems: 1, maxItems: CAPABILITY_IDS.length }),
-	task: Type.Optional(Type.String({ maxLength: 1000, description: "Current research subtask or exact installed skill name; narrows skill discovery without loading bodies." })),
+	task: Type.Optional(
+		Type.String({
+			maxLength: 1000,
+			description:
+				"Current research subtask or exact installed skill name; narrows skill discovery without loading bodies.",
+		}),
+	),
 });
 
 export interface CapabilityLoadDetails extends CapabilityState {

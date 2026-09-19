@@ -1,7 +1,5 @@
 import {
 	CAPABILITY_CATALOG,
-	WORKFLOW_DIRECTIONS,
-	workflowProfile,
 	getSkillCategory,
 	groupSkillCatalog,
 	type LoadedSkill,
@@ -9,11 +7,13 @@ import {
 	type SkillCategory,
 	skillCatalogSearchText,
 	skillDisplayName,
+	WORKFLOW_DIRECTIONS,
+	workflowProfile,
 } from "@drone/shared";
 import { useMemo, useState } from "react";
 import { useI18nStore, useT } from "../../i18n";
-import { WorkflowOverview } from "./WorkflowOverview";
 import { useSettingsStore } from "../../stores/settings";
+import { WorkflowOverview } from "./WorkflowOverview";
 
 function ScopeBadge({ scope }: { scope: ResourceScope }) {
 	const t = useT();

@@ -1,4 +1,6 @@
 // Isolated fixture. Production components and keyboard handler; no provider or approval action.
+
+import { RESEARCH_SKILL_SOURCES, WORKFLOW_PROFILES } from "@drone/shared";
 import { useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { SlashMenu } from "../../packages/desktop/src/renderer/src/components/composer/SlashMenu";
@@ -7,7 +9,6 @@ import { SkillsPanel } from "../../packages/desktop/src/renderer/src/components/
 import { useI18nStore } from "../../packages/desktop/src/renderer/src/i18n";
 import { useSettingsStore } from "../../packages/desktop/src/renderer/src/stores/settings";
 
-import { WORKFLOW_PROFILES, RESEARCH_SKILL_SOURCES } from "@drone/shared";
 const excluded = new Set(
 	RESEARCH_SKILL_SOURCES.flatMap((s) => s.skills.filter((k) => !k.bundled).map((k) => k.name)),
 );
