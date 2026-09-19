@@ -9,6 +9,7 @@ import { registerAppIpc } from "./app";
 import { registerKnowledgeIpc } from "./knowledge";
 import { registerLanIpc } from "./lan";
 import { registerPackagesIpc } from "./packages";
+import { registerPermissionSettingsIpc } from "./permissions";
 import { registerSessionsIpc } from "./sessions";
 import { registerSettingsIpc } from "./settings";
 import { registerUiPluginsIpc } from "./ui-plugins";
@@ -22,7 +23,7 @@ export function sendToRenderer(channel: string, payload: unknown): void {
 }
 
 /**
- * IPC 注册组合入口：按域拆在 ./sessions ./settings ./packages ./app ./ui-plugins 五个文件，
+ * IPC 注册组合入口：按域拆在 ./sessions ./settings ./permissions ./packages ./app ./ui-plugins 等文件，
  * 这里只做拼装 + backend/updater 事件转发到 renderer。
  */
 export function registerIpc(
@@ -32,6 +33,7 @@ export function registerIpc(
 ): void {
 	registerSessionsIpc(backend);
 	registerSettingsIpc(backend);
+	registerPermissionSettingsIpc(backend);
 	registerKnowledgeIpc(backend);
 	registerPackagesIpc(backend);
 	registerAppIpc(backend);

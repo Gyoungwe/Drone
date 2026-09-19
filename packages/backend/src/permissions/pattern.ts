@@ -110,6 +110,16 @@ export function evaluateBashCommand(
 	return { action, segment };
 }
 
+/** 单段求值（不切命令链）：设置页试算逐段展示用；语义与 evaluateSingle 完全一致 */
+export function evaluateSegment(
+	rules: PermissionRules,
+	toolName: string,
+	matchText: string | null,
+	fallback: PermissionAction = "ask",
+): PermissionAction {
+	return evaluateSingle(rules, toolName, matchText, fallback);
+}
+
 /**
  * 规则求值：bash 走命令链切段（evaluateBashCommand），其余工具单段求值。
  */

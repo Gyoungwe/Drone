@@ -13,6 +13,7 @@ export { literatureRecoverySummary } from "./literature-recovery";
 export * from "./marquee-motion";
 export * from "./mcp";
 export * from "./packages";
+export * from "./permission-settings";
 export * from "./progress-display";
 export * from "./public-timeline";
 export * from "./research-skills";

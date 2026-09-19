@@ -68,6 +68,7 @@ packages/
 | `src/skill-invocation.ts` | `parseExpandedSkillInvocation`、`formatSkillCommand` | 成功展开的 skill 调用展示投影：严格匹配 SDK canonical producer 格式，提取安全 name/args；backend 命名/撤回与 renderer 实时映射共用 |
 | `src/todo.ts` | `TodoItem`、`TODO_TOOL_NAME`、`extractTodos` | todo 工具契约（backend 注入与 renderer 面板共用） |
 | `src/example-tasks.ts` + `.json` | `EXAMPLE_TASKS`、`exampleTaskForDirection`、`composeExampleTaskPrompt`、`missingExampleTaskInputs` | 六方向内置示例任务（数据 + 首条消息组装纯函数；不建任务、不写文件）；说明与新增方法见 [example-tasks.md](example-tasks.md) |
+| `src/permission-settings.ts` | `PermissionSettings*`、`PermissionProbe*`、`PERMISSION_SELF_PROTECTION_PATTERNS`、`PERMISSION_KNOWN_TOOLS` | 设置 → 权限 面板的 IPC 形状（快照 / 保存输入与结果 / 试算 / 审计尾部）+ 自保护模式常量；backend 校验与 renderer 编辑模型共用；见 [permissions-settings.md](permissions-settings.md) |
 | `src/update.ts` | `UpdateState` | 自动更新事件载荷（`available.manual=true` = 当前构建无法自动安装，跳 release 页） |
 | `src/marquee-motion.ts` | `tailOffsetForWidths` | 流式正文 tail-follow 位移纯函数（无 DOM，可单测） |
 
@@ -95,7 +96,7 @@ src/
 ├── log.ts              结构化日志
 ├── lan/                局域网观察：config / projector / server（+ audit / sanitize）
 ├── session/            registry / naming / messages / trace+traces / event-slim+stream-guard / rates / ui-context
-├── permissions/        index(barrel) / bash-chain / pattern / config / tmp-zone / gate / extension / audit
+├── permissions/        index(barrel) / bash-chain / pattern / config / settings / tmp-zone / gate / extension / audit
 ├── project/            trust / trust-loader / workspace-store / files
 ├── settings/           settings / model-prefs / login
 ├── packages/           admin / catalog
@@ -117,6 +118,7 @@ src/
 | `src/session/ui-context.ts` | `makeUiContext` | `ExtensionUIContext` 桥接：confirm → PermissionGate，其余 no-op；**theme 必须是真实 `Theme` 类实例**（假对象会让 pi-mcp-adapter 等扩展 `theme.fg()` 抛错、MCP 服务器全连不上）；SDK 接口变化时在此补新成员 |
 | `src/permissions/gate.ts` | `PermissionGate` | 权限确认队列：allow/deny/allowAlways/allowDir + kind/suggestDir 元数据；respond 前供 PiBackend 持久化；listPending 供 LAN 只读快照 |
 | `src/permissions/index.ts`（+ bash-chain/pattern/config/tmp-zone） | `evaluateBashCommand` 等 | 逐工具权限规则引擎：allow/ask/deny × 通配模式；bash 命令链取最严段；自保护（permissions/workspaces/auth/trust 四文件）；tmp-zone = 临时区判定 + rm 豁免（纯函数）。已知天花板：xargs/find -exec/python -c 不覆盖 |
+| `src/permissions/settings.ts`（+ config.ts 的 `parseConfig`/`serializeConfig`/`validateConfig`） | `readPermissionSettings`、`writePermissionSettings`、`resetPermissionSettings`、`probePermission`、`readPermissionAuditTail` | 设置 → 权限 面板后端：快照（路径/原文/默认合并视图/mtime）、整表校验（动作枚举 / 纯数字键 / 自保护四模式存在、非 allow 且未被其后 allow 覆盖）、mtime 冲突检查 + tmp+rename 原子写（留 `.bak`，`enabled` 保留文件原值）、规则试算（同一求值链，只跑规则不模拟边界）。写后 `createPermissionConfigLoader` 下一次 tool_call 重读 = 保存即生效 |
 | `src/permissions/extension.ts` | `makePermissionGateExtension` | 权限门控内置扩展（tool_call 钩子 + 确认通道 + 会话权限模式分支）。求值链：① deny 直接 block → ② 临时区 → ③ 多根边界（projectRoot ∪ workspaces roots）读写分离（读默认放行/写默认确认）→ ④ 项目记忆 allowed[] → ⑤ ask；`getMode` 每次调用实时读，fullAccess 档下 ①⑤ 降级为审计 + 放行（spec permission-mode） |
 | `src/permissions/audit.ts` | `PermissionAuditLog`、`permissionAuditPath` | fullAccess 高危审计：JSONL 追加写 `~/.pi/agent/permission-audit.jsonl`（含 sessionId/boundary），超 1MB 截头保尾；写失败不阻塞工具调用 |
 | `src/project/trust.ts` | `TrustGate`、`resolveProjectTrust` | 信任决策链：无资源→信任 → trust.json → defaultProjectTrust → 两选项弹窗（信任/不信任均落盘）；同 cwd 在途询问去重 |
@@ -153,7 +155,7 @@ src/
 | `src/main/dev-agent-dir.ts` | dev/预览态数据隔离：userData 重定向 `*-dev` 后缀 + `PI_CODING_AGENT_DIR = ~/.pi/agent-dev` + 五配置一次性种子拷贝（正式目录零写入） |
 | `src/main/daily.ts` | 日常空间工作台目录（`~/.drone/daily`，全部日常会话的固定 cwd）+ 懒创建；信任链无资源自动信任不弹窗；dev/正式共享工作区（会话列表按 agent dir 天然隔离） |
 | `src/main/ipc/index.ts` | `registerIpc` 组合入口 + backend 事件/updater 状态转发 + UI 插件热重载 watcher 启动。**新增 handler 改对应域文件，不在 index.ts 堆** |
-| `src/main/ipc/{sessions,settings,packages,app,ui-plugins,lan}.ts` | 各域 handler（全部薄委托 backend；ui-plugins 域 handler async await 落盘后才返回） |
+| `src/main/ipc/{sessions,settings,permissions,packages,app,ui-plugins,lan}.ts` | 各域 handler（全部薄委托 backend；ui-plugins 域 handler async await 落盘后才返回；permissions 域 = 设置 → 权限 面板 load/save/reset/probe/auditTail + `openLocation` 用 shell 定位文件） |
 | `src/main/tabs.ts` / `ui-state.ts` | tabs.json / ui-state.json 读写（JsonStore 原子写；ui-state 补丁式合并 + normalize 补缺省） |
 | `src/main/background.ts` | 背景图选图（dialog → 拷贝 `userData/backgrounds/` 并清理旧图） |
 | `src/main/window.ts` | BrowserWindow：sandbox + preload；启动底色跟随主题防白闪（已解析主题经 `?theme=` query 传 renderer）；窗口框架按平台分流（mac hiddenInset / Win frameless+titleBarOverlay / Linux 原生）；导出 `resolveTheme`/`applyChromeTheme` |
@@ -183,6 +185,7 @@ src/
 | `stores/transcript.ts` | re-export shared reducer + per-session 字段（agentActive/unseenCompletion/todos）；reducer 细节见 shared `src/transcript/` |
 | `stores/event-conflator.ts` | 流式事件合流：纯追加型 delta 按会话/类型拼接 + rAF 每帧最多一次 flush，其余事件边界透传保序（可注入调度器，有测试） |
 | `stores/drafts.ts` | 草稿（文本/图片/slash 胶囊/@ 引用 attachments/选中引用 quotes）按会话持久 + `COMPOSER_FOCUS_EVENT`（撤回回填后聚焦输入框） |
+| `stores/permissions.ts` | 设置 → 权限 面板状态：磁盘快照 + 数组化草稿（`components/settings/permissions-model.ts`）+ 保存 / 冲突（mtime）/ 后端校验问题 / 审计尾部；`selectPermissionDirty` 结构比较脏检查 |
 | `stores/settings.ts` / `catalog.ts` / `provider-login.ts` | 设置域（providers + 上下文管理/channel-watch 开关，乐观更新回滚；permissionGateOff = 手改 permissions.json 卸载门控的逃生舱态只读感知）/ 社区包目录（300ms 防抖 + seq 防陈旧）/ OAuth 登录状态机（**取消时机 = LoginDialog 卸载 cleanup**；先订阅事件再 invoke） |
 | `stores/projects.ts` / `theme.ts` / `ui.ts` / `ui-preferences.ts` / `update.ts` / `ui-plugins.ts` / `toasts.ts` | 项目页（手动添加的按时间倒排）/ 主题与背景（init 在 render 前 await 防闪烁）/ todo 面板展开 + diff 侧栏开关（内存态）/ 会话轨道 + 中央动画开关（持久化 ui-state）/ 更新态 / UI 插件面板 / 全局 Toast（顶栏右侧，非阻塞自动消失） |
 | `hooks/` | `use-context-usage`（上下文用量，事件驱动刷新）/ `use-language` / `use-session-state`（useSessionReadOnly/useSessionBusy 收敛）/ `use-session-event-bridge`（App 事件桥装配层专用） |
@@ -198,7 +201,7 @@ src/
 | `diff/` | **DiffSidebar**（右侧变更侧栏：按轮分组 unified diff + 内嵌 BranchRow git 分支行；开关在 SessionTabBar）+ DiffFileCard |
 | `composer/` | **Composer**（装配层 ~330 行，键盘事件分发）+ 三 hook：`use-composer-send`（ensureSession 懒创建/followUp 排队/停止先 clearQueue/发送失败草稿回填）、`use-slash-menu`（命令拉取+胶囊回填+导航）、`use-at-completion`（@ token 探测/续钻/胶囊弹回）+ 展示件 QueueBar/ImageTray/AttachmentChip/**QuoteChip**（选中引用胶囊）/SendErrorBar + **ModelPicker** / **ThinkingPicker**（按模型 thinkingLevels 过滤+clamp）/ **PermissionPicker**（会话权限模式 chip：默认/完全访问）/ **SlashMenu** / **AtMenu** / **ContextRing** + 纯函数 `slash-filter`/`at-files`/`send-error`/`quote`（各有测试） |
 | `session/` | **SessionTabBar** + SessionTab/TabPill（状态收拢到头像图标；dnd-kit 拖拽排序，DragOverlay ghost + 轴锁定；拖拽期间退出 drag-region）/ **SessionRail**（左侧会话轨道：细线变形胶囊 + dock 波浪；开关在设置-外观）/ **ApprovalDock**（权限审批：async respond 成功才移除面板，失败保留重试）/ **TrustDialog**（项目信任两选项）/ **UpdateButton**（顶栏更新按钮）/ `session-status`（顶栏与轨道共用的状态/标题纯逻辑） |
-| `settings/` | **SettingsDialog**（PANELS 注册表；分类 = 静态 + 插件 settings.panel 贡献动态拼接）/ **GeneralPanel**（语言/上下文管理二态/channel-watch 开关）/ **AppearancePanel**（顶部 Tab 分栏：「基础」=主题三段/背景图/轨道/中央动画，「UI 插件」= 原独立分类并入的 UiPluginsSection：总开关/插件卡/槽位指派，设计稿 .local/design/ux/appearance-ui-plugins）/ **SkillsPanel**（Tools & Skills：lazy capability/tool schema footprint/最近调用 + 完整 Skill catalog） / **McpPanel**（SDK 0.84 无 MCP，占位）/ **ExtensionsPanel** + `extensions/`（目录浏览/安装/卸载，subagent 包安装两段式确认）/ **UiPluginsSection**（挂在 AppearancePanel 的 UI 插件 Tab 下） / **LanObserverPanel** / **AboutPanel** / `providers/`（ProvidersPanel + ProviderRow 操作全图标化 / LoginDialog（交互登录对话框：OAuth + api_key 交互流）/ CustomProviderForm + ModelRowsEditor（逐模型行编辑器）/ BuiltinProviderEditForm（内置端点覆写）/ SubagentPanel（子代理模型偏好）+ `model-rows` 纯函数） |
+| `settings/` | **SettingsDialog**（PANELS 注册表；分类 = 静态 + 插件 settings.panel 贡献动态拼接）/ **GeneralPanel**（语言/上下文管理二态/channel-watch 开关）/ **PermissionsPanel**（编辑全局 permissions.json：工作区边界 / 工具规则 + bash 模式表 **PatternTable**（↑↓✕、自保护行锁定表尾）+ 试算 / 高级（审计尾部、文件位置、恢复默认、放弃/保存）；纯编辑模型 `permissions-model.ts`，`PermissionsEditor` 按 props 渲染可单测）/ **AppearancePanel**（顶部 Tab 分栏：「基础」=主题三段/背景图/轨道/中央动画，「UI 插件」= 原独立分类并入的 UiPluginsSection：总开关/插件卡/槽位指派，设计稿 .local/design/ux/appearance-ui-plugins）/ **SkillsPanel**（Tools & Skills：lazy capability/tool schema footprint/最近调用 + 完整 Skill catalog） / **McpPanel**（SDK 0.84 无 MCP，占位）/ **ExtensionsPanel** + `extensions/`（目录浏览/安装/卸载，subagent 包安装两段式确认）/ **UiPluginsSection**（挂在 AppearancePanel 的 UI 插件 Tab 下） / **LanObserverPanel** / **AboutPanel** / `providers/`（ProvidersPanel + ProviderRow 操作全图标化 / LoginDialog（交互登录对话框：OAuth + api_key 交互流）/ CustomProviderForm + ModelRowsEditor（逐模型行编辑器）/ BuiltinProviderEditForm（内置端点覆写）/ SubagentPanel（子代理模型偏好）+ `model-rows` 纯函数） |
 | `projects/` | ProjectPage / SearchBar（日常选中时占位词取「日常」）/ ProjectSidebar（内置「日常」空间钉顶条目：canvas 底 + 细边框 + 咖啡 glyph，无删除钮）/ SessionPanel（新会话 = createDraftSession）/ SessionRow（hover 出诊断复制/删除）/ `date-groups` / ProjectBranchPicker（仅 draft 态渲染——真实会话项目绑死不可改；日常 draft 隐藏分支选择器，chip 显示「日常」）/ `diagnostics`（buildDiagnosticsText 纯文本） |
 | `ui/` | Button（ghost/primary × sm/md × danger）/ Dropdown / Switch（统一受控开关，支持 indeterminate）/ **Tooltip**（自定义悬浮提示，新增提示一律用它不用原生 title；右缘元素传 `align="end"` 防幻影横向滚动条） |
 | `icons/` | 内联 SVG 集中管理；`icons.test.ts` 校验所有 path `d` 语法（防残缺数据被 Chromium 丢弃） |
@@ -228,7 +231,8 @@ src/
 | 左侧会话轨道 | `session/SessionRail.tsx` + `stores/ui-preferences.ts`（开关持久化）+ `session-status.ts`（状态逻辑与顶栏共用）；逐帧截图 `scripts/shoot-rail.mjs` |
 | 权限审批面板 | `backend/src/permissions/gate.ts`（队列）+ `session/ApprovalDock.tsx`（快捷键 Enter/A/D/Esc；await 成功才移除） |
 | 会话权限模式（默认/完全访问） | 后端：`pi-backend.ts`（`permissionModes` map 内存态 + `get/setSessionPermissionMode`）+ `permissions/extension.ts`（fullAccess 审计分支）+ `permissions/audit.ts`；IPC：`PermissionGetMode/SetMode`；前端：`composer/PermissionPicker.tsx`（chip）+ `stores/sessions.ts`（`permissionModes` map，draft 态转正在 ensureSession 应用）+ `use-composer-send.ts`。模式不落盘、不跨会话继承、重启归零（spec permission-mode D1） |
-| 逐工具权限规则 | `backend/src/permissions/`（求值链在 extension.ts：deny → 临时区 → 多根边界读写分离 → 项目记忆 → ask）+ `project/workspace-store.ts`；enabled=false 只能手改 permissions.json（UI 无入口的逃生舱）；设置页工作区根管理 UI 未实现，手改 workspaces.json |
+| 逐工具权限规则 | `backend/src/permissions/`（求值链在 extension.ts：deny → 临时区 → 多根边界读写分离 → 项目记忆 → ask）+ `project/workspace-store.ts`；enabled=false 只能手改 permissions.json（UI 无入口的逃生舱，设置页只出横幅）；设置页工作区根管理 UI 未实现，手改 workspaces.json |
+| 权限设置页（设置 → 权限，编辑全局 permissions.json） | backend `permissions/settings.ts` + `config.ts`（`parseConfig` 显式布尔 / `serializeConfig` / `validateConfig`）；IPC `permissionSettings:*`（`main/ipc/permissions.ts`）；renderer `settings/PermissionsPanel.tsx` + `PatternTable.tsx` + `permissions-model.ts` + `stores/permissions.ts`；文档 [permissions-settings.md](permissions-settings.md)；冒烟 `scripts/check-permissions-ui.mjs` |
 | 项目信任 | backend `project/trust.ts` + `trust-loader.ts`；触发点 `stores/sessions.ts`（createDraftSession/setDraftCwd）与 `stores/projects.ts`（addProject）；弹窗 `session/TrustDialog.tsx` |
 | 日常空间（非项目闲聊维度） | main `daily.ts`（目录）+ IPC `app:getDailyDir` → renderer `lib/daily.ts`（缓存/判定）；侧栏钉顶条目 `projects/ProjectSidebar.tsx`（选中后 selectedCwd=dailyDir，右栏/搜索/新会话全复用）；隔离 = `stores/projects.ts` deriveProjects 过滤 + deleteProject 守卫（有 projects.test.ts）；空态 chip `ProjectBranchPicker.tsx`（下拉钉顶「日常」项，draft 日常 ↔ 项目双向切换）；胶囊/轨道咖啡头像 `SessionTabBar.tsx`/`SessionRail.tsx`（余态白底黑字，状态色优先）；设计稿 `.local/design/ux/daily-space/` |
 | 会话分叉 / 撤回 | backend `forkSession`/`recallMessage`（目标解析在 session/messages.ts；**agent 运行或压缩期间均拒绝**）；renderer `stores/sessions.ts`（fork 新 tab 打开并返回新 sessionId；recall 草稿回填 + COMPOSER_FOCUS_EVENT）+ `chat/message-actions.tsx`（ForkButton 挂轮次末段正文/RecallButton 挂用户气泡，运行/压缩期间禁用） |
