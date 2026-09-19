@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Acquire pinned upstream skill DATA; never run upstream installers, hooks or scripts.
-Python 3.10+. Default packs: Nature + license-filtered Scientific. ARS acquisition requires explicit permission; the release profile includes all three.
+Python 3.10+. Default packs: Nature + license-filtered Scientific. ARS acquisition requires an explicit license
+acknowledgment (the CC BY-NC 4.0 NonCommercial grant, or a separately held permission); the release profile includes all three.
 """
 import argparse
 import hashlib
@@ -44,8 +45,9 @@ def verify(source, destination, acknowledge=False, for_release=False):
         raise ValueError(f"{source['id']}: missing or stale skill receipt; run skills:sync")
     if source['id'] == 'academic' and (receipt.get('layout') != 'pi-complete-v1' or receipt.get('licenseAuthorization') not in ('noncommercial', 'separate-permission')):
         raise ValueError('ARS Pi layout or license authorization missing')
-    if for_release and source['id'] == 'academic' and receipt.get('licenseAuthorization') != 'separate-permission':
-        raise ValueError('ARS release requires separately held redistribution permission; a noncommercial/local acknowledgment is insufficient')
+    # Release basis for ARS is the explicit, recorded licenseAuthorization checked above: 'noncommercial'
+    # (the CC BY-NC 4.0 grant to reproduce and Share for NonCommercial purposes; Drone is distributed free of
+    # charge for noncommercial use and recipients are bound by the same terms) or 'separate-permission'.
     hashes = receipt.get('files', {})
     for item in expected:
         if item['path'] not in hashes:
@@ -171,10 +173,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sources', nargs='+', choices=['nature', 'scientific', 'academic'], default=['nature', 'scientific'])
     authorization = parser.add_mutually_exclusive_group()
-    authorization.add_argument('--acknowledge-noncommercial', action='store_true')
-    authorization.add_argument('--acknowledge-commercial-permission', action='store_true', help='Attest that separate permission already covers this local use; not a redistribution authorization')
+    authorization.add_argument('--acknowledge-noncommercial', action='store_true', help='Acknowledge the ARS CC BY-NC 4.0 NonCommercial terms; also the release basis (noncommercial distribution only, recipients are bound by the same terms)')
+    authorization.add_argument('--acknowledge-commercial-permission', action='store_true', help='Record that a separately held permission from the upstream author covers this use instead of the noncommercial grant; this flag grants no license')
     parser.add_argument('--check', action='store_true', help='Offline checksum validation; no downloads or writes')
-    parser.add_argument('--for-release', action='store_true', help='Verify all release sources; require separate ARS permission. This does not grant rights.')
+    parser.add_argument('--for-release', action='store_true', help='Verify all release sources; ARS must carry an explicit license basis (noncommercial or separate-permission). This does not grant rights.')
     args = parser.parse_args()
     if args.for_release and (not args.check or set(args.sources) != {'nature', 'scientific', 'academic'}):
         parser.error('--for-release requires --check --sources nature scientific academic')
@@ -184,7 +186,11 @@ def main():
             continue
         if args.check:
             count, files = verify(source, DEST, args.acknowledge_noncommercial, args.for_release)
-            print(f"{source['id']}: OK ({count} skills, {files} files)")
+            basis = ''
+            if source['id'] == 'academic':
+                receipt = json.loads((DEST / source['id'] / '.drone-pack.json').read_text(encoding='utf-8'))
+                basis = f"; license basis: {receipt.get('licenseAuthorization')}"
+            print(f"{source['id']}: OK ({count} skills, {files} files{basis})")
         else:
             install(source, DEST, args.acknowledge_noncommercial, args.acknowledge_commercial_permission)
 

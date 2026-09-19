@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Release builds ship the Academic Research Skills pack under its own CC BY-NC 4.0 NonCommercial grant: the Release workflow acquires the three pinned packs before packaging and records `licenseAuthorization: noncommercial` for ARS, and the release preflight accepts that basis instead of demanding a separately held permission the project does not hold. Drone is distributed free of charge for noncommercial use; recipients are bound by the same ARS terms (README notice, `docs/research-skill-packs.md`).
+
 ## 0.10.5 — 2026-09-19
 
 - Replaced the hardcoded tool / skill / acceptance tables in the core with five extension-declared hooks (`docs/extension-hooks.md`): a tool manifest declared once in `registerTool(pi, { …, drone })` (read-only, library mode, recovery-safe, capabilities, subagent exclusion, host activity text, receipt journal, flow cards, tool families), milestone acceptance verifiers registered by extensions (`file` / `human_review` stay in core; `zotero_item` and `wiki_review` moved to their extensions), a generic KnowledgeFlow `cards[]` shape rendered by one `FlowCards` component, UI slots and regions (`panel.artifacts.card`, `panel.task.milestone-evidence`, `panel.tab`, `rail.view`) plus `DroneUI.openExternal` / `useKnowledgeStore` / `i18n.registerMessages`, and a SKILL.md `alwaysWith` frontmatter that pins a skill to capabilities. A new domain now needs zero core changes.
