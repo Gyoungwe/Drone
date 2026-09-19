@@ -8,13 +8,13 @@ import {
 	getSkillCategory,
 	parseExpandedSkillInvocation,
 	researchSkillProfile,
+	workflowProfile,
 } from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import {
 	changesResearchWorkflow,
 	detectResearchIntent,
 	EMPTY_RESEARCH_INTENT,
-	isResearchWorkflowSkill,
 	mergeResearchIntent,
 	normalizeResearchIntent,
 	type ResearchSkillIntent,
@@ -142,7 +142,8 @@ function skillMatches(
 	selectedResearch: ReadonlySet<string>,
 ): boolean {
 	if (forced.has(name)) return true;
-	if (researchSkillProfile(name)) return selectedResearch.has(name);
+	if (workflowProfile(name) && !["research-vault", "research-workflow", "zotero-literature"].includes(name))
+		return selectedResearch.has(name);
 	const category = getSkillCategory(name);
 	if (category === "knowledge") return capabilities.has("knowledge") || capabilities.has("research");
 	if (category === "research" || category === "writing") return capabilities.has("research");
@@ -237,6 +238,14 @@ export class CapabilityRuntime {
 		if (!academicEnabled && this.academicManaged) this.clearAcademicSelection();
 		return this.apply();
 	}
+	getWorkflowSelection() {
+		return selectResearchSkills(
+			this.session ? allSkillsFromLoader(this.session.resourceLoader).skills : [],
+			this.active,
+			this.researchIntent,
+			{ academicEnabled: this.academicEnabled },
+		);
+	}
 	isResearchComparison(): boolean {
 		return this.researchIntent.comparison === true;
 	}
@@ -257,7 +266,9 @@ export class CapabilityRuntime {
 		}
 		const incomingResearch = detectResearchIntent(text);
 		if (changesResearchWorkflow(incomingResearch)) {
-			for (const name of this.forcedSkills) if (isResearchWorkflowSkill(name)) this.forcedSkills.delete(name);
+			for (const name of this.forcedSkills)
+				if (workflowProfile(name) && workflowProfile(name)?.direction !== "internal")
+					this.forcedSkills.delete(name);
 		}
 		this.researchIntent = mergeResearchIntent(this.researchIntent, incomingResearch);
 		for (const id of detected) this.active.add(id);
@@ -270,7 +281,8 @@ export class CapabilityRuntime {
 			const incoming = detectResearchIntent(task);
 			if (changesResearchWorkflow(incoming))
 				for (const name of this.forcedSkills)
-					if (isResearchWorkflowSkill(name)) this.forcedSkills.delete(name);
+					if (workflowProfile(name) && workflowProfile(name)?.direction !== "internal")
+						this.forcedSkills.delete(name);
 			this.researchIntent = mergeResearchIntent(this.researchIntent, incoming);
 		}
 		for (const id of capabilities) this.active.add(id);

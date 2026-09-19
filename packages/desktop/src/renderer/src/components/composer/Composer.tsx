@@ -293,6 +293,8 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 					<SlashMenu
 						commands={slash.slashCommands}
 						showSpecialized={slash.showSpecialized}
+						workflowDirection={slash.workflowDirection}
+						onBackToWorkflows={slash.backToWorkflows}
 						onToggleSpecialized={slash.toggleSpecialized}
 						query={slash.slashQuery}
 						selectedIndex={slash.slashSelected}

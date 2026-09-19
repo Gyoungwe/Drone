@@ -2,7 +2,7 @@
 
 **结论：收敛为 6 个常用入口，保留专业模块与不可拆分依赖；不要把近两百份技能拼成 6 份超长提示词。**
 
-本轮按你的选择执行：**ARS 已纳入默认发布配置；技能融合只出方案，尚未改写、隐藏或删除任何技能正文。**
+状态（2026-09-19）：**已按后续确认在 `skill-upgrade` 实现六方向导航及单阶段主流程路由；ARS 保持默认纳入发布。默认入口收拢，原名在高级视图/搜索中保留；未改写或删除上游技能正文。**
 
 ## 一、范围与数量
 
@@ -129,7 +129,7 @@
 ```
 
 - 六个入口是轻量导航/任务配置，不直接塞入所有正文。
-- 建议任务配置记录：`primaryWorkflow`、`stage`、`mode`、`specialists`、`requiredResources`、`permissionRequirements`、`outputContract`。这只是拟议的数据结构，不是当前已有 API。
+- 建议任务配置记录：`primaryWorkflow`、`stage`、`mode`、`specialists`、`requiredResources`、`permissionRequirements`、`outputContract`。这是方案中的完整目标结构；本轮实际选择器仅增加 `primaryWorkflow`、`stage`、`direction`、`contract`、`unavailableStage`，其余不是已实现的 API。
 - 保留现有“相关任务才对模型可见”的设计及自动发现预算；原生手动命令仍保持原名和明确调用语义。
 - 普通浏览默认只展示方向和当前相关选项；高级视图保留原技能、来源、状态和诊断信息。未安装或待许可条目必须标为不可用，不得把库存记录冒充可执行能力。
 - 原始上游内容保持固定版本，用项目侧适配层统一路由与交付合同。先不改写上游，避免哈希、相对路径、许可证和更新链失真。
@@ -144,7 +144,7 @@
 
 最低回归场景：普通闲聊不加载科研正文；局部润色不进十阶段；回复审稿不误开评审；Nature/ARS 审稿契约分别可见；已有 counts 不重跑测序前处理；单细胞格式/模型模块不误删；无授权不外发/付费/操作设备；Zotero/Wiki 不绕过原写入流程；阶段切换撤回旧 owner；高级原名仍可手动调用。
 
-## 七、本轮已经落地的 ARS 发布调整
+## 七、前一轮已经落地的 ARS 发布调整
 
 - `electron-builder.yml` 加入 Academic 完整资源；开发版和发布版都登记经校验的 ARS。
 - 4 个 Academic 条目的发布标记已更新；安装仍需要明确、适用的授权依据。
@@ -178,4 +178,60 @@ npm run typecheck
 
 ---
 
-**建议采纳的方案：六方向导航 + 单阶段主流程 + 专业模块按需加载 + 内部依赖原样保留。** 本轮到评估为止；确认后再实施入口及编排融合。
+## 九、当前分支实施记录（2026-09-19）
+
+### 已实现
+
+- `packages/shared/src/workflow-catalog.ts` 与 `workflow-profiles.json`：197 项来源/方向/子域映射，6 方向、40 个阶段入口；两个内部基础模块不作为独立方向。库存不等于已安装，Scientific 18 项许可待审保持不分发。
+- 后端：按当前真实 loader、能力及 ARS 模式选主流程；每阶段一个执行主流程，允许相关专业辅助模块；比较模式只做参考。阶段变化撤回旧阶段强制选项和专业模块，明确续聊可恢复有界意图检查点。
+- 模型入口：保持原 6 项/6000B 自动发现预算，仅提示当前 owner 与阶段合同，没有拼接 197 份正文。手动原生命令可选择 manual-only 技能，自动选择仍尊重禁用标记。
+- 设置页默认六方向卡片；聊天 `/` 为“方向 → 阶段”，只解析本会话真实、supported 且来源类型正确的命令。目录点击不发送消息、不执行技能；缺失阶段禁用，不伪造命令或自动替换不同审稿合同。
+- 高级视图保留原技能名、来源、分类、搜索及诊断；非受管用户技能保留。会话、目录、信任状态变化清空旧命令与目录状态，查询变化返回根目录。
+- Nature 三互盲、ARS 五席评议、普通评审、审稿回复分别保留；ARS 启用也不把普通评审改为五席。AnnData/scvi 等直接选择保持专业模块身份，不冒充 Scanpy 标准分析。
+- 原 ARS Pi wrapper/桥接、完整资源、确认模式、证据/权限工具及 LICENSE/NOTICE 保留；未改用户全局安装，未安装额外测试依赖。
+
+### 本轮验收
+
+| 检查 | 结果 |
+|---|---|
+| 后端路由、能力运行时、原 Pi 桥接与真实 SDK、阶段切换 | 80/80 通过 |
+| 桌面资源包、目录/菜单/输入/发送回归 | 42/42 通过 |
+| 共享目录与非等价合同 | 4/4 通过 |
+| 发布门禁 Python 回归 | 9/9 通过 |
+| 隔离 Electron UI | 11/11 检查通过 |
+| 三源离线发布预检与 electron-builder 实际复制 | Nature 745、Scientific 1806、Academic 2737 个源文件及回执全部通过 |
+| 全工作区 typecheck | 最终全工作区通过；中途曾被并行 `KnowledgeFlowCard.tsx` 的 `workbench.*` 翻译键阻断，未覆盖该并行修改，随后复跑已恢复通过 |
+
+126 项 Vitest 回归、9 项 Python 回归和 11 项 UI 检查分开统计。隔离 UI 使用隐藏窗口、临时 profile、真实组件/键盘事件、mock SDK 命令清单，无模型/研究 API 调用；不是生产账号或商业服务端到端验收。真实 SDK 测试使用离线 faux provider。
+
+UI 检查覆盖默认六方向、鼠标进入、ArrowDown/Enter/Tab、Esc 返回、ARS 原名、缺失互盲命令禁用、高级原名、精准搜索、中文工程技能搜索、英文/暗色/640px 无溢出、空会话清除旧命令及零执行调用。截图与 `validation.json` 留在临时目录（脚本打印路径）。旧 `check-skill-catalog-ui.mjs` 转发到新入口，避免继续使用过时的平铺列表断言。
+
+### 边界
+
+- 自然语言路由是有界关键词与显式优先级，不是完整语义规划器；复杂跨阶段任务应明确当前阶段或使用原有带确认的完整流程。
+- 新任务/具名专业模块按阶段替换处理，尚无通用“保留当前阶段并追加辅助模块”的自然语言语义判别；同一请求可明确列出主流程与辅助模块。
+- `before_agent_start` 注入阶段合同不是独立强制校验器；轮内 `capability_load` 更新可见性，新的阶段提示在下次事件生成。原权限与证据工具继续负责已有硬约束。
+- 没有增加真正互盲多代理隔离、动态第三方依赖安装或完整十阶段业务跑通；可见性不等于文件系统隔离。
+- 本轮未制作/签名/发布安装包，未重启真实应用，未执行 commit/push；资源复制验收不等于安装器验收。
+
+### 可重复验收
+
+```sh
+# 项目根目录
+npm run typecheck
+node scripts/check-workflow-catalog-ui.mjs
+python scripts/test-research-release.py
+python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
+node scripts/check-research-packaging.cjs
+
+# packages/backend
+npx vitest run test/research-skill-router.test.ts test/capability-runtime.test.ts test/academic-pi-bridge.test.ts test/academic-pi-sdk.test.mjs test/workflow-consolidation.test.ts
+
+# packages/desktop
+npx vitest run src/main/research-skill-packs.test.ts src/renderer/src/components/composer/skill-catalog.test.ts src/renderer/src/components/composer/SlashMenu.test.ts src/renderer/src/components/composer/slash-token.test.ts src/renderer/src/components/composer/use-composer-send.test.ts src/renderer/src/components/composer/workflow-menu.test.ts
+
+# packages/shared
+npx vitest run src/workflow-catalog.test.ts
+```
+
+**本轮完成的是：六方向导航 + 单阶段主流程选择/撤回 + 专业模块按需可见 + 原合同与依赖保留；不是物理删除专业能力或保证全部科研任务无人值守。**

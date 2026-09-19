@@ -1,5 +1,7 @@
 import {
 	CAPABILITY_CATALOG,
+	WORKFLOW_DIRECTIONS,
+	workflowProfile,
 	getSkillCategory,
 	groupSkillCatalog,
 	type LoadedSkill,
@@ -10,6 +12,7 @@ import {
 } from "@drone/shared";
 import { useMemo, useState } from "react";
 import { useI18nStore, useT } from "../../i18n";
+import { WorkflowOverview } from "./WorkflowOverview";
 import { useSettingsStore } from "../../stores/settings";
 
 function ScopeBadge({ scope }: { scope: ResourceScope }) {
@@ -163,6 +166,8 @@ export function SkillsPanel() {
 	const skills = useSettingsStore((s) => s.skills),
 		diagnostics = useSettingsStore((s) => s.skillDiagnostics);
 	const [query, setQuery] = useState("");
+	const [advanced, setAdvanced] = useState(false);
+	const [direction, setDirection] = useState("all");
 	const [category, setCategory] = useState<SkillCategory | "all">("all");
 	const [collapsed, setCollapsed] = useState<Set<SkillCategory>>(() => new Set(["setup", "support"]));
 	const needle = query.trim().toLocaleLowerCase();
@@ -172,13 +177,14 @@ export function SkillsPanel() {
 			(skills ?? []).filter(
 				(skill) =>
 					(category === "all" || getSkillCategory(skill.name) === category) &&
+					(direction === "all" || workflowProfile(skill.name)?.direction === direction) &&
 					(!needle ||
 						[skill.name, skill.description, skill.path, skill.source, skillCatalogSearchText(skill.name)]
 							.join(" ")
 							.toLocaleLowerCase()
 							.includes(needle)),
 			),
-		[skills, category, needle],
+		[skills, category, needle, direction],
 	);
 	const groups = useMemo(() => groupSkillCatalog(visible), [visible]);
 	const toggle = (key: SkillCategory) =>
@@ -194,87 +200,128 @@ export function SkillsPanel() {
 		);
 	return (
 		<div>
-			<ToolsOverview />
-			<h3 className="text-[13px] font-medium text-ink">{t("settings.skills.title")}</h3>
-			<p className="mt-1 text-[11px] text-ink-faint">
-				{t("skillsCatalog.count", { count: skills.length, groups: allGroups.length })}
-			</p>
-			<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{t("skillsCatalog.scopeHint")}</p>
-			{skills.some((skill) => skill.name === "research-vault") && (
-				<section className="mt-3 rounded-lg border border-border bg-hover/40 p-3">
-					<h4 className="text-[12px] font-medium text-ink">{t("skillsCatalog.owner")}</h4>
-					<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">{t("skillsCatalog.ownerHint")}</p>
-					<button
-						type="button"
-						className="mt-2 rounded px-2 py-1 text-[11px] text-accent hover:bg-hover"
-						onClick={() => useSettingsStore.getState().openWith("knowledge")}
-					>
-						{t("skillsCatalog.manage")}
-					</button>
-				</section>
-			)}
-			<div className="mt-3 flex flex-wrap gap-2">
-				<input
-					aria-label={t("skillsCatalog.search")}
-					placeholder={t("skillsCatalog.search")}
-					value={query}
-					onChange={(event) => setQuery(event.target.value)}
-					className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-[12px] text-ink outline-none focus:border-accent"
-				/>
-				<select
-					aria-label={t("skillsCatalog.all")}
-					value={category}
-					onChange={(event) => setCategory(event.target.value as SkillCategory | "all")}
-					className="max-w-full rounded-lg border border-border bg-surface px-2 text-[12px] text-ink"
-				>
-					<option value="all">{t("skillsCatalog.all")}</option>
-					{allGroups.map((group) => (
-						<option key={group.category} value={group.category}>
-							{t(`skillsCatalog.group.${group.category}`)} ({group.items.length})
-						</option>
-					))}
-				</select>
-			</div>
-			{groups.length === 0 && (
-				<p className="py-8 text-center text-[12px] text-ink-faint">{t("skillsCatalog.noMatch")}</p>
-			)}
-			{groups.map((group) => {
-				const expanded = Boolean(needle) || category !== "all" || !collapsed.has(group.category);
-				return (
-					<section
-						key={group.category}
-						className="mt-4"
-						aria-label={t(`skillsCatalog.group.${group.category}`)}
-					>
-						<button
-							type="button"
-							className="flex w-full items-center gap-2 rounded-lg bg-hover/60 px-3 py-2 text-left text-[12px] font-medium text-ink hover:bg-hover"
-							aria-expanded={expanded}
-							onClick={() => {
-								if (!needle && category === "all") toggle(group.category);
-							}}
+			<WorkflowOverview
+				skills={skills}
+				onInspect={(id) => {
+					setDirection(id);
+					setAdvanced(true);
+					setCategory("all");
+				}}
+			/>
+			<button
+				type="button"
+				className="my-3 rounded-lg border border-border px-3 py-2 text-xs text-accent hover:bg-hover"
+				aria-expanded={advanced}
+				onClick={() => {
+					setAdvanced((v) => !v);
+					setDirection("all");
+				}}
+			>
+				{t(advanced ? "workflows.compact" : "workflows.advanced", { count: skills.length })}
+			</button>
+			{advanced && (
+				<>
+					<ToolsOverview />
+					<h3 className="text-[13px] font-medium text-ink">{t("settings.skills.title")}</h3>
+					<p className="mt-1 text-[11px] text-ink-faint">
+						{t("skillsCatalog.count", { count: skills.length, groups: allGroups.length })}
+					</p>
+					<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{t("skillsCatalog.scopeHint")}</p>
+					{skills.some((skill) => skill.name === "research-vault") && (
+						<section className="mt-3 rounded-lg border border-border bg-hover/40 p-3">
+							<h4 className="text-[12px] font-medium text-ink">{t("skillsCatalog.owner")}</h4>
+							<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">{t("skillsCatalog.ownerHint")}</p>
+							<button
+								type="button"
+								className="mt-2 rounded px-2 py-1 text-[11px] text-accent hover:bg-hover"
+								onClick={() => useSettingsStore.getState().openWith("knowledge")}
+							>
+								{t("skillsCatalog.manage")}
+							</button>
+						</section>
+					)}
+					<div className="mt-3 flex flex-wrap gap-2">
+						<input
+							aria-label={t("skillsCatalog.search")}
+							placeholder={t("skillsCatalog.search")}
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-[12px] text-ink outline-none focus:border-accent"
+						/>
+						<select
+							aria-label={t("workflows.direction")}
+							value={direction}
+							onChange={(e) => setDirection(e.target.value)}
+							className="rounded-lg border border-border bg-surface px-2 text-xs text-ink"
 						>
-							<span aria-hidden>{expanded ? "▾" : "▸"}</span>
-							{t(`skillsCatalog.group.${group.category}`)}
-							<span className="ml-auto text-[11px] text-ink-faint">{group.items.length}</span>
-						</button>
-						{expanded && (
-							<>
-								{(group.category === "setup" || group.category === "support") && (
-									<p className="mt-2 px-2 text-[11px] leading-relaxed text-ink-faint">
-										{t(group.category === "setup" ? "skillsCatalog.setupHint" : "skillsCatalog.supportHint")}
-									</p>
+							<option value="all">{t("skillsCatalog.all")}</option>
+							{WORKFLOW_DIRECTIONS.map((d) => (
+								<option key={d.id} value={d.id}>
+									{d.label[useI18nStore.getState().language]}
+								</option>
+							))}
+							<option value="internal">{t("workflows.internal")}</option>
+						</select>
+						<select
+							aria-label={t("skillsCatalog.all")}
+							value={category}
+							onChange={(event) => setCategory(event.target.value as SkillCategory | "all")}
+							className="max-w-full rounded-lg border border-border bg-surface px-2 text-[12px] text-ink"
+						>
+							<option value="all">{t("skillsCatalog.all")}</option>
+							{allGroups.map((group) => (
+								<option key={group.category} value={group.category}>
+									{t(`skillsCatalog.group.${group.category}`)} ({group.items.length})
+								</option>
+							))}
+						</select>
+					</div>
+					{groups.length === 0 && (
+						<p className="py-8 text-center text-[12px] text-ink-faint">{t("skillsCatalog.noMatch")}</p>
+					)}
+					{groups.map((group) => {
+						const expanded = Boolean(needle) || category !== "all" || !collapsed.has(group.category);
+						return (
+							<section
+								key={group.category}
+								className="mt-4"
+								aria-label={t(`skillsCatalog.group.${group.category}`)}
+							>
+								<button
+									type="button"
+									className="flex w-full items-center gap-2 rounded-lg bg-hover/60 px-3 py-2 text-left text-[12px] font-medium text-ink hover:bg-hover"
+									aria-expanded={expanded}
+									onClick={() => {
+										if (!needle && category === "all") toggle(group.category);
+									}}
+								>
+									<span aria-hidden>{expanded ? "▾" : "▸"}</span>
+									{t(`skillsCatalog.group.${group.category}`)}
+									<span className="ml-auto text-[11px] text-ink-faint">{group.items.length}</span>
+								</button>
+								{expanded && (
+									<>
+										{(group.category === "setup" || group.category === "support") && (
+											<p className="mt-2 px-2 text-[11px] leading-relaxed text-ink-faint">
+												{t(
+													group.category === "setup"
+														? "skillsCatalog.setupHint"
+														: "skillsCatalog.supportHint",
+												)}
+											</p>
+										)}
+										<ul className="divide-y divide-border px-2">
+											{group.items.map((skill) => (
+												<SkillRow key={skill.path} skill={skill} />
+											))}
+										</ul>
+									</>
 								)}
-								<ul className="divide-y divide-border px-2">
-									{group.items.map((skill) => (
-										<SkillRow key={skill.path} skill={skill} />
-									))}
-								</ul>
-							</>
-						)}
-					</section>
-				);
-			})}
+							</section>
+						);
+					})}
+				</>
+			)}
 			{diagnostics.length > 0 && (
 				<section className="mt-4">
 					<h4 className="text-[11px] font-medium text-ink-2">{t("settings.skills.diagnostics")}</h4>

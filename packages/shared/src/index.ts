@@ -45,3 +45,5 @@ export * from "./ui-plugins";
 export * from "./update";
 export * from "./usage-display";
 export * from "./zotero";
+
+export * from "./workflow-catalog";
