@@ -2,9 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { readKnowledgeBinding } from "../knowledge/config.mjs";
-import { currentProject } from "../knowledge/extension-helpers.mjs";
-import { getKnowledgeService } from "../knowledge/service.mjs";
-import { previewWikiProposal } from "../knowledge/wiki-review.mjs";
+import { acceptanceSchema } from "./acceptance.mjs";
 import { createTaskAuthorization } from "./ask-authorization.mjs";
 import { resolveWriteRoots } from "./consent.mjs";
 import { createEvidenceRecovery } from "./evidence.mjs";
@@ -21,7 +19,6 @@ import { singleFlightCommand } from "./single-flight.mjs";
 import { restoreTaskToolOrder } from "./tool-protocol.mjs";
 import { shouldAskToContinue } from "./turn-end-prompt.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
-import { createCompositeZoteroReconciler } from "./zotero-reconcile.mjs";
 
 export function registerWorkbench(pi) {
 	let context,
@@ -70,16 +67,7 @@ export function registerWorkbench(pi) {
 		requireAuthorization: true,
 		persist: (snapshot) => pi.appendEntry(WORKBENCH_ENTRY, snapshot),
 		onCheckpoint: () => send(),
-		getZoteroStatus: createCompositeZoteroReconciler(),
-		getWikiStatus: async (id) => {
-			try {
-				const service = await getKnowledgeService();
-				const p = await previewWikiProposal(service, id, await currentProject(context.cwd));
-				return { status: p.status, path: p.path, stale: p.sources.some((s) => s.changed) };
-			} catch {
-				return null;
-			}
-		},
+		// 里程碑验收器（zotero_item / wiki_review / …）由各自的扩展 registerAcceptanceVerifier 登记（挂钩 2）
 		inspect,
 	});
 	const askAuthorization = createTaskAuthorization(journal, () => bindingKey());
@@ -455,19 +443,8 @@ export function registerWorkbench(pi) {
 						id: str,
 						title: str,
 						dependsOn: { type: "array", maxItems: 24, items: str },
-						acceptance: {
-							type: "object",
-							properties: {
-								kind: { type: "string", enum: ["file", "human_review", "wiki_review", "zotero_item"] },
-								path: str,
-								doi: str,
-								libraryId: str,
-								collection: str,
-								sha256: str,
-							},
-							required: ["kind"],
-							additionalProperties: false,
-						},
+						// kind 枚举与扩展字段是活引用：后加载的扩展登记的验收种类也会出现在模型看到的 schema 里
+						acceptance: acceptanceSchema(),
 					},
 					required: ["id", "title", "acceptance"],
 					additionalProperties: false,

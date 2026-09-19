@@ -1,4 +1,5 @@
 import { relative, resolve, sep } from "node:path";
+import { registerTool } from "../lib/tool-manifest.mjs";
 import { loadWorkspaceConfig } from "./workspace-config.mjs";
 
 export const MAX_CONCURRENT_SUBAGENTS = 3;
@@ -23,9 +24,10 @@ function isRunDirectory(resultsRoot, candidate) {
 
 export function registerResearchSubagents(pi, options = {}) {
 	const baseCwd = options.cwd ? resolve(options.cwd) : process.cwd();
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_subagent_policy",
 		label: "Research subagent policy",
+		drone: { readOnly: true, capabilities: ["research"] },
 		description: "Show the scientific subagent role map and validate an analyst run directory.",
 		parameters: {
 			type: "object",

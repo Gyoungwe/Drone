@@ -116,6 +116,7 @@ import {
 	reportEvapBatch,
 	writeContextManagerMode,
 } from "./tools/context-evaporation";
+import { globalToolManifest } from "./tools/manifest";
 import { makeShowImageTool } from "./tools/show-image";
 import { makeSshTool } from "./tools/ssh";
 import { makeStatusTool } from "./tools/status";
@@ -387,6 +388,14 @@ export class PiBackend {
 		if (event.type === "session_info_changed") log.info("session renamed", sessionId, { name: event.name });
 		// message_update 携带全量快照（partial + message），平方放大事故源头，先瘦身再分发
 		if (event.type === "message_update") event = slimMessageUpdate(event);
+		// 宿主状态条：按工具清单（drone.activity）盖章，reducer / 子代理 / 回放共用同一份声明（挂钩 1）
+		if (event.type === "tool_execution_start" && !event.hostActivity) {
+			const activity = (this.capabilityRuntimes.get(sessionId)?.tools ?? globalToolManifest).activity(
+				event.toolName,
+				event.args,
+			);
+			if (activity) event = { ...event, hostActivity: { text: activity.text, phase: activity.phase } };
+		}
 		// toolResult 大结果四份快照重复携带（0.5.2 白屏事故降压层）：image base64 剥除 + 超长 text 截断
 		event = slimBulkyEvent(event);
 		// 流式熔断：病态输出（空白洪流/超量）trip 后 abort 会话，并丢弃后续增量（trace 与转发同步止血）

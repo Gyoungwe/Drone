@@ -1,4 +1,6 @@
 import { useT } from "../../i18n";
+import { usePluginEntries } from "../../plugins/PluginRegions";
+import { UI_REGIONS } from "../../plugins/slots";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
@@ -9,6 +11,7 @@ import {
 	HelpIcon,
 	ObsidianIcon,
 	ProjectsIcon,
+	PuzzleIcon,
 	SearchIcon,
 	SubagentIcon,
 } from "../icons";
@@ -38,6 +41,8 @@ export function WorkbenchNav() {
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
 	const closeKnowledge = useKnowledgeStore((s) => s.close);
 	const openKnowledge = useKnowledgeStore((s) => s.open);
+	// 插件贡献的全屏视图（rail.view 区域，挂钩 4）
+	const pluginViews = usePluginEntries(UI_REGIONS.RailView);
 
 	const select = (key: NavKey) => {
 		if (key === "extensions") {
@@ -66,6 +71,23 @@ export function WorkbenchNav() {
 					>
 						<Icon size={17} />
 						<span>{t(`workbench.nav.${label}`)}</span>
+					</button>
+				))}
+				{pluginViews.map((entry) => (
+					<button
+						key={entry.id}
+						type="button"
+						className={`workbench-nav-item${view === entry.id ? " is-active" : ""}`}
+						onClick={() => {
+							closeKnowledge();
+							setView(entry.id as AppView);
+						}}
+						aria-current={view === entry.id ? "page" : undefined}
+						title={entry.title}
+						data-plugin={entry.pluginName}
+					>
+						<PuzzleIcon size={17} />
+						<span>{entry.title}</span>
 					</button>
 				))}
 			</nav>

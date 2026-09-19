@@ -1,5 +1,7 @@
 // Uses the same desktop AskGate/AskDialog as ask_user, without a model request.
 // Only an exact host-owned choice can authorize the displayed immutable revision.
+import { describeAcceptance } from "./acceptance.mjs";
+
 export function createTaskAuthorization(journal, checkBinding = async () => null) {
 	const pending = new Map();
 	return async function ask(input, ctx, signal = ctx.signal) {
@@ -39,14 +41,8 @@ export function createTaskAuthorization(journal, checkBinding = async () => null
 					: input.action === "confirm-outcome"
 						? "ask_user · 确认这一步的结果"
 						: "ask_user · 开始执行这个任务？";
-			const acceptanceLabel = (m) =>
-				m.acceptance.kind === "file"
-					? `生成文件 ${m.acceptance.path || ""}`.trim()
-					: m.acceptance.kind === "zotero_item"
-						? `文献进入 Zotero${m.acceptance.doi ? `（${m.acceptance.doi}）` : ""}`
-						: m.acceptance.kind === "wiki_review"
-							? "Wiki 更新经你在审阅页确认"
-							: "由你亲自确认完成";
+			// 验收标准文案：核心 file / human_review + 扩展登记的验收器 label（挂钩 2）
+			const acceptanceLabel = (m) => describeAcceptance(m.acceptance);
 			const details = [
 				`要做的事：${task.goal}`,
 				action ? `${action.title}\n${action.reason}` : task.authorizationSummary || task.goal,

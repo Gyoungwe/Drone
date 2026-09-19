@@ -4,7 +4,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, expect, it, vi } from "vitest";
 import { TaskRow } from "./TaskRow";
 
-vi.mock("../../i18n", () => ({ useT: () => (key: string) => key }));
+vi.mock("../../i18n", () => ({
+	useT: () => (key: string) => key,
+	useI18nStore: (selector: (s: { language: string }) => unknown) => selector({ language: "zh" }),
+	translateOptional: () => null,
+}));
 vi.stubGlobal("React", React);
 afterAll(() => vi.unstubAllGlobals());
 const task = {
@@ -58,4 +62,24 @@ it("running agent withholds the quick-action entry instead of offering a retry",
 	// Withholding the entry is stronger than rendering it disabled.
 	expect(html).not.toContain("继续做剩下的");
 	expect(html).toContain("任务仍在执行");
+});
+it("extension acceptance kinds render the verifier's evidence summary through the milestone slot", () => {
+	const html = render({
+		...task,
+		milestones: [
+			{
+				id: "z",
+				title: "Z",
+				state: "pending",
+				dependsOn: [],
+				acceptance: { kind: "zotero_item", doi: "10.1000/xyz" },
+				evidence: { state: "missing", summary: "Zotero 中未找到", note: "先运行 /zotero-setup" },
+			},
+		],
+	} as unknown as WorkbenchTask);
+	expect(html).toContain("Zotero 中未找到");
+	expect(html).toContain("先运行 /zotero-setup");
+	expect(html).toContain("10.1000/xyz");
+	// 核心种类没有扩展证据行
+	expect(render()).not.toContain("Zotero 中未找到");
 });

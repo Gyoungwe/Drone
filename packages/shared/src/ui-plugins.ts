@@ -7,7 +7,14 @@
  * 已知槽位名（main 进程校验 manifest.slots 用）。
  * 与 renderer 的 plugins/slots.ts 对齐（registry.test.ts 有断言），两处不可漂移。
  */
-export const KNOWN_UI_SLOTS: string[] = ["chat.tool-call-card", "chat.subagent-card", "chat.todo-panel"];
+export const KNOWN_UI_SLOTS: string[] = [
+	"chat.tool-call-card",
+	"chat.subagent-card",
+	"chat.todo-panel",
+	// 挂钩 4：产物页签的通用回执卡 / 任务卡里程碑证据行（扩展可换成领域专用渲染）
+	"panel.artifacts.card",
+	"panel.task.milestone-evidence",
+];
 
 /**
  * 已知区域名（main 进程校验 manifest.contributions 用；spec §15）。
@@ -22,6 +29,9 @@ export const KNOWN_UI_REGIONS: string[] = [
 	"chat.corner.bottom-right",
 	"chat.diff-sidebar",
 	"settings.panel",
+	// 挂钩 4：右侧面板新增页签 / 左侧导航新增全屏视图（贡献 = 一个页签 / 一个视图，title 作标签）
+	"panel.tab",
+	"rail.view",
 ];
 
 /** app.overlay 的九宫格锚点枚举（spec §16） */

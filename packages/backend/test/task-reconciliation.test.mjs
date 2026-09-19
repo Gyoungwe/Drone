@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it, vi } from "vitest";
 import { createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
-import { createZoteroReconciler } from "../../../.pi/lib/tasks/zotero-reconcile.mjs";
+import { createZoteroReconciler } from "../../../.pi/lib/zotero-reconcile.mjs";
 
 vi.setConfig({ testTimeout: 30000 });
 function pdf(text) {

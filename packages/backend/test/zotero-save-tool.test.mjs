@@ -2,12 +2,13 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import sourceArchive from "../../../.pi/extensions/source-archive.mjs";
 import { saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
 import zoteroLiterature from "../../../.pi/extensions/zotero-literature.mjs";
 import { beginKnowledgeFlow, flowFor, noteKnowledgeOperation } from "../../../.pi/lib/knowledge/ui-state.mjs";
 import { startResearchRun } from "../../../.pi/lib/research-loop.mjs";
 import { createTaskWorkbench, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
-import { detectCapabilities, READ_ONLY_LIBRARY_TOOLS, toolCapabilities } from "../src/capabilities/runtime";
+import { detectCapabilities, isReadOnlyLibraryTool, toolCapabilities } from "../src/capabilities/runtime";
 
 const DOI = "10.1234/example.2024";
 const ITEM = {
@@ -22,6 +23,7 @@ function fakePi() {
 	return {
 		registerTool: (tool) => tools.set(tool.name, tool),
 		registerCommand: () => {},
+		on: () => {},
 		events: {
 			on: (name, fn) => listeners.set(name, fn),
 			emit: async (name, payload) => {
@@ -103,7 +105,9 @@ const run = (ctx, extra) =>
 it("registers a write tool that is neither read-only nor available to subagents", () => {
 	zoteroLiterature(fakePi());
 	expect(tools.has("research_zotero_save")).toBe(true);
-	expect(READ_ONLY_LIBRARY_TOOLS.has("research_zotero_save")).toBe(false);
+	// 只读文献模式 / 能力路由都读 registerTool 的 drone 声明（挂钩 1），核心没有名字表
+	expect(isReadOnlyLibraryTool("research_zotero_save")).toBe(false);
+	expect(isReadOnlyLibraryTool("research_zotero_status")).toBe(true);
 	expect(toolCapabilities("research_zotero_save")).toEqual(["research", "external"]);
 	expect(detectCapabilities("请把这篇论文存进 Zotero 文献库")).toEqual(
 		expect.arrayContaining(["research", "external"]),
@@ -171,7 +175,10 @@ it("an authorized task plan naming the DOI as a zotero_item milestone covers the
 		journal.command({ taskId: journal.snapshot().id, revision: journal.view().revision, action });
 	act("authorize-task");
 	const grant = journal.authorization(true);
-	expect(grant.zoteroItems).toEqual([{ milestoneId: "lit", doi: DOI, libraryId: null, collection: null }]);
+	// 通用里程碑验收清单（挂钩 2）：zotero_item 由扩展登记的验收器贡献 DOI 条目
+	expect(grant.acceptances).toEqual([
+		{ milestoneId: "lit", kind: "zotero_item", doi: DOI, libraryId: null, collection: null },
+	]);
 	pi.events.on("drone:task-write-consent", (request) => {
 		if (request.cwd === cwd && request.sessionId === "session-z")
 			request.respond(journal.authorization(true));
@@ -204,7 +211,9 @@ it("headless sessions cannot write without task consent; existing items are reus
 	});
 	expect(saves).toBe(0);
 });
-it("the context panel receives one merged literature receipt per DOI", async () => {
+it("the context panel receives one merged literature card per DOI", async () => {
+	zoteroLiterature(fakePi());
+	sourceArchive(fakePi());
 	const ctx = { sessionManager: { getSessionId: () => "session-ui" } };
 	beginKnowledgeFlow(ctx, { vaultId: "v", revision: 3, vault: "/vault" });
 	noteKnowledgeOperation(ctx, {
@@ -222,15 +231,20 @@ it("the context panel receives one merged literature receipt per DOI", async () 
 			},
 		},
 	});
-	expect(flowFor("session-ui").literature).toEqual([
+	const field = (label) => flowFor("session-ui").cards[0].fields.find((f) => f.label === label);
+	expect(flowFor("session-ui").cards).toEqual([
 		expect.objectContaining({
-			doi: DOI,
-			zotero: "verified",
-			zoteroKey: "ABCD1234",
-			obsidian: "unknown",
-			source: "zotero-save",
+			key: `doi:${DOI}`,
+			kind: "literature",
+			title: "Example",
+			subtitle: `DOI ${DOI}`,
+			status: "saved",
+			source: "research_zotero_save",
 		}),
 	]);
+	expect(field("Zotero")).toMatchObject({ value: "verified", code: "ABCD1234", note: "连接器 · My Library" });
+	expect(field("Vault 笔记")).toMatchObject({ value: "unknown", i18n: "flow.field.vaultNote" });
+	expect(field("全文")).toMatchObject({ value: "metadata-only" });
 	noteKnowledgeOperation(ctx, {
 		toolName: "research_verify_literature",
 		toolCallId: "b",
@@ -244,22 +258,29 @@ it("the context panel receives one merged literature receipt per DOI", async () 
 			},
 		},
 	});
-	const rows = flowFor("session-ui").literature;
-	expect(rows).toHaveLength(1);
-	expect(rows[0]).toMatchObject({
-		zotero: "verified",
-		obsidian: "verified",
-		notePath: "Library/Papers/example.md",
-		fulltextStatus: "attachment-indexed-not-read",
-		channel: "connector",
-		library: "My Library",
-		source: "verify",
+	const cards = flowFor("session-ui").cards;
+	expect(cards).toHaveLength(1);
+	expect(cards[0]).toMatchObject({
+		title: "Example",
+		status: "both-verified",
+		path: "Library/Papers/example.md",
+		source: "research_verify_literature",
 	});
+	// 后来的核对不会抹掉已知事实（渠道 / 库名），但会补上笔记路径与全文状态
+	expect(field("Zotero")).toMatchObject({ value: "verified", code: "ABCD1234", note: "连接器 · My Library" });
+	expect(field("Vault 笔记")).toMatchObject({ value: "verified", code: "Library/Papers/example.md" });
+	expect(field("全文")).toMatchObject({ value: "attachment-indexed-not-read" });
+	expect(cards[0].links.map((link) => link.kind).sort()).toEqual(["external", "note", "resource"]);
 	noteKnowledgeOperation(ctx, {
 		toolName: "research_zotero_save",
 		toolCallId: "c",
 		isError: true,
 		result: {},
 	});
-	expect(flowFor("session-ui").literature).toHaveLength(1);
+	const after = flowFor("session-ui").cards;
+	expect(after.filter((card) => card.kind === "literature")).toHaveLength(1);
+	expect(after.find((card) => card.kind === "failure")).toMatchObject({
+		status: "failed",
+		source: "research_zotero_save",
+	});
 });

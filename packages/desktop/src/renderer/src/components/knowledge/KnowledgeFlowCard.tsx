@@ -36,7 +36,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 	const transcript = useTranscriptStore((s) => selectTranscript(s, sessionId));
 	const latest = [...transcript.messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
 	const artifacts = mergeKnowledgeArtifacts(
-		flow?.artifacts || [],
+		flow?.cards || [],
 		latest?.kind === "assistant" ? latest.taskView?.tasks || [] : [],
 		cwd || "",
 	);
@@ -256,7 +256,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 												size="sm"
 												onClick={() => {
 													if (/^(Wiki|Library|Projects|Inbox|Indexes)\//.test(item.path || ""))
-														setPath(item.path);
+														setPath(item.path ?? null);
 													else
 														useUiStore.getState().openResourcePreview({
 															href: item.path || "",

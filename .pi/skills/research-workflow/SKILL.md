@@ -1,6 +1,7 @@
 ---
 name: research-workflow
 description: "Bounded personal research workflow for Drone: local knowledge first, Web fallback, evidence verification, and parent-session-only knowledge writes."
+alwaysWith: research
 ---
 
 # Research Workflow

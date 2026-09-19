@@ -1,5 +1,6 @@
 import { knowledgeDirectory, readKnowledgeBinding } from "../lib/knowledge/config.mjs";
 import { registerKnowledgeInterface } from "../lib/knowledge/extension.mjs";
+import { cardLink, flowCard } from "../lib/knowledge/flow-cards.mjs";
 import {
 	inspectObsidianSetup,
 	OBSIDIAN_SETUP_BINDING,
@@ -14,6 +15,46 @@ import {
 	researchSetupOptions,
 } from "../lib/obsidian-workbench.mjs";
 import { USER_QUESTION_FOCUS } from "../lib/reply-focus.mjs";
+import { registerTool } from "../lib/tool-manifest.mjs";
+
+/** MCP 代理工具 research-obsidian_*（含子代理只读通道）的状态条 / 动作文案。 */
+const OBSIDIAN_FAMILY = {
+	match: "research-obsidian",
+	label: "Obsidian",
+	readOnly: true,
+	capabilities: ["research", "knowledge"],
+	activity: {
+		text: "正在搜索 Obsidian 知识库…",
+		phase: "knowledge-search",
+		verb: "正在检索 Obsidian",
+		queryKeys: ["query", "q", "search", "text", "path"],
+	},
+};
+function setupCard(event) {
+	const d = event.result?.details || {};
+	return flowCard({
+		key: event.toolCallId,
+		kind: "setup",
+		title: "Obsidian setup",
+		status: d.cancelled ? "cancelled" : d.state === "ready" ? "setup-complete" : "failed",
+		path: d.vault,
+		detail: "Global binding and missing structure only.",
+		source: event.toolName,
+	});
+}
+function depositCard(event) {
+	const d = event.result?.details || {};
+	return flowCard({
+		key: d.note || event.toolCallId,
+		kind: "note",
+		title: d.type || event.toolName,
+		status: d.note ? "note-written" : "failed",
+		path: d.note,
+		detail: d.scope,
+		links: [d.note ? cardLink("note", d.note, "打开笔记", "flow.link.openNote") : null],
+		source: event.toolName,
+	});
+}
 
 async function startSetup(pi, args, ctx) {
 	if (!ctx.hasUI) throw new Error("Obsidian MCP /obsidian-setup requires an interactive desktop UI");
@@ -53,9 +94,10 @@ export default function obsidianWorkbench(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
 	const knowledge = registerKnowledgeInterface(pi);
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_setup_options",
 		label: "Obsidian MCP · research-vault setup options",
+		drone: { readOnly: true, capabilities: ["research", "knowledge"], families: [OBSIDIAN_FAMILY] },
 		description:
 			"Read-only setup discovery: return the actual session workspace and optional Vault directory overview, current settings, built-in profiles, deposition modes and subagent MCP policies. Does not write or read file contents.",
 		parameters: {
@@ -78,9 +120,16 @@ export default function obsidianWorkbench(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_setup_obsidian",
 		label: "Obsidian MCP · apply research-vault setup",
+		drone: {
+			capabilities: ["research", "knowledge"],
+			subagent: "exclude",
+			activity: { text: "正在配置 Obsidian 知识库…", phase: "setup" },
+			flow: "setup",
+			flowCards: setupCard,
+		},
 		description:
 			"Initialize/bind an independent Obsidian vault, select a built-in knowledge profile, configure controlled deposition, and make research-obsidian retrieval-only. Parent session only. Reload after setup.",
 		parameters: {
@@ -156,9 +205,10 @@ export default function obsidianWorkbench(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_create_project",
 		label: "Create research project",
+		drone: { capabilities: ["research", "knowledge"], subagent: "exclude" },
 		description:
 			"Create a project using the configured knowledge profile and update project indexes. Existing projects and human edits are preserved.",
 		parameters: {
@@ -178,9 +228,17 @@ export default function obsidianWorkbench(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_deposit_knowledge",
 		label: "Deposit verified research knowledge",
+		drone: {
+			capabilities: ["research", "knowledge"],
+			subagent: "exclude",
+			journal: true,
+			activity: { text: "正在沉淀研究知识…", phase: "deposit" },
+			flow: "note",
+			flowCards: depositCard,
+		},
 		description:
 			"Write a typed research object through the controlled managed-block deposition layer. Raw Obsidian MCP writes are intentionally not exposed.",
 		parameters: {

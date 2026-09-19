@@ -1,4 +1,11 @@
-import type { SubagentRunUi, UIToolCall } from "@drone/shared";
+import type {
+	KnowledgeFlowCard,
+	SubagentRunUi,
+	TaskMilestone,
+	UIToolCall,
+	WorkbenchTask,
+} from "@drone/shared";
+import type { ReactNode } from "react";
 
 /**
  * 槽位目录 v1：槽位名与 props 契约的单一来源（spec §4）。
@@ -10,6 +17,10 @@ export const UI_SLOTS = {
 	SubagentCard: "chat.subagent-card",
 	/** 待办卡：现渲染在右侧上下文面板「任务」页签内（TasksPane），不再是聊天区悬浮胶囊 */
 	TodoPanel: "chat.todo-panel",
+	/** 产物页签里的一张通用回执卡（挂钩 4）：插件可按 card.kind 换成领域渲染，其余交回 renderDefault() */
+	ArtifactsCard: "panel.artifacts.card",
+	/** 任务卡里程碑的证据行（挂钩 4）：核心只做通用渲染（状态 / 摘要 / 字段 / 链接） */
+	MilestoneEvidence: "panel.task.milestone-evidence",
 } as const;
 export type SlotName = (typeof UI_SLOTS)[keyof typeof UI_SLOTS];
 
@@ -28,6 +39,10 @@ export const UI_REGIONS = {
 	/** 变更区域：现挂在右侧上下文面板「变更」页签底部（ChangesPane） */
 	DiffSidebar: "chat.diff-sidebar",
 	SettingsPanel: "settings.panel",
+	/** 右侧上下文面板新增页签：每个贡献一个页签，title 作标签（挂钩 4） */
+	PanelTab: "panel.tab",
+	/** 左侧导航新增全屏视图：每个贡献一个入口，title 作标签（挂钩 4） */
+	RailView: "rail.view",
 } as const;
 export type RegionName = (typeof UI_REGIONS)[keyof typeof UI_REGIONS];
 
@@ -36,4 +51,19 @@ export interface SlotPropsMap {
 	[UI_SLOTS.ToolCallCard]: { tool: UIToolCall };
 	[UI_SLOTS.SubagentCard]: { runs: SubagentRunUi[] };
 	[UI_SLOTS.TodoPanel]: Record<string, never>;
+	[UI_SLOTS.ArtifactsCard]: {
+		card: KnowledgeFlowCard;
+		sessionId: string | null;
+		/** 宿主默认渲染（插件只想接管某些 kind 时，其余调用它） */
+		renderDefault: () => ReactNode;
+	};
+	[UI_SLOTS.MilestoneEvidence]: {
+		milestone: TaskMilestone;
+		task: WorkbenchTask;
+		sessionId: string | null;
+		renderDefault: () => ReactNode;
+	};
 }
+
+/** 贡献型区域的页签 / 视图 id（写进 ui store 的 panelTab / view） */
+export const pluginTabId = (pluginName: string, id: string) => `plugin:${pluginName}:${id}` as const;

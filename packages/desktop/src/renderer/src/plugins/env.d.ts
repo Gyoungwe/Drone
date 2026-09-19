@@ -6,7 +6,8 @@ import type { Dropdown } from "../components/ui/Dropdown";
 import type { Tooltip } from "../components/ui/Tooltip";
 import type { useContextUsage } from "../hooks/use-context-usage";
 import type { useLanguage } from "../hooks/use-language";
-import type { useT } from "../i18n";
+import type { registerPluginMessages, useT } from "../i18n";
+import type { useKnowledgeStore } from "../stores/knowledge";
 import type { useProjectsStore } from "../stores/projects";
 import type { useSessionsStore } from "../stores/sessions";
 import type { useSettingsStore } from "../stores/settings";
@@ -31,6 +32,8 @@ export interface DroneUiApi {
 	helpers: {
 		summarizeArgs: typeof summarizeArgs;
 		displayToolName: typeof displayName;
+		openResourceExternal: (target: string, cwd?: string) => Promise<void>;
+		openExternal: (url: string) => Promise<void>;
 	};
 	hooks: {
 		useT: typeof useT;
@@ -44,6 +47,10 @@ export interface DroneUiApi {
 		useProjectsStore: typeof useProjectsStore;
 		useSettingsStore: typeof useSettingsStore;
 		useUiPreferencesStore: typeof useUiPreferencesStore;
+		useKnowledgeStore: typeof useKnowledgeStore;
+	};
+	i18n: {
+		registerMessages: typeof registerPluginMessages;
 	};
 }
 

@@ -3,13 +3,20 @@ import {
 	navigateResearchWiki,
 	researchWikiStatus,
 } from "../lib/research-wikiloop.mjs";
+import { registerTool } from "../lib/tool-manifest.mjs";
 
 export default function researchWikiLoop(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_wiki_navigate",
 		label: "Navigate research Wiki",
+		drone: {
+			readOnly: true,
+			recoverySafe: true,
+			capabilities: ["research", "knowledge"],
+			activity: { text: "正在检索研究 Wiki…", phase: "knowledge-search" },
+		},
 		description:
 			"Search the project agent-native Wiki before broader retrieval. Returns ranked pages and excerpts for downstream research.",
 		parameters: {
@@ -32,9 +39,14 @@ export default function researchWikiLoop(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_wiki_build",
 		label: "Build research Wiki",
+		drone: {
+			capabilities: ["research", "knowledge"],
+			subagent: "exclude",
+			activity: { text: "正在沉淀研究知识…", phase: "deposit" },
+		},
 		description:
 			"Publish or revise one parent-reviewed Wiki page, then rerun the original query and report whether the page became retrievable. Requires traceable evidence references.",
 		parameters: {
@@ -65,9 +77,10 @@ export default function researchWikiLoop(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_wiki_status",
 		label: "Research Wiki status",
+		drone: { readOnly: true, capabilities: ["research", "knowledge"] },
 		description: "Show project Wiki page count and downstream navigation feedback count.",
 		parameters: { type: "object", properties: { project: { type: "string" } }, required: ["project"] },
 		async execute(_id, params, _signal, _update, ctx) {

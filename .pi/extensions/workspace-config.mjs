@@ -3,6 +3,8 @@ import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/pr
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { knowledgeDirectory, projectIdentity, readKnowledgeBinding } from "../lib/knowledge/config.mjs";
+import { cardLink, flowCard } from "../lib/knowledge/flow-cards.mjs";
+import { registerTool } from "../lib/tool-manifest.mjs";
 import { containedFile, initializeVaultLayout } from "../lib/vault-layout.mjs";
 import { DEFAULT_VAULT_PROFILE, getVaultProfile, SUBAGENT_MCP_POLICIES } from "../lib/vault-profiles.mjs";
 
@@ -271,11 +273,30 @@ async function syncRunNote(vault, project, resultSlug, runDir, summary) {
 	return note;
 }
 
+function runSummaryCard(event) {
+	const d = event.result?.details || {};
+	return flowCard({
+		key: d.run || event.toolCallId,
+		kind: "summary",
+		title: "Run summary",
+		status: d.partial ? "partial" : d.run ? "summary-written" : "failed",
+		path: d.run,
+		detail:
+			d.obsidian_error || d.index_error || (d.obsidian_note ? "Vault run note saved." : "No Vault run note."),
+		links: [
+			d.run ? cardLink("path", d.run, "打开", "flow.link.open") : null,
+			d.obsidian_note ? cardLink("note", d.obsidian_note, "打开笔记", "flow.link.openNote") : null,
+		],
+		source: event.toolName,
+	});
+}
+
 export function registerWorkspaceConfig(pi, options = {}) {
 	const baseCwd = options.cwd ? resolve(options.cwd) : process.cwd();
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_workspace_status",
 		label: "Research workspace status",
+		drone: { readOnly: true, capabilities: ["research"] },
 		description: "Show result and Obsidian workspace configuration.",
 		parameters: { type: "object", properties: {} },
 		async execute(_id, _params, _signal, _update, ctx) {
@@ -283,9 +304,10 @@ export function registerWorkspaceConfig(pi, options = {}) {
 			return { content: [{ type: "text", text: JSON.stringify(config, null, 2) }], details: config };
 		},
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_init_vault",
 		label: "Initialize Obsidian vault",
+		drone: { capabilities: ["research", "knowledge"], subagent: "exclude" },
 		description: "Create the new Obsidian knowledge vault structure without overwriting files.",
 		parameters: {
 			type: "object",
@@ -315,9 +337,16 @@ export function registerWorkspaceConfig(pi, options = {}) {
 			};
 		},
 	});
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_summarize_run",
 		label: "Summarize research run",
+		drone: {
+			capabilities: ["research"],
+			subagent: "exclude",
+			activity: { text: "正在整理本轮研究总结…", phase: "synthesis" },
+			flow: "summary",
+			flowCards: runSummaryCard,
+		},
 		description:
 			"Write one parent-session summary to the run result and configured Obsidian vault. Before calling, extract the material evidence-backed observations into claims so later topic-memory updates can compare new knowledge with prior knowledge. Each claim must name the subject, predicate, source note/hash and whether it is an observation, interpretation, or hypothesis; never invent claims from an unverified summary.",
 		parameters: {

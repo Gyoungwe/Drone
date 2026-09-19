@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
+import { normalizeAlwaysWith } from "../src/capabilities/skill-frontmatter";
 import {
 	presentExtensionCommands,
 	slashCommandsForLoader,
@@ -72,6 +73,8 @@ it("both first-party skills have parseable frontmatter and distinct responsibili
 		const metadata = parse(frontmatter[1]);
 		expect(metadata.name).toBe(name);
 		expect(typeof metadata.description).toBe("string");
+		// 挂钩 5：第一方技能通过 frontmatter 声明随 research 常驻
+		expect(normalizeAlwaysWith(metadata.alwaysWith).has("research")).toBe(true);
 		expect(text).toContain("/obsidian-setup");
 	}
 });
@@ -82,6 +85,7 @@ it("zotero-literature is a literature skill, not a second Vault initializer", as
 	);
 	const metadata = parse(text.match(/^---\r?\n([\s\S]*?)\r?\n---/)[1]);
 	expect(metadata.name).toBe("zotero-literature");
+	expect(normalizeAlwaysWith(metadata.alwaysWith).has("research")).toBe(true);
 	expect(text).toContain("/zotero-setup");
 	expect(text).toContain("research-vault");
 	expect(text).toContain("still own the Vault");

@@ -8,6 +8,13 @@ function fixture() {
 	const run = new Promise<void>((r) => {
 		done = r;
 	});
+	// 只读恢复名单来自工具清单：只有声明 drone.recoverySafe 的工具会被重放（挂钩 1）
+	const definitions: Record<string, { drone?: { recoverySafe?: boolean } }> = {
+		bash: {},
+		research_read_knowledge: { drone: { recoverySafe: true } },
+		research_verify_literature: { drone: { recoverySafe: true } },
+		research_deposit_knowledge: { drone: { recoverySafe: false } },
+	};
 	const session = {
 		sessionId: "s",
 		isIdle: true,
@@ -17,12 +24,9 @@ function fixture() {
 			{ role: "toolResult", isError: false },
 			{ role: "assistant", timestamp: 2, stopReason: "error" },
 		],
-		getActiveToolNames: () => [
-			"bash",
-			"research_read_knowledge",
-			"research_verify_literature",
-			"research_deposit_knowledge",
-		],
+		getActiveToolNames: () => Object.keys(definitions),
+		getAllTools: () => Object.keys(definitions).map((name) => ({ name })),
+		getToolDefinition: (name: string) => (definitions[name] ? { name, ...definitions[name] } : undefined),
 		setActiveToolsByName: vi.fn(),
 		subscribe: vi.fn((cb) => {
 			listener = cb;

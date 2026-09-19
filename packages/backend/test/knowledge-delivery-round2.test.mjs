@@ -13,6 +13,10 @@ import {
 } from "../../../.pi/lib/knowledge/ui-state.mjs";
 import { configureObsidian, depositKnowledge } from "../../../.pi/lib/obsidian-workbench.mjs";
 import { assessManualPage, deliveryContract } from "../../../.pi/lib/source-delivery.mjs";
+import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
+
+// KnowledgeFlow 回执卡由扩展的 drone.flowCards 贡献（挂钩 3）：先登记声明
+registerResearchToolMeta();
 
 let root, cwd, vault, runDir;
 beforeEach(async () => {
@@ -182,7 +186,12 @@ it("findings and artifact events show bounded facts, never raw assistant/protoco
 			},
 		},
 	});
-	expect(flowFor(ctx.sessionId).artifacts[0].title).toBe("Downloaded paper");
+	expect(flowFor(ctx.sessionId).cards[0]).toMatchObject({
+		kind: "source",
+		title: "Downloaded paper",
+		status: "downloaded",
+		path: join(runDir, "paper.pdf"),
+	});
 	expect(JSON.stringify(flowFor(ctx.sessionId))).not.toContain("NO_EXPOSE");
 });
 

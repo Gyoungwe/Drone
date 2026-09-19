@@ -17,6 +17,7 @@ import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
 import { initDailyDir } from "./lib/daily";
 import { initUiPlugins } from "./plugins/loader";
+import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "./plugins/PluginRegions";
 import { RegionHost } from "./plugins/RegionHost";
 import { UI_REGIONS } from "./plugins/slots";
 import { finishSplash } from "./splash";
@@ -36,6 +37,12 @@ import { initUpdateStore } from "./stores/update";
 export default function App() {
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
 	const view = useUiStore((s) => s.view);
+	// 插件全屏视图（rail.view，挂钩 4）：插件被禁用/卸载后若仍处于该视图，回到聊天
+	const pluginViews = usePluginEntries(UI_REGIONS.RailView);
+	const pluginView = pluginViews.find((entry) => entry.id === view);
+	useEffect(() => {
+		if (isPluginEntryId(view) && !pluginView) useUiStore.getState().setView("chat");
+	}, [view, pluginView]);
 	// 订阅收敛为原始值（selector 返回 boolean → 仅在值翻转时重渲染）：App 子树（TabBar/MessageList/
 	// TodoPanel/DiffSidebar/…）无 memo，若订阅 transcript 对象会随每条流式 delta 全量级联重渲染
 	const showEmpty = useTranscriptStore((s) => {
@@ -112,6 +119,8 @@ export default function App() {
 						</div>
 					) : view === "research" || view === "knowledge" ? (
 						<KnowledgeView mode={view} />
+					) : pluginView ? (
+						<PluginEntryHost entry={pluginView} />
 					) : (
 						<>
 							<div className="relative flex min-w-0 flex-1 flex-col">

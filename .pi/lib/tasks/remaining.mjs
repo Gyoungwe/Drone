@@ -1,3 +1,5 @@
+import { acceptanceVerifier } from "./acceptance.mjs";
+
 const text = (value, max = 180) =>
 	String(value || "")
 		.replace(/\s+/g, " ")
@@ -31,9 +33,11 @@ export function remainingExplanation(task) {
 					: action.kind === "file" || action.kind === "download"
 						? "把已有文件的路径填进来，程序会核对，不用重新下载"
 						: "亲自看过之后回来确认一下";
-		} else if (m.acceptance.kind === "wiki_review") {
-			reason = "Wiki 上的修改还没经过你审阅通过";
-			next = "去 Wiki 审阅页看一下这次改了什么，通过或打回都在那里操作";
+		} else if (acceptanceVerifier(m.acceptance.kind)?.pending) {
+			// 扩展登记的验收种类自带未完成说明（挂钩 2）
+			const hint = acceptanceVerifier(m.acceptance.kind).pending(m) || {};
+			reason = hint.reason || `这一项要等 ${m.acceptance.kind} 核对通过`;
+			next = hint.next || "先核对已有结果，再决定是否继续";
 		} else if (m.acceptance.kind === "human_review") {
 			reason = "这一项约定要你亲自看过才算数，目前还没有";
 			next = "内容准备好后请过目一遍，看完确认即可";

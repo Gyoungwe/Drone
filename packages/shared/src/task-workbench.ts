@@ -19,26 +19,36 @@ export interface TaskMilestone {
 	title: string;
 	dependsOn: string[];
 	acceptance: {
-		kind: "file" | "human_review" | "wiki_review" | "zotero_item";
-		path?: string;
-		doi?: string;
-		libraryId?: string;
-		collection?: string;
+		/** file / human_review 由宿主核对；其它种类（zotero_item / wiki_review / …）由扩展登记的验收器定义（挂钩 2） */
+		kind: string;
+		path?: string | null;
+		sha256?: string | null;
+		/** 扩展验收器声明的字段（如 doi / libraryId / collection） */
+		[field: string]: string | null | undefined;
 	};
 	state: string;
 	evidence?: {
 		kind?: string;
 		path?: string;
 		at?: string;
-		/** zotero_item milestones: the read-only identity observation that completed them. */
+		/** 扩展验收器读回的观察：state 记号 + 可选的一句话摘要 / 附注 / 动作链接（通用渲染用） */
 		state?: string;
 		reason?: string;
+		summary?: string | null;
+		note?: string | null;
+		links?: {
+			label: string;
+			i18n?: string;
+			kind: "external" | "resource" | "note" | "path";
+			target: string;
+		}[];
 		itemId?: string;
 		libraryType?: string;
 		libraryId?: string;
 		doi?: string;
 		verifier?: string;
 		attachments?: { key: string; contentType?: string; metadataOnly?: boolean }[];
+		candidateId?: string;
 	} | null;
 }
 export interface TaskUserAction {
@@ -59,6 +69,8 @@ export interface TaskOperation {
 	at: string;
 	checkedAt?: string;
 	candidateId?: string;
+	/** 待外部审阅的对象（由登记了 observe 的验收器识别） */
+	review?: { kind: string; id: string; path?: string | null };
 	verifier?: string;
 	artifact?: TaskArtifact;
 }

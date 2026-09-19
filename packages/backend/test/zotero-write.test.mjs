@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	createCompositeZoteroReconciler,
 	createLocalZoteroReconciler,
-} from "../../../.pi/lib/tasks/zotero-reconcile.mjs";
+} from "../../../.pi/lib/zotero-reconcile.mjs";
 import {
 	describeZoteroSavePlan,
 	executeZoteroSave,

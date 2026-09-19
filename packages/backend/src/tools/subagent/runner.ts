@@ -24,6 +24,7 @@ import type { PermissionGate, PermissionRequestMeta } from "../../permissions/ga
 import { projectKnowledgeEvent } from "../../session/knowledge-publication";
 import type { SessionTraces } from "../../session/traces";
 import { makeUiContext } from "../../session/ui-context";
+import { globalToolManifest, ToolManifest } from "../manifest";
 import { makeSshTool } from "../ssh";
 import { makeStatusTool } from "../status";
 import { makeWebFetchTool } from "../webfetch";
@@ -223,8 +224,15 @@ function firstString(args: Record<string, unknown>, keys: string[]): string | un
 	return undefined;
 }
 
-/** Observable activity only: derived from tool name/arguments, never hidden reasoning. */
-export function describeSubagentActivity(toolName: string, args: Record<string, unknown>): string {
+/**
+ * Observable activity only: derived from tool name/arguments, never hidden reasoning.
+ * 领域文案（Zotero / Obsidian / 联网…）来自工具清单的 drone.activity / 工具家族（挂钩 1），核心只认 read / bash / 通用搜索。
+ */
+export function describeSubagentActivity(
+	toolName: string,
+	args: Record<string, unknown>,
+	manifest: ToolManifest = globalToolManifest,
+): string {
 	const nested = args.args && typeof args.args === "object" ? (args.args as Record<string, unknown>) : {};
 	const visibleArgs = { ...nested, ...args };
 	const descriptor = `${toolName} ${JSON.stringify(args)}`.toLowerCase();
@@ -236,30 +244,8 @@ export function describeSubagentActivity(toolName: string, args: Record<string, 
 		const command = firstString(visibleArgs, ["command", "cmd"]);
 		return command ? `正在运行命令：${command}` : "正在运行命令";
 	}
-	if (
-		descriptor.includes("research-zotero") ||
-		descriptor.includes("research_zotero") ||
-		descriptor.includes("zotero")
-	) {
-		const query = firstString(visibleArgs, ["query", "q", "search", "search_text", "text"]);
-		return query ? `正在检索 Zotero：“${query}”` : "正在检索 Zotero 文献库";
-	}
-	if (
-		descriptor.includes("research-obsidian") ||
-		descriptor.includes("research_obsidian") ||
-		descriptor.includes("obsidian")
-	) {
-		const query = firstString(visibleArgs, ["query", "q", "search", "text", "path"]);
-		return query ? `正在检索 Obsidian：“${query}”` : "正在检索 Obsidian 知识库";
-	}
-	if (descriptor.includes("web_search") || descriptor.includes("web-search")) {
-		const query = firstString(visibleArgs, ["query", "q", "search", "text"]);
-		return query ? `正在联网搜索：“${query}”` : "正在联网搜索";
-	}
-	if (descriptor.includes("fetch")) {
-		const target = firstString(visibleArgs, ["url", "target", "path"]);
-		return target ? `正在读取来源：${target}` : "正在读取并核对来源";
-	}
+	const described = manifest.describe(toolName, args);
+	if (described) return described;
 	if (descriptor.includes("search") || descriptor.includes("grep")) {
 		const query = firstString(visibleArgs, ["query", "pattern", "q", "text"]);
 		return query ? `正在搜索：“${query}”` : `正在执行 ${toolName}`;
@@ -501,6 +487,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 	});
 	// 等待 agent_settled 而非 agent_end：_runAgentPrompt 的 finally 保证 settled 在全部路径
 	// （正常结束 / 异常逃逸 / abort）都触发；agent_end 在 overflow 重试（willRetry）或异常时不算终结。
+	const manifest = new ToolManifest(session);
 	const endPromise = new Promise<void>((resolve) => {
 		unsubscribeEvents = session.subscribe((event: AgentSessionEvent) => {
 			if (deps.onEvent) deps.onEvent(session.sessionId, event);
@@ -521,19 +508,11 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 					}
 				} else if (event.toolName !== "contact_supervisor") {
 					result.currentTool = event.toolName;
-					result.currentAction = describeSubagentActivity(event.toolName, args);
+					result.currentAction = describeSubagentActivity(event.toolName, args, manifest);
 					input.onProgress?.(result);
-					const descriptor = `${event.toolName} ${JSON.stringify(args)}`.toLowerCase();
-					const inferred =
-						descriptor.includes("research-zotero") || descriptor.includes("research_zotero")
-							? { text: "正在检索 Zotero 文献库…", phase: "literature-search" }
-							: descriptor.includes("research-obsidian") || descriptor.includes("research_obsidian")
-								? { text: "正在搜索 Obsidian 知识库…", phase: "knowledge-search" }
-								: descriptor.includes("web_search") || descriptor.includes("web-search")
-									? { text: "正在联网检索相关研究…", phase: "web-search" }
-									: descriptor.includes("fetch")
-										? { text: "正在读取并核对原始来源…", phase: "reading" }
-										: null;
+					// 宿主状态条：工具清单声明的活动（挂钩 1），不再按工具名猜测
+					const activity = manifest.activity(event.toolName, args);
+					const inferred = activity ? { text: activity.text, phase: activity.phase } : null;
 					if (inferred) {
 						hostStatus = { ...inferred, toolCallId: event.toolCallId };
 						publishStatus();

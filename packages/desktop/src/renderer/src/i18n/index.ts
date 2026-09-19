@@ -34,13 +34,33 @@ type DotKeys<T, Prefix extends string = ""> = {
 
 export type MessageKey = DotKeys<Messages>;
 
-function resolve(messages: Messages, key: string): string {
+/** 插件自带文案（挂钩 4）：按注册顺序在核心字典之后查找；插件卸载时注销。 */
+type PluginMessages = Partial<Record<Language, Record<string, unknown>>>;
+const pluginDictionaries = new Map<string, PluginMessages>();
+export function registerPluginMessages(namespace: string, messages: PluginMessages): () => void {
+	pluginDictionaries.set(namespace, messages);
+	return () => {
+		if (pluginDictionaries.get(namespace) === messages) pluginDictionaries.delete(namespace);
+	};
+}
+
+function lookup(messages: unknown, key: string): string | null {
 	let node: unknown = messages;
 	for (const part of key.split(".")) {
+		if (!node || typeof node !== "object") return null;
 		node = (node as Record<string, unknown>)[part];
-		if (node === undefined) return key;
+		if (node === undefined) return null;
 	}
-	return typeof node === "string" ? node : key;
+	return typeof node === "string" ? node : null;
+}
+function resolve(language: Language, key: string): string | null {
+	const core = lookup(dictionaries[language], key);
+	if (core !== null) return core;
+	for (const messages of pluginDictionaries.values()) {
+		const value = lookup(messages[language], key) ?? lookup(messages.zh ?? messages.en, key);
+		if (value !== null) return value;
+	}
+	return null;
 }
 
 export function translate(
@@ -48,9 +68,14 @@ export function translate(
 	key: MessageKey,
 	params?: Record<string, string | number>,
 ): string {
-	const template = resolve(dictionaries[language], key);
+	const template = resolve(language, key) ?? key;
 	if (!params) return template;
 	return template.replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? `{${name}}`));
+}
+
+/** 可选翻译：键不存在时返回 null（供扩展贡献的回执卡 / 状态记号回退到原文）。 */
+export function translateOptional(language: Language, key: string): string | null {
+	return resolve(language, key);
 }
 
 /** 组件内使用：const t = useT(); t("settings.title") / t("permission.queued", { count: 2 }) */

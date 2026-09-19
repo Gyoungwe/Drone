@@ -14,6 +14,10 @@ import {
 	updateResearchLoop,
 } from "../../../.pi/lib/research-loop.mjs";
 import { createResearchReceiptJournal } from "../../../.pi/lib/research-receipt-journal.mjs";
+import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
+
+// 回执日志只记账声明了 drone.journal 的工具（挂钩 1）：先让真实扩展登记声明
+registerResearchToolMeta();
 
 let journals = [];
 let cwd, runDir;

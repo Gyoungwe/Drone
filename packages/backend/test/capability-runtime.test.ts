@@ -1,10 +1,17 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 import { makeCapabilityExtension } from "../src/capabilities/extension";
 import { CapabilityResourceLoader, SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime, detectCapabilities } from "../src/capabilities/runtime";
+// 测试夹具：让真实扩展把 drone 元数据（libraryMode / readOnly）登记进工具清单（挂钩 1）
+import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
 
-function makeLoader() {
+registerResearchToolMeta();
+
+function makeLoader(extraSkills: Record<string, unknown>[] = []) {
 	const skills = [
 		{
 			name: "research-vault",
@@ -13,6 +20,8 @@ function makeLoader() {
 			baseDir: "/skills/research-vault",
 			disableModelInvocation: false,
 			sourceInfo: { source: "test", scope: "temporary" },
+			// 夹具路径不存在：用进程内声明模拟 SKILL.md 的 `alwaysWith: [knowledge, research]`（挂钩 5）
+			alwaysWith: ["knowledge", "research"],
 		},
 		{
 			name: "research-workflow",
@@ -21,6 +30,7 @@ function makeLoader() {
 			baseDir: "/skills/research-workflow",
 			disableModelInvocation: false,
 			sourceInfo: { source: "test", scope: "temporary" },
+			alwaysWith: "research",
 		},
 		{
 			name: "code-review",
@@ -38,6 +48,7 @@ function makeLoader() {
 			disableModelInvocation: false,
 			sourceInfo: { source: "test", scope: "temporary" },
 		},
+		...extraSkills,
 	];
 	return {
 		getExtensions: () => ({ extensions: [], errors: [], runtime: { flagValues: new Map() } }),
@@ -308,4 +319,53 @@ it("bounds explicit existing-literature reuse without changing normal execution 
 	runtime.prepareForPrompt("实现代码并执行测试", false);
 	expect(runtime.state().activeTools).toContain("bash");
 	expect(runtime.guardTool("bash", {})).toBeUndefined();
+});
+
+describe("skill alwaysWith frontmatter (hook 5)", () => {
+	const skillFile = (name: string, frontmatter: string) =>
+		`---\nname: ${name}\ndescription: vendor ${name}\n${frontmatter}---\n\n# ${name}\n`;
+	it("pins a third-party skill by its SKILL.md declaration instead of hard-coded names", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "drone-skill-alwayswith-"));
+		try {
+			const pinned = join(dir, "vendor-literature", "SKILL.md");
+			const plain = join(dir, "vendor-plain", "SKILL.md");
+			await mkdir(dirname(pinned), { recursive: true });
+			await mkdir(dirname(plain), { recursive: true });
+			await writeFile(pinned, skillFile("vendor-literature", "alwaysWith: [research]\n"));
+			await writeFile(plain, skillFile("vendor-plain", ""));
+			const entry = (name: string, filePath: string) => ({
+				name,
+				description: `vendor ${name}`,
+				filePath,
+				baseDir: dirname(filePath),
+				disableModelInvocation: false,
+				sourceInfo: { source: "test", scope: "temporary" },
+			});
+			const visibility = new SkillVisibility();
+			const loader = new CapabilityResourceLoader(
+				makeLoader([entry("vendor-literature", pinned), entry("vendor-plain", plain)]),
+				visibility,
+			);
+			const runtime = new CapabilityRuntime(visibility);
+			runtime.bind(makeSession(loader) as any);
+			// 只读文献复用：常驻声明决定保留哪些技能，核心没有任何技能名
+			runtime.prepareForPrompt("只读复用已有文献，核对 Zotero 和 Obsidian，给比较基因组方案", false);
+			expect(runtime.state().visibleSkills).toEqual(
+				expect.arrayContaining(["research-vault", "research-workflow", "vendor-literature"]),
+			);
+			expect(runtime.state().visibleSkills).not.toContain("vendor-plain");
+			// 普通研究任务：常驻技能随 research 能力出现，未声明的第三方技能仍按分类/路由处理
+			runtime.prepareForPrompt("请检索转录组文献并核对知识库证据", false);
+			expect(runtime.state().visibleSkills).toContain("vendor-literature");
+			// 声明的能力未激活 → 常驻技能不可见
+			runtime.prepareForPrompt("检查仓库代码", false);
+			expect(runtime.state().visibleSkills).not.toContain("vendor-literature");
+			expect(runtime.state().visibleSkills).not.toContain("research-workflow");
+			// 显式 /skill: 仍然优先于任何声明
+			runtime.prepareForPrompt("/skill:vendor-plain explain", false);
+			expect(runtime.state().visibleSkills).toContain("vendor-plain");
+		} finally {
+			await rm(dir, { recursive: true, force: true });
+		}
+	});
 });

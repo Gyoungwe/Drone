@@ -4,13 +4,19 @@ import {
 	recordWikiSkillExperience,
 	wikiSkillStatus,
 } from "../lib/research-wikiskill.mjs";
+import { registerTool } from "../lib/tool-manifest.mjs";
 
 export default function researchWikiSkill(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_wikiskill_record",
 		label: "Compile research experience",
+		drone: {
+			capabilities: ["research", "knowledge"],
+			subagent: "exclude",
+			activity: { text: "正在总结研究经验…", phase: "synthesis" },
+		},
 		description:
 			"Compile one completed observable research run into the persistent WikiSkill raw/wiki layers. This stores auditable metadata and reusable process patterns, never hidden reasoning and never scientific claims as authority.",
 		parameters: {
@@ -49,9 +55,14 @@ export default function researchWikiSkill(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_wikiskill_propose",
 		label: "Propose research Skill evolution",
+		drone: {
+			capabilities: ["research", "knowledge"],
+			subagent: "exclude",
+			activity: { text: "正在改进研究策略…", phase: "skill-evolution" },
+		},
 		description:
 			"Stage one atomic SKILL.md candidate motivated by persistent WikiSkill patterns. The candidate is not active until it passes isolated validation gating.",
 		parameters: {
@@ -78,9 +89,14 @@ export default function researchWikiSkill(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_wikiskill_gate",
 		label: "Validate and gate research Skill",
+		drone: {
+			capabilities: ["research", "knowledge"],
+			subagent: "exclude",
+			activity: { text: "正在验证新的研究策略…", phase: "verification" },
+		},
 		description:
 			"Evaluate the active and candidate Skill in isolated no-tool Pi runs. Accept only a candidate that passes safety checks and scores strictly above both the active baseline and prior best; otherwise keep the active Skill while retaining Wiki history.",
 		parameters: {
@@ -105,9 +121,14 @@ export default function researchWikiSkill(pi) {
 		},
 	});
 
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_wikiskill_status",
 		label: "Research WikiSkill status",
+		drone: {
+			readOnly: true,
+			capabilities: ["research", "knowledge"],
+			activity: { text: "正在检查研究策略状态…", phase: "verification" },
+		},
 		description:
 			"Show the persistent experience/raw/wiki/proposal counts and best accepted validation scores for a project.",
 		parameters: { type: "object", properties: { project: { type: "string" } } },

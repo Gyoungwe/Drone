@@ -35,7 +35,17 @@ describe("session output list", () => {
 		expect(mergeKnowledgeArtifacts([], [task("C:/repo/results/plan.md", "pending")])).toEqual([]);
 	});
 	it("deduplicates Windows paths and relative flow paths against the session cwd", () => {
-		const flow = [{ key: "a", title: "plan", path: "results/plan.md", status: "saved", detail: "" }];
+		const flow = [
+			{
+				key: "a",
+				kind: "artifact",
+				title: "plan",
+				path: "results/plan.md",
+				status: "saved",
+				detail: "",
+				at: 1,
+			},
+		];
 		expect(
 			mergeKnowledgeArtifacts(
 				flow,
