@@ -144,6 +144,18 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # packages/desktop/resources/research-skills/ is gitignored and rebuilt from the
+      # commit/checksum-pinned lock (packages/shared/src/research-skill-sources.json);
+      # `npm run dist` and the electron-builder beforePack hook fail closed without it.
+      # ARS (CC BY-NC 4.0) ships in the release profile under the product owner's separately
+      # held redistribution permission; the flag records that attestation and grants no license.
+      # See docs/research-skill-packs.md ("Installation, validation and packaging").
+      - name: Acquire pinned research skill packs
+        shell: bash
+        run: |
+          python scripts/sync-research-skills.py --sources nature scientific
+          python scripts/sync-research-skills.py --sources academic --acknowledge-commercial-permission
+          python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
       - run: npm run dist -w packages/desktop -- --publish never
       - name: Upload build outputs directly to draft release
         timeout-minutes: 60
