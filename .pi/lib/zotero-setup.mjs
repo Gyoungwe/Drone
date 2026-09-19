@@ -103,7 +103,7 @@ export function zoteroMcpSpec(command, { disabled = true } = {}) {
 export async function readZoteroMcp({ agentDirectory } = {}) {
 	const path = mcpPath(agentDirectory);
 	if (!existsSync(path)) return { path, registered: false, disabled: true, command: null };
-	const value = JSON.parse(await readFile(path, "utf8"));
+	const value = JSON.parse((await readFile(path, "utf8")).replace(/^\uFEFF/, ""));
 	const raw = serverMap(value)[ZOTERO_SETUP_BINDING.mcpServer];
 	if (!raw || typeof raw !== "object" || Array.isArray(raw))
 		return { path, registered: false, disabled: true, command: null };
@@ -120,7 +120,7 @@ export async function registerZoteroMcp({ agentDirectory, command, enable = fals
 	const path = mcpPath(agentDirectory);
 	let value = {};
 	if (existsSync(path)) {
-		const parsed = JSON.parse(await readFile(path, "utf8"));
+		const parsed = JSON.parse((await readFile(path, "utf8")).replace(/^\uFEFF/, ""));
 		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
 			throw new Error(`${path} must contain an object`);
 		value = parsed;

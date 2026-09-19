@@ -1,6 +1,6 @@
 {
 	"name": "@drone/desktop",
-	"version": "0.10.3",
+	"version": "0.10.4",
 	"private": true,
 	"description": "Desktop GUI for the Pi coding agent",
 	"author": {
@@ -17,7 +17,7 @@
 		"build": "npm run build:lan-web && electron-vite build",
 		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
 		"test": "vitest run",
-		"dist": "npm run build && electron-builder",
+		"dist": "python ../../scripts/sync-research-skills.py --sources nature scientific academic --check --for-release && npm run build && electron-builder",
 		"start": "electron-vite preview"
 	},
 	"dependencies": {

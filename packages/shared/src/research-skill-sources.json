@@ -1,0 +1,1259 @@
+{
+	"schemaVersion": 1,
+	"sources": [
+		{
+			"id": "nature",
+			"repository": "Yuan1z0825/nature-skills",
+			"commit": "2375e0abdf42158ef149256f2c64b1f759a0d274",
+			"archiveSha256": "d5017c0e6415275306f3b1774a70ffc88a865969adc10816eb8e9a795464b363",
+			"license": "Apache-2.0",
+			"licenseFiles": ["LICENSE"],
+			"skills": [
+				{
+					"name": "nature-academic-search",
+					"path": "skills/nature-academic-search/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-citation",
+					"path": "skills/nature-citation/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-data",
+					"path": "skills/nature-data/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-downloader",
+					"path": "skills/nature-downloader/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-experiment-log",
+					"path": "skills/nature-experiment-log/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "nature-figure",
+					"path": "skills/nature-figure/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-image2ppt",
+					"path": "skills/nature-image2ppt/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-literature-pipeline",
+					"path": "skills/nature-literature-pipeline/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "nature-paper-card",
+					"path": "skills/nature-paper-card/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-paper-to-patent",
+					"path": "skills/nature-paper-to-patent/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-paper2ppt",
+					"path": "skills/nature-paper2ppt/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-polishing",
+					"path": "skills/nature-polishing/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "researchwrite",
+					"path": "skills/nature-proposal-writer/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "nature-reader",
+					"path": "skills/nature-reader/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-ref-verifier",
+					"path": "skills/nature-ref-verifier/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-response",
+					"path": "skills/nature-response/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-reviewer",
+					"path": "skills/nature-reviewer/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-shared",
+					"path": "skills/nature-shared/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-statistics",
+					"path": "skills/nature-statistics/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "nature-writing",
+					"path": "skills/nature-writing/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				}
+			],
+			"runtimeFiles": []
+		},
+		{
+			"id": "scientific",
+			"repository": "K-Dense-AI/scientific-agent-skills",
+			"commit": "330c8e764435a731eff571e3efdda70b363d0792",
+			"archiveSha256": "559c0a1c32666e08854e0276399cdb961d5ab5faf31183b2dc94382ee38c90f3",
+			"license": "MIT",
+			"licenseFiles": ["LICENSE.md"],
+			"skills": [
+				{
+					"name": "adaptyv",
+					"path": "skills/adaptyv/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "aeon",
+					"path": "skills/aeon/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "alphagenome",
+					"path": "skills/alphagenome/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "analytical-method-validation",
+					"path": "skills/analytical-method-validation/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "anndata",
+					"path": "skills/anndata/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "arbor",
+					"path": "skills/arbor/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "arboreto",
+					"path": "skills/arboreto/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "astropy",
+					"path": "skills/astropy/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "autoskill",
+					"path": "skills/autoskill/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "benchling-integration",
+					"path": "skills/benchling-integration/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "bgpt-paper-search",
+					"path": "skills/bgpt-paper-search/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "bids",
+					"path": "skills/bids/SKILL.md",
+					"license": "https://creativecommons.org/licenses/by/4.0/",
+					"bundled": true
+				},
+				{
+					"name": "biopython",
+					"path": "skills/biopython/SKILL.md",
+					"license": "Biopython License Agreement",
+					"bundled": false
+				},
+				{
+					"name": "bioservices",
+					"path": "skills/bioservices/SKILL.md",
+					"license": "GPLv3 license",
+					"bundled": false
+				},
+				{
+					"name": "bulk-rnaseq",
+					"path": "skills/bulk-rnaseq/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "cellxgene-census",
+					"path": "skills/cellxgene-census/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "cirq",
+					"path": "skills/cirq/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "citation-management",
+					"path": "skills/citation-management/SKILL.md",
+					"license": "MIT License",
+					"bundled": true
+				},
+				{
+					"name": "clinical-decision-support",
+					"path": "skills/clinical-decision-support/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "clinical-reports",
+					"path": "skills/clinical-reports/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "cobrapy",
+					"path": "skills/cobrapy/SKILL.md",
+					"license": "GPL-2.0 license",
+					"bundled": false
+				},
+				{
+					"name": "consciousness-council",
+					"path": "skills/consciousness-council/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "dask",
+					"path": "skills/dask/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "database-lookup",
+					"path": "skills/database-lookup/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "datalad",
+					"path": "skills/datalad/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "datamol",
+					"path": "skills/datamol/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "deepchem",
+					"path": "skills/deepchem/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "deepspot-m",
+					"path": "skills/deepspot-m/SKILL.md",
+					"license": "PolyForm-Noncommercial-1.0.0",
+					"bundled": false
+				},
+				{
+					"name": "deeptools",
+					"path": "skills/deeptools/SKILL.md",
+					"license": "BSD license",
+					"bundled": true
+				},
+				{
+					"name": "depmap",
+					"path": "skills/depmap/SKILL.md",
+					"license": "CC-BY-4.0",
+					"bundled": true
+				},
+				{
+					"name": "dhdna-profiler",
+					"path": "skills/dhdna-profiler/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "diffdock",
+					"path": "skills/diffdock/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "dnanexus-integration",
+					"path": "skills/dnanexus-integration/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "docx",
+					"path": "skills/docx/SKILL.md",
+					"license": "Proprietary. LICENSE.txt has complete terms",
+					"bundled": false
+				},
+				{
+					"name": "esm",
+					"path": "skills/esm/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "etetoolkit",
+					"path": "skills/etetoolkit/SKILL.md",
+					"license": "GPL-3.0-or-later",
+					"bundled": false
+				},
+				{
+					"name": "exa-search",
+					"path": "skills/exa-search/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "experimental-design",
+					"path": "skills/experimental-design/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "exploratory-data-analysis",
+					"path": "skills/exploratory-data-analysis/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "flowio",
+					"path": "skills/flowio/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "fluidsim",
+					"path": "skills/fluidsim/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "folklore-variant-evidence",
+					"path": "skills/folklore-variant-evidence/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "generate-image",
+					"path": "skills/generate-image/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "geniml",
+					"path": "skills/geniml/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "genomic-coordinates",
+					"path": "skills/genomic-coordinates/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "genomic-intelligence",
+					"path": "skills/genomic-intelligence/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "geomaster",
+					"path": "skills/geomaster/SKILL.md",
+					"license": "MIT License",
+					"bundled": true
+				},
+				{
+					"name": "geopandas",
+					"path": "skills/geopandas/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "get-available-resources",
+					"path": "skills/get-available-resources/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "gget",
+					"path": "skills/gget/SKILL.md",
+					"license": "BSD-2-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "ginkgo-cloud-lab",
+					"path": "skills/ginkgo-cloud-lab/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "glycoengineering",
+					"path": "skills/glycoengineering/SKILL.md",
+					"license": "Unknown",
+					"bundled": false
+				},
+				{
+					"name": "gtars",
+					"path": "skills/gtars/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "histolab",
+					"path": "skills/histolab/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "hugging-science",
+					"path": "skills/hugging-science/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "hypogenic",
+					"path": "skills/hypogenic/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "hypothesis-generation",
+					"path": "skills/hypothesis-generation/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "imaging-data-commons",
+					"path": "skills/imaging-data-commons/SKILL.md",
+					"license": "This skill is provided under the MIT License. IDC data itself has individual licensing (mostly CC-BY, some CC-NC) that must be respected when using the data.",
+					"bundled": false
+				},
+				{
+					"name": "infographics",
+					"path": "skills/infographics/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "iso-standards-readiness",
+					"path": "skills/iso-standards-readiness/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "lab-hardware-cad",
+					"path": "skills/lab-hardware-cad/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "labarchive-integration",
+					"path": "skills/labarchive-integration/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "lamindb",
+					"path": "skills/lamindb/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "latchbio-integration",
+					"path": "skills/latchbio-integration/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "latex-posters",
+					"path": "skills/latex-posters/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "liteparse",
+					"path": "skills/liteparse/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "literature-review",
+					"path": "skills/literature-review/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "markdown-mermaid-writing",
+					"path": "skills/markdown-mermaid-writing/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "market-research-reports",
+					"path": "skills/market-research-reports/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "markitdown",
+					"path": "skills/markitdown/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "matchms",
+					"path": "skills/matchms/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "matlab",
+					"path": "skills/matlab/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "matplotlib",
+					"path": "skills/matplotlib/SKILL.md",
+					"license": "https://github.com/matplotlib/matplotlib/tree/main/LICENSE",
+					"bundled": false
+				},
+				{
+					"name": "medchem",
+					"path": "skills/medchem/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "modal",
+					"path": "skills/modal/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "molecular-dynamics",
+					"path": "skills/molecular-dynamics/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "molfeat",
+					"path": "skills/molfeat/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "ncats-arax",
+					"path": "skills/ncats-arax/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "networkx",
+					"path": "skills/networkx/SKILL.md",
+					"license": "3-clause BSD license",
+					"bundled": true
+				},
+				{
+					"name": "neurokit2",
+					"path": "skills/neurokit2/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "neuropixels-analysis",
+					"path": "skills/neuropixels-analysis/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "nextflow",
+					"path": "skills/nextflow/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "omero-integration",
+					"path": "skills/omero-integration/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "onekgpd",
+					"path": "skills/onekgpd/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "ontology-term-resolution",
+					"path": "skills/ontology-term-resolution/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "open-notebook",
+					"path": "skills/open-notebook/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "openpiv",
+					"path": "skills/openpiv/SKILL.md",
+					"license": "BSD-3-Clause",
+					"bundled": true
+				},
+				{
+					"name": "opentrons-integration",
+					"path": "skills/opentrons-integration/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "optimize-for-gpu",
+					"path": "skills/optimize-for-gpu/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pacsomatic",
+					"path": "skills/pacsomatic/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "paper-lookup",
+					"path": "skills/paper-lookup/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "paperclip",
+					"path": "skills/paperclip/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "paperzilla",
+					"path": "skills/paperzilla/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "parallel-web",
+					"path": "skills/parallel-web/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pathml",
+					"path": "skills/pathml/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pathogen-variant-surveillance",
+					"path": "skills/pathogen-variant-surveillance/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pathway-enrichment",
+					"path": "skills/pathway-enrichment/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pdf",
+					"path": "skills/pdf/SKILL.md",
+					"license": "Proprietary. LICENSE.txt has complete terms",
+					"bundled": false
+				},
+				{
+					"name": "peer-review",
+					"path": "skills/peer-review/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pennylane",
+					"path": "skills/pennylane/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "phylogenetics",
+					"path": "skills/phylogenetics/SKILL.md",
+					"license": "Unknown",
+					"bundled": false
+				},
+				{
+					"name": "pi-agent",
+					"path": "skills/pi-agent/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pkpd-modeling",
+					"path": "skills/pkpd-modeling/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "polars",
+					"path": "skills/polars/SKILL.md",
+					"license": "https://github.com/pola-rs/polars/blob/main/LICENSE",
+					"bundled": false
+				},
+				{
+					"name": "polars-bio",
+					"path": "skills/polars-bio/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "pptx",
+					"path": "skills/pptx/SKILL.md",
+					"license": "Proprietary. LICENSE.txt has complete terms",
+					"bundled": false
+				},
+				{
+					"name": "pptx-posters",
+					"path": "skills/pptx-posters/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "primekg",
+					"path": "skills/primekg/SKILL.md",
+					"license": "Unknown",
+					"bundled": false
+				},
+				{
+					"name": "protocolsio-integration",
+					"path": "skills/protocolsio-integration/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pufferlib",
+					"path": "skills/pufferlib/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pydeseq2",
+					"path": "skills/pydeseq2/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "pydicom",
+					"path": "skills/pydicom/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pyhealth",
+					"path": "skills/pyhealth/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pylabrobot",
+					"path": "skills/pylabrobot/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pymatgen",
+					"path": "skills/pymatgen/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pymc",
+					"path": "skills/pymc/SKILL.md",
+					"license": "Apache License, Version 2.0",
+					"bundled": true
+				},
+				{
+					"name": "pymoo",
+					"path": "skills/pymoo/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "pyopenms",
+					"path": "skills/pyopenms/SKILL.md",
+					"license": "3 clause BSD license",
+					"bundled": true
+				},
+				{
+					"name": "pysam",
+					"path": "skills/pysam/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pytdc",
+					"path": "skills/pytdc/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "pytorch-lightning",
+					"path": "skills/pytorch-lightning/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "pyzotero",
+					"path": "skills/pyzotero/SKILL.md",
+					"license": "MIT License",
+					"bundled": true
+				},
+				{
+					"name": "qiskit",
+					"path": "skills/qiskit/SKILL.md",
+					"license": "Apache-2.0",
+					"bundled": true
+				},
+				{
+					"name": "qutip",
+					"path": "skills/qutip/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "rdkit",
+					"path": "skills/rdkit/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "relsa-severity-assessment",
+					"path": "skills/relsa-severity-assessment/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "research-grants",
+					"path": "skills/research-grants/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "research-lookup",
+					"path": "skills/research-lookup/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "rowan",
+					"path": "skills/rowan/SKILL.md",
+					"license": "Proprietary (API key required)",
+					"bundled": false
+				},
+				{
+					"name": "scanpy",
+					"path": "skills/scanpy/SKILL.md",
+					"license": "BSD-3-Clause",
+					"bundled": true
+				},
+				{
+					"name": "scholar-evaluation",
+					"path": "skills/scholar-evaluation/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "scientific-brainstorming",
+					"path": "skills/scientific-brainstorming/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "scientific-critical-thinking",
+					"path": "skills/scientific-critical-thinking/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "scientific-schematics",
+					"path": "skills/scientific-schematics/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "scientific-slides",
+					"path": "skills/scientific-slides/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "scientific-visualization",
+					"path": "skills/scientific-visualization/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "scientific-writing",
+					"path": "skills/scientific-writing/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "scikit-bio",
+					"path": "skills/scikit-bio/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "scikit-learn",
+					"path": "skills/scikit-learn/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "scikit-survival",
+					"path": "skills/scikit-survival/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "scvelo",
+					"path": "skills/scvelo/SKILL.md",
+					"license": "BSD-3-Clause",
+					"bundled": true
+				},
+				{
+					"name": "scvi-tools",
+					"path": "skills/scvi-tools/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "seaborn",
+					"path": "skills/seaborn/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "shap",
+					"path": "skills/shap/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "simpy",
+					"path": "skills/simpy/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "stable-baselines3",
+					"path": "skills/stable-baselines3/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "statistical-analysis",
+					"path": "skills/statistical-analysis/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "statistical-power",
+					"path": "skills/statistical-power/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "statsmodels",
+					"path": "skills/statsmodels/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "sympy",
+					"path": "skills/sympy/SKILL.md",
+					"license": "https://github.com/sympy/sympy/blob/master/LICENSE",
+					"bundled": false
+				},
+				{
+					"name": "tamarind",
+					"path": "skills/tamarind/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "tiledbvcf",
+					"path": "skills/tiledbvcf/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "timesfm-forecasting",
+					"path": "skills/timesfm-forecasting/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "torch-geometric",
+					"path": "skills/torch-geometric/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "torchdrug",
+					"path": "skills/torchdrug/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "transformers",
+					"path": "skills/transformers/SKILL.md",
+					"license": "Apache-2.0 license",
+					"bundled": true
+				},
+				{
+					"name": "treatment-plans",
+					"path": "skills/treatment-plans/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "umap-learn",
+					"path": "skills/umap-learn/SKILL.md",
+					"license": "BSD-3-Clause license",
+					"bundled": true
+				},
+				{
+					"name": "uncertainty-and-units",
+					"path": "skills/uncertainty-and-units/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "usfiscaldata",
+					"path": "skills/usfiscaldata/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "vaex",
+					"path": "skills/vaex/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "venue-templates",
+					"path": "skills/venue-templates/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				},
+				{
+					"name": "waypoint-bio",
+					"path": "skills/waypoint-bio/SKILL.md",
+					"license": "MIT",
+					"bundled": true
+				},
+				{
+					"name": "what-if-oracle",
+					"path": "skills/what-if-oracle/SKILL.md",
+					"license": "CC BY-NC-SA 4.0",
+					"bundled": false
+				},
+				{
+					"name": "xlsx",
+					"path": "skills/xlsx/SKILL.md",
+					"license": "Proprietary. LICENSE.txt has complete terms",
+					"bundled": false
+				},
+				{
+					"name": "zarr-python",
+					"path": "skills/zarr-python/SKILL.md",
+					"license": "MIT license",
+					"bundled": true
+				}
+			],
+			"runtimeFiles": []
+		},
+		{
+			"id": "academic",
+			"repository": "Imbad0202/academic-research-skills",
+			"commit": "3c546bc08c56f79e0068f1ea4f0acedf5bf69b5e",
+			"archiveSha256": "98aa80d4d160c6e92d7b73d902998ffcb8599b8ab89f0b6727ae738584838217",
+			"license": "CC-BY-NC-4.0",
+			"licenseFiles": ["LICENSE", "NOTICE.md"],
+			"skills": [
+				{
+					"name": "academic-paper",
+					"path": "academic-paper/SKILL.md",
+					"license": "CC-BY-NC-4.0",
+					"bundled": true
+				},
+				{
+					"name": "academic-paper-reviewer",
+					"path": "academic-paper-reviewer/SKILL.md",
+					"license": "CC-BY-NC-4.0",
+					"bundled": true
+				},
+				{
+					"name": "academic-pipeline",
+					"path": "academic-pipeline/SKILL.md",
+					"license": "CC-BY-NC-4.0",
+					"bundled": true
+				},
+				{
+					"name": "deep-research",
+					"path": "deep-research/SKILL.md",
+					"license": "CC-BY-NC-4.0",
+					"bundled": true
+				}
+			],
+			"runtimeFiles": [
+				{
+					"path": "MODE_REGISTRY.md",
+					"sha256": "fe3974f9cd139801c935f9dffb0031e73901f3548cb3c887f1a15a1001a1eb5d"
+				},
+				{
+					"path": "commands/ars-3w.md",
+					"sha256": "2db86727d54541ef4ea605805018b6c68ee2aa497cfdc2844dff3015d6e23b94"
+				},
+				{
+					"path": "commands/ars-abstract.md",
+					"sha256": "c2040a286ac382001a61ea81c7f6fb165716320406ec31379ce1f1eda5cc2104"
+				},
+				{
+					"path": "commands/ars-cache-invalidate.md",
+					"sha256": "60c6dc0d42eaf881d52e781dc1528904438b9a6ab23a5f0d8f56d426f311933e"
+				},
+				{
+					"path": "commands/ars-citation-check.md",
+					"sha256": "5834a3cf8ca5caae07ec85dbbe833ca09930e64b2eb60adaeabadbbe8bef6435"
+				},
+				{
+					"path": "commands/ars-disclosure.md",
+					"sha256": "5108d232b745ba085e45f94ca85f468abdf4bc8370180634c7bfc7fd9cb8fdfb"
+				},
+				{
+					"path": "commands/ars-format-convert.md",
+					"sha256": "49364fcd2a0a5b96ed3e979931b6db73f18ca0667d79268ef5c33b60f16e4b5c"
+				},
+				{
+					"path": "commands/ars-full.md",
+					"sha256": "b310bb23b83fc7b11460068b22fd5d56b28d8c151f524956fb5f5feee15e2606"
+				},
+				{
+					"path": "commands/ars-lit-review.md",
+					"sha256": "08cacaa17125aa386774683ad2bc8c360c003ab1323dfc931941f7f16768dbc8"
+				},
+				{
+					"path": "commands/ars-mark-read.md",
+					"sha256": "1272790ecd5a34835fc90584b48b6aa06985fb609410f191c1b55c9ad4259de1"
+				},
+				{
+					"path": "commands/ars-outline.md",
+					"sha256": "f1c993aa598ef67337109c8367c800d43cbcae760c0bdc2fe7c5bb469e395a05"
+				},
+				{
+					"path": "commands/ars-plan.md",
+					"sha256": "c231143a84bbe086091f5fcd94b1f3117fd91a00fa2e8c19707f386be49909b1"
+				},
+				{
+					"path": "commands/ars-rebuttal-audit.md",
+					"sha256": "4b48c4cd799417fe5d5cd62f55fc87050a562d47d5a7084ee6446454f0908ba4"
+				},
+				{
+					"path": "commands/ars-reviewer.md",
+					"sha256": "c8316335cfa054962afc6dd87a6a45036d0c07efe8c1d1911f013498d036c17b"
+				},
+				{
+					"path": "commands/ars-revision-coach.md",
+					"sha256": "975591bf5e9fd1d4a697798844c6d1604a6f1d5220da24b090b3d895c8125745"
+				},
+				{
+					"path": "commands/ars-revision.md",
+					"sha256": "7135f32bca5cc125539de4d8170ea673d2bb73cdccd9272d2d72f514b5290fb0"
+				},
+				{
+					"path": "commands/ars-unmark-read.md",
+					"sha256": "4ce45672f07da9d48bb3350b273523e1b0e9cb021ddf1849ca1b7d8cc8d896ca"
+				},
+				{
+					"path": "package.json",
+					"sha256": "5497d262a2af42e25d0e31ab65f115735c2b85c6c256576494cafda760165550"
+				},
+				{
+					"path": "pi/package.json",
+					"sha256": "a4fceb32c55830f4cbd0116482414707de4a37067036bfa8243321186f06687a"
+				},
+				{
+					"path": "pi/wrapper.js",
+					"sha256": "4ec8a6884f87b55d2e201dbe93aaaabc0ba33a46ef9ae0677b212c53fcc9ce2a"
+				}
+			]
+		}
+	]
+}

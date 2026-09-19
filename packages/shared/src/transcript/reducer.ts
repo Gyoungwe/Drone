@@ -1,4 +1,10 @@
-import { buildLlmUiError, buildStreamGuardUiError, isUserAbortError, type UiError } from "../errors";
+import {
+	buildLlmUiError,
+	buildStreamGuardUiError,
+	isUserAbortError,
+	sanitizeProviderError,
+	type UiError,
+} from "../errors";
 import { progressDisplay } from "../progress-display";
 import type { ImageInput, SessionEvent } from "../session";
 import { parseExpandedSkillInvocation } from "../skill-invocation";
@@ -263,6 +269,22 @@ function commitLlmErrorCard(state: SessionTranscriptState, error: UiError): Sess
  */
 export function reduceEvent(state: SessionTranscriptState, event: SessionEvent): SessionTranscriptState {
 	switch (event.type) {
+		case "model_wait": {
+			if (event.status !== "timed-out")
+				return { ...state, modelWait: event.status === "resumed" ? null : event };
+			const error: UiError = {
+				severity: "warning",
+				source: "network",
+				titleKey: "error.title.modelTimeout",
+				hintKey: "error.hint.modelTimeout",
+				actions: ["retry"],
+				timestamp: Date.now(),
+			};
+			return commitLlmErrorCard(
+				{ ...finalizeStreaming(state), modelWait: null, pendingLlmError: null },
+				error,
+			);
+		}
 		case "stream_guard_tripped": {
 			// 熔断显形：warning 卡（含 verdict detail）；同轮 pending 的 LLM 错误卡不再落（熔断卡是唯一解释）
 			// 先 finalize 再落卡——熔断发生在流式中途（message_update 触发），partial 正文必须先固化在卡前
@@ -304,6 +326,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				...state,
 				phase: "streaming",
 				agentActive: true,
+				modelWait: null,
 				streaming: emptyStreaming(),
 				// 新 run 开工：上一 run 的定格戳作废（防旧戳被 max 到新轮）
 				runEndedAt: undefined,
@@ -315,6 +338,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 			return {
 				...state,
 				phase: "streaming",
+				modelWait: null,
 				streaming: emptyStreaming(),
 			};
 		}
@@ -711,7 +735,13 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 			// 自动重试瞬时状态行（不落卡；成功恢复不留痕，最终失败由 turn_end/agent_end 落卡）
 			return {
 				...state,
-				retrying: { attempt: event.attempt, maxAttempts: event.maxAttempts, delayMs: event.delayMs },
+				modelWait: null,
+				retrying: {
+					attempt: event.attempt,
+					maxAttempts: event.maxAttempts,
+					delayMs: event.delayMs,
+					...(event.errorMessage ? { errorMessage: sanitizeProviderError(event.errorMessage) } : {}),
+				},
 			};
 		case "auto_retry_end":
 			return { ...state, retrying: null };
@@ -735,6 +765,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 		case "agent_end": {
 			const final = finalizeStreaming({
 				...state,
+				modelWait: null,
 				phase: event.willRetry ? "streaming" : "idle",
 				// willRetry 还会继续 → 保持工作中；否则 run 结束（含中止）
 				agentActive: event.willRetry ? state.agentActive : false,
@@ -755,6 +786,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				phase: "idle",
 				agentActive: false,
 				retrying: null,
+				modelWait: null,
 				researchStatus: { agent: null, host: null },
 				runEndedAt: Date.now(),
 			});

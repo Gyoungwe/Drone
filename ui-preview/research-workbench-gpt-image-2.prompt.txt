@@ -1,0 +1,15 @@
+Use case: ui-mockup
+Asset type: desktop app UI concept render for a research-focused agent workbench
+Primary request: Generate a polished, restrained, scientific-minimal desktop agent workbench for the Shuncode/Percho project. Use the supplied screenshots as visual references for the existing product, then redesign the same product into a calmer research-tool aesthetic with compact density and clear hierarchy.
+Input images: Image 1 is the current compact chat main surface reference; Image 2 is the current compact settings surface reference. Treat both as product/UI references, not as edit targets. Preserve the product's functional information architecture while improving visual grouping.
+Project functions to represent: a chat workspace for research agents; a Wiki research report strip with four stages Navigation, Wiki, Retrieval, Report; a compact task workbench with task progress and a Continue task action; evidence and local-file preview links; an SSH guard where an agent may start an SSH attempt but must pause for explicit user approval before reading a local OpenSSH key; an approval dock with exact destination and command; research skill packs and model/tool status.
+Scene/backdrop: one desktop application window, neutral off-white and cool gray canvas, a quiet lab-notebook atmosphere, no browser chrome.
+Subject: a professional research agent workbench with a main conversation column, a narrow task rail, a compact Wiki report card, a bottom composer, and a collapsible settings/guard affordance.
+Style/medium: high-fidelity product UI mockup, scientific software minimalism, editorial typography, restrained blue and teal accents, thin borders, soft shadows, precise alignment, compact vertical rhythm, no decorative illustration.
+Composition/framing: wide 16:10 desktop screenshot, front-facing UI, main chat area centered, task rail on the right, report strip above the conversation, no oversized hero block, enough whitespace for readability but no redundant empty panels.
+Lighting/mood: bright neutral daylight, calm, analytical, trustworthy, focused.
+Color palette: warm white, graphite text, cool gray surfaces, muted cobalt blue, restrained teal for active/approved states, amber only for pending approval.
+Materials/textures: flat digital surfaces, subtle paper-like warmth, crisp controls, accessible contrast.
+Text (verbatim, keep short and legible): "Research workbench", "Wiki report", "Navigation", "Wiki", "Retrieval", "Report", "Continue task", "SSH guard", "Approval required", "Local OpenSSH keys", "Send".
+Constraints: preserve the compact single-surface hierarchy; group related controls; keep the task rail and Wiki report visible; make approval state obvious without a modal dominating the screen; show one collapsed detail affordance for SSH; use realistic UI text placement and consistent typography.
+Avoid: marketing landing-page composition, giant title, chat bubbles with excessive rounding, glowing neon, dark cyberpunk styling, decorative 3D objects, unrelated charts, fake logos, watermarks, illegible dense microtext, extra panels that duplicate the task rail.

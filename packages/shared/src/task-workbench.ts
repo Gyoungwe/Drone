@@ -177,6 +177,30 @@ export function taskActionCommand(
 		.replace(/=+$/, "");
 	return `/task-action ${encoded}`;
 }
+/** Presentation only: never changes the ledger or certifies scientific claims. */
+export function taskDeliveryPresentation(task: WorkbenchTask, agentActive: boolean) {
+	const terminal = TERMINAL_TASK_STATES.has(task.state);
+	const allAccepted = task.milestones.length > 0 && task.milestones.every((m) => m.state === "completed");
+	const unsettled =
+		task.operations.some((o) => o.state === "started" || o.state === "unknown") ||
+		task.actions.some((a) => a.state === "pending");
+	const deliveryComplete = allAccepted && !unsettled;
+	const warnings = !!task.reason || task.operations.some((o) => o.state === "failed");
+	const closed = task.state === "cancelled" || task.state === "archived";
+	const label = closed
+		? TASK_STATE_LABELS[task.state]
+		: agentActive && !terminal && task.state !== "waiting_user"
+			? "执行中"
+			: deliveryComplete
+				? warnings
+					? "交付已完成 · 有提醒"
+					: "交付已完成"
+				: allAccepted && unsettled
+					? "交付已验收 · 尚有事项待核对"
+					: TASK_STATE_LABELS[task.state];
+	return { label, deliveryComplete, canContinue: !terminal && !agentActive && !deliveryComplete };
+}
+
 export const TASK_STATE_LABELS: Record<TaskState, string> = {
 	pending: "待开始",
 	running: "执行中",

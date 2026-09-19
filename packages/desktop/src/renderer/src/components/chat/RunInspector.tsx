@@ -1,5 +1,5 @@
 import type { RunInspectorTurn, TurnTiming, UsageDisplayTotal } from "@drone/shared";
-import { useI18nStore } from "../../i18n";
+import { useI18nStore, useT } from "../../i18n";
 
 const compact = (n: number) =>
 	n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.round(n));
@@ -16,6 +16,7 @@ export function RunInspector({
 	usage?: UsageDisplayTotal;
 }) {
 	const zh = useI18nStore((s) => s.language) === "zh";
+	const t = useT();
 	if (!run) return null;
 	const gate =
 		run.publication.status === "passed"
@@ -35,11 +36,14 @@ export function RunInspector({
 						: "not run";
 	return (
 		<details
-			className="mt-2 rounded-lg border border-border bg-surface/60 px-2.5 py-1.5 text-[11px] text-ink-dim"
+			className="group mt-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink-dim"
 			data-testid="run-inspector"
 		>
-			<summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1">
-				<span className="font-medium text-ink-2">{zh ? "Run Inspector" : "Run Inspector"}</span>
+			<summary
+				className="flex min-h-8 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 rounded focus-visible:outline-2 focus-visible:outline-accent"
+				aria-label={t("runInspector.label")}
+			>
+				<span className="font-medium text-ink">{t("runInspector.title")}</span>
 				<span>{seconds(timing)}</span>
 				<span>
 					{run.tools.length} {zh ? "个工具" : "tools"}
@@ -47,7 +51,12 @@ export function RunInspector({
 				<span>
 					{run.models.reduce((n, m) => n + m.responses, 0)} {zh ? "次模型响应" : "model responses"}
 				</span>
-				<span className="ml-auto text-ink-faint">{zh ? "展开" : "Expand"} ▾</span>
+				<span className="ml-auto rounded-md bg-hover px-2 py-1 font-medium text-ink-2 group-open:hidden">
+					{t("runInspector.expand")} ▾
+				</span>
+				<span className="ml-auto hidden rounded-md bg-hover px-2 py-1 font-medium text-ink-2 group-open:inline">
+					{t("runInspector.collapse")} ▴
+				</span>
 			</summary>
 			<div className="mt-2 grid gap-2 border-t border-border pt-2">
 				<section>

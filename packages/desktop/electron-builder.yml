@@ -1,5 +1,6 @@
 appId: io.github.gyoungwe.drone
 productName: Drone
+beforePack: "../../scripts/verify-research-release.cjs"
 directories:
   output: dist
 files:
@@ -37,6 +38,25 @@ extraResources:
   # 内置协作 skill（channel-pickup/design-handoff）：additionalSkillPaths 扫描，与 UI 插件目录分列
   - from: "resources/skills"
     to: "skills"
+  # Reviewed release sources. ARS redistribution uses separately held permission; preflight is mandatory.
+  - from: "resources/research-skills/nature"
+    to: "research-skills/nature"
+    filter: ["**/*", ".drone-pack.json"]
+  - from: "resources/research-skills/scientific"
+    to: "research-skills/scientific"
+    filter: ["**/*", ".drone-pack.json"]
+  - from: "resources/research-skills/academic"
+    to: "research-skills/academic"
+    filter: ["**/*", ".drone-pack.json"]
+  # builder-util skips .gitkeep during directory traversal; retain these pinned placeholders explicitly.
+  - from: "resources/research-skills/academic/academic-pipeline/references/adapters/.gitkeep"
+    to: "research-skills/academic/academic-pipeline/references/adapters/.gitkeep"
+  - from: "resources/research-skills/academic/scripts/adapters/examples/obsidian/input_fixture/vault/.gitkeep"
+    to: "research-skills/academic/scripts/adapters/examples/obsidian/input_fixture/vault/.gitkeep"
+  - from: "resources/research-skills/academic/scripts/adapters/examples/zotero/input_fixture/.gitkeep"
+    to: "research-skills/academic/scripts/adapters/examples/zotero/input_fixture/.gitkeep"
+  - from: "resources/research-skills/academic/scripts/adapters/tests/.gitkeep"
+    to: "research-skills/academic/scripts/adapters/tests/.gitkeep"
   # All first-party research capabilities, loaded from one versioned manifest.
   # Never package local settings, sessions, downloaded papers, credentials or the user skill directory.
   - from: "../../.pi/extensions"

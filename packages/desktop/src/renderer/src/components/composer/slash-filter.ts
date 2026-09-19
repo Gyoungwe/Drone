@@ -1,4 +1,13 @@
-import { getSkillCategory, type SlashCommandInfo, skillCatalogSearchText } from "@drone/shared";
+import {
+	getSkillCategory,
+	type SlashCommandInfo,
+	skillCatalogSearchText,
+	WORKFLOW_DIRECTIONS,
+	WORKFLOW_STAGES,
+	workflowProfile,
+	resolveWorkflowStage,
+	type WorkflowDirection,
+} from "@drone/shared";
 
 export const SOURCE_ORDER: SlashCommandInfo["source"][] = ["builtin", "template", "skill", "extension"];
 
@@ -38,7 +47,11 @@ export function removeSlashToken(text: string, token: SlashToken): string {
 /** 过滤后的命令列表（按来源分组顺序拍平；skill 名称优先、描述命中兜底）
  *  非 skill 命令维持前缀匹配；skill 命令支持去 skill: 前缀后的前缀/子串匹配，以及描述关键词匹配 */
 export function isSpecializedCommand(command: SlashCommandInfo): boolean {
-	return command.source === "skill" && ["setup", "support"].includes(getSkillCategory(command.name));
+	return (
+		(command.source === "skill" &&
+			(!!workflowProfile(command.name) || ["setup", "support"].includes(getSkillCategory(command.name)))) ||
+		(command.source === "template" && /^ars-(?!pi-)/.test(command.name))
+	);
 }
 export function filterCommands(
 	commands: SlashCommandInfo[],
@@ -87,19 +100,66 @@ export function filterCommands(
 	return [...rest, ...prefixSkills, ...substringSkills, ...descriptionSkills];
 }
 
-export type SlashMenuGroup = SlashCommandInfo["source"] | "setup" | "support";
-const MENU_GROUP_ORDER: SlashMenuGroup[] = [...SOURCE_ORDER, "setup", "support"];
+/** UI-only navigation: never serialized as a prompt or sent as an SDK command. */
+export interface WorkflowMenuCommand extends SlashCommandInfo {
+	workflowNavigation?: WorkflowDirection;
+	workflowStage?: string;
+}
+export function workflowMenuItems(
+	commands: SlashCommandInfo[],
+	direction?: WorkflowDirection | null,
+): WorkflowMenuCommand[] {
+	if (direction)
+		return WORKFLOW_STAGES.filter((s) => s.direction === direction).map((stage) => {
+			const actual = resolveWorkflowStage(stage, commands);
+			return actual
+				? { ...actual, workflowStage: stage.id }
+				: {
+						name: `unavailable:${stage.id}`,
+						source: "extension",
+						supported: false,
+						description: "",
+						workflowStage: stage.id,
+					};
+		});
+	// An empty/unrelated SDK catalog must not pretend that the integration is installed.
+	if (
+		!commands.some(
+			(c) =>
+				c.source === "skill" &&
+				workflowProfile(c.name)?.direction &&
+				workflowProfile(c.name)?.direction !== "internal",
+		)
+	)
+		return [];
+	return WORKFLOW_DIRECTIONS.map((direction) => ({
+		name: `workflow:${direction.id}`,
+		source: "extension",
+		supported: true,
+		description: "",
+		workflowNavigation: direction.id,
+	}));
+}
+export type SlashMenuGroup = SlashCommandInfo["source"] | "setup" | "support" | "workflow";
+const MENU_GROUP_ORDER: SlashMenuGroup[] = ["workflow", ...SOURCE_ORDER, "setup", "support"];
 /** A single ordering function for DOM, keyboard Enter and Tab; no visual/runtime index mismatch. */
 export function groupCommands(
 	commands: SlashCommandInfo[],
 	query: string,
 	showSpecialized = false,
-): Array<{ source: SlashMenuGroup; items: SlashCommandInfo[] }> {
-	const buckets = new Map<SlashMenuGroup, SlashCommandInfo[]>();
+	direction?: WorkflowDirection | null,
+): Array<{ source: SlashMenuGroup; items: WorkflowMenuCommand[] }> {
+	const buckets = new Map<SlashMenuGroup, WorkflowMenuCommand[]>();
+	if (!query && !showSpecialized) {
+		const navigation = workflowMenuItems(commands, direction);
+		if (navigation.length) buckets.set("workflow", navigation);
+		if (direction) return [{ source: "workflow", items: navigation }];
+	}
 	for (const command of filterCommands(commands, query, showSpecialized)) {
-		const source: SlashMenuGroup = isSpecializedCommand(command)
-			? (getSkillCategory(command.name) as "setup" | "support")
-			: command.source;
+		const source: SlashMenuGroup =
+			command.source === "skill" && ["setup", "support"].includes(getSkillCategory(command.name))
+				? (getSkillCategory(command.name) as "setup" | "support")
+				: command.source;
 		const items = buckets.get(source) ?? [];
 		items.push(command);
 		buckets.set(source, items);
@@ -113,6 +173,7 @@ export function menuCommands(
 	commands: SlashCommandInfo[],
 	query: string,
 	showSpecialized = false,
-): SlashCommandInfo[] {
-	return groupCommands(commands, query, showSpecialized).flatMap((group) => group.items);
+	direction?: WorkflowDirection | null,
+): WorkflowMenuCommand[] {
+	return groupCommands(commands, query, showSpecialized, direction).flatMap((group) => group.items);
 }

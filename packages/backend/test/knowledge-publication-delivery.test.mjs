@@ -459,3 +459,30 @@ it("automatic SDK delivery preserves the answer and its nonblocking reminder wit
 	expect(final.knowledgePublication.scientificallyVerified).toBe(false);
 	expect(JSON.stringify(await backend.getSessionMessages(sid))).toContain("AUTOMATIC_DIRECT_ANSWER");
 });
+
+it("manual recovery resumes a failed final with existing proof, no new user prompt, and no duplicate queue", async () => {
+	session.setAutoRetryEnabled(false);
+	const failed = Object.assign(reply(""), { stopReason: "error", errorMessage: "stream_read_error" });
+	await run([...steps().slice(0, 3), failed]);
+	expect(session.messages.filter((m) => m.role === "assistant").at(-1).stopReason).toBe("error");
+	const beforeUsers = session.messages.filter((m) => m.role === "user").length;
+	const beforeTools = session.messages.filter((m) => m.role === "toolResult").length;
+	const originalTools = session.getActiveToolNames();
+	const user = session.messages.filter((m) => m.role === "user").at(-1);
+	faux.setResponses([reply("RECOVERED_WITH_EXISTING_EVIDENCE [[Library/Papers/source]]")]);
+	const [a, b] = await Promise.all([
+		backend.retry(sid, "same-error-card", user.timestamp),
+		backend.retry(sid, "same-error-card", user.timestamp),
+	]);
+	expect(a).toEqual({ kind: "agent" });
+	expect(b).toEqual(a);
+	await session.waitForIdle();
+	await vi.waitFor(() => expect(session.getActiveToolNames()).toEqual(originalTools));
+	const final = session.messages.filter((m) => m.role === "assistant").at(-1);
+	expect(final.content[0].text).toContain("RECOVERED_WITH_EXISTING_EVIDENCE");
+	expect(final.knowledgePublication.status).toBe("released");
+	expect(session.messages.filter((m) => m.role === "user")).toHaveLength(beforeUsers);
+	expect(session.messages.filter((m) => m.role === "toolResult")).toHaveLength(beforeTools);
+	expect(session.getFollowUpMessages()).toEqual([]);
+	expect(JSON.stringify(await backend.getSessionMessages(sid))).toContain("RECOVERED_WITH_EXISTING_EVIDENCE");
+});

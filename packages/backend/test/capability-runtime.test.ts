@@ -288,3 +288,24 @@ it("does not import capability visibility from another session", () => {
 	expect(runtime.state().activeCapabilities).toEqual([]);
 	expect(runtime.state().activeTools).not.toContain("bash");
 });
+
+it("bounds explicit existing-literature reuse without changing normal execution routing", () => {
+	const visibility = new SkillVisibility(),
+		loader = new CapabilityResourceLoader(makeLoader(), visibility),
+		session = makeSession(loader);
+	const runtime = new CapabilityRuntime(visibility);
+	runtime.bind(session as any);
+	runtime.prepareForPrompt("只读复用已有文献，核对 Zotero 和 Obsidian，给比较基因组方案", false);
+	runtime.activate(["coding", "external"]);
+	expect(runtime.state().activeTools).not.toContain("bash");
+	expect(runtime.state().activeTools).not.toContain("ask_user");
+	expect(runtime.guardTool("task_plan", {})).toMatchObject({ block: true });
+	expect(runtime.guardTool("research_loop", { action: "start" })).toBeUndefined();
+	expect(runtime.guardTool("read", { path: "packages/desktop/results/old.json" })).toMatchObject({
+		block: true,
+	});
+	expect(runtime.guardTool("read", { path: ".pi/skills/research-workflow/SKILL.md" })).toBeUndefined();
+	runtime.prepareForPrompt("实现代码并执行测试", false);
+	expect(runtime.state().activeTools).toContain("bash");
+	expect(runtime.guardTool("bash", {})).toBeUndefined();
+});

@@ -1,0 +1,237 @@
+# 技能工作流融合方案
+
+**结论：收敛为 6 个常用入口，保留专业模块与不可拆分依赖；不要把近两百份技能拼成 6 份超长提示词。**
+
+状态（2026-09-19）：**已按后续确认在 `skill-upgrade` 实现六方向导航及单阶段主流程路由；ARS 保持默认纳入发布。默认入口收拢，原名在高级视图/搜索中保留；未改写或删除上游技能正文。**
+
+## 一、范围与数量
+
+| 来源 | 评估条目 | 当前发行候选 |
+|---|---:|---:|
+| Nature | 20 | 20 |
+| Scientific | 166 | 148 |
+| Academic / ARS | 4 | 4 |
+| 项目自有 | 7 | 7 |
+| **合计** | **197** | **179** |
+
+不包含用户全局安装的技能。Scientific 的另外 18 项仍等待单独许可复核：参与本次评估，但不因整合或 ARS 授权而自动获得分发资格。179 是项目资源清单里的候选数，不保证在每个用户环境去重后仍有 179 个独立可见入口。
+
+项目自有 7 项：`research-workflow`、`research-vault`、`zotero-literature`、`research-show-me`、`design-handoff`、`channel-pickup`、`drone-ui-plugin`。
+
+### 评估依据与限制
+
+- 覆盖 **197/197 份 SKILL.md** 的全文结构化扫描，共 **55,531 行、约 2.58 MB UTF-8 文本**：用途、阶段、强制条款、交叉提及和相对资源链接；对重叠较大及权限敏感的合同另做逐段核对。
+- 三源以原固定 commit 为准，并重新核对缓存归档 SHA-256；项目自有部分以本轮工作区读取快照为准。
+- 在三源发行候选的 SKILL 正文中提取到 **332 条可解析的 Markdown 相对资源链接**：330 条目标文件存在且属于保留范围；另 2 条经核对是 `[作者, 年份](url)` 的引用格式示例，不是缺文件。
+- **这不是 197 个技能的逐一实跑，也不是所有脚本、参考文档或外部依赖的逐行安全审计。** 动态路径、反引号中的命令、Python 导入、运行时网络服务等不属于上述链接计数。字符串提及不直接当成硬依赖。
+
+逐项依据、原文用途摘要、流程结构及处理建议见 **`research-skill-consolidation.csv`**（另提供 Excel 版）；同时提供 CSV、结构化 JSON 与资源链接核查表。
+
+## 二、建议的六个方向
+
+数量按**主要职责**归类，不代表模块只能用于这一方向。跨方向调用仍然允许，但只在实际任务需要时加载。
+
+| 常用入口 | 用户要解决的问题 | 内部如何融合 | 评估 / 发行候选 |
+|---|---|---|---:|
+| **1. 研究规划与设计** | 选题、假设、实验设计、样本量、开题和项目申请 | 共用问题澄清与研究计划入口；保留实验设计、效能、机构模板及 ARS 完整流程模式 | 12 / 11 |
+| **2. 文献证据与知识管理** | 查文献、下载、精读、综述、引用、Zotero、知识沉淀 | 共用检索—阅读—核验—沉淀主线；数据库、下载器、阅读器、文献库作为阶段模块 | 37 / 34 |
+| **3. 数据分析与专业计算** | 数据探索、统计、生信、机器学习、化学、物理等 | 共用输入/QC/结果交付合同；按数据类型和算法选择专业后端，不能硬合并不同库 | 89 / 80 |
+| **4. 论文写作与审校** | 起草、润色、统计报告、审稿、返修、投稿规范 | 一个入口下区分写作、语言编辑、审稿、回复等阶段；每阶段只有一个执行主流程 | 17 / 17 |
+| **5. 可视化与成果交付** | 数据图、机制图、解释页、PPT、海报和文档格式 | 共用交付目标与质量检查；保留真实数据绘图、AI 示意、截图重建、新制幻灯片的区别 | 18 / 13 |
+| **6. 工程集成与协作** | 交接、管线、算力、云平台、实验设备、应用定制 | 平台/设备/服务做适配器；安装、费用、外发、物理执行及自优化仍需对应授权 | 22 / 22 |
+| **内部基础层，不新增入口** | 任务/证据控制与共享参考 | `research-workflow`、`nature-shared` 保留，但不作为互相竞争的顶层业务入口 | 2 / 2 |
+
+六个方向内部可用 **34 个子域标签（含基础层标签）** 做筛选，不再把它们全部平铺给用户。高级浏览仍可按原技能名、来源、格式、学科或平台找到具体模块。
+
+**缩减目标是“常用选择入口 → 6 个”，不是“资源文件 → 6 份”。** 第一阶段原有 179 个发行候选全部保留；能否物理删除文件，必须在后续依赖闭包和回归检查后另行决定。本轮不承诺未经测量的 token、延迟或体积降幅。
+
+## 三、哪些适合融合，哪些只能共用入口
+
+### 1. 检索与引文：融合编排，不混淆证据类型
+
+- 将 `nature-academic-search`、`paper-lookup`、`research-lookup` 等收进同一检索入口，按问题和可用服务选择一个主检索方案。
+- 保留项目的本地知识/Zotero 优先策略、真实读取记录和双库分开验收；**不能用 `pyzotero` 或 `open-notebook` 替换宿主的证据与写入控制。**
+- `nature-ref-verifier` 与 `citation-management` 可共用“解析—字段核验—导出”的流程，但 DOI/作者/年份正确，不等于引用真的支持某项结论。
+- 系统综述仍须保留检索范围、纳排标准和综合方法，不能退化成泛泛的几篇论文摘要。
+- `nature-citation` 的 Nature/CNS 期刊范围是专用分支，不应限制普通检索。
+
+### 2. 写作：统一入口，保留快路径与严格路径
+
+`nature-writing`、`scientific-writing`、`academic-paper` 不宜同时担任正文负责人。按用户任务选择一个工作流，其余提供必要参考，而不是叠加三套命令。
+
+- **局部起草 / 普通修改**：沿用轻量路径，直接完成指定正文。
+- **语言润色**：走 `nature-polishing`，不重做选题和研究设计。
+- **完整 ARS 项目**：显式选择后保留其逐阶段确认、恢复和模式合同。
+- 项目自有工作流强调尽量一次集中询问；ARS 完整流程要求每阶段确认。应通过**明确的工作模式**表达区别，不能把二者揉成互相矛盾的默认提示词。
+
+### 3. 审稿与返修：共用导航，不抹掉不同合同
+
+- Nature 默认是 **3 份互盲评审 + 综合**，要求真实上下文隔离。
+- ARS 是 **5 席角色分工评议 + 编辑综合**，明确不把角色分工称为独立误差过程。
+- `peer-review` 可保留为普通、证据约束的轻量审校。
+- `nature-response` 与 ARS 的返修/回复模式属于**作者回应审稿意见**，不能被“再模拟审稿一次”替代。
+
+可以统一问题清单、定位字段、严重性和交付展示；不能悄悄改变席位数、隔离程度、保密约束或输出承诺。
+
+### 4. 数据与统计：不要按名称误合并
+
+- `nature-data` 实际负责 **Data/Code Availability 与 FAIR 信息**，不是通用数据清洗，应归入写作规范。
+- `nature-statistics` 主要是 **统计报告审查**；计算分析用 `statistical-analysis`、`statsmodels`、`pymc` 等适合的方法。
+- `experimental-design` / `statistical-power` 在采样设计阶段；统计建模在分析阶段；结果报告审查在写作阶段。它们有关联，但不是可删除的重复实现。
+- 生信、化学、量子等专业库折叠到后端，**保留不同数据结构、算法、硬件与版本合同**。不把不同领域拼成一个“万能分析”大提示词。
+
+### 5. 阅读、解释与演示：复用中间成果，避免重复劳动
+
+- 已有 `nature-reader` 源映射时，论文卡优先复用；没有完整材料时标明局部覆盖，不强迫再翻译整篇。
+- `nature-image2ppt` 是从图片重建可编辑对象；`nature-paper2ppt` / `scientific-slides` 是根据内容新制演示稿。共用“演示交付”入口，但保留两条路线。
+- `research-show-me` 的静态解释页不能和 `drone-ui-plugin` 的可执行 TSX 插件混用权限；解释页也不能冒充科学证据。
+- 数据图必须来自真实数据；AI 示意图是另一类交付。Scientific 综述正文里的“强制 AI 图”不得升级成默认费用或外传授权。
+
+### 6. 协作与自优化：减少入口，不删除互补角色
+
+`design-handoff` 与 `channel-pickup` 可以共用一个“跨会话协作”入口，但分别承担生产交接与接手实施，必须保留共同的 HANDOFF/spec/plan、通知、回报和退订协议。
+
+`autoskill`、`arbor`、`pi-agent` 放到高级能力：仅在用户明确要求时调用。整合技能本身不需要录屏、持续优化、配置云模型或安装第二个代理框架。探索性 `consciousness-council` / `dhdna-profiler` 不应成为普通科研的默认步骤，更不能当作经验证的科学或人员评判。
+
+## 四、不可拆分与条件依赖
+
+| 组合 | 处理原则 |
+|---|---|
+| **宿主任务/证据控制层** | 保留 workbench manifest 的 8 个扩展、16 个必需工具及相关 lib；任务状态、实际阅读和受控写入不交给第三方技能替代。 |
+| **Nature 共享资源** | 保留各技能 manifest/core/fragments/scripts/references 及被引用的 `nature-shared`；只读必要片段，不给共享包独立启动入口。 |
+| **ARS 完整 Pi 包** | 保留 4 根技能、原 wrapper、包清单、模式注册表、16 个命令和完整 shared/scripts/references。不能因入口只剩几个就删目录。 |
+| **bulk RNA-seq** | 按当前输入阶段进入；需要 DE/富集/绘图时保留相应模块，不要求已有 counts 的用户从 FASTQ 重跑。 |
+| **单细胞** | `anndata` 是数据结构，`scanpy` 是标准分析，`scvi-tools` 是概率模型；按任务组合，不能互删，也不能默认全开。 |
+| **基因组坐标与格式** | 组装版本、坐标基准、区间约定及文件索引合同必须跨模块保留。 |
+| **RDKit 与化学封装** | 简单封装不能替代底层精细操作；对接、分子动力学和性质预测也不是同一工作流。 |
+| **设备与实验平台** | Opentrons、PyLabRobot、云实验室等不因同属“自动化”就可互换；离线模拟、物理执行和预算分别受控。 |
+| **医疗/专利/合规分支** | 保留专业责任人、授权材料、隐私与审核边界；文档生成不等于临床决定、发明权判断或合规认证。 |
+| **跨会话协作** | 交接方和实施方是互补角色，减少入口不能造成无人产出或无人消费交接记录。 |
+
+完整的 **18 组边界**及定位依据在 Excel“不可拆分边界”工作表。
+
+### 依赖缺口不能靠“全部加载”解决
+
+例如 `literature-review` 提及 `bioservices` 和 `datacommons-client`：前者的技能文档不在默认发行清单，后者未在本次库存中发现同名 SKILL。它们只能作为待探测的外部能力，不能宣称已安装。软件包安装、技能文档分发许可、服务账号是三个不同问题。
+
+只有功能等价且符合任务范围的能力才可回退。PDF 文本提取能力不能冒充完整 PDF 编辑能力；每日文献订阅不能冒充研究到投稿；生成式示意图不能代替统计绘图。
+
+## 五、建议实现方式（尚未实施）
+
+```text
+用户问题
+  → 匹配六个方向之一（或明确的跨方向阶段）
+  → 识别当前阶段、输入、目标与工作模式
+  → 选择一个执行主流程
+  → 仅加载本阶段需要的专业模块与共享依赖
+  → 经宿主权限、证据与确认机制执行
+  → 输出可追溯产物，阶段切换时撤回旧模块
+```
+
+- 六个入口是轻量导航/任务配置，不直接塞入所有正文。
+- 建议任务配置记录：`primaryWorkflow`、`stage`、`mode`、`specialists`、`requiredResources`、`permissionRequirements`、`outputContract`。这是方案中的完整目标结构；本轮实际选择器仅增加 `primaryWorkflow`、`stage`、`direction`、`contract`、`unavailableStage`，其余不是已实现的 API。
+- 保留现有“相关任务才对模型可见”的设计及自动发现预算；原生手动命令仍保持原名和明确调用语义。
+- 普通浏览默认只展示方向和当前相关选项；高级视图保留原技能、来源、状态和诊断信息。未安装或待许可条目必须标为不可用，不得把库存记录冒充可执行能力。
+- 原始上游内容保持固定版本，用项目侧适配层统一路由与交付合同。先不改写上游，避免哈希、相对路径、许可证和更新链失真。
+- 安全/证据/审批合同不靠模型自己“记住”来替代现有工具权限；也不把路由可见性宣传成文件系统隔离。
+
+## 六、实施顺序与验收建议
+
+1. **先收导航**：六个入口 + 高级视图，兼容全部原名/别名；不删资源。
+2. **再统一阶段编排**：检索、引用、起草、审校、交付每阶段只有一个主流程；新增跨阶段回归。
+3. **再共享可复用合同**：输入来源、引用定位、QC、产物位置与格式校验，保留不同审稿/授权/确认模式。
+4. **最后才讨论物理裁减**：逐项确认静态和动态依赖、授权及等价输出，验证后裁减；原包仍可回滚。
+
+最低回归场景：普通闲聊不加载科研正文；局部润色不进十阶段；回复审稿不误开评审；Nature/ARS 审稿契约分别可见；已有 counts 不重跑测序前处理；单细胞格式/模型模块不误删；无授权不外发/付费/操作设备；Zotero/Wiki 不绕过原写入流程；阶段切换撤回旧 owner；高级原名仍可手动调用。
+
+## 七、前一轮已经落地的 ARS 发布调整
+
+- `electron-builder.yml` 加入 Academic 完整资源；开发版和发布版都登记经校验的 ARS。
+- 4 个 Academic 条目的发布标记已更新；安装仍需要明确、适用的授权依据。
+- `dist` 与直接调用 electron-builder 的 `beforePack` 都执行三源离线预检。缺包、非商业本地回执、哈希不符或未登记额外文件会阻止发布准备。
+- 原 LICENSE / NOTICE 保留。依据是你持有独立授权且本次明确要求纳入发布；软件配置和回执本身不授予新许可，也不改变上游或第三方依赖条款。
+- 使用 **electron-builder 实际的 extraResources 匹配器与复制器**，在临时目录复制后逐文件核验。发现它会跳过 `.gitkeep`，已为 ARS 的 4 个固定占位文件添加精确复制规则，避免“看似整包实际漏文件”。
+- 最终复制核验：Nature **745**、Scientific **1,806**、Academic **2,737** 个来源文件，外加各自回执，全部匹配。
+- 本轮针对性验证：后端 **52** 项、桌面 **13** 项、发布预检 **9** 项，共 **74 项通过**；完整工作区 typecheck 最后复跑通过。首次检查曾被并发界面修改的 `SettingsRow` 引用阻断；未越权修改该界面，随后工作区复跑已恢复通过。
+- **没有制作/发布安装包，没有主动重启应用，没有 commit/push。** 资源复制核验不等于完整安装包或商业服务端到端验收；没有调用付费模型或研究 API。
+
+可重复验证命令（项目根目录）：
+
+```sh
+python scripts/test-research-release.py
+python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
+node scripts/check-research-packaging.cjs
+npm run typecheck
+```
+
+## 八、主要原文依据
+
+全部逐项依据见评估表，三源链接固定到本次版本：
+
+- [Nature 写作：局部任务与非审批式进度提示](https://github.com/Yuan1z0825/nature-skills/blob/2375e0abdf42158ef149256f2c64b1f759a0d274/skills/nature-writing/SKILL.md#L32-L51)
+- [Nature 审稿：三份互盲、隔离与冻结](https://github.com/Yuan1z0825/nature-skills/blob/2375e0abdf42158ef149256f2c64b1f759a0d274/skills/nature-reviewer/SKILL.md#L19-L23)
+- [ARS 审稿：五席角色分工而非独立性承诺](https://github.com/Imbad0202/academic-research-skills/blob/3c546bc08c56f79e0068f1ea4f0acedf5bf69b5e/academic-paper-reviewer/SKILL.md#L17-L38)
+- [ARS 完整流程：逐阶段确认](https://github.com/Imbad0202/academic-research-skills/blob/3c546bc08c56f79e0068f1ea4f0acedf5bf69b5e/academic-pipeline/SKILL.md#L28-L70)
+- [Scientific 综述：服务提及和强制 AI 图要求](https://github.com/K-Dense-AI/scientific-agent-skills/blob/330c8e764435a731eff571e3efdda70b363d0792/skills/literature-review/SKILL.md#L23-L55)
+- [bulk RNA-seq：阶段链与单步入口](https://github.com/K-Dense-AI/scientific-agent-skills/blob/330c8e764435a731eff571e3efdda70b363d0792/skills/bulk-rnaseq/SKILL.md#L21-L32)
+- 项目内：`.pi/skills/*/SKILL.md`、`.pi/lib/workbench-manifest.json`、`packages/desktop/resources/skills/*/SKILL.md`、`packages/desktop/resources/ui-plugins/skills/drone-ui-plugin/SKILL.md`。
+
+---
+
+## 九、当前分支实施记录（2026-09-19）
+
+### 已实现
+
+- `packages/shared/src/workflow-catalog.ts` 与 `workflow-profiles.json`：197 项来源/方向/子域映射，6 方向、40 个阶段入口；两个内部基础模块不作为独立方向。库存不等于已安装，Scientific 18 项许可待审保持不分发。
+- 后端：按当前真实 loader、能力及 ARS 模式选主流程；每阶段一个执行主流程，允许相关专业辅助模块；比较模式只做参考。阶段变化撤回旧阶段强制选项和专业模块，明确续聊可恢复有界意图检查点。
+- 模型入口：保持原 6 项/6000B 自动发现预算，仅提示当前 owner 与阶段合同，没有拼接 197 份正文。手动原生命令可选择 manual-only 技能，自动选择仍尊重禁用标记。
+- 设置页默认六方向卡片；聊天 `/` 为“方向 → 阶段”，只解析本会话真实、supported 且来源类型正确的命令。目录点击不发送消息、不执行技能；缺失阶段禁用，不伪造命令或自动替换不同审稿合同。
+- 高级视图保留原技能名、来源、分类、搜索及诊断；非受管用户技能保留。会话、目录、信任状态变化清空旧命令与目录状态，查询变化返回根目录。
+- Nature 三互盲、ARS 五席评议、普通评审、审稿回复分别保留；ARS 启用也不把普通评审改为五席。AnnData/scvi 等直接选择保持专业模块身份，不冒充 Scanpy 标准分析。
+- 原 ARS Pi wrapper/桥接、完整资源、确认模式、证据/权限工具及 LICENSE/NOTICE 保留；未改用户全局安装，未安装额外测试依赖。
+
+### 本轮验收
+
+| 检查 | 结果 |
+|---|---|
+| 后端路由、能力运行时、原 Pi 桥接与真实 SDK、阶段切换 | 80/80 通过 |
+| 桌面资源包、目录/菜单/输入/发送回归 | 42/42 通过 |
+| 共享目录与非等价合同 | 4/4 通过 |
+| 发布门禁 Python 回归 | 9/9 通过 |
+| 隔离 Electron UI | 11/11 检查通过 |
+| 三源离线发布预检与 electron-builder 实际复制 | Nature 745、Scientific 1806、Academic 2737 个源文件及回执全部通过 |
+| 全工作区 typecheck | 最终全工作区通过；中途曾被并行 `KnowledgeFlowCard.tsx` 的 `workbench.*` 翻译键阻断，未覆盖该并行修改，随后复跑已恢复通过 |
+
+126 项 Vitest 回归、9 项 Python 回归和 11 项 UI 检查分开统计。隔离 UI 使用隐藏窗口、临时 profile、真实组件/键盘事件、mock SDK 命令清单，无模型/研究 API 调用；不是生产账号或商业服务端到端验收。真实 SDK 测试使用离线 faux provider。
+
+UI 检查覆盖默认六方向、鼠标进入、ArrowDown/Enter/Tab、Esc 返回、ARS 原名、缺失互盲命令禁用、高级原名、精准搜索、中文工程技能搜索、英文/暗色/640px 无溢出、空会话清除旧命令及零执行调用。截图与 `validation.json` 留在临时目录（脚本打印路径）。旧 `check-skill-catalog-ui.mjs` 转发到新入口，避免继续使用过时的平铺列表断言。
+
+### 边界
+
+- 自然语言路由是有界关键词与显式优先级，不是完整语义规划器；复杂跨阶段任务应明确当前阶段或使用原有带确认的完整流程。
+- 新任务/具名专业模块按阶段替换处理，尚无通用“保留当前阶段并追加辅助模块”的自然语言语义判别；同一请求可明确列出主流程与辅助模块。
+- `before_agent_start` 注入阶段合同不是独立强制校验器；轮内 `capability_load` 更新可见性，新的阶段提示在下次事件生成。原权限与证据工具继续负责已有硬约束。
+- 没有增加真正互盲多代理隔离、动态第三方依赖安装或完整十阶段业务跑通；可见性不等于文件系统隔离。
+- 本轮未制作/签名/发布安装包，未重启真实应用，未执行 commit/push；资源复制验收不等于安装器验收。
+
+### 可重复验收
+
+```sh
+# 项目根目录
+npm run typecheck
+node scripts/check-workflow-catalog-ui.mjs
+python scripts/test-research-release.py
+python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
+node scripts/check-research-packaging.cjs
+
+# packages/backend
+npx vitest run test/research-skill-router.test.ts test/capability-runtime.test.ts test/academic-pi-bridge.test.ts test/academic-pi-sdk.test.mjs test/workflow-consolidation.test.ts
+
+# packages/desktop
+npx vitest run src/main/research-skill-packs.test.ts src/renderer/src/components/composer/skill-catalog.test.ts src/renderer/src/components/composer/SlashMenu.test.ts src/renderer/src/components/composer/slash-token.test.ts src/renderer/src/components/composer/use-composer-send.test.ts src/renderer/src/components/composer/workflow-menu.test.ts
+
+# packages/shared
+npx vitest run src/workflow-catalog.test.ts
+```
+
+**本轮完成的是：六方向导航 + 单阶段主流程选择/撤回 + 专业模块按需可见 + 原合同与依赖保留；不是物理删除专业能力或保证全部科研任务无人值守。**

@@ -26,7 +26,7 @@ Do not copy the Zotero library into the Vault. Do not promise semantic-search ex
 If `research_zotero_status` reports `zoteroCli`, drive the installed CLI. Run `zotero-cli --help` once if flags are unknown. Typical shape (confirm against help):
 
 - `zotero-cli search "<query>" --json`
-- `zotero-cli get <itemKey> --json`
+- `zotero-cli --json get metadata <itemKey>` (confirm installed subcommand help)
 - annotations / collections via the same CLI (`--json`)
 
 Local mode needs Zotero desktop running. A failed local API is “Zotero is not reachable”, not “the paper does not exist”.
@@ -44,9 +44,18 @@ The citable “原文” is a **literature note**, not the PDF:
 
 Evidence and Wiki continue to use Vault paths. A Zotero hit cannot unlock `research_search_knowledge` or parent publication by itself.
 
+## Claim evidence and dual-library acceptance
+
+- Search results can contain fallback/unrelated records: normalize DOI (case, doi.org prefix) and compare the actual item DOI exactly. Zero exact matches is not absence if retrieval failed or was incomplete. Reuse one existing item; do not merge/delete pre-existing duplicates without permission.
+- Before writing, inspect current library/collection and bound Vault. Check for an existing note by DOI and Zotero key, not only title. Preserve human sections. Re-read after an uncertain write before retrying.
+- For every main claim, retain the original paper DOI, organism, actual section/figure/page read, method, result and limitation. State metadata-only/abstract-only explicitly. Wiki is orientation, not original-paper evidence.
+- Authorized dual deposition has two separate steps: Zotero metadata plus legally open fulltext when available; then an interpreted `Library/Papers` note with DOI and `zotero:<key>` links. `research_archive_source` alone does not import into Zotero.
+- Call `research_verify_literature` after deposition/reuse and report each destination separately. Its read-only local-personal-library check cannot verify groups, cloud sync, PDF bytes, or scientific support; if those are required use the configured authenticated API and report the limitation.
+- Cite the paper note next to its supported claim after `research_read_knowledge`. Give a compact claim → paper → location → support/limitation table, and a separate Zotero key / Obsidian path / fulltext / failure receipt table. Never disguise a partial destination as success.
+
 ## Boundaries
 
 - PDFs stay in Zotero. Do not dump full-text PDFs or binary fetch payloads into Vault notes.
 - Do not treat annotations as scientifically verified claims.
-- Write operations in Zotero (add-by-DOI, tags) need an explicit user request and hybrid/web API credentials; default local API is read-oriented.
+- Zotero writes require explicit user authorization. Prefer configured hybrid/web credentials. The local `/api` interface is read-oriented; if using Zotero’s supported Connector save endpoint, first verify the selected personal library/collection is the authorized destination and editable, send only verified metadata/legal open attachments, then read back exact DOI and key. Never write the Zotero database directly or invent credentials. If no authorized write route is available, report a blocked Zotero destination instead of claiming success.
 - Subagents do not receive this setup/write path. The parent deposits paper notes.

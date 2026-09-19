@@ -45,6 +45,7 @@ const KNOWN_ERROR_TITLES = new Set([
 	"error.title.llmNetwork",
 	"error.title.llmGeneric",
 	"error.title.streamGuard",
+	"error.title.modelTimeout",
 ]);
 function errorTitleKey(key: string): LanI18nKey {
 	return KNOWN_ERROR_TITLES.has(key) ? (key as LanI18nKey) : "error.generic";

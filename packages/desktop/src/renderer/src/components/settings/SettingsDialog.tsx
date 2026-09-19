@@ -88,9 +88,12 @@ export function SettingsDialog() {
 
 	return (
 		<div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/20" role="dialog" aria-modal>
-			<div className="flex h-[78vh] w-[min(980px,96vw)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-dialog">
-				<div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-					<h2 className="text-sm font-semibold text-ink">{t("settings.title")}</h2>
+			<div
+				data-testid="settings-dialog"
+				className="settings-dialog flex h-[74vh] w-[min(900px,94vw)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-dialog"
+			>
+				<div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+					<h2 className="text-[13px] font-semibold text-ink">{t("settings.title")}</h2>
 					<button
 						type="button"
 						className="rounded-lg px-2 py-1 text-ink-faint transition-colors hover:bg-hover hover:text-ink-2"
@@ -101,12 +104,12 @@ export function SettingsDialog() {
 					</button>
 				</div>
 				<div className="flex min-h-0 flex-1">
-					<nav className="w-44 shrink-0 overflow-y-auto border-r border-border p-2">
+					<nav className="w-36 shrink-0 overflow-y-auto border-r border-border p-1">
 						{STATIC_CATEGORIES.map((id) => (
 							<button
 								key={id}
 								type="button"
-								className={`mb-0.5 w-full rounded-lg px-3 py-2 text-left text-[13px] transition-colors ${
+								className={`mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
 									category === id
 										? "bg-hover font-medium text-ink"
 										: "text-ink-dim hover:bg-hover hover:text-ink"
@@ -123,7 +126,7 @@ export function SettingsDialog() {
 								<button
 									key={id}
 									type="button"
-									className={`mb-0.5 w-full rounded-lg px-3 py-2 text-left text-[13px] transition-colors ${
+									className={`mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
 										category === id
 											? "bg-hover font-medium text-ink"
 											: "text-ink-dim hover:bg-hover hover:text-ink"
@@ -135,7 +138,7 @@ export function SettingsDialog() {
 							);
 						})}
 					</nav>
-					<div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3">
+					<div className="settings-dialog-content min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2">
 						{Panel ? (
 							<Panel />
 						) : activePluginContribution ? (

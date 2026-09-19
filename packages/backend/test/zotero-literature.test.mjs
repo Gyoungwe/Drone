@@ -12,6 +12,7 @@ import {
 	bootstrapZotero,
 	inspectZotero,
 	installZoteroMcp,
+	readZoteroMcp,
 	registerZoteroMcp,
 	setupZoteroAgentMessage,
 	uvBootstrapCommand,
@@ -79,6 +80,32 @@ describe("zotero literature identity", () => {
 				zoteroKey: "ABCD1234",
 			}),
 		).rejects.toThrow("paper notes");
+	});
+});
+
+describe("Windows BOM config compatibility", () => {
+	it("reads BOM config without mutating it and preserves fields during registration", async () => {
+		const path = join(agentDir, "mcp.json");
+		const input =
+			"\uFEFF" +
+			JSON.stringify({
+				mcpServers: {
+					other: { command: "keep" },
+					zotero: { command: "old", disabled: true, env: { ZOTERO_API_KEY: "fixture-only" } },
+				},
+			});
+		await writeFile(path, input);
+		expect((await readZoteroMcp({ agentDirectory: agentDir })).registered).toBe(true);
+		expect(await readFile(path, "utf8")).toBe(input);
+		await registerZoteroMcp({ agentDirectory: agentDir, command: "new" });
+		const value = JSON.parse(await readFile(path, "utf8"));
+		expect(value.mcpServers.other.command).toBe("keep");
+		expect(value.mcpServers.zotero.env.ZOTERO_API_KEY).toBe("fixture-only");
+		expect(value.mcpServers.zotero.disabled).toBe(true);
+	});
+	it("does not hide invalid JSON behind BOM tolerance", async () => {
+		await writeFile(join(agentDir, "mcp.json"), "\uFEFF{invalid");
+		await expect(readZoteroMcp({ agentDirectory: agentDir })).rejects.toThrow();
 	});
 });
 

@@ -1,7 +1,25 @@
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { CAPABILITY_IDS, type CapabilityId, type CapabilityState, getSkillCategory } from "@drone/shared";
+import {
+	CAPABILITY_IDS,
+	type CapabilityId,
+	type CapabilityState,
+	formatSkillCommand,
+	getSkillCategory,
+	parseExpandedSkillInvocation,
+	researchSkillProfile,
+	workflowProfile,
+} from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
+import {
+	changesResearchWorkflow,
+	detectResearchIntent,
+	EMPTY_RESEARCH_INTENT,
+	mergeResearchIntent,
+	normalizeResearchIntent,
+	type ResearchSkillIntent,
+	selectResearchSkills,
+} from "./research-skill-router";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
 
 const ALWAYS_ON = new Set([
@@ -16,6 +34,31 @@ const ALWAYS_ON = new Set([
 	"task_evidence_restore",
 ]);
 
+export const READ_ONLY_LIBRARY_TOOLS = new Set([
+	"set_status",
+	"read",
+	"research_prepare_knowledge",
+	"research_wiki_navigate",
+	"research_read_knowledge",
+	"research_search_knowledge",
+	"research_verify_literature",
+	"research_loop",
+	"research_reconcile_literature",
+	"research_check_answer",
+	"research_knowledge_status",
+	"research_source_status",
+	"research_task_status",
+	"research_workspace_status",
+	"research_zotero_status",
+]);
+export function isReadOnlyLibraryRequest(text: string): boolean {
+	return (
+		/只读|read[- ]only/i.test(text) &&
+		/复用|既有|已有|reuse|existing/i.test(text) &&
+		/文献|论文|笔记|literature|papers?|notes?/i.test(text) &&
+		!/(?:修复|重构|实现|修改).{0,8}(?:代码|模块|系统)|\b(?:fix|refactor|implement)\b/i.test(text)
+	);
+}
 const PATTERNS: Record<CapabilityId, RegExp[]> = {
 	knowledge: [
 		/(?:knowledge|wiki|obsidian|vault|evidence|知识库|知识图谱|维基|证据|来源|主题记忆|恢复主题|resume topic|topic memory)/i,
@@ -36,7 +79,7 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 		/(?:image|figure|plot|chart|diagram|visuali[sz]|show[ -]?me|slide|ppt|图片|图像|绘图|图表|可视化|流程图|幻灯片)/i,
 	],
 	external: [
-		/(?:mcp|plugin|connector|github|gitlab|slack|drive|notion|zotero|channel|外部应用|插件|连接器)/i,
+		/(?:mcp|plugin|connector|github|gitlab|slack|drive|notion|zotero|channel|ssh|远程主机|服务器|外部应用|插件|连接器)/i,
 	],
 };
 
@@ -59,6 +102,8 @@ export function isTaskStatusQuery(text: string): boolean {
 }
 export function detectCapabilities(text: string): CapabilityId[] {
 	const found = new Set<CapabilityId>();
+	const intent = detectResearchIntent(text);
+	if (intent.topics.length || intent.named.length) found.add("research");
 	for (const id of CAPABILITY_IDS) if (PATTERNS[id].some((pattern) => pattern.test(text))) found.add(id);
 	const directSkill = text.match(/^\/skill:([a-z0-9-]+)/i)?.[1];
 	if (directSkill) {
@@ -94,8 +139,11 @@ function skillMatches(
 	name: string,
 	capabilities: ReadonlySet<CapabilityId>,
 	forced: ReadonlySet<string>,
+	selectedResearch: ReadonlySet<string>,
 ): boolean {
 	if (forced.has(name)) return true;
+	if (workflowProfile(name) && !["research-vault", "research-workflow", "zotero-literature"].includes(name))
+		return selectedResearch.has(name);
 	const category = getSkillCategory(name);
 	if (category === "knowledge") return capabilities.has("knowledge") || capabilities.has("research");
 	if (category === "research" || category === "writing") return capabilities.has("research");
@@ -136,6 +184,10 @@ export interface CapabilityChange {
 export class CapabilityRuntime {
 	private session?: RuntimeSession;
 	private lastCheckpoint = "";
+	private readOnlyLibrary = false;
+	private researchIntent: ResearchSkillIntent = EMPTY_RESEARCH_INTENT;
+	private academicManaged = false;
+	private academicEnabled = false;
 	private readonly active = new Set<CapabilityId>();
 	private readonly forcedSkills = new Set<string>();
 	private readonly excludedTools = new Set<string>();
@@ -155,25 +207,110 @@ export class CapabilityRuntime {
 		return this.apply();
 	}
 
+	manageAcademic(): void {
+		this.academicManaged = true;
+	}
+	skillPath(name: string): string | undefined {
+		return this.session
+			? allSkillsFromLoader(this.session.resourceLoader).skills.find((s) => s.name === name)?.filePath
+			: undefined;
+	}
+	setAcademicMode(enabled: boolean): CapabilityChange {
+		this.academicEnabled = enabled;
+		if (!enabled) this.clearAcademicSelection();
+		return this.apply();
+	}
+	private clearAcademicSelection(): void {
+		for (const name of this.forcedSkills)
+			if (researchSkillProfile(name)?.source === "academic") this.forcedSkills.delete(name);
+		this.researchIntent = normalizeResearchIntent({
+			...this.researchIntent,
+			named: this.researchIntent.named.filter((n) => researchSkillProfile(n)?.source !== "academic"),
+			primary:
+				researchSkillProfile(this.researchIntent.primary ?? "")?.source === "academic"
+					? undefined
+					: this.researchIntent.primary,
+		});
+	}
+	restoreRouting(academicEnabled = this.academicEnabled): CapabilityChange {
+		this.academicEnabled = academicEnabled;
+		this.restoreCheckpoint();
+		if (!academicEnabled && this.academicManaged) this.clearAcademicSelection();
+		return this.apply();
+	}
+	getWorkflowSelection() {
+		return selectResearchSkills(
+			this.session ? allSkillsFromLoader(this.session.resourceLoader).skills : [],
+			this.active,
+			this.researchIntent,
+			{ academicEnabled: this.academicEnabled },
+		);
+	}
+	isResearchComparison(): boolean {
+		return this.researchIntent.comparison === true;
+	}
 	prepareForPrompt(text: string, streaming: boolean): CapabilityChange {
+		// Never route on expanded third-party skill instructions as if they were user intent.
+		const invocation = parseExpandedSkillInvocation(text);
+		if (invocation) text = formatSkillCommand(invocation);
+		if (/^\/ars-pi-(?:start|stop|doctor)(?:\s|$)/.test(text.trim())) return this.apply();
 		if (text.trim() === "/task-status" || text.startsWith("/task-action ")) return this.apply();
 		if (!streaming && isTaskContinuation(text)) this.restoreCheckpoint();
+		if (!streaming && !isTaskContinuation(text)) this.readOnlyLibrary = isReadOnlyLibraryRequest(text);
 		const detected = detectCapabilities(text);
 		const directSkill = text.match(/^\/skill:([a-z0-9-]+)/i)?.[1];
 		if (!streaming && !isTaskContinuation(text)) {
 			this.active.clear();
 			this.forcedSkills.clear();
+			this.researchIntent = EMPTY_RESEARCH_INTENT;
 		}
+		const incomingResearch = detectResearchIntent(text);
+		if (changesResearchWorkflow(incomingResearch)) {
+			for (const name of this.forcedSkills)
+				if (workflowProfile(name) && workflowProfile(name)?.direction !== "internal")
+					this.forcedSkills.delete(name);
+		}
+		this.researchIntent = mergeResearchIntent(this.researchIntent, incomingResearch);
 		for (const id of detected) this.active.add(id);
 		if (directSkill) this.forcedSkills.add(directSkill);
 		return this.apply();
 	}
 
-	activate(capabilities: readonly CapabilityId[]): CapabilityChange {
+	activate(capabilities: readonly CapabilityId[], task?: string): CapabilityChange {
+		if (task) {
+			const incoming = detectResearchIntent(task);
+			if (changesResearchWorkflow(incoming))
+				for (const name of this.forcedSkills)
+					if (workflowProfile(name) && workflowProfile(name)?.direction !== "internal")
+						this.forcedSkills.delete(name);
+			this.researchIntent = mergeResearchIntent(this.researchIntent, incoming);
+		}
 		for (const id of capabilities) this.active.add(id);
 		return this.apply();
 	}
 
+	isReadOnlyLibrary(): boolean {
+		return this.readOnlyLibrary;
+	}
+	guardTool(name: string, input: Record<string, unknown> = {}) {
+		if (!this.readOnlyLibrary) return undefined;
+		if (!READ_ONLY_LIBRARY_TOOLS.has(name))
+			return {
+				block: true,
+				reason:
+					"This is read-only existing-literature reuse. Use native knowledge/identity tools and research_loop.start; no task_plan, shell, downloads or library writes are needed.",
+			};
+		if (
+			name === "read" &&
+			!/(?:^|[\\/])skills[\\/][^\\/]+[\\/]SKILL\.md$/i.test(String(input.path || input.filePath || ""))
+		)
+			return {
+				block: true,
+				reason:
+					"Read paper notes with research_read_knowledge; do not search filesystem run directories. research_loop.start creates the correct run directory.",
+			};
+		return undefined;
+	}
 	noteToolInvocation(name: string, at = Date.now()): void {
 		const previous = this.toolUsage.get(name);
 		this.toolUsage.set(name, { lastUsedAt: at, invocations: (previous?.invocations ?? 0) + 1 });
@@ -262,6 +399,7 @@ export class CapabilityRuntime {
 		if (!manager) return;
 		this.active.clear();
 		this.forcedSkills.clear();
+		this.researchIntent = EMPTY_RESEARCH_INTENT;
 		const scope = `${manager.getSessionId()}\0${manager.getCwd()}`;
 		const task = this.activeTaskRouting();
 		if (task)
@@ -274,6 +412,8 @@ export class CapabilityRuntime {
 				taskId?: unknown;
 				capabilities?: unknown;
 				skills?: unknown;
+				readOnlyLibrary?: boolean;
+				researchIntent?: unknown;
 			} | null;
 			if (
 				!data ||
@@ -287,6 +427,8 @@ export class CapabilityRuntime {
 				continue;
 			this.active.clear();
 			this.forcedSkills.clear();
+			this.readOnlyLibrary = data.readOnlyLibrary === true;
+			this.researchIntent = normalizeResearchIntent(data.researchIntent);
 			for (const id of data.capabilities) if (CAPABILITY_IDS.includes(id)) this.active.add(id);
 			for (const name of data.skills)
 				if (typeof name === "string" && /^[a-z0-9-]{1,100}$/.test(name)) this.forcedSkills.add(name);
@@ -299,6 +441,8 @@ export class CapabilityRuntime {
 			taskId: this.activeTaskRouting()?.id || null,
 			scope: `${manager.getSessionId()}\0${manager.getCwd()}`,
 			capabilities: [...this.active].sort(),
+			readOnlyLibrary: this.readOnlyLibrary,
+			researchIntent: this.researchIntent,
 			skills: [...this.forcedSkills].sort().slice(0, 32),
 		};
 		const encoded = JSON.stringify(data);
@@ -311,9 +455,23 @@ export class CapabilityRuntime {
 		const beforeTools = this.session.getActiveToolNames().slice().sort().join("\0");
 		const beforeSkills = this.skillVisibility.list().join("\0");
 		const allSkills = allSkillsFromLoader(this.session.resourceLoader).skills;
+		const selectedResearch = new Set(
+			selectResearchSkills(allSkills, this.active, this.researchIntent, {
+				academicEnabled: this.academicEnabled,
+			}).names,
+		);
 		this.skillVisibility.set(
 			allSkills
-				.filter((skill) => skillMatches(skill.name, this.active, this.forcedSkills))
+				.filter(
+					(skill) =>
+						(researchSkillProfile(skill.name)?.source !== "academic" ||
+							!this.academicManaged ||
+							this.academicEnabled) &&
+						skillMatches(skill.name, this.active, this.forcedSkills, selectedResearch) &&
+						(!this.readOnlyLibrary ||
+							["research-vault", "research-workflow", "zotero-literature"].includes(skill.name) ||
+							this.forcedSkills.has(skill.name)),
+				)
 				.map((skill) => skill.name),
 		);
 		const selected = new Set<string>([...ALWAYS_ON, ...this.extraAlwaysOn]);
@@ -321,7 +479,12 @@ export class CapabilityRuntime {
 			if (this.excludedTools.has(tool.name)) continue;
 			if (toolCapabilities(tool.name).some((id) => this.active.has(id))) selected.add(tool.name);
 		}
-		this.session.setActiveToolsByName([...selected].filter((name) => !this.excludedTools.has(name)));
+		this.session.setActiveToolsByName(
+			[...selected].filter(
+				(name) =>
+					!this.excludedTools.has(name) && (!this.readOnlyLibrary || READ_ONLY_LIBRARY_TOOLS.has(name)),
+			),
+		);
 		this.saveCheckpoint();
 		const state = this.state();
 		const afterTools = state.activeTools.join("\0");

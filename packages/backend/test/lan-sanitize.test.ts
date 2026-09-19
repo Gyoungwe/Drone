@@ -165,4 +165,21 @@ describe("sanitizeSessionEvent", () => {
 		const event = { type: "agent_start" } as SessionEvent;
 		expect(sanitizeSessionEvent(event)).toBe(event);
 	});
+	it("forwards provider wait and retry status to LAN", () => {
+		const wait: SessionEvent = {
+			type: "model_wait",
+			status: "waiting",
+			lastActivityAt: 100,
+			timeoutMs: 300000,
+		};
+		expect(sanitizeSessionEvent(wait)).toEqual(wait);
+		const retry: SessionEvent = {
+			type: "auto_retry_start",
+			attempt: 1,
+			maxAttempts: 2,
+			delayMs: 1000,
+			errorMessage: "502 server_error",
+		};
+		expect(sanitizeSessionEvent(retry)).toEqual(retry);
+	});
 });

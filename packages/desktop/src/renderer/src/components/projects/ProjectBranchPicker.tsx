@@ -40,7 +40,7 @@ function ProjectPicker() {
 		() => deriveProjects({ allSessions, addedProjects }),
 		[allSessions, addedProjects],
 	);
-	const name = cwd?.split("/").filter(Boolean).pop();
+	const name = cwd?.split(/[\\/]/).filter(Boolean).pop();
 	const daily = isDailyCwd(cwd);
 	// 模块缓存（load() 已 await 初始化；空态 EmptyState 挂载即触发 load）
 	const dailyDir = getDailyDirCached();
@@ -48,7 +48,7 @@ function ProjectPicker() {
 	return (
 		<Dropdown
 			trigger={
-				<span className="flex items-center gap-1.5">
+				<span className="flex items-center gap-1.5" title={cwd ?? undefined}>
 					{daily ? (
 						<span className="flex h-4.5 w-4.5 items-center justify-center rounded border border-border-strong bg-canvas text-ink">
 							<CoffeeIcon size={10} />
@@ -101,7 +101,10 @@ function ProjectPicker() {
 							<span className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded bg-ink-faint text-[10px] font-semibold text-on-ink">
 								{(project.name[0] ?? "P").toUpperCase()}
 							</span>
-							<span className="truncate">{project.name}</span>
+							<span className="min-w-0 text-left">
+								<span className="block truncate">{project.name}</span>
+								<span className="block break-all text-[10px] text-ink-dim">{project.cwd}</span>
+							</span>
 						</button>
 					))}
 					<button

@@ -32,6 +32,35 @@ export interface UiError {
 /** detail 展示截断上限（防巨错误文本进渲染树） */
 export const DETAIL_MAX_LENGTH = 4096;
 
+/** Provider diagnostics are visible in retry notes and errors; strip credentials before bounding. */
+export function sanitizeProviderError(value: string): string {
+	return truncateDetail(
+		value
+			.slice(0, 8192)
+			.replace(/https?:\/\/[^\s<>"']+/gi, (raw) => {
+				try {
+					const url = new URL(raw);
+					url.username = "";
+					url.password = "";
+					url.search = "";
+					url.hash = "";
+					return url.toString();
+				} catch {
+					return "[URL omitted]";
+				}
+			})
+			.replace(/bearer\s+[^\s,;"']+/gi, "Bearer [redacted]")
+			.replace(
+				/(["']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret|authorization|cookie)["']?\s*[=:]\s*)(?:"[^"]*(?:"|$)|'[^']*(?:'|$)|[^\s,;]+)/gi,
+				"$1[redacted]",
+			)
+			.replace(/\b(?:sk-|ghp_|github_pat_)[A-Za-z0-9_-]{8,}/g, "[redacted]")
+			.split("")
+			.map((c) => (c.charCodeAt(0) < 32 ? " " : c))
+			.join(""),
+	);
+}
+
 /**
  * 用户主动中断（abort）的错误消息判定。
  * SDK 把「in-flight 模型请求被用户停止取消」归类为 stopReason="error"，errorMessage 是
@@ -133,7 +162,7 @@ export function buildLlmUiError(errorMessage: string, now: number = Date.now()):
 		severity: "error",
 		source: cls.source,
 		titleKey: cls.titleKey,
-		detail: truncateDetail(errorMessage),
+		detail: sanitizeProviderError(errorMessage),
 		...(cls.hintKey ? { hintKey: cls.hintKey } : {}),
 		actions: cls.actions.includes("copyDetail") ? cls.actions : [...cls.actions, "copyDetail"],
 		timestamp: now,

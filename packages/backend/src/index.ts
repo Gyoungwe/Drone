@@ -87,6 +87,19 @@ export { ModelPrefsService } from "./settings/model-prefs";
 export { SettingsService } from "./settings/settings";
 export { BUILTIN_SLASH_COMMANDS, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
 export { makeShowImageTool, resolveShowImagePath, type ShowImageDetails } from "./tools/show-image";
+export {
+	buildSshArgs,
+	makeSshTool,
+	resolveSshKeyPath,
+	runLocalSsh,
+	type SshApproval,
+	type SshRunner,
+	type SshRunnerOptions,
+	type SshRunnerResult,
+	type SshToolDetails,
+	type SshToolOptions,
+	type SshToolParams,
+} from "./tools/ssh";
 export { formatTodoList, makeTodoTool, normalizeTodos } from "./tools/todo";
 export { makeTodoReminderExtension } from "./tools/todo-reminder";
 export {

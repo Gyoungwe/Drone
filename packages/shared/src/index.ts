@@ -8,6 +8,7 @@ export * from "./knowledge-links";
 export * from "./knowledge-specialists";
 export * from "./knowledge-upgrade";
 export * from "./lan";
+export { literatureRecoverySummary } from "./literature-recovery";
 export * from "./marquee-motion";
 export * from "./mcp";
 export * from "./packages";
@@ -31,6 +32,7 @@ export {
 } from "./resource-preview-format";
 export * from "./session";
 export * from "./settings";
+export * from "./research-skills";
 export * from "./skill-catalog";
 export * from "./skill-invocation";
 export * from "./subagent";
@@ -43,3 +45,5 @@ export * from "./ui-plugins";
 export * from "./update";
 export * from "./usage-display";
 export * from "./zotero";
+
+export * from "./workflow-catalog";

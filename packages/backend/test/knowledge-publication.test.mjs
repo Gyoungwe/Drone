@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { advisoryLine, registerAnswerPublication } from "../../../.pi/lib/knowledge/publication.mjs";
 import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
 import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
@@ -44,6 +45,130 @@ async function searchAndRead() {
 	await service.read(prep.ticket, cwd, { path: "Library/Papers/source.md" });
 }
 describe("native answer readiness, not model self-certification", () => {
+	it("publishes a bounded evidence ledger for 17 citations instead of losing all receipts", async () => {
+		vi.stubEnv("DRONE_REVIEW_MODE", "automatic");
+		const paths = Array.from({ length: 17 }, (_, i) => `Library/Papers/wing-${i}.md`);
+		for (const path of paths) await note(path, `# Wing development\nEvidence ${path}`);
+		await service.request("reconcile");
+		await service.search(prep.ticket, cwd, { query: "Wing development" });
+		for (const path of paths) await service.read(prep.ticket, cwd, { path });
+		const events = new Map();
+		const gate = registerAnswerPublication(
+			{ on: (name, handler) => events.set(name, handler) },
+			{
+				getCurrent: () => ({ service, ticket: prep.ticket }),
+			},
+		);
+		gate.begin(true);
+		const text = paths.map((path) => `[[${path}]]`).join(" ");
+		const preflight = await gate.preflight({ cwd }, text);
+		expect(preflight.sources).toHaveLength(12);
+		expect(preflight.unverifiedCitations).toEqual(paths.slice(12));
+		const result = await events.get("message_end")(
+			{ message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text }], timestamp: 1 } },
+			{ cwd },
+		);
+		const proof = result.message.knowledgePublication;
+		expect(proof).toMatchObject({
+			status: "released",
+			citationCount: 17,
+			citationLimit: 12,
+			unverifiedCitationCount: 5,
+			vaultId: service.binding.vaultId,
+		});
+		expect(proof.sources.map((item) => item.path)).toEqual(paths.slice(0, 12));
+		expect(proof.deliveries).toEqual([]);
+		expect(proof.unverifiedCitations).toEqual(paths.slice(12));
+		expect(proof.scientificallyVerified).toBe(false);
+		const notice = result.message.content.map((item) => item.text).join(" ");
+		expect(notice).toContain("17");
+		expect(notice).toContain("12");
+		expect(notice).toContain("5");
+		expect(notice).not.toContain("请拆分");
+	});
+	it("an unread early citation does not erase later verified sources or delivery receipts", async () => {
+		await searchAndRead();
+		await note("Library/Explainers/delivery.md", "# Generated explanation\nOutput, not evidence.");
+		const delivery = await service.deliveryReceipt(
+			prep.ticket,
+			cwd,
+			join(vault, "Library/Explainers/delivery.md"),
+		);
+		const text = `[[Library/Papers/not-read]] ${answer} [[Library/Explainers/delivery]]`;
+		const failure = await service
+			.validateAnswer(prep.ticket, cwd, text, { deliveries: [delivery] })
+			.catch((error) => error);
+		expect(failure.code).toBe("source-unread");
+		expect(failure.verified.sources.map((item) => item.path)).toEqual(["Library/Papers/source.md"]);
+		expect(failure.verified.deliveries).toEqual([delivery]);
+		expect(failure.verified.unverifiedCitations).toEqual(["Library/Papers/not-read.md"]);
+		expect(failure.verified.unverifiedCitationCount).toBe(1);
+	});
+	it.each(["search-required", "coverage-incomplete"])(
+		"%s still records citations that can be matched to current reads",
+		async (code) => {
+			await searchAndRead();
+			const state = await service.check(prep.ticket, cwd);
+			if (code === "search-required") state.answerSearch = null;
+			else state.answerSearch = { ...state.answerSearch, complete: false };
+			const failure = await service.validateAnswer(prep.ticket, cwd, answer).catch((error) => error);
+			expect(failure.code).toBe(code);
+			expect(failure.verified.sources.map((item) => item.path)).toEqual(["Library/Papers/source.md"]);
+			expect(failure.verified.unverifiedCitations).toEqual([]);
+			expect(advisoryLine(code, failure)).not.toContain("请重新");
+		},
+	);
+	it.each(["source-changed", "delivery-changed", "citation-invalid"])(
+		"%s keeps later current evidence and excludes the failed citation",
+		async (code) => {
+			await searchAndRead();
+			let path = "Library/../outside.md";
+			const deliveries = [];
+			if (code !== "citation-invalid") {
+				path = code === "delivery-changed" ? "Library/Explainers/result.md" : "Library/Papers/changed.md";
+				await note(path, "# Original version");
+				if (code === "delivery-changed")
+					deliveries.push(await service.deliveryReceipt(prep.ticket, cwd, join(vault, path)));
+				else await service.read(prep.ticket, cwd, { path });
+				await note(path, "# Changed version");
+			}
+			const failure = await service
+				.validateAnswer(prep.ticket, cwd, `[[${path}]] ${answer}`, { deliveries })
+				.catch((error) => error);
+			expect(failure.code).toBe(code);
+			expect(failure.verified.sources.map((item) => item.path)).toEqual(["Library/Papers/source.md"]);
+			expect(failure.verified.deliveries).toEqual([]);
+			expect(failure.verified.unverifiedCitations).toEqual([path]);
+			expect(failure.verified).toMatchObject({
+				citationCount: 2,
+				unverifiedCitationCount: 1,
+				scientificallyVerified: false,
+			});
+		},
+	);
+	it("strict publication still blocks an over-budget answer after collecting evidence", async () => {
+		await searchAndRead();
+		const extra = Array.from({ length: 12 }, (_, i) => `[[Library/Papers/unread-${i}]]`).join(" ");
+		const text = `${answer} ${extra}`;
+		const failure = await service.validateAnswer(prep.ticket, cwd, text).catch((error) => error);
+		expect(failure.code).toBe("citation-budget");
+		expect(failure.verified.sources).toHaveLength(1);
+		expect(failure.verified.unverifiedCitationCount).toBe(12);
+		const events = new Map();
+		const gate = registerAnswerPublication(
+			{ on: (name, handler) => events.set(name, handler) },
+			{
+				getCurrent: () => ({ service, ticket: prep.ticket }),
+			},
+		);
+		gate.begin(true);
+		const result = await events.get("message_end")(
+			{ message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text }], timestamp: 1 } },
+			{ cwd },
+		);
+		expect(result.message.knowledgePublication.status).toBe("blocked");
+		expect(result.message.content).not.toEqual([{ type: "text", text }]);
+	});
 	it("rejects a direct answer after navigation alone", async () => {
 		await expect(service.validateAnswer(prep.ticket, cwd, answer)).rejects.toThrow("search");
 	});

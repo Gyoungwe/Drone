@@ -1,9 +1,15 @@
-import type { SlashCommandInfo } from "@drone/shared";
+import type { SlashCommandInfo, WorkflowDirection } from "@drone/shared";
 import { type RefObject, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { isDraftSessionId } from "../../stores/sessions";
-import { extractSlashToken, menuCommands, removeSlashToken, type SlashToken } from "./slash-filter";
+import {
+	extractSlashToken,
+	menuCommands,
+	removeSlashToken,
+	type SlashToken,
+	type WorkflowMenuCommand,
+} from "./slash-filter";
 
 export interface UseSlashMenuOptions {
 	activeSessionId: string | null;
@@ -31,6 +37,7 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 	const t = useT();
 	const [slashSelected, setSlashSelected] = useState(0);
 	const [showSpecialized, setShowSpecialized] = useState(false);
+	const [workflowDirection, setWorkflowDirection] = useState<WorkflowDirection | null>(null);
 	const [slashCommands, setSlashCommands] = useState<SlashCommandInfo[]>([]);
 	/** 点击面板外部后隐藏菜单（保留文本，再次输入时恢复） */
 	const [slashDismissed, setSlashDismissed] = useState(false);
@@ -56,6 +63,10 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 	// 应答后 trustVersion 递增触发重拉，把项目级资源补进菜单）
 	// biome-ignore lint/correctness/useExhaustiveDependencies: trustVersion 是刻意的触发依赖（信任应答后重拉），effect 体内不引用
 	useEffect(() => {
+		setWorkflowDirection(null);
+		setSlashSelected(0);
+		setSlashCommands([]);
+		setShowSpecialized(false);
 		if (!activeSessionId) {
 			setSlashCommands([]);
 			return;
@@ -85,6 +96,7 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: 查询词变化时重置选中项
 	useEffect(() => {
 		setSlashSelected(0);
+		setWorkflowDirection(null);
 	}, [slashQuery]);
 
 	/**
@@ -92,8 +104,15 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 	 * - 整条文本恰为无参内置命令（compact/settings）→ 立即执行（选完即跑，现状行为）
 	 * - 其余 → 命令转胶囊：触发 token 原地移除，其余文字保留（= 命令参数），发送时拼 /cmd args
 	 */
-	const confirmCommand = async (command: SlashCommandInfo, { allowInline = true } = {}) => {
+	const confirmCommand = async (command: WorkflowMenuCommand, { allowInline = true } = {}) => {
 		if (!command.supported) return;
+		if (command.workflowNavigation) {
+			setWorkflowDirection(command.workflowNavigation);
+			setSlashSelected(0);
+			options.textareaRef.current?.focus();
+			return;
+		}
+		setWorkflowDirection(null);
 		const token = slashToken;
 		const standaloneInline =
 			allowInline &&
@@ -133,7 +152,7 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 
 	/** 按下标选中菜单项（无匹配时落回正常发送） */
 	const handleSlashPickByIndex = (index: number) => {
-		const flat = menuCommands(slashCommands, slashQuery, showSpecialized);
+		const flat = menuCommands(slashCommands, slashQuery, showSpecialized, workflowDirection);
 		const command = flat[Math.max(0, Math.min(index, flat.length - 1))] ?? undefined;
 		if (command) {
 			void confirmCommand(command);
@@ -144,7 +163,7 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 
 	/** Tab 补全：确认选中命令为胶囊（不触发内置立即执行），菜单随之关闭 */
 	const handleSlashTabComplete = () => {
-		const flat = menuCommands(slashCommands, slashQuery, showSpecialized);
+		const flat = menuCommands(slashCommands, slashQuery, showSpecialized, workflowDirection);
 		const command = flat[Math.max(0, Math.min(slashSelected, flat.length - 1))] ?? flat[0];
 		if (!command) return;
 		void confirmCommand(command, { allowInline: false });
@@ -179,7 +198,13 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 		if (e.key === "ArrowDown") {
 			e.preventDefault();
 			setSlashSelected((s) =>
-				Math.max(0, Math.min(s + 1, menuCommands(slashCommands, slashQuery, showSpecialized).length - 1)),
+				Math.max(
+					0,
+					Math.min(
+						s + 1,
+						menuCommands(slashCommands, slashQuery, showSpecialized, workflowDirection).length - 1,
+					),
+				),
 			);
 			return true;
 		}
@@ -190,6 +215,11 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 		}
 		if (e.key === "Escape") {
 			e.preventDefault();
+			if (workflowDirection && !slashQuery && !showSpecialized) {
+				setWorkflowDirection(null);
+				setSlashSelected(0);
+				return true;
+			}
 			setSlashDismissed(true);
 			return true;
 		}
@@ -204,8 +234,15 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 	return {
 		slashCommands,
 		showSpecialized,
+		workflowDirection,
+		backToWorkflows: () => {
+			setWorkflowDirection(null);
+			setSlashSelected(0);
+			options.textareaRef.current?.focus();
+		},
 		toggleSpecialized: () => {
 			setShowSpecialized((value) => !value);
+			setWorkflowDirection(null);
 			setSlashSelected(0);
 		},
 		slashSelected,
@@ -215,7 +252,7 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 		slashDismissed,
 		setSlashDismissed,
 		updateToken,
-		handleSlashPick: (command: SlashCommandInfo) => confirmCommand(command),
+		handleSlashPick: (command: WorkflowMenuCommand) => confirmCommand(command),
 		handleSlashPickByIndex,
 		restoreSlashPill,
 		handleKeyDown,

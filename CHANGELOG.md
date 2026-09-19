@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.4 — 2026-09-19
+
+- Reworked research answers to lead with the scientific conclusion, evidence level, default recommendation and explicit evidence boundaries.
+- Preserved conflicting knowledge with source and condition metadata so newer evidence can update a conclusion without silently erasing the earlier record.
+- Added context-grounded model recommendations to runtime questions while retaining user choice and custom text.
+- Carried evidence receipts through advisory validation failures, including citation-budget failures, and improved literature operations, provenance and recovery.
+- Improved task, model-wait, knowledge-flow and citation presentation across Desktop and LAN clients.
+
 ## 0.10.3 — 2026-09-18
 
 - Create tasks only when the agent explicitly calls `task_plan`; ordinary chat and follow-up corrections no longer create extra tasks.

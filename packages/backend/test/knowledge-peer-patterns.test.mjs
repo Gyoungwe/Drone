@@ -75,9 +75,16 @@ describe("actual current Wiki reads, not checkbox memory", () => {
 		expect((await service.search(prep.ticket, cwd, { query: "Source" })).hits.length).toBeGreaterThan(0);
 		expect(await service.citationCandidates(prep.ticket, cwd)).toContain("Wiki/Autotomy.md");
 	});
-	it("a missing linked Wiki still cannot unlock evidence search", async () => {
+	it("an unrelated broken navigation link does not block reading the current topic", async () => {
 		await note("Wiki/Index.md", "# Topics\n[[Wiki/DoesNotExist]]\n");
 		prep = await service.prepare({ cwd, project: "project-a", query: "Autotomy" });
+		expect((await service.search(prep.ticket, cwd, { query: "Source" })).hits.length).toBeGreaterThan(0);
+		expect(await service.citationCandidates(prep.ticket, cwd)).toContain("Wiki/Autotomy.md");
+	});
+	it("a previously selected related Wiki that disappears still blocks evidence search", async () => {
+		prep = await service.prepare({ cwd, project: "project-a", query: "Autotomy" });
+		expect(prep.linkedWiki).toContain("Wiki/Autotomy.md");
+		await rm(join(vault, "Wiki/Autotomy.md"));
 		await expect(service.search(prep.ticket, cwd, { query: "Source" })).rejects.toThrow("Wiki");
 	});
 });

@@ -17,6 +17,8 @@
 
 任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
 
+Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx electron-vite dev --remote-debugging-port=9224`；根目录 `npm run dev -- --remote-debugging-port=9224` 的参数不会穿过嵌套的 workspace 脚本。首次启动前运行根目录的 `npm run build:lan-web -w packages/desktop`。验证 `http://127.0.0.1:9224/json` 返回页面列表后再运行 CDP 冒烟脚本；普通开发仍用根目录 `npm run dev`。
+
 ## 总览
 
 npm workspaces monorepo，3 个包：
@@ -34,6 +36,7 @@ packages/
 | `scripts/smoke-error-events.mts` | 报错系统冒烟：本地 HTTP 伪造 provider（401/429）驱动 PiBackend，零凭证离线 |
 | `scripts/smoke-subagent.mts` | subagent 冒烟 |
 | `scripts/smoke-evaporation-ui.mjs` | 蒸发设置二态 CDP 冒烟（dev 实例带 `--remote-debugging-port=9224` 运行后执行） |
+| `scripts/check-report-ui.mjs` | 隔离 Electron 验收：桌面/LAN 长回答贴底、主动上翻、引用短标题/完整路径/点击、运行记录展开；不调用真实模型 |
 | `scripts/smoke-channel-watch.mts` | channel-watch 机制冒烟 V1–V6 |
 | `scripts/replay-trace.mts` | 事件 trace 离线重放（`--last` 自动找最新；排查 UI 状态问题首选） |
 | `scripts/replay-evaporation.mts` | 上下文蒸发离线 replay 调参（误杀率/体积曲线；`--core` 与线上实现同构对比；默认数据指 `.local/replay-data/sessions` 副本，指向正式 `~/.pi/agent` 会直接 abort） |

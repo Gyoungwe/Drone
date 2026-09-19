@@ -4,6 +4,7 @@ import { useT } from "../../i18n";
 import { backgroundImageUrl, useThemeStore } from "../../stores/theme";
 import { useUiPreferencesStore } from "../../stores/ui-preferences";
 import { Switch } from "../ui/Switch";
+import { SettingsRow } from "./SettingsRow";
 import { UiPluginsSection } from "./UiPluginsSection";
 
 const THEME_MODES: ThemeMode[] = ["light", "dark", "system"];
@@ -35,16 +36,20 @@ function AppearanceBasics() {
 	const setCenterOrbEnabled = useUiPreferencesStore((s) => s.setCenterOrbEnabled);
 
 	return (
-		<div className="flex flex-col gap-6">
-			<div>
-				<h3 className="text-[13px] font-medium text-ink">{t("settings.theme")}</h3>
-				<p className="mt-0.5 text-[11px] text-ink-faint">{t("settings.themeHint")}</p>
-				<div className="mt-2 flex gap-2">
+		<div className="settings-rows">
+			<div className="settings-row">
+				<div className="min-w-0">
+					<h3 className="settings-row-title">{t("settings.theme")}</h3>
+					<p className="settings-row-hint" title={t("settings.themeHint")}>
+						{t("settings.themeHint")}
+					</p>
+				</div>
+				<div className="flex shrink-0 gap-1.5">
 					{THEME_MODES.map((m) => (
 						<button
 							key={m}
 							type="button"
-							className={`rounded-lg border px-3 py-1.5 text-[13px] transition-colors ${
+							className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
 								mode === m
 									? "border-ink bg-ink text-on-ink"
 									: "border-border text-ink-2 hover:border-border-strong hover:bg-hover"
@@ -56,43 +61,49 @@ function AppearanceBasics() {
 					))}
 				</div>
 			</div>
-			<div>
-				<h3 className="text-[13px] font-medium text-ink">{t("settings.background")}</h3>
-				<p className="mt-0.5 text-[11px] text-ink-faint">{t("settings.backgroundHint")}</p>
-				<div className="mt-2 flex items-center gap-3">
-					{background.image ? (
-						<img
-							src={backgroundImageUrl(background.image)}
-							alt=""
-							className="h-16 w-28 rounded-lg border border-border object-cover"
-						/>
-					) : (
-						<div className="flex h-16 w-28 items-center justify-center rounded-lg border border-dashed border-border text-[11px] text-ink-faint">
-							—
-						</div>
-					)}
-					<div className="flex gap-2">
-						<button
-							type="button"
-							className="rounded-lg border border-border px-3 py-1.5 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover"
-							onClick={() => void pickBackground()}
-						>
-							{t(background.image ? "settings.backgroundChange" : "settings.backgroundPick")}
-						</button>
-						{background.image && (
+			<div className="settings-row settings-row-column">
+				<div className="flex items-center justify-between gap-4">
+					<div className="min-w-0">
+						<h3 className="settings-row-title">{t("settings.background")}</h3>
+						<p className="settings-row-hint" title={t("settings.backgroundHint")}>
+							{t("settings.backgroundHint")}
+						</p>
+					</div>
+					<div className="flex shrink-0 items-center gap-2">
+						{background.image ? (
+							<img
+								src={backgroundImageUrl(background.image)}
+								alt=""
+								className="h-10 w-16 rounded-md border border-border object-cover"
+							/>
+						) : (
+							<div className="flex h-10 w-16 items-center justify-center rounded-md border border-dashed border-border text-[10px] text-ink-faint">
+								—
+							</div>
+						)}
+						<div className="flex gap-1.5">
 							<button
 								type="button"
-								className="rounded-lg px-3 py-1.5 text-[13px] text-red-500 transition-colors hover:bg-red-50"
-								onClick={clearBackground}
+								className="rounded-md border border-border px-2 py-1 text-[11px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover"
+								onClick={() => void pickBackground()}
 							>
-								{t("settings.backgroundClear")}
+								{t(background.image ? "settings.backgroundChange" : "settings.backgroundPick")}
 							</button>
-						)}
+							{background.image && (
+								<button
+									type="button"
+									className="rounded-md px-2 py-1 text-[11px] text-red-500 transition-colors hover:bg-red-50"
+									onClick={clearBackground}
+								>
+									{t("settings.backgroundClear")}
+								</button>
+							)}
+						</div>
 					</div>
 				</div>
 				{background.image && (
-					<div className="mt-3 flex items-center gap-3">
-						<span className="w-20 shrink-0 text-[12px] text-ink-dim">{t("settings.backgroundDim")}</span>
+					<div className="settings-row-sub mt-2 flex items-center gap-2">
+						<span className="w-16 shrink-0 text-[10px] text-ink-dim">{t("settings.backgroundDim")}</span>
 						<input
 							type="range"
 							min={20}
@@ -102,26 +113,18 @@ function AppearanceBasics() {
 							className="h-1 flex-1 accent-[#7c3aed]"
 							aria-label={t("settings.backgroundDim")}
 						/>
-						<span className="w-10 shrink-0 text-right text-[12px] tabular-nums text-ink-dim">
+						<span className="w-8 shrink-0 text-right text-[10px] tabular-nums text-ink-dim">
 							{Math.round(background.dim * 100)}%
 						</span>
 					</div>
 				)}
 			</div>
-			<div>
-				<div className="flex items-center justify-between gap-4">
-					<h3 className="text-[13px] font-medium text-ink">{t("settings.sessionRail")}</h3>
-					<Switch checked={sessionRailEnabled} onCheckedChange={setSessionRailEnabled} />
-				</div>
-				<p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">{t("settings.sessionRailHint")}</p>
-			</div>
-			<div>
-				<div className="flex items-center justify-between gap-4">
-					<h3 className="text-[13px] font-medium text-ink">{t("settings.centerOrb")}</h3>
-					<Switch checked={centerOrbEnabled} onCheckedChange={setCenterOrbEnabled} />
-				</div>
-				<p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">{t("settings.centerOrbHint")}</p>
-			</div>
+			<SettingsRow title={t("settings.sessionRail")} hint={t("settings.sessionRailHint")}>
+				<Switch checked={sessionRailEnabled} onCheckedChange={setSessionRailEnabled} />
+			</SettingsRow>
+			<SettingsRow title={t("settings.centerOrb")} hint={t("settings.centerOrbHint")}>
+				<Switch checked={centerOrbEnabled} onCheckedChange={setCenterOrbEnabled} />
+			</SettingsRow>
 		</div>
 	);
 }
@@ -137,12 +140,12 @@ export function AppearancePanel() {
 
 	return (
 		<div>
-			<div className="flex gap-5 border-b border-border px-0.5 pt-0.5">
+			<div className="flex gap-4 border-b border-border px-0.5 pt-0.5">
 				{APPEARANCE_TABS.map((tabDef) => (
 					<button
 						key={tabDef.id}
 						type="button"
-						className={`relative -mb-px border-b-2 px-0.5 pb-[9px] pt-[5px] text-[13px] transition-colors ${
+						className={`relative -mb-px border-b-2 px-0.5 pb-2 pt-1 text-[12px] transition-colors ${
 							tab === tabDef.id
 								? "border-ink font-medium text-ink"
 								: "border-transparent text-ink-faint hover:text-ink-2"
@@ -153,7 +156,7 @@ export function AppearancePanel() {
 					</button>
 				))}
 			</div>
-			<div className="pt-5">{tab === "basics" ? <AppearanceBasics /> : <UiPluginsSection />}</div>
+			<div className="pt-3">{tab === "basics" ? <AppearanceBasics /> : <UiPluginsSection />}</div>
 		</div>
 	);
 }

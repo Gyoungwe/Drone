@@ -7,7 +7,6 @@ import {
 	isAgentWorking,
 } from "@drone/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
@@ -17,6 +16,7 @@ import { useUiPreferencesStore } from "../../stores/ui-preferences";
 import { CenterOrb } from "./CenterOrb";
 import { MessageItem } from "./MessageItem";
 import { MetaGroup } from "./MetaGroup";
+import { ModelWaitNote } from "./ModelWaitNote";
 import { ProgressNote } from "./ProgressNote";
 import { RetryNote } from "./RetryNote";
 import { RunInspector } from "./RunInspector";
@@ -72,7 +72,12 @@ export function MessageList() {
 
 	const pinToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
 		const el = scrollRef.current;
-		if (el) el.scrollTo({ top: el.scrollHeight, behavior });
+		if (el) {
+			el.scrollTo({ top: el.scrollHeight, behavior });
+			// Layout clamping/programmatic scrolling is not an upward user gesture.
+			lastScrollTopRef.current = el.scrollTop;
+			lastScrollHeightRef.current = el.scrollHeight;
+		}
 	}, []);
 
 	// 尺寸变化（流式追加、图片加载、窗口缩放）→ 跟随中保持贴底
@@ -88,9 +93,8 @@ export function MessageList() {
 		return () => observer.disconnect();
 	}, [pinToBottom]);
 
-	// 用户发出新消息（末条变为 user）→ 立即回底并恢复跟随
-	const lastMessage = transcript.messages[transcript.messages.length - 1];
-	const lastUserMessageId = lastMessage?.kind === "user" ? lastMessage.id : null;
+	// Find the latest user even when React batches it with the first assistant update.
+	const lastUserMessageId = transcript.messages.findLast((message) => message.kind === "user")?.id;
 	useEffect(() => {
 		if (!lastUserMessageId) return;
 		updateFollowing(true);
@@ -103,6 +107,16 @@ export function MessageList() {
 		updateFollowing(true);
 		pinToBottom();
 	}, [activeSessionId, pinToBottom, updateFollowing]);
+
+	// Settle after the final answer replaces streaming content. ResizeObserver keeps
+	// following later Markdown/image layout; an intentional scroll-up stays untouched.
+	useEffect(() => {
+		if (transcript.agentActive || !transcript.runEndedAt) return;
+		const frame = requestAnimationFrame(() => {
+			if (followingRef.current) pinToBottom();
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [transcript.agentActive, transcript.runEndedAt, pinToBottom]);
 
 	// 仅「向上滚动」脱离跟随（程序性向下贴底/平滑回底不中断跟随）；到达底部恢复。
 	// 压缩/消息重建会让内容变矮、浏览器把 scrollTop 往下钳——高度收缩导致的 top 下降
@@ -233,19 +247,6 @@ export function MessageList() {
 
 	return (
 		<div className="relative h-full">
-			{activeSessionId && (
-				<button
-					type="button"
-					className="absolute right-4 top-2 z-30 rounded-lg border border-border bg-canvas px-3 py-1.5 text-xs text-ink"
-					onClick={() =>
-						void getPi()
-							.prompt(activeSessionId, "/task-status")
-							.catch(() => {})
-					}
-				>
-					任务工作台
-				</button>
-			)}
 			{/* 中央状态动画：z-20 在文字层（z-10 滚动容器）之上——canvas 一体遮罩压住身后文字、
 			    凸显动画本体（用户规格：工作中不看文字）；pointer-events-none 不拦截交互 */}
 			{centerOrbEnabled && <CenterOrb visible={shownWorking} />}
@@ -260,9 +261,12 @@ export function MessageList() {
 				onClickCapture={handleSummaryToggle}
 				className="chat-scrollbar relative z-10 h-full overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable]"
 			>
-				<div ref={contentRef} className="mx-auto flex max-w-[760px] flex-col gap-6 px-6 pt-8 pb-16">
+				<div ref={contentRef} className="mx-auto flex max-w-[760px] flex-col gap-4 px-4 pt-5 pb-10">
 					{items}
 					{transcript.retrying && <RetryNote info={transcript.retrying} />}
+					{transcript.modelWait && activeSessionId && (
+						<ModelWaitNote key={activeSessionId} info={transcript.modelWait} sessionId={activeSessionId} />
+					)}
 				</div>
 			</div>
 			{/* 选中文字浮出菜单：定位在滚动容器内以便判断选区归属（fixed 定位不受父级影响） */}

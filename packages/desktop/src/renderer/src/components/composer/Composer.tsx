@@ -281,7 +281,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	};
 
 	return (
-		<div ref={boxRef} className={centered ? "w-full max-w-[760px]" : "shrink-0 px-6 pb-3"}>
+		<div ref={boxRef} className={centered ? "w-full max-w-[760px]" : "shrink-0 px-4 pb-2"}>
 			<div className="mx-auto max-w-[760px]">
 				{error && <SendErrorBar error={error} onRetry={() => void handleSend()} />}
 				{feedback && !error && (
@@ -293,6 +293,8 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 					<SlashMenu
 						commands={slash.slashCommands}
 						showSpecialized={slash.showSpecialized}
+						workflowDirection={slash.workflowDirection}
+						onBackToWorkflows={slash.backToWorkflows}
 						onToggleSpecialized={slash.toggleSpecialized}
 						query={slash.slashQuery}
 						selectedIndex={slash.slashSelected}
@@ -328,7 +330,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						{t("composer.noModelHint")}
 					</button>
 				)}
-				<div className="rounded-[20px] border-[0.5px] border-border bg-surface shadow-soft">
+				<div className="rounded-2xl border-[0.5px] border-border bg-surface shadow-soft">
 					{/* 引用胶囊区：独占顶部一行贴边（专为选中引用留的位置，不占正文宽度） */}
 					{quotes.length > 0 && (
 						<div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
@@ -344,7 +346,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 					{/* 正文行：slash/@ 胶囊内联在文本行首（有胶囊时 flex-wrap 同行，否则 textarea 独占整行）；
 					    外层容器恒定渲染，textarea 只切 className 不换位置 → 不重挂、不丢焦点；
 					    无引用时文本贴顶（可编辑区向上扩展），引用行临时加一行、不浪费空间 */}
-					<div className={`px-4 pb-5.5 ${quotes.length > 0 ? "pt-1.5" : "pt-2"}`}>
+					<div className={`px-3 pb-4 ${quotes.length > 0 ? "pt-1.5" : "pt-2"}`}>
 						<div
 							className={
 								slashCommand || attachments.length > 0
@@ -376,7 +378,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 							/>
 						</div>
 					</div>
-					<div className="flex items-center gap-2 px-3 pb-2">
+					<div className="flex items-center gap-1.5 px-2.5 pb-1.5">
 						<input
 							ref={fileInputRef}
 							type="file"

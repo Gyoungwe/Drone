@@ -16,6 +16,7 @@ import { SessionTabBar } from "./components/session/SessionTabBar";
 import { TrustDialog } from "./components/session/TrustDialog";
 import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { Toaster } from "./components/Toaster";
+import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
 import { initDailyDir } from "./lib/daily";
 import { initUiPlugins } from "./plugins/loader";
@@ -114,6 +115,7 @@ export default function App() {
 					   否则输入框（ApprovalDock）高度变化会压缩 main，轨道垂直居中随之漂移。
 					   外层 flex-row：末尾挂 DiffSidebar（push 式，聊天列自然压缩） */
 					<div className="relative flex min-h-0 flex-1">
+						<WorkbenchNav />
 						<div className="relative flex min-w-0 flex-1 flex-col">
 							<KnowledgeFlowCard sessionId={activeSessionId} />
 							<main className="relative min-h-0 flex-1">

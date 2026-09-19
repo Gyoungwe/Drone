@@ -6,6 +6,9 @@ describe("artifact resource routing", () => {
 		"routes %s to local preview",
 		(path) => expect(isLocalResourceTarget(path)).toBe(true),
 	);
+	it("accepts percent-encoded Windows separators from Markdown file links", () => {
+		expect(isLocalResourceTarget("C:%5CUsers%5CAdministrator%5CDocuments%5Creport.tsv")).toBe(true);
+	});
 	it.each([
 		"https://example.org/a",
 		"zotero://select/items/A",

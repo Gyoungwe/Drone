@@ -1,5 +1,5 @@
 import { buildChatRows, deriveRunInspectors, deriveTurnTimings, deriveTurnUsage } from "@drone/shared";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useLanStore } from "../store";
 import { healingTailSuffix } from "../store-pure";
@@ -36,6 +36,13 @@ export function ChatView({
 	onRespond?: (requestId: string, answer: "allowOnce" | "deny") => Promise<boolean>;
 }) {
 	const transcript = useLanStore((s) => s.transcripts[sessionId]);
+	const [recovering, setRecovering] = useState(false);
+	const [recoveryError, setRecoveryError] = useState("");
+	const recoveryLock = useRef(false);
+	const recoverAnswer = useLanStore((s) => s.recoverAnswer);
+	const readOnly = useLanStore((s) => s.list.find((item) => item.sessionId === sessionId)?.readOnly);
+	const lastError = transcript?.messages.at(-1)?.kind === "error" ? transcript.messages.at(-1) : undefined;
+	const lastUser = transcript?.messages.findLast((m) => m.kind === "user");
 	const view = useLanStore((s) => s.views[sessionId]);
 	const truncated = useLanStore((s) => s.truncated[sessionId]);
 	const perms = useLanStore((s) => s.pendingPerms[sessionId]);
@@ -54,11 +61,17 @@ export function ChatView({
 
 	const pinToBottom = useCallback(() => {
 		const el = scrollRef.current;
-		if (el) el.scrollTop = el.scrollHeight;
+		if (el) {
+			el.scrollTop = el.scrollHeight;
+			lastScrollTopRef.current = el.scrollTop;
+			lastScrollHeightRef.current = el.scrollHeight;
+		}
 	}, []);
 
 	// 尺寸变化（流式追加、平滑揭示逐字增高、窗口/键盘缩放）→ 跟随中保持贴底；
 	// RO 回调早于 paint，无闪烁。覆盖旧版按依赖信号贴底追不上平滑揭示的洞。
+	const hasTranscript = Boolean(transcript);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: attach when async history mounts or the session changes
 	useEffect(() => {
 		const scroll = scrollRef.current;
 		const content = contentRef.current;
@@ -69,7 +82,23 @@ export function ChatView({
 		observer.observe(content);
 		observer.observe(scroll);
 		return () => observer.disconnect();
-	}, [pinToBottom]);
+	}, [pinToBottom, hasTranscript, sessionId]);
+
+	// A new turn/session resumes following; completing a turn preserves a reader's
+	// deliberate scroll-up, but settles the final answer when following is active.
+	const lastUserId = lastUser?.id;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a new user message/session is the reset signal
+	useEffect(() => {
+		followingRef.current = true;
+		pinToBottom();
+	}, [lastUserId, sessionId, pinToBottom]);
+	useEffect(() => {
+		if (transcript?.agentActive || !transcript?.runEndedAt) return;
+		const frame = requestAnimationFrame(() => {
+			if (followingRef.current) pinToBottom();
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [transcript?.agentActive, transcript?.runEndedAt, pinToBottom]);
 
 	// 历史会话：无 transcript 种子时按需拉取（GET /api/sessions/:id/transcript）
 	useEffect(() => {
@@ -147,6 +176,56 @@ export function ChatView({
 						/>
 					);
 				})}
+				{remoteControl && !readOnly && lastError && lastUser && (
+					<div className="run-status-note">
+						<button
+							type="button"
+							disabled={recovering || !!view?.agentActive}
+							onClick={async () => {
+								if (recoveryLock.current) return;
+								recoveryLock.current = true;
+								setRecovering(true);
+								setRecoveryError("");
+								try {
+									const error = await recoverAnswer(sessionId, lastError.id, lastUser.timestamp);
+									if (error) setRecoveryError(error);
+								} finally {
+									recoveryLock.current = false;
+									setRecovering(false);
+								}
+							}}
+						>
+							{t("chat.recoverAnswer")}
+						</button>
+					</div>
+				)}
+				{recoveryError && (
+					<div role="alert" className="m-err">
+						{recoveryError}
+					</div>
+				)}
+				{transcript.retrying && (
+					<div className="run-status-note" role="status">
+						{t("chat.retrying", {
+							attempt: transcript.retrying.attempt,
+							maxAttempts: transcript.retrying.maxAttempts,
+						})}
+						{transcript.retrying.errorMessage && <span> · {transcript.retrying.errorMessage}</span>}
+					</div>
+				)}
+				{transcript.modelWait && (
+					<div className="run-status-note" role="status">
+						{t(
+							transcript.modelWait.status === "stopping"
+								? "chat.modelStopping"
+								: transcript.modelWait.status === "stop-failed"
+									? "chat.modelStopFailed"
+									: "chat.modelWaiting",
+							{ minutes: transcript.modelWait.timeoutMs / 60_000 },
+						)}
+						{transcript.modelWait.errorMessage && <span>{transcript.modelWait.errorMessage}</span>}
+					</div>
+				)}
 				{/* 中途进入兑底：run 在进行但本地无流式容器时，用 view 投影的 assistantTail
 				    渲染种子后的新增后缀（healing 计数 = 种子后 text_delta 字节数）；
 				    run 边界摘标记 + 快照取回已提交消息 */}

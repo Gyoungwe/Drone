@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, readFile, realpath, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { compareClaimSets } from "./claim-conflicts.mjs";
 import { knowledgeDirectory } from "./config.mjs";
 import { canRead, readNoteFile, validateNote } from "./files.mjs";
 
@@ -15,6 +16,8 @@ export const TOPIC_MEMORY_LIMITS = Object.freeze({
 	maxArtifacts: 12,
 	maxHistory: 8,
 	maxRecentRuns: 12,
+	maxClaims: 64,
+	maxConflicts: 32,
 	maxFileBytes: 512 * 1024,
 });
 
@@ -169,6 +172,18 @@ function normalizeTopic(topic, binding, project) {
 					.filter(Boolean)
 					.slice(0, 16)
 			: [],
+		claims: Array.isArray(topic.claims)
+			? topic.claims
+					.map((claim) => normalizeClaim(claim, project))
+					.filter(Boolean)
+					.slice(-TOPIC_MEMORY_LIMITS.maxClaims)
+			: [],
+		conflicts: Array.isArray(topic.conflicts)
+			? topic.conflicts
+					.map((conflict) => normalizeConflict(conflict, project))
+					.filter(Boolean)
+					.slice(-TOPIC_MEMORY_LIMITS.maxConflicts)
+			: [],
 		history: Array.isArray(topic.history)
 			? topic.history
 					.slice(-TOPIC_MEMORY_LIMITS.maxHistory)
@@ -178,6 +193,78 @@ function normalizeTopic(topic, binding, project) {
 		vaultId: typeof binding === "string" ? binding : binding?.vaultId,
 		project,
 	};
+}
+
+function normalizeClaim(claim, project) {
+	if (!claim || typeof claim !== "object") return null;
+	const sourcePath = text(claim.sourcePath || claim.source_path, 240);
+	const sourceHash = text(claim.sourceHash || claim.source_hash, 64);
+	if (
+		!sourcePath ||
+		!/^[a-f0-9]{64}$/.test(sourceHash) ||
+		!validateSource({ path: sourcePath, hash: sourceHash }, project)
+	)
+		return null;
+	const relation = ["observation", "interpretation", "hypothesis"].includes(claim.relation)
+		? claim.relation
+		: "observation";
+	const value = text(claim.value, 600);
+	const statement = text(claim.claim, 1200);
+	if (!statement || !text(claim.subject, 180) || !text(claim.predicate, 180)) return null;
+	return {
+		claim: statement,
+		subject: text(claim.subject, 180),
+		predicate: text(claim.predicate, 180),
+		...(value ? { value } : {}),
+		...["organism", "tissue", "stage", "method"].reduce((result, key) => {
+			const value = text(claim[key], 180);
+			if (value) result[key] = value;
+			return result;
+		}, {}),
+		sourcePath,
+		sourceHash,
+		...(claim.location ? { location: text(claim.location, 120) } : {}),
+		relation,
+	};
+}
+
+function validateConflictPath(path, project) {
+	if (
+		typeof path !== "string" ||
+		!path ||
+		isAbsolute(path) ||
+		path.includes("\\") ||
+		path.split("/").includes("..") ||
+		/(?:^|\/)(?:Runs|Explainers)\//i.test(path)
+	)
+		return false;
+	try {
+		validateNote(path);
+	} catch {
+		return false;
+	}
+	return canRead(path, project);
+}
+
+function normalizeConflict(conflict, project) {
+	if (!conflict || typeof conflict !== "object") return null;
+	const result = {
+		relation: text(conflict.relation, 40),
+		confidence: text(conflict.confidence, 20),
+		reason: text(conflict.reason, 600),
+		previousSourcePath: text(conflict.previousSourcePath, 240),
+		incomingSourcePath: text(conflict.incomingSourcePath, 240),
+		detectedAt: text(conflict.detectedAt, 40),
+	};
+	if (!["contradicts", "supports", "refines", "supersedes", "unresolved"].includes(result.relation))
+		return null;
+	if (
+		!result.reason ||
+		!validateConflictPath(result.previousSourcePath, project) ||
+		!validateConflictPath(result.incomingSourcePath, project)
+	)
+		return null;
+	return result;
 }
 function validateDocument(value, vaultId, project) {
 	if (!value || typeof value !== "object" || Array.isArray(value))
@@ -260,6 +347,14 @@ export function classifyTopic(existing, incoming) {
 		(source) => oldSources.has(source.path) && oldSources.get(source.path) !== source.hash,
 	);
 	if (changed) return "stale";
+	const previousClaims = existing.claims || [];
+	const incomingClaims = incoming.claims || [];
+	if (
+		previousClaims.length &&
+		incomingClaims.length &&
+		compareClaimSets(previousClaims, incomingClaims).some((comparison) => comparison.blocking)
+	)
+		return "conflict-candidate";
 	if (overlap(existing.summary, incoming.summary) < 0.12 && overlap(existing.title, incoming.title) < 0.2)
 		return "conflict-candidate";
 	return "additional";
@@ -326,6 +421,8 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 		recentRuns: topic.recentRuns,
 		proposalIds: topic.proposalIds,
 		keyFindings: topic.keyFindings,
+		claims: topic.claims,
+		conflicts: topic.conflicts,
 		history: topic.history,
 	});
 	const context = (topic) => {
@@ -334,6 +431,18 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 			title: topic.title,
 			entities: topic.entities.slice(0, 12),
 			summary: topic.summary.slice(0, 900),
+			claims: topic.claims.slice(-6).map((claim) => ({
+				claim: claim.claim,
+				subject: claim.subject,
+				predicate: claim.predicate,
+				value: claim.value,
+				organism: claim.organism,
+				tissue: claim.tissue,
+				stage: claim.stage,
+				method: claim.method,
+				relation: claim.relation,
+			})),
+			conflicts: topic.conflicts.slice(-4),
 		};
 		let output = JSON.stringify(value);
 		if (output.length > TOPIC_MEMORY_LIMITS.maxContextChars)
@@ -431,6 +540,7 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 					"entities",
 					"unresolvedQuestions",
 					"keyFindings",
+					"claims",
 				]);
 				for (const key of Object.keys(input || {}))
 					if (!allowed.has(key)) throw new Error(`Unsupported topic metadata field: ${key}`);
@@ -438,10 +548,30 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 				if (!id) throw new Error("Topic id is required");
 				const index = doc.topics.findIndex((topic) => topic.id === id);
 				const previous = index >= 0 ? doc.topics[index] : null;
+				const incomingClaims = Array.isArray(input.claims)
+					? input.claims.map((claim) => normalizeClaim(claim, scope.project)).filter(Boolean)
+					: [];
+				const claimComparisons = compareClaimSets(previous?.claims || [], incomingClaims);
 				const merged = normalizeTopic(
 					{
 						...previous,
 						...input,
+						...(claimComparisons.some((comparison) => comparison.blocking)
+							? { status: "conflict-candidate" }
+							: previous?.status === "conflict-candidate"
+								? { status: "conflict-candidate" }
+								: {}),
+						conflicts: [
+							...(previous?.conflicts || []),
+							...claimComparisons.map((comparison) => ({
+								relation: comparison.relation,
+								confidence: comparison.confidence,
+								reason: comparison.reason,
+								previousSourcePath: comparison.previous.sourcePath,
+								incomingSourcePath: comparison.incoming.sourcePath,
+								detectedAt: new Date().toISOString(),
+							})),
+						],
 						id,
 						createdAt: previous?.createdAt || new Date().toISOString(),
 						updatedAt: new Date().toISOString(),
@@ -467,6 +597,7 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 		record: async (input, expectedRevision) => {
 			if (!input || typeof input !== "object") throw new Error("Invalid topic record input");
 			let receipt;
+			let claimComparisons = [];
 			const next = await mutate(expectedRevision, (value) => {
 				if (
 					Array.isArray(input.sources) &&
@@ -494,6 +625,28 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 				if (!/^[a-z0-9][a-z0-9_-]{0,95}$/i.test(id)) throw new Error("Invalid topic id");
 				const index = value.topics.findIndex((topic) => topic.id === id);
 				const prior = index >= 0 ? value.topics[index] : null;
+				const priorClaims = prior?.claims || [];
+				const incomingClaims = Array.isArray(input.claims)
+					? input.claims.map((claim) => normalizeClaim(claim, scope.project)).filter(Boolean)
+					: [];
+				claimComparisons = compareClaimSets(priorClaims, incomingClaims);
+				const conflictRecords = claimComparisons.map((comparison) => ({
+					relation: comparison.relation,
+					confidence: comparison.confidence,
+					reason: comparison.reason,
+					previousSourcePath: comparison.previous.sourcePath,
+					incomingSourcePath: comparison.incoming.sourcePath,
+					detectedAt: new Date().toISOString(),
+				}));
+				const mergedClaims = [...priorClaims, ...incomingClaims].filter(
+					(claim, claimIndex, all) =>
+						all.findIndex(
+							(candidate) =>
+								candidate.sourcePath === claim.sourcePath &&
+								candidate.sourceHash === claim.sourceHash &&
+								candidate.claim === claim.claim,
+						) === claimIndex,
+				);
 				const mergedSources = [];
 				for (const source of [...(prior?.sources || []), ...(input.sources || [])]) {
 					if (
@@ -525,6 +678,10 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 						keyFindings: [...new Set([...(prior?.keyFindings || []), ...(input.keyFindings || [])])].slice(
 							-16,
 						),
+						claims: mergedClaims,
+						conflicts: [...(prior?.conflicts || []), ...conflictRecords].slice(
+							-TOPIC_MEMORY_LIMITS.maxConflicts,
+						),
 						history: [
 							...(prior?.history || []),
 							...(prior?.summary ? [{ summary: prior.summary, updatedAt: prior.updatedAt }] : []),
@@ -533,7 +690,9 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 						status:
 							classification === "stale" || classification === "conflict-candidate"
 								? classification
-								: "active",
+								: prior?.status === "conflict-candidate"
+									? "conflict-candidate"
+									: "active",
 						lastRunHash: input.runHash || prior?.lastRunHash,
 						recentRuns: input.runHash
 							? [...new Set([...(prior?.recentRuns || []), input.runHash])].slice(
@@ -552,6 +711,7 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 			});
 			return {
 				...receipt,
+				...(claimComparisons.length ? { conflicts: claimComparisons } : {}),
 				revision: next.revision,
 				topic:
 					receipt.topic && next.topics.find((topic) => topic.id === receipt.topic.id)

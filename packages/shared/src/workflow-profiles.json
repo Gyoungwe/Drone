@@ -1,0 +1,1184 @@
+[
+	{
+		"name": "nature-academic-search",
+		"direction": "evidence",
+		"subdomain": "证据检索与综述",
+		"source": "nature"
+	},
+	{
+		"name": "nature-citation",
+		"direction": "evidence",
+		"subdomain": "引文与论据核验",
+		"source": "nature"
+	},
+	{
+		"name": "nature-data",
+		"direction": "writing",
+		"subdomain": "报告规范、统计呈现与数据声明",
+		"source": "nature"
+	},
+	{
+		"name": "nature-downloader",
+		"direction": "evidence",
+		"subdomain": "获取、阅读与论文卡",
+		"source": "nature"
+	},
+	{
+		"name": "nature-experiment-log",
+		"direction": "evidence",
+		"subdomain": "订阅与实验日志",
+		"source": "nature"
+	},
+	{
+		"name": "nature-figure",
+		"direction": "presentation",
+		"subdomain": "数据图表",
+		"source": "nature"
+	},
+	{
+		"name": "nature-image2ppt",
+		"direction": "presentation",
+		"subdomain": "幻灯片与海报",
+		"source": "nature"
+	},
+	{
+		"name": "nature-literature-pipeline",
+		"direction": "evidence",
+		"subdomain": "订阅与实验日志",
+		"source": "nature"
+	},
+	{
+		"name": "nature-paper-card",
+		"direction": "evidence",
+		"subdomain": "获取、阅读与论文卡",
+		"source": "nature"
+	},
+	{
+		"name": "nature-paper-to-patent",
+		"direction": "writing",
+		"subdomain": "专利与专业报告（受限分支）",
+		"source": "nature"
+	},
+	{
+		"name": "nature-paper2ppt",
+		"direction": "presentation",
+		"subdomain": "幻灯片与海报",
+		"source": "nature"
+	},
+	{
+		"name": "nature-polishing",
+		"direction": "writing",
+		"subdomain": "正文与语言编辑",
+		"source": "nature"
+	},
+	{
+		"name": "researchwrite",
+		"direction": "planning",
+		"subdomain": "项目申请与研究计划",
+		"source": "nature"
+	},
+	{
+		"name": "nature-reader",
+		"direction": "evidence",
+		"subdomain": "获取、阅读与论文卡",
+		"source": "nature"
+	},
+	{
+		"name": "nature-ref-verifier",
+		"direction": "evidence",
+		"subdomain": "引文与论据核验",
+		"source": "nature"
+	},
+	{
+		"name": "nature-response",
+		"direction": "writing",
+		"subdomain": "审稿、回复与评价",
+		"source": "nature"
+	},
+	{
+		"name": "nature-reviewer",
+		"direction": "writing",
+		"subdomain": "审稿、回复与评价",
+		"source": "nature"
+	},
+	{
+		"name": "nature-shared",
+		"direction": "internal",
+		"subdomain": "证据与任务控制/共享资源",
+		"source": "nature"
+	},
+	{
+		"name": "nature-statistics",
+		"direction": "writing",
+		"subdomain": "报告规范、统计呈现与数据声明",
+		"source": "nature"
+	},
+	{
+		"name": "nature-writing",
+		"direction": "writing",
+		"subdomain": "正文与语言编辑",
+		"source": "nature"
+	},
+	{
+		"name": "adaptyv",
+		"direction": "engineering",
+		"subdomain": "实验平台、记录系统与设备",
+		"source": "scientific"
+	},
+	{
+		"name": "aeon",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "alphagenome",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "analytical-method-validation",
+		"direction": "planning",
+		"subdomain": "方法验证与合规准备",
+		"source": "scientific"
+	},
+	{
+		"name": "anndata",
+		"direction": "analysis",
+		"subdomain": "转录组与单细胞",
+		"source": "scientific"
+	},
+	{
+		"name": "arbor",
+		"direction": "engineering",
+		"subdomain": "自动优化与技能提案（显式授权）",
+		"source": "scientific"
+	},
+	{
+		"name": "arboreto",
+		"direction": "analysis",
+		"subdomain": "转录组与单细胞",
+		"source": "scientific"
+	},
+	{
+		"name": "astropy",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "autoskill",
+		"direction": "engineering",
+		"subdomain": "自动优化与技能提案（显式授权）",
+		"source": "scientific"
+	},
+	{
+		"name": "benchling-integration",
+		"direction": "engineering",
+		"subdomain": "实验平台、记录系统与设备",
+		"source": "scientific"
+	},
+	{
+		"name": "bgpt-paper-search",
+		"direction": "evidence",
+		"subdomain": "检索服务适配",
+		"source": "scientific"
+	},
+	{
+		"name": "bids",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "biopython",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "bioservices",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "bulk-rnaseq",
+		"direction": "analysis",
+		"subdomain": "转录组与单细胞",
+		"source": "scientific"
+	},
+	{
+		"name": "cellxgene-census",
+		"direction": "analysis",
+		"subdomain": "转录组与单细胞",
+		"source": "scientific"
+	},
+	{
+		"name": "cirq",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "citation-management",
+		"direction": "evidence",
+		"subdomain": "引文与论据核验",
+		"source": "scientific"
+	},
+	{
+		"name": "clinical-decision-support",
+		"direction": "writing",
+		"subdomain": "专利与专业报告（受限分支）",
+		"source": "scientific"
+	},
+	{
+		"name": "clinical-reports",
+		"direction": "writing",
+		"subdomain": "专利与专业报告（受限分支）",
+		"source": "scientific"
+	},
+	{
+		"name": "cobrapy",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "consciousness-council",
+		"direction": "planning",
+		"subdomain": "探索性推演（非核心）",
+		"source": "scientific"
+	},
+	{
+		"name": "dask",
+		"direction": "analysis",
+		"subdomain": "数据整理、存储与溯源",
+		"source": "scientific"
+	},
+	{
+		"name": "database-lookup",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "datalad",
+		"direction": "analysis",
+		"subdomain": "数据整理、存储与溯源",
+		"source": "scientific"
+	},
+	{
+		"name": "datamol",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "deepchem",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "deepspot-m",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "deeptools",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "depmap",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "dhdna-profiler",
+		"direction": "planning",
+		"subdomain": "探索性推演（非核心）",
+		"source": "scientific"
+	},
+	{
+		"name": "diffdock",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "dnanexus-integration",
+		"direction": "engineering",
+		"subdomain": "算力、云平台与管线",
+		"source": "scientific"
+	},
+	{
+		"name": "docx",
+		"direction": "presentation",
+		"subdomain": "文档与表格格式（待许可复核）",
+		"source": "scientific"
+	},
+	{
+		"name": "esm",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "etetoolkit",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "exa-search",
+		"direction": "evidence",
+		"subdomain": "检索服务适配",
+		"source": "scientific"
+	},
+	{
+		"name": "experimental-design",
+		"direction": "planning",
+		"subdomain": "选题、假设与实验设计",
+		"source": "scientific"
+	},
+	{
+		"name": "exploratory-data-analysis",
+		"direction": "analysis",
+		"subdomain": "数据整理、存储与溯源",
+		"source": "scientific"
+	},
+	{
+		"name": "flowio",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "fluidsim",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "folklore-variant-evidence",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "generate-image",
+		"direction": "presentation",
+		"subdomain": "解释图与视觉素材",
+		"source": "scientific"
+	},
+	{
+		"name": "geniml",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "genomic-coordinates",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "genomic-intelligence",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "geomaster",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "geopandas",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "get-available-resources",
+		"direction": "engineering",
+		"subdomain": "算力、云平台与管线",
+		"source": "scientific"
+	},
+	{
+		"name": "gget",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "ginkgo-cloud-lab",
+		"direction": "engineering",
+		"subdomain": "实验平台、记录系统与设备",
+		"source": "scientific"
+	},
+	{
+		"name": "glycoengineering",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "gtars",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "histolab",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "hugging-science",
+		"direction": "engineering",
+		"subdomain": "算力、云平台与管线",
+		"source": "scientific"
+	},
+	{
+		"name": "hypogenic",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "hypothesis-generation",
+		"direction": "planning",
+		"subdomain": "选题、假设与实验设计",
+		"source": "scientific"
+	},
+	{
+		"name": "imaging-data-commons",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "infographics",
+		"direction": "presentation",
+		"subdomain": "解释图与视觉素材",
+		"source": "scientific"
+	},
+	{
+		"name": "iso-standards-readiness",
+		"direction": "planning",
+		"subdomain": "方法验证与合规准备",
+		"source": "scientific"
+	},
+	{
+		"name": "lab-hardware-cad",
+		"direction": "engineering",
+		"subdomain": "实验平台、记录系统与设备",
+		"source": "scientific"
+	},
+	{
+		"name": "labarchive-integration",
+		"direction": "engineering",
+		"subdomain": "实验平台、记录系统与设备",
+		"source": "scientific"
+	},
+	{
+		"name": "lamindb",
+		"direction": "analysis",
+		"subdomain": "数据整理、存储与溯源",
+		"source": "scientific"
+	},
+	{
+		"name": "latchbio-integration",
+		"direction": "engineering",
+		"subdomain": "算力、云平台与管线",
+		"source": "scientific"
+	},
+	{
+		"name": "latex-posters",
+		"direction": "presentation",
+		"subdomain": "幻灯片与海报",
+		"source": "scientific"
+	},
+	{
+		"name": "liteparse",
+		"direction": "evidence",
+		"subdomain": "获取、阅读与论文卡",
+		"source": "scientific"
+	},
+	{
+		"name": "literature-review",
+		"direction": "evidence",
+		"subdomain": "证据检索与综述",
+		"source": "scientific"
+	},
+	{
+		"name": "markdown-mermaid-writing",
+		"direction": "presentation",
+		"subdomain": "解释图与视觉素材",
+		"source": "scientific"
+	},
+	{
+		"name": "market-research-reports",
+		"direction": "writing",
+		"subdomain": "专利与专业报告（受限分支）",
+		"source": "scientific"
+	},
+	{
+		"name": "markitdown",
+		"direction": "evidence",
+		"subdomain": "获取、阅读与论文卡",
+		"source": "scientific"
+	},
+	{
+		"name": "matchms",
+		"direction": "analysis",
+		"subdomain": "质谱与蛋白组",
+		"source": "scientific"
+	},
+	{
+		"name": "matlab",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "matplotlib",
+		"direction": "presentation",
+		"subdomain": "数据图表",
+		"source": "scientific"
+	},
+	{
+		"name": "medchem",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "modal",
+		"direction": "engineering",
+		"subdomain": "算力、云平台与管线",
+		"source": "scientific"
+	},
+	{
+		"name": "molecular-dynamics",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "molfeat",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "ncats-arax",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "networkx",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "neurokit2",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "neuropixels-analysis",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "nextflow",
+		"direction": "engineering",
+		"subdomain": "算力、云平台与管线",
+		"source": "scientific"
+	},
+	{
+		"name": "omero-integration",
+		"direction": "engineering",
+		"subdomain": "实验平台、记录系统与设备",
+		"source": "scientific"
+	},
+	{
+		"name": "onekgpd",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "ontology-term-resolution",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "open-notebook",
+		"direction": "evidence",
+		"subdomain": "知识库与文献库",
+		"source": "scientific"
+	},
+	{
+		"name": "openpiv",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "opentrons-integration",
+		"direction": "engineering",
+		"subdomain": "实验平台、记录系统与设备",
+		"source": "scientific"
+	},
+	{
+		"name": "optimize-for-gpu",
+		"direction": "engineering",
+		"subdomain": "算力、云平台与管线",
+		"source": "scientific"
+	},
+	{
+		"name": "pacsomatic",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "paper-lookup",
+		"direction": "evidence",
+		"subdomain": "证据检索与综述",
+		"source": "scientific"
+	},
+	{
+		"name": "paperclip",
+		"direction": "evidence",
+		"subdomain": "检索服务适配",
+		"source": "scientific"
+	},
+	{
+		"name": "paperzilla",
+		"direction": "evidence",
+		"subdomain": "检索服务适配",
+		"source": "scientific"
+	},
+	{
+		"name": "parallel-web",
+		"direction": "evidence",
+		"subdomain": "检索服务适配",
+		"source": "scientific"
+	},
+	{
+		"name": "pathml",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "pathogen-variant-surveillance",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "pathway-enrichment",
+		"direction": "analysis",
+		"subdomain": "转录组与单细胞",
+		"source": "scientific"
+	},
+	{
+		"name": "pdf",
+		"direction": "presentation",
+		"subdomain": "文档与表格格式（待许可复核）",
+		"source": "scientific"
+	},
+	{
+		"name": "peer-review",
+		"direction": "writing",
+		"subdomain": "审稿、回复与评价",
+		"source": "scientific"
+	},
+	{
+		"name": "pennylane",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "phylogenetics",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "pi-agent",
+		"direction": "engineering",
+		"subdomain": "交接与应用定制",
+		"source": "scientific"
+	},
+	{
+		"name": "pkpd-modeling",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "polars-bio",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "polars",
+		"direction": "analysis",
+		"subdomain": "数据整理、存储与溯源",
+		"source": "scientific"
+	},
+	{
+		"name": "pptx-posters",
+		"direction": "presentation",
+		"subdomain": "幻灯片与海报",
+		"source": "scientific"
+	},
+	{
+		"name": "pptx",
+		"direction": "presentation",
+		"subdomain": "文档与表格格式（待许可复核）",
+		"source": "scientific"
+	},
+	{
+		"name": "primekg",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "protocolsio-integration",
+		"direction": "engineering",
+		"subdomain": "实验平台、记录系统与设备",
+		"source": "scientific"
+	},
+	{
+		"name": "pufferlib",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "pydeseq2",
+		"direction": "analysis",
+		"subdomain": "转录组与单细胞",
+		"source": "scientific"
+	},
+	{
+		"name": "pydicom",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "pyhealth",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "pylabrobot",
+		"direction": "engineering",
+		"subdomain": "实验平台、记录系统与设备",
+		"source": "scientific"
+	},
+	{
+		"name": "pymatgen",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "pymc",
+		"direction": "analysis",
+		"subdomain": "统计建模与不确定性",
+		"source": "scientific"
+	},
+	{
+		"name": "pymoo",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "pyopenms",
+		"direction": "analysis",
+		"subdomain": "质谱与蛋白组",
+		"source": "scientific"
+	},
+	{
+		"name": "pysam",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "pytdc",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "pytorch-lightning",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "pyzotero",
+		"direction": "evidence",
+		"subdomain": "知识库与文献库",
+		"source": "scientific"
+	},
+	{
+		"name": "qiskit",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "qutip",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "rdkit",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "relsa-severity-assessment",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "research-grants",
+		"direction": "planning",
+		"subdomain": "项目申请与研究计划",
+		"source": "scientific"
+	},
+	{
+		"name": "research-lookup",
+		"direction": "evidence",
+		"subdomain": "证据检索与综述",
+		"source": "scientific"
+	},
+	{
+		"name": "rowan",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "scanpy",
+		"direction": "analysis",
+		"subdomain": "转录组与单细胞",
+		"source": "scientific"
+	},
+	{
+		"name": "scholar-evaluation",
+		"direction": "writing",
+		"subdomain": "审稿、回复与评价",
+		"source": "scientific"
+	},
+	{
+		"name": "scientific-brainstorming",
+		"direction": "planning",
+		"subdomain": "选题、假设与实验设计",
+		"source": "scientific"
+	},
+	{
+		"name": "scientific-critical-thinking",
+		"direction": "evidence",
+		"subdomain": "引文与论据核验",
+		"source": "scientific"
+	},
+	{
+		"name": "scientific-schematics",
+		"direction": "presentation",
+		"subdomain": "解释图与视觉素材",
+		"source": "scientific"
+	},
+	{
+		"name": "scientific-slides",
+		"direction": "presentation",
+		"subdomain": "幻灯片与海报",
+		"source": "scientific"
+	},
+	{
+		"name": "scientific-visualization",
+		"direction": "presentation",
+		"subdomain": "数据图表",
+		"source": "scientific"
+	},
+	{
+		"name": "scientific-writing",
+		"direction": "writing",
+		"subdomain": "正文与语言编辑",
+		"source": "scientific"
+	},
+	{
+		"name": "scikit-bio",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "scikit-learn",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "scikit-survival",
+		"direction": "analysis",
+		"subdomain": "影像、生理与医学研究",
+		"source": "scientific"
+	},
+	{
+		"name": "scvelo",
+		"direction": "analysis",
+		"subdomain": "转录组与单细胞",
+		"source": "scientific"
+	},
+	{
+		"name": "scvi-tools",
+		"direction": "analysis",
+		"subdomain": "转录组与单细胞",
+		"source": "scientific"
+	},
+	{
+		"name": "seaborn",
+		"direction": "presentation",
+		"subdomain": "数据图表",
+		"source": "scientific"
+	},
+	{
+		"name": "shap",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "simpy",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "stable-baselines3",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "statistical-analysis",
+		"direction": "analysis",
+		"subdomain": "统计建模与不确定性",
+		"source": "scientific"
+	},
+	{
+		"name": "statistical-power",
+		"direction": "planning",
+		"subdomain": "选题、假设与实验设计",
+		"source": "scientific"
+	},
+	{
+		"name": "statsmodels",
+		"direction": "analysis",
+		"subdomain": "统计建模与不确定性",
+		"source": "scientific"
+	},
+	{
+		"name": "sympy",
+		"direction": "analysis",
+		"subdomain": "物理、地理、材料与量子",
+		"source": "scientific"
+	},
+	{
+		"name": "tamarind",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "tiledbvcf",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "timesfm-forecasting",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "torch-geometric",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "torchdrug",
+		"direction": "analysis",
+		"subdomain": "化学、分子与药物",
+		"source": "scientific"
+	},
+	{
+		"name": "transformers",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "treatment-plans",
+		"direction": "writing",
+		"subdomain": "专利与专业报告（受限分支）",
+		"source": "scientific"
+	},
+	{
+		"name": "umap-learn",
+		"direction": "analysis",
+		"subdomain": "机器学习、时间序列与解释",
+		"source": "scientific"
+	},
+	{
+		"name": "uncertainty-and-units",
+		"direction": "analysis",
+		"subdomain": "统计建模与不确定性",
+		"source": "scientific"
+	},
+	{
+		"name": "usfiscaldata",
+		"direction": "evidence",
+		"subdomain": "专业数据库与标识",
+		"source": "scientific"
+	},
+	{
+		"name": "vaex",
+		"direction": "analysis",
+		"subdomain": "数据整理、存储与溯源",
+		"source": "scientific"
+	},
+	{
+		"name": "venue-templates",
+		"direction": "writing",
+		"subdomain": "报告规范、统计呈现与数据声明",
+		"source": "scientific"
+	},
+	{
+		"name": "waypoint-bio",
+		"direction": "analysis",
+		"subdomain": "基因组、序列与进化",
+		"source": "scientific"
+	},
+	{
+		"name": "what-if-oracle",
+		"direction": "planning",
+		"subdomain": "探索性推演（非核心）",
+		"source": "scientific"
+	},
+	{
+		"name": "xlsx",
+		"direction": "presentation",
+		"subdomain": "文档与表格格式（待许可复核）",
+		"source": "scientific"
+	},
+	{
+		"name": "zarr-python",
+		"direction": "analysis",
+		"subdomain": "数据整理、存储与溯源",
+		"source": "scientific"
+	},
+	{
+		"name": "academic-paper-reviewer",
+		"direction": "writing",
+		"subdomain": "审稿、回复与评价",
+		"source": "academic"
+	},
+	{
+		"name": "academic-paper",
+		"direction": "writing",
+		"subdomain": "正文与语言编辑",
+		"source": "academic"
+	},
+	{
+		"name": "academic-pipeline",
+		"direction": "planning",
+		"subdomain": "完整科研计划（显式模式）",
+		"source": "academic"
+	},
+	{
+		"name": "deep-research",
+		"direction": "evidence",
+		"subdomain": "证据检索与综述",
+		"source": "academic"
+	},
+	{
+		"name": "research-show-me",
+		"direction": "presentation",
+		"subdomain": "解释图与视觉素材",
+		"source": "project"
+	},
+	{
+		"name": "research-vault",
+		"direction": "evidence",
+		"subdomain": "知识库与文献库",
+		"source": "project"
+	},
+	{
+		"name": "research-workflow",
+		"direction": "internal",
+		"subdomain": "证据与任务控制/共享资源",
+		"source": "project"
+	},
+	{
+		"name": "zotero-literature",
+		"direction": "evidence",
+		"subdomain": "知识库与文献库",
+		"source": "project"
+	},
+	{
+		"name": "channel-pickup",
+		"direction": "engineering",
+		"subdomain": "交接与应用定制",
+		"source": "project"
+	},
+	{
+		"name": "design-handoff",
+		"direction": "engineering",
+		"subdomain": "交接与应用定制",
+		"source": "project"
+	},
+	{
+		"name": "drone-ui-plugin",
+		"direction": "engineering",
+		"subdomain": "交接与应用定制",
+		"source": "project"
+	}
+]

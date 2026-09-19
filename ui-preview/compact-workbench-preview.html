@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drone compact workbench preview</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #f7f8fa;
+      --surface: #ffffff;
+      --hover: #f1f3f6;
+      --border: #dfe3e8;
+      --ink: #1c222b;
+      --dim: #66717e;
+      --faint: #8e98a5;
+      --accent: #4368d6;
+      --accent-soft: #eef2ff;
+      --ok: #218a5b;
+      --warn: #bd7a18;
+      font-family: Inter, "SF Pro Display", "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); }
+    .page { width: 1360px; min-height: 900px; margin: 0 auto; padding: 26px; }
+    .eyebrow { margin: 0 0 8px; color: var(--faint); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+    .subtitle { margin: 8px 0 22px; color: var(--dim); font-size: 13px; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .72fr); gap: 16px; align-items: start; }
+    .shell, .settings { overflow: hidden; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); box-shadow: 0 14px 34px rgba(30, 38, 52, .08); }
+    .chrome { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 16px; border-bottom: 1px solid var(--border); }
+    .chrome-title { min-width: 0; font-size: 13px; font-weight: 600; }
+    .chrome-path { margin-top: 3px; overflow: hidden; color: var(--faint); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .pill { border: 1px solid var(--border); border-radius: 999px; padding: 5px 9px; color: var(--dim); font-size: 11px; white-space: nowrap; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 310px; min-height: 594px; }
+    .conversation { min-width: 0; padding: 14px 18px 18px; }
+    .knowledge { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .knowledge-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 11px; }
+    .knowledge-title { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 11px; font-weight: 600; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .knowledge-meta { flex: none; color: var(--faint); font-size: 10px; font-variant-numeric: tabular-nums; }
+    .knowledge-body { border-top: 1px solid var(--border); padding: 10px 11px; }
+    .stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 10px; }
+    .stage { border-radius: 7px; background: var(--hover); padding: 7px 8px; color: var(--dim); font-size: 10px; }
+    .stage strong { display: block; margin-bottom: 2px; color: var(--ink); font-size: 11px; }
+    .record { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; color: var(--dim); font-size: 11px; }
+    .record + .record { border-top: 1px solid #edf0f3; }
+    .record code { color: var(--accent); font-family: inherit; }
+    .message { margin: 0 0 16px; color: #303943; font-size: 13px; line-height: 1.75; }
+    .message ul { margin: 0; padding-left: 22px; }
+    .message li + li { margin-top: 6px; }
+    .task { border-left: 1px solid var(--border); background: #fbfcfd; }
+    .task-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 14px 9px; }
+    .task-head strong { font-size: 13px; }
+    .task-head span { color: var(--faint); font-size: 10px; }
+    .task-list { padding: 4px 10px 16px; }
+    .task-item { padding: 11px 6px; border-bottom: 1px solid var(--border); }
+    .task-item:last-child { border-bottom: 0; }
+    .task-row { display: flex; align-items: start; justify-content: space-between; gap: 7px; }
+    .task-item h3 { margin: 0; font-size: 12px; font-weight: 600; line-height: 1.45; }
+    .status { flex: none; border: 1px solid #b9dfca; border-radius: 999px; padding: 2px 6px; color: var(--ok); font-size: 10px; }
+    .task-item p { margin: 5px 0 0; color: var(--faint); font-size: 10px; line-height: 1.45; }
+    .settings { padding: 16px; }
+    .settings-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .settings-head h2 { margin: 0; font-size: 16px; }
+    .settings-head p { margin: 5px 0 0; color: var(--dim); font-size: 11px; line-height: 1.55; }
+    .card { border: 1px solid var(--border); border-radius: 11px; background: color-mix(in srgb, var(--hover) 45%, transparent); padding: 13px; }
+    .card-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .card h3 { margin: 0; font-size: 13px; }
+    .card-intro { margin: 4px 0 0; color: var(--faint); font-size: 11px; line-height: 1.5; }
+    .enabled { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 999px; padding: 4px 7px; color: var(--dim); font-size: 10px; white-space: nowrap; }
+    .enabled i { width: 6px; height: 6px; border-radius: 50%; background: #29a66b; }
+    dl { display: grid; gap: 10px; margin: 15px 0 0; }
+    dt { color: var(--faint); font-size: 10px; }
+    dd { margin: 3px 0 0; color: var(--dim); font-size: 11px; }
+    .hint { margin: 14px 0 0; color: var(--faint); font-size: 10px; line-height: 1.55; }
+    .approval { margin-top: 18px; border: 1px solid #d5c59f; border-radius: 11px; background: #fffaf0; padding: 13px; }
+    .approval-top { display: flex; align-items: center; gap: 7px; color: var(--warn); font-size: 11px; font-weight: 600; }
+    .approval-top b { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
+    .approval h4 { margin: 8px 0 5px; font-size: 12px; }
+    .approval p { margin: 0; color: #755e34; font-size: 10px; line-height: 1.55; }
+    .buttons { display: flex; gap: 7px; margin-top: 11px; }
+    .button { border: 1px solid var(--border); border-radius: 7px; padding: 6px 9px; background: var(--surface); color: var(--dim); font: inherit; font-size: 10px; }
+    .button.primary { border-color: var(--accent); background: var(--accent); color: white; }
+    .legend { display: flex; gap: 14px; margin-top: 15px; color: var(--faint); font-size: 10px; }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .legend i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .legend .green { background: #29a66b; }
+    .legend .amber { background: var(--warn); }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <p class="eyebrow">Drone · compact workbench preview</p>
+    <h1>任务会话与 SSH 守卫</h1>
+    <p class="subtitle">同类信息合并到紧凑的 Wiki 报告、任务侧栏和设置卡片中，保持原有字体层级与审批入口。</p>
+    <div class="grid">
+      <section class="shell" aria-label="聊天与任务工作台">
+        <header class="chrome">
+          <div>
+            <div class="chrome-title">wing_reference_genes.tsv</div>
+            <div class="chrome-path">C:\Users\Administrator\Documents\Shuncode\percho\packages\desktop</div>
+          </div>
+          <span class="pill">有提醒 · 7</span>
+        </header>
+        <div class="workspace">
+          <div class="conversation">
+            <section class="knowledge">
+              <div class="knowledge-head">
+                <div class="knowledge-title"><i class="dot"></i><span>Wiki 研究报告 · 已读取并合并</span><span style="color:var(--faint)">⌃</span></div>
+                <span class="knowledge-meta">匹配 12 · 输出 3</span>
+              </div>
+              <div class="knowledge-body">
+                <div class="stages">
+                  <div class="stage"><strong>导航</strong>完成</div>
+                  <div class="stage"><strong>Wiki</strong>已读取</div>
+                  <div class="stage"><strong>检索</strong>12 命中</div>
+                  <div class="stage"><strong>报告</strong>3 输出</div>
+                </div>
+                <div class="record"><span>Wiki / 研究背景</span><code>lines 12–38</code></div>
+                <div class="record"><span>Library / evidence.md</span><code>version 4</code></div>
+              </div>
+            </section>
+            <div class="message"><ul><li>本机没有这些物种的全基因组信息，跨物种“家族大小”的绝对数量需要谨慎解释。</li><li>9 个关键家族的 Pfam 编码已完成整理，可继续进入审阅流程。</li></ul></div>
+            <div class="message"><ul><li>当前报告保留来源、行号和版本标记，后续 Wiki 修改仍从同一审批入口提交。</li></ul></div>
+          </div>
+          <aside class="task">
+            <div class="task-head"><strong>任务工作台</strong><span>3 项进行中</span></div>
+            <div class="task-list">
+              <article class="task-item"><div class="task-row"><h3>整理 Wiki 研究报告</h3><span class="status">进行中</span></div><p>来源读取、证据链和输出已合并到同一条报告卡。</p></article>
+              <article class="task-item"><div class="task-row"><h3>检查 Pfam 编码</h3><span class="status">待审阅</span></div><p>保持行号、版本和原始文件入口。</p></article>
+              <article class="task-item"><div class="task-row"><h3>准备远程检查</h3><span class="status">需确认</span></div><p>发起 SSH 尝试前先在 ApprovalDock 中确认。</p></article>
+            </div>
+          </aside>
+        </div>
+      </section>
+      <section class="settings" aria-label="SSH 守卫设置">
+        <div class="settings-head"><div><h2>设置 · 通用</h2><p>外部访问与会话行为</p></div><span class="pill">compact</span></div>
+        <section class="card">
+          <div class="card-head"><div><h3>SSH 守卫</h3><p class="card-intro">Agent 可以发起 SSH 连接尝试，但读取本机密钥前会停下来请求你的确认。</p></div><span class="enabled"><i></i>已启用</span></div>
+          <dl><div><dt>访问策略</dt><dd>默认每次确认</dd></div><div><dt>密钥来源</dt><dd>仅使用本机 OpenSSH 密钥</dd></div><div><dt>授权范围</dt><dd>默认单次，可显式记住</dd></div></dl>
+          <p class="hint">审批请求与执行结果会留在会话记录中；拒绝后 Agent 仍可继续其他不需要 SSH 的步骤。</p>
+        </section>
+        <section class="approval"><div class="approval-top"><b></b>等待用户确认</div><h4>SSH access: build.example :: uname -a</h4><p>Host: agent@build.example:2222<br>Identity: OpenSSH default identity / agent</p><div class="buttons"><button class="button primary">允许一次</button><button class="button">拒绝</button></div></section>
+        <div class="legend"><span><i></i>知识流</span><span><i class="green"></i>已完成</span><span><i class="amber"></i>需确认</span></div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

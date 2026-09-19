@@ -1,4 +1,4 @@
-import type { SessionEvent } from "@drone/shared";
+import { isUserAbortError, type SessionEvent, sanitizeProviderError } from "@drone/shared";
 import type { RawMessage } from "./messages";
 
 /**
@@ -20,14 +20,20 @@ function bridge(): PublicationBridge | undefined {
 
 const notice = "【知识库检查未通过】发布检查未加载或发生错误，回答没有发布。请重新加载知识库扩展。";
 
-/** 兜底封条：把一条 assistant 草稿替换成「扩展未加载」提示，绝不透出未审内容。 */
+/** 兜底封条：隐藏未审草稿，同时区分服务商错误、中断与发布检查故障。 */
 function sealed(message: RawMessage): RawMessage {
+	const error = typeof message.errorMessage === "string" ? sanitizeProviderError(message.errorMessage) : "";
+	const interrupted =
+		message.stopReason === "aborted" || (message.stopReason === "error" && isUserAbortError(error));
+	const providerError = message.stopReason === "error" && !interrupted;
 	return {
 		role: "assistant",
-		content: [{ type: "text", text: notice }],
+		content: providerError
+			? []
+			: [{ type: "text", text: interrupted ? "本次请求已中断，未完成的回答没有发布。" : notice }],
 		timestamp: message.timestamp,
 		stopReason: message.stopReason,
-		...(message.stopReason === "error" ? { errorMessage: notice } : {}),
+		...(message.stopReason === "error" ? { errorMessage: error || "Model request failed" } : {}),
 	};
 }
 

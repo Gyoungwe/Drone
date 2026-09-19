@@ -32,7 +32,7 @@ jobs:
       tag: ${{ steps.pick.outputs.tag }}
       release: ${{ steps.pick.outputs.release }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - id: pick
@@ -81,10 +81,10 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_TAG }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -100,7 +100,7 @@ jobs:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_TAG }}
       - name: Validate release tag
@@ -136,10 +136,10 @@ jobs:
       # 无开发者证书：mac 显式走 adhoc 签名（identity: "-"），禁用 runner 上的证书自动发现
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_TAG }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm

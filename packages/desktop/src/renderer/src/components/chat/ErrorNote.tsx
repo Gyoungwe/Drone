@@ -1,5 +1,5 @@
-import type { UIMessage, UiError } from "@drone/shared";
-import { useMemo, useState } from "react";
+import type { UiError } from "@drone/shared";
+import { useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { type MessageKey, useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
@@ -12,7 +12,7 @@ import { ChevronRightIcon, CopyIcon, ErrorCircleIcon, GearIcon, RefreshIcon } fr
  * v2 语言：rounded-xl bg-surface shadow-soft（QueueBar/TodoPanel 同款），默认折叠。
  *
  * 动作行：
- * - retry：重发本卡之前最后一条 user 消息（原文 sourceText），错误卡保留（错误确实发生过）；
+ * - retry：只读恢复未完成回答，不重发原问题或进入 followUp 队列；
  * - compact：/compact 压缩（只 llmOverflow 类出现）；
  * - openSettings：打开设置面板（只凭证类出现）；
  * - copyDetail：复制原始报错（有 detail 时恒有）。
@@ -28,6 +28,10 @@ export function ErrorNote({
 }) {
 	const t = useT();
 	const [copied, setCopied] = useState(false);
+	const [recovering, setRecovering] = useState(false);
+	const [recoveryError, setRecoveryError] = useState("");
+	const recoveryLock = useRef(false);
+	const active = useTranscriptStore((s) => (sessionId ? s.bySession[sessionId]?.agentActive : false));
 
 	// 本卡之前最后一条 user 消息（重试用）——按 cardId 定位卡索引，向前找
 	const lastUser = useTranscriptStore((s) => {
@@ -44,17 +48,19 @@ export function ErrorNote({
 	});
 
 	const retry = async () => {
-		if (!sessionId || !lastUser) return;
-		const user = lastUser as Extract<UIMessage, { kind: "user" }>;
-		const text = user.sourceText ?? user.text;
-		const images = user.images;
-		useTranscriptStore.getState().markAgentActive(sessionId, true);
+		if (!sessionId || !lastUser || active || recoveryLock.current) return;
+		recoveryLock.current = true;
+		setRecovering(true);
+		setRecoveryError("");
 		try {
-			await getPi().prompt(sessionId, text, images.length > 0 ? images : undefined);
+			await getPi().retry(sessionId, cardId, lastUser.timestamp);
 			// 重发受理：切回该会话（若在看别的会话）
 			useSessionsStore.getState().switchSession(sessionId);
-		} catch {
-			useTranscriptStore.getState().markAgentActive(sessionId, false);
+		} catch (e) {
+			setRecoveryError(e instanceof Error ? e.message : String(e));
+		} finally {
+			recoveryLock.current = false;
+			setRecovering(false);
 		}
 	};
 
@@ -98,6 +104,7 @@ export function ErrorNote({
 					<ChevronRightIcon />
 				</span>
 			</summary>
+			{recoveryError && <p role="alert">{recoveryError}</p>}
 			<div className="error-note-body">
 				{error.detail && <pre className="error-note-detail">{error.detail}</pre>}
 				{error.hintKey && <p className="error-note-hint">{t(error.hintKey as MessageKey)}</p>}
@@ -107,6 +114,7 @@ export function ErrorNote({
 							key={action}
 							type="button"
 							className={`error-note-act${action === "retry" ? " strong" : ""}`}
+							disabled={action === "retry" && (!!active || recovering || !lastUser)}
 							onClick={() => {
 								if (action === "retry") void retry();
 								else if (action === "compact" && sessionId) void getPi().compact(sessionId);

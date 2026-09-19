@@ -2,6 +2,28 @@ import type { Messages } from "./zh";
 
 /** English language pack (mirrors zh.ts shape) */
 export const en: Messages = {
+	workflows: {
+	  "title": "Six workflow directions",
+	  "hint": "Choose the task and current stage. One primary workflow per stage; specialists load on demand. Browsing does not enable tools or run tasks.",
+	  "advanced": "Advanced: all original skills ({count})",
+	  "compact": "Back to six directions",
+	  "back": "Back to directions",
+	  "chooseStage": "Choose a stage →",
+	  "unavailable": "No eligible command registered in this session",
+	  "direction": "Task direction",
+	  "internal": "Internal governance and shared dependencies",
+	  "count": "{count} registered modules",
+	  "stageHint": "Stages resolve existing skills only. Type / in chat, choose the same direction and stage, then add your task. Original command names remain searchable.",
+	  "checkCommand": "Check ARS command availability in the chat slash menu",
+	  "inspect": "Inspect all registered modules in this direction",
+	  "visible": "Currently model-visible: {count} skills (not the full inventory)"
+	},
+	runInspector: {
+		title: "Run Inspector",
+		label: "Run details: tools, sources and model responses",
+		expand: "View details",
+		collapse: "Hide details",
+	},
 	taskConsent: {
 		manual: "More controls (expand if needed)",
 		title: "Confirm once, let it finish the job",
@@ -58,6 +80,9 @@ export const en: Messages = {
 		multiHint: "Choose any that apply, or enter your own answer",
 		required: "Important",
 		recommended: "Recommended",
+		modelRecommendation: "Model recommendation",
+		confidence: "Confidence: {value}",
+		basedOn: "Based on: {value}",
 		customPlaceholder: "Or enter your own answer…",
 		submit: "Submit answers",
 		submitting: "Submitting…",
@@ -76,6 +101,47 @@ export const en: Messages = {
 		untitled: "New session",
 		settings: "Settings",
 		close: "Close session (keep on disk)",
+	},
+	workbench: {
+		nav: {
+			title: "Research workbench navigation",
+			chat: "Chat",
+			research: "Research",
+			knowledge: "Knowledge",
+			tools: "Tools",
+			extensions: "Extensions",
+			settings: "Settings",
+			help: "Help",
+		},
+		agentReady: "Agent ready",
+		modelNotSelected: "No model selected",
+		approvalRequired: "Approval required",
+		sshSummary: "The agent may start an SSH attempt, but pauses for approval before reading a local key.",
+		localOpenSsh: "Local OpenSSH keys only",
+		reviewGuard: "Review SSH guard settings",
+		online: "Tools online",
+		ready: "Ready",
+		model: "Model",
+		tools: "Tools",
+		modelTools: "Model & tools",
+		controlTitle: "Agents work for you",
+		controlHint: "Sensitive actions pause for approval; sources, files, and key access stay visible.",
+		task: {
+			title: "Task workbench",
+			count: "tasks",
+		},
+		skills: {
+			title: "Research skills",
+			loading: "Loading skills for this session…",
+		},
+		wikiReport: "Wiki report",
+		wikiDescription: "The research report is organized into stages and updates as the agent works.",
+		openInWiki: "Open in Wiki",
+		stage: {
+			completed: "Completed",
+			inProgress: "In progress",
+			pending: "Pending",
+		},
 	},
 	update: {
 		checkForUpdates: "Check for updates",
@@ -361,6 +427,20 @@ export const en: Messages = {
 		channelWatch: "Cross-session channel collaboration (channel-watch)",
 		channelWatchHint:
 			"After a session subscribes to a channel it watches .local/agent-work/channel/<topic>/ for file updates; writes from another session wake this session to pick them up (per the HANDOFF.md protocol). Subscriptions persist via appendEntry and restore on session reopen; built-in loop protection. On by default, fully effective for trusted projects.",
+		sshGuard: {
+			title: "SSH guard",
+			description:
+				"The agent may start an SSH connection attempt, but it pauses for your approval before reading a local key.",
+			enabled: "Enabled",
+			approvalLabel: "Access policy",
+			approval: "Approval required by default",
+			keysLabel: "Key source",
+			keys: "Local OpenSSH keys only",
+			scopeLabel: "Grant scope",
+			scope: "One call by default; remember only explicitly",
+			defaultHint:
+				"The approval request and execution result remain in session history. If you deny it, the agent can continue steps that do not need SSH.",
+		},
 		sessionRail: "Left session rail",
 		sessionRailHint:
 			"Shows a vertically centered track of session lines on the left of the chat view; hover or focus a line and it grows into a floating capsule (project icon + title) — click to switch. The top tab bar stays unchanged; turn off to hide it.",
@@ -635,6 +715,7 @@ export const en: Messages = {
 			llmOverflow: "Model request failed: context limit exceeded",
 			llmNetwork: "Model request failed: network error",
 			llmGeneric: "Model request failed",
+			modelTimeout: "Model stopped responding; request stopped",
 			streamGuard: "Reply aborted by safety guard",
 			sendFailed: "Failed to send",
 			sendReadOnly: "Session is read-only, cannot send",
@@ -645,8 +726,14 @@ export const en: Messages = {
 			compact: "Context is too long. Run /compact to compress, or fork from here to start a new session.",
 			network: "Network connection issue; check your connection and retry.",
 			streamGuard: "Abnormal model output (pathological stream) was aborted by the safety guard.",
+			modelTimeout:
+				"No new model events for 5 minutes. Check your model service or continue the remaining work in this conversation. Completed tool operations are not automatically repeated.",
 		},
 		retrying: "Auto-retrying · attempt {attempt}/{maxAttempts} · waiting {delay}s",
+		modelWaiting:
+			"No new model events for over 60 seconds. Still waiting; the request will stop after {minutes} minutes of silence.",
+		modelStopping: "Model silent; requesting stop. Completion is not confirmed yet.",
+		modelStopFailed: "Stop failed; the task may still be running. Try stopping again or check the service.",
 		retryDone: "Retry succeeded",
 		retryFailed: "Retry failed",
 	},

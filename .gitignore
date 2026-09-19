@@ -29,3 +29,6 @@ npm-debug.log*
 /results/
 /packages/backend/pi-session-*.html
 /packages/backend/pi-session-*.jsonl
+
+# Reproducible third-party skill data; restored from the committed source lock.
+packages/desktop/resources/research-skills/

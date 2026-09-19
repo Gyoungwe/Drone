@@ -1,3 +1,5 @@
+import { researchSkillCategory } from "./research-skills";
+
 /** Presentation-only taxonomy. It never changes SDK invocation names, permissions or source files. */
 export const SKILL_CATEGORY_ORDER = [
 	"knowledge",
@@ -100,7 +102,7 @@ export function bareSkillName(name: string): string {
 }
 export function getSkillCategory(name: string): SkillCategory {
 	const bare = bareSkillName(name);
-	return categoryByName.get(bare) ?? (/^setup(?:-|$)|-setup$/.test(bare) ? "setup" : "other");
+	return researchSkillCategory(bare) ?? categoryByName.get(bare) ?? (/^setup(?:-|$)|-setup$/.test(bare) ? "setup" : "other");
 }
 /** Clear product labels without renaming third-party workflows. */
 const labels: Record<string, { zh: string; en: string }> = {

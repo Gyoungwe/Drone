@@ -42,12 +42,12 @@ const TRANSCRIPT_TAIL_LIMIT = 100;
 const PROMPT_MAX_BYTES = 8 * 1024;
 const BODY_MAX_BYTES = 16 * 1024;
 
-type WriteRoute = { action: "prompt" | "abort"; id: string } | { action: "perm"; id: string };
+type WriteRoute = { action: "prompt" | "abort" | "retry"; id: string } | { action: "perm"; id: string };
 
 /** 写端点路由匹配：/api/sessions/:id/prompt|abort、/api/permissions/:id/respond */
 function matchWriteRoute(pathname: string): WriteRoute | null {
-	const session = /^\/api\/sessions\/([^/]+)\/(prompt|abort)$/.exec(pathname);
-	if (session?.[1] && (session[2] === "prompt" || session[2] === "abort")) {
+	const session = /^\/api\/sessions\/([^/]+)\/(prompt|abort|retry)$/.exec(pathname);
+	if (session?.[1] && (session[2] === "prompt" || session[2] === "abort" || session[2] === "retry")) {
 		return { action: session[2], id: decodeURIComponent(session[1]) };
 	}
 	const perm = /^\/api\/permissions\/([^/]+)\/respond$/.exec(pathname);
@@ -119,6 +119,7 @@ export interface LanObserverBackend {
 	checkSessionWritable(sessionId: string): "ok" | "not_found" | "read_only";
 	prompt(sessionId: string, text: string): Promise<PromptReceipt>;
 	abort(sessionId: string): Promise<void>;
+	retry?(sessionId: string, requestId: string, expectedUserTimestamp?: number): Promise<PromptReceipt>;
 	respondPermission(requestId: string, answer: "allow" | "deny"): void;
 }
 
@@ -328,7 +329,7 @@ export class LanObserverServer {
 
 	/** M2 写端点处理（均已通过 token + remoteControl 双闸门）。 */
 	private async handleWrite(req: IncomingMessage, res: ServerResponse, route: WriteRoute): Promise<void> {
-		if (route.action === "prompt" || route.action === "abort") {
+		if (route.action === "prompt" || route.action === "abort" || route.action === "retry") {
 			const writable = this.backend.checkSessionWritable(route.id);
 			if (writable === "not_found") {
 				this.audit(req, route.action, route.id, "denied: not_found");
@@ -348,6 +349,27 @@ export class LanObserverServer {
 		if (!body.ok) {
 			this.audit(req, route.action, route.id, "denied: bad_body");
 			return this.sendJson(res, 400, { error: body.error });
+		}
+		if (route.action === "retry") {
+			if (!this.backend.retry) return this.sendJson(res, 501, { error: "recovery unavailable" });
+			const id = body.data.requestId,
+				stamp = body.data.expectedUserTimestamp;
+			if (
+				typeof id !== "string" ||
+				!/^[a-zA-Z0-9_.:-]{1,128}$/.test(id) ||
+				(stamp !== undefined && (typeof stamp !== "number" || !Number.isFinite(stamp)))
+			)
+				return this.sendJson(res, 400, { error: "invalid recovery request" });
+			try {
+				await this.backend.retry(route.id, id, stamp as number | undefined);
+			} catch (error) {
+				this.audit(req, "retry", route.id, "rejected");
+				return this.sendJson(res, 409, {
+					error: error instanceof Error ? error.message.split("\n")[0] : "recovery failed",
+				});
+			}
+			this.audit(req, "retry", route.id, "ok");
+			return this.sendJson(res, 200, { ok: true });
 		}
 		if (route.action === "prompt") {
 			const text = typeof body.data.text === "string" ? body.data.text.trim() : "";
