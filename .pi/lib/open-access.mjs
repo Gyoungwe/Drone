@@ -4,24 +4,28 @@ import { normalizeDoi } from "./literature-receipt.mjs";
  * 合法开放获取（OA）全文定位：只查询公开、许可明确的元数据服务，按可信度排序给出 PDF 候选。
  *
  * 来源（全部是公开 API / 出版者或存储库自己提供的文件，不接触任何影子图书馆）：
- *   1. Europe PMC   — DOI/PMID → PMCID、OA 标记、许可；OA 文章的渲染 PDF 与 JATS XML
- *   2. PMC OA 服务   — PMC 开放获取子集的官方 PDF 文件（FTP 镜像的 https 路径）
- *   3. Unpaywall     — 出版者 / 机构库 / 预印本的合法 OA 位置（需要联系邮箱）
- *   4. OpenAlex      — 同上，含 arXiv / bioRxiv / medRxiv 等仓储位置
- *   5. Semantic Scholar — openAccessPdf
- *   6. Crossref      — 出版者登记的全文链接（可能受订阅限制；失败即失败，不绕过）
+ *   1. Europe PMC   — DOI/PMID → PMCID、OA 标记、许可（身份补全）
+ *   2. PMC Cloud    — PMC 文章数据集（AWS S3 公开桶 pmc-oa-opendata，2026-08 起替代已下线的 oa.fcgi）：
+ *                     metadata/PMC{id}.{v}.json 给出许可与 pdf_url，PDF 直接由 https 读取，无验证码
+ *   3. Europe PMC   — OA 文章的渲染 PDF（站点有 Cloudflare 校验，桌面环境可用时才成功）
+ *   4. Unpaywall    — 出版者 / 机构库 / 预印本的合法 OA 位置（需要联系邮箱）
+ *   5. OpenAlex     — 同上，含 arXiv / bioRxiv / medRxiv 等仓储位置
+ *   6. Semantic Scholar — openAccessPdf、arXiv
+ *   7. Crossref     — 出版者登记的全文链接（可能受订阅限制；失败即失败，不绕过）
  *
  * 这里只产生候选与查询记录，不下载正文；下载、校验（必须是 PDF 字节）与归档在 source-archive.mjs。
  * 找不到 OA 版本时如实返回 not-found：闭源文献只能由用户用自己的访问权限下载后以 local_file 导入。
  */
 export const OA_SOURCES = Object.freeze([
 	"europepmc",
-	"pmc-oa",
+	"pmc-cloud",
 	"unpaywall",
 	"openalex",
 	"semanticscholar",
 	"crossref",
 ]);
+export const PMC_CLOUD_BASE = "https://pmc-oa-opendata.s3.amazonaws.com";
+const PMC_CLOUD_MAX_VERSIONS = 3;
 export const OA_DEFAULT_TIMEOUT_MS = 12_000;
 export const OA_MAX_CANDIDATES = 8;
 const DEFAULT_EMAIL_ENV = ["DRONE_CONTACT_EMAIL", "UNPAYWALL_EMAIL"];
@@ -58,9 +62,13 @@ const httpsUrl = (value) => {
 		return null;
 	}
 };
-/** PMC 的 FTP 链接有同路径的 https 镜像。 */
-const pmcFtpToHttps = (value) =>
-	String(value || "").replace(/^ftp:\/\/ftp\.ncbi\.nlm\.nih\.gov\//i, "https://ftp.ncbi.nlm.nih.gov/");
+/** PMC Cloud 元数据里的 s3:// 路径有同名的公开 https 读取地址（保留 md5 查询参数）。 */
+export const pmcCloudHttps = (value) => {
+	const text = String(value || "").trim();
+	if (/^s3:\/\/pmc-oa-opendata\//i.test(text))
+		return `${PMC_CLOUD_BASE}/${text.replace(/^s3:\/\/pmc-oa-opendata\//i, "")}`;
+	return text.startsWith(`${PMC_CLOUD_BASE}/`) ? text : null;
+};
 
 async function fetchJson(fetchImpl, url, { timeoutMs, signal, accept = "application/json" }) {
 	const controller = new AbortController();
@@ -146,7 +154,8 @@ export async function resolveOpenAccess({
 	const note = (source, status, detail) => queried.push({ source, status, detail: detail || null });
 	const opts = { timeoutMs, signal };
 
-	// 1. Europe PMC：身份补全（PMCID）、OA 标记、渲染 PDF / JATS XML
+	// 1. Europe PMC：身份补全（PMCID / PMID / DOI）与 OA 标记
+	let epmc = null;
 	if (enabled.has("europepmc")) {
 		const query = identity.doi
 			? `DOI:"${identity.doi}"`
@@ -169,68 +178,90 @@ export async function resolveOpenAccess({
 				identity.pmid = identity.pmid || normalizePmid(hit.pmid);
 				identity.doi = identity.doi || normalizeDoi(hit.doi);
 				meta.title = hit.title || null;
-				const isOa = hit.isOpenAccess === "Y";
-				const inEpmc = hit.inEPMC === "Y";
+				epmc = { isOa: hit.isOpenAccess === "Y", inEpmc: hit.inEPMC === "Y" };
 				note(
 					"europepmc",
 					"ok",
 					`${identity.pmcid || "no PMCID"}; isOpenAccess=${hit.isOpenAccess || "?"}; inEPMC=${hit.inEPMC || "?"}; hasPDF=${hit.hasPDF || "?"}`,
 				);
-				if (identity.pmcid && (isOa || inEpmc)) {
-					collector.add({
-						url: `https://europepmc.org/articles/${identity.pmcid}?pdf=render`,
-						source: "europepmc",
-						kind: "pdf",
-						license: isOa ? "open-access" : null,
-						note: "Europe PMC rendered PDF",
-					});
-					collector.add({
-						url: `https://europepmc.org/backend/ptpmcrender.fcgi?accid=${identity.pmcid}&blobtype=pdf`,
-						source: "europepmc",
-						kind: "pdf",
-						license: isOa ? "open-access" : null,
-						note: "Europe PMC render backend",
-					});
-				}
 			}
 		}
 	}
 
-	// 2. PMC 开放获取服务：官方 PDF 文件（仅 OA 子集）
-	if (enabled.has("pmc-oa") && identity.pmcid) {
-		const url = `https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi?id=${identity.pmcid}`;
-		const result = await fetchJson(fetchImpl, url, { ...opts, accept: "application/xml,text/xml" });
-		if (!result.ok) note("pmc-oa", "error", result.detail);
-		else {
-			const xml = String(result.body || "");
-			const error = xml.match(/<error[^>]*code="([^"]+)"/i);
-			if (error) note("pmc-oa", "ok", `not in OA subset (${error[1]})`);
-			else {
-				const license = xml.match(/<record[^>]*license="([^"]+)"/i)?.[1] || null;
-				let added = 0;
-				for (const link of xml.matchAll(/<link\s+([^>]*)\/?>/gi)) {
-					const attrs = link[1];
-					const format = attrs.match(/format="([^"]+)"/i)?.[1];
-					const href = attrs.match(/href="([^"]+)"/i)?.[1];
-					if (format !== "pdf" || !href) continue;
-					if (
-						collector.add({
-							url: pmcFtpToHttps(href),
-							source: "pmc-oa",
-							kind: "pdf",
-							license,
-							note: "PMC OA subset file",
-						})
-					)
-						added += 1;
-				}
-				meta.license = meta.license || license;
-				note("pmc-oa", "ok", added ? `${added} pdf link(s)` : "no pdf link (tgz only)");
+	// 2. PMC Cloud（官方文章数据集）：按版本读取元数据，取 pdf_url；发表版优先于作者手稿
+	let pmcCloudQueried = null;
+	const pmcCloud = async () => {
+		if (!enabled.has("pmc-cloud") || !identity.pmcid || pmcCloudQueried === identity.pmcid) return;
+		pmcCloudQueried = identity.pmcid;
+		const versions = [];
+		let errors = 0;
+		for (let v = 1; v <= PMC_CLOUD_MAX_VERSIONS; v += 1) {
+			const url = `${PMC_CLOUD_BASE}/metadata/${identity.pmcid}.${v}.json`;
+			const result = await fetchJson(fetchImpl, url, opts);
+			if (!result.ok) {
+				if (result.status !== 404 && result.status !== 403) errors += 1;
+				continue;
 			}
+			const record = result.body || {};
+			versions.push({
+				version: v,
+				manuscript: record.is_manuscript === true,
+				openAccess: record.is_pmc_openaccess === true,
+				license: record.license_code || null,
+				pdf: pmcCloudHttps(record.pdf_url),
+				doi: normalizeDoi(record.doi),
+			});
 		}
+		if (!versions.length) {
+			note(
+				"pmc-cloud",
+				errors ? "error" : "ok",
+				errors ? `${errors} metadata request(s) failed` : "not in PMC article datasets",
+			);
+			return;
+		}
+		versions.sort((a, b) => Number(a.manuscript) - Number(b.manuscript) || a.version - b.version);
+		let added = 0;
+		for (const record of versions) {
+			if (identity.doi && record.doi && record.doi !== identity.doi) continue;
+			if (
+				record.pdf &&
+				collector.add({
+					url: record.pdf,
+					source: "pmc-cloud",
+					kind: "pdf",
+					license: record.license,
+					version: record.manuscript ? "acceptedVersion" : "publishedVersion",
+					hostType: "repository",
+					note: `PMC article datasets v${record.version}`,
+				})
+			)
+				added += 1;
+			meta.license = meta.license || record.license;
+		}
+		note("pmc-cloud", "ok", `${versions.length} version(s); ${added} pdf link(s)`);
+	};
+	await pmcCloud();
+
+	// 3. Europe PMC 渲染 PDF（OA 或已入库文章；站点有 Cloudflare 校验，失败就交给后面的来源）
+	if (enabled.has("europepmc") && identity.pmcid && epmc && (epmc.isOa || epmc.inEpmc)) {
+		collector.add({
+			url: `https://europepmc.org/articles/${identity.pmcid}?pdf=render`,
+			source: "europepmc",
+			kind: "pdf",
+			license: epmc.isOa ? "open-access" : null,
+			note: "Europe PMC rendered PDF",
+		});
+		collector.add({
+			url: `https://europepmc.org/backend/ptpmcrender.fcgi?accid=${identity.pmcid}&blobtype=pdf`,
+			source: "europepmc",
+			kind: "pdf",
+			license: epmc.isOa ? "open-access" : null,
+			note: "Europe PMC render backend",
+		});
 	}
 
-	// 3. Unpaywall（需要邮箱）
+	// 4. Unpaywall（需要邮箱）
 	if (enabled.has("unpaywall") && identity.doi) {
 		if (!mail) note("unpaywall", "skipped", "no contact email (set DRONE_CONTACT_EMAIL)");
 		else {
@@ -268,7 +299,7 @@ export async function resolveOpenAccess({
 		}
 	}
 
-	// 4. OpenAlex
+	// 5. OpenAlex
 	if (enabled.has("openalex") && identity.doi) {
 		const url = `https://api.openalex.org/works/doi:${encodeURIComponent(identity.doi)}${mail ? `?mailto=${encodeURIComponent(mail)}` : ""}`;
 		const result = await fetchJson(fetchImpl, url, opts);
@@ -300,7 +331,7 @@ export async function resolveOpenAccess({
 		}
 	}
 
-	// 5. Semantic Scholar
+	// 6. Semantic Scholar
 	if (enabled.has("semanticscholar") && identity.doi) {
 		const url = `https://api.semanticscholar.org/graph/v1/paper/DOI:${encodeURIComponent(identity.doi)}?fields=openAccessPdf,externalIds,isOpenAccess`;
 		const result = await fetchJson(fetchImpl, url, opts);
@@ -314,6 +345,8 @@ export async function resolveOpenAccess({
 				license: paper.openAccessPdf?.license || null,
 				note: paper.openAccessPdf?.status || null,
 			});
+			if (!identity.pmcid && paper.externalIds?.PubMedCentral)
+				identity.pmcid = normalizePmcid(paper.externalIds.PubMedCentral);
 			const arxiv = paper.externalIds?.ArXiv;
 			if (arxiv && /^[0-9]{4}\.[0-9]{4,5}(v\d+)?$/.test(String(arxiv)))
 				collector.add({
@@ -330,7 +363,7 @@ export async function resolveOpenAccess({
 		}
 	}
 
-	// 6. Crossref 登记的全文链接（可能需要订阅；只尝试，不绕过）
+	// 7. Crossref 登记的全文链接（可能需要订阅；只尝试，不绕过）
 	if (enabled.has("crossref") && identity.doi) {
 		const url = `https://api.crossref.org/works/${encodeURIComponent(identity.doi)}${mail ? `?mailto=${encodeURIComponent(mail)}` : ""}`;
 		const result = await fetchJson(fetchImpl, url, opts);
@@ -355,6 +388,9 @@ export async function resolveOpenAccess({
 		}
 	}
 
+	// 聚合器补出了 PMCID（Europe PMC 没查到时）：再查一次官方数据集
+	await pmcCloud();
+
 	return {
 		...identity,
 		title: meta.title,
@@ -365,4 +401,4 @@ export async function resolveOpenAccess({
 	};
 }
 
-export default { resolveOpenAccess, contactEmail, normalizePmcid, normalizePmid, OA_SOURCES };
+export default { resolveOpenAccess, contactEmail, normalizePmcid, normalizePmid, pmcCloudHttps, OA_SOURCES };

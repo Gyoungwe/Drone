@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sourceArchive from "../../../.pi/extensions/source-archive.mjs";
 import { saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
-import { contactEmail, normalizePmcid, resolveOpenAccess } from "../../../.pi/lib/open-access.mjs";
+import {
+	contactEmail,
+	normalizePmcid,
+	pmcCloudHttps,
+	resolveOpenAccess,
+} from "../../../.pi/lib/open-access.mjs";
 import { startResearchRun } from "../../../.pi/lib/research-loop.mjs";
 import { archiveSource } from "../../../.pi/lib/source-archive.mjs";
 
@@ -18,7 +23,6 @@ const html = (body = "<html><body>landing page</body></html>", status = 200) =>
 	new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8" } });
 const json = (body, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-const xml = (body) => new Response(body, { status: 200, headers: { "content-type": "application/xml" } });
 /** 按 URL 正则路由的 fetch 桩；未命中一律 404。 */
 function router(routes) {
 	const calls = [];
@@ -43,11 +47,24 @@ const OA_HIT = {
 	hasPDF: "Y",
 	title: "Sex determination",
 };
+const S3 = "https://pmc-oa-opendata.s3.amazonaws.com";
+const cloudMeta = (version, record) => [
+	new RegExp(`pmc-oa-opendata\\.s3\\.amazonaws\\.com/metadata/PMC7079136\\.${version}\\.json$`),
+	() =>
+		record
+			? new Response(JSON.stringify(record), {
+					status: 200,
+					headers: { "content-type": "binary/octet-stream" },
+				})
+			: new Response("<Error><Code>NoSuchKey</Code></Error>", {
+					status: 404,
+					headers: { "content-type": "application/xml" },
+				}),
+];
 const LEGIT_HOSTS = [
 	"www.ebi.ac.uk",
 	"europepmc.org",
-	"www.ncbi.nlm.nih.gov",
-	"ftp.ncbi.nlm.nih.gov",
+	"pmc-oa-opendata.s3.amazonaws.com",
 	"api.unpaywall.org",
 	"api.openalex.org",
 	"api.semanticscholar.org",
@@ -58,16 +75,28 @@ const LEGIT_HOSTS = [
 ];
 
 describe("open-access resolver", () => {
-	it("orders candidates by source trust, converts PMC ftp links and never emits duplicates or ftp URLs", async () => {
+	it("orders candidates by source trust (PMC article datasets first), prefers the published version and never emits duplicates or s3:// URLs", async () => {
 		const { fetchImpl, calls } = router([
 			europePmc(OA_HIT),
-			[
-				/oa\.fcgi\?id=PMC7079136/,
-				() =>
-					xml(
-						`<OA><records><record id="${PMCID}" license="CC BY"><link format="tgz" href="ftp://ftp.ncbi.nlm.nih.gov/pub/pmc/x.tar.gz"/><link format="pdf" href="ftp://ftp.ncbi.nlm.nih.gov/pub/pmc/x/imb12628.pdf"/></record></records></OA>`,
-					),
-			],
+			cloudMeta(1, {
+				pmcid: PMCID,
+				version: 1,
+				doi: DOI,
+				is_manuscript: true,
+				is_pmc_openaccess: false,
+				license_code: "TDM",
+				pdf_url: null,
+			}),
+			cloudMeta(2, {
+				pmcid: PMCID,
+				version: 2,
+				doi: DOI,
+				is_manuscript: false,
+				is_pmc_openaccess: true,
+				license_code: "CC BY",
+				pdf_url: "s3://pmc-oa-opendata/PMC7079136.2/PMC7079136.2.pdf?md5=093c5a73546ed0b49913964a1d788670",
+			}),
+			cloudMeta(3, null),
 			[
 				/api\.unpaywall\.org/,
 				() =>
@@ -141,19 +170,20 @@ describe("open-access resolver", () => {
 			license: "CC BY",
 		});
 		expect(result.candidates.map((c) => [c.source, c.url])).toEqual([
+			["pmc-cloud", `${S3}/PMC7079136.2/PMC7079136.2.pdf?md5=093c5a73546ed0b49913964a1d788670`],
 			["europepmc", `https://europepmc.org/articles/${PMCID}?pdf=render`],
 			["europepmc", `https://europepmc.org/backend/ptpmcrender.fcgi?accid=${PMCID}&blobtype=pdf`],
-			["pmc-oa", "https://ftp.ncbi.nlm.nih.gov/pub/pmc/x/imb12628.pdf"],
 			["unpaywall", "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1111/imb.12628"],
 			["openalex", "https://example.org/repo/imb12628.pdf"],
 			["semanticscholar", "https://example.org/s2/imb12628.pdf"],
 			["semanticscholar", "https://arxiv.org/pdf/2001.01234"],
 			["crossref", "https://onlinelibrary.wiley.com/doi/pdf/10.1111/imb.12628"],
 		]);
-		expect(result.candidates.every((c) => !c.url.startsWith("ftp:"))).toBe(true);
+		expect(result.candidates[0]).toMatchObject({ license: "CC BY", version: "publishedVersion" });
+		expect(result.candidates.every((c) => /^https:\/\//.test(c.url))).toBe(true);
 		expect(result.queried.map((q) => `${q.source}:${q.status}`)).toEqual([
 			"europepmc:ok",
-			"pmc-oa:ok",
+			"pmc-cloud:ok",
 			"unpaywall:ok",
 			"openalex:ok",
 			"semanticscholar:ok",
@@ -180,6 +210,10 @@ describe("open-access resolver", () => {
 		await expect(resolveOpenAccess({ fetchImpl })).rejects.toThrow("needs a DOI");
 		expect(normalizePmcid("pmc123")).toBe("PMC123");
 		expect(normalizePmcid("PMC")).toBeNull();
+		expect(pmcCloudHttps("s3://pmc-oa-opendata/PMC1.1/PMC1.1.pdf?md5=ab")).toBe(
+			`${S3}/PMC1.1/PMC1.1.pdf?md5=ab`,
+		);
+		expect(pmcCloudHttps("https://evil.example/PMC1.1.pdf")).toBeNull();
 		expect(contactEmail("not-an-email", { UNPAYWALL_EMAIL: "x@y.org" })).toBe("x@y.org");
 		expect(contactEmail(undefined, {})).toBeNull();
 	});
@@ -199,11 +233,22 @@ describe("research_archive_source open-access acquisition", () => {
 	const manifest = async () =>
 		JSON.parse(await readFile(join(runDir, "sources", "download-manifest.json"), "utf8"));
 
-	it("archives a paper from its DOI alone, skipping candidates that are not PDF bytes", async () => {
+	it("archives a paper from its DOI alone through the PMC article datasets", async () => {
 		const { fetchImpl, calls } = router([
 			europePmc(OA_HIT),
-			[/europepmc\.org\/articles\/PMC7079136\?pdf=render/, () => html()],
-			[/ptpmcrender\.fcgi\?accid=PMC7079136/, () => pdf()],
+			cloudMeta(1, {
+				pmcid: PMCID,
+				version: 1,
+				doi: DOI,
+				is_manuscript: false,
+				is_pmc_openaccess: true,
+				license_code: "CC BY",
+				pdf_url: "s3://pmc-oa-opendata/PMC7079136.1/PMC7079136.1.pdf?md5=093c5a73546ed0b49913964a1d788670",
+			}),
+			[
+				/pmc-oa-opendata\.s3\.amazonaws\.com\/PMC7079136\.1\/PMC7079136\.1\.pdf\?md5=093c5a73546ed0b49913964a1d788670$/,
+				() => pdf(),
+			],
 		]);
 		const result = await archiveSource({
 			cwd,
@@ -215,13 +260,14 @@ describe("research_archive_source open-access acquisition", () => {
 		});
 		expect(result.status).toBe("downloaded");
 		expect(result.open_access).toMatchObject({
-			source: "europepmc",
-			url: `https://europepmc.org/backend/ptpmcrender.fcgi?accid=${PMCID}&blobtype=pdf`,
-			license: "open-access",
-			candidates_tried: 2,
+			source: "pmc-cloud",
+			url: `${S3}/PMC7079136.1/PMC7079136.1.pdf?md5=093c5a73546ed0b49913964a1d788670`,
+			license: "CC BY",
+			version: "publishedVersion",
+			candidates_tried: 1,
 		});
 		expect(result.metadata).toMatchObject({ doi: DOI, pmcid: PMCID, pmid: "32020703" });
-		expect(result.path.toLowerCase().endsWith(".pdf")).toBe(true);
+		expect(result.path.toLowerCase().endsWith("pmc7079136.1.pdf")).toBe(true);
 		expect(await readFile(result.path)).toEqual(Buffer.from(PDF));
 		const m = await manifest();
 		expect(m.items).toHaveLength(1);
@@ -230,11 +276,12 @@ describe("research_archive_source open-access acquisition", () => {
 		for (const u of calls) expect(LEGIT_HOSTS).toContain(new URL(u).hostname);
 	});
 
-	it("falls back from a failing given url to open-access resolution when the DOI is known", async () => {
+	it("falls back from a failing given url to open-access resolution when the DOI is known, skipping non-PDF candidates", async () => {
 		const { fetchImpl } = router([
 			[/publisher\.example\.org\/paywalled/, () => html("<html>Please sign in</html>", 200)],
 			europePmc(OA_HIT),
-			[/europepmc\.org\/articles\/PMC7079136\?pdf=render/, () => pdf()],
+			[/europepmc\.org\/articles\/PMC7079136\?pdf=render/, () => html()],
+			[/ptpmcrender\.fcgi\?accid=PMC7079136/, () => pdf()],
 		]);
 		const result = await archiveSource({
 			cwd,
@@ -246,9 +293,16 @@ describe("research_archive_source open-access acquisition", () => {
 			env: {},
 		});
 		expect(result.status).toBe("downloaded");
-		expect(result.open_access).toMatchObject({ source: "europepmc", candidates_tried: 2 });
+		expect(result.open_access).toMatchObject({
+			source: "europepmc",
+			license: "open-access",
+			candidates_tried: 3,
+		});
 		expect(result.url).toBe("https://publisher.example.org/paywalled/imb.12628.pdf");
-		expect(result.final_url).toBe(`https://europepmc.org/articles/${PMCID}?pdf=render`);
+		expect(result.final_url).toBe(
+			`https://europepmc.org/backend/ptpmcrender.fcgi?accid=${PMCID}&blobtype=pdf`,
+		);
+		expect(result.path.toLowerCase().endsWith(".pdf")).toBe(true);
 		expect(result.metadata.title).toBe("Sex determination");
 	});
 
