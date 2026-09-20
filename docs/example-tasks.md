@@ -14,7 +14,7 @@
 | id | 方向 | 阶段（首条命令） | 用户输入（* 必填） | 里程碑 → 验收 | 边界 |
 | --- | --- | --- | --- | --- | --- |
 | `planning-hypotheses` | 研究规划与设计 | ideation → methods（`/skill:hypothesis-generation`） | 研究问题*；背景材料路径 | 问题澄清与边界 → `human_review`；竞争假设与判别证据清单 → `file`（hypotheses.md）；实验设计草案 → `file`（design.md） | 不声称已完成任何实验 |
-| `evidence-literature` | 文献证据与知识管理 | search → reading → library（`/skill:nature-academic-search`） | 主题/关键词*；时间范围；是否放入 Zotero（默认否） | 检索范围与命中清单 → `file`；精读 2–3 篇的证据卡 → `file`；（选「是」时）精读文献进入 Zotero → `zotero_item` | 命中不等于已读；Zotero 写入需要单独同意 |
+| `evidence-literature` | 文献证据与知识管理 | search → reading → library（`/skill:nature-academic-search`） | 主题/关键词*；时间范围；是否放入 Zotero（默认否） | 检索范围与命中清单 → `file`；精读 2–3 篇的证据卡 → `file`；（选「是」时）精读文献逐篇进入 Zotero → `zotero_item`（每篇一个里程碑，DOI 留空，精读写入后由宿主按回执绑定；写错可 `task_wait kind=rebind`） | 命中不等于已读；Zotero 写入需要单独同意 |
 | `analysis-explore` | 数据分析与专业计算 | explore → statistics（`/skill:exploratory-data-analysis`） | 数据文件路径*；研究问题/分组变量* | 数据质量报告 → `file`；分析计划与检验结果 → `file`；结果解读确认 → `human_review` | 只披露实际执行过的检查 |
 | `writing-section` | 论文写作与审校 | writing → review（`/skill:scientific-writing`） | 章节*；素材/证据卡路径；目标期刊 | 章节初稿 → `file`；审校意见（证据受限）→ `file`；用户确认修改 → `human_review` | 只完成所请求的章节，不强行走完整流程 |
 | `presentation-figures` | 可视化与成果交付 | figures → slides（`/skill:scientific-visualization`） | 结果/数据文件*；目标格式（pptx/pdf，默认 pptx） | 真实数据图（含不确定性）→ `file`；汇报幻灯片 → `file`；交付检查 → `human_review` | AI 示意图不是数据图 |

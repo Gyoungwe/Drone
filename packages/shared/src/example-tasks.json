@@ -178,11 +178,12 @@
 			},
 			{
 				"title": {
-					"zh": "精读文献进入 Zotero",
-					"en": "Read papers filed in Zotero"
+					"zh": "精读文献逐篇进入 Zotero（DOI 精读后绑定）",
+					"en": "Each read paper filed in Zotero (DOI bound after reading)"
 				},
 				"acceptance": {
-					"kind": "zotero_item"
+					"kind": "zotero_item",
+					"hint": "one zotero_item milestone per paper, doi left empty until read"
 				},
 				"when": {
 					"input": "zotero",

@@ -9,6 +9,9 @@
  *   evidenceKind               完成时写进 milestone.evidence.kind 的记号（只描述宿主观察，不是科学结论）
  *   verify(acceptance, ctx)    里程碑级核对（reconcile 时调用）：返回 { state: "found" | "not-found" | "unknown" | ... , ...observed }
  *   observe(event, details)    操作级：某个工具结果是否产生了一个待外部审阅的对象 → { id, path? } | null
+ *   identify(event, details)   操作级：某个成功的工具结果产生了可绑定到本种类里程碑的身份（如刚写入 Zotero 的 DOI）
+ *                              → { doi, … }（只允许 fields 里声明的字段）| null。宿主把它绑到第一个尚无身份的
+ *                              同种类里程碑（`milestone.bound`），随后仍由 verify 读回；绑定不授予任何写入同意。
  *   resolve(review, ctx)       操作级：读回审阅结果 → { status: "applied" | "pending" | "rejected", path?, stale? } | null
  *   operationVerifier          操作被 resolve 判定 applied 时写进 operation.verifier 的记号
  *   consent(acceptance)        任务授权后对外暴露的验收条目（如 { doi }），供扩展匹配「这次写入是否在已批准的契约内」
@@ -48,7 +51,7 @@ registry.properties.sha256 ??= stringField;
 export function registerAcceptanceVerifier(kind, definition = {}) {
 	if (!KIND.test(kind || "")) throw new Error(`Acceptance kind "${kind}" must match ${KIND}`);
 	if (CORE_ACCEPTANCE_KINDS.includes(kind)) throw new Error(`Acceptance kind "${kind}" is owned by the host`);
-	for (const fn of ["label", "verify", "observe", "resolve", "consent", "pending"])
+	for (const fn of ["label", "verify", "observe", "resolve", "identify", "consent", "pending"])
 		if (definition[fn] !== undefined && typeof definition[fn] !== "function")
 			throw new Error(`Acceptance verifier ${kind}.${fn} must be a function`);
 	const fields = [...new Set(definition.fields || [])];
@@ -64,6 +67,7 @@ export function registerAcceptanceVerifier(kind, definition = {}) {
 		verify: definition.verify || null,
 		observe: definition.observe || null,
 		resolve: definition.resolve || null,
+		identify: definition.identify || null,
 		consent: definition.consent || null,
 		pending: definition.pending || null,
 		acknowledgeError: definition.acknowledgeError || null,
@@ -119,6 +123,16 @@ export function normalizeAcceptance(input, clean, verifiers = registry.verifiers
 	};
 	for (const field of verifier?.fields || []) acceptance[field] = clean(input[field]);
 	return acceptance;
+}
+
+/**
+ * 里程碑的有效验收标准：已批准契约里的 acceptance + 宿主运行期绑定的身份字段（`milestone.bound.fields`）。
+ * 契约本身（参与授权哈希）不被改写；绑定只补足计划时未知的身份（如精读后才确定的 DOI）。
+ */
+export function effectiveAcceptance(milestone) {
+	const acceptance = milestone?.acceptance || {};
+	const bound = milestone?.bound?.fields;
+	return bound && typeof bound === "object" ? { ...acceptance, ...bound } : { ...acceptance };
 }
 
 /** 授权卡上一句话描述一个里程碑的验收标准。 */

@@ -473,9 +473,9 @@ export function registerWorkbench(pi) {
 	);
 	tool(
 		"task_wait",
-		"Create a tracked human download/file, permission or review action. Supply the requested identity (title/DOI/hash), not generic download instructions. Cancellation is not consent; Wiki approval uses its existing review UI.",
+		"Create a tracked human download/file, permission, review or rebind action. Supply the requested identity (title/DOI/hash), not generic download instructions. kind=rebind asks the user to replace the DOI an approved milestone is verified against (milestoneId + doi + reason) when the planned or previously bound DOI turned out to be the wrong paper; the host opens the confirmation card and only the user's choice applies it. Cancellation is not consent; Wiki approval uses its existing review UI.",
 		{
-			kind: { type: "string", enum: ["file", "download", "authorization", "review"] },
+			kind: { type: "string", enum: ["file", "download", "authorization", "review", "rebind"] },
 			title: str,
 			reason: str,
 			url: str,
@@ -486,7 +486,7 @@ export function registerWorkbench(pi) {
 		["kind", "title", "reason"],
 		async (input, ctx, signal) => {
 			const action = journal.wait(input);
-			if (action.kind !== "authorization") return action;
+			if (!["authorization", "rebind"].includes(action.kind)) return action;
 			const authorized = await askAuthorization(
 				{
 					taskId: journal.snapshot().id,
@@ -497,7 +497,13 @@ export function registerWorkbench(pi) {
 				ctx,
 				signal,
 			);
-			send(authorized ? "好的，这项已经你确认，继续往下做。" : "你没有确认，这项先留着，不会替你做决定。");
+			send(
+				authorized
+					? action.kind === "rebind"
+						? "已按你的确认更换这一项对应的文献，接下来按新 DOI 核对。"
+						: "好的，这项已经你确认，继续往下做。"
+					: "你没有确认，这项先留着，不会替你做决定。",
+			);
 			return { ...action, state: authorized ? "acknowledged" : "pending", authorized };
 		},
 	);
@@ -568,7 +574,7 @@ export function registerWorkbench(pi) {
 					.view()
 					.tasks.find((t) => t.id === input.taskId)
 					?.actions.find((a) => a.id === input.actionId);
-				if (action?.kind === "authorization") {
+				if (["authorization", "rebind"].includes(action?.kind)) {
 					const accepted = await askAuthorization({ ...input, action: "ask-authorization" }, ctx);
 					send();
 					if (accepted) {

@@ -4,10 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parse } from "yaml";
-import zoteroLiterature from "../../../.pi/extensions/zotero-literature.mjs";
+import zoteroLiterature, {
+	identifyZoteroReceipt,
+	registerZoteroAcceptance,
+} from "../../../.pi/extensions/zotero-literature.mjs";
 import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
 import { normalizeSourceLinks } from "../../../.pi/lib/knowledge/source-links.mjs";
 import { configureObsidian, depositKnowledge } from "../../../.pi/lib/obsidian-workbench.mjs";
+import { resetAcceptanceVerifiers } from "../../../.pi/lib/tasks/acceptance.mjs";
 import {
 	bootstrapZotero,
 	inspectZotero,
@@ -304,4 +308,52 @@ it("ships a parseable zotero-literature skill", async () => {
 	expect(text).toContain("/zotero-setup");
 	expect(text).toContain("zotero-cli");
 	expect(text).toContain("not a receipt");
+});
+
+describe("zotero_item runtime DOI binding (hook 2 identify)", () => {
+	afterEach(() => resetAcceptanceVerifiers());
+	it("only host-read-back save receipts yield a bindable, normalised DOI", () => {
+		const event = { toolName: "research_zotero_save" };
+		expect(
+			identifyZoteroReceipt(event, {
+				status: "saved",
+				zoteroKey: "ABCD1234",
+				doi: "https://doi.org/10.1111/IMB.12628",
+			}),
+		).toEqual({ doi: "10.1111/imb.12628" });
+		expect(
+			identifyZoteroReceipt(event, { status: "reused", zoteroKey: "ABCD1234", doi: "10.1234/x" }),
+		).toEqual({
+			doi: "10.1234/x",
+		});
+		expect(
+			identifyZoteroReceipt(event, { status: "unverified", zoteroKey: "ABCD1234", doi: "10.1234/x" }),
+		).toBeNull();
+		expect(identifyZoteroReceipt(event, { status: "saved", zoteroKey: null, doi: "10.1234/x" })).toBeNull();
+		expect(
+			identifyZoteroReceipt(event, { status: "saved", zoteroKey: "ABCD1234", doi: "not-a-doi" }),
+		).toBeNull();
+		expect(
+			identifyZoteroReceipt(event, { status: "saved", zoteroKey: "ABCD1234", doi: "10.1/too-short-prefix" }),
+		).toBeNull();
+		expect(
+			identifyZoteroReceipt(
+				{ toolName: "research_verify_literature" },
+				{ status: "saved", zoteroKey: "ABCD1234", doi: "10.1234/x" },
+			),
+		).toBeNull();
+	});
+	it("labels, verifies and explains DOI-less milestones as pending rather than failed", async () => {
+		const verifier = registerZoteroAcceptance();
+		expect(verifier.identify).toBe(identifyZoteroReceipt);
+		expect(verifier.label({ kind: "zotero_item" })).toContain("精读后由宿主");
+		expect(verifier.label({ kind: "zotero_item", doi: "10.1/x" })).toBe("文献进入 Zotero（10.1/x）");
+		await expect(verifier.verify({ kind: "zotero_item" })).resolves.toMatchObject({
+			state: "pending",
+			reason: "doi-unbound",
+		});
+		expect(verifier.pending({ acceptance: { kind: "zotero_item" } }).reason).toContain("还没有对应的文献");
+		expect(verifier.pending({ acceptance: { kind: "zotero_item", doi: "10.1/x" } }).next).toContain("rebind");
+		expect(verifier.consent({ kind: "zotero_item" })).toBeNull();
+	});
 });
