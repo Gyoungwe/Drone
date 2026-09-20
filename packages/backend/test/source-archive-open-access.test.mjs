@@ -267,6 +267,8 @@ describe("research_archive_source open-access acquisition", () => {
 			candidates_tried: 1,
 		});
 		expect(result.metadata).toMatchObject({ doi: DOI, pmcid: PMCID, pmid: "32020703" });
+		expect(result.url).toBe(result.open_access.url);
+		expect(result.final_url).toBe(result.open_access.url);
 		expect(result.path.toLowerCase().endsWith("pmc7079136.1.pdf")).toBe(true);
 		expect(await readFile(result.path)).toEqual(Buffer.from(PDF));
 		const m = await manifest();

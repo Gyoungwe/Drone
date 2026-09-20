@@ -323,7 +323,8 @@ export async function archiveSource({
 				id: randomUUID(),
 				status: "downloaded",
 				category,
-				url,
+				// 仅凭 DOI 归档时没有调用方 URL：以实际取得文件的地址作为来源
+				url: url ?? resolvedUrl,
 				final_url: resolvedUrl,
 				downloaded_at: downloadedAt,
 				path: outputPath,
@@ -372,7 +373,8 @@ export async function archiveSource({
 			if (bytes.byteLength > limit) throw new Error(`local file exceeds max_bytes (${limit})`);
 			const outputName = safeFilename(filename || basename(canonical), `${category}-${randomUUID()}.bin`);
 			return await persist(bytes, {
-				resolvedUrl: url,
+				resolvedUrl:
+					url ?? (identity.doi ? `https://doi.org/${identity.doi}` : `file:${basename(canonical)}`),
 				contentType: content_type || metadata?.content_type || "application/octet-stream",
 				outputName,
 				verified: true,
