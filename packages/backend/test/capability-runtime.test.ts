@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 import { makeCapabilityExtension } from "../src/capabilities/extension";
@@ -242,23 +243,31 @@ describe("lazy capability runtime", () => {
 });
 
 describe("generic task continuations", () => {
-	it.each(["继续", "下好了", "continue", "/task-status", "完成到哪了"])(
-		"preserves required tools without adding authority: %s",
-		(query) => {
-			const visibility = new SkillVisibility();
-			const loader = new CapabilityResourceLoader(makeLoader(), visibility);
-			const session = makeSession(loader);
-			const runtime = new CapabilityRuntime(visibility);
-			runtime.bind(session as any);
-			runtime.prepareForPrompt("配置代码运行环境并分析实验文件", false);
-			runtime.activate(["visualization"]);
-			const tools = runtime.state().activeTools;
-			runtime.prepareForPrompt(query, false);
-			expect(runtime.state().activeTools).toEqual(tools);
-			runtime.prepareForPrompt("你好", false);
-			expect(runtime.state().activeTools).not.toContain("bash");
-		},
-	);
+	it.each([
+		"继续",
+		"下好了",
+		"continue",
+		"/task-status",
+		"完成到哪了",
+		"启动了",
+		"装好了。",
+		"已经打开了",
+		"好的",
+		"ok",
+	])("preserves required tools without adding authority: %s", (query) => {
+		const visibility = new SkillVisibility();
+		const loader = new CapabilityResourceLoader(makeLoader(), visibility);
+		const session = makeSession(loader);
+		const runtime = new CapabilityRuntime(visibility);
+		runtime.bind(session as any);
+		runtime.prepareForPrompt("配置代码运行环境并分析实验文件", false);
+		runtime.activate(["visualization"]);
+		const tools = runtime.state().activeTools;
+		runtime.prepareForPrompt(query, false);
+		expect(runtime.state().activeTools).toEqual(tools);
+		runtime.prepareForPrompt("你好", false);
+		expect(runtime.state().activeTools).not.toContain("bash");
+	});
 	it("excluded tools stay excluded across continuation", () => {
 		const visibility = new SkillVisibility();
 		const loader = new CapabilityResourceLoader(makeLoader(), visibility);
@@ -267,6 +276,55 @@ describe("generic task continuations", () => {
 		runtime.prepareForPrompt("修改代码", false);
 		runtime.prepareForPrompt("继续", false);
 		expect(runtime.state().activeTools).not.toContain("bash");
+	});
+});
+describe("an approved, unfinished task keeps its routing across ordinary follow-ups", () => {
+	function book(manager: SessionManager, task: Record<string, unknown>) {
+		const scope = createHash("sha256")
+			.update(`${manager.getSessionId()}\0${resolve(manager.getCwd())}`)
+			.digest("hex");
+		manager.appendCustomEntry("drone-task-workbench-v2", { scope, activeTaskId: task.id, tasks: [task] });
+	}
+	function start() {
+		const manager = SessionManager.inMemory("/fixture");
+		const visibility = new SkillVisibility();
+		const loader = new CapabilityResourceLoader(makeLoader(), visibility);
+		const runtime = new CapabilityRuntime(visibility);
+		runtime.bind({ ...makeSession(loader), sessionManager: manager } as any);
+		runtime.prepareForPrompt("检索文献并写成证据卡，然后放进 Zotero", false);
+		const capabilities = runtime.state().activeCapabilities;
+		expect(capabilities).toEqual(expect.arrayContaining(["research", "knowledge"]));
+		return { manager, runtime, capabilities, tools: runtime.state().activeTools };
+	}
+	it.each(["启动了", "你好", "顺便说一句，天气不错"])(
+		"keeps tools while the plan is approved and running: %s",
+		(text) => {
+			const { manager, runtime, capabilities, tools } = start();
+			book(manager, { id: "task-1", capabilities, state: "running", planApproved: true });
+			runtime.prepareForPrompt(text, false);
+			expect(runtime.state().activeTools).toEqual(tools);
+			expect(runtime.state().activeCapabilities).toEqual(capabilities);
+		},
+	);
+	it("adds newly requested capabilities on top instead of replacing the task's", () => {
+		const { manager, runtime, capabilities } = start();
+		book(manager, { id: "task-1", capabilities, state: "waiting_user", planApproved: true });
+		runtime.prepareForPrompt("顺便把结果做成图表", false);
+		expect(runtime.state().activeCapabilities).toEqual(
+			expect.arrayContaining([...capabilities, "visualization"]),
+		);
+	});
+	it.each(["completed", "cancelled", "archived"])("a %s task no longer pins routing", (state) => {
+		const { manager, runtime, capabilities } = start();
+		book(manager, { id: "task-1", capabilities, state, planApproved: true });
+		runtime.prepareForPrompt("你好", false);
+		expect(runtime.state().activeCapabilities).toEqual([]);
+	});
+	it("an unapproved plan does not pin routing either", () => {
+		const { manager, runtime, capabilities } = start();
+		book(manager, { id: "task-1", capabilities, state: "waiting_user", planApproved: false });
+		runtime.prepareForPrompt("你好", false);
+		expect(runtime.state().activeCapabilities).toEqual([]);
 	});
 });
 it("recovers same-session routing after restart under current exclusions, not old permissions", () => {

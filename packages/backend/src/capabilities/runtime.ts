@@ -75,7 +75,8 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 /** Continuations preserve tool visibility only, never permissions or evidence receipts. */
 export function isTaskContinuation(text: string): boolean {
 	if (/^(?:also\b|and\b|补充)/i.test(text.trim())) return true;
-	return /^(?:继续(?:吧|执行|处理|完成|上一任务)?|接着(?:做|处理)?|下好了|下载好了|我下载了(?:，?手动的那几篇)?|完成到哪了|进度(?:如何|怎么样)?|查看(?:任务)?进度|任务状态|continue|resume|done|status|what(?:'s| is) the status)[\s,.!？，。！?]*$/i.test(
+	// 明确的接续词，或对宿主提示的短回应（「启动了」「装好了」「好的」…）：都不是新话题，不能清空当前工具可见性。
+	return /^(?:继续(?:吧|执行|处理|完成|上一任务)?|接着(?:做|处理)?|下好了|下载好了|我下载了(?:，?手动的那几篇)?|完成到哪了|进度(?:如何|怎么样)?|查看(?:任务)?进度|任务状态|continue|resume|done|status|what(?:'s| is) the status|(?:我)?(?:已经?)?(?:启动|打开|开启|安装|装|下载|放|弄|搞定|准备|设置|配置)(?:好|完|定)?了(?:吧)?|(?:好|可以|行|搞定|弄好|装好|开好|启动好)了|好的|嗯|收到|ok(?:ay)?|ready|started|opened|installed|it(?:'s| is) (?:running|open|ready|installed))[\s,.!？，。！?~]*$/i.test(
 		text.trim(),
 	);
 }
@@ -151,6 +152,14 @@ function schemaBytes(tool: {
 		}),
 	);
 }
+
+interface TaskRouting {
+	id: string;
+	capabilities: string[];
+	state?: string;
+	planApproved?: boolean;
+}
+const TERMINAL_TASK_STATES = new Set(["completed", "cancelled", "archived"]);
 
 type RuntimeSession = Pick<
 	AgentSession,
@@ -243,11 +252,14 @@ export class CapabilityRuntime {
 		if (invocation) text = formatSkillCommand(invocation);
 		if (/^\/ars-pi-(?:start|stop|doctor)(?:\s|$)/.test(text.trim())) return this.apply();
 		if (text.trim() === "/task-status" || text.startsWith("/task-action ")) return this.apply();
-		if (!streaming && isTaskContinuation(text)) this.restoreCheckpoint();
-		if (!streaming && !isTaskContinuation(text)) this.readOnlyLibrary = isReadOnlyLibraryRequest(text);
+		// 任务进行中（计划已批准、尚未结束）的任何新消息都视为接续：保留检查点里的工具可见性，
+		// 新检测到的能力只做叠加；只有没有进行中任务的新话题才从零开始。这里只影响路由可见性，不影响权限。
+		const continuation = !streaming && (isTaskContinuation(text) || this.taskInProgress());
+		if (continuation) this.restoreCheckpoint();
+		if (!streaming && !continuation) this.readOnlyLibrary = isReadOnlyLibraryRequest(text);
 		const detected = detectCapabilities(text);
 		const directSkill = text.match(/^\/skill:([a-z0-9-]+)/i)?.[1];
-		if (!streaming && !isTaskContinuation(text)) {
+		if (!streaming && !continuation) {
 			this.active.clear();
 			this.forcedSkills.clear();
 			this.researchIntent = EMPTY_RESEARCH_INTENT;
@@ -364,7 +376,7 @@ export class CapabilityRuntime {
 	}
 
 	/** Only restore routing visibility; never permission grants, tools or executable code. */
-	private activeTaskRouting(): { id: string; capabilities: string[] } | null {
+	private activeTaskRouting(): TaskRouting | null {
 		const manager = this.session?.sessionManager;
 		if (!manager) return null;
 		const scope = createHash("sha256")
@@ -375,12 +387,17 @@ export class CapabilityRuntime {
 			const b = entry.data as {
 				scope?: string;
 				activeTaskId?: string;
-				tasks?: { id: string; capabilities: string[] }[];
+				tasks?: TaskRouting[];
 			};
 			if (b?.scope !== scope || !Array.isArray(b.tasks)) continue;
 			return b.tasks.find((t) => t.id === b.activeTaskId) || null;
 		}
 		return null;
+	}
+	/** 当前任务已获用户批准且未结束：新消息默认是对它的接续，而不是新话题。 */
+	private taskInProgress(): boolean {
+		const task = this.activeTaskRouting();
+		return !!task && task.planApproved === true && !TERMINAL_TASK_STATES.has(task.state ?? "");
 	}
 	private restoreCheckpoint(): void {
 		const manager = this.session?.sessionManager;
