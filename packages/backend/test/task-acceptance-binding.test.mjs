@@ -92,18 +92,27 @@ it("plan-time-empty zotero_item milestones bind to save receipts in order and ve
 	// 同一 DOI 再次写入（去重复用）不会占用第二个空位
 	await save(j, "save-1b", "10.1111/imb.12628");
 	expect(j.snapshot().milestones[1].bound).toBeUndefined();
+	// 第二个空位还在时，其它 DOI 会绑上去而不是记为未对应
+	expect(j.snapshot().unboundIdentities || []).toEqual([]);
 
 	await save(j, "save-2", "10.1073/pnas.2206025119");
 	library.set("10.1073/pnas.2206025119", "KEY00002");
+	// 空位用完后再写入第三篇：记录为未对应，趁同类里程碑还没全部验收时提示可改绑
+	await save(j, "save-3", "10.1186/s12864-019-5838-3");
+	expect(j.snapshot().unboundIdentities).toHaveLength(1);
+	expect(remainingExplanation(j.snapshot())).toContain("rebind");
 	await j.reconcile("/unused");
 	expect(j.snapshot().milestones.map((m) => m.state)).toEqual(["completed", "completed"]);
-	// 读回成功同时确认了带回身份的写入操作（含去重复用那次），任务才能算完成
+	// 同类里程碑都已验收后，多出来的写入只是额外沉淀，不再提示改绑
+	expect(remainingExplanation(j.snapshot())).not.toContain("rebind");
+	// 读回成功同时确认了带回身份的写入操作（含去重复用那次）；未对应任何里程碑的写入仍按原规则计为未核实
 	expect(j.snapshot().operations.map((o) => [o.id, o.state])).toEqual([
 		["save-1", "verified"],
 		["save-1b", "verified"],
 		["save-2", "verified"],
+		["save-3", "returned"],
 	]);
-	expect(j.snapshot().state).toBe("completed");
+	expect(j.snapshot().state).toBe("partial");
 });
 
 it("failed or unverified receipts never bind", async () => {
