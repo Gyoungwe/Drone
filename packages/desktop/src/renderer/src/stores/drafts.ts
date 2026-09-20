@@ -7,11 +7,13 @@ export const NEW_SESSION_DRAFT_KEY = "__new__";
 /** 请求聚焦输入框的窗口事件名（撤回回填草稿后由 store 派发，Composer 监听聚焦 textarea） */
 export const COMPOSER_FOCUS_EVENT = "pi:composer-focus";
 
-/** 一份会话草稿：文本 + 图片附件 + slash 命令胶囊 + @ 文件引用胶囊 + 选中引用胶囊 */
+/** 一份会话草稿：文本 + 图片附件 + slash 命令胶囊 + @ 子智能体胶囊 + @ 文件引用胶囊 + 选中引用胶囊 */
 export interface DraftEntry {
 	text: string;
 	images: ImageInput[];
 	slashCommand: string | null;
+	/** @ 子智能体胶囊（agent 名）；存在时 Enter 不发给主模型，而是把正文作为任务直接派发给它（与 slash 胶囊互斥） */
+	subagent: string | null;
 	/** @ 文件引用（项目相对路径）；发送时拼回 @path 列表置于正文前 */
 	attachments: string[];
 	/** 选中引用（对话区选中内容弹菜单添加）；发送时逐条转 blockquote 段落置于最前 */
@@ -23,6 +25,7 @@ export const EMPTY_DRAFT: DraftEntry = {
 	text: "",
 	images: [],
 	slashCommand: null,
+	subagent: null,
 	attachments: [],
 	quotes: [],
 };
@@ -42,6 +45,7 @@ function isEmpty(entry: DraftEntry): boolean {
 		!entry.text &&
 		entry.images.length === 0 &&
 		!entry.slashCommand &&
+		!entry.subagent &&
 		entry.attachments.length === 0 &&
 		entry.quotes.length === 0
 	);

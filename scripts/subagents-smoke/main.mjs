@@ -270,6 +270,73 @@ async function run() {
 		);
 		await shot("05-runs.png");
 
+		// S9 输入框 @ 选择器：消息开头 @ → 子智能体在前、文件在后 → 选中成胶囊 → Enter 直接派发
+		const composerInput = '[data-testid="composer-input"]';
+		const inputValue = () => js(`document.querySelector(${JSON.stringify(composerInput)}).value`);
+		const key = async (name) => {
+			await js(
+				`document.querySelector(${JSON.stringify(composerInput)}).dispatchEvent(new KeyboardEvent('keydown',{key:${JSON.stringify(name)},bubbles:true,cancelable:true}))`,
+			);
+			await sleep(60);
+		};
+		await wait(`!!document.querySelector(${JSON.stringify(composerInput)})`);
+		await typeInto(composerInput, "@", "HTMLTextAreaElement");
+		await wait("!!document.querySelector('[data-testid=\"at-menu-agents-header\"]')");
+		assert.equal(await js("document.querySelectorAll('[data-testid=\"at-menu-agent\"]').length"), 3);
+		assert.equal(
+			await js(
+				'document.querySelector(\'[data-testid="at-menu-agent"][data-agent="data-checker"]\').disabled',
+			),
+			true,
+		);
+		assert.equal(await js("document.querySelectorAll('[data-testid=\"at-menu-file\"]').length"), 4);
+		checks.push(
+			"@ at message start lists subagents (avatars; untrusted project agent disabled) ahead of project files",
+		);
+		await shot("07-at-menu.png");
+		await typeInto(composerInput, "@sc", "HTMLTextAreaElement");
+		await wait("document.querySelectorAll('[data-testid=\"at-menu-agent\"]').length===1");
+		await key("Enter");
+		await wait('!!document.querySelector(\'[data-testid="composer-subagent-chip"][data-agent="scout"]\')');
+		assert.equal(await inputValue(), "");
+		assert.equal(await js("window.__fixture.draftSubagent()"), "scout");
+		// 空文本 Backspace：胶囊整枚弹回 `@scout `，菜单不立刻重弹
+		await key("Backspace");
+		await wait("!document.querySelector('[data-testid=\"composer-subagent-chip\"]')");
+		assert.equal(await inputValue(), "@scout ");
+		assert.equal(await js("!!document.querySelector('[data-testid=\"at-menu\"]')"), false);
+		// 重新选中；胶囊在场时正文里的 / 不弹命令菜单（互斥）
+		await typeInto(composerInput, "@scout", "HTMLTextAreaElement");
+		await wait("document.querySelectorAll('[data-testid=\"at-menu-agent\"]').length===1");
+		await key("Enter");
+		await wait('!!document.querySelector(\'[data-testid="composer-subagent-chip"][data-agent="scout"]\')');
+		await typeInto(composerInput, "/compact", "HTMLTextAreaElement");
+		assert.equal(await js("!!document.querySelector('[data-command-group]')"), false);
+		await typeInto(
+			composerInput,
+			"枚举 docs/ 下与权限相关的文档，给出每份文档的一句话摘要",
+			"HTMLTextAreaElement",
+		);
+		await wait("document.querySelector('[data-testid=\"composer-hint\"]').textContent.includes('派发')");
+		assert.equal(
+			await js("document.querySelector('[data-testid=\"composer-send\"]').getAttribute('aria-label')"),
+			"派发",
+		);
+		await shot("08-at-chip.png");
+		await key("Enter");
+		await wait("window.__fixture.dispatched.length===3");
+		assert.deepEqual(await js("window.__fixture.dispatched[2]"), {
+			tasks: [{ agent: "scout", task: "枚举 docs/ 下与权限相关的文档，给出每份文档的一句话摘要" }],
+			followUp: true,
+		});
+		assert.equal(await js("window.__fixture.prompted.length"), 0);
+		await wait("!document.querySelector('[data-testid=\"composer-subagent-chip\"]')");
+		assert.equal(await inputValue(), "");
+		await wait("document.querySelectorAll('[data-testid=\"subagent-run-card\"]').length===4");
+		checks.push(
+			"@scout <task> + Enter dispatches one task straight to the backend (no prompt), clears the draft and shows the run",
+		);
+
 		// 英文文案
 		await js("window.__fixture.setLanguage('en')");
 		await wait("document.body.textContent.includes('Dispatch to this session')");

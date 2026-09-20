@@ -134,7 +134,9 @@ export function ExampleTaskForm({
 	const insert = () => {
 		if (!validate()) return;
 		const key = activeSessionId ?? NEW_SESSION_DRAFT_KEY;
-		useDraftStore.getState().updateDraft(key, (draft) => ({ ...draft, text: prompt, slashCommand: null }));
+		useDraftStore
+			.getState()
+			.updateDraft(key, (draft) => ({ ...draft, text: prompt, slashCommand: null, subagent: null }));
 		close();
 		window.dispatchEvent(new Event(COMPOSER_FOCUS_EVENT));
 	};

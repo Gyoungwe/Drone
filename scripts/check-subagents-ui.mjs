@@ -18,7 +18,7 @@ await writeFile(
 );
 await writeFile(
 	join(root, "style.css"),
-	`@import ${JSON.stringify(join(repo, "packages/desktop/src/renderer/src/styles/globals.css"))};@source ${JSON.stringify(join(repo, "packages/desktop/src/renderer/src"))};html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--color-canvas);color:var(--color-ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}`,
+	`@import ${JSON.stringify(join(repo, "packages/desktop/src/renderer/src/styles/globals.css"))};@source ${JSON.stringify(join(repo, "packages/desktop/src/renderer/src"))};@source ${JSON.stringify(join(repo, "scripts/subagents-smoke"))};html,body,#root{margin:0;height:100%;overflow:hidden;background:var(--color-canvas);color:var(--color-ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}`,
 );
 await writeFile(
 	join(root, "index.html"),

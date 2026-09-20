@@ -329,6 +329,16 @@ export const zh = {
 		permissionFullAccessTitle: "完全访问权限",
 		permissionFullAccessDesc: "不拦截任何操作，高危命令执行留痕审计；仅当前会话生效",
 		permissionGateOff: "内置权限门控已在 permissions.json 中关闭",
+		dispatch: "派发",
+		dispatchHint: "Enter 派发到本会话 · Shift+Enter 换行 · 结果进入右侧「子智能体」页签",
+		subagentTaskPlaceholder: "交给 {agent} 的任务：目标、范围、产出位置…",
+		subagentChipTitle: "派发给子智能体 {agent}（Esc 撤销）",
+		removeSubagent: "移除子智能体",
+		subagentTaskRequired: "请写下要交给 {agent} 的任务",
+		subagentNoImages: "子智能体派发不支持图片：移除图片，或撤掉 @ 胶囊改发给主模型",
+		subagentNoSession: "先发送一条消息创建会话，再用 @ 派发子智能体",
+		subagentDispatched: "已派发 {agent}，结果会进入本会话（右侧「子智能体」页签可跟踪）",
+		subagentNeedsPanel: "{agent} 是项目级定义，需要在面板勾选信任后派发——已为你预选",
 	},
 	selection: {
 		addToChat: "添加到对话",
@@ -357,6 +367,10 @@ export const zh = {
 	},
 	at: {
 		noMatch: "没有匹配的文件",
+		noMatchAny: "没有匹配的子智能体或文件",
+		subagentsHeader: "子智能体 · 派发到本会话（↑↓ 选择，Enter 确认）",
+		filesHeader: "文件",
+		subagentNeedsPanel: "项目级 · 在面板勾选信任后派发",
 	},
 	thinkingLevels: {
 		off: "关闭",
