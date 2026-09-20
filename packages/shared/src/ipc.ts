@@ -4,6 +4,14 @@ import type { LanStatus } from "./lan";
 import type { McpConfigSnapshot, McpStatus, McpStatusEvent } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "./packages";
 import type {
+	PermissionAuditTailEntry,
+	PermissionProbeInput,
+	PermissionProbeResult,
+	PermissionSettingsSaveInput,
+	PermissionSettingsSaveResult,
+	PermissionSettingsSnapshot,
+} from "./permission-settings";
+import type {
 	AppInfo,
 	ChannelWatchConfigInfo,
 	ContextManagerConfigInfo,
@@ -166,6 +174,13 @@ export const IpcChannels = {
 	PermissionRespond: "permission:respond",
 	/** 权限门控配置（enabled 解析保留，UI 无入口；chip 逃生舱禁用态感知用） */
 	PermissionGetConfig: "permission:getConfig",
+	/** 设置 → 权限 面板：可视化编辑全局 ~/.pi/agent/permissions.json（保存即生效，无需重启） */
+	PermissionSettingsLoad: "permissionSettings:load",
+	PermissionSettingsSave: "permissionSettings:save",
+	PermissionSettingsReset: "permissionSettings:reset",
+	PermissionSettingsProbe: "permissionSettings:probe",
+	PermissionSettingsAuditTail: "permissionSettings:auditTail",
+	PermissionSettingsOpenLocation: "permissionSettings:openLocation",
 	/** 会话权限模式（default / fullAccess；内存态，不落盘） */
 	PermissionGetMode: "permission:getMode",
 	PermissionSetMode: "permission:setMode",
@@ -373,6 +388,18 @@ export interface PiApi extends KnowledgeApi {
 	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;
 	/** 读取权限门控配置（enabled=false = 手改 permissions.json 的隐藏逃生舱态，chip 禁用提示用） */
 	getPermissionConfig(): Promise<PermissionConfigInfo>;
+	/** 设置 → 权限：读取规则文件快照（路径 / 原文 / 默认合并视图 / mtime） */
+	getPermissionSettings(): Promise<PermissionSettingsSnapshot>;
+	/** 设置 → 权限：保存（后端二次校验 + mtime 冲突检查；conflict 时不写盘，带回磁盘现状） */
+	savePermissionSettings(input: PermissionSettingsSaveInput): Promise<PermissionSettingsSaveResult>;
+	/** 设置 → 权限：恢复默认（enabled 保留文件原值） */
+	resetPermissionSettings(): Promise<PermissionSettingsSnapshot>;
+	/** 设置 → 权限：试算一条工具调用会命中哪条规则（可传未保存草稿；只跑规则链） */
+	probePermission(input: PermissionProbeInput): Promise<PermissionProbeResult>;
+	/** 设置 → 权限：审计日志尾部（最新在前，默认 20 条） */
+	getPermissionAuditTail(limit?: number): Promise<PermissionAuditTailEntry[]>;
+	/** 设置 → 权限：在文件管理器中定位 permissions.json（不存在则打开所在目录） */
+	openPermissionSettingsLocation(): Promise<void>;
 	/** 读取会话权限模式（default 缺省；关 tab 重开后端已归零，renderer 对齐真值用） */
 	getPermissionMode(sessionId: string): Promise<PermissionMode>;
 	/** 设置会话权限模式（内存态即时生效、不落盘、重启归零） */
@@ -549,6 +576,12 @@ export const INVOKE_ROUTES = {
 	respondAsk: IpcChannels.AskRespond,
 	respondPermission: IpcChannels.PermissionRespond,
 	getPermissionConfig: IpcChannels.PermissionGetConfig,
+	getPermissionSettings: IpcChannels.PermissionSettingsLoad,
+	savePermissionSettings: IpcChannels.PermissionSettingsSave,
+	resetPermissionSettings: IpcChannels.PermissionSettingsReset,
+	probePermission: IpcChannels.PermissionSettingsProbe,
+	getPermissionAuditTail: IpcChannels.PermissionSettingsAuditTail,
+	openPermissionSettingsLocation: IpcChannels.PermissionSettingsOpenLocation,
 	getPermissionMode: IpcChannels.PermissionGetMode,
 	setPermissionMode: IpcChannels.PermissionSetMode,
 	getContextManagerConfig: IpcChannels.ContextManagerGetConfig,

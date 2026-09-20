@@ -1,7 +1,14 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { PERMISSION_SELF_PROTECTION_PATTERNS, type PermissionSettingsIssue } from "@drone/shared";
 import { createLogger } from "../log";
-import type { PermissionAction, PermissionOutside, PermissionRule, PermissionRules } from "./pattern";
+import {
+	matchPattern,
+	type PermissionAction,
+	type PermissionOutside,
+	type PermissionRule,
+	type PermissionRules,
+} from "./pattern";
 
 const log = createLogger("permission-rules");
 
@@ -114,11 +121,24 @@ function parseOutside(raw: unknown): PermissionOutside | undefined {
 	return result.read || result.write || result.temporary ? (result as PermissionOutside) : undefined;
 }
 
-function parseConfig(raw: unknown): Partial<PermissionConfig> {
+/**
+ * 文件 JSON → 部分配置（非法条目丢弃，交给 mergeWithDefaults 补默认）。
+ * autoApproveProjectEdits：文件里的显式布尔优先；缺省时由 mergeWithDefaults 按
+ * 「是否存在 edit/write 规则」推导（设置页保存整表规则后仍能保住开关值）。
+ */
+export function parseConfig(raw: unknown): Partial<PermissionConfig> {
 	if (typeof raw !== "object" || raw === null) return {};
-	const input = raw as { enabled?: unknown; outside?: unknown; rules?: unknown };
+	const input = raw as {
+		enabled?: unknown;
+		autoApproveProjectEdits?: unknown;
+		outside?: unknown;
+		rules?: unknown;
+	};
 	const result: Partial<PermissionConfig> = {};
 	if (typeof input.enabled === "boolean") result.enabled = input.enabled;
+	if (typeof input.autoApproveProjectEdits === "boolean") {
+		result.autoApproveProjectEdits = input.autoApproveProjectEdits;
+	}
 	result.outside = parseOutside(input.outside);
 	if (typeof input.rules === "object" && input.rules !== null && !Array.isArray(input.rules)) {
 		const rules: PermissionRules = {};
@@ -136,6 +156,145 @@ function parseConfig(raw: unknown): Partial<PermissionConfig> {
 
 export function permissionConfigPath(agentDir: string): string {
 	return join(agentDir, "permissions.json");
+}
+
+/** 设置页写盘的 JSON 对象：用户可见字段 + 调用方给定的 enabled（保留文件原值，页面不编辑它） */
+export interface SerializedPermissionConfig {
+	enabled?: boolean;
+	autoApproveProjectEdits: boolean;
+	outside: PermissionOutside;
+	rules: PermissionRules;
+}
+
+/**
+ * 配置 → 写盘对象。只输出用户可见字段：autoApproveProjectEdits / outside / rules；
+ * `enabled` 仅在调用方显式给出时写入（设置页保存时传文件原值，从不改动逃生舱）。
+ * 规则对象按传入顺序逐键复制（JS 保持字符串键插入序 = 评估序）。
+ */
+export function serializeConfig(
+	config: PermissionConfig,
+	options?: { enabled?: boolean },
+): SerializedPermissionConfig {
+	const rules: PermissionRules = {};
+	for (const [tool, rule] of Object.entries(config.rules)) {
+		if (rule === undefined) continue;
+		rules[tool] = typeof rule === "string" ? rule : { ...rule };
+	}
+	const out: SerializedPermissionConfig = {
+		autoApproveProjectEdits: config.autoApproveProjectEdits,
+		outside: { read: config.outside.read, write: config.outside.write, temporary: config.outside.temporary },
+		rules,
+	};
+	return options?.enabled === undefined ? out : { enabled: options.enabled, ...out };
+}
+
+const NUMERIC_KEY = /^\d+$/;
+
+function actionIssue(path: string, value: unknown): PermissionSettingsIssue {
+	return {
+		code: "action",
+		path,
+		message: `${path}: 动作必须是 allow / ask / deny（收到 ${JSON.stringify(value)}）`,
+	};
+}
+
+/**
+ * 设置页保存前的整表校验（UI 与 permissions.save 各跑一次，后者兜底）：
+ * - 动作枚举：outside.* / rules.* / 模式表值只能是 allow / ask / deny；
+ * - 纯数字键：JS 会把纯数字属性名重排到最前，破坏「键序即评估序」，工具名与模式都禁止；
+ * - 空模式 / 空工具名；
+ * - 自保护：bash 必须是模式表，四条自保护模式齐全、不为 allow（ask 或收紧为 deny），
+ *   且实际生效——后命中生效意味着排在其后的 `*: allow` 会把它们盖掉，同样拒绝。
+ * 返回空数组 = 合法。
+ */
+export function validateConfig(config: PermissionConfig): PermissionSettingsIssue[] {
+	const issues: PermissionSettingsIssue[] = [];
+	if (typeof config !== "object" || config === null) {
+		return [{ code: "shape", path: "", message: "配置必须是对象" }];
+	}
+	if (typeof config.autoApproveProjectEdits !== "boolean") {
+		issues.push({
+			code: "shape",
+			path: "autoApproveProjectEdits",
+			message: "autoApproveProjectEdits 必须是布尔值",
+		});
+	}
+	const outside = config.outside as Partial<PermissionOutside> | undefined;
+	for (const key of ["read", "write", "temporary"] as const) {
+		const value = outside?.[key];
+		if (typeof value !== "string" || !ACTIONS.has(value)) issues.push(actionIssue(`outside.${key}`, value));
+	}
+	const rules = config.rules as PermissionRules | undefined;
+	if (typeof rules !== "object" || rules === null || Array.isArray(rules)) {
+		issues.push({ code: "shape", path: "rules", message: "rules 必须是对象" });
+		return issues;
+	}
+	for (const [tool, rule] of Object.entries(rules)) {
+		if (rule === undefined) continue;
+		const path = `rules.${tool}`;
+		if (tool.trim() === "") {
+			issues.push({ code: "empty-pattern", path, message: "工具名不能为空" });
+			continue;
+		}
+		if (NUMERIC_KEY.test(tool)) {
+			issues.push({ code: "numeric-key", path, message: `${path}: 纯数字键会被引擎重排，不能作为工具名` });
+		}
+		if (typeof rule === "string") {
+			if (!ACTIONS.has(rule)) issues.push(actionIssue(path, rule));
+			continue;
+		}
+		if (typeof rule !== "object" || rule === null || Array.isArray(rule)) {
+			issues.push({ code: "shape", path, message: `${path}: 规则必须是动作或「模式 → 动作」表` });
+			continue;
+		}
+		for (const [pattern, action] of Object.entries(rule)) {
+			const patternPath = `${path}.${pattern}`;
+			if (pattern.trim() === "")
+				issues.push({ code: "empty-pattern", path: patternPath, message: `${path}: 模式不能为空` });
+			if (NUMERIC_KEY.test(pattern)) {
+				issues.push({
+					code: "numeric-key",
+					path: patternPath,
+					message: `${patternPath}: 纯数字模式会被引擎重排`,
+				});
+			}
+			if (typeof action !== "string" || !ACTIONS.has(action)) issues.push(actionIssue(patternPath, action));
+		}
+	}
+	const bash = rules.bash;
+	if (typeof bash !== "object" || bash === null) {
+		issues.push({
+			code: "self-protection",
+			path: "rules.bash",
+			message: "bash 必须是模式表并包含自保护模式（*permissions.json* 等 = ask）",
+		});
+	} else {
+		for (const pattern of PERMISSION_SELF_PROTECTION_PATTERNS) {
+			const action = bash[pattern];
+			if (action === undefined || action === "allow") {
+				issues.push({
+					code: "self-protection",
+					path: `rules.bash.${pattern}`,
+					message: `自保护模式 ${pattern} 必须存在且不能为 allow`,
+				});
+				continue;
+			}
+			// 有效性：用「模式自身」当样本按键序求值，后面的 allow 通配盖掉它就等于没有
+			const sample = pattern.replace(/\*/g, "x");
+			let effective: string | undefined;
+			for (const [candidate, candidateAction] of Object.entries(bash)) {
+				if (matchPattern(candidate, sample)) effective = candidateAction;
+			}
+			if (effective === "allow") {
+				issues.push({
+					code: "self-protection",
+					path: `rules.bash.${pattern}`,
+					message: `自保护模式 ${pattern} 被其后的 allow 模式覆盖（后命中生效），请把它移到表尾`,
+				});
+			}
+		}
+	}
+	return issues;
 }
 
 /** 读取权限配置；文件不存在或非法时回退默认配置 */

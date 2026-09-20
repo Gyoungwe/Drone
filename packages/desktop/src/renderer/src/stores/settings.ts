@@ -19,6 +19,7 @@ import { isDraftSessionId, useSessionsStore } from "./sessions";
 
 export type SettingsCategory =
 	| "general"
+	| "permissions"
 	| "appearance"
 	| "models"
 	| "skills"

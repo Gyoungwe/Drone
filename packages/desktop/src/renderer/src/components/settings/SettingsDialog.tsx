@@ -15,11 +15,13 @@ import { ExtensionsPanel } from "./extensions/ExtensionsPanel";
 import { GeneralPanel } from "./GeneralPanel";
 import { LanObserverPanel } from "./LanObserverPanel";
 import { McpPanel } from "./McpPanel";
+import { PermissionsPanel } from "./PermissionsPanel";
 import { ProvidersPanel } from "./providers/ProvidersPanel";
 import { SkillsPanel } from "./SkillsPanel";
 
 const STATIC_CATEGORIES = [
 	"general",
+	"permissions",
 	"appearance",
 	"models",
 	"skills",
@@ -34,6 +36,7 @@ const STATIC_CATEGORIES = [
 /** 面板注册表：新增分类 = 写一个面板组件 + 在这里登记（未登记显示 coming soon） */
 const PANELS: Partial<Record<SettingsCategory, ComponentType>> = {
 	general: GeneralPanel,
+	permissions: PermissionsPanel,
 	appearance: AppearancePanel,
 	models: ProvidersPanel,
 	skills: SkillsPanel,

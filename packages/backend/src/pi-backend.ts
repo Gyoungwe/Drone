@@ -18,9 +18,15 @@ import type {
 	McpStatus,
 	ModelPrefs,
 	PermissionAnswer,
+	PermissionAuditTailEntry,
 	PermissionMode,
+	PermissionProbeInput,
+	PermissionProbeResult,
 	PermissionRequest,
 	PermissionResolved,
+	PermissionSettingsSaveInput,
+	PermissionSettingsSaveResult,
+	PermissionSettingsSnapshot,
 	PromptReceipt,
 	SessionEvent,
 	SessionMessage,
@@ -66,7 +72,14 @@ import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
 import { McpService } from "./mcp/service";
 import { PackageAdmin } from "./packages/admin";
-import { loadPermissionConfig } from "./permissions";
+import {
+	loadPermissionConfig,
+	probePermission as probePermissionRules,
+	readPermissionAuditTail,
+	readPermissionSettings,
+	resetPermissionSettings as resetPermissionSettingsFile,
+	writePermissionSettings,
+} from "./permissions";
 import {
 	makePermissionGateExtension,
 	type PermissionConfirm,
@@ -1391,6 +1404,39 @@ export class PiBackend {
 	/** 权限门控配置（enabled 解析保留；UI 已无开关入口，仅手改 permissions.json 可关 = 隐藏逃生舱） */
 	getPermissionConfig(): { enabled: boolean } {
 		return { enabled: loadPermissionConfig(getAgentDir()).enabled };
+	}
+
+	/** 设置 → 权限：规则文件快照（路径 / 原文 / 默认合并视图 / mtime） */
+	getPermissionSettings(): PermissionSettingsSnapshot {
+		return readPermissionSettings(getAgentDir());
+	}
+
+	/** 设置 → 权限 保存：校验 + mtime 冲突检查 + tmp+rename 原子写（.bak 保留，enabled 保留文件原值）；
+	 * 写后 createPermissionConfigLoader 在下一次 tool_call 前按 mtime+size 重读 = 保存即生效 */
+	savePermissionSettings(input: PermissionSettingsSaveInput): PermissionSettingsSaveResult {
+		try {
+			const result = writePermissionSettings(getAgentDir(), input);
+			if (!result.ok) log.info("permissions.json 未保存", { reason: result.reason });
+			return result;
+		} catch (err) {
+			log.error("permissions.json 写入失败", err);
+			throw err; // ipcMain.handle，reject 传回 renderer
+		}
+	}
+
+	/** 设置 → 权限 恢复默认（用户可见字段写回默认，enabled 不动） */
+	resetPermissionSettings(): PermissionSettingsSnapshot {
+		return resetPermissionSettingsFile(getAgentDir());
+	}
+
+	/** 设置 → 权限 试算：同一套规则求值，只跑规则链（不模拟边界/临时区/项目内自动放行） */
+	probePermission(input: PermissionProbeInput): PermissionProbeResult {
+		return probePermissionRules(getAgentDir(), input);
+	}
+
+	/** 设置 → 权限 审计日志尾部（fullAccess 高危留痕，最新在前） */
+	getPermissionAuditTail(limit?: number): PermissionAuditTailEntry[] {
+		return readPermissionAuditTail(getAgentDir(), limit);
 	}
 
 	/** 会话权限模式（default 缺省 fail-safe；关 tab 重开后端已归零，renderer 对齐用） */
