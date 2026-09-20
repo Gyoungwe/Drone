@@ -25,7 +25,7 @@ function zoteroLike(library) {
 			event.toolName === "research_zotero_save" && details?.status === "saved" && details.doi
 				? { doi: details.doi.toLowerCase(), ignored: "dropped" }
 				: null,
-		consent: (acceptance) => (acceptance.doi ? { doi: acceptance.doi } : null),
+		consent: (acceptance) => (acceptance.doi ? { doi: acceptance.doi } : { slot: true }),
 		pending: (m) => ({
 			reason: m.acceptance.doi ? `Zotero 里还没有读回 ${m.acceptance.doi}` : "这一项还没有对应的文献",
 			next: "写入后自动绑定",
@@ -63,8 +63,11 @@ async function save(j, id, doi, status = "saved") {
 it("plan-time-empty zotero_item milestones bind to save receipts in order and verify by the bound DOI", async () => {
 	const { j, library } = setup([zoteroMilestone("p1"), zoteroMilestone("p2")]);
 	expect(j.snapshot().milestones.map((m) => m.acceptance.doi)).toEqual(["", ""]);
-	// 空身份不进入写入同意（写入仍走单独的确认卡）
-	expect(j.authorization(true).acceptances).toEqual([]);
+	// 空身份是"精读后写入的一篇"槽位：授权卡上写明后，宿主把尚未绑定的槽位列进写入同意（每个槽位放行一次写入）
+	expect(j.authorization(true).acceptances).toEqual([
+		{ milestoneId: "p1", kind: "zotero_item", slot: true },
+		{ milestoneId: "p2", kind: "zotero_item", slot: true },
+	]);
 	await j.reconcile("/unused");
 	expect(j.snapshot().milestones.map((m) => m.state)).toEqual(["pending", "pending"]);
 	expect(remainingExplanation(j.snapshot())).toContain("这一项还没有对应的文献");
@@ -80,8 +83,8 @@ it("plan-time-empty zotero_item milestones bind to save receipts in order and ve
 	expect(p1.acceptance.doi).toBe(""); // 契约本身不改写
 	expect(effectiveAcceptance(p1).doi).toBe("10.1111/imb.12628");
 	expect(p2.bound).toBeUndefined();
-	// 回执自动绑定的身份不扩大写入同意
-	expect(j.authorization(true).acceptances).toEqual([]);
+	// 回执自动绑定的身份不扩大写入同意；已绑定的槽位也不再为第二篇放行
+	expect(j.authorization(true).acceptances).toEqual([{ milestoneId: "p2", kind: "zotero_item", slot: true }]);
 
 	library.set("10.1111/imb.12628", "KEY00001");
 	await j.reconcile("/unused");
@@ -112,7 +115,9 @@ it("plan-time-empty zotero_item milestones bind to save receipts in order and ve
 		["save-2", "verified"],
 		["save-3", "returned"],
 	]);
-	expect(j.snapshot().state).toBe("partial");
+	// 只有返回记录的操作不再否决完成：交付以验收过的里程碑为准，剩余说明如实标注未独立核对的那一步
+	expect(j.snapshot().state).toBe("completed");
+	expect(remainingExplanation(j.snapshot())).toContain("1 步命令/外部操作只有返回记录");
 });
 
 it("failed or unverified receipts never bind", async () => {

@@ -60,14 +60,16 @@ registerAcceptanceVerifier("zotero_item", {
 	observe: (event, details) => ({ id, path }) ,  // 某次工具结果产生了待审对象
 	resolve: async (review, { cwd }) => ({ status: "applied" | "pending" | "rejected", path, stale }),
 	identify: (event, details) => ({ doi }),        // 某次成功回执带回了可绑定到本种类里程碑的身份（只认 fields 里的字段）
-	consent: (a) => ({ doi: a.doi }),              // 授权后暴露给扩展的契约条目
+	consent: (a) => (a.doi ? { doi: a.doi } : { slot: true }), // 授权后暴露给扩展的契约条目；slot 表示"计划时未点名身份"的一次性写入槽位
 	pending: (m) => ({ reason, next }),
 	acknowledgeError: { code, message },           // 任务卡「确认」不能完成时的错误
 });
 ```
 
 - `workbench.authorization()` 返回通用的 `acceptances: [{ milestoneId, kind, …consent }]`，不再有 `zoteroItems` 特例；
-  Zotero 写入在扩展内自行匹配 `grant.acceptances`。
+  Zotero 写入在扩展内自行匹配 `grant.acceptances`。`consent` 返回 `{ slot: true }` 的条目只在该里程碑尚未绑定身份、
+  尚未验收时列出（授权卡上须写明这是"精读后写入的一篇"）；扩展自行保证每个槽位只放行一次写入（zotero-literature 用任务内的
+  槽位占用表处理并行批量写入），槽位之外的写入仍走确认卡。
 - 操作级审阅（Wiki 候选）经 `observe` / `resolve` 写入 `operation.review {kind,id,path}`。
 - 运行期身份绑定：计划时未知的身份（如精读后才确定的 DOI）可以留空；成功回执经 `identify` 返回身份后，
   宿主把它绑到第一个尚无身份的同种类里程碑（`milestone.bound = { fields, via, operationId, at }`），

@@ -197,6 +197,56 @@ it("an authorized task plan naming the DOI as a zotero_item milestone covers the
 	expect(other.details.status).toBe("cancelled");
 	expect(saves).toBe(1);
 });
+it("a DOI-less zotero_item milestone is a one-write slot covered by the task authorization; extra papers go back to the card", async () => {
+	const pi = fakePi();
+	zoteroLiterature(pi);
+	const journal = createTaskWorkbench({ requireAuthorization: true, persist: () => {} });
+	journal.attach("session-z");
+	journal.begin("精读后把文献收进 Zotero");
+	journal.plan({
+		summary: "精读一篇并写入 Zotero。",
+		milestones: [{ id: "lit", title: "精读文献进入 Zotero", acceptance: { kind: "zotero_item" } }],
+	});
+	journal.command({
+		taskId: journal.snapshot().id,
+		revision: journal.view().revision,
+		action: "authorize-task",
+	});
+	// 授权卡上写明的槽位进入写入同意：没有 DOI，只有 slot 标记
+	expect(journal.authorization(true).acceptances).toEqual([
+		{ milestoneId: "lit", kind: "zotero_item", slot: true, libraryId: null, collection: null },
+	]);
+	pi.events.on("drone:task-write-consent", (request) => {
+		if (request.cwd === cwd && request.sessionId === "session-z")
+			request.respond(journal.authorization(true));
+	});
+	const select = vi.fn(async () => "暂不写入");
+	// 同一批并行写入两篇、只有一个槽位：恰好一篇经槽位放行，另一篇回到确认卡（这里被拒绝）
+	const [first, second] = await Promise.all([
+		run(ctxFor({ select })),
+		run(ctxFor({ select }), { doi: "10.1234/other" }),
+	]);
+	const bySlot = [first, second].find((r) => r.details.consent.via === "task-plan-slot");
+	const byCard = [first, second].find((r) => r.details.consent.via === "ask-card");
+	expect(bySlot.details).toMatchObject({ status: "saved", consent: { milestoneId: "lit" } });
+	expect(byCard.details.status).toBe("cancelled");
+	expect(select).toHaveBeenCalledTimes(1);
+	expect(saves).toBe(1);
+	// 宿主按回执把 DOI 绑到槽位后，这一项不再为别的文献放行
+	const event = {
+		toolName: "research_zotero_save",
+		toolCallId: "slot-1",
+		input: { doi: bySlot.details.doi },
+	};
+	expect(journal.guard(event)).toBeNull();
+	await journal.observe({ ...event, details: bySlot.details, content: [] }, cwd);
+	expect(journal.snapshot().milestones[0].bound).toMatchObject({ fields: { doi: bySlot.details.doi } });
+	expect(journal.authorization(true).acceptances).toEqual([]);
+	saved = false;
+	const third = await run(ctxFor({ select }), { doi: "10.1234/third" });
+	expect(third.details).toMatchObject({ status: "cancelled", consent: { via: "ask-card" } });
+	expect(saves).toBe(1);
+});
 it("headless sessions cannot write without task consent; existing items are reused silently", async () => {
 	const pi = fakePi();
 	zoteroLiterature(pi);

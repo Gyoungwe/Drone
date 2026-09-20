@@ -36,7 +36,8 @@ export const en: Messages = {
 		confirmations: "Confirmations you will see",
 		auth: {
 			task: "Task authorization card: after task_plan creates the task, nothing runs until you approve",
-			"zotero-write": "Zotero write: each write asks for its own consent",
+			"zotero-write":
+				"Zotero write: papers listed on the task authorization card need no separate consent; only writes outside the plan ask again",
 			"external-delivery": "Outbound delivery / push: needs separate authorization",
 		},
 		artifacts: "Expected artifacts",

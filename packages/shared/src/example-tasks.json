@@ -44,11 +44,12 @@
 		"milestones": [
 			{
 				"title": {
-					"zh": "问题澄清与边界",
-					"en": "Clarified question and scope"
+					"zh": "问题澄清、边界与假定",
+					"en": "Clarified question, scope and assumptions"
 				},
 				"acceptance": {
-					"kind": "human_review"
+					"kind": "file",
+					"hint": "scope.md"
 				}
 			},
 			{
@@ -74,6 +75,10 @@
 		],
 		"authorizations": ["task"],
 		"artifacts": [
+			{
+				"zh": "scope.md（问题澄清、边界与假定）",
+				"en": "scope.md (clarified question, scope and assumptions)"
+			},
 			{
 				"zh": "hypotheses.md（假设与判别证据）",
 				"en": "hypotheses.md (hypotheses and discriminating evidence)"
@@ -203,8 +208,8 @@
 			}
 		],
 		"contractNotes": {
-			"zh": "命中不等于已读；Zotero 写入需要单独同意",
-			"en": "A search hit is not a source read; writing to Zotero needs its own consent"
+			"zh": "命中不等于已读；写入 Zotero 的只有精读过的几篇，已包含在这一次任务授权里",
+			"en": "A search hit is not a source read; only the closely read papers are written to Zotero, and that write is covered by the one task authorization"
 		}
 	},
 	{
@@ -272,11 +277,12 @@
 			},
 			{
 				"title": {
-					"zh": "结果解读确认",
-					"en": "Interpretation confirmed"
+					"zh": "结果解读与留给你判断的问题",
+					"en": "Interpretation and the questions left to you"
 				},
 				"acceptance": {
-					"kind": "human_review"
+					"kind": "file",
+					"hint": "interpretation.md"
 				}
 			}
 		],
@@ -289,6 +295,10 @@
 			{
 				"zh": "analysis.md（计划、检验、效应量与不确定性）",
 				"en": "analysis.md (plan, tests, effect sizes and uncertainty)"
+			},
+			{
+				"zh": "interpretation.md（结果解读与留给你判断的问题）",
+				"en": "interpretation.md (interpretation and the questions left to you)"
 			}
 		],
 		"contractNotes": {
@@ -374,11 +384,12 @@
 			},
 			{
 				"title": {
-					"zh": "用户确认修改",
-					"en": "Revisions confirmed"
+					"zh": "修改说明与待你决定的取舍",
+					"en": "Revision notes and the choices left to you"
 				},
 				"acceptance": {
-					"kind": "human_review"
+					"kind": "file",
+					"hint": "revision-notes.md"
 				}
 			}
 		],
@@ -391,6 +402,10 @@
 			{
 				"zh": "review.md（审校意见）",
 				"en": "review.md (review notes)"
+			},
+			{
+				"zh": "revision-notes.md（修改说明与待你决定的取舍）",
+				"en": "revision-notes.md (revision notes and the choices left to you)"
 			}
 		],
 		"contractNotes": {
@@ -476,11 +491,12 @@
 			},
 			{
 				"title": {
-					"zh": "交付检查",
-					"en": "Delivery check"
+					"zh": "交付检查清单（图与数据逐一对应）",
+					"en": "Delivery checklist (each figure traced to its data)"
 				},
 				"acceptance": {
-					"kind": "human_review"
+					"kind": "file",
+					"hint": "delivery-check.md"
 				}
 			}
 		],
@@ -493,6 +509,10 @@
 			{
 				"zh": "slides.pptx 或 slides.pdf",
 				"en": "slides.pptx or slides.pdf"
+			},
+			{
+				"zh": "delivery-check.md（图与数据逐一对应的检查清单）",
+				"en": "delivery-check.md (checklist tracing each figure to its data)"
 			}
 		],
 		"contractNotes": {
@@ -565,11 +585,12 @@
 			},
 			{
 				"title": {
-					"zh": "确认无安装、付费、外发",
-					"en": "Confirmed: nothing installed, paid for or sent out"
+					"zh": "边界自查：无安装、付费、外发",
+					"en": "Boundary self-check: nothing installed, paid for or sent out"
 				},
 				"acceptance": {
-					"kind": "human_review"
+					"kind": "file",
+					"hint": "handoff-check.md"
 				}
 			}
 		],
@@ -582,6 +603,10 @@
 			{
 				"zh": "spec.md / plan.md / HANDOFF.md",
 				"en": "spec.md / plan.md / HANDOFF.md"
+			},
+			{
+				"zh": "handoff-check.md（边界自查：无安装、付费、外发）",
+				"en": "handoff-check.md (boundary self-check: nothing installed, paid for or sent out)"
 			}
 		],
 		"contractNotes": {

@@ -13,14 +13,16 @@
 
 | id | 方向 | 阶段（首条命令） | 用户输入（* 必填） | 里程碑 → 验收 | 边界 |
 | --- | --- | --- | --- | --- | --- |
-| `planning-hypotheses` | 研究规划与设计 | ideation → methods（`/skill:hypothesis-generation`） | 研究问题*；背景材料路径 | 问题澄清与边界 → `human_review`；竞争假设与判别证据清单 → `file`（hypotheses.md）；实验设计草案 → `file`（design.md） | 不声称已完成任何实验 |
-| `evidence-literature` | 文献证据与知识管理 | search → reading → library（`/skill:nature-academic-search`） | 主题/关键词*；时间范围；是否放入 Zotero（默认否） | 检索范围与命中清单 → `file`；精读 2–3 篇的证据卡 → `file`；（选「是」时）精读文献逐篇进入 Zotero → `zotero_item`（每篇一个里程碑，DOI 留空，精读写入后由宿主按回执绑定；写错可 `task_wait kind=rebind`） | 命中不等于已读；Zotero 写入需要单独同意 |
-| `analysis-explore` | 数据分析与专业计算 | explore → statistics（`/skill:exploratory-data-analysis`） | 数据文件路径*；研究问题/分组变量* | 数据质量报告 → `file`；分析计划与检验结果 → `file`；结果解读确认 → `human_review` | 只披露实际执行过的检查 |
-| `writing-section` | 论文写作与审校 | writing → review（`/skill:scientific-writing`） | 章节*；素材/证据卡路径；目标期刊 | 章节初稿 → `file`；审校意见（证据受限）→ `file`；用户确认修改 → `human_review` | 只完成所请求的章节，不强行走完整流程 |
-| `presentation-figures` | 可视化与成果交付 | figures → slides（`/skill:scientific-visualization`） | 结果/数据文件*；目标格式（pptx/pdf，默认 pptx） | 真实数据图（含不确定性）→ `file`；汇报幻灯片 → `file`；交付检查 → `human_review` | AI 示意图不是数据图 |
-| `engineering-handoff` | 工程集成与协作 | resources → handoff（`/skill:get-available-resources`） | 项目路径*；交接对象 | 计算资源清单（只盘点）→ `file`；spec / plan / HANDOFF → `file`；确认无安装、付费、外发 → `human_review` | 不安装、不预订资源、不外发 |
+| `planning-hypotheses` | 研究规划与设计 | ideation → methods（`/skill:hypothesis-generation`） | 研究问题*；背景材料路径 | 问题澄清、边界与假定 → `file`（scope.md）；竞争假设与判别证据清单 → `file`（hypotheses.md）；实验设计草案 → `file`（design.md） | 不声称已完成任何实验 |
+| `evidence-literature` | 文献证据与知识管理 | search → reading → library（`/skill:nature-academic-search`） | 主题/关键词*；时间范围；是否放入 Zotero（默认否） | 检索范围与命中清单 → `file`；精读 2–3 篇的证据卡 → `file`；（选「是」时）精读文献逐篇进入 Zotero → `zotero_item`（每篇一个里程碑，DOI 留空，精读写入后由宿主按回执绑定；写错可 `task_wait kind=rebind`） | 命中不等于已读；写入 Zotero 的只有精读过的几篇，已包含在这一次任务授权里 |
+| `analysis-explore` | 数据分析与专业计算 | explore → statistics（`/skill:exploratory-data-analysis`） | 数据文件路径*；研究问题/分组变量* | 数据质量报告 → `file`；分析计划与检验结果 → `file`；结果解读与留给你判断的问题 → `file`（interpretation.md） | 只披露实际执行过的检查 |
+| `writing-section` | 论文写作与审校 | writing → review（`/skill:scientific-writing`） | 章节*；素材/证据卡路径；目标期刊 | 章节初稿 → `file`；审校意见（证据受限）→ `file`；修改说明与待你决定的取舍 → `file`（revision-notes.md） | 只完成所请求的章节，不强行走完整流程 |
+| `presentation-figures` | 可视化与成果交付 | figures → slides（`/skill:scientific-visualization`） | 结果/数据文件*；目标格式（pptx/pdf，默认 pptx） | 真实数据图（含不确定性）→ `file`；汇报幻灯片 → `file`；交付检查清单（图与数据逐一对应）→ `file`（delivery-check.md） | AI 示意图不是数据图 |
+| `engineering-handoff` | 工程集成与协作 | resources → handoff（`/skill:get-available-resources`） | 项目路径*；交接对象 | 计算资源清单（只盘点）→ `file`；spec / plan / HANDOFF → `file`；边界自查：无安装、付费、外发 → `file`（handoff-check.md） | 不安装、不预订资源、不外发 |
 
 「将遇到的确认」按 `authorizations` 提示：`task`（任务授权卡）在每个示例都有；`zotero-write` 只在文献示例出现；`external-delivery` 预留给需要外发/推送的示例。
+
+**一次授权闭环**：六个示例的里程碑全部是宿主能自己读回的 `file` / `zotero_item`，不再包含 `human_review`——需要用户判断的内容（问题边界、结果解读、修改取舍、交付检查、边界自查）都写成交付文件，用户在文件里看、在对话里改。授权卡点一次「同意本次请求」之后：模型每写完一个文件就收口的回合由宿主按同一份授权自动接续（`reserveHandoff`，要求本回合有新进展、最多 16 次）；并行批量写入不再被「阶段步数」误拦；命令类操作（bash/powershell）只有返回记录时不再否决任务完成，只在剩余说明里如实标注；选「放入 Zotero」时，计划里留空 DOI 的 `zotero_item` 是授权卡上写明的「精读后写入的一篇」槽位，每个槽位放行一次 `research_zotero_save`，不再逐篇弹「写入 Zotero 文献库？」。`packages/backend/test/example-tasks-one-authorization-sdk.test.mjs` 用真实 SDK 模拟六个示例（含 Zotero 分支）：只允许出现一张「开始执行这个任务？」卡，其余弹窗、权限确认、面板操作和「继续」都记为中断并断言为 0。
 
 ## 入口
 
@@ -39,8 +41,8 @@
 /skill:hypothesis-generation 【示例任务 · 研究规划与设计 · 从研究问题到可判别假设】
 目标：把一个研究问题澄清为若干竞争假设，列出能区分它们的证据，并给出实验设计草案。
 输入：研究问题=…；背景材料路径=（未提供）
-请先用 task_plan 建立任务并等待我的授权，再开始执行：
-  1. 问题澄清与边界（验收：human_review）
+请先用 task_plan 建立任务并等待我的授权；授权一次后请自主完成全部里程碑，不要中途再询问或等待，需要我判断的内容写进交付文件：
+  1. 问题澄清、边界与假定 → scope.md（验收：file）
   2. 竞争假设与判别证据清单 → hypotheses.md（验收：file）
   3. 实验设计草案 → design.md（验收：file）
 边界：不声称已完成任何实验；阶段契约：Question, rival hypotheses, discriminating evidence; no claim of completed experiments.
@@ -54,7 +56,7 @@
    - `direction` 必须是 `WORKFLOW_DIRECTIONS` 之一，且每个方向只能有一个示例；
    - `stages` 必须都存在于 `WORKFLOW_STAGES` 且属于同一方向；`command`（可省）必须是首个阶段 `commands` 之一，省略时取第一条；
    - `inputs[].kind` ∈ `text | path | doi | select`；`path` 可用 `pathKind`（`file | directory | any`）决定给哪种选择器；`required: true` 的输入不能有 `defaultValue`；
-   - `milestones` 固定 3 条，`acceptance.kind` ∈ `file | human_review | zotero_item | wiki_review`（`hint` 是建议文件名）；`when: { input, equals }` 让某条里程碑只在输入取某值时出现；
+   - `milestones` 固定 3 条，`acceptance.kind` ∈ `file | human_review | zotero_item | wiki_review`（`hint` 是建议文件名）；`when: { input, equals }` 让某条里程碑只在输入取某值时出现；示例任务应只用宿主能自己读回的 `file` / `zotero_item`，`human_review` 会让「一次授权跑完」多出一次确认（内核仍支持它，留给真正需要用户过目的任务）；
    - `authorizations` 必含 `task`；`artifacts` 与 `contractNotes` 仅用于提示。
 2. 运行 `npx vitest run -w packages/shared` 与 `-w packages/desktop`：`example-tasks.test.ts` 会校验以上约束，`components/tasks/example-tasks.test.ts` 会校验空态卡数量与对话框渲染。
 3. 无需改 UI 代码：卡片、菜单项与对话框都从数据渲染；界面文案在 `i18n/zh.ts`、`en.ts` 的 `examples.*`。

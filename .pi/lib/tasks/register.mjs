@@ -371,7 +371,15 @@ export function registerWorkbench(pi) {
 				continueAuthorized(context);
 				return;
 			}
-			// 授权过但停在半路（tool-failure 等原因不在 reserveContinuation 白名单里）：
+			// 授权后模型中途收口（写完一个文件、跑完一条命令就只说一句话结束回合）：
+			// 用户已经说过"执行到交付"，宿主按同一份授权自动接续，不弹窗、不等用户再说"继续"。
+			// reserveHandoff 要求本回合有新进展且未超上限，模型原地打转时不会无限接续。
+			if (last?.stopReason !== "error" && !ctx?.signal?.aborted && journal.reserveHandoff()) {
+				send();
+				continueAuthorized(context);
+				return;
+			}
+			// 授权过但停在半路又不能自动接续（连续无进展、达到上限、tool-failure 等）：
 			// 主动问一次，而不是只刷一张卡让用户自己去侧栏发现任务停了。
 			const snapshot = journal.snapshot();
 			if (

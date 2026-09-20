@@ -7,6 +7,8 @@ Ordinary chat does not create tasks. `task_plan` fills an unfinished task that h
 ## What is authorized
 
 - Normal stage transitions and at most 3 host-triggered recovery turns within the unchanged 192-call lifetime ceiling (48 calls per stage).
+- Automatic handoffs: when the model ends a turn early while deliverables remain (the common "wrote one file, said a sentence" cadence), the host hands the task back under the same authorization at `agent_end` (`reserveHandoff`) instead of asking again — only if the turn made new observed progress, nothing is waiting for the user, no effect has an unknown outcome, and fewer than 16 handoffs were used. Otherwise the turn-end "推进剩余事项" question remains the fallback.
+- Zotero write slots: a `zotero_item` milestone whose DOI is left empty at plan time is listed on the authorization card as "the one paper written after close reading"; the host exposes each unbound slot in `authorization().acceptances` (`slot: true`) so one `research_zotero_save` per slot needs no second card. Papers beyond the slots still go to the card.
 - Ordinary write/edit operations under the displayed canonical directories and their children. Output readback may use these explicitly approved roots even when data lives outside the session cwd; CURRENT read permissions and canonical directory identity are still checked. Missing output subdirectories are allowed; the approved project directory must already exist.
 - Existing command permissions, not a new arbitrary-shell/fullAccess privilege. The plan must state planned installations and preserve previous refusals.
 
@@ -20,7 +22,9 @@ Old records do not silently receive consent. Consent is attached to the immutabl
 
 ## Automatic progress and recovery
 
-Only successful results of host-allowed, distinct non-control calls count as observed progress. Status/todo spam, failed checks and fabricated result events do not. Observation is not scientific verification. Automatic stages require new observed progress; recovery is limited, refuses unresolved side effects/user actions, and never replays a write blindly.
+Only successful results of host-allowed, distinct non-control calls count as observed progress. Status/todo spam, failed checks and fabricated result events do not. Observation is not scientific verification. Automatic stages require new observed progress; recovery is limited, refuses unresolved side effects/user actions, and never replays a write blindly. Stage checkpoints are vetoed only by effects with an unknown outcome, not by sibling calls of a parallel batch that are still running.
+
+A task is complete when every milestone has host-read evidence and no effect has an unknown/changed outcome. Command effects (`bash`, `powershell`) have no artifact to read back and stay `returned`; they no longer keep a task at partial forever — the remaining summary states how many such steps have only a return record and that delivery rests on the verified files.
 
 A recoverable blocked publication can start a hidden **host** continuation through the SDK. It is not forged as a user message. SDK custom-message turns bypass `before_agent_start`, so only a host-minted continuation nonce lets the knowledge message-start hook refresh current-turn navigation, read budgets and publication state. Evidence must be read/validated again where required; private draft protections and specialist lifetime budgets remain unchanged.
 
@@ -29,7 +33,8 @@ Hard limits, missing credentials, absent necessary user data and unrecoverable e
 ## Code map
 
 - `.pi/lib/tasks/consent.mjs`: contract hash and canonical directory proposals.
-- `.pi/lib/tasks/workbench.mjs`: revision-checked consent, bounded progress and continuation reservations.
+- `.pi/lib/tasks/workbench.mjs`: revision-checked consent, bounded progress, continuation and automatic-handoff reservations.
+- `packages/backend/test/example-tasks-one-authorization-sdk.test.mjs`: real-SDK simulation of the six example tasks (plus the Zotero branch) asserting exactly one authorization card and zero further interruptions.
 - `.pi/lib/tasks/register.mjs` and `ask-authorization.mjs`: native authorization dialog, cancellable SDK handoff and permission-adapter bridge.
 - `backend/src/permissions/task-consent.ts`: canonical target checks for scoped ordinary writes; called only after existing deny evaluation.
 - `backend/src/permissions/gate.ts`: `allowRun` answer (run-scoped blanket approval for the remaining confirms; cleared on `agent_end` by `PiBackend.emitEvent`).
