@@ -63,7 +63,10 @@ export function remainingExplanation(task) {
 	))
 		lines.push(`需要你：${text(a.title)}；${text(a.reason)}。`);
 	// 写入回执带回了身份，但每个同类里程碑都已点名别的文献：不改契约，提示走改绑
-	for (const u of (task.unboundIdentities || []).slice(-4))
+	// （同类里程碑都已验收时，这些只是额外的写入，不需要提示）
+	for (const u of (task.unboundIdentities || [])
+		.filter((u) => remaining.some((m) => m.acceptance.kind === u.kind))
+		.slice(-4))
 		lines.push(
 			`已记录但未对应到任何交付项：${text(u.doi || u.kind, 140)}。若计划里写的文献有误，用 task_wait kind=rebind（milestoneId + doi + reason）请用户确认更换。`,
 		);

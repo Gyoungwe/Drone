@@ -72,12 +72,20 @@ export default function sourceArchive(pi) {
 			flowCards: archiveCard,
 		},
 		description:
-			"Download a literature or software source into the current run's sources directory with provenance and SHA-256. Browser-required responses are handed off for manual Computer Use verification; downloaded files are never executed.",
+			"Download a literature or software source into the current run's sources directory with provenance and SHA-256. For papers, give the DOI (or PMCID/PMID) and omit url: the host resolves a legitimate open-access PDF through Europe PMC, the PMC OA subset, Unpaywall, OpenAlex, Semantic Scholar and Crossref, tries the candidates in order and records what was queried. A given url that fails (HTML, 404, login wall) falls back to the same resolution when a DOI is known. status=no_open_access means no lawful OA copy exists: report the paper as abstract-only or ask the user to download it with their own access (task_wait kind=download, then local_file + human_verified=true); never fetch from pirate mirrors. Browser-required responses are handed off for manual Computer Use verification; downloaded files are never executed.",
 		parameters: {
 			type: "object",
 			properties: {
 				run_dir: { type: "string" },
-				url: { type: "string" },
+				url: { type: "string", description: "Optional for papers when doi/pmcid/pmid is given" },
+				doi: { type: "string" },
+				pmcid: { type: "string" },
+				pmid: { type: "string" },
+				resolve_open_access: {
+					type: "boolean",
+					description: "Default true for papers with an identifier; false = only fetch the given url",
+				},
+				max_candidates: { type: "integer", minimum: 1, maximum: 8, default: 6 },
 				category: { type: "string", enum: SOURCE_CATEGORIES },
 				filename: { type: "string" },
 				metadata: { type: "object" },
@@ -90,10 +98,10 @@ export default function sourceArchive(pi) {
 				max_bytes: { type: "integer", minimum: 1, maximum: 524288000, default: DEFAULT_MAX_BYTES },
 				timeout_ms: { type: "integer", minimum: 100, maximum: 600000, default: DEFAULT_TIMEOUT_MS },
 			},
-			required: ["run_dir", "url", "category"],
+			required: ["run_dir", "category"],
 		},
-		async execute(_id, params, _signal, _update, ctx) {
-			const result = await archiveSource({ ...params, cwd: ctx.cwd });
+		async execute(_id, params, signal, _update, ctx) {
+			const result = await archiveSource({ ...params, cwd: ctx.cwd, signal });
 			return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
 		},
 	});
@@ -212,6 +220,6 @@ export default function sourceArchive(pi) {
 		},
 	});
 	pi.on("before_agent_start", async (event) => ({
-		systemPrompt: `${event.systemPrompt}\n\nArchive papers, manuals and software with research_archive_source into the active run. Do not invent citations or treat browser_required/failed downloads as evidence. ${USER_QUESTION_FOCUS}`,
+		systemPrompt: `${event.systemPrompt}\n\nArchive papers, manuals and software with research_archive_source into the active run. For papers pass the DOI and let the host resolve a legitimate open-access PDF; no_open_access means abstract-only unless the user supplies the file through their own access. Do not invent citations or treat browser_required/failed/no_open_access downloads as evidence. ${USER_QUESTION_FOCUS}`,
 	}));
 }
