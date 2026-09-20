@@ -58,17 +58,35 @@ export function describeZoteroEvidence(result) {
 	};
 }
 
+const SAVE_BOUND_STATUSES = new Set(["saved", "reused"]);
+/** 写入回执 → 可绑定到 zotero_item 里程碑的身份：只认宿主自己读回过的条目（saved / reused + 8 位 key）。 */
+export function identifyZoteroReceipt(event, details) {
+	if (event?.toolName !== "research_zotero_save") return null;
+	const receipt = details && typeof details === "object" ? details : {};
+	if (!SAVE_BOUND_STATUSES.has(receipt.status) || !ZOTERO_KEY.test(receipt.zoteroKey || "")) return null;
+	const doi = normalizeDoi(receipt.doi);
+	return /^10\.\d{4,9}\/\S+$/.test(doi) ? { doi } : null;
+}
 /**
  * zotero_item 里程碑验收（挂钩 2）：只读回 Zotero 条目身份（DOI → item key / 附件元数据），
  * 不写入、不代表读过全文。同意决策仍在宿主任务工作台。
+ * DOI 可以在计划时留空（检索/精读后才知道是哪篇）：写入回执经 identify 绑定后再读回；
+ * 计划里写错了 DOI 时由 task_wait kind=rebind 请用户确认更换。
  */
 export function registerZoteroAcceptance() {
 	const reconcile = createCompositeZoteroReconciler();
 	return registerAcceptanceVerifier("zotero_item", {
 		fields: ["doi", "libraryId", "collection"],
 		evidenceKind: "zotero-read-only-item-identity",
-		label: (acceptance) => `文献进入 Zotero${acceptance.doi ? `（${acceptance.doi}）` : ""}`,
-		verify: async (acceptance) => describeZoteroEvidence(await reconcile(acceptance)),
+		label: (acceptance) =>
+			acceptance.doi
+				? `文献进入 Zotero（${acceptance.doi}）`
+				: "文献进入 Zotero（DOI 精读后由宿主按写入回执绑定）",
+		verify: async (acceptance) =>
+			acceptance.doi
+				? describeZoteroEvidence(await reconcile(acceptance))
+				: { state: "pending", reason: "doi-unbound", summary: "还没有文献绑定到这一项" },
+		identify: identifyZoteroReceipt,
 		// 已批准契约里点名的 DOI：写入同意可复用任务授权，不再弹第二张卡
 		consent: (acceptance) =>
 			acceptance.doi
@@ -78,10 +96,16 @@ export function registerZoteroAcceptance() {
 						collection: acceptance.collection || null,
 					}
 				: null,
-		pending: (m) => ({
-			reason: `Zotero 里还没有读回这条文献${m.acceptance.doi ? `（${m.acceptance.doi}）` : ""}的身份`,
-			next: "先用 research_zotero_save / research_verify_literature 写入并核对，再继续",
-		}),
+		pending: (m) =>
+			m.acceptance.doi
+				? {
+						reason: `Zotero 里还没有读回这条文献（${m.acceptance.doi}）的身份`,
+						next: "先用 research_zotero_save / research_verify_literature 写入并核对，再继续；若这个 DOI 本身不对，用 task_wait kind=rebind 请用户确认换成真实文献",
+					}
+				: {
+						reason: "这一项还没有对应的文献：精读后写入 Zotero 的回执会把 DOI 绑定过来",
+						next: "对精读过的每篇调用 research_zotero_save（用户逐条同意），宿主读回后自动绑定并验收",
+					},
 	});
 }
 

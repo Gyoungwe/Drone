@@ -5,6 +5,7 @@ import { isReadOnlyTool } from "../tool-manifest.mjs";
 import {
 	acceptanceKinds,
 	CORE_ACCEPTANCE_KINDS,
+	effectiveAcceptance,
 	normalizeAcceptance,
 	acceptanceVerifier as registeredVerifier,
 	acceptanceVerifiers as registeredVerifiers,
@@ -467,10 +468,37 @@ export function createTaskWorkbench({
 	}
 	function wait(input) {
 		const t = requireTask();
-		if (!["file", "download", "authorization", "review"].includes(input.kind))
+		if (!["file", "download", "authorization", "review", "rebind"].includes(input.kind))
 			throw error("action-kind", "Unknown user action.");
 		if (t.actions.filter((a) => a.state === "pending").length >= LIMITS.actions)
 			throw error("action-limit", "Resolve an existing action first.");
+		// 改绑：把已批准里程碑的身份（如 DOI）换成后来才确认的真实文献；只提出请求，用户在确认框里点头才生效。
+		let rebind = null;
+		if (input.kind === "rebind") {
+			const m = t.milestones.find((m) => m.id === input.milestoneId);
+			if (!m) throw error("rebind-milestone", "Name an existing milestone of this task to rebind.");
+			if (!t.planApproved)
+				throw error(
+					"rebind-plan",
+					"Rebind applies to an approved plan; before approval call task_plan with the correct identity.",
+				);
+			const fields = verifierFor(m.acceptance.kind)?.fields || [];
+			const doi = clean(input.doi, 512);
+			if (!fields.includes("doi") || !doi)
+				throw error(
+					"rebind-identity",
+					"Only milestones whose acceptance declares a doi field can be rebound; supply the new doi.",
+				);
+			const current = effectiveAcceptance(m);
+			if (sameIdentity(current.doi, doi))
+				throw error(
+					"rebind-same",
+					"This milestone already names that identity; verify it instead of rebinding.",
+				);
+			if (t.actions.some((a) => a.kind === "rebind" && a.state === "pending" && a.milestoneId === m.id))
+				throw error("rebind-pending", "A rebind request for this milestone is already waiting for the user.");
+			rebind = { milestoneId: m.id, doi, previous: clean(current.doi, 512) || null };
+		}
 		let url = null;
 		if (input.url) {
 			const parsed = new URL(input.url);
@@ -490,11 +518,12 @@ export function createTaskWorkbench({
 			reason: clean(input.reason),
 			url,
 			expected: {
-				kind: input.kind === "download" ? "pdf" : "file",
-				doi: clean(input.doi),
+				kind: input.kind === "download" ? "pdf" : rebind ? "identity" : "file",
+				doi: rebind ? rebind.doi : clean(input.doi),
 				title: clean(input.title),
 				sha256: /^[a-f0-9]{64}$/.test(input.sha256 || "") ? input.sha256 : null,
 			},
+			...(rebind ? { previous: rebind.previous } : {}),
 			milestoneId: t.milestones.some((m) => m.id === input.milestoneId) ? input.milestoneId : null,
 			state: "pending",
 			createdAt: now(),
@@ -614,6 +643,13 @@ export function createTaskWorkbench({
 			a.resolvedAt = now();
 			if (a.file) a.file.identity = a.file.identity === "hash-matched" ? "hash-matched" : "human-confirmed";
 			const m = t.milestones.find((m) => m.id === a.milestoneId);
+			// 用户在确认框里同意改绑：替换该里程碑的运行期身份，之前的核对结果作废，等待重新读回。
+			if (m && a.state === "acknowledged" && a.kind === "rebind" && a.expected?.doi) {
+				m.bound = { fields: { doi: a.expected.doi }, via: "rebind", actionId: a.id, at: now() };
+				m.state = "pending";
+				m.evidence = null;
+				t.unboundIdentities = (t.unboundIdentities || []).filter((u) => !sameIdentity(u.doi, a.expected.doi));
+			}
 			if (
 				m &&
 				a.state === "acknowledged" &&
@@ -669,13 +705,29 @@ export function createTaskWorkbench({
 			if (!verifier?.verify) continue;
 			let result;
 			try {
-				result = (await verifier.verify(m.acceptance, { cwd, task: clone(t) })) || { state: "unknown" };
+				result = (await verifier.verify(effectiveAcceptance(m), { cwd, task: clone(t) })) || {
+					state: "unknown",
+				};
 			} catch (e) {
 				result = { state: "unknown", reason: clean(e?.message || "verifier-failed") };
 			}
 			checkRevision(id, revision);
-			m.state = result.state === "found" && depsDone(t, m) ? "completed" : "blocked";
+			// pending = 身份尚未绑定（如 DOI 待精读后确定），不是核对失败
+			m.state =
+				result.state === "found" && depsDone(t, m)
+					? "completed"
+					: result.state === "pending"
+						? "pending"
+						: "blocked";
 			m.evidence = { ...result, kind: verifier.evidenceKind, at: now() };
+			// 读回成功也确认了带回该身份的那次写入操作的结果（挂钩 2 identify）
+			if (result.state === "found")
+				for (const op of t.operations)
+					if (op.identityMilestoneId === m.id && ["returned", "unknown"].includes(op.state)) {
+						op.state = "verified";
+						op.verifier = verifier.operationVerifier;
+						op.checkedAt = now();
+					}
 		}
 		for (const m of t.milestones) {
 			if (m.acceptance.kind !== "file") continue;
@@ -799,7 +851,8 @@ export function createTaskWorkbench({
 		for (const m of t.milestones || []) {
 			const verifier = verifierFor(m.acceptance?.kind);
 			if (!verifier?.consent) continue;
-			const entry = verifier.consent(m.acceptance);
+			// 只有用户在确认框里点头的改绑身份才进入写入同意；写入回执自动绑定的身份不扩大授权
+			const entry = verifier.consent(m.bound?.via === "rebind" ? effectiveAcceptance(m) : m.acceptance);
 			if (entry) acceptances.push({ milestoneId: m.id, kind: m.acceptance.kind, ...entry });
 		}
 		return { taskId: t.id, writeRoots: [...(t.writeRoots || [])], ...t.executionConsent, acceptances };
@@ -1001,6 +1054,45 @@ export function createTaskWorkbench({
 		save();
 		return null;
 	}
+	const sameIdentity = (a, b) =>
+		!!a && !!b && String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+	/** 把工具回执里的身份绑到第一个尚无身份的同类里程碑；已点名的身份不重复绑，找不到空位只记录，不改契约。 */
+	function bindIdentity(t, verifier, identity, op) {
+		if (!identity || typeof identity !== "object") return null;
+		const fields = {};
+		for (const field of verifier.fields || [])
+			if (typeof identity[field] === "string" && identity[field].trim())
+				fields[field] = clean(identity[field], 512);
+		const keys = Object.keys(fields);
+		if (!keys.length) return null;
+		const candidates = t.milestones.filter((m) => m.acceptance?.kind === verifier.kind);
+		if (!candidates.length) return null;
+		const matches = (m) => {
+			const current = effectiveAcceptance(m);
+			return keys.every((k) => sameIdentity(current[k], fields[k]));
+		};
+		const named = candidates.find(matches);
+		if (named) {
+			// 计划里已点名（或先前已绑定）的身份：不重复绑，只把这次操作挂到该里程碑，读回后一并核实
+			if (op) op.identityMilestoneId = named.id;
+			return null;
+		}
+		const slot = candidates.find((m) => {
+			const current = effectiveAcceptance(m);
+			return m.state !== "completed" && keys.every((k) => !current[k]);
+		});
+		if (!slot) {
+			t.unboundIdentities = [
+				...(t.unboundIdentities || []).filter((u) => !keys.every((k) => sameIdentity(u[k], fields[k]))),
+				{ kind: verifier.kind, ...fields, tool: op?.tool || null, at: now() },
+			].slice(-8);
+			return null;
+		}
+		slot.bound = { fields, via: op?.tool || "tool-receipt", operationId: op?.id || null, at: now() };
+		slot.evidence = null;
+		if (op) op.identityMilestoneId = slot.id;
+		return slot;
+	}
 	async function observe(event, cwd) {
 		const t = active();
 		if (!t) return;
@@ -1081,6 +1173,17 @@ export function createTaskWorkbench({
 				op.candidateId = clean(review.id);
 				op.review = { kind: verifier.kind, id: clean(review.id), path: clean(review.path, 512) || null };
 				break;
+			}
+			// 运行期身份绑定（挂钩 2 identify）：计划时未知的 DOI 等身份，由成功的工具回执绑到尚无身份的同类里程碑
+			for (const verifier of allVerifiers()) {
+				if (!verifier.identify) continue;
+				let identity = null;
+				try {
+					identity = verifier.identify(event, details);
+				} catch {
+					identity = null;
+				}
+				bindIdentity(t, verifier, identity, op);
 			}
 		}
 		t.receipts.push({

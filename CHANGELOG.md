@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `zotero_item` milestones no longer need the DOI at plan time: a successful `research_zotero_save` receipt (saved / reused, host read-back key) is bound by the host to the first DOI-less `zotero_item` milestone (`milestone.bound`, approved contract and its hash untouched) and verified by read-back at the next reconcile; DOI-less milestones show as pending instead of blocked. Verifiers may declare the new optional `identify(event, details)` hook (`docs/extension-hooks.md`, hook 2). When the planned or bound DOI turns out to be the wrong paper, `task_wait kind=rebind` (`milestoneId` + `doi` + `reason`) opens the same confirmation card with old → new DOI; only the user's approval rebinds it, and a rebind-approved DOI counts as plan-named for Zotero write consent. The evidence example task now asks for one `zotero_item` milestone per read paper with the DOI left empty.
+
 ## 0.11.0 — 2026-09-20
 
 - Typing `@` at the start of a message now offers the session's subagents ahead of project files (drone avatars, source badge, untrusted project definitions greyed out). Picking one turns it into a chip; the text after it is the task and Enter dispatches it straight into the session — the same single-task dispatch as the Subagents panel form (`subagents:dispatch`, followUp on, session cwd, no required tools), never through the main model. `@` further into the text, inside a `/` command, on a draft or read-only session, or after a chip is already set keeps behaving exactly as before (files only); a chip suppresses the `/` menu. Esc, Backspace on empty text and the chip's × undo it back to `@name `; a rejected dispatch restores the whole draft with the reason in the send error bar. Project-level definitions still require the per-dispatch trust checkbox, so picking one jumps to the panel form with the agent preselected. See `docs/subagents-panel.md` (输入框 `@` 派发).

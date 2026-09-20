@@ -10,6 +10,7 @@ import {
 	acceptanceVerifier,
 	CORE_ACCEPTANCE_KINDS,
 	describeAcceptance,
+	effectiveAcceptance,
 	normalizeAcceptance,
 	registerAcceptanceVerifier,
 	resetAcceptanceVerifiers,
@@ -56,7 +57,28 @@ describe("acceptance verifier registry (hook 2)", () => {
 			/invalid field "sha256"/,
 		);
 		expect(() => registerAcceptanceVerifier("x_kind", { verify: "nope" })).toThrow(/must be a function/);
+		expect(() => registerAcceptanceVerifier("x_kind", { identify: "nope" })).toThrow(/must be a function/);
 		expect(acceptanceKinds()).toEqual([...CORE_ACCEPTANCE_KINDS]);
+	});
+
+	it("keeps identify optional and merges host-bound identity without rewriting the approved acceptance", () => {
+		const verifier = registerAcceptanceVerifier("x_kind", { fields: ["doi"] });
+		expect(verifier.identify).toBeNull();
+		const milestone = {
+			acceptance: { kind: "x_kind", path: "", sha256: null, doi: "" },
+			bound: { fields: { doi: "10.1/bound" }, via: "tool" },
+		};
+		expect(effectiveAcceptance(milestone)).toEqual({
+			kind: "x_kind",
+			path: "",
+			sha256: null,
+			doi: "10.1/bound",
+		});
+		expect(milestone.acceptance.doi).toBe("");
+		expect(effectiveAcceptance({ acceptance: { kind: "x_kind", doi: "10.1/planned" } })).toEqual({
+			kind: "x_kind",
+			doi: "10.1/planned",
+		});
 	});
 
 	it("schema captured before registration sees kinds AND fields registered later (model view + pi validation)", () => {

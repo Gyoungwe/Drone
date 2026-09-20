@@ -59,6 +59,7 @@ registerAcceptanceVerifier("zotero_item", {
 	verify: async (a, { cwd, task }) => ({ state: "found", summary, note, links, …}), // reconcile 时核对
 	observe: (event, details) => ({ id, path }) ,  // 某次工具结果产生了待审对象
 	resolve: async (review, { cwd }) => ({ status: "applied" | "pending" | "rejected", path, stale }),
+	identify: (event, details) => ({ doi }),        // 某次成功回执带回了可绑定到本种类里程碑的身份（只认 fields 里的字段）
 	consent: (a) => ({ doi: a.doi }),              // 授权后暴露给扩展的契约条目
 	pending: (m) => ({ reason, next }),
 	acknowledgeError: { code, message },           // 任务卡「确认」不能完成时的错误
@@ -68,6 +69,15 @@ registerAcceptanceVerifier("zotero_item", {
 - `workbench.authorization()` 返回通用的 `acceptances: [{ milestoneId, kind, …consent }]`，不再有 `zoteroItems` 特例；
   Zotero 写入在扩展内自行匹配 `grant.acceptances`。
 - 操作级审阅（Wiki 候选）经 `observe` / `resolve` 写入 `operation.review {kind,id,path}`。
+- 运行期身份绑定：计划时未知的身份（如精读后才确定的 DOI）可以留空；成功回执经 `identify` 返回身份后，
+  宿主把它绑到第一个尚无身份的同种类里程碑（`milestone.bound = { fields, via, operationId, at }`），
+  契约 `acceptance` 与授权哈希不变，`verify` / `label` / `pending` 收到的是 `effectiveAcceptance(milestone)`
+  （acceptance + bound.fields）。`verify` 返回 `{ state: "pending" }` 表示身份未绑定，里程碑保持 `pending` 而非 `blocked`。
+  已点名的身份不重复绑；每个同类里程碑都已点名别的身份时只记入 `task.unboundIdentities`（不改契约）。
+- 改绑：计划里或先前绑定的身份被证明是错误文献时，模型用 `task_wait kind=rebind`（`milestoneId` + `doi` + `reason`）
+  提出请求；宿主用同一张 AskDialog 让用户确认（显示原 DOI → 新 DOI），同意后 `milestone.bound.via = "rebind"`、
+  旧核对结果作废并重新读回。只有 `via = "rebind"` 的身份进入 `authorization().acceptances`（等同计划点名的 DOI，
+  写入不再二次弹窗）；回执自动绑定的身份不扩大任何同意。
 - 登记时机：`task_plan` 的 acceptance schema 按引用持有登记表里的 `kinds` 与 `properties`（活对象），
   所以在 `task_plan` 之后加载的扩展（真实顺序里 `zotero-literature` 晚于 `obsidian-workbench`）登记的
   种类与字段，模型看到的 schema 与 pi 的参数校验都能看到。但 pi 在第一次调用工具时才编译并缓存校验器，
