@@ -1,4 +1,5 @@
 import type { AskRequest, AskResponse } from "./ask";
+import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
 import type { LanStatus } from "./lan";
 import type { McpConfigSnapshot, McpStatus, McpStatusEvent } from "./mcp";
@@ -99,6 +100,15 @@ export const IpcChannels = {
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
 	ZoteroStatus: "zotero:status",
+
+	/** 机构访问（合法机构通道，持久登录会话 + EZproxy 模板） */
+	InstitutionalGetStatus: "institutional:getStatus",
+	InstitutionalSaveConfig: "institutional:saveConfig",
+	InstitutionalOpenLogin: "institutional:openLogin",
+	InstitutionalOpenUrl: "institutional:openUrl",
+	InstitutionalClear: "institutional:clear",
+	InstitutionalTestAccess: "institutional:testAccess",
+	InstitutionalEvent: "institutional:event",
 
 	SessionCreate: "session:create",
 	SessionList: "session:list",
@@ -364,6 +374,18 @@ export interface PiApi extends KnowledgeApi {
 	onMcpEvent(cb: (event: McpStatusEvent) => void): () => void;
 	/** Zotero 文献库接入状态（注册/启用/本机 API 可达/桌面端检测）；面板用，只读 */
 	getZoteroStatus(): Promise<ZoteroStatus>;
+	/** 机构访问状态（配置 + 会话 Cookie + 是否已登录）；文献库面板用 */
+	getInstitutionalStatus(): Promise<InstitutionalStatus>;
+	/** 保存机构访问配置（EZproxy 模板 / OpenURL / 机构名 / 自动下载开关 / 上限） */
+	saveInstitutionalConfig(input: InstitutionalSaveInput): Promise<InstitutionalStatus>;
+	/** 打开机构登录窗口（可选 URL，未传则用上次或模板） */
+	openInstitutionalLogin(url?: string): Promise<{ url: string }>;
+	/** 在机构会话窗口中打开指定 URL（用于手动下载或测试） */
+	openInstitutionalUrl(url: string): Promise<{ url: string }>;
+	/** 清除机构会话（Cookie + 存储） */
+	clearInstitutionalSession(): Promise<InstitutionalStatus>;
+	/** 测试机构访问是否可达（经 EZproxy 模板与会话） */
+	testInstitutionalAccess(url: string): Promise<InstitutionalTestResult>;
 	saveApiKey(providerId: string, key: string): Promise<void>;
 	removeCredential(providerId: string): Promise<void>;
 	addCustomProvider(input: CustomProviderInput): Promise<void>;
@@ -578,6 +600,12 @@ export const INVOKE_ROUTES = {
 	getMcpConfig: IpcChannels.McpGetConfig,
 	setMcpServerEnabled: IpcChannels.McpSetServerEnabled,
 	getZoteroStatus: IpcChannels.ZoteroStatus,
+	getInstitutionalStatus: IpcChannels.InstitutionalGetStatus,
+	saveInstitutionalConfig: IpcChannels.InstitutionalSaveConfig,
+	openInstitutionalLogin: IpcChannels.InstitutionalOpenLogin,
+	openInstitutionalUrl: IpcChannels.InstitutionalOpenUrl,
+	clearInstitutionalSession: IpcChannels.InstitutionalClear,
+	testInstitutionalAccess: IpcChannels.InstitutionalTestAccess,
 	// Settings
 	saveApiKey: IpcChannels.SettingsSaveApiKey,
 	removeCredential: IpcChannels.SettingsRemoveCredential,

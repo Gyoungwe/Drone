@@ -1,3 +1,4 @@
+export * from "./institutional";
 export {
 	JsonStore,
 	JsonStoreCorruptedError,
