@@ -2,6 +2,12 @@ import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadWorkspaceConfig } from "../extensions/workspace-config.mjs";
+import {
+	buildProxiedUrl,
+	institutionalFetch,
+	isElectronAvailable,
+	loadInstitutionalConfig,
+} from "./institutional-access.mjs";
 import { normalizeDoi } from "./literature-receipt.mjs";
 import { publishSourceNote } from "./obsidian-workbench.mjs";
 import { normalizePmcid, normalizePmid, OA_MAX_CANDIDATES, resolveOpenAccess } from "./open-access.mjs";
@@ -552,9 +558,162 @@ export async function archiveSource({
 			});
 		}
 	}
+	// 2.5) 机构访问通道（合法机构会话 + EZproxy 模板）：仅当配置允许且未超限时尝试
+	const _institutionalResult = null;
+	let institutionalConfig = null;
+	try {
+		institutionalConfig = await loadInstitutionalConfig();
+	} catch {
+		institutionalConfig = null;
+	}
+	const institutionalEnabled =
+		institutionalConfig?.autoDownloadEnabled !== false && institutionalConfig?.configured;
+	if (institutionalEnabled && isElectronAvailable()) {
+		// 检查每任务上限
+		const limit = institutionalConfig?.perTaskLimit ?? 20;
+		let used = 0;
+		try {
+			const manifest = await readManifest(manifestPath, runDir);
+			used = manifest.items.filter((it) => it.open_access?.source === "institutional").length;
+		} catch {
+			used = 0;
+		}
+		if (used >= limit) {
+			const failureLimit = {
+				url: url || `https://doi.org/${identity.doi || ""}`.replace(/\/$/, ""),
+				category,
+				failed_at: new Date().toISOString(),
+				reason: `institutional limit reached: ${used}/${limit} files already fetched via institutional access in this run`,
+				browser_required: false,
+				open_access: {
+					doi: identity.doi,
+					pmcid: resolution.pmcid || identity.pmcid,
+					pmid: resolution.pmid || identity.pmid,
+					oa_status: resolution.oaStatus || null,
+					license: resolution.license || null,
+					queried: resolution.queried,
+					attempts,
+				},
+				institutional: {
+					limit,
+					used,
+					status: "limit_reached",
+				},
+			};
+			await recordFailure(manifestPath, failuresPath, runDir, failureLimit);
+			return {
+				status: "institutional_limit_reached",
+				...failureLimit,
+				manifest_path: manifestPath,
+				failures_path: failuresPath,
+			};
+		}
+
+		const candidates = [];
+		// Build proxied URLs for original url and OA candidates that failed
+		const originalForProxy = url || (identity.doi ? `https://doi.org/${identity.doi}` : null);
+		const urlsToTry = [];
+		if (originalForProxy) urlsToTry.push(originalForProxy);
+		for (const c of resolution.candidates.slice(0, candidateLimit)) {
+			if (c.url && !urlsToTry.includes(c.url)) urlsToTry.push(c.url);
+		}
+		// Also try doi.org directly
+		if (identity.doi) {
+			const doiUrl = `https://doi.org/${identity.doi}`;
+			if (!urlsToTry.includes(doiUrl)) urlsToTry.push(doiUrl);
+		}
+
+		for (const u of urlsToTry) {
+			const proxied = institutionalConfig.ezproxyTemplate
+				? buildProxiedUrl(u, institutionalConfig.ezproxyTemplate)
+				: null;
+			if (proxied) candidates.push({ url: proxied, via: "ezproxy", original: u });
+			candidates.push({ url: u, via: "institutional_session", original: u });
+		}
+
+		for (const cand of candidates) {
+			if (signal?.aborted) break;
+			try {
+				const inst = await institutionalFetch(cand.url, { timeoutMs: Math.min(timeout, 20000) });
+				if (inst.status >= 200 && inst.status < 400) {
+					const ct = inst.headers["content-type"] || "";
+					const _isPdf = ct.includes("pdf") || cand.url.toLowerCase().includes(".pdf");
+					const isHtmlLogin =
+						ct.includes("text/html") &&
+						inst.body.byteLength < 100000 &&
+						(() => {
+							try {
+								const snippet = new TextDecoder().decode(inst.body.slice(0, 4000)).toLowerCase();
+								return (
+									snippet.includes("shibboleth") ||
+									(snippet.includes("login") && snippet.includes("password")) ||
+									(snippet.includes("openathens") && snippet.includes("sign in")) ||
+									(snippet.includes("ezproxy") && snippet.includes("login"))
+								);
+							} catch {
+								return false;
+							}
+						})();
+					if (isHtmlLogin) {
+						attempts.push({
+							url: cand.url,
+							source: cand.via === "ezproxy" ? "ezproxy" : "institutional_session",
+							reason: `institutional auth required (login page detected at ${cand.url.slice(0, 120)})`,
+							browser_required: true,
+						});
+						continue;
+					}
+					// If we got something, try to persist
+					const outputName = safeFilename(
+						filename ||
+							filenameFromResponse(
+								{ headers: { get: (k) => inst.headers[k.toLowerCase()] || "" } },
+								inst.finalUrl,
+								category,
+							),
+						`${category}-${randomUUID()}.bin`,
+					);
+					try {
+						return await persist(inst.body, {
+							resolvedUrl: inst.finalUrl,
+							contentType: ct || "application/pdf",
+							outputName: /\.pdf$/i.test(outputName)
+								? outputName
+								: `${outputName.replace(/\.[a-z0-9]{1,5}$/i, "")}.pdf`,
+							openAccess: {
+								source: "institutional",
+								url: cand.url,
+								original_url: cand.original,
+								via: cand.via,
+								candidates_tried: attempts.length + 1,
+							},
+						});
+					} catch (error) {
+						attempts.push({
+							url: cand.url,
+							source: cand.via === "ezproxy" ? "ezproxy" : "institutional_session",
+							reason: error.message,
+							browser_required: false,
+						});
+					}
+				}
+			} catch (error) {
+				attempts.push({
+					url: cand.url,
+					source: cand.via === "ezproxy" ? "ezproxy" : "institutional_session",
+					reason: error.message,
+					browser_required: /HTTP (401|403|407|429)|login|auth|shibboleth|captcha/i.test(error.message),
+				});
+			}
+		}
+	}
+
 	// 3) 没有合法 OA 版本：如实记录一次；闭源文献只能由用户用自己的访问权限下载后以 local_file 导入
 	const challenged = attempts.find((a) => a.browser_required);
 	const label = identity.doi ? `doi:${identity.doi}` : identity.pmcid || `pmid:${identity.pmid}`;
+	const institutionalAttempt = attempts.find(
+		(a) => a.source === "ezproxy" || a.source === "institutional_session",
+	);
 	const failure = {
 		url: url || `https://doi.org/${identity.doi || ""}`.replace(/\/$/, ""),
 		category,
@@ -573,12 +732,39 @@ export async function archiveSource({
 			queried: resolution.queried,
 			attempts,
 		},
+		institutional: institutionalConfig
+			? {
+					configured: Boolean(institutionalConfig.configured),
+					auto_enabled: institutionalConfig.autoDownloadEnabled,
+					ezproxy_template: institutionalConfig.ezproxyTemplate ? "set" : "not_set",
+					attempted: Boolean(institutionalAttempt),
+					last_login_at: institutionalConfig.lastLoginAt || null,
+				}
+			: { configured: false },
 		manual_import: {
-			how: "If you have legitimate access (institutional login, purchase or the author's copy), download the PDF in your own browser, place it under .pi/browser-downloads, then call research_archive_source with local_file and human_verified=true. Do not use pirate mirrors.",
+			how: "If you have legitimate access (institutional login, purchase or the author's copy), download the PDF in your own browser, place it under .pi/browser-downloads, then call research_archive_source with local_file and human_verified=true. Or configure institutional access in Settings → Zotero panel → Institutional Access and log in once. Do not use pirate mirrors.",
 			task_wait: { kind: "download", doi: identity.doi, title: resolution.title || null },
+			institutional_login: institutionalConfig?.configured
+				? {
+						action: "open_login",
+						hint: "Institutional session may have expired; open Settings → Zotero → Institutional Access → Login",
+					}
+				: {
+						action: "configure",
+						hint: "Set EZproxy template or log in via institutional browser in Settings",
+					},
 		},
 	};
 	await recordFailure(manifestPath, failuresPath, runDir, failure);
+	// If institutional was configured but auth failed, surface as institutional_auth_required so UI can prompt login
+	if (institutionalConfig?.configured && institutionalAttempt && challenged) {
+		return {
+			status: "institutional_auth_required",
+			...failure,
+			manifest_path: manifestPath,
+			failures_path: failuresPath,
+		};
+	}
 	return { status: "no_open_access", ...failure, manifest_path: manifestPath, failures_path: failuresPath };
 }
 

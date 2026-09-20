@@ -6,6 +6,7 @@ import type { LanObserverHandle } from "../lan";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
+import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
 import { registerLanIpc } from "./lan";
 import { registerPackagesIpc } from "./packages";
@@ -39,6 +40,7 @@ export function registerIpc(
 	registerKnowledgeIpc(backend);
 	registerPackagesIpc(backend);
 	registerAppIpc(backend);
+	registerInstitutionalIpc();
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
