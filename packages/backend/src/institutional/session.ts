@@ -72,6 +72,108 @@ export async function clearInstitutionalSession(): Promise<void> {
 	}
 }
 
+let loginWindow: any | null = null;
+
+function getOrCreateLoginWindow(): any {
+	if (loginWindow && !loginWindow.isDestroyed()) {
+		loginWindow.focus();
+		return loginWindow;
+	}
+	const loaded = tryLoadElectron();
+	if (!loaded) throw new Error("Electron unavailable");
+	const { BrowserWindow, shell } = require("electron");
+	const win = new BrowserWindow({
+		width: 1220,
+		height: 860,
+		show: true,
+		title: "机构访问登录 - Drone",
+		webPreferences: {
+			partition: PARTITION,
+			nodeIntegration: false,
+			contextIsolation: true,
+			sandbox: true,
+		},
+		autoHideMenuBar: true,
+	});
+	loginWindow = win;
+	win.on("closed", () => {
+		loginWindow = null;
+	});
+	win.webContents.setWindowOpenHandler(({ url }: { url: string }) => {
+		if (url.startsWith("http://") || url.startsWith("https://")) {
+			return { action: "allow" };
+		}
+		void shell.openExternal(url);
+		return { action: "deny" };
+	});
+
+	// Auto-detect EZproxy template and touch login time on navigation
+	win.webContents.on("did-navigate", async (_event: any, url: string) => {
+		log.info("institutional window navigated", { url: url.slice(0, 200) });
+		try {
+			const { touchInstitutionalLogin, detectAndSaveTemplateFromUrl } = await import("./config");
+			await touchInstitutionalLogin(url);
+			await detectAndSaveTemplateFromUrl(url);
+		} catch {}
+	});
+
+	win.webContents.on("did-finish-load", async () => {
+		try {
+			const url = win.webContents.getURL();
+			const { touchInstitutionalLogin, detectAndSaveTemplateFromUrl } = await import("./config");
+			await touchInstitutionalLogin(url);
+			await detectAndSaveTemplateFromUrl(url);
+		} catch {}
+	});
+
+	return win;
+}
+
+export async function openInstitutionalLoginWindow(url?: string): Promise<{ url: string }> {
+	const loaded = tryLoadElectron();
+	if (!loaded) throw new Error("Electron unavailable");
+	const { loadInstitutionalConfig } = await import("./config");
+	const cfg = await loadInstitutionalConfig();
+	const target =
+		url ||
+		cfg.lastLoginUrl ||
+		cfg.ezproxyTemplate?.replace("%s", "") ||
+		"https://www.google.com/search?q=institutional+login";
+	let initialUrl = target;
+	if (initialUrl.includes("%s")) initialUrl = initialUrl.replace("%s", "https://www.nature.com/");
+	try {
+		new URL(initialUrl);
+	} catch {
+		initialUrl = "https://www.google.com/";
+	}
+	const win = getOrCreateLoginWindow();
+	await win.loadURL(initialUrl);
+	win.show();
+	win.focus();
+	return { url: initialUrl };
+}
+
+export async function openInstitutionalUrlInWindow(url: string): Promise<{ url: string }> {
+	const loaded = tryLoadElectron();
+	if (!loaded) throw new Error("Electron unavailable");
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw new Error("Invalid URL");
+	}
+	if (!/^https?:$/.test(parsed.protocol)) throw new Error("Only http(s) URLs allowed");
+	const { loadInstitutionalConfig, buildProxiedUrl } = await import("./config");
+	const cfg = await loadInstitutionalConfig();
+	const proxied = cfg.ezproxyTemplate ? buildProxiedUrl(url, cfg.ezproxyTemplate) : null;
+	const finalUrl = proxied || url;
+	const win = getOrCreateLoginWindow();
+	await win.loadURL(finalUrl);
+	win.show();
+	win.focus();
+	return { url: finalUrl };
+}
+
 export interface InstitutionalFetchOptions {
 	timeoutMs?: number;
 	headers?: Record<string, string>;

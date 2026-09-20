@@ -106,6 +106,56 @@ export function buildProxiedUrl(originalUrl, template) {
 	}
 }
 
+export function inferEzproxyTemplateFromUrl(navigatedUrl) {
+	try {
+		const u = new URL(navigatedUrl);
+		const href = u.href;
+		if (u.hostname.includes("ezproxy") && u.search) {
+			const params = new URLSearchParams(u.search);
+			const target = params.get("url");
+			if (target && /^https?:\/\//i.test(target)) {
+				const base = `${href.split("url=")[0]}url=`;
+				if (/^https?:\/\//i.test(base)) return `${base}%s`;
+			}
+			if ((href.includes("url=") && /url=https?%3A/i.test(href)) || href.includes("url=https://")) {
+				const idx = href.indexOf("url=");
+				if (idx > 0) {
+					const base = href.slice(0, idx + 4);
+					if (/^https?:\/\//i.test(base)) return `${base}%s`;
+				}
+			}
+		}
+		if ((href.includes("?url=") || href.includes("&url=")) && /url=https?/i.test(href)) {
+			const match = href.match(/^(https?:\/\/[^?]+\?[^=]*url=)/i);
+			if (match) {
+				const base = match[1];
+				if (base.length < 200) return `${base}%s`;
+			}
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+export async function detectAndSaveTemplateFromUrl(navigatedUrl) {
+	const { writeFile, mkdir } = await import("node:fs/promises");
+	const { dirname } = await import("node:path");
+	const inferred = inferEzproxyTemplateFromUrl(navigatedUrl);
+	if (!inferred) return null;
+	try {
+		const cfg = await loadInstitutionalConfig();
+		if (cfg.ezproxyTemplate === inferred) return cfg;
+		const next = { ...cfg, ezproxyTemplate: inferred, configured: true };
+		const path = configPath();
+		await mkdir(dirname(path), { recursive: true });
+		await writeFile(path, JSON.stringify(next, null, 2));
+		return next;
+	} catch {
+		return null;
+	}
+}
+
 let electronSession = null;
 let electronNet = null;
 
