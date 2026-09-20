@@ -33,7 +33,7 @@ export const zh = {
 		confirmations: "将遇到的确认",
 		auth: {
 			task: "任务授权卡：task_plan 建立任务后，由你批准才开始执行",
-			"zotero-write": "Zotero 写入：每次写入单独征求同意",
+			"zotero-write": "Zotero 写入：任务授权卡上列出的几篇不再单独询问，计划之外的写入才会再问",
 			"external-delivery": "外发 / 推送：需要单独授权",
 		},
 		artifacts: "预期产物",

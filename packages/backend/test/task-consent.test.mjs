@@ -200,21 +200,55 @@ async function registered({ withPlan = true } = {}) {
 		);
 	return { j, pi, ctx, events, commands, approve, idle };
 }
-+it("授权后停在半路：agent_end 主动弹窗问去留，而不是只刷一张卡", async () => {
-	const { ctx, events, approve } = await registered({ withPlan: true });
+const readProgress = async (events, ctx, id) => {
+	const input = { path: `${id}.txt` };
+	events.tool_call({ toolName: "read", toolCallId: id, input });
+	await events.tool_result(
+		{ toolName: "read", toolCallId: id, input, result: { content: [{ type: "text", text: "ok" }] } },
+		ctx,
+	);
+};
+const hostRuns = (pi) => pi.sendMessage.mock.calls.filter(([, o]) => o?.triggerTurn);
+it("授权后停在半路且本回合有进展：agent_end 按同一份授权自动接续，不弹窗、不等用户说继续", async () => {
+	const { j, pi, ctx, events, approve } = await registered({ withPlan: true });
 	vi.useFakeTimers();
 	await approve();
 	await vi.runOnlyPendingTimersAsync();
-	// 本回合确实干了活（progressCount 增长），但里程碑仍未验收
-	events.tool_call({ toolName: "read", toolCallId: "call_p", input: { path: "p.txt" } });
-	await events.tool_result(
-		{ toolName: "read", toolCallId: "call_p", result: { content: [{ type: "text", text: "ok" }] } },
-		ctx,
-	);
+	pi.sendMessage.mockClear();
+	// 本回合确实干了活（progressCount 增长），但里程碑仍未验收，模型只说了句话就结束
+	await readProgress(events, ctx, "call_p");
+	ctx.ui.select.mockClear();
+	await events.agent_end({ messages: [{ role: "assistant", stopReason: "endTurn" }] }, ctx);
+	await vi.runOnlyPendingTimersAsync();
+	expect(ctx.ui.select).not.toHaveBeenCalled();
+	expect(hostRuns(pi)).toHaveLength(1);
+	expect(hostRuns(pi)[0][0].customType).toBe("drone-task-autocontinue");
+	expect(j.snapshot()).toMatchObject({ reason: "automatic-handoff", budget: { autoHandoffs: 1 } });
+	// 接续后的回合若没有任何新进展就收口：不再接续也不弹窗（不让模型原地打转）
+	pi.sendMessage.mockClear();
+	await events.agent_end({ messages: [{ role: "assistant", stopReason: "endTurn" }] }, ctx);
+	await vi.runOnlyPendingTimersAsync();
+	expect(hostRuns(pi)).toHaveLength(0);
+	expect(ctx.ui.select).not.toHaveBeenCalled();
+});
+
+it("自动接续用完上限后，回合末改为主动弹窗问去留，而不是只刷一张卡", async () => {
+	const { j, pi, ctx, events, approve } = await registered({ withPlan: true });
+	vi.useFakeTimers();
+	await approve();
+	await vi.runOnlyPendingTimersAsync();
+	for (let i = 0; i < LIMITS.autoHandoffs; i++) {
+		await readProgress(events, ctx, `call_${i}`);
+		expect(j.reserveHandoff()).toBe(true);
+	}
+	expect(j.snapshot().budget.autoHandoffs).toBe(LIMITS.autoHandoffs);
+	await readProgress(events, ctx, "call_last");
+	pi.sendMessage.mockClear();
 	ctx.ui.select.mockClear();
 	ctx.ui.select.mockImplementation(async () => "暂不处理");
 	await events.agent_end({ messages: [{ role: "assistant", stopReason: "endTurn" }] }, ctx);
 	await vi.runOnlyPendingTimersAsync();
+	expect(hostRuns(pi)).toHaveLength(0);
 	expect(ctx.ui.select).toHaveBeenCalled();
 	const [report, choices] = ctx.ui.select.mock.calls[0];
 	expect(report).toContain("推进剩余事项");

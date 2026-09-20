@@ -46,6 +46,8 @@ interface ExampleTask {
 
 ### A.3 六个示例（初稿，实施时可微调文案）
 
+> 修订（一次授权闭环）：实施后把五条 `human_review` 里程碑改成了交付文件（`scope.md`、`interpretation.md`、`revision-notes.md`、`delivery-check.md`、`handoff-check.md`），选「入 Zotero」时留空 DOI 的 `zotero_item` 作为授权卡上写明的「精读后写入的一篇」槽位，不再逐篇弹卡。现行契约以 `docs/example-tasks.md` 与 `packages/shared/src/example-tasks.json` 为准；下表保留为设计时的初稿。
+
 | # | 方向 | 阶段（命令） | 用户输入 | 里程碑 → 验收 | 边界提醒 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 研究规划与设计 | `ideation`（`/skill:hypothesis-generation`）→ `methods` | 研究问题*，背景材料路径 | ① 问题澄清与边界 → `human_review`；② 竞争假设 + 判别证据清单 `hypotheses.md` → `file`；③ 实验设计草案 → `file` | 不声称已完成实验 |

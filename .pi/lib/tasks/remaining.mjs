@@ -70,6 +70,14 @@ export function remainingExplanation(task) {
 		lines.push(
 			`已记录但未对应到任何交付项：${text(u.doi || u.kind, 140)}。若计划里写的文献有误，用 task_wait kind=rebind（milestoneId + doi + reason）请用户确认更换。`,
 		);
-	if (milestones.length && !remaining.length) lines.push("约定的交付都已确认完成。还想做别的，直接说就行。");
+	if (milestones.length && !remaining.length) {
+		lines.push("约定的交付都已确认完成。还想做别的，直接说就行。");
+		// 命令/外部操作没有可读回的产物，宿主只有它们的返回记录；如实标注，不据此否决交付
+		const returned = (task.operations || []).filter((o) => o.state === "returned").length;
+		const failed = (task.operations || []).filter((o) => o.state === "failed").length;
+		if (returned)
+			lines.push(`其中 ${returned} 步命令/外部操作只有返回记录、没有独立核对；交付以验收过的文件为准。`);
+		if (failed) lines.push(`过程中有 ${failed} 步操作出过错；交付以最终验收过的文件为准。`);
+	}
 	return lines.join("\n").slice(0, 10000);
 }

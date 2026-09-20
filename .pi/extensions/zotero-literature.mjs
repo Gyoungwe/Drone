@@ -81,21 +81,20 @@ export function registerZoteroAcceptance() {
 		label: (acceptance) =>
 			acceptance.doi
 				? `文献进入 Zotero（${acceptance.doi}）`
-				: "文献进入 Zotero（DOI 精读后由宿主按写入回执绑定）",
+				: "文献进入 Zotero（本任务精读后写入的一篇；写入时不再单独询问）",
 		verify: async (acceptance) =>
 			acceptance.doi
 				? describeZoteroEvidence(await reconcile(acceptance))
 				: { state: "pending", reason: "doi-unbound", summary: "还没有文献绑定到这一项" },
 		identify: identifyZoteroReceipt,
-		// 已批准契约里点名的 DOI：写入同意可复用任务授权，不再弹第二张卡
-		consent: (acceptance) =>
-			acceptance.doi
-				? {
-						doi: acceptance.doi,
-						libraryId: acceptance.libraryId || null,
-						collection: acceptance.collection || null,
-					}
-				: null,
+		// 已批准契约里点名的 DOI：写入同意可复用任务授权，不再弹第二张卡。
+		// 计划时留空 DOI 的一项是"精读后写入的一篇"槽位：授权卡上写明了这一点，
+		// 宿主只把尚未绑定的槽位列进写入同意，每个槽位放行一次写入。
+		consent: (acceptance) => ({
+			...(acceptance.doi ? { doi: acceptance.doi } : { slot: true }),
+			libraryId: acceptance.libraryId || null,
+			collection: acceptance.collection || null,
+		}),
 		pending: (m) =>
 			m.acceptance.doi
 				? {
@@ -104,12 +103,28 @@ export function registerZoteroAcceptance() {
 					}
 				: {
 						reason: "这一项还没有对应的文献：精读后写入 Zotero 的回执会把 DOI 绑定过来",
-						next: "对精读过的每篇调用 research_zotero_save（用户逐条同意），宿主读回后自动绑定并验收",
+						next: "对精读过的每篇调用 research_zotero_save（任务授权已涵盖，不再逐条询问），宿主读回后自动绑定并验收",
 					},
 	});
 }
 
-/** Task-level consent covers only DOIs named by zotero_item milestones of an authorized, unchanged plan. */
+/** 计划时未点名 DOI 的槽位：同一任务里每个槽位同时只放行一次写入（并行批量写入时两篇不会争同一槽位）。 */
+const slotClaims = new Map();
+function claimSlot(taskId, milestoneId) {
+	const key = String(taskId || "");
+	const claimed = slotClaims.get(key) || new Set();
+	if (claimed.has(milestoneId)) return false;
+	claimed.add(milestoneId);
+	slotClaims.delete(key);
+	slotClaims.set(key, claimed);
+	while (slotClaims.size > 64) slotClaims.delete(slotClaims.keys().next().value);
+	return true;
+}
+/**
+ * Task-level consent covers DOIs named by zotero_item milestones of an authorized, unchanged plan,
+ * plus the DOI-less slots that plan declared ("one paper written after close reading"): the host lists
+ * only slots not yet bound by a write receipt, so each slot admits exactly one write.
+ */
 async function taskConsentFor(pi, ctx, doi) {
 	let grant = null;
 	await pi.events?.emit?.("drone:task-write-consent", {
@@ -120,13 +135,25 @@ async function taskConsentFor(pi, ctx, doi) {
 		},
 	});
 	const items = Array.isArray(grant?.acceptances) ? grant.acceptances : [];
-	const match = items.find((entry) => entry?.kind === "zotero_item" && normalizeDoi(entry?.doi) === doi);
-	return match ? { taskId: grant.taskId || null, milestoneId: match.milestoneId || null } : null;
+	const named = items.find((entry) => entry?.kind === "zotero_item" && normalizeDoi(entry?.doi) === doi);
+	if (named)
+		return { taskId: grant.taskId || null, milestoneId: named.milestoneId || null, via: "task-plan" };
+	for (const entry of items) {
+		if (entry?.kind !== "zotero_item" || !entry.slot || !entry.milestoneId) continue;
+		if (!claimSlot(grant.taskId, entry.milestoneId)) continue;
+		return {
+			taskId: grant.taskId || null,
+			milestoneId: entry.milestoneId,
+			via: "task-plan-slot",
+			release: () => slotClaims.get(String(grant.taskId || ""))?.delete(entry.milestoneId),
+		};
+	}
+	return null;
 }
 // Same desktop AskGate/AskDialog as ask_user and task authorization; only an exact host-owned choice writes.
 async function consentToZoteroSave(pi, ctx, plan, signal) {
 	const task = await taskConsentFor(pi, ctx, plan.doi);
-	if (task) return { granted: true, via: "task-plan", ...task };
+	if (task) return { granted: true, ...task };
 	if (!ctx.hasUI || !ctx.ui?.select)
 		throw new Error(
 			"Writing to Zotero needs an authorized task plan naming this DOI as a zotero_item milestone, or an interactive desktop confirmation. Neither is available here; no write performed.",
@@ -145,9 +172,16 @@ export async function runZoteroSave(pi, params, ctx, signal, deps = {}) {
 	if (plan.action !== "create") receipt = receiptWithoutWrite(plan);
 	else {
 		consent = await consentToZoteroSave(pi, ctx, plan, signal);
-		receipt = consent.granted
-			? await executeZoteroSave(plan, { signal, ...deps })
-			: receiptWithoutWrite({ ...plan, action: "cancelled", reason: "user-declined" });
+		try {
+			receipt = consent.granted
+				? await executeZoteroSave(plan, { signal, ...deps })
+				: receiptWithoutWrite({ ...plan, action: "cancelled", reason: "user-declined" });
+		} catch (error) {
+			consent.release?.();
+			throw error;
+		}
+		// 槽位写入没有成功读回：把槽位还回去，下一篇（或重试）还能用；成功的写入由宿主绑定回执后自然占住这一项
+		if (!SAVE_BOUND_STATUSES.has(receipt.status)) consent.release?.();
 	}
 	receipt.consent = {
 		via: consent.via,

@@ -87,8 +87,10 @@ describe("composeExampleTaskPrompt", () => {
 		const prompt = composeExampleTaskPrompt(planning, { question: "Q1" }, "zh");
 		expect(prompt).toContain("目标：");
 		expect(prompt).toContain("输入：研究问题=Q1；背景材料路径=（未提供）");
-		expect(prompt).toContain("请先用 task_plan 建立任务并等待我的授权，再开始执行：");
-		expect(prompt).toContain("  1. 问题澄清与边界（验收：human_review）");
+		expect(prompt).toContain(
+			"请先用 task_plan 建立任务并等待我的授权；授权一次后请自主完成全部里程碑，不要中途再询问或等待，需要我判断的内容写进交付文件：",
+		);
+		expect(prompt).toContain("  1. 问题澄清、边界与假定 → scope.md（验收：file）");
 		expect(prompt).toContain("  2. 竞争假设与判别证据清单 → hypotheses.md（验收：file）");
 		expect(prompt).toContain("  3. 实验设计草案 → design.md（验收：file）");
 		expect(prompt).toContain("边界：不声称已完成任何实验；阶段契约：Question, rival hypotheses");
@@ -104,7 +106,9 @@ describe("composeExampleTaskPrompt", () => {
 		).toBe(true);
 		expect(en).toContain("Inputs: Results / data file=C:/data/results.csv; Target format=pdf");
 		expect(en).toContain("Please create the task with task_plan first");
-		expect(en).toContain("  3. Delivery check (acceptance: human_review)");
+		expect(en).toContain(
+			"  3. Delivery checklist (each figure traced to its data) → delivery-check.md (acceptance: file)",
+		);
 		expect(en).toContain("Boundary: AI diagrams are not data plots; stage contract: ");
 	});
 	it("drops the optional Zotero milestone unless the user asked for it", () => {

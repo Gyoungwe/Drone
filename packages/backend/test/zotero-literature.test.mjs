@@ -346,7 +346,7 @@ describe("zotero_item runtime DOI binding (hook 2 identify)", () => {
 	it("labels, verifies and explains DOI-less milestones as pending rather than failed", async () => {
 		const verifier = registerZoteroAcceptance();
 		expect(verifier.identify).toBe(identifyZoteroReceipt);
-		expect(verifier.label({ kind: "zotero_item" })).toContain("精读后由宿主");
+		expect(verifier.label({ kind: "zotero_item" })).toContain("精读后写入的一篇");
 		expect(verifier.label({ kind: "zotero_item", doi: "10.1/x" })).toBe("文献进入 Zotero（10.1/x）");
 		await expect(verifier.verify({ kind: "zotero_item" })).resolves.toMatchObject({
 			state: "pending",
@@ -354,6 +354,16 @@ describe("zotero_item runtime DOI binding (hook 2 identify)", () => {
 		});
 		expect(verifier.pending({ acceptance: { kind: "zotero_item" } }).reason).toContain("还没有对应的文献");
 		expect(verifier.pending({ acceptance: { kind: "zotero_item", doi: "10.1/x" } }).next).toContain("rebind");
-		expect(verifier.consent({ kind: "zotero_item" })).toBeNull();
+		// 计划时留空 DOI 的一项是授权卡上写明的一次性写入槽位：进入写入同意，但只带 slot 标记、不带身份
+		expect(verifier.consent({ kind: "zotero_item" })).toEqual({
+			slot: true,
+			libraryId: null,
+			collection: null,
+		});
+		expect(verifier.consent({ kind: "zotero_item", doi: "10.1/x" })).toEqual({
+			doi: "10.1/x",
+			libraryId: null,
+			collection: null,
+		});
 	});
 });

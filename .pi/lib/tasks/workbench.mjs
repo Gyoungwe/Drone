@@ -23,6 +23,8 @@ export const LIMITS = Object.freeze({
 	actions: 16,
 	stageCalls: 48,
 	totalCalls: 192,
+	/** 授权后模型中途收口时宿主自动接续的上限：每次都要求有新进展，防止空转。 */
+	autoHandoffs: 16,
 	retries: 2,
 	fileBytes: 8 * 1024 * 1024,
 });
@@ -64,6 +66,7 @@ export const REASON_TEXT = Object.freeze({
 	"task-authorization-required": "计划已经准备好，等你点头。确认一次，后面就自动做完，不再反复打扰。",
 	"automatic-recovery": "刚才中断了一下，已经从上次保存的地方接着做，不用你操作。",
 	"automatic-stage-checkpoint": "进展已保存，正在接着做下一部分。",
+	"automatic-handoff": "这一步已保存，按你之前的授权接着做剩下的，不用再确认。",
 	"total-budget": "这个任务的步数已经用完，做出来的结果都保留着。想继续做，请重新描述需求开一个新任务。",
 	"stage-budget": "最近一段没有做出新进展，先停下来保留结果，避免空转。",
 	"budget-review-required": "这一段的步数用完了。先看看目前的结果，确认后可以在任务面板继续。",
@@ -531,6 +534,9 @@ export function createTaskWorkbench({
 		};
 		t.actions.push(action);
 		t.state = "waiting_user";
+		// 自动接续/阶段检查点的说明到这里已经过时：现在是在等用户，别再显示"正在接着做"
+		if (["automatic-handoff", "automatic-stage-checkpoint", "automatic-recovery"].includes(t.reason))
+			t.reason = null;
 		t.waitStartedAt ||= now();
 		save();
 		return clone(action);
@@ -805,20 +811,13 @@ export function createTaskWorkbench({
 			t.state = "blocked";
 			t.reason = "reconcile-before-retry";
 		} else if (t.actions.some((a) => a.state === "pending")) t.state = "waiting_user";
-		else if (
-			t.planApproved &&
-			t.milestones.length &&
-			t.milestones.every((m) => m.state === "completed") &&
-			!t.operations.some((o) => ["failed", "returned"].includes(o.state))
-		) {
+		// 完成 = 每一项交付都有宿主读回的证据，且没有结果不明的操作。命令类操作（bash/powershell）
+		// 只有「已返回」记录、没有可读回的产物，早先它们会让任务永远停在「部分完成」；
+		// 现在不再否决完成，只在剩余说明里如实标注这些记录没有独立核对。
+		else if (t.planApproved && t.milestones.length && t.milestones.every((m) => m.state === "completed")) {
 			t.state = "completed";
 			t.reason = null;
-		} else if (
-			t.milestones.some((m) => m.state === "blocked") ||
-			t.operations.some((o) => o.state === "failed")
-		)
-			t.state = "partial";
-		else t.state = "partial";
+		} else t.state = "partial";
 	}
 	/** Readback may inspect approved output roots even while an effect needs reconciliation.
 	 * The caller must still apply CURRENT read permissions. This never grants a write. */
@@ -853,7 +852,11 @@ export function createTaskWorkbench({
 			if (!verifier?.consent) continue;
 			// 只有用户在确认框里点头的改绑身份才进入写入同意；写入回执自动绑定的身份不扩大授权
 			const entry = verifier.consent(m.bound?.via === "rebind" ? effectiveAcceptance(m) : m.acceptance);
-			if (entry) acceptances.push({ milestoneId: m.id, kind: m.acceptance.kind, ...entry });
+			if (!entry) continue;
+			// 计划时未点名身份的槽位（验收器 consent 返回 slot:true）：授权卡上写明"精读后写入的一篇"，
+			// 只对尚未绑定、尚未验收的里程碑有效；写入回执绑定后这一项不再为第二篇放行
+			if (entry.slot && (m.bound || m.state === "completed")) continue;
+			acceptances.push({ milestoneId: m.id, kind: m.acceptance.kind, ...entry });
 		}
 		return { taskId: t.id, writeRoots: [...(t.writeRoots || [])], ...t.executionConsent, acceptances };
 	}
@@ -888,12 +891,39 @@ export function createTaskWorkbench({
 		save();
 		return true;
 	}
+	/**
+	 * 授权后模型只说了句话就结束回合（真实模型常见的节奏）：宿主按既有授权自动接续，不再弹窗。
+	 * 条件：授权有效、还有未验收交付、没有等用户的事项、没有结果不明的操作、本回合有新进展、
+	 * 未超总步数与自动接续上限。不新增预算，不改契约。
+	 */
+	function reserveHandoff() {
+		const t = active();
+		if (
+			!authorization() ||
+			t.state === "blocked" ||
+			!t.milestones.length ||
+			!t.milestones.some((m) => m.state !== "completed") ||
+			t.actions.some((a) => a.state === "pending") ||
+			t.operations.some((o) => ["started", "unknown", "changed"].includes(o.state)) ||
+			t.budget.calls >= LIMITS.totalCalls ||
+			(t.budget.autoHandoffs || 0) >= LIMITS.autoHandoffs ||
+			(t.progressCount || 0) <= (t.lastResumeProgress || 0)
+		)
+			return false;
+		t.budget.autoHandoffs = (t.budget.autoHandoffs || 0) + 1;
+		t.lastResumeProgress = t.progressCount;
+		t.reason = "automatic-handoff";
+		t.state = "partial";
+		save();
+		return true;
+	}
 	function advanceStage() {
 		const t = active();
+		// 并行批次里兄弟操作仍在执行（started）不该否决阶段检查点：那会把一批合法写入误判成「阶段步数用完」。
 		if (
 			!t?.planApproved ||
 			t.budget.calls >= LIMITS.totalCalls ||
-			t.operations.some((o) => ["started", "unknown"].includes(o.state))
+			t.operations.some((o) => o.state === "unknown")
 		)
 			return false;
 		const count = t.milestones.filter((m) => m.state === "completed").length;
@@ -1302,6 +1332,7 @@ export function createTaskWorkbench({
 		scope: () => book.scope,
 		readRoots,
 		reserveContinuation,
+		reserveHandoff,
 		attach,
 		begin,
 		plan,
