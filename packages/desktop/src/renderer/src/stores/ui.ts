@@ -3,10 +3,10 @@ import { create } from "zustand";
 /** 主区视图：聊天 / 空间（项目）/ 研究工作台 / 知识库（后两者是全屏视图，不再是弹窗）/ 插件贡献的全屏视图（rail.view，挂钩 4） */
 export type AppView = "chat" | "projects" | "research" | "knowledge" | `plugin:${string}`;
 
-/** 右侧上下文面板页签：任务 / 过程 / 变更 / 产物 + 插件贡献的页签（panel.tab，挂钩 4） */
-export type CorePanelTab = "tasks" | "process" | "changes" | "artifacts";
+/** 右侧上下文面板页签：任务 / 过程 / 变更 / 产物 / 子智能体 + 插件贡献的页签（panel.tab，挂钩 4） */
+export type CorePanelTab = "tasks" | "process" | "changes" | "artifacts" | "subagents";
 export type PanelTab = CorePanelTab | `plugin:${string}`;
-export const PANEL_TABS: readonly CorePanelTab[] = ["tasks", "process", "changes", "artifacts"];
+export const PANEL_TABS: readonly CorePanelTab[] = ["tasks", "process", "changes", "artifacts", "subagents"];
 
 /** chip → 面板跳转目标（nonce 保证重复跳同文件也重触发） */
 export interface ResourcePreviewTarget {

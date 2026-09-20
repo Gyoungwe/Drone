@@ -3,6 +3,7 @@ import type { ProgressDisplay } from "../progress-display";
 import type { PublicProgressStep } from "../public-timeline";
 import type { ImageInput, ModelWaitEvent } from "../session";
 import type { SkillInvocationDisplay } from "../skill-invocation";
+import type { SubagentPanelRun } from "../subagent";
 import type { TaskView } from "../task-workbench";
 import type { TodoItem } from "../todo";
 import type { ReportedUsage } from "../usage-display";
@@ -59,6 +60,8 @@ export interface SubagentRunUi {
 		message: string;
 		expectsReply: boolean;
 	} | null;
+	/** 面板派发运行的全量记录（排队 / 中止 / 上下文状态 / 审批归因；模型调用的运行没有） */
+	panel?: SubagentPanelRun;
 }
 
 /** 单条 UI 消息 */

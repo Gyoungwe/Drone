@@ -48,6 +48,12 @@ import type {
 	ProviderTestResult,
 	SubagentInfo,
 } from "./settings";
+import type {
+	SubagentDispatchInput,
+	SubagentDispatchReceipt,
+	SubagentPanelRun,
+	SubagentPanelSnapshot,
+} from "./subagent";
 import type { TodoItem } from "./todo";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
@@ -110,6 +116,11 @@ export const IpcChannels = {
 	SessionPeekSubagentMessages: "session:peekSubagentMessages",
 	SessionSteerSubagent: "session:steerSubagent",
 	SessionReplySubagentSupervisor: "session:replySubagentSupervisor",
+	/** 子智能体面板（会话内专属派发）：可用列表 / 派发 / 中止 / 本会话运行 */
+	SubagentsList: "subagents:list",
+	SubagentsDispatch: "subagents:dispatch",
+	SubagentsAbort: "subagents:abort",
+	SubagentsRuns: "subagents:runs",
 	SessionGetTodos: "session:getTodos",
 	SessionCompact: "session:compact",
 	SessionStats: "session:stats",
@@ -285,6 +296,14 @@ export interface PiApi extends KnowledgeApi {
 	steerSubagent(sessionId: string, message: string, mode?: "steer" | "followUp"): Promise<void>;
 	/** Resolve a child contact_supervisor request. */
 	replySubagentSupervisor(sessionId: string, requestId: string, message: string): Promise<void>;
+	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */
+	listSessionSubagents(sessionId: string): Promise<SubagentPanelSnapshot>;
+	/** 子智能体面板：直接派发到会话（与 subagent 工具同一 runner；超出槽位排队） */
+	dispatchSubagents(sessionId: string, input: SubagentDispatchInput): Promise<SubagentDispatchReceipt>;
+	/** 子智能体面板：中止 / 取消一个面板运行（排队中取消，运行中 abort 子会话）；未知 runId 返回 false */
+	abortSubagentRun(runId: string): Promise<boolean>;
+	/** 子智能体面板：本会话的面板运行（切回会话时补水；只含进程内存里的记录） */
+	listSubagentRuns(sessionId: string): Promise<SubagentPanelRun[]>;
 	/** 读取会话当前 todo 列表（最后一条 todo 工具结果，或 compaction 后恢复的 reminder 消息；无则空数组） */
 	getTodos(sessionId: string): Promise<TodoItem[]>;
 	compact(sessionId: string, customInstructions?: string): Promise<void>;
@@ -538,6 +557,10 @@ export const INVOKE_ROUTES = {
 	peekSubagentMessages: IpcChannels.SessionPeekSubagentMessages,
 	steerSubagent: IpcChannels.SessionSteerSubagent,
 	replySubagentSupervisor: IpcChannels.SessionReplySubagentSupervisor,
+	listSessionSubagents: IpcChannels.SubagentsList,
+	dispatchSubagents: IpcChannels.SubagentsDispatch,
+	abortSubagentRun: IpcChannels.SubagentsAbort,
+	listSubagentRuns: IpcChannels.SubagentsRuns,
 	getTodos: IpcChannels.SessionGetTodos,
 	// Packages / 文件 / 资源
 	searchCatalog: IpcChannels.PackagesSearchCatalog,
@@ -656,4 +679,12 @@ export const SESSION_INVOKE_METHODS = [
 	"listModels",
 	"listProjectFiles",
 	"ensureProjectTrust",
+] as const satisfies ReadonlyArray<keyof typeof INVOKE_ROUTES>;
+
+/** 子智能体面板 invoke 方法（main ipc/subagents.ts 注册器按此 1:1 转发 `backend[method]`）。 */
+export const SUBAGENT_INVOKE_METHODS = [
+	"listSessionSubagents",
+	"dispatchSubagents",
+	"abortSubagentRun",
+	"listSubagentRuns",
 ] as const satisfies ReadonlyArray<keyof typeof INVOKE_ROUTES>;

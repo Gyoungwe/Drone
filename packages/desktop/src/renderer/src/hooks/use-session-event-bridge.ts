@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { getPi } from "../api";
 import { EventConflator } from "../stores/event-conflator";
 import { useSessionsStore } from "../stores/sessions";
+import { useSubagentsStore } from "../stores/subagents";
 import { useTranscriptStore } from "../stores/transcript";
 import { useUiStore } from "../stores/ui";
 
@@ -35,6 +36,8 @@ export function useSessionEventBridge({
 				useSessionsStore.getState().updateSessionName(sessionId, event.name);
 				return; // 会话名走 sessions store；reducer 对该类型本就无操作
 			}
+			// 面板派发运行：面板 store 直接落（列表 / 徽标 / 审批归因），同时进 reducer 维护聊天里的派发行
+			if (event.type === "subagent_run") useSubagentsStore.getState().applyRun(sessionId, event.run);
 			conflator.push(sessionId, event);
 		});
 		const offPermission = pi.onPermissionRequest((req) => {

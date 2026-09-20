@@ -1,8 +1,11 @@
 import type { PermissionRequest } from "@drone/shared";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { APPROVAL_FOCUS_EVENT, useApprovalRun, useSubagentsStore } from "../../stores/subagents";
 import { useTranscriptStore } from "../../stores/transcript";
+import { useUiStore } from "../../stores/ui";
+import { SubagentAvatar } from "../chat/SubagentAvatar";
 import { Composer } from "../composer/Composer";
 import { Button } from "../ui/Button";
 import { Tooltip } from "../ui/Tooltip";
@@ -36,6 +39,26 @@ export function ApprovalDock({
 	// 应答 IPC 失败：请求保留在 pending（agent 仍在等待），展示错误供重试（D3）
 	const [error, setError] = useState<string | null>(null);
 	const [sending, setSending] = useState(false);
+	// 来源归因：子智能体（面板派发）的工具确认经父会话 gate 挂起 → 来源胶囊 + 「查看该运行」
+	const sourceRun = useApprovalRun(sessionId, shown?.id ?? null);
+	const focusRun = useSubagentsStore((s) => s.focusRun);
+	const openPanel = useUiStore((s) => s.openPanel);
+	const cardRef = useRef<HTMLDivElement>(null);
+	const [flash, setFlash] = useState(false);
+	useEffect(() => {
+		let timer: ReturnType<typeof setTimeout> | null = null;
+		const onFocus = () => {
+			cardRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+			setFlash(true);
+			if (timer) clearTimeout(timer);
+			timer = setTimeout(() => setFlash(false), 1600);
+		};
+		window.addEventListener(APPROVAL_FOCUS_EVENT, onFocus);
+		return () => {
+			window.removeEventListener(APPROVAL_FOCUS_EVENT, onFocus);
+			if (timer) clearTimeout(timer);
+		};
+	}, []);
 	useEffect(() => {
 		if (request) {
 			setShown(request);
@@ -108,9 +131,10 @@ export function ApprovalDock({
 			<div className="mx-auto max-w-[760px]">
 				<div
 					key={shown.id}
+					ref={cardRef}
 					className={`rounded-xl border-[0.5px] border-border border-l-2 border-l-amber-400 bg-surface px-3 py-2 shadow-soft ${
 						leaving ? "approval-exit" : "approval-enter"
-					}`}
+					}${flash ? " sa-run-focus" : ""}`}
 					role="dialog"
 					aria-modal
 				>
@@ -121,6 +145,15 @@ export function ApprovalDock({
 						<h3 className="min-w-0 flex-1 truncate font-mono text-[13px] font-medium text-ink">
 							{shown.title}
 						</h3>
+						{sourceRun && (
+							<span
+								className="flex shrink-0 items-center gap-1 rounded-full border border-warn/40 bg-warn/5 px-1.5 py-0.5 text-[11px] text-warn"
+								data-testid="approval-subagent-source"
+							>
+								<SubagentAvatar name={sourceRun.agent} source={sourceRun.source} size="sm" state="waiting" />
+								{t("permission.fromSubagent", { agent: sourceRun.agent })}
+							</span>
+						)}
 						{queueCount > 0 && (
 							<span className="shrink-0 text-[11px] text-ink-faint">
 								{t("permission.queued", { count: queueCount })}
@@ -134,6 +167,18 @@ export function ApprovalDock({
 						<p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[12px] break-all text-red-600">{error}</p>
 					)}
 					<div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
+						{sourceRun && (
+							<Button
+								className="mr-auto"
+								onClick={() => {
+									openPanel("subagents");
+									focusRun(sourceRun.runId);
+								}}
+								data-testid="approval-view-run"
+							>
+								{t("permission.viewRun")}
+							</Button>
+						)}
 						<Button onClick={() => respond("deny")}>
 							{t("permission.deny")}
 							<kbd className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[11px] text-ink-faint">Esc</kbd>

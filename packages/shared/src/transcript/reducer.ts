@@ -8,7 +8,14 @@ import {
 import { progressDisplay } from "../progress-display";
 import type { ImageInput, SessionEvent } from "../session";
 import { parseExpandedSkillInvocation } from "../skill-invocation";
-import { extractSubagentRuns, normalizeSubagentLaunchInputs } from "../subagent";
+import {
+	extractSubagentRuns,
+	normalizeSubagentLaunchInputs,
+	SUBAGENT_RESULT_CUSTOM_TYPE,
+	type SubagentPanelRun,
+	subagentResultRecordFromUnknown,
+	subagentRunDataFromPanelRun,
+} from "../subagent";
 import { taskStatusDisplay } from "../task-status";
 import { extractTodos, TODO_TOOL_NAME } from "../todo";
 import { reportedUsage } from "../usage-display";
@@ -19,6 +26,7 @@ import {
 	extractShowImage,
 	findLastIndex,
 	newMessageId,
+	newSubagentKey,
 	newToolKey,
 	parseArgs,
 	toolNameFromPartial,
@@ -55,6 +63,54 @@ function removeControlTool(streaming: NonNullable<SessionTranscriptState["stream
 				? streaming.activity
 				: streaming.activity.filter((item) => item.id !== `c${blockIndex}`),
 	};
+}
+
+/** 面板运行状态 → 运行卡基础状态（排队 / 需要回复 / 等待审批都算 running；已中止按中性完成态显示） */
+export function panelRunUiStatus(status: SubagentPanelRun["status"]): SubagentRunUi["status"] {
+	if (status === "error") return "error";
+	if (status === "done" || status === "aborted") return "done";
+	return "running";
+}
+
+function panelRunToUi(run: SubagentPanelRun, key: string): SubagentRunUi {
+	const data = subagentRunDataFromPanelRun(run);
+	return { ...data, key, status: panelRunUiStatus(run.status) };
+}
+
+/**
+ * 面板派发的运行在聊天里是一条独立子代理行（同一次派发的多个任务同一行），按 runId 原地更新：
+ * 排队 → 运行 → 完成 / 失败 / 中止 → 进入上下文，都改同一张卡，不追加新行。
+ * 行不存在（先看到结果消息 / 从历史打开）时按事件位置补建。
+ */
+function upsertPanelRun(state: SessionTranscriptState, run: SubagentPanelRun): SessionTranscriptState {
+	const rowIndex = state.messages.findIndex(
+		(message) =>
+			message.kind === "subagent" && message.runs.some((item) => item.panel?.dispatchId === run.dispatchId),
+	);
+	if (rowIndex < 0) {
+		return {
+			...state,
+			messages: [
+				...state.messages,
+				{
+					kind: "subagent",
+					id: `pd-${run.dispatchId}`,
+					runs: [panelRunToUi(run, newSubagentKey())],
+					timestamp: run.createdAt || Date.now(),
+				},
+			],
+		};
+	}
+	const row = state.messages[rowIndex];
+	if (row?.kind !== "subagent") return state;
+	const existing = row.runs.findIndex((item) => item.panel?.runId === run.runId);
+	const runs =
+		existing >= 0
+			? row.runs.map((item, index) => (index === existing ? panelRunToUi(run, item.key) : item))
+			: [...row.runs, panelRunToUi(run, newSubagentKey())];
+	const messages = [...state.messages];
+	messages[rowIndex] = { ...row, runs };
+	return { ...state, messages };
 }
 
 function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptState {
@@ -281,6 +337,8 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				],
 			};
 		}
+		case "subagent_run":
+			return upsertPanelRun(state, event.run);
 		case "agent_start":
 			return {
 				...state,
@@ -349,6 +407,11 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 			};
 		}
 		case "message_end": {
+			// 面板结果 custom 消息进入上下文（followUp 被主模型消费）：同一张卡改成「已进入上下文」
+			if (event.message.role === "custom" && event.message.customType === SUBAGENT_RESULT_CUSTOM_TYPE) {
+				const record = subagentResultRecordFromUnknown(event.message.details);
+				return record ? upsertPanelRun(state, { ...record.run, contextState: "delivered" }) : state;
+			}
 			const report = taskStatusDisplay(event.message);
 			if (report) {
 				if (state.messages.some((message) => message.id === report.id)) return state;

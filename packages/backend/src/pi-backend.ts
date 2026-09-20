@@ -33,7 +33,11 @@ import type {
 	SessionMeta,
 	SessionStats,
 	SlashCommandInfo,
+	SubagentDispatchInput,
+	SubagentDispatchReceipt,
 	SubagentInfo,
+	SubagentPanelRun,
+	SubagentPanelSnapshot,
 	TrustAnswer,
 	TrustRequest,
 	WikiModelReviewInput,
@@ -101,6 +105,7 @@ import {
 	readSessionMessagesFromContent,
 	resolveForkEntryId,
 	resolveRecallEntryId,
+	subagentPanelRawMessages,
 	toSessionMessages,
 } from "./session/messages";
 import { ModelWaitMonitor } from "./session/model-wait";
@@ -133,7 +138,12 @@ import { globalToolManifest } from "./tools/manifest";
 import { makeShowImageTool } from "./tools/show-image";
 import { makeSshTool } from "./tools/ssh";
 import { makeStatusTool } from "./tools/status";
-import { discoverAgents, isSubagentSessionPath, makeSubagentTool } from "./tools/subagent";
+import {
+	discoverAgents,
+	isSubagentSessionPath,
+	makeSubagentTool,
+	SubagentPanelService,
+} from "./tools/subagent";
 import { applySubagentMutex } from "./tools/subagent/mutex";
 import { withNativeSubagentSlot } from "./tools/subagent/slots";
 import { makeTodoTool } from "./tools/todo";
@@ -225,6 +235,35 @@ export class PiBackend {
 	private readonly trustGate = new TrustGate((req) => this.dispatchTrustRequest(req));
 	/** 会话事件 trace（JSONL，离线可重放） */
 	private readonly traces = new SessionTraces();
+	/** 子智能体面板：会话内专属派发登记表（与 subagent 工具同一 runner；见 tools/subagent/panel.ts） */
+	private readonly subagentPanel = new SubagentPanelService({
+		runner: {
+			getModelRuntime: () => this.getModelRuntime(),
+			getSubagentModel: (agentName) => this.modelPrefs.getSubagentModel(agentName),
+			traces: this.traces,
+			onEvent: (sessionId, event) => this.emitEvent(sessionId, event),
+			registerLiveChild: (sessionId, control) => {
+				this.liveSubagents.set(sessionId, control);
+				return () => {
+					if (this.liveSubagents.get(sessionId) === control) this.liveSubagents.delete(sessionId);
+				};
+			},
+		},
+		resolveSession: (sessionId) => {
+			const entry = this.registry.get(sessionId);
+			const gate = this.gates.get(sessionId);
+			if (!entry || !gate) return undefined;
+			return {
+				session: entry.session,
+				cwd: entry.cwd,
+				readOnly: entry.readOnly === true,
+				projectTrusted: entry.session.settingsManager.isProjectTrusted(),
+				gate,
+			};
+		},
+		emit: (sessionId, event) => this.emitEvent(sessionId, event),
+		log,
+	});
 	private readonly streamGuard = new StreamGuard();
 	private readonly recovery = new SessionRecovery();
 	private readonly modelWait = new ModelWaitMonitor(
@@ -435,10 +474,13 @@ export class PiBackend {
 		const publishedEvent = projectKnowledgeEvent(event);
 		if (!publishedEvent) return;
 		event = publishedEvent;
+		// 面板结果消息被主模型消费（message_end）→ 运行卡「已进入上下文」
+		this.subagentPanel.observe(sessionId, event);
 		if (
 			event.type !== "subagent_mutex" &&
 			event.type !== "stream_guard_tripped" &&
-			event.type !== "model_wait"
+			event.type !== "model_wait" &&
+			event.type !== "subagent_run"
 		)
 			this.traces.record(sessionId, event);
 		for (const handler of this.eventHandlers) {
@@ -687,6 +729,8 @@ export class PiBackend {
 		for (const run of this.modelReviews.values()) if (run.sessionId === sessionId) run.controller.abort();
 		const entry = this.registry.get(sessionId);
 		if (!entry) return;
+		// 面板派发的子会话随父会话关闭一起中止（登记表清空，不再推送事件）
+		this.subagentPanel.disposeSession(sessionId);
 		entry.session.dispose();
 		this.gates.get(sessionId)?.dispose();
 		this.gates.delete(sessionId);
@@ -1122,11 +1166,16 @@ export class PiBackend {
 			.getBranch()
 			.filter((item): item is Extract<SessionEntry, { type: "message" }> => item.type === "message")
 			.map((item) => item.message as RawMessage);
-		const messages = toSessionMessages(
-			projectKnowledgeSnapshot(entry.session.messages as RawMessage[], persisted),
-		);
+		// 面板派发 / 结果记录是 custom entry（不在 session.messages 里）：按时间戳并回消息流
+		const branch = entry.session.sessionManager.getBranch();
+		const panelRecords = subagentPanelRawMessages(branch);
+		const live = projectKnowledgeSnapshot(entry.session.messages as RawMessage[], persisted);
+		const merged = panelRecords.length > 0 ? mergeRawByTimestamp(live, panelRecords) : live;
+		const messages = toSessionMessages(merged, {
+			liveSubagentRunIds: new Set(this.subagentPanel.listRuns(sessionId).map((run) => run.runId)),
+		});
 		// 配对消息与会话树 entry id（assistant 供 fork 定位、user 供撤回定位）
-		assignEntryIds(messages, entry.session.sessionManager.getBranch());
+		assignEntryIds(messages, branch);
 		return messages;
 	}
 
@@ -1318,6 +1367,26 @@ export class PiBackend {
 				description,
 				source: source === "builtin" ? "builtin" : "user",
 			}));
+	}
+
+	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任）与并发边界 */
+	listSessionSubagents(sessionId: string): Promise<SubagentPanelSnapshot> {
+		return this.subagentPanel.listAgents(sessionId);
+	}
+
+	/** 子智能体面板：直接派发到会话（同 runSubagent 路径；超出运行槽排队） */
+	dispatchSubagents(sessionId: string, input: SubagentDispatchInput): Promise<SubagentDispatchReceipt> {
+		return this.subagentPanel.dispatch(sessionId, input);
+	}
+
+	/** 子智能体面板：取消排队 / 中止运行；终态或未知 runId 返回 false */
+	async abortSubagentRun(runId: string): Promise<boolean> {
+		return this.subagentPanel.abort(runId);
+	}
+
+	/** 子智能体面板：本会话进程内的面板运行（切回会话补水） */
+	async listSubagentRuns(sessionId: string): Promise<SubagentPanelRun[]> {
+		return this.subagentPanel.listRuns(sessionId);
 	}
 
 	onEvent(handler: EventHandler): () => void {
@@ -1569,3 +1638,28 @@ export class PiBackend {
 }
 
 export type { EventForwarder, Model };
+
+/** 按 timestamp 稳定归并两串消息（面板记录并回上下文消息流；同戳时上下文消息在前） */
+function mergeRawByTimestamp(base: RawMessage[], extra: RawMessage[]): RawMessage[] {
+	const out: RawMessage[] = [];
+	let i = 0;
+	let j = 0;
+	const sorted = [...extra].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+	while (i < base.length || j < sorted.length) {
+		const a = base[i];
+		const b = sorted[j];
+		if (a === undefined) {
+			if (b !== undefined) out.push(b);
+			j++;
+			continue;
+		}
+		if (b === undefined || (a.timestamp ?? 0) <= (b.timestamp ?? 0)) {
+			out.push(a);
+			i++;
+		} else {
+			out.push(b);
+			j++;
+		}
+	}
+	return out;
+}

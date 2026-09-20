@@ -87,6 +87,8 @@ export interface SubagentRunData {
 		message: string;
 		expectsReply: boolean;
 	} | null;
+	/** 面板派发的运行携带全量面板记录（排队 / 中止 / 上下文状态等只有面板运行才有） */
+	panel?: SubagentPanelRun;
 }
 
 /**
@@ -241,4 +243,223 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 		});
 	}
 	return runs.length > 0 ? runs : null;
+}
+
+/* ───────────────────────── 子智能体面板（会话内专属派发） ───────────────────────── */
+
+/** 子智能体定义来源：内置（Drone）/ 用户（~/.pi/agent/agents）/ 项目（.pi/agents） */
+export type SubagentPanelSource = "builtin" | "user" | "project";
+
+/**
+ * 面板运行状态机：queued（等运行槽）→ running（子会话已创建）⇄ needs_reply / waiting_approval
+ * → done / error / aborted。needs_reply / waiting_approval 都是「运行中」的子态，只是需要用户。
+ */
+export type SubagentPanelRunStatus =
+	| "queued"
+	| "running"
+	| "needs_reply"
+	| "waiting_approval"
+	| "done"
+	| "error"
+	| "aborted";
+
+/**
+ * 结果进入主模型上下文的状态：none = 未勾选 followUp（只留结果卡，用户手动引用）；
+ * pending = 已交给 followUp 队列，主模型仍在生成；delivered = 已进入上下文。
+ */
+export type SubagentPanelContextState = "none" | "pending" | "delivered";
+
+/** 面板可见的子智能体（session:listSubagents 返回项） */
+export interface SubagentPanelAgent {
+	name: string;
+	description: string;
+	source: SubagentPanelSource;
+	/** 定义声明的工具集（必需工具只能从中勾选） */
+	tools: string[];
+	/** 定义固定的模型（缺省跟随主会话 / 设置页覆盖） */
+	model?: string;
+	/** MCP 访问：none / read-local（研究策略只读） */
+	mcpAccess: "none" | "read-local";
+	/** 项目级定义在未信任项目里为 false：列表可见但不可派发 */
+	trusted: boolean;
+	/** 定义文件路径（内置为空） */
+	path?: string;
+}
+
+/** session:listSubagents 快照：可用列表 + 会话边界信息（并发上限 / 项目信任 / 目录） */
+export interface SubagentPanelSnapshot {
+	sessionId: string;
+	cwd: string;
+	agents: SubagentPanelAgent[];
+	/** 本项目并发上限（.pi/research-workspace.json maxConcurrentSubagents，1–3） */
+	maxConcurrent: number;
+	projectTrusted: boolean;
+	/** 用户级定义目录（空态「打开目录」用） */
+	userAgentsDir: string;
+	/** 项目级定义目录 */
+	projectAgentsDir: string;
+	/** 只读会话（子智能体产物检视）不能派发 */
+	readOnly: boolean;
+}
+
+export interface SubagentDispatchTask {
+	agent: string;
+	task: string;
+	/** 必需工具（须落在 agent 工具集内；后端复用 required_tools 校验） */
+	requiredTools?: string[];
+}
+
+export interface SubagentDispatchInput {
+	tasks: SubagentDispatchTask[];
+	/** 工作目录；缺省 = 会话 cwd */
+	cwd?: string;
+	/** 完成后把摘要作为 followUp 交给主模型（默认 true） */
+	followUp?: boolean;
+	/** 本次派发信任项目级定义（对应 confirmProjectAgents；不写入信任文件） */
+	trustProjectAgents?: boolean;
+}
+
+/** 最多并行任务数（与 subagent 工具 MAX_TASKS 一致） */
+export const SUBAGENT_PANEL_MAX_TASKS = 8;
+
+/** 面板派发运行记录（后端事实源；`subagent_run` 事件整条推送） */
+export interface SubagentPanelRun {
+	runId: string;
+	/** 同一次派发（一批任务）共享 */
+	dispatchId: string;
+	parentSessionId: string;
+	agent: string;
+	source: SubagentPanelSource;
+	task: string;
+	cwd: string;
+	requiredTools: string[];
+	followUp: boolean;
+	status: SubagentPanelRunStatus;
+	contextState: SubagentPanelContextState;
+	/** 排队位置（仅 queued） */
+	queuePosition?: number;
+	createdAt: number;
+	startedAt?: number;
+	endedAt?: number;
+	/** 子会话 id（运行中内联 transcript / steer / 回复上级请求） */
+	childSessionId?: string;
+	/** 子会话文件（回放） */
+	sessionFile?: string;
+	model?: string;
+	tokens?: number;
+	exitCode?: number;
+	error?: string;
+	/** 子智能体最终结论（已按上限截断） */
+	content?: string;
+	statusText?: string;
+	statusPhase?: string;
+	currentAction?: string;
+	currentTool?: string;
+	lastSteerAt?: number;
+	supervisorRequest?: SubagentRunData["supervisorRequest"];
+	/** 正挂在父会话 gate 上的审批请求 id（审批坞来源胶囊 / 等待审批 join 用） */
+	pendingApprovalIds: string[];
+}
+
+export interface SubagentDispatchReceipt {
+	dispatchId: string;
+	runs: SubagentPanelRun[];
+}
+
+/** 会话文件里的面板记录：派发条目（custom entry，模型不可见）与结果（custom message 或 entry） */
+export const SUBAGENT_DISPATCH_CUSTOM_TYPE = "drone-subagent-dispatch";
+export const SUBAGENT_RESULT_CUSTOM_TYPE = "drone-subagent-result";
+
+export interface SubagentDispatchRecord {
+	v: 1;
+	dispatchId: string;
+	runs: SubagentPanelRun[];
+}
+
+export interface SubagentResultRecord {
+	v: 1;
+	run: SubagentPanelRun;
+}
+
+/** 终态判定 */
+export function isSubagentRunSettled(status: SubagentPanelRunStatus): boolean {
+	return status === "done" || status === "error" || status === "aborted";
+}
+
+/** 需要用户介入（页签徽标变琥珀） */
+export function isSubagentRunAttention(status: SubagentPanelRunStatus): boolean {
+	return status === "needs_reply" || status === "waiting_approval";
+}
+
+/** 面板运行 → 聊天运行卡数据（SubagentRunData 形状；panel 字段保留全量记录） */
+export function subagentRunDataFromPanelRun(run: SubagentPanelRun): SubagentRunData {
+	return {
+		agent: run.agent,
+		sessionId: run.childSessionId,
+		task: run.task,
+		status: run.status === "error" ? "error" : "done",
+		model: run.model,
+		tokens: run.tokens,
+		exitCode: run.exitCode,
+		sessionFile: run.sessionFile,
+		statusText: run.statusText,
+		statusPhase: run.statusPhase,
+		currentAction: run.currentAction,
+		currentTool: run.currentTool,
+		startedAt: run.startedAt,
+		lastSteerAt: run.lastSteerAt,
+		supervisorRequest: run.supervisorRequest,
+		panel: run,
+	};
+}
+
+/** 结构校验：custom 记录 details → 面板运行（不符返回 null） */
+export function subagentPanelRunFromUnknown(value: unknown): SubagentPanelRun | null {
+	const run = value as Partial<SubagentPanelRun> | null | undefined;
+	if (
+		!run ||
+		typeof run.runId !== "string" ||
+		typeof run.dispatchId !== "string" ||
+		typeof run.agent !== "string" ||
+		typeof run.task !== "string" ||
+		typeof run.status !== "string"
+	)
+		return null;
+	return {
+		...run,
+		runId: run.runId,
+		dispatchId: run.dispatchId,
+		parentSessionId: typeof run.parentSessionId === "string" ? run.parentSessionId : "",
+		agent: run.agent,
+		source: run.source === "user" || run.source === "project" ? run.source : "builtin",
+		task: run.task,
+		cwd: typeof run.cwd === "string" ? run.cwd : "",
+		requiredTools: Array.isArray(run.requiredTools)
+			? run.requiredTools.filter((tool): tool is string => typeof tool === "string")
+			: [],
+		followUp: run.followUp === true,
+		status: run.status as SubagentPanelRunStatus,
+		contextState:
+			run.contextState === "pending" || run.contextState === "delivered" ? run.contextState : "none",
+		createdAt: typeof run.createdAt === "number" ? run.createdAt : 0,
+		pendingApprovalIds: Array.isArray(run.pendingApprovalIds)
+			? run.pendingApprovalIds.filter((id): id is string => typeof id === "string")
+			: [],
+	};
+}
+
+/** 派发记录 details → 运行列表 */
+export function subagentDispatchRecordFromUnknown(value: unknown): SubagentDispatchRecord | null {
+	const record = value as Partial<SubagentDispatchRecord> | null | undefined;
+	if (!record || typeof record.dispatchId !== "string" || !Array.isArray(record.runs)) return null;
+	const runs = record.runs
+		.map(subagentPanelRunFromUnknown)
+		.filter((run): run is SubagentPanelRun => run !== null);
+	return { v: 1, dispatchId: record.dispatchId, runs };
+}
+
+export function subagentResultRecordFromUnknown(value: unknown): SubagentResultRecord | null {
+	const record = value as Partial<SubagentResultRecord> | null | undefined;
+	const run = subagentPanelRunFromUnknown(record?.run);
+	return run ? { v: 1, run } : null;
 }

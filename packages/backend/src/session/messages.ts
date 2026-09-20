@@ -1,6 +1,7 @@
 import {
 	extractSubagentRuns,
 	type ImageInput,
+	isSubagentRunSettled,
 	type PublicProgressStep,
 	parseExpandedSkillInvocation,
 	progressDisplay,
@@ -8,6 +9,13 @@ import {
 	reportedUsage,
 	type SessionMessage,
 	type SessionToolCall,
+	SUBAGENT_DISPATCH_CUSTOM_TYPE,
+	SUBAGENT_RESULT_CUSTOM_TYPE,
+	type SubagentPanelRun,
+	type SubagentRunData,
+	subagentDispatchRecordFromUnknown,
+	subagentResultRecordFromUnknown,
+	subagentRunDataFromPanelRun,
 	taskStatusDisplay,
 } from "@drone/shared";
 import { parseSessionEntries, type SessionEntry, type SessionManager } from "@earendil-works/pi-coding-agent";
@@ -191,18 +199,75 @@ export function readSessionMessagesFromContent(content: string): SessionMessage[
 		if (entry.type === "message") return [entry.message];
 		if (entry.type === "custom_message")
 			return [{ ...entry, role: "custom", timestamp: new Date(entry.timestamp).getTime() }];
-		return [];
+		const panel = subagentPanelRawMessage(entry);
+		return panel ? [panel] : [];
 	});
 	return toSessionMessages(raw);
+}
+
+/** 子智能体面板的 custom entry（派发 / 结果记录，模型不可见）→ 中立 raw custom 消息；其余返回 null */
+function subagentPanelRawMessage(entry: {
+	type: string;
+	customType?: unknown;
+	data?: unknown;
+	timestamp?: string;
+}): RawMessage | null {
+	if (entry.type !== "custom" || typeof entry.customType !== "string") return null;
+	if (entry.customType !== SUBAGENT_DISPATCH_CUSTOM_TYPE && entry.customType !== SUBAGENT_RESULT_CUSTOM_TYPE)
+		return null;
+	return {
+		role: "custom",
+		customType: entry.customType,
+		details: entry.data,
+		timestamp: entry.timestamp ? new Date(entry.timestamp).getTime() : Date.now(),
+	};
+}
+
+/** 会话树分支里的面板记录（live 会话的 session.messages 不含 custom entry，需另行并回消息流） */
+export function subagentPanelRawMessages(branch: readonly SessionEntry[]): RawMessage[] {
+	return branch.map(subagentPanelRawMessage).filter((message): message is RawMessage => message !== null);
+}
+
+export interface ToSessionMessagesOptions {
+	/**
+	 * 仍在进程内运行的面板 runId：回放时这些运行保持原状态；其余未到终态的运行按「已中止」
+	 * （进程重启 / 会话重开时子会话已不存在）显示。
+	 */
+	liveSubagentRunIds?: ReadonlySet<string>;
 }
 
 /**
  * pi 消息 → 中立 SessionMessage 列表。
  * toolResult 消息单独出现（带 toolCallId），把输出回填到对应工具卡片。
  */
-export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessage[] {
+export function toSessionMessages(
+	rawMessages: readonly unknown[],
+	options: ToSessionMessagesOptions = {},
+): SessionMessage[] {
 	const out: SessionMessage[] = [];
 	const toolById = new Map<string, SessionToolCall>();
+	// 面板派发运行：派发记录建行，结果记录（custom 消息或 entry）原地更新同一行里的同一 run
+	const panelRuns = new Map<string, { runs: SubagentRunData[]; index: number }>();
+	const upsertPanelRun = (run: SubagentPanelRun, timestamp: number) => {
+		const data = subagentRunDataFromPanelRun(run);
+		const existing = panelRuns.get(run.runId);
+		if (existing) {
+			existing.runs[existing.index] = data;
+			return;
+		}
+		const row = out.find(
+			(message): message is Extract<SessionMessage, { role: "subagent" }> =>
+				message.role === "subagent" && message.runs.some((item) => item.panel?.dispatchId === run.dispatchId),
+		);
+		if (row) {
+			row.runs.push(data);
+			panelRuns.set(run.runId, { runs: row.runs, index: row.runs.length - 1 });
+			return;
+		}
+		const runs = [data];
+		out.push({ role: "subagent", runs, timestamp });
+		panelRuns.set(run.runId, { runs, index: 0 });
+	};
 	// Pair completed public status with its declaring assistant, not result arrival order.
 	// A later user turn cannot supply a result for an older status call.
 	const progressByMessage = new WeakMap<RawMessage, PublicProgressStep[]>();
@@ -229,6 +294,22 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 	let responseIndex = 0;
 
 	for (const raw of rawMessages as RawMessage[]) {
+		// 面板派发 / 结果记录（其余 custom 消息照旧走宿主状态展示等既有分支）
+		if (raw.role === "custom" && raw.customType === SUBAGENT_DISPATCH_CUSTOM_TYPE) {
+			const record = subagentDispatchRecordFromUnknown(raw.details);
+			for (const run of record?.runs ?? []) upsertPanelRun(run, raw.timestamp ?? Date.now());
+			continue;
+		}
+		if (raw.role === "custom" && raw.customType === SUBAGENT_RESULT_CUSTOM_TYPE) {
+			const record = subagentResultRecordFromUnknown(raw.details);
+			// followUp custom 消息出现在上下文里 = 已进入上下文；entry（未勾选 followUp）保持 none
+			if (record)
+				upsertPanelRun(
+					{ ...record.run, contextState: record.run.followUp ? "delivered" : "none" },
+					raw.timestamp ?? Date.now(),
+				);
+			continue;
+		}
 		const report = taskStatusDisplay(raw);
 		if (report) {
 			out.push({
@@ -398,6 +479,20 @@ export function toSessionMessages(rawMessages: readonly unknown[]): SessionMessa
 				}
 			}
 		}
+	}
+	// 未到终态且不在进程内的面板运行：子会话已随进程 / 会话消失，按已中止显示（不算失败）
+	for (const [runId, slot] of panelRuns) {
+		const data = slot.runs[slot.index];
+		const panel = data?.panel;
+		if (!data || !panel || isSubagentRunSettled(panel.status) || options.liveSubagentRunIds?.has(runId))
+			continue;
+		const aborted: SubagentPanelRun = {
+			...panel,
+			status: "aborted",
+			queuePosition: undefined,
+			pendingApprovalIds: [],
+		};
+		slot.runs[slot.index] = subagentRunDataFromPanelRun(aborted);
 	}
 	return out;
 }

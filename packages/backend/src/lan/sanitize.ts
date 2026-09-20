@@ -25,6 +25,7 @@ const FORWARDABLE_EVENTS = new Set([
 	"compaction_start",
 	"compaction_end",
 	"subagent_mutex",
+	"subagent_run",
 	"model_wait",
 	"stream_guard_tripped",
 	"auto_retry_start",
@@ -102,14 +103,20 @@ export function sanitizeSessionMessage(message: SessionMessage): SessionMessage 
 		// show_image 历史：占位保留（客户端显示图片占位），本地路径剥除
 		return { ...message, images: placeholderImages(message.images), paths: [] };
 	}
-	// subagent 结果消息：剥本地路径
+	// subagent 结果消息：剥本地路径（面板运行的 panel 记录同样带 sessionFile / cwd）
 	return {
 		...message,
 		runs: message.runs.map((run) => {
 			const { sessionFile: _sf, artifactsDir: _ad, ...rest } = run;
-			return rest;
+			return rest.panel ? { ...rest, panel: sanitizePanelRun(rest.panel) } : rest;
 		}),
 	};
+}
+
+/** 面板运行记录：剥本地路径（子会话文件 / 工作目录），其余状态字段照转 */
+function sanitizePanelRun<T extends { sessionFile?: string; cwd: string }>(run: T): T {
+	const { sessionFile: _sf, ...rest } = run;
+	return { ...rest, cwd: "" } as T;
 }
 
 /** SSE event 帧 sanitize；返回 null = 丢弃该帧（非白名单类型）。 */
@@ -117,6 +124,9 @@ export function sanitizeSessionEvent(event: SessionEvent): SessionEvent | null {
 	if (!FORWARDABLE_EVENTS.has(event.type)) return null;
 	if (event.type === "subagent_mutex") {
 		return { ...event, extensionPath: "" };
+	}
+	if (event.type === "subagent_run") {
+		return { ...event, run: sanitizePanelRun(event.run) };
 	}
 	if (event.type === "message_start" || event.type === "message_update") {
 		return { ...event, message: sanitizeAgentMessage(event.message) as typeof event.message };
