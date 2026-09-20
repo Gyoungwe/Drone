@@ -4,8 +4,10 @@ import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
+import { useSubagentsStore } from "../../stores/subagents";
 import { pushToast } from "../../stores/toasts";
 import { useTranscriptStore } from "../../stores/transcript";
+import { subagentTaskText } from "./at-subagents";
 import { buildQuoteBlock } from "./quote";
 import { buildSendUiError } from "./send-error";
 
@@ -16,6 +18,8 @@ export interface UseComposerSendOptions {
 	attachments: string[];
 	quotes: string[];
 	slashCommand: string | null;
+	/** @ 子智能体胶囊：存在时 Enter 走直接派发（正文 = 任务），不发给主模型 */
+	subagent: string | null;
 	followUpQueue: string[];
 	/** 压缩进行中（禁发：SDK 拒绝压缩中的 prompt） */
 	compacting: boolean;
@@ -26,6 +30,7 @@ export interface UseComposerSendOptions {
 	setAttachments: (updater: string[] | ((prev: string[]) => string[])) => void;
 	setQuotes: (updater: string[] | ((prev: string[]) => string[])) => void;
 	setSlashCommand: (command: string | null) => void;
+	setSubagent: (agent: string | null) => void;
 }
 
 /**
@@ -121,8 +126,58 @@ export function useComposerSend(options: UseComposerSendOptions) {
 		}
 	};
 
+	/**
+	 * @ 子智能体胶囊路径（S9）：正文作为任务直接派发给它（= 面板表单的单任务派发），不经主模型、
+	 * 不占 followUp 排队位；结果按 followUp 语义在主模型空闲时进入上下文。工作目录 = 会话 cwd，必需工具不填。
+	 * 派发不需要主模型空闲，所以 streaming / compacting 都不拦；图片没有派发通道，提示移除。
+	 */
+	const dispatchToSubagent = async (agent: string) => {
+		const { text, images, attachments, quotes, activeSessionId } = options;
+		if (sending) return;
+		const task = subagentTaskText({ text, attachments, quotes });
+		if (!task) {
+			showFeedback(t("composer.subagentTaskRequired", { agent }), "warn");
+			return;
+		}
+		if (images.length > 0) {
+			showFeedback(t("composer.subagentNoImages"), "warn");
+			return;
+		}
+		if (!activeSessionId || isDraftSessionId(activeSessionId)) {
+			showFeedback(t("composer.subagentNoSession"), "warn");
+			return;
+		}
+		setSending(true);
+		setError(null);
+		// 与普通发送一致：先清草稿，失败时整份回填（胶囊 / 引用 / 正文）
+		options.setText("");
+		options.setSubagent(null);
+		options.setAttachments([]);
+		options.setQuotes([]);
+		try {
+			await useSubagentsStore
+				.getState()
+				.dispatch(activeSessionId, { tasks: [{ agent, task }], followUp: true });
+			showFeedback(t("composer.subagentDispatched", { agent }));
+		} catch (err) {
+			setError(
+				t("panel.subagents.dispatchFailed", { error: err instanceof Error ? err.message : String(err) }),
+			);
+			options.setSubagent(agent);
+			options.setAttachments(attachments);
+			options.setQuotes(quotes);
+			if (text.trim()) options.setText(text);
+		} finally {
+			setSending(false);
+		}
+	};
+
 	const handleSend = async () => {
-		const { text, images, attachments, quotes, slashCommand, followUpQueue, compacting } = options;
+		const { text, images, attachments, quotes, slashCommand, followUpQueue, compacting, subagent } = options;
+		if (subagent) {
+			await dispatchToSubagent(subagent);
+			return;
+		}
 		// 引用胶囊逐条转 blockquote 段落；@ 引用胶囊拼回文本。引用置最前（先给上下文），正文在后
 		const quoteBlock = buildQuoteBlock(quotes);
 		const atText = attachments.map((p) => `@${p}`).join(" ");

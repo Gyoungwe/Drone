@@ -1,5 +1,6 @@
-// Isolated fixture: the real subagents pane / context panel / approval dock / chat run card against a fake window.pi.
-// Nothing touches ~/.pi, no model, no child session — backend behaviour is simulated by window.__fixture.
+// Isolated fixture: the real subagents pane / context panel / approval dock / composer (@ selector) / chat run card
+// against a fake window.pi. Nothing touches ~/.pi, no model, no child session — backend behaviour is simulated by
+// window.__fixture.
 
 import type {
 	PermissionRequest,
@@ -73,6 +74,7 @@ const runs = new Map<string, SubagentPanelRun>();
 let seq = 0;
 const fixture = {
 	dispatched: [] as SubagentDispatchInput[],
+	prompted: [] as string[],
 	aborted: [] as string[],
 	responded: [] as string[],
 	runs,
@@ -130,6 +132,7 @@ const fixture = {
 	},
 	lastRunId: () => [...runs.keys()].at(-1) ?? null,
 	draftText: () => useDraftStore.getState().bySession[SESSION_ID]?.text ?? "",
+	draftSubagent: () => useDraftStore.getState().bySession[SESSION_ID]?.subagent ?? null,
 	focusRunId: () => useSubagentsStore.getState().focusRunId,
 	panelTab: () => useUiStore.getState().panelTab,
 	setPanelTab: (tab: "tasks" | "subagents") => useUiStore.getState().setPanelTab(tab),
@@ -139,6 +142,20 @@ const fixture = {
 
 const api = {
 	platform: "win32",
+	/** 输入框普通发送（@ 胶囊在场时不该走到这里） */
+	prompt: async (_sessionId: string, content: string) => {
+		fixture.prompted.push(content);
+		return { kind: "agent" };
+	},
+	listProjectFiles: async () => [
+		"docs/permissions-settings.md",
+		"docs/subagents-panel.md",
+		"packages/backend/src/permissions/config.ts",
+		"scripts/",
+	],
+	listSlashCommands: async () => [],
+	listSlashCommandsForCwd: async () => [],
+	clearQueue: async () => ({ followUp: [] }),
 	listSessionSubagents: async () => SNAPSHOT,
 	listSubagentRuns: async () => [...runs.values()],
 	dispatchSubagents: async (
@@ -194,7 +211,22 @@ const api = {
 	},
 });
 
-useSessionsStore.setState({ sessions: [SESSION], activeSessionId: SESSION_ID, cwd: SESSION.cwd });
+useSessionsStore.setState({
+	sessions: [SESSION],
+	activeSessionId: SESSION_ID,
+	cwd: SESSION.cwd,
+	// 输入框发送钮需要至少一个模型（noModel 时禁发）
+	models: [
+		{
+			provider: "anthropic",
+			providerName: "Anthropic",
+			id: "claude-sonnet-4",
+			label: "Claude Sonnet 4",
+			authed: true,
+		},
+	],
+	currentModel: { provider: "anthropic", modelId: "claude-sonnet-4" },
+});
 useUiStore.getState().openPanel("subagents");
 
 function ChatColumn() {
@@ -215,7 +247,8 @@ function ChatColumn() {
 					)}
 				</div>
 			</div>
-			<ApprovalDock sessionId={SESSION_ID} hideComposer />
+			{/* 真实 Composer：S9 输入框 @ 选择器与审批坞同槽 */}
+			<ApprovalDock sessionId={SESSION_ID} hideComposer={false} />
 		</div>
 	);
 }

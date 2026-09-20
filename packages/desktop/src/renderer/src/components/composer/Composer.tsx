@@ -1,16 +1,19 @@
-import type { ImageInput } from "@drone/shared";
-import { useEffect, useRef, useState } from "react";
+import type { ImageInput, SubagentPanelAgent } from "@drone/shared";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useT } from "../../i18n";
 import { COMPOSER_FOCUS_EVENT, EMPTY_DRAFT, NEW_SESSION_DRAFT_KEY, useDraftStore } from "../../stores/drafts";
-import { useSessionsStore } from "../../stores/sessions";
+import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
+import { useSubagentsStore } from "../../stores/subagents";
 import { pushToast } from "../../stores/toasts";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
+import { useUiStore } from "../../stores/ui";
 import { ImagePreviewOverlay } from "../chat/ImagePreview";
 import { ArrowUpIcon, PlusIcon, StopIcon } from "../icons";
 import { AtMenu } from "./AtMenu";
 import { AttachmentChip } from "./AttachmentChip";
+import { atAgentAvailability, restoreSubagentText } from "./at-subagents";
 import { ContextRing } from "./ContextRing";
 import { composerRunActive } from "./composer-run";
 import { ImageTray } from "./ImageTray";
@@ -20,15 +23,19 @@ import { QueueBar } from "./QueueBar";
 import { QuoteChip } from "./QuoteChip";
 import { SendErrorBar } from "./SendErrorBar";
 import { SlashMenu } from "./SlashMenu";
+import { SubagentChip } from "./SubagentChip";
 import { ThinkingPicker } from "./ThinkingPicker";
 import { useAtCompletion } from "./use-at-completion";
 import { useComposerSend } from "./use-composer-send";
 import { useSlashMenu } from "./use-slash-menu";
 
+const EMPTY_AGENTS: readonly SubagentPanelAgent[] = [];
+
 /**
  * 底部输入框：自动增高、Enter 发送、生成中显示停止（输入中仍可排队发送）；centered 用于空态居中布局。
  * 逻辑域拆在同目录 hooks（use-composer-send / use-slash-menu / use-at-completion），
  * 本组件只做装配与键盘事件的分发组合。
+ * 消息开头的 @ 还能选子智能体（S9）：选中成胶囊，Enter 按胶囊直接派发（= 面板单任务派发）。
  */
 export function Composer({ centered = false }: { centered?: boolean }) {
 	const t = useT();
@@ -56,7 +63,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	/** 草稿（文本/图片/命令胶囊）按会话持久：切换会话/空态↔列表态换 Composer 实例不丢、不串会话 */
 	const draftKey = activeSessionId ?? NEW_SESSION_DRAFT_KEY;
 	const draft = useDraftStore((s) => s.bySession[draftKey] ?? EMPTY_DRAFT);
-	const { text, images, slashCommand, attachments, quotes } = draft;
+	const { text, images, slashCommand, subagent, attachments, quotes } = draft;
 	const updateDraft = useDraftStore((s) => s.updateDraft);
 	const setText = (updater: string | ((prev: string) => string)) => {
 		updateDraft(draftKey, (d) => ({ ...d, text: typeof updater === "function" ? updater(d.text) : updater }));
@@ -69,6 +76,9 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	};
 	const setSlashCommand = (command: string | null) => {
 		updateDraft(draftKey, (d) => ({ ...d, slashCommand: command }));
+	};
+	const setSubagent = (agent: string | null) => {
+		updateDraft(draftKey, (d) => ({ ...d, subagent: agent }));
 	};
 	const setAttachments = (updater: string[] | ((prev: string[]) => string[])) => {
 		updateDraft(draftKey, (d) => ({
@@ -95,6 +105,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		Boolean(text.trim()) ||
 		images.length > 0 ||
 		Boolean(slashCommand) ||
+		Boolean(subagent) ||
 		attachments.length > 0 ||
 		quotes.length > 0;
 
@@ -105,6 +116,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		attachments,
 		quotes,
 		slashCommand,
+		subagent,
 		followUpQueue,
 		compacting,
 		imagesSupported,
@@ -113,6 +125,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		setAttachments,
 		setQuotes,
 		setSlashCommand,
+		setSubagent,
 	});
 	const { sending, error, setError, feedback, showFeedback, ensureSession, runSlashCommand, handleSend } =
 		send;
@@ -130,12 +143,25 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 				? t("composer.placeholderQueued")
 				: t("composer.placeholder");
 
+	/** @ 子智能体候选（S9）：只对真实、非只读会话提供，数据 = 面板同一份快照（store TTL 缓存） */
+	const sessionKnown = useSessionsStore((s) => s.sessions.some((x) => x.sessionId === s.activeSessionId));
+	const dispatchable = sessionKnown && !readOnly && !isDraftSessionId(activeSessionId);
+	const agents = useSubagentsStore((s) =>
+		activeSessionId ? (s.agentsBySession[activeSessionId]?.snapshot?.agents ?? EMPTY_AGENTS) : EMPTY_AGENTS,
+	);
+	const loadAgents = useSubagentsStore((s) => s.loadAgents);
+	const ensureAgents = useCallback(() => {
+		if (activeSessionId && dispatchable) void loadAgents(activeSessionId);
+	}, [activeSessionId, dispatchable, loadAgents]);
+	const subagentSource = subagent ? agents.find((agent) => agent.name === subagent)?.source : undefined;
+
 	const slash = useSlashMenu({
 		activeSessionId,
 		cwd,
 		trustVersion,
 		text,
 		slashCommand,
+		subagent,
 		setText,
 		setSlashCommand,
 		textareaRef,
@@ -151,10 +177,44 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		text,
 		attachments,
 		slashOpen: slash.slashOpen,
+		slashCommand,
+		subagent,
+		dispatchable,
+		agents,
+		ensureAgents,
 		setText,
 		setAttachments,
+		/** 内置 / 用户级 → 胶囊；项目级定义每次派发都要在面板勾选信任 → 转面板表单预填（会话内不记忆） */
+		onPickSubagent: (agent) => {
+			if (atAgentAvailability(agent) === "needs_panel") {
+				useSubagentsStore.getState().setDraftAgent(agent.name);
+				useUiStore.getState().openPanel("subagents");
+				showFeedback(t("composer.subagentNeedsPanel", { agent: agent.name }));
+				return;
+			}
+			setSubagent(agent.name);
+		},
 		textareaRef,
 	});
+
+	/** 胶囊整枚撤销（Esc / 空文本 Backspace / ×）：`@name ` 拼回文本开头等待继续编辑；菜单不立刻重弹 */
+	const { setAtDismissed } = at;
+	const restoreSubagentChip = (e?: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		e?.preventDefault();
+		const agent = subagent;
+		if (!agent) return;
+		setSubagent(null);
+		setText((prev) => restoreSubagentText(agent, prev));
+		setAtDismissed(true);
+		requestAnimationFrame(() => {
+			const el = textareaRef.current;
+			if (el) {
+				el.focus();
+				const len = el.value.length;
+				el.setSelectionRange(len, len);
+			}
+		});
+	};
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: 高度由文本 DOM 变化驱动，显式依赖 text 便于触发
 	useEffect(() => {
@@ -173,7 +233,6 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 
 	// 点击输入框容器外部时收起命令/文件面板（文本保留；继续输入时恢复）
 	const { setSlashDismissed } = slash;
-	const { setAtDismissed } = at;
 	useEffect(() => {
 		if (!slash.slashOpen && !at.atOpen) return;
 		const onPointerDown = (e: PointerEvent) => {
@@ -205,9 +264,13 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (at.handleKeyDown(e)) return;
 		if (slash.handleKeyDown(e)) return;
-		// 胶囊撤销：Esc（任意文本态，菜单未消费时）；空文本 Backspace/Delete 先 @ 胶囊后 slash 胶囊
+		// 胶囊撤销：Esc（任意文本态，菜单未消费时）；空文本 Backspace/Delete 先 @ 文件胶囊，再子智能体 / slash 胶囊
 		if (slashCommand && e.key === "Escape") {
 			slash.restoreSlashPill(e);
+			return;
+		}
+		if (subagent && e.key === "Escape") {
+			restoreSubagentChip(e);
 			return;
 		}
 		if (e.key === "Escape" && isStreaming) {
@@ -216,10 +279,14 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 			return;
 		}
 		if (text === "" && (e.key === "Backspace" || e.key === "Delete")) {
-			// 胶囊撤销：视觉由近及远（@ 文件 → slash 命令 → 引用）
+			// 胶囊撤销：视觉由近及远（@ 文件 → @ 子智能体 / slash 命令 → 引用）
 			if (attachments.length > 0) {
 				e.preventDefault();
 				at.handleAttachmentRemove(attachments.length - 1);
+				return;
+			}
+			if (subagent) {
+				restoreSubagentChip(e);
 				return;
 			}
 			if (slashCommand) {
@@ -303,7 +370,8 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 				)}
 				{at.atOpen && (
 					<AtMenu
-						files={at.atFiltered}
+						items={at.atItems}
+						agentsOffered={at.agentsOffered}
 						selectedIndex={at.atSelected}
 						onSelectedIndexChange={at.setAtSelected}
 						onPick={at.handleAtPick}
@@ -342,13 +410,13 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 							))}
 						</div>
 					)}
-					{/* 正文行：slash/@ 胶囊内联在文本行首（有胶囊时 flex-wrap 同行，否则 textarea 独占整行）；
+					{/* 正文行：slash/@ 子智能体/@ 文件胶囊内联在文本行首（有胶囊时 flex-wrap 同行，否则 textarea 独占整行）；
 					    外层容器恒定渲染，textarea 只切 className 不换位置 → 不重挂、不丢焦点；
 					    无引用时文本贴顶（可编辑区向上扩展），引用行临时加一行、不浪费空间 */}
 					<div className={`px-3 pb-4 ${quotes.length > 0 ? "pt-1.5" : "pt-2"}`}>
 						<div
 							className={
-								slashCommand || attachments.length > 0
+								slashCommand || subagent || attachments.length > 0
 									? "flex flex-wrap items-start gap-x-1.5 gap-y-1"
 									: undefined
 							}
@@ -358,15 +426,29 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 									/{slashCommand}
 								</span>
 							)}
+							{subagent && (
+								<SubagentChip
+									name={subagent}
+									source={subagentSource}
+									onRemove={() => restoreSubagentChip()}
+								/>
+							)}
 							{attachments.map((path, index) => (
 								<AttachmentChip key={path} path={path} onRemove={() => at.handleAttachmentRemove(index)} />
 							))}
 							<textarea
 								ref={textareaRef}
+								data-testid="composer-input"
 								className={`max-h-[200px] resize-none bg-transparent text-[14px] leading-relaxed outline-none placeholder:text-ink-faint select-text ${
-									slashCommand || attachments.length > 0 ? "min-w-[140px] flex-1" : "w-full"
+									slashCommand || subagent || attachments.length > 0 ? "min-w-[140px] flex-1" : "w-full"
 								}`}
-								placeholder={slashCommand ? t("slash.argPlaceholder") : placeholder}
+								placeholder={
+									subagent
+										? t("composer.subagentTaskPlaceholder", { agent: subagent })
+										: slashCommand
+											? t("slash.argPlaceholder")
+											: placeholder
+								}
 								value={text}
 								rows={1}
 								disabled={readOnly || sending}
@@ -399,7 +481,10 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						>
 							<PlusIcon size={18} />
 						</button>
-						<div className="flex-1" />
+						{/* 中缝：@ 子智能体胶囊在场时提示 Enter = 派发（与 S9 输入框底栏一致） */}
+						<div className="min-w-0 flex-1 truncate text-[11px] text-ink-faint" data-testid="composer-hint">
+							{subagent ? t("composer.dispatchHint") : null}
+						</div>
 						{/* 右侧控件组（一处一事）：[模型 · 强度] [权限] [上下文环] [发送]；会话用量在右侧面板「过程」页签 */}
 						<div
 							className={`composer-model-group${readOnly ? " pointer-events-none opacity-40" : ""}`}
@@ -436,8 +521,9 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 									}
 									void handleSend();
 								}}
-								aria-label={t("composer.send")}
-								title={t("composer.send")}
+								aria-label={subagent ? t("composer.dispatch") : t("composer.send")}
+								title={subagent ? t("composer.dispatch") : t("composer.send")}
+								data-testid="composer-send"
 							>
 								<ArrowUpIcon size={20} />
 							</button>

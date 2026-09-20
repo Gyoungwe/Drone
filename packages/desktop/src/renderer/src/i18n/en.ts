@@ -340,6 +340,20 @@ export const en: Messages = {
 		permissionFullAccessDesc:
 			"Nothing is blocked; high-risk command runs are written to an audit log — current session only",
 		permissionGateOff: "The built-in permission gate is disabled in permissions.json",
+		dispatch: "Dispatch",
+		dispatchHint:
+			"Enter dispatches to this session · Shift+Enter for a new line · results land in the Subagents tab",
+		subagentTaskPlaceholder: "Task for {agent}: goal, scope, where to put the output…",
+		subagentChipTitle: "Dispatch to subagent {agent} (Esc to undo)",
+		removeSubagent: "Remove subagent",
+		subagentTaskRequired: "Write the task you want {agent} to do",
+		subagentNoImages:
+			"Subagent dispatch cannot carry images: remove them, or drop the @ chip to send to the main model",
+		subagentNoSession: "Send a message to create the session first, then dispatch subagents with @",
+		subagentDispatched:
+			"Dispatched {agent}; its result will land in this session (track it in the Subagents tab)",
+		subagentNeedsPanel:
+			"{agent} is a project-level definition and must be trusted in the panel for each dispatch — preselected for you",
 	},
 	selection: {
 		addToChat: "Add to chat",
@@ -368,6 +382,10 @@ export const en: Messages = {
 	},
 	at: {
 		noMatch: "No matching files",
+		noMatchAny: "No matching subagents or files",
+		subagentsHeader: "Subagents · dispatch to this session (↑↓ to choose, Enter to confirm)",
+		filesHeader: "Files",
+		subagentNeedsPanel: "project-level · trust it in the panel to dispatch",
 	},
 	thinkingLevels: {
 		off: "Off",

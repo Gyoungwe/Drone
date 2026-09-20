@@ -19,6 +19,8 @@ export interface UseSlashMenuOptions {
 	trustVersion: number;
 	text: string;
 	slashCommand: string | null;
+	/** @ 子智能体胶囊存在时不探测 /（任务正文里的路径 / 命令不该弹命令菜单；两种胶囊互斥） */
+	subagent: string | null;
 	setText: (updater: string | ((prev: string) => string)) => void;
 	setSlashCommand: (command: string | null) => void;
 	textareaRef: RefObject<HTMLTextAreaElement | null>;
@@ -46,15 +48,16 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 	const [slashToken, setSlashToken] = useState<SlashToken | null>(null);
 
 	const { activeSessionId, cwd, trustVersion, text } = options;
-	/** 胶囊已存在时不再探测（发送拼装只支持单命令，args 里打 / 不开菜单） */
+	/** 胶囊（slash / @ 子智能体）已存在时不再探测（发送拼装只支持单命令，args 里打 / 不开菜单） */
 	const updateToken = (value: string, cursor: number) => {
-		setSlashToken(options.slashCommand ? null : extractSlashToken(value, cursor));
+		setSlashToken(options.slashCommand || options.subagent ? null : extractSlashToken(value, cursor));
 	};
 
 	/** token 与当前文本一致才有效（程序化改文本自动失效）；胶囊模式下不生效 */
 	const slashOpen =
 		slashToken !== null &&
 		!options.slashCommand &&
+		!options.subagent &&
 		text.slice(slashToken.start, slashToken.end) === `/${slashToken.query}` &&
 		!slashDismissed;
 	const slashQuery = slashOpen ? slashToken.query : "";
