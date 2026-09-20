@@ -197,6 +197,79 @@ export function buildProxiedUrl(originalUrl: string, template?: string): string 
 	}
 }
 
+/**
+ * 从实际导航 URL 自动推断 EZproxy / WebVPN 模板并保存
+ * - EZproxy: https://ezproxy.example.edu/login?url=https://www.nature.com/xxx → https://ezproxy.example.edu/login?url=%s
+ * - WebVPN: https://webvpn.example.edu/https/443/www.nature.com/xxx → https://webvpn.example.edu/%s 形式需特殊处理，这里仅记录 host，模板仍靠 session
+ */
+export function inferEzproxyTemplateFromUrl(navigatedUrl: string): string | null {
+	try {
+		const u = new URL(navigatedUrl);
+		const href = u.href;
+		// EZproxy 典型：host 含 ezproxy 且 query 含 url= 且 url 参数是 http(s)
+		if (u.hostname.includes("ezproxy") && u.search) {
+			const params = new URLSearchParams(u.search);
+			const target = params.get("url");
+			if (target && /^https?:\/\//i.test(target)) {
+				// 模板 = 当前 URL 去掉 url 参数值，替换为 %s
+				// 保留 ?url= 前缀
+				const base = `${href.split("url=")[0]}url=`;
+				if (/^https?:\/\//i.test(base)) return `${base}%s`;
+			}
+			// 另一种：/login?url= 直接在 href 中
+			if ((href.includes("url=") && /url=https?%3A/i.test(href)) || href.includes("url=https://")) {
+				const idx = href.indexOf("url=");
+				if (idx > 0) {
+					const base = href.slice(0, idx + 4);
+					if (/^https?:\/\//i.test(base)) return `${base}%s`;
+				}
+			}
+		}
+		// 通用：任何含 ?url= 或 &url= 且值是 http(s) 的，认为是代理模板
+		if ((href.includes("?url=") || href.includes("&url=")) && /url=https?/i.test(href)) {
+			const match = href.match(/^(https?:\/\/[^?]+\?[^=]*url=)/i);
+			if (match) {
+				const base = match[1] as string;
+				// 防止把目标 host 也当成模板的一部分
+				if (
+					base &&
+					!base.includes("nature.com") &&
+					!base.includes("sciencedirect.com") &&
+					!base.includes("springer.com") &&
+					!base.includes("wiley.com")
+				) {
+					// 粗略：只要 base 是 http(s) 且长度合理
+					if (base.length < 200) return `${base}%s`;
+				} else {
+					// 即使包含目标，也尝试提取到 url= 为止
+					const idx = href.toLowerCase().indexOf("url=");
+					if (idx > 0) {
+						const base2 = href.slice(0, idx + 4);
+						if (base2.length < 300) return `${base2}%s`;
+					}
+				}
+			}
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+export async function detectAndSaveTemplateFromUrl(
+	navigatedUrl: string,
+): Promise<InstitutionalConfig | null> {
+	const inferred = inferEzproxyTemplateFromUrl(navigatedUrl);
+	if (!inferred) return null;
+	const current = await loadInstitutionalConfig();
+	// 已有相同模板则不重复写
+	if (current.ezproxyTemplate === inferred) return current;
+	// 只有当新模板看起来更通用（host 相同但更短）或当前未配置时才覆盖，避免误覆盖
+	const shouldSave = !current.ezproxyTemplate || inferred.length <= current.ezproxyTemplate.length + 20;
+	if (!shouldSave) return current;
+	return saveInstitutionalConfig({ ezproxyTemplate: inferred });
+}
+
 export async function clearInstitutionalLogin(): Promise<InstitutionalConfig> {
 	const s = store();
 	const current = await s.read();
