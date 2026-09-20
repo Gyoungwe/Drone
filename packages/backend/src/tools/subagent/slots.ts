@@ -15,7 +15,8 @@ interface Waiter {
 let active = 0;
 const byProject = new Map<string, number>(),
 	queue: Waiter[] = [];
-async function projectLimit(cwd: string): Promise<number> {
+/** 本项目并发上限（.pi/research-workspace.json maxConcurrentSubagents ∈ 1–3，缺省 3）；面板「运行槽」展示同源 */
+export async function nativeSubagentProjectLimit(cwd: string): Promise<number> {
 	try {
 		const config = JSON.parse(await readFile(join(cwd, ".pi/research-workspace.json"), "utf8"));
 		return [1, 2, 3].includes(config.maxConcurrentSubagents) ? config.maxConcurrentSubagents : 3;
@@ -45,7 +46,7 @@ export async function withNativeSubagentSlot<T>(
 ): Promise<T> {
 	signal?.throwIfAborted();
 	const key = resolve(cwd),
-		limit = await projectLimit(cwd);
+		limit = await nativeSubagentProjectLimit(cwd);
 	signal?.throwIfAborted();
 	if (queue.length >= MAX_QUEUED) throw new Error("Native subagent queue is full");
 	await new Promise<void>((resolveSlot, reject) => {

@@ -1,22 +1,23 @@
-import {
-	buildChatRows,
-	emptyTranscript,
-	messagesToUIMessages,
-	type SessionTranscriptState,
-	type UIMessage,
-} from "@drone/shared";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getPi } from "../../api";
-import { useT } from "../../i18n";
+import { type MessageKey, useT } from "../../i18n";
 import type { SubagentRunUi } from "../../stores/transcript";
-import { useTranscriptStore } from "../../stores/transcript";
 import { ChevronDownIcon } from "../icons";
-import { AssistantMessage } from "./AssistantMessage";
-import { ErrorNote } from "./ErrorNote";
-import { imageSrc } from "./ImagePreview";
-import { MetaGroup } from "./MetaGroup";
-import { SystemMessage } from "./SystemMessage";
-import { UserMessage } from "./UserMessage";
+import { InlineSubagentTranscript } from "./InlineSubagentTranscript";
+import { SubagentAvatar } from "./SubagentAvatar";
+import { SubagentResultCard } from "./SubagentResultCard";
+import { avatarStateForPanelStatus, avatarStateForRunUi } from "./subagent-avatar";
+
+/** 面板运行状态胶囊文案（模型调用的运行沿用 running / done / failed 三态） */
+const PANEL_STATUS_KEYS: Record<NonNullable<SubagentRunUi["panel"]>["status"], MessageKey> = {
+	queued: "message.subagent.queued",
+	running: "message.subagent.running",
+	needs_reply: "message.subagent.running",
+	waiting_approval: "message.subagent.running",
+	done: "message.subagent.done",
+	error: "message.subagent.failed",
+	aborted: "message.subagent.aborted",
+};
 
 function displayName(name: string): string {
 	return name.charAt(0).toUpperCase() + name.slice(1);
@@ -48,148 +49,6 @@ function phaseLabel(t: ReturnType<typeof useT>, phase?: string): string | null {
 	return key ? t(key) : phase;
 }
 
-function InlineMessage({
-	message,
-	streaming,
-	metaInGroup,
-}: {
-	message: UIMessage;
-	streaming?: boolean;
-	metaInGroup?: boolean;
-}) {
-	const t = useT();
-	if (message.kind === "user") return <UserMessage message={message} />;
-	if (message.kind === "assistant") {
-		return (
-			<AssistantMessage
-				text={message.text}
-				thinking={message.thinking}
-				tools={message.tools}
-				streaming={streaming}
-				metaInGroup={metaInGroup}
-			/>
-		);
-	}
-	if (message.kind === "system") return <SystemMessage message={message} />;
-	if (message.kind === "error")
-		return <ErrorNote sessionId={null} cardId={message.id} error={message.error} />;
-	if (message.kind === "image") {
-		return (
-			<div className="flex flex-wrap gap-2">
-				{message.images.map((image, index) => (
-					<img
-						// biome-ignore lint/suspicious/noArrayIndexKey: immutable image list
-						key={index}
-						src={imageSrc(image)}
-						alt={t("message.image")}
-						className="max-h-28 max-w-40 rounded-lg border border-border object-contain"
-					/>
-				))}
-			</div>
-		);
-	}
-	if (message.kind === "subagent") {
-		return (
-			<div className="text-[11px] text-ink-faint">
-				{t("message.summarySubagents", { n: message.runs.length })}
-			</div>
-		);
-	}
-	return null;
-}
-
-function InlineSubagentTranscript({ run }: { run: SubagentRunUi }) {
-	const t = useT();
-	const live = useTranscriptStore((state) => (run.sessionId ? state.bySession[run.sessionId] : undefined));
-	const [snapshot, setSnapshot] = useState<UIMessage[] | null>(null);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (!run.sessionFile) return;
-		if (live && (live.messages.length > 0 || live.streaming)) return;
-		let cancelled = false;
-		setLoading(true);
-		setError(null);
-		void getPi()
-			.peekSubagentMessages(run.sessionFile)
-			.then((messages) => {
-				if (!cancelled) setSnapshot(messagesToUIMessages(messages));
-			})
-			.catch((err) => {
-				if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-			})
-			.finally(() => {
-				if (!cancelled) setLoading(false);
-			});
-		return () => {
-			cancelled = true;
-		};
-	}, [run.sessionFile, live]);
-
-	const transcript = useMemo<SessionTranscriptState>(() => {
-		if (live && (live.messages.length > 0 || live.streaming)) return live;
-		return { ...emptyTranscript(), messages: snapshot ?? [] };
-	}, [live, snapshot]);
-	const rows = useMemo(
-		() => buildChatRows(transcript, run.sessionId ?? run.key, Date.now()),
-		[transcript, run.sessionId, run.key],
-	);
-
-	if (loading && rows.length === 0) {
-		return (
-			<div className="px-3 py-3 text-[11px] text-ink-faint">{t("message.subagent.loadingTranscript")}</div>
-		);
-	}
-	if (error && rows.length === 0) {
-		return (
-			<div className="px-3 py-3 text-[11px] text-err">
-				{t("message.subagent.transcriptError")}: {error}
-			</div>
-		);
-	}
-	if (rows.length === 0) {
-		return <div className="px-3 py-3 text-[11px] text-ink-faint">{t("message.subagent.noTranscript")}</div>;
-	}
-
-	return (
-		<div className="max-h-[420px] overflow-y-auto border-t border-border/60 bg-surface-2/30 px-3 py-3">
-			<div className="flex flex-col gap-4">
-				{rows.map((row) => {
-					if (row.kind === "turnDiff") return null;
-					if (row.kind === "metaGroup") {
-						return (
-							<MetaGroup
-								key={row.key}
-								items={row.items}
-								working={row.working}
-								endImmediately={row.endImmediately}
-								subagentCount={row.subagentCount}
-								statusText={row.statusText}
-							/>
-						);
-					}
-					if (row.kind === "streamingSubagents") {
-						return (
-							<div key={row.key} className="text-[11px] text-ink-faint">
-								{t("message.summarySubagents", { n: row.runs.length })}
-							</div>
-						);
-					}
-					return (
-						<InlineMessage
-							key={row.key}
-							message={row.message}
-							streaming={row.streaming}
-							metaInGroup={row.metaInGroup}
-						/>
-					);
-				})}
-			</div>
-		</div>
-	);
-}
-
 function formatDuration(ms: number): string {
 	const seconds = Math.max(0, Math.floor(ms / 1000));
 	if (seconds < 60) return `${seconds}s`;
@@ -214,17 +73,27 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 	const [sending, setSending] = useState(false);
 	const [controlError, setControlError] = useState<string | null>(null);
 	const [now, setNow] = useState(Date.now());
+	const panel = run.panel;
 	const expandable = run.sessionFile != null;
 	const canControl = run.status === "running" && run.sessionId != null;
 	const request = run.supervisorRequest ?? null;
-	const stateLabel =
-		run.status === "running"
+	const stateLabel = panel
+		? t(PANEL_STATUS_KEYS[panel.status])
+		: run.status === "running"
 			? t("message.subagent.running")
 			: run.status === "error"
 				? t("message.subagent.failed")
 				: t("message.subagent.done");
 	const phase = phaseLabel(t, run.statusPhase);
-	const current = run.currentAction ?? run.statusText ?? stateLabel;
+	const current =
+		panel?.status === "queued"
+			? t("message.subagent.queuedReason", { n: panel.queuePosition ?? 1 })
+			: panel?.status === "waiting_approval"
+				? `${run.currentAction ?? run.statusText ?? ""}${run.currentAction || run.statusText ? " · " : ""}${t("message.subagent.waitingApproval")}`
+				: (run.currentAction ?? run.statusText ?? stateLabel);
+	const avatarState = panel
+		? avatarStateForPanelStatus(panel.status)
+		: avatarStateForRunUi(run.status, { expectsReply: request?.expectsReply === true });
 
 	useEffect(() => {
 		if (run.status !== "running" || !run.startedAt) return;
@@ -246,6 +115,9 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 		}
 	};
 
+	// 面板派发且已完成：同一张卡换成结果卡（摘要 / 引用 / 展开记录 / followUp 状态）
+	if (panel && panel.status === "done") return <SubagentResultCard run={run} panel={panel} />;
+
 	const sendReply = async () => {
 		if (!run.sessionId || !request?.expectsReply || !reply.trim()) return;
 		setSending(true);
@@ -260,8 +132,14 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 		}
 	};
 
+	const aborted = panel?.status === "aborted";
+	const failed = panel ? panel.status === "error" : run.status === "error";
 	return (
-		<div className="overflow-hidden rounded-xl border border-border/70 bg-surface/40">
+		<div
+			className={`overflow-hidden rounded-xl border border-border/70 bg-surface/40${aborted ? " sa-run-aborted" : ""}`}
+			data-testid="subagent-run-row"
+			data-panel-status={panel?.status}
+		>
 			<button
 				type="button"
 				disabled={!expandable}
@@ -273,10 +151,13 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 				className={`w-full px-3 py-2.5 text-left transition-colors ${expandable ? "cursor-pointer hover:bg-hover" : "cursor-default"}`}
 			>
 				<div className="flex min-w-0 items-center gap-2">
-					{run.status === "running" ? (
+					<SubagentAvatar name={run.agent} source={panel?.source} size="lg" state={avatarState} />
+					{run.status === "running" && !aborted ? (
 						<span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />
-					) : run.status === "error" ? (
+					) : failed ? (
 						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+					) : aborted ? (
+						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ink-faint" />
 					) : (
 						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
 					)}
@@ -287,6 +168,11 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 					{phase && (
 						<span className="shrink-0 rounded-full border border-border/60 px-1.5 py-0.5 text-[11px] text-ink-dim">
 							{phase}
+						</span>
+					)}
+					{panel?.status === "waiting_approval" && (
+						<span className="shrink-0 rounded-full bg-warn/10 px-1.5 py-0.5 text-[11px] font-medium text-warn">
+							{t("message.subagent.waitingApproval")}
 						</span>
 					)}
 					{request?.expectsReply && (
@@ -310,16 +196,24 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 							</span>
 						</div>
 					)}
-					<div className="flex min-w-0 gap-2">
-						<span className="shrink-0 text-ink-faint">{t("message.subagent.current")}</span>
-						<span className="truncate font-medium text-ink-2" title={current}>
-							{current}
-						</span>
-					</div>
+					{!(panel && (panel.status === "error" || panel.status === "aborted")) && (
+						<div className="flex min-w-0 gap-2">
+							<span className="shrink-0 text-ink-faint">{t("message.subagent.current")}</span>
+							<span className="truncate font-medium text-ink-2" title={current}>
+								{current}
+							</span>
+						</div>
+					)}
 					{run.currentTool && (
 						<div className="flex min-w-0 gap-2">
 							<span className="shrink-0 text-ink-faint">{t("message.subagent.tool")}</span>
 							<span className="truncate font-mono text-[11px] text-ink-dim">{run.currentTool}</span>
+						</div>
+					)}
+					{panel?.status === "error" && panel.error && (
+						<div className="flex min-w-0 gap-2">
+							<span className="shrink-0 text-ink-faint">{t("message.subagent.error")}</span>
+							<span className="break-words text-err">{panel.error}</span>
 						</div>
 					)}
 				</div>
@@ -399,14 +293,38 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 	);
 }
 
+function formatClock(ts: number): string {
+	const d = new Date(ts);
+	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export function SubagentRunCard({ runs }: { runs: SubagentRunUi[] }) {
 	const t = useT();
+	const dispatched = runs.filter((run) => run.panel);
+	const first = dispatched[0]?.panel;
 	return (
 		<div className="mt-1 space-y-1.5">
-			{runs.length > 1 && (
-				<div className="px-1 text-[11px] font-medium text-ink-faint">
-					{t("message.summarySubagents", { n: runs.length })}
+			{first ? (
+				// 面板派发的系统条目：解释「这个子智能体是谁派发的」（custom entry 持久化，模型不可见）
+				<div
+					className="flex items-center gap-1.5 border-l-2 border-border px-2 text-[11px] text-ink-dim"
+					data-testid="subagent-dispatch-line"
+				>
+					<SubagentAvatar name={first.agent} source={first.source} size="sm" state="idle" />
+					<span className="truncate">
+						{t("message.subagent.panelDispatched", {
+							agents: [...new Set(dispatched.map((run) => run.agent))].join(", "),
+							n: dispatched.length,
+						})}
+						{` · ${formatClock(first.createdAt)}`}
+					</span>
 				</div>
+			) : (
+				runs.length > 1 && (
+					<div className="px-1 text-[11px] font-medium text-ink-faint">
+						{t("message.summarySubagents", { n: runs.length })}
+					</div>
+				)
 			)}
 			{runs.map((run) => (
 				<SubagentRunRow key={run.key} run={run} />

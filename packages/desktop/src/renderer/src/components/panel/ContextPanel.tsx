@@ -5,6 +5,7 @@ import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "../../plugin
 import { UI_REGIONS } from "../../plugins/slots";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
+import { summarizeRuns, useSubagentsStore } from "../../stores/subagents";
 import { EMPTY_TODOS, selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { PANEL_TABS, type PanelTab, useUiStore } from "../../stores/ui";
 import { PanelRightIcon } from "../icons";
@@ -13,13 +14,14 @@ import { useSessionStatus } from "../session/session-status";
 import { ArtifactsPane } from "./ArtifactsPane";
 import { ChangesPane } from "./ChangesPane";
 import { ProcessPane } from "./ProcessPane";
+import { SubagentsPane } from "./SubagentsPane";
 import { TasksPane } from "./TasksPane";
 
 /** 面板宽度（CSS 变量同步 globals.css .context-panel） */
 export const CONTEXT_PANEL_WIDTH = 372;
 
 /**
- * 右侧上下文面板：任务 / 过程 / 变更 / 产物 四页签，替代原 DiffSidebar + TaskSidebar + Todo 悬浮胶囊 +
+ * 右侧上下文面板：任务 / 过程 / 变更 / 产物 / 子智能体 五页签，替代原 DiffSidebar + TaskSidebar + Todo 悬浮胶囊 +
  * 知识流横条。固定栏位、push 式收展（聊天列自然压缩），永远只有一个右栏。
  *
  * 展开规则（用户确认）：运行开始自动展开；运行结束回到空闲选择；空闲时的手动开关被记住。
@@ -69,6 +71,7 @@ export function ContextPanel() {
 					{tab === "process" && <ProcessPane sessionId={activeSessionId} />}
 					{tab === "changes" && <ChangesPane sessionId={activeSessionId} />}
 					{tab === "artifacts" && <ArtifactsPane sessionId={activeSessionId} />}
+					{tab === "subagents" && <SubagentsPane sessionId={activeSessionId} />}
 					{pluginTab && <PluginEntryHost entry={pluginTab} />}
 				</div>
 				<PanelFooter />
@@ -77,15 +80,28 @@ export function ContextPanel() {
 	);
 }
 
-/** 页签计数：任务 done/total、变更文件数、产物数（过程页不计数） */
-function useTabBadges(sessionId: string | null): Partial<Record<PanelTab, string>> {
+interface TabBadges {
+	badges: Partial<Record<PanelTab, string>>;
+	/** 徽标琥珀态：子智能体存在「需要回复 / 等待审批」（有活要等你 ≠ 有活在跑） */
+	attention: Partial<Record<PanelTab, boolean>>;
+}
+
+/** 页签计数：任务 done/total、变更文件数、产物数、子智能体运行中数（过程页不计数） */
+function useTabBadges(sessionId: string | null): TabBadges {
 	const todos =
 		useTranscriptStore((s) => (sessionId ? s.bySession[sessionId]?.todos : undefined)) ?? EMPTY_TODOS;
 	const messages = useTranscriptStore((s) => selectTranscript(s, sessionId).messages);
 	const cwd = useSessionsStore((s) => s.cwd);
 	const flow = useKnowledgeStore((s) => (sessionId ? s.flows[sessionId] : undefined));
+	const runsRecord = useSubagentsStore((s) => (sessionId ? s.runsBySession[sessionId] : undefined));
 	return useMemo(() => {
 		const badges: Partial<Record<PanelTab, string>> = {};
+		const attention: Partial<Record<PanelTab, boolean>> = {};
+		if (runsRecord) {
+			const summary = summarizeRuns(Object.values(runsRecord));
+			if (summary.active > 0) badges.subagents = String(summary.active);
+			if (summary.attention) attention.subagents = true;
+		}
 		const latestTask = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
 		const tasks = latestTask?.kind === "assistant" ? (latestTask.taskView?.tasks ?? []) : [];
 		if (todos.length > 0) {
@@ -98,8 +114,8 @@ function useTabBadges(sessionId: string | null): Partial<Record<PanelTab, string
 		if (files > 0) badges.changes = String(files);
 		const artifacts = mergeKnowledgeArtifacts(flow?.cards || [], tasks, cwd || "");
 		if (artifacts.length > 0) badges.artifacts = String(artifacts.length);
-		return badges;
-	}, [todos, messages, flow, cwd]);
+		return { badges, attention };
+	}, [todos, messages, flow, cwd, runsRecord]);
 }
 
 function PanelHeader({
@@ -116,7 +132,7 @@ function PanelHeader({
 	collapseLabel: string;
 }) {
 	const t = useT();
-	const badges = useTabBadges(sessionId);
+	const { badges, attention } = useTabBadges(sessionId);
 	const pluginTabs = usePluginEntries(UI_REGIONS.PanelTab);
 	return (
 		<div className="context-panel-head">
@@ -142,7 +158,11 @@ function PanelHeader({
 						onClick={() => onTab(key)}
 					>
 						<span>{t(`panel.tabs.${key}`)}</span>
-						{badges[key] && <span className="context-panel-badge">{badges[key]}</span>}
+						{badges[key] && (
+							<span className={`context-panel-badge${attention[key] ? " attention" : ""}`}>
+								{badges[key]}
+							</span>
+						)}
 					</button>
 				))}
 				{pluginTabs.map((entry) => (

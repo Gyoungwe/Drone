@@ -2,7 +2,7 @@ import type { AgentSessionEvent as PiAgentSessionEvent } from "@earendil-works/p
 import type { CapabilityState } from "./capabilities";
 import type { ProgressDisplay } from "./progress-display";
 import type { SkillInvocationDisplay } from "./skill-invocation";
-import type { SubagentRunData } from "./subagent";
+import type { SubagentPanelRun, SubagentRunData } from "./subagent";
 import type { TaskView } from "./task-workbench";
 import type { ReportedUsage } from "./usage-display";
 
@@ -385,6 +385,15 @@ export interface ModelWaitEvent {
 	timeoutMs: number;
 }
 
+/**
+ * 子智能体面板运行事件：后端派发登记表每次变化整条推送（排队 / 运行 / 需要回复 / 等待审批 /
+ * 完成 / 失败 / 中止 / 进入上下文）。不进 trace；reducer 据此维护聊天里的派发行，面板 store 据此列表。
+ */
+export interface SubagentRunEvent {
+	type: "subagent_run";
+	run: SubagentPanelRun;
+}
+
 /** 宿主状态条文案：后端在 tool_execution_start 上按工具清单（drone.activity，挂钩 1）盖章，渲染层不再按工具名猜测。 */
 export interface HostActivityStamp {
 	text: string;
@@ -399,7 +408,8 @@ export type SessionEvent =
 	| ToolExecutionStartEvent
 	| SubagentMutexEvent
 	| StreamGuardTrippedEvent
-	| ModelWaitEvent;
+	| ModelWaitEvent
+	| SubagentRunEvent;
 
 /** 渲染进程收到的统一事件包络 */
 export interface SessionEventEnvelope {

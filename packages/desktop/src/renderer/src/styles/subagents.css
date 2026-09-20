@@ -1,0 +1,344 @@
+/* ======== 子智能体：动画形象（drone face）+ 面板专属样式 ========
+ * 形象 = 圆角方块 + 两只白色「眼睛」；底色由名称 djb2 哈希模 8 定（同名任何时刻同色）；
+ * 角标 D / U / P = 内置 / 用户 / 项目。表情 = 状态（data-state），全部纯 CSS：
+ * 眼睛扫视用 translate、眨眼用 scale（独立变换属性可叠加），呼吸圈用 box-shadow，全走合成层。
+ * 8 色板刻意避开状态色（红 / 琥珀 / 绿），深浅主题共用同一组渐变。 */
+.sa-av {
+	position: relative;
+	flex: none;
+	display: inline-block;
+	color: #fff;
+	border-radius: 7px;
+	vertical-align: middle;
+	animation: sa-breathe 3.2s ease-in-out infinite;
+}
+.sa-av.lg {
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	--sa-ew: 6px;
+	--sa-eh: 8.5px;
+	--sa-ex: 6px;
+	--sa-ey: 8px;
+	--sa-sw: 2px;
+}
+.sa-av.md {
+	width: 20px;
+	height: 20px;
+	--sa-ew: 4px;
+	--sa-eh: 5.5px;
+	--sa-ex: 5px;
+	--sa-ey: 6px;
+	--sa-sw: 1.5px;
+}
+.sa-av.sm {
+	width: 15px;
+	height: 15px;
+	border-radius: 5px;
+	--sa-ew: 3px;
+	--sa-eh: 4px;
+	--sa-ex: 3.5px;
+	--sa-ey: 4.5px;
+	--sa-sw: 1px;
+}
+.sa-av.h0 {
+	background: linear-gradient(135deg, #7c3aed, #a855f7);
+}
+.sa-av.h1 {
+	background: linear-gradient(135deg, #0369a1, #0ea5e9);
+}
+.sa-av.h2 {
+	background: linear-gradient(135deg, #0f766e, #2dd4bf);
+}
+.sa-av.h3 {
+	background: linear-gradient(135deg, #1d4ed8, #60a5fa);
+}
+.sa-av.h4 {
+	background: linear-gradient(135deg, #be185d, #f472b6);
+}
+.sa-av.h5 {
+	background: linear-gradient(135deg, #4338ca, #818cf8);
+}
+.sa-av.h6 {
+	background: linear-gradient(135deg, #155e75, #22d3ee);
+}
+.sa-av.h7 {
+	background: linear-gradient(135deg, #a21caf, #e879f9);
+}
+/* 眼睛 */
+.sa-av::before,
+.sa-av::after {
+	content: "";
+	position: absolute;
+	top: var(--sa-ey);
+	width: var(--sa-ew);
+	height: var(--sa-eh);
+	border-radius: 99px;
+	background: #fff;
+	animation: sa-blink 4.8s infinite;
+}
+.sa-av::before {
+	left: var(--sa-ex);
+}
+.sa-av::after {
+	right: var(--sa-ex);
+}
+/* 来源角标 */
+.sa-av .sa-av-c {
+	position: absolute;
+	right: -4px;
+	bottom: -4px;
+	z-index: 2;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 10px;
+	height: 10px;
+	padding: 0 1px;
+	border: 1px solid var(--color-border);
+	border-radius: 3px;
+	background: var(--color-surface);
+	color: var(--color-ink-dim);
+	font-size: 7px;
+	font-weight: 700;
+	line-height: 1;
+}
+.sa-av.sm .sa-av-c {
+	right: -3px;
+	bottom: -3px;
+	min-width: 8px;
+	height: 8px;
+	font-size: 6px;
+}
+@keyframes sa-breathe {
+	0%,
+	100% {
+		scale: 1;
+	}
+	50% {
+		scale: 1.045;
+	}
+}
+@keyframes sa-blink {
+	0%,
+	93%,
+	100% {
+		scale: 1 1;
+	}
+	96% {
+		scale: 1 0.12;
+	}
+}
+@keyframes sa-scan {
+	0% {
+		translate: calc(-1 * var(--sa-sw, 2px)) 0;
+	}
+	100% {
+		translate: var(--sa-sw, 2px) 0;
+	}
+}
+@keyframes sa-glow {
+	0%,
+	100% {
+		box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 35%, transparent);
+	}
+	50% {
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent);
+	}
+}
+@keyframes sa-glow-warn {
+	0%,
+	100% {
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-warn) 55%, transparent);
+	}
+	50% {
+		box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warn) 16%, transparent);
+	}
+}
+@keyframes sa-blinkup {
+	0%,
+	93%,
+	100% {
+		scale: 1 1.25;
+	}
+	96% {
+		scale: 1 0.12;
+	}
+}
+@keyframes sa-flash-ok {
+	0% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ok) 65%, transparent);
+	}
+	100% {
+		box-shadow: 0 0 0 9px transparent;
+	}
+}
+@keyframes sa-shake {
+	0%,
+	100% {
+		translate: 0 0;
+	}
+	20% {
+		translate: -2px 0;
+	}
+	40% {
+		translate: 2px 0;
+	}
+	60% {
+		translate: -1.5px 0;
+	}
+	80% {
+		translate: 1px 0;
+	}
+}
+/* 运行中 = 快呼吸 + 紫色微光 + 眼睛左右扫视 */
+.sa-av[data-state="running"] {
+	animation:
+		sa-breathe 1.7s ease-in-out infinite,
+		sa-glow 1.7s ease-in-out infinite;
+}
+.sa-av[data-state="running"]::before,
+.sa-av[data-state="running"]::after {
+	animation:
+		sa-scan 0.9s ease-in-out infinite alternate,
+		sa-blink 4.8s infinite;
+}
+/* 等待审批 / 需要回复 = 抬眼放大 + 琥珀呼吸圈 */
+.sa-av[data-state="waiting"] {
+	animation: sa-glow-warn 1.2s ease-in-out infinite;
+}
+.sa-av[data-state="waiting"]::before,
+.sa-av[data-state="waiting"]::after {
+	translate: 0 -1px;
+	animation: sa-blinkup 4.2s infinite;
+}
+/* 排队中 = 半阖眼左右徘徊 */
+.sa-av[data-state="queued"] {
+	opacity: 0.92;
+}
+.sa-av[data-state="queued"]::before,
+.sa-av[data-state="queued"]::after {
+	scale: 1 0.62;
+	animation: sa-scan 3.4s ease-in-out infinite alternate;
+}
+/* 完成 = 眯眼笑 + 绿圈闪一次 */
+.sa-av[data-state="done"] {
+	animation: sa-flash-ok 1s ease-out 1;
+}
+.sa-av[data-state="done"]::before,
+.sa-av[data-state="done"]::after {
+	animation: none;
+	scale: 1 0.55;
+	translate: 0 -0.5px;
+}
+/* 失败 = 抖一下，然后垂眼低饱和 */
+.sa-av[data-state="error"] {
+	animation: sa-shake 0.5s ease 1;
+	filter: saturate(0.55);
+}
+.sa-av[data-state="error"]::before {
+	animation: none;
+	rotate: -16deg;
+	scale: 1 0.7;
+	translate: 0 1px;
+}
+.sa-av[data-state="error"]::after {
+	animation: none;
+	rotate: 16deg;
+	scale: 1 0.7;
+	translate: 0 1px;
+}
+/* 已中止 = 熄灭（闭眼 + 去饱和，无任何循环动画） */
+.sa-av[data-state="aborted"] {
+	animation: none;
+	filter: grayscale(0.95);
+	opacity: 0.8;
+}
+.sa-av[data-state="aborted"]::before,
+.sa-av[data-state="aborted"]::after {
+	animation: none;
+	scale: 1 0.12;
+}
+@media (prefers-reduced-motion: reduce) {
+	.sa-av,
+	.sa-av[data-state],
+	.sa-av::before,
+	.sa-av::after,
+	.sa-av[data-state]::before,
+	.sa-av[data-state]::after {
+		animation: none;
+	}
+}
+
+/* ======== 面板：页签徽标琥珀态（存在需要回复 / 等待审批） ======== */
+.context-panel-tabs > button .context-panel-badge.attention,
+.context-panel-tabs > button.on .context-panel-badge.attention {
+	background: color-mix(in srgb, var(--color-warn) 16%, var(--color-surface));
+	color: var(--color-warn);
+}
+
+/* ======== 面板：工具 chip / 运行槽 / 高亮 ======== */
+.sa-chip {
+	display: inline-flex;
+	align-items: center;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	padding: 0 5px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 10.5px;
+	line-height: 17px;
+	color: var(--color-ink-2);
+	background: var(--color-hover);
+	cursor: default;
+}
+.sa-chip.on {
+	border-color: var(--color-accent);
+	color: var(--color-accent);
+	background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+.sa-chip.mcp {
+	border-style: dashed;
+}
+button.sa-chip {
+	cursor: pointer;
+}
+button.sa-chip:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+.sa-slots {
+	display: inline-flex;
+	gap: 3px;
+	align-items: center;
+}
+.sa-slot {
+	width: 14px;
+	height: 6px;
+	border-radius: 3px;
+	background: var(--color-border);
+}
+.sa-slot.on {
+	background: var(--color-accent);
+}
+/* 审批坞「查看该运行」→ 面板卡片高亮一次 */
+.sa-run-focus {
+	animation: sa-run-focus 1.6s ease-out 1;
+}
+@keyframes sa-run-focus {
+	0% {
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-warn) 55%, transparent);
+	}
+	100% {
+		box-shadow: 0 0 0 0 transparent;
+	}
+}
+/* 已中止整卡 75% 不透明度 */
+.sa-run-aborted {
+	opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+	.sa-run-focus {
+		animation: none;
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-warn) 55%, transparent);
+	}
+}

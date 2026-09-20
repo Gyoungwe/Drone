@@ -1,6 +1,7 @@
 @import "tailwindcss";
 /* 应用壳层（导航栏 / 上下文面板 / 过程块 / 全屏视图）样式，与 globals 同一 Tailwind 管线 */
 @import "./shell.css";
+@import "./subagents.css";
 
 /* dark: 工具类挂到 data-theme（手动切换），不走 prefers-color-scheme */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
