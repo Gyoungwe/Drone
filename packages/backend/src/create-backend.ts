@@ -4,6 +4,7 @@ import type { McpService } from "./mcp/service";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
 import type { PackageService } from "./services/packages";
+import { PermissionSettingsService } from "./services/permissions";
 import type { ZoteroService } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
 import type { LoginService } from "./settings/login";
@@ -37,6 +38,8 @@ export interface BackendServices {
 	login: LoginService;
 	/** MCP configuration and status service. */
 	mcp: McpService;
+	/** Durable permissions.json settings and rule-probe service. */
+	permissions: PermissionSettingsService;
 	/** Zotero integration status service. */
 	zotero: ZoteroService;
 	dispose(): void;
@@ -44,7 +47,8 @@ export interface BackendServices {
 
 export function createBackend(options: PiBackendOptions = {}): BackendServices {
 	const runtime = createDroneRuntime();
-	const sessions = new PiBackend({ ...options, runtime });
+	const permissions = new PermissionSettingsService();
+	const sessions = new PiBackend({ ...options, runtime, permissions });
 	return {
 		runtime,
 		sessions,
@@ -55,6 +59,7 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 		models: sessions.models,
 		login: sessions.login,
 		mcp: sessions.mcp,
+		permissions,
 		zotero: sessions.zotero,
 		dispose: () => {
 			sessions.dispose();

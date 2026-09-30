@@ -65,6 +65,7 @@
 - [ ] **A3-1 组合根**：新增 `backend/src/create-backend.ts`，返回 `BackendServices`；`PiBackend` 的构造函数内部改为调用它（行为不变）。
 - [ ] **A3-2 按域抽服务**（每个域一个 PR，顺序：approvals → permissions/trust → models/settings → mcp/packages → subagents → knowledge/zotero/institutional）：把方法移到 `services/<domain>.ts`，`PiBackend` 上保留委托方法并加 `@deprecated`。验收：每个服务 ≤ 400 行；原有测试不改就通过；新增的服务级单测可以不构造 `PiBackend`。
   - [x] packages：`PackageService` 已从 `PiBackend` 门面抽出，包目录访问与安装/卸载/热重载集中在 `src/services/packages.ts`；`BackendServices.packages` 暴露同一实例，门面方法保留兼容委托。
+  - [x] permissions/settings：`PermissionSettingsService` 已从 `PiBackend` 门面抽出，`permissions.json` 快照、原子保存、恢复默认、规则试算和审计尾部集中在 `src/services/permissions.ts`；`BackendServices.permissions` 暴露同一实例，旧方法保留兼容委托并有服务级单测。
   - [x] zotero：`ZoteroService` 已从 `PiBackend` 门面抽出，Knowledge IPC 优先使用 `BackendServices.zotero`，旧委托保留兼容。
 - [x] **A3-3 SessionEngine**：会话生命周期部分移到 `session-engine/engine.ts`，`buildExtensionFactories`、`buildCustomTools` 移到 `session-engine/extensions.ts`；生产 Pi SDK 运行时 import 只允许出现在 `session-engine/**`，测试文件保留直接 SDK import 以覆盖 SDK 分层；R1 生产基线已清零。
 - [ ] **A3-4 删除门面**：desktop main 和契约绑定改为直接使用 `BackendServices`；删除 `pi-backend.ts` 中的委托方法，保留类型 re-export 至少一个版本。验收：`check:arch` 的 R1 基线清零；`pi-backend.ts` 删除或只剩 re-export。
@@ -116,4 +117,5 @@
 | 2026-10-01 | A3 | `createBackend` 组合根显式暴露 runtime、sessionEngine、settings/models/login/mcp/packages/knowledge 服务；PiBackend 继续作为兼容门面，session 生命周期已由 SessionEngine 承接 | approvals、permissions/trust、subagents、zotero/institutional 等域仍待抽离，A3 总项未勾选 |
 | 2026-10-01 | A3-3 / A6 | 生产后端 Pi SDK 值导入统一经 `session-engine/sdk.ts`，架构检查 R1 生产基线清零；ZoteroService 已接入组合根；研究循环、Zotero、source archive 的运行时状态和串行队列改为 host runtime 注入与 scheduler；Zotero 验收器在 host runtime 广播后重放，保持一次任务授权语义 | PiBackend 门面及 approvals/permissions/trust/subagents/institutional 等域仍待拆出；其余 legacy 扩展 singleton 与 CLI runtime 注入仍待完成 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 承载 claim-conflicts 强类型实现；包 typecheck 通过，包内 4/4 与后端迁移测试 3/3 通过，并加入 Unicode 归一化兼容回归 | 其余 knowledge 模块、worker 与 benchmark 尚未迁移；旧 `.pi/lib` 实现保留为运行时兼容层 |
+| 2026-10-01 | A3-2 增量 | `PermissionSettingsService` 承接 permissions.json 快照、原子保存、恢复默认、规则试算与审计尾部；`BackendServices.permissions` 与 `PiBackend.permissions` 指向同一实例；服务级测试 1/1、createBackend 组合测试 1/1、backend typecheck 与架构检查通过 | 项目信任、审批 gate、会话权限模式仍在 PiBackend；A3-1/2/4 总项保持未完成 |
 | 2026-10-01 | 最终验收 | `npm run lint`、根 `npm run typecheck`、根 `npm test`、`npm run build`、`node scripts/check-architecture.mjs`、插件/扩展检查、`npm run test:upgrade` 全部通过；backend 1,352 passed + 13 skipped，desktop 548，shared 129 | A2-4 的整体 GET-only、A3-1/2/4、A5-1 后续模块及 A5-2/3/4、A6-1/2 仍未完成 |

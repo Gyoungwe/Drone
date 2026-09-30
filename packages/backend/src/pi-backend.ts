@@ -68,14 +68,6 @@ import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
 import { McpService } from "./mcp/service";
 import { PackageAdmin } from "./packages/admin";
-import {
-	loadPermissionConfig,
-	probePermission as probePermissionRules,
-	readPermissionAuditTail,
-	readPermissionSettings,
-	resetPermissionSettings as resetPermissionSettingsFile,
-	writePermissionSettings,
-} from "./permissions";
 import type { PermissionConfirm, PermissionModeRef } from "./permissions/extension";
 import { PermissionGate } from "./permissions/gate";
 import { walkProjectFiles } from "./project/files";
@@ -84,6 +76,7 @@ import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { createDroneRuntime } from "./runtime";
 import type { PackageService } from "./services/packages";
+import { PermissionSettingsService } from "./services/permissions";
 import { ZoteroService } from "./services/zotero";
 import { AskGate } from "./session/ask-gate";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
@@ -159,6 +152,8 @@ export interface PiBackendOptions {
 	userDataDir?: string;
 	/** Host-owned runtime container; omitted only for direct compatibility construction. */
 	runtime?: DroneRuntime;
+	/** Host-owned permission settings service; omitted for direct compatibility construction. */
+	permissions?: PermissionSettingsService;
 	/**
 	 * 桌面端集成（Electron 专用；纯 CLI 环境不传）：
 	 * appendSystemPrompt = 追加进每次会话系统提示词的段落（如「你运行在 Drone 桌面端，界面可被 UI 插件定制」）；
@@ -212,6 +207,8 @@ export class PiBackend {
 		}
 	>();
 	readonly mcp = new McpService();
+	/** Permission settings domain service exposed by the composition root. */
+	readonly permissions: PermissionSettingsService;
 	/** Zotero integration status service exposed by the composition root. */
 	readonly zotero = new ZoteroService();
 	/** 每会话按需 Tool/Skill 能力视图；注册表完整，只有模型可见 active subset 会变化。 */
@@ -300,6 +297,7 @@ export class PiBackend {
 
 	constructor(private readonly options: PiBackendOptions = {}) {
 		this.runtime = options.runtime ?? createDroneRuntime();
+		this.permissions = options.permissions ?? new PermissionSettingsService();
 		this.storage = createDefaultStorageRegistry({
 			agentDir: getAgentDir(),
 			userDataDir: options.userDataDir,
@@ -1446,20 +1444,23 @@ export class PiBackend {
 	}
 
 	/** 权限门控配置（enabled 解析保留；UI 已无开关入口，仅手改 permissions.json 可关 = 隐藏逃生舱） */
+	/** @deprecated 通过 BackendServices.permissions.getConfig 使用。 */
 	getPermissionConfig(): { enabled: boolean } {
-		return { enabled: loadPermissionConfig(getAgentDir()).enabled };
+		return this.permissions.getConfig();
 	}
 
 	/** 设置 → 权限：规则文件快照（路径 / 原文 / 默认合并视图 / mtime） */
+	/** @deprecated 通过 BackendServices.permissions.getSettings 使用。 */
 	getPermissionSettings(): PermissionSettingsSnapshot {
-		return readPermissionSettings(getAgentDir());
+		return this.permissions.getSettings();
 	}
 
 	/** 设置 → 权限 保存：校验 + mtime 冲突检查 + tmp+rename 原子写（.bak 保留，enabled 保留文件原值）；
 	 * 写后 createPermissionConfigLoader 在下一次 tool_call 前按 mtime+size 重读 = 保存即生效 */
+	/** @deprecated 通过 BackendServices.permissions.saveSettings 使用。 */
 	savePermissionSettings(input: PermissionSettingsSaveInput): PermissionSettingsSaveResult {
 		try {
-			const result = writePermissionSettings(getAgentDir(), input);
+			const result = this.permissions.saveSettings(input);
 			if (!result.ok) log.info("permissions.json 未保存", { reason: result.reason });
 			return result;
 		} catch (err) {
@@ -1469,18 +1470,21 @@ export class PiBackend {
 	}
 
 	/** 设置 → 权限 恢复默认（用户可见字段写回默认，enabled 不动） */
+	/** @deprecated 通过 BackendServices.permissions.resetSettings 使用。 */
 	resetPermissionSettings(): PermissionSettingsSnapshot {
-		return resetPermissionSettingsFile(getAgentDir());
+		return this.permissions.resetSettings();
 	}
 
 	/** 设置 → 权限 试算：同一套规则求值，只跑规则链（不模拟边界/临时区/项目内自动放行） */
+	/** @deprecated 通过 BackendServices.permissions.probe 使用。 */
 	probePermission(input: PermissionProbeInput): PermissionProbeResult {
-		return probePermissionRules(getAgentDir(), input);
+		return this.permissions.probe(input);
 	}
 
 	/** 设置 → 权限 审计日志尾部（fullAccess 高危留痕，最新在前） */
+	/** @deprecated 通过 BackendServices.permissions.getAuditTail 使用。 */
 	getPermissionAuditTail(limit?: number): PermissionAuditTailEntry[] {
-		return readPermissionAuditTail(getAgentDir(), limit);
+		return this.permissions.getAuditTail(limit);
 	}
 
 	/** 会话权限模式（default 缺省 fail-safe；关 tab 重开后端已归零，renderer 对齐用） */

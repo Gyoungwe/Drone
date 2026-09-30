@@ -91,6 +91,7 @@ export {
 	NPM_NOT_FOUND_SENTINEL,
 	PackageService,
 } from "./services/packages";
+export { PermissionSettingsService } from "./services/permissions";
 export { ZoteroService } from "./services/zotero";
 export {
 	assignEntryIds,
