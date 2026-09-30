@@ -23,7 +23,7 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，3 个包：
+npm workspaces monorepo，4 个包：
 
 ```
 packages/
@@ -34,6 +34,7 @@ packages/
 
 | 脚本 | 用途 |
 |---|---|
+| `scripts/build-extensions.mjs` | 将 `packages/extensions/src/*.ts` 打包到 `.pi/extensions/*.mjs`（默认保护已有产物） |
 | `scripts/smoke-backend.mts` | 真实 SDK 冒烟（需 `AI_OPS_API_KEY`） |
 | `scripts/smoke-error-events.mts` | 报错系统冒烟：本地 HTTP 伪造 provider（401/429）驱动 PiBackend，零凭证离线 |
 | `scripts/smoke-subagent.mts` | subagent 冒烟 |
