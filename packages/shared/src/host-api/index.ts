@@ -3,3 +3,4 @@ export * from "./define";
 export * from "./packages";
 export * from "./permissions";
 export * from "./sessions";
+export * from "./settings";

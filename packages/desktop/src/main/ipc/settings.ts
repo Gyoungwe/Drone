@@ -5,12 +5,58 @@ import type {
 	CustomProviderUpdateInput,
 	ListProvidersOptions,
 	PermissionAnswer,
+	SubagentThinkingLevel,
 } from "@drone/shared";
-import { IpcChannels } from "@drone/shared";
+import { IpcChannels, SettingsContract } from "@drone/shared";
 import { ipcMain, shell } from "electron";
+import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
 export function registerSettingsIpc(backend: PiBackend): void {
+	const implementation: ContractImplementation<typeof SettingsContract> = {
+		listProviders: (...args) => backend.settings.listProviders(args[0] as ListProvidersOptions | undefined),
+		saveApiKey: (providerId, key) => backend.settings.saveApiKey(providerId, key),
+		removeCredential: (providerId) => backend.settings.removeCredential(providerId),
+		addCustomProvider: (input) => backend.settings.addCustomProvider(input as CustomProviderInput),
+		updateCustomProvider: (input) =>
+			backend.settings.updateCustomProvider(input as CustomProviderUpdateInput),
+		removeCustomProvider: (providerId) => backend.settings.removeCustomProvider(providerId),
+		setProviderBaseUrl: (...args) => backend.settings.setProviderBaseUrl(args[0], args[1], args[2]),
+		testProvider: (...args) => backend.settings.testProvider(args[0], args[1]),
+		getModelPrefs: () => backend.getModelPrefs(),
+		setModelHidden: (provider, modelId, hidden) => backend.setModelHidden(provider, modelId, hidden),
+		setModelsHidden: (provider, modelIds, hidden) => backend.setModelsHidden(provider, modelIds, hidden),
+		setSubagentModel: (agent, modelRef) => backend.setSubagentModel(agent, modelRef),
+		setSubagentThinking: (agent, level) =>
+			backend.setSubagentThinking(agent, level as SubagentThinkingLevel | null),
+		listSubagents: () => backend.listSubagents(),
+		startProviderLogin: (loginId, providerId) => backend.login.startLogin(loginId, providerId),
+		cancelProviderLogin: (loginId) => backend.login.cancel(loginId),
+		respondProviderLogin: (loginId, promptId, value) => backend.login.respond(loginId, promptId, value),
+	};
+	bindContract(SettingsContract, implementation, {
+		channelForMethod: (_contract, method) =>
+			({
+				listProviders: IpcChannels.SettingsListProviders,
+				saveApiKey: IpcChannels.SettingsSaveApiKey,
+				removeCredential: IpcChannels.SettingsRemoveCredential,
+				addCustomProvider: IpcChannels.SettingsAddCustomProvider,
+				updateCustomProvider: IpcChannels.SettingsUpdateCustomProvider,
+				removeCustomProvider: IpcChannels.SettingsRemoveCustomProvider,
+				setProviderBaseUrl: IpcChannels.SettingsSetProviderBaseUrl,
+				testProvider: IpcChannels.SettingsTestProvider,
+				getModelPrefs: IpcChannels.SettingsGetModelPrefs,
+				setModelHidden: IpcChannels.SettingsSetModelHidden,
+				setModelsHidden: IpcChannels.SettingsSetModelsHidden,
+				setSubagentModel: IpcChannels.SettingsSetSubagentModel,
+				setSubagentThinking: IpcChannels.SettingsSetSubagentThinking,
+				listSubagents: IpcChannels.SettingsListSubagents,
+				startProviderLogin: IpcChannels.SettingsLoginStart,
+				cancelProviderLogin: IpcChannels.SettingsLoginCancel,
+				respondProviderLogin: IpcChannels.SettingsLoginRespond,
+			})[method as keyof typeof SettingsContract.methods],
+	});
+
 	ipcMain.handle(IpcChannels.McpGetStatus, (_e, cwd?: string) => backend.getMcpStatus(cwd));
 	ipcMain.handle(IpcChannels.McpGetConfig, (_e, cwd?: string) => backend.getMcpConfig(cwd));
 	ipcMain.handle(IpcChannels.McpSetServerEnabled, (_e, name: string, enabled: boolean, cwd?: string) =>
@@ -20,57 +66,6 @@ export function registerSettingsIpc(backend: PiBackend): void {
 		const config = await backend.getMcpConfig(cwd);
 		await shell.openPath(config.path);
 	});
-	ipcMain.handle(IpcChannels.SettingsListProviders, (_e, options?: ListProvidersOptions) =>
-		backend.settings.listProviders(options),
-	);
-	ipcMain.handle(IpcChannels.SettingsSaveApiKey, (_e, providerId: string, key: string) =>
-		backend.settings.saveApiKey(providerId, key),
-	);
-	ipcMain.handle(IpcChannels.SettingsRemoveCredential, (_e, providerId: string) =>
-		backend.settings.removeCredential(providerId),
-	);
-	ipcMain.handle(IpcChannels.SettingsAddCustomProvider, (_e, input: CustomProviderInput) =>
-		backend.settings.addCustomProvider(input),
-	);
-	ipcMain.handle(IpcChannels.SettingsUpdateCustomProvider, (_e, input: CustomProviderUpdateInput) =>
-		backend.settings.updateCustomProvider(input),
-	);
-	ipcMain.handle(IpcChannels.SettingsRemoveCustomProvider, (_e, providerId: string) =>
-		backend.settings.removeCustomProvider(providerId),
-	);
-	ipcMain.handle(
-		IpcChannels.SettingsSetProviderBaseUrl,
-		(_e, providerId: string, baseUrl: string, apiKey?: string) =>
-			backend.settings.setProviderBaseUrl(providerId, baseUrl, apiKey),
-	);
-	ipcMain.handle(IpcChannels.SettingsTestProvider, (_e, providerId: string, modelId?: string) =>
-		backend.settings.testProvider(providerId, modelId),
-	);
-	ipcMain.handle(IpcChannels.SettingsGetModelPrefs, () => backend.getModelPrefs());
-	ipcMain.handle(
-		IpcChannels.SettingsSetModelHidden,
-		(_e, provider: string, modelId: string, hidden: boolean) =>
-			backend.setModelHidden(provider, modelId, hidden),
-	);
-	ipcMain.handle(
-		IpcChannels.SettingsSetModelsHidden,
-		(_e, provider: string, modelIds: string[], hidden: boolean) =>
-			backend.setModelsHidden(provider, modelIds, hidden),
-	);
-	ipcMain.handle(IpcChannels.SettingsSetSubagentModel, (_e, agent: string, modelRef: string | null) =>
-		backend.setSubagentModel(agent, modelRef),
-	);
-	ipcMain.handle(IpcChannels.SettingsSetSubagentThinking, (_e, agent: string, level: any) =>
-		backend.setSubagentThinking(agent, level),
-	);
-	ipcMain.handle(IpcChannels.SettingsListSubagents, () => backend.listSubagents());
-	ipcMain.handle(IpcChannels.SettingsLoginStart, (_e, loginId: string, providerId: string) =>
-		backend.login.startLogin(loginId, providerId),
-	);
-	ipcMain.handle(IpcChannels.SettingsLoginCancel, (_e, loginId: string) => backend.login.cancel(loginId));
-	ipcMain.handle(IpcChannels.SettingsLoginRespond, (_e, loginId: string, promptId: string, value: string) =>
-		backend.login.respond(loginId, promptId, value),
-	);
 	ipcMain.handle(IpcChannels.AskRespond, (_e, requestId: string, response: AskResponse) =>
 		backend.respondAsk(requestId, response),
 	);
@@ -82,16 +77,14 @@ export function registerSettingsIpc(backend: PiBackend): void {
 		backend.getSessionPermissionMode(sessionId),
 	);
 	ipcMain.handle(IpcChannels.PermissionSetMode, (_e, sessionId: string, mode: unknown) => {
-		if (mode !== "default" && mode !== "strict" && mode !== "fullAccess") {
+		if (mode !== "default" && mode !== "strict" && mode !== "fullAccess")
 			throw new Error(`invalid permission mode: ${String(mode)}`);
-		}
 		backend.setSessionPermissionMode(sessionId, mode);
 	});
 	ipcMain.handle(IpcChannels.ContextManagerGetConfig, () => backend.getContextManagerConfig());
 	ipcMain.handle(IpcChannels.ContextManagerSetMode, (_e, mode: unknown) => {
-		if (mode !== "evaporation" && mode !== "off") {
+		if (mode !== "evaporation" && mode !== "off")
 			throw new Error(`invalid context manager mode: ${String(mode)}`);
-		}
 		backend.setContextManagerMode(mode);
 	});
 	ipcMain.handle(IpcChannels.ChannelWatchGetConfig, () => backend.getChannelWatchConfig());
