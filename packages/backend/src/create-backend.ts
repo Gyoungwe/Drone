@@ -4,11 +4,11 @@ import type { McpService } from "./mcp/service";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
 import type { PackageService } from "./services/packages";
+import type { ZoteroService } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
 import type { LoginService } from "./settings/login";
 import type { ModelSettingsService } from "./settings/models";
 import type { SettingsService } from "./settings/settings";
-import type { ZoteroService } from "./services/zotero";
 
 /**
  * Transitional composition root for the v2 migration.

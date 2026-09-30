@@ -84,6 +84,7 @@ import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { createDroneRuntime } from "./runtime";
 import type { PackageService } from "./services/packages";
+import { ZoteroService } from "./services/zotero";
 import { AskGate } from "./session/ask-gate";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "./session/knowledge-publication";
@@ -132,7 +133,6 @@ import { globalToolManifest } from "./tools/manifest";
 import { discoverAgents, isSubagentSessionPath, SubagentPanelService } from "./tools/subagent";
 import { applySubagentMutex } from "./tools/subagent/mutex";
 import { withNativeSubagentSlot } from "./tools/subagent/slots";
-import { ZoteroService } from "./services/zotero";
 
 const log = createLogger("backend");
 
