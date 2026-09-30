@@ -123,7 +123,7 @@ import { TraceRecorder } from "./session/trace";
 import { SessionTraces } from "./session/traces";
 import { makeUiContext } from "./session/ui-context";
 import { LoginService } from "./settings/login";
-import { ModelPrefsService } from "./settings/model-prefs";
+import { ModelSettingsService } from "./settings/models";
 import { SettingsService } from "./settings/settings";
 import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
 import { createDefaultStorageRegistry, type StorageRegistry } from "./storage/registry";
@@ -252,7 +252,7 @@ export class PiBackend {
 	private readonly subagentPanel = new SubagentPanelService({
 		runner: {
 			getModelRuntime: () => this.getModelRuntime(),
-			getSubagentModel: (agentName) => this.modelPrefs.getSubagentModel(agentName),
+			getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
 			traces: this.traces,
 			onEvent: (sessionId, event) => this.emitEvent(sessionId, event),
 			registerLiveChild: (sessionId, control) => {
@@ -290,7 +290,7 @@ export class PiBackend {
 	/** 设置页（provider/模型/凭证配置）服务 */
 	readonly settings = new SettingsService(() => this.getModelRuntime());
 	/** 用户级模型可见性与子代理模型偏好（独立于 CLI 共用 settings.json）。 */
-	private readonly modelPrefs = new ModelPrefsService(join(getAgentDir(), "model-prefs.json"));
+	private readonly modelSettings = new ModelSettingsService(join(getAgentDir(), "model-prefs.json"));
 	/** provider 交互登录服务（OAuth + api_key 交互，如 Google Vertex），事件经 onLoginEvent 分发 */
 	readonly login = new LoginService({
 		getRuntime: () => this.getModelRuntime(),
@@ -363,7 +363,7 @@ export class PiBackend {
 			tools.push(
 				makeSubagentTool({
 					getModelRuntime: () => this.getModelRuntime(),
-					getSubagentModel: (agentName) => this.modelPrefs.getSubagentModel(agentName),
+					getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
 					gate,
 					traces: this.traces,
 					onEvent: (sessionId, event) => this.emitEvent(sessionId, event),
@@ -426,8 +426,8 @@ export class PiBackend {
 			factories.push(
 				makeKnowledgeSpecialistBridge({
 					getRuntime: () => this.getModelRuntime(),
-					getModelPreference: (name) => this.modelPrefs.getSubagentModel(name),
-					getThinkingPreference: (name) => this.modelPrefs.getSubagentThinking(name),
+					getModelPreference: (name) => this.modelSettings.getSubagentModel(name),
+					getThinkingPreference: (name) => this.modelSettings.getSubagentThinking(name),
 				}),
 			);
 		// 上下文蒸发（默认开启：缺省 mode=evaporation；钩子实时读派生 mode，
@@ -841,8 +841,8 @@ export class PiBackend {
 						runKnowledgeSpecialist(
 							{
 								getRuntime: () => this.getModelRuntime(),
-								getModelPreference: (name) => this.modelPrefs.getSubagentModel(name),
-								getThinkingPreference: (name) => this.modelPrefs.getSubagentThinking(name),
+								getModelPreference: (name) => this.modelSettings.getSubagentModel(name),
+								getThinkingPreference: (name) => this.modelSettings.getSubagentThinking(name),
 							},
 							{
 								...request,
@@ -1353,7 +1353,7 @@ export class PiBackend {
 	async listModels(): Promise<AvailableModel[]> {
 		const [providers, prefs, runtime] = await Promise.all([
 			this.settings.listProviders(),
-			this.modelPrefs.getPrefs(),
+			this.modelSettings.getPrefs(),
 			this.getModelRuntime(),
 		]);
 		return providers.flatMap((provider) =>
@@ -1390,26 +1390,26 @@ export class PiBackend {
 	}
 
 	async getModelPrefs(): Promise<ModelPrefs> {
-		return this.modelPrefs.getPrefs();
+		return this.modelSettings.getPrefs();
 	}
 
 	async setModelHidden(provider: string, modelId: string, hidden: boolean): Promise<ModelPrefs> {
-		return this.modelPrefs.setModelHidden(provider, modelId, hidden);
+		return this.modelSettings.setModelHidden(provider, modelId, hidden);
 	}
 
 	async setModelsHidden(provider: string, modelIds: string[], hidden: boolean): Promise<ModelPrefs> {
-		return this.modelPrefs.setModelsHidden(provider, modelIds, hidden);
+		return this.modelSettings.setModelsHidden(provider, modelIds, hidden);
 	}
 
 	async setSubagentModel(agent: string, modelRef: string | null): Promise<ModelPrefs> {
-		return this.modelPrefs.setSubagentModel(agent, modelRef);
+		return this.modelSettings.setSubagentModel(agent, modelRef);
 	}
 
 	async setSubagentThinking(
 		agent: string,
 		level: import("@drone/shared").SubagentThinkingLevel | null,
 	): Promise<ModelPrefs> {
-		return this.modelPrefs.setSubagentThinking(agent, level);
+		return this.modelSettings.setSubagentThinking(agent, level);
 	}
 
 	async listSubagents(): Promise<SubagentInfo[]> {
