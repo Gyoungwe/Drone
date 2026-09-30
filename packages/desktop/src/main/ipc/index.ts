@@ -33,13 +33,13 @@ export function registerIpc(
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
 	getIncidentSnapshot?: () => unknown,
-	services?: Pick<BackendServices, "settings" | "models" | "login">,
+	services?: Pick<BackendServices, "settings" | "models" | "login" | "knowledge">,
 ): void {
 	registerSessionsIpc(backend);
 	registerSettingsIpc(backend, services);
 	registerPermissionSettingsIpc(backend);
 	registerSubagentsIpc(backend);
-	registerKnowledgeIpc(backend);
+	registerKnowledgeIpc(backend, services);
 	registerPackagesIpc(backend);
 	registerAppIpc(backend, getIncidentSnapshot);
 	registerInstitutionalIpc();
