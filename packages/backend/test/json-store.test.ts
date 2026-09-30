@@ -21,6 +21,7 @@ afterEach(() => {
 function store(defaultValue?: () => Record<string, unknown>) {
 	return new JsonStore<Record<string, unknown>>({
 		path,
+		storageId: "test-json-store",
 		defaultValue: defaultValue ?? (() => ({ seeded: true })),
 	});
 }
@@ -80,6 +81,7 @@ describe("JsonStore async", () => {
 	it("mode 选项保留读写能力，并在 POSIX 上限制为 0600", async () => {
 		const s = new JsonStore<Record<string, unknown>>({
 			path,
+			storageId: "test-json-store",
 			defaultValue: () => ({}),
 			mode: 0o600,
 		});
@@ -97,6 +99,7 @@ describe("JsonStore async", () => {
 		writeFileSync(path, '{\n  // 注释\n  "a": 1 }\n', "utf8");
 		const s = new JsonStore<Record<string, unknown>>({
 			path,
+			storageId: "test-json-store",
 			defaultValue: () => ({}),
 			parse: (raw) => JSON.parse(raw.replace(/\/\/[^\n"]*(?=\n)/g, "")) as Record<string, unknown>,
 		});
