@@ -158,6 +158,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
+			id: "agent-mcp",
+			path: `${agentDir}/mcp.json`,
+			owner: "mcp/service",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
 			id: "agent-sessions",
 			path: `${agentDir}/sessions`,
 			owner: "session-engine/sdk",

@@ -88,5 +88,9 @@ describe("StorageRegistry", () => {
 			path: "/tmp/drone-user-data/ui-plugins",
 			owner: "desktop/ui-plugins",
 		});
+		expect(entries.get("agent-mcp")).toMatchObject({
+			path: "/tmp/drone-agent/mcp.json",
+			owner: "mcp/service",
+		});
 	});
 });
