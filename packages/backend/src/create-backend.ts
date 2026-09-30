@@ -4,6 +4,7 @@ import type { McpService } from "./mcp/service";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
 import type { PackageService } from "./services/packages";
+import type { SessionEngine } from "./session-engine/engine";
 import type { LoginService } from "./settings/login";
 import type { ModelSettingsService } from "./settings/models";
 import type { SettingsService } from "./settings/settings";
@@ -21,6 +22,8 @@ export interface BackendServices {
 	runtime: DroneRuntime;
 	/** Session lifecycle and compatibility methods during A3 migration. */
 	sessions: PiBackend;
+	/** SDK lifecycle boundary; hosts can migrate session calls without importing Pi SDK types. */
+	sessionEngine: SessionEngine;
 	/** Domain-owned knowledge service; consumers do not need the compatibility façade. */
 	knowledge: KnowledgeUiService;
 	/** Community package catalog and package-manager operations. */
@@ -42,6 +45,7 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 	return {
 		runtime,
 		sessions,
+		sessionEngine: sessions.sessionEngine,
 		knowledge: sessions.knowledge,
 		packages: sessions.packages,
 		settings: sessions.settings,

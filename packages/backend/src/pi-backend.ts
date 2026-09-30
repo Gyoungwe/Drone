@@ -263,7 +263,8 @@ export class PiBackend {
 	/** 每会话事件速率（60s 窗口；心跳/临终快照数据源） */
 	private readonly eventRates = new EventRateTracker();
 	/** Session lifecycle and Pi SDK runtime boundary (A3-3). */
-	private readonly sessionEngine = new SessionEngine();
+	/** Explicit session lifecycle service exposed by createBackend during A3 migration. */
+	readonly sessionEngine = new SessionEngine();
 	/**
 	 * Compatibility injection seam for host adapters and SDK fixtures.
 	 *
