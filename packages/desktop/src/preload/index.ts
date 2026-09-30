@@ -7,11 +7,11 @@ import {
 	McpContract,
 	PackagesContract,
 	PermissionsContract,
+	type PiApi,
 	SessionsContract,
 	SettingsContract,
 	SubagentsContract,
 	UiPluginsContract,
-	type PiApi,
 } from "@drone/shared";
 import { contextBridge, ipcRenderer } from "electron";
 import { exposeContract } from "./expose-contract";
@@ -20,169 +20,205 @@ type InvokeFn = (...args: any[]) => Promise<any>;
 const invoke = (client: Record<string, unknown>, method: string): InvokeFn =>
 	((...args: any[]) => (client[method] as InvokeFn)(...args)) as InvokeFn;
 
+const channelFrom = (channels: Record<string, string>, method: string): string => {
+	const channel = channels[method];
+	if (!channel) throw new Error(`Missing IPC channel mapping: ${method}`);
+	return channel;
+};
+
 const appClient = exposeContract(AppContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			getInfo: IpcChannels.AppGetInfo,
-			getDiagnostics: IpcChannels.AppGetDiagnostics,
-			getDailyDir: IpcChannels.AppGetDailyDir,
-			openExternal: IpcChannels.AppOpenExternal,
-			filePreview: IpcChannels.FilePreview,
-			resourceOpenExternal: IpcChannels.ResourceOpenExternal,
-			loadTabs: IpcChannels.TabsLoad,
-			saveTabs: IpcChannels.TabsSave,
-			loadUiState: IpcChannels.UiStateLoad,
-			saveUiState: IpcChannels.UiStateSave,
-			pickBackgroundImage: IpcChannels.BackgroundPick,
-			checkForUpdates: IpcChannels.UpdateCheck,
-			downloadUpdate: IpcChannels.UpdateDownload,
-			installUpdate: IpcChannels.UpdateInstall,
-			saveFileDialog: IpcChannels.FileSaveDialog,
-			pickPath: IpcChannels.FilePickPath,
-			pickDirectory: IpcChannels.ProjectPickDirectory,
-			getGitBranch: IpcChannels.ProjectGetGitBranch,
-			listGitBranches: IpcChannels.ProjectListGitBranches,
-			checkoutBranch: IpcChannels.ProjectCheckoutBranch,
-		})[method as keyof typeof AppContract.methods]!,
+		channelFrom(
+			{
+				getInfo: IpcChannels.AppGetInfo,
+				getDiagnostics: IpcChannels.AppGetDiagnostics,
+				getDailyDir: IpcChannels.AppGetDailyDir,
+				openExternal: IpcChannels.AppOpenExternal,
+				filePreview: IpcChannels.FilePreview,
+				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
+				loadTabs: IpcChannels.TabsLoad,
+				saveTabs: IpcChannels.TabsSave,
+				loadUiState: IpcChannels.UiStateLoad,
+				saveUiState: IpcChannels.UiStateSave,
+				pickBackgroundImage: IpcChannels.BackgroundPick,
+				checkForUpdates: IpcChannels.UpdateCheck,
+				downloadUpdate: IpcChannels.UpdateDownload,
+				installUpdate: IpcChannels.UpdateInstall,
+				saveFileDialog: IpcChannels.FileSaveDialog,
+				pickPath: IpcChannels.FilePickPath,
+				pickDirectory: IpcChannels.ProjectPickDirectory,
+				getGitBranch: IpcChannels.ProjectGetGitBranch,
+				listGitBranches: IpcChannels.ProjectListGitBranches,
+				checkoutBranch: IpcChannels.ProjectCheckoutBranch,
+			},
+			method,
+		),
 });
 const knowledgeClient = exposeContract(KnowledgeContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			setSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
-			getOverview: IpcChannels.KnowledgeOverview,
-			previewSetup: IpcChannels.KnowledgeSetupPreview,
-			startSetup: IpcChannels.KnowledgeSetupStart,
-			getJobs: IpcChannels.KnowledgeJobs,
-			getReviews: IpcChannels.KnowledgeReviews,
-			previewReview: IpcChannels.KnowledgeReviewPreview,
-			reviewWithModel: IpcChannels.KnowledgeReviewModel,
-			cancelModelReview: IpcChannels.KnowledgeReviewModelCancel,
-			decideReview: IpcChannels.KnowledgeReviewDecide,
-			readNote: IpcChannels.KnowledgeReadNote,
-			maintain: IpcChannels.KnowledgeMaintain,
-			openTarget: IpcChannels.KnowledgeOpen,
-			resumeCheck: IpcChannels.KnowledgeResume,
-			getSemanticStatus: IpcChannels.KnowledgeSemanticStatus,
-			saveSemanticSettings: IpcChannels.KnowledgeSemanticSettingsSave,
-			testSemanticProvider: IpcChannels.KnowledgeSemanticProviderTest,
-			indexSemantic: IpcChannels.KnowledgeSemanticIndex,
-			cancelSemanticIndex: IpcChannels.KnowledgeSemanticIndexCancel,
-			getTopics: IpcChannels.KnowledgeTopics,
-			archiveTopic: IpcChannels.KnowledgeTopicArchive,
-			getZoteroStatus: IpcChannels.ZoteroStatus,
-		})[method as keyof typeof KnowledgeContract.methods]!,
+		channelFrom(
+			{
+				setSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
+				getOverview: IpcChannels.KnowledgeOverview,
+				previewSetup: IpcChannels.KnowledgeSetupPreview,
+				startSetup: IpcChannels.KnowledgeSetupStart,
+				getJobs: IpcChannels.KnowledgeJobs,
+				getReviews: IpcChannels.KnowledgeReviews,
+				previewReview: IpcChannels.KnowledgeReviewPreview,
+				reviewWithModel: IpcChannels.KnowledgeReviewModel,
+				cancelModelReview: IpcChannels.KnowledgeReviewModelCancel,
+				decideReview: IpcChannels.KnowledgeReviewDecide,
+				readNote: IpcChannels.KnowledgeReadNote,
+				maintain: IpcChannels.KnowledgeMaintain,
+				openTarget: IpcChannels.KnowledgeOpen,
+				resumeCheck: IpcChannels.KnowledgeResume,
+				getSemanticStatus: IpcChannels.KnowledgeSemanticStatus,
+				saveSemanticSettings: IpcChannels.KnowledgeSemanticSettingsSave,
+				testSemanticProvider: IpcChannels.KnowledgeSemanticProviderTest,
+				indexSemantic: IpcChannels.KnowledgeSemanticIndex,
+				cancelSemanticIndex: IpcChannels.KnowledgeSemanticIndexCancel,
+				getTopics: IpcChannels.KnowledgeTopics,
+				archiveTopic: IpcChannels.KnowledgeTopicArchive,
+				getZoteroStatus: IpcChannels.ZoteroStatus,
+			},
+			method,
+		),
 });
 const settingsClient = exposeContract(SettingsContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			listProviders: IpcChannels.SettingsListProviders,
-			saveApiKey: IpcChannels.SettingsSaveApiKey,
-			removeCredential: IpcChannels.SettingsRemoveCredential,
-			addCustomProvider: IpcChannels.SettingsAddCustomProvider,
-			updateCustomProvider: IpcChannels.SettingsUpdateCustomProvider,
-			removeCustomProvider: IpcChannels.SettingsRemoveCustomProvider,
-			setProviderBaseUrl: IpcChannels.SettingsSetProviderBaseUrl,
-			testProvider: IpcChannels.SettingsTestProvider,
-			getModelPrefs: IpcChannels.SettingsGetModelPrefs,
-			setModelHidden: IpcChannels.SettingsSetModelHidden,
-			setModelsHidden: IpcChannels.SettingsSetModelsHidden,
-			setSubagentModel: IpcChannels.SettingsSetSubagentModel,
-			setSubagentThinking: IpcChannels.SettingsSetSubagentThinking,
-			listSubagents: IpcChannels.SettingsListSubagents,
-			startProviderLogin: IpcChannels.SettingsLoginStart,
-			cancelProviderLogin: IpcChannels.SettingsLoginCancel,
-			respondProviderLogin: IpcChannels.SettingsLoginRespond,
-		})[method as keyof typeof SettingsContract.methods]!,
+		channelFrom(
+			{
+				listProviders: IpcChannels.SettingsListProviders,
+				saveApiKey: IpcChannels.SettingsSaveApiKey,
+				removeCredential: IpcChannels.SettingsRemoveCredential,
+				addCustomProvider: IpcChannels.SettingsAddCustomProvider,
+				updateCustomProvider: IpcChannels.SettingsUpdateCustomProvider,
+				removeCustomProvider: IpcChannels.SettingsRemoveCustomProvider,
+				setProviderBaseUrl: IpcChannels.SettingsSetProviderBaseUrl,
+				testProvider: IpcChannels.SettingsTestProvider,
+				getModelPrefs: IpcChannels.SettingsGetModelPrefs,
+				setModelHidden: IpcChannels.SettingsSetModelHidden,
+				setModelsHidden: IpcChannels.SettingsSetModelsHidden,
+				setSubagentModel: IpcChannels.SettingsSetSubagentModel,
+				setSubagentThinking: IpcChannels.SettingsSetSubagentThinking,
+				listSubagents: IpcChannels.SettingsListSubagents,
+				startProviderLogin: IpcChannels.SettingsLoginStart,
+				cancelProviderLogin: IpcChannels.SettingsLoginCancel,
+				respondProviderLogin: IpcChannels.SettingsLoginRespond,
+			},
+			method,
+		),
 });
 const permissionsClient = exposeContract(PermissionsContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			load: IpcChannels.PermissionSettingsLoad,
-			save: IpcChannels.PermissionSettingsSave,
-			reset: IpcChannels.PermissionSettingsReset,
-			probe: IpcChannels.PermissionSettingsProbe,
-			auditTail: IpcChannels.PermissionSettingsAuditTail,
-			respondAsk: IpcChannels.AskRespond,
-			respondPermission: IpcChannels.PermissionRespond,
-			getConfig: IpcChannels.PermissionGetConfig,
-			getMode: IpcChannels.PermissionGetMode,
-			setMode: IpcChannels.PermissionSetMode,
-			contextManagerGetConfig: IpcChannels.ContextManagerGetConfig,
-			contextManagerSetMode: IpcChannels.ContextManagerSetMode,
-			channelWatchGetConfig: IpcChannels.ChannelWatchGetConfig,
-			channelWatchSetEnabled: IpcChannels.ChannelWatchSetEnabled,
-			respondTrust: IpcChannels.TrustRespond,
-			openLocation: IpcChannels.PermissionSettingsOpenLocation,
-		})[method as keyof typeof PermissionsContract.methods]!,
+		channelFrom(
+			{
+				load: IpcChannels.PermissionSettingsLoad,
+				save: IpcChannels.PermissionSettingsSave,
+				reset: IpcChannels.PermissionSettingsReset,
+				probe: IpcChannels.PermissionSettingsProbe,
+				auditTail: IpcChannels.PermissionSettingsAuditTail,
+				respondAsk: IpcChannels.AskRespond,
+				respondPermission: IpcChannels.PermissionRespond,
+				getConfig: IpcChannels.PermissionGetConfig,
+				getMode: IpcChannels.PermissionGetMode,
+				setMode: IpcChannels.PermissionSetMode,
+				contextManagerGetConfig: IpcChannels.ContextManagerGetConfig,
+				contextManagerSetMode: IpcChannels.ContextManagerSetMode,
+				channelWatchGetConfig: IpcChannels.ChannelWatchGetConfig,
+				channelWatchSetEnabled: IpcChannels.ChannelWatchSetEnabled,
+				respondTrust: IpcChannels.TrustRespond,
+				openLocation: IpcChannels.PermissionSettingsOpenLocation,
+			},
+			method,
+		),
 });
 const subagentsClient = exposeContract(SubagentsContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			list: IpcChannels.SubagentsList,
-			dispatch: IpcChannels.SubagentsDispatch,
-			abort: IpcChannels.SubagentsAbort,
-			runs: IpcChannels.SubagentsRuns,
-		})[method as keyof typeof SubagentsContract.methods]!,
+		channelFrom(
+			{
+				list: IpcChannels.SubagentsList,
+				dispatch: IpcChannels.SubagentsDispatch,
+				abort: IpcChannels.SubagentsAbort,
+				runs: IpcChannels.SubagentsRuns,
+			},
+			method,
+		),
 });
 const packagesClient = exposeContract(PackagesContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			searchCatalog: IpcChannels.PackagesSearchCatalog,
-			installPackage: IpcChannels.PackagesInstall,
-			removePackage: IpcChannels.PackagesRemove,
-			listConfiguredPackages: IpcChannels.PackagesListConfigured,
-		})[method as keyof typeof PackagesContract.methods]!,
+		channelFrom(
+			{
+				searchCatalog: IpcChannels.PackagesSearchCatalog,
+				installPackage: IpcChannels.PackagesInstall,
+				removePackage: IpcChannels.PackagesRemove,
+				listConfiguredPackages: IpcChannels.PackagesListConfigured,
+			},
+			method,
+		),
 });
 const institutionalClient = exposeContract(InstitutionalContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			getStatus: IpcChannels.InstitutionalGetStatus,
-			saveConfig: IpcChannels.InstitutionalSaveConfig,
-			openLogin: IpcChannels.InstitutionalOpenLogin,
-			openUrl: IpcChannels.InstitutionalOpenUrl,
-			clear: IpcChannels.InstitutionalClear,
-			testAccess: IpcChannels.InstitutionalTestAccess,
-		})[method as keyof typeof InstitutionalContract.methods]!,
+		channelFrom(
+			{
+				getStatus: IpcChannels.InstitutionalGetStatus,
+				saveConfig: IpcChannels.InstitutionalSaveConfig,
+				openLogin: IpcChannels.InstitutionalOpenLogin,
+				openUrl: IpcChannels.InstitutionalOpenUrl,
+				clear: IpcChannels.InstitutionalClear,
+				testAccess: IpcChannels.InstitutionalTestAccess,
+			},
+			method,
+		),
 });
 const lanClient = exposeContract(LanContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			getStatus: IpcChannels.LanGetStatus,
-			setEnabled: IpcChannels.LanSetEnabled,
-			setRemoteControl: IpcChannels.LanSetRemoteControl,
-		})[method as keyof typeof LanContract.methods]!,
+		channelFrom(
+			{
+				getStatus: IpcChannels.LanGetStatus,
+				setEnabled: IpcChannels.LanSetEnabled,
+				setRemoteControl: IpcChannels.LanSetRemoteControl,
+			},
+			method,
+		),
 });
 const mcpClient = exposeContract(McpContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			getStatus: IpcChannels.McpGetStatus,
-			getConfig: IpcChannels.McpGetConfig,
-			setServerEnabled: IpcChannels.McpSetServerEnabled,
-			openConfig: IpcChannels.McpOpenConfig,
-		})[method as keyof typeof McpContract.methods]!,
+		channelFrom(
+			{
+				getStatus: IpcChannels.McpGetStatus,
+				getConfig: IpcChannels.McpGetConfig,
+				setServerEnabled: IpcChannels.McpSetServerEnabled,
+				openConfig: IpcChannels.McpOpenConfig,
+			},
+			method,
+		),
 });
 const uiPluginsClient = exposeContract(UiPluginsContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		({
-			getConfig: IpcChannels.UiPluginsGetConfig,
-			setEnabled: IpcChannels.UiPluginsSetEnabled,
-			list: IpcChannels.UiPluginsList,
-			readCode: IpcChannels.UiPluginsReadCode,
-			setPluginEnabled: IpcChannels.UiPluginsSetPluginEnabled,
-			assignSlot: IpcChannels.UiPluginsAssignSlot,
-			rebuild: IpcChannels.UiPluginsRebuild,
-			openDir: IpcChannels.UiPluginsOpenDir,
-		})[method as keyof typeof UiPluginsContract.methods]!,
+		channelFrom(
+			{
+				getConfig: IpcChannels.UiPluginsGetConfig,
+				setEnabled: IpcChannels.UiPluginsSetEnabled,
+				list: IpcChannels.UiPluginsList,
+				readCode: IpcChannels.UiPluginsReadCode,
+				setPluginEnabled: IpcChannels.UiPluginsSetPluginEnabled,
+				assignSlot: IpcChannels.UiPluginsAssignSlot,
+				rebuild: IpcChannels.UiPluginsRebuild,
+				openDir: IpcChannels.UiPluginsOpenDir,
+			},
+			method,
+		),
 });
 const knowledgeApi = {
 	setKnowledgeSpecialistSettings: invoke(knowledgeClient, "setSpecialistSettings"),
