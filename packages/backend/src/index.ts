@@ -7,6 +7,7 @@ export {
 	type JsonStoreOptions,
 	type ReadResult,
 } from "./json-store";
+export { KnowledgeUiService } from "./knowledge/ui";
 export { LanConfigService } from "./lan/config";
 export {
 	applyEvent as applyLanEvent,
@@ -18,6 +19,7 @@ export {
 } from "./lan/projector";
 export { type LanObserverBackend, LanObserverServer, type LanObserverServerOptions } from "./lan/server";
 export { createLogger, initLogging, type Logger } from "./log";
+export { McpService } from "./mcp/service";
 export { fetchPackageCatalog, parseCatalogHtml } from "./packages/catalog";
 export {
 	createPermissionConfigLoader,
