@@ -30,7 +30,8 @@ export async function saveConfig(input: {
 	autoDownloadEnabled?: boolean;
 	perTaskLimit?: number;
 }) {
-	return saveInstitutionalConfig(input as any);
+	await saveInstitutionalConfig(input as any);
+	return getInstitutionalStatus();
 }
 
 export async function clear() {

@@ -29,6 +29,8 @@ export interface BindContractOptions {
 	allowedAccess?: readonly HostApiAccess[];
 	/** Override the default `<domain>:<method>` channel during incremental migrations. */
 	channelForMethod?: (contract: DomainContract, method: string) => string;
+	/** Optional host-level guard evaluated with the raw IPC event before dispatch. */
+	beforeInvoke?: (event: unknown, contract: DomainContract, method: string) => void | Promise<void>;
 }
 
 function validationError(code: HostApiValidationError["code"], method: string): HostApiValidationError {
@@ -69,6 +71,7 @@ export function bindContract<TContract extends DomainContract>(
 			throw new Error(`Missing implementation for host method ${channel}`);
 		}
 		ipc.handle(channel, async (_event, ...args: unknown[]) => {
+			await options.beforeInvoke?.(_event, contract, methodName);
 			if (!Check(method.args, args)) return validationError("invalid_arguments", channel);
 			const result = await Reflect.apply(implementationMethod, implementation, args);
 			if (validateResult && !Check(method.result, result)) return validationError("invalid_result", channel);
