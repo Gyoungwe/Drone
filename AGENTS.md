@@ -5,7 +5,7 @@
 ## 硬约束
 
 - renderer 绝不直接 import Pi 包，只经 preload 的 `window.pi` 通信。
-- `packages/backend/src/pi-backend.ts` 是当前 Pi SDK 运行时 import 的唯一集中位置（版本固定为 0.84.3）；架构 v2 迁移期间新增 import 必须遵守 `check:arch` 的 R1 白名单。
+- Pi SDK 运行时值 import 统一收敛在 `packages/backend/src/session-engine/**`（版本固定为 0.84.3）；`pi-backend.ts` 仍是兼容门面，迁移期间新增 import 必须遵守 `check:arch` 的 R1 白名单。
 - 新增 IPC 要同步 `shared/src/ipc.ts`、`desktop/src/preload/index.ts`、对应 `main/ipc/` 文件和 backend；事件转发在 `main/ipc/index.ts`。
 - preload 保持 CJS；新增 UI 文案同时更新 `i18n/zh.ts` 与 `i18n/en.ts`。
 - Zustand selector 必须返回稳定引用；暴露给 UI 插件的 renderer API 要同步 host API、类型声明、构建 shim 和资源声明。
