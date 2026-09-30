@@ -1,8 +1,5 @@
+import { createSpecialistBudget, decideSpecialistRun } from "@drone/knowledge";
 import { describe, expect, it } from "vitest";
-import {
-	createSpecialistBudget,
-	decideSpecialistRun,
-} from "../../../.pi/lib/knowledge/orchestration-policy.mjs";
 import { withSpecialistSlot } from "../../../.pi/lib/knowledge/specialist-host.mjs";
 import { runKnowledgeSpecialist } from "../src/knowledge/specialist-runner";
 

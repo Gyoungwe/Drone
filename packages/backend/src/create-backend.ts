@@ -46,7 +46,7 @@ export interface BackendServices {
 }
 
 export function createBackend(options: PiBackendOptions = {}): BackendServices {
-	const runtime = createDroneRuntime();
+	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
 	const sessions = new PiBackend({ ...options, runtime, permissions });
 	return {

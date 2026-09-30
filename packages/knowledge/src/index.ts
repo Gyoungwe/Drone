@@ -5,3 +5,17 @@ export {
 	compareClaims,
 	type KnowledgeClaim,
 } from "./claim-conflicts";
+export {
+	createSpecialistBudget,
+	decideSpecialistRun,
+	SPECIALIST_DECISIONS,
+	type SpecialistBudget,
+	type SpecialistBudgetOptions,
+	type SpecialistBudgetSnapshot,
+	type SpecialistDecision,
+	type SpecialistRequestSignatureOptions,
+	type SpecialistRunDecision,
+	type SpecialistRunOptions,
+	type SpecialistUsage,
+	specialistRequestSignature,
+} from "./orchestration-policy";

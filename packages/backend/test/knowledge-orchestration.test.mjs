@@ -1,9 +1,5 @@
+import { createSpecialistBudget, decideSpecialistRun, specialistRequestSignature } from "@drone/knowledge";
 import { describe, expect, it } from "vitest";
-import {
-	createSpecialistBudget,
-	decideSpecialistRun,
-	specialistRequestSignature,
-} from "../../../.pi/lib/knowledge/orchestration-policy.mjs";
 
 describe("knowledge orchestration policy", () => {
 	it("blocks automatic evidence roles without evidence and preserves explicit delegation", () => {

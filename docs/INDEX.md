@@ -94,7 +94,7 @@ packages/
 
 ## packages/knowledge — 知识领域包（迁移中）
 
-`@drone/knowledge` 目前承载无 SDK 依赖的 claim 冲突比较合约：`src/claim-conflicts.ts` 导出 `compareClaims` 与 `compareClaimSets`，供 backend 和后续 knowledge 迁移复用。运行时仍从 `.pi/lib/knowledge/claim-conflicts.mjs` 加载兼容实现；其余 knowledge 模块按 A5-1 分阶段迁移。
+`@drone/knowledge` 目前承载无 SDK 依赖的 claim 冲突比较与 specialist 编排合约：`src/claim-conflicts.ts` 导出 `compareClaims` 与 `compareClaimSets`，`src/orchestration-policy.ts` 导出确定性调度决策、请求签名与预算器，供 backend 和后续 knowledge 迁移复用。运行时仍从 `.pi/lib/knowledge/{claim-conflicts,orchestration-policy}.mjs` 加载兼容实现；其余 knowledge 模块按 A5-1 分阶段迁移。
 
 ## packages/tasks — 任务领域包（迁移中）
 

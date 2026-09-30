@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createBackend } from "./create-backend";
+import { createDroneRuntime } from "./runtime";
 
 describe("createBackend", () => {
 	it("assembles the compatibility façade and domain service groups", () => {
@@ -16,6 +17,14 @@ describe("createBackend", () => {
 		expect(services.permissions.getConfig).toBeTypeOf("function");
 		expect(services.zotero).toBe(services.sessions.zotero);
 		expect(services.zotero.getStatus).toBeTypeOf("function");
+		services.dispose();
+	});
+
+	it("preserves an explicitly injected host runtime", () => {
+		const runtime = createDroneRuntime();
+		const services = createBackend({ runtime, projectTrust: false, permissionGates: false });
+		expect(services.runtime).toBe(runtime);
+		expect(services.sessions.runtime).toBe(runtime);
 		services.dispose();
 	});
 });
