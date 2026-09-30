@@ -1,6 +1,7 @@
 import { cardLink, literatureCard } from "../lib/knowledge/flow-cards.mjs";
 import { recordZoteroWrite } from "../lib/literature-operations.mjs";
 import { normalizeDoi } from "../lib/literature-receipt.mjs";
+import { bindRuntime, runtimeSlot, withHostRuntime } from "../lib/runtime-bridge.mjs";
 import { registerAcceptanceVerifier } from "../lib/tasks/acceptance.mjs";
 import { registerTool } from "../lib/tool-manifest.mjs";
 import { createCompositeZoteroReconciler } from "../lib/zotero-reconcile.mjs";
@@ -109,7 +110,9 @@ export function registerZoteroAcceptance() {
 }
 
 /** 计划时未点名 DOI 的槽位：同一任务里每个槽位同时只放行一次写入（并行批量写入时两篇不会争同一槽位）。 */
-const slotClaims = new Map();
+// Authorization slots are host-runtime state. A second desktop session must
+// never consume a pending slot from the first session in the same process.
+const slotClaims = runtimeSlot("tasks", "zotero-slot-claims", () => new Map());
 function claimSlot(taskId, milestoneId) {
 	const key = String(taskId || "");
 	const claimed = slotClaims.get(key) || new Set();
@@ -223,6 +226,8 @@ async function startSetup(pi, args, ctx) {
 
 export default function zoteroLiterature(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
+	bindRuntime(pi);
+	const run = (operation) => withHostRuntime(pi, operation);
 	registerZoteroAcceptance();
 
 	registerTool(pi, {
@@ -252,8 +257,10 @@ export default function zoteroLiterature(pi) {
 			"Read-only: report zotero-cli/zotero-mcp paths, installer availability, local Zotero API reachability, and MCP registration. Does not install software or write the Vault.",
 		parameters: { type: "object", properties: {} },
 		async execute() {
-			const status = await inspectZotero();
-			return { content: [{ type: "text", text: JSON.stringify(status, null, 2) }], details: status };
+			return run(async () => {
+				const status = await inspectZotero();
+				return { content: [{ type: "text", text: JSON.stringify(status, null, 2) }], details: status };
+			});
 		},
 	});
 
@@ -284,33 +291,35 @@ export default function zoteroLiterature(pi) {
 			},
 		},
 		async execute(_id, params, _signal, _update, ctx) {
-			const action = params.action || "bootstrap";
-			if (action === "register-mcp") {
-				const status = await inspectZotero();
-				const command = status.commands.zoteroMcp;
-				if (!command)
-					throw new Error(
-						`zotero-mcp is not on PATH. Run /zotero-setup or research_setup_zotero(action=bootstrap) to install ${ZOTERO_SETUP_BINDING.package}.`,
-					);
-				const mcp = await registerZoteroMcp({ command, enable: params.enable === true });
-				const result = {
-					mcp,
-					reloadRequired: true,
-					preferred: "zotero-cli via the zotero-literature skill; MCP schemas are optional and expensive",
+			return run(async () => {
+				const action = params.action || "bootstrap";
+				if (action === "register-mcp") {
+					const status = await inspectZotero();
+					const command = status.commands.zoteroMcp;
+					if (!command)
+						throw new Error(
+							`zotero-mcp is not on PATH. Run /zotero-setup or research_setup_zotero(action=bootstrap) to install ${ZOTERO_SETUP_BINDING.package}.`,
+						);
+					const mcp = await registerZoteroMcp({ command, enable: params.enable === true });
+					const result = {
+						mcp,
+						reloadRequired: true,
+						preferred: "zotero-cli via the zotero-literature skill; MCP schemas are optional and expensive",
+					};
+					return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
+				}
+				if (!ctx.hasUI) throw new Error("Installing zotero-mcp-server requires an interactive desktop UI");
+				const bootstrap = await bootstrapZotero({
+					confirm: (title, message) => ctx.ui.confirm(title, message),
+					enableMcp: params.enable === true,
+				});
+				if (action === "install" && bootstrap.cancelled)
+					throw new Error("User cancelled zotero-mcp-server installation");
+				return {
+					content: [{ type: "text", text: JSON.stringify(bootstrap, null, 2) }],
+					details: bootstrap,
 				};
-				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
-			}
-			if (!ctx.hasUI) throw new Error("Installing zotero-mcp-server requires an interactive desktop UI");
-			const bootstrap = await bootstrapZotero({
-				confirm: (title, message) => ctx.ui.confirm(title, message),
-				enableMcp: params.enable === true,
 			});
-			if (action === "install" && bootstrap.cancelled)
-				throw new Error("User cancelled zotero-mcp-server installation");
-			return {
-				content: [{ type: "text", text: JSON.stringify(bootstrap, null, 2) }],
-				details: bootstrap,
-			};
 		},
 	});
 
@@ -386,8 +395,10 @@ export default function zoteroLiterature(pi) {
 			},
 		},
 		async execute(_id, params, signal, _update, ctx) {
-			const receipt = await runZoteroSave(pi, params || {}, ctx, signal);
-			return { content: [{ type: "text", text: JSON.stringify(receipt, null, 2) }], details: receipt };
+			return run(async () => {
+				const receipt = await runZoteroSave(pi, params || {}, ctx, signal);
+				return { content: [{ type: "text", text: JSON.stringify(receipt, null, 2) }], details: receipt };
+			});
 		},
 	});
 

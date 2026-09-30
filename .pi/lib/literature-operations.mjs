@@ -3,8 +3,8 @@ import { readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadWorkspaceConfig } from "../extensions/workspace-config.mjs";
 import { normalizeDoi, verifyLiteratureReceipt } from "./literature-receipt.mjs";
+import { runRuntimeExclusive } from "./runtime-bridge.mjs";
 
-const queues = new Map();
 const contained = (root, path) => {
 	const rel = relative(root, path);
 	return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
@@ -35,14 +35,10 @@ async function writeJournal(file, journal) {
 	await rename(temp, file);
 }
 function queued(file, work) {
-	const job = (queues.get(file) || Promise.resolve()).catch(() => {}).then(work);
-	queues.set(file, job);
-	void job
-		.finally(() => {
-			if (queues.get(file) === job) queues.delete(file);
-		})
-		.catch(() => {});
-	return job;
+	// Queue ownership belongs to the injected host runtime. This keeps two
+	// desktop sessions (or a desktop session and the CLI) from sharing a
+	// process-global promise tail while preserving per-journal serialization.
+	return runRuntimeExclusive("literature-operation", file, work, "drone.literature-operation-queues.v1");
 }
 export function destinationRecovery(receipt) {
 	const zotero = receipt.zotero?.status,

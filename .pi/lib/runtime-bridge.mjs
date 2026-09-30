@@ -11,6 +11,10 @@ import { AsyncLocalStorage } from "node:async_hooks";
 const contexts = new AsyncLocalStorage();
 let installedRuntime = null;
 let standaloneRuntime = null;
+// A host may load several independent Pi extension graphs in one process. Keep
+// the runtime binding keyed by that host object instead of putting mutable
+// extension state in a process-global singleton.
+const hostRuntimes = new WeakMap();
 
 class KeyedScheduler {
 	#tails = new Map();
@@ -81,6 +85,39 @@ export function withRuntime(runtime, operation) {
 	if (!runtime || typeof runtime !== "object" || !runtime.scheduler)
 		throw new TypeError("A DroneRuntime with a scheduler is required");
 	return contexts.run(runtime, operation);
+}
+
+/**
+ * Bind a Pi host to the runtime announced by the desktop session engine.
+ * Dynamic first-party extensions load before the inline host factory, so they
+ * subscribe here and request the versioned announcement once. The returned
+ * cleanup function is intentionally small and can be used by extension tests.
+ */
+export function bindRuntime(pi) {
+	if (!pi?.events?.on) return () => {};
+	const receive = (payload) => {
+		if (payload?.version !== RUNTIME_BRIDGE_VERSION) return;
+		const runtime = payload?.runtime;
+		if (!runtime || typeof runtime !== "object" || !runtime.scheduler) return;
+		hostRuntimes.set(pi, runtime);
+	};
+	pi.events.on("drone:runtime/v1", receive);
+	// The host inline factory responds with the runtime it owns. This event is
+	// safe to emit before the listener exists; request it again after binding.
+	void pi.events.emit?.("drone:runtime/request/v1", { version: RUNTIME_BRIDGE_VERSION });
+	return () => {
+		if (hostRuntimes.get(pi)) hostRuntimes.delete(pi);
+	};
+}
+
+/** Return the host-bound runtime, with the standalone runtime as CLI fallback. */
+export function runtimeForHost(pi) {
+	return hostRuntimes.get(pi) || currentRuntime();
+}
+
+/** Run a dynamic extension callback in the runtime owned by its Pi host. */
+export function withHostRuntime(pi, operation) {
+	return withRuntime(runtimeForHost(pi), operation);
 }
 
 /** Return the runtime currently active for the calling async context. */
