@@ -5,7 +5,7 @@ import "./dev-agent-dir";
 import "./fix-path";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createLogger, initLogging, PiBackend } from "@drone/backend";
+import { createBackend, createLogger, initLogging, type BackendServices, type PiBackend } from "@drone/backend";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
@@ -19,6 +19,7 @@ import { applyChromeTheme, createWindow, resolveTheme } from "./window";
 
 const log = createLogger("main");
 let backend: PiBackend;
+let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
 let lanObserver: LanObserverHandle | undefined;
 
@@ -195,7 +196,7 @@ app.whenReady().then(async () => {
 		{ includeAcademic: true },
 	);
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
-	backend = new PiBackend({
+	backendServices = createBackend({
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
 			appendSystemPrompt: UI_PLUGIN_PROMPT,
@@ -211,6 +212,7 @@ app.whenReady().then(async () => {
 			academicPiRoot: researchSkillPacks.academicPiRoot,
 		},
 	});
+	backend = backendServices.sessions;
 	await backend.init();
 
 	// 心跳（决策 3，60s unref）：renderer 内存 + 每会话事件速率——白屏/冻结事故「死前多忙」的
@@ -259,6 +261,6 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
 	void lanObserver?.stop();
-	backend?.dispose();
+	backendServices?.dispose();
 	uiPluginsManager?.disposeWatcher();
 });

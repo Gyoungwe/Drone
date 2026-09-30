@@ -1,4 +1,5 @@
 export * from "./institutional";
+export { createBackend, type BackendServices } from "./create-backend";
 export {
 	JsonStore,
 	JsonStoreCorruptedError,
