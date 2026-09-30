@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { readReviewMode, saveReviewMode } from "@drone/knowledge";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { readReviewMode, saveReviewMode } from "../../../.pi/lib/knowledge/review-policy.mjs";
 import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
 import { stageWikiProposal, undoWikiUpdate, wikiHistory } from "../../../.pi/lib/knowledge/wiki-review.mjs";
 import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
