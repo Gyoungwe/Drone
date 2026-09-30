@@ -57,12 +57,6 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/knowledge-claim-conflicts.test.mjs",
-      "line": 2,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/claim-conflicts.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
       "line": 5,
       "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
