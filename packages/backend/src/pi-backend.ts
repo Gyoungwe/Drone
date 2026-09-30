@@ -291,6 +291,8 @@ export class PiBackend {
 	readonly settings = new SettingsService(() => this.getModelRuntime());
 	/** 用户级模型可见性与子代理模型偏好（独立于 CLI 共用 settings.json）。 */
 	private readonly modelSettings = new ModelSettingsService(join(getAgentDir(), "model-prefs.json"));
+	/** Compatibility alias retained for existing host/test adapters during A3 migration. */
+	private readonly modelPrefs = this.modelSettings;
 	/** provider 交互登录服务（OAuth + api_key 交互，如 Google Vertex），事件经 onLoginEvent 分发 */
 	readonly login = new LoginService({
 		getRuntime: () => this.getModelRuntime(),
@@ -1353,7 +1355,7 @@ export class PiBackend {
 	async listModels(): Promise<AvailableModel[]> {
 		const [providers, prefs, runtime] = await Promise.all([
 			this.settings.listProviders(),
-			this.modelSettings.getPrefs(),
+			this.modelPrefs.getPrefs(),
 			this.getModelRuntime(),
 		]);
 		return providers.flatMap((provider) =>
