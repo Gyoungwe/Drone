@@ -1,10 +1,10 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { normalizeSourceLinks } from "@drone/knowledge";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { registerWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
 import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
-import { normalizeSourceLinks } from "../../../.pi/lib/knowledge/source-links.mjs";
 import {
 	beginKnowledgeFlow,
 	flowFor,

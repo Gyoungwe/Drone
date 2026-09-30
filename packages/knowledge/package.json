@@ -9,7 +9,8 @@
 		".": "./src/index.ts",
 		"./claim-conflicts": "./src/claim-conflicts.ts",
 		"./orchestration-policy": "./src/orchestration-policy.ts",
-		"./review-policy": "./src/review-policy.ts"
+		"./review-policy": "./src/review-policy.ts",
+		"./source-links": "./src/source-links.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

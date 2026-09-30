@@ -87,6 +87,7 @@
   - [x] claim-conflicts：新增 `@drone/knowledge` TS 包入口与强类型 `compareClaims` / `compareClaimSets`，包内 3 个测试及后端迁移测试 3 个通过；`.pi/lib/knowledge/claim-conflicts.mjs` 暂作运行时兼容实现。
   - [x] orchestration-policy：新增 `@drone/knowledge` TS 包入口与强类型 `specialistRequestSignature` / `decideSpecialistRun` / `createSpecialistBudget`，包内 3/3 与后端 knowledge orchestration/stress 13/13 通过；`.pi/lib/knowledge/orchestration-policy.mjs` 暂作运行时兼容实现。
   - [x] review-policy：新增 `@drone/knowledge` TS 包入口与强类型 `readReviewMode` / `saveReviewMode` / `advisoryCodes`，包内 4/4 与 backend `knowledge-automatic-review` 4/4 通过；`.pi/lib/knowledge/review-policy.mjs` 暂作运行时兼容实现。
+  - [x] source-links：新增 `@drone/knowledge` TS 包入口与强类型 `onlineSourceLink` / `normalizeSourceLinks`，包内 4/4 与 backend `knowledge-delivery-round2`、`zotero-literature` 合计 26/26 通过；`.pi/lib/knowledge/source-links.mjs` 暂作运行时兼容实现。
 - [ ] **A5-2 @drone/tasks**：`.pi/lib/tasks/*` 迁移。验收：全部 `task-*` 测试通过，包括 `example-tasks-one-authorization-sdk.test.mjs`。
   - [x] failure-feedback：新增 `@drone/tasks` TS 包入口与强类型 `diagnosticText` / `toolResultFailed` / `failureObservation` / `failureContext` 等纯函数；包内 4/4 测试及 backend `task-failure-feedback` 20/20 测试通过，backend diagnostics 复用该脱敏入口；`.pi/lib/tasks/failure-feedback.mjs` 暂作运行时兼容实现。
 - [ ] **A5-3 @drone/research**：source-archive、open-access、zotero-*、institutional-access、literature-*、run-provenance、research-receipt-journal 等迁移。验收：`zotero-*`、`source-archive-*`、`institutional`、`literature-*` 测试通过。
@@ -129,4 +130,5 @@
 | 2026-10-01 | A3-1 增量 | `createBackend` 组合根现在尊重显式注入的 `DroneRuntime`，并通过组合测试验证 `BackendServices.runtime` 与 `PiBackend.runtime` 保持同一实例 | PiBackend 仍是兼容门面，A3-1 的完整 host composition 与 A3-4 façade 删除尚未完成 |
 | 2026-10-01 | A3-2 增量 | `ProjectTrustService` 统一项目 `trust.json` 存储与 `TrustGate` 交互门控生命周期；`BackendServices.projectTrust` 与 `PiBackend.projectTrust` 指向同一实例，资源加载和旧 `respondTrust` 保持兼容委托；服务级 2/2、trust 回归 14/14、组合根 2/2 通过 | approvals gate、会话权限模式与 PiBackend 兼容门面仍待拆出；A3-2/4 总项保持未完成 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 新增 review-policy 强类型实现；包 typecheck 通过，包内 4/4 与 backend `knowledge-automatic-review` 4/4 通过，并保留旧 `.pi` 兼容实现 | knowledge service、source-links、worker、specialist-host 与 benchmark 尚未迁移；A5-1 总项保持未完成 |
+| 2026-10-01 | A5-1 增量 | `@drone/knowledge` 新增 source-links 强类型实现；包 typecheck 通过，包内 4/4 与 backend `knowledge-delivery-round2`、`zotero-literature` 合计 26/26 通过，并保留旧 `.pi` 兼容实现 | knowledge service、worker、specialist-host 与 benchmark 尚未迁移；A5-1 总项保持未完成 |
 | 2026-10-01 | 最终验收 | `npm run lint`、根 `npm run typecheck`、根 `npm test`、`npm run build`、`node scripts/check-architecture.mjs`、插件/扩展检查、`npm run test:upgrade` 全部通过；backend 1,352 passed + 13 skipped，desktop 548，shared 129 | A2-4 的整体 GET-only、A3-1/2/4、A5-1 后续模块及 A5-2/3/4、A6-1/2 仍未完成 |

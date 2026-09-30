@@ -25,3 +25,9 @@ export {
 	readReviewMode,
 	saveReviewMode,
 } from "./review-policy";
+export {
+	normalizeSourceLinks,
+	onlineSourceLink,
+	type SourceLinkOptions,
+	type SourceLinksResult,
+} from "./source-links";

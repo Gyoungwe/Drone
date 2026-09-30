@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { normalizeSourceLinks } from "@drone/knowledge";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parse } from "yaml";
 import zoteroLiterature, {
@@ -9,7 +10,6 @@ import zoteroLiterature, {
 	registerZoteroAcceptance,
 } from "../../../.pi/extensions/zotero-literature.mjs";
 import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
-import { normalizeSourceLinks } from "../../../.pi/lib/knowledge/source-links.mjs";
 import { configureObsidian, depositKnowledge } from "../../../.pi/lib/obsidian-workbench.mjs";
 import { resetAcceptanceVerifiers } from "../../../.pi/lib/tasks/acceptance.mjs";
 import {
