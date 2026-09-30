@@ -28,7 +28,7 @@
     {
       "rule": "R1",
       "file": "packages/backend/src/packages/admin.ts",
-      "line": 3,
+      "line": 1,
       "detail": "runtime import @earendil-works/pi-coding-agent"
     },
     {
@@ -348,108 +348,6 @@
       "file": "packages/backend/test/wiki-model-review.test.mjs",
       "line": 5,
       "detail": "runtime import @earendil-works/pi-ai"
-    },
-    {
-      "rule": "R4",
-      "file": ".pi/lib/knowledge/publication.mjs",
-      "line": 264,
-      "detail": "global bridge drone.knowledge.publication.v1"
-    },
-    {
-      "rule": "R4",
-      "file": ".pi/lib/runtime-bridge.test.mjs",
-      "line": 53,
-      "detail": "global bridge drone.test.queue.v1"
-    },
-    {
-      "rule": "R4",
-      "file": ".pi/lib/tool-manifest.mjs",
-      "line": 10,
-      "detail": "global bridge drone.tool-manifest.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/backend/src/session/knowledge-publication.ts",
-      "line": 16,
-      "detail": "global bridge drone.knowledge.publication.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/backend/src/tools/manifest.ts",
-      "line": 62,
-      "detail": "global bridge drone.tool-manifest.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/backend/test/knowledge-publication-delivery.test.mjs",
-      "line": 207,
-      "detail": "global bridge drone.knowledge.publication.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/backend/test/knowledge-publication-fallback.test.ts",
-      "line": 8,
-      "detail": "global bridge drone.knowledge.publication.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 67,
-      "detail": "global bridge drone.acceptance-verifiers.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 64,
-      "detail": "global bridge drone.knowledge-binding.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 58,
-      "detail": "global bridge drone.knowledge.publication.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 62,
-      "detail": "global bridge drone.semantic-lock.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 66,
-      "detail": "global bridge drone.specialists.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 59,
-      "detail": "global bridge drone.tool-manifest.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 61,
-      "detail": "global bridge drone.topic-memory-queues.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 65,
-      "detail": "global bridge drone.ui.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 60,
-      "detail": "global bridge drone.wiki-review-locks.v1"
-    },
-    {
-      "rule": "R4",
-      "file": "packages/shared/src/runtime.ts",
-      "line": 63,
-      "detail": "global bridge drone.worker-pool.v1"
     },
     {
       "rule": "R5",
