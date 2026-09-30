@@ -34,6 +34,8 @@ export class JsonStoreCorruptedError extends Error {
 export interface JsonStoreOptions<T> {
 	/** 目标 JSON 文件绝对路径 */
 	path: string;
+	/** StorageRegistry 中登记的稳定存储 ID；生产持久化不得使用未登记的匿名 store。 */
+	storageId: string;
 	/** 文件缺失/损坏时 read 系使用的回退值（每次调用现取，避免共享可变引用） */
 	defaultValue: () => T;
 	/** 文件权限（如 auth 类 0600）；缺省走进程 umask */
@@ -65,12 +67,15 @@ function isEnoent(err: unknown): boolean {
 
 export class JsonStore<T> {
 	private readonly path: string;
+	readonly storageId: string;
 	private readonly defaultValue: () => T;
 	private readonly mode: number | undefined;
 	private readonly parse: (raw: string) => T;
 
 	constructor(options: JsonStoreOptions<T>) {
+		if (!options.storageId.trim()) throw new Error("JsonStore storageId cannot be empty");
 		this.path = options.path;
+		this.storageId = options.storageId;
 		this.defaultValue = options.defaultValue;
 		this.mode = options.mode;
 		this.parse = options.parse ?? (JSON.parse as (raw: string) => T);

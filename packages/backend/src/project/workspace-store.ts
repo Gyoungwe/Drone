@@ -65,6 +65,7 @@ export function loadWorkspaces(agentDir: string): WorkspacesConfig {
 function workspacesStore(agentDir: string): JsonStore<unknown> {
 	return new JsonStore<unknown>({
 		path: workspaceConfigPath(agentDir),
+		storageId: "agent-workspaces",
 		defaultValue: () => null,
 	});
 }

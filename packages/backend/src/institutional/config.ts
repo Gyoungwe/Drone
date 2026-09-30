@@ -17,6 +17,7 @@ function configPath(): string {
 function store(): JsonStore<InstitutionalConfig> {
 	return new JsonStore<InstitutionalConfig>({
 		path: configPath(),
+		storageId: "agent-institutional",
 		defaultValue: () => emptyInstitutionalConfig(),
 	});
 }

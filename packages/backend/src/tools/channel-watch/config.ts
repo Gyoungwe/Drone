@@ -84,6 +84,7 @@ export function clearChannelWatchEnabledCache(): void {
 export function writeChannelWatchEnabled(agentDir: string, enabled: boolean): void {
 	const store = new JsonStore<Record<string, unknown>>({
 		path: join(agentDir, "settings.json"),
+		storageId: "agent-settings",
 		defaultValue: () => ({}),
 		parse: (raw) => {
 			const parsed = parseSettings(raw);

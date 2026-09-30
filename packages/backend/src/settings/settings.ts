@@ -29,8 +29,11 @@ function stripJsonComments(raw: string): string {
 
 /** auth/models 的 JsonStore：JSONC 读侧 + 损坏时 read 回退 {}（写入拒损坏由 update 保证） */
 function jsonStoreFor(path: string, mode?: number): JsonStore<JsonObject> {
+	const storageId =
+		path.endsWith("/auth.json") || path.endsWith("\\auth.json") ? "agent-auth" : "agent-models";
 	return new JsonStore<JsonObject>({
 		path,
+		storageId: storageId,
 		defaultValue: () => ({}),
 		mode,
 		parse: (raw) => JSON.parse(stripJsonComments(raw)) as JsonObject,

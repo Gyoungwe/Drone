@@ -47,6 +47,7 @@ export class ModelPrefsService {
 	private store(): JsonStore<Partial<ModelPrefs>> {
 		return new JsonStore<Partial<ModelPrefs>>({
 			path: this.configPath,
+			storageId: "agent-model-prefs",
 			defaultValue: () => ({}),
 		});
 	}

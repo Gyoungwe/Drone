@@ -1,10 +1,49 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createDefaultStorageRegistry, StorageRegistry } from "./registry";
 
 describe("StorageRegistry", () => {
+	it("covers every production JsonStore construction with a registered storage id", async () => {
+		const roots = [resolve(process.cwd(), "src"), resolve(process.cwd(), "../desktop/src/main")];
+		const files: string[] = [];
+		const visit = async (root: string): Promise<void> => {
+			for (const entry of await readdir(root, { withFileTypes: true })) {
+				const path = join(root, entry.name);
+				if (entry.isDirectory()) await visit(path);
+				else if (entry.isFile() && path.endsWith(".ts") && !path.endsWith(".test.ts")) files.push(path);
+			}
+		};
+		for (const root of roots) await visit(root);
+		const registryIds = new Set(
+			createDefaultStorageRegistry({
+				agentDir: "/tmp/drone-agent",
+				userDataDir: "/tmp/drone-user-data",
+				knowledgeDir: "/tmp/drone-knowledge",
+			})
+				.list()
+				.map((entry) => entry.id),
+		);
+		const sites: string[] = [];
+		for (const file of files) {
+			const lines = (await readFile(file, "utf8")).split(/\r?\n/);
+			for (let index = 0; index < lines.length; index += 1) {
+				if (!/\bnew JsonStore(?:<|\s*\()/.test(lines[index] ?? "")) continue;
+				const block = lines.slice(Math.max(0, index - 2), index + 32).join("\n");
+				expect(block, `${file}:${index + 1} must declare storageId`).toMatch(/storageId\s*:/);
+				const ids = [...block.matchAll(/"((?:agent|desktop)-[^"]+)"/g)]
+					.map((match) => match[1])
+					.filter((id): id is string => Boolean(id));
+				expect(ids.length, `${file}:${index + 1} must reference a registry id`).toBeGreaterThan(0);
+				for (const id of ids)
+					expect(registryIds.has(id), `${file}:${index + 1} uses unregistered storage id ${id}`).toBe(true);
+				sites.push(file);
+			}
+		}
+		expect(sites).toHaveLength(10);
+	});
+
 	it("rejects duplicate entries and inventories file state", async () => {
 		const dir = await mkdtemp(join(tmpdir(), "drone-storage-"));
 		const path = join(dir, "settings.json");

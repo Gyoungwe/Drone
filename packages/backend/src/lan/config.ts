@@ -11,7 +11,11 @@ export class LanConfigService {
 	constructor(private readonly configPath: string) {}
 
 	private store(): JsonStore<Partial<LanObserverConfig>> {
-		return new JsonStore<Partial<LanObserverConfig>>({ path: this.configPath, defaultValue: () => ({}) });
+		return new JsonStore<Partial<LanObserverConfig>>({
+			path: this.configPath,
+			storageId: "desktop-lan-config",
+			defaultValue: () => ({}),
+		});
 	}
 
 	async load(): Promise<LanObserverConfig> {
