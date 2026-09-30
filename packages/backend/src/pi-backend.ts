@@ -85,7 +85,6 @@ import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { createDroneRuntime } from "./runtime";
 import type { PackageService } from "./services/packages";
 import { AskGate } from "./session/ask-gate";
-import { createEventPipeline, type Stage } from "./session/event-pipeline";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "./session/knowledge-publication";
 import {
@@ -115,6 +114,7 @@ import {
 	ProjectTrustStore,
 	SessionEngine,
 } from "./session-engine/engine";
+import { createEventPipeline, type Stage } from "./session-engine/event-pipeline";
 import {
 	buildSessionCustomTools,
 	buildSessionExtensionFactories,

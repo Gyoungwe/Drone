@@ -2,8 +2,8 @@ import type { SessionEvent } from "@drone/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PiBackend } from "../src/pi-backend";
 import { createDroneRuntime } from "../src/runtime";
-import { createEventPipeline } from "../src/session/event-pipeline";
 import { StreamGuard } from "../src/session/stream-guard";
+import { createEventPipeline } from "../src/session-engine/event-pipeline";
 
 const emit = (backend: PiBackend, event: unknown) =>
 	(backend as unknown as { emitEvent: (sessionId: string, event: SessionEvent) => void }).emitEvent(
