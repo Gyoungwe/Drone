@@ -52,3 +52,4 @@ export * from "./workflow-catalog";
 export * from "./zotero";
 
 export * from "./runtime";
+export * from "./host-api";
