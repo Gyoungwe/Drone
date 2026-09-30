@@ -7,6 +7,8 @@
  * 供 .pi/lib 内部（任务工作台、回执日志、KnowledgeFlow）查询。清单保存在
  * DroneRuntime 的 tools 槽位中，避免跨 host 的 process-global bridge。
  */
+
+import { emitProcessEvent } from "./process-events.mjs";
 import { runtimeSlot } from "./runtime-bridge.mjs";
 
 const registry = runtimeSlot("tools", "manifest", () => ({ tools: new Map(), families: new Map() }));
@@ -35,7 +37,7 @@ function publishRegistration(name, meta) {
 	// The backend listens to this versioned process event when it needs tool
 	// metadata without an AgentSession. Mutable state remains in runtimeSlot;
 	// this event only carries immutable registration data.
-	process.emit("drone:tool-manifest/v1", { version: 1, name, meta });
+	emitProcessEvent("drone:tool-manifest/v1", { version: 1, name, meta });
 }
 
 /** 声明一个带 drone 元数据的工具定义：校验并登记，原样返回给 pi.registerTool。 */

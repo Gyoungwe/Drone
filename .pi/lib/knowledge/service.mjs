@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { join, relative, resolve, sep } from "node:path";
 import { Worker } from "node:worker_threads";
+import { emitProcessEvent } from "../process-events.mjs";
 import { runRuntimeExclusive, runtimeSlot } from "../runtime-bridge.mjs";
 import { hasPaperCitation, requiresPaperEvidence } from "../source-delivery.mjs";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
@@ -25,7 +26,12 @@ process.on(SERVICE_EVENT, (payload) => {
 	if (payload.action === "request") {
 		const service = pool.get(payload.key);
 		if (service && !service.closed)
-			process.emit(SERVICE_EVENT, { action: "response", key: payload.key, service, origin: serviceModule });
+			emitProcessEvent(SERVICE_EVENT, {
+				action: "response",
+				key: payload.key,
+				service,
+				origin: serviceModule,
+			});
 	}
 });
 const MAX_TICKETS = 128;
@@ -831,13 +837,13 @@ export async function getKnowledgeService(binding = null) {
 	const key = `${directory}:${binding.vaultId}:${binding.revision}`;
 	let service = pool.get(key);
 	if (!service || service.closed) {
-		process.emit(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
+		emitProcessEvent(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
 		service = pool.get(key);
 	}
 	if (!service || service.closed) {
 		service = new KnowledgeService(binding, directory);
 		pool.set(key, service);
-		process.emit(SERVICE_EVENT, { action: "register", key, service, origin: serviceModule });
+		emitProcessEvent(SERVICE_EVENT, { action: "register", key, service, origin: serviceModule });
 		// Old in-flight writers keep their pinned Vault; never redirect them into a newly bound Vault.
 		const idle = [...pool].filter(([other, value]) => other !== key && value.pending.size === 0);
 		while (pool.size > 3 && idle.length) {

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { emitProcessEvent } from "../process-events.mjs";
 import { runtimeSlot } from "../runtime-bridge.mjs";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
@@ -44,10 +45,10 @@ export const specialistQueueSnapshot = () => ({ active: state.active, queueLengt
 export function registerKnowledgeSpecialistHost(id, run) {
 	if (!id || typeof run !== "function") throw new Error("A specialist host requires a session identity");
 	state.hosts.set(id, run);
-	process.emit(HOST_EVENT, { action: "register", id, run, origin: hostModule });
+	emitProcessEvent(HOST_EVENT, { action: "register", id, run, origin: hostModule });
 	return () => {
 		if (state.hosts.get(id) === run) state.hosts.delete(id);
-		process.emit(HOST_EVENT, { action: "unregister", id, run, origin: hostModule });
+		emitProcessEvent(HOST_EVENT, { action: "unregister", id, run, origin: hostModule });
 	};
 }
 export function knowledgeSpecialistHost(ctx) {

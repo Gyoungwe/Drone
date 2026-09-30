@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { emitProcessEvent } from "../process-events.mjs";
 import { runtimeSlot } from "../runtime-bridge.mjs";
 import { flowCardBuilder, toolMeta } from "../tool-manifest.mjs";
 import { failureCard, flowCard } from "./flow-cards.mjs";
@@ -42,7 +43,7 @@ export function subscribeKnowledgeUi(listener) {
 export function emitKnowledgeUi(event) {
 	const value = { ...event, sequence: ++state.seq };
 	deliverKnowledgeUi(value);
-	process.emit(UI_EVENT, { event: value, origin: uiModule });
+	emitProcessEvent(UI_EVENT, { event: value, origin: uiModule });
 	return value;
 }
 export function flowFor(id) {
