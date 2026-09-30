@@ -9,6 +9,7 @@ import { registerAppIpc } from "./app";
 import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
 import { registerLanIpc } from "./lan";
+import { registerMcpIpc } from "./mcp";
 import { registerPackagesIpc } from "./packages";
 import { registerPermissionSettingsIpc } from "./permissions";
 import { registerSessionsIpc } from "./sessions";
@@ -33,10 +34,11 @@ export function registerIpc(
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
 	getIncidentSnapshot?: () => unknown,
-	services?: Pick<BackendServices, "settings" | "models" | "login" | "knowledge">,
+	services?: Pick<BackendServices, "settings" | "models" | "login" | "knowledge" | "mcp">,
 ): void {
 	registerSessionsIpc(backend);
 	registerSettingsIpc(backend, services);
+	registerMcpIpc(backend, services);
 	registerPermissionSettingsIpc(backend);
 	registerSubagentsIpc(backend);
 	registerKnowledgeIpc(backend, services);
