@@ -69,7 +69,7 @@ queued ──(首个 onProgress = 子会话已创建)──▶ running ⇄ needs
 
 | 层 | 文件 |
 | --- | --- |
-| shared | `packages/shared/src/subagent.ts`（`SubagentPanelRun` / `SubagentPanelAgent` / `SubagentDispatchInput` / custom 类型常量 / 记录解析）；`session.ts`（`SubagentRunEvent`）；`transcript/reducer.ts`（`subagent_run` 原地更新派发行、结果 `message_end` → 已进入上下文）；`ipc.ts`（`subagents:list/dispatch/abort/runs`、`SUBAGENT_INVOKE_METHODS`） |
+| shared | `packages/shared/src/subagent.ts`（`SubagentPanelRun` / `SubagentPanelAgent` / `SubagentDispatchInput` / custom 类型常量 / 记录解析）；`session.ts`（`SubagentRunEvent`）；`transcript/reducer.ts`（`subagent_run` 原地更新派发行、结果 `message_end` → 已进入上下文）；`ipc.ts`（`subagents:list/dispatch/abort/runs`） |
 | backend | `tools/subagent/panel.ts`（`SubagentPanelService`：校验 / 登记 / 调度 / 归因 / 结果入会话）；`pi-backend.ts`（`listSessionSubagents` / `dispatchSubagents` / `abortSubagentRun` / `listSubagentRuns`；`emitEvent` 里 `observe`；`getSessionMessages` 并回面板记录）；`session/messages.ts`（回放）；`lan/sanitize.ts`（`subagent_run` 白名单 + 剥本地路径） |
 | desktop main | `main/ipc/subagents.ts`（四条通道 1:1 透传） |
 | renderer | `stores/subagents.ts`；`panel/SubagentsPane.tsx` + `subagents-form.ts`（校验 / 阶段契约 / 引用文本纯函数）；`composer/at-subagents.ts`（S9 纯逻辑：候选条件 / 名称模糊过滤 / 菜单合并 / 任务拼装 / 胶囊回填）+ `composer/AtMenu.tsx`（子智能体组 + 文件组）+ `composer/SubagentChip.tsx` + `use-at-completion.ts` / `use-slash-menu.ts` / `use-composer-send.ts`（胶囊 → 直接派发分支）+ `stores/drafts.ts`（`subagent` 字段）；`chat/SubagentAvatar.tsx` + `subagent-avatar.ts`（djb2 定色 h0–h7、角标 D/U/P、`data-state` 表情）；`chat/SubagentResultCard.tsx`；`chat/SubagentRunCard.tsx`（面板运行的状态 / 派发系统条目）；`chat/InlineSubagentTranscript.tsx`（从运行卡拆出，面板与聊天共用）；`session/ApprovalDock.tsx`（来源胶囊 + 查看该运行）；`panel/ContextPanel.tsx`（页签 + 徽标琥珀态）；`styles/subagents.css` |

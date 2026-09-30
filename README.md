@@ -74,7 +74,7 @@ flowchart TB
 
   subgraph Desktop["packages/desktop — Electron"]
     Main[main\napp lifecycle / PiBackend / IPC / institutional window / updater / ui-plugins manager]
-    Preload[preload\ncontextBridge window.pi\nINVOKE_ROUTES auto-gen]
+    Preload[preload\ncontextBridge window.pi\ndomain contracts]
     Renderer[renderer\nReact 19 + Tailwind 4 + Zustand\nchat / task workbench / knowledge / settings / subagents / plugins]
   end
 
@@ -95,7 +95,7 @@ flowchart TB
 
 ### 1. `packages/shared` — single source of truth for IPC
 
-- `ipc.ts`: `IpcChannels` constants + `PiApi` (full `window.pi` type). Adding a channel requires 4 sync points: `shared/ipc.ts` → `preload/index.ts` (auto via `INVOKE_ROUTES`) → `main/ipc/<domain>.ts` → backend method + `main/ipc/index.ts` event forwarding.
+- `ipc.ts`: `IpcChannels` constants + `PiApi` (full `window.pi` type). Adding a channel requires 4 sync points: `shared/ipc.ts` → `preload/index.ts` (via domain contracts) → `main/ipc/<domain>.ts` → backend method + `main/ipc/index.ts` event forwarding.
 - `session.ts`: `SessionMeta`, `SessionEvent` (Pi `AgentSessionEvent` ∪ Drone UI events like `subagent_mutex`, `model_wait`), `SessionMessage` (user/assistant with `entryId` for fork/recall, `image`, `subagent`), permission modes, trust.
 - `transcript/`: UI message state machine shared by desktop and lan-web — reducer, mapping, chat-rows grouping, turn-files aggregation, patch parsing, timing derivation.
 - `institutional.ts` (new): `InstitutionalConfig` (ezproxyTemplate auto-saved, perTaskLimit, lastLoginAt), `InstitutionalStatus`, `InstitutionalTestResult`.
@@ -120,7 +120,7 @@ flowchart TB
 - `ui-plugins/`: esbuild builder (shims `window.DroneUI`), manager (scan, build, fs.watch hot-reload, seed builtin pets).
 - `window.ts`, `tabs.ts`, `ui-state.ts`, `updater.ts`, etc.
 
-**preload/**: `index.ts` — `contextBridge.exposeInMainWorld('pi', api)` where `api` = auto-generated from `INVOKE_ROUTES` + event subscriptions. Must stay CJS (sandbox).
+**preload/**: `index.ts` — `contextBridge.exposeInMainWorld('pi', api)` where `api` = generated from domain contracts + event subscriptions. Must stay CJS (sandbox).
 
 **renderer/**: React 19 + Tailwind 4 + Zustand
 - `App.tsx`: view switching (chat/projects) + `use-session-event-bridge` (EventConflator rAF coalescing).

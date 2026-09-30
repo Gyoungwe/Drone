@@ -74,7 +74,7 @@ flowchart TB
 
   subgraph Desktop["packages/desktop — Electron"]
     Main[main\n生命周期 / PiBackend / IPC / 机构窗口 / updater / ui-plugins]
-    Preload[preload\ncontextBridge window.pi\nINVOKE_ROUTES 自动生成]
+    Preload[preload\ncontextBridge window.pi\n按域契约生成]
     Renderer[renderer\nReact 19 + Tailwind 4 + Zustand\nchat / task / knowledge / settings / subagents]
   end
 
@@ -95,7 +95,7 @@ flowchart TB
 
 ### 1. `packages/shared` — 跨进程契约
 
-- `ipc.ts`：`IpcChannels` 常量 + `PiApi`（`window.pi` 完整类型）。新增通道需四处同步：`shared/ipc.ts` → `preload/index.ts`（`INVOKE_ROUTES` 自动）→ `main/ipc/<domain>.ts` → backend 方法 + `main/ipc/index.ts` 事件转发。
+- `ipc.ts`：`IpcChannels` 常量 + `PiApi`（`window.pi` 完整类型）。新增通道需四处同步：`shared/ipc.ts` → `preload/index.ts`（各域契约）→ `main/ipc/<domain>.ts` → backend 方法 + `main/ipc/index.ts` 事件转发。
 - `session.ts`：`SessionMeta`、`SessionEvent`（Pi 原生 + Drone 自有如 `subagent_mutex`、`model_wait`）、`SessionMessage`（带 `entryId` 供 fork/撤回，`image`、`subagent`）。
 - `transcript/`：桌面与 lan-web 共用的 UI 消息状态机 — reducer、mapping、chat-rows 分组、turn-files 聚合、patch 解析、计时派生。
 - `institutional.ts`（新增）：`InstitutionalConfig`（ezproxyTemplate 自动保存、perTaskLimit、lastLoginAt）、`InstitutionalStatus`。
@@ -120,7 +120,7 @@ flowchart TB
 - `ui-plugins/`：esbuild 构建器（`window.DroneUI` shim）、manager（扫描、构建、fs.watch 热重载、内置桌宠）。
 - `window.ts`、`tabs.ts`、`ui-state.ts`、`updater.ts` 等。
 
-**preload/**：`index.ts` — `contextBridge.exposeInMainWorld('pi', api)`，`api` 由 `INVOKE_ROUTES` 自动生成 + 事件订阅。必须保持 CJS。
+**preload/**：`index.ts` — `contextBridge.exposeInMainWorld('pi', api)`，`api` 由 各域契约生成 + 事件订阅。必须保持 CJS。
 
 **renderer/**：React 19 + Tailwind 4 + Zustand
 - `App.tsx`：视图切换 + `use-session-event-bridge`（EventConflator rAF 合流）。

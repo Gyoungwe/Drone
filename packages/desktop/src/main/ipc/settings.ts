@@ -1,14 +1,11 @@
 import type { BackendServices, PiBackend } from "@drone/backend";
 import type {
-	AskResponse,
 	CustomProviderInput,
 	CustomProviderUpdateInput,
 	ListProvidersOptions,
-	PermissionAnswer,
 	SubagentThinkingLevel,
 } from "@drone/shared";
 import { IpcChannels, SettingsContract } from "@drone/shared";
-import { ipcMain } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
@@ -64,33 +61,4 @@ export function registerSettingsIpc(
 				respondProviderLogin: IpcChannels.SettingsLoginRespond,
 			})[method as keyof typeof SettingsContract.methods],
 	});
-
-	ipcMain.handle(IpcChannels.AskRespond, (_e, requestId: string, response: AskResponse) =>
-		backend.respondAsk(requestId, response),
-	);
-	ipcMain.handle(IpcChannels.PermissionRespond, (_e, requestId: string, answer: PermissionAnswer) =>
-		backend.respondPermission(requestId, answer),
-	);
-	ipcMain.handle(IpcChannels.PermissionGetConfig, () => backend.getPermissionConfig());
-	ipcMain.handle(IpcChannels.PermissionGetMode, (_e, sessionId: string) =>
-		backend.getSessionPermissionMode(sessionId),
-	);
-	ipcMain.handle(IpcChannels.PermissionSetMode, (_e, sessionId: string, mode: unknown) => {
-		if (mode !== "default" && mode !== "strict" && mode !== "fullAccess")
-			throw new Error(`invalid permission mode: ${String(mode)}`);
-		backend.setSessionPermissionMode(sessionId, mode);
-	});
-	ipcMain.handle(IpcChannels.ContextManagerGetConfig, () => backend.getContextManagerConfig());
-	ipcMain.handle(IpcChannels.ContextManagerSetMode, (_e, mode: unknown) => {
-		if (mode !== "evaporation" && mode !== "off")
-			throw new Error(`invalid context manager mode: ${String(mode)}`);
-		backend.setContextManagerMode(mode);
-	});
-	ipcMain.handle(IpcChannels.ChannelWatchGetConfig, () => backend.getChannelWatchConfig());
-	ipcMain.handle(IpcChannels.ChannelWatchSetEnabled, (_e, enabled: boolean) =>
-		backend.setChannelWatchEnabled(enabled),
-	);
-	ipcMain.handle(IpcChannels.TrustRespond, (_e, requestId: string, answer: number) =>
-		backend.respondTrust(requestId, answer),
-	);
 }
