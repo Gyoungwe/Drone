@@ -6,7 +6,8 @@
 		"noEmit": true,
 		"strict": false,
 		"declaration": false,
-		"types": []
+		"types": ["node"],
+		"lib": ["ES2023", "DOM"]
 	},
 	"include": [
 		"lib/knowledge/publication.mjs",

@@ -181,7 +181,10 @@ export async function inspectTaskFile(cwd, input, expected = {}) {
 	}
 }
 
-/** SDK branch entries are the durable authority, never model-authored status strings. */
+/**
+ * SDK branch entries are the durable authority, never model-authored status strings.
+ * @param {{ persist?: (value: unknown) => void, now?: () => string, inspect?: Function, verifiers?: any, onCheckpoint?: Function, requireAuthorization?: boolean }} options
+ */
 export function createTaskWorkbench({
 	persist = () => {},
 	now = () => new Date().toISOString(),

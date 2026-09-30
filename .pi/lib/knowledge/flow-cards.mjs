@@ -102,14 +102,16 @@ export function failureCard(event) {
 		.filter((b) => b?.type === "text")
 		.map((b) => b.text)
 		.join(" ");
-	return flowCard({
-		key: event.toolCallId,
-		kind: "failure",
-		title: event.toolName,
-		status: "failed",
-		detail: text,
-		source: event.toolName,
-	});
+	return flowCard(
+		/** @type {any} */ ({
+			key: event.toolCallId,
+			kind: "failure",
+			title: event.toolName,
+			status: "failed",
+			detail: text,
+			source: event.toolName,
+		}),
+	);
 }
 
 const ZOTERO_KEY = /^[A-Z0-9]{8}$/;
@@ -138,36 +140,38 @@ export function literatureCard(event, { write = false } = {}) {
 	const title = clip(write ? d.title : receipt?.zotero?.title, 200);
 	// 主状态：写入类取写入结果；核对类取整体回执状态（both-verified / partial…），缺省回退 Zotero 读回状态
 	const status = write ? clip(d.status, 32) || "unknown" : clip(receipt?.status, 32) || zoteroStatus;
-	return flowCard({
-		key: `doi:${doi}`,
-		kind: "literature",
-		title: title || doi,
-		provisionalTitle: !title,
-		subtitle: `DOI ${doi}`,
-		status,
-		detail: null,
-		path: notePath,
-		fields: [
-			cardField("Zotero", zoteroStatus, {
-				code: zoteroKey && ZOTERO_KEY.test(zoteroKey) ? zoteroKey : null,
-				note:
-					[channel ? CHANNEL_LABEL[channel] || channel : null, library].filter(Boolean).join(" · ") || null,
-			}),
-			cardField("Vault 笔记", obsidianStatus, { i18n: "flow.field.vaultNote", code: notePath }),
-			cardField("全文", fulltext || "unknown", { i18n: "flow.field.fulltext" }),
-		],
-		links: [
-			zoteroKey && ZOTERO_KEY.test(zoteroKey)
-				? cardLink(
-						"resource",
-						`zotero://select/library/items/${zoteroKey}`,
-						"在 Zotero 中打开",
-						"flow.link.openInZotero",
-					)
-				: null,
-			notePath ? cardLink("note", notePath, "打开笔记", "flow.link.openNote") : null,
-			cardLink("external", `https://doi.org/${encodeURI(doi)}`, "打开 DOI", "flow.link.openDoi"),
-		],
-		source: event.toolName,
-	});
+	return flowCard(
+		/** @type {any} */ ({
+			key: `doi:${doi}`,
+			kind: "literature",
+			title: title || doi,
+			provisionalTitle: !title,
+			subtitle: `DOI ${doi}`,
+			status,
+			detail: null,
+			path: notePath,
+			fields: [
+				cardField("Zotero", zoteroStatus, {
+					code: zoteroKey && ZOTERO_KEY.test(zoteroKey) ? zoteroKey : null,
+					note:
+						[channel ? CHANNEL_LABEL[channel] || channel : null, library].filter(Boolean).join(" · ") || null,
+				}),
+				cardField("Vault 笔记", obsidianStatus, { i18n: "flow.field.vaultNote", code: notePath }),
+				cardField("全文", fulltext || "unknown", { i18n: "flow.field.fulltext" }),
+			],
+			links: [
+				zoteroKey && ZOTERO_KEY.test(zoteroKey)
+					? cardLink(
+							"resource",
+							`zotero://select/library/items/${zoteroKey}`,
+							"在 Zotero 中打开",
+							"flow.link.openInZotero",
+						)
+					: null,
+				notePath ? cardLink("note", notePath, "打开笔记", "flow.link.openNote") : null,
+				cardLink("external", `https://doi.org/${encodeURI(doi)}`, "打开 DOI", "flow.link.openDoi"),
+			],
+			source: event.toolName,
+		}),
+	);
 }

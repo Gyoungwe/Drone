@@ -29,6 +29,7 @@
 		"validate:upgrade": "node scripts/check-upgrade-release.mjs --ui",
 		"check:arch": "node scripts/check-architecture.mjs",
 		"test:arch": "node --test scripts/check-architecture.test.mjs",
+		"check:pi": "tsc -p .pi --pretty false",
 		"build:extensions": "node scripts/build-extensions.mjs",
 		"check:extensions": "node scripts/check-extensions-build.mjs"
 	},

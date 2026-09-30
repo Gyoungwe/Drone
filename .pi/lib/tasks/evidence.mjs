@@ -2,7 +2,10 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { clean, inspectTaskFile } from "./workbench.mjs";
 
-/** Persist only source/version/window locators. Full contents remain subject to normal evaporation. */
+/**
+ * Persist only source/version/window locators. Full contents remain subject to normal evaporation.
+ * @param {{ authorize?: (...args: any[]) => unknown, persist?: (value: unknown) => void }} options
+ */
 export function createEvidenceRecovery({ authorize, persist = () => {} }) {
 	let scope = null,
 		taskId = null,

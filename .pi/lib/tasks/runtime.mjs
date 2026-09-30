@@ -40,7 +40,10 @@ const valid = (value, scope) =>
 	value.pending.length <= 32 &&
 	JSON.stringify(value).length <= 24000;
 
-/** Host-observed execution history; never a scientific proof or permission to retry writes. */
+/**
+ * Host-observed execution history; never a scientific proof or permission to retry writes.
+ * @param {{ persist?: (value: unknown) => void, now?: () => string }} options
+ */
 export function createTaskJournal({ persist = () => {}, now = () => new Date().toISOString() } = {}) {
 	let task = null,
 		scope = null,
