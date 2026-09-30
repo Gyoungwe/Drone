@@ -12,7 +12,6 @@ import { AsyncLocalStorage } from "node:async_hooks";
 const contexts = new AsyncLocalStorage();
 let installedRuntime = null;
 let standaloneRuntime = null;
-const fallbackLegacy = new Map();
 
 const legacySymbol = (key) => Symbol.for(key);
 
@@ -103,27 +102,18 @@ function legacyState(key, create) {
 	const symbol = legacySymbol(key);
 	const globalState = globalThis[symbol];
 	if (globalState !== undefined) return globalState;
-	if (!fallbackLegacy.has(key)) fallbackLegacy.set(key, create());
-	return fallbackLegacy.get(key);
-}
-
-function globalLegacyState(key) {
-	return globalThis[legacySymbol(key)];
+	const created = create();
+	// The host and dynamically loaded .pi extensions may evaluate this module
+	// in separate ESM realms. Keep the legacy/no-injection compatibility slot
+	// shared across those realms; explicitly injected runtimes never use it.
+	globalThis[symbol] = created;
+	return created;
 }
 
 function resolveSlot(domain, slot, create, key) {
 	const runtime = injectedRuntime();
 	if (!runtime) {
-		const legacy = globalLegacyState(key);
-		if (legacy !== undefined) return legacy;
-		if (!standaloneRuntime) standaloneRuntime = createStandaloneRuntime();
-		let standaloneGroup = standaloneRuntime[domain];
-		if (!standaloneGroup) {
-			standaloneGroup = {};
-			standaloneRuntime[domain] = standaloneGroup;
-		}
-		if (!standaloneGroup[slot]) standaloneGroup[slot] = create();
-		return standaloneGroup[slot];
+		return legacyState(key, create);
 	}
 	let group = runtime[domain];
 	if (!group) {
@@ -180,7 +170,7 @@ function legacyQueue(key) {
 export function runRuntimeExclusive(namespace, key, operation, legacyKey) {
 	const injected = injectedRuntime();
 	if (injected?.scheduler?.run) return injected.scheduler.run(`${namespace}:${key}`, operation);
-	if (!injected && globalLegacyState(legacyKey)) {
+	if (!injected) {
 		const queues = legacyQueue(legacyKey);
 		const previous = queues.get(key) || Promise.resolve();
 		const next = previous.catch(() => {}).then(operation);

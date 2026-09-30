@@ -351,6 +351,18 @@
     },
     {
       "rule": "R4",
+      "file": ".pi/lib/knowledge/publication.mjs",
+      "line": 264,
+      "detail": "global bridge drone.knowledge.publication.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/runtime-bridge.test.mjs",
+      "line": 53,
+      "detail": "global bridge drone.test.queue.v1"
+    },
+    {
+      "rule": "R4",
       "file": ".pi/lib/tool-manifest.mjs",
       "line": 10,
       "detail": "global bridge drone.tool-manifest.v1"

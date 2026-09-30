@@ -257,6 +257,16 @@ export function registerAnswerPublication(
 		setRuntime(runtime);
 		state.projectEvent = projectKnowledgeEvent;
 		state.projectSnapshot = projectKnowledgeSnapshot;
+	} else {
+		// Legacy extensions are loaded without a host runtime. Keep the old
+		// publication handshake for that path; an explicitly injected runtime
+		// remains isolated and never writes this process-global bridge.
+		const legacyKey = Symbol.for("drone.knowledge.publication.v1");
+		const legacy = globalThis[legacyKey] ?? {};
+		globalThis[legacyKey] = legacy;
+		legacy.proofs ??= new WeakSet();
+		legacy.projectEvent = projectKnowledgeEvent;
+		legacy.projectSnapshot = projectKnowledgeSnapshot;
 	}
 	let turnId = null,
 		required = true,

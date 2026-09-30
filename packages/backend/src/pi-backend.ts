@@ -263,6 +263,15 @@ export class PiBackend {
 	private readonly eventRates = new EventRateTracker();
 	/** Session lifecycle and Pi SDK runtime boundary (A3-3). */
 	private readonly sessionEngine = new SessionEngine();
+	/**
+	 * Compatibility injection seam for host adapters and SDK fixtures.
+	 *
+	 * The session engine owns the default runtime, while older integrations
+	 * assign this field to provide a faux/native runtime. Keeping the seam on
+	 * the façade lets those callers migrate without changing session behavior.
+	 */
+	/** @deprecated pass a runtime through the session-engine composition root. */
+	modelRuntime?: ModelRuntime;
 	/** 设置页（provider/模型/凭证配置）服务 */
 	readonly settings = new SettingsService(() => this.getModelRuntime());
 	/** 用户级模型可见性与子代理模型偏好（独立于 CLI 共用 settings.json）。 */
@@ -338,7 +347,7 @@ export class PiBackend {
 	}
 
 	private async getModelRuntime(): Promise<ModelRuntime> {
-		return this.sessionEngine.getModelRuntime();
+		return this.modelRuntime ?? this.sessionEngine.getModelRuntime();
 	}
 
 	private emitEvent(sessionId: string, event: SessionEvent): void {
@@ -388,7 +397,7 @@ export class PiBackend {
 			{
 				name: "publication-projection",
 				failMode: "closed",
-				run: (current) => projectKnowledgeEvent(current),
+				run: (current) => projectKnowledgeEvent(current, this.runtime),
 			},
 			{
 				name: "trace",
@@ -469,14 +478,23 @@ export class PiBackend {
 		const resourceLoader = capabilities
 			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
 			: baseResourceLoader;
-		const { session, extensionsResult } = await this.sessionEngine.create(cwd, {
-			model,
-			thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
-			tools: this.options.tools,
-			customTools: buildSessionCustomTools(this.sessionExtensionDependencies(), gate, askGate, capabilities),
-			settingsManager,
-			resourceLoader,
-		});
+		const { session, extensionsResult } = await this.sessionEngine.create(
+			cwd,
+			{
+				model,
+				thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
+				tools: this.options.tools,
+				customTools: buildSessionCustomTools(
+					this.sessionExtensionDependencies(),
+					gate,
+					askGate,
+					capabilities,
+				),
+				settingsManager,
+				resourceLoader,
+			},
+			runtime,
+		);
 		const mutex = applySubagentMutex(session, extensionsResult, this.options.subagentPreferBuiltin !== false);
 		if (mutex.shadowed.length > 0) {
 			log.info("third-party subagent tools shadowed", session.sessionId, mutex);
@@ -526,6 +544,7 @@ export class PiBackend {
 		// Idempotent: StrictMode / duplicate restore must not bind the same jsonl twice.
 		const already = this.registry.list().find((entry) => entry.session.sessionFile === filePath);
 		if (already) return this.registry.toMeta(already);
+		const runtime = await this.getModelRuntime();
 		const sessionManager = this.sessionEngine.openManager(filePath);
 		const cwd = sessionManager.getCwd() || process.cwd();
 		const gate = new PermissionGate((req) => this.dispatchPermissionRequest(req));
@@ -552,11 +571,20 @@ export class PiBackend {
 		const resourceLoader = capabilities
 			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
 			: baseResourceLoader;
-		const { session, extensionsResult } = await this.sessionEngine.open(filePath, {
-			settingsManager,
-			resourceLoader,
-			customTools: buildSessionCustomTools(this.sessionExtensionDependencies(), gate, askGate, capabilities),
-		});
+		const { session, extensionsResult } = await this.sessionEngine.open(
+			filePath,
+			{
+				settingsManager,
+				resourceLoader,
+				customTools: buildSessionCustomTools(
+					this.sessionExtensionDependencies(),
+					gate,
+					askGate,
+					capabilities,
+				),
+			},
+			runtime,
+		);
 		const mutex = applySubagentMutex(session, extensionsResult, this.options.subagentPreferBuiltin !== false);
 		if (mutex.shadowed.length > 0) {
 			log.info("third-party subagent tools shadowed", session.sessionId, mutex);
@@ -1098,7 +1126,7 @@ export class PiBackend {
 		// 面板派发 / 结果记录是 custom entry（不在 session.messages 里）：按时间戳并回消息流
 		const branch = entry.session.sessionManager.getBranch();
 		const panelRecords = subagentPanelRawMessages(branch);
-		const live = projectKnowledgeSnapshot(entry.session.messages as RawMessage[], persisted);
+		const live = projectKnowledgeSnapshot(entry.session.messages as RawMessage[], persisted, this.runtime);
 		const merged = panelRecords.length > 0 ? mergeRawByTimestamp(live, panelRecords) : live;
 		const messages = toSessionMessages(merged, {
 			liveSubagentRunIds: new Set(this.subagentPanel.listRuns(sessionId).map((run) => run.runId)),

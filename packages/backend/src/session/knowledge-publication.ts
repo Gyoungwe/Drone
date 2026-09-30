@@ -1,4 +1,4 @@
-import { isUserAbortError, type SessionEvent, sanitizeProviderError } from "@drone/shared";
+import { type DroneRuntime, isUserAbortError, type SessionEvent, sanitizeProviderError } from "@drone/shared";
 import type { RawMessage } from "./messages";
 
 /**
@@ -14,7 +14,10 @@ interface PublicationBridge {
 	projectSnapshot?: (messages: RawMessage[], persisted: RawMessage[]) => RawMessage[];
 }
 const key = Symbol.for("drone.knowledge.publication.v1");
-function bridge(): PublicationBridge | undefined {
+
+function bridge(runtime?: DroneRuntime): PublicationBridge | undefined {
+	const injected = runtime?.knowledge.publication as PublicationBridge | undefined;
+	if (injected) return injected;
 	return (globalThis as unknown as Record<symbol, PublicationBridge>)[key];
 }
 
@@ -76,10 +79,10 @@ function failClosedEvent(event: SessionEvent): SessionEvent | null {
 }
 
 /** Shared delivery boundary: desktop, LAN and trace consumers all receive the same projected event. */
-export function projectKnowledgeEvent(event: SessionEvent): SessionEvent | null {
+export function projectKnowledgeEvent(event: SessionEvent, runtime?: DroneRuntime): SessionEvent | null {
 	if (!process.env.DRONE_KNOWLEDGE_DIR) return event;
 	try {
-		const fn = bridge()?.projectEvent;
+		const fn = bridge(runtime)?.projectEvent;
 		if (fn) return fn(event);
 	} catch {
 		/* Fail closed, never leak the draft. */
@@ -88,10 +91,14 @@ export function projectKnowledgeEvent(event: SessionEvent): SessionEvent | null 
 }
 
 /** Live polling cannot reveal the assistant object while async validation is still pending. */
-export function projectKnowledgeSnapshot(messages: RawMessage[], persisted: RawMessage[]): RawMessage[] {
+export function projectKnowledgeSnapshot(
+	messages: RawMessage[],
+	persisted: RawMessage[],
+	runtime?: DroneRuntime,
+): RawMessage[] {
 	if (!process.env.DRONE_KNOWLEDGE_DIR) return messages;
 	try {
-		const fn = bridge()?.projectSnapshot;
+		const fn = bridge(runtime)?.projectSnapshot;
 		if (fn) return fn(messages, persisted);
 	} catch {
 		/* fail closed */

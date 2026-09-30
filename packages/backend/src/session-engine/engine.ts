@@ -32,10 +32,11 @@ export class SessionEngine {
 	async create(
 		cwd: string,
 		options: Omit<CreateAgentSessionOptions, "cwd" | "modelRuntime" | "sessionManager">,
+		runtime?: ModelRuntime,
 	): Promise<CreateAgentSessionResult> {
 		return createAgentSession({
 			cwd,
-			modelRuntime: await this.getModelRuntime(),
+			modelRuntime: runtime ?? (await this.getModelRuntime()),
 			sessionManager: SessionManager.create(cwd),
 			...options,
 		});
@@ -44,9 +45,10 @@ export class SessionEngine {
 	async open(
 		filePath: string,
 		options: Omit<CreateAgentSessionOptions, "modelRuntime" | "sessionManager"> = {},
+		runtime?: ModelRuntime,
 	): Promise<CreateAgentSessionResult> {
 		return createAgentSession({
-			modelRuntime: await this.getModelRuntime(),
+			modelRuntime: runtime ?? (await this.getModelRuntime()),
 			sessionManager: SessionManager.open(filePath),
 			...options,
 		});
