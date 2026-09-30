@@ -1,9 +1,9 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { shouldAskToContinue } from "@drone/tasks";
 import { afterEach, expect, it, vi } from "vitest";
 import { remainingExplanation } from "../../../.pi/lib/tasks/remaining.mjs";
-import { shouldAskToContinue } from "../../../.pi/lib/tasks/turn-end-prompt.mjs";
 import { createTaskWorkbench, LIMITS, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
 
 /**

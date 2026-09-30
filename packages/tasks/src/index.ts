@@ -19,3 +19,4 @@ export {
 	type TaskCommandContext,
 	type TaskCommandHandler,
 } from "./single-flight";
+export { MAX_AUTO_RESUMES, shouldAskToContinue, type TaskContinuationState } from "./turn-end-prompt";

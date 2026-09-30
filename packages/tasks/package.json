@@ -8,7 +8,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./failure-feedback": "./src/failure-feedback.ts",
-		"./single-flight": "./src/single-flight.ts"
+		"./single-flight": "./src/single-flight.ts",
+		"./turn-end-prompt": "./src/turn-end-prompt.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
