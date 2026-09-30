@@ -85,6 +85,11 @@ export {
 } from "./project/workspace-store";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export {
+	isNpmSpawnEnoent,
+	NPM_NOT_FOUND_SENTINEL,
+	PackageService,
+} from "./services/packages";
+export {
 	assignEntryIds,
 	blockImages,
 	blockText,

@@ -67,7 +67,6 @@ import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/spec
 import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
 import { McpService } from "./mcp/service";
-import { PackageAdmin } from "./packages/admin";
 import {
 	loadPermissionConfig,
 	probePermission as probePermissionRules,
@@ -83,6 +82,7 @@ import { TrustGate } from "./project/trust";
 import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { createDroneRuntime } from "./runtime";
+import { PackageService } from "./services/packages";
 import { AskGate } from "./session/ask-gate";
 import { createEventPipeline, type Stage } from "./session/event-pipeline";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
@@ -283,8 +283,8 @@ export class PiBackend {
 		getRuntime: () => this.getModelRuntime(),
 		send: (payload) => this.dispatchLoginEvent(payload),
 	});
-	/** 社区包管理（安装/卸载 + 会话热重载） */
-	private readonly packages: PackageAdmin;
+	/** 社区包管理（安装/卸载 + 会话热重载）；供 BackendServices 直接消费。 */
+	readonly packages: PackageService;
 	/** 项目资源两阶段加载 + 信任决策 */
 	private readonly projectLoader: ProjectResourceLoader;
 
@@ -295,7 +295,7 @@ export class PiBackend {
 			userDataDir: options.userDataDir,
 			knowledgeDir: process.env.DRONE_KNOWLEDGE_DIR,
 		});
-		this.packages = new PackageAdmin({
+		this.packages = new PackageService({
 			registry: this.registry,
 			defaultCwd: options.defaultCwd,
 			onSessionReloaded: (sessionId) => this.reapplyCapabilities(sessionId),
@@ -1018,7 +1018,7 @@ export class PiBackend {
 		};
 	}
 
-	/** 搜索 pi.dev 社区包目录（设置页扩展面板浏览用） */
+	/** @deprecated 通过 BackendServices.packages.searchPackages 使用。 */
 	async searchPackages(
 		query: string,
 		type?: CatalogPackageType | "",
@@ -1027,17 +1027,17 @@ export class PiBackend {
 		return this.packages.searchPackages(query, type, page);
 	}
 
-	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
+	/** @deprecated 通过 BackendServices.packages.listConfiguredPackages 使用。 */
 	async listConfiguredPackages(): Promise<ConfiguredPackageInfo[]> {
 		return this.packages.listConfiguredPackages();
 	}
 
-	/** 安装社区包（npm:<name>，用户级）；成功后热重载非流式活跃会话，扩展立即生效 */
+	/** @deprecated 通过 BackendServices.packages.installPackage 使用。 */
 	async installPackage(name: string): Promise<void> {
 		return this.packages.installPackage(name);
 	}
 
-	/** 卸载已配置的包（按 source + scope 移除并持久化）；成功后热重载非流式活跃会话 */
+	/** @deprecated 通过 BackendServices.packages.removePackage 使用。 */
 	async removePackage(source: string, scope: "user" | "project"): Promise<void> {
 		return this.packages.removePackage(source, scope);
 	}

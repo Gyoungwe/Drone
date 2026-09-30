@@ -1,6 +1,6 @@
 import { NPM_NOT_FOUND_SENTINEL } from "@drone/shared";
 import { describe, expect, it } from "vitest";
-import { isNpmSpawnEnoent } from "../src/packages/admin";
+import { isNpmSpawnEnoent } from "../src/services/packages";
 
 /**
  * npm ENOENT 错误识别（issue #18：GUI 启动 PATH 不含 npm → spawn npm ENOENT）。

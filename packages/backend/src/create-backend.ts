@@ -1,6 +1,7 @@
 import type { DroneRuntime } from "@drone/shared";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
+import type { PackageService } from "./services/packages";
 
 /**
  * Transitional composition root for the v2 migration.
@@ -17,6 +18,8 @@ export interface BackendServices {
 	sessions: PiBackend;
 	/** Domain-owned services exposed without reaching into the façade. */
 	knowledge: PiBackend["knowledge"];
+	/** Community package catalog and package-manager operations. */
+	packages: PackageService;
 	settings: PiBackend["settings"];
 	login: PiBackend["login"];
 	mcp: PiBackend["mcp"];
@@ -30,6 +33,7 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 		runtime,
 		sessions,
 		knowledge: sessions.knowledge,
+		packages: sessions.packages,
 		settings: sessions.settings,
 		login: sessions.login,
 		mcp: sessions.mcp,
