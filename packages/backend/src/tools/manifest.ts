@@ -13,8 +13,9 @@ import {
  *
  * 数据来源只有一个：扩展在 `pi.registerTool({ ..., drone })` 时的声明。后端经
  * `session.getToolDefinition(name)` 读到原样保存的注册对象；工具家族（MCP 服务器前缀等）
- * 由 `.pi/lib/tool-manifest.mjs` 经 globalThis Symbol 桥暴露（与 knowledge/publication 桥同款），
- * 供没有会话句柄的地方（子代理 runner）使用。核心工具（read/bash/…）的默认值在 CORE_TOOL_META。
+ * 由会话句柄直接暴露工具声明；没有会话句柄的调用使用 CORE_TOOL_META。
+ * First-party `.pi` modules keep their manifest in the injected runtime, so
+ * this backend adapter never reads process-global mutable state.
  */
 export interface ToolDefinitionSource {
 	getAllTools?(): { name: string }[];
@@ -59,31 +60,15 @@ const CORE_ACTIVITIES: { test: (name: string) => boolean; activity: ToolActivity
 	},
 ];
 
-const bridgeKey = Symbol.for("drone.tool-manifest.v1");
-interface ManifestBridge {
-	tools?: Map<string, unknown>;
-	families?: Map<string, unknown>;
-}
-function bridge(): ManifestBridge | undefined {
-	return (globalThis as unknown as Record<symbol, ManifestBridge | undefined>)[bridgeKey];
-}
-
 /** 运行时 .mjs 侧登记的工具家族（MCP 服务器前缀等），已规范化。 */
 export function bridgedToolFamilies(): ToolFamilyMeta[] {
-	const families = bridge()?.families;
-	if (!families) return [];
-	const result: ToolFamilyMeta[] = [];
-	for (const raw of families.values()) {
-		const meta = readDroneToolMeta({ drone: { families: [raw] } });
-		if (meta?.families?.[0]) result.push(meta.families[0]);
-	}
-	return result;
+	return [];
 }
 
 /** 运行时 .mjs 侧登记的单个工具元数据（会话句柄不可用时的后备）。 */
 export function bridgedToolMeta(name: string): DroneToolMeta | undefined {
-	const raw = bridge()?.tools?.get(name);
-	return raw ? readDroneToolMeta({ drone: raw }) : undefined;
+	void name;
+	return undefined;
 }
 
 export class ToolManifest {

@@ -55,16 +55,17 @@ export interface QueueBridge {
 	dispose?(): Promise<void> | void;
 }
 
-export const DRONE_KNOWLEDGE_PUBLICATION_KEY = Symbol.for("drone.knowledge.publication.v1");
-export const DRONE_TOOL_MANIFEST_KEY = Symbol.for("drone.tool-manifest.v1");
-export const DRONE_WIKI_REVIEW_LOCKS_KEY = Symbol.for("drone.wiki-review-locks.v1");
-export const DRONE_TOPIC_MEMORY_QUEUES_KEY = Symbol.for("drone.topic-memory-queues.v1");
-export const DRONE_SEMANTIC_LOCK_KEY = Symbol.for("drone.semantic-lock.v1");
-export const DRONE_WORKER_POOL_KEY = Symbol.for("drone.worker-pool.v1");
-export const DRONE_KNOWLEDGE_BINDING_KEY = Symbol.for("drone.knowledge-binding.v1");
-export const DRONE_UI_KEY = Symbol.for("drone.ui.v1");
-export const DRONE_SPECIALISTS_KEY = Symbol.for("drone.specialists.v1");
-export const DRONE_ACCEPTANCE_VERIFIERS_KEY = Symbol.for("drone.acceptance-verifiers.v1");
+/** Stable labels retained for migration callers; mutable state is runtime-owned. */
+export const DRONE_KNOWLEDGE_PUBLICATION_KEY = "drone.knowledge.publication.v1";
+export const DRONE_TOOL_MANIFEST_KEY = "drone.tool-manifest.v1";
+export const DRONE_WIKI_REVIEW_LOCKS_KEY = "drone.wiki-review-locks.v1";
+export const DRONE_TOPIC_MEMORY_QUEUES_KEY = "drone.topic-memory-queues.v1";
+export const DRONE_SEMANTIC_LOCK_KEY = "drone.semantic-lock.v1";
+export const DRONE_WORKER_POOL_KEY = "drone.worker-pool.v1";
+export const DRONE_KNOWLEDGE_BINDING_KEY = "drone.knowledge-binding.v1";
+export const DRONE_UI_KEY = "drone.ui.v1";
+export const DRONE_SPECIALISTS_KEY = "drone.specialists.v1";
+export const DRONE_ACCEPTANCE_VERIFIERS_KEY = "drone.acceptance-verifiers.v1";
 
 export interface DroneRuntime {
 	knowledge: KnowledgeRuntime;

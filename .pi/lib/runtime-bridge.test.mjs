@@ -49,33 +49,15 @@ test("runtime scheduler serializes only the same runtime key", async () => {
 	await Promise.all([first.dispose(), second.dispose()]);
 });
 
-test("legacy queue bridges remain usable while no runtime is injected", async () => {
-	const key = Symbol.for("drone.test.queue.v1");
-	const previous = globalThis[key];
-	globalThis[key] = new Map();
+test("an implicit standalone runtime serializes work without a global bridge", async () => {
 	const events = [];
-	try {
-		const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-		const first = runRuntimeExclusive(
-			"legacy",
-			"same",
-			async () => {
-				events.push("start");
-				await wait(10);
-				events.push("end");
-			},
-			"drone.test.queue.v1",
-		);
-		const second = runRuntimeExclusive(
-			"legacy",
-			"same",
-			async () => events.push("queued"),
-			"drone.test.queue.v1",
-		);
-		await Promise.all([first, second]);
-		assert.deepEqual(events, ["start", "end", "queued"]);
-	} finally {
-		if (previous === undefined) delete globalThis[key];
-		else globalThis[key] = previous;
-	}
+	const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+	const first = runRuntimeExclusive("standalone", "same", async () => {
+		events.push("start");
+		await wait(10);
+		events.push("end");
+	});
+	const second = runRuntimeExclusive("standalone", "same", async () => events.push("queued"));
+	await Promise.all([first, second]);
+	assert.deepEqual(events, ["start", "end", "queued"]);
 });
