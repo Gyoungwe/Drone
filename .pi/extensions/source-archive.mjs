@@ -3,6 +3,7 @@ import { reconcileLiteratureOperation } from "../lib/literature-operations.mjs";
 import { verifyLiteratureReceipt } from "../lib/literature-receipt.mjs";
 import { USER_QUESTION_FOCUS } from "../lib/reply-focus.mjs";
 import { recordRunProvenance } from "../lib/run-provenance.mjs";
+import { bindRuntime, withHostRuntime } from "../lib/runtime-bridge.mjs";
 import {
 	archiveSource,
 	DEFAULT_MAX_BYTES,
@@ -60,6 +61,8 @@ function sourceStatusCards(event) {
 
 export default function sourceArchive(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
+	bindRuntime(pi);
+	const run = (operation) => withHostRuntime(pi, operation);
 	registerTool(pi, {
 		name: "research_archive_source",
 		label: "Archive research source",
@@ -173,14 +176,16 @@ export default function sourceArchive(pi) {
 			required: ["run_dir", "doi", "zotero_key", "note_path"],
 		},
 		async execute(_id, p, _signal, _update, ctx) {
-			const value = await reconcileLiteratureOperation({
-				cwd: ctx.cwd,
-				runDir: p.run_dir,
-				doi: p.doi,
-				zoteroKey: p.zotero_key,
-				notePath: p.note_path,
+			return run(async () => {
+				const value = await reconcileLiteratureOperation({
+					cwd: ctx.cwd,
+					runDir: p.run_dir,
+					doi: p.doi,
+					zoteroKey: p.zotero_key,
+					notePath: p.note_path,
+				});
+				return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], details: value };
 			});
-			return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], details: value };
 		},
 	});
 	registerTool(pi, {
