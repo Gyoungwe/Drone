@@ -1,0 +1,1493 @@
+{
+  "version": 1,
+  "findings": [
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/capabilities/skill-frontmatter.ts",
+      "line": 3,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/institutional/config.ts",
+      "line": 7,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/knowledge/specialist-runner.ts",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/mcp/service.ts",
+      "line": 6,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/packages/admin.ts",
+      "line": 3,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/project/trust-loader.ts",
+      "line": 2,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/project/trust.ts",
+      "line": 9,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/session/messages.ts",
+      "line": 21,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/session/ui-context.ts",
+      "line": 2,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/settings/settings.ts",
+      "line": 9,
+      "detail": "runtime import @earendil-works/pi-ai/providers/all"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/settings/settings.ts",
+      "line": 10,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/slash-commands.ts",
+      "line": 7,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/tools/subagent/agents.ts",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/tools/subagent/panel.ts",
+      "line": 20,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/tools/subagent/runner.ts",
+      "line": 13,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/tools/subagent/runner.ts",
+      "line": 20,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/tools/subagent/tool.ts",
+      "line": 8,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/src/zotero/status.ts",
+      "line": 6,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/academic-pi-bridge.test.ts",
+      "line": 10,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/academic-pi-sdk.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/academic-pi-sdk.test.mjs",
+      "line": 6,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/capability-footprint.test.mjs",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/capability-footprint.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/capability-runtime.test.ts",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/compaction-image.test.ts",
+      "line": 1,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/example-tasks-one-authorization-sdk.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/example-tasks-one-authorization-sdk.test.mjs",
+      "line": 6,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/fork.test.ts",
+      "line": 2,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/knowledge-publication-delivery.test.mjs",
+      "line": 16,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/knowledge-publication-delivery.test.mjs",
+      "line": 17,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/knowledge-sdk.test.mjs",
+      "line": 10,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/knowledge-specialists-sdk.test.mjs",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/knowledge-specialists-sdk.test.mjs",
+      "line": 11,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/knowledge-specialists.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/obsidian-skill-integration.test.mjs",
+      "line": 10,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/permission-extension.test.ts",
+      "line": 11,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/recall.test.ts",
+      "line": 2,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/research-skill-router.test.ts",
+      "line": 2,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/skill-invocation.test.ts",
+      "line": 3,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/subagent-shadowing.test.ts",
+      "line": 10,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-acceptance-registry.test.mjs",
+      "line": 3,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-authorization-wire-sdk.test.mjs",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-authorization-wire-sdk.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-failure-feedback-sdk.test.mjs",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-failure-feedback-sdk.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-file-progress-sdk.test.mjs",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-file-progress-sdk.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-lifecycle-progress-sdk.test.mjs",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-lifecycle-progress-sdk.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-progress-entry-sdk.test.mjs",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-progress-entry-sdk.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-progress-sdk.test.mjs",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/task-progress-sdk.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/trust.test.ts",
+      "line": 4,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/usage-context-sdk.test.mjs",
+      "line": 1,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/wiki-model-review-sdk.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/wiki-model-review-sdk.test.mjs",
+      "line": 6,
+      "detail": "runtime import @earendil-works/pi-coding-agent"
+    },
+    {
+      "rule": "R1",
+      "file": "packages/backend/test/wiki-model-review.test.mjs",
+      "line": 5,
+      "detail": "runtime import @earendil-works/pi-ai"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/knowledge/config.mjs",
+      "line": 7,
+      "detail": "global bridge drone.knowledge.binding.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/knowledge/publication.mjs",
+      "line": 6,
+      "detail": "global bridge drone.knowledge.publication.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/knowledge/service.mjs",
+      "line": 16,
+      "detail": "global bridge drone.knowledge.semantic-lock.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/knowledge/service.mjs",
+      "line": 12,
+      "detail": "global bridge drone.knowledge.worker-pool.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/knowledge/specialist-host.mjs",
+      "line": 7,
+      "detail": "global bridge drone.knowledge.specialists.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/knowledge/topic-memory.mjs",
+      "line": 24,
+      "detail": "global bridge drone.knowledge.topic-memory-queues.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/knowledge/ui-state.mjs",
+      "line": 5,
+      "detail": "global bridge drone.knowledge.ui.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/knowledge/wiki-review.mjs",
+      "line": 12,
+      "detail": "global bridge drone.knowledge.wiki-review-locks.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/tasks/acceptance.mjs",
+      "line": 36,
+      "detail": "global bridge drone.acceptance-verifiers.v1"
+    },
+    {
+      "rule": "R4",
+      "file": ".pi/lib/tool-manifest.mjs",
+      "line": 10,
+      "detail": "global bridge drone.tool-manifest.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/backend/src/session/knowledge-publication.ts",
+      "line": 16,
+      "detail": "global bridge drone.knowledge.publication.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/backend/src/tools/manifest.ts",
+      "line": 62,
+      "detail": "global bridge drone.tool-manifest.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/backend/test/knowledge-publication-delivery.test.mjs",
+      "line": 207,
+      "detail": "global bridge drone.knowledge.publication.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/backend/test/knowledge-publication-fallback.test.ts",
+      "line": 8,
+      "detail": "global bridge drone.knowledge.publication.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 48,
+      "detail": "global bridge drone.acceptance-verifiers.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 45,
+      "detail": "global bridge drone.knowledge-binding.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 39,
+      "detail": "global bridge drone.knowledge.publication.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 43,
+      "detail": "global bridge drone.semantic-lock.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 47,
+      "detail": "global bridge drone.specialists.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 40,
+      "detail": "global bridge drone.tool-manifest.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 42,
+      "detail": "global bridge drone.topic-memory-queues.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 46,
+      "detail": "global bridge drone.ui.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 41,
+      "detail": "global bridge drone.wiki-review-locks.v1"
+    },
+    {
+      "rule": "R4",
+      "file": "packages/shared/src/runtime.ts",
+      "line": 44,
+      "detail": "global bridge drone.worker-pool.v1"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/src/tools/subagent/runner.ts",
+      "line": 386,
+      "detail": "relative .pi path ../../../../../.pi/extensions/subagent-mcp-readonly.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/src/tools/subagent/runner.ts",
+      "line": 402,
+      "detail": "relative .pi path ../../../../../.pi/lib/knowledge/publication.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/claim-bindings.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/claim-bindings.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/command-catalog.test.ts",
+      "line": 83,
+      "detail": "relative .pi path ../../../.pi/skills/zotero-literature/SKILL.md"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/example-tasks-one-authorization-sdk.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-automatic-review.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/review-policy.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-automatic-review.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-automatic-review.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-review.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-automatic-review.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-claim-conflicts.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/claim-conflicts.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/source-links.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
+      "line": 13,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-state.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
+      "line": 14,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
+      "line": 15,
+      "detail": "relative .pi path ../../../.pi/lib/source-delivery.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-lifecycle-extension.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-lifecycle-extension.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-lifecycle-extension.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/topic-memory.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-lifecycle-extension.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-lifecycle.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-orchestration.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/orchestration-policy.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-peer-patterns.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-peer-patterns.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-peer-patterns.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-state.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-peer-patterns.test.mjs",
+      "line": 14,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-review.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-peer-patterns.test.mjs",
+      "line": 15,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-peer-patterns.test.mjs",
+      "line": 16,
+      "detail": "relative .pi path ../../../.pi/lib/research-wikiloop.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-publication-delivery.test.mjs",
+      "line": 19,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-publication-delivery.test.mjs",
+      "line": 20,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-state.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-publication-delivery.test.mjs",
+      "line": 21,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-publication-hooks.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/publication.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-publication-hooks.test.mjs",
+      "line": 3,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/task-feedback.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-publication.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/publication.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-publication.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-publication.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-sdk.test.mjs",
+      "line": 12,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-sdk.test.mjs",
+      "line": 13,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-semantic.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-semantic.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/semantic-provider.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-semantic.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/semantic-settings.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-semantic.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-semantic.test.mjs",
+      "line": 10,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-service.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-service.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-service.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-service.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/maintenance.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-service.test.mjs",
+      "line": 14,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-service.test.mjs",
+      "line": 15,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-review.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-service.test.mjs",
+      "line": 485,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/worker.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-service.test.mjs",
+      "line": 21,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists-sdk.test.mjs",
+      "line": 13,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists-sdk.test.mjs",
+      "line": 14,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-state.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists-sdk.test.mjs",
+      "line": 15,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-review.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists-sdk.test.mjs",
+      "line": 16,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/specialist-delivery.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists.test.mjs",
+      "line": 15,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/specialist-host.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists.test.mjs",
+      "line": 20,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/specialists.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists.test.mjs",
+      "line": 25,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-state.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-specialists.test.mjs",
+      "line": 26,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-stress.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/orchestration-policy.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-stress.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/specialist-host.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-stress.test.mjs",
+      "line": 51,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/specialist-host.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-stress.test.mjs",
+      "line": 55,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/specialist-host.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-tool-budget.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/tool-budget.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-ui.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-ui.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-ui.test.mjs",
+      "line": 14,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-state.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-ui.test.mjs",
+      "line": 15,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-review.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-ui.test.mjs",
+      "line": 16,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-upgrade-ui.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-upgrade-ui.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/knowledge-upgrade-ui.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/literature-evidence.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/literature-receipt.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/literature-evidence.test.mjs",
+      "line": 14,
+      "detail": "relative .pi path ../../../.pi/lib/source-delivery.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/literature-operations.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/literature-operations.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/literature-operations.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/literature-operations.test.mjs",
+      "line": 10,
+      "detail": "relative .pi path ../../../.pi/lib/research-loop.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/obsidian-setup.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/extensions/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/obsidian-setup.test.mjs",
+      "line": 10,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-setup.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/obsidian-setup.test.mjs",
+      "line": 11,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/research-loop.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/extensions/research-loop.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/research-loop.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/research-loop.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/literature-receipt.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/research-loop.test.mjs",
+      "line": 15,
+      "detail": "relative .pi path ../../../.pi/lib/research-loop.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/research-loop.test.mjs",
+      "line": 16,
+      "detail": "relative .pi path ../../../.pi/lib/research-receipt-journal.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/run-provenance.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/research-loop.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/run-provenance.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/run-provenance.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/source-archive-open-access.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/extensions/source-archive.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/source-archive-open-access.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/source-archive-open-access.test.mjs",
+      "line": 12,
+      "detail": "relative .pi path ../../../.pi/lib/open-access.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/source-archive-open-access.test.mjs",
+      "line": 13,
+      "detail": "relative .pi path ../../../.pi/lib/research-loop.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/source-archive-open-access.test.mjs",
+      "line": 14,
+      "detail": "relative .pi path ../../../.pi/lib/source-archive.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-acceptance-binding.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/acceptance.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-acceptance-binding.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/ask-authorization.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-acceptance-binding.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/remaining.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-acceptance-binding.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-acceptance-registry.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/extensions/zotero-literature.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-acceptance-registry.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-acceptance-registry.test.mjs",
+      "line": 17,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/acceptance.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-acceptance-registry.test.mjs",
+      "line": 18,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/runtime.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-ask-authorization.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/ask-authorization.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-ask-authorization.test.mjs",
+      "line": 3,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-authorization-wire-sdk.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-command-single-flight.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/single-flight.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-consent.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-consent.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/consent.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-consent.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/register.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-consent.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-failure-feedback-sdk.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-failure-feedback.test.mjs",
+      "line": 11,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/failure-feedback.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-failure-feedback.test.mjs",
+      "line": 12,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-file-progress-sdk.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-lifecycle-progress-sdk.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-one-authorization-flow.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/remaining.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-one-authorization-flow.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/turn-end-prompt.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-one-authorization-flow.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-progress-entry-sdk.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-progress-race.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/progress-action.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-progress-sdk.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-progress.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/ask-authorization.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-progress.test.mjs",
+      "line": 3,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/progress-action.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-progress.test.mjs",
+      "line": 4,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/remaining.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-progress.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-reconciliation.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-reconciliation.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/zotero-reconcile.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-runtime.test.mjs",
+      "line": 10,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/runtime.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-tool-protocol.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/tool-protocol.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-workbench.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/evidence.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/task-workbench.test.mjs",
+      "line": 11,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/tool-manifest-fixture.mjs",
+      "line": 3,
+      "detail": "relative .pi path ../../../.pi/extensions/research-loop.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/tool-manifest-fixture.mjs",
+      "line": 4,
+      "detail": "relative .pi path ../../../.pi/extensions/source-archive.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/tool-manifest-fixture.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/extensions/zotero-literature.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/tool-manifest-fixture.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/topic-memory.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/topic-memory.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/usage-feedback.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/publication.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/usage-feedback.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/usage-feedback.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/task-feedback.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/usage-feedback.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-model-review-sdk.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-model-review-sdk.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-review.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-model-review-sdk.test.mjs",
+      "line": 10,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-model-review.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-model-review.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/specialist-host.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-model-review.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-model-review.test.mjs",
+      "line": 10,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-model-review.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-model-review.test.mjs",
+      "line": 15,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-review.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-model-review.test.mjs",
+      "line": 16,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/wiki-source-contract.test.mjs",
+      "line": 2,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-review.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-literature.test.mjs",
+      "line": 10,
+      "detail": "relative .pi path ../../../.pi/extensions/zotero-literature.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-literature.test.mjs",
+      "line": 11,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-literature.test.mjs",
+      "line": 12,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/source-links.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-literature.test.mjs",
+      "line": 13,
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-literature.test.mjs",
+      "line": 14,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/acceptance.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-literature.test.mjs",
+      "line": 24,
+      "detail": "relative .pi path ../../../.pi/lib/zotero-setup.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-literature.test.mjs",
+      "line": 299,
+      "detail": "relative .pi path ../../../.pi/skills/zotero-literature/SKILL.md"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-save-tool.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/extensions/source-archive.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-save-tool.test.mjs",
+      "line": 6,
+      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-save-tool.test.mjs",
+      "line": 7,
+      "detail": "relative .pi path ../../../.pi/extensions/zotero-literature.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-save-tool.test.mjs",
+      "line": 8,
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-state.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-save-tool.test.mjs",
+      "line": 9,
+      "detail": "relative .pi path ../../../.pi/lib/research-loop.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-save-tool.test.mjs",
+      "line": 10,
+      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-write.test.mjs",
+      "line": 5,
+      "detail": "relative .pi path ../../../.pi/lib/zotero-reconcile.mjs"
+    },
+    {
+      "rule": "R5",
+      "file": "packages/backend/test/zotero-write.test.mjs",
+      "line": 14,
+      "detail": "relative .pi path ../../../.pi/lib/zotero-write.mjs"
+    }
+  ]
+}

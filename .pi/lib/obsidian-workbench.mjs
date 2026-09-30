@@ -691,9 +691,12 @@ export async function obsidianStatus(cwd) {
 		const mcp = await readJson(join(cwd, ".mcp.json"));
 		const server = mcp.mcpServers?.[SERVER_NAME];
 		if (!server || server.disabled || server.args?.at(-1) !== vault) return { state: "missing-mcp", vault };
+		// Older workspaces may still point at the removed policy proxy. Keep the
+		// status recognizable so setup can tell the user to remove that entry,
+		// without ever attempting to execute the dead proxy or its old vendor.
+		if (isLegacyVaultProxy(server)) return { state: "missing-server", vault, legacyConfig: true };
 		try {
 			await access(server.args[0]);
-			if (server.args[0].endsWith("vault-mcp-proxy.mjs")) await access(server.args[1]);
 		} catch {
 			return { state: "missing-server", vault };
 		}
@@ -713,6 +716,11 @@ export async function obsidianStatus(cwd) {
 	}
 }
 
+function isLegacyVaultProxy(entry) {
+	const args = Array.isArray(entry?.args) ? entry.args : [];
+	return typeof args[0] === "string" && args[0].endsWith("vault-mcp-proxy.mjs");
+}
+
 // Resolve runtime code separately from ctx.cwd: a globally installed extension
 // serves many projects, and those projects do not each contain its npm runtime.
 export async function resolveObsidianRuntime({
@@ -723,7 +731,8 @@ export async function resolveObsidianRuntime({
 }) {
 	const runtimeFromConfig = (entry, root) => {
 		const args = Array.isArray(entry?.args) ? entry.args : [];
-		const path = typeof args[0] === "string" && args[0].endsWith("vault-mcp-proxy.mjs") ? args[1] : args[0];
+		if (isLegacyVaultProxy(entry)) return null;
+		const path = args[0];
 		return typeof path === "string" ? { path: resolve(root, path), command: entry.command } : null;
 	};
 	const candidates = [];
