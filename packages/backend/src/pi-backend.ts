@@ -96,6 +96,7 @@ import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { AskGate } from "./session/ask-gate";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
+import { createEventPipeline, type Stage } from "./session/event-pipeline";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "./session/knowledge-publication";
 import {
 	assignEntryIds,
@@ -450,47 +451,70 @@ export class PiBackend {
 		}
 		// toolResult 大结果四份快照重复携带（0.5.2 白屏事故降压层）：image base64 剥除 + 超长 text 截断
 		event = slimBulkyEvent(event);
-		// 流式熔断：病态输出（空白洪流/超量）trip 后 abort 会话，并丢弃后续增量（trace 与转发同步止血）
-		const verdict = this.streamGuard.inspect(sessionId, event);
-		// allowRun 生命周期 = 一次 agent run：run 结束即失效（下一条消息重新审批）
-		if (event.type === "agent_end") this.gates.get(sessionId)?.endRun();
-		if (verdict !== "pass") {
-			if (verdict !== "suppress") {
-				log.error("stream guard tripped, aborting session", sessionId, { verdict });
-				void this.abort(sessionId).catch(() => {});
-				// 熔断显形：合成 stream_guard_tripped UI 事件（subagent_mutex 同款：union + IPC 转发 +
-				// 不进 trace），reducer 产 warning 条——否则「回复戛然而止」零 UI 信号。
-				// 合成事件直接调 handler 循环，不喂回 streamGuard.inspect（防线不能自触发）。
-				for (const handler of this.eventHandlers) {
-					try {
-						handler(sessionId, { type: "stream_guard_tripped", verdict });
-					} catch {
-						// 事件处理器异常不影响主流程
-					}
-				}
-			}
-			return;
+			const stages: Stage<SessionEvent, string>[] = [
+				{
+					name: "stream-guard",
+					failMode: "closed",
+					run: (current, sid) => {
+						// 流式熔断：病态输出（空白洪流/超量）trip 后 abort，会话后续增量丢弃。
+						const verdict = this.streamGuard.inspect(sid, current);
+						if (current.type === "agent_end") this.gates.get(sid)?.endRun();
+						if (verdict === "pass") return current;
+						if (verdict !== "suppress") {
+							log.error("stream guard tripped, aborting session", sid, { verdict });
+							void this.abort(sid).catch(() => {});
+							// 合成事件直接发送，不重新喂回 pipeline，避免防线自触发。
+							for (const handler of this.eventHandlers) {
+								try {
+									handler(sid, { type: "stream_guard_tripped", verdict });
+								} catch {
+									// 单个处理器异常不影响主流程
+								}
+							}
+						}
+						return null;
+					},
+				},
+				{
+					name: "publication-projection",
+					failMode: "closed",
+					run: (current) => projectKnowledgeEvent(current),
+				},
+				{
+					name: "trace",
+					failMode: "open",
+					run: (current, sid) => {
+						if (
+							current.type !== "subagent_mutex" &&
+							current.type !== "stream_guard_tripped" &&
+							current.type !== "model_wait" &&
+							current.type !== "subagent_run"
+						)
+							this.traces.record(sid, current);
+						return current;
+					},
+				},
+				{
+					name: "fanout",
+					failMode: "open",
+					run: (current, sid) => {
+						// 面板结果消息被主模型消费（message_end）→ 运行卡「已进入上下文」。
+						this.subagentPanel.observe(sid, current);
+						for (const handler of this.eventHandlers) {
+							try {
+								handler(sid, current);
+							} catch {
+								// 事件处理器异常不影响主流程
+							}
+						}
+						return current;
+					},
+				},
+			];
+			createEventPipeline(stages, {
+				onError: ({ stage, error }) => log.error("event pipeline stage failed", sessionId, { stage: stage.name, error }),
+			}).run(event, sessionId);
 		}
-		const publishedEvent = projectKnowledgeEvent(event);
-		if (!publishedEvent) return;
-		event = publishedEvent;
-		// 面板结果消息被主模型消费（message_end）→ 运行卡「已进入上下文」
-		this.subagentPanel.observe(sessionId, event);
-		if (
-			event.type !== "subagent_mutex" &&
-			event.type !== "stream_guard_tripped" &&
-			event.type !== "model_wait" &&
-			event.type !== "subagent_run"
-		)
-			this.traces.record(sessionId, event);
-		for (const handler of this.eventHandlers) {
-			try {
-				handler(sessionId, event);
-			} catch {
-				// 事件处理器异常不影响主流程
-			}
-		}
-	}
 
 	async init(): Promise<void> {
 		await this.knowledge.connect();
