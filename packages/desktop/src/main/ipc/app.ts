@@ -2,7 +2,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { PiBackend } from "@drone/backend";
 import type { SavedTabs, UiState } from "@drone/shared";
-import { IpcChannels, isLocalResourceTarget } from "@drone/shared";
+import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
 import { pickBackgroundImage } from "../background";
 import { ensureDailyDir } from "../daily";
@@ -11,6 +11,7 @@ import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
 import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
 import { checkForUpdates, downloadUpdate, installUpdate } from "../updater";
+import { bindContract, type ContractImplementation } from "./bind-contract";
 import { materializeSaveContent } from "./save-content";
 
 /** 项目仓库地址（帮助跳转 + 关于页） */
@@ -34,6 +35,29 @@ async function readRecentLogTail(): Promise<string[]> {
  * tabs/ui-state 持久化、背景图、更新、文件/目录对话框、git 分支、外链与应用信息。
  */
 export function registerAppIpc(backend: PiBackend): void {
+	const contractImplementation: ContractImplementation<typeof AppContract> = {
+		getInfo: () => ({
+			name: app.getName(),
+			version: app.getVersion(),
+			electron: process.versions.electron ?? "",
+			chrome: process.versions.chrome ?? "",
+			node: process.versions.node ?? "",
+			platform: process.platform,
+			arch: process.arch,
+			repoUrl: REPO_URL,
+		}),
+		getDiagnostics: async () =>
+			backend.getDiagnostics({ version: app.getVersion(), logTail: await readRecentLogTail() }),
+		getDailyDir: () => ensureDailyDir(),
+	};
+	bindContract(AppContract, contractImplementation, {
+		channelForMethod: (_contract, method) =>
+			({
+				getInfo: IpcChannels.AppGetInfo,
+				getDiagnostics: IpcChannels.AppGetDiagnostics,
+				getDailyDir: IpcChannels.AppGetDailyDir,
+			})[method as keyof typeof AppContract.methods],
+	});
 	ipcMain.handle(IpcChannels.AppOpenExternal, (_e, url: string) => {
 		// 只允许 http(s) 链接，防 file:// 等协议滥用
 		if (typeof url === "string" && /^https?:\/\//.test(url)) return shell.openExternal(url);
@@ -50,21 +74,7 @@ export function registerAppIpc(backend: PiBackend): void {
 		}
 		return shell.openPath(resolveResourcePath(target, cwd));
 	});
-	ipcMain.handle(IpcChannels.AppGetInfo, () => ({
-		name: app.getName(),
-		version: app.getVersion(),
-		electron: process.versions.electron ?? "",
-		chrome: process.versions.chrome ?? "",
-		node: process.versions.node ?? "",
-		platform: process.platform,
-		arch: process.arch,
-		repoUrl: REPO_URL,
-	}));
-	ipcMain.handle(IpcChannels.AppGetDiagnostics, async () =>
-		backend.getDiagnostics({ version: app.getVersion(), logTail: await readRecentLogTail() }),
-	);
 	// 日常空间目录下发（懒创建；会话创建由 renderer 走既有 draft/createSession 流程）
-	ipcMain.handle(IpcChannels.AppGetDailyDir, () => ensureDailyDir());
 	ipcMain.handle(IpcChannels.TabsLoad, () => loadTabs());
 	ipcMain.handle(IpcChannels.TabsSave, (_e, tabs: SavedTabs) => saveTabs(tabs));
 	ipcMain.handle(IpcChannels.UiStateLoad, () => loadUiState());
