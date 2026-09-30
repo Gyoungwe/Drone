@@ -2,6 +2,8 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer, get, request as requestRaw } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { LanContract } from "@drone/shared";
+import { Check } from "typebox/value";
 import { afterEach, describe, expect, it } from "vitest";
 import { LanConfigService } from "../src/lan/config";
 import type { LanObserverBackend } from "../src/lan/server";
@@ -168,6 +170,19 @@ describe("LanObserverServer", () => {
 			views: [{ sessionId: "session-1", assistantTail: "hello", agentActive: true }],
 		});
 		await expect(sse(`http://127.0.0.1:${port}/api/stream?t=${token}`)).resolves.toContain("event: view");
+	});
+
+	it("projects LanContract.getStatus through authenticated GET only", async () => {
+		const server = await start();
+		const port = server.status().port;
+		const status = await request(`http://127.0.0.1:${port}/api/status?t=${token}`);
+		expect(status.status).toBe(200);
+		const body = JSON.parse(status.text);
+		expect(Check(LanContract.methods.getStatus.result, body)).toBe(true);
+		expect(body).toMatchObject({ enabled: true, port, clients: 0, remoteControl: false });
+		expect((await request(`http://127.0.0.1:${port}/api/status`)).status).toBe(401);
+		// No write adapter is added for the read-only LAN projection.
+		expect((await post(`http://127.0.0.1:${port}/api/status`, {})).status).toBe(404);
 	});
 
 	it("stream handshake carries retry hint and named ping heartbeat (client watchdog relies on it)", async () => {

@@ -252,7 +252,7 @@ src/
 | provider 设置 / 交互登录（OAuth + api_key） | backend `settings/settings.ts` + `login.ts` + shared `settings.ts`（类型）+ IPC `settings:login*`；UI `settings/providers/`（表单/登录对话框）+ `stores/provider-login.ts` + `stores/settings.ts` |
 | 子代理模型/Thinking 偏好 | backend `settings/model-prefs.ts`；UI `settings/providers/SubagentPanel.tsx`（protected knowledge roles 同页，显式不可用时 fail-closed） |
 | 自动更新 | `main/updater.ts` + `update-policy.ts` + shared `update.ts`；UI `session/UpdateButton.tsx`（顶栏）+ `settings/AboutPanel.tsx`（手动检查） |
-| 局域网观察页 | 契约 shared `lan.ts` + `host-api/lan.ts` → backend `lan/` → main `lan.ts` + `ipc/lan.ts`（`LanContract` + `bindContract`）→ preload → 设置 `LanObserverPanel.tsx`；浏览器页面 = `desktop/src/lan-web/`（独立 vite 单文件，`?raw` 内联；HTTP 仍 GET-only） |
+| 局域网观察页 | 契约 shared `lan.ts` + `host-api/lan.ts` → backend `lan/`（`GET /api/status` 投影 `LanContract.getStatus`，SSE 保留 `ping` 心跳）→ main `lan.ts` + `ipc/lan.ts`（`LanContract` + `bindContract`）→ preload → 设置 `LanObserverPanel.tsx`；浏览器页面 = `desktop/src/lan-web/`（独立 vite 单文件，`?raw` 内联；观察投影仍 GET-only） |
 | 主题 / 背景图 / Markdown 代码块主题 | `stores/theme.ts` + `styles/globals.css`（双套 token）；main `background.ts` + `pi-bg://` 协议（CSP img-src 含 pi-bg:）；UI `settings/AppearancePanel.tsx`；代码块主题走 `Markdown.tsx` 的 isDark + 显式双主题 |
 | Toast | `stores/toasts.ts` + globals.css `.toast` 样式段 |
 | UI 插件（槽位/区域/面板/无头/热重载） | 运行时 `renderer/src/plugins/`（registry：headless activate/cleanup 生命周期）；构建/扫描 `main/ui-plugins/`（build/manager/config）；IPC `main/ipc/ui-plugins.ts`；类型 shared `ui-plugins.ts`；规范与内置插件 `desktop/resources/ui-plugins/`（SPEC.md / drone-ui.d.ts / skills / examples / builtin/，含 voice-alerts 语音提醒） |

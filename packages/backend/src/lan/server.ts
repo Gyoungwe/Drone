@@ -256,7 +256,10 @@ export class LanObserverServer {
 		}
 		const isGetApi =
 			req.method === "GET" &&
-			(path === "/api/snapshot" || path === "/api/stream" || matchTranscriptRoute(path) !== null);
+			(path === "/api/status" ||
+				path === "/api/snapshot" ||
+				path === "/api/stream" ||
+				matchTranscriptRoute(path) !== null);
 		const writeRoute = req.method === "POST" ? matchWriteRoute(path) : null;
 		if (!isGetApi && !writeRoute) return this.sendJson(res, 404, { error: "not found" });
 		// 鉴权：POST 优先 Authorization: Bearer，回落 ?t=（无 cookie/ambient auth → CSRF 天然免疫）
@@ -264,6 +267,12 @@ export class LanObserverServer {
 			req.method === "POST" ? (bearerToken(req) ?? url.searchParams.get("t")) : url.searchParams.get("t");
 		if (!(await this.authorized(token))) {
 			return this.sendJson(res, 401, { error: "invalid token" });
+		}
+		// Host API LanContract.getStatus projection. This remains a read-only
+		// GET route; observer/control toggles are desktop IPC methods only.
+		if (path === "/api/status") {
+			this.sendJson(res, 200, this.status());
+			return;
 		}
 		if (path === "/api/snapshot") {
 			// 先冲刷待合并 delta 再记录序号：客户端丢弃 seq ≤ snapshotSeq 的 event 帧（效果已含在快照内）。
