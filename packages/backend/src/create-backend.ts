@@ -8,6 +8,7 @@ import type { SessionEngine } from "./session-engine/engine";
 import type { LoginService } from "./settings/login";
 import type { ModelSettingsService } from "./settings/models";
 import type { SettingsService } from "./settings/settings";
+import type { ZoteroService } from "./services/zotero";
 
 /**
  * Transitional composition root for the v2 migration.
@@ -36,6 +37,8 @@ export interface BackendServices {
 	login: LoginService;
 	/** MCP configuration and status service. */
 	mcp: McpService;
+	/** Zotero integration status service. */
+	zotero: ZoteroService;
 	dispose(): void;
 }
 
@@ -52,6 +55,7 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 		models: sessions.models,
 		login: sessions.login,
 		mcp: sessions.mcp,
+		zotero: sessions.zotero,
 		dispose: () => {
 			sessions.dispose();
 			void runtime.dispose();

@@ -132,7 +132,7 @@ import { globalToolManifest } from "./tools/manifest";
 import { discoverAgents, isSubagentSessionPath, SubagentPanelService } from "./tools/subagent";
 import { applySubagentMutex } from "./tools/subagent/mutex";
 import { withNativeSubagentSlot } from "./tools/subagent/slots";
-import { getZoteroStatus } from "./zotero/status";
+import { ZoteroService } from "./services/zotero";
 
 const log = createLogger("backend");
 
@@ -212,6 +212,8 @@ export class PiBackend {
 		}
 	>();
 	readonly mcp = new McpService();
+	/** Zotero integration status service exposed by the composition root. */
+	readonly zotero = new ZoteroService();
 	/** 每会话按需 Tool/Skill 能力视图；注册表完整，只有模型可见 active subset 会变化。 */
 	private readonly capabilityRuntimes = new Map<string, CapabilityRuntime>();
 	private readonly gates = new Map<string, PermissionGate>();
@@ -792,8 +794,8 @@ export class PiBackend {
 		await this.prompt(input.sessionId, `/obsidian-setup ${args}`);
 	}
 
-	async getZoteroStatus(): ReturnType<typeof getZoteroStatus> {
-		return getZoteroStatus();
+	getZoteroStatus(): ReturnType<ZoteroService["getStatus"]> {
+		return this.zotero.getStatus();
 	}
 	async resumeKnowledgeCheck(sessionId: string): Promise<void> {
 		const entry = this.requireSession(sessionId);

@@ -6,11 +6,12 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
 /** Deliberately desktop-only: approvals are not a model tool or an unauthenticated LAN route. */
 export function registerKnowledgeIpc(
 	backend: PiBackend,
-	services?: Pick<BackendServices, "knowledge">,
+	services?: Pick<BackendServices, "knowledge" | "zotero">,
 ): void {
 	// Knowledge reads/writes are owned by the explicit domain service. Keep the
 	// façade for session-bound orchestration until those methods move as well.
 	const knowledge = services?.knowledge ?? backend.knowledge;
+	const zotero = services?.zotero ?? backend.zotero;
 	const implementation: ContractImplementation<typeof KnowledgeContract> = {
 		setSpecialistSettings: (input) => knowledge.specialistSettings(input),
 		getOverview: (...args) => knowledge.overview(args[0]),
@@ -41,7 +42,7 @@ export function registerKnowledgeIpc(
 		cancelSemanticIndex: (input) => knowledge.cancelSemanticIndex(input),
 		getTopics: (input) => knowledge.topics(input),
 		archiveTopic: (input) => knowledge.archiveTopic(input),
-		getZoteroStatus: () => backend.getZoteroStatus(),
+		getZoteroStatus: () => zotero.getStatus(),
 	};
 	bindContract(KnowledgeContract, implementation, {
 		channelForMethod: (_contract, method) =>

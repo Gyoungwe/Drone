@@ -12,6 +12,8 @@ describe("createBackend", () => {
 		expect(services.models).toBe(services.sessions.models);
 		expect(services.login).toBe(services.sessions.login);
 		expect(services.mcp).toBe(services.sessions.mcp);
+		expect(services.zotero).toBe(services.sessions.zotero);
+		expect(services.zotero.getStatus).toBeTypeOf("function");
 		services.dispose();
 	});
 });
