@@ -1151,7 +1151,7 @@ export class PiBackend {
 	async peekSubagentMessages(filePath: string): Promise<SessionMessage[]> {
 		if (!isSubagentSessionPath(filePath)) throw new Error("Not a subagent session file");
 		const content = await readFile(filePath, "utf8");
-		return readSessionMessagesFromContent(content);
+		return this.projectPersistedMessages(content);
 	}
 
 	/**
@@ -1164,10 +1164,15 @@ export class PiBackend {
 		if (!meta?.sessionFile) return null;
 		try {
 			const content = await readFile(meta.sessionFile, "utf8");
-			return readSessionMessagesFromContent(content);
+			return this.projectPersistedMessages(content);
 		} catch {
 			return null;
 		}
+	}
+
+	/** Both history peeks share the live polling publication boundary before normalization. */
+	private projectPersistedMessages(content: string): SessionMessage[] {
+		return readSessionMessagesFromContent(content, (raw) => projectKnowledgeSnapshot(raw, raw, this.runtime));
 	}
 
 	/**

@@ -177,12 +177,16 @@ export function resolveForkEntryId(
 	throw new Error("Fork target message not found");
 }
 
+/** Optional history projection hook used by host boundaries before neutral normalization. */
+export type RawMessageProjector = (messages: RawMessage[]) => RawMessage[];
+
 /**
- * 只读解析会话文件内容（LAN 历史会话透视用）：不走 SessionManager.open（可能迁移写盘），
- * 纯函数 parseSessionEntries + 从文件末尾（leaf tip）沿 parentId 回溯出当前分支。
- * 分支语义与 getBranch() 一致：只保留当前分支上的消息。
+ * 只读解析当前分支，不走可能迁移写盘的 SessionManager.open。
+ *
+ * 保留 raw content 与 publication proof，让宿主先做同一份快照投影，再转成中立 UI 类型。
+ * 从最后一条 entry（leaf）沿 parentId 回溯，分支语义与 getBranch() 一致。
  */
-export function readSessionMessagesFromContent(content: string): SessionMessage[] {
+export function readRawMessagesFromContent(content: string): RawMessage[] {
 	const entries = parseSessionEntries(content);
 	// 当前分支：从最后一条 entry（leaf）沿 parentId 回溯
 	const byId = new Map<string, (typeof entries)[number]>();
@@ -202,7 +206,15 @@ export function readSessionMessagesFromContent(content: string): SessionMessage[
 		const panel = subagentPanelRawMessage(entry);
 		return panel ? [panel] : [];
 	});
-	return toSessionMessages(raw);
+	return raw as RawMessage[];
+}
+
+export function readSessionMessagesFromContent(
+	content: string,
+	project?: RawMessageProjector,
+): SessionMessage[] {
+	const raw = readRawMessagesFromContent(content);
+	return toSessionMessages(project ? project(raw) : raw);
 }
 
 /** 子智能体面板的 custom entry（派发 / 结果记录，模型不可见）→ 中立 raw custom 消息；其余返回 null */
