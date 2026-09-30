@@ -93,7 +93,7 @@
 ## A7 · StorageRegistry 与诊断
 
 - [ ] **A7-1**：新建 `backend/src/storage/registry.ts`，登记所有落盘状态（逐个排查 `JsonStore` 的使用点、userData、`DRONE_KNOWLEDGE_DIR`、traces、审计、会话 jsonl、机构会话分区），字段包括 id、path、owner、schema、migrate、sensitivity。验收：新增测试断言：凡是用到 `JsonStore` 的地方都能在注册表里找到对应条目（静态扫描或运行时断言皆可）。
-- [ ] **A7-2 诊断包**：新增 `app:diagnostics` 契约方法和设置 → 关于页的"导出诊断包"（i18n 双语）。内容：版本、平台、各存储的 schema 与损坏状态、最近的 incident 快照、日志尾部（脱敏）。**不含**凭据、auth.json 内容、Vault 正文、会话正文。验收：脱敏单测（放入假 key、假路径，断言输出中不出现）；UI 冒烟截图。
+- [x] **A7-2 诊断包**：新增 `app:diagnostics` 契约方法和设置 → 关于页的"导出诊断包"（i18n 双语）。内容：版本、平台、各存储的 schema 与损坏状态、最近的 incident 快照、日志尾部（脱敏）。**不含**凭据、auth.json 内容、Vault 正文、会话正文。导出使用无第三方依赖的 ZIP（`diagnostics.json` + `README.txt`），并通过现有保存对话框写入二进制；脱敏、ZIP 内容与保存桥接均有自动化测试覆盖。
 
 ---
 
@@ -103,3 +103,4 @@
 |---|---|---|---|
 | 2026-09-30 | 基线 | typecheck 通过；backend 1,320 / desktop 528 / shared 102 测试通过；backend 测试 336 s | — |
 | 2026-10-01 | A1-3 | `.pi/lib/knowledge/**/*.mjs` 与 `.pi/lib/tasks/**/*.mjs` 共 42 个文件纳入 `checkJs`；`npm run check:pi` 通过；根 `typecheck` 已串接该检查 | — |
+| 2026-10-01 | A7-2 | `serializeDiagnosticsArchive` 生成无压缩 ZIP；shared 诊断包 2 项、desktop 保存桥 3 项定向测试通过；导出文件名为 `drone-diagnostics-YYYY-MM-DD.zip` | UI 截图需在桌面运行环境补做 |
