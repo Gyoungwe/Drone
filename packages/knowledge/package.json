@@ -8,7 +8,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./claim-conflicts": "./src/claim-conflicts.ts",
-		"./orchestration-policy": "./src/orchestration-policy.ts"
+		"./orchestration-policy": "./src/orchestration-policy.ts",
+		"./review-policy": "./src/review-policy.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
