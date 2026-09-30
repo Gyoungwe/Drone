@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEventPipeline, runEventPipeline, type Stage } from "../src/session/event-pipeline";
+import { createEventPipeline, runEventPipeline, type Stage } from "../src/session-engine/event-pipeline";
 
 type Context = { seen: string[] };
 const stage = (
