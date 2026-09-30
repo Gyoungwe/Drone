@@ -18,8 +18,8 @@
  *   pending(milestone)         未完成时给用户的说明 { reason, next }
  *   acknowledgeError           { code, message }：任务卡上的「确认」不能完成该里程碑时抛出的错误（如 Wiki 必须走审阅页）
  *
- * 同意决策仍在宿主：这里只登记「怎么核对」，从不登记「是否允许」。登记表是进程级的（Symbol 桥），
- * 与工具清单 / 知识发布桥同款，便于任务工作台、授权卡和说明文案共用一份定义。
+ * 同意决策仍在宿主：这里只登记「怎么核对」，从不登记「是否允许」。登记表存放在
+ * DroneRuntime 的 tasks 槽位中，便于任务工作台、授权卡和说明文案共用一份定义，同时避免跨 host 共享可变状态。
  *
  * 登记时机：`kinds` 与 `properties` 都是活对象，task_plan 的参数 schema 按引用持有它们，因此在
  * task_plan 注册之后才加载的扩展（真实顺序里 obsidian-workbench 先于 zotero-literature）登记的
