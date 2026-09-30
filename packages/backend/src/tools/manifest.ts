@@ -14,8 +14,9 @@ import {
  * 数据来源只有一个：扩展在 `pi.registerTool({ ..., drone })` 时的声明。后端经
  * `session.getToolDefinition(name)` 读到原样保存的注册对象；工具家族（MCP 服务器前缀等）
  * 由会话句柄直接暴露工具声明；没有会话句柄的调用使用 CORE_TOOL_META。
- * First-party `.pi` modules keep their manifest in the injected runtime, so
- * this backend adapter never reads process-global mutable state.
+ * First-party `.pi` modules keep their manifest in the injected runtime and
+ * publish immutable registration records through a versioned process event.
+ * This adapter only caches those records for no-session callers.
  */
 export interface ToolDefinitionSource {
 	getAllTools?(): { name: string }[];
@@ -60,15 +61,38 @@ const CORE_ACTIVITIES: { test: (name: string) => boolean; activity: ToolActivity
 	},
 ];
 
+type ToolManifestRegistration = { version: 1; name: string; meta: unknown };
+const registeredTools = new Map<string, unknown>();
+const registeredFamilies = new Map<string, unknown>();
+
+process.on("drone:tool-manifest/v1", (payload: ToolManifestRegistration) => {
+	if (payload?.version !== 1 || typeof payload.name !== "string") return;
+	registeredTools.set(payload.name, payload.meta);
+	const families = (payload.meta as { families?: unknown[] } | null)?.families;
+	if (!Array.isArray(families)) return;
+	for (const family of families) {
+		const match = (family as { match?: unknown } | null)?.match;
+		if (typeof match === "string" && match) {
+			const record = family && typeof family === "object" ? family : {};
+			registeredFamilies.set(match.toLowerCase(), { ...record, owner: payload.name });
+		}
+	}
+});
+
 /** 运行时 .mjs 侧登记的工具家族（MCP 服务器前缀等），已规范化。 */
 export function bridgedToolFamilies(): ToolFamilyMeta[] {
-	return [];
+	const result: ToolFamilyMeta[] = [];
+	for (const raw of registeredFamilies.values()) {
+		const meta = readDroneToolMeta({ drone: { families: [raw] } });
+		if (meta?.families?.[0]) result.push(meta.families[0]);
+	}
+	return result;
 }
 
 /** 运行时 .mjs 侧登记的单个工具元数据（会话句柄不可用时的后备）。 */
 export function bridgedToolMeta(name: string): DroneToolMeta | undefined {
-	void name;
-	return undefined;
+	const raw = registeredTools.get(name);
+	return raw ? readDroneToolMeta({ drone: raw }) : undefined;
 }
 
 export class ToolManifest {

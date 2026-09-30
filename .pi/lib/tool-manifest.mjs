@@ -31,6 +31,13 @@ function assertMeta(name, meta) {
 			throw new Error(`Tool ${name}: family.match required`);
 }
 
+function publishRegistration(name, meta) {
+	// The backend listens to this versioned process event when it needs tool
+	// metadata without an AgentSession. Mutable state remains in runtimeSlot;
+	// this event only carries immutable registration data.
+	process.emit("drone:tool-manifest/v1", { version: 1, name, meta });
+}
+
 /** 声明一个带 drone 元数据的工具定义：校验并登记，原样返回给 pi.registerTool。 */
 export function defineTool(definition) {
 	const name = definition?.name;
@@ -38,6 +45,7 @@ export function defineTool(definition) {
 	const meta = definition.drone || {};
 	assertMeta(name, meta);
 	registry.tools.set(name, meta);
+	publishRegistration(name, meta);
 	for (const family of meta.families || [])
 		registry.families.set(family.match.toLowerCase(), { ...family, owner: name });
 	return definition;
