@@ -178,19 +178,23 @@ function legacyQueue(key) {
 
 /** Serialize a keyed operation through the injected runtime scheduler. */
 export function runRuntimeExclusive(namespace, key, operation, legacyKey) {
-	const runtime = injectedRuntime() || standaloneRuntime;
-	if (runtime?.scheduler?.run) return runtime.scheduler.run(`${namespace}:${key}`, operation);
-	if (!globalLegacyState(legacyKey)) {
+	const injected = injectedRuntime();
+	if (injected?.scheduler?.run) return injected.scheduler.run(`${namespace}:${key}`, operation);
+	if (!injected && globalLegacyState(legacyKey)) {
+		const queues = legacyQueue(legacyKey);
+		const previous = queues.get(key) || Promise.resolve();
+		const next = previous.catch(() => {}).then(operation);
+		queues.set(key, next);
+		return next.finally(() => {
+			if (queues.get(key) === next) queues.delete(key);
+		});
+	}
+	const runtime = injected || standaloneRuntime;
+	if (!runtime) {
 		standaloneRuntime ||= createStandaloneRuntime();
 		return standaloneRuntime.scheduler.run(`${namespace}:${key}`, operation);
 	}
-	const queues = legacyQueue(legacyKey);
-	const previous = queues.get(key) || Promise.resolve();
-	const next = previous.catch(() => {}).then(operation);
-	queues.set(key, next);
-	return next.finally(() => {
-		if (queues.get(key) === next) queues.delete(key);
-	});
+	return runtime.scheduler.run(`${namespace}:${key}`, operation);
 }
 
 export const RUNTIME_BRIDGE_VERSION = 1;
