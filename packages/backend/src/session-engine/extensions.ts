@@ -11,6 +11,7 @@ import {
 	type PermissionModeRef,
 } from "../permissions/extension";
 import type { PermissionGate } from "../permissions/gate";
+import type { AskGate } from "../session/ask-gate";
 import type { SessionTraces } from "../session/traces";
 import { makeAskUserTool } from "../tools/ask-user";
 import { makeCapabilityLoadTool } from "../tools/capability-load";
@@ -55,7 +56,7 @@ export interface SessionExtensionDependencies {
 export function buildSessionCustomTools(
 	deps: SessionExtensionDependencies,
 	gate: PermissionGate,
-	askGate: { ask: (request: any, signal?: AbortSignal) => Promise<any> },
+	askGate: Pick<AskGate, "ask">,
 	capabilities?: CapabilityRuntime,
 ): ToolDefinition[] {
 	const tools = [...(deps.customTools ?? [])];
