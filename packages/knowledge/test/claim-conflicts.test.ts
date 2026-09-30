@@ -40,4 +40,17 @@ describe("structured knowledge claim comparison", () => {
 		expect(result.relation).toBe("unresolved");
 		expect(result.blocking).toBe(false);
 	});
+
+	it("preserves legacy claim equivalence when case folding introduces a combining mark", () => {
+		const result = compareClaims(
+			claim({ subject: "İ" }),
+			claim({ subject: "i", value: "does not activate wing-margin growth" }),
+		);
+		expect(result).toEqual({
+			relation: "contradicts",
+			confidence: "high",
+			reason: "同一对象、同一条件、同一观察命题的方向相反。",
+			blocking: true,
+		});
+	});
 });
