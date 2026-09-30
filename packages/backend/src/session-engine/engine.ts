@@ -29,6 +29,55 @@ export class SessionEngine {
 		return this.modelRuntime;
 	}
 
+	/** Session lifecycle operations stay behind the SDK boundary. */
+	dispose(session: AgentSession): void {
+		session.dispose();
+	}
+
+	abort(session: AgentSession): Promise<void> {
+		return session.abort();
+	}
+
+	prompt(
+		session: AgentSession,
+		text: string,
+		options?: Parameters<AgentSession["prompt"]>[1],
+	): ReturnType<AgentSession["prompt"]> {
+		return session.prompt(text, options);
+	}
+
+	clearQueue(session: AgentSession): ReturnType<AgentSession["clearQueue"]> {
+		return session.clearQueue();
+	}
+
+	setModel(session: AgentSession, model: Parameters<AgentSession["setModel"]>[0]): Promise<void> {
+		return session.setModel(model);
+	}
+
+	setThinkingLevel(session: AgentSession, level: Parameters<AgentSession["setThinkingLevel"]>[0]): void {
+		session.setThinkingLevel(level);
+	}
+
+	compact(session: AgentSession, customInstructions?: string): ReturnType<AgentSession["compact"]> {
+		return session.compact(customInstructions);
+	}
+
+	reload(session: AgentSession): ReturnType<AgentSession["reload"]> {
+		return session.reload();
+	}
+
+	setSessionName(session: AgentSession, name: string): void {
+		session.setSessionName(name);
+	}
+
+	exportHtml(session: AgentSession): ReturnType<AgentSession["exportToHtml"]> {
+		return session.exportToHtml();
+	}
+
+	exportJsonl(session: AgentSession): string {
+		return session.exportToJsonl();
+	}
+
 	async create(
 		cwd: string,
 		options: Omit<CreateAgentSessionOptions, "cwd" | "modelRuntime" | "sessionManager">,

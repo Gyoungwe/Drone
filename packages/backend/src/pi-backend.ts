@@ -696,7 +696,7 @@ export class PiBackend {
 		if (!entry) return;
 		// 面板派发的子会话随父会话关闭一起中止（登记表清空，不再推送事件）
 		this.subagentPanel.disposeSession(sessionId);
-		entry.session.dispose();
+		this.sessionEngine.dispose(entry.session);
 		this.gates.get(sessionId)?.dispose();
 		this.gates.delete(sessionId);
 		for (const askGate of this.askGates.get(sessionId) ?? []) askGate.dispose();
@@ -831,8 +831,8 @@ export class PiBackend {
 		// ack 之后 run 期错误不再回传（走事件流呈现），then 的 reject 在已 resolve 后为 no-op。
 		// preflightResult(false) 只在 SDK catch 里紧随 throw 触发，不据此 reject，真实错误经 throw 传递。
 		await new Promise<void>((resolve, reject) => {
-			entry.session
-				.prompt(text, {
+			this.sessionEngine
+				.prompt(entry.session, text, {
 					// 运行中发送走 followUp 排队（agent 完成后自动投递；steer 打断暂不支持）
 					// SDK 要求 streaming 时必传 streamingBehavior，否则抛错
 					streamingBehavior: "followUp",
@@ -864,7 +864,7 @@ export class PiBackend {
 		const entry = this.registry.get(sessionId);
 		if (!entry) return;
 		log.info("abort", sessionId);
-		await entry.session.abort();
+		await this.sessionEngine.abort(entry.session);
 	}
 
 	/** LAN 远程写端点前置检查（registry 直查，无磁盘 IO）。 */
@@ -880,7 +880,7 @@ export class PiBackend {
 		const entry = this.registry.get(sessionId);
 		if (!entry) return { steering: [], followUp: [] };
 		log.info("clearQueue", sessionId);
-		return entry.session.clearQueue();
+		return this.sessionEngine.clearQueue(entry.session);
 	}
 
 	/** 当前排队的 followUp 消息文本；无会话返回空 */
@@ -896,20 +896,20 @@ export class PiBackend {
 		const runtime = await this.getModelRuntime();
 		const model = runtime.getModel(provider, modelId);
 		if (!model) throw new Error(`Model not found: ${provider}/${modelId}`);
-		await entry.session.setModel(model);
+		await this.sessionEngine.setModel(entry.session, model);
 	}
 
 	async setThinkingLevel(sessionId: string, level: string): Promise<void> {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
-		entry.session.setThinkingLevel(level as ThinkingLevel);
+		this.sessionEngine.setThinkingLevel(entry.session, level as ThinkingLevel);
 	}
 
 	async compact(sessionId: string, customInstructions?: string): Promise<void> {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Cannot compact a read-only subagent transcript");
 		log.info("compact", sessionId);
-		await entry.session.compact(customInstructions);
+		await this.sessionEngine.compact(entry.session, customInstructions);
 	}
 
 	async getStats(sessionId: string): Promise<SessionStats> {
@@ -1074,7 +1074,7 @@ export class PiBackend {
 				continue;
 			}
 			try {
-				await entry.session.reload();
+				await this.sessionEngine.reload(entry.session);
 				this.reapplyCapabilities(entry.session.sessionId);
 			} catch (err) {
 				log.warn("MCP session reload failed", entry.session.sessionId, err);
@@ -1115,13 +1115,15 @@ export class PiBackend {
 	async setSessionName(sessionId: string, name: string): Promise<void> {
 		const entry = this.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Cannot rename a read-only subagent transcript");
-		entry.session.setSessionName(name);
+		this.sessionEngine.setSessionName(entry.session, name);
 	}
 
 	/** 导出会话内容（HTML/JSONL）；返回文件内容，由调用方保存 */
 	async exportSession(sessionId: string, format: "html" | "jsonl"): Promise<string> {
 		const entry = this.requireSession(sessionId);
-		return format === "html" ? entry.session.exportToHtml() : entry.session.exportToJsonl();
+		return format === "html"
+			? await this.sessionEngine.exportHtml(entry.session)
+			: this.sessionEngine.exportJsonl(entry.session);
 	}
 
 	/** 读取会话历史消息（打开历史会话时回放给 UI） */

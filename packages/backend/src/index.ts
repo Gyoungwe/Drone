@@ -103,6 +103,7 @@ export {
 } from "./session/messages";
 export { type RegisteredSession, SessionRegistry } from "./session/registry";
 export { TraceRecorder } from "./session/trace";
+export { SessionEngine } from "./session-engine/engine";
 export { LoginService, type LoginServiceDeps } from "./settings/login";
 export { ModelPrefsService } from "./settings/model-prefs";
 export { ModelSettingsService } from "./settings/models";
