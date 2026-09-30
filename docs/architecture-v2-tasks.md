@@ -65,7 +65,8 @@
 - [ ] **A3-1 组合根**：新增 `backend/src/create-backend.ts`，返回 `BackendServices`；`PiBackend` 的构造函数内部改为调用它（行为不变）。
 - [ ] **A3-2 按域抽服务**（每个域一个 PR，顺序：approvals → permissions/trust → models/settings → mcp/packages → subagents → knowledge/zotero/institutional）：把方法移到 `services/<domain>.ts`，`PiBackend` 上保留委托方法并加 `@deprecated`。验收：每个服务 ≤ 400 行；原有测试不改就通过；新增的服务级单测可以不构造 `PiBackend`。
   - [x] packages：`PackageService` 已从 `PiBackend` 门面抽出，包目录访问与安装/卸载/热重载集中在 `src/services/packages.ts`；`BackendServices.packages` 暴露同一实例，门面方法保留兼容委托。
-- [ ] **A3-3 SessionEngine**：会话生命周期部分移到 `session-engine/engine.ts`，`buildExtensionFactories`、`buildCustomTools` 移到 `session-engine/extensions.ts`；Pi SDK 运行时 import 只允许出现在 `session-engine/**`（更新 R1 白名单）。
+  - [x] zotero：`ZoteroService` 已从 `PiBackend` 门面抽出，Knowledge IPC 优先使用 `BackendServices.zotero`，旧委托保留兼容。
+- [x] **A3-3 SessionEngine**：会话生命周期部分移到 `session-engine/engine.ts`，`buildExtensionFactories`、`buildCustomTools` 移到 `session-engine/extensions.ts`；生产 Pi SDK 运行时 import 只允许出现在 `session-engine/**`，测试文件保留直接 SDK import 以覆盖 SDK 分层；R1 生产基线已清零。
 - [ ] **A3-4 删除门面**：desktop main 和契约绑定改为直接使用 `BackendServices`；删除 `pi-backend.ts` 中的委托方法，保留类型 re-export 至少一个版本。验收：`check:arch` 的 R1 基线清零；`pi-backend.ts` 删除或只剩 re-export。
 
 ## A4 · EventPipeline
@@ -107,8 +108,9 @@
 | 2026-10-01 | A2-2 | 31 个 sessions IPC 方法统一由 `SessionsContract` + `bindContract` 注册；`PiApi` 会话方法由契约客户端类型推导；shared/desktop 定向契约与 IPC 测试通过 | `scripts/check-report-ui.mjs` 需要完整 Electron UI fixture；当前本机 fixture 在 React 初始化阶段失败，非 sessions IPC 错误 |
 | 2026-10-01 | A7-2 | `serializeDiagnosticsArchive` 生成无压缩 ZIP；shared 诊断包 2 项、desktop 保存桥 3 项定向测试通过；导出文件名为 `drone-diagnostics-YYYY-MM-DD.zip` | UI 截图需在桌面运行环境补做 |
 | 2026-10-01 | A5-0 | `build:extensions` 生成 `.pi/extensions/.build-manifest.json`，记录每个 TS 入口与 MJS 产物哈希；`check:extensions` 检测缺失、漂移和未登记产物；`--strict` 会把仍保留的旧产物视为失败。manifest 与最小 `subagent-research` 入口已提交，默认检查通过 | 其余 9 个 `.pi/extensions/*.mjs` 仍是迁移前产物，需 A5-4 迁移后移除 `legacy-preserved` |
-| 2026-10-01 | A4 / A6 | EventPipeline 已移入 `session-engine/`；桌面 IPC、LAN 历史读取与会话回放统一复用持久化知识投影；运行时投影器、知识服务、UI 流和 specialist host 改用显式版本化事件桥接；`node scripts/check-architecture.mjs` 通过且 R4 无新增发现 | A3-3 仍有 Pi SDK 类型/工具导入待进一步收口；A5-1–4、A6-1–2、A2-5、A2-4 类型去重仍未完成 |
+| 2026-10-01 | A4 / A6 | EventPipeline 已移入 `session-engine/`；桌面 IPC、LAN 历史读取与会话回放统一复用持久化知识投影；运行时投影器、知识服务、UI 流和 specialist host 改用显式版本化事件桥接；`node scripts/check-architecture.mjs` 通过且 R4 无新增发现 | A5-1–4、A6-1–2、A2-4 的整体 GET-only 语义仍待完成 |
 | 2026-10-01 | A0-3 | backend 测试按 unit/sdk 自动分层：unit 1252（11 skipped），sdk 99（2 skipped），总计 1351；`npm run test:unit` 通过（113 files，98.64s），`npm run test:sdk` 99 passed + 2 skipped（8.43s） | — |
 | 2026-10-01 | A0-4 / A2-3 | 删除 `.pi/lib/vault-mcp-proxy.mjs` 与旧 `register-invokers`/`INVOKE_ROUTES`；settings、permissions、packages、app、ui-plugins、lan、knowledge、institutional、subagents 全部由域契约 + `bindContract` 注册，preload 统一使用契约 client；旧配置识别保留为提示路径 | `IpcChannels` 仍是兼容通道名常量，尚未自动从契约生成 |
 | 2026-10-01 | A7-1 | `JsonStore` 强制 `storageId`，生产使用点登记到 `storage/registry.ts`；静态扫描测试覆盖 backend 与 desktop main 的 10 个生产构造点，cwd-independent | 其他非 JsonStore 落盘（会话、trace、审计、机构分区）仍待逐项登记 |
 | 2026-10-01 | A3 | `createBackend` 组合根显式暴露 runtime、sessionEngine、settings/models/login/mcp/packages/knowledge 服务；PiBackend 继续作为兼容门面，session 生命周期已由 SessionEngine 承接 | approvals、permissions/trust、subagents、zotero/institutional 等域仍待抽离，A3 总项未勾选 |
+| 2026-10-01 | A3-3 / A6 | 生产后端 Pi SDK 值导入统一经 `session-engine/sdk.ts`，架构检查 R1 生产基线清零；ZoteroService 已接入组合根；研究循环、Zotero、source archive 的运行时状态和串行队列改为 host runtime 注入与 scheduler | PiBackend 门面及 approvals/permissions/trust/subagents/institutional 等域仍待拆出；其余 legacy 扩展 singleton 与 CLI runtime 注入仍待完成 |
