@@ -48,14 +48,14 @@ beforeEach(() => {
 	};
 	registerKnowledgeIpc(backend);
 });
-it("rejects requests from child frames and non-application windows", () => {
+it("rejects requests from child frames and non-application windows", async () => {
 	const frame = {};
 	const handler = mocks.handlers.get(IpcChannels.KnowledgeReviewDecide)!;
-	expect(() => handler({ sender: { mainFrame: frame }, senderFrame: {} }, { token: "x" })).toThrow(
+	await expect(handler({ sender: { mainFrame: frame }, senderFrame: {} }, { token: "x" })).rejects.toThrow(
 		"main frame",
 	);
 	mocks.from.mockReturnValue(null);
-	expect(() => handler({ sender: { mainFrame: frame }, senderFrame: frame }, { token: "x" })).toThrow(
+	await expect(handler({ sender: { mainFrame: frame }, senderFrame: frame }, { token: "x" })).rejects.toThrow(
 		"main frame",
 	);
 	expect(backend.knowledge.decide).not.toHaveBeenCalled();
@@ -78,15 +78,15 @@ it("opens only backend-resolved knowledge paths", async () => {
 	expect(mocks.openExternal).toHaveBeenCalledWith("obsidian://open?path=%2Ffixture%2FVault%2Fnote.md");
 });
 
-it("specialist mode writes require the same main-frame restriction as approvals", () => {
+it("specialist mode writes require the same main-frame restriction as approvals", async () => {
 	const frame = {};
 	const handler = mocks.handlers.get(IpcChannels.KnowledgeSpecialistsSettings)!;
-	expect(() =>
+	await expect(
 		handler(
 			{ sender: { mainFrame: frame }, senderFrame: {} },
 			{ mode: "automatic", revision: 0, bindingRevision: 1 },
 		),
-	).toThrow("main frame");
+	).rejects.toThrow("main frame");
 });
 it("passes explicit specialist settings and both versions to the human host API", async () => {
 	backend.knowledge.specialistSettings = vi.fn(async () => ({ mode: "off", revision: 1 }));
@@ -99,12 +99,12 @@ it("passes explicit specialist settings and both versions to the human host API"
 	expect(backend.knowledge.specialistSettings).toHaveBeenCalledWith(input);
 });
 
-it("model review and cancellation remain restricted to the application main frame", () => {
+it("model review and cancellation remain restricted to the application main frame", async () => {
 	const frame = {};
 	for (const name of [IpcChannels.KnowledgeReviewModel, IpcChannels.KnowledgeReviewModelCancel])
-		expect(() => mocks.handlers.get(name)?.({ sender: { mainFrame: frame }, senderFrame: {} }, {})).toThrow(
-			"main frame",
-		);
+		await expect(
+			mocks.handlers.get(name)?.({ sender: { mainFrame: frame }, senderFrame: {} }, {}),
+		).rejects.toThrow("main frame");
 });
 
 it("guards and forwards semantic and topic human actions exactly", async () => {
@@ -115,12 +115,12 @@ it("guards and forwards semantic and topic human actions exactly", async () => {
 		input,
 	);
 	expect(backend.knowledge.indexSemantic).toHaveBeenCalledWith(input);
-	expect(() =>
+	await expect(
 		mocks.handlers.get(channel("KnowledgeTopics", "knowledge:topics"))?.(
 			{ sender: { mainFrame: frame }, senderFrame: {} },
 			input,
 		),
-	).toThrow("main frame");
+	).rejects.toThrow("main frame");
 	const topicInput = { cwd: "/fixture", bindingRevision: 4, id: "topic-1", expectedRevision: 9 };
 	await mocks.handlers.get(channel("KnowledgeTopicArchive", "knowledge:topicArchive"))?.(
 		{ sender: { mainFrame: frame }, senderFrame: frame },

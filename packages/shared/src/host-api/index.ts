@@ -1,6 +1,7 @@
 export * from "./app";
 export * from "./define";
 export * from "./institutional";
+export * from "./knowledge";
 export * from "./lan";
 export * from "./packages";
 export * from "./permissions";
