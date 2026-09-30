@@ -27,6 +27,8 @@ export interface BindContractOptions {
 	validateResult?: boolean;
 	/** Access policy is carried by the contract; this hook can disable LAN-only methods for a host. */
 	allowedAccess?: readonly HostApiAccess[];
+	/** Override the default `<domain>:<method>` channel during incremental migrations. */
+	channelForMethod?: (contract: DomainContract, method: string) => string;
 }
 
 function validationError(code: HostApiValidationError["code"], method: string): HostApiValidationError {
@@ -61,7 +63,7 @@ export function bindContract<TContract extends DomainContract>(
 		HostApiMethod,
 	][]) {
 		if (allowedAccess && method.access && !allowedAccess.includes(method.access)) continue;
-		const channel = channelOf(contract, methodName);
+		const channel = options.channelForMethod?.(contract, methodName) ?? channelOf(contract, methodName);
 		const implementationMethod = implementation[methodName];
 		if (typeof implementationMethod !== "function") {
 			throw new Error(`Missing implementation for host method ${channel}`);
