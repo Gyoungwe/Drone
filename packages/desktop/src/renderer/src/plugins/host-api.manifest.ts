@@ -1,29 +1,16 @@
 /**
- * Single source for the public UI-plugin host API names.
+ * Single source for the public UI-plugin host API.
  *
- * The generator in `packages/desktop/scripts/gen-plugin-api.mjs` projects this
- * manifest into the main-process shim. The renderer implementation and the
- * distributed declaration file remain ordinary TypeScript so they keep their
- * precise local types; the generator checks that every manifest name is
- * present in both projections.
+ * The JSON manifest is consumed by the generator and imported here so the
+ * renderer and all generated projections use the same names and signatures.
+ * Keep implementation details (imports and comments) in the projection files;
+ * only the marked namespace blocks are generated.
  */
+import manifest from "./host-api.manifest.json";
+
 export const PLUGIN_HOST_API_MANIFEST = {
-	version: 1,
-	namespaces: {
-		components: ["Button", "Dropdown", "Tooltip", "Markdown", "ImagePreview"],
-		helpers: ["summarizeArgs", "displayToolName", "openResourceExternal", "openExternal"],
-		hooks: ["useT", "useContextUsage", "useLanguage"],
-		stores: [
-			"useTranscriptStore",
-			"useSessionsStore",
-			"useUiStore",
-			"useProjectsStore",
-			"useSettingsStore",
-			"useUiPreferencesStore",
-			"useKnowledgeStore",
-		],
-		i18n: ["registerMessages"],
-	},
+	version: manifest.version as 1,
+	namespaces: manifest.namespaces,
 } as const;
 
 export type PluginHostApiManifest = typeof PLUGIN_HOST_API_MANIFEST;

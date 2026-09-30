@@ -1,0 +1,135 @@
+{
+	"version": 1,
+	"namespaces": {
+		"components": [
+			{
+				"name": "Button",
+				"hostValue": "Button",
+				"envType": "typeof Button",
+				"pluginType": "(props: PluginButtonProps) => unknown"
+			},
+			{
+				"name": "Dropdown",
+				"hostValue": "Dropdown",
+				"envType": "typeof Dropdown",
+				"pluginType": "(props: { trigger: unknown; children: (close: () => void) => unknown }) => unknown"
+			},
+			{
+				"name": "Tooltip",
+				"hostValue": "Tooltip",
+				"envType": "typeof Tooltip",
+				"pluginType": "(props: PluginTooltipProps) => unknown"
+			},
+			{
+				"name": "Markdown",
+				"hostValue": "Markdown",
+				"envType": "typeof Markdown",
+				"pluginType": "(props: PluginMarkdownProps) => unknown"
+			},
+			{
+				"name": "ImagePreview",
+				"hostValue": "ImagePreviewOverlay",
+				"envType": "typeof ImagePreviewOverlay",
+				"pluginType": "(props: PluginImagePreviewProps) => unknown"
+			}
+		],
+		"helpers": [
+			{
+				"name": "summarizeArgs",
+				"hostValue": "summarizeArgs",
+				"envType": "typeof summarizeArgs",
+				"pluginType": "(args: string) => string"
+			},
+			{
+				"name": "displayToolName",
+				"hostValue": "displayName",
+				"envType": "typeof displayName",
+				"pluginType": "(name: string) => string"
+			},
+			{
+				"name": "openResourceExternal",
+				"hostValue": "(target: string, cwd?: string) => getPi().openResourceExternal(target, cwd)",
+				"envType": "(target: string, cwd?: string) => Promise<void>",
+				"pluginType": "(target: string, cwd?: string) => Promise<void>"
+			},
+			{
+				"name": "openExternal",
+				"hostValue": "(url: string) => getPi().openExternal(url)",
+				"envType": "(url: string) => Promise<void>",
+				"pluginType": "(url: string) => Promise<void>"
+			}
+		],
+		"hooks": [
+			{
+				"name": "useT",
+				"hostValue": "useT",
+				"envType": "typeof useT",
+				"pluginType": "() => (key: string, params?: Record<string, string | number>) => string"
+			},
+			{
+				"name": "useContextUsage",
+				"hostValue": "useContextUsage",
+				"envType": "typeof useContextUsage",
+				"pluginType": "(sessionId: string | null) => ContextUsageInfo | null"
+			},
+			{
+				"name": "useLanguage",
+				"hostValue": "useLanguage",
+				"envType": "typeof useLanguage",
+				"pluginType": "() => \"zh\" | \"en\""
+			}
+		],
+		"stores": [
+			{
+				"name": "useTranscriptStore",
+				"hostValue": "useTranscriptStore",
+				"envType": "typeof useTranscriptStore",
+				"pluginType": "unknown"
+			},
+			{
+				"name": "useSessionsStore",
+				"hostValue": "useSessionsStore",
+				"envType": "typeof useSessionsStore",
+				"pluginType": "unknown"
+			},
+			{
+				"name": "useUiStore",
+				"hostValue": "useUiStore",
+				"envType": "typeof useUiStore",
+				"pluginType": "unknown"
+			},
+			{
+				"name": "useProjectsStore",
+				"hostValue": "useProjectsStore",
+				"envType": "typeof useProjectsStore",
+				"pluginType": "unknown"
+			},
+			{
+				"name": "useSettingsStore",
+				"hostValue": "useSettingsStore",
+				"envType": "typeof useSettingsStore",
+				"pluginType": "unknown"
+			},
+			{
+				"name": "useUiPreferencesStore",
+				"hostValue": "useUiPreferencesStore",
+				"envType": "typeof useUiPreferencesStore",
+				"pluginType": "unknown"
+			},
+			{
+				"name": "useKnowledgeStore",
+				"hostValue": "useKnowledgeStore",
+				"envType": "typeof useKnowledgeStore",
+				"pluginType": "unknown"
+			}
+		],
+		"i18n": [
+			{
+				"name": "registerMessages",
+				"hostValue": "registerPluginMessages",
+				"envType": "typeof registerPluginMessages",
+				"pluginType": "(\nnamespace: string,\nmessages: { zh?: Record<string, unknown>; en?: Record<string, unknown> },\n) => () => void"
+			}
+		]
+	}
+}

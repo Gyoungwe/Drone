@@ -199,6 +199,7 @@ declare module "@drone/plugin-api" {
 		onClose: () => void;
 	}
 
+	// <drone:generated namespace="components">
 	export const components: {
 		Button: (props: PluginButtonProps) => unknown;
 		Dropdown: (props: { trigger: unknown; children: (close: () => void) => unknown }) => unknown;
@@ -206,40 +207,62 @@ declare module "@drone/plugin-api" {
 		Markdown: (props: PluginMarkdownProps) => unknown;
 		ImagePreview: (props: PluginImagePreviewProps) => unknown;
 	};
+
+	// </drone:generated namespace="components">
+	/** 经主进程白名单打开 zotero:// obsidian:// 等资源（cwd 供相对路径解析） */
+	/** 系统浏览器打开 http(s) 链接 */
+	// <drone:generated namespace="helpers">
 	export const helpers: {
-		summarizeArgs(args: string): string;
-		displayToolName(name: string): string;
-		/** 经主进程白名单打开 zotero:// obsidian:// 等资源（cwd 供相对路径解析） */
-		openResourceExternal(target: string, cwd?: string): Promise<void>;
-		/** 系统浏览器打开 http(s) 链接 */
-		openExternal(url: string): Promise<void>;
+		summarizeArgs: (args: string) => string;
+		displayToolName: (name: string) => string;
+		openResourceExternal: (target: string, cwd?: string) => Promise<void>;
+		openExternal: (url: string) => Promise<void>;
 	};
+	// </drone:generated namespace="helpers">
+	/** 上下文使用量（事件驱动刷新；sessionId 为 null/draft 时返回 null）——token 仪表盘用 */
+	/** 当前界面语言（"zh" | "en"）——插件自有文案跟随中英 */
+	// <drone:generated namespace="hooks">
 	export const hooks: {
-		useT(): (key: string, params?: Record<string, string | number>) => string;
-		/** 上下文使用量（事件驱动刷新；sessionId 为 null/draft 时返回 null）——token 仪表盘用 */
-		useContextUsage(sessionId: string | null): ContextUsageInfo | null;
-		/** 当前界面语言（"zh" | "en"）——插件自有文案跟随中英 */
-		useLanguage(): "zh" | "en";
+		useT: () => (key: string, params?: Record<string, string | number>) => string;
+		useContextUsage: (sessionId: string | null) => ContextUsageInfo | null;
+		useLanguage: () => "zh" | "en";
 	};
+	// </drone:generated namespace="hooks">
+	/** 应用级 UI 偏好（ui-state.json 持久化）：centerOrbEnabled 等 */
+	/** 知识流：flows[sessionId] 含 cards[]（通用回执卡）、phase、publication 等 */
+	// <drone:generated namespace="stores">
 	export const stores: {
 		useTranscriptStore: unknown;
 		useSessionsStore: unknown;
 		useUiStore: unknown;
 		useProjectsStore: unknown;
 		useSettingsStore: unknown;
-		/** 应用级 UI 偏好（ui-state.json 持久化）：centerOrbEnabled 等 */
 		useUiPreferencesStore: unknown;
-		/** 知识流：flows[sessionId] 含 cards[]（通用回执卡）、phase、publication 等 */
 		useKnowledgeStore: unknown;
 	};
+	// </drone:generated namespace="stores">
 	/** 插件自带文案：注册后 useT()(key) 在核心字典找不到时回落到这里；返回注销函数（无头插件在 activate 里注册、清理函数里注销） */
+	// <drone:generated namespace="i18n">
 	export const i18n: {
-		registerMessages(
+		registerMessages: (
 			namespace: string,
 			messages: { zh?: Record<string, unknown>; en?: Record<string, unknown> },
-		): () => void;
+		) => () => void;
 	};
-	// store hooks 顶层便捷导出（与 shim 解构一致，例：import { useSessionsStore } from "@drone/plugin-api"）
+	// </drone:generated namespace="i18n">
+	// <drone:generated namespace="topLevel">
+	export const Button: (props: PluginButtonProps) => unknown;
+	export const Dropdown: (props: { trigger: unknown; children: (close: () => void) => unknown }) => unknown;
+	export const Tooltip: (props: PluginTooltipProps) => unknown;
+	export const Markdown: (props: PluginMarkdownProps) => unknown;
+	export const ImagePreview: (props: PluginImagePreviewProps) => unknown;
+	export const summarizeArgs: (args: string) => string;
+	export const displayToolName: (name: string) => string;
+	export const openResourceExternal: (target: string, cwd?: string) => Promise<void>;
+	export const openExternal: (url: string) => Promise<void>;
+	export const useT: () => (key: string, params?: Record<string, string | number>) => string;
+	export const useContextUsage: (sessionId: string | null) => ContextUsageInfo | null;
+	export const useLanguage: () => "zh" | "en";
 	export const useTranscriptStore: unknown;
 	export const useSessionsStore: unknown;
 	export const useUiStore: unknown;
@@ -247,12 +270,11 @@ declare module "@drone/plugin-api" {
 	export const useSettingsStore: unknown;
 	export const useUiPreferencesStore: unknown;
 	export const useKnowledgeStore: unknown;
-	export const openResourceExternal: (target: string, cwd?: string) => Promise<void>;
-	export const openExternal: (url: string) => Promise<void>;
 	export const registerMessages: (
 		namespace: string,
 		messages: { zh?: Record<string, unknown>; en?: Record<string, unknown> },
 	) => () => void;
+	// </drone:generated namespace="topLevel">
 	declare const api: unknown;
 	export default api;
 }

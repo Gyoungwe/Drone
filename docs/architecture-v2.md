@@ -227,7 +227,7 @@ export const SessionsContract = defineDomain("sessions", {
 | `PiApi` 类型（`Static<>` 推导） | 手写 `PiApi` 接口 |
 | main 注册：`Value.Check(args)` → 服务调用 → 开发模式下校验 result | `registerInvokers` 纯透传 + 各域手写 handler |
 | LAN：`access: "lan-read"` 的方法自动暴露为 GET，事件走 SSE | `shared/lan.ts` + `lan/server.ts` 的另一套投影 |
-| 插件 Host API：`plugins/host-api.manifest.ts` 生成 shim、`env.d.ts`、`drone-ui.d.ts` | 五处手工同步 |
+| 插件 Host API：`plugins/host-api.manifest.json` 生成 shim、`host-api.ts`、`env.d.ts`、`drone-ui.d.ts` 标记区 | 手工同步五处 |
 
 新增一个通道，从"改四处"变成"改契约 + 实现服务方法"两处。参数不合法时返回结构化的 `UiError`（复用 `shared/errors.ts`），不再把错误抛进 backend 深处。
 

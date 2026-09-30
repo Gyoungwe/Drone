@@ -64,7 +64,7 @@ export const { jsx, jsxs, Fragment } = J;`,
 const D = window.DroneUI.ReactDOM;
 export default D;
 export const { createPortal, flushSync } = D;`,
-	// @drone/plugin-api：由 renderer/plugins/host-api.manifest.ts 生成
+	// @drone/plugin-api：由 renderer/plugins/host-api.manifest.json 生成
 	"@drone/plugin-api": PLUGIN_API_SHIM,
 };
 
