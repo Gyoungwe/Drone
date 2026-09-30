@@ -1,26 +1,26 @@
 {
-  "version": 1,
-  "generator": "scripts/build-extensions.mjs",
-  "sourceDir": "packages/extensions/src",
-  "outDir": ".pi/extensions",
-  "entries": {
-    "subagent-research": {
-      "source": "subagent-research.ts",
-      "output": "subagent-research.mjs",
-      "status": "legacy-preserved",
-      "sourceSha256": "39aa44b171ea83497b03c5588895cb82ef11cd53ebecb2f5bc5e8492dc019f5a",
-      "outputSha256": "b44d7886ae1b162337af010658418b169088a6e8c86fc9e8d8c56a53b0578583"
-    }
-  },
-  "legacyOutputs": [
-    "institutional-access.mjs",
-    "obsidian-workbench.mjs",
-    "research-loop.mjs",
-    "research-wikiloop.mjs",
-    "research-wikiskill.mjs",
-    "source-archive.mjs",
-    "subagent-mcp-readonly.mjs",
-    "workspace-config.mjs",
-    "zotero-literature.mjs"
-  ]
+	"version": 1,
+	"generator": "scripts/build-extensions.mjs",
+	"sourceDir": "packages/extensions/src",
+	"outDir": ".pi/extensions",
+	"entries": {
+		"subagent-research": {
+			"source": "subagent-research.ts",
+			"output": "subagent-research.mjs",
+			"status": "legacy-preserved",
+			"sourceSha256": "39aa44b171ea83497b03c5588895cb82ef11cd53ebecb2f5bc5e8492dc019f5a",
+			"outputSha256": "b44d7886ae1b162337af010658418b169088a6e8c86fc9e8d8c56a53b0578583"
+		}
+	},
+	"legacyOutputs": [
+		"institutional-access.mjs",
+		"obsidian-workbench.mjs",
+		"research-loop.mjs",
+		"research-wikiloop.mjs",
+		"research-wikiskill.mjs",
+		"source-archive.mjs",
+		"subagent-mcp-readonly.mjs",
+		"workspace-config.mjs",
+		"zotero-literature.mjs"
+	]
 }

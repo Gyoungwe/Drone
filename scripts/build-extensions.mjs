@@ -96,7 +96,7 @@ const manifest = {
 	entries: records,
 	legacyOutputs,
 };
-await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+await writeFile(manifestPath, `${JSON.stringify(manifest, null, "\t")}\n`, "utf8");
 console.log(
 	`wrote ${relative(root, manifestPath)} (${Object.keys(records).length} source entries; ${legacyOutputs.length} legacy outputs)`,
 );
