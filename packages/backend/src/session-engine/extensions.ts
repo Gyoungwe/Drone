@@ -1,4 +1,4 @@
-import type { McpStatus, SessionEvent } from "@drone/shared";
+import type { DroneRuntime, McpStatus, SessionEvent } from "@drone/shared";
 import type { ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { InlineExtension, ModelRuntime, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
@@ -31,6 +31,8 @@ type LiveChildControl = {
 };
 
 export interface SessionExtensionDependencies {
+	/** Host-owned runtime shared with first-party .pi extensions through a versioned event. */
+	runtime: DroneRuntime;
 	permissionGates?: boolean;
 	permissionExtension?: boolean;
 	subagentPreferBuiltin?: boolean;
@@ -99,6 +101,10 @@ export function buildSessionExtensionFactories(
 	if (capability)
 		factories.push(makeCapabilityExtension(capability, deps.desktopIntegration?.academicPiRoot));
 	factories.push((pi) => {
+		// Dynamic .pi extensions load before inline factories. They subscribe to this
+		// versioned event during initialization and receive the same host-owned runtime
+		// without a process-global Symbol bridge.
+		pi.events.emit("drone:runtime/v1", { version: 1, runtime: deps.runtime });
 		pi.events.on("pi-mcp-adapter/status/v1", (payload) => {
 			if (!payload || typeof payload !== "object") return;
 			deps.setMcpStatus(cwd, payload as McpStatus);

@@ -449,3 +449,29 @@ it("an advisory raised before evidence collection still records what was cited",
 	expect(proof.unverifiedCitations).toEqual(["Library/Papers/a.md", "Library/Papers/b.md"]);
 	expect(proof.scientificallyVerified).not.toBe(true);
 });
+
+it("keeps publication proofs isolated between injected runtimes", async () => {
+	const runtime = () => ({ knowledge: {}, scheduler: {} });
+	const first = runtime();
+	const second = runtime();
+	const firstEvents = new Map();
+	const firstGate = registerAnswerPublication(
+		{ on: (name, handler) => firstEvents.set(name, handler) },
+		{ runtime: first, getCurrent: () => null },
+	);
+	registerAnswerPublication({ on: () => {} }, { runtime: second, getCurrent: () => null });
+	firstGate.begin(false);
+	const result = await firstEvents.get("message_end")(
+		{ message: message("isolated publication") },
+		{ cwd: "/fixture" },
+	);
+	const sealed = result.message;
+	const firstView = first.knowledge.publication.projectEvent({ type: "message_end", message: sealed });
+	const secondView = second.knowledge.publication.projectEvent({
+		type: "message_end",
+		message: structuredClone(sealed),
+	});
+	expect(firstView.message).toBe(sealed);
+	expect(secondView.message.content[0].text).toContain("知识库检查未通过");
+	expect(secondView.message.content[0].text).not.toContain("isolated publication");
+});

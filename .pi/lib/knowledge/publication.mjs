@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { runtimeSlot, setRuntime } from "../runtime-bridge.mjs";
+import { runtimeSlot, withRuntime } from "../runtime-bridge.mjs";
 import { diagnosticText } from "../tasks/failure-feedback.mjs";
 import { advisoryCodes, readReviewMode } from "./review-policy.mjs";
 import { publicationKnowledgeFlow, updateKnowledgeFlow } from "./ui-state.mjs";
@@ -253,21 +253,20 @@ export function registerAnswerPublication(
 		maxToolRounds = 24,
 	},
 ) {
-	if (runtime) {
-		setRuntime(runtime);
-		state.projectEvent = projectKnowledgeEvent;
-		state.projectSnapshot = projectKnowledgeSnapshot;
-	} else {
-		// Legacy extensions are loaded without a host runtime. Keep the old
-		// publication handshake for that path; an explicitly injected runtime
-		// remains isolated and never writes this process-global bridge.
-		const legacyKey = Symbol.for("drone.knowledge.publication.v1");
-		const legacy = globalThis[legacyKey] ?? {};
-		globalThis[legacyKey] = legacy;
-		legacy.proofs ??= new WeakSet();
-		legacy.projectEvent = projectKnowledgeEvent;
-		legacy.projectSnapshot = projectKnowledgeSnapshot;
-	}
+	let activeRuntime = null;
+	const attachRuntime = (next) => {
+		if (!next || typeof next !== "object" || !next.scheduler || !next.knowledge) return false;
+		activeRuntime = next;
+		const slot = next.knowledge.publication || {};
+		slot.proofs ??= new WeakSet();
+		slot.projectEvent = (event) => withRuntime(next, () => projectKnowledgeEvent(event));
+		slot.projectSnapshot = (messages, persisted) =>
+			withRuntime(next, () => projectKnowledgeSnapshot(messages, persisted));
+		next.knowledge.publication = slot;
+		return true;
+	};
+	if (runtime) attachRuntime(runtime);
+	const inRuntime = (operation) => (activeRuntime ? withRuntime(activeRuntime, operation) : operation());
 	let turnId = null,
 		required = true,
 		started = false,
@@ -298,7 +297,7 @@ export function registerAnswerPublication(
 			return original ? { ...message, content: original } : message;
 		}),
 	}));
-	pi.on("message_end", async (event, ctx) => {
+	const handleMessageEnd = async (event, ctx) => {
 		const message = event.message;
 		if (message.role !== "assistant") return;
 		const report = (message) => {
@@ -519,8 +518,10 @@ export function registerAnswerPublication(
 			}
 			return report(failure(message, error));
 		}
-	});
+	};
+	pi.on("message_end", (event, ctx) => inRuntime(() => handleMessageEnd(event, ctx)));
 	return {
+		attachRuntime,
 		async recordDelivery(ctx, path) {
 			const c = getCurrent(ctx);
 			if (!c) return;

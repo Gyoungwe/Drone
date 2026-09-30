@@ -1,6 +1,5 @@
 import { join, resolve } from "node:path";
 import { publishExplainer } from "../obsidian-workbench.mjs";
-import { setRuntime } from "../runtime-bridge.mjs";
 import { deliveryContract } from "../source-delivery.mjs";
 import { registerAcceptanceVerifier } from "../tasks/acceptance.mjs";
 import { registerTaskRuntime } from "../tasks/runtime.mjs";
@@ -112,7 +111,6 @@ function explainerCard(event) {
 }
 
 export function registerKnowledgeInterface(pi, { readOnly = false, runtime = null } = {}) {
-	if (runtime) setRuntime(runtime);
 	registerWikiReviewAcceptance();
 	const taskRuntime = readOnly ? null : registerTaskRuntime(pi);
 	const recovery = new Map();
@@ -185,6 +183,14 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 		getDeliveryFooter: () => deliveryFooter,
 		getTaskFeedback: () => feedback,
 		getTaskRuntime: () => taskRuntime,
+	});
+	// Dynamic extensions initialize before inline host factories. The host
+	// announces its per-backend runtime after this listener is registered;
+	// publication attaches only its explicit bridge and leaves knowledge-service
+	// runtime state in the existing CLI-compatible slot.
+	pi.events?.on?.("drone:runtime/v1", (payload) => {
+		if (payload?.version !== 1 || !payload.runtime || typeof payload.runtime !== "object") return;
+		publication.attachRuntime?.(payload.runtime);
 	});
 	pi.on("tool_result", async (event, ctx) => {
 		const guarded = guardResearchToolResult(event);

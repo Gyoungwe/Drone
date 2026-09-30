@@ -204,29 +204,22 @@ describe("same checked result across stream, history, LAN polling and exports", 
 		expect(JSON.stringify(message)).not.toContain("FORGED_UNCHECKED");
 	});
 	it("fails closed if the dynamically loaded bridge is unavailable", () => {
-		const key = Symbol.for("drone.knowledge.publication.v1"),
-			saved = globalThis[key];
-		delete globalThis[key];
-		try {
-			const message = {
-				role: "assistant",
-				content: [{ type: "text", text: "MISSING_HOOK_BYPASS" }],
-				timestamp: 1,
-				stopReason: "stop",
-			};
-			expect(
-				projectKnowledgeEvent({
-					type: "message_update",
-					assistantMessageEvent: { type: "text_delta", delta: "MISSING_HOOK_BYPASS" },
-				}),
-			).toBeNull();
-			expect(JSON.stringify(projectKnowledgeEvent({ type: "message_end", message }))).not.toContain(
-				"MISSING_HOOK_BYPASS",
-			);
-			expect(JSON.stringify(message)).not.toContain("MISSING_HOOK_BYPASS");
-		} finally {
-			globalThis[key] = saved;
-		}
+		const message = {
+			role: "assistant",
+			content: [{ type: "text", text: "MISSING_HOOK_BYPASS" }],
+			timestamp: 1,
+			stopReason: "stop",
+		};
+		expect(
+			projectKnowledgeEvent({
+				type: "message_update",
+				assistantMessageEvent: { type: "text_delta", delta: "MISSING_HOOK_BYPASS" },
+			}),
+		).toBeNull();
+		expect(JSON.stringify(projectKnowledgeEvent({ type: "message_end", message }))).not.toContain(
+			"MISSING_HOOK_BYPASS",
+		);
+		expect(JSON.stringify(message)).not.toContain("MISSING_HOOK_BYPASS");
 	});
 });
 

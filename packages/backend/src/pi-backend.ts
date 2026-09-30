@@ -325,6 +325,7 @@ export class PiBackend {
 
 	private sessionExtensionDependencies(): SessionExtensionDependencies {
 		return {
+			runtime: this.runtime,
 			permissionGates: this.options.permissionGates,
 			permissionExtension: this.options.permissionExtension,
 			subagentPreferBuiltin: this.options.subagentPreferBuiltin,
