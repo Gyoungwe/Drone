@@ -104,8 +104,10 @@ export default function sourceArchive(pi) {
 			required: ["run_dir", "category"],
 		},
 		async execute(_id, params, signal, _update, ctx) {
-			const result = await archiveSource({ ...params, cwd: ctx.cwd, signal });
-			return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
+			return run(async () => {
+				const result = await archiveSource({ ...params, cwd: ctx.cwd, signal });
+				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
+			});
 		},
 	});
 	registerTool(pi, {

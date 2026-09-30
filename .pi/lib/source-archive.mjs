@@ -11,6 +11,7 @@ import {
 import { normalizeDoi } from "./literature-receipt.mjs";
 import { publishSourceNote } from "./obsidian-workbench.mjs";
 import { normalizePmcid, normalizePmid, OA_MAX_CANDIDATES, resolveOpenAccess } from "./open-access.mjs";
+import { runRuntimeExclusive } from "./runtime-bridge.mjs";
 import { assessManualPage } from "./source-delivery.mjs";
 
 export const SOURCE_CATEGORIES = Object.freeze(["papers", "supplementary", "software", "manuals"]);
@@ -114,16 +115,8 @@ async function atomicJson(file, value) {
 	await rename(temp, file);
 }
 
-const RUN_LOCKS = new Map();
 async function withRunLock(key, fn) {
-	const prior = RUN_LOCKS.get(key) || Promise.resolve();
-	const current = prior.catch(() => {}).then(fn);
-	RUN_LOCKS.set(key, current);
-	try {
-		return await current;
-	} finally {
-		if (RUN_LOCKS.get(key) === current) RUN_LOCKS.delete(key);
-	}
+	return runRuntimeExclusive("source-archive", key, fn, "drone.source-archive-locks.v1");
 }
 
 async function readManifest(file, runDir) {
