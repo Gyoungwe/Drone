@@ -19,3 +19,19 @@ export interface DiagnosticsSnapshot {
 	readonly incidentSnapshot?: unknown;
 	readonly logTail?: string[];
 }
+
+/**
+ * The portable JSON fallback used by the About page when a native archive
+ * writer is unavailable.  The wrapper gives support tooling a stable marker
+ * without changing the existing app:getDiagnostics response shape.
+ */
+export interface DiagnosticsPackage {
+	readonly format: "drone-diagnostics";
+	readonly schema: 1;
+	readonly snapshot: DiagnosticsSnapshot;
+}
+
+export function serializeDiagnosticsPackage(snapshot: DiagnosticsSnapshot): string {
+	const pkg: DiagnosticsPackage = { format: "drone-diagnostics", schema: 1, snapshot };
+	return JSON.stringify(pkg, null, 2);
+}

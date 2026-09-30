@@ -13,7 +13,7 @@ describe("diagnostics", () => {
 	it("includes store metadata but never reads store contents", async () => {
 		const registry = new StorageRegistry().register({
 			id: "auth",
-			path: "/does/not/exist/auth.json",
+			path: "/Users/test-user/private/auth.json",
 			owner: "settings",
 			schema: 1,
 			sensitivity: "secret",
@@ -21,5 +21,44 @@ describe("diagnostics", () => {
 		const snapshot = await buildDiagnostics(registry, { version: "test", logTail: ["token=hidden"] });
 		expect(snapshot.stores[0]).toMatchObject({ id: "auth", sensitivity: "secret", status: "missing" });
 		expect(snapshot.logTail?.[0]).not.toContain("hidden");
+		expect(snapshot.stores[0]?.path).not.toContain("/Users/test-user/private");
+		const windows = await buildDiagnostics(
+			new StorageRegistry().register({
+				id: "windows-auth",
+				path: "C:\\Users\\test-user\\auth.json",
+				owner: "settings",
+				schema: 1,
+				sensitivity: "secret",
+			}),
+			{ version: "test" },
+		);
+		expect(windows.stores[0]?.path).toBe("<redacted>/auth.json");
+	});
+
+	it("redacts incident credentials, paths, and session content", async () => {
+		const registry = new StorageRegistry();
+		const snapshot = await buildDiagnostics(registry, {
+			version: "test",
+			incidentSnapshot: {
+				reason: "renderer-crash",
+				path: "/Users/test-user/private/vault.json",
+				apiKey: "sk-fake-key",
+				message: "private session body",
+				processes: [{ type: "GPU", memoryMb: 12 }],
+				sessions: [{ id: "abcd1234", rate1m: 4, lastEventAgeMs: 8 }],
+			},
+			logTail: ["authorization=Bearer fake-token", "path=/Users/test-user/private/session.jsonl"],
+		});
+		const serialized = JSON.stringify(snapshot);
+		expect(serialized).not.toContain("sk-fake-key");
+		expect(serialized).not.toContain("fake-token");
+		expect(serialized).not.toContain("/Users/test-user/private");
+		expect(serialized).not.toContain("private session body");
+		expect(snapshot.incidentSnapshot).toMatchObject({
+			reason: "renderer-crash",
+			path: "<redacted>/vault.json",
+			processes: [{ type: "GPU", memoryMb: 12 }],
+			sessions: [{ id: "abcd1234", rate1m: 4, lastEventAgeMs: 8 }],
+		});
 	});
 });

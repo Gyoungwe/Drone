@@ -28,6 +28,7 @@ let backend: PiBackend;
 let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
 let lanObserver: LanObserverHandle | undefined;
+let latestIncidentSnapshot: ReturnType<typeof buildIncidentSnapshot> | undefined;
 
 /**
  * 追加进每次会话系统提示词的桌面端段落（每次调用都付费，保持精简）。
@@ -125,7 +126,8 @@ app.whenReady().then(async () => {
 			if (details.reason === "clean-exit") return;
 			// 临终快照（决策 3）：谁杀的/死前多忙/内存多高——reload 前同步取数，避免异步竞态。
 			// 只记 id/速率/内存数字，绝不记消息正文
-			crashLog.error("incident snapshot", buildIncidentSnapshot(details));
+			latestIncidentSnapshot = buildIncidentSnapshot(details);
+			crashLog.error("incident snapshot", latestIncidentSnapshot);
 			const now = Date.now();
 			while (crashReloads.length > 0 && now - (crashReloads[0] ?? 0) > RELOAD_WINDOW_MS) crashReloads.shift();
 			if (crashReloads.length >= MAX_AUTO_RELOADS) {
@@ -249,7 +251,7 @@ app.whenReady().then(async () => {
 	);
 	uiPluginsManager = new UiPluginManager();
 	await uiPluginsManager.init();
-	registerIpc(backend, uiPluginsManager, lanObserver);
+	registerIpc(backend, uiPluginsManager, lanObserver, () => latestIncidentSnapshot);
 	await initUpdater();
 	scheduleAutoUpdateCheck();
 	const uiState = await loadUiState();

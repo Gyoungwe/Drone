@@ -32,6 +32,7 @@ export function registerIpc(
 	backend: PiBackend,
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
+	getIncidentSnapshot?: () => unknown,
 ): void {
 	registerSessionsIpc(backend);
 	registerSettingsIpc(backend);
@@ -39,7 +40,7 @@ export function registerIpc(
 	registerSubagentsIpc(backend);
 	registerKnowledgeIpc(backend);
 	registerPackagesIpc(backend);
-	registerAppIpc(backend);
+	registerAppIpc(backend, getIncidentSnapshot);
 	registerInstitutionalIpc();
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);

@@ -34,7 +34,7 @@ async function readRecentLogTail(): Promise<string[]> {
  * 应用域：窗口级功能（不依赖 PiBackend 会话状态的部分也在此，backend 参数仅为对齐签名）。
  * tabs/ui-state 持久化、背景图、更新、文件/目录对话框、git 分支、外链与应用信息。
  */
-export function registerAppIpc(backend: PiBackend): void {
+export function registerAppIpc(backend: PiBackend, getIncidentSnapshot?: () => unknown): void {
 	const contractImplementation: ContractImplementation<typeof AppContract> = {
 		getInfo: () => ({
 			name: app.getName(),
@@ -47,7 +47,11 @@ export function registerAppIpc(backend: PiBackend): void {
 			repoUrl: REPO_URL,
 		}),
 		getDiagnostics: async () =>
-			backend.getDiagnostics({ version: app.getVersion(), logTail: await readRecentLogTail() }),
+			backend.getDiagnostics({
+				version: app.getVersion(),
+				incidentSnapshot: getIncidentSnapshot?.(),
+				logTail: await readRecentLogTail(),
+			}),
 		getDailyDir: () => ensureDailyDir(),
 	};
 	bindContract(AppContract, contractImplementation, {

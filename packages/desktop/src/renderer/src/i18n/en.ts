@@ -715,6 +715,8 @@ export const en: Messages = {
 			exportingDiagnostics: "Exporting…",
 			diagnosticsSaved: "Saved",
 			diagnosticsFailed: "Export failed",
+			diagnosticsHint:
+				"Includes version, storage status, incident metadata, and redacted logs; credentials, Vault data, and session content are excluded.",
 		},
 		tools: {
 			title: "Tools & Skills runtime",

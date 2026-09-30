@@ -687,6 +687,7 @@ export const zh = {
 			exportingDiagnostics: "导出中…",
 			diagnosticsSaved: "已保存",
 			diagnosticsFailed: "导出失败",
+			diagnosticsHint: "仅包含版本、存储状态、事故摘要和脱敏日志，不包含凭据、Vault 或会话正文。",
 		},
 		tools: {
 			title: "Tools & Skills 运行状态",

@@ -1,4 +1,4 @@
-import type { AppInfo } from "@drone/shared";
+import { type AppInfo, serializeDiagnosticsPackage } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -64,7 +64,7 @@ export function AboutPanel() {
 			const snapshot = await getPi().getDiagnostics();
 			const path = await getPi().saveFileDialog(
 				`drone-diagnostics-${new Date().toISOString().slice(0, 10)}.json`,
-				JSON.stringify(snapshot, null, 2),
+				serializeDiagnosticsPackage(snapshot),
 			);
 			setDiagnosticsState(path ? "saved" : "idle");
 		} catch {
@@ -123,6 +123,7 @@ export function AboutPanel() {
 					<span className="text-[11px] text-danger">{t("settings.about.diagnosticsFailed")}</span>
 				)}
 			</div>
+			<p className="max-w-[280px] text-[11px] text-ink-faint">{t("settings.about.diagnosticsHint")}</p>
 			{statusText && <p className="mt-1 text-[11px] text-ink-faint">{statusText}</p>}
 		</div>
 	);
