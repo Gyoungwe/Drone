@@ -5,6 +5,15 @@ export {
 	type JsonStoreOptions,
 	type ReadResult,
 } from "./json-store";
+export { buildDiagnostics, redactDiagnosticText, type DiagnosticsSnapshot } from "./diagnostics";
+export {
+	createDefaultStorageRegistry,
+	StorageRegistry,
+	type DefaultStorageRegistryOptions,
+	type StorageEntry,
+	type StorageSensitivity,
+	type StorageState,
+} from "./storage/registry";
 export { LanConfigService } from "./lan/config";
 export {
 	applyEvent as applyLanEvent,
