@@ -116,11 +116,32 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "config",
 		})
 		.register({
+			id: "agent-model-prefs",
+			path: `${agentDir}/model-prefs.json`,
+			owner: "settings/model-prefs",
+			schema: 1,
+			sensitivity: "config",
+		})
+		.register({
 			id: "agent-permissions",
 			path: `${agentDir}/permissions.json`,
 			owner: "permissions/settings",
 			schema: 1,
 			sensitivity: "config",
+		})
+		.register({
+			id: "agent-permission-audit",
+			path: `${agentDir}/permission-audit.jsonl`,
+			owner: "permissions/audit",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "agent-institutional",
+			path: `${agentDir}/institutional.json`,
+			owner: "institutional/config",
+			schema: 1,
+			sensitivity: "private",
 		})
 		.register({
 			id: "agent-trust",
@@ -133,6 +154,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			id: "agent-workspaces",
 			path: `${agentDir}/workspaces.json`,
 			owner: "project/workspace-store",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "agent-sessions",
+			path: `${agentDir}/sessions`,
+			owner: "session-engine/sdk",
 			schema: 1,
 			sensitivity: "private",
 		});
@@ -164,6 +192,20 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 				id: "desktop-lan-audit",
 				path: `${userDataDir}/lan-audit.jsonl`,
 				owner: "desktop/lan",
+				schema: 1,
+				sensitivity: "private",
+			})
+			.register({
+				id: "desktop-ui-state",
+				path: `${userDataDir}/ui-state.json`,
+				owner: "desktop/ui-state",
+				schema: 1,
+				sensitivity: "private",
+			})
+			.register({
+				id: "desktop-backgrounds",
+				path: `${userDataDir}/backgrounds`,
+				owner: "desktop/background",
 				schema: 1,
 				sensitivity: "private",
 			})

@@ -1,4 +1,5 @@
-import { writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import type { PiBackend } from "@drone/backend";
 import type { SavedTabs, UiState } from "@drone/shared";
 import { IpcChannels, isLocalResourceTarget } from "@drone/shared";
@@ -14,6 +15,19 @@ import { materializeSaveContent } from "./save-content";
 
 /** 项目仓库地址（帮助跳转 + 关于页） */
 const REPO_URL = "https://github.com/Gyoungwe/Drone";
+
+async function readRecentLogTail(): Promise<string[]> {
+	try {
+		const dir = join(app.getPath("userData"), "logs");
+		const files = (await readdir(dir)).filter((name) => /^main-\d{4}-\d{2}-\d{2}\.log$/.test(name)).sort();
+		const latest = files.at(-1);
+		if (!latest) return [];
+		const content = await readFile(join(dir, latest), "utf8");
+		return content.split(/\r?\n/).filter(Boolean).slice(-100);
+	} catch {
+		return [];
+	}
+}
 
 /**
  * 应用域：窗口级功能（不依赖 PiBackend 会话状态的部分也在此，backend 参数仅为对齐签名）。
@@ -46,7 +60,9 @@ export function registerAppIpc(backend: PiBackend): void {
 		arch: process.arch,
 		repoUrl: REPO_URL,
 	}));
-	ipcMain.handle(IpcChannels.AppGetDiagnostics, () => backend.getDiagnostics({ version: app.getVersion() }));
+	ipcMain.handle(IpcChannels.AppGetDiagnostics, async () =>
+		backend.getDiagnostics({ version: app.getVersion(), logTail: await readRecentLogTail() }),
+	);
 	// 日常空间目录下发（懒创建；会话创建由 renderer 走既有 draft/createSession 流程）
 	ipcMain.handle(IpcChannels.AppGetDailyDir, () => ensureDailyDir());
 	ipcMain.handle(IpcChannels.TabsLoad, () => loadTabs());
