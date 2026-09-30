@@ -1,5 +1,5 @@
 import type { PiBackend } from "@drone/backend";
-import { IpcChannels, SESSION_INVOKE_METHODS, SessionsContract, channelOf } from "@drone/shared";
+import { channelOf, IpcChannels, SESSION_INVOKE_METHODS, SessionsContract } from "@drone/shared";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 import { registerInvokers } from "./register-invokers";
 
@@ -22,9 +22,11 @@ export function registerSessionsIpc(backend: PiBackend): void {
 	// session entry points through the schema-backed host contract.
 	const legacyMethods = SESSION_INVOKE_METHODS.filter(
 		(method) =>
-			!((method === "createSession" && CONTRACT_METHODS.has("create")) ||
+			!(
+				(method === "createSession" && CONTRACT_METHODS.has("create")) ||
 				(method === "listSessions" && CONTRACT_METHODS.has("list")) ||
-				(method === "prompt" && CONTRACT_METHODS.has("prompt"))),
+				(method === "prompt" && CONTRACT_METHODS.has("prompt"))
+			),
 	) as Parameters<typeof registerInvokers>[1];
 	registerInvokers(backend, legacyMethods);
 

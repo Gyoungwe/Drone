@@ -1,6 +1,6 @@
 import { mkdtemp, readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ModelSettingsService } from "../src/settings/models";
 
@@ -39,7 +39,9 @@ describe("ModelSettingsService", () => {
 		const dir = await mkdtemp(join(tmpdir(), "drone-model-settings-"));
 		const service = new ModelSettingsService(join(dir, "model-prefs.json"));
 
-		await expect(service.setModelHidden("", "gpt-5", true)).rejects.toThrow("provider and modelId are required");
+		await expect(service.setModelHidden("", "gpt-5", true)).rejects.toThrow(
+			"provider and modelId are required",
+		);
 		await service.setModelHidden("openai", "gpt-5", true);
 		await service.setModelHidden("openai", "gpt-5", false);
 		await service.setSubagentModel("researcher", "claude");

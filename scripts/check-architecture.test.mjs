@@ -1,9 +1,9 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import assert from "node:assert/strict";
+import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const root = new URL("../", import.meta.url);
@@ -14,13 +14,20 @@ const checker = new URL("./check-architecture.mjs", import.meta.url);
 test("architecture checker reports a new renderer Pi SDK import", async () => {
 	const temp = await mkdtemp(join(process.env.TMPDIR || "/tmp", "drone-architecture-"));
 	try {
-		const source = await readFile(new URL("../packages/desktop/src/renderer/src/main.tsx", import.meta.url), "utf8");
+		const source = await readFile(
+			new URL("../packages/desktop/src/renderer/src/main.tsx", import.meta.url),
+			"utf8",
+		);
 		await writeFile(join(temp, "fixture.tsx"), `${source}\nimport "@earendil-works/pi-coding-agent";\n`);
 		// The checker is deliberately tested through its public CLI contract. A
 		// small standalone fixture mirrors the finding shape used in CI.
-		const finding = /import\s+["']@earendil-works\/pi-coding-agent["']/.test(await readFile(join(temp, "fixture.tsx"), "utf8"));
+		const finding = /import\s+["']@earendil-works\/pi-coding-agent["']/.test(
+			await readFile(join(temp, "fixture.tsx"), "utf8"),
+		);
 		assert.equal(finding, true);
-		const result = await execFileAsync(process.execPath, [checker.pathname], { cwd: root.pathname }).catch((error) => error);
+		const result = await execFileAsync(process.execPath, [checker.pathname], { cwd: root.pathname }).catch(
+			(error) => error,
+		);
 		assert.equal(result.code ?? 0, 0, "repository baseline should pass before injecting the fixture");
 	} finally {
 		await rm(temp, { recursive: true, force: true });

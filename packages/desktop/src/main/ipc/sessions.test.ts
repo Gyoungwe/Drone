@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("electron", () => ({
 	ipcMain: {
-		handle: (channel: string, handler: (...args: unknown[]) => unknown) => mocks.handlers.set(channel, handler),
+		handle: (channel: string, handler: (...args: unknown[]) => unknown) =>
+			mocks.handlers.set(channel, handler),
 		removeHandler: mocks.removeHandler,
 	},
 }));
@@ -23,12 +24,12 @@ describe("registerSessionsIpc", () => {
 
 	it("routes migrated methods through the sessions contract channels", async () => {
 		const createSession = vi.fn(async (options: { cwd: string }) => ({
-				sessionId: "s1",
-				cwd: options.cwd,
-				active: true,
-				messageCount: 0,
-				createdAt: 1,
-			}));
+			sessionId: "s1",
+			cwd: options.cwd,
+			active: true,
+			messageCount: 0,
+			createdAt: 1,
+		}));
 		const listSessions = vi.fn(async () => []);
 		const backend = {
 			createSession,

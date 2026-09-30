@@ -4,6 +4,7 @@ export * from "./diagnostics";
 export * from "./errors";
 export * from "./evidence-labels";
 export * from "./example-tasks";
+export * from "./host-api";
 export * from "./institutional";
 export * from "./ipc";
 export * from "./knowledge";
@@ -35,6 +36,7 @@ export {
 	TEXT_PREVIEW_BYTES,
 	tablePreview,
 } from "./resource-preview-format";
+export * from "./runtime";
 export * from "./session";
 export * from "./settings";
 export * from "./skill-catalog";
@@ -51,6 +53,3 @@ export * from "./update";
 export * from "./usage-display";
 export * from "./workflow-catalog";
 export * from "./zotero";
-
-export * from "./runtime";
-export * from "./host-api";

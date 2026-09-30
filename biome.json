@@ -43,6 +43,11 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["scripts/fixtures/**"],
+			"formatter": { "enabled": false },
+			"linter": { "enabled": false }
 		}
 	],
 	"assist": {

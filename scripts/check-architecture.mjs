@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { existsSync } from "node:fs";
 /**
  * Ratcheting architecture guard for the package and Pi extension boundaries.
  *
@@ -9,7 +10,6 @@
  * baseline can shrink over time.
  */
 import { readFile, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import process from "node:process";
 
@@ -64,19 +64,22 @@ function scanFile(file, text, findings) {
 
 	// R1: SDK value imports. Keep the check intentionally broad so a newly
 	// added side-effect or dynamic import is caught as well.
-	const sdkRe = /(?:from\s*["'](@earendil-works\/pi-[^"']+)["']|import\s*\(\s*["'](@earendil-works\/pi-[^"']+)["']\s*\)|require\s*\(\s*["'](@earendil-works\/pi-[^"']+)["']\s*\)|import\s*["'](@earendil-works\/pi-[^"']+)["'])/g;
+	const sdkRe =
+		/(?:from\s*["'](@earendil-works\/pi-[^"']+)["']|import\s*\(\s*["'](@earendil-works\/pi-[^"']+)["']\s*\)|require\s*\(\s*["'](@earendil-works\/pi-[^"']+)["']\s*\)|import\s*["'](@earendil-works\/pi-[^"']+)["'])/g;
 	for (const match of text.matchAll(sdkRe)) {
 		const offset = match.index ?? 0;
 		const line = lines[lineNumber(text, offset) - 1] || "";
 		if (!isRuntimeImport(line)) continue;
 		const specifier = match.slice(1).find(Boolean);
-		const allowed = rel.startsWith("packages/backend/src/session-engine/") || rel === "packages/backend/src/pi-backend.ts";
+		const allowed =
+			rel.startsWith("packages/backend/src/session-engine/") || rel === "packages/backend/src/pi-backend.ts";
 		if (!allowed) addFinding(findings, "R1", file, lineNumber(text, offset), `runtime import ${specifier}`);
 	}
 
 	// R2: domain packages stay independent from host and SDK layers.
 	if (domain) {
-		const forbidden = /(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(electron|@earendil-works\/pi-[^"']+|@drone\/(?:backend|desktop))(?=["'])/g;
+		const forbidden =
+			/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(electron|@earendil-works\/pi-[^"']+|@drone\/(?:backend|desktop))(?=["'])/g;
 		for (const match of text.matchAll(forbidden)) {
 			const offset = match.index ?? 0;
 			addFinding(findings, "R2", file, lineNumber(text, offset), `domain import ${match[1]}`);
@@ -85,7 +88,8 @@ function scanFile(file, text, findings) {
 
 	// R3: renderer/LAN may only cross package boundaries through shared.
 	if (isRenderer) {
-		const forbidden = /(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(@drone\/(?!shared(?:["'/])|desktop(?:["'/]))[^"']+|electron|@earendil-works\/pi-[^"']+)(?=["'])/g;
+		const forbidden =
+			/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(@drone\/(?!shared(?:["'/])|desktop(?:["'/]))[^"']+|electron|@earendil-works\/pi-[^"']+)(?=["'])/g;
 		for (const match of text.matchAll(forbidden)) {
 			const offset = match.index ?? 0;
 			addFinding(findings, "R3", file, lineNumber(text, offset), `renderer import ${match[1]}`);
@@ -102,7 +106,8 @@ function scanFile(file, text, findings) {
 
 	// R5: a package source file must not reach into the .pi runtime through a
 	// relative URL/import. Bare .pi references in comments and config are safe.
-	const boundaryRe = /(?:from\s*["']|import\s*\(\s*["']|new\s+URL\(\s*["'])(\.\.?\/[^"'`\n]*\.pi\/[^"'`\n]*)(?:["'`])/g;
+	const boundaryRe =
+		/(?:from\s*["']|import\s*\(\s*["']|new\s+URL\(\s*["'])(\.\.?\/[^"'`\n]*\.pi\/[^"'`\n]*)(?:["'`])/g;
 	for (const match of text.matchAll(boundaryRe)) {
 		const offset = match.index ?? 0;
 		addFinding(findings, "R5", file, lineNumber(text, offset), `relative .pi path ${match[1]}`);
@@ -110,10 +115,12 @@ function scanFile(file, text, findings) {
 
 	// R6: keep domain dependencies acyclic.
 	if (domain) {
-		const imports = /(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(@drone\/(knowledge|tasks|research))(?=["'/])/g;
+		const imports =
+			/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(@drone\/(knowledge|tasks|research))(?=["'/])/g;
 		for (const match of text.matchAll(imports)) {
 			const target = match[2];
-			const forbidden = (domain === "knowledge" && target !== "knowledge") ||
+			const forbidden =
+				(domain === "knowledge" && target !== "knowledge") ||
 				(domain === "tasks" && target === "research") ||
 				(domain === "research" && target === "tasks");
 			if (!forbidden) continue;
@@ -154,11 +161,14 @@ const currentKeys = new Set(findings.map(canonical));
 const added = findings.filter((finding) => !baselineKeys.has(canonical(finding)));
 const removed = baseline.filter((finding) => !currentKeys.has(canonical(finding)));
 if (removed.length) {
-	console.warn(`Architecture baseline has ${removed.length} fixed finding(s); update it with --update-baseline.`);
+	console.warn(
+		`Architecture baseline has ${removed.length} fixed finding(s); update it with --update-baseline.`,
+	);
 }
 if (added.length) {
 	console.error(`Architecture check failed: ${added.length} new violation(s).`);
-	for (const finding of added) console.error(`- ${finding.rule} ${finding.file}:${finding.line} — ${finding.detail}`);
+	for (const finding of added)
+		console.error(`- ${finding.rule} ${finding.file}:${finding.line} — ${finding.detail}`);
 	process.exit(1);
 }
 console.log(`Architecture check passed (${findings.length} baseline finding(s), ${removed.length} fixed).`);
