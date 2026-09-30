@@ -711,6 +711,10 @@ export const en: Messages = {
 			version: "Version",
 			poweredBy: "Built on Pi Coding Agent",
 			sourceCode: "Source code & feedback",
+			exportDiagnostics: "Export diagnostics",
+			exportingDiagnostics: "Exporting…",
+			diagnosticsSaved: "Saved",
+			diagnosticsFailed: "Export failed",
 		},
 		tools: {
 			title: "Tools & Skills runtime",

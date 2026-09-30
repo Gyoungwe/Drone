@@ -1,20 +1,12 @@
+export { type BackendServices, createBackend } from "./create-backend";
+export { buildDiagnostics, type DiagnosticsSnapshot, redactDiagnosticText } from "./diagnostics";
 export * from "./institutional";
-export { createBackend, type BackendServices } from "./create-backend";
 export {
 	JsonStore,
 	JsonStoreCorruptedError,
 	type JsonStoreOptions,
 	type ReadResult,
 } from "./json-store";
-export { buildDiagnostics, redactDiagnosticText, type DiagnosticsSnapshot } from "./diagnostics";
-export {
-	createDefaultStorageRegistry,
-	StorageRegistry,
-	type DefaultStorageRegistryOptions,
-	type StorageEntry,
-	type StorageSensitivity,
-	type StorageState,
-} from "./storage/registry";
 export { LanConfigService } from "./lan/config";
 export {
 	applyEvent as applyLanEvent,
@@ -91,6 +83,7 @@ export {
 	type WorkspacesConfig,
 	workspaceConfigPath,
 } from "./project/workspace-store";
+export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export {
 	assignEntryIds,
 	blockImages,
@@ -107,6 +100,14 @@ export { LoginService, type LoginServiceDeps } from "./settings/login";
 export { ModelPrefsService } from "./settings/model-prefs";
 export { SettingsService } from "./settings/settings";
 export { BUILTIN_SLASH_COMMANDS, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
+export {
+	createDefaultStorageRegistry,
+	type DefaultStorageRegistryOptions,
+	type StorageEntry,
+	StorageRegistry,
+	type StorageSensitivity,
+	type StorageState,
+} from "./storage/registry";
 export { makeShowImageTool, resolveShowImagePath, type ShowImageDetails } from "./tools/show-image";
 export {
 	buildSshArgs,

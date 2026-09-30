@@ -94,20 +94,86 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 	const registry = new StorageRegistry();
 	const { agentDir, userDataDir, knowledgeDir } = options;
 	registry
-		.register({ id: "agent-auth", path: `${agentDir}/auth.json`, owner: "settings/login", schema: 1, sensitivity: "secret" })
-		.register({ id: "agent-models", path: `${agentDir}/models.json`, owner: "settings/settings", schema: 1, sensitivity: "secret" })
-		.register({ id: "agent-settings", path: `${agentDir}/settings.json`, owner: "settings/settings", schema: 1, sensitivity: "config" })
-		.register({ id: "agent-permissions", path: `${agentDir}/permissions.json`, owner: "permissions/settings", schema: 1, sensitivity: "config" })
-		.register({ id: "agent-trust", path: `${agentDir}/trust.json`, owner: "project/trust", schema: 1, sensitivity: "private" })
-		.register({ id: "agent-workspaces", path: `${agentDir}/workspaces.json`, owner: "project/workspace-store", schema: 1, sensitivity: "private" });
+		.register({
+			id: "agent-auth",
+			path: `${agentDir}/auth.json`,
+			owner: "settings/login",
+			schema: 1,
+			sensitivity: "secret",
+		})
+		.register({
+			id: "agent-models",
+			path: `${agentDir}/models.json`,
+			owner: "settings/settings",
+			schema: 1,
+			sensitivity: "secret",
+		})
+		.register({
+			id: "agent-settings",
+			path: `${agentDir}/settings.json`,
+			owner: "settings/settings",
+			schema: 1,
+			sensitivity: "config",
+		})
+		.register({
+			id: "agent-permissions",
+			path: `${agentDir}/permissions.json`,
+			owner: "permissions/settings",
+			schema: 1,
+			sensitivity: "config",
+		})
+		.register({
+			id: "agent-trust",
+			path: `${agentDir}/trust.json`,
+			owner: "project/trust",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "agent-workspaces",
+			path: `${agentDir}/workspaces.json`,
+			owner: "project/workspace-store",
+			schema: 1,
+			sensitivity: "private",
+		});
 	if (knowledgeDir)
-		registry.register({ id: "knowledge-root", path: knowledgeDir, owner: "knowledge", schema: 1, sensitivity: "private" });
+		registry.register({
+			id: "knowledge-root",
+			path: knowledgeDir,
+			owner: "knowledge",
+			schema: 1,
+			sensitivity: "private",
+		});
 	if (userDataDir) {
 		registry
-			.register({ id: "desktop-tabs", path: `${userDataDir}/tabs.json`, owner: "desktop/tabs", schema: 1, sensitivity: "private" })
-			.register({ id: "desktop-lan-config", path: `${userDataDir}/lan-observer.json`, owner: "desktop/lan", schema: 1, sensitivity: "config" })
-			.register({ id: "desktop-lan-audit", path: `${userDataDir}/lan-audit.jsonl`, owner: "desktop/lan", schema: 1, sensitivity: "private" })
-			.register({ id: "desktop-logs", path: `${userDataDir}/logs`, owner: "desktop/logging", schema: 1, sensitivity: "private" });
+			.register({
+				id: "desktop-tabs",
+				path: `${userDataDir}/tabs.json`,
+				owner: "desktop/tabs",
+				schema: 1,
+				sensitivity: "private",
+			})
+			.register({
+				id: "desktop-lan-config",
+				path: `${userDataDir}/lan-observer.json`,
+				owner: "desktop/lan",
+				schema: 1,
+				sensitivity: "config",
+			})
+			.register({
+				id: "desktop-lan-audit",
+				path: `${userDataDir}/lan-audit.jsonl`,
+				owner: "desktop/lan",
+				schema: 1,
+				sensitivity: "private",
+			})
+			.register({
+				id: "desktop-logs",
+				path: `${userDataDir}/logs`,
+				owner: "desktop/logging",
+				schema: 1,
+				sensitivity: "private",
+			});
 	}
 	return registry;
 }

@@ -1,5 +1,6 @@
 export * from "./ask";
 export * from "./capabilities";
+export * from "./diagnostics";
 export * from "./errors";
 export * from "./evidence-labels";
 export * from "./example-tasks";

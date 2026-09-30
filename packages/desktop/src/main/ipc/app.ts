@@ -19,7 +19,7 @@ const REPO_URL = "https://github.com/Gyoungwe/Drone";
  * 应用域：窗口级功能（不依赖 PiBackend 会话状态的部分也在此，backend 参数仅为对齐签名）。
  * tabs/ui-state 持久化、背景图、更新、文件/目录对话框、git 分支、外链与应用信息。
  */
-export function registerAppIpc(_backend: PiBackend): void {
+export function registerAppIpc(backend: PiBackend): void {
 	ipcMain.handle(IpcChannels.AppOpenExternal, (_e, url: string) => {
 		// 只允许 http(s) 链接，防 file:// 等协议滥用
 		if (typeof url === "string" && /^https?:\/\//.test(url)) return shell.openExternal(url);
@@ -46,6 +46,7 @@ export function registerAppIpc(_backend: PiBackend): void {
 		arch: process.arch,
 		repoUrl: REPO_URL,
 	}));
+	ipcMain.handle(IpcChannels.AppGetDiagnostics, () => backend.getDiagnostics({ version: app.getVersion() }));
 	// 日常空间目录下发（懒创建；会话创建由 renderer 走既有 draft/createSession 流程）
 	ipcMain.handle(IpcChannels.AppGetDailyDir, () => ensureDailyDir());
 	ipcMain.handle(IpcChannels.TabsLoad, () => loadTabs());

@@ -5,7 +5,13 @@ import "./dev-agent-dir";
 import "./fix-path";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createBackend, createLogger, initLogging, type BackendServices, type PiBackend } from "@drone/backend";
+import {
+	type BackendServices,
+	createBackend,
+	createLogger,
+	initLogging,
+	type PiBackend,
+} from "@drone/backend";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
@@ -197,6 +203,7 @@ app.whenReady().then(async () => {
 	);
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
 	backendServices = createBackend({
+		userDataDir: app.getPath("userData"),
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
 			appendSystemPrompt: UI_PLUGIN_PROMPT,

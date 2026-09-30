@@ -683,6 +683,10 @@ export const zh = {
 			version: "版本",
 			poweredBy: "基于 Pi Coding Agent 构建",
 			sourceCode: "源码与反馈",
+			exportDiagnostics: "导出诊断包",
+			exportingDiagnostics: "导出中…",
+			diagnosticsSaved: "已保存",
+			diagnosticsFailed: "导出失败",
 		},
 		tools: {
 			title: "Tools & Skills 运行状态",

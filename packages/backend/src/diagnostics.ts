@@ -1,22 +1,15 @@
-import type { StorageRegistry, StorageState } from "./storage/registry";
+import type { DiagnosticsSnapshot } from "@drone/shared";
+import type { StorageRegistry } from "./storage/registry";
 
-export interface DiagnosticsSnapshot {
-	readonly version: string;
-	readonly platform: NodeJS.Platform;
-	readonly node: string;
-	readonly generatedAt: string;
-	readonly stores: StorageState[];
-	readonly incidentSnapshot?: unknown;
-	readonly logTail?: string[];
-}
+export type { DiagnosticsSnapshot } from "@drone/shared";
 
-const SECRET_PATTERNS = [
-	/(api[_-]?key|token|secret|password|authorization)\s*[:=]\s*[^\s,;]+/gi,
-	/-----BEGIN [^-]+-----[\s\S]*?-----END [^-]+-----/g,
-];
+const SECRET_KEY_PATTERN = /(api[_-]?key|token|secret|password|authorization)\s*[:=]\s*[^\s,;]+/gi;
+const SECRET_PEM_PATTERN = /-----BEGIN [^-]+-----[\s\S]*?-----END [^-]+-----/g;
 
 export function redactDiagnosticText(value: string): string {
-	return SECRET_PATTERNS.reduce((text, pattern) => text.replace(pattern, "$1=[REDACTED]"), value);
+	return value
+		.replace(SECRET_KEY_PATTERN, (_match, key: string) => `${key}=[REDACTED]`)
+		.replace(SECRET_PEM_PATTERN, "[REDACTED PEM]");
 }
 
 /** Build a diagnostics payload without reading credentials, Vault contents or session bodies. */

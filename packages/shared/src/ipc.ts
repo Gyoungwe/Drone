@@ -1,4 +1,5 @@
 import type { AskRequest, AskResponse } from "./ask";
+import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
 import type { LanStatus } from "./lan";
@@ -224,6 +225,8 @@ export const IpcChannels = {
 	AppOpenExternal: "app:openExternal",
 	/** 应用信息（版本/运行时版本/仓库地址，设置关于页用） */
 	AppGetInfo: "app:getInfo",
+	/** 诊断摘要（只含存储元数据与经脱敏的运行时信息） */
+	AppGetDiagnostics: "app:getDiagnostics",
 	/** 日常空间工作台目录（~/.drone/daily；懒创建后返回，日常会话的固定 cwd） */
 	AppGetDailyDir: "app:getDailyDir",
 	/** 顶栏 tabs 持久化（userData/tabs.json，不依赖 renderer localStorage） */
@@ -468,6 +471,8 @@ export interface PiApi extends KnowledgeApi {
 	openExternal(url: string): Promise<void>;
 	/** 读取应用信息（版本/运行时/仓库地址） */
 	getAppInfo(): Promise<AppInfo>;
+	/** 读取诊断摘要（不包含凭证、Vault 或会话正文） */
+	getDiagnostics(): Promise<DiagnosticsSnapshot>;
 	/** 日常空间工作台目录（不存在则懒创建；日常会话的固定 cwd，信任链无资源自动信任） */
 	getDailyDir(): Promise<string>;
 	/** 读取持久化的顶栏 tabs（无数据返回 null） */
@@ -654,6 +659,7 @@ export const INVOKE_ROUTES = {
 	// 应用 / tabs / ui-state / 背景 / 更新
 	openExternal: IpcChannels.AppOpenExternal,
 	getAppInfo: IpcChannels.AppGetInfo,
+	getDiagnostics: IpcChannels.AppGetDiagnostics,
 	getDailyDir: IpcChannels.AppGetDailyDir,
 	loadTabs: IpcChannels.TabsLoad,
 	saveTabs: IpcChannels.TabsSave,

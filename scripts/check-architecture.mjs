@@ -18,7 +18,6 @@ const BASELINE_PATH = join(ROOT, "scripts/fixtures/architecture-baseline.json");
 const SCAN_ROOTS = ["packages", ".pi"];
 const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
 const SKIP_PARTS = new Set(["node_modules", "dist", "out", "coverage"]);
-const TEST_PART = /(^|[._-])test([._-]|$)|(^|[._-])spec([._-]|$)/i;
 
 function toPosix(value) {
 	return value.split(sep).join("/");

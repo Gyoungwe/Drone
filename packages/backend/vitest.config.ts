@@ -11,15 +11,15 @@ export default defineConfig({
 				extends: true,
 				test: {
 					name: "unit",
-					include: ["test/**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}"],
-					exclude: ["test/**/*-sdk.test.*"],
+					include: ["**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}"],
+					exclude: ["**/*-sdk.test.*", "**/node_modules/**"],
 				},
 			},
 			{
 				extends: true,
 				test: {
 					name: "sdk",
-					include: ["test/**/*-sdk.test.*"],
+					include: ["**/*-sdk.test.*"],
 				},
 			},
 		],

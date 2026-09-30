@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import { StorageRegistry } from "./registry";
 
 describe("StorageRegistry", () => {
@@ -16,7 +16,9 @@ describe("StorageRegistry", () => {
 			schema: 1,
 			sensitivity: "config",
 		});
-		expect(() => registry.register({ ...registry.assertRegistered("settings") })).toThrow(/already registered/);
+		expect(() => registry.register({ ...registry.assertRegistered("settings") })).toThrow(
+			/already registered/,
+		);
 		expect((await registry.inspect())[0]).toMatchObject({ id: "settings", status: "ok", bytes: 2 });
 	});
 

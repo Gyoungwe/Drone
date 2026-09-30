@@ -11,6 +11,8 @@ import type {
 	ContextManagerMode,
 	ContextUsageInfo,
 	CreateSessionOptions,
+	DiagnosticsSnapshot,
+	DroneRuntime,
 	ImageInput,
 	LoadedResources,
 	LoginEventPayload,
@@ -70,6 +72,7 @@ import {
 	SkillVisibility,
 } from "./capabilities/resource-loader";
 import { CapabilityRuntime, isTaskStatusQuery } from "./capabilities/runtime";
+import { buildDiagnostics } from "./diagnostics";
 import { makeKnowledgeSpecialistBridge } from "./knowledge/specialist-bridge";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
 import { KnowledgeUiService } from "./knowledge/ui";
@@ -94,9 +97,10 @@ import { walkProjectFiles } from "./project/files";
 import { TrustGate } from "./project/trust";
 import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
+import { createDroneRuntime } from "./runtime";
 import { AskGate } from "./session/ask-gate";
-import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
 import { createEventPipeline, type Stage } from "./session/event-pipeline";
+import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "./session/knowledge-publication";
 import {
 	assignEntryIds,
@@ -122,6 +126,7 @@ import { LoginService } from "./settings/login";
 import { ModelPrefsService } from "./settings/model-prefs";
 import { SettingsService } from "./settings/settings";
 import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
+import { createDefaultStorageRegistry, type StorageRegistry } from "./storage/registry";
 import { makeAskUserTool } from "./tools/ask-user";
 import { makeCapabilityLoadTool } from "./tools/capability-load";
 import {
@@ -173,6 +178,10 @@ export interface PiBackendOptions {
 	webFetch?: boolean | { allowRanges?: string[] };
 	/** 内置 subagent 优先于第三方 subagent 扩展（默认 true） */
 	subagentPreferBuiltin?: boolean;
+	/** 桌面端 userData 根目录，用于诊断存储清单；不读取其中的文件内容。 */
+	userDataDir?: string;
+	/** Host-owned runtime container; omitted only for direct compatibility construction. */
+	runtime?: DroneRuntime;
 	/**
 	 * 桌面端集成（Electron 专用；纯 CLI 环境不传）：
 	 * appendSystemPrompt = 追加进每次会话系统提示词的段落（如「你运行在 Drone 桌面端，界面可被 UI 插件定制」）；
@@ -207,6 +216,7 @@ type McpHandler = (cwd: string, status: McpStatus) => void;
  * - session-trace.ts      会话事件 trace 生命周期
  */
 export class PiBackend {
+	readonly runtime: DroneRuntime;
 	readonly knowledge = new KnowledgeUiService();
 	private readonly registry = new SessionRegistry();
 	private readonly eventHandlers = new Set<EventHandler>();
@@ -236,6 +246,8 @@ export class PiBackend {
 	private readonly trustGate = new TrustGate((req) => this.dispatchTrustRequest(req));
 	/** 会话事件 trace（JSONL，离线可重放） */
 	private readonly traces = new SessionTraces();
+	/** Durable-state inventory used by the metadata-only diagnostics endpoint. */
+	private readonly storage: StorageRegistry;
 	/** 子智能体面板：会话内专属派发登记表（与 subagent 工具同一 runner；见 tools/subagent/panel.ts） */
 	private readonly subagentPanel = new SubagentPanelService({
 		runner: {
@@ -290,6 +302,12 @@ export class PiBackend {
 	private readonly projectLoader: ProjectResourceLoader;
 
 	constructor(private readonly options: PiBackendOptions = {}) {
+		this.runtime = options.runtime ?? createDroneRuntime();
+		this.storage = createDefaultStorageRegistry({
+			agentDir: getAgentDir(),
+			userDataDir: options.userDataDir,
+			knowledgeDir: process.env.DRONE_KNOWLEDGE_DIR,
+		});
 		this.packages = new PackageAdmin({
 			registry: this.registry,
 			defaultCwd: options.defaultCwd,
@@ -302,6 +320,17 @@ export class PiBackend {
 			buildExtensions: (cwd, confirm, modeRef) => this.buildExtensionFactories(cwd, confirm, modeRef),
 			projectTrust: options.projectTrust,
 			desktopIntegration: options.desktopIntegration,
+		});
+	}
+
+	/** Return redacted runtime/storage metadata without reading secrets or session bodies. */
+	async getDiagnostics(
+		options: { version?: string; incidentSnapshot?: unknown; logTail?: readonly string[] } = {},
+	): Promise<DiagnosticsSnapshot> {
+		return buildDiagnostics(this.storage, {
+			version: options.version ?? "unknown",
+			incidentSnapshot: options.incidentSnapshot,
+			logTail: options.logTail,
 		});
 	}
 
@@ -451,70 +480,71 @@ export class PiBackend {
 		}
 		// toolResult 大结果四份快照重复携带（0.5.2 白屏事故降压层）：image base64 剥除 + 超长 text 截断
 		event = slimBulkyEvent(event);
-			const stages: Stage<SessionEvent, string>[] = [
-				{
-					name: "stream-guard",
-					failMode: "closed",
-					run: (current, sid) => {
-						// 流式熔断：病态输出（空白洪流/超量）trip 后 abort，会话后续增量丢弃。
-						const verdict = this.streamGuard.inspect(sid, current);
-						if (current.type === "agent_end") this.gates.get(sid)?.endRun();
-						if (verdict === "pass") return current;
-						if (verdict !== "suppress") {
-							log.error("stream guard tripped, aborting session", sid, { verdict });
-							void this.abort(sid).catch(() => {});
-							// 合成事件直接发送，不重新喂回 pipeline，避免防线自触发。
-							for (const handler of this.eventHandlers) {
-								try {
-									handler(sid, { type: "stream_guard_tripped", verdict });
-								} catch {
-									// 单个处理器异常不影响主流程
-								}
-							}
-						}
-						return null;
-					},
-				},
-				{
-					name: "publication-projection",
-					failMode: "closed",
-					run: (current) => projectKnowledgeEvent(current),
-				},
-				{
-					name: "trace",
-					failMode: "open",
-					run: (current, sid) => {
-						if (
-							current.type !== "subagent_mutex" &&
-							current.type !== "stream_guard_tripped" &&
-							current.type !== "model_wait" &&
-							current.type !== "subagent_run"
-						)
-							this.traces.record(sid, current);
-						return current;
-					},
-				},
-				{
-					name: "fanout",
-					failMode: "open",
-					run: (current, sid) => {
-						// 面板结果消息被主模型消费（message_end）→ 运行卡「已进入上下文」。
-						this.subagentPanel.observe(sid, current);
+		const stages: Stage<SessionEvent, string>[] = [
+			{
+				name: "stream-guard",
+				failMode: "closed",
+				run: (current, sid) => {
+					// 流式熔断：病态输出（空白洪流/超量）trip 后 abort，会话后续增量丢弃。
+					const verdict = this.streamGuard.inspect(sid, current);
+					if (current.type === "agent_end") this.gates.get(sid)?.endRun();
+					if (verdict === "pass") return current;
+					if (verdict !== "suppress") {
+						log.error("stream guard tripped, aborting session", sid, { verdict });
+						void this.abort(sid).catch(() => {});
+						// 合成事件直接发送，不重新喂回 pipeline，避免防线自触发。
 						for (const handler of this.eventHandlers) {
 							try {
-								handler(sid, current);
+								handler(sid, { type: "stream_guard_tripped", verdict });
 							} catch {
-								// 事件处理器异常不影响主流程
+								// 单个处理器异常不影响主流程
 							}
 						}
-						return current;
-					},
+					}
+					return null;
 				},
-			];
-			createEventPipeline(stages, {
-				onError: ({ stage, error }) => log.error("event pipeline stage failed", sessionId, { stage: stage.name, error }),
-			}).run(event, sessionId);
-		}
+			},
+			{
+				name: "publication-projection",
+				failMode: "closed",
+				run: (current) => projectKnowledgeEvent(current),
+			},
+			{
+				name: "trace",
+				failMode: "open",
+				run: (current, sid) => {
+					if (
+						current.type !== "subagent_mutex" &&
+						current.type !== "stream_guard_tripped" &&
+						current.type !== "model_wait" &&
+						current.type !== "subagent_run"
+					)
+						this.traces.record(sid, current);
+					return current;
+				},
+			},
+			{
+				name: "fanout",
+				failMode: "open",
+				run: (current, sid) => {
+					// 面板结果消息被主模型消费（message_end）→ 运行卡「已进入上下文」。
+					this.subagentPanel.observe(sid, current);
+					for (const handler of this.eventHandlers) {
+						try {
+							handler(sid, current);
+						} catch {
+							// 事件处理器异常不影响主流程
+						}
+					}
+					return current;
+				},
+			},
+		];
+		createEventPipeline(stages, {
+			onError: ({ stage, error }) =>
+				log.error("event pipeline stage failed", sessionId, { stage: stage.name, error }),
+		}).run(event, sessionId);
+	}
 
 	async init(): Promise<void> {
 		await this.knowledge.connect();
@@ -1593,6 +1623,7 @@ export class PiBackend {
 		this.trustHandlers.clear();
 		this.trustGate.dispose();
 		this.traces.disposeAll();
+		void this.runtime.dispose();
 		log.info("backend disposed");
 	}
 

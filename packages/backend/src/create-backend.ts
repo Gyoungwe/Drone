@@ -1,4 +1,6 @@
+import type { DroneRuntime } from "@drone/shared";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
+import { createDroneRuntime } from "./runtime";
 
 /**
  * Transitional composition root for the v2 migration.
@@ -9,6 +11,8 @@ import { PiBackend, type PiBackendOptions } from "./pi-backend";
  * façade removal an internal change.
  */
 export interface BackendServices {
+	/** Per-host runtime container; extension bridges must not use process globals. */
+	runtime: DroneRuntime;
 	/** Session lifecycle and compatibility methods during A3 migration. */
 	sessions: PiBackend;
 	/** Domain-owned services exposed without reaching into the façade. */
@@ -20,13 +24,18 @@ export interface BackendServices {
 }
 
 export function createBackend(options: PiBackendOptions = {}): BackendServices {
-	const sessions = new PiBackend(options);
+	const runtime = createDroneRuntime();
+	const sessions = new PiBackend({ ...options, runtime });
 	return {
+		runtime,
 		sessions,
 		knowledge: sessions.knowledge,
 		settings: sessions.settings,
 		login: sessions.login,
 		mcp: sessions.mcp,
-		dispose: () => sessions.dispose(),
+		dispose: () => {
+			sessions.dispose();
+			void runtime.dispose();
+		},
 	};
 }
