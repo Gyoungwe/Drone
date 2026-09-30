@@ -14,3 +14,8 @@ export {
 	taskProgressContext,
 	toolResultFailed,
 } from "./failure-feedback";
+export {
+	singleFlightCommand,
+	type TaskCommandContext,
+	type TaskCommandHandler,
+} from "./single-flight";

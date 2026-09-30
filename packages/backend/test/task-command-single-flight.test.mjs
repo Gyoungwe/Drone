@@ -1,5 +1,5 @@
+import { singleFlightCommand } from "@drone/tasks";
 import { expect, it, vi } from "vitest";
-import { singleFlightCommand } from "../../../.pi/lib/tasks/single-flight.mjs";
 
 const ctx = (id = "session", cwd = "/project") => ({ cwd, sessionManager: { getSessionId: () => id } });
 it("coalesces only in-flight identical commands, never caches authorization outcomes", async () => {

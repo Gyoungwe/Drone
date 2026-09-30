@@ -90,6 +90,7 @@
   - [x] source-links：新增 `@drone/knowledge` TS 包入口与强类型 `onlineSourceLink` / `normalizeSourceLinks`，包内 4/4 与 backend `knowledge-delivery-round2`、`zotero-literature` 合计 26/26 通过；`.pi/lib/knowledge/source-links.mjs` 暂作运行时兼容实现。
 - [ ] **A5-2 @drone/tasks**：`.pi/lib/tasks/*` 迁移。验收：全部 `task-*` 测试通过，包括 `example-tasks-one-authorization-sdk.test.mjs`。
   - [x] failure-feedback：新增 `@drone/tasks` TS 包入口与强类型 `diagnosticText` / `toolResultFailed` / `failureObservation` / `failureContext` 等纯函数；包内 4/4 测试及 backend `task-failure-feedback` 20/20 测试通过，backend diagnostics 复用该脱敏入口；`.pi/lib/tasks/failure-feedback.mjs` 暂作运行时兼容实现。
+  - [x] single-flight：新增 `@drone/tasks` TS 包入口与强类型 `singleFlightCommand`，包内 3/3 与 backend `task-command-single-flight` 4/4 通过；`.pi/lib/tasks/single-flight.mjs` 暂作运行时兼容实现。
 - [ ] **A5-3 @drone/research**：source-archive、open-access、zotero-*、institutional-access、literature-*、run-provenance、research-receipt-journal 等迁移。验收：`zotero-*`、`source-archive-*`、`institutional`、`literature-*` 测试通过。
 - [ ] **A5-4 扩展适配层**：`.pi/extensions/*.mjs` 的源码移到 `packages/extensions/src/`，只保留参数映射和注册逻辑，领域逻辑全部调用领域包。`runner.ts` 里两处 `../../../../../.pi/…` 改为包引用或构建产物的解析函数。验收：R5 基线清零；`.pi/lib` 从 extraResources 移除后，打包冒烟通过。
 
@@ -124,6 +125,7 @@
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 承载 claim-conflicts 强类型实现；包 typecheck 通过，包内 4/4 与后端迁移测试 3/3 通过，并加入 Unicode 归一化兼容回归 | 其余 knowledge 模块、worker 与 benchmark 尚未迁移；旧 `.pi/lib` 实现保留为运行时兼容层 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 新增 orchestration-policy 强类型实现；包内 3/3、backend knowledge orchestration/stress 13/13 通过，并保留旧 `.pi` 兼容实现 | knowledge service、worker、specialist-host 与 benchmark 尚未迁移；A5-1 总项保持未完成 |
 | 2026-10-01 | A5-2 增量 | `@drone/tasks` 承载 failure-feedback 强类型实现；包 typecheck 通过，包内 4/4 与 backend `task-failure-feedback` 20/20 通过；backend diagnostics 复用包的 credential/URL 脱敏函数 | 其余 tasks 模块、task-* SDK 测试与 `.pi/lib/tasks` 运行时兼容层尚未迁移 |
+| 2026-10-01 | A5-2 增量 | `@drone/tasks` 新增 single-flight 强类型实现；包 typecheck 通过，包内 3/3 与 backend `task-command-single-flight` 4/4 通过；命令合并仍按会话、目录与参数隔离，完成/失败后允许显式重试 | 其余 tasks 模块、task-* SDK 测试与 `.pi/lib/tasks` 运行时兼容层尚未迁移；A5-2 总项保持未完成 |
 | 2026-10-01 | A6-2 增量 | tool-manifest 增加 `drone:tool-manifest/v1` + `drone:tool-manifest/request/v1` 的 `pi.events` 注册/回放握手；SessionEngine 在 inline host factory 绑定后端收集器，覆盖扩展先加载的时序；独立事件总线、版本过滤、晚绑定回放 3 个测试，加上 capability/research/Zotero 回归测试通过 | 兼容期仍保留 process event 供无 host event bus 的 CLI/测试调用；acceptance-verifiers、其余 singleton/队列尚未迁移，A6-2 总项保持未完成 |
 | 2026-10-01 | A6-2 增量 | acceptance-verifiers 增加 `drone:acceptance-verifier/v1` + `drone:acceptance-verifier/request/v1` 的 `pi.events` 注册/回放握手；扩展登记会在 host runtime 广播时复制到注入 runtime，SessionEngine 绑定后端收集器；`.pi/lib/tasks/acceptance.test.mjs` 与 backend collector 定向测试通过 | process-local runtimeSlot 仍保留 CLI/兼容路径；worker-pool、binding、ui、specialists 与其余队列尚未迁移，A6-2 总项保持未完成 |
 | 2026-10-01 | A3-2 增量 | `PermissionSettingsService` 承接 permissions.json 快照、原子保存、恢复默认、规则试算与审计尾部；`BackendServices.permissions` 与 `PiBackend.permissions` 指向同一实例；服务级测试 1/1、createBackend 组合测试 1/1、backend typecheck 与架构检查通过 | 项目信任、审批 gate、会话权限模式仍在 PiBackend；A3-1/2/4 总项保持未完成 |
