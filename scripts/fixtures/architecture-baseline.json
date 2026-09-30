@@ -3,111 +3,9 @@
   "findings": [
     {
       "rule": "R1",
-      "file": "packages/backend/src/capabilities/skill-frontmatter.ts",
-      "line": 3,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/institutional/config.ts",
-      "line": 7,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
       "file": "packages/backend/src/knowledge/specialist-runner.ts",
       "line": 4,
       "detail": "runtime import @earendil-works/pi-ai"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/mcp/service.ts",
-      "line": 6,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/packages/admin.ts",
-      "line": 1,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/project/trust-loader.ts",
-      "line": 2,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/project/trust.ts",
-      "line": 9,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/session/messages.ts",
-      "line": 21,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/session/ui-context.ts",
-      "line": 2,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/settings/settings.ts",
-      "line": 9,
-      "detail": "runtime import @earendil-works/pi-ai/providers/all"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/settings/settings.ts",
-      "line": 10,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/slash-commands.ts",
-      "line": 7,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/tools/subagent/agents.ts",
-      "line": 5,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/tools/subagent/panel.ts",
-      "line": 20,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/tools/subagent/runner.ts",
-      "line": 13,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/tools/subagent/runner.ts",
-      "line": 20,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/tools/subagent/tool.ts",
-      "line": 8,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/src/zotero/status.ts",
-      "line": 6,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
     },
     {
       "rule": "R1",
@@ -209,12 +107,6 @@
       "rule": "R1",
       "file": "packages/backend/test/obsidian-skill-integration.test.mjs",
       "line": 10,
-      "detail": "runtime import @earendil-works/pi-coding-agent"
-    },
-    {
-      "rule": "R1",
-      "file": "packages/backend/test/permission-extension.test.ts",
-      "line": 11,
       "detail": "runtime import @earendil-works/pi-coding-agent"
     },
     {
