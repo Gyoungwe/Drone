@@ -21,38 +21,38 @@ describe("event pipeline", () => {
 		expect(order).toEqual(["1", "2", "3"]);
 	});
 
-	it("closed failure suppresses the event and stops later stages", () => {
-		const ran: string[] = [];
-		const result = createEventPipeline([
-			stage("closed", () => {
-				throw new Error("boom");
-			}),
-			stage("later", (event) => {
-				ran.push(String(event));
-				return event;
-			}),
-		]).run(7, { seen: [] });
-		expect(result).toBeNull();
-		expect(ran).toEqual([]);
-	});
-
-	it("open failure is recorded and the original event continues", () => {
-		const failures: unknown[] = [];
+	it.each([
+		{ name: "publication", failMode: "closed" as const, expected: null, laterRuns: false },
+		{ name: "trace", failMode: "open" as const, expected: 5, laterRuns: true },
+	])("$name failure follows its $failMode policy", ({ name, failMode, expected, laterRuns }) => {
+		const ran: number[] = [];
+		const failures: Array<{ stage: string; event: number; context: Context; error: unknown }> = [];
 		const result = createEventPipeline(
 			[
 				stage(
-					"trace",
+					name,
 					() => {
-						throw new Error("trace failed");
+						throw new Error(`${name} failed`);
 					},
-					"open",
+					failMode,
 				),
-				stage("next", (event) => event + 2),
+				stage("next", (event) => {
+					ran.push(event);
+					return event + 2;
+				}),
 			],
-			{ onError: (failure) => failures.push(failure) },
+			{
+				onError: (failure) => failures.push(failure),
+			},
 		).run(3, { seen: [] });
-		expect(result).toBe(5);
-		expect(failures).toHaveLength(1);
+
+		expect(result).toBe(expected);
+		expect(ran).toEqual(laterRuns ? [3] : []);
+		expect(failures).toHaveLength(failMode === "open" ? 1 : 0);
+		if (failMode === "open") {
+			expect(failures[0]).toMatchObject({ stage: { name }, event: 3, context: { seen: [] } });
+			expect(failures[0]?.error).toBeInstanceOf(Error);
+		}
 	});
 
 	it("a stage returning null suppresses downstream stages", () => {
