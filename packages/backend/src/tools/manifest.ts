@@ -61,23 +61,49 @@ const CORE_ACTIVITIES: { test: (name: string) => boolean; activity: ToolActivity
 	},
 ];
 
+export const TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1" as const;
+export const TOOL_MANIFEST_REQUEST_EVENT = "drone:tool-manifest/request/v1" as const;
+
+export interface VersionedEventBus {
+	on(event: string, listener: (payload: unknown) => void): unknown;
+	emit?(event: string, payload?: unknown): unknown;
+}
+
 type ToolManifestRegistration = { version: 1; name: string; meta: unknown };
 const registeredTools = new Map<string, unknown>();
 const registeredFamilies = new Map<string, unknown>();
 
-process.on("drone:tool-manifest/v1", (payload: ToolManifestRegistration) => {
-	if (payload?.version !== 1 || typeof payload.name !== "string") return;
-	registeredTools.set(payload.name, payload.meta);
-	const families = (payload.meta as { families?: unknown[] } | null)?.families;
+function acceptRegistration(payload: unknown): void {
+	if (!payload || typeof payload !== "object") return;
+	const registration = payload as Partial<ToolManifestRegistration>;
+	if (registration.version !== 1 || typeof registration.name !== "string") return;
+	registeredTools.set(registration.name, registration.meta);
+	const families = (registration.meta as { families?: unknown[] } | null)?.families;
 	if (!Array.isArray(families)) return;
 	for (const family of families) {
 		const match = (family as { match?: unknown } | null)?.match;
 		if (typeof match === "string" && match) {
-			const record = family && typeof family === "object" ? family : {};
-			registeredFamilies.set(match.toLowerCase(), { ...record, owner: payload.name });
+			const familyRecord = family && typeof family === "object" ? family : {};
+			registeredFamilies.set(match.toLowerCase(), { ...familyRecord, owner: registration.name });
 		}
 	}
-});
+}
+
+/**
+ * Attach the backend collector to a session's Pi event bus. Dynamic first-party
+ * extensions load before inline factories, so the request/replay handshake is
+ * required to recover declarations emitted during extension initialization.
+ */
+export function bindToolManifestEvents(events: VersionedEventBus | undefined): () => void {
+	if (!events?.on) return () => {};
+	events.on(TOOL_MANIFEST_EVENT, acceptRegistration);
+	void events.emit?.(TOOL_MANIFEST_REQUEST_EVENT, { version: 1 });
+	return () => {};
+}
+
+// Compatibility collector for CLI/tests that provide a minimal Pi object
+// without a host event bus. New desktop sessions use bindToolManifestEvents.
+process.on(TOOL_MANIFEST_EVENT, acceptRegistration);
 
 /** 运行时 .mjs 侧登记的工具家族（MCP 服务器前缀等），已规范化。 */
 export function bridgedToolFamilies(): ToolFamilyMeta[] {

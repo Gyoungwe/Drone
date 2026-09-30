@@ -17,6 +17,7 @@ import { makeAskUserTool } from "../tools/ask-user";
 import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
+import { bindToolManifestEvents } from "../tools/manifest";
 import { makeShowImageTool } from "../tools/show-image";
 import { makeSshTool } from "../tools/ssh";
 import { makeStatusTool } from "../tools/status";
@@ -104,6 +105,9 @@ export function buildSessionExtensionFactories(
 		// Dynamic .pi extensions load before inline factories. They subscribe to this
 		// versioned event during initialization and receive the same host-owned runtime
 		// without a process-global Symbol bridge.
+		// Their tool declarations use the same request/replay handshake, so the
+		// backend collector sees registrations emitted before this factory ran.
+		bindToolManifestEvents(pi.events);
 		const announceRuntime = () => pi.events.emit("drone:runtime/v1", { version: 1, runtime: deps.runtime });
 		pi.events.on("drone:runtime/request/v1", announceRuntime);
 		announceRuntime();

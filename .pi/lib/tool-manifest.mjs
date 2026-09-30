@@ -13,6 +13,17 @@ import { runtimeSlot } from "./runtime-bridge.mjs";
 
 const registry = runtimeSlot("tools", "manifest", () => ({ tools: new Map(), families: new Map() }));
 
+/** Versioned host event used to project first-party registrations into the backend. */
+export const TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1";
+/** Request/replay event used when the host listener is installed after extensions. */
+export const TOOL_MANIFEST_REQUEST_EVENT = "drone:tool-manifest/request/v1";
+
+// A dynamic extension is initialized before the host's inline factories. Keep a
+// per-Pi replay listener so the host can request registrations after it has
+// installed its collector. The registry itself remains runtime-owned; this
+// bridge only transports immutable declaration records.
+const eventBridges = new WeakSet();
+
 const SUBAGENT_MODES = new Set(["exclude", "inherit"]);
 
 function assertMeta(name, meta) {
@@ -33,11 +44,32 @@ function assertMeta(name, meta) {
 			throw new Error(`Tool ${name}: family.match required`);
 }
 
-function publishRegistration(name, meta) {
-	// The backend listens to this versioned process event when it needs tool
-	// metadata without an AgentSession. Mutable state remains in runtimeSlot;
-	// this event only carries immutable registration data.
-	emitProcessEvent("drone:tool-manifest/v1", { version: 1, name, meta });
+function registration(name, meta) {
+	return { version: 1, name, meta };
+}
+
+function replayRegistrations(pi) {
+	if (!pi?.events?.emit) return;
+	for (const [name, meta] of registry.tools) {
+		void pi.events.emit(TOOL_MANIFEST_EVENT, registration(name, meta));
+	}
+}
+
+function installEventBridge(pi) {
+	if (!pi?.events?.on || eventBridges.has(pi)) return;
+	eventBridges.add(pi);
+	pi.events.on(TOOL_MANIFEST_REQUEST_EVENT, (payload) => {
+		if (payload?.version === 1) replayRegistrations(pi);
+	});
+}
+
+function publishRegistration(pi, name, meta) {
+	const payload = registration(name, meta);
+	// The versioned pi.events bridge is the host-facing path. Keep emitting the
+	// old process event during migration so CLI/test callers with a minimal Pi
+	// object keep the no-session manifest fallback until they bind an event bus.
+	void pi?.events?.emit?.(TOOL_MANIFEST_EVENT, payload);
+	emitProcessEvent(TOOL_MANIFEST_EVENT, payload);
 }
 
 /** 声明一个带 drone 元数据的工具定义：校验并登记，原样返回给 pi.registerTool。 */
@@ -47,7 +79,6 @@ export function defineTool(definition) {
 	const meta = definition.drone || {};
 	assertMeta(name, meta);
 	registry.tools.set(name, meta);
-	publishRegistration(name, meta);
 	for (const family of meta.families || [])
 		registry.families.set(family.match.toLowerCase(), { ...family, owner: name });
 	return definition;
@@ -56,9 +87,11 @@ export function defineTool(definition) {
 /** 子代理子会话里不注册标记为 exclude 的工具；其余原样交给 pi.registerTool。 */
 /** @param {any} pi @param {any[]} definitions */
 export function registerTools(pi, definitions) {
+	installEventBridge(pi);
 	const registered = [];
 	for (const definition of definitions) {
 		const defined = defineTool(definition);
+		publishRegistration(pi, defined.name, defined.drone || {});
 		if (process.env.PI_SUBAGENT_CHILD && defined.drone?.subagent === "exclude") continue;
 		pi.registerTool(defined);
 		registered.push(defined.name);
