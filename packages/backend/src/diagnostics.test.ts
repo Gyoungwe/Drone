@@ -1,3 +1,4 @@
+import { DIAGNOSTICS_ARCHIVE_PREFIX, serializeDiagnosticsArchive } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import { buildDiagnostics, redactDiagnosticText } from "./diagnostics";
 import { StorageRegistry } from "./storage/registry";
@@ -60,5 +61,21 @@ describe("diagnostics", () => {
 			processes: [{ type: "GPU", memoryMb: 12 }],
 			sessions: [{ id: "abcd1234", rate1m: 4, lastEventAgeMs: 8 }],
 		});
+	});
+
+	it("packages the redacted snapshot without exposing raw storage data", async () => {
+		const snapshot = await buildDiagnostics(new StorageRegistry(), {
+			version: "test",
+			incidentSnapshot: { apiKey: "sk-never-export", path: "/Users/test-user/vault.json" },
+			logTail: ["token=never-export"],
+		});
+		const archive = serializeDiagnosticsArchive(snapshot);
+		expect(archive.startsWith(DIAGNOSTICS_ARCHIVE_PREFIX)).toBe(true);
+		const binary = atob(archive.slice(DIAGNOSTICS_ARCHIVE_PREFIX.length));
+		const text = Array.from(binary, (character) => String.fromCharCode(character.charCodeAt(0))).join("");
+		expect(text).toContain("diagnostics.json");
+		expect(text).not.toContain("sk-never-export");
+		expect(text).not.toContain("never-export");
+		expect(text).not.toContain("/Users/test-user");
 	});
 });
