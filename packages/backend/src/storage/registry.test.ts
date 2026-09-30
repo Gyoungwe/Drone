@@ -1,12 +1,14 @@
 import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { createDefaultStorageRegistry, StorageRegistry } from "./registry";
 
 describe("StorageRegistry", () => {
 	it("covers every production JsonStore construction with a registered storage id", async () => {
-		const roots = [resolve(process.cwd(), "src"), resolve(process.cwd(), "../desktop/src/main")];
+		const backendSrc = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+		const roots = [backendSrc, resolve(backendSrc, "../../desktop/src/main")];
 		const files: string[] = [];
 		const visit = async (root: string): Promise<void> => {
 			for (const entry of await readdir(root, { withFileTypes: true })) {
