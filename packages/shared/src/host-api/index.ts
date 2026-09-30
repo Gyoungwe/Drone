@@ -6,4 +6,5 @@ export * from "./packages";
 export * from "./permissions";
 export * from "./sessions";
 export * from "./settings";
+export * from "./subagents";
 export * from "./ui-plugins";
