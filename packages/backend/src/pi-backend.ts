@@ -55,17 +55,7 @@ import {
 	type TodoItem,
 } from "@drone/shared";
 import type { Model, ThinkingLevel } from "@earendil-works/pi-ai";
-import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
-import {
-	createAgentSession,
-	getAgentDir,
-	ModelRuntime,
-	ProjectTrustStore,
-	type SessionEntry,
-	SessionManager,
-	type ToolDefinition,
-} from "@earendil-works/pi-coding-agent";
-import { makeCapabilityExtension } from "./capabilities/extension";
+import type { SessionEntry, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import {
 	allSkillsFromLoader,
 	CapabilityResourceLoader,
@@ -73,7 +63,6 @@ import {
 } from "./capabilities/resource-loader";
 import { CapabilityRuntime, isTaskStatusQuery } from "./capabilities/runtime";
 import { buildDiagnostics } from "./diagnostics";
-import { makeKnowledgeSpecialistBridge } from "./knowledge/specialist-bridge";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
 import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
@@ -87,11 +76,7 @@ import {
 	resetPermissionSettings as resetPermissionSettingsFile,
 	writePermissionSettings,
 } from "./permissions";
-import {
-	makePermissionGateExtension,
-	type PermissionConfirm,
-	type PermissionModeRef,
-} from "./permissions/extension";
+import type { PermissionConfirm, PermissionModeRef } from "./permissions/extension";
 import { PermissionGate } from "./permissions/gate";
 import { walkProjectFiles } from "./project/files";
 import { TrustGate } from "./project/trust";
@@ -122,39 +107,30 @@ import { StreamGuard } from "./session/stream-guard";
 import { TraceRecorder } from "./session/trace";
 import { SessionTraces } from "./session/traces";
 import { makeUiContext } from "./session/ui-context";
+import {
+	getAgentDir,
+	getSupportedThinkingLevels,
+	type ModelRuntime,
+	ProjectTrustStore,
+	SessionEngine,
+} from "./session-engine/engine";
+import {
+	buildSessionCustomTools,
+	buildSessionExtensionFactories,
+	makeCapabilitySessionExtension,
+	type SessionExtensionDependencies,
+} from "./session-engine/extensions";
 import { LoginService } from "./settings/login";
 import { ModelSettingsService } from "./settings/models";
 import { SettingsService } from "./settings/settings";
 import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
 import { createDefaultStorageRegistry, type StorageRegistry } from "./storage/registry";
-import { makeAskUserTool } from "./tools/ask-user";
-import { makeCapabilityLoadTool } from "./tools/capability-load";
-import {
-	makeChannelWatchExtension,
-	readChannelWatchEnabled,
-	writeChannelWatchEnabled,
-} from "./tools/channel-watch";
-import {
-	makeEvapExtension,
-	readContextManagerMode,
-	reportEvapBatch,
-	writeContextManagerMode,
-} from "./tools/context-evaporation";
+import { readChannelWatchEnabled, writeChannelWatchEnabled } from "./tools/channel-watch";
+import { readContextManagerMode, writeContextManagerMode } from "./tools/context-evaporation";
 import { globalToolManifest } from "./tools/manifest";
-import { makeShowImageTool } from "./tools/show-image";
-import { makeSshTool } from "./tools/ssh";
-import { makeStatusTool } from "./tools/status";
-import {
-	discoverAgents,
-	isSubagentSessionPath,
-	makeSubagentTool,
-	SubagentPanelService,
-} from "./tools/subagent";
+import { discoverAgents, isSubagentSessionPath, SubagentPanelService } from "./tools/subagent";
 import { applySubagentMutex } from "./tools/subagent/mutex";
 import { withNativeSubagentSlot } from "./tools/subagent/slots";
-import { makeTodoTool } from "./tools/todo";
-import { makeTodoReminderExtension } from "./tools/todo-reminder";
-import { makeWebFetchTool } from "./tools/webfetch";
 import { getZoteroStatus } from "./zotero/status";
 
 const log = createLogger("backend");
@@ -285,8 +261,8 @@ export class PiBackend {
 	);
 	/** 每会话事件速率（60s 窗口；心跳/临终快照数据源） */
 	private readonly eventRates = new EventRateTracker();
-	private modelRuntime: ModelRuntime | undefined;
-	private modelPromise: Promise<ModelRuntime> | undefined;
+	/** Session lifecycle and Pi SDK runtime boundary (A3-3). */
+	private readonly sessionEngine = new SessionEngine();
 	/** 设置页（provider/模型/凭证配置）服务 */
 	readonly settings = new SettingsService(() => this.getModelRuntime());
 	/** 用户级模型可见性与子代理模型偏好（独立于 CLI 共用 settings.json）。 */
@@ -319,7 +295,8 @@ export class PiBackend {
 			trustStore: this.trustStore,
 			ask: (dir, opts) => this.trustGate.ask(dir, opts),
 			canAsk: () => this.trustHandlers.size > 0,
-			buildExtensions: (cwd, confirm, modeRef) => this.buildExtensionFactories(cwd, confirm, modeRef),
+			buildExtensions: (cwd, confirm, modeRef) =>
+				buildSessionExtensionFactories(this.sessionExtensionDependencies(), cwd, confirm, modeRef),
 			projectTrust: options.projectTrust,
 			desktopIntegration: options.desktopIntegration,
 		});
@@ -336,130 +313,32 @@ export class PiBackend {
 		});
 	}
 
-	/** 自定义工具 = 调用方传入的 + 内置 webfetch（webFetch:false 关闭）+ show_image + set_status + todo + subagent */
-	private buildCustomTools(
-		gate: PermissionGate,
-		askGate: AskGate,
-		capabilities?: CapabilityRuntime,
-	): ToolDefinition[] {
-		const tools = [...(this.options.customTools ?? [])];
-		const webFetch = this.options.webFetch;
-		if (webFetch !== false) {
-			tools.push(makeWebFetchTool(typeof webFetch === "object" ? webFetch : undefined));
-		}
-		// Desktop-native ask_user intentionally overrides the TUI-only pi-ask tool while preserving its public contract.
-		tools.push(makeAskUserTool({ ask: (request, signal) => askGate.ask(request, signal) }));
-		if (capabilities) tools.push(makeCapabilityLoadTool(capabilities));
-		tools.push(makeShowImageTool());
-		// SSH is always guarded in the tool itself: the approval request is emitted just
-		// before OpenSSH starts, so a model can propose a connection without gaining
-		// access to the local key or network until the user approves it.
-		tools.push(
-			makeSshTool({
-				confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
-			}) as ToolDefinition,
-		);
-		tools.push(makeStatusTool());
-		tools.push(makeTodoTool());
-		if (this.options.subagentPreferBuiltin !== false) {
-			tools.push(
-				makeSubagentTool({
-					getModelRuntime: () => this.getModelRuntime(),
-					getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
-					gate,
-					traces: this.traces,
-					onEvent: (sessionId, event) => this.emitEvent(sessionId, event),
-					registerLiveChild: (sessionId, control) => {
-						this.liveSubagents.set(sessionId, control);
-						return () => {
-							if (this.liveSubagents.get(sessionId) === control) this.liveSubagents.delete(sessionId);
-						};
-					},
-				}),
-			);
-		}
-		return tools;
-	}
-
-	/**
-	 * 内置扩展随资源加载器注册（inline factory，不受项目信任影响）。注册序即
-	 * context 钩子链序（V2 冒烟实证）：权限门控（无 context 钩子）→ 视觉代理
-	 * （image→文本，先文本化）→ 上下文蒸发（基于文本化内容做蒸发决策，
-	 * 需保住视觉代理的替换）→ todo-reminder（恢复注入最后，不被压）。
-	 * 权限门控受 permissionGates/permissionExtension 开关控制（permissionGates=false
-	 * 时 confirm 恒 false，不能注册）；视觉代理 handler 实时读配置，设置页保存后立即
-	 * 生效；上下文蒸发默认开启（缺省 mode=evaporation），设置页可切 off，切换 ≤2s
-	 * 生效免重开会话；subagent 子会话不加载本工厂——noExtensions，见 runner.ts）。
-	 */
-	private buildExtensionFactories(
-		cwd: string,
-		confirm: PermissionConfirm | undefined,
-		modeRef?: PermissionModeRef,
-	): Array<
-		| ReturnType<typeof makeTodoReminderExtension>
-		| ReturnType<typeof makeChannelWatchExtension>
-		| ReturnType<typeof makeEvapExtension>
-	> {
-		const factories: Array<
-			| ReturnType<typeof makeTodoReminderExtension>
-			| ReturnType<typeof makeChannelWatchExtension>
-			| ReturnType<typeof makeEvapExtension>
-			| ((pi: { events: { on(event: string, handler: (payload: unknown) => void): void } }) => void)
-		> = [];
-		factories.push((pi: { events: { on(event: string, handler: (payload: unknown) => void): void } }) => {
-			pi.events.on("pi-mcp-adapter/status/v1", (payload) => {
-				if (!payload || typeof payload !== "object") return;
-				this.setMcpStatus(cwd, payload as McpStatus);
-			});
-		});
-		if (this.options.permissionGates !== false && this.options.permissionExtension !== false) {
-			// confirm 直接桥到 PermissionGate（携带 kind/suggestDir 元数据，驱动「允许此目录」）；
-			// 未提供时扩展自行回退 ctx.ui.confirm（无元数据）；modeRef 同款闭包注入（D1：
-			// 按会话内存态，每次 tool_call 实时读，无 modeRef 的调用方如 draft 斜杠命令恒 default）
-			factories.push(
-				makePermissionGateExtension(getAgentDir(), {
-					projectRoot: cwd,
-					confirm,
-					getMode: () => modeRef?.current ?? "default",
-				}),
-			);
-		}
-		if (this.options.subagentPreferBuiltin !== false)
-			factories.push(
-				makeKnowledgeSpecialistBridge({
-					getRuntime: () => this.getModelRuntime(),
-					getModelPreference: (name) => this.modelSettings.getSubagentModel(name),
-					getThinkingPreference: (name) => this.modelSettings.getSubagentThinking(name),
-				}),
-			);
-		// 上下文蒸发（默认开启：缺省 mode=evaporation；钩子实时读派生 mode，
-		// 设置页切换后 ≤2s 生效，无需重开会话）。
-		// 批次上报双通道：log（快速 grep）+ trace_custom 行（灰度分析脚本直读，
-		// reducer 未知类型 no-op，replay-trace.mts 重放安全）
-		factories.push(
-			makeEvapExtension({
-				agentDir: getAgentDir(),
-				reporter: (sessionId, batch) => {
-					reportEvapBatch(sessionId, batch);
-					this.traces.recordCustom(sessionId, "evap_batch", batch);
-				},
-			}),
-		);
-		// channel-watch 跨会话协作（开关默认开；session_start 检查开关 + trusted 门，
-		// 无订阅时零 fs 监听；钩子与蒸发/todo 无语义交互，位置不敏感，放 todo 前）
-		factories.push(makeChannelWatchExtension({ agentDir: getAgentDir(), cwd }));
-		// todo-reminder 最后：compaction 后恢复注入的任务列表不被上游折叠
-		factories.push(makeTodoReminderExtension());
-		return factories;
+	private sessionExtensionDependencies(): SessionExtensionDependencies {
+		return {
+			permissionGates: this.options.permissionGates,
+			permissionExtension: this.options.permissionExtension,
+			subagentPreferBuiltin: this.options.subagentPreferBuiltin,
+			webFetch: this.options.webFetch,
+			tools: this.options.tools,
+			customTools: this.options.customTools,
+			desktopIntegration: this.options.desktopIntegration,
+			getModelRuntime: () => this.getModelRuntime(),
+			getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
+			getSubagentThinking: (agentName) => this.modelSettings.getSubagentThinking(agentName),
+			traces: this.traces,
+			onEvent: (sessionId, event) => this.emitEvent(sessionId, event),
+			registerLiveChild: (sessionId, control) => {
+				this.liveSubagents.set(sessionId, control);
+				return () => {
+					if (this.liveSubagents.get(sessionId) === control) this.liveSubagents.delete(sessionId);
+				};
+			},
+			setMcpStatus: (cwd, status) => this.setMcpStatus(cwd, status),
+		};
 	}
 
 	private async getModelRuntime(): Promise<ModelRuntime> {
-		if (this.modelRuntime) return this.modelRuntime;
-		if (!this.modelPromise) {
-			this.modelPromise = ModelRuntime.create();
-		}
-		this.modelRuntime = await this.modelPromise;
-		return this.modelRuntime;
+		return this.sessionEngine.getModelRuntime();
 	}
 
 	private emitEvent(sessionId: string, event: SessionEvent): void {
@@ -582,7 +461,7 @@ export class PiBackend {
 			...(capabilities
 				? {
 						extensionFactories: [
-							makeCapabilityExtension(capabilities, this.options.desktopIntegration?.academicPiRoot),
+							makeCapabilitySessionExtension(capabilities, this.options.desktopIntegration?.academicPiRoot),
 						],
 					}
 				: {}),
@@ -590,14 +469,11 @@ export class PiBackend {
 		const resourceLoader = capabilities
 			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
 			: baseResourceLoader;
-		const { session, extensionsResult } = await createAgentSession({
-			cwd,
-			modelRuntime: runtime,
+		const { session, extensionsResult } = await this.sessionEngine.create(cwd, {
 			model,
 			thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
 			tools: this.options.tools,
-			customTools: this.buildCustomTools(gate, askGate, capabilities),
-			sessionManager: SessionManager.create(cwd),
+			customTools: buildSessionCustomTools(this.sessionExtensionDependencies(), gate, askGate, capabilities),
 			settingsManager,
 			resourceLoader,
 		});
@@ -650,8 +526,7 @@ export class PiBackend {
 		// Idempotent: StrictMode / duplicate restore must not bind the same jsonl twice.
 		const already = this.registry.list().find((entry) => entry.session.sessionFile === filePath);
 		if (already) return this.registry.toMeta(already);
-		const runtime = await this.getModelRuntime();
-		const sessionManager = SessionManager.open(filePath);
+		const sessionManager = this.sessionEngine.openManager(filePath);
 		const cwd = sessionManager.getCwd() || process.cwd();
 		const gate = new PermissionGate((req) => this.dispatchPermissionRequest(req));
 		const askGate = new AskGate((req) => this.dispatchAskRequest(req));
@@ -669,7 +544,7 @@ export class PiBackend {
 			...(capabilities
 				? {
 						extensionFactories: [
-							makeCapabilityExtension(capabilities, this.options.desktopIntegration?.academicPiRoot),
+							makeCapabilitySessionExtension(capabilities, this.options.desktopIntegration?.academicPiRoot),
 						],
 					}
 				: {}),
@@ -677,12 +552,10 @@ export class PiBackend {
 		const resourceLoader = capabilities
 			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
 			: baseResourceLoader;
-		const { session, extensionsResult } = await createAgentSession({
-			sessionManager,
-			modelRuntime: runtime,
+		const { session, extensionsResult } = await this.sessionEngine.open(filePath, {
 			settingsManager,
 			resourceLoader,
-			customTools: this.buildCustomTools(gate, askGate, capabilities),
+			customTools: buildSessionCustomTools(this.sessionExtensionDependencies(), gate, askGate, capabilities),
 		});
 		const mutex = applySubagentMutex(session, extensionsResult, this.options.subagentPreferBuiltin !== false);
 		if (mutex.shadowed.length > 0) {
@@ -732,7 +605,7 @@ export class PiBackend {
 
 	async listSessions(cwd?: string): Promise<SessionMeta[]> {
 		const target = cwd || this.options.defaultCwd || process.cwd();
-		const infos = await SessionManager.list(target);
+		const infos = await this.sessionEngine.list(target);
 		const activeIds = new Set(this.registry.list().map((e) => e.session.sessionId));
 		return infos
 			.filter((info) => !activeIds.has(info.id))
@@ -750,7 +623,7 @@ export class PiBackend {
 
 	/** 跨全部项目目录枚举会话（项目管理页用，含活跃会话） */
 	async listAllSessions(): Promise<SessionMeta[]> {
-		const infos = await SessionManager.listAll();
+		const infos = await this.sessionEngine.listAll();
 		const activeIds = new Set(this.registry.list().map((e) => e.session.sessionId));
 		return infos
 			.filter((info) => info.cwd)
@@ -1301,7 +1174,7 @@ export class PiBackend {
 			throw new Error("This session has not been saved yet. Send a message first.");
 		}
 		// 在新打开的 manager 上分叉，避免动当前会话的 manager 状态
-		const forkedManager = SessionManager.open(file, sourceManager.getSessionDir());
+		const forkedManager = this.sessionEngine.openManager(file, sourceManager.getSessionDir());
 		const newPath = forkedManager.createBranchedSession(targetId);
 		if (!newPath) throw new Error("Failed to create forked session");
 		log.info("fork session", sessionId, { targetId, newPath });

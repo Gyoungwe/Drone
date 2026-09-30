@@ -29,6 +29,12 @@ test("architecture checker reports a new renderer Pi SDK import", async () => {
 			(error) => error,
 		);
 		assert.equal(result.code ?? 0, 0, "repository baseline should pass before injecting the fixture");
+		const checkerSource = await readFile(checker, "utf8");
+		assert.doesNotMatch(
+			checkerSource,
+			/rel === ["']packages\/backend\/src\/pi-backend\.ts["']/,
+			"Pi SDK runtime imports must stay inside session-engine",
+		);
 	} finally {
 		await rm(temp, { recursive: true, force: true });
 	}

@@ -71,8 +71,7 @@ function scanFile(file, text, findings) {
 		const line = lines[lineNumber(text, offset) - 1] || "";
 		if (!isRuntimeImport(line)) continue;
 		const specifier = match.slice(1).find(Boolean);
-		const allowed =
-			rel.startsWith("packages/backend/src/session-engine/") || rel === "packages/backend/src/pi-backend.ts";
+		const allowed = rel.startsWith("packages/backend/src/session-engine/");
 		if (!allowed) addFinding(findings, "R1", file, lineNumber(text, offset), `runtime import ${specifier}`);
 	}
 
