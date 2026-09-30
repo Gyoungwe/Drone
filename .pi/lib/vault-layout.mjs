@@ -48,7 +48,9 @@ export async function containedFile(root, path) {
 	return target;
 }
 
+/** @param {string} template @param {Record<string, any>} [values] */
 export function renderTemplate(template, values = {}) {
+	/** @type {any} */
 	const fields = { uuid: randomUUID(), date: new Date().toISOString(), ...values };
 	const rendered = template.replace(/\{\{([a-z_]+)\}\}/g, (match, key) => fields[key] ?? match);
 	if (template.includes("id: pi-<stable-id>"))

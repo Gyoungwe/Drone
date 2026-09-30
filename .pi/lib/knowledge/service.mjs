@@ -273,6 +273,7 @@ export class KnowledgeService {
 		for (const path of state.reads.keys()) push(path);
 		return out.slice(0, 6);
 	}
+	/** @param {any} ticket @param {string} cwd @param {string} [query] */
 	async ensureAnswerSearch(ticket, cwd, query = "") {
 		const state = await this.check(ticket, cwd);
 		if (state.answerSearch) return state.answerSearch;
@@ -286,6 +287,7 @@ export class KnowledgeService {
 		await this.search(ticket, cwd, { query: q, limit: 5 });
 		return (await this.check(ticket, cwd)).answerSearch;
 	}
+	/** @param {any} ticket @param {string} cwd @param {string} [query] @param {{ refresh?: boolean }} [options] */
 	async materializeCitations(ticket, cwd, query = "", { refresh = false } = {}) {
 		const state = await this.check(ticket, cwd);
 		const searchQuery = String(state.answerSearch?.query || query || "")
@@ -328,6 +330,7 @@ export class KnowledgeService {
 			return this.materializeCitations(ticket, cwd, searchQuery, { refresh: true });
 		return citations;
 	}
+	/** @param {any} ticket @param {string} cwd @param {Record<string, any>} [options] */
 	async search(
 		ticket,
 		cwd,
@@ -556,6 +559,7 @@ export class KnowledgeService {
 		await assertBinding(this.binding);
 		return { ok: true, provider: result.provider, model: result.model, dimension: result.dimension };
 	}
+	/** @param {Record<string, any>} [options] */
 	async rebuildSemanticIndex({ limit = 8, project = null, signal } = {}) {
 		await assertBinding(this.binding);
 		const settings = await readSemanticSettings(this.binding.vaultId);

@@ -9,10 +9,5 @@
 		"types": ["node"],
 		"lib": ["ES2023", "DOM"]
 	},
-	"include": [
-		"lib/knowledge/publication.mjs",
-		"lib/tasks/acceptance.mjs",
-		"lib/tasks/runtime.mjs",
-		"lib/tool-manifest.mjs"
-	]
+	"include": ["lib/knowledge/**/*.mjs", "lib/tasks/**/*.mjs", "lib/tool-manifest.mjs"]
 }

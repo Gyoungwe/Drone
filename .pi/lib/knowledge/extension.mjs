@@ -161,9 +161,10 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 			beforeStart: async () => ({}),
 			withTurnBinding: async (_ctx, operation) => operation(),
 		};
-	let current = null,
-		bootstrap = null,
-		activeTopic = null,
+	let current = null;
+	/** @type {any} */
+	let bootstrap = null;
+	let activeTopic = null,
 		topicMemory = null,
 		sessionScopeId = null,
 		awaitingUserStart = false,
@@ -1406,6 +1407,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 							(c) => ["skill:show-me", "skill:research-show-me"].includes(c.name) && c.source === "skill",
 						),
 				});
+				if (!bootstrap) throw new Error("Knowledge navigation bootstrap unavailable");
 				return {
 					message: {
 						customType: "drone-knowledge-navigation",

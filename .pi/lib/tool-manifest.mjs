@@ -44,6 +44,7 @@ export function defineTool(definition) {
 }
 
 /** 子代理子会话里不注册标记为 exclude 的工具；其余原样交给 pi.registerTool。 */
+/** @param {any} pi @param {any[]} definitions */
 export function registerTools(pi, definitions) {
 	const registered = [];
 	for (const definition of definitions) {
@@ -56,6 +57,7 @@ export function registerTools(pi, definitions) {
 }
 
 /** 单个工具的便捷注册：`registerTool(pi, definition)`。 */
+/** @param {any} pi @param {any} definition */
 export function registerTool(pi, definition) {
 	return registerTools(pi, [definition])[0] ?? null;
 }

@@ -22,6 +22,9 @@ function loopback(hostname) {
 	return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
 }
 
+/**
+ * @param {Record<string, any>} [input]
+ */
 export function validateSemanticConfig(input = {}) {
 	if (!input || typeof input !== "object" || Array.isArray(input))
 		throw new Error("Semantic settings must be an object");
@@ -179,6 +182,11 @@ function vectors(value, expected) {
 	return { vectors: out, dimension };
 }
 
+/**
+ * @param {Record<string, any>} rawConfig
+ * @param {string[]} texts
+ * @param {{ signal?: AbortSignal }} [options]
+ */
 export async function embedTexts(rawConfig, texts, { signal } = {}) {
 	const config = validateSemanticConfig(rawConfig);
 	if (!config.enabled) throw new Error("Semantic embeddings are disabled");

@@ -351,6 +351,7 @@ export function classifyTopic(existing, incoming) {
 	return "additional";
 }
 
+/** @param {Record<string, any>} [options] */
 export function createTopicMemory({ binding, project, directory = knowledgeDirectory() } = {}) {
 	if (!binding?.vaultId) throw new Error("Topic memory requires a bound Vault");
 	const scope = { vaultId: binding.vaultId, project: projectKey(project) };
@@ -587,6 +588,7 @@ export function createTopicMemory({ binding, project, directory = knowledgeDirec
 		},
 		record: async (input, expectedRevision) => {
 			if (!input || typeof input !== "object") throw new Error("Invalid topic record input");
+			/** @type {any} */
 			let receipt;
 			let claimComparisons = [];
 			const next = await mutate(expectedRevision, (value) => {

@@ -49,6 +49,7 @@ const searchSchema = {
 	required: ["query"],
 	additionalProperties: false,
 };
+/** @param {Record<string, any>} [options] */
 export function knowledgeReadStart({ start_line, startLine } = {}) {
 	if (start_line !== undefined && startLine !== undefined && start_line !== startLine)
 		throw new Error("Conflicting read ranges");
@@ -263,6 +264,7 @@ export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false })
 			if (generation === epoch) noteKnowledgeSpecialist(ctx, progress);
 		};
 		publish({});
+		/** @type {any} */
 		let prepared;
 		let committed = false;
 		let resultUsage = null;
@@ -317,7 +319,9 @@ export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false })
 							throw new Error("Wiki target is outside the permitted scope");
 						allowed.add(targetPath);
 					}
-					const read = async ({ path, start_line, startLine }) => {
+					/** @param {Record<string, any>} options */
+					const read = async (options) => {
+						const { path, start_line, startLine } = options;
 						const firstLine = knowledgeReadStart({ start_line, startLine });
 						await check();
 						if (!budget.addToolOperation() || ++readCount > 8)
@@ -345,6 +349,7 @@ export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false })
 					const sources = [];
 					if (role !== "navigator") for (const path of sourcePaths) sources.push(await read({ path }));
 					const target = targetPath ? await read({ path: targetPath }) : null;
+					/** @type {any[]} */
 					const capabilities = [
 						{
 							name: "knowledge_read",

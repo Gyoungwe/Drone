@@ -239,6 +239,7 @@ export async function stageWikiProposal(service, ticket, cwd, input) {
 // Host-only accumulation for repeated research rounds on the exact same topic.
 // It keeps one pending candidate, revalidates all earlier source versions, and
 // invalidates any stale UI preview by changing the proposal hash.
+/** @param {any} service @param {any} ticket @param {string} cwd @param {string} id @param {Record<string, any>} [input] */
 export async function mergeWikiProposal(
 	service,
 	ticket,

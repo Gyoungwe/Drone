@@ -8,9 +8,9 @@ try {
 	try {
 		modulePath = createRequire(import.meta.url).resolve("pdfjs-dist/legacy/build/pdf.mjs");
 	} catch {
-		modulePath = createRequire(join(process.resourcesPath || "", "app.asar/package.json")).resolve(
-			"pdfjs-dist/legacy/build/pdf.mjs",
-		);
+		modulePath = createRequire(
+			join(/** @type {any} */ (process).resourcesPath || "", "app.asar/package.json"),
+		).resolve("pdfjs-dist/legacy/build/pdf.mjs");
 	}
 	const { getDocument } = await import(pathToFileURL(modulePath).href);
 	// pdf.js requires a trailing "/" on factory URLs; path.sep would be "\" on Windows.

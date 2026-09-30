@@ -180,11 +180,13 @@ export async function knowledgeSetupPreview({ cwd = null, path = null } = {}) {
 			"Read-only preview. Project folders are created for confirmed projects, not automatically for every open directory. Setup still requires the skill interview and a separate write confirmation.",
 	};
 }
+/** @param {Record<string, any>} options */
 export async function knowledgeJobs({ cwd = null, offset = 0, limit = 20, revision } = {}) {
 	const { service } = await bound(revision),
 		{ project } = await projectAt(cwd);
 	return service.request("uiJobs", { project, offset, limit });
 }
+/** @param {Record<string, any>} options */
 export async function knowledgeReviews({ cwd, offset = 0, limit = 15, revision }) {
 	const { service } = await bound(revision),
 		{ project } = await projectAt(cwd);
@@ -208,6 +210,7 @@ export async function knowledgeReviews({ cwd, offset = 0, limit = 15, revision }
 		nextOffset: offset + items.length < all.items.length ? offset + items.length : null,
 	};
 }
+/** @param {Record<string, any>} options */
 export async function knowledgePreviewReview({ cwd, id, revision }) {
 	const { binding, service } = await bound(revision),
 		{ project } = await projectAt(cwd);
@@ -242,6 +245,7 @@ export function consumeKnowledgeReviewPreview(cwd, token) {
 	previews.delete(token);
 	return entry;
 }
+/** @param {Record<string, any>} options */
 export async function knowledgeDecideReview({ cwd, token, decision }) {
 	if (!["apply", "reject"].includes(decision)) throw new Error("Invalid Wiki decision");
 	const entry = consumeKnowledgeReviewPreview(cwd, token);
@@ -249,6 +253,7 @@ export async function knowledgeDecideReview({ cwd, token, decision }) {
 	invalidateKnowledgeUi();
 	return result;
 }
+/** @param {Record<string, any>} options */
 export async function knowledgeReadNote({ cwd = null, path, startLine = 1, revision }) {
 	const { binding, service } = await bound(revision),
 		{ project } = await projectAt(cwd);
@@ -302,6 +307,7 @@ export async function knowledgeReadNote({ cwd = null, path, startLine = 1, revis
 	if (displayText) return { ...page, displayText, displayLinkBase: binding.vault };
 	return page;
 }
+/** @param {Record<string, any>} options */
 export async function knowledgeMaintenance({ cwd = null, action, revision, id, expectedHash }) {
 	const { binding, service } = await bound(revision),
 		{ project } = await projectAt(cwd);
@@ -332,6 +338,7 @@ export async function knowledgeMaintenance({ cwd = null, action, revision, id, e
 		maintenance.delete(key);
 	}
 }
+/** @param {Record<string, any>} options */
 export async function knowledgeOpenTarget({ cwd = null, path = null, revision }) {
 	const { binding } = await bound(revision);
 	const { project } = await projectAt(cwd);
@@ -353,6 +360,7 @@ function requireProject(projectInfo) {
 	return projectInfo.project;
 }
 
+/** @param {Record<string, any>} options */
 export async function knowledgeSemanticStatus({ cwd = null, bindingRevision } = {}) {
 	const { service } = await bound(bindingRevision),
 		{ project, projectError } = await projectAt(cwd);
@@ -360,6 +368,7 @@ export async function knowledgeSemanticStatus({ cwd = null, bindingRevision } = 
 	return service.semanticStatus({ project: project || undefined });
 }
 
+/** @param {Record<string, any>} options */
 export async function saveKnowledgeSemanticSettings({
 	config,
 	bindingRevision,
@@ -373,6 +382,7 @@ export async function saveKnowledgeSemanticSettings({
 	);
 }
 
+/** @param {Record<string, any>} options */
 export async function testKnowledgeSemanticProvider({ config, bindingRevision } = {}) {
 	if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
 	const { binding, service } = await bound(bindingRevision);
@@ -381,6 +391,7 @@ export async function testKnowledgeSemanticProvider({ config, bindingRevision } 
 	return withKnowledgeBinding(binding, () => service.testSemanticProvider(config, bindingRevision, {}));
 }
 
+/** @param {Record<string, any>} options */
 export async function indexKnowledgeSemantic({ cwd, bindingRevision, requestId, limit = 8 } = {}) {
 	if (typeof cwd !== "string" || !cwd) throw new Error("Project cwd is required for semantic indexing");
 	if (typeof requestId !== "string" || !requestId) throw new Error("Index request id is required");
@@ -408,6 +419,7 @@ export async function indexKnowledgeSemantic({ cwd, bindingRevision, requestId, 
 	}
 }
 
+/** @param {Record<string, any>} options */
 export async function cancelKnowledgeSemanticIndex({ cwd, bindingRevision, requestId } = {}) {
 	if (typeof cwd !== "string" || !cwd) throw new Error("Project cwd is required for semantic indexing");
 	if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
@@ -419,6 +431,7 @@ export async function cancelKnowledgeSemanticIndex({ cwd, bindingRevision, reque
 	job.controller.abort();
 }
 
+/** @param {Record<string, any>} options */
 export async function getKnowledgeTopics({ cwd, bindingRevision, query = "" } = {}) {
 	if (typeof cwd !== "string" || !cwd) throw new Error("Project cwd is required for topics");
 	if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
@@ -431,6 +444,7 @@ export async function getKnowledgeTopics({ cwd, bindingRevision, query = "" } = 
 	);
 }
 
+/** @param {Record<string, any>} options */
 export async function archiveKnowledgeTopic({ cwd, bindingRevision, id, expectedRevision } = {}) {
 	if (typeof cwd !== "string" || !cwd) throw new Error("Project cwd is required for topics");
 	if (!Number.isSafeInteger(bindingRevision) || !Number.isSafeInteger(expectedRevision))

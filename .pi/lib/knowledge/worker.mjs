@@ -155,6 +155,7 @@ function changed(path, previous) {
 		// New evidence is searchable immediately; semantic Wiki consolidation is a separate pending item.
 		if (!/(?:^|\/)Wiki\//.test(path)) job("evidence-review", path, scope);
 	}
+	/** @type {any[]} */
 	const dependents = db.prepare("SELECT source FROM links WHERE target=?").all(path);
 	for (const { source } of dependents)
 		if (/(?:^|\/)Wiki\//.test(source) && !source.endsWith("/Index.md"))
@@ -579,6 +580,7 @@ async function semanticBatch(args) {
 	const limit = Math.max(1, Math.min(16, Math.floor(args.limit || 8)));
 	const chunkChars = Math.max(256, Math.min(8_000, Math.floor(args.chunkChars || 1200)));
 	const scope = args.project || "";
+	/** @type {any[]} */
 	const rows = db
 		.prepare(`SELECT path,title,body,hash,signature,scope,kind FROM notes
     WHERE (scope='shared' OR scope=?) AND kind NOT IN ('navigation','explainer') ORDER BY path`)
@@ -700,6 +702,7 @@ function semanticCandidates(args) {
 		throw new Error("Invalid semantic similarity threshold");
 	const query = args.vector,
 		limit = Math.max(1, Math.min(12, Math.floor(args.limit || 5)));
+	/** @type {any[]} */
 	const rows = db
 		.prepare(
 			"SELECT s.path,s.hash,s.vector,s.dimension,s.chunk_index,s.start_char,s.end_char,n.title,n.kind FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer' ORDER BY s.path LIMIT 5000",

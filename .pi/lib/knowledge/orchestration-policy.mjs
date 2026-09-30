@@ -15,6 +15,7 @@ const digest = (value) =>
 		.update(String(value || ""))
 		.digest("hex")
 		.slice(0, 24);
+/** @param {Record<string, any>} [options] */
 export function specialistRequestSignature({
 	role,
 	task = "",
@@ -35,6 +36,7 @@ export function specialistRequestSignature({
 	});
 }
 
+/** @param {Record<string, any>} [options] */
 export function decideSpecialistRun({
 	role,
 	task = "",

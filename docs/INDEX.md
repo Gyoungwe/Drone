@@ -17,6 +17,8 @@
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 
+`.pi/tsconfig.json` 开启 `allowJs` + `checkJs`；当前已覆盖 `.pi/lib/knowledge/**/*.mjs` 与 `.pi/lib/tasks/**/*.mjs`，根 `npm run typecheck` 会串接 `npm run check:pi`。
+
 任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
 
 Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx electron-vite dev --remote-debugging-port=9224`；根目录 `npm run dev -- --remote-debugging-port=9224` 的参数不会穿过嵌套的 workspace 脚本。首次启动前运行根目录的 `npm run build:lan-web -w packages/desktop`。验证 `http://127.0.0.1:9224/json` 返回页面列表后再运行 CDP 冒烟脚本；普通开发仍用根目录 `npm run dev`。

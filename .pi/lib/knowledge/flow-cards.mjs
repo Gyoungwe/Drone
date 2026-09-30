@@ -64,6 +64,7 @@ export function cardLink(kind, target, label, i18n) {
 }
 
 /** 构造一张通用回执卡；空字段自动省略，链接 / 字段里的 null 自动过滤。 */
+/** @param {Record<string, any>} card */
 export function flowCard({
 	key,
 	kind,

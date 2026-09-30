@@ -52,6 +52,7 @@ function validatePatch(config) {
 	}
 }
 
+/** @returns {Promise<any>} */
 export async function loadWorkspaceConfig(cwd = process.cwd()) {
 	if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
 		const desktop = JSON.parse(await readFile(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));

@@ -306,6 +306,7 @@ export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) 
 	});
 }
 
+/** @param {Record<string, any>} [input] */
 export async function publishExplainer({
 	cwd = process.cwd(),
 	project,
@@ -403,6 +404,7 @@ export async function publishExplainer({
 
 const hasControlCharacter = (value) => [...String(value)].some((char) => char.charCodeAt(0) < 32);
 
+/** @param {Record<string, any>} [input] */
 export async function createObsidianProject({ cwd = process.cwd(), project, title = project } = {}) {
 	validateProject(project);
 	const config = await loadWorkspaceConfig(cwd);
@@ -550,6 +552,7 @@ function zoteroCitekey(value) {
 	return key;
 }
 
+/** @param {Record<string, any>} [input] */
 export async function depositKnowledge({
 	cwd = process.cwd(),
 	project,
@@ -735,6 +738,7 @@ export async function resolveObsidianRuntime({
 		const path = args[0];
 		return typeof path === "string" ? { path: resolve(root, path), command: entry.command } : null;
 	};
+	/** @type {any[]} */
 	const candidates = [];
 	if (server) candidates.push({ path: resolve(cwd, server), command: existing?.command });
 	else {

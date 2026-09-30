@@ -27,6 +27,7 @@ function fileStem(resultSlug, title) {
 	return value || "research-topic";
 }
 
+/** @param {Record<string, any>} [input] */
 export function autoTopicCandidate({ summary, query, resultSlug, sourcePaths = [] } = {}) {
 	const markdown = String(summary || "").trim();
 	if (markdown.length < 160) return { eligible: false, reason: "summary-too-short" };

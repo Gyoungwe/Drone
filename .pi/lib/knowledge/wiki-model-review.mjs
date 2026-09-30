@@ -68,6 +68,7 @@ function validateReview(data, paths) {
 	};
 }
 /** User-invoked foreground review of ONE exact preview. No background sweep or model approval tool. */
+/** @param {any} input @param {Record<string, any>} options */
 export async function reviewWikiWithModel(input, { evaluate, check, signal, progress = () => {} }) {
 	if (input?.acknowledged !== true || typeof input.autoApply !== "boolean")
 		throw new Error(
