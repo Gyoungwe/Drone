@@ -13,6 +13,8 @@ import type {
 	SessionMessage,
 	SessionMeta,
 } from "@drone/shared";
+import { LanContract } from "@drone/shared";
+import { Check } from "typebox/value";
 import { LanAuditLog } from "./audit";
 import type { LanConfigService } from "./config";
 import {
@@ -271,7 +273,11 @@ export class LanObserverServer {
 		// Host API LanContract.getStatus projection. This remains a read-only
 		// GET route; observer/control toggles are desktop IPC methods only.
 		if (path === "/api/status") {
-			this.sendJson(res, 200, this.status());
+			const status = this.status();
+			if (!Check(LanContract.methods.getStatus.result, status)) {
+				return this.sendJson(res, 500, { error: "invalid status projection" });
+			}
+			this.sendJson(res, 200, status);
 			return;
 		}
 		if (path === "/api/snapshot") {

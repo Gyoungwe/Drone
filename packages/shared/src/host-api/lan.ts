@@ -1,8 +1,8 @@
-import { Type } from "typebox";
-import type { LanStatus } from "../lan";
+import { type Static, Type } from "typebox";
 import { defineDomain } from "./define";
 
-const LanStatusSchema = Type.Object(
+/** Shared LAN observer status returned by desktop IPC and the read-only HTTP projection. */
+export const LanStatusSchema = Type.Object(
 	{
 		enabled: Type.Boolean(),
 		port: Type.Union([Type.Integer({ minimum: 1 }), Type.Null()]),
@@ -13,6 +13,9 @@ const LanStatusSchema = Type.Object(
 	},
 	{ additionalProperties: false },
 );
+
+/** TypeScript view derived from the runtime Host API schema. */
+export type LanStatus = Static<typeof LanStatusSchema>;
 
 /**
  * LAN observer host API. The status projection is safe for a read-only LAN

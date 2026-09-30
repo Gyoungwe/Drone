@@ -1,9 +1,9 @@
 import type { AskRequest, AskResponse } from "./ask";
 import type { DiagnosticsSnapshot } from "./diagnostics";
+import type { LanStatus } from "./host-api/lan";
 import type { SessionsApi } from "./host-api/sessions";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
-import type { LanStatus } from "./lan";
 import type { McpConfigSnapshot, McpStatus, McpStatusEvent } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "./packages";
 import type {

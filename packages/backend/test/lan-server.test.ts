@@ -185,6 +185,18 @@ describe("LanObserverServer", () => {
 		expect((await post(`http://127.0.0.1:${port}/api/status`, {})).status).toBe(404);
 	});
 
+	it("rejects a status projection that violates LanContract at runtime", async () => {
+		const server = await start();
+		const originalStatus = server.status.bind(server);
+		(server as unknown as { status: () => unknown }).status = () => ({
+			...originalStatus(),
+			clients: -1,
+		});
+		const response = await request(`http://127.0.0.1:${server.status().port}/api/status?t=${token}`);
+		expect(response.status).toBe(500);
+		expect(JSON.parse(response.text)).toEqual({ error: "invalid status projection" });
+	});
+
 	it("stream handshake carries retry hint and named ping heartbeat (client watchdog relies on it)", async () => {
 		const server = await start(0, backend(), { pingMs: 50 });
 		const port = server.status().port;

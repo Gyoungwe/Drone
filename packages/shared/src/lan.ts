@@ -11,21 +11,6 @@ export interface LanObserverConfig {
 	remoteControl: boolean;
 }
 
-/** 局域网观察服务的运行状态（供设置页显示）。 */
-export interface LanStatus {
-	enabled: boolean;
-	/** 实际监听端口；未监听时为 null。 */
-	port: number | null;
-	/** 各网卡 IPv4 的完整观察 URL（含 token）。 */
-	urls: string[];
-	/** 首选 URL 的二维码 data URL。 */
-	qrDataUrl: string | null;
-	/** 当前 SSE 连接数。 */
-	clients: number;
-	/** M2 远程控制开关运行态（客户端据此显隐 composer/审批按钮）。 */
-	remoteControl: boolean;
-}
-
 /** 会话列表项；历史会话只暴露此投影，不提供详情。 */
 export interface LanSessionBrief {
 	sessionId: string;

@@ -57,7 +57,7 @@
   - [x] subagents：面板列表、派发、中止与运行记录均通过 `SubagentsContract` + `bindContract` 注册；保留既有 `subagents:*` 通道、renderer 调用形状，并为运行记录增加严格 TypeBox 校验。
 - [ ] **A2-4 LAN 复用契约**：`lan/server.ts` 把 `access: "lan-read"` 的方法暴露为 GET，事件走现有 SSE（保留命名事件 `ping` 心跳，见 PITFALLS）；删除 `shared/lan.ts` 中和契约重复的类型。验收：`lan-server`、`lan-projector`、`lan-sanitize` 测试通过；LAN 仍然是 GET-only（加一条断言）。
   - [x] 桌面端 `lan:getStatus`、`lan:setEnabled`、`lan:setRemoteControl` 已迁移到 `LanContract` + `bindContract`；`getStatus` 标记 `lan-read`，控制开关保持 desktop-only。
-  - [x] LAN HTTP 增加鉴权 `GET /api/status`，复用 `LanContract.getStatus` 的结果形状；SSE 保留现有命名 `ping` 心跳，未增加 LAN 写端点。
+  - [x] LAN HTTP 增加鉴权 `GET /api/status`，复用 `LanContract.getStatus` 的结果形状并在服务端执行运行时 schema 校验；`LanStatus` 从契约 `LanStatusSchema` 推导，SSE 保留现有命名 `ping` 心跳。
 - [ ] **A2-5 插件 Host API 清单化**：`renderer/src/plugins/host-api.manifest.ts` 作为唯一来源，生成 `host-api.ts` 的导出表、`env.d.ts`、`main/ui-plugins/build.ts` 的 SHIM、`resources/ui-plugins/drone-ui.d.ts`（脚本放在 `packages/desktop/scripts/gen-plugin-api.mjs`，产物提交进仓库，CI 检查是否与清单一致）。验收：新增一个 hook 只需改清单一处再运行生成脚本；`registry.test.ts` 通过。
 
 ## A3 · 拆分 PiBackend
