@@ -41,8 +41,8 @@ const CONTRACT_CHANNELS = {
 
 /**
  * Register every session method through the schema-backed host contract.
- * Renderer method names and legacy channel names remain unchanged; only the
- * transport registration moved away from INVOKE_ROUTES/registerInvokers.
+ * Renderer method names and legacy channel names remain unchanged while
+ * transport registration is kept behind the schema-backed binder.
  */
 export function registerSessionsIpc(backend: PiBackend): void {
 	const implementation = Object.fromEntries(

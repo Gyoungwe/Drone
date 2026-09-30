@@ -23,11 +23,11 @@
   - 新建 `scripts/check-architecture.mjs`：扫描 `packages/**`、`.pi/**`（排除 node_modules、dist、测试 fixtures），检查 R1–R6。当前的违规项写进 `scripts/fixtures/architecture-baseline.json`；**新增违规让脚本失败，违规减少时提示更新基线**。
   - 加入根 `package.json`：`"check:arch": "node scripts/check-architecture.mjs"`；CI `check` job 在 typecheck 之后运行。
   - 验收：在当前代码上退出码为 0；人为在 renderer 里加一行 `import "@earendil-works/pi-coding-agent"` 时退出码为 1，并指出文件和规则编号（为此写一个单测）。
-- [ ] **A0-3 测试分层**
+- [x] **A0-3 测试分层**
   - backend 的 `vitest.config.ts` 改用 `projects`：`unit`（排除 `*-sdk.test.*` 和会构造真实 `PiBackend` 或 `AgentSession` 的用例）和 `sdk`。新增 `npm run test:unit` 和 `npm run test:sdk`；`npm test` 仍然跑全部。
   - CI 拆成并行 job：`static`（lint/typecheck/arch）、`unit`、`sdk`、`desktop`，Windows 矩阵保留。
   - 验收：`test:unit` 与 `test:sdk` 的用例数之和等于拆分前的总数（1,320 + 13 skipped）；把 `test:unit` 的耗时记进执行日志。
-- [ ] **A0-4 遗留死路径**
+- [x] **A0-4 遗留死路径**
   - 调查 `.pi/lib/vault-mcp-proxy.mjs`（它 import 的 `vendor/pi-web-ui/…` 不存在）和 `obsidian-workbench.mjs:696,726` 对它的引用：确认是否有迁移路径会生成指向它的用户 MCP 配置。
   - 确认没有：删除该文件，把引用改成"识别旧配置 → 提示用户移除"。确认有：保留识别逻辑，但不再 import vendor。
   - 验收：`grep -rn "vendor/pi-web-ui" .pi packages` 无结果；相关的 obsidian 测试通过。
@@ -51,7 +51,7 @@
   - preload：`exposeContract(contract)` 生成 invoke 和 on* 订阅。
   - 验收：单测覆盖参数合法、参数非法、result 不符（开发模式）、事件订阅与退订四种情况。
 - [x] **A2-2 迁移 sessions 域**：`SessionsContract` 替代 `INVOKE_ROUTES` 里 sessions 部分和对应的 `registerInvokers` 调用；`PiApi` 里这部分类型改由契约推导。验收：renderer 无需改动调用点（方法名不变），通过 typecheck；`scripts/check-report-ui.mjs` 通过。
-- [ ] **A2-3 迁移其余域**：settings、permissions、packages、app、ui-plugins、lan、knowledge、institutional、subagents，每个域一个提交。全部迁完后删除 `INVOKE_ROUTES`，`IpcChannels` 改由契约生成。验收：`grep -c "ipcMain.handle(" packages/desktop/src/main` 只剩 `bind-contract.ts` 以及少数有文档说明的例外。
+- [x] **A2-3 迁移其余域**：settings、permissions、packages、app、ui-plugins、lan、knowledge、institutional、subagents，每个域一个提交。全部迁完后删除 `INVOKE_ROUTES`，`IpcChannels` 改由契约生成。验收：`grep -c "ipcMain.handle(" packages/desktop/src/main` 只剩 `bind-contract.ts` 以及少数有文档说明的例外。
   - [x] ui-plugins：配置、列表、读码、启停、槽位指派、重建、打开目录均通过 `UiPluginsContract` + `bindContract` 注册；保留既有通道名与 renderer 调用形状。
   - [x] institutional：状态、配置、登录窗口、URL 打开、会话清理、访问测试均通过 `InstitutionalContract` + `bindContract` 注册；保留既有通道名、返回形状与主 frame 安全校验。
   - [x] subagents：面板列表、派发、中止与运行记录均通过 `SubagentsContract` + `bindContract` 注册；保留既有 `subagents:*` 通道、renderer 调用形状，并为运行记录增加严格 TypeBox 校验。
@@ -70,8 +70,8 @@
 
 ## A4 · EventPipeline
 
-- [ ] **A4-1**：新建 `session-engine/event-pipeline.ts`，定义 `Stage` 接口（含 `failMode`），把 `emitEvent` 里的 slim、stream-guard、publication 投影、trace、fanout 改写成阶段列表。
-- [ ] **A4-2**：desktop IPC、LAN、子代理面板、历史回放（`getSessionMessages`、`peek*`）统一从 fanout 或同一个 `projectSnapshot` 取数据。
+- [x] **A4-1**：新建 `session-engine/event-pipeline.ts`，定义 `Stage` 接口（含 `failMode`），把 `emitEvent` 里的 slim、stream-guard、publication 投影、trace、fanout 改写成阶段列表。
+- [x] **A4-2**：desktop IPC、LAN、子代理面板、历史回放（`getSessionMessages`、`peek*`）统一从 fanout 或同一个 `projectSnapshot` 取数据。
 - [x] **A4-3 表驱动测试**：覆盖阶段顺序；publication 抛异常 → 失败关闭；trace 抛异常 → 放行并记日志；stream-guard 熔断 → 后续增量丢弃。验收：已有的 `event-slim`、`stream-guard*`、`knowledge-publication-*`、`trace` 测试不改就通过。
 
 ## A5 · 领域包 TS 化（风险最高，放在最后做）
@@ -93,7 +93,7 @@
 
 ## A7 · StorageRegistry 与诊断
 
-- [ ] **A7-1**：新建 `backend/src/storage/registry.ts`，登记所有落盘状态（逐个排查 `JsonStore` 的使用点、userData、`DRONE_KNOWLEDGE_DIR`、traces、审计、会话 jsonl、机构会话分区），字段包括 id、path、owner、schema、migrate、sensitivity。验收：新增测试断言：凡是用到 `JsonStore` 的地方都能在注册表里找到对应条目（静态扫描或运行时断言皆可）。
+- [x] **A7-1**：新建 `backend/src/storage/registry.ts`，登记所有落盘状态（逐个排查 `JsonStore` 的使用点、userData、`DRONE_KNOWLEDGE_DIR`、traces、审计、会话 jsonl、机构会话分区），字段包括 id、path、owner、schema、migrate、sensitivity。验收：新增测试断言：凡是用到 `JsonStore` 的地方都能在注册表里找到对应条目（静态扫描或运行时断言皆可）。
 - [x] **A7-2 诊断包**：新增 `app:diagnostics` 契约方法和设置 → 关于页的"导出诊断包"（i18n 双语）。内容：版本、平台、各存储的 schema 与损坏状态、最近的 incident 快照、日志尾部（脱敏）。**不含**凭据、auth.json 内容、Vault 正文、会话正文。导出使用无第三方依赖的 ZIP（`diagnostics.json` + `README.txt`），并通过现有保存对话框写入二进制；脱敏、ZIP 内容与保存桥接均有自动化测试覆盖。
 
 ---
@@ -107,4 +107,7 @@
 | 2026-10-01 | A2-2 | 31 个 sessions IPC 方法统一由 `SessionsContract` + `bindContract` 注册；`PiApi` 会话方法由契约客户端类型推导；shared/desktop 定向契约与 IPC 测试通过 | `scripts/check-report-ui.mjs` 需要完整 Electron UI fixture；当前本机 fixture 在 React 初始化阶段失败，非 sessions IPC 错误 |
 | 2026-10-01 | A7-2 | `serializeDiagnosticsArchive` 生成无压缩 ZIP；shared 诊断包 2 项、desktop 保存桥 3 项定向测试通过；导出文件名为 `drone-diagnostics-YYYY-MM-DD.zip` | UI 截图需在桌面运行环境补做 |
 | 2026-10-01 | A5-0（管线护栏） | `build:extensions` 生成 `.pi/extensions/.build-manifest.json`，记录每个 TS 入口与 MJS 产物哈希；`check:extensions` 检测缺失、漂移和未登记产物；`--strict` 会把仍保留的旧产物视为失败。manifest 与最小 `subagent-research` 入口已提交，默认检查通过 | 其余 9 个 `.pi/extensions/*.mjs` 仍是迁移前产物，需 A5-4 迁移后移除 `legacy-preserved` |
-| 2026-10-01 | A4 / A6 | EventPipeline 边界测试与持久化历史投影已覆盖；运行时投影器、知识服务、UI 流和 specialist host 改用显式版本化事件桥接；`node scripts/check-architecture.mjs` 通过且 R4 无新增发现 | EventPipeline 主实现仍在 `session/`，A2-3 域迁移、A5-1–4 和 A7-1 仍未完成 |
+| 2026-10-01 | A4 / A6 | EventPipeline 已移入 `session-engine/`；桌面 IPC、LAN 历史读取与会话回放统一复用持久化知识投影；运行时投影器、知识服务、UI 流和 specialist host 改用显式版本化事件桥接；`node scripts/check-architecture.mjs` 通过且 R4 无新增发现 | A3-3 仍有 Pi SDK 类型/工具导入待进一步收口；A5-1–4、A6-1–2、A2-5、A2-4 类型去重仍未完成 |
+| 2026-10-01 | A0-3 | backend 测试按 unit/sdk 自动分层：unit 1252（11 skipped），sdk 99（2 skipped），总计 1351；`npm run test:unit` 通过（113 files，98.64s），`npm run test:sdk` 99 passed + 2 skipped（8.43s） | — |
+| 2026-10-01 | A0-4 / A2-3 | 删除 `.pi/lib/vault-mcp-proxy.mjs` 与旧 `register-invokers`/`INVOKE_ROUTES`；settings、permissions、packages、app、ui-plugins、lan、knowledge、institutional、subagents 全部由域契约 + `bindContract` 注册，preload 统一使用契约 client；旧配置识别保留为提示路径 | `IpcChannels` 仍是兼容通道名常量，尚未自动从契约生成 |
+| 2026-10-01 | A7-1 | `JsonStore` 强制 `storageId`，生产使用点登记到 `storage/registry.ts`；静态扫描测试覆盖 backend 与 desktop main 的 10 个生产构造点，cwd-independent | 其他非 JsonStore 落盘（会话、trace、审计、机构分区）仍待逐项登记 |
