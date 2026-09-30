@@ -14,6 +14,12 @@ const manifestPath = new URL("./src/renderer/src/plugins/host-api.manifest.ts", 
 const outputPath = new URL("./src/main/ui-plugins/plugin-api-shim.generated.ts", root);
 
 const manifestSource = await readFile(manifestPath, "utf8");
+const projectionPaths = [
+	new URL("./src/renderer/src/plugins/host-api.ts", root),
+	new URL("./src/renderer/src/plugins/env.d.ts", root),
+	new URL("./resources/ui-plugins/drone-ui.d.ts", root),
+];
+const projectionSources = await Promise.all(projectionPaths.map((path) => readFile(path, "utf8")));
 
 function readNames(namespace) {
 	const match = new RegExp(`${namespace}:\\s*\\[([\\s\\S]*?)\\]`).exec(manifestSource);
@@ -28,6 +34,22 @@ const names = {
 	stores: readNames("stores"),
 	i18n: readNames("i18n"),
 };
+
+// These projections contain the executable host object, renderer declaration,
+// and CLI/plugin declaration. Keep the manifest genuinely single-source by
+// failing when a declared public name is missing from any projection.
+const projectionMissing = [];
+for (const [namespace, namespaceNames] of Object.entries(names)) {
+	for (const name of namespaceNames) {
+		for (const [index, source] of projectionSources.entries()) {
+			if (!new RegExp(`\\b${name.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b`).test(source))
+				projectionMissing.push(`${namespace}.${name} in ${projectionPaths[index].pathname}`);
+		}
+	}
+}
+if (projectionMissing.length > 0) {
+	throw new Error(`Plugin host API manifest drift:\\n${projectionMissing.join("\\n")}`);
+}
 
 const shim = [
 	"const A = window.DroneUI;",
