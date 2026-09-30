@@ -34,7 +34,7 @@ Drone 的产品语义已经相当成熟，但代码结构还停在"一个 TS 宿
 
 现有设计里做对了、要保留的东西：
 
-- 单点 import Pi SDK（`pi-backend.ts`，钉 0.84.3）
+- Pi SDK 运行时值导入收敛到会话引擎边界（`session-engine/sdk.ts`，钉 0.84.3）；`PiBackend` 保留兼容门面
 - renderer 不碰 SDK
 - `INVOKE_ROUTES` 已经收敛了一部分 IPC 样板
 - 五个扩展挂钩（`docs/extension-hooks.md`）已经去掉了硬编码的工具/技能表
@@ -157,7 +157,7 @@ packages/
 
 | 规则 | 说明 |
 |---|---|
-| R1 | 运行时 import `@earendil-works/pi-*` 只允许出现在 `backend/src/session-engine/**`（现 `pi-backend.ts`）和少数白名单文件；其他地方只能 `import type` |
+| R1 | 运行时 import `@earendil-works/pi-*` 只允许出现在 `backend/src/session-engine/**`（值导出集中于 `session-engine/sdk.ts`）；其他地方只能 `import type` |
 | R2 | 领域包（knowledge/tasks/research）不得 import `electron`、Pi SDK 运行时、`@drone/backend`、`@drone/desktop` |
 | R3 | renderer 与 lan-web 只能 import `@drone/shared` |
 | R4 | 禁止新增 `Symbol.for("drone.…")`（迁移期白名单只减不增） |

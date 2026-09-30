@@ -82,6 +82,7 @@
 - [x] **A5-0 打包管线**：`npm run build:extensions` 从 `packages/extensions/src/*.ts` 输出 `.pi/extensions/*.mjs`；`electron-builder.yml` 的 extraResources 不变（仍然复制 `.pi/extensions`）；`.pi/lib` 在迁移期继续复制。产物是否提交进 git 需要决策：推荐**提交**，保证 CLI 用户 `git clone` 后直接可用，CI 检查产物和源码一致。在 `docs/DECISIONS` 或本文执行日志里记录决定。
   - 验收：先用一个最小扩展（`subagent-research`）走通全流程；`check-knowledge-package.mjs`、`check-research-packaging.cjs` 通过；在 CLI 模式下 `.pi/settings.json` 能加载。
 - [ ] **A5-1 @drone/knowledge**：把 `.pi/lib/knowledge/*` 迁到 `packages/knowledge/src/*.ts`（先 `git mv` 移动文件，再改成 TS）。worker（`worker.mjs`）单独作为一个构建入口。55 个后端测试的 import 从 `.pi/lib/...` 改为 `@drone/knowledge`。验收：§5 不变量 1–3 相关测试全部通过；`scripts/benchmark-knowledge.mjs` 和 `benchmark-semantic.mjs` 能运行，结果量级与迁移前一致（把数字记进执行日志）。
+  - [x] claim-conflicts：新增 `@drone/knowledge` TS 包入口与强类型 `compareClaims` / `compareClaimSets`，包内 3 个测试及后端迁移测试 3 个通过；`.pi/lib/knowledge/claim-conflicts.mjs` 暂作运行时兼容实现。
 - [ ] **A5-2 @drone/tasks**：`.pi/lib/tasks/*` 迁移。验收：全部 `task-*` 测试通过，包括 `example-tasks-one-authorization-sdk.test.mjs`。
 - [ ] **A5-3 @drone/research**：source-archive、open-access、zotero-*、institutional-access、literature-*、run-provenance、research-receipt-journal 等迁移。验收：`zotero-*`、`source-archive-*`、`institutional`、`literature-*` 测试通过。
 - [ ] **A5-4 扩展适配层**：`.pi/extensions/*.mjs` 的源码移到 `packages/extensions/src/`，只保留参数映射和注册逻辑，领域逻辑全部调用领域包。`runner.ts` 里两处 `../../../../../.pi/…` 改为包引用或构建产物的解析函数。验收：R5 基线清零；`.pi/lib` 从 extraResources 移除后，打包冒烟通过。
@@ -114,3 +115,4 @@
 | 2026-10-01 | A7-1 | `JsonStore` 强制 `storageId`，生产使用点登记到 `storage/registry.ts`；静态扫描测试覆盖 backend 与 desktop main 的 10 个生产构造点，cwd-independent | 其他非 JsonStore 落盘（会话、trace、审计、机构分区）仍待逐项登记 |
 | 2026-10-01 | A3 | `createBackend` 组合根显式暴露 runtime、sessionEngine、settings/models/login/mcp/packages/knowledge 服务；PiBackend 继续作为兼容门面，session 生命周期已由 SessionEngine 承接 | approvals、permissions/trust、subagents、zotero/institutional 等域仍待抽离，A3 总项未勾选 |
 | 2026-10-01 | A3-3 / A6 | 生产后端 Pi SDK 值导入统一经 `session-engine/sdk.ts`，架构检查 R1 生产基线清零；ZoteroService 已接入组合根；研究循环、Zotero、source archive 的运行时状态和串行队列改为 host runtime 注入与 scheduler | PiBackend 门面及 approvals/permissions/trust/subagents/institutional 等域仍待拆出；其余 legacy 扩展 singleton 与 CLI runtime 注入仍待完成 |
+| 2026-10-01 | A5-1 增量 | `@drone/knowledge` 承载 claim-conflicts 强类型实现；包 typecheck 通过，包内 3/3 与后端迁移测试 3/3 通过 | 其余 knowledge 模块、worker 与 benchmark 尚未迁移；旧 `.pi/lib` 实现保留为运行时兼容层 |

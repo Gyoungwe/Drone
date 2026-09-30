@@ -7,7 +7,7 @@
 ## 硬约束（改代码前必知）
 
 - renderer 绝不 import pi 包，只经 `window.pi`（preload）通信
-- `packages/backend/src/pi-backend.ts` 是唯一 import pi SDK 的地方（钉 0.84.3）
+- Pi SDK 运行时值导入统一收敛在 `packages/backend/src/session-engine/**`（钉 0.84.3）；`pi-backend.ts` 仍是兼容门面
 - 新增 IPC 四处同步：`shared/src/ipc.ts` → `desktop/src/preload/index.ts` → `main/ipc/`（按域选文件）→ backend；事件转发在 `main/ipc/index.ts`
 - preload 必须保持 CJS（sandbox 限制，见 PITFALLS）
 - 新增 UI 文案：`i18n/zh.ts` + `en.ts` 双字典都要加
@@ -25,12 +25,13 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，4 个包：
+npm workspaces monorepo，5 个包：
 
 ```
 packages/
 ├── shared/     IPC 契约层（纯类型 + 通道常量，三方共享）
 ├── backend/    纯 Node；pi SDK 适配层
+├── knowledge/  知识领域纯函数与 claim 合约（TS 包，迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
 ```
 
@@ -89,9 +90,13 @@ packages/
 | Observability | `shared/src/transcript/run-inspector.ts` + Desktop/LAN `RunInspector` | retrieval counts/fallbacks, public specialist stop reasons, actual read paths; no private chain-of-thought |
 | Release gates | `scripts/{benchmark-semantic,stress-knowledge,check-upgrade-release,check-packaged-desktop}.mjs` | synthetic stress, production-pipeline benchmark, consolidated gate, isolated packaged-app smoke |
 
+## packages/knowledge — 知识领域包（迁移中）
+
+`@drone/knowledge` 目前承载无 SDK 依赖的 claim 冲突比较合约：`src/claim-conflicts.ts` 导出 `compareClaims` 与 `compareClaimSets`，供 backend 和后续 knowledge 迁移复用。运行时仍从 `.pi/lib/knowledge/claim-conflicts.mjs` 加载兼容实现；其余 knowledge 模块按 A5-1 分阶段迁移。
+
 ## packages/backend — pi SDK 适配层
 
-纯 Node，不依赖 Electron。唯一 import pi SDK 的包，import 收敛在 `pi-backend.ts`。
+纯 Node，不依赖 Electron。唯一 import pi SDK 的包，运行时值导入收敛在 `session-engine/**`；`pi-backend.ts` 保留兼容门面。
 
 ```
 src/
