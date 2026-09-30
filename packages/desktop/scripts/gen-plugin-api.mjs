@@ -27,6 +27,22 @@ function readNames(namespace) {
 	return [...match[1].matchAll(/"([^"]+)"/g)].map((item) => item[1]);
 }
 
+function projectionNames(source, namespace, declaration) {
+	const open = declaration === "drone" ? `export const ${namespace}:\\s*\\{` : `${namespace}:\\s*\\{`;
+	// Namespace blocks are deliberately shallow in all three projections. The
+	// first expression handles multiline blocks; the fallback covers the
+	// renderer's compact `i18n: { registerMessages: ... }` object.
+	const block =
+		new RegExp(`${open}([\\s\\S]*?)\\n\\s*\\}\\s*[,;]?`).exec(source) ??
+		new RegExp(`${open}([^}]*)\\}`).exec(source);
+	if (!block) throw new Error(`Plugin host API projection is missing ${namespace} (${declaration})`);
+	const firstProperty = /^([ \t]*)\S/m.exec(block[1]);
+	const indent = firstProperty?.[1] ?? "";
+	const escapedIndent = indent.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const property = new RegExp(`^${escapedIndent}([A-Za-z_$][\\w$]*)\\s*(?::|\\(|,)`, "gm");
+	return [...block[1].matchAll(property)].map((item) => item[1]);
+}
+
 const names = {
 	components: readNames("components"),
 	helpers: readNames("helpers"),
@@ -37,13 +53,21 @@ const names = {
 
 // These projections contain the executable host object, renderer declaration,
 // and CLI/plugin declaration. Keep the manifest genuinely single-source by
-// failing when a declared public name is missing from any projection.
+// failing when a declared public name is missing, or an undeclared name is
+// added, in any projection.
 const projectionMissing = [];
+const projectionKinds = ["host", "env", "drone"];
 for (const [namespace, namespaceNames] of Object.entries(names)) {
-	for (const name of namespaceNames) {
-		for (const [index, source] of projectionSources.entries()) {
-			if (!new RegExp(`\\b${name.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b`).test(source))
-				projectionMissing.push(`${namespace}.${name} in ${projectionPaths[index].pathname}`);
+	const expected = new Set(namespaceNames);
+	for (const [index, source] of projectionSources.entries()) {
+		const actual = new Set(projectionNames(source, namespace, projectionKinds[index]));
+		for (const name of namespaceNames) {
+			if (!actual.has(name))
+				projectionMissing.push(`${namespace}.${name} missing in ${projectionPaths[index].pathname}`);
+		}
+		for (const name of actual) {
+			if (!expected.has(name))
+				projectionMissing.push(`${namespace}.${name} is undeclared in ${projectionPaths[index].pathname}`);
 		}
 	}
 }
