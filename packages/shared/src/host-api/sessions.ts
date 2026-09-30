@@ -71,7 +71,10 @@ export const SessionsContract = defineDomain("sessions", {
 			access: "desktop",
 		},
 		list: {
-			args: Type.Tuple([Type.Optional(Type.String({ minLength: 1 }))]),
+			// TypeBox 1.3 keeps tuple minItems=1 even when the only item is
+			// optional; model the zero/one argument forms explicitly so the
+			// contract accepts the existing listSessions() call site.
+			args: Type.Union([Type.Tuple([]), Type.Tuple([Type.String({ minLength: 1 })])]),
 			result: Type.Array(Type.Unsafe<SessionMeta>(SessionMetaSchema)),
 			access: "lan-read",
 		},

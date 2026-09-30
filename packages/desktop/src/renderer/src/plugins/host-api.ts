@@ -19,6 +19,7 @@ import { useTranscriptStore } from "../stores/transcript";
 import { useUiStore } from "../stores/ui";
 import { useUiPreferencesStore } from "../stores/ui-preferences";
 import type { DroneUiApi } from "./env";
+import { PLUGIN_HOST_API_MANIFEST } from "./host-api.manifest";
 
 /**
  * 宿主 API：把宿主能力挂到 window.DroneUI（插件运行时的唯一入口，与宿主共享同一 React 实例）。
@@ -27,7 +28,7 @@ import type { DroneUiApi } from "./env";
  * main.tsx 在 render 前 import 本模块（副作用挂载），确保任何插件代码运行前已就绪。
  */
 window.DroneUI = {
-	version: 1,
+	version: PLUGIN_HOST_API_MANIFEST.version,
 	// 完整命名空间对象（不是具名导入）：保证插件拿到与宿主同一实例
 	React,
 	jsxRuntime,

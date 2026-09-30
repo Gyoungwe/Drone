@@ -44,8 +44,10 @@ describe("registerSessionsIpc", () => {
 
 		expect(await create({}, { cwd: "/tmp/project" })).toMatchObject({ sessionId: "s1" });
 		expect(await list({}, "/tmp/project")).toEqual([]);
+		expect(await list({})).toEqual([]);
 		expect(createSession).toHaveBeenCalledWith({ cwd: "/tmp/project" });
 		expect(listSessions).toHaveBeenCalledWith("/tmp/project");
+		expect(listSessions).toHaveBeenCalledWith();
 		expect(mocks.handlers.has("sessions:create")).toBe(false);
 		expect(mocks.handlers.has(IpcChannels.SessionOpen)).toBe(true);
 	});
