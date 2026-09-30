@@ -50,10 +50,15 @@ async function walk(dir, files = []) {
 	return files;
 }
 
-function isRuntimeImport(line) {
+function isRuntimeImport(line, text, offset) {
 	// `import type ...` is explicitly permitted. Mixed imports are runtime
 	// imports because their value bindings still execute at runtime.
-	return !/^\s*import\s+type\b/.test(line);
+	if (/^\s*import\s+type\b/.test(line)) return false;
+	// Multiline type imports match on their closing `from` line. Look back to
+	// the start of that import so the guard does not classify them as runtime
+	// dependencies.
+	const start = Math.max(0, text.lastIndexOf("import", offset));
+	return !/\bimport\s+type\b/.test(text.slice(start, offset));
 }
 
 function scanFile(file, text, findings) {
@@ -69,7 +74,7 @@ function scanFile(file, text, findings) {
 	for (const match of text.matchAll(sdkRe)) {
 		const offset = match.index ?? 0;
 		const line = lines[lineNumber(text, offset) - 1] || "";
-		if (!isRuntimeImport(line)) continue;
+		if (!isRuntimeImport(line, text, offset)) continue;
 		const specifier = match.slice(1).find(Boolean);
 		const allowed = rel.startsWith("packages/backend/src/session-engine/");
 		if (!allowed) addFinding(findings, "R1", file, lineNumber(text, offset), `runtime import ${specifier}`);

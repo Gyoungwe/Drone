@@ -16,9 +16,9 @@ import {
 	type SubagentResultRecord,
 	subagentResultRecordFromUnknown,
 } from "@drone/shared";
-import type { AgentSession } from "@earendil-works/pi-coding-agent";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { PermissionGate, type PermissionRequestMeta } from "../../permissions/gate";
+import type { AgentSession } from "../../session-engine/sdk";
+import { getAgentDir } from "../../session-engine/sdk";
 import { discoverAgents as discoverAgentsDefault, type SubagentDefinition } from "./agents";
 import {
 	assertSubagentTools,

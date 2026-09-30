@@ -18,7 +18,7 @@ import {
 	subagentRunDataFromPanelRun,
 	taskStatusDisplay,
 } from "@drone/shared";
-import { parseSessionEntries, type SessionEntry, type SessionManager } from "@earendil-works/pi-coding-agent";
+import { parseSessionEntries, type SessionEntry, type SessionManager } from "../session-engine/sdk";
 
 /**
  * pi 消息 → 中立 SessionMessage 的纯函数集（历史回放 / fork / recall / 导出共用）。

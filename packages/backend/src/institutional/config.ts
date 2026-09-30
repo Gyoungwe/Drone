@@ -4,9 +4,9 @@ import {
 	type InstitutionalConfig,
 	type InstitutionalSaveInput,
 } from "@drone/shared";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
+import { getAgentDir } from "../session-engine/sdk";
 
 const log = createLogger("institutional");
 

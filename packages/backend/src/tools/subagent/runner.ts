@@ -5,25 +5,25 @@ import { join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { PROTECTED_KNOWLEDGE_AGENTS } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
-import type {
-	AgentSessionEvent,
-	AgentToolResult,
-	ModelRuntime,
-	ToolDefinition,
-} from "@earendil-works/pi-coding-agent";
-import {
-	createAgentSession,
-	DefaultResourceLoader,
-	getAgentDir,
-	SessionManager,
-	SettingsManager,
-} from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
 import { projectKnowledgeEvent } from "../../session/knowledge-publication";
 import type { SessionTraces } from "../../session/traces";
 import { makeUiContext } from "../../session/ui-context";
+import type {
+	AgentSessionEvent,
+	AgentToolResult,
+	ModelRuntime,
+	ToolDefinition,
+} from "../../session-engine/sdk";
+import {
+	createAgentSession,
+	DefaultResourceLoader,
+	getAgentDir,
+	SessionManager,
+	SettingsManager,
+} from "../../session-engine/sdk";
 import { globalToolManifest, ToolManifest } from "../manifest";
 import { makeSshTool } from "../ssh";
 import { makeStatusTool } from "../status";

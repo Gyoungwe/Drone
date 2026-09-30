@@ -6,7 +6,7 @@ import {
 	hasTrustRequiringProjectResources,
 	type ProjectTrustStore,
 	type ProjectTrustUpdate,
-} from "@earendil-works/pi-coding-agent";
+} from "../session-engine/sdk";
 
 /** 信任选项（含写 trust.json 所需的 updates；key 发给 renderer 展示） */
 export interface TrustOptionInternal {

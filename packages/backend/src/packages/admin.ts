@@ -1,5 +1,5 @@
-import { DefaultPackageManager, getAgentDir, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { type PackageManager, PackageService, type PackageServiceDependencies } from "../services/packages";
+import { DefaultPackageManager, getAgentDir, SettingsManager } from "../session-engine/sdk";
 
 function createDefaultPackageManager(cwd: string): PackageManager {
 	return new DefaultPackageManager({
