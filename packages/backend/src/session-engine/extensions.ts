@@ -104,7 +104,9 @@ export function buildSessionExtensionFactories(
 		// Dynamic .pi extensions load before inline factories. They subscribe to this
 		// versioned event during initialization and receive the same host-owned runtime
 		// without a process-global Symbol bridge.
-		pi.events.emit("drone:runtime/v1", { version: 1, runtime: deps.runtime });
+		const announceRuntime = () => pi.events.emit("drone:runtime/v1", { version: 1, runtime: deps.runtime });
+		pi.events.on("drone:runtime/request/v1", announceRuntime);
+		announceRuntime();
 		pi.events.on("pi-mcp-adapter/status/v1", (payload) => {
 			if (!payload || typeof payload !== "object") return;
 			deps.setMcpStatus(cwd, payload as McpStatus);

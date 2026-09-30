@@ -192,6 +192,10 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 		if (payload?.version !== 1 || !payload.runtime || typeof payload.runtime !== "object") return;
 		publication.attachRuntime?.(payload.runtime);
 	});
+	// The host factory may run before or after dynamic extensions. A request
+	// handshake makes the runtime handoff order-independent without a global
+	// mutable bridge.
+	pi.events?.emit?.("drone:runtime/request/v1", { version: 1 });
 	pi.on("tool_result", async (event, ctx) => {
 		const guarded = guardResearchToolResult(event);
 		await feedback.observe({ ...event, ...guarded }, ctx);

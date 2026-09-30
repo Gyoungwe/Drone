@@ -16,6 +16,15 @@ const state = runtimeSlot(
 	}),
 	"drone.knowledge.specialists.v1",
 );
+const HOST_EVENT = "drone:knowledge-specialist-host/v1";
+const hostModule = {};
+process.on(HOST_EVENT, (payload) => {
+	if (!payload || payload.origin === hostModule || typeof payload.id !== "string") return;
+	if (payload.action === "register" && typeof payload.run === "function")
+		state.hosts.set(payload.id, payload.run);
+	if (payload.action === "unregister" && state.hosts.get(payload.id) === payload.run)
+		state.hosts.delete(payload.id);
+});
 export const SPECIALIST_LIMITS = Object.freeze({
 	maxRunsPerTurn: 4,
 	maxRunsPerSession: 20,
@@ -35,12 +44,15 @@ export const specialistQueueSnapshot = () => ({ active: state.active, queueLengt
 export function registerKnowledgeSpecialistHost(id, run) {
 	if (!id || typeof run !== "function") throw new Error("A specialist host requires a session identity");
 	state.hosts.set(id, run);
+	process.emit(HOST_EVENT, { action: "register", id, run, origin: hostModule });
 	return () => {
 		if (state.hosts.get(id) === run) state.hosts.delete(id);
+		process.emit(HOST_EVENT, { action: "unregister", id, run, origin: hostModule });
 	};
 }
 export function knowledgeSpecialistHost(ctx) {
-	return state.hosts.get(contextSessionId(ctx));
+	const id = contextSessionId(ctx);
+	return state.hosts.get(id);
 }
 export async function specialistSettings() {
 	const dir = knowledgeDirectory();

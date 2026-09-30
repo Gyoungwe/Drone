@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { runtimeSlot, withRuntime } from "../runtime-bridge.mjs";
+import { runtimeSlot } from "../runtime-bridge.mjs";
 import { diagnosticText } from "../tasks/failure-feedback.mjs";
 import { advisoryCodes, readReviewMode } from "./review-policy.mjs";
 import { publicationKnowledgeFlow, updateKnowledgeFlow } from "./ui-state.mjs";
@@ -253,20 +253,22 @@ export function registerAnswerPublication(
 		maxToolRounds = 24,
 	},
 ) {
-	let activeRuntime = null;
 	const attachRuntime = (next) => {
 		if (!next || typeof next !== "object" || !next.scheduler || !next.knowledge) return false;
-		activeRuntime = next;
 		const slot = next.knowledge.publication || {};
 		slot.proofs ??= new WeakSet();
-		slot.projectEvent = (event) => withRuntime(next, () => projectKnowledgeEvent(event));
-		slot.projectSnapshot = (messages, persisted) =>
-			withRuntime(next, () => projectKnowledgeSnapshot(messages, persisted));
+		// The publication instance owns its proof set and its knowledge-service
+		// turn state.  Keep these callbacks bound to that instance instead of
+		// switching the whole extension into the host runtime: doing so would
+		// create a second service/UI state and detach validation from the turn
+		// that prepared it.  The host runtime still receives an explicit bridge;
+		// no process-global mutable handoff is needed.
+		slot.projectEvent = (event) => projectKnowledgeEvent(event);
+		slot.projectSnapshot = (messages, persisted) => projectKnowledgeSnapshot(messages, persisted);
 		next.knowledge.publication = slot;
 		return true;
 	};
 	if (runtime) attachRuntime(runtime);
-	const inRuntime = (operation) => (activeRuntime ? withRuntime(activeRuntime, operation) : operation());
 	let turnId = null,
 		required = true,
 		started = false,
@@ -519,7 +521,7 @@ export function registerAnswerPublication(
 			return report(failure(message, error));
 		}
 	};
-	pi.on("message_end", (event, ctx) => inRuntime(() => handleMessageEnd(event, ctx)));
+	pi.on("message_end", (event, ctx) => handleMessageEnd(event, ctx));
 	return {
 		attachRuntime,
 		async recordDelivery(ctx, path) {

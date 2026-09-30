@@ -9,6 +9,29 @@ const state = runtimeSlot(
 	() => ({ listeners: new Set(), flows: new Map(), seq: 0 }),
 	"drone.knowledge.ui.v1",
 );
+// Dynamic Pi extensions and the bundled backend can load this module through
+// different ESM loaders.  Forward UI facts through a versioned process event so
+// both copies observe the same flow without a global Symbol registry.
+const UI_EVENT = "drone:knowledge-ui/v1";
+const uiModule = {};
+function deliverKnowledgeUi(value) {
+	if (value.kind === "flow" && value.flow?.sessionId) {
+		state.flows.set(value.flow.sessionId, structuredClone(value.flow));
+		while (state.flows.size > MAX_SESSIONS) state.flows.delete(state.flows.keys().next().value);
+	}
+	state.seq = Math.max(state.seq, Number(value.sequence) || 0);
+	for (const fn of state.listeners) {
+		try {
+			fn(structuredClone(value));
+		} catch {
+			/* a closed UI must not fail a read/write */
+		}
+	}
+}
+process.on(UI_EVENT, (payload) => {
+	if (!payload || payload.origin === uiModule || !payload.event) return;
+	deliverKnowledgeUi(payload.event);
+});
 const MAX_SESSIONS = 64,
 	MAX_RECORDS = 40;
 const sessionId = (ctx) => ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || null;
@@ -18,13 +41,8 @@ export function subscribeKnowledgeUi(listener) {
 }
 export function emitKnowledgeUi(event) {
 	const value = { ...event, sequence: ++state.seq };
-	for (const fn of state.listeners) {
-		try {
-			fn(structuredClone(value));
-		} catch {
-			/* a closed UI must not fail a read/write */
-		}
-	}
+	deliverKnowledgeUi(value);
+	process.emit(UI_EVENT, { event: value, origin: uiModule });
 	return value;
 }
 export function flowFor(id) {

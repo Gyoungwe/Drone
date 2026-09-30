@@ -11,6 +11,23 @@ import { readSemanticSettings, saveSemanticSettings } from "./semantic-settings.
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
 const pool = runtimeSlot("knowledge", "workerPool", () => new Map(), "drone.knowledge.worker-pool.v1");
+// The desktop host can load the .pi extension through a second ESM loader.  A
+// versioned request/response event shares the service object across those
+// module copies without reintroducing a Symbol-keyed global singleton.
+const SERVICE_EVENT = "drone:knowledge-service/v1";
+const serviceModule = {};
+process.on(SERVICE_EVENT, (payload) => {
+	if (!payload || payload.origin === serviceModule || typeof payload.key !== "string") return;
+	if ((payload.action === "register" || payload.action === "response") && payload.service) {
+		pool.set(payload.key, payload.service);
+		return;
+	}
+	if (payload.action === "request") {
+		const service = pool.get(payload.key);
+		if (service && !service.closed)
+			process.emit(SERVICE_EVENT, { action: "response", key: payload.key, service, origin: serviceModule });
+	}
+});
 const MAX_TICKETS = 128;
 
 function queueSemantic(key, task) {
@@ -814,8 +831,13 @@ export async function getKnowledgeService(binding = null) {
 	const key = `${directory}:${binding.vaultId}:${binding.revision}`;
 	let service = pool.get(key);
 	if (!service || service.closed) {
+		process.emit(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
+		service = pool.get(key);
+	}
+	if (!service || service.closed) {
 		service = new KnowledgeService(binding, directory);
 		pool.set(key, service);
+		process.emit(SERVICE_EVENT, { action: "register", key, service, origin: serviceModule });
 		// Old in-flight writers keep their pinned Vault; never redirect them into a newly bound Vault.
 		const idle = [...pool].filter(([other, value]) => other !== key && value.pending.size === 0);
 		while (pool.size > 3 && idle.length) {
