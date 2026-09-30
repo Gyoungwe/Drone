@@ -10,7 +10,9 @@
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
-		"test": "vitest run"
+		"test": "vitest run",
+		"test:unit": "vitest run --project unit",
+		"test:sdk": "vitest run --project sdk"
 	},
 	"dependencies": {
 		"@earendil-works/pi-ai": "0.84.3",
