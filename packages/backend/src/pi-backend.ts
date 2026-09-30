@@ -71,12 +71,12 @@ import { PackageAdmin } from "./packages/admin";
 import type { PermissionConfirm, PermissionModeRef } from "./permissions/extension";
 import { PermissionGate } from "./permissions/gate";
 import { walkProjectFiles } from "./project/files";
-import { TrustGate } from "./project/trust";
 import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { createDroneRuntime } from "./runtime";
 import type { PackageService } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
+import { ProjectTrustService } from "./services/project-trust";
 import { ZoteroService } from "./services/zotero";
 import { AskGate } from "./session/ask-gate";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
@@ -105,7 +105,6 @@ import {
 	getAgentDir,
 	getSupportedThinkingLevels,
 	type ModelRuntime,
-	ProjectTrustStore,
 	SessionEngine,
 } from "./session-engine/engine";
 import { createEventPipeline, type Stage } from "./session-engine/event-pipeline";
@@ -218,8 +217,7 @@ export class PiBackend {
 	/** 按会话权限模式（default 缺省；fullAccess = 一切放行 + 高危审计）：会话创建时随工厂注入，关会话/重启归零 */
 	private readonly permissionModes = new Map<string, PermissionModeRef>();
 	/** 项目信任决策记录（~/.pi/agent/trust.json，与 CLI 共享）+ 信任请求门控 */
-	private readonly trustStore = new ProjectTrustStore(getAgentDir());
-	private readonly trustGate = new TrustGate((req) => this.dispatchTrustRequest(req));
+	readonly projectTrust: ProjectTrustService;
 	/** 会话事件 trace（JSONL，离线可重放） */
 	private readonly traces = new SessionTraces();
 	/** Durable-state inventory used by the metadata-only diagnostics endpoint. */
@@ -303,14 +301,17 @@ export class PiBackend {
 			userDataDir: options.userDataDir,
 			knowledgeDir: process.env.DRONE_KNOWLEDGE_DIR,
 		});
+		this.projectTrust = new ProjectTrustService({
+			onRequest: (request) => this.dispatchTrustRequest(request),
+		});
 		this.packages = new PackageAdmin({
 			registry: this.registry,
 			defaultCwd: options.defaultCwd,
 			onSessionReloaded: (sessionId) => this.reapplyCapabilities(sessionId),
 		});
 		this.projectLoader = new ProjectResourceLoader({
-			trustStore: this.trustStore,
-			ask: (dir, opts) => this.trustGate.ask(dir, opts),
+			trustStore: this.projectTrust.store,
+			ask: (dir, opts) => this.projectTrust.ask(dir, opts),
 			canAsk: () => this.trustHandlers.size > 0,
 			buildExtensions: (cwd, confirm, modeRef) =>
 				buildSessionExtensionFactories(this.sessionExtensionDependencies(), cwd, confirm, modeRef),
@@ -1533,7 +1534,7 @@ export class PiBackend {
 	}
 
 	respondTrust(requestId: string, answer: TrustAnswer): void {
-		this.trustGate.respond(requestId, answer);
+		this.projectTrust.respond(requestId, answer);
 	}
 
 	dispose(): void {
@@ -1546,7 +1547,7 @@ export class PiBackend {
 		this.permissionHandlers.clear();
 		this.permissionResolvedHandlers.clear();
 		this.trustHandlers.clear();
-		this.trustGate.dispose();
+		this.projectTrust.dispose();
 		this.traces.disposeAll();
 		void this.runtime.dispose();
 		log.info("backend disposed");

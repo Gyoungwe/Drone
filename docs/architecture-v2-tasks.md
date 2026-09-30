@@ -66,6 +66,7 @@
 - [ ] **A3-2 按域抽服务**（每个域一个 PR，顺序：approvals → permissions/trust → models/settings → mcp/packages → subagents → knowledge/zotero/institutional）：把方法移到 `services/<domain>.ts`，`PiBackend` 上保留委托方法并加 `@deprecated`。验收：每个服务 ≤ 400 行；原有测试不改就通过；新增的服务级单测可以不构造 `PiBackend`。
   - [x] packages：`PackageService` 已从 `PiBackend` 门面抽出，包目录访问与安装/卸载/热重载集中在 `src/services/packages.ts`；`BackendServices.packages` 暴露同一实例，门面方法保留兼容委托。
   - [x] permissions/settings：`PermissionSettingsService` 已从 `PiBackend` 门面抽出，`permissions.json` 快照、原子保存、恢复默认、规则试算和审计尾部集中在 `src/services/permissions.ts`；`BackendServices.permissions` 暴露同一实例，旧方法保留兼容委托并有服务级单测。
+  - [x] project-trust：`ProjectTrustService` 承接 `ProjectTrustStore` 与 `TrustGate` 的同一生命周期；项目资源加载、信任应答和销毁均经 `PiBackend.projectTrust` 委托，`BackendServices.projectTrust` 暴露同一实例；服务级 2/2 与组合根回归 1/1 通过。
   - [x] zotero：`ZoteroService` 已从 `PiBackend` 门面抽出，Knowledge IPC 优先使用 `BackendServices.zotero`，旧委托保留兼容。
 - [x] **A3-3 SessionEngine**：会话生命周期部分移到 `session-engine/engine.ts`，`buildExtensionFactories`、`buildCustomTools` 移到 `session-engine/extensions.ts`；生产 Pi SDK 运行时 import 只允许出现在 `session-engine/**`，测试文件保留直接 SDK import 以覆盖 SDK 分层；R1 生产基线已清零。
 - [ ] **A3-4 删除门面**：desktop main 和契约绑定改为直接使用 `BackendServices`；删除 `pi-backend.ts` 中的委托方法，保留类型 re-export 至少一个版本。验收：`check:arch` 的 R1 基线清零；`pi-backend.ts` 删除或只剩 re-export。
@@ -125,5 +126,6 @@
 | 2026-10-01 | A6-2 增量 | tool-manifest 增加 `drone:tool-manifest/v1` + `drone:tool-manifest/request/v1` 的 `pi.events` 注册/回放握手；SessionEngine 在 inline host factory 绑定后端收集器，覆盖扩展先加载的时序；独立事件总线、版本过滤、晚绑定回放 3 个测试，加上 capability/research/Zotero 回归测试通过 | 兼容期仍保留 process event 供无 host event bus 的 CLI/测试调用；acceptance-verifiers、其余 singleton/队列尚未迁移，A6-2 总项保持未完成 |
 | 2026-10-01 | A3-2 增量 | `PermissionSettingsService` 承接 permissions.json 快照、原子保存、恢复默认、规则试算与审计尾部；`BackendServices.permissions` 与 `PiBackend.permissions` 指向同一实例；服务级测试 1/1、createBackend 组合测试 1/1、backend typecheck 与架构检查通过 | 项目信任、审批 gate、会话权限模式仍在 PiBackend；A3-1/2/4 总项保持未完成 |
 | 2026-10-01 | A3-1 增量 | `createBackend` 组合根现在尊重显式注入的 `DroneRuntime`，并通过组合测试验证 `BackendServices.runtime` 与 `PiBackend.runtime` 保持同一实例 | PiBackend 仍是兼容门面，A3-1 的完整 host composition 与 A3-4 façade 删除尚未完成 |
+| 2026-10-01 | A3-2 增量 | `ProjectTrustService` 统一项目 `trust.json` 存储与 `TrustGate` 交互门控生命周期；`BackendServices.projectTrust` 与 `PiBackend.projectTrust` 指向同一实例，资源加载和旧 `respondTrust` 保持兼容委托；服务级 2/2、trust 回归 14/14、组合根 2/2 通过 | approvals gate、会话权限模式与 PiBackend 兼容门面仍待拆出；A3-2/4 总项保持未完成 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 新增 review-policy 强类型实现；包 typecheck 通过，包内 4/4 与 backend `knowledge-automatic-review` 4/4 通过，并保留旧 `.pi` 兼容实现 | knowledge service、source-links、worker、specialist-host 与 benchmark 尚未迁移；A5-1 总项保持未完成 |
 | 2026-10-01 | 最终验收 | `npm run lint`、根 `npm run typecheck`、根 `npm test`、`npm run build`、`node scripts/check-architecture.mjs`、插件/扩展检查、`npm run test:upgrade` 全部通过；backend 1,352 passed + 13 skipped，desktop 548，shared 129 | A2-4 的整体 GET-only、A3-1/2/4、A5-1 后续模块及 A5-2/3/4、A6-1/2 仍未完成 |

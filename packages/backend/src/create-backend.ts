@@ -5,6 +5,7 @@ import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
 import type { PackageService } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
+import type { ProjectTrustService } from "./services/project-trust";
 import type { ZoteroService } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
 import type { LoginService } from "./settings/login";
@@ -42,6 +43,8 @@ export interface BackendServices {
 	permissions: PermissionSettingsService;
 	/** Zotero integration status service. */
 	zotero: ZoteroService;
+	/** Project trust store and interactive trust gate. */
+	projectTrust: ProjectTrustService;
 	dispose(): void;
 }
 
@@ -61,6 +64,7 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 		mcp: sessions.mcp,
 		permissions,
 		zotero: sessions.zotero,
+		projectTrust: sessions.projectTrust,
 		dispose: () => {
 			sessions.dispose();
 			void runtime.dispose();

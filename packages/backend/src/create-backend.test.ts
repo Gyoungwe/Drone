@@ -17,6 +17,7 @@ describe("createBackend", () => {
 		expect(services.permissions.getConfig).toBeTypeOf("function");
 		expect(services.zotero).toBe(services.sessions.zotero);
 		expect(services.zotero.getStatus).toBeTypeOf("function");
+		expect(services.projectTrust).toBe(services.sessions.projectTrust);
 		services.dispose();
 	});
 

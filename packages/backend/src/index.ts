@@ -92,6 +92,7 @@ export {
 	PackageService,
 } from "./services/packages";
 export { PermissionSettingsService } from "./services/permissions";
+export { ProjectTrustService } from "./services/project-trust";
 export { ZoteroService } from "./services/zotero";
 export {
 	assignEntryIds,
