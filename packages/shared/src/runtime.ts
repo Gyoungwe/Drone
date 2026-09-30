@@ -14,6 +14,10 @@ export interface KnowledgeRuntime {
 	publication?: KnowledgePublicationBridge;
 	binding?: KnowledgeBindingBridge;
 	workerPool?: unknown;
+	semanticLock?: unknown;
+	wikiReview?: unknown;
+	topicMemory?: unknown;
+	ui?: UiBridge;
 	specialists?: unknown;
 }
 export interface TaskRuntime {

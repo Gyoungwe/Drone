@@ -1,10 +1,14 @@
 import { randomUUID } from "node:crypto";
+import { runtimeSlot } from "../runtime-bridge.mjs";
 import { flowCardBuilder, toolMeta } from "../tool-manifest.mjs";
 import { failureCard, flowCard } from "./flow-cards.mjs";
 
-const key = Symbol.for("drone.knowledge.ui.v1");
-globalThis[key] ??= { listeners: new Set(), flows: new Map(), seq: 0 };
-const state = globalThis[key];
+const state = runtimeSlot(
+	"knowledge",
+	"ui",
+	() => ({ listeners: new Set(), flows: new Map(), seq: 0 }),
+	"drone.knowledge.ui.v1",
+);
 const MAX_SESSIONS = 64,
 	MAX_RECORDS = 40;
 const sessionId = (ctx) => ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || null;

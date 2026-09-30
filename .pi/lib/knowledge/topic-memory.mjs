@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, readFile, realpath, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { runRuntimeExclusive } from "../runtime-bridge.mjs";
 import { compareClaimSets } from "./claim-conflicts.mjs";
 import { knowledgeDirectory } from "./config.mjs";
 import { canRead, readNoteFile, validateNote } from "./files.mjs";
@@ -21,9 +22,6 @@ export const TOPIC_MEMORY_LIMITS = Object.freeze({
 	maxFileBytes: 512 * 1024,
 });
 
-const queueKey = Symbol.for("drone.knowledge.topic-memory-queues.v1");
-if (!globalThis[queueKey]) globalThis[queueKey] = new Map();
-const queues = globalThis[queueKey];
 const digest = (value) => createHash("sha256").update(String(value)).digest("hex");
 const text = (value, limit) =>
 	String(value ?? "")
@@ -309,14 +307,7 @@ async function atomicWrite(path, value) {
 	}
 }
 async function withLock(path, operation) {
-	const previous = queues.get(path) || Promise.resolve();
-	const next = previous.catch(() => {}).then(operation);
-	queues.set(path, next);
-	try {
-		return await next;
-	} finally {
-		if (queues.get(path) === next) queues.delete(path);
-	}
+	return runRuntimeExclusive("topic-memory", path, operation, "drone.knowledge.topic-memory-queues.v1");
 }
 function tokens(value) {
 	return new Set(

@@ -1,5 +1,6 @@
 import { join, resolve } from "node:path";
 import { publishExplainer } from "../obsidian-workbench.mjs";
+import { setRuntime } from "../runtime-bridge.mjs";
 import { deliveryContract } from "../source-delivery.mjs";
 import { registerAcceptanceVerifier } from "../tasks/acceptance.mjs";
 import { registerTaskRuntime } from "../tasks/runtime.mjs";
@@ -110,7 +111,8 @@ function explainerCard(event) {
 	});
 }
 
-export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
+export function registerKnowledgeInterface(pi, { readOnly = false, runtime = null } = {}) {
+	if (runtime) setRuntime(runtime);
 	registerWikiReviewAcceptance();
 	const taskRuntime = readOnly ? null : registerTaskRuntime(pi);
 	const recovery = new Map();
@@ -176,6 +178,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 	let explainerArchived = false;
 	const feedback = createTaskFeedback();
 	const publication = registerAnswerPublication(pi, {
+		runtime,
 		getCurrent: (ctx) => requireTurn(ctx),
 		evidenceOnly: readOnly,
 		getDeliveryFooter: () => deliveryFooter,

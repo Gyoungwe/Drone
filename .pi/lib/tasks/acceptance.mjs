@@ -33,16 +33,18 @@ const KIND = /^[a-z][a-z0-9_]{1,40}$/;
 const FIELD = /^[a-zA-Z][a-zA-Z0-9]{0,40}$/;
 const stringField = { type: "string", minLength: 1, maxLength: 512 };
 
-const key = Symbol.for("drone.acceptance-verifiers.v1");
-globalThis[key] ??= (() => {
+import { runtimeSlot } from "../runtime-bridge.mjs";
+
+const createRegistry = () => {
 	const kinds = [...CORE_ACCEPTANCE_KINDS];
 	return {
 		verifiers: new Map(),
 		kinds,
 		properties: { kind: { type: "string", enum: kinds }, path: stringField, sha256: stringField },
 	};
-})();
-const registry = globalThis[key];
+};
+/** @type {any} */
+const registry = runtimeSlot("tasks", "acceptance", createRegistry, "drone.acceptance-verifiers.v1");
 // 兼容更早的登记表实例（properties 里还没有核心字段）
 registry.properties.kind ??= { type: "string", enum: registry.kinds };
 registry.properties.path ??= stringField;

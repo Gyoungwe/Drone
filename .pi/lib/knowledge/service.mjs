@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { join, relative, resolve, sep } from "node:path";
 import { Worker } from "node:worker_threads";
+import { runRuntimeExclusive, runtimeSlot } from "../runtime-bridge.mjs";
 import { hasPaperCitation, requiresPaperEvidence } from "../source-delivery.mjs";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import { canRead, validateNote } from "./files.mjs";
@@ -9,24 +10,11 @@ import { embedTexts, validateSemanticConfig } from "./semantic-provider.mjs";
 import { readSemanticSettings, saveSemanticSettings } from "./semantic-settings.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
-const poolKey = Symbol.for("drone.knowledge.worker-pool.v1");
-globalThis[poolKey] ??= new Map();
-const pool = globalThis[poolKey];
+const pool = runtimeSlot("knowledge", "workerPool", () => new Map(), "drone.knowledge.worker-pool.v1");
 const MAX_TICKETS = 128;
-const semanticLockKey = Symbol.for("drone.knowledge.semantic-lock.v1");
-globalThis[semanticLockKey] ??= new Map();
-const semanticLocks = globalThis[semanticLockKey];
 
 function queueSemantic(key, task) {
-	const previous = semanticLocks.get(key) || Promise.resolve();
-	const current = previous.catch(() => {}).then(task);
-	const held = current
-		.catch(() => {})
-		.finally(() => {
-			if (semanticLocks.get(key) === held) semanticLocks.delete(key);
-		});
-	semanticLocks.set(key, held);
-	return current;
+	return runRuntimeExclusive("semantic-lock", key, task, "drone.knowledge.semantic-lock.v1");
 }
 function providerConfig(settings) {
 	return {

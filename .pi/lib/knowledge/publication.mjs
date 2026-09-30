@@ -1,11 +1,16 @@
 import { createHash, randomUUID } from "node:crypto";
+import { runtimeSlot, setRuntime } from "../runtime-bridge.mjs";
 import { diagnosticText } from "../tasks/failure-feedback.mjs";
 import { advisoryCodes, readReviewMode } from "./review-policy.mjs";
 import { publicationKnowledgeFlow, updateKnowledgeFlow } from "./ui-state.mjs";
 
-const key = Symbol.for("drone.knowledge.publication.v1");
-globalThis[key] ??= { proofs: new WeakSet() };
-const state = globalThis[key];
+const state = runtimeSlot(
+	"knowledge",
+	"publication",
+	/** @returns {any} */
+	() => ({ proofs: new WeakSet() }),
+	"drone.knowledge.publication.v1",
+);
 const FIELD = "knowledgePublication";
 const hash = (content) =>
 	createHash("sha256")
@@ -238,6 +243,7 @@ state.projectSnapshot = projectKnowledgeSnapshot;
 export function registerAnswerPublication(
 	pi,
 	{
+		runtime = null,
 		getCurrent,
 		evidenceOnly = false,
 		getDeliveryFooter = null,
@@ -246,6 +252,7 @@ export function registerAnswerPublication(
 		maxToolRounds = 24,
 	},
 ) {
+	if (runtime) setRuntime(runtime);
 	let turnId = null,
 		required = true,
 		started = false,

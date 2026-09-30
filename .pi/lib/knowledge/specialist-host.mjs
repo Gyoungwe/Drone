@@ -1,17 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { runtimeSlot } from "../runtime-bridge.mjs";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
-const key = Symbol.for("drone.knowledge.specialists.v1");
-globalThis[key] ??= {
-	hosts: new Map(),
-	active: 0,
-	queue: [],
-	settingsQueue: Promise.resolve(),
-};
-const state = globalThis[key];
+const state = runtimeSlot(
+	"knowledge",
+	"specialists",
+	() => ({
+		hosts: new Map(),
+		active: 0,
+		queue: [],
+		settingsQueue: Promise.resolve(),
+	}),
+	"drone.knowledge.specialists.v1",
+);
 export const SPECIALIST_LIMITS = Object.freeze({
 	maxRunsPerTurn: 4,
 	maxRunsPerSession: 20,

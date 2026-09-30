@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { link, lstat, mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+import { runRuntimeExclusive } from "../runtime-bridge.mjs";
 import { knowledgeDirectory, withKnowledgeBinding } from "./config.mjs";
 import { canRead, readNoteFile, validateNote } from "./files.mjs";
 import { readReviewMode } from "./review-policy.mjs";
@@ -9,21 +10,11 @@ import { invalidateKnowledgeUi } from "./ui-state.mjs";
 const AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
 const START = "<!-- pi-agent:managed:start -->",
 	END = "<!-- pi-agent:managed:end -->";
-const queueKey = Symbol.for("drone.knowledge.wiki-review-locks.v1");
-globalThis[queueKey] ??= new Map();
-const queues = globalThis[queueKey];
 const digest = (text) => createHash("sha256").update(text).digest("hex");
 const MAX_PENDING = 100,
 	MAX_AGE = 24 * 60 * 60 * 1000;
 async function exclusive(key, operation) {
-	const previous = queues.get(key) || Promise.resolve(),
-		next = previous.catch(() => {}).then(operation);
-	queues.set(key, next);
-	try {
-		return await next;
-	} finally {
-		if (queues.get(key) === next) queues.delete(key);
-	}
+	return runRuntimeExclusive("wiki-review", key, operation, "drone.knowledge.wiki-review-locks.v1");
 }
 function rootFor(service) {
 	return join(knowledgeDirectory(), service.binding.vaultId, "wiki-review");
