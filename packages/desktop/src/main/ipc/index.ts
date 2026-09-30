@@ -1,4 +1,4 @@
-import type { PiBackend } from "@drone/backend";
+import type { BackendServices, PiBackend } from "@drone/backend";
 import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@drone/shared";
 import { IpcChannels } from "@drone/shared";
 import { BrowserWindow } from "electron";
@@ -33,9 +33,10 @@ export function registerIpc(
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
 	getIncidentSnapshot?: () => unknown,
+	services?: Pick<BackendServices, "settings" | "models" | "login">,
 ): void {
 	registerSessionsIpc(backend);
-	registerSettingsIpc(backend);
+	registerSettingsIpc(backend, services);
 	registerPermissionSettingsIpc(backend);
 	registerSubagentsIpc(backend);
 	registerKnowledgeIpc(backend);

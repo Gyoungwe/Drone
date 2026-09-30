@@ -8,6 +8,9 @@ describe("createBackend", () => {
 		expect(services.knowledge).toBe(services.sessions.knowledge);
 		expect(services.packages).toBe(services.sessions.packages);
 		expect(services.settings).toBe(services.sessions.settings);
+		expect(services.models).toBe(services.sessions.models);
+		expect(services.login).toBe(services.sessions.login);
+		expect(services.mcp).toBe(services.sessions.mcp);
 		services.dispose();
 	});
 });

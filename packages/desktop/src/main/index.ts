@@ -251,7 +251,7 @@ app.whenReady().then(async () => {
 	);
 	uiPluginsManager = new UiPluginManager();
 	await uiPluginsManager.init();
-	registerIpc(backend, uiPluginsManager, lanObserver, () => latestIncidentSnapshot);
+	registerIpc(backend, uiPluginsManager, lanObserver, () => latestIncidentSnapshot, backendServices);
 	await initUpdater();
 	scheduleAutoUpdateCheck();
 	const uiState = await loadUiState();

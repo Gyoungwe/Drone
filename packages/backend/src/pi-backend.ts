@@ -276,9 +276,15 @@ export class PiBackend {
 	/** 设置页（provider/模型/凭证配置）服务 */
 	readonly settings = new SettingsService(() => this.getModelRuntime());
 	/** 用户级模型可见性与子代理模型偏好（独立于 CLI 共用 settings.json）。 */
-	private readonly modelSettings = new ModelSettingsService(join(getAgentDir(), "model-prefs.json"));
+	readonly models = new ModelSettingsService(join(getAgentDir(), "model-prefs.json"));
 	/** Compatibility alias retained for existing host/test adapters during A3 migration. */
-	private readonly modelPrefs = this.modelSettings;
+	private get modelSettings(): ModelSettingsService {
+		return this.models;
+	}
+	/** Compatibility alias retained for existing host/test adapters during A3 migration. */
+	private get modelPrefs(): ModelSettingsService {
+		return this.models;
+	}
 	/** provider 交互登录服务（OAuth + api_key 交互，如 Google Vertex），事件经 onLoginEvent 分发 */
 	readonly login = new LoginService({
 		getRuntime: () => this.getModelRuntime(),

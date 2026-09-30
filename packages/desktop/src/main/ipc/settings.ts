@@ -1,4 +1,4 @@
-import type { PiBackend } from "@drone/backend";
+import type { BackendServices, PiBackend } from "@drone/backend";
 import type {
 	AskResponse,
 	CustomProviderInput,
@@ -12,27 +12,35 @@ import { ipcMain, shell } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
-export function registerSettingsIpc(backend: PiBackend): void {
+export function registerSettingsIpc(
+	backend: PiBackend,
+	services?: Pick<BackendServices, "settings" | "models" | "login">,
+): void {
+	// Prefer explicit domain services when the composition root is available. The
+	// PiBackend fallback keeps older tests and embedders source-compatible while
+	// the remaining approval/session methods migrate off the façade.
+	const settings = services?.settings ?? backend.settings;
+	const models = services?.models ?? backend.models;
+	const login = services?.login ?? backend.login;
 	const implementation: ContractImplementation<typeof SettingsContract> = {
-		listProviders: (...args) => backend.settings.listProviders(args[0] as ListProvidersOptions | undefined),
-		saveApiKey: (providerId, key) => backend.settings.saveApiKey(providerId, key),
-		removeCredential: (providerId) => backend.settings.removeCredential(providerId),
-		addCustomProvider: (input) => backend.settings.addCustomProvider(input as CustomProviderInput),
-		updateCustomProvider: (input) =>
-			backend.settings.updateCustomProvider(input as CustomProviderUpdateInput),
-		removeCustomProvider: (providerId) => backend.settings.removeCustomProvider(providerId),
-		setProviderBaseUrl: (...args) => backend.settings.setProviderBaseUrl(args[0], args[1], args[2]),
-		testProvider: (...args) => backend.settings.testProvider(args[0], args[1]),
-		getModelPrefs: () => backend.getModelPrefs(),
-		setModelHidden: (provider, modelId, hidden) => backend.setModelHidden(provider, modelId, hidden),
-		setModelsHidden: (provider, modelIds, hidden) => backend.setModelsHidden(provider, modelIds, hidden),
-		setSubagentModel: (agent, modelRef) => backend.setSubagentModel(agent, modelRef),
+		listProviders: (...args) => settings.listProviders(args[0] as ListProvidersOptions | undefined),
+		saveApiKey: (providerId, key) => settings.saveApiKey(providerId, key),
+		removeCredential: (providerId) => settings.removeCredential(providerId),
+		addCustomProvider: (input) => settings.addCustomProvider(input as CustomProviderInput),
+		updateCustomProvider: (input) => settings.updateCustomProvider(input as CustomProviderUpdateInput),
+		removeCustomProvider: (providerId) => settings.removeCustomProvider(providerId),
+		setProviderBaseUrl: (...args) => settings.setProviderBaseUrl(args[0], args[1], args[2]),
+		testProvider: (...args) => settings.testProvider(args[0], args[1]),
+		getModelPrefs: () => models.getPrefs(),
+		setModelHidden: (provider, modelId, hidden) => models.setModelHidden(provider, modelId, hidden),
+		setModelsHidden: (provider, modelIds, hidden) => models.setModelsHidden(provider, modelIds, hidden),
+		setSubagentModel: (agent, modelRef) => models.setSubagentModel(agent, modelRef),
 		setSubagentThinking: (agent, level) =>
-			backend.setSubagentThinking(agent, level as SubagentThinkingLevel | null),
+			models.setSubagentThinking(agent, level as SubagentThinkingLevel | null),
 		listSubagents: () => backend.listSubagents(),
-		startProviderLogin: (loginId, providerId) => backend.login.startLogin(loginId, providerId),
-		cancelProviderLogin: (loginId) => backend.login.cancel(loginId),
-		respondProviderLogin: (loginId, promptId, value) => backend.login.respond(loginId, promptId, value),
+		startProviderLogin: (loginId, providerId) => login.startLogin(loginId, providerId),
+		cancelProviderLogin: (loginId) => login.cancel(loginId),
+		respondProviderLogin: (loginId, promptId, value) => login.respond(loginId, promptId, value),
 	};
 	bindContract(SettingsContract, implementation, {
 		channelForMethod: (_contract, method) =>
