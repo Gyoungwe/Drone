@@ -52,6 +52,7 @@
   - 验收：单测覆盖参数合法、参数非法、result 不符（开发模式）、事件订阅与退订四种情况。
 - [ ] **A2-2 迁移 sessions 域**：`SessionsContract` 替代 `INVOKE_ROUTES` 里 sessions 部分和对应的 `registerInvokers` 调用；`PiApi` 里这部分类型改由契约推导。验收：renderer 无需改动调用点（方法名不变），通过 typecheck；`scripts/check-report-ui.mjs` 通过。
 - [ ] **A2-3 迁移其余域**：settings、permissions、packages、app、ui-plugins、lan、knowledge、institutional、subagents，每个域一个提交。全部迁完后删除 `INVOKE_ROUTES`，`IpcChannels` 改由契约生成。验收：`grep -c "ipcMain.handle(" packages/desktop/src/main` 只剩 `bind-contract.ts` 以及少数有文档说明的例外。
+  - [x] ui-plugins：配置、列表、读码、启停、槽位指派、重建、打开目录均通过 `UiPluginsContract` + `bindContract` 注册；保留既有通道名与 renderer 调用形状。
 - [ ] **A2-4 LAN 复用契约**：`lan/server.ts` 把 `access: "lan-read"` 的方法暴露为 GET，事件走现有 SSE（保留命名事件 `ping` 心跳，见 PITFALLS）；删除 `shared/lan.ts` 中和契约重复的类型。验收：`lan-server`、`lan-projector`、`lan-sanitize` 测试通过；LAN 仍然是 GET-only（加一条断言）。
 - [ ] **A2-5 插件 Host API 清单化**：`renderer/src/plugins/host-api.manifest.ts` 作为唯一来源，生成 `host-api.ts` 的导出表、`env.d.ts`、`main/ui-plugins/build.ts` 的 SHIM、`resources/ui-plugins/drone-ui.d.ts`（脚本放在 `packages/desktop/scripts/gen-plugin-api.mjs`，产物提交进仓库，CI 检查是否与清单一致）。验收：新增一个 hook 只需改清单一处再运行生成脚本；`registry.test.ts` 通过。
 
