@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
 	diagnosticText,
 	FAILURE_EXPLANATION_POLICY,
@@ -8,7 +7,8 @@ import {
 	TASK_HANDOFF_POLICY,
 	taskProgressContext,
 	toolResultFailed,
-} from "../../../.pi/lib/tasks/failure-feedback.mjs";
+} from "@drone/tasks";
+import { describe, expect, it } from "vitest";
 import { createTaskWorkbench, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
 
 const call = (id, toolName = "read", path = "input.csv") => ({ toolCallId: id, toolName, input: { path } });

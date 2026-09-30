@@ -1,0 +1,16 @@
+export {
+	diagnosticText,
+	FAILURE_EXPLANATION_POLICY,
+	type FailureObservation,
+	failureContext,
+	failureObservation,
+	failureReceipt,
+	TASK_HANDOFF_POLICY,
+	type TaskAction,
+	type TaskFailureEvent,
+	type TaskMilestone,
+	type TaskOperation,
+	type TaskSnapshot,
+	taskProgressContext,
+	toolResultFailed,
+} from "./failure-feedback";

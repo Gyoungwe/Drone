@@ -85,6 +85,7 @@
 - [ ] **A5-1 @drone/knowledge**：把 `.pi/lib/knowledge/*` 迁到 `packages/knowledge/src/*.ts`（先 `git mv` 移动文件，再改成 TS）。worker（`worker.mjs`）单独作为一个构建入口。55 个后端测试的 import 从 `.pi/lib/...` 改为 `@drone/knowledge`。验收：§5 不变量 1–3 相关测试全部通过；`scripts/benchmark-knowledge.mjs` 和 `benchmark-semantic.mjs` 能运行，结果量级与迁移前一致（把数字记进执行日志）。
   - [x] claim-conflicts：新增 `@drone/knowledge` TS 包入口与强类型 `compareClaims` / `compareClaimSets`，包内 3 个测试及后端迁移测试 3 个通过；`.pi/lib/knowledge/claim-conflicts.mjs` 暂作运行时兼容实现。
 - [ ] **A5-2 @drone/tasks**：`.pi/lib/tasks/*` 迁移。验收：全部 `task-*` 测试通过，包括 `example-tasks-one-authorization-sdk.test.mjs`。
+  - [x] failure-feedback：新增 `@drone/tasks` TS 包入口与强类型 `diagnosticText` / `toolResultFailed` / `failureObservation` / `failureContext` 等纯函数；包内 4/4 测试及 backend `task-failure-feedback` 20/20 测试通过，backend diagnostics 复用该脱敏入口；`.pi/lib/tasks/failure-feedback.mjs` 暂作运行时兼容实现。
 - [ ] **A5-3 @drone/research**：source-archive、open-access、zotero-*、institutional-access、literature-*、run-provenance、research-receipt-journal 等迁移。验收：`zotero-*`、`source-archive-*`、`institutional`、`literature-*` 测试通过。
 - [ ] **A5-4 扩展适配层**：`.pi/extensions/*.mjs` 的源码移到 `packages/extensions/src/`，只保留参数映射和注册逻辑，领域逻辑全部调用领域包。`runner.ts` 里两处 `../../../../../.pi/…` 改为包引用或构建产物的解析函数。验收：R5 基线清零；`.pi/lib` 从 extraResources 移除后，打包冒烟通过。
 
@@ -117,5 +118,6 @@
 | 2026-10-01 | A3 | `createBackend` 组合根显式暴露 runtime、sessionEngine、settings/models/login/mcp/packages/knowledge 服务；PiBackend 继续作为兼容门面，session 生命周期已由 SessionEngine 承接 | approvals、permissions/trust、subagents、zotero/institutional 等域仍待抽离，A3 总项未勾选 |
 | 2026-10-01 | A3-3 / A6 | 生产后端 Pi SDK 值导入统一经 `session-engine/sdk.ts`，架构检查 R1 生产基线清零；ZoteroService 已接入组合根；研究循环、Zotero、source archive 的运行时状态和串行队列改为 host runtime 注入与 scheduler；Zotero 验收器在 host runtime 广播后重放，保持一次任务授权语义 | PiBackend 门面及 approvals/permissions/trust/subagents/institutional 等域仍待拆出；其余 legacy 扩展 singleton 与 CLI runtime 注入仍待完成 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 承载 claim-conflicts 强类型实现；包 typecheck 通过，包内 4/4 与后端迁移测试 3/3 通过，并加入 Unicode 归一化兼容回归 | 其余 knowledge 模块、worker 与 benchmark 尚未迁移；旧 `.pi/lib` 实现保留为运行时兼容层 |
+| 2026-10-01 | A5-2 增量 | `@drone/tasks` 承载 failure-feedback 强类型实现；包 typecheck 通过，包内 4/4 与 backend `task-failure-feedback` 20/20 通过；backend diagnostics 复用包的 credential/URL 脱敏函数 | 其余 tasks 模块、task-* SDK 测试与 `.pi/lib/tasks` 运行时兼容层尚未迁移 |
 | 2026-10-01 | A3-2 增量 | `PermissionSettingsService` 承接 permissions.json 快照、原子保存、恢复默认、规则试算与审计尾部；`BackendServices.permissions` 与 `PiBackend.permissions` 指向同一实例；服务级测试 1/1、createBackend 组合测试 1/1、backend typecheck 与架构检查通过 | 项目信任、审批 gate、会话权限模式仍在 PiBackend；A3-1/2/4 总项保持未完成 |
 | 2026-10-01 | 最终验收 | `npm run lint`、根 `npm run typecheck`、根 `npm test`、`npm run build`、`node scripts/check-architecture.mjs`、插件/扩展检查、`npm run test:upgrade` 全部通过；backend 1,352 passed + 13 skipped，desktop 548，shared 129 | A2-4 的整体 GET-only、A3-1/2/4、A5-1 后续模块及 A5-2/3/4、A6-1/2 仍未完成 |

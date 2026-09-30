@@ -1,4 +1,5 @@
 import type { DiagnosticsSnapshot } from "@drone/shared";
+import { diagnosticText } from "@drone/tasks";
 import type { StorageRegistry } from "./storage/registry";
 
 export type { DiagnosticsSnapshot } from "@drone/shared";
@@ -17,7 +18,7 @@ const MAX_DIAGNOSTIC_ITEMS = 64;
 const MAX_DIAGNOSTIC_STRING = 2048;
 
 export function redactDiagnosticText(value: string): string {
-	return value
+	return diagnosticText(value, 8192)
 		.replace(SECRET_KEY_PATTERN, (_match, key: string) => `${key}=[REDACTED]`)
 		.replace(BEARER_PATTERN, "Bearer [REDACTED]")
 		.replace(SENSITIVE_PATH_PATTERN, (_match, key: string) => `${key}=<redacted-path>`)

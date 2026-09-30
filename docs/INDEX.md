@@ -25,13 +25,15 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，5 个包：
+npm workspaces monorepo，6 个包：
 
 ```
 packages/
 ├── shared/     IPC 契约层（纯类型 + 通道常量，三方共享）
 ├── backend/    纯 Node；pi SDK 适配层
 ├── knowledge/  知识领域纯函数与 claim 合约（TS 包，迁移中）
+├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
+├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
 ```
 
@@ -93,6 +95,10 @@ packages/
 ## packages/knowledge — 知识领域包（迁移中）
 
 `@drone/knowledge` 目前承载无 SDK 依赖的 claim 冲突比较合约：`src/claim-conflicts.ts` 导出 `compareClaims` 与 `compareClaimSets`，供 backend 和后续 knowledge 迁移复用。运行时仍从 `.pi/lib/knowledge/claim-conflicts.mjs` 加载兼容实现；其余 knowledge 模块按 A5-1 分阶段迁移。
+
+## packages/tasks — 任务领域包（迁移中）
+
+`@drone/tasks` 目前承载无 SDK 依赖的失败反馈纯函数：`src/failure-feedback.ts` 导出诊断脱敏、失败识别、失败观察与任务上下文合约，供 backend 和后续 tasks 迁移复用。`.pi/lib/tasks/failure-feedback.mjs` 仍保留为 CLI/扩展运行时兼容实现；其余 tasks 模块按 A5-2 分阶段迁移。
 
 ## packages/backend — pi SDK 适配层
 
