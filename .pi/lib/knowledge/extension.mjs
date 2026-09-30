@@ -1,7 +1,7 @@
 import { join, resolve } from "node:path";
 import { publishExplainer } from "../obsidian-workbench.mjs";
 import { deliveryContract } from "../source-delivery.mjs";
-import { registerAcceptanceVerifier } from "../tasks/acceptance.mjs";
+import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "../tasks/acceptance.mjs";
 import { registerTaskRuntime } from "../tasks/runtime.mjs";
 import { registerTool } from "../tool-manifest.mjs";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
@@ -111,6 +111,7 @@ function explainerCard(event) {
 }
 
 export function registerKnowledgeInterface(pi, { readOnly = false, runtime = null } = {}) {
+	bindAcceptanceVerifierEvents(pi);
 	registerWikiReviewAcceptance();
 	const taskRuntime = readOnly ? null : registerTaskRuntime(pi);
 	const recovery = new Map();

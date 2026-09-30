@@ -2,7 +2,7 @@ import { cardLink, literatureCard } from "../lib/knowledge/flow-cards.mjs";
 import { recordZoteroWrite } from "../lib/literature-operations.mjs";
 import { normalizeDoi } from "../lib/literature-receipt.mjs";
 import { bindRuntime, runtimeSlot, withHostRuntime } from "../lib/runtime-bridge.mjs";
-import { registerAcceptanceVerifier } from "../lib/tasks/acceptance.mjs";
+import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "../lib/tasks/acceptance.mjs";
 import { registerTool } from "../lib/tool-manifest.mjs";
 import { createCompositeZoteroReconciler } from "../lib/zotero-reconcile.mjs";
 import {
@@ -227,6 +227,7 @@ async function startSetup(pi, args, ctx) {
 export default function zoteroLiterature(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
 	bindRuntime(pi);
+	bindAcceptanceVerifierEvents(pi);
 	const run = (operation) => withHostRuntime(pi, operation);
 	// Registration happens before the host announcement for compatibility with
 	// task_plan schema construction. Replay it in the injected host runtime so

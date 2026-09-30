@@ -13,6 +13,7 @@ import {
 import type { PermissionGate } from "../permissions/gate";
 import type { AskGate } from "../session/ask-gate";
 import type { SessionTraces } from "../session/traces";
+import { bindAcceptanceVerifierEvents } from "../tasks/acceptance";
 import { makeAskUserTool } from "../tools/ask-user";
 import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
@@ -108,6 +109,7 @@ export function buildSessionExtensionFactories(
 		// Their tool declarations use the same request/replay handshake, so the
 		// backend collector sees registrations emitted before this factory ran.
 		bindToolManifestEvents(pi.events);
+		bindAcceptanceVerifierEvents(pi.events, deps.runtime);
 		const announceRuntime = () => pi.events.emit("drone:runtime/v1", { version: 1, runtime: deps.runtime });
 		pi.events.on("drone:runtime/request/v1", announceRuntime);
 		announceRuntime();

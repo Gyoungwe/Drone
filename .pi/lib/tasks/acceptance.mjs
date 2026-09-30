@@ -33,7 +33,16 @@ const KIND = /^[a-z][a-z0-9_]{1,40}$/;
 const FIELD = /^[a-zA-Z][a-zA-Z0-9]{0,40}$/;
 const stringField = { type: "string", minLength: 1, maxLength: 512 };
 
-import { runtimeSlot } from "../runtime-bridge.mjs";
+import { runtimeSlot, withRuntime } from "../runtime-bridge.mjs";
+
+/** Versioned event bridge used when an extension graph is loaded before its host runtime. */
+export const ACCEPTANCE_VERIFIER_EVENT = "drone:acceptance-verifier/v1";
+export const ACCEPTANCE_VERIFIER_REQUEST_EVENT = "drone:acceptance-verifier/request/v1";
+
+// A Pi host may load more than one extension which imports this module. Keep the
+// bridge installation idempotent per host object, while each runtime still owns
+// the mutable verifier registry behind runtimeSlot().
+const eventBridges = new WeakSet();
 
 const createRegistry = () => {
 	const kinds = [...CORE_ACCEPTANCE_KINDS];
@@ -49,6 +58,66 @@ const registry = runtimeSlot("tasks", "acceptance", createRegistry, "drone.accep
 registry.properties.kind ??= { type: "string", enum: registry.kinds };
 registry.properties.path ??= stringField;
 registry.properties.sha256 ??= stringField;
+
+function definitionOf(verifier) {
+	const definition = {
+		fields: [...(verifier.fields || [])],
+		evidenceKind: verifier.evidenceKind,
+		operationVerifier: verifier.operationVerifier,
+	};
+	for (const key of ["label", "verify", "observe", "resolve", "identify", "consent", "pending"])
+		if (typeof verifier[key] === "function") definition[key] = verifier[key];
+	if (verifier.acknowledgeError) definition.acknowledgeError = verifier.acknowledgeError;
+	return definition;
+}
+
+function registrationOf(verifier) {
+	return {
+		version: 1,
+		kind: verifier.kind,
+		definition: definitionOf(verifier),
+	};
+}
+
+/**
+ * Bind the extension-local acceptance registry to a Pi event bus.
+ *
+ * Dynamic extensions are initialized before the inline host factory. Their
+ * first registration therefore lands in the standalone runtime. The host
+ * runtime announcement copies those definitions into the injected runtime and
+ * publishes them through a versioned event. A host can also request a replay
+ * after subscribing, which makes the load order explicit and testable.
+ */
+export function bindAcceptanceVerifierEvents(pi) {
+	if (!pi?.events?.on || eventBridges.has(pi)) return () => {};
+	eventBridges.add(pi);
+	const publish = (verifier) => {
+		void pi.events.emit?.(ACCEPTANCE_VERIFIER_EVENT, registrationOf(verifier));
+	};
+	const replay = () => {
+		for (const verifier of acceptanceVerifiers()) publish(verifier);
+	};
+	const onRequest = (payload) => {
+		if (payload?.version === 1) replay();
+	};
+	const onRuntime = (payload) => {
+		if (payload?.version !== 1 || !payload.runtime || typeof payload.runtime !== "object") return;
+		const verifiers = acceptanceVerifiers().map(registrationOf);
+		if (!payload.runtime.scheduler) return;
+		withRuntime(payload.runtime, () => {
+			for (const registration of verifiers)
+				registerAcceptanceVerifier(registration.kind, registration.definition);
+		});
+		for (const registration of verifiers) void pi.events.emit?.(ACCEPTANCE_VERIFIER_EVENT, registration);
+	};
+	pi.events.on(ACCEPTANCE_VERIFIER_REQUEST_EVENT, onRequest);
+	pi.events.on("drone:runtime/v1", onRuntime);
+	// The host may already have installed its collector; request a replay after
+	// subscribing so registrations emitted during extension initialization are not
+	// lost to a one-shot event.
+	void pi.events.emit?.(ACCEPTANCE_VERIFIER_REQUEST_EVENT, { version: 1 });
+	return () => {};
+}
 
 export function registerAcceptanceVerifier(kind, definition = {}) {
 	if (!KIND.test(kind || "")) throw new Error(`Acceptance kind "${kind}" must match ${KIND}`);
