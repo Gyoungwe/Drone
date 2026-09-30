@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DIAGNOSTICS_ARCHIVE_PREFIX } from "@drone/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { materializeSaveContent } from "./save-content";
 
@@ -21,5 +22,11 @@ describe("materializeSaveContent", () => {
 
 	it("keeps inline export text unchanged", async () => {
 		expect(await materializeSaveContent('{"content":"hello"}')).toBe('{"content":"hello"}');
+	});
+
+	it("decodes the diagnostics binary marker for ZIP writes", async () => {
+		const materialized = await materializeSaveContent(`${DIAGNOSTICS_ARCHIVE_PREFIX}AAEC`);
+		expect(materialized).toBeInstanceOf(Uint8Array);
+		expect([...new Uint8Array(materialized as Uint8Array)]).toEqual([0, 1, 2]);
 	});
 });

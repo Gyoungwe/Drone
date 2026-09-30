@@ -1,4 +1,4 @@
-import { type AppInfo, serializeDiagnosticsPackage } from "@drone/shared";
+import { type AppInfo, serializeDiagnosticsArchive } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -63,8 +63,8 @@ export function AboutPanel() {
 		try {
 			const snapshot = await getPi().getDiagnostics();
 			const path = await getPi().saveFileDialog(
-				`drone-diagnostics-${new Date().toISOString().slice(0, 10)}.json`,
-				serializeDiagnosticsPackage(snapshot),
+				`drone-diagnostics-${new Date().toISOString().slice(0, 10)}.zip`,
+				serializeDiagnosticsArchive(snapshot),
 			);
 			setDiagnosticsState(path ? "saved" : "idle");
 		} catch {

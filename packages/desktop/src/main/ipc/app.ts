@@ -101,7 +101,9 @@ export function registerAppIpc(backend: PiBackend, getIncidentSnapshot?: () => u
 			? await dialog.showSaveDialog(window, options)
 			: await dialog.showSaveDialog(options);
 		if (result.canceled || !result.filePath) return null;
-		await writeFile(result.filePath, await materializeSaveContent(content), "utf-8");
+		const materialized = await materializeSaveContent(content);
+		if (typeof materialized === "string") await writeFile(result.filePath, materialized, "utf-8");
+		else await writeFile(result.filePath, materialized);
 		return result.filePath;
 	});
 	ipcMain.handle(IpcChannels.FilePickPath, async (_e, kind: "file" | "directory", defaultPath?: string) => {
