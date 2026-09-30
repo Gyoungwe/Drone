@@ -228,6 +228,13 @@ export default function zoteroLiterature(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
 	bindRuntime(pi);
 	const run = (operation) => withHostRuntime(pi, operation);
+	// Registration happens before the host announcement for compatibility with
+	// task_plan schema construction. Replay it in the injected host runtime so
+	// later authorization callbacks observe the same verifier while running in
+	// the host context.
+	pi.events?.on?.("drone:runtime/v1", (payload) => {
+		if (payload?.version === 1) run(() => registerZoteroAcceptance());
+	});
 	registerZoteroAcceptance();
 
 	registerTool(pi, {
