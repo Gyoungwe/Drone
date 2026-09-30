@@ -241,9 +241,10 @@ export const TASK_REASON_TEXT: Record<string, string> = {
 	"task-authorization-required": "计划已经准备好，等你点头。确认一次，后面就自动做完，不再反复打扰。",
 	"automatic-recovery": "刚才中断了一下，已经从上次保存的地方接着做，不用你操作。",
 	"automatic-stage-checkpoint": "进展已保存，正在接着做下一部分。",
+	"automatic-handoff": "这一步已保存，按你之前的授权接着做剩下的，不用再确认。",
 	"total-budget": "这个任务的步数已经用完，做出来的结果都保留着。想继续做，请重新描述需求开一个新任务。",
 	"stage-budget": "最近一段没有做出新进展，先停下来保留结果，避免空转。",
-	"budget-review-required": "这一段的步数用完了。先看看目前的结果，确认后可以继续。",
+	"budget-review-required": "这一段的步数用完了。先看看目前的结果，确认后可以在任务面板继续。",
 	"reconcile-before-retry":
 		"上次有操作没等到结果就中断了（比如写文件、安装、上传），现在不确定它做没做成。请先点“核对已有结果”看一下实际情况，别让它盲目重做一遍。",
 	"binding-changed": "知识库换了，旧任务里查到的内容不能继续用。请重新描述需求，开一个新任务。",

@@ -5,6 +5,7 @@ import {
 	taskIsTerminal,
 	taskNeedsUser,
 	tasksForTranscript,
+	TASK_REASON_TEXT,
 	type WorkbenchTask,
 } from "./task-workbench";
 
@@ -147,5 +148,12 @@ describe("流内工作台卡的取舍", () => {
 			]),
 		);
 		expect(shown).toEqual([]);
+	});
+});
+
+describe("task reason contract", () => {
+	it("keeps the shared reason text aligned with the CLI workbench", async () => {
+		const cli = await import(new URL("../../../.pi/lib/tasks/workbench.mjs", import.meta.url).href);
+		expect(TASK_REASON_TEXT).toEqual(cli.REASON_TEXT);
 	});
 });
