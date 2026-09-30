@@ -16,6 +16,8 @@ export interface ExposeContractOptions {
 	ipc?: IpcRendererLike;
 	bridge?: ContextBridgeLike;
 	globalName?: string;
+	/** Override a channel during incremental migrations that preserve legacy names. */
+	channelForMethod?: (contract: DomainContract, method: string) => string;
 }
 
 function eventClientName(name: string): string {
@@ -33,7 +35,7 @@ export function exposeContract<TContract extends DomainContract>(
 	const renderer = options.ipc ?? ipcRenderer;
 	const api: Record<string, unknown> = {};
 	for (const methodName of Object.keys(contract.methods)) {
-		const channel = channelOf(contract, methodName);
+		const channel = options.channelForMethod?.(contract, methodName) ?? channelOf(contract, methodName);
 		api[methodName] = (...args: unknown[]) => renderer.invoke(channel, ...args);
 	}
 	for (const eventName of Object.keys(contract.events)) {

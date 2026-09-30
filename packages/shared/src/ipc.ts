@@ -1,5 +1,6 @@
 import type { AskRequest, AskResponse } from "./ask";
 import type { DiagnosticsSnapshot } from "./diagnostics";
+import type { SessionsApi } from "./host-api/sessions";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
 import type { LanStatus } from "./lan";
@@ -18,23 +19,14 @@ import type {
 	ChannelWatchConfigInfo,
 	ContextManagerConfigInfo,
 	ContextManagerMode,
-	ContextUsageInfo,
-	CreateSessionOptions,
 	GitBranches,
-	ImageInput,
-	LoadedResources,
 	PermissionAnswer,
 	PermissionConfigInfo,
 	PermissionMode,
 	PermissionRequest,
 	PermissionResolved,
-	QueuedMessages,
 	SavedTabs,
 	SessionEventEnvelope,
-	SessionMessage,
-	SessionMeta,
-	SessionStats,
-	SlashCommandInfo,
 	TrustAnswer,
 	TrustRequest,
 	UiState,
@@ -56,7 +48,6 @@ import type {
 	SubagentPanelRun,
 	SubagentPanelSnapshot,
 } from "./subagent";
-import type { TodoItem } from "./todo";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
 import type { ZoteroStatus } from "./zotero";
@@ -284,31 +275,9 @@ export const IpcChannels = {
 export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
-export interface PiApi extends KnowledgeApi {
+export interface PiApi extends KnowledgeApi, SessionsApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
-	createSession(options: CreateSessionOptions): Promise<SessionMeta>;
-	listSessions(cwd?: string): Promise<SessionMeta[]>;
-	/** 跨全部项目目录枚举历史会话（项目管理页用） */
-	listAllSessions(): Promise<SessionMeta[]>;
-	openSession(filePath: string): Promise<SessionMeta>;
-	closeSession(sessionId: string): Promise<void>;
-	/** 删除会话（含磁盘 jsonl 文件，不可恢复） */
-	deleteSession(sessionId: string, sessionFile?: string): Promise<void>;
-	/** 发送消息；images 为随消息附带的图片（base64） */
-	prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt>;
-	abort(sessionId: string): Promise<void>;
-	retry(sessionId: string, requestId: string, expectedUserTimestamp?: number): Promise<PromptReceipt>;
-	setModel(sessionId: string, provider: string, modelId: string): Promise<void>;
-	setThinkingLevel(sessionId: string, level: string): Promise<void>;
-	/** 读取会话历史消息（打开历史会话时回放） */
-	getSessionMessages(sessionId: string): Promise<SessionMessage[]>;
-	/** 只读预览 sessions-subagents 下的会话文件；非法路径抛错 */
-	peekSubagentMessages(filePath: string): Promise<SessionMessage[]>;
-	/** Send live guidance to a running child session without opening it as a tab. */
-	steerSubagent(sessionId: string, message: string, mode?: "steer" | "followUp"): Promise<void>;
-	/** Resolve a child contact_supervisor request. */
-	replySubagentSupervisor(sessionId: string, requestId: string, message: string): Promise<void>;
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */
 	listSessionSubagents(sessionId: string): Promise<SubagentPanelSnapshot>;
 	/** 子智能体面板：直接派发到会话（与 subagent 工具同一 runner；超出槽位排队） */
@@ -317,40 +286,6 @@ export interface PiApi extends KnowledgeApi {
 	abortSubagentRun(runId: string): Promise<boolean>;
 	/** 子智能体面板：本会话的面板运行（切回会话时补水；只含进程内存里的记录） */
 	listSubagentRuns(sessionId: string): Promise<SubagentPanelRun[]>;
-	/** 读取会话当前 todo 列表（最后一条 todo 工具结果，或 compaction 后恢复的 reminder 消息；无则空数组） */
-	getTodos(sessionId: string): Promise<TodoItem[]>;
-	compact(sessionId: string, customInstructions?: string): Promise<void>;
-	getStats(sessionId: string): Promise<SessionStats>;
-	/** 当前模型上下文使用（tokens/contextWindow/percent），无会话或未知时返回 null */
-	getContextUsage(sessionId: string): Promise<ContextUsageInfo | null>;
-	/** 清空运行中排队的消息（steer+followUp 都清），返回被清内容（abort 时还原草稿/队列面板清空按钮用） */
-	clearQueue(sessionId: string): Promise<QueuedMessages>;
-	/** 当前排队的 followUp 消息文本（切换会话回来自恢复队列面板用） */
-	getFollowUpMessages(sessionId: string): Promise<string[]>;
-	/** 列出斜杠命令（内置 + prompt 模板 + skill + 扩展命令） */
-	listSlashCommands(sessionId: string): Promise<SlashCommandInfo[]>;
-	/** 无会话列出斜杠命令（draft 新会话用；信任未决的项目不弹窗，只含用户级资源） */
-	listSlashCommandsForCwd(cwd: string): Promise<SlashCommandInfo[]>;
-	/** 设置会话显示名（触发 session_info_changed 事件） */
-	setSessionName(sessionId: string, name: string): Promise<void>;
-	/** 导出会话内容（HTML/JSONL），返回文件内容文本 */
-	exportSession(sessionId: string, format: "html" | "jsonl"): Promise<string>;
-	/**
-	 * 在指定 assistant 消息处分叉：生成以其为结尾的新会话并切换过去（原会话文件保留）。
-	 * ref.entryId 精确定位（历史消息）；缺省时按 ref.text 从分支尾部匹配最近一条同文 assistant 消息。
-	 * 运行或压缩中的会话拒绝 fork。返回新会话 meta。
-	 */
-	forkSession(sessionId: string, ref: { entryId?: string; text?: string }): Promise<SessionMeta>;
-	/**
-	 * 撤回一条用户消息：会话回退到该消息发送之前（被撤回内容在文件中保留为侧枝），
-	 * 文本与图片返回给调用方放回输入框。运行或压缩中的会话拒绝撤回。
-	 */
-	recallMessage(
-		sessionId: string,
-		ref: { entryId?: string; text?: string; timestamp?: number },
-	): Promise<{ text: string; images: ImageInput[] }>;
-	/** 读取会话已加载的资源（skills/扩展；设置页展示用） */
-	getLoadedResources(sessionId: string): Promise<LoadedResources>;
 	/** 搜索 pi.dev 社区包目录（服务端模糊匹配名称/描述/作者，50 条/页） */
 	searchCatalog(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
 	/** 安装社区包（npm:<name>，用户级）；成功后热重载非流式活跃会话 */
@@ -367,7 +302,6 @@ export interface PiApi extends KnowledgeApi {
 	previewFile(target: string, cwd?: string): Promise<ResourcePreviewResult>;
 	/** 使用系统默认应用打开资源：HTTP(S) 用浏览器，本地路径用系统文件关联。 */
 	openResourceExternal(target: string, cwd?: string): Promise<void>;
-	listModels(): Promise<import("./session").AvailableModel[]>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
 	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
 	getMcpStatus(cwd?: string): Promise<McpStatus>;
@@ -556,39 +490,11 @@ export const INVOKE_ROUTES = {
 	cancelKnowledgeSemanticIndex: IpcChannels.KnowledgeSemanticIndexCancel,
 	getKnowledgeTopics: IpcChannels.KnowledgeTopics,
 	archiveKnowledgeTopic: IpcChannels.KnowledgeTopicArchive,
-	// Session（sessions 注册器亦按 SESSION_INVOKE_METHODS 消费本组）
-	createSession: IpcChannels.SessionCreate,
-	listSessions: IpcChannels.SessionList,
-	listAllSessions: IpcChannels.SessionListAll,
-	openSession: IpcChannels.SessionOpen,
-	closeSession: IpcChannels.SessionClose,
-	deleteSession: IpcChannels.SessionDelete,
-	prompt: IpcChannels.SessionPrompt,
-	abort: IpcChannels.SessionAbort,
-	retry: IpcChannels.SessionRetry,
-	setModel: IpcChannels.SessionSetModel,
-	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
-	compact: IpcChannels.SessionCompact,
-	getStats: IpcChannels.SessionStats,
-	getContextUsage: IpcChannels.SessionGetContextUsage,
-	clearQueue: IpcChannels.SessionClearQueue,
-	getFollowUpMessages: IpcChannels.SessionGetFollowUpMessages,
-	listSlashCommands: IpcChannels.SessionListSlashCommands,
-	listSlashCommandsForCwd: IpcChannels.SessionListSlashCommandsForCwd,
-	setSessionName: IpcChannels.SessionSetName,
-	exportSession: IpcChannels.SessionExport,
-	forkSession: IpcChannels.SessionFork,
-	recallMessage: IpcChannels.SessionRecall,
-	getLoadedResources: IpcChannels.SessionGetLoadedResources,
-	getSessionMessages: IpcChannels.SessionGetMessages,
-	peekSubagentMessages: IpcChannels.SessionPeekSubagentMessages,
-	steerSubagent: IpcChannels.SessionSteerSubagent,
-	replySubagentSupervisor: IpcChannels.SessionReplySubagentSupervisor,
+	// Session 子智能体面板由 SubagentsContract 负责，保留其历史方法名。
 	listSessionSubagents: IpcChannels.SubagentsList,
 	dispatchSubagents: IpcChannels.SubagentsDispatch,
 	abortSubagentRun: IpcChannels.SubagentsAbort,
 	listSubagentRuns: IpcChannels.SubagentsRuns,
-	getTodos: IpcChannels.SessionGetTodos,
 	// Packages / 文件 / 资源
 	searchCatalog: IpcChannels.PackagesSearchCatalog,
 	installPackage: IpcChannels.PackagesInstall,
@@ -599,7 +505,6 @@ export const INVOKE_ROUTES = {
 	previewFile: IpcChannels.FilePreview,
 	openResourceExternal: IpcChannels.ResourceOpenExternal,
 	// 模型 / provider / MCP
-	listModels: IpcChannels.ModelsList,
 	listProviders: IpcChannels.SettingsListProviders,
 	getMcpStatus: IpcChannels.McpGetStatus,
 	getMcpConfig: IpcChannels.McpGetConfig,
@@ -650,9 +555,7 @@ export const INVOKE_ROUTES = {
 	lanSetRemoteControl: IpcChannels.LanSetRemoteControl,
 	// Trust / 项目
 	respondTrust: IpcChannels.TrustRespond,
-	ensureProjectTrust: IpcChannels.ProjectEnsureTrust,
 	pickDirectory: IpcChannels.ProjectPickDirectory,
-	listProjectFiles: IpcChannels.ProjectListFiles,
 	getGitBranch: IpcChannels.ProjectGetGitBranch,
 	listGitBranches: IpcChannels.ProjectListGitBranches,
 	checkoutBranch: IpcChannels.ProjectCheckoutBranch,
@@ -680,42 +583,7 @@ export const INVOKE_ROUTES = {
 	uiPluginsOpenDir: IpcChannels.UiPluginsOpenDir,
 } satisfies Partial<Record<keyof PiApi, IpcChannel>>;
 
-/** invoke 契约里由 sessions 注册器（main）负责的方法：全部 1:1 转发 `backend[method]`（同名）。 */
-export const SESSION_INVOKE_METHODS = [
-	"createSession",
-	"listSessions",
-	"listAllSessions",
-	"openSession",
-	"closeSession",
-	"deleteSession",
-	"prompt",
-	"abort",
-	"retry",
-	"setModel",
-	"setThinkingLevel",
-	"compact",
-	"getStats",
-	"getContextUsage",
-	"clearQueue",
-	"getFollowUpMessages",
-	"listSlashCommands",
-	"listSlashCommandsForCwd",
-	"setSessionName",
-	"exportSession",
-	"forkSession",
-	"recallMessage",
-	"getLoadedResources",
-	"getSessionMessages",
-	"peekSubagentMessages",
-	"steerSubagent",
-	"replySubagentSupervisor",
-	"getTodos",
-	"listModels",
-	"listProjectFiles",
-	"ensureProjectTrust",
-] as const satisfies ReadonlyArray<keyof typeof INVOKE_ROUTES>;
-
-/** 子智能体面板 invoke 方法（main ipc/subagents.ts 注册器按此 1:1 转发 `backend[method]`）。 */
+/** 子智能体面板 invoke 方法（main ipc/subagents.ts 注册器按契约注册）。 */
 export const SUBAGENT_INVOKE_METHODS = [
 	"listSessionSubagents",
 	"dispatchSubagents",

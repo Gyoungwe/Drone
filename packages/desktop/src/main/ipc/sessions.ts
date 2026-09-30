@@ -1,42 +1,62 @@
 import type { PiBackend } from "@drone/backend";
-import { channelOf, IpcChannels, SESSION_INVOKE_METHODS, SessionsContract } from "@drone/shared";
+import { IpcChannels, SessionsContract } from "@drone/shared";
 import { bindContract, type ContractImplementation } from "./bind-contract";
-import { registerInvokers } from "./register-invokers";
 
 type SessionContractMethod = keyof typeof SessionsContract.methods & string;
-const CONTRACT_METHODS = new Set<SessionContractMethod>(["create", "prompt", "list"]);
 
-const CONTRACT_CHANNELS: Record<SessionContractMethod, string> = {
-	create: IpcChannels.SessionCreate,
+/** Keep the historical singular `session:*` channels stable during migration. */
+const CONTRACT_CHANNELS = {
+	createSession: IpcChannels.SessionCreate,
+	listSessions: IpcChannels.SessionList,
+	listAllSessions: IpcChannels.SessionListAll,
+	openSession: IpcChannels.SessionOpen,
+	closeSession: IpcChannels.SessionClose,
+	deleteSession: IpcChannels.SessionDelete,
 	prompt: IpcChannels.SessionPrompt,
-	list: IpcChannels.SessionList,
-};
+	abort: IpcChannels.SessionAbort,
+	retry: IpcChannels.SessionRetry,
+	setModel: IpcChannels.SessionSetModel,
+	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
+	compact: IpcChannels.SessionCompact,
+	getStats: IpcChannels.SessionStats,
+	getContextUsage: IpcChannels.SessionGetContextUsage,
+	clearQueue: IpcChannels.SessionClearQueue,
+	getFollowUpMessages: IpcChannels.SessionGetFollowUpMessages,
+	listSlashCommands: IpcChannels.SessionListSlashCommands,
+	listSlashCommandsForCwd: IpcChannels.SessionListSlashCommandsForCwd,
+	setSessionName: IpcChannels.SessionSetName,
+	exportSession: IpcChannels.SessionExport,
+	forkSession: IpcChannels.SessionFork,
+	recallMessage: IpcChannels.SessionRecall,
+	getLoadedResources: IpcChannels.SessionGetLoadedResources,
+	getSessionMessages: IpcChannels.SessionGetMessages,
+	peekSubagentMessages: IpcChannels.SessionPeekSubagentMessages,
+	steerSubagent: IpcChannels.SessionSteerSubagent,
+	replySubagentSupervisor: IpcChannels.SessionReplySubagentSupervisor,
+	getTodos: IpcChannels.SessionGetTodos,
+	listModels: IpcChannels.ModelsList,
+	listProjectFiles: IpcChannels.ProjectListFiles,
+	ensureProjectTrust: IpcChannels.ProjectEnsureTrust,
+} satisfies Record<SessionContractMethod, string>;
 
 /**
- * 会话域：Session* 通道（生命周期/提示/导出/fork/撤回）+ 模型列表 + 项目文件/信任。
- * create/prompt/list 通过 SessionsContract 做参数/结果校验；其余方法保持 1:1 透传
- * `backend[method]`。通道名与 preload 共用 INVOKE_ROUTES 事实源。
+ * Register every session method through the schema-backed host contract.
+ * Renderer method names and legacy channel names remain unchanged; only the
+ * transport registration moved away from INVOKE_ROUTES/registerInvokers.
  */
 export function registerSessionsIpc(backend: PiBackend): void {
-	// Keep all legacy method names/channels intact while moving the three stable
-	// session entry points through the schema-backed host contract.
-	const legacyMethods = SESSION_INVOKE_METHODS.filter(
-		(method) =>
-			!(
-				(method === "createSession" && CONTRACT_METHODS.has("create")) ||
-				(method === "listSessions" && CONTRACT_METHODS.has("list")) ||
-				(method === "prompt" && CONTRACT_METHODS.has("prompt"))
-			),
-	) as Parameters<typeof registerInvokers>[1];
-	registerInvokers(backend, legacyMethods);
+	const implementation = Object.fromEntries(
+		(Object.keys(SessionsContract.methods) as SessionContractMethod[]).map((method) => {
+			const fn = backend[method as keyof PiBackend] as unknown;
+			if (typeof fn !== "function") throw new Error(`Missing backend session method: ${method}`);
+			return [
+				method,
+				(...args: unknown[]) => Reflect.apply(fn as (...args: unknown[]) => unknown, backend, args),
+			];
+		}),
+	) as unknown as ContractImplementation<typeof SessionsContract>;
 
-	const implementation: ContractImplementation<typeof SessionsContract> = {
-		create: (options) => backend.createSession(options),
-		prompt: (...args) => backend.prompt(...args),
-		list: (...args) => backend.listSessions(...args),
-	};
 	bindContract(SessionsContract, implementation, {
-		channelForMethod: (_contract, method) =>
-			CONTRACT_CHANNELS[method as SessionContractMethod] ?? channelOf(SessionsContract, method),
+		channelForMethod: (_contract, method) => CONTRACT_CHANNELS[method as SessionContractMethod],
 	});
 }

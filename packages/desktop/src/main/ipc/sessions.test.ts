@@ -13,8 +13,23 @@ vi.mock("electron", () => ({
 	},
 }));
 
-import { IpcChannels } from "@drone/shared";
+import { IpcChannels, SessionsContract } from "@drone/shared";
 import { registerSessionsIpc } from "./sessions";
+
+function backendForTests(overrides: Record<string, unknown> = {}) {
+	const defaults: Record<string, unknown> = {};
+	for (const method of Object.keys(SessionsContract.methods)) defaults[method] = vi.fn(async () => undefined);
+	defaults.createSession = vi.fn(async (options: { cwd: string }) => ({
+		sessionId: "s1",
+		cwd: options.cwd,
+		active: true,
+		messageCount: 0,
+		createdAt: 1,
+	}));
+	defaults.listSessions = vi.fn(async () => []);
+	defaults.prompt = vi.fn(async () => ({ kind: "agent" }));
+	return { ...defaults, ...overrides } as unknown as Parameters<typeof registerSessionsIpc>[0];
+}
 
 describe("registerSessionsIpc", () => {
 	beforeEach(() => {
@@ -22,7 +37,7 @@ describe("registerSessionsIpc", () => {
 		mocks.removeHandler.mockClear();
 	});
 
-	it("routes migrated methods through the sessions contract channels", async () => {
+	it("routes every session method through its legacy session channel", async () => {
 		const createSession = vi.fn(async (options: { cwd: string }) => ({
 			sessionId: "s1",
 			cwd: options.cwd,
@@ -31,12 +46,7 @@ describe("registerSessionsIpc", () => {
 			createdAt: 1,
 		}));
 		const listSessions = vi.fn(async () => []);
-		const backend = {
-			createSession,
-			listSessions,
-			prompt: vi.fn(async () => ({ accepted: true })),
-			openSession: vi.fn(async () => undefined),
-		} as unknown as Parameters<typeof registerSessionsIpc>[0];
+		const backend = backendForTests({ createSession, listSessions });
 
 		registerSessionsIpc(backend);
 		const create = mocks.handlers.get(IpcChannels.SessionCreate)!;
@@ -48,17 +58,15 @@ describe("registerSessionsIpc", () => {
 		expect(createSession).toHaveBeenCalledWith({ cwd: "/tmp/project" });
 		expect(listSessions).toHaveBeenCalledWith("/tmp/project");
 		expect(listSessions).toHaveBeenCalledWith();
-		expect(mocks.handlers.has("sessions:create")).toBe(false);
+		expect(mocks.handlers.has("sessions:createSession")).toBe(false);
 		expect(mocks.handlers.has(IpcChannels.SessionOpen)).toBe(true);
+		expect(mocks.handlers.has(IpcChannels.SessionGetMessages)).toBe(true);
+		expect(mocks.handlers.has(IpcChannels.ProjectListFiles)).toBe(true);
 	});
 
 	it("rejects invalid migrated arguments before calling the backend", async () => {
 		const createSession = vi.fn();
-		const backend = {
-			createSession,
-			listSessions: vi.fn(),
-			prompt: vi.fn(),
-		} as unknown as Parameters<typeof registerSessionsIpc>[0];
+		const backend = backendForTests({ createSession });
 		registerSessionsIpc(backend);
 
 		const create = mocks.handlers.get(IpcChannels.SessionCreate)!;
