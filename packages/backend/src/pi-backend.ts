@@ -67,6 +67,7 @@ import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/spec
 import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
 import { McpService } from "./mcp/service";
+import { PackageAdmin } from "./packages/admin";
 import {
 	loadPermissionConfig,
 	probePermission as probePermissionRules,
@@ -82,7 +83,7 @@ import { TrustGate } from "./project/trust";
 import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { createDroneRuntime } from "./runtime";
-import { PackageService } from "./services/packages";
+import type { PackageService } from "./services/packages";
 import { AskGate } from "./session/ask-gate";
 import { createEventPipeline, type Stage } from "./session/event-pipeline";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
@@ -295,7 +296,7 @@ export class PiBackend {
 			userDataDir: options.userDataDir,
 			knowledgeDir: process.env.DRONE_KNOWLEDGE_DIR,
 		});
-		this.packages = new PackageService({
+		this.packages = new PackageAdmin({
 			registry: this.registry,
 			defaultCwd: options.defaultCwd,
 			onSessionReloaded: (sessionId) => this.reapplyCapabilities(sessionId),

@@ -1,6 +1,5 @@
 import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "@drone/shared";
 import { NPM_NOT_FOUND_SENTINEL } from "@drone/shared";
-import { DefaultPackageManager, getAgentDir, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { createLogger } from "../log";
 import { fetchPackageCatalog } from "../packages/catalog";
 import type { SessionRegistry } from "../session/registry";
@@ -19,6 +18,22 @@ export function isNpmSpawnEnoent(err: unknown): boolean {
 	const code = (err as { code?: unknown } | null)?.code;
 	const syscall = (err as { syscall?: unknown } | null)?.syscall;
 	return code === "ENOENT" && typeof syscall === "string" && /\bnpm\b/.test(syscall);
+}
+
+/** Minimal package-manager boundary kept free of Pi SDK runtime imports. */
+export interface PackageManager {
+	listConfiguredPackages(): ReadonlyArray<{ source: string; scope: "user" | "project" }>;
+	installAndPersist(source: string): Promise<void>;
+	removeAndPersist(source: string, options?: { local?: boolean }): Promise<boolean>;
+}
+
+export type PackageManagerFactory = (cwd: string) => PackageManager;
+
+export interface PackageServiceDependencies {
+	registry: SessionRegistry;
+	defaultCwd?: string;
+	onSessionReloaded?: (sessionId: string) => void;
+	packageManagerFactory: PackageManagerFactory;
 }
 
 /** npm ENOENT 时换为带哨兵的可读错误，其余原样抛出 */
@@ -40,25 +55,15 @@ function rethrowPackageError(err: unknown): never {
  * user's settings file or spawn npm.
  */
 export class PackageService {
-	private packageManager: DefaultPackageManager | undefined;
+	private packageManager: PackageManager | undefined;
 
-	constructor(
-		private readonly deps: {
-			registry: SessionRegistry;
-			defaultCwd?: string;
-			onSessionReloaded?: (sessionId: string) => void;
-		},
-	) {}
+	constructor(private readonly deps: PackageServiceDependencies) {}
 
 	/** 包管理器（用户级安装/卸载，懒加载；settingsManager 仅用于读写 settings.json 安装记录） */
-	private getPackageManager(): DefaultPackageManager {
+	private getPackageManager(): PackageManager {
 		if (!this.packageManager) {
 			const cwd = this.deps.defaultCwd || process.cwd();
-			this.packageManager = new DefaultPackageManager({
-				cwd,
-				agentDir: getAgentDir(),
-				settingsManager: SettingsManager.create(cwd, getAgentDir()),
-			});
+			this.packageManager = this.deps.packageManagerFactory(cwd);
 		}
 		return this.packageManager;
 	}
