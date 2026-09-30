@@ -8,7 +8,11 @@ const state = runtimeSlot(
 	"knowledge",
 	"publication",
 	/** @returns {any} */
-	() => ({ proofs: new WeakSet() }),
+	() => ({
+		proofs: new WeakSet(),
+		projectEvent: projectKnowledgeEvent,
+		projectSnapshot: projectKnowledgeSnapshot,
+	}),
 	"drone.knowledge.publication.v1",
 );
 const FIELD = "knowledgePublication";
@@ -237,9 +241,6 @@ export function projectKnowledgeSnapshot(messages, persisted = []) {
 		return projectUnsealed(m);
 	});
 }
-state.projectEvent = projectKnowledgeEvent;
-state.projectSnapshot = projectKnowledgeSnapshot;
-
 export function registerAnswerPublication(
 	pi,
 	{
@@ -252,7 +253,11 @@ export function registerAnswerPublication(
 		maxToolRounds = 24,
 	},
 ) {
-	if (runtime) setRuntime(runtime);
+	if (runtime) {
+		setRuntime(runtime);
+		state.projectEvent = projectKnowledgeEvent;
+		state.projectSnapshot = projectKnowledgeSnapshot;
+	}
 	let turnId = null,
 		required = true,
 		started = false,
