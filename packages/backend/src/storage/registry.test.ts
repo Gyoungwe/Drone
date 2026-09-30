@@ -2,7 +2,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { StorageRegistry } from "./registry";
+import { createDefaultStorageRegistry, StorageRegistry } from "./registry";
 
 describe("StorageRegistry", () => {
 	it("rejects duplicate entries and inventories file state", async () => {
@@ -31,5 +31,21 @@ describe("StorageRegistry", () => {
 			sensitivity: "private",
 		});
 		expect((await registry.inspect())[0]?.status).toBe("missing");
+	});
+
+	it("registers desktop durable state alongside agent state", () => {
+		const entries = createDefaultStorageRegistry({
+			agentDir: "/tmp/drone-agent",
+			userDataDir: "/tmp/drone-user-data",
+			knowledgeDir: "/tmp/drone-knowledge",
+		});
+		expect(entries.get("desktop-ui-plugins-config")).toMatchObject({
+			path: "/tmp/drone-user-data/ui-plugins.json",
+			owner: "desktop/ui-plugins",
+		});
+		expect(entries.get("desktop-ui-plugins")).toMatchObject({
+			path: "/tmp/drone-user-data/ui-plugins",
+			owner: "desktop/ui-plugins",
+		});
 	});
 });

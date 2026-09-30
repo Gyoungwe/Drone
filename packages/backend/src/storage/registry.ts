@@ -215,6 +215,20 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 				owner: "desktop/logging",
 				schema: 1,
 				sensitivity: "private",
+			})
+			.register({
+				id: "desktop-ui-plugins-config",
+				path: `${userDataDir}/ui-plugins.json`,
+				owner: "desktop/ui-plugins",
+				schema: 1,
+				sensitivity: "config",
+			})
+			.register({
+				id: "desktop-ui-plugins",
+				path: `${userDataDir}/ui-plugins`,
+				owner: "desktop/ui-plugins",
+				schema: 1,
+				sensitivity: "private",
 			});
 	}
 	return registry;
