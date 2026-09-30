@@ -65,6 +65,7 @@ function scanFile(file, text, findings) {
 	const rel = displayPath(file);
 	const lines = text.split("\n");
 	const isRenderer = /^packages\/desktop\/src\/(renderer|lan-web)\//.test(rel);
+	const isTest = /(?:^|\/)(?:test|tests)\//.test(rel) || /\.(?:test|spec)\.[^.]+$/.test(rel);
 	const domain = rel.match(/^packages\/(knowledge|tasks|research)\//)?.[1];
 
 	// R1: SDK value imports. Keep the check intentionally broad so a newly
@@ -76,7 +77,9 @@ function scanFile(file, text, findings) {
 		const line = lines[lineNumber(text, offset) - 1] || "";
 		if (!isRuntimeImport(line, text, offset)) continue;
 		const specifier = match.slice(1).find(Boolean);
-		const allowed = rel.startsWith("packages/backend/src/session-engine/");
+		// Tests intentionally exercise the SDK boundary directly; production
+		// runtime imports remain restricted to the session-engine gateway.
+		const allowed = isTest || rel.startsWith("packages/backend/src/session-engine/");
 		if (!allowed) addFinding(findings, "R1", file, lineNumber(text, offset), `runtime import ${specifier}`);
 	}
 

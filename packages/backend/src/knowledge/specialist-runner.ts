@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { type KnowledgeSpecialistRole, PROTECTED_KNOWLEDGE_AGENTS } from "@drone/shared";
 import type { Context, Message, Model, ModelThinkingLevel, Tool } from "@earendil-works/pi-ai";
-import { getSupportedThinkingLevels, validateToolArguments } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { getSupportedThinkingLevels, validateToolArguments } from "../session-engine/sdk";
 
 export interface SpecialistCapability extends Tool {
 	execute(args: Record<string, unknown>, signal: AbortSignal): Promise<unknown>;
