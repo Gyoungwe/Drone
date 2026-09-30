@@ -1,7 +1,7 @@
-import { compareClaims } from "@drone/knowledge";
 import { describe, expect, it } from "vitest";
+import { compareClaims, type KnowledgeClaim } from "../src/index";
 
-const claim = (overrides = {}) => ({
+const claim = (overrides: Partial<KnowledgeClaim> = {}): KnowledgeClaim => ({
 	claim: "Wg activates wing-margin growth",
 	subject: "Wg",
 	predicate: "activates",
@@ -10,8 +10,6 @@ const claim = (overrides = {}) => ({
 	tissue: "wing disc",
 	stage: "third instar",
 	method: "RNAi",
-	sourcePath: "Library/Papers/a.md",
-	sourceHash: "a".repeat(64),
 	relation: "observation",
 	...overrides,
 });
