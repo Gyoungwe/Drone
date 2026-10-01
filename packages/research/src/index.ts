@@ -7,6 +7,21 @@ export {
 	verifyLiteratureReceipt,
 } from "./literature-receipt";
 export {
+	contactEmail,
+	normalizePmcid,
+	normalizePmid,
+	OA_DEFAULT_TIMEOUT_MS,
+	OA_MAX_CANDIDATES,
+	OA_SOURCES,
+	type OpenAccessCandidate,
+	type OpenAccessOptions,
+	type OpenAccessQuery,
+	type OpenAccessResolution,
+	PMC_CLOUD_BASE,
+	pmcCloudHttps,
+	resolveOpenAccess,
+} from "./open-access";
+export {
 	type ExecutionReceiptInput,
 	observeExecutionReceipt,
 	type ProvenanceFileDeclaration,

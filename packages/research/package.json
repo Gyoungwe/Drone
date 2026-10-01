@@ -9,7 +9,8 @@
 		".": "./src/index.ts",
 		"./literature-receipt": "./src/literature-receipt.ts",
 		"./source-delivery": "./src/source-delivery.ts",
-		"./run-provenance": "./src/run-provenance.ts"
+		"./run-provenance": "./src/run-provenance.ts",
+		"./open-access": "./src/open-access.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

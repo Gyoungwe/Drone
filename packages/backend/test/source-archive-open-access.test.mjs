@@ -1,15 +1,10 @@
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { contactEmail, normalizePmcid, pmcCloudHttps, resolveOpenAccess } from "@drone/research/open-access";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sourceArchive from "../../../.pi/extensions/source-archive.mjs";
 import { saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
-import {
-	contactEmail,
-	normalizePmcid,
-	pmcCloudHttps,
-	resolveOpenAccess,
-} from "../../../.pi/lib/open-access.mjs";
 import { startResearchRun } from "../../../.pi/lib/research-loop.mjs";
 import { archiveSource } from "../../../.pi/lib/source-archive.mjs";
 
