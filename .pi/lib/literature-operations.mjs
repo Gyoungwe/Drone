@@ -38,7 +38,7 @@ function queued(file, work) {
 	// Queue ownership belongs to the injected host runtime. This keeps two
 	// desktop sessions (or a desktop session and the CLI) from sharing a
 	// process-global promise tail while preserving per-journal serialization.
-	return runRuntimeExclusive("literature-operation", file, work, "drone.literature-operation-queues.v1");
+	return runRuntimeExclusive("literature-operation", file, work);
 }
 export function destinationRecovery(receipt) {
 	const zotero = receipt.zotero?.status,
