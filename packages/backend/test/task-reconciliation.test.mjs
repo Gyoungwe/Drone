@@ -1,6 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { findZoteroItemsByIdentity } from "@drone/research/zotero-identity";
 import { expect, it, vi } from "vitest";
 import { createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
 import { createZoteroReconciler } from "../../../.pi/lib/zotero-reconcile.mjs";
@@ -104,6 +105,12 @@ it("Zotero lookup is exact, read-only and distinguishes attachment metadata from
 		scientificallyVerified: false,
 		safeToAutoRetry: false,
 	});
+	expect(
+		findZoteroItemsByIdentity(
+			[{ key: "ABCD1234", data: { DOI: "10.1234/fixture", collections: ["COLL1234"] } }],
+			{ doi: "https://doi.org/10.1234/fixture", collection: "COLL1234" },
+		),
+	).toHaveLength(1);
 	expect(request).toHaveBeenCalledTimes(2);
 	expect(request.mock.calls.every(([p]) => p.startsWith("items"))).toBe(true);
 });

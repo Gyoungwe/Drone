@@ -45,3 +45,15 @@ export {
 	RESEARCH_ANSWER_GUIDANCE,
 	requiresPaperEvidence,
 } from "./source-delivery";
+export {
+	findZoteroItemsByIdentity,
+	isValidZoteroDoi,
+	isZoteroItemKey,
+	normalizeZoteroDoi,
+	summarizeZoteroAttachments,
+	ZOTERO_KEY_PATTERN,
+	type ZoteroAttachmentIdentity,
+	type ZoteroIdentityItem,
+	type ZoteroIdentityQuery,
+	zoteroItemDoi,
+} from "./zotero-identity";
