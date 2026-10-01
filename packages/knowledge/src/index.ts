@@ -54,6 +54,11 @@ export {
 	saveReviewMode,
 } from "./review-policy";
 export {
+	buildKnowledgeSearchExpression,
+	splitKnowledgeChunks,
+	tokenizeKnowledgeText,
+} from "./search-policy";
+export {
 	normalizeSourceLinks,
 	onlineSourceLink,
 	type SourceLinkOptions,

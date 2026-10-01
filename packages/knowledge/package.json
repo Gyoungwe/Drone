@@ -14,7 +14,8 @@
 		"./source-links": "./src/source-links.ts",
 		"./tool-budget": "./src/tool-budget.ts",
 		"./topic-candidate": "./src/topic-candidate.ts",
-		"./flow-cards": "./src/flow-cards.ts"
+		"./flow-cards": "./src/flow-cards.ts",
+		"./search-policy": "./src/search-policy.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

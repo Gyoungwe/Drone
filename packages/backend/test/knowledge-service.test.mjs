@@ -2,6 +2,7 @@ import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } fr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { buildKnowledgeSearchExpression } from "@drone/knowledge/search-policy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadWorkspaceConfig, saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
 import { readKnowledgeBinding, saveKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
@@ -492,7 +493,7 @@ it("FTS-first query plan does not enumerate all notes through the scope index", 
 		db.exec(schema);
 		const details = db
 			.prepare(`EXPLAIN QUERY PLAN ${query}`)
-			.all("autotomy", "project-a", 5)
+			.all(buildKnowledgeSearchExpression("autotomy"), "project-a", 5)
 			.map((row) => row.detail);
 		expect(details[0]).toMatch(/search VIRTUAL TABLE/);
 		expect(details.some((line) => /SEARCH n USING INTEGER PRIMARY KEY/.test(line))).toBe(true);
