@@ -9,7 +9,8 @@
 		".": "./src/index.ts",
 		"./failure-feedback": "./src/failure-feedback.ts",
 		"./single-flight": "./src/single-flight.ts",
-		"./turn-end-prompt": "./src/turn-end-prompt.ts"
+		"./turn-end-prompt": "./src/turn-end-prompt.ts",
+		"./tool-protocol": "./src/tool-protocol.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

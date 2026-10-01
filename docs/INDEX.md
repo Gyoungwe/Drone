@@ -98,7 +98,7 @@ packages/
 
 ## packages/tasks — 任务领域包（迁移中）
 
-`@drone/tasks` 目前承载无 SDK 依赖的失败反馈、命令协调与回合续作策略：`src/failure-feedback.ts` 导出诊断脱敏、失败识别、失败观察与任务上下文合约，`src/single-flight.ts` 导出按会话、目录、参数隔离的 in-flight 命令合并器，`src/turn-end-prompt.ts` 导出受授权、进度和配额约束的继续提示策略，供 backend 和后续 tasks 迁移复用。`.pi/lib/tasks/{failure-feedback,single-flight,turn-end-prompt}.mjs` 仍保留为 CLI/扩展运行时兼容实现；其余 tasks 模块按 A5-2 分阶段迁移。
+`@drone/tasks` 目前承载无 SDK 依赖的失败反馈、命令协调、回合续作策略与协议修复：`src/failure-feedback.ts` 导出诊断脱敏、失败识别、失败观察与任务上下文合约，`src/single-flight.ts` 导出按会话、目录、参数隔离的 in-flight 命令合并器，`src/turn-end-prompt.ts` 导出受授权、进度和配额约束的继续提示策略，`src/tool-protocol.ts` 仅修复已知旧版状态卡交错，供 backend 和后续 tasks 迁移复用。`.pi/lib/tasks/{failure-feedback,single-flight,turn-end-prompt,tool-protocol}.mjs` 仍保留为 CLI/扩展运行时兼容实现；其余 tasks 模块按 A5-2 分阶段迁移。
 
 ## packages/backend — pi SDK 适配层
 
@@ -117,7 +117,7 @@ src/
 ├── project/            trust / trust-loader / workspace-store / files
 ├── settings/           settings / model-prefs / login
 ├── packages/           admin / catalog
-├── services/           packages / permissions / project-trust / zotero（域服务，组合根暴露）
+├── services/           approvals / packages / permissions / project-trust / zotero（域服务，组合根暴露）
 └── tools/              show-image / todo / todo-reminder / webfetch / subagent / context-evaporation / channel-watch
 ```
 
@@ -153,6 +153,7 @@ src/
 | `src/settings/model-prefs.ts` | `ModelPrefsService` | `model-prefs.json`：隐藏模型 + 停用 provider + per-agent 子代理模型；`listModels()` 唯一出口过滤 |
 | `src/settings/login.ts` | `LoginService` | provider 交互登录桥接：AuthInteraction → IPC 事件（prompt 挂起等 renderer 应答；浏览器先到则拒挂起 prompt）。支持 OAuth + api_key 交互登录（如 Google Vertex）；`filterAuthSelectOptions` 对 google-vertex 剔除必败的 api-key 选项（Vertex 不接受 API key，见 PITFALLS） |
 | `src/services/packages.ts` | `PackageService` | 社区包搜索/安装/卸载/已配置清单 + 装卸后对非流式会话热重载（对齐 CLI /reload）；npm ENOENT 转带哨兵的可读错误；通过 `BackendServices.packages` 暴露 |
+| `src/services/approvals.ts` | `ApprovalService` | per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播和 allowRun 队列裁决；通过 `BackendServices.approvals` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/permissions.ts` | `PermissionSettingsService` | `permissions.json` 快照、原子保存、恢复默认、规则试算与审计尾部；通过 `BackendServices.permissions` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`PiBackend` 的资源加载与旧 `respondTrust` 继续委托 |
 | `src/packages/admin.ts` | `PackageAdmin`（兼容别名） | 旧包管理入口的兼容 re-export；新代码使用 `services/packages.ts` |
