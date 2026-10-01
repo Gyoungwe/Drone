@@ -54,7 +54,14 @@ function rethrowPackageError(err: unknown): never {
  * The package manager remains lazy because catalog browsing must not touch the
  * user's settings file or spawn npm.
  */
-export class PackageService {
+export interface PackageServicePort {
+	searchPackages(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
+	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
+	installPackage(name: string): Promise<void>;
+	removePackage(source: string, scope: "user" | "project"): Promise<void>;
+}
+
+export class PackageService implements PackageServicePort {
 	private packageManager: PackageManager | undefined;
 
 	constructor(private readonly deps: PackageServiceDependencies) {}

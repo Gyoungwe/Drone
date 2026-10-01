@@ -34,15 +34,18 @@ export function registerIpc(
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
 	getIncidentSnapshot?: () => unknown,
-	services?: Pick<BackendServices, "settings" | "models" | "login" | "knowledge" | "mcp" | "zotero">,
+	services?: Pick<
+		BackendServices,
+		"settings" | "models" | "login" | "knowledge" | "mcp" | "zotero" | "packages" | "subagents"
+	>,
 ): void {
 	registerSessionsIpc(backend);
 	registerSettingsIpc(backend, services);
 	registerMcpIpc(backend, services);
 	registerPermissionSettingsIpc(backend);
-	registerSubagentsIpc(backend);
+	registerSubagentsIpc(backend, services);
 	registerKnowledgeIpc(backend, services);
-	registerPackagesIpc(backend);
+	registerPackagesIpc(backend, services);
 	registerAppIpc(backend, getIncidentSnapshot);
 	registerInstitutionalIpc();
 	registerUiPluginsIpc(uiPluginsManager);

@@ -91,9 +91,11 @@ export {
 	isNpmSpawnEnoent,
 	NPM_NOT_FOUND_SENTINEL,
 	PackageService,
+	type PackageServicePort,
 } from "./services/packages";
 export { PermissionSettingsService } from "./services/permissions";
 export { ProjectTrustService } from "./services/project-trust";
+export { SubagentService, type SubagentServicePort } from "./services/subagents";
 export { ZoteroService } from "./services/zotero";
 export {
 	assignEntryIds,

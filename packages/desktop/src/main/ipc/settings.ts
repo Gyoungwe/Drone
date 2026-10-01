@@ -11,7 +11,7 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
 export function registerSettingsIpc(
 	backend: PiBackend,
-	services?: Pick<BackendServices, "settings" | "models" | "login">,
+	services?: Pick<BackendServices, "settings" | "models" | "login" | "subagents">,
 ): void {
 	// Prefer explicit domain services when the composition root is available. The
 	// PiBackend fallback keeps older tests and embedders source-compatible while
@@ -19,6 +19,12 @@ export function registerSettingsIpc(
 	const settings = services?.settings ?? backend.settings;
 	const models = services?.models ?? backend.models;
 	const login = services?.login ?? backend.login;
+	const subagents =
+		services?.subagents ??
+		backend.subagents ??
+		({
+			listAvailable: () => backend.listSubagents(),
+		} satisfies Pick<BackendServices["subagents"], "listAvailable">);
 	const implementation: ContractImplementation<typeof SettingsContract> = {
 		listProviders: (...args) => settings.listProviders(args[0] as ListProvidersOptions | undefined),
 		saveApiKey: (providerId, key) => settings.saveApiKey(providerId, key),
@@ -34,7 +40,7 @@ export function registerSettingsIpc(
 		setSubagentModel: (agent, modelRef) => models.setSubagentModel(agent, modelRef),
 		setSubagentThinking: (agent, level) =>
 			models.setSubagentThinking(agent, level as SubagentThinkingLevel | null),
-		listSubagents: () => backend.listSubagents(),
+		listSubagents: () => subagents.listAvailable(),
 		startProviderLogin: (loginId, providerId) => login.startLogin(loginId, providerId),
 		cancelProviderLogin: (loginId) => login.cancel(loginId),
 		respondProviderLogin: (loginId, promptId, value) => login.respond(loginId, promptId, value),

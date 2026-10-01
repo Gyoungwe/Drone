@@ -77,6 +77,7 @@ import { type ApprovalDecision, ApprovalService } from "./services/approvals";
 import type { PackageService } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import { ProjectTrustService } from "./services/project-trust";
+import { SubagentService } from "./services/subagents";
 import { ZoteroService } from "./services/zotero";
 import { AskGate } from "./session/ask-gate";
 import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
@@ -122,7 +123,7 @@ import { createDefaultStorageRegistry, type StorageRegistry } from "./storage/re
 import { readChannelWatchEnabled, writeChannelWatchEnabled } from "./tools/channel-watch";
 import { readContextManagerMode, writeContextManagerMode } from "./tools/context-evaporation";
 import { globalToolManifest } from "./tools/manifest";
-import { discoverAgents, isSubagentSessionPath, SubagentPanelService } from "./tools/subagent";
+import { isSubagentSessionPath, SubagentPanelService } from "./tools/subagent";
 import { applySubagentMutex } from "./tools/subagent/mutex";
 import { withNativeSubagentSlot } from "./tools/subagent/slots";
 
@@ -250,6 +251,8 @@ export class PiBackend {
 		emit: (sessionId, event) => this.emitEvent(sessionId, event),
 		log,
 	});
+	/** Host-facing subagent boundary; the panel implementation remains private. */
+	readonly subagents: SubagentService;
 	private readonly streamGuard = new StreamGuard();
 	private readonly recovery = new SessionRecovery();
 	private readonly modelWait = new ModelWaitMonitor(
@@ -298,6 +301,7 @@ export class PiBackend {
 		this.approvals = new ApprovalService({
 			onDecision: (decision) => this.persistPermissionDecision(decision),
 		});
+		this.subagents = new SubagentService(this.subagentPanel, options.defaultCwd);
 		this.storage = createDefaultStorageRegistry({
 			agentDir: getAgentDir(),
 			userDataDir: options.userDataDir,
@@ -1334,35 +1338,33 @@ export class PiBackend {
 		return this.modelSettings.setSubagentThinking(agent, level);
 	}
 
+	/** @deprecated 通过 BackendServices.subagents.listAvailable 使用。 */
 	async listSubagents(): Promise<SubagentInfo[]> {
-		const agents = await discoverAgents(this.options.defaultCwd ?? process.cwd(), { projectTrusted: false });
-		return agents
-			.filter((agent) => agent.source !== "project")
-			.map(({ name, description, source }) => ({
-				name,
-				description,
-				source: source === "builtin" ? "builtin" : "user",
-			}));
+		return this.subagents.listAvailable();
 	}
 
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任）与并发边界 */
+	/** @deprecated 通过 BackendServices.subagents.listSession 使用。 */
 	listSessionSubagents(sessionId: string): Promise<SubagentPanelSnapshot> {
-		return this.subagentPanel.listAgents(sessionId);
+		return this.subagents.listSession(sessionId);
 	}
 
 	/** 子智能体面板：直接派发到会话（同 runSubagent 路径；超出运行槽排队） */
+	/** @deprecated 通过 BackendServices.subagents.dispatch 使用。 */
 	dispatchSubagents(sessionId: string, input: SubagentDispatchInput): Promise<SubagentDispatchReceipt> {
-		return this.subagentPanel.dispatch(sessionId, input);
+		return this.subagents.dispatch(sessionId, input);
 	}
 
 	/** 子智能体面板：取消排队 / 中止运行；终态或未知 runId 返回 false */
+	/** @deprecated 通过 BackendServices.subagents.abort 使用。 */
 	async abortSubagentRun(runId: string): Promise<boolean> {
-		return this.subagentPanel.abort(runId);
+		return this.subagents.abort(runId);
 	}
 
 	/** 子智能体面板：本会话进程内的面板运行（切回会话补水） */
+	/** @deprecated 通过 BackendServices.subagents.listRuns 使用。 */
 	async listSubagentRuns(sessionId: string): Promise<SubagentPanelRun[]> {
-		return this.subagentPanel.listRuns(sessionId);
+		return this.subagents.listRuns(sessionId);
 	}
 
 	onEvent(handler: EventHandler): () => void {

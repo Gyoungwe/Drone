@@ -79,4 +79,29 @@ describe("registerSubagentsIpc", () => {
 		expect(invalid).toMatchObject({ code: "invalid_arguments", severity: "error" });
 		expect(listSessionSubagents).not.toHaveBeenCalled();
 	});
+
+	it("prefers the explicit host service over façade methods", async () => {
+		const service = {
+			listSession: vi.fn(async () => ({
+				sessionId: "session-2",
+				cwd: "/tmp/project",
+				agents: [],
+				maxConcurrent: 1,
+				projectTrusted: false,
+				userAgentsDir: "/tmp/agents",
+				projectAgentsDir: "/tmp/project/.pi/agents",
+				readOnly: false,
+			})),
+			dispatch: vi.fn(async () => ({ dispatchId: "d2", runs: [] })),
+			abort: vi.fn(async () => true),
+			listRuns: vi.fn(async () => []),
+			listAvailable: vi.fn(async () => []),
+		};
+		const backend = {} as Parameters<typeof registerSubagentsIpc>[0];
+		registerSubagentsIpc(backend, { subagents: service });
+
+		const list = mocks.handlers.get(IpcChannels.SubagentsList)!;
+		expect(await list({}, "session-2")).toMatchObject({ sessionId: "session-2" });
+		expect(service.listSession).toHaveBeenCalledWith("session-2");
+	});
 });

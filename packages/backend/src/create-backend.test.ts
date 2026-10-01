@@ -20,6 +20,8 @@ describe("createBackend", () => {
 		expect(services.zotero).toBe(services.sessions.zotero);
 		expect(services.zotero.getStatus).toBeTypeOf("function");
 		expect(services.projectTrust).toBe(services.sessions.projectTrust);
+		expect(services.subagents).toBe(services.sessions.subagents);
+		expect(services.subagents.listAvailable).toBeTypeOf("function");
 		services.dispose();
 	});
 

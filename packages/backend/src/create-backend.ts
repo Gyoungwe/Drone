@@ -4,9 +4,10 @@ import type { McpService } from "./mcp/service";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
-import type { PackageService } from "./services/packages";
+import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
+import type { SubagentServicePort } from "./services/subagents";
 import type { ZoteroService } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
 import type { LoginService } from "./settings/login";
@@ -31,7 +32,7 @@ export interface BackendServices {
 	/** Domain-owned knowledge service; consumers do not need the compatibility façade. */
 	knowledge: KnowledgeUiService;
 	/** Community package catalog and package-manager operations. */
-	packages: PackageService;
+	packages: PackageServicePort;
 	/** Provider and credential settings service. */
 	settings: SettingsService;
 	/** User-level model visibility and subagent preferences. */
@@ -46,6 +47,8 @@ export interface BackendServices {
 	approvals: ApprovalService;
 	/** Zotero integration status service. */
 	zotero: ZoteroService;
+	/** Session-scoped subagent panel and settings discovery boundary. */
+	subagents: SubagentServicePort;
 	/** Project trust store and interactive trust gate. */
 	projectTrust: ProjectTrustService;
 	dispose(): void;
@@ -68,6 +71,7 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 		permissions,
 		approvals: sessions.approvals,
 		zotero: sessions.zotero,
+		subagents: sessions.subagents,
 		projectTrust: sessions.projectTrust,
 		dispose: () => {
 			sessions.dispose();
