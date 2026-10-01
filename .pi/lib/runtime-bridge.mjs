@@ -98,7 +98,13 @@ export function bindRuntime(pi) {
 	if (!pi || (typeof pi !== "object" && typeof pi !== "function")) return () => {};
 	if (runtimeBindings.has(pi)) return () => {};
 	runtimeBindings.add(pi);
+	const inherited = currentRuntime();
 	const fallback = createStandaloneRuntime();
+	// Extensions register immutable tool/acceptance declarations before the
+	// desktop host announces its runtime. Give this host a private copy so
+	// callbacks that run in the fallback still see those declarations without
+	// sharing mutable journals, queues, or UI state from another host.
+	adoptRuntimeState(inherited, fallback);
 	hostRuntimes.set(pi, fallback);
 	// CLI/test Pi hosts may not expose the desktop event bus. Give each such
 	// host an explicit standalone runtime instead of falling back to the
@@ -136,6 +142,42 @@ export function bindRuntime(pi) {
 
 /** Transfer extension-owned slots when a desktop host announces its runtime late. */
 function adoptRuntimeState(previous, runtime) {
+	const sourceTools = previous?.tools?.manifest;
+	if (sourceTools) {
+		if (!runtime.tools) runtime.tools = {};
+		const targetTools = runtime.tools.manifest ?? { tools: new Map(), families: new Map() };
+		runtime.tools.manifest = targetTools;
+		if (!targetTools.tools) targetTools.tools = new Map();
+		for (const [name, meta] of sourceTools.tools || []) {
+			if (!targetTools.tools.has(name)) targetTools.tools.set(name, meta);
+		}
+		if (!targetTools.families) targetTools.families = new Map();
+		for (const [name, meta] of sourceTools.families || []) {
+			if (!targetTools.families.has(name)) targetTools.families.set(name, meta);
+		}
+	}
+	const sourceAcceptance = previous?.tasks?.acceptance;
+	if (sourceAcceptance) {
+		if (!runtime.tasks) runtime.tasks = {};
+		const targetAcceptance = runtime.tasks.acceptance ?? {
+			verifiers: new Map(),
+			kinds: [],
+			properties: {},
+		};
+		runtime.tasks.acceptance = targetAcceptance;
+		if (!targetAcceptance.verifiers) targetAcceptance.verifiers = new Map();
+		for (const [kind, verifier] of sourceAcceptance.verifiers || []) {
+			if (!targetAcceptance.verifiers.has(kind)) targetAcceptance.verifiers.set(kind, verifier);
+		}
+		if (Array.isArray(sourceAcceptance.kinds)) {
+			targetAcceptance.kinds ??= [];
+			for (const kind of sourceAcceptance.kinds)
+				if (!targetAcceptance.kinds.includes(kind)) targetAcceptance.kinds.push(kind);
+		}
+		targetAcceptance.properties ??= {};
+		for (const [key, value] of Object.entries(sourceAcceptance.properties || {}))
+			if (!(key in targetAcceptance.properties)) targetAcceptance.properties[key] = value;
+	}
 	for (const domain of ["knowledge", "tasks", "tools"]) {
 		const source = previous?.[domain];
 		if (!source || typeof source !== "object") continue;
@@ -164,6 +206,11 @@ export function currentRuntime() {
 	if (installedRuntime) return installedRuntime;
 	standaloneRuntime ||= createStandaloneRuntime();
 	return standaloneRuntime;
+}
+
+/** Whether the current call is explicitly scoped to a host-owned runtime. */
+export function hasRuntimeContext() {
+	return Boolean(contexts.getStore() || installedRuntime);
 }
 
 function resolveSlot(domain, slot, create) {

@@ -9,9 +9,14 @@
  */
 
 import { emitProcessEvent } from "./process-events.mjs";
-import { bindRuntime, runtimeSlot, withHostRuntime } from "./runtime-bridge.mjs";
+import { bindRuntime, hasRuntimeContext, runtimeSlot, withHostRuntime } from "./runtime-bridge.mjs";
 
 const registry = runtimeSlot("tools", "manifest", () => ({ tools: new Map(), families: new Map() }));
+// Compatibility read model for code that consumes declarations outside a host
+// callback (research journals and KnowledgeFlow). Mutable execution state stays
+// runtime-owned; only immutable tool metadata is mirrored here.
+const compatibilityTools = new Map();
+const compatibilityFamilies = new Map();
 
 /** Versioned host event used to project first-party registrations into the backend. */
 export const TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1";
@@ -95,6 +100,11 @@ export function defineTool(definition) {
 	registry.tools.set(name, meta);
 	for (const family of meta.families || [])
 		registry.families.set(family.match.toLowerCase(), { ...family, owner: name });
+	if (!compatibilityTools.has(name)) compatibilityTools.set(name, meta);
+	for (const family of meta.families || []) {
+		const key = family.match.toLowerCase();
+		if (!compatibilityFamilies.has(key)) compatibilityFamilies.set(key, { ...family, owner: name });
+	}
 	return definition;
 }
 
@@ -123,11 +133,11 @@ export function registerTool(pi, definition) {
 }
 
 export function toolMeta(name) {
-	return registry.tools.get(name) || null;
+	return registry.tools.get(name) || (hasRuntimeContext() ? null : compatibilityTools.get(name)) || null;
 }
 
 export function toolFamilies() {
-	return [...registry.families.values()];
+	return [...(hasRuntimeContext() ? registry.families : compatibilityFamilies).values()];
 }
 
 /** 工具家族匹配：名称前缀（`research-zotero_*`）或参数中的 server 名。 */
@@ -135,7 +145,7 @@ export function matchToolFamily(toolName, args) {
 	const name = String(toolName || "").toLowerCase();
 	const server = typeof args?.server === "string" ? args.server.toLowerCase() : "";
 	const tool = typeof args?.tool === "string" ? args.tool.toLowerCase() : "";
-	for (const family of registry.families.values()) {
+	for (const family of (hasRuntimeContext() ? registry.families : compatibilityFamilies).values()) {
 		const m = family.match.toLowerCase();
 		if (
 			name === m ||
@@ -166,11 +176,11 @@ export function toolsWhere(predicate) {
 
 /** 工具执行中的宿主状态条文案：工具声明优先，再看家族。 */
 export function toolActivity(name, args) {
-	return registry.tools.get(name)?.activity || matchToolFamily(name, args)?.activity || null;
+	return toolMeta(name)?.activity || matchToolFamily(name, args)?.activity || null;
 }
 
 /** 回执卡构造器（挂钩 3）：工具声明的 drone.flowCards(event)。 */
 export function flowCardBuilder(name) {
-	const builder = registry.tools.get(name)?.flowCards;
+	const builder = toolMeta(name)?.flowCards;
 	return typeof builder === "function" ? builder : null;
 }

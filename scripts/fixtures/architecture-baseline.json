@@ -472,31 +472,25 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/source-archive-open-access.test.mjs",
-      "line": 5,
+      "line": 6,
       "detail": "relative .pi path ../../../.pi/extensions/source-archive.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/source-archive-open-access.test.mjs",
-      "line": 6,
+      "line": 7,
       "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/source-archive-open-access.test.mjs",
-      "line": 12,
-      "detail": "relative .pi path ../../../.pi/lib/open-access.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/source-archive-open-access.test.mjs",
-      "line": 13,
+      "line": 8,
       "detail": "relative .pi path ../../../.pi/lib/research-loop.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/source-archive-open-access.test.mjs",
-      "line": 14,
+      "line": 9,
       "detail": "relative .pi path ../../../.pi/lib/source-archive.mjs"
     },
     {
