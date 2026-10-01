@@ -154,14 +154,8 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-publication-hooks.test.mjs",
-      "line": 2,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/publication.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-publication-hooks.test.mjs",
       "line": 3,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/task-feedback.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/publication.mjs"
     },
     {
       "rule": "R5",
@@ -700,20 +694,14 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/usage-feedback.test.mjs",
-      "line": 6,
+      "line": 7,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/publication.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/usage-feedback.test.mjs",
-      "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/usage-feedback.test.mjs",
       "line": 8,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/task-feedback.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
     },
     {
       "rule": "R5",

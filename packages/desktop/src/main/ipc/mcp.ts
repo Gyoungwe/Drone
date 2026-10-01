@@ -4,12 +4,17 @@ import { shell } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** MCP configuration/status IPC. Contract validation protects renderer input and output shapes. */
-export function registerMcpIpc(backend: SessionServicePort, services?: Pick<BackendServices, "mcp">): void {
+export function registerMcpIpc(
+	backendOrServices: BackendServices | SessionServicePort,
+	services?: Pick<BackendServices, "mcp">,
+): void {
+	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
+	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
 	const legacy = backend as SessionServicePort & {
 		setMcpServerEnabled?: BackendServices["mcp"]["setServerEnabled"];
 	};
 	const mcp =
-		services?.mcp ??
+		hostServices?.mcp ??
 		("mcp" in backend ? (backend as SessionServicePort & Pick<BackendServices, "mcp">).mcp : undefined);
 	if (!mcp) throw new Error("MCP service is required by the desktop host");
 	const implementation: ContractImplementation<typeof McpContract> = {

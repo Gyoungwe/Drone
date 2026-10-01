@@ -3,34 +3,34 @@ import { createBackend } from "./create-backend";
 import { createDroneRuntime } from "./runtime";
 
 describe("createBackend", () => {
-	it("assembles the compatibility façade and domain service groups", () => {
+	it("assembles domain service groups outside the session port", () => {
 		const services = createBackend({ projectTrust: false, permissionGates: false });
 		expect(services.sessions).toBeDefined();
 		expect(services.diagnostics).toBeDefined();
 		expect(services.diagnostics.getDiagnostics).toBeTypeOf("function");
-		expect(services.sessionEngine).toBe(services.sessions.sessionEngine);
-		expect(services.knowledge).toBe(services.sessions.knowledge);
+		expect(services.sessionEngine).toBeDefined();
+		expect(services.knowledge).toBeDefined();
 		expect(services.knowledge.overview).toBeTypeOf("function");
-		expect(services.knowledgeSession).toBe(services.sessions.knowledgeSession);
+		expect(services.knowledgeSession).toBeDefined();
 		expect(services.knowledgeSession.reviewWithModel).toBeTypeOf("function");
-		expect(services.packages).toBe(services.sessions.packages);
-		expect(services.settings).toBe(services.sessions.settings);
+		expect(services.packages).toBeDefined();
+		expect(services.settings).toBeDefined();
 		expect(services.settings.listProviders).toBeTypeOf("function");
-		expect(services.models).toBe(services.sessions.models);
+		expect(services.models).toBeDefined();
 		expect(services.models.getPrefs).toBeTypeOf("function");
-		expect(services.login).toBe(services.sessions.login);
+		expect(services.login).toBeDefined();
 		expect(services.login.startLogin).toBeTypeOf("function");
-		expect(services.mcp).toBe(services.sessions.mcp);
-		expect(services.permissions).toBe(services.sessions.permissions);
+		expect(services.mcp).toBeDefined();
+		expect(services.permissions).toBeDefined();
 		expect(services.permissions.getConfig).toBeTypeOf("function");
-		expect(services.approvals).toBe(services.sessions.approvals);
+		expect(services.approvals).toBeDefined();
 		expect(services.approvals.listPending).toBeTypeOf("function");
-		expect(services.zotero).toBe(services.sessions.zotero);
+		expect(services.zotero).toBeDefined();
 		expect(services.zotero.getStatus).toBeTypeOf("function");
-		expect(services.institutional).toBe(services.sessions.institutional);
+		expect(services.institutional).toBeDefined();
 		expect(services.institutional.testAccess).toBeTypeOf("function");
-		expect(services.projectTrust).toBe(services.sessions.projectTrust);
-		expect(services.subagents).toBe(services.sessions.subagents);
+		expect(services.projectTrust).toBeDefined();
+		expect(services.subagents).toBeDefined();
 		expect(services.subagents.listAvailable).toBeTypeOf("function");
 		services.dispose();
 	});
@@ -47,7 +47,6 @@ describe("createBackend", () => {
 		const runtime = createDroneRuntime();
 		const services = createBackend({ runtime, projectTrust: false, permissionGates: false });
 		expect(services.runtime).toBe(runtime);
-		expect(services.sessions.runtime).toBe(runtime);
 		services.dispose();
 	});
 });

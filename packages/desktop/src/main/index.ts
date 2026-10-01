@@ -5,13 +5,7 @@ import "./dev-agent-dir";
 import "./fix-path";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import {
-	type BackendServices,
-	createBackend,
-	createLogger,
-	initLogging,
-	type SessionServicePort,
-} from "@drone/backend";
+import { type BackendServices, createBackend, createLogger, initLogging } from "@drone/backend";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
@@ -24,7 +18,6 @@ import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
 import { applyChromeTheme, createWindow, resolveTheme } from "./window";
 
 const log = createLogger("main");
-let backend: SessionServicePort;
 let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
 let lanObserver: LanObserverHandle | undefined;
@@ -80,7 +73,7 @@ function buildIncidentSnapshot(details: { reason: string; exitCode: number }): {
 		reason: details.reason,
 		exitCode: details.exitCode,
 		processes: summarizeProcesses(app.getAppMetrics()),
-		sessions: summarizeRates(backend.getEventRates()),
+		sessions: summarizeRates(backendServices?.sessions.getEventRates() ?? new Map()),
 		uptimeMs: Math.round(process.uptime() * 1000),
 	};
 }
@@ -221,8 +214,7 @@ app.whenReady().then(async () => {
 			academicPiRoot: researchSkillPacks.academicPiRoot,
 		},
 	});
-	backend = backendServices.sessions;
-	await backend.init();
+	await backendServices.sessions.init();
 
 	// 心跳（决策 3，60s unref）：renderer 内存 + 每会话事件速率——白屏/冻结事故「死前多忙」的
 	// 最后读数；快照/心跳只记 id/速率/内存数字，绝不记消息正文
@@ -232,7 +224,7 @@ app.whenReady().then(async () => {
 			const rendererMemoryMb = Math.round(tabs.reduce((sum, m) => sum + m.memory.workingSetSize, 0) / 1024);
 			crashLog.info("renderer heartbeat", {
 				rendererMemoryMb,
-				sessions: summarizeRates(backend.getEventRates()),
+				sessions: summarizeRates(backendServices?.sessions.getEventRates() ?? new Map()),
 			});
 		} catch (err) {
 			crashLog.warn("renderer heartbeat failed", err);
@@ -245,7 +237,7 @@ app.whenReady().then(async () => {
 	}, HEARTBEAT_INTERVAL_MS);
 	consoleFlush.unref();
 	lanObserver = await initLanObserver(
-		backend,
+		backendServices,
 		join(app.getPath("userData"), "lan-observer.json"),
 		join(app.getPath("userData"), "lan-audit.jsonl"),
 	);

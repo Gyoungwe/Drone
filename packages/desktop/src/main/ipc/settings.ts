@@ -10,29 +10,31 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
 export function registerSettingsIpc(
-	backend: SessionServicePort,
+	backendOrServices: BackendServices | SessionServicePort,
 	services?: Pick<BackendServices, "settings" | "models" | "login" | "subagents">,
 ): void {
-	// Prefer explicit domain services from the composition root.  The structural
+	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
+	// Prefer explicit domain services from the composition root. The structural
 	// fallback only supports older host adapters that expose the same services.
+	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
 	const legacy = backend as SessionServicePort & {
 		listSubagents?: BackendServices["subagents"]["listAvailable"];
 	};
 	const settings =
-		services?.settings ??
+		hostServices?.settings ??
 		("settings" in backend
 			? (backend as SessionServicePort & Pick<BackendServices, "settings">).settings
 			: undefined);
 	const models =
-		services?.models ??
+		hostServices?.models ??
 		("models" in backend
 			? (backend as SessionServicePort & Pick<BackendServices, "models">).models
 			: undefined);
 	const login =
-		services?.login ??
+		hostServices?.login ??
 		("login" in backend ? (backend as SessionServicePort & Pick<BackendServices, "login">).login : undefined);
 	const subagents =
-		services?.subagents ??
+		hostServices?.subagents ??
 		("subagents" in backend
 			? (backend as SessionServicePort & Pick<BackendServices, "subagents">).subagents
 			: legacy.listSubagents

@@ -4,9 +4,11 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** 社区包域：pi.dev 目录搜索 + 安装/卸载 + 已配置清单。 */
 export function registerPackagesIpc(
-	backend: SessionServicePort,
+	backendOrServices: BackendServices | SessionServicePort,
 	services?: Pick<BackendServices, "packages">,
 ): void {
+	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
+	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
 	const legacy = backend as SessionServicePort & {
 		searchPackages?: BackendServices["packages"]["searchPackages"];
 		installPackage?: BackendServices["packages"]["installPackage"];
@@ -14,7 +16,7 @@ export function registerPackagesIpc(
 		listConfiguredPackages?: BackendServices["packages"]["listConfiguredPackages"];
 	};
 	const packages =
-		services?.packages ??
+		hostServices?.packages ??
 		("packages" in backend
 			? (backend as SessionServicePort & Pick<BackendServices, "packages">).packages
 			: legacy.searchPackages &&

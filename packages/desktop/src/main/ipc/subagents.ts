@@ -7,9 +7,11 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
  * `backend[method]`（校验、排队、结果入会话都在 backend 的 SubagentPanelService）。
  */
 export function registerSubagentsIpc(
-	backend: SessionServicePort,
+	backendOrServices: BackendServices | SessionServicePort,
 	services?: Pick<BackendServices, "subagents">,
 ): void {
+	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
+	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
 	const legacy = backend as SessionServicePort & {
 		listSessionSubagents?: BackendServices["subagents"]["listSession"];
 		dispatchSubagents?: BackendServices["subagents"]["dispatch"];
@@ -18,7 +20,7 @@ export function registerSubagentsIpc(
 		listSubagents?: BackendServices["subagents"]["listAvailable"];
 	};
 	const subagents =
-		services?.subagents ??
+		hostServices?.subagents ??
 		("subagents" in backend
 			? (backend as SessionServicePort & Pick<BackendServices, "subagents">).subagents
 			: legacy.listSessionSubagents &&

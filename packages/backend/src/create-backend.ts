@@ -49,22 +49,12 @@ import type { SettingsServicePort } from "./settings/settings";
  * part of this port.
  */
 export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupervisor"> {
-	/** Host-owned runtime and domain ports exposed for compatibility adapters. */
-	runtime: DroneRuntime;
-	sessionEngine: SessionEngine;
-	knowledge: KnowledgeUiServicePort;
-	knowledgeSession: KnowledgeSessionServicePort;
-	packages: PackageServicePort;
-	settings: SettingsServicePort;
-	models: ModelSettingsServicePort;
-	login: LoginServicePort;
-	mcp: McpServicePort;
-	permissions: PermissionSettingsService;
-	approvals: ApprovalService;
-	zotero: ZoteroServicePort;
-	institutional: InstitutionalServicePort;
-	subagents: SubagentServicePort;
-	projectTrust: ProjectTrustService;
+	/**
+	 * Host-facing session boundary. Domain services intentionally do not live
+	 * here; consumers should obtain them from BackendServices. The concrete
+	 * PiBackend still exposes compatibility properties at runtime, but they are
+	 * not part of the host contract.
+	 */
 	replySubagentSupervisor(sessionId: string, requestId: string, message: string): void | Promise<void>;
 	init(): Promise<void>;
 	getEventRates(): Map<string, { window60s: number[]; lastEventAt: number }>;

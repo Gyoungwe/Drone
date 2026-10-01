@@ -41,7 +41,7 @@ describe("registerSubagentsIpc", () => {
 			dispatchSubagents,
 			abortSubagentRun,
 			listSubagentRuns,
-		} as unknown as Parameters<typeof registerSubagentsIpc>[0];
+		} as unknown as unknown as Parameters<typeof registerSubagentsIpc>[0];
 
 		registerSubagentsIpc(backend);
 		const list = mocks.handlers.get(IpcChannels.SubagentsList)!;
@@ -71,7 +71,7 @@ describe("registerSubagentsIpc", () => {
 			dispatchSubagents: vi.fn(),
 			abortSubagentRun: vi.fn(),
 			listSubagentRuns: vi.fn(),
-		} as unknown as Parameters<typeof registerSubagentsIpc>[0];
+		} as unknown as unknown as Parameters<typeof registerSubagentsIpc>[0];
 		registerSubagentsIpc(backend);
 
 		const list = mocks.handlers.get(IpcChannels.SubagentsList)!;
@@ -97,8 +97,10 @@ describe("registerSubagentsIpc", () => {
 			listRuns: vi.fn(async () => []),
 			listAvailable: vi.fn(async () => []),
 		};
-		const backend = {} as Parameters<typeof registerSubagentsIpc>[0];
-		registerSubagentsIpc(backend, { subagents: service });
+		const backend = { sessions: {}, subagents: service } as unknown as Parameters<
+			typeof registerSubagentsIpc
+		>[0];
+		registerSubagentsIpc(backend);
 
 		const list = mocks.handlers.get(IpcChannels.SubagentsList)!;
 		expect(await list({}, "session-2")).toMatchObject({ sessionId: "session-2" });

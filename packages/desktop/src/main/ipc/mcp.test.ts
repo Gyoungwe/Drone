@@ -74,6 +74,17 @@ describe("registerMcpIpc", () => {
 		expect(mocks.openPath).toHaveBeenCalledWith(config.path);
 	});
 
+	it("uses the composition-root service when the host is passed directly", async () => {
+		const mcp = {
+			getStatus: vi.fn(() => status),
+			getConfig: vi.fn(async () => config),
+			setServerEnabled: vi.fn(async () => config),
+		};
+		registerMcpIpc({ sessions: {}, mcp } as unknown as Parameters<typeof registerMcpIpc>[0]);
+		await mocks.handlers.get(IpcChannels.McpSetServerEnabled)!({}, "docs", true, undefined);
+		expect(mcp.setServerEnabled).toHaveBeenCalledWith("docs", true, undefined);
+	});
+
 	it("uses the explicit MCP service for toggles", async () => {
 		const mcp = {
 			getStatus: vi.fn(() => status),

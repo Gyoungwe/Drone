@@ -1,5 +1,5 @@
 import { networkInterfaces } from "node:os";
-import { LanConfigService, type LanObserverBackend, LanObserverServer } from "@drone/backend";
+import { type BackendServices, LanConfigService, LanObserverServer } from "@drone/backend";
 import type { LanStatus } from "@drone/shared";
 import * as QRCode from "qrcode";
 // lan-web 单文件产物（vite-plugin-singlefile；需先跑 build:lan-web，dev/build 脚本已前置）
@@ -28,12 +28,12 @@ const PWA_MANIFEST = JSON.stringify({
 
 /** Electron 接线：配置落 userData，HTTP server 仍完全位于纯 Node backend。 */
 export async function initLanObserver(
-	backend: LanObserverBackend,
+	services: Pick<BackendServices, "sessions">,
 	configPath: string,
 	auditPath?: string,
 ): Promise<LanObserverHandle> {
 	const config = new LanConfigService(configPath);
-	const server = new LanObserverServer(backend, config, {
+	const server = new LanObserverServer(services.sessions, config, {
 		pageHtml: lanWebHtml,
 		pwaManifest: PWA_MANIFEST,
 		iconPng: Buffer.from(LAN_ICON_PNG_BASE64, "base64"),

@@ -34,32 +34,19 @@ export function registerIpc(
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
 	getIncidentSnapshot?: () => unknown,
-	services?: Pick<
-		BackendServices,
-		| "settings"
-		| "models"
-		| "login"
-		| "knowledge"
-		| "knowledgeSession"
-		| "mcp"
-		| "zotero"
-		| "packages"
-		| "subagents"
-		| "institutional"
-		| "diagnostics"
-	>,
 ): void {
-	const backend = backendServices.sessions;
-	const hostServices = services ?? backendServices;
+	// The desktop host binds contracts from the composition root directly. The
+	// individual IPC modules retain narrow legacy overloads for third-party
+	// integrations, but production wiring never walks through PiBackend fields.
 	registerSessionsIpc(backendServices);
-	registerSettingsIpc(backend, hostServices);
-	registerMcpIpc(backend, hostServices);
+	registerSettingsIpc(backendServices);
+	registerMcpIpc(backendServices);
 	registerPermissionSettingsIpc(backendServices);
-	registerSubagentsIpc(backend, hostServices);
-	registerKnowledgeIpc(backendServices, hostServices);
-	registerPackagesIpc(backend, hostServices);
-	registerAppIpc(hostServices?.diagnostics ?? backend, getIncidentSnapshot);
-	registerInstitutionalIpc(hostServices);
+	registerSubagentsIpc(backendServices);
+	registerKnowledgeIpc(backendServices);
+	registerPackagesIpc(backendServices);
+	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
+	registerInstitutionalIpc(backendServices);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
@@ -67,26 +54,26 @@ export function registerIpc(
 		sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "changed", name });
 	});
 
-	backend.onEvent((sessionId, event) => {
+	backendServices.sessions.onEvent((sessionId, event) => {
 		sendToRenderer(IpcChannels.Event, { sessionId, event });
 	});
-	backend.onAskRequest((req: AskRequest) => {
+	backendServices.sessions.onAskRequest((req: AskRequest) => {
 		sendToRenderer(IpcChannels.AskRequest, req);
 	});
-	backend.onPermissionRequest((req: PermissionRequest) => {
+	backendServices.sessions.onPermissionRequest((req: PermissionRequest) => {
 		sendToRenderer(IpcChannels.PermissionRequest, req);
 	});
 	// 权限裁决也回投渲染端：LAN 远程应答 / 其他来源应答时桌面卡片要同步撤掉
-	backend.onPermissionResolved((result: PermissionResolved) => {
+	backendServices.sessions.onPermissionResolved((result: PermissionResolved) => {
 		sendToRenderer(IpcChannels.PermissionResolved, result);
 	});
-	backend.onTrustRequest((req: TrustRequest) => {
+	backendServices.sessions.onTrustRequest((req: TrustRequest) => {
 		sendToRenderer(IpcChannels.TrustRequest, req);
 	});
-	backend.onLoginEvent((payload) => {
+	backendServices.sessions.onLoginEvent((payload) => {
 		sendToRenderer(IpcChannels.SettingsLoginEvent, payload);
 	});
-	backend.onMcpStatus((cwd, status) => {
+	backendServices.sessions.onMcpStatus((cwd, status) => {
 		sendToRenderer(IpcChannels.McpEvent, { cwd, status });
 	});
 	onUpdateState((state) => {

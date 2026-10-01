@@ -25,7 +25,9 @@ describe("registerPackagesIpc", () => {
 			removePackage: vi.fn(async () => {}),
 			listConfiguredPackages: vi.fn(async () => []),
 		};
-		registerPackagesIpc({} as Parameters<typeof registerPackagesIpc>[0], { packages: service });
+		registerPackagesIpc({ sessions: {}, packages: service } as unknown as Parameters<
+			typeof registerPackagesIpc
+		>[0]);
 
 		const list = mocks.handlers.get(IpcChannels.PackagesListConfigured)!;
 		expect(await list({})).toEqual([]);
