@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { stat } from "node:fs/promises";
 
 export type StorageSensitivity = "public" | "config" | "private" | "secret";
@@ -87,12 +88,57 @@ export interface DefaultStorageRegistryOptions {
 	agentDir: string;
 	userDataDir?: string;
 	knowledgeDir?: string;
+	/** Optional non-JsonStore roots discovered by the host at startup. */
+	logDir?: string;
+	projectWorkRoots?: readonly string[];
+	knowledgeVaultRoots?: readonly string[];
+	researchResultsRoots?: readonly string[];
+}
+
+/**
+ * Build a deterministic suffix for host-discovered roots without exposing the
+ * raw path in diagnostics ids. The path itself is carried separately in the
+ * redacted storage snapshot.
+ */
+function rootId(prefix: string, path: string): string {
+	return `${prefix}-${createHash("sha256").update(path).digest("hex").slice(0, 12)}`;
+}
+
+function registerRoots(
+	registry: StorageRegistry,
+	paths: readonly string[] | undefined,
+	prefix: string,
+	owner: string,
+	sensitivity: StorageSensitivity,
+): void {
+	const registered = new Set<string>();
+	for (const path of paths ?? []) {
+		if (!path.trim()) continue;
+		const id = rootId(prefix, path);
+		if (registered.has(id)) continue;
+		registered.add(id);
+		registry.register({
+			id,
+			path,
+			owner,
+			schema: 1,
+			sensitivity,
+		});
+	}
 }
 
 /** Register the durable paths shared by desktop and CLI hosts. */
 export function createDefaultStorageRegistry(options: DefaultStorageRegistryOptions): StorageRegistry {
 	const registry = new StorageRegistry();
-	const { agentDir, userDataDir, knowledgeDir } = options;
+	const {
+		agentDir,
+		userDataDir,
+		knowledgeDir,
+		logDir,
+		projectWorkRoots,
+		knowledgeVaultRoots,
+		researchResultsRoots,
+	} = options;
 	registry
 		.register({
 			id: "agent-auth",
@@ -170,15 +216,65 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			owner: "session-engine/sdk",
 			schema: 1,
 			sensitivity: "private",
+		})
+		.register({
+			id: "agent-session-traces",
+			path: `${agentDir}/sessions`,
+			owner: "session/traces",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "agent-subagent-sessions",
+			path: `${agentDir}/sessions-subagents`,
+			owner: "subagents/session-engine",
+			schema: 1,
+			sensitivity: "private",
 		});
-	if (knowledgeDir)
+	if (logDir)
+		registry.register({
+			id: "agent-logs",
+			path: logDir,
+			owner: "backend/logging",
+			schema: 1,
+			sensitivity: "private",
+		});
+	if (knowledgeDir) {
 		registry.register({
 			id: "knowledge-root",
 			path: knowledgeDir,
 			owner: "knowledge",
 			schema: 1,
 			sensitivity: "private",
+		})
+		.register({
+			id: "knowledge-binding",
+			path: `${knowledgeDir}/binding.json`,
+			owner: "knowledge/config",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "knowledge-review-policy",
+			path: `${knowledgeDir}/review-policy.json`,
+			owner: "knowledge/review-policy",
+			schema: 1,
+			sensitivity: "config",
+		})
+		.register({
+			id: "knowledge-specialists",
+			path: `${knowledgeDir}/specialists.json`,
+			owner: "knowledge/specialist-host",
+			schema: 1,
+			sensitivity: "config",
 		});
+	}
+	// These roots are selected after binding/project discovery. Registering the
+	// parent directory keeps SQLite, JSONL and generated review artifacts in the
+	// same inventory without reading their contents into diagnostics.
+	registerRoots(registry, projectWorkRoots, "project-work", "tools/channel-watch", "private");
+	registerRoots(registry, knowledgeVaultRoots, "knowledge-vault", "knowledge/wiki-review", "private");
+	registerRoots(registry, researchResultsRoots, "research-results", "research/provenance", "private");
 	if (userDataDir) {
 		registry
 			.register({

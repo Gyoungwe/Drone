@@ -330,6 +330,7 @@ export class PiBackend {
 			agentDir: getAgentDir(),
 			userDataDir: options.userDataDir,
 			knowledgeDir: process.env.DRONE_KNOWLEDGE_DIR,
+			logDir: process.env.PI_LOG_DIR,
 		});
 		this.projectTrust = new ProjectTrustService({
 			onRequest: (request) => this.dispatchTrustRequest(request),

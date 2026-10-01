@@ -93,4 +93,38 @@ describe("StorageRegistry", () => {
 			owner: "mcp/service",
 		});
 	});
+
+	it("registers non-JsonStore roots with deterministic ids", () => {
+		const options = {
+			agentDir: "/tmp/drone-agent",
+			userDataDir: "/tmp/drone-user-data",
+			knowledgeDir: "/tmp/drone-knowledge",
+			logDir: "/tmp/drone-logs",
+			projectWorkRoots: ["/tmp/project/.local/agent-work"],
+			knowledgeVaultRoots: ["/tmp/vault"],
+			researchResultsRoots: ["/tmp/project/results"],
+		} as const;
+		const first = createDefaultStorageRegistry(options);
+		const second = createDefaultStorageRegistry(options);
+		for (const [prefix, path, owner] of [
+			["agent-logs", "/tmp/drone-logs", "backend/logging"],
+			["project-work-", "/tmp/project/.local/agent-work", "tools/channel-watch"],
+			["knowledge-vault-", "/tmp/vault", "knowledge/wiki-review"],
+			["research-results-", "/tmp/project/results", "research/provenance"],
+		] as const) {
+			const entry = first.list().find((candidate) =>
+				prefix.endsWith("-") ? candidate.id.startsWith(prefix) && candidate.path === path : candidate.id === prefix,
+			);
+			expect(entry, `missing storage entry for ${path}`).toMatchObject({ path, owner, sensitivity: "private" });
+			expect(entry && second.get(entry.id)).toEqual(entry);
+		}
+		expect(first.get("agent-session-traces")).toMatchObject({
+			path: "/tmp/drone-agent/sessions",
+			owner: "session/traces",
+		});
+		expect(first.get("agent-subagent-sessions")).toMatchObject({
+			path: "/tmp/drone-agent/sessions-subagents",
+			owner: "subagents/session-engine",
+		});
+	});
 });
