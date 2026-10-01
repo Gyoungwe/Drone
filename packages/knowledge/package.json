@@ -29,7 +29,8 @@
 		"./runtime-host": "./src/runtime-host.ts",
 		"./ui-state": "./src/ui-state.ts",
 		"./publication": "./src/publication.ts",
-		"./worker": "./src/worker.ts"
+		"./worker": "./src/worker.ts",
+		"./service": "./src/service.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

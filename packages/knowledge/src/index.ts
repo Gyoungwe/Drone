@@ -194,3 +194,5 @@ export {
 	projectKnowledgeSnapshot,
 	registerAnswerPublication,
 } from "./publication";
+
+export { KnowledgeService, closeKnowledgeServices, getKnowledgeService, notifyKnowledgeChange } from "./service";

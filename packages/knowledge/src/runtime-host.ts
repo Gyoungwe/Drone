@@ -65,3 +65,25 @@ export function toolMeta(_toolName: string): unknown {
 export function flowCardBuilder(_toolName: string): unknown {
 	return null;
 }
+
+export type KnowledgeWorkerFactory = (url: URL, options: Record<string, unknown>) => unknown;
+let workerFactory: KnowledgeWorkerFactory = (url, options) => {
+	throw new Error(`Knowledge worker host is not configured for ${url.href}`);
+};
+export function configureKnowledgeWorker(factory: KnowledgeWorkerFactory): void {
+	workerFactory = factory;
+}
+export function createKnowledgeWorker(url: URL, options: Record<string, unknown>): unknown {
+	return workerFactory(url, options);
+}
+export function configureKnowledgeEvidence(host: {
+	requiresPaperEvidence?: (query: string) => boolean;
+	hasPaperCitation?: (sources: unknown[]) => boolean;
+}): void {
+	if (host.requiresPaperEvidence) requiresPaperEvidence = host.requiresPaperEvidence;
+	if (host.hasPaperCitation) hasPaperCitation = host.hasPaperCitation;
+}
+let requiresPaperEvidence = (query: string) => /paper|literature|article|文献|论文/i.test(query);
+let hasPaperCitation = (sources: unknown[]) =>
+	Array.isArray(sources) && sources.some((source) => /(?:^|\/)Library\/Papers\//.test(String((source as { path?: unknown })?.path ?? "")));
+export { requiresPaperEvidence, hasPaperCitation };
