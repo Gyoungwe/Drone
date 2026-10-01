@@ -16,7 +16,8 @@
 		"./topic-candidate": "./src/topic-candidate.ts",
 		"./flow-cards": "./src/flow-cards.ts",
 		"./search-policy": "./src/search-policy.ts",
-		"./publication-policy": "./src/publication-policy.ts"
+		"./publication-policy": "./src/publication-policy.ts",
+		"./semantic-settings": "./src/semantic-settings.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

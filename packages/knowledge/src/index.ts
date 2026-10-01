@@ -86,6 +86,18 @@ export {
 	type ToolBudgetOptions,
 } from "./tool-budget";
 export {
+	createSemanticSettingsApi,
+	createSemanticSettingsState,
+	readSemanticSettings,
+	saveSemanticSettings,
+	validateSemanticConfig,
+	type SemanticConfig,
+	type SemanticProvider,
+	type SemanticSettings,
+	type SemanticSettingsApi,
+	type SemanticSettingsState,
+} from "./semantic-settings";
+export {
 	autoTopicCandidate,
 	type TopicCandidate,
 	type TopicCandidateInput,
