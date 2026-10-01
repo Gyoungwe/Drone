@@ -948,6 +948,7 @@ export class PiBackend {
 
 	/** 全部未决权限请求的只读快照（LAN Observer 等被动观察者用）。 */
 	/** 全部未决权限请求快照（含 requestId；LAN 观察/远程应答与桌面共用） */
+	/** @deprecated 通过 BackendServices.approvals.listPending 使用。 */
 	getPendingPermissionRequests(): PermissionRequest[] {
 		return this.approvals.listPending();
 	}
@@ -1383,11 +1384,13 @@ export class PiBackend {
 		return false;
 	}
 
+	/** @deprecated 通过 BackendServices.approvals.onRequest 使用。 */
 	onPermissionRequest(handler: PermissionHandler): () => void {
 		return this.approvals.onRequest(handler);
 	}
 
 	/** 权限请求被桌面端实际应答后通知被动观察者。 */
+	/** @deprecated 通过 BackendServices.approvals.onResolved 使用。 */
 	onPermissionResolved(handler: PermissionResolvedHandler): () => void {
 		return this.approvals.onResolved(handler);
 	}
@@ -1402,6 +1405,7 @@ export class PiBackend {
 		return () => this.loginHandlers.delete(handler);
 	}
 
+	/** @deprecated 通过 BackendServices.approvals.respond 使用。 */
 	respondPermission(requestId: string, answer: PermissionAnswer): void {
 		const sessionId = this.approvals.respond(requestId, answer);
 		if (answer === "allowRun" && sessionId) log.info("permission allowRun", sessionId, { requestId });

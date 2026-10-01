@@ -33,16 +33,20 @@ describe("ApprovalService", () => {
 
 	it("allowRun resolves queued requests and removes the session on dispose", async () => {
 		const service = new ApprovalService();
+		const resolved: string[] = [];
+		service.onResolved((result) => resolved.push(result.requestId));
 		const gate = service.createGate();
 		gate.bindSession("session-2");
 		service.register("session-2", gate);
 		const first = gate.confirm("first", "one");
 		const second = gate.confirm("second", "two");
-		const requestId = service.listPending()[0].id;
+		const requestIds = service.listPending().map((request) => request.id);
+		const requestId = requestIds[0];
 
 		expect(service.respond(requestId, "allowRun")).toBe("session-2");
 		expect(await first).toBe(true);
 		expect(await second).toBe(true);
+		expect(resolved).toEqual(requestIds);
 		service.remove("session-2");
 		expect(service.listPending()).toEqual([]);
 	});
