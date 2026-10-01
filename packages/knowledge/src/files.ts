@@ -53,7 +53,7 @@ export function allowedSegment(name: string): boolean {
 	);
 }
 
-export function validateNote(path: unknown): asserts path is string {
+export function validateNote(path: unknown): string {
 	if (
 		typeof path !== "string" ||
 		isAbsolute(path) ||
@@ -65,6 +65,7 @@ export function validateNote(path: unknown): asserts path is string {
 	const first = path.split("/")[0] ?? "";
 	if (RESERVED.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
 		throw new Error("Reserved Vault directories require canonical casing");
+	return path;
 }
 
 export function noteScope(path: string): string {

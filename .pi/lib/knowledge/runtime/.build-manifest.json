@@ -1,0 +1,130 @@
+{
+	"version": 1,
+	"generator": "scripts/build-knowledge-runtime.mjs",
+	"entries": {
+		"claim-conflicts.mjs": {
+			"source": "packages/knowledge/src/claim-conflicts.ts",
+			"sha256": "85814606bf1bf33f0546c50b2512cc00fce7652b21b2205a0cfa9101b5e9fb56"
+		},
+		"config.mjs": {
+			"source": "packages/knowledge/src/config.ts",
+			"sha256": "56c600c793f14e7c1be024929bf04752a0c53d503abf6c3dabdb68d040be5806"
+		},
+		"extension-helpers.mjs": {
+			"source": "packages/knowledge/src/extension-helpers.ts",
+			"sha256": "308d380ced099c380df1ee5f9d90769d2382ee19508f4a2a1284e7cd9daf10aa"
+		},
+		"files.mjs": {
+			"source": "packages/knowledge/src/files.ts",
+			"sha256": "b9c54f10ecfa54ec0b33edd04dc5063e51b39348a3bf14802bf40fad32ce708f"
+		},
+		"flow-cards.mjs": {
+			"source": "packages/knowledge/src/flow-cards.ts",
+			"sha256": "c427abe3252d7465a452858131fb73739b147c6f76c75a38aff75ee64eeb8898"
+		},
+		"index.mjs": {
+			"source": "packages/knowledge/src/index.ts",
+			"sha256": "d15dd74c9d147ba7480df98a2bd293db3600a272510e5663b0c3b0d3c7b46d07"
+		},
+		"layout.mjs": {
+			"source": "packages/knowledge/src/layout.ts",
+			"sha256": "87e0d5d0fbc1065fd68b08bfdce4277cbd08aca86b3d759324ac6deb8a4dafc2"
+		},
+		"maintenance.mjs": {
+			"source": "packages/knowledge/src/maintenance.ts",
+			"sha256": "5a597a87137f61a5a093b99eceb62ff39025c1f422e6045b6a8119e727c5993e"
+		},
+		"orchestration-policy.mjs": {
+			"source": "packages/knowledge/src/orchestration-policy.ts",
+			"sha256": "83a6e3ccb46d1426a086b72a355e987c4018f4a46686d098b08c623a203ce6dd"
+		},
+		"publication-policy.mjs": {
+			"source": "packages/knowledge/src/publication-policy.ts",
+			"sha256": "d1b4aa1105a17cffc2430792c04f678b8f6454a389ce3d38ff224b4eef859f0c"
+		},
+		"publication.mjs": {
+			"source": "packages/knowledge/src/publication.ts",
+			"sha256": "3edae48d1cadf8fd75583e25ba27181603e95f7564bc4d0f8663b4a6e5058441"
+		},
+		"review-policy.mjs": {
+			"source": "packages/knowledge/src/review-policy.ts",
+			"sha256": "0bddc4af44919c785d0da9aa845b5545b53499f93e55e3da3af4a47e963a270b"
+		},
+		"runtime-host.mjs": {
+			"source": "packages/knowledge/src/runtime-host.ts",
+			"sha256": "1f26539206c177749cd804cc96f5003d43a36b92e37bc85e83aec2643e76519d"
+		},
+		"search-policy.mjs": {
+			"source": "packages/knowledge/src/search-policy.ts",
+			"sha256": "f05649d925248da7a87e3cf04985fca836e849dd3786f3cd307caae287a4cc27"
+		},
+		"semantic-provider.mjs": {
+			"source": "packages/knowledge/src/semantic-provider.ts",
+			"sha256": "edecd734af37370ff4f5b171115e46a17483bd61228bb456629bd5c80c9fb743"
+		},
+		"semantic-settings.mjs": {
+			"source": "packages/knowledge/src/semantic-settings.ts",
+			"sha256": "95dce64591463dad313fea482e0befa078d7d762df92e94eeaaf31201526a0bd"
+		},
+		"service.mjs": {
+			"source": "packages/knowledge/src/service.ts",
+			"sha256": "e52971e78ac6fd0b024d3bb03b294932f609e3468ab5b24f241c52fd1b184a01"
+		},
+		"source-links.mjs": {
+			"source": "packages/knowledge/src/source-links.ts",
+			"sha256": "fe6f64a9a2539f449e5428bc02dce3226fd9f3fe3dc8f808ccfbd3f34f9c3112"
+		},
+		"specialist-delivery.mjs": {
+			"source": "packages/knowledge/src/specialist-delivery.ts",
+			"sha256": "ebc91242e82123457b7775e9d4806bc8b7310c26e5e410d18d5e79c7fc0bc3d9"
+		},
+		"specialist-host.mjs": {
+			"source": "packages/knowledge/src/specialist-host.ts",
+			"sha256": "c2e3ed2223b0ae874fc833d81a1d64bd262db09882da2bb99cc70a1fc9fb9c91"
+		},
+		"specialists.mjs": {
+			"source": "packages/knowledge/src/specialists.ts",
+			"sha256": "cb018962a62bec7fdedb09c1272cc11adc781149e35e2cca8a46df9ca5a81062"
+		},
+		"task-feedback.mjs": {
+			"source": "packages/knowledge/src/task-feedback.ts",
+			"sha256": "e322256d61823a2d42d4f642ce3357e188f93db8e01ce8ad54bff59fa8c051a1"
+		},
+		"tool-budget.mjs": {
+			"source": "packages/knowledge/src/tool-budget.ts",
+			"sha256": "5ff446b24e3310ec7e890c60e56de3ef7e9a431af5651edbaa1c12b1b2284c5e"
+		},
+		"topic-candidate.mjs": {
+			"source": "packages/knowledge/src/topic-candidate.ts",
+			"sha256": "ca36878b0c2570e04b41ad162cf4ef9f8f08dd308cdea45ae79db1af20c3274f"
+		},
+		"topic-memory.mjs": {
+			"source": "packages/knowledge/src/topic-memory.ts",
+			"sha256": "6411c336b253434077a9171f22bd272038f5d2ac6fa33a93aa66733126c53413"
+		},
+		"ui-service.mjs": {
+			"source": "packages/knowledge/src/ui-service.ts",
+			"sha256": "14e840ba75aa13fed163f77efe052ff1b4970902231aa449c6ee345e424bd252"
+		},
+		"ui-state.mjs": {
+			"source": "packages/knowledge/src/ui-state.ts",
+			"sha256": "8d584cdf4f1886282d5116f560a1ae04175c4a59b7e8d9553c10862ec62938aa"
+		},
+		"wiki-model-review.mjs": {
+			"source": "packages/knowledge/src/wiki-model-review.ts",
+			"sha256": "2a68cbf36edda8dbdc02f34234df204a11e7122bfb7651a656914355f9a14ecd"
+		},
+		"wiki-policy.mjs": {
+			"source": "packages/knowledge/src/wiki-policy.ts",
+			"sha256": "4b8955dcf5a5c9383a690a30f3e52839996c10ef09fdda47f3e4f4bd20a0ebdf"
+		},
+		"wiki-review.mjs": {
+			"source": "packages/knowledge/src/wiki-review.ts",
+			"sha256": "683e5946c4274a95419ba5749961f5a51ec16f1966fec3e000f025ba1ce63194"
+		},
+		"worker.mjs": {
+			"source": "packages/knowledge/src/worker.ts",
+			"sha256": "1c54a31a382d0391a28df9451f6d85eab0f83a248ac3e5792d409bdd20a36003"
+		}
+	}
+}

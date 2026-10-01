@@ -5,7 +5,8 @@
  * are deterministic and safe for read-only package use and tests.
  */
 export type RuntimeExclusive = <T>(namespace: string, key: string, work: () => Promise<T>) => Promise<T>;
-export type ProcessEventEmitter = (event: unknown) => void;
+export type ProcessEventEmitter = (event: string, payload?: unknown) => void;
+export type RuntimeSlotProvider = <T extends object>(domain: string, slot: string, create: () => T) => T;
 export type ToolMetadataLookup = (toolName: string) => unknown;
 export type FlowCardBuilder = (toolName: string) => unknown;
 export type DeliveryContract = (prompt: string, options?: Record<string, unknown>) => unknown;
@@ -32,6 +33,7 @@ let processEvent: ProcessEventEmitter = () => undefined;
 let metadataLookup: ToolMetadataLookup = () => null;
 let cardBuilderLookup: FlowCardBuilder = () => null;
 let deliveryLookup: DeliveryContract = () => null;
+let hostSlotProvider: RuntimeSlotProvider | undefined;
 
 export function configureKnowledgeRuntime(host: {
 	runRuntimeExclusive?: RuntimeExclusive;
@@ -39,6 +41,7 @@ export function configureKnowledgeRuntime(host: {
 	toolMeta?: ToolMetadataLookup;
 	flowCardBuilder?: FlowCardBuilder;
 	deliveryContract?: DeliveryContract;
+	runtimeSlot?: RuntimeSlotProvider;
 } = {}): void {
 	// Multiple compatibility adapters can load in one process. Merge seams
 	// instead of resetting a previously installed host registry when another
@@ -48,17 +51,44 @@ export function configureKnowledgeRuntime(host: {
 	if (host.toolMeta) metadataLookup = host.toolMeta;
 	if (host.flowCardBuilder) cardBuilderLookup = host.flowCardBuilder;
 	if (host.deliveryContract) deliveryLookup = host.deliveryContract;
+	if (host.runtimeSlot) hostSlotProvider = host.runtimeSlot;
 }
 
 export const runRuntimeExclusive: RuntimeExclusive = (namespace, key, work) =>
 	runtimeExclusive(namespace, key, work);
-export const emitProcessEvent: ProcessEventEmitter = (event) => processEvent(event);
+export const emitProcessEvent: ProcessEventEmitter = (event, payload) => processEvent(event, payload);
 
-const slots = new Map<string, unknown>();
-export function runtimeSlot<T>(domain: string, key: string, factory: () => T): T {
-	const slotKey = `${domain}:${key}`;
-	if (!slots.has(slotKey)) slots.set(slotKey, factory());
-	return slots.get(slotKey) as T;
+const slots = new Map<string, object>();
+/** Resolve each operation through the host's current async runtime, including
+ * modules loaded before the host installs its adapter. */
+export function runtimeSlot<T extends object>(domain: string, key: string, factory: () => T): T {
+	let hostProxy: T | undefined;
+	let provider: RuntimeSlotProvider | undefined;
+	const resolve = (): T => {
+		if (hostSlotProvider) {
+			if (provider !== hostSlotProvider) {
+				provider = hostSlotProvider;
+				hostProxy = provider(domain, key, factory);
+			}
+			return hostProxy as T;
+		}
+		const slotKey = `${domain}:${key}`;
+		if (!slots.has(slotKey)) slots.set(slotKey, factory());
+		return slots.get(slotKey) as T;
+	};
+	return new Proxy({} as T, {
+		get: (_target, property) => {
+			const state = resolve();
+			const value = Reflect.get(state, property);
+			return typeof value === "function" ? value.bind(state) : value;
+		},
+		set: (_target, property, value) => Reflect.set(resolve(), property, value),
+		ownKeys: () => Reflect.ownKeys(resolve()),
+		getOwnPropertyDescriptor: (_target, property) => {
+			const descriptor = Reflect.getOwnPropertyDescriptor(resolve(), property);
+			return descriptor ? { ...descriptor, configurable: true } : undefined;
+		},
+	});
 }
 export function diagnosticText(value: unknown, limit = 4096): string {
 	if (typeof value !== "string" && typeof value !== "number") return "";

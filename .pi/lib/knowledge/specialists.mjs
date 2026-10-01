@@ -1,5 +1,5 @@
 /** Compatibility adapter. Domain implementation lives in @drone/knowledge. */
 import { deliveryContract } from "../source-delivery.mjs";
-import { configureKnowledgeRuntime } from "../../../packages/knowledge/src/runtime-host.ts";
+import { configureKnowledgeRuntime } from "./runtime/runtime-host.mjs";
 configureKnowledgeRuntime({ deliveryContract });
-export * from "../../../packages/knowledge/src/specialists.ts";
+export * from "./runtime/specialists.mjs";
