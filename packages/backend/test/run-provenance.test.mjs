@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { observeExecutionReceipt, recordRunProvenance } from "@drone/research/run-provenance";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { startResearchRun } from "../../../.pi/lib/research-loop.mjs";
-import { observeExecutionReceipt, recordRunProvenance } from "../../../.pi/lib/run-provenance.mjs";
 
 let cwd, runDir;
 beforeEach(async () => {

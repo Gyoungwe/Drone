@@ -7,6 +7,18 @@ export {
 	verifyLiteratureReceipt,
 } from "./literature-receipt";
 export {
+	type ExecutionReceiptInput,
+	observeExecutionReceipt,
+	type ProvenanceFileDeclaration,
+	type ProvenanceSnapshot,
+	type RunProvenanceInput,
+	type RunProvenanceManifest,
+	type RunProvenanceResult,
+	recordRunProvenance,
+	type WorkspaceConfig,
+	type WorkspaceConfigLoader,
+} from "./run-provenance";
+export {
 	type DeliveryContract,
 	deliveryContract,
 	hasPaperCitation,

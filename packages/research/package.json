@@ -8,7 +8,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./literature-receipt": "./src/literature-receipt.ts",
-		"./source-delivery": "./src/source-delivery.ts"
+		"./source-delivery": "./src/source-delivery.ts",
+		"./run-provenance": "./src/run-provenance.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
