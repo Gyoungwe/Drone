@@ -7,6 +7,7 @@
 	"types": "./src/index.ts",
 	"exports": {
 		".": "./src/index.ts",
+		"./evidence-gate": "./src/evidence-gate.ts",
 		"./literature-receipt": "./src/literature-receipt.ts",
 		"./source-delivery": "./src/source-delivery.ts",
 		"./literature-operations": "./src/literature-operations.ts",

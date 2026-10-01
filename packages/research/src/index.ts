@@ -1,4 +1,15 @@
 export {
+	assertEvidenceAnswerable,
+	createEvidenceGate,
+	EVIDENCE_STAGES,
+	type EvidenceEvent,
+	type EvidenceFailure,
+	type EvidenceGate,
+	type EvidenceGateFailureState,
+	type EvidenceGateState,
+	type EvidenceStage,
+} from "./evidence-gate";
+export {
 	buildProxiedUrl,
 	inferEzproxyTemplateFromUrl,
 } from "./institutional-proxy";
