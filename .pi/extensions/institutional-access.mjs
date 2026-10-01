@@ -1,142 +1,184 @@
-import {
-	isElectronAvailable,
-	loadInstitutionalConfig,
-	openInstitutionalLoginWindow,
-	openInstitutionalUrlInWindow,
-} from "../lib/institutional-access.mjs";
-import { registerTool } from "../lib/tool-manifest.mjs";
-
-export default function institutionalAccess(pi) {
-	if (process.env.PI_SUBAGENT_CHILD === "1") return;
-
-	registerTool(pi, {
-		name: "research_institutional_login",
-		label: "Institutional login",
-		drone: {
-			capabilities: ["research"],
-			journal: false,
-			subagent: "exclude",
-			activity: { text: "正在打开机构登录窗口…", phase: "auth" },
-		},
-		description:
-			"Open the institutional login window (persistent partition persist:drone-institutional) for the user to log in via EZproxy / Shibboleth / CARSI / OpenAthens / WebVPN. After the user logs in, the host auto-detects the EZproxy template from the navigated URL and saves it to ~/.pi/agent/institutional.json (no manual template needed). Use when research_archive_source returns institutional_auth_required or when the user has institutional access. The login persists across restarts.",
-		parameters: {
-			type: "object",
-			properties: {
-				url: {
-					type: "string",
-					description:
-						"Optional publisher or DOI URL to open directly in the institutional window (e.g. https://doi.org/10.1038/nature12373 or https://www.nature.com/articles/...)",
-				},
-				reason: {
-					type: "string",
-					description: "Optional reason shown to the user (e.g. which paper needs institutional access)",
-				},
-			},
-		},
-		async execute(_id, params, _signal, _update, _ctx) {
-			if (!isElectronAvailable()) {
-				return {
-					content: [
-						{
-							type: "text",
-							text: JSON.stringify(
-								{
-									status: "electron_unavailable",
-									message:
-										"Institutional login requires Drone desktop (Electron). CLI mode cannot open a login window.",
-								},
-								null,
-								2,
-							),
-						},
-					],
-					details: { status: "electron_unavailable" },
-				};
-			}
-
-			const targetUrl = params.url || "https://www.nature.com/";
-			let opened;
-			try {
-				if (params.url) {
-					// Try to open the specific URL (will be proxied if template exists)
-					opened = await openInstitutionalUrlInWindow(targetUrl);
-				} else {
-					opened = await openInstitutionalLoginWindow();
-				}
-			} catch (err) {
-				return {
-					content: [{ type: "text", text: `Failed to open institutional login window: ${err.message}` }],
-					details: { status: "failed", error: err.message },
-				};
-			}
-
-			const cfg = await loadInstitutionalConfig();
-			const result = {
-				status: "login_window_opened",
-				opened_url: opened.url,
-				requested_url: params.url || null,
-				reason: params.reason || null,
-				config: {
-					ezproxy_template: cfg.ezproxyTemplate ? "set" : "not_set",
-					ezproxy_template_value: cfg.ezproxyTemplate || null,
-					institution: cfg.institutionName || null,
-					auto_download: cfg.autoDownloadEnabled,
-					per_task_limit: cfg.perTaskLimit,
-					last_login_at: cfg.lastLoginAt || null,
-				},
-				instructions:
-					"The institutional browser window is now open. Please complete your institutional login (library / EZproxy / Shibboleth / CARSI / OpenAthens / WebVPN). The host will auto-detect the EZproxy template from the URL (e.g. .../login?url=%s) and save it automatically. After logging in, you can close the window or leave it open, then retry the paper download with research_archive_source. The login persists across restarts in partition persist:drone-institutional.",
-				next_steps: [
-					"1. In the opened window, log in via your institution (if EZproxy, you will see a login?url=... URL; it will be saved as template automatically)",
-					"2. Once logged in, navigate to the publisher if needed to verify access",
-					"3. Return to the chat and call research_archive_source again for the DOI",
-				],
-			};
-
-			return {
-				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-				details: result,
-			};
-		},
-	});
-
-	registerTool(pi, {
-		name: "research_institutional_status",
-		label: "Institutional status",
-		drone: {
-			readOnly: true,
-			capabilities: ["research"],
-		},
-		description:
-			"Show institutional access status (config + session cookies + whether logged in). No login window.",
-		parameters: { type: "object", properties: {} },
-		async execute() {
-			const cfg = await loadInstitutionalConfig();
-			const electronAvailable = isElectronAvailable();
-			let cookiesCount = 0;
-			if (electronAvailable) {
-				try {
-					const { getInstitutionalSession } = await import("../lib/institutional-access.mjs");
-					const sess = getInstitutionalSession();
-					if (sess) {
-						const cookies = await sess.cookies.get({});
-						cookiesCount = cookies.length;
-					}
-				} catch {}
-			}
-			const status = {
-				config: cfg,
-				session: {
-					cookiesCount,
-					hasSessionCookies: cookiesCount > 0,
-					partition: "persist:drone-institutional",
-					lastAccessAt: cfg.lastLoginAt,
-				},
-				loggedIn: cookiesCount > 0 || Boolean(cfg.lastLoginAt),
-				electronAvailable,
-			};
-			return { content: [{ type: "text", text: JSON.stringify(status, null, 2) }], details: status };
-		},
-	});
+// packages/extensions/src/institutional-access.ts
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { homedir } from "node:os";
+import { join } from "node:path";
+var require2 = createRequire(import.meta.url);
+var PARTITION = "persist:drone-institutional";
+var CONFIG_PATH = join(homedir(), ".pi", "agent", "institutional.json");
+var defaultConfig = () => ({ version: 1, autoDownloadEnabled: true, perTaskLimit: 20 });
+function normalizeConfig(raw) {
+  if (!raw || typeof raw !== "object") return defaultConfig();
+  const value = raw;
+  const template = typeof value.ezproxyTemplate === "string" && /^https?:\/\//i.test(value.ezproxyTemplate) ? value.ezproxyTemplate.slice(0, 2048) : void 0;
+  const institutionName = typeof value.institutionName === "string" ? value.institutionName.trim().slice(0, 120) : void 0;
+  const limit = typeof value.perTaskLimit === "number" && Number.isInteger(value.perTaskLimit) ? Math.min(100, Math.max(1, value.perTaskLimit)) : 20;
+  return {
+    version: 1,
+    ezproxyTemplate: template,
+    institutionName,
+    autoDownloadEnabled: typeof value.autoDownloadEnabled === "boolean" ? value.autoDownloadEnabled : true,
+    perTaskLimit: limit,
+    lastLoginAt: typeof value.lastLoginAt === "string" ? value.lastLoginAt : void 0,
+    lastLoginUrl: typeof value.lastLoginUrl === "string" ? value.lastLoginUrl : void 0
+  };
 }
+async function loadConfig() {
+  try {
+    return normalizeConfig(JSON.parse(await readFile(CONFIG_PATH, "utf8")));
+  } catch {
+    return defaultConfig();
+  }
+}
+async function saveConfig(config) {
+  await mkdir(join(homedir(), ".pi", "agent"), { recursive: true });
+  await writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}
+`, "utf8");
+}
+function electron() {
+  try {
+    return require2("electron");
+  } catch {
+    return null;
+  }
+}
+function session() {
+  const loaded = electron();
+  try {
+    return loaded?.session?.fromPartition(PARTITION) || null;
+  } catch {
+    return null;
+  }
+}
+function openWindow(url) {
+  const loaded = electron();
+  if (!loaded?.BrowserWindow) throw new Error("Electron unavailable");
+  const win = new loaded.BrowserWindow({
+    width: 1220,
+    height: 860,
+    title: "\u673A\u6784\u8BBF\u95EE\u767B\u5F55 - Drone",
+    webPreferences: { partition: PARTITION, nodeIntegration: false, contextIsolation: true, sandbox: true },
+    autoHideMenuBar: true
+  });
+  const recordNavigation = async (navigatedUrl) => {
+    const config = await loadConfig();
+    const inferred = inferEzproxyTemplate(navigatedUrl);
+    await saveConfig({
+      ...config,
+      ezproxyTemplate: inferred || config.ezproxyTemplate,
+      lastLoginAt: (/* @__PURE__ */ new Date()).toISOString(),
+      lastLoginUrl: navigatedUrl.slice(0, 2048)
+    });
+  };
+  win.webContents?.on?.("did-navigate", (_event, navigatedUrl) => {
+    void recordNavigation(navigatedUrl).catch(() => {
+    });
+  });
+  void win.loadURL(url);
+  return { url };
+}
+function inferEzproxyTemplate(value) {
+  try {
+    const url = new URL(value);
+    const target = new URLSearchParams(url.search).get("url");
+    if (!target || !/^https?:\/\//i.test(target)) return void 0;
+    const marker = url.href.indexOf("url=");
+    if (marker < 0) return void 0;
+    const template = `${url.href.slice(0, marker)}url=%s`;
+    return template.length <= 2048 ? template : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function proxiedUrl(url, template) {
+  if (!template) return null;
+  if (template.includes("%s")) return template.replaceAll("%s", encodeURIComponent(url));
+  if (template.endsWith("=")) return `${template}${encodeURIComponent(url)}`;
+  return `${template}${template.includes("?") ? "&" : "?"}url=${encodeURIComponent(url)}`;
+}
+function toolResponse(value, details) {
+  return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], details: details ?? value };
+}
+function institutionalAccess(pi) {
+  if (process.env.PI_SUBAGENT_CHILD === "1") return;
+  pi.registerTool({
+    name: "research_institutional_login",
+    label: "Institutional login",
+    description: "Open the persistent institutional browser window for EZproxy, Shibboleth, CARSI, OpenAthens, or WebVPN login.",
+    parameters: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "Optional publisher or DOI URL." },
+        reason: { type: "string", description: "Optional reason shown in the result." }
+      }
+    },
+    drone: {
+      capabilities: ["research"],
+      journal: false,
+      subagent: "exclude",
+      activity: { text: "\u6B63\u5728\u6253\u5F00\u673A\u6784\u767B\u5F55\u7A97\u53E3\u2026", phase: "auth" }
+    },
+    async execute(_id, params) {
+      const target = params?.url || "https://www.nature.com/";
+      if (!electron())
+        return toolResponse(
+          {
+            status: "electron_unavailable",
+            message: "Institutional login requires Drone desktop (Electron)."
+          },
+          { status: "electron_unavailable" }
+        );
+      try {
+        const config = await loadConfig();
+        const opened = openWindow(proxiedUrl(target, config.ezproxyTemplate) || target);
+        const next = { ...config, lastLoginAt: (/* @__PURE__ */ new Date()).toISOString(), lastLoginUrl: opened.url };
+        await saveConfig(next);
+        return toolResponse(
+          {
+            status: "login_window_opened",
+            opened_url: opened.url,
+            requested_url: params?.url || null,
+            reason: params?.reason || null,
+            partition: PARTITION
+          },
+          { status: "login_window_opened" }
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return toolResponse({ status: "failed", error: message }, { status: "failed", error: message });
+      }
+    }
+  });
+  pi.registerTool({
+    name: "research_institutional_status",
+    label: "Institutional status",
+    description: "Show institutional access configuration and session status.",
+    parameters: { type: "object", properties: {} },
+    drone: { readOnly: true, capabilities: ["research"] },
+    async execute() {
+      const config = await loadConfig();
+      const current = session();
+      let cookiesCount = 0;
+      try {
+        cookiesCount = current ? (await current.cookies.get({})).length : 0;
+      } catch {
+        cookiesCount = 0;
+      }
+      const status = {
+        config,
+        session: {
+          cookiesCount,
+          hasSessionCookies: cookiesCount > 0,
+          partition: PARTITION,
+          lastAccessAt: config.lastLoginAt
+        },
+        loggedIn: cookiesCount > 0 || Boolean(config.lastLoginAt),
+        electronAvailable: Boolean(electron())
+      };
+      return toolResponse(status, status);
+    }
+  });
+}
+export {
+  institutionalAccess as default
+};

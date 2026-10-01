@@ -105,6 +105,10 @@ packages/
 
 `@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界。backend literature evidence、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
 
+## packages/extensions — Pi 扩展适配层（迁移中）
+
+`src/*.ts` 是可打包的扩展入口；`institutional-access.ts` 提供机构登录与状态工具，独立处理 CLI 降级和 Electron 持久分区，并通过 `drone` 元数据声明研究能力与子代理隔离。`scripts/build-extensions.mjs` 将入口生成到 `.pi/extensions/`；仍未迁移的旧入口会在 `.build-manifest.json` 中标记为 `legacy-preserved`。
+
 ## packages/backend — pi SDK 适配层
 
 纯 Node，不依赖 Electron。唯一 import pi SDK 的包，运行时值导入收敛在 `session-engine/**`；`pi-backend.ts` 保留兼容门面。

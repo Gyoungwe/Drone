@@ -4,6 +4,13 @@
 	"sourceDir": "packages/extensions/src",
 	"outDir": ".pi/extensions",
 	"entries": {
+		"institutional-access": {
+			"source": "institutional-access.ts",
+			"output": "institutional-access.mjs",
+			"status": "generated",
+			"sourceSha256": "4b441b45dc30ebe249dbfe48e0396e0115b12ba649a968159e3b228f6e6664d4",
+			"outputSha256": "a51284189f4d335727a15a5722111adfa2f13033ed425721cca8ade30b17259d"
+		},
 		"subagent-research": {
 			"source": "subagent-research.ts",
 			"output": "subagent-research.mjs",
@@ -13,7 +20,6 @@
 		}
 	},
 	"legacyOutputs": [
-		"institutional-access.mjs",
 		"obsidian-workbench.mjs",
 		"research-loop.mjs",
 		"research-wikiloop.mjs",
