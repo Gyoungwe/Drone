@@ -23,6 +23,17 @@ export {
 	toolResultFailed,
 } from "./failure-feedback";
 export {
+	effectiveRemainingAcceptance,
+	type RemainingAcceptance,
+	type RemainingExplanationOptions,
+	type RemainingMilestone,
+	type RemainingTask,
+	type RemainingTaskAction,
+	type RemainingTaskOperation,
+	type RemainingVerifier,
+	remainingExplanation,
+} from "./remaining";
+export {
 	singleFlightCommand,
 	type TaskCommandContext,
 	type TaskCommandHandler,
