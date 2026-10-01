@@ -218,3 +218,5 @@ export {
 	specialistSettings,	
 	withSpecialistSlot,
 } from "./specialist-host";
+
+export { createKnowledgeSpecialists, knowledgeReadStart, shouldOrientKnowledge } from "./specialists";

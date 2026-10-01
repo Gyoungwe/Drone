@@ -6,6 +6,9 @@
  */
 export type RuntimeExclusive = <T>(namespace: string, key: string, work: () => Promise<T>) => Promise<T>;
 export type ProcessEventEmitter = (event: unknown) => void;
+export type ToolMetadataLookup = (toolName: string) => unknown;
+export type FlowCardBuilder = (toolName: string) => unknown;
+export type DeliveryContract = (prompt: string, options?: Record<string, unknown>) => unknown;
 
 const locks = new Map<string, Promise<void>>();
 const defaultRunRuntimeExclusive: RuntimeExclusive = async <T>(_namespace: string, key: string, work: () => Promise<T>) => {
@@ -26,13 +29,25 @@ const defaultRunRuntimeExclusive: RuntimeExclusive = async <T>(_namespace: strin
 
 let runtimeExclusive: RuntimeExclusive = defaultRunRuntimeExclusive;
 let processEvent: ProcessEventEmitter = () => undefined;
+let metadataLookup: ToolMetadataLookup = () => null;
+let cardBuilderLookup: FlowCardBuilder = () => null;
+let deliveryLookup: DeliveryContract = () => null;
 
 export function configureKnowledgeRuntime(host: {
 	runRuntimeExclusive?: RuntimeExclusive;
 	emitProcessEvent?: ProcessEventEmitter;
+	toolMeta?: ToolMetadataLookup;
+	flowCardBuilder?: FlowCardBuilder;
+	deliveryContract?: DeliveryContract;
 } = {}): void {
-	runtimeExclusive = host.runRuntimeExclusive ?? defaultRunRuntimeExclusive;
-	processEvent = host.emitProcessEvent ?? (() => undefined);
+	// Multiple compatibility adapters can load in one process. Merge seams
+	// instead of resetting a previously installed host registry when another
+	// adapter (for example the service worker) initializes later.
+	if (host.runRuntimeExclusive) runtimeExclusive = host.runRuntimeExclusive;
+	if (host.emitProcessEvent) processEvent = host.emitProcessEvent;
+	if (host.toolMeta) metadataLookup = host.toolMeta;
+	if (host.flowCardBuilder) cardBuilderLookup = host.flowCardBuilder;
+	if (host.deliveryContract) deliveryLookup = host.deliveryContract;
 }
 
 export const runRuntimeExclusive: RuntimeExclusive = (namespace, key, work) =>
@@ -60,10 +75,10 @@ export function diagnosticText(value: unknown, limit = 4096): string {
 		.slice(0, Math.max(0, limit));
 }
 export function toolMeta(_toolName: string): unknown {
-	return null;
+	return metadataLookup(_toolName);
 }
 export function flowCardBuilder(_toolName: string): unknown {
-	return null;
+	return cardBuilderLookup(_toolName);
 }
 
 export type KnowledgeWorkerFactory = (url: URL, options: Record<string, unknown>) => unknown;
@@ -87,3 +102,5 @@ let requiresPaperEvidence = (query: string) => /paper|literature|article|文献|
 let hasPaperCitation = (sources: unknown[]) =>
 	Array.isArray(sources) && sources.some((source) => /(?:^|\/)Library\/Papers\//.test(String((source as { path?: unknown })?.path ?? "")));
 export { requiresPaperEvidence, hasPaperCitation };
+
+export const deliveryContract: DeliveryContract = (prompt, options) => deliveryLookup(prompt, options);
