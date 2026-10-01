@@ -307,7 +307,7 @@ async function atomicWrite(path, value) {
 	}
 }
 async function withLock(path, operation) {
-	return runRuntimeExclusive("topic-memory", path, operation, "drone.knowledge.topic-memory-queues.v1");
+	return runRuntimeExclusive("topic-memory", path, operation);
 }
 function tokens(value) {
 	return new Set(
