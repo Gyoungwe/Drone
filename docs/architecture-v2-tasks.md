@@ -108,8 +108,8 @@
 
 ## A6 · DroneRuntime 注入
 
-- [ ] **A6-1**：在 `shared/src/runtime.ts` 定义 `DroneRuntime` 接口；`create-backend.ts` 构造实现，第一方扩展改为内联工厂并注入 runtime（桌面模式）；`@drone/extensions` 的入口在 CLI 模式下调用 `createStandaloneRuntime()`。
-- [ ] **A6-2**：逐个替换 10 个 `Symbol.for("drone.*")`：锁和队列类（`wiki-review-locks`、`topic-memory-queues`、`semantic-lock`）统一换成 `runtime.scheduler`（带 dispose）；单例类（worker-pool、binding、ui、specialists）改由 runtime 持有；`tool-manifest`、`acceptance-verifiers` 改为通过 `pi.events` 的版本化注册事件收集。
+- [x] **A6-1**：在 `shared/src/runtime.ts` 定义 `DroneRuntime` 接口；`create-backend.ts` 构造实现，第一方扩展改为内联工厂并注入 runtime（桌面模式）；`@drone/extensions` 的入口在 CLI 模式下调用 `createStandaloneRuntime()`。
+- [x] **A6-2**：逐个替换 10 个 `Symbol.for("drone.*")`：锁和队列类（`wiki-review-locks`、`topic-memory-queues`、`semantic-lock`）统一换成 `runtime.scheduler`（带 dispose）；单例类（worker-pool、binding、ui、specialists）改由 runtime 持有；`tool-manifest`、`acceptance-verifiers` 改为通过 `pi.events` 的版本化注册事件收集。
 - [x] **A6-3**：`knowledge-publication.ts` 改为从 runtime 取投影器；`failClosedEvent` 保留，只作为抛异常时的兜底。验收：R4 基线清零；`knowledge-publication-fallback.test.ts` 改为覆盖"投影器抛异常"场景并通过；测试可以在同一进程里创建两个互不干扰的 runtime（新增测试）。
 
 ## A7 · StorageRegistry 与诊断
@@ -184,4 +184,5 @@
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge/semantic-provider` 承载语义 provider 配置验证、请求边界、凭据注入与 bounded vector 响应校验；backend `knowledge-semantic` 10/10 改用包入口，knowledge typecheck/40 tests 通过 | `.pi/lib/knowledge/semantic-provider.mjs` 保留 CLI 自包含适配；service/worker 与 extension runtime 仍待整体迁移
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge/files` 承载 Vault 相对路径校验、软链接拒绝、读取期间签名一致性、1 MiB 上限和 bounded snippet；包内 6/6 与 typecheck、Biome 通过 | `.pi/lib/knowledge/files.mjs` 仍保留运行时兼容入口；layout、maintenance、service、worker 与 specialist host 尚待迁移 |
 | 2026-10-01 | A5-3 增量 | `@drone/research/evidence-gate` 承载证据阶段单调推进、失败终态和 answerable 断言；research 包 11 个文件、37 项测试与 typecheck 通过 | `.pi/lib/evidence-gate.mjs` 仍保留运行时兼容入口；source archive、research receipt journal 与 Zotero 运行时适配器尚待迁移 |
-| 2026-10-01 | 全量回归（语义、授权、文件与证据切片后） | backend 1,373 passed + 13 skipped、desktop 556、extensions 16、knowledge 46、research 37、shared 130、tasks 37；`npm run lint -- --error-on-warnings`、`npm run typecheck`、`npm test`、`npm run build`、`npm run test:upgrade -- --fixtures-only`、`check:extensions --strict`、`check:plugin-api` 与架构检查（140 baseline、0 fixed）全部通过 | A5 总项仍按兼容层策略逐步迁移：knowledge service/worker、tasks runtime、research source archive/Zotero adapters、5 个 legacy extension outputs，以及 A6-1/2 的剩余宿主归属仍待收尾 |
+| 2026-10-01 | 全量回归（语义、授权、文件与证据切片后） | backend 1,373 passed + 13 skipped、desktop 556、extensions 16、knowledge 46、research 37、shared 130、tasks 37；`npm run lint -- --error-on-warnings`、`npm run typecheck`、`npm test`、`npm run build`、`npm run test:upgrade -- --fixtures-only`、`check:extensions --strict`、`check:plugin-api` 与架构检查（140 baseline、0 fixed）全部通过 | A5 总项仍按兼容层策略逐步迁移：knowledge service/worker、tasks runtime、research source archive/Zotero adapters、5 个 legacy extension outputs 仍待收尾 |
+| 2026-10-01 | A6-1 / A6-2 完成 | `DroneRuntime` 已由 shared 契约、backend 组合根和 extensions CLI fallback 统一承载；10 个 `Symbol.for("drone.*")` 运行时桥已清零，锁/队列使用 scheduler，worker/UI/specialist 等资源挂入 host runtime，tool-manifest/acceptance 通过版本化事件桥接；runtime 隔离、dispose、Pi host 回归通过 | Worker 线程内部 activeRequests/flushes/dirty/inflight 仍是 worker 私有状态；无 host 上下文的兼容读取只保留只读模型，不承载执行状态 |
