@@ -65,6 +65,21 @@ export {
 	type WorkspaceConfigLoader,
 } from "./run-provenance";
 export {
+	type ContentValidation,
+	DEFAULT_MAX_BYTES,
+	DEFAULT_TIMEOUT_MS,
+	hasMagic,
+	isWithin,
+	looksLikeChallenge,
+	normalizeMetadata,
+	SOURCE_CATEGORIES,
+	type SourceCategory,
+	type SourceMetadata,
+	safeFilename,
+	validateContent,
+	validateRunDir,
+} from "./source-archive-policy";
+export {
 	type DeliveryContract,
 	deliveryContract,
 	hasPaperCitation,

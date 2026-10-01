@@ -17,7 +17,8 @@
 		"./zotero-identity": "./src/zotero-identity.ts",
 		"./zotero-reconcile": "./src/zotero-reconcile.ts",
 		"./zotero-setup": "./src/zotero-setup.ts",
-		"./zotero-write": "./src/zotero-write.ts"
+		"./zotero-write": "./src/zotero-write.ts",
+		"./source-archive-policy": "./src/source-archive-policy.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
