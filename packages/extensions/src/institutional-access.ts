@@ -48,8 +48,8 @@ function openWindow(url: string): { url: string } {
 		autoHideMenuBar: true,
 	});
 	const recordNavigation = async (navigatedUrl: string) => {
-		const config = await loadInstitutionalConfig();
 		await detectAndSaveTemplateFromUrl(navigatedUrl);
+		const config = await loadInstitutionalConfig();
 		await saveInstitutionalConfig({
 			...config,
 			lastLoginAt: new Date().toISOString(),
