@@ -5,6 +5,9 @@ import { loadWorkspaceConfig } from "../extensions/workspace-config.mjs";
 import { normalizeDoi, verifyLiteratureReceipt } from "./literature-receipt.mjs";
 import { runRuntimeExclusive } from "./runtime-bridge.mjs";
 
+// Keep the CLI adapter self-contained; the typed policy source lives in
+// packages/research/src/literature-operations.ts and is covered by package tests.
+
 const contained = (root, path) => {
 	const rel = relative(root, path);
 	return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);

@@ -3,6 +3,11 @@ export {
 	inferEzproxyTemplateFromUrl,
 } from "./institutional-proxy";
 export {
+	type DestinationRecovery,
+	destinationRecovery,
+	type LiteratureDestinationReceipt,
+} from "./literature-operations";
+export {
 	exactDoiItems,
 	type LiteratureItem,
 	type LiteratureReceipt,

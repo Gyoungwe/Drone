@@ -9,6 +9,7 @@
 		".": "./src/index.ts",
 		"./literature-receipt": "./src/literature-receipt.ts",
 		"./source-delivery": "./src/source-delivery.ts",
+		"./literature-operations": "./src/literature-operations.ts",
 		"./run-provenance": "./src/run-provenance.ts",
 		"./open-access": "./src/open-access.ts",
 		"./institutional-proxy": "./src/institutional-proxy.ts",

@@ -1,12 +1,10 @@
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { destinationRecovery } from "@drone/research/literature-operations";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
-import {
-	destinationRecovery,
-	reconcileLiteratureOperation,
-} from "../../../.pi/lib/literature-operations.mjs";
+import { reconcileLiteratureOperation } from "../../../.pi/lib/literature-operations.mjs";
 import { startResearchRun } from "../../../.pi/lib/research-loop.mjs";
 
 let cwd, runDir;
