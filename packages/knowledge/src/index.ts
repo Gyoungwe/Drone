@@ -222,3 +222,5 @@ export {
 export { createKnowledgeSpecialists, knowledgeReadStart, shouldOrientKnowledge } from "./specialists";
 
 export { saveSpecialistExplainer } from "./specialist-delivery";
+
+export { lastWikiModelReview, reviewWikiWithModel } from "./wiki-model-review";
