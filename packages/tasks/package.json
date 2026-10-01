@@ -15,7 +15,8 @@
 		"./tool-protocol": "./src/tool-protocol.ts",
 		"./remaining": "./src/remaining.ts",
 		"./evidence": "./src/evidence.ts",
-		"./authorization-policy": "./src/authorization-policy.ts"
+		"./authorization-policy": "./src/authorization-policy.ts",
+		"./pdf-identity": "./src/pdf-identity.ts"
 	},
 	"dependencies": {
 		"@drone/shared": "*"

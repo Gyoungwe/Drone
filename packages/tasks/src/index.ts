@@ -50,6 +50,16 @@ export {
 	toolResultFailed,
 } from "./failure-feedback";
 export {
+	normalizePdfIdentityResult,
+	PdfIdentityError,
+	type PdfIdentityErrorCode,
+	type PdfIdentityOptions,
+	type PdfIdentityResult,
+	type PdfIdentityWorker,
+	type PdfIdentityWorkerResult,
+	readPdfIdentity,
+} from "./pdf-identity";
+export {
 	createTaskProgression,
 	type TaskProgressionContext,
 	type TaskProgressionInput,
