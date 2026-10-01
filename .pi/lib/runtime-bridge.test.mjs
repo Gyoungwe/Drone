@@ -101,3 +101,40 @@ test("dynamic hosts receive only their announced runtime", async () => {
 	assert.equal(await withHostRuntime(secondHost, () => slot.get("owner")), "second");
 	await Promise.all([first.dispose(), second.dispose()]);
 });
+
+test("disposing one host runtime rejects only that host's future work", async () => {
+	const first = createStandaloneRuntime();
+	const second = createStandaloneRuntime();
+	const makeHost = () => {
+		const listeners = new Map();
+		return {
+			events: {
+				on(name, handler) {
+					listeners.set(name, handler);
+				},
+				emit(name, payload) {
+					if (name === "drone:runtime/request/v1") listeners.get("drone:runtime/v1")?.(payload);
+				},
+			},
+			announce(runtime) {
+				listeners.get("drone:runtime/v1")?.({ version: 1, runtime });
+			},
+		};
+	};
+	const firstHost = makeHost();
+	const secondHost = makeHost();
+	bindRuntime(firstHost);
+	bindRuntime(secondHost);
+	firstHost.announce(first);
+	secondHost.announce(second);
+
+	await first.dispose();
+	await assert.rejects(
+		withHostRuntime(firstHost, () => runRuntimeExclusive("dispose", "first", async () => {})),
+		/Runtime scheduler has been disposed/,
+	);
+	await withHostRuntime(secondHost, () =>
+		runRuntimeExclusive("dispose", "second", async () => "still available"),
+	);
+	await second.dispose();
+});

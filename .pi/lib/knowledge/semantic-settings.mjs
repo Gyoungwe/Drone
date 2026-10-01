@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { runRuntimeExclusive, runtimeSlot } from "../runtime-bridge.mjs";
 import { knowledgeDirectory } from "./config.mjs";
 import { validateSemanticConfig } from "./semantic-provider.mjs";
 
@@ -19,8 +20,12 @@ const SETTINGS_KEYS = new Set([
 	"chunkChars",
 	"minSimilarity",
 ]);
-const locks = new Map();
-const defaultUpdatedAt = new Map();
+/**
+ * Mutable fallback timestamps belong to the injected DroneRuntime. The file
+ * itself is protected by the runtime scheduler below, so host runtimes never
+ * share either the queue or an in-memory default timestamp.
+ */
+const state = runtimeSlot("knowledge", "semanticSettings", () => ({ defaultUpdatedAt: new Map() }));
 
 function pathFor(vaultId) {
 	if (!/^[a-f0-9]{24}$/.test(vaultId || "")) throw new Error("Invalid Vault binding");
@@ -61,16 +66,8 @@ async function assertFile(path) {
 	}
 }
 
-function lockFor(path, task) {
-	const previous = locks.get(path) || Promise.resolve();
-	const current = previous.catch(() => {}).then(task);
-	const held = current
-		.catch(() => {})
-		.finally(() => {
-			if (locks.get(path) === held) locks.delete(path);
-		});
-	locks.set(path, held);
-	return current;
+function runForPath(path, task) {
+	return runRuntimeExclusive("knowledge.semantic-settings", path, task);
 }
 
 function normalize(value, revision, updatedAt = null) {
@@ -110,8 +107,8 @@ async function readUnlocked(path) {
 		return normalize(value, value.revision, value.updatedAt);
 	} catch (error) {
 		if (error.code === "ENOENT") {
-			const updatedAt = defaultUpdatedAt.get(path) || new Date().toISOString();
-			defaultUpdatedAt.set(path, updatedAt);
+			const updatedAt = state.defaultUpdatedAt.get(path) || new Date().toISOString();
+			state.defaultUpdatedAt.set(path, updatedAt);
 			return { version: 1, revision: 0, ...validateSemanticConfig({}), updatedAt };
 		}
 		if (error instanceof SyntaxError) throw new Error("Semantic settings cannot be read: invalid JSON");
@@ -121,12 +118,12 @@ async function readUnlocked(path) {
 
 export async function readSemanticSettings(vaultId) {
 	const path = pathFor(vaultId);
-	return lockFor(path, () => readUnlocked(path));
+	return runForPath(path, () => readUnlocked(path));
 }
 
 export async function saveSemanticSettings(vaultId, input, expectedRevision) {
 	const path = pathFor(vaultId);
-	return lockFor(path, async () => {
+	return runForPath(path, async () => {
 		const current = await readUnlocked(path);
 		if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== current.revision)
 			throw new Error("Semantic settings revision is stale");
