@@ -12,7 +12,8 @@
 		"./single-flight": "./src/single-flight.ts",
 		"./turn-end-prompt": "./src/turn-end-prompt.ts",
 		"./tool-protocol": "./src/tool-protocol.ts",
-		"./remaining": "./src/remaining.ts"
+		"./remaining": "./src/remaining.ts",
+		"./evidence": "./src/evidence.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

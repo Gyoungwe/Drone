@@ -7,6 +7,18 @@ export {
 	resolveWriteRoots,
 } from "./consent";
 export {
+	createEvidenceRecovery,
+	type EvidenceEntry,
+	type EvidenceEvent,
+	type EvidenceInspector,
+	type EvidenceInspectResult,
+	type EvidenceRecord,
+	type EvidenceRecoveryOptions,
+	type EvidenceRestoreInput,
+	type EvidenceRestoreResult,
+	type EvidenceSnapshot,
+} from "./evidence";
+export {
 	diagnosticText,
 	FAILURE_EXPLANATION_POLICY,
 	type FailureObservation,
