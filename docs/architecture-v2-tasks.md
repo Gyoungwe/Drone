@@ -62,8 +62,8 @@
 
 ## A3 · 拆分 PiBackend
 
-- [ ] **A3-1 组合根**：新增 `backend/src/create-backend.ts`，返回 `BackendServices`；`PiBackend` 的构造函数内部改为调用它（行为不变）。
-- [ ] **A3-2 按域抽服务**（每个域一个 PR，顺序：approvals → permissions/trust → models/settings → mcp/packages → subagents → knowledge/zotero/institutional）：把方法移到 `services/<domain>.ts`，`PiBackend` 上保留委托方法并加 `@deprecated`。验收：每个服务 ≤ 400 行；原有测试不改就通过；新增的服务级单测可以不构造 `PiBackend`。
+- [x] **A3-1 组合根**：新增 `backend/src/create-backend.ts`，返回 `BackendServices`；`PiBackend` 的构造函数内部改为调用它（行为不变）。
+- [x] **A3-2 按域抽服务**（每个域一个 PR，顺序：approvals → permissions/trust → models/settings → mcp/packages → subagents → knowledge/zotero/institutional）：把方法移到 `services/<domain>.ts`，`PiBackend` 上保留委托方法并加 `@deprecated`。验收：每个服务 ≤ 400 行；原有测试不改就通过；新增的服务级单测可以不构造 `PiBackend`。
   - [x] packages：`PackageService` 已从 `PiBackend` 门面抽出，包目录访问与安装/卸载/热重载集中在 `src/services/packages.ts`；`BackendServices.packages` 暴露同一实例，门面方法保留兼容委托。
   - [x] permissions/settings：`PermissionSettingsService` 已从 `PiBackend` 门面抽出，`permissions.json` 快照、原子保存、恢复默认、规则试算和审计尾部集中在 `src/services/permissions.ts`；`BackendServices.permissions` 暴露同一实例，旧方法保留兼容委托并有服务级单测。
   - [x] project-trust：`ProjectTrustService` 承接 `ProjectTrustStore` 与 `TrustGate` 的同一生命周期；项目资源加载、信任应答和销毁均经 `PiBackend.projectTrust` 委托，`BackendServices.projectTrust` 暴露同一实例；服务级 2/2 与组合根回归 1/1 通过。
@@ -93,6 +93,7 @@
   - [x] review-policy：新增 `@drone/knowledge` TS 包入口与强类型 `readReviewMode` / `saveReviewMode` / `advisoryCodes`，包内 4/4 与 backend `knowledge-automatic-review` 4/4 通过；`.pi/lib/knowledge/review-policy.mjs` 暂作运行时兼容实现。
   - [x] source-links：新增 `@drone/knowledge` TS 包入口与强类型 `onlineSourceLink` / `normalizeSourceLinks`，包内 4/4 与 backend `knowledge-delivery-round2`、`zotero-literature` 合计 26/26 通过；`.pi/lib/knowledge/source-links.mjs` 暂作运行时兼容实现。
   - [x] flow-cards：新增 `@drone/knowledge` TS 包入口与强类型回执卡构造器，包内 3/3 通过；`.pi/lib/knowledge/flow-cards.mjs` 暂作扩展运行时兼容实现。
+  - [x] files：新增 `@drone/knowledge/files` 安全文件读取入口，迁移 Vault 相对路径校验、软链接拒绝、1 MiB 上限、稳定哈希与 bounded snippet；包内 6/6 通过；`.pi/lib/knowledge/files.mjs` 暂作运行时兼容实现。
 - [ ] **A5-2 @drone/tasks**：`.pi/lib/tasks/*` 迁移。验收：全部 `task-*` 测试通过，包括 `example-tasks-one-authorization-sdk.test.mjs`。
   - [x] failure-feedback：新增 `@drone/tasks` TS 包入口与强类型 `diagnosticText` / `toolResultFailed` / `failureObservation` / `failureContext` 等纯函数；包内 4/4 测试及 backend `task-failure-feedback` 20/20 测试通过，backend diagnostics 复用该脱敏入口；`.pi/lib/tasks/failure-feedback.mjs` 暂作运行时兼容实现。
   - [x] single-flight：新增 `@drone/tasks` TS 包入口与强类型 `singleFlightCommand`，包内 3/3 与 backend `task-command-single-flight` 4/4 通过；`.pi/lib/tasks/single-flight.mjs` 暂作运行时兼容实现。
@@ -102,6 +103,7 @@
   - [x] evidence：新增 `@drone/tasks/evidence` TypeScript 状态机，`.pi/lib/tasks/evidence.mjs` 仅保留宿主 inspector 适配；包内 5/5 与 backend `task-workbench` 30/30 通过。
 - [ ] **A5-3 @drone/research**：source-archive、open-access、zotero-*、institutional-access、literature-*、run-provenance、research-receipt-journal 等迁移。验收：`zotero-*`、`source-archive-*`、`institutional`、`literature-*` 测试通过。
   - [x] run-provenance：新增 `@drone/research/run-provenance`，执行回执、文件快照、范围/凭据校验和 QC 边界迁移到 TS；包内 5/5，backend 回归 4/4；`.pi/lib/run-provenance.mjs` 保持自包含兼容入口。
+  - [x] evidence-gate：新增 `@drone/research/evidence-gate`，迁移证据阶段单调推进、失败终态与 answerable 断言；research 包 37/37 通过；`.pi/lib/evidence-gate.mjs` 暂作运行时兼容入口。
 - [ ] **A5-4 扩展适配层**：`.pi/extensions/*.mjs` 的源码移到 `packages/extensions/src/`，只保留参数映射和注册逻辑，领域逻辑全部调用领域包。`runner.ts` 里两处 `../../../../../.pi/…` 改为包引用或构建产物的解析函数。验收：R5 基线清零；`.pi/lib` 从 extraResources 移除后，打包冒烟通过。
 
 ## A6 · DroneRuntime 注入
@@ -180,3 +182,5 @@
 | 2026-10-01 | 全量验收（A3/A5/A6/A7 增量后） | `npm test` 全部通过：backend 1,372 passed + 13 skipped、desktop 556、extensions 16、knowledge 40、research 31、shared 130、tasks 31；`npm run typecheck`、`.pi` checkJs、build、upgrade fixtures、plugin API、extensions strict、架构检查（141 baseline、0 fixed）均通过 | 仍保留 5 个 `.pi/extensions` legacy 适配入口；A5-1/2/3 的运行时 worker、source archive 与剩余扩展仍按兼容层策略逐步迁移 |
 | 2026-10-01 | A5-2 增量 | `@drone/tasks` 新增 `authorization-policy` 纯策略入口：动作枚举/待决动作判定、授权请求去重键、ask_user 标题与授权卡正文投影；包测试 37/37、包 typecheck 与 Biome 检查通过；`.pi/lib/tasks/ask-authorization.mjs` 保持 CLI/扩展兼容实现 | backend、desktop 与组合根未改；授权 journal、binding 校验和 UI 仍由宿主运行时负责，A5-2 总项保持未完成 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge/semantic-provider` 承载语义 provider 配置验证、请求边界、凭据注入与 bounded vector 响应校验；backend `knowledge-semantic` 10/10 改用包入口，knowledge typecheck/40 tests 通过 | `.pi/lib/knowledge/semantic-provider.mjs` 保留 CLI 自包含适配；service/worker 与 extension runtime 仍待整体迁移
+| 2026-10-01 | A5-1 增量 | `@drone/knowledge/files` 承载 Vault 相对路径校验、软链接拒绝、读取期间签名一致性、1 MiB 上限和 bounded snippet；包内 6/6 与 typecheck、Biome 通过 | `.pi/lib/knowledge/files.mjs` 仍保留运行时兼容入口；layout、maintenance、service、worker 与 specialist host 尚待迁移 |
+| 2026-10-01 | A5-3 增量 | `@drone/research/evidence-gate` 承载证据阶段单调推进、失败终态和 answerable 断言；research 包 11 个文件、37 项测试与 typecheck 通过 | `.pi/lib/evidence-gate.mjs` 仍保留运行时兼容入口；source archive、research receipt journal 与 Zotero 运行时适配器尚待迁移 |

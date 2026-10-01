@@ -95,7 +95,7 @@ packages/
 
 ## packages/knowledge — 知识领域包（迁移中）
 
-`@drone/knowledge` 目前承载无 SDK 依赖的 claim 冲突比较、specialist 编排、review policy、source links、tool budget 与 topic candidate 合约：`src/claim-conflicts.ts` 导出 `compareClaims` 与 `compareClaimSets`，`src/orchestration-policy.ts` 导出确定性调度决策、请求签名与预算器，`src/review-policy.ts` 导出 review mode 持久化与 advisory code 集合，`src/source-links.ts` 导出安全的在线、DOI、Vault、Zotero 与本地结果链接归一化，`src/tool-budget.ts` 和 `src/topic-candidate.ts` 提供预算与主题候选策略，供 backend 和后续 knowledge 迁移复用。运行时仍从 `.pi/lib/knowledge/*` 加载兼容实现；其余 knowledge 模块按 A5-1 分阶段迁移。
+`@drone/knowledge` 目前承载无 SDK 依赖的策略与安全文件合约：`src/files.ts` 提供 Vault 相对路径校验、软链接拒绝、稳定读取与 bounded snippet，`src/config.ts` 提供应用知识绑定，`src/semantic-provider.ts` 提供向量 provider 边界；同时保留 claim 冲突比较、specialist 编排、review policy、source links、tool budget 与 topic candidate 合约。运行时仍从 `.pi/lib/knowledge/*` 加载兼容实现；service、worker、maintenance、layout 与 specialist host 按 A5-1 分阶段迁移。
 
 ## packages/tasks — 任务领域包（迁移中）
 
@@ -103,7 +103,7 @@ packages/
 
 ## packages/research — 研究来源领域包（迁移中）
 
-`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/literature-operations.ts` 提供宿主注入的文献对账 journal/队列边界，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界。backend literature evidence、literature operations、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
+`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/literature-operations.ts` 提供宿主注入的文献对账 journal/队列边界，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界，`src/evidence-gate.ts` 统一证据阶段单调推进、失败终态与 answerable 断言。backend literature evidence、literature operations、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
 
 ## packages/extensions — Pi 扩展适配层（迁移中）
 
