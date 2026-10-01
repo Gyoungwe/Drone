@@ -30,6 +30,7 @@ const CORE_TOOLS = new Set([
 	"research_read_knowledge",
 	"research_search_knowledge",
 	"research_verify_literature",
+	"research_reconcile_literature",
 	"research_archive_source",
 ]);
 const TOOLS = { has: (name) => CORE_TOOLS.has(name) || toolMeta(name)?.journal === true };

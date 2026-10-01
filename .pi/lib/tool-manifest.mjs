@@ -27,7 +27,7 @@ export const TOOL_MANIFEST_REQUEST_EVENT = "drone:tool-manifest/request/v1";
 // per-Pi replay listener so the host can request registrations after it has
 // installed its collector. The registry itself remains runtime-owned; this
 // bridge only transports immutable declaration records.
-const eventBridges = new WeakSet();
+const eventBridges = runtimeSlot("tools", "manifestEventBridges", () => new WeakSet());
 
 const SUBAGENT_MODES = new Set(["exclude", "inherit"]);
 
