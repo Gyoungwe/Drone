@@ -6,7 +6,9 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**/*.{ts,tsx,js,jsx,mjs,cjs,json,html,css}"]
+		"includes": [
+			"**/*.{ts,tsx,js,jsx,mjs,cjs,json,html,css}"
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -35,7 +37,12 @@
 	},
 	"overrides": [
 		{
-			"includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.mjs", "**/test/**"],
+			"includes": [
+				"**/*.test.ts",
+				"**/*.test.tsx",
+				"**/*.test.mjs",
+				"**/test/**"
+			],
 			"linter": {
 				"rules": {
 					"style": {
@@ -45,14 +52,44 @@
 			}
 		},
 		{
-			"includes": ["scripts/fixtures/**"],
-			"formatter": { "enabled": false },
-			"linter": { "enabled": false }
+			"includes": [
+				"scripts/fixtures/**"
+			],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			}
 		},
 		{
-			"includes": [".pi/extensions/*.mjs"],
-			"formatter": { "enabled": false },
-			"linter": { "enabled": false }
+			"includes": [
+				".pi/extensions/*.mjs"
+			],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			}
+		},
+		{
+			"includes": [
+				"packages/tasks/src/runtime-compiled/*.mjs"
+			],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			},
+			"assist": {
+				"actions": {
+					"source": {
+						"organizeImports": "off"
+					}
+				}
+			}
 		}
 	],
 	"assist": {

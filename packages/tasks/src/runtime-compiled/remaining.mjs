@@ -12,7 +12,7 @@ function remainingExplanation(task) {
     const recorded = (task.operations || []).some(
       (o) => o.artifact?.path === acceptance.path && !o.artifact?.intentOnly && o.state !== "started"
     );
-    let reason, next;
+    let reason = "", next = "";
     if (deps.length) {
       reason = `\u524D\u7F6E\u9879\u5C1A\u672A\u9A8C\u6536\uFF1A${deps.map((d) => text(d.title, 70)).join("\u3001")}`;
       next = "\u5148\u628A\u524D\u9762\u8FD9\u51E0\u9879\u505A\u5B8C\uFF0C\u8FD9\u4E00\u9879\u81EA\u7136\u4F1A\u8DDF\u4E0A";

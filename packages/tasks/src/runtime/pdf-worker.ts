@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { parentPort, workerData } from "node:worker_threads";
 
 try {
-	let modulePath;
+	let modulePath: string;
 	try {
 		modulePath = createRequire(import.meta.url).resolve("pdfjs-dist/legacy/build/pdf.mjs");
 	} catch {

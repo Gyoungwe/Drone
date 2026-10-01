@@ -66,7 +66,11 @@ function failureContext(task, current, includeProgress = false) {
       ...new Map(
         (task?.operations || []).filter((o) => o.artifact && !o.artifact.intentOnly).map((o) => [o.artifact.path, o])
       ).values()
-    ].slice(-6).map((o) => ({ path: diagnosticText(o.artifact.path, 240), state: o.state, at: o.checkedAt || o.at })),
+    ].slice(-6).map((o) => ({
+      path: diagnosticText(o.artifact.path, 240),
+      state: o.state,
+      at: o.checkedAt || o.at
+    })),
     recentOperations: (task?.operations || []).slice(-6).map((o) => ({ id: o.id, tool: o.tool, state: o.state, at: o.at })),
     pendingActions: (task?.actions || []).filter((a) => a.state === "pending").slice(0, 8).map((a) => ({ kind: a.kind, title: diagnosticText(a.title, 180) })),
     uncertainEffects: (task?.operations || []).filter((o) => ["started", "unknown", "changed"].includes(o.state)).slice(-6).map((o) => ({ id: o.id, tool: o.tool, state: o.state })),

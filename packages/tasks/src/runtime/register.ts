@@ -20,7 +20,7 @@ import { shouldAskToContinue } from "./turn-end-prompt";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench";
 
 export function registerWorkbench(pi: any) {
-	let context,
+	let context: any,
 		prepared = false,
 		awaitingUser = false,
 		halted = false;
@@ -104,7 +104,7 @@ export function registerWorkbench(pi: any) {
 		);
 	};
 	let handoffGeneration = 0;
-	let handoffTimer;
+	let handoffTimer: any;
 	let automaticTurn = false;
 	let continuationToken = null;
 	(journal as any).isAutoContinuation = (message) =>
@@ -134,7 +134,7 @@ export function registerWorkbench(pi: any) {
 				!journal.authorization()
 			)
 				return;
-			let idle;
+			let idle: any;
 			try {
 				idle = !ctx.isIdle || ctx.isIdle();
 			} catch {

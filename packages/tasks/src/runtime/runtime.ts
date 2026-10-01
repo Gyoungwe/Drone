@@ -116,7 +116,12 @@ export function createTaskJournal({ persist = () => {}, now = () => new Date().t
 			.map((b) => b.text)
 			.join(" ");
 		const cancelled = tool === "ask_user" && (details.cancelled || /cancelled|canceled/i.test(text));
-		const receipt: any = { id, tool, at: now(), state: failed ? "failed" : cancelled ? "cancelled" : "returned" };
+		const receipt: any = {
+			id,
+			tool,
+			at: now(),
+			state: failed ? "failed" : cancelled ? "cancelled" : "returned",
+		};
 		// Only read back explicitly written workspace files. Tool text and arbitrary plugin
 		// details cannot certify an artifact, command outcome, or scientific conclusion.
 		if (!failed && ["write", "edit"].includes(tool) && typeof event.input?.path === "string") {

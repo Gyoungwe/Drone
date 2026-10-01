@@ -70,7 +70,7 @@ export function createTaskProgression(
 			const selected = await ctx.ui.select(report, choices, { signal: ctx.signal });
 			if (!choices.includes(selected) || selected === "暂不处理" || ctx.signal?.aborted) return;
 			await validate();
-			let path;
+			let path: any;
 			if (file && selected === proceed) {
 				path = await ctx.ui.input(
 					`ask_user · 提交文件\n\n${action.title}\n${action.reason}\n请把文件的完整路径填在下面。程序会自己核对这份文件对不对，不会盲目采用。`,

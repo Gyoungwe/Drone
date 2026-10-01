@@ -24,7 +24,7 @@ class KeyedScheduler {
 	async acquire(key) {
 		if (this.#disposed) throw new Error("Runtime scheduler has been disposed");
 		const previous = this.#tails.get(key) || Promise.resolve();
-		let unlock;
+		let unlock: ((value?: unknown) => void) | undefined;
 		const gate = new Promise((resolve) => {
 			unlock = resolve;
 		});
@@ -60,7 +60,7 @@ class KeyedScheduler {
 export function createStandaloneRuntime(log = {}) {
 	const disposables = new Set();
 	let disposed = false;
-	let disposal;
+	let disposal: Promise<void> | undefined;
 	const registerDisposable = (resource) => {
 		if (!resource || (typeof resource.dispose !== "function" && typeof resource.close !== "function"))
 			return () => {};

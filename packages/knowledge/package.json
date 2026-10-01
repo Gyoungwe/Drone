@@ -35,7 +35,8 @@
 		"./specialist-host": "./src/specialist-host.ts",
 		"./specialists": "./src/specialists.ts",
 		"./specialist-delivery": "./src/specialist-delivery.ts",
-		"./wiki-model-review": "./src/wiki-model-review.ts"
+		"./wiki-model-review": "./src/wiki-model-review.ts",
+		"./ui-service": "./src/ui-service.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

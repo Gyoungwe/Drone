@@ -126,3 +126,30 @@ export const loadWorkspaceConfig: WorkspaceConfigLoader = (cwd) => workspaceConf
 export const publishExplainer: ExplainerPublisher = (input) => explainerPublisher(input);
 export const consumeKnowledgeReviewPreview = (cwd: string, token: string) => reviewPreviewConsumer(cwd, token);
 export const specialistSettings = () => specialistSettingsReader();
+
+export type LayoutDefinition = { templates: Record<string, string>; noteTemplate: string };
+let layoutDefinition: LayoutDefinition = { templates: {}, noteTemplate: "" };
+let obsidianSetupInspector: (input: Record<string, unknown>) => Promise<unknown> = async () => null;
+let setupDirectoryInspector: (vault: string) => Promise<unknown> = async () => null;
+let setupVaultResolver: (supplied: string, workspace: string) => string = (supplied) => supplied;
+let setupOptionsReader: () => unknown = () => [];
+export function configureKnowledgeSetup(host: {
+	layout?: LayoutDefinition;
+	inspectObsidianSetup?: (input: Record<string, unknown>) => Promise<unknown>;
+	inspectSetupDirectory?: (vault: string) => Promise<unknown>;
+	resolveSetupVault?: (supplied: string, workspace: string) => string;
+	researchSetupOptions?: () => unknown;
+} = {}): void {
+	if (host.layout) layoutDefinition = host.layout;
+	if (host.inspectObsidianSetup) obsidianSetupInspector = host.inspectObsidianSetup;
+	if (host.inspectSetupDirectory) setupDirectoryInspector = host.inspectSetupDirectory;
+	if (host.resolveSetupVault) setupVaultResolver = host.resolveSetupVault;
+	if (host.researchSetupOptions) setupOptionsReader = host.researchSetupOptions;
+}
+export const LAYOUT: LayoutDefinition = new Proxy({} as LayoutDefinition, {
+	get: (_target, key) => layoutDefinition[key as keyof LayoutDefinition],
+});
+export const inspectObsidianSetup = (input: Record<string, unknown>) => obsidianSetupInspector(input);
+export const inspectSetupDirectory = (vault: string) => setupDirectoryInspector(vault);
+export const resolveSetupVault = (supplied: string, workspace: string) => setupVaultResolver(supplied, workspace);
+export const researchSetupOptions = () => setupOptionsReader();

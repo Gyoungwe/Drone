@@ -430,7 +430,10 @@ export function createTaskWorkbench({
 		)
 			throw error("plan-limit", "Plan needs 1–24 milestones.");
 		const ids = new Set(input.milestones.map((m) => m.id));
-		if (ids.size !== input.milestones.length || [...ids].some((id) => !/^[a-zA-Z0-9-]{1,40}$/.test(String(id))))
+		if (
+			ids.size !== input.milestones.length ||
+			[...ids].some((id) => !/^[a-zA-Z0-9-]{1,40}$/.test(String(id)))
+		)
 			throw error("plan-id", "Milestone IDs must be unique.");
 		const seen = new Set();
 		const milestones = input.milestones.map((m) => {
@@ -713,7 +716,7 @@ export function createTaskWorkbench({
 		for (const m of t.milestones) {
 			const verifier = verifierFor(m.acceptance.kind);
 			if (!verifier?.verify) continue;
-			let result;
+			let result: any;
 			try {
 				result = (await verifier.verify(effectiveAcceptance(m), { cwd, task: clone(t) })) || {
 					state: "unknown",

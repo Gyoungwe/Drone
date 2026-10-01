@@ -85,7 +85,12 @@ function createTaskJournal({ persist = () => {
     const failed = event.isError || details.status === "failed" || details.error && details.successful === 0;
     const text = (event.content || []).filter((b) => b.type === "text").map((b) => b.text).join(" ");
     const cancelled = tool === "ask_user" && (details.cancelled || /cancelled|canceled/i.test(text));
-    const receipt = { id, tool, at: now(), state: failed ? "failed" : cancelled ? "cancelled" : "returned" };
+    const receipt = {
+      id,
+      tool,
+      at: now(),
+      state: failed ? "failed" : cancelled ? "cancelled" : "returned"
+    };
     if (!failed && ["write", "edit"].includes(tool) && typeof event.input?.path === "string") {
       try {
         const base = await realpath(cwd), full = await realpath(resolve(cwd, event.input.path));

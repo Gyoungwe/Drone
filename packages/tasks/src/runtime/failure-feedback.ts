@@ -95,7 +95,11 @@ export function failureContext(task, current, includeProgress = false) {
 			).values(),
 		]
 			.slice(-6)
-			.map((o: any) => ({ path: diagnosticText(o.artifact.path, 240), state: o.state, at: o.checkedAt || o.at })),
+			.map((o: any) => ({
+				path: diagnosticText(o.artifact.path, 240),
+				state: o.state,
+				at: o.checkedAt || o.at,
+			})),
 		recentOperations: (task?.operations || [])
 			.slice(-6)
 			.map((o) => ({ id: o.id, tool: o.tool, state: o.state, at: o.at })),

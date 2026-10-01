@@ -22,7 +22,8 @@ export function remainingExplanation(task) {
 		const recorded = (task.operations || []).some(
 			(o) => o.artifact?.path === acceptance.path && !o.artifact?.intentOnly && o.state !== "started",
 		);
-		let reason, next;
+		let reason = "",
+			next = "";
 		if (deps.length) {
 			reason = `前置项尚未验收：${deps.map((d) => text(d.title, 70)).join("、")}`;
 			next = "先把前面这几项做完，这一项自然会跟上";
