@@ -6,13 +6,12 @@ import { randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+import { cardLink, flowCard } from "@drone/knowledge/flow-cards";
 import {
-	cardLink,
-	flowCard,
 	knowledgeDirectory,
 	projectIdentity,
 	readKnowledgeBinding,
-} from "@drone/knowledge";
+} from "@drone/knowledge/config";
 import {
 	containedFile,
 	DEFAULT_VAULT_PROFILE,
@@ -64,6 +63,15 @@ const initializeVault = (path: string, project: string | null = null, profile = 
 export const DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 	resultsRoot: "./results",
 	obsidianVault: null,
+	// Keep the compatibility fields present in every returned shape. The
+	// legacy Obsidian adapter reads these fields even when no desktop binding
+	// has been established yet.
+	vaultWritePolicy: null,
+	mcpStatus: null,
+	knowledgeScope: "project",
+	knowledgeProjectId: null,
+	knowledgeBindingRevision: 0,
+	legacyProjectVault: null,
 	maxConcurrentSubagents: 3,
 	timezone: "Asia/Shanghai",
 	knowledgeProfile: DEFAULT_VAULT_PROFILE,

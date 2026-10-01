@@ -9,28 +9,40 @@
 			"output": "institutional-access.mjs",
 			"status": "generated",
 			"sourceSha256": "3dbf02ec9729cde3ab8285b420bd37e4ce271b73344b7624a8be72361b4ff149",
-			"outputSha256": "1ef14afd7ccea6cc3e90352a72b3c21085be365ddda6e534452e55e01d77dbea"
+			"outputSha256": "6b6995064de2dedbbdfce452782b96c198f700d5e83f2ed0081c6b44856b45e9"
+		},
+		"research-wikiloop": {
+			"source": "research-wikiloop.ts",
+			"output": "research-wikiloop.mjs",
+			"status": "generated",
+			"sourceSha256": "0d235805b540e4dea75ca4c0c1df18392a2212f49925fb5e0825121d0f56e5f5",
+			"outputSha256": "728a38acb32dbb1bb5f0669bd82ff65edd4ee91e1c7c7ccda6658a528bb46038"
+		},
+		"research-wikiskill": {
+			"source": "research-wikiskill.ts",
+			"output": "research-wikiskill.mjs",
+			"status": "generated",
+			"sourceSha256": "c8c5318299fdce0169fa5622e079c5d5b8101c002dca6459689f5d4d8c85cd9f",
+			"outputSha256": "9c3361642b592d689174ec62b0c836a94fb96754af5f781494e6e42721ca776a"
 		},
 		"subagent-research": {
 			"source": "subagent-research.ts",
 			"output": "subagent-research.mjs",
 			"status": "generated",
 			"sourceSha256": "0931f889056fcb19fad1b3dc9db93d33313dfacfd0cc16b346e7890ec924baaf",
-			"outputSha256": "d6e26f3713fbdc9f01de6d723451e91a53baaba8c4ad98b33650598fbc6ee9dd"
+			"outputSha256": "dd9dff652c47c20c34270cf0ed340a41f07fa38620b613ed30b17379f0b22580"
 		},
 		"workspace-config": {
 			"source": "workspace-config.ts",
 			"output": "workspace-config.mjs",
 			"status": "generated",
-			"sourceSha256": "966cf6d52ec883b61c0502e418b3335f042ff86a8f7ff5ab0257ac340548fd4f",
-			"outputSha256": "e8e74a3db0bf281c41639b50b70997881c49ba23ea39ce1509b68a7dce2836c3"
+			"sourceSha256": "042bc7d2935bb308cb39d38c3cc41bdf32c4574b65eefbaa33faa10c26bed9f3",
+			"outputSha256": "021ac9cc9b774e0aa57a4f33d12176e8b8e4a9072837840e57a7a3507a159606"
 		}
 	},
 	"legacyOutputs": [
 		"obsidian-workbench.mjs",
 		"research-loop.mjs",
-		"research-wikiloop.mjs",
-		"research-wikiskill.mjs",
 		"source-archive.mjs",
 		"subagent-mcp-readonly.mjs",
 		"zotero-literature.mjs"
