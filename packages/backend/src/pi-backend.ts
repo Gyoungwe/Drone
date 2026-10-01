@@ -74,6 +74,7 @@ import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { createDroneRuntime } from "./runtime";
 import { type ApprovalDecision, ApprovalService } from "./services/approvals";
+import { InstitutionalService } from "./services/institutional";
 import type { PackageService } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import { ProjectTrustService } from "./services/project-trust";
@@ -211,6 +212,8 @@ export class PiBackend {
 	readonly approvals: ApprovalService;
 	/** Zotero integration status service exposed by the composition root. */
 	readonly zotero = new ZoteroService();
+	/** Institutional access configuration/status service exposed by the composition root. */
+	readonly institutional = new InstitutionalService();
 	/** 每会话按需 Tool/Skill 能力视图；注册表完整，只有模型可见 active subset 会变化。 */
 	private readonly capabilityRuntimes = new Map<string, CapabilityRuntime>();
 	private readonly askGates = new Map<string, Set<AskGate>>();

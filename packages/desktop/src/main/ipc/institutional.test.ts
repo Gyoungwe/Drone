@@ -32,7 +32,7 @@ const status = {
 	session: { cookiesCount: 0, hasSessionCookies: false, partition: "persist:drone-institutional" },
 	loggedIn: false,
 	electronAvailable: true,
-};
+} as const;
 
 describe("registerInstitutionalIpc", () => {
 	beforeEach(() => {
@@ -99,5 +99,23 @@ describe("registerInstitutionalIpc", () => {
 		for (const method of Object.keys(InstitutionalContract.methods)) {
 			expect(mocks.handlers.has(`institutional:${method}`)).toBe(true);
 		}
+	});
+
+	it("prefers the explicit backend service for stateful operations", async () => {
+		const service = {
+			getStatus: vi.fn(async () => status),
+			saveConfig: vi.fn(async () => status),
+			clear: vi.fn(async () => status),
+			testAccess: vi.fn(async () => ({
+				url: "https://service.example.edu",
+				status: 204,
+				ok: true,
+				via: "institutional_session" as const,
+			})),
+		};
+		registerInstitutionalIpc({ institutional: service });
+		const result = await mocks.handlers.get(IpcChannels.InstitutionalGetStatus)!({});
+		expect(result).toEqual(status);
+		expect(service.getStatus).toHaveBeenCalledOnce();
 	});
 });

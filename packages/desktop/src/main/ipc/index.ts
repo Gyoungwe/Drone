@@ -36,7 +36,15 @@ export function registerIpc(
 	getIncidentSnapshot?: () => unknown,
 	services?: Pick<
 		BackendServices,
-		"settings" | "models" | "login" | "knowledge" | "mcp" | "zotero" | "packages" | "subagents"
+		| "settings"
+		| "models"
+		| "login"
+		| "knowledge"
+		| "mcp"
+		| "zotero"
+		| "packages"
+		| "subagents"
+		| "institutional"
 	>,
 ): void {
 	registerSessionsIpc(backend);
@@ -47,7 +55,7 @@ export function registerIpc(
 	registerKnowledgeIpc(backend, services);
 	registerPackagesIpc(backend, services);
 	registerAppIpc(backend, getIncidentSnapshot);
-	registerInstitutionalIpc();
+	registerInstitutionalIpc(services);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）

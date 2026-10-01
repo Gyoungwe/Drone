@@ -87,6 +87,7 @@ export {
 } from "./project/workspace-store";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
+export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {
 	isNpmSpawnEnoent,
 	NPM_NOT_FOUND_SENTINEL,

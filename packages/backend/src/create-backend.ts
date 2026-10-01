@@ -4,6 +4,7 @@ import type { McpService } from "./mcp/service";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
+import type { InstitutionalServicePort } from "./services/institutional";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
@@ -47,6 +48,8 @@ export interface BackendServices {
 	approvals: ApprovalService;
 	/** Zotero integration status service. */
 	zotero: ZoteroService;
+	/** Institutional access configuration and session probe boundary. */
+	institutional: InstitutionalServicePort;
 	/** Session-scoped subagent panel and settings discovery boundary. */
 	subagents: SubagentServicePort;
 	/** Project trust store and interactive trust gate. */
@@ -71,6 +74,7 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 		permissions,
 		approvals: sessions.approvals,
 		zotero: sessions.zotero,
+		institutional: sessions.institutional,
 		subagents: sessions.subagents,
 		projectTrust: sessions.projectTrust,
 		dispose: () => {

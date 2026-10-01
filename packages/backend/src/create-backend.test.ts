@@ -19,6 +19,8 @@ describe("createBackend", () => {
 		expect(services.approvals.listPending).toBeTypeOf("function");
 		expect(services.zotero).toBe(services.sessions.zotero);
 		expect(services.zotero.getStatus).toBeTypeOf("function");
+		expect(services.institutional).toBe(services.sessions.institutional);
+		expect(services.institutional.testAccess).toBeTypeOf("function");
 		expect(services.projectTrust).toBe(services.sessions.projectTrust);
 		expect(services.subagents).toBe(services.sessions.subagents);
 		expect(services.subagents.listAvailable).toBeTypeOf("function");
