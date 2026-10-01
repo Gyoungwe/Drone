@@ -26,11 +26,11 @@ describe("institutional proxy policy", () => {
 
 	it("infers an EZproxy template only from an explicit HTTP target", () => {
 		expect(
-			inferEzproxyTemplateFromUrl(
-				`https://ezproxy.example.edu/login?url=${encodeURIComponent(target)}`,
-			),
+			inferEzproxyTemplateFromUrl(`https://ezproxy.example.edu/login?url=${encodeURIComponent(target)}`),
 		).toBe("https://ezproxy.example.edu/login?url=%s");
-		expect(inferEzproxyTemplateFromUrl("https://ezproxy.example.edu/login?url=ftp%3A%2F%2Fexample.org")).toBeNull();
+		expect(
+			inferEzproxyTemplateFromUrl("https://ezproxy.example.edu/login?url=ftp%3A%2F%2Fexample.org"),
+		).toBeNull();
 		expect(inferEzproxyTemplateFromUrl("not-a-url")).toBeNull();
 	});
 });

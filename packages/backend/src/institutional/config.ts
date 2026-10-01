@@ -1,13 +1,10 @@
 import { join } from "node:path";
+import { inferEzproxyTemplateFromUrl } from "@drone/research/institutional-proxy";
 import {
 	emptyInstitutionalConfig,
 	type InstitutionalConfig,
 	type InstitutionalSaveInput,
 } from "@drone/shared";
-import {
-	buildProxiedUrl,
-	inferEzproxyTemplateFromUrl,
-} from "@drone/research/institutional-proxy";
 import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
 import { getAgentDir } from "../session-engine/sdk";
