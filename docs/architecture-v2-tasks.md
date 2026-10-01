@@ -73,7 +73,7 @@
   - [x] mcp / settings / models / login：MCP 重载边界、provider 设置、模型偏好和交互登录均通过 `BackendServices` 端口提供，desktop IPC 保留兼容 fallback。
   - [x] knowledge / sessions：知识 UI 与 Zotero 服务端口已接入组合根；sessions IPC 直接绑定组合根的 session service。
 - [x] **A3-3 SessionEngine**：会话生命周期部分移到 `session-engine/engine.ts`，`buildExtensionFactories`、`buildCustomTools` 移到 `session-engine/extensions.ts`；生产 Pi SDK 运行时 import 只允许出现在 `session-engine/**`，测试文件保留直接 SDK import 以覆盖 SDK 分层；R1 生产基线已清零。
-- [ ] **A3-4 删除门面**：desktop main 和契约绑定改为直接使用 `BackendServices`；删除 `pi-backend.ts` 中的委托方法，保留类型 re-export 至少一个版本。验收：`check:arch` 的 R1 基线清零；`pi-backend.ts` 删除或只剩 re-export。
+- [x] **A3-4 删除门面**：desktop main 和契约绑定直接使用 `BackendServices`；会话实现移到 `session-service.ts`，`pi-backend.ts` 只保留一版本兼容 value/type re-export。验收：`check:arch` 的 R1 基线清零，`pi-backend.ts` 仅含兼容导出；旧导入仍由别名保持可用。
 
 ## A4 · EventPipeline
 
@@ -174,3 +174,5 @@
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 承载 `extension-helpers` 与 `task-feedback` 的强类型实现；新增工具结果信封、项目/主题/会话身份策略、观察到的任务回执与 PDF 二进制门禁；包内 40/40、backend `knowledge-publication-hooks` 40/40 与 `usage-feedback` 13/13 通过；`.pi/lib/knowledge/*.mjs` 保留自包含兼容入口供 CLI 运行时使用 | knowledge service、worker、specialist-host、maintenance 与其余 `.pi` 运行时入口仍待迁移；A5-1 总项保持未完成 |
 | 2026-10-01 | A3-4 增量 | `SessionServicePort` 收敛为纯会话/事件边界，域服务不再出现在会话端口；desktop main 的 IPC、心跳与 LAN 初始化均直接消费 `BackendServices`，IPC 模块的旧 PiBackend 形状仅保留为兼容适配路径；backend/desktop typecheck 与 7 个定向 IPC/组合根测试（25/25）通过 | `PiBackend` 仍是会话实现与兼容构造根；旧委托方法、LAN 后端结构端口及少数第三方适配入口仍待后续删除，A3-4 总项保持未完成 |
 | 2026-10-01 | A6-2 运行时归属增量 | provenance、Obsidian 写入、Knowledge UI 预览/维护/语义任务、tool-manifest/acceptance 事件桥接均改为 host `runtimeSlot`；Knowledge worker pool 和 specialist host 注册 runtime disposal，关闭宿主时释放 worker、清理排队任务；研究回执 journal 补齐 reconciliation 核心工具记账。Biome、`.pi` checkJs、backend 定向 85 项、runtime/acceptance node:test 8 项通过 | Knowledge worker 内部 activeRequests/flushes/dirty/inflight 属于独立 Worker 实例，尚未进一步抽象为跨线程 runtime slot；tool-manifest 的无 host 兼容声明镜像仍保留 process-local 读模型，不承载执行状态 |
+
+| 2026-10-01 | A3-4 完成 | 会话实现移到 `session-service.ts` 并命名为 `SessionService`；`pi-backend.ts` 仅保留 `PiBackend`/`PiBackendOptions` 兼容导出，组合根改用 `SessionService`，desktop/LAN/IPC 继续直接消费 `BackendServices`；backend/desktop typecheck、组合根与 SDK 回归通过，架构检查 141 baseline、0 fixed | 兼容别名保留一个发布周期；会话编排仍集中在 SessionService，后续可继续按 lifecycle/permission 子域拆分

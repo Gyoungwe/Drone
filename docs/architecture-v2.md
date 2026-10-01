@@ -188,7 +188,7 @@ export interface DroneRuntime {
 ```
 backend/src/
   create-backend.ts        组合根：读配置 → 构造 Storage/Runtime → 构造各服务 → 返回 BackendServices
-  session-engine/          原 pi-backend.ts 的会话部分（唯一运行时 import SDK）
+  session-engine/          SessionEngine 与会话生命周期边界（唯一运行时 import SDK）
     engine.ts              create/open/close/delete/prompt/retry/abort/fork/compact/recall
     extensions.ts          内联工厂装配（原 buildExtensionFactories / buildCustomTools）
     event-pipeline.ts      §3.5
@@ -196,7 +196,8 @@ backend/src/
     models.ts  settings.ts  permissions.ts  trust.ts  mcp.ts  packages.ts
     subagents.ts  knowledge.ts  zotero.ts  institutional.ts  approvals.ts（ask/permission/trust/login 分发）
   storage/                 §3.6
-  pi-backend.ts            过渡期门面：只做委托，标记 @deprecated，阶段 A3 结束后删除
+  session-service.ts       Host session service 实现（由组合根构造）
+  pi-backend.ts            一版本兼容 re-export，标记 @deprecated
 ```
 
 `BackendServices` 是一个普通对象（`{ sessions, models, settings, … }`）。desktop main 按域取用，契约层（§3.4）直接绑定到对应的服务方法上。
