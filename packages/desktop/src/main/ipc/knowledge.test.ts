@@ -145,3 +145,47 @@ it("forwards explicit one-shot model review choices, never granting a model tool
 	);
 	expect(backend.reviewKnowledgeWithModel).toHaveBeenCalledWith(input);
 });
+
+it("binds session-bound actions from BackendServices when provided", async () => {
+	const frame = {};
+	const knowledgeSession = {
+		startSetup: vi.fn(async () => undefined),
+		reviewWithModel: vi.fn(async () => ({ applied: false })),
+		cancelModelReview: vi.fn(async () => undefined),
+		resumeCheck: vi.fn(async () => undefined),
+	};
+	registerKnowledgeIpc({
+		sessions: backend,
+		knowledge: backend.knowledge,
+		knowledgeSession,
+		zotero: { getStatus: vi.fn() },
+	} as any);
+	const reviewInput = {
+		cwd: "/fixture",
+		token: "exact",
+		sessionId: "s",
+		requestId: "id",
+		acknowledged: true,
+		autoApply: false,
+	};
+	await mocks.handlers.get(IpcChannels.KnowledgeSetupStart)?.(
+		{ sender: { mainFrame: frame }, senderFrame: frame },
+		{ sessionId: "s", path: "/fixture/Vault" },
+	);
+	await mocks.handlers.get(IpcChannels.KnowledgeReviewModel)?.(
+		{ sender: { mainFrame: frame }, senderFrame: frame },
+		reviewInput,
+	);
+	await mocks.handlers.get(IpcChannels.KnowledgeReviewModelCancel)?.(
+		{ sender: { mainFrame: frame }, senderFrame: frame },
+		{ sessionId: "s", requestId: "id" },
+	);
+	await mocks.handlers.get(IpcChannels.KnowledgeResume)?.(
+		{ sender: { mainFrame: frame }, senderFrame: frame },
+		"s",
+	);
+	expect(knowledgeSession.startSetup).toHaveBeenCalledWith({ sessionId: "s", path: "/fixture/Vault" });
+	expect(knowledgeSession.reviewWithModel).toHaveBeenCalledWith(reviewInput);
+	expect(knowledgeSession.cancelModelReview).toHaveBeenCalledWith({ sessionId: "s", requestId: "id" });
+	expect(knowledgeSession.resumeCheck).toHaveBeenCalledWith("s");
+});

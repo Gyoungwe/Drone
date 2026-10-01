@@ -5,6 +5,7 @@ import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
 import type { InstitutionalServicePort } from "./services/institutional";
+import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
@@ -32,6 +33,8 @@ export interface BackendServices {
 	sessionEngine: SessionEngine;
 	/** Domain-owned knowledge service; consumers do not need the compatibility façade. */
 	knowledge: KnowledgeUiServicePort;
+	/** Session-bound knowledge actions (setup/review/resume) independent of IPC. */
+	knowledgeSession: KnowledgeSessionServicePort;
 	/** Community package catalog and package-manager operations. */
 	packages: PackageServicePort;
 	/** Provider and credential settings service. */
@@ -66,6 +69,7 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 		sessions,
 		sessionEngine: sessions.sessionEngine,
 		knowledge: sessions.knowledge,
+		knowledgeSession: sessions.knowledgeSession,
 		packages: sessions.packages,
 		settings: sessions.settings,
 		models: sessions.models,

@@ -89,6 +89,13 @@ export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {
+	type KnowledgeReviewControl,
+	type KnowledgeSessionContext,
+	KnowledgeSessionService,
+	type KnowledgeSessionServiceDependencies,
+	type KnowledgeSessionServicePort,
+} from "./services/knowledge-session";
+export {
 	isNpmSpawnEnoent,
 	NPM_NOT_FOUND_SENTINEL,
 	PackageService,

@@ -75,6 +75,7 @@ import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { createDroneRuntime } from "./runtime";
 import { type ApprovalDecision, ApprovalService } from "./services/approvals";
 import { InstitutionalService } from "./services/institutional";
+import { type KnowledgeReviewControl, KnowledgeSessionService } from "./services/knowledge-session";
 import type { PackageService } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import { ProjectTrustService } from "./services/project-trust";
@@ -191,6 +192,8 @@ type McpHandler = (cwd: string, status: McpStatus) => void;
 export class PiBackend {
 	readonly runtime: DroneRuntime;
 	readonly knowledge = new KnowledgeUiService();
+	/** Session-bound knowledge actions exposed through BackendServices. */
+	readonly knowledgeSession: KnowledgeSessionService;
 	private readonly registry = new SessionRegistry();
 	private readonly eventHandlers = new Set<EventHandler>();
 	private readonly askHandlers = new Set<AskHandler>();
@@ -302,6 +305,23 @@ export class PiBackend {
 		this.runtime = options.runtime ?? createDroneRuntime();
 		this.permissions = options.permissions ?? new PermissionSettingsService();
 		this.mcp = new McpService({ onServerEnabled: (cwd) => this.reloadMcpSessions(cwd) });
+		this.knowledgeSession = new KnowledgeSessionService({
+			getContext: (sessionId) => {
+				const entry = this.registry.get(sessionId);
+				if (!entry) return undefined;
+				return {
+					sessionId,
+					identity: entry,
+					cwd: entry.cwd,
+					readOnly: entry.readOnly === true,
+					streaming: entry.session.isStreaming,
+					hasModel: Boolean(entry.session.model),
+					projectTrusted: entry.session.settingsManager.isProjectTrusted(),
+				};
+			},
+			prompt: (sessionId, text) => this.prompt(sessionId, text),
+			evaluateReview: (input, control) => this.evaluateKnowledgeReview(input, control),
+		});
 		this.approvals = new ApprovalService({
 			onDecision: (decision) => this.persistPermissionDecision(decision),
 		});
@@ -703,7 +723,7 @@ export class PiBackend {
 
 	async closeSession(sessionId: string): Promise<void> {
 		this.modelWait.cleanup(sessionId);
-		for (const run of this.modelReviews.values()) if (run.sessionId === sessionId) run.controller.abort();
+		this.knowledgeSession.disposeSession(sessionId);
 		const entry = this.registry.get(sessionId);
 		if (!entry) return;
 		// 面板派发的子会话随父会话关闭一起中止（登记表清空，不再推送事件）
@@ -733,53 +753,39 @@ export class PiBackend {
 		log.info("session deleted", sessionId);
 	}
 
-	private modelReviews = new Map<string, { sessionId: string; controller: AbortController }>();
-	async reviewKnowledgeWithModel(input: WikiModelReviewInput): Promise<WikiModelReviewResult> {
-		if (!input || !/^[0-9a-f-]{36}$/i.test(input.requestId))
-			throw new Error("Invalid model review request id");
+	private async evaluateKnowledgeReview(
+		input: WikiModelReviewInput,
+		control: KnowledgeReviewControl,
+	): Promise<WikiModelReviewResult> {
 		const entry = this.requireSession(input.sessionId);
-		if (entry.readOnly || entry.cwd !== input.cwd)
-			throw new Error("Open the candidate's originating project in a writable session");
-		if (entry.session.isStreaming)
-			throw new Error("Wait for the current conversation to finish before model review");
-		if (this.modelReviews.has(input.requestId) || this.modelReviews.size >= 2)
-			throw new Error("Model review is already running; wait or cancel it");
-		if (!entry.session.model) throw new Error("Select a model before review");
-		const controller = new AbortController(),
-			check = async () => {
-				controller.signal.throwIfAborted();
-				if (this.registry.get(input.sessionId) !== entry || !entry.session.settingsManager.isProjectTrusted())
-					throw new Error("Session closed or project is not trusted for model review");
-			};
-		this.modelReviews.set(input.requestId, { sessionId: input.sessionId, controller }); // Reserve before awaiting trust checks.
-		const timer = setTimeout(() => controller.abort(), 120000);
-		try {
-			await check();
-			return await this.knowledge.reviewWithModel(input, {
-				signal: controller.signal,
-				check,
-				evaluate: (request: SpecialistRequest) =>
-					withNativeSubagentSlot(entry.cwd, controller.signal, () =>
-						runKnowledgeSpecialist(
-							{
-								getRuntime: () => this.getModelRuntime(),
-								getModelPreference: (name) => this.modelSettings.getSubagentModel(name),
-								getThinkingPreference: (name) => this.modelSettings.getSubagentThinking(name),
-							},
-							{
-								...request,
-								parentModel: entry.session.model,
-								parentThinkingLevel: entry.session.thinkingLevel,
-								signal: controller.signal,
-							},
-						),
+		return this.knowledge.reviewWithModel(input, {
+			signal: control.signal,
+			check: control.check,
+			evaluate: (request: SpecialistRequest) =>
+				withNativeSubagentSlot(entry.cwd, control.signal, () =>
+					runKnowledgeSpecialist(
+						{
+							getRuntime: () => this.getModelRuntime(),
+							getModelPreference: (name) => this.modelSettings.getSubagentModel(name),
+							getThinkingPreference: (name) => this.modelSettings.getSubagentThinking(name),
+						},
+						{
+							...request,
+							parentModel: entry.session.model,
+							parentThinkingLevel: entry.session.thinkingLevel,
+							signal: control.signal,
+						},
 					),
-			});
-		} finally {
-			clearTimeout(timer);
-			this.modelReviews.delete(input.requestId);
-		}
+				),
+		});
 	}
+
+	/** @deprecated 通过 BackendServices.knowledgeSession.reviewWithModel 使用。 */
+	async reviewKnowledgeWithModel(input: WikiModelReviewInput): Promise<WikiModelReviewResult> {
+		return this.knowledgeSession.reviewWithModel(input);
+	}
+
+	/** @deprecated 通过 BackendServices.knowledgeSession.cancelModelReview 使用。 */
 	async cancelKnowledgeModelReview({
 		sessionId,
 		requestId,
@@ -787,31 +793,20 @@ export class PiBackend {
 		sessionId: string;
 		requestId: string;
 	}): Promise<void> {
-		const run = this.modelReviews.get(requestId);
-		if (run?.sessionId === sessionId) run.controller.abort();
+		await this.knowledgeSession.cancelModelReview({ sessionId, requestId });
 	}
 
+	/** @deprecated 通过 BackendServices.knowledgeSession.startSetup 使用。 */
 	async startKnowledgeSetup(input: { sessionId: string; path?: string }): Promise<void> {
-		const entry = this.requireSession(input.sessionId);
-		if (entry.readOnly || entry.session.isStreaming)
-			throw new Error("Wait for the current task to finish before setup");
-		if (input.path && (typeof input.path !== "string" || input.path.length > 4096))
-			throw new Error("Invalid Vault path");
-		// Vault-only：Zotero 文献接入已拆到独立的 /zotero-setup + Zotero 面板，这里不再夹带
-		const args = input.path ? JSON.stringify({ vaultPath: input.path }) : "";
-		await this.prompt(input.sessionId, `/obsidian-setup ${args}`);
+		await this.knowledgeSession.startSetup(input);
 	}
 
 	getZoteroStatus(): ReturnType<ZoteroService["getStatus"]> {
 		return this.zotero.getStatus();
 	}
+	/** @deprecated 通过 BackendServices.knowledgeSession.resumeCheck 使用。 */
 	async resumeKnowledgeCheck(sessionId: string): Promise<void> {
-		const entry = this.requireSession(sessionId);
-		if (entry.readOnly || entry.session.isStreaming) throw new Error("Wait for the current task to finish");
-		await this.prompt(
-			sessionId,
-			"请继续完成上一任务的知识库检查：重新准备导航，按需阅读 Wiki、检索并阅读实际引用来源，然后发布回答。不要把界面阅读当作模型已经阅读，也不要绕过失败的检查。",
-		);
+		await this.knowledgeSession.resumeCheck(sessionId);
 	}
 
 	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt> {
@@ -1511,8 +1506,8 @@ export class PiBackend {
 
 	dispose(): void {
 		this.modelWait.dispose();
-		for (const run of this.modelReviews.values()) run.controller.abort();
-		this.modelReviews.clear();
+		for (const sessionId of this.registry.list().map((entry) => entry.session.sessionId))
+			this.knowledgeSession.disposeSession(sessionId);
 		this.knowledge.dispose();
 		this.registry.disposeAll();
 		this.eventHandlers.clear();

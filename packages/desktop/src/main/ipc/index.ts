@@ -40,6 +40,7 @@ export function registerIpc(
 		| "models"
 		| "login"
 		| "knowledge"
+		| "knowledgeSession"
 		| "mcp"
 		| "zotero"
 		| "packages"
@@ -55,7 +56,7 @@ export function registerIpc(
 	registerMcpIpc(backend, hostServices);
 	registerPermissionSettingsIpc(backend);
 	registerSubagentsIpc(backend, hostServices);
-	registerKnowledgeIpc(backend, hostServices);
+	registerKnowledgeIpc(backendOrServices, hostServices);
 	registerPackagesIpc(backend, hostServices);
 	registerAppIpc(backend, getIncidentSnapshot);
 	registerInstitutionalIpc(hostServices);
