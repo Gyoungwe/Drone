@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { resolve, relative } from "node:path";
+import { relative, resolve } from "node:path";
 import { build } from "esbuild";
 
 const root = resolve(import.meta.dirname, "..");
@@ -31,8 +31,7 @@ await build({
 	logLevel: "silent",
 });
 const outputs = (await readdir(outDir)).filter((name) => name.endsWith(".mjs")).sort();
-const generatedFiles = (await readdir(outDir, { recursive: true }))
-	.filter((name) => name.endsWith(".mjs"));
+const generatedFiles = (await readdir(outDir, { recursive: true })).filter((name) => name.endsWith(".mjs"));
 const entries = {};
 for (const name of generatedFiles) {
 	// Bundled ESM artifacts are checked through the legacy .pi compatibility
@@ -47,8 +46,13 @@ for (const name of generatedFiles) {
 	const source = name.replace(/\.mjs$/, ".ts");
 	entries[name] = {
 		source: `packages/knowledge/src/${source}`,
-		sha256: createHash("sha256").update(await readFile(outputPath)).digest("hex"),
+		sha256: createHash("sha256")
+			.update(await readFile(outputPath))
+			.digest("hex"),
 	};
 }
-await writeFile(resolve(outDir, ".build-manifest.json"), `${JSON.stringify({version: 1, generator: "scripts/build-knowledge-runtime.mjs", entries}, null, "\t")}\n`);
+await writeFile(
+	resolve(outDir, ".build-manifest.json"),
+	`${JSON.stringify({ version: 1, generator: "scripts/build-knowledge-runtime.mjs", entries }, null, "\t")}\n`,
+);
 console.log(`built ${outputs.length} knowledge entries in ${relative(root, outDir)} (worker isolated)`);
