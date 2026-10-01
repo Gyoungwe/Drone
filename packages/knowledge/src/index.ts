@@ -185,7 +185,9 @@ export {
 	noteKnowledgeRead,
 	noteKnowledgeSearch,
 	noteKnowledgeSpecialist,
+	notifyKnowledgeUi,
 	publicationKnowledgeFlow,
+	requestWikiReviewUi,
 	subscribeKnowledgeUi,
 	updateKnowledgeFlow,
 } from "./ui-state";
