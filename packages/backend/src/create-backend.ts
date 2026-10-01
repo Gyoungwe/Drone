@@ -18,7 +18,6 @@ import type {
 import type { DiagnosticsServicePort } from "./diagnostics";
 import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
-import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
 import type { InstitutionalServicePort } from "./services/institutional";
@@ -29,6 +28,7 @@ import type { ProjectTrustService } from "./services/project-trust";
 import type { SubagentServicePort } from "./services/subagents";
 import type { ZoteroServicePort } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
+import { PiBackend, type PiBackendOptions } from "./session-service";
 import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
