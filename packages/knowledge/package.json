@@ -12,7 +12,8 @@
 		"./review-policy": "./src/review-policy.ts",
 		"./source-links": "./src/source-links.ts",
 		"./tool-budget": "./src/tool-budget.ts",
-		"./topic-candidate": "./src/topic-candidate.ts"
+		"./topic-candidate": "./src/topic-candidate.ts",
+		"./flow-cards": "./src/flow-cards.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
