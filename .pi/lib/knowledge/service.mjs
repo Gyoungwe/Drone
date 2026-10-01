@@ -209,8 +209,19 @@ export class KnowledgeService {
 				maxChars: 1400,
 				reviewMaxChars: 400,
 			});
-			if (latest.hash !== page.hash || latest.missing !== page.missing)
+			if (latest.hash !== page.hash || latest.missing !== page.missing) {
+				// Project indexes are host-maintained navigation material. Summary
+				// delivery can refresh one while the parent is issuing its next
+				// search; accept that generated change after replacing the snapshot.
+				// Human-authored navigation (Home, Wiki and project Context) still
+				// invalidates the ticket and requires an explicit prepare step.
+				if (page.path === `Projects/${state.project}/Index.md`) {
+					page.hash = latest.hash;
+					page.missing = latest.missing;
+					continue;
+				}
 				throw new Error("Navigation changed; call research_prepare_knowledge again before searching");
+			}
 		}
 		return state;
 	}
@@ -637,7 +648,15 @@ export class KnowledgeService {
 		return { project: state.project, sources };
 	}
 	async currentReadEvidence(ticket, cwd, { limit = 12 } = {}) {
-		const state = await this.check(ticket, cwd);
+		// A later search or read can legitimately refresh the navigation snapshot
+		// while the host is materializing a completed summary. Evidence receipts
+		// belong to this ticket, so revalidating the fixed navigation here creates a
+		// race without adding source integrity: each receipt is still checked against
+		// the current note hash below.
+		await withKnowledgeBinding(this.binding, async () => {});
+		const state = this.tickets.get(ticket);
+		if (!state || state.cwd !== resolve(cwd) || Date.now() - state.createdAt > 60 * 60 * 1000)
+			throw new Error("Read current navigation with research_prepare_knowledge first");
 		const cap = Math.max(1, Math.min(12, Number(limit) || 12));
 		const sources = [];
 		for (const [path, receipt] of [...state.reads].reverse()) {
