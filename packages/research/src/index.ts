@@ -57,3 +57,19 @@ export {
 	type ZoteroIdentityQuery,
 	zoteroItemDoi,
 } from "./zotero-identity";
+export {
+	type ConnectorZoteroItem,
+	connectorTargetId,
+	type NormalizedZoteroAttachment,
+	type NormalizedZoteroItem,
+	normalizeZoteroAttachment,
+	normalizeZoteroItem,
+	toConnectorItem,
+	toWebApiItem,
+	type WebApiZoteroItem,
+	ZOTERO_ITEM_SPECS,
+	ZOTERO_ITEM_TYPES,
+	ZOTERO_WRITE_LIMITS,
+	type ZoteroCreator,
+	type ZoteroWriteInput,
+} from "./zotero-write";

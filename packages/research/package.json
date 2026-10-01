@@ -12,7 +12,8 @@
 		"./run-provenance": "./src/run-provenance.ts",
 		"./open-access": "./src/open-access.ts",
 		"./institutional-proxy": "./src/institutional-proxy.ts",
-		"./zotero-identity": "./src/zotero-identity.ts"
+		"./zotero-identity": "./src/zotero-identity.ts",
+		"./zotero-write": "./src/zotero-write.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
