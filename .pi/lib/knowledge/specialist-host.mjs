@@ -11,6 +11,12 @@ const state = runtimeSlot("knowledge", "specialists", () => ({
 	active: 0,
 	queue: [],
 	settingsQueue: Promise.resolve(),
+	disposed: false,
+	dispose() {
+		this.disposed = true;
+		this.hosts.clear();
+		for (const item of this.queue.splice(0)) item.reject();
+	},
 }));
 const HOST_EVENT = "drone:knowledge-specialist-host/v1";
 const hostModule = {};
@@ -39,6 +45,7 @@ export const contextSessionId = (ctx) => ctx?.sessionManager?.getSessionId?.() |
 export const specialistQueueSnapshot = () => ({ active: state.active, queueLength: state.queue.length });
 export function registerKnowledgeSpecialistHost(id, run) {
 	if (!id || typeof run !== "function") throw new Error("A specialist host requires a session identity");
+	if (state.disposed) throw new Error("Knowledge specialist runtime has been disposed");
 	state.hosts.set(id, run);
 	emitProcessEvent(HOST_EVENT, { action: "register", id, run, origin: hostModule });
 	return () => {
@@ -181,6 +188,7 @@ export async function setSpecialistSettings({ mode, revision, bindingRevision, .
 }
 export async function withSpecialistSlot(signal, work, options = {}) {
 	signal?.throwIfAborted();
+	if (state.disposed) throw new Error("Knowledge specialist runtime has been disposed");
 	const bounded = (value, fallback, max) =>
 		Number.isSafeInteger(value) ? Math.min(max, Math.max(1, value)) : fallback;
 	const concurrency = bounded(
@@ -205,6 +213,13 @@ export async function withSpecialistSlot(signal, work, options = {}) {
 					signal?.removeEventListener("abort", abort);
 					clearTimeout(timer);
 					resolve();
+				},
+				reject: () => {
+					if (settled) return;
+					settled = true;
+					signal?.removeEventListener("abort", abort);
+					clearTimeout(timer);
+					reject(new Error("Knowledge specialist runtime has been disposed"));
 				},
 			};
 			const abort = () => {

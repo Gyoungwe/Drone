@@ -11,7 +11,16 @@ import { embedTexts, validateSemanticConfig } from "./semantic-provider.mjs";
 import { readSemanticSettings, saveSemanticSettings } from "./semantic-settings.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
-const pool = runtimeSlot("knowledge", "workerPool", () => new Map());
+const pool = runtimeSlot("knowledge", "workerPool", () => {
+	const services = new Map();
+	return Object.assign(services, {
+		async dispose() {
+			const allocated = [...services.values()];
+			services.clear();
+			await Promise.allSettled(allocated.map((service) => service.close()));
+		},
+	});
+});
 // The desktop host can load the .pi extension through a second ESM loader.  A
 // versioned request/response event shares the service object across those
 // module copies without reintroducing a Symbol-keyed global singleton.

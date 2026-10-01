@@ -42,7 +42,7 @@ export const ACCEPTANCE_VERIFIER_REQUEST_EVENT = "drone:acceptance-verifier/requ
 // A Pi host may load more than one extension which imports this module. Keep the
 // bridge installation idempotent per host object, while each runtime still owns
 // the mutable verifier registry behind runtimeSlot().
-const eventBridges = new WeakSet();
+const eventBridges = runtimeSlot("tasks", "acceptanceEventBridges", () => new WeakSet());
 
 const createRegistry = () => {
 	const kinds = [...CORE_ACCEPTANCE_KINDS];
