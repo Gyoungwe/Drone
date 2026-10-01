@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/files.ts
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";

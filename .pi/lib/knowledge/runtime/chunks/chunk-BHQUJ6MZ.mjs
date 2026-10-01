@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/tool-budget.ts
 function createToolBudget(options = {}) {
   const maxReads = options.maxReads ?? 8;

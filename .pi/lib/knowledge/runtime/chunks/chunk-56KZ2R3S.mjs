@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   projectIdentity
 } from "./chunk-CXEKIGAQ.mjs";

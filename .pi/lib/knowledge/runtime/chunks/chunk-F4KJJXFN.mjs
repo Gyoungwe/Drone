@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   readNoteFile
 } from "./chunk-UFYQ36T5.mjs";

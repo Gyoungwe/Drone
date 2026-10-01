@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   embedTexts,
   semanticLimits,

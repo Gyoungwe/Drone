@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/publication-policy.ts
 var publicationFallbackNotice = "\u53D1\u5E03\u68C0\u67E5\u672A\u52A0\u8F7D\u6216\u53D1\u751F\u9519\u8BEF\uFF0C\u56DE\u7B54\u6CA1\u6709\u53D1\u5E03\u3002";
 var publicationNotices = {

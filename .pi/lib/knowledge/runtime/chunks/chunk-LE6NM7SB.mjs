@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/source-links.ts
 import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";

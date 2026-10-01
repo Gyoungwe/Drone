@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/runtime-host.ts
 var locks = /* @__PURE__ */ new Map();
 var defaultRunRuntimeExclusive = async (_namespace, key, work) => {

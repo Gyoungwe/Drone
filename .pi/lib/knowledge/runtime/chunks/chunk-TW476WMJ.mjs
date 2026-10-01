@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/task-feedback.ts
 import { lstat, realpath } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";

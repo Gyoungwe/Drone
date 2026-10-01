@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/semantic-provider.ts
 import { URL } from "node:url";
 var MAX_BATCH = 32;

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   invalidateKnowledgeUi
 } from "./chunk-SUUDCD4L.mjs";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/orchestration-policy.ts
 import { createHash } from "node:crypto";
 var SPECIALIST_DECISIONS = ["run", "skip", "wait", "ask-user"];

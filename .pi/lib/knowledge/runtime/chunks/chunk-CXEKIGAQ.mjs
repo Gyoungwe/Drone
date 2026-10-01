@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/config.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";

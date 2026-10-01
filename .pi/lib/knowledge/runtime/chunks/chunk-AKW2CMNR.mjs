@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/wiki-policy.ts
 import { createHash } from "node:crypto";
 var MANAGED_START = "<!-- pi-agent:managed:start -->";

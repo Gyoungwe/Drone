@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   knowledgeDirectory
 } from "./chunk-CXEKIGAQ.mjs";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/topic-candidate.ts
 function titleFromSummary(summary, query, resultSlug) {
   const heading = summary.match(/^#\s+(.+)$/m)?.[1]?.trim();

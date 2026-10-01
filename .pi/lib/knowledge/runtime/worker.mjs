@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/worker.ts
 import { watch } from "node:fs";
 import { mkdir, readdir } from "node:fs/promises";

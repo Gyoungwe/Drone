@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/claim-conflicts.ts
 var normalize = (value) => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[\u0000-\u001f\u007f]/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 var tokens = (value) => new Set(

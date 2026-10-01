@@ -31,12 +31,23 @@ await build({
 	logLevel: "silent",
 });
 const outputs = (await readdir(outDir)).filter((name) => name.endsWith(".mjs")).sort();
+const generatedFiles = (await readdir(outDir, { recursive: true }))
+	.filter((name) => name.endsWith(".mjs"));
 const entries = {};
-for (const name of outputs) {
+for (const name of generatedFiles) {
+	// Bundled ESM artifacts are checked through the legacy .pi compatibility
+	// wrappers.  Keep the generated bundle itself out of checkJs inference:
+	// source typing is enforced by the package TypeScript build instead.
+	const outputPath = resolve(outDir, name);
+	const output = await readFile(outputPath, "utf8");
+	if (!output.startsWith("// @ts-nocheck")) {
+		await writeFile(outputPath, `// @ts-nocheck\n${output}`);
+	}
+	if (!outputs.includes(name)) continue;
 	const source = name.replace(/\.mjs$/, ".ts");
 	entries[name] = {
 		source: `packages/knowledge/src/${source}`,
-		sha256: createHash("sha256").update(await readFile(resolve(outDir, name))).digest("hex"),
+		sha256: createHash("sha256").update(await readFile(outputPath)).digest("hex"),
 	};
 }
 await writeFile(resolve(outDir, ".build-manifest.json"), `${JSON.stringify({version: 1, generator: "scripts/build-knowledge-runtime.mjs", entries}, null, "\t")}\n`);

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   MANAGED_END,
   MANAGED_START,

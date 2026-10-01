@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/flow-cards.ts
 var OK = /* @__PURE__ */ new Set([
   "verified",

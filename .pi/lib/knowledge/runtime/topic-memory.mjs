@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   TOPIC_MEMORY_LIMITS,
   TOPIC_MEMORY_VERSION,

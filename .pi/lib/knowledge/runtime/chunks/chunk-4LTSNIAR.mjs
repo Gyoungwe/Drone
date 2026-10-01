@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/knowledge/src/search-policy.ts
 function tokenizeKnowledgeText(text) {
   const words = String(text).normalize("NFKC").toLowerCase().match(/[a-z0-9][a-z0-9._+-]*|[\p{Script=Han}]+/gu) || [];

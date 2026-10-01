@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   SPECIALIST_LIMITS,
   contextSessionId,

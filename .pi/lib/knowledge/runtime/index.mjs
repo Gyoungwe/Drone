@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   TOPIC_MEMORY_LIMITS,
   TOPIC_MEMORY_VERSION,
@@ -112,7 +113,9 @@ import {
   noteKnowledgeRead,
   noteKnowledgeSearch,
   noteKnowledgeSpecialist,
+  notifyKnowledgeUi,
   publicationKnowledgeFlow,
+  requestWikiReviewUi,
   subscribeKnowledgeUi,
   updateKnowledgeFlow
 } from "./chunks/chunk-GC2J7ECB.mjs";
@@ -290,6 +293,7 @@ export {
   noteKnowledgeSpecialist,
   noteScope,
   notifyKnowledgeChange,
+  notifyKnowledgeUi,
   onlineSourceLink,
   previewWikiProposal,
   projectIdentity,
@@ -307,6 +311,7 @@ export {
   readTopic,
   registerAnswerPublication,
   registerKnowledgeSpecialistHost,
+  requestWikiReviewUi,
   result,
   reviewWikiWithModel,
   runNavigationMaintenance,
