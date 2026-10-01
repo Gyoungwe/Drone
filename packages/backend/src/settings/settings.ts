@@ -49,7 +49,18 @@ async function readJsonFile(path: string): Promise<JsonObject> {
  * auth.json 与 models.json 由 pi 读取（本服务负责写入），
  * 写完统一经 ModelRuntime.refresh() 让运行中的会话生效。
  */
-export class SettingsService {
+export interface SettingsServicePort {
+	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
+	saveApiKey(providerId: string, key: string): Promise<void>;
+	removeCredential(providerId: string): Promise<void>;
+	addCustomProvider(input: CustomProviderInput): Promise<void>;
+	updateCustomProvider(input: CustomProviderUpdateInput): Promise<void>;
+	removeCustomProvider(providerId: string): Promise<void>;
+	setProviderBaseUrl(providerId: string, baseUrl: string, apiKey?: string): Promise<void>;
+	testProvider(providerId: string, modelId?: string): Promise<ProviderTestResult>;
+}
+
+export class SettingsService implements SettingsServicePort {
 	constructor(private readonly getRuntime: () => Promise<ModelRuntime>) {}
 
 	private get authPath(): string {

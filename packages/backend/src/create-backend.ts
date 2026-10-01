@@ -11,9 +11,9 @@ import type { ProjectTrustService } from "./services/project-trust";
 import type { SubagentServicePort } from "./services/subagents";
 import type { ZoteroService } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
-import type { LoginService } from "./settings/login";
-import type { ModelSettingsService } from "./settings/models";
-import type { SettingsService } from "./settings/settings";
+import type { LoginServicePort } from "./settings/login";
+import type { ModelSettingsServicePort } from "./settings/models";
+import type { SettingsServicePort } from "./settings/settings";
 
 /**
  * Transitional composition root for the v2 migration.
@@ -35,11 +35,11 @@ export interface BackendServices {
 	/** Community package catalog and package-manager operations. */
 	packages: PackageServicePort;
 	/** Provider and credential settings service. */
-	settings: SettingsService;
+	settings: SettingsServicePort;
 	/** User-level model visibility and subagent preferences. */
-	models: ModelSettingsService;
+	models: ModelSettingsServicePort;
 	/** Interactive provider login service. */
-	login: LoginService;
+	login: LoginServicePort;
 	/** MCP configuration and status service. */
 	mcp: McpServicePort;
 	/** Durable permissions.json settings and rule-probe service. */

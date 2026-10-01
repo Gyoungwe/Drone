@@ -111,10 +111,10 @@ export {
 export { type RegisteredSession, SessionRegistry } from "./session/registry";
 export { TraceRecorder } from "./session/trace";
 export { SessionEngine } from "./session-engine/engine";
-export { LoginService, type LoginServiceDeps } from "./settings/login";
+export { LoginService, type LoginServiceDeps, type LoginServicePort } from "./settings/login";
 export { ModelPrefsService } from "./settings/model-prefs";
-export { ModelSettingsService } from "./settings/models";
-export { SettingsService } from "./settings/settings";
+export { ModelSettingsService, type ModelSettingsServicePort } from "./settings/models";
+export { SettingsService, type SettingsServicePort } from "./settings/settings";
 export { BUILTIN_SLASH_COMMANDS, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
 export {
 	createDefaultStorageRegistry,

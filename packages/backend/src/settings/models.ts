@@ -9,7 +9,17 @@ import { ModelPrefsService } from "./model-prefs";
  * service has no session or Electron dependencies, so it can be reused by a
  * future standalone host without pulling the backend facade along.
  */
-export class ModelSettingsService {
+export interface ModelSettingsServicePort {
+	getPrefs(): Promise<ModelPrefs>;
+	setModelHidden(provider: string, modelId: string, hidden: boolean): Promise<ModelPrefs>;
+	setModelsHidden(provider: string, modelIds: string[], hidden: boolean): Promise<ModelPrefs>;
+	setSubagentModel(agent: string, modelRef: string | null): Promise<ModelPrefs>;
+	getSubagentModel(agent: string): Promise<string | undefined>;
+	setSubagentThinking(agent: string, level: SubagentThinkingLevel | null): Promise<ModelPrefs>;
+	getSubagentThinking(agent: string): Promise<SubagentThinkingLevel | undefined>;
+}
+
+export class ModelSettingsService implements ModelSettingsServicePort {
 	private readonly prefs: ModelPrefsService;
 
 	constructor(configPath: string) {
