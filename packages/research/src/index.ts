@@ -3,9 +3,20 @@ export {
 	inferEzproxyTemplateFromUrl,
 } from "./institutional-proxy";
 export {
+	createLiteratureOperations,
 	type DestinationRecovery,
 	destinationRecovery,
 	type LiteratureDestinationReceipt,
+	type LiteratureOperationInput,
+	type LiteratureOperationJournal,
+	type LiteratureOperationLocation,
+	type LiteratureOperationPorts,
+	type LiteratureOperationReceipt,
+	type LiteratureOperationRecord,
+	type LiteratureOperationVerifier,
+	type LiteratureWriteRecord,
+	literatureOperationId,
+	type ZoteroWriteReceipt,
 } from "./literature-operations";
 export {
 	exactDoiItems,

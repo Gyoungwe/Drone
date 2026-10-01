@@ -103,7 +103,7 @@ packages/
 
 ## packages/research — 研究来源领域包（迁移中）
 
-`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界。backend literature evidence、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
+`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/literature-operations.ts` 提供宿主注入的文献对账 journal/队列边界，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界。backend literature evidence、literature operations、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
 
 ## packages/extensions — Pi 扩展适配层（迁移中）
 
