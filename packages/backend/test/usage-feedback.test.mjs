@@ -1,11 +1,11 @@
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createTaskFeedback, guardResearchToolResult } from "@drone/knowledge/task-feedback";
 import { deriveTurnUsage, messagesToUIMessages } from "@drone/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerAnswerPublication } from "../../../.pi/lib/knowledge/publication.mjs";
 import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import { createTaskFeedback, guardResearchToolResult } from "../../../.pi/lib/knowledge/task-feedback.mjs";
 import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 import { toSessionMessages } from "../src/session/messages";
 

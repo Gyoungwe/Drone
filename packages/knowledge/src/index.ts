@@ -22,6 +22,17 @@ export {
 	withKnowledgeBinding,
 } from "./config";
 export {
+	continuationHint,
+	continuesTopic,
+	currentProject,
+	explainerTopicId,
+	type KnowledgeToolResult,
+	result,
+	type SessionIdentityContext,
+	sessionIdentity,
+	type TopicForContinuation,
+} from "./extension-helpers";
+export {
 	type CardFieldOptions,
 	cardField,
 	cardLink,
@@ -91,6 +102,18 @@ export {
 	type SourceLinkOptions,
 	type SourceLinksResult,
 } from "./source-links";
+export {
+	createTaskFeedback,
+	guardResearchToolResult,
+	type ResearchToolResultEvent,
+	type TaskFeedback,
+	type TaskFeedbackContent,
+	type TaskFeedbackContext,
+	type TaskFeedbackEvent,
+	type TaskFeedbackFacts,
+	type TaskFeedbackFailure,
+	type TaskFeedbackFile,
+} from "./task-feedback";
 export {
 	createToolBudget,
 	type ToolBudget,

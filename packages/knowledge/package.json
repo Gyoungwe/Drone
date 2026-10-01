@@ -17,7 +17,9 @@
 		"./flow-cards": "./src/flow-cards.ts",
 		"./search-policy": "./src/search-policy.ts",
 		"./publication-policy": "./src/publication-policy.ts",
-		"./semantic-settings": "./src/semantic-settings.ts"
+		"./semantic-settings": "./src/semantic-settings.ts",
+		"./extension-helpers": "./src/extension-helpers.ts",
+		"./task-feedback": "./src/task-feedback.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
