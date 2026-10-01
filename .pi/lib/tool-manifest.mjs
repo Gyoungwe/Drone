@@ -9,7 +9,7 @@
  */
 
 import { emitProcessEvent } from "./process-events.mjs";
-import { runtimeSlot, withHostRuntime } from "./runtime-bridge.mjs";
+import { bindRuntime, runtimeSlot, withHostRuntime } from "./runtime-bridge.mjs";
 
 const registry = runtimeSlot("tools", "manifest", () => ({ tools: new Map(), families: new Map() }));
 
@@ -50,9 +50,11 @@ function registration(name, meta) {
 
 function replayRegistrations(pi) {
 	if (!pi?.events?.emit) return;
-	for (const [name, meta] of registry.tools) {
-		void pi.events.emit(TOOL_MANIFEST_EVENT, registration(name, meta));
-	}
+	withHostRuntime(pi, () => {
+		for (const [name, meta] of registry.tools) {
+			void pi.events.emit(TOOL_MANIFEST_EVENT, registration(name, meta));
+		}
+	});
 }
 
 function installEventBridge(pi) {
@@ -61,6 +63,18 @@ function installEventBridge(pi) {
 	pi.events.on(TOOL_MANIFEST_REQUEST_EVENT, (payload) => {
 		if (payload?.version === 1) replayRegistrations(pi);
 	});
+}
+
+/** Keep each tool callback inside the runtime owned by its Pi host. */
+function bindToolRuntime(pi, definition) {
+	if (typeof definition?.execute !== "function") return definition;
+	const execute = definition.execute;
+	return {
+		...definition,
+		execute(...args) {
+			return withHostRuntime(pi, () => execute.apply(this, args));
+		},
+	};
 }
 
 function publishRegistration(pi, name, meta) {
@@ -87,6 +101,7 @@ export function defineTool(definition) {
 /** 子代理子会话里不注册标记为 exclude 的工具；其余原样交给 pi.registerTool。 */
 /** @param {any} pi @param {any[]} definitions */
 export function registerTools(pi, definitions) {
+	bindRuntime(pi);
 	return withHostRuntime(pi, () => {
 		installEventBridge(pi);
 		const registered = [];
@@ -94,7 +109,7 @@ export function registerTools(pi, definitions) {
 			const defined = defineTool(definition);
 			publishRegistration(pi, defined.name, defined.drone || {});
 			if (process.env.PI_SUBAGENT_CHILD && defined.drone?.subagent === "exclude") continue;
-			pi.registerTool(defined);
+			pi.registerTool(bindToolRuntime(pi, defined));
 			registered.push(defined.name);
 		}
 		return registered;

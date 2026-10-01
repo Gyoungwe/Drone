@@ -11,6 +11,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 const contexts = new AsyncLocalStorage();
 let installedRuntime = null;
 let standaloneRuntime = null;
+const runtimeBindings = new WeakSet();
 // A host may load several independent Pi extension graphs in one process. Keep
 // the runtime binding keyed by that host object instead of putting mutable
 // extension state in a process-global singleton.
@@ -95,33 +96,56 @@ export function withRuntime(runtime, operation) {
  */
 export function bindRuntime(pi) {
 	if (!pi || (typeof pi !== "object" && typeof pi !== "function")) return () => {};
+	if (runtimeBindings.has(pi)) return () => {};
+	runtimeBindings.add(pi);
+	const fallback = createStandaloneRuntime();
+	hostRuntimes.set(pi, fallback);
 	// CLI/test Pi hosts may not expose the desktop event bus. Give each such
 	// host an explicit standalone runtime instead of falling back to the
 	// process-wide lazy runtime. This keeps extension state isolated even when
 	// no SessionEngine is present to announce a desktop-owned runtime.
 	if (!pi.events?.on || !pi.events?.emit) {
-		if (hostRuntimes.has(pi)) return () => {};
-		const runtime = createStandaloneRuntime();
-		hostRuntimes.set(pi, runtime);
 		return () => {
-			if (hostRuntimes.get(pi) !== runtime) return;
+			if (hostRuntimes.get(pi) !== fallback) return;
+			runtimeBindings.delete(pi);
 			hostRuntimes.delete(pi);
-			void runtime.dispose();
+			void fallback.dispose();
 		};
 	}
 	const receive = (payload) => {
 		if (payload?.version !== RUNTIME_BRIDGE_VERSION) return;
 		const runtime = payload?.runtime;
 		if (!runtime || typeof runtime !== "object" || !runtime.scheduler) return;
+		const previous = hostRuntimes.get(pi);
+		if (previous && previous !== runtime) adoptRuntimeState(previous, runtime);
 		hostRuntimes.set(pi, runtime);
+		if (previous && previous !== runtime) void previous.dispose();
 	};
 	pi.events.on("drone:runtime/v1", receive);
 	// The host inline factory responds with the runtime it owns. This event is
 	// safe to emit before the listener exists; request it again after binding.
 	void pi.events.emit?.("drone:runtime/request/v1", { version: RUNTIME_BRIDGE_VERSION });
 	return () => {
-		if (hostRuntimes.get(pi)) hostRuntimes.delete(pi);
+		runtimeBindings.delete(pi);
+		if (hostRuntimes.get(pi) === fallback) {
+			hostRuntimes.delete(pi);
+			void fallback.dispose();
+		} else hostRuntimes.delete(pi);
 	};
+}
+
+/** Transfer extension-owned slots when a desktop host announces its runtime late. */
+function adoptRuntimeState(previous, runtime) {
+	for (const domain of ["knowledge", "tasks", "tools"]) {
+		const source = previous?.[domain];
+		if (!source || typeof source !== "object") continue;
+		let target = runtime[domain];
+		if (!target) {
+			target = {};
+			runtime[domain] = target;
+		}
+		for (const key of Reflect.ownKeys(source)) if (!(key in target)) target[key] = source[key];
+	}
 }
 
 /** Return the host-bound runtime, with the standalone runtime as CLI fallback. */
