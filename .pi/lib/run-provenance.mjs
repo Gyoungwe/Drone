@@ -3,8 +3,14 @@ import { createReadStream } from "node:fs";
 import { lstat, readFile, realpath, rename, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadWorkspaceConfig } from "../extensions/workspace-config.mjs";
+import { runtimeSlot } from "./runtime-bridge.mjs";
 
-const queues = new Map();
+const runtimeState = runtimeSlot("research", "runProvenance", () => ({
+	queues: new Map(),
+	dispose() {
+		this.queues.clear();
+	},
+}));
 const digest = (v) => createHash("sha256").update(v).digest("hex");
 const within = (root, path) => {
 	const r = relative(root, path);
@@ -59,7 +65,7 @@ export async function observeExecutionReceipt({
 	if (!["bash", "powershell"].includes(toolName) || !toolCallId) return null;
 	const run = await runPath(cwd, runDir),
 		file = join(run, "execution-observations.json");
-	const work = (queues.get(file) || Promise.resolve())
+	const work = (runtimeState.queues.get(file) || Promise.resolve())
 		.catch(() => {})
 		.then(async () => {
 			let records = [];
@@ -86,10 +92,10 @@ export async function observeExecutionReceipt({
 			});
 			await atomic(file, { version: 1, records: records.slice(-256), scientificallyVerified: false });
 		});
-	queues.set(file, work);
+	runtimeState.queues.set(file, work);
 	void work
 		.finally(() => {
-			if (queues.get(file) === work) queues.delete(file);
+			if (runtimeState.queues.get(file) === work) runtimeState.queues.delete(file);
 		})
 		.catch(() => {});
 	return work;
@@ -129,7 +135,7 @@ export async function recordRunProvenance({ cwd = process.cwd(), runDir, files =
 	}
 	let records = [];
 	const log = join(run, "execution-observations.json");
-	await queues.get(log);
+	await runtimeState.queues.get(log);
 	try {
 		records = await readObservations(log);
 	} catch (e) {
