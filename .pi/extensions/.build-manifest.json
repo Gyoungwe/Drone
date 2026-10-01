@@ -8,8 +8,8 @@
 			"source": "institutional-access.ts",
 			"output": "institutional-access.mjs",
 			"status": "generated",
-			"sourceSha256": "4b441b45dc30ebe249dbfe48e0396e0115b12ba649a968159e3b228f6e6664d4",
-			"outputSha256": "a51284189f4d335727a15a5722111adfa2f13033ed425721cca8ade30b17259d"
+			"sourceSha256": "3dbf02ec9729cde3ab8285b420bd37e4ce271b73344b7624a8be72361b4ff149",
+			"outputSha256": "1ef14afd7ccea6cc3e90352a72b3c21085be365ddda6e534452e55e01d77dbea"
 		},
 		"subagent-research": {
 			"source": "subagent-research.ts",
@@ -26,6 +26,7 @@
 		"research-wikiskill.mjs",
 		"source-archive.mjs",
 		"subagent-mcp-readonly.mjs",
+		"subagent-research.mjs",
 		"workspace-config.mjs",
 		"zotero-literature.mjs"
 	]

@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { buildProxiedUrl, inferEzproxyTemplateFromUrl } from "@drone/research/institutional-proxy";
 
 const require = createRequire(import.meta.url);
 const PARTITION = "persist:drone-institutional";
@@ -96,7 +97,7 @@ function openWindow(url: string): { url: string } {
 	});
 	const recordNavigation = async (navigatedUrl: string) => {
 		const config = await loadConfig();
-		const inferred = inferEzproxyTemplate(navigatedUrl);
+		const inferred = inferEzproxyTemplateFromUrl(navigatedUrl) ?? undefined;
 		await saveConfig({
 			...config,
 			ezproxyTemplate: inferred || config.ezproxyTemplate,
@@ -109,27 +110,6 @@ function openWindow(url: string): { url: string } {
 	});
 	void win.loadURL(url);
 	return { url };
-}
-
-function inferEzproxyTemplate(value: string): string | undefined {
-	try {
-		const url = new URL(value);
-		const target = new URLSearchParams(url.search).get("url");
-		if (!target || !/^https?:\/\//i.test(target)) return undefined;
-		const marker = url.href.indexOf("url=");
-		if (marker < 0) return undefined;
-		const template = `${url.href.slice(0, marker)}url=%s`;
-		return template.length <= 2048 ? template : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
-function proxiedUrl(url: string, template?: string): string | null {
-	if (!template) return null;
-	if (template.includes("%s")) return template.replaceAll("%s", encodeURIComponent(url));
-	if (template.endsWith("=")) return `${template}${encodeURIComponent(url)}`;
-	return `${template}${template.includes("?") ? "&" : "?"}url=${encodeURIComponent(url)}`;
 }
 
 function toolResponse(value: unknown, details?: unknown) {
@@ -168,7 +148,7 @@ export default function institutionalAccess(pi: PiTool): void {
 				);
 			try {
 				const config = await loadConfig();
-				const opened = openWindow(proxiedUrl(target, config.ezproxyTemplate) || target);
+				const opened = openWindow(buildProxiedUrl(target, config.ezproxyTemplate) || target);
 				const next = { ...config, lastLoginAt: new Date().toISOString(), lastLoginUrl: opened.url };
 				await saveConfig(next);
 				return toolResponse(

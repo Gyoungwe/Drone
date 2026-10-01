@@ -3,6 +3,73 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
+
+// packages/research/src/institutional-proxy.ts
+function buildProxiedUrl(originalUrl, template) {
+  if (!template) return null;
+  const trimmed = template.trim();
+  if (!trimmed) return null;
+  try {
+    if (trimmed.includes("%s")) return trimmed.replaceAll("%s", encodeURIComponent(originalUrl));
+    const urlObj = new URL(originalUrl);
+    if (trimmed.includes(urlObj.host)) return null;
+    if (/[?&=]$/.test(trimmed) || trimmed.endsWith("url=") || trimmed.endsWith("url")) {
+      const separator = trimmed.includes("?") ? trimmed.endsWith("?") || trimmed.endsWith("&") || trimmed.endsWith("=") ? "" : "&" : "?";
+      if (trimmed.endsWith("=")) return `${trimmed}${encodeURIComponent(originalUrl)}`;
+      return `${trimmed}${separator}url=${encodeURIComponent(originalUrl)}`;
+    }
+    if (trimmed.includes("ezproxy") || trimmed.includes("login")) {
+      const hasQuery = trimmed.includes("?");
+      if (hasQuery) {
+        if (trimmed.endsWith("?") || trimmed.endsWith("&"))
+          return `${trimmed}${encodeURIComponent(originalUrl)}`;
+        if (trimmed.includes("url=")) {
+          if (/url=$/.test(trimmed)) return `${trimmed}${encodeURIComponent(originalUrl)}`;
+          return `${trimmed}&url=${encodeURIComponent(originalUrl)}`;
+        }
+        return `${trimmed}&url=${encodeURIComponent(originalUrl)}`;
+      }
+      return `${trimmed}?url=${encodeURIComponent(originalUrl)}`;
+    }
+    return `${trimmed}${encodeURIComponent(originalUrl)}`;
+  } catch {
+    return null;
+  }
+}
+function inferEzproxyTemplateFromUrl(navigatedUrl) {
+  try {
+    const url = new URL(navigatedUrl);
+    const href = url.href;
+    if (url.hostname.includes("ezproxy") && url.search) {
+      const target = new URLSearchParams(url.search).get("url");
+      if (target && /^https?:\/\//i.test(target)) {
+        const base = `${href.split("url=")[0]}url=`;
+        if (/^https?:\/\//i.test(base)) return `${base}%s`;
+      }
+      if (href.includes("url=") && /url=https?%3A/i.test(href) || href.includes("url=https://")) {
+        const index = href.indexOf("url=");
+        if (index > 0) {
+          const base = href.slice(0, index + 4);
+          if (/^https?:\/\//i.test(base)) return `${base}%s`;
+        }
+      }
+    }
+    if ((href.includes("?url=") || href.includes("&url=")) && /url=https?/i.test(href)) {
+      const match = href.match(/^(https?:\/\/[^?]+\?[^=]*url=)/i);
+      if (match) {
+        const base = match[1];
+        if (base && !base.includes("nature.com") && !base.includes("sciencedirect.com") && !base.includes("springer.com") && !base.includes("wiley.com") && base.length < 200)
+          return `${base}%s`;
+        if (base && base.length < 300) return `${base}%s`;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// packages/extensions/src/institutional-access.ts
 var require2 = createRequire(import.meta.url);
 var PARTITION = "persist:drone-institutional";
 var CONFIG_PATH = join(homedir(), ".pi", "agent", "institutional.json");
@@ -62,7 +129,7 @@ function openWindow(url) {
   });
   const recordNavigation = async (navigatedUrl) => {
     const config = await loadConfig();
-    const inferred = inferEzproxyTemplate(navigatedUrl);
+    const inferred = inferEzproxyTemplateFromUrl(navigatedUrl) ?? void 0;
     await saveConfig({
       ...config,
       ezproxyTemplate: inferred || config.ezproxyTemplate,
@@ -76,25 +143,6 @@ function openWindow(url) {
   });
   void win.loadURL(url);
   return { url };
-}
-function inferEzproxyTemplate(value) {
-  try {
-    const url = new URL(value);
-    const target = new URLSearchParams(url.search).get("url");
-    if (!target || !/^https?:\/\//i.test(target)) return void 0;
-    const marker = url.href.indexOf("url=");
-    if (marker < 0) return void 0;
-    const template = `${url.href.slice(0, marker)}url=%s`;
-    return template.length <= 2048 ? template : void 0;
-  } catch {
-    return void 0;
-  }
-}
-function proxiedUrl(url, template) {
-  if (!template) return null;
-  if (template.includes("%s")) return template.replaceAll("%s", encodeURIComponent(url));
-  if (template.endsWith("=")) return `${template}${encodeURIComponent(url)}`;
-  return `${template}${template.includes("?") ? "&" : "?"}url=${encodeURIComponent(url)}`;
 }
 function toolResponse(value, details) {
   return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], details: details ?? value };
@@ -130,7 +178,7 @@ function institutionalAccess(pi) {
         );
       try {
         const config = await loadConfig();
-        const opened = openWindow(proxiedUrl(target, config.ezproxyTemplate) || target);
+        const opened = openWindow(buildProxiedUrl(target, config.ezproxyTemplate) || target);
         const next = { ...config, lastLoginAt: (/* @__PURE__ */ new Date()).toISOString(), lastLoginUrl: opened.url };
         await saveConfig(next);
         return toolResponse(
