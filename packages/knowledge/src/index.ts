@@ -6,8 +6,12 @@ export {
 	type KnowledgeClaim,
 } from "./claim-conflicts";
 export {
+	createKnowledgeConfigApi,
+	createKnowledgeConfigState,
 	type KnowledgeBinding,
 	type KnowledgeBindingInput,
+	type KnowledgeConfigApi,
+	type KnowledgeConfigState,
 	type KnowledgeDepositMode,
 	type KnowledgeProfile,
 	type KnowledgeSubagentPolicy,

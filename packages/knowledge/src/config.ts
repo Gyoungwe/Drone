@@ -31,8 +31,30 @@ export interface ReadKnowledgeBindingOptions {
 
 type BindingOperation<T> = () => T | Promise<T>;
 
-const local = new AsyncLocalStorage<KnowledgeBinding>();
-const queues = new Map<string, Promise<unknown>>();
+/**
+ * Mutable state owned by one knowledge host runtime.
+ *
+ * The package-level convenience exports below use a private default state for
+ * ordinary backend callers. Runtime adapters should use
+ * `createKnowledgeConfigApi()` with a host-owned state so two Pi hosts never
+ * share binding context or save queues.
+ */
+export interface KnowledgeConfigState {
+	local: AsyncLocalStorage<KnowledgeBinding>;
+	queues: Map<string, Promise<unknown>>;
+}
+
+export interface KnowledgeConfigApi {
+	knowledgeDirectory: typeof knowledgeDirectory;
+	projectIdentity: typeof projectIdentity;
+	readKnowledgeBinding: typeof readKnowledgeBinding;
+	saveKnowledgeBinding: typeof saveKnowledgeBinding;
+	withKnowledgeBinding: typeof withKnowledgeBinding;
+}
+
+export function createKnowledgeConfigState(): KnowledgeConfigState {
+	return { local: new AsyncLocalStorage<KnowledgeBinding>(), queues: new Map() };
+}
 
 function errorCode(error: unknown): unknown {
 	return error && typeof error === "object" && "code" in error
@@ -80,10 +102,11 @@ function validateBinding(value: unknown): asserts value is KnowledgeBinding {
 }
 
 /** Read the current app binding, or null when the desktop binding directory is not configured. */
-export async function readKnowledgeBinding({
-	fresh = false,
-}: ReadKnowledgeBindingOptions = {}): Promise<KnowledgeBinding | null> {
-	if (!fresh && local.getStore()) return local.getStore() ?? null;
+async function readKnowledgeBindingWithState(
+	state: KnowledgeConfigState,
+	{ fresh = false }: ReadKnowledgeBindingOptions = {},
+): Promise<KnowledgeBinding | null> {
+	if (!fresh && state.local.getStore()) return state.local.getStore() ?? null;
 	const directory = knowledgeDirectory();
 	if (!directory) return null;
 	let value: unknown;
@@ -99,18 +122,26 @@ export async function readKnowledgeBinding({
 	return value;
 }
 
+export async function readKnowledgeBinding(
+	options: ReadKnowledgeBindingOptions = {},
+): Promise<KnowledgeBinding | null> {
+	return readKnowledgeBindingWithState(defaultState, options);
+}
+
 /** Save an app binding atomically, with an optional optimistic revision check. */
-export async function saveKnowledgeBinding(
+
+async function saveKnowledgeBindingWithState(
+	state: KnowledgeConfigState,
 	input: KnowledgeBindingInput,
 	expectedRevision: number | null = null,
 ): Promise<KnowledgeBinding> {
 	const directory = knowledgeDirectory();
 	if (!directory) throw new Error("Application knowledge directory is not configured");
-	const previous = queues.get(directory) || Promise.resolve();
+	const previous = state.queues.get(directory) || Promise.resolve();
 	const operation = previous
 		.catch(() => {})
 		.then(async () => {
-			const current = await readKnowledgeBinding({ fresh: true });
+			const current = await readKnowledgeBindingWithState(state, { fresh: true });
 			if (expectedRevision !== null && (current?.revision || 0) !== expectedRevision)
 				throw new Error("Knowledge binding changed while confirming; review the new binding");
 			const vault = await realpath(input.vault);
@@ -131,21 +162,53 @@ export async function saveKnowledgeBinding(
 			await rename(temporary, join(directory, "binding.json"));
 			return value;
 		});
-	queues.set(directory, operation);
+	state.queues.set(directory, operation);
 	try {
 		return await operation;
 	} finally {
-		if (queues.get(directory) === operation) queues.delete(directory);
+		if (state.queues.get(directory) === operation) state.queues.delete(directory);
 	}
 }
 
+export async function saveKnowledgeBinding(
+	input: KnowledgeBindingInput,
+	expectedRevision: number | null = null,
+): Promise<KnowledgeBinding> {
+	return saveKnowledgeBindingWithState(defaultState, input, expectedRevision);
+}
+
 /** Run a binding-scoped operation only when the persisted binding still matches the caller's revision. */
+
+async function withKnowledgeBindingWithState<T>(
+	state: KnowledgeConfigState,
+	binding: KnowledgeBinding,
+	operation: BindingOperation<T>,
+): Promise<T> {
+	const current = await readKnowledgeBindingWithState(state, { fresh: true });
+	if (!binding || current?.vaultId !== binding.vaultId || current?.revision !== binding.revision)
+		throw new Error("Knowledge binding changed; start a new turn before reading or writing");
+	return state.local.run(binding, operation);
+}
+
 export async function withKnowledgeBinding<T>(
 	binding: KnowledgeBinding,
 	operation: BindingOperation<T>,
 ): Promise<T> {
-	const current = await readKnowledgeBinding({ fresh: true });
-	if (!binding || current?.vaultId !== binding.vaultId || current?.revision !== binding.revision)
-		throw new Error("Knowledge binding changed; start a new turn before reading or writing");
-	return local.run(binding, operation);
+	return withKnowledgeBindingWithState(defaultState, binding, operation);
 }
+
+/** Build bindings backed by a host-owned state object. */
+export function createKnowledgeConfigApi(
+	state: KnowledgeConfigState = createKnowledgeConfigState(),
+): KnowledgeConfigApi {
+	return {
+		knowledgeDirectory,
+		projectIdentity,
+		readKnowledgeBinding: (options = {}) => readKnowledgeBindingWithState(state, options),
+		saveKnowledgeBinding: (input, expectedRevision = null) =>
+			saveKnowledgeBindingWithState(state, input, expectedRevision),
+		withKnowledgeBinding: (binding, operation) => withKnowledgeBindingWithState(state, binding, operation),
+	};
+}
+
+const defaultState = createKnowledgeConfigState();
