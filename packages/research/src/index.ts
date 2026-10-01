@@ -41,3 +41,7 @@ export {
 	RESEARCH_ANSWER_GUIDANCE,
 	requiresPaperEvidence,
 } from "./source-delivery";
+export {
+	buildProxiedUrl,
+	inferEzproxyTemplateFromUrl,
+} from "./institutional-proxy";
