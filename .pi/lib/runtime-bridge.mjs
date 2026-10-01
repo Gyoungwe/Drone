@@ -100,6 +100,7 @@ export function bindRuntime(pi) {
 	// process-wide lazy runtime. This keeps extension state isolated even when
 	// no SessionEngine is present to announce a desktop-owned runtime.
 	if (!pi.events?.on || !pi.events?.emit) {
+		if (hostRuntimes.has(pi)) return () => {};
 		const runtime = createStandaloneRuntime();
 		hostRuntimes.set(pi, runtime);
 		return () => {

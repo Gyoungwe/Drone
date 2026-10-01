@@ -103,6 +103,9 @@ test("CLI hosts receive independent standalone runtimes", async () => {
 	const secondHost = {};
 	const disposeFirst = bindRuntime(firstHost);
 	const disposeSecond = bindRuntime(secondHost);
+	const firstRuntime = runtimeForHost(firstHost);
+	bindRuntime(firstHost);
+	assert.equal(runtimeForHost(firstHost), firstRuntime);
 	assert.notEqual(runtimeForHost(firstHost), runtimeForHost(secondHost));
 
 	const slot = runtimeSlot("knowledge", "cli-host-isolation", () => new Map());
