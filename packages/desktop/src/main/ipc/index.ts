@@ -54,7 +54,7 @@ export function registerIpc(
 	registerSessionsIpc(backendOrServices);
 	registerSettingsIpc(backend, hostServices);
 	registerMcpIpc(backend, hostServices);
-	registerPermissionSettingsIpc(backend);
+	registerPermissionSettingsIpc(backendOrServices);
 	registerSubagentsIpc(backend, hostServices);
 	registerKnowledgeIpc(backendOrServices, hostServices);
 	registerPackagesIpc(backend, hostServices);
