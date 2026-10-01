@@ -112,10 +112,18 @@ describe("StorageRegistry", () => {
 			["knowledge-vault-", "/tmp/vault", "knowledge/wiki-review"],
 			["research-results-", "/tmp/project/results", "research/provenance"],
 		] as const) {
-			const entry = first.list().find((candidate) =>
-				prefix.endsWith("-") ? candidate.id.startsWith(prefix) && candidate.path === path : candidate.id === prefix,
-			);
-			expect(entry, `missing storage entry for ${path}`).toMatchObject({ path, owner, sensitivity: "private" });
+			const entry = first
+				.list()
+				.find((candidate) =>
+					prefix.endsWith("-")
+						? candidate.id.startsWith(prefix) && candidate.path === path
+						: candidate.id === prefix,
+				);
+			expect(entry, `missing storage entry for ${path}`).toMatchObject({
+				path,
+				owner,
+				sensitivity: "private",
+			});
 			expect(entry && second.get(entry.id)).toEqual(entry);
 		}
 		expect(first.get("agent-session-traces")).toMatchObject({

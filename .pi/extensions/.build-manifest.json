@@ -9,7 +9,7 @@
 			"output": "institutional-access.mjs",
 			"status": "generated",
 			"sourceSha256": "3dbf02ec9729cde3ab8285b420bd37e4ce271b73344b7624a8be72361b4ff149",
-			"outputSha256": "1ef14afd7ccea6cc3e90352a72b3c21085be365ddda6e534452e55e01d77dbea"
+			"outputSha256": "cacb43fda327aa77c4351f73f031e89b2f7928229eb43b17f7a9beacec42ca90"
 		},
 		"subagent-research": {
 			"source": "subagent-research.ts",

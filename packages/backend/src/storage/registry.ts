@@ -240,34 +240,35 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		});
 	if (knowledgeDir) {
-		registry.register({
-			id: "knowledge-root",
-			path: knowledgeDir,
-			owner: "knowledge",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
-			id: "knowledge-binding",
-			path: `${knowledgeDir}/binding.json`,
-			owner: "knowledge/config",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
-			id: "knowledge-review-policy",
-			path: `${knowledgeDir}/review-policy.json`,
-			owner: "knowledge/review-policy",
-			schema: 1,
-			sensitivity: "config",
-		})
-		.register({
-			id: "knowledge-specialists",
-			path: `${knowledgeDir}/specialists.json`,
-			owner: "knowledge/specialist-host",
-			schema: 1,
-			sensitivity: "config",
-		});
+		registry
+			.register({
+				id: "knowledge-root",
+				path: knowledgeDir,
+				owner: "knowledge",
+				schema: 1,
+				sensitivity: "private",
+			})
+			.register({
+				id: "knowledge-binding",
+				path: `${knowledgeDir}/binding.json`,
+				owner: "knowledge/config",
+				schema: 1,
+				sensitivity: "private",
+			})
+			.register({
+				id: "knowledge-review-policy",
+				path: `${knowledgeDir}/review-policy.json`,
+				owner: "knowledge/review-policy",
+				schema: 1,
+				sensitivity: "config",
+			})
+			.register({
+				id: "knowledge-specialists",
+				path: `${knowledgeDir}/specialists.json`,
+				owner: "knowledge/specialist-host",
+				schema: 1,
+				sensitivity: "config",
+			});
 	}
 	// These roots are selected after binding/project discovery. Registering the
 	// parent directory keeps SQLite, JSONL and generated review artifacts in the

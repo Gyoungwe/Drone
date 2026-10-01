@@ -1,5 +1,5 @@
 import { networkInterfaces } from "node:os";
-import { LanConfigService, LanObserverServer, type LanObserverBackend } from "@drone/backend";
+import { LanConfigService, type LanObserverBackend, LanObserverServer } from "@drone/backend";
 import type { LanStatus } from "@drone/shared";
 import * as QRCode from "qrcode";
 // lan-web 单文件产物（vite-plugin-singlefile；需先跑 build:lan-web，dev/build 脚本已前置）

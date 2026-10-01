@@ -1,4 +1,4 @@
-export { type BackendServices, type SessionServicePort, createBackend } from "./create-backend";
+export { type BackendServices, createBackend, type SessionServicePort } from "./create-backend";
 export {
 	buildDiagnostics,
 	type DiagnosticsOptions,
