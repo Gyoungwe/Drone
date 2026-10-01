@@ -69,11 +69,11 @@ import { createLogger } from "./log";
 import { McpService } from "./mcp/service";
 import { PackageAdmin } from "./packages/admin";
 import type { PermissionConfirm, PermissionModeRef } from "./permissions/extension";
-import { PermissionGate } from "./permissions/gate";
 import { walkProjectFiles } from "./project/files";
 import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
 import { createDroneRuntime } from "./runtime";
+import { type ApprovalDecision, ApprovalService } from "./services/approvals";
 import type { PackageService } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import { ProjectTrustService } from "./services/project-trust";
@@ -192,8 +192,6 @@ export class PiBackend {
 	private readonly registry = new SessionRegistry();
 	private readonly eventHandlers = new Set<EventHandler>();
 	private readonly askHandlers = new Set<AskHandler>();
-	private readonly permissionHandlers = new Set<PermissionHandler>();
-	private readonly permissionResolvedHandlers = new Set<PermissionResolvedHandler>();
 	private readonly trustHandlers = new Set<TrustHandler>();
 	private readonly loginHandlers = new Set<LoginHandler>();
 	private readonly mcpHandlers = new Set<McpHandler>();
@@ -208,11 +206,12 @@ export class PiBackend {
 	readonly mcp = new McpService();
 	/** Permission settings domain service exposed by the composition root. */
 	readonly permissions: PermissionSettingsService;
+	/** Approval registry and host event boundary exposed by the composition root. */
+	readonly approvals: ApprovalService;
 	/** Zotero integration status service exposed by the composition root. */
 	readonly zotero = new ZoteroService();
 	/** 每会话按需 Tool/Skill 能力视图；注册表完整，只有模型可见 active subset 会变化。 */
 	private readonly capabilityRuntimes = new Map<string, CapabilityRuntime>();
-	private readonly gates = new Map<string, PermissionGate>();
 	private readonly askGates = new Map<string, Set<AskGate>>();
 	/** 按会话权限模式（default 缺省；fullAccess = 一切放行 + 高危审计）：会话创建时随工厂注入，关会话/重启归零 */
 	private readonly permissionModes = new Map<string, PermissionModeRef>();
@@ -238,7 +237,7 @@ export class PiBackend {
 		},
 		resolveSession: (sessionId) => {
 			const entry = this.registry.get(sessionId);
-			const gate = this.gates.get(sessionId);
+			const gate = this.approvals.getGate(sessionId);
 			if (!entry || !gate) return undefined;
 			return {
 				session: entry.session,
@@ -296,6 +295,9 @@ export class PiBackend {
 	constructor(private readonly options: PiBackendOptions = {}) {
 		this.runtime = options.runtime ?? createDroneRuntime();
 		this.permissions = options.permissions ?? new PermissionSettingsService();
+		this.approvals = new ApprovalService({
+			onDecision: (decision) => this.persistPermissionDecision(decision),
+		});
 		this.storage = createDefaultStorageRegistry({
 			agentDir: getAgentDir(),
 			userDataDir: options.userDataDir,
@@ -387,7 +389,7 @@ export class PiBackend {
 				run: (current, sid) => {
 					// 流式熔断：病态输出（空白洪流/超量）trip 后 abort，会话后续增量丢弃。
 					const verdict = this.streamGuard.inspect(sid, current);
-					if (current.type === "agent_end") this.gates.get(sid)?.endRun();
+					if (current.type === "agent_end") this.approvals.getGate(sid)?.endRun();
 					if (verdict === "pass") return current;
 					if (verdict !== "suppress") {
 						log.error("stream guard tripped, aborting session", sid, { verdict });
@@ -462,7 +464,7 @@ export class PiBackend {
 		const model =
 			options.provider && options.modelId ? runtime.getModel(options.provider, options.modelId) : undefined;
 
-		const gate = new PermissionGate((req) => this.dispatchPermissionRequest(req));
+		const gate = this.approvals.createGate();
 		const askGate = new AskGate((req) => this.dispatchAskRequest(req));
 		// 权限扩展的确认通道直接桥到 gate（携带 kind/suggestDir 元数据，驱动「允许此目录」/持久化）
 		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
@@ -527,7 +529,7 @@ export class PiBackend {
 
 		gate.bindSession(session.sessionId);
 		askGate.bindSession(session.sessionId);
-		this.gates.set(session.sessionId, gate);
+		this.approvals.register(session.sessionId, gate);
 		this.registerAskGate(session.sessionId, askGate);
 		this.permissionModes.set(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
@@ -557,7 +559,7 @@ export class PiBackend {
 		const runtime = await this.getModelRuntime();
 		const sessionManager = this.sessionEngine.openManager(filePath);
 		const cwd = sessionManager.getCwd() || process.cwd();
-		const gate = new PermissionGate((req) => this.dispatchPermissionRequest(req));
+		const gate = this.approvals.createGate();
 		const askGate = new AskGate((req) => this.dispatchAskRequest(req));
 		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
 		// 重开历史会话同样 default 起步（D1：模式不随会话文件继承）
@@ -617,7 +619,7 @@ export class PiBackend {
 
 		gate.bindSession(session.sessionId);
 		askGate.bindSession(session.sessionId);
-		this.gates.set(session.sessionId, gate);
+		this.approvals.register(session.sessionId, gate);
 		this.registerAskGate(session.sessionId, askGate);
 		this.permissionModes.set(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
@@ -699,8 +701,7 @@ export class PiBackend {
 		// 面板派发的子会话随父会话关闭一起中止（登记表清空，不再推送事件）
 		this.subagentPanel.disposeSession(sessionId);
 		this.sessionEngine.dispose(entry.session);
-		this.gates.get(sessionId)?.dispose();
-		this.gates.delete(sessionId);
+		this.approvals.remove(sessionId);
 		for (const askGate of this.askGates.get(sessionId) ?? []) askGate.dispose();
 		this.askGates.delete(sessionId);
 		this.permissionModes.delete(sessionId);
@@ -948,7 +949,7 @@ export class PiBackend {
 	/** 全部未决权限请求的只读快照（LAN Observer 等被动观察者用）。 */
 	/** 全部未决权限请求快照（含 requestId；LAN 观察/远程应答与桌面共用） */
 	getPendingPermissionRequests(): PermissionRequest[] {
-		return [...this.gates.values()].flatMap((gate) => gate.listPending());
+		return this.approvals.listPending();
 	}
 
 	/** 当前模型上下文使用情况；刚压缩后 tokens 未知（null），会话无模型时 percent 为 null */
@@ -1383,14 +1384,12 @@ export class PiBackend {
 	}
 
 	onPermissionRequest(handler: PermissionHandler): () => void {
-		this.permissionHandlers.add(handler);
-		return () => this.permissionHandlers.delete(handler);
+		return this.approvals.onRequest(handler);
 	}
 
 	/** 权限请求被桌面端实际应答后通知被动观察者。 */
 	onPermissionResolved(handler: PermissionResolvedHandler): () => void {
-		this.permissionResolvedHandlers.add(handler);
-		return () => this.permissionResolvedHandlers.delete(handler);
+		return this.approvals.onResolved(handler);
 	}
 
 	onTrustRequest(handler: TrustHandler): () => void {
@@ -1404,44 +1403,8 @@ export class PiBackend {
 	}
 
 	respondPermission(requestId: string, answer: PermissionAnswer): void {
-		if (answer === "allowDir" || answer === "allowAlways") {
-			// 持久化决策（仅内置权限扩展的请求带 meta）：
-			// allowDir → 根加入 workspaces.json（本次与后续均按界内处置）；
-			// allowAlways → 模式键记入当前项目的 allowed[]（跨会话生效）
-			for (const gate of this.gates.values()) {
-				const req = gate.getRequest(requestId);
-				if (!req) continue;
-				// 先放行 agent 再持久化（D3）：持久化失败（如 workspaces.json 损坏拒写）只丢记忆不挂会话，
-				// log.error 留痕——fail-open 与 enabled=false 整体放行的既有语义一致
-				gate.respond(requestId, answer);
-				this.dispatchPermissionResolved({ sessionId: gate.getSessionId(), requestId, answered: true });
-				const entry = this.registry.get(gate.getSessionId());
-				if (entry) {
-					try {
-						const agentDir = getAgentDir();
-						if (answer === "allowDir" && req.meta?.suggestDir) {
-							addWorkspaceRoot(agentDir, entry.cwd, req.meta.suggestDir);
-						} else if (answer === "allowAlways" && req.meta) {
-							addAllowedPattern(agentDir, entry.cwd, req.title);
-						}
-					} catch (err) {
-						log.error("权限决策持久化失败（agent 已放行，本次决策不记忆）", requestId, err);
-					}
-				}
-				return;
-			}
-			return;
-		}
-		for (const gate of this.gates.values()) {
-			if (!gate.getRequest(requestId)) continue;
-			const drained = answer === "allowRun" ? gate.listPending().map((p) => p.id) : [requestId];
-			gate.respond(requestId, answer);
-			// allowRun 连带放行了排队中的请求，逐个通知观察者撤卡
-			for (const id of drained) {
-				this.dispatchPermissionResolved({ sessionId: gate.getSessionId(), requestId: id, answered: true });
-			}
-			if (answer === "allowRun") log.info("permission allowRun", gate.getSessionId(), { requestId });
-		}
+		const sessionId = this.approvals.respond(requestId, answer);
+		if (answer === "allowRun" && sessionId) log.info("permission allowRun", sessionId, { requestId });
 	}
 
 	/** 权限门控配置（enabled 解析保留；UI 已无开关入口，仅手改 permissions.json 可关 = 隐藏逃生舱） */
@@ -1544,8 +1507,7 @@ export class PiBackend {
 		this.knowledge.dispose();
 		this.registry.disposeAll();
 		this.eventHandlers.clear();
-		this.permissionHandlers.clear();
-		this.permissionResolvedHandlers.clear();
+		this.approvals.dispose();
 		this.trustHandlers.clear();
 		this.projectTrust.dispose();
 		this.traces.disposeAll();
@@ -1577,23 +1539,18 @@ export class PiBackend {
 		return true;
 	}
 
-	private dispatchPermissionRequest(req: PermissionRequest): void {
-		for (const handler of this.permissionHandlers) {
-			try {
-				handler(req);
-			} catch {
-				// 忽略单个处理器异常
+	private persistPermissionDecision(decision: ApprovalDecision): void {
+		const entry = this.registry.get(decision.sessionId);
+		if (!entry) return;
+		try {
+			const agentDir = getAgentDir();
+			if (decision.answer === "allowDir" && decision.meta?.suggestDir) {
+				addWorkspaceRoot(agentDir, entry.cwd, decision.meta.suggestDir);
+			} else if (decision.answer === "allowAlways" && decision.meta) {
+				addAllowedPattern(agentDir, entry.cwd, decision.title);
 			}
-		}
-	}
-
-	private dispatchPermissionResolved(result: PermissionResolved): void {
-		for (const handler of this.permissionResolvedHandlers) {
-			try {
-				handler(result);
-			} catch {
-				// 忽略单个处理器异常
-			}
+		} catch (err) {
+			log.error("权限决策持久化失败（agent 已放行，本次决策不记忆）", decision.requestId, err);
 		}
 	}
 

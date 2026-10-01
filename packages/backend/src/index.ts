@@ -86,6 +86,7 @@ export {
 	workspaceConfigPath,
 } from "./project/workspace-store";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
+export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
 export {
 	isNpmSpawnEnoent,
 	NPM_NOT_FOUND_SENTINEL,

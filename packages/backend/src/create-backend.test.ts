@@ -15,6 +15,8 @@ describe("createBackend", () => {
 		expect(services.mcp).toBe(services.sessions.mcp);
 		expect(services.permissions).toBe(services.sessions.permissions);
 		expect(services.permissions.getConfig).toBeTypeOf("function");
+		expect(services.approvals).toBe(services.sessions.approvals);
+		expect(services.approvals.listPending).toBeTypeOf("function");
 		expect(services.zotero).toBe(services.sessions.zotero);
 		expect(services.zotero.getStatus).toBeTypeOf("function");
 		expect(services.projectTrust).toBe(services.sessions.projectTrust);

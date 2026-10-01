@@ -3,6 +3,7 @@ import type { KnowledgeUiService } from "./knowledge/ui";
 import type { McpService } from "./mcp/service";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
+import type { ApprovalService } from "./services/approvals";
 import type { PackageService } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
@@ -41,6 +42,8 @@ export interface BackendServices {
 	mcp: McpService;
 	/** Durable permissions.json settings and rule-probe service. */
 	permissions: PermissionSettingsService;
+	/** Per-session permission approval registry and host event boundary. */
+	approvals: ApprovalService;
 	/** Zotero integration status service. */
 	zotero: ZoteroService;
 	/** Project trust store and interactive trust gate. */
@@ -63,6 +66,7 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 		login: sessions.login,
 		mcp: sessions.mcp,
 		permissions,
+		approvals: sessions.approvals,
 		zotero: sessions.zotero,
 		projectTrust: sessions.projectTrust,
 		dispose: () => {
