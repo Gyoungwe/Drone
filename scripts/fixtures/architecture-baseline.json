@@ -3,18 +3,6 @@
   "findings": [
     {
       "rule": "R5",
-      "file": "packages/backend/src/tools/subagent/runner.ts",
-      "line": 386,
-      "detail": "relative .pi path ../../../../../.pi/extensions/subagent-mcp-readonly.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/src/tools/subagent/runner.ts",
-      "line": 402,
-      "detail": "relative .pi path ../../../../../.pi/lib/knowledge/publication.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/claim-bindings.test.mjs",
       "line": 2,
       "detail": "relative .pi path ../../../.pi/lib/claim-bindings.mjs"
@@ -369,12 +357,6 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/knowledge-tool-budget.test.mjs",
-      "line": 2,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/tool-budget.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/knowledge-ui.test.mjs",
       "line": 5,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
@@ -423,18 +405,6 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/literature-evidence.test.mjs",
-      "line": 9,
-      "detail": "relative .pi path ../../../.pi/lib/literature-receipt.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/literature-evidence.test.mjs",
-      "line": 14,
-      "detail": "relative .pi path ../../../.pi/lib/source-delivery.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/literature-operations.test.mjs",
       "line": 5,
       "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
@@ -472,20 +442,14 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/research-loop.test.mjs",
-      "line": 6,
+      "line": 7,
       "detail": "relative .pi path ../../../.pi/extensions/research-loop.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/research-loop.test.mjs",
-      "line": 7,
-      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/research-loop.test.mjs",
       "line": 8,
-      "detail": "relative .pi path ../../../.pi/lib/literature-receipt.mjs"
+      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
     },
     {
       "rule": "R5",
@@ -502,14 +466,8 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/run-provenance.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/research-loop.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/run-provenance.test.mjs",
       "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/run-provenance.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/research-loop.mjs"
     },
     {
       "rule": "R5",
@@ -610,14 +568,8 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/task-consent.test.mjs",
-      "line": 5,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-consent.test.mjs",
       "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/consent.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
     },
     {
       "rule": "R5",
@@ -688,20 +640,14 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/task-progress.test.mjs",
-      "line": 2,
+      "line": 3,
       "detail": "relative .pi path ../../../.pi/lib/tasks/ask-authorization.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/task-progress.test.mjs",
-      "line": 3,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/progress-action.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-progress.test.mjs",
       "line": 4,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/remaining.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/tasks/progress-action.mjs"
     },
     {
       "rule": "R5",
@@ -726,12 +672,6 @@
       "file": "packages/backend/test/task-runtime.test.mjs",
       "line": 10,
       "detail": "relative .pi path ../../../.pi/lib/tasks/runtime.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-workbench.test.mjs",
-      "line": 5,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/evidence.mjs"
     },
     {
       "rule": "R5",

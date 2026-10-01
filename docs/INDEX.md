@@ -123,6 +123,7 @@ src/
 ├── settings/           settings / model-prefs / login
 ├── packages/           admin / catalog
 ├── services/           approvals / institutional / packages / permissions / project-trust / subagents / zotero（域服务，组合根暴露）
+├── research-root.ts    研究 workbench 打包资源根解析（开发树与 extraResources 共用）
 └── tools/              show-image / todo / todo-reminder / webfetch / subagent / context-evaporation / channel-watch
 ```
 
