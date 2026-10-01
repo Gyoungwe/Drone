@@ -34,12 +34,6 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-automatic-review.test.mjs",
-      "line": 5,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/review-policy.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-automatic-review.test.mjs",
       "line": 6,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
     },
@@ -58,20 +52,14 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
-      "line": 5,
+      "line": 6,
       "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
       "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/source-links.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
     },
     {
       "rule": "R5",
@@ -120,12 +108,6 @@
       "file": "packages/backend/test/knowledge-lifecycle.test.mjs",
       "line": 5,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-orchestration.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/orchestration-policy.mjs"
     },
     {
       "rule": "R5",
@@ -370,25 +352,19 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-stress.test.mjs",
-      "line": 5,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/orchestration-policy.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-stress.test.mjs",
-      "line": 6,
+      "line": 3,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/specialist-host.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-stress.test.mjs",
-      "line": 51,
+      "line": 48,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/specialist-host.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-stress.test.mjs",
-      "line": 55,
+      "line": 52,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/specialist-host.mjs"
     },
     {
@@ -633,12 +609,6 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/task-command-single-flight.test.mjs",
-      "line": 2,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/single-flight.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/task-consent.test.mjs",
       "line": 5,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
@@ -670,12 +640,6 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/task-failure-feedback.test.mjs",
-      "line": 11,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/failure-feedback.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-failure-feedback.test.mjs",
       "line": 12,
       "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
     },
@@ -694,14 +658,8 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/task-one-authorization-flow.test.mjs",
-      "line": 5,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/remaining.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-one-authorization-flow.test.mjs",
       "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/turn-end-prompt.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/tasks/remaining.mjs"
     },
     {
       "rule": "R5",
@@ -768,12 +726,6 @@
       "file": "packages/backend/test/task-runtime.test.mjs",
       "line": 10,
       "detail": "relative .pi path ../../../.pi/lib/tasks/runtime.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-tool-protocol.test.mjs",
-      "line": 2,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/tool-protocol.mjs"
     },
     {
       "rule": "R5",
@@ -904,20 +856,14 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/zotero-literature.test.mjs",
-      "line": 10,
+      "line": 11,
       "detail": "relative .pi path ../../../.pi/extensions/zotero-literature.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/zotero-literature.test.mjs",
-      "line": 11,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/zotero-literature.test.mjs",
       "line": 12,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/source-links.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
     },
     {
       "rule": "R5",
