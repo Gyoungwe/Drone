@@ -99,11 +99,11 @@ packages/
 
 ## packages/tasks — 任务领域包（迁移中）
 
-`@drone/tasks` 目前承载无 SDK 依赖的失败反馈、命令协调、回合续作、授权与剩余进度解释策略以及协议修复：`src/failure-feedback.ts` 导出诊断脱敏、失败识别、失败观察与任务上下文合约，`src/single-flight.ts` 导出按会话、目录、参数隔离的 in-flight 命令合并器，`src/turn-end-prompt.ts` 导出受授权、进度和配额约束的继续提示策略，`src/consent.ts` 与 `src/remaining.ts` 收敛任务授权和剩余进度文案，`src/tool-protocol.ts` 仅修复已知旧版状态卡交错。`.pi/lib/tasks/*` 仍保留为 CLI/扩展运行时兼容实现；其余 tasks 模块按 A5-2 分阶段迁移。
+`@drone/tasks` 目前承载无 SDK 依赖的失败反馈、命令协调、回合续作、授权、剩余进度解释和 evidence recovery 策略以及协议修复：`src/failure-feedback.ts` 导出诊断脱敏、失败识别、失败观察与任务上下文合约，`src/single-flight.ts` 导出按会话、目录、参数隔离的 in-flight 命令合并器，`src/turn-end-prompt.ts` 导出受授权、进度和配额约束的继续提示策略，`src/consent.ts` 与 `src/remaining.ts` 收敛任务授权和剩余进度文案，`src/evidence.ts` 提供宿主注入 inspector 的证据恢复状态机，`src/tool-protocol.ts` 仅修复已知旧版状态卡交错。`.pi/lib/tasks/*` 仍保留为 CLI/扩展运行时兼容实现；其余 tasks 模块按 A5-2 分阶段迁移。
 
 ## packages/research — 研究来源领域包（迁移中）
 
-`@drone/research` 承载文献证据回执与来源交付的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因。backend literature evidence、research loop 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 兼容实现。
+`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界。backend literature evidence、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
 
 ## packages/backend — pi SDK 适配层
 

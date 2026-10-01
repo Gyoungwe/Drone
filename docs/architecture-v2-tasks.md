@@ -99,7 +99,9 @@
   - [x] turn-end-prompt：新增 `@drone/tasks` TS 包入口与强类型 `shouldAskToContinue`，包内 3/3 与 backend `task-one-authorization-flow` 4/4 通过；`.pi/lib/tasks/turn-end-prompt.mjs` 暂作运行时兼容实现。
   - [x] tool-protocol：新增 `@drone/tasks` TS 包入口与强类型 `restoreTaskToolOrder`，包内 9/9 与 backend `task-tool-protocol` 9/9 通过；`.pi/lib/tasks/tool-protocol.mjs` 暂作运行时兼容实现。
   - [x] consent / remaining：新增 `@drone/tasks` TS 包入口与强类型任务授权、剩余进度解释策略；包内测试和 backend `task-consent` / `task-progress` 回归通过；旧 `.pi` 文件暂作运行时兼容实现。
+  - [x] evidence：新增 `@drone/tasks/evidence` TypeScript 状态机，`.pi/lib/tasks/evidence.mjs` 仅保留宿主 inspector 适配；包内 5/5 与 backend `task-workbench` 30/30 通过。
 - [ ] **A5-3 @drone/research**：source-archive、open-access、zotero-*、institutional-access、literature-*、run-provenance、research-receipt-journal 等迁移。验收：`zotero-*`、`source-archive-*`、`institutional`、`literature-*` 测试通过。
+  - [x] run-provenance：新增 `@drone/research/run-provenance`，执行回执、文件快照、范围/凭据校验和 QC 边界迁移到 TS；包内 5/5，backend 回归 4/4；`.pi/lib/run-provenance.mjs` 保持自包含兼容入口。
 - [ ] **A5-4 扩展适配层**：`.pi/extensions/*.mjs` 的源码移到 `packages/extensions/src/`，只保留参数映射和注册逻辑，领域逻辑全部调用领域包。`runner.ts` 里两处 `../../../../../.pi/…` 改为包引用或构建产物的解析函数。验收：R5 基线清零；`.pi/lib` 从 extraResources 移除后，打包冒烟通过。
 
 ## A6 · DroneRuntime 注入
@@ -153,3 +155,5 @@
 | 2026-10-01 | A5-1 / A6-2 增量 | knowledge 新增 tool-budget、topic-candidate；runtime bridge 删除旧 legacy key 参数，所有生产 `runtimeSlot`/`runRuntimeExclusive` 调用使用 host runtime；`.pi` checkJs 与隔离测试通过 | knowledge service/worker/specialist-host 尚未整体 TS 化；仍需完成剩余 runtime singleton 与扩展入口迁移 |
 | 2026-10-01 | A3-2 增量 | services ports 的组合根与 sessions IPC 绑定通过：backend create-backend、desktop IPC 31 项定向测试通过，架构检查 150 baseline、6 fixed | A3-4 仍保留 PiBackend 兼容 façade，待删除委托并保留类型 re-export |
 | 2026-10-01 | 全量验收复跑 | `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`node scripts/check-architecture.mjs`、`check:extensions`、`check:plugin-api`、`test:upgrade --fixtures-only` 全部通过；backend 1,368 passed + 13 skipped、desktop 554、extensions 1、knowledge 20、research 4、shared 130、tasks 24 | A3-4 façade 删除、A5-1/3/4 完整迁移、A6-1/2 完整收尾仍待继续；兼容层保留是当前发布策略 |
+| 2026-10-01 | A5 / A6 增量 | `@drone/research/run-provenance` 与 `@drone/tasks/evidence` 通过包级和 backend 回归；CLI/测试 Pi 宿主按对象获得独立 standalone runtime，重复绑定幂等；tool metadata 在 host runtime 注册，research-loop 隔离回归 27/27 | 带事件总线但尚未广播 runtime 的 CLI fallback、acceptance/tool-manifest 全量宿主归属以及 A5-4 扩展自包含打包仍待收尾 |
+| 2026-10-01 | 修复后全量回归 | host runtime tool metadata 修复后 `npm test` 全部通过：backend 1,368 passed + 13 skipped、desktop 555、extensions 1、knowledge 20、research 9、shared 130、tasks 29；`.pi` checkJs、workspace typecheck、Biome、build、架构检查（148 baseline、8 fixed）和 `test:upgrade --fixtures-only` 通过 | A5-4 扩展自包含打包、A3-4 façade 删除及 A6-1/2 全量宿主归属仍待收尾 |
