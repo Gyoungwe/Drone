@@ -11,8 +11,13 @@ export interface HostApiMethod<TArgs extends TSchema = TSchema, TResult extends 
 }
 
 export type HostApiMethods = Readonly<Record<string, HostApiMethod>>;
+type NormalizedAccess<TMethod extends HostApiMethod> = TMethod["access"] extends HostApiAccess
+	? TMethod["access"]
+	: "desktop";
 export type NormalizedMethods<TMethods extends HostApiMethods> = {
-	readonly [K in keyof TMethods]: Omit<TMethods[K], "access"> & { readonly access: HostApiAccess };
+	readonly [K in keyof TMethods]: Omit<TMethods[K], "access"> & {
+		readonly access: NormalizedAccess<TMethods[K]>;
+	};
 };
 export type HostApiEvents = Readonly<Record<string, TSchema>>;
 
@@ -58,6 +63,22 @@ export function channelOf<const TName extends string, const TMethod extends stri
 ): `${TName}:${TMethod}` {
 	const name = typeof domain === "string" ? domain : domain.name;
 	return `${name}:${method}` as `${TName}:${TMethod}`;
+}
+
+/**
+ * Return methods visible to a particular transport.
+ *
+ * Contracts are runtime data as well as a source of TypeScript types. Keeping
+ * this selector beside `defineDomain` lets adapters derive their allow-list
+ * from the same access labels used by the desktop binder.
+ */
+export function methodsWithAccess<TContract extends DomainContract>(
+	contract: TContract,
+	access: HostApiAccess,
+): Array<keyof TContract["methods"] & string> {
+	return (Object.entries(contract.methods) as [keyof TContract["methods"] & string, HostApiMethod][])
+		.filter(([, method]) => method.access === access)
+		.map(([methodName]) => methodName);
 }
 
 type MethodArgs<TMethod> =

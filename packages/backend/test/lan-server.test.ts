@@ -7,7 +7,7 @@ import { Check } from "typebox/value";
 import { afterEach, describe, expect, it } from "vitest";
 import { LanConfigService } from "../src/lan/config";
 import type { LanObserverBackend } from "../src/lan/server";
-import { LanObserverServer } from "../src/lan/server";
+import { assertLanReadGetOnly, LanObserverServer } from "../src/lan/server";
 
 const token = Buffer.from("0123456789ab").toString("base64url");
 const servers: LanObserverServer[] = [];
@@ -183,6 +183,10 @@ describe("LanObserverServer", () => {
 		expect((await request(`http://127.0.0.1:${port}/api/status`)).status).toBe(401);
 		// No write adapter is added for the read-only LAN projection.
 		expect((await post(`http://127.0.0.1:${port}/api/status`, {})).status).toBe(404);
+	});
+
+	it("keeps every lan-read contract method behind the GET-only assertion", () => {
+		expect(() => assertLanReadGetOnly()).not.toThrow();
 	});
 
 	it("rejects a status projection that violates LanContract at runtime", async () => {

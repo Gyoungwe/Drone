@@ -113,20 +113,5 @@ export interface LanSnapshot {
 	snapshotSeq: number;
 }
 
-/** M2 POST /api/sessions/:id/prompt 请求体。 */
-export interface LanPromptBody {
-	text: string;
-}
-
-/** M2 POST /api/permissions/:id/respond 请求体（远程只允许允许一次/拒绝）。 */
-export interface LanRespondBody {
-	answer: "allowOnce" | "deny";
-}
-
-/** M2 写端点统一成功响应。 */
-export interface LanWriteResult {
-	ok: true;
-}
-
 /** sanitize 后图片数据的哨兵值（base64 被剥除）；客户端据此渲染占位而非尝试加载。 */
 export const LAN_IMAGE_PLACEHOLDER = "lan-image-stripped";
