@@ -8,9 +8,15 @@ import {
 	updateResearchLoop,
 } from "./research-loop.mjs";
 import { observeExecutionReceipt } from "./run-provenance.mjs";
+import { runtimeSlot } from "./runtime-bridge.mjs";
 import { toolMeta } from "./tool-manifest.mjs";
 
-const owners = new Map();
+const runtimeState = runtimeSlot("research", "receiptJournal", () => ({
+	owners: new Map(),
+	dispose() {
+		this.owners.clear();
+	},
+}));
 // 核心执行 / 联网原语固定记账；扩展工具经 drone.journal 声明加入（挂钩 1）。
 // These first-party evidence tools can be loaded by a different extension
 // graph than research-loop. Keep their journal contract explicit so host
@@ -51,10 +57,10 @@ export function createResearchReceiptJournal(cwd, { sessionId = null } = {}) {
 		if (!runDir) return;
 		const status = await updateResearchLoop({ cwd, runDir, action: "status" });
 		const path = status.run_dir;
-		if (owners.has(path) && owners.get(path) !== owner)
+		if (runtimeState.owners.has(path) && runtimeState.owners.get(path) !== owner)
 			throw new Error("Research run is owned by another active session/turn; create a separate run");
 		if (!runs.has(path)) {
-			owners.set(path, owner);
+			runtimeState.owners.set(path, owner);
 			await flushResearchReceipts({ cwd, runDir: path });
 			resetResearchReceipts({ cwd, runDir: path });
 			runs.add(path);
@@ -123,9 +129,9 @@ export function createResearchReceiptJournal(cwd, { sessionId = null } = {}) {
 			await tail.catch(() => {});
 			for (const runDir of runs) {
 				await flushResearchReceipts({ cwd, runDir });
-				if (owners.get(runDir) === owner) {
+				if (runtimeState.owners.get(runDir) === owner) {
 					resetResearchReceipts({ cwd, runDir });
-					owners.delete(runDir);
+					runtimeState.owners.delete(runDir);
 				}
 			}
 			runs.clear();

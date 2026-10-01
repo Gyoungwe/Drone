@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadWorkspaceConfig } from "../extensions/workspace-config.mjs";
 import { claimBindingRefs, validateClaimBindings } from "./claim-bindings.mjs";
 import { verifyLiteratureReceipt } from "./literature-receipt.mjs";
+import { runtimeSlot } from "./runtime-bridge.mjs";
 import { sourceStatus } from "./source-archive.mjs";
 
 export const RESEARCH_STAGES = Object.freeze([
@@ -18,22 +19,31 @@ export const RESEARCH_STAGES = Object.freeze([
 ]);
 
 // Current-turn, host-observed receipts only; model tool arguments cannot populate this ledger.
-const receiptLedger = new Map();
-const receiptQueues = new Map();
+// The ledger and its serial queues belong to the active DroneRuntime so separate
+// Pi hosts cannot consume or mutate one another's evidence receipts.
+const runtimeState = runtimeSlot("research", "loop", () => ({
+	receiptLedger: new Map(),
+	receiptQueues: new Map(),
+	dispose() {
+		this.receiptLedger.clear();
+		this.receiptQueues.clear();
+	},
+}));
 const runKey = (cwd, runDir) => resolve(cwd, runDir);
 function ledger(cwd, runDir) {
 	const key = runKey(cwd, runDir);
-	if (!receiptLedger.has(key)) {
-		if (receiptLedger.size >= 128) receiptLedger.delete(receiptLedger.keys().next().value);
-		receiptLedger.set(key, { reads: new Map(), verified: new Map() });
+	if (!runtimeState.receiptLedger.has(key)) {
+		if (runtimeState.receiptLedger.size >= 128)
+			runtimeState.receiptLedger.delete(runtimeState.receiptLedger.keys().next().value);
+		runtimeState.receiptLedger.set(key, { reads: new Map(), verified: new Map() });
 	}
-	return receiptLedger.get(key);
+	return runtimeState.receiptLedger.get(key);
 }
 export async function flushResearchReceipts({ cwd = process.cwd(), runDir } = {}) {
-	await receiptQueues.get(runKey(cwd, runDir));
+	await runtimeState.receiptQueues.get(runKey(cwd, runDir));
 }
 export function resetResearchReceipts({ cwd = process.cwd(), runDir } = {}) {
-	if (runDir) receiptLedger.delete(runKey(cwd, runDir));
+	if (runDir) runtimeState.receiptLedger.delete(runKey(cwd, runDir));
 }
 async function reusableSources(cwd, runDir) {
 	const config = await loadWorkspaceConfig(cwd);
@@ -365,13 +375,13 @@ export async function completeResearchGate({
 export function observeResearchReceipt(options = {}) {
 	if (!options.runDir) return Promise.resolve(null);
 	const key = runKey(options.cwd || process.cwd(), options.runDir);
-	const work = (receiptQueues.get(key) || Promise.resolve())
+	const work = (runtimeState.receiptQueues.get(key) || Promise.resolve())
 		.catch(() => {})
 		.then(() => observeReceipt(options));
-	receiptQueues.set(key, work);
+	runtimeState.receiptQueues.set(key, work);
 	void work
 		.finally(() => {
-			if (receiptQueues.get(key) === work) receiptQueues.delete(key);
+			if (runtimeState.receiptQueues.get(key) === work) runtimeState.receiptQueues.delete(key);
 		})
 		.catch(() => {});
 	return work;
