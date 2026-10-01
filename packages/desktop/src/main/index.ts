@@ -10,7 +10,7 @@ import {
 	createBackend,
 	createLogger,
 	initLogging,
-	type PiBackend,
+	type SessionServicePort,
 } from "@drone/backend";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
@@ -24,7 +24,7 @@ import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
 import { applyChromeTheme, createWindow, resolveTheme } from "./window";
 
 const log = createLogger("main");
-let backend: PiBackend;
+let backend: SessionServicePort;
 let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
 let lanObserver: LanObserverHandle | undefined;

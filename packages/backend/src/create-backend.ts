@@ -25,13 +25,21 @@ import type { SettingsServicePort } from "./settings/settings";
  * and future CLI hosts one place to assemble the runtime and makes the final
  * façade removal an internal change.
  */
+/**
+ * Transitional session port.  The composition root owns this type so desktop
+ * and LAN callers do not import the concrete implementation directly.  The
+ * compatibility façade remains the backing implementation until A3-4 removes
+ * its final delegation surface.
+ */
+export type SessionServicePort = PiBackend;
+
 export interface BackendServices {
 	/** Per-host runtime container; extension bridges must not use process globals. */
 	runtime: DroneRuntime;
 	/** Host-facing diagnostics boundary; keeps desktop IPC independent of PiBackend. */
 	diagnostics: DiagnosticsServicePort;
 	/** Session lifecycle and compatibility methods during A3 migration. */
-	sessions: PiBackend;
+	sessions: SessionServicePort;
 	/** SDK lifecycle boundary; hosts can migrate session calls without importing Pi SDK types. */
 	sessionEngine: SessionEngine;
 	/** Domain-owned knowledge service; consumers do not need the compatibility façade. */
