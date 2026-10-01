@@ -9,7 +9,7 @@
  */
 
 import { emitProcessEvent } from "./process-events.mjs";
-import { runtimeSlot } from "./runtime-bridge.mjs";
+import { runtimeSlot, withHostRuntime } from "./runtime-bridge.mjs";
 
 const registry = runtimeSlot("tools", "manifest", () => ({ tools: new Map(), families: new Map() }));
 
@@ -87,16 +87,18 @@ export function defineTool(definition) {
 /** 子代理子会话里不注册标记为 exclude 的工具；其余原样交给 pi.registerTool。 */
 /** @param {any} pi @param {any[]} definitions */
 export function registerTools(pi, definitions) {
-	installEventBridge(pi);
-	const registered = [];
-	for (const definition of definitions) {
-		const defined = defineTool(definition);
-		publishRegistration(pi, defined.name, defined.drone || {});
-		if (process.env.PI_SUBAGENT_CHILD && defined.drone?.subagent === "exclude") continue;
-		pi.registerTool(defined);
-		registered.push(defined.name);
-	}
-	return registered;
+	return withHostRuntime(pi, () => {
+		installEventBridge(pi);
+		const registered = [];
+		for (const definition of definitions) {
+			const defined = defineTool(definition);
+			publishRegistration(pi, defined.name, defined.drone || {});
+			if (process.env.PI_SUBAGENT_CHILD && defined.drone?.subagent === "exclude") continue;
+			pi.registerTool(defined);
+			registered.push(defined.name);
+		}
+		return registered;
+	});
 }
 
 /** 单个工具的便捷注册：`registerTool(pi, definition)`。 */

@@ -12,7 +12,20 @@ import { toolMeta } from "./tool-manifest.mjs";
 
 const owners = new Map();
 // 核心执行 / 联网原语固定记账；扩展工具经 drone.journal 声明加入（挂钩 1）。
-const CORE_TOOLS = new Set(["bash", "powershell", "webfetch", "fetch_content", "web_search"]);
+// These first-party evidence tools can be loaded by a different extension
+// graph than research-loop. Keep their journal contract explicit so host
+// runtime isolation does not make receipt capture depend on registration order.
+const CORE_TOOLS = new Set([
+	"bash",
+	"powershell",
+	"webfetch",
+	"fetch_content",
+	"web_search",
+	"research_read_knowledge",
+	"research_search_knowledge",
+	"research_verify_literature",
+	"research_archive_source",
+]);
 const TOOLS = { has: (name) => CORE_TOOLS.has(name) || toolMeta(name)?.journal === true };
 
 // One journal per host session/agent turn. Never exposed as model tool parameters.
