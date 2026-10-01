@@ -4,12 +4,7 @@ import { runtimeSlot } from "../runtime-bridge.mjs";
 import { flowCardBuilder, toolMeta } from "../tool-manifest.mjs";
 import { failureCard, flowCard } from "./flow-cards.mjs";
 
-const state = runtimeSlot(
-	"knowledge",
-	"ui",
-	() => ({ listeners: new Set(), flows: new Map(), seq: 0 }),
-	"drone.knowledge.ui.v1",
-);
+const state = runtimeSlot("knowledge", "ui", () => ({ listeners: new Set(), flows: new Map(), seq: 0 }));
 // Dynamic Pi extensions and the bundled backend can load this module through
 // different ESM loaders.  Forward UI facts through a versioned process event so
 // both copies observe the same flow without a global Symbol registry.

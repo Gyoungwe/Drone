@@ -11,7 +11,7 @@ import { embedTexts, validateSemanticConfig } from "./semantic-provider.mjs";
 import { readSemanticSettings, saveSemanticSettings } from "./semantic-settings.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
-const pool = runtimeSlot("knowledge", "workerPool", () => new Map(), "drone.knowledge.worker-pool.v1");
+const pool = runtimeSlot("knowledge", "workerPool", () => new Map());
 // The desktop host can load the .pi extension through a second ESM loader.  A
 // versioned request/response event shares the service object across those
 // module copies without reintroducing a Symbol-keyed global singleton.
@@ -37,7 +37,7 @@ process.on(SERVICE_EVENT, (payload) => {
 const MAX_TICKETS = 128;
 
 function queueSemantic(key, task) {
-	return runRuntimeExclusive("semantic-lock", key, task, "drone.knowledge.semantic-lock.v1");
+	return runRuntimeExclusive("semantic-lock", key, task);
 }
 function providerConfig(settings) {
 	return {

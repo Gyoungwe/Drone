@@ -6,17 +6,12 @@ import { runtimeSlot } from "../runtime-bridge.mjs";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
-const state = runtimeSlot(
-	"knowledge",
-	"specialists",
-	() => ({
-		hosts: new Map(),
-		active: 0,
-		queue: [],
-		settingsQueue: Promise.resolve(),
-	}),
-	"drone.knowledge.specialists.v1",
-);
+const state = runtimeSlot("knowledge", "specialists", () => ({
+	hosts: new Map(),
+	active: 0,
+	queue: [],
+	settingsQueue: Promise.resolve(),
+}));
 const HOST_EVENT = "drone:knowledge-specialist-host/v1";
 const hostModule = {};
 process.on(HOST_EVENT, (payload) => {

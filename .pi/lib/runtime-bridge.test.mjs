@@ -9,7 +9,7 @@ import {
 	withRuntime,
 } from "./runtime-bridge.mjs";
 
-const pool = runtimeSlot("knowledge", "workerPool", () => new Map(), "drone.test.worker-pool.v1");
+const pool = runtimeSlot("knowledge", "workerPool", () => new Map());
 
 test("runtime slots are isolated across two injected runtimes", async () => {
 	const first = createStandaloneRuntime();
@@ -32,22 +32,17 @@ test("runtime scheduler serializes only the same runtime key", async () => {
 	const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 	const firstA = withRuntime(first, () =>
-		runRuntimeExclusive(
-			"test",
-			"same",
-			async () => {
-				events.push("first:start");
-				await wait(15);
-				events.push("first:end");
-			},
-			"drone.test.queue.v1",
-		),
+		runRuntimeExclusive("test", "same", async () => {
+			events.push("first:start");
+			await wait(15);
+			events.push("first:end");
+		}),
 	);
 	const firstB = withRuntime(first, () =>
-		runRuntimeExclusive("test", "same", async () => events.push("first:queued"), "drone.test.queue.v1"),
+		runRuntimeExclusive("test", "same", async () => events.push("first:queued")),
 	);
 	const secondA = withRuntime(second, () =>
-		runRuntimeExclusive("test", "same", async () => events.push("second:independent"), "drone.test.queue.v1"),
+		runRuntimeExclusive("test", "same", async () => events.push("second:independent")),
 	);
 	await Promise.all([firstA, firstB, secondA]);
 

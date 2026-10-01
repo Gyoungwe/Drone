@@ -53,7 +53,7 @@ const createRegistry = () => {
 	};
 };
 /** @type {any} */
-const registry = runtimeSlot("tasks", "acceptance", createRegistry, "drone.acceptance-verifiers.v1");
+const registry = runtimeSlot("tasks", "acceptance", createRegistry);
 // 兼容更早的登记表实例（properties 里还没有核心字段）。这个修复必须
 // 在每个 runtime 上懒执行：host runtime 可能在模块加载后才由 SessionEngine 注入。
 function ensureRegistryShape() {

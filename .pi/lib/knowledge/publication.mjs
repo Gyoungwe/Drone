@@ -13,7 +13,6 @@ const state = runtimeSlot(
 		projectEvent: projectKnowledgeEvent,
 		projectSnapshot: projectKnowledgeSnapshot,
 	}),
-	"drone.knowledge.publication.v1",
 );
 const FIELD = "knowledgePublication";
 const hash = (content) =>

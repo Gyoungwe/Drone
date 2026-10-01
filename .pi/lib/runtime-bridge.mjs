@@ -148,10 +148,9 @@ function resolveSlot(domain, slot, create) {
  * @param {string} domain
  * @param {string} slot
  * @param {() => T} create
- * @param {string} _legacyKey Retained for source compatibility; ignored.
  * @returns {T}
  */
-export function runtimeSlot(domain, slot, create, _legacyKey = "") {
+export function runtimeSlot(domain, slot, create) {
 	if (typeof create !== "function") throw new TypeError("runtimeSlot requires a factory");
 	const proxy = new Proxy(
 		{},
@@ -177,7 +176,7 @@ export function runtimeSlot(domain, slot, create, _legacyKey = "") {
 }
 
 /** Serialize a keyed operation through the injected runtime scheduler. */
-export function runRuntimeExclusive(namespace, key, operation, _legacyKey = "") {
+export function runRuntimeExclusive(namespace, key, operation) {
 	return currentRuntime().scheduler.run(`${namespace}:${key}`, operation);
 }
 

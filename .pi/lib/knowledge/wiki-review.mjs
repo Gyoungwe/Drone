@@ -14,7 +14,7 @@ const digest = (text) => createHash("sha256").update(text).digest("hex");
 const MAX_PENDING = 100,
 	MAX_AGE = 24 * 60 * 60 * 1000;
 async function exclusive(key, operation) {
-	return runRuntimeExclusive("wiki-review", key, operation, "drone.knowledge.wiki-review-locks.v1");
+	return runRuntimeExclusive("wiki-review", key, operation);
 }
 function rootFor(service) {
 	return join(knowledgeDirectory(), service.binding.vaultId, "wiki-review");

@@ -5,12 +5,10 @@ import { basename, isAbsolute, join, resolve } from "node:path";
 import { runtimeSlot } from "../runtime-bridge.mjs";
 import { invalidateKnowledgeUi } from "./ui-state.mjs";
 
-const state = runtimeSlot(
-	"knowledge",
-	"binding",
-	() => ({ local: new AsyncLocalStorage(), queues: new Map() }),
-	"drone.knowledge.binding.v1",
-);
+const state = runtimeSlot("knowledge", "binding", () => ({
+	local: new AsyncLocalStorage(),
+	queues: new Map(),
+}));
 export function knowledgeDirectory() {
 	const value = process.env.DRONE_KNOWLEDGE_DIR;
 	if (!value) return null; // CLI/legacy projects do not silently mutate desktop state.

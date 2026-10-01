@@ -116,7 +116,7 @@ async function atomicJson(file, value) {
 }
 
 async function withRunLock(key, fn) {
-	return runRuntimeExclusive("source-archive", key, fn, "drone.source-archive-locks.v1");
+	return runRuntimeExclusive("source-archive", key, fn);
 }
 
 async function readManifest(file, runDir) {
