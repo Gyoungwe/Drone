@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { dirname } from "node:path";
-import type { BackendServices, PiBackend } from "@drone/backend";
+import type { BackendServices, SessionServicePort } from "@drone/backend";
 import { IpcChannels, PermissionsContract } from "@drone/shared";
 import { shell } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
@@ -9,9 +9,15 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
  * 设置 → 权限 面板：编辑全局 permissions.json。读 / 校验 / 原子写 / 试算 / 审计尾部全在 backend
  * （permissions/settings.ts），这里只透传 + 用 shell 定位文件（不存在时打开所在目录）。
  */
-export function registerPermissionSettingsIpc(backendOrServices: PiBackend | BackendServices): void {
+export function registerPermissionSettingsIpc(backendOrServices: SessionServicePort | BackendServices): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
-	const permissions = "sessions" in backendOrServices ? backendOrServices.permissions : backend.permissions;
+	const permissions =
+		"sessions" in backendOrServices
+			? backendOrServices.permissions
+			: "permissions" in backend
+				? (backend as SessionServicePort & Pick<BackendServices, "permissions">).permissions
+				: undefined;
+	if (!permissions) throw new Error("Permission service is required by the desktop host");
 	const implementation: ContractImplementation<typeof PermissionsContract> = {
 		load: () => permissions.getSettings(),
 		save: (input) => permissions.saveSettings(input),

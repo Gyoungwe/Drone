@@ -1,4 +1,4 @@
-import type { BackendServices, PiBackend } from "@drone/backend";
+import type { BackendServices } from "@drone/backend";
 import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@drone/shared";
 import { IpcChannels } from "@drone/shared";
 import { BrowserWindow } from "electron";
@@ -30,7 +30,7 @@ export function sendToRenderer(channel: string, payload: unknown): void {
  * 这里只做拼装 + backend/updater 事件转发到 renderer。
  */
 export function registerIpc(
-	backendOrServices: PiBackend | BackendServices,
+	backendServices: BackendServices,
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
 	getIncidentSnapshot?: () => unknown,
@@ -49,15 +49,14 @@ export function registerIpc(
 		| "diagnostics"
 	>,
 ): void {
-	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
-	const hostServices =
-		services ?? ("sessions" in backendOrServices ? (backendOrServices as BackendServices) : undefined);
-	registerSessionsIpc(backendOrServices);
+	const backend = backendServices.sessions;
+	const hostServices = services ?? backendServices;
+	registerSessionsIpc(backendServices);
 	registerSettingsIpc(backend, hostServices);
 	registerMcpIpc(backend, hostServices);
-	registerPermissionSettingsIpc(backendOrServices);
+	registerPermissionSettingsIpc(backendServices);
 	registerSubagentsIpc(backend, hostServices);
-	registerKnowledgeIpc(backendOrServices, hostServices);
+	registerKnowledgeIpc(backendServices, hostServices);
 	registerPackagesIpc(backend, hostServices);
 	registerAppIpc(hostServices?.diagnostics ?? backend, getIncidentSnapshot);
 	registerInstitutionalIpc(hostServices);

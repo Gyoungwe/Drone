@@ -1,4 +1,20 @@
-import type { DroneRuntime } from "@drone/shared";
+import type {
+	AskRequest,
+	AskResponse,
+	ContextManagerMode,
+	DroneRuntime,
+	LoginEventPayload,
+	McpStatus,
+	PermissionAnswer,
+	PermissionMode,
+	PermissionRequest,
+	PermissionResolved,
+	SessionEvent,
+	SessionMessage,
+	SessionsApi,
+	TrustAnswer,
+	TrustRequest,
+} from "@drone/shared";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
@@ -26,12 +42,53 @@ import type { SettingsServicePort } from "./settings/settings";
  * façade removal an internal change.
  */
 /**
- * Transitional session port.  The composition root owns this type so desktop
- * and LAN callers do not import the concrete implementation directly.  The
- * compatibility façade remains the backing implementation until A3-4 removes
- * its final delegation surface.
+ * Host-facing session boundary.  This is deliberately structural: desktop,
+ * LAN, and future hosts depend on the transport/session contract and lifecycle
+ * events, while the concrete PiBackend remains an internal composition-root
+ * implementation.  Compatibility-only domain delegates are intentionally not
+ * part of this port.
  */
-export type SessionServicePort = PiBackend;
+export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupervisor"> {
+	/** Host-owned runtime and domain ports exposed for compatibility adapters. */
+	runtime: DroneRuntime;
+	sessionEngine: SessionEngine;
+	knowledge: KnowledgeUiServicePort;
+	knowledgeSession: KnowledgeSessionServicePort;
+	packages: PackageServicePort;
+	settings: SettingsServicePort;
+	models: ModelSettingsServicePort;
+	login: LoginServicePort;
+	mcp: McpServicePort;
+	permissions: PermissionSettingsService;
+	approvals: ApprovalService;
+	zotero: ZoteroServicePort;
+	institutional: InstitutionalServicePort;
+	subagents: SubagentServicePort;
+	projectTrust: ProjectTrustService;
+	replySubagentSupervisor(sessionId: string, requestId: string, message: string): void | Promise<void>;
+	init(): Promise<void>;
+	getEventRates(): Map<string, { window60s: number[]; lastEventAt: number }>;
+	onEvent(handler: (sessionId: string, event: SessionEvent) => void): () => void;
+	onAskRequest(handler: (request: AskRequest) => void): () => void;
+	onPermissionRequest(handler: (request: PermissionRequest) => void): () => void;
+	onPermissionResolved(handler: (result: PermissionResolved) => void): () => void;
+	onTrustRequest(handler: (request: TrustRequest) => void): () => void;
+	onLoginEvent(handler: (payload: LoginEventPayload) => void): () => void;
+	onMcpStatus(handler: (cwd: string, status: McpStatus) => void): () => void;
+	respondAsk(requestId: string, response: AskResponse): boolean;
+	respondPermission(requestId: string, answer: PermissionAnswer): void;
+	respondTrust(requestId: string, answer: TrustAnswer): void;
+	getSessionPermissionMode(sessionId: string): PermissionMode;
+	setSessionPermissionMode(sessionId: string, mode: PermissionMode): void;
+	getContextManagerConfig(): { mode: ContextManagerMode };
+	setContextManagerMode(mode: ContextManagerMode): void;
+	getChannelWatchConfig(): { enabled: boolean };
+	setChannelWatchEnabled(enabled: boolean): void;
+	peekSessionMessages(sessionId: string): Promise<SessionMessage[] | null>;
+	listActiveSessionRuntime(): Array<{ sessionId: string; streaming: boolean; compacting: boolean }>;
+	getPendingPermissionRequests(): PermissionRequest[];
+	checkSessionWritable(sessionId: string): "ok" | "not_found" | "read_only";
+}
 
 export interface BackendServices {
 	/** Per-host runtime container; extension bridges must not use process globals. */

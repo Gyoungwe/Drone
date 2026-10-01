@@ -5,9 +5,6 @@ import type {
 	AskRequest,
 	AskResponse,
 	AvailableModel,
-	CatalogPackageType,
-	CatalogSearchResult,
-	ConfiguredPackageInfo,
 	ContextManagerMode,
 	ContextUsageInfo,
 	CreateSessionOptions,
@@ -16,7 +13,6 @@ import type {
 	ImageInput,
 	LoadedResources,
 	LoginEventPayload,
-	McpConfigSnapshot,
 	McpStatus,
 	ModelPrefs,
 	PermissionAnswer,
@@ -35,11 +31,6 @@ import type {
 	SessionMeta,
 	SessionStats,
 	SlashCommandInfo,
-	SubagentDispatchInput,
-	SubagentDispatchReceipt,
-	SubagentInfo,
-	SubagentPanelRun,
-	SubagentPanelSnapshot,
 	TrustAnswer,
 	TrustRequest,
 	WikiModelReviewInput,
@@ -1032,43 +1023,6 @@ export class PiBackend {
 		};
 	}
 
-	/** @deprecated 通过 BackendServices.packages.searchPackages 使用。 */
-	async searchPackages(
-		query: string,
-		type?: CatalogPackageType | "",
-		page?: number,
-	): Promise<CatalogSearchResult> {
-		return this.packages.searchPackages(query, type, page);
-	}
-
-	/** @deprecated 通过 BackendServices.packages.listConfiguredPackages 使用。 */
-	async listConfiguredPackages(): Promise<ConfiguredPackageInfo[]> {
-		return this.packages.listConfiguredPackages();
-	}
-
-	/** @deprecated 通过 BackendServices.packages.installPackage 使用。 */
-	async installPackage(name: string): Promise<void> {
-		return this.packages.installPackage(name);
-	}
-
-	/** @deprecated 通过 BackendServices.packages.removePackage 使用。 */
-	async removePackage(source: string, scope: "user" | "project"): Promise<void> {
-		return this.packages.removePackage(source, scope);
-	}
-
-	async getMcpStatus(cwd?: string): Promise<McpStatus> {
-		return this.mcp.getStatus(cwd);
-	}
-
-	async getMcpConfig(cwd?: string): Promise<McpConfigSnapshot> {
-		return this.mcp.getConfig(cwd);
-	}
-
-	/** @deprecated 通过 BackendServices.mcp.setServerEnabled 使用。 */
-	async setMcpServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot> {
-		return this.mcp.setServerEnabled(name, enabled, cwd);
-	}
-
 	/** MCP 配置变更后热重载同项目的空闲会话，对齐 CLI /reload。 */
 	private async reloadMcpSessions(cwd?: string): Promise<void> {
 		const target = resolve(cwd || this.options.defaultCwd || process.cwd());
@@ -1333,35 +1287,6 @@ export class PiBackend {
 		level: import("@drone/shared").SubagentThinkingLevel | null,
 	): Promise<ModelPrefs> {
 		return this.modelSettings.setSubagentThinking(agent, level);
-	}
-
-	/** @deprecated 通过 BackendServices.subagents.listAvailable 使用。 */
-	async listSubagents(): Promise<SubagentInfo[]> {
-		return this.subagents.listAvailable();
-	}
-
-	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任）与并发边界 */
-	/** @deprecated 通过 BackendServices.subagents.listSession 使用。 */
-	listSessionSubagents(sessionId: string): Promise<SubagentPanelSnapshot> {
-		return this.subagents.listSession(sessionId);
-	}
-
-	/** 子智能体面板：直接派发到会话（同 runSubagent 路径；超出运行槽排队） */
-	/** @deprecated 通过 BackendServices.subagents.dispatch 使用。 */
-	dispatchSubagents(sessionId: string, input: SubagentDispatchInput): Promise<SubagentDispatchReceipt> {
-		return this.subagents.dispatch(sessionId, input);
-	}
-
-	/** 子智能体面板：取消排队 / 中止运行；终态或未知 runId 返回 false */
-	/** @deprecated 通过 BackendServices.subagents.abort 使用。 */
-	async abortSubagentRun(runId: string): Promise<boolean> {
-		return this.subagents.abort(runId);
-	}
-
-	/** 子智能体面板：本会话进程内的面板运行（切回会话补水） */
-	/** @deprecated 通过 BackendServices.subagents.listRuns 使用。 */
-	async listSubagentRuns(sessionId: string): Promise<SubagentPanelRun[]> {
-		return this.subagents.listRuns(sessionId);
 	}
 
 	onEvent(handler: EventHandler): () => void {

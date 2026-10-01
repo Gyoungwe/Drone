@@ -1,4 +1,4 @@
-import type { BackendServices, PiBackend } from "@drone/backend";
+import type { BackendServices, SessionServicePort } from "@drone/backend";
 import { IpcChannels, SubagentsContract } from "@drone/shared";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -7,20 +7,33 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
  * `backend[method]`（校验、排队、结果入会话都在 backend 的 SubagentPanelService）。
  */
 export function registerSubagentsIpc(
-	backend: PiBackend,
+	backend: SessionServicePort,
 	services?: Pick<BackendServices, "subagents">,
 ): void {
+	const legacy = backend as SessionServicePort & {
+		listSessionSubagents?: BackendServices["subagents"]["listSession"];
+		dispatchSubagents?: BackendServices["subagents"]["dispatch"];
+		abortSubagentRun?: BackendServices["subagents"]["abort"];
+		listSubagentRuns?: BackendServices["subagents"]["listRuns"];
+		listSubagents?: BackendServices["subagents"]["listAvailable"];
+	};
 	const subagents =
 		services?.subagents ??
-		backend.subagents ??
-		({
-			listSession: (sessionId: string) => backend.listSessionSubagents(sessionId),
-			dispatch: (sessionId: string, input: Parameters<PiBackend["dispatchSubagents"]>[1]) =>
-				backend.dispatchSubagents(sessionId, input),
-			abort: (runId: string) => backend.abortSubagentRun(runId),
-			listRuns: (sessionId: string) => backend.listSubagentRuns(sessionId),
-			listAvailable: () => backend.listSubagents(),
-		} satisfies BackendServices["subagents"]);
+		("subagents" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "subagents">).subagents
+			: legacy.listSessionSubagents &&
+					legacy.dispatchSubagents &&
+					legacy.abortSubagentRun &&
+					legacy.listSubagentRuns
+				? {
+						listSession: legacy.listSessionSubagents.bind(backend),
+						dispatch: legacy.dispatchSubagents.bind(backend),
+						abort: legacy.abortSubagentRun.bind(backend),
+						listRuns: legacy.listSubagentRuns.bind(backend),
+						listAvailable: () => legacy.listSubagents?.() ?? Promise.resolve([]),
+					}
+				: undefined);
+	if (!subagents) throw new Error("Subagent service is required by the desktop host");
 	const implementation: ContractImplementation<typeof SubagentsContract> = {
 		list: (sessionId) => subagents.listSession(sessionId),
 		dispatch: (sessionId, input) => subagents.dispatch(sessionId, input),

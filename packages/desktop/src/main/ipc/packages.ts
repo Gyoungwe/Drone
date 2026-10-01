@@ -1,22 +1,34 @@
-import type { BackendServices, PiBackend } from "@drone/backend";
+import type { BackendServices, SessionServicePort } from "@drone/backend";
 import { IpcChannels, PackagesContract } from "@drone/shared";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** 社区包域：pi.dev 目录搜索 + 安装/卸载 + 已配置清单。 */
-export function registerPackagesIpc(backend: PiBackend, services?: Pick<BackendServices, "packages">): void {
+export function registerPackagesIpc(
+	backend: SessionServicePort,
+	services?: Pick<BackendServices, "packages">,
+): void {
+	const legacy = backend as SessionServicePort & {
+		searchPackages?: BackendServices["packages"]["searchPackages"];
+		installPackage?: BackendServices["packages"]["installPackage"];
+		removePackage?: BackendServices["packages"]["removePackage"];
+		listConfiguredPackages?: BackendServices["packages"]["listConfiguredPackages"];
+	};
 	const packages =
 		services?.packages ??
-		backend.packages ??
-		({
-			searchPackages: (query: string, type?: Parameters<PiBackend["searchPackages"]>[1], page?: number) =>
-				backend.searchPackages(query, type, page),
-			installPackage: (name: string) => backend.installPackage(name),
-			removePackage: (source: string, scope: "user" | "project") => backend.removePackage(source, scope),
-			listConfiguredPackages: () => backend.listConfiguredPackages(),
-		} satisfies Pick<
-			BackendServices["packages"],
-			"searchPackages" | "installPackage" | "removePackage" | "listConfiguredPackages"
-		>);
+		("packages" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "packages">).packages
+			: legacy.searchPackages &&
+					legacy.installPackage &&
+					legacy.removePackage &&
+					legacy.listConfiguredPackages
+				? {
+						searchPackages: legacy.searchPackages.bind(backend),
+						installPackage: legacy.installPackage.bind(backend),
+						removePackage: legacy.removePackage.bind(backend),
+						listConfiguredPackages: legacy.listConfiguredPackages.bind(backend),
+					}
+				: undefined);
+	if (!packages) throw new Error("Package service is required by the desktop host");
 	const implementation: ContractImplementation<typeof PackagesContract> = {
 		searchCatalog: (...args) => {
 			const [query, type, page] = args;

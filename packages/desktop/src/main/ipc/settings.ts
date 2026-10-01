@@ -1,4 +1,4 @@
-import type { BackendServices, PiBackend } from "@drone/backend";
+import type { BackendServices, SessionServicePort } from "@drone/backend";
 import type {
 	CustomProviderInput,
 	CustomProviderUpdateInput,
@@ -10,21 +10,36 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** 设置域：provider 设置 + MCP + 权限门控配置 + 项目信任应答 */
 export function registerSettingsIpc(
-	backend: PiBackend,
+	backend: SessionServicePort,
 	services?: Pick<BackendServices, "settings" | "models" | "login" | "subagents">,
 ): void {
-	// Prefer explicit domain services when the composition root is available. The
-	// PiBackend fallback keeps older tests and embedders source-compatible while
-	// the remaining approval/session methods migrate off the façade.
-	const settings = services?.settings ?? backend.settings;
-	const models = services?.models ?? backend.models;
-	const login = services?.login ?? backend.login;
+	// Prefer explicit domain services from the composition root.  The structural
+	// fallback only supports older host adapters that expose the same services.
+	const legacy = backend as SessionServicePort & {
+		listSubagents?: BackendServices["subagents"]["listAvailable"];
+	};
+	const settings =
+		services?.settings ??
+		("settings" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "settings">).settings
+			: undefined);
+	const models =
+		services?.models ??
+		("models" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "models">).models
+			: undefined);
+	const login =
+		services?.login ??
+		("login" in backend ? (backend as SessionServicePort & Pick<BackendServices, "login">).login : undefined);
 	const subagents =
 		services?.subagents ??
-		backend.subagents ??
-		({
-			listAvailable: () => backend.listSubagents(),
-		} satisfies Pick<BackendServices["subagents"], "listAvailable">);
+		("subagents" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "subagents">).subagents
+			: legacy.listSubagents
+				? { listAvailable: legacy.listSubagents.bind(backend) }
+				: undefined);
+	if (!settings || !models || !login || !subagents)
+		throw new Error("Settings services are required by the desktop host");
 	const implementation: ContractImplementation<typeof SettingsContract> = {
 		listProviders: (...args) => settings.listProviders(args[0] as ListProvidersOptions | undefined),
 		saveApiKey: (providerId, key) => settings.saveApiKey(providerId, key),

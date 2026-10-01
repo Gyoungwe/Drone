@@ -1,30 +1,63 @@
-import type { BackendServices, PiBackend } from "@drone/backend";
+import type { BackendServices, SessionServicePort } from "@drone/backend";
 import { IpcChannels, KnowledgeContract } from "@drone/shared";
 import { BrowserWindow, shell } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** Deliberately desktop-only: approvals are not a model tool or an unauthenticated LAN route. */
 export function registerKnowledgeIpc(
-	backendOrServices: PiBackend | BackendServices,
+	backendOrServices: SessionServicePort | BackendServices,
 	services?: Pick<BackendServices, "knowledge" | "knowledgeSession" | "zotero">,
 ): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
 	const hostServices =
 		services ?? ("sessions" in backendOrServices ? (backendOrServices as BackendServices) : undefined);
-	const knowledge = hostServices?.knowledge ?? backend.knowledge;
-	const zotero = hostServices?.zotero ?? backend.zotero;
+	const legacy = backend as SessionServicePort & {
+		knowledge?: BackendServices["knowledge"];
+		knowledgeSession?: BackendServices["knowledgeSession"];
+		zotero?: BackendServices["zotero"];
+		startKnowledgeSetup?: BackendServices["knowledgeSession"]["startSetup"];
+		reviewKnowledgeWithModel?: BackendServices["knowledgeSession"]["reviewWithModel"];
+		cancelKnowledgeModelReview?: BackendServices["knowledgeSession"]["cancelModelReview"];
+		resumeKnowledgeCheck?: BackendServices["knowledgeSession"]["resumeCheck"];
+		getZoteroStatus?: BackendServices["zotero"]["getStatus"];
+	};
+	const knowledge =
+		hostServices?.knowledge ??
+		("knowledge" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "knowledge">).knowledge
+			: legacy.knowledge);
+	const zotero =
+		hostServices?.zotero ??
+		("zotero" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "zotero">).zotero
+			: (legacy.zotero ??
+				(legacy.getZoteroStatus
+					? { getStatus: legacy.getZoteroStatus.bind(backend) }
+					: {
+							getStatus: async () => {
+								throw new Error("Zotero service is unavailable");
+							},
+						})));
 	const knowledgeSession =
 		hostServices?.knowledgeSession ??
-		backend.knowledgeSession ??
-		({
-			startSetup: (input) => backend.startKnowledgeSetup(input),
-			reviewWithModel: (input) => backend.reviewKnowledgeWithModel(input),
-			cancelModelReview: (input) => backend.cancelKnowledgeModelReview(input),
-			resumeCheck: (sessionId) => backend.resumeKnowledgeCheck(sessionId),
-		} satisfies Pick<
-			BackendServices["knowledgeSession"],
-			"startSetup" | "reviewWithModel" | "cancelModelReview" | "resumeCheck"
-		>);
+		("knowledgeSession" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "knowledgeSession">).knowledgeSession
+			: (legacy.knowledgeSession ?? {
+					startSetup: (input) =>
+						legacy.startKnowledgeSetup?.(input) ??
+						Promise.reject(new Error("Knowledge session service unavailable")),
+					reviewWithModel: (input) =>
+						legacy.reviewKnowledgeWithModel?.(input) ??
+						Promise.reject(new Error("Knowledge session service unavailable")),
+					cancelModelReview: (input) =>
+						legacy.cancelKnowledgeModelReview?.(input) ??
+						Promise.reject(new Error("Knowledge session service unavailable")),
+					resumeCheck: (sessionId) =>
+						legacy.resumeKnowledgeCheck?.(sessionId) ??
+						Promise.reject(new Error("Knowledge session service unavailable")),
+				}));
+	if (!knowledge || !zotero || !knowledgeSession)
+		throw new Error("Knowledge services are required by the desktop host");
 	const implementation: ContractImplementation<typeof KnowledgeContract> = {
 		setSpecialistSettings: (input) => knowledge.specialistSettings(input),
 		getOverview: (...args) => knowledge.overview(args[0]),
