@@ -154,3 +154,19 @@ test("disposing one host runtime rejects only that host's future work", async ()
 	);
 	await second.dispose();
 });
+
+test("runtime slots register disposables without crossing host runtimes", async () => {
+	const first = createStandaloneRuntime();
+	const second = createStandaloneRuntime();
+	let firstDisposed = 0;
+	let secondDisposed = 0;
+	const firstSlot = runtimeSlot("knowledge", "disposable-resource", () => ({ dispose: () => void firstDisposed++ }));
+	const secondSlot = runtimeSlot("knowledge", "disposable-resource", () => ({ dispose: () => void secondDisposed++ }));
+	await withRuntime(first, () => firstSlot.dispose);
+	await withRuntime(second, () => secondSlot.dispose);
+	await first.dispose();
+	assert.equal(firstDisposed, 1);
+	assert.equal(secondDisposed, 0);
+	await second.dispose();
+	assert.equal(secondDisposed, 1);
+});
