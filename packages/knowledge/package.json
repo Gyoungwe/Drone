@@ -28,7 +28,8 @@
 		"./maintenance": "./src/maintenance.ts",
 		"./runtime-host": "./src/runtime-host.ts",
 		"./ui-state": "./src/ui-state.ts",
-		"./publication": "./src/publication.ts"
+		"./publication": "./src/publication.ts",
+		"./worker": "./src/worker.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
