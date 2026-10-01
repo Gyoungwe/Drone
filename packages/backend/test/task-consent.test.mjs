@@ -1,9 +1,9 @@
 import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { resolveWriteRoots } from "@drone/tasks/consent";
 import { afterEach, expect, it, vi } from "vitest";
 import { readKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
-import { resolveWriteRoots } from "../../../.pi/lib/tasks/consent.mjs";
 import { registerWorkbench } from "../../../.pi/lib/tasks/register.mjs";
 import { createTaskWorkbench, LIMITS, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
 

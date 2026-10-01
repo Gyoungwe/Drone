@@ -1,4 +1,12 @@
 export {
+	type ConsentTask,
+	contractHash,
+	type ExecutionConsent,
+	hasTaskConsent,
+	MAX_AUTO_RESUMES,
+	resolveWriteRoots,
+} from "./consent";
+export {
 	diagnosticText,
 	FAILURE_EXPLANATION_POLICY,
 	type FailureObservation,
@@ -24,4 +32,4 @@ export {
 	type TaskProtocolBlock,
 	type TaskProtocolMessage,
 } from "./tool-protocol";
-export { MAX_AUTO_RESUMES, shouldAskToContinue, type TaskContinuationState } from "./turn-end-prompt";
+export { shouldAskToContinue, type TaskContinuationState } from "./turn-end-prompt";

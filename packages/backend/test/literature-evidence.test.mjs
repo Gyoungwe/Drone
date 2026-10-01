@@ -1,17 +1,9 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { exactDoiItems, normalizeDoi, verifyLiteratureReceipt } from "@drone/research/literature-receipt";
+import { deliveryContract, hasPaperCitation, requiresPaperEvidence } from "@drone/research/source-delivery";
 import { expect, it } from "vitest";
-import {
-	exactDoiItems,
-	normalizeDoi,
-	verifyLiteratureReceipt,
-} from "../../../.pi/lib/literature-receipt.mjs";
-import {
-	deliveryContract,
-	hasPaperCitation,
-	requiresPaperEvidence,
-} from "../../../.pi/lib/source-delivery.mjs";
 
 it("activates for Chinese comparative-genomics planning without download words", () => {
 	expect(requiresPaperEvidence("帮我构思一下昆虫翅发育基因的比较基因组分析方式和流程")).toBe(true);

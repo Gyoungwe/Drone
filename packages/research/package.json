@@ -1,5 +1,5 @@
 {
-	"name": "@drone/tasks",
+	"name": "@drone/research",
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
@@ -7,17 +7,15 @@
 	"types": "./src/index.ts",
 	"exports": {
 		".": "./src/index.ts",
-		"./failure-feedback": "./src/failure-feedback.ts",
-		"./consent": "./src/consent.ts",
-		"./single-flight": "./src/single-flight.ts",
-		"./turn-end-prompt": "./src/turn-end-prompt.ts",
-		"./tool-protocol": "./src/tool-protocol.ts"
+		"./literature-receipt": "./src/literature-receipt.ts",
+		"./source-delivery": "./src/source-delivery.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
 	},
 	"devDependencies": {
+		"@types/node": "^22.0.0",
 		"typescript": "^5.9.0",
 		"vitest": "^3.2.0"
 	}

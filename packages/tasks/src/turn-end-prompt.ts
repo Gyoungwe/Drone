@@ -1,5 +1,6 @@
-/** Maximum automatic continuations allowed for one authorized task. */
-export const MAX_AUTO_RESUMES = 3;
+import { MAX_AUTO_RESUMES } from "./consent";
+
+export { MAX_AUTO_RESUMES } from "./consent";
 
 export interface TaskContinuationState {
 	executionConsent?: unknown;

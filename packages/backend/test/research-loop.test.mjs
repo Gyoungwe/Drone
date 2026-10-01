@@ -2,10 +2,10 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { verifyLiteratureReceipt } from "@drone/research/literature-receipt";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import researchLoopExtension from "../../../.pi/extensions/research-loop.mjs";
 import { saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
-import { verifyLiteratureReceipt } from "../../../.pi/lib/literature-receipt.mjs";
 import {
 	completeResearchGate,
 	observeResearchReceipt,
