@@ -39,6 +39,23 @@ export class StorageRegistry {
 		return this;
 	}
 
+	/** Register a host-discovered directory idempotently across sessions. */
+	registerDiscoveredRoot(
+		prefix: string,
+		path: string,
+		owner: string,
+		sensitivity: StorageSensitivity,
+		schema: number | string = 1,
+	): StorageEntry {
+		if (!path.trim()) throw new Error("Storage root path cannot be empty");
+		const id = rootId(prefix, path);
+		const existing = this.entries.get(id);
+		if (existing) return existing;
+		const entry: StorageEntry = { id, path, owner, schema, sensitivity };
+		this.register(entry);
+		return this.entries.get(id) as StorageEntry;
+	}
+
 	get(id: string): StorageEntry | undefined {
 		return this.entries.get(id);
 	}
@@ -117,13 +134,7 @@ function registerRoots(
 		const id = rootId(prefix, path);
 		if (registered.has(id)) continue;
 		registered.add(id);
-		registry.register({
-			id,
-			path,
-			owner,
-			schema: 1,
-			sensitivity,
-		});
+		registry.registerDiscoveredRoot(prefix, path, owner, sensitivity);
 	}
 }
 

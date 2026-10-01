@@ -113,7 +113,7 @@ import { ModelSettingsService } from "./settings/models";
 import { SettingsService } from "./settings/settings";
 import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
 import { createDefaultStorageRegistry, type StorageRegistry } from "./storage/registry";
-import { readChannelWatchEnabled, writeChannelWatchEnabled } from "./tools/channel-watch";
+import { agentWorkRoot, readChannelWatchEnabled, writeChannelWatchEnabled } from "./tools/channel-watch";
 import { readContextManagerMode, writeContextManagerMode } from "./tools/context-evaporation";
 import { globalToolManifest } from "./tools/manifest";
 import { isSubagentSessionPath, SubagentPanelService } from "./tools/subagent";
@@ -479,6 +479,7 @@ export class SessionService {
 	async createSession(options: CreateSessionOptions): Promise<SessionMeta> {
 		const runtime = await this.getModelRuntime();
 		const cwd = options.cwd || this.options.defaultCwd || process.cwd();
+		this.storage.registerDiscoveredRoot("project-work", agentWorkRoot(cwd), "tools/channel-watch", "private");
 		const model =
 			options.provider && options.modelId ? runtime.getModel(options.provider, options.modelId) : undefined;
 
@@ -577,6 +578,7 @@ export class SessionService {
 		const runtime = await this.getModelRuntime();
 		const sessionManager = this.sessionEngine.openManager(filePath);
 		const cwd = sessionManager.getCwd() || process.cwd();
+		this.storage.registerDiscoveredRoot("project-work", agentWorkRoot(cwd), "tools/channel-watch", "private");
 		const gate = this.approvals.createGate();
 		const askGate = new AskGate((req) => this.dispatchAskRequest(req));
 		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);

@@ -94,6 +94,24 @@ describe("StorageRegistry", () => {
 		});
 	});
 
+	it("registers discovered project roots idempotently", () => {
+		const registry = new StorageRegistry();
+		const first = registry.registerDiscoveredRoot(
+			"project-work",
+			"/tmp/project/.local/agent-work",
+			"tools/channel-watch",
+			"private",
+		);
+		const second = registry.registerDiscoveredRoot(
+			"project-work",
+			"/tmp/project/.local/agent-work",
+			"tools/channel-watch",
+			"private",
+		);
+		expect(second).toBe(first);
+		expect(registry.list()).toHaveLength(1);
+	});
+
 	it("registers non-JsonStore roots with deterministic ids", () => {
 		const options = {
 			agentDir: "/tmp/drone-agent",
