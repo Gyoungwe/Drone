@@ -4,6 +4,7 @@ import {
 	bindRuntime,
 	createStandaloneRuntime,
 	runRuntimeExclusive,
+	runtimeForHost,
 	runtimeSlot,
 	withHostRuntime,
 	withRuntime,
@@ -95,6 +96,23 @@ test("dynamic hosts receive only their announced runtime", async () => {
 	assert.equal(await withHostRuntime(firstHost, () => slot.get("owner")), "first");
 	assert.equal(await withHostRuntime(secondHost, () => slot.get("owner")), "second");
 	await Promise.all([first.dispose(), second.dispose()]);
+});
+
+test("CLI hosts receive independent standalone runtimes", async () => {
+	const firstHost = {};
+	const secondHost = {};
+	const disposeFirst = bindRuntime(firstHost);
+	const disposeSecond = bindRuntime(secondHost);
+	assert.notEqual(runtimeForHost(firstHost), runtimeForHost(secondHost));
+
+	const slot = runtimeSlot("knowledge", "cli-host-isolation", () => new Map());
+	await withHostRuntime(firstHost, () => slot.set("owner", "first"));
+	await withHostRuntime(secondHost, () => slot.set("owner", "second"));
+	assert.equal(await withHostRuntime(firstHost, () => slot.get("owner")), "first");
+	assert.equal(await withHostRuntime(secondHost, () => slot.get("owner")), "second");
+
+	disposeFirst();
+	disposeSecond();
 });
 
 test("disposing one host runtime rejects only that host's future work", async () => {

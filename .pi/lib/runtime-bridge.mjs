@@ -94,7 +94,20 @@ export function withRuntime(runtime, operation) {
  * cleanup function is intentionally small and can be used by extension tests.
  */
 export function bindRuntime(pi) {
-	if (!pi?.events?.on) return () => {};
+	if (!pi || (typeof pi !== "object" && typeof pi !== "function")) return () => {};
+	// CLI/test Pi hosts may not expose the desktop event bus. Give each such
+	// host an explicit standalone runtime instead of falling back to the
+	// process-wide lazy runtime. This keeps extension state isolated even when
+	// no SessionEngine is present to announce a desktop-owned runtime.
+	if (!pi.events?.on || !pi.events?.emit) {
+		const runtime = createStandaloneRuntime();
+		hostRuntimes.set(pi, runtime);
+		return () => {
+			if (hostRuntimes.get(pi) !== runtime) return;
+			hostRuntimes.delete(pi);
+			void runtime.dispose();
+		};
+	}
 	const receive = (payload) => {
 		if (payload?.version !== RUNTIME_BRIDGE_VERSION) return;
 		const runtime = payload?.runtime;
