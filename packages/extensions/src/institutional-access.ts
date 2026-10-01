@@ -1,12 +1,13 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import { buildProxiedUrl, inferEzproxyTemplateFromUrl } from "@drone/research/institutional-proxy";
+import {
+	buildProxiedUrl,
+	detectAndSaveTemplateFromUrl,
+	loadInstitutionalConfig,
+	saveInstitutionalConfig,
+} from "@drone/research/institutional-access";
 
 const require = createRequire(import.meta.url);
 const PARTITION = "persist:drone-institutional";
-const CONFIG_PATH = join(homedir(), ".pi", "agent", "institutional.json");
 
 type PiTool = {
 	registerTool(definition: {
@@ -18,55 +19,6 @@ type PiTool = {
 		execute: (...args: any[]) => Promise<unknown>;
 	}): void;
 };
-
-type Config = {
-	version: 1;
-	ezproxyTemplate?: string;
-	institutionName?: string;
-	autoDownloadEnabled: boolean;
-	perTaskLimit: number;
-	lastLoginAt?: string;
-	lastLoginUrl?: string;
-};
-
-const defaultConfig = (): Config => ({ version: 1, autoDownloadEnabled: true, perTaskLimit: 20 });
-
-function normalizeConfig(raw: unknown): Config {
-	if (!raw || typeof raw !== "object") return defaultConfig();
-	const value = raw as Record<string, unknown>;
-	const template =
-		typeof value.ezproxyTemplate === "string" && /^https?:\/\//i.test(value.ezproxyTemplate)
-			? value.ezproxyTemplate.slice(0, 2048)
-			: undefined;
-	const institutionName =
-		typeof value.institutionName === "string" ? value.institutionName.trim().slice(0, 120) : undefined;
-	const limit =
-		typeof value.perTaskLimit === "number" && Number.isInteger(value.perTaskLimit)
-			? Math.min(100, Math.max(1, value.perTaskLimit))
-			: 20;
-	return {
-		version: 1,
-		ezproxyTemplate: template,
-		institutionName,
-		autoDownloadEnabled: typeof value.autoDownloadEnabled === "boolean" ? value.autoDownloadEnabled : true,
-		perTaskLimit: limit,
-		lastLoginAt: typeof value.lastLoginAt === "string" ? value.lastLoginAt : undefined,
-		lastLoginUrl: typeof value.lastLoginUrl === "string" ? value.lastLoginUrl : undefined,
-	};
-}
-
-async function loadConfig(): Promise<Config> {
-	try {
-		return normalizeConfig(JSON.parse(await readFile(CONFIG_PATH, "utf8")));
-	} catch {
-		return defaultConfig();
-	}
-}
-
-async function saveConfig(config: Config): Promise<void> {
-	await mkdir(join(homedir(), ".pi", "agent"), { recursive: true });
-	await writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-}
 
 function electron(): any | null {
 	try {
@@ -96,11 +48,10 @@ function openWindow(url: string): { url: string } {
 		autoHideMenuBar: true,
 	});
 	const recordNavigation = async (navigatedUrl: string) => {
-		const config = await loadConfig();
-		const inferred = inferEzproxyTemplateFromUrl(navigatedUrl) ?? undefined;
-		await saveConfig({
+		const config = await loadInstitutionalConfig();
+		await detectAndSaveTemplateFromUrl(navigatedUrl);
+		await saveInstitutionalConfig({
 			...config,
-			ezproxyTemplate: inferred || config.ezproxyTemplate,
 			lastLoginAt: new Date().toISOString(),
 			lastLoginUrl: navigatedUrl.slice(0, 2048),
 		});
@@ -147,10 +98,10 @@ export default function institutionalAccess(pi: PiTool): void {
 					{ status: "electron_unavailable" },
 				);
 			try {
-				const config = await loadConfig();
+				const config = await loadInstitutionalConfig();
 				const opened = openWindow(buildProxiedUrl(target, config.ezproxyTemplate) || target);
 				const next = { ...config, lastLoginAt: new Date().toISOString(), lastLoginUrl: opened.url };
-				await saveConfig(next);
+				await saveInstitutionalConfig(next);
 				return toolResponse(
 					{
 						status: "login_window_opened",
@@ -174,7 +125,7 @@ export default function institutionalAccess(pi: PiTool): void {
 		parameters: { type: "object", properties: {} },
 		drone: { readOnly: true, capabilities: ["research"] },
 		async execute() {
-			const config = await loadConfig();
+			const config = await loadInstitutionalConfig();
 			const current = session();
 			let cookiesCount = 0;
 			try {

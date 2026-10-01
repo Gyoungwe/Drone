@@ -1,6 +1,3 @@
-// packages/extensions/src/institutional-access.ts
-import { createRequire } from "node:module";
-
 // packages/research/src/institutional-access.ts
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -136,134 +133,15 @@ async function detectAndSaveTemplateFromUrl(navigatedUrl, { path = INSTITUTIONAL
   if (config.ezproxyTemplate === inferred) return config;
   return saveInstitutionalConfig({ ...config, ezproxyTemplate: inferred }, path, io);
 }
-
-// packages/extensions/src/institutional-access.ts
-var require2 = createRequire(import.meta.url);
-var PARTITION = "persist:drone-institutional";
-function electron() {
-  try {
-    return require2("electron");
-  } catch {
-    return null;
-  }
-}
-function session() {
-  const loaded = electron();
-  try {
-    return loaded?.session?.fromPartition(PARTITION) || null;
-  } catch {
-    return null;
-  }
-}
-function openWindow(url) {
-  const loaded = electron();
-  if (!loaded?.BrowserWindow) throw new Error("Electron unavailable");
-  const win = new loaded.BrowserWindow({
-    width: 1220,
-    height: 860,
-    title: "\u673A\u6784\u8BBF\u95EE\u767B\u5F55 - Drone",
-    webPreferences: { partition: PARTITION, nodeIntegration: false, contextIsolation: true, sandbox: true },
-    autoHideMenuBar: true
-  });
-  const recordNavigation = async (navigatedUrl) => {
-    const config = await loadInstitutionalConfig();
-    await detectAndSaveTemplateFromUrl(navigatedUrl);
-    await saveInstitutionalConfig({
-      ...config,
-      lastLoginAt: (/* @__PURE__ */ new Date()).toISOString(),
-      lastLoginUrl: navigatedUrl.slice(0, 2048)
-    });
-  };
-  win.webContents?.on?.("did-navigate", (_event, navigatedUrl) => {
-    void recordNavigation(navigatedUrl).catch(() => {
-    });
-  });
-  void win.loadURL(url);
-  return { url };
-}
-function toolResponse(value, details) {
-  return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], details: details ?? value };
-}
-function institutionalAccess(pi) {
-  if (process.env.PI_SUBAGENT_CHILD === "1") return;
-  pi.registerTool({
-    name: "research_institutional_login",
-    label: "Institutional login",
-    description: "Open the persistent institutional browser window for EZproxy, Shibboleth, CARSI, OpenAthens, or WebVPN login.",
-    parameters: {
-      type: "object",
-      properties: {
-        url: { type: "string", description: "Optional publisher or DOI URL." },
-        reason: { type: "string", description: "Optional reason shown in the result." }
-      }
-    },
-    drone: {
-      capabilities: ["research"],
-      journal: false,
-      subagent: "exclude",
-      activity: { text: "\u6B63\u5728\u6253\u5F00\u673A\u6784\u767B\u5F55\u7A97\u53E3\u2026", phase: "auth" }
-    },
-    async execute(_id, params) {
-      const target = params?.url || "https://www.nature.com/";
-      if (!electron())
-        return toolResponse(
-          {
-            status: "electron_unavailable",
-            message: "Institutional login requires Drone desktop (Electron)."
-          },
-          { status: "electron_unavailable" }
-        );
-      try {
-        const config = await loadInstitutionalConfig();
-        const opened = openWindow(buildProxiedUrl(target, config.ezproxyTemplate) || target);
-        const next = { ...config, lastLoginAt: (/* @__PURE__ */ new Date()).toISOString(), lastLoginUrl: opened.url };
-        await saveInstitutionalConfig(next);
-        return toolResponse(
-          {
-            status: "login_window_opened",
-            opened_url: opened.url,
-            requested_url: params?.url || null,
-            reason: params?.reason || null,
-            partition: PARTITION
-          },
-          { status: "login_window_opened" }
-        );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return toolResponse({ status: "failed", error: message }, { status: "failed", error: message });
-      }
-    }
-  });
-  pi.registerTool({
-    name: "research_institutional_status",
-    label: "Institutional status",
-    description: "Show institutional access configuration and session status.",
-    parameters: { type: "object", properties: {} },
-    drone: { readOnly: true, capabilities: ["research"] },
-    async execute() {
-      const config = await loadInstitutionalConfig();
-      const current = session();
-      let cookiesCount = 0;
-      try {
-        cookiesCount = current ? (await current.cookies.get({})).length : 0;
-      } catch {
-        cookiesCount = 0;
-      }
-      const status = {
-        config,
-        session: {
-          cookiesCount,
-          hasSessionCookies: cookiesCount > 0,
-          partition: PARTITION,
-          lastAccessAt: config.lastLoginAt
-        },
-        loggedIn: cookiesCount > 0 || Boolean(config.lastLoginAt),
-        electronAvailable: Boolean(electron())
-      };
-      return toolResponse(status, status);
-    }
-  });
-}
 export {
-  institutionalAccess as default
+  INSTITUTIONAL_AGENT_DIR,
+  INSTITUTIONAL_CONFIG_NAME,
+  INSTITUTIONAL_CONFIG_PATH,
+  buildProxiedUrl,
+  detectAndSaveTemplateFromUrl,
+  emptyInstitutionalConfig,
+  inferEzproxyTemplateFromUrl,
+  loadInstitutionalConfig,
+  normalizeInstitutionalConfig,
+  saveInstitutionalConfig
 };

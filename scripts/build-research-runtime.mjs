@@ -13,7 +13,11 @@ const entries = {
 	"claim-bindings": "packages/research/src/claim-bindings.ts",
 	"research-receipt-core": "packages/research/src/receipt-journal.ts",
 	"source-archive-core": "packages/research/src/source-archive.ts",
+	"institutional-access-core": "packages/research/src/institutional-access.ts",
 	"research-loop-core": "packages/research/src/research-loop.ts",
+	"zotero-setup": "packages/research/src/zotero-setup-runtime.ts",
+	"zotero-reconcile": "packages/research/src/zotero-reconcile-runtime.ts",
+	"zotero-write": "packages/research/src/zotero-write-runtime.ts",
 };
 
 await mkdir(outputDir, { recursive: true });
