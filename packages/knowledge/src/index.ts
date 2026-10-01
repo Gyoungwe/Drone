@@ -48,6 +48,17 @@ export {
 	specialistRequestSignature,
 } from "./orchestration-policy";
 export {
+	advisoryLine,
+	advisoryNotice,
+	knowledgeFailure,
+	type PublicationFailure,
+	type PublicationFailureCode,
+	type PublicationVerification,
+	publicationFallbackNotice,
+	publicationNotice,
+	publicationNotices,
+} from "./publication-policy";
+export {
 	advisoryCodes,
 	type ReviewMode,
 	readReviewMode,

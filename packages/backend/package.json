@@ -20,7 +20,8 @@
 		"@drone/shared": "*",
 		"@drone/research": "*",
 		"@drone/tasks": "*",
-		"typebox": "1.3.7"
+		"typebox": "1.3.7",
+		"@drone/knowledge": "*"
 	},
 	"devDependencies": {
 		"typescript": "^5.9.0",

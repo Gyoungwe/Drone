@@ -1,7 +1,16 @@
 import { createHash, randomUUID } from "node:crypto";
 import { runtimeSlot } from "../runtime-bridge.mjs";
 import { diagnosticText } from "../tasks/failure-feedback.mjs";
+import {
+	advisoryLine,
+	advisoryNotice,
+	knowledgeFailure,
+	publicationNotices as notices,
+} from "./publication-policy.mjs";
 import { advisoryCodes, readReviewMode } from "./review-policy.mjs";
+
+export { advisoryLine, advisoryNotice, knowledgeFailure };
+
 import { publicationKnowledgeFlow, updateKnowledgeFlow } from "./ui-state.mjs";
 
 const state = runtimeSlot(
@@ -19,87 +28,6 @@ const hash = (content) =>
 	createHash("sha256")
 		.update(JSON.stringify(content ?? []))
 		.digest("hex");
-const notices = {
-	"paper-citation-required":
-		"本次研究回答缺少具体论文依据；Wiki 或报告链接不能替代本轮读过的文献笔记。请标明证据缺口，不要反复检索只为消除提醒。",
-	"search-required": "本轮尚未完成知识库检索。请先检索，再阅读需要引用的内容。",
-	"coverage-incomplete": "知识索引尚未完整可用。请检查索引状态或故障，不能将此情况当作无命中。",
-	"citation-required": "检索有命中，但回答没有引用本轮读过的知识条目。",
-	"citation-invalid": "回答中的知识库引用格式不合法。",
-	"citation-budget": "本次回答的引用超过检查上限，请拆分为更小的回答。",
-	"source-unread": "回答引用了本轮没有实际阅读的条目。",
-	"delivery-changed": "本轮生成的产物在保存后发生变化，不能沿用旧的产物回执。",
-	"source-changed": "引用内容在阅读后发生了变化，请读取新版本并重新检索。",
-	"wiki-changed": "相关 Wiki 已变化，请读取当前版本后重新检索。",
-	"search-stale": "检索后索引版本发生变化，请重新检索当前内容。",
-	"binding-changed": "当前知识库绑定已变化，请重新读取导航，不沿用旧知识库的证据。",
-	"navigation-changed": "本轮导航已失效，请重新读取导航并完成检索。",
-	"not-prepared": "知识库准备步骤尚未完成，回答没有发布。",
-	interrupted: "本次请求已中断，未完成的回答没有发布。",
-	"model-error": "模型请求失败，未完成的回答没有发布。",
-	"check-timeout": "回答前检查超时，草稿没有发布。",
-	"check-failed": "回答前检查发生错误，草稿没有发布。",
-	"empty-answer": "任务已结束，但模型没有生成可显示的回复。请查看本轮产物或要求继续交付说明。",
-	"answer-too-large": "本次回答超出单次检查的大小上限，请分段完成。",
-	"protocol-budget": "本轮工具上下文超过安全缓存上限，请开启新一轮任务。",
-	"tool-loop-stopped":
-		"【任务阶段已暂停】本阶段达到工具或上下文安全预算。已保存的结果不会因此删除；查看任务执行记录后可继续，无需新建对话。继续前先核对结果未知的操作，不要重复安装、导入或上传。",
-};
-// Nonblocking advisories are shown next to a delivered answer, so they must read as an
-// explanation to the reader. The `notices` table above is instruction text aimed at the
-// model and is kept for blocking failures, where the model must act on it.
-const advisoryNotices = {
-	"paper-citation-required":
-		"这份回答没有引用具体的原始论文，主要依据是 Wiki 或已生成的报告。内容已保留，但请把它当作待查证的线索。",
-	"citation-budget": "这份回答引用的来源超过了单次核验上限。内容已完整保留。",
-	"citation-required": "这份回答没有引用本轮读过的知识条目，未能建立来源对应关系。内容已保留。",
-	"citation-invalid": "这份回答里有格式不合法的知识库引用，该引用未被核验。内容已保留。",
-	"source-unread": "这份回答引用了本轮没有实际打开过的条目，该引用未被核验。内容已保留。",
-	"source-changed": "引用的内容在本轮读取后发生了变化，核验结果可能已过期。内容已保留。",
-	"delivery-changed": "本轮生成的产物在保存后发生了变化，其回执未被采用。内容已保留。",
-	"wiki-changed": "相关 Wiki 在本轮读取后发生了变化，核验结果可能已过期。内容已保留。",
-	"search-required": "本轮没有完成知识库检索，检索覆盖情况尚未确认。内容已保留。",
-	"search-stale": "检索完成后知识库索引发生了变化，核验结果可能已过期。内容已保留。",
-	"coverage-incomplete": "知识库索引本轮未完整就绪，这不代表库中没有相关内容。内容已保留。",
-	"check-timeout": "回答前的核验超时，本次未完成核验。内容已保留。",
-	"not-prepared": "知识库准备步骤未完成，本次未做核验。内容已保留。",
-};
-/** User-facing copy for a nonblocking advisory; falls back to the model-facing notice. */
-export function advisoryNotice(code) {
-	return advisoryNotices[code] || notices[code] || notices["check-failed"];
-}
-/**
- * One reader-facing advisory line: what happened, then what was actually verified.
- * Counts come from the check itself, so the sentence cannot overstate verification.
- */
-export function advisoryLine(code, error) {
-	const verified = error?.verified;
-	const sources = Array.isArray(verified?.sources) ? verified.sources.length : 0;
-	const deliveries = Array.isArray(verified?.deliveries) ? verified.deliveries.length : 0;
-	const cited =
-		verified?.unverifiedCitationCount ??
-		(Array.isArray(verified?.unverifiedCitations) ? verified.unverifiedCitations.length : 0);
-	const notice =
-		code === "citation-budget" &&
-		Number.isInteger(verified?.citationCount) &&
-		Number.isInteger(verified?.citationLimit)
-			? `这份回答引用了 ${verified.citationCount} 处来源，超过单次核验上限（${verified.citationLimit} 处）。内容已完整保留。`
-			: advisoryNotice(code);
-	const parts = [];
-	if (sources) parts.push(`已核对 ${sources} 处来源的读取记录与当前版本`);
-	if (deliveries) parts.push(`已核对 ${deliveries} 份本轮产物`);
-	if (cited) parts.push(`${sources ? "另有" : "共"} ${cited} 处引用未逐条核验`);
-	const detail = parts.length ? `${parts.join("、")}。` : "";
-	return `${notice}${detail ? ` ${detail}` : ""}${sources || deliveries ? " 来源核对不代表科学结论已获验证。" : ""}`;
-}
-function reason(error) {
-	if (notices[error?.code]) return error.code;
-	const text = String(error?.message || "");
-	if (/binding changed/i.test(text)) return "binding-changed";
-	if (/navigation changed/i.test(text)) return "navigation-changed";
-	if (/navigation|prepare_knowledge/i.test(text)) return "not-prepared";
-	return "check-failed";
-}
 function sanitizeError(text) {
 	return diagnosticText(text, 4096).trim();
 }
@@ -155,15 +83,6 @@ function blocked(message, code = "check-failed", turnId = null, operational = nu
 			scientificallyVerified: false,
 		},
 	);
-}
-export function knowledgeFailure(error) {
-	const code = reason(error),
-		paths = [];
-	for (const path of Array.isArray(error?.paths) ? error.paths : []) {
-		if (typeof path === "string" && path.length <= 512 && !/[\r\n<>]/.test(path)) paths.push(path);
-		if (paths.length >= 6) break;
-	}
-	return { code, message: notices[code] || notices["check-failed"], paths };
 }
 /**
  * Evidence a failed check had already verified before it raised an advisory.

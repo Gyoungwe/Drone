@@ -1,3 +1,4 @@
+import { publicationFallbackNotice } from "@drone/knowledge/publication-policy";
 import { type DroneRuntime, isUserAbortError, type SessionEvent, sanitizeProviderError } from "@drone/shared";
 import type { RawMessage } from "./messages";
 
@@ -18,7 +19,7 @@ function bridge(runtime?: DroneRuntime): PublicationBridge | undefined {
 	return runtime?.knowledge.publication as PublicationBridge | undefined;
 }
 
-const notice = "【知识库检查未通过】发布检查未加载或发生错误，回答没有发布。请重新加载知识库扩展。";
+const notice = `【知识库检查未通过】${publicationFallbackNotice}`;
 
 /** 兜底封条：隐藏未审草稿，同时区分服务商错误、中断与发布检查故障。 */
 function sealed(message: RawMessage): RawMessage {
