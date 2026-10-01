@@ -20,7 +20,8 @@
 		"./semantic-settings": "./src/semantic-settings.ts",
 		"./extension-helpers": "./src/extension-helpers.ts",
 		"./task-feedback": "./src/task-feedback.ts",
-		"./semantic-provider": "./src/semantic-provider.ts"
+		"./semantic-provider": "./src/semantic-provider.ts",
+		"./files": "./src/files.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

@@ -33,6 +33,18 @@ export {
 	type TopicForContinuation,
 } from "./extension-helpers";
 export {
+	allowedSegment,
+	canRead,
+	fileVersion,
+	inspectNote,
+	MAX_NOTE_BYTES,
+	noteScope,
+	readNoteFile,
+	safeNotePath,
+	snippet,
+	validateNote,
+} from "./files";
+export {
 	type CardFieldOptions,
 	cardField,
 	cardLink,
