@@ -31,3 +31,15 @@ export {
 	type SourceLinkOptions,
 	type SourceLinksResult,
 } from "./source-links";
+export {
+	createToolBudget,
+	type ToolBudget,
+	type ToolBudgetFailure,
+	type ToolBudgetOptions,
+} from "./tool-budget";
+export {
+	autoTopicCandidate,
+	type TopicCandidate,
+	type TopicCandidateInput,
+	type TopicCandidateResult,
+} from "./topic-candidate";

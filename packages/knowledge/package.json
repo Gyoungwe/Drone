@@ -10,7 +10,9 @@
 		"./claim-conflicts": "./src/claim-conflicts.ts",
 		"./orchestration-policy": "./src/orchestration-policy.ts",
 		"./review-policy": "./src/review-policy.ts",
-		"./source-links": "./src/source-links.ts"
+		"./source-links": "./src/source-links.ts",
+		"./tool-budget": "./src/tool-budget.ts",
+		"./topic-candidate": "./src/topic-candidate.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
