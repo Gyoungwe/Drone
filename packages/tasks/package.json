@@ -14,7 +14,8 @@
 		"./turn-end-prompt": "./src/turn-end-prompt.ts",
 		"./tool-protocol": "./src/tool-protocol.ts",
 		"./remaining": "./src/remaining.ts",
-		"./evidence": "./src/evidence.ts"
+		"./evidence": "./src/evidence.ts",
+		"./authorization-policy": "./src/authorization-policy.ts"
 	},
 	"dependencies": {
 		"@drone/shared": "*"

@@ -1,4 +1,19 @@
 export {
+	type AuthorizationAction,
+	type AuthorizationMilestone,
+	type AuthorizationRequest,
+	type AuthorizationTask,
+	authorizationRequestKey,
+	authorizationTitle,
+	buildAuthorizationDetails,
+	isPendingAuthorizationAction,
+	isTaskAuthorizationAction,
+	TASK_AUTHORIZATION_ACTIONS,
+	TASK_AUTHORIZATION_KINDS,
+	type TaskAuthorizationAction,
+	type TaskAuthorizationKind,
+} from "./authorization-policy";
+export {
 	type ConsentTask,
 	contractHash,
 	type ExecutionConsent,
