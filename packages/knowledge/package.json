@@ -7,6 +7,7 @@
 	"types": "./src/index.ts",
 	"exports": {
 		".": "./src/index.ts",
+		"./config": "./src/config.ts",
 		"./claim-conflicts": "./src/claim-conflicts.ts",
 		"./orchestration-policy": "./src/orchestration-policy.ts",
 		"./review-policy": "./src/review-policy.ts",

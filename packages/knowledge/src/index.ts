@@ -6,6 +6,18 @@ export {
 	type KnowledgeClaim,
 } from "./claim-conflicts";
 export {
+	type KnowledgeBinding,
+	type KnowledgeBindingInput,
+	type KnowledgeDepositMode,
+	type KnowledgeProfile,
+	type KnowledgeSubagentPolicy,
+	knowledgeDirectory,
+	projectIdentity,
+	readKnowledgeBinding,
+	saveKnowledgeBinding,
+	withKnowledgeBinding,
+} from "./config";
+export {
 	type CardFieldOptions,
 	cardField,
 	cardLink,

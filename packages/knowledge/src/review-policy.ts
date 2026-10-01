@@ -1,16 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdir, rename, writeFile } from "node:fs/promises";
-import { isAbsolute, join, resolve } from "node:path";
+import { join } from "node:path";
+
+import { knowledgeDirectory } from "./config";
 
 export type ReviewMode = "automatic" | "strict";
-
-function knowledgeDirectory(): string | null {
-	const value = process.env.DRONE_KNOWLEDGE_DIR;
-	if (!value) return null;
-	if (!isAbsolute(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
-	return resolve(value);
-}
 
 function errorCode(error: unknown): unknown {
 	return error && typeof error === "object" && "code" in error ? error.code : undefined;
