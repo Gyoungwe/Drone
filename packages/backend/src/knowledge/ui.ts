@@ -3,8 +3,69 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
 
 type Handler = (event: KnowledgeUiEvent) => void;
+
+/** Host-facing knowledge management boundary; keeps IPC adapters independent of implementation state. */
+export interface KnowledgeUiServicePort {
+	connect(): Promise<void>;
+	subscribe(listener: Handler): () => void;
+	notify(text: string, severity?: string, sessionId?: string | null): Promise<void>;
+	specialistSettings(
+		input: Parameters<KnowledgeApi["setKnowledgeSpecialistSettings"]>[0],
+	): ReturnType<KnowledgeApi["setKnowledgeSpecialistSettings"]>;
+	reviewWithModel(
+		input: Parameters<KnowledgeApi["reviewKnowledgeWithModel"]>[0],
+		options: unknown,
+	): ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]>;
+	overview(
+		input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeOverview"]>;
+	setupPreview(
+		input: Parameters<KnowledgeApi["previewKnowledgeSetup"]>[0],
+	): ReturnType<KnowledgeApi["previewKnowledgeSetup"]>;
+	jobs(input: Parameters<KnowledgeApi["getKnowledgeJobs"]>[0]): ReturnType<KnowledgeApi["getKnowledgeJobs"]>;
+	reviews(
+		input: Parameters<KnowledgeApi["getKnowledgeReviews"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeReviews"]>;
+	preview(
+		input: Parameters<KnowledgeApi["previewKnowledgeReview"]>[0],
+	): ReturnType<KnowledgeApi["previewKnowledgeReview"]>;
+	decide(
+		input: Parameters<KnowledgeApi["decideKnowledgeReview"]>[0],
+	): ReturnType<KnowledgeApi["decideKnowledgeReview"]>;
+	read(
+		input: Parameters<KnowledgeApi["readKnowledgeNote"]>[0],
+	): ReturnType<KnowledgeApi["readKnowledgeNote"]>;
+	maintain(
+		input: Parameters<KnowledgeApi["maintainKnowledge"]>[0],
+	): ReturnType<KnowledgeApi["maintainKnowledge"]>;
+	openTarget(
+		input: Parameters<KnowledgeApi["openKnowledgeTarget"]>[0],
+	): Promise<{ path: string; kind: "note" | "vault" }>;
+	semanticStatus(
+		input: Parameters<KnowledgeApi["getKnowledgeSemanticStatus"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeSemanticStatus"]>;
+	saveSemanticSettings(
+		input: Parameters<KnowledgeApi["saveKnowledgeSemanticSettings"]>[0],
+	): ReturnType<KnowledgeApi["saveKnowledgeSemanticSettings"]>;
+	testSemanticProvider(
+		input: Parameters<KnowledgeApi["testKnowledgeSemanticProvider"]>[0],
+	): ReturnType<KnowledgeApi["testKnowledgeSemanticProvider"]>;
+	indexSemantic(
+		input: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>[0],
+	): ReturnType<KnowledgeApi["indexKnowledgeSemantic"]>;
+	cancelSemanticIndex(
+		input: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>[0],
+	): ReturnType<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
+	topics(
+		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
+	archiveTopic(
+		input: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>[0],
+	): ReturnType<KnowledgeApi["archiveKnowledgeTopic"]>;
+	dispose(): void;
+}
 /** Dynamic resource boundary works in source and electron-builder layouts. */
-export class KnowledgeUiService {
+export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private listeners = new Set<Handler>();
 	private unsubscribe: (() => void) | null = null;
 	private disposed = false;

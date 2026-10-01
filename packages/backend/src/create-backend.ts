@@ -1,5 +1,5 @@
 import type { DroneRuntime } from "@drone/shared";
-import type { KnowledgeUiService } from "./knowledge/ui";
+import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
@@ -9,7 +9,7 @@ import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
 import type { SubagentServicePort } from "./services/subagents";
-import type { ZoteroService } from "./services/zotero";
+import type { ZoteroServicePort } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
 import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
@@ -31,7 +31,7 @@ export interface BackendServices {
 	/** SDK lifecycle boundary; hosts can migrate session calls without importing Pi SDK types. */
 	sessionEngine: SessionEngine;
 	/** Domain-owned knowledge service; consumers do not need the compatibility façade. */
-	knowledge: KnowledgeUiService;
+	knowledge: KnowledgeUiServicePort;
 	/** Community package catalog and package-manager operations. */
 	packages: PackageServicePort;
 	/** Provider and credential settings service. */
@@ -47,7 +47,7 @@ export interface BackendServices {
 	/** Per-session permission approval registry and host event boundary. */
 	approvals: ApprovalService;
 	/** Zotero integration status service. */
-	zotero: ZoteroService;
+	zotero: ZoteroServicePort;
 	/** Institutional access configuration and session probe boundary. */
 	institutional: InstitutionalServicePort;
 	/** Session-scoped subagent panel and settings discovery boundary. */

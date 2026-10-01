@@ -9,7 +9,11 @@ import { getZoteroStatus } from "../zotero/status";
  * root an explicit domain object and keeps desktop IPC from reaching through
  * the PiBackend compatibility façade.
  */
-export class ZoteroService {
+export interface ZoteroServicePort {
+	getStatus(): Promise<ZoteroStatus>;
+}
+
+export class ZoteroService implements ZoteroServicePort {
 	getStatus(): Promise<ZoteroStatus> {
 		return getZoteroStatus();
 	}

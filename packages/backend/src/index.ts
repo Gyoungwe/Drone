@@ -7,7 +7,7 @@ export {
 	type JsonStoreOptions,
 	type ReadResult,
 } from "./json-store";
-export { KnowledgeUiService } from "./knowledge/ui";
+export { KnowledgeUiService, type KnowledgeUiServicePort } from "./knowledge/ui";
 export { LanConfigService } from "./lan/config";
 export {
 	applyEvent as applyLanEvent,
@@ -97,7 +97,7 @@ export {
 export { PermissionSettingsService } from "./services/permissions";
 export { ProjectTrustService } from "./services/project-trust";
 export { SubagentService, type SubagentServicePort } from "./services/subagents";
-export { ZoteroService } from "./services/zotero";
+export { ZoteroService, type ZoteroServicePort } from "./services/zotero";
 export {
 	assignEntryIds,
 	blockImages,

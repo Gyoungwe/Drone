@@ -8,6 +8,7 @@ describe("createBackend", () => {
 		expect(services.sessions).toBeDefined();
 		expect(services.sessionEngine).toBe(services.sessions.sessionEngine);
 		expect(services.knowledge).toBe(services.sessions.knowledge);
+		expect(services.knowledge.overview).toBeTypeOf("function");
 		expect(services.packages).toBe(services.sessions.packages);
 		expect(services.settings).toBe(services.sessions.settings);
 		expect(services.settings.listProviders).toBeTypeOf("function");
