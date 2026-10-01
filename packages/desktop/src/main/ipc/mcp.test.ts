@@ -73,4 +73,16 @@ describe("registerMcpIpc", () => {
 		await mocks.handlers.get(IpcChannels.McpOpenConfig)!({}, undefined);
 		expect(mocks.openPath).toHaveBeenCalledWith(config.path);
 	});
+
+	it("uses the explicit MCP service for toggles", async () => {
+		const mcp = {
+			getStatus: vi.fn(() => status),
+			getConfig: vi.fn(async () => config),
+			setServerEnabled: vi.fn(async () => config),
+		};
+		const backend = { mcp } as any;
+		registerMcpIpc(backend, { mcp });
+		await mocks.handlers.get(IpcChannels.McpSetServerEnabled)!({}, "docs", true, undefined);
+		expect(mcp.setServerEnabled).toHaveBeenCalledWith("docs", true, undefined);
+	});
 });

@@ -9,9 +9,10 @@ export function registerMcpIpc(backend: PiBackend, services?: Pick<BackendServic
 	const implementation: ContractImplementation<typeof McpContract> = {
 		getStatus: (...args) => mcp.getStatus(args[0]),
 		getConfig: (...args) => mcp.getConfig(args[0]),
-		// Keep the façade adapter here until session reload ownership moves into
-		// the MCP service; this preserves /reload behavior after a toggle.
-		setServerEnabled: (...args) => backend.setMcpServerEnabled(args[0], args[1], args[2]),
+		setServerEnabled: (...args) =>
+			services
+				? mcp.setServerEnabled(args[0], args[1], args[2])
+				: backend.setMcpServerEnabled(args[0], args[1], args[2]),
 		openConfig: async (...args) => {
 			const config = await mcp.getConfig(args[0]);
 			await shell.openPath(config.path);

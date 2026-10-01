@@ -1,6 +1,6 @@
 import type { DroneRuntime } from "@drone/shared";
 import type { KnowledgeUiService } from "./knowledge/ui";
-import type { McpService } from "./mcp/service";
+import type { McpServicePort } from "./mcp/service";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
@@ -41,7 +41,7 @@ export interface BackendServices {
 	/** Interactive provider login service. */
 	login: LoginService;
 	/** MCP configuration and status service. */
-	mcp: McpService;
+	mcp: McpServicePort;
 	/** Durable permissions.json settings and rule-probe service. */
 	permissions: PermissionSettingsService;
 	/** Per-session permission approval registry and host event boundary. */

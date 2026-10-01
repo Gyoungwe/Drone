@@ -205,7 +205,7 @@ export class PiBackend {
 			reply: (requestId: string, message: string) => boolean;
 		}
 	>();
-	readonly mcp = new McpService();
+	readonly mcp: McpService;
 	/** Permission settings domain service exposed by the composition root. */
 	readonly permissions: PermissionSettingsService;
 	/** Approval registry and host event boundary exposed by the composition root. */
@@ -301,6 +301,7 @@ export class PiBackend {
 	constructor(private readonly options: PiBackendOptions = {}) {
 		this.runtime = options.runtime ?? createDroneRuntime();
 		this.permissions = options.permissions ?? new PermissionSettingsService();
+		this.mcp = new McpService({ onServerEnabled: (cwd) => this.reloadMcpSessions(cwd) });
 		this.approvals = new ApprovalService({
 			onDecision: (decision) => this.persistPermissionDecision(decision),
 		});
@@ -1069,10 +1070,9 @@ export class PiBackend {
 		return this.mcp.getConfig(cwd);
 	}
 
+	/** @deprecated 通过 BackendServices.mcp.setServerEnabled 使用。 */
 	async setMcpServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot> {
-		const snapshot = await this.mcp.setServerEnabled(name, enabled, cwd);
-		await this.reloadMcpSessions(cwd);
-		return snapshot;
+		return this.mcp.setServerEnabled(name, enabled, cwd);
 	}
 
 	/** MCP 配置变更后热重载同项目的空闲会话，对齐 CLI /reload。 */

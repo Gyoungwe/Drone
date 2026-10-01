@@ -19,7 +19,7 @@ export {
 } from "./lan/projector";
 export { type LanObserverBackend, LanObserverServer, type LanObserverServerOptions } from "./lan/server";
 export { createLogger, initLogging, type Logger } from "./log";
-export { McpService } from "./mcp/service";
+export { McpService, type McpServiceOptions, type McpServicePort } from "./mcp/service";
 export { fetchPackageCatalog, parseCatalogHtml } from "./packages/catalog";
 export {
 	createPermissionConfigLoader,
