@@ -14,9 +14,9 @@
 		"subagent-research": {
 			"source": "subagent-research.ts",
 			"output": "subagent-research.mjs",
-			"status": "legacy-preserved",
-			"sourceSha256": "39aa44b171ea83497b03c5588895cb82ef11cd53ebecb2f5bc5e8492dc019f5a",
-			"outputSha256": "b44d7886ae1b162337af010658418b169088a6e8c86fc9e8d8c56a53b0578583"
+			"status": "generated",
+			"sourceSha256": "c36ee2dada3758af32751a4c00f9155d6a5fc61737e5ca9f7f45d7ab902190e1",
+			"outputSha256": "d645108375cc4ebf2708db48ffe8724ae593cadb90764f6f0af109b65f3d76e8"
 		}
 	},
 	"legacyOutputs": [
@@ -26,7 +26,6 @@
 		"research-wikiskill.mjs",
 		"source-archive.mjs",
 		"subagent-mcp-readonly.mjs",
-		"subagent-research.mjs",
 		"workspace-config.mjs",
 		"zotero-literature.mjs"
 	]
