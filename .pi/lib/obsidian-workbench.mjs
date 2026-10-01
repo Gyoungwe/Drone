@@ -11,6 +11,7 @@ import { knowledgeDirectory, readKnowledgeBinding, saveKnowledgeBinding } from "
 import { initializeProjectContext, initializeSharedNavigation } from "./knowledge/layout.mjs";
 import { getKnowledgeService, notifyKnowledgeChange } from "./knowledge/service.mjs";
 import { normalizeSourceLinks, onlineSourceLink } from "./knowledge/source-links.mjs";
+import { runtimeSlot } from "./runtime-bridge.mjs";
 import { renderTemplate } from "./vault-layout.mjs";
 import { getVaultProfile, listVaultProfiles } from "./vault-profiles.mjs";
 
@@ -32,7 +33,12 @@ export const OBSIDIAN_READ_TOOLS = [
 const MANAGED_START = "<!-- pi-agent:managed:start -->";
 const MANAGED_END = "<!-- pi-agent:managed:end -->";
 const PROJECT_TEMPLATE = `---\ntype: project\nproject: "{{project_slug}}"\ntitle: {{project_title_yaml}}\ncreated_at: "{{created_at}}"\n---\n\n# {{project_title}}\n\n[[Home]] | [[Projects/Index]] | [[Library/Index]]\n\n## Research question\n\n## Goals\n\n## Next steps\n\n${MANAGED_START}\n{{project_content}}\n${MANAGED_END}\n\n## Human review\n\n`;
-const vaultUpdates = new Map();
+const runtimeState = runtimeSlot("knowledge", "obsidianWorkbench", () => ({
+	vaultUpdates: new Map(),
+	dispose() {
+		this.vaultUpdates.clear();
+	},
+}));
 
 function validateProject(project) {
 	if (
@@ -64,13 +70,13 @@ async function vaultPath(vault, ...parts) {
 // Serialize updates for one vault so parallel project creation cannot lose links.
 async function updateVault(cwd, operation) {
 	const vault = await configuredVault(cwd);
-	const previous = vaultUpdates.get(vault) || Promise.resolve();
+	const previous = runtimeState.vaultUpdates.get(vault) || Promise.resolve();
 	const next = previous.catch(() => {}).then(() => operation(vault));
-	vaultUpdates.set(vault, next);
+	runtimeState.vaultUpdates.set(vault, next);
 	try {
 		return await next;
 	} finally {
-		if (vaultUpdates.get(vault) === next) vaultUpdates.delete(vault);
+		if (runtimeState.vaultUpdates.get(vault) === next) runtimeState.vaultUpdates.delete(vault);
 	}
 }
 
