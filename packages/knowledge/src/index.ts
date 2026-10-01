@@ -84,6 +84,7 @@ export {
 	splitKnowledgeChunks,
 	tokenizeKnowledgeText,
 } from "./search-policy";
+export { embedTexts, validateSemanticConfig as validateSemanticProviderConfig } from "./semantic-provider";
 export {
 	createSemanticSettingsApi,
 	createSemanticSettingsState,

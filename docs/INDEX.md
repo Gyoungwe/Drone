@@ -299,3 +299,5 @@ src/
 - `.local/design/` — 设计稿：`ux/error-system/`（报错卡定稿，项目设计语言基准）、`ux/lan_observer/`、`ux/turn_diff/`、`components/center-status-anim/`、`icons/` 等
 - `.local/docs/research/` — 外部技术资料研究笔记
 - `.local/docs/INDEX-full-2026-08.md` — 本次精简前的完整版索引归档（含实现细节）
+
+`@drone/knowledge/semantic-provider` 承载语义 provider 配置验证、bounded request/response 与向量安全校验；宿主只负责凭据、同意和调度。
