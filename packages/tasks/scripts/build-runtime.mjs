@@ -1,8 +1,9 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
-const root = resolve(dirname(new URL(import.meta.url).pathname), "..");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = join(root, "src", "runtime");
 const output = join(root, "src", "runtime-compiled");
 await mkdir(output, { recursive: true });
