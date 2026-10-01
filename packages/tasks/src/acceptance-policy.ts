@@ -144,10 +144,7 @@ export function resetAcceptanceVerifiers(registry: AcceptanceRegistry): void {
 		if (!(CORE_FIELDS as readonly string[]).includes(field)) delete registry.properties[field];
 }
 
-export function acceptanceVerifier(
-	registry: AcceptanceRegistry,
-	kind: unknown,
-): AcceptanceVerifier | null {
+export function acceptanceVerifier(registry: AcceptanceRegistry, kind: unknown): AcceptanceVerifier | null {
 	return typeof kind === "string" ? registry.verifiers.get(kind) || null : null;
 }
 

@@ -65,7 +65,9 @@ describe("task acceptance policy", () => {
 
 	it("uses verifier labels and falls back safely when a label throws", () => {
 		const registry = createAcceptanceRegistry();
-		registerAcceptanceVerifier(registry, "lab_sample", { label: (acceptance) => `样本 ${acceptance.sampleId}` });
+		registerAcceptanceVerifier(registry, "lab_sample", {
+			label: (acceptance) => `样本 ${acceptance.sampleId}`,
+		});
 		expect(describeAcceptance(registry, { kind: "lab_sample", sampleId: "S-1" })).toBe("样本 S-1");
 		registerAcceptanceVerifier(registry, "broken_kind", {
 			label: () => {
