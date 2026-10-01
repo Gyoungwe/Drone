@@ -1,28 +1,35 @@
 // packages/extensions/src/research-wikiloop.ts
-import { randomUUID as randomUUID3 } from "node:crypto";
+
+// packages/knowledge/src/config.ts
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash, randomUUID, randomUUID as randomUUID3 } from "node:crypto";
 import {
 	appendFile,
+	mkdir,
 	mkdir as mkdir4,
 	readdir as readdir2,
+	readFile,
 	readFile as readFile4,
+	realpath,
 	realpath as realpath4,
+	rename,
 	rename as rename4,
+	writeFile,
 	writeFile as writeFile4,
 } from "node:fs/promises";
 import {
+	basename,
 	basename as basename3,
 	dirname as dirname3,
+	isAbsolute,
+	join,
 	join as join4,
 	relative as relative3,
+	resolve,
 	resolve as resolve4,
 	sep as sep3,
 } from "node:path";
 
-// packages/knowledge/src/config.ts
-import { AsyncLocalStorage } from "node:async_hooks";
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
-import { basename, isAbsolute, join, resolve } from "node:path";
 function createKnowledgeConfigState() {
 	return { local: new AsyncLocalStorage(), queues: /* @__PURE__ */ new Map() };
 }
@@ -86,6 +93,7 @@ var defaultState = createKnowledgeConfigState();
 
 // packages/extensions/src/internal/runtime.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
+
 var VERSION = 1;
 var RUNTIME_EVENT = "drone:runtime/v1";
 var RUNTIME_REQUEST_EVENT = "drone:runtime/request/v1";
@@ -207,6 +215,7 @@ import {
 	resolve as resolve2,
 	sep,
 } from "node:path";
+
 var VAULT_PROFILES = {
 	project: {
 		id: "project",
@@ -523,6 +532,7 @@ import {
 	resolve as resolve3,
 	sep as sep2,
 } from "node:path";
+
 var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 	resultsRoot: "./results",
 	obsidianVault: null,
@@ -976,10 +986,11 @@ function researchWikiLoop(pi) {
 Research Wiki loop: for substantive research, use research_wiki_navigate on the active project before broader local/Zotero/Web retrieval. Treat Wiki pages as navigation memory, never as final authority. After evidence is inspected and claims are supportable, the parent session may call research_wiki_build with traceable source_refs and the original research query. Inspect its retrieval feedback. If retrievable is false, improve the page title, links or concise evidence-bearing summary and retry at most twice. Never weaken evidence standards merely to improve Wiki retrieval. Child sessions never write the Wiki.`,
 	}));
 }
+
 export {
 	buildResearchWikiPage,
-	researchWikiLoop as default,
 	navigateResearchWiki,
 	queryTerms,
+	researchWikiLoop as default,
 	researchWikiStatus,
 };

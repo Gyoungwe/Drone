@@ -1,22 +1,95 @@
 // packages/extensions/src/workspace-config.ts
-import { randomUUID as randomUUID3 } from "node:crypto";
+
+// packages/knowledge/src/config.ts
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash, randomUUID, randomUUID as randomUUID3 } from "node:crypto";
 import {
 	access,
+	mkdir,
 	mkdir as mkdir3,
+	readFile,
 	readFile as readFile3,
+	realpath,
 	realpath as realpath3,
+	rename,
 	rename as rename3,
+	writeFile,
 	writeFile as writeFile3,
 } from "node:fs/promises";
 import {
+	basename,
 	dirname as dirname2,
+	isAbsolute,
 	isAbsolute as isAbsolute3,
+	join,
 	join as join3,
 	relative as relative2,
+	resolve,
 	resolve as resolve3,
 	sep as sep2,
 } from "node:path";
 import { pathToFileURL } from "node:url";
+
+function createKnowledgeConfigState() {
+	return { local: new AsyncLocalStorage(), queues: /* @__PURE__ */ new Map() };
+}
+function errorCode(error) {
+	return error && typeof error === "object" && "code" in error ? error.code : void 0;
+}
+function knowledgeDirectory() {
+	const value = process.env.DRONE_KNOWLEDGE_DIR;
+	if (!value) return null;
+	if (!isAbsolute(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
+	return resolve(value);
+}
+function projectIdentity(cwd, configured) {
+	if (typeof configured === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured)) return configured;
+	const path = resolve(cwd);
+	const stem =
+		basename(path)
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/^-|-$/g, "")
+			.slice(0, 40) || "project";
+	return `${stem}-${createHash("sha256").update(path).digest("hex").slice(0, 10)}`;
+}
+function validateBinding(value) {
+	if (
+		!value ||
+		typeof value !== "object" ||
+		Array.isArray(value) ||
+		value.version !== 1 ||
+		!isAbsolute(String(value.vault || "")) ||
+		!/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) ||
+		!Number.isSafeInteger(value.revision) ||
+		Number(value.revision) < 1 ||
+		!["project", "literature", "hybrid"].includes(String(value.profile)) ||
+		!["run-only", "verified", "rich"].includes(String(value.depositMode)) ||
+		!["none", "read-local"].includes(String(value.subagentPolicy)) ||
+		typeof value.updatedAt !== "string"
+	)
+		throw new Error("Invalid application knowledge binding; no project fallback was used");
+}
+async function readKnowledgeBindingWithState(state, { fresh = false } = {}) {
+	if (!fresh && state.local.getStore()) return state.local.getStore() ?? null;
+	const directory = knowledgeDirectory();
+	if (!directory) return null;
+	let value;
+	try {
+		value = JSON.parse((await readFile(join(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
+	} catch (error) {
+		if (errorCode(error) === "ENOENT") return null;
+		throw new Error(
+			`Knowledge binding cannot be read: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+	validateBinding(value);
+	return value;
+}
+async function readKnowledgeBinding(options = {}) {
+	return readKnowledgeBindingWithState(defaultState, options);
+}
+var defaultState = createKnowledgeConfigState();
 
 // packages/knowledge/src/flow-cards.ts
 var OK = /* @__PURE__ */ new Set([
@@ -86,72 +159,6 @@ function flowCard(input) {
 	};
 }
 
-// packages/knowledge/src/config.ts
-import { AsyncLocalStorage } from "node:async_hooks";
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
-import { basename, isAbsolute, join, resolve } from "node:path";
-function createKnowledgeConfigState() {
-	return { local: new AsyncLocalStorage(), queues: /* @__PURE__ */ new Map() };
-}
-function errorCode(error) {
-	return error && typeof error === "object" && "code" in error ? error.code : void 0;
-}
-function knowledgeDirectory() {
-	const value = process.env.DRONE_KNOWLEDGE_DIR;
-	if (!value) return null;
-	if (!isAbsolute(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
-	return resolve(value);
-}
-function projectIdentity(cwd, configured) {
-	if (typeof configured === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured)) return configured;
-	const path = resolve(cwd);
-	const stem =
-		basename(path)
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, "-")
-			.replace(/^-|-$/g, "")
-			.slice(0, 40) || "project";
-	return `${stem}-${createHash("sha256").update(path).digest("hex").slice(0, 10)}`;
-}
-function validateBinding(value) {
-	if (
-		!value ||
-		typeof value !== "object" ||
-		Array.isArray(value) ||
-		value.version !== 1 ||
-		!isAbsolute(String(value.vault || "")) ||
-		!/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) ||
-		!Number.isSafeInteger(value.revision) ||
-		Number(value.revision) < 1 ||
-		!["project", "literature", "hybrid"].includes(String(value.profile)) ||
-		!["run-only", "verified", "rich"].includes(String(value.depositMode)) ||
-		!["none", "read-local"].includes(String(value.subagentPolicy)) ||
-		typeof value.updatedAt !== "string"
-	)
-		throw new Error("Invalid application knowledge binding; no project fallback was used");
-}
-async function readKnowledgeBindingWithState(state, { fresh = false } = {}) {
-	if (!fresh && state.local.getStore()) return state.local.getStore() ?? null;
-	const directory = knowledgeDirectory();
-	if (!directory) return null;
-	let value;
-	try {
-		value = JSON.parse((await readFile(join(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
-	} catch (error) {
-		if (errorCode(error) === "ENOENT") return null;
-		throw new Error(
-			`Knowledge binding cannot be read: ${error instanceof Error ? error.message : String(error)}`,
-		);
-	}
-	validateBinding(value);
-	return value;
-}
-async function readKnowledgeBinding(options = {}) {
-	return readKnowledgeBindingWithState(defaultState, options);
-}
-var defaultState = createKnowledgeConfigState();
-
 // packages/extensions/src/internal/vault.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
 import {
@@ -175,6 +182,7 @@ import {
 	resolve as resolve2,
 	sep,
 } from "node:path";
+
 var VAULT_PROFILES = {
 	project: {
 		id: "project",
@@ -976,11 +984,12 @@ function registerWorkspaceConfig(pi, options = {}) {
 	});
 }
 var workspace_config_default = registerWorkspaceConfig;
+
 export {
 	DEFAULT_WORKSPACE_CONFIG,
-	workspace_config_default as default,
 	initializeVault,
 	loadWorkspaceConfig,
 	registerWorkspaceConfig,
 	saveWorkspaceConfig,
+	workspace_config_default as default,
 };

@@ -1,49 +1,51 @@
 // packages/extensions/src/research-wikiskill.ts
-import { spawn } from "node:child_process";
-import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
-import {
-	access as access2,
-	appendFile,
-	cp,
-	mkdir as mkdir3,
-	readdir,
-	readFile as readFile3,
-	rename as rename3,
-	writeFile as writeFile3,
-} from "node:fs/promises";
-import {
-	basename as basename2,
-	dirname as dirname2,
-	isAbsolute as isAbsolute3,
-	join as join3,
-	relative as relative2,
-	resolve as resolve3,
-	sep as sep2,
-} from "node:path";
-
-// packages/extensions/src/workspace-config.ts
-import {
-	access,
-	mkdir as mkdir2,
-	readFile as readFile2,
-	realpath as realpath2,
-	rename as rename2,
-	writeFile as writeFile2,
-} from "node:fs/promises";
-import {
-	dirname,
-	isAbsolute as isAbsolute2,
-	join as join2,
-	relative,
-	resolve as resolve2,
-	sep,
-} from "node:path";
 
 // packages/knowledge/src/config.ts
 import { AsyncLocalStorage } from "node:async_hooks";
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
-import { basename, isAbsolute, join, resolve } from "node:path";
+import { spawn } from "node:child_process";
+import { createHash, createHash as createHash2, randomUUID, randomUUID as randomUUID2 } from "node:crypto";
+// packages/extensions/src/workspace-config.ts
+import {
+	access,
+	access as access2,
+	appendFile,
+	cp,
+	mkdir,
+	mkdir as mkdir2,
+	mkdir as mkdir3,
+	readdir,
+	readFile,
+	readFile as readFile2,
+	readFile as readFile3,
+	realpath,
+	realpath as realpath2,
+	rename,
+	rename as rename2,
+	rename as rename3,
+	writeFile,
+	writeFile as writeFile2,
+	writeFile as writeFile3,
+} from "node:fs/promises";
+import {
+	basename,
+	basename as basename2,
+	dirname,
+	dirname as dirname2,
+	isAbsolute,
+	isAbsolute as isAbsolute2,
+	isAbsolute as isAbsolute3,
+	join,
+	join as join2,
+	join as join3,
+	relative,
+	relative as relative2,
+	resolve,
+	resolve as resolve2,
+	resolve as resolve3,
+	sep,
+	sep as sep2,
+} from "node:path";
+
 function createKnowledgeConfigState() {
 	return { local: new AsyncLocalStorage(), queues: /* @__PURE__ */ new Map() };
 }
@@ -960,12 +962,13 @@ function researchWikiSkill(pi) {
 WikiSkill evolution policy: the scientific knowledge path and the Skill-evolution Wiki are separate. During normal research, use Zotero/Obsidian/Web plus the evidence gate for factual claims; never cite WikiSkill patterns as scientific evidence. After a completed parent research run, compile only reusable observable process experience with research_wikiskill_record. When a pattern recurs or reveals a concrete workflow defect, stage one atomic update to research-workflow or research-vault with research_wikiskill_propose, then run research_wikiskill_gate. Never activate a proposal manually. A rejected candidate is discarded from the active Skill but its Wiki pattern and impact history persist. Do not store hidden chain-of-thought.`,
 	}));
 }
+
 export {
-	researchWikiSkill as default,
 	evaluateSkill,
 	gateWikiSkillProposal,
 	proposeWikiSkill,
 	recordWikiSkillExperience,
+	researchWikiSkill as default,
 	safetyChecks,
 	wikiSkillStatus,
 };

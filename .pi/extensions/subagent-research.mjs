@@ -1,9 +1,10 @@
 // packages/extensions/src/subagent-research.ts
-import { readFile } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 // packages/extensions/src/internal/runtime.ts
 import { AsyncLocalStorage } from "node:async_hooks";
+import { readFile } from "node:fs/promises";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
+
 var VERSION = 1;
 var RUNTIME_EVENT = "drone:runtime/v1";
 var RUNTIME_REQUEST_EVENT = "drone:runtime/request/v1";
@@ -216,9 +217,10 @@ function registerResearchSubagents(pi, options = {}) {
 	});
 }
 var subagent_research_default = registerResearchSubagents;
+
 export {
 	MAX_CONCURRENT_SUBAGENTS,
 	ROLE_MAP,
-	subagent_research_default as default,
 	registerResearchSubagents,
+	subagent_research_default as default,
 };
