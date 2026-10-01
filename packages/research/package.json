@@ -18,7 +18,8 @@
 		"./zotero-reconcile": "./src/zotero-reconcile.ts",
 		"./zotero-setup": "./src/zotero-setup.ts",
 		"./zotero-write": "./src/zotero-write.ts",
-		"./source-archive-policy": "./src/source-archive-policy.ts"
+		"./source-archive-policy": "./src/source-archive-policy.ts",
+		"./receipt-journal-policy": "./src/receipt-journal-policy.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

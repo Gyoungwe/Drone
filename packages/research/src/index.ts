@@ -53,6 +53,16 @@ export {
 	resolveOpenAccess,
 } from "./open-access";
 export {
+	CORE_RESEARCH_RECEIPT_TOOLS,
+	type CoreResearchReceiptTool,
+	ReceiptJournalBuffer,
+	type ReceiptJournalBufferOptions,
+	type ReceiptJournalSnapshot,
+	type ResearchReceiptEvent,
+	receiptBelongsToRun,
+	shouldRecordResearchReceipt,
+} from "./receipt-journal-policy";
+export {
 	type ExecutionReceiptInput,
 	observeExecutionReceipt,
 	type ProvenanceFileDeclaration,
