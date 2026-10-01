@@ -22,7 +22,8 @@
 		"./receipt-journal-policy": "./src/receipt-journal-policy.ts",
 		"./receipt-journal": "./src/receipt-journal.ts",
 		"./claim-bindings": "./src/claim-bindings.ts",
-		"./source-archive": "./src/source-archive.ts"
+		"./source-archive": "./src/source-archive.ts",
+		"./research-loop": "./src/research-loop.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

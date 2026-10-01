@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { resolveWriteRoots } from "@drone/tasks/consent";
 import { afterEach, expect, it, vi } from "vitest";
 import { readKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
-import { registerWorkbench } from "../../../.pi/lib/tasks/register.mjs";
-import { createTaskWorkbench, LIMITS, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
+import { registerWorkbench } from "@drone/tasks/register";
+import { createTaskWorkbench, LIMITS, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 
 vi.mock("../../../.pi/lib/knowledge/config.mjs", async (original) => ({
 	...(await original()),

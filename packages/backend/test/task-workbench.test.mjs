@@ -8,7 +8,7 @@ import {
 	inspectTaskFile,
 	LIMITS,
 	WORKBENCH_ENTRY,
-} from "../../../.pi/lib/tasks/workbench.mjs";
+} from "@drone/tasks/workbench";
 
 vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 });
 const dirs = [];

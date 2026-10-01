@@ -7,7 +7,7 @@ import {
 	createTaskJournal,
 	registerTaskRuntime,
 	TASK_ENTRY,
-} from "../../../.pi/lib/tasks/runtime.mjs";
+} from "@drone/tasks/runtime";
 
 let dirs = [];
 afterEach(async () => {

@@ -14,8 +14,8 @@ import {
 	normalizeAcceptance,
 	registerAcceptanceVerifier,
 	resetAcceptanceVerifiers,
-} from "../../../.pi/lib/tasks/acceptance.mjs";
-import { registerTaskRuntime } from "../../../.pi/lib/tasks/runtime.mjs";
+} from "@drone/tasks/acceptance";
+import { registerTaskRuntime } from "@drone/tasks/runtime";
 
 /** 只捕获 registerTool、其余 API 全部 no-op 的 pi 桩。 */
 function stubPi(tools = new Map()) {

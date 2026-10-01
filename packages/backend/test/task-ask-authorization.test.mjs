@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
-import { createTaskAuthorization } from "../../../.pi/lib/tasks/ask-authorization.mjs";
-import { createTaskWorkbench } from "../../../.pi/lib/tasks/workbench.mjs";
+import { createTaskAuthorization } from "@drone/tasks/ask-authorization";
+import { createTaskWorkbench } from "@drone/tasks/workbench";
 import { AskGate } from "../src/session/ask-gate";
 import { makeUiContext } from "../src/session/ui-context";
 

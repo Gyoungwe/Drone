@@ -161,3 +161,5 @@ export {
 	type ZoteroCreator,
 	type ZoteroWriteInput,
 } from "./zotero-write";
+
+export { createResearchLoop, RESEARCH_STAGES, type ResearchLoopPorts, type ResearchLoopWorkspace } from "./research-loop";

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { findZoteroItemsByIdentity } from "@drone/research/zotero-identity";
 import { lookupZoteroByDoi } from "@drone/research/zotero-reconcile";
 import { expect, it, vi } from "vitest";
-import { createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
+import { createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { createZoteroReconciler } from "../../../.pi/lib/zotero-reconcile.mjs";
 
 vi.setConfig({ testTimeout: 30000 });
