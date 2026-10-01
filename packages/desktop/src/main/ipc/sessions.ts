@@ -1,4 +1,4 @@
-import type { PiBackend } from "@drone/backend";
+import type { BackendServices, PiBackend } from "@drone/backend";
 import { IpcChannels, SessionsContract } from "@drone/shared";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
@@ -44,7 +44,8 @@ const CONTRACT_CHANNELS = {
  * Renderer method names and legacy channel names remain unchanged while
  * transport registration is kept behind the schema-backed binder.
  */
-export function registerSessionsIpc(backend: PiBackend): void {
+export function registerSessionsIpc(backendOrServices: PiBackend | BackendServices): void {
+	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
 	const implementation = Object.fromEntries(
 		(Object.keys(SessionsContract.methods) as SessionContractMethod[]).map((method) => {
 			const fn = backend[method as keyof PiBackend] as unknown;

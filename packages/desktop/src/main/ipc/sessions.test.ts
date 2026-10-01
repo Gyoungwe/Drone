@@ -74,4 +74,19 @@ describe("registerSessionsIpc", () => {
 		expect(invalid).toMatchObject({ code: "invalid_arguments", severity: "error" });
 		expect(createSession).not.toHaveBeenCalled();
 	});
+
+	it("accepts the composition root while preserving the legacy façade fallback", async () => {
+		const createSession = vi.fn(async () => ({
+			sessionId: "s2",
+			cwd: "/tmp/project",
+			active: true,
+			messageCount: 0,
+			createdAt: 2,
+		}));
+		const backend = backendForTests({ createSession });
+		registerSessionsIpc({ sessions: backend } as unknown as Parameters<typeof registerSessionsIpc>[0]);
+		const create = mocks.handlers.get(IpcChannels.SessionCreate)!;
+		expect(await create({}, { cwd: "/tmp/project" })).toMatchObject({ sessionId: "s2" });
+		expect(createSession).toHaveBeenCalledWith({ cwd: "/tmp/project" });
+	});
 });

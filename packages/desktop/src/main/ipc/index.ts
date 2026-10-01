@@ -50,7 +50,7 @@ export function registerIpc(
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
 	const hostServices =
 		services ?? ("sessions" in backendOrServices ? (backendOrServices as BackendServices) : undefined);
-	registerSessionsIpc(backend);
+	registerSessionsIpc(backendOrServices);
 	registerSettingsIpc(backend, hostServices);
 	registerMcpIpc(backend, hostServices);
 	registerPermissionSettingsIpc(backend);
