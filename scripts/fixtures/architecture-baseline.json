@@ -190,14 +190,8 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-semantic.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-semantic.test.mjs",
       "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/semantic-provider.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
     },
     {
       "rule": "R5",
