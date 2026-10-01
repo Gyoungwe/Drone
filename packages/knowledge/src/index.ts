@@ -160,3 +160,37 @@ export {
 	validateWikiSourcePaths,
 	type WikiProposalShape,
 } from "./wiki-policy";
+
+export {
+	TOPIC_MEMORY_LIMITS,
+	TOPIC_MEMORY_VERSION,
+	archiveTopic,
+	classifyTopic,
+	createTopicMemory,
+	listTopics,
+	readTopic,
+	topicRunHash,
+	updateTopic,
+} from "./topic-memory";
+export { runNavigationMaintenance, updateNavigation } from "./maintenance";
+export { configureKnowledgeRuntime } from "./runtime-host";
+
+export {
+	beginKnowledgeFlow,
+	clearKnowledgeFlow,
+	emitKnowledgeUi,
+	flowFor,
+	invalidateKnowledgeUi,
+	noteKnowledgeOperation,
+	noteKnowledgeRead,
+	noteKnowledgeSearch,
+	noteKnowledgeSpecialist,
+	publicationKnowledgeFlow,
+	subscribeKnowledgeUi,
+	updateKnowledgeFlow,
+} from "./ui-state";
+export {
+	projectKnowledgeEvent,
+	projectKnowledgeSnapshot,
+	registerAnswerPublication,
+} from "./publication";

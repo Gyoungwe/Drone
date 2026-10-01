@@ -23,7 +23,12 @@
 		"./semantic-provider": "./src/semantic-provider.ts",
 		"./files": "./src/files.ts",
 		"./layout": "./src/layout.ts",
-		"./wiki-policy": "./src/wiki-policy.ts"
+		"./wiki-policy": "./src/wiki-policy.ts",
+		"./topic-memory": "./src/topic-memory.ts",
+		"./maintenance": "./src/maintenance.ts",
+		"./runtime-host": "./src/runtime-host.ts",
+		"./ui-state": "./src/ui-state.ts",
+		"./publication": "./src/publication.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
