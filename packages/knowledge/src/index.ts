@@ -207,3 +207,14 @@ export {
 	wikiHistory,
 	validateWikiSourcePaths as validateRuntimeWikiSourcePaths,
 } from "./wiki-review";
+
+export {
+	SPECIALIST_LIMITS,
+	contextSessionId,
+	knowledgeSpecialistHost,
+	registerKnowledgeSpecialistHost,	
+	setSpecialistSettings,
+	specialistQueueSnapshot,
+	specialistSettings,	
+	withSpecialistSlot,
+} from "./specialist-host";
