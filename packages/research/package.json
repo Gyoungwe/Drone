@@ -19,7 +19,10 @@
 		"./zotero-setup": "./src/zotero-setup.ts",
 		"./zotero-write": "./src/zotero-write.ts",
 		"./source-archive-policy": "./src/source-archive-policy.ts",
-		"./receipt-journal-policy": "./src/receipt-journal-policy.ts"
+		"./receipt-journal-policy": "./src/receipt-journal-policy.ts",
+		"./receipt-journal": "./src/receipt-journal.ts",
+		"./claim-bindings": "./src/claim-bindings.ts",
+		"./source-archive": "./src/source-archive.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

@@ -1,5 +1,6 @@
-import { realpath } from "node:fs/promises";
-import { resolve } from "node:path";
+// Host adapter for the typed research receipt journal. Persistence, workspace
+// binding and runtime ownership stay in the Pi host; bounded buffering and
+// duplicate/run-scope policy live in @drone/research.
 import { loadWorkspaceConfig } from "../extensions/workspace-config.mjs";
 import {
 	flushResearchReceipts,
@@ -7,6 +8,7 @@ import {
 	resetResearchReceipts,
 	updateResearchLoop,
 } from "./research-loop.mjs";
+import { createResearchReceiptJournal as createTypedJournal } from "./research-receipt-core.mjs";
 import { observeExecutionReceipt } from "./run-provenance.mjs";
 import { runtimeSlot } from "./runtime-bridge.mjs";
 import { toolMeta } from "./tool-manifest.mjs";
@@ -17,127 +19,19 @@ const runtimeState = runtimeSlot("research", "receiptJournal", () => ({
 		this.owners.clear();
 	},
 }));
-// 核心执行 / 联网原语固定记账；扩展工具经 drone.journal 声明加入（挂钩 1）。
-// These first-party evidence tools can be loaded by a different extension
-// graph than research-loop. Keep their journal contract explicit so host
-// runtime isolation does not make receipt capture depend on registration order.
-const CORE_TOOLS = new Set([
-	"bash",
-	"powershell",
-	"webfetch",
-	"fetch_content",
-	"web_search",
-	"research_read_knowledge",
-	"research_search_knowledge",
-	"research_verify_literature",
-	"research_reconcile_literature",
-	"research_archive_source",
-]);
-const TOOLS = { has: (name) => CORE_TOOLS.has(name) || toolMeta(name)?.journal === true };
 
-// One journal per host session/agent turn. Never exposed as model tool parameters.
 export function createResearchReceiptJournal(cwd, { sessionId = null } = {}) {
-	const owner = Symbol("research-turn");
-	const belongsTo = (receipt, runDir) => {
-		const ownedRun = receipt.args?.run_dir || receipt.details?.run_dir;
-		return !ownedRun || resolve(cwd, ownedRun) === resolve(cwd, runDir);
-	};
-	let active = true,
-		tail = Promise.resolve(),
-		currentRun;
-	const receipts = [],
-		runs = new Set(),
-		seen = new Set();
-	let evicted = 0;
-	const serial = (work) => {
-		const next = tail.catch(() => {}).then(() => (active ? work() : null));
-		tail = next;
-		return next;
-	};
-	const attach = async (runDir) => {
-		if (!runDir) return;
-		const status = await updateResearchLoop({ cwd, runDir, action: "status" });
-		const path = status.run_dir;
-		if (runtimeState.owners.has(path) && runtimeState.owners.get(path) !== owner)
-			throw new Error("Research run is owned by another active session/turn; create a separate run");
-		if (!runs.has(path)) {
-			runtimeState.owners.set(path, owner);
-			await flushResearchReceipts({ cwd, runDir: path });
-			resetResearchReceipts({ cwd, runDir: path });
-			runs.add(path);
-			for (const receipt of receipts) {
-				// Archive/deposit receipts with a run owner cannot migrate to another run.
-				if (!belongsTo(receipt, path)) continue;
-				await observeExecutionReceipt({ ...receipt, cwd, runDir: path });
-				await observeResearchReceipt({ ...receipt, cwd, runDir: path });
-			}
-		}
-		currentRun = path;
-	};
-	return {
-		currentRun: () => currentRun,
-		record(event) {
-			if (
-				!active ||
-				(event.isError && !["bash", "powershell"].includes(event.toolName)) ||
-				!TOOLS.has(event.toolName)
-			)
-				return Promise.resolve(null);
-			// Start snapshot capture now, not when a later run replays the receipt.
-			const snapshot =
-				event.toolName === "research_read_knowledge"
-					? loadWorkspaceConfig(cwd)
-							.then(async (config) => ({
-								vault: config.obsidianVault ? await realpath(config.obsidianVault) : null,
-								revision: config.knowledgeBindingRevision || 0,
-							}))
-							.catch(() => ({ vault: null, revision: -1 }))
-					: Promise.resolve(undefined);
-			const receipt = { ...structuredClone(event), sessionId, observedAt: new Date().toISOString() };
-			return serial(async () => {
-				if (receipt.toolCallId && seen.has(receipt.toolCallId)) return null;
-				if (receipt.toolCallId) seen.add(receipt.toolCallId);
-				receipt.readBinding = await snapshot;
-				if (receipts.length >= 256) {
-					receipts.shift();
-					evicted++;
-				}
-				receipts.push(receipt);
-				if (currentRun && belongsTo(receipt, currentRun)) {
-					await observeExecutionReceipt({ ...receipt, cwd, runDir: currentRun });
-					return observeResearchReceipt({ ...receipt, cwd, runDir: currentRun });
-				}
-				return null;
-			});
+	return createTypedJournal(cwd, {
+		sessionId,
+		ports: {
+			workspace: loadWorkspaceConfig,
+			status: async (workspace, runDir) => updateResearchLoop({ cwd: workspace, runDir, action: "status" }),
+			flush: async (workspace, runDir) => flushResearchReceipts({ cwd: workspace, runDir }),
+			reset: (workspace, runDir) => resetResearchReceipts({ cwd: workspace, runDir }),
+			observeExecution: (event) => observeExecutionReceipt(event),
+			observeResearch: (event) => observeResearchReceipt(event),
+			isJournalTool: (name) => toolMeta(name)?.journal === true,
+			owners: runtimeState.owners,
 		},
-		execute(runDir, work) {
-			return serial(async () => {
-				if (runDir) await attach(runDir);
-				const result = await work();
-				if (result.run_dir) await attach(result.run_dir);
-				const refreshed = result.run_dir
-					? await updateResearchLoop({ cwd, runDir: result.run_dir, action: "status" })
-					: result;
-				return {
-					...result,
-					...refreshed,
-					receipt_journal: { scope: "current-session-current-turn", buffered: receipts.length, evicted },
-				};
-			});
-		},
-		async close() {
-			active = false;
-			await tail.catch(() => {});
-			for (const runDir of runs) {
-				await flushResearchReceipts({ cwd, runDir });
-				if (runtimeState.owners.get(runDir) === owner) {
-					resetResearchReceipts({ cwd, runDir });
-					runtimeState.owners.delete(runDir);
-				}
-			}
-			runs.clear();
-			receipts.length = 0;
-			seen.clear();
-		},
-	};
+	});
 }

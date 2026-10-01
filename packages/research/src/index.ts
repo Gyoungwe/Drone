@@ -1,4 +1,13 @@
 export {
+	CLAIM_BINDING_SCHEMA,
+	type ClaimBinding,
+	type ClaimBindingSource,
+	type ClaimReadRecord,
+	type ClaimSourceRecord,
+	claimBindingRefs,
+	validateClaimBindings,
+} from "./claim-bindings";
+export {
 	assertEvidenceAnswerable,
 	createEvidenceGate,
 	EVIDENCE_STAGES,
@@ -53,6 +62,11 @@ export {
 	resolveOpenAccess,
 } from "./open-access";
 export {
+	createResearchReceiptJournal,
+	type ResearchJournalPorts,
+	type ResearchJournalWorkspace,
+} from "./receipt-journal";
+export {
 	CORE_RESEARCH_RECEIPT_TOOLS,
 	type CoreResearchReceiptTool,
 	ReceiptJournalBuffer,
@@ -74,6 +88,12 @@ export {
 	type WorkspaceConfig,
 	type WorkspaceConfigLoader,
 } from "./run-provenance";
+export {
+	archiveSource,
+	type SourceArchivePorts,
+	type SourceArchiveWorkspace,
+	sourceStatus,
+} from "./source-archive";
 export {
 	type ContentValidation,
 	DEFAULT_MAX_BYTES,
