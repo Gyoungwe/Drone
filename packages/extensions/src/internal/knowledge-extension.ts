@@ -1,29 +1,29 @@
 // @ts-nocheck
 import { join, resolve } from "node:path";
-import { publishExplainer } from "../obsidian-workbench.mjs";
-import { deliveryContract } from "../source-delivery.mjs";
-import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "../tasks/acceptance.mjs";
-import { registerTaskRuntime } from "../tasks/runtime.mjs";
-import { registerTool } from "../tool-manifest.mjs";
-import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
+import { publishExplainer } from "./obsidian-workbench";
+import { deliveryContract } from "@drone/research/source-delivery";
+import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "@drone/tasks/acceptance";
+import { registerTaskRuntime } from "@drone/tasks/runtime";
+import { registerTool } from "@drone/tasks/tool-manifest-runtime";
+import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "@drone/knowledge/config";
 import {
 	continuesTopic,
 	currentProject,
 	explainerTopicId,
 	result,
 	sessionIdentity,
-} from "./extension-helpers.mjs";
-import { cardLink, flowCard } from "./flow-cards.mjs";
-import { runNavigationMaintenance } from "./maintenance.mjs";
-import { registerAnswerPublication } from "./publication.mjs";
-import { readReviewMode } from "./review-policy.mjs";
-import { getKnowledgeService } from "./service.mjs";
-import { saveSpecialistExplainer } from "./specialist-delivery.mjs";
-import { createKnowledgeSpecialists } from "./specialists.mjs";
-import { createTaskFeedback, guardResearchToolResult } from "./task-feedback.mjs";
-import { createToolBudget } from "./tool-budget.mjs";
-import { autoTopicCandidate } from "./topic-candidate.mjs";
-import { createTopicMemory, topicRunHash } from "./topic-memory.mjs";
+} from "@drone/knowledge/extension-helpers";
+import { cardLink, flowCard } from "@drone/knowledge/flow-cards";
+import { runNavigationMaintenance } from "@drone/knowledge/maintenance";
+import { registerAnswerPublication } from "@drone/knowledge/publication";
+import { readReviewMode } from "@drone/knowledge/review-policy";
+import { getKnowledgeService } from "@drone/knowledge/service";
+import { saveSpecialistExplainer } from "@drone/knowledge/specialist-delivery";
+import { createKnowledgeSpecialists } from "@drone/knowledge/specialists";
+import { createTaskFeedback, guardResearchToolResult } from "@drone/knowledge/task-feedback";
+import { createToolBudget } from "@drone/knowledge/tool-budget";
+import { autoTopicCandidate } from "@drone/knowledge/topic-candidate";
+import { createTopicMemory, topicRunHash } from "@drone/knowledge/topic-memory";
 import {
 	beginKnowledgeFlow,
 	invalidateKnowledgeUi,
@@ -33,14 +33,14 @@ import {
 	notifyKnowledgeUi,
 	requestWikiReviewUi,
 	updateKnowledgeFlow,
-} from "./ui-state.mjs";
+} from "@drone/knowledge/ui-state";
 import {
 	decideWikiProposal,
 	listWikiProposals,
 	mergeWikiProposal,
 	previewWikiProposal,
 	stageWikiProposal,
-} from "./wiki-review.mjs";
+} from "@drone/knowledge/wiki-review";
 
 /**
  * wiki_review 里程碑验收（挂钩 2）：research_propose_wiki_update 产生的候选是「待外部审阅的对象」，

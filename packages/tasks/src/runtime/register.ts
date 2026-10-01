@@ -19,7 +19,10 @@ import { restoreTaskToolOrder } from "./tool-protocol";
 import { shouldAskToContinue } from "./turn-end-prompt";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench";
 
-export function registerWorkbench(pi: any) {
+export function registerWorkbench(
+	pi: any,
+	options: { readKnowledgeBinding?: () => Promise<{ vaultId: string; revision: number } | null> } = {},
+) {
 	let context: any,
 		prepared = false,
 		awaitingUser = false,
@@ -82,8 +85,10 @@ export function registerWorkbench(pi: any) {
 		journal.attach(scope, ctx.sessionManager?.getBranch?.() || [], force);
 		evidence.attach(scope, journal.snapshot()?.id, ctx.sessionManager?.getBranch?.() || [], force);
 	};
+	const readKnowledgeBinding =
+		options.readKnowledgeBinding || (() => pi?.drone?.readKnowledgeBinding?.() || null);
 	const bindingKey = async () => {
-		const b = await pi?.drone?.readKnowledgeBinding?.();
+		const b = await readKnowledgeBinding();
 		return b ? `${b.vaultId}:${b.revision}` : null;
 	};
 	// Status messages enter history only after the complete SDK tool batch is appended.

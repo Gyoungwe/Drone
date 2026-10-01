@@ -27,7 +27,6 @@ const normalize = (value: unknown): string =>
 	String(value ?? "")
 		.normalize("NFKC")
 		.toLowerCase()
-		// biome-ignore lint/suspicious/noControlCharactersInRegex: strip control bytes from untrusted claim text
 		.replace(/[\u0000-\u001f\u007f]/g, " ")
 		.replace(/[^\p{L}\p{N}]+/gu, " ")
 		.trim();

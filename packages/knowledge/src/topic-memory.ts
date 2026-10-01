@@ -27,7 +27,6 @@ const digest = (value) => createHash("sha256").update(String(value)).digest("hex
 const text = (value, limit) =>
 	String(value ?? "")
 		.normalize("NFKC")
-		// biome-ignore lint/suspicious/noControlCharactersInRegex: strip control bytes from untrusted metadata
 		.replace(/[\u0000-\u001f\u007f]/g, " ")
 		.trim()
 		.slice(0, limit);

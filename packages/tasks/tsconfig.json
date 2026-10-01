@@ -3,16 +3,11 @@
 	"compilerOptions": {
 		"noEmit": true,
 		"declaration": false,
-		"types": [
-			"node"
-		],
+		"types": ["node"],
 		"strict": false,
 		"noImplicitAny": false,
 		"noUncheckedIndexedAccess": false,
 		"useUnknownInCatchVariables": false
 	},
-	"include": [
-		"src/**/*.ts",
-		"test/**/*.ts"
-	]
+	"include": ["src/**/*.ts", "test/**/*.ts"]
 }

@@ -34,7 +34,8 @@
 		"build:research": "node scripts/build-research-runtime.mjs",
 		"check:extensions": "node scripts/check-extensions-build.mjs",
 		"generate:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs",
-		"check:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs --check"
+		"check:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs --check",
+		"build:tasks": "npm run build:runtime -w @drone/tasks && node scripts/build-task-runtime.mjs"
 	},
 	"engines": {
 		"node": ">=22.19"

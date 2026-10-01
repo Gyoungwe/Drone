@@ -7,6 +7,7 @@ const outputDir = resolve(root, ".pi/lib");
 const entries = {
 	"open-access": "packages/research/src/open-access.ts",
 	"literature-receipt": "packages/research/src/literature-receipt.ts",
+	"literature-operations-core": "packages/research/src/literature-operations.ts",
 	"evidence-gate": "packages/research/src/evidence-gate.ts",
 	"run-provenance": "packages/research/src/run-provenance.ts",
 	"source-delivery": "packages/research/src/source-delivery.ts",

@@ -404,7 +404,8 @@ function createResearchLoop(ports) {
   }
   async function ensureStage(cwd, runDir, stage, fill) {
     const current = await updateResearchLoop({ cwd, runDir, action: "status" });
-    if (RESEARCH_STAGES.indexOf(current.evidence_gate.stage) >= RESEARCH_STAGES.indexOf(stage)) return current;
+    if (RESEARCH_STAGES.indexOf(current.evidence_gate.stage) >= RESEARCH_STAGES.indexOf(stage))
+      return current;
     return fill();
   }
   async function completeResearchGate({
@@ -429,7 +430,13 @@ function createResearchLoop(ports) {
     if (!refs.length && !claimBindings.length)
       throw new Error("claim_refs must contain at least one traceable claim binding");
     if (claimBindings.length || RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("claims_bound"))
-      status = await updateResearchLoop({ cwd, runDir, action: "bind_claims", claimRefs: refs, claimBindings });
+      status = await updateResearchLoop({
+        cwd,
+        runDir,
+        action: "bind_claims",
+        claimRefs: refs,
+        claimBindings
+      });
     gate = status.evidence_gate;
     if (gate.stage !== "answerable") status = await updateResearchLoop({ cwd, runDir, action: "finalize" });
     return status;
@@ -573,7 +580,16 @@ function createResearchLoop(ports) {
       return null;
     }
   }
-  return { startResearchRun, updateResearchLoop, completeResearchGate, observeResearchReceipt, flushResearchReceipts, resetResearchReceipts, topicIdFromResultSlug, dispose: () => runtimeState.dispose() };
+  return {
+    startResearchRun,
+    updateResearchLoop,
+    completeResearchGate,
+    observeResearchReceipt,
+    flushResearchReceipts,
+    resetResearchReceipts,
+    topicIdFromResultSlug,
+    dispose: () => runtimeState.dispose()
+  };
 }
 export {
   RESEARCH_STAGES,

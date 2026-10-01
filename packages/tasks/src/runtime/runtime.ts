@@ -221,8 +221,8 @@ export function createTaskJournal({ persist = () => {}, now = () => new Date().t
 	};
 }
 
-export function registerTaskRuntime(pi) {
-	if (process.env.DRONE_TASK_WORKBENCH !== "off") return registerWorkbench(pi);
+export function registerTaskRuntime(pi, options = {}) {
+	if (process.env.DRONE_TASK_WORKBENCH !== "off") return registerWorkbench(pi, options);
 	const journal = createTaskJournal({ persist: (snapshot) => pi.appendEntry?.(TASK_ENTRY, snapshot) });
 	const attach = (ctx, force = false) => {
 		const id = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated";

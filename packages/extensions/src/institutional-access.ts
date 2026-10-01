@@ -37,6 +37,47 @@ function session(): any | null {
 	}
 }
 
+/** Host ports used by research source archive; Electron never enters @drone/research. */
+export function isElectronAvailable(): boolean {
+	return Boolean(electron());
+}
+
+export function getInstitutionalSession(): any | null {
+	return session();
+}
+
+export async function institutionalFetch(url: string, options: Record<string, any> = {}): Promise<Record<string, any>> {
+	const loaded = electron();
+	if (!loaded) throw new Error("Electron session unavailable");
+	const sess = session();
+	const timeoutMs = options.timeoutMs ?? 30_000;
+	const fetchFn = loaded.net?.fetch || globalThis.fetch;
+	if (typeof fetchFn !== "function") throw new Error("fetch unavailable");
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	try {
+		const response = await fetchFn(url, {
+			method: "GET",
+			headers: options.headers,
+			signal: controller.signal,
+			session: sess,
+		});
+		const headers: Record<string, string> = {};
+		response.headers.forEach((value: string, key: string) => {
+			headers[key.toLowerCase()] = value;
+		});
+		return {
+			status: response.status,
+			headers,
+			body: new Uint8Array(await response.arrayBuffer()),
+			finalUrl: response.url || url,
+			response,
+		};
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
 function openWindow(url: string): { url: string } {
 	const loaded = electron();
 	if (!loaded?.BrowserWindow) throw new Error("Electron unavailable");

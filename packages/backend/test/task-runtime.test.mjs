@@ -1,13 +1,8 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { continuesTask, createTaskJournal, registerTaskRuntime, TASK_ENTRY } from "@drone/tasks/runtime";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-	continuesTask,
-	createTaskJournal,
-	registerTaskRuntime,
-	TASK_ENTRY,
-} from "@drone/tasks/runtime";
 
 let dirs = [];
 afterEach(async () => {

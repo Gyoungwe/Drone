@@ -3,6 +3,7 @@ import { createResearchReceiptJournal } from "@drone/research/receipt-journal";
 import { createResearchLoop, type ResearchLoopPorts } from "@drone/research/research-loop";
 import { observeExecutionReceipt } from "@drone/research/run-provenance";
 import { sourceStatus as typedSourceStatus } from "@drone/research/source-archive";
+import { registerTool } from "@drone/tasks/tool-manifest-runtime";
 import { bindExtensionRuntime, runExtensionExclusive } from "./internal/runtime";
 import { loadWorkspaceConfig } from "./workspace-config";
 
@@ -54,11 +55,10 @@ export default function researchLoop(pi: Pi): void {
 		workspace: async (cwd) => (await loadWorkspaceConfig(cwd)) as any,
 		verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input as any),
 		sourceStatus: async ({ cwd, run_dir }) => {
-			const workspace: any = await loadWorkspaceConfig(cwd);
 			return typedSourceStatus(
 				{ cwd, run_dir },
 				{
-					workspace,
+					workspace: async (workspaceCwd) => (await loadWorkspaceConfig(workspaceCwd)) as any,
 					publishSourceNote: async () => ({}),
 					exclusive: (key, work) => runExtensionExclusive(pi, key, work),
 				},
@@ -86,7 +86,7 @@ export default function researchLoop(pi: Pi): void {
 		}
 		return journal;
 	};
-	pi.registerTool({
+	registerTool(pi, {
 		name: "research_loop",
 		label: "Research evidence loop",
 		drone: {

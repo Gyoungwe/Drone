@@ -18,7 +18,7 @@ import { singleFlightCommand } from "./single-flight.mjs";
 import { restoreTaskToolOrder } from "./tool-protocol.mjs";
 import { shouldAskToContinue } from "./turn-end-prompt.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
-function registerWorkbench(pi) {
+function registerWorkbench(pi, options = {}) {
   let context, prepared = false, awaitingUser = false, halted = false;
   let pendingStatus = null;
   let providerTurnOpen = false;
@@ -74,8 +74,9 @@ function registerWorkbench(pi) {
     journal.attach(scope, ctx.sessionManager?.getBranch?.() || [], force);
     evidence.attach(scope, journal.snapshot()?.id, ctx.sessionManager?.getBranch?.() || [], force);
   };
+  const readKnowledgeBinding = options.readKnowledgeBinding || (() => pi?.drone?.readKnowledgeBinding?.() || null);
   const bindingKey = async () => {
-    const b = await pi?.drone?.readKnowledgeBinding?.();
+    const b = await readKnowledgeBinding();
     return b ? `${b.vaultId}:${b.revision}` : null;
   };
   const send = (content = journal.render()) => {

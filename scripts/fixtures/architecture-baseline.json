@@ -477,63 +477,15 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/task-acceptance-binding.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/acceptance.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-acceptance-binding.test.mjs",
-      "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/ask-authorization.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-acceptance-binding.test.mjs",
-      "line": 8,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/remaining.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-acceptance-binding.test.mjs",
-      "line": 9,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/task-acceptance-registry.test.mjs",
-      "line": 5,
+      "line": 17,
       "detail": "relative .pi path ../../../.pi/extensions/zotero-literature.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/task-acceptance-registry.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-acceptance-registry.test.mjs",
-      "line": 17,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/acceptance.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-acceptance-registry.test.mjs",
       "line": 18,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/runtime.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-ask-authorization.test.mjs",
-      "line": 2,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/ask-authorization.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-ask-authorization.test.mjs",
-      "line": 3,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
     },
     {
       "rule": "R5",
@@ -543,33 +495,9 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/task-consent.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-consent.test.mjs",
-      "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/register.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-consent.test.mjs",
-      "line": 8,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/task-failure-feedback-sdk.test.mjs",
       "line": 7,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-failure-feedback.test.mjs",
-      "line": 12,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
     },
     {
       "rule": "R5",
@@ -585,18 +513,6 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/task-one-authorization-flow.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/remaining.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-one-authorization-flow.test.mjs",
-      "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/task-progress-entry-sdk.test.mjs",
       "line": 7,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
@@ -609,45 +525,9 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/task-progress.test.mjs",
-      "line": 3,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/ask-authorization.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-progress.test.mjs",
-      "line": 4,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/progress-action.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-progress.test.mjs",
-      "line": 5,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-reconciliation.test.mjs",
-      "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/task-reconciliation.test.mjs",
       "line": 8,
       "detail": "relative .pi path ../../../.pi/lib/zotero-reconcile.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-runtime.test.mjs",
-      "line": 10,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/runtime.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/task-workbench.test.mjs",
-      "line": 11,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
     },
     {
       "rule": "R5",

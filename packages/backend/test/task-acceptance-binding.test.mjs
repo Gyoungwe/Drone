@@ -1,4 +1,3 @@
-import { afterEach, expect, it, vi } from "vitest";
 import {
 	effectiveAcceptance,
 	registerAcceptanceVerifier,
@@ -7,6 +6,7 @@ import {
 import { createTaskAuthorization } from "@drone/tasks/ask-authorization";
 import { remainingExplanation } from "@drone/tasks/remaining-runtime";
 import { createTaskWorkbench } from "@drone/tasks/workbench";
+import { afterEach, expect, it, vi } from "vitest";
 
 vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 });
 afterEach(() => resetAcceptanceVerifiers());

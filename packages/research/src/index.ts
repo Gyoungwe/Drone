@@ -19,6 +19,18 @@ export {
 	type EvidenceStage,
 } from "./evidence-gate";
 export {
+	detectAndSaveTemplateFromUrl,
+	emptyInstitutionalConfig,
+	INSTITUTIONAL_AGENT_DIR,
+	INSTITUTIONAL_CONFIG_NAME,
+	INSTITUTIONAL_CONFIG_PATH,
+	type InstitutionalConfig,
+	type InstitutionalConfigIo,
+	loadInstitutionalConfig,
+	normalizeInstitutionalConfig,
+	saveInstitutionalConfig,
+} from "./institutional-access";
+export {
 	buildProxiedUrl,
 	inferEzproxyTemplateFromUrl,
 } from "./institutional-proxy";
@@ -76,6 +88,12 @@ export {
 	receiptBelongsToRun,
 	shouldRecordResearchReceipt,
 } from "./receipt-journal-policy";
+export {
+	createResearchLoop,
+	RESEARCH_STAGES,
+	type ResearchLoopPorts,
+	type ResearchLoopWorkspace,
+} from "./research-loop";
 export {
 	type ExecutionReceiptInput,
 	observeExecutionReceipt,
@@ -137,6 +155,11 @@ export {
 	type ZoteroReconcileExpectation,
 } from "./zotero-reconcile";
 export {
+	createCompositeZoteroReconciler,
+	createLocalZoteroReconciler,
+	createZoteroReconciler,
+} from "./zotero-reconcile-runtime";
+export {
 	mergeZoteroMcpConfig,
 	readZoteroMcpConfig,
 	remainingZoteroSetupSteps,
@@ -145,6 +168,18 @@ export {
 	type ZoteroSetupStatus,
 	zoteroMcpSpec,
 } from "./zotero-setup";
+export {
+	bootstrapZotero,
+	inspectZotero,
+	installUv,
+	installZoteroMcp,
+	probeZoteroLocalApi,
+	readZoteroMcp,
+	registerZoteroMcp,
+	resolveInstallers,
+	resolveZoteroCommands,
+	setupZoteroAgentMessage,
+} from "./zotero-setup-runtime";
 export {
 	type ConnectorZoteroItem,
 	connectorTargetId,
@@ -161,5 +196,17 @@ export {
 	type ZoteroCreator,
 	type ZoteroWriteInput,
 } from "./zotero-write";
-
-export { createResearchLoop, RESEARCH_STAGES, type ResearchLoopPorts, type ResearchLoopWorkspace } from "./research-loop";
+export {
+	connectorSaveTarget,
+	executeZoteroSave,
+	localApiChildren,
+	localApiSearchByDoi,
+	prepareZoteroSave,
+	probeZoteroConnector,
+	receiptWithoutWrite,
+	webChildren,
+	webCreateItems,
+	webKeyAccess,
+	webSearchByDoi,
+	zoteroWebApiConfig,
+} from "./zotero-write-runtime";

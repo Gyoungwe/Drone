@@ -2,13 +2,8 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createEvidenceRecovery } from "@drone/tasks/evidence";
+import { createTaskWorkbench, inspectTaskFile, LIMITS, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-	createTaskWorkbench,
-	inspectTaskFile,
-	LIMITS,
-	WORKBENCH_ENTRY,
-} from "@drone/tasks/workbench";
 
 vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 });
 const dirs = [];

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // packages/extensions/src/institutional-access.ts
 import { createRequire } from "node:module";
 
@@ -155,6 +156,43 @@ function session() {
     return null;
   }
 }
+function isElectronAvailable() {
+  return Boolean(electron());
+}
+function getInstitutionalSession() {
+  return session();
+}
+async function institutionalFetch(url, options = {}) {
+  const loaded = electron();
+  if (!loaded) throw new Error("Electron session unavailable");
+  const sess = session();
+  const timeoutMs = options.timeoutMs ?? 3e4;
+  const fetchFn = loaded.net?.fetch || globalThis.fetch;
+  if (typeof fetchFn !== "function") throw new Error("fetch unavailable");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchFn(url, {
+      method: "GET",
+      headers: options.headers,
+      signal: controller.signal,
+      session: sess
+    });
+    const headers = {};
+    response.headers.forEach((value, key) => {
+      headers[key.toLowerCase()] = value;
+    });
+    return {
+      status: response.status,
+      headers,
+      body: new Uint8Array(await response.arrayBuffer()),
+      finalUrl: response.url || url,
+      response
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 function openWindow(url) {
   const loaded = electron();
   if (!loaded?.BrowserWindow) throw new Error("Electron unavailable");
@@ -265,5 +303,8 @@ function institutionalAccess(pi) {
   });
 }
 export {
-  institutionalAccess as default
+  institutionalAccess as default,
+  getInstitutionalSession,
+  institutionalFetch,
+  isElectronAvailable
 };

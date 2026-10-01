@@ -17,7 +17,7 @@
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 
-`.pi/tsconfig.json` 开启 `allowJs` + `checkJs`；当前已覆盖 `.pi/lib/knowledge/**/*.mjs` 与 `.pi/lib/tasks/**/*.mjs`，根 `npm run typecheck` 会串接 `npm run check:pi`。
+`.pi/tsconfig.json` 开启 `allowJs` + `checkJs`；当前覆盖兼容入口与任务/知识运行时，生成的 `.pi/lib/knowledge/runtime/**/*.mjs` 明确排除在检查图之外（源代码由领域包 typecheck 覆盖），根 `npm run typecheck` 会串接 `npm run check:pi`。
 
 任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
 
@@ -95,20 +95,20 @@ packages/
 
 ## packages/knowledge — 知识领域包（迁移中）
 
-`@drone/knowledge` 目前承载无 SDK 依赖的策略与安全文件合约：`src/files.ts` 提供 Vault 相对路径校验、软链接拒绝、稳定读取与 bounded snippet，`src/layout.ts` 提供共享导航与项目上下文初始化、create-only 文件保护和 managed block 更新，`src/wiki-policy.ts` 提供 Wiki 目标/来源、managed block、静态 explainer 与 proposal hash 约束，`src/config.ts` 提供应用知识绑定，`src/semantic-provider.ts` 提供向量 provider 边界；同时保留 claim 冲突比较、specialist 编排、review policy、source links、tool budget 与 topic candidate 合约。运行时仍从 `.pi/lib/knowledge/*` 加载兼容实现；service、worker、maintenance 与 specialist host 按 A5-1 分阶段迁移。
+`@drone/knowledge` 的 canonical runtime source 位于 `src/`：`files.ts`、`layout.ts`、`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts`、`wiki-review.ts` 以及各项 policy/provider 合约；根 `scripts/build-knowledge-runtime.mjs` 生成 `.pi/lib/knowledge/runtime/` worker/runtime 产物。`.pi/lib/knowledge/*` 保留为宿主兼容适配层，跨 bundle 的 UI、验收器与 host ports 仍由它桥接。
 
 ## packages/tasks — 任务领域包（迁移中）
 
-`@drone/tasks` 目前承载无 SDK 依赖的失败反馈、命令协调、回合续作、授权、剩余进度解释、evidence recovery、PDF identity 和 acceptance policy：`src/authorization-policy.ts` 提供 ask_user 授权动作判定与授权卡投影，`src/pdf-identity.ts` 提供宿主注入 PDF worker 的隔离边界、15 秒超时、AbortSignal 清理、页数/文本上限与稳定错误码，`src/acceptance-policy.ts` 提供验收器注册、schema live refs、结果归一化和说明投影。`.pi/lib/tasks/*` 仍保留为 CLI/Pi 运行时适配；其余 tasks runtime 模块按 A5-2 分阶段迁移。
+`@drone/tasks` 的 canonical runtime 位于 `src/runtime/*.ts`，并由 `scripts/build-runtime.mjs` 生成并提交 `src/runtime-compiled/*.mjs`；其中 workbench、register、acceptance、授权、PDF worker、tool manifest 与 runtime bridge 通过 host ports 接入。`npm run build:tasks` 将同一 typed runtime 生成到无 workspace 依赖的 `.pi/lib/tasks/*` 兼容图；开发环境 acceptance adapter 复用包注册表，隔离发布包回退到自包含产物。
 
 ## packages/research — 研究来源领域包（迁移中）
 
-`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/literature-operations.ts` 提供宿主注入的文献对账 journal/队列边界，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界，`src/evidence-gate.ts` 统一证据阶段单调推进、失败终态与 answerable 断言，`src/source-archive-policy.ts` 统一来源归档的路径、文件名、挑战页、签名和元数据门禁，`src/receipt-journal-policy.ts` 统一核心工具准入、错误工具过滤、去重回执缓冲与 run_dir 归属。backend literature evidence、literature operations、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
+`@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。
 
 
 ## packages/extensions — Pi 扩展适配层（迁移中）
 
-`src/*.ts` 是可打包的扩展入口；`institutional-access.ts` 提供机构登录与状态工具，独立处理 CLI 降级和 Electron 持久分区，并通过 `drone` 元数据声明研究能力与子代理隔离。`scripts/build-extensions.mjs` 将入口生成到 `.pi/extensions/`；仍未迁移的旧入口会在 `.build-manifest.json` 中标记为 `legacy-preserved`。
+`src/*.ts` 是可打包的扩展入口：当前 generated entries 包括 `institutional-access`、`knowledge-extension`、`research-loop`、`research-wikiloop`、`research-wikiskill`、`subagent-research`、`workspace-config`；`scripts/build-extensions.mjs` 将它们生成到 `.pi/extensions/`。manifest 顶层 `legacyOutputs` 明确保留 4 个跨 bundle 兼容入口：`obsidian-workbench.mjs`、`source-archive.mjs`、`subagent-mcp-readonly.mjs`、`zotero-literature.mjs`；`check:extensions --strict` 校验 generated entries 的源/产物哈希，并将这些声明的遗留产物排除在漂移失败之外。
 
 ## packages/backend — pi SDK 适配层
 

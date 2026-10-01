@@ -11,5 +11,15 @@
 	},
 	"devDependencies": {
 		"typescript": "^5.9.0"
+	},
+	"dependencies": {
+		"@drone/knowledge": "*",
+		"@drone/research": "*",
+		"@drone/tasks": "*",
+		"@drone/shared": "*"
+	},
+	"exports": {
+		"./knowledge-extension": "./src/knowledge-extension.ts",
+		"./internal/knowledge-extension": "./src/internal/knowledge-extension.ts"
 	}
 }
