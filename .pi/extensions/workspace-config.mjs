@@ -1,17 +1,497 @@
-import { randomUUID } from "node:crypto";
-import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+// packages/extensions/src/workspace-config.ts
+
+// packages/knowledge/src/config.ts
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash, randomUUID as randomUUID3 } from "node:crypto";
+import {
+	access,
+	mkdir as mkdir3,
+	readFile,
+	readFile as readFile3,
+	realpath as realpath3,
+	rename as rename3,
+	writeFile as writeFile3,
+} from "node:fs/promises";
+import {
+	basename,
+	dirname as dirname2,
+	isAbsolute,
+	isAbsolute as isAbsolute3,
+	join,
+	join as join3,
+	relative as relative2,
+	resolve,
+	resolve as resolve3,
+	sep as sep2,
+} from "node:path";
 import { pathToFileURL } from "node:url";
-import { knowledgeDirectory, projectIdentity, readKnowledgeBinding } from "../lib/knowledge/config.mjs";
-import { cardLink, flowCard } from "../lib/knowledge/flow-cards.mjs";
-import { registerTool } from "../lib/tool-manifest.mjs";
-import { containedFile, initializeVaultLayout } from "../lib/vault-layout.mjs";
-import { DEFAULT_VAULT_PROFILE, getVaultProfile, SUBAGENT_MCP_POLICIES } from "../lib/vault-profiles.mjs";
 
-const initializeVault = (path, project = null, profile = DEFAULT_VAULT_PROFILE) =>
+function createKnowledgeConfigState() {
+	return { local: new AsyncLocalStorage(), queues: /* @__PURE__ */ new Map() };
+}
+function errorCode(error) {
+	return error && typeof error === "object" && "code" in error ? error.code : void 0;
+}
+function knowledgeDirectory() {
+	const value = process.env.DRONE_KNOWLEDGE_DIR;
+	if (!value) return null;
+	if (!isAbsolute(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
+	return resolve(value);
+}
+function projectIdentity(cwd, configured) {
+	if (typeof configured === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured)) return configured;
+	const path = resolve(cwd);
+	const stem =
+		basename(path)
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/^-|-$/g, "")
+			.slice(0, 40) || "project";
+	return `${stem}-${createHash("sha256").update(path).digest("hex").slice(0, 10)}`;
+}
+function validateBinding(value) {
+	if (
+		!value ||
+		typeof value !== "object" ||
+		Array.isArray(value) ||
+		value.version !== 1 ||
+		!isAbsolute(String(value.vault || "")) ||
+		!/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) ||
+		!Number.isSafeInteger(value.revision) ||
+		Number(value.revision) < 1 ||
+		!["project", "literature", "hybrid"].includes(String(value.profile)) ||
+		!["run-only", "verified", "rich"].includes(String(value.depositMode)) ||
+		!["none", "read-local"].includes(String(value.subagentPolicy)) ||
+		typeof value.updatedAt !== "string"
+	)
+		throw new Error("Invalid application knowledge binding; no project fallback was used");
+}
+async function readKnowledgeBindingWithState(state, { fresh = false } = {}) {
+	if (!fresh && state.local.getStore()) return state.local.getStore() ?? null;
+	const directory = knowledgeDirectory();
+	if (!directory) return null;
+	let value;
+	try {
+		value = JSON.parse((await readFile(join(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
+	} catch (error) {
+		if (errorCode(error) === "ENOENT") return null;
+		throw new Error(
+			`Knowledge binding cannot be read: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+	validateBinding(value);
+	return value;
+}
+async function readKnowledgeBinding(options = {}) {
+	return readKnowledgeBindingWithState(defaultState, options);
+}
+var defaultState = createKnowledgeConfigState();
+
+// packages/knowledge/src/flow-cards.ts
+var OK = /* @__PURE__ */ new Set([
+	"verified",
+	"saved",
+	"reused",
+	"both-verified",
+	"attachment-indexed-not-read",
+	"applied",
+	"written",
+	"note-written",
+	"summary-written",
+	"explainer-archived",
+	"setup-complete",
+	"\u5DF2\u4FDD\u5B58",
+	"archived",
+	"found",
+	"ready",
+]);
+var ERROR = /* @__PURE__ */ new Set([
+	"failed",
+	"identity-mismatch",
+	"missing",
+	"blocked",
+	"cancelled",
+	"not-found",
+	"error",
+]);
+var MUTED = /* @__PURE__ */ new Set(["unknown", "unavailable", "pending"]);
+var clip = (value, max) => (typeof value === "string" && value ? value.slice(0, max) : null);
+function statusTone(status) {
+	const value = String(status || "");
+	if (OK.has(value)) return "ok";
+	if (ERROR.has(value)) return "error";
+	if (MUTED.has(value)) return "muted";
+	return "warn";
+}
+function cardLink(kind, target, label, i18n) {
+	if (!["external", "resource", "note", "path"].includes(kind) || typeof target !== "string" || !target)
+		return null;
+	return {
+		label: clip(label, 60) || kind,
+		...(i18n ? { i18n } : {}),
+		kind,
+		target: target.slice(0, 4096),
+	};
+}
+function flowCard(input) {
+	const { key, kind, title, subtitle, status, tone, detail, path, fields, links, source, provisionalTitle } =
+		input;
+	const state = clip(String(status ?? ""), 32) || "unknown";
+	const safeKind = clip(kind, 40) || "artifact";
+	return {
+		key: clip(String(key ?? ""), 512) || `${kind}:${title}`,
+		kind: safeKind,
+		title: clip(String(title ?? ""), 200) || kind || "artifact",
+		provisionalTitle: provisionalTitle === true,
+		subtitle: clip(subtitle, 300),
+		status: state,
+		tone: tone || statusTone(state),
+		detail: clip(detail, 400),
+		path: clip(path, 4096),
+		fields: (fields || []).filter(Boolean).slice(0, 12),
+		links: (links || []).filter(Boolean).slice(0, 6),
+		source: clip(source, 80),
+		at: Date.now(),
+	};
+}
+
+// packages/extensions/src/internal/vault.ts
+import { randomUUID as randomUUID2 } from "node:crypto";
+import {
+	link,
+	lstat,
+	mkdir as mkdir2,
+	readdir,
+	readFile as readFile2,
+	realpath as realpath2,
+	rename as rename2,
+	stat,
+	unlink,
+	writeFile as writeFile2,
+} from "node:fs/promises";
+import {
+	basename as basename2,
+	dirname,
+	isAbsolute as isAbsolute2,
+	join as join2,
+	relative,
+	resolve as resolve2,
+	sep,
+} from "node:path";
+
+var VAULT_PROFILES = {
+	project: {
+		id: "project",
+		projectTypes: [
+			"Questions",
+			"Concepts",
+			"Entities",
+			"Papers",
+			"Sources",
+			"Evidence",
+			"Claims",
+			"Decisions",
+			"Runs",
+			"Artifacts",
+			"Wiki",
+		],
+		libraryTypes: ["Papers", "Methods", "Software", "Explainers"],
+	},
+	literature: {
+		id: "literature",
+		projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
+		libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Explainers"],
+	},
+	hybrid: {
+		id: "hybrid",
+		projectTypes: [
+			"Questions",
+			"Concepts",
+			"Entities",
+			"Papers",
+			"Sources",
+			"Evidence",
+			"Claims",
+			"Decisions",
+			"Runs",
+			"Artifacts",
+			"Wiki",
+		],
+		libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Explainers"],
+	},
+};
+var DEFAULT_VAULT_PROFILE = "hybrid";
+var SUBAGENT_MCP_POLICIES = ["none", "read-local"];
+function getVaultProfile(id = DEFAULT_VAULT_PROFILE) {
+	if (typeof id !== "string" || !(id in VAULT_PROFILES)) throw new Error(`Unknown knowledge profile: ${id}`);
+	return VAULT_PROFILES[id];
+}
+var LAYOUT = {
+	version: 3,
+	templates: {
+		Project: "project",
+		Question: "question",
+		Source: "source",
+		Claim: "claim",
+		Evidence: "evidence",
+		Run: "run",
+	},
+	noteTemplate:
+		'---\nid: "pi-{{uuid}}"\ntype: {{type}}\nproject: "{{project_slug}}"\nstatus: draft\ncreated: "{{date}}"\nupdated: "{{date}}"\ntags: []\n---\n\n# {{title}}\n\n<!-- pi-agent:managed:start -->\n{{project_content}}\n<!-- pi-agent:managed:end -->\n\n## Human review\n',
+};
+var MANAGED_START = "<!-- pi-agent:managed:start -->";
+var MANAGED_END = "<!-- pi-agent:managed:end -->";
+function containsPath(root, target) {
+	const rel = relative(resolve2(root), resolve2(target));
+	return rel === "" || (!isAbsolute2(rel) && rel !== ".." && !rel.startsWith(`..${sep}`));
+}
+async function canonicalPath(path) {
+	try {
+		return await realpath2(path);
+	} catch (error) {
+		if (error.code !== "ENOENT" || dirname(path) === path) throw error;
+		return join2(await canonicalPath(dirname(path)), basename2(path));
+	}
+}
+async function containedFile(root, path) {
+	const target = resolve2(root, path);
+	if (!containsPath(root, target) || !containsPath(root, await canonicalPath(target)))
+		throw new Error("Path must stay inside Vault");
+	return target;
+}
+async function validateVaultPath(input, excluded = []) {
+	if (typeof input !== "string" || !input.trim()) throw new Error("Vault path is required");
+	if (input.split(/[\\/]/).includes("..")) throw new Error("Vault path must not contain traversal");
+	const path = await canonicalPath(resolve2(input.trim()));
+	if (path === resolve2(path, "..") || /^[a-z]:[\\/]*$/i.test(input))
+		throw new Error("Vault cannot be a filesystem root");
+	for (const other of excluded.filter(Boolean)) {
+		const forbidden = await canonicalPath(resolve2(other));
+		if (containsPath(path, forbidden) || containsPath(forbidden, path))
+			throw new Error("Vault must be independent from workspace, results and product code");
+	}
+	try {
+		if (!(await stat(path)).isDirectory()) throw new Error("Vault must be a directory");
+	} catch (error) {
+		if (error.code !== "ENOENT") throw error;
+	}
+	return path;
+}
+async function createOnly(path, content) {
+	await mkdir2(dirname(path), { recursive: true });
+	const temporary = `${path}.${randomUUID2()}.tmp`;
+	await writeFile2(temporary, content, { encoding: "utf8", flag: "wx" });
+	try {
+		await link(temporary, path);
+		return true;
+	} catch (error) {
+		if (error.code !== "EEXIST") throw error;
+		const existing = await lstat(path);
+		if (!existing.isFile() || existing.isSymbolicLink())
+			throw new Error(`Expected a regular Vault file: ${path}`);
+		return false;
+	} finally {
+		await unlink(temporary).catch(() => {});
+	}
+}
+async function initializeVaultLayout(input, options = {}) {
+	const vault = await validateVaultPath(input, options.excluded ?? []);
+	const project = options.project ?? null;
+	if (project !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(project))
+		throw new Error("Invalid project slug");
+	const selected = getVaultProfile(options.profile);
+	const directories = [
+		"Projects",
+		"Templates",
+		"Indexes",
+		"Attachments",
+		".obsidian",
+		...selected.libraryTypes.map((type) => `Library/${type}`),
+		...selected.projectTypes.map((type) => `Projects/_template/${type}`),
+		...(project ? selected.projectTypes.map((type) => `Projects/${project}/${type}`) : []),
+	];
+	for (const directory of directories) await containedFile(vault, directory);
+	const notes = Object.fromEntries(
+		Object.entries(LAYOUT.templates).map(([name, type]) => [
+			`Templates/${name}.md`,
+			LAYOUT.noteTemplate.replace("{{type}}", type),
+		]),
+	);
+	const index = (title) => `# ${title}
+
+${MANAGED_START}
+${MANAGED_END}
+
+## Human review
+`;
+	Object.assign(notes, {
+		"Home.md":
+			"# Pi Research Vault\n\n- [[Projects/Index]]\n- [[Indexes/Knowledge]]\n- [[Library/Index]]\n\n## Human review\n",
+		"Projects/Index.md": index("Projects"),
+		"Indexes/Projects.md": index("Projects"),
+		"Indexes/Knowledge.md": index("Knowledge"),
+		"Library/Index.md": index("Library"),
+		"Projects/_template/Index.md": notes["Templates/Project.md"],
+		".obsidian/app.json": `${JSON.stringify(
+			{ useMarkdownLinks: false, newLinkFormat: "absolute", attachmentFolderPath: "Attachments" },
+			null,
+			2,
+		)}
+`,
+		".obsidian/community-plugins.json": "[]\n",
+	});
+	for (const file of Object.keys(notes)) await containedFile(vault, file);
+	for (const directory of directories) await mkdir2(join2(vault, directory), { recursive: true });
+	for (const [file, content] of Object.entries(notes)) await createOnly(join2(vault, file), content);
+	return {
+		vault,
+		directories: directories.map((directory) => join2(vault, directory)),
+		templateVersion: LAYOUT.version,
+		profile: selected,
+	};
+}
+async function readText(path) {
+	try {
+		return await readFile2(path, "utf8");
+	} catch (error) {
+		if (error.code === "ENOENT") return null;
+		throw error;
+	}
+}
+async function writeManagedIndex(path, heading, body) {
+	const original =
+		(await readText(path)) ??
+		`${heading}
+
+## Human review
+
+`;
+	const start = original.indexOf(MANAGED_START);
+	const end = original.indexOf(MANAGED_END);
+	const block = `${MANAGED_START}
+${body.trim()}
+${MANAGED_END}`;
+	let updated;
+	if (start !== -1 || end !== -1) {
+		if (start === -1 || end < start) throw new Error(`Invalid managed index markers: ${path}`);
+		updated = original.slice(0, start) + block + original.slice(end + MANAGED_END.length);
+	} else {
+		const review = original.search(/^## Human review\s*$/m);
+		updated =
+			review < 0
+				? `${original}${original.endsWith("\n") ? "\n" : "\n\n"}${block}
+`
+				: `${original.slice(0, review)}${block}
+
+${original.slice(review)}`;
+	}
+	if (updated === original) return;
+	await mkdir2(dirname(path), { recursive: true });
+	const temporary = `${path}.${randomUUID2()}.tmp`;
+	await writeFile2(temporary, updated, "utf8");
+	await rename2(temporary, path);
+}
+async function childEntries(directory) {
+	try {
+		return await readdir(directory, { withFileTypes: true });
+	} catch (error) {
+		if (error.code === "ENOENT") return [];
+		throw error;
+	}
+}
+async function noteLinks(vault, directory) {
+	const links = [];
+	for (const entry of await childEntries(directory)) {
+		const file = join2(directory, entry.name);
+		if (entry.isDirectory()) links.push(...(await noteLinks(vault, file)));
+		else if (entry.isFile() && entry.name.endsWith(".md")) {
+			const target = relative(vault, file).replaceAll(sep, "/").slice(0, -3);
+			if (!/[\]|#\r\n]/.test(target)) links.push(`- [[${target}]]`);
+		}
+	}
+	return links.sort((a, b) => a.localeCompare(b));
+}
+async function categorizedLinks(vault, root, types) {
+	const sections = [];
+	for (const type of types) {
+		const directory = await containedFile(vault, `${root}/${type}`);
+		const links = await noteLinks(vault, directory);
+		sections.push(
+			`## ${type}
+
+${links.join("\n")}`.trimEnd(),
+		);
+	}
+	return sections.join("\n\n");
+}
+function validateProject(project) {
+	if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(project) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/.test(project))
+		throw new Error("project must be a non-reserved lowercase kebab-case slug");
+	return project;
+}
+async function refreshProjectIndexes(vault, options = {}) {
+	const project = options.project ?? null;
+	if (project !== null) validateProject(project);
+	const profile = getVaultProfile(options.profile);
+	const projectRoot = await containedFile(vault, "Projects");
+	const projects = (await childEntries(projectRoot))
+		.filter((entry) => entry.isDirectory() && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(entry.name))
+		.map((entry) => entry.name)
+		.sort();
+	const projectIndexes = [];
+	for (const slug of projects) {
+		const index = await containedFile(vault, `Projects/${slug}/Index.md`);
+		if (project === null || project === slug || (await readText(index)) === null) {
+			const body = await categorizedLinks(vault, `Projects/${slug}`, profile.projectTypes);
+			await writeManagedIndex(
+				index,
+				`---
+type: project
+project: ${JSON.stringify(slug)}
+---
+
+# ${slug}
+
+[[Home]] | [[Projects/Index]] | [[Library/Index]]`,
+				body,
+			);
+		}
+		projectIndexes.push(index);
+	}
+	const links = projects.map((slug) => `- [[Projects/${slug}/Index]]`).join("\n");
+	const projectsIndex = await containedFile(vault, "Projects/Index.md");
+	const legacyIndex = await containedFile(vault, "Indexes/Projects.md");
+	const libraryIndex = await containedFile(vault, "Library/Index.md");
+	await writeManagedIndex(projectsIndex, "# Projects\n\n[[Home]]", links);
+	await writeManagedIndex(legacyIndex, "# Projects", links);
+	await writeManagedIndex(
+		libraryIndex,
+		"# Library\n\n[[Home]]",
+		await categorizedLinks(vault, "Library", profile.libraryTypes),
+	);
+	const knowledgeIndex = await containedFile(vault, "Indexes/Knowledge.md");
+	await writeManagedIndex(
+		knowledgeIndex,
+		"# Knowledge",
+		[links, "[[Library/Index]]"].filter(Boolean).join("\n\n"),
+	);
+	return { projectsIndex, legacyIndex, libraryIndex, knowledgeIndex, projectIndexes };
+}
+
+// packages/extensions/src/workspace-config.ts
+var TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1";
+function registerTool(pi, definition) {
+	void pi.events?.emit?.(TOOL_MANIFEST_EVENT, {
+		version: 1,
+		name: definition.name,
+		meta: definition.drone || {},
+	});
+	if (process.env.PI_SUBAGENT_CHILD === "1" && definition.drone?.subagent === "exclude") return;
+	pi.registerTool(definition);
+}
+var initializeVault = (path, project = null, profile = DEFAULT_VAULT_PROFILE) =>
 	initializeVaultLayout(path, { project, profile });
-
-export const DEFAULT_WORKSPACE_CONFIG = Object.freeze({
+var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 	resultsRoot: "./results",
 	obsidianVault: null,
 	maxConcurrentSubagents: 3,
@@ -20,18 +500,14 @@ export const DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 	knowledgeDepositMode: "verified",
 	subagentMcpPolicy: "read-local",
 });
-
-const CONFIG_NAME = ".pi/research-workspace.json";
-
+var CONFIG_NAME = ".pi/research-workspace.json";
 function configPath(cwd) {
-	return join(cwd, CONFIG_NAME);
+	return join3(cwd, CONFIG_NAME);
 }
-
 function resolveConfiguredPath(cwd, value) {
 	if (value == null || value === "") return null;
-	return resolve(cwd, value);
+	return resolve3(cwd, value);
 }
-
 function validatePatch(config) {
 	const max = Number(config.maxConcurrentSubagents);
 	if (!Number.isInteger(max) || max < 1 || max > 3) {
@@ -51,11 +527,9 @@ function validatePatch(config) {
 		throw new Error("subagentMcpPolicy must be none or read-local");
 	}
 }
-
-/** @returns {Promise<any>} */
-export async function loadWorkspaceConfig(cwd = process.cwd()) {
+async function loadWorkspaceConfig(cwd = process.cwd()) {
 	if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
-		const desktop = JSON.parse(await readFile(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
+		const desktop = JSON.parse(await readFile3(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
 		return {
 			...DEFAULT_WORKSPACE_CONFIG,
 			resultsRoot: desktop.resultsRoot,
@@ -64,10 +538,10 @@ export async function loadWorkspaceConfig(cwd = process.cwd()) {
 			mcpStatus: desktop.mcpStatus,
 		};
 	}
-	const projectRoot = resolve(cwd);
+	const projectRoot = resolve3(cwd);
 	let raw = {};
 	try {
-		raw = JSON.parse(await readFile(configPath(projectRoot), "utf8"));
+		raw = JSON.parse(await readFile3(configPath(projectRoot), "utf8"));
 	} catch (error) {
 		if (error.code !== "ENOENT") raw = {};
 	}
@@ -110,18 +584,16 @@ export async function loadWorkspaceConfig(cwd = process.cwd()) {
 		obsidianVault: resolveConfiguredPath(projectRoot, merged.obsidianVault),
 	};
 }
-
 function storedPath(cwd, value) {
 	if (value == null) return null;
-	const absolute = resolve(cwd, value);
-	const rel = relative(resolve(cwd), absolute);
-	return rel && !isAbsolute(rel) && !rel.startsWith(`..${sep}`) && rel !== ".."
-		? `./${rel.replaceAll(sep, "/")}`
+	const absolute = resolve3(cwd, value);
+	const rel = relative2(resolve3(cwd), absolute);
+	return rel && !isAbsolute3(rel) && !rel.startsWith(`..${sep2}`) && rel !== ".."
+		? `./${rel.replaceAll(sep2, "/")}`
 		: absolute;
 }
-
-export async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
-	const projectRoot = resolve(cwd);
+async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
+	const projectRoot = resolve3(cwd);
 	if (
 		knowledgeDirectory() &&
 		["obsidianVault", "knowledgeProfile", "knowledgeDepositMode", "subagentMcpPolicy"].some(
@@ -160,17 +632,21 @@ export async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
 		);
 	}
 	const target = configPath(projectRoot);
-	await mkdir(dirname(target), { recursive: true });
+	await mkdir3(dirname2(target), { recursive: true });
 	const temporary = `${target}.${process.pid}.tmp`;
-	await writeFile(temporary, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
-	await rename(temporary, target);
+	await writeFile3(
+		temporary,
+		`${JSON.stringify(payload, null, 2)}
+`,
+		"utf8",
+	);
+	await rename3(temporary, target);
 	return {
 		...merged,
-		resultsRoot: resolve(merged.resultsRoot),
-		obsidianVault: merged.obsidianVault && resolve(merged.obsidianVault),
+		resultsRoot: resolve3(merged.resultsRoot),
+		obsidianVault: merged.obsidianVault && resolve3(merged.obsidianVault),
 	};
 }
-
 function safeSegment(value, label) {
 	const segment = String(value ?? "").trim();
 	if (!segment || segment === "." || segment === ".." || segment.includes("/") || segment.includes("\\")) {
@@ -178,75 +654,78 @@ function safeSegment(value, label) {
 	}
 	return segment;
 }
-
-export { initializeVault };
-
 function isWithin(root, target) {
-	const rel = relative(resolve(root), resolve(target));
-	return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !isAbsolute(rel));
+	const rel = relative2(resolve3(root), resolve3(target));
+	return rel === "" || (!rel.startsWith(`..${sep2}`) && rel !== ".." && !isAbsolute3(rel));
 }
-
 function updateManagedBlock(original, body) {
 	const start = "<!-- pi-agent:managed:start -->";
 	const end = "<!-- pi-agent:managed:end -->";
-	const replacement = `${start}\n${String(body).trim()}\n${end}`;
+	const replacement = `${start}
+${String(body).trim()}
+${end}`;
 	const pattern = new RegExp(
 		`${start.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}.*?${end.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}`,
 		"s",
 	);
 	return pattern.test(original)
 		? original.replace(pattern, replacement)
-		: `${original.trimEnd()}\n\n${replacement}\n`;
-}
+		: `${original.trimEnd()}
 
+${replacement}
+`;
+}
 async function atomicText(path, text) {
-	await mkdir(dirname(path), { recursive: true });
+	await mkdir3(dirname2(path), { recursive: true });
 	const temporary = `${path}.${process.pid}.tmp`;
-	await writeFile(temporary, text, "utf8");
-	await rename(temporary, path);
+	await writeFile3(temporary, text, "utf8");
+	await rename3(temporary, path);
 }
-
 async function writeSummary(runDir, summary, status) {
-	const runPath = resolve(runDir);
-	const resultRoot = dirname(runPath);
-	const historyRoot = join(resultRoot, "summary-history");
-	await mkdir(historyRoot, { recursive: true });
-	const content = `${String(summary).trim()}\n`;
-	await atomicText(join(runPath, "SUMMARY.md"), content);
-	await atomicText(join(resultRoot, "SUMMARY.md"), content);
-	const stamp = new Date().toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
-	const history = join(historyRoot, `${stamp}.md`);
+	const runPath = resolve3(runDir);
+	const resultRoot = dirname2(runPath);
+	const historyRoot = join3(resultRoot, "summary-history");
+	await mkdir3(historyRoot, { recursive: true });
+	const content = `${String(summary).trim()}
+`;
+	await atomicText(join3(runPath, "SUMMARY.md"), content);
+	await atomicText(join3(resultRoot, "SUMMARY.md"), content);
+	const stamp = /* @__PURE__ */ new Date()
+		.toISOString()
+		.replaceAll(/[-:]/g, "")
+		.replace(".000", "")
+		.replace("Z", "Z");
+	const history = join3(historyRoot, `${stamp}.md`);
 	await atomicText(history, content);
-	const metadataPath = join(runPath, "metadata.json");
+	const metadataPath = join3(runPath, "metadata.json");
 	let metadata = {};
 	try {
-		metadata = JSON.parse(await readFile(metadataPath, "utf8"));
-	} catch {
-		/* metadata may be absent for a manually created run */
-	}
+		metadata = JSON.parse(await readFile3(metadataPath, "utf8"));
+	} catch {}
 	metadata.summary_status = status === "pending" ? "pending" : "written";
-	metadata.summary_updated_at = new Date().toISOString();
-	await atomicText(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
-	return { run: join(runPath, "SUMMARY.md"), latest: join(resultRoot, "SUMMARY.md"), history };
+	metadata.summary_updated_at = /* @__PURE__ */ new Date().toISOString();
+	await atomicText(
+		metadataPath,
+		`${JSON.stringify(metadata, null, 2)}
+`,
+	);
+	return { run: join3(runPath, "SUMMARY.md"), latest: join3(resultRoot, "SUMMARY.md"), history };
 }
-
 async function syncRunNote(vault, project, resultSlug, runDir, summary) {
 	const safeProject = safeSegment(project || "default", "project");
 	const safeSlug = safeSegment(resultSlug || "research-question", "result_slug");
-	const runPath = resolve(runDir);
-	const metadataPath = join(runPath, "metadata.json");
+	const runPath = resolve3(runDir);
+	const metadataPath = join3(runPath, "metadata.json");
 	let metadata = {};
 	try {
-		metadata = JSON.parse(await readFile(metadataPath, "utf8"));
-	} catch {
-		/* handled by frontmatter defaults */
-	}
-	const runId = safeSegment(metadata.run_id || runPath.split(sep).at(-1), "run_id");
-	const note = await containedFile(vault, join("Projects", safeProject, "Runs", `${safeSlug}-${runId}.md`));
+		metadata = JSON.parse(await readFile3(metadataPath, "utf8"));
+	} catch {}
+	const runId = safeSegment(metadata.run_id || runPath.split(sep2).at(-1), "run_id");
+	const note = await containedFile(vault, join3("Projects", safeProject, "Runs", `${safeSlug}-${runId}.md`));
 	if (!knowledgeDirectory()) await initializeVault(vault, safeProject);
 	const frontmatter = [
 		"---",
-		`id: pi-${randomUUID()}`,
+		`id: pi-${randomUUID3()}`,
 		`run_id: ${JSON.stringify(runId)}`,
 		"type: run",
 		`project: ${JSON.stringify(safeProject)}`,
@@ -258,22 +737,34 @@ async function syncRunNote(vault, project, resultSlug, runDir, summary) {
 		"---",
 	].join("\n");
 	const resultUri = pathToFileURL(runPath).href;
-	const summaryUri = pathToFileURL(join(runPath, "SUMMARY.md")).href;
+	const summaryUri = pathToFileURL(join3(runPath, "SUMMARY.md")).href;
 	let original = "";
 	try {
-		original = await readFile(note, "utf8");
-	} catch {
-		/* new note */
-	}
+		original = await readFile3(note, "utf8");
+	} catch {}
 	if (!original) {
-		original = `${frontmatter}\n\n# ${safeSlug} · ${runId}\n\n## Agent-generated summary\n${"<!-- pi-agent:managed:start -->"}\n${String(summary).trim()}\n<!-- pi-agent:managed:end -->\n\n## Result files\n- [Open result directory](${resultUri})\n- [Open SUMMARY.md](${summaryUri})\n\n## Human review\n\n`;
+		original = `${frontmatter}
+
+# ${safeSlug} \xB7 ${runId}
+
+## Agent-generated summary
+${"<!-- pi-agent:managed:start -->"}
+${String(summary).trim()}
+<!-- pi-agent:managed:end -->
+
+## Result files
+- [Open result directory](${resultUri})
+- [Open SUMMARY.md](${summaryUri})
+
+## Human review
+
+`;
 		await atomicText(note, original);
 	} else {
 		await atomicText(note, updateManagedBlock(original, summary));
 	}
 	return note;
 }
-
 function runSummaryCard(event) {
 	const d = event.result?.details || {};
 	return flowCard({
@@ -285,15 +776,16 @@ function runSummaryCard(event) {
 		detail:
 			d.obsidian_error || d.index_error || (d.obsidian_note ? "Vault run note saved." : "No Vault run note."),
 		links: [
-			d.run ? cardLink("path", d.run, "打开", "flow.link.open") : null,
-			d.obsidian_note ? cardLink("note", d.obsidian_note, "打开笔记", "flow.link.openNote") : null,
+			d.run ? cardLink("path", d.run, "\u6253\u5F00", "flow.link.open") : null,
+			d.obsidian_note
+				? cardLink("note", d.obsidian_note, "\u6253\u5F00\u7B14\u8BB0", "flow.link.openNote")
+				: null,
 		],
 		source: event.toolName,
 	});
 }
-
-export function registerWorkspaceConfig(pi, options = {}) {
-	const baseCwd = options.cwd ? resolve(options.cwd) : process.cwd();
+function registerWorkspaceConfig(pi, options = {}) {
+	const baseCwd = options.cwd ? resolve3(options.cwd) : process.cwd();
 	registerTool(pi, {
 		name: "research_workspace_status",
 		label: "Research workspace status",
@@ -344,7 +836,10 @@ export function registerWorkspaceConfig(pi, options = {}) {
 		drone: {
 			capabilities: ["research"],
 			subagent: "exclude",
-			activity: { text: "正在整理本轮研究总结…", phase: "synthesis" },
+			activity: {
+				text: "\u6B63\u5728\u6574\u7406\u672C\u8F6E\u7814\u7A76\u603B\u7ED3\u2026",
+				phase: "synthesis",
+			},
 			flow: "summary",
 			flowCards: runSummaryCard,
 		},
@@ -387,29 +882,29 @@ export function registerWorkspaceConfig(pi, options = {}) {
 		async execute(_id, params, _signal, _update, ctx) {
 			const cwd = ctx?.cwd || baseCwd;
 			const config = await loadWorkspaceConfig(cwd);
-			const runDir = resolve(cwd, params.run_dir);
+			const runDir = resolve3(cwd, params.run_dir);
 			if (!isWithin(config.resultsRoot, runDir))
 				throw new Error("run_dir must be inside the configured results root");
-			if (!isWithin(await realpath(config.resultsRoot), await realpath(runDir)))
+			if (!isWithin(await realpath3(config.resultsRoot), await realpath3(runDir)))
 				throw new Error("run_dir escapes results root through a link");
-			const relativeRun = relative(config.resultsRoot, runDir);
+			const relativeRun = relative2(config.resultsRoot, runDir);
 			if (
 				!relativeRun ||
-				relativeRun.startsWith(`..${sep}`) ||
-				relativeRun.split(sep).length !== 2 ||
-				!relativeRun.split(sep)[1].startsWith("run-")
+				relativeRun.startsWith(`..${sep2}`) ||
+				relativeRun.split(sep2).length !== 2 ||
+				!relativeRun.split(sep2)[1].startsWith("run-")
 			) {
 				throw new Error("run_dir must point to a run directory directly inside a result slug");
 			}
 			if (
-				!(await access(join(runDir, "metadata.json")).then(
+				!(await access(join3(runDir, "metadata.json")).then(
 					() => true,
 					() => false,
 				))
 			) {
 				throw new Error("run_dir is missing metadata.json");
 			}
-			const metadata = JSON.parse(await readFile(join(runDir, "metadata.json"), "utf8"));
+			const metadata = JSON.parse(await readFile3(join3(runDir, "metadata.json"), "utf8"));
 			const gate = metadata.evidence_gate;
 			if (
 				gate?.stage !== "answerable" ||
@@ -442,8 +937,10 @@ export function registerWorkspaceConfig(pi, options = {}) {
 				}
 				if (note) {
 					try {
-						const { refreshProjectIndexes } = await import("../lib/obsidian-workbench.mjs");
-						indexes = await refreshProjectIndexes({ cwd, project });
+						indexes = await refreshProjectIndexes(config.obsidianVault, {
+							project,
+							profile: config.knowledgeProfile,
+						});
 					} catch (error) {
 						indexError = String(error.message).slice(0, 600);
 					}
@@ -473,5 +970,13 @@ export function registerWorkspaceConfig(pi, options = {}) {
 		},
 	});
 }
+var workspace_config_default = registerWorkspaceConfig;
 
-export default registerWorkspaceConfig;
+export {
+	DEFAULT_WORKSPACE_CONFIG,
+	initializeVault,
+	loadWorkspaceConfig,
+	registerWorkspaceConfig,
+	saveWorkspaceConfig,
+	workspace_config_default as default,
+};

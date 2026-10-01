@@ -17,6 +17,13 @@
 			"status": "generated",
 			"sourceSha256": "0931f889056fcb19fad1b3dc9db93d33313dfacfd0cc16b346e7890ec924baaf",
 			"outputSha256": "d6e26f3713fbdc9f01de6d723451e91a53baaba8c4ad98b33650598fbc6ee9dd"
+		},
+		"workspace-config": {
+			"source": "workspace-config.ts",
+			"output": "workspace-config.mjs",
+			"status": "generated",
+			"sourceSha256": "966cf6d52ec883b61c0502e418b3335f042ff86a8f7ff5ab0257ac340548fd4f",
+			"outputSha256": "e8e74a3db0bf281c41639b50b70997881c49ba23ea39ce1509b68a7dce2836c3"
 		}
 	},
 	"legacyOutputs": [
@@ -26,7 +33,6 @@
 		"research-wikiskill.mjs",
 		"source-archive.mjs",
 		"subagent-mcp-readonly.mjs",
-		"workspace-config.mjs",
 		"zotero-literature.mjs"
 	]
 }

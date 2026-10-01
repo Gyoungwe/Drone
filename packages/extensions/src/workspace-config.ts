@@ -1,0 +1,529 @@
+// The extension is bundled into a JavaScript entry point; runtime validation is
+// covered by the extension and backend contract tests. The source intentionally
+// mirrors the permissive Pi SDK callback shapes.
+// @ts-nocheck
+import { randomUUID } from "node:crypto";
+import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
+import {
+	cardLink,
+	flowCard,
+	knowledgeDirectory,
+	projectIdentity,
+	readKnowledgeBinding,
+} from "@drone/knowledge";
+import {
+	containedFile,
+	DEFAULT_VAULT_PROFILE,
+	getVaultProfile,
+	initializeVaultLayout,
+	refreshProjectIndexes,
+	SUBAGENT_MCP_POLICIES,
+} from "./internal/vault";
+
+type ToolDefinition = {
+	name: string;
+	label: string;
+	description: string;
+	parameters: Record<string, unknown>;
+	drone?: Record<string, unknown>;
+	execute: (...args: any[]) => Promise<unknown>;
+};
+
+type PiLike = {
+	events?: { emit?: (event: string, payload: unknown) => unknown };
+	registerTool: (definition: ToolDefinition) => void;
+	registerCommand: (
+		name: string,
+		definition: {
+			description: string;
+			handler: (
+				args: string,
+				ctx: { cwd: string; ui: { notify: (message: string, level: string) => void } },
+			) => Promise<void>;
+		},
+	) => void;
+};
+
+const TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1";
+
+function registerTool(pi: PiLike, definition: ToolDefinition): void {
+	void pi.events?.emit?.(TOOL_MANIFEST_EVENT, {
+		version: 1,
+		name: definition.name,
+		meta: definition.drone || {},
+	});
+	if (process.env.PI_SUBAGENT_CHILD === "1" && definition.drone?.subagent === "exclude") return;
+	pi.registerTool(definition);
+}
+
+const initializeVault = (path: string, project: string | null = null, profile = DEFAULT_VAULT_PROFILE) =>
+	initializeVaultLayout(path, { project, profile });
+
+export const DEFAULT_WORKSPACE_CONFIG = Object.freeze({
+	resultsRoot: "./results",
+	obsidianVault: null,
+	maxConcurrentSubagents: 3,
+	timezone: "Asia/Shanghai",
+	knowledgeProfile: DEFAULT_VAULT_PROFILE,
+	knowledgeDepositMode: "verified",
+	subagentMcpPolicy: "read-local",
+});
+
+const CONFIG_NAME = ".pi/research-workspace.json";
+
+function configPath(cwd) {
+	return join(cwd, CONFIG_NAME);
+}
+
+function resolveConfiguredPath(cwd, value) {
+	if (value == null || value === "") return null;
+	return resolve(cwd, value);
+}
+
+function validatePatch(config) {
+	const max = Number(config.maxConcurrentSubagents);
+	if (!Number.isInteger(max) || max < 1 || max > 3) {
+		throw new Error("maxConcurrentSubagents must be an integer between 1 and 3");
+	}
+	if (typeof config.timezone !== "string" || !config.timezone.trim()) {
+		throw new Error("timezone must be a non-empty string");
+	}
+	if (typeof config.resultsRoot !== "string" || !config.resultsRoot.trim()) {
+		throw new Error("resultsRoot must be a non-empty path");
+	}
+	getVaultProfile(config.knowledgeProfile);
+	if (!["run-only", "verified", "rich"].includes(config.knowledgeDepositMode)) {
+		throw new Error("knowledgeDepositMode must be run-only, verified, or rich");
+	}
+	if (!SUBAGENT_MCP_POLICIES.includes(config.subagentMcpPolicy)) {
+		throw new Error("subagentMcpPolicy must be none or read-local");
+	}
+}
+
+/** @returns {Promise<any>} */
+export async function loadWorkspaceConfig(cwd = process.cwd()) {
+	if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
+		const desktop = JSON.parse(await readFile(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
+		return {
+			...DEFAULT_WORKSPACE_CONFIG,
+			resultsRoot: desktop.resultsRoot,
+			obsidianVault: desktop.vaultStatus === "bound" ? desktop.obsidianVault : null,
+			vaultWritePolicy: desktop.vaultWritePolicy,
+			mcpStatus: desktop.mcpStatus,
+		};
+	}
+	const projectRoot = resolve(cwd);
+	let raw = {};
+	try {
+		raw = JSON.parse(await readFile(configPath(projectRoot), "utf8"));
+	} catch (error) {
+		if (error.code !== "ENOENT") raw = {};
+	}
+	const merged = { ...DEFAULT_WORKSPACE_CONFIG, ...raw };
+	if (knowledgeDirectory()) {
+		const binding = await readKnowledgeBinding();
+		return {
+			...DEFAULT_WORKSPACE_CONFIG,
+			resultsRoot: resolveConfiguredPath(
+				projectRoot,
+				typeof raw.resultsRoot === "string" && raw.resultsRoot.trim()
+					? raw.resultsRoot
+					: DEFAULT_WORKSPACE_CONFIG.resultsRoot,
+			),
+			obsidianVault: binding?.vault || null,
+			knowledgeProfile: binding?.profile || "hybrid",
+			knowledgeDepositMode: binding?.depositMode || "verified",
+			subagentMcpPolicy: binding?.subagentPolicy || "none",
+			knowledgeScope: "application",
+			knowledgeProjectId: projectIdentity(projectRoot, raw.knowledgeProjectId),
+			knowledgeBindingRevision: binding?.revision || 0,
+			legacyProjectVault: raw.obsidianVault || null,
+			maxConcurrentSubagents: [1, 2, 3].includes(raw.maxConcurrentSubagents)
+				? raw.maxConcurrentSubagents
+				: DEFAULT_WORKSPACE_CONFIG.maxConcurrentSubagents,
+		};
+	}
+	try {
+		validatePatch(merged);
+	} catch {
+		return {
+			...DEFAULT_WORKSPACE_CONFIG,
+			resultsRoot: resolveConfiguredPath(projectRoot, DEFAULT_WORKSPACE_CONFIG.resultsRoot),
+			obsidianVault: null,
+		};
+	}
+	return {
+		...merged,
+		resultsRoot: resolveConfiguredPath(projectRoot, merged.resultsRoot),
+		obsidianVault: resolveConfiguredPath(projectRoot, merged.obsidianVault),
+	};
+}
+
+function storedPath(cwd, value) {
+	if (value == null) return null;
+	const absolute = resolve(cwd, value);
+	const rel = relative(resolve(cwd), absolute);
+	return rel && !isAbsolute(rel) && !rel.startsWith(`..${sep}`) && rel !== ".."
+		? `./${rel.replaceAll(sep, "/")}`
+		: absolute;
+}
+
+export async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
+	const projectRoot = resolve(cwd);
+	if (
+		knowledgeDirectory() &&
+		["obsidianVault", "knowledgeProfile", "knowledgeDepositMode", "subagentMcpPolicy"].some(
+			(key) => key in patch,
+		)
+	) {
+		throw new Error(
+			"Vault policies are application-wide; use /obsidian-setup rather than a project override",
+		);
+	}
+	const current = await loadWorkspaceConfig(projectRoot);
+	const merged = {
+		...current,
+		...patch,
+		resultsRoot: resolveConfiguredPath(projectRoot, patch.resultsRoot ?? current.resultsRoot),
+		obsidianVault: resolveConfiguredPath(projectRoot, patch.obsidianVault ?? current.obsidianVault),
+	};
+	validatePatch({ ...merged, resultsRoot: String(merged.resultsRoot) });
+	const payload = {
+		resultsRoot: storedPath(projectRoot, merged.resultsRoot),
+		obsidianVault: storedPath(projectRoot, merged.obsidianVault),
+		maxConcurrentSubagents: merged.maxConcurrentSubagents,
+		timezone: merged.timezone,
+		knowledgeProfile: merged.knowledgeProfile,
+		knowledgeDepositMode: merged.knowledgeDepositMode,
+		subagentMcpPolicy: merged.subagentMcpPolicy,
+	};
+	if (knowledgeDirectory()) {
+		delete payload.obsidianVault;
+		delete payload.knowledgeProfile;
+		delete payload.knowledgeDepositMode;
+		delete payload.subagentMcpPolicy;
+		payload.knowledgeProjectId = projectIdentity(
+			projectRoot,
+			patch.knowledgeProjectId || merged.knowledgeProjectId,
+		);
+	}
+	const target = configPath(projectRoot);
+	await mkdir(dirname(target), { recursive: true });
+	const temporary = `${target}.${process.pid}.tmp`;
+	await writeFile(temporary, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+	await rename(temporary, target);
+	return {
+		...merged,
+		resultsRoot: resolve(merged.resultsRoot),
+		obsidianVault: merged.obsidianVault && resolve(merged.obsidianVault),
+	};
+}
+
+function safeSegment(value, label) {
+	const segment = String(value ?? "").trim();
+	if (!segment || segment === "." || segment === ".." || segment.includes("/") || segment.includes("\\")) {
+		throw new Error(`invalid ${label}`);
+	}
+	return segment;
+}
+
+export { initializeVault };
+
+function isWithin(root, target) {
+	const rel = relative(resolve(root), resolve(target));
+	return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !isAbsolute(rel));
+}
+
+function updateManagedBlock(original, body) {
+	const start = "<!-- pi-agent:managed:start -->";
+	const end = "<!-- pi-agent:managed:end -->";
+	const replacement = `${start}\n${String(body).trim()}\n${end}`;
+	const pattern = new RegExp(
+		`${start.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}.*?${end.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}`,
+		"s",
+	);
+	return pattern.test(original)
+		? original.replace(pattern, replacement)
+		: `${original.trimEnd()}\n\n${replacement}\n`;
+}
+
+async function atomicText(path, text) {
+	await mkdir(dirname(path), { recursive: true });
+	const temporary = `${path}.${process.pid}.tmp`;
+	await writeFile(temporary, text, "utf8");
+	await rename(temporary, path);
+}
+
+async function writeSummary(runDir, summary, status) {
+	const runPath = resolve(runDir);
+	const resultRoot = dirname(runPath);
+	const historyRoot = join(resultRoot, "summary-history");
+	await mkdir(historyRoot, { recursive: true });
+	const content = `${String(summary).trim()}\n`;
+	await atomicText(join(runPath, "SUMMARY.md"), content);
+	await atomicText(join(resultRoot, "SUMMARY.md"), content);
+	const stamp = new Date().toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
+	const history = join(historyRoot, `${stamp}.md`);
+	await atomicText(history, content);
+	const metadataPath = join(runPath, "metadata.json");
+	let metadata = {};
+	try {
+		metadata = JSON.parse(await readFile(metadataPath, "utf8"));
+	} catch {
+		/* metadata may be absent for a manually created run */
+	}
+	metadata.summary_status = status === "pending" ? "pending" : "written";
+	metadata.summary_updated_at = new Date().toISOString();
+	await atomicText(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+	return { run: join(runPath, "SUMMARY.md"), latest: join(resultRoot, "SUMMARY.md"), history };
+}
+
+async function syncRunNote(vault, project, resultSlug, runDir, summary) {
+	const safeProject = safeSegment(project || "default", "project");
+	const safeSlug = safeSegment(resultSlug || "research-question", "result_slug");
+	const runPath = resolve(runDir);
+	const metadataPath = join(runPath, "metadata.json");
+	let metadata = {};
+	try {
+		metadata = JSON.parse(await readFile(metadataPath, "utf8"));
+	} catch {
+		/* handled by frontmatter defaults */
+	}
+	const runId = safeSegment(metadata.run_id || runPath.split(sep).at(-1), "run_id");
+	const note = await containedFile(vault, join("Projects", safeProject, "Runs", `${safeSlug}-${runId}.md`));
+	if (!knowledgeDirectory()) await initializeVault(vault, safeProject);
+	const frontmatter = [
+		"---",
+		`id: pi-${randomUUID()}`,
+		`run_id: ${JSON.stringify(runId)}`,
+		"type: run",
+		`project: ${JSON.stringify(safeProject)}`,
+		`result_slug: ${JSON.stringify(safeSlug)}`,
+		`topic_id: ${JSON.stringify(metadata.topic_id || safeSlug.replace(/-20\d{6}(?:\d{6})?$/, ""))}`,
+		`result_path: ${JSON.stringify(runPath)}`,
+		`status: ${JSON.stringify(metadata.status || "unknown")}`,
+		`created_at: ${JSON.stringify(metadata.started_at || "")}`,
+		"---",
+	].join("\n");
+	const resultUri = pathToFileURL(runPath).href;
+	const summaryUri = pathToFileURL(join(runPath, "SUMMARY.md")).href;
+	let original = "";
+	try {
+		original = await readFile(note, "utf8");
+	} catch {
+		/* new note */
+	}
+	if (!original) {
+		original = `${frontmatter}\n\n# ${safeSlug} · ${runId}\n\n## Agent-generated summary\n${"<!-- pi-agent:managed:start -->"}\n${String(summary).trim()}\n<!-- pi-agent:managed:end -->\n\n## Result files\n- [Open result directory](${resultUri})\n- [Open SUMMARY.md](${summaryUri})\n\n## Human review\n\n`;
+		await atomicText(note, original);
+	} else {
+		await atomicText(note, updateManagedBlock(original, summary));
+	}
+	return note;
+}
+
+function runSummaryCard(event) {
+	const d = event.result?.details || {};
+	return flowCard({
+		key: d.run || event.toolCallId,
+		kind: "summary",
+		title: "Run summary",
+		status: d.partial ? "partial" : d.run ? "summary-written" : "failed",
+		path: d.run,
+		detail:
+			d.obsidian_error || d.index_error || (d.obsidian_note ? "Vault run note saved." : "No Vault run note."),
+		links: [
+			d.run ? cardLink("path", d.run, "打开", "flow.link.open") : null,
+			d.obsidian_note ? cardLink("note", d.obsidian_note, "打开笔记", "flow.link.openNote") : null,
+		],
+		source: event.toolName,
+	});
+}
+
+export function registerWorkspaceConfig(pi, options = {}) {
+	const baseCwd = options.cwd ? resolve(options.cwd) : process.cwd();
+	registerTool(pi, {
+		name: "research_workspace_status",
+		label: "Research workspace status",
+		drone: { readOnly: true, capabilities: ["research"] },
+		description: "Show result and Obsidian workspace configuration.",
+		parameters: { type: "object", properties: {} },
+		async execute(_id, _params, _signal, _update, ctx) {
+			const config = await loadWorkspaceConfig(ctx?.cwd || baseCwd);
+			return { content: [{ type: "text", text: JSON.stringify(config, null, 2) }], details: config };
+		},
+	});
+	registerTool(pi, {
+		name: "research_init_vault",
+		label: "Initialize Obsidian vault",
+		drone: { capabilities: ["research", "knowledge"], subagent: "exclude" },
+		description: "Create the new Obsidian knowledge vault structure without overwriting files.",
+		parameters: {
+			type: "object",
+			properties: {
+				path: { type: "string" },
+				project: { type: "string" },
+				profile: { type: "string", enum: ["project", "literature", "hybrid"] },
+			},
+			required: ["path"],
+		},
+		async execute(_id, params) {
+			if (knowledgeDirectory())
+				throw new Error("Use /obsidian-setup for confirmed application-wide initialization");
+			const profile = params.profile || (await loadWorkspaceConfig(baseCwd)).knowledgeProfile;
+			const result = await initializeVaultLayout(params.path, {
+				project: params.project || null,
+				profile,
+				excluded: [baseCwd, (await loadWorkspaceConfig(baseCwd)).resultsRoot],
+			});
+			const config = await saveWorkspaceConfig(baseCwd, {
+				obsidianVault: result.vault,
+				knowledgeProfile: profile,
+			});
+			return {
+				content: [{ type: "text", text: `Initialized Obsidian vault at ${result.vault}` }],
+				details: { result, config },
+			};
+		},
+	});
+	registerTool(pi, {
+		name: "research_summarize_run",
+		label: "Summarize research run",
+		drone: {
+			capabilities: ["research"],
+			subagent: "exclude",
+			activity: { text: "正在整理本轮研究总结…", phase: "synthesis" },
+			flow: "summary",
+			flowCards: runSummaryCard,
+		},
+		description:
+			"Write one parent-session summary to the run result and configured Obsidian vault. Before calling, extract the material evidence-backed observations into claims so later topic-memory updates can compare new knowledge with prior knowledge. Each claim must name the subject, predicate, source note/hash and whether it is an observation, interpretation, or hypothesis; never invent claims from an unverified summary.",
+		parameters: {
+			type: "object",
+			properties: {
+				run_dir: { type: "string" },
+				summary_markdown: { type: "string" },
+				project: { type: "string" },
+				result_slug: { type: "string" },
+				claims: {
+					type: "array",
+					description:
+						"Structured evidence-backed claims for topic-memory conflict detection. Include only claims supported by sources actually read this turn; preserve different organisms, tissues, stages and methods as separate conditions. Omit this field only when the run contains no substantive claims.",
+					maxItems: 24,
+					items: {
+						type: "object",
+						properties: {
+							claim: { type: "string", maxLength: 1200 },
+							subject: { type: "string", maxLength: 180 },
+							predicate: { type: "string", maxLength: 180 },
+							value: { type: "string", maxLength: 600 },
+							organism: { type: "string", maxLength: 180 },
+							tissue: { type: "string", maxLength: 180 },
+							stage: { type: "string", maxLength: 180 },
+							method: { type: "string", maxLength: 180 },
+							sourcePath: { type: "string", maxLength: 240 },
+							sourceHash: { type: "string", minLength: 64, maxLength: 64 },
+							location: { type: "string", maxLength: 120 },
+							relation: { type: "string", enum: ["observation", "interpretation", "hypothesis"] },
+						},
+						required: ["claim", "subject", "predicate", "sourcePath", "sourceHash", "relation"],
+					},
+				},
+			},
+			required: ["run_dir", "summary_markdown"],
+		},
+		async execute(_id, params, _signal, _update, ctx) {
+			const cwd = ctx?.cwd || baseCwd;
+			const config = await loadWorkspaceConfig(cwd);
+			const runDir = resolve(cwd, params.run_dir);
+			if (!isWithin(config.resultsRoot, runDir))
+				throw new Error("run_dir must be inside the configured results root");
+			if (!isWithin(await realpath(config.resultsRoot), await realpath(runDir)))
+				throw new Error("run_dir escapes results root through a link");
+			const relativeRun = relative(config.resultsRoot, runDir);
+			if (
+				!relativeRun ||
+				relativeRun.startsWith(`..${sep}`) ||
+				relativeRun.split(sep).length !== 2 ||
+				!relativeRun.split(sep)[1].startsWith("run-")
+			) {
+				throw new Error("run_dir must point to a run directory directly inside a result slug");
+			}
+			if (
+				!(await access(join(runDir, "metadata.json")).then(
+					() => true,
+					() => false,
+				))
+			) {
+				throw new Error("run_dir is missing metadata.json");
+			}
+			const metadata = JSON.parse(await readFile(join(runDir, "metadata.json"), "utf8"));
+			const gate = metadata.evidence_gate;
+			if (
+				gate?.stage !== "answerable" ||
+				gate.status !== "ok" ||
+				gate.answerable !== true ||
+				!Array.isArray(gate.claim_refs) ||
+				gate.claim_refs.length === 0
+			) {
+				throw new Error(
+					"Evidence gate is closed: research_loop must complete retrieval, inspection, archiving and claim binding before summarization",
+				);
+			}
+			const outputs = await writeSummary(runDir, params.summary_markdown, "succeeded");
+			let note = null,
+				indexes = null,
+				obsidianError = null,
+				indexError = null;
+			if (config.obsidianVault) {
+				const project = params.project || metadata.project;
+				try {
+					note = await syncRunNote(
+						config.obsidianVault,
+						project,
+						params.result_slug || metadata.result_slug,
+						runDir,
+						params.summary_markdown,
+					);
+				} catch (error) {
+					obsidianError = String(error.message).slice(0, 600);
+				}
+				if (note) {
+					try {
+						indexes = await refreshProjectIndexes(config.obsidianVault, {
+							project,
+							profile: config.knowledgeProfile,
+						});
+					} catch (error) {
+						indexError = String(error.message).slice(0, 600);
+					}
+				}
+			}
+			const result = {
+				...outputs,
+				claims: Array.isArray(params.claims) ? params.claims : [],
+				obsidian_note: note,
+				indexes,
+				summary_saved: true,
+				partial: Boolean(obsidianError || indexError),
+				obsidian_error: obsidianError,
+				index_error: indexError,
+			};
+			return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
+		},
+	});
+	pi.registerCommand("research-workspace", {
+		description: "Show the configured result and Obsidian workspace",
+		handler: async (_args, ctx) => {
+			const config = await loadWorkspaceConfig(ctx.cwd);
+			ctx.ui.notify(
+				`Results: ${config.resultsRoot}; Obsidian: ${config.obsidianVault || "not configured"}`,
+				"info",
+			);
+		},
+	});
+}
+
+export default registerWorkspaceConfig;
