@@ -30,7 +30,7 @@ export function sendToRenderer(channel: string, payload: unknown): void {
  * 这里只做拼装 + backend/updater 事件转发到 renderer。
  */
 export function registerIpc(
-	backend: PiBackend,
+	backendOrServices: PiBackend | BackendServices,
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
 	getIncidentSnapshot?: () => unknown,
@@ -47,15 +47,18 @@ export function registerIpc(
 		| "institutional"
 	>,
 ): void {
+	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
+	const hostServices =
+		services ?? ("sessions" in backendOrServices ? (backendOrServices as BackendServices) : undefined);
 	registerSessionsIpc(backend);
-	registerSettingsIpc(backend, services);
-	registerMcpIpc(backend, services);
+	registerSettingsIpc(backend, hostServices);
+	registerMcpIpc(backend, hostServices);
 	registerPermissionSettingsIpc(backend);
-	registerSubagentsIpc(backend, services);
-	registerKnowledgeIpc(backend, services);
-	registerPackagesIpc(backend, services);
+	registerSubagentsIpc(backend, hostServices);
+	registerKnowledgeIpc(backend, hostServices);
+	registerPackagesIpc(backend, hostServices);
 	registerAppIpc(backend, getIncidentSnapshot);
-	registerInstitutionalIpc(services);
+	registerInstitutionalIpc(hostServices);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
