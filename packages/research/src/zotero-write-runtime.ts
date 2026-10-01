@@ -4,6 +4,7 @@ import {
 	connectorTargetId,
 	normalizeZoteroAttachment,
 	normalizeZoteroItem,
+	textField,
 	toConnectorItem,
 	toWebApiItem,
 } from "./zotero-write";
@@ -29,17 +30,6 @@ export const ZOTERO_ENDPOINTS = Object.freeze({
 	localApi: "http://127.0.0.1:23119/api",
 	webApi: "https://api.zotero.org",
 });
-
-function textField(value: unknown, max: number, name: string): string {
-	if (value === undefined || value === null) return "";
-	if (typeof value !== "string" && typeof value !== "number") throw new Error(`${name} must be a string`);
-	const text = String(value)
-		.replace(/\p{Cc}/gu, " ")
-		.replace(/\s+/g, " ")
-		.trim();
-	if (text.length > max) throw new Error(`${name} exceeds ${max} characters`);
-	return text;
-}
 
 const KEY = /^[A-Z0-9]{8}$/;
 

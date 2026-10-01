@@ -84,7 +84,7 @@ export interface WebApiZoteroItem {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-function textField(value: unknown, max: number, name: string): string {
+export function textField(value: unknown, max: number, name: string): string {
 	if (value === undefined || value === null) return "";
 	if (typeof value !== "string" && typeof value !== "number") throw new Error(`${name} must be a string`);
 	const text = String(value)

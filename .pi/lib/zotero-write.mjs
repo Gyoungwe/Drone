@@ -180,13 +180,6 @@ var ZOTERO_ENDPOINTS = Object.freeze({
   localApi: "http://127.0.0.1:23119/api",
   webApi: "https://api.zotero.org"
 });
-function textField2(value, max, name) {
-  if (value === void 0 || value === null) return "";
-  if (typeof value !== "string" && typeof value !== "number") throw new Error(`${name} must be a string`);
-  const text = String(value).replace(/\p{Cc}/gu, " ").replace(/\s+/g, " ").trim();
-  if (text.length > max) throw new Error(`${name} exceeds ${max} characters`);
-  return text;
-}
 var KEY = /^[A-Z0-9]{8}$/;
 function timeoutSignal(ms, signal) {
   const timer = AbortSignal.timeout(ms);
@@ -374,10 +367,10 @@ function publicWebConfig(config) {
 async function prepareZoteroSave(input = {}, { fetchImpl = fetch, env = process.env, signal } = {}) {
   const item = normalizeZoteroItem(input);
   const attachment = normalizeZoteroAttachment(input);
-  const requested = textField2(input.channel, 16, "channel") || "auto";
+  const requested = textField(input.channel, 16, "channel") || "auto";
   if (!["auto", "connector", "web"].includes(requested))
     throw new Error("channel must be auto, connector or web");
-  const collectionKey = textField2(input.collection_key ?? input.collectionKey, 8, "collection_key") || null;
+  const collectionKey = textField(input.collection_key ?? input.collectionKey, 8, "collection_key") || null;
   if (collectionKey && !KEY.test(collectionKey))
     throw new Error("collection_key must be an 8-character Zotero key");
   const target = connectorTargetId(input.target);
