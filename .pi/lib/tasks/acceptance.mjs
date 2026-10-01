@@ -54,10 +54,17 @@ const createRegistry = () => {
 };
 /** @type {any} */
 const registry = runtimeSlot("tasks", "acceptance", createRegistry, "drone.acceptance-verifiers.v1");
-// 兼容更早的登记表实例（properties 里还没有核心字段）
-registry.properties.kind ??= { type: "string", enum: registry.kinds };
-registry.properties.path ??= stringField;
-registry.properties.sha256 ??= stringField;
+// 兼容更早的登记表实例（properties 里还没有核心字段）。这个修复必须
+// 在每个 runtime 上懒执行：host runtime 可能在模块加载后才由 SessionEngine 注入。
+function ensureRegistryShape() {
+	registry.verifiers ??= new Map();
+	registry.kinds ??= [...CORE_ACCEPTANCE_KINDS];
+	registry.properties ??= {};
+	registry.properties.kind ??= { type: "string", enum: registry.kinds };
+	registry.properties.path ??= stringField;
+	registry.properties.sha256 ??= stringField;
+}
+ensureRegistryShape();
 
 function definitionOf(verifier) {
 	const definition = {
@@ -120,6 +127,7 @@ export function bindAcceptanceVerifierEvents(pi) {
 }
 
 export function registerAcceptanceVerifier(kind, definition = {}) {
+	ensureRegistryShape();
 	if (!KIND.test(kind || "")) throw new Error(`Acceptance kind "${kind}" must match ${KIND}`);
 	if (CORE_ACCEPTANCE_KINDS.includes(kind)) throw new Error(`Acceptance kind "${kind}" is owned by the host`);
 	for (const fn of ["label", "verify", "observe", "resolve", "identify", "consent", "pending"])
@@ -152,6 +160,7 @@ export function registerAcceptanceVerifier(kind, definition = {}) {
 
 /** 仅供测试：清空扩展登记的验收器。 */
 export function resetAcceptanceVerifiers() {
+	ensureRegistryShape();
 	registry.verifiers.clear();
 	registry.kinds.splice(0, registry.kinds.length, ...CORE_ACCEPTANCE_KINDS);
 	for (const field of Object.keys(registry.properties))
@@ -159,14 +168,17 @@ export function resetAcceptanceVerifiers() {
 }
 
 export function acceptanceVerifier(kind) {
+	ensureRegistryShape();
 	return registry.verifiers.get(kind) || null;
 }
 
 export function acceptanceVerifiers() {
+	ensureRegistryShape();
 	return [...registry.verifiers.values()];
 }
 
 export function acceptanceKinds() {
+	ensureRegistryShape();
 	return [...registry.kinds];
 }
 
@@ -175,6 +187,7 @@ export function acceptanceKinds() {
  * 后加载的扩展登记的种类与字段会同时出现在模型看到的 schema 和参数校验里。
  */
 export function acceptanceSchema() {
+	ensureRegistryShape();
 	return {
 		type: "object",
 		properties: registry.properties,
@@ -184,9 +197,10 @@ export function acceptanceSchema() {
 }
 
 /** 规范化模型提交的验收对象：核心字段 + 该种类声明的字段，其余丢弃。 */
-export function normalizeAcceptance(input, clean, verifiers = registry.verifiers) {
+export function normalizeAcceptance(input, clean, verifiers) {
+	ensureRegistryShape();
 	const kind = input?.kind;
-	const verifier = verifiers.get(kind) || null;
+	const verifier = (verifiers || registry.verifiers).get(kind) || null;
 	const acceptance = {
 		kind,
 		path: clean(input.path, 512),

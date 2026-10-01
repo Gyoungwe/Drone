@@ -37,7 +37,7 @@ describe("acceptance verifier event bridge", () => {
 			kind: "wiki_review",
 			definition: { evidenceKind: "wiki-applied" },
 		});
-		expect([...runtime.tasks.acceptance?.verifiers?.entries() ?? []]).toEqual([
+		expect([...(runtime.tasks.acceptance?.verifiers?.entries() ?? [])]).toEqual([
 			["wiki_review", { evidenceKind: "wiki-applied" }],
 		]);
 		await runtime.dispose();
