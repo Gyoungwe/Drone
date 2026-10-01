@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { loadWorkspaceConfig } from "../../extensions/workspace-config.mjs";
 import { inspectObsidianSetup, inspectSetupDirectory, resolveSetupVault } from "../obsidian-setup.mjs";
 import { researchSetupOptions } from "../obsidian-workbench.mjs";
+import { runtimeSlot } from "../runtime-bridge.mjs";
 import { LAYOUT } from "../vault-layout.mjs";
 import {
 	knowledgeDirectory,
@@ -28,10 +29,17 @@ import {
 	wikiHistory,
 } from "./wiki-review.mjs";
 
-const previews = new Map(),
-	MAX_PREVIEWS = 64,
-	maintenance = new Set(),
-	semanticJobs = new Map();
+const runtimeState = runtimeSlot("knowledge", "uiService", () => ({
+	previews: new Map(),
+	maintenance: new Set(),
+	semanticJobs: new Map(),
+	dispose() {
+		this.previews.clear();
+		this.maintenance.clear();
+		this.semanticJobs.clear();
+	},
+}));
+const MAX_PREVIEWS = 64;
 function pathCwd(cwd) {
 	if (cwd !== null && cwd !== undefined && (typeof cwd !== "string" || !isAbsolute(cwd)))
 		throw new Error("Workspace must be an absolute path");
@@ -218,7 +226,7 @@ export async function knowledgePreviewReview({ cwd, id, revision }) {
 	const preview = await previewWikiProposal(service, id, project),
 		token = randomUUID();
 	const expires = Date.now() + 10 * 60 * 1000;
-	previews.set(token, {
+	runtimeState.previews.set(token, {
 		binding,
 		service,
 		project,
@@ -227,7 +235,8 @@ export async function knowledgePreviewReview({ cwd, id, revision }) {
 		hash: preview.proposalHash,
 		expires,
 	});
-	while (previews.size > MAX_PREVIEWS) previews.delete(previews.keys().next().value);
+	while (runtimeState.previews.size > MAX_PREVIEWS)
+		runtimeState.previews.delete(runtimeState.previews.keys().next().value);
 	const { lastWikiModelReview } = await import("./wiki-model-review.mjs");
 	return {
 		...preview,
@@ -239,10 +248,10 @@ export async function knowledgePreviewReview({ cwd, id, revision }) {
 	};
 }
 export function consumeKnowledgeReviewPreview(cwd, token) {
-	const entry = previews.get(token);
+	const entry = runtimeState.previews.get(token);
 	if (!entry || entry.cwd !== pathCwd(cwd) || entry.expires < Date.now())
 		throw new Error("Review expired; open the exact preview again");
-	previews.delete(token);
+	runtimeState.previews.delete(token);
 	return entry;
 }
 /** @param {Record<string, any>} options */
@@ -326,8 +335,8 @@ export async function knowledgeMaintenance({ cwd = null, action, revision, id, e
 	if (!Number.isSafeInteger(revision) || revision < 1)
 		throw new Error("Refresh the binding before maintenance");
 	const key = `${binding.vaultId}:${binding.revision}`;
-	if (maintenance.has(key)) throw new Error("Knowledge maintenance is already running");
-	maintenance.add(key);
+	if (runtimeState.maintenance.has(key)) throw new Error("Knowledge maintenance is already running");
+	runtimeState.maintenance.add(key);
 	try {
 		const result = await withKnowledgeBinding(binding, () =>
 			action === "reconcile" ? service.request("reconcile") : runNavigationMaintenance(service, project, 5),
@@ -335,7 +344,7 @@ export async function knowledgeMaintenance({ cwd = null, action, revision, id, e
 		invalidateKnowledgeUi();
 		return result;
 	} finally {
-		maintenance.delete(key);
+		runtimeState.maintenance.delete(key);
 	}
 }
 /** @param {Record<string, any>} options */
@@ -402,10 +411,11 @@ export async function indexKnowledgeSemantic({ cwd, bindingRevision, requestId, 
 		projectInfo = await projectAt(cwd),
 		project = requireProject(projectInfo),
 		key = `${binding.vaultId}:${project}`;
-	if (semanticJobs.has(key)) throw new Error("Semantic indexing is already running for this project");
+	if (runtimeState.semanticJobs.has(key))
+		throw new Error("Semantic indexing is already running for this project");
 	const controller = new AbortController(),
 		job = { requestId, controller };
-	semanticJobs.set(key, job);
+	runtimeState.semanticJobs.set(key, job);
 	try {
 		return await withKnowledgeBinding(binding, () =>
 			service.rebuildSemanticIndex({
@@ -415,7 +425,7 @@ export async function indexKnowledgeSemantic({ cwd, bindingRevision, requestId, 
 			}),
 		);
 	} finally {
-		if (semanticJobs.get(key) === job) semanticJobs.delete(key);
+		if (runtimeState.semanticJobs.get(key) === job) runtimeState.semanticJobs.delete(key);
 	}
 }
 
@@ -426,7 +436,7 @@ export async function cancelKnowledgeSemanticIndex({ cwd, bindingRevision, reque
 	const { binding } = await bound(bindingRevision),
 		project = requireProject(await projectAt(cwd)),
 		key = `${binding.vaultId}:${project}`,
-		job = semanticJobs.get(key);
+		job = runtimeState.semanticJobs.get(key);
 	if (!job || job.requestId !== requestId) throw new Error("No matching semantic index request is running");
 	job.controller.abort();
 }
