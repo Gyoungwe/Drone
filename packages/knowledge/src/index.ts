@@ -220,3 +220,5 @@ export {
 } from "./specialist-host";
 
 export { createKnowledgeSpecialists, knowledgeReadStart, shouldOrientKnowledge } from "./specialists";
+
+export { saveSpecialistExplainer } from "./specialist-delivery";

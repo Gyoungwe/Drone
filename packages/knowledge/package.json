@@ -33,7 +33,8 @@
 		"./service": "./src/service.ts",
 		"./wiki-review": "./src/wiki-review.ts",
 		"./specialist-host": "./src/specialist-host.ts",
-		"./specialists": "./src/specialists.ts"
+		"./specialists": "./src/specialists.ts",
+		"./specialist-delivery": "./src/specialist-delivery.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

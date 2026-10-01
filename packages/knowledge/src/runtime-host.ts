@@ -104,3 +104,25 @@ let hasPaperCitation = (sources: unknown[]) =>
 export { requiresPaperEvidence, hasPaperCitation };
 
 export const deliveryContract: DeliveryContract = (prompt, options) => deliveryLookup(prompt, options);
+
+export type WorkspaceConfigLoader = (cwd: string) => Promise<Record<string, unknown>>;
+export type ExplainerPublisher = (input: Record<string, unknown>) => Promise<unknown>;
+let workspaceConfigLoader: WorkspaceConfigLoader = async () => { throw new Error("Workspace config host is not configured"); };
+let explainerPublisher: ExplainerPublisher = async () => { throw new Error("Explainer publisher host is not configured"); };
+let reviewPreviewConsumer: (cwd: string, token: string) => unknown = () => null;
+let specialistSettingsReader: () => Promise<Record<string, unknown>> = async () => ({ mode: "strict" });
+export function configureKnowledgeHost(host: {
+	loadWorkspaceConfig?: WorkspaceConfigLoader;
+	publishExplainer?: ExplainerPublisher;
+	consumeKnowledgeReviewPreview?: (cwd: string, token: string) => unknown;
+	specialistSettings?: () => Promise<Record<string, unknown>>;
+} = {}): void {
+	if (host.loadWorkspaceConfig) workspaceConfigLoader = host.loadWorkspaceConfig;
+	if (host.publishExplainer) explainerPublisher = host.publishExplainer;
+	if (host.consumeKnowledgeReviewPreview) reviewPreviewConsumer = host.consumeKnowledgeReviewPreview;
+	if (host.specialistSettings) specialistSettingsReader = host.specialistSettings;
+}
+export const loadWorkspaceConfig: WorkspaceConfigLoader = (cwd) => workspaceConfigLoader(cwd);
+export const publishExplainer: ExplainerPublisher = (input) => explainerPublisher(input);
+export const consumeKnowledgeReviewPreview = (cwd: string, token: string) => reviewPreviewConsumer(cwd, token);
+export const specialistSettings = () => specialistSettingsReader();
