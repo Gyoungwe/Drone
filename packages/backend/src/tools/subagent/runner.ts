@@ -2,12 +2,13 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { PROTECTED_KNOWLEDGE_AGENTS } from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
 import type { PermissionGate, PermissionRequestMeta } from "../../permissions/gate";
+import { researchWorkbenchRoot } from "../../research-root";
 import { projectKnowledgeEvent } from "../../session/knowledge-publication";
 import type { SessionTraces } from "../../session/traces";
 import { makeUiContext } from "../../session/ui-context";
@@ -381,9 +382,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 			}) as ToolDefinition,
 		);
 	const mcpAccess = await resolveSubagentMcpAccess(input.cwd, input.agent, input.projectTrusted);
-	const readonlyMcpExtension = process.env.DRONE_RESEARCH_WORKBENCH_ROOT
-		? join(process.env.DRONE_RESEARCH_WORKBENCH_ROOT, "extensions", "subagent-mcp-readonly.mjs")
-		: fileURLToPath(new URL("../../../../../.pi/extensions/subagent-mcp-readonly.mjs", import.meta.url));
+	const readonlyMcpExtension = join(researchWorkbenchRoot(), "extensions", "subagent-mcp-readonly.mjs");
 	const childExtensionFactories = [
 		makePermissionGateExtension(agentDir, {
 			projectRoot: input.cwd,
@@ -397,9 +396,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		childExtensionFactories.push(readonlyMcp.makeSubagentReadonlyMcp(input.cwd) as never);
 	} else if (process.env.DRONE_KNOWLEDGE_DIR) {
 		// Children without Vault permission return labeled material, not a checked parent answer.
-		const modulePath = process.env.DRONE_RESEARCH_WORKBENCH_ROOT
-			? join(process.env.DRONE_RESEARCH_WORKBENCH_ROOT, "lib", "knowledge", "publication.mjs")
-			: fileURLToPath(new URL("../../../../../.pi/lib/knowledge/publication.mjs", import.meta.url));
+		const modulePath = join(researchWorkbenchRoot(), "lib", "knowledge", "publication.mjs");
 		const publication = (await import(pathToFileURL(modulePath).href)) as {
 			registerAnswerPublication: (
 				pi: unknown,
