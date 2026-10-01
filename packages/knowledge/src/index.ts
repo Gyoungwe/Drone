@@ -148,3 +148,15 @@ export {
 	type TopicCandidateInput,
 	type TopicCandidateResult,
 } from "./topic-candidate";
+export {
+	immutableWikiProposalHash,
+	MANAGED_END,
+	MANAGED_START,
+	type ManagedParts,
+	managedParts,
+	proposedWikiText,
+	targetWikiPath,
+	validateSpecialistHtml,
+	validateWikiSourcePaths,
+	type WikiProposalShape,
+} from "./wiki-policy";

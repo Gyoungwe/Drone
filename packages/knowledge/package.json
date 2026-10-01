@@ -22,7 +22,8 @@
 		"./task-feedback": "./src/task-feedback.ts",
 		"./semantic-provider": "./src/semantic-provider.ts",
 		"./files": "./src/files.ts",
-		"./layout": "./src/layout.ts"
+		"./layout": "./src/layout.ts",
+		"./wiki-policy": "./src/wiki-policy.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
