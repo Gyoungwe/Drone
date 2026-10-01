@@ -94,6 +94,7 @@
   - [x] source-links：新增 `@drone/knowledge` TS 包入口与强类型 `onlineSourceLink` / `normalizeSourceLinks`，包内 4/4 与 backend `knowledge-delivery-round2`、`zotero-literature` 合计 26/26 通过；`.pi/lib/knowledge/source-links.mjs` 暂作运行时兼容实现。
   - [x] flow-cards：新增 `@drone/knowledge` TS 包入口与强类型回执卡构造器，包内 3/3 通过；`.pi/lib/knowledge/flow-cards.mjs` 暂作扩展运行时兼容实现。
   - [x] files：新增 `@drone/knowledge/files` 安全文件读取入口，迁移 Vault 相对路径校验、软链接拒绝、1 MiB 上限、稳定哈希与 bounded snippet；包内 6/6 通过；`.pi/lib/knowledge/files.mjs` 暂作运行时兼容实现。
+  - [x] layout：新增 `@drone/knowledge/layout`，迁移安全 Vault containment、create-only 初始化、managed navigation 更新与项目上下文模板；包内 7 项定向测试，knowledge 包回归 53/53 通过；`.pi/lib/knowledge/layout.mjs` 暂作运行时兼容实现。
 - [ ] **A5-2 @drone/tasks**：`.pi/lib/tasks/*` 迁移。验收：全部 `task-*` 测试通过，包括 `example-tasks-one-authorization-sdk.test.mjs`。
   - [x] failure-feedback：新增 `@drone/tasks` TS 包入口与强类型 `diagnosticText` / `toolResultFailed` / `failureObservation` / `failureContext` 等纯函数；包内 4/4 测试及 backend `task-failure-feedback` 20/20 测试通过，backend diagnostics 复用该脱敏入口；`.pi/lib/tasks/failure-feedback.mjs` 暂作运行时兼容实现。
   - [x] single-flight：新增 `@drone/tasks` TS 包入口与强类型 `singleFlightCommand`，包内 3/3 与 backend `task-command-single-flight` 4/4 通过；`.pi/lib/tasks/single-flight.mjs` 暂作运行时兼容实现。
@@ -101,9 +102,12 @@
   - [x] tool-protocol：新增 `@drone/tasks` TS 包入口与强类型 `restoreTaskToolOrder`，包内 9/9 与 backend `task-tool-protocol` 9/9 通过；`.pi/lib/tasks/tool-protocol.mjs` 暂作运行时兼容实现。
   - [x] consent / remaining：新增 `@drone/tasks` TS 包入口与强类型任务授权、剩余进度解释策略；包内测试和 backend `task-consent` / `task-progress` 回归通过；旧 `.pi` 文件暂作运行时兼容实现。
   - [x] evidence：新增 `@drone/tasks/evidence` TypeScript 状态机，`.pi/lib/tasks/evidence.mjs` 仅保留宿主 inspector 适配；包内 5/5 与 backend `task-workbench` 30/30 通过。
+  - [x] authorization-policy：新增 `@drone/tasks/authorization-policy` 纯授权卡策略入口，包内 6 项测试通过；`.pi/lib/tasks/ask-authorization.mjs` 暂作运行时兼容实现。
+  - [x] pdf-identity：新增 `@drone/tasks/pdf-identity` 宿主注入 worker 边界，含 15 秒超时、AbortSignal 清理、页数/文本上限与稳定错误码；包内 43/43 通过；`.pi/lib/tasks/pdf-identity.mjs` 暂作 CLI worker 适配器。
 - [ ] **A5-3 @drone/research**：source-archive、open-access、zotero-*、institutional-access、literature-*、run-provenance、research-receipt-journal 等迁移。验收：`zotero-*`、`source-archive-*`、`institutional`、`literature-*` 测试通过。
   - [x] run-provenance：新增 `@drone/research/run-provenance`，执行回执、文件快照、范围/凭据校验和 QC 边界迁移到 TS；包内 5/5，backend 回归 4/4；`.pi/lib/run-provenance.mjs` 保持自包含兼容入口。
   - [x] evidence-gate：新增 `@drone/research/evidence-gate`，迁移证据阶段单调推进、失败终态与 answerable 断言；research 包 37/37 通过；`.pi/lib/evidence-gate.mjs` 暂作运行时兼容入口。
+  - [x] source-archive-policy：新增 `@drone/research/source-archive-policy`，迁移 run 目录、文件名、挑战页、magic bytes、内容类型与元数据门禁；包内 5 项测试与 typecheck 通过；`.pi/lib/source-archive.mjs` 仍保留下载/写入运行时适配。
 - [ ] **A5-4 扩展适配层**：`.pi/extensions/*.mjs` 的源码移到 `packages/extensions/src/`，只保留参数映射和注册逻辑，领域逻辑全部调用领域包。`runner.ts` 里两处 `../../../../../.pi/…` 改为包引用或构建产物的解析函数。验收：R5 基线清零；`.pi/lib` 从 extraResources 移除后，打包冒烟通过。
 
 ## A6 · DroneRuntime 注入
@@ -184,5 +188,8 @@
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge/semantic-provider` 承载语义 provider 配置验证、请求边界、凭据注入与 bounded vector 响应校验；backend `knowledge-semantic` 10/10 改用包入口，knowledge typecheck/40 tests 通过 | `.pi/lib/knowledge/semantic-provider.mjs` 保留 CLI 自包含适配；service/worker 与 extension runtime 仍待整体迁移
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge/files` 承载 Vault 相对路径校验、软链接拒绝、读取期间签名一致性、1 MiB 上限和 bounded snippet；包内 6/6 与 typecheck、Biome 通过 | `.pi/lib/knowledge/files.mjs` 仍保留运行时兼容入口；layout、maintenance、service、worker 与 specialist host 尚待迁移 |
 | 2026-10-01 | A5-3 增量 | `@drone/research/evidence-gate` 承载证据阶段单调推进、失败终态和 answerable 断言；research 包 11 个文件、37 项测试与 typecheck 通过 | `.pi/lib/evidence-gate.mjs` 仍保留运行时兼容入口；source archive、research receipt journal 与 Zotero 运行时适配器尚待迁移 |
+| 2026-10-01 | A5-1 增量 | `@drone/knowledge/layout` 承载安全 Vault 初始化、create-only 文件保护与 managed navigation 更新；knowledge 包回归 53/53、typecheck 与 Biome 通过 | `.pi/lib/knowledge/layout.mjs` 仍保留运行时兼容入口；service、worker、maintenance 与 specialist host 尚待迁移 |
+| 2026-10-01 | A5-2 增量 | `@drone/tasks/pdf-identity` 承载隔离 PDF worker 的超时、取消、页数/文本边界与稳定错误码；tasks 包回归 43/43、typecheck 与 Biome 通过 | `.pi/lib/tasks/pdf-identity.mjs` 仍保留 CLI worker 适配器；workbench、acceptance、register 与 runtime 尚待迁移 |
+| 2026-10-01 | A5-3 增量 | `@drone/research/source-archive-policy` 承载来源归档的 run 目录、文件名、挑战页、magic bytes、内容类型和元数据策略；5 项测试与 typecheck 通过 | `.pi/lib/source-archive.mjs` 仍负责下载/写入运行时；source archive runtime、receipt journal、Zotero/institutional adapters 尚待迁移 |
 | 2026-10-01 | 全量回归（语义、授权、文件与证据切片后） | backend 1,373 passed + 13 skipped、desktop 556、extensions 16、knowledge 46、research 37、shared 130、tasks 37；`npm run lint -- --error-on-warnings`、`npm run typecheck`、`npm test`、`npm run build`、`npm run test:upgrade -- --fixtures-only`、`check:extensions --strict`、`check:plugin-api` 与架构检查（140 baseline、0 fixed）全部通过 | A5 总项仍按兼容层策略逐步迁移：knowledge service/worker、tasks runtime、research source archive/Zotero adapters、5 个 legacy extension outputs 仍待收尾 |
 | 2026-10-01 | A6-1 / A6-2 完成 | `DroneRuntime` 已由 shared 契约、backend 组合根和 extensions CLI fallback 统一承载；10 个 `Symbol.for("drone.*")` 运行时桥已清零，锁/队列使用 scheduler，worker/UI/specialist 等资源挂入 host runtime，tool-manifest/acceptance 通过版本化事件桥接；runtime 隔离、dispose、Pi host 回归通过 | Worker 线程内部 activeRequests/flushes/dirty/inflight 仍是 worker 私有状态；无 host 上下文的兼容读取只保留只读模型，不承载执行状态 |

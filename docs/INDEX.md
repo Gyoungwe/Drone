@@ -103,7 +103,9 @@ packages/
 
 ## packages/research — 研究来源领域包（迁移中）
 
-`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/literature-operations.ts` 提供宿主注入的文献对账 journal/队列边界，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界，`src/evidence-gate.ts` 统一证据阶段单调推进、失败终态与 answerable 断言。backend literature evidence、literature operations、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
+`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/literature-operations.ts` 提供宿主注入的文献对账 journal/队列边界，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界，`src/evidence-gate.ts` 统一证据阶段单调推进、失败终态与 answerable 断言，`src/source-archive-policy.ts` 统一来源归档的路径、文件名、挑战页、签名和元数据门禁。backend literature evidence、literature operations、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
+
+`@drone/tasks` 的 `src/pdf-identity.ts` 提供宿主注入 PDF worker 的隔离边界、15 秒超时、AbortSignal 清理、页数/文本上限与稳定错误码；`.pi/lib/tasks/pdf-identity.mjs` 继续作为 CLI worker 适配器。
 
 ## packages/extensions — Pi 扩展适配层（迁移中）
 
