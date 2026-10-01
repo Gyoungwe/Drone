@@ -21,7 +21,8 @@
 		"./extension-helpers": "./src/extension-helpers.ts",
 		"./task-feedback": "./src/task-feedback.ts",
 		"./semantic-provider": "./src/semantic-provider.ts",
-		"./files": "./src/files.ts"
+		"./files": "./src/files.ts",
+		"./layout": "./src/layout.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

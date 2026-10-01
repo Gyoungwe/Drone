@@ -95,7 +95,7 @@ packages/
 
 ## packages/knowledge — 知识领域包（迁移中）
 
-`@drone/knowledge` 目前承载无 SDK 依赖的策略与安全文件合约：`src/files.ts` 提供 Vault 相对路径校验、软链接拒绝、稳定读取与 bounded snippet，`src/config.ts` 提供应用知识绑定，`src/semantic-provider.ts` 提供向量 provider 边界；同时保留 claim 冲突比较、specialist 编排、review policy、source links、tool budget 与 topic candidate 合约。运行时仍从 `.pi/lib/knowledge/*` 加载兼容实现；service、worker、maintenance、layout 与 specialist host 按 A5-1 分阶段迁移。
+`@drone/knowledge` 目前承载无 SDK 依赖的策略与安全文件合约：`src/files.ts` 提供 Vault 相对路径校验、软链接拒绝、稳定读取与 bounded snippet，`src/layout.ts` 提供共享导航与项目上下文初始化、create-only 文件保护和 managed block 更新，`src/config.ts` 提供应用知识绑定，`src/semantic-provider.ts` 提供向量 provider 边界；同时保留 claim 冲突比较、specialist 编排、review policy、source links、tool budget 与 topic candidate 合约。运行时仍从 `.pi/lib/knowledge/*` 加载兼容实现；service、worker、maintenance 与 specialist host 按 A5-1 分阶段迁移。
 
 ## packages/tasks — 任务领域包（迁移中）
 

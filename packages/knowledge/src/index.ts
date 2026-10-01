@@ -61,6 +61,15 @@ export {
 	statusTone,
 } from "./flow-cards";
 export {
+	containedVaultFile,
+	createVaultFileOnly,
+	initializeProjectContext,
+	initializeSharedNavigation,
+	type KnowledgeLayoutDependencies,
+	type NavigationUpdateResult,
+	updateVaultNavigation,
+} from "./layout";
+export {
 	createSpecialistBudget,
 	decideSpecialistRun,
 	SPECIALIST_DECISIONS,
