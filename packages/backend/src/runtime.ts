@@ -1,4 +1,4 @@
-import type { DroneRuntime, KeyedLocks } from "@drone/shared";
+import type { DroneRuntime, KeyedLocks, RuntimeDisposable } from "@drone/shared";
 import { createLogger, type Logger } from "./log";
 
 /** Per-backend keyed scheduler used by knowledge/task migrations. */
@@ -49,12 +49,45 @@ export class KeyedScheduler implements KeyedLocks {
 
 export function createDroneRuntime(logger: Logger = createLogger("runtime")): DroneRuntime {
 	const scheduler = new KeyedScheduler();
+	const disposables = new Set<RuntimeDisposable>();
+	let disposed = false;
+	let disposal: Promise<void> | undefined;
+	const registerDisposable = (resource: RuntimeDisposable): (() => void) => {
+		if (!resource || (typeof resource.dispose !== "function" && typeof resource.close !== "function"))
+			return () => {};
+		if (disposed) {
+			void (resource.dispose?.() ?? resource.close?.());
+			return () => {};
+		}
+		disposables.add(resource);
+		return () => disposables.delete(resource);
+	};
+	const dispose = async (): Promise<void> => {
+		if (disposal) return disposal;
+		disposed = true;
+		disposal = (async () => {
+			const resources = [...disposables];
+			disposables.clear();
+			await Promise.allSettled(
+				resources.map((resource) => {
+					try {
+						return resource.dispose?.() ?? resource.close?.();
+					} catch (error) {
+						return Promise.reject(error);
+					}
+				}),
+			);
+			await scheduler.dispose();
+		})();
+		return disposal;
+	};
 	return {
 		knowledge: {},
 		tasks: {},
-		tools: { tools: new Map() },
+		tools: { tools: new Map(), families: new Map() },
 		scheduler,
 		log: logger,
-		dispose: () => scheduler.dispose(),
+		registerDisposable,
+		dispose: dispose,
 	};
 }

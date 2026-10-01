@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { bindExtensionRuntime, runExtensionExclusive, withExtensionRuntime } from "./internal/runtime";
 
 /** Maximum number of concurrent research workers allowed by the host policy. */
 export const MAX_CONCURRENT_SUBAGENTS = 3;
@@ -16,6 +17,10 @@ export const ROLE_MAP = Object.freeze({
 } as const);
 
 type PiLike = {
+	events?: {
+		on?: (event: string, listener: (payload: unknown) => void) => unknown;
+		emit?: (event: string, payload?: unknown) => unknown;
+	};
 	registerTool: (definition: {
 		name: string;
 		label: string;
@@ -90,6 +95,7 @@ function toolResponse(value: unknown) {
 }
 
 export function registerResearchSubagents(pi: PiLike, options: { cwd?: string } = {}): void {
+	bindExtensionRuntime(pi);
 	const baseCwd = options.cwd ? resolve(options.cwd) : process.cwd();
 	pi.registerTool({
 		name: "research_subagent_policy",
@@ -102,36 +108,40 @@ export function registerResearchSubagents(pi: PiLike, options: { cwd?: string } 
 			required: ["role"],
 		},
 		async execute(_id, params: { role?: string; run_dir?: string }, _signal, _update, ctx) {
-			const role = params?.role ? ROLE_MAP[params.role as keyof typeof ROLE_MAP] : undefined;
-			if (!role) throw new Error(`unknown research subagent role: ${params?.role}`);
-			const cwd = typeof ctx?.cwd === "string" ? resolve(ctx.cwd) : baseCwd;
-			const config = await loadWorkspacePolicy(cwd);
-			const runDir = params.run_dir ? resolve(cwd, params.run_dir) : null;
-			const runDirAllowed =
-				params.role !== "analyst" || (runDir !== null && isRunDirectory(config.resultsRoot, runDir));
-			if (params.role === "analyst" && !runDirAllowed) {
-				throw new Error("analyst requires a run_dir directly inside the configured results root");
-			}
-			const details = {
-				max_concurrent_subagents: Math.min(MAX_CONCURRENT_SUBAGENTS, config.maxConcurrentSubagents),
-				role: params.role,
-				...role,
-				run_dir: runDir,
-				run_dir_allowed: Boolean(runDirAllowed),
-				main_session_owns_obsidian_writes: true,
-				subagent_mcp_is_read_only: true,
-			};
-			return toolResponse(details);
+			return runExtensionExclusive(pi, "research-subagent-policy", async () => {
+				const role = params?.role ? ROLE_MAP[params.role as keyof typeof ROLE_MAP] : undefined;
+				if (!role) throw new Error(`unknown research subagent role: ${params?.role}`);
+				const cwd = typeof ctx?.cwd === "string" ? resolve(ctx.cwd) : baseCwd;
+				const config = await loadWorkspacePolicy(cwd);
+				const runDir = params.run_dir ? resolve(cwd, params.run_dir) : null;
+				const runDirAllowed =
+					params.role !== "analyst" || (runDir !== null && isRunDirectory(config.resultsRoot, runDir));
+				if (params.role === "analyst" && !runDirAllowed) {
+					throw new Error("analyst requires a run_dir directly inside the configured results root");
+				}
+				const details = {
+					max_concurrent_subagents: Math.min(MAX_CONCURRENT_SUBAGENTS, config.maxConcurrentSubagents),
+					role: params.role,
+					...role,
+					run_dir: runDir,
+					run_dir_allowed: Boolean(runDirAllowed),
+					main_session_owns_obsidian_writes: true,
+					subagent_mcp_is_read_only: true,
+				};
+				return toolResponse(details);
+			});
 		},
 	});
 
 	pi.registerCommand("research-subagents", {
 		description: "Show research subagent roles and concurrency policy",
 		handler: async (_args, ctx) => {
-			ctx.ui.notify(
-				`Roles: ${Object.keys(ROLE_MAP).join(", ")}; max concurrent: ${MAX_CONCURRENT_SUBAGENTS}`,
-				"info",
-			);
+			await withExtensionRuntime(pi, async () => {
+				ctx.ui.notify(
+					`Roles: ${Object.keys(ROLE_MAP).join(", ")}; max concurrent: ${MAX_CONCURRENT_SUBAGENTS}`,
+					"info",
+				);
+			});
 		},
 	});
 }

@@ -9,14 +9,14 @@
 			"output": "institutional-access.mjs",
 			"status": "generated",
 			"sourceSha256": "3dbf02ec9729cde3ab8285b420bd37e4ce271b73344b7624a8be72361b4ff149",
-			"outputSha256": "cacb43fda327aa77c4351f73f031e89b2f7928229eb43b17f7a9beacec42ca90"
+			"outputSha256": "1ef14afd7ccea6cc3e90352a72b3c21085be365ddda6e534452e55e01d77dbea"
 		},
 		"subagent-research": {
 			"source": "subagent-research.ts",
 			"output": "subagent-research.mjs",
 			"status": "generated",
-			"sourceSha256": "c36ee2dada3758af32751a4c00f9155d6a5fc61737e5ca9f7f45d7ab902190e1",
-			"outputSha256": "d645108375cc4ebf2708db48ffe8724ae593cadb90764f6f0af109b65f3d76e8"
+			"sourceSha256": "0931f889056fcb19fad1b3dc9db93d33313dfacfd0cc16b346e7890ec924baaf",
+			"outputSha256": "d6e26f3713fbdc9f01de6d723451e91a53baaba8c4ad98b33650598fbc6ee9dd"
 		}
 	},
 	"legacyOutputs": [

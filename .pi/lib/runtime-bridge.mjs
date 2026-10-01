@@ -58,16 +58,47 @@ class KeyedScheduler {
 
 /** Construct the CLI-compatible runtime used when no desktop host is present. */
 export function createStandaloneRuntime(log = {}) {
-	return {
+	const disposables = new Set();
+	let disposed = false;
+	let disposal;
+	const registerDisposable = (resource) => {
+		if (!resource || (typeof resource.dispose !== "function" && typeof resource.close !== "function"))
+			return () => {};
+		if (disposed) {
+			void (resource.dispose?.() ?? resource.close?.());
+			return () => {};
+		}
+		disposables.add(resource);
+		return () => disposables.delete(resource);
+	};
+	const runtime = {
 		knowledge: {},
 		tasks: {},
 		tools: { tools: new Map(), families: new Map() },
 		scheduler: new KeyedScheduler(),
 		log,
+		registerDisposable,
 		dispose() {
-			return this.scheduler.dispose();
+			if (disposal) return disposal;
+			disposed = true;
+			disposal = (async () => {
+				const resources = [...disposables];
+				disposables.clear();
+				await Promise.allSettled(
+					resources.map((resource) => {
+						try {
+							return resource.dispose?.() ?? resource.close?.();
+						} catch (error) {
+							return Promise.reject(error);
+						}
+					}),
+				);
+				await runtime.scheduler.dispose();
+			})();
+			return disposal;
 		},
 	};
+	return runtime;
 }
 
 /** Install a host runtime for subsequently loaded/registered first-party modules. */
@@ -204,7 +235,7 @@ export function withHostRuntime(pi, operation) {
 export function currentRuntime() {
 	if (contexts.getStore()) return contexts.getStore();
 	if (installedRuntime) return installedRuntime;
-	standaloneRuntime ||= createStandaloneRuntime();
+	if (!standaloneRuntime) standaloneRuntime = createStandaloneRuntime();
 	return standaloneRuntime;
 }
 
@@ -220,7 +251,10 @@ function resolveSlot(domain, slot, create) {
 		group = {};
 		runtime[domain] = group;
 	}
-	if (!group[slot]) group[slot] = create();
+	if (!group[slot]) {
+		group[slot] = create();
+		runtime.registerDisposable?.(group[slot]);
+	}
 	return group[slot];
 }
 

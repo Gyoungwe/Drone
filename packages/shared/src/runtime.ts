@@ -55,6 +55,12 @@ export interface QueueBridge {
 	dispose?(): Promise<void> | void;
 }
 
+/** A resource allocated inside a host-owned runtime slot. */
+export interface RuntimeDisposable {
+	dispose?(): Promise<void> | void;
+	close?(): Promise<void> | void;
+}
+
 /** Stable labels retained for migration callers; mutable state is runtime-owned. */
 export const DRONE_KNOWLEDGE_PUBLICATION_KEY = "drone.knowledge.publication.v1";
 export const DRONE_TOOL_MANIFEST_KEY = "drone.tool-manifest.v1";
@@ -73,6 +79,8 @@ export interface DroneRuntime {
 	tools: ToolManifestRegistry;
 	scheduler: KeyedLocks;
 	log: Logger;
+	/** Optional slot lifecycle hook used by runtime-backed legacy adapters. */
+	registerDisposable?(resource: RuntimeDisposable): () => void;
 	dispose(): Promise<void>;
 }
 

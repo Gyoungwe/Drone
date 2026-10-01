@@ -77,3 +77,63 @@ test("subagent policy extension reports unknown roles", async (t) => {
 	});
 	await assert.rejects(tools[0].execute("test", { role: "unknown" }), /unknown research subagent role/);
 });
+
+test("subagent policy entry adopts the host runtime and serializes execution", async (t) => {
+	const extension = await loadBuiltExtension(t);
+	const project = await mkdtemp(join(tmpdir(), "drone-subagent-runtime-project-"));
+	t.after(() => rm(project, { recursive: true, force: true }));
+	const listeners = new Map();
+	let active = 0;
+	let maxActive = 0;
+	const waiters = [];
+	let disposed = false;
+	const runtime = {
+		scheduler: {
+			async run(_key, task) {
+				if (disposed) throw new Error("Extension runtime scheduler has been disposed");
+				if (active > 0) await new Promise((resolve) => waiters.push(resolve));
+				active++;
+				maxActive = Math.max(maxActive, active);
+				try {
+					return await task();
+				} finally {
+					active--;
+					waiters.shift()?.();
+				}
+			},
+		},
+		async dispose() {
+			disposed = true;
+		},
+	};
+	const tools = [];
+	const host = {
+		events: {
+			on(name, listener) {
+				listeners.set(name, listener);
+				return () => listeners.delete(name);
+			},
+			emit(name, _payload) {
+				if (name === "drone:runtime/request/v1") listeners.get("drone:runtime/v1")?.({ version: 1, runtime });
+				return undefined;
+			},
+		},
+		registerTool(definition) {
+			tools.push(definition);
+		},
+		registerCommand() {},
+	};
+	extension.default(host);
+	const first = tools[0].execute("test", { role: "scout" }, undefined, undefined, { cwd: project });
+	const second = tools[0].execute("test", { role: "reviewer" }, undefined, undefined, { cwd: project });
+	const results = await Promise.all([first, second]);
+	assert.equal(results[0].details.role, "scout");
+	assert.equal(results[1].details.role, "reviewer");
+	assert.equal(maxActive, 1);
+	await runtime.dispose();
+	assert.equal(disposed, true);
+	await assert.rejects(
+		tools[0].execute("test", { role: "scout" }, undefined, undefined, { cwd: project }),
+		/Extension runtime scheduler has been disposed/,
+	);
+});
