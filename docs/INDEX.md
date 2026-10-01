@@ -25,7 +25,7 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，6 个包：
+npm workspaces monorepo，7 个包：
 
 ```
 packages/
@@ -33,6 +33,7 @@ packages/
 ├── backend/    纯 Node；pi SDK 适配层
 ├── knowledge/  知识领域纯函数与 claim 合约（TS 包，迁移中）
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
+├── research/   文献回执与来源交付合约（TS 包，迁移中）
 ├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
 ```
@@ -94,11 +95,15 @@ packages/
 
 ## packages/knowledge — 知识领域包（迁移中）
 
-`@drone/knowledge` 目前承载无 SDK 依赖的 claim 冲突比较、specialist 编排、review policy 与 source links 合约：`src/claim-conflicts.ts` 导出 `compareClaims` 与 `compareClaimSets`，`src/orchestration-policy.ts` 导出确定性调度决策、请求签名与预算器，`src/review-policy.ts` 导出 review mode 持久化与 advisory code 集合，`src/source-links.ts` 导出安全的在线、DOI、Vault、Zotero 与本地结果链接归一化，供 backend 和后续 knowledge 迁移复用。运行时仍从 `.pi/lib/knowledge/{claim-conflicts,orchestration-policy,review-policy,source-links}.mjs` 加载兼容实现；其余 knowledge 模块按 A5-1 分阶段迁移。
+`@drone/knowledge` 目前承载无 SDK 依赖的 claim 冲突比较、specialist 编排、review policy、source links、tool budget 与 topic candidate 合约：`src/claim-conflicts.ts` 导出 `compareClaims` 与 `compareClaimSets`，`src/orchestration-policy.ts` 导出确定性调度决策、请求签名与预算器，`src/review-policy.ts` 导出 review mode 持久化与 advisory code 集合，`src/source-links.ts` 导出安全的在线、DOI、Vault、Zotero 与本地结果链接归一化，`src/tool-budget.ts` 和 `src/topic-candidate.ts` 提供预算与主题候选策略，供 backend 和后续 knowledge 迁移复用。运行时仍从 `.pi/lib/knowledge/*` 加载兼容实现；其余 knowledge 模块按 A5-1 分阶段迁移。
 
 ## packages/tasks — 任务领域包（迁移中）
 
-`@drone/tasks` 目前承载无 SDK 依赖的失败反馈、命令协调、回合续作策略与协议修复：`src/failure-feedback.ts` 导出诊断脱敏、失败识别、失败观察与任务上下文合约，`src/single-flight.ts` 导出按会话、目录、参数隔离的 in-flight 命令合并器，`src/turn-end-prompt.ts` 导出受授权、进度和配额约束的继续提示策略，`src/tool-protocol.ts` 仅修复已知旧版状态卡交错，供 backend 和后续 tasks 迁移复用。`.pi/lib/tasks/{failure-feedback,single-flight,turn-end-prompt,tool-protocol}.mjs` 仍保留为 CLI/扩展运行时兼容实现；其余 tasks 模块按 A5-2 分阶段迁移。
+`@drone/tasks` 目前承载无 SDK 依赖的失败反馈、命令协调、回合续作、授权与剩余进度解释策略以及协议修复：`src/failure-feedback.ts` 导出诊断脱敏、失败识别、失败观察与任务上下文合约，`src/single-flight.ts` 导出按会话、目录、参数隔离的 in-flight 命令合并器，`src/turn-end-prompt.ts` 导出受授权、进度和配额约束的继续提示策略，`src/consent.ts` 与 `src/remaining.ts` 收敛任务授权和剩余进度文案，`src/tool-protocol.ts` 仅修复已知旧版状态卡交错。`.pi/lib/tasks/*` 仍保留为 CLI/扩展运行时兼容实现；其余 tasks 模块按 A5-2 分阶段迁移。
+
+## packages/research — 研究来源领域包（迁移中）
+
+`@drone/research` 承载文献证据回执与来源交付的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因。backend literature evidence、research loop 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 兼容实现。
 
 ## packages/backend — pi SDK 适配层
 
@@ -117,13 +122,14 @@ src/
 ├── project/            trust / trust-loader / workspace-store / files
 ├── settings/           settings / model-prefs / login
 ├── packages/           admin / catalog
-├── services/           approvals / packages / permissions / project-trust / zotero（域服务，组合根暴露）
+├── services/           approvals / institutional / packages / permissions / project-trust / subagents / zotero（域服务，组合根暴露）
 └── tools/              show-image / todo / todo-reminder / webfetch / subagent / context-evaporation / channel-watch
 ```
 
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
-| `src/pi-backend.ts` | `PiBackend` | **门面**：create/open/close/delete/prompt（followUp 排队，preflight 回执见 `use-composer-send`）/abort/fork/recall/compact/stats/listModels（附 `thinkingLevels`/`imageInput`）/会话权限模式（`permissionModes` map 内存态 + get/setSessionPermissionMode，随 buildExtensionFactories 闭包注入扩展）/事件与权限·信任分发（respondPermission **先 gate.respond 放行再持久化**，持久化失败只 log 不挂会话）。`buildCustomTools(gate)` 注册 webfetch+show_image+todo+subagent；`buildExtensionFactories` 注册序 = context 钩子链序：权限门控 → 上下文蒸发 → channel-watch → todo-reminder（最后，注入不被折叠）；subagent 子会话 `noExtensions`。`sessions-subagents/` 下会话记 readOnly，prompt/fork/recall/setModel 一律 throw |
+| `src/create-backend.ts` | `BackendServices`、`createBackend` | 组合根：注入每 host `DroneRuntime`，组装 session、knowledge、zotero、institutional、subagents、mcp、settings、models、login、packages、permissions 与 approvals 服务；desktop IPC 优先消费这些端口 |
+| `src/pi-backend.ts` | `PiBackend` | **兼容门面**：create/open/close/delete/prompt（followUp 排队，preflight 回执见 `use-composer-send`）/abort/fork/recall/compact/stats/listModels（附 `thinkingLevels`/`imageInput`）/事件与权限·信任分发。新 host 通过 `BackendServices` 端口接入；兼容期保留旧委托 |
 | `src/json-store.ts` | `JsonStore`、`JsonStoreCorruptedError` | 统一 JSON 持久化：tmp+rename 原子写；read 损坏回退默认、update 损坏抛 CorruptedError 拒写；async 版 per-path 队列串行化、sync 变体热路径用；缓存/normalize 不进本层 |
 | `src/slash-commands.ts` | `BUILTIN_SLASH_COMMANDS` | 内置静态表（compact/name/export/settings）+ 模板/skill/扩展命令映射（纯函数） |
 | `src/log.ts` | `createLogger`、`initLogging` | 结构化日志：按天落盘 `main-<本地日期>.log`（`PI_LOG_LEVEL`/`PI_LOG_DIR`） |
@@ -156,6 +162,9 @@ src/
 | `src/services/approvals.ts` | `ApprovalService` | per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播和 allowRun 队列裁决；通过 `BackendServices.approvals` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/permissions.ts` | `PermissionSettingsService` | `permissions.json` 快照、原子保存、恢复默认、规则试算与审计尾部；通过 `BackendServices.permissions` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`PiBackend` 的资源加载与旧 `respondTrust` 继续委托 |
+| `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |
+| `src/services/subagents.ts` | `SubagentService` | 子代理面板发现、派发、中止与运行记录；通过 `BackendServices.subagents` 暴露 |
+| `src/mcp/service.ts` | `McpService` | MCP 配置、状态读取和重载边界；通过 `BackendServices.mcp` 暴露 |
 | `src/packages/admin.ts` | `PackageAdmin`（兼容别名） | 旧包管理入口的兼容 re-export；新代码使用 `services/packages.ts` |
 | `src/packages/catalog.ts` | `fetchPackageCatalog` | pi.dev 目录抓取：无 JSON API，解析 SSR HTML 的 `<article data-package-card>` |
 | `src/lan/` | `LanObserverServer`、`seedView`/`applyEvent` | 局域网只读观察：userData 配置 + token 轮换、纯会话投影、GET-only HTTP+SSE（timingSafeEqual、5 客户端上限、合帧） |
@@ -170,7 +179,7 @@ src/
 
 | 文件 | 职责 |
 |---|---|
-| `src/main/index.ts` | app 生命周期 + 装配：initLogging / `pi-bg://` 协议 / renderer 崩溃钩子 / `new PiBackend()` / LAN / `new UiPluginManager()` / registerIpc / updater / 建窗。**首三行必须 import `./pi-package-dir` + `./dev-agent-dir` + `./fix-path`**；render-process-gone 自动 reload（30s 内 ≥3 次停手弹窗，崩溃时输出 incident snapshot）；before-quit 逐项 dispose |
+| `src/main/index.ts` | app 生命周期 + 装配：initLogging / `pi-bg://` 协议 / renderer 崩溃钩子 / `createBackend()` 组合根 / LAN / `new UiPluginManager()` / registerIpc / updater / 建窗。**首三行必须 import `./pi-package-dir` + `./dev-agent-dir` + `./fix-path`**；render-process-gone 自动 reload（30s 内 ≥3 次停手弹窗，崩溃时输出 incident snapshot）；before-quit 逐项 dispose |
 | `src/main/console-dedup.ts` | renderer console 错误签名去重（首条全量/重复计数/阈值与周期汇总），纯函数可单测 |
 | `src/main/fix-path.ts` | GUI 启动 PATH 修复：Finder/Dock 启动 PATH 无 Homebrew，spawn npm 会 ENOENT；同步追加常见 bin 目录 + 异步 `$SHELL -ilc` 合并（须在 spawn 任何子进程前 import） |
 | `src/main/pi-package-dir.ts` | 打包态 `PI_PACKAGE_DIR = resources/pi-package`（SDK `getPackageDir()` 最优先读它，不缓存）：pi 官方 docs/examples 经 extraResources 装入 |

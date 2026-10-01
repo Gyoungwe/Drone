@@ -55,7 +55,7 @@
   - [x] ui-plugins：配置、列表、读码、启停、槽位指派、重建、打开目录均通过 `UiPluginsContract` + `bindContract` 注册；保留既有通道名与 renderer 调用形状。
   - [x] institutional：状态、配置、登录窗口、URL 打开、会话清理、访问测试均通过 `InstitutionalContract` + `bindContract` 注册；保留既有通道名、返回形状与主 frame 安全校验。
   - [x] subagents：面板列表、派发、中止与运行记录均通过 `SubagentsContract` + `bindContract` 注册；保留既有 `subagents:*` 通道、renderer 调用形状，并为运行记录增加严格 TypeBox 校验。
-- [ ] **A2-4 LAN 复用契约**：`lan/server.ts` 把 `access: "lan-read"` 的方法暴露为 GET，事件走现有 SSE（保留命名事件 `ping` 心跳，见 PITFALLS）；删除 `shared/lan.ts` 中和契约重复的类型。验收：`lan-server`、`lan-projector`、`lan-sanitize` 测试通过；LAN 仍然是 GET-only（加一条断言）。
+- [x] **A2-4 LAN 复用契约**：`lan/server.ts` 把 `access: "lan-read"` 的方法暴露为 GET，事件走现有 SSE（保留命名事件 `ping` 心跳，见 PITFALLS）；删除 `shared/lan.ts` 中和契约重复的类型。验收：`lan-server`、`lan-projector`、`lan-sanitize` 测试通过；LAN 仍然是 GET-only（加一条断言）。
   - [x] 桌面端 `lan:getStatus`、`lan:setEnabled`、`lan:setRemoteControl` 已迁移到 `LanContract` + `bindContract`；`getStatus` 标记 `lan-read`，控制开关保持 desktop-only。
   - [x] LAN HTTP 增加鉴权 `GET /api/status`，复用 `LanContract.getStatus` 的结果形状并在服务端执行运行时 schema 校验；`LanStatus` 从契约 `LanStatusSchema` 推导，SSE 保留现有命名 `ping` 心跳。
 - [x] **A2-5 插件 Host API 清单化**：`renderer/src/plugins/host-api.manifest.json` 为唯一生成来源，`host-api.manifest.ts` 提供 renderer 运行时导入；`packages/desktop/scripts/gen-plugin-api.mjs` 生成 `host-api.ts`、`env.d.ts`、main/ui-plugins/build.ts 的 SHIM、`resources/ui-plugins/drone-ui.d.ts` 标记区，保留投影文件中的宿主实现与其他声明。`--check` 与 `gen-plugin-api.test.ts` 防止名称、类型和生成结果漂移。
@@ -69,6 +69,9 @@
   - [x] project-trust：`ProjectTrustService` 承接 `ProjectTrustStore` 与 `TrustGate` 的同一生命周期；项目资源加载、信任应答和销毁均经 `PiBackend.projectTrust` 委托，`BackendServices.projectTrust` 暴露同一实例；服务级 2/2 与组合根回归 1/1 通过。
   - [x] approvals：`ApprovalService` 承接 per-session `PermissionGate` 注册表、待决请求快照、请求/裁决事件广播与 allowRun 队列裁决；`BackendServices.approvals` 与 `PiBackend.approvals` 指向同一实例，旧 `onPermission*`/`respondPermission` 委托保持兼容；服务级 2/2、组合根回归 2/2 与权限回归 40/40 通过。
   - [x] zotero：`ZoteroService` 已从 `PiBackend` 门面抽出，Knowledge IPC 优先使用 `BackendServices.zotero`，旧委托保留兼容。
+  - [x] institutional / subagents：机构访问状态与会话子代理面板服务已从 `PiBackend` 暴露为组合根端口，desktop IPC 生产路径优先直接消费端口。
+  - [x] mcp / settings / models / login：MCP 重载边界、provider 设置、模型偏好和交互登录均通过 `BackendServices` 端口提供，desktop IPC 保留兼容 fallback。
+  - [x] knowledge / sessions：知识 UI 与 Zotero 服务端口已接入组合根；sessions IPC 直接绑定组合根的 session service。
 - [x] **A3-3 SessionEngine**：会话生命周期部分移到 `session-engine/engine.ts`，`buildExtensionFactories`、`buildCustomTools` 移到 `session-engine/extensions.ts`；生产 Pi SDK 运行时 import 只允许出现在 `session-engine/**`，测试文件保留直接 SDK import 以覆盖 SDK 分层；R1 生产基线已清零。
 - [ ] **A3-4 删除门面**：desktop main 和契约绑定改为直接使用 `BackendServices`；删除 `pi-backend.ts` 中的委托方法，保留类型 re-export 至少一个版本。验收：`check:arch` 的 R1 基线清零；`pi-backend.ts` 删除或只剩 re-export。
 
@@ -119,7 +122,7 @@
 | 2026-10-01 | A2-2 | 31 个 sessions IPC 方法统一由 `SessionsContract` + `bindContract` 注册；`PiApi` 会话方法由契约客户端类型推导；shared/desktop 定向契约与 IPC 测试通过 | `scripts/check-report-ui.mjs` 需要完整 Electron UI fixture；当前本机 fixture 在 React 初始化阶段失败，非 sessions IPC 错误 |
 | 2026-10-01 | A7-2 | `serializeDiagnosticsArchive` 生成无压缩 ZIP；shared 诊断包 2 项、desktop 保存桥 3 项定向测试通过；导出文件名为 `drone-diagnostics-YYYY-MM-DD.zip` | UI 截图需在桌面运行环境补做 |
 | 2026-10-01 | A5-0 | `build:extensions` 生成 `.pi/extensions/.build-manifest.json`，记录每个 TS 入口与 MJS 产物哈希；`check:extensions` 检测缺失、漂移和未登记产物；`--strict` 会把仍保留的旧产物视为失败。manifest 与最小 `subagent-research` 入口已提交，默认检查通过 | 其余 9 个 `.pi/extensions/*.mjs` 仍是迁移前产物，需 A5-4 迁移后移除 `legacy-preserved` |
-| 2026-10-01 | A4 / A6 | EventPipeline 已移入 `session-engine/`；桌面 IPC、LAN 历史读取与会话回放统一复用持久化知识投影；运行时投影器、知识服务、UI 流和 specialist host 改用显式版本化事件桥接；`node scripts/check-architecture.mjs` 通过且 R4 无新增发现 | A5-1–4、A6-1–2、A2-4 的整体 GET-only 语义仍待完成 |
+| 2026-10-01 | A4 / A6 | EventPipeline 已移入 `session-engine/`；桌面 IPC、LAN 历史读取与会话回放统一复用持久化知识投影；运行时投影器、知识服务、UI 流和 specialist host 改用显式版本化事件桥接；`node scripts/check-architecture.mjs` 通过且 R4 无新增发现 | A5-1–4、A6-1–2 仍待完成；LAN 控制写端点保留兼容鉴权 |
 | 2026-10-01 | A0-3 | backend 测试按 unit/sdk 自动分层：unit 1252（11 skipped），sdk 99（2 skipped），总计 1351；`npm run test:unit` 通过（113 files，98.64s），`npm run test:sdk` 99 passed + 2 skipped（8.43s） | — |
 | 2026-10-01 | A0-4 / A2-3 | 删除 `.pi/lib/vault-mcp-proxy.mjs` 与旧 `register-invokers`/`INVOKE_ROUTES`；settings、permissions、packages、app、ui-plugins、lan、knowledge、institutional、subagents 全部由域契约 + `bindContract` 注册，preload 统一使用契约 client；旧配置识别保留为提示路径 | `IpcChannels` 仍是兼容通道名常量，尚未自动从契约生成 |
 | 2026-10-01 | A7-1 | `JsonStore` 强制 `storageId`，生产使用点登记到 `storage/registry.ts`；静态扫描测试覆盖 backend 与 desktop main 的 10 个生产构造点，cwd-independent | 其他非 JsonStore 落盘（会话、trace、审计、机构分区）仍待逐项登记 |
@@ -139,5 +142,11 @@
 | 2026-10-01 | A3-2 增量 | `ApprovalService` 统一 per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播与 allowRun 队列裁决；`BackendServices.approvals` 与 `PiBackend.approvals` 共用同一实例，旧权限回调和回答入口继续委托；服务级 2/2、组合根 2/2、权限回归 40/40 通过 | 会话权限模式、desktop 直接消费服务与 PiBackend 门面删除仍待完成；A3-2/4 总项保持未完成 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 新增 review-policy 强类型实现；包 typecheck 通过，包内 4/4 与 backend `knowledge-automatic-review` 4/4 通过，并保留旧 `.pi` 兼容实现 | knowledge service、source-links、worker、specialist-host 与 benchmark 尚未迁移；A5-1 总项保持未完成 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 新增 source-links 强类型实现；包 typecheck 通过，包内 4/4 与 backend `knowledge-delivery-round2`、`zotero-literature` 合计 26/26 通过，并保留旧 `.pi` 兼容实现 | knowledge service、worker、specialist-host 与 benchmark 尚未迁移；A5-1 总项保持未完成 |
-| 2026-10-01 | 最终验收 | `npm run lint`、根 `npm run typecheck`、根 `npm test`、`npm run build`、`node scripts/check-architecture.mjs`、插件/扩展检查、`npm run test:upgrade` 全部通过；backend 1,352 passed + 13 skipped，desktop 548，shared 129 | A2-4 的整体 GET-only、A3-1/2/4、A5-1 后续模块及 A5-2/3/4、A6-1/2 仍未完成 |
-| 2026-10-01 | 最终验收复跑 | 静态检查、类型检查、构建、架构 ratchet、插件/扩展检查与升级 fixture 全部通过；根 `npm test` 通过：backend 1,362 passed + 13 skipped、desktop 548、extensions 1、knowledge 15、shared 129、tasks 19 | A2-4 的整体 GET-only、A3-1/2/4、A5-1 后续模块及 A5-2/3/4、A6-1/2 仍未完成 |
+| 2026-10-01 | 最终验收 | `npm run lint`、根 `npm run typecheck`、根 `npm test`、`npm run build`、`node scripts/check-architecture.mjs`、插件/扩展检查、`npm run test:upgrade` 全部通过；backend 1,352 passed + 13 skipped，desktop 548，shared 129 | A3-1/2/4、A5-1 后续模块及 A5-2/3/4、A6-1/2 仍未完成 |
+| 2026-10-01 | 最终验收复跑 | 静态检查、类型检查、构建、架构 ratchet、插件/扩展检查与升级 fixture 全部通过；根 `npm test` 通过：backend 1,362 passed + 13 skipped、desktop 548、extensions 1、knowledge 15、shared 129、tasks 19 | A3-1/2/4、A5-1 后续模块及 A5-2/3/4、A6-1/2 仍未完成 |
+| 2026-10-01 | A2-4 | LAN `lan-read` 路由由 `LanContract` 推导并强制 GET；新增 `assertLanReadGetOnly()` 运行时断言与 `lan-server` 回归测试，保留 SSE `ping` 心跳和已有控制端点 | `lan-control` 的 M2 写端点仍按原有鉴权保留，A2-4 只约束契约读端点 |
+| 2026-10-01 | A3-2 / A3-4 增量 | 组合根新增 institutional、subagents、knowledge、zotero、mcp、settings、models、login、sessions 端口；desktop IPC 生产路径已优先使用 `BackendServices`，PiBackend 仍提供兼容 fallback | PiBackend 中会话编排、knowledge orchestration 和少数兼容委托仍待最终删除 |
+| 2026-10-01 | A5-2 增量 | `@drone/tasks` 新增 consent 与 remaining explanation 策略；包测试 24/24 通过，backend `task-consent` 30/30、`task-progress` 16/16 通过 | `.pi/lib/tasks` 运行时兼容层和其余 task SDK 测试仍待迁移 |
+| 2026-10-01 | A5-3 增量 | 新建 `@drone/research`，迁移 literature receipt 与 source delivery 合约；包测试 4/4，backend literature evidence/research loop 34/34 通过 | source-archive、open-access、zotero/institutional 运行时模块仍待迁移 |
+| 2026-10-01 | A5-1 / A6-2 增量 | knowledge 新增 tool-budget、topic-candidate；runtime bridge 删除旧 legacy key 参数，所有生产 `runtimeSlot`/`runRuntimeExclusive` 调用使用 host runtime；`.pi` checkJs 与隔离测试通过 | knowledge service/worker/specialist-host 尚未整体 TS 化；仍需完成剩余 runtime singleton 与扩展入口迁移 |
+| 2026-10-01 | A3-2 增量 | services ports 的组合根与 sessions IPC 绑定通过：backend create-backend、desktop IPC 31 项定向测试通过，架构检查 150 baseline、6 fixed | A3-4 仍保留 PiBackend 兼容 façade，待删除委托并保留类型 re-export |
