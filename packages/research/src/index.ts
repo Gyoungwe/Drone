@@ -63,6 +63,22 @@ export {
 	zoteroItemDoi,
 } from "./zotero-identity";
 export {
+	lookupZoteroByDoi,
+	type ZoteroListResponse,
+	type ZoteroReadRequest,
+	type ZoteroReconcileContext,
+	type ZoteroReconcileExpectation,
+} from "./zotero-reconcile";
+export {
+	mergeZoteroMcpConfig,
+	readZoteroMcpConfig,
+	remainingZoteroSetupSteps,
+	ZOTERO_SETUP_BINDING,
+	type ZoteroMcpServerEntry,
+	type ZoteroSetupStatus,
+	zoteroMcpSpec,
+} from "./zotero-setup";
+export {
 	type ConnectorZoteroItem,
 	connectorTargetId,
 	type NormalizedZoteroAttachment,

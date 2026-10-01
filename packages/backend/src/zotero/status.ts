@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { readZoteroMcpConfig, ZOTERO_SETUP_BINDING } from "@drone/research/zotero-setup";
 import type { ZoteroStatus } from "@drone/shared";
 import { getAgentDir } from "../session-engine/sdk";
 
@@ -10,21 +11,12 @@ import { getAgentDir } from "../session-engine/sdk";
  * 不从 `.pi/lib/zotero-setup.mjs` 动态 import——与全仓约定一致（main/backend 只经 SDK 扩展机制加载 .mjs）。
  * 常量（server 名/本机 API/文档/下载/桌面路径）与 zotero-setup.mjs 保持一致，改动很少。
  */
-const ZOTERO_MCP_SERVER = "zotero";
-const LOCAL_API = "http://127.0.0.1:23119/api";
-const DOCS_URL = "https://github.com/54yyyu/zotero-mcp";
-const DOWNLOAD_URL = "https://www.zotero.org/download";
+const LOCAL_API = ZOTERO_SETUP_BINDING.localApi;
+const DOCS_URL = ZOTERO_SETUP_BINDING.docs;
+const DOWNLOAD_URL = ZOTERO_SETUP_BINDING.download;
 
 function mcpPath(): string {
 	return join(getAgentDir(), "mcp.json");
-}
-
-function serverMap(value: unknown): Record<string, unknown> {
-	const record = value as { mcpServers?: unknown; "mcp-servers"?: unknown } | null;
-	const servers = record?.mcpServers ?? record?.["mcp-servers"];
-	return servers && typeof servers === "object" && !Array.isArray(servers)
-		? (servers as Record<string, unknown>)
-		: {};
 }
 
 /** 读取 ~/.pi/agent/mcp.json 里 zotero server 的注册/启用/命令（对应 zotero-setup.mjs readZoteroMcp） */
@@ -32,13 +24,10 @@ async function readZoteroMcp(): Promise<{ registered: boolean; enabled: boolean;
 	const path = mcpPath();
 	if (!existsSync(path)) return { registered: false, enabled: false, command: null };
 	try {
-		const raw = serverMap(JSON.parse(await readFile(path, "utf8")))[ZOTERO_MCP_SERVER];
-		if (!raw || typeof raw !== "object" || Array.isArray(raw))
-			return { registered: false, enabled: false, command: null };
-		const server = raw as { disabled?: unknown; command?: unknown };
+		const server = readZoteroMcpConfig(JSON.parse((await readFile(path, "utf8")).replace(/^\uFEFF/, "")));
 		return {
-			registered: true,
-			enabled: server.disabled !== true,
+			registered: server.registered,
+			enabled: server.registered && !server.disabled,
 			command: typeof server.command === "string" ? server.command : null,
 		};
 	} catch {

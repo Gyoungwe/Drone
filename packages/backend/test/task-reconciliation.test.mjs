@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { findZoteroItemsByIdentity } from "@drone/research/zotero-identity";
+import { lookupZoteroByDoi } from "@drone/research/zotero-reconcile";
 import { expect, it, vi } from "vitest";
 import { createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
 import { createZoteroReconciler } from "../../../.pi/lib/zotero-reconcile.mjs";
@@ -105,13 +106,25 @@ it("Zotero lookup is exact, read-only and distinguishes attachment metadata from
 		scientificallyVerified: false,
 		safeToAutoRetry: false,
 	});
+	const packageResult = await lookupZoteroByDoi(
+		request,
+		{ doi: "https://doi.org/10.1234/fixture", collection: "COLL1234" },
+		{ libraryType: "users", libraryId: "123", verifier: "zotero-read-only-item-identity" },
+	);
+	expect(packageResult).toMatchObject({
+		state: "found",
+		itemId: "ABCD1234",
+		attachmentContentsVerified: false,
+		scientificallyVerified: false,
+		safeToAutoRetry: false,
+	});
 	expect(
 		findZoteroItemsByIdentity(
 			[{ key: "ABCD1234", data: { DOI: "10.1234/fixture", collections: ["COLL1234"] } }],
 			{ doi: "https://doi.org/10.1234/fixture", collection: "COLL1234" },
 		),
 	).toHaveLength(1);
-	expect(request).toHaveBeenCalledTimes(2);
+	expect(request).toHaveBeenCalledTimes(4);
 	expect(request.mock.calls.every(([p]) => p.startsWith("items"))).toBe(true);
 });
 it.each([0, 2, 101])("Zotero count %s never becomes verified import completion", async (count) => {
