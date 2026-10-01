@@ -196,3 +196,14 @@ export {
 } from "./publication";
 
 export { KnowledgeService, closeKnowledgeServices, getKnowledgeService, notifyKnowledgeChange } from "./service";
+
+export {
+	decideWikiProposal,
+	listWikiProposals,
+	mergeWikiProposal,
+	previewWikiProposal,
+	stageWikiProposal,
+	undoWikiUpdate,
+	wikiHistory,
+	validateWikiSourcePaths as validateRuntimeWikiSourcePaths,
+} from "./wiki-review";

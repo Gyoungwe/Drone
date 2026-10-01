@@ -30,7 +30,8 @@
 		"./ui-state": "./src/ui-state.ts",
 		"./publication": "./src/publication.ts",
 		"./worker": "./src/worker.ts",
-		"./service": "./src/service.ts"
+		"./service": "./src/service.ts",
+		"./wiki-review": "./src/wiki-review.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
