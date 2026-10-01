@@ -4,6 +4,22 @@ import type { StorageRegistry } from "./storage/registry";
 
 export type { DiagnosticsSnapshot } from "@drone/shared";
 
+/**
+ * Host-facing diagnostics boundary.
+ *
+ * Desktop and other hosts only need this small port; they should not reach
+ * through the PiBackend compatibility façade to collect diagnostics.
+ */
+export interface DiagnosticsServicePort {
+	getDiagnostics(options?: DiagnosticsOptions): Promise<DiagnosticsSnapshot>;
+}
+
+export interface DiagnosticsOptions {
+	version?: string;
+	incidentSnapshot?: unknown;
+	logTail?: readonly string[];
+}
+
 const SECRET_KEY_PATTERN =
 	/(api[_-]?key|token|secret|password|authorization)\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+/gi;
 const SECRET_PEM_PATTERN = /-----BEGIN [^-]+-----[\s\S]*?-----END [^-]+-----/g;

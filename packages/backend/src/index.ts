@@ -1,5 +1,11 @@
 export { type BackendServices, createBackend } from "./create-backend";
-export { buildDiagnostics, type DiagnosticsSnapshot, redactDiagnosticText } from "./diagnostics";
+export {
+	buildDiagnostics,
+	type DiagnosticsOptions,
+	type DiagnosticsServicePort,
+	type DiagnosticsSnapshot,
+	redactDiagnosticText,
+} from "./diagnostics";
 export * from "./institutional";
 export {
 	JsonStore,

@@ -6,6 +6,8 @@ describe("createBackend", () => {
 	it("assembles the compatibility façade and domain service groups", () => {
 		const services = createBackend({ projectTrust: false, permissionGates: false });
 		expect(services.sessions).toBeDefined();
+		expect(services.diagnostics).toBeDefined();
+		expect(services.diagnostics.getDiagnostics).toBeTypeOf("function");
 		expect(services.sessionEngine).toBe(services.sessions.sessionEngine);
 		expect(services.knowledge).toBe(services.sessions.knowledge);
 		expect(services.knowledge.overview).toBeTypeOf("function");
@@ -30,6 +32,14 @@ describe("createBackend", () => {
 		expect(services.projectTrust).toBe(services.sessions.projectTrust);
 		expect(services.subagents).toBe(services.sessions.subagents);
 		expect(services.subagents.listAvailable).toBeTypeOf("function");
+		services.dispose();
+	});
+
+	it("forwards host diagnostics through the explicit service port", async () => {
+		const services = createBackend({ projectTrust: false, permissionGates: false });
+		const snapshot = await services.diagnostics.getDiagnostics({ version: "test" });
+		expect(snapshot.version).toBe("test");
+		expect(snapshot.stores).toBeInstanceOf(Array);
 		services.dispose();
 	});
 

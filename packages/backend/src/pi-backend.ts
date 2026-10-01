@@ -62,7 +62,7 @@ import {
 	SkillVisibility,
 } from "./capabilities/resource-loader";
 import { CapabilityRuntime, isTaskStatusQuery } from "./capabilities/runtime";
-import { buildDiagnostics } from "./diagnostics";
+import { buildDiagnostics, type DiagnosticsOptions } from "./diagnostics";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
 import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
@@ -351,9 +351,7 @@ export class PiBackend {
 	}
 
 	/** Return redacted runtime/storage metadata without reading secrets or session bodies. */
-	async getDiagnostics(
-		options: { version?: string; incidentSnapshot?: unknown; logTail?: readonly string[] } = {},
-	): Promise<DiagnosticsSnapshot> {
+	async getDiagnostics(options: DiagnosticsOptions = {}): Promise<DiagnosticsSnapshot> {
 		return buildDiagnostics(this.storage, {
 			version: options.version ?? "unknown",
 			incidentSnapshot: options.incidentSnapshot,

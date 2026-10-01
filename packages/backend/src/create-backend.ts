@@ -1,4 +1,5 @@
 import type { DroneRuntime } from "@drone/shared";
+import type { DiagnosticsServicePort } from "./diagnostics";
 import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { PiBackend, type PiBackendOptions } from "./pi-backend";
@@ -27,6 +28,8 @@ import type { SettingsServicePort } from "./settings/settings";
 export interface BackendServices {
 	/** Per-host runtime container; extension bridges must not use process globals. */
 	runtime: DroneRuntime;
+	/** Host-facing diagnostics boundary; keeps desktop IPC independent of PiBackend. */
+	diagnostics: DiagnosticsServicePort;
 	/** Session lifecycle and compatibility methods during A3 migration. */
 	sessions: PiBackend;
 	/** SDK lifecycle boundary; hosts can migrate session calls without importing Pi SDK types. */
@@ -64,8 +67,12 @@ export function createBackend(options: PiBackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
 	const sessions = new PiBackend({ ...options, runtime, permissions });
+	const diagnostics: DiagnosticsServicePort = {
+		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
+	};
 	return {
 		runtime,
+		diagnostics,
 		sessions,
 		sessionEngine: sessions.sessionEngine,
 		knowledge: sessions.knowledge,

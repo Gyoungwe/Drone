@@ -1,6 +1,6 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { PiBackend } from "@drone/backend";
+import type { DiagnosticsServicePort } from "@drone/backend";
 import type { SavedTabs, UiState } from "@drone/shared";
 import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
 import { app, BrowserWindow, dialog, nativeTheme, shell } from "electron";
@@ -31,10 +31,13 @@ async function readRecentLogTail(): Promise<string[]> {
 }
 
 /**
- * 应用域：窗口级功能（不依赖 PiBackend 会话状态的部分也在此，backend 参数仅为对齐签名）。
+ * 应用域：窗口级功能（不依赖会话状态的部分也在此，诊断读取通过显式 service port）。
  * tabs/ui-state 持久化、背景图、更新、文件/目录对话框、git 分支、外链与应用信息。
  */
-export function registerAppIpc(backend: PiBackend, getIncidentSnapshot?: () => unknown): void {
+export function registerAppIpc(
+	diagnostics: DiagnosticsServicePort,
+	getIncidentSnapshot?: () => unknown,
+): void {
 	const implementation: ContractImplementation<typeof AppContract> = {
 		getInfo: () => ({
 			name: app.getName(),
@@ -47,7 +50,7 @@ export function registerAppIpc(backend: PiBackend, getIncidentSnapshot?: () => u
 			repoUrl: REPO_URL,
 		}),
 		getDiagnostics: async () =>
-			backend.getDiagnostics({
+			diagnostics.getDiagnostics({
 				version: app.getVersion(),
 				incidentSnapshot: getIncidentSnapshot?.(),
 				logTail: await readRecentLogTail(),

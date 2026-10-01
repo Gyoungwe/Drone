@@ -46,6 +46,7 @@ export function registerIpc(
 		| "packages"
 		| "subagents"
 		| "institutional"
+		| "diagnostics"
 	>,
 ): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
@@ -58,7 +59,7 @@ export function registerIpc(
 	registerSubagentsIpc(backend, hostServices);
 	registerKnowledgeIpc(backendOrServices, hostServices);
 	registerPackagesIpc(backend, hostServices);
-	registerAppIpc(backend, getIncidentSnapshot);
+	registerAppIpc(hostServices?.diagnostics ?? backend, getIncidentSnapshot);
 	registerInstitutionalIpc(hostServices);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);
