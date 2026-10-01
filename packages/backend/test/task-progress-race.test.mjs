@@ -1,5 +1,5 @@
+import { createTaskProgression } from "@drone/tasks/progress-action";
 import { expect, it, vi } from "vitest";
-import { createTaskProgression } from "../../../.pi/lib/tasks/progress-action.mjs";
 
 it.each(["generation", "task", "binding", "abort"])(
 	"%s changing during readback cancels the old continuation",
@@ -38,7 +38,9 @@ it.each(["generation", "task", "binding", "abort"])(
 		};
 		const next = vi.fn(),
 			send = vi.fn();
-		const run = createTaskProgression(j, {
+		const run = createTaskProgression({
+			taskJournal: j,
+			taskAuthorization: async () => false,
 			getGeneration: () => generation,
 			checkBinding: async () => binding,
 			continueAuthorized: next,

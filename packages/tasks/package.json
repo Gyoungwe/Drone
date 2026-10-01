@@ -7,6 +7,7 @@
 	"types": "./src/index.ts",
 	"exports": {
 		".": "./src/index.ts",
+		"./progress-action": "./src/progress-action.ts",
 		"./failure-feedback": "./src/failure-feedback.ts",
 		"./consent": "./src/consent.ts",
 		"./single-flight": "./src/single-flight.ts",
@@ -14,6 +15,9 @@
 		"./tool-protocol": "./src/tool-protocol.ts",
 		"./remaining": "./src/remaining.ts",
 		"./evidence": "./src/evidence.ts"
+	},
+	"dependencies": {
+		"@drone/shared": "*"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

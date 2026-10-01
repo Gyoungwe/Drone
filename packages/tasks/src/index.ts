@@ -35,6 +35,16 @@ export {
 	toolResultFailed,
 } from "./failure-feedback";
 export {
+	createTaskProgression,
+	type TaskProgressionContext,
+	type TaskProgressionInput,
+	type TaskProgressionJournal,
+	type TaskProgressionOptions,
+	type TaskProgressionTask,
+	type TaskProgressionUi,
+	type TaskProgressionView,
+} from "./progress-action";
+export {
 	effectiveRemainingAcceptance,
 	type RemainingAcceptance,
 	type RemainingExplanationOptions,
