@@ -95,17 +95,16 @@ packages/
 
 ## packages/knowledge — 知识领域包（迁移中）
 
-`@drone/knowledge` 目前承载无 SDK 依赖的策略与安全文件合约：`src/files.ts` 提供 Vault 相对路径校验、软链接拒绝、稳定读取与 bounded snippet，`src/layout.ts` 提供共享导航与项目上下文初始化、create-only 文件保护和 managed block 更新，`src/config.ts` 提供应用知识绑定，`src/semantic-provider.ts` 提供向量 provider 边界；同时保留 claim 冲突比较、specialist 编排、review policy、source links、tool budget 与 topic candidate 合约。运行时仍从 `.pi/lib/knowledge/*` 加载兼容实现；service、worker、maintenance 与 specialist host 按 A5-1 分阶段迁移。
+`@drone/knowledge` 目前承载无 SDK 依赖的策略与安全文件合约：`src/files.ts` 提供 Vault 相对路径校验、软链接拒绝、稳定读取与 bounded snippet，`src/layout.ts` 提供共享导航与项目上下文初始化、create-only 文件保护和 managed block 更新，`src/wiki-policy.ts` 提供 Wiki 目标/来源、managed block、静态 explainer 与 proposal hash 约束，`src/config.ts` 提供应用知识绑定，`src/semantic-provider.ts` 提供向量 provider 边界；同时保留 claim 冲突比较、specialist 编排、review policy、source links、tool budget 与 topic candidate 合约。运行时仍从 `.pi/lib/knowledge/*` 加载兼容实现；service、worker、maintenance 与 specialist host 按 A5-1 分阶段迁移。
 
 ## packages/tasks — 任务领域包（迁移中）
 
-`@drone/tasks` 目前承载无 SDK 依赖的失败反馈、命令协调、回合续作、授权、剩余进度解释和 evidence recovery 策略以及协议修复：`src/failure-feedback.ts` 导出诊断脱敏、失败识别、失败观察与任务上下文合约，`src/single-flight.ts` 导出按会话、目录、参数隔离的 in-flight 命令合并器，`src/turn-end-prompt.ts` 导出受授权、进度和配额约束的继续提示策略，`src/consent.ts` 与 `src/remaining.ts` 收敛任务授权和剩余进度文案，`src/authorization-policy.ts` 提供 ask_user 授权动作判定、去重键和授权卡文案投影，`src/evidence.ts` 提供宿主注入 inspector 的证据恢复状态机，`src/tool-protocol.ts` 仅修复已知旧版状态卡交错。`.pi/lib/tasks/*` 仍保留为 CLI/扩展运行时兼容实现；其余 tasks 模块按 A5-2 分阶段迁移。
+`@drone/tasks` 目前承载无 SDK 依赖的失败反馈、命令协调、回合续作、授权、剩余进度解释、evidence recovery、PDF identity 和 acceptance policy：`src/authorization-policy.ts` 提供 ask_user 授权动作判定与授权卡投影，`src/pdf-identity.ts` 提供宿主注入 PDF worker 的隔离边界、15 秒超时、AbortSignal 清理、页数/文本上限与稳定错误码，`src/acceptance-policy.ts` 提供验收器注册、schema live refs、结果归一化和说明投影。`.pi/lib/tasks/*` 仍保留为 CLI/Pi 运行时适配；其余 tasks runtime 模块按 A5-2 分阶段迁移。
 
 ## packages/research — 研究来源领域包（迁移中）
 
-`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/literature-operations.ts` 提供宿主注入的文献对账 journal/队列边界，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界，`src/evidence-gate.ts` 统一证据阶段单调推进、失败终态与 answerable 断言，`src/source-archive-policy.ts` 统一来源归档的路径、文件名、挑战页、签名和元数据门禁。backend literature evidence、literature operations、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
+`@drone/research` 承载文献证据回执、来源交付和执行可复现性的无 SDK 合约：`src/literature-receipt.ts` 统一 DOI/Zotero/Vault 回执和证据状态，`src/source-delivery.ts` 统一来源交付状态与失败原因，`src/literature-operations.ts` 提供宿主注入的文献对账 journal/队列边界，`src/run-provenance.ts` 统一执行观察、文件快照、范围/凭据校验和 QC 边界，`src/evidence-gate.ts` 统一证据阶段单调推进、失败终态与 answerable 断言，`src/source-archive-policy.ts` 统一来源归档的路径、文件名、挑战页、签名和元数据门禁，`src/receipt-journal-policy.ts` 统一核心工具准入、错误工具过滤、去重回执缓冲与 run_dir 归属。backend literature evidence、literature operations、research loop、run-provenance 测试已迁移到包入口；source archive、open access、Zotero/institutional 运行时仍保留 `.pi` 自包含兼容实现。
 
-`@drone/tasks` 的 `src/pdf-identity.ts` 提供宿主注入 PDF worker 的隔离边界、15 秒超时、AbortSignal 清理、页数/文本上限与稳定错误码；`.pi/lib/tasks/pdf-identity.mjs` 继续作为 CLI worker 适配器。
 
 ## packages/extensions — Pi 扩展适配层（迁移中）
 
