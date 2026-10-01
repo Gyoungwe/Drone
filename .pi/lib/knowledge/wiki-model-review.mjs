@@ -1,13 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { runtimeSlot } from "../runtime-bridge.mjs";
 import { knowledgeDirectory, withKnowledgeBinding } from "./config.mjs";
 import { canRead, readNoteFile, validateNote } from "./files.mjs";
 import { specialistSettings } from "./specialist-host.mjs";
 import { consumeKnowledgeReviewPreview } from "./ui-service.mjs";
 import { decideWikiProposal, previewWikiProposal } from "./wiki-review.mjs";
 
-const active = new Set();
+// A review is single-flight per host runtime. Keeping this guard in a runtime
+// slot prevents one desktop host from blocking an unrelated host in-process.
+const state = runtimeSlot("knowledge", "wikiModelReview", () => ({ active: new Set() }));
 const CHECKS = [
 	"evidenceSupportsChanges",
 	"scopeAndUncertaintyPreserved",
@@ -79,8 +82,8 @@ export async function reviewWikiWithModel(input, { evaluate, check, signal, prog
 	const entry = consumeKnowledgeReviewPreview(input.cwd, input.token),
 		{ service, project, id, hash, binding } = entry;
 	const key = `${binding.vaultId}:${id}`;
-	if (active.has(key)) throw new Error("This Wiki candidate is already being reviewed");
-	active.add(key);
+	if (state.active.has(key)) throw new Error("This Wiki candidate is already being reviewed");
+	state.active.add(key);
 	const startedAt = Date.now(),
 		auditId = randomUUID();
 	let audit = null;
@@ -228,6 +231,6 @@ export async function reviewWikiWithModel(input, { evaluate, check, signal, prog
 		}
 		throw error;
 	} finally {
-		active.delete(key);
+		state.active.delete(key);
 	}
 }
