@@ -13,6 +13,7 @@ const entries = {
 	"claim-bindings": "packages/research/src/claim-bindings.ts",
 	"research-receipt-core": "packages/research/src/receipt-journal.ts",
 	"source-archive-core": "packages/research/src/source-archive.ts",
+	"research-loop-core": "packages/research/src/research-loop.ts",
 };
 
 await mkdir(outputDir, { recursive: true });
