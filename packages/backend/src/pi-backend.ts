@@ -1,8 +1,8 @@
 /**
- * @deprecated Import the host session implementation from `./session-service`
- * or consume `BackendServices.sessions` from `createBackend`. This file remains
- * as a one-release compatibility export for existing integrations.
+ * @deprecated Import `SessionService` from `./session-service` or consume
+ * `BackendServices.sessions` from `createBackend`. This compatibility module
+ * remains for existing integrations during the migration window.
  */
 
-export type { PiBackendOptions } from "./session-service";
-export { PiBackend } from "./session-service";
+export type { SessionServiceOptions, SessionServiceOptions as PiBackendOptions } from "./session-service";
+export { SessionService, SessionService as PiBackend } from "./session-service";

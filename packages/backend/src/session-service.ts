@@ -122,7 +122,7 @@ import { withNativeSubagentSlot } from "./tools/subagent/slots";
 
 const log = createLogger("backend");
 
-export interface PiBackendOptions {
+export interface SessionServiceOptions {
 	/** 默认工作目录（createSession 未指定时使用） */
 	defaultCwd?: string;
 	/** 每会话工具白名单；缺省用 pi 默认（read/bash/edit/write） */
@@ -180,7 +180,7 @@ type McpHandler = (cwd: string, status: McpStatus) => void;
  * - project-trust-loader.ts 两阶段项目资源加载 + 信任决策
  * - session-trace.ts      会话事件 trace 生命周期
  */
-export class PiBackend {
+export class SessionService {
 	readonly runtime: DroneRuntime;
 	readonly knowledge = new KnowledgeUiService();
 	/** Session-bound knowledge actions exposed through BackendServices. */
@@ -292,7 +292,7 @@ export class PiBackend {
 	/** 项目资源两阶段加载 + 信任决策 */
 	private readonly projectLoader: ProjectResourceLoader;
 
-	constructor(private readonly options: PiBackendOptions = {}) {
+	constructor(private readonly options: SessionServiceOptions = {}) {
 		this.runtime = options.runtime ?? createDroneRuntime();
 		this.permissions = options.permissions ?? new PermissionSettingsService();
 		this.mcp = new McpService({ onServerEnabled: (cwd) => this.reloadMcpSessions(cwd) });
@@ -1222,7 +1222,7 @@ export class PiBackend {
 		}
 		// 持久化回退点：custom entry 不参与 LLM 上下文，只把 leaf 移动写进文件
 		// （否则撤回只存在内存，重启后旧分支回来）
-		sm.appendCustomEntry(PiBackend.RECALLED_MARKER_TYPE, { recalledEntryId: targetId });
+		sm.appendCustomEntry(SessionService.RECALLED_MARKER_TYPE, { recalledEntryId: targetId });
 		log.info("recall message", sessionId, { targetId });
 		return { text, images };
 	}

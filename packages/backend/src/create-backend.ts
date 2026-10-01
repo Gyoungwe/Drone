@@ -28,7 +28,7 @@ import type { ProjectTrustService } from "./services/project-trust";
 import type { SubagentServicePort } from "./services/subagents";
 import type { ZoteroServicePort } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
-import { PiBackend, type PiBackendOptions } from "./session-service";
+import { SessionService, type SessionServiceOptions } from "./session-service";
 import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
@@ -118,10 +118,10 @@ export interface BackendServices {
 	dispose(): void;
 }
 
-export function createBackend(options: PiBackendOptions = {}): BackendServices {
+export function createBackend(options: SessionServiceOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
-	const sessions = new PiBackend({ ...options, runtime, permissions });
+	const sessions = new SessionService({ ...options, runtime, permissions });
 	const diagnostics: DiagnosticsServicePort = {
 		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
 	};
