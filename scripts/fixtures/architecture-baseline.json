@@ -407,12 +407,6 @@
       "rule": "R5",
       "file": "packages/backend/test/literature-operations.test.mjs",
       "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/literature-operations.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/literature-operations.test.mjs",
-      "line": 8,
       "detail": "relative .pi path ../../../.pi/lib/research-loop.mjs"
     },
     {
