@@ -14,6 +14,7 @@
 - zustand selector 必须返回稳定引用（模块级空对象/数组；#185 无限渲染，见 PITFALLS）
 - 新增 renderer hook/store 要暴露给插件 = 源模块 + `plugins/host-api.ts` + `plugins/env.d.ts`（DroneUiApi）+ `main/ui-plugins/build.ts` SHIM + `resources/drone-ui.d.ts`（必要时 SPEC.md 导出清单）五处同步
 - JSON 持久化一律走 backend `JsonStore`（原子写 + 损坏语义），不自写 fs
+- `@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库；宿主连接、SSH、Pi SDK 和 Electron 适配留在组合根（R7）。
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 
@@ -25,7 +26,7 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，7 个包：
+npm workspaces monorepo，8 个包：
 
 ```
 packages/
@@ -34,6 +35,7 @@ packages/
 ├── knowledge/  知识领域纯函数与 claim 合约（TS 包，迁移中）
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
 ├── research/   文献回执与来源交付合约（TS 包，迁移中）
+├── compute/    远程计算与声明式工作流领域包（TS 包，B3 垂直切片）
 ├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
 ```
@@ -104,6 +106,10 @@ packages/
 ## packages/research — 研究来源领域包（迁移中）
 
 `@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。
+
+## packages/compute — 远程计算与工作流领域包（B3）
+
+`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/workflow.ts` 定义 WorkflowSpec、模块目录、类型/环检查与稳定哈希；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供 nf-core/rnaseq test profile 配置；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@drone/research/run-provenance` 的远程执行声明；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由 B1/B2 宿主适配层接入。
 
 
 ## packages/extensions — Pi 扩展适配层（迁移中）

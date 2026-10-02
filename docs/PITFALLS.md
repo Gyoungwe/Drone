@@ -28,8 +28,19 @@
 | Google Vertex 填了 key 仍 401「API keys are not supported by this API」 | 二 · Vertex 只支持 ADC/服务账号（api_key 路径必败，桥接层已剔除 api-key 选项） |
 | 随便说「你好」就弹出「知识库检查未通过（interrupted）」 | 二 · 知识发布门禁把 LLM 失败误报成知识检查失败 |
 | `/obsidian-setup` 等斜杠技能填完路径后输入框像卡死 | 二 · 扩展命令里嵌套 await sendUserMessage 会占住 sending |
+| B3 RNA-seq 在本机无法直接验证 Nextflow/Slurm | 六 · Compute B3 只走 fake runner；真实集群条件单独确认 |
 
 ## 一、事故复盘（含可复用诊断手法）
+
+## 六、Compute B3：本地 seam 不等于真实集群
+
+`@drone/compute` 的 WorkflowSpec 编译、Nextflow `-preview` argv、direct/Slurm
+executor 选择、固定 runner 协议、MultiQC 阈值和远程 provenance 都可以在本地
+用 fake runner 验证。它们不会证明目标主机已经安装 Nextflow、容器镜像已经缓存、
+Slurm 命令可用，或样本结果具有科学有效性。真实 smoke 必须在一次授权合同内由
+B1/B2 宿主 transport 执行，并保留流程 revision、容器 digest、scheduler job id
+和回收产物校验；MultiQC 通过也仍保持 `reviewed=false` 与
+`scientificallyVerified=false`。
 
 ### 0.4.6 全 app 冻结事故（2026-08-23）
 

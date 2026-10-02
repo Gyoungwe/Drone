@@ -12,7 +12,7 @@
 - JSON 持久化统一使用 backend `JsonStore`，保持原子写入和损坏处理语义。
 - 不提交凭据、Vault 正文、会话正文、`results/` 或本机生成的私有状态。
 
-## 分层规则（R1–R6）
+## 分层规则（R1–R7）
 
 - **R1**：Pi SDK 运行时 import 只能位于 backend 会话引擎或已登记的迁移白名单；其他层只能使用类型 import。
 - **R2**：knowledge、tasks、research 领域包不得依赖 Electron、Pi SDK、backend 或 desktop。
@@ -20,6 +20,7 @@
 - **R4**：禁止新增 `Symbol.for("drone.*")` 全局桥；迁移期基线只能减少。
 - **R5**：禁止通过相对路径穿越包边界访问 `.pi/` 运行时文件。
 - **R6**：领域包依赖方向保持单向：tasks 可使用 knowledge 的公开类型，research 可使用 knowledge；反向依赖禁止。
+- **R7**：`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库；不得 import Electron、Pi SDK、backend、desktop 或其他领域包，宿主适配由组合根提供。
 
 `node scripts/check-architecture.mjs` 会比较当前结果和已登记基线：新增违规会失败，已修复违规会提示更新基线。
 

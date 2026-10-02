@@ -67,6 +67,7 @@ function scanFile(file, text, findings) {
 	const isRenderer = /^packages\/desktop\/src\/(renderer|lan-web)\//.test(rel);
 	const isTest = /(?:^|\/)(?:test|tests)\//.test(rel) || /\.(?:test|spec)\.[^.]+$/.test(rel);
 	const domain = rel.match(/^packages\/(knowledge|tasks|research)\//)?.[1];
+	const isCompute = rel.startsWith("packages/compute/");
 
 	// R1: SDK value imports. Keep the check intentionally broad so a newly
 	// added side-effect or dynamic import is caught as well.
@@ -133,6 +134,18 @@ function scanFile(file, text, findings) {
 			if (!forbidden) continue;
 			const offset = match.index ?? 0;
 			addFinding(findings, "R6", file, lineNumber(text, offset), `domain dependency ${domain} -> ${target}`);
+		}
+	}
+
+	// R7: compute is a host-independent domain package. It may use shared
+	// contracts and Node built-ins, but never reaches a host, Pi SDK, or another
+	// domain package. The backend composition root owns those adapters.
+	if (isCompute) {
+		const forbidden =
+			/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(electron|@earendil-works\/pi-[^"']+|@drone\/(?!shared(?:["'/]))[^"']+)(?=["'])/g;
+		for (const match of text.matchAll(forbidden)) {
+			const offset = match.index ?? 0;
+			addFinding(findings, "R7", file, lineNumber(text, offset), `compute boundary import ${match[1]}`);
 		}
 	}
 }
