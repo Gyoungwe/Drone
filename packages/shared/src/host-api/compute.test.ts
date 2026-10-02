@@ -1,6 +1,11 @@
 import { Check } from "typebox/value";
 import { describe, expect, it } from "vitest";
-import { ArtifactExpectationSchema, ComputeHostProfileSchema, JobSpecSchema, WorkflowSpecSchema } from "../compute";
+import {
+	ArtifactExpectationSchema,
+	ComputeHostProfileSchema,
+	JobSpecSchema,
+	WorkflowSpecSchema,
+} from "../compute";
 import { ComputeContract } from "./compute";
 import { channelOf } from "./define";
 
@@ -42,8 +47,12 @@ describe("ComputeContract", () => {
 	});
 
 	it("keeps runner profiles and workflow specs credential-free", () => {
-		expect(Check(ComputeHostProfileSchema, { alias: "hpc-a", host: "hpc.example", username: "alice" })).toBe(true);
-		expect(Check(ComputeHostProfileSchema, { alias: "hpc-a", host: "hpc.example", password: "secret" })).toBe(false);
+		expect(Check(ComputeHostProfileSchema, { alias: "hpc-a", host: "hpc.example", username: "alice" })).toBe(
+			true,
+		);
+		expect(Check(ComputeHostProfileSchema, { alias: "hpc-a", host: "hpc.example", password: "secret" })).toBe(
+			false,
+		);
 		expect(
 			Check(WorkflowSpecSchema, {
 				version: 1,

@@ -234,3 +234,75 @@ export class RunnerClient {
 }
 
 export { RUNNER_PROTOCOL_VERSION } from "./types";
+
+import type { CommandResult } from "./types";
+
+export type WorkflowRunnerOperation =
+	| "version"
+	| "capabilities"
+	| "prepare"
+	| "start"
+	| "status"
+	| "logs"
+	| "cancel"
+	| "collect";
+
+export interface WorkflowRunnerRequest {
+	operation: WorkflowRunnerOperation;
+	jobId?: string;
+	cursor?: string;
+	payload?: Readonly<Record<string, unknown>>;
+}
+
+export interface WorkflowRunnerResponse {
+	ok: boolean;
+	operation: WorkflowRunnerOperation;
+	jobId?: string;
+	status?: string;
+	cursor?: string;
+	data?: unknown;
+	error?: string;
+}
+
+/** Fixed-subcommand seam used by the B3 workflow compiler and scheduler adapters. */
+export interface WorkflowRemoteRunner {
+	request(request: WorkflowRunnerRequest): Promise<WorkflowRunnerResponse>;
+}
+
+export class FakeWorkflowRemoteRunner implements WorkflowRemoteRunner {
+	readonly requests: WorkflowRunnerRequest[] = [];
+	private readonly responses = new Map<WorkflowRunnerOperation, WorkflowRunnerResponse>();
+
+	respond(operation: WorkflowRunnerOperation, response: Omit<WorkflowRunnerResponse, "operation">): this {
+		this.responses.set(operation, { ...response, operation });
+		return this;
+	}
+
+	async request(request: WorkflowRunnerRequest): Promise<WorkflowRunnerResponse> {
+		this.requests.push(structuredClone(request));
+		return (
+			this.responses.get(request.operation) ?? {
+				operation: request.operation,
+				ok: true,
+				jobId: request.jobId,
+			}
+		);
+	}
+}
+
+export const runnerCommand = (operation: WorkflowRunnerOperation): readonly string[] => ["runner", operation];
+
+export function boundedRunnerResponse(
+	response: WorkflowRunnerResponse,
+	maxBytes = 1024 * 1024,
+): WorkflowRunnerResponse {
+	const text = JSON.stringify(response.data ?? "");
+	if (Buffer.byteLength(text, "utf8") > maxBytes)
+		throw new Error("Runner response exceeds the bounded payload limit");
+	return response;
+}
+
+export type FixedCommandExecutor = (argv: readonly string[], stdin: string) => Promise<CommandResult>;
+
+/** Compatibility alias for the B3 fake runner API. */
+export const FakeRemoteRunner = FakeWorkflowRemoteRunner;

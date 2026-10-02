@@ -269,3 +269,95 @@ export function createStateEvent(
 ): JobEvent {
 	return { id, jobId, at: status.updatedAt, type: "state", state: status.state, payload: status };
 }
+
+import type { WorkflowRemoteRunner, WorkflowRunnerResponse } from "./runner";
+import type { ComputeExecutorKind, ComputeWorkflowJobSpec } from "./types";
+
+export type WorkflowJobStatus =
+	| "draft"
+	| "prepared"
+	| "submitted"
+	| "running"
+	| "succeeded"
+	| "failed"
+	| "cancelled"
+	| "unknown";
+
+export type SubmissionDecision =
+	| { kind: "submit"; reason: "no-lock" }
+	| { kind: "reuse"; jobId: string; reason: "job-id-present" | "remote-job-found" }
+	| { kind: "unknown"; reason: "lock-without-job-id" };
+
+/** Idempotency rule for retries: an ambiguous side effect is never replayed automatically. */
+export function submissionDecision(input: {
+	lockExists: boolean;
+	jobId?: string;
+	discoveredJobId?: string;
+}): SubmissionDecision {
+	if (input.jobId) return { kind: "reuse", jobId: input.jobId, reason: "job-id-present" };
+	if (input.discoveredJobId)
+		return { kind: "reuse", jobId: input.discoveredJobId, reason: "remote-job-found" };
+	if (input.lockExists) return { kind: "unknown", reason: "lock-without-job-id" };
+	return { kind: "submit", reason: "no-lock" };
+}
+
+const workflowTerminal = new Set<WorkflowJobStatus>(["succeeded", "failed", "cancelled"]);
+const workflowAllowed: Readonly<Record<WorkflowJobStatus, readonly WorkflowJobStatus[]>> = {
+	draft: ["prepared", "unknown"],
+	prepared: ["submitted", "unknown"],
+	submitted: ["running", "succeeded", "failed", "cancelled", "unknown"],
+	running: ["succeeded", "failed", "cancelled", "unknown"],
+	succeeded: [],
+	failed: [],
+	cancelled: [],
+	unknown: ["submitted", "running", "succeeded", "failed", "cancelled", "unknown"],
+};
+
+export function transitionWorkflowJob(
+	current: WorkflowJobStatus,
+	next: WorkflowJobStatus,
+): WorkflowJobStatus {
+	if (workflowTerminal.has(current)) {
+		if (current !== next) throw new Error(`Terminal job ${current} cannot transition to ${next}`);
+		return current;
+	}
+	if (!workflowAllowed[current].includes(next))
+		throw new Error(`Invalid job transition ${current} -> ${next}`);
+	return next;
+}
+
+export interface SchedulerAdapter {
+	readonly kind: ComputeExecutorKind;
+	prepare(job: ComputeWorkflowJobSpec, runner: WorkflowRemoteRunner): Promise<WorkflowRunnerResponse>;
+	start(job: ComputeWorkflowJobSpec, runner: WorkflowRemoteRunner): Promise<WorkflowRunnerResponse>;
+	status(job: ComputeWorkflowJobSpec, runner: WorkflowRemoteRunner): Promise<WorkflowRunnerResponse>;
+	logs(
+		job: ComputeWorkflowJobSpec,
+		cursor: string | undefined,
+		runner: WorkflowRemoteRunner,
+	): Promise<WorkflowRunnerResponse>;
+	cancel(job: ComputeWorkflowJobSpec, runner: WorkflowRemoteRunner): Promise<WorkflowRunnerResponse>;
+	collect(job: ComputeWorkflowJobSpec, runner: WorkflowRemoteRunner): Promise<WorkflowRunnerResponse>;
+}
+
+function workflowAdapter(kind: ComputeExecutorKind): SchedulerAdapter {
+	return {
+		kind,
+		prepare: (job, runner) =>
+			runner.request({
+				operation: "prepare",
+				jobId: job.jobId,
+				payload: { executor: kind, workflowSpecSha256: job.workflow.workflowSpecSha256 },
+			}),
+		start: (job, runner) =>
+			runner.request({ operation: "start", jobId: job.jobId, payload: { executor: kind } }),
+		status: (job, runner) => runner.request({ operation: "status", jobId: job.jobId }),
+		logs: (job, cursor, runner) => runner.request({ operation: "logs", jobId: job.jobId, cursor }),
+		cancel: (job, runner) => runner.request({ operation: "cancel", jobId: job.jobId }),
+		collect: (job, runner) =>
+			runner.request({ operation: "collect", jobId: job.jobId, payload: { remoteWrite: job.remoteWrite } }),
+	};
+}
+
+export const directScheduler = workflowAdapter("direct");
+export const slurmScheduler = workflowAdapter("slurm");

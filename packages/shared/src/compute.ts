@@ -432,7 +432,9 @@ const WorkflowStepSchema = Type.Object(
 		id: ProfileId,
 		module: WorkflowModuleSchema,
 		dependsOn: Type.Optional(Type.Array(ProfileId)),
-		parameters: Type.Optional(Type.Record(Type.String(), Type.Union([Type.String(), Type.Number(), Type.Boolean()]))),
+		parameters: Type.Optional(
+			Type.Record(Type.String(), Type.Union([Type.String(), Type.Number(), Type.Boolean()])),
+		),
 	},
 	{ additionalProperties: false },
 );

@@ -17,7 +17,14 @@
 		"./runner/version": "./src/runner/version.ts",
 		"./jobs/idempotency": "./src/jobs/idempotency.ts",
 		"./jobs/state-machine": "./src/jobs/state-machine.ts",
-		"./artifacts/manifest": "./src/artifacts/manifest.ts"
+		"./artifacts/manifest": "./src/artifacts/manifest.ts",
+		"./workflow": "./src/workflow.ts",
+		"./nextflow": "./src/nextflow.ts",
+		"./executor": "./src/executor.ts",
+		"./rnaseq": "./src/rnaseq.ts",
+		"./qc": "./src/qc.ts",
+		"./provenance": "./src/provenance.ts",
+		"./authorization": "./src/authorization.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
@@ -28,6 +35,7 @@
 	},
 	"devDependencies": {
 		"typescript": "^5.9.0",
-		"vitest": "^3.2.0"
+		"vitest": "^3.2.0",
+		"@types/node": "^22.0.0"
 	}
 }
