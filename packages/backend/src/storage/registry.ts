@@ -105,6 +105,8 @@ export interface DefaultStorageRegistryOptions {
 	agentDir: string;
 	userDataDir?: string;
 	knowledgeDir?: string;
+	/** Optional research-state ledger root registered by the inquiry host. */
+	inquiryDir?: string;
 	/** Optional non-JsonStore roots discovered by the host at startup. */
 	logDir?: string;
 	projectWorkRoots?: readonly string[];
@@ -145,6 +147,7 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 		agentDir,
 		userDataDir,
 		knowledgeDir,
+		inquiryDir,
 		logDir,
 		projectWorkRoots,
 		knowledgeVaultRoots,
@@ -314,6 +317,23 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 				owner: "knowledge/specialist-host",
 				schema: 1,
 				sensitivity: "config",
+			});
+	}
+	if (inquiryDir) {
+		registry
+			.register({
+				id: "inquiry-root",
+				path: inquiryDir,
+				owner: "inquiry",
+				schema: 1,
+				sensitivity: "private",
+			})
+			.register({
+				id: "inquiry-ledger",
+				path: `${inquiryDir}/ledger.json`,
+				owner: "inquiry/ledger",
+				schema: 1,
+				sensitivity: "private",
 			});
 	}
 	// These roots are selected after binding/project discovery. Registering the

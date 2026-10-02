@@ -46,3 +46,10 @@ test("architecture checker enforces the compute R7 boundary", async () => {
 	assert.match(source, /addFinding\(findings, "R7"/);
 	assert.match(source, /compute import/);
 });
+
+test("architecture checker enforces the inquiry R8 boundary", async () => {
+	const source = await readFile(checker, "utf8");
+	assert.match(source, /const inquiry = rel\.startsWith\("packages\/inquiry\/"\)/);
+	assert.match(source, /addFinding\(findings, "R8"/);
+	assert.match(source, /inquiry import/);
+});
