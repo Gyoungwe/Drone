@@ -26,6 +26,7 @@ import {
 	type ComputeRemoteOperation,
 	createComputeServiceAdapter,
 } from "./services/compute-adapter";
+import { InquiryService, type InquiryServicePort } from "./services/inquiry";
 import type { InstitutionalServicePort } from "./services/institutional";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
@@ -129,6 +130,8 @@ export interface BackendServices {
 	projectTrust: ProjectTrustService;
 	/** Long-running remote compute jobs, persisted independently from sessions. */
 	compute: ComputeServicePort;
+	/** Optional project research-state ledger; disabled unless inquiryDir is configured. */
+	inquiry: InquiryServicePort;
 	/** Renderer-facing projection over the durable B1 compute service. */
 	computeAdapter: ComputeHostAdapter;
 	dispose(): void;
@@ -143,12 +146,20 @@ export interface BackendOptions extends SessionServiceOptions {
 	computeAgentDir?: string;
 	/** Approval callback for runner and remote-read operations. Omitted means fail closed. */
 	computeAuthorizeRemoteOperation?: (operation: ComputeRemoteOperation) => Promise<void>;
+	/** Optional project research-state root; enables the SQLite inquiry ledger. */
+	inquiryDir?: string;
+	/** Stable project identity for the inquiry ledger. */
+	inquiryProjectId?: string;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
-	const sessions = new SessionService({ ...options, runtime, permissions });
+	const sessions = new SessionService({ ...options, runtime, permissions, inquiryDir: options.inquiryDir });
+	const inquiry = new InquiryService({
+		inquiryDir: options.inquiryDir,
+		projectId: options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
+	});
 	const compute = new ComputeService({
 		runtime,
 		storage: sessions.getStorageRegistry(),
@@ -197,10 +208,12 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		projectTrust: sessions.projectTrust,
 		compute,
 		computeAdapter,
+		inquiry,
 		dispose: () => {
 			sessions.dispose();
 			void compute.dispose();
 			void computeAdapter.dispose?.();
+			inquiry.dispose();
 			void runtime.dispose();
 		},
 	};

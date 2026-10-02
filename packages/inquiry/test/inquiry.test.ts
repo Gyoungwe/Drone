@@ -10,6 +10,7 @@ import {
 	MemoryInquiryStorage,
 	planWorkspacePromotion,
 	registerInquiryStorage,
+	SqliteInquiryStorage,
 	validateArtifactLineage,
 	validateArtifactRecord,
 	type WorkspaceRun,
@@ -89,6 +90,29 @@ describe("inquiry ledger records", () => {
 			const reopened = new FileInquiryStorage("project-1", path);
 			expect((await reopened.snapshot()).artifacts.map((item) => item.id)).toEqual(["a", "z"]);
 			expect(await readFile(path, "utf8")).toContain('"schemaVersion": 1');
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("persists all four ledgers in a SQLite database and reopens safely", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-inquiry-sqlite-"));
+		try {
+			const path = join(root, "ledger.sqlite");
+			const storage = new SqliteInquiryStorage("project-1", path);
+			await Promise.all([
+				storage.artifacts.put(artifact({ id: "z" })),
+				storage.artifacts.put(artifact({ id: "a" })),
+			]);
+			expect((await storage.snapshot()).artifacts.map((item) => item.id)).toEqual(["a", "z"]);
+			await storage.close();
+			const reopened = new SqliteInquiryStorage("project-1", path);
+			expect((await reopened.artifacts.list()).map((item) => item.id)).toEqual(["a", "z"]);
+			await expect(reopened.artifacts.put(artifact({ id: "bad", sha256: "invalid" }))).rejects.toThrow(
+				"sha256",
+			);
+			await reopened.close();
+			expect(() => new SqliteInquiryStorage("another-project", path)).toThrow("another project");
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}

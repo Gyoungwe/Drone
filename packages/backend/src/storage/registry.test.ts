@@ -94,6 +94,21 @@ describe("StorageRegistry", () => {
 		});
 	});
 
+	it("registers the inquiry SQLite root and ledger when configured", () => {
+		const registry = createDefaultStorageRegistry({
+			agentDir: "/tmp/drone-agent",
+			inquiryDir: "/tmp/drone-project/.drone",
+		});
+		expect(registry.get("inquiry-root")).toMatchObject({
+			path: "/tmp/drone-project/.drone",
+			owner: "inquiry",
+		});
+		expect(registry.get("inquiry-ledger")).toMatchObject({
+			path: "/tmp/drone-project/.drone/ledger.sqlite",
+			owner: "inquiry/ledger",
+		});
+	});
+
 	it("registers discovered project roots idempotently", () => {
 		const registry = new StorageRegistry();
 		const first = registry.registerDiscoveredRoot(

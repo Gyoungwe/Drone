@@ -330,7 +330,7 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			})
 			.register({
 				id: "inquiry-ledger",
-				path: `${inquiryDir}/ledger.json`,
+				path: `${inquiryDir}/ledger.sqlite`,
 				owner: "inquiry/ledger",
 				schema: 1,
 				sensitivity: "private",
