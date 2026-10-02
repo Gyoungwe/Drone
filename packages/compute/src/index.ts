@@ -5,6 +5,7 @@ export * from "./jobs";
 export * from "./nextflow";
 export * from "./provenance";
 export * from "./qc";
+export * from "./repair";
 export * from "./rnaseq";
 export * from "./runner";
 export * from "./schedulers/direct";

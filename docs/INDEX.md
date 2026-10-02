@@ -108,9 +108,9 @@ packages/
 
 `@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`run-summary.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。
 
-## packages/compute — 远程计算与工作流领域包（B3）
+## packages/compute — 远程计算与工作流领域包（B3 / B5c）
 
-`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/types.ts` 定义 B1 runner-facing `WorkflowSpec` 与 B3 `ComputeWorkflowSpec` 等类型；`src/workflow.ts` 提供模块目录、类型/环检查与稳定哈希；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供标记为 preview-only 的 nf-core/rnaseq test profile 配置；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@drone/research/run-provenance` 的远程执行声明；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由宿主适配层接入。
+`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/types.ts` 定义 B1 runner-facing `WorkflowSpec`、B3 `ComputeWorkflowSpec` 与 B5c 的先验/注册/失败检索端口；`src/workflow.ts` 提供模块目录、类型/环检查、稳定哈希和提交前注册门禁；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/repair.ts` 提供仅修改声明式 spec 的有界（最多三次）自主修复循环与“我替你决定的”决策记录；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供标记为 preview-only 的 nf-core/rnaseq test profile 配置；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@drone/research/run-provenance` 的远程执行声明；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由宿主适配层接入。
 
 
 ## packages/extensions — Pi 扩展适配层（迁移中）

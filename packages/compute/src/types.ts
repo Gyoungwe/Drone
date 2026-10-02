@@ -458,6 +458,68 @@ export interface ComputeWorkflowSpec {
 	outputs: readonly WorkflowOutput[];
 	parameters?: Readonly<Record<string, string | number | boolean>>;
 	metadata?: Readonly<Record<string, string>>;
+	/**
+	 * A prior must be recorded before a workflow can be submitted.  The
+	 * registration itself lives in a host port; keeping the declaration in the
+	 * spec makes it part of the immutable contract hash without giving the
+	 * workflow arbitrary code or command execution.
+	 */
+	prior?: WorkflowPrior;
+}
+
+/** A bounded, human-readable expectation recorded before execution. */
+export interface WorkflowPrior {
+	readonly id: string;
+	readonly statement: string;
+	readonly direction?: "increase" | "decrease" | "no-change" | "unknown";
+	readonly expected?: string;
+	readonly confidence?: number;
+	readonly registeredAt?: string;
+}
+
+/** A host-issued registration that binds a spec and its approved modules. */
+export interface WorkflowRegistration {
+	readonly workflowSpecSha256: string;
+	readonly workflowId: string;
+	readonly moduleIds: readonly string[];
+	readonly priorId: string;
+	readonly registeredAt: string;
+}
+
+/** Host persistence seam for workflow and prior registration. */
+export interface WorkflowRegistrationPort {
+	get(
+		workflowSpecSha256: string,
+	): WorkflowRegistration | Promise<WorkflowRegistration | undefined> | undefined;
+	register(input: {
+		readonly spec: ComputeWorkflowSpec;
+		readonly workflowSpecSha256: string;
+		readonly moduleIds: readonly string[];
+	}): WorkflowRegistration | Promise<WorkflowRegistration>;
+}
+
+/** Failure and negative-result lookup is intentionally injected from inquiry/knowledge. */
+export interface WorkflowFailureRecord {
+	readonly id: string;
+	readonly signature: string;
+	readonly summary: string;
+	readonly remediation?: string;
+	readonly workflowSpecSha256?: string;
+	readonly observedAt?: string;
+	readonly outcome?: "failed" | "negative" | "resolved";
+}
+
+export interface WorkflowFailureLookupPort {
+	lookupFailures(input: {
+		readonly workflowId: string;
+		readonly signature: string;
+		readonly limit: number;
+	}): readonly WorkflowFailureRecord[] | Promise<readonly WorkflowFailureRecord[]>;
+	lookupNegativeResults(input: {
+		readonly workflowId: string;
+		readonly signature?: string;
+		readonly limit: number;
+	}): readonly WorkflowFailureRecord[] | Promise<readonly WorkflowFailureRecord[]>;
 }
 
 export type WorkflowNode = ComputeWorkflowStep;
