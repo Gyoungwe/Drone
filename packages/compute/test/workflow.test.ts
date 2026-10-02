@@ -10,6 +10,7 @@ import {
 	createComputeAuthorization,
 	createRemoteJobProvenance,
 	createRnaseqWorkflowSpec,
+	directScheduler,
 	evaluateMultiqcJson,
 	evaluateMultiqcText,
 	FakeCommandRunner,
@@ -30,7 +31,9 @@ describe("RNA-seq WorkflowSpec vertical slice", () => {
 		const catalog = rnaseqModuleCatalog();
 		const validation = validateWorkflowSpec(spec, catalog);
 		expect(validation.ok).toBe(true);
+		expect(validation.warnings.map((issue) => issue.code)).toContain("fixture-module");
 		const artifact = compileWorkflow(spec, catalog);
+		expect(artifact.executionMode).toBe("fixture");
 		expect(artifact.mainNf).toContain("nextflow.enable.dsl=2");
 		expect(artifact.mainNf).toContain("include { RNASEQ as rnaseq_RNASEQ }");
 		expect(artifact.mainNf).toContain("RNASEQ");
@@ -214,7 +217,7 @@ describe("authorization and runner seams", () => {
 			jobId: "123",
 		});
 	});
-	it("binds a job to an immutable approval and never runs arbitrary shell text", () => {
+	it("binds a job to an immutable approval and never runs arbitrary shell text", async () => {
 		const workflow = compileWorkflow(
 			createRnaseqWorkflowSpec({ samplesheet: "reads.csv" }),
 			rnaseqModuleCatalog(),
@@ -237,13 +240,30 @@ describe("authorization and runner seams", () => {
 			authorization,
 		};
 		const job: ComputeWorkflowJobSpec = { ...base, contractHash: computeJobContractHash(base) };
-		expect(checkJobAuthorization(job, authorization.contractHash).ok).toBe(true);
+		expect(checkJobAuthorization(job, authorization.contractHash)).toMatchObject({
+			ok: false,
+			reason: "workflow is a preview fixture and cannot be submitted",
+		});
+		const readyWorkflow = {
+			...workflow,
+			executionMode: "ready" as const,
+			moduleCommits: { [RNASEQ_PIPELINE]: "abc123" },
+			containerDigests: { [RNASEQ_PIPELINE]: `sha256:${"a".repeat(64)}` },
+		};
+		const readyBase = { ...base, workflow: readyWorkflow };
+		const readyJob: ComputeWorkflowJobSpec = {
+			...readyBase,
+			contractHash: computeJobContractHash(readyBase),
+		};
+		expect(checkJobAuthorization(readyJob, authorization.contractHash).ok).toBe(true);
 		expect(
-			checkJobAuthorization({ ...job, remoteWrite: ["/data/../etc"] }, authorization.contractHash).ok,
+			checkJobAuthorization({ ...readyJob, remoteWrite: ["/data/../etc"] }, authorization.contractHash).ok,
 		).toBe(false);
-		expect(checkJobAuthorization(job, "stale").ok).toBe(false);
+		expect(checkJobAuthorization(readyJob, "stale").ok).toBe(false);
 
 		const runner = new FakeRemoteRunner();
+		expect(() => directScheduler.start(job, runner)).toThrow("preview fixture");
+		expect(runner.requests).toHaveLength(0);
 		void runner.request({ operation: "start", jobId: "job-1", payload: { executor: "direct" } });
 		expect(runner.requests[0]?.operation).toBe("start");
 	});

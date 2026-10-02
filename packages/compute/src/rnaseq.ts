@@ -28,6 +28,7 @@ export const RNASEQ_MODULE: WorkflowModule = {
 		{ name: "counts", type: "counts" },
 	],
 	containerDigest: "sha256:unresolved-test-profile",
+	execution: "fixture",
 };
 
 export function validateRnaseqConfig(config: RnaseqRunConfig): void {
