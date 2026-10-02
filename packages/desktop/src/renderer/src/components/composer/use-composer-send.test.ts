@@ -53,6 +53,11 @@ beforeEach(() => {
 	useSessionsStore.setState({ activeSessionId: "s" });
 	useSubagentsStore.setState({ runsBySession: {} });
 });
+it("omits the optional image argument when sending plain text", async () => {
+	pi.prompt.mockResolvedValue({ kind: "agent" });
+	await composer("hello").handleSend();
+	expect(pi.prompt).toHaveBeenCalledWith("s", "hello");
+});
 it("a fast SDK run cannot be restarted by a late prompt acknowledgement", async () => {
 	pi.prompt.mockImplementation(async () => {
 		useTranscriptStore.getState().applyEvent("s", { type: "agent_start" });

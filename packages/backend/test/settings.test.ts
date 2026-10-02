@@ -209,6 +209,25 @@ describe("SettingsService provider mutations", () => {
 		}
 	});
 
+	it("probes a supported current Codex model when no model is supplied", async () => {
+		const legacy = { id: "gpt-5.3-codex-spark", provider: "openai-codex" };
+		const current = { id: "gpt-6.1-sol", provider: "openai-codex" };
+		const completeSimple = vi.fn().mockResolvedValue({ stopReason: "stop" });
+		const runtime = {
+			getProviderAuthStatus: () => ({ configured: true }),
+			getModels: () => [legacy, current],
+			getModel: (_provider: string, id: string) => [legacy, current].find((model) => model.id === id),
+			completeSimple,
+		};
+		const settings = new SettingsService(async () => runtime as unknown as ModelRuntime);
+
+		await expect(settings.testProvider("openai-codex")).resolves.toMatchObject({
+			ok: true,
+			modelId: "gpt-6.1-sol",
+		});
+		expect(completeSimple).toHaveBeenCalledWith(current, expect.anything(), expect.anything());
+	});
+
 	it.each(["stop", "error", "aborted"])(
 		"provider probe handles SDK %s results and releases its timer",
 		async (stopReason) => {

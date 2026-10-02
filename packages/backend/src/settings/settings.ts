@@ -20,6 +20,7 @@ type JsonObject = Record<string, unknown>;
 /** 联网刷新模型目录的整体超时（SDK fetchWithRetry 默认无超时，网络不可达时会一直挂） */
 const NETWORK_REFRESH_TIMEOUT_MS = 15_000;
 const PROVIDER_TEST_TIMEOUT_MS = 15_000;
+const OPENAI_CODEX_PROBE_MODELS = ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-astra"] as const;
 
 /** models.json 支持 JSONC 注释；写入时统一输出纯 JSON */
 function stripJsonComments(raw: string): string {
@@ -373,9 +374,14 @@ export class SettingsService implements SettingsServicePort {
 		if (!status.configured) {
 			return { ok: false, error: "未配置凭证" };
 		}
+		const models = runtime.getModels(providerId);
 		const model = modelId
 			? runtime.getModel(providerId, modelId)
-			: (runtime.getModels(providerId)[0] ?? undefined);
+			: ((providerId === "openai-codex"
+					? OPENAI_CODEX_PROBE_MODELS.map((id) => models.find((candidate) => candidate.id === id)).find(
+							Boolean,
+						)
+					: undefined) ?? models[0]);
 		if (!model) {
 			return { ok: false, error: "该 provider 下没有可用模型" };
 		}

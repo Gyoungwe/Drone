@@ -63,5 +63,8 @@ describe("SessionsContract", () => {
 		expect(Check(SessionsContract.methods.steerSubagent.args, ["session-1", "continue", "invalid"])).toBe(
 			false,
 		);
+		expect(Check(SessionsContract.methods.prompt.args, ["session-1", "hello"])).toBe(true);
+		expect(Check(SessionsContract.methods.prompt.args, ["session-1", "hello", []])).toBe(true);
+		expect(Check(SessionsContract.methods.prompt.args, ["session-1", "hello", undefined])).toBe(false);
 	});
 });
