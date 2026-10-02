@@ -20,6 +20,7 @@ import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
+import { type ComputeHostAdapter, createUnavailableComputeService } from "./services/compute-adapter";
 import type { InstitutionalServicePort } from "./services/institutional";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
@@ -121,11 +122,21 @@ export interface BackendServices {
 	subagents: SubagentServicePort;
 	/** Project trust store and interactive trust gate. */
 	projectTrust: ProjectTrustService;
+	/** Narrow compute host adapter; B1 supplies the runner-backed implementation. */
+	compute: ComputeHostAdapter;
 	dispose(): void;
 }
 
-export function createBackend(options: SessionServiceOptions = {}): BackendServices {
+export interface BackendOptions extends SessionServiceOptions {
+	/** Inject the B1 compute service without coupling this composition root to its runner package. */
+	compute?: ComputeHostAdapter;
+}
+
+export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
+	const compute = options.compute ?? createUnavailableComputeService();
+	runtime.compute = { ...(runtime.compute ?? {}), service: compute };
+	void compute.init?.();
 	const permissions = new PermissionSettingsService();
 	const sessions = new SessionService({ ...options, runtime, permissions });
 	const diagnostics: DiagnosticsServicePort = {
@@ -151,8 +162,10 @@ export function createBackend(options: SessionServiceOptions = {}): BackendServi
 		institutional: sessions.institutional,
 		subagents: sessions.subagents,
 		projectTrust: sessions.projectTrust,
+		compute,
 		dispose: () => {
 			sessions.dispose();
+			void compute.dispose?.();
 			void runtime.dispose();
 		},
 	};

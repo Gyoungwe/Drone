@@ -469,6 +469,10 @@ export function createTaskWorkbench({
 		if (input.goal) t.goal = clean(input.goal);
 		t.authorizationSummary = clean(input.summary || t.goal, 1200);
 		t.writeRoots = [...(input.writeRoots || [])];
+		// The optional compute section is immutable task scope. Leave it absent for
+		// legacy/no-compute plans so their pre-compute consent hash remains valid.
+		if (input.compute !== undefined) t.compute = clone(input.compute);
+		else delete t.compute;
 		t.milestones = milestones;
 		t.planApproved = false;
 		t.state = "waiting_user";

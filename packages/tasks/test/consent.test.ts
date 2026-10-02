@@ -31,6 +31,39 @@ describe("task consent", () => {
 		expect(hasTaskConsent(approved, 10)).toBe(true);
 		expect(hasTaskConsent({ ...approved, goal: "different" }, 10)).toBe(false);
 	});
+	it("invalidates consent when the compute scope or budget changes", () => {
+		const task = {
+			id: "task-compute",
+			goal: "run workflow",
+			writeRoots: [],
+			compute: {
+				hosts: ["slurm-a"],
+				remoteRead: ["/data/in"],
+				remoteWrite: ["/data/out"],
+				workflows: ["rnaseq"],
+				budget: { maxCoreHours: 10, maxWalltimeMinutes: 60, maxConcurrentJobs: 2, maxDiskGb: 20 },
+			},
+			milestones: [{ id: "run", title: "Run", acceptance: { kind: "file", path: "result" } }],
+			planApproved: true,
+		};
+		const approved = {
+			...task,
+			executionConsent: {
+				version: 1,
+				contractHash: contractHash(task),
+				maxCalls: 10,
+				maxAutoResumes: 3,
+				approvedAt: "now",
+			},
+		};
+		expect(hasTaskConsent(approved, 10)).toBe(true);
+		expect(
+			hasTaskConsent(
+				{ ...approved, compute: { ...task.compute, budget: { ...task.compute.budget, maxCoreHours: 9 } } },
+				10,
+			),
+		).toBe(false);
+	});
 	it("only resolves existing project directories below the home directory", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-tasks-consent-"));
 		roots.push(root);

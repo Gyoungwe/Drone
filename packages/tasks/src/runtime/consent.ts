@@ -5,18 +5,19 @@ import { isAbsolute, parse, relative, resolve } from "node:path";
 
 export const MAX_AUTO_RESUMES = 3;
 export function contractHash(task) {
-	return createHash("sha256")
-		.update(
-			JSON.stringify([
-				task.id,
-				task.goal,
-				task.binding ?? null,
-				task.authorizationSummary ?? "",
-				task.writeRoots ?? [],
-				task.milestones.map(({ id, title, dependsOn, acceptance }) => ({ id, title, dependsOn, acceptance })),
-			]),
-		)
-		.digest("hex");
+	const contract = [
+		task.id,
+		task.goal,
+		task.binding ?? null,
+		task.authorizationSummary ?? "",
+		task.writeRoots ?? [],
+	];
+	// Preserve hashes for legacy tasks that never declared compute scope.
+	if (task.compute !== undefined) contract.push(task.compute ?? null);
+	contract.push(
+		task.milestones.map(({ id, title, dependsOn, acceptance }) => ({ id, title, dependsOn, acceptance })),
+	);
+	return createHash("sha256").update(JSON.stringify(contract)).digest("hex");
 }
 /** Only an explicit, revision-checked task-action creates this record. No legacy auto-grant. */
 export function hasTaskConsent(task, maxCalls) {

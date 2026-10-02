@@ -362,6 +362,8 @@ function createTaskWorkbench({
     if (input.goal) t.goal = clean(input.goal);
     t.authorizationSummary = clean(input.summary || t.goal, 1200);
     t.writeRoots = [...input.writeRoots || []];
+    if (input.compute !== void 0) t.compute = clone(input.compute);
+    else delete t.compute;
     t.milestones = milestones;
     t.planApproved = false;
     t.state = "waiting_user";

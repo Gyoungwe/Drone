@@ -1,3 +1,6 @@
+import { Check } from "typebox/value";
+import { type ComputeAuthorization, ComputeAuthorizationSchema } from "./compute";
+
 export type TaskState =
 	| "pending"
 	| "running"
@@ -86,6 +89,8 @@ export interface WorkbenchTask {
 	authorizationRequired?: boolean;
 	authorizationSummary?: string;
 	writeRoots?: string[];
+	/** Optional remote compute scope; never grants permission by itself. */
+	compute?: ComputeAuthorization | null;
 	executionConsent?: {
 		version: 1;
 		contractHash: string;
@@ -151,6 +156,7 @@ export function decodeTaskView(value: unknown): TaskView | undefined {
 					(Array.isArray(t.writeRoots) &&
 						t.writeRoots.length <= 8 &&
 						t.writeRoots.every((p) => typeof p === "string" && p.length <= 512))) &&
+				(t.compute === undefined || t.compute === null || Check(ComputeAuthorizationSchema, t.compute)) &&
 				(t.executionConsent === undefined ||
 					(t.executionConsent?.version === 1 &&
 						t.executionConsent.maxCalls === 192 &&

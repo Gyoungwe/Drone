@@ -4,13 +4,14 @@ import { expect, it, vi } from "vitest";
 import { AskGate } from "../src/session/ask-gate";
 import { makeUiContext } from "../src/session/ui-context";
 
-function fixture() {
+function fixture(compute) {
 	const journal = createTaskWorkbench({ requireAuthorization: true });
 	journal.attach("session-a");
 	journal.begin("Create a bounded report");
 	journal.plan({
 		summary: "Create report only",
 		writeRoots: [],
+		...(compute ? { compute } : {}),
 		milestones: [
 			{ id: "report", title: "Report", dependsOn: [], acceptance: { kind: "file", path: "report.md" } },
 		],
@@ -22,6 +23,24 @@ function fixture() {
 	});
 	return { journal, input, ask: createTaskAuthorization(journal) };
 }
+
+it("shows the approved compute host and budget in the ask_user contract", async () => {
+	const f = fixture({
+		hosts: ["slurm-a"],
+		remoteRead: ["/data/in"],
+		remoteWrite: ["/data/out"],
+		workflows: ["rnaseq"],
+		budget: { maxCoreHours: 10, maxWalltimeMinutes: 60, maxConcurrentJobs: 2, maxDiskGb: 20 },
+	});
+	const selected = vi.fn(async () => "暂不授权");
+	await f.ask(f.input(), { ui: { select: selected } });
+	expect(selected).toHaveBeenCalledWith(
+		expect.stringContaining("slurm-a"),
+		expect.any(Array),
+		expect.any(Object),
+	);
+	expect(selected.mock.calls[0][0]).toContain("60");
+});
 it("opens the real ask_user gate, displays the contract, and grants only the selected approval", async () => {
 	const f = fixture(),
 		requests = [];

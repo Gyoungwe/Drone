@@ -12,6 +12,8 @@ export interface ConsentTask {
 	binding?: unknown;
 	authorizationSummary?: unknown;
 	writeRoots?: unknown;
+	/** Optional remote-compute scope. It is part of the immutable contract hash. */
+	compute?: unknown;
 	milestones?: readonly {
 		id?: unknown;
 		title?: unknown;
@@ -31,23 +33,25 @@ export interface ExecutionConsent {
 }
 
 export function contractHash(task: ConsentTask): string {
-	return createHash("sha256")
-		.update(
-			JSON.stringify([
-				task.id,
-				task.goal,
-				task.binding ?? null,
-				task.authorizationSummary ?? "",
-				task.writeRoots ?? [],
-				(task.milestones || []).map(({ id, title, dependsOn, acceptance }) => ({
-					id,
-					title,
-					dependsOn,
-					acceptance,
-				})),
-			]),
-		)
-		.digest("hex");
+	const contract: unknown[] = [
+		task.id,
+		task.goal,
+		task.binding ?? null,
+		task.authorizationSummary ?? "",
+		task.writeRoots ?? [],
+	];
+	// Keep the pre-compute hash byte-for-byte stable for legacy tasks. A new
+	// compute block is appended only when it was explicitly part of the plan.
+	if (task.compute !== undefined) contract.push(task.compute ?? null);
+	contract.push(
+		(task.milestones || []).map(({ id, title, dependsOn, acceptance }) => ({
+			id,
+			title,
+			dependsOn,
+			acceptance,
+		})),
+	);
+	return createHash("sha256").update(JSON.stringify(contract)).digest("hex");
 }
 
 /** Only an explicit revision-checked task action creates this record. */

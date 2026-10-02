@@ -4,16 +4,18 @@ import { homedir } from "node:os";
 import { isAbsolute, parse, relative, resolve } from "node:path";
 const MAX_AUTO_RESUMES = 3;
 function contractHash(task) {
-  return createHash("sha256").update(
-    JSON.stringify([
-      task.id,
-      task.goal,
-      task.binding ?? null,
-      task.authorizationSummary ?? "",
-      task.writeRoots ?? [],
-      task.milestones.map(({ id, title, dependsOn, acceptance }) => ({ id, title, dependsOn, acceptance }))
-    ])
-  ).digest("hex");
+  const contract = [
+    task.id,
+    task.goal,
+    task.binding ?? null,
+    task.authorizationSummary ?? "",
+    task.writeRoots ?? []
+  ];
+  if (task.compute !== void 0) contract.push(task.compute ?? null);
+  contract.push(
+    task.milestones.map(({ id, title, dependsOn, acceptance }) => ({ id, title, dependsOn, acceptance }))
+  );
+  return createHash("sha256").update(JSON.stringify(contract)).digest("hex");
 }
 function hasTaskConsent(task, maxCalls) {
   const c = task?.executionConsent;

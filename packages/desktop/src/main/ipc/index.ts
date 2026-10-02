@@ -6,6 +6,7 @@ import type { LanObserverHandle } from "../lan";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
+import { registerComputeIpc } from "./compute";
 import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
 import { registerLanIpc } from "./lan";
@@ -44,6 +45,7 @@ export function registerIpc(
 	registerPermissionSettingsIpc(backendServices);
 	registerSubagentsIpc(backendServices);
 	registerKnowledgeIpc(backendServices);
+	registerComputeIpc(backendServices, sendToRenderer);
 	registerPackagesIpc(backendServices);
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);

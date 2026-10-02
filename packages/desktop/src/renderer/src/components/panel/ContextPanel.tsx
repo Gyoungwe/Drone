@@ -13,6 +13,7 @@ import { mergeKnowledgeArtifacts } from "../knowledge/artifacts";
 import { useSessionStatus } from "../session/session-status";
 import { ArtifactsPane } from "./ArtifactsPane";
 import { ChangesPane } from "./ChangesPane";
+import { ComputePane } from "./ComputePane";
 import { ProcessPane } from "./ProcessPane";
 import { SubagentsPane } from "./SubagentsPane";
 import { TasksPane } from "./TasksPane";
@@ -21,7 +22,7 @@ import { TasksPane } from "./TasksPane";
 export const CONTEXT_PANEL_WIDTH = 372;
 
 /**
- * 右侧上下文面板：任务 / 过程 / 变更 / 产物 / 子智能体 五页签，替代原 DiffSidebar + TaskSidebar + Todo 悬浮胶囊 +
+ * 右侧上下文面板：任务 / 过程 / 变更 / 产物 / 子智能体 / 计算 六页签，替代原 DiffSidebar + TaskSidebar + Todo 悬浮胶囊 +
  * 知识流横条。固定栏位、push 式收展（聊天列自然压缩），永远只有一个右栏。
  *
  * 展开规则（用户确认）：运行开始自动展开；运行结束回到空闲选择；空闲时的手动开关被记住。
@@ -72,6 +73,7 @@ export function ContextPanel() {
 					{tab === "changes" && <ChangesPane sessionId={activeSessionId} />}
 					{tab === "artifacts" && <ArtifactsPane sessionId={activeSessionId} />}
 					{tab === "subagents" && <SubagentsPane sessionId={activeSessionId} />}
+					{tab === "compute" && <ComputePane />}
 					{pluginTab && <PluginEntryHost entry={pluginTab} />}
 				</div>
 				<PanelFooter />

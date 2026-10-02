@@ -32,6 +32,50 @@ describe("createBackend", () => {
 		expect(services.projectTrust).toBeDefined();
 		expect(services.subagents).toBeDefined();
 		expect(services.subagents.listAvailable).toBeTypeOf("function");
+		expect(services.compute.listHosts).toBeTypeOf("function");
+		services.dispose();
+	});
+
+	it("keeps an injected compute adapter on the backend boundary", () => {
+		const compute = {
+			listHosts: async () => [],
+			getHost: async () => null,
+			saveHost: async () => {
+				throw new Error("unused");
+			},
+			removeHost: async () => {},
+			probeHost: async () => {
+				throw new Error("unused");
+			},
+			getHealthSnapshot: async () => ({ checkedAt: new Date().toISOString(), hosts: [] }),
+			listJobs: async () => [],
+			getJob: async () => null,
+			getLogs: async (id: string) => ({
+				jobId: id,
+				cursor: "",
+				text: "",
+				truncated: false,
+				at: new Date().toISOString(),
+			}),
+			cancelJob: async () => {},
+			openTerminal: async () => {
+				throw new Error("unused");
+			},
+			getTerminal: async () => null,
+			writeTerminal: async () => {},
+			closeTerminal: async () => {},
+			getOnboardingStatus: async () => [],
+			checkOnboardingStep: async (step: any) => ({ step, state: "not_configured", summary: "unused" }),
+			authorizeRemoteOperation: async () => {},
+			onHealthChanged: () => () => {},
+			onJobUpdated: () => () => {},
+			onLogChunk: () => () => {},
+			onTerminalOutput: () => () => {},
+			onTerminalClosed: () => () => {},
+		};
+		const services = createBackend({ compute: compute as any, projectTrust: false, permissionGates: false });
+		expect(services.compute).toBe(compute);
+		expect(services.runtime.compute?.service).toBe(compute);
 		services.dispose();
 	});
 

@@ -25,6 +25,12 @@ export interface TaskRuntime {
 	acceptance?: AcceptanceVerifiersBridge;
 	consent?: unknown;
 }
+/** Host-owned compute adapter slot; the runner implementation is injected by the backend. */
+export interface ComputeRuntime {
+	service?: unknown;
+	scheduler?: unknown;
+	transport?: unknown;
+}
 export interface ToolManifestRegistry {
 	tools: Map<string, unknown>;
 	families?: Map<string, unknown>;
@@ -76,6 +82,7 @@ export const DRONE_ACCEPTANCE_VERIFIERS_KEY = "drone.acceptance-verifiers.v1";
 export interface DroneRuntime {
 	knowledge: KnowledgeRuntime;
 	tasks: TaskRuntime;
+	compute?: ComputeRuntime;
 	tools: ToolManifestRegistry;
 	scheduler: KeyedLocks;
 	log: Logger;

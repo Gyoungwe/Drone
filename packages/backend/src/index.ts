@@ -1,4 +1,9 @@
-export { type BackendServices, createBackend, type SessionServicePort } from "./create-backend";
+export {
+	type BackendOptions,
+	type BackendServices,
+	createBackend,
+	type SessionServicePort,
+} from "./create-backend";
 export {
 	buildDiagnostics,
 	type DiagnosticsOptions,
@@ -93,6 +98,7 @@ export {
 } from "./project/workspace-store";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
+export { type ComputeHostAdapter, createUnavailableComputeService } from "./services/compute-adapter";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {
 	type KnowledgeReviewControl,
