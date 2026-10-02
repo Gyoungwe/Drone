@@ -127,7 +127,7 @@ src/
 ├── project/            trust / trust-loader / workspace-store / files
 ├── settings/           settings / model-prefs / login
 ├── packages/           admin / catalog
-├── services/           approvals / institutional / packages / permissions / project-trust / subagents / zotero（域服务，组合根暴露）
+├── services/           approvals / institutional / packages / permissions / project-trust / session-permissions / subagents / zotero（域服务，组合根暴露）
 ├── research-root.ts    研究 workbench 打包资源根解析（开发树与 extraResources 共用）
 └── tools/              show-image / todo / todo-reminder / webfetch / subagent / context-evaporation / channel-watch
 ```
@@ -167,6 +167,7 @@ src/
 | `src/services/packages.ts` | `PackageService` | 社区包搜索/安装/卸载/已配置清单 + 装卸后对非流式会话热重载（对齐 CLI /reload）；npm ENOENT 转带哨兵的可读错误；通过 `BackendServices.packages` 暴露 |
 | `src/services/approvals.ts` | `ApprovalService` | per-session `PermissionGate` 注册、待决请求快照、请求/裁决广播和 allowRun 队列裁决；通过 `BackendServices.approvals` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/permissions.ts` | `PermissionSettingsService` | `permissions.json` 快照、原子保存、恢复默认、规则试算与审计尾部；通过 `BackendServices.permissions` 暴露，`PiBackend` 保留兼容委托 |
+| `src/services/session-permissions.ts` | `SessionPermissionService` | 活跃会话的内存权限模式（default/fullAccess）；关闭会话或重启即归零；通过 `BackendServices.sessionPermissions` 暴露 |
 | `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`PiBackend` 的资源加载与旧 `respondTrust` 继续委托 |
 | `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |
 | `src/services/subagents.ts` | `SubagentService` | 子代理面板发现、派发、中止与运行记录；通过 `BackendServices.subagents` 暴露 |
