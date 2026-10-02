@@ -1,6 +1,6 @@
 {
 	"name": "@drone/desktop",
-	"version": "0.14.2",
+	"version": "0.14.3",
 	"private": true,
 	"description": "Desktop GUI for the Pi coding agent",
 	"author": {

@@ -745,8 +745,11 @@ async function dispatch(op, args) {
 		return status();
 	}
 	if (op === "reconcile") {
+		const pendingScan = Boolean(scan);
 		fullScanRequested = false;
 		await beginReconcile(!!args.force);
+		// An explicit reconcile must include files created while an earlier warm scan was running.
+		if (pendingScan) await beginReconcile(!!args.force);
 		await flushDirty();
 		// A directory notification can start a follow-up scan during the dirty flush.
 		if (scan) await scan;

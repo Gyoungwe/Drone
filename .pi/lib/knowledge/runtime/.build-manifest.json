@@ -128,7 +128,7 @@
 		},
 		"worker.mjs": {
 			"source": "packages/knowledge/src/worker.ts",
-			"sha256": "80655aaf432a207b544e6b6228356235514a8b1883cf8697d833833b80437233"
+			"sha256": "42c130b98226a6630ff95fde71a686a80a7cc8c3bab5ce0be4be35777c29024b"
 		}
 	}
 }

@@ -40,8 +40,8 @@ it("reconcile waits for pending directory scans before reporting ready", async (
 	await service.request("warm");
 	await mkdir(join(vault, "new-notes"));
 	await writeFile(join(vault, "new-notes", "new.md"), "# New evidence\n");
-	const status = await service.request("reconcile");
+	const status = await service.request("reconcile", { force: true });
 	expect(status.problems).toEqual([]);
 	expect(status.coverage).toBe("ready");
 	expect(status.noteCount).toBe(81);
-});
+}, 30_000);

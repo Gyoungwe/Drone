@@ -796,8 +796,10 @@ async function dispatch(op, args) {
     return status();
   }
   if (op === "reconcile") {
+    const pendingScan = Boolean(scan);
     fullScanRequested = false;
     await beginReconcile(!!args.force);
+    if (pendingScan) await beginReconcile(!!args.force);
     await flushDirty();
     if (scan) await scan;
     return status();
