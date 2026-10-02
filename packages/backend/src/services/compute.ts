@@ -261,6 +261,16 @@ export class ComputeService implements ComputeServicePort {
 		});
 	}
 
+	/** Whether a concrete runner was supplied for remote compute operations. */
+	hasExecutor(): boolean {
+		return this.executor !== undefined;
+	}
+
+	/** Whether the configured runner implements one of the optional operations. */
+	hasExecutorMethod(method: keyof ComputeExecutor): boolean {
+		return typeof this.executor?.[method] === "function";
+	}
+
 	private registerStorage(): void {
 		const entries = [
 			{

@@ -20,8 +20,12 @@ import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
-import { ComputeService, type ComputeServicePort } from "./services/compute";
-import { type ComputeHostAdapter, createUnavailableComputeService } from "./services/compute-adapter";
+import { type ComputeExecutor, ComputeService, type ComputeServicePort } from "./services/compute";
+import {
+	type ComputeHostAdapter,
+	type ComputeRemoteOperation,
+	createComputeServiceAdapter,
+} from "./services/compute-adapter";
 import type { InstitutionalServicePort } from "./services/institutional";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
@@ -125,7 +129,7 @@ export interface BackendServices {
 	projectTrust: ProjectTrustService;
 	/** Long-running remote compute jobs, persisted independently from sessions. */
 	compute: ComputeServicePort;
-	/** Renderer-facing host projection; B1 runner integration is injected later. */
+	/** Renderer-facing projection over the durable B1 compute service. */
 	computeAdapter: ComputeHostAdapter;
 	dispose(): void;
 }
@@ -133,14 +137,34 @@ export interface BackendServices {
 export interface BackendOptions extends SessionServiceOptions {
 	/** Inject the renderer-facing host adapter without coupling the composition root to SSH details. */
 	compute?: ComputeHostAdapter;
+	/** Optional runner used by tests or a host-specific transport integration. */
+	computeExecutor?: ComputeExecutor;
+	/** Agent directory for compute persistence; defaults to the session engine directory. */
+	computeAgentDir?: string;
+	/** Approval callback for runner and remote-read operations. Omitted means fail closed. */
+	computeAuthorizeRemoteOperation?: (operation: ComputeRemoteOperation) => Promise<void>;
 }
 
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
 	const sessions = new SessionService({ ...options, runtime, permissions });
-	const compute = new ComputeService({ runtime, storage: sessions.getStorageRegistry() });
-	const computeAdapter = options.compute ?? createUnavailableComputeService();
+	const compute = new ComputeService({
+		runtime,
+		storage: sessions.getStorageRegistry(),
+		...(options.computeAgentDir ? { agentDir: options.computeAgentDir } : {}),
+		...(options.computeExecutor ? { executor: options.computeExecutor } : {}),
+	});
+	const computeAdapter =
+		options.compute ??
+		createComputeServiceAdapter({
+			service: compute,
+			storage: sessions.getStorageRegistry(),
+			...(options.computeAgentDir ? { agentDir: options.computeAgentDir } : {}),
+			...(options.computeAuthorizeRemoteOperation
+				? { authorizeRemoteOperation: options.computeAuthorizeRemoteOperation }
+				: {}),
+		});
 	if (runtime.compute) {
 		runtime.compute.service = compute;
 		runtime.compute.adapter = computeAdapter;
