@@ -26,6 +26,7 @@ export function computeJobContractHash(
 				host: job.host,
 				authorization,
 				workflowSpecSha256: job.workflow.workflowSpecSha256,
+				executionMode: job.workflow.executionMode,
 				moduleCommits: job.workflow.moduleCommits,
 				containerDigests: job.workflow.containerDigests,
 				executor: job.executor,
@@ -63,6 +64,8 @@ export function checkJobAuthorization(
 		return { ok: false, reason: "compute authorization does not match the approved task contract" };
 	if (job.contractHash !== computeJobContractHash(job))
 		return { ok: false, reason: "job contract hash is invalid" };
+	if (job.workflow.executionMode !== "ready")
+		return { ok: false, reason: "workflow is a preview fixture and cannot be submitted" };
 	if (!auth.hosts.includes(job.host))
 		return { ok: false, reason: `host ${job.host} is outside the approved scope` };
 	if (

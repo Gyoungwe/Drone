@@ -180,6 +180,19 @@ export function validateWorkflowSpec(
 				`Module ${step.module} must declare a sha256 container digest`,
 				`steps.${index}.module`,
 			);
+		else if (module.execution !== "fixture" && !/^sha256:[0-9a-f]{64}$/i.test(module.containerDigest))
+			addIssue(
+				errors,
+				"unresolved-container",
+				`Module ${step.module} must use a resolved sha256 container digest before submission`,
+				`steps.${index}.module`,
+			);
+		if (module.execution === "fixture")
+			warnings.push({
+				code: "fixture-module",
+				message: `Module ${module.id} is a preview fixture and cannot be submitted to a remote runner`,
+				path: `steps.${index}.module`,
+			});
 		if (!/^[-A-Za-z0-9_./]+$/.test(module.path) || module.path.startsWith("/") || module.path.includes(".."))
 			addIssue(
 				errors,

@@ -422,6 +422,8 @@ export interface WorkflowModule {
 	outputs: readonly WorkflowPort[];
 	containerDigest?: string;
 	container?: string;
+	/** Fixture modules may be compiled and previewed, but cannot be submitted. */
+	execution?: "ready" | "fixture";
 }
 
 export interface WorkflowInput {
@@ -479,6 +481,7 @@ export interface CompiledWorkflow {
 	workflowSpecSha256: string;
 	moduleCommits: Readonly<Record<string, string>>;
 	containerDigests: Readonly<Record<string, string>>;
+	executionMode: "ready" | "fixture";
 }
 
 export interface CommandResult {
@@ -583,6 +586,7 @@ export interface RemoteJobProvenance {
 	pipelineVersion: string;
 	profile?: string;
 	workflowSpecSha256: string;
+	executionMode: "ready" | "fixture";
 	modules: readonly RemoteModuleProvenance[];
 	remoteInputs: readonly string[];
 	remoteOutputs: readonly string[];

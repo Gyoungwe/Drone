@@ -270,6 +270,7 @@ export function createStateEvent(
 	return { id, jobId, at: status.updatedAt, type: "state", state: status.state, payload: status };
 }
 
+import { assertJobAuthorized } from "./authorization";
 import type { WorkflowRemoteRunner, WorkflowRunnerResponse } from "./runner";
 import type { ComputeExecutorKind, ComputeWorkflowJobSpec } from "./types";
 
@@ -343,14 +344,18 @@ export interface SchedulerAdapter {
 function workflowAdapter(kind: ComputeExecutorKind): SchedulerAdapter {
 	return {
 		kind,
-		prepare: (job, runner) =>
-			runner.request({
+		prepare: (job, runner) => {
+			assertJobAuthorized(job);
+			return runner.request({
 				operation: "prepare",
 				jobId: job.jobId,
 				payload: { executor: kind, workflowSpecSha256: job.workflow.workflowSpecSha256 },
-			}),
-		start: (job, runner) =>
-			runner.request({ operation: "start", jobId: job.jobId, payload: { executor: kind } }),
+			});
+		},
+		start: (job, runner) => {
+			assertJobAuthorized(job);
+			return runner.request({ operation: "start", jobId: job.jobId, payload: { executor: kind } });
+		},
 		status: (job, runner) => runner.request({ operation: "status", jobId: job.jobId }),
 		logs: (job, cursor, runner) => runner.request({ operation: "logs", jobId: job.jobId, cursor }),
 		cancel: (job, runner) => runner.request({ operation: "cancel", jobId: job.jobId }),

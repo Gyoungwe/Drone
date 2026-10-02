@@ -93,6 +93,7 @@ export function compileWorkflow(spec: ComputeWorkflowSpec, catalog: WorkflowModu
 				.filter((module) => module.containerDigest)
 				.map((module) => [module.id, module.containerDigest as string]),
 		),
+		executionMode: uniqueModules.some((module) => module.execution === "fixture") ? "fixture" : "ready",
 	};
 }
 
