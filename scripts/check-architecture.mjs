@@ -67,6 +67,7 @@ function scanFile(file, text, findings) {
 	const isRenderer = /^packages\/desktop\/src\/(renderer|lan-web)\//.test(rel);
 	const isTest = /(?:^|\/)(?:test|tests)\//.test(rel) || /\.(?:test|spec)\.[^.]+$/.test(rel);
 	const domain = rel.match(/^packages\/(knowledge|tasks|research)\//)?.[1];
+	const inquiry = rel.startsWith("packages/inquiry/");
 	const compute = rel.startsWith("packages/compute/");
 
 	// R1: SDK value imports. Keep the check intentionally broad so a newly
@@ -145,6 +146,18 @@ function scanFile(file, text, findings) {
 		for (const match of text.matchAll(forbidden)) {
 			const offset = match.index ?? 0;
 			addFinding(findings, "R7", file, lineNumber(text, offset), `compute import ${match[1]}`);
+		}
+	}
+
+	// R8: inquiry is a portable research-state domain. It may use the shared
+	// contract layer, but host persistence and compute adapters belong to the
+	// backend composition root.
+	if (inquiry) {
+		const forbidden =
+			/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(@drone\/(?!shared(?:["'/]))[^"']+|electron|@earendil-works\/pi-[^"']+)(?=["'])/g;
+		for (const match of text.matchAll(forbidden)) {
+			const offset = match.index ?? 0;
+			addFinding(findings, "R8", file, lineNumber(text, offset), `inquiry import ${match[1]}`);
 		}
 	}
 }
