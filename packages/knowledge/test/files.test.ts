@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	allowedSegment,
@@ -59,7 +59,7 @@ describe("knowledge file boundaries", () => {
 		});
 		expect(result.hash).toMatch(/^[a-f0-9]{64}$/);
 		expect(result.signature).toBe(fileVersion((await inspectNote(vault, path)).stat));
-		expect((await safeNotePath(vault, path)).endsWith("Projects/alpha/Context.md")).toBe(true);
+		expect(relative(vault, await safeNotePath(vault, path))).toBe(path);
 	});
 
 	it("rejects symlinked notes and oversized notes", async () => {

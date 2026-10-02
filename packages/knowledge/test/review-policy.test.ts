@@ -24,7 +24,7 @@ describe("review policy", () => {
 		expect(readReviewMode()).toBe("strict");
 		const path = join(root, "app", "review-policy.json");
 		expect(JSON.parse(await readFile(path, "utf8"))).toEqual({ version: 1, mode: "strict" });
-		expect((await stat(path)).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") expect((await stat(path)).mode & 0o777).toBe(0o600);
 	});
 
 	it("lets the strict environment override persisted automatic mode", async () => {

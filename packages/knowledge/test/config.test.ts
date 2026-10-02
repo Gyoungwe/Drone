@@ -45,8 +45,10 @@ describe("knowledge binding", () => {
 			subagentPolicy: "read-local",
 		});
 		expect(binding).toMatchObject({ version: 1, revision: 1, vault: await realpath(vault) });
-		expect((await stat(join(root, "app"))).mode & 0o777).toBe(0o700);
-		expect((await stat(join(root, "app", "binding.json"))).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") {
+			expect((await stat(join(root, "app"))).mode & 0o777).toBe(0o700);
+			expect((await stat(join(root, "app", "binding.json"))).mode & 0o777).toBe(0o600);
+		}
 		expect(JSON.parse(await readFile(join(root, "app", "binding.json"), "utf8"))).toMatchObject(binding);
 		expect(await readKnowledgeBinding()).toEqual(binding);
 		await expect(saveKnowledgeBinding({ ...binding, vault }, 0)).rejects.toThrow("changed");
