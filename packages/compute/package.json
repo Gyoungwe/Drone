@@ -24,6 +24,7 @@
 		"./rnaseq": "./src/rnaseq.ts",
 		"./qc": "./src/qc.ts",
 		"./provenance": "./src/provenance.ts",
+		"./repair": "./src/repair.ts",
 		"./authorization": "./src/authorization.ts"
 	},
 	"scripts": {

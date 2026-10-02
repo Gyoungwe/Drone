@@ -1,6 +1,16 @@
 import { createHash } from "node:crypto";
-import type { ComputeAuthorization, ComputeWorkflowJobSpec } from "./types";
-import { stableJson } from "./workflow";
+import type {
+	ComputeAuthorization,
+	ComputeWorkflowJobSpec,
+	ComputeWorkflowSpec,
+	WorkflowRegistrationPort,
+} from "./types";
+import {
+	assertWorkflowRegistered,
+	stableJson,
+	type WorkflowModuleCatalog,
+	workflowSpecHash,
+} from "./workflow";
 
 export function computeContractHash(authorization: Omit<ComputeAuthorization, "contractHash">): string {
 	return createHash("sha256").update(stableJson(authorization)).digest("hex");
@@ -105,4 +115,29 @@ function validRemotePath(path: string): boolean {
 export function assertJobAuthorized(job: ComputeWorkflowJobSpec, expectedContractHash?: string): void {
 	const result = checkJobAuthorization(job, expectedContractHash);
 	if (!result.ok) throw new Error(result.reason);
+}
+
+/**
+ * Submission gate for hosts that have adopted B5c.  Existing callers can keep
+ * using `checkJobAuthorization` for B1–B4 compatibility; new submit paths
+ * should call this stricter async gate so the prior and module registration
+ * are checked immediately before the remote side effect.
+ */
+export async function checkRegisteredJobAuthorization(
+	job: ComputeWorkflowJobSpec,
+	spec: ComputeWorkflowSpec,
+	catalog: WorkflowModuleCatalog,
+	registrations: WorkflowRegistrationPort,
+	expectedContractHash?: string,
+): Promise<AuthorizationCheck> {
+	const base = checkJobAuthorization(job, expectedContractHash);
+	if (!base.ok) return base;
+	if (job.workflow.workflowSpecSha256 !== workflowSpecHash(spec))
+		return { ok: false, reason: "compiled workflow does not match the submitted specification" };
+	try {
+		await assertWorkflowRegistered(spec, catalog, registrations);
+		return { ok: true };
+	} catch (error) {
+		return { ok: false, reason: error instanceof Error ? error.message : String(error) };
+	}
 }

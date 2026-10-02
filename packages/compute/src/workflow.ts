@@ -4,6 +4,8 @@ import type {
 	ComputeWorkflowStep,
 	WorkflowModule,
 	WorkflowReference,
+	WorkflowRegistration,
+	WorkflowRegistrationPort,
 	WorkflowValidationIssue,
 	WorkflowValidationResult,
 } from "./types";
@@ -35,6 +37,39 @@ export class InMemoryWorkflowModuleCatalog implements WorkflowModuleCatalog {
 
 export function moduleCatalog(modules: readonly WorkflowModule[]): WorkflowModuleCatalog {
 	return new InMemoryWorkflowModuleCatalog(modules);
+}
+
+/**
+ * Small in-memory host port used by tests and by adapters that do not persist
+ * registrations themselves.  The production host should replace this with a
+ * JsonStore/SQLite-backed implementation; the compute package never writes
+ * files on its own.
+ */
+export class InMemoryWorkflowRegistrationPort implements WorkflowRegistrationPort {
+	private readonly registrations = new Map<string, WorkflowRegistration>();
+
+	get(workflowSpecSha256: string): WorkflowRegistration | undefined {
+		return this.registrations.get(workflowSpecSha256);
+	}
+
+	register(input: {
+		readonly spec: ComputeWorkflowSpec;
+		readonly workflowSpecSha256: string;
+		readonly moduleIds: readonly string[];
+	}): WorkflowRegistration {
+		const existing = this.registrations.get(input.workflowSpecSha256);
+		if (existing) return existing;
+		if (!input.spec.prior?.id) throw new Error("Workflow prior must be registered before the workflow");
+		const registration: WorkflowRegistration = {
+			workflowSpecSha256: input.workflowSpecSha256,
+			workflowId: input.spec.id,
+			moduleIds: [...input.moduleIds],
+			priorId: input.spec.prior.id,
+			registeredAt: new Date().toISOString(),
+		};
+		this.registrations.set(input.workflowSpecSha256, registration);
+		return registration;
+	}
 }
 
 export function referenceKey(reference: WorkflowReference): string {
@@ -403,6 +438,46 @@ export function assertValidWorkflowSpec(spec: ComputeWorkflowSpec, catalog: Work
 			`Invalid ComputeWorkflowSpec: ${result.errors.map((issue) => `${issue.code} at ${issue.path ?? "root"}`).join(", ")}`,
 		);
 	return result.workflowSpecSha256 as string;
+}
+
+/**
+ * Register a validated workflow and its prior before a caller can submit it.
+ * This is deliberately separate from compilation: preview/dry-run remains
+ * useful for L0/L1 tasks, while remote submission must use this host-issued
+ * registration record.
+ */
+export function registerWorkflowSpec(
+	spec: ComputeWorkflowSpec,
+	catalog: WorkflowModuleCatalog,
+	port: WorkflowRegistrationPort,
+): WorkflowRegistration | Promise<WorkflowRegistration> {
+	const hash = assertValidWorkflowSpec(spec, catalog);
+	if (!spec.prior?.id || !spec.prior.statement.trim())
+		throw new Error("Workflow prior must be recorded before submission");
+	const moduleIds = [...new Set(spec.steps.map((step) => step.module))];
+	return port.register({ spec, workflowSpecSha256: hash, moduleIds });
+}
+
+/** Resolve a registration and fail closed when it is absent or stale. */
+export async function assertWorkflowRegistered(
+	spec: ComputeWorkflowSpec,
+	catalog: WorkflowModuleCatalog,
+	port: WorkflowRegistrationPort,
+): Promise<WorkflowRegistration> {
+	const hash = assertValidWorkflowSpec(spec, catalog);
+	const registration = await port.get(hash);
+	if (!registration) throw new Error("Workflow must be registered before submission");
+	if (registration.workflowSpecSha256 !== hash)
+		throw new Error("Workflow registration does not match the current specification");
+	if (registration.workflowId !== spec.id || registration.priorId !== spec.prior?.id)
+		throw new Error("Workflow registration does not match the workflow prior");
+	const moduleIds = new Set(spec.steps.map((step) => step.module));
+	if (
+		registration.moduleIds.length !== moduleIds.size ||
+		registration.moduleIds.some((id) => !moduleIds.has(id))
+	)
+		throw new Error("Workflow registration does not match the approved module set");
+	return registration;
 }
 
 export function createWorkflowSpec(input: Omit<ComputeWorkflowSpec, "version">): ComputeWorkflowSpec {
