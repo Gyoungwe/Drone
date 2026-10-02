@@ -379,6 +379,34 @@ Host observations only. For substantial execution, first do read-only preparatio
       goal: { ...str, maxLength: 180 },
       summary: { type: "string", minLength: 1, maxLength: 1200 },
       writeDirectories: { type: "array", maxItems: 8, items: str },
+      compute: {
+        type: "object",
+        properties: {
+          hosts: {
+            type: "array",
+            minItems: 1,
+            maxItems: 32,
+            items: { type: "string", minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9._:-]+$" }
+          },
+          remoteRead: { type: "array", maxItems: 64, items: { ...str, maxLength: 1024 } },
+          remoteWrite: { type: "array", maxItems: 64, items: { ...str, maxLength: 1024 } },
+          budget: {
+            type: "object",
+            properties: {
+              maxCoreHours: { type: "number", minimum: 0, maximum: 1e9 },
+              maxWalltimeMinutes: { type: "integer", minimum: 1, maximum: 2e6 },
+              maxConcurrentJobs: { type: "integer", minimum: 1, maximum: 1e4 },
+              maxDiskGb: { type: "integer", minimum: 1, maximum: 1e6 }
+            },
+            required: ["maxCoreHours", "maxWalltimeMinutes", "maxConcurrentJobs", "maxDiskGb"],
+            additionalProperties: false
+          },
+          workflows: { type: "array", maxItems: 128, items: { ...str, maxLength: 256 } },
+          agentCode: { type: "boolean" }
+        },
+        required: ["hosts", "remoteRead", "remoteWrite", "budget", "workflows"],
+        additionalProperties: false
+      },
       milestones: {
         type: "array",
         minItems: 1,

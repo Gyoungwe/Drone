@@ -25,11 +25,12 @@ export interface TaskRuntime {
 	acceptance?: AcceptanceVerifiersBridge;
 	consent?: unknown;
 }
-
 /** Host-owned compute service slot. The shared layer only knows the boundary;
  * concrete SSH/runner implementations stay in @drone/compute/backend. */
 export interface ComputeRuntime {
 	service?: unknown;
+	scheduler?: unknown;
+	transport?: unknown;
 	[key: string]: unknown;
 }
 export interface ToolManifestRegistry {
@@ -83,7 +84,6 @@ export const DRONE_ACCEPTANCE_VERIFIERS_KEY = "drone.acceptance-verifiers.v1";
 export interface DroneRuntime {
 	knowledge: KnowledgeRuntime;
 	tasks: TaskRuntime;
-	/** Optional during the migration so existing CLI runtimes remain valid. */
 	compute?: ComputeRuntime;
 	tools: ToolManifestRegistry;
 	scheduler: KeyedLocks;

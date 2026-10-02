@@ -1,5 +1,6 @@
 import {
 	AppContract,
+	ComputeContract,
 	InstitutionalContract,
 	IpcChannels,
 	KnowledgeContract,
@@ -220,6 +221,31 @@ const uiPluginsClient = exposeContract(UiPluginsContract, {
 			method,
 		),
 });
+const computeClient = exposeContract(ComputeContract, {
+	ipc: ipcRenderer,
+	channelForMethod: (_contract, method) =>
+		channelFrom(
+			{
+				listHosts: IpcChannels.ComputeListHosts,
+				getHost: IpcChannels.ComputeGetHost,
+				saveHost: IpcChannels.ComputeSaveHost,
+				removeHost: IpcChannels.ComputeRemoveHost,
+				probeHost: IpcChannels.ComputeProbeHost,
+				getHealthSnapshot: IpcChannels.ComputeHealth,
+				listJobs: IpcChannels.ComputeJobs,
+				getJob: IpcChannels.ComputeJob,
+				getLogs: IpcChannels.ComputeLogs,
+				cancelJob: IpcChannels.ComputeCancelJob,
+				openTerminal: IpcChannels.ComputeOpenTerminal,
+				getTerminal: IpcChannels.ComputeGetTerminal,
+				writeTerminal: IpcChannels.ComputeWriteTerminal,
+				closeTerminal: IpcChannels.ComputeCloseTerminal,
+				getOnboardingStatus: IpcChannels.ComputeOnboarding,
+				checkOnboardingStep: IpcChannels.ComputeCheckOnboarding,
+			},
+			method,
+		),
+});
 const knowledgeApi = {
 	setKnowledgeSpecialistSettings: invoke(knowledgeClient, "setSpecialistSettings"),
 	getKnowledgeOverview: invoke(knowledgeClient, "getOverview"),
@@ -245,6 +271,7 @@ const knowledgeApi = {
 	getZoteroStatus: invoke(knowledgeClient, "getZoteroStatus"),
 };
 const invokeApi = {
+	...computeClient,
 	...knowledgeApi,
 	listSessionSubagents: invoke(subagentsClient, "list"),
 	dispatchSubagents: invoke(subagentsClient, "dispatch"),

@@ -1,6 +1,21 @@
 // @ts-nocheck
 /** Compatibility artifact generated from packages/tasks/src/runtime/ask-authorization.ts; packaged resources share the .pi runtime bridge. */
 import { describeAcceptance, effectiveAcceptance } from "./acceptance.mjs";
+function computeAuthorizationDetails(compute) {
+  if (!compute || typeof compute !== "object") return null;
+  const hosts = Array.isArray(compute.hosts) && compute.hosts.every((host) => typeof host === "string") ? compute.hosts : null;
+  const remoteRead = Array.isArray(compute.remoteRead) && compute.remoteRead.every((path) => typeof path === "string") ? compute.remoteRead : null;
+  const remoteWrite = Array.isArray(compute.remoteWrite) && compute.remoteWrite.every((path) => typeof path === "string") ? compute.remoteWrite : null;
+  const budget = compute.budget;
+  if (!hosts || !remoteRead || !remoteWrite || !budget || typeof budget !== "object") return null;
+  if (![budget.maxCoreHours, budget.maxWalltimeMinutes, budget.maxConcurrentJobs, budget.maxDiskGb].every(
+    (value) => typeof value === "number" && Number.isFinite(value) && value >= 0
+  ) || ![budget.maxWalltimeMinutes, budget.maxConcurrentJobs, budget.maxDiskGb].every(
+    (value) => typeof value === "number" && Number.isInteger(value) && value > 0
+  ))
+    return null;
+  return `\u8BA1\u7B97\u8303\u56F4\uFF1A\u4E3B\u673A ${hosts.join(", ")}\uFF1B\u8FDC\u7A0B\u8BFB\u53D6 ${remoteRead.join(", ") || "\u672A\u58F0\u660E"}\uFF1B\u8FDC\u7A0B\u5199\u5165 ${remoteWrite.join(", ") || "\u672A\u58F0\u660E"}\uFF1B\u6700\u591A ${budget.maxCoreHours} \u6838\u65F6\u3001\u5355\u4F5C\u4E1A ${budget.maxWalltimeMinutes} \u5206\u949F\u3001${budget.maxConcurrentJobs} \u4E2A\u5E76\u53D1\u4F5C\u4E1A\u3001${budget.maxDiskGb} GiB\u3002${compute.agentCode === true ? "\u5141\u8BB8\u6C99\u7BB1\u4E2D\u7684 Agent \u6A21\u5757\u3002" : "\u4E0D\u5141\u8BB8 Agent \u7F16\u5199\u6A21\u5757\u3002"}`;
+}
 function createTaskAuthorization(journal, checkBinding = async () => null) {
   const pending = /* @__PURE__ */ new Map();
   return async function ask(input, ctx, signal = ctx.signal) {
@@ -30,6 +45,7 @@ function createTaskAuthorization(journal, checkBinding = async () => null) {
       const title = input.action === "next-stage" ? "ask_user \xB7 \u7EE7\u7EED\u4E0B\u4E00\u9636\u6BB5\uFF1F" : input.action === "confirm-outcome" ? "ask_user \xB7 \u786E\u8BA4\u8FD9\u4E00\u6B65\u7684\u7ED3\u679C" : rebind ? "ask_user \xB7 \u66F4\u6362\u8FD9\u4E00\u9879\u5BF9\u5E94\u7684\u6587\u732E\uFF1F" : "ask_user \xB7 \u5F00\u59CB\u6267\u884C\u8FD9\u4E2A\u4EFB\u52A1\uFF1F";
       const acceptanceLabel = (m) => describeAcceptance(effectiveAcceptance(m));
       const rebindTarget = rebind ? task.milestones.find((m) => m.id === rebind.milestoneId) : null;
+      const computeDetails = computeAuthorizationDetails(task.compute);
       const details = [
         `\u8981\u505A\u7684\u4E8B\uFF1A${task.goal}`,
         rebind ? [
@@ -43,6 +59,7 @@ ${action.reason}`,
 ${action.reason}` : task.authorizationSummary || task.goal,
         (task.writeRoots || []).length ? `\u4F1A\u5199\u5165\u8FD9\u4E9B\u6587\u4EF6\u5939\uFF08\u5305\u62EC\u5B50\u6587\u4EF6\u5939\uFF09\uFF1A
 ${task.writeRoots.map((r) => `- ${r}`).join("\n")}` : "\u4E0D\u4F1A\u65B0\u589E\u53EF\u5199\u6587\u4EF6\u5939\uFF1B\u6539\u52A8\u6587\u4EF6\u4ECD\u6309\u4F60\u73B0\u6709\u7684\u6743\u9650\u8BBE\u7F6E\u9010\u9879\u786E\u8BA4\u3002",
+        computeDetails || "\u4E0D\u5305\u542B\u8FDC\u7A0B\u8BA1\u7B97\u8303\u56F4\uFF1B\u8BA1\u7B97\u5DE5\u5177\u53EA\u80FD\u505A\u53EA\u8BFB\u63A2\u6D4B\u3002",
         `\u505A\u5B8C\u7684\u6807\u51C6\uFF1A
 ${task.milestones.map((m) => `- ${m.title}\uFF1A${acceptanceLabel(m)}`).join("\n")}`,
         input.action === "confirm-outcome" ? "\u8FD9\u91CC\u53EA\u8BB0\u5F55\u4F60\u5DF2\u6838\u5BF9\u8FC7\u8FD9\u4E00\u6B65\u7684\u7ED3\u679C\uFF0C\u4E0D\u4F1A\u91CD\u65B0\u6267\u884C\u5B83\u3002" : rebind ? "\u8FD9\u53EA\u6539\u53D8\u8FD9\u4E00\u9879\u6309\u54EA\u7BC7\u6587\u732E\u6838\u5BF9\uFF0C\u4E0D\u6269\u5927\u53EF\u5199\u76EE\u5F55\u6216\u5176\u5B83\u6743\u9650\u3002" : "\u540C\u610F\u540E\u5B83\u4F1A\u81EA\u5DF1\u505A\u5B8C\u8FD9\u4E9B\u4E8B\uFF0C\u4E2D\u9014\u4E0D\u518D\u53CD\u590D\u95EE\u4F60\uFF1B\u505A\u522B\u7684\u3001\u5220\u4E1C\u897F\u6216\u78B0\u654F\u611F\u6587\u4EF6\u4ECD\u4F1A\u5148\u5F81\u5F97\u4F60\u540C\u610F\u3002\u4F60\u968F\u65F6\u53EF\u4EE5\u505C\u6B62\u3002",

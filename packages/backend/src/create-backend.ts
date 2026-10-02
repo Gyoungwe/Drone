@@ -21,6 +21,7 @@ import type { McpServicePort } from "./mcp/service";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
 import { ComputeService, type ComputeServicePort } from "./services/compute";
+import { type ComputeHostAdapter, createUnavailableComputeService } from "./services/compute-adapter";
 import type { InstitutionalServicePort } from "./services/institutional";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
@@ -124,16 +125,29 @@ export interface BackendServices {
 	projectTrust: ProjectTrustService;
 	/** Long-running remote compute jobs, persisted independently from sessions. */
 	compute: ComputeServicePort;
+	/** Renderer-facing host projection; B1 runner integration is injected later. */
+	computeAdapter: ComputeHostAdapter;
 	dispose(): void;
 }
 
-export function createBackend(options: SessionServiceOptions = {}): BackendServices {
+export interface BackendOptions extends SessionServiceOptions {
+	/** Inject the renderer-facing host adapter without coupling the composition root to SSH details. */
+	compute?: ComputeHostAdapter;
+}
+
+export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
 	const sessions = new SessionService({ ...options, runtime, permissions });
 	const compute = new ComputeService({ runtime, storage: sessions.getStorageRegistry() });
-	if (runtime.compute) runtime.compute.service = compute;
-	else runtime.compute = { service: compute };
+	const computeAdapter = options.compute ?? createUnavailableComputeService();
+	if (runtime.compute) {
+		runtime.compute.service = compute;
+		runtime.compute.adapter = computeAdapter;
+	} else {
+		runtime.compute = { service: compute, adapter: computeAdapter };
+	}
+	void computeAdapter.init?.();
 	const diagnostics: DiagnosticsServicePort = {
 		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
 	};
@@ -158,9 +172,11 @@ export function createBackend(options: SessionServiceOptions = {}): BackendServi
 		subagents: sessions.subagents,
 		projectTrust: sessions.projectTrust,
 		compute,
+		computeAdapter,
 		dispose: () => {
 			sessions.dispose();
 			void compute.dispose();
+			void computeAdapter.dispose?.();
 			void runtime.dispose();
 		},
 	};

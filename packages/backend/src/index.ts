@@ -1,4 +1,9 @@
-export { type BackendServices, createBackend, type SessionServicePort } from "./create-backend";
+export {
+	type BackendOptions,
+	type BackendServices,
+	createBackend,
+	type SessionServicePort,
+} from "./create-backend";
 export {
 	buildDiagnostics,
 	type DiagnosticsOptions,
@@ -110,6 +115,7 @@ export {
 	type ComputeWorkflowModule,
 	validateArtifactManifest,
 } from "./services/compute";
+export { type ComputeHostAdapter, createUnavailableComputeService } from "./services/compute-adapter";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {
 	type KnowledgeReviewControl,

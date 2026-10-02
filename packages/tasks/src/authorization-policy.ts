@@ -6,6 +6,9 @@
  * projection free of those runtime concerns so it can be tested in isolation.
  */
 
+import { type ComputeAuthorization, ComputeAuthorizationSchema } from "@drone/shared";
+import { Check } from "typebox/value";
+
 export const TASK_AUTHORIZATION_ACTIONS = [
 	"authorize-task",
 	"approve-plan",
@@ -41,6 +44,7 @@ export interface AuthorizationTask {
 	goal?: unknown;
 	authorizationSummary?: unknown;
 	writeRoots?: unknown;
+	compute?: ComputeAuthorization | null;
 	milestones?: readonly AuthorizationMilestone[];
 	[key: string]: unknown;
 }
@@ -105,6 +109,12 @@ export function buildAuthorizationDetails(
 	const writeRoots = Array.isArray(task.writeRoots)
 		? task.writeRoots.filter((root): root is string => typeof root === "string")
 		: [];
+	const compute = Check(ComputeAuthorizationSchema, task.compute)
+		? (task.compute as ComputeAuthorization)
+		: null;
+	const computeDetails = compute
+		? `计算范围：主机 ${compute.hosts.join(", ")}；远程读取 ${compute.remoteRead.join(", ") || "未声明"}；远程写入 ${compute.remoteWrite.join(", ") || "未声明"}；最多 ${compute.budget.maxCoreHours} 核时、单作业 ${compute.budget.maxWalltimeMinutes} 分钟、${compute.budget.maxConcurrentJobs} 个并发作业、${compute.budget.maxDiskGb} GiB。${compute.agentCode ? "允许沙箱中的 Agent 模块。" : "不允许 Agent 编写模块。"}`
+		: null;
 	const rebindTarget = rebind
 		? milestones.find((milestone) => milestone.id === rebind.milestoneId)
 		: undefined;
@@ -125,6 +135,7 @@ export function buildAuthorizationDetails(
 		writeRoots.length
 			? `会写入这些文件夹（包括子文件夹）：\n${writeRoots.map((root) => `- ${root}`).join("\n")}`
 			: "不会新增可写文件夹；改动文件仍按你现有的权限设置逐项确认。",
+		computeDetails ?? "不包含远程计算范围；计算工具只能做只读探测。",
 		`做完的标准：\n${milestones.map((milestone) => `- ${displayText(milestone.title)}：${acceptanceLabel(milestone)}`).join("\n")}`,
 		inputActionNote(action, rebind),
 		"不想继续就选“暂不授权”或直接关掉，都不会开始执行。",

@@ -2,6 +2,34 @@
 // Only an exact host-owned choice can authorize the displayed immutable revision.
 import { describeAcceptance, effectiveAcceptance } from "./acceptance";
 
+function computeAuthorizationDetails(compute: any): string | null {
+	if (!compute || typeof compute !== "object") return null;
+	const hosts =
+		Array.isArray(compute.hosts) && compute.hosts.every((host) => typeof host === "string")
+			? compute.hosts
+			: null;
+	const remoteRead =
+		Array.isArray(compute.remoteRead) && compute.remoteRead.every((path) => typeof path === "string")
+			? compute.remoteRead
+			: null;
+	const remoteWrite =
+		Array.isArray(compute.remoteWrite) && compute.remoteWrite.every((path) => typeof path === "string")
+			? compute.remoteWrite
+			: null;
+	const budget = compute.budget;
+	if (!hosts || !remoteRead || !remoteWrite || !budget || typeof budget !== "object") return null;
+	if (
+		![budget.maxCoreHours, budget.maxWalltimeMinutes, budget.maxConcurrentJobs, budget.maxDiskGb].every(
+			(value) => typeof value === "number" && Number.isFinite(value) && value >= 0,
+		) ||
+		![budget.maxWalltimeMinutes, budget.maxConcurrentJobs, budget.maxDiskGb].every(
+			(value) => typeof value === "number" && Number.isInteger(value) && value > 0,
+		)
+	)
+		return null;
+	return `计算范围：主机 ${hosts.join(", ")}；远程读取 ${remoteRead.join(", ") || "未声明"}；远程写入 ${remoteWrite.join(", ") || "未声明"}；最多 ${budget.maxCoreHours} 核时、单作业 ${budget.maxWalltimeMinutes} 分钟、${budget.maxConcurrentJobs} 个并发作业、${budget.maxDiskGb} GiB。${compute.agentCode === true ? "允许沙箱中的 Agent 模块。" : "不允许 Agent 编写模块。"}`;
+}
+
 export function createTaskAuthorization(journal: any, checkBinding: any = async () => null) {
 	const pending = new Map();
 	return async function ask(input: any, ctx: any, signal = ctx.signal) {
@@ -50,6 +78,7 @@ export function createTaskAuthorization(journal: any, checkBinding: any = async 
 			// 验收标准文案：核心 file / human_review + 扩展登记的验收器 label（挂钩 2）；含运行期已绑定的身份
 			const acceptanceLabel = (m) => describeAcceptance(effectiveAcceptance(m));
 			const rebindTarget = rebind ? task.milestones.find((m) => m.id === rebind.milestoneId) : null;
+			const computeDetails = computeAuthorizationDetails(task.compute);
 			const details = [
 				`要做的事：${task.goal}`,
 				rebind
@@ -66,6 +95,7 @@ export function createTaskAuthorization(journal: any, checkBinding: any = async 
 				(task.writeRoots || []).length
 					? `会写入这些文件夹（包括子文件夹）：\n${task.writeRoots.map((r) => `- ${r}`).join("\n")}`
 					: "不会新增可写文件夹；改动文件仍按你现有的权限设置逐项确认。",
+				computeDetails || "不包含远程计算范围；计算工具只能做只读探测。",
 				`做完的标准：\n${task.milestones.map((m) => `- ${m.title}：${acceptanceLabel(m)}`).join("\n")}`,
 				input.action === "confirm-outcome"
 					? "这里只记录你已核对过这一步的结果，不会重新执行它。"

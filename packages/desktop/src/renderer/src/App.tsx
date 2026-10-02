@@ -22,6 +22,7 @@ import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "./plugins/Pl
 import { RegionHost } from "./plugins/RegionHost";
 import { UI_REGIONS } from "./plugins/slots";
 import { finishSplash } from "./splash";
+import { useComputeStore } from "./stores/compute";
 import { useSessionsStore } from "./stores/sessions";
 import { backgroundImageUrl, useThemeStore } from "./stores/theme";
 import { useTranscriptStore } from "./stores/transcript";
@@ -81,6 +82,13 @@ export default function App() {
 		void initDailyDir();
 		// UI 插件加载链路（总开关关时只订阅事件，零开销）
 		void initUiPlugins();
+		const disposeCompute = useComputeStore.getState().init();
+		void Promise.allSettled([
+			useComputeStore.getState().refresh(),
+			useComputeStore.getState().refreshJobs(),
+			useComputeStore.getState().refreshOnboarding(),
+		]);
+		return disposeCompute;
 	}, []);
 
 	const respondAsk = async (requestId: string, response: AskResponse) => {

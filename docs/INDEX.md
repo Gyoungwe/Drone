@@ -14,7 +14,6 @@
 - zustand selector 必须返回稳定引用（模块级空对象/数组；#185 无限渲染，见 PITFALLS）
 - 新增 renderer hook/store 要暴露给插件 = 源模块 + `plugins/host-api.ts` + `plugins/env.d.ts`（DroneUiApi）+ `main/ui-plugins/build.ts` SHIM + `resources/drone-ui.d.ts`（必要时 SPEC.md 导出清单）五处同步
 - JSON 持久化一律走 backend `JsonStore`（原子写 + 损坏语义），不自写 fs
-- `@drone/compute` 只依赖 `@drone/shared`；不得导入 backend、desktop、Electron 或 Pi SDK（R7）
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 
@@ -26,7 +25,7 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，8 个包：
+npm workspaces monorepo，7 个包：
 
 ```
 packages/
@@ -35,7 +34,6 @@ packages/
 ├── knowledge/  知识领域纯函数与 claim 合约（TS 包，迁移中）
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
 ├── research/   文献回执与来源交付合约（TS 包，迁移中）
-├── compute/    远程作业领域包（主机/runner/作业状态与产物合约）
 ├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
 ```
@@ -67,8 +65,9 @@ packages/
 
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
-| `src/ipc.ts` | `IpcChannels`、`PiApi` | 通道名常量 + `window.pi` 完整类型（sessions/settings/packages/app/ui-plugins/lan/login 全域通道 + 同步属性 `platform`） |
-| `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`LanContract`、`LanStatus`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract` | TypeBox Host API 域契约；供 desktop bindContract 与后续 LAN/插件适配复用；`KnowledgeContract` 覆盖知识库管理、审核、语义索引与 Zotero 状态；`LanContract.getStatus` 标记为 `lan-read`，`LanStatus` 从 `LanStatusSchema` 推导，控制开关与机构访问保留 desktop 权限；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录 |
+| `src/ipc.ts` | `IpcChannels`、`PiApi` | 通道名常量 + `window.pi` 完整类型（sessions/settings/packages/app/ui-plugins/lan/login/compute 全域通道 + 同步属性 `platform`） |
+| `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`LanContract`、`ComputeContract`、`LanStatus`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract` | TypeBox Host API 域契约；供 desktop bindContract 与适配器复用；`ComputeContract` 覆盖主机登记、健康、作业日志、终端和引导状态，远端副作用由 backend adapter 继续做授权门控；`KnowledgeContract` 覆盖知识库管理、审核、语义索引与 Zotero 状态；`LanContract.getStatus` 标记为 `lan-read`，`LanStatus` 从 `LanStatusSchema` 推导，控制开关与机构访问保留 desktop 权限；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录 |
+| `src/compute.ts` | `ComputeHost`、`ComputeAuthorization`、`ComputeBudget`、`checkComputeAuthorization` | 远程主机/作业/终端/引导共享 schema，以及任务计算范围、路径和预算的 fail-closed 检查；B1 runner 通过稳定 adapter 接入 |
 | `src/session.ts` | `SessionMeta`、`SessionStats`、`AvailableModel`（可选 `thinkingLevels`/`imageInput`，缺省 fail-open）、`SessionEvent`、`SessionMessage`、`UiState`、`PermissionRequest`、`PermissionMode`（default/fullAccess）、`TrustRequest`、`LoadedResources` 等 | 会话/事件跨进程类型。`SessionEvent` = pi `AgentSessionEvent` ∪ Drone 自有 UI 事件（`subagent_mutex`/`stream_guard_tripped`/`model_wait`/`subagent_run`，不进 trace）；`SessionMessage` union：user/assistant（均带 `entryId` 供 fork/撤回；user 专属 `skill`/`sourceText`）+ `role:"image"`（show_image 回放）+ `role:"subagent"` |
 | `src/transcript/` | `reduceEvent`、`messagesToUIMessages`、`buildChatRows`、`deriveTurnChanges`、`deriveTurnTimings` | **UI 消息状态机（桌面与 lan-web 共用同一份）**：`types`（UIMessage/StreamingState 等）、`helpers`（事件载荷解析）、`reducer`（pi 事件 → UI 状态）、`mapping`（历史回放）、`parse-patch`（unified diff 结构化解析）、`turn-files`（按轮聚合文件变更）、`turn-timings`（按轮计时派生 + runEndedAt 定格）、`chat-rows`（行序列分组 + 轮末行定位规则）、`meta-summary`（工具语义分类统计） |
 | `src/errors.ts` | `UiError`、`classifyLlmError`、`buildLlmUiError`、`buildStreamGuardUiError`、`DETAIL_MAX_LENGTH` | 统一报错信封：错误卡数据源（live reducer / 历史回放 mapping / Composer 内联 / LAN 共用）；`classifyLlmError` 按 401/429/context/网络模式分类，误判只影响标题措辞 |
@@ -106,10 +105,6 @@ packages/
 ## packages/research — 研究来源领域包（迁移中）
 
 `@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。
-
-## packages/compute — 远程计算领域包（B1）
-
-`@drone/compute` 只依赖 `@drone/shared`（R7）。`src/types.ts` 定义无凭据的主机档案、Transport/runner 协议、声明式 WorkflowSpec、JobSpec/JobRecord 与产物清单；`src/runner.ts` 和 `src/transport.ts` 提供固定 runner 子命令的传输边界；`src/jobs.ts` 提供作业状态机、未知结果对账和 JSONL 事件接口。桌面/LAN 的 Host API 入口为 `shared/src/host-api/compute.ts` 导出的 `ComputeContract`，具体持久化与 SSH 适配留在 backend 组合根。
 
 
 ## packages/extensions — Pi 扩展适配层（迁移中）
@@ -178,7 +173,7 @@ src/
 | `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`PiBackend` 的资源加载与旧 `respondTrust` 继续委托 |
 | `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |
 | `src/services/subagents.ts` | `SubagentService` | 子代理面板发现、派发、中止与运行记录；通过 `BackendServices.subagents` 暴露 |
-| `src/services/compute.ts` | `ComputeService` | 远程主机/作业持久化、幂等提交、断线对账、状态轮询、日志与产物校验；通过 `BackendServices.compute` 暴露 |
+| `src/services/compute-adapter.ts` | `ComputeHostAdapter`、`createUnavailableComputeService` | B2 远程计算 host-facing adapter；默认仅提供不宣称在线的主机登记/观察投影，B1 注入 SSH/调度器实现并在副作用前执行授权 |
 | `src/mcp/service.ts` | `McpService` | MCP 配置、状态读取和重载边界；通过 `BackendServices.mcp` 暴露 |
 | `src/packages/admin.ts` | `PackageAdmin`（兼容别名） | 旧包管理入口的兼容 re-export；新代码使用 `services/packages.ts` |
 | `src/packages/catalog.ts` | `fetchPackageCatalog` | pi.dev 目录抓取：无 JSON API，解析 SSR HTML 的 `<article data-package-card>` |
@@ -201,7 +196,7 @@ src/
 | `src/main/dev-agent-dir.ts` | dev/预览态数据隔离：userData 重定向 `*-dev` 后缀 + `PI_CODING_AGENT_DIR = ~/.pi/agent-dev` + 五配置一次性种子拷贝（正式目录零写入） |
 | `src/main/daily.ts` | 日常空间工作台目录（`~/.drone/daily`，全部日常会话的固定 cwd）+ 懒创建；信任链无资源自动信任不弹窗；dev/正式共享工作区（会话列表按 agent dir 天然隔离） |
 | `src/main/ipc/index.ts` | `registerIpc` 组合入口 + backend 事件/updater 状态转发 + UI 插件热重载 watcher 启动。**新增 handler 改对应域文件，不在 index.ts 堆** |
-| `src/main/ipc/{sessions,settings,permissions,packages,knowledge,app,ui-plugins,lan,institutional,subagents}.ts` | 各域 handler（全部薄委托 backend；knowledge 域经 `KnowledgeContract` 做参数/结果边界校验；ui-plugins 域 handler async await 落盘后才返回；permissions 域 = 设置 → 权限 面板 load/save/reset/probe/auditTail + `openLocation` 用 shell 定位文件） |
+| `src/main/ipc/{sessions,settings,permissions,packages,knowledge,compute,app,ui-plugins,lan,institutional,subagents}.ts` | 各域 handler（全部薄委托 backend；compute 通过 `ComputeContract` 做参数/结果边界校验并转发健康/作业/终端事件；knowledge 域经 `KnowledgeContract` 做参数/结果边界校验；ui-plugins 域 handler async await 落盘后才返回；permissions 域 = 设置 → 权限 面板 load/save/reset/probe/auditTail + `openLocation` 用 shell 定位文件） |
 | `src/main/tabs.ts` / `ui-state.ts` | tabs.json / ui-state.json 读写（JsonStore 原子写；ui-state 补丁式合并 + normalize 补缺省） |
 | `src/main/background.ts` | 背景图选图（dialog → 拷贝 `userData/backgrounds/` 并清理旧图） |
 | `src/main/window.ts` | BrowserWindow：sandbox + preload；启动底色跟随主题防白闪（已解析主题经 `?theme=` query 传 renderer）；窗口框架按平台分流（mac hiddenInset / Win frameless+titleBarOverlay / Linux 原生）；导出 `resolveTheme`/`applyChromeTheme` |
@@ -233,7 +228,7 @@ src/
 | `stores/drafts.ts` | 草稿（文本/图片/slash 胶囊/@ 引用 attachments/选中引用 quotes）按会话持久 + `COMPOSER_FOCUS_EVENT`（撤回回填后聚焦输入框） |
 | `stores/permissions.ts` | 设置 → 权限 面板状态：磁盘快照 + 数组化草稿（`components/settings/permissions-model.ts`）+ 保存 / 冲突（mtime）/ 后端校验问题 / 审计尾部；`selectPermissionDirty` 结构比较脏检查 |
 | `stores/settings.ts` / `catalog.ts` / `provider-login.ts` | 设置域（providers + 上下文管理/channel-watch 开关，乐观更新回滚；permissionGateOff = 手改 permissions.json 卸载门控的逃生舱态只读感知）/ 社区包目录（300ms 防抖 + seq 防陈旧）/ OAuth 登录状态机（**取消时机 = LoginDialog 卸载 cleanup**；先订阅事件再 invoke） |
-| `stores/projects.ts` / `theme.ts` / `ui.ts` / `ui-preferences.ts` / `update.ts` / `ui-plugins.ts` / `toasts.ts` | 项目页（手动添加的按时间倒排）/ 主题与背景（init 在 render 前 await 防闪烁）/ todo 面板展开 + diff 侧栏开关（内存态）/ 会话轨道 + 中央动画开关（持久化 ui-state）/ 更新态 / UI 插件面板 / 全局 Toast（顶栏右侧，非阻塞自动消失） |
+| `stores/projects.ts` / `theme.ts` / `ui.ts` / `compute.ts` / `ui-preferences.ts` / `update.ts` / `ui-plugins.ts` / `toasts.ts` | 项目页（手动添加的按时间倒排）/ 主题与背景（init 在 render 前 await 防闪烁）/ 右侧任务、过程、变更、产物、子智能体、计算页签与主机、作业、日志、终端、引导状态 / 会话轨道 + 中央动画开关（持久化 ui-state）/ 更新态 / UI 插件面板 / 全局 Toast（顶栏右侧，非阻塞自动消失） |
 | `hooks/` | `use-context-usage`（上下文用量，事件驱动刷新）/ `use-language` / `use-session-state`（useSessionReadOnly/useSessionBusy 收敛）/ `use-session-event-bridge`（App 事件桥装配层专用） |
 | `plugins/` | UI 插件运行时：`slots.ts`（槽位名+props 契约单一来源）/ `registry.ts`（zustand：overrides + contributions 堆叠 + headless activate/cleanups + 崩溃计数/loadNonces）/ `Slot.tsx`（总开关门控 + PluginBoundary 包裹）/ `RegionHost.tsx`（区域挂载点，容器语义）/ `PluginBoundary.tsx`（class 错误边界，崩溃回退）/ `host-api.ts`（`window.DroneUI` 挂载，main.tsx render 前 import）/ `loader.ts`（initUiPlugins/reloadAll/computeAssignedSlots） |
 | `i18n/` | zh/en 字典 + `useT()`（文案改这里，双字典） |
