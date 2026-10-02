@@ -129,6 +129,16 @@
 
 ---
 
+## B5 · 研究状态、元认知与工作流修复
+
+- [x] **B5a 研究状态基础**：新增 `@drone/inquiry` 领域包，提供 artifact、finding、question/prior、attempt 四本账、自动 lineage 校验、workspace run/result 晋升与 cleanup dry-run；SQLite `SqliteInquiryStorage` 使用独立表、事务、WAL/FULL 同步和 project 隔离；backend 组合根通过 `InquiryService` 注入并登记 `ledger.sqlite`。
+- [x] **B5b 元认知发布门禁**：publication projection 在发布前核对报告数字、引用产物校验和、方法与实际工作流/模块/参数、finding 标签及诊断漂移；不一致时失败关闭，并把通过的 finding 投影为可引用证据。
+- [x] **B5c 工作流编排与有限修复**：`WorkflowSpec` 先验与模块注册门禁、编译/type-check/preview、失败与负结果检索、最多三次声明式自主修复；重复失败阻断，并记录“我替你决定的”变更。
+- [ ] **B5d–B5f**：KernelSession 与探索、critic/多路径稳健性、评估与人工验证，另开后续阶段实现。
+- [ ] **B7–B8**：数据管理/FAIR/实验设计与可选协作能力，按专题计划另行排期。
+
+---
+
 ## 执行日志
 
 | 日期 | 任务 | 结果 / 数字 | 遗留 |
@@ -205,3 +215,4 @@
 | 2026-10-01 | 发布前最终回归 | `npm run build:tasks` 生成 17 个无 workspace 依赖的 tasks `.pi` 兼容产物；`npm run lint -- --error-on-warnings`、根 `npm run typecheck`、backend 1,373 passed + 13 skipped、desktop 556、extensions 16、knowledge 58、research 50、shared 130、tasks 49、`npm run build`、`npm run test:upgrade -- --fixtures-only`、`check:extensions --strict`、`check:plugin-api` 与架构检查（120 baseline、0 fixed）通过；`channel-watch-watcher` 定向 4/4 复跑通过 | A5 顶层仍保留 `.pi/lib` host adapters 与 4 个 legacy extension outputs；A5-1/2/3/4 的最终清理不在本批次强行删除 |
 | 2026-10-03 | CI 发布护栏 | desktop CI job 新增 knowledge 58、tasks 49、research 50 三个包级测试（共 157 项）；knowledge、tasks、research runtime builder 均支持临时目录构建后 `--check` 字节校验，tasks 兼容产物同步校验；清理 knowledge 目录中 20 个已无引用的旧 chunk；本地 lint、typecheck、build、架构/插件/扩展检查、升级 fixture 与三包测试全部通过 | PiBackend 继续保留兼容门面；backend 测试时长、120 条测试 `.pi` 相对路径架构基线及研究技能包下载依赖仍按后续任务处理 |
 | 2026-10-03 | A3-4 / 后续收敛 | `SessionPermissionService` 承接会话权限模式，`SessionLifecycleService` 承接会话枚举、关闭顺序与资源清理；channel-watch 测试注入短 debounce，backend unit 约 24 秒、unit+SDK 约 33 秒；可迁移 backend 测试改用 knowledge/research 包入口，架构基线由 120 降至 106；CI 增加离线研究包门禁，release 在获取 pinned skill packs 后显式运行真实 packaging check；全量 `npm test` 通过（backend 1,378 + 13 skipped、desktop 556、extensions 16、knowledge 58、research 50、shared 130、tasks 49） | `SessionService` 的 create/open/delete 仍与 project resources、extensions、filesystem 强耦合；剩余 106 条是 host/compatibility adapter 测试边界，未放宽架构规则；真实 research packs 仍由 release 同步步骤提供，Academic pack 需显式许可依据 |
+| 2026-10-03 | B5a–B5c | `@drone/inquiry` 四本账与 SQLite 持久化、backend `InquiryService` 组合根、B5b 元认知发布门禁、B5c 先验注册与最多三次自主修复已合并；全量 `npm test` 通过，根 typecheck、Biome、架构检查通过 | B5d–B5f、B7、B8 留待后续；研究状态的事件订阅、桌面/LAN 只读面板和 host 投影仍需单独接入 |
