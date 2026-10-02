@@ -83,5 +83,11 @@ jobs:
       - run: npm test -w @drone/shared
       - run: npm test -w @drone/desktop
       - run: npm test -w @drone/extensions
+      - run: npm test -w @drone/knowledge
+      - run: npm test -w @drone/tasks
+      - run: npm test -w @drone/research
+      - run: npm run check:knowledge-runtime
+      - run: npm run check:tasks-runtime
+      - run: npm run check:research-runtime
       - run: npm run test:upgrade
       - run: npm run build

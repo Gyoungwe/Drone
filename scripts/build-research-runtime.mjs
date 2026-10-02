@@ -1,9 +1,12 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { build } from "esbuild";
 
 const root = resolve(import.meta.dirname, "..");
-const outputDir = resolve(root, ".pi/lib");
+const expectedDir = resolve(root, ".pi/lib");
+const check = process.argv.includes("--check");
+const outputDir = check ? await mkdtemp(resolve(tmpdir(), "drone-research-runtime-check-")) : expectedDir;
 const entries = {
 	"open-access": "packages/research/src/open-access.ts",
 	"literature-receipt": "packages/research/src/literature-receipt.ts",
@@ -21,17 +24,33 @@ const entries = {
 	"zotero-write": "packages/research/src/zotero-write-runtime.ts",
 };
 
-await mkdir(outputDir, { recursive: true });
-for (const [name, relativeEntry] of Object.entries(entries)) {
-	await build({
-		entryPoints: [resolve(root, relativeEntry)],
-		outfile: resolve(outputDir, `${name}.mjs`),
-		bundle: true,
-		format: "esm",
-		platform: "node",
-		packages: "bundle",
-		sourcemap: false,
-		logLevel: "silent",
-	});
-	console.log(`built .pi/lib/${name}.mjs from ${relativeEntry}`);
+try {
+	await mkdir(outputDir, { recursive: true });
+	for (const [name, relativeEntry] of Object.entries(entries)) {
+		await build({
+			entryPoints: [resolve(root, relativeEntry)],
+			outfile: resolve(outputDir, `${name}.mjs`),
+			bundle: true,
+			format: "esm",
+			platform: "node",
+			packages: "bundle",
+			sourcemap: false,
+			logLevel: "silent",
+		});
+	}
+	if (check) {
+		const stale = [];
+		for (const name of Object.keys(entries)) {
+			const actual = await readFile(resolve(outputDir, `${name}.mjs`));
+			const expected = await readFile(resolve(expectedDir, `${name}.mjs`));
+			if (!actual.equals(expected)) stale.push(`${name}.mjs`);
+		}
+		if (stale.length > 0) throw new Error(`research runtime artifacts are stale: ${stale.join(", ")}`);
+		console.log("research runtime artifacts are up to date");
+	} else {
+		for (const [name, relativeEntry] of Object.entries(entries))
+			console.log(`built .pi/lib/${name}.mjs from ${relativeEntry}`);
+	}
+} finally {
+	if (check) await rm(outputDir, { recursive: true, force: true });
 }
