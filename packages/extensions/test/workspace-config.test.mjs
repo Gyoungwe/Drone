@@ -3,11 +3,12 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 const extensionPath = resolve(import.meta.dirname, "../../../.pi/extensions/workspace-config.mjs");
 
 async function loadExtension() {
-	return import(`${extensionPath}?test=${Date.now()}-${Math.random()}`);
+	return import(pathToFileURL(extensionPath).href + "?test=" + Date.now() + "-" + Math.random());
 }
 
 async function makeWorkspace(t) {
