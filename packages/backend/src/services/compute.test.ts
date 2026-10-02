@@ -75,6 +75,28 @@ describe("ComputeService", () => {
 		await service.dispose();
 	});
 
+	it("keeps active reconciliation forward-only and records explicit unknown", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-compute-"));
+		let remoteStatus: "running" | "queued" | "unknown" = "running";
+		const service = new ComputeService({
+			storage: new StorageRegistry(),
+			agentDir: root,
+			executor: {
+				submit: async () => ({ status: "queued" }),
+				status: async () => ({ status: remoteStatus }),
+			},
+		});
+		await service.upsertHost(host());
+		const job = await service.submit(spec("forward-only"));
+		expect(job.status).toBe("queued");
+		expect((await service.status(job.jobId)).status).toBe("running");
+		remoteStatus = "queued";
+		expect((await service.status(job.jobId)).status).toBe("running");
+		remoteStatus = "unknown";
+		expect((await service.status(job.jobId)).status).toBe("unknown");
+		await service.dispose();
+	});
+
 	it("verifies collected artifact checksums and rejects traversal", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-compute-"));
 		const output = join(root, "output");

@@ -172,10 +172,24 @@ function isTerminal(status: JobState): boolean {
 	return TERMINAL.has(status);
 }
 
+const STATUS_RANK: Partial<Record<JobState, number>> = {
+	draft: 0,
+	authorized: 1,
+	prepared: 2,
+	submitting: 3,
+	queued: 4,
+	running: 5,
+	collecting: 6,
+	cancelling: 6,
+};
+
 /** Keep reconciliation monotonic. A stale runner response cannot revive a terminal job. */
 function mergeStatus(previous: JobState, next: JobState): JobState {
 	if (isTerminal(previous)) return previous;
-	if (next === "unknown") return previous === "draft" ? "unknown" : previous;
+	if (next === "unknown") return "unknown";
+	if (previous === "unknown") return next;
+	if (next === "failed" || next === "cancelled") return next;
+	if ((STATUS_RANK[next] ?? -1) < (STATUS_RANK[previous] ?? -1)) return previous;
 	return next;
 }
 
