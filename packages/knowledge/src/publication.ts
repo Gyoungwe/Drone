@@ -8,6 +8,7 @@ import {
 	knowledgeFailure,
 	publicationNotices as notices,
 } from "./publication-policy";
+import { evaluateMetacognitivePublication } from "./metacognitive-policy";
 import { advisoryCodes, readReviewMode } from "./review-policy";
 
 export { advisoryLine, advisoryNotice, knowledgeFailure };
@@ -63,7 +64,7 @@ function seal(message, content, detail) {
 	state.proofs.add(proof);
 	return { ...base(message, content), [FIELD]: proof };
 }
-function blocked(message, code = "check-failed", turnId = null, operational = null, paths = []) {
+function blocked(message, code = "check-failed", turnId = null, operational = null, paths = [], extra = null) {
 	return seal(
 		message,
 		[
@@ -81,6 +82,7 @@ function blocked(message, code = "check-failed", turnId = null, operational = nu
 			reason: code,
 			turnId,
 			...(paths.length ? { paths } : {}),
+			...(extra && typeof extra === "object" ? extra : {}),
 			scientificallyVerified: false,
 		},
 	);
@@ -169,6 +171,7 @@ export function registerAnswerPublication(
 		getDeliveryFooter = null,
 		getTaskFeedback = null,
 		getTaskRuntime = null,
+		getMetacognition = null,
 		maxToolRounds = 24,
 	},
 ) {
@@ -204,12 +207,59 @@ export function registerAnswerPublication(
 	};
 	const failure = (message, error) => {
 		const info = knowledgeFailure(error);
+		const metacognitive = error?.metacognition;
+		const metacognitiveReport =
+			metacognitive && Array.isArray(metacognitive.failures) && metacognitive.failures.length
+				? metacognitive.failures
+						.slice(0, 8)
+						.map((item) => `- ${String(item.detail || item.code).slice(0, 600)}`)
+						.join("\n")
+				: "";
 		const task = getTaskRuntime?.();
 		if (task?.snapshot()) task.pause(info.code);
 		const report = task?.snapshot()
 			? `${task.render()}\n\n研究说明尚未发布：${info.message}`
 			: getTaskFeedback?.()?.report(info.code, info.message, info.paths);
-		return blocked(message, info.code, turnId, report, info.paths);
+		return blocked(
+			message,
+			info.code,
+			turnId,
+			[report, metacognitiveReport].filter(Boolean).join("\n\n") || null,
+			info.paths,
+			metacognitive ? { metacognition: metacognitive } : null,
+		);
+	};
+	const evaluateMetacognition = async (ctx, current, text) => {
+		if (typeof getMetacognition !== "function") return null;
+		let snapshot;
+		try {
+			snapshot = await getMetacognition(ctx, current);
+		} catch {
+			throw Object.assign(new Error("Metacognitive host snapshot unavailable"), {
+				code: "metacognitive-inconsistency",
+				metacognition: {
+					ok: false,
+					findings: [],
+					failures: [
+						{
+							code: "metacognition-invalid",
+							subject: "host-snapshot",
+							detail: "Host metacognitive snapshot could not be read",
+						},
+					],
+				},
+			});
+		}
+		if (snapshot == null) return null;
+		const evaluation = evaluateMetacognitivePublication(text, snapshot);
+		if (!evaluation.ok)
+			throw Object.assign(new Error("Metacognitive publication checks failed"), {
+			code: "metacognitive-inconsistency",
+			paths: evaluation.failures.map((item) => item.path).filter(Boolean).slice(0, 6),
+			metacognition: evaluation,
+			verified: { metacognition: evaluation },
+			});
+		return evaluation;
 	};
 	// Keep signed model protocol blocks unchanged in live provider context, not in public history.
 	pi.on("context", async (event) => ({
@@ -385,6 +435,7 @@ export function registerAnswerPublication(
 				proof = await validateWithTimeout();
 			}
 			if (ctx.signal?.aborted) return report(failure(message, { code: "interrupted" }));
+			const metacognitive = await evaluateMetacognition(ctx, c, publishText);
 			const published =
 				proof.status === "no-hits"
 					? [
@@ -402,6 +453,7 @@ export function registerAnswerPublication(
 			return report(
 				seal(message, visible, {
 					...proof,
+					...(metacognitive ? { metacognition: metacognitive } : {}),
 					status: proof.status === "ready" ? "released" : "no-hits",
 					turnId,
 				}),
@@ -462,7 +514,8 @@ export function registerAnswerPublication(
 							timer = setTimeout(() => reject({ code: "check-timeout" }), 5000);
 						}),
 					]);
-				return { ok: true, proof };
+				const metacognition = await evaluateMetacognition(ctx, c, text);
+				return { ok: true, proof, ...(metacognition ? { metacognition } : {}) };
 			} catch (error) {
 				const info = knowledgeFailure(error);
 				if ((await readReviewMode()) === "automatic" && advisoryCodes.has(info.code)) {

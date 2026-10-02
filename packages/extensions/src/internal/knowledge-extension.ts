@@ -185,6 +185,10 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 		getDeliveryFooter: () => deliveryFooter,
 		getTaskFeedback: () => feedback,
 		getTaskRuntime: () => taskRuntime,
+		// The backend may inject a bounded, host-observed metacognitive snapshot
+		// on the current turn. Missing snapshots keep legacy operational turns
+		// compatible; when supplied, the publication gate fails closed.
+		getMetacognition: (_ctx, turn) => turn?.metacognition ?? null,
 	});
 	// Dynamic extensions initialize before inline host factories. The host
 	// announces its per-backend runtime after this listener is registered;

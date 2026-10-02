@@ -475,3 +475,37 @@ it("keeps publication proofs isolated between injected runtimes", async () => {
 	expect(secondView.message.content[0].text).toContain("知识库检查未通过");
 	expect(secondView.message.content[0].text).not.toContain("isolated publication");
 });
+
+it("fails closed on injected metacognitive inconsistencies and keeps actionable diffs", async () => {
+	const events = new Map();
+	const hash = "a".repeat(64);
+	const gate = registerAnswerPublication(
+		{ on: (name, handler) => events.set(name, handler) },
+		{
+			getCurrent: () => ({ service: { validateAnswer: async () => ({ status: "ready" }) } }),
+			getMetacognition: async () => ({
+				artifacts: [
+					{ path: "Runs/run-1/report.md", sha256: hash, currentSha256: "b".repeat(64), text: "n=12" },
+				],
+				numbers: [{ value: 13, rendered: "13", artifactPath: "Runs/run-1/report.md" }],
+				diagnostics: [{ id: "control", reported: "on", observed: "off" }],
+			}),
+		},
+	);
+	gate.begin(true);
+	const result = await events.get("message_end")(
+		{ message: message("Result: 13 [[Runs/run-1/report]]") },
+		{ cwd: "/fixture" },
+	);
+	expect(result.message.knowledgePublication.status).toBe("blocked");
+	expect(result.message.knowledgePublication.reason).toBe("metacognitive-inconsistency");
+	expect(result.message.knowledgePublication.metacognition.failures).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({ code: "artifact-checksum-stale" }),
+			expect.objectContaining({ code: "report-number-unbound" }),
+			expect.objectContaining({ code: "diagnostic-drift" }),
+		]),
+	);
+	expect(result.message.content[0].text).toContain("Cited artifact changed");
+	expect(result.message.content[0].text).not.toContain("Result: 13");
+});

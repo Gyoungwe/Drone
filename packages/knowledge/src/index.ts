@@ -95,6 +95,23 @@ export {
 	publicationNotices,
 } from "./publication-policy";
 export {
+	evaluateMetacognitivePublication,
+	type MetacognitiveArtifact,
+	type MetacognitiveArtifactNumber,
+	type MetacognitiveDiagnostic,
+	type MetacognitiveEvidenceFinding,
+	type MetacognitiveExecutedWorkflow,
+	type MetacognitiveFailure,
+	type MetacognitiveFailureCode,
+	type MetacognitiveFinding,
+	type MetacognitiveFindingUse,
+	type MetacognitiveLabel,
+	type MetacognitiveMethodClaim,
+	type MetacognitiveNumberClaim,
+	type MetacognitiveSnapshot,
+	type MetacognitiveUseRole,
+} from "./metacognitive-policy";
+export {
 	advisoryCodes,
 	type ReviewMode,
 	readReviewMode,

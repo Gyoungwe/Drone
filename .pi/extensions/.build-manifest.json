@@ -16,7 +16,7 @@
 			"output": "knowledge-extension.mjs",
 			"status": "generated",
 			"sourceSha256": "809a5be02436faea7bd05fab84d9ddfd94444194b425d94acb9ffb72d34940be",
-			"outputSha256": "70d069fe2428d727ef20aa6c26f24d8c45031fb814ae9644e21e310de552a43e"
+			"outputSha256": "70fb1ac1f4d543ee84f63b9c6e56af22b004e2645913cccf864e4c18a0d4ebfb"
 		},
 		"research-loop": {
 			"source": "research-loop.ts",
