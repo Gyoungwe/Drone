@@ -93,6 +93,23 @@ export {
 } from "./project/workspace-store";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
+export {
+	artifactSha256,
+	type ComputeCollectOptions,
+	type ComputeCollectResult,
+	type ComputeEvent,
+	type ComputeExecutor,
+	type ComputeJobInput,
+	type ComputeLogEvent,
+	type ComputeLogsResult,
+	ComputeService,
+	type ComputeServiceOptions,
+	type ComputeServicePort,
+	type ComputeStatusResult,
+	type ComputeSubmitResult,
+	type ComputeWorkflowModule,
+	validateArtifactManifest,
+} from "./services/compute";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {
 	type KnowledgeReviewControl,

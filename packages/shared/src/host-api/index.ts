@@ -1,4 +1,5 @@
 export * from "./app";
+export * from "./compute";
 export * from "./define";
 export * from "./institutional";
 export * from "./knowledge";

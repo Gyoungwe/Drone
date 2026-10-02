@@ -42,6 +42,8 @@ export interface JsonStoreOptions<T> {
 	mode?: number;
 	/** 解析钩子（默认 JSON.parse）；models.json 等 JSONC 文件用它先剥注释 */
 	parse?: (raw: string) => T;
+	/** 序列化钩子；默认 JSON.stringify。用于 JSONL journals while retaining atomic writes. */
+	serialize?: (value: T) => string;
 }
 
 /** async 版 per-path 操作队列：串行化同路径的 update/write（load→merge→write 竞态修复）；空则清理 */
@@ -71,6 +73,7 @@ export class JsonStore<T> {
 	private readonly defaultValue: () => T;
 	private readonly mode: number | undefined;
 	private readonly parse: (raw: string) => T;
+	private readonly serialize: (value: T) => string;
 
 	constructor(options: JsonStoreOptions<T>) {
 		if (!options.storageId.trim()) throw new Error("JsonStore storageId cannot be empty");
@@ -79,6 +82,7 @@ export class JsonStore<T> {
 		this.defaultValue = options.defaultValue;
 		this.mode = options.mode;
 		this.parse = options.parse ?? (JSON.parse as (raw: string) => T);
+		this.serialize = options.serialize ?? ((value) => JSON.stringify(value, null, 2));
 	}
 
 	/** 读取原始状态（不回退）：ENOENT → missing+default；解析失败 → corrupted；其他 IO 错误上抛 */
@@ -121,7 +125,7 @@ export class JsonStore<T> {
 			`.${basename(this.path)}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`,
 		);
 		try {
-			await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: this.mode });
+			await writeFile(tmp, `${this.serialize(value)}\n`, { encoding: "utf8", mode: this.mode });
 			await rename(tmp, this.path);
 		} catch (err) {
 			await rm(tmp, { force: true }).catch(() => {});
@@ -137,7 +141,7 @@ export class JsonStore<T> {
 			`.${basename(this.path)}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`,
 		);
 		try {
-			writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: this.mode });
+			writeFileSync(tmp, `${this.serialize(value)}\n`, { encoding: "utf8", mode: this.mode });
 			renameSync(tmp, this.path);
 		} catch (err) {
 			rmSync(tmp, { force: true });
