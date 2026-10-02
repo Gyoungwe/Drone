@@ -19,11 +19,7 @@ const OPENAI_CODEX_PROVIDER = "openai-codex";
 const OPENAI_CODEX_PREFERRED_MODELS = ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-astra"] as const;
 // 这些是 0.13.0 内置目录里作为首选项留下的旧 Codex 模型。用户明确选择的
 // 其它旧模型仍然保留，升级只迁移 SDK 升级前自动选中的默认值。
-const LEGACY_OPENAI_CODEX_DEFAULTS = new Set([
-	"gpt-5.3-codex",
-	"gpt-5.3-codex-spark",
-	"gpt-5.6-sol",
-]);
+const LEGACY_OPENAI_CODEX_DEFAULTS = new Set(["gpt-5.3-codex", "gpt-5.3-codex-spark", "gpt-5.6-sol"]);
 
 type ModelRef = { provider: string; modelId: string };
 

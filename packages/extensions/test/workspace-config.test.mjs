@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 const extensionPath = resolve(import.meta.dirname, "../../../.pi/extensions/workspace-config.mjs");
 
 async function loadExtension() {
-	return import(pathToFileURL(extensionPath).href + "?test=" + Date.now() + "-" + Math.random());
+	return import(`${pathToFileURL(extensionPath).href}?test=${Date.now()}-${Math.random()}`);
 }
 
 async function makeWorkspace(t) {

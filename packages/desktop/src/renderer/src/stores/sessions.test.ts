@@ -352,11 +352,7 @@ describe("模型/思考级别", () => {
 				authed: true,
 			},
 		];
-		const result = chooseInitialModel(
-			models,
-			{ provider: "openai-codex", modelId: "gpt-5.6-sol" },
-			null,
-		);
+		const result = chooseInitialModel(models, { provider: "openai-codex", modelId: "gpt-5.6-sol" }, null);
 		expect(result).toEqual({ model: { provider: "openai-codex", modelId: "gpt-6.1-sol" }, migrated: true });
 	});
 
