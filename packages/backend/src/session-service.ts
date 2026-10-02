@@ -70,6 +70,7 @@ import { type KnowledgeReviewControl, KnowledgeSessionService } from "./services
 import type { PackageService } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import { ProjectTrustService } from "./services/project-trust";
+import { SessionLifecycleService } from "./services/session-lifecycle";
 import { SessionPermissionService } from "./services/session-permissions";
 import { SubagentService } from "./services/subagents";
 import { ZoteroService } from "./services/zotero";
@@ -262,6 +263,8 @@ export class SessionService {
 	/** Session lifecycle and Pi SDK runtime boundary (A3-3). */
 	/** Explicit session lifecycle service exposed by createBackend during A3 migration. */
 	readonly sessionEngine = new SessionEngine();
+	/** Host-owned list/close lifecycle coordination; create/open setup remains here during migration. */
+	readonly lifecycle: SessionLifecycleService;
 	/**
 	 * Compatibility injection seam for host adapters and SDK fixtures.
 	 *
@@ -295,6 +298,7 @@ export class SessionService {
 
 	constructor(private readonly options: SessionServiceOptions = {}) {
 		this.runtime = options.runtime ?? createDroneRuntime();
+		this.lifecycle = new SessionLifecycleService(this.registry, this.sessionEngine, options.defaultCwd);
 		this.permissions = options.permissions ?? new PermissionSettingsService();
 		this.mcp = new McpService({ onServerEnabled: (cwd) => this.reloadMcpSessions(cwd) });
 		this.knowledgeSession = new KnowledgeSessionService({
@@ -665,41 +669,12 @@ export class SessionService {
 	}
 
 	async listSessions(cwd?: string): Promise<SessionMeta[]> {
-		const target = cwd || this.options.defaultCwd || process.cwd();
-		const infos = await this.sessionEngine.list(target);
-		const activeIds = new Set(this.registry.list().map((e) => e.session.sessionId));
-		return infos
-			.filter((info) => !activeIds.has(info.id))
-			.map((info) => ({
-				sessionId: info.id,
-				sessionFile: info.path,
-				cwd: info.cwd || target,
-				name: info.name,
-				active: false,
-				messageCount: info.messageCount,
-				createdAt: info.created.getTime(),
-				modifiedAt: info.modified.getTime(),
-			}));
+		return this.lifecycle.list(cwd);
 	}
 
 	/** 跨全部项目目录枚举会话（项目管理页用，含活跃会话） */
 	async listAllSessions(): Promise<SessionMeta[]> {
-		const infos = await this.sessionEngine.listAll();
-		const activeIds = new Set(this.registry.list().map((e) => e.session.sessionId));
-		return infos
-			.filter((info) => info.cwd)
-			.map((info) => ({
-				sessionId: info.id,
-				sessionFile: info.path,
-				cwd: info.cwd || "",
-				name: info.name,
-				active: activeIds.has(info.id),
-				// subagent 产物会话只读（LAN 列表/写端点禁用判定用）
-				readOnly: isSubagentSessionPath(info.path) || undefined,
-				messageCount: info.messageCount,
-				createdAt: info.created.getTime(),
-				modifiedAt: info.modified.getTime(),
-			}));
+		return this.lifecycle.listAll();
 	}
 
 	private reapplyCapabilities(sessionId: string): void {
@@ -717,21 +692,23 @@ export class SessionService {
 	async closeSession(sessionId: string): Promise<void> {
 		this.modelWait.cleanup(sessionId);
 		this.knowledgeSession.disposeSession(sessionId);
-		const entry = this.registry.get(sessionId);
-		if (!entry) return;
-		// 面板派发的子会话随父会话关闭一起中止（登记表清空，不再推送事件）
-		this.subagentPanel.disposeSession(sessionId);
-		this.sessionEngine.dispose(entry.session);
-		this.approvals.remove(sessionId);
-		for (const askGate of this.askGates.get(sessionId) ?? []) askGate.dispose();
-		this.askGates.delete(sessionId);
-		this.sessionPermissions.remove(sessionId);
-		this.capabilityRuntimes.delete(sessionId);
-		this.streamGuard.cleanup(sessionId);
-		this.eventRates.delete(sessionId);
-		this.registry.delete(sessionId);
-		await this.traces.stop(sessionId);
-		log.info("session closed", sessionId);
+		await this.lifecycle.close(sessionId, {
+			// 面板派发的子会话随父会话关闭一起中止（登记表清空，不再推送事件）
+			beforeDispose: (id) => this.subagentPanel.disposeSession(id),
+			afterEngineDispose: (id) => {
+				this.approvals.remove(id);
+				for (const askGate of this.askGates.get(id) ?? []) askGate.dispose();
+				this.askGates.delete(id);
+				this.sessionPermissions.remove(id);
+				this.capabilityRuntimes.delete(id);
+				this.streamGuard.cleanup(id);
+				this.eventRates.delete(id);
+			},
+			afterDispose: async (id) => {
+				await this.traces.stop(id);
+				log.info("session closed", id);
+			},
+		});
 	}
 
 	/** 删除历史会话（pi 无删除 API，会话即磁盘 jsonl，直接删文件） */

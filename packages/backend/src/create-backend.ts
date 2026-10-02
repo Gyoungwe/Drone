@@ -25,6 +25,7 @@ import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
+import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
 import type { ZoteroServicePort } from "./services/zotero";
@@ -90,6 +91,8 @@ export interface BackendServices {
 	sessions: SessionServicePort;
 	/** SDK lifecycle boundary; hosts can migrate session calls without importing Pi SDK types. */
 	sessionEngine: SessionEngine;
+	/** Session discovery and disposal coordination during the lifecycle migration. */
+	lifecycle: SessionLifecycleServicePort;
 	/** Domain-owned knowledge service; consumers do not need the compatibility façade. */
 	knowledge: KnowledgeUiServicePort;
 	/** Session-bound knowledge actions (setup/review/resume) independent of IPC. */
@@ -133,6 +136,7 @@ export function createBackend(options: SessionServiceOptions = {}): BackendServi
 		diagnostics,
 		sessions,
 		sessionEngine: sessions.sessionEngine,
+		lifecycle: sessions.lifecycle,
 		knowledge: sessions.knowledge,
 		knowledgeSession: sessions.knowledgeSession,
 		packages: sessions.packages,
