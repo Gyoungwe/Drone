@@ -1,3 +1,4 @@
+import { type PlanProposal, renderPlanProposalCard } from "./plan-proposal";
 /**
  * Pure task-authorization policy shared by host adapters.
  *
@@ -42,6 +43,7 @@ export interface AuthorizationTask {
 	authorizationSummary?: unknown;
 	writeRoots?: unknown;
 	milestones?: readonly AuthorizationMilestone[];
+	proposal?: PlanProposal | null;
 	[key: string]: unknown;
 }
 
@@ -90,6 +92,16 @@ export function authorizationTitle(action: AuthorizationRequest["action"], rebin
 
 const displayText = (value: unknown): string => String(value ?? "");
 
+export function buildProposalAuthorizationDetails(
+	task: AuthorizationTask,
+	action: AuthorizationAction | null | undefined,
+	rebind: AuthorizationAction | null | undefined,
+	proposal: PlanProposal,
+	acceptanceLabel: (milestone: AuthorizationMilestone) => string = () => "已核对",
+): string {
+	return buildAuthorizationDetails(task, action, rebind, acceptanceLabel, proposal);
+}
+
 /**
  * Render the immutable, user-facing authorization contract shown by ask_user.
  * `acceptanceLabel` is injected by the host so extension acceptance kinds can
@@ -100,6 +112,7 @@ export function buildAuthorizationDetails(
 	action: AuthorizationAction | null | undefined,
 	rebind: AuthorizationAction | null | undefined,
 	acceptanceLabel: (milestone: AuthorizationMilestone) => string = () => "已核对",
+	proposal: PlanProposal | null | undefined = task.proposal,
 ): string {
 	const milestones = Array.isArray(task.milestones) ? task.milestones : [];
 	const writeRoots = Array.isArray(task.writeRoots)
@@ -119,16 +132,21 @@ export function buildAuthorizationDetails(
 		: action
 			? `${displayText(action.title)}\n${displayText(action.reason)}`
 			: displayText(task.authorizationSummary || task.goal);
-	return [
-		`要做的事：${displayText(task.goal)}`,
-		taskSpecificDetails,
-		writeRoots.length
-			? `会写入这些文件夹（包括子文件夹）：\n${writeRoots.map((root) => `- ${root}`).join("\n")}`
-			: "不会新增可写文件夹；改动文件仍按你现有的权限设置逐项确认。",
-		`做完的标准：\n${milestones.map((milestone) => `- ${displayText(milestone.title)}：${acceptanceLabel(milestone)}`).join("\n")}`,
-		inputActionNote(action, rebind),
-		"不想继续就选“暂不授权”或直接关掉，都不会开始执行。",
-	].join("\n\n");
+	const proposalDetails = proposal
+		? `\n\n方案提案（批准仍需你明确同意）\n\n${renderPlanProposalCard(proposal)}`
+		: "";
+	return (
+		[
+			`要做的事：${displayText(task.goal)}`,
+			taskSpecificDetails,
+			writeRoots.length
+				? `会写入这些文件夹（包括子文件夹）：\n${writeRoots.map((root) => `- ${root}`).join("\n")}`
+				: "不会新增可写文件夹；改动文件仍按你现有的权限设置逐项确认。",
+			`做完的标准：\n${milestones.map((milestone) => `- ${displayText(milestone.title)}：${acceptanceLabel(milestone)}`).join("\n")}`,
+			inputActionNote(action, rebind),
+			"不想继续就选“暂不授权”或直接关掉，都不会开始执行。",
+		].join("\n\n") + proposalDetails
+	);
 }
 
 function inputActionNote(

@@ -107,6 +107,26 @@ export {
 	type WorkspaceConfigLoader,
 } from "./run-provenance";
 export {
+	buildKnowledgeDeposit,
+	createResearchRunSummary,
+	depositResearchKnowledge,
+	normalizeResearchRunSummary,
+	RESEARCH_SUMMARY_LIMITS,
+	RESEARCH_SUMMARY_VERSION,
+	type ResearchCitation,
+	type ResearchCitationInput,
+	type ResearchEvidenceGate,
+	type ResearchFinding,
+	type ResearchFindingInput,
+	type ResearchKnowledgeDeposit,
+	type ResearchReadReceipt,
+	type ResearchRunSummary,
+	type ResearchRunSummaryInput,
+	type ResearchTopicMemoryPort,
+	researchKnowledgeDeposit,
+	researchRunSummary,
+} from "./run-summary";
+export {
 	archiveSource,
 	type SourceArchivePorts,
 	type SourceArchiveWorkspace,

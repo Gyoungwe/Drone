@@ -8,7 +8,7 @@ import {
 } from "./chunk-IGZMNWC2.mjs";
 import {
   getKnowledgeService
-} from "./chunk-4D6I2ZVS.mjs";
+} from "./chunk-PYFGTDA7.mjs";
 import {
   normalizeSourceLinks
 } from "./chunk-LE6NM7SB.mjs";
@@ -16,6 +16,9 @@ import {
   setSpecialistSettings,
   specialistSettings
 } from "./chunk-K64ABPUJ.mjs";
+import {
+  runNavigationMaintenance
+} from "./chunk-Q4ULDE2G.mjs";
 import {
   flowFor,
   invalidateKnowledgeUi
@@ -39,9 +42,6 @@ import {
   readKnowledgeBinding,
   withKnowledgeBinding
 } from "./chunk-CXEKIGAQ.mjs";
-import {
-  runNavigationMaintenance
-} from "./chunk-Q4ULDE2G.mjs";
 import {
   safeNotePath
 } from "./chunk-AHEUR5VB.mjs";

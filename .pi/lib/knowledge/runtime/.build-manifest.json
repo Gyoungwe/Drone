@@ -10,6 +10,10 @@
 			"source": "packages/knowledge/src/config.ts",
 			"sha256": "10a6c4f2bcaa198b3389b0c56c72e513e343a21df24b5ebc613b68936fcc5160"
 		},
+		"experience-store.mjs": {
+			"source": "packages/knowledge/src/experience-store.ts",
+			"sha256": "bd30007dc2f82130af2494ce356db7be6c3863554b7c1fe06d13fa1b2df1c78e"
+		},
 		"extension-helpers.mjs": {
 			"source": "packages/knowledge/src/extension-helpers.ts",
 			"sha256": "aa8fe8696b5da07d925c4a6e6b2ea4fecb06aa813b9445682c2bd3143eff6820"
@@ -24,7 +28,7 @@
 		},
 		"index.mjs": {
 			"source": "packages/knowledge/src/index.ts",
-			"sha256": "bb4e0ed2c87337af8b282cc594e5ef96a48a03ea39968a44475f4b89033247c8"
+			"sha256": "fb2b6915f1e2ec84041ee2527ab5fc280ae234c0baaba2813588099cf9b9f59e"
 		},
 		"layout.mjs": {
 			"source": "packages/knowledge/src/layout.ts",
@@ -68,7 +72,7 @@
 		},
 		"service.mjs": {
 			"source": "packages/knowledge/src/service.ts",
-			"sha256": "5955d89255216c4159464dc5118d9ffd9fd6e13df1b227004d4b95f224ee62b3"
+			"sha256": "3bd5e76ed0455bcdf16d4b6182120fe9dda115b22850e1be2f9eb43eace42d65"
 		},
 		"source-links.mjs": {
 			"source": "packages/knowledge/src/source-links.ts",
@@ -100,11 +104,11 @@
 		},
 		"topic-memory.mjs": {
 			"source": "packages/knowledge/src/topic-memory.ts",
-			"sha256": "522c00f3877bf5a7b021131af02fec8ea04d993c9f3ab3021a8647b568b060d6"
+			"sha256": "5aa04b8c2bd9ea015bf2f1bbc522f24566d021674803c3987e3841660ca55ba3"
 		},
 		"ui-service.mjs": {
 			"source": "packages/knowledge/src/ui-service.ts",
-			"sha256": "553b97f7727382ae269933f5fcc64b144e1a3236c18221b704fbd9297a6b33eb"
+			"sha256": "5732b477d26f56e3cbb46fcd8a11f8a554882d7a8887511d6d11ff11d8e8cae1"
 		},
 		"ui-state.mjs": {
 			"source": "packages/knowledge/src/ui-state.ts",

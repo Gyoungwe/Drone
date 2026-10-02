@@ -1,10 +1,18 @@
 // @ts-nocheck
 import {
+  readSemanticSettings,
+  saveSemanticSettings
+} from "./chunk-O536IQIE.mjs";
+import {
   invalidateKnowledgeUi
 } from "./chunk-GC2J7ECB.mjs";
 import {
   readReviewMode
 } from "./chunk-6LT3KQRY.mjs";
+import {
+  embedTexts,
+  validateSemanticConfig
+} from "./chunk-OWE2DUY5.mjs";
 import {
   createKnowledgeWorker,
   emitProcessEvent,
@@ -13,14 +21,6 @@ import {
   runRuntimeExclusive,
   runtimeSlot
 } from "./chunk-4VUDROQV.mjs";
-import {
-  embedTexts,
-  validateSemanticConfig
-} from "./chunk-OWE2DUY5.mjs";
-import {
-  readSemanticSettings,
-  saveSemanticSettings
-} from "./chunk-O536IQIE.mjs";
 import {
   knowledgeDirectory,
   readKnowledgeBinding,

@@ -1,5 +1,8 @@
 // @ts-nocheck
 import {
+  autoTopicCandidate
+} from "./chunks/chunk-P4SVSIRY.mjs";
+import {
   TOPIC_MEMORY_LIMITS,
   TOPIC_MEMORY_VERSION,
   archiveTopic,
@@ -9,7 +12,7 @@ import {
   readTopic,
   topicRunHash,
   updateTopic
-} from "./chunks/chunk-T5BKJEMD.mjs";
+} from "./chunks/chunk-MFL6DGIT.mjs";
 import {
   archiveKnowledgeTopic,
   cancelKnowledgeSemanticIndex,
@@ -29,7 +32,7 @@ import {
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-RUGQBTM4.mjs";
+} from "./chunks/chunk-34XJZ47A.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
@@ -59,7 +62,14 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-4D6I2ZVS.mjs";
+} from "./chunks/chunk-PYFGTDA7.mjs";
+import {
+  createSemanticSettingsApi,
+  createSemanticSettingsState,
+  readSemanticSettings,
+  saveSemanticSettings,
+  validateSemanticConfig as validateSemanticConfig2
+} from "./chunks/chunk-O536IQIE.mjs";
 import {
   normalizeSourceLinks,
   onlineSourceLink
@@ -90,8 +100,9 @@ import {
   createToolBudget
 } from "./chunks/chunk-BHQUJ6MZ.mjs";
 import {
-  autoTopicCandidate
-} from "./chunks/chunk-P4SVSIRY.mjs";
+  runNavigationMaintenance,
+  updateNavigation
+} from "./chunks/chunk-Q4ULDE2G.mjs";
 import {
   SPECIALIST_DECISIONS,
   createSpecialistBudget,
@@ -133,9 +144,6 @@ import {
   saveReviewMode
 } from "./chunks/chunk-6LT3KQRY.mjs";
 import {
-  configureKnowledgeRuntime
-} from "./chunks/chunk-4VUDROQV.mjs";
-import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
   tokenizeKnowledgeText
@@ -145,16 +153,21 @@ import {
   validateSemanticConfig
 } from "./chunks/chunk-OWE2DUY5.mjs";
 import {
-  createSemanticSettingsApi,
-  createSemanticSettingsState,
-  readSemanticSettings,
-  saveSemanticSettings,
-  validateSemanticConfig as validateSemanticConfig2
-} from "./chunks/chunk-O536IQIE.mjs";
-import {
   compareClaimSets,
   compareClaims
 } from "./chunks/chunk-BMV53RD4.mjs";
+import {
+  EXPERIENCE_LIMITS,
+  EXPERIENCE_VERSION,
+  createExperienceStore,
+  experienceInputFromTerminalJob,
+  recordTerminalJobExperience,
+  searchExperiences,
+  terminalJobExperienceInput
+} from "./chunks/chunk-75R34SNQ.mjs";
+import {
+  configureKnowledgeRuntime
+} from "./chunks/chunk-4VUDROQV.mjs";
 import {
   continuationHint,
   continuesTopic,
@@ -181,10 +194,6 @@ import {
   statusTone
 } from "./chunks/chunk-H6MOV67K.mjs";
 import {
-  runNavigationMaintenance,
-  updateNavigation
-} from "./chunks/chunk-Q4ULDE2G.mjs";
-import {
   containedVaultFile,
   createVaultFileOnly,
   initializeProjectContext,
@@ -204,6 +213,8 @@ import {
   validateNote
 } from "./chunks/chunk-AHEUR5VB.mjs";
 export {
+  EXPERIENCE_LIMITS,
+  EXPERIENCE_VERSION,
   KnowledgeService,
   MANAGED_END,
   MANAGED_START,
@@ -236,6 +247,7 @@ export {
   contextSessionId,
   continuationHint,
   continuesTopic,
+  createExperienceStore,
   createKnowledgeConfigApi,
   createKnowledgeConfigState,
   createKnowledgeSpecialists,
@@ -251,6 +263,7 @@ export {
   decideWikiProposal,
   embedTexts,
   emitKnowledgeUi,
+  experienceInputFromTerminalJob,
   explainerTopicId,
   failureCard,
   fileVersion,
@@ -309,6 +322,7 @@ export {
   readReviewMode,
   readSemanticSettings,
   readTopic,
+  recordTerminalJobExperience,
   registerAnswerPublication,
   registerKnowledgeSpecialistHost,
   requestWikiReviewUi,
@@ -321,6 +335,7 @@ export {
   saveReviewMode,
   saveSemanticSettings,
   saveSpecialistExplainer,
+  searchExperiences,
   sessionIdentity,
   setSpecialistSettings,
   shouldOrientKnowledge,
@@ -333,6 +348,7 @@ export {
   statusTone,
   subscribeKnowledgeUi,
   targetWikiPath,
+  terminalJobExperienceInput,
   testKnowledgeSemanticProvider,
   tokenizeKnowledgeText,
   topicRunHash,
