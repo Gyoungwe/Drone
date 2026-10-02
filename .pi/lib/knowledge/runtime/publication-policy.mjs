@@ -6,7 +6,7 @@ import {
   publicationFallbackNotice,
   publicationNotice,
   publicationNotices
-} from "./chunks/chunk-3H4YGOMN.mjs";
+} from "./chunks/chunk-IDLVS5M7.mjs";
 export {
   advisoryLine,
   advisoryNotice,

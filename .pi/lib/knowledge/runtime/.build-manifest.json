@@ -28,7 +28,7 @@
 		},
 		"index.mjs": {
 			"source": "packages/knowledge/src/index.ts",
-			"sha256": "b215bbf6604cba4b1affc30c97fb1fc6e84482969df0f5ae89b2c7edb00309c7"
+			"sha256": "aa9a07c6ebd402ae83987262477012d2af0f6d725f3ddc20211070d0b9c91ad5"
 		},
 		"layout.mjs": {
 			"source": "packages/knowledge/src/layout.ts",
@@ -38,17 +38,21 @@
 			"source": "packages/knowledge/src/maintenance.ts",
 			"sha256": "c03a11358699159932ce363100210a75e731d124a549043a09f44d4394b983a4"
 		},
+		"metacognitive-policy.mjs": {
+			"source": "packages/knowledge/src/metacognitive-policy.ts",
+			"sha256": "2a8a08848d6fbb5cca1473498f8fa9c932c16c33664722ed198dacd8b0afaf4b"
+		},
 		"orchestration-policy.mjs": {
 			"source": "packages/knowledge/src/orchestration-policy.ts",
 			"sha256": "5b61268c7d6915ca38f39b22de78814e66f6d43d7ee42e859fb6f3376b192a2c"
 		},
 		"publication-policy.mjs": {
 			"source": "packages/knowledge/src/publication-policy.ts",
-			"sha256": "1679a886e40a0b76aeeba910ea1aee189a7f1a90a41f43e2f94e4a19b7445a77"
+			"sha256": "c631f253b67cfae6fd554faa246f35c53e98a0763d87a2972f3c33e92c6b1128"
 		},
 		"publication.mjs": {
 			"source": "packages/knowledge/src/publication.ts",
-			"sha256": "3556122789ed5e1ee4d74b9a92ed7d50b44efe46b8e0e77f31e440c48ef8afc0"
+			"sha256": "4016274c5e09786d647b7daeb92f13cda72a784629cfeae58f26eac4749330a4"
 		},
 		"review-policy.mjs": {
 			"source": "packages/knowledge/src/review-policy.ts",
@@ -72,7 +76,7 @@
 		},
 		"service.mjs": {
 			"source": "packages/knowledge/src/service.ts",
-			"sha256": "3bd5e76ed0455bcdf16d4b6182120fe9dda115b22850e1be2f9eb43eace42d65"
+			"sha256": "e483fb9b188251157e9a8ec604ca7780794db0d80f16675e97473bc5af036a16"
 		},
 		"source-links.mjs": {
 			"source": "packages/knowledge/src/source-links.ts",
@@ -108,7 +112,7 @@
 		},
 		"ui-service.mjs": {
 			"source": "packages/knowledge/src/ui-service.ts",
-			"sha256": "5732b477d26f56e3cbb46fcd8a11f8a554882d7a8887511d6d11ff11d8e8cae1"
+			"sha256": "253edaf58ee5e5c99ca52fe3a2ecf541962ca0890accd38c048c118c5ead39fd"
 		},
 		"ui-state.mjs": {
 			"source": "packages/knowledge/src/ui-state.ts",

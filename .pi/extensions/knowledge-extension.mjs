@@ -1903,7 +1903,7 @@ var KnowledgeService = class {
     const searched = state4.answerSearch;
     const citationLimit = 12;
     const verifiedSources = [], verifiedOutputs = [];
-    const citedPaths = [
+    const citedPaths2 = [
       ...new Set(
         Array.from(String(text3).matchAll(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g), (match) => {
           const path = match[1].trim();
@@ -1919,10 +1919,10 @@ var KnowledgeService = class {
       ...searched ? { searchQuery: searched.query, indexRevision: searched.revision } : {},
       sources: [...verifiedSources],
       deliveries: [...verifiedOutputs],
-      citationCount: citedPaths.length,
+      citationCount: citedPaths2.length,
       citationLimit,
-      unverifiedCitationCount: citedPaths.length - verifiedPaths.size,
-      unverifiedCitations: citedPaths.filter((path) => !verifiedPaths.has(path)),
+      unverifiedCitationCount: citedPaths2.length - verifiedPaths.size,
+      unverifiedCitations: citedPaths2.filter((path) => !verifiedPaths.has(path)),
       scientificallyVerified: false
     });
     let firstFailure;
@@ -1945,7 +1945,7 @@ var KnowledgeService = class {
       if (!valid2) recordFailure("wiki-changed", "The Wiki read changed; read and search again");
     }
     const invalidPaths = /* @__PURE__ */ new Set();
-    for (const path of citedPaths) {
+    for (const path of citedPaths2) {
       try {
         validateNote(path);
       } catch {
@@ -1953,15 +1953,15 @@ var KnowledgeService = class {
         recordFailure("citation-invalid", "Invalid Vault citation", [path]);
       }
     }
-    if (citedPaths.length > citationLimit)
+    if (citedPaths2.length > citationLimit)
       recordFailure("citation-budget", "Limit one checked answer to 12 distinct citations");
-    if (searched?.hitCount && !citedPaths.length)
+    if (searched?.hitCount && !citedPaths2.length)
       recordFailure(
         "citation-required",
         "A citation to a read source using [[Vault/relative/path]] is required after search hits"
       );
     const sources = verifiedSources, outputs = verifiedOutputs;
-    for (const path of citedPaths.slice(0, citationLimit)) {
+    for (const path of citedPaths2.slice(0, citationLimit)) {
       if (invalidPaths.has(path)) continue;
       const output = deliveries.find(
         (item) => item.path === path && item.role === "delivery-only" && item.vaultId === this.binding.vaultId && item.bindingRevision === this.binding.revision
@@ -3117,7 +3117,7 @@ async function readPdfIdentity(bytes) {
     const timer = setTimeout(() => {
       void worker.terminate();
       reject(new Error("PDF identity inspection timed out; no file was changed."));
-    }, 15e3);
+    }, 3e4);
     worker.once("message", (result2) => {
       clearTimeout(timer);
       void worker.terminate();
@@ -5563,7 +5563,8 @@ var publicationNotices = {
   "empty-answer": "\u4EFB\u52A1\u5DF2\u7ED3\u675F\uFF0C\u4F46\u6A21\u578B\u6CA1\u6709\u751F\u6210\u53EF\u663E\u793A\u7684\u56DE\u590D\u3002\u8BF7\u67E5\u770B\u672C\u8F6E\u4EA7\u7269\u6216\u8981\u6C42\u7EE7\u7EED\u4EA4\u4ED8\u8BF4\u660E\u3002",
   "answer-too-large": "\u672C\u6B21\u56DE\u7B54\u8D85\u51FA\u5355\u6B21\u68C0\u67E5\u7684\u5927\u5C0F\u4E0A\u9650\uFF0C\u8BF7\u5206\u6BB5\u5B8C\u6210\u3002",
   "protocol-budget": "\u672C\u8F6E\u5DE5\u5177\u4E0A\u4E0B\u6587\u8D85\u8FC7\u5B89\u5168\u7F13\u5B58\u4E0A\u9650\uFF0C\u8BF7\u5F00\u542F\u65B0\u4E00\u8F6E\u4EFB\u52A1\u3002",
-  "tool-loop-stopped": "\u3010\u4EFB\u52A1\u9636\u6BB5\u5DF2\u6682\u505C\u3011\u672C\u9636\u6BB5\u8FBE\u5230\u5DE5\u5177\u6216\u4E0A\u4E0B\u6587\u5B89\u5168\u9884\u7B97\u3002\u5DF2\u4FDD\u5B58\u7684\u7ED3\u679C\u4E0D\u4F1A\u56E0\u6B64\u5220\u9664\uFF1B\u67E5\u770B\u4EFB\u52A1\u6267\u884C\u8BB0\u5F55\u540E\u53EF\u7EE7\u7EED\uFF0C\u65E0\u9700\u65B0\u5EFA\u5BF9\u8BDD\u3002\u7EE7\u7EED\u524D\u5148\u6838\u5BF9\u7ED3\u679C\u672A\u77E5\u7684\u64CD\u4F5C\uFF0C\u4E0D\u8981\u91CD\u590D\u5B89\u88C5\u3001\u5BFC\u5165\u6216\u4E0A\u4F20\u3002"
+  "tool-loop-stopped": "\u3010\u4EFB\u52A1\u9636\u6BB5\u5DF2\u6682\u505C\u3011\u672C\u9636\u6BB5\u8FBE\u5230\u5DE5\u5177\u6216\u4E0A\u4E0B\u6587\u5B89\u5168\u9884\u7B97\u3002\u5DF2\u4FDD\u5B58\u7684\u7ED3\u679C\u4E0D\u4F1A\u56E0\u6B64\u5220\u9664\uFF1B\u67E5\u770B\u4EFB\u52A1\u6267\u884C\u8BB0\u5F55\u540E\u53EF\u7EE7\u7EED\uFF0C\u65E0\u9700\u65B0\u5EFA\u5BF9\u8BDD\u3002\u7EE7\u7EED\u524D\u5148\u6838\u5BF9\u7ED3\u679C\u672A\u77E5\u7684\u64CD\u4F5C\uFF0C\u4E0D\u8981\u91CD\u590D\u5B89\u88C5\u3001\u5BFC\u5165\u6216\u4E0A\u4F20\u3002",
+  "metacognitive-inconsistency": "\u62A5\u544A\u3001\u65B9\u6CD5\u3001\u8BC1\u636E\u6807\u7B7E\u6216\u8BCA\u65AD\u4E0E\u5BBF\u4E3B\u89C2\u5BDF\u4E0D\u4E00\u81F4\uFF1B\u8349\u7A3F\u6CA1\u6709\u53D1\u5E03\u3002\u8BF7\u6309\u4E0B\u9762\u7684\u5DEE\u5F02\u4FEE\u6B63\u62A5\u544A\u6216\u91CD\u65B0\u8FD0\u884C\u5F53\u524D\u5DE5\u4F5C\u6D41\u3002"
 };
 var advisoryNotices = {
   "paper-citation-required": "\u8FD9\u4EFD\u56DE\u7B54\u6CA1\u6709\u5F15\u7528\u5177\u4F53\u7684\u539F\u59CB\u8BBA\u6587\uFF0C\u4E3B\u8981\u4F9D\u636E\u662F Wiki \u6216\u5DF2\u751F\u6210\u7684\u62A5\u544A\u3002\u5185\u5BB9\u5DF2\u4FDD\u7559\uFF0C\u4F46\u8BF7\u628A\u5B83\u5F53\u4F5C\u5F85\u67E5\u8BC1\u7684\u7EBF\u7D22\u3002",
@@ -5629,6 +5630,240 @@ function classifyFailureCode(error2) {
   return "check-failed";
 }
 
+// packages/knowledge/src/metacognitive-policy.ts
+var MAX_FAILURES = 16;
+var MAX_TEXT = 600;
+var SHA256 = /^[a-f0-9]{64}$/i;
+function bounded(value, max = MAX_TEXT) {
+  const text3 = typeof value === "string" ? value : JSON.stringify(value);
+  return String(text3 ?? "").replace(/[\r\n]+/g, " ").slice(0, max);
+}
+function sameValue(left, right) {
+  if (Object.is(left, right)) return true;
+  if (typeof left === "number" && typeof right === "number" && Number.isFinite(left) && Number.isFinite(right))
+    return left === right;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+}
+function hasKey(value, key) {
+  return Object.hasOwn(value, key);
+}
+function subset(expected, observed) {
+  if (!expected) return [];
+  if (!observed) return Object.keys(expected);
+  return Object.keys(expected).filter((key) => !hasKey(observed, key) || !sameValue(expected[key], observed[key]));
+}
+function numberValue(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && value.trim() !== "" ? parsed : null;
+}
+function numberMatches(expected, observed, tolerance = 0) {
+  const left = numberValue(expected);
+  const right = numberValue(observed);
+  if (left !== null && right !== null) return Math.abs(left - right) <= Math.max(0, tolerance);
+  return String(expected).trim() === String(observed).trim();
+}
+function artifactHasNumber(artifact, claim) {
+  const tolerance = claim.rounding?.tolerance ?? (typeof claim.rounding?.digits === "number" && claim.rounding.digits >= 0 ? 0.5 * 10 ** -claim.rounding.digits : 0);
+  if (artifact.numbers?.some((item) => numberMatches(claim.value, item.value, item.tolerance ?? tolerance))) return true;
+  if (typeof artifact.text !== "string") return false;
+  const rendered = claim.rendered ?? String(claim.value);
+  if (artifact.text.includes(rendered)) return true;
+  return artifact.text.includes(String(claim.value));
+}
+function citedPaths(answer) {
+  return new Set(
+    Array.from(answer.matchAll(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g), (match) => {
+      const path = (match[1] || "").trim();
+      return path.endsWith(".md") ? path : `${path}.md`;
+    })
+  );
+}
+function addFailure(failures, failure) {
+  if (failures.length < MAX_FAILURES) failures.push(failure);
+}
+function evaluateMetacognitivePublication(answer, snapshot) {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
+    return { ok: true, failures: [], findings: [] };
+  const input = snapshot;
+  if (input.enabled === false) return { ok: true, failures: [], findings: [] };
+  const failures = [];
+  const citations = citedPaths(answer);
+  const artifacts = /* @__PURE__ */ new Map();
+  for (const artifact of Array.isArray(input.artifacts) ? input.artifacts : []) {
+    if (artifact && typeof artifact.path === "string") artifacts.set(artifact.path, artifact);
+  }
+  const checkedPaths = /* @__PURE__ */ new Set();
+  const checkArtifact = (path, subject) => {
+    const artifact = artifacts.get(path);
+    if (!artifact) {
+      addFailure(failures, {
+        code: "artifact-checksum-stale",
+        subject,
+        detail: `No current checksum receipt for ${bounded(path, 240)}`,
+        path
+      });
+      return void 0;
+    }
+    if (!SHA256.test(String(artifact.sha256 || "")) || !SHA256.test(String(artifact.currentSha256 || ""))) {
+      addFailure(failures, {
+        code: "artifact-checksum-stale",
+        subject,
+        detail: `Missing or malformed checksum receipt for ${bounded(path, 240)}`,
+        path
+      });
+    } else if (artifact.sha256?.toLowerCase() !== artifact.currentSha256?.toLowerCase()) {
+      addFailure(failures, {
+        code: "artifact-checksum-stale",
+        subject,
+        detail: `Cited artifact changed after observation (${bounded(artifact.sha256, 16)}\u2026 \u2192 ${bounded(artifact.currentSha256, 16)}\u2026)`,
+        path
+      });
+    }
+    checkedPaths.add(path);
+    return artifact;
+  };
+  for (const claim of Array.isArray(input.numbers) ? input.numbers : []) {
+    if (!claim || typeof claim.artifactPath !== "string") {
+      addFailure(failures, {
+        code: "metacognition-invalid",
+        subject: "report-number",
+        detail: "A report number has no cited artifact path"
+      });
+      continue;
+    }
+    const rendered = claim.rendered ?? String(claim.value);
+    if (!answer.includes(rendered)) {
+      addFailure(failures, {
+        code: "report-number-unbound",
+        subject: claim.id || rendered,
+        detail: `Reported number ${bounded(rendered, 80)} is not present in the final answer`,
+        path: claim.artifactPath
+      });
+    }
+    if (!citations.has(claim.artifactPath)) {
+      addFailure(failures, {
+        code: "report-number-unbound",
+        subject: claim.id || rendered,
+        detail: `Reported number ${bounded(rendered, 80)} is not tied to citation ${bounded(claim.artifactPath, 240)}`,
+        path: claim.artifactPath
+      });
+    }
+    const artifact = checkArtifact(claim.artifactPath, claim.id || rendered);
+    if (artifact && !artifactHasNumber(artifact, claim))
+      addFailure(failures, {
+        code: "report-number-unbound",
+        subject: claim.id || rendered,
+        detail: `Artifact does not contain ${bounded(String(claim.value), 80)} with the declared rounding`,
+        path: claim.artifactPath
+      });
+  }
+  for (const path of citations) {
+    if (artifacts.has(path) && !checkedPaths.has(path)) checkArtifact(path, "citation");
+  }
+  for (const method of Array.isArray(input.methods) ? input.methods : []) {
+    const executed = input.executed;
+    if (!method || typeof method.description !== "string" || !method.description.trim()) {
+      addFailure(failures, { code: "metacognition-invalid", subject: "method", detail: "Method description is empty" });
+      continue;
+    }
+    if (!answer.includes(method.description))
+      addFailure(failures, {
+        code: "method-mismatch",
+        subject: method.id || method.description,
+        detail: "Method description is not present in the final answer"
+      });
+    if (!executed) {
+      addFailure(failures, {
+        code: "method-mismatch",
+        subject: method.id || method.description,
+        detail: "No host-observed workflow execution was supplied"
+      });
+      continue;
+    }
+    if (method.workflow && !executed.workflows?.includes(method.workflow))
+      addFailure(failures, {
+        code: "method-mismatch",
+        subject: method.id || method.workflow,
+        detail: `Workflow ${bounded(method.workflow, 120)} was not observed`
+      });
+    for (const module of method.modules || [])
+      if (!executed.modules?.includes(module))
+        addFailure(failures, {
+          code: "method-mismatch",
+          subject: method.id || module,
+          detail: `Module ${bounded(module, 120)} was not observed`
+        });
+    for (const key of subset(method.params, executed.params))
+      addFailure(failures, {
+        code: "method-mismatch",
+        subject: method.id || key,
+        detail: `Parameter ${bounded(key, 120)} differs from the observed workflow`
+      });
+  }
+  const findingMap = /* @__PURE__ */ new Map();
+  const findingEvidence = [];
+  for (const rawFinding of Array.isArray(input.findings) ? input.findings : []) {
+    const finding = rawFinding;
+    if (!finding || typeof finding.id !== "string" || typeof finding.text !== "string") {
+      addFailure(failures, { code: "metacognition-invalid", subject: "finding", detail: "Finding is malformed" });
+      continue;
+    }
+    findingMap.set(finding.id, finding);
+    const paths = Array.from(
+      new Set(
+        (Array.isArray(finding.citationPaths) ? finding.citationPaths : []).filter(
+          (path) => typeof path === "string"
+        )
+      )
+    );
+    findingEvidence.push({ id: finding.id, text: bounded(finding.text), label: finding.label, citationPaths: paths });
+    for (const path of paths) {
+      if (!citations.has(path))
+        addFailure(failures, {
+          code: "finding-label-conflict",
+          subject: finding.id,
+          detail: `Finding is missing its cited artifact ${bounded(path, 240)}`,
+          path
+        });
+      else checkArtifact(path, finding.id);
+    }
+  }
+  for (const use of Array.isArray(input.uses) ? input.uses : []) {
+    const finding = findingMap.get(use?.findingId || "");
+    if (!finding) {
+      addFailure(failures, {
+        code: "finding-label-conflict",
+        subject: use?.findingId || "finding",
+        detail: "The final answer references an unknown finding"
+      });
+      continue;
+    }
+    if (["exploratory", "overturned", "unstable"].includes(finding.label)) {
+      const invalidRole = finding.label === "exploratory" ? ["conclusion", "validation"].includes(use.role) : use.role !== "exploratory";
+      if (invalidRole)
+        addFailure(failures, {
+          code: "finding-label-conflict",
+          subject: finding.id,
+          detail: `Finding labelled ${finding.label} cannot be used as ${use.role}`
+        });
+    }
+  }
+  for (const diagnostic of Array.isArray(input.diagnostics) ? input.diagnostics : []) {
+    if (!diagnostic || typeof diagnostic.id !== "string" || !sameValue(diagnostic.reported, diagnostic.observed))
+      addFailure(failures, {
+        code: "diagnostic-drift",
+        subject: diagnostic?.id || "diagnostic",
+        detail: `Reported diagnostic differs from the observed control/result (${bounded(diagnostic?.reported)} vs ${bounded(diagnostic?.observed)})`
+      });
+  }
+  return { ok: failures.length === 0, failures, findings: findingEvidence };
+}
+
 // packages/knowledge/src/publication.ts
 var state2 = runtimeSlot(
   "knowledge",
@@ -5668,7 +5903,7 @@ function seal(message, content, detail) {
   state2.proofs.add(proof);
   return { ...base(message, content), [FIELD2]: proof };
 }
-function blocked(message, code = "check-failed", turnId = null, operational = null, paths = []) {
+function blocked(message, code = "check-failed", turnId = null, operational = null, paths = [], extra = null) {
   return seal(
     message,
     [
@@ -5682,6 +5917,7 @@ function blocked(message, code = "check-failed", turnId = null, operational = nu
       reason: code,
       turnId,
       ...paths.length ? { paths } : {},
+      ...extra && typeof extra === "object" ? extra : {},
       scientificallyVerified: false
     }
   );
@@ -5758,6 +5994,7 @@ function registerAnswerPublication(pi, {
   getDeliveryFooter = null,
   getTaskFeedback = null,
   getTaskRuntime = null,
+  getMetacognition = null,
   maxToolRounds = 24
 }) {
   const attachRuntime = (next) => {
@@ -5780,12 +6017,53 @@ ${String(footer).slice(0, 2e3)}` }] : [];
   };
   const failure = (message, error2) => {
     const info = knowledgeFailure(error2);
+    const metacognitive = error2?.metacognition;
+    const metacognitiveReport = metacognitive && Array.isArray(metacognitive.failures) && metacognitive.failures.length ? metacognitive.failures.slice(0, 8).map((item) => `- ${String(item.detail || item.code).slice(0, 600)}`).join("\n") : "";
     const task = getTaskRuntime?.();
     if (task?.snapshot()) task.pause(info.code);
     const report = task?.snapshot() ? `${task.render()}
 
 \u7814\u7A76\u8BF4\u660E\u5C1A\u672A\u53D1\u5E03\uFF1A${info.message}` : getTaskFeedback?.()?.report(info.code, info.message, info.paths);
-    return blocked(message, info.code, turnId, report, info.paths);
+    return blocked(
+      message,
+      info.code,
+      turnId,
+      [report, metacognitiveReport].filter(Boolean).join("\n\n") || null,
+      info.paths,
+      metacognitive ? { metacognition: metacognitive } : null
+    );
+  };
+  const evaluateMetacognition = async (ctx, current, text3) => {
+    if (typeof getMetacognition !== "function") return null;
+    let snapshot;
+    try {
+      snapshot = await getMetacognition(ctx, current);
+    } catch {
+      throw Object.assign(new Error("Metacognitive host snapshot unavailable"), {
+        code: "metacognitive-inconsistency",
+        metacognition: {
+          ok: false,
+          findings: [],
+          failures: [
+            {
+              code: "metacognition-invalid",
+              subject: "host-snapshot",
+              detail: "Host metacognitive snapshot could not be read"
+            }
+          ]
+        }
+      });
+    }
+    if (snapshot == null) return null;
+    const evaluation = evaluateMetacognitivePublication(text3, snapshot);
+    if (!evaluation.ok)
+      throw Object.assign(new Error("Metacognitive publication checks failed"), {
+        code: "metacognitive-inconsistency",
+        paths: evaluation.failures.map((item) => item.path).filter(Boolean).slice(0, 6),
+        metacognition: evaluation,
+        verified: { metacognition: evaluation }
+      });
+    return evaluation;
   };
   pi.on("context", async (event) => ({
     messages: event.messages.map((message) => {
@@ -5941,6 +6219,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
         proof = await validateWithTimeout();
       }
       if (ctx.signal?.aborted) return report(failure(message, { code: "interrupted" }));
+      const metacognitive = await evaluateMetacognition(ctx, c, publishText);
       const published = proof.status === "no-hits" ? [
         {
           type: "text",
@@ -5955,6 +6234,7 @@ ${String(footer).slice(0, 2e3)}` }] : published;
       return report(
         seal(message, visible, {
           ...proof,
+          ...metacognitive ? { metacognition: metacognitive } : {},
           status: proof.status === "ready" ? "released" : "no-hits",
           turnId
         })
@@ -6016,7 +6296,8 @@ ${String(footer).slice(0, 2e3)}` }] : published;
             timer = setTimeout(() => reject({ code: "check-timeout" }), 5e3);
           })
         ]);
-        return { ok: true, proof };
+        const metacognition = await evaluateMetacognition(ctx, c, text3);
+        return { ok: true, proof, ...metacognition ? { metacognition } : {} };
       } catch (error2) {
         const info = knowledgeFailure(error2);
         if (await readReviewMode() === "automatic" && advisoryCodes.has(info.code)) {
@@ -6420,24 +6701,24 @@ async function specialistSettings() {
   for (const key of Object.keys(costLimits))
     if (data[key] !== void 0 && (typeof data[key] !== "number" || !Number.isFinite(data[key]) || data[key] < 0))
       throw new Error("Invalid knowledge specialist settings");
-  const bounded = {};
+  const bounded2 = {};
   for (const [key, [min, max]] of Object.entries(integerLimits))
-    bounded[key] = Math.min(max, Math.max(min, data[key] ?? SPECIALIST_LIMITS[key]));
+    bounded2[key] = Math.min(max, Math.max(min, data[key] ?? SPECIALIST_LIMITS[key]));
   for (const [key, max] of Object.entries(costLimits))
-    bounded[key] = Math.min(max, Math.max(0, data[key] ?? SPECIALIST_LIMITS[key]));
-  return { ...SPECIALIST_LIMITS, ...bounded, mode: data.mode, revision: data.revision };
+    bounded2[key] = Math.min(max, Math.max(0, data[key] ?? SPECIALIST_LIMITS[key]));
+  return { ...SPECIALIST_LIMITS, ...bounded2, mode: data.mode, revision: data.revision };
 }
 async function withSpecialistSlot(signal, work, options = {}) {
   signal?.throwIfAborted();
   if (state3.disposed) throw new Error("Knowledge specialist runtime has been disposed");
-  const bounded = (value, fallback, max) => Number.isSafeInteger(value) ? Math.min(max, Math.max(1, value)) : fallback;
-  const concurrency = bounded(
+  const bounded2 = (value, fallback, max) => Number.isSafeInteger(value) ? Math.min(max, Math.max(1, value)) : fallback;
+  const concurrency = bounded2(
     options.concurrency,
     SPECIALIST_LIMITS.concurrency,
     SPECIALIST_LIMITS.maxConcurrency
   );
-  const queueLimit = bounded(options.queueLimit, SPECIALIST_LIMITS.queueLimit, SPECIALIST_LIMITS.queueLimit);
-  const queueWaitMs = bounded(
+  const queueLimit = bounded2(options.queueLimit, SPECIALIST_LIMITS.queueLimit, SPECIALIST_LIMITS.queueLimit);
+  const queueWaitMs = bounded2(
     options.queueWaitMs,
     SPECIALIST_LIMITS.queueWaitMs,
     SPECIALIST_LIMITS.queueWaitMs
@@ -8535,7 +8816,11 @@ function registerKnowledgeInterface(pi, { readOnly: readOnly2 = false, runtime =
     evidenceOnly: readOnly2,
     getDeliveryFooter: () => deliveryFooter,
     getTaskFeedback: () => feedback,
-    getTaskRuntime: () => taskRuntime
+    getTaskRuntime: () => taskRuntime,
+    // The backend may inject a bounded, host-observed metacognitive snapshot
+    // on the current turn. Missing snapshots keep legacy operational turns
+    // compatible; when supplied, the publication gate fails closed.
+    getMetacognition: (_ctx, turn) => turn?.metacognition ?? null
   });
   pi.events?.on?.("drone:runtime/v1", (payload) => {
     if (payload?.version !== 1 || !payload.runtime || typeof payload.runtime !== "object") return;

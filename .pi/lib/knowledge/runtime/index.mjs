@@ -1,5 +1,8 @@
 // @ts-nocheck
 import {
+  createToolBudget
+} from "./chunks/chunk-BHQUJ6MZ.mjs";
+import {
   autoTopicCandidate
 } from "./chunks/chunk-P4SVSIRY.mjs";
 import {
@@ -32,7 +35,7 @@ import {
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-34XJZ47A.mjs";
+} from "./chunks/chunk-KYVVQJ6E.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
@@ -62,7 +65,11 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-PYFGTDA7.mjs";
+} from "./chunks/chunk-7HHP6BXQ.mjs";
+import {
+  embedTexts,
+  validateSemanticConfig
+} from "./chunks/chunk-OWE2DUY5.mjs";
 import {
   createSemanticSettingsApi,
   createSemanticSettingsState,
@@ -97,9 +104,6 @@ import {
   guardResearchToolResult
 } from "./chunks/chunk-TW476WMJ.mjs";
 import {
-  createToolBudget
-} from "./chunks/chunk-BHQUJ6MZ.mjs";
-import {
   runNavigationMaintenance,
   updateNavigation
 } from "./chunks/chunk-Q4ULDE2G.mjs";
@@ -113,7 +117,7 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-I7NV4WUF.mjs";
+} from "./chunks/chunk-Q5REE5N5.mjs";
 import {
   beginKnowledgeFlow,
   clearKnowledgeFlow,
@@ -131,13 +135,16 @@ import {
   updateKnowledgeFlow
 } from "./chunks/chunk-GC2J7ECB.mjs";
 import {
+  evaluateMetacognitivePublication
+} from "./chunks/chunk-CVD67FIU.mjs";
+import {
   advisoryLine,
   advisoryNotice,
   knowledgeFailure,
   publicationFallbackNotice,
   publicationNotice,
   publicationNotices
-} from "./chunks/chunk-3H4YGOMN.mjs";
+} from "./chunks/chunk-IDLVS5M7.mjs";
 import {
   advisoryCodes,
   readReviewMode,
@@ -148,10 +155,6 @@ import {
   splitKnowledgeChunks,
   tokenizeKnowledgeText
 } from "./chunks/chunk-4LTSNIAR.mjs";
-import {
-  embedTexts,
-  validateSemanticConfig
-} from "./chunks/chunk-OWE2DUY5.mjs";
 import {
   compareClaimSets,
   compareClaims
@@ -263,6 +266,7 @@ export {
   decideWikiProposal,
   embedTexts,
   emitKnowledgeUi,
+  evaluateMetacognitivePublication,
   experienceInputFromTerminalJob,
   explainerTopicId,
   failureCard,
