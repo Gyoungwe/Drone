@@ -36,6 +36,7 @@ packages/
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
 ├── research/   文献回执与来源交付合约（TS 包，迁移中）
 ├── compute/    远程计算与声明式工作流领域包（TS 包，B3 垂直切片）
+├── inquiry/    研究状态层领域包（TS 包，B5a 四本账与工作区合同）
 ├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
 ```
@@ -111,6 +112,10 @@ packages/
 ## packages/compute — 远程计算与工作流领域包（B3）
 
 `@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/types.ts` 定义 B1 runner-facing `WorkflowSpec` 与 B3 `ComputeWorkflowSpec` 等类型；`src/workflow.ts` 提供模块目录、类型/环检查与稳定哈希；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供标记为 preview-only 的 nf-core/rnaseq test profile 配置；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@drone/research/run-provenance` 的远程执行声明；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由宿主适配层接入。
+
+## packages/inquiry — 研究状态层领域包（B5a）
+
+`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设和分析尝试四本账；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/storage.ts` 提供宿主可注入的四账存储接口，并附带排序稳定、原子写入的文件适配器；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用。SQLite、任务/计算事件订阅和 Electron/LAN 投影留在 backend 组合根，领域包不读取文件内容，也不执行删除。
 
 
 ## packages/extensions — Pi 扩展适配层（迁移中）
