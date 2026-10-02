@@ -115,7 +115,14 @@ export {
 	type ComputeWorkflowModule,
 	validateArtifactManifest,
 } from "./services/compute";
-export { type ComputeHostAdapter, createUnavailableComputeService } from "./services/compute-adapter";
+export {
+	type ComputeHostAdapter,
+	type ComputeHostAdapterOptions,
+	type ComputeRemoteOperation,
+	ComputeServiceAdapter,
+	createComputeServiceAdapter,
+	createUnavailableComputeService,
+} from "./services/compute-adapter";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {
 	type KnowledgeReviewControl,
