@@ -59,7 +59,7 @@ describe("knowledge file boundaries", () => {
 		});
 		expect(result.hash).toMatch(/^[a-f0-9]{64}$/);
 		expect(result.signature).toBe(fileVersion((await inspectNote(vault, path)).stat));
-		expect(relative(vault, await safeNotePath(vault, path))).toBe(path);
+		expect(relative(vault, await safeNotePath(vault, path)).replaceAll("\\\\", "/")).toBe(path);
 	});
 
 	it("rejects symlinked notes and oversized notes", async () => {
