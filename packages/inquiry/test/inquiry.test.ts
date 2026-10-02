@@ -130,8 +130,8 @@ describe("workspace promotion", () => {
 			createdAt: "2026-01-01T00:00:00.000Z",
 		};
 		const plan = planWorkspacePromotion({ layout, run, artifacts: [artifact()] });
-		expect(plan.moves[0]?.from).toBe("/tmp/project/runs/task-1/run-1/output.tsv");
-		expect(plan.moves[0]?.to).toBe("/tmp/project/results/task-1/run-1/output.tsv");
+		expect(plan.moves[0]?.from).toBe(join("/tmp/project", "runs/task-1/run-1/output.tsv"));
+		expect(plan.moves[0]?.to).toBe(join("/tmp/project", "results/task-1/run-1/output.tsv"));
 		expect(plan.indexEntries[0]?.resultPath).toBe("results/task-1/run-1/output.tsv");
 	});
 });
