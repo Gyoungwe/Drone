@@ -10,7 +10,7 @@ async function readPdfIdentity(bytes) {
     const timer = setTimeout(() => {
       void worker.terminate();
       reject(new Error("PDF identity inspection timed out; no file was changed."));
-    }, 15e3);
+    }, 3e4);
     worker.once("message", (result) => {
       clearTimeout(timer);
       void worker.terminate();

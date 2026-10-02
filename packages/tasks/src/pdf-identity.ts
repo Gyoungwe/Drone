@@ -30,7 +30,7 @@ export type PdfIdentityWorker = (
 export interface PdfIdentityOptions {
 	/** Isolated parser supplied by the host (usually a worker-thread adapter). */
 	worker: PdfIdentityWorker;
-	/** Parser wait in milliseconds, capped at 15 seconds. */
+	/** Parser wait in milliseconds, capped at 30 seconds for slower Windows worker startup. */
 	timeoutMs?: number;
 }
 
@@ -47,7 +47,7 @@ export class PdfIdentityError extends Error {
 	}
 }
 
-const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 30_000;
 const TIMEOUT = Symbol("pdf-identity-timeout");
 
 function asBytes(value: Uint8Array): Uint8Array {

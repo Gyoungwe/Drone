@@ -105,7 +105,7 @@
   - [x] consent / remaining：新增 `@drone/tasks` TS 包入口与强类型任务授权、剩余进度解释策略；包内测试和 backend `task-consent` / `task-progress` 回归通过；旧 `.pi` 文件暂作运行时兼容实现。
   - [x] evidence：新增 `@drone/tasks/evidence` TypeScript 状态机，`.pi/lib/tasks/evidence.mjs` 仅保留宿主 inspector 适配；包内 5/5 与 backend `task-workbench` 30/30 通过。
   - [x] authorization-policy：新增 `@drone/tasks/authorization-policy` 纯授权卡策略入口，包内 6 项测试通过；`.pi/lib/tasks/ask-authorization.mjs` 暂作运行时兼容实现。
-  - [x] pdf-identity：新增 `@drone/tasks/pdf-identity` 宿主注入 worker 边界，含 15 秒超时、AbortSignal 清理、页数/文本上限与稳定错误码；包内 43/43 通过；`.pi/lib/tasks/pdf-identity.mjs` 暂作 CLI worker 适配器。
+  - [x] pdf-identity：新增 `@drone/tasks/pdf-identity` 宿主注入 worker 边界，含 30 秒跨平台超时、AbortSignal 清理、页数/文本上限与稳定错误码；包内 43/43 通过；`.pi/lib/tasks/pdf-identity.mjs` 暂作 CLI worker 适配器。
   - [x] acceptance-policy：新增 `@drone/tasks/acceptance-policy`，迁移验收器注册、schema live refs、结果归一化和说明投影；包内 49/49 通过；`.pi/lib/tasks/acceptance.mjs` 仍负责 Pi 事件桥接。
   - [x] runtime：`src/runtime/*.ts` 与 checked-in `src/runtime-compiled/*.mjs` 已承载 workbench、register、acceptance、授权、PDF worker、tool manifest 和 runtime bridge；`npm run build:tasks` 同步生成无 workspace 依赖的 `.pi/lib/tasks` 兼容图，开发环境的 acceptance adapter 优先复用 typed package 注册表，隔离打包环境回退到自包含产物；tasks 包 49 项通过，因此 A5-2 总项仍只剩宿主/SDK 兼容边界。
 - [ ] **A5-3 @drone/research**：source-archive、open-access、zotero-*、institutional-access、literature-*、run-provenance、research-receipt-journal 等迁移。验收：`zotero-*`、`source-archive-*`、`institutional`、`literature-*` 测试通过。
