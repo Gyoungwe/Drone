@@ -120,12 +120,12 @@ export function cleanupCandidates(
 		})
 		.map((artifact) => ({
 			artifact,
-				reason:
-					artifact.status === "superseded"
-						? ("superseded" as const)
-						: artifact.status === "cleanup-candidate"
-							? ("unreferenced" as const)
-							: ("stale-draft" as const),
+			reason:
+				artifact.status === "superseded"
+					? ("superseded" as const)
+					: artifact.status === "cleanup-candidate"
+						? ("unreferenced" as const)
+						: ("stale-draft" as const),
 			referencedBy: [...(references.get(artifact.id) ?? [])].sort(),
 		}))
 		.sort((a, b) => a.artifact.id.localeCompare(b.artifact.id));

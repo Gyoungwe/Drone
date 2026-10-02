@@ -9,6 +9,7 @@
 		".": "./src/index.ts",
 		"./models": "./src/models.ts",
 		"./storage": "./src/storage.ts",
+		"./sqlite-storage": "./src/storage.ts",
 		"./lineage": "./src/lineage.ts",
 		"./workspace": "./src/workspace.ts"
 	},

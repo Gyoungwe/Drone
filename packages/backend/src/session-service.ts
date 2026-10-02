@@ -147,6 +147,8 @@ export interface SessionServiceOptions {
 	userDataDir?: string;
 	/** Host-owned runtime container; omitted only for direct compatibility construction. */
 	runtime?: DroneRuntime;
+	/** Optional project research-state root registered for the inquiry adapter. */
+	inquiryDir?: string;
 	/** Host-owned permission settings service; omitted for direct compatibility construction. */
 	permissions?: PermissionSettingsService;
 	/**
@@ -327,6 +329,7 @@ export class SessionService {
 			agentDir: getAgentDir(),
 			userDataDir: options.userDataDir,
 			knowledgeDir: process.env.DRONE_KNOWLEDGE_DIR,
+			inquiryDir: options.inquiryDir,
 			logDir: process.env.PI_LOG_DIR,
 		});
 		this.projectTrust = new ProjectTrustService({

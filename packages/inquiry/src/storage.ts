@@ -1,5 +1,7 @@
+import { mkdirSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { validateArtifactLineage, validateFindingReferences } from "./lineage";
 import type { ArtifactRecord, AttemptRecord, FindingRecord, InquirySnapshot, QuestionRecord } from "./models";
 
@@ -53,7 +55,7 @@ export function registerInquiryStorage(
 		{ id: INQUIRY_STORAGE_IDS.root, path: rootPath, owner: "inquiry", schema: 1, sensitivity: "private" },
 		{
 			id: INQUIRY_STORAGE_IDS.ledger,
-			path: `${rootPath.replace(/[\\/]$/, "")}/ledger.json`,
+			path: `${rootPath.replace(/[\\/]$/, "")}/ledger.sqlite`,
 			owner: "inquiry/ledger",
 			schema: 1,
 			sensitivity: "private",
@@ -68,6 +70,26 @@ interface PersistedDocument extends InquirySnapshot {
 }
 
 const queues = new Map<string, Promise<void>>();
+
+const SQLITE_TABLES = ["artifacts", "findings", "questions", "attempts"] as const;
+type SqliteLedgerKey = (typeof SQLITE_TABLES)[number];
+type LedgerRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord;
+
+interface SqliteMetaRow {
+	project_id: string;
+	schema_version: number;
+	revision: number;
+	updated_at: string;
+}
+
+interface SqlitePayloadRow {
+	payload: string;
+}
+
+function quotedTable(key: SqliteLedgerKey): string {
+	// The key is selected from a fixed tuple above; never interpolate user input.
+	return `"${key}"`;
+}
 
 function enqueue<T>(path: string, operation: () => Promise<T>): Promise<T> {
 	const previous = queues.get(path) ?? Promise.resolve();
@@ -247,6 +269,186 @@ export class FileInquiryStorage implements InquiryStorage {
 			});
 			await writeDocument(this.path, next);
 		});
+	}
+}
+
+/**
+ * Durable SQLite adapter for desktop/CLI hosts.  The domain package only
+ * depends on Node's built-in `node:sqlite`; no backend or Electron value is
+ * imported.  Each ledger has its own table, with the complete record kept as
+ * a JSON payload so schema migrations remain host-controlled and records keep
+ * their exact domain shape.
+ */
+export class SqliteInquiryStorage implements InquiryStorage {
+	readonly artifacts: ArtifactLedger;
+	readonly findings: FindingLedger;
+	readonly questions: QuestionLedger;
+	readonly attempts: AttemptLedger;
+	private readonly database: DatabaseSync;
+	private closed = false;
+
+	constructor(
+		readonly projectId: string,
+		readonly path: string,
+	) {
+		if (!projectId.trim()) throw new Error("Inquiry projectId cannot be empty");
+		if (!path.trim()) throw new Error("Inquiry SQLite path cannot be empty");
+		mkdirSync(dirname(path), { recursive: true });
+		this.database = new DatabaseSync(path);
+		this.database.exec("PRAGMA busy_timeout = 5000");
+		this.database.exec("PRAGMA foreign_keys = ON");
+		this.database.exec("PRAGMA journal_mode = WAL");
+		this.database.exec("PRAGMA synchronous = FULL");
+		this.database.exec(`
+			CREATE TABLE IF NOT EXISTS inquiry_meta (
+				project_id TEXT PRIMARY KEY NOT NULL,
+				schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+				revision INTEGER NOT NULL CHECK (revision >= 0),
+				updated_at TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS artifacts (
+				id TEXT PRIMARY KEY NOT NULL,
+				project_id TEXT NOT NULL,
+				payload TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS findings (
+				id TEXT PRIMARY KEY NOT NULL,
+				project_id TEXT NOT NULL,
+				payload TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS questions (
+				id TEXT PRIMARY KEY NOT NULL,
+				project_id TEXT NOT NULL,
+				payload TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS attempts (
+				id TEXT PRIMARY KEY NOT NULL,
+				project_id TEXT NOT NULL,
+				payload TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+		`);
+		const meta = this.database
+			.prepare("SELECT project_id, schema_version, revision, updated_at FROM inquiry_meta LIMIT 1")
+			.get() as SqliteMetaRow | undefined;
+		if (meta && meta.project_id !== projectId) {
+			this.database.close();
+			throw new Error("Inquiry SQLite ledger belongs to another project");
+		}
+		if (!meta) {
+			this.database
+				.prepare(
+					"INSERT INTO inquiry_meta (project_id, schema_version, revision, updated_at) VALUES (?, 1, 0, ?)",
+				)
+				.run(projectId, new Date(0).toISOString());
+		}
+		this.artifacts = new SqliteLedgerCollection<ArtifactRecord>(this, "artifacts");
+		this.findings = new SqliteLedgerCollection<FindingRecord>(this, "findings");
+		this.questions = new SqliteLedgerCollection<QuestionRecord>(this, "questions");
+		this.attempts = new SqliteLedgerCollection<AttemptRecord>(this, "attempts");
+	}
+
+	async snapshot(): Promise<InquirySnapshot> {
+		return this.snapshotSync();
+	}
+
+	private snapshotSync(): InquirySnapshot {
+		this.assertOpen();
+		const meta = this.database
+			.prepare("SELECT project_id, schema_version, revision, updated_at FROM inquiry_meta LIMIT 1")
+			.get() as SqliteMetaRow | undefined;
+		if (!meta || meta.project_id !== this.projectId || meta.schema_version !== 1)
+			throw new Error("Invalid inquiry SQLite metadata");
+		const read = <T extends LedgerRecord>(key: SqliteLedgerKey): readonly T[] =>
+			(
+				this.database
+					.prepare(`SELECT payload FROM ${quotedTable(key)} WHERE project_id = ? ORDER BY id ASC`)
+					.all(this.projectId) as unknown as SqlitePayloadRow[]
+			).map((row) => JSON.parse(row.payload) as T);
+		return {
+			schemaVersion: 1,
+			projectId: this.projectId,
+			revision: meta.revision,
+			updatedAt: meta.updated_at,
+			artifacts: read<ArtifactRecord>("artifacts"),
+			findings: read<FindingRecord>("findings"),
+			questions: read<QuestionRecord>("questions"),
+			attempts: read<AttemptRecord>("attempts"),
+		};
+	}
+
+	async update(key: SqliteLedgerKey, record: LedgerRecord): Promise<void> {
+		return enqueue(this.path, async () => {
+			this.assertOpen();
+			this.database.exec("BEGIN IMMEDIATE");
+			try {
+				const current = this.snapshotSync();
+				this.validateRecord(key, record, current);
+				const updatedAt = new Date().toISOString();
+				this.database
+					.prepare(
+						`INSERT INTO ${quotedTable(key)} (id, project_id, payload, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET project_id = excluded.project_id, payload = excluded.payload, updated_at = excluded.updated_at`,
+					)
+					.run(record.id, this.projectId, JSON.stringify(record), updatedAt);
+				this.database
+					.prepare("UPDATE inquiry_meta SET revision = revision + 1, updated_at = ? WHERE project_id = ?")
+					.run(updatedAt, this.projectId);
+				this.database.exec("COMMIT");
+			} catch (error) {
+				try {
+					this.database.exec("ROLLBACK");
+				} catch {
+					// Preserve the original validation/SQLite error.
+				}
+				throw error;
+			}
+		});
+	}
+
+	private validateRecord(key: SqliteLedgerKey, record: LedgerRecord, current: InquirySnapshot): void {
+		if (!record.id || record.projectId !== this.projectId || record.schemaVersion !== 1)
+			throw new Error(`Invalid ${key.slice(0, -1)} record`);
+		if (key === "artifacts") {
+			const errors = validateArtifactLineage(record as ArtifactRecord, current.artifacts);
+			if (errors.length) throw new Error(`Invalid artifact record: ${errors.join("; ")}`);
+		}
+		if (key === "findings") {
+			const errors = validateFindingReferences(record as FindingRecord, current);
+			if (errors.length) throw new Error(`Invalid finding record: ${errors.join("; ")}`);
+		}
+	}
+
+	private assertOpen(): void {
+		if (this.closed) throw new Error("Inquiry SQLite storage is closed");
+	}
+
+	async close(): Promise<void> {
+		if (this.closed) return;
+		this.closed = true;
+		this.database.close();
+	}
+}
+
+class SqliteLedgerCollection<T extends { readonly id: string }> implements LedgerCollection<T> {
+	constructor(
+		private readonly owner: SqliteInquiryStorage,
+		private readonly key: SqliteLedgerKey,
+	) {}
+
+	async get(id: string): Promise<T | undefined> {
+		return (await this.list()).find((record) => record.id === id);
+	}
+
+	async list(): Promise<readonly T[]> {
+		const snapshot = await this.owner.snapshot();
+		return snapshot[this.key] as unknown as readonly T[];
+	}
+
+	async put(record: T): Promise<void> {
+		await this.owner.update(this.key, record as unknown as LedgerRecord);
 	}
 }
 

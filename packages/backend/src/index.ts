@@ -123,6 +123,7 @@ export {
 	createComputeServiceAdapter,
 	createUnavailableComputeService,
 } from "./services/compute-adapter";
+export { InquiryService, type InquiryServiceOptions, type InquiryServicePort } from "./services/inquiry";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {
 	type KnowledgeReviewControl,
