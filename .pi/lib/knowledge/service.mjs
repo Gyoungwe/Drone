@@ -11,6 +11,6 @@ import {
 
 configureKnowledgeRuntime({ runRuntimeExclusive, runtimeSlot, emitProcessEvent });
 configureKnowledgeEvidence({ hasPaperCitation, requiresPaperEvidence });
-configureKnowledgeWorker((_url, options) => new Worker(new URL("./worker.mjs", import.meta.url), options));
+configureKnowledgeWorker((_url, options) => new Worker(new URL("./runtime/worker.mjs", import.meta.url), options));
 
 export * from "./runtime/service.mjs";

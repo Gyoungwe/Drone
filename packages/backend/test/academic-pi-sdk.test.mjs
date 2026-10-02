@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { fauxProvider } from "@earendil-works/pi-ai";
+import { fauxAssistantMessage, fauxProvider, getCurrentSystemPrompt } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { researchSkillPackPaths } from "../../desktop/src/main/research-skill-packs";
@@ -10,7 +10,7 @@ import { PiBackend } from "../src/pi-backend";
 
 const packs = resolve(import.meta.dirname, "../../desktop/resources/research-skills");
 const installed = existsSync(join(packs, "academic/.drone-pack.json"));
-let root, backend, modelRuntime, cwd, faux, paths, session;
+let root, backend, modelRuntime, cwd, faux, paths, session, observedSystemPrompt;
 describe.skipIf(!installed)("ARS through the real PiBackend / SDK session (offline faux provider)", () => {
 	beforeEach(async () => {
 		root = await realpath(await mkdtemp(join(tmpdir(), "drone-ars-sdk-")));
@@ -27,6 +27,7 @@ describe.skipIf(!installed)("ARS through the real PiBackend / SDK session (offli
 			refreshOnCreate: false,
 		});
 		faux = fauxProvider({ provider: "ars-offline-smoke" });
+		observedSystemPrompt = "";
 		modelRuntime.registerNativeProvider(faux.provider);
 		vi.spyOn(modelRuntime, "hasConfiguredAuth").mockReturnValue(true);
 		paths = researchSkillPackPaths(packs, { includeAcademic: true });
@@ -69,6 +70,13 @@ describe.skipIf(!installed)("ARS through the real PiBackend / SDK session (offli
 		expect(commands.some((c) => c.name === "ars-pi-start")).toBe(true);
 		session = backend.registry.get(sid).session;
 		const send = async (text) => {
+			observedSystemPrompt = "";
+			faux.setResponses([
+				(context) => {
+					observedSystemPrompt = getCurrentSystemPrompt(context.messages);
+					return fauxAssistantMessage("ok");
+				},
+			]);
 			await backend.prompt(sid, text);
 			await session.waitForIdle();
 		};
@@ -79,7 +87,7 @@ describe.skipIf(!installed)("ARS through the real PiBackend / SDK session (offli
 				["academic-pipeline", "academic-paper", "academic-paper-reviewer", "deep-research"].includes(n),
 			),
 		).toEqual(["academic-pipeline"]);
-		expect(session.agent.state.systemPrompt).toContain("Academic Research Skills compatibility for Pi");
+		expect(observedSystemPrompt).toContain("Academic Research Skills compatibility for Pi");
 		const message = session.messages.find(
 			(m) =>
 				m.role === "user" &&
@@ -88,7 +96,8 @@ describe.skipIf(!installed)("ARS through the real PiBackend / SDK session (offli
 		);
 		expect(message).toBeTruthy();
 		await send("你好");
-		expect(session.agent.state.systemPrompt).not.toContain("Academic Research Skills compatibility for Pi");
+		expect(observedSystemPrompt).not.toBe("");
+		expect(observedSystemPrompt).not.toContain("Academic Research Skills compatibility for Pi");
 		expect((await backend.getLoadedResources(sid)).capabilities.visibleSkills).toEqual([]);
 		await send("/ars-plan topic");
 		await send("/ars-pi-stop");
@@ -96,7 +105,8 @@ describe.skipIf(!installed)("ARS through the real PiBackend / SDK session (offli
 		expect((await backend.getLoadedResources(sid)).capabilities.visibleSkills).not.toContain(
 			"academic-paper",
 		);
-		expect(session.agent.state.systemPrompt).not.toContain("Academic Research Skills compatibility for Pi");
+		expect(observedSystemPrompt).not.toBe("");
+		expect(observedSystemPrompt).not.toContain("Academic Research Skills compatibility for Pi");
 	}, 30000);
 	it("rejects installing the vanilla wrapper and host bridge together", async () => {
 		backend = makeBackend([join(paths.academicPiRoot, "pi/wrapper.js")]);

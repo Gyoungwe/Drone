@@ -87,6 +87,8 @@ jobs:
       - run: npm test -w @drone/knowledge
       - run: npm test -w @drone/tasks
       - run: npm test -w @drone/research
+      - run: npm test -w @drone/compute
+      - run: npm test -w @drone/inquiry
       - run: npm run check:knowledge-runtime
       - run: npm run check:tasks-runtime
       - run: npm run check:research-runtime
