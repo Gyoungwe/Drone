@@ -1,10 +1,10 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { readKnowledgeBinding } from "@drone/knowledge/config";
 import { KNOWLEDGE_SPECIALISTS } from "@drone/shared";
 import { fauxToolCall as call, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
 import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
 import { validateSpecialistHtml } from "../../../.pi/lib/knowledge/specialist-delivery.mjs";
 import {

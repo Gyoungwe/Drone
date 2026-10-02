@@ -2,10 +2,10 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promis
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { readKnowledgeBinding } from "@drone/knowledge/config";
 import { embedTexts, validateSemanticConfig } from "@drone/knowledge/semantic-provider";
+import { readSemanticSettings } from "@drone/knowledge/semantic-settings";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
-import { readSemanticSettings } from "../../../.pi/lib/knowledge/semantic-settings.mjs";
 import { closeKnowledgeServices, KnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
 import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 

@@ -3,15 +3,6 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { normalizeSourceLinks } from "@drone/knowledge";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { parse } from "yaml";
-import zoteroLiterature, {
-	identifyZoteroReceipt,
-	registerZoteroAcceptance,
-} from "../../../.pi/extensions/zotero-literature.mjs";
-import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
-import { configureObsidian, depositKnowledge } from "../../../.pi/lib/obsidian-workbench.mjs";
-import { resetAcceptanceVerifiers } from "../../../.pi/lib/tasks/acceptance.mjs";
 import {
 	bootstrapZotero,
 	inspectZotero,
@@ -21,7 +12,16 @@ import {
 	setupZoteroAgentMessage,
 	uvBootstrapCommand,
 	zoteroMcpSpec,
-} from "../../../.pi/lib/zotero-setup.mjs";
+} from "@drone/research/zotero-setup-runtime";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { parse } from "yaml";
+import zoteroLiterature, {
+	identifyZoteroReceipt,
+	registerZoteroAcceptance,
+} from "../../../.pi/extensions/zotero-literature.mjs";
+import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
+import { configureObsidian, depositKnowledge } from "../../../.pi/lib/obsidian-workbench.mjs";
+import { resetAcceptanceVerifiers } from "../../../.pi/lib/tasks/acceptance.mjs";
 import { detectCapabilities, toolCapabilities } from "../src/capabilities/runtime";
 
 let root, cwd, vault, agentDir;

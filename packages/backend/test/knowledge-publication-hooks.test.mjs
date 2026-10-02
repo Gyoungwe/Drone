@@ -1,6 +1,6 @@
+import { projectKnowledgeEvent, registerAnswerPublication } from "@drone/knowledge/publication";
 import { createTaskFeedback } from "@drone/knowledge/task-feedback";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { projectKnowledgeEvent, registerAnswerPublication } from "../../../.pi/lib/knowledge/publication.mjs";
 
 function harness(
 	validate = async () => ({ status: "ready", sources: [], scientificallyVerified: false }),

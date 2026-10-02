@@ -179,6 +179,7 @@ export {
 	resolveInstallers,
 	resolveZoteroCommands,
 	setupZoteroAgentMessage,
+	uvBootstrapCommand,
 } from "./zotero-setup-runtime";
 export {
 	type ConnectorZoteroItem,
@@ -198,6 +199,7 @@ export {
 } from "./zotero-write";
 export {
 	connectorSaveTarget,
+	describeZoteroSavePlan,
 	executeZoteroSave,
 	localApiChildren,
 	localApiSearchByDoi,

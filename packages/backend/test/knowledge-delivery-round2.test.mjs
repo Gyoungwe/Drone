@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { normalizeSourceLinks } from "@drone/knowledge";
+import { assessManualPage, deliveryContract } from "@drone/research/source-delivery";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { registerWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
 import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
@@ -12,7 +13,6 @@ import {
 	noteKnowledgeSearch,
 } from "../../../.pi/lib/knowledge/ui-state.mjs";
 import { configureObsidian, depositKnowledge } from "../../../.pi/lib/obsidian-workbench.mjs";
-import { assessManualPage, deliveryContract } from "../../../.pi/lib/source-delivery.mjs";
 import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
 
 // KnowledgeFlow 回执卡由扩展的 drone.flowCards 贡献（挂钩 3）：先登记声明

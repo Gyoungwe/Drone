@@ -1,5 +1,5 @@
+import { stageWikiProposal, validateWikiSourcePaths } from "@drone/knowledge/wiki-review";
 import { expect, it } from "vitest";
-import { stageWikiProposal, validateWikiSourcePaths } from "../../../.pi/lib/knowledge/wiki-review.mjs";
 
 it.each(["results/run/paper.pdf", "https://example.org/paper", "../outside.md", "C:\\outside.md"])(
 	"reports the source field before trying any binding or write: %s",

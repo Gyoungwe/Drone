@@ -2,10 +2,10 @@ import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } fr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { readKnowledgeBinding, saveKnowledgeBinding } from "@drone/knowledge/config";
 import { buildKnowledgeSearchExpression } from "@drone/knowledge/search-policy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadWorkspaceConfig, saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
-import { readKnowledgeBinding, saveKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
 import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension.mjs";
 import { runNavigationMaintenance } from "../../../.pi/lib/knowledge/maintenance.mjs";
 import {

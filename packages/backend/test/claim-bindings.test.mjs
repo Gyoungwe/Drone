@@ -1,5 +1,5 @@
+import { validateClaimBindings } from "@drone/research/claim-bindings";
 import { expect, it } from "vitest";
-import { validateClaimBindings } from "../../../.pi/lib/claim-bindings.mjs";
 
 const path = "Library/Papers/example.md",
 	hash = "abc",

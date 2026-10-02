@@ -3,12 +3,6 @@
   "findings": [
     {
       "rule": "R5",
-      "file": "packages/backend/test/claim-bindings.test.mjs",
-      "line": 2,
-      "detail": "relative .pi path ../../../.pi/lib/claim-bindings.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/command-catalog.test.ts",
       "line": 83,
       "detail": "relative .pi path ../../../.pi/skills/zotero-literature/SKILL.md"
@@ -40,50 +34,38 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
-      "line": 6,
+      "line": 7,
       "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
-      "line": 7,
+      "line": 8,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
-      "line": 13,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-state.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
       "line": 14,
-      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/ui-state.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-delivery-round2.test.mjs",
       "line": 15,
-      "detail": "relative .pi path ../../../.pi/lib/source-delivery.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-lifecycle-extension.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-lifecycle-extension.test.mjs",
       "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-lifecycle-extension.test.mjs",
       "line": 8,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/topic-memory.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
     },
     {
       "rule": "R5",
@@ -153,12 +135,6 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/knowledge-publication-hooks.test.mjs",
-      "line": 3,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/publication.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/knowledge-publication.test.mjs",
       "line": 5,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/publication.mjs"
@@ -190,18 +166,6 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-semantic.test.mjs",
-      "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-semantic.test.mjs",
-      "line": 8,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/semantic-settings.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-semantic.test.mjs",
       "line": 9,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
     },
@@ -214,14 +178,8 @@
     {
       "rule": "R5",
       "file": "packages/backend/test/knowledge-service.test.mjs",
-      "line": 7,
-      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-service.test.mjs",
       "line": 8,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
+      "detail": "relative .pi path ../../../.pi/extensions/workspace-config.mjs"
     },
     {
       "rule": "R5",
@@ -282,12 +240,6 @@
       "file": "packages/backend/test/knowledge-specialists-sdk.test.mjs",
       "line": 16,
       "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/knowledge-specialists.test.mjs",
-      "line": 7,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/config.mjs"
     },
     {
       "rule": "R5",
@@ -525,12 +477,6 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/task-reconciliation.test.mjs",
-      "line": 8,
-      "detail": "relative .pi path ../../../.pi/lib/zotero-reconcile.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/tool-manifest-fixture.mjs",
       "line": 3,
       "detail": "relative .pi path ../../../.pi/extensions/research-loop.mjs"
@@ -552,12 +498,6 @@
       "file": "packages/backend/test/tool-manifest-fixture.mjs",
       "line": 6,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/extension.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/topic-memory.test.mjs",
-      "line": 5,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/topic-memory.mjs"
     },
     {
       "rule": "R5",
@@ -633,39 +573,27 @@
     },
     {
       "rule": "R5",
-      "file": "packages/backend/test/wiki-source-contract.test.mjs",
-      "line": 2,
-      "detail": "relative .pi path ../../../.pi/lib/knowledge/wiki-review.mjs"
-    },
-    {
-      "rule": "R5",
       "file": "packages/backend/test/zotero-literature.test.mjs",
-      "line": 11,
+      "line": 21,
       "detail": "relative .pi path ../../../.pi/extensions/zotero-literature.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/zotero-literature.test.mjs",
-      "line": 12,
+      "line": 22,
       "detail": "relative .pi path ../../../.pi/lib/knowledge/service.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/zotero-literature.test.mjs",
-      "line": 13,
+      "line": 23,
       "detail": "relative .pi path ../../../.pi/lib/obsidian-workbench.mjs"
     },
     {
       "rule": "R5",
       "file": "packages/backend/test/zotero-literature.test.mjs",
-      "line": 14,
-      "detail": "relative .pi path ../../../.pi/lib/tasks/acceptance.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/zotero-literature.test.mjs",
       "line": 24,
-      "detail": "relative .pi path ../../../.pi/lib/zotero-setup.mjs"
+      "detail": "relative .pi path ../../../.pi/lib/tasks/acceptance.mjs"
     },
     {
       "rule": "R5",
@@ -708,18 +636,6 @@
       "file": "packages/backend/test/zotero-save-tool.test.mjs",
       "line": 10,
       "detail": "relative .pi path ../../../.pi/lib/tasks/workbench.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/zotero-write.test.mjs",
-      "line": 6,
-      "detail": "relative .pi path ../../../.pi/lib/zotero-reconcile.mjs"
-    },
-    {
-      "rule": "R5",
-      "file": "packages/backend/test/zotero-write.test.mjs",
-      "line": 12,
-      "detail": "relative .pi path ../../../.pi/lib/zotero-write.mjs"
     }
   ]
 }

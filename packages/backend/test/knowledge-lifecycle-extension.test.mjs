@@ -2,10 +2,10 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createTopicMemory } from "@drone/knowledge/topic-memory";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension.mjs";
 import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
-import { createTopicMemory } from "../../../.pi/lib/knowledge/topic-memory.mjs";
 import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
 let root, project, vault, app;

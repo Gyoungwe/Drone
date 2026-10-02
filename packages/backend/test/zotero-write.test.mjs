@@ -1,15 +1,15 @@
-import { normalizeZoteroItem, toConnectorItem, toWebApiItem } from "@drone/research/zotero-write";
-import { describe, expect, it, vi } from "vitest";
 import {
 	createCompositeZoteroReconciler,
 	createLocalZoteroReconciler,
-} from "../../../.pi/lib/zotero-reconcile.mjs";
+} from "@drone/research/zotero-reconcile-runtime";
+import { normalizeZoteroItem, toConnectorItem, toWebApiItem } from "@drone/research/zotero-write";
 import {
 	describeZoteroSavePlan,
 	executeZoteroSave,
 	prepareZoteroSave,
 	receiptWithoutWrite,
-} from "../../../.pi/lib/zotero-write.mjs";
+} from "@drone/research/zotero-write-runtime";
+import { describe, expect, it, vi } from "vitest";
 
 const DOI = "10.1234/example.2024";
 const ITEM = {

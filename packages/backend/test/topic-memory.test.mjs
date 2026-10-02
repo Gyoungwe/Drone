@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, readFile, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createTopicMemory, topicRunHash } from "@drone/knowledge/topic-memory";
 import { describe, expect, it } from "vitest";
-import { createTopicMemory, topicRunHash } from "../../../.pi/lib/knowledge/topic-memory.mjs";
 
 const binding = { vaultId: "0123456789abcdef01234567" };
 const source = (path, fill = "a") => ({ path, hash: fill.repeat(64).slice(0, 64) });

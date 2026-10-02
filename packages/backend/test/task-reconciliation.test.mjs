@@ -3,9 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { findZoteroItemsByIdentity } from "@drone/research/zotero-identity";
 import { lookupZoteroByDoi } from "@drone/research/zotero-reconcile";
+import { createZoteroReconciler } from "@drone/research/zotero-reconcile-runtime";
 import { createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { expect, it, vi } from "vitest";
-import { createZoteroReconciler } from "../../../.pi/lib/zotero-reconcile.mjs";
 
 vi.setConfig({ testTimeout: 30000 });
 function pdf(text) {
