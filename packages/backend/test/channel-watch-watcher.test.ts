@@ -75,6 +75,8 @@ describe("ChannelWatcher（fs.watch 模式）", () => {
 			debounceMs: 150,
 		});
 		await w.start();
+		// Let the native watcher finish attaching before the first file mutation.
+		await sleep(10);
 		try {
 			await writeFile(join(root, "t2/A.md"), "a", { flag: "w" });
 			// Wait for the actual debounced event rather than assuming fs.watch latency under concurrent builds.

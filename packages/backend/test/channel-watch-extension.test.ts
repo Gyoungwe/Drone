@@ -1,7 +1,7 @@
 import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildWakeMessage, makeChannelWatchExtension } from "../src/tools/channel-watch/extension";
 import { formatPostEntry } from "../src/tools/channel-watch/post";
 import {
@@ -73,6 +73,10 @@ afterAll(async () => {
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((r) => setTimeout(r, ms));
+}
+
+async function waitForWakeCount(pi: ReturnType<typeof makeFakePi>, count: number): Promise<void> {
+	await vi.waitFor(() => expect(pi.wakes).toHaveLength(count), { timeout: 2_000, interval: 25 });
 }
 
 async function wire(opts: { cwd: string; trusted?: boolean; entries?: unknown[]; enabled?: boolean }) {
@@ -171,8 +175,7 @@ describe("extension 全链路", () => {
 		// 另一会话 post（模拟对端写 MESSAGES.md，不经本会话 tool_call → 非自写）
 		const mf = join(cwd, ".local/agent-work/channel/t1/MESSAGES.md");
 		await writeFile(mf, "## 2026-08-25 10:00 · abc\n\nhi\n\n---\n");
-		await sleep(EVENT_SETTLE_MS);
-		expect(pi.wakes).toHaveLength(1);
+		await waitForWakeCount(pi, 1);
 		expect(pi.wakes[0]).toMatch(
 			/^\[channel:t1\] 有新消息（\d{2}:\d{2}:\d{2}），请读 \.local\/agent-work\/channel\/t1\/MESSAGES\.md 查收。$/,
 		);
@@ -182,8 +185,7 @@ describe("extension 全链路", () => {
 		expect(pi.wakes).toHaveLength(1);
 		// 内容变化（新消息 append）→ 再唤醒
 		await appendFile(mf, "## 2026-08-25 10:01 · abc\n\nsecond\n\n---\n");
-		await sleep(EVENT_SETTLE_MS);
-		expect(pi.wakes).toHaveLength(2);
+		await waitForWakeCount(pi, 2);
 	}, 60_000);
 
 	it("自写抑制：本会话 write MESSAGES.md 目标在窗口内不唤醒", async () => {
@@ -246,20 +248,22 @@ describe("extension 全链路", () => {
 		expect(r.content[0]?.text).toContain("t1：已订阅");
 		await mkdir(join(cwd, ".local/agent-work/channel/t1"), { recursive: true });
 		await writeFile(join(cwd, ".local/agent-work/channel/t1/MESSAGES.md"), "## t\n\nv1\n\n---\n");
-		await sleep(EVENT_SETTLE_MS);
-		expect(pi.wakes).toHaveLength(1);
+		await waitForWakeCount(pi, 1);
 	}, 60_000);
 
 	it("乒乓上限：连续唤醒 6 次后暂停 + notify", async () => {
 		const cwd = join(testRoot, "pingpong");
 		const { pi } = await wire({ cwd });
 		await subscribe(pi, "pp");
+		// subscribe starts the watcher lazily; let its async startup settle before the first write.
+		await sleep(10);
 		const dir = join(cwd, ".local/agent-work/channel/pp");
 		await mkdir(dir, { recursive: true });
 		const before = notifications.length;
 		for (let i = 0; i < 8; i++) {
 			await writeFile(join(dir, "MESSAGES.md"), `v${i}\n`);
-			await sleep(EVENT_SETTLE_MS);
+			if (i < 6) await waitForWakeCount(pi, i + 1);
+			else await sleep(EVENT_SETTLE_MS);
 		}
 		// 前 5 次投递 + 第 6 次触发暂停（投递后计数）→ 总投递 6 次，后续 2 次被暂停拦截
 		expect(pi.wakes.length).toBe(6);
@@ -277,11 +281,12 @@ describe("extension 全链路", () => {
 		const cwd = join(testRoot, "userinput");
 		const { pi } = await wire({ cwd });
 		await subscribe(pi, "t1");
+		await sleep(10);
 		const dir = join(cwd, ".local/agent-work/channel/t1");
 		await mkdir(dir, { recursive: true });
 		for (let i = 0; i < 3; i++) {
 			await writeFile(join(dir, "MESSAGES.md"), `v${i}\n`);
-			await sleep(EVENT_SETTLE_MS);
+			await waitForWakeCount(pi, i + 1);
 		}
 		expect(pi.wakes).toHaveLength(3);
 		// 真人消息（source 非 extension）→ 计数清零
@@ -289,7 +294,7 @@ describe("extension 全链路", () => {
 		// 再 3 次不会到 6
 		for (let i = 3; i < 6; i++) {
 			await writeFile(join(dir, "MESSAGES.md"), `v${i}\n`);
-			await sleep(EVENT_SETTLE_MS);
+			await waitForWakeCount(pi, i + 1);
 		}
 		expect(pi.wakes).toHaveLength(6); // 无暂停，全部投递
 		const list = pi.tools.find((t) => t.name === "channel_list");
@@ -354,6 +359,7 @@ describe("channel_post", () => {
 		const a = await wire({ cwd }); // 会话 A：不订阅，只发
 		const b = await wire({ cwd }); // 会话 B：订阅 t1
 		await subscribe(b.pi, "t1");
+		await sleep(10);
 		const r = (await findPost(a.pi).execute("tc-p1", {
 			topic: "t1",
 			message: "进展同步：阶段 1 完成",
@@ -364,8 +370,7 @@ describe("channel_post", () => {
 		expect(content).toContain("进展同步：阶段 1 完成");
 		expect(content).toContain("s-test");
 		expect(content).not.toContain("[CLOSED]");
-		await sleep(EVENT_SETTLE_MS);
-		expect(b.pi.wakes).toHaveLength(1);
+		await waitForWakeCount(b.pi, 1);
 		expect(b.pi.wakes[0]).toContain("[channel:t1] 有新消息");
 		expect(a.pi.wakes).toHaveLength(0);
 	}, 60_000);

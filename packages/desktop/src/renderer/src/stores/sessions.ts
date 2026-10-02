@@ -15,6 +15,63 @@ export function isDraftSessionId(sessionId: string | null | undefined): boolean 
 	return typeof sessionId === "string" && sessionId.startsWith(DRAFT_SESSION_PREFIX);
 }
 
+const OPENAI_CODEX_PROVIDER = "openai-codex";
+const OPENAI_CODEX_PREFERRED_MODELS = ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-astra"] as const;
+// 这些是 0.13.0 内置目录里作为首选项留下的旧 Codex 模型。用户明确选择的
+// 其它旧模型仍然保留，升级只迁移 SDK 升级前自动选中的默认值。
+const LEGACY_OPENAI_CODEX_DEFAULTS = new Set([
+	"gpt-5.3-codex",
+	"gpt-5.3-codex-spark",
+	"gpt-5.6-sol",
+]);
+
+type ModelRef = { provider: string; modelId: string };
+
+function latestOpenAICodexModel(models: AvailableModel[]): AvailableModel | undefined {
+	for (const modelId of OPENAI_CODEX_PREFERRED_MODELS) {
+		const model = models.find(
+			(candidate) => candidate.provider === OPENAI_CODEX_PROVIDER && candidate.id === modelId,
+		);
+		if (model) return model;
+	}
+	return undefined;
+}
+
+/**
+ * Choose the initial model after a provider/catalog refresh.
+ *
+ * Pi 1.0.0 appends GPT-6.1 Sol to the Codex catalog, while the old catalog
+ * starts with GPT-5.3 Codex Spark. Keep an explicit user choice intact, but
+ * migrate that known automatic default and prefer the newest Codex model for
+ * a newly authenticated account.
+ */
+export function chooseInitialModel(
+	models: AvailableModel[],
+	savedModel: ModelRef | null,
+	currentModel: ModelRef | null,
+): { model: ModelRef | null; migrated: boolean } {
+	const available = (ref: ModelRef | null): ModelRef | null =>
+		ref && models.some((candidate) => candidate.provider === ref.provider && candidate.id === ref.modelId)
+			? ref
+			: null;
+
+	const saved = available(savedModel);
+	if (saved && saved.provider === OPENAI_CODEX_PROVIDER && LEGACY_OPENAI_CODEX_DEFAULTS.has(saved.modelId)) {
+		const preferred = latestOpenAICodexModel(models);
+		if (preferred) return { model: { provider: preferred.provider, modelId: preferred.id }, migrated: true };
+	}
+
+	const retained = saved ?? available(currentModel);
+	if (retained) return { model: retained, migrated: false };
+
+	const preferredCodex = latestOpenAICodexModel(models.filter((model) => model.authed));
+	const fallback = preferredCodex ?? models.find((model) => model.authed) ?? models[0];
+	return {
+		model: fallback ? { provider: fallback.provider, modelId: fallback.id } : null,
+		migrated: false,
+	};
+}
+
 /**
  * 打开会话时同步四件套：消息历史（可选跳过 live 态）、排队队列、todo 面板、权限模式。
  * 取数并行（各写 store 不同字段，无交叉读），应用顺序保持 history → queue → todos。
@@ -384,19 +441,14 @@ export const useSessionsStore = create<SessionsStore>((set, get) => ({
 	loadModels: async () => {
 		try {
 			const models = await getPi().listModels();
-			// 复用上次使用的模型/思考级别（失效则回退到第一个可用模型）
+			// 复用上次使用的模型/思考级别；SDK 升级后迁移旧 Codex 默认到最新模型。
 			const saved = await getPi().loadUiState();
-			const savedModel =
-				saved?.currentModel &&
-				models.some(
-					(m) => m.provider === saved.currentModel?.provider && m.id === saved.currentModel?.modelId,
-				)
-					? saved.currentModel
-					: null;
 			const current = get().currentModel;
-			const fallback = models.find((m) => m.authed) ?? models[0];
-			const nextCurrentModel =
-				savedModel ?? current ?? (fallback ? { provider: fallback.provider, modelId: fallback.id } : null);
+			const { model: nextCurrentModel, migrated } = chooseInitialModel(
+				models,
+				saved?.currentModel ?? null,
+				current,
+			);
 			// 持久化级别也按当前选中模型的能力夹紧（避免恢复后 store 与 UI/SDK 实际生效值不一致）
 			const nextModelRecord = nextCurrentModel
 				? models.find((m) => m.provider === nextCurrentModel.provider && m.id === nextCurrentModel.modelId)
@@ -412,6 +464,11 @@ export const useSessionsStore = create<SessionsStore>((set, get) => ({
 				currentModel: nextCurrentModel,
 				thinkingLevel: clampedLevel,
 			});
+			if (migrated && nextCurrentModel) {
+				getPi()
+					.saveUiState({ currentModel: nextCurrentModel })
+					.catch((error) => console.error("模型默认迁移持久化失败", error));
+			}
 		} catch (error) {
 			console.error("加载模型列表失败", error);
 			pushToast("warning", "toast.modelsLoadFailed", errText(error));

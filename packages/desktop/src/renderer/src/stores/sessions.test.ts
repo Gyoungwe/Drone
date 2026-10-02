@@ -20,7 +20,7 @@ const piMock = vi.hoisted(() => ({
 }));
 vi.mock("../api", () => ({ getPi: () => piMock }));
 
-import { DRAFT_SESSION_PREFIX, isDraftSessionId, useSessionsStore } from "./sessions";
+import { chooseInitialModel, DRAFT_SESSION_PREFIX, isDraftSessionId, useSessionsStore } from "./sessions";
 import { useToastsStore } from "./toasts";
 import { useTranscriptStore } from "./transcript";
 
@@ -310,6 +310,98 @@ describe("reorderSessions（拖拽排序）", () => {
 });
 
 describe("模型/思考级别", () => {
+	it("升级后把旧的 Codex 自动默认迁移到 GPT-6.1 Sol", () => {
+		const models = [
+			{
+				provider: "openai-codex",
+				providerName: "OpenAI Codex",
+				id: "gpt-5.3-codex-spark",
+				label: "GPT-5.3 Codex Spark",
+				authed: true,
+			},
+			{
+				provider: "openai-codex",
+				providerName: "OpenAI Codex",
+				id: "gpt-6.1-sol",
+				label: "GPT-6.1 Sol",
+				authed: true,
+			},
+		];
+		const result = chooseInitialModel(
+			models,
+			{ provider: "openai-codex", modelId: "gpt-5.3-codex-spark" },
+			null,
+		);
+		expect(result).toEqual({ model: { provider: "openai-codex", modelId: "gpt-6.1-sol" }, migrated: true });
+	});
+
+	it("升级后把旧版本保存的 GPT-5.6 Sol 默认迁移到 GPT-6.1 Sol", () => {
+		const models = [
+			{
+				provider: "openai-codex",
+				providerName: "OpenAI Codex",
+				id: "gpt-5.6-sol",
+				label: "GPT-5.6 Sol",
+				authed: true,
+			},
+			{
+				provider: "openai-codex",
+				providerName: "OpenAI Codex",
+				id: "gpt-6.1-sol",
+				label: "GPT-6.1 Sol",
+				authed: true,
+			},
+		];
+		const result = chooseInitialModel(
+			models,
+			{ provider: "openai-codex", modelId: "gpt-5.6-sol" },
+			null,
+		);
+		expect(result).toEqual({ model: { provider: "openai-codex", modelId: "gpt-6.1-sol" }, migrated: true });
+	});
+
+	it("保留用户明确选择的旧 Codex 模型", () => {
+		const models = [
+			{
+				provider: "openai-codex",
+				providerName: "OpenAI Codex",
+				id: "gpt-5.5",
+				label: "GPT-5.5",
+				authed: true,
+			},
+			{
+				provider: "openai-codex",
+				providerName: "OpenAI Codex",
+				id: "gpt-6.1-sol",
+				label: "GPT-6.1 Sol",
+				authed: true,
+			},
+		];
+		const result = chooseInitialModel(models, { provider: "openai-codex", modelId: "gpt-5.5" }, null);
+		expect(result).toEqual({ model: { provider: "openai-codex", modelId: "gpt-5.5" }, migrated: false });
+	});
+
+	it("新认证的 Codex 账户默认使用最新可用模型", () => {
+		const models = [
+			{
+				provider: "openai-codex",
+				providerName: "OpenAI Codex",
+				id: "gpt-5.3-codex-spark",
+				label: "GPT-5.3 Codex Spark",
+				authed: true,
+			},
+			{
+				provider: "openai-codex",
+				providerName: "OpenAI Codex",
+				id: "gpt-6.1-sol",
+				label: "GPT-6.1 Sol",
+				authed: true,
+			},
+		];
+		const result = chooseInitialModel(models, null, null);
+		expect(result).toEqual({ model: { provider: "openai-codex", modelId: "gpt-6.1-sol" }, migrated: false });
+	});
+
 	it("draft 下切换模型：只更新全局默认与 draft 条目，不调后端 setModel", async () => {
 		useSessionsStore.getState().createDraftSession("/proj/a");
 		await useSessionsStore.getState().setCurrentModel("p", "m");

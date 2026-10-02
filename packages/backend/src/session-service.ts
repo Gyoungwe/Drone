@@ -1195,7 +1195,10 @@ export class SessionService {
 			// 手动回退 leaf 并同步内存上下文（与 navigateTree 内部做的事一致）
 			if (target.parentId) sm.branch(target.parentId);
 			else sm.resetLeaf();
-			entry.session.agent.state.messages = sm.buildSessionContext().messages;
+			// SDK 1.0 keeps the agent transcript projection internally; assigning
+			// agent.state.messages no longer changes the next provider request.
+			// Refresh the projection after moving the session-manager leaf instead.
+			entry.session.refreshContext();
 		} else {
 			const result = await entry.session.navigateTree(targetId);
 			if (result.cancelled) throw new Error("Recall was cancelled by an extension");

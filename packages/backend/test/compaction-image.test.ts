@@ -2,7 +2,7 @@ import { compact, generateSummaryWithUsage } from "@earendil-works/pi-coding-age
 import { describe, expect, it } from "vitest";
 
 /**
- * SDK 0.84 的 compaction 摘要请求不经过 Agent 的 context 钩子，
+ * compaction 摘要请求不经过 Agent 的 context 钩子，
  * 但 generateSummaryWithUsage/generateTurnPrefixSummary 在 convertToLlm 之后
  * 还会 serializeConversation 成纯文本 prompt。这个测试把该行为钉住：
  * 文本模型 + 含图历史触发压缩时，摘要请求里不能出现 image block。
@@ -53,10 +53,19 @@ function makeStreamFn(calls: CapturedRequest[]) {
 function expectTextOnlyPrompt(request: CapturedRequest): void {
 	expect(JSON.stringify(request).includes('"type":"image"')).toBe(false);
 	for (const message of request.messages) {
-		const types = Array.isArray(message.content)
-			? message.content.map((block) => (block as { type?: unknown }).type)
-			: [typeof message.content];
-		expect(types).toEqual(["text"]);
+		if (Array.isArray(message.content)) {
+			// pi-ai 1.0 may serialize text-only content as string[]; older
+			// transports used { type: "text" } blocks.
+			expect(
+				message.content.every(
+					(block) => typeof block === "string" || (block as { type?: unknown }).type === "text",
+				),
+			).toBe(true);
+		} else {
+			// pi-ai 1.0's TranscriptContext may serialize a single text block as a
+			// plain string; it is still a text-only provider request.
+			expect(typeof message.content).toBe("string");
+		}
 	}
 }
 

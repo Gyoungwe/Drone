@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
+import { getCurrentSystemPrompt } from "@earendil-works/pi-ai/utils/transcript";
 import {
 	createAgentSession,
 	DefaultResourceLoader,
@@ -124,7 +125,7 @@ it("real SDK dispatches four isolated roles by stage; parent still reads evidenc
 			2,
 		);
 	const router = async (context) => {
-		const role = context.systemPrompt?.match(
+		const role = getCurrentSystemPrompt(context.messages || []).match(
 			/^You are knowledge-(navigator|evidence-curator|wiki-editor|explainer),/,
 		)?.[1];
 		const n = counts[role || "parent"] || 0;

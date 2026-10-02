@@ -15,13 +15,13 @@
 		"test:sdk": "vitest run --project sdk"
 	},
 	"dependencies": {
-		"@earendil-works/pi-ai": "0.84.3",
-		"@earendil-works/pi-coding-agent": "0.84.3",
-		"@drone/shared": "*",
+		"@drone/knowledge": "*",
 		"@drone/research": "*",
+		"@drone/shared": "*",
 		"@drone/tasks": "*",
-		"typebox": "1.3.7",
-		"@drone/knowledge": "*"
+		"@earendil-works/pi-ai": "1.0.0",
+		"@earendil-works/pi-coding-agent": "1.0.0",
+		"typebox": "1.3.7"
 	},
 	"devDependencies": {
 		"typescript": "^5.9.0",

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { activeExampleTaskMilestones, composeExampleTaskPrompt, exampleTask } from "@drone/shared";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
+import { getCurrentTools } from "@earendil-works/pi-ai/utils/transcript";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
 import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
@@ -170,7 +171,9 @@ function scriptedModel(task, scenario, contract) {
 		};
 		const last = messages[messages.length - 1];
 		// 真实模型看到工具不在当前可见集合里时，会先 capability_load（宿主按需暴露工具，不算中断）
-		const visible = new Set((context.tools || []).map((t) => t.name));
+		// pi-ai 1.0 passes a TranscriptContext to providers. Tool declarations live
+		// on its system messages rather than on the legacy `context.tools` field.
+		const visible = new Set(getCurrentTools(context.messages || []).map((t) => t.name));
 		const needed = ["write", ...(scenario.shell ? ["bash"] : [])];
 		if (needed.some((name) => !visible.has(name)))
 			return reply([call("capability_load", { capabilities: ["coding", "files"], task: task.title.zh })], {

@@ -18,11 +18,28 @@ const assistant = (u, stopReason = "stop") => ({
 	timestamp: 1,
 });
 const entry = (id, message) => ({ id, type: "message", message });
+const projection = (branch, messages) => {
+	const entries = branch.map((sourceEntry) => ({ sourceEntry, messages: [] }));
+	let entryIndex = entries.length - 1;
+	for (const message of [...messages].reverse()) {
+		while (entryIndex >= 0 && branch[entryIndex].type === "compaction") entryIndex--;
+		if (entryIndex < 0) break;
+		entries[entryIndex].messages.unshift(message);
+		entryIndex--;
+	}
+	return { messages, entries };
+};
 const context = (branch, messages, contextWindow = 1000000) =>
 	AgentSession.prototype.getContextUsage.call({
 		model: { contextWindow },
 		messages,
-		sessionManager: { getBranch: () => branch },
+		_limitsModel() {
+			return this.model;
+		},
+		sessionManager: {
+			getBranch: () => branch,
+			buildSessionProjection: () => projection(branch, messages),
+		},
 	});
 describe("native SDK cumulative versus compaction-aware context semantics", () => {
 	it("last-response context includes cached input and output, not reasoning twice", () => {
@@ -76,6 +93,13 @@ describe("native SDK cumulative versus compaction-aware context semantics", () =
 	});
 	it("a missing or zero window is unavailable, not a manufactured percent", () => {
 		expect(context([], [], 0)).toBeUndefined();
-		expect(AgentSession.prototype.getContextUsage.call({ model: undefined })).toBeUndefined();
+		expect(
+			AgentSession.prototype.getContextUsage.call({
+				model: undefined,
+				_limitsModel() {
+					return this.model;
+				},
+			}),
+		).toBeUndefined();
 	});
 });
