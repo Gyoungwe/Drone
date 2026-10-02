@@ -228,3 +228,34 @@ export { saveSpecialistExplainer } from "./specialist-delivery";
 export { lastWikiModelReview, reviewWikiWithModel } from "./wiki-model-review";
 
 export * from "./ui-service";
+
+export {
+	EXPERIENCE_LIMITS,
+	EXPERIENCE_VERSION,
+	createExperienceStore,
+	experienceInputFromTerminalJob,
+	recordTerminalJobExperience,
+	terminalJobExperienceInput,
+	searchExperiences,
+	type ExperienceArtifact,
+	type ExperienceBinding,
+	type ExperienceDocument,
+	type ExperienceInput,
+	type ExperienceObservation,
+	type ExperienceOutcome,
+	type ExperienceQcDistribution,
+	type ExperienceQcMetric,
+	type ExperienceProvenance,
+	type ExperienceRecord,
+	type ExperienceRepair,
+	type ExperienceResourceUse,
+	type ExperienceSearchHit,
+	type ExperienceSearchResult,
+	type ExperienceStorePort,
+	type TerminalJobExperienceInput,
+	type ExperienceStatus,
+	type ExperienceStore,
+	type ExperienceStoreOptions,
+	type WorkflowSpecDiff,
+	type WorkflowSpecDiffValue,
+} from "./experience-store";

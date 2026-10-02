@@ -27,11 +27,15 @@
 		"./receipt-journal": "./src/receipt-journal.ts",
 		"./claim-bindings": "./src/claim-bindings.ts",
 		"./source-archive": "./src/source-archive.ts",
-		"./research-loop": "./src/research-loop.ts"
+		"./research-loop": "./src/research-loop.ts",
+		"./run-summary": "./src/run-summary.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
+	},
+	"dependencies": {
+		"@drone/knowledge": "*"
 	},
 	"devDependencies": {
 		"@types/node": "^22.0.0",

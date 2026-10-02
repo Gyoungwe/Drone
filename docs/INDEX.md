@@ -98,15 +98,15 @@ packages/
 
 ## packages/knowledge — 知识领域包（迁移中）
 
-`@drone/knowledge` 的 canonical runtime source 位于 `src/`：`files.ts`、`layout.ts`、`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts`、`wiki-review.ts` 以及各项 policy/provider 合约；根 `scripts/build-knowledge-runtime.mjs` 生成 `.pi/lib/knowledge/runtime/` worker/runtime 产物。`.pi/lib/knowledge/*` 保留为宿主兼容适配层，跨 bundle 的 UI、验收器与 host ports 仍由它桥接。
+`@drone/knowledge` 的 canonical runtime source 位于 `src/`：`files.ts`、`layout.ts`、`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts`、`experience-store.ts`、`wiki-review.ts` 以及各项 policy/provider 合约；根 `scripts/build-knowledge-runtime.mjs` 生成 `.pi/lib/knowledge/runtime/` worker/runtime 产物。`.pi/lib/knowledge/*` 保留为宿主兼容适配层，跨 bundle 的 UI、验收器与 host ports 仍由它桥接。
 
 ## packages/tasks — 任务领域包（迁移中）
 
-`@drone/tasks` 的 canonical runtime 位于 `src/runtime/*.ts`，并由 `scripts/build-runtime.mjs` 生成并提交 `src/runtime-compiled/*.mjs`；其中 workbench、register、acceptance、授权、PDF worker、tool manifest 与 runtime bridge 通过 host ports 接入。`npm run build:tasks` 将同一 typed runtime 生成到无 workspace 依赖的 `.pi/lib/tasks/*` 兼容图；开发环境 acceptance adapter 复用包注册表，隔离发布包回退到自包含产物。
+`@drone/tasks` 的 canonical runtime 位于 `src/runtime/*.ts`，并由 `scripts/build-runtime.mjs` 生成并提交 `src/runtime-compiled/*.mjs`；其中 workbench、register、acceptance、授权、方案提案卡、PDF worker、tool manifest 与 runtime bridge 通过 host ports 接入。`npm run build:tasks` 将同一 typed runtime 生成到无 workspace 依赖的 `.pi/lib/tasks/*` 兼容图；开发环境 acceptance adapter 复用包注册表，隔离发布包回退到自包含产物。
 
 ## packages/research — 研究来源领域包（迁移中）
 
-`@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。
+`@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`run-summary.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。
 
 ## packages/compute — 远程计算与工作流领域包（B3）
 

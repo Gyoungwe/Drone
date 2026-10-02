@@ -19,6 +19,7 @@ const entries = {
 	"source-archive-core": "packages/research/src/source-archive.ts",
 	"institutional-access-core": "packages/research/src/institutional-access.ts",
 	"research-loop-core": "packages/research/src/research-loop.ts",
+	"research-run-summary": "packages/research/src/run-summary.ts",
 	"zotero-setup": "packages/research/src/zotero-setup-runtime.ts",
 	"zotero-reconcile": "packages/research/src/zotero-reconcile-runtime.ts",
 	"zotero-write": "packages/research/src/zotero-write-runtime.ts",

@@ -102,7 +102,8 @@
 			"types": "./src/runtime/consent.ts",
 			"import": "./src/runtime-compiled/consent.mjs",
 			"default": "./src/runtime-compiled/consent.mjs"
-		}
+		},
+		"./plan-proposal": "./src/plan-proposal.ts"
 	},
 	"dependencies": {
 		"@drone/shared": "*"
