@@ -141,3 +141,21 @@ export async function checkRegisteredJobAuthorization(
 		return { ok: false, reason: error instanceof Error ? error.message : String(error) };
 	}
 }
+
+/** Throwing companion for adapters that must stop before invoking a runner. */
+export async function assertRegisteredJobAuthorized(
+	job: ComputeWorkflowJobSpec,
+	spec: ComputeWorkflowSpec,
+	catalog: WorkflowModuleCatalog,
+	registrations: WorkflowRegistrationPort,
+	expectedContractHash?: string,
+): Promise<void> {
+	const result = await checkRegisteredJobAuthorization(
+		job,
+		spec,
+		catalog,
+		registrations,
+		expectedContractHash,
+	);
+	if (!result.ok) throw new Error(result.reason);
+}

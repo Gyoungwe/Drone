@@ -143,9 +143,21 @@ export async function runAutonomousRepair(options: AutonomousRepairOptions): Pro
 		}
 
 		if (!failure && artifact) {
-			const observation = options.execute
-				? await options.execute(artifact, { attempt, spec })
-				: { ok: true, summary: "Workflow compiled successfully" };
+			let observation: WorkflowExecutionObservation;
+			try {
+				observation = options.execute
+					? await options.execute(artifact, { attempt, spec })
+					: { ok: true, summary: "Workflow compiled successfully" };
+			} catch (error) {
+				observation = {
+					ok: false,
+					failure: {
+						signature: `execution:${error instanceof Error ? error.message : String(error)}`,
+						message: error instanceof Error ? error.message : String(error),
+						at,
+					},
+				};
+			}
 			if (observation.ok) {
 				attempts.push({
 					attempt,

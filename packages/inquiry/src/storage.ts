@@ -212,16 +212,27 @@ export class FileInquiryStorage implements InquiryStorage {
 			const current = await readDocument(this.path, this.projectId);
 			if (key === "artifacts") {
 				const artifact = record as ArtifactRecord;
-				const errors = validateArtifactLineage(artifact, current.artifacts);
+				const errors = [
+					...(artifact.projectId !== this.projectId ? ["artifact belongs to another project"] : []),
+					...validateArtifactLineage(artifact, current.artifacts),
+				];
 				if (errors.length) throw new Error(`Invalid artifact record: ${errors.join("; ")}`);
 			} else if (key === "findings") {
 				const finding = record as FindingRecord;
 				const errors = validateFindingReferences(finding, current);
 				if (errors.length) throw new Error(`Invalid finding record: ${errors.join("; ")}`);
 			} else if (key === "questions") {
-				if (!record || (record as QuestionRecord).schemaVersion !== 1)
+				if (
+					!record ||
+					(record as QuestionRecord).schemaVersion !== 1 ||
+					(record as QuestionRecord).projectId !== this.projectId
+				)
 					throw new Error("Invalid question record");
-			} else if (!record || (record as AttemptRecord).schemaVersion !== 1) {
+			} else if (
+				!record ||
+				(record as AttemptRecord).schemaVersion !== 1 ||
+				(record as AttemptRecord).projectId !== this.projectId
+			) {
 				throw new Error("Invalid attempt record");
 			}
 			const values = [...current[key]] as Array<typeof record>;
@@ -277,7 +288,11 @@ export class MemoryInquiryStorage implements InquiryStorage {
 		record: ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord,
 	): Promise<void> {
 		if (key === "artifacts") {
-			const errors = validateArtifactLineage(record as ArtifactRecord, this.state.artifacts);
+			const artifact = record as ArtifactRecord;
+			const errors = [
+				...(artifact.projectId !== this.projectId ? ["artifact belongs to another project"] : []),
+				...validateArtifactLineage(artifact, this.state.artifacts),
+			];
 			if (errors.length) throw new Error(`Invalid artifact record: ${errors.join("; ")}`);
 		}
 		if (key === "findings") {

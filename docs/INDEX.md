@@ -26,7 +26,7 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，8 个包：
+npm workspaces monorepo，9 个包：
 
 ```
 packages/
