@@ -25,6 +25,7 @@ import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
+import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
 import type { ZoteroServicePort } from "./services/zotero";
 import type { SessionEngine } from "./session-engine/engine";
@@ -107,6 +108,8 @@ export interface BackendServices {
 	permissions: PermissionSettingsService;
 	/** Per-session permission approval registry and host event boundary. */
 	approvals: ApprovalService;
+	/** In-memory per-session permission mode boundary; resets when a session closes. */
+	sessionPermissions: SessionPermissionServicePort;
 	/** Zotero integration status service. */
 	zotero: ZoteroServicePort;
 	/** Institutional access configuration and session probe boundary. */
@@ -139,6 +142,7 @@ export function createBackend(options: SessionServiceOptions = {}): BackendServi
 		mcp: sessions.mcp,
 		permissions,
 		approvals: sessions.approvals,
+		sessionPermissions: sessions.sessionPermissions,
 		zotero: sessions.zotero,
 		institutional: sessions.institutional,
 		subagents: sessions.subagents,

@@ -109,6 +109,7 @@ export {
 } from "./services/packages";
 export { PermissionSettingsService } from "./services/permissions";
 export { ProjectTrustService } from "./services/project-trust";
+export { SessionPermissionService, type SessionPermissionServicePort } from "./services/session-permissions";
 export { SubagentService, type SubagentServicePort } from "./services/subagents";
 export { ZoteroService, type ZoteroServicePort } from "./services/zotero";
 export {

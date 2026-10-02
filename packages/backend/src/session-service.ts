@@ -59,7 +59,7 @@ import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
 import { McpService } from "./mcp/service";
 import { PackageAdmin } from "./packages/admin";
-import type { PermissionConfirm, PermissionModeRef } from "./permissions/extension";
+import type { PermissionConfirm } from "./permissions/extension";
 import { walkProjectFiles } from "./project/files";
 import { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
@@ -70,6 +70,7 @@ import { type KnowledgeReviewControl, KnowledgeSessionService } from "./services
 import type { PackageService } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import { ProjectTrustService } from "./services/project-trust";
+import { SessionPermissionService } from "./services/session-permissions";
 import { SubagentService } from "./services/subagents";
 import { ZoteroService } from "./services/zotero";
 import { AskGate } from "./session/ask-gate";
@@ -211,8 +212,8 @@ export class SessionService {
 	/** 每会话按需 Tool/Skill 能力视图；注册表完整，只有模型可见 active subset 会变化。 */
 	private readonly capabilityRuntimes = new Map<string, CapabilityRuntime>();
 	private readonly askGates = new Map<string, Set<AskGate>>();
-	/** 按会话权限模式（default 缺省；fullAccess = 一切放行 + 高危审计）：会话创建时随工厂注入，关会话/重启归零 */
-	private readonly permissionModes = new Map<string, PermissionModeRef>();
+	/** Per-session permission mode boundary; modes stay in memory and reset on close/restart. */
+	readonly sessionPermissions = new SessionPermissionService();
 	/** 项目信任决策记录（~/.pi/agent/trust.json，与 CLI 共享）+ 信任请求门控 */
 	readonly projectTrust: ProjectTrustService;
 	/** 会话事件 trace（JSONL，离线可重放） */
@@ -488,7 +489,7 @@ export class SessionService {
 		// 权限扩展的确认通道直接桥到 gate（携带 kind/suggestDir 元数据，驱动「允许此目录」/持久化）
 		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
 		// 会话权限模式引用：新会话一律 default 起步（D1：不落盘、不继承），随工厂闭包注入求值链
-		const modeRef: PermissionModeRef = { current: "default" };
+		const modeRef = this.sessionPermissions.createMode();
 
 		const skillVisibility = new SkillVisibility();
 		const capabilities =
@@ -550,7 +551,7 @@ export class SessionService {
 		askGate.bindSession(session.sessionId);
 		this.approvals.register(session.sessionId, gate);
 		this.registerAskGate(session.sessionId, askGate);
-		this.permissionModes.set(session.sessionId, modeRef);
+		this.sessionPermissions.bind(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
 			await session.bindExtensions({
 				uiContext: makeUiContext(gate, askGate, (text, type) => {
@@ -583,7 +584,7 @@ export class SessionService {
 		const askGate = new AskGate((req) => this.dispatchAskRequest(req));
 		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
 		// 重开历史会话同样 default 起步（D1：模式不随会话文件继承）
-		const modeRef: PermissionModeRef = { current: "default" };
+		const modeRef = this.sessionPermissions.createMode();
 		const skillVisibility = new SkillVisibility();
 		const capabilities =
 			this.options.lazyCapabilities === false && !this.options.desktopIntegration?.academicPiRoot
@@ -641,7 +642,7 @@ export class SessionService {
 		askGate.bindSession(session.sessionId);
 		this.approvals.register(session.sessionId, gate);
 		this.registerAskGate(session.sessionId, askGate);
-		this.permissionModes.set(session.sessionId, modeRef);
+		this.sessionPermissions.bind(session.sessionId, modeRef);
 		if (this.options.permissionGates !== false) {
 			await session.bindExtensions({
 				uiContext: makeUiContext(gate, askGate, (text, type) => {
@@ -724,7 +725,7 @@ export class SessionService {
 		this.approvals.remove(sessionId);
 		for (const askGate of this.askGates.get(sessionId) ?? []) askGate.dispose();
 		this.askGates.delete(sessionId);
-		this.permissionModes.delete(sessionId);
+		this.sessionPermissions.remove(sessionId);
 		this.capabilityRuntimes.delete(sessionId);
 		this.streamGuard.cleanup(sessionId);
 		this.eventRates.delete(sessionId);
@@ -1383,14 +1384,12 @@ export class SessionService {
 
 	/** 会话权限模式（default 缺省 fail-safe；关 tab 重开后端已归零，renderer 对齐用） */
 	getSessionPermissionMode(sessionId: string): PermissionMode {
-		return this.permissionModes.get(sessionId)?.current ?? "default";
+		return this.sessionPermissions.getMode(sessionId);
 	}
 
 	/** 切换会话权限模式（内存态即时生效，不落盘；会话不存在时抛可读错误） */
 	setSessionPermissionMode(sessionId: string, mode: PermissionMode): void {
-		const ref = this.permissionModes.get(sessionId);
-		if (!ref) throw new Error(`Session not found: ${sessionId}`);
-		ref.current = mode;
+		this.sessionPermissions.setMode(sessionId, mode);
 		log.info("permission mode", sessionId, { mode });
 	}
 
@@ -1438,6 +1437,7 @@ export class SessionService {
 		this.registry.disposeAll();
 		this.eventHandlers.clear();
 		this.approvals.dispose();
+		this.sessionPermissions.dispose();
 		this.trustHandlers.clear();
 		this.projectTrust.dispose();
 		this.traces.disposeAll();
