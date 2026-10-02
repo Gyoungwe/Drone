@@ -31,6 +31,7 @@ jobs:
       - run: npm run test:arch
       - run: npm run check:plugin-api
       - run: npm run check:extensions
+      - run: npm run test:research-packaging
 
   unit:
     name: Backend unit tests (${{ matrix.os }})

@@ -38,6 +38,8 @@ export interface ChannelWatchOptions {
 	agentDir: string;
 	/** 项目根（会话 cwd） */
 	cwd: string;
+	/** watcher 防抖窗口；未提供时使用生产默认值 3s。 */
+	debounceMs?: number;
 	/** 开关读取（缺省 readChannelWatchEnabled(agentDir)，测试注入） */
 	isEnabled?: () => boolean;
 	/** guard 时间函数（测试注入） */
@@ -147,6 +149,7 @@ export function makeChannelWatchExtension(options: ChannelWatchOptions): InlineE
 				const w = new ChannelWatcher({
 					channelRoot: channelRoot(options.cwd),
 					onEvent: onWatchEvent,
+					debounceMs: options.debounceMs,
 				});
 				const mode = await w.start(); // fs.watch 失败自动降级轮询，无 failed 分支
 				watcher = w;

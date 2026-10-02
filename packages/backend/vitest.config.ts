@@ -36,9 +36,11 @@ const ALL_TEST_GLOB = "**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}";
 export default defineConfig({
 	test: {
 		// SQLite services create native workers. Isolate test files in processes and
-		// bound Windows concurrency to avoid native worker / IPC crashes under load.
+		// bound concurrency to keep native worker startup and channel-watch fixtures
+		// predictable on both developer machines and CI.
 		pool: "forks",
-		...(process.platform === "win32" ? { maxWorkers: 2, minWorkers: 1 } : {}),
+		maxWorkers: process.platform === "win32" ? 2 : 4,
+		minWorkers: 1,
 		projects: [
 			{
 				extends: true,

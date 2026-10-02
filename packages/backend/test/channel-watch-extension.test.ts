@@ -58,6 +58,8 @@ function makeFakeCtx(entries: unknown[] = [], trusted = true) {
 let testRoot: string;
 let agentDir: string;
 const notifications: string[] = [];
+const TEST_DEBOUNCE_MS = 50;
+const EVENT_SETTLE_MS = 250;
 
 beforeAll(async () => {
 	testRoot = await mkdtemp(join(tmpdir(), "cw-ext-"));
@@ -78,6 +80,7 @@ async function wire(opts: { cwd: string; trusted?: boolean; entries?: unknown[];
 	const ext = makeChannelWatchExtension({
 		agentDir,
 		cwd: opts.cwd,
+		debounceMs: TEST_DEBOUNCE_MS,
 		isEnabled: () => opts.enabled ?? true,
 		notify: (t) => notifications.push(t),
 	});
@@ -163,23 +166,23 @@ describe("extension 全链路", () => {
 		await mkdir(join(cwd, ".local/agent-work/channel/t1"), { recursive: true });
 		// 写文件 ≠ 通知：非 MESSAGES 文件静默（多文件写入不再产生多条唤醒）
 		await writeFile(join(cwd, ".local/agent-work/channel/t1/IMPL-NOTES.md"), "v1\n");
-		await sleep(3900); // 防抖 3s + 余量
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(0);
 		// 另一会话 post（模拟对端写 MESSAGES.md，不经本会话 tool_call → 非自写）
 		const mf = join(cwd, ".local/agent-work/channel/t1/MESSAGES.md");
 		await writeFile(mf, "## 2026-08-25 10:00 · abc\n\nhi\n\n---\n");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(1);
 		expect(pi.wakes[0]).toMatch(
 			/^\[channel:t1\] 有新消息（\d{2}:\d{2}:\d{2}），请读 \.local\/agent-work\/channel\/t1\/MESSAGES\.md 查收。$/,
 		);
 		// 同内容再写 → hash 未变 → 不再唤醒
 		await writeFile(mf, "## 2026-08-25 10:00 · abc\n\nhi\n\n---\n");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(1);
 		// 内容变化（新消息 append）→ 再唤醒
 		await appendFile(mf, "## 2026-08-25 10:01 · abc\n\nsecond\n\n---\n");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(2);
 	}, 60_000);
 
@@ -200,7 +203,7 @@ describe("extension 全链路", () => {
 		);
 		// 紧接着文件真的被写入（同一目标）
 		await writeFile(join(cwd, ".local/agent-work/channel/t1/MESSAGES.md"), "x");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(0);
 	}, 60_000);
 
@@ -213,10 +216,10 @@ describe("extension 全链路", () => {
 		// bash 旁路：会话内用 bash 写频道文件（tool_call 只标 write/edit，bash 不进自写窗口）
 		// spec channel-post 后：非 MESSAGES 文件根本不投递，旁路自唤醒问题消失
 		await writeFile(f, "echo via-bash v1\n");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(0);
 		await writeFile(f, "echo via-bash v2\n");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(0);
 	}, 60_000);
 
@@ -230,7 +233,7 @@ describe("extension 全链路", () => {
 		// 对端 post 也不唤醒（无订阅）
 		await mkdir(join(cwd, ".local/agent-work/channel/t1"), { recursive: true });
 		await writeFile(join(cwd, ".local/agent-work/channel/t1/MESSAGES.md"), "## t\n\nx\n\n---\n");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(0);
 	}, 60_000);
 
@@ -243,7 +246,7 @@ describe("extension 全链路", () => {
 		expect(r.content[0]?.text).toContain("t1：已订阅");
 		await mkdir(join(cwd, ".local/agent-work/channel/t1"), { recursive: true });
 		await writeFile(join(cwd, ".local/agent-work/channel/t1/MESSAGES.md"), "## t\n\nv1\n\n---\n");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(1);
 	}, 60_000);
 
@@ -256,7 +259,7 @@ describe("extension 全链路", () => {
 		const before = notifications.length;
 		for (let i = 0; i < 8; i++) {
 			await writeFile(join(dir, "MESSAGES.md"), `v${i}\n`);
-			await sleep(3900);
+			await sleep(EVENT_SETTLE_MS);
 		}
 		// 前 5 次投递 + 第 6 次触发暂停（投递后计数）→ 总投递 6 次，后续 2 次被暂停拦截
 		expect(pi.wakes.length).toBe(6);
@@ -278,7 +281,7 @@ describe("extension 全链路", () => {
 		await mkdir(dir, { recursive: true });
 		for (let i = 0; i < 3; i++) {
 			await writeFile(join(dir, "MESSAGES.md"), `v${i}\n`);
-			await sleep(3900);
+			await sleep(EVENT_SETTLE_MS);
 		}
 		expect(pi.wakes).toHaveLength(3);
 		// 真人消息（source 非 extension）→ 计数清零
@@ -286,7 +289,7 @@ describe("extension 全链路", () => {
 		// 再 3 次不会到 6
 		for (let i = 3; i < 6; i++) {
 			await writeFile(join(dir, "MESSAGES.md"), `v${i}\n`);
-			await sleep(3900);
+			await sleep(EVENT_SETTLE_MS);
 		}
 		expect(pi.wakes).toHaveLength(6); // 无暂停，全部投递
 		const list = pi.tools.find((t) => t.name === "channel_list");
@@ -361,7 +364,7 @@ describe("channel_post", () => {
 		expect(content).toContain("进展同步：阶段 1 完成");
 		expect(content).toContain("s-test");
 		expect(content).not.toContain("[CLOSED]");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(b.pi.wakes).toHaveLength(1);
 		expect(b.pi.wakes[0]).toContain("[channel:t1] 有新消息");
 		expect(a.pi.wakes).toHaveLength(0);
@@ -377,7 +380,7 @@ describe("channel_post", () => {
 		expect(r.content[0]?.text).toContain("已发送到频道 [t1]");
 		const content = await readFile(join(cwd, ".local/agent-work/channel/t1/MESSAGES.md"), "utf8");
 		expect(content).toContain("给自己的备注");
-		await sleep(3900);
+		await sleep(EVENT_SETTLE_MS);
 		expect(pi.wakes).toHaveLength(0);
 	}, 60_000);
 
