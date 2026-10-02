@@ -14,6 +14,7 @@
 - zustand selector 必须返回稳定引用（模块级空对象/数组；#185 无限渲染，见 PITFALLS）
 - 新增 renderer hook/store 要暴露给插件 = 源模块 + `plugins/host-api.ts` + `plugins/env.d.ts`（DroneUiApi）+ `main/ui-plugins/build.ts` SHIM + `resources/drone-ui.d.ts`（必要时 SPEC.md 导出清单）五处同步
 - JSON 持久化一律走 backend `JsonStore`（原子写 + 损坏语义），不自写 fs
+- `@drone/compute` 只依赖 `@drone/shared`；不得导入 backend、desktop、Electron 或 Pi SDK（R7）
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 
@@ -25,7 +26,7 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，7 个包：
+npm workspaces monorepo，8 个包：
 
 ```
 packages/
@@ -34,6 +35,7 @@ packages/
 ├── knowledge/  知识领域纯函数与 claim 合约（TS 包，迁移中）
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
 ├── research/   文献回执与来源交付合约（TS 包，迁移中）
+├── compute/    远程作业领域包（主机/runner/作业状态与产物合约）
 ├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
 ```
@@ -105,6 +107,10 @@ packages/
 
 `@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。
 
+## packages/compute — 远程计算领域包（B1）
+
+`@drone/compute` 只依赖 `@drone/shared`（R7）。`src/types.ts` 定义无凭据的主机档案、Transport/runner 协议、声明式 WorkflowSpec、JobSpec/JobRecord 与产物清单；`src/runner.ts` 和 `src/transport.ts` 提供固定 runner 子命令的传输边界；`src/jobs.ts` 提供作业状态机、未知结果对账和 JSONL 事件接口。桌面/LAN 的 Host API 入口为 `shared/src/host-api/compute.ts` 导出的 `ComputeContract`，具体持久化与 SSH 适配留在 backend 组合根。
+
 
 ## packages/extensions — Pi 扩展适配层（迁移中）
 
@@ -172,6 +178,7 @@ src/
 | `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`PiBackend` 的资源加载与旧 `respondTrust` 继续委托 |
 | `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |
 | `src/services/subagents.ts` | `SubagentService` | 子代理面板发现、派发、中止与运行记录；通过 `BackendServices.subagents` 暴露 |
+| `src/services/compute.ts` | `ComputeService` | 远程主机/作业持久化、幂等提交、断线对账、状态轮询、日志与产物校验；通过 `BackendServices.compute` 暴露 |
 | `src/mcp/service.ts` | `McpService` | MCP 配置、状态读取和重载边界；通过 `BackendServices.mcp` 暴露 |
 | `src/packages/admin.ts` | `PackageAdmin`（兼容别名） | 旧包管理入口的兼容 re-export；新代码使用 `services/packages.ts` |
 | `src/packages/catalog.ts` | `fetchPackageCatalog` | pi.dev 目录抓取：无 JSON API，解析 SSR HTML 的 `<article data-package-card>` |

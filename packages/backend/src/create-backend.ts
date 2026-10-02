@@ -20,6 +20,7 @@ import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
+import { ComputeService, type ComputeServicePort } from "./services/compute";
 import type { InstitutionalServicePort } from "./services/institutional";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
@@ -121,6 +122,8 @@ export interface BackendServices {
 	subagents: SubagentServicePort;
 	/** Project trust store and interactive trust gate. */
 	projectTrust: ProjectTrustService;
+	/** Long-running remote compute jobs, persisted independently from sessions. */
+	compute: ComputeServicePort;
 	dispose(): void;
 }
 
@@ -128,6 +131,9 @@ export function createBackend(options: SessionServiceOptions = {}): BackendServi
 	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
 	const sessions = new SessionService({ ...options, runtime, permissions });
+	const compute = new ComputeService({ runtime, storage: sessions.getStorageRegistry() });
+	if (runtime.compute) runtime.compute.service = compute;
+	else runtime.compute = { service: compute };
 	const diagnostics: DiagnosticsServicePort = {
 		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
 	};
@@ -151,8 +157,10 @@ export function createBackend(options: SessionServiceOptions = {}): BackendServi
 		institutional: sessions.institutional,
 		subagents: sessions.subagents,
 		projectTrust: sessions.projectTrust,
+		compute,
 		dispose: () => {
 			sessions.dispose();
+			void compute.dispose();
 			void runtime.dispose();
 		},
 	};

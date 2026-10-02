@@ -220,7 +220,8 @@ export class SessionService {
 	/** 会话事件 trace（JSONL，离线可重放） */
 	private readonly traces = new SessionTraces();
 	/** Durable-state inventory used by the metadata-only diagnostics endpoint. */
-	private readonly storage: StorageRegistry;
+	/** Durable storage inventory shared with host domain services (compute, diagnostics). */
+	readonly storage: StorageRegistry;
 	/** 子智能体面板：会话内专属派发登记表（与 subagent 工具同一 runner；见 tools/subagent/panel.ts） */
 	private readonly subagentPanel = new SubagentPanelService({
 		runner: {
@@ -354,6 +355,11 @@ export class SessionService {
 			incidentSnapshot: options.incidentSnapshot,
 			logTail: options.logTail,
 		});
+	}
+
+	/** Expose the metadata-only inventory to composition-root services. */
+	getStorageRegistry(): StorageRegistry {
+		return this.storage;
 	}
 
 	private sessionExtensionDependencies(): SessionExtensionDependencies {

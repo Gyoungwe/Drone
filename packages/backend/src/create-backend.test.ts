@@ -32,6 +32,8 @@ describe("createBackend", () => {
 		expect(services.projectTrust).toBeDefined();
 		expect(services.subagents).toBeDefined();
 		expect(services.subagents.listAvailable).toBeTypeOf("function");
+		expect(services.compute).toBeDefined();
+		expect(services.compute.listHosts).toBeTypeOf("function");
 		services.dispose();
 	});
 

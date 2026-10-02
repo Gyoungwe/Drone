@@ -67,6 +67,7 @@ function scanFile(file, text, findings) {
 	const isRenderer = /^packages\/desktop\/src\/(renderer|lan-web)\//.test(rel);
 	const isTest = /(?:^|\/)(?:test|tests)\//.test(rel) || /\.(?:test|spec)\.[^.]+$/.test(rel);
 	const domain = rel.match(/^packages\/(knowledge|tasks|research)\//)?.[1];
+	const compute = rel.startsWith("packages/compute/");
 
 	// R1: SDK value imports. Keep the check intentionally broad so a newly
 	// added side-effect or dynamic import is caught as well.
@@ -133,6 +134,17 @@ function scanFile(file, text, findings) {
 			if (!forbidden) continue;
 			const offset = match.index ?? 0;
 			addFinding(findings, "R6", file, lineNumber(text, offset), `domain dependency ${domain} -> ${target}`);
+		}
+	}
+
+	// R7: compute is a portable domain package. It may consume the shared
+	// contract layer, but must not pull host implementations, Electron, or Pi.
+	if (compute) {
+		const forbidden =
+			/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(@drone\/(?!shared(?:["'/]))[^"']+|electron|@earendil-works\/pi-[^"']+)(?=["'])/g;
+		for (const match of text.matchAll(forbidden)) {
+			const offset = match.index ?? 0;
+			addFinding(findings, "R7", file, lineNumber(text, offset), `compute import ${match[1]}`);
 		}
 	}
 }

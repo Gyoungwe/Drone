@@ -39,3 +39,10 @@ test("architecture checker reports a new renderer Pi SDK import", async () => {
 		await rm(temp, { recursive: true, force: true });
 	}
 });
+
+test("architecture checker enforces the compute R7 boundary", async () => {
+	const source = await readFile(checker, "utf8");
+	assert.match(source, /const compute = rel\.startsWith\("packages\/compute\/"\)/);
+	assert.match(source, /addFinding\(findings, "R7"/);
+	assert.match(source, /compute import/);
+});

@@ -222,6 +222,34 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
+			id: "agent-compute-root",
+			path: `${agentDir}/compute`,
+			owner: "compute/service",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "agent-compute-hosts",
+			path: `${agentDir}/compute/hosts.json`,
+			owner: "compute/hosts",
+			schema: 1,
+			sensitivity: "config",
+		})
+		.register({
+			id: "agent-compute-jobs-root",
+			path: `${agentDir}/compute/jobs`,
+			owner: "compute/jobs",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "agent-compute-events-root",
+			path: `${agentDir}/compute/events`,
+			owner: "compute/events",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
 			id: "agent-sessions",
 			path: `${agentDir}/sessions`,
 			owner: "session-engine/sdk",
