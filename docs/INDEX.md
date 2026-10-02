@@ -110,7 +110,7 @@ packages/
 
 ## packages/compute — 远程计算与工作流领域包（B3）
 
-`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/workflow.ts` 定义 WorkflowSpec、模块目录、类型/环检查与稳定哈希；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供 nf-core/rnaseq test profile 配置；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@drone/research/run-provenance` 的远程执行声明；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由 B1/B2 宿主适配层接入。
+`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/types.ts` 定义 B1 runner-facing `WorkflowSpec` 与 B3 `ComputeWorkflowSpec` 等类型；`src/workflow.ts` 提供模块目录、类型/环检查与稳定哈希；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供标记为 preview-only 的 nf-core/rnaseq test profile 配置；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@drone/research/run-provenance` 的远程执行声明；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由宿主适配层接入。
 
 
 ## packages/extensions — Pi 扩展适配层（迁移中）

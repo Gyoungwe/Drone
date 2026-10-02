@@ -37,8 +37,10 @@
 `@drone/compute` 的 WorkflowSpec 编译、Nextflow `-preview` argv、direct/Slurm
 executor 选择、固定 runner 协议、MultiQC 阈值和远程 provenance 都可以在本地
 用 fake runner 验证。它们不会证明目标主机已经安装 Nextflow、容器镜像已经缓存、
-Slurm 命令可用，或样本结果具有科学有效性。真实 smoke 必须在一次授权合同内由
-B1/B2 宿主 transport 执行，并保留流程 revision、容器 digest、scheduler job id
+Slurm 命令可用，或样本结果具有科学有效性。内置 nf-core/rnaseq test-profile
+使用的是 preview fixture；其 `test-profile-pinned` revision 和 unresolved
+container digest 会被 B3 authorization/scheduler gate 拒绝，不能作为真实提交。
+真实 smoke 必须在一次授权合同内由宿主 transport 执行，并保留流程 revision、容器 digest、scheduler job id
 和回收产物校验；MultiQC 通过也仍保持 `reviewed=false` 与
 `scientificallyVerified=false`。
 
