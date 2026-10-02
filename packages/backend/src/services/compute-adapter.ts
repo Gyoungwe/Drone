@@ -256,7 +256,7 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 			});
 		this.metadataStore = new JsonStore<PersistedHost[]>({
 			path,
-			storageId: HOST_METADATA_STORAGE_ID,
+			storageId: "agent-compute-projection-hosts",
 			defaultValue: () => [],
 		});
 	}

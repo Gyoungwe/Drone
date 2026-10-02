@@ -236,6 +236,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "config",
 		})
 		.register({
+			id: "agent-compute-projection-hosts",
+			path: `${agentDir}/compute/desktop-hosts.json`,
+			owner: "compute/desktop-projection",
+			schema: 1,
+			sensitivity: "config",
+		})
+		.register({
 			id: "agent-compute-jobs-root",
 			path: `${agentDir}/compute/jobs`,
 			owner: "compute/jobs",

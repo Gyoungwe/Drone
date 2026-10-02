@@ -43,7 +43,7 @@ describe("StorageRegistry", () => {
 				sites.push(file);
 			}
 		}
-		expect(sites).toHaveLength(13);
+		expect(sites).toHaveLength(14);
 	});
 
 	it("rejects duplicate entries and inventories file state", async () => {
