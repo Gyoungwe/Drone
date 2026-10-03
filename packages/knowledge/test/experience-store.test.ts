@@ -150,6 +150,63 @@ describe("experience store", () => {
 		expect(persisted).not.toContain("output");
 	});
 
+	it("records compute execution facts and lets a later task search by workflow, host and failure", async () => {
+		const directory = await root();
+		const store = createExperienceStore({ binding, project: "project-a", hostId: "host-a", directory });
+		const result = await recordTerminalJobExperience(
+			store,
+			{
+				jobId: "compute-1",
+				featureKey: "rnaseq-align",
+				summary: "The rnaseq workflow completed and produced a bounded report.",
+				outcome: "success",
+				exitCode: 0,
+				failureSignature: "missing-index",
+				workflow: "nf-core/rnaseq",
+				workflowRevision: "workflow-rev-7",
+				contractHash: "c".repeat(64),
+				scheduler: "slurm",
+				schedulerJobId: "slurm-42",
+				artifactRefs: [{ path: "runs/run-1/report.json", sha256: "d".repeat(64), bytes: 42 }],
+				observationId: "compute-observation-1",
+				provenance: {
+					runId: "compute-run-1",
+					receiptId: "compute-receipt-1",
+					manifestSha256: "e".repeat(64),
+				},
+			},
+			0,
+		);
+		expect(result.record).toMatchObject({
+			workflow: "nf-core/rnaseq",
+			workflowRevision: "workflow-rev-7",
+			contractHash: "c".repeat(64),
+			scheduler: "slurm",
+			schedulerJobId: "slurm-42",
+			artifactRefs: [{ path: "runs/run-1/report.json", sha256: "d".repeat(64) }],
+		});
+		const found = await store.search("rnaseq", {
+			includeObserved: true,
+			workflow: "nf-core/rnaseq",
+			hostId: "host-a",
+			failureSignature: "missing-index",
+		});
+		expect(found.records).toHaveLength(1);
+		expect(found.records[0]?.record.jobId).toBe("compute-1");
+		const laterTask = await searchExperiences({
+			binding,
+			project: "project-a",
+			hostId: "host-a",
+			directory,
+			query: "slurm",
+			workflow: "nf-core/rnaseq",
+			hostFilter: "host-a",
+			failureSignature: "missing-index",
+			includeObserved: true,
+		});
+		expect(laterTask.records.map((hit) => hit.record.id)).toEqual([result.record.id]);
+	});
+
 	it("marks a repeated feature verified or accepts an explicit successful repair", async () => {
 		const directory = await root();
 		const store = createExperienceStore({ binding, project: "project-a", hostId: "host-a", directory });

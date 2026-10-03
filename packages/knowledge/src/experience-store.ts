@@ -23,6 +23,10 @@ export const EXPERIENCE_LIMITS = Object.freeze({
 	maxSearchResults: 24,
 	maxHostIdChars: 64,
 	maxProjectChars: 96,
+	maxWorkflowChars: 180,
+	maxSchedulerChars: 32,
+	maxRevisionChars: 180,
+	maxSchedulerJobIdChars: 180,
 	maxQueryChars: 200,
 });
 
@@ -37,6 +41,16 @@ export interface ExperienceArtifact {
 	path?: string;
 	sha256: string;
 	bytes?: number;
+}
+
+/** Host-observed execution facts copied from a terminal compute completion. */
+export interface ExperienceExecutionFacts {
+	contractHash?: string | null;
+	workflow?: string | null;
+	workflowRevision?: string | null;
+	scheduler?: string | null;
+	schedulerJobId?: string | null;
+	artifactRefs?: readonly ExperienceArtifact[] | null;
 }
 
 export interface ExperienceRepair {
@@ -100,6 +114,12 @@ export interface ExperienceObservation {
 	qcMetrics?: readonly ExperienceQcMetric[] | null;
 	qc?: readonly ExperienceQcMetric[] | null;
 	modelSummary?: string | null;
+	contractHash?: string | null;
+	workflow?: string | null;
+	workflowRevision?: string | null;
+	scheduler?: string | null;
+	schedulerJobId?: string | null;
+	artifactRefs?: readonly ExperienceArtifact[] | null;
 	provenance?: ExperienceProvenance;
 }
 
@@ -119,6 +139,13 @@ export interface TerminalJobExperienceInput {
 	qcMetrics?: readonly ExperienceQcMetric[] | null;
 	qc?: readonly ExperienceQcMetric[] | null;
 	modelSummary?: string | null;
+	/** Immutable task/compute contract and exact workflow facts observed by the host. */
+	contractHash?: string | null;
+	workflow?: string | null;
+	workflowRevision?: string | null;
+	scheduler?: string | null;
+	schedulerJobId?: string | null;
+	artifactRefs?: readonly ExperienceArtifact[] | null;
 	observationId: string;
 	observedAt?: string;
 	topicId?: string | null;
@@ -156,6 +183,12 @@ export interface ExperienceInput {
 	qc?: readonly ExperienceQcMetric[] | null;
 	/** Compatibility alias for qcMetrics at the adapter boundary. */
 	modelSummary?: string | null;
+	contractHash?: string | null;
+	workflow?: string | null;
+	workflowRevision?: string | null;
+	scheduler?: string | null;
+	schedulerJobId?: string | null;
+	artifactRefs?: readonly ExperienceArtifact[] | null;
 	/** Accepted for compatibility at the adapter boundary but intentionally never persisted. */
 	command?: unknown;
 	output?: unknown;
@@ -189,6 +222,12 @@ export interface ExperienceRecord {
 	qcMetrics: ExperienceQcMetric[];
 	modelSummary: string | null;
 	modelGenerated: boolean;
+	contractHash: string | null;
+	workflow: string | null;
+	workflowRevision: string | null;
+	scheduler: string | null;
+	schedulerJobId: string | null;
+	artifactRefs: ExperienceArtifact[];
 	provenance: ExperienceProvenance;
 	tags: string[];
 	sourceRefs: string[];
@@ -246,7 +285,7 @@ export interface ExperienceStore {
 	}>;
 	search: (
 		query?: string,
-		options?: { limit?: number; includeObserved?: boolean },
+		options?: { limit?: number; includeObserved?: boolean; workflow?: string; hostId?: string; failureSignature?: string },
 	) => Promise<ExperienceSearchResult>;
 }
 
@@ -447,6 +486,33 @@ function normalizeArtifact(value: unknown): ExperienceArtifact | null {
 	};
 }
 
+function normalizeArtifactRefs(value: unknown): ExperienceArtifact[] {
+	if (!Array.isArray(value)) return [];
+	return value
+		.map(normalizeArtifact)
+		.filter((item): item is ExperienceArtifact => Boolean(item))
+		.slice(0, EXPERIENCE_LIMITS.maxArtifacts);
+}
+
+function normalizeWorkflow(value: unknown): string | null {
+	const result = text(value, EXPERIENCE_LIMITS.maxWorkflowChars);
+	return result || null;
+}
+
+function normalizeWorkflowRevision(value: unknown): string | null {
+	const result = text(value, EXPERIENCE_LIMITS.maxRevisionChars);
+	return result || null;
+}
+
+function normalizeScheduler(value: unknown): string | null {
+	const result = text(value, EXPERIENCE_LIMITS.maxSchedulerChars).toLowerCase();
+	return result && /^[a-z][a-z0-9._-]{0,31}$/.test(result) ? result : null;
+}
+
+function normalizeSchedulerJobId(value: unknown): string | null {
+	return opaqueRef(value, EXPERIENCE_LIMITS.maxSchedulerJobIdChars) || null;
+}
+
 function normalizeProvenance(input: ExperienceProvenance): ExperienceProvenance {
 	if (!input || typeof input !== "object") throw new Error("Experience provenance is required");
 	const item = input as Record<string, unknown>;
@@ -529,6 +595,12 @@ function normalizeRecord(value: unknown, vaultId: string, project: string, hostI
 		qcMetrics: normalizeQcMetrics(item.qcMetrics ?? item.qc ?? item.qcMetricDistribution),
 		modelSummary: text(item.modelSummary, EXPERIENCE_LIMITS.maxModelSummaryChars) || null,
 		modelGenerated: item.modelGenerated === true && Boolean(text(item.modelSummary, EXPERIENCE_LIMITS.maxModelSummaryChars)),
+		contractHash: hash(item.contractHash),
+		workflow: normalizeWorkflow(item.workflow),
+		workflowRevision: normalizeWorkflowRevision(item.workflowRevision ?? item.workflowRevisionId),
+		scheduler: normalizeScheduler(item.scheduler),
+		schedulerJobId: normalizeSchedulerJobId(item.schedulerJobId),
+		artifactRefs: normalizeArtifactRefs(item.artifactRefs ?? item.artifacts),
 		provenance: normalizeProvenance((item.provenance || {}) as ExperienceProvenance),
 		tags: boundedStringList(item.tags, EXPERIENCE_LIMITS.maxTags),
 		sourceRefs: boundedStringList(item.sourceRefs, EXPERIENCE_LIMITS.maxSources),
@@ -604,6 +676,11 @@ function scoreRecord(record: ExperienceRecord, query: string): number {
 		record.failureSignature || "",
 		record.failedStep || "",
 		record.modelSummary || "",
+		record.workflow || "",
+		record.workflowRevision || "",
+		record.scheduler || "",
+		record.schedulerJobId || "",
+		record.hostId,
 		...record.tags,
 		record.topicId || "",
 	];
@@ -637,6 +714,12 @@ export function experienceInputFromTerminalJob(input: TerminalJobExperienceInput
 			resourceUse: input.resourceUse,
 			qcMetrics: input.qcMetrics ?? input.qc,
 			modelSummary: input.modelSummary,
+			contractHash: input.contractHash,
+			workflow: input.workflow,
+			workflowRevision: input.workflowRevision,
+			scheduler: input.scheduler,
+			schedulerJobId: input.schedulerJobId,
+			artifactRefs: input.artifactRefs,
 			observedAt: input.observedAt,
 			provenance: input.provenance,
 		},
@@ -652,6 +735,12 @@ export function experienceInputFromTerminalJob(input: TerminalJobExperienceInput
 		resourceUse: input.resourceUse,
 		qcMetrics: input.qcMetrics ?? input.qc,
 		modelSummary: input.modelSummary,
+		contractHash: input.contractHash,
+		workflow: input.workflow,
+		workflowRevision: input.workflowRevision,
+		scheduler: input.scheduler,
+		schedulerJobId: input.schedulerJobId,
+		artifactRefs: input.artifactRefs,
 	};
 }
 
@@ -719,6 +808,12 @@ export function createExperienceStore(options: ExperienceStoreOptions): Experien
 				const resourceUse = normalizeResourceUse(input.resourceUse ?? observation.resourceUse);
 				const qcMetrics = normalizeQcMetrics(input.qcMetrics ?? input.qc ?? observation.qcMetrics ?? observation.qc);
 				const modelSummary = text(input.modelSummary ?? observation.modelSummary, EXPERIENCE_LIMITS.maxModelSummaryChars) || null;
+				const contractHash = hash(input.contractHash ?? observation.contractHash);
+				const workflow = normalizeWorkflow(input.workflow ?? observation.workflow);
+				const workflowRevision = normalizeWorkflowRevision(input.workflowRevision ?? observation.workflowRevision);
+				const scheduler = normalizeScheduler(input.scheduler ?? observation.scheduler);
+				const schedulerJobId = normalizeSchedulerJobId(input.schedulerJobId ?? observation.schedulerJobId);
+				const artifactRefs = normalizeArtifactRefs(input.artifactRefs ?? observation.artifactRefs);
 			const observedAt = text(observation.observedAt, 40) || now();
 			const sanitizedTags = boundedStringList(input.tags, EXPERIENCE_LIMITS.maxTags);
 			const sanitizedSources = boundedStringList(input.sourceRefs, EXPERIENCE_LIMITS.maxSources);
@@ -757,9 +852,15 @@ export function createExperienceStore(options: ExperienceStoreOptions): Experien
 						repair,
 						workflowSpecDiff,
 						resourceUse,
-						qcMetrics,
-						modelSummary,
-						modelGenerated: Boolean(modelSummary),
+							qcMetrics,
+							modelSummary,
+							modelGenerated: Boolean(modelSummary),
+							contractHash,
+							workflow,
+							workflowRevision,
+							scheduler,
+							schedulerJobId,
+							artifactRefs,
 					provenance,
 					tags: sanitizedTags,
 					sourceRefs: sanitizedSources,
@@ -792,16 +893,31 @@ export function createExperienceStore(options: ExperienceStoreOptions): Experien
 						record.modelSummary = modelSummary;
 						record.modelGenerated = true;
 					}
+					if (contractHash) record.contractHash = contractHash;
+					if (workflow) record.workflow = workflow;
+					if (workflowRevision) record.workflowRevision = workflowRevision;
+					if (scheduler) record.scheduler = scheduler;
+					if (schedulerJobId) record.schedulerJobId = schedulerJobId;
+					if (artifactRefs.length) record.artifactRefs = artifactRefs;
 				if (!existing) document.records.unshift(record);
 				return { document, result: { classification: existing ? ("updated" as const) : ("new" as const), record } };
 			});
 			return { ...out.result, revision: out.document.revision, record: out.result.record };
 		},
-		search: async (query = "", options: { limit?: number; includeObserved?: boolean } = {}): Promise<ExperienceSearchResult> => {
+		search: async (
+			query = "",
+			options: { limit?: number; includeObserved?: boolean; workflow?: string; hostId?: string; failureSignature?: string } = {},
+		): Promise<ExperienceSearchResult> => {
 			const document = await read();
 			const q = text(query, EXPERIENCE_LIMITS.maxQueryChars);
 			const limit = Math.min(EXPERIENCE_LIMITS.maxSearchResults, Math.max(1, Math.floor(options.limit || EXPERIENCE_LIMITS.maxSearchResults)));
+			const workflowFilter = normalizeWorkflow(options.workflow);
+			const hostFilter = options.hostId === undefined ? null : hostKey(options.hostId);
+			const failureFilter = text(options.failureSignature, 240).toLowerCase() || null;
 			const records = document.records
+				.filter((record) => !workflowFilter || record.workflow?.toLowerCase() === workflowFilter.toLowerCase())
+				.filter((record) => !hostFilter || record.hostId === hostFilter)
+				.filter((record) => !failureFilter || record.failureSignature?.toLowerCase() === failureFilter)
 				.filter((record) => options.includeObserved !== false || record.status === "verified")
 				.map((record) => ({ record, score: scoreRecord(record, q) }))
 				.filter((hit) => !q || hit.score > 0)
@@ -812,7 +928,17 @@ export function createExperienceStore(options: ExperienceStoreOptions): Experien
 	};
 }
 
-export async function searchExperiences(options: ExperienceStoreOptions & { query?: string; limit?: number; includeObserved?: boolean }): Promise<ExperienceSearchResult> {
-	const { query = "", limit, includeObserved, ...storeOptions } = options;
-	return createExperienceStore(storeOptions).search(query, { limit, includeObserved });
+export async function searchExperiences(
+	options: ExperienceStoreOptions & {
+		query?: string;
+		limit?: number;
+		includeObserved?: boolean;
+		workflow?: string;
+		failureSignature?: string;
+		hostFilter?: string;
+	},
+): Promise<ExperienceSearchResult> {
+	const { query = "", limit, includeObserved, workflow, failureSignature, hostFilter, ...storeOptions } = options;
+	const store = createExperienceStore(storeOptions);
+	return store.search(query, { limit, includeObserved, workflow, hostId: hostFilter, failureSignature });
 }

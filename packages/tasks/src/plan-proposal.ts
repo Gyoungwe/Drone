@@ -223,6 +223,34 @@ function digest(value: unknown): string {
 	return createHash("sha256").update(canonical(value)).digest("hex");
 }
 
+type ProposalContract = Omit<
+	PlanProposal,
+	"contractHash" | "approval" | "approvedContractHash" | "navigationOnly"
+>;
+
+function proposalContract(proposal: PlanProposal): ProposalContract {
+	return {
+		version: 1,
+		project: proposal.project,
+		goal: proposal.goal,
+		query: proposal.query,
+		summary: proposal.summary,
+		findings: proposal.findings,
+		candidates: proposal.candidates,
+		recommendation: proposal.recommendation,
+		questions: proposal.questions,
+		conflicts: proposal.conflicts,
+		uncertainties: proposal.uncertainties,
+		compute: proposal.compute,
+		previousContractHash: proposal.previousContractHash,
+	};
+}
+
+/** Recompute the immutable contract identity from proposal inputs, never from a stored hash. */
+export function planProposalContractHash(proposal: PlanProposal): string {
+	return digest(proposalContract(proposal));
+}
+
 export function normalizePlanProposal(input: PlanProposalInput): PlanProposal {
 	const findingsInput = Array.isArray(input.findings) ? input.findings : [];
 	if (!findingsInput.length || findingsInput.length > PLAN_PROPOSAL_LIMITS.findings)
@@ -335,10 +363,7 @@ export function normalizePlanProposal(input: PlanProposalInput): PlanProposal {
 	const previousContractHash = clean(input.previousContractHash, 64).toLowerCase();
 	if (previousContractHash && !/^[a-f0-9]{64}$/.test(previousContractHash))
 		throw new Error("Invalid previous proposal hash");
-	const contract: Omit<
-		PlanProposal,
-		"contractHash" | "approval" | "approvedContractHash" | "navigationOnly"
-	> = {
+	const contract: ProposalContract = {
 		version: 1,
 		project,
 		goal,
@@ -366,13 +391,20 @@ export const createPlanProposal = normalizePlanProposal;
 
 export function approvePlanProposal(proposal: PlanProposal, expectedContractHash: unknown): PlanProposal {
 	if (proposal.approval !== "pending") throw new Error("Only a pending proposal can be approved");
-	if (expectedContractHash !== proposal.contractHash)
+	const currentContractHash = planProposalContractHash(proposal);
+	if (proposal.contractHash !== currentContractHash || expectedContractHash !== currentContractHash)
 		throw new Error("Proposal changed; refresh before approval");
-	return { ...proposal, approval: "approved", approvedContractHash: proposal.contractHash };
+	return {
+		...proposal,
+		approval: "approved",
+		approvedContractHash: currentContractHash,
+		contractHash: currentContractHash,
+	};
 }
 export function rejectPlanProposal(proposal: PlanProposal, expectedContractHash: unknown): PlanProposal {
 	if (proposal.approval !== "pending") throw new Error("Only a pending proposal can be rejected");
-	if (expectedContractHash !== proposal.contractHash)
+	const currentContractHash = planProposalContractHash(proposal);
+	if (proposal.contractHash !== currentContractHash || expectedContractHash !== currentContractHash)
 		throw new Error("Proposal changed; refresh before rejection");
 	return { ...proposal, approval: "rejected", approvedContractHash: null };
 }
@@ -380,7 +412,13 @@ export function canExecutePlanProposal(
 	proposal: PlanProposal,
 	currentContractHash = proposal.contractHash,
 ): boolean {
-	return proposal.approval === "approved" && proposal.approvedContractHash === currentContractHash;
+	const computedHash = planProposalContractHash(proposal);
+	return (
+		proposal.approval === "approved" &&
+		proposal.contractHash === computedHash &&
+		proposal.approvedContractHash === computedHash &&
+		currentContractHash === computedHash
+	);
 }
 
 export type ProposalRecoveryDecision = "retry" | "block";

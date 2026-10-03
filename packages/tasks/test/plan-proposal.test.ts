@@ -75,6 +75,14 @@ describe("plan proposal policy", () => {
 		const approved = approvePlanProposal(proposal, proposal.contractHash);
 		expect(canExecutePlanProposal(approved)).toBe(true);
 	});
+	it("invalidates an old authorization when a key proposal input changes", () => {
+		const proposal = createPlanProposal(input);
+		const changed = { ...proposal, compute: { ...proposal.compute, workflows: ["nf-core/chipseq"] } };
+		expect(() => approvePlanProposal(changed, proposal.contractHash)).toThrow("changed");
+		const approved = approvePlanProposal(proposal, proposal.contractHash);
+		const changedAfterApproval = { ...approved, budget: "ignored", goal: "changed goal" };
+		expect(canExecutePlanProposal(changedAfterApproval)).toBe(false);
+	});
 	it("blocks the third identical failed effect while allowing changed recovery", () => {
 		expect(proposalRecoveryDecision(1, true)).toBe("retry");
 		expect(proposalRecoveryDecision(2, true)).toBe("block");
