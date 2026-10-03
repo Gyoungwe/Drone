@@ -1,16 +1,11 @@
 import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { resolveWriteRoots } from "@drone/tasks/consent";
+import { registerWorkbench } from "@drone/tasks/register";
+import { createTaskWorkbench, LIMITS, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { afterEach, expect, it, vi } from "vitest";
-import { readKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
-import { resolveWriteRoots } from "../../../.pi/lib/tasks/consent.mjs";
-import { registerWorkbench } from "../../../.pi/lib/tasks/register.mjs";
-import { createTaskWorkbench, LIMITS, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
 
-vi.mock("../../../.pi/lib/knowledge/config.mjs", async (original) => ({
-	...(await original()),
-	readKnowledgeBinding: vi.fn(async () => null),
-}));
 const dirs = [];
 afterEach(async () => {
 	vi.useRealTimers();
@@ -169,6 +164,7 @@ async function registered({ withPlan = true } = {}) {
 	// 可切换的空闲状态：回合执行中为 false（模型已发出 tool_calls，结果未回）
 	const idle = { value: true };
 	const pi = {
+		drone: { readKnowledgeBinding: vi.fn(async () => null) },
 		on: (name, cb) => {
 			events[name] = cb;
 		},
@@ -433,16 +429,18 @@ it("a late preparation failure cannot reopen a task cancelled during the async h
 	vi.useFakeTimers();
 	let rejectBinding;
 	// Authorization checks the binding before and after the user answer; the third read is the handoff under test.
-	readKnowledgeBinding
+	pi.drone.readKnowledgeBinding
 		.mockResolvedValueOnce(null)
 		.mockResolvedValueOnce(null)
-		.mockReturnValueOnce(
-			new Promise((_resolve, reject) => {
-				rejectBinding = reject;
-			}),
+		.mockImplementationOnce(
+			() =>
+				new Promise((_resolve, reject) => {
+					rejectBinding = reject;
+				}),
 		);
 	await approve();
 	vi.advanceTimersByTime(0);
+	expect(pi.drone.readKnowledgeBinding).toHaveBeenCalledTimes(3);
 	await commands["task-action"].handler(
 		Buffer.from(
 			JSON.stringify({ taskId: j.snapshot().id, revision: j.view().revision, action: "cancel" }),

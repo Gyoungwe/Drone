@@ -199,8 +199,18 @@ async function run() {
 			"four specialist roles, explicit model-cost and permission information; real IPC mode change persists without calling a model",
 		);
 		await capture("06-specialist-settings");
+		// SkillsPanel now opens on the six-direction browse view. Reach the
+		// capability details through its real Advanced control before inspecting
+		// the footprint and registered tools, just as a user does.
+		const skillsScope = "document.querySelector('[data-testid=tools-skills-fixture]')";
 		await wait(
-			"document.querySelector('[data-testid=tools-skills-overview]')",
+			`${skillsScope}.querySelectorAll('[data-testid=workflow-overview] [data-workflow-direction]').length===6`,
+			"six workflow directions before advanced tools",
+		);
+		assert(await js(`!${skillsScope}.querySelector('[data-testid=tools-skills-overview]')`));
+		await click("高级：全部原始技能（2）", skillsScope);
+		await wait(
+			`${skillsScope}.querySelector('[data-testid=tools-skills-overview]')`,
 			"Tools & Skills capability overview",
 		);
 		assert(
@@ -211,8 +221,27 @@ async function run() {
 				"document.querySelector('[data-testid=tools-skills-fixture]').innerText.includes('research_search_knowledge')",
 			),
 		);
-		checks.push("Tools & Skills shows active/lazy/always-on registry metadata and measured schema footprint");
+		for (const [tool, mode] of [
+			["ask_user", "Always-on"],
+			["research_search_knowledge", "Loaded"],
+			["bash", "Lazy"],
+		]) {
+			assert(
+				await js(
+					`[...${skillsScope}.querySelectorAll('[data-testid=tools-skills-overview] li')].some(row=>row.querySelector('code')?.textContent===${JSON.stringify(tool)}&&row.innerText.includes(${JSON.stringify(mode)}))`,
+				),
+				`Registered tool ${tool} retains its ${mode} mode`,
+			);
+		}
+		checks.push(
+			"six-direction browse view opens Advanced tools; active/lazy/always-on registry metadata and measured schema footprint remain visible",
+		);
 		await capture("07-tools-skills");
+		await click("返回六方向浏览", skillsScope);
+		await wait(
+			`!${skillsScope}.querySelector('[data-testid=tools-skills-overview]')&&${skillsScope}.querySelectorAll('[data-workflow-direction]').length===6`,
+			"return to compact six-direction browse view",
+		);
 		await wait("document.querySelector('[data-testid=run-inspector]')", "Run Inspector");
 		await js("document.querySelector('[data-testid=run-inspector]').open=true");
 		assert(
@@ -372,11 +401,13 @@ async function run() {
 		await wait("document.querySelector('[data-testid=knowledge-note] a[href]')", "clickable Vault reference");
 		await js("document.querySelector('[data-testid=knowledge-note] a[href]').click()");
 		await wait(
-			"document.querySelector('[role=dialog] [data-testid=knowledge-note]')&&document.querySelector('[role=dialog]').innerText.includes('Wiki/Topic.md')",
+			"document.querySelector('.knowledge-view [data-testid=knowledge-note]')&&document.querySelector('.knowledge-view').innerText.includes('Wiki/Topic.md')&&!document.querySelector('.knowledge-view[role=dialog]')",
 			"click opens current scoped Wiki note",
 		);
-		await js("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
-		await wait("!document.querySelector('[role=dialog]')", "close note");
+		await js(
+			"document.querySelector('.knowledge-view [data-testid=knowledge-note] button[aria-label=\"关闭\"]')?.click();true",
+		);
+		await wait("!document.querySelector('.knowledge-view')", "close note");
 		checks.push("existing Vault wikilinks render and open actual scoped notes");
 
 		checks.push(
@@ -412,7 +443,7 @@ async function run() {
 		const proof = await service.validateAnswer(prep.ticket, cwd, "限定条件的记录 [[Library/Papers/source]]");
 		state.publicationKnowledgeFlow(ctx, { ...proof, status: "released" });
 		await wait(
-			"document.querySelector('[data-testid=knowledge-flow-card]')&&document.body.innerText.includes('发布检查通过')",
+			"document.querySelector('[data-testid=knowledge-flow-card]')&&document.querySelector('[data-testid=knowledge-flow-card]').innerText.includes('回答已发布')",
 			"flow card",
 		);
 		await js("document.querySelector('[data-testid=knowledge-flow-card] button[aria-expanded]').click()");
@@ -501,14 +532,14 @@ async function run() {
 			js(
 				"[...document.querySelector('#stage-timeline-fixture').querySelectorAll('[data-testid=progress-note],[data-testid=tool-phase-group]')].map(n=>n.dataset.testid==='progress-note'?'stage:'+n.querySelector('p').textContent:'tools')",
 			);
-		assert.deepEqual(await timelineOrder(), ["stage:先定位主题和已有证据", "tools"]);
+		assert.deepEqual(await timelineOrder(), ["stage:先定位主题和已有证据计划", "tools"]);
 		await js("window.stageTimelineFixture.next();true");
 		await wait(
 			"document.querySelectorAll('#stage-timeline-fixture [data-testid=progress-note]').length===2",
 			"next stage visible without waiting for entire run",
 		);
 		assert.deepEqual(await timelineOrder(), [
-			"stage:先定位主题和已有证据",
+			"stage:先定位主题和已有证据计划",
 			"tools",
 			"stage:补查缺失的软件参数",
 			"tools",
@@ -520,12 +551,19 @@ async function run() {
 			"document.querySelector('#stage-timeline-fixture').innerText.includes('本轮交付说明')",
 			"final reply remains after phase summary",
 		);
+		await js(
+			"document.querySelector('#stage-timeline-fixture [data-testid=process-block] button[aria-expanded=\"false\"]')?.click();true",
+		);
+		await wait(
+			"document.querySelectorAll('#stage-timeline-fixture [data-testid=progress-note]').length===3",
+			"completed process stages expanded",
+		);
 		const expectedTimeline = [
-			"stage:先定位主题和已有证据",
+			"stage:先定位主题和已有证据计划",
 			"tools",
 			"stage:补查缺失的软件参数",
 			"tools",
-			"stage:本阶段小结：明确已知与缺口",
+			"stage:本阶段小结：明确已知与缺口小结",
 		];
 		assert.deepEqual(await timelineOrder(), expectedTimeline);
 		await js(
@@ -549,34 +587,40 @@ async function run() {
 			"actual MessageList shows live completed public summary before its tools, then next summary/tools and stage summary; finalization, expand/collapse and narrow width preserve order (scripted public tool results, no raw reasoning)",
 		);
 
+		window.setSize(1200, 960);
 		await js(
 			"window.sidebarFixture.begin();document.querySelector('#stage-timeline-fixture').style.display='none';document.querySelector('[data-testid=sidebar-actions-fixture]').style.display='block';document.querySelector('[data-testid=sidebar-actions-fixture]').classList.remove('hidden');document.querySelector('[data-testid=sidebar-actions-fixture]').scrollIntoView({block:'center'});document.documentElement.dataset.theme='light';true",
 		);
 		await wait(
-			"document.querySelector('[data-testid=project-sidebar-actions] > button:nth-child(2)').textContent.trim()==='Obsidian'",
-			"visible Obsidian sidebar label",
+			"document.querySelector('[data-testid=sidebar-actions-fixture] .workbench-nav-item[title=\"知识库\"]')",
+			"visible workbench navigation",
 		);
 		const actionGeometry = () =>
 			js(
-				"[...document.querySelector('[data-testid=project-sidebar-actions]').children].map(b=>{const r=b.getBoundingClientRect(),i=b.querySelector('svg').getBoundingClientRect(),t=b.querySelector('span').getBoundingClientRect();return {tag:b.tagName,label:b.textContent.trim(),x:r.x,y:r.y,width:r.width,height:r.height,iconX:i.x,iconWidth:i.width,textX:t.x};})",
+				"[...document.querySelector('[data-testid=sidebar-actions-fixture]').querySelectorAll('.workbench-nav-item')].map(b=>{const r=b.getBoundingClientRect(),i=b.querySelector('svg').getBoundingClientRect(),t=b.querySelector('span').getBoundingClientRect();return {tag:b.tagName,label:b.textContent.trim(),x:r.x,y:r.y,width:r.width,height:r.height,iconX:i.x,iconWidth:i.width,textX:t.x};})",
 			);
 		const aligned = (rows) => {
-			assert.equal(rows.length, 4);
+			assert.equal(rows.length, 7);
 			for (const row of rows) {
 				assert.equal(row.tag, "BUTTON");
-				assert(row.width > 180 && row.height >= 28, "sidebar row must be visible and full width");
+				assert(
+					row.width >= 36 && row.height >= 36,
+					"workbench row must be visible and have a stable hit target",
+				);
 				for (const k of ["x", "width", "height", "iconX", "iconWidth", "textX"])
 					assert(Math.abs(row[k] - rows[0][k]) < 0.5, `equal sidebar ${k}`);
 			}
-			assert.equal(rows[1].label, "Obsidian");
-			assert.equal(rows[2].label, "Zotero");
+			assert.deepEqual(
+				rows.map((row) => row.label),
+				["聊天", "空间", "研究", "知识库", "扩展", "设置", "帮助"],
+			);
 		};
 		aligned(await actionGeometry());
 		// Offscreen windows are not OS-focused. Drive Chromium's real input with focus emulation; do not steal the user's active application.
 		window.webContents.debugger.attach("1.3");
 		await window.webContents.debugger.sendCommand("Emulation.setFocusEmulationEnabled", { enabled: true });
 		await js(
-			"window.sidebarFixture.reset();document.querySelector('[data-testid=project-sidebar-actions] > button').focus();true",
+			"window.sidebarFixture.reset();document.querySelector('[data-testid=sidebar-actions-fixture] .workbench-nav-item').focus();true",
 		);
 		await window.webContents.debugger.sendCommand("Input.dispatchKeyEvent", {
 			type: "keyDown",
@@ -590,10 +634,7 @@ async function run() {
 			code: "Tab",
 			windowsVirtualKeyCode: 9,
 		});
-		await wait(
-			"document.activeElement?.dataset.testid==='obsidian-shortcut'",
-			"sidebar keyboard focus order",
-		);
+		await wait("document.activeElement?.textContent.trim()==='空间'", "sidebar keyboard focus order");
 		await window.webContents.debugger.sendCommand("Input.dispatchKeyEvent", {
 			type: "keyDown",
 			key: "Enter",
@@ -608,40 +649,44 @@ async function run() {
 			code: "Enter",
 			windowsVirtualKeyCode: 13,
 		});
-		await wait(
-			"window.sidebarFixture.state().open&&window.sidebarFixture.state().category==='knowledge'",
-			"Enter opens knowledge settings",
-		);
+		await wait("window.sidebarFixture.state().view==='projects'", "Enter opens projects view");
 		await js("window.sidebarFixture.reset();true");
-		const middle = (await actionGeometry())[1];
+		const settingsButton = (await actionGeometry())[5];
 		await window.webContents.debugger.sendCommand("Input.dispatchMouseEvent", {
 			type: "mousePressed",
-			x: Math.floor(middle.x + middle.width - 4),
-			y: Math.floor(middle.y + middle.height / 2),
+			x: Math.floor(settingsButton.x + settingsButton.width - 4),
+			y: Math.floor(settingsButton.y + settingsButton.height / 2),
 			button: "left",
 			clickCount: 1,
 		});
 		await window.webContents.debugger.sendCommand("Input.dispatchMouseEvent", {
 			type: "mouseReleased",
-			x: Math.floor(middle.x + middle.width - 4),
-			y: Math.floor(middle.y + middle.height / 2),
+			x: Math.floor(settingsButton.x + settingsButton.width - 4),
+			y: Math.floor(settingsButton.y + settingsButton.height / 2),
 			button: "left",
 			clickCount: 1,
 		});
 		await wait(
-			"window.sidebarFixture.state().open&&window.sidebarFixture.state().category==='knowledge'",
-			"full row right edge opens knowledge settings",
+			"window.sidebarFixture.state().open&&window.sidebarFixture.state().category==='general'",
+			"full row right edge opens settings",
 		);
 		checks.push(
-			"real sidebar Settings/Obsidian/Help rows have equal measured hit rectangles, icon and text alignment; visible Obsidian name; Tab/Enter and far-right click open knowledge settings",
+			"real workbench navigation rows have equal measured hit rectangles, icon and text alignment; visible knowledge entry; Tab/Enter changes view and far-right click opens settings",
 		);
 		await capture("11-sidebar-aligned-light");
 		await js("window.sidebarFixture.language('en');document.documentElement.dataset.theme='dark';true");
 		await wait(
-			"document.querySelector('[data-testid=project-sidebar-actions]').innerText.includes('Help')",
+			"document.querySelector('[data-testid=sidebar-actions-fixture] .workbench-nav-item[title=\"Help\"]')",
 			"English sidebar",
 		);
-		aligned(await actionGeometry());
+		window.setSize(520, 980);
+		await pause(200);
+		assert(
+			await js(
+				"getComputedStyle(document.querySelector('[data-testid=sidebar-actions-fixture] .workbench-nav')).display==='none'",
+			),
+			"workbench navigation collapses at narrow width",
+		);
 		assert(
 			await js("document.documentElement.scrollWidth<=window.innerWidth+1"),
 			"sidebar no narrow-window overflow",
@@ -668,7 +713,11 @@ async function run() {
 			"document.querySelector('#stage-timeline-fixture').innerText.includes('analysis.csv')",
 			"host task checkpoint displayed without model turn",
 		);
-		assert(await js("document.querySelector('#stage-timeline-fixture').innerText.includes('不是科研结论')"));
+		assert(
+			await js(
+				"document.querySelector('#stage-timeline-fixture').innerText.includes('不代表实验结论已验证')",
+			),
+		);
 		await js("document.querySelector('#stage-timeline-fixture').scrollIntoView({block:'start'});true");
 		await capture("13-generic-task-checkpoint");
 		checks.push(
@@ -681,9 +730,8 @@ async function run() {
 			persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }),
 		});
 		workbench.attach("isolated-ui-v2");
-		workbench.begin("实验数据交付与人工复核");
-		const taskId = workbench.snapshot().id;
 		workbench.plan({
+			goal: "实验数据交付与人工复核",
 			milestones: [
 				{ id: "data", title: "CSV 文件读回", acceptance: { kind: "file", path: "analysis.csv" } },
 				{
@@ -694,6 +742,7 @@ async function run() {
 				},
 			],
 		});
+		const taskId = workbench.snapshot().id;
 		workbench.wait({
 			kind: "file",
 			title: "请核对实验数据文件",
@@ -702,68 +751,62 @@ async function run() {
 		});
 		const pushTask = async () =>
 			js(`window.stageTimelineFixture.status("宿主任务记录", ${JSON.stringify(workbench.view())});true`);
-		const taskActions = [];
-		ipcMain.handle(IpcChannels.SessionPrompt, async (_event, _session, text) => {
-			assert(text.startsWith("/task-action "));
-			const action = JSON.parse(Buffer.from(text.slice(13), "base64url").toString("utf8"));
-			taskActions.push(action.action);
-			if (action.action === "file") await workbench.acceptFile(action, cwd);
-			else if (action.action === "refresh") {
-				workbench.command(action);
-				await workbench.reconcile(cwd);
-			} else workbench.command(action);
-			await pushTask();
-			return { kind: "command" };
-		});
 		await pushTask();
 		await wait(
-			"!!document.querySelector('[data-testid=task-workbench]')",
-			"v2 structured task card live reducer",
+			"document.querySelector('[data-testid=task-workbench]').innerText.includes('实验数据交付与人工复核')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('CSV 文件读回')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('人工核对交付文件')",
+			"v2 structured task contract view",
 		);
-		const taskClick = async (label) => {
-			await js(
-				`(() => { const b=[...document.querySelector('[data-task-id="${taskId}"]').querySelectorAll('button')].find(b=>b.textContent.includes(${JSON.stringify(label)})); if(!b || b.disabled) throw Error('task button unavailable'); b.click(); return true; })()`,
-			);
+		assert.equal(workbench.view().tasks[0].state, "waiting_user");
+		workbench.command({ taskId, revision: workbench.view().revision, action: "approve-plan" });
+		await pushTask();
+		await wait(
+			"document.querySelector('[data-testid=task-workbench]').innerText.includes('等待你')",
+			"approved task contract remains visible while its file action awaits readback",
+		);
+		const writeEvent = {
+			toolName: "write",
+			toolCallId: "fixture-task-write",
+			input: { path: "analysis.csv", content: "sample,value\nfixture,1\n" },
+			isError: false,
+			content: [{ type: "text", text: "written" }],
+			details: {},
 		};
-		await taskClick("确认这些验收条件");
-		await wait(
-			"!document.querySelector('[data-testid=task-workbench]').innerText.includes('模型提案，待你确认')",
-			"user approves explicit plan through IPC",
+		assert.equal(workbench.guard(writeEvent), null);
+		await workbench.observe(writeEvent, cwd);
+		const action = workbench.view().tasks[0].actions.find((item) => item.kind === "file");
+		assert(action);
+		await workbench.acceptFile(
+			{ taskId, revision: workbench.view().revision, actionId: action.id, path: "analysis.csv" },
+			cwd,
 		);
-		await taskClick("只读核对产物");
-		await wait(
-			"document.querySelector('[data-testid=task-workbench]').innerText.includes('✓ CSV 文件读回')",
-			"host file readback updates selected criterion",
-		);
+		workbench.command({
+			taskId,
+			revision: workbench.view().revision,
+			action: "acknowledge",
+			actionId: action.id,
+		});
+		await pushTask();
 		await js(
-			`(() => {const i=document.querySelector('[data-testid=task-workbench] input'); const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; setter.call(i,'analysis.csv'); i.dispatchEvent(new Event('input',{bubbles:true}));return true;})()`,
+			"document.querySelectorAll('[data-testid=task-workbench] details').forEach((node)=>{node.open=true});true",
 		);
-		await taskClick("核对这个文件");
 		await wait(
-			"document.querySelector('[data-testid=task-workbench]').innerText.includes('文件已检查：analysis.csv')",
-			"manual file inspection through actual preload IPC",
-		);
-		await taskClick("我已核对这一事项");
-		await wait(
-			"!document.querySelector('[data-testid=task-workbench]').innerText.includes('请核对实验数据文件')",
-			"scoped acknowledgment resolves only its action",
+			"(()=>{const node=document.querySelector('[data-testid=task-workbench]');return Boolean(node)&&node.innerText.includes('✓')&&node.innerText.includes('CSV 文件读回')&&node.innerText.includes('人工核对交付文件')&&node.innerText.includes('已验收 2/2')})()",
+			"host file readback updates selected criterion",
 		);
 		workbench = createTaskWorkbench();
 		workbench.attach("isolated-ui-v2", entries);
 		await workbench.reconcile(cwd);
 		await pushTask();
-		await wait(
-			"document.querySelector('[data-testid=task-workbench]').innerText.includes('记录的验收已满足')",
-			"restart restores approved file and human review receipts",
+		await js(
+			"document.querySelectorAll('[data-testid=task-workbench] details').forEach((node)=>{node.open=true});true",
 		);
-		assert(
-			taskActions.includes("file") &&
-				taskActions.includes("acknowledge") &&
-				taskActions.includes("approve-plan"),
+		await wait(
+			"document.querySelector('[data-testid=task-workbench]').innerText.includes('✓')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('CSV 文件读回')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('人工核对交付文件')&&document.querySelector('[data-testid=task-workbench]').innerText.includes('已验收 2/2')",
+			"restart restores verified file delivery and scoped acceptance",
 		);
 		await capture("14-task-workbench-ipc-recovery");
 		checks.push(
-			"v2 task workbench: actual Electron/preload IPC plan approval, file inspection, scoped review, durable ledger restart and no model completion claims",
+			"v2 task contract view: actual TasksPane renders the plan, host readback and explicit file acknowledgment complete both scoped acceptance criteria, and durable ledger restart preserves the verified delivery without a scientific completion claim",
 		);
 		assert.equal(errors.length, 0, "renderer errors");
 		await writeFile(

@@ -1,12 +1,66 @@
-import type { PiBackend } from "@drone/backend";
-import { SESSION_INVOKE_METHODS } from "@drone/shared";
-import { registerInvokers } from "./register-invokers";
+import type { BackendServices, SessionServicePort } from "@drone/backend";
+import type { SessionsApi } from "@drone/shared";
+import { IpcChannels, SessionsContract } from "@drone/shared";
+import { bindContract, type ContractImplementation } from "./bind-contract";
+
+type SessionContractMethod = keyof typeof SessionsContract.methods & string;
+
+/** Keep the historical singular `session:*` channels stable during migration. */
+const CONTRACT_CHANNELS = {
+	createSession: IpcChannels.SessionCreate,
+	listSessions: IpcChannels.SessionList,
+	listAllSessions: IpcChannels.SessionListAll,
+	openSession: IpcChannels.SessionOpen,
+	closeSession: IpcChannels.SessionClose,
+	deleteSession: IpcChannels.SessionDelete,
+	prompt: IpcChannels.SessionPrompt,
+	abort: IpcChannels.SessionAbort,
+	retry: IpcChannels.SessionRetry,
+	setModel: IpcChannels.SessionSetModel,
+	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
+	compact: IpcChannels.SessionCompact,
+	getStats: IpcChannels.SessionStats,
+	getContextUsage: IpcChannels.SessionGetContextUsage,
+	clearQueue: IpcChannels.SessionClearQueue,
+	getFollowUpMessages: IpcChannels.SessionGetFollowUpMessages,
+	listSlashCommands: IpcChannels.SessionListSlashCommands,
+	listSlashCommandsForCwd: IpcChannels.SessionListSlashCommandsForCwd,
+	setSessionName: IpcChannels.SessionSetName,
+	exportSession: IpcChannels.SessionExport,
+	forkSession: IpcChannels.SessionFork,
+	recallMessage: IpcChannels.SessionRecall,
+	getLoadedResources: IpcChannels.SessionGetLoadedResources,
+	getSessionMessages: IpcChannels.SessionGetMessages,
+	peekSubagentMessages: IpcChannels.SessionPeekSubagentMessages,
+	steerSubagent: IpcChannels.SessionSteerSubagent,
+	replySubagentSupervisor: IpcChannels.SessionReplySubagentSupervisor,
+	getTodos: IpcChannels.SessionGetTodos,
+	listModels: IpcChannels.ModelsList,
+	listProjectFiles: IpcChannels.ProjectListFiles,
+	ensureProjectTrust: IpcChannels.ProjectEnsureTrust,
+} satisfies Record<SessionContractMethod, string>;
 
 /**
- * 会话域：Session* 通道（生命周期/提示/导出/fork/撤回）+ 模型列表 + 项目文件/信任。
- * 全部为 1:1 透传 `backend[method]`（同名），由 registerInvokers 按 SESSION_INVOKE_METHODS
- * 统一注册；通道名与 preload 共用 INVOKE_ROUTES 事实源。
+ * Register every session method through the schema-backed host contract.
+ * Renderer method names and legacy channel names remain unchanged while
+ * transport registration is kept behind the schema-backed binder.
  */
-export function registerSessionsIpc(backend: PiBackend): void {
-	registerInvokers(backend, SESSION_INVOKE_METHODS);
+export function registerSessionsIpc(
+	backendOrServices: SessionServicePort | Pick<BackendServices, "sessions">,
+): void {
+	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
+	const implementation = Object.fromEntries(
+		(Object.keys(SessionsContract.methods) as SessionContractMethod[]).map((method) => {
+			const fn = backend[method as keyof SessionsApi] as unknown;
+			if (typeof fn !== "function") throw new Error(`Missing backend session method: ${method}`);
+			return [
+				method,
+				(...args: unknown[]) => Reflect.apply(fn as (...args: unknown[]) => unknown, backend, args),
+			];
+		}),
+	) as unknown as ContractImplementation<typeof SessionsContract>;
+
+	bindContract(SessionsContract, implementation, {
+		channelForMethod: (_contract, method) => CONTRACT_CHANNELS[method as SessionContractMethod],
+	});
 }

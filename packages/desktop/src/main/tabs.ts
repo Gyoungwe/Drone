@@ -12,6 +12,7 @@ function tabsFilePath(): string {
 function tabsStore(): JsonStore<Partial<SavedTabs> | null> {
 	return new JsonStore<Partial<SavedTabs> | null>({
 		path: tabsFilePath(),
+		storageId: "desktop-tabs",
 		defaultValue: () => null,
 	});
 }

@@ -12,6 +12,7 @@ function uiStateFilePath(): string {
 function uiStateStore(): JsonStore<Partial<UiState> | null> {
 	return new JsonStore<Partial<UiState> | null>({
 		path: uiStateFilePath(),
+		storageId: "desktop-ui-state",
 		defaultValue: () => null,
 	});
 }

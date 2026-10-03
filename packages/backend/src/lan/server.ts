@@ -13,6 +13,8 @@ import type {
 	SessionMessage,
 	SessionMeta,
 } from "@drone/shared";
+import { LanContract, methodsWithAccess } from "@drone/shared";
+import { Check } from "typebox/value";
 import { LanAuditLog } from "./audit";
 import type { LanConfigService } from "./config";
 import {
@@ -43,6 +45,61 @@ const PROMPT_MAX_BYTES = 8 * 1024;
 const BODY_MAX_BYTES = 16 * 1024;
 
 type WriteRoute = { action: "prompt" | "abort" | "retry"; id: string } | { action: "perm"; id: string };
+
+type LanReadMethod = {
+	[K in keyof typeof LanContract.methods]: (typeof LanContract.methods)[K]["access"] extends "lan-read"
+		? K
+		: never;
+}[keyof typeof LanContract.methods] &
+	string;
+
+interface LanReadRoute {
+	/** HTTP verb is explicit so a future route cannot silently become writable. */
+	method: "GET";
+	path: string;
+}
+
+/**
+ * The LAN adapter only projects read methods. Keep the path mapping beside the
+ * contract-derived method name so adding a new `lan-read` method fails type
+ * checking until it has an explicit GET projection.
+ */
+const LAN_READ_ROUTES: Readonly<Record<LanReadMethod, LanReadRoute>> = {
+	getStatus: { method: "GET", path: "/api/status" },
+};
+
+/**
+ * Runtime guard for the LAN transport boundary. TypeScript catches omissions
+ * in the route table during development; this check also protects production
+ * builds where the contract can be changed independently of the adapter.
+ */
+export function assertLanReadGetOnly(): void {
+	const contractMethods = methodsWithAccess(LanContract, "lan-read");
+	const routeMethods = Object.keys(LAN_READ_ROUTES);
+	if (
+		contractMethods.length !== routeMethods.length ||
+		contractMethods.some((method) => !routeMethods.includes(method))
+	) {
+		throw new Error("Every lan-read host method must have an explicit LAN GET projection");
+	}
+	const paths = new Set<string>();
+	for (const [method, route] of Object.entries(LAN_READ_ROUTES)) {
+		if (route.method !== "GET") throw new Error(`LAN host method ${method} must remain GET-only`);
+		if (paths.has(route.path)) throw new Error(`Duplicate LAN GET route ${route.path}`);
+		paths.add(route.path);
+		const contractMethod = LanContract.methods[method as keyof typeof LanContract.methods];
+		if (contractMethod?.access !== "lan-read") {
+			throw new Error(`LAN route ${route.path} is not backed by a lan-read host method`);
+		}
+	}
+}
+
+function matchLanReadRoute(pathname: string): LanReadMethod | null {
+	for (const [method, route] of Object.entries(LAN_READ_ROUTES)) {
+		if (route.path === pathname) return method as LanReadMethod;
+	}
+	return null;
+}
 
 /** 写端点路由匹配：/api/sessions/:id/prompt|abort、/api/permissions/:id/respond */
 function matchWriteRoute(pathname: string): WriteRoute | null {
@@ -169,6 +226,7 @@ export class LanObserverServer {
 		private readonly config: LanConfigService,
 		private readonly options: LanObserverServerOptions,
 	) {
+		assertLanReadGetOnly();
 		this.auditLog = options.auditPath ? new LanAuditLog(options.auditPath) : null;
 	}
 
@@ -254,9 +312,13 @@ export class LanObserverServer {
 			res.end(this.options.iconPng);
 			return;
 		}
+		const lanReadMethod = req.method === "GET" ? matchLanReadRoute(path) : null;
 		const isGetApi =
 			req.method === "GET" &&
-			(path === "/api/snapshot" || path === "/api/stream" || matchTranscriptRoute(path) !== null);
+			(lanReadMethod !== null ||
+				path === "/api/snapshot" ||
+				path === "/api/stream" ||
+				matchTranscriptRoute(path) !== null);
 		const writeRoute = req.method === "POST" ? matchWriteRoute(path) : null;
 		if (!isGetApi && !writeRoute) return this.sendJson(res, 404, { error: "not found" });
 		// 鉴权：POST 优先 Authorization: Bearer，回落 ?t=（无 cookie/ambient auth → CSRF 天然免疫）
@@ -264,6 +326,18 @@ export class LanObserverServer {
 			req.method === "POST" ? (bearerToken(req) ?? url.searchParams.get("t")) : url.searchParams.get("t");
 		if (!(await this.authorized(token))) {
 			return this.sendJson(res, 401, { error: "invalid token" });
+		}
+		// Host API `lan-read` methods are projected only through authenticated GET
+		// routes. Desktop-only toggles never enter this adapter.
+		if (lanReadMethod) {
+			const result = lanReadMethod === "getStatus" ? this.status() : undefined;
+			const schema = LanContract.methods[lanReadMethod].result;
+			if (!Check(schema, result)) {
+				const label = lanReadMethod === "getStatus" ? "status" : lanReadMethod;
+				return this.sendJson(res, 500, { error: `invalid ${label} projection` });
+			}
+			this.sendJson(res, 200, result);
+			return;
 		}
 		if (path === "/api/snapshot") {
 			// 先冲刷待合并 delta 再记录序号：客户端丢弃 seq ≤ snapshotSeq 的 event 帧（效果已含在快照内）。

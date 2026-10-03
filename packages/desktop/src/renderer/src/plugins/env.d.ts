@@ -22,6 +22,7 @@ export interface DroneUiApi {
 	React: typeof import("react");
 	jsxRuntime: typeof import("react/jsx-runtime");
 	ReactDOM: typeof import("react-dom");
+	// <drone:generated namespace="components">
 	components: {
 		Button: typeof Button;
 		Dropdown: typeof Dropdown;
@@ -29,17 +30,23 @@ export interface DroneUiApi {
 		Markdown: typeof Markdown;
 		ImagePreview: typeof ImagePreviewOverlay;
 	};
+	// </drone:generated namespace="components">
+	// <drone:generated namespace="helpers">
 	helpers: {
 		summarizeArgs: typeof summarizeArgs;
 		displayToolName: typeof displayName;
 		openResourceExternal: (target: string, cwd?: string) => Promise<void>;
 		openExternal: (url: string) => Promise<void>;
 	};
+	// </drone:generated namespace="helpers">
+	// <drone:generated namespace="hooks">
 	hooks: {
 		useT: typeof useT;
 		useContextUsage: typeof useContextUsage;
 		useLanguage: typeof useLanguage;
 	};
+	// </drone:generated namespace="hooks">
+	// <drone:generated namespace="stores">
 	stores: {
 		useTranscriptStore: typeof useTranscriptStore;
 		useSessionsStore: typeof useSessionsStore;
@@ -49,9 +56,12 @@ export interface DroneUiApi {
 		useUiPreferencesStore: typeof useUiPreferencesStore;
 		useKnowledgeStore: typeof useKnowledgeStore;
 	};
+	// </drone:generated namespace="stores">
+	// <drone:generated namespace="i18n">
 	i18n: {
 		registerMessages: typeof registerPluginMessages;
 	};
+	// </drone:generated namespace="i18n">
 }
 
 declare global {

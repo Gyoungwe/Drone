@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from "node:fs";
 import { CAPABILITY_IDS, type CapabilityId } from "@drone/shared";
-import { parseFrontmatter } from "@earendil-works/pi-coding-agent";
+import { parseFrontmatter } from "../session-engine/sdk";
 
 /**
  * 技能常驻标记（挂钩 5）。

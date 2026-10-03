@@ -1,6 +1,6 @@
-import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
-import { Theme } from "@earendil-works/pi-coding-agent";
 import type { PermissionGate } from "../permissions/gate";
+import type { ExtensionUIContext } from "../session-engine/sdk";
+import { Theme } from "../session-engine/sdk";
 import type { AskGate } from "./ask-gate";
 
 /**

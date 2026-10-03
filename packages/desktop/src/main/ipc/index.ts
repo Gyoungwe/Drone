@@ -1,4 +1,4 @@
-import type { PiBackend } from "@drone/backend";
+import type { BackendServices } from "@drone/backend";
 import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@drone/shared";
 import { IpcChannels } from "@drone/shared";
 import { BrowserWindow } from "electron";
@@ -6,9 +6,12 @@ import type { LanObserverHandle } from "../lan";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
+import { registerComputeIpc } from "./compute";
+import { registerDiscoveryIpc } from "./discovery";
 import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
 import { registerLanIpc } from "./lan";
+import { registerMcpIpc } from "./mcp";
 import { registerPackagesIpc } from "./packages";
 import { registerPermissionSettingsIpc } from "./permissions";
 import { registerSessionsIpc } from "./sessions";
@@ -29,18 +32,25 @@ export function sendToRenderer(channel: string, payload: unknown): void {
  * 这里只做拼装 + backend/updater 事件转发到 renderer。
  */
 export function registerIpc(
-	backend: PiBackend,
+	backendServices: BackendServices,
 	uiPluginsManager: UiPluginManager,
 	lan: LanObserverHandle,
+	getIncidentSnapshot?: () => unknown,
 ): void {
-	registerSessionsIpc(backend);
-	registerSettingsIpc(backend);
-	registerPermissionSettingsIpc(backend);
-	registerSubagentsIpc(backend);
-	registerKnowledgeIpc(backend);
-	registerPackagesIpc(backend);
-	registerAppIpc(backend);
-	registerInstitutionalIpc();
+	// The desktop host binds contracts from the composition root directly. The
+	// individual IPC modules retain narrow legacy overloads for third-party
+	// integrations, but production wiring never walks through PiBackend fields.
+	registerSessionsIpc(backendServices);
+	registerSettingsIpc(backendServices);
+	registerMcpIpc(backendServices);
+	registerPermissionSettingsIpc(backendServices);
+	registerSubagentsIpc(backendServices);
+	registerKnowledgeIpc(backendServices);
+	registerComputeIpc(backendServices, sendToRenderer);
+	registerDiscoveryIpc(backendServices);
+	registerPackagesIpc(backendServices);
+	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
+	registerInstitutionalIpc(backendServices);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
@@ -48,26 +58,26 @@ export function registerIpc(
 		sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "changed", name });
 	});
 
-	backend.onEvent((sessionId, event) => {
+	backendServices.sessions.onEvent((sessionId, event) => {
 		sendToRenderer(IpcChannels.Event, { sessionId, event });
 	});
-	backend.onAskRequest((req: AskRequest) => {
+	backendServices.sessions.onAskRequest((req: AskRequest) => {
 		sendToRenderer(IpcChannels.AskRequest, req);
 	});
-	backend.onPermissionRequest((req: PermissionRequest) => {
+	backendServices.sessions.onPermissionRequest((req: PermissionRequest) => {
 		sendToRenderer(IpcChannels.PermissionRequest, req);
 	});
 	// 权限裁决也回投渲染端：LAN 远程应答 / 其他来源应答时桌面卡片要同步撤掉
-	backend.onPermissionResolved((result: PermissionResolved) => {
+	backendServices.sessions.onPermissionResolved((result: PermissionResolved) => {
 		sendToRenderer(IpcChannels.PermissionResolved, result);
 	});
-	backend.onTrustRequest((req: TrustRequest) => {
+	backendServices.sessions.onTrustRequest((req: TrustRequest) => {
 		sendToRenderer(IpcChannels.TrustRequest, req);
 	});
-	backend.onLoginEvent((payload) => {
+	backendServices.sessions.onLoginEvent((payload) => {
 		sendToRenderer(IpcChannels.SettingsLoginEvent, payload);
 	});
-	backend.onMcpStatus((cwd, status) => {
+	backendServices.sessions.onMcpStatus((cwd, status) => {
 		sendToRenderer(IpcChannels.McpEvent, { cwd, status });
 	});
 	onUpdateState((state) => {

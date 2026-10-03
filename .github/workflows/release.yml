@@ -156,6 +156,7 @@ jobs:
           python scripts/sync-research-skills.py --sources nature scientific
           python scripts/sync-research-skills.py --sources academic --acknowledge-noncommercial
           python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
+          node scripts/check-research-packaging.cjs
       - run: npm run dist -w packages/desktop -- --publish never
       - name: Upload build outputs directly to draft release
         timeout-minutes: 60

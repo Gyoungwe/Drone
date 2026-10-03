@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { normalizeAlwaysWith } from "../src/capabilities/skill-frontmatter";
@@ -66,7 +67,10 @@ describe("owned aliases are folded, not deleted or guessed", () => {
 
 it("both first-party skills have parseable frontmatter and distinct responsibilities", async () => {
 	for (const name of ["research-vault", "research-workflow"]) {
-		const text = await readFile(new URL(`../../../.pi/skills/${name}/SKILL.md`, import.meta.url), "utf8");
+		const text = await readFile(
+			resolve(import.meta.dirname, "../../../.pi/skills", name, "SKILL.md"),
+			"utf8",
+		);
 		const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
 		expect(frontmatter).not.toBeNull();
 		if (!frontmatter?.[1]) throw new Error(`Missing frontmatter: ${name}`);
@@ -80,7 +84,7 @@ it("both first-party skills have parseable frontmatter and distinct responsibili
 });
 it("zotero-literature is a literature skill, not a second Vault initializer", async () => {
 	const text = await readFile(
-		new URL("../../../.pi/skills/zotero-literature/SKILL.md", import.meta.url),
+		resolve(import.meta.dirname, "../../../.pi/skills/zotero-literature/SKILL.md"),
 		"utf8",
 	);
 	const metadata = parse(text.match(/^---\r?\n([\s\S]*?)\r?\n---/)[1]);

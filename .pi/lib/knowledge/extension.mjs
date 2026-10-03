@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { join, resolve } from "node:path";
 import { publishExplainer } from "../obsidian-workbench.mjs";
 import { deliveryContract } from "../source-delivery.mjs";
-import { registerAcceptanceVerifier } from "../tasks/acceptance.mjs";
+import { bindAcceptanceVerifierEvents, registerAcceptanceVerifier } from "../tasks/acceptance.mjs";
 import { registerTaskRuntime } from "../tasks/runtime.mjs";
 import { registerTool } from "../tool-manifest.mjs";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config.mjs";
@@ -110,9 +111,10 @@ function explainerCard(event) {
 	});
 }
 
-export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
+export function registerKnowledgeInterface(pi, { readOnly = false, runtime = null } = {}) {
+	bindAcceptanceVerifierEvents(pi);
 	registerWikiReviewAcceptance();
-	const taskRuntime = readOnly ? null : registerTaskRuntime(pi);
+	const taskRuntime = readOnly ? null : registerTaskRuntime(pi, { readKnowledgeBinding });
 	const recovery = new Map();
 	let recoveryScope = null;
 	const saveRecovery = () => {
@@ -159,9 +161,10 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 			beforeStart: async () => ({}),
 			withTurnBinding: async (_ctx, operation) => operation(),
 		};
-	let current = null,
-		bootstrap = null,
-		activeTopic = null,
+	let current = null;
+	/** @type {any} */
+	let bootstrap = null;
+	let activeTopic = null,
 		topicMemory = null,
 		sessionScopeId = null,
 		awaitingUserStart = false,
@@ -176,12 +179,25 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 	let explainerArchived = false;
 	const feedback = createTaskFeedback();
 	const publication = registerAnswerPublication(pi, {
+		runtime,
 		getCurrent: (ctx) => requireTurn(ctx),
 		evidenceOnly: readOnly,
 		getDeliveryFooter: () => deliveryFooter,
 		getTaskFeedback: () => feedback,
 		getTaskRuntime: () => taskRuntime,
 	});
+	// Dynamic extensions initialize before inline host factories. The host
+	// announces its per-backend runtime after this listener is registered;
+	// publication attaches only its explicit bridge and leaves knowledge-service
+	// runtime state in the existing CLI-compatible slot.
+	pi.events?.on?.("drone:runtime/v1", (payload) => {
+		if (payload?.version !== 1 || !payload.runtime || typeof payload.runtime !== "object") return;
+		publication.attachRuntime?.(payload.runtime);
+	});
+	// The host factory may run before or after dynamic extensions. A request
+	// handshake makes the runtime handoff order-independent without a global
+	// mutable bridge.
+	pi.events?.emit?.("drone:runtime/request/v1", { version: 1 });
 	pi.on("tool_result", async (event, ctx) => {
 		const guarded = guardResearchToolResult(event);
 		await feedback.observe({ ...event, ...guarded }, ctx);
@@ -1403,6 +1419,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false } = {}) {
 							(c) => ["skill:show-me", "skill:research-show-me"].includes(c.name) && c.source === "skill",
 						),
 				});
+				if (!bootstrap) throw new Error("Knowledge navigation bootstrap unavailable");
 				return {
 					message: {
 						customType: "drone-knowledge-navigation",

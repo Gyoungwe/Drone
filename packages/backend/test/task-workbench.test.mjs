@@ -1,14 +1,9 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createEvidenceRecovery } from "@drone/tasks/evidence";
+import { createTaskWorkbench, inspectTaskFile, LIMITS, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { afterEach, expect, it, vi } from "vitest";
-import { createEvidenceRecovery } from "../../../.pi/lib/tasks/evidence.mjs";
-import {
-	createTaskWorkbench,
-	inspectTaskFile,
-	LIMITS,
-	WORKBENCH_ENTRY,
-} from "../../../.pi/lib/tasks/workbench.mjs";
 
 vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 });
 const dirs = [];
@@ -356,7 +351,7 @@ it("evicted evidence is restored under current permission/version and remains bo
 	const dir = await fixture();
 	await writeFile(join(dir, "data.txt"), "one\ntwo\nthree");
 	const allow = vi.fn(async () => {}),
-		e = createEvidenceRecovery({ authorize: allow });
+		e = createEvidenceRecovery({ authorize: allow, inspectTaskFile });
 	e.attach("s", "t");
 	await e.capture({ toolCallId: "r", input: { path: "data.txt", offset: 2, limit: 1 } }, dir, null);
 	await expect(e.restore({ receiptId: "r", path: "data.txt" }, dir, async () => null)).rejects.toThrow(
@@ -376,7 +371,7 @@ it("revoked permission or changed bytes invalidate recovery instead of reusing a
 	const dir = await fixture();
 	await writeFile(join(dir, "data.txt"), "one");
 	const allow = vi.fn(async () => {}),
-		e = createEvidenceRecovery({ authorize: allow });
+		e = createEvidenceRecovery({ authorize: allow, inspectTaskFile });
 	e.attach("s", "t");
 	await e.capture({ toolCallId: "r", input: { path: "data.txt" } }, dir, "binding");
 	e.evict(["r"]);

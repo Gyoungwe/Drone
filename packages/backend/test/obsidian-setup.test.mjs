@@ -1,14 +1,14 @@
 import { access, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import obsidianWorkbench from "../../../.pi/extensions/obsidian-workbench.mjs";
 import {
 	inspectObsidianSetup,
 	inspectSetupDirectory,
 	resolveSetupVault,
-} from "../../../.pi/lib/obsidian-setup.mjs";
-import { resolveObsidianRuntime } from "../../../.pi/lib/obsidian-workbench.mjs";
+} from "@drone/extensions/internal/obsidian-setup";
+import { resolveObsidianRuntime } from "@drone/extensions/internal/obsidian-workbench";
+import obsidianWorkbench from "@drone/extensions/obsidian-workbench";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, cwd, vault;
 beforeEach(async () => {

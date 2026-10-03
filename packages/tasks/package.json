@@ -1,0 +1,120 @@
+{
+	"name": "@drone/tasks",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./progress-action": "./src/progress-action.ts",
+		"./failure-feedback": "./src/failure-feedback.ts",
+		"./consent": "./src/consent.ts",
+		"./single-flight": "./src/single-flight.ts",
+		"./turn-end-prompt": "./src/turn-end-prompt.ts",
+		"./tool-protocol": "./src/tool-protocol.ts",
+		"./remaining": "./src/remaining.ts",
+		"./evidence": "./src/evidence.ts",
+		"./acceptance-policy": "./src/acceptance-policy.ts",
+		"./authorization-policy": "./src/authorization-policy.ts",
+		"./pdf-identity": "./src/pdf-identity.ts",
+		"./runtime": {
+			"types": "./src/runtime/runtime.ts",
+			"import": "./src/runtime-compiled/runtime.mjs",
+			"default": "./src/runtime-compiled/runtime.mjs"
+		},
+		"./workbench": {
+			"types": "./src/runtime/workbench.ts",
+			"import": "./src/runtime-compiled/workbench.mjs",
+			"default": "./src/runtime-compiled/workbench.mjs"
+		},
+		"./register": {
+			"types": "./src/runtime/register.ts",
+			"import": "./src/runtime-compiled/register.mjs",
+			"default": "./src/runtime-compiled/register.mjs"
+		},
+		"./acceptance": {
+			"types": "./src/runtime/acceptance.ts",
+			"import": "./src/runtime-compiled/acceptance.mjs",
+			"default": "./src/runtime-compiled/acceptance.mjs"
+		},
+		"./ask-authorization": {
+			"types": "./src/runtime/ask-authorization.ts",
+			"import": "./src/runtime-compiled/ask-authorization.mjs",
+			"default": "./src/runtime-compiled/ask-authorization.mjs"
+		},
+		"./pdf-worker": {
+			"types": "./src/runtime/pdf-worker.ts",
+			"import": "./src/runtime-compiled/pdf-worker.mjs",
+			"default": "./src/runtime-compiled/pdf-worker.mjs"
+		},
+		"./pdf-identity-runtime": {
+			"types": "./src/runtime/pdf-identity.ts",
+			"import": "./src/runtime-compiled/pdf-identity.mjs",
+			"default": "./src/runtime-compiled/pdf-identity.mjs"
+		},
+		"./tool-manifest-runtime": {
+			"types": "./src/runtime/tool-manifest.ts",
+			"import": "./src/runtime-compiled/tool-manifest.mjs",
+			"default": "./src/runtime-compiled/tool-manifest.mjs"
+		},
+		"./runtime-bridge": {
+			"types": "./src/runtime/runtime-bridge.ts",
+			"import": "./src/runtime-compiled/runtime-bridge.mjs",
+			"default": "./src/runtime-compiled/runtime-bridge.mjs"
+		},
+		"./evidence-runtime": {
+			"types": "./src/runtime/evidence.ts",
+			"import": "./src/runtime-compiled/evidence.mjs",
+			"default": "./src/runtime-compiled/evidence.mjs"
+		},
+		"./failure-feedback-runtime": {
+			"types": "./src/runtime/failure-feedback.ts",
+			"import": "./src/runtime-compiled/failure-feedback.mjs",
+			"default": "./src/runtime-compiled/failure-feedback.mjs"
+		},
+		"./progress-action-runtime": {
+			"types": "./src/runtime/progress-action.ts",
+			"import": "./src/runtime-compiled/progress-action.mjs",
+			"default": "./src/runtime-compiled/progress-action.mjs"
+		},
+		"./remaining-runtime": {
+			"types": "./src/runtime/remaining.ts",
+			"import": "./src/runtime-compiled/remaining.mjs",
+			"default": "./src/runtime-compiled/remaining.mjs"
+		},
+		"./single-flight-runtime": {
+			"types": "./src/runtime/single-flight.ts",
+			"import": "./src/runtime-compiled/single-flight.mjs",
+			"default": "./src/runtime-compiled/single-flight.mjs"
+		},
+		"./tool-protocol-runtime": {
+			"types": "./src/runtime/tool-protocol.ts",
+			"import": "./src/runtime-compiled/tool-protocol.mjs",
+			"default": "./src/runtime-compiled/tool-protocol.mjs"
+		},
+		"./turn-end-prompt-runtime": {
+			"types": "./src/runtime/turn-end-prompt.ts",
+			"import": "./src/runtime-compiled/turn-end-prompt.mjs",
+			"default": "./src/runtime-compiled/turn-end-prompt.mjs"
+		},
+		"./consent-runtime": {
+			"types": "./src/runtime/consent.ts",
+			"import": "./src/runtime-compiled/consent.mjs",
+			"default": "./src/runtime-compiled/consent.mjs"
+		},
+		"./plan-proposal": "./src/plan-proposal.ts"
+	},
+	"dependencies": {
+		"@drone/shared": "*"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"build:runtime": "node scripts/build-runtime.mjs"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.0",
+		"vitest": "^3.2.0"
+	}
+}

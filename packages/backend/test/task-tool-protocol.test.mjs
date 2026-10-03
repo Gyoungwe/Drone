@@ -1,5 +1,5 @@
+import { restoreTaskToolOrder as repair } from "@drone/tasks";
 import { expect, it } from "vitest";
-import { restoreTaskToolOrder as repair } from "../../../.pi/lib/tasks/tool-protocol.mjs";
 
 const assistant = {
 	role: "assistant",

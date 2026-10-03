@@ -1,0 +1,86 @@
+{
+	"version": 1,
+	"generator": "scripts/build-extensions.mjs",
+	"sourceDir": "packages/extensions/src",
+	"outDir": ".pi/extensions",
+	"entries": {
+		"institutional-access": {
+			"source": "institutional-access.ts",
+			"output": "institutional-access.mjs",
+			"status": "generated",
+			"sourceSha256": "c79ec27eb25440ea653e2fb4388c36b21603b0de0ff09a1a9b8f759b4ba56fc2",
+			"outputSha256": "e73d6c241ee93cd2339f79ea005e796df09849ebc2f8acae6455376504cbaa24"
+		},
+		"knowledge-extension": {
+			"source": "knowledge-extension.ts",
+			"output": "knowledge-extension.mjs",
+			"status": "generated",
+			"sourceSha256": "809a5be02436faea7bd05fab84d9ddfd94444194b425d94acb9ffb72d34940be",
+			"outputSha256": "3acae30185d53021f8cedae48144568ccc1dccf30bca93f5c68e094747c224a9"
+		},
+		"obsidian-workbench": {
+			"source": "obsidian-workbench.ts",
+			"output": "obsidian-workbench.mjs",
+			"status": "generated",
+			"sourceSha256": "0308fcc2628377c184a55d3be5fde53760d4a80658d11bc886620a2bc12b4fef",
+			"outputSha256": "832cc7714116d2660a20f7279cbdc122f7d9b0cdc686e2a1805328f03fba5a11"
+		},
+		"research-loop": {
+			"source": "research-loop.ts",
+			"output": "research-loop.mjs",
+			"status": "generated",
+			"sourceSha256": "4913bc44666882ff963d5587b843fbbfe00dea66a396faa22ffc44941fb80b22",
+			"outputSha256": "5313b49b41e8eb7b1816a8693c4fce0952fa9de32a78ec7dad658c521dd87ceb"
+		},
+		"research-wikiloop": {
+			"source": "research-wikiloop.ts",
+			"output": "research-wikiloop.mjs",
+			"status": "generated",
+			"sourceSha256": "0d235805b540e4dea75ca4c0c1df18392a2212f49925fb5e0825121d0f56e5f5",
+			"outputSha256": "601bb7dc7fcbdeb48553b0ea7a63ddad650f673b8fb1069a6266d2140ed4442f"
+		},
+		"research-wikiskill": {
+			"source": "research-wikiskill.ts",
+			"output": "research-wikiskill.mjs",
+			"status": "generated",
+			"sourceSha256": "c8c5318299fdce0169fa5622e079c5d5b8101c002dca6459689f5d4d8c85cd9f",
+			"outputSha256": "ba35188d3d22190febac38faef2d64ce91ae90bb63866196f848b8e6dd414c14"
+		},
+		"source-archive": {
+			"source": "source-archive.ts",
+			"output": "source-archive.mjs",
+			"status": "generated",
+			"sourceSha256": "3dcd6df0b98b082e9345151c2dc6a19d9ba7ca7aca942841af73bbbd280cc031",
+			"outputSha256": "99fe30ecbd0e96e333230387e38901d5af7b66bb363a39b075c0d6828aa46d94"
+		},
+		"subagent-mcp-readonly": {
+			"source": "subagent-mcp-readonly.ts",
+			"output": "subagent-mcp-readonly.mjs",
+			"status": "generated",
+			"sourceSha256": "98106345b337390cd3cf9f40a96c7e4864cc34d44f4406c3cf57077e6d1c29f9",
+			"outputSha256": "f0dfe388b321d921a056f1da71fb476efd9c6d5e059536a22015c3bab4220b66"
+		},
+		"subagent-research": {
+			"source": "subagent-research.ts",
+			"output": "subagent-research.mjs",
+			"status": "generated",
+			"sourceSha256": "0931f889056fcb19fad1b3dc9db93d33313dfacfd0cc16b346e7890ec924baaf",
+			"outputSha256": "98856c19944e179a48003dbc26c0b53c4f36357ee7bb9b48be4c977b264e1940"
+		},
+		"workspace-config": {
+			"source": "workspace-config.ts",
+			"output": "workspace-config.mjs",
+			"status": "generated",
+			"sourceSha256": "d6d50ce6ee188ac88d7be90648fdea71233aa025928a9d57b4c1612acca6eed8",
+			"outputSha256": "b3b30f47331e8e1cf4799b1a892234cbb36b90913c76373a9b10af71554574aa"
+		},
+		"zotero-literature": {
+			"source": "zotero-literature.ts",
+			"output": "zotero-literature.mjs",
+			"status": "generated",
+			"sourceSha256": "e61d7412d90a844fba28f266d0cedc09defa08b634a86e09197a5e6b3a63c37b",
+			"outputSha256": "08a00b71d5abc67f9f42d0966506dea429277a9cad7f2fef1dc7028b74419a4d"
+		}
+	},
+	"legacyOutputs": []
+}

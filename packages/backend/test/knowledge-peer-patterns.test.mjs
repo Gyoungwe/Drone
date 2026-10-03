@@ -1,19 +1,19 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension.mjs";
-import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import { subscribeKnowledgeUi } from "../../../.pi/lib/knowledge/ui-state.mjs";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
+import { buildResearchWikiPage } from "@drone/extensions/research-wikiloop";
+import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
+import { subscribeKnowledgeUi } from "@drone/knowledge/ui-state";
 import {
 	decideWikiProposal,
 	listWikiProposals,
 	mergeWikiProposal,
 	previewWikiProposal,
 	stageWikiProposal,
-} from "../../../.pi/lib/knowledge/wiki-review.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
-import { buildResearchWikiPage } from "../../../.pi/lib/research-wikiloop.mjs";
+} from "@drone/knowledge/wiki-review";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, cwd, vault, service, prep;
 async function note(path, body) {

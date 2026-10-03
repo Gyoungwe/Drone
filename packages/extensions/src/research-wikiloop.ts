@@ -1,0 +1,348 @@
+// The extension is bundled into a standalone JavaScript entry point. Its
+// implementation deliberately owns the Wiki search/write policy instead of
+// reaching back into .pi/lib at runtime.
+// @ts-nocheck
+import { randomUUID } from "node:crypto";
+import { appendFile, mkdir, readdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { knowledgeDirectory } from "@drone/knowledge/config";
+import { bindExtensionRuntime, runExtensionExclusive } from "./internal/runtime";
+import { initializeVaultLayout, MANAGED_END, MANAGED_START, refreshProjectIndexes } from "./internal/vault";
+import { loadWorkspaceConfig } from "./workspace-config";
+
+const MAX_QUERY_TERMS = 64;
+const MAX_PAGE_BYTES = 256 * 1024;
+const MAX_TOP_K = 12;
+const TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1";
+
+function registerTool(pi, definition) {
+	void pi?.events?.emit?.(TOOL_MANIFEST_EVENT, {
+		version: 1,
+		name: definition.name,
+		meta: definition.drone || {},
+	});
+	if (process.env.PI_SUBAGENT_CHILD === "1" && definition.drone?.subagent === "exclude") return;
+	pi.registerTool(definition);
+}
+
+function validateSegment(value, label) {
+	const text = String(value ?? "").trim();
+	if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text)) throw new Error(`${label} must be lowercase kebab-case`);
+	return text;
+}
+
+function normalize(text) {
+	return String(text ?? "")
+		.normalize("NFKC")
+		.toLowerCase();
+}
+
+export function queryTerms(query) {
+	const text = normalize(query);
+	const terms = new Set(text.match(/[a-z0-9][a-z0-9._+-]*/g) || []);
+	for (const chunk of text.match(/[\p{Script=Han}]+/gu) || []) {
+		if (chunk.length <= 2) terms.add(chunk);
+		else {
+			terms.add(chunk);
+			for (let i = 0; i < chunk.length - 1; i += 1) terms.add(chunk.slice(i, i + 2));
+		}
+	}
+	return [...terms].filter(Boolean).slice(0, MAX_QUERY_TERMS);
+}
+
+async function readText(path) {
+	try {
+		return await readFile(path, "utf8");
+	} catch (error) {
+		if (error.code === "ENOENT") return null;
+		throw error;
+	}
+}
+
+async function walkMarkdown(root) {
+	const out = [];
+	let entries = [];
+	try {
+		entries = await readdir(root, { withFileTypes: true });
+	} catch (error) {
+		if (error.code === "ENOENT") return out;
+		throw error;
+	}
+	for (const entry of entries) {
+		if (entry.name.startsWith(".")) continue;
+		const path = join(root, entry.name);
+		if (entry.isDirectory()) out.push(...(await walkMarkdown(path)));
+		else if (entry.isFile() && entry.name.endsWith(".md")) out.push(path);
+	}
+	return out;
+}
+
+function titleOf(path, text) {
+	return text.match(/^#\s+(.+)$/m)?.[1]?.trim() || basename(path, ".md");
+}
+
+function scorePage(query, terms, title, text) {
+	const q = normalize(query);
+	const heading = normalize(title);
+	const body = normalize(text);
+	let score = q && heading.includes(q) ? 24 : q && body.includes(q) ? 12 : 0;
+	for (const term of terms) {
+		if (heading.includes(term)) score += 5;
+		const occurrences = body.split(term).length - 1;
+		score += Math.min(occurrences, 8);
+	}
+	return score;
+}
+
+function excerptFor(text, terms) {
+	const plain = text
+		.replace(/^---[\s\S]*?---\s*/m, "")
+		.replace(/<!--[\s\S]*?-->/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+	const lower = normalize(plain);
+	let index = -1;
+	for (const term of terms) {
+		const found = lower.indexOf(term);
+		if (found >= 0 && (index < 0 || found < index)) index = found;
+	}
+	const start = Math.max(0, index < 0 ? 0 : index - 100);
+	return plain.slice(start, start + 420);
+}
+
+function wikiRoot(vault, project) {
+	return join(vault, "Projects", project, "Wiki");
+}
+
+export async function navigateResearchWiki({ cwd = process.cwd(), project, query, topK = 5 } = {}) {
+	project = validateSegment(project, "project");
+	if (typeof query !== "string" || !query.trim()) throw new Error("query is required");
+	topK = Math.max(1, Math.min(MAX_TOP_K, Number(topK) || 5));
+	const config = await loadWorkspaceConfig(cwd);
+	if (!config.obsidianVault) return { configured: false, project, query, hits: [], total_pages: 0 };
+	const root = wikiRoot(config.obsidianVault, project);
+	const terms = queryTerms(query);
+	const pages = [];
+	for (const path of await walkMarkdown(root)) {
+		const text = await readText(path);
+		if (!text) continue;
+		const title = titleOf(path, text);
+		const score = scorePage(query, terms, title, text);
+		if (score > 0) pages.push({ path, title, score, excerpt: excerptFor(text, terms) });
+	}
+	pages.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+	return {
+		configured: true,
+		project,
+		query,
+		terms,
+		total_pages: (await walkMarkdown(root)).length,
+		hits: pages.slice(0, topK).map((hit, i) => ({ ...hit, rank: i + 1 })),
+	};
+}
+
+function managedBody({ content, sourceRefs, relatedPages }) {
+	const sources = sourceRefs.length
+		? sourceRefs.map((value) => `- ${value}`).join("\n")
+		: "- Unverified: no source reference supplied";
+	const related = relatedPages.length
+		? `\n\n## Related Wiki pages\n${relatedPages.map((value) => `- [[${value}]]`).join("\n")}`
+		: "";
+	return `${String(content).trim()}\n\n## Evidence references\n${sources}${related}`;
+}
+
+function updateManaged(original, replacement) {
+	const start = original.indexOf(MANAGED_START);
+	const end = original.indexOf(MANAGED_END);
+	if (start < 0 && end < 0)
+		return `${original.trimEnd()}\n\n${MANAGED_START}\n${replacement}\n${MANAGED_END}\n`;
+	if (start < 0 || end < start) throw new Error("invalid managed block markers");
+	return `${original.slice(0, start)}${MANAGED_START}\n${replacement}\n${MANAGED_END}${original.slice(end + MANAGED_END.length)}`;
+}
+
+async function atomicText(path, text) {
+	await mkdir(dirname(path), { recursive: true });
+	const temp = `${path}.${randomUUID()}.tmp`;
+	await writeFile(temp, text, "utf8");
+	await rename(temp, path);
+}
+
+async function rankFor(result, path) {
+	const target = await realpath(path).catch(() => resolve(path));
+	for (const hit of result.hits) {
+		const candidate = await realpath(hit.path).catch(() => resolve(hit.path));
+		if (candidate === target) return hit.rank;
+	}
+	return null;
+}
+
+export async function buildResearchWikiPage({
+	cwd = process.cwd(),
+	project,
+	slug,
+	title,
+	content,
+	sourceRefs = [],
+	relatedPages = [],
+	validationQuery,
+} = {}) {
+	if (knowledgeDirectory())
+		throw new Error(
+			"Application Wiki changes require research_propose_wiki_update and user /obsidian-review; the legacy Wiki writer is disabled",
+		);
+	project = validateSegment(project, "project");
+	slug = validateSegment(slug, "slug");
+	if (typeof title !== "string" || !title.trim()) throw new Error("title is required");
+	if (typeof content !== "string" || !content.trim()) throw new Error("content is required");
+	if (Buffer.byteLength(content, "utf8") > MAX_PAGE_BYTES) throw new Error("content exceeds 256 KiB");
+	if (!Array.isArray(sourceRefs) || sourceRefs.length === 0)
+		throw new Error("source_refs must contain at least one traceable source");
+	if (typeof validationQuery !== "string" || !validationQuery.trim())
+		throw new Error("validation_query is required");
+	const config = await loadWorkspaceConfig(cwd);
+	if (!config.obsidianVault) throw new Error("Obsidian vault is not configured");
+	const before = await navigateResearchWiki({ cwd, project, query: validationQuery, topK: MAX_TOP_K });
+	const initialized = await initializeVaultLayout(config.obsidianVault, {
+		project,
+		profile: config.knowledgeProfile,
+	});
+	const vault = initialized.vault;
+	const root = wikiRoot(vault, project);
+	const path = join(root, `${slug}.md`);
+	const existing = await readText(path);
+	const body = managedBody({
+		content,
+		sourceRefs: sourceRefs.map(String),
+		relatedPages: relatedPages.map(String),
+	});
+	const initial = `---\nid: pi-wiki-${project}-${slug}\ntype: wiki\nproject: ${JSON.stringify(project)}\nstatus: active\n---\n\n# ${title.trim()}\n\n${MANAGED_START}\n${body}\n${MANAGED_END}\n\n## Human review\n\n`;
+	await atomicText(path, existing === null ? initial : updateManaged(existing, body));
+	await refreshProjectIndexes(vault, { project, profile: config.knowledgeProfile });
+	const after = await navigateResearchWiki({ cwd, project, query: validationQuery, topK: MAX_TOP_K });
+	const beforeRank = await rankFor(before, path);
+	const afterRank = await rankFor(after, path);
+	const feedback = {
+		at: new Date().toISOString(),
+		project,
+		page: relative(vault, path).split(sep).join("/"),
+		query: validationQuery,
+		before_rank: beforeRank,
+		after_rank: afterRank,
+		retrievable: afterRank !== null,
+		improved: afterRank !== null && (beforeRank === null || afterRank < beforeRank),
+	};
+	await appendFile(join(root, ".feedback.jsonl"), `${JSON.stringify(feedback)}\n`, "utf8");
+	return { path, feedback, before: before.hits.slice(0, 5), after: after.hits.slice(0, 5) };
+}
+
+export async function researchWikiStatus({ cwd = process.cwd(), project } = {}) {
+	project = validateSegment(project, "project");
+	const config = await loadWorkspaceConfig(cwd);
+	if (!config.obsidianVault) return { configured: false, project, pages: 0, feedback_events: 0 };
+	const root = wikiRoot(config.obsidianVault, project);
+	const pages = await walkMarkdown(root);
+	const feedback = await readText(join(root, ".feedback.jsonl"));
+	return {
+		configured: true,
+		project,
+		root,
+		pages: pages.length,
+		feedback_events: feedback ? feedback.trim().split("\n").filter(Boolean).length : 0,
+	};
+}
+
+export default function researchWikiLoop(pi) {
+	if (process.env.PI_SUBAGENT_CHILD === "1") return;
+	bindExtensionRuntime(pi);
+
+	registerTool(pi, {
+		name: "research_wiki_navigate",
+		label: "Navigate research Wiki",
+		drone: {
+			readOnly: true,
+			recoverySafe: true,
+			capabilities: ["research", "knowledge"],
+			activity: { text: "正在检索研究 Wiki…", phase: "knowledge-search" },
+		},
+		description:
+			"Search the project agent-native Wiki before broader retrieval. Returns ranked pages and excerpts for downstream research.",
+		parameters: {
+			type: "object",
+			properties: {
+				project: { type: "string" },
+				query: { type: "string" },
+				top_k: { type: "integer", minimum: 1, maximum: 12 },
+			},
+			required: ["project", "query"],
+		},
+		async execute(_id, params, _signal, _update, ctx) {
+			return runExtensionExclusive(pi, "research-wiki-navigate", async () => {
+				const result = await navigateResearchWiki({
+					cwd: ctx.cwd,
+					project: params.project,
+					query: params.query,
+					topK: params.top_k,
+				});
+				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
+			});
+		},
+	});
+
+	registerTool(pi, {
+		name: "research_wiki_build",
+		label: "Build research Wiki",
+		drone: {
+			capabilities: ["research", "knowledge"],
+			subagent: "exclude",
+			activity: { text: "正在沉淀研究知识…", phase: "deposit" },
+		},
+		description:
+			"Publish or revise one parent-reviewed Wiki page, then rerun the original query and report whether the page became retrievable. Requires traceable evidence references.",
+		parameters: {
+			type: "object",
+			properties: {
+				project: { type: "string" },
+				slug: { type: "string" },
+				title: { type: "string" },
+				content_markdown: { type: "string" },
+				source_refs: { type: "array", items: { type: "string" }, minItems: 1 },
+				related_pages: { type: "array", items: { type: "string" } },
+				validation_query: { type: "string" },
+			},
+			required: ["project", "slug", "title", "content_markdown", "source_refs", "validation_query"],
+		},
+		async execute(_id, params, _signal, _update, ctx) {
+			return runExtensionExclusive(pi, "research-wiki-build", async () => {
+				const result = await buildResearchWikiPage({
+					cwd: ctx.cwd,
+					project: params.project,
+					slug: params.slug,
+					title: params.title,
+					content: params.content_markdown,
+					sourceRefs: params.source_refs,
+					relatedPages: params.related_pages || [],
+					validationQuery: params.validation_query,
+				});
+				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
+			});
+		},
+	});
+
+	registerTool(pi, {
+		name: "research_wiki_status",
+		label: "Research Wiki status",
+		drone: { readOnly: true, capabilities: ["research", "knowledge"] },
+		description: "Show project Wiki page count and downstream navigation feedback count.",
+		parameters: { type: "object", properties: { project: { type: "string" } }, required: ["project"] },
+		async execute(_id, params, _signal, _update, ctx) {
+			return runExtensionExclusive(pi, "research-wiki-status", async () => {
+				const result = await researchWikiStatus({ cwd: ctx.cwd, project: params.project });
+				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
+			});
+		},
+	});
+
+	pi.on?.("before_agent_start", async (event) => ({
+		systemPrompt: `${event.systemPrompt}\n\nResearch Wiki loop: for substantive research, use research_wiki_navigate on the active project before broader local/Zotero/Web retrieval. Treat Wiki pages as navigation memory, never as final authority. After evidence is inspected and claims are supportable, the parent session may call research_wiki_build with traceable source_refs and the original research query. Inspect its retrieval feedback. If retrievable is false, improve the page title, links or concise evidence-bearing summary and retry at most twice. Never weaken evidence standards merely to improve Wiki retrieval. Child sessions never write the Wiki.`,
+	}));
+}

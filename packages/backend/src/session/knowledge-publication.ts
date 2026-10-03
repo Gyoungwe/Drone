@@ -1,24 +1,25 @@
-import { isUserAbortError, type SessionEvent, sanitizeProviderError } from "@drone/shared";
+import { publicationFallbackNotice } from "@drone/knowledge/publication-policy";
+import { type DroneRuntime, isUserAbortError, type SessionEvent, sanitizeProviderError } from "@drone/shared";
 import type { RawMessage } from "./messages";
 
 /**
  * 发布网关跨模块契约：投影逻辑住在运行时加载的 .pi 知识扩展（publication.mjs），
- * 它把 `projectEvent`/`projectSnapshot` 挂到 `globalThis[key]`。后端事件管线（pi-backend
- * emitEvent / getSessionMessages / subagent runner）经本模块的稳定入口调用。
+ * 它把 `projectEvent`/`projectSnapshot` 注入当前 DroneRuntime。后端事件管线
+ *（pi-backend emitEvent / getSessionMessages / subagent runner）经本模块的稳定入口调用。
  *
- * 扩展与后端分属两套模块世界（bundled TS ↔ 运行时 .mjs），无法共享实现，只能经全局 Symbol
- * 握手——把这唯一的 untyped 边界收在 `bridge()` 一处，其余代码只见类型化入口。
+ * 扩展与后端分属两套模块世界（bundled TS ↔ 运行时 .mjs）。runtime 由宿主通过版本化
+ * `pi.events` 注入动态扩展，再经显式参数传回这里；把唯一的 untyped 边界收在 `bridge()` 一处，
+ * 其余代码只见类型化入口。运行时缺失或投影器抛错时继续走失败关闭兜底。
  */
 interface PublicationBridge {
 	projectEvent?: (event: SessionEvent) => SessionEvent | null;
 	projectSnapshot?: (messages: RawMessage[], persisted: RawMessage[]) => RawMessage[];
 }
-const key = Symbol.for("drone.knowledge.publication.v1");
-function bridge(): PublicationBridge | undefined {
-	return (globalThis as unknown as Record<symbol, PublicationBridge>)[key];
+function bridge(runtime?: DroneRuntime): PublicationBridge | undefined {
+	return runtime?.knowledge.publication as PublicationBridge | undefined;
 }
 
-const notice = "【知识库检查未通过】发布检查未加载或发生错误，回答没有发布。请重新加载知识库扩展。";
+const notice = `【知识库检查未通过】${publicationFallbackNotice}`;
 
 /** 兜底封条：隐藏未审草稿，同时区分服务商错误、中断与发布检查故障。 */
 function sealed(message: RawMessage): RawMessage {
@@ -76,10 +77,10 @@ function failClosedEvent(event: SessionEvent): SessionEvent | null {
 }
 
 /** Shared delivery boundary: desktop, LAN and trace consumers all receive the same projected event. */
-export function projectKnowledgeEvent(event: SessionEvent): SessionEvent | null {
+export function projectKnowledgeEvent(event: SessionEvent, runtime?: DroneRuntime): SessionEvent | null {
 	if (!process.env.DRONE_KNOWLEDGE_DIR) return event;
 	try {
-		const fn = bridge()?.projectEvent;
+		const fn = bridge(runtime)?.projectEvent;
 		if (fn) return fn(event);
 	} catch {
 		/* Fail closed, never leak the draft. */
@@ -88,10 +89,14 @@ export function projectKnowledgeEvent(event: SessionEvent): SessionEvent | null 
 }
 
 /** Live polling cannot reveal the assistant object while async validation is still pending. */
-export function projectKnowledgeSnapshot(messages: RawMessage[], persisted: RawMessage[]): RawMessage[] {
+export function projectKnowledgeSnapshot(
+	messages: RawMessage[],
+	persisted: RawMessage[],
+	runtime?: DroneRuntime,
+): RawMessage[] {
 	if (!process.env.DRONE_KNOWLEDGE_DIR) return messages;
 	try {
-		const fn = bridge()?.projectSnapshot;
+		const fn = bridge(runtime)?.projectSnapshot;
 		if (fn) return fn(messages, persisted);
 	} catch {
 		/* fail closed */

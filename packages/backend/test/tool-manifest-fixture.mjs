@@ -1,9 +1,14 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import researchLoop from "../../../.pi/extensions/research-loop.mjs";
-import sourceArchive from "../../../.pi/extensions/source-archive.mjs";
-import zoteroLiterature from "../../../.pi/extensions/zotero-literature.mjs";
-import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension.mjs";
+import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
+import sourceArchive from "@drone/extensions/research-host";
+import researchLoop from "@drone/extensions/research-loop";
+import zoteroLiterature from "@drone/extensions/zotero-literature";
+import { bindToolManifestEvents } from "../src/tools/manifest";
+
+// Re-export an existing extension entry so event-bridge tests exercise the
+// real registration path without adding another package-relative .pi import.
+export { sourceArchive };
 
 /**
  * 测试夹具（挂钩 1）：工具清单没有名字表，只读 / 回执日志 / 只读恢复 / 卡片构造器都来自扩展
@@ -13,7 +18,18 @@ import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension
  */
 export function stubPi(tools = new Map()) {
 	const noop = () => {};
-	return {
+	const listeners = new Map();
+	const events = {
+		on(name, listener) {
+			const current = listeners.get(name) || [];
+			current.push(listener);
+			listeners.set(name, current);
+		},
+		emit(name, payload) {
+			for (const listener of listeners.get(name) || []) listener(payload);
+		},
+	};
+	const pi = {
 		registerTool: (tool) => tools.set(tool.name, tool),
 		registerCommand: noop,
 		registerMessageRenderer: noop,
@@ -21,8 +37,10 @@ export function stubPi(tools = new Map()) {
 		appendEntry: noop,
 		sendMessage: noop,
 		getCommands: () => [],
-		events: { on: noop, emit: async () => {} },
+		events,
 	};
+	bindToolManifestEvents(events);
+	return pi;
 }
 
 let registered = null;

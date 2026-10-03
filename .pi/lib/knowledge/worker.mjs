@@ -13,6 +13,11 @@ import {
 	snippet,
 	validateNote,
 } from "./files.mjs";
+import {
+	buildKnowledgeSearchExpression,
+	splitKnowledgeChunks,
+	tokenizeKnowledgeText,
+} from "./search-policy.mjs";
 
 await mkdir(dirname(workerData.database), { recursive: true, mode: 0o700 });
 const db = new DatabaseSync(workerData.database, { timeout: 1500 });
@@ -100,32 +105,6 @@ function bump() {
 		db.prepare("UPDATE meta SET value=value+1 WHERE key='revision' RETURNING value").get().value,
 	);
 }
-function tokens(text) {
-	const words =
-		String(text)
-			.normalize("NFKC")
-			.toLowerCase()
-			.match(/[a-z0-9][a-z0-9._+-]*|[\p{Script=Han}]+/gu) || [];
-	const out = [];
-	for (const word of words) {
-		if (/\p{Script=Han}/u.test(word)) {
-			// Explicit Chinese character/bigram tokens cover one- and two-character queries.
-			const chars = [...word];
-			for (let i = 0; i < chars.length; i++) {
-				out.push(chars[i]);
-				if (i + 1 < chars.length) out.push(chars[i] + chars[i + 1]);
-			}
-		} else out.push(word);
-	}
-	return out;
-}
-function queryExpression(query) {
-	if (typeof query !== "string" || !query.trim() || query.length > 2000)
-		throw new Error("Query must contain 1–2000 characters");
-	const terms = [...new Set(tokens(query))].slice(0, 32);
-	if (!terms.length) throw new Error("Query has no searchable terms");
-	return terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR ");
-}
 function job(kind, path, scope) {
 	statements.job.run(`${kind}:${path}`, kind, path, scope, revision, new Date().toISOString());
 }
@@ -155,6 +134,7 @@ function changed(path, previous) {
 		// New evidence is searchable immediately; semantic Wiki consolidation is a separate pending item.
 		if (!/(?:^|\/)Wiki\//.test(path)) job("evidence-review", path, scope);
 	}
+	/** @type {any[]} */
 	const dependents = db.prepare("SELECT source FROM links WHERE target=?").all(path);
 	for (const { source } of dependents)
 		if (/(?:^|\/)Wiki\//.test(source) && !source.endsWith("/Index.md"))
@@ -227,8 +207,8 @@ async function updatePath(path, force = false) {
 				const row = statements.get.get(path);
 				db.prepare("INSERT INTO search(rowid,title,terms) VALUES(?,?,?)").run(
 					row.id,
-					tokens(title).join(" "),
-					tokens(file.text).join(" "),
+					tokenizeKnowledgeText(title).join(" "),
+					tokenizeKnowledgeText(file.text).join(" "),
 				);
 				statements.links.run(path);
 				for (const target of internalLinks(path, file.text)) statements.addLink.run(path, target);
@@ -461,7 +441,7 @@ async function search(args) {
 	stats.searches++;
 	if (coverage === "uninitialized") void beginReconcile();
 	await flushDirty();
-	const expression = queryExpression(args.query);
+	const expression = buildKnowledgeSearchExpression(args.query);
 	const limit = Math.max(1, Math.min(12, Math.floor(args.limit || 5)));
 	const kindFilter = args.wikiOnly
 		? "AND n.kind='wiki'"
@@ -494,7 +474,7 @@ async function search(args) {
 		let at = lower.indexOf(needle);
 		if (at < 0)
 			at =
-				tokens(args.query)
+				tokenizeKnowledgeText(args.query)
 					.map((t) => lower.indexOf(t))
 					.find((i) => i >= 0) ?? 0;
 		const startLine = Math.max(1, current.body.slice(0, at).split("\n").length - 2);
@@ -567,18 +547,13 @@ async function hydrateCandidates(args) {
 	}
 	return { hits };
 }
-function splitChunks(text, maxChars = 1200) {
-	const chunks = [];
-	for (let start = 0; start < text.length && chunks.length < 64; start += maxChars)
-		chunks.push(text.slice(start, start + maxChars));
-	return chunks;
-}
 async function semanticBatch(args) {
 	const fingerprint = String(args.fingerprint || "");
 	if (!fingerprint || fingerprint.length > 300) throw new Error("Invalid semantic fingerprint");
 	const limit = Math.max(1, Math.min(16, Math.floor(args.limit || 8)));
 	const chunkChars = Math.max(256, Math.min(8_000, Math.floor(args.chunkChars || 1200)));
 	const scope = args.project || "";
+	/** @type {any[]} */
 	const rows = db
 		.prepare(`SELECT path,title,body,hash,signature,scope,kind FROM notes
     WHERE (scope='shared' OR scope=?) AND kind NOT IN ('navigation','explainer') ORDER BY path`)
@@ -594,7 +569,7 @@ async function semanticBatch(args) {
 		} catch {
 			continue;
 		}
-		const chunks = splitChunks(current.body, chunkChars);
+		const chunks = splitKnowledgeChunks(current.body, chunkChars);
 		for (let index = 0; index < chunks.length; index++) {
 			const chunk = chunks[index];
 			const found = db
@@ -700,6 +675,7 @@ function semanticCandidates(args) {
 		throw new Error("Invalid semantic similarity threshold");
 	const query = args.vector,
 		limit = Math.max(1, Math.min(12, Math.floor(args.limit || 5)));
+	/** @type {any[]} */
 	const rows = db
 		.prepare(
 			"SELECT s.path,s.hash,s.vector,s.dimension,s.chunk_index,s.start_char,s.end_char,n.title,n.kind FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer' ORDER BY s.path LIMIT 5000",

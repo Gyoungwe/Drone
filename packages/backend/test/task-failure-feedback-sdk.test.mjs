@@ -1,10 +1,11 @@
 ﻿import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { closeKnowledgeServices } from "@drone/knowledge/service";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
+import { getCurrentSystemPrompt } from "@earendil-works/pi-ai/utils/transcript";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
-import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
 import { PiBackend } from "../src/pi-backend";
 
 // Actual SDK/provider/tool-result transport, but an in-memory fake model: no paid model or user credentials.
@@ -66,9 +67,10 @@ it("real SDK failure → task_status → natural handoff keeps pairing and does 
 		expect(faux.state.callCount).toBe(3);
 		expect(network).not.toHaveBeenCalled();
 		expect(captured.messages.some((m) => m.role === "toolResult" && m.toolName === "task_status")).toBe(true);
-		expect(captured.systemPrompt).toContain("not a copied task ledger");
-		expect(captured.systemPrompt).toContain("which concrete step/file/service failed");
-		expect(captured.systemPrompt).toContain("impact not yet known");
+		const capturedSystemPrompt = getCurrentSystemPrompt(captured.messages || []);
+		expect(capturedSystemPrompt).toContain("not a copied task ledger");
+		expect(capturedSystemPrompt).toContain("which concrete step/file/service failed");
+		expect(capturedSystemPrompt).toContain("impact not yet known");
 		const index = captured.messages.findIndex((m) => m.role === "toolResult" && m.toolName === "read");
 		expect(index).toBeGreaterThan(0);
 		const result = captured.messages[index];

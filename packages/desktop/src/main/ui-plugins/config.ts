@@ -15,6 +15,7 @@ function uiPluginsConfigPath(): string {
 function configStore(): JsonStore<Partial<UiPluginsConfig> | null> {
 	return new JsonStore<Partial<UiPluginsConfig> | null>({
 		path: uiPluginsConfigPath(),
+		storageId: "desktop-ui-plugins-config",
 		defaultValue: () => null,
 	});
 }

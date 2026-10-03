@@ -1,4 +1,4 @@
-import type { AppInfo } from "@drone/shared";
+import { type AppInfo, serializeDiagnosticsArchive } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -8,6 +8,7 @@ import { useUpdateStore } from "../../stores/update";
 export function AboutPanel() {
 	const t = useT();
 	const [info, setInfo] = useState<AppInfo | null>(null);
+	const [diagnosticsState, setDiagnosticsState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
 	const state = useUpdateStore((s) => s.state);
 
 	useEffect(() => {
@@ -57,6 +58,20 @@ export function AboutPanel() {
 					? t("update.download")
 					: t("update.checkForUpdates");
 
+	const exportDiagnostics = async () => {
+		setDiagnosticsState("saving");
+		try {
+			const snapshot = await getPi().getDiagnostics();
+			const path = await getPi().saveFileDialog(
+				`drone-diagnostics-${new Date().toISOString().slice(0, 10)}.zip`,
+				serializeDiagnosticsArchive(snapshot),
+			);
+			setDiagnosticsState(path ? "saved" : "idle");
+		} catch {
+			setDiagnosticsState("failed");
+		}
+	};
+
 	return (
 		<div className="flex flex-col items-center gap-1.5 py-10 text-center">
 			<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink text-[16px] font-bold text-on-ink">
@@ -90,6 +105,25 @@ export function AboutPanel() {
 					{t("settings.about.sourceCode")}
 				</button>
 			</div>
+			<div className="mt-2 flex items-center gap-2">
+				<button
+					type="button"
+					className="rounded-lg border border-border px-4 py-1.5 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover hover:text-ink disabled:opacity-60"
+					disabled={diagnosticsState === "saving"}
+					onClick={() => void exportDiagnostics()}
+				>
+					{diagnosticsState === "saving"
+						? t("settings.about.exportingDiagnostics")
+						: t("settings.about.exportDiagnostics")}
+				</button>
+				{diagnosticsState === "saved" && (
+					<span className="text-[11px] text-ink-faint">{t("settings.about.diagnosticsSaved")}</span>
+				)}
+				{diagnosticsState === "failed" && (
+					<span className="text-[11px] text-danger">{t("settings.about.diagnosticsFailed")}</span>
+				)}
+			</div>
+			<p className="max-w-[280px] text-[11px] text-ink-faint">{t("settings.about.diagnosticsHint")}</p>
 			{statusText && <p className="mt-1 text-[11px] text-ink-faint">{statusText}</p>}
 		</div>
 	);

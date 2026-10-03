@@ -1,6 +1,9 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
+import { subscribeKnowledgeUi } from "@drone/knowledge/ui-state";
 import {
 	buildChatRows,
 	deriveTurnUsage,
@@ -16,9 +19,6 @@ import {
 } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import { subscribeKnowledgeUi } from "../../../.pi/lib/knowledge/ui-state.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 import { PiBackend } from "../src/pi-backend";
 import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/knowledge-publication";
 import { readSessionMessagesFromContent } from "../src/session/messages";
@@ -204,29 +204,22 @@ describe("same checked result across stream, history, LAN polling and exports", 
 		expect(JSON.stringify(message)).not.toContain("FORGED_UNCHECKED");
 	});
 	it("fails closed if the dynamically loaded bridge is unavailable", () => {
-		const key = Symbol.for("drone.knowledge.publication.v1"),
-			saved = globalThis[key];
-		delete globalThis[key];
-		try {
-			const message = {
-				role: "assistant",
-				content: [{ type: "text", text: "MISSING_HOOK_BYPASS" }],
-				timestamp: 1,
-				stopReason: "stop",
-			};
-			expect(
-				projectKnowledgeEvent({
-					type: "message_update",
-					assistantMessageEvent: { type: "text_delta", delta: "MISSING_HOOK_BYPASS" },
-				}),
-			).toBeNull();
-			expect(JSON.stringify(projectKnowledgeEvent({ type: "message_end", message }))).not.toContain(
-				"MISSING_HOOK_BYPASS",
-			);
-			expect(JSON.stringify(message)).not.toContain("MISSING_HOOK_BYPASS");
-		} finally {
-			globalThis[key] = saved;
-		}
+		const message = {
+			role: "assistant",
+			content: [{ type: "text", text: "MISSING_HOOK_BYPASS" }],
+			timestamp: 1,
+			stopReason: "stop",
+		};
+		expect(
+			projectKnowledgeEvent({
+				type: "message_update",
+				assistantMessageEvent: { type: "text_delta", delta: "MISSING_HOOK_BYPASS" },
+			}),
+		).toBeNull();
+		expect(JSON.stringify(projectKnowledgeEvent({ type: "message_end", message }))).not.toContain(
+			"MISSING_HOOK_BYPASS",
+		);
+		expect(JSON.stringify(message)).not.toContain("MISSING_HOOK_BYPASS");
 	});
 });
 

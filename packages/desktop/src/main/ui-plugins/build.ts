@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Plugin } from "esbuild";
+import { PLUGIN_API_SHIM } from "./plugin-api-shim.generated";
 
 /**
  * 懒加载 esbuild + 打包态二进制路径修正（两件事必须一起做）：
@@ -63,16 +64,8 @@ export const { jsx, jsxs, Fragment } = J;`,
 const D = window.DroneUI.ReactDOM;
 export default D;
 export const { createPortal, flushSync } = D;`,
-	// @drone/plugin-api：宿主精选子集
-	"@drone/plugin-api": `
-const A = window.DroneUI;
-export default A;
-export const { version, components, helpers, hooks, stores, i18n } = A;
-export const { Button, Dropdown, Tooltip, Markdown, ImagePreview } = A.components;
-export const { summarizeArgs, displayToolName, openResourceExternal, openExternal } = A.helpers;
-export const { useT, useContextUsage, useLanguage } = A.hooks;
-export const { useTranscriptStore, useSessionsStore, useUiStore, useProjectsStore, useSettingsStore, useUiPreferencesStore, useKnowledgeStore } = A.stores;
-export const { registerMessages } = A.i18n;`,
+	// @drone/plugin-api：由 renderer/plugins/host-api.manifest.json 生成
+	"@drone/plugin-api": PLUGIN_API_SHIM,
 };
 
 /**

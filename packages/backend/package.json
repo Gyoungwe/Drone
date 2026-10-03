@@ -10,15 +10,25 @@
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
-		"test": "vitest run"
+		"test": "vitest run",
+		"test:unit": "vitest run --project unit",
+		"test:sdk": "vitest run --project sdk"
 	},
 	"dependencies": {
-		"@earendil-works/pi-ai": "0.84.3",
-		"@earendil-works/pi-coding-agent": "0.84.3",
+		"@drone/compute": "*",
+		"@drone/discovery": "*",
+		"@drone/inquiry": "*",
+		"@drone/knowledge": "*",
+		"@drone/research": "*",
 		"@drone/shared": "*",
+		"@drone/tasks": "*",
+		"@earendil-works/pi-ai": "1.0.0",
+		"@earendil-works/pi-coding-agent": "1.0.0",
+		"ssh2": "^1.17.0",
 		"typebox": "1.3.7"
 	},
 	"devDependencies": {
+		"@types/ssh2": "^1.15.6",
 		"typescript": "^5.9.0",
 		"vitest": "^3.2.0"
 	}

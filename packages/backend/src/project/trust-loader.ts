@@ -1,7 +1,7 @@
-import type { InlineExtension, ProjectTrustStore } from "@earendil-works/pi-coding-agent";
-import { DefaultResourceLoader, getAgentDir, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { createLogger } from "../log";
 import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
+import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
+import { DefaultResourceLoader, getAgentDir, SettingsManager } from "../session-engine/sdk";
 import { resolveProjectTrust, type TrustOptionInternal } from "./trust";
 
 const log = createLogger("backend");

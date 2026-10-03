@@ -1,83 +1,67 @@
+// @ts-nocheck
+/** Compatibility artifact generated from packages/tasks/src/runtime/remaining.ts; packaged resources share the .pi runtime bridge. */
 import { acceptanceVerifier, effectiveAcceptance } from "./acceptance.mjs";
-
-const text = (value, max = 180) =>
-	String(value || "")
-		.replace(/\s+/g, " ")
-		.slice(0, max);
-/** Host observations, not a model estimate or scientific certification. */
-export function remainingExplanation(task) {
-	const milestones = task.milestones || [],
-		remaining = milestones.filter((m) => m.state !== "completed");
-	const lines = [
-		milestones.length
-			? `已验收 ${milestones.length - remaining.length}/${milestones.length} 项；剩余 ${remaining.length} 项。`
-			: "还没约定要交付什么，暂不计算完成百分比；先说清楚想要什么结果、做到什么程度算完成。",
-	];
-	for (const m of remaining) {
-		const acceptance = effectiveAcceptance(m);
-		const deps = (m.dependsOn || [])
-			.map((id) => milestones.find((x) => x.id === id))
-			.filter((x) => x && x.state !== "completed");
-		const action = (task.actions || []).find((a) => a.milestoneId === m.id && a.state === "pending");
-		const recorded = (task.operations || []).some(
-			(o) => o.artifact?.path === acceptance.path && !o.artifact?.intentOnly && o.state !== "started",
-		);
-		let reason, next;
-		if (deps.length) {
-			reason = `前置项尚未验收：${deps.map((d) => text(d.title, 70)).join("、")}`;
-			next = "先把前面这几项做完，这一项自然会跟上";
-		} else if (action) {
-			reason = `等待你处理：${text(action.title)}；${text(action.reason)}`;
-			next =
-				action.kind === "authorization"
-					? "在弹出的确认框里点同意"
-					: action.kind === "rebind"
-						? "在弹出的确认框里决定是否换成新的文献"
-						: action.kind === "file" || action.kind === "download"
-							? "把已有文件的路径填进来，程序会核对，不用重新下载"
-							: "亲自看过之后回来确认一下";
-		} else if (acceptanceVerifier(m.acceptance.kind)?.pending) {
-			// 扩展登记的验收种类自带未完成说明（挂钩 2）；传入含运行期绑定身份的有效验收
-			const hint = acceptanceVerifier(m.acceptance.kind).pending({ ...m, acceptance }) || {};
-			reason = hint.reason || `这一项要等 ${m.acceptance.kind} 核对通过`;
-			next = hint.next || "先核对已有结果，再决定是否继续";
-		} else if (m.acceptance.kind === "human_review") {
-			reason = "这一项约定要你亲自看过才算数，目前还没有";
-			next = "内容准备好后请过目一遍，看完确认即可";
-		} else if (recorded) {
-			reason = "已有产物记录，但和约定的标准还没对上";
-			next = "先看看已生成的文件对不对（位置、版本、内容），别急着重新生成";
-		} else if (m.evidence?.code === "ENOENT") {
-			reason = "在约定的位置没找到文件——也可能是存到别处了";
-			next = `看一下 ${text(acceptance.path, 140)} 和实际保存的位置是不是同一个，确实没有再补做`;
-		} else {
-			reason = "这一项还没确认完成；不能据此断言文件不存在或工作未做";
-			next = `先看看${text(acceptance.path || acceptance.doi || "现有结果", 140)}，确实缺了再补`;
-		}
-		lines.push(`• ${text(m.title)}\n  原因：${reason}\n  下一步：${next}。`);
-	}
-	if ((task.operations || []).some((o) => ["started", "unknown"].includes(o.state)))
-		lines.push("有操作上次没等到结果：先核对它实际做没做成，别直接重来一遍。");
-	for (const a of (task.actions || []).filter(
-		(a) => a.state === "pending" && !remaining.some((m) => m.id === a.milestoneId),
-	))
-		lines.push(`需要你：${text(a.title)}；${text(a.reason)}。`);
-	// 写入回执带回了身份，但每个同类里程碑都已点名别的文献：不改契约，提示走改绑
-	// （同类里程碑都已验收时，这些只是额外的写入，不需要提示）
-	for (const u of (task.unboundIdentities || [])
-		.filter((u) => remaining.some((m) => m.acceptance.kind === u.kind))
-		.slice(-4))
-		lines.push(
-			`已记录但未对应到任何交付项：${text(u.doi || u.kind, 140)}。若计划里写的文献有误，用 task_wait kind=rebind（milestoneId + doi + reason）请用户确认更换。`,
-		);
-	if (milestones.length && !remaining.length) {
-		lines.push("约定的交付都已确认完成。还想做别的，直接说就行。");
-		// 命令/外部操作没有可读回的产物，宿主只有它们的返回记录；如实标注，不据此否决交付
-		const returned = (task.operations || []).filter((o) => o.state === "returned").length;
-		const failed = (task.operations || []).filter((o) => o.state === "failed").length;
-		if (returned)
-			lines.push(`其中 ${returned} 步命令/外部操作只有返回记录、没有独立核对；交付以验收过的文件为准。`);
-		if (failed) lines.push(`过程中有 ${failed} 步操作出过错；交付以最终验收过的文件为准。`);
-	}
-	return lines.join("\n").slice(0, 10000);
+const text = (value, max = 180) => String(value || "").replace(/\s+/g, " ").slice(0, max);
+function remainingExplanation(task) {
+  const milestones = task.milestones || [], remaining = milestones.filter((m) => m.state !== "completed");
+  const lines = [
+    milestones.length ? `\u5DF2\u9A8C\u6536 ${milestones.length - remaining.length}/${milestones.length} \u9879\uFF1B\u5269\u4F59 ${remaining.length} \u9879\u3002` : "\u8FD8\u6CA1\u7EA6\u5B9A\u8981\u4EA4\u4ED8\u4EC0\u4E48\uFF0C\u6682\u4E0D\u8BA1\u7B97\u5B8C\u6210\u767E\u5206\u6BD4\uFF1B\u5148\u8BF4\u6E05\u695A\u60F3\u8981\u4EC0\u4E48\u7ED3\u679C\u3001\u505A\u5230\u4EC0\u4E48\u7A0B\u5EA6\u7B97\u5B8C\u6210\u3002"
+  ];
+  for (const m of remaining) {
+    const acceptance = effectiveAcceptance(m);
+    const deps = (m.dependsOn || []).map((id) => milestones.find((x) => x.id === id)).filter((x) => x && x.state !== "completed");
+    const action = (task.actions || []).find((a) => a.milestoneId === m.id && a.state === "pending");
+    const recorded = (task.operations || []).some(
+      (o) => o.artifact?.path === acceptance.path && !o.artifact?.intentOnly && o.state !== "started"
+    );
+    let reason = "", next = "";
+    if (deps.length) {
+      reason = `\u524D\u7F6E\u9879\u5C1A\u672A\u9A8C\u6536\uFF1A${deps.map((d) => text(d.title, 70)).join("\u3001")}`;
+      next = "\u5148\u628A\u524D\u9762\u8FD9\u51E0\u9879\u505A\u5B8C\uFF0C\u8FD9\u4E00\u9879\u81EA\u7136\u4F1A\u8DDF\u4E0A";
+    } else if (action) {
+      reason = `\u7B49\u5F85\u4F60\u5904\u7406\uFF1A${text(action.title)}\uFF1B${text(action.reason)}`;
+      next = action.kind === "authorization" ? "\u5728\u5F39\u51FA\u7684\u786E\u8BA4\u6846\u91CC\u70B9\u540C\u610F" : action.kind === "rebind" ? "\u5728\u5F39\u51FA\u7684\u786E\u8BA4\u6846\u91CC\u51B3\u5B9A\u662F\u5426\u6362\u6210\u65B0\u7684\u6587\u732E" : action.kind === "file" || action.kind === "download" ? "\u628A\u5DF2\u6709\u6587\u4EF6\u7684\u8DEF\u5F84\u586B\u8FDB\u6765\uFF0C\u7A0B\u5E8F\u4F1A\u6838\u5BF9\uFF0C\u4E0D\u7528\u91CD\u65B0\u4E0B\u8F7D" : "\u4EB2\u81EA\u770B\u8FC7\u4E4B\u540E\u56DE\u6765\u786E\u8BA4\u4E00\u4E0B";
+    } else if (acceptanceVerifier(m.acceptance.kind)?.pending) {
+      const hint = acceptanceVerifier(m.acceptance.kind).pending({ ...m, acceptance }) || {};
+      reason = hint.reason || `\u8FD9\u4E00\u9879\u8981\u7B49 ${m.acceptance.kind} \u6838\u5BF9\u901A\u8FC7`;
+      next = hint.next || "\u5148\u6838\u5BF9\u5DF2\u6709\u7ED3\u679C\uFF0C\u518D\u51B3\u5B9A\u662F\u5426\u7EE7\u7EED";
+    } else if (m.acceptance.kind === "human_review") {
+      reason = "\u8FD9\u4E00\u9879\u7EA6\u5B9A\u8981\u4F60\u4EB2\u81EA\u770B\u8FC7\u624D\u7B97\u6570\uFF0C\u76EE\u524D\u8FD8\u6CA1\u6709";
+      next = "\u5185\u5BB9\u51C6\u5907\u597D\u540E\u8BF7\u8FC7\u76EE\u4E00\u904D\uFF0C\u770B\u5B8C\u786E\u8BA4\u5373\u53EF";
+    } else if (recorded) {
+      reason = "\u5DF2\u6709\u4EA7\u7269\u8BB0\u5F55\uFF0C\u4F46\u548C\u7EA6\u5B9A\u7684\u6807\u51C6\u8FD8\u6CA1\u5BF9\u4E0A";
+      next = "\u5148\u770B\u770B\u5DF2\u751F\u6210\u7684\u6587\u4EF6\u5BF9\u4E0D\u5BF9\uFF08\u4F4D\u7F6E\u3001\u7248\u672C\u3001\u5185\u5BB9\uFF09\uFF0C\u522B\u6025\u7740\u91CD\u65B0\u751F\u6210";
+    } else if (m.evidence?.code === "ENOENT") {
+      reason = "\u5728\u7EA6\u5B9A\u7684\u4F4D\u7F6E\u6CA1\u627E\u5230\u6587\u4EF6\u2014\u2014\u4E5F\u53EF\u80FD\u662F\u5B58\u5230\u522B\u5904\u4E86";
+      next = `\u770B\u4E00\u4E0B ${text(acceptance.path, 140)} \u548C\u5B9E\u9645\u4FDD\u5B58\u7684\u4F4D\u7F6E\u662F\u4E0D\u662F\u540C\u4E00\u4E2A\uFF0C\u786E\u5B9E\u6CA1\u6709\u518D\u8865\u505A`;
+    } else {
+      reason = "\u8FD9\u4E00\u9879\u8FD8\u6CA1\u786E\u8BA4\u5B8C\u6210\uFF1B\u4E0D\u80FD\u636E\u6B64\u65AD\u8A00\u6587\u4EF6\u4E0D\u5B58\u5728\u6216\u5DE5\u4F5C\u672A\u505A";
+      next = `\u5148\u770B\u770B${text(acceptance.path || acceptance.doi || "\u73B0\u6709\u7ED3\u679C", 140)}\uFF0C\u786E\u5B9E\u7F3A\u4E86\u518D\u8865`;
+    }
+    lines.push(`\u2022 ${text(m.title)}
+  \u539F\u56E0\uFF1A${reason}
+  \u4E0B\u4E00\u6B65\uFF1A${next}\u3002`);
+  }
+  if ((task.operations || []).some((o) => ["started", "unknown"].includes(o.state)))
+    lines.push("\u6709\u64CD\u4F5C\u4E0A\u6B21\u6CA1\u7B49\u5230\u7ED3\u679C\uFF1A\u5148\u6838\u5BF9\u5B83\u5B9E\u9645\u505A\u6CA1\u505A\u6210\uFF0C\u522B\u76F4\u63A5\u91CD\u6765\u4E00\u904D\u3002");
+  for (const a of (task.actions || []).filter(
+    (a2) => a2.state === "pending" && !remaining.some((m) => m.id === a2.milestoneId)
+  ))
+    lines.push(`\u9700\u8981\u4F60\uFF1A${text(a.title)}\uFF1B${text(a.reason)}\u3002`);
+  for (const u of (task.unboundIdentities || []).filter((u2) => remaining.some((m) => m.acceptance.kind === u2.kind)).slice(-4))
+    lines.push(
+      `\u5DF2\u8BB0\u5F55\u4F46\u672A\u5BF9\u5E94\u5230\u4EFB\u4F55\u4EA4\u4ED8\u9879\uFF1A${text(u.doi || u.kind, 140)}\u3002\u82E5\u8BA1\u5212\u91CC\u5199\u7684\u6587\u732E\u6709\u8BEF\uFF0C\u7528 task_wait kind=rebind\uFF08milestoneId + doi + reason\uFF09\u8BF7\u7528\u6237\u786E\u8BA4\u66F4\u6362\u3002`
+    );
+  if (milestones.length && !remaining.length) {
+    lines.push("\u7EA6\u5B9A\u7684\u4EA4\u4ED8\u90FD\u5DF2\u786E\u8BA4\u5B8C\u6210\u3002\u8FD8\u60F3\u505A\u522B\u7684\uFF0C\u76F4\u63A5\u8BF4\u5C31\u884C\u3002");
+    const returned = (task.operations || []).filter((o) => o.state === "returned").length;
+    const failed = (task.operations || []).filter((o) => o.state === "failed").length;
+    if (returned)
+      lines.push(`\u5176\u4E2D ${returned} \u6B65\u547D\u4EE4/\u5916\u90E8\u64CD\u4F5C\u53EA\u6709\u8FD4\u56DE\u8BB0\u5F55\u3001\u6CA1\u6709\u72EC\u7ACB\u6838\u5BF9\uFF1B\u4EA4\u4ED8\u4EE5\u9A8C\u6536\u8FC7\u7684\u6587\u4EF6\u4E3A\u51C6\u3002`);
+    if (failed) lines.push(`\u8FC7\u7A0B\u4E2D\u6709 ${failed} \u6B65\u64CD\u4F5C\u51FA\u8FC7\u9519\uFF1B\u4EA4\u4ED8\u4EE5\u6700\u7EC8\u9A8C\u6536\u8FC7\u7684\u6587\u4EF6\u4E3A\u51C6\u3002`);
+  }
+  return lines.join("\n").slice(0, 1e4);
 }
+export {
+  remainingExplanation
+};

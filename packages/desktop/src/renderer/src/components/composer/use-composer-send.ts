@@ -242,7 +242,12 @@ export function useComposerSend(options: UseComposerSendOptions) {
 		options.setAttachments([]);
 		options.setQuotes([]);
 		try {
-			await getPi().prompt(sessionId, content, sentImages.length > 0 ? sentImages : undefined);
+			// The IPC contract has two valid tuple shapes: [sessionId, text] and
+			// [sessionId, text, images]. Passing an explicit undefined third
+			// argument matches neither shape and is rejected before the backend
+			// handler runs.
+			if (sentImages.length > 0) await getPi().prompt(sessionId, content, sentImages);
+			else await getPi().prompt(sessionId, content);
 			// SDK events own agent activity. An acknowledgement can arrive after agent_settled,
 			// and UI-only commands need not emit any agent events. sending covers preflight.
 		} catch (err) {

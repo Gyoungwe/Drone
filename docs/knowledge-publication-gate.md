@@ -6,6 +6,20 @@ Application mode is selected by `DRONE_KNOWLEDGE_DIR`. When a Vault is bound, th
 
 The application publication module uses the pinned SDK message_end replacement contract. A replacement occurs before SessionManager persistence. PiBackend applies a fail-closed projection before trace/desktop/LAN fanout; it suppresses incremental assistant message payloads and sanitizes start/final/turn/agent snapshots. Live history polling uses the same publication state and cannot expose an in-flight draft while asynchronous validation is pending. JSONL/HTML exports use finalized persistence. No UI-only hiding is treated as the security boundary.
 
+## Metacognitive publication checks
+
+Hosts may inject a bounded `MetacognitiveSnapshot` into the publication instance. The
+pure `@drone/knowledge/metacognitive-policy` compares the final text with the
+host-observed run without executing code or inferring scientific truth. It checks
+that reported numbers occur in a cited artifact with the declared rounding, the
+cited artifact checksum is still current, method descriptions name workflows,
+modules and parameters that were actually observed, exploratory/overturned/unstable
+findings are not used as validation or conclusions, and diagnostic values match
+the observed controls/results. Any mismatch blocks publication and carries a
+bounded actionable diff; a successful finding record is copied into the proof as
+citable observed evidence. An absent snapshot keeps compatibility with existing
+operational turns; a supplied but unreadable or inconsistent snapshot fails closed.
+
 ## Conditions
 
 - Current native navigation ticket, correct project/workspace and unchanged Vault binding.

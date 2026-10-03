@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
+import { stageWikiProposal } from "@drone/knowledge/wiki-review";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
+import { getCurrentTools } from "@earendil-works/pi-ai/utils/transcript";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import { stageWikiProposal } from "../../../.pi/lib/knowledge/wiki-review.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 import { PiBackend } from "../src/pi-backend";
 
 let root, cwd, vault, backend, session, sid, faux, preview;
@@ -112,7 +113,7 @@ it("desktop model-review host calls one isolated SDK request, preserves chat con
 	expect(result.humanReviewed).toBe(false);
 	expect(faux.state.callCount).toBe(1);
 	expect(JSON.stringify(captured)).not.toContain("PARENT_PRIVATE_HISTORY");
-	expect(captured.tools.map((t) => t.name)).toEqual(["knowledge_submit"]);
+	expect(getCurrentTools(captured.messages || []).map((t) => t.name)).toEqual(["knowledge_submit"]);
 	expect(JSON.stringify(session.messages)).toBe(before);
 	expect(await readFile(join(vault, "Wiki/topic.md"), "utf8")).toContain("condition A only");
 });

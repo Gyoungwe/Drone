@@ -1,8 +1,12 @@
 export * from "./ask";
 export * from "./capabilities";
+export * from "./compute";
+export * from "./diagnostics";
+export * from "./discovery";
 export * from "./errors";
 export * from "./evidence-labels";
 export * from "./example-tasks";
+export * from "./host-api";
 export * from "./institutional";
 export * from "./ipc";
 export * from "./knowledge";
@@ -34,6 +38,7 @@ export {
 	TEXT_PREVIEW_BYTES,
 	tablePreview,
 } from "./resource-preview-format";
+export * from "./runtime";
 export * from "./session";
 export * from "./settings";
 export * from "./skill-catalog";

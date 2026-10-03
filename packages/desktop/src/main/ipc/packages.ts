@@ -1,16 +1,52 @@
-import type { PiBackend } from "@drone/backend";
-import type { CatalogPackageType } from "@drone/shared";
-import { IpcChannels } from "@drone/shared";
-import { ipcMain } from "electron";
+import type { BackendServices, SessionServicePort } from "@drone/backend";
+import { IpcChannels, PackagesContract } from "@drone/shared";
+import { bindContract, type ContractImplementation } from "./bind-contract";
 
-/** 社区包域：pi.dev 目录搜索 + 安装/卸载 + 已配置清单 */
-export function registerPackagesIpc(backend: PiBackend): void {
-	ipcMain.handle(IpcChannels.PackagesSearchCatalog, (_e, query: string, type?: string, page?: number) =>
-		backend.searchPackages(query, type as CatalogPackageType | "" | undefined, page),
-	);
-	ipcMain.handle(IpcChannels.PackagesInstall, (_e, name: string) => backend.installPackage(name));
-	ipcMain.handle(IpcChannels.PackagesRemove, (_e, source: string, scope: "user" | "project") =>
-		backend.removePackage(source, scope),
-	);
-	ipcMain.handle(IpcChannels.PackagesListConfigured, () => backend.listConfiguredPackages());
+/** 社区包域：pi.dev 目录搜索 + 安装/卸载 + 已配置清单。 */
+export function registerPackagesIpc(
+	backendOrServices: BackendServices | SessionServicePort,
+	services?: Pick<BackendServices, "packages">,
+): void {
+	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
+	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
+	const legacy = backend as SessionServicePort & {
+		searchPackages?: BackendServices["packages"]["searchPackages"];
+		installPackage?: BackendServices["packages"]["installPackage"];
+		removePackage?: BackendServices["packages"]["removePackage"];
+		listConfiguredPackages?: BackendServices["packages"]["listConfiguredPackages"];
+	};
+	const packages =
+		hostServices?.packages ??
+		("packages" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "packages">).packages
+			: legacy.searchPackages &&
+					legacy.installPackage &&
+					legacy.removePackage &&
+					legacy.listConfiguredPackages
+				? {
+						searchPackages: legacy.searchPackages.bind(backend),
+						installPackage: legacy.installPackage.bind(backend),
+						removePackage: legacy.removePackage.bind(backend),
+						listConfiguredPackages: legacy.listConfiguredPackages.bind(backend),
+					}
+				: undefined);
+	if (!packages) throw new Error("Package service is required by the desktop host");
+	const implementation: ContractImplementation<typeof PackagesContract> = {
+		searchCatalog: (...args) => {
+			const [query, type, page] = args;
+			return packages.searchPackages(query, type, page);
+		},
+		installPackage: (name) => packages.installPackage(name),
+		removePackage: (source, scope) => packages.removePackage(source, scope),
+		listConfiguredPackages: () => packages.listConfiguredPackages(),
+	};
+	bindContract(PackagesContract, implementation, {
+		channelForMethod: (_contract, method) =>
+			({
+				searchCatalog: IpcChannels.PackagesSearchCatalog,
+				installPackage: IpcChannels.PackagesInstall,
+				removePackage: IpcChannels.PackagesRemove,
+				listConfiguredPackages: IpcChannels.PackagesListConfigured,
+			})[method as keyof typeof PackagesContract.methods],
+	});
 }

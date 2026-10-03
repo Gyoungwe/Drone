@@ -1,17 +1,14 @@
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { parse } from "yaml";
+import { join, resolve } from "node:path";
+import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
 import zoteroLiterature, {
 	identifyZoteroReceipt,
 	registerZoteroAcceptance,
-} from "../../../.pi/extensions/zotero-literature.mjs";
-import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
-import { normalizeSourceLinks } from "../../../.pi/lib/knowledge/source-links.mjs";
-import { configureObsidian, depositKnowledge } from "../../../.pi/lib/obsidian-workbench.mjs";
-import { resetAcceptanceVerifiers } from "../../../.pi/lib/tasks/acceptance.mjs";
+} from "@drone/extensions/zotero-literature";
+import { normalizeSourceLinks } from "@drone/knowledge";
+import { closeKnowledgeServices } from "@drone/knowledge/service";
 import {
 	bootstrapZotero,
 	inspectZotero,
@@ -21,7 +18,10 @@ import {
 	setupZoteroAgentMessage,
 	uvBootstrapCommand,
 	zoteroMcpSpec,
-} from "../../../.pi/lib/zotero-setup.mjs";
+} from "@drone/research/zotero-setup-runtime";
+import { resetAcceptanceVerifiers } from "@drone/tasks/acceptance";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { parse } from "yaml";
 import { detectCapabilities, toolCapabilities } from "../src/capabilities/runtime";
 
 let root, cwd, vault, agentDir;
@@ -296,7 +296,7 @@ it("slash command is labeled as from-zero install", () => {
 
 it("ships a parseable zotero-literature skill", async () => {
 	const text = await readFile(
-		new URL("../../../.pi/skills/zotero-literature/SKILL.md", import.meta.url),
+		resolve(import.meta.dirname, "../../../.pi/skills/zotero-literature/SKILL.md"),
 		"utf8",
 	);
 	const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);

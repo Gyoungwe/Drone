@@ -1,0 +1,50 @@
+{
+	"name": "@drone/knowledge",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./config": "./src/config.ts",
+		"./claim-conflicts": "./src/claim-conflicts.ts",
+		"./orchestration-policy": "./src/orchestration-policy.ts",
+		"./review-policy": "./src/review-policy.ts",
+		"./source-links": "./src/source-links.ts",
+		"./tool-budget": "./src/tool-budget.ts",
+		"./topic-candidate": "./src/topic-candidate.ts",
+		"./flow-cards": "./src/flow-cards.ts",
+		"./search-policy": "./src/search-policy.ts",
+		"./publication-policy": "./src/publication-policy.ts",
+		"./semantic-settings": "./src/semantic-settings.ts",
+		"./extension-helpers": "./src/extension-helpers.ts",
+		"./task-feedback": "./src/task-feedback.ts",
+		"./semantic-provider": "./src/semantic-provider.ts",
+		"./files": "./src/files.ts",
+		"./layout": "./src/layout.ts",
+		"./wiki-policy": "./src/wiki-policy.ts",
+		"./topic-memory": "./src/topic-memory.ts",
+		"./maintenance": "./src/maintenance.ts",
+		"./runtime-host": "./src/runtime-host.ts",
+		"./ui-state": "./src/ui-state.ts",
+		"./publication": "./src/publication.ts",
+		"./worker": "./src/worker.ts",
+		"./service": "./src/service.ts",
+		"./wiki-review": "./src/wiki-review.ts",
+		"./specialist-host": "./src/specialist-host.ts",
+		"./specialists": "./src/specialists.ts",
+		"./specialist-delivery": "./src/specialist-delivery.ts",
+		"./wiki-model-review": "./src/wiki-model-review.ts",
+		"./ui-service": "./src/ui-service.ts",
+		"./experience-store": "./src/experience-store.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.0",
+		"vitest": "^3.2.0"
+	}
+}

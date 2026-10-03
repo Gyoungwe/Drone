@@ -1,5 +1,5 @@
+import { createToolBudget } from "@drone/knowledge/tool-budget";
 import { describe, expect, it } from "vitest";
-import { createToolBudget } from "../../../.pi/lib/knowledge/tool-budget.mjs";
 
 describe("knowledge tool-budget", () => {
 	it("allows reads and searches up to the default caps", () => {

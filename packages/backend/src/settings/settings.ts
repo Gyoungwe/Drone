@@ -6,9 +6,8 @@ import type {
 	ProviderInfo,
 	ProviderTestResult,
 } from "@drone/shared";
-import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
-import { getAgentDir, type ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { JsonStore } from "../json-store";
+import { builtinProviders, getAgentDir, type ModelRuntime } from "../session-engine/sdk";
 
 /** 内置 provider id 集合：models.json 里配置的 ID 命中它 = 「覆写内置」（有官方模型列表可共享），否则是全新自定义 provider */
 const BUILTIN_PROVIDER_IDS = new Set(builtinProviders().map((p) => p.id));
@@ -21,6 +20,7 @@ type JsonObject = Record<string, unknown>;
 /** 联网刷新模型目录的整体超时（SDK fetchWithRetry 默认无超时，网络不可达时会一直挂） */
 const NETWORK_REFRESH_TIMEOUT_MS = 15_000;
 const PROVIDER_TEST_TIMEOUT_MS = 15_000;
+const OPENAI_CODEX_PROBE_MODELS = ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-astra"] as const;
 
 /** models.json 支持 JSONC 注释；写入时统一输出纯 JSON */
 function stripJsonComments(raw: string): string {
@@ -29,8 +29,11 @@ function stripJsonComments(raw: string): string {
 
 /** auth/models 的 JsonStore：JSONC 读侧 + 损坏时 read 回退 {}（写入拒损坏由 update 保证） */
 function jsonStoreFor(path: string, mode?: number): JsonStore<JsonObject> {
+	const storageId =
+		path.endsWith("/auth.json") || path.endsWith("\\auth.json") ? "agent-auth" : "agent-models";
 	return new JsonStore<JsonObject>({
 		path,
+		storageId: storageId,
 		defaultValue: () => ({}),
 		mode,
 		parse: (raw) => JSON.parse(stripJsonComments(raw)) as JsonObject,
@@ -47,7 +50,18 @@ async function readJsonFile(path: string): Promise<JsonObject> {
  * auth.json 与 models.json 由 pi 读取（本服务负责写入），
  * 写完统一经 ModelRuntime.refresh() 让运行中的会话生效。
  */
-export class SettingsService {
+export interface SettingsServicePort {
+	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
+	saveApiKey(providerId: string, key: string): Promise<void>;
+	removeCredential(providerId: string): Promise<void>;
+	addCustomProvider(input: CustomProviderInput): Promise<void>;
+	updateCustomProvider(input: CustomProviderUpdateInput): Promise<void>;
+	removeCustomProvider(providerId: string): Promise<void>;
+	setProviderBaseUrl(providerId: string, baseUrl: string, apiKey?: string): Promise<void>;
+	testProvider(providerId: string, modelId?: string): Promise<ProviderTestResult>;
+}
+
+export class SettingsService implements SettingsServicePort {
 	constructor(private readonly getRuntime: () => Promise<ModelRuntime>) {}
 
 	private get authPath(): string {
@@ -360,9 +374,14 @@ export class SettingsService {
 		if (!status.configured) {
 			return { ok: false, error: "未配置凭证" };
 		}
+		const models = runtime.getModels(providerId);
 		const model = modelId
 			? runtime.getModel(providerId, modelId)
-			: (runtime.getModels(providerId)[0] ?? undefined);
+			: ((providerId === "openai-codex"
+					? OPENAI_CODEX_PROBE_MODELS.map((id) => models.find((candidate) => candidate.id === id)).find(
+							Boolean,
+						)
+					: undefined) ?? models[0]);
 		if (!model) {
 			return { ok: false, error: "该 provider 下没有可用模型" };
 		}

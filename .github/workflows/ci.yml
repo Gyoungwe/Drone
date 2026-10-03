@@ -11,7 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  static:
+    name: Static checks (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -26,6 +27,70 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run test
+      - run: npm run check:arch
+      - run: npm run test:arch
+      - run: npm run check:plugin-api
+      - run: npm run check:extensions
+      - run: npm run test:research-packaging
+
+  unit:
+    name: Backend unit tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
+
+  sdk:
+    name: Backend SDK tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:sdk
+
+  desktop:
+    name: Desktop and workspace tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Backend is covered by the parallel unit/sdk jobs. Keep the other
+      # workspace suites and the root upgrade/build gates in this job.
+      - run: npm test -w @drone/shared
+      - run: npm test -w @drone/desktop
+      - run: npm test -w @drone/extensions
+      - run: npm test -w @drone/knowledge
+      - run: npm test -w @drone/tasks
+      - run: npm test -w @drone/research
+      - run: npm test -w @drone/compute
+      - run: npm test -w @drone/inquiry
+      - run: npm run check:knowledge-runtime
+      - run: npm run check:tasks-runtime
+      - run: npm run check:research-runtime
       - run: npm run test:upgrade
       - run: npm run build

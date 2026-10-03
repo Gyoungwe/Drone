@@ -1,12 +1,12 @@
-import { afterEach, expect, it, vi } from "vitest";
 import {
 	effectiveAcceptance,
 	registerAcceptanceVerifier,
 	resetAcceptanceVerifiers,
-} from "../../../.pi/lib/tasks/acceptance.mjs";
-import { createTaskAuthorization } from "../../../.pi/lib/tasks/ask-authorization.mjs";
-import { remainingExplanation } from "../../../.pi/lib/tasks/remaining.mjs";
-import { createTaskWorkbench } from "../../../.pi/lib/tasks/workbench.mjs";
+} from "@drone/tasks/acceptance";
+import { createTaskAuthorization } from "@drone/tasks/ask-authorization";
+import { remainingExplanation } from "@drone/tasks/remaining-runtime";
+import { createTaskWorkbench } from "@drone/tasks/workbench";
+import { afterEach, expect, it, vi } from "vitest";
 
 vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 });
 afterEach(() => resetAcceptanceVerifiers());

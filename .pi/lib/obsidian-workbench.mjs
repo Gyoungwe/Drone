@@ -11,6 +11,7 @@ import { knowledgeDirectory, readKnowledgeBinding, saveKnowledgeBinding } from "
 import { initializeProjectContext, initializeSharedNavigation } from "./knowledge/layout.mjs";
 import { getKnowledgeService, notifyKnowledgeChange } from "./knowledge/service.mjs";
 import { normalizeSourceLinks, onlineSourceLink } from "./knowledge/source-links.mjs";
+import { runtimeSlot } from "./runtime-bridge.mjs";
 import { renderTemplate } from "./vault-layout.mjs";
 import { getVaultProfile, listVaultProfiles } from "./vault-profiles.mjs";
 
@@ -32,7 +33,12 @@ export const OBSIDIAN_READ_TOOLS = [
 const MANAGED_START = "<!-- pi-agent:managed:start -->";
 const MANAGED_END = "<!-- pi-agent:managed:end -->";
 const PROJECT_TEMPLATE = `---\ntype: project\nproject: "{{project_slug}}"\ntitle: {{project_title_yaml}}\ncreated_at: "{{created_at}}"\n---\n\n# {{project_title}}\n\n[[Home]] | [[Projects/Index]] | [[Library/Index]]\n\n## Research question\n\n## Goals\n\n## Next steps\n\n${MANAGED_START}\n{{project_content}}\n${MANAGED_END}\n\n## Human review\n\n`;
-const vaultUpdates = new Map();
+const runtimeState = runtimeSlot("knowledge", "obsidianWorkbench", () => ({
+	vaultUpdates: new Map(),
+	dispose() {
+		this.vaultUpdates.clear();
+	},
+}));
 
 function validateProject(project) {
 	if (
@@ -64,13 +70,13 @@ async function vaultPath(vault, ...parts) {
 // Serialize updates for one vault so parallel project creation cannot lose links.
 async function updateVault(cwd, operation) {
 	const vault = await configuredVault(cwd);
-	const previous = vaultUpdates.get(vault) || Promise.resolve();
+	const previous = runtimeState.vaultUpdates.get(vault) || Promise.resolve();
 	const next = previous.catch(() => {}).then(() => operation(vault));
-	vaultUpdates.set(vault, next);
+	runtimeState.vaultUpdates.set(vault, next);
 	try {
 		return await next;
 	} finally {
-		if (vaultUpdates.get(vault) === next) vaultUpdates.delete(vault);
+		if (runtimeState.vaultUpdates.get(vault) === next) runtimeState.vaultUpdates.delete(vault);
 	}
 }
 
@@ -306,6 +312,7 @@ export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) 
 	});
 }
 
+/** @param {Record<string, any>} [input] */
 export async function publishExplainer({
 	cwd = process.cwd(),
 	project,
@@ -403,6 +410,7 @@ export async function publishExplainer({
 
 const hasControlCharacter = (value) => [...String(value)].some((char) => char.charCodeAt(0) < 32);
 
+/** @param {Record<string, any>} [input] */
 export async function createObsidianProject({ cwd = process.cwd(), project, title = project } = {}) {
 	validateProject(project);
 	const config = await loadWorkspaceConfig(cwd);
@@ -550,6 +558,7 @@ function zoteroCitekey(value) {
 	return key;
 }
 
+/** @param {Record<string, any>} [input] */
 export async function depositKnowledge({
 	cwd = process.cwd(),
 	project,
@@ -691,9 +700,12 @@ export async function obsidianStatus(cwd) {
 		const mcp = await readJson(join(cwd, ".mcp.json"));
 		const server = mcp.mcpServers?.[SERVER_NAME];
 		if (!server || server.disabled || server.args?.at(-1) !== vault) return { state: "missing-mcp", vault };
+		// Older workspaces may still point at the removed policy proxy. Keep the
+		// status recognizable so setup can tell the user to remove that entry,
+		// without ever attempting to execute the dead proxy or its old vendor.
+		if (isLegacyVaultProxy(server)) return { state: "missing-server", vault, legacyConfig: true };
 		try {
 			await access(server.args[0]);
-			if (server.args[0].endsWith("vault-mcp-proxy.mjs")) await access(server.args[1]);
 		} catch {
 			return { state: "missing-server", vault };
 		}
@@ -713,6 +725,11 @@ export async function obsidianStatus(cwd) {
 	}
 }
 
+function isLegacyVaultProxy(entry) {
+	const args = Array.isArray(entry?.args) ? entry.args : [];
+	return typeof args[0] === "string" && args[0].endsWith("vault-mcp-proxy.mjs");
+}
+
 // Resolve runtime code separately from ctx.cwd: a globally installed extension
 // serves many projects, and those projects do not each contain its npm runtime.
 export async function resolveObsidianRuntime({
@@ -723,9 +740,11 @@ export async function resolveObsidianRuntime({
 }) {
 	const runtimeFromConfig = (entry, root) => {
 		const args = Array.isArray(entry?.args) ? entry.args : [];
-		const path = typeof args[0] === "string" && args[0].endsWith("vault-mcp-proxy.mjs") ? args[1] : args[0];
+		if (isLegacyVaultProxy(entry)) return null;
+		const path = args[0];
 		return typeof path === "string" ? { path: resolve(root, path), command: entry.command } : null;
 	};
+	/** @type {any[]} */
 	const candidates = [];
 	if (server) candidates.push({ path: resolve(cwd, server), command: existing?.command });
 	else {

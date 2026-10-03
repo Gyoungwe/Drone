@@ -1,5 +1,5 @@
+import { compareClaims } from "@drone/knowledge";
 import { describe, expect, it } from "vitest";
-import { compareClaims } from "../../../.pi/lib/knowledge/claim-conflicts.mjs";
 
 const claim = (overrides = {}) => ({
 	claim: "Wg activates wing-margin growth",

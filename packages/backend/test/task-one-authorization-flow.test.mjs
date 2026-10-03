@@ -1,10 +1,10 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { shouldAskToContinue } from "@drone/tasks";
+import { remainingExplanation } from "@drone/tasks/remaining-runtime";
+import { createTaskWorkbench, LIMITS, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { afterEach, expect, it, vi } from "vitest";
-import { remainingExplanation } from "../../../.pi/lib/tasks/remaining.mjs";
-import { shouldAskToContinue } from "../../../.pi/lib/tasks/turn-end-prompt.mjs";
-import { createTaskWorkbench, LIMITS, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
 
 /**
  * 一次授权闭环的宿主机制：授权后模型中途收口 → 自动接续（有进展才续、有上限）；

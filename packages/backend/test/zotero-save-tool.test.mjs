@@ -1,13 +1,12 @@
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import sourceArchive, { startResearchRun } from "@drone/extensions/research-host";
+import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
+import zoteroLiterature from "@drone/extensions/zotero-literature";
+import { beginKnowledgeFlow, flowFor, noteKnowledgeOperation } from "@drone/knowledge/ui-state";
+import { createTaskWorkbench, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import sourceArchive from "../../../.pi/extensions/source-archive.mjs";
-import { saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
-import zoteroLiterature from "../../../.pi/extensions/zotero-literature.mjs";
-import { beginKnowledgeFlow, flowFor, noteKnowledgeOperation } from "../../../.pi/lib/knowledge/ui-state.mjs";
-import { startResearchRun } from "../../../.pi/lib/research-loop.mjs";
-import { createTaskWorkbench, WORKBENCH_ENTRY } from "../../../.pi/lib/tasks/workbench.mjs";
 import { detectCapabilities, isReadOnlyLibraryTool, toolCapabilities } from "../src/capabilities/runtime";
 
 const DOI = "10.1234/example.2024";

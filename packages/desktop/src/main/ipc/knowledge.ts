@@ -1,68 +1,136 @@
-import type { PiBackend } from "@drone/backend";
-import type { KnowledgeApi } from "@drone/shared";
-import { IpcChannels } from "@drone/shared";
-import type { IpcMainInvokeEvent } from "electron";
-import { BrowserWindow, ipcMain, shell } from "electron";
-
-const upgradeChannels = {
-	semanticStatus:
-		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticStatus ?? "knowledge:semanticStatus",
-	semanticSettingsSave:
-		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticSettingsSave ??
-		"knowledge:semanticSettingsSave",
-	semanticProviderTest:
-		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticProviderTest ??
-		"knowledge:semanticProviderTest",
-	semanticIndex:
-		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticIndex ?? "knowledge:semanticIndex",
-	semanticIndexCancel:
-		(IpcChannels as unknown as Record<string, string>).KnowledgeSemanticIndexCancel ??
-		"knowledge:semanticIndexCancel",
-	topics: (IpcChannels as unknown as Record<string, string>).KnowledgeTopics ?? "knowledge:topics",
-	topicArchive:
-		(IpcChannels as unknown as Record<string, string>).KnowledgeTopicArchive ?? "knowledge:topicArchive",
-};
+import type { BackendServices, SessionServicePort } from "@drone/backend";
+import { IpcChannels, KnowledgeContract } from "@drone/shared";
+import { BrowserWindow, shell } from "electron";
+import { bindContract, type ContractImplementation } from "./bind-contract";
 
 /** Deliberately desktop-only: approvals are not a model tool or an unauthenticated LAN route. */
-export function registerKnowledgeIpc(backend: PiBackend): void {
-	const handle = (channel: string, fn: (input: any) => unknown) => {
-		ipcMain.handle(channel, (event: IpcMainInvokeEvent, input: unknown) => {
-			if (!BrowserWindow.fromWebContents(event.sender) || event.senderFrame !== event.sender.mainFrame)
-				throw new Error("Knowledge UI requests require the application main frame");
-			return fn(input);
-		});
+export function registerKnowledgeIpc(
+	backendOrServices: SessionServicePort | BackendServices,
+	services?: Pick<BackendServices, "knowledge" | "knowledgeSession" | "zotero">,
+): void {
+	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
+	const hostServices =
+		services ?? ("sessions" in backendOrServices ? (backendOrServices as BackendServices) : undefined);
+	const legacy = backend as SessionServicePort & {
+		knowledge?: BackendServices["knowledge"];
+		knowledgeSession?: BackendServices["knowledgeSession"];
+		zotero?: BackendServices["zotero"];
+		startKnowledgeSetup?: BackendServices["knowledgeSession"]["startSetup"];
+		reviewKnowledgeWithModel?: BackendServices["knowledgeSession"]["reviewWithModel"];
+		cancelKnowledgeModelReview?: BackendServices["knowledgeSession"]["cancelModelReview"];
+		resumeKnowledgeCheck?: BackendServices["knowledgeSession"]["resumeCheck"];
+		getZoteroStatus?: BackendServices["zotero"]["getStatus"];
 	};
-	handle(IpcChannels.KnowledgeSpecialistsSettings, (input) => backend.knowledge.specialistSettings(input));
-	handle(IpcChannels.KnowledgeOverview, (input) => backend.knowledge.overview(input));
-	handle(IpcChannels.KnowledgeSetupPreview, (input) => backend.knowledge.setupPreview(input));
-	handle(IpcChannels.KnowledgeSetupStart, (input) => backend.startKnowledgeSetup(input));
-	handle(IpcChannels.KnowledgeJobs, (input) => backend.knowledge.jobs(input));
-	handle(IpcChannels.KnowledgeReviews, (input) => backend.knowledge.reviews(input));
-	handle(IpcChannels.KnowledgeReviewPreview, (input) => backend.knowledge.preview(input));
-	handle(IpcChannels.KnowledgeReviewModel, (input) => backend.reviewKnowledgeWithModel(input));
-	handle(IpcChannels.KnowledgeReviewModelCancel, (input) => backend.cancelKnowledgeModelReview(input));
-	handle(IpcChannels.KnowledgeReviewDecide, (input) => backend.knowledge.decide(input));
-	handle(IpcChannels.KnowledgeReadNote, (input) => backend.knowledge.read(input));
-	handle(IpcChannels.KnowledgeMaintain, (input) => backend.knowledge.maintain(input));
-	handle(IpcChannels.KnowledgeResume, (input) => backend.resumeKnowledgeCheck(input));
-	handle(IpcChannels.KnowledgeOpen, async (input: Parameters<KnowledgeApi["openKnowledgeTarget"]>[0]) => {
-		const target = await backend.knowledge.openTarget(input);
-		if (target.kind === "note")
-			await shell.openExternal(`obsidian://open?path=${encodeURIComponent(target.path)}`);
-		else {
+	const knowledge =
+		hostServices?.knowledge ??
+		("knowledge" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "knowledge">).knowledge
+			: legacy.knowledge);
+	const zotero =
+		hostServices?.zotero ??
+		("zotero" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "zotero">).zotero
+			: (legacy.zotero ??
+				(legacy.getZoteroStatus
+					? { getStatus: legacy.getZoteroStatus.bind(backend) }
+					: {
+							getStatus: async () => {
+								throw new Error("Zotero service is unavailable");
+							},
+						})));
+	const knowledgeSession =
+		hostServices?.knowledgeSession ??
+		("knowledgeSession" in backend
+			? (backend as SessionServicePort & Pick<BackendServices, "knowledgeSession">).knowledgeSession
+			: (legacy.knowledgeSession ?? {
+					startSetup: (input) =>
+						legacy.startKnowledgeSetup?.(input) ??
+						Promise.reject(new Error("Knowledge session service unavailable")),
+					reviewWithModel: (input) =>
+						legacy.reviewKnowledgeWithModel?.(input) ??
+						Promise.reject(new Error("Knowledge session service unavailable")),
+					cancelModelReview: (input) =>
+						legacy.cancelKnowledgeModelReview?.(input) ??
+						Promise.reject(new Error("Knowledge session service unavailable")),
+					resumeCheck: (sessionId) =>
+						legacy.resumeKnowledgeCheck?.(sessionId) ??
+						Promise.reject(new Error("Knowledge session service unavailable")),
+				}));
+	if (!knowledge || !zotero || !knowledgeSession)
+		throw new Error("Knowledge services are required by the desktop host");
+	const implementation: ContractImplementation<typeof KnowledgeContract> = {
+		setSpecialistSettings: (input) => knowledge.specialistSettings(input),
+		getOverview: (...args) => knowledge.overview(args[0]),
+		previewSetup: (input) => knowledge.setupPreview(input),
+		startSetup: (input) => knowledgeSession.startSetup(input),
+		getJobs: (...args) => knowledge.jobs(args[0]),
+		getReviews: (input) => knowledge.reviews(input),
+		previewReview: (input) => knowledge.preview(input),
+		reviewWithModel: (input) => knowledgeSession.reviewWithModel(input),
+		cancelModelReview: (input) => knowledgeSession.cancelModelReview(input),
+		decideReview: (input) => knowledge.decide(input),
+		readNote: (input) => knowledge.read(input),
+		maintain: (input) => knowledge.maintain(input),
+		openTarget: async (input) => {
+			const target = await knowledge.openTarget(input);
+			if (target.kind === "note") {
+				await shell.openExternal(`obsidian://open?path=${encodeURIComponent(target.path)}`);
+				return;
+			}
 			const error = await shell.openPath(target.path);
 			if (error) throw new Error(error);
-		}
+		},
+		resumeCheck: (sessionId) => knowledgeSession.resumeCheck(sessionId),
+		getSemanticStatus: (...args) => knowledge.semanticStatus(args[0]),
+		saveSemanticSettings: (input) => knowledge.saveSemanticSettings(input),
+		testSemanticProvider: (input) => knowledge.testSemanticProvider(input),
+		indexSemantic: (input) => knowledge.indexSemantic(input),
+		cancelSemanticIndex: (input) => knowledge.cancelSemanticIndex(input),
+		getTopics: (input) => knowledge.topics(input),
+		archiveTopic: (input) => knowledge.archiveTopic(input),
+		getZoteroStatus: () => zotero.getStatus(),
+	};
+	bindContract(KnowledgeContract, implementation, {
+		channelForMethod: (_contract, method) =>
+			({
+				setSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
+				getOverview: IpcChannels.KnowledgeOverview,
+				previewSetup: IpcChannels.KnowledgeSetupPreview,
+				startSetup: IpcChannels.KnowledgeSetupStart,
+				getJobs: IpcChannels.KnowledgeJobs,
+				getReviews: IpcChannels.KnowledgeReviews,
+				previewReview: IpcChannels.KnowledgeReviewPreview,
+				reviewWithModel: IpcChannels.KnowledgeReviewModel,
+				cancelModelReview: IpcChannels.KnowledgeReviewModelCancel,
+				decideReview: IpcChannels.KnowledgeReviewDecide,
+				readNote: IpcChannels.KnowledgeReadNote,
+				maintain: IpcChannels.KnowledgeMaintain,
+				openTarget: IpcChannels.KnowledgeOpen,
+				resumeCheck: IpcChannels.KnowledgeResume,
+				getSemanticStatus: IpcChannels.KnowledgeSemanticStatus,
+				saveSemanticSettings: IpcChannels.KnowledgeSemanticSettingsSave,
+				testSemanticProvider: IpcChannels.KnowledgeSemanticProviderTest,
+				indexSemantic: IpcChannels.KnowledgeSemanticIndex,
+				cancelSemanticIndex: IpcChannels.KnowledgeSemanticIndexCancel,
+				getTopics: IpcChannels.KnowledgeTopics,
+				archiveTopic: IpcChannels.KnowledgeTopicArchive,
+				getZoteroStatus: IpcChannels.ZoteroStatus,
+			})[method as keyof typeof KnowledgeContract.methods],
+		beforeInvoke: (event, _contract, method) => {
+			if (method === "getZoteroStatus") return;
+			const invokeEvent = event as {
+				sender?: Electron.WebContents;
+				senderFrame?: Electron.WebFrameMain | null;
+			};
+			if (
+				!invokeEvent.sender ||
+				!BrowserWindow.fromWebContents(invokeEvent.sender) ||
+				invokeEvent.senderFrame !== invokeEvent.sender.mainFrame
+			)
+				throw new Error("Knowledge UI requests require the application main frame");
+		},
 	});
-	handle(upgradeChannels.semanticStatus, (input) => backend.knowledge.semanticStatus(input));
-	handle(upgradeChannels.semanticSettingsSave, (input) => backend.knowledge.saveSemanticSettings(input));
-	handle(upgradeChannels.semanticProviderTest, (input) => backend.knowledge.testSemanticProvider(input));
-	handle(upgradeChannels.semanticIndex, (input) => backend.knowledge.indexSemantic(input));
-	handle(upgradeChannels.semanticIndexCancel, (input) => backend.knowledge.cancelSemanticIndex(input));
-	handle(upgradeChannels.topics, (input) => backend.knowledge.topics(input));
-	handle(upgradeChannels.topicArchive, (input) => backend.knowledge.archiveTopic(input));
-	handle(IpcChannels.ZoteroStatus, () => backend.getZoteroStatus());
-	backend.knowledge.subscribe((event) => {
+	knowledge.subscribe((event) => {
 		for (const window of BrowserWindow.getAllWindows()) {
 			if (!window.isDestroyed()) window.webContents.send(IpcChannels.KnowledgeEvent, event);
 		}

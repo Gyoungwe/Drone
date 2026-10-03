@@ -43,6 +43,109 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["scripts/fixtures/**"],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			}
+		},
+		{
+			"includes": [".pi/extensions/*.mjs"],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			},
+			"assist": {
+				"actions": {
+					"source": {
+						"organizeImports": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [".pi/lib/knowledge/runtime/**/*.mjs"],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			},
+			"assist": {
+				"actions": {
+					"source": {
+						"organizeImports": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [".pi/lib/**/*.mjs"],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			},
+			"assist": {
+				"actions": {
+					"source": {
+						"organizeImports": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"packages/knowledge/src/**/*.ts",
+				"packages/extensions/src/internal/**/*.ts",
+				"packages/extensions/src/institutional-access.ts",
+				"packages/extensions/src/knowledge-extension.ts"
+			],
+			"formatter": {
+				"enabled": false
+			},
+			"assist": {
+				"actions": {
+					"source": {
+						"organizeImports": "off"
+					}
+				}
+			},
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noImplicitAnyLet": "off",
+						"noControlCharactersInRegex": "off"
+					},
+					"correctness": {
+						"noUnusedFunctionParameters": "off",
+						"noUnusedImports": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["packages/tasks/src/runtime-compiled/*.mjs"],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			},
+			"assist": {
+				"actions": {
+					"source": {
+						"organizeImports": "off"
+					}
+				}
+			}
 		}
 	],
 	"assist": {

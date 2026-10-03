@@ -1,6 +1,6 @@
+import { projectKnowledgeEvent, registerAnswerPublication } from "@drone/knowledge/publication";
+import { createTaskFeedback } from "@drone/knowledge/task-feedback";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { projectKnowledgeEvent, registerAnswerPublication } from "../../../.pi/lib/knowledge/publication.mjs";
-import { createTaskFeedback } from "../../../.pi/lib/knowledge/task-feedback.mjs";
 
 function harness(
 	validate = async () => ({ status: "ready", sources: [], scientificallyVerified: false }),
@@ -448,4 +448,64 @@ it("an advisory raised before evidence collection still records what was cited",
 	// Parsed-but-unchecked citations are auditable, never presented as verified.
 	expect(proof.unverifiedCitations).toEqual(["Library/Papers/a.md", "Library/Papers/b.md"]);
 	expect(proof.scientificallyVerified).not.toBe(true);
+});
+
+it("keeps publication proofs isolated between injected runtimes", async () => {
+	const runtime = () => ({ knowledge: {}, scheduler: {} });
+	const first = runtime();
+	const second = runtime();
+	const firstEvents = new Map();
+	const firstGate = registerAnswerPublication(
+		{ on: (name, handler) => firstEvents.set(name, handler) },
+		{ runtime: first, getCurrent: () => null },
+	);
+	registerAnswerPublication({ on: () => {} }, { runtime: second, getCurrent: () => null });
+	firstGate.begin(false);
+	const result = await firstEvents.get("message_end")(
+		{ message: message("isolated publication") },
+		{ cwd: "/fixture" },
+	);
+	const sealed = result.message;
+	const firstView = first.knowledge.publication.projectEvent({ type: "message_end", message: sealed });
+	const secondView = second.knowledge.publication.projectEvent({
+		type: "message_end",
+		message: structuredClone(sealed),
+	});
+	expect(firstView.message).toBe(sealed);
+	expect(secondView.message.content[0].text).toContain("知识库检查未通过");
+	expect(secondView.message.content[0].text).not.toContain("isolated publication");
+});
+
+it("fails closed on injected metacognitive inconsistencies and keeps actionable diffs", async () => {
+	const events = new Map();
+	const hash = "a".repeat(64);
+	const gate = registerAnswerPublication(
+		{ on: (name, handler) => events.set(name, handler) },
+		{
+			getCurrent: () => ({ service: { validateAnswer: async () => ({ status: "ready" }) } }),
+			getMetacognition: async () => ({
+				artifacts: [
+					{ path: "Runs/run-1/report.md", sha256: hash, currentSha256: "b".repeat(64), text: "n=12" },
+				],
+				numbers: [{ value: 13, rendered: "13", artifactPath: "Runs/run-1/report.md" }],
+				diagnostics: [{ id: "control", reported: "on", observed: "off" }],
+			}),
+		},
+	);
+	gate.begin(true);
+	const result = await events.get("message_end")(
+		{ message: message("Result: 13 [[Runs/run-1/report]]") },
+		{ cwd: "/fixture" },
+	);
+	expect(result.message.knowledgePublication.status).toBe("blocked");
+	expect(result.message.knowledgePublication.reason).toBe("metacognitive-inconsistency");
+	expect(result.message.knowledgePublication.metacognition.failures).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({ code: "artifact-checksum-stale" }),
+			expect.objectContaining({ code: "report-number-unbound" }),
+			expect.objectContaining({ code: "diagnostic-drift" }),
+		]),
+	);
+	expect(result.message.content[0].text).toContain("Cited artifact changed");
+	expect(result.message.content[0].text).not.toContain("Result: 13");
 });

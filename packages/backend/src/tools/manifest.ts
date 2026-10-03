@@ -13,8 +13,10 @@ import {
  *
  * 数据来源只有一个：扩展在 `pi.registerTool({ ..., drone })` 时的声明。后端经
  * `session.getToolDefinition(name)` 读到原样保存的注册对象；工具家族（MCP 服务器前缀等）
- * 由 `.pi/lib/tool-manifest.mjs` 经 globalThis Symbol 桥暴露（与 knowledge/publication 桥同款），
- * 供没有会话句柄的地方（子代理 runner）使用。核心工具（read/bash/…）的默认值在 CORE_TOOL_META。
+ * 由会话句柄直接暴露工具声明；没有会话句柄的调用使用 CORE_TOOL_META。
+ * First-party `.pi` modules keep their manifest in the injected runtime and
+ * publish immutable registration records through a versioned process event.
+ * This adapter only caches those records for no-session callers.
  */
 export interface ToolDefinitionSource {
 	getAllTools?(): { name: string }[];
@@ -59,21 +61,54 @@ const CORE_ACTIVITIES: { test: (name: string) => boolean; activity: ToolActivity
 	},
 ];
 
-const bridgeKey = Symbol.for("drone.tool-manifest.v1");
-interface ManifestBridge {
-	tools?: Map<string, unknown>;
-	families?: Map<string, unknown>;
+export const TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1" as const;
+export const TOOL_MANIFEST_REQUEST_EVENT = "drone:tool-manifest/request/v1" as const;
+
+export interface VersionedEventBus {
+	on(event: string, listener: (payload: unknown) => void): unknown;
+	emit?(event: string, payload?: unknown): unknown;
 }
-function bridge(): ManifestBridge | undefined {
-	return (globalThis as unknown as Record<symbol, ManifestBridge | undefined>)[bridgeKey];
+
+type ToolManifestRegistration = { version: 1; name: string; meta: unknown };
+const registeredTools = new Map<string, unknown>();
+const registeredFamilies = new Map<string, unknown>();
+
+function acceptRegistration(payload: unknown): void {
+	if (!payload || typeof payload !== "object") return;
+	const registration = payload as Partial<ToolManifestRegistration>;
+	if (registration.version !== 1 || typeof registration.name !== "string") return;
+	registeredTools.set(registration.name, registration.meta);
+	const families = (registration.meta as { families?: unknown[] } | null)?.families;
+	if (!Array.isArray(families)) return;
+	for (const family of families) {
+		const match = (family as { match?: unknown } | null)?.match;
+		if (typeof match === "string" && match) {
+			const familyRecord = family && typeof family === "object" ? family : {};
+			registeredFamilies.set(match.toLowerCase(), { ...familyRecord, owner: registration.name });
+		}
+	}
 }
+
+/**
+ * Attach the backend collector to a session's Pi event bus. Dynamic first-party
+ * extensions load before inline factories, so the request/replay handshake is
+ * required to recover declarations emitted during extension initialization.
+ */
+export function bindToolManifestEvents(events: VersionedEventBus | undefined): () => void {
+	if (!events?.on) return () => {};
+	events.on(TOOL_MANIFEST_EVENT, acceptRegistration);
+	void events.emit?.(TOOL_MANIFEST_REQUEST_EVENT, { version: 1 });
+	return () => {};
+}
+
+// Compatibility collector for CLI/tests that provide a minimal Pi object
+// without a host event bus. New desktop sessions use bindToolManifestEvents.
+process.on(TOOL_MANIFEST_EVENT, acceptRegistration);
 
 /** 运行时 .mjs 侧登记的工具家族（MCP 服务器前缀等），已规范化。 */
 export function bridgedToolFamilies(): ToolFamilyMeta[] {
-	const families = bridge()?.families;
-	if (!families) return [];
 	const result: ToolFamilyMeta[] = [];
-	for (const raw of families.values()) {
+	for (const raw of registeredFamilies.values()) {
 		const meta = readDroneToolMeta({ drone: { families: [raw] } });
 		if (meta?.families?.[0]) result.push(meta.families[0]);
 	}
@@ -82,7 +117,7 @@ export function bridgedToolFamilies(): ToolFamilyMeta[] {
 
 /** 运行时 .mjs 侧登记的单个工具元数据（会话句柄不可用时的后备）。 */
 export function bridgedToolMeta(name: string): DroneToolMeta | undefined {
-	const raw = bridge()?.tools?.get(name);
+	const raw = registeredTools.get(name);
 	return raw ? readDroneToolMeta({ drone: raw }) : undefined;
 }
 

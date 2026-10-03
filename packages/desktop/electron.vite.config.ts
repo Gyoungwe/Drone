@@ -8,7 +8,10 @@ export default defineConfig({
 		plugins: [externalizeDepsPlugin({ exclude: ["@drone/backend", "@drone/shared"] })],
 		build: {
 			rollupOptions: {
-				external: ["@earendil-works/pi-coding-agent"],
+				// ssh2 has an optional cpu-features native module. Keep the package
+				// external so electron-builder can rebuild it for Electron's ABI;
+				// bundling a Node-built .node file makes packaged startup fail.
+				external: ["@earendil-works/pi-coding-agent", "ssh2"],
 			},
 		},
 		resolve: {

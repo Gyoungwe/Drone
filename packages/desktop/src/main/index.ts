@@ -5,7 +5,7 @@ import "./dev-agent-dir";
 import "./fix-path";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createLogger, initLogging, PiBackend } from "@drone/backend";
+import { type BackendServices, createBackend, createLogger, initLogging } from "@drone/backend";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
@@ -18,9 +18,10 @@ import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
 import { applyChromeTheme, createWindow, resolveTheme } from "./window";
 
 const log = createLogger("main");
-let backend: PiBackend;
+let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
 let lanObserver: LanObserverHandle | undefined;
+let latestIncidentSnapshot: ReturnType<typeof buildIncidentSnapshot> | undefined;
 
 /**
  * 追加进每次会话系统提示词的桌面端段落（每次调用都付费，保持精简）。
@@ -72,7 +73,7 @@ function buildIncidentSnapshot(details: { reason: string; exitCode: number }): {
 		reason: details.reason,
 		exitCode: details.exitCode,
 		processes: summarizeProcesses(app.getAppMetrics()),
-		sessions: summarizeRates(backend.getEventRates()),
+		sessions: summarizeRates(backendServices?.sessions.getEventRates() ?? new Map()),
 		uptimeMs: Math.round(process.uptime() * 1000),
 	};
 }
@@ -118,7 +119,8 @@ app.whenReady().then(async () => {
 			if (details.reason === "clean-exit") return;
 			// 临终快照（决策 3）：谁杀的/死前多忙/内存多高——reload 前同步取数，避免异步竞态。
 			// 只记 id/速率/内存数字，绝不记消息正文
-			crashLog.error("incident snapshot", buildIncidentSnapshot(details));
+			latestIncidentSnapshot = buildIncidentSnapshot(details);
+			crashLog.error("incident snapshot", latestIncidentSnapshot);
 			const now = Date.now();
 			while (crashReloads.length > 0 && now - (crashReloads[0] ?? 0) > RELOAD_WINDOW_MS) crashReloads.shift();
 			if (crashReloads.length >= MAX_AUTO_RELOADS) {
@@ -195,7 +197,8 @@ app.whenReady().then(async () => {
 		{ includeAcademic: true },
 	);
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
-	backend = new PiBackend({
+	backendServices = createBackend({
+		userDataDir: app.getPath("userData"),
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
 			appendSystemPrompt: UI_PLUGIN_PROMPT,
@@ -211,7 +214,7 @@ app.whenReady().then(async () => {
 			academicPiRoot: researchSkillPacks.academicPiRoot,
 		},
 	});
-	await backend.init();
+	await backendServices.sessions.init();
 
 	// 心跳（决策 3，60s unref）：renderer 内存 + 每会话事件速率——白屏/冻结事故「死前多忙」的
 	// 最后读数；快照/心跳只记 id/速率/内存数字，绝不记消息正文
@@ -221,7 +224,7 @@ app.whenReady().then(async () => {
 			const rendererMemoryMb = Math.round(tabs.reduce((sum, m) => sum + m.memory.workingSetSize, 0) / 1024);
 			crashLog.info("renderer heartbeat", {
 				rendererMemoryMb,
-				sessions: summarizeRates(backend.getEventRates()),
+				sessions: summarizeRates(backendServices?.sessions.getEventRates() ?? new Map()),
 			});
 		} catch (err) {
 			crashLog.warn("renderer heartbeat failed", err);
@@ -234,13 +237,13 @@ app.whenReady().then(async () => {
 	}, HEARTBEAT_INTERVAL_MS);
 	consoleFlush.unref();
 	lanObserver = await initLanObserver(
-		backend,
+		backendServices,
 		join(app.getPath("userData"), "lan-observer.json"),
 		join(app.getPath("userData"), "lan-audit.jsonl"),
 	);
 	uiPluginsManager = new UiPluginManager();
 	await uiPluginsManager.init();
-	registerIpc(backend, uiPluginsManager, lanObserver);
+	registerIpc(backendServices, uiPluginsManager, lanObserver, () => latestIncidentSnapshot);
 	await initUpdater();
 	scheduleAutoUpdateCheck();
 	const uiState = await loadUiState();
@@ -259,6 +262,6 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
 	void lanObserver?.stop();
-	backend?.dispose();
+	backendServices?.dispose();
 	uiPluginsManager?.disposeWatcher();
 });

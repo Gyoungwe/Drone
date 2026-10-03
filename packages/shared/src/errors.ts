@@ -15,6 +15,8 @@ export type UiErrorSource = "llm" | "session" | "tool" | "extension" | "app" | "
 export type UiErrorAction = "retry" | "compact" | "openSettings" | "copyDetail";
 
 export interface UiError {
+	/** Stable machine-readable code for adapters that need to branch without parsing titleKey. */
+	code?: string;
 	severity: UiErrorSeverity;
 	source: UiErrorSource;
 	/** i18n key（error.title.*）+ 插值参数（只放 provider/model 等安全值） */

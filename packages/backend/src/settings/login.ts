@@ -55,7 +55,13 @@ export function filterAuthSelectOptions<TOption extends { id: string; label: str
 	return options.filter((option) => !blocked.includes(option.id));
 }
 
-export class LoginService {
+export interface LoginServicePort {
+	startLogin(loginId: string, providerId: string): Promise<LoginResult>;
+	respond(loginId: string, promptId: string, value: string): void;
+	cancel(loginId: string): void;
+}
+
+export class LoginService implements LoginServicePort {
 	private active: ActiveLogin | undefined;
 
 	constructor(private readonly deps: LoginServiceDeps) {}

@@ -3,7 +3,7 @@ import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import type { McpConfigServer, McpConfigSnapshot, McpStatus } from "@drone/shared";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { getAgentDir } from "../session-engine/sdk";
 
 type RawServer = Record<string, unknown>;
 type McpScope = McpConfigServer["scope"];
@@ -13,9 +13,11 @@ interface ConfigSource {
 	scope: McpScope;
 }
 
-interface McpServiceOptions {
+export interface McpServiceOptions {
 	agentDir?: string;
 	homeDir?: string;
+	/** Reload active sessions after a host-facing configuration toggle. */
+	onServerEnabled?: (cwd?: string) => Promise<void>;
 }
 
 function emptyStatus(): McpStatus {
@@ -68,15 +70,23 @@ function mergeServer(base: RawServer | undefined, next: RawServer): RawServer {
 	return merged;
 }
 
-export class McpService {
+export interface McpServicePort {
+	getStatus(cwd?: string): McpStatus;
+	getConfig(cwd?: string): Promise<McpConfigSnapshot>;
+	setServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot>;
+}
+
+export class McpService implements McpServicePort {
 	private readonly agentDir: string;
 	private readonly homeDir: string;
+	private readonly onServerEnabled?: (cwd?: string) => Promise<void>;
 	private lastStatus = emptyStatus();
 	private readonly statusByCwd = new Map<string, McpStatus>();
 
 	constructor(options: McpServiceOptions = {}) {
 		this.agentDir = options.agentDir ?? getAgentDir();
 		this.homeDir = options.homeDir ?? homedir();
+		this.onServerEnabled = options.onServerEnabled;
 	}
 
 	private sources(cwd?: string): ConfigSource[] {
@@ -164,6 +174,7 @@ export class McpService {
 		await writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
 		await chmod(tempPath, 0o600);
 		await rename(tempPath, path);
+		await this.onServerEnabled?.(cwd);
 		return this.getConfig(cwd);
 	}
 }

@@ -1,9 +1,6 @@
+import { createSpecialistBudget, decideSpecialistRun } from "@drone/knowledge";
+import { withSpecialistSlot } from "@drone/knowledge/specialist-host";
 import { describe, expect, it } from "vitest";
-import {
-	createSpecialistBudget,
-	decideSpecialistRun,
-} from "../../../.pi/lib/knowledge/orchestration-policy.mjs";
-import { withSpecialistSlot } from "../../../.pi/lib/knowledge/specialist-host.mjs";
 import { runKnowledgeSpecialist } from "../src/knowledge/specialist-runner";
 
 describe("synthetic long-session specialist stress", () => {
@@ -47,13 +44,12 @@ describe("synthetic long-session specialist stress", () => {
 	it("transfers queued ownership without leaking active slots", async () => {
 		const work = () => new Promise((resolve) => setTimeout(resolve, 5));
 		const runs = [1, 2, 3, 4].map(() => withSpecialistSlot(undefined, work, { concurrency: 1 }));
-		expect(
-			(await import("../../../.pi/lib/knowledge/specialist-host.mjs")).specialistQueueSnapshot().active,
-		).toBe(1);
+		expect((await import("@drone/knowledge/specialist-host")).specialistQueueSnapshot().active).toBe(1);
 		await Promise.all(runs);
-		expect(
-			(await import("../../../.pi/lib/knowledge/specialist-host.mjs")).specialistQueueSnapshot(),
-		).toEqual({ active: 0, queueLength: 0 });
+		expect((await import("@drone/knowledge/specialist-host")).specialistQueueSnapshot()).toEqual({
+			active: 0,
+			queueLength: 0,
+		});
 	});
 	it("charges reported provider usage before a later SDK call", async () => {
 		const calls = [];

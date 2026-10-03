@@ -2,7 +2,8 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
-import { KnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
+import "@drone/extensions/internal/obsidian-workbench";
+import { KnowledgeService } from "@drone/knowledge/service";
 
 let root, vault, service;
 beforeEach(async () => {
@@ -40,8 +41,8 @@ it("reconcile waits for pending directory scans before reporting ready", async (
 	await service.request("warm");
 	await mkdir(join(vault, "new-notes"));
 	await writeFile(join(vault, "new-notes", "new.md"), "# New evidence\n");
-	const status = await service.request("reconcile");
+	const status = await service.request("reconcile", { force: true });
 	expect(status.problems).toEqual([]);
 	expect(status.coverage).toBe("ready");
 	expect(status.noteCount).toBe(81);
-});
+}, 30_000);

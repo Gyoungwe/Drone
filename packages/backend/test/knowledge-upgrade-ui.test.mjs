@@ -1,10 +1,10 @@
 import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { closeKnowledgeServices } from "@drone/knowledge/service";
+import * as ui from "@drone/knowledge/ui-service";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
-import * as ui from "../../../.pi/lib/knowledge/ui-service.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
 let root, bindingRevision;
 beforeEach(async () => {

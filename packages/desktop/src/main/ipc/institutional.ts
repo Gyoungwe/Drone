@@ -1,46 +1,42 @@
-import type { InstitutionalSaveInput } from "@drone/shared";
-import { IpcChannels } from "@drone/shared";
-import { BrowserWindow, ipcMain } from "electron";
+import type { BackendServices } from "@drone/backend";
+import { InstitutionalContract, IpcChannels } from "@drone/shared";
+import { BrowserWindow } from "electron";
 import * as institutional from "../institutional-access";
+import { bindContract, type ContractImplementation } from "./bind-contract";
 
-export function registerInstitutionalIpc(): void {
-	ipcMain.handle(IpcChannels.InstitutionalGetStatus, async () => {
-		return institutional.getStatus();
-	});
+function assertMainFrame(event: unknown, _contract: unknown, method: string): void {
+	const invokeEvent = event as { sender?: Electron.WebContents; senderFrame?: Electron.WebFrameMain | null };
+	if (
+		!invokeEvent.sender ||
+		!BrowserWindow.fromWebContents(invokeEvent.sender) ||
+		invokeEvent.senderFrame !== invokeEvent.sender.mainFrame
+	) {
+		throw new Error(`Institutional ${method} requires main frame`);
+	}
+}
 
-	ipcMain.handle(IpcChannels.InstitutionalSaveConfig, async (_e, input: InstitutionalSaveInput) => {
-		// Validate main frame
-		if (!BrowserWindow.fromWebContents(_e.sender) || _e.senderFrame !== _e.sender.mainFrame) {
-			throw new Error("Institutional config save requires main frame");
-		}
-		return institutional.saveConfig(input);
-	});
-
-	ipcMain.handle(IpcChannels.InstitutionalOpenLogin, async (_e, url?: string) => {
-		if (!BrowserWindow.fromWebContents(_e.sender) || _e.senderFrame !== _e.sender.mainFrame) {
-			throw new Error("Open login requires main frame");
-		}
-		return institutional.openInstitutionalLogin(url);
-	});
-
-	ipcMain.handle(IpcChannels.InstitutionalOpenUrl, async (_e, url: string) => {
-		if (!BrowserWindow.fromWebContents(_e.sender) || _e.senderFrame !== _e.sender.mainFrame) {
-			throw new Error("Open URL requires main frame");
-		}
-		return institutional.openInstitutionalUrl(url);
-	});
-
-	ipcMain.handle(IpcChannels.InstitutionalClear, async (_e) => {
-		if (!BrowserWindow.fromWebContents(_e.sender) || _e.senderFrame !== _e.sender.mainFrame) {
-			throw new Error("Clear requires main frame");
-		}
-		return institutional.clear();
-	});
-
-	ipcMain.handle(IpcChannels.InstitutionalTestAccess, async (_e, url: string) => {
-		if (!BrowserWindow.fromWebContents(_e.sender) || _e.senderFrame !== _e.sender.mainFrame) {
-			throw new Error("Test requires main frame");
-		}
-		return institutional.testAccess(url);
+export function registerInstitutionalIpc(_services?: Pick<BackendServices, "institutional">): void {
+	const service = _services?.institutional;
+	const implementation: ContractImplementation<typeof InstitutionalContract> = {
+		getStatus: () => (service ? service.getStatus() : institutional.getStatus()),
+		saveConfig: (input) => (service ? service.saveConfig(input) : institutional.saveConfig(input)),
+		openLogin: (...args) => institutional.openInstitutionalLogin(args[0]),
+		openUrl: (url) => institutional.openInstitutionalUrl(url),
+		clear: () => (service ? service.clear() : institutional.clear()),
+		testAccess: (url) => (service ? service.testAccess(url) : institutional.testAccess(url)),
+	};
+	bindContract(InstitutionalContract, implementation, {
+		channelForMethod: (_contract, method) =>
+			({
+				getStatus: IpcChannels.InstitutionalGetStatus,
+				saveConfig: IpcChannels.InstitutionalSaveConfig,
+				openLogin: IpcChannels.InstitutionalOpenLogin,
+				openUrl: IpcChannels.InstitutionalOpenUrl,
+				clear: IpcChannels.InstitutionalClear,
+				testAccess: IpcChannels.InstitutionalTestAccess,
+			})[method as keyof typeof InstitutionalContract.methods],
+		beforeInvoke: (event, _contract, method) => {
+			if (method !== "getStatus") assertMainFrame(event, _contract, method);
+		},
 	});
 }

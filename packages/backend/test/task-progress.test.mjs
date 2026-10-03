@@ -1,8 +1,8 @@
+import { createTaskAuthorization } from "@drone/tasks/ask-authorization";
+import { createTaskProgression } from "@drone/tasks/progress-action-runtime";
+import { remainingExplanation } from "@drone/tasks/remaining";
+import { createTaskWorkbench } from "@drone/tasks/workbench";
 import { expect, it, vi } from "vitest";
-import { createTaskAuthorization } from "../../../.pi/lib/tasks/ask-authorization.mjs";
-import { createTaskProgression } from "../../../.pi/lib/tasks/progress-action.mjs";
-import { remainingExplanation } from "../../../.pi/lib/tasks/remaining.mjs";
-import { createTaskWorkbench } from "../../../.pi/lib/tasks/workbench.mjs";
 
 function fixture(approved = true, kind = "file") {
 	const j = createTaskWorkbench({

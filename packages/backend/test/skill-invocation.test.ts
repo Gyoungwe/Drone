@@ -87,6 +87,7 @@ describe("PiBackend skill recall", () => {
 				isStreaming: false,
 				isCompacting: false,
 				sessionManager,
+				refreshContext: () => {},
 				agent: { state: {} },
 			} as never,
 			unsubscribe: () => {},

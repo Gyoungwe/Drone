@@ -1,0 +1,45 @@
+{
+	"name": "@drone/research",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./evidence-gate": "./src/evidence-gate.ts",
+		"./literature-receipt": "./src/literature-receipt.ts",
+		"./source-delivery": "./src/source-delivery.ts",
+		"./literature-operations": "./src/literature-operations.ts",
+		"./run-provenance": "./src/run-provenance.ts",
+		"./open-access": "./src/open-access.ts",
+		"./institutional-proxy": "./src/institutional-proxy.ts",
+		"./institutional-access": "./src/institutional-access.ts",
+		"./zotero-identity": "./src/zotero-identity.ts",
+		"./zotero-reconcile": "./src/zotero-reconcile.ts",
+		"./zotero-setup": "./src/zotero-setup.ts",
+		"./zotero-write": "./src/zotero-write.ts",
+		"./zotero-setup-runtime": "./src/zotero-setup-runtime.ts",
+		"./zotero-reconcile-runtime": "./src/zotero-reconcile-runtime.ts",
+		"./zotero-write-runtime": "./src/zotero-write-runtime.ts",
+		"./source-archive-policy": "./src/source-archive-policy.ts",
+		"./receipt-journal-policy": "./src/receipt-journal-policy.ts",
+		"./receipt-journal": "./src/receipt-journal.ts",
+		"./claim-bindings": "./src/claim-bindings.ts",
+		"./source-archive": "./src/source-archive.ts",
+		"./research-loop": "./src/research-loop.ts",
+		"./run-summary": "./src/run-summary.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@drone/knowledge": "*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0",
+		"typescript": "^5.9.0",
+		"vitest": "^3.2.0"
+	}
+}

@@ -1,0 +1,20 @@
+services:
+  compute:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: drone-compute-fixture:bookworm-20240904
+    hostname: drone-slurm
+    privileged: true
+    ports:
+      - "${DRONE_FIXTURE_SSH_PORT:-22222}:22"
+    volumes:
+      - ../../packages/backend/resources/compute-runner:/opt/drone/runner:ro
+      - ../../scripts/compute-fixtures:/opt/drone/fixtures:ro
+    environment:
+      DRONE_FIXTURE_USER: "drone"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "squeue -h >/dev/null"]
+      interval: 2s
+      timeout: 2s
+      retries: 20

@@ -2,12 +2,12 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promis
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { readKnowledgeBinding } from "@drone/knowledge/config";
+import { embedTexts, validateSemanticConfig } from "@drone/knowledge/semantic-provider";
+import { readSemanticSettings } from "@drone/knowledge/semantic-settings";
+import { closeKnowledgeServices, KnowledgeService } from "@drone/knowledge/service";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readKnowledgeBinding } from "../../../.pi/lib/knowledge/config.mjs";
-import { embedTexts, validateSemanticConfig } from "../../../.pi/lib/knowledge/semantic-provider.mjs";
-import { readSemanticSettings } from "../../../.pi/lib/knowledge/semantic-settings.mjs";
-import { closeKnowledgeServices, KnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
 let root, vault, cwd, app;
 beforeEach(async () => {

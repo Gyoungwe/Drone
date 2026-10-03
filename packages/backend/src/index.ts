@@ -1,3 +1,40 @@
+export type { DiscoveryExplorationPlan } from "@drone/shared";
+export {
+	type ComputeCredential,
+	type ComputeCredentialProvider,
+	createDefaultComputeExecutor,
+	DefaultComputeExecutor,
+	type DefaultComputeExecutorOptions,
+} from "./compute/default-executor";
+export {
+	type BackendOptions,
+	type BackendServices,
+	createBackend,
+	type SessionServicePort,
+} from "./create-backend";
+export {
+	buildDiagnostics,
+	type DiagnosticsOptions,
+	type DiagnosticsServicePort,
+	type DiagnosticsSnapshot,
+	redactDiagnosticText,
+} from "./diagnostics";
+export {
+	buildContainerKernelArgv,
+	ContainerKernelRunner,
+	type ContainerKernelRunnerOptions,
+	type ContainerProcess,
+	detectContainerRuntime,
+	unavailableContainerCapabilities,
+} from "./discovery/container-runner";
+export {
+	type DiscoveryAuthorization,
+	type DiscoveryAuthorizationOperation,
+	type DiscoveryKernelSessionInput,
+	DiscoveryService,
+	type DiscoveryServiceOptions,
+	type DiscoveryServicePort,
+} from "./discovery/service";
 export * from "./institutional";
 export {
 	JsonStore,
@@ -5,6 +42,7 @@ export {
 	type JsonStoreOptions,
 	type ReadResult,
 } from "./json-store";
+export { KnowledgeUiService, type KnowledgeUiServicePort } from "./knowledge/ui";
 export { LanConfigService } from "./lan/config";
 export {
 	applyEvent as applyLanEvent,
@@ -16,6 +54,7 @@ export {
 } from "./lan/projector";
 export { type LanObserverBackend, LanObserverServer, type LanObserverServerOptions } from "./lan/server";
 export { createLogger, initLogging, type Logger } from "./log";
+export { McpService, type McpServiceOptions, type McpServicePort } from "./mcp/service";
 export { fetchPackageCatalog, parseCatalogHtml } from "./packages/catalog";
 export {
 	createPermissionConfigLoader,
@@ -81,6 +120,74 @@ export {
 	type WorkspacesConfig,
 	workspaceConfigPath,
 } from "./project/workspace-store";
+export { createDroneRuntime, KeyedScheduler } from "./runtime";
+export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
+export {
+	artifactSha256,
+	type ComputeCollectOptions,
+	type ComputeCollectResult,
+	type ComputeEvent,
+	type ComputeExecutor,
+	type ComputeExperienceRecorder,
+	type ComputeJobInput,
+	type ComputeLogEvent,
+	type ComputeLogsResult,
+	ComputeService,
+	type ComputeServiceOptions,
+	type ComputeServicePort,
+	type ComputeStatusResult,
+	type ComputeSubmitResult,
+	type ComputeWorkflowModule,
+	validateArtifactManifest,
+} from "./services/compute";
+export {
+	type ComputeHostAdapter,
+	type ComputeHostAdapterOptions,
+	type ComputeRemoteOperation,
+	ComputeServiceAdapter,
+	createComputeServiceAdapter,
+	createUnavailableComputeService,
+} from "./services/compute-adapter";
+export {
+	ComputeDataDesignService,
+	type ComputeDataDesignServiceOptions,
+	type ComputeDataDesignServicePort,
+	createComputeDataDesignService,
+} from "./services/compute-data-design";
+export {
+	type ComputeExperienceBridgeOptions,
+	createComputeExperienceRecorder,
+} from "./services/compute-experience";
+export {
+	assertComputePreflight,
+	type ComputeDataDesignSubmission,
+	ComputePreflightError,
+	type ComputePreflightJobSpec,
+	type ComputePreflightResult,
+	type ComputeProposalQuestion,
+	preflightComputeSubmission,
+} from "./services/compute-preflight";
+export { InquiryService, type InquiryServiceOptions, type InquiryServicePort } from "./services/inquiry";
+export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
+export {
+	type KnowledgeReviewControl,
+	type KnowledgeSessionContext,
+	KnowledgeSessionService,
+	type KnowledgeSessionServiceDependencies,
+	type KnowledgeSessionServicePort,
+} from "./services/knowledge-session";
+export {
+	isNpmSpawnEnoent,
+	NPM_NOT_FOUND_SENTINEL,
+	PackageService,
+	type PackageServicePort,
+} from "./services/packages";
+export { PermissionSettingsService } from "./services/permissions";
+export { ProjectTrustService } from "./services/project-trust";
+export { SessionLifecycleService, type SessionLifecycleServicePort } from "./services/session-lifecycle";
+export { SessionPermissionService, type SessionPermissionServicePort } from "./services/session-permissions";
+export { SubagentService, type SubagentServicePort } from "./services/subagents";
+export { ZoteroService, type ZoteroServicePort } from "./services/zotero";
 export {
 	assignEntryIds,
 	blockImages,
@@ -93,10 +200,20 @@ export {
 } from "./session/messages";
 export { type RegisteredSession, SessionRegistry } from "./session/registry";
 export { TraceRecorder } from "./session/trace";
-export { LoginService, type LoginServiceDeps } from "./settings/login";
+export { SessionEngine } from "./session-engine/engine";
+export { LoginService, type LoginServiceDeps, type LoginServicePort } from "./settings/login";
 export { ModelPrefsService } from "./settings/model-prefs";
-export { SettingsService } from "./settings/settings";
+export { ModelSettingsService, type ModelSettingsServicePort } from "./settings/models";
+export { SettingsService, type SettingsServicePort } from "./settings/settings";
 export { BUILTIN_SLASH_COMMANDS, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
+export {
+	createDefaultStorageRegistry,
+	type DefaultStorageRegistryOptions,
+	type StorageEntry,
+	StorageRegistry,
+	type StorageSensitivity,
+	type StorageState,
+} from "./storage/registry";
 export { makeShowImageTool, resolveShowImagePath, type ShowImageDetails } from "./tools/show-image";
 export {
 	buildSshArgs,

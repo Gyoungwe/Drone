@@ -1,5 +1,8 @@
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+	TASK_REASON_TEXT,
 	type TaskView,
 	taskDeliveryPresentation,
 	taskIsTerminal,
@@ -147,5 +150,13 @@ describe("流内工作台卡的取舍", () => {
 			]),
 		);
 		expect(shown).toEqual([]);
+	});
+});
+
+describe("task reason contract", () => {
+	it("keeps the shared reason text aligned with the CLI workbench", async () => {
+		const cliPath = resolve(process.cwd(), "../../.pi/lib/tasks/workbench.mjs");
+		const cli = await import(pathToFileURL(cliPath).href);
+		expect(TASK_REASON_TEXT).toEqual(cli.REASON_TEXT);
 	});
 });

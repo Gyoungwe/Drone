@@ -1,9 +1,7 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { validateToolArguments } from "@earendil-works/pi-ai";
-import { afterEach, describe, expect, it } from "vitest";
-import zoteroLiterature from "../../../.pi/extensions/zotero-literature.mjs";
-import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension.mjs";
+import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
+import zoteroLiterature from "@drone/extensions/zotero-literature";
 import {
 	acceptanceKinds,
 	acceptanceSchema,
@@ -14,8 +12,10 @@ import {
 	normalizeAcceptance,
 	registerAcceptanceVerifier,
 	resetAcceptanceVerifiers,
-} from "../../../.pi/lib/tasks/acceptance.mjs";
-import { registerTaskRuntime } from "../../../.pi/lib/tasks/runtime.mjs";
+} from "@drone/tasks/acceptance";
+import { registerTaskRuntime } from "@drone/tasks/runtime";
+import { validateToolArguments } from "@earendil-works/pi-ai";
+import { afterEach, describe, expect, it } from "vitest";
 
 /** 只捕获 registerTool、其余 API 全部 no-op 的 pi 桩。 */
 function stubPi(tools = new Map()) {

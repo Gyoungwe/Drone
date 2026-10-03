@@ -11,21 +11,6 @@ export interface LanObserverConfig {
 	remoteControl: boolean;
 }
 
-/** 局域网观察服务的运行状态（供设置页显示）。 */
-export interface LanStatus {
-	enabled: boolean;
-	/** 实际监听端口；未监听时为 null。 */
-	port: number | null;
-	/** 各网卡 IPv4 的完整观察 URL（含 token）。 */
-	urls: string[];
-	/** 首选 URL 的二维码 data URL。 */
-	qrDataUrl: string | null;
-	/** 当前 SSE 连接数。 */
-	clients: number;
-	/** M2 远程控制开关运行态（客户端据此显隐 composer/审批按钮）。 */
-	remoteControl: boolean;
-}
-
 /** 会话列表项；历史会话只暴露此投影，不提供详情。 */
 export interface LanSessionBrief {
 	sessionId: string;
@@ -126,21 +111,6 @@ export interface LanSnapshot {
 	remoteControl: boolean;
 	/** 快照采集起点的服务端帧序号：客户端丢弃 seq ≤ 此值的 event 帧（效果已含在快照内），防 delta 双重应用。 */
 	snapshotSeq: number;
-}
-
-/** M2 POST /api/sessions/:id/prompt 请求体。 */
-export interface LanPromptBody {
-	text: string;
-}
-
-/** M2 POST /api/permissions/:id/respond 请求体（远程只允许允许一次/拒绝）。 */
-export interface LanRespondBody {
-	answer: "allowOnce" | "deny";
-}
-
-/** M2 写端点统一成功响应。 */
-export interface LanWriteResult {
-	ok: true;
 }
 
 /** sanitize 后图片数据的哨兵值（base64 被剥除）；客户端据此渲染占位而非尝试加载。 */
