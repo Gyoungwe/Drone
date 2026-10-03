@@ -163,6 +163,9 @@ describe("evidence-grounded failure feedback", () => {
 		expect(FAILURE_EXPLANATION_POLICY).toContain("impact not yet known");
 		expect(FAILURE_EXPLANATION_POLICY).toContain("read-only reconciliation");
 		expect(FAILURE_EXPLANATION_POLICY).toContain("grants no tools, consent");
+		expect(FAILURE_EXPLANATION_POLICY).toContain("not in the reply");
+		expect(FAILURE_EXPLANATION_POLICY).not.toContain("Explain recovered attempts as history");
+		expect(TASK_HANDOFF_POLICY).toContain("process-error postmortem");
 	});
 });
 it("redacts command flags and truncated quoted credentials before showing the diagnostic excerpt", () => {
