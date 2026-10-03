@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -26,9 +27,9 @@ test("architecture checker reports a new renderer Pi SDK import", async () => {
 			await readFile(join(temp, "fixture.tsx"), "utf8"),
 		);
 		assert.equal(finding, true);
-		const result = await execFileAsync(process.execPath, [checker.pathname], { cwd: root.pathname }).catch(
-			(error) => error,
-		);
+		const result = await execFileAsync(process.execPath, [fileURLToPath(checker)], {
+			cwd: fileURLToPath(root),
+		}).catch((error) => error);
 		assert.equal(result.code ?? 0, 0, "repository baseline should pass before injecting the fixture");
 		const checkerSource = await readFile(checker, "utf8");
 		assert.doesNotMatch(
