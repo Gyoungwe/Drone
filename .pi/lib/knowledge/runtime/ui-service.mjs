@@ -18,7 +18,7 @@ import {
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-27SNMV5Y.mjs";
+} from "./chunks/chunk-FAUD64KQ.mjs";
 import "./chunks/chunk-IGZMNWC2.mjs";
 import "./chunks/chunk-QVR3JW7N.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";

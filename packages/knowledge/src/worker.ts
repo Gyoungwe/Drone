@@ -677,11 +677,6 @@ function semanticCandidates(args) {
 	const query = args.vector,
 		limit = Math.max(1, Math.min(12, Math.floor(args.limit || 5)));
 	/** @type {any[]} */
-	const rows = db
-		.prepare(
-			"SELECT s.path,s.hash,s.vector,s.dimension,s.chunk_index,s.start_char,s.end_char,n.title,n.kind FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer' ORDER BY s.path LIMIT 5000",
-		)
-		.all(fingerprint, args.project || "");
 	const totalEligible = Number(
 		db
 			.prepare(
@@ -690,7 +685,15 @@ function semanticCandidates(args) {
 			.get(fingerprint, args.project || "").count,
 	);
 	const best = new Map();
-	for (const row of rows) {
+	let scanned = 0;
+	for (let offset = 0; offset < totalEligible; offset += 5000) {
+		const rows = db
+			.prepare(
+				"SELECT s.path,s.hash,s.vector,s.dimension,s.chunk_index,s.start_char,s.end_char,n.title,n.kind FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer' ORDER BY s.path,s.chunk_index LIMIT 5000 OFFSET ?",
+			)
+			.all(fingerprint, args.project || "", offset);
+		scanned += rows.length;
+		for (const row of rows) {
 		if (row.dimension !== query.length) continue;
 		let vector;
 		try {
@@ -727,14 +730,15 @@ function semanticCandidates(args) {
 				startChar: row.start_char,
 				endChar: row.end_char,
 			});
+		}
 	}
 	const result = [...best.values()]
 		.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path))
 		.slice(0, limit);
 	return {
 		items: result,
-		partial: totalEligible > rows.length,
-		scanned: rows.length,
+		partial: false,
+		scanned,
 		totalEligible,
 		nextCursor: null,
 	};

@@ -208,4 +208,11 @@ describe("bounded topic memory", () => {
 		expect(topic.claims).toHaveLength(2);
 		expect(topic.conflicts[0].relation).toBe("contradicts");
 	});
+	it("does not classify low-overlap summaries as conflicts without structured opposing claims", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
+		const store = createTopicMemory({ binding, project: "project-a", directory: root });
+		await store.record({ topicId: "topic", title: "Wing signaling", summary: "Wg activates growth" });
+		const next = await store.record({ topicId: "topic", title: "Metabolic timing", summary: "Circadian timing changes feeding" });
+		expect(next.classification).toBe("additional");
+	});
 });

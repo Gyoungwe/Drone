@@ -15,7 +15,7 @@ import {
   readTopic,
   topicRunHash,
   updateTopic
-} from "./chunks/chunk-MFL6DGIT.mjs";
+} from "./chunks/chunk-6AUOQBSC.mjs";
 import {
   archiveKnowledgeTopic,
   cancelKnowledgeSemanticIndex,
@@ -35,7 +35,7 @@ import {
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-27SNMV5Y.mjs";
+} from "./chunks/chunk-FAUD64KQ.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
@@ -154,7 +154,7 @@ import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
   tokenizeKnowledgeText
-} from "./chunks/chunk-4LTSNIAR.mjs";
+} from "./chunks/chunk-7IE2YLNK.mjs";
 import {
   compareClaimSets,
   compareClaims

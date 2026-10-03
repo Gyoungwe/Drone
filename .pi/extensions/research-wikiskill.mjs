@@ -9,6 +9,9 @@ import { basename as basename2, dirname as dirname2, isAbsolute as isAbsolute3, 
 import { access, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
 import { dirname, isAbsolute as isAbsolute2, join as join2, relative, resolve as resolve2, sep } from "node:path";
 
+// packages/extensions/src/research-policy.ts
+var MAX_CONCURRENT_RESEARCH_SUBAGENTS = 3;
+
 // packages/knowledge/src/config.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
@@ -119,7 +122,7 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
   knowledgeProjectId: null,
   knowledgeBindingRevision: 0,
   legacyProjectVault: null,
-  maxConcurrentSubagents: 3,
+  maxConcurrentSubagents: MAX_CONCURRENT_RESEARCH_SUBAGENTS,
   timezone: "Asia/Shanghai",
   knowledgeProfile: DEFAULT_VAULT_PROFILE,
   knowledgeDepositMode: "verified",
@@ -135,8 +138,8 @@ function resolveConfiguredPath(cwd, value) {
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
-  if (!Number.isInteger(max) || max < 1 || max > 3) {
-    throw new Error("maxConcurrentSubagents must be an integer between 1 and 3");
+  if (!Number.isInteger(max) || max < 1 || max > MAX_CONCURRENT_RESEARCH_SUBAGENTS) {
+    throw new Error(`maxConcurrentSubagents must be an integer between 1 and ${MAX_CONCURRENT_RESEARCH_SUBAGENTS}`);
   }
   if (typeof config.timezone !== "string" || !config.timezone.trim()) {
     throw new Error("timezone must be a non-empty string");

@@ -1811,18 +1811,6 @@ async function atomicWrite(path, value) {
 async function withLock(path, operation) {
   return runRuntimeExclusive("topic-memory", path, operation);
 }
-function tokens2(value) {
-  return new Set(
-    text2(value, 6e3).toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((x) => x.length > 2)
-  );
-}
-function overlap2(a, b) {
-  const left = tokens2(a), right = tokens2(b);
-  if (!left.size || !right.size) return 0;
-  let common = 0;
-  for (const item of left) if (right.has(item)) common++;
-  return common / Math.max(left.size, right.size);
-}
 function classifyTopic(existing, incoming) {
   if (!existing) return "new";
   if (incoming.runHash && (incoming.runHash === existing.lastRunHash || existing.recentRuns?.includes(incoming.runHash)))
@@ -1835,8 +1823,6 @@ function classifyTopic(existing, incoming) {
   const previousClaims = existing.claims || [];
   const incomingClaims = incoming.claims || [];
   if (previousClaims.length && incomingClaims.length && compareClaimSets(previousClaims, incomingClaims).some((comparison) => comparison.blocking))
-    return "conflict-candidate";
-  if (overlap2(existing.summary, incoming.summary) < 0.12 && overlap2(existing.title, incoming.title) < 0.2)
     return "conflict-candidate";
   return "additional";
 }
@@ -2205,6 +2191,11 @@ import { basename as basename5, dirname as dirname8, isAbsolute as isAbsolute7, 
 // packages/extensions/src/workspace-config.ts
 import { access, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
 import { dirname, isAbsolute as isAbsolute2, join as join2, relative, resolve as resolve2, sep } from "node:path";
+
+// packages/extensions/src/research-policy.ts
+var MAX_CONCURRENT_RESEARCH_SUBAGENTS = 3;
+
+// packages/extensions/src/workspace-config.ts
 init_config();
 init_flow_cards();
 
@@ -2270,7 +2261,7 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
   knowledgeProjectId: null,
   knowledgeBindingRevision: 0,
   legacyProjectVault: null,
-  maxConcurrentSubagents: 3,
+  maxConcurrentSubagents: MAX_CONCURRENT_RESEARCH_SUBAGENTS,
   timezone: "Asia/Shanghai",
   knowledgeProfile: DEFAULT_VAULT_PROFILE,
   knowledgeDepositMode: "verified",
@@ -2286,8 +2277,8 @@ function resolveConfiguredPath(cwd, value) {
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
-  if (!Number.isInteger(max) || max < 1 || max > 3) {
-    throw new Error("maxConcurrentSubagents must be an integer between 1 and 3");
+  if (!Number.isInteger(max) || max < 1 || max > MAX_CONCURRENT_RESEARCH_SUBAGENTS) {
+    throw new Error(`maxConcurrentSubagents must be an integer between 1 and ${MAX_CONCURRENT_RESEARCH_SUBAGENTS}`);
   }
   if (typeof config.timezone !== "string" || !config.timezone.trim()) {
     throw new Error("timezone must be a non-empty string");
@@ -8449,11 +8440,11 @@ function createSpecialistBudget({
   const updateUsage = (usage = {}, usageTurn = turn) => {
     if (usageTurn !== turn) return false;
     const nonnegativeFinite = (value) => typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
-    const tokens3 = nonnegativeFinite(usage.totalTokens);
+    const tokens2 = nonnegativeFinite(usage.totalTokens);
     const cost = nonnegativeFinite(usage.cost);
-    if (tokens3 !== null) {
-      turnTokens += tokens3;
-      sessionTokens += tokens3;
+    if (tokens2 !== null) {
+      turnTokens += tokens2;
+      sessionTokens += tokens2;
     }
     if (cost !== null) {
       turnCost += cost;

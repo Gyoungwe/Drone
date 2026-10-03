@@ -346,8 +346,9 @@ export function classifyTopic(existing, incoming) {
 		compareClaimSets(previousClaims, incomingClaims).some((comparison) => comparison.blocking)
 	)
 		return "conflict-candidate";
-	if (overlap(existing.summary, incoming.summary) < 0.12 && overlap(existing.title, incoming.title) < 0.2)
-		return "conflict-candidate";
+	// Low textual overlap is a discovery signal, not evidence of contradiction.
+	// Keep unrelated updates as additional memories until structured claims establish
+	// a same-condition opposite observation.
 	return "additional";
 }
 

@@ -236,18 +236,6 @@ async function atomicWrite(path, value) {
 async function withLock(path, operation) {
   return runRuntimeExclusive("topic-memory", path, operation);
 }
-function tokens(value) {
-  return new Set(
-    text(value, 6e3).toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((x) => x.length > 2)
-  );
-}
-function overlap(a, b) {
-  const left = tokens(a), right = tokens(b);
-  if (!left.size || !right.size) return 0;
-  let common = 0;
-  for (const item of left) if (right.has(item)) common++;
-  return common / Math.max(left.size, right.size);
-}
 function classifyTopic(existing, incoming) {
   if (!existing) return "new";
   if (incoming.runHash && (incoming.runHash === existing.lastRunHash || existing.recentRuns?.includes(incoming.runHash)))
@@ -260,8 +248,6 @@ function classifyTopic(existing, incoming) {
   const previousClaims = existing.claims || [];
   const incomingClaims = incoming.claims || [];
   if (previousClaims.length && incomingClaims.length && compareClaimSets(previousClaims, incomingClaims).some((comparison) => comparison.blocking))
-    return "conflict-candidate";
-  if (overlap(existing.summary, incoming.summary) < 0.12 && overlap(existing.title, incoming.title) < 0.2)
     return "conflict-candidate";
   return "additional";
 }

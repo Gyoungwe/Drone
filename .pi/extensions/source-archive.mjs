@@ -2777,7 +2777,7 @@ function createResearchLoop(ports) {
     await access2(join3(path, "metadata.json"));
     return { config, path, metadataPath: join3(path, "metadata.json") };
   }
-  async function startResearchRun({ cwd = process.cwd(), project, resultSlug, query } = {}) {
+  async function startResearchRun({ cwd = process.cwd(), project, resultSlug, query, requiresProvenance = false } = {}) {
     const config = await loadWorkspaceConfig3(cwd);
     project = safeSlug(project || "research-workbench", "project");
     resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
@@ -2793,6 +2793,9 @@ function createResearchLoop(ports) {
       topic_id: topicIdFromResultSlug(resultSlug),
       query: query.trim(),
       status: "running",
+      revision: 0,
+      requires_provenance: requiresProvenance === true,
+      provenance: { status: requiresProvenance === true ? "pending" : "not-required" },
       started_at: now,
       evidence_gate: {
         stage: "created",
@@ -2808,7 +2811,7 @@ function createResearchLoop(ports) {
     await atomicJson2(join3(runDir, "metadata.json"), metadata);
     return { run_dir: runDir, metadata };
   }
-  async function updateResearchLoop({
+  async function updateResearchLoopUnlocked({
     cwd = process.cwd(),
     runDir,
     action,
@@ -2817,10 +2820,14 @@ function createResearchLoop(ports) {
     claimRefs = [],
     claimBindings = [],
     outcome,
-    notes
+    notes,
+    expectedRevision
   } = {}) {
     const { path, metadataPath } = await resolveRun(cwd, runDir);
     const metadata = await readJson2(metadataPath);
+    const revision = Number.isInteger(metadata.revision) ? metadata.revision : 0;
+    if (expectedRevision != null && Number(expectedRevision) !== revision)
+      throw new Error(`research run changed; expected revision ${expectedRevision}, found ${revision}`);
     let gate = gateOf(metadata);
     const detail = {
       ...query ? { query: String(query).trim() } : {},
@@ -2831,7 +2838,7 @@ function createResearchLoop(ports) {
       if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf(stage))
         throw new Error(`research loop must reach ${stage} before ${action}`);
     };
-    if (action === "status") return { run_dir: path, metadata, evidence_gate: gate };
+    if (action === "status") return { run_dir: path, metadata, evidence_gate: gate, revision };
     if (action === "record_local") {
       if (!query?.trim()) throw new Error("query is required");
       gate = advance(gate, "local_query_recorded", detail);
@@ -2875,7 +2882,7 @@ function createResearchLoop(ports) {
       );
     } else if (action === "bind_claims") {
       if (gate.stage === "sources_inspected") {
-        const available = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+        const available = await updateResearchLoopUnlocked({ cwd, runDir, action: "verify_archive" });
         gate = available.evidence_gate;
       }
       requireStage("sources_archived");
@@ -2907,6 +2914,11 @@ function createResearchLoop(ports) {
       const refs = claimBindingRefs(checked);
       if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
         throw new Error("archive verification and structured claim bindings are required before answerable");
+      if (metadata.requires_provenance === true) {
+        const provenance = await readJson2(join3(path, "reproducibility-manifest.json"));
+        if (!provenance || provenance.version !== 1)
+          throw new Error("This run requires a reproducibility manifest before it can become answerable");
+      }
       gate = advance(
         { ...gate, claim_bindings: checked, claim_refs: refs, warnings: [], status: "ok", answerable: true },
         "answerable",
@@ -2919,8 +2931,15 @@ function createResearchLoop(ports) {
     }
     metadata.evidence_gate = gate;
     metadata.updated_at = (/* @__PURE__ */ new Date()).toISOString();
+    metadata.revision = revision + 1;
     await atomicJson2(metadataPath, metadata);
-    return { run_dir: path, evidence_gate: gate };
+    return { run_dir: path, evidence_gate: gate, revision: metadata.revision };
+  }
+  async function updateResearchLoop(input = {}) {
+    const cwd = input.cwd || process.cwd();
+    const key = runKey(cwd, input.runDir);
+    const work = () => updateResearchLoopUnlocked(input);
+    return ports.exclusive ? ports.exclusive(key, work) : work();
   }
   function isWikiPath(path) {
     return /(?:^|[\\/])Wiki[\\/]/i.test(String(path || ""));
@@ -3115,6 +3134,11 @@ import { fileURLToPath as fileURLToPath2, pathToFileURL as pathToFileURL2 } from
 // packages/extensions/src/workspace-config.ts
 import { access as access3, mkdir as mkdir4, readFile as readFile6, realpath as realpath6, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
 import { dirname as dirname3, isAbsolute as isAbsolute7, join as join5, relative as relative6, resolve as resolve7, sep as sep6 } from "node:path";
+
+// packages/extensions/src/research-policy.ts
+var MAX_CONCURRENT_RESEARCH_SUBAGENTS = 3;
+
+// packages/extensions/src/workspace-config.ts
 init_config();
 init_flow_cards();
 
@@ -3180,7 +3204,7 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
   knowledgeProjectId: null,
   knowledgeBindingRevision: 0,
   legacyProjectVault: null,
-  maxConcurrentSubagents: 3,
+  maxConcurrentSubagents: MAX_CONCURRENT_RESEARCH_SUBAGENTS,
   timezone: "Asia/Shanghai",
   knowledgeProfile: DEFAULT_VAULT_PROFILE,
   knowledgeDepositMode: "verified",
@@ -3196,8 +3220,8 @@ function resolveConfiguredPath(cwd, value) {
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
-  if (!Number.isInteger(max) || max < 1 || max > 3) {
-    throw new Error("maxConcurrentSubagents must be an integer between 1 and 3");
+  if (!Number.isInteger(max) || max < 1 || max > MAX_CONCURRENT_RESEARCH_SUBAGENTS) {
+    throw new Error(`maxConcurrentSubagents must be an integer between 1 and ${MAX_CONCURRENT_RESEARCH_SUBAGENTS}`);
   }
   if (typeof config.timezone !== "string" || !config.timezone.trim()) {
     throw new Error("timezone must be a non-empty string");
@@ -5458,6 +5482,7 @@ var recordZoteroWrite = operations.recordZoteroWrite;
 var loop = createResearchLoop({
   workspace: async (cwd) => await loadWorkspaceConfig(cwd),
   verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input),
+  exclusive,
   sourceStatus: async ({ cwd, run_dir, verify }) => sourceStatus({ cwd, run_dir, verify }, archivePorts)
 });
 

@@ -3,7 +3,7 @@ import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
   tokenizeKnowledgeText
-} from "./chunks/chunk-4LTSNIAR.mjs";
+} from "./chunks/chunk-7IE2YLNK.mjs";
 export {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,

@@ -254,6 +254,9 @@ export async function researchWikiStatus({ cwd = process.cwd(), project } = {}) 
 export default function researchWikiLoop(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
 	bindExtensionRuntime(pi);
+	// The application-scoped KnowledgePanel owns Wiki navigation and review in the
+	// desktop host. Keep these legacy tools available to CLI/project vaults only.
+	if (knowledgeDirectory()) return;
 
 	registerTool(pi, {
 		name: "research_wiki_navigate",

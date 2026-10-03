@@ -45,7 +45,7 @@ export function splitKnowledgeChunks(text: string, maxChars = 1200): string[] {
 	if (!Number.isInteger(maxChars) || maxChars < 1 || maxChars > 8_000)
 		throw new Error("Semantic chunk size must be an integer between 1 and 8000");
 	const chunks: string[] = [];
-	for (let start = 0; start < text.length && chunks.length < 64; start += maxChars)
+	for (let start = 0; start < text.length; start += maxChars)
 		chunks.push(text.slice(start, start + maxChars));
 	return chunks;
 }

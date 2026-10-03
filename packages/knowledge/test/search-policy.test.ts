@@ -22,9 +22,9 @@ describe("knowledge search policy", () => {
 		expect(() => buildKnowledgeSearchExpression("x".repeat(2001))).toThrow("Query must contain");
 	});
 
-	it("splits semantic text into at most 64 bounded chunks", () => {
+	it("splits semantic text without silently dropping long-note chunks", () => {
 		expect(splitKnowledgeChunks("abcdefgh", 3)).toEqual(["abc", "def", "gh"]);
-		expect(splitKnowledgeChunks("x".repeat(1000), 1)).toHaveLength(64);
+		expect(splitKnowledgeChunks("x".repeat(1000), 1)).toHaveLength(1000);
 		expect(() => splitKnowledgeChunks("x", 0)).toThrow("chunk size");
 	});
 });

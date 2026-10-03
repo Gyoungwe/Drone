@@ -159,7 +159,7 @@ function splitKnowledgeChunks(text, maxChars = 1200) {
   if (!Number.isInteger(maxChars) || maxChars < 1 || maxChars > 8e3)
     throw new Error("Semantic chunk size must be an integer between 1 and 8000");
   const chunks = [];
-  for (let start = 0; start < text.length && chunks.length < 64; start += maxChars)
+  for (let start = 0; start < text.length; start += maxChars)
     chunks.push(text.slice(start, start + maxChars));
   return chunks;
 }
@@ -737,55 +737,59 @@ function semanticCandidates(args) {
   if (typeof minSimilarity !== "number" || !Number.isFinite(minSimilarity) || minSimilarity < 0 || minSimilarity > 1)
     throw new Error("Invalid semantic similarity threshold");
   const query = args.vector, limit = Math.max(1, Math.min(12, Math.floor(args.limit || 5)));
-  const rows = db.prepare(
-    "SELECT s.path,s.hash,s.vector,s.dimension,s.chunk_index,s.start_char,s.end_char,n.title,n.kind FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer' ORDER BY s.path LIMIT 5000"
-  ).all(fingerprint, args.project || "");
   const totalEligible = Number(
     db.prepare(
       "SELECT COUNT(*) AS count FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer'"
     ).get(fingerprint, args.project || "").count
   );
   const best = /* @__PURE__ */ new Map();
-  for (const row of rows) {
-    if (row.dimension !== query.length) continue;
-    let vector;
-    try {
-      vector = JSON.parse(row.vector);
-    } catch {
-      continue;
-    }
-    if (!Array.isArray(vector) || vector.length !== query.length) continue;
-    let dot = 0, qa = 0, va = 0;
-    for (let i = 0; i < query.length; i++) {
-      const q = query[i], v = vector[i];
-      if (typeof v !== "number" || !Number.isFinite(v)) {
-        va = Number.NaN;
-        break;
+  let scanned = 0;
+  for (let offset = 0; offset < totalEligible; offset += 5e3) {
+    const rows = db.prepare(
+      "SELECT s.path,s.hash,s.vector,s.dimension,s.chunk_index,s.start_char,s.end_char,n.title,n.kind FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer' ORDER BY s.path,s.chunk_index LIMIT 5000 OFFSET ?"
+    ).all(fingerprint, args.project || "", offset);
+    scanned += rows.length;
+    for (const row of rows) {
+      if (row.dimension !== query.length) continue;
+      let vector;
+      try {
+        vector = JSON.parse(row.vector);
+      } catch {
+        continue;
       }
-      dot += q * v;
-      qa += q * q;
-      va += v * v;
+      if (!Array.isArray(vector) || vector.length !== query.length) continue;
+      let dot = 0, qa = 0, va = 0;
+      for (let i = 0; i < query.length; i++) {
+        const q = query[i], v = vector[i];
+        if (typeof v !== "number" || !Number.isFinite(v)) {
+          va = Number.NaN;
+          break;
+        }
+        dot += q * v;
+        qa += q * q;
+        va += v * v;
+      }
+      const score = dot / Math.sqrt(qa * va);
+      if (!Number.isFinite(score) || score < minSimilarity) continue;
+      const current = best.get(row.path);
+      if (!current || score > current.score)
+        best.set(row.path, {
+          path: row.path,
+          title: row.title,
+          hash: row.hash,
+          kind: row.kind,
+          score,
+          chunkIndex: row.chunk_index,
+          startChar: row.start_char,
+          endChar: row.end_char
+        });
     }
-    const score = dot / Math.sqrt(qa * va);
-    if (!Number.isFinite(score) || score < minSimilarity) continue;
-    const current = best.get(row.path);
-    if (!current || score > current.score)
-      best.set(row.path, {
-        path: row.path,
-        title: row.title,
-        hash: row.hash,
-        kind: row.kind,
-        score,
-        chunkIndex: row.chunk_index,
-        startChar: row.start_char,
-        endChar: row.end_char
-      });
   }
   const result = [...best.values()].sort((a, b) => b.score - a.score || a.path.localeCompare(b.path)).slice(0, limit);
   return {
     items: result,
-    partial: totalEligible > rows.length,
-    scanned: rows.length,
+    partial: false,
+    scanned,
     totalEligible,
     nextCursor: null
   };
