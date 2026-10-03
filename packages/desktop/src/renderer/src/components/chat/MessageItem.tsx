@@ -1,14 +1,18 @@
+import { tasksForDecision } from "@drone/shared";
 import { memo, useState } from "react";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import type { UIMessage } from "../../stores/transcript";
+import { useAgentActive } from "../session/session-status";
 import { AssistantMessage } from "./AssistantMessage";
 import { ErrorNote } from "./ErrorNote";
 import { ImagePreviewOverlay, imageSrc } from "./ImagePreview";
 import { CopyButton, ForkButton } from "./message-actions";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { SystemMessage } from "./SystemMessage";
+import { TaskDecisionCard } from "./TaskDecisionCard";
+import { TurnRouteCard } from "./TurnRouteCard";
 import { UserMessage } from "./UserMessage";
 
 /** 单条消息：按类型分发（用户气泡 / 图片块 / 子代理卡 / 错误卡 / 系统分割线 / 助手消息体） */
@@ -17,6 +21,7 @@ export const MessageItem = memo(function MessageItem({
 	streaming,
 	metaInGroup,
 	showActions = true,
+	showTaskCard = false,
 	sessionId = null,
 }: {
 	message: UIMessage;
@@ -25,11 +30,14 @@ export const MessageItem = memo(function MessageItem({
 	metaInGroup?: boolean;
 	/** 是否渲染操作行：仅轮次最后一段正文为 true（中间自言自语不挂复制/fork，减少噪音） */
 	showActions?: boolean;
+	/** 只有最新一条任务快照渲染决定卡。 */
+	showTaskCard?: boolean;
 	/** 当前会话（错误卡重试/压缩动作需要） */
 	sessionId?: string | null;
 }) {
 	const t = useT();
 	const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+	const agentActive = useAgentActive(sessionId ?? null);
 
 	if (message.kind === "user") {
 		return <UserMessage message={message} />;
@@ -86,8 +94,40 @@ export const MessageItem = memo(function MessageItem({
 		return <SystemMessage message={message} />;
 	}
 
-	// 任务不进聊天流：状态看右侧工作台侧栏，要用户拍板的一律走 ask_user 弹窗。
-	if (message.taskView) return null;
+	if (message.kind === "assistant" && (message.route || (message.taskView && showTaskCard))) {
+		const view = message.taskView;
+		const tasks = view && showTaskCard ? tasksForDecision(view) : [];
+		const pending = tasks.some((task) =>
+			task.actions.some((action) => action.kind === "review" && action.state === "pending"),
+		);
+		if (!message.text && !message.route && tasks.length === 0) return null;
+		return (
+			<div className="group" data-testid={pending ? "chat-task-review" : undefined}>
+				{message.route ? (
+					<TurnRouteCard
+						route={message.route}
+						tasks={tasks}
+						view={view}
+						sessionId={sessionId ?? null}
+						agentActive={agentActive}
+					/>
+				) : null}
+				{!message.route &&
+					view &&
+					tasks.map((task) => (
+						<TaskDecisionCard
+							key={task.id}
+							task={task}
+							view={view}
+							sessionId={sessionId ?? null}
+							agentActive={agentActive}
+						/>
+					))}
+				{message.text && <AssistantMessage text={message.text} thinking="" tools={[]} />}
+			</div>
+		);
+	}
+	if (message.kind === "assistant" && message.taskView) return null;
 	return (
 		<div className="group">
 			<AssistantMessage

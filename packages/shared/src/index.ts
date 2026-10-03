@@ -50,6 +50,7 @@ export * from "./todo";
 export * from "./tool-manifest";
 export * from "./transcript";
 export * from "./transcript/run-inspector";
+export * from "./turn-route";
 export * from "./ui-plugins";
 export * from "./update";
 export * from "./usage-display";

@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 import {
 	TASK_REASON_TEXT,
 	type TaskView,
+	taskDecision,
 	taskDeliveryPresentation,
 	taskIsTerminal,
 	taskNeedsUser,
+	tasksForDecision,
 	tasksForTranscript,
 	type WorkbenchTask,
 } from "./task-workbench";
@@ -133,6 +135,25 @@ describe("流内工作台卡的取舍", () => {
 		}
 	});
 
+	it("只把待验收动作投影到聊天流", () => {
+		const action = {
+			id: "review-1",
+			kind: "review" as const,
+			title: "核对报告",
+			reason: "请看最终结果",
+			expected: {},
+			state: "pending",
+		};
+		const review = task({
+			state: "waiting_user",
+			actions: [action],
+		});
+		expect(tasksForTranscript(view([review]))).toEqual([review]);
+		expect(
+			tasksForTranscript(view([{ ...review, actions: [{ ...action, state: "acknowledged" }] }])),
+		).toEqual([]);
+	});
+
 	it("等用户拍板的也不进流：决策走 ask_user 弹窗，不靠一张要自己去找的卡", () => {
 		expect(tasksForTranscript(view([task({ state: "blocked" })]))).toEqual([]);
 		expect(tasksForTranscript(view([task({ state: "waiting_user" })]))).toEqual([]);
@@ -150,6 +171,95 @@ describe("流内工作台卡的取舍", () => {
 			]),
 		);
 		expect(shown).toEqual([]);
+	});
+});
+
+describe("task decision card", () => {
+	const review = {
+		id: "review-1",
+		kind: "review" as const,
+		title: "请看一下 Zotero 读取结果",
+		reason: "阶段步数用完",
+		expected: {},
+		milestoneId: null,
+		state: "pending",
+	};
+	it("uses the review title and refuses to complete an unlinked review", () => {
+		const decision = taskDecision(
+			task({
+				goal: "配置并验证 Zotero 文献读取能力",
+				state: "waiting_user",
+				reason: "stage-budget",
+				budget: { calls: 76, stageCalls: 48 },
+				progressCount: 46,
+				stageStartProgress: 16,
+				milestones: [
+					{
+						id: "done",
+						title: "已读到库",
+						state: "completed",
+						dependsOn: [],
+						acceptance: { kind: "human_review" },
+					},
+					{
+						id: "left",
+						title: "剩下的下载",
+						state: "pending",
+						dependsOn: [],
+						acceptance: { kind: "file" },
+					},
+				],
+				actions: [review],
+				operations: [{ id: "op", tool: "read", state: "returned", at: "t" }],
+			}),
+		);
+		expect(decision.mode).toBe("decision");
+		expect(decision.title).toBe("请看一下 Zotero 读取结果");
+		expect(decision.stop).toBe("停在这一段的步数上限");
+		expect(decision.done).toContain("已读到库");
+		expect(decision.remaining).toContain("剩下的下载");
+		expect(decision.canComplete).toBe(false);
+		expect(decision.canDefer).toBe(true);
+		expect(decision.canEnd).toBe(true);
+		expect(decision.cannotComplete).toContain("不能替你勾完成");
+		expect(decision.details.join("\n")).toContain("stage-budget");
+		expect(decision.details.join("\n")).toContain("read · returned");
+		expect(tasksForDecision(view([task({ state: "running" })]))[0]?.id).toBe("t1");
+	});
+	it("offers completion only for an open human-review deliverable, then collapses", () => {
+		const open = taskDecision(
+			task({
+				state: "waiting_user",
+				actions: [{ ...review, milestoneId: "check" }],
+				milestones: [
+					{
+						id: "check",
+						title: "核对读取",
+						state: "pending",
+						dependsOn: [],
+						acceptance: { kind: "human_review" },
+					},
+				],
+			}),
+		);
+		expect(open.canComplete).toBe(true);
+		expect(open.completeActionId).toBe("review-1");
+		const quiet = taskDecision(task({ goal: "配置并验证 Zotero 文献读取能力", state: "partial" }));
+		expect(quiet.mode).toBe("line");
+		expect(quiet.line).toBe("配置并验证 Zotero 文献读取能力 · 还在做");
+		expect(quiet.canDefer).toBe(false);
+		expect(taskDecision(task({ goal: "配置并验证 Zotero 文献读取能力", state: "cancelled" })).line).toContain(
+			"已结束",
+		);
+	});
+	it("english copy stays on the same facts", () => {
+		const decision = taskDecision(
+			task({ state: "blocked", reason: "stage-budget", actions: [review] }),
+			"en",
+		);
+		expect(decision.stop).toBe("Stopped at this stage's step limit");
+		expect(decision.deferLabel).toBe("Leave it unchecked and continue");
+		expect(decision.cannotComplete).toContain("cannot be marked complete");
 	});
 });
 

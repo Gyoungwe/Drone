@@ -44,9 +44,10 @@ function isProgressRow(row: ChatRow): row is Extract<ChatRow, { kind: "message" 
 	);
 }
 
-/** 任务视图消息（task_plan 结果）在聊天流里不渲染，只喂右侧面板——不能把一段过程劈成两块 */
+/** Older task snapshots fold away. The latest card (taskPlacement show) stays in the transcript. */
 function isTaskViewRow(row: ChatRow): boolean {
-	return row.kind === "message" && row.message.kind === "assistant" && Boolean(row.message.taskView);
+	if (row.kind !== "message" || row.message.kind !== "assistant" || !row.message.taskView) return false;
+	return row.taskPlacement !== "show";
 }
 
 function isProcessRow(row: ChatRow): boolean {

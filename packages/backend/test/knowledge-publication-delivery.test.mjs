@@ -286,7 +286,7 @@ describe("live-run edges and provider protocol compatibility", () => {
 		expect(exported).toContain("Protocol-safe answer");
 	});
 	it("queued follow-up questions receive fresh host proof instead of inheriting prior permissions", async () => {
-		const queuedQuestion = "A new question after the completed evidence check.";
+		const queuedQuestion = "A new research question after the completed evidence check.";
 		const scripted = steps();
 		scripted[3] = async () => {
 			await session.followUp(queuedQuestion);
@@ -310,7 +310,7 @@ describe("live-run edges and provider protocol compatibility", () => {
 		expect(queued.knowledgePublication.turnId).not.toBe(first.knowledgePublication.turnId);
 	});
 	it("backend prompt acknowledgement and event delivery expose the same sealed current-turn proof", async () => {
-		const prompt = "A normal desktop or LAN question.";
+		const prompt = "A normal desktop or LAN research question.";
 		faux.setResponses([reply("IPC_PATH_CURRENT_PROOF")]);
 		await expect(backend.prompt(sid, prompt)).resolves.toEqual({ kind: "agent" });
 		await vi.waitFor(() => expect(events.some((e) => e.type === "agent_settled")).toBe(true));
@@ -384,13 +384,19 @@ it("real SDK displays public stage → tools → next stage → tools → summar
 	];
 	await run(steps);
 	const labels = (state) =>
-		buildChatRows(state, "fixture").flatMap((row) =>
-			row.kind === "metaGroup"
-				? row.items.flatMap((i) => i.tools.map((t) => t.name))
-				: row.kind === "message" && row.message.kind === "assistant" && !row.message.taskView
-					? [row.message.progress?.text || row.message.text]
-					: [],
-		);
+		buildChatRows(state, "fixture").flatMap((row) => {
+			if (row.kind === "metaGroup") return row.items.flatMap((i) => i.tools.map((t) => t.name));
+			if (
+				row.kind !== "message" ||
+				row.message.kind !== "assistant" ||
+				row.message.taskView ||
+				row.message.route
+			) {
+				return [];
+			}
+			const text = row.message.progress?.text || row.message.text;
+			return text ? [text] : [];
+		});
 	const expected = [
 		"STAGE_ONE",
 		"research_read_knowledge",

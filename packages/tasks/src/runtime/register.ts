@@ -239,6 +239,8 @@ export function registerWorkbench(
 				send();
 				return { action: "handled" };
 			}
+			// 有进展时检查点回调已经写过新快照；没放开配额时也要刷掉聊天里的旧审阅卡。
+			if (result.deferredReview && !result.stageReleased) send();
 			prepared = true;
 		} catch (e) {
 			halted = true;

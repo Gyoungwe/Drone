@@ -405,17 +405,15 @@ ${String(footer).slice(0, 2e3)}` }] : published;
         } catch (authorityError) {
           return report(failure(message, authorityError));
         }
+        const advisoryContent = info.code === "citation-required" ? [] : [{ type: "text", text: `
+
+\u3010\u6709\u63D0\u9192\u3011${advisoryLine(info.code, error)}` }];
         return report(
           seal(
             message,
             [
               ...content,
-              {
-                type: "text",
-                text: `
-
-\u3010\u6709\u63D0\u9192\u3011${advisoryLine(info.code, error)}`
-              },
+              ...advisoryContent,
               ...advisoryFooter(ctx)
             ],
             {

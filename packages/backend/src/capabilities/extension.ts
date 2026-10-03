@@ -1,8 +1,14 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { formatSkillCommand, parseExpandedSkillInvocation, workflowProfile } from "@drone/shared";
 import type { InlineExtension } from "@earendil-works/pi-coding-agent";
 import { attachAcademicPiBridge } from "./academic-pi-bridge";
 import type { CapabilityRuntime } from "./runtime";
+
+const MODEL_RESPONSE_GUIDANCE = `
+Response format: use Markdown that is easy to scan. Start with a short conclusion, then separate sections with blank lines. Use bullets for parallel items and numbered lists for ordered steps; keep one idea per bullet. Put commands, paths, identifiers, and structured values in inline code or fenced code blocks. When asking the user to decide, use a short title, state what is blocked, list the choices with their effects, and end with one clear next action. Avoid dense single-paragraph answers and do not claim a capability or workflow was used unless a host result confirms it.`;
+
+const CAPABILITY_DISCOVERY_GUIDANCE = `
+Capability contracts are expandable during the current turn. If a required tool, skill, or next-stage contract is missing, call capability_load again with the smallest required capability set and a precise task. The call is additive and safe to repeat; after its result, inspect the newly available tools and continue. Never invent a missing tool name. If the missing item is user input, approval, or a safety decision rather than a capability, call ask_user with a structured request instead of guessing.`;
 
 function messageText(message: unknown): string {
 	if (!message || typeof message !== "object") return "";
@@ -42,13 +48,30 @@ export function makeCapabilityExtension(runtime: CapabilityRuntime, academicRoot
 	return async (pi) => {
 		const bridge = academicRoot ? await attachAcademicPiBridge(pi, runtime, academicRoot) : undefined;
 		const prepared = new Set<string>();
+		let pendingRoute: ReturnType<CapabilityRuntime["describeTurn"]> | null = null;
+		const rememberRoute = (text: string, streaming: boolean) => {
+			if (streaming || !text.trim()) {
+				pendingRoute = null;
+				return;
+			}
+			try {
+				pendingRoute = runtime.describeTurn(text);
+			} catch {
+				pendingRoute = null;
+			}
+		};
 		pi.on("input", async (event, ctx) => {
 			const handled = await bridge?.input(event, ctx);
 			const result = handled?.result ?? { action: "continue" as const };
-			if (result.action === "handled") return result;
-			if (handled?.routingText === undefined)
-				runtime.prepareForPrompt(event.text, event.streamingBehavior !== undefined);
-			prepared.add(routingKey(result.action === "transform" ? result.text : event.text));
+			if (result.action === "handled") {
+				pendingRoute = null;
+				return result;
+			}
+			const streaming = event.streamingBehavior !== undefined;
+			if (handled?.routingText === undefined) runtime.prepareForPrompt(event.text, streaming);
+			const routed = result.action === "transform" ? result.text : event.text;
+			rememberRoute(handled?.routingText ?? routed, streaming);
+			prepared.add(routingKey(routed));
 			if (prepared.size > 64) {
 				const oldest = prepared.values().next().value;
 				if (oldest) prepared.delete(oldest);
@@ -60,10 +83,28 @@ export function makeCapabilityExtension(runtime: CapabilityRuntime, academicRoot
 			if (!text || prepared.delete(routingKey(text))) return;
 			// Direct SDK input has no host-normalized command. Only genuine invocation/arguments are routed.
 			runtime.prepareForPrompt(text, false);
+			rememberRoute(text, false);
 		});
 		pi.on("before_agent_start", async (event, ctx) => {
+			const route = pendingRoute;
+			pendingRoute = null;
+			if (route) {
+				try {
+					await pi.sendMessage(
+						{
+							customType: "drone-turn-route",
+							display: true,
+							content: " ",
+							details: { reportId: randomUUID(), route },
+						},
+						{ triggerTurn: false },
+					);
+				} catch {
+					// The card explains the turn. Failing to display it must not block the reply.
+				}
+			}
 			const academic = await bridge?.beforeAgentStart(event, ctx);
-			let systemPrompt = academic?.systemPrompt ?? event.systemPrompt;
+			let systemPrompt = `${academic?.systemPrompt ?? event.systemPrompt}${MODEL_RESPONSE_GUIDANCE}${CAPABILITY_DISCOVERY_GUIDANCE}`;
 			const visible = runtime.state().visibleSkills;
 			if (visible.some((name) => workflowProfile(name) && workflowProfile(name)?.direction !== "internal"))
 				systemPrompt +=
@@ -86,7 +127,7 @@ export function makeCapabilityExtension(runtime: CapabilityRuntime, academicRoot
 			if (runtime.isReadOnlyLibrary())
 				systemPrompt +=
 					"\nScope: read-only existing-literature reuse. Do not create task_plan or ask for execution consent. Native research_loop.start creates the correctly scoped run metadata automatically; do not locate old run directories with filesystem/shell tools. Read notes and verify identities, then submit structured claim_bindings and reconcile destinations. No downloads, Vault writes or imports.";
-			return systemPrompt === event.systemPrompt ? undefined : { systemPrompt };
+			return { systemPrompt };
 		});
 		pi.on("tool_call", (event) => {
 			runtime.noteToolInvocation(event.toolName);

@@ -5,11 +5,10 @@ import { compactNumber, formatDuration } from "../../lib/format";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { RunInspector } from "../chat/RunInspector";
-import { SessionUsageFooter } from "../chat/UsageSettlement";
 
 /**
- * 「过程」页签：会话累计用量 → 每轮运行记录（最新在上；模型/工具/阶段/来源/诊断全在这里，
- * 消息流里只留一行页脚）。
+ * 「过程」页签：每轮运行记录（最新在上；模型/工具/阶段/来源/诊断全在这里，
+ * 消息流和输入框保留可见的用量摘要）。
  */
 export function ProcessPane({ sessionId }: { sessionId: string | null }) {
 	const t = useT();
@@ -56,7 +55,6 @@ export function ProcessPane({ sessionId }: { sessionId: string | null }) {
 
 	return (
 		<div className="context-pane" ref={listRef}>
-			<SessionUsageFooter sessionId={sessionId} />
 			{turns.map((i) => {
 				const timing = timings[i];
 				const usage = usages[i];

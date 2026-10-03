@@ -42,6 +42,8 @@ export type ChatRow =
 			showActions: boolean;
 			/** 流式正文占位（固化后同 id 进入 messages，不 remount） */
 			streaming: boolean;
+			/** Latest task snapshot stays in the transcript. Older ones are not rendered. */
+			taskPlacement?: "show";
 	  }
 	| { kind: "streamingSubagents"; key: string; runs: SubagentRunUi[] }
 	| {
@@ -106,6 +108,10 @@ export function buildChatRows(
 ): ChatRow[] {
 	const { streaming } = transcript;
 	const agentWorking = isAgentWorking(transcript);
+	let latestTaskViewId: string | undefined;
+	for (const message of transcript.messages) {
+		if (message.kind === "assistant" && message.taskView) latestTaskViewId = message.id;
+	}
 	const rows: ChatRow[] = [];
 	let metaItems: MetaItem[] = [];
 	let lastCycle: string | undefined;
@@ -166,14 +172,30 @@ export function buildChatRows(
 			});
 		}
 		if (message.thinking || message.tools.length) metaItems.push(committedMetaItem(message));
-		if (message.text) {
+		// Only the latest task snapshot is a card. Older ones keep their pending reviews in the
+		// ledger, but a click there would act on a stale revision.
+		if (message.taskView) {
+			flushMeta();
+			if (message.id !== latestTaskViewId) return;
+			rows.push({
+				kind: "message",
+				key: message.id,
+				message: { ...(message.progress ? { ...message, progress: undefined } : message), text: "" },
+				metaInGroup: true,
+				showActions: false,
+				streaming: false,
+				taskPlacement: "show",
+			});
+			return;
+		}
+		if (message.route || message.text) {
 			flushMeta();
 			rows.push({
 				kind: "message",
 				key: message.id,
 				message: message.progress ? { ...message, progress: undefined } : message,
 				metaInGroup: true,
-				showActions: !live && turnFinalTextIds.has(message.id),
+				showActions: !live && turnFinalTextIds.has(message.id) && Boolean(message.text),
 				streaming: live,
 			});
 		}

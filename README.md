@@ -22,13 +22,15 @@
 
 ## Demo
 
+The images below are captured from Drone's Electron application. The chat surface now keeps each turn's route explanation and any pending task decision in one expandable card; the interaction and copy rules are documented in [the turn-route design note](docs/superpowers/specs/2026-10-04-turn-route-explanation-design.md).
+
 ![drone welcome page with the whale maid desk pet](docs/assets/img/drone_pet.png)
 
 ![UI plugins settings — the whale maid desk pet ships built in](docs/assets/img/drone_ui_plugins.png)
 
-**Chat**
+**Chat and turn decisions**
 
-![Chat page demo](docs/assets/img/demo-chat.gif)
+![Chat page and task execution in the desktop application](docs/assets/img/demo-chat.gif)
 
 **Custom background & dark theme**
 

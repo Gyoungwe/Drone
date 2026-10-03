@@ -280,6 +280,13 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 							{flow.error || flow.publication?.reason}
 						</p>
 					)}
+					{!!flow.publication?.warnings?.length && (
+						<div className="mb-2 space-y-1 rounded-lg bg-hover p-2 text-[11px] text-warn">
+							{flow.publication.warnings.map((warning) => (
+								<p key={`${warning.code}:${warning.message}`}>{warning.message}</p>
+							))}
+						</div>
+					)}
 					<h4 className="mb-1 text-[11px] font-semibold">{t("readScope")}</h4>
 					<div className="space-y-1">
 						{records.map((row: KnowledgeReadRecord) => (

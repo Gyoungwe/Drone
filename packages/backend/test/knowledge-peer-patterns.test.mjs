@@ -342,7 +342,7 @@ describe("review lifecycle and context budget", () => {
 			on: (name, fn) => events.set(name, fn),
 		};
 		const api = registerKnowledgeInterface(pi);
-		const start = await api.beforeStart({ prompt: "Autotomy" }, { cwd });
+		const start = await api.beforeStart({ prompt: "research Autotomy" }, { cwd });
 		expect(start.message.content).toContain("indexAtPreparation");
 		expect(start.message.content).not.toContain("bodyReads");
 		expect(start.message.content).not.toContain("reconciliations");

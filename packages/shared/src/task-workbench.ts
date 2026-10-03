@@ -101,6 +101,9 @@ export interface WorkbenchTask {
 	archivedFrom?: TaskState;
 	archivedAt?: string;
 	budget: { calls: number; stageCalls: number };
+	/** Host observations copied onto the view. Absent on older snapshots. */
+	progressCount?: number;
+	stageStartProgress?: number;
 	waitMs: number;
 	capabilities: string[];
 	milestones: TaskMilestone[];
@@ -295,12 +298,170 @@ export function taskIsTerminal(task: WorkbenchTask): boolean {
 }
 
 /**
- * 流内应渲染的任务子集 —— 恒为空。
+ * 流内应渲染的任务子集。
  *
- * 任务的「状态」归右侧上下文面板「任务」页签，任务的「决策」归 ask_user 弹窗，
- * 聊天流只承载对话本身。保留此函数是为了让调用方继续有一个明确的语义入口，
- * 也便于日后若要放开某一类卡片时只改这一处。
+ * 任务状态仍归右侧上下文面板；只有任务已经完成工作、留下待人工验收的
+ * review 动作时，才在对应的助手消息旁投影一张可操作卡片。授权、阻塞和
+ * 其它决策继续由宿主的 ask_user 流程处理，避免把过程噪声塞进聊天流。
  */
-export function tasksForTranscript(_view: TaskView): WorkbenchTask[] {
-	return [];
+export function tasksForTranscript(view: TaskView): WorkbenchTask[] {
+	return view.tasks.filter((task) =>
+		task.actions.some((action) => action.kind === "review" && action.state === "pending"),
+	);
+}
+
+export type TaskDecisionLang = "zh" | "en";
+
+/** Chat card for one task. Presentation only: it never mutates the ledger. */
+export interface TaskDecision {
+	mode: "decision" | "line";
+	title: string;
+	stop: string;
+	done: string;
+	remaining: string;
+	details: string[];
+	line: string;
+	canComplete: boolean;
+	canDefer: boolean;
+	canEnd: boolean;
+	completeActionId: string | null;
+	cannotComplete: string | null;
+	completeLabel: string;
+	deferLabel: string;
+	endLabel: string;
+	detailsLabel: string;
+}
+
+function clip(text: string, max: number): string {
+	const flat = text.replace(/\s+/g, " ").trim();
+	return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}
+
+function pendingReview(task: WorkbenchTask) {
+	return task.actions.find((action) => action.kind === "review" && action.state === "pending");
+}
+
+/** The latest snapshot's card. Pending reviews first; otherwise the active task, as one line. */
+export function tasksForDecision(view: TaskView): WorkbenchTask[] {
+	const pending = tasksForTranscript(view);
+	if (pending.length) return pending;
+	const active = view.tasks.find((task) => task.id === view.activeTaskId) ?? view.tasks.at(-1);
+	return active ? [active] : [];
+}
+
+/**
+ * Title is the decision itself. Three lines say where it stopped, what is done, and what is left.
+ * Completion is offered only when the review is tied to an open human-review deliverable.
+ */
+export function taskDecision(task: WorkbenchTask, lang: TaskDecisionLang = "zh"): TaskDecision {
+	const zh = lang !== "en";
+	const review = pendingReview(task);
+	const milestone = review?.milestoneId
+		? task.milestones.find((item) => item.id === review.milestoneId)
+		: undefined;
+	const canComplete = Boolean(
+		review && milestone && milestone.acceptance.kind === "human_review" && milestone.state !== "completed",
+	);
+	const terminal = TERMINAL_TASK_STATES.has(task.state);
+	const doneNames = task.milestones.filter((item) => item.state === "completed").map((item) => item.title);
+	const openNames = task.milestones.filter((item) => item.state !== "completed").map((item) => item.title);
+	const done = doneNames.length
+		? zh
+			? `已经做成：${doneNames.join("、")}`
+			: `Done: ${doneNames.join(", ")}`
+		: zh
+			? "已经做成：还没有勾掉的交付"
+			: "Done: nothing checked off yet";
+	const remaining = openNames.length
+		? zh
+			? `还差：${openNames.join("、")}`
+			: `Left: ${openNames.join(", ")}`
+		: task.remainingSummary
+			? zh
+				? `还差：${clip(task.remainingSummary, 160)}`
+				: `Left: ${clip(task.remainingSummary, 160)}`
+			: zh
+				? "还差：没有列出的未完成项"
+				: "Left: no open deliverable is listed";
+	const stop =
+		task.reason === "stage-budget" || task.reason === "budget-review-required"
+			? zh
+				? "停在这一段的步数上限"
+				: "Stopped at this stage's step limit"
+			: task.reason === "total-budget"
+				? zh
+					? "停在整个任务的步数上限"
+					: "Stopped at the task step limit"
+				: review
+					? zh
+						? "停下来等你看一眼"
+						: "Stopped for you to look"
+					: task.state === "blocked"
+						? zh
+							? "停在宿主拦住的地方"
+							: "Stopped at a host block"
+						: zh
+							? "还在做"
+							: "Still going";
+	const ops = task.operations.slice(-4).map((op) => `${op.tool} · ${op.state}`);
+	const details = [
+		zh
+			? `步数 ${task.budget.calls}，这一段 ${task.budget.stageCalls}`
+			: `Calls ${task.budget.calls}, this stage ${task.budget.stageCalls}`,
+		task.reason
+			? zh
+				? `原因代码 ${task.reason}`
+				: `Reason code ${task.reason}`
+			: zh
+				? "没有原因代码"
+				: "No reason code",
+		...(typeof task.progressCount === "number"
+			? [
+					zh
+						? `这一段新进展 ${task.progressCount}，起点 ${task.stageStartProgress ?? 0}`
+						: `Progress ${task.progressCount}, stage start ${task.stageStartProgress ?? 0}`,
+				]
+			: []),
+		...ops,
+	];
+	const closed =
+		task.state === "archived"
+			? zh
+				? "已归档"
+				: "archived"
+			: task.state === "cancelled" || task.state === "completed"
+				? zh
+					? "已结束"
+					: "ended"
+				: task.state === "blocked"
+					? zh
+						? "停着"
+						: "stopped"
+					: zh
+						? "还在做"
+						: "in progress";
+	const mode = review && !terminal ? "decision" : "line";
+	return {
+		mode,
+		title: review?.title.trim() || task.goal,
+		stop,
+		done,
+		remaining,
+		details,
+		line: `${task.goal} · ${closed}`,
+		canComplete,
+		canDefer: mode === "decision",
+		canEnd: mode === "decision" && !terminal,
+		completeActionId: canComplete && review ? review.id : null,
+		cannotComplete:
+			mode === "decision" && !canComplete
+				? zh
+					? "这项对不上具体交付，不能替你勾完成。"
+					: "This review is not tied to a deliverable, so it cannot be marked complete."
+				: null,
+		completeLabel: zh ? "我看过了，这项算完成" : "I checked it; count this done",
+		deferLabel: zh ? "先不验收，继续后面的" : "Leave it unchecked and continue",
+		endLabel: zh ? "结束这项任务" : "End this task",
+		detailsLabel: zh ? "详情" : "Details",
+	};
 }

@@ -1,4 +1,6 @@
 import { describeAcceptance, effectiveAcceptance } from "./acceptance.mjs";
+import { hasTaskConsent } from "./consent.mjs";
+const TASK_TOTAL_CALLS = 192;
 function computeAuthorizationDetails(compute) {
   if (!compute || typeof compute !== "object") return null;
   const hosts = Array.isArray(compute.hosts) && compute.hosts.every((host) => typeof host === "string") ? compute.hosts : null;
@@ -23,6 +25,8 @@ function createTaskAuthorization(journal, checkBinding = async () => null) {
       throw new Error("Task changed. Refresh before requesting authorization.");
     if (["completed", "cancelled", "archived"].includes(task.state))
       throw new Error("Task is no longer awaiting authorization.");
+    if (input.action === "authorize-task" && hasTaskConsent(task, TASK_TOTAL_CALLS) && (await checkBinding() ?? null) === (task.binding ?? null))
+      return true;
     const action = input.action === "ask-authorization" ? task.actions.find(
       (a) => a.id === input.actionId && ["authorization", "rebind"].includes(a.kind) && a.state === "pending"
     ) : null;

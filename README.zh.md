@@ -22,13 +22,15 @@
 
 ## 演示
 
+下面的图片均来自 Drone Electron 应用的实际截图。聊天页现在把每轮路由说明和待处理的任务决定收进同一张可展开卡片；交互和文案规则见[回合路由设计说明](docs/superpowers/specs/2026-10-04-turn-route-explanation-design.md)。
+
 ![drone 欢迎页与鲸鱼娘桌宠](docs/assets/img/drone_pet.png)
 
 ![设置 —— UI 插件管理，内置鲸鱼娘桌宠](docs/assets/img/drone_ui_plugins.png)
 
-**聊天页**
+**聊天页与任务执行**
 
-![聊天页演示](docs/assets/img/demo-chat.gif)
+![桌面应用中的聊天页与任务执行](docs/assets/img/demo-chat.gif)
 
 **自定义背景 + 深色主题**
 
