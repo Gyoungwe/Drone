@@ -1,3 +1,5 @@
+import type { ComputeDataDesignContract } from "@drone/shared";
+
 /** A host profile is safe to persist: it deliberately contains no credentials. */
 export interface HostProfile {
 	readonly alias: string;
@@ -590,6 +592,8 @@ export interface ComputeAuthorization {
 	workflows: readonly string[];
 	budget: ComputeBudget;
 	agentCode?: boolean;
+	/** B7's immutable data/design references are part of the signed authorization. */
+	dataDesign?: ComputeDataDesignContract;
 }
 
 export interface ComputeWorkflowJobSpec {

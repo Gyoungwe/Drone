@@ -111,6 +111,7 @@ export {
 	type ComputeCollectResult,
 	type ComputeEvent,
 	type ComputeExecutor,
+	type ComputeExperienceRecorder,
 	type ComputeJobInput,
 	type ComputeLogEvent,
 	type ComputeLogsResult,
@@ -130,6 +131,25 @@ export {
 	createComputeServiceAdapter,
 	createUnavailableComputeService,
 } from "./services/compute-adapter";
+export {
+	ComputeDataDesignService,
+	type ComputeDataDesignServiceOptions,
+	type ComputeDataDesignServicePort,
+	createComputeDataDesignService,
+} from "./services/compute-data-design";
+export {
+	type ComputeExperienceBridgeOptions,
+	createComputeExperienceRecorder,
+} from "./services/compute-experience";
+export {
+	assertComputePreflight,
+	type ComputeDataDesignSubmission,
+	ComputePreflightError,
+	type ComputePreflightJobSpec,
+	type ComputePreflightResult,
+	type ComputeProposalQuestion,
+	preflightComputeSubmission,
+} from "./services/compute-preflight";
 export { InquiryService, type InquiryServiceOptions, type InquiryServicePort } from "./services/inquiry";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {

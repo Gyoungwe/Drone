@@ -14,6 +14,7 @@ import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
 import { getAgentDir } from "../session-engine/engine";
 import type { StorageRegistry } from "../storage/registry";
+import { assertComputePreflight, type ComputePreflightJobSpec } from "./compute-preflight";
 
 const log = createLogger("compute-service");
 
@@ -106,11 +107,26 @@ export interface ComputeServiceOptions {
 	storage: StorageRegistry;
 	agentDir?: string;
 	executor?: ComputeExecutor;
+	/** Optional host hook for additional checks; built-in B7 preflight always runs. */
+	preflight?: (spec: ComputePreflightJobSpec) => void | Promise<void>;
+	/** Receives terminal/collection observations for the B4 experience store. */
+	experienceRecorder?: ComputeExperienceRecorder;
 	pollIntervalMs?: number;
 }
 
+export interface ComputeExperienceRecorder {
+	record(event: ComputeEvent, job: JobRecord): void | Promise<void>;
+}
+
 /** Host contracts permit an omitted id; the service allocates one before prepare/start. */
-export type ComputeJobInput = Omit<JobSpec, "jobId"> & { jobId?: string };
+export type ComputeJobInput = Omit<JobSpec, "jobId"> & {
+	jobId?: string;
+	/** Optional B7 records and immutable design contract supplied by the task host. */
+	dataDesign?: unknown;
+	/** Approved task contract, including the B7 dataDesign hash binding. */
+	authorization?: unknown;
+	contractHash?: string;
+};
 
 export interface ComputeEvent {
 	readonly id: string;
@@ -262,6 +278,8 @@ export class ComputeService implements ComputeServicePort {
 	private readonly hostCache = new Map<string, HostProfile>();
 	private readonly events = new Set<(event: ComputeEvent) => void>();
 	private readonly executor?: ComputeExecutor;
+	private readonly preflight?: (spec: ComputePreflightJobSpec) => void | Promise<void>;
+	private readonly experienceRecorder?: ComputeExperienceRecorder;
 	private readonly runtime?: DroneRuntime;
 	private readonly pollIntervalMs: number;
 	private pollTimer: ReturnType<typeof setInterval> | undefined;
@@ -271,6 +289,8 @@ export class ComputeService implements ComputeServicePort {
 	constructor(private readonly options: ComputeServiceOptions) {
 		this.runtime = options.runtime;
 		this.executor = options.executor;
+		this.preflight = options.preflight;
+		this.experienceRecorder = options.experienceRecorder;
 		this.pollIntervalMs = Math.max(1_000, options.pollIntervalMs ?? 15_000);
 		this.root = join(options.agentDir ?? getAgentDir(), "compute");
 		this.registerStorage();
@@ -456,6 +476,11 @@ export class ComputeService implements ComputeServicePort {
 	}
 
 	async submit(spec: ComputeJobInput): Promise<JobRecord> {
+		// B7 is a host-side gate. Run it before idempotency lookup, persistence,
+		// initialization, or any executor call so an invalid/mismatched design
+		// cannot cause an observable compute side effect or silently alter intent.
+		assertComputePreflight(spec as ComputePreflightJobSpec);
+		if (this.preflight) await this.preflight(spec as ComputePreflightJobSpec);
 		if (!this.initialized) await this.init();
 		const raw = asRecord(spec);
 		const requestedId = typeof raw.jobId === "string" ? raw.jobId : undefined;
@@ -784,6 +809,12 @@ export class ComputeService implements ComputeServicePort {
 
 	private async appendEvent(event: ComputeEvent): Promise<void> {
 		await this.eventStore(event.jobId).update((events) => [...events, event]);
+		const observedJob = this.jobs.get(event.jobId);
+		if (observedJob && this.experienceRecorder) {
+			await Promise.resolve(this.experienceRecorder.record(event, observedJob)).catch((error) => {
+				log.warn("compute experience recording failed", error);
+			});
+		}
 		for (const handler of this.events) {
 			try {
 				handler(event);
