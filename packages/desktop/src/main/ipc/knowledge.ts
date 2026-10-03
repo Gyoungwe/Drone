@@ -61,6 +61,8 @@ export function registerKnowledgeIpc(
 	const implementation: ContractImplementation<typeof KnowledgeContract> = {
 		setSpecialistSettings: (input) => knowledge.specialistSettings(input),
 		getOverview: (...args) => knowledge.overview(args[0]),
+		getResearchRuns: (...args) => knowledge.researchRuns(args[0]),
+		getResearchRun: (input) => knowledge.researchRun(input),
 		previewSetup: (input) => knowledge.setupPreview(input),
 		startSetup: (input) => knowledgeSession.startSetup(input),
 		getJobs: (...args) => knowledge.jobs(args[0]),
@@ -95,6 +97,8 @@ export function registerKnowledgeIpc(
 			({
 				setSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
 				getOverview: IpcChannels.KnowledgeOverview,
+				getResearchRuns: IpcChannels.KnowledgeResearchRuns,
+				getResearchRun: IpcChannels.KnowledgeResearchRun,
 				previewSetup: IpcChannels.KnowledgeSetupPreview,
 				startSetup: IpcChannels.KnowledgeSetupStart,
 				getJobs: IpcChannels.KnowledgeJobs,

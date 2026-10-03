@@ -19,6 +19,12 @@ export interface KnowledgeUiServicePort {
 	overview(
 		input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeOverview"]>;
+	researchRuns(
+		input: Parameters<KnowledgeApi["getResearchRuns"]>[0],
+	): ReturnType<KnowledgeApi["getResearchRuns"]>;
+	researchRun(
+		input: Parameters<KnowledgeApi["getResearchRun"]>[0],
+	): ReturnType<KnowledgeApi["getResearchRun"]>;
 	setupPreview(
 		input: Parameters<KnowledgeApi["previewKnowledgeSetup"]>[0],
 	): ReturnType<KnowledgeApi["previewKnowledgeSetup"]>;
@@ -80,6 +86,15 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			/* @vite-ignore */ pathToFileURL(join(this.root(), "lib", "knowledge", `${name}.mjs`)).href
 		);
 	}
+	private async researchModule(name: string) {
+		return import(/* @vite-ignore */ pathToFileURL(join(this.root(), "lib", `${name}.mjs`)).href);
+	}
+	private async workspaceConfig(cwd: string) {
+		const mod = await import(
+			/* @vite-ignore */ pathToFileURL(join(this.root(), "extensions", "workspace-config.mjs")).href
+		);
+		return mod.loadWorkspaceConfig(cwd);
+	}
 	async connect(): Promise<void> {
 		if (!process.env.DRONE_KNOWLEDGE_DIR || this.unsubscribe || this.disposed) return;
 		if (!this.loading)
@@ -132,6 +147,22 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeOverview"]> {
 		return this.call("knowledgeOverview", input);
+	}
+	async researchRuns(
+		input: Parameters<KnowledgeApi["getResearchRuns"]>[0] = {},
+	): ReturnType<KnowledgeApi["getResearchRuns"]> {
+		const cwd = input?.cwd || process.cwd();
+		const config = await this.workspaceConfig(cwd);
+		const mod = await this.researchModule("research-run-ui");
+		return mod.listResearchRuns({ ...input, resultsRoot: config.resultsRoot });
+	}
+	async researchRun(
+		input: Parameters<KnowledgeApi["getResearchRun"]>[0],
+	): ReturnType<KnowledgeApi["getResearchRun"]> {
+		const cwd = input?.cwd || process.cwd();
+		const config = await this.workspaceConfig(cwd);
+		const mod = await this.researchModule("research-run-ui");
+		return mod.getResearchRun({ ...input, resultsRoot: config.resultsRoot });
 	}
 	setupPreview(
 		input: Parameters<KnowledgeApi["previewKnowledgeSetup"]>[0],

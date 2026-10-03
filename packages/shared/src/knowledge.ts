@@ -184,6 +184,57 @@ export interface KnowledgeOverview {
 	error?: string | null;
 	flow: KnowledgeFlow | null;
 }
+export type ResearchRunRouteState = "pending" | "active" | "complete" | "blocked";
+export interface ResearchRunRouteNode {
+	key: string;
+	label: string;
+	state: ResearchRunRouteState;
+	at: string | null;
+	detail: string | null;
+}
+export interface ResearchRunListItem {
+	runId: string;
+	resultSlug: string;
+	project: string;
+	topicId: string | null;
+	query: string;
+	status: string;
+	stage: string;
+	answerable: boolean;
+	scientificallyVerified: false;
+	startedAt: string | null;
+	updatedAt: string | null;
+	runDir: string;
+}
+export interface ResearchRunSource {
+	path: string;
+	status: string;
+	hash: string | null;
+	verified: boolean;
+}
+export interface ResearchRunClaim {
+	claim: string;
+	support: string[];
+	status: string;
+}
+export interface ResearchRunDetail extends ResearchRunListItem {
+	route: ResearchRunRouteNode[];
+	sources: ResearchRunSource[];
+	claims: ResearchRunClaim[];
+	warnings: string[];
+	coverage: Record<string, unknown> | null;
+	archive: { count: number; reused: number; verified: boolean };
+}
+export interface ResearchRunsRequest {
+	cwd?: string | null;
+	project?: string | null;
+	limit?: number;
+}
+export interface ResearchRunRequest {
+	cwd?: string | null;
+	runDir?: string | null;
+	runId?: string | null;
+}
 export interface KnowledgePage<T> {
 	items: T[];
 	total: number;
@@ -316,6 +367,8 @@ export interface WikiModelReviewResult {
 	sources?: { path: string; hash: string; startLine: number; endLine: number }[];
 }
 export interface KnowledgeApi {
+	getResearchRuns(input?: ResearchRunsRequest): Promise<{ items: ResearchRunListItem[]; total: number }>;
+	getResearchRun(input: ResearchRunRequest): Promise<ResearchRunDetail>;
 	getKnowledgeSemanticStatus(input?: {
 		cwd?: string | null;
 		bindingRevision?: number;
