@@ -199,6 +199,15 @@ function createResearchLoop(ports) {
         "Reused source changed or current-turn receipt is missing; re-read and verify the existing note, do not re-import it"
       );
   }
+  async function validateStoredClaimBindings(cwd, runDir, gate) {
+    if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
+      throw new Error("Structured claim_bindings are required before answerable");
+    return validateClaimBindings(
+      gate.claim_bindings,
+      await reusableSources(cwd, runDir),
+      ledger(cwd, runDir).reads
+    );
+  }
   function safeSlug(value, label) {
     const text2 = String(value ?? "").trim();
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text2)) throw new Error(`${label} must be lowercase kebab-case`);
@@ -344,7 +353,13 @@ function createResearchLoop(ports) {
       );
     } else if (action === "verify_archive") {
       requireStage("sources_inspected");
-      const archive = await sourceStatus({ cwd, run_dir: path });
+      const archive = await sourceStatus({ cwd, run_dir: path, verify: true });
+      if (archive.verification && archive.verification.ok !== true) {
+        const failed = archive.verification.items?.filter((item) => item.ok !== true) || [];
+        throw new Error(
+          `Archived source verification failed: ${failed.map((item) => item.reason || item.path).join(", ") || "unknown"}`
+        );
+      }
       const downloaded = (archive.manifest?.items || []).filter((item) => item.status === "downloaded");
       const reused = await reusableSources(cwd, runDir);
       if (!downloaded.length && !reused.length)
@@ -375,20 +390,30 @@ function createResearchLoop(ports) {
         );
         gate = { ...gate, claim_bindings: checked, warnings: [] };
         claimRefs = claimBindingRefs(checked);
-      } else if (gate.claim_bindings.length && claimRefs.length) {
-        gate = { ...gate, claim_bindings: [] };
+      } else if (gate.claim_bindings.length) {
+        const checked = await validateStoredClaimBindings(cwd, runDir, gate);
+        gate = { ...gate, claim_bindings: checked, claim_refs: claimBindingRefs(checked), warnings: [] };
+        claimRefs = claimBindingRefs(checked);
+      } else if (claimRefs.length) {
+        throw new Error("Structured claim_bindings are required; legacy claim_refs cannot make a run answerable");
       }
-      if (!Array.isArray(claimRefs) || claimRefs.length === 0)
-        throw new Error("claim_refs must contain at least one traceable claim binding");
+      if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
+        throw new Error("Structured claim_bindings must contain at least one validated claim");
       gate = advance({ ...gate, claim_refs: [...new Set(claimRefs.map(String))] }, "claims_bound", {
         claim_refs: claimRefs
       });
     } else if (action === "finalize") {
       requireStage("claims_bound");
       await validateReuse(cwd, runDir, gate);
-      if (gate.archive_count + gate.reuse_count < 1 || gate.claim_refs.length < 1)
-        throw new Error("archive verification and claim binding are required before answerable");
-      gate = advance({ ...gate, status: "ok", answerable: true }, "answerable", detail);
+      const checked = await validateStoredClaimBindings(cwd, runDir, gate);
+      const refs = claimBindingRefs(checked);
+      if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
+        throw new Error("archive verification and structured claim bindings are required before answerable");
+      gate = advance(
+        { ...gate, claim_bindings: checked, claim_refs: refs, warnings: [], status: "ok", answerable: true },
+        "answerable",
+        detail
+      );
     } else if (action === "complete") {
       return completeResearchGate({ cwd, runDir, claimRefs, claimBindings });
     } else {
@@ -422,19 +447,16 @@ function createResearchLoop(ports) {
     if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_archived"))
       status = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
     gate = status.evidence_gate;
-    if (!claimBindings.length && !claimRefs.length && !gate.claim_refs.length)
+    if (!claimBindings.length && !gate.claim_bindings.length)
       throw new Error(
-        "Provide explicit claim_refs; downloading or identity verification alone does not bind scientific claims"
+        "Provide structured claim_bindings; legacy claim_refs cannot make a research run answerable"
       );
-    const refs = (Array.isArray(claimRefs) && claimRefs.length ? claimRefs : null) || gate.claim_refs;
-    if (!refs.length && !claimBindings.length)
-      throw new Error("claim_refs must contain at least one traceable claim binding");
     if (claimBindings.length || RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("claims_bound"))
       status = await updateResearchLoop({
         cwd,
         runDir,
         action: "bind_claims",
-        claimRefs: refs,
+        claimRefs,
         claimBindings
       });
     gate = status.evidence_gate;
@@ -568,13 +590,7 @@ function createResearchLoop(ports) {
         const archived = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
         return archived;
       }
-      if (toolName === "research_deposit_knowledge" && details.type === "claim" && details.note)
-        return await updateResearchLoop({
-          cwd,
-          runDir,
-          action: "bind_claims",
-          claimRefs: [details.note]
-        });
+      if (toolName === "research_deposit_knowledge" && details.type === "claim" && details.note) return null;
       return null;
     } catch {
       return null;

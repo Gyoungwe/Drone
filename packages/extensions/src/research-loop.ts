@@ -54,9 +54,9 @@ export default function researchLoop(pi: Pi): void {
 	const ports: ResearchLoopPorts = {
 		workspace: async (cwd) => (await loadWorkspaceConfig(cwd)) as any,
 		verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input as any),
-		sourceStatus: async ({ cwd, run_dir }) => {
+		sourceStatus: async ({ cwd, run_dir, verify }) => {
 			return typedSourceStatus(
-				{ cwd, run_dir },
+				{ cwd, run_dir, verify },
 				{
 					workspace: async (workspaceCwd) => (await loadWorkspaceConfig(workspaceCwd)) as any,
 					publishSourceNote: async () => ({}),

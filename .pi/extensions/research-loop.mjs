@@ -448,6 +448,15 @@ function createResearchLoop(ports) {
         "Reused source changed or current-turn receipt is missing; re-read and verify the existing note, do not re-import it"
       );
   }
+  async function validateStoredClaimBindings(cwd, runDir, gate) {
+    if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
+      throw new Error("Structured claim_bindings are required before answerable");
+    return validateClaimBindings(
+      gate.claim_bindings,
+      await reusableSources(cwd, runDir),
+      ledger(cwd, runDir).reads
+    );
+  }
   function safeSlug(value, label) {
     const text2 = String(value ?? "").trim();
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text2)) throw new Error(`${label} must be lowercase kebab-case`);
@@ -593,7 +602,13 @@ function createResearchLoop(ports) {
       );
     } else if (action === "verify_archive") {
       requireStage("sources_inspected");
-      const archive = await sourceStatus2({ cwd, run_dir: path });
+      const archive = await sourceStatus2({ cwd, run_dir: path, verify: true });
+      if (archive.verification && archive.verification.ok !== true) {
+        const failed = archive.verification.items?.filter((item) => item.ok !== true) || [];
+        throw new Error(
+          `Archived source verification failed: ${failed.map((item) => item.reason || item.path).join(", ") || "unknown"}`
+        );
+      }
       const downloaded = (archive.manifest?.items || []).filter((item) => item.status === "downloaded");
       const reused = await reusableSources(cwd, runDir);
       if (!downloaded.length && !reused.length)
@@ -624,20 +639,30 @@ function createResearchLoop(ports) {
         );
         gate = { ...gate, claim_bindings: checked, warnings: [] };
         claimRefs = claimBindingRefs(checked);
-      } else if (gate.claim_bindings.length && claimRefs.length) {
-        gate = { ...gate, claim_bindings: [] };
+      } else if (gate.claim_bindings.length) {
+        const checked = await validateStoredClaimBindings(cwd, runDir, gate);
+        gate = { ...gate, claim_bindings: checked, claim_refs: claimBindingRefs(checked), warnings: [] };
+        claimRefs = claimBindingRefs(checked);
+      } else if (claimRefs.length) {
+        throw new Error("Structured claim_bindings are required; legacy claim_refs cannot make a run answerable");
       }
-      if (!Array.isArray(claimRefs) || claimRefs.length === 0)
-        throw new Error("claim_refs must contain at least one traceable claim binding");
+      if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
+        throw new Error("Structured claim_bindings must contain at least one validated claim");
       gate = advance({ ...gate, claim_refs: [...new Set(claimRefs.map(String))] }, "claims_bound", {
         claim_refs: claimRefs
       });
     } else if (action === "finalize") {
       requireStage("claims_bound");
       await validateReuse(cwd, runDir, gate);
-      if (gate.archive_count + gate.reuse_count < 1 || gate.claim_refs.length < 1)
-        throw new Error("archive verification and claim binding are required before answerable");
-      gate = advance({ ...gate, status: "ok", answerable: true }, "answerable", detail);
+      const checked = await validateStoredClaimBindings(cwd, runDir, gate);
+      const refs = claimBindingRefs(checked);
+      if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
+        throw new Error("archive verification and structured claim bindings are required before answerable");
+      gate = advance(
+        { ...gate, claim_bindings: checked, claim_refs: refs, warnings: [], status: "ok", answerable: true },
+        "answerable",
+        detail
+      );
     } else if (action === "complete") {
       return completeResearchGate({ cwd, runDir, claimRefs, claimBindings });
     } else {
@@ -671,19 +696,16 @@ function createResearchLoop(ports) {
     if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("sources_archived"))
       status = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
     gate = status.evidence_gate;
-    if (!claimBindings.length && !claimRefs.length && !gate.claim_refs.length)
+    if (!claimBindings.length && !gate.claim_bindings.length)
       throw new Error(
-        "Provide explicit claim_refs; downloading or identity verification alone does not bind scientific claims"
+        "Provide structured claim_bindings; legacy claim_refs cannot make a research run answerable"
       );
-    const refs = (Array.isArray(claimRefs) && claimRefs.length ? claimRefs : null) || gate.claim_refs;
-    if (!refs.length && !claimBindings.length)
-      throw new Error("claim_refs must contain at least one traceable claim binding");
     if (claimBindings.length || RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf("claims_bound"))
       status = await updateResearchLoop({
         cwd,
         runDir,
         action: "bind_claims",
-        claimRefs: refs,
+        claimRefs,
         claimBindings
       });
     gate = status.evidence_gate;
@@ -817,13 +839,7 @@ function createResearchLoop(ports) {
         const archived = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
         return archived;
       }
-      if (toolName === "research_deposit_knowledge" && details.type === "claim" && details.note)
-        return await updateResearchLoop({
-          cwd,
-          runDir,
-          action: "bind_claims",
-          claimRefs: [details.note]
-        });
+      if (toolName === "research_deposit_knowledge" && details.type === "claim" && details.note) return null;
       return null;
     } catch {
       return null;
@@ -941,8 +957,9 @@ async function observeExecutionReceipt({
 }
 
 // packages/research/src/source-archive.ts
+import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
 import { access as access2, mkdir as mkdir2, readFile as readFile4, realpath as realpath5, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
-import { basename as basename2, dirname as dirname2, extname, join as join3, relative as relative5, resolve as resolve6, sep as sep5 } from "node:path";
+import { basename as basename2, dirname as dirname2, extname, isAbsolute as isAbsolute5, join as join3, relative as relative5, resolve as resolve6, sep as sep5 } from "node:path";
 
 // packages/research/src/open-access.ts
 var OA_SOURCES = Object.freeze([
@@ -983,6 +1000,45 @@ async function readManifest(file, runDir) {
     return { version: 1, run_dir: runDir, updated_at: null, items: [] };
   }
 }
+async function verifyManifestItems(manifest, runDir) {
+  const downloaded = manifest.items.filter((entry) => entry?.status === "downloaded");
+  if (downloaded.length === 0) return { ok: true, items: [] };
+  let sourcesRoot;
+  try {
+    sourcesRoot = await realpath5(join3(runDir, "sources"));
+  } catch {
+    return {
+      ok: false,
+      items: downloaded.map((item) => ({
+        id: item.id ?? null,
+        path: item.path ?? item.local_path ?? null,
+        ok: false,
+        reason: "sources directory is missing"
+      }))
+    };
+  }
+  const items = [];
+  for (const item of downloaded) {
+    const path = typeof item.path === "string" ? item.path : typeof item.local_path === "string" ? item.local_path : "";
+    if (!path) {
+      items.push({ id: item.id ?? null, path: null, ok: false, reason: "missing manifest path" });
+      continue;
+    }
+    try {
+      const canonical = await realpath5(isAbsolute5(path) ? path : resolve6(runDir, path));
+      if (!isWithin(sourcesRoot, canonical)) throw new Error("path escapes run sources");
+      const bytes = await readFile4(canonical);
+      const sha256 = createHash3("sha256").update(bytes).digest("hex");
+      if (sha256 !== String(item.sha256 || "").toLowerCase()) throw new Error("sha256 mismatch");
+      if (item.size_bytes !== void 0 && Number(item.size_bytes) !== bytes.byteLength)
+        throw new Error("size mismatch");
+      items.push({ id: item.id ?? null, path: canonical, ok: true, sha256, size_bytes: bytes.byteLength });
+    } catch (error) {
+      items.push({ id: item.id ?? null, path, ok: false, reason: String(error?.message || error) });
+    }
+  }
+  return { ok: items.every((item) => item.ok === true), items };
+}
 async function sourceStatus(options = {}, ports) {
   if (!ports) throw new Error("Source archive host ports are required");
   const { cwd = process.cwd(), run_dir } = options;
@@ -1011,7 +1067,8 @@ async function sourceStatus(options = {}, ports) {
     manifest_path: manifestExists ? manifestPath : null,
     failures_path: failuresExists ? failuresPath : null,
     manifest,
-    failure_count: manifest.failures?.length ?? Math.max(0, (failures.match(/^## /gm) || []).length)
+    failure_count: manifest.failures?.length ?? Math.max(0, (failures.match(/^## /gm) || []).length),
+    ...options.verify ? { verification: await verifyManifestItems(manifest, runDir) } : {}
   };
 }
 
@@ -1445,13 +1502,13 @@ function standaloneRuntime2() {
 
 // packages/extensions/src/workspace-config.ts
 import { access as access3, mkdir as mkdir4, readFile as readFile6, realpath as realpath7, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
-import { dirname as dirname3, isAbsolute as isAbsolute6, join as join5, relative as relative6, resolve as resolve8, sep as sep6 } from "node:path";
+import { dirname as dirname3, isAbsolute as isAbsolute7, join as join5, relative as relative6, resolve as resolve8, sep as sep6 } from "node:path";
 
 // packages/knowledge/src/config.ts
 import { AsyncLocalStorage as AsyncLocalStorage3 } from "node:async_hooks";
-import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash4, randomUUID as randomUUID4 } from "node:crypto";
 import { mkdir as mkdir3, readFile as readFile5, realpath as realpath6, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
-import { basename as basename3, isAbsolute as isAbsolute5, join as join4, resolve as resolve7 } from "node:path";
+import { basename as basename3, isAbsolute as isAbsolute6, join as join4, resolve as resolve7 } from "node:path";
 function createKnowledgeConfigState() {
   return { local: new AsyncLocalStorage3(), queues: /* @__PURE__ */ new Map() };
 }
@@ -1461,17 +1518,17 @@ function errorCode(error) {
 function knowledgeDirectory() {
   const value = process.env.DRONE_KNOWLEDGE_DIR;
   if (!value) return null;
-  if (!isAbsolute5(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
+  if (!isAbsolute6(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
   return resolve7(value);
 }
 function projectIdentity(cwd, configured) {
   if (typeof configured === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured)) return configured;
   const path = resolve7(cwd);
   const stem = basename3(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
-  return `${stem}-${createHash3("sha256").update(path).digest("hex").slice(0, 10)}`;
+  return `${stem}-${createHash4("sha256").update(path).digest("hex").slice(0, 10)}`;
 }
 function validateBinding(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute5(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute6(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
     throw new Error("Invalid application knowledge binding; no project fallback was used");
 }
 async function readKnowledgeBindingWithState(state, { fresh = false } = {}) {
@@ -1662,9 +1719,9 @@ function researchLoop(pi) {
   const ports = {
     workspace: async (cwd) => await loadWorkspaceConfig(cwd),
     verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input),
-    sourceStatus: async ({ cwd, run_dir }) => {
+    sourceStatus: async ({ cwd, run_dir, verify }) => {
       return sourceStatus(
-        { cwd, run_dir },
+        { cwd, run_dir, verify },
         {
           workspace: async (workspaceCwd) => await loadWorkspaceConfig(workspaceCwd),
           publishSourceNote: async () => ({}),

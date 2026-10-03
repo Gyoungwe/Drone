@@ -16,21 +16,21 @@
 			"output": "knowledge-extension.mjs",
 			"status": "generated",
 			"sourceSha256": "809a5be02436faea7bd05fab84d9ddfd94444194b425d94acb9ffb72d34940be",
-			"outputSha256": "551bcee8d440c9f40e0c54ef322b10c51f230ab365a381e92e91c04545c94db7"
+			"outputSha256": "1cdc2a29b59d39fc41f8773db46ee2be99726af6b888164a3918ef0eb10068ae"
 		},
 		"obsidian-workbench": {
 			"source": "obsidian-workbench.ts",
 			"output": "obsidian-workbench.mjs",
 			"status": "generated",
 			"sourceSha256": "0308fcc2628377c184a55d3be5fde53760d4a80658d11bc886620a2bc12b4fef",
-			"outputSha256": "4895d783e474bfd6c0c9adf9683381b609088c77f5b0d93ea1e095f211db0e3d"
+			"outputSha256": "515f6d3f371fe0bb142cda56147e6bcb37bf1ff27bc477e2978a6cb5508509b7"
 		},
 		"research-loop": {
 			"source": "research-loop.ts",
 			"output": "research-loop.mjs",
 			"status": "generated",
-			"sourceSha256": "4913bc44666882ff963d5587b843fbbfe00dea66a396faa22ffc44941fb80b22",
-			"outputSha256": "5313b49b41e8eb7b1816a8693c4fce0952fa9de32a78ec7dad658c521dd87ceb"
+			"sourceSha256": "756a93d91c0b6e180412b1dd03b9ccc49de5b3174c43eecc44f13f32d2e87baf",
+			"outputSha256": "404fc2d5356b860907e62fe3a15aa1575669ab5097b705160bb64fea2d16b9ac"
 		},
 		"research-wikiloop": {
 			"source": "research-wikiloop.ts",
@@ -51,14 +51,14 @@
 			"output": "source-archive.mjs",
 			"status": "generated",
 			"sourceSha256": "3dcd6df0b98b082e9345151c2dc6a19d9ba7ca7aca942841af73bbbd280cc031",
-			"outputSha256": "99fe30ecbd0e96e333230387e38901d5af7b66bb363a39b075c0d6828aa46d94"
+			"outputSha256": "9ba01b5a9dbeb64810a0c299de82acfa978d33207311cb4b34f2c413cf694120"
 		},
 		"subagent-mcp-readonly": {
 			"source": "subagent-mcp-readonly.ts",
 			"output": "subagent-mcp-readonly.mjs",
 			"status": "generated",
 			"sourceSha256": "98106345b337390cd3cf9f40a96c7e4864cc34d44f4406c3cf57077e6d1c29f9",
-			"outputSha256": "0fe2e21f7df0cfbee2c3d7e68d81a7b9f623595baa41cfc8cab694d378bb31c2"
+			"outputSha256": "65a60ca687e9bad037b601153b76365e775a86d2edee5201fbd50cd98e03a024"
 		},
 		"subagent-research": {
 			"source": "subagent-research.ts",
@@ -71,8 +71,8 @@
 			"source": "workspace-config.ts",
 			"output": "workspace-config.mjs",
 			"status": "generated",
-			"sourceSha256": "d6d50ce6ee188ac88d7be90648fdea71233aa025928a9d57b4c1612acca6eed8",
-			"outputSha256": "b3b30f47331e8e1cf4799b1a892234cbb36b90913c76373a9b10af71554574aa"
+			"sourceSha256": "38e48fd5774faed560b7283c339ae64c9cd93d96ab0e289148bd6403c4a327ed",
+			"outputSha256": "ff1da357a18e69ce0cafcdea654a5977e9a06897ab32356ccc75d73a9342d507"
 		},
 		"zotero-literature": {
 			"source": "zotero-literature.ts",

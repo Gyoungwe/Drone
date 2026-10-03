@@ -296,10 +296,11 @@ describe("worker-owned hybrid retrieval", () => {
 				vector: [1, 0],
 				minSimilarity: 0.9,
 			});
-			expect(candidates[0]).toMatchObject({ chunkIndex: match.chunkIndex });
+			expect(candidates).toMatchObject({ partial: false, scanned: 1, totalEligible: 1 });
+			expect(candidates.items[0]).toMatchObject({ chunkIndex: match.chunkIndex });
 			const hydrated = await service.request("hydrateCandidates", {
 				project: "project-a",
-				candidates,
+				candidates: candidates.items,
 				limit: 1,
 			});
 			expect(hydrated.hits[0].startLine).toBeGreaterThan(1);
@@ -359,7 +360,7 @@ describe("worker-owned hybrid retrieval", () => {
 					vector: [0.3, Math.sqrt(1 - 0.3 ** 2)],
 					minSimilarity: 0.35,
 				}),
-			).toEqual([]);
+			).toMatchObject({ items: [] });
 			expect(
 				await service.request("semanticCandidates", {
 					fingerprint: "test-fingerprint",
@@ -367,7 +368,7 @@ describe("worker-owned hybrid retrieval", () => {
 					vector: [0.3, Math.sqrt(1 - 0.3 ** 2)],
 					minSimilarity: 0.2,
 				}),
-			).toEqual([expect.objectContaining({ path: "Library/Papers/current.md" })]);
+			).toMatchObject({ items: [expect.objectContaining({ path: "Library/Papers/current.md" })] });
 			expect(
 				(
 					await service.request("hydrateCandidates", {
@@ -378,7 +379,7 @@ describe("worker-owned hybrid retrieval", () => {
 						project: "project-a",
 					})
 				).hits,
-			).toEqual([]);
+				).toEqual([]);
 			await writeFile(join(vault, "Library/Papers/current.md"), "# Changed\nreplacement");
 			await service.request("changed", { paths: ["Library/Papers/current.md"] });
 			expect(
@@ -387,7 +388,7 @@ describe("worker-owned hybrid retrieval", () => {
 					project: "project-a",
 					vector: [1, 0],
 				}),
-			).toEqual([]);
+				).toMatchObject({ items: [] });
 		} finally {
 			await service.close();
 		}

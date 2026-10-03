@@ -35,7 +35,7 @@ import {
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-KYVVQJ6E.mjs";
+} from "./chunks/chunk-27SNMV5Y.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
@@ -65,7 +65,7 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-7HHP6BXQ.mjs";
+} from "./chunks/chunk-QVR3JW7N.mjs";
 import {
   embedTexts,
   validateSemanticConfig

@@ -453,8 +453,20 @@ var KnowledgeService = class {
               limit: 24,
               minSimilarity: settings.minSimilarity
             });
-            semanticItems = (Array.isArray(candidateResult) ? candidateResult : candidateResult.items || []).map((item, index) => ({ ...item, rank: index + 1 }));
-            if (candidateResult?.partial) metrics.index.semanticPartial = true;
+            const semanticResult = Array.isArray(candidateResult) ? { items: candidateResult, partial: Boolean(candidateResult.partial) } : candidateResult && typeof candidateResult === "object" ? candidateResult : { items: [], partial: false };
+            semanticItems = (Array.isArray(semanticResult.items) ? semanticResult.items : []).map(
+              (item, index) => ({ ...item, rank: index + 1 })
+            );
+            metrics.index.semantic = {
+              ...metrics.index.semantic || {},
+              coverage: semanticResult.partial ? "partial" : "complete",
+              ...Number.isInteger(semanticResult.scanned) ? { scanned: semanticResult.scanned } : {},
+              ...Number.isInteger(semanticResult.totalEligible) ? { totalEligible: semanticResult.totalEligible } : {}
+            };
+            if (semanticResult.partial) metrics.index.semanticPartial = true;
+            if (Number.isInteger(semanticResult.scanned)) metrics.index.semanticScanned = semanticResult.scanned;
+            if (Number.isInteger(semanticResult.totalEligible))
+              metrics.index.semanticTotalEligible = semanticResult.totalEligible;
           }
         }
       } catch (error) {
@@ -496,6 +508,7 @@ var KnowledgeService = class {
           enabled: semanticEnabled,
           candidateCount: semanticItems.length,
           acceptedCount: hydrated.hits.length,
+          ...metrics.index.semantic ? { coverage: metrics.index.semantic } : {},
           ...semanticError ? { error: semanticError } : {}
         }
       };

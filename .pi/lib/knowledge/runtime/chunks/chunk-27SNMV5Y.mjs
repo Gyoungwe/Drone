@@ -8,7 +8,7 @@ import {
 } from "./chunk-IGZMNWC2.mjs";
 import {
   getKnowledgeService
-} from "./chunk-7HHP6BXQ.mjs";
+} from "./chunk-QVR3JW7N.mjs";
 import {
   normalizeSourceLinks
 } from "./chunk-LE6NM7SB.mjs";

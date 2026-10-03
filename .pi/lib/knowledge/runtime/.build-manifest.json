@@ -28,7 +28,7 @@
 		},
 		"index.mjs": {
 			"source": "packages/knowledge/src/index.ts",
-			"sha256": "69cd2dcec6d8745cbdcf512df9468f0115e9750d5e2ab103fdf251f9c986b9a6"
+			"sha256": "4e40e55d4b994754ec385874aa20d0446b6d95e127e91da6e98001e5b41634ca"
 		},
 		"layout.mjs": {
 			"source": "packages/knowledge/src/layout.ts",
@@ -76,7 +76,7 @@
 		},
 		"service.mjs": {
 			"source": "packages/knowledge/src/service.ts",
-			"sha256": "e483fb9b188251157e9a8ec604ca7780794db0d80f16675e97473bc5af036a16"
+			"sha256": "8e79b0a887e89569e3b5c864e787772d37e8dbf6316e2b6dffe53aceef94ca83"
 		},
 		"source-links.mjs": {
 			"source": "packages/knowledge/src/source-links.ts",
@@ -112,7 +112,7 @@
 		},
 		"ui-service.mjs": {
 			"source": "packages/knowledge/src/ui-service.ts",
-			"sha256": "253edaf58ee5e5c99ca52fe3a2ecf541962ca0890accd38c048c118c5ead39fd"
+			"sha256": "ab3d47acd00f898d76092609d26361d307e3c7d9c7c0b62f1401b3d600abba66"
 		},
 		"ui-state.mjs": {
 			"source": "packages/knowledge/src/ui-state.ts",
@@ -132,7 +132,7 @@
 		},
 		"worker.mjs": {
 			"source": "packages/knowledge/src/worker.ts",
-			"sha256": "42c130b98226a6630ff95fde71a686a80a7cc8c3bab5ce0be4be35777c29024b"
+			"sha256": "e5e00e23092a21aecef17c9da23c654a1be1c64ec7f4efe789ca85e27df0ab29"
 		}
 	}
 }

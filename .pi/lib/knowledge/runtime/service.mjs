@@ -4,7 +4,7 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-7HHP6BXQ.mjs";
+} from "./chunks/chunk-QVR3JW7N.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";
 import "./chunks/chunk-O536IQIE.mjs";
 import "./chunks/chunk-GC2J7ECB.mjs";

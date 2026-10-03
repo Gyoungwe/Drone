@@ -52,7 +52,14 @@ async function seedArchive() {
 		join(sources, "download-manifest.json"),
 		`${JSON.stringify({
 			items: [
-				{ id: "src-1", status: "downloaded", sha256: "abc", path: file, url: "https://example.test/p" },
+				{
+					id: "src-1",
+					status: "downloaded",
+					sha256: createHash("sha256").update("fixture-pdf").digest("hex"),
+					size_bytes: "fixture-pdf".length,
+					path: file,
+					url: "https://example.test/p",
+				},
 			],
 			failures: [],
 		})}\n`,
@@ -130,16 +137,35 @@ it("closes the gate in one host-serial complete after a verified archive", async
 		action: "inspect_sources",
 		sourceRefs: ["https://example.test/p"],
 	});
-	await expect(completeResearchGate({ cwd, runDir })).rejects.toThrow("explicit claim_refs");
+	await expect(completeResearchGate({ cwd, runDir, claimRefs: ["legacy claim"] })).rejects.toThrow(
+		"structured claim_bindings",
+	);
+	await expect(completeResearchGate({ cwd, runDir })).rejects.toThrow("structured claim_bindings");
 	const done = await completeResearchGate({
 		cwd,
 		runDir,
-		claimRefs: ["Explicit limited claim -> https://example.test/p"],
+		claimBindings: [unboundClaimBinding("Explicit limited claim -> https://example.test/p")],
 	});
 	expect(done.evidence_gate.stage).toBe("answerable");
 	expect(done.evidence_gate.answerable).toBe(true);
 	expect(done.evidence_gate.archive_count).toBe(1);
 	expect(done.evidence_gate.claim_refs[0]).toMatch(/^Explicit limited claim/);
+});
+
+it("rejects an archived source after its bytes change", async () => {
+	await seedArchive();
+	await updateResearchLoop({ cwd, runDir, action: "record_local", query: "DESeq2" });
+	await updateResearchLoop({ cwd, runDir, action: "record_external", notes: "used local notes" });
+	await updateResearchLoop({
+		cwd,
+		runDir,
+		action: "inspect_sources",
+		sourceRefs: ["https://example.test/p"],
+	});
+	await writeFile(join(runDir, "sources", "papers", "paper.pdf"), "tampered-pdf");
+	await expect(
+		completeResearchGate({ cwd, runDir, claimBindings: [unboundClaimBinding("tampered claim")] }),
+	).rejects.toThrow("sha256 mismatch");
 });
 
 it("archive download receipts record acquisition but never auto-bind claims or finalize", async () => {
@@ -178,6 +204,22 @@ async function localPaper(name = "paper", key = "ABCDEFGH") {
 	const proof = await verifyLiteratureReceipt({ doi, zotero_key: key, note_path: path, vault });
 	return { vault, path, text, hash, proof };
 }
+function unboundClaimBinding(claim = "Limited claim") {
+	return {
+		claim,
+		relationship: "hypothesis",
+		limitations: "fixture claim requires human review",
+		sources: [],
+	};
+}
+function claimBinding(p, claim = "Limited method claim") {
+	return {
+		claim,
+		relationship: "direct",
+		limitations: "fixture only",
+		sources: [{ path: p.path, start_line: 4, end_line: 4, quote: "Result and limitations." }],
+	};
+}
 async function noteRead(p, overrides = {}) {
 	return observeResearchReceipt({
 		cwd,
@@ -199,11 +241,11 @@ it("reuses actual current-turn note reads without pretending to archive PDFs", a
 	const p = await localPaper();
 	await noteRead(p);
 	await identity(p);
-	await expect(completeResearchGate({ cwd, runDir })).rejects.toThrow("explicit claim_refs");
+	await expect(completeResearchGate({ cwd, runDir })).rejects.toThrow("structured claim_bindings");
 	const done = await completeResearchGate({
 		cwd,
 		runDir,
-		claimRefs: ["Limited method claim -> Library/Papers/paper.md section Result"],
+		claimBindings: [claimBinding(p, "Limited method claim -> Library/Papers/paper.md section Result")],
 	});
 	expect(done.evidence_gate).toMatchObject({
 		answerable: true,
@@ -271,7 +313,11 @@ it("parallel real receipts retain all source refs rather than last-writer-wins",
 				: { data: { DOI: url.includes("ABCDEFGH") ? "10.1038/a" : "10.1038/b" } },
 	}));
 	await Promise.all([noteRead(a), noteRead(b), identity(a), identity(b)]);
-	const done = await completeResearchGate({ cwd, runDir, claimRefs: ["claim a", "claim b"] });
+	const done = await completeResearchGate({
+		cwd,
+		runDir,
+		claimBindings: [claimBinding(a, "claim a"), claimBinding(b, "claim b")],
+	});
 	expect(done.evidence_gate.reuse_count).toBe(2);
 	expect(done.evidence_gate.source_refs).toEqual(expect.arrayContaining([a.path, b.path]));
 });
@@ -318,7 +364,7 @@ async function attachJournal(j) {
 }
 async function finishJournal(j) {
 	return j.execute(runDir, () =>
-		completeResearchGate({ cwd, runDir, claimRefs: ["Limited claim -> Library/Papers/paper.md Result"] }),
+		completeResearchGate({ cwd, runDir, claimBindings: [unboundClaimBinding()] }),
 	);
 }
 it.each(["read-before-start", "verify-before-read", "start-before-read", "parallel"])(
@@ -440,9 +486,9 @@ it("extension captures tool events before start, returns current state, and igno
 		);
 		runDir = start.details.run_dir;
 		expect(start.details.evidence_gate.reuse_count).toBe(1);
-		const done = await tool.execute(
+	const done = await tool.execute(
 			"complete",
-			{ action: "complete", run_dir: runDir, claim_refs: ["Limited claim -> paper.md"] },
+			{ action: "complete", run_dir: runDir, claim_bindings: [claimBinding(p, "Limited claim -> paper.md")] },
 			null,
 			null,
 			ctx,
