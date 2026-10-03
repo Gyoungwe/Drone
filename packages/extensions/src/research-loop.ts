@@ -118,6 +118,7 @@ export default function researchLoop(pi: Pi): void {
 				project: { type: "string" },
 				result_slug: { type: "string" },
 				query: { type: "string" },
+				requires_provenance: { type: "boolean" },
 				source_refs: { type: "array", items: { type: "string" } },
 				claim_refs: { type: "array", items: { type: "string" } },
 				claim_bindings: CLAIM_BINDING_SCHEMA,
@@ -146,6 +147,7 @@ export default function researchLoop(pi: Pi): void {
 								project: params.project,
 								resultSlug: params.result_slug,
 								query: params.query,
+								requiresProvenance: params.requires_provenance === true,
 							})
 						: loop.updateResearchLoop({
 								cwd: ctx.cwd,

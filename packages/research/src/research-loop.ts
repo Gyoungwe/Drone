@@ -23,6 +23,7 @@ export interface ResearchLoopPorts {
 	workspace(cwd: string): Promise<ResearchLoopWorkspace>;
 	verifyLiteratureReceipt(input: Record<string, unknown>): Promise<any>;
 	sourceStatus(input: { cwd: string; run_dir: string; verify?: boolean }): Promise<any>;
+	exclusive?<T>(key: string, work: () => Promise<T>): Promise<T>;
 }
 /** Each host owns one loop instance. No ledger or queue is shared across hosts. */
 export function createResearchLoop(ports: ResearchLoopPorts) {
@@ -215,7 +216,7 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		return { config, path, metadataPath: join(path, "metadata.json") };
 	}
 
-	async function startResearchRun({ cwd = process.cwd(), project, resultSlug, query }: any = {}) {
+	async function startResearchRun({ cwd = process.cwd(), project, resultSlug, query, requiresProvenance = false }: any = {}) {
 		const config = await loadWorkspaceConfig(cwd);
 		project = safeSlug(project || "research-workbench", "project");
 		resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
@@ -234,6 +235,9 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 			topic_id: topicIdFromResultSlug(resultSlug),
 			query: query.trim(),
 			status: "running",
+			revision: 0,
+			requires_provenance: requiresProvenance === true,
+			provenance: { status: requiresProvenance === true ? "pending" : "not-required" },
 			started_at: now,
 			evidence_gate: {
 				stage: "created",
@@ -250,7 +254,7 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		return { run_dir: runDir, metadata };
 	}
 
-	async function updateResearchLoop({
+	async function updateResearchLoopUnlocked({
 		cwd = process.cwd(),
 		runDir,
 		action,
@@ -260,9 +264,13 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		claimBindings = [],
 		outcome,
 		notes,
+		expectedRevision,
 	}: any = {}): Promise<any> {
 		const { path, metadataPath } = await resolveRun(cwd, runDir);
 		const metadata = await readJson(metadataPath);
+		const revision = Number.isInteger(metadata.revision) ? metadata.revision : 0;
+		if (expectedRevision != null && Number(expectedRevision) !== revision)
+			throw new Error(`research run changed; expected revision ${expectedRevision}, found ${revision}`);
 		let gate = gateOf(metadata);
 		const detail: any = {
 			...(query ? { query: String(query).trim() } : {}),
@@ -273,7 +281,7 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 			if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf(stage))
 				throw new Error(`research loop must reach ${stage} before ${action}`);
 		};
-		if (action === "status") return { run_dir: path, metadata, evidence_gate: gate };
+		if (action === "status") return { run_dir: path, metadata, evidence_gate: gate, revision };
 		if (action === "record_local") {
 			if (!query?.trim()) throw new Error("query is required");
 			gate = advance(gate, "local_query_recorded", detail);
@@ -317,7 +325,7 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 			);
 		} else if (action === "bind_claims") {
 			if (gate.stage === "sources_inspected") {
-				const available = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+				const available = await updateResearchLoopUnlocked({ cwd, runDir, action: "verify_archive" });
 				gate = available.evidence_gate;
 			}
 			requireStage("sources_archived");
@@ -349,6 +357,11 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 			const refs = claimBindingRefs(checked);
 			if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
 				throw new Error("archive verification and structured claim bindings are required before answerable");
+			if (metadata.requires_provenance === true) {
+				const provenance = await readJson(join(path, "reproducibility-manifest.json"));
+				if (!provenance || provenance.version !== 1)
+					throw new Error("This run requires a reproducibility manifest before it can become answerable");
+			}
 			gate = advance(
 				{ ...gate, claim_bindings: checked, claim_refs: refs, warnings: [], status: "ok", answerable: true },
 				"answerable",
@@ -361,8 +374,15 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		}
 		metadata.evidence_gate = gate;
 		metadata.updated_at = new Date().toISOString();
+		metadata.revision = revision + 1;
 		await atomicJson(metadataPath, metadata);
-		return { run_dir: path, evidence_gate: gate };
+		return { run_dir: path, evidence_gate: gate, revision: metadata.revision };
+	}
+	async function updateResearchLoop(input: any = {}): Promise<any> {
+		const cwd = input.cwd || process.cwd();
+		const key = runKey(cwd, input.runDir);
+		const work = () => updateResearchLoopUnlocked(input);
+		return ports.exclusive ? ports.exclusive(key, work) : work();
 	}
 
 	function isWikiPath(path: any) {
