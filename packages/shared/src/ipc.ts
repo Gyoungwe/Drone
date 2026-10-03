@@ -67,6 +67,13 @@ export interface ResourcePreviewResult {
 	truncated?: boolean;
 }
 
+/** A user-dropped file copied into the app-owned session attachment store. */
+export interface ImportedAttachment {
+	path: string;
+	name: string;
+	bytes: number;
+}
+
 /** IPC 通道名常量 */
 export const IpcChannels = {
 	KnowledgeOverview: "knowledge:overview",
@@ -181,6 +188,7 @@ export const IpcChannels = {
 	FileSaveDialog: "file:saveDialog",
 	FilePickPath: "file:pickPath",
 	FilePreview: "file:preview",
+	FileImportDropped: "file:importDropped",
 	ResourceOpenExternal: "resource:openExternal",
 	ModelsList: "models:list",
 	SettingsListProviders: "settings:listProviders",
@@ -334,6 +342,8 @@ export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryA
 	pickPath(kind: "file" | "directory", defaultPath?: string): Promise<string | null>;
 	/** 读取本地文件供右侧资源栏预览；路径可相对 cwd。大文本会截断，大二进制只返回元数据。 */
 	previewFile(target: string, cwd?: string): Promise<ResourcePreviewResult>;
+	/** Copy a user-dropped file into the app-owned attachment directory. */
+	importDroppedFile(sourcePath: string, sessionId: string): Promise<ImportedAttachment>;
 	/** 使用系统默认应用打开资源：HTTP(S) 用浏览器，本地路径用系统文件关联。 */
 	openResourceExternal(target: string, cwd?: string): Promise<void>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */

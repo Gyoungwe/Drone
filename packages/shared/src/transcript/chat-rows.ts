@@ -1,3 +1,4 @@
+import { tasksForTranscript } from "../task-workbench";
 import { stageMessages } from "./stage-messages";
 import type { TurnChanges } from "./turn-files";
 import type { TurnTiming } from "./turn-timings";
@@ -166,7 +167,8 @@ export function buildChatRows(
 			});
 		}
 		if (message.thinking || message.tools.length) metaItems.push(committedMetaItem(message));
-		if (message.text) {
+		const hasReviewCard = Boolean(message.taskView && tasksForTranscript(message.taskView).length > 0);
+		if (message.text || hasReviewCard) {
 			flushMeta();
 			rows.push({
 				kind: "message",

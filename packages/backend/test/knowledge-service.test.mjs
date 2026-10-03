@@ -346,7 +346,8 @@ describe("navigation delivery and bounded maintenance", () => {
 		await prepared({ wiki: false });
 		const h = harness();
 		const ctx = { cwd: a, sessionId: "auto-topic" };
-		await h.interface.beforeStart({ prompt: "介绍这组研究文献并沉淀可复用主题" }, ctx);
+		const start = await h.interface.beforeStart({ prompt: "介绍这组研究文献并沉淀可复用主题" }, ctx);
+		expect(start.message?.customType).toBe("drone-knowledge-navigation");
 		await h.tools
 			.get("research_read_knowledge")
 			.execute("read", { path: "Library/Papers/source.md" }, undefined, undefined, ctx);
@@ -426,11 +427,50 @@ describe("navigation delivery and bounded maintenance", () => {
 	it("removes the old navigation payload when the application binding changes", async () => {
 		await prepared();
 		const h = harness();
-		await h.interface.beforeStart({ prompt: "x" }, { cwd: a });
+		await h.interface.beforeStart({ prompt: "自切的知识有哪些？" }, { cwd: a });
 		await configureObsidian({ cwd: b, vault: join(root, "Second Vault") });
 		const output = await h.events.get("context")({ messages: [] });
 		expect(output.messages[0].content).toContain("binding changed");
 		expect(output.messages[0].content).not.toContain("已有认识");
+	});
+	it("does not prepare or gate ordinary chat when an application Vault is bound", async () => {
+		await prepared();
+		const h = harness();
+		const start = await h.interface.beforeStart({ prompt: "你好，帮我写一个排序函数" }, { cwd: a });
+		expect(start.message).toBeUndefined();
+		const context = await h.events.get("context")({ messages: [] });
+		expect(context).toBeUndefined();
+		const end = await h.events.get("message_end")(
+			{
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text: "可以，用 sort 实现。" }],
+					stopReason: "stop",
+					timestamp: Date.now(),
+				},
+			},
+			{ cwd: a },
+		);
+		expect(end.message.knowledgePublication.status).toBe("unconfigured");
+		expect(end.message.content[0].text).toBe("可以，用 sort 实现。");
+	});
+	it("promotes a bound ordinary turn when the model actually reads knowledge", async () => {
+		await prepared({ wiki: false });
+		const h = harness();
+		const ctx = { cwd: a, sessionId: "lazy-knowledge" };
+		await h.interface.beforeStart({ prompt: "请直接回答这个问题" }, ctx);
+		await h.events.get("tool_execution_start")(
+			{ toolCallId: "read", toolName: "research_read_knowledge", args: {} },
+			ctx,
+		);
+		const read = await h.tools
+			.get("research_read_knowledge")
+			.execute("read", { path: "Library/Papers/source.md" }, undefined, undefined, ctx);
+		expect(read.details?.citation || read.citation).toBeTruthy();
+		const context = await h.events.get("context")({ messages: [] }, ctx);
+		expect(context.messages.some((message) => message.customType === "drone-knowledge-navigation")).toBe(
+			true,
+		);
 	});
 	it("read-only children receive no maintenance or deposition tools", async () => {
 		await setup();

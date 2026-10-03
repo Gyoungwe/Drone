@@ -1,4 +1,10 @@
-import type { RunInspectorTurn, TurnChanges, TurnTiming, UsageDisplayTotal } from "@drone/shared";
+import {
+	deriveAverageOutputRate,
+	type RunInspectorTurn,
+	type TurnChanges,
+	type TurnTiming,
+	type UsageDisplayTotal,
+} from "@drone/shared";
 import { useEffect, useReducer } from "react";
 import { useT } from "../../i18n";
 import { compactNumber, formatDuration } from "../../lib/format";
@@ -64,6 +70,8 @@ export function TurnFooter({
 	const toolCount = run?.tools.length ?? 0;
 	const responses = run?.models.reduce((n, m) => n + m.responses, 0) ?? 0;
 	const errors = run?.errors ?? 0;
+	const outputRate =
+		!running && timing ? deriveAverageOutputRate(usage?.output, timing.startedAt, timing.endedAt) : null;
 	const usageTitle = usage
 		? `in ${compactNumber(usage.input)} · out ${compactNumber(usage.output)} · cache ${compactNumber(
 				usage.cacheRead,
@@ -92,6 +100,9 @@ export function TurnFooter({
 			{!running && usage && usage.total > 0 && (
 				<span className="turn-footer-stat" title={usageTitle}>
 					{compactNumber(usage.total)} tok
+					{outputRate != null
+						? t("turnFooter.outputAverage", { rate: compactNumber(Math.round(outputRate)) })
+						: ""}
 					{usage.cacheRate != null && usage.cacheRate > 0
 						? ` · ${(usage.cacheRate * 100).toFixed(0)}% cache`
 						: ""}

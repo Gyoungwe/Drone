@@ -1,6 +1,13 @@
 // Uses the same desktop AskGate/AskDialog as ask_user, without a model request.
 // Only an exact host-owned choice can authorize the displayed immutable revision.
 import { describeAcceptance, effectiveAcceptance } from "./acceptance";
+import { hasTaskConsent } from "./consent";
+
+// Keep this in sync with the workbench's immutable task lifetime ceiling. A
+// replay may reuse consent only when it is still a current, fully valid task
+// authorization; accepting a caller-supplied maxCalls would make stale or
+// forged consent records look current.
+const TASK_TOTAL_CALLS = 192;
 
 function computeAuthorizationDetails(compute: any): string | null {
 	if (!compute || typeof compute !== "object") return null;
@@ -39,6 +46,16 @@ export function createTaskAuthorization(journal: any, checkBinding: any = async 
 			throw new Error("Task changed. Refresh before requesting authorization.");
 		if (["completed", "cancelled", "archived"].includes(task.state))
 			throw new Error("Task is no longer awaiting authorization.");
+		// A task contract is approved once.  A stale/replayed task-action command
+		// must not reopen the same host authorization dialog after consent exists.
+		// Other actions (next-stage / outcome / rebind) still require their own
+		// explicit decision because they describe a different user-owned choice.
+		if (
+			input.action === "authorize-task" &&
+			hasTaskConsent(task, TASK_TOTAL_CALLS) &&
+			((await checkBinding()) ?? null) === (task.binding ?? null)
+		)
+			return true;
 		const action =
 			input.action === "ask-authorization"
 				? task.actions.find(

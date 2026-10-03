@@ -467,15 +467,16 @@ export function registerAnswerPublication(
 				} catch (authorityError) {
 					return report(failure(message, authorityError));
 				}
+				const advisoryContent =
+					info.code === "citation-required"
+						? []
+						: [{ type: "text", text: `\n\n【有提醒】${advisoryLine(info.code, error)}` }];
 				return report(
 					seal(
 						message,
 						[
 							...content,
-							{
-								type: "text",
-								text: `\n\n【有提醒】${advisoryLine(info.code, error)}`,
-							},
+							...advisoryContent,
 							...advisoryFooter(ctx),
 						],
 						{

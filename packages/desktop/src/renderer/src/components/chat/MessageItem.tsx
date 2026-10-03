@@ -1,14 +1,17 @@
+import { tasksForTranscript } from "@drone/shared";
 import { memo, useState } from "react";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import type { UIMessage } from "../../stores/transcript";
+import { useAgentActive } from "../session/session-status";
 import { AssistantMessage } from "./AssistantMessage";
 import { ErrorNote } from "./ErrorNote";
 import { ImagePreviewOverlay, imageSrc } from "./ImagePreview";
 import { CopyButton, ForkButton } from "./message-actions";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { SystemMessage } from "./SystemMessage";
+import { TaskRow } from "./TaskRow";
 import { UserMessage } from "./UserMessage";
 
 /** 单条消息：按类型分发（用户气泡 / 图片块 / 子代理卡 / 错误卡 / 系统分割线 / 助手消息体） */
@@ -30,6 +33,7 @@ export const MessageItem = memo(function MessageItem({
 }) {
 	const t = useT();
 	const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+	const agentActive = useAgentActive(sessionId ?? null);
 
 	if (message.kind === "user") {
 		return <UserMessage message={message} />;
@@ -86,8 +90,20 @@ export const MessageItem = memo(function MessageItem({
 		return <SystemMessage message={message} />;
 	}
 
-	// 任务不进聊天流：状态看右侧工作台侧栏，要用户拍板的一律走 ask_user 弹窗。
-	if (message.taskView) return null;
+	if (message.taskView) {
+		const view = message.taskView;
+		const reviewTasks = tasksForTranscript(view);
+		return (
+			<div className="group" data-testid={reviewTasks.length ? "chat-task-review" : undefined}>
+				{message.text && <AssistantMessage text={message.text} thinking="" tools={[]} />}
+				{reviewTasks.map((task) => (
+					<div key={task.id} className="mt-2 rounded-xl border border-amber-500/30 bg-surface">
+						<TaskRow task={task} view={view} sessionId={sessionId ?? null} agentActive={agentActive} />
+					</div>
+				))}
+			</div>
+		);
+	}
 	return (
 		<div className="group">
 			<AssistantMessage

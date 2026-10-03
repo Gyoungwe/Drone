@@ -157,6 +157,9 @@ export const en: Messages = {
 		approvalPending: "An action is waiting for your decision → above the composer",
 		todoTitle: "Todo list",
 		taskViewTitle: "Task contract",
+		reviewTitle: "Review needed",
+		reviewAcknowledge: "I reviewed it",
+		reviewLater: "This card stays here until you decide",
 		tasksEmpty: "No task list yet — it appears here once the agent makes a plan.",
 		processEmpty: "No run records yet.",
 		turn: "Turn {n}",
@@ -317,6 +320,7 @@ export const en: Messages = {
 		responses: "{count} responses",
 		errors: "{count} errors",
 		inPanel: "Open details in the Process tab",
+		outputAverage: "This turn avg {rate} output tok/s (includes tool wait)",
 	},
 	workbench: {
 		nav: {
@@ -390,6 +394,9 @@ export const en: Messages = {
 		subagentTaskPlaceholder: "Task for {agent}: goal, scope, where to put the output…",
 		subagentChipTitle: "Dispatch to subagent {agent} (Esc to undo)",
 		removeSubagent: "Remove subagent",
+		dropRegion: "File drop area",
+		dropTarget:
+			"Drop to add files; project files become references and outside files are saved to this session",
 		subagentTaskRequired: "Write the task you want {agent} to do",
 		subagentNoImages:
 			"Subagent dispatch cannot carry images: remove them, or drop the @ chip to send to the main model",

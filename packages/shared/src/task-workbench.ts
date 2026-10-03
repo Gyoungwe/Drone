@@ -295,12 +295,14 @@ export function taskIsTerminal(task: WorkbenchTask): boolean {
 }
 
 /**
- * 流内应渲染的任务子集 —— 恒为空。
+ * 流内应渲染的任务子集。
  *
- * 任务的「状态」归右侧上下文面板「任务」页签，任务的「决策」归 ask_user 弹窗，
- * 聊天流只承载对话本身。保留此函数是为了让调用方继续有一个明确的语义入口，
- * 也便于日后若要放开某一类卡片时只改这一处。
+ * 任务状态仍归右侧上下文面板；只有任务已经完成工作、留下待人工验收的
+ * review 动作时，才在对应的助手消息旁投影一张可操作卡片。授权、阻塞和
+ * 其它决策继续由宿主的 ask_user 流程处理，避免把过程噪声塞进聊天流。
  */
-export function tasksForTranscript(_view: TaskView): WorkbenchTask[] {
-	return [];
+export function tasksForTranscript(view: TaskView): WorkbenchTask[] {
+	return view.tasks.filter((task) =>
+		task.actions.some((action) => action.kind === "review" && action.state === "pending"),
+	);
 }

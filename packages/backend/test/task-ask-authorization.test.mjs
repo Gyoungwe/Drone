@@ -1,5 +1,5 @@
 import { createTaskAuthorization } from "@drone/tasks/ask-authorization";
-import { createTaskWorkbench } from "@drone/tasks/workbench";
+import { createTaskWorkbench, WORKBENCH_ENTRY } from "@drone/tasks/workbench";
 import { expect, it, vi } from "vitest";
 import { AskGate } from "../src/session/ask-gate";
 import { makeUiContext } from "../src/session/ui-context";
@@ -22,6 +22,29 @@ function fixture(compute) {
 		action: "authorize-task",
 	});
 	return { journal, input, ask: createTaskAuthorization(journal) };
+}
+
+function persistedFixture(binding = null) {
+	const entries = [];
+	const journal = createTaskWorkbench({
+		requireAuthorization: true,
+		persist: (data) => entries.push({ customType: WORKBENCH_ENTRY, data }),
+	});
+	journal.attach("session-a");
+	journal.begin("Create a bounded report", [], binding);
+	journal.plan({
+		summary: "Create report only",
+		writeRoots: [],
+		milestones: [
+			{ id: "report", title: "Report", dependsOn: [], acceptance: { kind: "file", path: "report.md" } },
+		],
+	});
+	const input = () => ({
+		taskId: journal.snapshot().id,
+		revision: journal.view().revision,
+		action: "authorize-task",
+	});
+	return { journal, entries, input, ask: createTaskAuthorization(journal) };
 }
 
 it("shows the approved compute host and budget in the ask_user contract", async () => {
@@ -148,4 +171,49 @@ it("deduplicates simultaneous requests for the same revision", async () => {
 	resolve("同意本次请求");
 	expect(await a).toBe(true);
 	expect(await b).toBe(true);
+});
+
+it("does not reopen the task authorization dialog after consent exists", async () => {
+	const f = fixture();
+	const select = vi.fn(async () => "同意本次请求");
+	const ctx = { ui: { select } };
+	expect(await f.ask(f.input(), ctx)).toBe(true);
+	expect(select).toHaveBeenCalledOnce();
+	// A replayed authorize-task command is idempotent and must not look like a
+	// second authorization request to the user.
+	expect(await f.ask(f.input(), ctx)).toBe(true);
+	expect(select).toHaveBeenCalledOnce();
+});
+
+it("reopens authorization when the persisted contract no longer matches consent", async () => {
+	const original = persistedFixture();
+	const select = vi.fn(async () => "同意本次请求");
+	expect(await original.ask(original.input(), { ui: { select } })).toBe(true);
+
+	const replay = structuredClone(original.entries);
+	replay.at(-1).data.tasks[0].authorizationSummary = "A different scope";
+	const changed = createTaskWorkbench({ requireAuthorization: true });
+	changed.attach("session-a", replay);
+	const changedAsk = createTaskAuthorization(changed);
+	const changedInput = {
+		taskId: changed.snapshot().id,
+		revision: changed.view().revision,
+		action: "authorize-task",
+	};
+	const replaySelect = vi.fn(async () => "暂不授权");
+	expect(await changedAsk(changedInput, { ui: { select: replaySelect } })).toBe(false);
+	expect(replaySelect).toHaveBeenCalledOnce();
+});
+
+it("reopens authorization when the live knowledge binding changed", async () => {
+	let binding = "vault-a";
+	const f = persistedFixture(binding);
+	const select = vi.fn(async () => "同意本次请求");
+	const ask = createTaskAuthorization(f.journal, async () => binding);
+	expect(await ask(f.input(), { ui: { select } })).toBe(true);
+
+	binding = "vault-b";
+	const replaySelect = vi.fn(async () => "暂不授权");
+	expect(await ask(f.input(), { ui: { select: replaySelect } })).toBe(false);
+	expect(replaySelect).toHaveBeenCalledOnce();
 });
