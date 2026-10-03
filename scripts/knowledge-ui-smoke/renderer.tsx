@@ -8,10 +8,13 @@ import {
 import { KnowledgeFlowCard } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgeFlowCard";
 import { KnowledgePanel } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgePanel";
 import { KnowledgeUiRoot } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgeUiRoot";
+import { KnowledgeView } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgeView";
+import { TasksPane } from "../../packages/desktop/src/renderer/src/components/panel/TasksPane";
 import { SkillsPanel } from "../../packages/desktop/src/renderer/src/components/settings/SkillsPanel";
 import { useSessionsStore } from "../../packages/desktop/src/renderer/src/stores/sessions";
 import { useSettingsStore } from "../../packages/desktop/src/renderer/src/stores/settings";
 import { useTranscriptStore } from "../../packages/desktop/src/renderer/src/stores/transcript";
+import { useUiStore } from "../../packages/desktop/src/renderer/src/stores/ui";
 import { reportedUsage, sumReportedUsage } from "../../packages/shared/src/usage-display";
 import { SidebarActionsFixture } from "./sidebar";
 import { StageTimelineFixture } from "./timeline";
@@ -194,6 +197,16 @@ useTranscriptStore
 	]);
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("knowledge-ui-smoke: #root missing");
+
+function KnowledgeFixturePanel() {
+	const view = useUiStore((state) => state.view);
+	return view === "research" || view === "knowledge" ? (
+		<KnowledgeView mode={view} />
+	) : (
+		<KnowledgePanel context={{ cwd: info.cwd, sessionId: "fixture" }} />
+	);
+}
+
 createRoot(rootEl).render(
 	<div style={{ maxWidth: 1080, margin: "0 auto", padding: 16 }}>
 		<div className="mb-3 text-[10px] tracking-wider text-ink-dim">
@@ -201,7 +214,7 @@ createRoot(rootEl).render(
 		</div>
 		<KnowledgeFlowCard sessionId="fixture" />
 		<div className="rounded-2xl border border-border bg-surface p-4">
-			<KnowledgePanel context={{ cwd: info.cwd, sessionId: "fixture" }} />
+			<KnowledgeFixturePanel />
 		</div>
 		<div className="mt-4 rounded-2xl border border-border bg-surface p-4" data-testid="tools-skills-fixture">
 			<SkillsPanel />
@@ -225,6 +238,9 @@ createRoot(rootEl).render(
 			<SessionUsageFooter sessionId="fixture" />
 		</div>
 		<StageTimelineFixture />
+		<div className="mt-4 rounded-2xl border border-border bg-surface p-4" data-testid="task-workbench">
+			<TasksPane sessionId="fixture" />
+		</div>
 		<SidebarActionsFixture />
 		<KnowledgeUiRoot />
 	</div>,
