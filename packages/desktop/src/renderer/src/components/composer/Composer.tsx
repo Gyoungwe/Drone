@@ -1,5 +1,6 @@
 import type { ImageInput, SubagentPanelAgent } from "@drone/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getPi } from "../../api";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useT } from "../../i18n";
 import { COMPOSER_FOCUS_EVENT, EMPTY_DRAFT, NEW_SESSION_DRAFT_KEY, useDraftStore } from "../../stores/drafts";
@@ -10,6 +11,7 @@ import { pushToast } from "../../stores/toasts";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { ImagePreviewOverlay } from "../chat/ImagePreview";
+import { SessionUsageFooter } from "../chat/UsageSettlement";
 import { ArrowUpIcon, PlusIcon, StopIcon } from "../icons";
 import { AtMenu } from "./AtMenu";
 import { AttachmentChip } from "./AttachmentChip";
@@ -93,8 +95,9 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		}));
 	};
 	const [previewImage, setPreviewImage] = useState<ImageInput | null>(null);
+	const [dragActive, setDragActive] = useState(false);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
-	const boxRef = useRef<HTMLDivElement>(null);
+	const boxRef = useRef<HTMLElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const followUpQueue = transcript.followUpQueue;
@@ -346,9 +349,100 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		handleFiles(files);
 	};
 
+	/** Resolve a dropped path to the existing @-file reference shape. */
+	const projectRelativePath = (sourcePath: string): string | null => {
+		if (!cwd) return null;
+		const normalize = (value: string) => value.replaceAll("\\", "/").replace(/\/+$/, "");
+		const root = normalize(cwd);
+		const candidate = normalize(sourcePath);
+		const prefix = `${root}/`;
+		if (candidate === root || !candidate.toLowerCase().startsWith(prefix.toLowerCase())) return null;
+		return candidate.slice(prefix.length);
+	};
+
+	/** Native files are copied by main for paths outside the current project. */
+	const handleDrop = async (event: React.DragEvent<HTMLElement>) => {
+		setDragActive(false);
+		event.preventDefault();
+		if (readOnly) return;
+		const files = Array.from(event.dataTransfer.files || []);
+		const uriPaths = event.dataTransfer
+			.getData("text/uri-list")
+			.split(/\r?\n/)
+			.map((uri) => uri.trim())
+			.filter((uri) => uri && !uri.startsWith("#"))
+			.flatMap((uri) => {
+				try {
+					const parsed = new URL(uri);
+					if (parsed.protocol !== "file:") return [];
+					const path = decodeURIComponent(parsed.pathname);
+					return [/^\/[a-zA-Z]:\//.test(path) ? path.slice(1) : path];
+				} catch {
+					return [];
+				}
+			});
+		if (files.length === 0 && uriPaths.length === 0) return;
+		const imported: string[] = [];
+		for (const [index, file] of files.entries()) {
+			if (file.type.startsWith("image/")) {
+				handleFiles([file]);
+				continue;
+			}
+			const sourcePath = (file as File & { path?: string }).path || uriPaths[index];
+			if (!sourcePath) continue;
+			const relative = projectRelativePath(sourcePath);
+			if (relative) {
+				imported.push(relative);
+				continue;
+			}
+			try {
+				const copy = await getPi().importDroppedFile(sourcePath, activeSessionId ?? "new-session");
+				imported.push(copy.path);
+			} catch (error) {
+				showFeedback(error instanceof Error ? error.message : String(error), "warn");
+			}
+		}
+		// Some desktop shells expose only text/uri-list for a file drag. Reuse the
+		// same project-reference/copy path for any URI without a File entry.
+		for (const sourcePath of uriPaths.slice(files.length)) {
+			const relative = projectRelativePath(sourcePath);
+			if (relative) {
+				imported.push(relative);
+				continue;
+			}
+			try {
+				const copy = await getPi().importDroppedFile(sourcePath, activeSessionId ?? "new-session");
+				imported.push(copy.path);
+			} catch (error) {
+				showFeedback(error instanceof Error ? error.message : String(error), "warn");
+			}
+		}
+		if (imported.length) setAttachments((prev) => [...new Set([...prev, ...imported])]);
+	};
+
 	return (
-		<div ref={boxRef} className={centered ? "w-full max-w-[760px]" : "shrink-0 px-4 pb-2"}>
+		<section
+			ref={boxRef}
+			className={`${centered ? "w-full max-w-[760px]" : "shrink-0 px-4 pb-2"} relative`}
+			aria-label={t("composer.dropRegion")}
+			onDragOver={(event) => {
+				event.preventDefault();
+				if (!readOnly) setDragActive(true);
+			}}
+			onDragLeave={(event) => {
+				if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false);
+			}}
+			onDrop={(event) => void handleDrop(event)}
+		>
 			<div className="mx-auto max-w-[760px]">
+				{dragActive && (
+					<div
+						className="pointer-events-none absolute inset-x-0 top-0 z-10 rounded-2xl border-2 border-dashed border-accent bg-accent/10 px-3 py-2 text-center text-xs text-accent"
+						data-testid="composer-drop-target"
+					>
+						{t("composer.dropTarget")}
+					</div>
+				)}
 				{error && <SendErrorBar error={error} onRetry={() => void handleSend()} />}
 				{feedback && !error && (
 					<p className={`mb-1.5 text-xs ${feedback.tone === "warn" ? "text-amber-500" : "text-ink-dim"}`}>
@@ -383,6 +477,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						onRestore={() => void send.handleRestoreQueue(focusTextarea)}
 					/>
 				)}
+				<SessionUsageFooter sessionId={activeSessionId} />
 				<ImageTray
 					images={images}
 					onPreview={setPreviewImage}
@@ -485,7 +580,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						<div className="min-w-0 flex-1 truncate text-[11px] text-ink-faint" data-testid="composer-hint">
 							{subagent ? t("composer.dispatchHint") : null}
 						</div>
-						{/* 右侧控件组（一处一事）：[模型 · 强度] [权限] [上下文环] [发送]；会话用量在右侧面板「过程」页签 */}
+						{/* 右侧控件组（一处一事）：[模型 · 强度] [权限] [上下文环] [发送] */}
 						<div
 							className={`composer-model-group${readOnly ? " pointer-events-none opacity-40" : ""}`}
 							title={t("composer.modelGroupHint")}
@@ -532,6 +627,6 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 				</div>
 			</div>
 			{previewImage && <ImagePreviewOverlay image={previewImage} onClose={() => setPreviewImage(null)} />}
-		</div>
+		</section>
 	);
 }

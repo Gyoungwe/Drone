@@ -357,6 +357,8 @@ it.each(["search-required", "citation-required", "source-unread", "search-stale"
 		expect(result.message.knowledgePublication.scientificallyVerified).not.toBe(true);
 		expect(result.message.knowledgePublication.warnings[0].code).toBe(code);
 		expect(result.message.content[0].text).toContain("Useful answer");
+		if (code === "citation-required")
+			expect(result.message.content.map((item) => item.text).join(" ")).not.toContain("【有提醒】");
 		expect(h.called).toHaveBeenCalledOnce();
 		expect((await h.gate.preflight({ cwd: "/fixture" }, "draft")).ok).toBe(true);
 	},

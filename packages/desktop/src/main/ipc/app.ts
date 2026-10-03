@@ -1,5 +1,6 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { randomUUID } from "node:crypto";
+import { copyFile, mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import type { DiagnosticsServicePort } from "@drone/backend";
 import type { SavedTabs, UiState } from "@drone/shared";
 import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
@@ -16,6 +17,7 @@ import { materializeSaveContent } from "./save-content";
 
 /** 项目仓库地址（帮助跳转 + 关于页） */
 const REPO_URL = "https://github.com/Gyoungwe/Drone";
+const MAX_DROPPED_ATTACHMENT_BYTES = 100 * 1024 * 1024;
 
 async function readRecentLogTail(): Promise<string[]> {
 	try {
@@ -60,6 +62,22 @@ export function registerAppIpc(
 			if (typeof url === "string" && /^https?:\/\//.test(url)) return shell.openExternal(url);
 		},
 		filePreview: (...args) => previewLocalFile(args[0], args[1]),
+		importDroppedFile: async (sourcePath, sessionId) => {
+			const source = await realpath(sourcePath);
+			const info = await stat(source);
+			if (!info.isFile()) throw new Error("Dropped path is not a file");
+			if (info.size > MAX_DROPPED_ATTACHMENT_BYTES)
+				throw new Error("Dropped file is larger than the 100 MB session attachment limit");
+			const safeSession =
+				String(sessionId)
+					.replace(/[^a-zA-Z0-9_-]/g, "_")
+					.slice(0, 120) || "session";
+			const directory = join(app.getPath("userData"), "session-attachments", safeSession);
+			await mkdir(directory, { recursive: true });
+			const target = join(directory, `${randomUUID()}-${basename(source)}`);
+			await copyFile(source, target);
+			return { path: target, name: basename(source), bytes: info.size };
+		},
 		resourceOpenExternal: async (...args) => {
 			const [target, cwd] = args;
 			if (typeof target !== "string" || !target) return;
@@ -128,6 +146,7 @@ export function registerAppIpc(
 				getDailyDir: IpcChannels.AppGetDailyDir,
 				openExternal: IpcChannels.AppOpenExternal,
 				filePreview: IpcChannels.FilePreview,
+				importDroppedFile: IpcChannels.FileImportDropped,
 				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
 				loadTabs: IpcChannels.TabsLoad,
 				saveTabs: IpcChannels.TabsSave,

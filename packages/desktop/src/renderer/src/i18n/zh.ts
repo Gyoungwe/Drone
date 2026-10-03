@@ -151,6 +151,9 @@ export const zh = {
 		approvalPending: "有操作在等你确认 → 见输入框上方",
 		todoTitle: "任务清单",
 		taskViewTitle: "任务契约",
+		reviewTitle: "需要你审核",
+		reviewAcknowledge: "我已看过，验收",
+		reviewLater: "稍后处理可保留此卡",
 		tasksEmpty: "还没有任务清单——Agent 建立计划后会显示在这里。",
 		processEmpty: "还没有运行记录。",
 		turn: "第 {n} 轮",
@@ -307,6 +310,7 @@ export const zh = {
 		responses: "{count} 次响应",
 		errors: "{count} 个错误",
 		inPanel: "在右侧「过程」页签查看明细",
+		outputAverage: "本轮平均 {rate} 输出 tok/s（含工具等待）",
 	},
 	workbench: {
 		nav: {
@@ -377,6 +381,8 @@ export const zh = {
 		subagentTaskPlaceholder: "交给 {agent} 的任务：目标、范围、产出位置…",
 		subagentChipTitle: "派发给子智能体 {agent}（Esc 撤销）",
 		removeSubagent: "移除子智能体",
+		dropRegion: "文件拖拽区域",
+		dropTarget: "松开以添加文件；项目内文件会作为引用，项目外文件会保存到本会话",
 		subagentTaskRequired: "请写下要交给 {agent} 的任务",
 		subagentNoImages: "子智能体派发不支持图片：移除图片，或撤掉 @ 胶囊改发给主模型",
 		subagentNoSession: "先发送一条消息创建会话，再用 @ 派发子智能体",

@@ -133,6 +133,25 @@ describe("流内工作台卡的取舍", () => {
 		}
 	});
 
+	it("只把待验收动作投影到聊天流", () => {
+		const action = {
+			id: "review-1",
+			kind: "review" as const,
+			title: "核对报告",
+			reason: "请看最终结果",
+			expected: {},
+			state: "pending",
+		};
+		const review = task({
+			state: "waiting_user",
+			actions: [action],
+		});
+		expect(tasksForTranscript(view([review]))).toEqual([review]);
+		expect(
+			tasksForTranscript(view([{ ...review, actions: [{ ...action, state: "acknowledged" }] }])),
+		).toEqual([]);
+	});
+
 	it("等用户拍板的也不进流：决策走 ask_user 弹窗，不靠一张要自己去找的卡", () => {
 		expect(tasksForTranscript(view([task({ state: "blocked" })]))).toEqual([]);
 		expect(tasksForTranscript(view([task({ state: "waiting_user" })]))).toEqual([]);

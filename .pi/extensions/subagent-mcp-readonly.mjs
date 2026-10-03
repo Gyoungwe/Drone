@@ -4896,7 +4896,49 @@ import { createHash as createHash9, randomUUID as randomUUID10 } from "node:cryp
 import { realpath as realpath9 } from "node:fs/promises";
 import { isAbsolute as isAbsolute10, relative as relative9, resolve as resolve12, sep as sep7 } from "node:path";
 
+// packages/tasks/src/runtime-compiled/consent.mjs
+import { createHash as createHash7 } from "node:crypto";
+import { realpath as realpath7, stat as stat3 } from "node:fs/promises";
+import { homedir as homedir2 } from "node:os";
+import { isAbsolute as isAbsolute8, parse, relative as relative7, resolve as resolve9 } from "node:path";
+var MAX_AUTO_RESUMES = 3;
+function contractHash(task) {
+  const contract = [
+    task.id,
+    task.goal,
+    task.binding ?? null,
+    task.authorizationSummary ?? "",
+    task.writeRoots ?? []
+  ];
+  if (task.compute !== void 0) contract.push(task.compute ?? null);
+  contract.push(
+    task.milestones.map(({ id, title, dependsOn, acceptance }) => ({ id, title, dependsOn, acceptance }))
+  );
+  return createHash7("sha256").update(JSON.stringify(contract)).digest("hex");
+}
+function hasTaskConsent(task, maxCalls) {
+  const c = task?.executionConsent;
+  return !!(task?.planApproved && task.milestones.length && c?.version === 1 && c.contractHash === contractHash(task) && c.maxCalls === maxCalls && c.maxAutoResumes === MAX_AUTO_RESUMES && typeof c.approvedAt === "string");
+}
+async function resolveWriteRoots(cwd, paths = []) {
+  if (!Array.isArray(paths) || paths.length > 8) throw new Error("Choose at most eight project directories.");
+  const roots = [];
+  const home = await realpath7(homedir2());
+  for (const p of paths) {
+    if (typeof p !== "string" || !p.trim() || p.length > 512) throw new Error("Invalid write directory.");
+    const root = await realpath7(resolve9(cwd, p));
+    const homeRelative = relative7(root, home);
+    if (root === parse(root).root || !isAbsolute8(homeRelative) && !homeRelative.startsWith(".."))
+      throw new Error("Authorize a project directory, not a drive, home directory or its parent.");
+    if (!(await stat3(root)).isDirectory())
+      throw new Error("Authorize an existing project directory; outputs may create subdirectories.");
+    if (!roots.includes(root)) roots.push(root);
+  }
+  return roots;
+}
+
 // packages/tasks/src/runtime-compiled/ask-authorization.mjs
+var TASK_TOTAL_CALLS = 192;
 function computeAuthorizationDetails(compute) {
   if (!compute || typeof compute !== "object") return null;
   const hosts = Array.isArray(compute.hosts) && compute.hosts.every((host) => typeof host === "string") ? compute.hosts : null;
@@ -4921,6 +4963,8 @@ function createTaskAuthorization(journal, checkBinding = async () => null) {
       throw new Error("Task changed. Refresh before requesting authorization.");
     if (["completed", "cancelled", "archived"].includes(task.state))
       throw new Error("Task is no longer awaiting authorization.");
+    if (input.action === "authorize-task" && hasTaskConsent(task, TASK_TOTAL_CALLS) && (await checkBinding() ?? null) === (task.binding ?? null))
+      return true;
     const action = input.action === "ask-authorization" ? task.actions.find(
       (a) => a.id === input.actionId && ["authorization", "rebind"].includes(a.kind) && a.state === "pending"
     ) : null;
@@ -4977,47 +5021,6 @@ ${details}`, [deny, allow], { signal });
       pending.delete(key);
     }
   };
-}
-
-// packages/tasks/src/runtime-compiled/consent.mjs
-import { createHash as createHash7 } from "node:crypto";
-import { realpath as realpath7, stat as stat3 } from "node:fs/promises";
-import { homedir as homedir2 } from "node:os";
-import { isAbsolute as isAbsolute8, parse, relative as relative7, resolve as resolve9 } from "node:path";
-var MAX_AUTO_RESUMES = 3;
-function contractHash(task) {
-  const contract = [
-    task.id,
-    task.goal,
-    task.binding ?? null,
-    task.authorizationSummary ?? "",
-    task.writeRoots ?? []
-  ];
-  if (task.compute !== void 0) contract.push(task.compute ?? null);
-  contract.push(
-    task.milestones.map(({ id, title, dependsOn, acceptance }) => ({ id, title, dependsOn, acceptance }))
-  );
-  return createHash7("sha256").update(JSON.stringify(contract)).digest("hex");
-}
-function hasTaskConsent(task, maxCalls) {
-  const c = task?.executionConsent;
-  return !!(task?.planApproved && task.milestones.length && c?.version === 1 && c.contractHash === contractHash(task) && c.maxCalls === maxCalls && c.maxAutoResumes === MAX_AUTO_RESUMES && typeof c.approvedAt === "string");
-}
-async function resolveWriteRoots(cwd, paths = []) {
-  if (!Array.isArray(paths) || paths.length > 8) throw new Error("Choose at most eight project directories.");
-  const roots = [];
-  const home = await realpath7(homedir2());
-  for (const p of paths) {
-    if (typeof p !== "string" || !p.trim() || p.length > 512) throw new Error("Invalid write directory.");
-    const root = await realpath7(resolve9(cwd, p));
-    const homeRelative = relative7(root, home);
-    if (root === parse(root).root || !isAbsolute8(homeRelative) && !homeRelative.startsWith(".."))
-      throw new Error("Authorize a project directory, not a drive, home directory or its parent.");
-    if (!(await stat3(root)).isDirectory())
-      throw new Error("Authorize an existing project directory; outputs may create subdirectories.");
-    if (!roots.includes(root)) roots.push(root);
-  }
-  return roots;
 }
 
 // packages/tasks/src/runtime-compiled/evidence.mjs
@@ -8088,17 +8091,15 @@ ${String(footer).slice(0, 2e3)}` }] : published;
         } catch (authorityError) {
           return report(failure(message, authorityError));
         }
+        const advisoryContent = info.code === "citation-required" ? [] : [{ type: "text", text: `
+
+\u3010\u6709\u63D0\u9192\u3011${advisoryLine(info.code, error2)}` }];
         return report(
           seal(
             message,
             [
               ...content,
-              {
-                type: "text",
-                text: `
-
-\u3010\u6709\u63D0\u9192\u3011${advisoryLine(info.code, error2)}`
-              },
+              ...advisoryContent,
               ...advisoryFooter(ctx)
             ],
             {
@@ -9313,6 +9314,20 @@ function registerKnowledgeInterface(pi, { readOnly: readOnly2 = false, runtime =
     if (text3) deliveryFooter = [deliveryFooter, text3].filter(Boolean).join("\n");
   };
   const toolInputs = /* @__PURE__ */ new Map();
+  const isKnowledgeRequest = (prompt, researchContinuation = false) => Boolean(
+    deliveryContract2(prompt, { researchContinuation }) || /知识(?:库|内容|有哪些|记录)?|研究|文献|论文|证据|检索|\bknowledge\b|obsidian|vault|wiki|evidence\s+note|\bresearch\b/i.test(
+      String(prompt || "")
+    )
+  );
+  const knowledgeTool = (name) => /^research_/.test(String(name || ""));
+  let turnKnowledgeRequested = false;
+  let turnBinding = null;
+  const promoteKnowledgeTurn = (ctx) => {
+    if (turnKnowledgeRequested) return;
+    turnKnowledgeRequested = true;
+    publication.begin(true, false);
+    if (turnBinding) beginKnowledgeFlow(ctx, turnBinding);
+  };
   const specialists = createKnowledgeSpecialists(pi, { getCurrent: (ctx) => requireTurn(ctx), readOnly: readOnly2 });
   const toolBudget = createToolBudget();
   let explainerArchived = false;
@@ -9339,12 +9354,14 @@ function registerKnowledgeInterface(pi, { readOnly: readOnly2 = false, runtime =
     await feedback.observe({ ...event, ...guarded }, ctx);
     return guarded;
   });
-  pi.on("tool_execution_start", (event) => {
+  pi.on("tool_execution_start", (event, ctx) => {
+    if (knowledgeTool(event.toolName)) promoteKnowledgeTurn(ctx);
     if (event.toolName === "research_summarize_run" || event.toolName === "research_propose_wiki_update")
       toolInputs.set(event.toolCallId, event.args || {});
     if (event.toolName === "research_propose_wiki_update") explicitTopicProposal = true;
   });
   pi.on("tool_execution_end", async (event, ctx) => {
+    if (knowledgeTool(event.toolName) && !event.isError) promoteKnowledgeTurn(ctx);
     if (event.toolName === "research_loop" && !event.isError && event.result?.details?.evidence_gate?.answerable && event.result.details.evidence_gate.reuse_count > 0 && !deliveryFooter?.includes("\u672C\u8F6E\u8BC1\u636E\u8303\u56F4\uFF08\u7A0B\u5E8F\u8BB0\u5F55\uFF09")) {
       appendFooter(
         "\u3010\u672C\u8F6E\u8BC1\u636E\u8303\u56F4\uFF08\u7A0B\u5E8F\u8BB0\u5F55\uFF09\u3011\u6B64\u5904\u590D\u7528\u8BC1\u636E\u6765\u81EA\u6574\u7406\u7B14\u8BB0\uFF1BPDF \u9875\u7801\u3001HTML \u7AE0\u8282\u662F\u7B14\u8BB0\u767B\u8BB0\u7684\u5386\u53F2\u539F\u6587\u5B9A\u4F4D\uFF0C\u4E0D\u4EE3\u8868\u672C\u8F6E\u91CD\u65B0\u9605\u8BFB\u5168\u6587\u3002\u53CC\u5E93\u8EAB\u4EFD\u548C\u5F15\u6587\u4E00\u81F4\u6027\u68C0\u67E5\u4E0D\u7B49\u4E8E\u79D1\u5B66\u7ED3\u8BBA\u9A8C\u8BC1\u3002\u7CBE\u786E\u54C8\u5E0C\u4E0E\u5E93\u72B6\u6001\u4EE5\u539F\u751F\u6838\u5BF9\u8BB0\u5F55\u4E3A\u51C6\u3002"
@@ -10311,14 +10328,18 @@ ${text3}`, [
     deliveryFooter = null;
     explainerArchived = false;
     toolInputs.clear();
-    publication.begin(true);
+    turnKnowledgeRequested = isKnowledgeRequest(query, continuation);
+    turnBinding = null;
+    publication.begin(turnKnowledgeRequested);
+    if (!turnKnowledgeRequested) invalidateKnowledgeUi();
     toolBudget.reset();
     try {
       const binding = await readKnowledgeBinding();
-      publication.begin(!!binding);
+      turnBinding = binding;
+      publication.begin(!!binding && turnKnowledgeRequested);
       toolBudget.reset();
-      beginKnowledgeFlow(ctx, binding);
-      if (binding) {
+      if (binding && turnKnowledgeRequested) {
+        beginKnowledgeFlow(ctx, binding);
         specialists.begin(query);
         feedback.begin();
         await prepare(ctx, query);
@@ -10411,7 +10432,11 @@ ${text3}`, [
       deliveryFooter = null;
       toolInputs.clear();
       awaitingUserStart = true;
-      publication.begin(true);
+      const continuation = Boolean(activeTopic && continuesTopic(event.prompt || "", activeTopic));
+      turnKnowledgeRequested = isKnowledgeRequest(event.prompt || "", continuation);
+      turnBinding = null;
+      publication.begin(turnKnowledgeRequested);
+      if (!turnKnowledgeRequested) invalidateKnowledgeUi();
       explainerArchived = false;
       specialists.begin(event.prompt || "");
       feedback.begin();
@@ -10421,10 +10446,10 @@ ${text3}`, [
       }
       try {
         const binding = await readKnowledgeBinding();
-        publication.begin(!!binding);
+        turnBinding = binding;
+        publication.begin(!!binding && turnKnowledgeRequested);
         toolBudget.reset();
-        beginKnowledgeFlow(ctx, binding);
-        if (!binding)
+        if (!binding || !turnKnowledgeRequested)
           return {
             guidance: deliveryContract2(event.prompt, {
               showMeAvailable: !!pi.getCommands?.().some(
@@ -10432,6 +10457,7 @@ ${text3}`, [
               )
             })?.guidance || ""
           };
+        beginKnowledgeFlow(ctx, binding);
         const _visible = await prepare(ctx, event.prompt || "");
         const delivery = deliveryContract2(event.prompt, {
           researchContinuation: Boolean(activeTopic && continuesTopic(event.prompt || "", activeTopic)),

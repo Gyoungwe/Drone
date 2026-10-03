@@ -1,5 +1,6 @@
 import {
 	buildChatRows,
+	deriveAverageOutputRate,
 	deriveTurnUsage,
 	emptyTranscript,
 	messagesToUIMessages,
@@ -20,6 +21,14 @@ const response = (id: string, patch: Record<string, unknown> = {}) => ({
 	...patch,
 });
 describe("native SDK usage display adapters", () => {
+	it("derives a wall-clock turn average only from a valid completed interval", () => {
+		expect(deriveAverageOutputRate(120, 1_000, 5_000)).toBe(30);
+		expect(deriveAverageOutputRate(0, 1_000, 5_000)).toBe(0);
+		expect(deriveAverageOutputRate(120, 1_000, undefined)).toBeNull();
+		expect(deriveAverageOutputRate(120, 5_000, 1_000)).toBeNull();
+		expect(deriveAverageOutputRate(120, 1_000, 1_000)).toBeNull();
+	});
+
 	it("shows token-weighted cache hits and never counts reasoning twice", () => {
 		const first = reportedUsage(response("1"))!,
 			second = reportedUsage(
