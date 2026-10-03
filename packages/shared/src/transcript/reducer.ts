@@ -17,8 +17,8 @@ import {
 	subagentRunDataFromPanelRun,
 } from "../subagent";
 import { taskStatusDisplay } from "../task-status";
-import { turnRouteDisplay } from "../turn-route";
 import { extractTodos, TODO_TOOL_NAME } from "../todo";
+import { turnRouteDisplay } from "../turn-route";
 import { reportedUsage } from "../usage-display";
 import {
 	emptyStreaming,
@@ -428,7 +428,15 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 					...state,
 					messages: [
 						...state.messages,
-						{ kind: "assistant", id: route.id, text: "", thinking: "", tools: [], timestamp: route.timestamp, route: route.route },
+						{
+							kind: "assistant",
+							id: route.id,
+							text: "",
+							thinking: "",
+							tools: [],
+							timestamp: route.timestamp,
+							route: route.route,
+						},
 					],
 				};
 			}

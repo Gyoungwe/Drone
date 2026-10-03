@@ -57,7 +57,9 @@ function session(names: string[], book?: unknown) {
 								type: "custom",
 								customType: "drone-task-workbench-v2",
 								data: {
-									scope: createHash("sha256").update(`s1\0${resolve(cwd)}`).digest("hex"),
+									scope: createHash("sha256")
+										.update(`s1\0${resolve(cwd)}`)
+										.digest("hex"),
 									activeTaskId: "t1",
 									limits: { stageCalls: 48, totalCalls: 192 },
 									tasks: [book],
@@ -158,7 +160,9 @@ describe("describeTurn", () => {
 		await handlers.get("input")?.({ type: "input", text: "你好", source: "interactive" });
 		await handlers.get("before_agent_start")?.({ systemPrompt: "base" });
 		expect(sent.map((message) => message.customType)).toEqual(["drone-turn-route", "drone-turn-route"]);
-		const [search, hello] = sent.map((message) => turnRouteLines(message.details?.route as any).lines.join("\n"));
+		const [search, hello] = sent.map((message) =>
+			turnRouteLines(message.details?.route as any).lines.join("\n"),
+		);
 		expect(search).toContain("nature-academic-search");
 		expect(search).toContain("文献发现");
 		expect(hello).not.toContain("nature-academic-search");
