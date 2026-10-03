@@ -56,10 +56,9 @@ export class ComputeDataDesignService implements ComputeDataDesignServicePort {
 	constructor(options: ComputeDataDesignServiceOptions = {}) {
 		const root = join(options.agentDir ?? getAgentDir(), "compute");
 		const path = join(root, "data-design.json");
-		const storageId = "agent-compute-data-design";
-		if (options.storage && !options.storage.get(storageId)) {
+		if (options.storage && !options.storage.get("agent-compute-data-design")) {
 			options.storage.register({
-				id: storageId,
+				id: "agent-compute-data-design",
 				path,
 				owner: "compute/data-design",
 				schema: 1,
@@ -68,7 +67,7 @@ export class ComputeDataDesignService implements ComputeDataDesignServicePort {
 		}
 		this.store = new JsonStore<DataDesignDocument>({
 			path,
-			storageId,
+			storageId: "agent-compute-data-design",
 			defaultValue: () => ({ version: 1, datasets: [], fetchRecords: [] }),
 			parse: (raw) => {
 				const value = JSON.parse(raw) as Partial<DataDesignDocument>;

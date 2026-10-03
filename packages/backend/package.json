@@ -16,6 +16,7 @@
 	},
 	"dependencies": {
 		"@drone/compute": "*",
+		"@drone/discovery": "*",
 		"@drone/inquiry": "*",
 		"@drone/knowledge": "*",
 		"@drone/research": "*",

@@ -1,6 +1,7 @@
 import type { AskRequest, AskResponse } from "./ask";
 import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { ComputeApi } from "./host-api/compute";
+import type { DiscoveryApi } from "./host-api/discovery";
 import type { LanStatus } from "./host-api/lan";
 import type { SessionsApi } from "./host-api/sessions";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
@@ -113,6 +114,15 @@ export const IpcChannels = {
 	ComputeLogEvent: "compute:logChunk",
 	ComputeTerminalOutputEvent: "compute:terminalOutput",
 	ComputeTerminalClosedEvent: "compute:terminalClosed",
+	/** 研究发现：内核能力、会话、批评、多路径与评测只读投影。 */
+	DiscoveryCapabilities: "discovery:getCapabilities",
+	DiscoveryKernelSessions: "discovery:listKernelSessions",
+	DiscoveryKernelSession: "discovery:getKernelSession",
+	DiscoveryCloseKernelSession: "discovery:closeKernelSession",
+	DiscoveryCriticReviews: "discovery:listCriticReviews",
+	DiscoveryMultipathAssessments: "discovery:listMultipathAssessments",
+	DiscoveryExplorationPlans: "discovery:listExplorationPlans",
+	DiscoveryEvaluations: "discovery:listEvaluations",
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
 	ZoteroStatus: "zotero:status",
@@ -299,7 +309,7 @@ export const IpcChannels = {
 export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
-export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi {
+export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */

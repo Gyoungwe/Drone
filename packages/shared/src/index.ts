@@ -2,6 +2,7 @@ export * from "./ask";
 export * from "./capabilities";
 export * from "./compute";
 export * from "./diagnostics";
+export * from "./discovery";
 export * from "./errors";
 export * from "./evidence-labels";
 export * from "./example-tasks";

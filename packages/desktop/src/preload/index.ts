@@ -1,6 +1,7 @@
 import {
 	AppContract,
 	ComputeContract,
+	DiscoveryContract,
 	InstitutionalContract,
 	IpcChannels,
 	KnowledgeContract,
@@ -247,6 +248,23 @@ const computeClient = exposeContract(ComputeContract, {
 			method,
 		),
 });
+const discoveryClient = exposeContract(DiscoveryContract, {
+	ipc: ipcRenderer,
+	channelForMethod: (_contract, method) =>
+		channelFrom(
+			{
+				getCapabilities: IpcChannels.DiscoveryCapabilities,
+				listKernelSessions: IpcChannels.DiscoveryKernelSessions,
+				getKernelSession: IpcChannels.DiscoveryKernelSession,
+				closeKernelSession: IpcChannels.DiscoveryCloseKernelSession,
+				listCriticReviews: IpcChannels.DiscoveryCriticReviews,
+				listMultipathAssessments: IpcChannels.DiscoveryMultipathAssessments,
+				listExplorationPlans: IpcChannels.DiscoveryExplorationPlans,
+				listEvaluations: IpcChannels.DiscoveryEvaluations,
+			},
+			method,
+		),
+});
 const knowledgeApi = {
 	setKnowledgeSpecialistSettings: invoke(knowledgeClient, "setSpecialistSettings"),
 	getKnowledgeOverview: invoke(knowledgeClient, "getOverview"),
@@ -273,6 +291,7 @@ const knowledgeApi = {
 };
 const invokeApi = {
 	...computeClient,
+	...discoveryClient,
 	...knowledgeApi,
 	listSessionSubagents: invoke(subagentsClient, "list"),
 	dispatchSubagents: invoke(subagentsClient, "dispatch"),

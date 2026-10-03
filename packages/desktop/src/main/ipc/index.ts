@@ -7,6 +7,7 @@ import type { UiPluginManager } from "../ui-plugins/manager";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
 import { registerComputeIpc } from "./compute";
+import { registerDiscoveryIpc } from "./discovery";
 import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
 import { registerLanIpc } from "./lan";
@@ -46,6 +47,7 @@ export function registerIpc(
 	registerSubagentsIpc(backendServices);
 	registerKnowledgeIpc(backendServices);
 	registerComputeIpc(backendServices, sendToRenderer);
+	registerDiscoveryIpc(backendServices);
 	registerPackagesIpc(backendServices);
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);

@@ -1,3 +1,4 @@
+export type { DiscoveryExplorationPlan } from "@drone/shared";
 export {
 	type ComputeCredential,
 	type ComputeCredentialProvider,
@@ -18,6 +19,22 @@ export {
 	type DiagnosticsSnapshot,
 	redactDiagnosticText,
 } from "./diagnostics";
+export {
+	buildContainerKernelArgv,
+	ContainerKernelRunner,
+	type ContainerKernelRunnerOptions,
+	type ContainerProcess,
+	detectContainerRuntime,
+	unavailableContainerCapabilities,
+} from "./discovery/container-runner";
+export {
+	type DiscoveryAuthorization,
+	type DiscoveryAuthorizationOperation,
+	type DiscoveryKernelSessionInput,
+	DiscoveryService,
+	type DiscoveryServiceOptions,
+	type DiscoveryServicePort,
+} from "./discovery/service";
 export * from "./institutional";
 export {
 	JsonStore,
