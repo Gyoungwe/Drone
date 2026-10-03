@@ -60,7 +60,17 @@ def atomic_json(path, value, mode=0o600):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=".%s." % path.name, dir=str(path.parent))
     try:
-        os.fchmod(fd, mode)
+        # ``fchmod`` is unavailable on Windows.  The mode is a meaningful
+        # permission boundary on POSIX, while Windows still gets the same
+        # atomic write and replacement semantics through ``os.chmod``.
+        fchmod = getattr(os, "fchmod", None)
+        if fchmod is not None:
+            fchmod(fd, mode)
+        else:
+            try:
+                os.chmod(temporary, mode)
+            except OSError:
+                pass
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(value, handle, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
             handle.write("\n")
