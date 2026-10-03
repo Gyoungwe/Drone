@@ -103,8 +103,17 @@ export const MessageItem = memo(function MessageItem({
 		if (!message.text && !message.route && tasks.length === 0) return null;
 		return (
 			<div className="group" data-testid={pending ? "chat-task-review" : undefined}>
-				{message.route && <TurnRouteCard route={message.route} />}
-				{view &&
+				{message.route ? (
+					<TurnRouteCard
+						route={message.route}
+						tasks={tasks}
+						view={view}
+						sessionId={sessionId ?? null}
+						agentActive={agentActive}
+					/>
+				) : null}
+				{!message.route &&
+					view &&
 					tasks.map((task) => (
 						<TaskDecisionCard
 							key={task.id}
