@@ -384,13 +384,19 @@ it("real SDK displays public stage → tools → next stage → tools → summar
 	];
 	await run(steps);
 	const labels = (state) =>
-		buildChatRows(state, "fixture").flatMap((row) =>
-			row.kind === "metaGroup"
-				? row.items.flatMap((i) => i.tools.map((t) => t.name))
-				: row.kind === "message" && row.message.kind === "assistant" && !row.message.taskView
-					? [row.message.progress?.text || row.message.text]
-					: [],
-		);
+		buildChatRows(state, "fixture").flatMap((row) => {
+			if (row.kind === "metaGroup") return row.items.flatMap((i) => i.tools.map((t) => t.name));
+			if (
+				row.kind !== "message" ||
+				row.message.kind !== "assistant" ||
+				row.message.taskView ||
+				row.message.route
+			) {
+				return [];
+			}
+			const text = row.message.progress?.text || row.message.text;
+			return text ? [text] : [];
+		});
 	const expected = [
 		"STAGE_ONE",
 		"research_read_knowledge",
