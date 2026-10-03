@@ -1,6 +1,10 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
+import { flowFor } from "@drone/knowledge/ui-state";
+import { listWikiProposals } from "@drone/knowledge/wiki-review";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { getCurrentSystemPrompt } from "@earendil-works/pi-ai/utils/transcript";
 import {
@@ -11,10 +15,6 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
-import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import { flowFor } from "../../../.pi/lib/knowledge/ui-state.mjs";
-import { listWikiProposals } from "../../../.pi/lib/knowledge/wiki-review.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 import { makeKnowledgeSpecialistBridge } from "../src/knowledge/specialist-bridge";
 
 let root, session;

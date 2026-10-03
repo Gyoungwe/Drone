@@ -3,12 +3,16 @@ import { access, mkdir, readdir, readFile, realpath, rename, stat, writeFile } f
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { initializeVault, loadWorkspaceConfig, saveWorkspaceConfig, } from "../workspace-config";
+import { configureKnowledgeExtensionRuntime } from "./knowledge-runtime";
+import { inspectObsidianSetup, inspectSetupDirectory, resolveSetupVault } from "./obsidian-setup";
+import { configureKnowledgeHost, configureKnowledgeSetup } from "@drone/knowledge/runtime-host";
+import { consumeKnowledgeReviewPreview } from "@drone/knowledge/ui-service";
 import { knowledgeDirectory, readKnowledgeBinding, saveKnowledgeBinding } from "@drone/knowledge/config";
 import { initializeProjectContext, initializeSharedNavigation } from "@drone/knowledge/layout";
 import { getKnowledgeService, notifyKnowledgeChange } from "@drone/knowledge/service";
 import { normalizeSourceLinks, onlineSourceLink } from "@drone/knowledge/source-links";
 import { runtimeSlot } from "@drone/tasks/runtime-bridge";
-import { renderTemplate } from "./vault-layout";
+import { LAYOUT, renderTemplate } from "./vault-layout";
 import { getVaultProfile, listVaultProfiles } from "./vault-profiles";
 export const SERVER_NAME = "research-obsidian";
 export const OBSIDIAN_READ_TOOLS: any = [
@@ -33,6 +37,22 @@ const runtimeState = runtimeSlot("knowledge", "obsidianWorkbench", () => ({
         this.vaultUpdates.clear();
     },
 })) as { vaultUpdates: Map<string, Promise<unknown>>; dispose(): void };
+// Install the source-package runtime seams before any KnowledgeService is
+// constructed through this adapter.
+configureKnowledgeExtensionRuntime();
+configureKnowledgeHost({
+    loadWorkspaceConfig,
+    consumeKnowledgeReviewPreview,
+    publishExplainer,
+    specialistSettings: async () => (await import("@drone/knowledge/specialist-host")).specialistSettings(),
+});
+configureKnowledgeSetup({
+    layout: LAYOUT,
+    inspectObsidianSetup,
+    inspectSetupDirectory,
+    resolveSetupVault,
+    researchSetupOptions,
+});
 function validateProject(project: any) {
     if (typeof project !== "string" ||
         !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(project) ||
@@ -204,7 +224,8 @@ export async function installProjectTemplate({ cwd = process.cwd() }: any = {}) 
         vault,
         template: await ensureTemplate(vault),
         ...(await refreshIndexes(vault, null, true, profile)),
-    }));
+}));
+
 }
 export async function refreshProjectIndexes({ cwd = process.cwd(), project = null }: any = {}) {
     if (project !== null)

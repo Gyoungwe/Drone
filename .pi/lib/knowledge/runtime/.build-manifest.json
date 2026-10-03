@@ -28,7 +28,7 @@
 		},
 		"index.mjs": {
 			"source": "packages/knowledge/src/index.ts",
-			"sha256": "b98e8021d59022a818e586a5c23a49eb1114b7aa003f3909deddf59cb075e579"
+			"sha256": "9e48cc7a5f21b96281c349a8d14fd6fe2a7befe9b9601c1952d557ca0c9c51fe"
 		},
 		"layout.mjs": {
 			"source": "packages/knowledge/src/layout.ts",
@@ -92,7 +92,7 @@
 		},
 		"specialists.mjs": {
 			"source": "packages/knowledge/src/specialists.ts",
-			"sha256": "d5d2b2e1ea0fd6f429d4e96bd0a1d2eb883d40dbba8e5182ce3182f559406514"
+			"sha256": "e3148dbe17715234c19745431f88b2a75a9f2e6079c3c6e99f3cf6022aef8554"
 		},
 		"task-feedback.mjs": {
 			"source": "packages/knowledge/src/task-feedback.ts",

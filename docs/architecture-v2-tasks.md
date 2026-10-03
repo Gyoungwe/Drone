@@ -115,6 +115,8 @@
   - [x] receipt-journal-policy：新增 `@drone/research/receipt-journal-policy`，迁移核心工具准入、错误工具过滤、256 容量去重回执缓冲与 run_dir 归属判定；research 包回归 46/46 通过；`.pi/lib/research-receipt-journal.mjs` 仍保留宿主 journal 适配。
   - [x] runtime：source archive、receipt journal、research loop、Zotero setup/reconcile/write 与 institutional host runtime 已迁入 `@drone/research`，并由 `.pi/lib` 适配 workspace/filesystem/CLI 端口；research 包 50 项通过，A5-3 总项仍因兼容入口与 host 适配保留而未完成。
 - [ ] **A5-4 扩展适配层**：`.pi/extensions/*.mjs` 的源码移到 `packages/extensions/src/`，只保留参数映射和注册逻辑，领域逻辑全部调用领域包。`runner.ts` 里两处 `../../../../../.pi/…` 改为包引用或构建产物的解析函数。验收：R5 基线清零；`.pi/lib` 从 extraResources 移除后，打包冒烟通过。
+  - [x] 正式入口：`obsidian-workbench`、`source-archive`、`zotero-literature`、`subagent-mcp-readonly` 已迁入 TypeScript 源码并由 `build:extensions` 生成；兼容 `research-host` 仅转发宿主端口，不再作为独立扩展产物；manifest 已无 legacy outputs。
+  - [ ] `.pi/lib` 仍作为兼容运行时资源随包携带，待 A5-1/2/3 完整移除后再删。
 
 ## A6 · DroneRuntime 注入
 
@@ -218,3 +220,4 @@
 | 2026-10-03 | A3-4 / 后续收敛 | `SessionPermissionService` 承接会话权限模式，`SessionLifecycleService` 承接会话枚举、关闭顺序与资源清理；channel-watch 测试注入短 debounce，backend unit 约 24 秒、unit+SDK 约 33 秒；可迁移 backend 测试改用 knowledge/research 包入口，架构基线由 120 降至 106；CI 增加离线研究包门禁，release 在获取 pinned skill packs 后显式运行真实 packaging check；全量 `npm test` 通过（backend 1,378 + 13 skipped、desktop 556、extensions 16、knowledge 58、research 50、shared 130、tasks 49） | `SessionService` 的 create/open/delete 仍与 project resources、extensions、filesystem 强耦合；剩余 106 条是 host/compatibility adapter 测试边界，未放宽架构规则；真实 research packs 仍由 release 同步步骤提供，Academic pack 需显式许可依据 |
 | 2026-10-03 | B5a–B5c | `@drone/inquiry` 四本账与 SQLite 持久化、backend `InquiryService` 组合根、B5b 元认知发布门禁、B5c 先验注册与最多三次自主修复已合并；全量 `npm test` 通过，根 typecheck、Biome、架构检查通过 | B5d–B5f、B7、B8 留待后续；研究状态的事件订阅、桌面/LAN 只读面板和 host 投影仍需单独接入 |
 | 2026-10-03 | B1–B7 收尾 | B1/B2 真实 runner、ssh2/OpenSSH/ProxyJump、known_hosts 与 SFTP/终端/授权 IPC；B3 固定 nf-core/rnaseq 3.18.0 vertical slice、MultiQC/QC/provenance 与显式真实 smoke；B5a 事件宿主接入；B5d–B5f discovery 包；B7 数据/设计合同均已接入并通过本地测试。runner 协议、取消、断线未知态、幂等、产物校验和桌面资源打包路径均已覆盖 | Docker/Slurm fixture 需要本机 Docker daemon；真实 Windows/OTP/跳板机、外部 Slurm 与真实研究数据/基线需在相应环境提供后执行；B8 暂不实施 |
+| 2026-10-03 | 后续收尾 | `SessionService` 进一步拆为显式 `SessionHost` 组合根、API/设置/诊断委托、construction/control/events/messages/models/resources/settings-boundary/extensions 专责服务；门面约 400 行、专责服务均 ≤400 行。R5 既有 106 条已迁移到 typed package/extension adapters，架构基线清零；4 个 legacy extension outputs 已替换为正式 source entries，`check:extensions --strict` 无遗留。研究技能包增加锁定缓存、SHA/receipt 校验、原子恢复和离线 release gate；backend unit 约 26 秒、定向 unit+SDK 约 33 秒。 | `PiBackend` 兼容导出、`.pi/lib` 兼容运行时和 A5-1/2/3 的完整移除仍保留一个发布周期；真实 Windows/OTP/外部 Slurm 需正确的 SSH Host 别名和凭据环境后再做 smoke；B8 暂不实施 |

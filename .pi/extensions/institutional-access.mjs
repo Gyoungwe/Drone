@@ -303,8 +303,12 @@ function institutionalAccess(pi) {
   });
 }
 export {
+  buildProxiedUrl,
   institutionalAccess as default,
+  detectAndSaveTemplateFromUrl,
   getInstitutionalSession,
   institutionalFetch,
-  isElectronAvailable
+  isElectronAvailable,
+  loadInstitutionalConfig,
+  saveInstitutionalConfig
 };

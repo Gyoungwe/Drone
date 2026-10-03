@@ -1,10 +1,10 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { startResearchRun } from "@drone/extensions/research-host";
+import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
 import { createLiteratureOperations, destinationRecovery } from "@drone/research/literature-operations";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
-import { startResearchRun } from "../../../.pi/lib/research-loop.mjs";
 
 let cwd, runDir;
 beforeEach(async () => {

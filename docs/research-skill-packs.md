@@ -63,7 +63,7 @@ npm run skills:sync                 # default: nature + filtered scientific
 npm run skills:check                # offline: validate every acquired file hash
 ```
 
-The first acquisition downloads commit-pinned GitHub archives (Scientific's full archive is about 234 MB, despite the selected skill files being much smaller). There are no runtime network fetches. Downloads have size bounds, locked SHA-256 checksums, path/type checks and staged publication. An existing changed/stale destination is **not overwritten**; move it aside explicitly before resync. The script never executes upstream code or reads credentials. Skill scripts remain inert until a separately authorized agent task requests execution.
+The first acquisition downloads commit-pinned GitHub archives (Scientific's full archive is about 234 MB, despite the selected skill files being much smaller). A verified archive is retained in the gitignored `.local/research-skill-cache/` cache, keyed by source, commit and the lock's archive SHA-256, so a clean resource directory can be restored without downloading again. Pass `--offline --cache-dir <path>` to require a cache-only restore; a missing or corrupted entry is rejected and never replaced by an unverified network response. There are no runtime network fetches. Downloads have size bounds, locked SHA-256 checksums, path/type checks and staged publication; both cache and resource publication use temporary files and atomic renames. An existing changed/stale destination is **not overwritten**; move it aside explicitly before resync. The script never executes upstream code or reads credentials. Skill scripts remain inert until a separately authorized agent task requests execution.
 
 Generated sources live in `packages/desktop/resources/research-skills/`, intentionally gitignored. Keep the source lock, installer and routing code in Git rather than vendoring huge repositories. `npm run dist -w packages/desktop` verifies all three sources before building. The electron-builder `beforePack` hook repeats the fail-closed check, including when invoked directly. A fresh checkout — including the Release workflow — must acquire Nature/Scientific and explicitly install ARS with an acknowledged license basis; the Release workflow uses `--acknowledge-noncommercial`. Missing ARS, stale hashes, a receipt without an explicit license basis, redirected resources or unreceipted extra files fail the release check. Runtime missing/stale packs fail closed with a diagnostic warning; first-party skills remain available.
 
@@ -88,6 +88,14 @@ Release preflight (offline, no build or publish):
 ```sh
 python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
 ```
+
+To restore a previously acquired pack without network access, use the same lock and cache explicitly:
+
+```sh
+python scripts/sync-research-skills.py --sources nature scientific academic --acknowledge-noncommercial --cache-dir .local/research-skill-cache --offline
+```
+
+The `--offline` path is a restore operation and still writes only a fully staged, receipt-bearing resource directory. It does not grant or infer a license; ARS still requires the explicit noncommercial acknowledgment or a separately held permission, and its receipt remains the release authority.
 
 The release check requires an explicit `licenseAuthorization` on the ARS receipt: `noncommercial` (the CC BY-NC 4.0 grant, used by the Release workflow) or `separate-permission` (a separately held agreement). A receipt records the distributor's basis; it is neither the license nor the agreement itself. Do not embed private license contracts or credentials in the resources. Neither this configuration nor the app's MIT license relicenses upstream ARS or its external dependencies.
 

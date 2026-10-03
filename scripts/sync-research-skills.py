@@ -16,6 +16,7 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 LOCK = ROOT / 'packages/shared/src/research-skill-sources.json'
 DEST = ROOT / 'packages/desktop/resources/research-skills'
+CACHE = ROOT / '.local/research-skill-cache'
 MAX_ARCHIVE = 350 * 1024 * 1024
 MAX_EXTRACTED = 150 * 1024 * 1024
 
@@ -36,12 +37,97 @@ def selected_skills(source, acknowledge=False):
     return [skill for skill in source['skills'] if skill['bundled']]
 
 
+def cache_archive_path(source, cache_dir=CACHE):
+    """Return the deterministic cache path for one lock entry.
+
+    The archive digest is part of the filename as well as the integrity check;
+    changing a lock entry therefore cannot accidentally reuse an older archive.
+    """
+    source_id = source['id']
+    commit = source['commit']
+    archive_sha = source['archiveSha256']
+    if (
+        not source_id
+        or not commit
+        or not archive_sha
+        or any(character not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-' for character in source_id + commit)
+        or len(archive_sha) != 64
+        or any(character not in '0123456789abcdef' for character in archive_sha)
+    ):
+        raise ValueError('Unsafe source cache identity')
+    root = Path(cache_dir)
+    if root.exists() and (root.is_symlink() or not root.is_dir()):
+        raise ValueError(f'Unsafe research skill cache directory: {root}')
+    root = root.resolve()
+    path = root / f'{source_id}-{commit}-{archive_sha}.tar.gz'
+    if not path.resolve().is_relative_to(root) or path.is_symlink():
+        raise ValueError(f'Unsafe research skill cache path: {path}')
+    return path
+
+
+def _verify_cached_archive(source, cache_dir):
+    path = cache_archive_path(source, cache_dir)
+    if path.is_symlink():
+        raise ValueError(f'Unsafe cached archive symlink: {path}')
+    if not path.exists():
+        return path, False
+    if not path.is_file():
+        raise ValueError(f'Cached archive is not a regular file: {path}')
+    if digest(path) != source['archiveSha256']:
+        raise ValueError(f'Cached archive checksum mismatch; remove or replace explicitly: {path}')
+    return path, True
+
+
+def _download_archive(source, cache_dir):
+    """Fetch and atomically cache one pinned archive, then return its path."""
+    path, cached = _verify_cached_archive(source, cache_dir)
+    if cached:
+        print(f"Using cached {source['id']} @ {source['commit'][:12]}", flush=True)
+        return path
+
+    cache_root = path.parent
+    cache_root.mkdir(parents=True, exist_ok=True)
+    # Keep the temporary file beside the final path so os.replace is atomic on
+    # the same filesystem. It is removed automatically if download/validation
+    # fails, and the destination is never exposed until the SHA is verified.
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(prefix=f'.{path.name}.', suffix='.tmp', dir=cache_root, delete=False) as stream:
+            temporary = Path(stream.name)
+            url = f"https://codeload.github.com/{source['repository']}/tar.gz/{source['commit']}"
+            print(f"Downloading {source['id']} @ {source['commit'][:12]}", flush=True)
+            request = urllib.request.Request(url, headers={'User-Agent': 'Drone-research-skills/1'})
+            total = 0
+            with urllib.request.urlopen(request, timeout=90) as response:
+                while block := response.read(1024 * 1024):
+                    total += len(block)
+                    if total > MAX_ARCHIVE:
+                        raise ValueError('Archive exceeds size limit')
+                    stream.write(block)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Windows cannot replace an open NamedTemporaryFile. Close it before
+        # checksum validation and publication, including before failure cleanup.
+        if digest(temporary) != source['archiveSha256']:
+            raise ValueError('Archive checksum mismatch; refuse unreviewed upstream content')
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+    return path
+
+
 def verify(source, destination, acknowledge=False, for_release=False):
     root = destination / source['id']
     receipt = json.loads((root / '.drone-pack.json').read_text(encoding='utf-8'))
     skills = selected_skills(source, acknowledge or receipt.get('licenseAuthorization') in ('noncommercial', 'separate-permission'))
     expected = [{'name': skill['name'], 'path': skill['path']} for skill in skills]
-    if receipt.get('version') != 1 or receipt.get('commit') != source['commit'] or receipt.get('skills') != expected:
+    if (
+        receipt.get('version') != 1
+        or receipt.get('commit') != source['commit']
+        or receipt.get('archiveSha256') != source['archiveSha256']
+        or receipt.get('skills') != expected
+    ):
         raise ValueError(f"{source['id']}: missing or stale skill receipt; run skills:sync")
     if source['id'] == 'academic' and (receipt.get('layout') != 'pi-complete-v1' or receipt.get('licenseAuthorization') not in ('noncommercial', 'separate-permission')):
         raise ValueError('ARS Pi layout or license authorization missing')
@@ -81,14 +167,13 @@ def verify(source, destination, acknowledge=False, for_release=False):
     return len(expected), len(hashes)
 
 
-def install(source, destination, acknowledge=False, commercial_permission=False):
+def install(source, destination, acknowledge=False, commercial_permission=False, cache_dir=CACHE, offline=False):
     acknowledge = acknowledge or commercial_permission
     selected = selected_skills(source, acknowledge)
     prefixes = [str(PurePosixPath(skill['path']).parent) + '/' for skill in selected]
     if source['id'] == 'academic':
         # Full ordinary-file repository, not a hand-picked subset. Registration remains explicit.
         prefixes = ['']
-    destination.mkdir(parents=True, exist_ok=True)
     target = destination / source['id']
     if target.exists():
         try:
@@ -97,21 +182,16 @@ def install(source, destination, acknowledge=False, commercial_permission=False)
             return
         except (ValueError, OSError, KeyError):
             raise ValueError(f'{target} exists but is modified or stale. Move it aside explicitly before syncing; no local edits will be overwritten.')
+    if offline:
+        archive, cached = _verify_cached_archive(source, cache_dir)
+        if not cached:
+            raise ValueError(f"Offline mode requires a verified cached archive for {source['id']} @ {source['commit'][:12]}")
+        print(f"Using cached {source['id']} @ {source['commit'][:12]}", flush=True)
+    else:
+        archive = _download_archive(source, cache_dir)
+    destination.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.skill-stage-', dir=destination) as temporary:
         stage = Path(temporary)
-        archive = stage / 'source.tar.gz'
-        url = f"https://codeload.github.com/{source['repository']}/tar.gz/{source['commit']}"
-        print(f"Downloading {source['id']} @ {source['commit'][:12]}", flush=True)
-        request = urllib.request.Request(url, headers={'User-Agent': 'Drone-research-skills/1'})
-        total = 0
-        with urllib.request.urlopen(request, timeout=90) as response, archive.open('wb') as output:
-            while block := response.read(1024 * 1024):
-                total += len(block)
-                if total > MAX_ARCHIVE:
-                    raise ValueError('Archive exceeds size limit')
-                output.write(block)
-        if digest(archive) != source['archiveSha256']:
-            raise ValueError('Archive checksum mismatch; refuse unreviewed upstream content')
         payload = stage / 'payload'
         payload.mkdir()
         extracted = 0
@@ -175,6 +255,8 @@ def main():
     authorization = parser.add_mutually_exclusive_group()
     authorization.add_argument('--acknowledge-noncommercial', action='store_true', help='Acknowledge the ARS CC BY-NC 4.0 NonCommercial terms; also the release basis (noncommercial distribution only, recipients are bound by the same terms)')
     authorization.add_argument('--acknowledge-commercial-permission', action='store_true', help='Record that a separately held permission from the upstream author covers this use instead of the noncommercial grant; this flag grants no license')
+    parser.add_argument('--cache-dir', type=Path, default=CACHE, help=f'Pinned archive cache directory (default: {CACHE})')
+    parser.add_argument('--offline', action='store_true', help='Restore from an existing verified archive cache; refuse network access and missing entries')
     parser.add_argument('--check', action='store_true', help='Offline checksum validation; no downloads or writes')
     parser.add_argument('--for-release', action='store_true', help='Verify all release sources; ARS must carry an explicit license basis (noncommercial or separate-permission). This does not grant rights.')
     args = parser.parse_args()
@@ -192,7 +274,14 @@ def main():
                 basis = f"; license basis: {receipt.get('licenseAuthorization')}"
             print(f"{source['id']}: OK ({count} skills, {files} files{basis})")
         else:
-            install(source, DEST, args.acknowledge_noncommercial, args.acknowledge_commercial_permission)
+            install(
+                source,
+                DEST,
+                args.acknowledge_noncommercial,
+                args.acknowledge_commercial_permission,
+                args.cache_dir,
+                args.offline,
+            )
 
 
 if __name__ == '__main__':

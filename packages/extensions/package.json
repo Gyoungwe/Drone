@@ -20,6 +20,16 @@
 	},
 	"exports": {
 		"./knowledge-extension": "./src/knowledge-extension.ts",
-		"./internal/knowledge-extension": "./src/internal/knowledge-extension.ts"
+		"./internal/knowledge-extension": "./src/internal/knowledge-extension.ts",
+		"./workspace-config": "./src/workspace-config.ts",
+		"./research-loop": "./src/research-loop.ts",
+		"./research-host": "./src/internal/research-host-entry.ts",
+		"./internal/obsidian-workbench": "./src/internal/obsidian-workbench.ts",
+		"./internal/obsidian-setup": "./src/internal/obsidian-setup.ts",
+		"./research-wikiloop": "./src/research-wikiloop.ts",
+		"./zotero-literature": "./src/zotero-literature.ts",
+		"./obsidian-workbench": "./src/obsidian-workbench.ts",
+		"./internal/reply-focus": "./src/internal/reply-focus.ts",
+		"./source-archive": "./src/source-archive.ts"
 	}
 }

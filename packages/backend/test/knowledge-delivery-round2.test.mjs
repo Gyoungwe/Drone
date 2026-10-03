@@ -1,18 +1,18 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
+import { registerWorkspaceConfig } from "@drone/extensions/workspace-config";
 import { normalizeSourceLinks } from "@drone/knowledge";
-import { assessManualPage, deliveryContract } from "@drone/research/source-delivery";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { registerWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
-import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
+import { closeKnowledgeServices } from "@drone/knowledge/service";
 import {
 	beginKnowledgeFlow,
 	flowFor,
 	noteKnowledgeOperation,
 	noteKnowledgeSearch,
-} from "../../../.pi/lib/knowledge/ui-state.mjs";
-import { configureObsidian, depositKnowledge } from "../../../.pi/lib/obsidian-workbench.mjs";
+} from "@drone/knowledge/ui-state";
+import { assessManualPage, deliveryContract } from "@drone/research/source-delivery";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
 
 // KnowledgeFlow 回执卡由扩展的 drone.flowCards 贡献（挂钩 3）：先登记声明

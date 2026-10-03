@@ -2,24 +2,20 @@ import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } fr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { readKnowledgeBinding, saveKnowledgeBinding } from "@drone/knowledge/config";
-import { buildKnowledgeSearchExpression } from "@drone/knowledge/search-policy";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadWorkspaceConfig, saveWorkspaceConfig } from "../../../.pi/extensions/workspace-config.mjs";
-import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension.mjs";
-import { runNavigationMaintenance } from "../../../.pi/lib/knowledge/maintenance.mjs";
-import {
-	closeKnowledgeServices,
-	getKnowledgeService,
-	KnowledgeService,
-} from "../../../.pi/lib/knowledge/service.mjs";
-import { listWikiProposals } from "../../../.pi/lib/knowledge/wiki-review.mjs";
 import {
 	configureObsidian,
 	depositKnowledge,
 	publishExplainer,
 	publishSourceNote,
-} from "../../../.pi/lib/obsidian-workbench.mjs";
+} from "@drone/extensions/internal/obsidian-workbench";
+import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
+import { loadWorkspaceConfig, saveWorkspaceConfig } from "@drone/extensions/workspace-config";
+import { readKnowledgeBinding, saveKnowledgeBinding } from "@drone/knowledge/config";
+import { runNavigationMaintenance } from "@drone/knowledge/maintenance";
+import { buildKnowledgeSearchExpression } from "@drone/knowledge/search-policy";
+import { closeKnowledgeServices, getKnowledgeService, KnowledgeService } from "@drone/knowledge/service";
+import { listWikiProposals } from "@drone/knowledge/wiki-review";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveSubagentMcpAccess } from "../src/tools/subagent/runner";
 
 // These are real filesystem + worker/SQLite integration tests, not 5-second unit tests.
@@ -483,7 +479,7 @@ describe("navigation delivery and bounded maintenance", () => {
 });
 
 it("FTS-first query plan does not enumerate all notes through the scope index", async () => {
-	const source = await readFile(new URL("../../../.pi/lib/knowledge/worker.mjs", import.meta.url), "utf8");
+	const source = await readFile(new URL("../../knowledge/src/worker.ts", import.meta.url), "utf8");
 	const schema = source.match(/db\.exec\(`([\s\S]*?)`\);/)[1];
 	const match = source.match(/const rows = db\s*\.prepare\(`([\s\S]*?)`\)\s*\.all\(expression/);
 	expect(match).not.toBeNull();

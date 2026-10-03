@@ -22,6 +22,8 @@
 
 任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
 
+研究技能包的锁定来源、许可记录、缓存与离线恢复：见 [research-skill-packs.md](research-skill-packs.md)。
+
 Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx electron-vite dev --remote-debugging-port=9224`；根目录 `npm run dev -- --remote-debugging-port=9224` 的参数不会穿过嵌套的 workspace 脚本。首次启动前运行根目录的 `npm run build:lan-web -w packages/desktop`。验证 `http://127.0.0.1:9224/json` 返回页面列表后再运行 CDP 冒烟脚本；普通开发仍用根目录 `npm run dev`。
 
 ## 总览
@@ -194,6 +196,9 @@ src/
 | `src/services/permissions.ts` | `PermissionSettingsService` | `permissions.json` 快照、原子保存、恢复默认、规则试算与审计尾部；通过 `BackendServices.permissions` 暴露，`PiBackend` 保留兼容委托 |
 | `src/services/session-permissions.ts` | `SessionPermissionService` | 活跃会话的内存权限模式（default/fullAccess）；关闭会话或重启即归零；通过 `BackendServices.sessionPermissions` 暴露 |
 | `src/services/session-lifecycle.ts` | `SessionLifecycleService` | 会话发现与关闭协调（registry/SDK dispose 顺序和清理 hook）；创建/打开仍由 `SessionService` 装配项目资源与扩展；通过 `BackendServices.lifecycle` 暴露 |
+| `src/services/session-host.ts` + `session-composition.ts` | `SessionHost`、`initializeSessionComposition` | 会话组合根的显式端口类型与装配顺序；把 runtime、权限、MCP、知识、模型、消息、资源和扩展依赖绑定到同一个宿主边界 |
+| `src/services/session-api.ts` + `session-api-settings.ts` + `session-api-diagnostics.ts` | `SessionServiceApi`、`SessionSettingsApi` | 兼容 API 的薄委托层：会话/模型/设置/权限/诊断调用转发到专责服务，避免把业务实现重新集中到门面 |
+| `src/services/session-{construction,control,events,messages,models,resources,settings-boundary,extensions}.ts` | 会话专责服务 | 分别承载 create/open、prompt/abort/fork、事件管线、消息映射、模型偏好、资源/MCP、权限设置边界和扩展构造；单文件保持在 400 行以内 |
 | `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`PiBackend` 的资源加载与旧 `respondTrust` 继续委托 |
 | `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |
 | `src/services/subagents.ts` | `SubagentService` | 子代理面板发现、派发、中止与运行记录；通过 `BackendServices.subagents` 暴露 |

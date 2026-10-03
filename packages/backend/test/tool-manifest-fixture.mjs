@@ -1,9 +1,9 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import researchLoop from "../../../.pi/extensions/research-loop.mjs";
-import sourceArchive from "../../../.pi/extensions/source-archive.mjs";
-import zoteroLiterature from "../../../.pi/extensions/zotero-literature.mjs";
-import { registerKnowledgeInterface } from "../../../.pi/lib/knowledge/extension.mjs";
+import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
+import sourceArchive from "@drone/extensions/research-host";
+import researchLoop from "@drone/extensions/research-loop";
+import zoteroLiterature from "@drone/extensions/zotero-literature";
 import { bindToolManifestEvents } from "../src/tools/manifest";
 
 // Re-export an existing extension entry so event-bridge tests exercise the

@@ -1,10 +1,10 @@
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { advisoryLine, registerAnswerPublication } from "@drone/knowledge/publication";
+import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { advisoryLine, registerAnswerPublication } from "../../../.pi/lib/knowledge/publication.mjs";
-import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
 let root, cwd, vault, service, prep;
 async function note(path, text) {
@@ -50,7 +50,13 @@ describe("native answer readiness, not model self-certification", () => {
 		const paths = Array.from({ length: 17 }, (_, i) => `Library/Papers/wing-${i}.md`);
 		for (const path of paths) await note(path, `# Wing development\nEvidence ${path}`);
 		await service.request("reconcile");
-		await service.search(prep.ticket, cwd, { query: "Wing development" });
+		// Reconcile schedules worker indexing; wait for a complete search so this
+		// citation-budget case cannot accidentally become a coverage advisory.
+		await vi.waitFor(
+			async () =>
+				expect((await service.search(prep.ticket, cwd, { query: "Wing development" })).complete).toBe(true),
+			{ timeout: 2000 },
+		);
 		for (const path of paths) await service.read(prep.ticket, cwd, { path });
 		const events = new Map();
 		const gate = registerAnswerPublication(

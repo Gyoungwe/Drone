@@ -1,9 +1,9 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import * as ui from "../../../.pi/lib/knowledge/ui-service.mjs";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
+import * as ui from "@drone/knowledge/ui-service";
 import {
 	beginKnowledgeFlow,
 	flowFor,
@@ -11,9 +11,9 @@ import {
 	publicationKnowledgeFlow,
 	subscribeKnowledgeUi,
 	updateKnowledgeFlow,
-} from "../../../.pi/lib/knowledge/ui-state.mjs";
-import { stageWikiProposal } from "../../../.pi/lib/knowledge/wiki-review.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
+} from "@drone/knowledge/ui-state";
+import { stageWikiProposal } from "@drone/knowledge/wiki-review";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, cwd, vault, service, prep, revision;
 async function note(path, text) {

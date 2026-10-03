@@ -5,6 +5,7 @@ import {
 	loadInstitutionalConfig,
 	saveInstitutionalConfig,
 } from "@drone/research/institutional-access";
+export { buildProxiedUrl, detectAndSaveTemplateFromUrl, loadInstitutionalConfig, saveInstitutionalConfig };
 
 const require = createRequire(import.meta.url);
 const PARTITION = "persist:drone-institutional";

@@ -1,128 +1,59 @@
-import { existsSync } from "node:fs";
-import { readFile, unlink } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import type {
 	AskRequest,
-	AskResponse,
-	AvailableModel,
-	ContextManagerMode,
-	ContextUsageInfo,
-	CreateSessionOptions,
-	DiagnosticsSnapshot,
 	DroneRuntime,
-	ImageInput,
-	LoadedResources,
 	LoginEventPayload,
 	McpStatus,
-	ModelPrefs,
-	PermissionAnswer,
-	PermissionAuditTailEntry,
-	PermissionMode,
-	PermissionProbeInput,
-	PermissionProbeResult,
-	PermissionRequest,
-	PermissionResolved,
-	PermissionSettingsSaveInput,
-	PermissionSettingsSaveResult,
-	PermissionSettingsSnapshot,
-	PromptReceipt,
 	SessionEvent,
-	SessionMessage,
-	SessionMeta,
-	SessionStats,
-	SlashCommandInfo,
-	TrustAnswer,
 	TrustRequest,
 	WikiModelReviewInput,
 	WikiModelReviewResult,
 } from "@drone/shared";
-import {
-	extractTodos,
-	formatSkillCommand,
-	parseExpandedSkillInvocation,
-	sanitizeProviderError,
-	TODO_REMINDER_CUSTOM_TYPE,
-	TODO_TOOL_NAME,
-	type TodoItem,
-} from "@drone/shared";
-import type { Model, ThinkingLevel } from "@earendil-works/pi-ai";
-import type { SessionEntry, ToolDefinition } from "@earendil-works/pi-coding-agent";
-import {
-	allSkillsFromLoader,
-	CapabilityResourceLoader,
-	SkillVisibility,
-} from "./capabilities/resource-loader";
-import { CapabilityRuntime, isTaskStatusQuery } from "./capabilities/runtime";
-import { buildDiagnostics, type DiagnosticsOptions } from "./diagnostics";
+import type { Model } from "@earendil-works/pi-ai";
+import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type { CapabilityRuntime } from "./capabilities/runtime";
 import { runKnowledgeSpecialist, type SpecialistRequest } from "./knowledge/specialist-runner";
 import { KnowledgeUiService } from "./knowledge/ui";
 import { createLogger } from "./log";
-import { McpService } from "./mcp/service";
-import { PackageAdmin } from "./packages/admin";
-import type { PermissionConfirm } from "./permissions/extension";
-import { walkProjectFiles } from "./project/files";
-import { ProjectResourceLoader } from "./project/trust-loader";
+import type { McpService } from "./mcp/service";
+import type { ProjectResourceLoader } from "./project/trust-loader";
 import { addAllowedPattern, addWorkspaceRoot } from "./project/workspace-store";
-import { createDroneRuntime } from "./runtime";
-import { type ApprovalDecision, ApprovalService } from "./services/approvals";
+import type { ApprovalDecision, ApprovalService } from "./services/approvals";
 import { InstitutionalService } from "./services/institutional";
-import { type KnowledgeReviewControl, KnowledgeSessionService } from "./services/knowledge-session";
+import type { KnowledgeReviewControl, KnowledgeSessionService } from "./services/knowledge-session";
 import type { PackageService } from "./services/packages";
-import { PermissionSettingsService } from "./services/permissions";
-import { ProjectTrustService } from "./services/project-trust";
-import { SessionLifecycleService } from "./services/session-lifecycle";
+import type { PermissionSettingsService } from "./services/permissions";
+import type { ProjectTrustService } from "./services/project-trust";
+import { SessionServiceApi } from "./services/session-api";
+import { initializeSessionComposition } from "./services/session-composition";
+import type { SessionConstructionService } from "./services/session-construction";
+import type { SessionControlService } from "./services/session-control";
+import type { SessionExtensionsService } from "./services/session-extensions";
+import type { SessionLifecycleService } from "./services/session-lifecycle";
+import type { SessionMessageService } from "./services/session-messages";
+import type { SessionModelsService } from "./services/session-models";
 import { SessionPermissionService } from "./services/session-permissions";
-import { SubagentService } from "./services/subagents";
+import type { SessionResourceService } from "./services/session-resources";
+import type { SessionSettingsBoundary } from "./services/session-settings-boundary";
+import type { SubagentService } from "./services/subagents";
 import { ZoteroService } from "./services/zotero";
-import { AskGate } from "./session/ask-gate";
-import { slimBulkyEvent, slimMessageUpdate } from "./session/event-slim";
-import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "./session/knowledge-publication";
-import {
-	assignEntryIds,
-	blockImages,
-	blockText,
-	type RawMessage,
-	readSessionMessagesFromContent,
-	resolveForkEntryId,
-	resolveRecallEntryId,
-	subagentPanelRawMessages,
-	toSessionMessages,
-} from "./session/messages";
+import type { AskGate } from "./session/ask-gate";
 import { ModelWaitMonitor } from "./session/model-wait";
-import { autoNameSession } from "./session/naming";
 import { EventRateTracker } from "./session/rates";
 import { SessionRecovery } from "./session/recovery";
 import { type EventForwarder, SessionRegistry } from "./session/registry";
 import { StreamGuard } from "./session/stream-guard";
-import { TraceRecorder } from "./session/trace";
 import { SessionTraces } from "./session/traces";
-import { makeUiContext } from "./session/ui-context";
-import {
-	getAgentDir,
-	getSupportedThinkingLevels,
-	type ModelRuntime,
-	SessionEngine,
-} from "./session-engine/engine";
-import { createEventPipeline, type Stage } from "./session-engine/event-pipeline";
-import {
-	buildSessionCustomTools,
-	buildSessionExtensionFactories,
-	makeCapabilitySessionExtension,
-	type SessionExtensionDependencies,
-} from "./session-engine/extensions";
+import { getAgentDir, type ModelRuntime, SessionEngine } from "./session-engine/engine";
+import type { SessionExtensionDependencies } from "./session-engine/extensions";
 import { LoginService } from "./settings/login";
 import { ModelSettingsService } from "./settings/models";
 import { SettingsService } from "./settings/settings";
-import { presentExtensionCommands, slashCommandsForLoader, slashCommandsForSession } from "./slash-commands";
-import { createDefaultStorageRegistry, type StorageRegistry } from "./storage/registry";
-import { agentWorkRoot, readChannelWatchEnabled, writeChannelWatchEnabled } from "./tools/channel-watch";
-import { readContextManagerMode, writeContextManagerMode } from "./tools/context-evaporation";
-import { globalToolManifest } from "./tools/manifest";
-import { isSubagentSessionPath, SubagentPanelService } from "./tools/subagent";
-import { applySubagentMutex } from "./tools/subagent/mutex";
+import type { StorageRegistry } from "./storage/registry";
+import { SubagentPanelService } from "./tools/subagent";
 import { withNativeSubagentSlot } from "./tools/subagent/slots";
 
-const log = createLogger("backend");
+const _log = createLogger("backend");
 
 export interface SessionServiceOptions {
 	/** 默认工作目录（createSession 未指定时使用） */
@@ -165,13 +96,9 @@ export interface SessionServiceOptions {
 	};
 }
 
-type EventHandler = (sessionId: string, event: SessionEvent) => void;
-type AskHandler = (req: AskRequest) => void;
-type PermissionHandler = (req: PermissionRequest) => void;
-type PermissionResolvedHandler = (result: PermissionResolved) => void;
-type TrustHandler = (req: TrustRequest) => void;
 type LoginHandler = (payload: LoginEventPayload) => void;
-type McpHandler = (cwd: string, status: McpStatus) => void;
+type AskHandler = (req: AskRequest) => void;
+type TrustHandler = (req: TrustRequest) => void;
 
 /**
  * PiBackend：pi SDK 的唯一适配层（门面）。不依赖 Electron，
@@ -184,48 +111,45 @@ type McpHandler = (cwd: string, status: McpStatus) => void;
  * - project-trust-loader.ts 两阶段项目资源加载 + 信任决策
  * - session-trace.ts      会话事件 trace 生命周期
  */
-export class SessionService {
-	readonly runtime: DroneRuntime;
+export class SessionService extends SessionServiceApi {
+	readonly runtime!: DroneRuntime;
 	readonly knowledge = new KnowledgeUiService();
 	/** Session-bound knowledge actions exposed through BackendServices. */
-	readonly knowledgeSession: KnowledgeSessionService;
-	private readonly registry = new SessionRegistry();
-	private readonly eventHandlers = new Set<EventHandler>();
-	private readonly askHandlers = new Set<AskHandler>();
-	private readonly trustHandlers = new Set<TrustHandler>();
-	private readonly loginHandlers = new Set<LoginHandler>();
-	private readonly mcpHandlers = new Set<McpHandler>();
-	/** Live child controls for supervisor-aware foreground subagents. */
-	private readonly liveSubagents = new Map<
+	readonly knowledgeSession!: KnowledgeSessionService;
+	readonly registry = new SessionRegistry();
+	readonly askHandlers = new Set<AskHandler>();
+	readonly trustHandlers = new Set<TrustHandler>();
+	readonly loginHandlers = new Set<LoginHandler>();
+	readonly mcpHandlers = new Set<(cwd: string, status: McpStatus) => void>();
+	readonly liveSubagents = new Map<
 		string,
 		{
 			steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
 			reply: (requestId: string, message: string) => boolean;
 		}
 	>();
-	readonly mcp: McpService;
+	readonly mcp!: McpService;
 	/** Permission settings domain service exposed by the composition root. */
-	readonly permissions: PermissionSettingsService;
+	readonly permissions!: PermissionSettingsService;
 	/** Approval registry and host event boundary exposed by the composition root. */
-	readonly approvals: ApprovalService;
+	readonly approvals!: ApprovalService;
 	/** Zotero integration status service exposed by the composition root. */
 	readonly zotero = new ZoteroService();
 	/** Institutional access configuration/status service exposed by the composition root. */
 	readonly institutional = new InstitutionalService();
-	/** 每会话按需 Tool/Skill 能力视图；注册表完整，只有模型可见 active subset 会变化。 */
-	private readonly capabilityRuntimes = new Map<string, CapabilityRuntime>();
-	private readonly askGates = new Map<string, Set<AskGate>>();
 	/** Per-session permission mode boundary; modes stay in memory and reset on close/restart. */
 	readonly sessionPermissions = new SessionPermissionService();
 	/** 项目信任决策记录（~/.pi/agent/trust.json，与 CLI 共享）+ 信任请求门控 */
-	readonly projectTrust: ProjectTrustService;
-	/** 会话事件 trace（JSONL，离线可重放） */
-	private readonly traces = new SessionTraces();
+	readonly projectTrust!: ProjectTrustService;
 	/** Durable-state inventory used by the metadata-only diagnostics endpoint. */
 	/** Durable storage inventory shared with host domain services (compute, diagnostics). */
-	readonly storage: StorageRegistry;
-	/** 子智能体面板：会话内专属派发登记表（与 subagent 工具同一 runner；见 tools/subagent/panel.ts） */
-	private readonly subagentPanel = new SubagentPanelService({
+	readonly storage!: StorageRegistry;
+	/** Host-facing subagent boundary; the panel implementation remains private. */
+	readonly subagents!: SubagentService;
+	readonly capabilityRuntimes = new Map<string, CapabilityRuntime>();
+	readonly askGates = new Map<string, Set<AskGate>>();
+	readonly traces = new SessionTraces();
+	readonly subagentPanel = new SubagentPanelService({
 		runner: {
 			getModelRuntime: () => this.getModelRuntime(),
 			getSubagentModel: (agentName) => this.modelSettings.getSubagentModel(agentName),
@@ -240,7 +164,7 @@ export class SessionService {
 		},
 		resolveSession: (sessionId) => {
 			const entry = this.registry.get(sessionId);
-			const gate = this.approvals.getGate(sessionId);
+			const gate = this.approvals?.getGate(sessionId);
 			if (!entry || !gate) return undefined;
 			return {
 				session: entry.session,
@@ -251,23 +175,33 @@ export class SessionService {
 			};
 		},
 		emit: (sessionId, event) => this.emitEvent(sessionId, event),
-		log,
+		log: createLogger("backend"),
 	});
-	/** Host-facing subagent boundary; the panel implementation remains private. */
-	readonly subagents: SubagentService;
-	private readonly streamGuard = new StreamGuard();
-	private readonly recovery = new SessionRecovery();
-	private readonly modelWait = new ModelWaitMonitor(
+	readonly streamGuard = new StreamGuard();
+	readonly recovery = new SessionRecovery();
+	readonly modelWait = new ModelWaitMonitor(
 		(sessionId, event) => this.emitEvent(sessionId, event),
 		(sessionId) => this.abort(sessionId),
 	);
-	/** 每会话事件速率（60s 窗口；心跳/临终快照数据源） */
-	private readonly eventRates = new EventRateTracker();
+	readonly eventRates = new EventRateTracker();
+	private eventService!: {
+		emit: (sessionId: string, event: SessionEvent) => void;
+		onEvent: (handler: (sessionId: string, event: SessionEvent) => void) => () => void;
+		clear: () => void;
+	};
+	messageService!: SessionMessageService;
+	control!: SessionControlService;
+	modelsService!: SessionModelsService;
+	settingsBoundary!: SessionSettingsBoundary;
+	resources!: SessionResourceService;
+	construction!: SessionConstructionService;
+	extensions!: SessionExtensionsService;
+	projectLoader!: ProjectResourceLoader;
 	/** Session lifecycle and Pi SDK runtime boundary (A3-3). */
 	/** Explicit session lifecycle service exposed by createBackend during A3 migration. */
 	readonly sessionEngine = new SessionEngine();
 	/** Host-owned list/close lifecycle coordination; create/open setup remains here during migration. */
-	readonly lifecycle: SessionLifecycleService;
+	readonly lifecycle!: SessionLifecycleService;
 	/**
 	 * Compatibility injection seam for host adapters and SDK fixtures.
 	 *
@@ -281,91 +215,29 @@ export class SessionService {
 	readonly settings = new SettingsService(() => this.getModelRuntime());
 	/** 用户级模型可见性与子代理模型偏好（独立于 CLI 共用 settings.json）。 */
 	readonly models = new ModelSettingsService(join(getAgentDir(), "model-prefs.json"));
-	/** Compatibility alias retained for existing host/test adapters during A3 migration. */
-	private get modelSettings(): ModelSettingsService {
-		return this.models;
-	}
-	/** Compatibility alias retained for existing host/test adapters during A3 migration. */
-	private get modelPrefs(): ModelSettingsService {
-		return this.models;
-	}
 	/** provider 交互登录服务（OAuth + api_key 交互，如 Google Vertex），事件经 onLoginEvent 分发 */
 	readonly login = new LoginService({
 		getRuntime: () => this.getModelRuntime(),
 		send: (payload) => this.dispatchLoginEvent(payload),
 	});
 	/** 社区包管理（安装/卸载 + 会话热重载）；供 BackendServices 直接消费。 */
-	readonly packages: PackageService;
-	/** 项目资源两阶段加载 + 信任决策 */
-	private readonly projectLoader: ProjectResourceLoader;
+	readonly packages!: PackageService;
 
-	constructor(private readonly options: SessionServiceOptions = {}) {
-		this.runtime = options.runtime ?? createDroneRuntime();
-		this.lifecycle = new SessionLifecycleService(this.registry, this.sessionEngine, options.defaultCwd);
-		this.permissions = options.permissions ?? new PermissionSettingsService();
-		this.mcp = new McpService({ onServerEnabled: (cwd) => this.reloadMcpSessions(cwd) });
-		this.knowledgeSession = new KnowledgeSessionService({
-			getContext: (sessionId) => {
-				const entry = this.registry.get(sessionId);
-				if (!entry) return undefined;
-				return {
-					sessionId,
-					identity: entry,
-					cwd: entry.cwd,
-					readOnly: entry.readOnly === true,
-					streaming: entry.session.isStreaming,
-					hasModel: Boolean(entry.session.model),
-					projectTrusted: entry.session.settingsManager.isProjectTrusted(),
-				};
-			},
-			prompt: (sessionId, text) => this.prompt(sessionId, text),
-			evaluateReview: (input, control) => this.evaluateKnowledgeReview(input, control),
-		});
-		this.approvals = new ApprovalService({
-			onDecision: (decision) => this.persistPermissionDecision(decision),
-		});
-		this.subagents = new SubagentService(this.subagentPanel, options.defaultCwd);
-		this.storage = createDefaultStorageRegistry({
-			agentDir: getAgentDir(),
-			userDataDir: options.userDataDir,
-			knowledgeDir: process.env.DRONE_KNOWLEDGE_DIR,
-			inquiryDir: options.inquiryDir,
-			logDir: process.env.PI_LOG_DIR,
-		});
-		this.projectTrust = new ProjectTrustService({
-			onRequest: (request) => this.dispatchTrustRequest(request),
-		});
-		this.packages = new PackageAdmin({
-			registry: this.registry,
-			defaultCwd: options.defaultCwd,
-			onSessionReloaded: (sessionId) => this.reapplyCapabilities(sessionId),
-		});
-		this.projectLoader = new ProjectResourceLoader({
-			trustStore: this.projectTrust.store,
-			ask: (dir, opts) => this.projectTrust.ask(dir, opts),
-			canAsk: () => this.trustHandlers.size > 0,
-			buildExtensions: (cwd, confirm, modeRef) =>
-				buildSessionExtensionFactories(this.sessionExtensionDependencies(), cwd, confirm, modeRef),
-			projectTrust: options.projectTrust,
-			desktopIntegration: options.desktopIntegration,
-		});
+	constructor(readonly options: SessionServiceOptions = {}) {
+		super();
+		this.bindHost(this);
+		initializeSessionComposition(this, options);
 	}
 
-	/** Return redacted runtime/storage metadata without reading secrets or session bodies. */
-	async getDiagnostics(options: DiagnosticsOptions = {}): Promise<DiagnosticsSnapshot> {
-		return buildDiagnostics(this.storage, {
-			version: options.version ?? "unknown",
-			incidentSnapshot: options.incidentSnapshot,
-			logTail: options.logTail,
-		});
+	get modelSettings(): ModelSettingsService {
+		return this.models;
+	}
+	/** Compatibility seam retained for tests and host adapters that inject model preferences. */
+	get modelPrefs(): ModelSettingsService {
+		return this.models;
 	}
 
-	/** Expose the metadata-only inventory to composition-root services. */
-	getStorageRegistry(): StorageRegistry {
-		return this.storage;
-	}
-
-	private sessionExtensionDependencies(): SessionExtensionDependencies {
+	sessionExtensionDependencies(): SessionExtensionDependencies {
 		return {
 			runtime: this.runtime,
 			permissionGates: this.options.permissionGates,
@@ -390,349 +262,101 @@ export class SessionService {
 		};
 	}
 
-	private async getModelRuntime(): Promise<ModelRuntime> {
+	async getModelRuntime(): Promise<ModelRuntime> {
 		return this.modelRuntime ?? this.sessionEngine.getModelRuntime();
 	}
 
-	private emitEvent(sessionId: string, event: SessionEvent): void {
-		this.modelWait.inspect(sessionId, event);
-		if (event.type === "auto_retry_start")
-			event = { ...event, errorMessage: sanitizeProviderError(event.errorMessage || "") };
-		this.eventRates.tick(sessionId);
-		// 会话标题全量落一行日志（决策 7：不截断）：用户拿 UI 里看到的标题（含自动命名的 …）
-		// 能直接 grep 主日志定位会话，不再只靠 prompt 行的 120 字符截断
-		if (event.type === "session_info_changed") log.info("session renamed", sessionId, { name: event.name });
-		// message_update 携带全量快照（partial + message），平方放大事故源头，先瘦身再分发
-		if (event.type === "message_update") event = slimMessageUpdate(event);
-		// 宿主状态条：按工具清单（drone.activity）盖章，reducer / 子代理 / 回放共用同一份声明（挂钩 1）
-		if (event.type === "tool_execution_start" && !event.hostActivity) {
-			const activity = (this.capabilityRuntimes.get(sessionId)?.tools ?? globalToolManifest).activity(
-				event.toolName,
-				event.args,
-			);
-			if (activity) event = { ...event, hostActivity: { text: activity.text, phase: activity.phase } };
-		}
-		// toolResult 大结果四份快照重复携带（0.5.2 白屏事故降压层）：image base64 剥除 + 超长 text 截断
-		event = slimBulkyEvent(event);
-		const stages: Stage<SessionEvent, string>[] = [
-			{
-				name: "stream-guard",
-				failMode: "closed",
-				run: (current, sid) => {
-					// 流式熔断：病态输出（空白洪流/超量）trip 后 abort，会话后续增量丢弃。
-					const verdict = this.streamGuard.inspect(sid, current);
-					if (current.type === "agent_end") this.approvals.getGate(sid)?.endRun();
-					if (verdict === "pass") return current;
-					if (verdict !== "suppress") {
-						log.error("stream guard tripped, aborting session", sid, { verdict });
-						void this.abort(sid).catch(() => {});
-						// 合成事件直接发送，不重新喂回 pipeline，避免防线自触发。
-						for (const handler of this.eventHandlers) {
-							try {
-								handler(sid, { type: "stream_guard_tripped", verdict });
-							} catch {
-								// 单个处理器异常不影响主流程
-							}
-						}
-					}
-					return null;
-				},
-			},
-			{
-				name: "publication-projection",
-				failMode: "closed",
-				run: (current) => projectKnowledgeEvent(current, this.runtime),
-			},
-			{
-				name: "trace",
-				failMode: "open",
-				run: (current, sid) => {
-					if (
-						current.type !== "subagent_mutex" &&
-						current.type !== "stream_guard_tripped" &&
-						current.type !== "model_wait" &&
-						current.type !== "subagent_run"
-					)
-						this.traces.record(sid, current);
-					return current;
-				},
-			},
-			{
-				name: "fanout",
-				failMode: "open",
-				run: (current, sid) => {
-					// 面板结果消息被主模型消费（message_end）→ 运行卡「已进入上下文」。
-					this.subagentPanel.observe(sid, current);
-					for (const handler of this.eventHandlers) {
-						try {
-							handler(sid, current);
-						} catch {
-							// 事件处理器异常不影响主流程
-						}
-					}
-					return current;
-				},
-			},
-		];
-		createEventPipeline(stages, {
-			onError: ({ stage, error }) =>
-				log.error("event pipeline stage failed", sessionId, { stage: stage.name, error }),
-		}).run(event, sessionId);
-	}
-
-	async init(): Promise<void> {
-		await this.knowledge.connect();
-		await this.getModelRuntime();
-	}
-
-	/** 项目文件列表（@ 补全数据源，相对路径、目录带尾 /，TTL 缓存） */
-	async listProjectFiles(cwd?: string): Promise<string[]> {
-		return walkProjectFiles(cwd || this.options.defaultCwd || process.cwd());
-	}
-
-	async createSession(options: CreateSessionOptions): Promise<SessionMeta> {
-		const runtime = await this.getModelRuntime();
-		const cwd = options.cwd || this.options.defaultCwd || process.cwd();
-		this.storage.registerDiscoveredRoot("project-work", agentWorkRoot(cwd), "tools/channel-watch", "private");
-		const model =
-			options.provider && options.modelId ? runtime.getModel(options.provider, options.modelId) : undefined;
-
-		const gate = this.approvals.createGate();
-		const askGate = new AskGate((req) => this.dispatchAskRequest(req));
-		// 权限扩展的确认通道直接桥到 gate（携带 kind/suggestDir 元数据，驱动「允许此目录」/持久化）
-		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
-		// 会话权限模式引用：新会话一律 default 起步（D1：不落盘、不继承），随工厂闭包注入求值链
-		const modeRef = this.sessionPermissions.createMode();
-
-		const skillVisibility = new SkillVisibility();
-		const capabilities =
-			this.options.lazyCapabilities === false && !this.options.desktopIntegration?.academicPiRoot
-				? undefined
-				: new CapabilityRuntime(skillVisibility);
-		const { settingsManager, resourceLoader: baseResourceLoader } = await this.projectLoader.load(cwd, {
-			confirm: confirmBridge,
-			modeRef,
-			...(capabilities
-				? {
-						extensionFactories: [
-							makeCapabilitySessionExtension(capabilities, this.options.desktopIntegration?.academicPiRoot),
-						],
-					}
-				: {}),
-		});
-		const resourceLoader = capabilities
-			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
-			: baseResourceLoader;
-		const { session, extensionsResult } = await this.sessionEngine.create(
-			cwd,
-			{
-				model,
-				thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
-				tools: this.options.tools,
-				customTools: buildSessionCustomTools(
-					this.sessionExtensionDependencies(),
-					gate,
-					askGate,
-					capabilities,
-				),
-				settingsManager,
-				resourceLoader,
-			},
-			runtime,
-		);
-		const mutex = applySubagentMutex(session, extensionsResult, this.options.subagentPreferBuiltin !== false);
-		if (mutex.shadowed.length > 0) {
-			log.info("third-party subagent tools shadowed", session.sessionId, mutex);
-			for (const shadowed of mutex.shadowed) {
-				this.emitEvent(session.sessionId, {
-					type: "subagent_mutex",
-					extensionPath: shadowed.extensionPath,
-					tools: shadowed.tools,
-				});
+	private dispatchLoginEvent(payload: LoginEventPayload): void {
+		for (const handler of this.loginHandlers) {
+			try {
+				handler(payload);
+			} catch {
+				// 忽略单个处理器异常
 			}
 		}
-
-		if (capabilities) {
-			capabilities.bind(session, {
-				excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
-				extraAlwaysOn: this.options.tools ?? [],
-			});
-			this.capabilityRuntimes.set(session.sessionId, capabilities);
-		}
-
-		gate.bindSession(session.sessionId);
-		askGate.bindSession(session.sessionId);
-		this.approvals.register(session.sessionId, gate);
-		this.registerAskGate(session.sessionId, askGate);
-		this.sessionPermissions.bind(session.sessionId, modeRef);
-		if (this.options.permissionGates !== false) {
-			await session.bindExtensions({
-				uiContext: makeUiContext(gate, askGate, (text, type) => {
-					void this.knowledge.notify(text, type, session.sessionId).catch(() => {});
-				}),
-				mode: "tui",
-			});
-		}
-
-		const unsubscribe = session.subscribe((event) => {
-			autoNameSession(session, event);
-			this.emitEvent(session.sessionId, event);
-		});
-		this.registry.add({ session, unsubscribe, cwd });
-		await this.traces.start(session.sessionId, session.sessionManager.getSessionDir());
-
-		log.info("session created", session.sessionId, { cwd });
-		return this.toMetaOrThrow(session.sessionId);
 	}
 
-	async openSession(filePath: string): Promise<SessionMeta> {
-		// Idempotent: StrictMode / duplicate restore must not bind the same jsonl twice.
-		const already = this.registry.list().find((entry) => entry.session.sessionFile === filePath);
-		if (already) return this.registry.toMeta(already);
-		const runtime = await this.getModelRuntime();
-		const sessionManager = this.sessionEngine.openManager(filePath);
-		const cwd = sessionManager.getCwd() || process.cwd();
-		this.storage.registerDiscoveredRoot("project-work", agentWorkRoot(cwd), "tools/channel-watch", "private");
-		const gate = this.approvals.createGate();
-		const askGate = new AskGate((req) => this.dispatchAskRequest(req));
-		const confirmBridge: PermissionConfirm = (title, message, meta) => gate.confirm(title, message, meta);
-		// 重开历史会话同样 default 起步（D1：模式不随会话文件继承）
-		const modeRef = this.sessionPermissions.createMode();
-		const skillVisibility = new SkillVisibility();
-		const capabilities =
-			this.options.lazyCapabilities === false && !this.options.desktopIntegration?.academicPiRoot
-				? undefined
-				: new CapabilityRuntime(skillVisibility);
-		const { settingsManager, resourceLoader: baseResourceLoader } = await this.projectLoader.load(cwd, {
-			confirm: confirmBridge,
-			modeRef,
-			...(capabilities
-				? {
-						extensionFactories: [
-							makeCapabilitySessionExtension(capabilities, this.options.desktopIntegration?.academicPiRoot),
-						],
-					}
-				: {}),
-		});
-		const resourceLoader = capabilities
-			? new CapabilityResourceLoader(baseResourceLoader, skillVisibility)
-			: baseResourceLoader;
-		const { session, extensionsResult } = await this.sessionEngine.open(
-			filePath,
-			{
-				settingsManager,
-				resourceLoader,
-				customTools: buildSessionCustomTools(
-					this.sessionExtensionDependencies(),
-					gate,
-					askGate,
-					capabilities,
-				),
-			},
-			runtime,
-		);
-		const mutex = applySubagentMutex(session, extensionsResult, this.options.subagentPreferBuiltin !== false);
-		if (mutex.shadowed.length > 0) {
-			log.info("third-party subagent tools shadowed", session.sessionId, mutex);
-			for (const shadowed of mutex.shadowed) {
-				this.emitEvent(session.sessionId, {
-					type: "subagent_mutex",
-					extensionPath: shadowed.extensionPath,
-					tools: shadowed.tools,
-				});
+	getEventService(): {
+		emit: (sessionId: string, event: SessionEvent) => void;
+		onEvent: (handler: (sessionId: string, event: SessionEvent) => void) => () => void;
+		clear: () => void;
+	} {
+		return this.eventService;
+	}
+
+	setEventService(service: {
+		emit: (sessionId: string, event: SessionEvent) => void;
+		onEvent: (handler: (sessionId: string, event: SessionEvent) => void) => () => void;
+		clear: () => void;
+	}): void {
+		this.eventService = service;
+	}
+
+	emitEvent(sessionId: string, event: SessionEvent): void {
+		this.eventService.emit(sessionId, event);
+	}
+
+	requireSession(sessionId: string) {
+		const entry = this.registry.get(sessionId);
+		if (!entry) throw new Error(`Session not found: ${sessionId}`);
+		return entry;
+	}
+
+	toMetaOrThrow(sessionId: string) {
+		const entry = this.registry.get(sessionId);
+		if (!entry) throw new Error(`Session not found: ${sessionId}`);
+		return this.registry.toMeta(entry);
+	}
+
+	registerAskGate(sessionId: string, gate: AskGate): void {
+		const gates = this.askGates.get(sessionId) ?? new Set<AskGate>();
+		gates.add(gate);
+		this.askGates.set(sessionId, gates);
+	}
+
+	dispatchAskRequest(req: AskRequest): boolean {
+		if (this.askHandlers.size === 0) return false;
+		for (const handler of this.askHandlers) handler(req);
+		return true;
+	}
+
+	dispatchTrustRequest(req: TrustRequest): void {
+		for (const handler of this.trustHandlers) {
+			try {
+				handler(req);
+			} catch {
+				// Ignore an individual observer failure.
 			}
 		}
+	}
 
-		if (capabilities) {
-			capabilities.bind(session, {
-				excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
-				extraAlwaysOn: this.options.tools ?? [],
-			});
-			this.capabilityRuntimes.set(session.sessionId, capabilities);
+	persistPermissionDecision(decision: ApprovalDecision): void {
+		const entry = this.registry.get(decision.sessionId);
+		if (!entry) return;
+		try {
+			const agentDir = getAgentDir();
+			if (decision.answer === "allowDir" && decision.meta?.suggestDir)
+				addWorkspaceRoot(agentDir, entry.cwd, decision.meta.suggestDir);
+			else if (decision.answer === "allowAlways" && decision.meta)
+				addAllowedPattern(agentDir, entry.cwd, decision.title);
+		} catch (error) {
+			_log.error("权限决策持久化失败（agent 已放行，本次决策不记忆）", decision.requestId, error);
 		}
-
-		gate.bindSession(session.sessionId);
-		askGate.bindSession(session.sessionId);
-		this.approvals.register(session.sessionId, gate);
-		this.registerAskGate(session.sessionId, askGate);
-		this.sessionPermissions.bind(session.sessionId, modeRef);
-		if (this.options.permissionGates !== false) {
-			await session.bindExtensions({
-				uiContext: makeUiContext(gate, askGate, (text, type) => {
-					void this.knowledge.notify(text, type, session.sessionId).catch(() => {});
-				}),
-				mode: "tui",
-			});
-		}
-		const unsubscribe = session.subscribe((event) => {
-			autoNameSession(session, event);
-			this.emitEvent(session.sessionId, event);
-		});
-		// 子代理产物目录下的会话文件 = 只读检视（spec §8.1：防能力静默漂移/递归绕过）。
-		// 其运行 trace 由 runner 管理，检视页不可写，故不另建 recorder（避免覆盖运行中的 recorder）。
-		const readOnly = isSubagentSessionPath(filePath);
-		this.registry.add({ session, unsubscribe, cwd, readOnly: readOnly || undefined });
-		if (!readOnly) await this.traces.start(session.sessionId, session.sessionManager.getSessionDir());
-		log.info("session opened", session.sessionId, { file: filePath });
-		return this.toMetaOrThrow(session.sessionId);
 	}
 
-	async listSessions(cwd?: string): Promise<SessionMeta[]> {
-		return this.lifecycle.list(cwd);
-	}
-
-	/** 跨全部项目目录枚举会话（项目管理页用，含活跃会话） */
-	async listAllSessions(): Promise<SessionMeta[]> {
-		return this.lifecycle.listAll();
-	}
-
-	private reapplyCapabilities(sessionId: string): void {
+	reapplyCapabilities(sessionId: string): void {
 		const runtime = this.capabilityRuntimes.get(sessionId);
-		const entry = this.registry.get(sessionId);
-		if (!runtime || !entry) return;
+		if (!runtime || !this.registry.get(sessionId)) return;
 		const changed = runtime.activate([]);
-		log.info("capability tools reapplied after reload", sessionId, {
-			activeTools: changed.state.footprint.activeTools,
-			allTools: changed.state.footprint.allTools,
-			reduction: Number(changed.state.footprint.reductionRatio.toFixed(3)),
-		});
+		_log.info("capability tools reapplied after reload", sessionId, changed.state.footprint);
 	}
 
-	async closeSession(sessionId: string): Promise<void> {
-		this.modelWait.cleanup(sessionId);
-		this.knowledgeSession.disposeSession(sessionId);
-		await this.lifecycle.close(sessionId, {
-			// 面板派发的子会话随父会话关闭一起中止（登记表清空，不再推送事件）
-			beforeDispose: (id) => this.subagentPanel.disposeSession(id),
-			afterEngineDispose: (id) => {
-				this.approvals.remove(id);
-				for (const askGate of this.askGates.get(id) ?? []) askGate.dispose();
-				this.askGates.delete(id);
-				this.sessionPermissions.remove(id);
-				this.capabilityRuntimes.delete(id);
-				this.streamGuard.cleanup(id);
-				this.eventRates.delete(id);
-			},
-			afterDispose: async (id) => {
-				await this.traces.stop(id);
-				log.info("session closed", id);
-			},
-		});
+	setMcpStatus(cwd: string, status: McpStatus): void {
+		this.mcp.setStatus(status, cwd);
+		for (const handler of this.mcpHandlers) handler(cwd, status);
 	}
 
-	/** 删除历史会话（pi 无删除 API，会话即磁盘 jsonl，直接删文件） */
-	async deleteSession(sessionId: string, sessionFile?: string): Promise<void> {
-		const entry = this.registry.get(sessionId);
-		const sessionDir = entry?.session.sessionManager.getSessionDir();
-		const file = sessionFile ?? entry?.session.sessionManager.getSessionFile();
-		if (entry) await this.closeSession(sessionId);
-		if (!file) throw new Error(`Session file not found: ${sessionId}`);
-		await unlink(file);
-		if (sessionDir) await TraceRecorder.removeAll(sessionDir, sessionId);
-		log.info("session deleted", sessionId);
-	}
-
-	private async evaluateKnowledgeReview(
+	async evaluateKnowledgeReview(
 		input: WikiModelReviewInput,
 		control: KnowledgeReviewControl,
 	): Promise<WikiModelReviewResult> {
@@ -758,765 +382,6 @@ export class SessionService {
 				),
 		});
 	}
-
-	/** @deprecated 通过 BackendServices.knowledgeSession.reviewWithModel 使用。 */
-	async reviewKnowledgeWithModel(input: WikiModelReviewInput): Promise<WikiModelReviewResult> {
-		return this.knowledgeSession.reviewWithModel(input);
-	}
-
-	/** @deprecated 通过 BackendServices.knowledgeSession.cancelModelReview 使用。 */
-	async cancelKnowledgeModelReview({
-		sessionId,
-		requestId,
-	}: {
-		sessionId: string;
-		requestId: string;
-	}): Promise<void> {
-		await this.knowledgeSession.cancelModelReview({ sessionId, requestId });
-	}
-
-	/** @deprecated 通过 BackendServices.knowledgeSession.startSetup 使用。 */
-	async startKnowledgeSetup(input: { sessionId: string; path?: string }): Promise<void> {
-		await this.knowledgeSession.startSetup(input);
-	}
-
-	getZoteroStatus(): ReturnType<ZoteroService["getStatus"]> {
-		return this.zotero.getStatus();
-	}
-	/** @deprecated 通过 BackendServices.knowledgeSession.resumeCheck 使用。 */
-	async resumeKnowledgeCheck(sessionId: string): Promise<void> {
-		await this.knowledgeSession.resumeCheck(sessionId);
-	}
-
-	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt> {
-		const entry = this.requireSession(sessionId);
-		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
-		if (this.recovery.isRecovering(sessionId))
-			throw new Error("Wait for answer recovery to finish or stop it before sending a new task");
-		if (!images?.length && isTaskStatusQuery(text) && entry.session.extensionRunner.getCommand("task-status"))
-			text = "/task-status";
-		log.info("prompt", sessionId, { text: text.slice(0, 120), images: images?.length ?? 0 });
-		// Extension commands execute before the SDK emits `input`, so lazy capability loading
-		// must happen here as well; otherwise /obsidian-setup cannot see research-vault.
-		this.capabilityRuntimes.get(sessionId)?.prepareForPrompt(text, entry.session.isStreaming);
-		// Own prompt lifecycle classification at this seam. The renderer cannot know which
-		// slash commands are extension commands, and extension commands emit no agent events.
-		const spaceIndex = text.indexOf(" ");
-		const commandName = text.startsWith("/") ? text.slice(1, spaceIndex === -1 ? undefined : spaceIndex) : "";
-		const isExtensionCommand = !!commandName && !!entry.session.extensionRunner.getCommand(commandName);
-		const receipt: PromptReceipt = isExtensionCommand
-			? { kind: "command" }
-			: entry.session.isStreaming
-				? { kind: "queued" }
-				: { kind: "agent" };
-		// session.prompt() 非流式路径会 await 整个 run（直到 agent_settled）；渲染端只需要
-		// “已受理/已入队”回执——用 preflightResult 提前返回，否则 IPC 挂一整轮，渲染端
-		// sending 状态被占住，运行中的 followUp 排队发送被防重发守卫静默拦截。
-		// preflight 前抛错（无模型/无 key/compaction 中）照常 reject 传给渲染端；
-		// ack 之后 run 期错误不再回传（走事件流呈现），then 的 reject 在已 resolve 后为 no-op。
-		// preflightResult(false) 只在 SDK catch 里紧随 throw 触发，不据此 reject，真实错误经 throw 传递。
-		await new Promise<void>((resolve, reject) => {
-			this.sessionEngine
-				.prompt(entry.session, text, {
-					// 运行中发送走 followUp 排队（agent 完成后自动投递；steer 打断暂不支持）
-					// SDK 要求 streaming 时必传 streamingBehavior，否则抛错
-					streamingBehavior: "followUp",
-					images: images?.map((image) => ({
-						type: "image" as const,
-						data: image.data,
-						mimeType: image.mimeType,
-					})),
-					preflightResult: (ok) => {
-						if (ok) resolve();
-					},
-				})
-				.then(
-					() => resolve(),
-					(err) => reject(err),
-				);
-		});
-		return receipt;
-	}
-
-	async retry(sessionId: string, requestId: string, expectedUserTimestamp?: number): Promise<PromptReceipt> {
-		const entry = this.requireSession(sessionId);
-		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
-		return this.recovery.retry(entry.session, requestId, expectedUserTimestamp);
-	}
-
-	async abort(sessionId: string): Promise<void> {
-		this.modelWait.cleanup(sessionId);
-		const entry = this.registry.get(sessionId);
-		if (!entry) return;
-		log.info("abort", sessionId);
-		await this.sessionEngine.abort(entry.session);
-	}
-
-	/** LAN 远程写端点前置检查（registry 直查，无磁盘 IO）。 */
-	checkSessionWritable(sessionId: string): "ok" | "not_found" | "read_only" {
-		const entry = this.registry.get(sessionId);
-		if (!entry) return "not_found";
-		if (entry.readOnly) return "read_only";
-		return "ok";
-	}
-
-	/** 清空运行中排队消息（steer+followUp 都清），返回被清内容；无会话返回空 */
-	async clearQueue(sessionId: string): Promise<{ steering: string[]; followUp: string[] }> {
-		const entry = this.registry.get(sessionId);
-		if (!entry) return { steering: [], followUp: [] };
-		log.info("clearQueue", sessionId);
-		return this.sessionEngine.clearQueue(entry.session);
-	}
-
-	/** 当前排队的 followUp 消息文本；无会话返回空 */
-	async getFollowUpMessages(sessionId: string): Promise<string[]> {
-		const entry = this.registry.get(sessionId);
-		if (!entry) return [];
-		return [...entry.session.getFollowUpMessages()];
-	}
-
-	async setModel(sessionId: string, provider: string, modelId: string): Promise<void> {
-		const entry = this.requireSession(sessionId);
-		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
-		const runtime = await this.getModelRuntime();
-		const model = runtime.getModel(provider, modelId);
-		if (!model) throw new Error(`Model not found: ${provider}/${modelId}`);
-		await this.sessionEngine.setModel(entry.session, model);
-	}
-
-	async setThinkingLevel(sessionId: string, level: string): Promise<void> {
-		const entry = this.requireSession(sessionId);
-		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
-		this.sessionEngine.setThinkingLevel(entry.session, level as ThinkingLevel);
-	}
-
-	async compact(sessionId: string, customInstructions?: string): Promise<void> {
-		const entry = this.requireSession(sessionId);
-		if (entry.readOnly) throw new Error("Cannot compact a read-only subagent transcript");
-		log.info("compact", sessionId);
-		await this.sessionEngine.compact(entry.session, customInstructions);
-	}
-
-	async getStats(sessionId: string): Promise<SessionStats> {
-		const entry = this.requireSession(sessionId);
-		const stats = entry.session.getSessionStats();
-		return {
-			inputTokens: stats.tokens.input,
-			outputTokens: stats.tokens.output,
-			cacheReadTokens: stats.tokens.cacheRead,
-			cacheWriteTokens: stats.tokens.cacheWrite,
-			totalTokens: stats.tokens.total,
-			requests: stats.assistantMessages,
-			scope: "sdk-session",
-			cost: stats.cost,
-		};
-	}
-
-	/** 每会话事件速率快照（心跳/临终快照数据源）：最近 60s 每秒事件数 + 最近事件时刻。
-	 * 顺带回收已结束会话（subagent 子会话不走 closeSession）的残留条目。 */
-	getEventRates(): Map<string, { window60s: number[]; lastEventAt: number }> {
-		this.eventRates.prune((id) => this.registry.has(id));
-		return this.eventRates.snapshot();
-	}
-
-	/** 全部活跃会话的运行态快照（只读观察者用）。 */
-	listActiveSessionRuntime(): { sessionId: string; streaming: boolean; compacting: boolean }[] {
-		return this.registry.list().map(({ session }) => ({
-			sessionId: session.sessionId,
-			streaming: session.isStreaming,
-			compacting: session.isCompacting,
-		}));
-	}
-
-	/** 全部未决权限请求的只读快照（LAN Observer 等被动观察者用）。 */
-	/** 全部未决权限请求快照（含 requestId；LAN 观察/远程应答与桌面共用） */
-	/** @deprecated 通过 BackendServices.approvals.listPending 使用。 */
-	getPendingPermissionRequests(): PermissionRequest[] {
-		return this.approvals.listPending();
-	}
-
-	/** 当前模型上下文使用情况；刚压缩后 tokens 未知（null），会话无模型时 percent 为 null */
-	async getContextUsage(sessionId: string): Promise<ContextUsageInfo | null> {
-		const entry = this.requireSession(sessionId);
-		const usage = entry.session.getContextUsage();
-		if (!usage) return null;
-		return { tokens: usage.tokens, contextWindow: usage.contextWindow, percent: usage.percent };
-	}
-
-	/** 列出斜杠命令：内置（标记 supported）+ prompt 模板 + skill + 扩展命令 */
-	async listSlashCommands(sessionId: string): Promise<SlashCommandInfo[]> {
-		return slashCommandsForSession(this.requireSession(sessionId).session);
-	}
-
-	/**
-	 * 无会话列出斜杠命令（draft 新会话的补全数据源）：三类命令都只依赖
-	 * DefaultResourceLoader（扩展命令在加载期注册进 ext.commands），无需建会话。
-	 * 信任未决的项目不弹窗、按不信任只加载用户级资源（弹窗已在选目录时前置）。
-	 */
-	async listSlashCommandsForCwd(cwd?: string): Promise<SlashCommandInfo[]> {
-		const target = cwd || this.options.defaultCwd || process.cwd();
-		const { resourceLoader } = await this.projectLoader.load(target, { askTrust: false });
-		return slashCommandsForLoader(resourceLoader);
-	}
-
-	/** 项目信任前置决策（添加项目/切换 draft cwd 时由 renderer 调用） */
-	async ensureProjectTrust(cwd: string): Promise<boolean> {
-		return this.projectLoader.ensureTrust(cwd);
-	}
-
-	/** 扩展显示名：`<inline:N>` 原样，目录式扩展取最后一段（剥 index.ts 后缀） */
-	private extensionDisplayName(path: string): string {
-		const cleaned = path.replace(/\/index\.(ts|js)$/, "");
-		const base = cleaned.split("/").filter(Boolean).pop();
-		return base ?? path;
-	}
-
-	/** 读取会话已加载的资源（skills/扩展；设置页展示用） */
-	async getLoadedResources(sessionId: string): Promise<LoadedResources> {
-		const entry = this.requireSession(sessionId);
-		const session = entry.session;
-		const skillResult = allSkillsFromLoader(session.resourceLoader);
-		const extResult = session.resourceLoader.getExtensions();
-		return {
-			skills: skillResult.skills.map((skill) => ({
-				name: skill.name,
-				description: skill.description,
-				scope: skill.sourceInfo.scope,
-				source: skill.sourceInfo.source,
-				path: skill.filePath,
-				disableModelInvocation: skill.disableModelInvocation,
-			})),
-			skillDiagnostics: skillResult.diagnostics.map((d) => ({
-				type: d.type,
-				message: d.message,
-				path: d.path,
-			})),
-			extensions: extResult.extensions.map((ext) => ({
-				name: this.extensionDisplayName(ext.path),
-				path: ext.path,
-				scope: ext.sourceInfo.scope,
-				source: ext.sourceInfo.source,
-				hidden: ext.hidden === true,
-				toolsCount: ext.tools.size,
-				tools: [...ext.tools.keys()],
-				commands: presentExtensionCommands(
-					[...ext.commands.values()].map((command) => ({ ...command, invocationName: command.name })),
-				).map((command) => command.name),
-				flagsCount: ext.flags.size,
-				shortcutsCount: ext.shortcuts.size,
-			})),
-			extensionErrors: extResult.errors,
-			...(this.capabilityRuntimes.get(sessionId)
-				? { capabilities: this.capabilityRuntimes.get(sessionId)?.state() }
-				: {}),
-		};
-	}
-
-	/** MCP 配置变更后热重载同项目的空闲会话，对齐 CLI /reload。 */
-	private async reloadMcpSessions(cwd?: string): Promise<void> {
-		const target = resolve(cwd || this.options.defaultCwd || process.cwd());
-		for (const entry of this.registry.list()) {
-			if (resolve(entry.cwd) !== target) continue;
-			if (entry.session.isStreaming || entry.session.isCompacting) {
-				log.info("skip MCP reload while session busy", entry.session.sessionId, { cwd: target });
-				continue;
-			}
-			try {
-				await this.sessionEngine.reload(entry.session);
-				this.reapplyCapabilities(entry.session.sessionId);
-			} catch (err) {
-				log.warn("MCP session reload failed", entry.session.sessionId, err);
-			}
-		}
-	}
-
-	onMcpStatus(handler: McpHandler): () => void {
-		this.mcpHandlers.add(handler);
-		return () => this.mcpHandlers.delete(handler);
-	}
-
-	setMcpStatus(cwd: string, status: McpStatus): void {
-		this.mcp.setStatus(status, cwd);
-		for (const handler of this.mcpHandlers) handler(cwd, status);
-	}
-
-	async steerSubagent(
-		sessionId: string,
-		message: string,
-		mode: "steer" | "followUp" = "steer",
-	): Promise<void> {
-		const control = this.liveSubagents.get(sessionId);
-		if (!control) throw new Error("Subagent is no longer running");
-		const text = message.trim();
-		if (!text) throw new Error("Steer message cannot be empty");
-		await control.steer(text, mode);
-	}
-
-	replySubagentSupervisor(sessionId: string, requestId: string, message: string): void {
-		const control = this.liveSubagents.get(sessionId);
-		if (!control) throw new Error("Subagent is no longer running");
-		const text = message.trim();
-		if (!text) throw new Error("Supervisor reply cannot be empty");
-		if (!control.reply(requestId, text)) throw new Error("Supervisor request is no longer pending");
-	}
-
-	async setSessionName(sessionId: string, name: string): Promise<void> {
-		const entry = this.requireSession(sessionId);
-		if (entry.readOnly) throw new Error("Cannot rename a read-only subagent transcript");
-		this.sessionEngine.setSessionName(entry.session, name);
-	}
-
-	/** 导出会话内容（HTML/JSONL）；返回文件内容，由调用方保存 */
-	async exportSession(sessionId: string, format: "html" | "jsonl"): Promise<string> {
-		const entry = this.requireSession(sessionId);
-		return format === "html"
-			? await this.sessionEngine.exportHtml(entry.session)
-			: this.sessionEngine.exportJsonl(entry.session);
-	}
-
-	/** 读取会话历史消息（打开历史会话时回放给 UI） */
-	async getSessionMessages(sessionId: string): Promise<SessionMessage[]> {
-		const entry = this.requireSession(sessionId);
-		const persisted = entry.session.sessionManager
-			.getBranch()
-			.filter((item): item is Extract<SessionEntry, { type: "message" }> => item.type === "message")
-			.map((item) => item.message as RawMessage);
-		// 面板派发 / 结果记录是 custom entry（不在 session.messages 里）：按时间戳并回消息流
-		const branch = entry.session.sessionManager.getBranch();
-		const panelRecords = subagentPanelRawMessages(branch);
-		const live = projectKnowledgeSnapshot(entry.session.messages as RawMessage[], persisted, this.runtime);
-		const merged = panelRecords.length > 0 ? mergeRawByTimestamp(live, panelRecords) : live;
-		const messages = toSessionMessages(merged, {
-			liveSubagentRunIds: new Set(this.subagentPanel.listRuns(sessionId).map((run) => run.runId)),
-		});
-		// 配对消息与会话树 entry id（assistant 供 fork 定位、user 供撤回定位）
-		assignEntryIds(messages, branch);
-		return messages;
-	}
-
-	/**
-	 * 桌面端子智能体内联预览：按 sessionFile 纯读取 jsonl，不注册 SessionManager，
-	 * 不创建 tab，不改变父会话。只允许 sessions-subagents 根目录，防任意文件读取。
-	 */
-	async peekSubagentMessages(filePath: string): Promise<SessionMessage[]> {
-		if (!isSubagentSessionPath(filePath)) throw new Error("Not a subagent session file");
-		const content = await readFile(filePath, "utf8");
-		return this.projectPersistedMessages(content);
-	}
-
-	/**
-	 * LAN 历史会话只读透视：活跃会话走 registry（同 getSessionMessages）；
-	 * 未打开的会话纯解析文件（不开 SessionManager，零副作用零写盘）。不存在返回 null。
-	 */
-	async peekSessionMessages(sessionId: string): Promise<SessionMessage[] | null> {
-		if (this.registry.get(sessionId)) return this.getSessionMessages(sessionId);
-		const meta = (await this.listAllSessions()).find((s) => s.sessionId === sessionId);
-		if (!meta?.sessionFile) return null;
-		try {
-			const content = await readFile(meta.sessionFile, "utf8");
-			return this.projectPersistedMessages(content);
-		} catch {
-			return null;
-		}
-	}
-
-	/** Both history peeks share the live polling publication boundary before normalization. */
-	private projectPersistedMessages(content: string): SessionMessage[] {
-		return readSessionMessagesFromContent(content, (raw) => projectKnowledgeSnapshot(raw, raw, this.runtime));
-	}
-
-	/**
-	 * 读取会话当前 todo 列表：扫 session.messages（裁剪后的上下文）找最后一条
-	 * todo 工具结果的 details，或最后一条 todo-reminder custom message 的 details
-	 * （compaction 后注入的恢复消息；toolResult 已被截断时兜底）。都没有返回 []。
-	 */
-	async getTodos(sessionId: string): Promise<TodoItem[]> {
-		const entry = this.requireSession(sessionId);
-		for (const raw of [...entry.session.messages].reverse()) {
-			const m = raw as RawMessage;
-			if (m.role === "toolResult" && m.toolName === TODO_TOOL_NAME && !m.isError) {
-				const todos = extractTodos(m.details);
-				if (todos) return todos;
-			}
-			if (m.role === "custom" && m.customType === TODO_REMINDER_CUSTOM_TYPE) {
-				const todos = extractTodos(m.details);
-				if (todos) return todos;
-			}
-		}
-		return [];
-	}
-
-	/**
-	 * 在指定 assistant 消息处分叉：新会话文件以其为结尾（原文件与原会话都保留），
-	 * 打开新会话并返回其 meta（调用方决定新开会话标签还是原位切换）。
-	 * ref.entryId 精确定位；缺省时按 ref.text 从分支尾部向前匹配最近一条同文 assistant 消息
-	 * （刚完成的流式消息还没有 entryId，走文本兜底）。
-	 */
-	async forkSession(sessionId: string, ref: { entryId?: string; text?: string }): Promise<SessionMeta> {
-		const entry = this.requireSession(sessionId);
-		if (entry.readOnly) throw new Error("Cannot fork a read-only subagent transcript");
-		if (entry.session.isStreaming || entry.session.isCompacting) {
-			throw new Error("Cannot fork while the agent is running or context is compacting");
-		}
-		const sourceManager = entry.session.sessionManager;
-		const targetId = resolveForkEntryId(sourceManager, ref);
-		const file = sourceManager.getSessionFile();
-		if (!file || !existsSync(file)) {
-			throw new Error("This session has not been saved yet. Send a message first.");
-		}
-		// 在新打开的 manager 上分叉，避免动当前会话的 manager 状态
-		const forkedManager = this.sessionEngine.openManager(file, sourceManager.getSessionDir());
-		const newPath = forkedManager.createBranchedSession(targetId);
-		if (!newPath) throw new Error("Failed to create forked session");
-		log.info("fork session", sessionId, { targetId, newPath });
-		return this.openSession(newPath);
-	}
-
-	/** 撤回的 custom entry 标记类型：追加在回退点后使 leaf 移动落盘持久（重启后撤回仍生效） */
-	static readonly RECALLED_MARKER_TYPE = "message-recalled";
-
-	/**
-	 * 撤回一条用户消息：navigateTree 把会话 leaf 回退到该消息之前（被撤回内容在文件中
-	 * 保留为侧枝，不删除），同时重建内存 LLM 上下文；随后追加 message-recalled custom entry
-	 * （不进上下文、不进消息列表）把 leaf 移动持久化，避免重启后旧分支回来。
-	 * 文本与图片从目标 entry 提取后返回，调用方放回输入框继续编辑。
-	 */
-	async recallMessage(
-		sessionId: string,
-		ref: { entryId?: string; text?: string; timestamp?: number },
-	): Promise<{ text: string; images: ImageInput[] }> {
-		const entry = this.requireSession(sessionId);
-		if (entry.readOnly) throw new Error("Cannot recall in a read-only subagent transcript");
-		if (entry.session.isStreaming || entry.session.isCompacting) {
-			throw new Error("Cannot recall while the agent is running or context is compacting");
-		}
-		const sm = entry.session.sessionManager;
-		const targetId = resolveRecallEntryId(sm, ref);
-		const target = sm.getEntry(targetId) as Extract<SessionEntry, { type: "message" }>;
-		const message = target.message as RawMessage;
-		// 文本/图片从目标 entry 提取（navigateTree 只返回 editorText，图片会丢）
-		const sourceText = blockText(message.content);
-		const invocation = parseExpandedSkillInvocation(sourceText);
-		const text = invocation ? formatSkillCommand(invocation) : sourceText;
-		const images = blockImages(message.content);
-		if (sm.getLeafId() === targetId) {
-			// 悬挂的用户消息（发出后无任何回复，entry 即当前 leaf）：navigateTree 视为 no-op，
-			// 手动回退 leaf 并同步内存上下文（与 navigateTree 内部做的事一致）
-			if (target.parentId) sm.branch(target.parentId);
-			else sm.resetLeaf();
-			// SDK 1.0 keeps the agent transcript projection internally; assigning
-			// agent.state.messages no longer changes the next provider request.
-			// Refresh the projection after moving the session-manager leaf instead.
-			entry.session.refreshContext();
-		} else {
-			const result = await entry.session.navigateTree(targetId);
-			if (result.cancelled) throw new Error("Recall was cancelled by an extension");
-		}
-		// 持久化回退点：custom entry 不参与 LLM 上下文，只把 leaf 移动写进文件
-		// （否则撤回只存在内存，重启后旧分支回来）
-		sm.appendCustomEntry(SessionService.RECALLED_MARKER_TYPE, { recalledEntryId: targetId });
-		log.info("recall message", sessionId, { targetId });
-		return { text, images };
-	}
-
-	async listModels(): Promise<AvailableModel[]> {
-		const [providers, prefs, runtime] = await Promise.all([
-			this.settings.listProviders(),
-			this.modelPrefs.getPrefs(),
-			this.getModelRuntime(),
-		]);
-		return providers.flatMap((provider) =>
-			provider.configured
-				? provider.models
-						.filter((model) => !prefs.hiddenModels[provider.id]?.includes(model.id))
-						.map((model) => {
-							// 该模型实际支持的思考深度（SDK 按 reasoning/thinkingLevelMap 判定；不推理的模型只有 off）
-							// + 图片输入能力（input 含 image；查不到则缺省，UI fail-open）
-							let thinkingLevels: string[] | undefined;
-							let imageInput: boolean | undefined;
-							try {
-								const m = runtime.getModel(provider.id, model.id);
-								if (m) {
-									thinkingLevels = getSupportedThinkingLevels(m);
-									imageInput = m.input.includes("image");
-								}
-							} catch {
-								thinkingLevels = undefined;
-								imageInput = undefined;
-							}
-							return {
-								provider: provider.id,
-								providerName: provider.name,
-								id: model.id,
-								label: model.name,
-								authed: true,
-								thinkingLevels,
-								imageInput,
-							};
-						})
-				: [],
-		);
-	}
-
-	async getModelPrefs(): Promise<ModelPrefs> {
-		return this.modelSettings.getPrefs();
-	}
-
-	async setModelHidden(provider: string, modelId: string, hidden: boolean): Promise<ModelPrefs> {
-		return this.modelSettings.setModelHidden(provider, modelId, hidden);
-	}
-
-	async setModelsHidden(provider: string, modelIds: string[], hidden: boolean): Promise<ModelPrefs> {
-		return this.modelSettings.setModelsHidden(provider, modelIds, hidden);
-	}
-
-	async setSubagentModel(agent: string, modelRef: string | null): Promise<ModelPrefs> {
-		return this.modelSettings.setSubagentModel(agent, modelRef);
-	}
-
-	async setSubagentThinking(
-		agent: string,
-		level: import("@drone/shared").SubagentThinkingLevel | null,
-	): Promise<ModelPrefs> {
-		return this.modelSettings.setSubagentThinking(agent, level);
-	}
-
-	onEvent(handler: EventHandler): () => void {
-		this.eventHandlers.add(handler);
-		return () => this.eventHandlers.delete(handler);
-	}
-
-	onAskRequest(handler: AskHandler): () => void {
-		this.askHandlers.add(handler);
-		return () => this.askHandlers.delete(handler);
-	}
-
-	respondAsk(requestId: string, response: AskResponse): boolean {
-		for (const gates of this.askGates.values()) {
-			for (const gate of gates) {
-				if (gate.respond(requestId, response)) return true;
-			}
-		}
-		return false;
-	}
-
-	/** @deprecated 通过 BackendServices.approvals.onRequest 使用。 */
-	onPermissionRequest(handler: PermissionHandler): () => void {
-		return this.approvals.onRequest(handler);
-	}
-
-	/** 权限请求被桌面端实际应答后通知被动观察者。 */
-	/** @deprecated 通过 BackendServices.approvals.onResolved 使用。 */
-	onPermissionResolved(handler: PermissionResolvedHandler): () => void {
-		return this.approvals.onResolved(handler);
-	}
-
-	onTrustRequest(handler: TrustHandler): () => void {
-		this.trustHandlers.add(handler);
-		return () => this.trustHandlers.delete(handler);
-	}
-
-	onLoginEvent(handler: LoginHandler): () => void {
-		this.loginHandlers.add(handler);
-		return () => this.loginHandlers.delete(handler);
-	}
-
-	/** @deprecated 通过 BackendServices.approvals.respond 使用。 */
-	respondPermission(requestId: string, answer: PermissionAnswer): void {
-		const sessionId = this.approvals.respond(requestId, answer);
-		if (answer === "allowRun" && sessionId) log.info("permission allowRun", sessionId, { requestId });
-	}
-
-	/** 权限门控配置（enabled 解析保留；UI 已无开关入口，仅手改 permissions.json 可关 = 隐藏逃生舱） */
-	/** @deprecated 通过 BackendServices.permissions.getConfig 使用。 */
-	getPermissionConfig(): { enabled: boolean } {
-		return this.permissions.getConfig();
-	}
-
-	/** 设置 → 权限：规则文件快照（路径 / 原文 / 默认合并视图 / mtime） */
-	/** @deprecated 通过 BackendServices.permissions.getSettings 使用。 */
-	getPermissionSettings(): PermissionSettingsSnapshot {
-		return this.permissions.getSettings();
-	}
-
-	/** 设置 → 权限 保存：校验 + mtime 冲突检查 + tmp+rename 原子写（.bak 保留，enabled 保留文件原值）；
-	 * 写后 createPermissionConfigLoader 在下一次 tool_call 前按 mtime+size 重读 = 保存即生效 */
-	/** @deprecated 通过 BackendServices.permissions.saveSettings 使用。 */
-	savePermissionSettings(input: PermissionSettingsSaveInput): PermissionSettingsSaveResult {
-		try {
-			const result = this.permissions.saveSettings(input);
-			if (!result.ok) log.info("permissions.json 未保存", { reason: result.reason });
-			return result;
-		} catch (err) {
-			log.error("permissions.json 写入失败", err);
-			throw err; // ipcMain.handle，reject 传回 renderer
-		}
-	}
-
-	/** 设置 → 权限 恢复默认（用户可见字段写回默认，enabled 不动） */
-	/** @deprecated 通过 BackendServices.permissions.resetSettings 使用。 */
-	resetPermissionSettings(): PermissionSettingsSnapshot {
-		return this.permissions.resetSettings();
-	}
-
-	/** 设置 → 权限 试算：同一套规则求值，只跑规则链（不模拟边界/临时区/项目内自动放行） */
-	/** @deprecated 通过 BackendServices.permissions.probe 使用。 */
-	probePermission(input: PermissionProbeInput): PermissionProbeResult {
-		return this.permissions.probe(input);
-	}
-
-	/** 设置 → 权限 审计日志尾部（fullAccess 高危留痕，最新在前） */
-	/** @deprecated 通过 BackendServices.permissions.getAuditTail 使用。 */
-	getPermissionAuditTail(limit?: number): PermissionAuditTailEntry[] {
-		return this.permissions.getAuditTail(limit);
-	}
-
-	/** 会话权限模式（default 缺省 fail-safe；关 tab 重开后端已归零，renderer 对齐用） */
-	getSessionPermissionMode(sessionId: string): PermissionMode {
-		return this.sessionPermissions.getMode(sessionId);
-	}
-
-	/** 切换会话权限模式（内存态即时生效，不落盘；会话不存在时抛可读错误） */
-	setSessionPermissionMode(sessionId: string, mode: PermissionMode): void {
-		this.sessionPermissions.setMode(sessionId, mode);
-		log.info("permission mode", sessionId, { mode });
-	}
-
-	/** 上下文管理模式（二态：evaporation / off；单一 key 派生读，缺省蒸发） */
-	getContextManagerConfig(): { mode: ContextManagerMode } {
-		return { mode: readContextManagerMode(getAgentDir()) };
-	}
-
-	/** 写上下文管理模式（单一写者原子写，写后即效：下一轮 context 钩子见新值）。损坏拒写时上抛 */
-	setContextManagerMode(mode: ContextManagerMode): void {
-		try {
-			writeContextManagerMode(getAgentDir(), mode);
-		} catch (err) {
-			log.error("settings.json 写入失败（contextManager mode 未保存）", err);
-			throw err; // ipcMain.handle，reject 传回 renderer
-		}
-		log.info("context manager mode", mode);
-	}
-
-	/** channel-watch 总开关（设置 UI 用；键在 ~/.pi/agent/settings.json，缺省=开） */
-	getChannelWatchConfig(): { enabled: boolean } {
-		return { enabled: readChannelWatchEnabled(getAgentDir()) };
-	}
-
-	/** 写 channel-watch 开关（下一 session_start 生效：目录 init/watcher/工具注册全部跟随）。损坏拒写时上抛 */
-	setChannelWatchEnabled(enabled: boolean): void {
-		try {
-			writeChannelWatchEnabled(getAgentDir(), enabled);
-		} catch (err) {
-			log.error("settings.json 写入失败（channel-watch 开关未保存）", err);
-			throw err; // ipcMain.handle，reject 传回 renderer
-		}
-		log.info("channel watch enabled", enabled);
-	}
-
-	respondTrust(requestId: string, answer: TrustAnswer): void {
-		this.projectTrust.respond(requestId, answer);
-	}
-
-	dispose(): void {
-		this.modelWait.dispose();
-		for (const sessionId of this.registry.list().map((entry) => entry.session.sessionId))
-			this.knowledgeSession.disposeSession(sessionId);
-		this.knowledge.dispose();
-		this.registry.disposeAll();
-		this.eventHandlers.clear();
-		this.approvals.dispose();
-		this.sessionPermissions.dispose();
-		this.trustHandlers.clear();
-		this.projectTrust.dispose();
-		this.traces.disposeAll();
-		void this.runtime.dispose();
-		log.info("backend disposed");
-	}
-
-	private requireSession(sessionId: string) {
-		const entry = this.registry.get(sessionId);
-		if (!entry) throw new Error(`Session not found: ${sessionId}`);
-		return entry;
-	}
-
-	private toMetaOrThrow(sessionId: string): SessionMeta {
-		const entry = this.registry.get(sessionId);
-		if (!entry) throw new Error(`Session not found: ${sessionId}`);
-		return this.registry.toMeta(entry);
-	}
-
-	private registerAskGate(sessionId: string, gate: AskGate): void {
-		const gates = this.askGates.get(sessionId) ?? new Set<AskGate>();
-		gates.add(gate);
-		this.askGates.set(sessionId, gates);
-	}
-
-	private dispatchAskRequest(req: AskRequest): boolean {
-		if (this.askHandlers.size === 0) return false;
-		for (const handler of this.askHandlers) handler(req);
-		return true;
-	}
-
-	private persistPermissionDecision(decision: ApprovalDecision): void {
-		const entry = this.registry.get(decision.sessionId);
-		if (!entry) return;
-		try {
-			const agentDir = getAgentDir();
-			if (decision.answer === "allowDir" && decision.meta?.suggestDir) {
-				addWorkspaceRoot(agentDir, entry.cwd, decision.meta.suggestDir);
-			} else if (decision.answer === "allowAlways" && decision.meta) {
-				addAllowedPattern(agentDir, entry.cwd, decision.title);
-			}
-		} catch (err) {
-			log.error("权限决策持久化失败（agent 已放行，本次决策不记忆）", decision.requestId, err);
-		}
-	}
-
-	private dispatchTrustRequest(req: TrustRequest): void {
-		for (const handler of this.trustHandlers) {
-			try {
-				handler(req);
-			} catch {
-				// 忽略单个处理器异常
-			}
-		}
-	}
-
-	private dispatchLoginEvent(payload: LoginEventPayload): void {
-		for (const handler of this.loginHandlers) {
-			try {
-				handler(payload);
-			} catch {
-				// 忽略单个处理器异常
-			}
-		}
-	}
 }
 
 export type { EventForwarder, Model };
-
-/** 按 timestamp 稳定归并两串消息（面板记录并回上下文消息流；同戳时上下文消息在前） */
-function mergeRawByTimestamp(base: RawMessage[], extra: RawMessage[]): RawMessage[] {
-	const out: RawMessage[] = [];
-	let i = 0;
-	let j = 0;
-	const sorted = [...extra].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
-	while (i < base.length || j < sorted.length) {
-		const a = base[i];
-		const b = sorted[j];
-		if (a === undefined) {
-			if (b !== undefined) out.push(b);
-			j++;
-			continue;
-		}
-		if (b === undefined || (a.timestamp ?? 0) <= (b.timestamp ?? 0)) {
-			out.push(a);
-			i++;
-		} else {
-			out.push(b);
-			j++;
-		}
-	}
-	return out;
-}

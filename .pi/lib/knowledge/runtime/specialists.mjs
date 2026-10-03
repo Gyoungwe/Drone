@@ -3,7 +3,7 @@ import {
   createKnowledgeSpecialists,
   knowledgeReadStart,
   shouldOrientKnowledge
-} from "./chunks/chunk-7S272UXR.mjs";
+} from "./chunks/chunk-VJ65XVAJ.mjs";
 import "./chunks/chunk-K64ABPUJ.mjs";
 import "./chunks/chunk-BRQ6C4CR.mjs";
 import "./chunks/chunk-GC2J7ECB.mjs";

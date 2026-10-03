@@ -3,6 +3,7 @@ set -eu
 
 mkdir -p /run/sshd /run/munge /var/log/slurm /var/spool/slurmctld /var/spool/slurmd
 chown -R munge:munge /run/munge
+chown -R slurm:slurm /var/spool/slurmctld /var/spool/slurmd /var/log/slurm
 if [ ! -f /etc/munge/munge.key ]; then
   dd if=/dev/urandom of=/etc/munge/munge.key bs=1 count=1024 2>/dev/null
   chown munge:munge /etc/munge/munge.key

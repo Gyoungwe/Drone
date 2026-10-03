@@ -71,7 +71,7 @@ export function shouldOrientKnowledge(prompt) {
 		!!deliveryContract(text) ||
 		(/比较|对比|分析|综述|compare|analy[sz]|review/i.test(text) &&
 			/论文|文献|研究|证据|方法|软件|papers?|evidence|software/i.test(text)) ||
-		/知识库|已有知识|主题.{0,8}(?:知识|进展)|根据.{0,10}(?:文献|笔记)|show\s*-?\s*me|\bwiki\b/i.test(text)
+		/知识库|已有知识|主题.{0,8}(?:知识|进展)|根据.{0,10}(?:文献|笔记)|(?:介绍|解读|讲解).{0,12}(?:论文|文献)|下载.{0,12}(?:软件说明书|说明书|软件文档)|show\s*-?\s*me|\bwiki\b/i.test(text)
 	);
 }
 export function createKnowledgeSpecialists(pi, { getCurrent, readOnly = false }) {

@@ -88,7 +88,7 @@ import {
   createKnowledgeSpecialists,
   knowledgeReadStart,
   shouldOrientKnowledge
-} from "./chunks/chunk-7S272UXR.mjs";
+} from "./chunks/chunk-VJ65XVAJ.mjs";
 import {
   SPECIALIST_LIMITS,
   contextSessionId,

@@ -1,11 +1,11 @@
 ﻿import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { closeKnowledgeServices } from "@drone/knowledge/service";
 import { fauxToolCall as call, fauxProvider, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { getCurrentSystemPrompt } from "@earendil-works/pi-ai/utils/transcript";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
-import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
 import { PiBackend } from "../src/pi-backend";
 
 // Actual SDK/provider/tool-result transport, but an in-memory fake model: no paid model or user credentials.

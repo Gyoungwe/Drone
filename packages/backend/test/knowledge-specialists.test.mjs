@@ -1,29 +1,25 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
 import { readKnowledgeBinding } from "@drone/knowledge/config";
-import { KNOWLEDGE_SPECIALISTS } from "@drone/shared";
-import { fauxToolCall as call, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import { validateSpecialistHtml } from "../../../.pi/lib/knowledge/specialist-delivery.mjs";
+import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
+import { validateSpecialistHtml } from "@drone/knowledge/specialist-delivery";
 import {
 	registerKnowledgeSpecialistHost,
 	setSpecialistSettings,
 	specialistSettings,
 	withSpecialistSlot,
-} from "../../../.pi/lib/knowledge/specialist-host.mjs";
+} from "@drone/knowledge/specialist-host";
 import {
 	createKnowledgeSpecialists,
 	knowledgeReadStart,
 	shouldOrientKnowledge,
-} from "../../../.pi/lib/knowledge/specialists.mjs";
-import {
-	beginKnowledgeFlow,
-	flowFor,
-	noteKnowledgeSpecialist,
-} from "../../../.pi/lib/knowledge/ui-state.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
+} from "@drone/knowledge/specialists";
+import { beginKnowledgeFlow, flowFor, noteKnowledgeSpecialist } from "@drone/knowledge/ui-state";
+import { KNOWLEDGE_SPECIALISTS } from "@drone/shared";
+import { fauxToolCall as call, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runKnowledgeSpecialist } from "../src/knowledge/specialist-runner";
 import { discoverAgents } from "../src/tools/subagent/agents";
 import { runSubagent } from "../src/tools/subagent/runner";

@@ -1,19 +1,15 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
+import { setSpecialistSettings, specialistSettings } from "@drone/knowledge/specialist-host";
+import { knowledgePreviewReview } from "@drone/knowledge/ui-service";
+import { lastWikiModelReview, reviewWikiWithModel } from "@drone/knowledge/wiki-model-review";
+import { mergeWikiProposal, previewWikiProposal, stageWikiProposal } from "@drone/knowledge/wiki-review";
 import { KNOWLEDGE_REVIEWER, PROTECTED_KNOWLEDGE_AGENTS } from "@drone/shared";
 import { fauxToolCall as call, fauxAssistantMessage as reply } from "@earendil-works/pi-ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { closeKnowledgeServices, getKnowledgeService } from "../../../.pi/lib/knowledge/service.mjs";
-import { setSpecialistSettings, specialistSettings } from "../../../.pi/lib/knowledge/specialist-host.mjs";
-import { knowledgePreviewReview } from "../../../.pi/lib/knowledge/ui-service.mjs";
-import { lastWikiModelReview, reviewWikiWithModel } from "../../../.pi/lib/knowledge/wiki-model-review.mjs";
-import {
-	mergeWikiProposal,
-	previewWikiProposal,
-	stageWikiProposal,
-} from "../../../.pi/lib/knowledge/wiki-review.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 import { runKnowledgeSpecialist } from "../src/knowledge/specialist-runner";
 
 let root, cwd, vault, service, prep, revision, staged, preview;

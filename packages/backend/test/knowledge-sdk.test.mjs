@@ -1,6 +1,8 @@
 import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { closeKnowledgeServices } from "@drone/knowledge/service";
 import {
 	createAgentSession,
 	DefaultResourceLoader,
@@ -9,8 +11,6 @@ import {
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
-import { closeKnowledgeServices } from "../../../.pi/lib/knowledge/service.mjs";
-import { configureObsidian } from "../../../.pi/lib/obsidian-workbench.mjs";
 
 it("real SDK delivers global navigation before model invocation in an unrelated project", async () => {
 	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-knowledge-sdk-")));
