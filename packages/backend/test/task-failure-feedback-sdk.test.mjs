@@ -69,7 +69,8 @@ it("real SDK failure → task_status → natural handoff keeps pairing and does 
 		expect(captured.messages.some((m) => m.role === "toolResult" && m.toolName === "task_status")).toBe(true);
 		const capturedSystemPrompt = getCurrentSystemPrompt(captured.messages || []);
 		expect(capturedSystemPrompt).toContain("not a copied task ledger");
-		expect(capturedSystemPrompt).toContain("which concrete step/file/service failed");
+		expect(capturedSystemPrompt).toContain("not in the reply");
+		expect(capturedSystemPrompt).not.toContain("Explain recovered attempts as history");
 		expect(capturedSystemPrompt).toContain("impact not yet known");
 		const index = captured.messages.findIndex((m) => m.role === "toolResult" && m.toolName === "read");
 		expect(index).toBeGreaterThan(0);

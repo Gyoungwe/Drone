@@ -92,6 +92,10 @@ describe("failure-feedback domain functions", () => {
 		expect(taskProgressContext({ ...task, reason: undefined })).toContain("task_progress_context");
 		expect(failureReceipt({ failures: [] })).toContain("没保留下来");
 		expect(FAILURE_EXPLANATION_POLICY).toContain("impact not yet known");
+		expect(FAILURE_EXPLANATION_POLICY).toContain("not in the reply");
+		expect(FAILURE_EXPLANATION_POLICY).not.toContain("Explain recovered attempts as history");
+		expect(FAILURE_EXPLANATION_POLICY).not.toContain("report what was repaired");
 		expect(TASK_HANDOFF_POLICY).toContain("next concrete action");
+		expect(TASK_HANDOFF_POLICY).toContain("process-error postmortem");
 	});
 });
