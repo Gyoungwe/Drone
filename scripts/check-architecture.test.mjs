@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { promisify } from "node:util";
@@ -12,7 +13,7 @@ const checker = new URL("./check-architecture.mjs", import.meta.url);
 // The fixture test runs the checker against a temporary copy of the source tree
 // so it does not mutate the repository or its ratchet baseline.
 test("architecture checker reports a new renderer Pi SDK import", async () => {
-	const temp = await mkdtemp(join(process.env.TMPDIR || "/tmp", "drone-architecture-"));
+	const temp = await mkdtemp(join(tmpdir(), "drone-architecture-"));
 	try {
 		const source = await readFile(
 			new URL("../packages/desktop/src/renderer/src/main.tsx", import.meta.url),
