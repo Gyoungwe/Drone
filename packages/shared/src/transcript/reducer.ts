@@ -17,6 +17,7 @@ import {
 	subagentRunDataFromPanelRun,
 } from "../subagent";
 import { taskStatusDisplay } from "../task-status";
+import { turnRouteDisplay } from "../turn-route";
 import { extractTodos, TODO_TOOL_NAME } from "../todo";
 import { reportedUsage } from "../usage-display";
 import {
@@ -418,6 +419,17 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				return {
 					...state,
 					messages: [...state.messages, { kind: "assistant", ...report, thinking: "", tools: [] }],
+				};
+			}
+			const route = turnRouteDisplay(event.message);
+			if (route) {
+				if (state.messages.some((message) => message.id === route.id)) return state;
+				return {
+					...state,
+					messages: [
+						...state.messages,
+						{ kind: "assistant", id: route.id, text: "", thinking: "", tools: [], timestamp: route.timestamp, route: route.route },
+					],
 				};
 			}
 			return acceptFinalSnapshot(state, event.message);

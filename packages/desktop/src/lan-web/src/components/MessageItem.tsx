@@ -1,4 +1,4 @@
-import { LAN_IMAGE_PLACEHOLDER, type UIMessage } from "@drone/shared";
+import { LAN_IMAGE_PLACEHOLDER, type UIMessage, turnRouteLines } from "@drone/shared";
 import { type LanI18nKey, t } from "../i18n";
 import { ChevronRightIcon, ImageIcon } from "./icons";
 import { Markdown } from "./Markdown";
@@ -111,8 +111,22 @@ export function MessageItem({
 					{message.text}
 				</div>
 			);
-		case "assistant":
-			// 与桌面端一致：任务不进聊天流。LAN 端只读，任务状态不在此复述。
+		case "assistant": {
+			// 与桌面端一致：任务账本不在 LAN 复述。路由说明跟着这一轮的记录走。
+			if (message.route) {
+				const view = turnRouteLines(
+					message.route,
+					navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en",
+				);
+				return (
+					<details className={`m-assistant${cls}`} data-testid="turn-route">
+						<summary>{view.summary}</summary>
+						{view.lines.map((line) => (
+							<p key={line}>{line}</p>
+						))}
+					</details>
+				);
+			}
 			if (message.taskView) return null;
 			if (message.progress && !message.text)
 				return (
@@ -152,6 +166,7 @@ export function MessageItem({
 					{!metaInGroup && message.tools.map((tool) => <ToolCard key={tool.key} tool={tool} />)}
 				</div>
 			);
+		}
 		case "error":
 			// 统一报错信封（共用 reducer 自动派发）；LAN 迷你字典没有 error.* 全量
 			// 密钥，标题用 titleKey 的中文兜底（仅当已知 key 时翻译，否则原文 key）

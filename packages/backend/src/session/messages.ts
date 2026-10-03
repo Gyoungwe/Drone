@@ -17,6 +17,7 @@ import {
 	subagentResultRecordFromUnknown,
 	subagentRunDataFromPanelRun,
 	taskStatusDisplay,
+	turnRouteDisplay,
 } from "@drone/shared";
 import { parseSessionEntries, type SessionEntry, type SessionManager } from "../session-engine/sdk";
 
@@ -333,6 +334,19 @@ export function toSessionMessages(
 				thinking: "",
 				tools: [],
 				images: [],
+			});
+			continue;
+		}
+		const route = turnRouteDisplay(raw);
+		if (route) {
+			out.push({
+				role: "assistant",
+				text: "",
+				timestamp: route.timestamp,
+				thinking: "",
+				tools: [],
+				images: [],
+				route: route.route,
 			});
 			continue;
 		}

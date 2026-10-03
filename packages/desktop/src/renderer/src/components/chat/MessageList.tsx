@@ -223,6 +223,7 @@ export function MessageList() {
 				message={row.message}
 				metaInGroup={row.metaInGroup}
 				showActions={row.showActions}
+				showTaskCard={row.taskPlacement === "show"}
 				streaming={row.streaming}
 				sessionId={activeSessionId}
 			/>

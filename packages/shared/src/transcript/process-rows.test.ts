@@ -148,4 +148,47 @@ describe("groupProcessRows", () => {
 		expect(seg.rows).toHaveLength(5);
 		expect(seg.stages).toBe(2);
 	});
+
+	it("keeps the latest task card out of the process block", () => {
+		const snapshot = {
+			kind: "assistant" as const,
+			id: "old",
+			text: "",
+			thinking: "",
+			tools: [],
+			timestamp: 2,
+			taskView: {
+				version: 2 as const,
+				revision: 1,
+				activeTaskId: "t",
+				selectionRequired: false,
+				tasks: [],
+				limits: { stageCalls: 48, totalCalls: 192 },
+			},
+		};
+		const folded: ChatRow = {
+			kind: "message",
+			key: "old",
+			message: snapshot,
+			metaInGroup: true,
+			showActions: false,
+			streaming: false,
+		};
+		const shown: ChatRow = {
+			kind: "message",
+			key: "latest",
+			message: { ...snapshot, id: "latest" },
+			metaInGroup: true,
+			showActions: false,
+			streaming: false,
+			taskPlacement: "show",
+		};
+		const out = groupProcessRows([user("u1"), progress("a1", "规划"), folded, shown, text("done")]);
+		expect(out.map((row) => (row.kind === "message" ? row.key : row.kind))).toEqual([
+			"u1",
+			"process",
+			"latest",
+			"done",
+		]);
+	});
 });

@@ -4,6 +4,7 @@ import type { ProgressDisplay } from "./progress-display";
 import type { SkillInvocationDisplay } from "./skill-invocation";
 import type { SubagentPanelRun, SubagentRunData } from "./subagent";
 import type { TaskView } from "./task-workbench";
+import type { TurnRoute } from "./turn-route";
 import type { ReportedUsage } from "./usage-display";
 
 /** 顶栏打开的会话持久化（重启恢复用，由主进程写入 userData/tabs.json） */
@@ -117,6 +118,8 @@ export interface SessionAssistantMessage {
 	role: "assistant";
 	hostStatus?: true;
 	taskView?: TaskView;
+	/** Per-turn routing explanation. Empty text; the card renders `route`. */
+	route?: TurnRoute;
 	text: string;
 	thinking: string;
 	tools: SessionToolCall[];

@@ -5,6 +5,7 @@ import type { ImageInput, ModelWaitEvent } from "../session";
 import type { SkillInvocationDisplay } from "../skill-invocation";
 import type { SubagentPanelRun } from "../subagent";
 import type { TaskView } from "../task-workbench";
+import type { TurnRoute } from "../turn-route";
 import type { TodoItem } from "../todo";
 import type { ReportedUsage } from "../usage-display";
 
@@ -82,6 +83,7 @@ export type UIMessage =
 	| {
 			kind: "assistant";
 			taskView?: TaskView;
+			route?: TurnRoute;
 			cycleId?: string;
 			usage?: ReportedUsage;
 			progress?: ProgressDisplay;

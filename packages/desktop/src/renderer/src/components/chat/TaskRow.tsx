@@ -7,7 +7,6 @@ import {
 } from "@drone/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
-import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import { DefaultMilestoneEvidence, MilestoneEvidence } from "./MilestoneEvidence";
@@ -31,14 +30,13 @@ export function TaskRow({
 	sessionId: string | null;
 	agentActive: boolean;
 }) {
-	const t = useT();
 	const [busy, setBusy] = useState(false),
 		[error, setError] = useState("");
 	const done = task.milestones.filter((m) => m.state === "completed").length;
 	const pct = task.milestones.length ? Math.round((done / task.milestones.length) * 100) : 0;
 	const reason = explainTaskReason(task.reason);
 	const presentation = taskDeliveryPresentation(task, agentActive);
-	const pendingReview = task.actions.find((action) => action.kind === "review" && action.state === "pending");
+	const pendingReview = task.actions.some((action) => action.kind === "review" && action.state === "pending");
 	const remainingSummary =
 		(agentActive ? "任务仍在执行；验收进度会随结果更新，无需重复发起。" : task.remainingSummary) ||
 		(task.milestones.length
@@ -86,51 +84,7 @@ export function TaskRow({
 			>
 				{remainingSummary}
 			</p>
-			{pendingReview && (
-				<section
-					className="mt-2 rounded-lg border border-amber-500/35 bg-amber-500/5 p-2"
-					data-testid="task-review-card"
-				>
-					<div className="flex items-start gap-2">
-						<span className="mt-0.5 text-amber-500" aria-hidden="true">
-							⚠
-						</span>
-						<div className="min-w-0 flex-1">
-							<strong className="block text-[11px] text-ink">{t("panel.reviewTitle")}</strong>
-							<p className="mt-0.5 break-words text-[11px] leading-4 text-ink-dim">
-								{pendingReview.title}
-								{pendingReview.reason ? ` · ${pendingReview.reason}` : ""}
-							</p>
-						</div>
-					</div>
-					<div className="mt-2 flex flex-wrap items-center gap-1.5">
-						<button
-							type="button"
-							disabled={busy || !sessionId || agentActive}
-							className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-40"
-							onClick={async () => {
-								if (!sessionId) return;
-								setBusy(true);
-								setError("");
-								try {
-									await getPi().prompt(
-										sessionId,
-										taskActionCommand(view, task.id, "acknowledge", { actionId: pendingReview.id }),
-									);
-								} catch (e) {
-									setError(String(e));
-								} finally {
-									setBusy(false);
-								}
-							}}
-						>
-							{t("panel.reviewAcknowledge")}
-						</button>
-						<span className="text-[11px] text-ink-faint">{t("panel.reviewLater")}</span>
-					</div>
-				</section>
-			)}
-			{presentation.canContinue && (
+			{presentation.canContinue && !pendingReview && (
 				<button
 					type="button"
 					disabled={busy || agentActive || !sessionId}
