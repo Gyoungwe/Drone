@@ -15,6 +15,7 @@ from __future__ import print_function
 
 import base64
 import binascii
+import ctypes
 import errno
 import hashlib
 import json
@@ -26,8 +27,19 @@ import subprocess
 import sys
 import tempfile
 import time
+from ctypes import wintypes
 from datetime import datetime, timezone
 from pathlib import Path
+
+
+WINDOWS = os.name == "nt"
+WINDOWS_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+WINDOWS_PROCESS_QUERY_INFORMATION = 0x0400
+WINDOWS_STILL_ACTIVE = 259
+
+
+class _WindowsFileTime(ctypes.Structure):
+    _fields_ = [("dwLowDateTime", ctypes.c_uint32), ("dwHighDateTime", ctypes.c_uint32)]
 
 
 PROTOCOL_VERSION = 1
@@ -342,8 +354,64 @@ def write_status(directory, state, **fields):
     return value
 
 
+def _windows_process_details(pid):
+    """Return a creation-time marker for a live Windows process.
+
+    ``os.kill(pid, 0)`` is not a liveness probe on Windows: its implementation
+    maps signals to ``TerminateProcess`` and can report permission errors for a
+    process that is still running.  Querying the process through kernel32 gives
+    us both a race-safe existence check and a marker that protects against PID
+    reuse after a reconnect.
+    """
+    if not WINDOWS:
+        return None
+    try:
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    except (AttributeError, OSError):
+        return None
+    try:
+        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+        kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+        kernel32.GetProcessTimes.argtypes = [wintypes.HANDLE, ctypes.POINTER(_WindowsFileTime),
+                                             ctypes.POINTER(_WindowsFileTime), ctypes.POINTER(_WindowsFileTime),
+                                             ctypes.POINTER(_WindowsFileTime)]
+        kernel32.GetProcessTimes.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+    except AttributeError:
+        return None
+    handle = None
+    for access in (WINDOWS_PROCESS_QUERY_LIMITED_INFORMATION, WINDOWS_PROCESS_QUERY_INFORMATION):
+        handle = kernel32.OpenProcess(access, False, int(pid))
+        if handle:
+            break
+    if not handle:
+        return None
+    try:
+        exit_code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+            return None
+        if exit_code.value != WINDOWS_STILL_ACTIVE:
+            return None
+        creation = _WindowsFileTime()
+        exit_time = _WindowsFileTime()
+        kernel_time = _WindowsFileTime()
+        user_time = _WindowsFileTime()
+        if not kernel32.GetProcessTimes(handle, ctypes.byref(creation), ctypes.byref(exit_time),
+                                        ctypes.byref(kernel_time), ctypes.byref(user_time)):
+            return None
+        marker = (creation.dwHighDateTime << 32) | creation.dwLowDateTime
+        return str(marker)
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def process_start_marker(pid):
-    """Return Linux's monotonic process start tick when available."""
+    """Return a stable process creation marker when the host exposes one."""
+    if WINDOWS:
+        return _windows_process_details(pid)
     try:
         fields = Path("/proc/%d/stat" % int(pid)).read_text(encoding="ascii").split()
         return fields[21]
@@ -357,6 +425,11 @@ def process_start_marker(pid):
 def process_matches(pid, marker):
     if not isinstance(pid, int) or pid <= 0:
         return False
+    if WINDOWS:
+        details = _windows_process_details(pid)
+        if details is None:
+            return False
+        return marker is None or details == marker
     try:
         os.kill(pid, 0)
     except OSError:
@@ -569,6 +642,25 @@ def worker(directory):
 
 
 def terminate_process_group(pid):
+    if WINDOWS:
+        # ``killpg`` does not exist on Windows and ``os.kill(pid, 0)`` is not
+        # a safe liveness check there.  taskkill's tree mode reaches both the
+        # persistent worker and the registered workflow child.
+        for force in (False, True):
+            args = ["taskkill", "/PID", str(int(pid)), "/T"]
+            if force:
+                args.append("/F")
+            try:
+                subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20, check=False)
+            except (OSError, subprocess.TimeoutExpired):
+                if force:
+                    return
+            deadline = time.time() + (5 if not force else 2)
+            while time.time() < deadline and process_matches(pid, None):
+                time.sleep(0.1)
+            if not process_matches(pid, None):
+                return
+        return
     try:
         os.killpg(os.getpgid(pid), signal.SIGTERM)
     except OSError:
