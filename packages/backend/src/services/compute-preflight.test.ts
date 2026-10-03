@@ -109,6 +109,22 @@ describe("compute data-design preflight", () => {
 		}).toThrow("proposal decision");
 	});
 
+	it("wraps malformed design payloads as preflight errors", () => {
+		const value = design();
+		const result = preflightComputeSubmission({
+			jobId: "job-1",
+			hostAlias: "local",
+			workflow: { version: 1, modules: [], steps: [] },
+			dataDesign: { ...value, contract: undefined } as never,
+			authorization: authorization(value.contract),
+		});
+		expect(result.ok).toBe(false);
+		expect(result.errors.some((issue) => issue.code === "invalid-data-design")).toBe(true);
+		expect(() => {
+			throw new ComputePreflightError(result);
+		}).toThrow(ComputePreflightError);
+	});
+
 	it("blocks an invalid design before ComputeService persists or executes it", async () => {
 		const value = design();
 		let submissions = 0;

@@ -76,6 +76,7 @@ export class ComputePreflightError extends Error {
 }
 
 function canonical(value: unknown): string {
+	if (value === undefined) return "undefined";
 	if (value === null || typeof value !== "object") return JSON.stringify(value);
 	if (Array.isArray(value)) return `[${value.map((item) => canonical(item)).join(",")}]`;
 	const row = value as Record<string, unknown>;
