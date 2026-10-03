@@ -134,8 +134,9 @@
 - [x] **B5a 研究状态基础**：新增 `@drone/inquiry` 领域包，提供 artifact、finding、question/prior、attempt 四本账、自动 lineage 校验、workspace run/result 晋升与 cleanup dry-run；SQLite `SqliteInquiryStorage` 使用独立表、事务、WAL/FULL 同步和 project 隔离；backend 组合根通过 `InquiryService` 注入并登记 `ledger.sqlite`。
 - [x] **B5b 元认知发布门禁**：publication projection 在发布前核对报告数字、引用产物校验和、方法与实际工作流/模块/参数、finding 标签及诊断漂移；不一致时失败关闭，并把通过的 finding 投影为可引用证据。
 - [x] **B5c 工作流编排与有限修复**：`WorkflowSpec` 先验与模块注册门禁、编译/type-check/preview、失败与负结果检索、最多三次声明式自主修复；重复失败阻断，并记录“我替你决定的”变更。
-- [ ] **B5d–B5f**：KernelSession 与探索、critic/多路径稳健性、评估与人工验证，另开后续阶段实现。
-- [ ] **B7–B8**：数据管理/FAIR/实验设计与可选协作能力，按专题计划另行排期。
+- [x] **B5d–B5f**：`@drone/discovery` 提供容器能力门控的 KernelSession、runs-only 导出、探索预算/先验与竞争解释、独立只读 critic、多路径稳健性记录，以及带数据集版本和基线的 BixBench/重新发现/不一致拦截/混杂发现/线索命中/核验耗时/重复失败评测；缺外部数据返回 `needs-data`，执行器失败返回 `blocked`。
+- [x] **B7**：`@drone/compute` 与 `@drone/shared` 提供内容寻址数据集、样本表与设计矩阵校验、受控公共数据抓取、分析计划/功效与最小可检测效应、偏离复核和确定性 RO-Crate 清单；校验失败在提交前阻断并保留可追溯记录。
+- [ ] **B8**：团队协作能力，按用户要求暂不实施。
 
 ---
 
@@ -216,3 +217,4 @@
 | 2026-10-03 | CI 发布护栏 | desktop CI job 新增 knowledge 58、tasks 49、research 50 三个包级测试（共 157 项）；knowledge、tasks、research runtime builder 均支持临时目录构建后 `--check` 字节校验，tasks 兼容产物同步校验；清理 knowledge 目录中 20 个已无引用的旧 chunk；本地 lint、typecheck、build、架构/插件/扩展检查、升级 fixture 与三包测试全部通过 | PiBackend 继续保留兼容门面；backend 测试时长、120 条测试 `.pi` 相对路径架构基线及研究技能包下载依赖仍按后续任务处理 |
 | 2026-10-03 | A3-4 / 后续收敛 | `SessionPermissionService` 承接会话权限模式，`SessionLifecycleService` 承接会话枚举、关闭顺序与资源清理；channel-watch 测试注入短 debounce，backend unit 约 24 秒、unit+SDK 约 33 秒；可迁移 backend 测试改用 knowledge/research 包入口，架构基线由 120 降至 106；CI 增加离线研究包门禁，release 在获取 pinned skill packs 后显式运行真实 packaging check；全量 `npm test` 通过（backend 1,378 + 13 skipped、desktop 556、extensions 16、knowledge 58、research 50、shared 130、tasks 49） | `SessionService` 的 create/open/delete 仍与 project resources、extensions、filesystem 强耦合；剩余 106 条是 host/compatibility adapter 测试边界，未放宽架构规则；真实 research packs 仍由 release 同步步骤提供，Academic pack 需显式许可依据 |
 | 2026-10-03 | B5a–B5c | `@drone/inquiry` 四本账与 SQLite 持久化、backend `InquiryService` 组合根、B5b 元认知发布门禁、B5c 先验注册与最多三次自主修复已合并；全量 `npm test` 通过，根 typecheck、Biome、架构检查通过 | B5d–B5f、B7、B8 留待后续；研究状态的事件订阅、桌面/LAN 只读面板和 host 投影仍需单独接入 |
+| 2026-10-03 | B1–B7 收尾 | B1/B2 真实 runner、ssh2/OpenSSH/ProxyJump、known_hosts 与 SFTP/终端/授权 IPC；B3 固定 nf-core/rnaseq 3.18.0 vertical slice、MultiQC/QC/provenance 与显式真实 smoke；B5a 事件宿主接入；B5d–B5f discovery 包；B7 数据/设计合同均已接入并通过本地测试。runner 协议、取消、断线未知态、幂等、产物校验和桌面资源打包路径均已覆盖 | Docker/Slurm fixture 需要本机 Docker daemon；真实 Windows/OTP/跳板机、外部 Slurm 与真实研究数据/基线需在相应环境提供后执行；B8 暂不实施 |

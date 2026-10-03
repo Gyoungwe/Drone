@@ -36,8 +36,26 @@ const emptyQc = (): QcGateResult => ({
 	qualifiedBy: "no-report",
 });
 
+const RESOLVED_DIGEST = /^sha256:[0-9a-f]{64}$/i;
+
+/** Reject an execution record that would claim reproducibility without a
+ * resolved OCI digest.  Fixture workflows are intentionally exempt because
+ * they cannot be submitted to a production runner. */
+export function assertResolvedContainerDigests(workflow: CompiledWorkflow): void {
+	if (workflow.executionMode === "fixture") return;
+	for (const [moduleId, digest] of Object.entries(workflow.containerDigests)) {
+		if (!RESOLVED_DIGEST.test(digest))
+			throw new Error(
+				`Container digest for ${moduleId} is unresolved; resolve it from the registry manifest`,
+			);
+	}
+	if (Object.keys(workflow.moduleCommits).some((moduleId) => !workflow.containerDigests[moduleId]))
+		throw new Error("Every production workflow module must have a resolved container digest");
+}
+
 /** Compute provenance is an execution record; it intentionally cannot assert scientific validity. */
 export function createRemoteJobProvenance(input: RemoteProvenanceInput): RemoteJobProvenance {
+	if (input.executionStatus !== "unknown") assertResolvedContainerDigests(input.workflow);
 	const modules: RemoteModuleProvenance[] = Object.entries(input.workflow.moduleCommits).map(
 		([id, commit]) => ({
 			id,

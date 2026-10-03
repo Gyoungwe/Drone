@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import type { InquiryComputeEvent, InquiryTaskTerminalEvent } from "./inquiry";
 import { InquiryService } from "./inquiry";
 
 describe("backend inquiry composition adapter", () => {
@@ -27,5 +28,124 @@ describe("backend inquiry composition adapter", () => {
 
 	it("requires an explicit project id for a configured root", () => {
 		expect(() => new InquiryService({ inquiryDir: "/tmp/drone-inquiry" })).toThrow("inquiryProjectId");
+	});
+
+	it("registers terminal compute and task events through an injected source", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-events-"));
+		let computeHandler: ((event: InquiryComputeEvent) => void) | undefined;
+		let taskHandler: ((event: InquiryTaskTerminalEvent) => void) | undefined;
+		const detachCalls: string[] = [];
+		const source = {
+			onComputeEvent: (handler: (event: InquiryComputeEvent) => void) => {
+				computeHandler = handler;
+				return () => detachCalls.push("compute");
+			},
+			onTaskTerminal: (handler: (event: InquiryTaskTerminalEvent) => void) => {
+				taskHandler = handler;
+				return () => detachCalls.push("task");
+			},
+		};
+		const checksum = "a".repeat(64);
+		try {
+			const service = new InquiryService({
+				inquiryDir: root,
+				projectId: "project-events",
+				eventSource: source,
+			});
+			computeHandler?.({
+				id: "compute-event-1",
+				jobId: "job-1",
+				type: "status",
+				status: "running",
+				at: 1_000,
+			});
+			computeHandler?.({
+				id: "compute-event-2",
+				jobId: "job-1",
+				type: "collected",
+				status: "succeeded",
+				at: 2_000,
+				runId: "run-1",
+				artifacts: [{ path: "results/report.md", bytes: 12, sha256: checksum }],
+			});
+			taskHandler?.({
+				id: "task-event-1",
+				taskId: "task-1",
+				runId: "task-run-1",
+				status: "failed",
+				at: 3_000,
+				detail: "runner failed",
+			});
+			await service.drainEvents();
+			const snapshot = await service.readOnlySnapshot();
+			expect(snapshot?.artifacts).toHaveLength(1);
+			expect(snapshot?.artifacts[0]).toMatchObject({
+				projectId: "project-events",
+				path: "results/report.md",
+				purpose: "deliverable",
+				source: { kind: "run", id: "run-1" },
+			});
+			expect(snapshot?.attempts).toHaveLength(2);
+			expect(snapshot?.attempts).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						id: "compute:run-1",
+						outcome: "succeeded",
+						artifactIds: [expect.any(String)],
+					}),
+					expect.objectContaining({ id: "task:task-run-1", outcome: "failed", artifactIds: [] }),
+				]),
+			);
+			service.dispose();
+			expect(detachCalls).toEqual(["compute", "task"]);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("serializes event writes and reports invalid project events", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-queue-"));
+		const errors: unknown[] = [];
+		try {
+			const service = new InquiryService({
+				inquiryDir: root,
+				projectId: "project-queue",
+				onEventError: (error) => errors.push(error),
+			});
+			const source = {
+				onTaskTerminal: (handler: (event: InquiryTaskTerminalEvent) => void) => {
+					handler({
+						id: "bad-project",
+						taskId: "task-1",
+						status: "succeeded",
+						at: 4_000,
+						projectId: "other-project",
+					});
+					return () => {};
+				},
+			};
+			service.attachEventSource(source);
+			await service.drainEvents();
+			expect(errors).toHaveLength(1);
+			expect(String(errors[0])).toContain("another project");
+			expect((await service.readOnlySnapshot())?.attempts).toHaveLength(0);
+			service.dispose();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("exposes an empty read-only projection while disabled", async () => {
+		const service = new InquiryService();
+		expect(await service.readOnlySnapshot()).toBeUndefined();
+		await service.recordComputeEvent({
+			id: "ignored",
+			jobId: "job",
+			type: "status",
+			status: "succeeded",
+			at: 1,
+		});
+		await service.drainEvents();
+		service.dispose();
 	});
 });

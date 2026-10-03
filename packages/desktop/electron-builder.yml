@@ -16,6 +16,10 @@ asarUnpack:
 # pi SDK 包资源镜像：docs/examples/README 不进 asar，agent 的 read/bash 工具都能直接访问。
 # main 进程经 PI_PACKAGE_DIR 指到这里（export-html/themes/package.json 同根解析，必须一起带）。
 extraResources:
+  # Bundled compute runner used by the local executor and deployed to SSH hosts after checksum verification.
+  - from: "../backend/resources/compute-runner"
+    to: "compute-runner"
+    filter: ["**/*", "!__pycache__/**"]
   - from: "../../node_modules/@earendil-works/pi-coding-agent/docs"
     to: "pi-package/docs"
   - from: "../../node_modules/@earendil-works/pi-coding-agent/examples"

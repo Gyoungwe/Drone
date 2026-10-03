@@ -92,6 +92,11 @@ export const ComputeHostInputSchema = Type.Object(
 		endpoint: Type.Optional(Type.String({ maxLength: 512, pattern: "^[^@]*$" })),
 		port: Type.Optional(Type.Integer({ minimum: 1, maximum: 65535 })),
 		user: Type.Optional(Type.String({ maxLength: 128 })),
+		identityFile: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+		jumpHosts: Type.Optional(
+			Type.Array(Type.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9._-]+$" }), { maxItems: 8 }),
+		),
+		hostKeyFingerprint: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
 		workspaceRoot: Type.Optional(Type.String({ maxLength: 1024 })),
 		managed: Type.Optional(Type.Boolean()),
 	},
@@ -478,6 +483,39 @@ export const ComputeJobSchema = Type.Object(
 	{ additionalProperties: false },
 );
 export type ComputeJob = Static<typeof ComputeJobSchema>;
+
+/** Renderer-safe job submission contract. It deliberately excludes scripts and shell strings. */
+export const ComputeJobInputSchema = Type.Object(
+	{
+		hostId: ComputeIdSchema,
+		idempotencyKey: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
+		remoteWorkDir: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+		workflow: Type.Object(
+			{
+				name: Type.String({ minLength: 1, maxLength: 256 }),
+				version: Type.String({ minLength: 1, maxLength: 128 }),
+				source: Type.Optional(Type.String({ maxLength: 256 })),
+				specHash: Type.Optional(Type.String({ maxLength: 128 })),
+			},
+			{ additionalProperties: false },
+		),
+		resources: Type.Optional(
+			Type.Object(
+				{
+					cpus: Type.Optional(Type.Integer({ minimum: 1, maximum: 1_000_000 })),
+					memoryBytes: Type.Optional(Type.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER })),
+					wallTimeSeconds: Type.Optional(Type.Integer({ minimum: 1, maximum: 172_800_000 })),
+				},
+				{ additionalProperties: false },
+			),
+		),
+		readPaths: Type.Optional(Type.Array(Type.String({ minLength: 1, maxLength: 1024 }), { maxItems: 64 })),
+		writePaths: Type.Optional(Type.Array(Type.String({ minLength: 1, maxLength: 1024 }), { maxItems: 64 })),
+		outputs: Type.Optional(Type.Array(Type.String({ minLength: 1, maxLength: 1024 }), { maxItems: 256 })),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeJobInput = Static<typeof ComputeJobInputSchema>;
 
 export const ComputeLogChunkSchema = Type.Object(
 	{

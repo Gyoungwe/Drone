@@ -15,6 +15,7 @@ import type {
 	TrustAnswer,
 	TrustRequest,
 } from "@drone/shared";
+import { createDefaultComputeExecutor } from "./compute/default-executor";
 import type { DiagnosticsServicePort } from "./diagnostics";
 import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
@@ -164,7 +165,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		runtime,
 		storage: sessions.getStorageRegistry(),
 		...(options.computeAgentDir ? { agentDir: options.computeAgentDir } : {}),
-		...(options.computeExecutor ? { executor: options.computeExecutor } : {}),
+		executor:
+			options.computeExecutor ??
+			createDefaultComputeExecutor({
+				...(options.computeAgentDir ? { agentDir: options.computeAgentDir } : {}),
+			}),
 	});
 	const computeAdapter =
 		options.compute ??
@@ -176,6 +181,20 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				? { authorizeRemoteOperation: options.computeAuthorizeRemoteOperation }
 				: {}),
 		});
+	const detachInquiryComputeEvents = inquiry.attachEventSource({
+		onComputeEvent: (handler) => compute.onEvent(handler),
+		onTaskTerminal: (handler) =>
+			sessions.onEvent((sessionId, event) => {
+				const value = event as unknown as { type?: string; willRetry?: boolean };
+				if (value.type !== "agent_end") return;
+				handler({
+					id: `session:${sessionId}:${Date.now()}`,
+					taskId: sessionId,
+					status: value.willRetry ? "partial" : "succeeded",
+					at: Date.now(),
+				});
+			}),
+	});
 	if (runtime.compute) {
 		runtime.compute.service = compute;
 		runtime.compute.adapter = computeAdapter;
@@ -210,6 +229,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		computeAdapter,
 		inquiry,
 		dispose: () => {
+			detachInquiryComputeEvents();
 			sessions.dispose();
 			void compute.dispose();
 			void computeAdapter.dispose?.();

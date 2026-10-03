@@ -40,7 +40,10 @@
 		"build:knowledge": "node scripts/build-knowledge-runtime.mjs",
 		"check:knowledge-runtime": "node scripts/build-knowledge-runtime.mjs --check",
 		"check:research-runtime": "node scripts/build-research-runtime.mjs --check",
-		"check:tasks-runtime": "npm run build:runtime --workspace @drone/tasks -- --check && node scripts/build-task-runtime.mjs --check"
+		"check:tasks-runtime": "npm run build:runtime --workspace @drone/tasks -- --check && node scripts/build-task-runtime.mjs --check",
+		"test:compute:runner": "python3 scripts/test-compute-runner.py",
+		"test:compute:docker": "sh scripts/test-compute-docker.sh",
+		"test:compute:rnaseq": "sh scripts/b3-pipeline/run-rnaseq-smoke.sh"
 	},
 	"engines": {
 		"node": ">=22.19"

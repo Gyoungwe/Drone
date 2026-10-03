@@ -262,6 +262,7 @@ export const zh = {
 			check: "检查",
 			probe: "探测",
 			openTerminal: "打开终端",
+			runExample: "运行示例",
 			remove: "移除",
 			close: "关闭",
 			alias: "主机别名",

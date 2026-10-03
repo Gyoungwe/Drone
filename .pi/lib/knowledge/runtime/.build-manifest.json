@@ -12,7 +12,7 @@
 		},
 		"experience-store.mjs": {
 			"source": "packages/knowledge/src/experience-store.ts",
-			"sha256": "e768dfa561290b8d1a16d50ac174cf0d87c93de3c586471d5ce57e90e85f2a73"
+			"sha256": "acd7293df80322d980b401bf2de29f786d120aced1fca8f6f04bcd1fcf44623d"
 		},
 		"extension-helpers.mjs": {
 			"source": "packages/knowledge/src/extension-helpers.ts",
@@ -28,7 +28,7 @@
 		},
 		"index.mjs": {
 			"source": "packages/knowledge/src/index.ts",
-			"sha256": "aa9a07c6ebd402ae83987262477012d2af0f6d725f3ddc20211070d0b9c91ad5"
+			"sha256": "b98e8021d59022a818e586a5c23a49eb1114b7aa003f3909deddf59cb075e579"
 		},
 		"layout.mjs": {
 			"source": "packages/knowledge/src/layout.ts",

@@ -234,6 +234,7 @@ const computeClient = exposeContract(ComputeContract, {
 				getHealthSnapshot: IpcChannels.ComputeHealth,
 				listJobs: IpcChannels.ComputeJobs,
 				getJob: IpcChannels.ComputeJob,
+				submitJob: IpcChannels.ComputeSubmitJob,
 				getLogs: IpcChannels.ComputeLogs,
 				cancelJob: IpcChannels.ComputeCancelJob,
 				openTerminal: IpcChannels.ComputeOpenTerminal,

@@ -37,6 +37,7 @@ packages/
 ├── research/   文献回执与来源交付合约（TS 包，迁移中）
 ├── compute/    远程计算与声明式工作流领域包（TS 包，B3 垂直切片）
 ├── inquiry/    研究状态层领域包（TS 包，B5a 四本账与工作区合同）
+├── discovery/  研究发现领域包（TS 包，B5d–B5f 内核、批评、多路径与评测）
 ├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
 ```
@@ -57,6 +58,9 @@ packages/
 | `scripts/repro-full.mjs` | 把 trace 事件序列直接注入 renderer 复现（#185/白屏类问题，手法见 PITFALLS 0.5.0） |
 | `scripts/shoot-rail.mjs` | UI 动画 CDP 确定性逐帧截图模板（SessionRail 演示，换场景照抄三步：触发状态 → pause 动画钉 currentTime → captureScreenshot） |
 | `scripts/cdp-eval.mjs` / `cdp-shot.mjs` / `shoot-demo-gif.mjs` | CDP 页面单次求值 / 截图 / demo gif |
+| `scripts/test-compute-runner.py` / `scripts/test-compute-runner.sh` | 使用显式真实可执行 fixture 验证 runner 协议、断线后持久化、幂等提交、取消与校验回收 |
+| `scripts/test-compute-docker.sh`、`scripts/compute-fixtures/` | 可选 Docker SSHD + 单节点 Slurm 集成 fixture；需用户启动 Docker daemon，不用于生产 runner；细节见 [compute.md](compute.md) |
+| `scripts/b3-pipeline/` | 显式 opt-in 的真实 nf-core/rnaseq 3.18.0 test-profile smoke 与 digest-backed provenance；缺 Nextflow/OCI digest 时拒绝提交 |
 
 依赖补丁：`patches/` + patch-package（root devDep + postinstall）。目前一处 `thinking-orbs+0.3.1.patch`（移除 IntersectionObserver+visibilitychange 门控，Win11 恢复事件丢失会冻住 rAF）。改法：手改 `node_modules/thinking-orbs/dist/index.{es.js,cjs}` 两份 → `npx patch-package thinking-orbs`；升级该包前重评补丁是否仍需要。
 
@@ -109,13 +113,19 @@ packages/
 
 `@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`run-summary.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。
 
-## packages/compute — 远程计算与工作流领域包（B3 / B5c）
+## packages/compute — 远程计算与工作流领域包（B1–B3 / B5c / B7）
 
-`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/types.ts` 定义 B1 runner-facing `WorkflowSpec`、B3 `ComputeWorkflowSpec` 与 B5c 的先验/注册/失败检索端口；`src/workflow.ts` 提供模块目录、类型/环检查、稳定哈希和提交前注册门禁；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/repair.ts` 提供仅修改声明式 spec 的有界（最多三次）自主修复循环与“我替你决定的”决策记录；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供标记为 preview-only 的 nf-core/rnaseq test profile 配置；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@drone/research/run-provenance` 的远程执行声明；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由宿主适配层接入。
+`@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库，遵守 R7；它不连接 Electron、Pi SDK、backend 或真实集群。`src/types.ts` 定义 B1 runner-facing `WorkflowSpec`、B3 `ComputeWorkflowSpec` 与 B5c 的先验/注册/失败检索端口；`src/workflow.ts` 提供模块目录、类型/环检查、稳定哈希和提交前注册门禁；`src/nextflow.ts` 将已批准图编译为 DSL2 和配置，并通过注入的 runner 做 `-preview`；`src/repair.ts` 提供仅修改声明式 spec 的有界（最多三次）自主修复循环与“我替你决定的”决策记录；`src/executor.ts` 暴露 direct/Slurm 的 argv seam；`src/rnaseq.ts` 提供固定 nf-core/rnaseq 3.18.0 revision、官方 test profile 与已解析容器 digest 记录；`src/qc.ts` 解析 MultiQC 并保留 `reviewed=false`、`qcVerified=false`、`scientificallyVerified=false`；`src/provenance.ts` 提供可适配到 `@drone/research/run-provenance` 的远程执行声明并拒绝未解析 digest；`src/runner.ts`、`jobs.ts` 只定义固定子命令和状态机，真实 SSH/Slurm 由宿主适配层接入。部署资源 `packages/backend/resources/compute-runner/runner.py` 实现同一 stdin JSON 协议的 POSIX runner。
+
+B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和确定性 RO-Crate 实现在 `src/dataset.ts`；宿主把设计合同放入任务授权并以合同哈希绑定。远端 transport、桌面投影和本地/ Docker/Slurm fixture 的运行说明见 [compute.md](compute.md)。
 
 ## packages/inquiry — 研究状态层领域包（B5a）
 
-`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设和分析尝试四本账；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/storage.ts` 提供宿主可注入的四账存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用。backend 的 `services/inquiry.ts` 只在显式配置 `inquiryDir` 与项目 id 时实例化 SQLite，任务/计算事件订阅和 Electron/LAN 投影仍由后续组合根接入，领域包不读取文件内容，也不执行删除。
+`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设和分析尝试四本账；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/storage.ts` 提供宿主可注入的四账存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用。backend 的 `services/inquiry.ts` 只在显式配置 `inquiryDir` 与项目 id 时实例化 SQLite，并通过宿主注入的 compute/task 终态事件登记已校验的 artifact/attempt、串行化事件写入并提供项目只读快照；Electron/LAN 投影仍由后续组合根接入，领域包不读取文件内容，也不执行删除。
+
+## packages/discovery — 研究发现领域包（B5d–B5f）
+
+`@drone/discovery` 保持 runner 与 Inquiry 端口注入，不执行宿主 shell。`src/kernel.ts` 提供容器能力门控、空闲/执行超时、分级输出过滤、runs-only 导出与 Python/R 受控 fixture；`src/exploration.ts` 提供独立探索预算、先验/意外度、竞争解释和 Inquiry 记录；`src/critic.ts` 提供只读批评者、多路径执行与稳健性等级；`src/evaluation.ts` 提供 BixBench、重新发现、不一致拦截、混杂发现、线索命中、核验耗时和重复失败指标及基线协议。评测数据与外部缺口说明见 [research-evaluation.md](research-evaluation.md)。
 
 
 ## packages/extensions — Pi 扩展适配层（迁移中）

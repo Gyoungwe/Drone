@@ -1,4 +1,11 @@
 export {
+	type ComputeCredential,
+	type ComputeCredentialProvider,
+	createDefaultComputeExecutor,
+	DefaultComputeExecutor,
+	type DefaultComputeExecutorOptions,
+} from "./compute/default-executor";
+export {
 	type BackendOptions,
 	type BackendServices,
 	createBackend,

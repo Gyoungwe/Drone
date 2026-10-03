@@ -38,6 +38,8 @@ export function registerComputeIpc(
 		getHealthSnapshot: () => compute.getHealthSnapshot(),
 		listJobs: (filter) => compute.listJobs(filter),
 		getJob: (id) => compute.getJob(id),
+		submitJob: (input) =>
+			authorized({ kind: "submit_job", hostId: input.hostId }, () => compute.submitJob(input)),
 		getLogs: (id, cursor) => compute.getLogs(id, cursor),
 		cancelJob: (id) => authorized({ kind: "cancel_job", jobId: id }, () => compute.cancelJob(id)),
 		openTerminal: (input) =>
@@ -61,6 +63,7 @@ export function registerComputeIpc(
 				getHealthSnapshot: IpcChannels.ComputeHealth,
 				listJobs: IpcChannels.ComputeJobs,
 				getJob: IpcChannels.ComputeJob,
+				submitJob: IpcChannels.ComputeSubmitJob,
 				getLogs: IpcChannels.ComputeLogs,
 				cancelJob: IpcChannels.ComputeCancelJob,
 				openTerminal: IpcChannels.ComputeOpenTerminal,

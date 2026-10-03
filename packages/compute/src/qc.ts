@@ -20,13 +20,14 @@ function flattenMetrics(
 	value: unknown,
 	prefix = "",
 	result: Record<string, number | string | boolean> = {},
+	depth = 0,
 ): Record<string, number | string | boolean> {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return result;
+	if (depth > 16 || !value || typeof value !== "object" || Array.isArray(value)) return result;
 	for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
 		const path = prefix ? `${prefix}.${key}` : key;
 		const scalar = numberOrString(child);
 		if (scalar !== null) result[path] = scalar;
-		else flattenMetrics(child, path, result);
+		else flattenMetrics(child, path, result, depth + 1);
 	}
 	return result;
 }
@@ -42,18 +43,19 @@ export function parseMultiqcReport(input: unknown): MultiqcSummary {
 		general && typeof general === "object" && !Array.isArray(general)
 			? Object.keys(general as Record<string, unknown>).length
 			: 0;
-	const raw = report.report_saved_raw_data ?? report.raw_data ?? report;
+	const savedRaw = report.report_saved_raw_data ?? report.raw_data;
+	const raw = savedRaw ?? report;
 	const sampleNames = new Set<string>();
 	if (general && typeof general === "object" && !Array.isArray(general)) {
 		for (const sample of Object.keys(general as Record<string, unknown>)) sampleNames.add(sample);
 	}
+	const rawModules =
+		savedRaw && typeof savedRaw === "object" && !Array.isArray(savedRaw)
+			? Object.keys(savedRaw as Record<string, unknown>)
+			: [];
 	const modules = Array.isArray(report.modules)
 		? report.modules.filter((module): module is string => typeof module === "string")
-		: Object.keys(
-				report.report_general_stats_data && typeof report.report_general_stats_data === "object"
-					? (report.report_general_stats_data as object)
-					: {},
-			);
+		: rawModules;
 	return { sampleCount: sampleNames.size, modules, metrics, raw };
 }
 

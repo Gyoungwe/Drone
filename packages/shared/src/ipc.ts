@@ -99,6 +99,7 @@ export const IpcChannels = {
 	ComputeHealth: "compute:getHealthSnapshot",
 	ComputeJobs: "compute:listJobs",
 	ComputeJob: "compute:getJob",
+	ComputeSubmitJob: "compute:submitJob",
 	ComputeLogs: "compute:getLogs",
 	ComputeCancelJob: "compute:cancelJob",
 	ComputeOpenTerminal: "compute:openTerminal",

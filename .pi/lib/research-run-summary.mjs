@@ -859,6 +859,10 @@ var EXPERIENCE_LIMITS = Object.freeze({
   maxSearchResults: 24,
   maxHostIdChars: 64,
   maxProjectChars: 96,
+  maxWorkflowChars: 180,
+  maxSchedulerChars: 32,
+  maxRevisionChars: 180,
+  maxSchedulerJobIdChars: 180,
   maxQueryChars: 200
 });
 

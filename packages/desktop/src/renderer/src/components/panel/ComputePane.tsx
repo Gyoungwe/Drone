@@ -18,11 +18,13 @@ function HostRow({
 	host,
 	onProbe,
 	onOpenTerminal,
+	onSubmitExample,
 	onRemove,
 }: {
 	host: ComputeHost;
 	onProbe: () => void;
 	onOpenTerminal: () => void;
+	onSubmitExample: () => void;
 	onRemove: () => void;
 }) {
 	const t = useT();
@@ -53,6 +55,14 @@ function HostRow({
 					disabled={host.authState !== "ready"}
 				>
 					{t("panel.compute.openTerminal")}
+				</button>
+				<button
+					type="button"
+					className="panel-action"
+					onClick={onSubmitExample}
+					disabled={host.authState !== "ready"}
+				>
+					{t("panel.compute.runExample")}
 				</button>
 				<button type="button" className="panel-action" onClick={onRemove}>
 					{t("panel.compute.remove")}
@@ -103,6 +113,7 @@ export function ComputePane() {
 	const refreshJobs = useComputeStore((state) => state.refreshJobs);
 	const refreshOnboarding = useComputeStore((state) => state.refreshOnboarding);
 	const probeHost = useComputeStore((state) => state.probeHost);
+	const submitJob = useComputeStore((state) => state.submitJob);
 	const openTerminal = useComputeStore((state) => state.openTerminal);
 	const cancelJob = useComputeStore((state) => state.cancelJob);
 	const saveHost = useComputeStore((state) => state.saveHost);
@@ -119,6 +130,15 @@ export function ComputePane() {
 	const startTerminal = async (host: ComputeHost) => {
 		const opened = await openTerminal({ hostId: host.id, mode: "shell" });
 		setTerminalId(opened.id);
+	};
+	const submitExample = async (host: ComputeHost) => {
+		await submitJob({
+			hostId: host.id,
+			idempotencyKey: `example:${host.id}:${new Date().toISOString().slice(0, 10)}`,
+			workflow: { name: "nf-core/rnaseq", version: "3.18.0", source: "nf-core" },
+			resources: { cpus: 2, wallTimeSeconds: 3600 },
+			outputs: ["multiqc_report.html", "counts.tsv"],
+		});
 	};
 	const sendTerminal = async () => {
 		if (!terminalId || !terminalInput) return;
@@ -164,6 +184,7 @@ export function ComputePane() {
 								host={host}
 								onProbe={() => void probeHost(host.id)}
 								onOpenTerminal={() => void startTerminal(host)}
+								onSubmitExample={() => void submitExample(host)}
 								onRemove={() => void removeHost(host.id)}
 							/>
 						))}

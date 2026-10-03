@@ -1,0 +1,13 @@
+{
+	"pipeline": "nf-core/rnaseq",
+	"revision": "3.18.0",
+	"commit": "b96a75361a4f1d49aa969a2b1c68e3e607de06e8",
+	"profile": "test",
+	"resources": {
+		"cpus": 4,
+		"memoryBytes": 8589934592,
+		"wallTimeSeconds": 3600
+	},
+	"containerDigestSource": "runtime OCI manifests; supplied by DRONE_RNASEQ_CONTAINER_DIGESTS",
+	"executionMode": "production"
+}

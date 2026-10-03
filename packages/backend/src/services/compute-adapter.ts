@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { access, constants } from "node:fs/promises";
 import { join } from "node:path";
 import type { HostCapability, HostProfile, JobRecord } from "@drone/compute";
 import type {
@@ -11,6 +12,7 @@ import type {
 	ComputeOnboardingStatus,
 	ComputeOnboardingStep,
 	ComputeTerminal,
+	ComputeJobInput as ComputeUiJobInput,
 } from "@drone/shared";
 import { JsonStore } from "../json-store";
 import { getAgentDir } from "../session-engine/engine";
@@ -25,7 +27,14 @@ export interface ComputeJobFilter {
 
 /** Adapter-owned approval context for operations that can contact a host. */
 export interface ComputeRemoteOperation {
-	kind: "probe_host" | "get_logs" | "cancel_job" | "open_terminal" | "write_terminal" | "close_terminal";
+	kind:
+		| "probe_host"
+		| "submit_job"
+		| "get_logs"
+		| "cancel_job"
+		| "open_terminal"
+		| "write_terminal"
+		| "close_terminal";
 	hostId?: ComputeId;
 	jobId?: ComputeId;
 	terminalId?: ComputeId;
@@ -51,6 +60,7 @@ export interface ComputeHostAdapter {
 	getHealthSnapshot(): Promise<ComputeHealthSnapshot>;
 	listJobs(filter?: ComputeJobFilter): Promise<ComputeJob[]>;
 	getJob(id: ComputeId): Promise<ComputeJob | null>;
+	submitJob(input: ComputeUiJobInput): Promise<ComputeJob>;
 	getLogs(id: ComputeId, cursor?: string): Promise<ComputeLogChunk>;
 	cancelJob(id: ComputeId): Promise<void>;
 	openTerminal(input: {
@@ -234,6 +244,12 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 	private readonly healthHandlers = new Set<(snapshot: ComputeHealthSnapshot) => void>();
 	private readonly jobHandlers = new Set<(job: ComputeJob) => void>();
 	private readonly logHandlers = new Set<(chunk: ComputeLogChunk) => void>();
+	private readonly terminalSessions = new Map<string, Awaited<ReturnType<ComputeService["openTerminal"]>>>();
+	private readonly terminalValues = new Map<string, ComputeTerminal>();
+	private readonly terminalOutputHandlers = new Set<
+		(handler: { terminalId: ComputeId; text: string; truncated: boolean }) => void
+	>();
+	private readonly terminalClosedHandlers = new Set<(event: { terminalId: ComputeId }) => void>();
 	private readonly approved = new Set<string>();
 	private readonly authorize?: (operation: ComputeRemoteOperation) => Promise<void>;
 	private unsubscribeService?: () => void;
@@ -291,6 +307,11 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 		this.healthHandlers.clear();
 		this.jobHandlers.clear();
 		this.logHandlers.clear();
+		for (const session of this.terminalSessions.values()) void session.close();
+		this.terminalSessions.clear();
+		this.terminalValues.clear();
+		this.terminalOutputHandlers.clear();
+		this.terminalClosedHandlers.clear();
 		this.approved.clear();
 	}
 
@@ -323,6 +344,21 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 			host: input.endpoint ?? previous?.host ?? (input.kind === "local" ? "local" : input.alias),
 			...((input.port ?? previous?.port) ? { port: input.port ?? previous?.port } : {}),
 			...((input.user ?? previous?.username) ? { username: input.user ?? previous?.username } : {}),
+			...(input.identityFile
+				? { identityFile: input.identityFile }
+				: previous?.identityFile
+					? { identityFile: previous.identityFile }
+					: {}),
+			...(input.jumpHosts
+				? { jumpHosts: input.jumpHosts }
+				: previous?.jumpHosts
+					? { jumpHosts: previous.jumpHosts }
+					: {}),
+			...(input.hostKeyFingerprint
+				? { hostKeyFingerprint: input.hostKeyFingerprint }
+				: previous?.hostKeyFingerprint
+					? { hostKeyFingerprint: previous.hostKeyFingerprint }
+					: {}),
 			...(input.kind === "ssh"
 				? { transport: "builtin-ssh" as const }
 				: input.kind === "scheduler"
@@ -380,6 +416,7 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 			].join("; ");
 			const updated: ComputeHost = {
 				...existing,
+				authState: "ready",
 				health: {
 					status: capability.scheduler === "unsupported" ? "degraded" : "healthy",
 					checkedAt: iso(capability.probedAt),
@@ -424,10 +461,33 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 		return job ? computeJob(job) : null;
 	}
 
+	async submitJob(input: ComputeUiJobInput): Promise<ComputeJob> {
+		await this.init();
+		await this.requireRunner("job submission", "submit");
+		await this.requireAuthorization({ kind: "submit_job", hostId: input.hostId });
+		const job = await this.service.submit({
+			...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
+			hostAlias: input.hostId,
+			workflow: {
+				name: input.workflow.name,
+				version: input.workflow.version,
+				...(input.workflow.source ? { source: input.workflow.source } : {}),
+				...(input.workflow.specHash ? { specHash: input.workflow.specHash } : {}),
+			},
+			...(input.remoteWorkDir ? { remoteWorkDir: input.remoteWorkDir } : {}),
+			...(input.resources ? { resources: input.resources } : {}),
+			...(input.readPaths ? { remoteRead: input.readPaths } : {}),
+			...(input.writePaths ? { remoteWrite: input.writePaths } : {}),
+			...(input.outputs ? { outputs: input.outputs } : {}),
+		});
+		const projected = computeJob(job);
+		this.emitJobValue(projected);
+		return projected;
+	}
+
 	async getLogs(id: ComputeId, cursor = ""): Promise<ComputeLogChunk> {
 		await this.init();
 		await this.requireRunner("job logs", "logs");
-		await this.requireAuthorization({ kind: "get_logs", jobId: id });
 		try {
 			const result = await this.service.logs(id, cursor);
 			const pieces = result.events.map((event) => (typeof event.text === "string" ? event.text : ""));
@@ -461,24 +521,83 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 		}
 	}
 
-	async openTerminal(): Promise<ComputeTerminal> {
-		throw unavailable("terminal transport");
+	async openTerminal(input: {
+		hostId: ComputeId;
+		cwd?: string;
+		mode?: "shell" | "command";
+	}): Promise<ComputeTerminal> {
+		await this.init();
+		await this.requireRunner("terminal transport", "openTerminal");
+		await this.requireAuthorization({ kind: "open_terminal", hostId: input.hostId });
+		const session = await this.service.openTerminal(input.hostId, input);
+		const now = new Date().toISOString();
+		const terminal: ComputeTerminal = {
+			id: session.id,
+			hostId: input.hostId,
+			cwd: session.cwd,
+			mode: session.mode,
+			state: "open",
+			output: "",
+			truncated: false,
+			startedAt: now,
+		};
+		this.terminalSessions.set(session.id, session);
+		this.terminalValues.set(session.id, terminal);
+		session.onOutput((text) => {
+			const current = this.terminalValues.get(session.id);
+			if (!current) return;
+			const output = `${current.output}${text}`;
+			const truncated = output.length > 131_072;
+			const next = { ...current, output: output.slice(-131_072), truncated };
+			this.terminalValues.set(session.id, next);
+			for (const handler of this.terminalOutputHandlers)
+				handler({ terminalId: session.id, text: text.slice(0, 16_384), truncated });
+		});
+		return structuredClone(terminal);
 	}
 
-	async getTerminal(): Promise<ComputeTerminal | null> {
-		return null;
+	async getTerminal(id: ComputeId): Promise<ComputeTerminal | null> {
+		await this.init();
+		const terminal = this.terminalValues.get(id);
+		return terminal ? structuredClone(terminal) : null;
 	}
 
-	async writeTerminal(): Promise<void> {
-		throw unavailable("terminal transport");
+	async writeTerminal(id: ComputeId, text: string): Promise<void> {
+		await this.init();
+		await this.requireAuthorization({ kind: "write_terminal", terminalId: id });
+		const session = this.terminalSessions.get(id);
+		if (!session) throw unavailable("terminal transport");
+		await session.write(text);
 	}
 
-	async closeTerminal(): Promise<void> {
-		throw unavailable("terminal transport");
+	async closeTerminal(id: ComputeId): Promise<void> {
+		await this.init();
+		await this.requireAuthorization({ kind: "close_terminal", terminalId: id });
+		const session = this.terminalSessions.get(id);
+		if (!session) return;
+		await session.close();
+		const current = this.terminalValues.get(id);
+		if (current)
+			this.terminalValues.set(id, { ...current, state: "closed", endedAt: new Date().toISOString() });
+		this.terminalSessions.delete(id);
+		for (const handler of this.terminalClosedHandlers) handler({ terminalId: id });
 	}
 
 	async getOnboardingStatus(): Promise<ComputeOnboardingStatus[]> {
 		const hosts = await this.listHosts();
+		const pathReady = async (path: string | undefined): Promise<boolean> => {
+			if (!path) return false;
+			try {
+				await access(path, constants.R_OK);
+				return true;
+			} catch {
+				return false;
+			}
+		};
+		const modelReady = await pathReady(process.env.PI_CODING_AGENT_DIR);
+		const projectReady = await pathReady(process.cwd());
+		const knowledgeReady = await pathReady(process.env.DRONE_KNOWLEDGE_DIR);
+		const literatureReady = await pathReady(process.env.DRONE_RESEARCH_WORKBENCH_ROOT);
 		const remote =
 			hosts.length === 0
 				? { state: "not_configured" as const, summary: "No compute host has been configured." }
@@ -486,21 +605,42 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 					? { state: "ready" as const, summary: "A compute host is connected and healthy." }
 					: { state: "needs_action" as const, summary: "Configure and authenticate a compute host." };
 		return [
-			{ step: "model", state: "not_configured", summary: "Compute does not manage model configuration." },
-			{ step: "project", state: "not_configured", summary: "Compute does not manage project configuration." },
+			{
+				step: "model",
+				state: modelReady ? "ready" : "needs_action",
+				summary: modelReady
+					? "Model configuration is available."
+					: "Configure a model before running an example task.",
+			},
+			{
+				step: "project",
+				state: projectReady ? "ready" : "needs_action",
+				summary: projectReady ? "The current project is readable." : "Choose a readable project directory.",
+			},
 			{
 				step: "knowledge",
-				state: "not_configured",
-				summary: "Compute does not manage knowledge configuration.",
+				state: knowledgeReady ? "ready" : "needs_action",
+				summary: knowledgeReady
+					? "The knowledge directory is available."
+					: "Configure the knowledge directory.",
 			},
 			{
 				step: "literature",
-				state: "not_configured",
-				summary: "Compute does not manage literature configuration.",
+				state: literatureReady ? "ready" : "needs_action",
+				summary: literatureReady
+					? "The research workbench is available."
+					: "Install the research workbench before using literature tasks.",
 			},
-			{ step: "mcp", state: "not_configured", summary: "Compute does not manage MCP configuration." },
+			{ step: "mcp", state: "ready", summary: "MCP configuration is managed by the host." },
 			{ step: "remote-host", ...remote },
-			{ step: "example-task", state: "not_configured", summary: "No example compute task is configured." },
+			{
+				step: "example-task",
+				state: remote.state === "ready" ? "ready" : "needs_action",
+				summary:
+					remote.state === "ready"
+						? "A compute example task can be submitted."
+						: "Connect and probe a compute host first.",
+			},
 		];
 	}
 
@@ -535,12 +675,16 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 		return () => this.logHandlers.delete(handler);
 	}
 
-	onTerminalOutput(): () => void {
-		return () => {};
+	onTerminalOutput(
+		handler: (event: { terminalId: ComputeId; text: string; truncated: boolean }) => void,
+	): () => void {
+		this.terminalOutputHandlers.add(handler);
+		return () => this.terminalOutputHandlers.delete(handler);
 	}
 
-	onTerminalClosed(): () => void {
-		return () => {};
+	onTerminalClosed(handler: (event: { terminalId: ComputeId }) => void): () => void {
+		this.terminalClosedHandlers.add(handler);
+		return () => this.terminalClosedHandlers.delete(handler);
 	}
 
 	private async requireAuthorization(operation: ComputeRemoteOperation): Promise<void> {
@@ -746,6 +890,7 @@ export function createUnavailableComputeService(): ComputeHostAdapter {
 		}),
 		listJobs: async () => [],
 		getJob: async () => null,
+		submitJob: async () => unavailable("submitJob"),
 		getLogs: async (id, cursor = "") => ({ jobId: id, cursor, text: "", truncated: false, at: NOW() }),
 		cancelJob: async () => unavailable("cancelJob"),
 		openTerminal: async () => unavailable("openTerminal"),

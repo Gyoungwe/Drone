@@ -272,6 +272,7 @@ export const en: Messages = {
 			check: "Check",
 			probe: "Probe",
 			openTerminal: "Open terminal",
+			runExample: "Run example",
 			remove: "Remove",
 			close: "Close",
 			alias: "Host alias",

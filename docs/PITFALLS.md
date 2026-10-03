@@ -200,3 +200,7 @@ pi SDK 必须声明进 `packages/desktop/package.json` dependencies（electron-b
 ### 已开源：github.com/Jaxton07/drone
 
 git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保护（PR + CI `check` 必过 + squash merge），Release 由 tag 触发（`.github/workflows/release.yml`）。
+
+### ssh2 可选原生模块不能打进主进程 bundle（2026-10-03）
+
+新增 ssh2 后，electron-vite 会顺带把 `cpu-features`/`sshcrypto` 的 `.node` 文件复制进 `out/main/chunks`。这些文件是在运行构建的 Node ABI 下生成的，electron-builder 随后重编译依赖树时不会替换已经打进 bundle 的副本，因此 `.app` 在载入主模块时会报 `NODE_MODULE_VERSION` 不匹配，窗口和 CDP 端口都不会出现。`electron.vite.config.ts` 必须把 `ssh2` 保持为 external，让打包阶段按 Electron ABI 和目标架构准备依赖；用实际 `.app` 的隔离首次启动冒烟验证，不能只看 `npm run build` 成功。

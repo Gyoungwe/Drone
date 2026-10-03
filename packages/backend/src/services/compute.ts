@@ -55,6 +55,16 @@ export interface ComputeCollectResult {
 	[key: string]: unknown;
 }
 
+export interface ComputeTerminalSession {
+	readonly id: string;
+	readonly hostAlias: string;
+	readonly cwd: string;
+	readonly mode: "shell" | "command";
+	write(text: string): Promise<void>;
+	close(): Promise<void>;
+	onOutput(handler: (text: string) => void): () => void;
+}
+
 /**
  * Backend-owned runner boundary. The domain package owns protocol and state
  * semantics; this interface owns connection lifetime and filesystem policy.
@@ -68,6 +78,10 @@ export interface ComputeExecutor {
 	logs?(job: JobRecord, host: HostProfile, cursor?: string): Promise<ComputeLogsResult>;
 	cancel?(job: JobRecord, host: HostProfile): Promise<ComputeStatusResult | undefined>;
 	collect?(job: JobRecord, host: HostProfile, options?: ComputeCollectOptions): Promise<ComputeCollectResult>;
+	openTerminal?(
+		host: HostProfile,
+		input: { cwd?: string; mode?: "shell" | "command" },
+	): Promise<ComputeTerminalSession>;
 }
 
 export interface ComputeWorkflowModule {
@@ -106,6 +120,8 @@ export interface ComputeEvent {
 	readonly status?: JobState;
 	readonly cursor?: string;
 	readonly detail?: string;
+	/** Verified runner entries emitted when collection completes. */
+	readonly artifacts?: ArtifactManifest["entries"];
 }
 
 export interface ComputeServicePort {
@@ -132,6 +148,10 @@ export interface ComputeServicePort {
 	cancelJob(jobId: string): Promise<JobRecord>;
 	collectJob(input: ComputeCollectOptions & { jobId: string }): Promise<ComputeCollectResult>;
 	listWorkflowModules(): Promise<readonly ComputeWorkflowModule[]>;
+	openTerminal(
+		hostAlias: string,
+		input: { cwd?: string; mode?: "shell" | "command" },
+	): Promise<ComputeTerminalSession>;
 	onEvent(handler: (event: ComputeEvent) => void): () => void;
 	dispose(): Promise<void>;
 }
@@ -677,7 +697,14 @@ export class ComputeService implements ComputeServicePort {
 		if (!result) throw new Error("Compute runner returned no artifact manifest");
 		validateArtifactManifest(result.manifest, targetDir, options.expected, options.maxBytes);
 		await verifyArtifactChecksums(result.manifest, targetDir);
-		await this.appendEvent({ id: randomUUID(), jobId, type: "collected", at: now(), status: "succeeded" });
+		await this.appendEvent({
+			id: randomUUID(),
+			jobId,
+			type: "collected",
+			at: now(),
+			status: "succeeded",
+			artifacts: result.manifest.entries,
+		});
 		return result;
 	}
 
@@ -687,6 +714,15 @@ export class ComputeService implements ComputeServicePort {
 
 	async listWorkflowModules(): Promise<readonly ComputeWorkflowModule[]> {
 		return (await this.executor?.listWorkflowModules?.()) ?? [];
+	}
+
+	async openTerminal(
+		hostAlias: string,
+		input: { cwd?: string; mode?: "shell" | "command" },
+	): Promise<ComputeTerminalSession> {
+		if (!this.executor?.openTerminal) throw new Error("Compute runner does not provide terminal access");
+		const host = await this.requireHost(hostAlias);
+		return this.executor.openTerminal(host, input);
 	}
 
 	onEvent(handler: (event: ComputeEvent) => void): () => void {

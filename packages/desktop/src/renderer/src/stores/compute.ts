@@ -3,6 +3,7 @@ import type {
 	ComputeHost,
 	ComputeHostInput,
 	ComputeJob,
+	ComputeJobInput,
 	ComputeLogChunk,
 	ComputeOnboardingStatus,
 	ComputeOnboardingStep,
@@ -30,6 +31,7 @@ export interface ComputeState {
 	refresh(): Promise<void>;
 	refreshJobs(): Promise<void>;
 	refreshOnboarding(): Promise<void>;
+	submitJob(input: ComputeJobInput): Promise<ComputeJob>;
 	saveHost(input: ComputeHostInput): Promise<ComputeHost>;
 	removeHost(id: string): Promise<void>;
 	probeHost(id: string): Promise<ComputeHost>;
@@ -136,6 +138,19 @@ export const useComputeStore = create<ComputeState>((set, get) => ({
 			set({ onboarding: await getPi().getOnboardingStatus(), error: null });
 		} catch (error) {
 			set({ error: error instanceof Error ? error.message : String(error) });
+		}
+	},
+	submitJob: async (input) => {
+		try {
+			const job = await getPi().submitJob(input);
+			set((state) => ({
+				jobs: [job, ...state.jobs.filter((item) => item.id !== job.id)].slice(0, 100),
+				error: null,
+			}));
+			return job;
+		} catch (error) {
+			set({ error: error instanceof Error ? error.message : String(error) });
+			throw error;
 		}
 	},
 	saveHost: async (input) => {
