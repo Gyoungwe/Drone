@@ -1,5 +1,4 @@
 import type { ProgressDisplay } from "../progress-display";
-import { tasksForTranscript } from "../task-workbench";
 import type { ChatRow } from "./chat-rows";
 import { type SummarySegment, summarizeCategories } from "./meta-summary";
 
@@ -45,10 +44,10 @@ function isProgressRow(row: ChatRow): row is Extract<ChatRow, { kind: "message" 
 	);
 }
 
-/** 普通任务视图只喂右侧面板；待验收 review 必须留在聊天流，不能被过程块收起。 */
+/** Older task snapshots fold away. The latest card (taskPlacement show) stays in the transcript. */
 function isTaskViewRow(row: ChatRow): boolean {
 	if (row.kind !== "message" || row.message.kind !== "assistant" || !row.message.taskView) return false;
-	return tasksForTranscript(row.message.taskView).length === 0;
+	return row.taskPlacement !== "show";
 }
 
 function isProcessRow(row: ChatRow): boolean {

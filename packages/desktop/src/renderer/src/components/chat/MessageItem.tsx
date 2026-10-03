@@ -1,4 +1,4 @@
-import { tasksForTranscript } from "@drone/shared";
+import { tasksForDecision } from "@drone/shared";
 import { memo, useState } from "react";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
@@ -11,7 +11,8 @@ import { ImagePreviewOverlay, imageSrc } from "./ImagePreview";
 import { CopyButton, ForkButton } from "./message-actions";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { SystemMessage } from "./SystemMessage";
-import { TaskRow } from "./TaskRow";
+import { TaskDecisionCard } from "./TaskDecisionCard";
+import { TurnRouteCard } from "./TurnRouteCard";
 import { UserMessage } from "./UserMessage";
 
 /** 单条消息：按类型分发（用户气泡 / 图片块 / 子代理卡 / 错误卡 / 系统分割线 / 助手消息体） */
@@ -20,6 +21,7 @@ export const MessageItem = memo(function MessageItem({
 	streaming,
 	metaInGroup,
 	showActions = true,
+	showTaskCard = false,
 	sessionId = null,
 }: {
 	message: UIMessage;
@@ -28,6 +30,8 @@ export const MessageItem = memo(function MessageItem({
 	metaInGroup?: boolean;
 	/** 是否渲染操作行：仅轮次最后一段正文为 true（中间自言自语不挂复制/fork，减少噪音） */
 	showActions?: boolean;
+	/** 只有最新一条任务快照渲染决定卡。 */
+	showTaskCard?: boolean;
 	/** 当前会话（错误卡重试/压缩动作需要） */
 	sessionId?: string | null;
 }) {
@@ -90,20 +94,31 @@ export const MessageItem = memo(function MessageItem({
 		return <SystemMessage message={message} />;
 	}
 
-	if (message.taskView) {
+	if (message.kind === "assistant" && (message.route || (message.taskView && showTaskCard))) {
 		const view = message.taskView;
-		const reviewTasks = tasksForTranscript(view);
+		const tasks = view && showTaskCard ? tasksForDecision(view) : [];
+		const pending = tasks.some((task) =>
+			task.actions.some((action) => action.kind === "review" && action.state === "pending"),
+		);
+		if (!message.text && !message.route && tasks.length === 0) return null;
 		return (
-			<div className="group" data-testid={reviewTasks.length ? "chat-task-review" : undefined}>
+			<div className="group" data-testid={pending ? "chat-task-review" : undefined}>
+				{message.route && <TurnRouteCard route={message.route} />}
+				{view &&
+					tasks.map((task) => (
+						<TaskDecisionCard
+							key={task.id}
+							task={task}
+							view={view}
+							sessionId={sessionId ?? null}
+							agentActive={agentActive}
+						/>
+					))}
 				{message.text && <AssistantMessage text={message.text} thinking="" tools={[]} />}
-				{reviewTasks.map((task) => (
-					<div key={task.id} className="mt-2 rounded-xl border border-amber-500/30 bg-surface">
-						<TaskRow task={task} view={view} sessionId={sessionId ?? null} agentActive={agentActive} />
-					</div>
-				))}
 			</div>
 		);
 	}
+	if (message.kind === "assistant" && message.taskView) return null;
 	return (
 		<div className="group">
 			<AssistantMessage

@@ -84,6 +84,11 @@ export const REASON_TEXT = Object.freeze({
 	"user-archived": "任务已归档。",
 });
 export const explainReason = (code) => (code ? REASON_TEXT[code] || code : null);
+/** 「继续」放下未验收的审阅，不把它算成已看过。进度问句和任务指令不算。 */
+export const defersPendingReview = (query) =>
+	/^(?:继续(?:做完|吧|执行|处理|完成|上一任务)?|接着(?:做|处理)?|continue|resume)[\s,.!？，。！?]*$/i.test(
+		String(query ?? "").trim(),
+	);
 const error = (code, message) => Object.assign(new Error(message), { code });
 const stable = (value) =>
 	JSON.stringify(value, (_key, v) =>
@@ -346,7 +351,7 @@ export function createTaskWorkbench({
 	/** Turn arrival never creates a task: ordinary chat, clarifications and corrections are not tasks.
 	 *  A task exists only once the model commits to a contract via task_plan (see openTask).
 	 *  Here we only resume the task already in flight. */
-	function begin(_query, capabilities = [], binding = null) {
+	function begin(query, capabilities = [], binding = null) {
 		// Remember the turn's capability routing so a task opened later this turn (via task_plan)
 		// still records it; reopening the session restores tool visibility from the task itself.
 		turnCapabilities = capabilities.filter((c) => typeof c === "string").slice(0, 16);
@@ -379,6 +384,22 @@ export function createTaskWorkbench({
 			save();
 			return { idle: true };
 		}
+		// 「继续」先放下未挂钩的审阅，再走原来的阶段检查点。不勾交付，不动授权和文件。
+		t.lastDefer = null;
+		if (defersPendingReview(query) && !t.operations.some((o) => ["started", "unknown"].includes(o.state))) {
+			let reviews = 0;
+			for (const action of t.actions) {
+				if (action.state === "pending" && action.kind === "review") {
+					action.state = "cancelled";
+					action.resolvedAt = now();
+					reviews++;
+				}
+			}
+			if (reviews) {
+				settleWait(t);
+				t.lastDefer = { reviews, releasedStage: false };
+			}
+		}
 		if (t.operations.some((o) => ["started", "unknown"].includes(o.state))) {
 			t.state = "blocked";
 			t.reason = "reconcile-before-retry";
@@ -394,9 +415,15 @@ export function createTaskWorkbench({
 		t.capabilities = [...new Set([...t.capabilities, ...capabilities])]
 			.filter((c) => typeof c === "string")
 			.slice(0, 16);
+		if (t.lastDefer)
+			t.lastDefer.releasedStage = t.reason === "automatic-stage-checkpoint" && t.budget.stageCalls === 0;
 		requested = false;
 		save();
-		return { taskId: t.id };
+		return {
+			taskId: t.id,
+			deferredReview: Boolean(t.lastDefer?.reviews),
+			stageReleased: t.lastDefer?.releasedStage === true,
+		};
 	}
 	/** Creates the task that task_plan is about to fill in, evicting archived rows if the book is full. */
 	function openTask(query, binding = turnBinding) {
