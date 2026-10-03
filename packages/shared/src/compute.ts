@@ -112,6 +112,152 @@ export const ComputeBudgetSchema = Type.Object(
 );
 export type ComputeBudget = Static<typeof ComputeBudgetSchema>;
 
+/**
+ * B7 data and design records. These are deliberately transport-safe values:
+ * checksums and identifiers are persisted in the task contract, while the
+ * compute package remains responsible for pure validation and planning.
+ */
+export const ComputeSha256Schema = Type.String({ pattern: "^[a-fA-F0-9]{64}$" });
+export type ComputeSha256 = Static<typeof ComputeSha256Schema>;
+
+export const ComputeDatasetFileSchema = Type.Object(
+	{
+		path: Type.String({ minLength: 1, maxLength: 1024 }),
+		bytes: Type.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
+		sha256: ComputeSha256Schema,
+		mediaType: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeDatasetFile = Static<typeof ComputeDatasetFileSchema>;
+
+export const ComputeDatasetSourceSchema = Type.Object(
+	{
+		kind: Type.Union([
+			Type.Literal("local"),
+			Type.Literal("public"),
+			Type.Literal("generated"),
+			Type.Literal("imported"),
+		]),
+		uri: Type.Optional(Type.String({ minLength: 1, maxLength: 2048 })),
+		accession: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
+		license: Type.Optional(Type.String({ minLength: 1, maxLength: 512 })),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeDatasetSource = Static<typeof ComputeDatasetSourceSchema>;
+
+export const ComputeDatasetVersionSchema = Type.Object(
+	{
+		datasetId: ComputeIdSchema,
+		versionId: Type.String({ minLength: 1, maxLength: 128, pattern: "^sha256:[a-fA-F0-9]{64}$" }),
+		contentSha256: ComputeSha256Schema,
+		schemaVersion: Type.Integer({ minimum: 1, maximum: 100 }),
+		files: Type.Array(ComputeDatasetFileSchema, { maxItems: 1_000_000 }),
+		sizeBytes: Type.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
+		source: Type.Optional(ComputeDatasetSourceSchema),
+		createdAt: Type.String({ minLength: 1, maxLength: 64 }),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeDatasetVersion = Static<typeof ComputeDatasetVersionSchema>;
+
+export const ComputeDatasetVersionRefSchema = Type.Object(
+	{
+		datasetId: ComputeIdSchema,
+		versionId: Type.String({ minLength: 1, maxLength: 128, pattern: "^sha256:[a-fA-F0-9]{64}$" }),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeDatasetVersionRef = Static<typeof ComputeDatasetVersionRefSchema>;
+
+export const ComputeSampleColumnSchema = Type.Object(
+	{
+		name: Type.String({ minLength: 1, maxLength: 128 }),
+		type: Type.Union([
+			Type.Literal("string"),
+			Type.Literal("integer"),
+			Type.Literal("number"),
+			Type.Literal("boolean"),
+		]),
+		required: Type.Optional(Type.Boolean()),
+		unique: Type.Optional(Type.Boolean()),
+		allowedValues: Type.Optional(
+			Type.Array(Type.Union([Type.String(), Type.Number(), Type.Boolean()]), { maxItems: 512 }),
+		),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeSampleColumn = Static<typeof ComputeSampleColumnSchema>;
+
+export const ComputeSampleSheetSchema = Type.Object(
+	{
+		id: ComputeIdSchema,
+		version: Type.Integer({ minimum: 1, maximum: 100 }),
+		idColumn: Type.String({ minLength: 1, maxLength: 128 }),
+		columns: Type.Array(ComputeSampleColumnSchema, { minItems: 1, maxItems: 512 }),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeSampleSheet = Static<typeof ComputeSampleSheetSchema>;
+
+export const ComputeAnalysisPlanSchema = Type.Object(
+	{
+		id: ComputeIdSchema,
+		version: Type.Integer({ minimum: 1, maximum: 100 }),
+		outcome: Type.String({ minLength: 1, maxLength: 256 }),
+		design: Type.Union([
+			Type.Literal("two-group"),
+			Type.Literal("paired"),
+			Type.Literal("factorial"),
+			Type.Literal("regression"),
+		]),
+		primaryTest: Type.String({ minLength: 1, maxLength: 256 }),
+		alpha: Type.Number({ exclusiveMinimum: 0, exclusiveMaximum: 1 }),
+		targetPower: Type.Number({ exclusiveMinimum: 0, exclusiveMaximum: 1 }),
+		effectSize: Type.Number({ exclusiveMinimum: 0 }),
+		totalSampleSize: Type.Optional(Type.Integer({ minimum: 2, maximum: 10_000_000 })),
+		perGroupSampleSize: Type.Optional(Type.Integer({ minimum: 1, maximum: 5_000_000 })),
+		groups: Type.Optional(
+			Type.Array(Type.String({ minLength: 1, maxLength: 128 }), { minItems: 2, maxItems: 256 }),
+		),
+		covariates: Type.Optional(Type.Array(Type.String({ minLength: 1, maxLength: 128 }), { maxItems: 256 })),
+		datasetVersion: Type.Optional(ComputeDatasetVersionRefSchema),
+		sampleSheetSchemaId: Type.Optional(ComputeIdSchema),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeAnalysisPlan = Static<typeof ComputeAnalysisPlanSchema>;
+
+export const ComputePublicDataFetchRecordSchema = Type.Object(
+	{
+		id: ComputeIdSchema,
+		uri: Type.String({ minLength: 1, maxLength: 2048 }),
+		accession: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
+		source: Type.String({ minLength: 1, maxLength: 256 }),
+		license: Type.Optional(Type.String({ minLength: 1, maxLength: 512 })),
+		termsAccepted: Type.Boolean(),
+		fetchedAt: Type.String({ minLength: 1, maxLength: 64 }),
+		bytes: Type.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
+		sha256: ComputeSha256Schema,
+	},
+	{ additionalProperties: false },
+);
+export type ComputePublicDataFetchRecord = Static<typeof ComputePublicDataFetchRecordSchema>;
+
+export const ComputeDataDesignContractSchema = Type.Object(
+	{
+		datasetVersion: ComputeDatasetVersionRefSchema,
+		sampleSheetSchemaId: ComputeIdSchema,
+		sampleSheetSha256: ComputeSha256Schema,
+		analysisPlanId: ComputeIdSchema,
+		analysisPlanSha256: ComputeSha256Schema,
+		fetchRecordIds: Type.Optional(Type.Array(ComputeIdSchema, { maxItems: 256 })),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeDataDesignContract = Static<typeof ComputeDataDesignContractSchema>;
+
 /** Optional section of a task contract. Its exact value is included in contractHash. */
 export const ComputeAuthorizationSchema = Type.Object(
 	{
@@ -121,6 +267,8 @@ export const ComputeAuthorizationSchema = Type.Object(
 		budget: ComputeBudgetSchema,
 		workflows: Type.Array(Type.String({ minLength: 1, maxLength: 256 }), { maxItems: 128 }),
 		agentCode: Type.Optional(Type.Boolean()),
+		/** B7 records are optional for legacy compute tasks and required by B7-aware hosts. */
+		dataDesign: Type.Optional(ComputeDataDesignContractSchema),
 	},
 	{ additionalProperties: false },
 );

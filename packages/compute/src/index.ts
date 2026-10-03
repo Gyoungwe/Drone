@@ -1,5 +1,6 @@
 export * from "./artifacts";
 export * from "./authorization";
+export * from "./dataset";
 export * from "./executor";
 export * from "./jobs";
 export * from "./nextflow";

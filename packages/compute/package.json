@@ -25,7 +25,8 @@
 		"./qc": "./src/qc.ts",
 		"./provenance": "./src/provenance.ts",
 		"./repair": "./src/repair.ts",
-		"./authorization": "./src/authorization.ts"
+		"./authorization": "./src/authorization.ts",
+		"./dataset": "./src/dataset.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
