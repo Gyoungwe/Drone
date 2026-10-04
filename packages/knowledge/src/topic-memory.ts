@@ -309,23 +309,6 @@ async function atomicWrite(path, value) {
 async function withLock(path, operation) {
 	return runRuntimeExclusive("topic-memory", path, operation);
 }
-function tokens(value) {
-	return new Set(
-		text(value, 6000)
-			.toLowerCase()
-			.split(/[^\p{L}\p{N}]+/u)
-			.filter((x) => x.length > 2),
-	);
-}
-function overlap(a, b) {
-	const left = tokens(a),
-		right = tokens(b);
-	if (!left.size || !right.size) return 0;
-	let common = 0;
-	for (const item of left) if (right.has(item)) common++;
-	return common / Math.max(left.size, right.size);
-}
-
 export function classifyTopic(existing, incoming) {
 	if (!existing) return "new";
 	if (
