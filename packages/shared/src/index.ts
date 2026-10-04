@@ -7,6 +7,7 @@ export * from "./errors";
 export * from "./evidence-labels";
 export * from "./example-tasks";
 export * from "./host-api";
+export * from "./harness";
 export * from "./institutional";
 export * from "./ipc";
 export * from "./knowledge";
