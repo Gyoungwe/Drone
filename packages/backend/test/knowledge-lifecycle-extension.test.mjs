@@ -37,7 +37,7 @@ describe("topic memory extension lifecycle", () => {
 		};
 		const api = registerKnowledgeInterface(pi);
 		const ctx = { cwd: project, sessionId: "topic-session" };
-		await api.beforeStart({ prompt: "topic" }, ctx);
+		await api.beforeStart({ prompt: "knowledge topic" }, ctx);
 		const binding = JSON.parse(await readFile(join(app, "binding.json"), "utf8"));
 		const memory = createTopicMemory({ binding, project: "project" });
 		const evidenceHash = createHash("sha256")
@@ -71,7 +71,7 @@ describe("topic memory extension lifecycle", () => {
 		};
 		const api = registerKnowledgeInterface(pi);
 		const ctx = { cwd: project, sessionId: "continuation" };
-		await api.beforeStart({ prompt: "topic" }, ctx);
+		await api.beforeStart({ prompt: "knowledge topic" }, ctx);
 		const binding = JSON.parse(await readFile(join(app, "binding.json"), "utf8"));
 		const memory = createTopicMemory({ binding, project: "project" });
 		const hash = createHash("sha256")
@@ -94,7 +94,9 @@ describe("topic memory extension lifecycle", () => {
 			ctx,
 		);
 		const cleared = await events.get("context")({ messages: [] }, ctx);
-		expect(cleared.messages.some((m) => m.customType === "drone-knowledge-topic-memory")).toBe(false);
+		expect(cleared?.messages?.some((m) => m.customType === "drone-knowledge-topic-memory") ?? false).toBe(
+			false,
+		);
 	});
 	it("returns bounded candidates for an ambiguous Chinese topic request", async () => {
 		const tools = new Map();
@@ -106,7 +108,7 @@ describe("topic memory extension lifecycle", () => {
 		};
 		const api = registerKnowledgeInterface(pi);
 		const ctx = { cwd: project, sessionId: "ambiguous" };
-		await api.beforeStart({ prompt: "topic" }, ctx);
+		await api.beforeStart({ prompt: "knowledge topic" }, ctx);
 		const binding = JSON.parse(await readFile(join(app, "binding.json"), "utf8"));
 		const memory = createTopicMemory({ binding, project: "project" });
 		await memory.record({ topicId: "a", title: "幼虫 A", summary: "a" });
@@ -127,7 +129,7 @@ describe("topic memory extension lifecycle", () => {
 		};
 		const api = registerKnowledgeInterface(pi);
 		const ctx = { cwd: project, sessionId: "revoked" };
-		await api.beforeStart({ prompt: "topic" }, ctx);
+		await api.beforeStart({ prompt: "knowledge topic" }, ctx);
 		const path = join(app, "binding.json");
 		const binding = JSON.parse(await readFile(path, "utf8"));
 		await writeFile(path, JSON.stringify({ ...binding, revision: binding.revision + 1 }));
@@ -160,7 +162,7 @@ describe("topic memory extension lifecycle", () => {
 		let trusted = true;
 		const sessionManager = { getSessionId: () => "real-sdk-session" };
 		const ctx = { cwd: project, sessionManager, isProjectTrusted: () => trusted };
-		await api.beforeStart({ prompt: "larva topic" }, ctx);
+		await api.beforeStart({ prompt: "knowledge larva topic" }, ctx);
 		const binding = JSON.parse(await readFile(join(app, "binding.json"), "utf8"));
 		const memory = createTopicMemory({ binding, project: "project" });
 		await memory.record({ topicId: "larva", title: "Larva", summary: "larval biology" });
@@ -172,7 +174,7 @@ describe("topic memory extension lifecycle", () => {
 		expect(topicMessage).toBeDefined();
 		expect(topicMessage.content.length).toBeLessThan(2800);
 
-		await api.beforeStart({ prompt: "switch to a different topic about geology" }, ctx);
+		await api.beforeStart({ prompt: "knowledge switch to a different topic about geology" }, ctx);
 		packet = await events.get("context")({ messages: [] }, ctx);
 		expect(packet.messages.some((message) => message.customType === "drone-knowledge-topic-memory")).toBe(
 			false,

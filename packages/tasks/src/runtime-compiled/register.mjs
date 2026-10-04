@@ -215,6 +215,7 @@ function registerWorkbench(pi, options = {}) {
         send();
         return { action: "handled" };
       }
+      if (result.deferredReview && !result.stageReleased) send();
       prepared = true;
     } catch (e) {
       halted = true;

@@ -9,7 +9,7 @@ import { basename as basename2, dirname as dirname2, isAbsolute as isAbsolute3, 
 import { access, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
 import { dirname, isAbsolute as isAbsolute2, join as join2, relative, resolve as resolve2, sep } from "node:path";
 
-// packages/knowledge/src/config.ts
+// ../Drone/packages/knowledge/src/config.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";

@@ -21,6 +21,32 @@ export interface UsageDisplayTotal {
 	cacheComplete: boolean;
 	cost: number | null;
 }
+
+/**
+ * Calculate the reported output-token average for a completed turn.
+ *
+ * This is wall-clock throughput for the whole turn, so tool execution and
+ * provider wait time are included. It deliberately returns unknown when the
+ * timestamps are absent or invalid instead of inventing a rate from a tiny
+ * denominator.
+ */
+export function deriveAverageOutputRate(
+	output: number | undefined,
+	startedAt: number | undefined,
+	endedAt: number | undefined,
+): number | null {
+	if (output === undefined || !Number.isFinite(output) || output < 0) return null;
+	if (
+		startedAt === undefined ||
+		endedAt === undefined ||
+		!Number.isFinite(startedAt) ||
+		!Number.isFinite(endedAt) ||
+		endedAt <= startedAt
+	)
+		return null;
+	return output / ((endedAt - startedAt) / 1000);
+}
+
 const count = (value: unknown): number | null =>
 	typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 export function reportedUsage(raw: unknown): ReportedUsage | undefined {

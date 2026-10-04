@@ -4,7 +4,7 @@ import { randomUUID as randomUUID3 } from "node:crypto";
 import { appendFile, mkdir as mkdir4, readdir as readdir2, readFile as readFile4, realpath as realpath4, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
 import { basename as basename3, dirname as dirname3, join as join4, relative as relative3, resolve as resolve4, sep as sep3 } from "node:path";
 
-// packages/knowledge/src/config.ts
+// ../Drone/packages/knowledge/src/config.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";

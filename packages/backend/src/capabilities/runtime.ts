@@ -7,7 +7,10 @@ import {
 	formatSkillCommand,
 	getSkillCategory,
 	parseExpandedSkillInvocation,
+	isDeferReviewPhrase,
 	researchSkillProfile,
+	type TurnRoute,
+	type TurnRouteHost,
 	workflowProfile,
 } from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
@@ -158,6 +161,13 @@ interface TaskRouting {
 	capabilities: string[];
 	state?: string;
 	planApproved?: boolean;
+	reason?: string | null;
+	progressCount?: number;
+	stageStartProgress?: number;
+	budget?: { calls?: number; stageCalls?: number };
+	actions?: { kind?: string; state?: string; milestoneId?: string | null }[];
+	milestones?: { id?: string; state?: string; acceptance?: { kind?: string } }[];
+	lastDefer?: { reviews?: number; releasedStage?: boolean } | null;
 }
 const TERMINAL_TASK_STATES = new Set(["completed", "cancelled", "archived"]);
 
@@ -242,6 +252,65 @@ export class CapabilityRuntime {
 			this.researchIntent,
 			{ academicEnabled: this.academicEnabled },
 		);
+	}
+	/**
+	 * Explain the route that prepareForPrompt just chose, plus the host gate already on the book.
+	 * Call it after prepareForPrompt. It does not route again and does not change the ledger.
+	 */
+	describeTurn(text: string): TurnRoute {
+		const trimmed = text.trim().replace(/\s+/g, " ");
+		const utterance = trimmed.slice(0, 180) || "(empty)";
+		const taskCommand = trimmed === "/task-status" || trimmed.startsWith("/task-action ");
+		const deferPhrase = isDeferReviewPhrase(trimmed);
+		const inProgress = this.taskInProgress();
+		const continuation = !taskCommand && (isTaskContinuation(trimmed) || deferPhrase || inProgress);
+		const readOnly = !taskCommand && !continuation && this.readOnlyLibrary;
+		const intake = taskCommand
+			? "task-command"
+			: readOnly
+				? "read-only"
+				: isTaskStatusQuery(trimmed)
+					? "status"
+					: continuation
+						? "continuation"
+						: "new-topic";
+		const selection = this.getWorkflowSelection();
+		const visible = new Set(this.state().visibleSkills);
+		const primary = selection.primaryWorkflow ?? null;
+		const host = this.hostGate();
+		const visiblePrimary = Boolean(primary && visible.has(primary));
+		let landing: TurnRoute["landing"] = "ordinary";
+		if (readOnly) landing = "library";
+		else if (
+			host &&
+			(host.pendingReview ||
+				host.deferredReviews > 0 ||
+				host.stageLimited ||
+				host.reason === "total-budget" ||
+				host.state === "blocked" ||
+				host.state === "waiting_user")
+		)
+			landing = "host-gate";
+		else if (visiblePrimary) landing = "workflow";
+		return {
+			utterance,
+			intake,
+			capabilities: CAPABILITY_IDS.filter((id) => this.active.has(id)),
+			topics: this.researchIntent.topics.slice(0, 8),
+			direction: selection.direction ?? null,
+			stage: selection.stage ?? null,
+			contract: selection.contract ?? null,
+			primary,
+			reason: primary ? (selection.reasons[primary] ?? null) : null,
+			unavailableStage: selection.unavailableStage ?? null,
+			comparison: this.researchIntent.comparison === true,
+			academic: this.academicEnabled,
+			keptCheckpoint: continuation && !taskCommand,
+			deferPhrase,
+			visiblePrimary,
+			landing,
+			host,
+		};
 	}
 	isResearchComparison(): boolean {
 		return this.researchIntent.comparison === true;
@@ -391,6 +460,54 @@ export class CapabilityRuntime {
 			};
 			if (b?.scope !== scope || !Array.isArray(b.tasks)) continue;
 			return b.tasks.find((t) => t.id === b.activeTaskId) || null;
+		}
+		return null;
+	}
+	/** Host gate as persisted before this read. Null when the session has no active task book. */
+	private hostGate(): TurnRouteHost | null {
+		const manager = this.session?.sessionManager;
+		if (!manager?.getSessionId || !manager.getCwd || !manager.getBranch) return null;
+		const scope = createHash("sha256")
+			.update(`${manager.getSessionId()}\0${resolve(manager.getCwd())}`)
+			.digest("hex");
+		for (const entry of [...manager.getBranch()].reverse()) {
+			if (entry.type !== "custom" || entry.customType !== "drone-task-workbench-v2") continue;
+			const book = entry.data as {
+				scope?: string;
+				activeTaskId?: string;
+				limits?: { stageCalls?: number };
+				tasks?: TaskRouting[];
+			};
+			if (book?.scope !== scope || !Array.isArray(book.tasks)) continue;
+			const task = book.tasks.find((item) => item.id === book.activeTaskId);
+			if (!task) return null;
+			const stageLimit = book.limits?.stageCalls ?? 48;
+			const stageCalls = task.budget?.stageCalls ?? 0;
+			const progressCount = task.progressCount ?? 0;
+			const stageStartProgress = task.stageStartProgress ?? 0;
+			const pending = (task.actions ?? []).filter(
+				(action) => action.kind === "review" && action.state === "pending",
+			);
+			const review = pending[0];
+			const milestone = review?.milestoneId
+				? task.milestones?.find((item) => item.id === review.milestoneId)
+				: undefined;
+			return {
+				reason: typeof task.reason === "string" ? task.reason : null,
+				state: task.state ?? null,
+				stageCalls,
+				calls: task.budget?.calls ?? 0,
+				progressCount,
+				stageStartProgress,
+				stageLimited: stageCalls >= stageLimit,
+				hasProgress: progressCount > stageStartProgress,
+				pendingReview: pending.length > 0,
+				reviewLinked: Boolean(
+					milestone && milestone.acceptance?.kind === "human_review" && milestone.state !== "completed",
+				),
+				deferredReviews: task.lastDefer?.reviews ?? 0,
+				releasedStage: task.lastDefer?.releasedStage === true,
+			};
 		}
 		return null;
 	}

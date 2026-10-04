@@ -28,7 +28,7 @@
 		},
 		"index.mjs": {
 			"source": "packages/knowledge/src/index.ts",
-			"sha256": "4df98b72d71c470f0896c6c2e1e465291ac6c0ebdd488f3b3bc6fbff073e7d75"
+			"sha256": "9c3555cd17962d7061ec97bc33069cfe7aaf826ed4aeb9e93cd661fbd924380e"
 		},
 		"layout.mjs": {
 			"source": "packages/knowledge/src/layout.ts",
@@ -52,7 +52,7 @@
 		},
 		"publication.mjs": {
 			"source": "packages/knowledge/src/publication.ts",
-			"sha256": "4016274c5e09786d647b7daeb92f13cda72a784629cfeae58f26eac4749330a4"
+			"sha256": "50a5af334893ff27fc542139a0fa4e45bff7508373d9c5807f819f4adbc5bf0e"
 		},
 		"review-policy.mjs": {
 			"source": "packages/knowledge/src/review-policy.ts",

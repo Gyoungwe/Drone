@@ -75,6 +75,9 @@ const REASON_TEXT = Object.freeze({
   "user-archived": "\u4EFB\u52A1\u5DF2\u5F52\u6863\u3002"
 });
 const explainReason = (code) => code ? REASON_TEXT[code] || code : null;
+const defersPendingReview = (query) => /^(?:继续(?:做完|吧|执行|处理|完成|上一任务)?|接着(?:做|处理)?|continue|resume)[\s,.!？，。！?]*$/i.test(
+  String(query ?? "").trim()
+);
 const error = (code, message) => Object.assign(new Error(message), { code });
 const stable = (value) => JSON.stringify(
   value,
@@ -268,7 +271,7 @@ function createTaskWorkbench({
     if (!t || book.selectionRequired) throw error("task-selection-required", "Select a task first.");
     return t;
   }
-  function begin(_query, capabilities = [], binding = null) {
+  function begin(query, capabilities = [], binding = null) {
     turnCapabilities = capabilities.filter((c) => typeof c === "string").slice(0, 16);
     turnBinding = binding;
     const eligible = book.tasks.filter((t2) => !terminal(t2.state));
@@ -296,6 +299,21 @@ function createTaskWorkbench({
       save();
       return { idle: true };
     }
+    t.lastDefer = null;
+    if (defersPendingReview(query) && !t.operations.some((o) => ["started", "unknown"].includes(o.state))) {
+      let reviews = 0;
+      for (const action of t.actions) {
+        if (action.state === "pending" && action.kind === "review") {
+          action.state = "cancelled";
+          action.resolvedAt = now();
+          reviews++;
+        }
+      }
+      if (reviews) {
+        settleWait(t);
+        t.lastDefer = { reviews, releasedStage: false };
+      }
+    }
     if (t.operations.some((o) => ["started", "unknown"].includes(o.state))) {
       t.state = "blocked";
       t.reason = "reconcile-before-retry";
@@ -309,9 +327,15 @@ function createTaskWorkbench({
       t.reason = "budget-review-required";
     } else t.state = "running";
     t.capabilities = [.../* @__PURE__ */ new Set([...t.capabilities, ...capabilities])].filter((c) => typeof c === "string").slice(0, 16);
+    if (t.lastDefer)
+      t.lastDefer.releasedStage = t.reason === "automatic-stage-checkpoint" && t.budget.stageCalls === 0;
     requested = false;
     save();
-    return { taskId: t.id };
+    return {
+      taskId: t.id,
+      deferredReview: Boolean(t.lastDefer?.reviews),
+      stageReleased: t.lastDefer?.releasedStage === true
+    };
   }
   function openTask(query, binding = turnBinding) {
     if (book.tasks.length >= LIMITS.tasks) {
@@ -1119,6 +1143,7 @@ export {
   WORKBENCH_ENTRY,
   clean,
   createTaskWorkbench,
+  defersPendingReview,
   explainReason,
   inspectTaskFile
 };

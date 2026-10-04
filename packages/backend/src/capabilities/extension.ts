@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { formatSkillCommand, parseExpandedSkillInvocation, workflowProfile } from "@drone/shared";
 import type { InlineExtension } from "@earendil-works/pi-coding-agent";
 import { attachAcademicPiBridge } from "./academic-pi-bridge";
@@ -42,13 +42,30 @@ export function makeCapabilityExtension(runtime: CapabilityRuntime, academicRoot
 	return async (pi) => {
 		const bridge = academicRoot ? await attachAcademicPiBridge(pi, runtime, academicRoot) : undefined;
 		const prepared = new Set<string>();
+		let pendingRoute: ReturnType<CapabilityRuntime["describeTurn"]> | null = null;
+		const rememberRoute = (text: string, streaming: boolean) => {
+			if (streaming || !text.trim()) {
+				pendingRoute = null;
+				return;
+			}
+			try {
+				pendingRoute = runtime.describeTurn(text);
+			} catch {
+				pendingRoute = null;
+			}
+		};
 		pi.on("input", async (event, ctx) => {
 			const handled = await bridge?.input(event, ctx);
 			const result = handled?.result ?? { action: "continue" as const };
-			if (result.action === "handled") return result;
-			if (handled?.routingText === undefined)
-				runtime.prepareForPrompt(event.text, event.streamingBehavior !== undefined);
-			prepared.add(routingKey(result.action === "transform" ? result.text : event.text));
+			if (result.action === "handled") {
+				pendingRoute = null;
+				return result;
+			}
+			const streaming = event.streamingBehavior !== undefined;
+			if (handled?.routingText === undefined) runtime.prepareForPrompt(event.text, streaming);
+			const routed = result.action === "transform" ? result.text : event.text;
+			rememberRoute(handled?.routingText ?? routed, streaming);
+			prepared.add(routingKey(routed));
 			if (prepared.size > 64) {
 				const oldest = prepared.values().next().value;
 				if (oldest) prepared.delete(oldest);
@@ -60,8 +77,26 @@ export function makeCapabilityExtension(runtime: CapabilityRuntime, academicRoot
 			if (!text || prepared.delete(routingKey(text))) return;
 			// Direct SDK input has no host-normalized command. Only genuine invocation/arguments are routed.
 			runtime.prepareForPrompt(text, false);
+			rememberRoute(text, false);
 		});
 		pi.on("before_agent_start", async (event, ctx) => {
+			const route = pendingRoute;
+			pendingRoute = null;
+			if (route) {
+				try {
+					await pi.sendMessage(
+						{
+							customType: "drone-turn-route",
+							display: true,
+							content: " ",
+							details: { reportId: randomUUID(), route },
+						},
+						{ triggerTurn: false },
+					);
+				} catch {
+					// The card explains the turn. Failing to display it must not block the reply.
+				}
+			}
 			const academic = await bridge?.beforeAgentStart(event, ctx);
 			let systemPrompt = academic?.systemPrompt ?? event.systemPrompt;
 			const visible = runtime.state().visibleSkills;

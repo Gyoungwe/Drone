@@ -173,6 +173,27 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 		if (text) deliveryFooter = [deliveryFooter, text].filter(Boolean).join("\n");
 	};
 	const toolInputs = new Map();
+	// A bound Vault is available to the host, but it is not an implicit scope for
+	// every conversation.  We route explicit research/knowledge requests into the
+	// normal prepare + publication path and promote a turn if the model actually
+	// invokes a research tool.  This keeps ordinary chat free of hidden navigation
+	// context while preserving a fail-closed boundary for real evidence reads.
+	const isKnowledgeRequest = (prompt, researchContinuation = false) =>
+		Boolean(
+			deliveryContract(prompt, { researchContinuation }) ||
+			/知识(?:库|内容|有哪些|记录)?|研究|文献|论文|证据|检索|\bknowledge\b|obsidian|vault|wiki|evidence\s+note|\bresearch\b/i.test(
+				String(prompt || ""),
+			),
+		);
+	const knowledgeTool = (name) => /^research_/.test(String(name || ""));
+	let turnKnowledgeRequested = false;
+	let turnBinding = null;
+	const promoteKnowledgeTurn = (ctx) => {
+		if (turnKnowledgeRequested) return;
+		turnKnowledgeRequested = true;
+		publication.begin(true, false);
+		if (turnBinding) beginKnowledgeFlow(ctx, turnBinding);
+	};
 	const specialists = createKnowledgeSpecialists(pi, { getCurrent: (ctx) => requireTurn(ctx), readOnly });
 	const toolBudget = createToolBudget();
 	let explainerArchived = false;
@@ -207,12 +228,17 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 		return guarded;
 	});
 
-	pi.on("tool_execution_start", (event) => {
+	pi.on("tool_execution_start", (event, ctx) => {
+		if (knowledgeTool(event.toolName)) promoteKnowledgeTurn(ctx);
 		if (event.toolName === "research_summarize_run" || event.toolName === "research_propose_wiki_update")
 			toolInputs.set(event.toolCallId, event.args || {});
 		if (event.toolName === "research_propose_wiki_update") explicitTopicProposal = true; // avoid a duplicate auto candidate in the same parallel batch
 	});
 	pi.on("tool_execution_end", async (event, ctx) => {
+		// Some hosts only emit execution-end for a tool call.  Promote on a
+		// successful knowledge operation as well as execution-start so a real read
+		// can never finish under the ordinary-chat publication mode.
+		if (knowledgeTool(event.toolName) && !event.isError) promoteKnowledgeTurn(ctx);
 		if (
 			event.toolName === "research_loop" &&
 			!event.isError &&
@@ -1280,14 +1306,18 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 		deliveryFooter = null;
 		explainerArchived = false;
 		toolInputs.clear();
-		publication.begin(true);
+		turnKnowledgeRequested = isKnowledgeRequest(query, continuation);
+		turnBinding = null;
+		publication.begin(turnKnowledgeRequested);
+		if (!turnKnowledgeRequested) invalidateKnowledgeUi();
 		toolBudget.reset();
 		try {
 			const binding = await readKnowledgeBinding();
-			publication.begin(!!binding);
+			turnBinding = binding;
+			publication.begin(!!binding && turnKnowledgeRequested);
 			toolBudget.reset();
-			beginKnowledgeFlow(ctx, binding);
-			if (binding) {
+			if (binding && turnKnowledgeRequested) {
+				beginKnowledgeFlow(ctx, binding);
 				specialists.begin(query);
 				feedback.begin();
 				await prepare(ctx, query);
@@ -1388,7 +1418,11 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 			deliveryFooter = null;
 			toolInputs.clear();
 			awaitingUserStart = true;
-			publication.begin(true);
+			const continuation = Boolean(activeTopic && continuesTopic(event.prompt || "", activeTopic));
+			turnKnowledgeRequested = isKnowledgeRequest(event.prompt || "", continuation);
+			turnBinding = null;
+			publication.begin(turnKnowledgeRequested);
+			if (!turnKnowledgeRequested) invalidateKnowledgeUi();
 			explainerArchived = false;
 			specialists.begin(event.prompt || "");
 			feedback.begin();
@@ -1398,10 +1432,10 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 			}
 			try {
 				const binding = await readKnowledgeBinding();
-				publication.begin(!!binding);
+				turnBinding = binding;
+				publication.begin(!!binding && turnKnowledgeRequested);
 				toolBudget.reset();
-				beginKnowledgeFlow(ctx, binding);
-				if (!binding)
+				if (!binding || !turnKnowledgeRequested)
 					return {
 						guidance:
 							deliveryContract(event.prompt, {
@@ -1411,8 +1445,9 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 										(c) =>
 											["skill:show-me", "skill:research-show-me"].includes(c.name) && c.source === "skill",
 									),
-							})?.guidance || "",
+						})?.guidance || "",
 					};
+				beginKnowledgeFlow(ctx, binding);
 				const _visible = await prepare(ctx, event.prompt || "");
 				const delivery = deliveryContract(event.prompt, {
 					researchContinuation: Boolean(activeTopic && continuesTopic(event.prompt || "", activeTopic)),

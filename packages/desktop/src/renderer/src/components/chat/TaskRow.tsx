@@ -36,6 +36,7 @@ export function TaskRow({
 	const pct = task.milestones.length ? Math.round((done / task.milestones.length) * 100) : 0;
 	const reason = explainTaskReason(task.reason);
 	const presentation = taskDeliveryPresentation(task, agentActive);
+	const pendingReview = task.actions.some((action) => action.kind === "review" && action.state === "pending");
 	const remainingSummary =
 		(agentActive ? "任务仍在执行；验收进度会随结果更新，无需重复发起。" : task.remainingSummary) ||
 		(task.milestones.length
@@ -83,7 +84,7 @@ export function TaskRow({
 			>
 				{remainingSummary}
 			</p>
-			{presentation.canContinue && (
+			{presentation.canContinue && !pendingReview && (
 				<button
 					type="button"
 					disabled={busy || agentActive || !sessionId}

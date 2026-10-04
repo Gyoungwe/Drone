@@ -2,12 +2,12 @@
 // packages/extensions/src/institutional-access.ts
 import { createRequire } from "node:module";
 
-// packages/research/src/institutional-access.ts
+// ../Drone/packages/research/src/institutional-access.ts
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
-// packages/research/src/institutional-proxy.ts
+// ../Drone/packages/research/src/institutional-proxy.ts
 function buildProxiedUrl(originalUrl, template) {
   if (!template) return null;
   const trimmed = template.trim();
@@ -72,7 +72,7 @@ function inferEzproxyTemplateFromUrl(navigatedUrl) {
   }
 }
 
-// packages/research/src/institutional-access.ts
+// ../Drone/packages/research/src/institutional-access.ts
 var INSTITUTIONAL_CONFIG_NAME = "institutional.json";
 var INSTITUTIONAL_AGENT_DIR = join(homedir(), ".pi", "agent");
 var INSTITUTIONAL_CONFIG_PATH = join(INSTITUTIONAL_AGENT_DIR, INSTITUTIONAL_CONFIG_NAME);

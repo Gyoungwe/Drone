@@ -1,6 +1,6 @@
 import { Type } from "typebox";
 import type { DiagnosticsSnapshot } from "../diagnostics";
-import type { ResourcePreviewResult } from "../ipc";
+import type { ImportedAttachment, ResourcePreviewResult } from "../ipc";
 import type { AppInfo, SavedTabs, UiState } from "../session";
 import { defineDomain } from "./define";
 
@@ -25,6 +25,10 @@ const DiagnosticsSnapshotSchema = Type.Unsafe<DiagnosticsSnapshot>({ type: "obje
 const SavedTabsSchema = Type.Unsafe<SavedTabs>({ type: "object" });
 const UiStateSchema = Type.Unsafe<UiState>({ type: "object" });
 const ResourcePreviewResultSchema = Type.Unsafe<ResourcePreviewResult>({ type: "object" });
+const ImportedAttachmentSchema = Type.Object(
+	{ path: Type.String(), name: Type.String(), bytes: Type.Integer({ minimum: 0 }) },
+	{ additionalProperties: false },
+);
 const GitBranchesSchema = Type.Object(
 	{ current: Type.Union([Type.String(), Type.Null()]), branches: Type.Array(Type.String()) },
 	{ additionalProperties: false },
@@ -50,6 +54,10 @@ export const AppContract = defineDomain("app", {
 		filePreview: {
 			args: Type.Union([Type.Tuple([Type.String()]), Type.Tuple([Type.String(), Type.String()])]),
 			result: ResourcePreviewResultSchema,
+		},
+		importDroppedFile: {
+			args: Type.Tuple([Type.String({ minLength: 1 }), Type.String({ minLength: 1 })]),
+			result: Type.Unsafe<ImportedAttachment>(ImportedAttachmentSchema),
 		},
 		resourceOpenExternal: {
 			args: Type.Union([Type.Tuple([Type.String()]), Type.Tuple([Type.String(), Type.String()])]),
