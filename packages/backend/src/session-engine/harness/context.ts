@@ -3,13 +3,13 @@ import {
 	decodeTaskView,
 	HARNESS_CHECKPOINT_CUSTOM_TYPE,
 	HARNESS_CONTRACT,
-	renderHarnessCheckpoint,
-	renderHarnessPosture,
 	type HarnessCheckpoint,
 	type HarnessPosture,
+	renderHarnessCheckpoint,
+	renderHarnessPosture,
 } from "@drone/shared";
-import type { ExtensionContext, InlineExtension } from "../sdk";
 import { createLogger } from "../../log";
+import type { ExtensionContext, InlineExtension } from "../sdk";
 
 const log = createLogger("session-harness");
 
@@ -37,11 +37,14 @@ interface RawBranchEntry {
 	message?: unknown;
 }
 
+type HarnessTask = NonNullable<ReturnType<typeof decodeTaskView>>["tasks"][number];
+
 function customMessages(branch: readonly unknown[]): RawCustomMessage[] {
 	return branch.flatMap((entry): RawCustomMessage[] => {
 		if (!entry || typeof entry !== "object") return [];
 		const candidate = entry as RawBranchEntry;
-		if (candidate.type !== "message" || !candidate.message || typeof candidate.message !== "object") return [];
+		if (candidate.type !== "message" || !candidate.message || typeof candidate.message !== "object")
+			return [];
 		const message = candidate.message as RawCustomMessage;
 		return message.role === "custom" && typeof message.customType === "string" ? [message] : [];
 	});
@@ -56,13 +59,14 @@ function text(value: unknown): string | undefined {
 }
 
 function taskViewFromMessage(message: RawCustomMessage | undefined) {
-	if (!message || !message.details || typeof message.details !== "object") return undefined;
+	if (!message?.details || typeof message.details !== "object") return undefined;
 	return decodeTaskView((message.details as { taskView?: unknown }).taskView);
 }
 
-function pathValues(task: ReturnType<typeof decodeTaskView> extends infer T ? T extends { tasks: any[] } ? T["tasks"][number] : never : never): string[] {
+function pathValues(task: HarnessTask): string[] {
 	const values: string[] = [];
-	if (Array.isArray(task.writeRoots)) values.push(...task.writeRoots.filter((value): value is string => typeof value === "string"));
+	if (Array.isArray(task.writeRoots))
+		values.push(...task.writeRoots.filter((value): value is string => typeof value === "string"));
 	for (const milestone of task.milestones) {
 		if (typeof milestone.acceptance.path === "string") values.push(milestone.acceptance.path);
 	}
@@ -75,7 +79,7 @@ function pathValues(task: ReturnType<typeof decodeTaskView> extends infer T ? T 
 	return [...new Set(values)].filter((value) => value.length > 0 && value.length <= 512).slice(0, 8);
 }
 
-function deliverableValues(task: NonNullable<ReturnType<typeof decodeTaskView>>["tasks"][number]): string[] {
+function deliverableValues(task: HarnessTask): string[] {
 	return task.milestones
 		.filter((milestone) => milestone.state !== "completed")
 		.map((milestone) => {

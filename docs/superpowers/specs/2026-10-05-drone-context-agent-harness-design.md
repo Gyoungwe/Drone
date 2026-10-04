@@ -2,7 +2,7 @@
 
 ## 状态
 
-本文件记录对 OpenScience 的架构解读和 Drone 的拟议升级范围。当前只记录设计，不包含实现变更。
+本文件记录对 OpenScience 的架构解读和 Drone 的拟议升级范围。第一阶段的上下文合同与 checkpoint 投影已经实现；redirect、deliverables、recall 和 workers 单元仍属于后续阶段。
 
 ## 目标
 

@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HARNESS_CHECKPOINT_CUSTOM_TYPE, type HarnessCheckpoint } from "../../shared/src/harness";
-import {
-	checkpointFromBranch,
-	makeHarnessContextExtension,
-} from "../src/session-engine/harness/context";
 import { buildSessionExtensionFactories } from "../src/session-engine/extensions";
+import { checkpointFromBranch, makeHarnessContextExtension } from "../src/session-engine/harness/context";
 
 const taskView = {
 	version: 2 as const,
@@ -130,9 +127,15 @@ describe("harness context adapter", () => {
 		const extension = makeHarnessContextExtension();
 		await (extension as any).factory(pi);
 		const context = fakeContext();
-		await registered.get("before_agent_start")?.({ prompt: "First objective", systemPrompt: "base" }, context);
+		await registered.get("before_agent_start")?.(
+			{ prompt: "First objective", systemPrompt: "base" },
+			context,
+		);
 		const first = await registered.get("context")?.({ messages: [] }, context);
-		await registered.get("before_agent_start")?.({ prompt: "Second objective", systemPrompt: "base" }, context);
+		await registered.get("before_agent_start")?.(
+			{ prompt: "Second objective", systemPrompt: "base" },
+			context,
+		);
 		const second = await registered.get("context")?.({ messages: first.messages }, context);
 		expect(second.messages.at(-1)?.content).toContain("Second objective");
 	});
@@ -155,8 +158,8 @@ describe("harness context adapter", () => {
 				.filter((factory): factory is { name?: unknown } => !!factory && typeof factory === "object")
 				.map((factory) => factory.name);
 		expect(names(buildSessionExtensionFactories(deps, "/tmp/drone"))).toContain("harness-context");
-		expect(names(buildSessionExtensionFactories({ ...deps, harnessContext: false }, "/tmp/drone"))).not.toContain(
-			"harness-context",
-		);
+		expect(
+			names(buildSessionExtensionFactories({ ...deps, harnessContext: false }, "/tmp/drone")),
+		).not.toContain("harness-context");
 	});
 });

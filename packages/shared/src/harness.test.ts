@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-	HARNESS_CONTRACT,
 	checkpointFingerprint,
+	HARNESS_CONTRACT,
 	renderHarnessCheckpoint,
 	renderHarnessPosture,
 } from "./harness";

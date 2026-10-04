@@ -35,7 +35,7 @@
 - `HARNESS_CONTRACT`: stable text stating inspect/verify/preserve/deliver/report rules and that private reasoning must not be exposed.
 - `renderHarnessPosture(posture): string`: bounded per-turn posture text.
 - `renderHarnessCheckpoint(checkpoint): string`: deterministic Markdown/XML-safe projection with section order `Objective`, `Deliverables`, `Findings`, `Work state`, `Next move`, `Relevant files`.
-- `checkpointFingerprint(checkpoint): string`: stable SHA-256 fingerprint over canonical JSON; use Web Crypto or Node-independent deterministic serialization already supported by the shared package.
+- `checkpointFingerprint(checkpoint): string`: stable 64-character identity fingerprint over canonical JSON; it is used only for change detection and trace correlation, not as an authentication or evidence hash.
 
 - [ ] **Step 1: Write failing pure contract tests**
 
@@ -76,7 +76,7 @@ Expected: FAIL because the harness module and renderers do not exist.
 
 Define the exported types and constants. Normalize whitespace, cap each list item at 1,200 characters, cap each list at 8 items, and cap the final rendered checkpoint at 8,000 characters by dropping oldest findings before truncating required sections. Escape `<` and `>` in user-derived content before placing it inside the checkpoint block.
 
-Use a deterministic canonical object serializer for the fingerprint; omit `undefined` values and sort object keys so equal checkpoints hash identically.
+Use a deterministic canonical object serializer for the fingerprint; omit `undefined` values and sort object keys so equal checkpoints hash identically. Keep the implementation SDK-free; the identity fingerprint must not be presented as a security or evidence digest.
 
 - [ ] **Step 4: Export and run the focused tests**
 

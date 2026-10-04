@@ -47,7 +47,7 @@ function normalize(value: unknown, limit = ITEM_LIMIT): string {
 	return compact.length > limit ? `${compact.slice(0, Math.max(0, limit - 1))}…` : compact;
 }
 
-function escape(value: string): string {
+function xmlEscape(value: string): string {
 	return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
@@ -56,11 +56,11 @@ function list(values: readonly string[]): string[] {
 		.map((value) => normalize(value))
 		.filter(Boolean)
 		.slice(0, ITEM_COUNT_LIMIT)
-		.map((value) => `- ${escape(value)}`);
+		.map((value) => `- ${xmlEscape(value)}`);
 }
 
 function section(title: string, values: readonly string[] | string): string {
-	const body = Array.isArray(values) ? list(values) : [escape(normalize(values)) || "(none)"];
+	const body = Array.isArray(values) ? list(values) : [xmlEscape(normalize(values)) || "(none)"];
 	return [`### ${title}`, ...(body.length ? body : ["- (none)"])].join("\n");
 }
 
@@ -70,7 +70,8 @@ function section(title: string, values: readonly string[] | string): string {
  */
 export function renderHarnessPosture(posture: HarnessPosture): string {
 	const effort = posture.effort === "ultra" ? "ULTRA" : "NORMAL";
-	const mode = posture.mode === "plan" ? "Plan mode is read-only." : "Execute only within the active permissions.";
+	const mode =
+		posture.mode === "plan" ? "Plan mode is read-only." : "Execute only within the active permissions.";
 	const delegation =
 		posture.delegation === "off"
 			? "Keep the work in the lead conversation."

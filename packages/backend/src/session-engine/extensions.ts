@@ -18,7 +18,6 @@ import { makeAskUserTool } from "../tools/ask-user";
 import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
-import { makeHarnessContextExtension } from "./harness/context";
 import { bindToolManifestEvents } from "../tools/manifest";
 import { makeShowImageTool } from "../tools/show-image";
 import { makeSshTool } from "../tools/ssh";
@@ -27,6 +26,7 @@ import { makeSubagentTool } from "../tools/subagent";
 import { makeTodoTool } from "../tools/todo";
 import { makeTodoReminderExtension } from "../tools/todo-reminder";
 import { makeWebFetchTool } from "../tools/webfetch";
+import { makeHarnessContextExtension } from "./harness/context";
 
 type LiveChildControl = {
 	steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
@@ -141,7 +141,8 @@ export function buildSessionExtensionFactories(
 	if (deps.harnessContext !== false)
 		factories.push(
 			makeHarnessContextExtension({
-				report: (sessionId, checkpoint) => deps.traces.recordCustom(sessionId, "harness_checkpoint", checkpoint),
+				report: (sessionId, checkpoint) =>
+					deps.traces.recordCustom(sessionId, "harness_checkpoint", checkpoint),
 			}),
 		);
 	factories.push(
