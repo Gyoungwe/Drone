@@ -213,6 +213,7 @@ export function ProcessLaneView({
 						className={`process-lane-node ${node.state}${state.current === node.id ? " current" : ""}`}
 						data-process-node={node.id}
 						data-state={node.state}
+						aria-label={nodeLabel(node, t)}
 						style={{ left: rect.x, top: rect.y, width: rect.width, minHeight: nodeHeight(node) }}
 					>
 						<header className="process-lane-node-head">
