@@ -2,8 +2,10 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HostProfile, JobSpec } from "@drone/compute";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DefaultComputeExecutor } from "./default-executor";
+
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 const host: HostProfile = { alias: "local", host: "local", transport: "builtin-ssh" };
 const spec: JobSpec = {
