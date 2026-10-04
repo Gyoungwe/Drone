@@ -18,6 +18,7 @@ import { makeAskUserTool } from "../tools/ask-user";
 import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
+import { makeHarnessContextExtension } from "./harness/context";
 import { bindToolManifestEvents } from "../tools/manifest";
 import { makeShowImageTool } from "../tools/show-image";
 import { makeSshTool } from "../tools/ssh";
@@ -37,6 +38,8 @@ export interface SessionExtensionDependencies {
 	runtime: DroneRuntime;
 	permissionGates?: boolean;
 	permissionExtension?: boolean;
+	/** Host-owned bounded prompt/checkpoint contract; enabled by default. */
+	harnessContext?: boolean;
 	subagentPreferBuiltin?: boolean;
 	webFetch?: boolean | { allowRanges?: string[] };
 	tools?: string[];
@@ -133,6 +136,12 @@ export function buildSessionExtensionFactories(
 				getRuntime: deps.getModelRuntime,
 				getModelPreference: deps.getSubagentModel,
 				getThinkingPreference: deps.getSubagentThinking,
+			}),
+		);
+	if (deps.harnessContext !== false)
+		factories.push(
+			makeHarnessContextExtension({
+				report: (sessionId, checkpoint) => deps.traces.recordCustom(sessionId, "harness_checkpoint", checkpoint),
 			}),
 		);
 	factories.push(

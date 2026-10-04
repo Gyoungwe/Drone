@@ -4,6 +4,7 @@ import {
 	checkpointFromBranch,
 	makeHarnessContextExtension,
 } from "../src/session-engine/harness/context";
+import { buildSessionExtensionFactories } from "../src/session-engine/extensions";
 
 const taskView = {
 	version: 2 as const,
@@ -145,5 +146,17 @@ describe("harness context adapter", () => {
 		await (extension as any).factory(pi);
 		const result = await registered.get("context")?.({ messages: [] }, malformed);
 		expect(result?.messages.at(-1)?.customType).toBe(HARNESS_CHECKPOINT_CUSTOM_TYPE);
+	});
+
+	it("registers the harness context extension by default and supports disabling it", () => {
+		const deps = { runtime: {}, traces: {} } as any;
+		const names = (factories: readonly unknown[]) =>
+			factories
+				.filter((factory): factory is { name?: unknown } => !!factory && typeof factory === "object")
+				.map((factory) => factory.name);
+		expect(names(buildSessionExtensionFactories(deps, "/tmp/drone"))).toContain("harness-context");
+		expect(names(buildSessionExtensionFactories({ ...deps, harnessContext: false }, "/tmp/drone"))).not.toContain(
+			"harness-context",
+		);
 	});
 });
