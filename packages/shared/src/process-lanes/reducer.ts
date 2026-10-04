@@ -173,11 +173,17 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 								textPair("生物学重复要齐", "Biological replicates are required"),
 								textPair("写盘要任务门", "Writes require a task contract"),
 							]
-						: [
-								textPair("技能写入系统提示", "Workflow added to the system prompt"),
-								textPair("这一轮还没执行", "No execution receipt this turn"),
-								textPair("命中不算读过", "Search hits are not reads"),
-							],
+						: route.stage === "vault"
+							? [
+									textPair("工作流换成知识库", "Workflow changed to knowledge management"),
+									textPair("阅读和绑定等回执", "Waiting for read and binding receipts"),
+									textPair("沉淀不进引用门", "Deposits do not add citations"),
+								]
+							: [
+									textPair("技能写入系统提示", "Workflow added to the system prompt"),
+									textPair("这一轮还没执行", "No execution receipt this turn"),
+									textPair("命中不算读过", "Search hits are not reads"),
+								],
 				);
 				edge("picked", "doing");
 			} else if (route.landing === "library") {
@@ -206,22 +212,28 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 								textPair("命中挂在正在做下面", "Hits stay with current activity"),
 								textPair("不进本轮读过", "Not added to this turn's reads"),
 							]
-						: [
-								textPair(`调用 ${event.name}`, `Calling ${event.name}`),
-								textPair(
-									event.state === "running"
-										? "等待回执"
-										: event.state === "error"
-											? "调用失败，保留回执"
-											: "调用回执已到",
-									event.state === "running"
-										? "Awaiting receipt"
-										: event.state === "error"
-											? "Failed call recorded"
-											: "Call receipt received",
-								),
-								textPair("写盘仍按任务契约", "Writes remain bound by task consent"),
-							],
+						: event.type === "tool-receipt" && event.name === "read" && event.state === "done"
+							? [
+									textPair("改为调用 read", "Read call recorded"),
+									textPair("只读与 research_* 放行", "Read-only and research_* calls remain allowed"),
+									textPair("写盘要契约", "Writes require a contract"),
+								]
+							: [
+									textPair(`调用 ${event.name}`, `Calling ${event.name}`),
+									textPair(
+										event.state === "running"
+											? "等待回执"
+											: event.state === "error"
+												? "调用失败，保留回执"
+												: "调用回执已到",
+										event.state === "running"
+											? "Awaiting receipt"
+											: event.state === "error"
+												? "Failed call recorded"
+												: "Call receipt received",
+									),
+									textPair("写盘仍按任务契约", "Writes remain bound by task consent"),
+								],
 				);
 			const n = state.nodes.find((n) => n.id === "doing");
 			if (n) n.receipts = receipts;

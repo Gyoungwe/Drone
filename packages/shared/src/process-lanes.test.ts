@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	deriveProcessEvents,
 	deriveProcessLaneState,
+	estimateProcessLayout,
 	initialProcessLaneState,
 	reduceProcessEvent,
 } from "./process-lanes";
@@ -37,6 +38,15 @@ describe("process lane projection", () => {
 				.filter((lane) => ["evidence", "deposit", "answer"].includes(lane.id))
 				.every((lane) => !eighth.nodes.some((n) => n.lane === lane.id)),
 		).toBe(true);
+	});
+	it("keeps both supported panel widths free of projected card overlap", () => {
+		for (let step = 0; step < PROCESS_DEMO_STEPS.length; step++) {
+			for (const width of [372, 744]) {
+				const layout = estimateProcessLayout(processDemoState(step), width);
+				expect(layout.overlaps, `${width}/${step}`).toEqual([]);
+				expect(layout.overflow, `${width}/${step}`).toBe(false);
+			}
+		}
 	});
 	it("does not turn ordinary read, links or search hits into cited evidence", () => {
 		const state = deriveProcessLaneState([

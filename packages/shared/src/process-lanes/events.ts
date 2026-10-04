@@ -86,7 +86,7 @@ export function deriveProcessEvents(messages: readonly UIMessage[]): ProcessEven
 			}
 			if (
 				tool.name === "research_deposit_knowledge" &&
-				(result.vaultWritten === true || typeof result.path === "string")
+				(result.vaultWritten === true || typeof result.note === "string" || typeof result.path === "string")
 			) {
 				const args = json(tool.args);
 				push({
@@ -94,7 +94,12 @@ export function deriveProcessEvents(messages: readonly UIMessage[]): ProcessEven
 					id,
 					seq: seq++,
 					kind: String(args?.type ?? result.type ?? "source"),
-					path: typeof result.path === "string" ? result.path : undefined,
+					path:
+						typeof result.note === "string"
+							? result.note
+							: typeof result.path === "string"
+								? result.path
+								: undefined,
 				});
 			}
 			if (tool.name === "research_propose_wiki_update" || tool.name === "research_zotero_save") {
