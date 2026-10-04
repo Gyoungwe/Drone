@@ -112,6 +112,9 @@ it("ignores Wiki reads and failed tools", async () => {
 
 it("closes the gate in one host-serial complete after a verified archive", async () => {
 	await seedArchive();
+	const p = await localPaper("archived", "ARCHIV01");
+	await noteRead(p);
+	await identity(p);
 	await updateResearchLoop({
 		cwd,
 		runDir,
@@ -134,12 +137,17 @@ it("closes the gate in one host-serial complete after a verified archive", async
 	const done = await completeResearchGate({
 		cwd,
 		runDir,
-		claimRefs: ["Explicit limited claim -> https://example.test/p"],
+		claimBindings: [binding(p, "Explicit limited claim")],
 	});
 	expect(done.evidence_gate.stage).toBe("answerable");
 	expect(done.evidence_gate.answerable).toBe(true);
 	expect(done.evidence_gate.archive_count).toBe(1);
 	expect(done.evidence_gate.claim_refs[0]).toMatch(/^Explicit limited claim/);
+	const metadata = JSON.parse(await readFile(join(runDir, "metadata.json"), "utf8"));
+	expect(metadata.status).toBe("completed");
+	expect(metadata.research_nodes).toHaveLength(8);
+	expect(metadata.research_nodes.every((node) => node.state === "completed")).toBe(true);
+	expect(metadata.provenance).toMatchObject({ status: "host-verified", claim_bindings: expect.any(Array) });
 });
 
 it("archive download receipts record acquisition but never auto-bind claims or finalize", async () => {
@@ -160,6 +168,55 @@ it("archive download receipts record acquisition but never auto-bind claims or f
 	expect(observed.evidence_gate.claim_refs).toEqual([]);
 	const metadata = JSON.parse(await readFile(join(runDir, "metadata.json"), "utf8"));
 	expect(metadata.evidence_gate.stage).toBe("sources_archived");
+});
+
+it("binds a structured claim to a read archived run source", async () => {
+	const sources = join(runDir, "sources", "papers");
+	await mkdir(sources, { recursive: true });
+	const sourcePath = join(sources, "paper.md");
+	const text = "# Archived source\nThe bounded result is reproducible.\n";
+	await writeFile(sourcePath, text);
+	const sourceHash = createHash("sha256").update(text).digest("hex");
+	await writeFile(
+		join(runDir, "sources", "download-manifest.json"),
+		`${JSON.stringify({ items: [{ id: "source-1", status: "downloaded", sha256: sourceHash, path: sourcePath }], failures: [] })}\n`,
+	);
+	await observeResearchReceipt({
+		cwd,
+		runDir,
+		toolName: "research_archive_source",
+		args: { run_dir: runDir, url: "https://example.test/p" },
+		details: { status: "downloaded", path: sourcePath, url: "https://example.test/p" },
+	});
+	await observeResearchReceipt({
+		cwd,
+		runDir,
+		toolName: "read",
+		args: { path: relative(cwd, sourcePath) },
+		details: { path: relative(cwd, sourcePath) },
+		content: [{ type: "text", text }],
+	});
+	const done = await completeResearchGate({
+		cwd,
+		runDir,
+		claimBindings: [
+			{
+				claim: "The bounded result is reproducible",
+				relationship: "direct",
+				limitations: "fixture only",
+				sources: [
+					{
+						path: relative(cwd, sourcePath),
+						start_line: 2,
+						end_line: 2,
+						quote: "The bounded result is reproducible.",
+					},
+				],
+			},
+		],
+	});
+	expect(done.evidence_gate.answerable).toBe(true);
+	expect(done.evidence_gate.claim_bindings[0].sources[0]).toMatchObject({ hash: sourceHash });
 });
 
 async function localPaper(name = "paper", key = "ABCDEFGH") {
@@ -195,6 +252,14 @@ async function identity(p, overrides = {}) {
 		details: { ...p.proof, ...overrides },
 	});
 }
+function binding(p, claim = "Limited method claim") {
+	return {
+		claim,
+		relationship: "direct",
+		limitations: "fixture only",
+		sources: [{ path: p.path, start_line: 4, end_line: 4, quote: "Result and limitations." }],
+	};
+}
 it("reuses actual current-turn note reads without pretending to archive PDFs", async () => {
 	const p = await localPaper();
 	await noteRead(p);
@@ -203,7 +268,7 @@ it("reuses actual current-turn note reads without pretending to archive PDFs", a
 	const done = await completeResearchGate({
 		cwd,
 		runDir,
-		claimRefs: ["Limited method claim -> Library/Papers/paper.md section Result"],
+		claimBindings: [binding(p)],
 	});
 	expect(done.evidence_gate).toMatchObject({
 		answerable: true,
@@ -271,7 +336,11 @@ it("parallel real receipts retain all source refs rather than last-writer-wins",
 				: { data: { DOI: url.includes("ABCDEFGH") ? "10.1038/a" : "10.1038/b" } },
 	}));
 	await Promise.all([noteRead(a), noteRead(b), identity(a), identity(b)]);
-	const done = await completeResearchGate({ cwd, runDir, claimRefs: ["claim a", "claim b"] });
+	const done = await completeResearchGate({
+		cwd,
+		runDir,
+		claimBindings: [binding(a, "claim a"), binding(b, "claim b")],
+	});
 	expect(done.evidence_gate.reuse_count).toBe(2);
 	expect(done.evidence_gate.source_refs).toEqual(expect.arrayContaining([a.path, b.path]));
 });
@@ -316,10 +385,8 @@ function verifyEvent(p, id = "verify") {
 async function attachJournal(j) {
 	return j.execute(runDir, () => updateResearchLoop({ cwd, runDir, action: "status" }));
 }
-async function finishJournal(j) {
-	return j.execute(runDir, () =>
-		completeResearchGate({ cwd, runDir, claimRefs: ["Limited claim -> Library/Papers/paper.md Result"] }),
-	);
+async function finishJournal(j, p) {
+	return j.execute(runDir, () => completeResearchGate({ cwd, runDir, claimBindings: [binding(p)] }));
 }
 it.each(["read-before-start", "verify-before-read", "start-before-read", "parallel"])(
 	"journal supports legitimate order %s without rereading",
@@ -337,7 +404,7 @@ it.each(["read-before-start", "verify-before-read", "start-before-read", "parall
 			await j.record(verifyEvent(p));
 		}
 		await attachJournal(j);
-		const done = await finishJournal(j);
+		const done = await finishJournal(j, p);
 		expect(done.evidence_gate).toMatchObject({ answerable: true, archive_count: 0, reuse_count: 1 });
 		expect(done.receipt_journal.buffered).toBe(2);
 		expect(done.evidence_gate.reused_sources[0].evidence_profile).toMatchObject({
@@ -355,7 +422,7 @@ it("journal rejects cross-session run ownership without erasing the first sessio
 	await a.record(verifyEvent(p));
 	await attachJournal(a);
 	await expect(attachJournal(b)).rejects.toThrow("another active session");
-	expect((await finishJournal(a)).evidence_gate.answerable).toBe(true);
+	expect((await finishJournal(a, p)).evidence_gate.answerable).toBe(true);
 });
 it("new turn cannot use old or late completed receipts", async () => {
 	const p = await localPaper(),
@@ -367,7 +434,7 @@ it("new turn cannot use old or late completed receipts", async () => {
 	await old.record(readEvent(p, "late"));
 	const next = journal();
 	await attachJournal(next);
-	await expect(finishJournal(next)).rejects.toThrow("receipt is missing");
+	await expect(finishJournal(next, p)).rejects.toThrow("receipt is missing");
 });
 it("binding changes between buffered reading and run creation invalidate the receipt", async () => {
 	const p = await localPaper(),
@@ -385,14 +452,14 @@ it("binding changes between buffered reading and run creation invalidate the rec
 	});
 	await j.record(verifyEvent({ ...p, proof }));
 	await attachJournal(j);
-	await expect(finishJournal(j)).rejects.toThrow("No available source");
+	await expect(finishJournal(j, p)).rejects.toThrow("No available source");
 });
 it("failed receipts and repeat completion events do not inflate the journal", async () => {
 	const p = await localPaper(),
 		j = journal();
 	await j.record({ ...readEvent(p, "failed"), isError: true });
 	await Promise.all([j.record(readEvent(p)), j.record(readEvent(p)), j.record(verifyEvent(p))]);
-	const done = await finishJournal(j);
+	const done = await finishJournal(j, p);
 	expect(done.receipt_journal.buffered).toBe(2);
 	expect(done.evidence_gate.reuse_count).toBe(1);
 });
@@ -403,7 +470,7 @@ it("buffered note changes before attachment are not accepted", async () => {
 	await j.record(verifyEvent(p));
 	await writeFile(join(p.vault, p.path), `${p.text} changed`);
 	await attachJournal(j);
-	await expect(finishJournal(j)).rejects.toThrow("No available source");
+	await expect(finishJournal(j, p)).rejects.toThrow("No available source");
 });
 it("extension captures tool events before start, returns current state, and ignores old-turn completions", async () => {
 	const p = await localPaper(),
@@ -442,7 +509,7 @@ it("extension captures tool events before start, returns current state, and igno
 		expect(start.details.evidence_gate.reuse_count).toBe(1);
 		const done = await tool.execute(
 			"complete",
-			{ action: "complete", run_dir: runDir, claim_refs: ["Limited claim -> paper.md"] },
+			{ action: "complete", run_dir: runDir, claim_bindings: [binding(p)] },
 			null,
 			null,
 			ctx,
@@ -494,7 +561,7 @@ it("closing an old journal twice cannot erase a newer turn's receipts", async ()
 	await next.record(verifyEvent(p));
 	await attachJournal(next);
 	await old.close();
-	expect((await finishJournal(next)).evidence_gate.answerable).toBe(true);
+	expect((await finishJournal(next, p)).evidence_gate.answerable).toBe(true);
 });
 
 it("complete persists structured excerpt bindings and labels legacy compatibility", async () => {
@@ -546,7 +613,7 @@ it("reconciliation's live verification receipt is accepted without a redundant i
 		args: { run_dir: runDir },
 		details: { receipt: p.proof, status: "both-identities-verified", writesToLibraries: 0 },
 	});
-	const done = await finishJournal(j);
+	const done = await finishJournal(j, p);
 	expect(done.evidence_gate).toMatchObject({ answerable: true, reuse_count: 1, archive_count: 0 });
 	expect(done.receipt_journal.buffered).toBe(2);
 });

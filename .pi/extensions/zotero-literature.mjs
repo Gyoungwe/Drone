@@ -2000,7 +2000,7 @@ var RUNTIME_BRIDGE_VERSION = 1;
 
 // packages/tasks/src/runtime-compiled/acceptance.mjs
 var CORE_ACCEPTANCE_KINDS = Object.freeze(["file", "human_review"]);
-var CORE_FIELDS = Object.freeze(["kind", "path", "sha256"]);
+var CORE_FIELDS = Object.freeze(["kind", "path", "sha256", "rootKind"]);
 var KIND = /^[a-z][a-z0-9_]{1,40}$/;
 var FIELD = /^[a-zA-Z][a-zA-Z0-9]{0,40}$/;
 var stringField = { type: "string", minLength: 1, maxLength: 512 };
@@ -2012,7 +2012,12 @@ var createRegistry = () => {
   return {
     verifiers: /* @__PURE__ */ new Map(),
     kinds,
-    properties: { kind: { type: "string", enum: kinds }, path: stringField, sha256: stringField }
+    properties: {
+      kind: { type: "string", enum: kinds },
+      path: stringField,
+      sha256: stringField,
+      rootKind: { type: "string", enum: ["workspace", "vault", "research-run"], minLength: 1, maxLength: 32 }
+    }
   };
 };
 var registry = runtimeSlot("tasks", "acceptance", createRegistry);
@@ -2023,6 +2028,12 @@ function ensureRegistryShape() {
   registry.properties.kind ??= { type: "string", enum: registry.kinds };
   registry.properties.path ??= stringField;
   registry.properties.sha256 ??= stringField;
+  registry.properties.rootKind ??= {
+    type: "string",
+    enum: ["workspace", "vault", "research-run"],
+    minLength: 1,
+    maxLength: 32
+  };
 }
 ensureRegistryShape();
 function definitionOf(verifier) {

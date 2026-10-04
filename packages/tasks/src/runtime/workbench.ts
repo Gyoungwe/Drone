@@ -36,6 +36,7 @@ export const clean = (value, max = 180) =>
 		.join("")
 		.slice(0, max);
 const hash = (value: any) => createHash("sha256").update(value).digest("hex");
+export const ARTIFACT_ROOT_KINDS = Object.freeze(["workspace", "vault", "research-run"]);
 const clone = (value) => structuredClone(value);
 const controls = new Set([
 	"set_status",
@@ -50,11 +51,13 @@ const controls = new Set([
 // 只读判定来自工具清单（挂钩 1）：核心只读原语 + 扩展声明的 drone.readOnly / 只读工具家族。
 const readOnly = (name) => isReadOnlyTool(name);
 const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
-const sameArtifactPath = (cwd, declared, observed) => {
+const sameArtifactPath = (cwd, declared, observed, observedAbsolute = null) => {
 	const normalize = (path) => {
 		const absolute = resolve(cwd || process.cwd(), path);
 		return process.platform === "win32" ? absolute.toLowerCase() : absolute;
 	};
+	if (typeof declared === "string" && isAbsolute(declared) && typeof observedAbsolute === "string")
+		return normalize(declared) === normalize(observedAbsolute);
 	return (
 		typeof declared === "string" &&
 		typeof observed === "string" &&
@@ -128,6 +131,8 @@ export async function inspectTaskFile(cwd: any, input: any, expected: any = {}):
 			throw error("file-limit", "File changed beyond the inspection limit.");
 		const identity: any = {
 			path: rel.split(sep).join("/"),
+			absolutePath: path,
+			rootKind: ARTIFACT_ROOT_KINDS.includes(expected.rootKind) ? expected.rootKind : "workspace",
 			bytes: bytes.length,
 			sha256: hash(bytes),
 			observedAt: new Date().toISOString(),
@@ -749,8 +754,9 @@ export function createTaskWorkbench({
 		for (const m of t.milestones) {
 			if (m.acceptance.kind !== "file") continue;
 			try {
-				const artifact = await inspect(cwd, m.acceptance.path, {
+				const artifact = await inspect(cwd, m.evidence?.absolutePath || m.acceptance.path, {
 					sha256: m.acceptance.sha256 || m.evidence?.sha256,
+					rootKind: m.acceptance.rootKind || m.evidence?.rootKind,
 				});
 				updates.push({ id: m.id, artifact });
 			} catch (e) {
@@ -771,7 +777,10 @@ export function createTaskWorkbench({
 		for (const op of t.operations) {
 			if (!op.artifact || !["verified", "returned", "unknown"].includes(op.state)) continue;
 			try {
-				const artifact = await inspect(cwd, op.artifact.path, { sha256: op.artifact.sha256 });
+				const artifact = await inspect(cwd, op.artifact.absolutePath || op.artifact.path, {
+					sha256: op.artifact.sha256,
+					rootKind: op.artifact.rootKind,
+				});
 				op.state = "verified";
 				op.checkedAt = now();
 				op.artifact = artifact;
@@ -1188,7 +1197,8 @@ export function createTaskWorkbench({
 				for (const m of t.milestones)
 					if (
 						m.acceptance.kind === "file" &&
-						sameArtifactPath(cwd, m.acceptance.path, op.artifact.path) &&
+						(!m.acceptance.rootKind || m.acceptance.rootKind === op.artifact.rootKind) &&
+						sameArtifactPath(cwd, m.acceptance.path, op.artifact.path, op.artifact.absolutePath) &&
 						(!m.acceptance.sha256 || m.acceptance.sha256 === op.artifact.sha256) &&
 						m.dependsOn.every((dep) => t.milestones.find((x) => x.id === dep)?.state === "completed")
 					) {
@@ -1299,6 +1309,7 @@ export function createTaskWorkbench({
 			"### 任务进展",
 			`任务：${t.goal}`,
 			`状态：${labels[t.state]}；更新于 ${t.updatedAt}`,
+			`宿主计数：阶段 ${t.budget.stageCalls}/${LIMITS.stageCalls}；总计 ${t.budget.calls}/${LIMITS.totalCalls}`,
 			`交付：已完成 ${t.milestones.filter((m) => m.state === "completed").length}/${t.milestones.length} 项`,
 			...[
 				...new Map(

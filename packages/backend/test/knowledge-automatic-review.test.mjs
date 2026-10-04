@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
 import { readReviewMode, saveReviewMode } from "@drone/knowledge";
 import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
-import { stageWikiProposal, undoWikiUpdate, wikiHistory } from "@drone/knowledge/wiki-review";
+import {
+	decideWikiProposal,
+	stageWikiProposal,
+	undoWikiUpdate,
+	wikiHistory,
+} from "@drone/knowledge/wiki-review";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 let root, cwd, vault, service, prep;
@@ -40,11 +45,15 @@ const stage = () =>
 		rationale: "Organize evidence",
 		source_paths: [source],
 	});
-it("automatically saves a new AI page, archives exact history and supports safe undo", async () => {
-	const saved = await stage();
+const accept = (candidate) =>
+	decideWikiProposal(service, candidate.id, "test", candidate.proposalHash, "apply", { actor: "human" });
+it("queues a new AI page for human review, archives exact history and supports safe undo", async () => {
+	const candidate = await stage();
+	expect(candidate.status).toBe("pending");
+	const saved = await accept(candidate);
 	expect(saved.status).toBe("applied");
-	expect(saved.humanReviewed).toBe(false);
-	expect(saved.reviewMethod).toBe("automatic");
+	expect(saved.humanReviewed).toBe(true);
+	expect(saved.reviewMethod).toBe("human");
 	expect(saved.scientificallyVerified).toBe(false);
 	const history = await wikiHistory(service, "test");
 	expect(history).toHaveLength(1);
@@ -59,7 +68,7 @@ it("strict mode stages without touching live Wiki", async () => {
 	await expect(readFile(join(vault, path))).rejects.toMatchObject({ code: "ENOENT" });
 });
 it("does not overwrite human edits, and undo refuses an intervening human change", async () => {
-	const saved = await stage(),
+	const saved = await accept(await stage()),
 		history = await wikiHistory(service, "test");
 	await writeFile(join(vault, path), "# Human-authored revision\nKeep this.\n");
 	await service.read(prep.ticket, cwd, { path });
@@ -70,16 +79,17 @@ it("does not overwrite human edits, and undo refuses an intervening human change
 	expect(await readFile(join(vault, path), "utf8")).toContain("Keep this");
 });
 it("updates an unchanged AI-owned page and restores its previous version on undo", async () => {
-	await stage();
+	await accept(await stage());
 	const before = await readFile(join(vault, path), "utf8");
 	await service.read(prep.ticket, cwd, { path });
-	const updated = await stageWikiProposal(service, prep.ticket, cwd, {
+	const candidate = await stageWikiProposal(service, prep.ticket, cwd, {
 		path,
 		title: "Automatic",
 		markdown: "Updated bounded observation. [[Library/Papers/source]]",
 		rationale: "Refine",
 		source_paths: [source],
 	});
+	const updated = await accept(candidate);
 	expect(updated.status).toBe("applied");
 	const item = (await wikiHistory(service, "test")).find((p) => p.id === updated.id);
 	await undoWikiUpdate(service, "test", updated.id, item.afterHash);

@@ -96,7 +96,7 @@ export default function researchLoop(pi: Pi): void {
 			activity: { text: "正在检查研究证据链…", phase: "verification" },
 		},
 		description:
-			"Create or inspect a scientific evidence gate. Prefer start and status; the host advances search, inspection, archive, claims and finalize from successful tools.",
+			"Create or inspect a scientific evidence gate. Prefer start and status; the host advances search, inspection, archive, claims and finalize from successful tools. Structured claim_bindings with observed source excerpts are required before complete/finalize; claim_refs alone do not establish support.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -210,6 +210,7 @@ export default function researchLoop(pi: Pi): void {
 				toolName: event.toolName,
 				args: started.args,
 				details: event.result?.details || {},
+				...(event.toolName === "read" ? { content: event.result?.content || [] } : {}),
 				isError: !!event.isError,
 			});
 		}),

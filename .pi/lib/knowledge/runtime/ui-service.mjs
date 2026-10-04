@@ -18,8 +18,8 @@ import {
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-KYVVQJ6E.mjs";
-import "./chunks/chunk-IGZMNWC2.mjs";
+} from "./chunks/chunk-X3UUGJ74.mjs";
+import "./chunks/chunk-NCQOEHSQ.mjs";
 import "./chunks/chunk-7HHP6BXQ.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";
 import "./chunks/chunk-O536IQIE.mjs";

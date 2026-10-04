@@ -21,7 +21,7 @@ describe("task acceptance policy", () => {
 		const schema = acceptanceSchema(registry);
 		expect(acceptanceKinds(registry)).toEqual([...CORE_ACCEPTANCE_KINDS]);
 		expect(schema.properties.kind?.enum).toEqual([...CORE_ACCEPTANCE_KINDS]);
-		expect(Object.keys(schema.properties)).toEqual(["kind", "path", "sha256"]);
+		expect(Object.keys(schema.properties)).toEqual(["kind", "path", "sha256", "rootKind"]);
 
 		registerAcceptanceVerifier(registry, "lab_sample", { fields: ["sampleId", "batch"] });
 		expect(schema.properties.kind?.enum).toContain("lab_sample");
@@ -85,7 +85,7 @@ describe("task acceptance policy", () => {
 		resetAcceptanceVerifiers(registry);
 		expect(acceptanceVerifier(registry, "lab_sample")).toBeNull();
 		expect(acceptanceKinds(registry)).toEqual([...CORE_ACCEPTANCE_KINDS]);
-		expect(Object.keys(schema.properties)).toEqual(["kind", "path", "sha256"]);
+		expect(Object.keys(schema.properties)).toEqual(["kind", "path", "sha256", "rootKind"]);
 		expect(schema.properties.kind?.enum).toEqual([...CORE_ACCEPTANCE_KINDS]);
 	});
 });

@@ -84,6 +84,12 @@ function managedParts(text) {
 		throw new Error("Invalid managed block markers");
 	return { start, end, body: start < 0 ? "" : text.slice(start + START.length, end).trim() };
 }
+function normalizeCandidate(markdown) {
+	return String(markdown)
+		.replace(/^\uFEFF?\s*---\s*\n[\s\S]*?\n---\s*\n?/i, "")
+		.replace(/^\s*#\s+[^\n]+\n+/, "")
+		.trim();
+}
 function proposedText(original, title, body) {
 	const block = `${START}\n${body.trim()}\n${END}`;
 	if (original === null)
@@ -183,7 +189,7 @@ export async function stageWikiProposal(service, ticket, cwd, input) {
 		const after = proposedText(
 			original?.text ?? null,
 			title.trim(),
-			`${markdown.trim()}\n\n## Sources\n${refs}`,
+			`${normalizeCandidate(markdown)}\n\n## Sources\n${refs}`,
 		);
 		const proposal = {
 			id: randomUUID(),
@@ -213,16 +219,6 @@ export async function stageWikiProposal(service, ticket, cwd, input) {
 			await atomicJson(join(directory, `${proposal.id}.json`), proposal);
 		});
 		invalidateKnowledgeUi();
-		if ((await readReviewMode()) === "automatic") {
-			try {
-				return await decideWikiProposal(service, proposal.id, project, proposal.proposalHash, "apply", {
-					actor: "automatic",
-					authority: AUTOMATIC_AUTHORITY,
-				});
-			} catch {
-				// Keep the exact candidate pending. Never overwrite human edits or retry an uncertain write.
-			}
-		}
 		return {
 			id: proposal.id,
 			status: "pending",

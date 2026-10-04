@@ -31,6 +31,7 @@ const LIMITS = Object.freeze({
 });
 const clean = (value, max = 180) => String(value ?? "").replace(/(?:bearer\s+|(?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s,;]+/gi, "[redacted]").split("").map((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127 || "<>".includes(c) ? " " : c).join("").slice(0, max);
 const hash = (value) => createHash("sha256").update(value).digest("hex");
+const ARTIFACT_ROOT_KINDS = Object.freeze(["workspace", "vault", "research-run"]);
 const clone = (value) => structuredClone(value);
 const controls = /* @__PURE__ */ new Set([
   "set_status",
@@ -44,11 +45,13 @@ const controls = /* @__PURE__ */ new Set([
 ]);
 const readOnly = (name) => isReadOnlyTool(name);
 const terminal = (state) => ["completed", "cancelled", "archived"].includes(state);
-const sameArtifactPath = (cwd, declared, observed) => {
+const sameArtifactPath = (cwd, declared, observed, observedAbsolute = null) => {
   const normalize = (path) => {
     const absolute = resolve(cwd || process.cwd(), path);
     return process.platform === "win32" ? absolute.toLowerCase() : absolute;
   };
+  if (typeof declared === "string" && isAbsolute(declared) && typeof observedAbsolute === "string")
+    return normalize(declared) === normalize(observedAbsolute);
   return typeof declared === "string" && typeof observed === "string" && normalize(declared) === normalize(observed);
 };
 const REASON_TEXT = Object.freeze({
@@ -98,6 +101,8 @@ async function inspectTaskFile(cwd, input, expected = {}) {
       throw error("file-limit", "File changed beyond the inspection limit.");
     const identity = {
       path: rel.split(sep).join("/"),
+      absolutePath: path,
+      rootKind: ARTIFACT_ROOT_KINDS.includes(expected.rootKind) ? expected.rootKind : "workspace",
       bytes: bytes.length,
       sha256: hash(bytes),
       observedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -615,8 +620,9 @@ function createTaskWorkbench({
     for (const m of t.milestones) {
       if (m.acceptance.kind !== "file") continue;
       try {
-        const artifact = await inspect(cwd, m.acceptance.path, {
-          sha256: m.acceptance.sha256 || m.evidence?.sha256
+        const artifact = await inspect(cwd, m.evidence?.absolutePath || m.acceptance.path, {
+          sha256: m.acceptance.sha256 || m.evidence?.sha256,
+          rootKind: m.acceptance.rootKind || m.evidence?.rootKind
         });
         updates.push({ id: m.id, artifact });
       } catch (e) {
@@ -637,7 +643,10 @@ function createTaskWorkbench({
     for (const op of t.operations) {
       if (!op.artifact || !["verified", "returned", "unknown"].includes(op.state)) continue;
       try {
-        const artifact = await inspect(cwd, op.artifact.path, { sha256: op.artifact.sha256 });
+        const artifact = await inspect(cwd, op.artifact.absolutePath || op.artifact.path, {
+          sha256: op.artifact.sha256,
+          rootKind: op.artifact.rootKind
+        });
         op.state = "verified";
         op.checkedAt = now();
         op.artifact = artifact;
@@ -945,7 +954,7 @@ function createTaskWorkbench({
         op.state = "verified";
         op.verifier = "workspace-file-readback-not-scientific-review";
         for (const m of t.milestones)
-          if (m.acceptance.kind === "file" && sameArtifactPath(cwd, m.acceptance.path, op.artifact.path) && (!m.acceptance.sha256 || m.acceptance.sha256 === op.artifact.sha256) && m.dependsOn.every((dep) => t.milestones.find((x) => x.id === dep)?.state === "completed")) {
+          if (m.acceptance.kind === "file" && (!m.acceptance.rootKind || m.acceptance.rootKind === op.artifact.rootKind) && sameArtifactPath(cwd, m.acceptance.path, op.artifact.path, op.artifact.absolutePath) && (!m.acceptance.sha256 || m.acceptance.sha256 === op.artifact.sha256) && m.dependsOn.every((dep) => t.milestones.find((x) => x.id === dep)?.state === "completed")) {
             m.state = "completed";
             m.evidence = { ...op.artifact, kind: "file-observed", at: now() };
           }
@@ -1049,6 +1058,7 @@ function createTaskWorkbench({
       "### \u4EFB\u52A1\u8FDB\u5C55",
       `\u4EFB\u52A1\uFF1A${t.goal}`,
       `\u72B6\u6001\uFF1A${labels[t.state]}\uFF1B\u66F4\u65B0\u4E8E ${t.updatedAt}`,
+      `\u5BBF\u4E3B\u8BA1\u6570\uFF1A\u9636\u6BB5 ${t.budget.stageCalls}/${LIMITS.stageCalls}\uFF1B\u603B\u8BA1 ${t.budget.calls}/${LIMITS.totalCalls}`,
       `\u4EA4\u4ED8\uFF1A\u5DF2\u5B8C\u6210 ${t.milestones.filter((m) => m.state === "completed").length}/${t.milestones.length} \u9879`,
       ...[
         ...new Map(
@@ -1103,6 +1113,7 @@ function createTaskWorkbench({
   };
 }
 export {
+  ARTIFACT_ROOT_KINDS,
   LIMITS,
   REASON_TEXT,
   WORKBENCH_ENTRY,

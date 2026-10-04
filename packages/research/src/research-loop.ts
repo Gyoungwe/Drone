@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { claimBindingRefs, validateClaimBindings } from "./claim-bindings";
@@ -141,6 +141,78 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		return rel === "" || (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`));
 	}
 
+	function fileHash(bytes: any) {
+		return createHash("sha256").update(bytes).digest("hex");
+	}
+
+	async function archivedSourceRecords(cwd: any, runDir: any) {
+		const archive = await sourceStatus({ cwd, run_dir: resolve(cwd, runDir) });
+		const records: any[] = [];
+		for (const item of archive.manifest?.items || []) {
+			if (item.status !== "downloaded" || !item.path || !item.sha256) continue;
+			const absolute = resolve(cwd, item.path);
+			if (!within(join(resolve(cwd, runDir), "sources"), absolute)) continue;
+			try {
+				if (!within(await realpath(join(resolve(cwd, runDir), "sources")), await realpath(absolute)))
+					continue;
+				if (fileHash(await readFile(absolute)) !== item.sha256) continue;
+			} catch {
+				continue;
+			}
+			const aliases = new Set([
+				String(item.path),
+				absolute,
+				relative(cwd, absolute),
+				relative(resolve(cwd, runDir), absolute),
+			]);
+			for (const path of aliases)
+				records.push({
+					path,
+					hash: String(item.sha256),
+					doi: item.metadata?.doi || item.doi,
+					zotero_key: item.metadata?.zotero_key || item.zotero_key,
+				});
+		}
+		return records;
+	}
+
+	async function recordArchivedRead(cwd: any, runDir: any, path: any, args: any, details: any, content: any) {
+		const absolute = resolve(cwd, path);
+		const sourcesRoot = join(resolve(cwd, runDir), "sources");
+		if (!within(sourcesRoot, absolute)) return false;
+		if (!within(await realpath(sourcesRoot), await realpath(absolute))) return false;
+		if (details.truncation?.firstLineExceedsLimit) return false;
+		const returned = details.truncation?.content ?? content?.find((part: any) => part.type === "text")?.text;
+		if (typeof returned !== "string" || !returned.trim()) return false;
+		const bytes = await readFile(absolute);
+		// Only complete lines actually returned to the model count as read. A disk read
+		// verifies their identity; it must never expand a partial tool response.
+		const sourceText = bytes.toString("utf8");
+		if (sourceText.includes("\0") || sourceText.startsWith("%PDF-")) return false;
+		const startLine = Number.isInteger(args.offset) && args.offset > 0 ? args.offset : 1;
+		const selected = sourceText
+			.split("\n")
+			.slice(startLine - 1, args.limit ? startLine - 1 + args.limit : undefined);
+		const visible = returned.split("\n");
+		const lines: string[] = [];
+		for (let index = 0; index < Math.min(selected.length, visible.length, 2000); index++) {
+			const shown = visible[index] ?? "";
+			if (selected[index] !== shown || lines.join("\n").length + shown.length > 90_000) break;
+			lines.push(shown);
+		}
+		const text = lines.join("\n");
+		if (!text.trim()) return false;
+		const read = { hash: fileHash(bytes), text, startLine, endLine: startLine + lines.length - 1 };
+		const aliases = new Set([
+			String(path),
+			absolute,
+			relative(cwd, absolute),
+			relative(resolve(cwd, runDir), absolute),
+		]);
+		for (const alias of aliases) ledger(cwd, runDir).reads.set(alias, read);
+		return true;
+	}
+
 	async function readJson(path: any) {
 		const value = JSON.parse(await readFile(path, "utf8"));
 		if (!value || typeof value !== "object" || Array.isArray(value))
@@ -174,6 +246,24 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 			reuse_count: Number(gate.reuse_count) || 0,
 			reused_sources: Array.isArray(gate.reused_sources) ? gate.reused_sources : [],
 			scientificallyVerified: false,
+		};
+	}
+
+	function researchNodes(gate: any) {
+		const current = RESEARCH_STAGES.indexOf(gate.stage);
+		return RESEARCH_STAGES.map((id, index) => ({
+			id,
+			state: gate.answerable || index < current ? "completed" : index === current ? "current" : "pending",
+			observed: (gate.events || []).some((event: any) => event.type === id && !event.skipped),
+		}));
+	}
+
+	function provenanceFor(gate: any, status = "pending") {
+		return {
+			status,
+			source_refs: [...gate.source_refs],
+			claim_bindings: structuredClone(gate.claim_bindings),
+			updated_at: new Date().toISOString(),
 		};
 	}
 
@@ -235,6 +325,8 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 				source_refs: [],
 				archive_count: 0,
 			},
+			research_nodes: researchNodes({ stage: "created", answerable: false, events: [{ type: "created" }] }),
+			provenance: provenanceFor({ source_refs: [], claim_bindings: [] }),
 		};
 		await mkdir(runDir, { recursive: true });
 		await atomicJson(join(runDir, "metadata.json"), metadata);
@@ -310,14 +402,18 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 			if (claimBindings.length) {
 				const checked = validateClaimBindings(
 					claimBindings,
-					await reusableSources(cwd, runDir),
+					[...(await reusableSources(cwd, runDir)), ...(await archivedSourceRecords(cwd, runDir))],
 					ledger(cwd, runDir).reads,
 				);
 				gate = { ...gate, claim_bindings: checked, warnings: [] };
 				claimRefs = claimBindingRefs(checked);
 			} else if (gate.claim_bindings.length && claimRefs.length) {
-				gate = { ...gate, claim_bindings: [] };
+				throw new Error("Structured claim_bindings are required; legacy claim_refs cannot establish support");
 			}
+			if (!gate.claim_bindings.length)
+				throw new Error(
+					"Structured claim_bindings with observed source excerpts are required before answerable",
+				);
 			if (!Array.isArray(claimRefs) || claimRefs.length === 0)
 				throw new Error("claim_refs must contain at least one traceable claim binding");
 			gate = advance({ ...gate, claim_refs: [...new Set(claimRefs.map(String))] }, "claims_bound", {
@@ -326,8 +422,20 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		} else if (action === "finalize") {
 			requireStage("claims_bound");
 			await validateReuse(cwd, runDir, gate);
-			if (gate.archive_count + gate.reuse_count < 1 || gate.claim_refs.length < 1)
+			if (
+				gate.archive_count + gate.reuse_count < 1 ||
+				gate.claim_refs.length < 1 ||
+				!gate.claim_bindings.length ||
+				gate.claim_bindings.some(
+					(binding: any) => !Array.isArray(binding.sources) || binding.sources.length < 1,
+				)
+			)
 				throw new Error("archive verification and claim binding are required before answerable");
+			gate.claim_bindings = validateClaimBindings(
+				gate.claim_bindings,
+				[...(await reusableSources(cwd, runDir)), ...(await archivedSourceRecords(cwd, runDir))],
+				ledger(cwd, runDir).reads,
+			);
 			gate = advance({ ...gate, status: "ok", answerable: true }, "answerable", detail);
 		} else if (action === "complete") {
 			return completeResearchGate({ cwd, runDir, claimRefs, claimBindings });
@@ -335,6 +443,12 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 			throw new Error(`unknown research_loop action: ${action}`);
 		}
 		metadata.evidence_gate = gate;
+		metadata.research_nodes = researchNodes(gate);
+		metadata.provenance = provenanceFor(gate, gate.answerable ? "host-verified" : "pending");
+		if (gate.answerable) {
+			metadata.status = "completed";
+			metadata.finalized_at = metadata.finalized_at || new Date().toISOString();
+		}
 		metadata.updated_at = new Date().toISOString();
 		await atomicJson(metadataPath, metadata);
 		return { run_dir: path, evidence_gate: gate };
@@ -382,7 +496,7 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 				claimBindings,
 			});
 		gate = status.evidence_gate;
-		if (gate.stage !== "answerable") status = await updateResearchLoop({ cwd, runDir, action: "finalize" });
+		status = await updateResearchLoop({ cwd, runDir, action: "finalize" });
 		return status;
 	}
 
@@ -410,6 +524,7 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		toolName,
 		args = {},
 		details = {},
+		content = [],
 		isError = false,
 		readBinding,
 	}: any = {}) {
@@ -483,6 +598,24 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 				if ((await reusableSources(cwd, runDir)).length)
 					return await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
 				return inspected;
+			}
+			if (toolName === "read") {
+				const path = String(args.path || details.path || "");
+				if (!path || details.missing === true) return null;
+				const archived = await recordArchivedRead(cwd, runDir, path, args, details, content);
+				if (!archived) return null;
+				await ensureStage(cwd, runDir, "local_query_recorded", () =>
+					updateResearchLoop({ cwd, runDir, action: "record_local", query: path }),
+				);
+				await ensureStage(cwd, runDir, "external_search_recorded", () =>
+					updateResearchLoop({
+						cwd,
+						runDir,
+						action: "record_external",
+						notes: "Host recorded a read of the archived run source.",
+					}),
+				);
+				return updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [path] });
 			}
 			if (
 				toolName === "research_verify_literature" &&

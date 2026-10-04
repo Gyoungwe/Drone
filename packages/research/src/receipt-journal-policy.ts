@@ -12,6 +12,7 @@ export const CORE_RESEARCH_RECEIPT_TOOLS = [
 	"research_verify_literature",
 	"research_reconcile_literature",
 	"research_archive_source",
+	"read",
 ] as const;
 
 export type CoreResearchReceiptTool = (typeof CORE_RESEARCH_RECEIPT_TOOLS)[number];
