@@ -191,6 +191,7 @@ export interface ResearchRunRouteNode {
 	state: ResearchRunRouteState;
 	at: string | null;
 	detail: string | null;
+	count?: number;
 }
 export interface ResearchRunListItem {
 	runId: string;
@@ -211,19 +212,60 @@ export interface ResearchRunSource {
 	status: string;
 	hash: string | null;
 	verified: boolean;
+	size?: number | null;
+	location?: string | null;
+	metadata?: Record<string, unknown> | null;
 }
 export interface ResearchRunClaim {
+	id?: string | null;
 	claim: string;
 	support: string[];
 	status: string;
+	relationship?: "direct" | "indirect" | "hypothesis" | "unsupported" | null;
+	limitations?: string | null;
+	organism?: string | null;
+	method?: string | null;
+	evidence?: {
+		path: string;
+		startLine: number | null;
+		endLine: number | null;
+		quote: string | null;
+		hash: string | null;
+	}[];
+}
+export interface ResearchRunTimelineEvent {
+	type: string;
+	at: string | null;
+	detail: string | null;
+	status: "ok" | "failed" | "observed";
+	refs?: string[];
 }
 export interface ResearchRunDetail extends ResearchRunListItem {
 	route: ResearchRunRouteNode[];
+	timeline?: ResearchRunTimelineEvent[];
 	sources: ResearchRunSource[];
 	claims: ResearchRunClaim[];
 	warnings: string[];
 	coverage: Record<string, unknown> | null;
 	archive: { count: number; reused: number; verified: boolean };
+	integrity?: { checked: number; verified: number; changed: number; missing: number };
+	provenance?: {
+		status: "not-recorded" | "observed" | "changed" | "incomplete";
+		files: {
+			path: string;
+			role: string;
+			hash: string | null;
+			currentHash: string | null;
+			matches: boolean | null;
+		}[];
+		limitations: string[];
+	};
+	gaps?: string[];
+	governance?: {
+		duplicateSources: string[][];
+		staleSources: string[];
+		unavailableSources: string[];
+	};
 }
 export interface ResearchRunsRequest {
 	cwd?: string | null;
