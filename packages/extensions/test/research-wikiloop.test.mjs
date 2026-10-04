@@ -43,7 +43,7 @@ async function makeWorkspace(t) {
 	return cwd;
 }
 
-test("research Wiki extension stays self-contained and preserves its three tools", async (t) => {
+test("research Wiki extension keeps legacy navigation/build/status tools unregistered", async (t) => {
 	const extension = await loadBuiltExtension(t);
 	await makeWorkspace(t);
 	const tools = [];
@@ -56,60 +56,38 @@ test("research Wiki extension stays self-contained and preserves its three tools
 	});
 	assert.deepEqual(
 		tools.map((tool) => tool.name),
-		["research_wiki_navigate", "research_wiki_build", "research_wiki_status"],
+		[],
 	);
-	assert.equal(tools[0].drone.readOnly, true);
-	assert.equal(tools[0].drone.recoverySafe, true);
-	assert.equal(tools[1].drone.subagent, "exclude");
-	assert.deepEqual(
-		events.map(({ name, payload }) => [name, payload.name]),
-		[
-			["drone:tool-manifest/v1", "research_wiki_navigate"],
-			["drone:tool-manifest/v1", "research_wiki_build"],
-			["drone:tool-manifest/v1", "research_wiki_status"],
-		],
-	);
+	assert.deepEqual(events, []);
 });
 
 test("research Wiki extension navigates, publishes, and records retrieval feedback", async (t) => {
 	const extension = await loadBuiltExtension(t);
 	const cwd = await makeWorkspace(t);
-	const statusTool = [];
-	extension.default({ registerTool: (definition) => statusTool.push(definition) });
-	const statusBefore = await statusTool[2].execute("test", { project: "drone" }, undefined, undefined, {
+	const statusBefore = await extension.researchWikiStatus({ cwd, project: "drone" });
+	assert.equal(statusBefore.configured, true);
+	assert.equal(statusBefore.pages, 0);
+	const built = await extension.buildResearchWikiPage({
 		cwd,
+		project: "drone",
+		slug: "architecture-v2",
+		title: "Architecture v2",
+		content: "The architecture separates runtime ownership from extension policy.",
+		sourceRefs: ["docs/architecture-v2-tasks.md"],
+		validationQuery: "runtime ownership",
 	});
-	assert.equal(statusBefore.details.configured, true);
-	assert.equal(statusBefore.details.pages, 0);
-	const built = await statusTool[1].execute(
-		"test",
-		{
-			project: "drone",
-			slug: "architecture-v2",
-			title: "Architecture v2",
-			content_markdown: "The architecture separates runtime ownership from extension policy.",
-			source_refs: ["docs/architecture-v2-tasks.md"],
-			validation_query: "runtime ownership",
-		},
-		undefined,
-		undefined,
-		{ cwd },
-	);
-	assert.equal(built.details.feedback.retrievable, true);
-	assert.equal(built.details.feedback.after_rank, 1);
-	const navigated = await statusTool[0].execute(
-		"test",
-		{ project: "drone", query: "runtime ownership", top_k: 1 },
-		undefined,
-		undefined,
-		{ cwd },
-	);
-	assert.equal(navigated.details.hits[0].title, "Architecture v2");
-	const statusAfter = await statusTool[2].execute("test", { project: "drone" }, undefined, undefined, {
+	assert.equal(built.feedback.retrievable, true);
+	assert.equal(built.feedback.after_rank, 1);
+	const navigated = await extension.navigateResearchWiki({
 		cwd,
+		project: "drone",
+		query: "runtime ownership",
+		topK: 1,
 	});
-	assert.equal(statusAfter.details.pages, 1);
-	assert.equal(statusAfter.details.feedback_events, 1);
+	assert.equal(navigated.hits[0].title, "Architecture v2");
+	const statusAfter = await extension.researchWikiStatus({ cwd, project: "drone" });
+	assert.equal(statusAfter.pages, 1);
+	assert.equal(statusAfter.feedback_events, 1);
 });
 
 test("application knowledge mode keeps the legacy Wiki writer disabled", async (t) => {

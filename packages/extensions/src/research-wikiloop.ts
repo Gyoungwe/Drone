@@ -6,25 +6,13 @@ import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, readdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { knowledgeDirectory } from "@drone/knowledge/config";
-import { bindExtensionRuntime, runExtensionExclusive } from "./internal/runtime";
+import { bindExtensionRuntime } from "./internal/runtime";
 import { initializeVaultLayout, MANAGED_END, MANAGED_START, refreshProjectIndexes } from "./internal/vault";
 import { loadWorkspaceConfig } from "./workspace-config";
 
 const MAX_QUERY_TERMS = 64;
 const MAX_PAGE_BYTES = 256 * 1024;
 const MAX_TOP_K = 12;
-const TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1";
-
-function registerTool(pi, definition) {
-	void pi?.events?.emit?.(TOOL_MANIFEST_EVENT, {
-		version: 1,
-		name: definition.name,
-		meta: definition.drone || {},
-	});
-	if (process.env.PI_SUBAGENT_CHILD === "1" && definition.drone?.subagent === "exclude") return;
-	pi.registerTool(definition);
-}
-
 function validateSegment(value, label) {
 	const text = String(value ?? "").trim();
 	if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text)) throw new Error(`${label} must be lowercase kebab-case`);
@@ -254,95 +242,7 @@ export async function researchWikiStatus({ cwd = process.cwd(), project } = {}) 
 export default function researchWikiLoop(pi) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
 	bindExtensionRuntime(pi);
-
-	registerTool(pi, {
-		name: "research_wiki_navigate",
-		label: "Navigate research Wiki",
-		drone: {
-			readOnly: true,
-			recoverySafe: true,
-			capabilities: ["research", "knowledge"],
-			activity: { text: "正在检索研究 Wiki…", phase: "knowledge-search" },
-		},
-		description:
-			"Search the project agent-native Wiki before broader retrieval. Returns ranked pages and excerpts for downstream research.",
-		parameters: {
-			type: "object",
-			properties: {
-				project: { type: "string" },
-				query: { type: "string" },
-				top_k: { type: "integer", minimum: 1, maximum: 12 },
-			},
-			required: ["project", "query"],
-		},
-		async execute(_id, params, _signal, _update, ctx) {
-			return runExtensionExclusive(pi, "research-wiki-navigate", async () => {
-				const result = await navigateResearchWiki({
-					cwd: ctx.cwd,
-					project: params.project,
-					query: params.query,
-					topK: params.top_k,
-				});
-				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
-			});
-		},
-	});
-
-	registerTool(pi, {
-		name: "research_wiki_build",
-		label: "Build research Wiki",
-		drone: {
-			capabilities: ["research", "knowledge"],
-			subagent: "exclude",
-			activity: { text: "正在沉淀研究知识…", phase: "deposit" },
-		},
-		description:
-			"Publish or revise one parent-reviewed Wiki page, then rerun the original query and report whether the page became retrievable. Requires traceable evidence references.",
-		parameters: {
-			type: "object",
-			properties: {
-				project: { type: "string" },
-				slug: { type: "string" },
-				title: { type: "string" },
-				content_markdown: { type: "string" },
-				source_refs: { type: "array", items: { type: "string" }, minItems: 1 },
-				related_pages: { type: "array", items: { type: "string" } },
-				validation_query: { type: "string" },
-			},
-			required: ["project", "slug", "title", "content_markdown", "source_refs", "validation_query"],
-		},
-		async execute(_id, params, _signal, _update, ctx) {
-			return runExtensionExclusive(pi, "research-wiki-build", async () => {
-				const result = await buildResearchWikiPage({
-					cwd: ctx.cwd,
-					project: params.project,
-					slug: params.slug,
-					title: params.title,
-					content: params.content_markdown,
-					sourceRefs: params.source_refs,
-					relatedPages: params.related_pages || [],
-					validationQuery: params.validation_query,
-				});
-				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
-			});
-		},
-	});
-
-	registerTool(pi, {
-		name: "research_wiki_status",
-		label: "Research Wiki status",
-		drone: { readOnly: true, capabilities: ["research", "knowledge"] },
-		description: "Show project Wiki page count and downstream navigation feedback count.",
-		parameters: { type: "object", properties: { project: { type: "string" } }, required: ["project"] },
-		async execute(_id, params, _signal, _update, ctx) {
-			return runExtensionExclusive(pi, "research-wiki-status", async () => {
-				const result = await researchWikiStatus({ cwd: ctx.cwd, project: params.project });
-				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
-			});
-		},
-	});
-
 	pi.on?.("before_agent_start", async (event) => ({
-		systemPrompt: `${event.systemPrompt}\n\nResearch Wiki loop: for substantive research, use research_wiki_navigate on the active project before broader local/Zotero/Web retrieval. Treat Wiki pages as navigation memory, never as final authority. After evidence is inspected and claims are supportable, the parent session may call research_wiki_build with traceable source_refs and the original research query. Inspect its retrieval feedback. If retrievable is false, improve the page title, links or concise evidence-bearing summary and retry at most twice. Never weaken evidence standards merely to improve Wiki retrieval. Child sessions never write the Wiki.`,
+		systemPrompt: `${event.systemPrompt}\n\nResearch Wiki policy: legacy Wiki navigation, build and status tools are disabled. Use the knowledge extension's evidence search and the human-reviewed Wiki proposal/review flow; a pending proposal is not live knowledge or scientific verification. Child sessions never write the Wiki.`,
 	}));
 }

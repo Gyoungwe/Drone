@@ -43,20 +43,39 @@ function registerWorkbench(pi, options = {}) {
     });
     if (!allowed) throw new Error("Current permission policy denied this read.");
   };
-  const inspect = async (cwd, path, expected) => {
-    await authorize(cwd, path);
-    const full = resolve(cwd, path);
-    const root = journal.readRoots().find((candidate) => {
-      const rel = relative(candidate, full);
-      return !isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`);
-    });
-    if (root) {
-      if (relative(root, await realpath(root)) !== "")
-        throw new Error("Approved directory identity changed.");
-      const artifact = await inspectTaskFile(root, full, expected);
-      return { ...artifact, path: (isAbsolute(path) ? full : relative(cwd, full)).replaceAll("\\", "/") };
-    }
-    return inspectTaskFile(cwd, path, expected);
+  const inspect = async (cwd, path, expected = {}) => {
+    const binding = await readKnowledgeBinding();
+    if (journal.snapshot()?.reason === "binding-changed")
+      throw new Error("Knowledge binding changed; this task cannot inspect the new destination.");
+    const declaredBinding = journal.snapshot()?.binding;
+    if (declaredBinding !== void 0 && declaredBinding !== (binding ? `${binding.vaultId}:${binding.revision}` : null))
+      throw new Error("Knowledge binding changed; reconcile the original task scope first.");
+    const vault = binding?.vault ? await realpath(binding.vault) : null;
+    const requestedRoot = expected.rootKind || "workspace";
+    if (requestedRoot === "vault" && !vault)
+      throw new Error("Vault file acceptance requires a current knowledge binding.");
+    const base = requestedRoot === "vault" ? vault : cwd;
+    const full = resolve(base, path);
+    const contains = (root2) => {
+      const rel = relative(root2, full);
+      return !!rel && !isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`);
+    };
+    if (requestedRoot === "vault" && !contains(vault))
+      throw new Error("Vault artifact must remain inside the bound Vault.");
+    const approvedRoot = journal.readRoots().find(contains);
+    const root = requestedRoot === "vault" ? vault : approvedRoot || cwd;
+    await authorize(cwd, full);
+    if (approvedRoot && relative(approvedRoot, await realpath(approvedRoot)) !== "")
+      throw new Error("Approved directory identity changed.");
+    const rootKind = vault && contains(vault) ? "vault" : requestedRoot;
+    const artifact = await inspectTaskFile(root, full, { ...expected, rootKind });
+    return {
+      ...artifact,
+      path: rootKind === "vault" ? relative(vault, artifact.absolutePath).replaceAll("\\", "/") : (isAbsolute(path) ? artifact.absolutePath : relative(cwd, artifact.absolutePath)).replaceAll(
+        "\\",
+        "/"
+      )
+    };
   };
   const journal = createTaskWorkbench({
     requireAuthorization: true,
@@ -81,9 +100,9 @@ function registerWorkbench(pi, options = {}) {
     const b = await readKnowledgeBinding();
     return b ? `${b.vaultId}:${b.revision}` : null;
   };
-  const send = (content = journal.render()) => {
+  const send = (content = journal.render(), command = null) => {
     if (providerTurnOpen) {
-      pendingStatus = content;
+      pendingStatus = { content, command };
       return;
     }
     pendingStatus = null;
@@ -92,7 +111,7 @@ function registerWorkbench(pi, options = {}) {
         customType: "drone-task-status",
         display: true,
         content,
-        details: { operational: true, reportId: randomUUID(), taskView: journal.view() }
+        details: { operational: true, reportId: randomUUID(), command, taskView: journal.view() }
       },
       { triggerTurn: false }
     );
@@ -272,7 +291,7 @@ Host observations only. For substantial execution, first do read-only preparatio
   });
   pi.on("turn_end", () => {
     providerTurnOpen = false;
-    if (pendingStatus !== null) send(pendingStatus);
+    if (pendingStatus !== null) send(pendingStatus.content, pendingStatus.command);
   });
   pi.on("tool_call", (event) => {
     providerTurnOpen = true;
@@ -304,7 +323,7 @@ Host observations only. For substantial execution, first do read-only preparatio
     providerTurnOpen = false;
     const held = pendingStatus;
     pendingStatus = null;
-    if (held) send(held);
+    if (held) send(held.content, held.command);
     if (last?.stopReason === "aborted" || ctx?.signal?.aborted || /was aborted|request aborted/i.test(last?.errorMessage || "")) {
       cancelHandoff();
       journal.pause("user-aborted");
@@ -496,7 +515,7 @@ Host observations only. For substantial execution, first do read-only preparatio
     description: "\u4EFB\u52A1\u5DE5\u4F5C\u53F0\uFF1A\u65E0\u6A21\u578B\u72B6\u6001\u3001\u4EFB\u52A1\u9009\u62E9\u3001\u4EA7\u7269\u4E0E\u4EBA\u5DE5\u52A8\u4F5C",
     handler: async (_args, ctx) => {
       attach(ctx);
-      send();
+      send(void 0, "task-status");
     }
   });
   const progressTask = createTaskProgression(journal, {
@@ -515,6 +534,10 @@ Host observations only. For substantial execution, first do read-only preparatio
       if (ctx.isIdle && !ctx.isIdle())
         throw new Error("Stop the agent before changing tasks or inspecting recovery files.");
       if (args.length > 6e3) throw new Error("Task command too large.");
+      if (!args.trim()) {
+        send("\u4EFB\u52A1\u52A8\u4F5C\u4E3A\u7A7A\uFF1A\u8BF7\u4ECE\u4EFB\u52A1\u9762\u677F\u53D1\u8D77\u5177\u4F53\u64CD\u4F5C\uFF1B\u8FD9\u6761\u6D88\u606F\u4E0D\u4F1A\u6539\u53D8\u4EFB\u52A1\u6216\u6388\u6743\u3002", "task-action");
+        return;
+      }
       const input = JSON.parse(Buffer.from(args.trim(), "base64url").toString("utf8"));
       if (input.action === "progress") {
         await progressTask(input, ctx);
@@ -565,7 +588,7 @@ Host observations only. For substantial execution, first do read-only preparatio
         pi.sendUserMessage("\u7EE7\u7EED", { expandPromptTemplates: true });
         return;
       } else journal.command(input);
-      send();
+      send(void 0, "task-action");
     })
   });
   return journal;

@@ -9,14 +9,14 @@
 export const CORE_ACCEPTANCE_KINDS = ["file", "human_review"] as const;
 export type CoreAcceptanceKind = (typeof CORE_ACCEPTANCE_KINDS)[number];
 
-const CORE_FIELDS = ["kind", "path", "sha256"] as const;
+const CORE_FIELDS = ["kind", "path", "sha256", "rootKind"] as const;
 const KIND = /^[a-z][a-z0-9_]{1,40}$/;
 const FIELD = /^[a-zA-Z][a-zA-Z0-9]{0,40}$/;
 
 export interface AcceptanceSchemaProperty {
 	type: "string";
-	minLength: 1;
-	maxLength: 512;
+	minLength: number;
+	maxLength: number;
 	enum?: string[];
 }
 
@@ -24,6 +24,7 @@ export interface AcceptanceInput {
 	kind?: unknown;
 	path?: unknown;
 	sha256?: unknown;
+	rootKind?: unknown;
 	[key: string]: unknown;
 }
 
@@ -95,6 +96,12 @@ export function createAcceptanceRegistry(): AcceptanceRegistry {
 			kind: { type: "string", enum: kinds, minLength: 1, maxLength: 512 },
 			path: stringField,
 			sha256: stringField,
+			rootKind: {
+				type: "string",
+				enum: ["workspace", "vault", "research-run"],
+				minLength: 1,
+				maxLength: 32,
+			},
 		},
 	};
 }
@@ -183,6 +190,8 @@ export function normalizeAcceptance(
 			? source.sha256
 			: null,
 	};
+	if (["workspace", "vault", "research-run"].includes(String(source.rootKind)))
+		acceptance.rootKind = source.rootKind;
 	for (const field of verifier?.fields || []) acceptance[field] = clean(source[field]);
 	return acceptance;
 }

@@ -24,6 +24,8 @@
 
 研究技能包的锁定来源、许可记录、缓存与离线恢复：见 [research-skill-packs.md](research-skill-packs.md)。
 
+Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭代记录](superpowers/reports/2026-10-04-drone-five-round-iteration.md) 与 [状态链修复设计](superpowers/specs/2026-10-04-drone-state-chain-fixes-design.md)。
+
 Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx electron-vite dev --remote-debugging-port=9224`；根目录 `npm run dev -- --remote-debugging-port=9224` 的参数不会穿过嵌套的 workspace 脚本。首次启动前运行根目录的 `npm run build:lan-web -w packages/desktop`。验证 `http://127.0.0.1:9224/json` 返回页面列表后再运行 CDP 冒烟脚本；普通开发仍用根目录 `npm run dev`。
 
 ## 总览

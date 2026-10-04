@@ -35,11 +35,11 @@ import {
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-KYVVQJ6E.mjs";
+} from "./chunks/chunk-X3UUGJ74.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
-} from "./chunks/chunk-DNXTNEC5.mjs";
+} from "./chunks/chunk-6MZJ6XQ2.mjs";
 import {
   MANAGED_END,
   MANAGED_START,
@@ -59,7 +59,7 @@ import {
   undoWikiUpdate,
   validateWikiSourcePaths as validateWikiSourcePaths2,
   wikiHistory
-} from "./chunks/chunk-IGZMNWC2.mjs";
+} from "./chunks/chunk-NCQOEHSQ.mjs";
 import {
   KnowledgeService,
   closeKnowledgeServices,

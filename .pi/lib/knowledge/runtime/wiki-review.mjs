@@ -8,7 +8,7 @@ import {
   undoWikiUpdate,
   validateWikiSourcePaths,
   wikiHistory
-} from "./chunks/chunk-IGZMNWC2.mjs";
+} from "./chunks/chunk-NCQOEHSQ.mjs";
 import "./chunks/chunk-GC2J7ECB.mjs";
 import "./chunks/chunk-6LT3KQRY.mjs";
 import "./chunks/chunk-4VUDROQV.mjs";

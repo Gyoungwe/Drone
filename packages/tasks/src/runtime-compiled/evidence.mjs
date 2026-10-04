@@ -30,6 +30,8 @@ function createEvidenceRecovery({ authorize, persist = () => {
           id: clean(event.toolCallId, 100),
           path: file.path,
           sha256: file.sha256,
+          ...file.rootKind ? { rootKind: file.rootKind } : {},
+          ...file.absolutePath ? { absolutePath: file.absolutePath } : {},
           offset,
           limit,
           binding,
@@ -59,9 +61,15 @@ function createEvidenceRecovery({ authorize, persist = () => {
       const binding = await bindingProvider();
       if (binding !== record.binding) throw new Error("recovery-binding-changed");
       await authorize(cwd, record.path);
-      await inspectTaskFile(cwd, record.path, { sha256: record.sha256 });
-      const text = (await readFile(resolve(cwd, record.path), "utf8")).split(/\r?\n/).slice(record.offset - 1, record.offset - 1 + record.limit).join("\n").slice(0, 16e3);
-      await inspectTaskFile(cwd, record.path, { sha256: record.sha256 });
+      await inspectTaskFile(cwd, record.absolutePath || record.path, {
+        sha256: record.sha256,
+        rootKind: record.rootKind
+      });
+      const text = (await readFile(record.absolutePath || resolve(cwd, record.path), "utf8")).split(/\r?\n/).slice(record.offset - 1, record.offset - 1 + record.limit).join("\n").slice(0, 16e3);
+      await inspectTaskFile(cwd, record.absolutePath || record.path, {
+        sha256: record.sha256,
+        rootKind: record.rootKind
+      });
       used++;
       record.evicted = false;
       save();
@@ -69,6 +77,7 @@ function createEvidenceRecovery({ authorize, persist = () => {
         status: "restored",
         path: record.path,
         sha256: record.sha256,
+        ...record.rootKind ? { rootKind: record.rootKind } : {},
         offset: record.offset,
         limit: record.limit,
         text,

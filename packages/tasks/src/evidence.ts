@@ -17,18 +17,22 @@ export interface EvidenceEvent {
 export interface EvidenceInspectResult {
 	path: string;
 	sha256: string;
+	rootKind?: "workspace" | "vault" | "research-run";
+	absolutePath?: string;
 }
 
 export type EvidenceInspector = (
 	cwd: string,
 	input: string,
-	expected?: { sha256?: string },
+	expected?: { sha256?: string; rootKind?: "workspace" | "vault" | "research-run" },
 ) => Promise<EvidenceInspectResult>;
 
 export interface EvidenceRecord {
 	id: string;
 	path: string;
 	sha256: string;
+	rootKind?: "workspace" | "vault" | "research-run";
+	absolutePath?: string;
 	offset: number;
 	limit: number;
 	binding: unknown;
@@ -141,6 +145,8 @@ export function createEvidenceRecovery({
 					id: clean(event.toolCallId),
 					path: file.path,
 					sha256: file.sha256,
+					...(file.rootKind ? { rootKind: file.rootKind } : {}),
+					...(file.absolutePath ? { absolutePath: file.absolutePath } : {}),
 					offset,
 					limit,
 					binding,
@@ -175,13 +181,19 @@ export function createEvidenceRecovery({
 			const binding = await bindingProvider();
 			if (binding !== record.binding) throw new Error("recovery-binding-changed");
 			await authorize(cwd, record.path);
-			await inspectTaskFile(cwd, record.path, { sha256: record.sha256 });
-			const text = (await readFile(resolve(cwd, record.path), "utf8"))
+			await inspectTaskFile(cwd, record.absolutePath || record.path, {
+				sha256: record.sha256,
+				rootKind: record.rootKind,
+			});
+			const text = (await readFile(record.absolutePath || resolve(cwd, record.path), "utf8"))
 				.split(/\r?\n/)
 				.slice(record.offset - 1, record.offset - 1 + record.limit)
 				.join("\n")
 				.slice(0, 16000);
-			await inspectTaskFile(cwd, record.path, { sha256: record.sha256 });
+			await inspectTaskFile(cwd, record.absolutePath || record.path, {
+				sha256: record.sha256,
+				rootKind: record.rootKind,
+			});
 			used++;
 			record.evicted = false;
 			save();
@@ -189,6 +201,7 @@ export function createEvidenceRecovery({
 				status: "restored",
 				path: record.path,
 				sha256: record.sha256,
+				...(record.rootKind ? { rootKind: record.rootKind } : {}),
 				offset: record.offset,
 				limit: record.limit,
 				text,

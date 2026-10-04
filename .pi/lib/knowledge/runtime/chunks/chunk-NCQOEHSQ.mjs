@@ -90,6 +90,9 @@ function managedParts(text) {
     throw new Error("Invalid managed block markers");
   return { start, end, body: start < 0 ? "" : text.slice(start + START.length, end).trim() };
 }
+function normalizeCandidate(markdown) {
+  return String(markdown).replace(/^\uFEFF?\s*---\s*\n[\s\S]*?\n---\s*\n?/i, "").replace(/^\s*#\s+[^\n]+\n+/, "").trim();
+}
 function proposedText(original, title, body) {
   const block = `${START}
 ${body.trim()}
@@ -181,7 +184,7 @@ async function stageWikiProposal(service, ticket, cwd, input) {
     const after = proposedText(
       original?.text ?? null,
       title.trim(),
-      `${markdown.trim()}
+      `${normalizeCandidate(markdown)}
 
 ## Sources
 ${refs}`
@@ -214,15 +217,6 @@ ${refs}`
       await atomicJson(join(directory, `${proposal.id}.json`), proposal);
     });
     invalidateKnowledgeUi();
-    if (await readReviewMode() === "automatic") {
-      try {
-        return await decideWikiProposal(service, proposal.id, project, proposal.proposalHash, "apply", {
-          actor: "automatic",
-          authority: AUTOMATIC_AUTHORITY
-        });
-      } catch {
-      }
-    }
     return {
       id: proposal.id,
       status: "pending",

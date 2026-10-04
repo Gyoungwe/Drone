@@ -13,7 +13,8 @@ var CORE_RESEARCH_RECEIPT_TOOLS = [
   "research_search_knowledge",
   "research_verify_literature",
   "research_reconcile_literature",
-  "research_archive_source"
+  "research_archive_source",
+  "read"
 ];
 function shouldRecordResearchReceipt(event, isJournalTool = () => false) {
   const toolName = typeof event.toolName === "string" ? event.toolName : "";

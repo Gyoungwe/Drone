@@ -28,7 +28,7 @@
 		},
 		"index.mjs": {
 			"source": "packages/knowledge/src/index.ts",
-			"sha256": "9e48cc7a5f21b96281c349a8d14fd6fe2a7befe9b9601c1952d557ca0c9c51fe"
+			"sha256": "4df98b72d71c470f0896c6c2e1e465291ac6c0ebdd488f3b3bc6fbff073e7d75"
 		},
 		"layout.mjs": {
 			"source": "packages/knowledge/src/layout.ts",
@@ -112,7 +112,7 @@
 		},
 		"ui-service.mjs": {
 			"source": "packages/knowledge/src/ui-service.ts",
-			"sha256": "253edaf58ee5e5c99ca52fe3a2ecf541962ca0890accd38c048c118c5ead39fd"
+			"sha256": "306f39a8a3b811c19077d872c8acbb662fa29ac6cbb4c7a3c9a3a0aae5d395d8"
 		},
 		"ui-state.mjs": {
 			"source": "packages/knowledge/src/ui-state.ts",
@@ -120,7 +120,7 @@
 		},
 		"wiki-model-review.mjs": {
 			"source": "packages/knowledge/src/wiki-model-review.ts",
-			"sha256": "baed3e3d62d717b8da8c9bea5b02f6f3c3d38ebbb2164be148eec6da9c459da5"
+			"sha256": "222f569997d78135ae47b5bf45617a839d5a56167e1132f3b60effdb69913da0"
 		},
 		"wiki-policy.mjs": {
 			"source": "packages/knowledge/src/wiki-policy.ts",
@@ -128,7 +128,7 @@
 		},
 		"wiki-review.mjs": {
 			"source": "packages/knowledge/src/wiki-review.ts",
-			"sha256": "9c545cf3c3884b9dad7df11841476d5f87e48568d087d004bc0b0b33cd1e343a"
+			"sha256": "84db42da3ade613a251bd0b8c42f33930a594ab82233fd64ec6876d6e8dd8f15"
 		},
 		"worker.mjs": {
 			"source": "packages/knowledge/src/worker.ts",

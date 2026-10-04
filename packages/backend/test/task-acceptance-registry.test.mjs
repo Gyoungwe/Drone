@@ -87,7 +87,7 @@ describe("acceptance verifier registry (hook 2)", () => {
 		const taskPlan = tools.get("task_plan");
 		expect(taskPlan).toBeTruthy();
 		expect(acceptanceOf(taskPlan).properties.kind.enum).toEqual(["file", "human_review"]);
-		expect(Object.keys(acceptanceOf(taskPlan).properties)).toEqual(["kind", "path", "sha256"]);
+		expect(Object.keys(acceptanceOf(taskPlan).properties)).toEqual(["kind", "path", "sha256", "rootKind"]);
 
 		registerAcceptanceVerifier("lab_sample", {
 			fields: ["sampleId", "batch"],
@@ -143,7 +143,7 @@ describe("acceptance verifier registry (hook 2)", () => {
 		expect(acceptanceVerifier("lab_sample")).toBeNull();
 		expect(acceptanceKinds()).toEqual(["file", "human_review"]);
 		const schema = acceptanceSchema();
-		expect(Object.keys(schema.properties)).toEqual(["kind", "path", "sha256"]);
+		expect(Object.keys(schema.properties)).toEqual(["kind", "path", "sha256", "rootKind"]);
 		expect(schema.properties.kind.enum).toBe(schema.properties.kind.enum); // 仍是活引用
 	});
 });

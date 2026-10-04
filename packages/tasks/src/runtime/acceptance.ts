@@ -28,7 +28,7 @@
  * 不能等到某次工具调用之后再登记。
  */
 export const CORE_ACCEPTANCE_KINDS = Object.freeze(["file", "human_review"]);
-const CORE_FIELDS = Object.freeze(["kind", "path", "sha256"]);
+const CORE_FIELDS = Object.freeze(["kind", "path", "sha256", "rootKind"]);
 const KIND = /^[a-z][a-z0-9_]{1,40}$/;
 const FIELD = /^[a-zA-Z][a-zA-Z0-9]{0,40}$/;
 const stringField = { type: "string", minLength: 1, maxLength: 512 };
@@ -49,7 +49,12 @@ const createRegistry = () => {
 	return {
 		verifiers: new Map(),
 		kinds,
-		properties: { kind: { type: "string", enum: kinds }, path: stringField, sha256: stringField },
+		properties: {
+			kind: { type: "string", enum: kinds },
+			path: stringField,
+			sha256: stringField,
+			rootKind: { type: "string", enum: ["workspace", "vault", "research-run"], minLength: 1, maxLength: 32 },
+		},
 	};
 };
 /** @type {any} */
@@ -63,6 +68,12 @@ function ensureRegistryShape() {
 	registry.properties.kind ??= { type: "string", enum: registry.kinds };
 	registry.properties.path ??= stringField;
 	registry.properties.sha256 ??= stringField;
+	registry.properties.rootKind ??= {
+		type: "string",
+		enum: ["workspace", "vault", "research-run"],
+		minLength: 1,
+		maxLength: 32,
+	};
 }
 ensureRegistryShape();
 
@@ -201,11 +212,13 @@ export function normalizeAcceptance(input: any, clean: any, verifiers: any) {
 	ensureRegistryShape();
 	const kind = input?.kind;
 	const verifier = (verifiers || registry.verifiers).get(kind) || null;
-	const acceptance = {
+	const acceptance: any = {
 		kind,
 		path: clean(input.path, 512),
 		sha256: /^[a-f0-9]{64}$/.test(input.sha256 || "") ? input.sha256 : null,
 	};
+	if (["workspace", "vault", "research-run"].includes(String(input.rootKind)))
+		acceptance.rootKind = input.rootKind;
 	for (const field of verifier?.fields || []) acceptance[field] = clean(input[field]);
 	return acceptance;
 }

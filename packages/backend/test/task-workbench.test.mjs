@@ -144,6 +144,37 @@ it("native file acceptance requires user-approved plan and real readback", async
 	expect(j.snapshot().state).toBe("completed");
 	expect(j.render()).toContain("已完成");
 });
+it("keeps Vault-relative acceptance in the Vault root and preserves its identity", async () => {
+	const observed = [];
+	const j = createTaskWorkbench({
+		requireAuthorization: true,
+		inspect: async (_cwd, path, expected) => {
+			observed.push({ path, expected });
+			return {
+				path,
+				absolutePath: `/vault/${path}`,
+				rootKind: expected.rootKind,
+				sha256: "a".repeat(64),
+			};
+		},
+	});
+	j.attach("scope-vault");
+	j.begin("核对论文笔记");
+	j.openTask("核对论文笔记", null);
+	j.plan({
+		milestones: [
+			{
+				id: "paper",
+				title: "论文笔记",
+				acceptance: { kind: "file", path: "Library/Papers/paper.md", rootKind: "vault" },
+			},
+		],
+	});
+	act(j, "approve-plan");
+	await j.reconcile("/workspace");
+	expect(observed[0]).toMatchObject({ path: "Library/Papers/paper.md", expected: { rootKind: "vault" } });
+	expect(j.snapshot().milestones[0].state).toBe("completed");
+});
 it("observed milestone progress can checkpoint once, not by re-writing status", async () => {
 	const dir = await fixture();
 	const { j } = setup();

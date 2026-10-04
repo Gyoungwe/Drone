@@ -5,7 +5,7 @@ import {
   previewWikiProposal,
   undoWikiUpdate,
   wikiHistory
-} from "./chunk-IGZMNWC2.mjs";
+} from "./chunk-NCQOEHSQ.mjs";
 import {
   getKnowledgeService
 } from "./chunk-7HHP6BXQ.mjs";
