@@ -388,9 +388,9 @@ it("real SDK displays public stage → tools → next stage → tools → summar
 			row.kind === "metaGroup"
 				? row.items.flatMap((i) => i.tools.map((t) => t.name))
 				: row.kind === "message" &&
-					row.message.kind === "assistant" &&
-					!row.message.taskView &&
-					!row.message.route
+						row.message.kind === "assistant" &&
+						!row.message.taskView &&
+						!row.message.route
 					? [row.message.progress?.text || row.message.text]
 					: [],
 		);
