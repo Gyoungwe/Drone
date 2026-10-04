@@ -27,6 +27,9 @@ import { makeTodoTool } from "../tools/todo";
 import { makeTodoReminderExtension } from "../tools/todo-reminder";
 import { makeWebFetchTool } from "../tools/webfetch";
 import { makeHarnessContextExtension } from "./harness/context";
+import { makeHarnessDeliveryExtension } from "./harness/delivery";
+import { makeHarnessGuardExtension } from "./harness/guards";
+import { makeHarnessRecallTool } from "./harness/recall";
 
 type LiveChildControl = {
 	steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
@@ -79,6 +82,7 @@ export function buildSessionCustomTools(
 	);
 	tools.push(makeStatusTool());
 	tools.push(makeTodoTool());
+	if (deps.harnessContext !== false) tools.push(makeHarnessRecallTool());
 	if (deps.subagentPreferBuiltin !== false) {
 		tools.push(
 			makeSubagentTool({
@@ -141,10 +145,16 @@ export function buildSessionExtensionFactories(
 	if (deps.harnessContext !== false)
 		factories.push(
 			makeHarnessContextExtension({
+				reportStatus: (sessionId, status) => deps.traces.recordCustom(sessionId, "harness_contract", status),
 				report: (sessionId, checkpoint) =>
 					deps.traces.recordCustom(sessionId, "harness_checkpoint", checkpoint),
 			}),
 		);
+	if (deps.harnessContext !== false) {
+		const report = (sessionId: string, kind: string, data: unknown) =>
+			deps.traces.recordCustom(sessionId, kind, data);
+		factories.push(makeHarnessGuardExtension(report), makeHarnessDeliveryExtension(report));
+	}
 	factories.push(
 		makeEvapExtension({
 			agentDir: getAgentDir(),

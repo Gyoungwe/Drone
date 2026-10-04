@@ -199,6 +199,8 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 			const mode: SubagentDetails["mode"] = tasks.length > 1 ? "parallel" : "single";
 			const shouldConfirm = params.confirmProjectAgents !== false;
 			const projectTrusted = ctx.isProjectTrusted();
+			const attempts = new Map<string, number>();
+			const parentSessionId = ctx.sessionManager.getSessionId();
 			const definitions = await Promise.all(
 				tasks.map(async (task) => {
 					const cwd = task.cwd ?? ctx.cwd;
@@ -217,6 +219,9 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 			const filled = () => slots.filter((slot): slot is SingleResult => slot !== undefined);
 			const emit = () => onUpdate?.(partialResult(mode, filled()));
 			await withConcurrency(definitions, MAX_CONCURRENCY, async ({ task, cwd, agent }, index) => {
+				const attemptKey = `${parentSessionId}/${agent.name}/${task.task}`;
+				const attempt = (attempts.get(attemptKey) ?? 0) + 1;
+				attempts.set(attemptKey, attempt);
 				let result: SingleResult;
 				try {
 					result = await runSubagent(deps, {
@@ -226,6 +231,8 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 						cwd,
 						projectTrusted,
 						model: ctx.model,
+						parentSessionId,
+						attempt,
 						signal,
 						onProgress: (progress) => {
 							slots[index] = progress;

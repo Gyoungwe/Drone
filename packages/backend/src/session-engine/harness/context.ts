@@ -1,214 +1,262 @@
 import {
 	checkpointFingerprint,
-	decodeTaskView,
+	contractFingerprint,
 	HARNESS_CHECKPOINT_CUSTOM_TYPE,
-	HARNESS_CONTRACT,
+	HARNESS_STATUS_CUSTOM_TYPE,
 	type HarnessCheckpoint,
+	type HarnessContractFingerprint,
 	type HarnessPosture,
+	type HarnessSourceRef,
 	renderHarnessCheckpoint,
-	renderHarnessPosture,
+	renderHarnessPromptLayer,
+	resolveHarnessModelFamily,
 } from "@drone/shared";
 import { createLogger } from "../../log";
 import type { ExtensionContext, InlineExtension } from "../sdk";
+import {
+	boundedText,
+	contentText,
+	customRecords,
+	type HarnessCustomRecord,
+	latestUserObjective,
+	record,
+	taskViewFromBranch,
+} from "./branch";
+import { assessTaskDelivery, renderDeliveryStatus } from "./delivery";
 
 const log = createLogger("session-harness");
-
 const DEFAULT_POSTURE: HarnessPosture = {
 	effort: "normal",
 	delegation: "standard",
 	autonomy: "balanced",
 	mode: "execute",
 };
-
 export interface HarnessContextExtensionOptions {
 	report?: (sessionId: string, checkpoint: HarnessCheckpoint) => void;
+	reportStatus?: (sessionId: string, status: HarnessContractFingerprint) => void;
 	getPosture?: (ctx: ExtensionContext) => HarnessPosture;
+	getSkills?: (ctx: ExtensionContext) => readonly string[];
 }
-
-interface RawCustomMessage {
-	role?: unknown;
-	customType?: unknown;
-	content?: unknown;
-	details?: unknown;
-}
-
-interface RawBranchEntry {
-	type?: unknown;
-	message?: unknown;
-}
-
-type HarnessTask = NonNullable<ReturnType<typeof decodeTaskView>>["tasks"][number];
-
-function customMessages(branch: readonly unknown[]): RawCustomMessage[] {
-	return branch.flatMap((entry): RawCustomMessage[] => {
-		if (!entry || typeof entry !== "object") return [];
-		const candidate = entry as RawBranchEntry;
-		if (candidate.type !== "message" || !candidate.message || typeof candidate.message !== "object")
-			return [];
-		const message = candidate.message as RawCustomMessage;
-		return message.role === "custom" && typeof message.customType === "string" ? [message] : [];
-	});
-}
-
-function latest(messages: readonly RawCustomMessage[], customType: string): RawCustomMessage | undefined {
-	return [...messages].reverse().find((message) => message.customType === customType);
-}
-
-function text(value: unknown): string | undefined {
-	return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function taskViewFromMessage(message: RawCustomMessage | undefined) {
-	if (!message?.details || typeof message.details !== "object") return undefined;
-	return decodeTaskView((message.details as { taskView?: unknown }).taskView);
-}
-
+type HarnessTask = import("@drone/shared").WorkbenchTask;
 function pathValues(task: HarnessTask): string[] {
-	const values: string[] = [];
-	if (Array.isArray(task.writeRoots))
-		values.push(...task.writeRoots.filter((value): value is string => typeof value === "string"));
-	for (const milestone of task.milestones) {
-		if (typeof milestone.acceptance.path === "string") values.push(milestone.acceptance.path);
-	}
-	for (const operation of task.operations) {
-		if (typeof operation.artifact?.path === "string") values.push(operation.artifact.path);
-	}
-	for (const action of task.actions) {
-		if (typeof action.file?.path === "string") values.push(action.file.path);
-	}
-	return [...new Set(values)].filter((value) => value.length > 0 && value.length <= 512).slice(0, 8);
-}
-
-function deliverableValues(task: HarnessTask): string[] {
-	return task.milestones
-		.filter((milestone) => milestone.state !== "completed")
-		.map((milestone) => {
-			const path = typeof milestone.acceptance.path === "string" ? `: ${milestone.acceptance.path}` : "";
-			return `${milestone.title}${path}`;
-		})
+	const paths = [
+		...(task.writeRoots ?? []),
+		...task.milestones.map((milestone) => milestone.acceptance.path),
+		...task.operations.map((operation) => operation.artifact?.path),
+		...task.actions.map((action) => action.file?.path),
+	];
+	return [...new Set(paths)]
+		.filter((path): path is string => typeof path === "string" && path.length > 0 && path.length <= 512)
 		.slice(0, 8);
 }
-
-function sourceSummary(messages: readonly RawCustomMessage[]): string[] {
-	const findings: string[] = [];
-	for (const customType of ["drone-task-status", "todo-reminder", "drone-subagent-result"] as const) {
-		const content = text(latest(messages, customType)?.content);
-		if (content) findings.push(`${customType}: ${content}`);
-	}
-	return findings.slice(0, 8);
+function sourceRef(message: HarnessCustomRecord, kind: HarnessSourceRef["kind"]): HarnessSourceRef {
+	return {
+		kind,
+		id: boundedText(message.id, 120),
+		label: message.customType,
+		timestamp: boundedText(message.timestamp, 80),
+	};
 }
-
-/** Project existing durable host entries into the bounded model-facing checkpoint. */
+/** Existing durable records are facts; this projection is navigation, never evidence. */
 export function checkpointFromBranch(
 	objective: string,
 	epoch: number,
 	branch: readonly unknown[],
 ): HarnessCheckpoint {
-	const messages = customMessages(branch);
-	const taskMessage = [...messages].reverse().find((message) => !!taskViewFromMessage(message));
-	const taskView = taskViewFromMessage(taskMessage);
-	const activeTask = taskView?.tasks.find((task) => task.id === taskView.activeTaskId) ?? taskView?.tasks[0];
-	const safeObjective = text(objective) ?? activeTask?.goal ?? "Continue the current user request.";
-	const findings = sourceSummary(messages);
-	if (activeTask?.reason) findings.unshift(`task reason: ${activeTask.reason}`);
+	const messages = customRecords(branch);
+	const view = taskViewFromBranch(branch);
+	const task = view?.tasks.find((task) => task.id === view.activeTaskId);
+	const findings: string[] = [];
+	const sources: HarnessSourceRef[] = [];
+	for (const [customType, kind] of [
+		["drone-task-status", "task"],
+		["todo-reminder", "todo"],
+		["drone-subagent-result", "subagent"],
+	] as const) {
+		const message = [...messages].reverse().find((message) => message.customType === customType);
+		if (!message) continue;
+		const content = contentText(message.content);
+		if (content) findings.push(`${customType}: ${content}`);
+		sources.push(sourceRef(message, kind));
+	}
+	for (const value of [...branch].reverse()) {
+		const entry = record(value);
+		if (entry?.type === "compaction" || entry?.type === "branch_summary") {
+			sources.push({
+				kind: "compaction",
+				id: boundedText(entry.id, 120),
+				label: String(entry.type),
+				timestamp: boundedText(entry.timestamp, 80),
+			});
+			break;
+		}
+	}
+	if (task?.reason) findings.unshift(`task reason: ${task.reason}`);
+	if (view && task) findings.push(renderDeliveryStatus(assessTaskDelivery(view)));
 	return {
 		version: 1,
 		epoch: Math.max(0, Math.floor(epoch)),
-		objective: safeObjective,
-		deliverables: activeTask ? deliverableValues(activeTask) : [],
+		objective:
+			boundedText(objective) ??
+			task?.goal ??
+			latestUserObjective(branch) ??
+			"Continue the current user request.",
+		deliverables:
+			task?.milestones
+				.filter((milestone) => milestone.state !== "completed")
+				.map(
+					(milestone) =>
+						`${milestone.title}${milestone.acceptance.path ? `: ${milestone.acceptance.path}` : ""}`,
+				)
+				.slice(0, 8) ?? [],
 		findings: findings.slice(0, 8),
-		workState: activeTask?.state ?? "in_progress",
+		workState: task?.state ?? "in_progress",
 		nextMove:
-			text(activeTask?.remainingSummary) ??
+			boundedText(task?.remainingSummary) ??
 			"Continue the current request and verify the next observable result.",
-		relevantFiles: activeTask ? pathValues(activeTask) : [],
+		relevantFiles: task ? pathValues(task) : [],
+		sources,
 	};
 }
-
-function sessionId(ctx: ExtensionContext): string {
-	return ctx.sessionManager.getSessionId();
-}
-
 export function makeHarnessContextExtension(options: HarnessContextExtensionOptions = {}): InlineExtension {
 	return {
 		name: "harness-context",
 		factory: (pi) => {
-			let currentSessionId = "";
-			let objective = "";
-			let epoch = 0;
-			let needsCheckpoint = true;
-			let lastFingerprint = "";
-
+			let objective = "",
+				epoch = 0,
+				needsCheckpoint = true,
+				lastCheckpoint = "",
+				lastContract = "";
+			let cachedMessage:
+				| {
+						role: "custom";
+						customType: string;
+						display: boolean;
+						content: string;
+						details: unknown;
+						timestamp: number;
+				  }
+				| undefined;
 			const reset = (ctx: ExtensionContext) => {
-				currentSessionId = sessionId(ctx);
-				objective = "";
-				epoch = 0;
+				const branch = ctx.sessionManager.getBranch();
+				objective = latestUserObjective(branch) ?? "";
+				epoch = branch.filter((entry) => entry.type === "compaction").length;
 				needsCheckpoint = true;
-				lastFingerprint = "";
+				lastCheckpoint = "";
+				cachedMessage = undefined;
+				const saved = customRecords(branch)
+					.reverse()
+					.find((entry) => entry.customType === HARNESS_STATUS_CUSTOM_TYPE);
+				lastContract =
+					boundedText((saved?.data as { fingerprint?: unknown } | undefined)?.fingerprint, 64) ?? "";
 			};
-
 			pi.on("session_start", (_event, ctx) => {
 				try {
 					reset(ctx);
 				} catch (error) {
-					log.warn("harness session_start failed", { error: String(error) });
+					log.warn("harness restore failed", { error: String(error) });
 				}
 			});
-
-			pi.on("before_agent_start", async (event, ctx) => {
+			pi.on("session_tree", (_event, ctx) => {
 				try {
-					currentSessionId = sessionId(ctx);
-					const prompt = text(event.prompt);
+					reset(ctx);
+				} catch (error) {
+					log.warn("harness tree restore failed", { error: String(error) });
+				}
+			});
+			pi.on("before_agent_start", (event, ctx) => {
+				try {
+					const prompt = boundedText(event.prompt);
 					if (prompt && prompt !== objective) {
 						objective = prompt;
 						needsCheckpoint = true;
 					}
 					const posture = options.getPosture?.(ctx) ?? DEFAULT_POSTURE;
-					return {
-						systemPrompt: [event.systemPrompt, HARNESS_CONTRACT, renderHarnessPosture(posture)]
-							.filter(Boolean)
-							.join("\n\n"),
+					const skills = options.getSkills?.(ctx) ?? [];
+					const family = resolveHarnessModelFamily(ctx.model?.provider, ctx.model?.id);
+					const systemPrompt = [
+						event.systemPrompt,
+						renderHarnessPromptLayer(family, posture, undefined, skills),
+					]
+						.filter(Boolean)
+						.join("\n\n");
+					// Persist hashes and names, never the complete prompt or tool schemas.
+					const contract: HarnessContractFingerprint = {
+						version: 1,
+						provider: ctx.model?.provider ?? "unknown",
+						model: ctx.model?.id ?? "unknown",
+						system: contractFingerprint({
+							version: 1,
+							provider: "",
+							model: "",
+							system: systemPrompt,
+							tools: [],
+							capabilities: [],
+							skills: [],
+						}),
+						tools: (pi.getAllTools?.() ?? [])
+							.map(
+								(tool) =>
+									`${tool.name}:${contractFingerprint({ version: 1, provider: "", model: "", system: JSON.stringify({ description: tool.description, parameters: tool.parameters, exposure: tool.exposure }), tools: [], capabilities: [], skills: [] })}`,
+							)
+							.sort(),
+						capabilities: (pi.getCommands?.() ?? []).map((command) => command.name).sort(),
+						skills: [...skills].sort(),
+						fingerprint: "",
 					};
+					contract.fingerprint = contractFingerprint(contract);
+					if (contract.fingerprint !== lastContract) {
+						lastContract = contract.fingerprint;
+						try {
+							options.reportStatus?.(ctx.sessionManager.getSessionId(), contract);
+							pi.appendEntry?.(HARNESS_STATUS_CUSTOM_TYPE, contract);
+						} catch (error) {
+							log.warn("harness contract report failed", { error: String(error) });
+						}
+					}
+					return { systemPrompt };
 				} catch (error) {
-					log.warn("harness before_agent_start failed", { error: String(error) });
+					log.warn("harness prompt failed", { error: String(error) });
 					return undefined;
 				}
 			});
-
-			pi.on("session_compact", (_event, ctx) => {
-				try {
-					currentSessionId = sessionId(ctx);
-					epoch += 1;
-					needsCheckpoint = true;
-				} catch (error) {
-					log.warn("harness session_compact failed", { error: String(error) });
-				}
+			pi.on("session_compact", () => {
+				epoch += 1;
+				needsCheckpoint = true;
 			});
-
-			pi.on("context", async (event, ctx) => {
+			pi.on("context", (event, ctx) => {
 				try {
-					currentSessionId = sessionId(ctx);
 					const checkpoint = checkpointFromBranch(objective, epoch, ctx.sessionManager.getBranch());
 					const fingerprint = checkpointFingerprint(checkpoint);
-					if (!needsCheckpoint && fingerprint === lastFingerprint) return undefined;
-					lastFingerprint = fingerprint;
+					if (!needsCheckpoint && fingerprint === lastCheckpoint && cachedMessage) {
+						return event.messages.some(
+							(message) =>
+								message.role === "custom" &&
+								message.customType === HARNESS_CHECKPOINT_CUSTOM_TYPE &&
+								(message.details as { fingerprint?: string } | undefined)?.fingerprint === fingerprint,
+						)
+							? undefined
+							: { messages: [...event.messages, cachedMessage] };
+					}
+					lastCheckpoint = fingerprint;
 					needsCheckpoint = false;
 					const message = {
 						role: "custom" as const,
 						customType: HARNESS_CHECKPOINT_CUSTOM_TYPE,
 						display: false,
 						content: renderHarnessCheckpoint(checkpoint),
-						details: { version: 1, epoch: checkpoint.epoch, fingerprint },
+						details: { version: 1, epoch, fingerprint, sources: checkpoint.sources },
 						timestamp: Date.now(),
 					};
+					cachedMessage = message;
 					try {
-						options.report?.(currentSessionId, checkpoint);
+						options.report?.(ctx.sessionManager.getSessionId(), checkpoint);
 					} catch (error) {
 						log.warn("harness checkpoint report failed", { error: String(error) });
 					}
 					return { messages: [...event.messages, message] };
 				} catch (error) {
-					log.warn("harness context projection failed", { error: String(error) });
+					log.warn("harness projection failed", { error: String(error) });
 					return undefined;
 				}
 			});

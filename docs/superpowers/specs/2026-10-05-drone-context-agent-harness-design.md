@@ -2,7 +2,7 @@
 
 ## 状态
 
-本文件记录对 OpenScience 的架构解读和 Drone 的拟议升级范围。第一阶段的上下文合同与 checkpoint 投影已经实现；redirect、deliverables、recall 和 workers 单元仍属于后续阶段。
+本文件记录对 OpenScience 的架构解读和 Drone 的升级结果。上下文合同、真实 SDK 分支恢复、模型族/科学/回复提示词分层、受控 recall、失败重定向、交付物/预算观察和 worker attempt 追踪已经实现；后续只根据真实 trace 样本决定是否增加更细的 review 或 unattended 单元。
 
 ## 目标
 
@@ -123,7 +123,7 @@ Drone 已有的能力：
 4. 工具 schema、能力包、技能和关键 prompt 的变化缺少统一 fingerprint，难以解释一次回复为什么与上一轮不同。
 5. `todo`、证据和产物已经有保护逻辑，但缺少受控的历史 recall 来按引用恢复更早的工具结果。
 
-## 拟议升级
+## 已实现的升级
 
 ### A. Shared Harness Ledger
 
@@ -186,7 +186,7 @@ user request
 
 ## 实施边界
 
-第一阶段只做 shared contracts、backend adapter、checkpoint/recall 和最小 units；复用现有 task/evidence/subagent/evaporation 实现，不搬运 OpenScience 的 provider、compute 或完整 server protocol。第二阶段再根据 trace 中的真实失败样本决定是否增加 review、unattended 或更细的成本单元。
+实现保持在 shared contracts 与 session-engine seam 内：复用现有 task/evidence/subagent/evaporation 实现，不搬运 OpenScience 的 provider、compute 或完整 server protocol。`context.ts`/`branch.ts` 负责真实 SDK entry 的恢复和 bounded checkpoint；`recall.ts` 提供只读历史导航；`guards.ts` 负责一次重定向和二次阻断；`delivery.ts` 复用 task acceptance 做 loop-boundary 观察；worker runner 把 attempt 写入父 trace。后续只根据真实 trace 样本决定是否增加 review、unattended 或更细的成本单元。
 
 ## 验收标准
 

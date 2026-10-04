@@ -40,21 +40,19 @@ const taskView = {
 function branch() {
 	return [
 		{
-			type: "message",
-			message: {
-				role: "custom",
-				customType: "drone-task-status",
-				content: "当前任务：读取 session-engine",
-				details: { taskView },
-			},
+			type: "custom_message",
+			id: "status-1",
+			customType: "drone-task-status",
+			content: "当前任务：读取 session-engine",
+			details: { taskView },
+			display: true,
 		},
 		{
-			type: "message",
-			message: {
-				role: "custom",
-				customType: "todo-reminder",
-				content: "Continue the report checklist",
-			},
+			type: "custom_message",
+			id: "todo-1",
+			customType: "todo-reminder",
+			content: "Continue the report checklist",
+			display: false,
 		},
 	];
 }

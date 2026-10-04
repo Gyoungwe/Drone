@@ -4,6 +4,8 @@ import {
 	HARNESS_CONTRACT,
 	renderHarnessCheckpoint,
 	renderHarnessPosture,
+	renderHarnessSpecialistLayer,
+	resolveHarnessModelFamily,
 } from "./harness";
 
 const checkpoint = {
@@ -46,6 +48,19 @@ describe("harness context contract", () => {
 		expect(posture).toContain("light");
 		expect(posture).toContain("balanced");
 		expect(posture).toContain("permission mode");
+	});
+
+	it("selects model-family guidance and keeps specialist prompts compact", () => {
+		expect(resolveHarnessModelFamily("openai", "gpt-6-astra")).toBe("gpt-astra");
+		expect(resolveHarnessModelFamily("anthropic", "claude-sonnet")).toBe("anthropic");
+		const specialist = renderHarnessSpecialistLayer(
+			"gpt",
+			{ effort: "normal", delegation: "off", autonomy: "autonomous", mode: "execute" },
+			"evidence",
+		);
+		expect(specialist).toContain("Scientific contract:");
+		expect(specialist).toContain("Response contract:");
+		expect(specialist).not.toContain("Drone harness contract:");
 	});
 
 	it("bounds hostile or oversized user-derived fields", () => {
