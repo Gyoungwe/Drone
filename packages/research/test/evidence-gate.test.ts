@@ -42,6 +42,8 @@ describe("evidence gate", () => {
 		expect(() => assertEvidenceAnswerable(gate, { claimBindings: ["claim-1"] })).toThrow(
 			"structured claim binding",
 		);
-		expect(assertEvidenceAnswerable(gate, { claimBindings: [{ claim: "claim-1" }] }).stage).toBe("answerable");
+		expect(assertEvidenceAnswerable(gate, { claimBindings: [{ claim: "claim-1" }] }).stage).toBe(
+			"answerable",
+		);
 	});
 });

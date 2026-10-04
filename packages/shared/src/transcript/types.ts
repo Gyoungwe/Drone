@@ -5,8 +5,8 @@ import type { ImageInput, ModelWaitEvent } from "../session";
 import type { SkillInvocationDisplay } from "../skill-invocation";
 import type { SubagentPanelRun } from "../subagent";
 import type { TaskView } from "../task-workbench";
-import type { TurnRoute } from "../turn-route";
 import type { TodoItem } from "../todo";
+import type { TurnRoute } from "../turn-route";
 import type { ReportedUsage } from "../usage-display";
 
 /** SDK 自动重试（auto_retry_start）即时信息：状态行文案 + 出现/清除时机都来自事件流 */

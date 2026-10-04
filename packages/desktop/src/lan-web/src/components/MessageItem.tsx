@@ -1,4 +1,4 @@
-import { LAN_IMAGE_PLACEHOLDER, type UIMessage, turnRouteLines } from "@drone/shared";
+import { LAN_IMAGE_PLACEHOLDER, turnRouteLines, type UIMessage } from "@drone/shared";
 import { type LanI18nKey, t } from "../i18n";
 import { ChevronRightIcon, ImageIcon } from "./icons";
 import { Markdown } from "./Markdown";

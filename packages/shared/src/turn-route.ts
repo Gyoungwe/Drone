@@ -157,9 +157,7 @@ export function decodeTurnRoute(value: unknown): TurnRoute | undefined {
 	};
 }
 
-export function turnRouteDisplay(
-	raw: unknown,
-): { id: string; timestamp: number; route: TurnRoute } | null {
+export function turnRouteDisplay(raw: unknown): { id: string; timestamp: number; route: TurnRoute } | null {
 	if (!raw || typeof raw !== "object") return null;
 	const message = raw as {
 		role?: unknown;
@@ -204,7 +202,9 @@ function stageLabel(id: string | null, lang: "zh" | "en"): string | null {
 
 function contractLine(route: TurnRoute, lang: "zh" | "en"): string | null {
 	if (route.stage === "search" || route.contract?.includes("search hit is not a source read"))
-		return lang === "zh" ? "约定：搜到一条文献不算已经读过原文。" : "Contract: a search hit is not a source read.";
+		return lang === "zh"
+			? "约定：搜到一条文献不算已经读过原文。"
+			: "Contract: a search hit is not a source read.";
 	if (!route.contract) return null;
 	return lang === "zh" ? `约定：${route.contract}` : `Contract: ${route.contract}`;
 }
@@ -212,10 +212,12 @@ function contractLine(route: TurnRoute, lang: "zh" | "en"): string | null {
 function intakeLine(route: TurnRoute, lang: "zh" | "en"): string {
 	const said = `「${route.utterance}」`;
 	if (lang === "en") {
-		if (route.intake === "task-command") return `${said} is a task command, so this turn does not pick a new workflow.`;
+		if (route.intake === "task-command")
+			return `${said} is a task command, so this turn does not pick a new workflow.`;
 		if (route.intake === "read-only")
 			return `${said} is read-only reuse of literature already on hand. No new task contract is opened.`;
-		if (route.intake === "status") return `${said} asks for status. The checkpoint stays, and this is not a new topic.`;
+		if (route.intake === "status")
+			return `${said} asks for status. The checkpoint stays, and this is not a new topic.`;
 		if (route.intake === "continuation")
 			return route.keptCheckpoint
 				? `${said} continues the task already underway and keeps its checkpoint.`
@@ -278,7 +280,9 @@ function landingLine(route: TurnRoute, lang: "zh" | "en"): string {
 			? `选中了 ${route.primary}，但它当前不可见，所以没有写进系统提示。`
 			: `${route.primary} was selected, but it is not visible, so it was not written into the system prompt.`;
 	if (route.landing === "ordinary")
-		return lang === "zh" ? "没有进入研究工作流，按普通对话回答。" : "No research workflow was entered. This is an ordinary reply.";
+		return lang === "zh"
+			? "没有进入研究工作流，按普通对话回答。"
+			: "No research workflow was entered. This is an ordinary reply.";
 	return lang === "zh" ? "这一轮停在宿主门上。" : "This turn stops at a host gate.";
 }
 
@@ -322,7 +326,9 @@ function hostLines(route: TurnRoute, lang: "zh" | "en"): string[] {
 	}
 	if (host.deferredReviews > 0) {
 		lines.push(`这句话放下了 ${host.deferredReviews} 张审阅，没有把交付勾成完成。`);
-		lines.push(host.releasedStage ? "这一段已经有进展，阶段步数已放开。" : "这一段没有新进展，阶段步数没有放开。");
+		lines.push(
+			host.releasedStage ? "这一段已经有进展，阶段步数已放开。" : "这一段没有新进展，阶段步数没有放开。",
+		);
 	} else if (host.pendingReview && route.deferPhrase) {
 		lines.push(
 			host.reviewLinked
@@ -354,8 +360,11 @@ function summaryOf(route: TurnRoute, lang: "zh" | "en"): string {
 		if (route.landing === "host-gate") {
 			if (route.deferPhrase && (route.host?.pendingReview || route.host?.deferredReviews))
 				return "Continues the checkpoint. The review is set aside, and the stage limit follows the progress.";
-			if (route.host?.pendingReview) return "Checkpoint kept. The review is still waiting, so the stage quota stays.";
-			return route.host?.reason ? `Stopped at the host gate (${route.host.reason}).` : "Stopped at the host gate.";
+			if (route.host?.pendingReview)
+				return "Checkpoint kept. The review is still waiting, so the stage quota stays.";
+			return route.host?.reason
+				? `Stopped at the host gate (${route.host.reason}).`
+				: "Stopped at the host gate.";
 		}
 		if (route.landing === "workflow" && route.primary)
 			return stage ? `Enters ${stage} via ${route.primary}.` : `Follows ${route.primary}.`;

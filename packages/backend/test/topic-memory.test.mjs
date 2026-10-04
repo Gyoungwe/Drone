@@ -212,7 +212,11 @@ describe("bounded topic memory", () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-topic-memory-"));
 		const store = createTopicMemory({ binding, project: "project-a", directory: root });
 		await store.record({ topicId: "topic", title: "Wing signaling", summary: "Wg activates growth" });
-		const next = await store.record({ topicId: "topic", title: "Metabolic timing", summary: "Circadian timing changes feeding" });
+		const next = await store.record({
+			topicId: "topic",
+			title: "Metabolic timing",
+			summary: "Circadian timing changes feeding",
+		});
 		expect(next.classification).toBe("additional");
 	});
 });

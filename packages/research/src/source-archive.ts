@@ -95,7 +95,8 @@ async function verifyManifestItems(manifest: any, runDir: string): Promise<Recor
 	}
 	const items = [];
 	for (const item of downloaded) {
-		const path = typeof item.path === "string" ? item.path : typeof item.local_path === "string" ? item.local_path : "";
+		const path =
+			typeof item.path === "string" ? item.path : typeof item.local_path === "string" ? item.local_path : "";
 		if (!path) {
 			items.push({ id: item.id ?? null, path: null, ok: false, reason: "missing manifest path" });
 			continue;

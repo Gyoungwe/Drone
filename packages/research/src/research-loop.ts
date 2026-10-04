@@ -216,7 +216,13 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		return { config, path, metadataPath: join(path, "metadata.json") };
 	}
 
-	async function startResearchRun({ cwd = process.cwd(), project, resultSlug, query, requiresProvenance = false }: any = {}) {
+	async function startResearchRun({
+		cwd = process.cwd(),
+		project,
+		resultSlug,
+		query,
+		requiresProvenance = false,
+	}: any = {}) {
 		const config = await loadWorkspaceConfig(cwd);
 		project = safeSlug(project || "research-workbench", "project");
 		resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
@@ -343,7 +349,9 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 				gate = { ...gate, claim_bindings: checked, claim_refs: claimBindingRefs(checked), warnings: [] };
 				claimRefs = claimBindingRefs(checked);
 			} else if (claimRefs.length) {
-				throw new Error("Structured claim_bindings are required; legacy claim_refs cannot make a run answerable");
+				throw new Error(
+					"Structured claim_bindings are required; legacy claim_refs cannot make a run answerable",
+				);
 			}
 			if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
 				throw new Error("Structured claim_bindings must contain at least one validated claim");
