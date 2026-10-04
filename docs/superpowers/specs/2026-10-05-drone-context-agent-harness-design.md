@@ -87,6 +87,24 @@ OpenScience 的最终回复约束很朴素，但与外部验收配合后效果�
 
 模型负责把事实组织成用户可读的答复，harness 负责防止“文字上完成、文件上未完成”。
 
+### 6. 稳定合同、每轮姿态和动态状态是三种不同东西
+
+对 OpenScience 当前实现更精确的描述是：
+
+- `research` 和 `plan` 这两个主 agent 没有自己的 `agent.prompt`，通常使用模型族 header；`plan` 另外在每轮插入只读计划合同，所以它是“家族开头 + 每轮 plan contract”。
+- `ml`、`biology`、`physics`、`chemistry`、`data`、`general` 等 specialist 有自己的 specialist prompt。非 Codex 路线下，这份 prompt 替代家族 header，但仍填入统一的 science contract 和领域技能索引。
+- Codex 订阅路线把主 agent 的 prompt 放进 provider 的 `instructions`；worker 的 specialist contract 留在 conversation system context 中，从传输层避免同一份家族开头出现两次。
+- effort、delegation、independence、plan/build 状态属于每轮姿态，不写死在家族 header。姿态通过 `<system-reminder>` 或等价的 system message 注入，并且权限模式始终优先。
+- 预算、花费、研究状态和工具集合是动态事实。只有状态键改变时才追加持久的 harness message；相同提醒不重复追加。这样既让模型看到变化，也不让每一步都改写缓存前缀。
+
+因此，Drone 的 prompt 设计也应分成三类：
+
+1. **稳定合同**：模型族语气、科学/工程原则、回复格式和 agent 角色；
+2. **每轮姿态**：努力程度、委托级别、独立性、plan/build 模式和当前阶段；
+3. **变化状态**：预算、交付物缺口、证据状态、工具可见性、worker 结果和下一步。
+
+把三者全部拼进一条不断变化的 system prompt，会同时增加上下文成本、破坏缓存并让模型难以分辨“长期规则”和“当前状态”。
+
 ## Drone 当前状态与缺口
 
 Drone 已有的能力：
