@@ -42,7 +42,14 @@ describe("PiBackend.listModels", () => {
 		const backend = new PiBackend({ projectTrust: false });
 		vi.spyOn(backend.settings, "listProviders").mockResolvedValue(providers);
 		Object.defineProperty(backend, "modelPrefs", {
-			value: { getPrefs: async () => ({ hiddenModels: { fast: ["legacy"] }, subagentModels: {} }) },
+			value: {
+				getPrefs: async () => ({
+					hiddenModels: { fast: ["legacy"] },
+					subagentModels: {},
+					subagentThinking: {},
+					backgroundReviewerModel: false,
+				}),
+			},
 		});
 		vi.spyOn(
 			backend as unknown as { getModelRuntime: () => Promise<ModelRuntime> },
@@ -58,7 +65,14 @@ describe("PiBackend.listModels", () => {
 		const backend = new PiBackend({ projectTrust: false });
 		vi.spyOn(backend.settings, "listProviders").mockResolvedValue(providers);
 		Object.defineProperty(backend, "modelPrefs", {
-			value: { getPrefs: async () => ({ hiddenModels: {}, subagentModels: {} }) },
+			value: {
+				getPrefs: async () => ({
+					hiddenModels: {},
+					subagentModels: {},
+					subagentThinking: {},
+					backgroundReviewerModel: false,
+				}),
+			},
 		});
 		vi.spyOn(
 			backend as unknown as { getModelRuntime: () => Promise<ModelRuntime> },
@@ -80,7 +94,14 @@ describe("PiBackend.listModels", () => {
 		const backend = new PiBackend({ projectTrust: false });
 		vi.spyOn(backend.settings, "listProviders").mockResolvedValue(providers);
 		Object.defineProperty(backend, "modelPrefs", {
-			value: { getPrefs: async () => ({ hiddenModels: {}, subagentModels: {} }) },
+			value: {
+				getPrefs: async () => ({
+					hiddenModels: {},
+					subagentModels: {},
+					subagentThinking: {},
+					backgroundReviewerModel: false,
+				}),
+			},
 		});
 		vi.spyOn(
 			backend as unknown as { getModelRuntime: () => Promise<ModelRuntime> },

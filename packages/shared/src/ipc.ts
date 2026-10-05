@@ -211,6 +211,7 @@ export const IpcChannels = {
 	SettingsSetModelsHidden: "settings:setModelsHidden",
 	SettingsSetSubagentModel: "settings:setSubagentModel",
 	SettingsSetSubagentThinking: "settings:setSubagentThinking",
+	SettingsSetBackgroundReviewerModel: "settings:setBackgroundReviewerModel",
 	/** 只列内置与用户级 subagent（设置是全局配置，不绑定项目） */
 	SettingsListSubagents: "settings:listSubagents",
 	/** provider 交互登录（OAuth / api_key，后者如 Google Vertex 的 ADC/服务账号）；loginId 由 renderer 生成用于事件归属 */
@@ -389,6 +390,8 @@ export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryA
 		agent: string,
 		level: import("./settings").SubagentThinkingLevel | null,
 	): Promise<ModelPrefs>;
+	/** 开关后台模型审稿；关闭时后台审稿只运行纯规则检查。 */
+	setBackgroundReviewerModel(enabled: boolean): Promise<ModelPrefs>;
 	/** 列内置与用户级 subagent 定义（不读项目级定义） */
 	listSubagents(): Promise<SubagentInfo[]>;
 	/** 启动 provider 交互登录（OAuth 浏览器/设备码流 · api_key 提示/选择流）；事件经 onProviderLoginEvent 推送，promise 在流程结束时 resolve（取消不算错误） */

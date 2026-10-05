@@ -6,9 +6,12 @@ import {
 	type BackgroundReviewerOptions,
 	type BackgroundReviewRequest,
 	type DeliverableReviewSnapshot,
+	type ReviewerModelProvider,
+	type ReviewerProviderSelection,
 	type ReviewReadReceipt,
 } from "@drone/knowledge";
 import type { SessionEvent } from "@drone/shared";
+import { globalToolManifest } from "../tools/manifest";
 import type { InquiryReadOnlySnapshot } from "./inquiry";
 
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
@@ -18,7 +21,29 @@ const TEXT_FILE = /\.(?:md|txt|csv|json|html?|tex|ya?ml)$/i;
 interface ReviewerHostOptions {
 	getCwd(sessionId: string): string | undefined;
 	getLedger?(): Promise<InquiryReadOnlySnapshot | undefined>;
+	getProviders?: () => readonly ReviewerModelProvider[] | Promise<readonly ReviewerModelProvider[]>;
+	getMainProvider?: (sessionId: string) => string | undefined;
+	useModel?: () => boolean | Promise<boolean>;
+	modelReview?: (
+		snapshot: DeliverableReviewSnapshot,
+		selection: ReviewerProviderSelection,
+	) => ReturnType<NonNullable<BackgroundReviewerOptions["modelReview"]>>;
+	onSchedule?: (request: {
+		sessionId: string;
+		snapshot: unknown;
+		trigger: BackgroundReviewRequest["trigger"];
+	}) => void;
 	onResult: NonNullable<BackgroundReviewerOptions["onResult"]>;
+}
+
+const DELIVERABLE_WRITERS = new Set(["write", "edit"]);
+
+/** Only core file mutation tools are implicit deliverable writers. Extensions must add a future
+ * explicit manifest declaration before they can trigger review; domain/tool name substrings are
+ * deliberately ignored so archive/download tools cannot start a review. */
+export function isDeliverableWriter(toolName: string): boolean {
+	if (DELIVERABLE_WRITERS.has(toolName)) return true;
+	return globalToolManifest.meta(toolName)?.deliverable === true;
 }
 
 /** Read-only host adapter. Observed reads never grant evidence-gate authority. */
@@ -29,7 +54,12 @@ export class DeliverableReviewerService {
 	private disposed = false;
 
 	constructor(private readonly options: ReviewerHostOptions) {
-		this.reviewer = new BackgroundReviewer({ onResult: options.onResult });
+		this.reviewer = new BackgroundReviewer({
+			onResult: options.onResult,
+			getProviders: options.getProviders,
+			useModel: options.useModel,
+			modelReview: options.modelReview,
+		});
 	}
 
 	observe(sessionId: string, event: unknown): void {
@@ -63,7 +93,7 @@ export class DeliverableReviewerService {
 			receipts.set(path, { path, receiptRef: input.toolCallId, text });
 			while (receipts.size > 128) receipts.delete(receipts.keys().next().value ?? "");
 			this.receipts.set(sessionId, receipts);
-		} else if (/(?:write|edit|save|deposit|summarize|archive)/i.test(input.toolName)) {
+		} else if (isDeliverableWriter(input.toolName)) {
 			this.schedule({
 				sessionId,
 				snapshot: { deliverables: [{ id: path, path }] },
@@ -77,13 +107,19 @@ export class DeliverableReviewerService {
 		snapshot: unknown;
 		trigger: BackgroundReviewRequest["trigger"];
 	}): void {
+		this.options.onSchedule?.(request);
 		// File I/O and ledger projection are deferred along with the review.
 		setTimeout(() => {
 			if (this.disposed) return;
 			const snapshot = this.record(request.snapshot) as DeliverableReviewSnapshot;
 			void this.snapshot(request.sessionId, snapshot)
 				.then((prepared) => {
-					if (!this.disposed) this.reviewer.schedule({ ...request, snapshot: prepared });
+					if (!this.disposed)
+						this.reviewer.schedule({
+							...request,
+							mainProvider: this.options.getMainProvider?.(request.sessionId),
+							snapshot: prepared,
+						});
 				})
 				.catch(() => {});
 		}, 0);

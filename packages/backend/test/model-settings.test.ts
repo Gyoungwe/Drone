@@ -13,6 +13,7 @@ describe("ModelSettingsService", () => {
 			hiddenModels: {},
 			subagentModels: {},
 			subagentThinking: {},
+			backgroundReviewerModel: false,
 		});
 
 		await service.setModelHidden("openai", "gpt-5", true);
@@ -53,6 +54,7 @@ describe("ModelSettingsService", () => {
 			hiddenModels: {},
 			subagentModels: {},
 			subagentThinking: {},
+			backgroundReviewerModel: false,
 		});
 	});
 });

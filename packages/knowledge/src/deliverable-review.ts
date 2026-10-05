@@ -80,6 +80,7 @@ export interface ReviewerModelProvider {
 
 export interface ReviewerProviderSelection {
 	provider: string;
+	model?: string;
 	independent: boolean;
 	nonIndependentReason?: string;
 }
@@ -95,6 +96,8 @@ export interface BackgroundReviewerOptions {
 	) => DeliverableReviewFinding[] | Promise<DeliverableReviewFinding[]>;
 	mainProvider?: string;
 	providers?: readonly ReviewerModelProvider[];
+	getProviders?: () => readonly ReviewerModelProvider[] | Promise<readonly ReviewerModelProvider[]>;
+	useModel?: () => boolean | Promise<boolean>;
 	onResult?: (sessionId: string, result: DeliverableReviewResult, trigger: ReviewerTrigger) => void | Promise<void>;
 	now?: () => number;
 }
@@ -110,6 +113,7 @@ export interface BackgroundReviewRequest {
 	sessionId: string;
 	snapshot: DeliverableReviewSnapshot;
 	trigger: ReviewerTrigger;
+	mainProvider?: string;
 }
 
 const SHA256 = /^[a-f0-9]{64}$/i;
@@ -309,10 +313,11 @@ export function selectReviewerProvider(
 	const configured = providers.filter((item) => typeof item.provider === "string" && item.provider.trim());
 	if (!configured.length) return null;
 	const independent = mainProvider ? configured.find((item) => item.provider !== mainProvider) : undefined;
-	if (independent) return { provider: independent.provider, independent: true };
+	if (independent) return { provider: independent.provider, model: independent.model, independent: true };
 	const fallback = configured[0];
 	return {
 		provider: fallback?.provider ?? "",
+		model: fallback?.model,
 		independent: false,
 		nonIndependentReason: "非独立审稿：没有配置其他 provider。",
 	};
@@ -325,6 +330,8 @@ export class BackgroundReviewer {
 	private readonly modelReview?: BackgroundReviewerOptions["modelReview"];
 	private readonly mainProvider?: string;
 	private readonly providers: readonly ReviewerModelProvider[];
+	private readonly getProviders?: BackgroundReviewerOptions["getProviders"];
+	private readonly useModel?: BackgroundReviewerOptions["useModel"];
 	private readonly onResult?: BackgroundReviewerOptions["onResult"];
 	private readonly now: () => number;
 	private readonly cache = new Map<string, Map<string, Promise<DeliverableReviewResult>>>();
@@ -341,6 +348,8 @@ export class BackgroundReviewer {
 		this.modelReview = options.modelReview;
 		this.mainProvider = options.mainProvider;
 		this.providers = options.providers ?? [];
+		this.getProviders = options.getProviders;
+		this.useModel = options.useModel;
 		this.onResult = options.onResult;
 		this.now = options.now ?? Date.now;
 	}
@@ -379,8 +388,9 @@ export class BackgroundReviewer {
 				const findings = await Promise.race([
 					Promise.resolve().then(async () => {
 						const ruleFindings = await this.review(request.snapshot);
-						if (!this.modelReview) return ruleFindings;
-						const selection = selectReviewerProvider(this.mainProvider, this.providers);
+						if (!this.modelReview || (this.useModel && !(await this.useModel()))) return ruleFindings;
+						const providers = this.getProviders ? await this.getProviders() : this.providers;
+						const selection = selectReviewerProvider(request.mainProvider ?? this.mainProvider, providers);
 						if (!selection) return ruleFindings;
 						const modelFindings = await this.modelReview(request.snapshot, selection);
 						return selection.independent
