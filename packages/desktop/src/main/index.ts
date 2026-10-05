@@ -199,6 +199,10 @@ app.whenReady().then(async () => {
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
+		// Enable the project-scoped inquiry ledger for the desktop artifact panel.
+		// The ledger contains only hashes and bounded provenance summaries.
+		inquiryDir: join(app.getPath("userData"), "inquiry"),
+		inquiryProjectId: "desktop",
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
 			appendSystemPrompt: UI_PLUGIN_PROMPT,

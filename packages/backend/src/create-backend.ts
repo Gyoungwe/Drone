@@ -44,6 +44,11 @@ import {
 	createComputeExperienceRecorder,
 } from "./services/compute-experience";
 import { InquiryService, type InquiryServicePort } from "./services/inquiry";
+import {
+	computeInquiryMetadata,
+	createInquiryComputeRerun,
+	createInquiryComputeRerunCompletion,
+} from "./services/inquiry-compute";
 import type { InstitutionalServicePort } from "./services/institutional";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
@@ -250,7 +255,24 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				: {}),
 		});
 	const detachInquiryComputeEvents = inquiry.attachEventSource({
-		onComputeEvent: (handler) => compute.onEvent(handler),
+		onComputeEvent: (handler) =>
+			compute.onEvent((event) => {
+				void compute
+					.getJob(event.jobId)
+					.then((job) => {
+						if (!job) return handler(event);
+						handler({ ...event, ...computeInquiryMetadata(job) });
+					})
+					.catch(() => handler(event));
+			}),
+		enrichComputeEvent: async (event) => {
+			try {
+				const job = await compute.getJob(event.jobId);
+				return job ? { ...event, ...computeInquiryMetadata(job) } : event;
+			} catch {
+				return event;
+			}
+		},
 		onTaskTerminal: (handler) =>
 			sessions.onEvent((sessionId, event) => {
 				const value = event as unknown as { type?: string; willRetry?: boolean };
@@ -263,6 +285,24 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				});
 			}),
 	});
+	// One-click reruns use the same adapter and therefore the same authorization
+	// boundary as a user-submitted compute job. Submission returns immediately;
+	// the completion worker survives renderer restarts through inquiry storage.
+	inquiry.setRerunHandler(
+		createInquiryComputeRerun({
+			adapter: computeAdapter,
+			collectionRoot: join(options.inquiryDir ?? options.defaultCwd ?? process.cwd(), "reruns"),
+			drainEvents: () => inquiry.drainEvents(),
+		}),
+	);
+	inquiry.setRerunCompletionHandler(
+		createInquiryComputeRerunCompletion({
+			compute,
+			collectionRoot: join(options.inquiryDir ?? options.defaultCwd ?? process.cwd(), "reruns"),
+			drainEvents: () => inquiry.drainEvents(),
+		}),
+	);
+
 	if (runtime.compute) {
 		runtime.compute.service = compute;
 		runtime.compute.adapter = computeAdapter;

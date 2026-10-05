@@ -3,7 +3,14 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { validateArtifactLineage, validateFindingReferences } from "./lineage";
-import type { ArtifactRecord, AttemptRecord, FindingRecord, InquirySnapshot, QuestionRecord } from "./models";
+import type {
+	ArtifactRecord,
+	ArtifactRerunRecord,
+	AttemptRecord,
+	FindingRecord,
+	InquirySnapshot,
+	QuestionRecord,
+} from "./models";
 
 export interface LedgerCollection<T extends { readonly id: string }> {
 	get(id: string): Promise<T | undefined>;
@@ -15,6 +22,7 @@ export interface ArtifactLedger extends LedgerCollection<ArtifactRecord> {}
 export interface FindingLedger extends LedgerCollection<FindingRecord> {}
 export interface QuestionLedger extends LedgerCollection<QuestionRecord> {}
 export interface AttemptLedger extends LedgerCollection<AttemptRecord> {}
+export interface ArtifactRerunLedger extends LedgerCollection<ArtifactRerunRecord> {}
 
 /** Host-facing storage boundary. A backend may implement this with SQLite. */
 export interface InquiryStorage {
@@ -23,6 +31,7 @@ export interface InquiryStorage {
 	readonly findings: FindingLedger;
 	readonly questions: QuestionLedger;
 	readonly attempts: AttemptLedger;
+	readonly reruns: ArtifactRerunLedger;
 	snapshot(): Promise<InquirySnapshot>;
 	close?(): Promise<void>;
 }
@@ -71,9 +80,9 @@ interface PersistedDocument extends InquirySnapshot {
 
 const queues = new Map<string, Promise<void>>();
 
-const SQLITE_TABLES = ["artifacts", "findings", "questions", "attempts"] as const;
+const SQLITE_TABLES = ["artifacts", "findings", "questions", "attempts", "reruns"] as const;
 type SqliteLedgerKey = (typeof SQLITE_TABLES)[number];
-type LedgerRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord;
+type LedgerRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | ArtifactRerunRecord;
 
 interface SqliteMetaRow {
 	project_id: string;
@@ -115,6 +124,7 @@ function emptyDocument(projectId: string): PersistedDocument {
 		findings: [],
 		questions: [],
 		attempts: [],
+		reruns: [],
 	};
 }
 
@@ -129,6 +139,7 @@ function stableDocument(document: PersistedDocument): PersistedDocument {
 		findings: sortRecords(document.findings),
 		questions: sortRecords(document.questions),
 		attempts: sortRecords(document.attempts),
+		reruns: sortRecords(document.reruns ?? []),
 	};
 }
 
@@ -147,7 +158,10 @@ function parseDocument(raw: string, projectId: string): PersistedDocument {
 	const revision = parsed.revision;
 	if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0)
 		throw new Error("Invalid inquiry ledger revision");
-	return stableDocument(parsed as PersistedDocument);
+	return stableDocument({
+		...parsed,
+		reruns: Array.isArray(parsed.reruns) ? parsed.reruns : [],
+	} as PersistedDocument);
 }
 
 async function readDocument(path: string, projectId: string): Promise<PersistedDocument> {
@@ -178,7 +192,7 @@ async function writeDocument(path: string, document: PersistedDocument): Promise
 class FileLedgerCollection<T extends { readonly id: string }> implements LedgerCollection<T> {
 	constructor(
 		private readonly owner: FileInquiryStorage,
-		private readonly key: "artifacts" | "findings" | "questions" | "attempts",
+		private readonly key: "artifacts" | "findings" | "questions" | "attempts" | "reruns",
 	) {}
 
 	async get(id: string): Promise<T | undefined> {
@@ -209,6 +223,7 @@ export class FileInquiryStorage implements InquiryStorage {
 	readonly findings: FindingLedger;
 	readonly questions: QuestionLedger;
 	readonly attempts: AttemptLedger;
+	readonly reruns: ArtifactRerunLedger;
 
 	constructor(
 		readonly projectId: string,
@@ -220,6 +235,7 @@ export class FileInquiryStorage implements InquiryStorage {
 		this.findings = new FileLedgerCollection<FindingRecord>(this, "findings");
 		this.questions = new FileLedgerCollection<QuestionRecord>(this, "questions");
 		this.attempts = new FileLedgerCollection<AttemptRecord>(this, "attempts");
+		this.reruns = new FileLedgerCollection<ArtifactRerunRecord>(this, "reruns");
 	}
 
 	async snapshot(): Promise<InquirySnapshot> {
@@ -227,8 +243,8 @@ export class FileInquiryStorage implements InquiryStorage {
 	}
 
 	async update(
-		key: "artifacts" | "findings" | "questions" | "attempts",
-		record: ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord,
+		key: "artifacts" | "findings" | "questions" | "attempts" | "reruns",
+		record: ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | ArtifactRerunRecord,
 	): Promise<void> {
 		return enqueue(this.path, async () => {
 			const current = await readDocument(this.path, this.projectId);
@@ -250,6 +266,10 @@ export class FileInquiryStorage implements InquiryStorage {
 					(record as QuestionRecord).projectId !== this.projectId
 				)
 					throw new Error("Invalid question record");
+			} else if (key === "reruns") {
+				const rerun = record as ArtifactRerunRecord;
+				if (rerun?.schemaVersion !== 1 || rerun.projectId !== this.projectId)
+					throw new Error("Invalid artifact rerun record");
 			} else if (
 				!record ||
 				(record as AttemptRecord).schemaVersion !== 1 ||
@@ -257,7 +277,7 @@ export class FileInquiryStorage implements InquiryStorage {
 			) {
 				throw new Error("Invalid attempt record");
 			}
-			const values = [...current[key]] as Array<typeof record>;
+			const values = [...(current[key] ?? [])] as Array<typeof record>;
 			const index = values.findIndex((item) => item.id === record.id);
 			if (index >= 0) values[index] = record;
 			else values.push(record);
@@ -284,6 +304,7 @@ export class SqliteInquiryStorage implements InquiryStorage {
 	readonly findings: FindingLedger;
 	readonly questions: QuestionLedger;
 	readonly attempts: AttemptLedger;
+	readonly reruns: ArtifactRerunLedger;
 	private readonly database: DatabaseSync;
 	private closed = false;
 
@@ -330,6 +351,12 @@ export class SqliteInquiryStorage implements InquiryStorage {
 				payload TEXT NOT NULL,
 				updated_at TEXT NOT NULL
 			);
+			CREATE TABLE IF NOT EXISTS reruns (
+				id TEXT PRIMARY KEY NOT NULL,
+				project_id TEXT NOT NULL,
+				payload TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
 		`);
 		const meta = this.database
 			.prepare("SELECT project_id, schema_version, revision, updated_at FROM inquiry_meta LIMIT 1")
@@ -349,6 +376,7 @@ export class SqliteInquiryStorage implements InquiryStorage {
 		this.findings = new SqliteLedgerCollection<FindingRecord>(this, "findings");
 		this.questions = new SqliteLedgerCollection<QuestionRecord>(this, "questions");
 		this.attempts = new SqliteLedgerCollection<AttemptRecord>(this, "attempts");
+		this.reruns = new SqliteLedgerCollection<ArtifactRerunRecord>(this, "reruns");
 	}
 
 	async snapshot(): Promise<InquirySnapshot> {
@@ -377,6 +405,7 @@ export class SqliteInquiryStorage implements InquiryStorage {
 			findings: read<FindingRecord>("findings"),
 			questions: read<QuestionRecord>("questions"),
 			attempts: read<AttemptRecord>("attempts"),
+			reruns: read<ArtifactRerunRecord>("reruns"),
 		};
 	}
 
@@ -419,6 +448,11 @@ export class SqliteInquiryStorage implements InquiryStorage {
 			const errors = validateFindingReferences(record as FindingRecord, current);
 			if (errors.length) throw new Error(`Invalid finding record: ${errors.join("; ")}`);
 		}
+		if (key === "reruns") {
+			const rerun = record as ArtifactRerunRecord;
+			if (!rerun.sourceArtifactId || !rerun.jobId || !rerun.status)
+				throw new Error("Invalid artifact rerun record");
+		}
 	}
 
 	private assertOpen(): void {
@@ -459,6 +493,7 @@ export class MemoryInquiryStorage implements InquiryStorage {
 	readonly findings: FindingLedger;
 	readonly questions: QuestionLedger;
 	readonly attempts: AttemptLedger;
+	readonly reruns: ArtifactRerunLedger;
 
 	constructor(
 		readonly projectId: string,
@@ -474,11 +509,13 @@ export class MemoryInquiryStorage implements InquiryStorage {
 			findings: sortRecords(initial?.findings ?? []),
 			questions: sortRecords(initial?.questions ?? []),
 			attempts: sortRecords(initial?.attempts ?? []),
+			reruns: sortRecords(initial?.reruns ?? []),
 		};
 		this.artifacts = new MemoryLedgerCollection(this, "artifacts");
 		this.findings = new MemoryLedgerCollection(this, "findings");
 		this.questions = new MemoryLedgerCollection(this, "questions");
 		this.attempts = new MemoryLedgerCollection(this, "attempts");
+		this.reruns = new MemoryLedgerCollection(this, "reruns");
 	}
 
 	async snapshot(): Promise<InquirySnapshot> {
@@ -486,8 +523,8 @@ export class MemoryInquiryStorage implements InquiryStorage {
 	}
 
 	async update(
-		key: "artifacts" | "findings" | "questions" | "attempts",
-		record: ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord,
+		key: "artifacts" | "findings" | "questions" | "attempts" | "reruns",
+		record: ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | ArtifactRerunRecord,
 	): Promise<void> {
 		if (key === "artifacts") {
 			const artifact = record as ArtifactRecord;
@@ -501,7 +538,7 @@ export class MemoryInquiryStorage implements InquiryStorage {
 			const errors = validateFindingReferences(record as FindingRecord, this.state);
 			if (errors.length) throw new Error(`Invalid finding record: ${errors.join("; ")}`);
 		}
-		const values = [...this.state[key]] as Array<typeof record>;
+		const values = [...(this.state[key] ?? [])] as Array<typeof record>;
 		const index = values.findIndex((item) => item.id === record.id);
 		if (index >= 0) values[index] = record;
 		else values.push(record);
@@ -517,7 +554,7 @@ export class MemoryInquiryStorage implements InquiryStorage {
 class MemoryLedgerCollection<T extends { readonly id: string }> implements LedgerCollection<T> {
 	constructor(
 		private readonly owner: MemoryInquiryStorage,
-		private readonly key: "artifacts" | "findings" | "questions" | "attempts",
+		private readonly key: "artifacts" | "findings" | "questions" | "attempts" | "reruns",
 	) {}
 	async get(id: string): Promise<T | undefined> {
 		return (await this.list()).find((record) => record.id === id);

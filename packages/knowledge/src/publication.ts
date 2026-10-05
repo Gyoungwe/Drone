@@ -436,6 +436,10 @@ export function registerAnswerPublication(
 			}
 			if (ctx.signal?.aborted) return report(failure(message, { code: "interrupted" }));
 			const metacognitive = await evaluateMetacognition(ctx, c, publishText);
+			const warnings = [
+				...(Array.isArray(proof.warnings) ? proof.warnings : []),
+				...(metacognitive?.warnings || []).map((warning) => ({ code: warning.code, message: warning.detail })),
+			];
 			const published =
 				proof.status === "no-hits"
 					? [
@@ -453,6 +457,7 @@ export function registerAnswerPublication(
 			return report(
 				seal(message, visible, {
 					...proof,
+					...(warnings.length ? { warnings } : {}),
 					...(metacognitive ? { metacognition: metacognitive } : {}),
 					status: proof.status === "ready" ? "released" : "no-hits",
 					turnId,

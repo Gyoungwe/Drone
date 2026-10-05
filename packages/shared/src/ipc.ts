@@ -2,6 +2,7 @@ import type { AskRequest, AskResponse } from "./ask";
 import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { ComputeApi } from "./host-api/compute";
 import type { DiscoveryApi } from "./host-api/discovery";
+import type { InquiryApi } from "./host-api/inquiry";
 import type { LanStatus } from "./host-api/lan";
 import type { SessionsApi } from "./host-api/sessions";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
@@ -130,6 +131,11 @@ export const IpcChannels = {
 	DiscoveryMultipathAssessments: "discovery:listMultipathAssessments",
 	DiscoveryExplorationPlans: "discovery:listExplorationPlans",
 	DiscoveryEvaluations: "discovery:listEvaluations",
+	/** 研究产物来源与受授权保护的可复现重跑。 */
+	InquiryArtifacts: "inquiry:listArtifacts",
+	InquiryArtifactProvenance: "inquiry:artifactProvenance",
+	InquiryRerunArtifact: "inquiry:rerunArtifact",
+	InquiryRerunUpdatedEvent: "inquiry:rerunUpdated",
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
 	ZoteroStatus: "zotero:status",
@@ -317,7 +323,7 @@ export const IpcChannels = {
 export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
-export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryApi {
+export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryApi, InquiryApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */

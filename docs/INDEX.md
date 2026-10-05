@@ -126,7 +126,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## packages/inquiry — 研究状态层领域包（B5a）
 
-`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设和分析尝试四本账；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/storage.ts` 提供宿主可注入的四账存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用。backend 的 `services/inquiry.ts` 只在显式配置 `inquiryDir` 与项目 id 时实例化 SQLite，并通过宿主注入的 compute/task 终态事件登记已校验的 artifact/attempt、串行化事件写入并提供项目只读快照；Electron/LAN 投影仍由后续组合根接入，领域包不读取文件内容，也不执行删除。
+`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设和分析尝试四本账；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/provenance.ts` 提供最多 20 层父链的无正文来源投影；`src/reproducibility.ts` 提供代码指纹 + run-provenance 三态纯判定；`src/storage.ts` 提供宿主可注入的四账存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用并实现受授权重跑与 superseded 记账。backend 的 `services/inquiry.ts` 只在显式配置 `inquiryDir` 与项目 id 时实例化 SQLite，并通过宿主注入的 compute/task 终态事件登记已校验的 artifact/attempt、串行化事件写入并提供项目只读快照；shared `host-api/inquiry.ts` → desktop `main/ipc/inquiry.ts` → preload → `ArtifactsPane` 提供来源展开、三态徽标和重跑入口，领域包不读取文件内容，也不执行删除。
 
 ## packages/discovery — 研究发现领域包（B5d–B5f）
 

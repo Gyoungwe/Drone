@@ -9,6 +9,15 @@ export type ArtifactLocation = "local" | "remote";
 export type ArtifactPurpose = "input" | "draft" | "intermediate" | "deliverable" | "evidence";
 export type ArtifactStatus = "valid" | "superseded" | "cleanup-candidate" | "archived";
 
+/** Bounded run metadata used for provenance display and reproducibility checks. */
+export interface RunProvenanceSummary {
+	readonly containerDigests?: readonly string[];
+	readonly workflow?: string;
+	readonly modules?: readonly string[];
+	readonly commandSummary?: string;
+	readonly environment?: Readonly<Record<string, string>>;
+}
+
 export interface ArtifactSource {
 	readonly kind: "task" | "run" | "input" | "tool" | "workflow" | "manual";
 	readonly id: string;
@@ -29,6 +38,9 @@ export interface ArtifactRecord {
 	/** Parent artifacts form the immutable lineage graph. */
 	readonly parentIds: readonly string[];
 	readonly runId?: string;
+	readonly sessionId?: string;
+	readonly turn?: number;
+	readonly runProvenance?: RunProvenanceSummary;
 	readonly createdAt: string;
 	readonly updatedAt: string;
 }
@@ -116,6 +128,9 @@ export interface AttemptRecord {
 	readonly parameters: Readonly<Record<string, string | number | boolean | null>>;
 	readonly artifactIds: readonly string[];
 	readonly resultSummary?: string;
+	readonly sessionId?: string;
+	readonly turn?: number;
+	readonly runProvenance?: RunProvenanceSummary;
 	readonly outcome: AttemptOutcome;
 	readonly enteredReport: boolean;
 	readonly startedAt: string;
@@ -131,6 +146,58 @@ export interface InquirySnapshot {
 	readonly findings: readonly FindingRecord[];
 	readonly questions: readonly QuestionRecord[];
 	readonly attempts: readonly AttemptRecord[];
+	/** Durable one-click rerun state; absent in pre-rerun ledgers. */
+	readonly reruns?: readonly ArtifactRerunRecord[];
 }
 
-export type InquiryRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord;
+export type InquiryRecord =
+	| ArtifactRecord
+	| FindingRecord
+	| QuestionRecord
+	| AttemptRecord
+	| ArtifactRerunRecord;
+
+export type ReproducibilityStatus = "reproducible" | "partial" | "not-reproducible";
+
+export interface ArtifactProvenance {
+	readonly artifact: ArtifactRecord;
+	/** Parent records in traversal order. The target artifact is excluded. */
+	readonly parentChain: readonly ArtifactRecord[];
+	readonly parentChainTruncated: boolean;
+	readonly attempts: readonly AttemptRecord[];
+	readonly runProvenance?: RunProvenanceSummary;
+	readonly sourceSessionId?: string;
+	readonly sourceTurn?: number;
+	readonly reproducibility: ReproducibilityStatus;
+	readonly rerun?: ArtifactRerunRecord;
+}
+
+export type ArtifactRerunStatus = "submitted" | "running" | "reproduced" | "superseded" | "failed";
+
+export interface ArtifactRerunRecord {
+	readonly id: string;
+	readonly schemaVersion: typeof INQUIRY_SCHEMA_VERSION;
+	readonly projectId: string;
+	readonly sourceArtifactId: string;
+	readonly artifact: ArtifactRecord;
+	readonly jobId: string;
+	readonly status: ArtifactRerunStatus;
+	readonly previousSha256: string;
+	readonly resultArtifactId?: string;
+	readonly sha256?: string;
+	readonly difference?: string;
+	readonly error?: string;
+	readonly submittedAt: string;
+	readonly updatedAt: string;
+}
+
+export interface ArtifactRerunResult {
+	readonly status: ArtifactRerunStatus;
+	readonly jobId: string;
+	readonly previousArtifactId: string;
+	readonly previousSha256: string;
+	readonly artifactId?: string;
+	readonly sha256?: string;
+	readonly difference?: string;
+	readonly error?: string;
+}

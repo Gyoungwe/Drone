@@ -61,6 +61,8 @@ export interface ComputeHostAdapter {
 	listJobs(filter?: ComputeJobFilter): Promise<ComputeJob[]>;
 	getJob(id: ComputeId): Promise<ComputeJob | null>;
 	submitJob(input: ComputeUiJobInput): Promise<ComputeJob>;
+	/** Host-only rerun of a persisted specification through the normal approval boundary. */
+	resubmitJob?(id: ComputeId): Promise<ComputeJob>;
 	getLogs(id: ComputeId, cursor?: string): Promise<ComputeLogChunk>;
 	cancelJob(id: ComputeId): Promise<void>;
 	openTerminal(input: {
@@ -480,6 +482,21 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 			...(input.writePaths ? { remoteWrite: input.writePaths } : {}),
 			...(input.outputs ? { outputs: input.outputs } : {}),
 		});
+		const projected = computeJob(job);
+		this.emitJobValue(projected);
+		return projected;
+	}
+
+	async resubmitJob(id: ComputeId): Promise<ComputeJob> {
+		await this.init();
+		await this.requireRunner("job submission", "submit");
+		const original = await this.service.getJob(id);
+		if (!original) throw new Error("Original compute job is unavailable");
+		await this.requireAuthorization({ kind: "submit_job", hostId: original.hostAlias });
+		// Allocate a fresh execution identity while retaining the exact graph,
+		// input references, resource limits and B7 preflight fields.
+		const { jobId: _jobId, idempotencyKey: _idempotencyKey, ...spec } = original.spec;
+		const job = await this.service.submit(spec);
 		const projected = computeJob(job);
 		this.emitJobValue(projected);
 		return projected;

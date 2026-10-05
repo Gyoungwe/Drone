@@ -11,6 +11,8 @@
 		"./storage": "./src/storage.ts",
 		"./sqlite-storage": "./src/storage.ts",
 		"./lineage": "./src/lineage.ts",
+		"./provenance": "./src/provenance.ts",
+		"./reproducibility": "./src/reproducibility.ts",
 		"./workspace": "./src/workspace.ts"
 	},
 	"scripts": {
