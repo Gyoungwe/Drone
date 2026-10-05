@@ -40,7 +40,7 @@ packages/
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
 ├── research/   文献回执与来源交付合约（TS 包，迁移中）
 ├── compute/    远程计算与声明式工作流领域包（TS 包，B3 垂直切片）
-├── inquiry/    研究状态层领域包（TS 包，B5a 四本账与工作区合同）
+├── inquiry/    研究状态层领域包（TS 包，B5a 五本账与工作区合同）
 ├── discovery/  研究发现领域包（TS 包，B5d–B5f 内核、批评、多路径与评测）
 ├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
@@ -126,7 +126,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## packages/inquiry — 研究状态层领域包（B5a）
 
-`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设、分析尝试和 Agent 决策五本账；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/storage.ts` 提供宿主可注入的五账存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`，schema v2 对旧 v1 增量迁移；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用，撤销决策只标记账本与下游产物待复核，不触发外部写操作。backend 的 `services/inquiry.ts` 为显式 `inquiryDir` 保留单项目 SQLite，同时为桌面 host 按项目 id 懒创建隔离 SQLite，并通过宿主注入的 compute/task/扩展成功回执登记已校验的 artifact/attempt/decision、串行化事件写入并提供项目只读快照；Electron IPC 的 decisions.list/revoke 与任务面板复用该只读投影。
+`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设、分析尝试和 Agent 决策五本账；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/storage.ts` 提供宿主可注入的五账存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`，schema v2 对旧 v1 增量迁移；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用，撤销决策只标记账本与下游产物待复核，不触发外部写操作。backend 的 `services/inquiry.ts` 为显式 `inquiryDir` 保留单项目 SQLite，同时为桌面 host 按项目 id 懒创建隔离 SQLite，并通过宿主注入的 compute/task/扩展成功回执登记已校验的 artifact/attempt/decision、串行化事件写入并提供项目只读快照；Electron IPC 的 decisions.list/revoke/confirm 与任务面板复用该只读投影。
 
 ## packages/discovery — 研究发现领域包（B5d–B5f）
 
