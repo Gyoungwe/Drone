@@ -222,7 +222,7 @@ export class CdpPage {
 			}
 			if (await this.visibleCount('[data-testid="ask-dialog"]')) {
 				const chosen = await this.eval(
-					`(() => { const root=document.querySelector('[data-testid="ask-dialog"]'); const b=[...root.querySelectorAll('button')].find(x=>!/(提交|取消|submit|cancel)/iu.test(x.textContent) && /同意|确认|允许|继续|approve|confirm|allow|yes|accept/iu.test(x.textContent)); if(!b)return false; b.click(); return true; })()`,
+					`(() => { const root=document.querySelector('[data-testid="ask-dialog"]'); const sections=[...root.querySelectorAll('section')]; const choices=sections.map(section=>[...section.querySelectorAll('button')].find(x=>!x.disabled)); const all=choices.filter(Boolean); if(!all.length)return false; all.forEach(button=>button.click()); return true; })()`,
 				);
 				if (!chosen) throw new Error("ask-dialog has no option button");
 				const submitted = await this.clickRegexWithin('[data-testid="ask-dialog"]', "提交|完成|submit");
