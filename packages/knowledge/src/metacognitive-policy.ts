@@ -18,15 +18,19 @@ export interface MetacognitiveArtifactNumber {
 
 export interface MetacognitiveArtifact {
 	path: string;
+	/** Inquiry lineage status; pending review is never publishable. */
+	status?: "valid" | "superseded" | "cleanup-candidate" | "archived" | "pending-review";
 	/** Hash recorded when the artifact was cited. */
 	sha256?: string;
 	/** Hash observed immediately before publication. */
 	currentSha256?: string;
+	/** Human confirmation metadata retained with a previously revoked artifact. */
+	reviews?: readonly { decisionId: string; confirmedBy: "user"; confirmedAt: string }[];
+	/** Reproducibility is advisory; a missing receipt never bypasses fail-closed checks. */
+	reproducibility?: "reproducible" | "partial" | "not-reproducible";
 	/** Optional bounded text/number index supplied by the host. */
 	text?: string;
 	numbers?: readonly MetacognitiveArtifactNumber[];
-	/** Inquiry-derived status; only a missing reproducibility receipt is advisory. */
-	reproducibility?: "reproducible" | "partial" | "not-reproducible";
 }
 
 export interface MetacognitiveNumberClaim {
@@ -89,6 +93,7 @@ export type MetacognitiveFailureCode =
 	| "method-mismatch"
 	| "finding-label-conflict"
 	| "diagnostic-drift"
+	| "artifact-pending-review"
 	| "metacognition-invalid";
 
 export interface MetacognitiveFailure {
@@ -205,7 +210,9 @@ export function evaluateMetacognitivePublication(
 	const citations = citedPaths(answer);
 	const artifacts = new Map<string, MetacognitiveArtifact>();
 	for (const artifact of Array.isArray(input.artifacts) ? input.artifacts : []) {
-		if (artifact && typeof artifact.path === "string") artifacts.set(artifact.path, artifact);
+		if (artifact && typeof artifact.path === "string") {
+			artifacts.set(artifact.path, artifact);
+		}
 	}
 	const checkedPaths = new Set<string>();
 	const checkArtifact = (path: string, subject: string): MetacognitiveArtifact | undefined => {
@@ -219,6 +226,13 @@ export function evaluateMetacognitivePublication(
 			});
 			return undefined;
 		}
+		if (artifact.status === "pending-review" && citations.has(path))
+			addFailure(failures, {
+				code: "artifact-pending-review",
+				subject: path,
+				detail: `Artifact ${bounded(path, 240)} is pending review after a revoked decision`,
+				path,
+			});
 		if (artifact.reproducibility === "not-reproducible")
 			addWarning(warnings, {
 				code: "artifact-not-reproducible",

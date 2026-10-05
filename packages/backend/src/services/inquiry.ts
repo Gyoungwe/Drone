@@ -1,20 +1,26 @@
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import {
 	type ArtifactLocation,
-	type ArtifactProvenance,
 	type ArtifactPurpose,
 	type ArtifactRecord,
+	type ArtifactProvenance,
 	type ArtifactRerunRecord,
 	type ArtifactRerunResult,
 	type ArtifactSource,
 	type ArtifactStatus,
 	type AttemptOutcome,
 	type AttemptRecord,
+	type DecisionKind,
+	type DecisionRecord,
+	type RunProvenanceSummary,
 	InquiryService as DomainInquiryService,
 	type InquiryStorage,
-	type RunProvenanceSummary,
 	SqliteInquiryStorage,
 } from "@drone/inquiry";
+import type { StorageRegistry } from "../storage/registry";
 
 /** Metadata accepted from a trusted host event after it has verified the file. */
 export interface InquiryEventArtifact {
@@ -82,13 +88,20 @@ export interface InquiryTaskTerminalEvent {
 export interface InquiryEventSource {
 	readonly onComputeEvent?: (handler: (event: InquiryComputeEvent) => void) => () => void;
 	readonly onTaskTerminal?: (handler: (event: InquiryTaskTerminalEvent) => void) => () => void;
+	readonly onDecision?: (handler: (event: InquiryDecisionEvent) => void) => () => void;
 	readonly enrichComputeEvent?: (event: InquiryComputeEvent) => Promise<InquiryComputeEvent>;
 }
 
-export type InquiryRerunHandler = (
-	provenance: ArtifactProvenance,
-) => Promise<{ readonly jobId: string } | ArtifactRecord>;
-export type InquiryRerunCompletionHandler = (pending: ArtifactRerunRecord) => Promise<ArtifactRecord>;
+/** Successful host receipt for an agent-made decision. */
+export interface InquiryDecisionEvent {
+	readonly id: string;
+	readonly kind: DecisionKind;
+	readonly summary: string;
+	readonly basis?: readonly string[];
+	readonly affectedArtifactIds?: readonly string[];
+	readonly at?: number | string;
+	readonly projectId?: string;
+}
 
 export type InquiryReadOnlySnapshot = Awaited<ReturnType<DomainInquiryService["readOnlyState"]>> & {
 	readonly attempts: readonly AttemptRecord[];
@@ -98,15 +111,19 @@ export type InquiryReadOnlySnapshot = Awaited<ReturnType<DomainInquiryService["r
 export interface InquiryServiceOptions {
 	/** Directory registered as `inquiry-root`; the SQLite file is created inside it. */
 	readonly inquiryDir?: string;
+	/** Desktop host root for lazy, independently isolated project ledgers. */
+	readonly projectsDir?: string;
+	readonly storageRegistry?: StorageRegistry;
 	/** Stable project identity. Callers should supply a project id when multiple projects share a host. */
 	readonly projectId?: string;
 	/** Optional host subscriptions. Callbacks are serialized before touching the ledger. */
 	readonly eventSource?: InquiryEventSource;
 	/** Event failures are reported here while the host event stream continues. */
 	readonly onEventError?: (error: unknown) => void;
-	/** Optional host callback used by the one-click reproducible rerun path. */
-	readonly rerunHandler?: InquiryRerunHandler;
+	readonly rerunHandler?: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>;
 }
+
+export type InquiryRerunHandler = (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>;
 
 export interface InquiryServicePort {
 	readonly enabled: boolean;
@@ -114,13 +131,18 @@ export interface InquiryServicePort {
 	readonly domain?: DomainInquiryService;
 	recordComputeEvent(event: InquiryComputeEvent): Promise<void>;
 	recordTaskTerminal(event: InquiryTaskTerminalEvent): Promise<void>;
-	readOnlySnapshot(): Promise<InquiryReadOnlySnapshot | undefined>;
+	recordDecision(event: InquiryDecisionEvent | DecisionRecord): Promise<void>;
+	listDecisions(projectId?: string): Promise<readonly DecisionRecord[]>;
+	revokeDecision(id: string, reason: string): Promise<DecisionRecord>;
+	confirmDecision(id: string, reason: string): Promise<DecisionRecord>;
+	reviewDecisionArtifacts(id: string, reason: string): Promise<DecisionRecord>;
 	listArtifacts(): Promise<readonly ArtifactRecord[]>;
 	artifactProvenance(artifactId: string): Promise<ArtifactProvenance | undefined>;
 	rerunArtifact(artifactId: string): Promise<ArtifactRerunResult>;
-	setRerunHandler(handler: InquiryRerunHandler): void;
-	setRerunCompletionHandler(handler: InquiryRerunCompletionHandler): void;
+	setRerunHandler(handler: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>): void;
+	setRerunCompletionHandler(handler: (pending: ArtifactRerunRecord) => Promise<ArtifactRecord>): void;
 	onRerunUpdated(handler: (result: ArtifactRerunResult) => void): () => void;
+	readOnlySnapshot(projectId?: string): Promise<InquiryReadOnlySnapshot | undefined>;
 	drainEvents(): Promise<void>;
 	attachEventSource(source: InquiryEventSource): () => void;
 	dispose(): void;
@@ -163,16 +185,24 @@ export class InquiryService implements InquiryServicePort {
 	readonly domain?: DomainInquiryService;
 	private readonly unsubscribers: Array<() => void> = [];
 	private readonly onEventError?: (error: unknown) => void;
-	private rerunHandler?: InquiryRerunHandler;
-	private rerunCompletionHandler?: InquiryRerunCompletionHandler;
+	private rerunHandler?: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>;
+	private rerunCompletionHandler?: (pending: ArtifactRerunRecord) => Promise<ArtifactRecord>;
 	private readonly rerunListeners = new Set<(result: ArtifactRerunResult) => void>();
 	private readonly activeReruns = new Set<string>();
 	private eventTail: Promise<void> = Promise.resolve();
 	private disposed = false;
+	private readonly projects = new Map<string, InquiryService>();
+	private readonly options: InquiryServiceOptions;
 
 	constructor(options: InquiryServiceOptions = {}) {
+		this.options = options;
 		this.onEventError = options.onEventError;
 		this.rerunHandler = options.rerunHandler;
+		if (options.projectsDir) {
+			this.enabled = true;
+			if (options.eventSource) this.attachEventSource(options.eventSource);
+			return;
+		}
 		if (!options.inquiryDir) {
 			this.enabled = false;
 			return;
@@ -194,11 +224,7 @@ export class InquiryService implements InquiryServicePort {
 		if (source.onComputeEvent) {
 			attached.push(
 				source.onComputeEvent((event) => {
-					this.enqueue(async () =>
-						this.recordComputeEvent(
-							source.enrichComputeEvent ? await source.enrichComputeEvent(event) : event,
-						),
-					);
+					this.enqueue(async () => this.recordComputeEvent(source.enrichComputeEvent ? await source.enrichComputeEvent(event) : event));
 				}),
 			);
 		}
@@ -206,6 +232,13 @@ export class InquiryService implements InquiryServicePort {
 			attached.push(
 				source.onTaskTerminal((event) => {
 					this.enqueue(() => this.recordTaskTerminal(event));
+				}),
+			);
+		}
+		if (source.onDecision) {
+			attached.push(
+				source.onDecision((event) => {
+					this.enqueue(() => this.recordDecision(event));
 				}),
 			);
 		}
@@ -220,7 +253,22 @@ export class InquiryService implements InquiryServicePort {
 
 	/** Record a terminal/collection compute event. Non-terminal progress is ignored. */
 	async recordComputeEvent(event: InquiryComputeEvent): Promise<void> {
+		if (this.options.projectsDir)
+			return this.project(event.projectId ?? this.options.projectId).recordComputeEvent({
+				...event,
+				projectId: event.projectId ?? this.options.projectId,
+			});
 		if (!this.domain || !this.storage) return;
+		if (event.type === "submitted") {
+			await this.recordDecision({
+				id: `compute-submit:${event.jobId}`,
+				kind: "compute-submit",
+				summary: `Submitted compute job ${event.jobId}`,
+				basis: [`job:${event.jobId}`, event.id],
+				at: event.at,
+				projectId: event.projectId,
+			});
+		}
 		if (
 			event.type !== "collected" &&
 			event.type !== "cancelled" &&
@@ -237,24 +285,24 @@ export class InquiryService implements InquiryServicePort {
 			event.artifacts ?? event.manifest?.entries,
 			eventAt,
 			event.status === "succeeded" || event.type === "collected" ? "deliverable" : "intermediate",
-			"remote",
-			event.runId ?? event.jobId,
-			event.sessionId,
-			event.turn,
-			event.runProvenance,
+				"remote",
+				event.runId ?? event.jobId,
+				event.sessionId,
+				event.turn,
+				event.runProvenance,
 		);
 		const attempt: AttemptRecord = {
 			id: `compute:${executionId}`,
-			schemaVersion: 1,
+			schemaVersion: 2,
 			projectId: this.storage.projectId,
 			hypothesisIds: [],
 			parameters: {
 				source: "compute",
 				jobId: event.jobId,
-				...(event.hostId ? { hostId: event.hostId } : {}),
 				...(event.runId ? { runId: event.runId } : {}),
 				eventType: event.type,
 				status: event.status ?? null,
+				...(event.hostId ? { hostId: event.hostId } : {}),
 				...(event.parameters ?? {}),
 			},
 			artifactIds,
@@ -263,16 +311,22 @@ export class InquiryService implements InquiryServicePort {
 			enteredReport: false,
 			startedAt: asIso(event.startedAt ?? event.at),
 			finishedAt: eventAt,
-			...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
-			...(event.sessionId ? { sessionId: event.sessionId } : {}),
-			...(event.turn !== undefined ? { turn: event.turn } : {}),
-			...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
+				...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
+				...(event.sessionId ? { sessionId: event.sessionId } : {}),
+				...(event.turn !== undefined ? { turn: event.turn } : {}),
+				...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
 		};
 		await this.domain.recordAttempt(attempt);
+		await this.associateReceipts([`job:${event.jobId}`, `run:${executionId}`], artifactIds);
 	}
 
 	/** Record a terminal task/workflow event and its verified artifact metadata. */
 	async recordTaskTerminal(event: InquiryTaskTerminalEvent): Promise<void> {
+		if (this.options.projectsDir)
+			return this.project(event.projectId ?? this.options.projectId).recordTaskTerminal({
+				...event,
+				projectId: event.projectId ?? this.options.projectId,
+			});
 		if (!this.domain || !this.storage) return;
 		if (!TERMINAL_TASK_STATUSES.has(event.status)) return;
 		this.assertProject(event.projectId);
@@ -292,13 +346,12 @@ export class InquiryService implements InquiryServicePort {
 		);
 		const attempt: AttemptRecord = {
 			id: `task:${executionId}`,
-			schemaVersion: 1,
+			schemaVersion: 2,
 			projectId: this.storage.projectId,
 			hypothesisIds: [],
 			parameters: {
 				source: "task",
 				taskId: event.taskId,
-				...(event.sessionId ? { sessionId: event.sessionId } : {}),
 				...(event.runId ? { runId: event.runId } : {}),
 				status: event.status,
 				...(event.parameters ?? {}),
@@ -309,31 +362,96 @@ export class InquiryService implements InquiryServicePort {
 			enteredReport: false,
 			startedAt: asIso(event.startedAt ?? event.at),
 			finishedAt: eventAt,
-			...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
-			...(event.sessionId ? { sessionId: event.sessionId } : {}),
-			...(event.turn !== undefined ? { turn: event.turn } : {}),
-			...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
+				...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
+				...(event.sessionId ? { sessionId: event.sessionId } : {}),
+				...(event.turn !== undefined ? { turn: event.turn } : {}),
+				...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
 		};
 		await this.domain.recordAttempt(attempt);
+		await this.associateReceipts([`task:${event.taskId}`, `run:${executionId}`], artifactIds);
 	}
 
-	/** Return the project projection only; no ledger mutation or file access occurs beyond the read. */
-	async readOnlySnapshot(): Promise<InquiryReadOnlySnapshot | undefined> {
-		if (!this.domain) return undefined;
-		const [state, snapshot] = await Promise.all([this.domain.readOnlyState(), this.domain.snapshot()]);
-		return { ...state, attempts: snapshot.attempts };
+	async recordDecision(event: InquiryDecisionEvent | DecisionRecord): Promise<void> {
+		if (this.options.projectsDir) {
+			const projectId = event.projectId ?? this.options.projectId;
+			if (!projectId) throw new Error("A project identity is required for a decision");
+			const project = this.project(projectId);
+			return project.recordDecision({ ...event, id: `${this.projectKey(projectId)}:${event.id}` });
+		}
+		if (!this.domain || !this.storage) return;
+		if (event.projectId && event.projectId !== this.storage.projectId)
+			throw new Error(`Inquiry decision belongs to another project: ${event.projectId}`);
+		const record: DecisionRecord =
+			"schemaVersion" in event
+				? event
+				: {
+						id: event.id,
+						schemaVersion: 2,
+						projectId: this.storage.projectId,
+						kind: event.kind,
+						summary: event.summary,
+						basis: [...new Set(event.basis ?? [])],
+						affectedArtifactIds: [...new Set(event.affectedArtifactIds ?? [])],
+						status: "active",
+						createdAt: asIso(event.at),
+					};
+		const snapshot = await this.storage.snapshot();
+		const related = snapshot.artifacts.filter((item) =>
+			record.basis.some(
+				(basis) => basis === `${item.source.kind}:${item.source.id}` || basis === `run:${item.runId}`,
+			),
+		);
+		await this.domain.recordDecision({
+			...record,
+			affectedArtifactIds: [...new Set([...record.affectedArtifactIds, ...related.map((item) => item.id)])],
+		});
 	}
 
-	async listArtifacts(): Promise<readonly ArtifactRecord[]> {
-		if (!this.domain) return [];
-		return (await this.domain.snapshot()).artifacts;
+	listDecisions(projectId?: string): Promise<readonly DecisionRecord[]> {
+		if (this.options.projectsDir) return this.project(projectId).listDecisions(projectId);
+		return this.domain?.listDecisions(projectId) ?? Promise.resolve([]);
 	}
 
-	async artifactProvenance(artifactId: string): Promise<ArtifactProvenance | undefined> {
-		return this.domain?.artifactProvenance(artifactId);
+	revokeDecision(id: string, reason: string): Promise<DecisionRecord> {
+		if (this.options.projectsDir) return this.projectForDecision(id).revokeDecision(id, reason);
+		if (!this.domain) return Promise.reject(new Error("Inquiry service is unavailable"));
+		const domain = this.domain;
+		const operation = this.eventTail.then(() => domain.revokeDecision(id, reason));
+		this.eventTail = operation.then(
+			() => {},
+			() => {},
+		);
+		return operation;
+	}
+
+	reviewDecisionArtifacts(id: string, reason: string): Promise<DecisionRecord> {
+		return this.confirmDecision(id, reason);
+	}
+
+	confirmDecision(id: string, reason: string): Promise<DecisionRecord> {
+		if (this.options.projectsDir) return this.projectForDecision(id).confirmDecision(id, reason);
+		if (!this.domain) return Promise.reject(new Error("Inquiry service is unavailable"));
+		const domain = this.domain;
+		const operation = this.eventTail.then(() => domain.confirmDecision(id, reason));
+		this.eventTail = operation.then(
+			() => {},
+			() => {},
+		);
+		return operation;
+	}
+
+	listArtifacts(): Promise<readonly ArtifactRecord[]> {
+		if (this.options.projectsDir) return this.project(this.options.projectId).listArtifacts();
+		return this.domain ? this.domain.snapshot().then((snapshot) => snapshot.artifacts) : Promise.resolve([]);
+	}
+
+	artifactProvenance(artifactId: string): Promise<ArtifactProvenance | undefined> {
+		if (this.options.projectsDir) return this.project(this.options.projectId).artifactProvenance(artifactId);
+		return this.domain?.artifactProvenance(artifactId) ?? Promise.resolve(undefined);
 	}
 
 	async rerunArtifact(artifactId: string): Promise<ArtifactRerunResult> {
+		if (this.options.projectsDir) return this.project(this.options.projectId).rerunArtifact(artifactId);
 		if (!this.domain) throw new Error("Inquiry service is unavailable");
 		const result = await this.domain.rerunArtifact(artifactId);
 		this.emitRerun(result);
@@ -344,12 +462,12 @@ export class InquiryService implements InquiryServicePort {
 		return result;
 	}
 
-	setRerunHandler(handler: InquiryRerunHandler): void {
+	setRerunHandler(handler: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>): void {
 		this.rerunHandler = handler;
 		this.domain?.setRerunHandler(handler);
 	}
 
-	setRerunCompletionHandler(handler: InquiryRerunCompletionHandler): void {
+	setRerunCompletionHandler(handler: (pending: ArtifactRerunRecord) => Promise<ArtifactRecord>): void {
 		this.rerunCompletionHandler = handler;
 		if (this.domain) void this.resumePendingReruns();
 	}
@@ -359,25 +477,9 @@ export class InquiryService implements InquiryServicePort {
 		return () => this.rerunListeners.delete(handler);
 	}
 
-	/** Wait until all host events observed so far have finished writing. */
-	async drainEvents(): Promise<void> {
-		await this.eventTail;
-	}
-
-	dispose(): void {
-		if (this.disposed) return;
-		this.disposed = true;
-		for (const unsubscribe of [...this.unsubscribers]) unsubscribe();
-		if (this.storage) void this.storage.close();
-	}
-
 	private emitRerun(result: ArtifactRerunResult): void {
 		for (const listener of this.rerunListeners) {
-			try {
-				listener(result);
-			} catch (error) {
-				this.onEventError?.(error);
-			}
+			try { listener(result); } catch (error) { this.onEventError?.(error); }
 		}
 	}
 
@@ -387,8 +489,7 @@ export class InquiryService implements InquiryServicePort {
 	}
 
 	private async processRerun(pending: ArtifactRerunRecord): Promise<void> {
-		if (this.disposed || !this.domain || !this.rerunCompletionHandler || this.activeReruns.has(pending.id))
-			return;
+		if (this.disposed || !this.domain || !this.rerunCompletionHandler || this.activeReruns.has(pending.id)) return;
 		this.activeReruns.add(pending.id);
 		try {
 			const running = await this.domain.markRerunRunning(pending.id);
@@ -398,16 +499,10 @@ export class InquiryService implements InquiryServicePort {
 			if (result) this.emitRerun(result);
 		} catch (error) {
 			try {
-				const result = await this.domain.completeRerun(pending.id, {
-					error: error instanceof Error ? error.message : String(error),
-				});
+				const result = await this.domain.completeRerun(pending.id, { error: error instanceof Error ? error.message : String(error) });
 				if (result) this.emitRerun(result);
-			} catch (completionError) {
-				this.onEventError?.(completionError);
-			}
-		} finally {
-			this.activeReruns.delete(pending.id);
-		}
+			} catch (completionError) { this.onEventError?.(completionError); }
+		} finally { this.activeReruns.delete(pending.id); }
 	}
 
 	private toRerunResult(record: ArtifactRerunRecord): ArtifactRerunResult {
@@ -421,6 +516,79 @@ export class InquiryService implements InquiryServicePort {
 			...(record.difference ? { difference: record.difference } : {}),
 			...(record.error ? { error: record.error } : {}),
 		};
+	}
+
+	private projectKey(projectId: string): string {
+		return createHash("sha256").update(projectId).digest("hex").slice(0, 32);
+	}
+
+	private project(projectId?: string): InquiryService {
+		if (!projectId?.trim() || !this.options.projectsDir) throw new Error("A project identity is required");
+		const key = this.projectKey(projectId);
+		let service = this.projects.get(key);
+		if (!service) {
+			const root = join(this.options.projectsDir, key);
+			this.options.storageRegistry?.registerDiscoveredRoot(
+				"inquiry-ledger",
+				join(root, "ledger.sqlite"),
+				"inquiry/ledger",
+				"private",
+				2,
+			);
+			service = new InquiryService({ inquiryDir: root, projectId, onEventError: this.onEventError, ...(this.rerunHandler ? { rerunHandler: this.rerunHandler } : {}) });
+			this.projects.set(key, service);
+		}
+		return service;
+	}
+
+	private projectForDecision(id: string): InquiryService {
+		const key = id.split(":")[0] ?? "";
+		if (!this.options.projectsDir || !/^[a-f0-9]{32}$/.test(key))
+			throw new Error("Invalid project decision id");
+		const cached = this.projects.get(key);
+		if (cached) return cached;
+		const path = join(this.options.projectsDir, key, "ledger.sqlite");
+		if (!existsSync(path)) throw new Error("Decision project not found");
+		const database = new DatabaseSync(path, { readOnly: true });
+		try {
+			const meta = database.prepare("SELECT project_id FROM inquiry_meta LIMIT 1").get();
+			if (typeof meta?.project_id !== "string" || this.projectKey(meta.project_id) !== key)
+				throw new Error("Invalid project ledger");
+			return this.project(meta.project_id);
+		} finally {
+			database.close();
+		}
+	}
+
+	private async associateReceipts(basis: readonly string[], artifactIds: readonly string[]): Promise<void> {
+		if (!this.domain || !artifactIds.length) return;
+		for (const decision of await this.domain.listDecisions()) {
+			if (decision.basis.some((item) => basis.includes(item)))
+				await this.domain.associateDecisionArtifacts(decision.id, artifactIds);
+		}
+	}
+
+	/** Return the project projection only; no ledger mutation or file access occurs beyond the read. */
+	async readOnlySnapshot(projectId?: string): Promise<InquiryReadOnlySnapshot | undefined> {
+		await this.drainEvents();
+		if (this.options.projectsDir) return projectId ? this.project(projectId).readOnlySnapshot() : undefined;
+		if (!this.domain) return undefined;
+		const [state, snapshot] = await Promise.all([this.domain.readOnlyState(), this.domain.snapshot()]);
+		return { ...state, attempts: snapshot.attempts };
+	}
+
+	/** Wait until all host events observed so far have finished writing. */
+	async drainEvents(): Promise<void> {
+		await this.eventTail;
+		await Promise.all([...this.projects.values()].map((project) => project.drainEvents()));
+	}
+
+	dispose(): void {
+		if (this.disposed) return;
+		this.disposed = true;
+		for (const unsubscribe of [...this.unsubscribers]) unsubscribe();
+		for (const project of this.projects.values()) project.dispose();
+		if (this.storage) void this.storage.close();
 	}
 
 	private enqueue(work: () => Promise<void>): void {
@@ -502,7 +670,7 @@ export class InquiryService implements InquiryServicePort {
 			`${kind}:${executionId}:${entry.path.replaceAll("\\", "/")}:${sha256.toLowerCase()}`;
 		return {
 			id,
-			schemaVersion: 1,
+			schemaVersion: 2,
 			projectId: this.storage?.projectId ?? "",
 			location: entry.location ?? defaultLocation,
 			path: entry.path,

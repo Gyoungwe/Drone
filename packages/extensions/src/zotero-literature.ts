@@ -239,6 +239,17 @@ export async function runZoteroSave(pi, params, ctx, signal, deps = {}) {
 		taskId: consent.taskId || null,
 		milestoneId: consent.milestoneId || null,
 	};
+	if (SAVE_BOUND_STATUSES.has(receipt.status))
+		pi.events?.emit?.("drone:decision-record/v1", {
+			id: `zotero-write:${receipt.zoteroKey || receipt.doi}`,
+			kind: "zotero-write",
+			summary: `Zotero write receipt for ${receipt.doi}`,
+			basis: [
+				receipt.zoteroKey || receipt.doi,
+				...(receipt.journal?.operationId ? [receipt.journal.operationId] : []),
+			],
+			at: new Date().toISOString(),
+		});
 	if (params.run_dir) {
 		try {
 			receipt.journal = await recordZoteroWrite({ cwd: ctx.cwd, runDir: params.run_dir, receipt });

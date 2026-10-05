@@ -29,7 +29,8 @@ export type PublicationFailureCode =
 	| "answer-too-large"
 	| "protocol-budget"
 	| "tool-loop-stopped"
-	| "metacognitive-inconsistency";
+	| "metacognitive-inconsistency"
+	| "artifact-pending-review";
 
 export interface PublicationVerification {
 	sources?: unknown;
@@ -77,6 +78,8 @@ export const publicationNotices: Readonly<Record<PublicationFailureCode, string>
 		"【任务阶段已暂停】本阶段达到工具或上下文安全预算。已保存的结果不会因此删除；查看任务执行记录后可继续，无需新建对话。继续前先核对结果未知的操作，不要重复安装、导入或上传。",
 	"metacognitive-inconsistency":
 		"报告、方法、证据标签或诊断与宿主观察不一致；草稿没有发布。请按下面的差异修正报告或重新运行当前工作流。",
+	"artifact-pending-review":
+		"引用的产物正在等待复核；草稿没有发布。请重新生成受影响产物或完成现有审核。",
 };
 
 const advisoryNotices: Partial<Record<PublicationFailureCode, string>> = {

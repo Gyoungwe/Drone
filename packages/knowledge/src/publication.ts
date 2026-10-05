@@ -254,7 +254,9 @@ export function registerAnswerPublication(
 		const evaluation = evaluateMetacognitivePublication(text, snapshot);
 		if (!evaluation.ok)
 			throw Object.assign(new Error("Metacognitive publication checks failed"), {
-			code: "metacognitive-inconsistency",
+			code: evaluation.failures.some((failure) => failure.code === "artifact-pending-review")
+				? "artifact-pending-review"
+				: "metacognitive-inconsistency",
 			paths: evaluation.failures.map((item) => item.path).filter(Boolean).slice(0, 6),
 			metacognition: evaluation,
 			verified: { metacognition: evaluation },

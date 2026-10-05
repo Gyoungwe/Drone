@@ -16,7 +16,7 @@
 			"output": "knowledge-extension.mjs",
 			"status": "generated",
 			"sourceSha256": "809a5be02436faea7bd05fab84d9ddfd94444194b425d94acb9ffb72d34940be",
-			"outputSha256": "95a816e01fe456cf7343e40df2e19b07dab8b84c67a66b785d2c01e995d55dd1"
+			"outputSha256": "1408cc4bc051e0e0b792625d7debd01bbcb5980e460d3d1558fd7fe1371a606e"
 		},
 		"obsidian-workbench": {
 			"source": "obsidian-workbench.ts",
@@ -78,8 +78,8 @@
 			"source": "zotero-literature.ts",
 			"output": "zotero-literature.mjs",
 			"status": "generated",
-			"sourceSha256": "e61d7412d90a844fba28f266d0cedc09defa08b634a86e09197a5e6b3a63c37b",
-			"outputSha256": "e5d6388adc08d3c7ac29b767aea412a65cad18ebd3ecf532022e239b733ef4a8"
+			"sourceSha256": "4c3f0981bd99d0e133db4d4ad155e8671cb4807ee9cec4528d3e0744999b8f06",
+			"outputSha256": "176c820b2d3e5cd504bee5d3d571f4c2a6fea450445bcffe11f003b8a39fafa5"
 		}
 	},
 	"legacyOutputs": []

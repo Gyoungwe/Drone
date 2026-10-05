@@ -549,6 +549,14 @@ Host observations only. For substantial execution, first do read-only preparatio
           send("\u4F60\u6CA1\u6709\u786E\u8BA4\uFF0C\u4EFB\u52A1\u4E0D\u4F1A\u5F00\u59CB\u3002\u60F3\u6267\u884C\u7684\u65F6\u5019\u518D\u70B9\u4E00\u6B21\u5C31\u884C\u3002");
           return;
         }
+        const authorizedTask = journal.view().tasks.find((task) => task.id === input.taskId);
+        pi.events?.emit?.("drone:decision-record/v1", {
+          id: `task-authorization:${input.taskId}:${input.revision}`,
+          kind: "task-authorization",
+          summary: authorizedTask?.authorizationSummary || authorizedTask?.goal || "Task authorization approved",
+          basis: [`task:${input.taskId}`, `revision:${input.revision}`],
+          at: (/* @__PURE__ */ new Date()).toISOString()
+        });
         send("\u5DF2\u786E\u8BA4\uFF0C\u63A5\u4E0B\u6765\u4F1A\u81EA\u52A8\u505A\u5B8C\u5E76\u4EA4\u4ED8\u7ED3\u679C\u3002\u4F60\u968F\u65F6\u53EF\u4EE5\u505C\uFF1B\u8981\u505A\u8BA1\u5212\u4E4B\u5916\u7684\u4E8B\u4ECD\u4F1A\u5148\u95EE\u4F60\u3002");
         continueAuthorized(ctx);
         return;
@@ -568,6 +576,14 @@ Host observations only. For substantial execution, first do read-only preparatio
           const accepted = await askAuthorization({ ...input, action: "ask-authorization" }, ctx);
           send();
           if (accepted) {
+            if (action?.kind === "rebind")
+              pi.events?.emit?.("drone:decision-record/v1", {
+                id: `rebind:${input.taskId}:${input.actionId}`,
+                kind: "rebind",
+                summary: action.title || "Rebind approved",
+                basis: [`task:${input.taskId}`, `action:${input.actionId}`],
+                at: (/* @__PURE__ */ new Date()).toISOString()
+              });
             journal.command({ taskId: input.taskId, revision: journal.view().revision, action: "select" });
             continueAuthorized(ctx);
           }

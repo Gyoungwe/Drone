@@ -80,6 +80,8 @@ export interface SessionExtensionDependencies {
 	onEvent: (sessionId: string, event: SessionEvent) => void;
 	registerLiveChild?: (sessionId: string, control: LiveChildControl) => () => void;
 	setMcpStatus: (cwd: string, status: McpStatus) => void;
+	/** Successful agent-made decisions emitted by first-party task/literature extensions. */
+	onDecision?: (sessionId: string, event: unknown) => void;
 }
 
 /** Build host-owned tools once per session. This module is the only place where
@@ -153,6 +155,9 @@ export function buildSessionExtensionFactories(
 		pi.events.on("pi-mcp-adapter/status/v1", (payload) => {
 			if (!payload || typeof payload !== "object") return;
 			deps.setMcpStatus(cwd, payload as McpStatus);
+		});
+		pi.events.on("drone:decision-record/v1", (payload) => {
+			deps.onDecision?.(cwd, payload);
 		});
 	});
 	if (deps.permissionGates !== false && deps.permissionExtension !== false) {

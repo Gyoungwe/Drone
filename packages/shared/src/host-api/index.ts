@@ -1,3 +1,4 @@
+export * from "../decisions";
 export * from "./app";
 export * from "./compute";
 export * from "./define";

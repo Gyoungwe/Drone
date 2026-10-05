@@ -28,7 +28,7 @@
 		},
 		"index.mjs": {
 			"source": "packages/knowledge/src/index.ts",
-			"sha256": "9c3555cd17962d7061ec97bc33069cfe7aaf826ed4aeb9e93cd661fbd924380e"
+			"sha256": "5f35f711233eb65e95a5b2b6f8f531e8294417d4a340afd90c715cc815d73efc"
 		},
 		"layout.mjs": {
 			"source": "packages/knowledge/src/layout.ts",
@@ -40,7 +40,7 @@
 		},
 		"metacognitive-policy.mjs": {
 			"source": "packages/knowledge/src/metacognitive-policy.ts",
-			"sha256": "2a8a08848d6fbb5cca1473498f8fa9c932c16c33664722ed198dacd8b0afaf4b"
+			"sha256": "705efcac30b0f581022d1cad970b822c8fd83bfe34e2478440b3b92a7b455506"
 		},
 		"orchestration-policy.mjs": {
 			"source": "packages/knowledge/src/orchestration-policy.ts",
@@ -48,11 +48,11 @@
 		},
 		"publication-policy.mjs": {
 			"source": "packages/knowledge/src/publication-policy.ts",
-			"sha256": "c631f253b67cfae6fd554faa246f35c53e98a0763d87a2972f3c33e92c6b1128"
+			"sha256": "8877c02b0727a360a1657eb19f94ab7665c4ed8d3e773f9496b7f6d1c3763609"
 		},
 		"publication.mjs": {
 			"source": "packages/knowledge/src/publication.ts",
-			"sha256": "50a5af334893ff27fc542139a0fa4e45bff7508373d9c5807f819f4adbc5bf0e"
+			"sha256": "29651bcc3c9e7f5f9b36c1f079b5dd31697d3a95a55387a5c06e4e952e455202"
 		},
 		"review-policy.mjs": {
 			"source": "packages/knowledge/src/review-policy.ts",

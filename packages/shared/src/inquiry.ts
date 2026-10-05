@@ -9,7 +9,7 @@ export interface InquiryRunProvenance {
 }
 export interface InquiryArtifactRecord {
 	readonly id: string;
-	readonly schemaVersion: 1;
+	readonly schemaVersion: 1 | 2;
 	readonly projectId: string;
 	readonly location: "local" | "remote";
 	readonly path: string;
@@ -17,7 +17,7 @@ export interface InquiryArtifactRecord {
 	readonly sha256: string;
 	readonly source: { readonly kind: string; readonly id: string; readonly version?: string };
 	readonly purpose: "input" | "draft" | "intermediate" | "deliverable" | "evidence";
-	readonly status: "valid" | "superseded" | "cleanup-candidate" | "archived";
+	readonly status: "valid" | "superseded" | "cleanup-candidate" | "archived" | "pending-review";
 	readonly parentIds: readonly string[];
 	readonly runId?: string;
 	readonly sessionId?: string;
@@ -28,7 +28,7 @@ export interface InquiryArtifactRecord {
 }
 export interface InquiryAttemptRecord {
 	readonly id: string;
-	readonly schemaVersion: 1;
+	readonly schemaVersion: 1 | 2;
 	readonly projectId: string;
 	readonly hypothesisIds: readonly string[];
 	readonly codeFingerprint?: string;
@@ -56,7 +56,7 @@ export interface InquiryArtifactProvenance {
 }
 export interface InquiryArtifactRerunRecord {
 	readonly id: string;
-	readonly schemaVersion: 1;
+	readonly schemaVersion: 1 | 2;
 	readonly projectId: string;
 	readonly sourceArtifactId: string;
 	readonly jobId: string;

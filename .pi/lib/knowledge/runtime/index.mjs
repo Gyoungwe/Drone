@@ -117,7 +117,7 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-UZQ2XGMZ.mjs";
+} from "./chunks/chunk-LMQXTBOY.mjs";
 import {
   beginKnowledgeFlow,
   clearKnowledgeFlow,
@@ -136,7 +136,7 @@ import {
 } from "./chunks/chunk-GC2J7ECB.mjs";
 import {
   evaluateMetacognitivePublication
-} from "./chunks/chunk-CVD67FIU.mjs";
+} from "./chunks/chunk-IRZ35DB3.mjs";
 import {
   advisoryLine,
   advisoryNotice,
@@ -144,7 +144,7 @@ import {
   publicationFallbackNotice,
   publicationNotice,
   publicationNotices
-} from "./chunks/chunk-IDLVS5M7.mjs";
+} from "./chunks/chunk-U3GNWHNQ.mjs";
 import {
   advisoryCodes,
   readReviewMode,

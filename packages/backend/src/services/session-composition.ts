@@ -110,6 +110,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		userDataDir: options.userDataDir,
 		knowledgeDir: process.env.DRONE_KNOWLEDGE_DIR,
 		inquiryDir: options.inquiryDir,
+		inquiryProjectsDir: options.projectsDir,
 		logDir: process.env.PI_LOG_DIR,
 	});
 	service.projectTrust = new ProjectTrustService({

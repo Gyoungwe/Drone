@@ -1,9 +1,10 @@
 import {
 	AppContract,
 	ComputeContract,
+	DecisionsContract,
 	DiscoveryContract,
-	InquiryContract,
 	InstitutionalContract,
+	InquiryContract,
 	IpcChannels,
 	KnowledgeContract,
 	LanContract,
@@ -267,6 +268,18 @@ const discoveryClient = exposeContract(DiscoveryContract, {
 			method,
 		),
 });
+const decisionsClient = exposeContract(DecisionsContract, {
+	ipc: ipcRenderer,
+	channelForMethod: (_contract, method) =>
+		channelFrom(
+			{
+				list: IpcChannels.DecisionsList,
+				revoke: IpcChannels.DecisionsRevoke,
+				confirm: IpcChannels.DecisionsConfirm,
+			},
+			method,
+		),
+});
 const inquiryClient = exposeContract(InquiryContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
@@ -306,7 +319,8 @@ const knowledgeApi = {
 const invokeApi = {
 	...computeClient,
 	...discoveryClient,
-	...inquiryClient,
+		...decisionsClient,
+		...inquiryClient,
 	...knowledgeApi,
 	listSessionSubagents: invoke(subagentsClient, "list"),
 	dispatchSubagents: invoke(subagentsClient, "dispatch"),

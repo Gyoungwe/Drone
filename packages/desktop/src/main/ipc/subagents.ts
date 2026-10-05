@@ -12,6 +12,7 @@ export function registerSubagentsIpc(
 ): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
 	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
+	const inquiry = "inquiry" in backendOrServices ? backendOrServices.inquiry : undefined;
 	const legacy = backend as SessionServicePort & {
 		listSessionSubagents?: BackendServices["subagents"]["listSession"];
 		dispatchSubagents?: BackendServices["subagents"]["dispatch"];
@@ -38,7 +39,20 @@ export function registerSubagentsIpc(
 	if (!subagents) throw new Error("Subagent service is required by the desktop host");
 	const implementation: ContractImplementation<typeof SubagentsContract> = {
 		list: (sessionId) => subagents.listSession(sessionId),
-		dispatch: (sessionId, input) => subagents.dispatch(sessionId, input),
+		dispatch: async (sessionId, input) => {
+			const receipt = await subagents.dispatch(sessionId, input);
+			void inquiry
+				?.recordDecision({
+					id: `subagent-dispatch:${receipt.runs.map((run) => run.runId).join(",") || sessionId}`,
+					kind: "subagent-dispatch",
+					summary: `Dispatched ${receipt.runs.length} subagent run(s)`,
+					basis: receipt.runs.map((run) => run.runId),
+					projectId: receipt.runs[0]?.cwd,
+					at: new Date().toISOString(),
+				})
+				.catch(() => {});
+			return receipt;
+		},
 		abort: (runId) => subagents.abort(runId),
 		runs: (sessionId) => subagents.listRuns(sessionId),
 	};
