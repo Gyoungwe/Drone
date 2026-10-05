@@ -2,6 +2,7 @@ import { join } from "node:path";
 import type {
 	AskRequest,
 	DroneRuntime,
+	HarnessUnit,
 	LoginEventPayload,
 	McpStatus,
 	SessionEvent,
@@ -70,6 +71,8 @@ export interface SessionServiceOptions {
 	permissionExtension?: boolean;
 	/** 是否注册模型上下文合同与 compact checkpoint 扩展（默认 true）。 */
 	harnessContext?: boolean;
+	/** 独立 harness 单元开关；缺省全部启用，harnessContext=false 仍优先关闭全部。 */
+	harness?: Partial<Record<HarnessUnit, boolean>>;
 	/** 是否启用项目信任门控（false 时所有项目自动信任，项目资源直接加载；供无人值守场景用） */
 	projectTrust?: boolean;
 	/** 是否内置 webfetch 工具（默认 true）；传对象可配置 CIDR 放行 */
@@ -245,6 +248,7 @@ export class SessionService extends SessionServiceApi {
 			permissionGates: this.options.permissionGates,
 			permissionExtension: this.options.permissionExtension,
 			harnessContext: this.options.harnessContext,
+			harness: this.options.harness,
 			subagentPreferBuiltin: this.options.subagentPreferBuiltin,
 			webFetch: this.options.webFetch,
 			tools: this.options.tools,

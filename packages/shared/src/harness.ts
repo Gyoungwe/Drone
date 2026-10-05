@@ -9,6 +9,67 @@ export const HARNESS_STATUS_CUSTOM_TYPE = "drone-harness-status-v1" as const;
 export const HARNESS_REDIRECT_CUSTOM_TYPE = "drone-harness-redirect-v1" as const;
 export const HARNESS_GUARD_CUSTOM_TYPE = "drone-harness-guard-v1" as const;
 
+export type HarnessUnit = "context" | "recall" | "guard" | "delivery" | "familyPrompt";
+
+export const HARNESS_UNITS = [
+	"context",
+	"recall",
+	"guard",
+	"delivery",
+	"familyPrompt",
+] as const satisfies readonly HarnessUnit[];
+
+export type HarnessUnitState = Record<HarnessUnit, boolean>;
+
+export interface ResolvedHarnessUnits {
+	units: HarnessUnitState;
+	ignored: string[];
+}
+
+const HARNESS_UNIT_BY_KEY: Record<string, HarnessUnit> = {
+	context: "context",
+	recall: "recall",
+	guard: "guard",
+	delivery: "delivery",
+	familyprompt: "familyPrompt",
+};
+
+/** Resolve the backwards-compatible and per-unit harness switches. */
+export function resolveHarnessUnits(
+	input: {
+		harnessContext?: boolean;
+		harness?: Partial<Record<HarnessUnit, boolean>>;
+	},
+	env = "",
+): ResolvedHarnessUnits {
+	const legacyDisabled = input.harnessContext === false;
+	const units = Object.fromEntries(HARNESS_UNITS.map((unit) => [unit, !legacyDisabled])) as HarnessUnitState;
+	if (!legacyDisabled) {
+		for (const unit of HARNESS_UNITS) {
+			const value = input.harness?.[unit];
+			if (typeof value === "boolean") units[unit] = value;
+		}
+	}
+	const ignored = new Set<string>();
+	const disabled = env
+		.split(",")
+		.map((value) => value.trim())
+		.filter(Boolean)
+		.map((value) => value.replace(/\s+/gu, "").toLowerCase());
+	const disableAll = disabled.includes("all");
+	if (!legacyDisabled && disableAll) for (const unit of HARNESS_UNITS) units[unit] = false;
+	for (const key of disabled) {
+		if (key === "all") continue;
+		const unit = HARNESS_UNIT_BY_KEY[key];
+		if (unit) {
+			if (!legacyDisabled) units[unit] = false;
+		} else {
+			ignored.add(key);
+		}
+	}
+	return { units, ignored: [...ignored] };
+}
+
 export interface HarnessPosture {
 	effort: "normal" | "ultra";
 	delegation: "off" | "light" | "standard" | "high";
@@ -215,7 +276,7 @@ const FAMILY_GUIDANCE: Record<HarnessModelFamily, string> = {
 };
 
 export function renderHarnessPromptLayer(
-	family: HarnessModelFamily,
+	family: HarnessModelFamily | null,
 	posture: HarnessPosture,
 	role?: HarnessSpecialistRole,
 	skills: readonly string[] = [],
@@ -230,7 +291,7 @@ export function renderHarnessPromptLayer(
 				.join("\n")}`
 		: "";
 	return [
-		`Model family guidance (${family}): ${FAMILY_GUIDANCE[family]}`,
+		family ? `Model family guidance (${family}): ${FAMILY_GUIDANCE[family]}` : "",
 		HARNESS_CONTRACT,
 		SCIENCE_CONTRACT,
 		RESPONSE_CONTRACT,
