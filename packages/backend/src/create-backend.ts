@@ -52,6 +52,7 @@ import {
 } from "./services/inquiry-compute";
 import type { InstitutionalServicePort } from "./services/institutional";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
+import { LocalExecutionRecorder } from "./services/local-execution";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
@@ -222,6 +223,27 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		projectId: defaultProjectId,
 		legacyInquiryDir: options.legacyInquiryDir,
 	});
+	const localExecution = new LocalExecutionRecorder({
+		inquiry,
+		getCwd: (sessionId) => sessions.registry.get(sessionId)?.cwd,
+		getProjectId: (sessionId) =>
+			canonicalProjectId(
+				sessions.registry.get(sessionId)?.cwd ??
+					options.inquiryProjectId ??
+					options.defaultCwd ??
+					process.cwd(),
+			),
+		scheduleReview: (sessionId, paths) =>
+			runtime.knowledge.reviewer?.schedule({
+				sessionId,
+				snapshot: { deliverables: paths.map((path) => ({ id: path, path })) },
+				trigger: "deliverable-write",
+			}),
+	});
+	const detachLocalExecution = sessions.onEvent((sessionId, event) =>
+		localExecution.observe(sessionId, event),
+	);
+	runtime.registerDisposable?.({ dispose: detachLocalExecution });
 	const discovery = new DiscoveryService({
 		projectId: canonicalProjectId(options.discoveryProjectId ?? "default"),
 		projectRoot: options.discoveryProjectRoot ?? options.defaultCwd ?? process.cwd(),
@@ -230,6 +252,8 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		...(inquiry.domain ? { inquiry: inquiry.domain } : {}),
 		...(options.discoveryAuthorize ? { authorize: options.discoveryAuthorize } : {}),
 		...(options.discoveryRunner ? { runner: options.discoveryRunner } : {}),
+		onExecution: (event) =>
+			localExecution.recordKernelExecution({ ...event, projectId: canonicalProjectId(event.cwd) }),
 	});
 	const dataDesign =
 		options.computeDataDesign ??

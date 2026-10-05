@@ -34,9 +34,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 	const [rerunningId, setRerunningId] = useState<string | null>(null);
 	const [rerunResults, setRerunResults] = useState<Record<string, RerunNotice>>({});
 
-	const inquiryScope = `${sessionId ?? ""}:${cwd ?? ""}`;
 	useEffect(() => {
-		void inquiryScope;
 		let live = true;
 		setProvenanceById({});
 		setExpandedId(null);
@@ -52,7 +50,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 		return () => {
 			live = false;
 		};
-	}, [inquiryScope, cwd]);
+	}, [cwd]);
 	useEffect(() => {
 		const unsubscribe = getPi().onRerunUpdated((result) => {
 			const key = rerunStatusKey(result.status);
@@ -327,7 +325,7 @@ export function ArtifactProvenanceCard({
 								: ""}
 						</button>
 					)}
-					{provenance.reproducibility === "reproducible" && onRerun && (
+					{record.location === "remote" && provenance.reproducibility === "reproducible" && onRerun && (
 						<button
 							type="button"
 							className="panel-action ml-2"

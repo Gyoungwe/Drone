@@ -13,6 +13,7 @@ import { AskDialog } from "../session/AskDialog";
 import { useAgentActive } from "../session/session-status";
 import { ExampleTaskCards } from "../tasks/ExampleTaskCards";
 import { decisionConfirmationChoice, decisionConfirmationRequest } from "./decision-confirm";
+import { stableEmptyConfirmedIds, stableEmptyDecisions } from "./decision-projection";
 
 function TodoLine({ todo, spinnerPaused }: { todo: TodoItem; spinnerPaused: boolean }) {
 	if (todo.status === "completed") {
@@ -61,8 +62,8 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 	useEffect(() => {
 		let disposed = false;
 		if (!projectId) {
-			setDecisions([]);
-			setConfirmedIds(new Set());
+			setDecisions(stableEmptyDecisions);
+			setConfirmedIds(stableEmptyConfirmedIds);
 			return () => {
 				disposed = true;
 			};
@@ -72,11 +73,11 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 			.then((next) => {
 				if (!disposed) {
 					setDecisions(next);
-					setConfirmedIds(new Set());
+					setConfirmedIds(stableEmptyConfirmedIds);
 				}
 			})
 			.catch(() => {
-				if (!disposed) setDecisions([]);
+				if (!disposed) setDecisions(stableEmptyDecisions);
 			});
 		return () => {
 			disposed = true;

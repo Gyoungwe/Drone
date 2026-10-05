@@ -85,10 +85,27 @@ export interface InquiryTaskTerminalEvent {
 	readonly projectId?: string;
 }
 
+/** Host-verified provenance for a local script or discovery execution. */
+export interface InquiryLocalExecutionEvent {
+	readonly id: string;
+	readonly projectId?: string;
+	readonly sessionId?: string;
+	readonly turn?: number;
+	readonly toolName: string;
+	readonly startedAt?: number | string;
+	readonly finishedAt?: number | string;
+	readonly codeFingerprint: string;
+	readonly parameters: Readonly<Record<string, string | number | boolean | null>>;
+	readonly runProvenance: RunProvenanceSummary;
+	readonly outcome: AttemptOutcome;
+	readonly artifacts?: readonly InquiryEventArtifact[];
+}
+
 /** Host callbacks keep the domain package independent from compute/tasks. */
 export interface InquiryEventSource {
 	readonly onComputeEvent?: (handler: (event: InquiryComputeEvent) => void) => () => void;
 	readonly onTaskTerminal?: (handler: (event: InquiryTaskTerminalEvent) => void) => () => void;
+	readonly onLocalExecution?: (handler: (event: InquiryLocalExecutionEvent) => void) => () => void;
 	readonly onDecision?: (handler: (event: InquiryDecisionEvent) => void) => () => void;
 	readonly enrichComputeEvent?: (event: InquiryComputeEvent) => Promise<InquiryComputeEvent>;
 }
@@ -138,6 +155,7 @@ export interface InquiryServicePort {
 	readonly domain?: DomainInquiryService;
 	recordComputeEvent(event: InquiryComputeEvent): Promise<void>;
 	recordTaskTerminal(event: InquiryTaskTerminalEvent): Promise<void>;
+	recordLocalExecution(event: InquiryLocalExecutionEvent): Promise<void>;
 	recordDecision(event: InquiryDecisionEvent | DecisionRecord): Promise<void>;
 	listDecisions(projectId?: string): Promise<readonly DecisionRecord[]>;
 	revokeDecision(id: string, reason: string): Promise<DecisionRecord>;
@@ -252,6 +270,9 @@ export class InquiryService implements InquiryServicePort {
 					this.enqueue(() => this.recordTaskTerminal(event));
 				}),
 			);
+		}
+		if (source.onLocalExecution) {
+			attached.push(source.onLocalExecution((event) => this.enqueue(() => this.recordLocalExecution(event))));
 		}
 		if (source.onDecision) {
 			attached.push(
@@ -391,6 +412,46 @@ export class InquiryService implements InquiryServicePort {
 		};
 		await this.domain.recordAttempt(attempt);
 		await this.associateReceipts([`task:${event.taskId}`, `run:${executionId}`], artifactIds);
+	}
+
+	/** Record provenance for host-local bash/kernel work without retaining source or output contents. */
+	async recordLocalExecution(event: InquiryLocalExecutionEvent): Promise<void> {
+		if (this.options.projectsDir) {
+			const projectId = canonicalProjectId(event.projectId ?? this.options.projectId);
+			return this.project(projectId).recordLocalExecution({ ...event, projectId });
+		}
+		if (!this.domain || !this.storage) return;
+		this.assertProject(event.projectId);
+		const finishedAt = asIso(event.finishedAt ?? event.startedAt);
+		const artifactIds = await this.recordArtifacts(
+			"run",
+			event.id,
+			event.artifacts,
+			finishedAt,
+			"deliverable",
+			"local",
+			event.id,
+			event.sessionId,
+			event.turn,
+			event.runProvenance,
+		);
+		await this.domain.recordAttempt({
+			id: `local:${event.id}`,
+			schemaVersion: 2,
+			projectId: this.storage.projectId,
+			hypothesisIds: [],
+			codeFingerprint: event.codeFingerprint,
+			parameters: { source: "local", tool: event.toolName, ...event.parameters },
+			artifactIds,
+			outcome: event.outcome,
+			enteredReport: false,
+			startedAt: asIso(event.startedAt ?? event.finishedAt),
+			finishedAt,
+			...(event.sessionId ? { sessionId: event.sessionId } : {}),
+			...(event.turn !== undefined ? { turn: event.turn } : {}),
+			runProvenance: event.runProvenance,
+		});
+		await this.associateReceipts([`tool:${event.id}`, `run:${event.id}`], artifactIds);
 	}
 
 	async recordDecision(event: InquiryDecisionEvent | DecisionRecord): Promise<void> {
