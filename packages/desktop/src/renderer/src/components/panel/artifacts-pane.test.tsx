@@ -33,7 +33,7 @@ const record: InquiryArtifactRecord = {
 	id: "artifact-1",
 	schemaVersion: 1,
 	projectId: "project-1",
-	location: "local",
+	location: "remote",
 	path: "results/report.tsv",
 	bytes: 12,
 	sha256: "a".repeat(64),
@@ -121,6 +121,16 @@ describe("ArtifactProvenanceCard", () => {
 			}),
 		);
 		expect(partial).not.toContain("panel.artifactProvenance.rerun");
+		const local = renderToStaticMarkup(
+			createElement(ArtifactProvenanceCard, {
+				record: { ...record, location: "local" },
+				provenance: provenance("reproducible"),
+				expanded: true,
+				onToggle: () => {},
+				onRerun: () => {},
+			}),
+		);
+		expect(local).not.toContain("panel.artifactProvenance.rerun");
 	});
 
 	it("renders persisted submitted, running, reproduced, inconsistent, and failed states", () => {

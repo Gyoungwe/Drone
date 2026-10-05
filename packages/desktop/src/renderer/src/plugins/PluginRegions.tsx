@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { useMemo } from "react";
 import { useUiPluginsStore } from "../stores/ui-plugins";
 import { PluginBoundary } from "./PluginBoundary";
 import { EMPTY_CONTRIBUTIONS } from "./RegionHost";
@@ -17,13 +18,15 @@ export interface PluginEntry {
 export function usePluginEntries(region: RegionName): PluginEntry[] {
 	const list = useUiPluginRegistry((s) => s.contributions[region]) ?? EMPTY_CONTRIBUTIONS;
 	const masterOn = useUiPluginsStore((s) => s.config.enabled);
-	if (!masterOn || list.length === 0) return EMPTY_ENTRIES;
-	return list.map((c) => ({
-		id: pluginTabId(c.pluginName, c.id),
-		pluginName: c.pluginName,
-		title: c.title || c.id,
-		contribution: c,
-	}));
+	return useMemo(() => {
+		if (!masterOn || list.length === 0) return EMPTY_ENTRIES;
+		return list.map((c) => ({
+			id: pluginTabId(c.pluginName, c.id),
+			pluginName: c.pluginName,
+			title: c.title || c.id,
+			contribution: c,
+		}));
+	}, [list, masterOn]);
 }
 const EMPTY_ENTRIES: PluginEntry[] = [];
 

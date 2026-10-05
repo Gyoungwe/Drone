@@ -115,6 +115,40 @@ describe("backend inquiry composition adapter", () => {
 		}
 	});
 
+	it("records local execution provenance without source or output contents", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-local-"));
+		try {
+			const service = new InquiryService({ inquiryDir: root, projectId: root });
+			await service.recordLocalExecution({
+				id: "tool-1",
+				projectId: root,
+				sessionId: "s1",
+				toolName: "bash",
+				codeFingerprint: "f".repeat(64),
+				parameters: { source: "local", seed: 1 },
+				runProvenance: {
+					workflow: "local",
+					modules: ["bash"],
+					environment: { interpreterVersion: "Python 3" },
+				},
+				outcome: "succeeded",
+				artifacts: [{ path: "results/plot.png", bytes: 3, sha256: "a".repeat(64), location: "local" }],
+			});
+			const snapshot = await service.readOnlySnapshot(root);
+			expect(snapshot?.attempts).toEqual([
+				expect.objectContaining({
+					id: "local:tool-1",
+					codeFingerprint: "f".repeat(64),
+					artifactIds: [expect.any(String)],
+				}),
+			]);
+			expect(snapshot?.artifacts[0]).toMatchObject({ location: "local", path: "results/plot.png" });
+			service.dispose();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
 	it("serializes event writes and reports invalid project events", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-queue-"));
 		const errors: unknown[] = [];
