@@ -117,6 +117,7 @@ export interface InquiryServicePort {
 	recordDecision(event: InquiryDecisionEvent | DecisionRecord): Promise<void>;
 	listDecisions(projectId?: string): Promise<readonly DecisionRecord[]>;
 	revokeDecision(id: string, reason: string): Promise<DecisionRecord>;
+	confirmDecision(id: string, reason: string): Promise<DecisionRecord>;
 	reviewDecisionArtifacts(id: string, reason: string): Promise<DecisionRecord>;
 	readOnlySnapshot(projectId?: string): Promise<InquiryReadOnlySnapshot | undefined>;
 	drainEvents(): Promise<void>;
@@ -379,10 +380,14 @@ export class InquiryService implements InquiryServicePort {
 	}
 
 	reviewDecisionArtifacts(id: string, reason: string): Promise<DecisionRecord> {
-		if (this.options.projectsDir) return this.projectForDecision(id).reviewDecisionArtifacts(id, reason);
+		return this.confirmDecision(id, reason);
+	}
+
+	confirmDecision(id: string, reason: string): Promise<DecisionRecord> {
+		if (this.options.projectsDir) return this.projectForDecision(id).confirmDecision(id, reason);
 		if (!this.domain) return Promise.reject(new Error("Inquiry service is unavailable"));
 		const domain = this.domain;
-		const operation = this.eventTail.then(() => domain.reviewDecisionArtifacts(id, reason));
+		const operation = this.eventTail.then(() => domain.confirmDecision(id, reason));
 		this.eventTail = operation.then(
 			() => {},
 			() => {},

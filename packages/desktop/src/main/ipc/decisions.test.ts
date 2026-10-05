@@ -25,7 +25,7 @@ describe("registerDecisionsIpc", () => {
 		mocks.fromWebContents.mockReturnValue(mocks.window);
 	});
 
-	it("lists and revokes through the inquiry port without external adapters", async () => {
+	it("lists, revokes and confirms through the inquiry port without external adapters", async () => {
 		const decision = {
 			id: "decision-1",
 			schemaVersion: 2,
@@ -44,6 +44,7 @@ describe("registerDecisionsIpc", () => {
 				status: "revoked",
 				revokedAt: "2026-01-02T00:00:00.000Z",
 			})),
+			confirmDecision: vi.fn(async () => decision),
 		};
 		const unbind = registerDecisionsIpc(inquiry as any);
 		const frame = {};
@@ -54,8 +55,12 @@ describe("registerDecisionsIpc", () => {
 		).toMatchObject({
 			status: "revoked",
 		});
+		expect(await mocks.handlers.get(IpcChannels.DecisionsConfirm)!(event, "decision-1", "confirmed")).toEqual(
+			decision,
+		);
 		expect(inquiry.listDecisions).toHaveBeenCalledWith("project-1");
 		expect(inquiry.revokeDecision).toHaveBeenCalledWith("decision-1", "review");
+		expect(inquiry.confirmDecision).toHaveBeenCalledWith("decision-1", "confirmed");
 		unbind();
 	});
 });

@@ -224,6 +224,50 @@ describe("backend inquiry composition adapter", () => {
 		}
 	});
 
+	it("confirms a revoked task receipt without invoking external adapters", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-confirm-"));
+		const zotero = { write: vi.fn() };
+		const compute = { submit: vi.fn() };
+		try {
+			const service = new InquiryService({ inquiryDir: root, projectId: "project-confirm" });
+			await service.recordDecision({
+				id: "task-auth-confirm",
+				kind: "task-authorization",
+				summary: "Authorized task",
+				basis: ["task:task-confirm"],
+				projectId: "project-confirm",
+			});
+			await service.recordTaskTerminal({
+				id: "terminal-confirm",
+				taskId: "task-confirm",
+				runId: "run-confirm",
+				status: "succeeded",
+				at: "2026-01-01T00:00:00.000Z",
+				artifacts: [{ path: "runs/task-confirm/report.md", bytes: 1, sha256: "a".repeat(64) }],
+			});
+			const decision = (await service.listDecisions())[0];
+			if (!decision) throw new Error("confirmation decision fixture failed");
+			await service.revokeDecision(decision.id, "Review");
+			await expect(service.confirmDecision(decision.id, "")).rejects.toThrow("human review reason");
+			await service.confirmDecision(decision.id, "Checked by user");
+			expect((await service.readOnlySnapshot())?.artifacts[0]).toMatchObject({
+				status: "valid",
+				reviews: [
+					expect.objectContaining({
+						decisionId: decision.id,
+						confirmedBy: "user",
+						confirmedAt: expect.any(String),
+					}),
+				],
+			});
+			expect(zotero.write).not.toHaveBeenCalled();
+			expect(compute.submit).not.toHaveBeenCalled();
+			service.dispose();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
 	it("records every decision kind from successful receipts without touching external adapters", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-decisions-"));
 		const zotero = { write: vi.fn() };

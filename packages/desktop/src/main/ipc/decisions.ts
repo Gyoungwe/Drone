@@ -26,12 +26,15 @@ export function registerDecisionsIpc(backendOrInquiry: BackendServices | Inquiry
 	const implementation: ContractImplementation<typeof DecisionsContract> = {
 		list: async (projectId) => (await inquiry.listDecisions(projectId)).map(transport),
 		revoke: async (id, reason) => transport(await inquiry.revokeDecision(id, reason)),
+		confirm: async (id, reason) => transport(await inquiry.confirmDecision(id, reason)),
 	};
 	return bindContract(DecisionsContract, implementation, {
 		channelForMethod: (_contract, method) =>
-			({ list: IpcChannels.DecisionsList, revoke: IpcChannels.DecisionsRevoke })[
-				method as keyof typeof DecisionsContract.methods
-			],
+			({
+				list: IpcChannels.DecisionsList,
+				revoke: IpcChannels.DecisionsRevoke,
+				confirm: IpcChannels.DecisionsConfirm,
+			})[method as keyof typeof DecisionsContract.methods],
 		beforeInvoke: (event) => requireMainFrame(event),
 	});
 }

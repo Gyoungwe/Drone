@@ -133,6 +133,7 @@ export const IpcChannels = {
 	DiscoveryEvaluations: "discovery:listEvaluations",
 	DecisionsList: "decisions:list",
 	DecisionsRevoke: "decisions:revoke",
+	DecisionsConfirm: "decisions:confirm",
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
 	ZoteroStatus: "zotero:status",

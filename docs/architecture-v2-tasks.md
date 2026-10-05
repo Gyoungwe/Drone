@@ -133,8 +133,8 @@
 
 ## B5 · 研究状态、元认知与工作流修复
 
-- [x] **B5a 研究状态基础**：新增 `@drone/inquiry` 领域包，提供 artifact、finding、question/prior、attempt 四本账、自动 lineage 校验、workspace run/result 晋升与 cleanup dry-run；SQLite `SqliteInquiryStorage` 使用独立表、事务、WAL/FULL 同步和 project 隔离；backend 组合根通过 `InquiryService` 注入并登记 `ledger.sqlite`。
-- [x] **B5b 元认知发布门禁**：publication projection 在发布前核对报告数字、引用产物校验和、方法与实际工作流/模块/参数、finding 标签及诊断漂移；不一致时失败关闭，并把通过的 finding 投影为可引用证据。
+- [x] **B5a 研究状态基础**：新增 `@drone/inquiry` 领域包，提供 artifact、finding、question/prior、attempt 和 agent decision 五本账、自动 lineage 校验、workspace run/result 晋升与 cleanup dry-run；SQLite `SqliteInquiryStorage` 使用独立表、事务、WAL/FULL 同步和 project 隔离；backend 组合根通过 `InquiryService` 注入并登记 `ledger.sqlite`。
+- [x] **B5b 元认知发布门禁**：publication projection 在发布前核对报告数字、引用产物校验和、方法与实际工作流/模块/参数、finding 标签及诊断漂移，并拦截实际引用的待复核产物；不一致时失败关闭，并把通过的 finding 投影为可引用证据。
 - [x] **B5c 工作流编排与有限修复**：`WorkflowSpec` 先验与模块注册门禁、编译/type-check/preview、失败与负结果检索、最多三次声明式自主修复；重复失败阻断，并记录“我替你决定的”变更。
 - [x] **B5d–B5f**：`@drone/discovery` 提供容器能力门控的 KernelSession、runs-only 导出、探索预算/先验与竞争解释、独立只读 critic、多路径稳健性记录，以及带数据集版本和基线的 BixBench/重新发现/不一致拦截/混杂发现/线索命中/核验耗时/重复失败评测；缺外部数据返回 `needs-data`，执行器失败返回 `blocked`。
 - [x] **B7**：`@drone/compute` 与 `@drone/shared` 提供内容寻址数据集、样本表与设计矩阵校验、受控公共数据抓取、分析计划/功效与最小可检测效应、偏离复核和确定性 RO-Crate 清单；校验失败在提交前阻断并保留可追溯记录。

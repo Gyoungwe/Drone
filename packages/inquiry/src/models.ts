@@ -32,10 +32,18 @@ export interface ArtifactRecord {
 	readonly parentIds: readonly string[];
 	/** Revocations still awaiting an explicit human review. */
 	readonly pendingReviewDecisionIds?: readonly string[];
-	readonly reviews?: readonly { decisionId: string; reason: string; at: string }[];
+	readonly reviews?: readonly ArtifactReview[];
 	readonly runId?: string;
 	readonly createdAt: string;
 	readonly updatedAt: string;
+}
+
+/** Explicit human acknowledgement of one revoked decision's artifact impact. */
+export interface ArtifactReview {
+	readonly decisionId: string;
+	readonly confirmedBy: "user";
+	readonly confirmedAt: string;
+	readonly reason: string;
 }
 
 export type FindingLabel = "exploratory" | "confirmatory";

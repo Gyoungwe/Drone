@@ -53,6 +53,10 @@ const RevokeArgs = Type.Tuple([
 	Type.String({ minLength: 1, maxLength: 256 }),
 	Type.String({ minLength: 1, maxLength: 2000 }),
 ]);
+const ConfirmArgs = Type.Tuple([
+	Type.String({ minLength: 1, maxLength: 256 }),
+	Type.String({ minLength: 1, maxLength: 2000 }),
+]);
 
 export const DecisionsContract = defineDomain("decisions", {
 	methods: {
@@ -62,6 +66,10 @@ export const DecisionsContract = defineDomain("decisions", {
 		},
 		revoke: {
 			args: RevokeArgs,
+			result: DecisionRecordSchema,
+		},
+		confirm: {
+			args: ConfirmArgs,
 			result: DecisionRecordSchema,
 		},
 	},

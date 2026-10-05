@@ -3,9 +3,9 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-WFZGUVGI.mjs";
+} from "./chunks/chunk-LMQXTBOY.mjs";
 import "./chunks/chunk-GC2J7ECB.mjs";
-import "./chunks/chunk-GVLY5KQR.mjs";
+import "./chunks/chunk-IRZ35DB3.mjs";
 import {
   advisoryLine,
   advisoryNotice,

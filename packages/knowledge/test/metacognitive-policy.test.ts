@@ -37,6 +37,28 @@ describe("metacognitive publication policy", () => {
 		expect(result.failures[0]).toMatchObject({ code: "artifact-pending-review" });
 	});
 
+	it("ignores pending artifacts that are not referenced by this publication", () => {
+		const result = evaluateMetacognitivePublication("A clean answer [[Runs/run-1/report]]", {
+			artifacts: [artifact(), { ...artifact("Runs/run-2/unused.md"), status: "pending-review" }],
+		});
+		expect(result).toMatchObject({ ok: true, failures: [] });
+	});
+
+	it("allows a cited artifact after user confirmation restores valid status", () => {
+		const result = evaluateMetacognitivePublication("Confirmed output [[Runs/run-1/report]]", {
+			artifacts: [
+				{
+					...artifact(),
+					status: "valid",
+					reviews: [
+						{ decisionId: "decision-1", confirmedBy: "user", confirmedAt: "2026-01-02T00:00:00.000Z" },
+					],
+				},
+			],
+		});
+		expect(result).toMatchObject({ ok: true, failures: [] });
+	});
+
 	it("blocks stale checksums, method drift and diagnostic drift together", () => {
 		const result = evaluateMetacognitivePublication("Used wrong method [[Runs/run-1/report]]", {
 			artifacts: [{ ...artifact(), currentSha256: "b".repeat(64) }],

@@ -43,6 +43,13 @@ describe("inquiry ledger records", () => {
 			"path must be a safe project-relative path",
 			"sha256 must be a 64-character hexadecimal digest",
 		]);
+		expect(
+			validateArtifactRecord(
+				artifact({
+					reviews: [{ decisionId: "", confirmedBy: "user", confirmedAt: "bad", reason: "" }],
+				}),
+			),
+		).toContain("artifact reviews must be user confirmations with valid timestamps");
 		expect(validateArtifactLineage(artifact({ parentIds: ["missing"] }), [])).toContain(
 			"missing parent artifact: missing",
 		);
@@ -180,6 +187,50 @@ describe("inquiry ledger records", () => {
 		expect(revoked.status).toBe("revoked");
 		const statuses = (await storage.snapshot()).artifacts.map((item) => item.status);
 		expect(statuses).toEqual(["pending-review", "pending-review", "pending-review"]);
+	});
+
+	it("confirms revoked artifacts as user-reviewed and records the confirmation", async () => {
+		const storage = new MemoryInquiryStorage("project-1");
+		const service = new InquiryService(storage);
+		await service.recordArtifact(artifact({ id: "review-root" }));
+		await service.recordArtifact(
+			artifact({
+				id: "review-child",
+				parentIds: ["review-root"],
+				path: "runs/task-1/run-1/review-child.tsv",
+			}),
+		);
+		await service.recordDecision(
+			decisionRecord({
+				id: "decision-review",
+				projectId: "project-1",
+				kind: "workflow-repair",
+				summary: "Repair changed the workflow",
+				affectedArtifactIds: ["review-root"],
+			}),
+		);
+		await service.revokeDecision("decision-review", "Please inspect");
+		const confirmed = await service.reviewDecisionArtifacts("decision-review", "I checked the outputs");
+		expect(confirmed.status).toBe("revoked");
+		const snapshot = await storage.snapshot();
+		expect(snapshot.artifacts).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: "review-root",
+					status: "valid",
+					pendingReviewDecisionIds: [],
+					reviews: [
+						{
+							decisionId: "decision-review",
+							confirmedBy: "user",
+							confirmedAt: expect.any(String),
+							reason: "I checked the outputs",
+						},
+					],
+				}),
+				expect.objectContaining({ id: "review-child", status: "valid", pendingReviewDecisionIds: [] }),
+			]),
+		);
 	});
 
 	it("legacy SQLite metadata migrates and preserves old records", async () => {

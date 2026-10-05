@@ -270,7 +270,14 @@ const discoveryClient = exposeContract(DiscoveryContract, {
 const decisionsClient = exposeContract(DecisionsContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
-		channelFrom({ list: IpcChannels.DecisionsList, revoke: IpcChannels.DecisionsRevoke }, method),
+		channelFrom(
+			{
+				list: IpcChannels.DecisionsList,
+				revoke: IpcChannels.DecisionsRevoke,
+				confirm: IpcChannels.DecisionsConfirm,
+			},
+			method,
+		),
 });
 const knowledgeApi = {
 	setKnowledgeSpecialistSettings: invoke(knowledgeClient, "setSpecialistSettings"),

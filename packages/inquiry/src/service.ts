@@ -171,11 +171,7 @@ export class InquiryService {
 	}
 
 	/** Explicit human acknowledgement; each independent revocation must be reviewed. */
-	async reviewDecisionArtifacts(
-		id: string,
-		reason: string,
-		now = new Date().toISOString(),
-	): Promise<DecisionRecord> {
+	async confirmDecision(id: string, reason: string, now = new Date().toISOString()): Promise<DecisionRecord> {
 		const decision = await this.storage.decisions.get(id);
 		if (decision?.status !== "revoked") throw new Error("Only revoked decisions can be reviewed");
 		if (!reason.trim()) throw new Error("A human review reason is required");
@@ -187,11 +183,23 @@ export class InquiryService {
 				...artifact,
 				status: pending.length ? "pending-review" : "valid",
 				pendingReviewDecisionIds: pending,
-				reviews: [...(artifact.reviews ?? []), { decisionId: id, reason, at: now }],
+				reviews: [
+					...(artifact.reviews ?? []),
+					{ decisionId: id, confirmedBy: "user", confirmedAt: now, reason },
+				],
 				updatedAt: now,
 			});
 		}
 		return decision;
+	}
+
+	/** Compatibility alias for host adapters that used the earlier review name. */
+	async reviewDecisionArtifacts(
+		id: string,
+		reason: string,
+		now = new Date().toISOString(),
+	): Promise<DecisionRecord> {
+		return this.confirmDecision(id, reason, now);
 	}
 
 	async cleanupDryRun(options: { readonly staleBefore?: string } = {}): Promise<CleanupDryRun> {

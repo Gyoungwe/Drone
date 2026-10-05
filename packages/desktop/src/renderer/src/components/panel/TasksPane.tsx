@@ -1,4 +1,4 @@
-import type { DecisionRecord, TodoItem } from "@drone/shared";
+import type { AskResponse, DecisionRecord, TodoItem } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
@@ -9,8 +9,10 @@ import { useSessionsStore } from "../../stores/sessions";
 import { EMPTY_TODOS, selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { TaskRow } from "../chat/TaskRow";
 import { TodoCompleteIcon, TodoPendingIcon, TodoSpinnerIcon } from "../icons";
+import { AskDialog } from "../session/AskDialog";
 import { useAgentActive } from "../session/session-status";
 import { ExampleTaskCards } from "../tasks/ExampleTaskCards";
+import { decisionConfirmationChoice, decisionConfirmationRequest } from "./decision-confirm";
 
 function TodoLine({ todo, spinnerPaused }: { todo: TodoItem; spinnerPaused: boolean }) {
 	if (todo.status === "completed") {
@@ -50,11 +52,17 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 	const t = useT();
 	const [decisions, setDecisions] = useState<readonly DecisionRecord[]>([]);
 	const [busyId, setBusyId] = useState<string | null>(null);
+	const [confirmedIds, setConfirmedIds] = useState<ReadonlySet<string>>(new Set());
+	const [confirmation, setConfirmation] = useState<{
+		decision: DecisionRecord;
+		action: "revoke" | "confirm";
+	} | null>(null);
 
 	useEffect(() => {
 		let disposed = false;
 		if (!projectId) {
 			setDecisions([]);
+			setConfirmedIds(new Set());
 			return () => {
 				disposed = true;
 			};
@@ -62,7 +70,10 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 		void getPi()
 			.list(projectId)
 			.then((next) => {
-				if (!disposed) setDecisions(next);
+				if (!disposed) {
+					setDecisions(next);
+					setConfirmedIds(new Set());
+				}
 			})
 			.catch(() => {
 				if (!disposed) setDecisions([]);
@@ -72,20 +83,40 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 		};
 	}, [projectId]);
 
-	const revoke = async (decision: DecisionRecord) => {
-		if (
-			decision.status !== "active" ||
-			busyId ||
-			!window.confirm(t("panel.decisionConfirm", { summary: decision.summary }))
-		)
-			return;
+	const apply = async () => {
+		const pending = confirmation;
+		if (!pending || busyId) return;
+		setConfirmation(null);
+		const { decision, action } = pending;
 		setBusyId(decision.id);
 		try {
-			const revoked = await getPi().revoke(decision.id, t("panel.decisionRevokeReason"));
-			setDecisions((current) => current.map((item) => (item.id === revoked.id ? revoked : item)));
+			if (action === "revoke") {
+				const revoked = await getPi().revoke(decision.id, t("panel.decisionRevokeReason"));
+				setDecisions((current) => current.map((item) => (item.id === revoked.id ? revoked : item)));
+			} else {
+				await getPi().confirm(decision.id, t("panel.decisionConfirmReview"));
+				setConfirmedIds((current) => new Set(current).add(decision.id));
+			}
 		} finally {
 			setBusyId(null);
 		}
+	};
+	const confirmationRequest = confirmation
+		? decisionConfirmationRequest(confirmation.decision, confirmation.action, {
+				title: t("panel.decisionConfirmTitle"),
+				message: t("panel.decisionConfirmMessage", {
+					action:
+						confirmation.action === "revoke"
+							? t("panel.decisionRevoke").toLowerCase()
+							: t("panel.decisionConfirmReview").toLowerCase(),
+				}),
+				confirm: t("panel.decisionConfirmAction"),
+				cancel: t("panel.decisionCancel"),
+			})
+		: null;
+	const respondConfirmation = async (_requestId: string, response: AskResponse) => {
+		if (decisionConfirmationChoice(response) === "confirm") await apply();
+		else setConfirmation(null);
 	};
 
 	return (
@@ -117,18 +148,28 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 										type="button"
 										className="shrink-0 text-[11px] text-err hover:underline disabled:opacity-50"
 										disabled={busyId !== null}
-										onClick={() => void revoke(decision)}
+										onClick={() => setConfirmation({ decision, action: "revoke" })}
 									>
 										{busyId === decision.id ? t("panel.decisionRevoking") : t("panel.decisionRevoke")}
 									</button>
+								) : confirmedIds.has(decision.id) ? (
+									<span className="shrink-0 text-[11px] text-ink-faint">{t("panel.decisionConfirmed")}</span>
 								) : (
-									<span className="shrink-0 text-[11px] text-ink-faint">{t("panel.decisionRevoked")}</span>
+									<button
+										type="button"
+										className="shrink-0 text-[11px] text-accent hover:underline disabled:opacity-50"
+										disabled={busyId !== null}
+										onClick={() => setConfirmation({ decision, action: "confirm" })}
+									>
+										{busyId === decision.id ? t("panel.decisionRevoking") : t("panel.decisionConfirmReview")}
+									</button>
 								)}
 							</div>
 						</li>
 					))}
 				</ul>
 			)}
+			{confirmationRequest && <AskDialog requests={[confirmationRequest]} onRespond={respondConfirmation} />}
 		</section>
 	);
 }

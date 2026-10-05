@@ -40,6 +40,22 @@ export function validateArtifactRecord(record: ArtifactRecord): readonly string[
 		errors.push("invalid status");
 	if (new Set(record.parentIds).size !== record.parentIds.length) errors.push("parentIds must be unique");
 	if (record.parentIds.some((id) => !nonEmpty(id))) errors.push("parentIds must be non-empty");
+	if (
+		record.pendingReviewDecisionIds?.some((id) => !nonEmpty(id)) ||
+		(record.pendingReviewDecisionIds &&
+			new Set(record.pendingReviewDecisionIds).size !== record.pendingReviewDecisionIds.length)
+	)
+		errors.push("pendingReviewDecisionIds must be unique and non-empty");
+	if (
+		record.reviews?.some(
+			(review) =>
+				!nonEmpty(review.decisionId) ||
+				review.confirmedBy !== "user" ||
+				!nonEmpty(review.reason) ||
+				!validDate(review.confirmedAt),
+		)
+	)
+		errors.push("artifact reviews must be user confirmations with valid timestamps");
 	if (record.runId !== undefined && !nonEmpty(record.runId)) errors.push("runId must be non-empty");
 	if (!validDate(record.createdAt) || !validDate(record.updatedAt))
 		errors.push("timestamps must be ISO dates");
