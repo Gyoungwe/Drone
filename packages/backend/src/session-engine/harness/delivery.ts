@@ -68,11 +68,21 @@ export function makeHarnessDeliveryExtension(
 					const data = { ...status, message: renderDeliveryStatus(status) };
 					pi.appendEntry(DELIVERY_TYPE, { fingerprint, status });
 					report?.(ctx.sessionManager.getSessionId(), "harness_delivery", data);
-					if (status.complete)
+					const completedMilestones =
+						view.tasks
+							.find((task) => task.id === view.activeTaskId)
+							?.milestones.filter((milestone) => milestone.state === "completed") ?? [];
+					if (completedMilestones.length)
 						review?.(ctx.sessionManager.getSessionId(), {
 							enabled: true,
 							body: "",
 							milestoneId: status.taskId,
+							deliverables: completedMilestones
+								.filter((milestone) => typeof milestone.acceptance.path === "string")
+								.map((milestone) => ({
+									id: milestone.id,
+									path: milestone.acceptance.path ?? undefined,
+								})),
 						});
 				} catch (error) {
 					log.warn("harness delivery failed", { error: String(error) });
