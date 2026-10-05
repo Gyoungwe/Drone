@@ -1,24 +1,7 @@
 import { createServer } from "node:http";
-import { execFileSync } from "node:child_process";
-import { WebSocket } from "ws";
-import { CdpPage, runScenario } from "./common.mjs";
+import { runScenario } from "./common.mjs";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function browserTarget(url) {
-	const version = JSON.parse(execFileSync("curl", ["-s", "http://127.0.0.1:" + (process.env.DRONE_CDP_PORT || 9224) + "/json/version"], { encoding: "utf8" }));
-	const socket = new WebSocket(version.webSocketDebuggerUrl);
-	await new Promise((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
-	let id = 0;
-	const result = await new Promise((resolve, reject) => {
-		const requestId = ++id;
-		const onMessage = (data) => { const message = JSON.parse(data.toString()); if (message.id !== requestId) return; socket.off("message", onMessage); if (message.error) reject(new Error(message.error.message)); else resolve(message.result); };
-		socket.on("message", onMessage);
-		socket.send(JSON.stringify({ id: requestId, method: "Target.createTarget", params: { url } }));
-	});
-	socket.close();
-	return result;
-}
 
 function startErrorServer(status) {
 	let requests = 0;
@@ -130,11 +113,11 @@ await runScenario("p5", async (page, result, step) => {
 		await page.waitForSelector('[data-testid="settings-dialog"] input[readonly]', 10_000);
 		const url = await page.eval('document.querySelector(\'[data-testid="settings-dialog"] input[readonly]\')?.value || null');
 		if (!url) return { ok: false, selectors: ['[data-testid="settings-dialog"] [role="switch"]', '[data-testid="settings-dialog"] input[readonly]'], tab, switchCount, url };
-		const created = await browserTarget(url);
+		await page.send("Page.navigate", { url });
 		await sleep(1_000);
-		const lanPage = await new CdpPage(url, created.targetId).open();
-		const dom = await lanPage.eval("(() => { const writes=[...document.querySelectorAll('button,input,textarea,[contenteditable=\"true\"],[role=\"textbox\"]')].filter(n=>{ if(n.matches('input[readonly]')) return false; const text=(n.textContent||'')+' '+(n.getAttribute('aria-label')||'')+' '+(n.getAttribute('title')||''); return /发送|写|编辑|删除|保存|提交|send|write|edit|delete|save|submit/i.test(text) || n.matches('textarea,[contenteditable=\"true\"],[role=\"textbox\"]'); }); return {textarea:document.querySelectorAll('textarea').length,send:document.querySelectorAll('[data-testid=\"composer-send\"],button[aria-label=\"发送\"],button[aria-label=\"Send\"]').length,writeControls:writes.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input').length}; })()");
-		await lanPage.close();
+		const dom = await page.eval("(() => { const writes=[...document.querySelectorAll('button,input,textarea,[contenteditable=\"true\"],[role=\"textbox\"]')].filter(n=>{ if(n.matches('input[readonly]')) return false; const text=(n.textContent||'')+' '+(n.getAttribute('aria-label')||'')+' '+(n.getAttribute('title')||''); return /发送|写|编辑|删除|保存|提交|send|write|edit|delete|save|submit/i.test(text) || n.matches('textarea,[contenteditable=\"true\"],[role=\"textbox\"]'); }); return {textarea:document.querySelectorAll('textarea').length,send:document.querySelectorAll('[data-testid=\"composer-send\"],button[aria-label=\"发送\"],button[aria-label=\"Send\"]').length,writeControls:writes.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input').length,url:location.href}; })()");
+		await page.send("Page.navigate", { url: "http://localhost:5173/" });
+		await sleep(1_000);
 		await page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
 		return { ok: Boolean(tab && dom.textarea === 0 && dom.send === 0 && dom.writeControls === 0), selectors: ['LAN page textarea', 'LAN page [data-testid="composer-send"]', 'LAN page button,input,[contenteditable]'], tab, dom };
 	});
