@@ -4,7 +4,9 @@ import {
 	emptyTranscript,
 	isAgentWorking,
 	type StreamingState,
+	type TaskView,
 	type TurnChanges,
+	type TurnRoute,
 	type UIMessage,
 	type UIToolCall,
 } from "@drone/shared";
@@ -160,6 +162,48 @@ describe("buildChatRows", () => {
 			.filter((r) => r.kind === "metaGroup")
 			.map((r) => r.key);
 		expect(keys).toEqual(["meta-s1-g0", "meta-s1-g1"]);
+	});
+
+	it("attaches the latest task snapshot to the latest route row", () => {
+		const route: TurnRoute = {
+			utterance: "继续处理当前任务",
+			intake: "continuation",
+			capabilities: ["coding"],
+			topics: ["task"],
+			direction: "coding",
+			stage: "execution",
+			contract: "继续当前任务",
+			primary: "coding",
+			reason: "沿用当前任务检查点",
+			unavailableStage: null,
+			comparison: false,
+			academic: false,
+			keptCheckpoint: true,
+			deferPhrase: true,
+			visiblePrimary: true,
+			landing: "workflow",
+			host: null,
+		};
+		const taskView: TaskView = {
+			version: 2,
+			revision: 3,
+			activeTaskId: null,
+			selectionRequired: false,
+			tasks: [],
+			limits: { stageCalls: 48, totalCalls: 192 },
+		};
+		const t = {
+			...emptyTranscript(),
+			messages: [assistant("", { id: "route-1", route }), assistant("", { id: "task-1", taskView })],
+		};
+		const rows = buildChatRows(t, "s1").filter((row) => row.kind === "message");
+		expect(rows).toHaveLength(1);
+		const row = rows[0];
+		if (row?.kind !== "message" || row.message.kind !== "assistant")
+			throw new Error("expected an embedded route message");
+		expect(row.message.route).toBe(route);
+		expect(row.message.taskView).toBe(taskView);
+		expect(row.taskPlacement).toBe("show");
 	});
 });
 

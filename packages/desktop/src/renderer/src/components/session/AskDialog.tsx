@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { Button } from "../ui/Button";
 import { confirmOptionIndex, isDangerAskOption, isSimpleConfirm, orderedAskOptions } from "./ask-simple";
+import { formatCardText } from "./format-card-text";
 
 type Drafts = Record<string, AskAnswer>;
 
@@ -29,10 +30,12 @@ function Recommendation({ question, t }: { question: AskQuestion; t: ReturnType<
 					</span>
 				)}
 			</div>
-			<p className="mt-1 text-[11px] leading-relaxed text-ink-2">{recommendation.reason}</p>
+			<p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-ink-2">
+				{formatCardText(recommendation.reason)}
+			</p>
 			{recommendation.basedOn?.length ? (
-				<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">
-					{t("ask.basedOn", { value: recommendation.basedOn.join(" · ") })}
+				<p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-ink-dim">
+					{formatCardText(t("ask.basedOn", { value: recommendation.basedOn.join(" · ") }))}
 				</p>
 			) : null}
 		</div>
@@ -127,7 +130,7 @@ export function AskDialog({
 					</div>
 					<div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
 						<p className="whitespace-pre-wrap break-words rounded-lg bg-hover px-3 py-2.5 text-[13px] leading-relaxed text-ink select-text">
-							{question.prompt}
+							{formatCardText(question.prompt)}
 						</p>
 						<Recommendation question={question} t={t} />
 						{error && <p className="mt-3 text-[11px] text-err">{error}</p>}
@@ -216,13 +219,18 @@ export function AskDialog({
 						const multi = item.type === "multi";
 						const textOnly = item.type === "text";
 						return (
-							<section key={item.id} className="space-y-2.5">
+							<section
+								key={item.id}
+								className="space-y-2.5 rounded-xl border border-border bg-surface px-3 py-3 shadow-soft"
+							>
 								<div className="flex items-start gap-2">
 									<span className="mt-0.5 rounded-md bg-hover px-1.5 py-0.5 text-[11px] font-medium text-ink-faint">
 										{item.label || `Q${questionIndex + 1}`}
 									</span>
 									<div className="min-w-0 flex-1">
-										<p className="text-[13px] font-medium leading-relaxed text-ink">{item.prompt}</p>
+										<p className="whitespace-pre-wrap text-[13px] font-medium leading-relaxed text-ink">
+											{formatCardText(item.prompt)}
+										</p>
 										{!textOnly && (
 											<p className="mt-0.5 text-[11px] text-ink-faint">
 												{multi ? t("ask.multiHint") : t("ask.singleHint")}
@@ -232,7 +240,7 @@ export function AskDialog({
 									</div>
 								</div>
 								<Recommendation question={item} t={t} />
-								<div className="grid gap-1.5 pl-8">
+								<div className="grid gap-1.5">
 									{!textOnly &&
 										item.options.map((option) => {
 											const active = selected.includes(option.value);
@@ -257,8 +265,8 @@ export function AskDialog({
 														)}
 													</div>
 													{option.description && (
-														<p className="mt-1 pl-6 text-[11px] leading-relaxed text-ink-dim">
-															{option.description}
+														<p className="mt-1 pl-6 whitespace-pre-wrap text-[11px] leading-relaxed text-ink-dim">
+															{formatCardText(option.description)}
 														</p>
 													)}
 													{option.preview && (
