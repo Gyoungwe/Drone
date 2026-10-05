@@ -25,6 +25,8 @@ export interface MetacognitiveArtifact {
 	/** Optional bounded text/number index supplied by the host. */
 	text?: string;
 	numbers?: readonly MetacognitiveArtifactNumber[];
+	/** Inquiry-derived status; only a missing reproducibility receipt is advisory. */
+	reproducibility?: "reproducible" | "partial" | "not-reproducible";
 }
 
 export interface MetacognitiveNumberClaim {
@@ -106,8 +108,16 @@ export interface MetacognitiveEvidenceFinding {
 export interface MetacognitiveEvaluation {
 	ok: boolean;
 	failures: MetacognitiveFailure[];
+	warnings: MetacognitiveWarning[];
 	/** Finding records are copied into the publication proof for citation. */
 	findings: MetacognitiveEvidenceFinding[];
+}
+
+export interface MetacognitiveWarning {
+	code: "artifact-not-reproducible";
+	subject: string;
+	detail: string;
+	path?: string;
 }
 
 const MAX_FAILURES = 16;
@@ -177,16 +187,21 @@ function addFailure(failures: MetacognitiveFailure[], failure: MetacognitiveFail
 	if (failures.length < MAX_FAILURES) failures.push(failure);
 }
 
+function addWarning(warnings: MetacognitiveWarning[], warning: MetacognitiveWarning): void {
+	if (warnings.length < 8) warnings.push(warning);
+}
+
 /** Compare a final answer with host-observed reports, workflows and findings. */
 export function evaluateMetacognitivePublication(
 	answer: string,
 	snapshot: unknown,
 ): MetacognitiveEvaluation {
 	if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
-		return { ok: true, failures: [], findings: [] };
+		return { ok: true, failures: [], warnings: [], findings: [] };
 	const input = snapshot as MetacognitiveSnapshot;
-	if (input.enabled === false) return { ok: true, failures: [], findings: [] };
+	if (input.enabled === false) return { ok: true, failures: [], warnings: [], findings: [] };
 	const failures: MetacognitiveFailure[] = [];
+	const warnings: MetacognitiveWarning[] = [];
 	const citations = citedPaths(answer);
 	const artifacts = new Map<string, MetacognitiveArtifact>();
 	for (const artifact of Array.isArray(input.artifacts) ? input.artifacts : []) {
@@ -204,6 +219,13 @@ export function evaluateMetacognitivePublication(
 			});
 			return undefined;
 		}
+		if (artifact.reproducibility === "not-reproducible")
+			addWarning(warnings, {
+				code: "artifact-not-reproducible",
+				subject,
+				detail: `Cited artifact has no recorded code fingerprint or run provenance: ${bounded(path, 240)}`,
+				path,
+			});
 		if (!SHA256.test(String(artifact.sha256 || "")) || !SHA256.test(String(artifact.currentSha256 || ""))) {
 			addFailure(failures, {
 				code: "artifact-checksum-stale",
@@ -366,5 +388,5 @@ export function evaluateMetacognitivePublication(
 			});
 	}
 
-	return { ok: failures.length === 0, failures, findings: findingEvidence };
+	return { ok: failures.length === 0, failures, warnings, findings: findingEvidence };
 }

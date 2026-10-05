@@ -148,4 +148,38 @@ describe("backend inquiry composition adapter", () => {
 		await service.drainEvents();
 		service.dispose();
 	});
+
+	it("projects provenance metadata without returning file contents", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-provenance-"));
+		try {
+			const service = new InquiryService({ inquiryDir: root, projectId: "project-provenance" });
+			await service.recordComputeEvent({
+				id: "compute-provenance",
+				jobId: "job-provenance",
+				type: "collected",
+				status: "succeeded",
+				at: 5_000,
+				runId: "run-provenance",
+				codeFingerprint: "code-fingerprint",
+				runProvenance: { workflow: "nf-core/rnaseq", containerDigests: ["sha256:test"] },
+				sessionId: "session-1",
+				turn: 4,
+				parameters: { seed: 7 },
+				artifacts: [{ path: "results/output.tsv", bytes: 10, sha256: "a".repeat(64) }],
+			});
+			const artifact = (await service.listArtifacts())[0];
+			expect(artifact).toBeDefined();
+			const result = await service.artifactProvenance(artifact?.id ?? "");
+			expect(result).toMatchObject({
+				reproducibility: "reproducible",
+				sourceSessionId: "session-1",
+				sourceTurn: 4,
+				runProvenance: { workflow: "nf-core/rnaseq" },
+			});
+			expect(result).not.toHaveProperty("content");
+			service.dispose();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
 });

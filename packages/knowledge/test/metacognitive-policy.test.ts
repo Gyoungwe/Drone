@@ -69,4 +69,15 @@ describe("metacognitive publication policy", () => {
 			{ id: "f1", text: "A note", label: "validation", citationPaths: ["Runs/run-1/report.md"] },
 		]);
 	});
+
+	it("returns a warning, without blocking, for a cited non-reproducible artifact", () => {
+		const result = evaluateMetacognitivePublication("A note [[Runs/run-1/report]]", {
+			artifacts: [{ ...artifact(), reproducibility: "not-reproducible" }],
+		});
+		expect(result.ok).toBe(true);
+		expect(result.failures).toEqual([]);
+		expect(result.warnings).toEqual([
+			expect.objectContaining({ code: "artifact-not-reproducible", path: "Runs/run-1/report.md" }),
+		]);
+	});
 });

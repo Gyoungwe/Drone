@@ -8,6 +8,7 @@ import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
 import { registerComputeIpc } from "./compute";
 import { registerDiscoveryIpc } from "./discovery";
+import { registerInquiryIpc } from "./inquiry";
 import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
 import { registerLanIpc } from "./lan";
@@ -51,6 +52,7 @@ export function registerIpc(
 	registerPackagesIpc(backendServices);
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);
+	registerInquiryIpc(backendServices);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）

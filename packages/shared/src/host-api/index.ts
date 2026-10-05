@@ -2,6 +2,7 @@ export * from "./app";
 export * from "./compute";
 export * from "./define";
 export * from "./discovery";
+export * from "./inquiry";
 export * from "./institutional";
 export * from "./knowledge";
 export * from "./lan";

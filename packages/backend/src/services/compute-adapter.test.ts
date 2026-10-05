@@ -1,7 +1,7 @@
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { StorageRegistry } from "../storage/registry";
 import type { ComputeExecutor } from "./compute";
 import { ComputeService } from "./compute";
@@ -135,6 +135,44 @@ describe("default compute adapter", () => {
 		});
 		await expect(adapter.cancelJob("job-2")).rejects.toThrow("denied");
 		expect(cancellations).toBe(0);
+		await adapter.dispose?.();
+		await service.dispose();
+	});
+
+	it("resubmits the persisted WorkflowSpec through the existing approval path", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-compute-rerun-"));
+		const submittedSpecs: unknown[] = [];
+		const executor: ComputeExecutor = {
+			submit: async (spec) => {
+				submittedSpecs.push(spec);
+				return { status: "succeeded" };
+			},
+			status: async () => ({ status: "succeeded" }),
+		};
+		const service = new ComputeService({
+			storage: new StorageRegistry(),
+			agentDir: root,
+			executor,
+			pollIntervalMs: 60_000,
+		});
+		const authorizeRemoteOperation = vi.fn(async () => {});
+		const adapter = createComputeServiceAdapter({ service, agentDir: root, authorizeRemoteOperation });
+		await adapter.saveHost({ alias: "local", displayName: "Local", kind: "local" });
+		await service.submit({
+			jobId: "original-job",
+			hostAlias: "local",
+			workflow: { version: 1, modules: [], steps: [] },
+			resources: { cpus: 2 },
+		});
+		const rerun = await adapter.resubmitJob?.("original-job");
+		expect(rerun?.id).not.toBe("original-job");
+		expect(submittedSpecs).toHaveLength(2);
+		expect(submittedSpecs[1]).toMatchObject({
+			hostAlias: "local",
+			workflow: { version: 1, modules: [], steps: [] },
+			resources: { cpus: 2 },
+		});
+		expect(authorizeRemoteOperation).toHaveBeenCalledWith({ kind: "submit_job", hostId: "local" });
 		await adapter.dispose?.();
 		await service.dispose();
 	});

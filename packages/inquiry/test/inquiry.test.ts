@@ -10,6 +10,7 @@ import {
 	MemoryInquiryStorage,
 	planWorkspacePromotion,
 	registerInquiryStorage,
+	reproducibilityStatus,
 	SqliteInquiryStorage,
 	validateArtifactLineage,
 	validateArtifactRecord,
@@ -37,6 +38,110 @@ const artifact = (overrides: Partial<ArtifactRecord> = {}): ArtifactRecord => ({
 });
 
 describe("inquiry ledger records", () => {
+	it("classifies the three reproducibility states without side effects", () => {
+		expect(reproducibilityStatus("code-1", { workflow: "rnaseq" })).toBe("reproducible");
+		expect(reproducibilityStatus("code-1", undefined)).toBe("partial");
+		expect(reproducibilityStatus(undefined, { workflow: "rnaseq" })).toBe("partial");
+		expect(reproducibilityStatus(undefined, undefined)).toBe("not-reproducible");
+		expect(reproducibilityStatus("", {})).toBe("not-reproducible");
+		expect(reproducibilityStatus("code-1", {})).toBe("partial");
+	});
+
+	it("returns bounded parent provenance and truncates deep lineage", async () => {
+		const storage = new MemoryInquiryStorage("project-1");
+		const service = new InquiryService(storage);
+		for (let index = 0; index <= 22; index += 1) {
+			await service.recordArtifact(
+				artifact({
+					id: `artifact-${index}`,
+					parentIds: index === 0 ? [] : [`artifact-${index - 1}`],
+					path: `runs/task-1/run-1/output-${index}.tsv`,
+				}),
+			);
+		}
+		const provenance = await service.artifactProvenance("artifact-22");
+		expect(provenance?.parentChain).toHaveLength(20);
+		expect(provenance?.parentChain[0]?.id).toBe("artifact-21");
+		expect(provenance?.parentChain.at(-1)?.id).toBe("artifact-2");
+		expect(provenance?.parentChainTruncated).toBe(true);
+	});
+
+	it("reruns reproducible artifacts and supersedes a changed result", async () => {
+		const storage = new MemoryInquiryStorage("project-1");
+		const service = new InquiryService(storage);
+		await service.recordArtifact(
+			artifact({ id: "source", runProvenance: { workflow: "rnaseq" }, sessionId: "s1", turn: 2 }),
+		);
+		await service.recordAttempt({
+			id: "attempt-1",
+			schemaVersion: 1,
+			projectId: "project-1",
+			hypothesisIds: [],
+			codeFingerprint: "code-1",
+			parameters: { hostId: "local" },
+			artifactIds: ["source"],
+			outcome: "succeeded",
+			enteredReport: false,
+			startedAt: "2026-01-01T00:00:00.000Z",
+		});
+		service.setRerunHandler(async (provenance) => ({
+			...provenance.artifact,
+			id: "rerun-1",
+			sha256: "b".repeat(64),
+			parentIds: [provenance.artifact.id],
+			createdAt: "2026-01-02T00:00:00.000Z",
+			updatedAt: "2026-01-02T00:00:00.000Z",
+		}));
+		const result = await service.rerunArtifact("source");
+		expect(result).toMatchObject({ status: "superseded", artifactId: "rerun-1" });
+		expect((await storage.artifacts.get("source"))?.status).toBe("superseded");
+		expect((await storage.artifacts.get("rerun-1"))?.sha256).toBe("b".repeat(64));
+	});
+
+	it("marks a matching rerun as reproduced without superseding the original", async () => {
+		const storage = new MemoryInquiryStorage("project-1");
+		const service = new InquiryService(storage);
+		await service.recordArtifact(artifact({ id: "same", runProvenance: { workflow: "rnaseq" } }));
+		await service.recordAttempt({
+			id: "attempt-same",
+			schemaVersion: 1,
+			projectId: "project-1",
+			hypothesisIds: [],
+			codeFingerprint: "code-1",
+			parameters: {},
+			artifactIds: ["same"],
+			outcome: "succeeded",
+			enteredReport: false,
+			startedAt: "2026-01-01T00:00:00.000Z",
+		});
+		service.setRerunHandler(async (provenance) => ({ ...provenance.artifact, id: "same-rerun" }));
+		expect(await service.rerunArtifact("same")).toMatchObject({
+			status: "reproduced",
+			artifactId: "same-rerun",
+		});
+		expect((await storage.artifacts.get("same"))?.status).toBe("valid");
+	});
+	it("gets source session and turn from an associated attempt when absent on the artifact", async () => {
+		const service = new InquiryService(new MemoryInquiryStorage("project-1"));
+		await service.recordArtifact(artifact());
+		await service.recordAttempt({
+			id: "attempt-source",
+			schemaVersion: 1,
+			projectId: "project-1",
+			hypothesisIds: [],
+			parameters: {},
+			artifactIds: ["artifact-1"],
+			sessionId: "source-session",
+			turn: 3,
+			outcome: "succeeded",
+			enteredReport: false,
+			startedAt: "2026-01-01T00:00:00.000Z",
+		});
+		expect(await service.artifactProvenance("artifact-1")).toMatchObject({
+			sourceSessionId: "source-session",
+			sourceTurn: 3,
+		});
+	});
 	it("rejects traversal, invalid checksums and incomplete lineage", () => {
 		expect(validateArtifactRecord(artifact({ path: "../secret", sha256: "bad" }))).toEqual([
 			"path must be a safe project-relative path",

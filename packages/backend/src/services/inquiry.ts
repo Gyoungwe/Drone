@@ -1,14 +1,17 @@
 import { join } from "node:path";
 import {
 	type ArtifactLocation,
+	type ArtifactProvenance,
 	type ArtifactPurpose,
 	type ArtifactRecord,
+	type ArtifactRerunResult,
 	type ArtifactSource,
 	type ArtifactStatus,
 	type AttemptOutcome,
 	type AttemptRecord,
 	InquiryService as DomainInquiryService,
 	type InquiryStorage,
+	type RunProvenanceSummary,
 	SqliteInquiryStorage,
 } from "@drone/inquiry";
 
@@ -45,6 +48,11 @@ export interface InquiryComputeEvent {
 	readonly runId?: string;
 	readonly startedAt?: number | string;
 	readonly codeFingerprint?: string;
+	readonly parameters?: Readonly<Record<string, string | number | boolean | null>>;
+	readonly hostId?: string;
+	readonly sessionId?: string;
+	readonly turn?: number;
+	readonly runProvenance?: RunProvenanceSummary;
 	readonly artifacts?: readonly InquiryEventArtifact[];
 	readonly manifest?: InquiryEventManifest;
 	readonly projectId?: string;
@@ -60,6 +68,10 @@ export interface InquiryTaskTerminalEvent {
 	readonly startedAt?: number | string;
 	readonly detail?: string;
 	readonly codeFingerprint?: string;
+	readonly parameters?: Readonly<Record<string, string | number | boolean | null>>;
+	readonly sessionId?: string;
+	readonly turn?: number;
+	readonly runProvenance?: RunProvenanceSummary;
 	readonly artifacts?: readonly InquiryEventArtifact[];
 	readonly manifest?: InquiryEventManifest;
 	readonly projectId?: string;
@@ -69,7 +81,10 @@ export interface InquiryTaskTerminalEvent {
 export interface InquiryEventSource {
 	readonly onComputeEvent?: (handler: (event: InquiryComputeEvent) => void) => () => void;
 	readonly onTaskTerminal?: (handler: (event: InquiryTaskTerminalEvent) => void) => () => void;
+	readonly enrichComputeEvent?: (event: InquiryComputeEvent) => Promise<InquiryComputeEvent>;
 }
+
+export type InquiryRerunHandler = (provenance: ArtifactProvenance) => Promise<ArtifactRecord>;
 
 export type InquiryReadOnlySnapshot = Awaited<ReturnType<DomainInquiryService["readOnlyState"]>> & {
 	readonly attempts: readonly AttemptRecord[];
@@ -85,6 +100,8 @@ export interface InquiryServiceOptions {
 	readonly eventSource?: InquiryEventSource;
 	/** Event failures are reported here while the host event stream continues. */
 	readonly onEventError?: (error: unknown) => void;
+	/** Optional host callback used by the one-click reproducible rerun path. */
+	readonly rerunHandler?: InquiryRerunHandler;
 }
 
 export interface InquiryServicePort {
@@ -94,6 +111,10 @@ export interface InquiryServicePort {
 	recordComputeEvent(event: InquiryComputeEvent): Promise<void>;
 	recordTaskTerminal(event: InquiryTaskTerminalEvent): Promise<void>;
 	readOnlySnapshot(): Promise<InquiryReadOnlySnapshot | undefined>;
+	listArtifacts(): Promise<readonly ArtifactRecord[]>;
+	artifactProvenance(artifactId: string): Promise<ArtifactProvenance | undefined>;
+	rerunArtifact(artifactId: string): Promise<ArtifactRerunResult>;
+	setRerunHandler(handler: InquiryRerunHandler): void;
 	drainEvents(): Promise<void>;
 	attachEventSource(source: InquiryEventSource): () => void;
 	dispose(): void;
@@ -136,11 +157,13 @@ export class InquiryService implements InquiryServicePort {
 	readonly domain?: DomainInquiryService;
 	private readonly unsubscribers: Array<() => void> = [];
 	private readonly onEventError?: (error: unknown) => void;
+	private rerunHandler?: InquiryRerunHandler;
 	private eventTail: Promise<void> = Promise.resolve();
 	private disposed = false;
 
 	constructor(options: InquiryServiceOptions = {}) {
 		this.onEventError = options.onEventError;
+		this.rerunHandler = options.rerunHandler;
 		if (!options.inquiryDir) {
 			this.enabled = false;
 			return;
@@ -148,7 +171,9 @@ export class InquiryService implements InquiryServicePort {
 		const projectId = options.projectId?.trim();
 		if (!projectId) throw new Error("inquiryProjectId is required when inquiryDir is configured");
 		this.storage = new SqliteInquiryStorage(projectId, join(options.inquiryDir, "ledger.sqlite"));
-		this.domain = new DomainInquiryService(this.storage);
+		this.domain = new DomainInquiryService(this.storage, {
+			...(this.rerunHandler ? { rerunHandler: this.rerunHandler } : {}),
+		});
 		this.enabled = true;
 		if (options.eventSource) this.attachEventSource(options.eventSource);
 	}
@@ -160,7 +185,11 @@ export class InquiryService implements InquiryServicePort {
 		if (source.onComputeEvent) {
 			attached.push(
 				source.onComputeEvent((event) => {
-					this.enqueue(() => this.recordComputeEvent(event));
+					this.enqueue(async () =>
+						this.recordComputeEvent(
+							source.enrichComputeEvent ? await source.enrichComputeEvent(event) : event,
+						),
+					);
 				}),
 			);
 		}
@@ -201,6 +230,9 @@ export class InquiryService implements InquiryServicePort {
 			event.status === "succeeded" || event.type === "collected" ? "deliverable" : "intermediate",
 			"remote",
 			event.runId ?? event.jobId,
+			event.sessionId,
+			event.turn,
+			event.runProvenance,
 		);
 		const attempt: AttemptRecord = {
 			id: `compute:${executionId}`,
@@ -210,9 +242,11 @@ export class InquiryService implements InquiryServicePort {
 			parameters: {
 				source: "compute",
 				jobId: event.jobId,
+				...(event.hostId ? { hostId: event.hostId } : {}),
 				...(event.runId ? { runId: event.runId } : {}),
 				eventType: event.type,
 				status: event.status ?? null,
+				...(event.parameters ?? {}),
 			},
 			artifactIds,
 			...(summary(event.detail) ? { resultSummary: summary(event.detail) } : {}),
@@ -221,6 +255,9 @@ export class InquiryService implements InquiryServicePort {
 			startedAt: asIso(event.startedAt ?? event.at),
 			finishedAt: eventAt,
 			...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
+			...(event.sessionId ? { sessionId: event.sessionId } : {}),
+			...(event.turn !== undefined ? { turn: event.turn } : {}),
+			...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
 		};
 		await this.domain.recordAttempt(attempt);
 	}
@@ -240,6 +277,9 @@ export class InquiryService implements InquiryServicePort {
 			event.status === "succeeded" ? "deliverable" : "intermediate",
 			"local",
 			event.runId ?? event.taskId,
+			event.sessionId,
+			event.turn,
+			event.runProvenance,
 		);
 		const attempt: AttemptRecord = {
 			id: `task:${executionId}`,
@@ -249,8 +289,10 @@ export class InquiryService implements InquiryServicePort {
 			parameters: {
 				source: "task",
 				taskId: event.taskId,
+				...(event.sessionId ? { sessionId: event.sessionId } : {}),
 				...(event.runId ? { runId: event.runId } : {}),
 				status: event.status,
+				...(event.parameters ?? {}),
 			},
 			artifactIds,
 			...(summary(event.detail) ? { resultSummary: summary(event.detail) } : {}),
@@ -259,6 +301,9 @@ export class InquiryService implements InquiryServicePort {
 			startedAt: asIso(event.startedAt ?? event.at),
 			finishedAt: eventAt,
 			...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
+			...(event.sessionId ? { sessionId: event.sessionId } : {}),
+			...(event.turn !== undefined ? { turn: event.turn } : {}),
+			...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
 		};
 		await this.domain.recordAttempt(attempt);
 	}
@@ -268,6 +313,25 @@ export class InquiryService implements InquiryServicePort {
 		if (!this.domain) return undefined;
 		const [state, snapshot] = await Promise.all([this.domain.readOnlyState(), this.domain.snapshot()]);
 		return { ...state, attempts: snapshot.attempts };
+	}
+
+	async listArtifacts(): Promise<readonly ArtifactRecord[]> {
+		if (!this.domain) return [];
+		return (await this.domain.snapshot()).artifacts;
+	}
+
+	async artifactProvenance(artifactId: string): Promise<ArtifactProvenance | undefined> {
+		return this.domain?.artifactProvenance(artifactId);
+	}
+
+	async rerunArtifact(artifactId: string): Promise<ArtifactRerunResult> {
+		if (!this.domain) throw new Error("Inquiry service is unavailable");
+		return this.domain.rerunArtifact(artifactId);
+	}
+
+	setRerunHandler(handler: InquiryRerunHandler): void {
+		this.rerunHandler = handler;
+		this.domain?.setRerunHandler(handler);
 	}
 
 	/** Wait until all host events observed so far have finished writing. */
@@ -307,6 +371,9 @@ export class InquiryService implements InquiryServicePort {
 		defaultPurpose: ArtifactPurpose,
 		defaultLocation: ArtifactLocation,
 		defaultRunId: string,
+		sessionId?: string,
+		turn?: number,
+		runProvenance?: RunProvenanceSummary,
 	): Promise<string[]> {
 		if (!this.domain || !this.storage || !entries?.length) return [];
 		const artifactIds: string[] = [];
@@ -319,6 +386,9 @@ export class InquiryService implements InquiryServicePort {
 				defaultPurpose,
 				defaultLocation,
 				defaultRunId,
+				sessionId,
+				turn,
+				runProvenance,
 			);
 			if (!record) continue;
 			await this.domain.recordArtifact(record);
@@ -335,6 +405,9 @@ export class InquiryService implements InquiryServicePort {
 		defaultPurpose: ArtifactPurpose,
 		defaultLocation: ArtifactLocation,
 		defaultRunId: string,
+		sessionId?: string,
+		turn?: number,
+		runProvenance?: RunProvenanceSummary,
 	): ArtifactRecord | undefined {
 		const bytes = entry.bytes ?? entry.size;
 		const sha256 = entry.sha256?.trim();
@@ -366,6 +439,9 @@ export class InquiryService implements InquiryServicePort {
 			status: entry.status ?? "valid",
 			parentIds: [...new Set(entry.parentIds ?? [])],
 			runId: nonEmpty(entry.runId) ?? defaultRunId,
+			...(sessionId ? { sessionId } : {}),
+			...(turn !== undefined ? { turn } : {}),
+			...(runProvenance ? { runProvenance } : {}),
 			createdAt: eventAt,
 			updatedAt: eventAt,
 		};
