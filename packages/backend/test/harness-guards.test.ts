@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createHarnessGuardState, observeHarnessFailure } from "../src/session-engine/harness/guards";
+import {
+	createHarnessGuardState,
+	makeHarnessGuardExtension,
+	observeHarnessFailure,
+} from "../src/session-engine/harness/guards";
 
 describe("harness loop guard", () => {
 	it("redirects once after three identical failures and blocks after a second streak", () => {
@@ -23,5 +27,41 @@ describe("harness loop guard", () => {
 		state = observeHarnessFailure(state, failure);
 		expect(state.streak).toBe(1);
 		expect(state.redirects).toBe(0);
+	});
+
+	it("records redirect and block actions without tool arguments", async () => {
+		const handlers = new Map<string, (...args: any[]) => any>();
+		const records: Array<Record<string, unknown>> = [];
+		const pi = {
+			on(name: string, handler: (...args: any[]) => any) {
+				handlers.set(name, handler);
+			},
+			appendEntry: () => undefined,
+		};
+		const context = {
+			sessionManager: {
+				getSessionId: () => "session-1",
+				getBranch: () => [],
+			},
+		};
+		const extension = makeHarnessGuardExtension({
+			recordUnit: (sessionId, unit, action) => records.push({ sessionId, unit, action }),
+		});
+		(await (extension as any).factory(pi)) as unknown;
+		const failure = {
+			isError: true,
+			toolName: "bash",
+			input: { command: "private-tool-argument" },
+			content: "exit 1",
+		};
+		for (let i = 0; i < 3; i++) await handlers.get("tool_result")?.(failure, context);
+		await handlers.get("context")?.({ messages: [] }, context);
+		for (let i = 0; i < 3; i++) await handlers.get("tool_result")?.(failure, context);
+		await handlers.get("tool_call")?.({ toolName: "bash", input: failure.input }, context);
+		expect(records).toEqual([
+			{ sessionId: "session-1", unit: "guard", action: "redirect" },
+			{ sessionId: "session-1", unit: "guard", action: "block" },
+		]);
+		expect(JSON.stringify(records)).not.toContain("private-tool-argument");
 	});
 });

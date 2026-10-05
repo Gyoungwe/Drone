@@ -53,16 +53,24 @@ export function observeHarnessFailure(
 		pending: true,
 	};
 }
+export interface HarnessGuardExtensionOptions {
+	report?: (sessionId: string, kind: string, data: unknown) => void;
+	recordUnit?: (sessionId: string, unit: "guard", action: "redirect" | "block") => void;
+}
+
+type HarnessGuardReporter = HarnessGuardExtensionOptions["report"];
+
 export function makeHarnessGuardExtension(
-	report?: (sessionId: string, kind: string, data: unknown) => void,
+	optionsOrReport: HarnessGuardExtensionOptions | HarnessGuardReporter = {},
 ): InlineExtension {
+	const options = typeof optionsOrReport === "function" ? { report: optionsOrReport } : optionsOrReport;
 	return {
 		name: "harness-guard",
 		factory: (pi) => {
 			let state = createHarnessGuardState();
 			const persist = (ctx: ExtensionContext) => {
 				pi.appendEntry(HARNESS_GUARD_CUSTOM_TYPE, state);
-				report?.(ctx.sessionManager.getSessionId(), "harness_guard", state);
+				options.report?.(ctx.sessionManager.getSessionId(), "harness_guard", state);
 			};
 			const restore = (_event: unknown, ctx: ExtensionContext) => {
 				const saved = latestCustom(ctx.sessionManager.getBranch(), HARNESS_GUARD_CUSTOM_TYPE)?.data as
@@ -137,6 +145,11 @@ export function makeHarnessGuardExtension(
 				try {
 					state = { ...state, pending: false };
 					persist(ctx);
+					options.recordUnit?.(
+						ctx.sessionManager.getSessionId(),
+						"guard",
+						state.blocked ? "block" : "redirect",
+					);
 					return {
 						messages: [
 							...event.messages,
@@ -154,17 +167,19 @@ export function makeHarnessGuardExtension(
 					return undefined;
 				}
 			});
-			pi.on("tool_call", (event) =>
-				state.blocked && !["task_status", "harness_recall"].includes(event.toolName)
-					? { block: true, terminate: true, reason: content() }
-					: undefined,
-			);
+			pi.on("tool_call", (event, ctx) => {
+				if (!state.blocked || ["task_status", "harness_recall"].includes(event.toolName)) return undefined;
+				options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "block");
+				return { block: true, terminate: true, reason: content() };
+			});
 			pi.on("agent_before_settle", (event, ctx) => {
 				if (!state.pending || event.outcome !== "completed" || !event.context.canContinue) return;
 				try {
 					const message = content();
+					const blocked = state.blocked;
 					state = { ...state, pending: false };
 					persist(ctx);
+					options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", blocked ? "block" : "redirect");
 					return {
 						entries: [
 							{

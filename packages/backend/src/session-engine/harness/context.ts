@@ -7,6 +7,7 @@ import {
 	type HarnessContractFingerprint,
 	type HarnessPosture,
 	type HarnessSourceRef,
+	type HarnessUnit,
 	renderHarnessCheckpoint,
 	renderHarnessPromptLayer,
 	resolveHarnessModelFamily,
@@ -36,6 +37,8 @@ export interface HarnessContextExtensionOptions {
 	reportStatus?: (sessionId: string, status: HarnessContractFingerprint) => void;
 	getPosture?: (ctx: ExtensionContext) => HarnessPosture;
 	getSkills?: (ctx: ExtensionContext) => readonly string[];
+	familyPrompt?: boolean;
+	recordUnit?: (sessionId: string, unit: HarnessUnit, action: string, details?: { family?: string }) => void;
 }
 type HarnessTask = import("@drone/shared").WorkbenchTask;
 function pathValues(task: HarnessTask): string[] {
@@ -173,7 +176,10 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 					}
 					const posture = options.getPosture?.(ctx) ?? DEFAULT_POSTURE;
 					const skills = options.getSkills?.(ctx) ?? [];
-					const family = resolveHarnessModelFamily(ctx.model?.provider, ctx.model?.id);
+					const family =
+						options.familyPrompt === false
+							? null
+							: resolveHarnessModelFamily(ctx.model?.provider, ctx.model?.id);
 					const systemPrompt = [
 						event.systemPrompt,
 						renderHarnessPromptLayer(family, posture, undefined, skills),
@@ -214,6 +220,9 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 							log.warn("harness contract report failed", { error: String(error) });
 						}
 					}
+					if (family) {
+						options.recordUnit?.(ctx.sessionManager.getSessionId(), "familyPrompt", "inject", { family });
+					}
 					return { systemPrompt };
 				} catch (error) {
 					log.warn("harness prompt failed", { error: String(error) });
@@ -251,6 +260,7 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 					cachedMessage = message;
 					try {
 						options.report?.(ctx.sessionManager.getSessionId(), checkpoint);
+						options.recordUnit?.(ctx.sessionManager.getSessionId(), "context", "checkpoint");
 					} catch (error) {
 						log.warn("harness checkpoint report failed", { error: String(error) });
 					}

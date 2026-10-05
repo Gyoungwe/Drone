@@ -138,6 +138,20 @@ describe("harness context adapter", () => {
 		expect(second.messages.at(-1)?.content).toContain("Second objective");
 	});
 
+	it("keeps shared contracts when familyPrompt is disabled", async () => {
+		const { registered, pi } = handlers();
+		const extension = makeHarnessContextExtension({ familyPrompt: false });
+		await (extension as any).factory(pi);
+		const result = await registered.get("before_agent_start")?.(
+			{ prompt: "Objective", systemPrompt: "base" },
+			fakeContext(),
+		);
+		expect(result.systemPrompt).not.toContain("Model family guidance");
+		expect(result.systemPrompt).toContain("Drone harness contract:");
+		expect(result.systemPrompt).toContain("Scientific contract:");
+		expect(result.systemPrompt).toContain("Response contract:");
+	});
+
 	it("ignores malformed branch entries and fails open", async () => {
 		const malformed = fakeContext([{ type: "message", message: { role: "custom", details: "bad" } }]);
 		const checkpoint = checkpointFromBranch("Objective", 0, malformed.sessionManager.getBranch());

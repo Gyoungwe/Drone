@@ -38,9 +38,17 @@ export function renderDeliveryStatus(status: HarnessDeliveryStatus): string {
 	return `Host delivery check: ${status.complete ? "recorded acceptance satisfied" : "incomplete"}; missing: ${status.missing.join("; ") || "none recorded"}; unsettled: ${status.unsettled.join("; ") || "none"}; budget ${status.budget.used}/${status.budget.limit} (${status.budget.level}). Do not claim missing or unchecked deliverables are complete. Acceptance is operational, not scientific certification.`;
 }
 /** Observe delivery at the loop boundary; task runtime remains the only continuation owner. */
+export interface HarnessDeliveryExtensionOptions {
+	report?: (sessionId: string, kind: string, data: unknown) => void;
+	recordUnit?: (sessionId: string, unit: "delivery", action: "gap") => void;
+}
+
+type HarnessDeliveryReporter = HarnessDeliveryExtensionOptions["report"];
+
 export function makeHarnessDeliveryExtension(
-	report?: (sessionId: string, kind: string, data: unknown) => void,
+	optionsOrReport: HarnessDeliveryExtensionOptions | HarnessDeliveryReporter = {},
 ): InlineExtension {
+	const options = typeof optionsOrReport === "function" ? { report: optionsOrReport } : optionsOrReport;
 	return {
 		name: "harness-delivery",
 		factory: (pi) => {
@@ -66,7 +74,10 @@ export function makeHarnessDeliveryExtension(
 					last = fingerprint;
 					const data = { ...status, message: renderDeliveryStatus(status) };
 					pi.appendEntry(DELIVERY_TYPE, { fingerprint, status });
-					report?.(ctx.sessionManager.getSessionId(), "harness_delivery", data);
+					options.report?.(ctx.sessionManager.getSessionId(), "harness_delivery", data);
+					if (!status.complete) {
+						options.recordUnit?.(ctx.sessionManager.getSessionId(), "delivery", "gap");
+					}
 				} catch (error) {
 					log.warn("harness delivery failed", { error: String(error) });
 				}
