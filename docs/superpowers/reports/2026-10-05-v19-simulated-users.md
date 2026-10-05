@@ -1,73 +1,77 @@
-# Drone v0.19.1 模拟用户测试报告（T2）
+# Drone v0.19.2 模拟用户测试报告（T2 正式重跑）
 
-日期：2026-10-06
-测试分支：`codex/sim-v19`
-被测 tag：`v0.19.1`，提交 `772bb5c9465a2e96412944124c7782108dfe38fa`
-对比 tag：`v0.18.0`，提交 `a5ba4b88e136d7ed39e27db8e6fba3a9f2c1e442`
-脚本最新提交：`e1f8d1c`（PR #50 CI：8/8 通过，合并状态 CLEAN）
+日期：2026-10-06  
+分支：codex/sim-v19（PR #50）  
+被测：v0.19.2 / eb0aa9fd33c89ae2d2aeb32535d1779cce889c58  
+对比：v0.18.0 / a5ba4b88e136d7ed39e27db8e6fba3a9f2c1e442  
+原始产物：/tmp/drone-v192-formal2/  
+范围：只改测试脚本和本报告，没有改产品代码、合并或发版。
 
-## 1. 结论
+## 1. 一页结论
 
-本轮不能作为验收通过证据。两个版本均完成源码构建；v0.19.1 Release macOS arm64 安装包完成冷启动，关于页显示 `0.19.1`，包内 `knowledge-extension.mjs` 与 v0.19.1 tag 构建产物 SHA-256 均为 `b55c9fff0cf2c45da2fb26370a76649aa413eb22a7295841cf82d3590089a880`。
+本轮不能作为验收通过证据。两边 npm ci、npm run build 和 CDP 开发态启动均成功；renderer console error 与 unhandled rejection 均为 0，旧会话复核中没有捕获 Maximum update depth exceeded。P1–P5 有多项未完成或明确失败，P4 没有达到 25 轮，因此不填性能回归百分比。
 
-正式 UI 重跑在 v0.19.1 上已经产生原始结果，但在 P2/P3/P5 之后累计 usage 为约 **2,894,993 tokens / $0.179047**，超过当时脚本预算上限 2,000,000 tokens；因此停止继续请求模型。v0.18.0 未完成同工作量正式重跑，未给出性能回归百分比。阻断验收问题数：**1（预算与工作量不满足，测试结论不可验收）**。产品问题列在下表，未修改产品代码。
+阻断验收问题数：5：P1 授权后仍追问且未 settled；P2 两种 Wiki 模式均无 pending；P3 provenance/reviewer 卡缺失；P5 v0.19.2 没有远程控制第二开关且伪 provider 未命中；P4 25 轮、compaction、recall、决策闭环均未完成。
 
-T2 返工脚本已将下一轮预算改为 **15,000,000 tokens / $3**，任一先到即停。每个场景 JSON 的 `budget` 同时记录 `inputTokens`（未命中缓存输入）、`cacheHitInputTokens`（缓存命中输入）、`cacheWriteInputTokens`、`outputTokens`、`totalTokens` 和费用，避免把缓存输入混入普通输入。下一轮正式对象为 `v0.19.2` 与 `v0.18.0`，截至报告更新时 `git ls-remote` 尚未看到 `v0.19.2` tag，故尚未开始正式重跑。
+Release 页三平台资产已齐。macOS arm64 DMG 的 release digest 为 3f06bf53…b2b8bceb，下载文件类型为 zlib compressed data，hdiutil attach 无法识别；DMG 安装冒烟失败。macOS arm64 ZIP（digest 1e2e8b45…09dc8c9c）可解压冷启动，关于页显示 0.19.2；包内 extension 与 tag 源文件 SHA-256 均为 b55c9fff0cf2c45da2fb26370a76649aa413eb22a7295841cf82d3590089a880。
 
 ## 2. 问题表
 
-| 编号 | 严重度 | 维度 | 复现与证据 | 疑似模块 |
+| 编号 | 严重度 | 维度 | 复现与判定依据 | 疑似模块 |
 |---|---|---|---|---|
-| T2-BUDGET | 阻断 | 性能/测试 | v0.19.1 历史正式运行累计约 2,894,993 tokens，超过当时 2,000,000 上限；见 `/tmp/drone-v19-sim/agent-v191/` 与各场景 JSON 的原始记录。下一轮已改为 15,000,000 tokens / $3 双门槛。 | 测试预算守卫；`common.mjs` 在运行前/步后检查并拆分 usage |
-| T2-01 | 严重 | 功能/体验 | P3 固定 `plot_fixed.py` 成功生成 `figure.png`、`result.md`；产物区 `[data-testid="artifact-provenance-card"]` 数量为 0，篡改后 reviewer code 只有 `untraceable-number`，缺少 `figure-code-mismatch`。证据：`/tmp/drone-v19-sim/out-v191b-formal/p3.json`。 | inquiry artifact provenance、deliverable reviewer |
-| T2-02 | 严重 | UI/体验 | v0.19.1 LAN 页面 DOM 中 textarea=0、发送按钮=0，但写操作控件计数为 2；历史脚本未记录控件明细。下一轮改为分别验证 remote control 关闭（写控件数=0）和开启（出现 textarea/发送按钮且成功发一条消息），并记录每个控件的 selector/text。历史证据：`/tmp/drone-v19-sim/out-v191b-formal/p5.json`。 | LAN observer web |
-| T2-03 | 一般 | UI/稳定性 | P1 在已有长会话状态下出现 6 次 `Maximum update depth exceeded`，随后示例任务对话框无法打开/启动；证据：`/tmp/drone-v19-sim/out-v191-formal3/p1.json`。该次运行被状态污染，需在全新 userData 再确认。 | renderer session/task state |
-| T2-04 | 一般 | 功能/测试 | P5 旧伪 provider 401/429 两次 `requestCount=0`、无 `.error-note`，说明只改 DeepSeek 端点没有命中真实请求。下一轮在隔离 `agent-dev/models.json` 写入独立本地 provider，刷新模型目录，在 UI 将当前会话切到该模型后再发请求；必须同时满足本地服务 requestCount>0、错误卡出现、恢复后 composer 可用。历史证据：`/tmp/drone-v19-sim/out-v191b-formal/p5.json`。 | model settings/provider routing 或测试替换入口 |
-| T2-05 | 建议 | UI | P1 双语审计发现原始 key 字符串和 20 个溢出候选；脚本已逐候选截图，未把候选数直接计为缺陷。证据目录：`/tmp/drone-v19-sim/out-v191-formal3/p1/overflow-*.png`。 | i18n / layout |
+| V19-01 | 阻断 | 体验/功能 | P1 example-task-launch enabled 且点击成功；v0.19.2 startedRun=true、settled=false、handled=["ask-user-form"]，v0.18.0 也未 settled。授权后追问目标为 0。 | task authorization / ask-user |
+| V19-02 | 阻断 | 功能 | P2 读取 wiki-review-panel 的总数和具体队列按钮；automatic/manual 两次 totalAfter=0、queueItems=0，目标文件 SHA-256 未变。 | Wiki proposal/review |
+| V19-03 | 阻断 | 功能 | P3 固定夹具 data.csv（29 bytes）和 plot_fixed.py 存在；v0.19.2 无结果，v0.18.0 虽生成文件但未 settled；两边 provenance 卡为 0，篡改后没有 figure-code-mismatch 和 untraceable-number。 | artifact provenance/reviewer |
+| V19-04 | 阻断 | 功能/体验 | P5 设置页 role=switch 只有 1 个，remote=null；v0.19.2 开启态虽能发送固定 LAN 消息，但没有远控开关和审批条件。 | LAN observer |
+| V19-05 | 阻断 | 功能/测试 | P5 独立 provider 经 UI 刷新后 selected=null；401/429 两次 requestCount=0、错误卡 0。 | provider routing |
+| V19-06 | 严重 | 稳定性/体验 | P4 两版 actualCompletedRounds=10/25、renderedAssistantMessages=10，第 10 轮 compaction 未 settled；v0.19.2 trace harnessCalls=23、familyPrompt=11、harnessRecallCalls=0，v0.18.0 harnessCalls=0。 | harness/compaction |
+| V19-07 | 严重 | 功能 | P4 decision-row 数为 0，未完成撤销→pending-review→发布拦截→确认放行，也未验证未引用产物不拦截。 | decision ledger |
+| V19-08 | 严重 | 发布 | macOS arm64 DMG digest 正确但无法挂载；ZIP 冷启动通过，不能替代 DMG 安装冒烟。 | release packaging |
+| V19-09 | 一般 | 测试 | P5 旧 JSON 的取消步骤因断言过弱标为通过，但 error-note 为 0；脚本已收紧为 errorCards>0，旧结果不计通过。 | error-card assertion |
+| V19-10 | 建议 | UI | 各版本产生 20 个 overflow 候选并逐个截图；主要是 truncate/横向滚动容器，候选数不直接计缺陷。 | layout/i18n |
 
 ## 3. 性能对比
 
-没有满足两版本相同完成轮数和相同渲染消息数的运行，故不填回归百分比。P2、P3、P5 也不纳入性能表；P4 未在预算停止前完成两版本正式运行。
+不填百分比：两版虽各记录 10 settled 回合/10 渲染消息，但请求目标是 25 轮且 compaction 未完成；disabled 重启两版实际为 0/5 轮。P2、P3、P5 短场景也不进入性能表。
 
-| 指标 | v0.18.0 | v0.19.1 | 变化 |
+| 指标 | v0.18.0 | v0.19.2 | 变化 |
 |---|---:|---:|---:|
-| 冷启动到可输入 | 未正式重跑 | Release 冷启动通过；开发态首屏数据见场景 JSON | 未比较 |
-| P4 完成轮数/渲染消息数 | 未完成 | 未完成 | 未比较 |
-| 首 token 中位数（3 次） | 未完成 | 未完成 | 未比较 |
-| renderer/main 内存、长任务、帧率、trace 大小 | 未完成 | 未完成 | 未比较 |
+| P4 请求轮数 / settled 轮数 | 25 / 10 | 25 / 10 | 工作量未完成，未比较 |
+| P4 渲染助手消息 | 10 | 10 | 仅部分工作量，未比较 |
+| 首 token、帧率、长任务、内存、trace 大小 | 未完成 | 未完成 | 未比较 |
+| 200 条记录渲染 | 未完成 | 未完成 | 未比较 |
 
-## 4. 用户场景结果
+## 4. 五组用户步骤
 
-- **P1**：DeepSeek 设置行通过；Slash/@ 菜单在一次干净状态运行通过；示例任务在首次运行中触发了真实 ask-user 表单并最终生成两个文件，但修正版重跑受旧会话状态影响失败，不能计为通过。原始结果：`/tmp/drone-v19-sim/out-v191-formal3/p1.json`。
-- **P2**：知识库初始化和 automatic/manual pending 闭环未完成。此前失败原因是脚本把多问题 `ask-dialog` 当成带固定文字的单选卡；已改为按具体 `section button` 逐题选择，并优先选择确认选项，修复提交 `ed9416c`，但预算停止前未重新消耗模型验证。
-- **P3**：固定夹具和本地执行通过；来源卡与两类审稿卡未通过，不能计为通过。
-- **P4**：v0.19.1 正式 25 轮、compaction、decision closure 和禁用重启未完成；不计通过，不与 v0.18.0 比较。
-- **P5**：权限规则保存/试算、自保护规则、取消生成、四个视口/主题截图通过；401/429 替换和 LAN 只读未通过。
+- P1：DeepSeek 设置行 configuredRows=1、示例对话框和双语审计 leaked=[] 通过；Slash/@ 菜单计数均为 0；授权后有表单追问且未 settled。证据：两版 p1.json。
+- P2：预置 binding 通过；topic DOM 输入/刷新/文章数为 0；automatic/manual 队列均为 0；Zotero 面板可打开。证据：两版 p2.json。
+- P3：固定夹具与计算空态 hosts=0、jobs=0、buttons=9 通过；运行 settled、来源卡、两类 reviewer 卡均未通过。证据：两版 p3.json。
+- P4：正常 10/25 轮，compaction/recall/decision closure 失败；disabled 重启真实执行但 0/5 轮，均不计通过。证据：p4.json 与 p4-disabled/p4.json。
+- P5：权限规则保存/试算、自保护规则、四视口亮暗截图通过；取消 error card、伪 provider、LAN 双态均不通过。证据：两版 p5.json。
 
 ## 5. 脚本自检
 
-1. `waitForIdle` 只有在先观察到运行事件后才允许 `settled=true`；旧消息卡不能制造假阳性，超时为失败。
-2. P1 区分 `[data-testid="permission-allow-run"]`、`[data-testid="ask-simple"]` 和 `[data-testid="ask-dialog"]`，授权后再次 ask 会计入中断。
-3. 多问题 ask 表单按每个 `section` 的具体按钮选择；确认类选项优先，避免误选“暂不授权”。
-4. P4 口令只在 `.markdown-body` 助手节点中查找，用户 `.bg-bubble` 单独计数；trace 必须有真实 `harness_recall` 和 `harness_unit`。
-5. P2 队列判断读取 `wiki-review-panel` 的总数、具体 aside 条目、选中预览和可用决策按钮，并比较目标文件 SHA-256；空态文案不能通过。
-6. P3 只接受固定 fixture 文件、provenance DOM、两个 reviewer code 和主回合可输入的合取条件。
-7. G-01 只检查 LAN DOM 中 textarea、发送按钮和写控件；不使用提示文字作为通过条件。
-8. 所有步骤保留选择器、取值、耗时、截图、console error、unhandled rejection 和交互计数；`ok` 必须是严格 `true`。
-9. `common.mjs` 现在扫描隔离 agent 的 message usage，在每一步前和步后检查 15,000,000 token / $3 上限；超过任一门槛后后续步骤直接失败，并分开记录普通输入、缓存命中输入、缓存写入输入和输出。
-10. 溢出候选逐一截图；候选数不直接等同 UI 缺陷数。
-11. P5 伪 provider 通过 `models.json` 独立 provider + UI 模型选择器建立真实请求链；G-01 分成 remote control off/on 两个 DOM 合取断言，on 状态额外要求 `.m-user` 出现固定测试消息且输入框清空。
+1. P1 完成步复用启动步的 startedRun/settled，空闲 DOM 不能制造通过。
+2. P1 分开处理 permission-allow-run、ask-simple、ask-dialog，授权后 ask-user 计入中断。
+3. P2 必须有队列总数增加、具体条目、选中预览、可用决策按钮和目标文件 SHA-256 证据；空态文案不能通过。
+4. P3 必须同时满足固定夹具、provenance DOM、两个 reviewer code、主回合可输入。
+5. P4 口令只查助手 markdown-body，用户 bg-bubble 单独计数；trace 必须有真实 harness_recall；disabled 才要求 familyPrompt/guard 为 0。
+6. P5 伪 provider 必须满足 aria-label 刷新、UI 选中模型、requestCount>0、错误卡和恢复；G-01 只看 LAN DOM 的真实写控件，停止按钮被排除。
+7. 所有步骤记录选择器、值、耗时、截图、console/unhandled 和交互计数，ok 严格为布尔值。
+8. 预算拆分记录未缓存输入、缓存命中输入、缓存写入、输出、总 token 和费用；overflow 候选逐一截图，不以候选数直接报错。
 
-## 6. 费用与原始产物
+## 6. 费用、构建与原始产物
 
-正式 v0.19.1 已记录约 **2,894,993 tokens / $0.179047**；没有在报告中写入任何 key。所有 Vault、项目、userData、截图、trace、JSON 均在 `/tmp/drone-v19-sim/`，未进入仓库。v0.18.0 仅完成 `npm ci`/build，未消耗模型请求。
+Usage 来自隔离 agent-dev JSONL，未输出 key。累计包含正式 P1–P5、P4 正常和 disabled 尝试：
 
-主要结果：
+| 版本 | 未缓存输入 | 缓存命中输入 | 缓存写入 | 输出 | 总 token | 费用 |
+|---|---:|---:|---:|---:|---:|---:|
+| v0.18.0 | 493,639 | 1,380,352 | 0 | 89,989 | 1,963,980 | $1.068695 |
+| v0.19.2 | 527,673 | 1,031,168 | 0 | 105,423 | 1,664,264 | $1.159375 |
+| 合计 | 1,021,312 | 2,411,520 | 0 | 195,412 | 3,628,244 | $2.228070 |
 
-- P1：`/tmp/drone-v19-sim/out-v191-formal3/p1.json`
-- P2：`/tmp/drone-v19-sim/out-v191b-formal/p2.json`
-- P3：`/tmp/drone-v19-sim/out-v191b-formal/p3.json`
-- P5：`/tmp/drone-v19-sim/out-v191b-formal/p5.json`
-- Release 冷启动 userData：`/tmp/drone-v19-sim/release-v191-userData2/`
+构建均成功；Vite 动态 import 警告不影响构建。P4 disabled 主进程日志另有 MaxListenersExceededWarning，renderer error/unhandled 仍为 0。
 
-本 PR 只包含 `scripts/sim-v19/` 和本报告；不合并、不发版、不修改产品代码。
+主要 JSON 在 /tmp/drone-v192-formal2/out-v192/ 与 out-v180/ 下；Release 产物在 /tmp/drone-v192-formal2/release/。
+
+本 PR 只包含 scripts/sim-v19/ 与本报告；不合并、不发版、不改产品代码。

@@ -193,7 +193,9 @@ await runScenario("p4", async (page, result, step) => {
 		const workloadEqual = result.workload.actualCompletedRounds === ROUNDS;
 		return {
 			ok: Boolean(
-				trace.harnessCalls > 0 && prohibited.familyPrompt === 0 && prohibited.guard === 0 && workloadEqual,
+				trace.harnessCalls > 0 &&
+					(!DISABLED || (prohibited.familyPrompt === 0 && prohibited.guard === 0)) &&
+					workloadEqual,
 			),
 			selectors: ["trace *.jsonl kind=harness_unit", "trace data.unit", "p4 actualCompletedRounds"],
 			trace,

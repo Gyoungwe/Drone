@@ -63,7 +63,10 @@ function installPseudoProvider(baseUrl) {
 async function refreshModelsInUi(page) {
 	await page.clickText("设置", { exact: true });
 	await page.clickTextWithin('[data-testid="settings-dialog"]', "模型", { exact: true });
-	const refreshed = await page.clickRegexWithin('[data-testid="settings-dialog"]', "刷新|Refresh");
+	const refreshed =
+		(await page.clickSelector(
+			'[data-testid="settings-dialog"] button[aria-label="联网刷新模型目录"], [data-testid="settings-dialog"] button[aria-label="Refresh model catalog"]',
+		)) || (await page.clickRegexWithin('[data-testid="settings-dialog"]', "刷新|Refresh"));
 	const visible = await page.waitFor(
 		`[...document.querySelectorAll('[data-testid="settings-dialog"] li')].some((n)=>/Drone local error fixture/i.test(n.textContent||''))`,
 		20_000,
@@ -129,13 +132,14 @@ async function inspectLanDom(page) {
 		});
 		const selectors = ['textarea','[contenteditable="true"]','[role="textbox"]','input:not([readonly])','button.c-btn','button.pbtn'];
 		const controls = selectors.flatMap((selector) => [...document.querySelectorAll(selector)].filter(visible).map(describe));
+		const writeControls = controls.filter((node) => !/停止|stop/i.test(node.ariaLabel || node.text));
 		const sendButtons = [...document.querySelectorAll('button[aria-label="发送"],button[aria-label="Send"],button.c-btn.send:not(.stop)')].filter(visible).map(describe);
 		return {
 			url: location.href,
 			textarea: document.querySelectorAll('textarea').length,
 			sendButtons,
-			writeControls: controls,
-			writeControlCount: controls.length,
+			writeControls,
+			writeControlCount: writeControls.length,
 			buttons: document.querySelectorAll('button').length,
 			inputs: document.querySelectorAll('input').length,
 		};
@@ -321,7 +325,7 @@ await runScenario("p5", async (page, result, step) => {
 			(await page.clickSelector('button[aria-label="Stop"]'));
 		const errorCards = await page.visibleCount(".error-note");
 		return {
-			ok: Boolean(filled && sent && startedRun && appeared && stopped),
+			ok: Boolean(filled && sent && startedRun && appeared && stopped && errorCards > 0),
 			selectors: ['[data-testid="composer-send"]', 'button[aria-label="停止"]', ".error-note"],
 			filled,
 			sent,

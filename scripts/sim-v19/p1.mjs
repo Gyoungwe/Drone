@@ -27,6 +27,7 @@ async function waitThroughTask(page, result, timeoutMs = 120_000) {
 
 await runScenario("p1", async (page, result, step) => {
 	result.interactions = { clicks: 0, inputs: 0, confirmations: 0, postAuthorizationInterruptions: 0 };
+	let launchRun = { startedRun: false, settled: false, handled: [] };
 	for (const name of ["search-log.md", "evidence-cards.md"]) rmSync(`${PROJECT}/${name}`, { force: true });
 	await page.key("Escape");
 	await page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
@@ -122,6 +123,7 @@ await runScenario("p1", async (page, result, step) => {
 		const launched = await page.clickSelector('[data-testid="example-task-launch"]');
 		result.interactions.clicks += 1;
 		const run = await waitThroughTask(page, result, 90_000);
+		launchRun = run;
 		const permissionCount = run.handled.filter((item) => item === "permission").length;
 		const askUserCount = run.handled.filter((item) => item.startsWith("ask-user")).length;
 		return {
@@ -150,7 +152,6 @@ await runScenario("p1", async (page, result, step) => {
 	});
 
 	await step("run-to-completion-without-second-ask", async () => {
-		const settled = await page.waitForIdle(120_000);
 		const assistantReplies = await page.eval("document.querySelectorAll('.markdown-body').length");
 		const dialogs = await page.eval(
 			'document.querySelectorAll(\'[data-testid="ask-simple"],[data-testid="ask-dialog"],[data-testid="permission-allow-run"]\').length',
@@ -162,7 +163,8 @@ await runScenario("p1", async (page, result, step) => {
 		const completedFiles = expectedFiles.filter((file) => file.exists).length;
 		return {
 			ok: Boolean(
-				settled &&
+				launchRun.startedRun &&
+					launchRun.settled &&
 					assistantReplies > 0 &&
 					dialogs === 0 &&
 					result.interactions.postAuthorizationInterruptions === 0 &&
@@ -175,7 +177,8 @@ await runScenario("p1", async (page, result, step) => {
 				'[data-testid="ask-simple"]',
 				'[data-testid="ask-dialog"]',
 			],
-			settled,
+			startedRun: launchRun.startedRun,
+			settled: launchRun.settled,
 			assistantReplies,
 			dialogs,
 			postAuthorizationInterruptions: result.interactions.postAuthorizationInterruptions,
