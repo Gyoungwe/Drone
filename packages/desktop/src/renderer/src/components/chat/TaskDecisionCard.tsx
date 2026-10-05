@@ -8,21 +8,24 @@ import {
 import { useState } from "react";
 import { getPi } from "../../api";
 import { useI18nStore } from "../../i18n";
+import { formatCardText } from "../session/format-card-text";
 
 /**
- * The chat decision. The side pane keeps the full ledger.
- * “先不验收，继续后面的” sends the same “继续” the host already understands.
+ * The task decision is also embedded in the route card. Keeping the action logic here means
+ * chat, route and task-panel entry points all use the same taskActionCommand protocol.
  */
 export function TaskDecisionCard({
 	task,
 	view,
 	sessionId,
 	agentActive,
+	embedded = false,
 }: {
 	task: WorkbenchTask;
 	view: TaskView;
 	sessionId: string | null;
 	agentActive: boolean;
+	embedded?: boolean;
 }) {
 	const language = useI18nStore((state) => state.language) as TaskDecisionLang;
 	const decision = taskDecision(task, language === "en" ? "en" : "zh");
@@ -40,24 +43,22 @@ export function TaskDecisionCard({
 			setBusy(false);
 		}
 	};
-	if (decision.mode === "line") {
-		return (
-			<p className="mt-2 text-[12px] text-ink-dim" data-testid="task-decision-line">
-				{decision.line}
+	const content = (
+		<>
+			<h4 className="text-[13px] font-medium leading-5 text-ink">{formatCardText(decision.title)}</h4>
+			<p className="mt-1 whitespace-pre-wrap text-[12px] leading-5 text-ink">
+				{formatCardText(decision.stop)}
 			</p>
-		);
-	}
-	return (
-		<section
-			className="mt-2 rounded-xl border border-amber-500/35 bg-surface px-3 py-2"
-			data-testid="task-decision"
-		>
-			<h4 className="text-[13px] font-medium leading-5 text-ink">{decision.title}</h4>
-			<p className="mt-1 text-[12px] leading-5 text-ink">{decision.stop}</p>
-			<p className="text-[12px] leading-5 text-ink-dim">{decision.done}</p>
-			<p className="text-[12px] leading-5 text-ink-dim">{decision.remaining}</p>
+			<p className="whitespace-pre-wrap text-[12px] leading-5 text-ink-dim">
+				{formatCardText(decision.done)}
+			</p>
+			<p className="whitespace-pre-wrap text-[12px] leading-5 text-ink-dim">
+				{formatCardText(decision.remaining)}
+			</p>
 			{decision.cannotComplete && (
-				<p className="mt-1 text-[12px] leading-5 text-ink-dim">{decision.cannotComplete}</p>
+				<p className="mt-1 whitespace-pre-wrap text-[12px] leading-5 text-ink-dim">
+					{formatCardText(decision.cannotComplete)}
+				</p>
 			)}
 			<div className="mt-2 flex flex-wrap gap-1.5">
 				{decision.canComplete && decision.completeActionId && (
@@ -97,19 +98,43 @@ export function TaskDecisionCard({
 			</div>
 			<details className="mt-2">
 				<summary className="cursor-pointer text-[11px] text-ink-dim">{decision.detailsLabel}</summary>
-				<ul className="mt-1 space-y-0.5">
+				<ul className="mt-1 list-disc space-y-0.5 pl-4">
 					{decision.details.map((line) => (
-						<li key={line} className="text-[11px] leading-4 text-ink-dim">
-							{line}
+						<li key={line} className="whitespace-pre-wrap text-[11px] leading-4 text-ink-dim">
+							{formatCardText(line)}
 						</li>
 					))}
 				</ul>
 			</details>
 			{error && (
-				<p role="alert" className="mt-1 text-[11px] text-red-500">
-					{error}
+				<p role="alert" className="mt-1 whitespace-pre-wrap text-[11px] text-red-500">
+					{formatCardText(error)}
 				</p>
 			)}
+		</>
+	);
+	if (decision.mode === "line") {
+		return (
+			<p
+				className={
+					embedded ? "mt-2 whitespace-pre-wrap text-[12px] text-ink-dim" : "mt-2 text-[12px] text-ink-dim"
+				}
+				data-testid="task-decision-line"
+			>
+				{formatCardText(decision.line)}
+			</p>
+		);
+	}
+	return embedded ? (
+		<div className="mt-3 border-t border-border/70 pt-3" data-testid="task-decision">
+			{content}
+		</div>
+	) : (
+		<section
+			className="mt-2 rounded-xl border border-amber-500/35 bg-surface px-3 py-2"
+			data-testid="task-decision"
+		>
+			{content}
 		</section>
 	);
 }

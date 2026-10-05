@@ -1,9 +1,10 @@
-import type { TaskView, WorkbenchTask } from "@drone/shared";
+import type { TaskView, TurnRoute, WorkbenchTask } from "@drone/shared";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, expect, it, vi } from "vitest";
 import { TaskDecisionCard } from "./TaskDecisionCard";
 import { TaskRow } from "./TaskRow";
+import { TurnRouteCard } from "./TurnRouteCard";
 
 vi.mock("../../i18n", () => ({
 	useT: () => (key: string) => key,
@@ -142,4 +143,54 @@ it("renders the decision card from the task, and a quiet line when nothing is pe
 	);
 	expect(quiet).toContain("配置并验证 Zotero 文献读取能力 · 还在做");
 	expect(quiet).not.toContain("先不验收，继续后面的");
+});
+
+it("embeds the task decision in the route card instead of rendering a second card", () => {
+	const route = {
+		utterance: "继续处理当前任务",
+		intake: "continuation",
+		capabilities: ["coding"],
+		topics: ["task"],
+		direction: "coding",
+		stage: "execution",
+		contract: "继续当前任务",
+		primary: "coding",
+		reason: "沿用当前任务检查点",
+		unavailableStage: null,
+		comparison: false,
+		academic: false,
+		keptCheckpoint: true,
+		deferPhrase: true,
+		visiblePrimary: true,
+		landing: "workflow",
+		host: null,
+	} as TurnRoute;
+	const html = renderToStaticMarkup(
+		createElement(TurnRouteCard, {
+			route,
+			tasks: [
+				{
+					...task,
+					state: "waiting_user",
+					actions: [
+						{
+							id: "review-1",
+							kind: "review",
+							title: "请看一下结果",
+							reason: "等你",
+							expected: {},
+							milestoneId: null,
+							state: "pending",
+						},
+					],
+				} as unknown as WorkbenchTask,
+			],
+			view,
+			sessionId: "session",
+			agentActive: false,
+		}),
+	);
+	expect(html).toContain('data-testid="turn-route-decisions"');
+	expect(html.match(/data-testid="task-decision"/g)).toHaveLength(1);
+	expect(html).toContain("请看一下结果");
 });
