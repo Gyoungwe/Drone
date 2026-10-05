@@ -6,8 +6,8 @@ import { WebSocket } from "ws";
 const PORT = Number(process.env.DRONE_CDP_PORT || 9224);
 const OUT = process.env.DRONE_SIM_OUT || "/tmp/drone-v19-sim/out";
 const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || "/tmp/drone-v19-sim/agent-dev";
-const MAX_TOKENS = Number(process.env.DRONE_SIM_MAX_TOKENS || 2_000_000);
-const MAX_COST_USD = Number(process.env.DRONE_SIM_MAX_COST_USD || 5);
+const MAX_TOKENS = Number(process.env.DRONE_SIM_MAX_TOKENS || 15_000_000);
+const MAX_COST_USD = Number(process.env.DRONE_SIM_MAX_COST_USD || 3);
 mkdirSync(OUT, { recursive: true });
 
 function target(targetUrl = null, targetId = null) {
@@ -24,7 +24,15 @@ function target(targetUrl = null, targetId = null) {
 }
 
 function usageSummary(root = AGENT_DIR) {
-	const summary = { totalTokens: 0, costUSD: 0, messageCount: 0 };
+	const summary = {
+		totalTokens: 0,
+		inputTokens: 0,
+		cacheHitInputTokens: 0,
+		cacheWriteInputTokens: 0,
+		outputTokens: 0,
+		costUSD: 0,
+		messageCount: 0,
+	};
 	const walk = (dir) => {
 		let entries;
 		try {
@@ -52,7 +60,20 @@ function usageSummary(root = AGENT_DIR) {
 					const usage = value?.message?.usage;
 					if (!usage) continue;
 					summary.messageCount++;
-					summary.totalTokens += Number(usage.totalTokens || 0);
+					const input = Number(usage.input ?? usage.inputTokens ?? 0);
+					const cacheRead = Number(
+						usage.cacheRead ?? usage.cacheReadTokens ?? usage.cache_read_input_tokens ?? 0,
+					);
+					const cacheWrite = Number(
+						usage.cacheWrite ?? usage.cacheWriteTokens ?? usage.cache_creation_input_tokens ?? 0,
+					);
+					const output = Number(usage.output ?? usage.outputTokens ?? 0);
+					const total = Number(usage.totalTokens ?? input + cacheRead + cacheWrite + output);
+					summary.inputTokens += input;
+					summary.cacheHitInputTokens += cacheRead;
+					summary.cacheWriteInputTokens += cacheWrite;
+					summary.outputTokens += output;
+					summary.totalTokens += total;
 					summary.costUSD += Number(usage.cost?.total || 0);
 				} catch {
 					// Ignore non-message lines and malformed partial writes.

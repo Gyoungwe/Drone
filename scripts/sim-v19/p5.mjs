@@ -1,7 +1,13 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
+import { join } from "node:path";
 import { runScenario } from "./common.mjs";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || "/tmp/drone-v19-sim/agent-dev";
+const PSEUDO_PROVIDER = "drone-sim-error";
+const PSEUDO_MODEL = "drone-sim-error-model";
+const APP_URL = process.env.DRONE_SIM_APP_URL || "http://localhost:5173/";
 
 function startErrorServer(status) {
 	let requests = 0;
@@ -27,45 +33,152 @@ function startErrorServer(status) {
 	);
 }
 
-async function providerEdit(page, baseUrl) {
-	await page.clickText("设置", { exact: true });
-	await page.clickTextWithin('[data-testid="settings-dialog"]', "模型", { exact: true });
-	const clicked = await page.eval(
-		"(() => { const root=document.querySelector('[data-testid=\"settings-dialog\"]'); const row=[...root.querySelectorAll('li')].find(n=>/DeepSeek/i.test(n.textContent||'')); const button=[...(row?.querySelectorAll('button[aria-label]')||[])].find(n=>/配置|编辑|endpoint|base/i.test(n.getAttribute('aria-label')||'')); button?.click(); return Boolean(button); })()",
-	);
-	await page.settle();
-	const inputReady = await page.eval(
-		"(() => { const root=document.querySelector('[data-testid=\"settings-dialog\"]'); const row=[...root.querySelectorAll('li')].find(n=>/DeepSeek/i.test(n.textContent||'')); const input=row?.querySelector('input:not([type=\"password\"])'); if(!input)return false; input.focus(); input.select(); return true; })()",
-	);
-	if (inputReady) await page.send("Input.insertText", { text: baseUrl });
-	const inputId = inputReady ? "scoped DeepSeek baseUrl input" : null;
-	const filled = inputReady;
-	const saved = await page.clickRegexWithin('[data-testid="settings-dialog"]', "保存|Save");
-	await page.settle();
-	return { clicked, inputId, filled, saved };
+function installPseudoProvider(baseUrl) {
+	const modelsPath = join(AGENT_DIR, "models.json");
+	const authPath = join(AGENT_DIR, "auth.json");
+	const originalModels = existsSync(modelsPath) ? readFileSync(modelsPath, "utf8") : null;
+	const originalAuth = existsSync(authPath) ? readFileSync(authPath, "utf8") : null;
+	const models = originalModels ? JSON.parse(originalModels) : {};
+	const auth = originalAuth ? JSON.parse(originalAuth) : {};
+	models.providers = {
+		...(models.providers || {}),
+		[PSEUDO_PROVIDER]: {
+			name: "Drone local error fixture",
+			baseUrl,
+			api: "openai-completions",
+			models: [{ id: PSEUDO_MODEL, name: "Drone local error fixture" }],
+		},
+	};
+	auth[PSEUDO_PROVIDER] = { type: "api_key", key: "drone-sim-local" };
+	writeFileSync(modelsPath, `${JSON.stringify(models, null, 2)}\n`, { mode: 0o600 });
+	writeFileSync(authPath, `${JSON.stringify(auth, null, 2)}\n`, { mode: 0o600 });
+	return () => {
+		if (originalModels === null) writeFileSync(modelsPath, "{}\n", { mode: 0o600 });
+		else writeFileSync(modelsPath, originalModels, { mode: 0o600 });
+		if (originalAuth === null) writeFileSync(authPath, "{}\n", { mode: 0o600 });
+		else writeFileSync(authPath, originalAuth, { mode: 0o600 });
+	};
 }
 
-async function restoreProvider(page) {
-	const restored = await providerEdit(page, "");
-	await page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
-	return restored;
+async function refreshModelsInUi(page) {
+	await page.clickText("设置", { exact: true });
+	await page.clickTextWithin('[data-testid="settings-dialog"]', "模型", { exact: true });
+	const refreshed = await page.clickRegexWithin('[data-testid="settings-dialog"]', "刷新|Refresh");
+	const visible = await page.waitFor(
+		`[...document.querySelectorAll('[data-testid="settings-dialog"] li')].some((n)=>/Drone local error fixture/i.test(n.textContent||''))`,
+		20_000,
+	);
+	return { refreshed, visible };
+}
+
+async function closeSettings(page) {
+	return page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
+}
+
+async function navigate(page, url) {
+	try {
+		await page.send("Page.navigate", { url });
+	} catch {
+		await page.eval(`(() => { location.assign(${JSON.stringify(url)}); return true; })()`);
+	}
+	await page.waitFor("document.readyState === 'complete'", 15_000);
+	await sleep(1_000);
+}
+
+async function setLanState(page, remoteControl) {
+	await navigate(page, APP_URL);
+	await page.clickText("设置", { exact: true });
+	const tab = await page.clickTextWithin('[data-testid="settings-dialog"]', "局域网观察", { exact: true });
+	const switches = await page.eval(
+		"[...document.querySelectorAll('[data-testid=\"settings-dialog\"] [role=\"switch\"]')].map((node,index)=>({index,checked:node.getAttribute('aria-checked')}))",
+	);
+	const enabled = switches[0];
+	if (enabled?.checked !== "true") {
+		await page.eval(
+			'(() => { const node=document.querySelector(\'[data-testid="settings-dialog"] [role="switch"]\'); if(!node)return false; node.click(); return true; })()',
+		);
+	}
+	const urlReady = await page.waitForSelector('[data-testid="settings-dialog"] input[readonly]', 15_000);
+	const remote = switches[1];
+	if (!remote) {
+		return { tab, switches, urlReady, remote: null, url: null };
+	}
+	if ((remote.checked === "true") !== remoteControl) {
+		await page.eval(
+			`(() => { const nodes=[...document.querySelectorAll('[data-testid="settings-dialog"] [role="switch"]')]; const node=nodes[1]; if(!node)return false; node.click(); return true; })()`,
+		);
+	}
+	const remoteReady = await page.waitFor(
+		`document.querySelectorAll('[data-testid="settings-dialog"] [role="switch"]')[1]?.getAttribute('aria-checked') === ${JSON.stringify(remoteControl ? "true" : "false")}`,
+		10_000,
+	);
+	const url = await page.eval(
+		"document.querySelector('[data-testid=\"settings-dialog\"] input[readonly]')?.value || null",
+	);
+	return { tab, switches, urlReady, remote: { ...remote, expected: remoteControl, ready: remoteReady }, url };
+}
+
+async function inspectLanDom(page) {
+	return page.eval(`(() => {
+		const visible = (node) => { const r=node.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(node).visibility !== 'hidden'; };
+		const describe = (node) => ({
+			tag: node.tagName.toLowerCase(),
+			selector: node.dataset.testid ? '[data-testid="'+node.dataset.testid+'"]' : node.getAttribute('aria-label') ? node.tagName.toLowerCase()+'[aria-label="'+node.getAttribute('aria-label')+'"]' : node.className ? node.tagName.toLowerCase()+'.'+String(node.className).trim().replace(/\\s+/g,'.') : node.tagName.toLowerCase(),
+			text: (node.textContent || node.getAttribute('placeholder') || '').trim().slice(0,120),
+			ariaLabel: node.getAttribute('aria-label'),
+		});
+		const selectors = ['textarea','[contenteditable="true"]','[role="textbox"]','input:not([readonly])','button.c-btn','button.pbtn'];
+		const controls = selectors.flatMap((selector) => [...document.querySelectorAll(selector)].filter(visible).map(describe));
+		const sendButtons = [...document.querySelectorAll('button[aria-label="发送"],button[aria-label="Send"],button.c-btn.send:not(.stop)')].filter(visible).map(describe);
+		return {
+			url: location.href,
+			textarea: document.querySelectorAll('textarea').length,
+			sendButtons,
+			writeControls: controls,
+			writeControlCount: controls.length,
+			buttons: document.querySelectorAll('button').length,
+			inputs: document.querySelectorAll('input').length,
+		};
+	})()`);
+}
+
+async function sendLanMessage(page) {
+	const cardClicked = await page.eval(
+		"(() => { const cards=[...document.querySelectorAll('.s-card.live,.s-card.idle')]; const card=cards[0] || document.querySelector('.s-card'); if(!card)return false; card.click(); return true; })()",
+	);
+	const composerReady = await page.waitForSelector("textarea.composer-input", 10_000);
+	const text = "LAN-SIM-REMOTE-CONTROL";
+	const filled = composerReady && (await page.fill("textarea.composer-input", text));
+	const sent = filled && (await page.clickSelector('button[aria-label="发送"],button[aria-label="Send"]'));
+	const userMessageVisible = await page.waitFor(
+		`[...document.querySelectorAll('.m-user')].some((node)=>node.textContent?.includes(${JSON.stringify(text)}))`,
+		10_000,
+	);
+	const cleared = await page.eval("document.querySelector('textarea.composer-input')?.value === ''");
+	return { cardClicked, composerReady, filled, sent, userMessageVisible, cleared, text };
 }
 
 async function runPseudoError(page, result, status) {
 	const fixture = await startErrorServer(status);
+	const restoreFiles = installPseudoProvider(`http://127.0.0.1:${fixture.port}/v1`);
 	try {
-		const configured = await providerEdit(page, `http://127.0.0.1:${fixture.port}/v1`);
-		await page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
+		const configured = await refreshModelsInUi(page);
+		await closeSettings(page);
 		await page.clickSelector('button[aria-label="新建会话"]');
 		const pickerOpened = await page.eval(
 			"(() => { const button=document.querySelector('.composer-model-group > div > button'); button?.click(); return Boolean(button); })()",
 		);
 		const selected = await page.eval(
-			"(() => { const button=[...document.querySelectorAll('.composer-model-group button')].find(n=>/DeepSeek|deepseek/i.test(n.textContent||'')); button?.click(); return button?.textContent.trim() || null; })()",
+			`(() => { const button=[...document.querySelectorAll('.composer-model-group button')].find(n=>/${PSEUDO_MODEL}|Drone local error fixture/i.test(n.textContent||'')); button?.click(); return button?.textContent.trim() || null; })()`,
 		);
+		const selectedInComposer = await page.waitFor(
+			`/Drone local error fixture|${PSEUDO_MODEL}/i.test(document.querySelector('.composer-model-group > div > button')?.textContent||'')`,
+			5_000,
+		);
+		const baselineErrors = await page.visibleCount(".error-note");
 		const filled = await page.fill(
 			'[data-testid="composer-input"]',
-			"伪 provider 错误事件测试：只发送一次短请求，不要调用工具。",
+			`本地伪 provider ${status} 错误事件测试：只发送一次短请求，不要调用工具。`,
 		);
 		const sent = await page.clickSelector('[data-testid="composer-send"]');
 		const startedRun = await page.waitForRunStart(60_000);
@@ -78,33 +191,42 @@ async function runPseudoError(page, result, status) {
 			await sleep(500);
 		}
 		const evidence = await page.eval(
-			"(() => { const cards=[...document.querySelectorAll('.error-note')]; const details=[...document.querySelectorAll('.error-note-detail')].map(n=>n.textContent.trim()); return {cards:cards.length,details,alerts:document.querySelectorAll('[role=\"alert\"]').length}; })()",
+			`(() => { const cards=[...document.querySelectorAll('.error-note')]; const titles=[...document.querySelectorAll('.error-note-title')].map(n=>n.textContent.trim()); const details=[...document.querySelectorAll('.error-note-detail')].map(n=>n.textContent.trim()); return {cards:cards.length, newCards:Math.max(0,cards.length-${baselineErrors}), titles, details, alerts:document.querySelectorAll('[role="alert"]').length}; })()`,
 		);
-		const restored = await restoreProvider(page);
+		const recovered = await page.clickSelector('button[aria-label="新建会话"]');
+		const composerReady = await page.waitForSelector('[data-testid="composer-input"]', 5_000);
 		return {
 			status,
 			configured,
 			pickerOpened,
 			selected,
+			selectedInComposer,
 			filled,
 			sent,
 			startedRun,
 			evidence,
 			requestCount: fixture.requests,
-			restored,
+			recovered,
+			composerReady,
 			ok: Boolean(
-				configured.filled &&
+				configured.refreshed &&
+					configured.visible &&
 					pickerOpened &&
 					selected &&
+					selectedInComposer &&
 					sent &&
 					startedRun &&
 					fixture.requests > 0 &&
-					evidence.cards > 0 &&
-					evidence.details.some((text) => text.includes(String(status))) &&
-					restored.filled,
+					evidence.newCards > 0 &&
+					[...evidence.titles, ...evidence.details].some((text) =>
+						new RegExp(`${status}|unauthorized|rate.?limit|认证|凭证|限流`, "iu").test(text),
+					) &&
+					recovered &&
+					composerReady,
 			),
 		};
 	} finally {
+		restoreFiles();
 		fixture.server.close();
 	}
 }
@@ -225,61 +347,61 @@ await runScenario("p5", async (page, result, step) => {
 		};
 	});
 
-	await step("lan-observer-read-only-dom", async () => {
-		await page.clickText("设置", { exact: true });
-		const tab = await page.clickTextWithin('[data-testid="settings-dialog"]', "局域网观察", { exact: true });
-		const switchCount = await page.visibleCount('[data-testid="settings-dialog"] [role="switch"]');
-		if (switchCount > 0) {
-			const current = await page.eval(
-				'document.querySelector(\'[data-testid="settings-dialog"] [role="switch"]\')?.getAttribute("aria-checked")',
-			);
-			if (current !== "true") await page.clickSelector('[data-testid="settings-dialog"] [role="switch"]');
-		}
-		await page.waitForSelector('[data-testid="settings-dialog"] input[readonly]', 10_000);
-		const url = await page.eval(
-			"document.querySelector('[data-testid=\"settings-dialog\"] input[readonly]')?.value || null",
-		);
-		if (!url)
-			return {
-				ok: false,
-				selectors: [
-					'[data-testid="settings-dialog"] [role="switch"]',
-					'[data-testid="settings-dialog"] input[readonly]',
-				],
-				tab,
-				switchCount,
-				url,
-			};
-		let navigated = false;
-		try {
-			await page.send("Page.navigate", { url });
-			navigated = true;
-		} catch {
-			// Electron's embedded CDP target can reject Page.navigate; use the same
-			// visible page location as the CDP-driven fallback and keep the DOM check.
-			navigated = await page.eval(`(() => { location.assign(${JSON.stringify(url)}); return true; })()`);
-		}
-		await sleep(1_000);
-		const dom = await page.eval(
-			"(() => { const writes=[...document.querySelectorAll('button,input,textarea,[contenteditable=\"true\"],[role=\"textbox\"]')].filter(n=>{ if(n.matches('input[readonly]')) return false; const text=(n.textContent||'')+' '+(n.getAttribute('aria-label')||'')+' '+(n.getAttribute('title')||''); return /发送|写|编辑|删除|保存|提交|send|write|edit|delete|save|submit/i.test(text) || n.matches('textarea,[contenteditable=\"true\"],[role=\"textbox\"]'); }); return {textarea:document.querySelectorAll('textarea').length,send:document.querySelectorAll('[data-testid=\"composer-send\"],button[aria-label=\"发送\"],button[aria-label=\"Send\"]').length,writeControls:writes.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input').length,url:location.href}; })()",
-		);
-		try {
-			await page.send("Page.navigate", { url: "http://localhost:5173/" });
-		} catch {
-			await page.eval("(() => { location.assign('http://localhost:5173/'); return true; })()");
-		}
-		await sleep(1_000);
-		await page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
+	await step("lan-observer-remote-control-off-read-only", async () => {
+		const settings = await setLanState(page, false);
+		if (!settings.url) return { ok: false, selectors: ["settings LAN switches", "LAN URL input"], settings };
+		await navigate(page, settings.url);
+		const dom = await inspectLanDom(page);
+		const returned = await navigate(page, APP_URL);
 		return {
-			ok: Boolean(tab && navigated && dom.textarea === 0 && dom.send === 0 && dom.writeControls === 0),
+			ok: Boolean(settings.tab && settings.urlReady && settings.remote?.ready && dom.writeControlCount === 0),
 			selectors: [
-				"LAN page textarea",
-				'LAN page [data-testid="composer-send"]',
-				"LAN page button,input,[contenteditable]",
+				'[data-testid="settings-dialog"] [role="switch"]:nth-of-type(1)',
+				'[data-testid="settings-dialog"] [role="switch"]:nth-of-type(2)',
+				'[data-testid="settings-dialog"] input[readonly]',
+				"LAN textarea/contenteditable/role=textbox/input:not([readonly])",
+				"LAN button.c-btn / button.pbtn",
 			],
-			tab,
-			navigated,
+			settings,
 			dom,
+			returned,
+		};
+	});
+
+	await step("lan-observer-remote-control-on-send", async () => {
+		const settings = await setLanState(page, true);
+		if (!settings.url) return { ok: false, selectors: ["settings LAN switches", "LAN URL input"], settings };
+		await navigate(page, settings.url);
+		const before = await inspectLanDom(page);
+		const send = await sendLanMessage(page);
+		const after = await inspectLanDom(page);
+		const returned = await navigate(page, APP_URL);
+		return {
+			ok: Boolean(
+				settings.tab &&
+					settings.urlReady &&
+					settings.remote?.ready &&
+					before.writeControlCount > 0 &&
+					before.sendButtons.length > 0 &&
+					send.cardClicked &&
+					send.composerReady &&
+					send.filled &&
+					send.sent &&
+					send.userMessageVisible &&
+					send.cleared,
+			),
+			selectors: [
+				'[data-testid="settings-dialog"] [role="switch"]:nth-of-type(2)',
+				".s-card.live, .s-card.idle",
+				"textarea.composer-input",
+				'button[aria-label="发送"],button[aria-label="Send"]',
+				".m-user",
+			],
+			settings,
+			before,
+			send,
+			after,
+			returned,
 		};
 	});
 
