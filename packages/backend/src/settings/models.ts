@@ -16,6 +16,7 @@ export interface ModelSettingsServicePort {
 	setSubagentModel(agent: string, modelRef: string | null): Promise<ModelPrefs>;
 	getSubagentModel(agent: string): Promise<string | undefined>;
 	setSubagentThinking(agent: string, level: SubagentThinkingLevel | null): Promise<ModelPrefs>;
+	setBackgroundReviewerModel(enabled: boolean): Promise<ModelPrefs>;
 	getSubagentThinking(agent: string): Promise<SubagentThinkingLevel | undefined>;
 }
 
@@ -52,5 +53,9 @@ export class ModelSettingsService implements ModelSettingsServicePort {
 
 	getSubagentThinking(agent: string): Promise<SubagentThinkingLevel | undefined> {
 		return this.prefs.getSubagentThinking(agent);
+	}
+
+	setBackgroundReviewerModel(enabled: boolean): Promise<ModelPrefs> {
+		return this.prefs.setBackgroundReviewerModel(enabled);
 	}
 }

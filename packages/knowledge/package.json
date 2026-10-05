@@ -17,6 +17,7 @@
 		"./flow-cards": "./src/flow-cards.ts",
 		"./search-policy": "./src/search-policy.ts",
 		"./publication-policy": "./src/publication-policy.ts",
+		"./metacognitive-policy": "./src/metacognitive-policy.ts",
 		"./semantic-settings": "./src/semantic-settings.ts",
 		"./extension-helpers": "./src/extension-helpers.ts",
 		"./task-feedback": "./src/task-feedback.ts",
@@ -37,7 +38,8 @@
 		"./specialist-delivery": "./src/specialist-delivery.ts",
 		"./wiki-model-review": "./src/wiki-model-review.ts",
 		"./ui-service": "./src/ui-service.ts",
-		"./experience-store": "./src/experience-store.ts"
+		"./experience-store": "./src/experience-store.ts",
+		"./deliverable-review": "./src/deliverable-review.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

@@ -2,6 +2,7 @@ import { join } from "node:path";
 import type {
 	AskRequest,
 	DroneRuntime,
+	HarnessUnit,
 	LoginEventPayload,
 	McpStatus,
 	SessionEvent,
@@ -70,6 +71,8 @@ export interface SessionServiceOptions {
 	permissionExtension?: boolean;
 	/** 是否注册模型上下文合同与 compact checkpoint 扩展（默认 true）。 */
 	harnessContext?: boolean;
+	/** 独立 harness 单元开关；缺省全部启用，harnessContext=false 仍优先关闭全部。 */
+	harness?: Partial<Record<HarnessUnit, boolean>>;
 	/** 是否启用项目信任门控（false 时所有项目自动信任，项目资源直接加载；供无人值守场景用） */
 	projectTrust?: boolean;
 	/** 是否内置 webfetch 工具（默认 true）；传对象可配置 CIDR 放行 */
@@ -82,6 +85,8 @@ export interface SessionServiceOptions {
 	runtime?: DroneRuntime;
 	/** Optional project research-state root registered for the inquiry adapter. */
 	inquiryDir?: string;
+	/** Host-wide root for per-project inquiry ledgers. */
+	projectsDir?: string;
 	/** Host-owned permission settings service; omitted for direct compatibility construction. */
 	permissions?: PermissionSettingsService;
 	/**
@@ -101,6 +106,7 @@ export interface SessionServiceOptions {
 type LoginHandler = (payload: LoginEventPayload) => void;
 type AskHandler = (req: AskRequest) => void;
 type TrustHandler = (req: TrustRequest) => void;
+type DecisionHandler = (event: unknown) => void;
 
 /**
  * PiBackend：pi SDK 的唯一适配层（门面）。不依赖 Electron，
@@ -123,6 +129,7 @@ export class SessionService extends SessionServiceApi {
 	readonly trustHandlers = new Set<TrustHandler>();
 	readonly loginHandlers = new Set<LoginHandler>();
 	readonly mcpHandlers = new Set<(cwd: string, status: McpStatus) => void>();
+	readonly decisionHandlers = new Set<DecisionHandler>();
 	readonly liveSubagents = new Map<
 		string,
 		{
@@ -245,6 +252,7 @@ export class SessionService extends SessionServiceApi {
 			permissionGates: this.options.permissionGates,
 			permissionExtension: this.options.permissionExtension,
 			harnessContext: this.options.harnessContext,
+			harness: this.options.harness,
 			subagentPreferBuiltin: this.options.subagentPreferBuiltin,
 			webFetch: this.options.webFetch,
 			tools: this.options.tools,
@@ -262,7 +270,22 @@ export class SessionService extends SessionServiceApi {
 				};
 			},
 			setMcpStatus: (cwd, status) => this.setMcpStatus(cwd, status),
+			onDecision: (sessionId, event) => {
+				for (const handler of this.decisionHandlers) {
+					try {
+						const value = event && typeof event === "object" ? (event as Record<string, unknown>) : {};
+						handler({ ...value, ...(value.projectId ? {} : { projectId: sessionId }) });
+					} catch {
+						// Decision journaling is observational and must not interrupt a session.
+					}
+				}
+			},
 		};
+	}
+
+	onDecision(handler: DecisionHandler): () => void {
+		this.decisionHandlers.add(handler);
+		return () => this.decisionHandlers.delete(handler);
 	}
 
 	async getModelRuntime(): Promise<ModelRuntime> {

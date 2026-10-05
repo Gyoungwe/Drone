@@ -41,4 +41,10 @@ describe("knowledge publication policy", () => {
 	it("falls back to a safe check-failed notice for unknown codes", () => {
 		expect(publicationNotice("unknown-code")).toBe("回答前检查发生错误，草稿没有发布。");
 	});
+
+	it("keeps pending-review artifacts fail-closed at the publication boundary", () => {
+		const result = knowledgeFailure({ code: "artifact-pending-review" });
+		expect(result).toMatchObject({ code: "artifact-pending-review", paths: [] });
+		expect(publicationNotice(result.code)).toContain("等待复核");
+	});
 });

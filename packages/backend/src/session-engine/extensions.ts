@@ -1,10 +1,17 @@
-import type { DroneRuntime, McpStatus, SessionEvent } from "@drone/shared";
+import {
+	type DroneRuntime,
+	type HarnessUnit,
+	type McpStatus,
+	resolveHarnessUnits,
+	type SessionEvent,
+} from "@drone/shared";
 import type { ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { InlineExtension, ModelRuntime, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { makeCapabilityExtension } from "../capabilities/extension";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { makeKnowledgeSpecialistBridge } from "../knowledge/specialist-bridge";
+import { createLogger } from "../log";
 import {
 	makePermissionGateExtension,
 	type PermissionConfirm,
@@ -31,6 +38,19 @@ import { makeHarnessDeliveryExtension } from "./harness/delivery";
 import { makeHarnessGuardExtension } from "./harness/guards";
 import { makeHarnessRecallTool } from "./harness/recall";
 
+const log = createLogger("session-harness");
+const warnedHarnessUnits = new Set<string>();
+
+function resolveSessionHarnessUnits(deps: SessionExtensionDependencies) {
+	const resolved = resolveHarnessUnits(deps, process.env.DRONE_HARNESS_DISABLE);
+	const unknown = resolved.ignored.filter((name) => !warnedHarnessUnits.has(name));
+	if (unknown.length > 0) {
+		for (const name of unknown) warnedHarnessUnits.add(name);
+		log.warn("ignored unknown harness units", { units: unknown });
+	}
+	return resolved.units;
+}
+
 type LiveChildControl = {
 	steer: (message: string, mode?: "steer" | "followUp") => Promise<void>;
 	reply: (requestId: string, message: string) => boolean;
@@ -43,6 +63,7 @@ export interface SessionExtensionDependencies {
 	permissionExtension?: boolean;
 	/** Host-owned bounded prompt/checkpoint contract; enabled by default. */
 	harnessContext?: boolean;
+	harness?: Partial<Record<HarnessUnit, boolean>>;
 	subagentPreferBuiltin?: boolean;
 	webFetch?: boolean | { allowRanges?: string[] };
 	tools?: string[];
@@ -59,6 +80,8 @@ export interface SessionExtensionDependencies {
 	onEvent: (sessionId: string, event: SessionEvent) => void;
 	registerLiveChild?: (sessionId: string, control: LiveChildControl) => () => void;
 	setMcpStatus: (cwd: string, status: McpStatus) => void;
+	/** Successful agent-made decisions emitted by first-party task/literature extensions. */
+	onDecision?: (sessionId: string, event: unknown) => void;
 }
 
 /** Build host-owned tools once per session. This module is the only place where
@@ -69,6 +92,7 @@ export function buildSessionCustomTools(
 	askGate: Pick<AskGate, "ask">,
 	capabilities?: CapabilityRuntime,
 ): ToolDefinition[] {
+	const harness = resolveSessionHarnessUnits(deps);
 	const tools = [...(deps.customTools ?? [])];
 	if (deps.webFetch !== false)
 		tools.push(makeWebFetchTool(typeof deps.webFetch === "object" ? deps.webFetch : undefined));
@@ -82,7 +106,14 @@ export function buildSessionCustomTools(
 	);
 	tools.push(makeStatusTool());
 	tools.push(makeTodoTool());
-	if (deps.harnessContext !== false) tools.push(makeHarnessRecallTool());
+	if (harness.recall) {
+		tools.push(
+			makeHarnessRecallTool({
+				recordUnit: (sessionId, unit, action) =>
+					deps.traces.recordCustom(sessionId, "harness_unit", { unit, action }),
+			}),
+		);
+	}
 	if (deps.subagentPreferBuiltin !== false) {
 		tools.push(
 			makeSubagentTool({
@@ -106,6 +137,7 @@ export function buildSessionExtensionFactories(
 	modeRef?: PermissionModeRef,
 	capability?: CapabilityRuntime,
 ): InlineExtension[] {
+	const harness = resolveSessionHarnessUnits(deps);
 	const factories: InlineExtension[] = [];
 	if (capability)
 		factories.push(makeCapabilityExtension(capability, deps.desktopIntegration?.academicPiRoot));
@@ -123,6 +155,9 @@ export function buildSessionExtensionFactories(
 		pi.events.on("pi-mcp-adapter/status/v1", (payload) => {
 			if (!payload || typeof payload !== "object") return;
 			deps.setMcpStatus(cwd, payload as McpStatus);
+		});
+		pi.events.on("drone:decision-record/v1", (payload) => {
+			deps.onDecision?.(cwd, payload);
 		});
 	});
 	if (deps.permissionGates !== false && deps.permissionExtension !== false) {
@@ -142,18 +177,37 @@ export function buildSessionExtensionFactories(
 				getThinkingPreference: deps.getSubagentThinking,
 			}),
 		);
-	if (deps.harnessContext !== false)
+	if (harness.context)
 		factories.push(
 			makeHarnessContextExtension({
+				familyPrompt: harness.familyPrompt,
 				reportStatus: (sessionId, status) => deps.traces.recordCustom(sessionId, "harness_contract", status),
 				report: (sessionId, checkpoint) =>
 					deps.traces.recordCustom(sessionId, "harness_checkpoint", checkpoint),
+				recordUnit: (sessionId, unit, action, details) =>
+					deps.traces.recordCustom(sessionId, "harness_unit", { unit, action, ...details }),
 			}),
 		);
-	if (deps.harnessContext !== false) {
+	if (harness.guard || harness.delivery) {
 		const report = (sessionId: string, kind: string, data: unknown) =>
 			deps.traces.recordCustom(sessionId, kind, data);
-		factories.push(makeHarnessGuardExtension(report), makeHarnessDeliveryExtension(report));
+		const recordUnit = (sessionId: string, unit: HarnessUnit, action: string) =>
+			deps.traces.recordCustom(sessionId, "harness_unit", { unit, action });
+		if (harness.guard) factories.push(makeHarnessGuardExtension({ report, recordUnit }));
+		if (harness.delivery)
+			factories.push(
+				makeHarnessDeliveryExtension({
+					report,
+					recordUnit,
+					review: (sessionId, snapshot) => {
+						deps.runtime.knowledge.reviewer?.schedule({
+							sessionId,
+							snapshot,
+							trigger: "milestone-complete",
+						});
+					},
+				}),
+			);
 	}
 	factories.push(
 		makeEvapExtension({

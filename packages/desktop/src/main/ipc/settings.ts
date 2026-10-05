@@ -57,6 +57,7 @@ export function registerSettingsIpc(
 		setSubagentModel: (agent, modelRef) => models.setSubagentModel(agent, modelRef),
 		setSubagentThinking: (agent, level) =>
 			models.setSubagentThinking(agent, level as SubagentThinkingLevel | null),
+		setBackgroundReviewerModel: (enabled) => models.setBackgroundReviewerModel(enabled),
 		listSubagents: () => subagents.listAvailable(),
 		startProviderLogin: (loginId, providerId) => login.startLogin(loginId, providerId),
 		cancelProviderLogin: (loginId) => login.cancel(loginId),
@@ -78,6 +79,7 @@ export function registerSettingsIpc(
 				setModelsHidden: IpcChannels.SettingsSetModelsHidden,
 				setSubagentModel: IpcChannels.SettingsSetSubagentModel,
 				setSubagentThinking: IpcChannels.SettingsSetSubagentThinking,
+				setBackgroundReviewerModel: IpcChannels.SettingsSetBackgroundReviewerModel,
 				listSubagents: IpcChannels.SettingsListSubagents,
 				startProviderLogin: IpcChannels.SettingsLoginStart,
 				cancelProviderLogin: IpcChannels.SettingsLoginCancel,

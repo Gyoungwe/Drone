@@ -78,6 +78,7 @@ export class SessionServiceApi extends SessionSettingsApi {
 				this.host.eventRates.delete(id);
 			},
 			afterDispose: async (id: string) => {
+				this.host.runtime.knowledge.reviewer?.clearSession?.(id);
 				await this.host.traces.stop(id);
 				log.info("session closed", id);
 			},

@@ -18,7 +18,8 @@ import { registerTool } from "../lib/tool-manifest.mjs";
 registerTool(pi, {
 	name: "research_zotero_save",
 	label: "…", description: "…", parameters: {…}, execute: …,
-	drone: {
+		drone: {
+		deliverable: true,               // 成功执行会产生可审查交付物（触发后台规则审稿）
 		readOnly: false,                 // 只读工具（只读恢复 / 只读文献模式 / 回执日志判定）
 		libraryMode: false,              // 非只读但在「只读复用已有文献」模式下仍允许
 		recoverySafe: false,             // 会话恢复时可以自动重放

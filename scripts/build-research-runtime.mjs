@@ -1,6 +1,7 @@
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { build } from "esbuild";
 
 const root = resolve(import.meta.dirname, "..");
@@ -27,8 +28,9 @@ const entries = {
 
 try {
 	await mkdir(outputDir, { recursive: true });
+	const inputHash = createHash("sha256");
 	for (const [name, relativeEntry] of Object.entries(entries)) {
-		await build({
+		const result = await build({
 			entryPoints: [resolve(root, relativeEntry)],
 			outfile: resolve(outputDir, `${name}.mjs`),
 			bundle: true,
@@ -37,14 +39,27 @@ try {
 			packages: "bundle",
 			sourcemap: false,
 			logLevel: "silent",
+			metafile: true,
 		});
+		for (const input of Object.keys(result.metafile?.inputs || {}).sort()) {
+			const path = resolve(root, input);
+			inputHash.update(relative(root, path).replaceAll("\\", "/"));
+			inputHash.update("\0");
+			inputHash.update(await readFile(path));
+			inputHash.update("\0");
+		}
 	}
+	await writeFile(
+		resolve(outputDir, ".build-manifest.json"),
+		`${JSON.stringify({ version: 1, generator: "scripts/build-research-runtime.mjs", inputsSha256: inputHash.digest("hex") }, null, "\t")}\n`,
+	);
 	if (check) {
 		const stale = [];
-		for (const name of Object.keys(entries)) {
-			const actual = await readFile(resolve(outputDir, `${name}.mjs`));
-			const expected = await readFile(resolve(expectedDir, `${name}.mjs`));
-			if (!actual.equals(expected)) stale.push(`${name}.mjs`);
+		for (const name of [...Object.keys(entries), ".build-manifest.json"]) {
+			const filename = name === ".build-manifest.json" ? name : `${name}.mjs`;
+			const actual = await readFile(resolve(outputDir, filename));
+			const expected = await readFile(resolve(expectedDir, filename));
+			if (!actual.equals(expected)) stale.push(filename);
 		}
 		if (stale.length > 0) throw new Error(`research runtime artifacts are stale: ${stale.join(", ")}`);
 		console.log("research runtime artifacts are up to date");

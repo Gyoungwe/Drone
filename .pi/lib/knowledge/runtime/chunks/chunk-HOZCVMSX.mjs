@@ -5,12 +5,12 @@ import {
 } from "./chunk-GC2J7ECB.mjs";
 import {
   evaluateMetacognitivePublication
-} from "./chunk-CVD67FIU.mjs";
+} from "./chunk-TT3YMRLM.mjs";
 import {
   advisoryLine,
   knowledgeFailure,
   publicationNotices
-} from "./chunk-IDLVS5M7.mjs";
+} from "./chunk-U3GNWHNQ.mjs";
 import {
   advisoryCodes,
   readReviewMode
@@ -161,7 +161,22 @@ function registerAnswerPublication(pi, {
     slot.projectEvent = (event) => projectKnowledgeEvent(event);
     slot.projectSnapshot = (messages, persisted) => projectKnowledgeSnapshot(messages, persisted);
     next.knowledge.publication = slot;
+    attachReviewer(next.knowledge.reviewer);
     return true;
+  };
+  let reviewer = null;
+  const attachReviewer = (next) => {
+    if (!next || typeof next !== "object" || typeof next.schedule !== "function") return false;
+    reviewer = next;
+    return true;
+  };
+  const sessionIdFor = (ctx) => ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId || "";
+  const scheduleReview = (ctx, snapshot, trigger) => {
+    if (!reviewer || !sessionIdFor(ctx)) return;
+    try {
+      reviewer.schedule({ sessionId: sessionIdFor(ctx), snapshot, trigger });
+    } catch {
+    }
   };
   if (runtime) attachRuntime(runtime);
   let turnId = null, required = true, started = false, protocolBytes = 0, toolRounds = 0, setupReceipt = null;
@@ -215,7 +230,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
     const evaluation = evaluateMetacognitivePublication(text, snapshot);
     if (!evaluation.ok)
       throw Object.assign(new Error("Metacognitive publication checks failed"), {
-        code: "metacognitive-inconsistency",
+        code: evaluation.failures.some((failure2) => failure2.code === "artifact-pending-review") ? "artifact-pending-review" : "metacognitive-inconsistency",
         paths: evaluation.failures.map((item) => item.path).filter(Boolean).slice(0, 6),
         metacognition: evaluation,
         verified: { metacognition: evaluation }
@@ -377,6 +392,27 @@ ${String(footer).slice(0, 2e3)}` }] : [];
       }
       if (ctx.signal?.aborted) return report(failure(message, { code: "interrupted" }));
       const metacognitive = await evaluateMetacognition(ctx, c, publishText);
+      const warnings = [
+        ...Array.isArray(proof.warnings) ? proof.warnings : [],
+        ...(metacognitive?.warnings || []).map((warning) => ({ code: warning.code, message: warning.detail }))
+      ];
+      let reviewerWarnings = [];
+      if (reviewer && typeof getMetacognition === "function") {
+        try {
+          const reviewSnapshot = await getMetacognition(ctx, c);
+          if (reviewSnapshot && typeof reviewSnapshot === "object") {
+            const snapshot = { ...reviewSnapshot, body: publishText };
+            const cached = reviewer.getCached?.(sessionIdFor(ctx), snapshot);
+            const prior = reviewer.getFindings?.(sessionIdFor(ctx));
+            reviewerWarnings = [
+              ...Array.isArray(cached?.findings) ? cached.findings : [],
+              ...Array.isArray(prior) ? prior : []
+            ].filter((finding, index, all) => finding.severity === "high" && !finding.handled && all.findIndex((item) => item.id === finding.id) === index);
+            scheduleReview(ctx, snapshot, "publication-projection");
+          }
+        } catch {
+        }
+      }
       const published = proof.status === "no-hits" ? [
         {
           type: "text",
@@ -391,7 +427,9 @@ ${String(footer).slice(0, 2e3)}` }] : published;
       return report(
         seal(message, visible, {
           ...proof,
+          ...warnings.length ? { warnings } : {},
           ...metacognitive ? { metacognition: metacognitive } : {},
+          ...reviewerWarnings.length ? { reviewerWarnings } : {},
           status: proof.status === "ready" ? "released" : "no-hits",
           turnId
         })
@@ -433,11 +471,20 @@ ${String(footer).slice(0, 2e3)}` }] : published;
   pi.on("message_end", (event, ctx) => handleMessageEnd(event, ctx));
   return {
     attachRuntime,
+    attachReviewer,
     async recordDelivery(ctx, path) {
       const c = getCurrent(ctx);
       if (!c) return;
       const receipt = await c.service.deliveryReceipt(c.ticket, ctx.cwd, path);
       deliveries.set(receipt.path, receipt);
+      scheduleReview(
+        ctx,
+        {
+          enabled: true,
+          deliverables: [{ id: receipt.path, path: receipt.path, sha256: receipt.hash }]
+        },
+        "deliverable-write"
+      );
       while (deliveries.size > 12) deliveries.delete(deliveries.keys().next().value);
     },
     async preflight(ctx, text) {
@@ -452,6 +499,14 @@ ${String(footer).slice(0, 2e3)}` }] : published;
           })
         ]);
         const metacognition = await evaluateMetacognition(ctx, c, text);
+        if (reviewer && typeof getMetacognition === "function") {
+          try {
+            const snapshot = await getMetacognition(ctx, c);
+            if (snapshot && typeof snapshot === "object")
+              scheduleReview(ctx, { ...snapshot, body: text }, "publication-projection");
+          } catch {
+          }
+        }
         return { ok: true, proof, ...metacognition ? { metacognition } : {} };
       } catch (error) {
         const info = knowledgeFailure(error);

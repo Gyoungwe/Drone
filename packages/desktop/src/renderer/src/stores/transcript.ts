@@ -153,6 +153,7 @@ export const useTranscriptStore = create<TranscriptStore>((set) => ({
 						retrying: null,
 						modelWait: null,
 						researchStatus: { agent: null, host: null },
+						reviewerFindings: current?.reviewerFindings ?? [],
 						pendingPermissions: current?.pendingPermissions ?? [],
 					},
 				},

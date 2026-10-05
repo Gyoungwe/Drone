@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
 	checkpointFingerprint,
 	HARNESS_CONTRACT,
+	HARNESS_UNITS,
 	renderHarnessCheckpoint,
 	renderHarnessPosture,
+	renderHarnessPromptLayer,
 	renderHarnessSpecialistLayer,
 	resolveHarnessModelFamily,
+	resolveHarnessUnits,
 } from "./harness";
 
 const checkpoint = {
@@ -61,6 +64,45 @@ describe("harness context contract", () => {
 		expect(specialist).toContain("Scientific contract:");
 		expect(specialist).toContain("Response contract:");
 		expect(specialist).not.toContain("Drone harness contract:");
+	});
+
+	it("resolves default, legacy, per-unit, environment, and unknown switches", () => {
+		expect(resolveHarnessUnits({}).units).toEqual(
+			Object.fromEntries(HARNESS_UNITS.map((unit) => [unit, true])),
+		);
+		expect(
+			resolveHarnessUnits({ harnessContext: false, harness: { context: true } }, "recall").units,
+		).toEqual(Object.fromEntries(HARNESS_UNITS.map((unit) => [unit, false])));
+		expect(resolveHarnessUnits({ harness: { recall: false, familyPrompt: false } }).units).toMatchObject({
+			recall: false,
+			familyPrompt: false,
+			context: true,
+		});
+		expect(resolveHarnessUnits({}, "guard, FamilyPrompt").units).toMatchObject({
+			guard: false,
+			familyPrompt: false,
+			context: true,
+		});
+		expect(resolveHarnessUnits({}, "all").units).toEqual(
+			Object.fromEntries(HARNESS_UNITS.map((unit) => [unit, false])),
+		);
+		expect(resolveHarnessUnits({}, "guard, unknown unit, UNKNOWN").ignored).toEqual([
+			"unknownunit",
+			"unknown",
+		]);
+	});
+
+	it("can omit only family guidance while retaining the shared contracts", () => {
+		const prompt = renderHarnessPromptLayer(null, {
+			effort: "normal",
+			delegation: "off",
+			autonomy: "balanced",
+			mode: "execute",
+		});
+		expect(prompt).not.toContain("Model family guidance");
+		expect(prompt).toContain("Drone harness contract:");
+		expect(prompt).toContain("Scientific contract:");
+		expect(prompt).toContain("Response contract:");
 	});
 
 	it("bounds hostile or oversized user-derived fields", () => {

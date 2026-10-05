@@ -74,4 +74,8 @@ export class SessionModelsService {
 	): Promise<ModelPrefs> {
 		return this.host.getModelPrefsService().setSubagentThinking(agent, level);
 	}
+
+	async setBackgroundReviewerModel(enabled: boolean): Promise<ModelPrefs> {
+		return this.host.getModelPrefsService().setBackgroundReviewerModel(enabled);
+	}
 }

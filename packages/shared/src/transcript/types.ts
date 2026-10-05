@@ -30,6 +30,11 @@ export interface RetryInfo {
 	errorMessage?: string;
 }
 
+export type ReviewerFindingUi = Extract<
+	import("../session").SessionEvent,
+	{ type: "reviewer_finding" }
+>["finding"];
+
 /** 会话 UI 态类型（transcript reducer 的状态形状） */
 
 /** 子代理运行（UI 态：流式期 running，固化后 done/error） */
@@ -226,6 +231,8 @@ export interface SessionTranscriptState {
 	/** SDK 自动重试瞬时信息（auto_retry_start → 状态行；auto_retry_end/agent_settled 清） */
 	retrying: RetryInfo | null;
 	modelWait: ModelWaitEvent | null;
+	/** Additive public findings from the asynchronous deliverable reviewer. */
+	reviewerFindings: ReviewerFindingUi[];
 	/** 最近一次 agent run 的固化结束时刻（agent_end willRetry=false / agent_settled 盖戳，agent_start 清）；
 	 * 最后一轮计时定格用——晚于最后一条消息落地，取 max 防「运行中末帧 > 定格值」回退 */
 	runEndedAt?: number;
@@ -244,6 +251,7 @@ export function emptyTranscript(): SessionTranscriptState {
 		pendingLlmError: null,
 		retrying: null,
 		modelWait: null,
+		reviewerFindings: [],
 		researchStatus: { agent: null, host: null },
 	};
 }

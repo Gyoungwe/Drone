@@ -9,8 +9,8 @@ import "./chunks/chunk-BRQ6C4CR.mjs";
 import "./chunks/chunk-GC2J7ECB.mjs";
 import "./chunks/chunk-4VUDROQV.mjs";
 import "./chunks/chunk-CXEKIGAQ.mjs";
-import "./chunks/chunk-H6MOV67K.mjs";
 import "./chunks/chunk-AHEUR5VB.mjs";
+import "./chunks/chunk-H6MOV67K.mjs";
 export {
   createKnowledgeSpecialists,
   knowledgeReadStart,

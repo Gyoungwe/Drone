@@ -1,7 +1,7 @@
 {
 	"name": "drone",
 	"private": true,
-	"version": "0.11.0",
+	"version": "0.19.0",
 	"description": "Desktop GUI for the Pi coding agent, built with Electron",
 	"license": "MIT",
 	"author": "Jaxton07",
@@ -18,7 +18,7 @@
 		"postinstall": "patch-package",
 		"build": "npm run build -w packages/desktop",
 		"typecheck": "npm run typecheck --workspaces && npm run check:pi",
-		"test": "npm run test --workspaces --if-present",
+		"test": "npm run test --workspaces --if-present && node --test scripts/check-build-inputs.test.mjs",
 		"test:unit": "npm run test:unit -w @drone/backend",
 		"test:sdk": "npm run test:sdk -w @drone/backend",
 		"dist": "npm run dist -w packages/desktop",

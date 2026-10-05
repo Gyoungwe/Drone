@@ -32,6 +32,8 @@ export interface ModelPrefs {
 	subagentModels: Record<string, string>;
 	/** 缺省 = 跟随主会话 thinking；显式值必须被目标模型支持。 */
 	subagentThinking: Record<string, SubagentThinkingLevel>;
+	/** 后台审稿是否允许调用模型；默认关闭，仅执行规则审查。 */
+	backgroundReviewerModel: boolean;
 }
 
 /** 设置页可配置的子代理（仅内置与用户级定义，不含项目级）。 */

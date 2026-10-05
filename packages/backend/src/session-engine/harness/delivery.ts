@@ -38,9 +38,22 @@ export function renderDeliveryStatus(status: HarnessDeliveryStatus): string {
 	return `Host delivery check: ${status.complete ? "recorded acceptance satisfied" : "incomplete"}; missing: ${status.missing.join("; ") || "none recorded"}; unsettled: ${status.unsettled.join("; ") || "none"}; budget ${status.budget.used}/${status.budget.limit} (${status.budget.level}). Do not claim missing or unchecked deliverables are complete. Acceptance is operational, not scientific certification.`;
 }
 /** Observe delivery at the loop boundary; task runtime remains the only continuation owner. */
+export interface HarnessDeliveryExtensionOptions {
+	report?: (sessionId: string, kind: string, data: unknown) => void;
+	recordUnit?: (sessionId: string, unit: "delivery", action: "gap") => void;
+	review?: (sessionId: string, snapshot: unknown) => void;
+}
+
+type HarnessDeliveryReporter = HarnessDeliveryExtensionOptions["report"];
+
 export function makeHarnessDeliveryExtension(
-	report?: (sessionId: string, kind: string, data: unknown) => void,
+	optionsOrReport: HarnessDeliveryExtensionOptions | HarnessDeliveryReporter = {},
+	review?: (sessionId: string, snapshot: unknown) => void,
 ): InlineExtension {
+	const options =
+		typeof optionsOrReport === "function"
+			? { report: optionsOrReport, ...(review ? { review } : {}) }
+			: optionsOrReport;
 	return {
 		name: "harness-delivery",
 		factory: (pi) => {
@@ -66,7 +79,23 @@ export function makeHarnessDeliveryExtension(
 					last = fingerprint;
 					const data = { ...status, message: renderDeliveryStatus(status) };
 					pi.appendEntry(DELIVERY_TYPE, { fingerprint, status });
-					report?.(ctx.sessionManager.getSessionId(), "harness_delivery", data);
+					options.report?.(ctx.sessionManager.getSessionId(), "harness_delivery", data);
+					if (!status.complete) {
+						options.recordUnit?.(ctx.sessionManager.getSessionId(), "delivery", "gap");
+					}
+					const completedMilestones =
+						view.tasks
+							.find((task) => task.id === view.activeTaskId)
+							?.milestones.filter((milestone) => milestone.state === "completed") ?? [];
+					if (completedMilestones.length)
+						options.review?.(ctx.sessionManager.getSessionId(), {
+							enabled: true,
+							body: "",
+							milestoneId: status.taskId,
+							deliverables: completedMilestones
+								.filter((milestone) => typeof milestone.acceptance.path === "string")
+								.map((milestone) => ({ id: milestone.id, path: milestone.acceptance.path ?? undefined })),
+						});
 				} catch (error) {
 					log.warn("harness delivery failed", { error: String(error) });
 				}

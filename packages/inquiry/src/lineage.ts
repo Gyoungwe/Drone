@@ -23,7 +23,7 @@ function nonEmpty(value: unknown): value is string {
 
 export function validateArtifactRecord(record: ArtifactRecord): readonly string[] {
 	const errors: string[] = [];
-	if (record.schemaVersion !== 1) errors.push("unsupported schema version");
+	if (record.schemaVersion !== 1 && record.schemaVersion !== 2) errors.push("unsupported schema version");
 	if (!nonEmpty(record.id)) errors.push("id is required");
 	if (!nonEmpty(record.projectId)) errors.push("projectId is required");
 	if (!isSafeArtifactPath(record.path)) errors.push("path must be a safe project-relative path");
@@ -36,10 +36,26 @@ export function validateArtifactRecord(record: ArtifactRecord): readonly string[
 		errors.push("invalid source kind");
 	if (!["input", "draft", "intermediate", "deliverable", "evidence"].includes(record.purpose))
 		errors.push("invalid purpose");
-	if (!["valid", "superseded", "cleanup-candidate", "archived"].includes(record.status))
+	if (!["valid", "superseded", "cleanup-candidate", "archived", "pending-review"].includes(record.status))
 		errors.push("invalid status");
 	if (new Set(record.parentIds).size !== record.parentIds.length) errors.push("parentIds must be unique");
 	if (record.parentIds.some((id) => !nonEmpty(id))) errors.push("parentIds must be non-empty");
+	if (
+		record.pendingReviewDecisionIds?.some((id) => !nonEmpty(id)) ||
+		(record.pendingReviewDecisionIds &&
+			new Set(record.pendingReviewDecisionIds).size !== record.pendingReviewDecisionIds.length)
+	)
+		errors.push("pendingReviewDecisionIds must be unique and non-empty");
+	if (
+		record.reviews?.some(
+			(review) =>
+				!nonEmpty(review.decisionId) ||
+				review.confirmedBy !== "user" ||
+				!nonEmpty(review.reason) ||
+				!validDate(review.confirmedAt),
+		)
+	)
+		errors.push("artifact reviews must be user confirmations with valid timestamps");
 	if (record.runId !== undefined && !nonEmpty(record.runId)) errors.push("runId must be non-empty");
 	if (!validDate(record.createdAt) || !validDate(record.updatedAt))
 		errors.push("timestamps must be ISO dates");

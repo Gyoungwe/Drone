@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
@@ -19,7 +20,7 @@ const snapshot = async (directory) => {
 };
 
 try {
-	await build({
+	const buildResult = await build({
 		entryPoints: entries.map((name) => join(source, name)),
 		outdir: output,
 		format: "esm",
@@ -27,7 +28,16 @@ try {
 		bundle: false,
 		outExtension: { ".js": ".mjs" },
 		logLevel: "silent",
+		metafile: true,
 	});
+	const inputHash = createHash("sha256");
+	for (const input of Object.keys(buildResult.metafile?.inputs || {}).sort()) {
+		const path = resolve(root, input);
+		inputHash.update(relative(root, path).replaceAll("\\", "/"));
+		inputHash.update("\0");
+		inputHash.update(await readFile(path));
+		inputHash.update("\0");
+	}
 	for (const name of entries.map((entry) => entry.replace(/\.ts$/, ".mjs"))) {
 		const file = join(output, name);
 		let text = await readFile(file, "utf8");
@@ -41,6 +51,10 @@ try {
 		);
 		await writeFile(file, text);
 	}
+	await writeFile(
+		join(output, ".build-manifest.json"),
+		`${JSON.stringify({ version: 1, generator: "packages/tasks/scripts/build-runtime.mjs", inputsSha256: inputHash.digest("hex") }, null, "\t")}\n`,
+	);
 	if (check) {
 		const [actual, expected] = await Promise.all([snapshot(output), snapshot(expectedOutput)]);
 		const names = new Set([...actual.keys(), ...expected.keys()]);

@@ -81,6 +81,7 @@ const ModelPrefsSchema = Type.Object(
 				Type.Literal("max"),
 			]),
 		),
+		backgroundReviewerModel: Type.Boolean(),
 	},
 	{ additionalProperties: false },
 );
@@ -163,6 +164,10 @@ export const SettingsContract = defineDomain("settings", {
 			args: Type.Tuple([StringId, Type.Union([Type.String(), Type.Null()])]),
 			result: Type.Unsafe<ModelPrefs>(ModelPrefsSchema),
 		},
+		setBackgroundReviewerModel: {
+			args: Type.Tuple([Type.Boolean()]),
+			result: Type.Unsafe<ModelPrefs>(ModelPrefsSchema),
+		},
 		listSubagents: { args: Type.Tuple([]), result: Type.Array(SubagentInfoSchema) },
 		startProviderLogin: {
 			args: Type.Tuple([StringId, StringId]),
@@ -181,5 +186,6 @@ export type SettingsSchemaTypes = {
 	updateCustomProvider: [input: CustomProviderUpdateInput];
 	setProviderBaseUrl: [providerId: string, baseUrl: string, apiKey?: string];
 	setSubagentThinking: [agent: string, level: SubagentThinkingLevel | null];
+	setBackgroundReviewerModel: [enabled: boolean];
 };
 export type { LoginResult, ModelPrefs, ProviderInfo, ProviderTestResult, SubagentInfo };

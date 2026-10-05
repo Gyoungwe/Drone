@@ -1,7 +1,9 @@
 import {
 	AppContract,
 	ComputeContract,
+	DecisionsContract,
 	DiscoveryContract,
+	InquiryContract,
 	InstitutionalContract,
 	IpcChannels,
 	KnowledgeContract,
@@ -107,6 +109,7 @@ const settingsClient = exposeContract(SettingsContract, {
 				setModelsHidden: IpcChannels.SettingsSetModelsHidden,
 				setSubagentModel: IpcChannels.SettingsSetSubagentModel,
 				setSubagentThinking: IpcChannels.SettingsSetSubagentThinking,
+				setBackgroundReviewerModel: IpcChannels.SettingsSetBackgroundReviewerModel,
 				listSubagents: IpcChannels.SettingsListSubagents,
 				startProviderLogin: IpcChannels.SettingsLoginStart,
 				cancelProviderLogin: IpcChannels.SettingsLoginCancel,
@@ -266,6 +269,30 @@ const discoveryClient = exposeContract(DiscoveryContract, {
 			method,
 		),
 });
+const decisionsClient = exposeContract(DecisionsContract, {
+	ipc: ipcRenderer,
+	channelForMethod: (_contract, method) =>
+		channelFrom(
+			{
+				list: IpcChannels.DecisionsList,
+				revoke: IpcChannels.DecisionsRevoke,
+				confirm: IpcChannels.DecisionsConfirm,
+			},
+			method,
+		),
+});
+const inquiryClient = exposeContract(InquiryContract, {
+	ipc: ipcRenderer,
+	channelForMethod: (_contract, method) =>
+		channelFrom(
+			{
+				listArtifacts: IpcChannels.InquiryArtifacts,
+				artifactProvenance: IpcChannels.InquiryArtifactProvenance,
+				rerunArtifact: IpcChannels.InquiryRerunArtifact,
+			},
+			method,
+		),
+});
 const knowledgeApi = {
 	setKnowledgeSpecialistSettings: invoke(knowledgeClient, "setSpecialistSettings"),
 	getKnowledgeOverview: invoke(knowledgeClient, "getOverview"),
@@ -293,6 +320,8 @@ const knowledgeApi = {
 const invokeApi = {
 	...computeClient,
 	...discoveryClient,
+	...decisionsClient,
+	...inquiryClient,
 	...knowledgeApi,
 	listSessionSubagents: invoke(subagentsClient, "list"),
 	dispatchSubagents: invoke(subagentsClient, "dispatch"),
@@ -336,6 +365,7 @@ const invokeApi = {
 	setModelsHidden: invoke(settingsClient, "setModelsHidden"),
 	setSubagentModel: invoke(settingsClient, "setSubagentModel"),
 	setSubagentThinking: invoke(settingsClient, "setSubagentThinking"),
+	setBackgroundReviewerModel: invoke(settingsClient, "setBackgroundReviewerModel"),
 	listSubagents: invoke(settingsClient, "listSubagents"),
 	startProviderLogin: invoke(settingsClient, "startProviderLogin"),
 	cancelProviderLogin: invoke(settingsClient, "cancelProviderLogin"),

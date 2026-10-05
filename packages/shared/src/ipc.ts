@@ -1,7 +1,9 @@
 import type { AskRequest, AskResponse } from "./ask";
+import type { DecisionsApi } from "./decisions";
 import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { ComputeApi } from "./host-api/compute";
 import type { DiscoveryApi } from "./host-api/discovery";
+import type { InquiryApi } from "./host-api/inquiry";
 import type { LanStatus } from "./host-api/lan";
 import type { SessionsApi } from "./host-api/sessions";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
@@ -130,6 +132,13 @@ export const IpcChannels = {
 	DiscoveryMultipathAssessments: "discovery:listMultipathAssessments",
 	DiscoveryExplorationPlans: "discovery:listExplorationPlans",
 	DiscoveryEvaluations: "discovery:listEvaluations",
+	DecisionsList: "decisions:list",
+	DecisionsRevoke: "decisions:revoke",
+	DecisionsConfirm: "decisions:confirm",
+	InquiryArtifacts: "inquiry:listArtifacts",
+	InquiryArtifactProvenance: "inquiry:artifactProvenance",
+	InquiryRerunArtifact: "inquiry:rerunArtifact",
+	InquiryRerunUpdatedEvent: "inquiry:rerunUpdated",
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
 	ZoteroStatus: "zotero:status",
@@ -211,6 +220,7 @@ export const IpcChannels = {
 	SettingsSetModelsHidden: "settings:setModelsHidden",
 	SettingsSetSubagentModel: "settings:setSubagentModel",
 	SettingsSetSubagentThinking: "settings:setSubagentThinking",
+	SettingsSetBackgroundReviewerModel: "settings:setBackgroundReviewerModel",
 	/** 只列内置与用户级 subagent（设置是全局配置，不绑定项目） */
 	SettingsListSubagents: "settings:listSubagents",
 	/** provider 交互登录（OAuth / api_key，后者如 Google Vertex 的 ADC/服务账号）；loginId 由 renderer 生成用于事件归属 */
@@ -317,7 +327,7 @@ export const IpcChannels = {
 export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
-export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryApi {
+export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryApi, DecisionsApi, InquiryApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */
@@ -389,6 +399,8 @@ export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryA
 		agent: string,
 		level: import("./settings").SubagentThinkingLevel | null,
 	): Promise<ModelPrefs>;
+	/** 开关后台模型审稿；关闭时后台审稿只运行纯规则检查。 */
+	setBackgroundReviewerModel(enabled: boolean): Promise<ModelPrefs>;
 	/** 列内置与用户级 subagent 定义（不读项目级定义） */
 	listSubagents(): Promise<SubagentInfo[]>;
 	/** 启动 provider 交互登录（OAuth 浏览器/设备码流 · api_key 提示/选择流）；事件经 onProviderLoginEvent 推送，promise 在流程结束时 resolve（取消不算错误） */

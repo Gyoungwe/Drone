@@ -43,7 +43,12 @@ import {
 	type ComputeExperienceRecorder,
 	createComputeExperienceRecorder,
 } from "./services/compute-experience";
-import { InquiryService, type InquiryServicePort } from "./services/inquiry";
+import { type InquiryDecisionEvent, InquiryService, type InquiryServicePort } from "./services/inquiry";
+import {
+	computeInquiryMetadata,
+	createInquiryComputeRerun,
+	createInquiryComputeRerunCompletion,
+} from "./services/inquiry-compute";
 import type { InstitutionalServicePort } from "./services/institutional";
 import type { KnowledgeSessionServicePort } from "./services/knowledge-session";
 import type { PackageServicePort } from "./services/packages";
@@ -180,6 +185,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	computeDataDesign?: ComputeDataDesignServicePort;
 	/** Optional project research-state root; enables the SQLite inquiry ledger. */
 	inquiryDir?: string;
+	/** Host-wide root containing one isolated inquiry ledger per project id. */
+	projectsDir?: string;
 	/** Stable project identity for the inquiry ledger. */
 	inquiryProjectId?: string;
 	/** Project root used by the discovery kernel and run-file boundary. */
@@ -200,6 +207,12 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const sessions = new SessionService({ ...options, runtime, permissions, inquiryDir: options.inquiryDir });
 	const inquiry = new InquiryService({
 		inquiryDir: options.inquiryDir,
+		projectsDir:
+			options.projectsDir ??
+			(!options.inquiryDir && options.userDataDir
+				? join(options.userDataDir, "inquiry-projects")
+				: undefined),
+		storageRegistry: sessions.storage,
 		projectId: options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
 	});
 	const discovery = new DiscoveryService({
@@ -250,7 +263,19 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				: {}),
 		});
 	const detachInquiryComputeEvents = inquiry.attachEventSource({
-		onComputeEvent: (handler) => compute.onEvent(handler),
+		onComputeEvent: (handler) =>
+			compute.onEvent((event) => {
+				void compute
+					.getJob(event.jobId)
+					.then((job) =>
+						handler({
+							...event,
+							projectId: options.inquiryProjectId ?? options.defaultCwd,
+							...(job ? computeInquiryMetadata(job) : {}),
+						}),
+					)
+					.catch(() => handler({ ...event, projectId: options.inquiryProjectId ?? options.defaultCwd }));
+			}),
 		onTaskTerminal: (handler) =>
 			sessions.onEvent((sessionId, event) => {
 				const value = event as unknown as { type?: string; willRetry?: boolean };
@@ -260,9 +285,27 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					taskId: sessionId,
 					status: value.willRetry ? "partial" : "succeeded",
 					at: Date.now(),
+					projectId: options.inquiryProjectId ?? options.defaultCwd ?? sessionId,
+					sessionId,
 				});
 			}),
+		onDecision: (handler) => sessions.onDecision((event) => handler(event as InquiryDecisionEvent)),
 	});
+	inquiry.setRerunHandler(
+		createInquiryComputeRerun({
+			adapter: computeAdapter,
+			compute,
+			collectionRoot: options.computeAgentDir ?? getAgentDir(),
+			drainEvents: () => inquiry.drainEvents(),
+		}),
+	);
+	inquiry.setRerunCompletionHandler(
+		createInquiryComputeRerunCompletion({
+			compute,
+			collectionRoot: options.computeAgentDir ?? getAgentDir(),
+			drainEvents: () => inquiry.drainEvents(),
+		}),
+	);
 	if (runtime.compute) {
 		runtime.compute.service = compute;
 		runtime.compute.adapter = computeAdapter;

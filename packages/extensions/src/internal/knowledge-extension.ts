@@ -217,6 +217,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 	pi.events?.on?.("drone:runtime/v1", (payload) => {
 		if (payload?.version !== 1 || !payload.runtime || typeof payload.runtime !== "object") return;
 		publication.attachRuntime?.(payload.runtime);
+		publication.attachReviewer?.(payload.runtime.knowledge?.reviewer);
 	});
 	// The host factory may run before or after dynamic extensions. A request
 	// handshake makes the runtime handoff order-independent without a global

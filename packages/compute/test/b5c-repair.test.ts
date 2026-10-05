@@ -61,6 +61,7 @@ describe("B5c autonomous repair", () => {
 			},
 		};
 		let executions = 0;
+		const journaled: string[] = [];
 		const result = await runAutonomousRepair({
 			spec,
 			catalog,
@@ -78,10 +79,14 @@ describe("B5c autonomous repair", () => {
 					rationale: "The failure record points to a missing index",
 				},
 			}),
+			onDecisionMade: (decision) => {
+				journaled.push(decision.action);
+			},
 		});
 		expect(result.status).toBe("succeeded");
 		expect(result.attempts).toHaveLength(2);
 		expect(result.decisionsMadeForYou[0]).toMatchObject({ label: "我替你决定的", attempt: 1 });
+		expect(journaled).toEqual(["enable the indexed fixture"]);
 		expect(calls).toEqual(["failure:missing-index", "negative:missing-index"]);
 	});
 

@@ -340,6 +340,10 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 		}
 		case "subagent_run":
 			return upsertPanelRun(state, event.run);
+		case "reviewer_finding": {
+			const findings = state.reviewerFindings.filter((finding) => finding.id !== event.finding.id);
+			return { ...state, reviewerFindings: [...findings, event.finding].slice(-64) };
+		}
 		case "agent_start":
 			return {
 				...state,

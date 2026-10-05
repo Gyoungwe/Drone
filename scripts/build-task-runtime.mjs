@@ -22,6 +22,7 @@ const header = (name) =>
 const entries = (await readdir(sourceDir))
 	.filter((name) => name.endsWith(".mjs") && name !== "runtime-bridge.mjs")
 	.sort();
+const manifest = await readFile(resolve(sourceDir, ".build-manifest.json"), "utf8");
 
 try {
 	await mkdir(outputDir, { recursive: true });
@@ -70,10 +71,11 @@ export const {
 } = implementation;
 `,
 	);
+	await writeFile(resolve(outputDir, ".build-manifest.json"), manifest);
 
 	if (check) {
 		const stale = [];
-		for (const name of [...entries, "acceptance-packaged.mjs", "acceptance.mjs"]) {
+		for (const name of [...entries, "acceptance-packaged.mjs", "acceptance.mjs", ".build-manifest.json"]) {
 			const actual = await readFile(resolve(outputDir, name));
 			const expected = await readFile(resolve(expectedDir, name));
 			if (!actual.equals(expected)) stale.push(name);

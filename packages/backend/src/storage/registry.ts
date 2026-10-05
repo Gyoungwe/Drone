@@ -107,6 +107,7 @@ export interface DefaultStorageRegistryOptions {
 	knowledgeDir?: string;
 	/** Optional research-state ledger root registered by the inquiry host. */
 	inquiryDir?: string;
+	inquiryProjectsDir?: string;
 	/** Optional non-JsonStore roots discovered by the host at startup. */
 	logDir?: string;
 	projectWorkRoots?: readonly string[];
@@ -148,6 +149,7 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 		userDataDir,
 		knowledgeDir,
 		inquiryDir,
+		inquiryProjectsDir,
 		logDir,
 		projectWorkRoots,
 		knowledgeVaultRoots,
@@ -388,10 +390,18 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 				id: "inquiry-ledger",
 				path: `${inquiryDir}/ledger.sqlite`,
 				owner: "inquiry/ledger",
-				schema: 1,
+				schema: 2,
 				sensitivity: "private",
 			});
 	}
+	if (inquiryProjectsDir)
+		registry.register({
+			id: "inquiry-projects",
+			path: inquiryProjectsDir,
+			owner: "inquiry/projects",
+			schema: 2,
+			sensitivity: "private",
+		});
 	// These roots are selected after binding/project discovery. Registering the
 	// parent directory keeps SQLite, JSONL and generated review artifacts in the
 	// same inventory without reading their contents into diagnostics.

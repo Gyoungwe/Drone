@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
+import { build } from "esbuild";
 
 const root = resolve(import.meta.dirname, "..");
 const sourceDir = resolve(root, "packages/extensions/src");
@@ -14,6 +15,17 @@ const manifestPath = resolve(outDir, ".build-manifest.json");
 const strict = process.argv.includes("--strict") || process.env.DRONE_EXTENSIONS_STRICT === "1";
 const sha256 = (contents) => createHash("sha256").update(contents).digest("hex");
 const readHash = async (path) => sha256(await readFile(path));
+const inputsHash = async (metafile) => {
+	const hash = createHash("sha256");
+	for (const input of Object.keys(metafile?.inputs || {}).sort()) {
+		const path = resolve(root, input);
+		hash.update(relative(root, path).replaceAll("\\", "/"));
+		hash.update("\0");
+		hash.update(await readFile(path));
+		hash.update("\0");
+	}
+	return hash.digest("hex");
+};
 const exists = async (path) => {
 	try {
 		await stat(path);
@@ -66,8 +78,27 @@ for (const entry of entries) {
 	const outputHash = await readHash(output);
 	if (record.status === "generated") {
 		const sourceHash = await readHash(resolve(sourceDir, entry));
+		const metafile = (
+			await build({
+				entryPoints: [resolve(sourceDir, entry)],
+				outfile: output,
+				bundle: true,
+				format: "esm",
+				platform: "node",
+				packages: "bundle",
+				sourcemap: false,
+				metafile: true,
+				write: false,
+				logLevel: "silent",
+			})
+		).metafile;
 		if (record.sourceSha256 !== sourceHash) {
 			errors.push(`${entry} changed since ${record.output}; run npm run build:extensions -- --force`);
+		}
+		if (record.inputsSha256 !== (await inputsHash(metafile))) {
+			errors.push(
+				`${entry} or one of its dependencies changed since ${record.output}; run npm run build:extensions -- --force`,
+			);
 		}
 		if (record.outputSha256 !== outputHash) {
 			errors.push(`${record.output} was modified after generation; run npm run build:extensions -- --force`);

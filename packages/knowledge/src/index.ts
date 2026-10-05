@@ -112,6 +112,25 @@ export {
 	type MetacognitiveUseRole,
 } from "./metacognitive-policy";
 export {
+	BackgroundReviewer,
+	type BackgroundReviewerBridge,
+	reviewDeliverable,
+	selectReviewerProvider,
+	type BackgroundReviewRequest,
+	type BackgroundReviewerOptions,
+	type DeliverableReviewFinding,
+	type DeliverableReviewLocation,
+	type DeliverableReviewResult,
+	type DeliverableReviewSnapshot,
+	type ReviewAttemptRecord,
+	type ReviewDeliverableRecord,
+	type ReviewReadReceipt,
+	type ReviewerModelProvider,
+	type ReviewerProviderSelection,
+	type ReviewerSeverity,
+	type ReviewerTrigger,
+} from "./deliverable-review";
+export {
 	advisoryCodes,
 	type ReviewMode,
 	readReviewMode,

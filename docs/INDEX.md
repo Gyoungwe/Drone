@@ -40,7 +40,7 @@ packages/
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
 ├── research/   文献回执与来源交付合约（TS 包，迁移中）
 ├── compute/    远程计算与声明式工作流领域包（TS 包，B3 垂直切片）
-├── inquiry/    研究状态层领域包（TS 包，B5a 四本账与工作区合同）
+├── inquiry/    研究状态层领域包（TS 包，B5a 五本账与工作区合同）
 ├── discovery/  研究发现领域包（TS 包，B5d–B5f 内核、批评、多路径与评测）
 ├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
@@ -77,7 +77,7 @@ packages/
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
 | `src/ipc.ts` | `IpcChannels`、`PiApi` | 通道名常量 + `window.pi` 完整类型（sessions/settings/packages/app/ui-plugins/lan/login/compute 全域通道 + 同步属性 `platform`） |
-| `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`LanContract`、`ComputeContract`、`DiscoveryContract`、`LanStatus`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract` | TypeBox Host API 域契约；供 desktop bindContract 与适配器复用；`ComputeContract` 覆盖主机登记、健康、作业日志、终端和引导状态，远端副作用由 backend adapter 继续做授权门控；`DiscoveryContract` 提供 B5d–B5f 内核会话、批评、多路径、探索计划和评测的只读投影，关闭会话保留 desktop 权限；`KnowledgeContract` 覆盖知识库管理、审核、语义索引与 Zotero 状态；`LanContract.getStatus` 标记为 `lan-read`，`LanStatus` 从 `LanStatusSchema` 推导，控制开关与机构访问保留 desktop 权限；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录 |
+| `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`LanContract`、`ComputeContract`、`DiscoveryContract`、`DecisionsContract`、`LanStatus`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract` | TypeBox Host API 域契约；供 desktop bindContract 与适配器复用；`ComputeContract` 覆盖主机登记、健康、作业日志、终端和引导状态，远端副作用由 backend adapter 继续做授权门控；`DiscoveryContract` 提供 B5d–B5f 内核会话、批评、多路径、探索计划和评测的只读投影，关闭会话保留 desktop 权限；`DecisionsContract` 提供项目决策账本的列表、撤销和人工确认；`KnowledgeContract` 覆盖知识库管理、审核、语义索引与 Zotero 状态；`LanContract.getStatus` 标记为 `lan-read`，`LanStatus` 从 `LanStatusSchema` 推导，控制开关与机构访问保留 desktop 权限；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录 |
 | `src/compute.ts` | `ComputeHost`、`ComputeAuthorization`、`ComputeBudget`、`checkComputeAuthorization` | 远程主机/作业/终端/引导共享 schema，以及任务计算范围、路径和预算的 fail-closed 检查；B1 runner 通过稳定 adapter 接入 |
 | `src/session.ts` | `SessionMeta`、`SessionStats`、`AvailableModel`（可选 `thinkingLevels`/`imageInput`，缺省 fail-open）、`SessionEvent`、`SessionMessage`、`UiState`、`PermissionRequest`、`PermissionMode`（default/fullAccess）、`TrustRequest`、`LoadedResources` 等 | 会话/事件跨进程类型。`SessionEvent` = pi `AgentSessionEvent` ∪ Drone 自有 UI 事件（`subagent_mutex`/`stream_guard_tripped`/`model_wait`/`subagent_run`，不进 trace）；`SessionMessage` union：user/assistant（均带 `entryId` 供 fork/撤回；user 专属 `skill`/`sourceText`）+ `role:"image"`（show_image 回放）+ `role:"subagent"` |
 | `src/transcript/` | `reduceEvent`、`messagesToUIMessages`、`buildChatRows`、`deriveTurnChanges`、`deriveTurnTimings` | **UI 消息状态机（桌面与 lan-web 共用同一份）**：`types`（UIMessage/StreamingState 等）、`helpers`（事件载荷解析）、`reducer`（pi 事件 → UI 状态）、`mapping`（历史回放）、`parse-patch`（unified diff 结构化解析）、`turn-files`（按轮聚合文件变更）、`turn-timings`（按轮计时派生 + runEndedAt 定格）、`chat-rows`（行序列分组 + 轮末行定位规则）、`meta-summary`（工具语义分类统计） |
@@ -108,7 +108,7 @@ packages/
 
 ## packages/knowledge — 知识领域包（迁移中）
 
-`@drone/knowledge` 的 canonical runtime source 位于 `src/`：`files.ts`、`layout.ts`、`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts`、`experience-store.ts`、`wiki-review.ts` 以及各项 policy/provider 合约；根 `scripts/build-knowledge-runtime.mjs` 生成 `.pi/lib/knowledge/runtime/` worker/runtime 产物。`.pi/lib/knowledge/*` 保留为宿主兼容适配层，跨 bundle 的 UI、验收器与 host ports 仍由它桥接。
+`@drone/knowledge` 的 canonical runtime source 位于 `src/`：`files.ts`、`layout.ts`、`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts`、`experience-store.ts`、`wiki-review.ts`、`deliverable-review.ts` 以及各项 policy/provider 合约；`deliverable-review.ts` 提供 B5b 交付物后台审稿纯函数、缓存/超时调度与 provider 选择，意见通过共享会话事件进入过程面板并写入 trace；根 `scripts/build-knowledge-runtime.mjs` 生成 `.pi/lib/knowledge/runtime/` worker/runtime 产物。`.pi/lib/knowledge/*` 保留为宿主兼容适配层，跨 bundle 的 UI、验收器与 host ports 仍由它桥接。
 
 ## packages/tasks — 任务领域包（迁移中）
 
@@ -126,7 +126,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## packages/inquiry — 研究状态层领域包（B5a）
 
-`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设和分析尝试四本账；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/storage.ts` 提供宿主可注入的四账存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用。backend 的 `services/inquiry.ts` 只在显式配置 `inquiryDir` 与项目 id 时实例化 SQLite，并通过宿主注入的 compute/task 终态事件登记已校验的 artifact/attempt、串行化事件写入并提供项目只读快照；Electron/LAN 投影仍由后续组合根接入，领域包不读取文件内容，也不执行删除。
+`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设、分析尝试、Agent 决策与异步重跑账本；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/provenance.ts` 提供最多 20 层父链的无正文来源投影；`src/reproducibility.ts` 提供代码指纹 + run-provenance 三态纯判定；`src/storage.ts` 提供宿主可注入的账本存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`，schema v2 将旧 v1 与早期重跑记录迁移并保留读取兼容；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用，撤销决策只标记账本与下游产物待复核，不触发外部写操作，并提供授权异步重跑。backend 的 `services/inquiry.ts` 为显式 `inquiryDir` 保留单项目 SQLite，同时为桌面 host 按项目 id 懒创建隔离 SQLite，并通过宿主注入的 compute/task/扩展成功回执登记已校验的 artifact/attempt/decision、串行化事件写入并提供项目只读快照；shared `host-api/inquiry.ts` → desktop `main/ipc/inquiry.ts` → preload → `ArtifactsPane` 提供来源展开、三态徽标和重跑入口，Electron IPC 的 decisions.list/revoke/confirm 与任务面板复用该只读投影。
 
 ## packages/discovery — 研究发现领域包（B5d–B5f）
 
@@ -230,7 +230,7 @@ src/
 | `src/main/dev-agent-dir.ts` | dev/预览态数据隔离：userData 重定向 `*-dev` 后缀 + `PI_CODING_AGENT_DIR = ~/.pi/agent-dev` + 五配置一次性种子拷贝（正式目录零写入） |
 | `src/main/daily.ts` | 日常空间工作台目录（`~/.drone/daily`，全部日常会话的固定 cwd）+ 懒创建；信任链无资源自动信任不弹窗；dev/正式共享工作区（会话列表按 agent dir 天然隔离） |
 | `src/main/ipc/index.ts` | `registerIpc` 组合入口 + backend 事件/updater 状态转发 + UI 插件热重载 watcher 启动。**新增 handler 改对应域文件，不在 index.ts 堆** |
-| `src/main/ipc/{sessions,settings,permissions,packages,knowledge,compute,discovery,app,ui-plugins,lan,institutional,subagents}.ts` | 各域 handler（全部薄委托 backend；compute 通过 `ComputeContract` 做参数/结果边界校验并转发健康/作业/终端事件；discovery 通过 `DiscoveryContract` 暴露 B5d–B5f 只读投影并对关闭会话执行主帧校验；knowledge 域经 `KnowledgeContract` 做参数/结果边界校验；ui-plugins 域 handler async await 落盘后才返回；permissions 域 = 设置 → 权限 面板 load/save/reset/probe/auditTail + `openLocation` 用 shell 定位文件） |
+| `src/main/ipc/{sessions,settings,permissions,packages,knowledge,compute,discovery,decisions,app,ui-plugins,lan,institutional,subagents}.ts` | 各域 handler（全部薄委托 backend；compute 通过 `ComputeContract` 做参数/结果边界校验并转发健康/作业/终端事件；discovery 通过 `DiscoveryContract` 暴露 B5d–B5f 只读投影并对关闭会话执行主帧校验；decisions 通过 `DecisionsContract` 提供项目决策列表/撤销/人工确认；knowledge 域经 `KnowledgeContract` 做参数/结果边界校验；ui-plugins 域 handler async await 落盘后才返回；permissions 域 = 设置 → 权限 面板 load/save/reset/probe/auditTail + `openLocation` 用 shell 定位文件） |
 | `src/main/tabs.ts` / `ui-state.ts` | tabs.json / ui-state.json 读写（JsonStore 原子写；ui-state 补丁式合并 + normalize 补缺省） |
 | `src/main/background.ts` | 背景图选图（dialog → 拷贝 `userData/backgrounds/` 并清理旧图） |
 | `src/main/window.ts` | BrowserWindow：sandbox + preload；启动底色跟随主题防白闪（已解析主题经 `?theme=` query 传 renderer）；窗口框架按平台分流（mac hiddenInset / Win frameless+titleBarOverlay / Linux 原生）；导出 `resolveTheme`/`applyChromeTheme` |

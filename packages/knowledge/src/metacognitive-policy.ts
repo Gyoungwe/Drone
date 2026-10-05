@@ -18,13 +18,21 @@ export interface MetacognitiveArtifactNumber {
 
 export interface MetacognitiveArtifact {
 	path: string;
+	/** Inquiry lineage status; pending review is never publishable. */
+	status?: "valid" | "superseded" | "cleanup-candidate" | "archived" | "pending-review";
 	/** Hash recorded when the artifact was cited. */
 	sha256?: string;
 	/** Hash observed immediately before publication. */
 	currentSha256?: string;
+	/** Human confirmation metadata retained with a previously revoked artifact. */
+	reviews?: readonly { decisionId: string; confirmedBy: "user"; confirmedAt: string }[];
+	/** Reproducibility is advisory; a missing receipt never bypasses fail-closed checks. */
+	reproducibility?: "reproducible" | "partial" | "not-reproducible";
 	/** Optional bounded text/number index supplied by the host. */
 	text?: string;
 	numbers?: readonly MetacognitiveArtifactNumber[];
+	/** Optional current-turn read receipt reference for source citations. */
+	receiptId?: string;
 }
 
 export interface MetacognitiveNumberClaim {
@@ -87,6 +95,7 @@ export type MetacognitiveFailureCode =
 	| "method-mismatch"
 	| "finding-label-conflict"
 	| "diagnostic-drift"
+	| "artifact-pending-review"
 	| "metacognition-invalid";
 
 export interface MetacognitiveFailure {
@@ -106,8 +115,16 @@ export interface MetacognitiveEvidenceFinding {
 export interface MetacognitiveEvaluation {
 	ok: boolean;
 	failures: MetacognitiveFailure[];
+	warnings: MetacognitiveWarning[];
 	/** Finding records are copied into the publication proof for citation. */
 	findings: MetacognitiveEvidenceFinding[];
+}
+
+export interface MetacognitiveWarning {
+	code: "artifact-not-reproducible";
+	subject: string;
+	detail: string;
+	path?: string;
 }
 
 const MAX_FAILURES = 16;
@@ -177,20 +194,27 @@ function addFailure(failures: MetacognitiveFailure[], failure: MetacognitiveFail
 	if (failures.length < MAX_FAILURES) failures.push(failure);
 }
 
+function addWarning(warnings: MetacognitiveWarning[], warning: MetacognitiveWarning): void {
+	if (warnings.length < 8) warnings.push(warning);
+}
+
 /** Compare a final answer with host-observed reports, workflows and findings. */
 export function evaluateMetacognitivePublication(
 	answer: string,
 	snapshot: unknown,
 ): MetacognitiveEvaluation {
 	if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
-		return { ok: true, failures: [], findings: [] };
+		return { ok: true, failures: [], warnings: [], findings: [] };
 	const input = snapshot as MetacognitiveSnapshot;
-	if (input.enabled === false) return { ok: true, failures: [], findings: [] };
+	if (input.enabled === false) return { ok: true, failures: [], warnings: [], findings: [] };
 	const failures: MetacognitiveFailure[] = [];
+	const warnings: MetacognitiveWarning[] = [];
 	const citations = citedPaths(answer);
 	const artifacts = new Map<string, MetacognitiveArtifact>();
 	for (const artifact of Array.isArray(input.artifacts) ? input.artifacts : []) {
-		if (artifact && typeof artifact.path === "string") artifacts.set(artifact.path, artifact);
+		if (artifact && typeof artifact.path === "string") {
+			artifacts.set(artifact.path, artifact);
+		}
 	}
 	const checkedPaths = new Set<string>();
 	const checkArtifact = (path: string, subject: string): MetacognitiveArtifact | undefined => {
@@ -204,6 +228,20 @@ export function evaluateMetacognitivePublication(
 			});
 			return undefined;
 		}
+		if (artifact.status === "pending-review" && citations.has(path))
+			addFailure(failures, {
+				code: "artifact-pending-review",
+				subject: path,
+				detail: `Artifact ${bounded(path, 240)} is pending review after a revoked decision`,
+				path,
+			});
+		if (artifact.reproducibility === "not-reproducible")
+			addWarning(warnings, {
+				code: "artifact-not-reproducible",
+				subject,
+				detail: `Cited artifact has no recorded code fingerprint or run provenance: ${bounded(path, 240)}`,
+				path,
+			});
 		if (!SHA256.test(String(artifact.sha256 || "")) || !SHA256.test(String(artifact.currentSha256 || ""))) {
 			addFailure(failures, {
 				code: "artifact-checksum-stale",
@@ -366,5 +404,5 @@ export function evaluateMetacognitivePublication(
 			});
 	}
 
-	return { ok: failures.length === 0, failures, findings: findingEvidence };
+	return { ok: failures.length === 0, failures, warnings, findings: findingEvidence };
 }
