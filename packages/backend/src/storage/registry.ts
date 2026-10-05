@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { stat } from "node:fs/promises";
+import { join } from "node:path";
 
 export type StorageSensitivity = "public" | "config" | "private" | "secret";
 
@@ -416,7 +417,7 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			})
 			.register({
 				id: "inquiry-legacy-ledger",
-				path: `${legacyInquiryDir}/ledger.sqlite`,
+				path: join(legacyInquiryDir, "ledger.sqlite"),
 				owner: "inquiry/legacy-readonly",
 				schema: "preserve",
 				sensitivity: "private",
