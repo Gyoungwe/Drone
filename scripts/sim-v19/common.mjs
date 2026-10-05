@@ -8,7 +8,7 @@ const OUT = process.env.DRONE_SIM_OUT || "/tmp/drone-v19-sim/out";
 mkdirSync(OUT, { recursive: true });
 
 function target(targetUrl = null, targetId = null) {
-	const raw = execFileSync("curl", ["-s", `http://127.0.0.1:${PORT}/json`], { encoding: "utf8" });
+	const raw = execFileSync("curl", ["--max-time", "5", "-fsS", `http://127.0.0.1:${PORT}/json`], { encoding: "utf8" });
 	const pages = JSON.parse(raw).filter((item) => item.type === "page");
 	const page = (targetId ? pages.find((item) => item.id === targetId) : null) || (targetUrl ? pages.find((item) => item.url === targetUrl) : null) || pages[0];
 	if (!page) throw new Error(`CDP page target not found on ${PORT}`);
@@ -41,8 +41,9 @@ export class CdpPage {
 
 	async open() {
 		await new Promise((resolveOpen, reject) => {
-			this.ws.once("open", resolveOpen);
-			this.ws.once("error", reject);
+			const timer = setTimeout(() => reject(new Error("CDP WebSocket connection timed out")), 10_000);
+			this.ws.once("open", () => { clearTimeout(timer); resolveOpen(); });
+			this.ws.once("error", (error) => { clearTimeout(timer); reject(error); });
 		});
 		await this.send("Runtime.enable");
 		await this.send("Log.enable");
@@ -53,9 +54,14 @@ export class CdpPage {
 	send(method, params = {}) {
 		return new Promise((resolveSend, reject) => {
 			const id = ++this.id;
-			this.pending.set(id, (message) =>
-				message.error ? reject(new Error(message.error.message)) : resolveSend(message.result),
-			);
+			const timer = setTimeout(() => {
+				this.pending.delete(id);
+				reject(new Error(`CDP ${method} timed out after 15 seconds`));
+			}, 15_000);
+			this.pending.set(id, (message) => {
+				clearTimeout(timer);
+				message.error ? reject(new Error(`${method}: ${message.error.message}`)) : resolveSend(message.result);
+			});
 			this.ws.send(JSON.stringify({ id, method, params }));
 		});
 	}
@@ -110,7 +116,7 @@ export class CdpPage {
 	}
 
 	async settle() {
-		await this.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))");
+		await this.eval("new Promise(r=>{setTimeout(r,250);requestAnimationFrame(()=>requestAnimationFrame(r))})");
 	}
 
 	async key(key, code = key, modifiers = 0) {
@@ -324,7 +330,7 @@ export async function runScenario(name, fn) {
 			let detail = {};
 			try {
 				const value = await fnStep(page);
-				ok = value?.ok !== false;
+				ok = value?.ok === true;
 				detail = value && typeof value === "object" ? value : { value };
 			} catch (error) {
 				detail = { error: sanitize(error?.stack || error) };

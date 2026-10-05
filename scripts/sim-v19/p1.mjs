@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { runScenario } from "./common.mjs";
 
 const PROJECT = process.env.DRONE_SIM_PROJECT || "/tmp/drone-v19-sim/project";
@@ -23,6 +23,7 @@ async function waitThroughTask(page, result, timeoutMs = 120_000) {
 
 await runScenario("p1", async (page, result, step) => {
 	result.interactions = { clicks: 0, inputs: 0, confirmations: 0, postAuthorizationInterruptions: 0 };
+	for (const name of ["search-log.md", "evidence-cards.md"]) rmSync(PROJECT + "/" + name, { force: true });
 	await page.key("Escape");
 	await page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
 
@@ -49,23 +50,26 @@ await runScenario("p1", async (page, result, step) => {
 	});
 
 	await step("open-evidence-example-and-fill", async () => {
+		const taskTab = await page.clickText("任务", { exact: true });
+		const cards = await page.waitForSelector('[data-testid="example-task-cards"]', 10_000);
 		const opened = await page.clickRegexWithin('[data-testid="example-task-cards"]', "主题文献检索与精读证据卡");
 		const dialog = await page.waitForSelector('[data-testid="example-task-dialog"]');
 		const input = await page.eval("document.querySelector('[data-testid=\"example-task-input\"] input, [data-testid=\"example-task-input\"] textarea')?.id || null");
-		if (!input) return { ok: false, selectors: ['[data-testid="example-task-dialog"]', '[data-testid="example-task-input"] input'] };
+		if (!input) return { ok: false, selectors: ['[data-testid="example-task-cards"]', '[data-testid="example-task-dialog"]', '[data-testid="example-task-input"] input'], taskTab, cards, opened };
 		const filled = await page.fill("#" + input, "只研究两篇开放获取论文：DOI 10.1371/journal.pone.0000308 和 10.1371/journal.pone.0022596。限定只读这两篇，写简短检索日志和证据卡，不写 Zotero。完成后停止。模型预算上限 0.25 美元。");
 		result.interactions.clicks += 1;
 		result.interactions.inputs += 1;
-		return { ok: Boolean(opened && dialog && filled), selectors: ['[data-testid="example-task-card"]', '[data-testid="example-task-input"] input'], inputId: input };
+		return { ok: Boolean(taskTab && cards && opened && dialog && filled), selectors: ['[data-testid="example-task-cards"]', '[data-testid="example-task-dialog"]', '[data-testid="example-task-input"] input'], taskTab, cards, opened, inputId: input };
 	});
 
 	await step("launch-and-single-authorization", async () => {
+		const launchEnabled = await page.eval(`!document.querySelector('[data-testid="example-task-launch"]')?.disabled`);
 		const launched = await page.clickSelector('[data-testid="example-task-launch"]');
 		result.interactions.clicks += 1;
 		const run = await waitThroughTask(page, result, 90_000);
 		const permissionCount = run.handled.filter((item) => item === "permission").length;
 		const askUserCount = run.handled.filter((item) => item.startsWith("ask-user")).length;
-		return { ok: Boolean(launched && run.startedRun && run.settled && permissionCount === 1 && askUserCount === 0), selectors: ['[data-testid="example-task-launch"]', '[data-testid="permission-allow-run"]', '[data-testid="ask-simple"]', '[data-testid="ask-dialog"]'], launched, startedRun: run.startedRun, settled: run.settled, handled: run.handled, permissionCount, askUserCount };
+		return { ok: Boolean(launchEnabled && launched && run.startedRun && run.settled && permissionCount === 1 && askUserCount === 0), selectors: ['[data-testid="example-task-launch"]', '[data-testid="permission-allow-run"]', '[data-testid="ask-simple"]', '[data-testid="ask-dialog"]'], launchEnabled, launched, startedRun: run.startedRun, settled: run.settled, handled: run.handled, permissionCount, askUserCount };
 	});
 
 	await step("run-to-completion-without-second-ask", async () => {
