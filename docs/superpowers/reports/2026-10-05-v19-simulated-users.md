@@ -4,7 +4,7 @@
 测试分支：`codex/sim-v19`  
 正式被测 tag：`v0.19.1`（等待 `git ls-remote` 出现）  
 对比基线：`v0.18.0`（`a5ba4b8`）  
-脚本加固提交：`737946b`
+脚本加固提交：`4123ff9`
 
 ## 1. 当前结论
 
@@ -16,7 +16,7 @@
 
 | 场景 | 加固检查 | 空跑观察 | 验收状态 |
 |---|---|---|---|
-| P1 | 设置/模型用 `[data-testid="settings-dialog"] li` 读取 DeepSeek 行；Slash 用 `div.shadow-pop button[data-command]`；@ 用 `[data-testid="at-menu-agent"]`；授权分别识别 `[data-testid="ask-simple"]`、`[data-testid="ask-dialog"]`、`[data-testid="permission-allow-run"]` | 模型行取到 DeepSeek 且“已配置”；@ 菜单取到 1 个 agent；空跑中授权后交付文件未全部出现，步骤按失败记录 | 未完成，不计通过 |
+| P1 | 设置/模型用 `[data-testid="settings-dialog"] li` 读取 DeepSeek 行；Slash 用 `div.shadow-pop button[data-command]`；@ 用 `[data-testid="at-menu-agent"]`；授权分别识别 `[data-testid="ask-simple"]`、`[data-testid="ask-dialog"]`、`[data-testid="permission-allow-run"]`；示例产物先清理 | 模型行取到 DeepSeek 且“已配置”；@ 菜单取到 1 个 agent；最新空跑实际记录 8 次 permission、1 次 ask-user-form，且两个产物均未生成，严格失败 | 未完成，不计通过 |
 | P2 | Vault `Wiki/Existing.md` 预置；模式值读取 `select[aria-label="知识审核模式"]`；队列总数读取 Wiki 审核 aside 的 `reviews · N`；条目读取 `aside button span.block.break-words`；候选状态通过可用批准/拒绝按钮；目标文件用 SHA-256 前后比对 | 未绑定/未形成可核验 pending 队列时，`totalAfter > totalBefore` 断言失败；“没有待审核”不会通过 | 未完成，不计通过 |
 | P3 | 固定 `data.csv` + `plot_fixed.py`；文件存在与数字由文件读取；产物用 `[data-testid="artifact-provenance-details"]`、`[data-reproducibility]`、代码指纹/父链节点；审稿用 `.reviewer-card-code` 精确匹配两类 code | v0.19.0 空跑未生成两个固定产物，因此 provenance 与两张审稿卡均失败 | 未完成，不计通过 |
 | P4 | 第 1 轮随机 `RECALL-XXXXXXXX`；后续提示不再包含口令；只在助手 `.markdown-body` 查找；trace 需有真实 `harness_recall` 调用；每轮等 `waitForIdle(30s)`，统计实际完成轮数；trace 的 `familyPrompt`/`guard` 必须为 0 | 5 轮空跑完成 5 轮；助手明确回答 harness_recall 不可用，`secretInAssistant=false`、`harnessRecallCalls=0`；trace 有 `familyPrompt=6`，因此失败 | 未完成，不计通过 |
@@ -69,4 +69,3 @@
 - 正式报告（本文件）：`docs/superpowers/reports/2026-10-05-v19-simulated-users.md`
 - v0.19.0 空跑原始产物：`/tmp/drone-v19-sim/out-v19-hardening/`
 - 原始用户内容、Vault、项目和凭证均保留在 `/tmp/drone-v19-sim/` 隔离目录，不进入仓库。
-
