@@ -5,7 +5,7 @@ import {
 } from "./chunk-GC2J7ECB.mjs";
 import {
   evaluateMetacognitivePublication
-} from "./chunk-IRZ35DB3.mjs";
+} from "./chunk-TT3YMRLM.mjs";
 import {
   advisoryLine,
   knowledgeFailure,
@@ -392,6 +392,10 @@ ${String(footer).slice(0, 2e3)}` }] : [];
       }
       if (ctx.signal?.aborted) return report(failure(message, { code: "interrupted" }));
       const metacognitive = await evaluateMetacognition(ctx, c, publishText);
+      const warnings = [
+        ...Array.isArray(proof.warnings) ? proof.warnings : [],
+        ...(metacognitive?.warnings || []).map((warning) => ({ code: warning.code, message: warning.detail }))
+      ];
       let reviewerWarnings = [];
       if (reviewer && typeof getMetacognition === "function") {
         try {
@@ -423,6 +427,7 @@ ${String(footer).slice(0, 2e3)}` }] : published;
       return report(
         seal(message, visible, {
           ...proof,
+          ...warnings.length ? { warnings } : {},
           ...metacognitive ? { metacognition: metacognitive } : {},
           ...reviewerWarnings.length ? { reviewerWarnings } : {},
           status: proof.status === "ready" ? "released" : "no-hits",

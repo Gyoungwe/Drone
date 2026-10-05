@@ -166,10 +166,11 @@ function selectReviewerProvider(mainProvider, providers) {
   const configured = providers.filter((item) => typeof item.provider === "string" && item.provider.trim());
   if (!configured.length) return null;
   const independent = mainProvider ? configured.find((item) => item.provider !== mainProvider) : void 0;
-  if (independent) return { provider: independent.provider, independent: true };
+  if (independent) return { provider: independent.provider, model: independent.model, independent: true };
   const fallback = configured[0];
   return {
     provider: fallback?.provider ?? "",
+    model: fallback?.model,
     independent: false,
     nonIndependentReason: "\u975E\u72EC\u7ACB\u5BA1\u7A3F\uFF1A\u6CA1\u6709\u914D\u7F6E\u5176\u4ED6 provider\u3002"
   };
@@ -181,6 +182,8 @@ var BackgroundReviewer = class {
   modelReview;
   mainProvider;
   providers;
+  getProviders;
+  useModel;
   onResult;
   now;
   cache = /* @__PURE__ */ new Map();
@@ -196,6 +199,8 @@ var BackgroundReviewer = class {
     this.modelReview = options.modelReview;
     this.mainProvider = options.mainProvider;
     this.providers = options.providers ?? [];
+    this.getProviders = options.getProviders;
+    this.useModel = options.useModel;
     this.onResult = options.onResult;
     this.now = options.now ?? Date.now;
   }
@@ -232,8 +237,9 @@ var BackgroundReviewer = class {
         const findings = await Promise.race([
           Promise.resolve().then(async () => {
             const ruleFindings = await this.review(request.snapshot);
-            if (!this.modelReview) return ruleFindings;
-            const selection = selectReviewerProvider(this.mainProvider, this.providers);
+            if (!this.modelReview || this.useModel && !await this.useModel()) return ruleFindings;
+            const providers = this.getProviders ? await this.getProviders() : this.providers;
+            const selection = selectReviewerProvider(request.mainProvider ?? this.mainProvider, providers);
             if (!selection) return ruleFindings;
             const modelFindings = await this.modelReview(request.snapshot, selection);
             return selection.independent ? [...ruleFindings, ...modelFindings] : [

@@ -55,12 +55,16 @@ function citedPaths(answer) {
 function addFailure(failures, failure) {
   if (failures.length < MAX_FAILURES) failures.push(failure);
 }
+function addWarning(warnings, warning) {
+  if (warnings.length < 8) warnings.push(warning);
+}
 function evaluateMetacognitivePublication(answer, snapshot) {
   if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
-    return { ok: true, failures: [], findings: [] };
+    return { ok: true, failures: [], warnings: [], findings: [] };
   const input = snapshot;
-  if (input.enabled === false) return { ok: true, failures: [], findings: [] };
+  if (input.enabled === false) return { ok: true, failures: [], warnings: [], findings: [] };
   const failures = [];
+  const warnings = [];
   const citations = citedPaths(answer);
   const artifacts = /* @__PURE__ */ new Map();
   for (const artifact of Array.isArray(input.artifacts) ? input.artifacts : []) {
@@ -85,6 +89,13 @@ function evaluateMetacognitivePublication(answer, snapshot) {
         code: "artifact-pending-review",
         subject: path,
         detail: `Artifact ${bounded(path, 240)} is pending review after a revoked decision`,
+        path
+      });
+    if (artifact.reproducibility === "not-reproducible")
+      addWarning(warnings, {
+        code: "artifact-not-reproducible",
+        subject,
+        detail: `Cited artifact has no recorded code fingerprint or run provenance: ${bounded(path, 240)}`,
         path
       });
     if (!SHA256.test(String(artifact.sha256 || "")) || !SHA256.test(String(artifact.currentSha256 || ""))) {
@@ -239,7 +250,7 @@ function evaluateMetacognitivePublication(answer, snapshot) {
         detail: `Reported diagnostic differs from the observed control/result (${bounded(diagnostic?.reported)} vs ${bounded(diagnostic?.observed)})`
       });
   }
-  return { ok: failures.length === 0, failures, findings: findingEvidence };
+  return { ok: failures.length === 0, failures, warnings, findings: findingEvidence };
 }
 
 export {

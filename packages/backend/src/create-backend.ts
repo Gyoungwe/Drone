@@ -267,11 +267,13 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			compute.onEvent((event) => {
 				void compute
 					.getJob(event.jobId)
-					.then((job) => handler({
-						...event,
-						projectId: options.inquiryProjectId ?? options.defaultCwd,
-						...(job ? computeInquiryMetadata(job) : {}),
-					}))
+					.then((job) =>
+						handler({
+							...event,
+							projectId: options.inquiryProjectId ?? options.defaultCwd,
+							...(job ? computeInquiryMetadata(job) : {}),
+						}),
+					)
 					.catch(() => handler({ ...event, projectId: options.inquiryProjectId ?? options.defaultCwd }));
 			}),
 		onTaskTerminal: (handler) =>

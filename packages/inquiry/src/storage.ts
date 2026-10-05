@@ -87,7 +87,13 @@ const queues = new Map<string, Promise<void>>();
 
 const SQLITE_TABLES = ["artifacts", "findings", "questions", "attempts", "decisions", "reruns"] as const;
 type SqliteLedgerKey = (typeof SQLITE_TABLES)[number];
-type LedgerRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | DecisionRecord | ArtifactRerunRecord;
+type LedgerRecord =
+	| ArtifactRecord
+	| FindingRecord
+	| QuestionRecord
+	| AttemptRecord
+	| DecisionRecord
+	| ArtifactRerunRecord;
 
 interface SqliteMetaRow {
 	project_id: string;
@@ -219,10 +225,7 @@ class FileLedgerCollection<T extends { readonly id: string }> implements LedgerC
 	}
 
 	async put(record: T): Promise<void> {
-		await this.owner.update(
-			this.key,
-			record as unknown as LedgerRecord,
-		);
+		await this.owner.update(this.key, record as unknown as LedgerRecord);
 	}
 }
 
@@ -296,7 +299,14 @@ export class FileInquiryStorage implements InquiryStorage {
 					throw new Error("Invalid decision record");
 			} else if (key === "reruns") {
 				const rerun = record as ArtifactRerunRecord;
-				if (!rerun || (rerun.schemaVersion !== INQUIRY_SCHEMA_VERSION && rerun.schemaVersion !== LEGACY_INQUIRY_SCHEMA_VERSION) || rerun.projectId !== this.projectId || !rerun.sourceArtifactId || !rerun.jobId)
+				if (
+					!rerun ||
+					(rerun.schemaVersion !== INQUIRY_SCHEMA_VERSION &&
+						rerun.schemaVersion !== LEGACY_INQUIRY_SCHEMA_VERSION) ||
+					rerun.projectId !== this.projectId ||
+					!rerun.sourceArtifactId ||
+					!rerun.jobId
+				)
 					throw new Error("Invalid artifact rerun record");
 			} else if (
 				!record ||
@@ -306,7 +316,7 @@ export class FileInquiryStorage implements InquiryStorage {
 			) {
 				throw new Error("Invalid attempt record");
 			}
-		const values = [...(current[key] ?? [])] as Array<typeof record>;
+			const values = [...(current[key] ?? [])] as Array<typeof record>;
 			const index = values.findIndex((item) => item.id === record.id);
 			if (index >= 0) values[index] = record;
 			else values.push(record);
@@ -530,7 +540,7 @@ export class SqliteInquiryStorage implements InquiryStorage {
 				!Array.isArray(decision.affectedArtifactIds)
 			)
 				throw new Error("Invalid decision record");
-			}
+		}
 		if (key === "reruns") {
 			const rerun = record as ArtifactRerunRecord;
 			if (!rerun.sourceArtifactId || !rerun.jobId || !rerun.status)
@@ -561,7 +571,7 @@ class SqliteLedgerCollection<T extends { readonly id: string }> implements Ledge
 
 	async list(): Promise<readonly T[]> {
 		const snapshot = await this.owner.snapshot();
-			return (snapshot[this.key] ?? []) as unknown as readonly T[];
+		return (snapshot[this.key] ?? []) as unknown as readonly T[];
 	}
 
 	async put(record: T): Promise<void> {
@@ -637,7 +647,13 @@ export class MemoryInquiryStorage implements InquiryStorage {
 		}
 		if (key === "reruns") {
 			const rerun = record as ArtifactRerunRecord;
-			if ((rerun.schemaVersion !== INQUIRY_SCHEMA_VERSION && rerun.schemaVersion !== LEGACY_INQUIRY_SCHEMA_VERSION) || rerun.projectId !== this.projectId || !rerun.sourceArtifactId || !rerun.jobId)
+			if (
+				(rerun.schemaVersion !== INQUIRY_SCHEMA_VERSION &&
+					rerun.schemaVersion !== LEGACY_INQUIRY_SCHEMA_VERSION) ||
+				rerun.projectId !== this.projectId ||
+				!rerun.sourceArtifactId ||
+				!rerun.jobId
+			)
 				throw new Error("Invalid artifact rerun record");
 		}
 		const values = [...(this.state[key] ?? [])] as Array<typeof record>;
@@ -666,9 +682,6 @@ class MemoryLedgerCollection<T extends { readonly id: string }> implements Ledge
 		return sortRecords((snapshot[this.key] ?? []) as unknown as readonly T[]);
 	}
 	async put(record: T): Promise<void> {
-		await this.owner.update(
-			this.key,
-			record as unknown as LedgerRecord,
-		);
+		await this.owner.update(this.key, record as unknown as LedgerRecord);
 	}
 }

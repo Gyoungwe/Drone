@@ -13,6 +13,20 @@ const sourceNames = (await readdir(sourceDir))
 	.filter((name) => name.endsWith(".ts") && name !== "worker.ts")
 	.sort();
 const entryPoints = sourceNames.map((name) => resolve(sourceDir, name));
+const inputsHash = async (metafiles) => {
+	const inputs = new Set();
+	for (const metafile of metafiles)
+		for (const input of Object.keys(metafile?.inputs || {})) inputs.add(input);
+	const hash = createHash("sha256");
+	for (const input of [...inputs].sort()) {
+		const path = resolve(root, input);
+		hash.update(relative(root, path).replaceAll("\\", "/"));
+		hash.update("\0");
+		hash.update(await readFile(path));
+		hash.update("\0");
+	}
+	return hash.digest("hex");
+};
 
 const snapshot = async (directory) => {
 	const files = new Map();
@@ -31,7 +45,7 @@ const snapshot = async (directory) => {
 try {
 	if (!check) await rm(outDir, { recursive: true, force: true });
 	await mkdir(outDir, { recursive: true });
-	await build({
+	const entryBuild = await build({
 		entryPoints,
 		outdir: outDir,
 		bundle: true,
@@ -42,8 +56,9 @@ try {
 		chunkNames: "chunks/[name]-[hash]",
 		sourcemap: false,
 		logLevel: "silent",
+		metafile: true,
 	});
-	await build({
+	const workerBuild = await build({
 		entryPoints: [resolve(sourceDir, "worker.ts")],
 		outfile: resolve(outDir, "worker.mjs"),
 		bundle: true,
@@ -51,10 +66,12 @@ try {
 		platform: "node",
 		sourcemap: false,
 		logLevel: "silent",
+		metafile: true,
 	});
 	const outputs = (await readdir(outDir)).filter((name) => name.endsWith(".mjs")).sort();
 	const generatedFiles = (await readdir(outDir, { recursive: true })).filter((name) => name.endsWith(".mjs"));
 	const entries = {};
+	const allInputsSha256 = await inputsHash([entryBuild.metafile, workerBuild.metafile]);
 	for (const name of generatedFiles) {
 		// Bundled ESM artifacts are checked through the legacy .pi compatibility
 		// wrappers. Keep the generated bundle itself out of checkJs inference:
@@ -71,11 +88,12 @@ try {
 			sha256: createHash("sha256")
 				.update(await readFile(outputPath))
 				.digest("hex"),
+			inputsSha256: allInputsSha256,
 		};
 	}
 	await writeFile(
 		resolve(outDir, ".build-manifest.json"),
-		`${JSON.stringify({ version: 1, generator: "scripts/build-knowledge-runtime.mjs", entries }, null, "\t")}\n`,
+		`${JSON.stringify({ version: 1, generator: "scripts/build-knowledge-runtime.mjs", inputsSha256: allInputsSha256, entries }, null, "\t")}\n`,
 	);
 
 	if (check) {

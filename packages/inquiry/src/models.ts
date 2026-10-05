@@ -189,7 +189,13 @@ export interface InquirySnapshot {
 	readonly reruns?: readonly ArtifactRerunRecord[];
 }
 
-export type InquiryRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | DecisionRecord | ArtifactRerunRecord;
+export type InquiryRecord =
+	| ArtifactRecord
+	| FindingRecord
+	| QuestionRecord
+	| AttemptRecord
+	| DecisionRecord
+	| ArtifactRerunRecord;
 
 export type ReproducibilityStatus = "reproducible" | "partial" | "not-reproducible";
 

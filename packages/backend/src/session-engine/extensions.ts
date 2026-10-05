@@ -200,12 +200,12 @@ export function buildSessionExtensionFactories(
 					report,
 					recordUnit,
 					review: (sessionId, snapshot) => {
-					deps.runtime.knowledge.reviewer?.schedule({
-						sessionId,
-						snapshot,
-						trigger: "milestone-complete",
-					});
-				},
+						deps.runtime.knowledge.reviewer?.schedule({
+							sessionId,
+							snapshot,
+							trigger: "milestone-complete",
+						});
+					},
 				}),
 			);
 	}

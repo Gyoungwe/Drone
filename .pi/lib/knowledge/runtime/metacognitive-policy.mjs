@@ -1,7 +1,7 @@
 // @ts-nocheck
 import {
   evaluateMetacognitivePublication
-} from "./chunks/chunk-IRZ35DB3.mjs";
+} from "./chunks/chunk-TT3YMRLM.mjs";
 export {
   evaluateMetacognitivePublication
 };

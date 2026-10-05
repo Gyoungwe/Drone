@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.19.0 — 2026-10-05
+
+- 修复发布产物过期校验：extensions、knowledge、tasks、research 的构建 manifest 现在包含全部传递输入的组合哈希；只改依赖源文件而不重新生成时，检查会失败，避免 v0.18.0 中 knowledge Wiki 审核逻辑过期仍被打包的问题。
 
 - Harness 单元现在可分别通过 `harness.context`、`harness.recall`、`harness.guard`、`harness.delivery`、`harness.familyPrompt` 或 `DRONE_HARNESS_DISABLE` 开关；保留 `harnessContext` 的兼容总开关，并在 trace_custom 中记录各单元真正生效时的 `harness_unit` 触发计数。
 

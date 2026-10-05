@@ -50,7 +50,10 @@ export function makeHarnessDeliveryExtension(
 	optionsOrReport: HarnessDeliveryExtensionOptions | HarnessDeliveryReporter = {},
 	review?: (sessionId: string, snapshot: unknown) => void,
 ): InlineExtension {
-	const options = typeof optionsOrReport === "function" ? { report: optionsOrReport, ...(review ? { review } : {}) } : optionsOrReport;
+	const options =
+		typeof optionsOrReport === "function"
+			? { report: optionsOrReport, ...(review ? { review } : {}) }
+			: optionsOrReport;
 	return {
 		name: "harness-delivery",
 		factory: (pi) => {

@@ -4,9 +4,9 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
 	type ArtifactLocation,
+	type ArtifactProvenance,
 	type ArtifactPurpose,
 	type ArtifactRecord,
-	type ArtifactProvenance,
 	type ArtifactRerunRecord,
 	type ArtifactRerunResult,
 	type ArtifactSource,
@@ -15,9 +15,9 @@ import {
 	type AttemptRecord,
 	type DecisionKind,
 	type DecisionRecord,
-	type RunProvenanceSummary,
 	InquiryService as DomainInquiryService,
 	type InquiryStorage,
+	type RunProvenanceSummary,
 	SqliteInquiryStorage,
 } from "@drone/inquiry";
 import type { StorageRegistry } from "../storage/registry";
@@ -120,10 +120,14 @@ export interface InquiryServiceOptions {
 	readonly eventSource?: InquiryEventSource;
 	/** Event failures are reported here while the host event stream continues. */
 	readonly onEventError?: (error: unknown) => void;
-	readonly rerunHandler?: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>;
+	readonly rerunHandler?: (
+		provenance: ArtifactProvenance,
+	) => Promise<{ readonly jobId: string } | ArtifactRecord>;
 }
 
-export type InquiryRerunHandler = (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>;
+export type InquiryRerunHandler = (
+	provenance: ArtifactProvenance,
+) => Promise<{ readonly jobId: string } | ArtifactRecord>;
 
 export interface InquiryServicePort {
 	readonly enabled: boolean;
@@ -139,7 +143,9 @@ export interface InquiryServicePort {
 	listArtifacts(): Promise<readonly ArtifactRecord[]>;
 	artifactProvenance(artifactId: string): Promise<ArtifactProvenance | undefined>;
 	rerunArtifact(artifactId: string): Promise<ArtifactRerunResult>;
-	setRerunHandler(handler: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>): void;
+	setRerunHandler(
+		handler: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>,
+	): void;
 	setRerunCompletionHandler(handler: (pending: ArtifactRerunRecord) => Promise<ArtifactRecord>): void;
 	onRerunUpdated(handler: (result: ArtifactRerunResult) => void): () => void;
 	readOnlySnapshot(projectId?: string): Promise<InquiryReadOnlySnapshot | undefined>;
@@ -185,7 +191,9 @@ export class InquiryService implements InquiryServicePort {
 	readonly domain?: DomainInquiryService;
 	private readonly unsubscribers: Array<() => void> = [];
 	private readonly onEventError?: (error: unknown) => void;
-	private rerunHandler?: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>;
+	private rerunHandler?: (
+		provenance: ArtifactProvenance,
+	) => Promise<{ readonly jobId: string } | ArtifactRecord>;
 	private rerunCompletionHandler?: (pending: ArtifactRerunRecord) => Promise<ArtifactRecord>;
 	private readonly rerunListeners = new Set<(result: ArtifactRerunResult) => void>();
 	private readonly activeReruns = new Set<string>();
@@ -224,7 +232,11 @@ export class InquiryService implements InquiryServicePort {
 		if (source.onComputeEvent) {
 			attached.push(
 				source.onComputeEvent((event) => {
-					this.enqueue(async () => this.recordComputeEvent(source.enrichComputeEvent ? await source.enrichComputeEvent(event) : event));
+					this.enqueue(async () =>
+						this.recordComputeEvent(
+							source.enrichComputeEvent ? await source.enrichComputeEvent(event) : event,
+						),
+					);
 				}),
 			);
 		}
@@ -285,11 +297,11 @@ export class InquiryService implements InquiryServicePort {
 			event.artifacts ?? event.manifest?.entries,
 			eventAt,
 			event.status === "succeeded" || event.type === "collected" ? "deliverable" : "intermediate",
-				"remote",
-				event.runId ?? event.jobId,
-				event.sessionId,
-				event.turn,
-				event.runProvenance,
+			"remote",
+			event.runId ?? event.jobId,
+			event.sessionId,
+			event.turn,
+			event.runProvenance,
 		);
 		const attempt: AttemptRecord = {
 			id: `compute:${executionId}`,
@@ -311,10 +323,10 @@ export class InquiryService implements InquiryServicePort {
 			enteredReport: false,
 			startedAt: asIso(event.startedAt ?? event.at),
 			finishedAt: eventAt,
-				...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
-				...(event.sessionId ? { sessionId: event.sessionId } : {}),
-				...(event.turn !== undefined ? { turn: event.turn } : {}),
-				...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
+			...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
+			...(event.sessionId ? { sessionId: event.sessionId } : {}),
+			...(event.turn !== undefined ? { turn: event.turn } : {}),
+			...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
 		};
 		await this.domain.recordAttempt(attempt);
 		await this.associateReceipts([`job:${event.jobId}`, `run:${executionId}`], artifactIds);
@@ -362,10 +374,10 @@ export class InquiryService implements InquiryServicePort {
 			enteredReport: false,
 			startedAt: asIso(event.startedAt ?? event.at),
 			finishedAt: eventAt,
-				...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
-				...(event.sessionId ? { sessionId: event.sessionId } : {}),
-				...(event.turn !== undefined ? { turn: event.turn } : {}),
-				...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
+			...(event.codeFingerprint ? { codeFingerprint: event.codeFingerprint } : {}),
+			...(event.sessionId ? { sessionId: event.sessionId } : {}),
+			...(event.turn !== undefined ? { turn: event.turn } : {}),
+			...(event.runProvenance ? { runProvenance: event.runProvenance } : {}),
 		};
 		await this.domain.recordAttempt(attempt);
 		await this.associateReceipts([`task:${event.taskId}`, `run:${executionId}`], artifactIds);
@@ -462,7 +474,9 @@ export class InquiryService implements InquiryServicePort {
 		return result;
 	}
 
-	setRerunHandler(handler: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>): void {
+	setRerunHandler(
+		handler: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>,
+	): void {
 		this.rerunHandler = handler;
 		this.domain?.setRerunHandler(handler);
 	}
@@ -479,7 +493,11 @@ export class InquiryService implements InquiryServicePort {
 
 	private emitRerun(result: ArtifactRerunResult): void {
 		for (const listener of this.rerunListeners) {
-			try { listener(result); } catch (error) { this.onEventError?.(error); }
+			try {
+				listener(result);
+			} catch (error) {
+				this.onEventError?.(error);
+			}
 		}
 	}
 
@@ -489,7 +507,8 @@ export class InquiryService implements InquiryServicePort {
 	}
 
 	private async processRerun(pending: ArtifactRerunRecord): Promise<void> {
-		if (this.disposed || !this.domain || !this.rerunCompletionHandler || this.activeReruns.has(pending.id)) return;
+		if (this.disposed || !this.domain || !this.rerunCompletionHandler || this.activeReruns.has(pending.id))
+			return;
 		this.activeReruns.add(pending.id);
 		try {
 			const running = await this.domain.markRerunRunning(pending.id);
@@ -499,10 +518,16 @@ export class InquiryService implements InquiryServicePort {
 			if (result) this.emitRerun(result);
 		} catch (error) {
 			try {
-				const result = await this.domain.completeRerun(pending.id, { error: error instanceof Error ? error.message : String(error) });
+				const result = await this.domain.completeRerun(pending.id, {
+					error: error instanceof Error ? error.message : String(error),
+				});
 				if (result) this.emitRerun(result);
-			} catch (completionError) { this.onEventError?.(completionError); }
-		} finally { this.activeReruns.delete(pending.id); }
+			} catch (completionError) {
+				this.onEventError?.(completionError);
+			}
+		} finally {
+			this.activeReruns.delete(pending.id);
+		}
 	}
 
 	private toRerunResult(record: ArtifactRerunRecord): ArtifactRerunResult {
@@ -535,7 +560,12 @@ export class InquiryService implements InquiryServicePort {
 				"private",
 				2,
 			);
-			service = new InquiryService({ inquiryDir: root, projectId, onEventError: this.onEventError, ...(this.rerunHandler ? { rerunHandler: this.rerunHandler } : {}) });
+			service = new InquiryService({
+				inquiryDir: root,
+				projectId,
+				onEventError: this.onEventError,
+				...(this.rerunHandler ? { rerunHandler: this.rerunHandler } : {}),
+			});
 			this.projects.set(key, service);
 		}
 		return service;

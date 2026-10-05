@@ -16,6 +16,17 @@ const manifestPath = resolve(outDir, ".build-manifest.json");
 
 const sha256 = (contents) => createHash("sha256").update(contents).digest("hex");
 const readHash = async (path) => sha256(await readFile(path));
+const inputsHash = async (metafile) => {
+	const hash = createHash("sha256");
+	for (const input of Object.keys(metafile?.inputs || {}).sort()) {
+		const path = resolve(root, input);
+		hash.update(relative(root, path).replaceAll("\\", "/"));
+		hash.update("\0");
+		hash.update(await readFile(path));
+		hash.update("\0");
+	}
+	return hash.digest("hex");
+};
 const readManifest = async () => {
 	try {
 		return JSON.parse(await readFile(manifestPath, "utf8"));
@@ -39,6 +50,7 @@ for (const entry of entries) {
 	const output = resolve(outDir, `${stem}.mjs`);
 	const sourceHash = await readHash(source);
 	let built = false;
+	let buildResult;
 	try {
 		await stat(output);
 		if (!force) {
@@ -62,7 +74,7 @@ for (const entry of entries) {
 		built = true;
 	}
 	if (built) {
-		await build({
+		buildResult = await build({
 			entryPoints: [source],
 			outfile: output,
 			bundle: true,
@@ -71,6 +83,7 @@ for (const entry of entries) {
 			sourcemap: false,
 			packages: "bundle",
 			logLevel: "silent",
+			metafile: true,
 		});
 		// Bundled extension artifacts are compatibility resources consumed by
 		// the checkJs project through legacy .pi/lib imports. Their source is
@@ -82,11 +95,26 @@ for (const entry of entries) {
 		}
 		console.log(`${force ? "rebuilt" : "built"} ${relative(root, output)} from ${relative(root, source)}`);
 	}
+	if (!buildResult) {
+		buildResult = await build({
+			entryPoints: [source],
+			outfile: output,
+			bundle: true,
+			format: "esm",
+			platform: "node",
+			sourcemap: false,
+			packages: "bundle",
+			logLevel: "silent",
+			metafile: true,
+			write: false,
+		});
+	}
 	records[stem] = {
 		source: entry,
 		output: `${stem}.mjs`,
 		status: built || previous?.entries?.[stem]?.status === "generated" ? "generated" : "legacy-preserved",
 		sourceSha256: sourceHash,
+		inputsSha256: await inputsHash(buildResult.metafile),
 		outputSha256: await readHash(output),
 	};
 }

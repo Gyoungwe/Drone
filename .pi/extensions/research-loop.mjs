@@ -1,5 +1,5 @@
 // @ts-nocheck
-// ../Drone/packages/research/src/literature-receipt.ts
+// packages/research/src/literature-receipt.ts
 import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
@@ -91,10 +91,10 @@ async function verifyLiteratureReceipt({
   return receipt;
 }
 
-// ../Drone/packages/research/src/receipt-journal.ts
+// packages/research/src/receipt-journal.ts
 import { realpath as realpath2 } from "node:fs/promises";
 
-// ../Drone/packages/research/src/receipt-journal-policy.ts
+// packages/research/src/receipt-journal-policy.ts
 import { resolve as resolve2 } from "node:path";
 var CORE_RESEARCH_RECEIPT_TOOLS = [
   "bash",
@@ -106,7 +106,8 @@ var CORE_RESEARCH_RECEIPT_TOOLS = [
   "research_search_knowledge",
   "research_verify_literature",
   "research_reconcile_literature",
-  "research_archive_source"
+  "research_archive_source",
+  "read"
 ];
 function shouldRecordResearchReceipt(event, isJournalTool = () => false) {
   const toolName = typeof event.toolName === "string" ? event.toolName : "";
@@ -159,7 +160,7 @@ function receiptBelongsToRun(receipt, cwd, runDir) {
   return !ownedRun || resolve2(cwd, String(ownedRun)) === resolve2(cwd, runDir);
 }
 
-// ../Drone/packages/research/src/receipt-journal.ts
+// packages/research/src/receipt-journal.ts
 function createResearchReceiptJournal(cwd, { sessionId = null, ports }) {
   const owners = ports.owners || /* @__PURE__ */ new Map();
   const owner = Symbol("research-turn");
@@ -247,12 +248,12 @@ function createResearchReceiptJournal(cwd, { sessionId = null, ports }) {
   };
 }
 
-// ../Drone/packages/research/src/research-loop.ts
-import { randomUUID } from "node:crypto";
+// packages/research/src/research-loop.ts
+import { createHash as createHash2, randomUUID } from "node:crypto";
 import { access, mkdir, readFile as readFile2, realpath as realpath3, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute as isAbsolute2, join, relative as relative2, resolve as resolve3, sep as sep2 } from "node:path";
 
-// ../Drone/packages/research/src/claim-bindings.ts
+// packages/research/src/claim-bindings.ts
 var RELATIONSHIPS = ["direct", "indirect", "hypothesis", "unsupported"];
 function text(value, label, max = 4e3) {
   if (typeof value !== "string" || !value.trim() || value.length > max) throw new Error(`Invalid ${label}`);
@@ -356,7 +357,7 @@ var CLAIM_BINDING_SCHEMA = {
   }
 };
 
-// ../Drone/packages/research/src/research-loop.ts
+// packages/research/src/research-loop.ts
 var RESEARCH_STAGES = Object.freeze([
   "created",
   "local_query_recorded",
@@ -462,6 +463,71 @@ function createResearchLoop(ports) {
     const rel = relative2(resolve3(root), resolve3(target));
     return rel === "" || !isAbsolute2(rel) && rel !== ".." && !rel.startsWith(`..${sep2}`);
   }
+  function fileHash(bytes) {
+    return createHash2("sha256").update(bytes).digest("hex");
+  }
+  async function archivedSourceRecords(cwd, runDir) {
+    const archive = await sourceStatus2({ cwd, run_dir: resolve3(cwd, runDir) });
+    const records = [];
+    for (const item of archive.manifest?.items || []) {
+      if (item.status !== "downloaded" || !item.path || !item.sha256) continue;
+      const absolute = resolve3(cwd, item.path);
+      if (!within2(join(resolve3(cwd, runDir), "sources"), absolute)) continue;
+      try {
+        if (!within2(await realpath3(join(resolve3(cwd, runDir), "sources")), await realpath3(absolute)))
+          continue;
+        if (fileHash(await readFile2(absolute)) !== item.sha256) continue;
+      } catch {
+        continue;
+      }
+      const aliases = /* @__PURE__ */ new Set([
+        String(item.path),
+        absolute,
+        relative2(cwd, absolute),
+        relative2(resolve3(cwd, runDir), absolute)
+      ]);
+      for (const path of aliases)
+        records.push({
+          path,
+          hash: String(item.sha256),
+          doi: item.metadata?.doi || item.doi,
+          zotero_key: item.metadata?.zotero_key || item.zotero_key
+        });
+    }
+    return records;
+  }
+  async function recordArchivedRead(cwd, runDir, path, args, details, content) {
+    const absolute = resolve3(cwd, path);
+    const sourcesRoot = join(resolve3(cwd, runDir), "sources");
+    if (!within2(sourcesRoot, absolute)) return false;
+    if (!within2(await realpath3(sourcesRoot), await realpath3(absolute))) return false;
+    if (details.truncation?.firstLineExceedsLimit) return false;
+    const returned = details.truncation?.content ?? content?.find((part) => part.type === "text")?.text;
+    if (typeof returned !== "string" || !returned.trim()) return false;
+    const bytes = await readFile2(absolute);
+    const sourceText = bytes.toString("utf8");
+    if (sourceText.includes("\0") || sourceText.startsWith("%PDF-")) return false;
+    const startLine = Number.isInteger(args.offset) && args.offset > 0 ? args.offset : 1;
+    const selected = sourceText.split("\n").slice(startLine - 1, args.limit ? startLine - 1 + args.limit : void 0);
+    const visible = returned.split("\n");
+    const lines = [];
+    for (let index = 0; index < Math.min(selected.length, visible.length, 2e3); index++) {
+      const shown = visible[index] ?? "";
+      if (selected[index] !== shown || lines.join("\n").length + shown.length > 9e4) break;
+      lines.push(shown);
+    }
+    const text2 = lines.join("\n");
+    if (!text2.trim()) return false;
+    const read = { hash: fileHash(bytes), text: text2, startLine, endLine: startLine + lines.length - 1 };
+    const aliases = /* @__PURE__ */ new Set([
+      String(path),
+      absolute,
+      relative2(cwd, absolute),
+      relative2(resolve3(cwd, runDir), absolute)
+    ]);
+    for (const alias of aliases) ledger(cwd, runDir).reads.set(alias, read);
+    return true;
+  }
   async function readJson(path) {
     const value = JSON.parse(await readFile2(path, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value))
@@ -490,6 +556,22 @@ function createResearchLoop(ports) {
       reuse_count: Number(gate.reuse_count) || 0,
       reused_sources: Array.isArray(gate.reused_sources) ? gate.reused_sources : [],
       scientificallyVerified: false
+    };
+  }
+  function researchNodes(gate) {
+    const current = RESEARCH_STAGES.indexOf(gate.stage);
+    return RESEARCH_STAGES.map((id, index) => ({
+      id,
+      state: gate.answerable || index < current ? "completed" : index === current ? "current" : "pending",
+      observed: (gate.events || []).some((event) => event.type === id && !event.skipped)
+    }));
+  }
+  function provenanceFor(gate, status = "pending") {
+    return {
+      status,
+      source_refs: [...gate.source_refs],
+      claim_bindings: structuredClone(gate.claim_bindings),
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
   function advance(gate, stage, details = {}) {
@@ -544,7 +626,9 @@ function createResearchLoop(ports) {
         claim_refs: [],
         source_refs: [],
         archive_count: 0
-      }
+      },
+      research_nodes: researchNodes({ stage: "created", answerable: false, events: [{ type: "created" }] }),
+      provenance: provenanceFor({ source_refs: [], claim_bindings: [] })
     };
     await mkdir(runDir, { recursive: true });
     await atomicJson(join(runDir, "metadata.json"), metadata);
@@ -619,14 +703,18 @@ function createResearchLoop(ports) {
       if (claimBindings.length) {
         const checked = validateClaimBindings(
           claimBindings,
-          await reusableSources(cwd, runDir),
+          [...await reusableSources(cwd, runDir), ...await archivedSourceRecords(cwd, runDir)],
           ledger(cwd, runDir).reads
         );
         gate = { ...gate, claim_bindings: checked, warnings: [] };
         claimRefs = claimBindingRefs(checked);
       } else if (gate.claim_bindings.length && claimRefs.length) {
-        gate = { ...gate, claim_bindings: [] };
+        throw new Error("Structured claim_bindings are required; legacy claim_refs cannot establish support");
       }
+      if (!gate.claim_bindings.length)
+        throw new Error(
+          "Structured claim_bindings with observed source excerpts are required before answerable"
+        );
       if (!Array.isArray(claimRefs) || claimRefs.length === 0)
         throw new Error("claim_refs must contain at least one traceable claim binding");
       gate = advance({ ...gate, claim_refs: [...new Set(claimRefs.map(String))] }, "claims_bound", {
@@ -635,8 +723,15 @@ function createResearchLoop(ports) {
     } else if (action === "finalize") {
       requireStage("claims_bound");
       await validateReuse(cwd, runDir, gate);
-      if (gate.archive_count + gate.reuse_count < 1 || gate.claim_refs.length < 1)
+      if (gate.archive_count + gate.reuse_count < 1 || gate.claim_refs.length < 1 || !gate.claim_bindings.length || gate.claim_bindings.some(
+        (binding) => !Array.isArray(binding.sources) || binding.sources.length < 1
+      ))
         throw new Error("archive verification and claim binding are required before answerable");
+      gate.claim_bindings = validateClaimBindings(
+        gate.claim_bindings,
+        [...await reusableSources(cwd, runDir), ...await archivedSourceRecords(cwd, runDir)],
+        ledger(cwd, runDir).reads
+      );
       gate = advance({ ...gate, status: "ok", answerable: true }, "answerable", detail);
     } else if (action === "complete") {
       return completeResearchGate({ cwd, runDir, claimRefs, claimBindings });
@@ -644,6 +739,12 @@ function createResearchLoop(ports) {
       throw new Error(`unknown research_loop action: ${action}`);
     }
     metadata.evidence_gate = gate;
+    metadata.research_nodes = researchNodes(gate);
+    metadata.provenance = provenanceFor(gate, gate.answerable ? "host-verified" : "pending");
+    if (gate.answerable) {
+      metadata.status = "completed";
+      metadata.finalized_at = metadata.finalized_at || (/* @__PURE__ */ new Date()).toISOString();
+    }
     metadata.updated_at = (/* @__PURE__ */ new Date()).toISOString();
     await atomicJson(metadataPath, metadata);
     return { run_dir: path, evidence_gate: gate };
@@ -687,7 +788,7 @@ function createResearchLoop(ports) {
         claimBindings
       });
     gate = status.evidence_gate;
-    if (gate.stage !== "answerable") status = await updateResearchLoop({ cwd, runDir, action: "finalize" });
+    status = await updateResearchLoop({ cwd, runDir, action: "finalize" });
     return status;
   }
   function observeResearchReceipt(options = {}) {
@@ -708,6 +809,7 @@ function createResearchLoop(ports) {
     toolName,
     args = {},
     details = {},
+    content = [],
     isError = false,
     readBinding
   } = {}) {
@@ -784,6 +886,30 @@ function createResearchLoop(ports) {
           return await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
         return inspected;
       }
+      if (toolName === "read") {
+        const path = String(args.path || details.path || "");
+        if (!path || details.missing === true) return null;
+        const archived = await recordArchivedRead(cwd, runDir, path, args, details, content);
+        if (!archived) return null;
+        await ensureStage(
+          cwd,
+          runDir,
+          "local_query_recorded",
+          () => updateResearchLoop({ cwd, runDir, action: "record_local", query: path })
+        );
+        await ensureStage(
+          cwd,
+          runDir,
+          "external_search_recorded",
+          () => updateResearchLoop({
+            cwd,
+            runDir,
+            action: "record_external",
+            notes: "Host recorded a read of the archived run source."
+          })
+        );
+        return updateResearchLoop({ cwd, runDir, action: "inspect_sources", sourceRefs: [path] });
+      }
       if (toolName === "research_verify_literature" && details.status === "both-verified" && details.obsidian?.status === "verified" && details.zotero?.status === "verified") {
         const path = details.obsidian.path;
         if (!/^Library\/Papers\/.+\.md$/.test(path || "")) return null;
@@ -841,12 +967,12 @@ function createResearchLoop(ports) {
   };
 }
 
-// ../Drone/packages/research/src/run-provenance.ts
-import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
+// packages/research/src/run-provenance.ts
+import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
 import { lstat, readFile as readFile3, realpath as realpath4, rename as rename2, stat as stat2, writeFile as writeFile2 } from "node:fs/promises";
 import { isAbsolute as isAbsolute3, join as join2, relative as relative3, resolve as resolve4, sep as sep3 } from "node:path";
 var queues = /* @__PURE__ */ new Map();
-var digest = (value) => createHash2("sha256").update(value).digest("hex");
+var digest = (value) => createHash3("sha256").update(value).digest("hex");
 var defaultWorkspaceConfig = async (cwd) => ({
   resultsRoot: resolve4(cwd, "results")
 });
@@ -940,11 +1066,11 @@ async function observeExecutionReceipt({
   return work.then(() => void 0);
 }
 
-// ../Drone/packages/research/src/source-archive.ts
+// packages/research/src/source-archive.ts
 import { access as access2, mkdir as mkdir2, readFile as readFile4, realpath as realpath5, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
 import { basename as basename2, dirname as dirname2, extname, join as join3, relative as relative5, resolve as resolve6, sep as sep5 } from "node:path";
 
-// ../Drone/packages/research/src/open-access.ts
+// packages/research/src/open-access.ts
 var OA_SOURCES = Object.freeze([
   "europepmc",
   "pmc-cloud",
@@ -954,7 +1080,7 @@ var OA_SOURCES = Object.freeze([
   "crossref"
 ]);
 
-// ../Drone/packages/research/src/source-archive-policy.ts
+// packages/research/src/source-archive-policy.ts
 import { basename, isAbsolute as isAbsolute4, relative as relative4, resolve as resolve5, sep as sep4 } from "node:path";
 var SOURCE_CATEGORIES = ["papers", "supplementary", "software", "manuals"];
 var DEFAULT_MAX_BYTES = 50 * 1024 * 1024;
@@ -971,7 +1097,7 @@ function validateRunDir(resultsRoot, candidate) {
   return runDir;
 }
 
-// ../Drone/packages/research/src/source-archive.ts
+// packages/research/src/source-archive.ts
 async function readManifest(file, runDir) {
   try {
     const parsed = JSON.parse(await readFile4(file, "utf8"));
@@ -1015,12 +1141,12 @@ async function sourceStatus(options = {}, ports) {
   };
 }
 
-// ../Drone/packages/tasks/src/runtime-compiled/process-events.mjs
+// packages/tasks/src/runtime-compiled/process-events.mjs
 function emitProcessEvent(event, ...args) {
   process.emit(event, ...args);
 }
 
-// ../Drone/packages/tasks/src/runtime-compiled/runtime-bridge.mjs
+// packages/tasks/src/runtime-compiled/runtime-bridge.mjs
 import { AsyncLocalStorage } from "node:async_hooks";
 var contexts = new AsyncLocalStorage();
 var installedRuntime = null;
@@ -1251,7 +1377,7 @@ function runtimeSlot(domain, slot, create) {
 }
 var RUNTIME_BRIDGE_VERSION = 1;
 
-// ../Drone/packages/tasks/src/runtime-compiled/tool-manifest.mjs
+// packages/tasks/src/runtime-compiled/tool-manifest.mjs
 var registry = runtimeSlot("tools", "manifest", () => ({ tools: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map() }));
 var compatibilityTools = /* @__PURE__ */ new Map();
 var compatibilityFamilies = /* @__PURE__ */ new Map();
@@ -1447,9 +1573,9 @@ function standaloneRuntime2() {
 import { access as access3, mkdir as mkdir4, readFile as readFile6, realpath as realpath7, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
 import { dirname as dirname3, isAbsolute as isAbsolute6, join as join5, relative as relative6, resolve as resolve8, sep as sep6 } from "node:path";
 
-// ../Drone/packages/knowledge/src/config.ts
+// packages/knowledge/src/config.ts
 import { AsyncLocalStorage as AsyncLocalStorage3 } from "node:async_hooks";
-import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
 import { mkdir as mkdir3, readFile as readFile5, realpath as realpath6, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
 import { basename as basename3, isAbsolute as isAbsolute5, join as join4, resolve as resolve7 } from "node:path";
 function createKnowledgeConfigState() {
@@ -1468,7 +1594,7 @@ function projectIdentity(cwd, configured) {
   if (typeof configured === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured)) return configured;
   const path = resolve7(cwd);
   const stem = basename3(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
-  return `${stem}-${createHash3("sha256").update(path).digest("hex").slice(0, 10)}`;
+  return `${stem}-${createHash4("sha256").update(path).digest("hex").slice(0, 10)}`;
 }
 function validateBinding(value) {
   if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute5(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")

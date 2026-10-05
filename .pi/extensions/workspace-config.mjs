@@ -5,7 +5,7 @@ import { access, mkdir as mkdir3, readFile as readFile3, realpath as realpath3, 
 import { dirname as dirname2, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve as resolve3, sep as sep2 } from "node:path";
 import { pathToFileURL } from "node:url";
 
-// ../Drone/packages/knowledge/src/config.ts
+// packages/knowledge/src/config.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
@@ -53,7 +53,7 @@ async function readKnowledgeBinding(options = {}) {
 }
 var defaultState = createKnowledgeConfigState();
 
-// ../Drone/packages/knowledge/src/flow-cards.ts
+// packages/knowledge/src/flow-cards.ts
 var OK = /* @__PURE__ */ new Set([
   "verified",
   "saved",
