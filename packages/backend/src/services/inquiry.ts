@@ -20,6 +20,7 @@ import {
 	type RunProvenanceSummary,
 	SqliteInquiryStorage,
 } from "@drone/inquiry";
+import { canonicalProjectId } from "../project-id";
 import type { StorageRegistry } from "../storage/registry";
 
 /** Metadata accepted from a trusted host event after it has verified the file. */
@@ -113,6 +114,8 @@ export interface InquiryServiceOptions {
 	readonly inquiryDir?: string;
 	/** Desktop host root for lazy, independently isolated project ledgers. */
 	readonly projectsDir?: string;
+	/** Existing single ledger mounted read-only for upgrade preservation. */
+	readonly legacyInquiryDir?: string;
 	readonly storageRegistry?: StorageRegistry;
 	/** Stable project identity. Callers should supply a project id when multiple projects share a host. */
 	readonly projectId?: string;
@@ -140,9 +143,9 @@ export interface InquiryServicePort {
 	revokeDecision(id: string, reason: string): Promise<DecisionRecord>;
 	confirmDecision(id: string, reason: string): Promise<DecisionRecord>;
 	reviewDecisionArtifacts(id: string, reason: string): Promise<DecisionRecord>;
-	listArtifacts(): Promise<readonly ArtifactRecord[]>;
-	artifactProvenance(artifactId: string): Promise<ArtifactProvenance | undefined>;
-	rerunArtifact(artifactId: string): Promise<ArtifactRerunResult>;
+	listArtifacts(projectId?: string): Promise<readonly ArtifactRecord[]>;
+	artifactProvenance(artifactId: string, projectId?: string): Promise<ArtifactProvenance | undefined>;
+	rerunArtifact(artifactId: string, projectId?: string): Promise<ArtifactRerunResult>;
 	setRerunHandler(
 		handler: (provenance: ArtifactProvenance) => Promise<{ readonly jobId: string } | ArtifactRecord>,
 	): void;
@@ -203,7 +206,10 @@ export class InquiryService implements InquiryServicePort {
 	private readonly options: InquiryServiceOptions;
 
 	constructor(options: InquiryServiceOptions = {}) {
-		this.options = options;
+		this.options = {
+			...options,
+			...(options.projectId ? { projectId: canonicalProjectId(options.projectId) } : {}),
+		};
 		this.onEventError = options.onEventError;
 		this.rerunHandler = options.rerunHandler;
 		if (options.projectsDir) {
@@ -215,7 +221,7 @@ export class InquiryService implements InquiryServicePort {
 			this.enabled = false;
 			return;
 		}
-		const projectId = options.projectId?.trim();
+		const projectId = this.options.projectId?.trim();
 		if (!projectId) throw new Error("inquiryProjectId is required when inquiryDir is configured");
 		this.storage = new SqliteInquiryStorage(projectId, join(options.inquiryDir, "ledger.sqlite"));
 		this.domain = new DomainInquiryService(this.storage, {
@@ -265,11 +271,13 @@ export class InquiryService implements InquiryServicePort {
 
 	/** Record a terminal/collection compute event. Non-terminal progress is ignored. */
 	async recordComputeEvent(event: InquiryComputeEvent): Promise<void> {
-		if (this.options.projectsDir)
-			return this.project(event.projectId ?? this.options.projectId).recordComputeEvent({
+		if (this.options.projectsDir) {
+			const projectId = canonicalProjectId(event.projectId ?? this.options.projectId);
+			return this.project(projectId).recordComputeEvent({
 				...event,
-				projectId: event.projectId ?? this.options.projectId,
+				projectId,
 			});
+		}
 		if (!this.domain || !this.storage) return;
 		if (event.type === "submitted") {
 			await this.recordDecision({
@@ -334,11 +342,13 @@ export class InquiryService implements InquiryServicePort {
 
 	/** Record a terminal task/workflow event and its verified artifact metadata. */
 	async recordTaskTerminal(event: InquiryTaskTerminalEvent): Promise<void> {
-		if (this.options.projectsDir)
-			return this.project(event.projectId ?? this.options.projectId).recordTaskTerminal({
+		if (this.options.projectsDir) {
+			const projectId = canonicalProjectId(event.projectId ?? this.options.projectId);
+			return this.project(projectId).recordTaskTerminal({
 				...event,
-				projectId: event.projectId ?? this.options.projectId,
+				projectId,
 			});
+		}
 		if (!this.domain || !this.storage) return;
 		if (!TERMINAL_TASK_STATUSES.has(event.status)) return;
 		this.assertProject(event.projectId);
@@ -385,17 +395,18 @@ export class InquiryService implements InquiryServicePort {
 
 	async recordDecision(event: InquiryDecisionEvent | DecisionRecord): Promise<void> {
 		if (this.options.projectsDir) {
-			const projectId = event.projectId ?? this.options.projectId;
+			const projectId = canonicalProjectId(event.projectId ?? this.options.projectId);
 			if (!projectId) throw new Error("A project identity is required for a decision");
 			const project = this.project(projectId);
-			return project.recordDecision({ ...event, id: `${this.projectKey(projectId)}:${event.id}` });
+			return project.recordDecision({ ...event, projectId, id: `${this.projectKey(projectId)}:${event.id}` });
 		}
 		if (!this.domain || !this.storage) return;
-		if (event.projectId && event.projectId !== this.storage.projectId)
+		const eventProjectId = event.projectId ? canonicalProjectId(event.projectId) : undefined;
+		if (eventProjectId && eventProjectId !== this.storage.projectId)
 			throw new Error(`Inquiry decision belongs to another project: ${event.projectId}`);
 		const record: DecisionRecord =
 			"schemaVersion" in event
-				? event
+				? { ...event, projectId: this.storage.projectId }
 				: {
 						id: event.id,
 						schemaVersion: 2,
@@ -419,9 +430,10 @@ export class InquiryService implements InquiryServicePort {
 		});
 	}
 
-	listDecisions(projectId?: string): Promise<readonly DecisionRecord[]> {
-		if (this.options.projectsDir) return this.project(projectId).listDecisions(projectId);
-		return this.domain?.listDecisions(projectId) ?? Promise.resolve([]);
+	async listDecisions(projectId?: string): Promise<readonly DecisionRecord[]> {
+		const normalized = canonicalProjectId(projectId ?? this.options.projectId);
+		if (this.options.projectsDir) return normalized ? this.project(normalized).listDecisions(normalized) : [];
+		return this.domain?.listDecisions(normalized || undefined) ?? [];
 	}
 
 	revokeDecision(id: string, reason: string): Promise<DecisionRecord> {
@@ -452,18 +464,25 @@ export class InquiryService implements InquiryServicePort {
 		return operation;
 	}
 
-	listArtifacts(): Promise<readonly ArtifactRecord[]> {
-		if (this.options.projectsDir) return this.project(this.options.projectId).listArtifacts();
+	listArtifacts(projectId?: string): Promise<readonly ArtifactRecord[]> {
+		if (this.options.projectsDir) {
+			const id = canonicalProjectId(projectId ?? this.options.projectId);
+			return id ? this.project(id).listArtifacts() : Promise.resolve([]);
+		}
 		return this.domain ? this.domain.snapshot().then((snapshot) => snapshot.artifacts) : Promise.resolve([]);
 	}
 
-	artifactProvenance(artifactId: string): Promise<ArtifactProvenance | undefined> {
-		if (this.options.projectsDir) return this.project(this.options.projectId).artifactProvenance(artifactId);
+	artifactProvenance(artifactId: string, projectId?: string): Promise<ArtifactProvenance | undefined> {
+		if (this.options.projectsDir)
+			return this.project(canonicalProjectId(projectId ?? this.options.projectId)).artifactProvenance(
+				artifactId,
+			);
 		return this.domain?.artifactProvenance(artifactId) ?? Promise.resolve(undefined);
 	}
 
-	async rerunArtifact(artifactId: string): Promise<ArtifactRerunResult> {
-		if (this.options.projectsDir) return this.project(this.options.projectId).rerunArtifact(artifactId);
+	async rerunArtifact(artifactId: string, projectId?: string): Promise<ArtifactRerunResult> {
+		if (this.options.projectsDir)
+			return this.project(canonicalProjectId(projectId ?? this.options.projectId)).rerunArtifact(artifactId);
 		if (!this.domain) throw new Error("Inquiry service is unavailable");
 		const result = await this.domain.rerunArtifact(artifactId);
 		this.emitRerun(result);
@@ -548,8 +567,9 @@ export class InquiryService implements InquiryServicePort {
 	}
 
 	private project(projectId?: string): InquiryService {
-		if (!projectId?.trim() || !this.options.projectsDir) throw new Error("A project identity is required");
-		const key = this.projectKey(projectId);
+		const normalized = canonicalProjectId(projectId);
+		if (!normalized || !this.options.projectsDir) throw new Error("A project identity is required");
+		const key = this.projectKey(normalized);
 		let service = this.projects.get(key);
 		if (!service) {
 			const root = join(this.options.projectsDir, key);
@@ -562,7 +582,7 @@ export class InquiryService implements InquiryServicePort {
 			);
 			service = new InquiryService({
 				inquiryDir: root,
-				projectId,
+				projectId: normalized,
 				onEventError: this.onEventError,
 				...(this.rerunHandler ? { rerunHandler: this.rerunHandler } : {}),
 			});
@@ -582,9 +602,12 @@ export class InquiryService implements InquiryServicePort {
 		const database = new DatabaseSync(path, { readOnly: true });
 		try {
 			const meta = database.prepare("SELECT project_id FROM inquiry_meta LIMIT 1").get();
-			if (typeof meta?.project_id !== "string" || this.projectKey(meta.project_id) !== key)
+			if (
+				typeof meta?.project_id !== "string" ||
+				this.projectKey(canonicalProjectId(meta.project_id)) !== key
+			)
 				throw new Error("Invalid project ledger");
-			return this.project(meta.project_id);
+			return this.project(canonicalProjectId(meta.project_id));
 		} finally {
 			database.close();
 		}
@@ -601,7 +624,10 @@ export class InquiryService implements InquiryServicePort {
 	/** Return the project projection only; no ledger mutation or file access occurs beyond the read. */
 	async readOnlySnapshot(projectId?: string): Promise<InquiryReadOnlySnapshot | undefined> {
 		await this.drainEvents();
-		if (this.options.projectsDir) return projectId ? this.project(projectId).readOnlySnapshot() : undefined;
+		if (this.options.projectsDir) {
+			const normalized = canonicalProjectId(projectId);
+			return normalized ? this.project(normalized).readOnlySnapshot() : undefined;
+		}
 		if (!this.domain) return undefined;
 		const [state, snapshot] = await Promise.all([this.domain.readOnlyState(), this.domain.snapshot()]);
 		return { ...state, attempts: snapshot.attempts };
@@ -634,7 +660,7 @@ export class InquiryService implements InquiryServicePort {
 	}
 
 	private assertProject(projectId: string | undefined): void {
-		if (projectId && projectId !== this.storage?.projectId)
+		if (projectId && canonicalProjectId(projectId) !== this.storage?.projectId)
 			throw new Error(`Inquiry event belongs to another project: ${projectId}`);
 	}
 

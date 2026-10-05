@@ -120,6 +120,16 @@ describe("harness context adapter", () => {
 		expect(second).toBeUndefined();
 	});
 
+	it("does not project a replaced session through the old context", async () => {
+		const { registered, pi } = handlers();
+		const extension = makeHarnessContextExtension();
+		await (extension as any).factory(pi);
+		const oldContext = fakeContext();
+		await registered.get("session_start")?.({}, oldContext);
+		await registered.get("session_shutdown")?.({}, oldContext);
+		expect(await registered.get("context")?.({ messages: [] }, oldContext)).toBeUndefined();
+	});
+
 	it("creates a new checkpoint when the objective changes", async () => {
 		const { registered, pi } = handlers();
 		const extension = makeHarnessContextExtension();

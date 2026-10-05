@@ -140,7 +140,20 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 						timestamp: number;
 				  }
 				| undefined;
+			let activeSessionId = "";
+			let shutDown = false;
+			const sessionId = (ctx: ExtensionContext): string | undefined => {
+				try {
+					const id = ctx.sessionManager.getSessionId();
+					if (!activeSessionId && !shutDown) activeSessionId = id;
+					return id === activeSessionId ? id : undefined;
+				} catch {
+					return undefined;
+				}
+			};
 			const reset = (ctx: ExtensionContext) => {
+				shutDown = false;
+				activeSessionId = ctx.sessionManager.getSessionId();
 				const branch = ctx.sessionManager.getBranch();
 				objective = latestUserObjective(branch) ?? "";
 				epoch = branch.filter((entry) => entry.type === "compaction").length;
@@ -167,7 +180,14 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 					log.warn("harness tree restore failed", { error: String(error) });
 				}
 			});
+			pi.on("session_shutdown", () => {
+				shutDown = true;
+				activeSessionId = "";
+				cachedMessage = undefined;
+				needsCheckpoint = true;
+			});
 			pi.on("before_agent_start", (event, ctx) => {
+				if (!sessionId(ctx)) return;
 				try {
 					const prompt = boundedText(event.prompt);
 					if (prompt && prompt !== objective) {
@@ -214,14 +234,14 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 					if (contract.fingerprint !== lastContract) {
 						lastContract = contract.fingerprint;
 						try {
-							options.reportStatus?.(ctx.sessionManager.getSessionId(), contract);
+							options.reportStatus?.(sessionId(ctx) ?? "", contract);
 							pi.appendEntry?.(HARNESS_STATUS_CUSTOM_TYPE, contract);
 						} catch (error) {
 							log.warn("harness contract report failed", { error: String(error) });
 						}
 					}
 					if (family) {
-						options.recordUnit?.(ctx.sessionManager.getSessionId(), "familyPrompt", "inject", { family });
+						options.recordUnit?.(sessionId(ctx) ?? "", "familyPrompt", "inject", { family });
 					}
 					return { systemPrompt };
 				} catch (error) {
@@ -234,6 +254,8 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 				needsCheckpoint = true;
 			});
 			pi.on("context", (event, ctx) => {
+				const id = sessionId(ctx);
+				if (!id) return undefined;
 				try {
 					const checkpoint = checkpointFromBranch(objective, epoch, ctx.sessionManager.getBranch());
 					const fingerprint = checkpointFingerprint(checkpoint);
@@ -259,8 +281,8 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 					};
 					cachedMessage = message;
 					try {
-						options.report?.(ctx.sessionManager.getSessionId(), checkpoint);
-						options.recordUnit?.(ctx.sessionManager.getSessionId(), "context", "checkpoint");
+						options.report?.(id, checkpoint);
+						options.recordUnit?.(id, "context", "checkpoint");
 					} catch (error) {
 						log.warn("harness checkpoint report failed", { error: String(error) });
 					}

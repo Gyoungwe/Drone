@@ -1,4 +1,5 @@
 import type { WikiModelReviewInput, WikiModelReviewResult } from "@drone/shared";
+import { canonicalProjectId } from "../project-id";
 
 /** Read-only session facts needed by the knowledge management boundary. */
 export interface KnowledgeSessionContext {
@@ -44,7 +45,7 @@ export class KnowledgeSessionService implements KnowledgeSessionServicePort {
 		if (!input || !/^[0-9a-f-]{36}$/i.test(input.requestId))
 			throw new Error("Invalid model review request id");
 		const initial = this.requireContext(input.sessionId);
-		if (initial.readOnly || initial.cwd !== input.cwd)
+		if (initial.readOnly || canonicalProjectId(initial.cwd) !== canonicalProjectId(input.cwd))
 			throw new Error("Open the candidate's originating project in a writable session");
 		if (initial.streaming) throw new Error("Wait for the current conversation to finish before model review");
 		if (this.reviews.has(input.requestId) || this.reviews.size >= 2)
@@ -58,7 +59,7 @@ export class KnowledgeSessionService implements KnowledgeSessionServicePort {
 			if (
 				!current ||
 				current.identity !== initial.identity ||
-				current.cwd !== input.cwd ||
+				canonicalProjectId(current.cwd) !== canonicalProjectId(input.cwd) ||
 				!current.projectTrusted
 			)
 				throw new Error("Session closed or project is not trusted for model review");

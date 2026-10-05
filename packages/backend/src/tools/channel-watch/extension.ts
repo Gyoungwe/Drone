@@ -169,7 +169,7 @@ export function makeChannelWatchExtension(options: ChannelWatchOptions): InlineE
 				for (const tool of makeChannelTools({
 					cwd: options.cwd,
 					getSubscriptions: () => new Set(subscriptions),
-					subscribe(topic) {
+					async subscribe(topic) {
 						const invalid = validateTopic(topic);
 						if (invalid) return { ok: false, error: invalid };
 						if (!trusted) {
@@ -182,7 +182,7 @@ export function makeChannelWatchExtension(options: ChannelWatchOptions): InlineE
 						guard.resumeTopic(topic);
 						subscriptions.add(topic);
 						persist();
-						void ensureWatcher();
+						await ensureWatcher();
 						return { ok: true, resumed };
 					},
 					async post(topic, message, closed) {

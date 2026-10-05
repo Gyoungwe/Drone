@@ -126,7 +126,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## packages/inquiry — 研究状态层领域包（B5a）
 
-`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设、分析尝试、Agent 决策与异步重跑账本；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/provenance.ts` 提供最多 20 层父链的无正文来源投影；`src/reproducibility.ts` 提供代码指纹 + run-provenance 三态纯判定；`src/storage.ts` 提供宿主可注入的账本存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`，schema v2 将旧 v1 与早期重跑记录迁移并保留读取兼容；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用，撤销决策只标记账本与下游产物待复核，不触发外部写操作，并提供授权异步重跑。backend 的 `services/inquiry.ts` 为显式 `inquiryDir` 保留单项目 SQLite，同时为桌面 host 按项目 id 懒创建隔离 SQLite，并通过宿主注入的 compute/task/扩展成功回执登记已校验的 artifact/attempt/decision、串行化事件写入并提供项目只读快照；shared `host-api/inquiry.ts` → desktop `main/ipc/inquiry.ts` → preload → `ArtifactsPane` 提供来源展开、三态徽标和重跑入口，Electron IPC 的 decisions.list/revoke/confirm 与任务面板复用该只读投影。
+`@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设、分析尝试、Agent 决策与异步重跑账本；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/provenance.ts` 提供最多 20 层父链的无正文来源投影；`src/reproducibility.ts` 提供代码指纹 + run-provenance 三态纯判定；`src/storage.ts` 提供宿主可注入的账本存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`，schema v2 将旧 v1 与早期重跑记录迁移并保留读取兼容；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用，撤销决策只标记账本与下游产物待复核，不触发外部写操作，并提供授权异步重跑。backend 的 `services/inquiry.ts` 通过 `canonicalProjectId` 将真实工作区 realpath 作为桌面项目账本键，按项目懒创建隔离 SQLite，并通过宿主注入的 compute/task/扩展成功回执登记已校验的 artifact/attempt/decision、串行化事件写入并提供项目只读快照；旧单账本由 StorageRegistry 以只读 preserve 条目登记。shared `host-api/inquiry.ts` → desktop `main/ipc/inquiry.ts` → preload → `ArtifactsPane` 提供来源展开、三态徽标和重跑入口，Electron IPC 的 decisions.list/revoke/confirm 与任务面板复用该只读投影。
 
 ## packages/discovery — 研究发现领域包（B5d–B5f）
 

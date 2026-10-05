@@ -75,6 +75,7 @@ export function makeEvapExtension(options: EvapExtensionOptions): InlineExtensio
 				try {
 					if (!enabled()) {
 						active = false;
+						currentSessionId = "";
 						return;
 					}
 					active = true;
@@ -84,10 +85,18 @@ export function makeEvapExtension(options: EvapExtensionOptions): InlineExtensio
 				} catch (err) {
 					// 启用判定失败 → 降级为关闭（会话照常，SDK 默认路径不变）
 					active = false;
+					currentSessionId = "";
 					log.error("evaporation session_start 失败，降级关闭", {
 						error: err instanceof Error ? err.message : String(err),
 					});
 				}
+			});
+			// A queued context transform may outlive a replaced session. Clearing the
+			// plain session id makes that work a no-op before it can touch stale ctx.
+			pi.on("session_shutdown", () => {
+				active = false;
+				currentSessionId = "";
+				state = createEvapState();
 			});
 
 			pi.on("session_compact", async (_event) => {
@@ -107,23 +116,33 @@ export function makeEvapExtension(options: EvapExtensionOptions): InlineExtensio
 			// --- context 管道（每次 LLM 调用前） ---
 			pi.on("context", async (event, ctx) => {
 				if (!liveEnabled()) return undefined;
+				const sessionId = currentSessionId;
+				let config: EvapConfig;
+				let windowTokens: number;
+				try {
+					config = getConfig();
+					if (ctx.sessionManager.getSessionId() !== sessionId) return undefined;
+					windowTokens = windowTokensFor(ctx, config);
+				} catch {
+					// SDK disposal may invalidate a handler before shutdown is delivered.
+					return undefined;
+				}
+				// 真实 usage 优先；tokens=null（compaction 后首轮）或读取异常 → 内部估算兜底
+				let usageTokens: number | null = null;
+				try {
+					usageTokens = ctx.getContextUsage()?.tokens ?? null;
+				} catch {
+					usageTokens = null;
+				}
 				return withLock(async () => {
-					const config = getConfig();
-					const windowTokens = windowTokensFor(ctx, config);
-					// 真实 usage 优先；tokens=null（compaction 后首轮）或读取异常 → 内部估算兜底
-					let usageTokens: number | null = null;
-					try {
-						usageTokens = ctx.getContextUsage()?.tokens ?? null;
-					} catch {
-						usageTokens = null;
-					}
+					if (!active || !sessionId || sessionId !== currentSessionId) return undefined;
 					const wire = event.messages as unknown as EvapWireMessage[];
 					const result = evaporateWire(wire, state, config, {
 						windowTokens,
 						usageTokens,
 					});
 					if (result.batch.snipped + result.batch.pruned > 0) {
-						report(currentSessionId, result.batch);
+						report(sessionId, result.batch);
 						const evicted = result.messages
 							.filter(
 								(message, index) =>
@@ -133,7 +152,7 @@ export function makeEvapExtension(options: EvapExtensionOptions): InlineExtensio
 							.filter(Boolean);
 						if (evicted.length)
 							pi.events?.emit?.("drone:context-evicted", {
-								sessionId: currentSessionId,
+								sessionId,
 								toolCallIds: evicted.slice(0, 64),
 							});
 					}

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { ChatView } from "./components/ChatView";
-import { Composer } from "./components/Composer";
 import { ChevronLeftIcon } from "./components/icons";
 import { SessionList } from "./components/SessionList";
 import { TokenGate } from "./components/TokenGate";
@@ -27,8 +26,6 @@ export function App() {
 	const status = useLanStore((s) => s.status);
 	const selected = useLanStore((s) => s.selected);
 	const select = useLanStore((s) => s.select);
-	const remoteControl = useLanStore((s) => s.remoteControl);
-	const respondPermission = useLanStore((s) => s.respondPermission);
 	const name = useLanStore((s) => {
 		if (!s.selected) return "";
 		return s.views[s.selected]?.name ?? s.list.find((item) => item.sessionId === s.selected)?.name ?? "";
@@ -37,11 +34,6 @@ export function App() {
 	useEffect(() => {
 		connect();
 	}, []);
-
-	// 权限应答（M2）：失败时 PermissionCard 恢复可点（perm 帧仍未决，可重试）
-	const onRespond = async (requestId: string, answer: "allowOnce" | "deny") => {
-		return (await respondPermission(requestId, answer)) === null;
-	};
 
 	if (status === "token") {
 		return (
@@ -73,8 +65,7 @@ export function App() {
 					</div>
 				</header>
 			)}
-			{selected ? <ChatView sessionId={selected} isDark={isDark} onRespond={onRespond} /> : <SessionList />}
-			{selected && remoteControl && <Composer sessionId={selected} />}
+			{selected ? <ChatView sessionId={selected} isDark={isDark} /> : <SessionList />}
 			{!selected && <FootLine />}
 		</div>
 	);

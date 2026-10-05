@@ -26,6 +26,7 @@ export function registerWorkbench(
 	} = {},
 ) {
 	let context: any,
+		activeSessionId: string | undefined,
 		prepared = false,
 		awaitingUser = false,
 		halted = false;
@@ -111,6 +112,7 @@ export function registerWorkbench(
 	});
 	const attach = (ctx: any, force = false) => {
 		context = ctx;
+		activeSessionId = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || undefined;
 		const scope = createHash("sha256")
 			.update(`${ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated"}\0${resolve(ctx.cwd)}`)
 			.digest("hex");
@@ -225,7 +227,11 @@ export function registerWorkbench(
 		};
 		handoffTimer = setTimeout(() => void handoff().catch(cancelHandoff), 0);
 	};
-	pi.on("session_shutdown", cancelHandoff);
+	pi.on("session_shutdown", () => {
+		cancelHandoff();
+		activeSessionId = undefined;
+		context = undefined;
+	});
 	// Current task consent is exposed only to the existing permission adapter, never to model tool inputs.
 	pi.events?.on?.("drone:task-write-consent", (request) => {
 		if (
@@ -374,9 +380,17 @@ export function registerWorkbench(
 		}
 	});
 	pi.events?.on?.("drone:context-evicted", (event) => {
-		if (event.sessionId === context?.sessionManager?.getSessionId?.()) evidence.evict(event.toolCallIds);
+		if (event.sessionId === activeSessionId) evidence.evict(event.toolCallIds);
 	});
 	pi.on("agent_end", async (event, ctx) => {
+		const turnContext = context;
+		const turnSessionId = activeSessionId;
+		if (
+			!turnContext ||
+			!turnSessionId ||
+			turnSessionId !== (ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId)
+		)
+			return;
 		const last = [...(event.messages || [])].reverse().find((m) => m.role === "assistant");
 		// Fallback for errors/aborts that end without a normal turn_end.
 		providerTurnOpen = false;
@@ -396,7 +410,7 @@ export function registerWorkbench(
 		journal.settle();
 		if (journal.authorization()) {
 			try {
-				await journal.reconcile(context.cwd);
+				await journal.reconcile(turnContext.cwd);
 			} catch {
 				/* no consent or proof is fabricated */
 			}
@@ -406,7 +420,8 @@ export function registerWorkbench(
 				journal.reserveContinuation(last.knowledgePublication.reason)
 			) {
 				send("刚才停了一下，正在按你之前的授权接着做：先核对已有结果，再继续剩下的部分，不用你再确认。");
-				continueAuthorized(context);
+				if (activeSessionId !== turnSessionId || context !== turnContext) return;
+				continueAuthorized(turnContext);
 				return;
 			}
 			// 授权后模型中途收口（写完一个文件、跑完一条命令就只说一句话结束回合）：
@@ -414,7 +429,8 @@ export function registerWorkbench(
 			// reserveHandoff 要求本回合有新进展且未超上限，模型原地打转时不会无限接续。
 			if (last?.stopReason !== "error" && !ctx?.signal?.aborted && journal.reserveHandoff()) {
 				send();
-				continueAuthorized(context);
+				if (activeSessionId !== turnSessionId || context !== turnContext) return;
+				continueAuthorized(turnContext);
 				return;
 			}
 			// 授权过但停在半路又不能自动接续（连续无进展、达到上限、tool-failure 等）：
@@ -427,7 +443,8 @@ export function registerWorkbench(
 			) {
 				send();
 				try {
-					await progressTask({ taskId: snapshot.id, revision: journal.view().revision }, context);
+					if (activeSessionId !== turnSessionId || context !== turnContext) return;
+					await progressTask({ taskId: snapshot.id, revision: journal.view().revision }, turnContext);
 				} catch {
 					/* 弹窗失败不应吃掉回合结束；状态卡已发出 */
 				}

@@ -289,9 +289,15 @@ export function registerAnswerPublication(
 	const handleMessageEnd = async (event, ctx) => {
 		const message = event.message;
 		if (message.role !== "assistant") return;
+		// Session replacement invalidates ctx. Keep only plain values across awaits;
+		// all publication work below is bound to this session id and cwd snapshot.
+		const sessionId = sessionIdFor(ctx);
+		const cwd = ctx?.cwd;
+		const signal = ctx?.signal;
+		const flowCtx = { sessionId };
 		const report = (message) => {
 			if (message[FIELD]?.status !== "tool-only" && message[FIELD]?.reason !== "model-error")
-				publicationKnowledgeFlow(ctx, message[FIELD]);
+				publicationKnowledgeFlow(flowCtx, message[FIELD]);
 			return { message };
 		};
 		const blocks = Array.isArray(message.content) ? message.content : [];
@@ -342,7 +348,7 @@ export function registerAnswerPublication(
 			);
 		if (
 			["aborted", "length", "pending"].includes(message.stopReason) ||
-			ctx.signal?.aborted ||
+				signal?.aborted ||
 			isUserAbortError(message)
 		)
 			return report(failure(message, { code: "interrupted" }));
@@ -404,15 +410,17 @@ export function registerAnswerPublication(
 		const text = content.map((b) => b.text).join("\n");
 		if (Buffer.byteLength(text, "utf8") > 128 * 1024)
 			return report(blocked(message, "answer-too-large", turnId));
-		updateKnowledgeFlow(ctx, { phase: "checking" });
+		updateKnowledgeFlow(flowCtx, { phase: "checking" });
+		let currentTurn;
 		try {
 			const c = getCurrent(ctx);
+			currentTurn = c;
 			if (!c) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
 			let publishText = text;
 			let publishContent = content;
 			const attachMaterializedCitations = async (refresh = false) => {
 				if (typeof c.service.materializeCitations !== "function") return;
-				const paths = await c.service.materializeCitations(c.ticket, ctx.cwd, c.query, { refresh });
+				const paths = await c.service.materializeCitations(c.ticket, cwd, c.query, { refresh });
 				if (!paths.length || /\[\[[^\]]+\]\]/.test(publishText)) return;
 				const suffix = `\n\n依据：${paths.map((path) => `[[${path.replace(/\.md$/i, "")}]]`).join(" ")}`;
 				publishText = `${publishText}${suffix}`;
@@ -426,7 +434,7 @@ export function registerAnswerPublication(
 				let timer;
 				try {
 					return await Promise.race([
-						c.service.validateAnswer(c.ticket, ctx.cwd, publishText, {
+						c.service.validateAnswer(c.ticket, cwd, publishText, {
 							deliveries: [...deliveries.values()],
 						}),
 						new Promise((_, reject) => {
@@ -452,8 +460,8 @@ export function registerAnswerPublication(
 				await attachMaterializedCitations(true);
 				proof = await validateWithTimeout();
 			}
-				if (ctx.signal?.aborted) return report(failure(message, { code: "interrupted" }));
-				const metacognitive = await evaluateMetacognition(ctx, c, publishText);
+			if (signal?.aborted) return report(failure(message, { code: "interrupted" }));
+				const metacognitive = await evaluateMetacognition(flowCtx, c, publishText);
 				const warnings = [
 					...(Array.isArray(proof.warnings) ? proof.warnings : []),
 					...(metacognitive?.warnings || []).map((warning) => ({ code: warning.code, message: warning.detail })),
@@ -461,16 +469,16 @@ export function registerAnswerPublication(
 				let reviewerWarnings = [];
 			if (reviewer && typeof getMetacognition === "function") {
 				try {
-					const reviewSnapshot = await getMetacognition(ctx, c);
+					const reviewSnapshot = await getMetacognition(flowCtx, c);
 					if (reviewSnapshot && typeof reviewSnapshot === "object") {
 						const snapshot = { ...reviewSnapshot, body: publishText };
-						const cached = reviewer.getCached?.(sessionIdFor(ctx), snapshot);
-						const prior = reviewer.getFindings?.(sessionIdFor(ctx));
+						const cached = reviewer.getCached?.(sessionId, snapshot);
+						const prior = reviewer.getFindings?.(sessionId);
 						reviewerWarnings = [
 							...(Array.isArray(cached?.findings) ? cached.findings : []),
 							...(Array.isArray(prior) ? prior : []),
 						].filter((finding, index, all) => finding.severity === "high" && !finding.handled && all.findIndex((item) => item.id === finding.id) === index);
-						scheduleReview(ctx, snapshot, "publication-projection");
+						scheduleReview(flowCtx, snapshot, "publication-projection");
 					}
 				} catch {
 					/* A reviewer snapshot is optional and cannot weaken the publication gate. */
@@ -486,7 +494,7 @@ export function registerAnswerPublication(
 							...publishContent,
 						]
 					: publishContent;
-			const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(ctx) : null;
+			const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(flowCtx) : null;
 			const visible = footer
 				? [...published, { type: "text", text: `\n\n${String(footer).slice(0, 2000)}` }]
 				: published;
@@ -502,10 +510,11 @@ export function registerAnswerPublication(
 			);
 		} catch (error) {
 			const info = knowledgeFailure(error);
-			if ((await readReviewMode()) === "automatic" && advisoryCodes.has(info.code) && !ctx.signal?.aborted) {
+			if ((await readReviewMode()) === "automatic" && advisoryCodes.has(info.code) && !signal?.aborted) {
 				try {
-					const current = getCurrent(ctx);
-					await current.service.check(current.ticket, ctx.cwd);
+					const current = currentTurn;
+					if (!current) throw new Error("not prepared");
+					await current.service.check(current.ticket, cwd);
 				} catch (authorityError) {
 					return report(failure(message, authorityError));
 				}
@@ -519,7 +528,7 @@ export function registerAnswerPublication(
 						[
 							...content,
 							...advisoryContent,
-							...advisoryFooter(ctx),
+							...advisoryFooter(flowCtx),
 						],
 						{
 							status: "released",
@@ -540,12 +549,15 @@ export function registerAnswerPublication(
 		attachRuntime,
 		attachReviewer,
 		async recordDelivery(ctx, path) {
+			const sessionId = sessionIdFor(ctx);
+			const cwd = ctx?.cwd;
+			const flowCtx = { sessionId };
 			const c = getCurrent(ctx);
 			if (!c) return;
-			const receipt = await c.service.deliveryReceipt(c.ticket, ctx.cwd, path);
+		const receipt = await c.service.deliveryReceipt(c.ticket, cwd, path);
 			deliveries.set(receipt.path, receipt);
 			scheduleReview(
-				ctx,
+				flowCtx,
 				{
 					enabled: true,
 					deliverables: [{ id: receipt.path, path: receipt.path, sha256: receipt.hash }],
@@ -555,23 +567,26 @@ export function registerAnswerPublication(
 			while (deliveries.size > 12) deliveries.delete(deliveries.keys().next().value);
 		},
 		async preflight(ctx, text) {
+			const sessionId = sessionIdFor(ctx);
+			const cwd = ctx?.cwd;
+			const flowCtx = { sessionId };
 			let timer;
 			try {
 				if (typeof text !== "string" || Buffer.byteLength(text, "utf8") > 128 * 1024)
 					throw { code: "answer-too-large" };
 				const c = getCurrent(ctx),
 					proof = await Promise.race([
-						c.service.validateAnswer(c.ticket, ctx.cwd, text, { deliveries: [...deliveries.values()] }),
+						c.service.validateAnswer(c.ticket, cwd, text, { deliveries: [...deliveries.values()] }),
 						new Promise((_, reject) => {
 							timer = setTimeout(() => reject({ code: "check-timeout" }), 5000);
 						}),
 					]);
-				const metacognition = await evaluateMetacognition(ctx, c, text);
+				const metacognition = await evaluateMetacognition(flowCtx, c, text);
 				if (reviewer && typeof getMetacognition === "function") {
 					try {
-						const snapshot = await getMetacognition(ctx, c);
+						const snapshot = await getMetacognition(flowCtx, c);
 						if (snapshot && typeof snapshot === "object")
-							scheduleReview(ctx, { ...snapshot, body: text }, "publication-projection");
+							scheduleReview(flowCtx, { ...snapshot, body: text }, "publication-projection");
 					} catch {
 						/* Optional background reviewer snapshot. */
 					}
@@ -582,7 +597,7 @@ export function registerAnswerPublication(
 				if ((await readReviewMode()) === "automatic" && advisoryCodes.has(info.code)) {
 					try {
 						const current = getCurrent(ctx);
-						await current.service.check(current.ticket, ctx.cwd);
+						await current.service.check(current.ticket, cwd);
 					} catch {
 						return {
 							ok: false,

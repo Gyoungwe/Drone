@@ -120,6 +120,7 @@ export {
 	type WorkspacesConfig,
 	workspaceConfigPath,
 } from "./project/workspace-store";
+export { canonicalProjectId, normalizeProjectId } from "./project-id";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
 export {

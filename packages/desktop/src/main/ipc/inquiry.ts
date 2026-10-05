@@ -35,14 +35,14 @@ export function registerInquiryIpc(
 ): () => void {
 	const inquiry = "inquiry" in backendOrInquiry ? backendOrInquiry.inquiry : backendOrInquiry;
 	const implementation: ContractImplementation<typeof InquiryContract> = {
-		listArtifacts: async () => [...(await inquiry.listArtifacts())],
-		artifactProvenance: async (artifactId) => {
-			const result = await inquiry.artifactProvenance(artifactId);
+		listArtifacts: async (projectId?: string) => [...(await inquiry.listArtifacts(projectId))],
+		artifactProvenance: async (artifactId, projectId?: string) => {
+			const result = await inquiry.artifactProvenance(artifactId, projectId);
 			return result ?? uiError("artifact_not_found", `Artifact not found: ${artifactId}`);
 		},
-		rerunArtifact: async (artifactId) => {
+		rerunArtifact: async (artifactId, projectId?: string) => {
 			try {
-				return await inquiry.rerunArtifact(artifactId);
+				return await inquiry.rerunArtifact(artifactId, projectId);
 			} catch (error) {
 				return uiError("artifact_rerun_failed", error instanceof Error ? error.message : String(error));
 			}

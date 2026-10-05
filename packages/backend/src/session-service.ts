@@ -87,6 +87,8 @@ export interface SessionServiceOptions {
 	inquiryDir?: string;
 	/** Host-wide root for per-project inquiry ledgers. */
 	projectsDir?: string;
+	/** Existing v0.19.0 single ledger, mounted read-only for preservation. */
+	legacyInquiryDir?: string;
 	/** Host-owned permission settings service; omitted for direct compatibility construction. */
 	permissions?: PermissionSettingsService;
 	/**
@@ -274,7 +276,11 @@ export class SessionService extends SessionServiceApi {
 				for (const handler of this.decisionHandlers) {
 					try {
 						const value = event && typeof event === "object" ? (event as Record<string, unknown>) : {};
-						handler({ ...value, ...(value.projectId ? {} : { projectId: sessionId }) });
+						const projectId =
+							typeof value.projectId === "string" && value.projectId.trim()
+								? value.projectId
+								: this.registry.get(sessionId)?.cwd;
+						handler({ ...value, ...(projectId ? { projectId } : {}) });
 					} catch {
 						// Decision journaling is observational and must not interrupt a session.
 					}
