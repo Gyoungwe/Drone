@@ -200,8 +200,8 @@ if (!rootEl) throw new Error("knowledge-ui-smoke: #root missing");
 
 function KnowledgeFixturePanel() {
 	const view = useUiStore((state) => state.view);
-	return view === "research" || view === "knowledge" ? (
-		<KnowledgeView mode={view} />
+	return view === "knowledge" ? (
+		<KnowledgeView />
 	) : (
 		<KnowledgePanel context={{ cwd: info.cwd, sessionId: "fixture" }} />
 	);

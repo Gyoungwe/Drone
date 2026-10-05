@@ -6,7 +6,7 @@ import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { TaskArtifactLinks, taskArtifactLinks } from "../chat/TaskArtifactLinks";
-import { ObsidianIcon, SearchIcon } from "../icons";
+import { ObsidianIcon } from "../icons";
 import { mergeKnowledgeArtifacts } from "../knowledge/artifacts";
 import { KnowledgeFlowCard } from "../knowledge/KnowledgeFlowCard";
 import { FlowCards } from "./FlowCards";
@@ -166,15 +166,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 				</section>
 			)}
 			{empty && <p className="panel-empty">{t("panel.artifactsEmpty")}</p>}
-			<div className="grid grid-cols-2 gap-2">
-				<button
-					type="button"
-					className="panel-action"
-					onClick={() => openKnowledge({ cwd, sessionId, tab: "overview" })}
-				>
-					<SearchIcon size={14} />
-					<span>{t("workbench.nav.research")}</span>
-				</button>
+			<div className="grid grid-cols-1 gap-2">
 				<button
 					type="button"
 					className="panel-action"

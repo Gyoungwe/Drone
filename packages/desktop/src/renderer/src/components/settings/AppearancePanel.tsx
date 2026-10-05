@@ -1,11 +1,9 @@
 import type { ThemeMode } from "@drone/shared";
-import { useState } from "react";
 import { useT } from "../../i18n";
 import { backgroundImageUrl, useThemeStore } from "../../stores/theme";
 import { useUiPreferencesStore } from "../../stores/ui-preferences";
 import { Switch } from "../ui/Switch";
 import { SettingsRow } from "./SettingsRow";
-import { UiPluginsSection } from "./UiPluginsSection";
 
 const THEME_MODES: ThemeMode[] = ["light", "dark", "system"];
 const THEME_LABEL_KEYS = {
@@ -13,13 +11,6 @@ const THEME_LABEL_KEYS = {
 	dark: "settings.themeDark",
 	system: "settings.themeSystem",
 } as const;
-
-type AppearanceTab = "basics" | "uiPlugins";
-
-const APPEARANCE_TABS = [
-	{ id: "basics", labelKey: "settings.appearance.tabBasics" },
-	{ id: "uiPlugins", labelKey: "settings.appearance.tabUiPlugins" },
-] as const;
 
 /** 基础子页：主题模式 + 自定义背景图（选图/清除/遮罩浓度）+ 两个界面开关 */
 function AppearanceBasics() {
@@ -124,34 +115,7 @@ function AppearanceBasics() {
 	);
 }
 
-/**
- * 外观面板：顶部 Tab 分栏（设计稿 .local/design/ux/appearance-ui-plugins）
- * 「基础」= 内置外观设置；「UI 插件」= 替换内置组件的插件管理（原独立设置分类并入）。
- * Tab 是面板内临时视图（内存态），每次打开设置默认落在「基础」。
- */
+/** 外观面板：主题、背景与界面开关（UI 插件管理在 设置 › 高级 › UI 插件） */
 export function AppearancePanel() {
-	const t = useT();
-	const [tab, setTab] = useState<AppearanceTab>("basics");
-
-	return (
-		<div>
-			<div className="flex gap-4 border-b border-border px-0.5 pt-0.5">
-				{APPEARANCE_TABS.map((tabDef) => (
-					<button
-						key={tabDef.id}
-						type="button"
-						className={`relative -mb-px border-b-2 px-0.5 pb-2 pt-1 text-[12px] transition-colors ${
-							tab === tabDef.id
-								? "border-ink font-medium text-ink"
-								: "border-transparent text-ink-faint hover:text-ink-2"
-						}`}
-						onClick={() => setTab(tabDef.id)}
-					>
-						{t(tabDef.labelKey)}
-					</button>
-				))}
-			</div>
-			<div className="pt-3">{tab === "basics" ? <AppearanceBasics /> : <UiPluginsSection />}</div>
-		</div>
-	);
+	return <AppearanceBasics />;
 }

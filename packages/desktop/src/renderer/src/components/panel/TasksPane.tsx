@@ -120,15 +120,24 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 		else setConfirmation(null);
 	};
 
+	// 治理信息默认不打扰：无记录不渲染；仅有待确认项（已撤销、尚未人工确认）时默认展开
+	if (decisions.length === 0 && !confirmationRequest) return null;
+	const pendingCount = decisions.filter(
+		(decision) => decision.status !== "active" && !confirmedIds.has(decision.id),
+	).length;
+
 	return (
-		<section className="panel-card" data-testid="decisions-section">
-			<header className="flex items-center gap-2">
+		<details className="panel-card" data-testid="decisions-section" open={pendingCount > 0 || undefined}>
+			<summary className="flex cursor-pointer items-center gap-2">
 				<span className="text-[12px] font-medium text-ink">{t("panel.decisionsTitle")}</span>
 				<span className="text-[11px] tabular-nums text-ink-faint">{decisions.length}</span>
-			</header>
-			{decisions.length === 0 ? (
-				<p className="mt-1 text-[11px] text-ink-faint">{t("panel.decisionsEmpty")}</p>
-			) : (
+				{pendingCount > 0 && (
+					<span className="text-[11px] text-warn">
+						{t("panel.decisionsPending", { count: pendingCount })}
+					</span>
+				)}
+			</summary>
+			{decisions.length > 0 && (
 				<ul className="mt-2 space-y-2">
 					{decisions.map((decision) => (
 						<li
@@ -171,7 +180,7 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 				</ul>
 			)}
 			{confirmationRequest && <AskDialog requests={[confirmationRequest]} onRespond={respondConfirmation} />}
-		</section>
+		</details>
 	);
 }
 

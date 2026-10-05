@@ -600,7 +600,7 @@ async function run() {
 				"[...document.querySelector('[data-testid=sidebar-actions-fixture]').querySelectorAll('.workbench-nav-item')].map(b=>{const r=b.getBoundingClientRect(),i=b.querySelector('svg').getBoundingClientRect(),t=b.querySelector('span').getBoundingClientRect();return {tag:b.tagName,label:b.textContent.trim(),x:r.x,y:r.y,width:r.width,height:r.height,iconX:i.x,iconWidth:i.width,textX:t.x};})",
 			);
 		const aligned = (rows) => {
-			assert.equal(rows.length, 7);
+			assert.equal(rows.length, 6);
 			for (const row of rows) {
 				assert.equal(row.tag, "BUTTON");
 				assert(
@@ -612,7 +612,7 @@ async function run() {
 			}
 			assert.deepEqual(
 				rows.map((row) => row.label),
-				["聊天", "空间", "研究", "知识库", "扩展", "设置", "帮助"],
+				["聊天", "空间", "知识库", "扩展", "设置", "帮助"],
 			);
 		};
 		aligned(await actionGeometry());

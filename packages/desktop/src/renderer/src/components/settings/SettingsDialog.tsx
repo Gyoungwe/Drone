@@ -9,6 +9,7 @@ import { type SettingsCategory, useSettingsStore } from "../../stores/settings";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
 import { KnowledgePanel } from "../knowledge/KnowledgePanel";
 import { ZoteroPanel } from "../knowledge/ZoteroPanel";
+import { ComputePane } from "../panel/ComputePane";
 import { AboutPanel } from "./AboutPanel";
 import { AppearancePanel } from "./AppearancePanel";
 import { ExtensionsPanel } from "./extensions/ExtensionsPanel";
@@ -18,6 +19,8 @@ import { McpPanel } from "./McpPanel";
 import { PermissionsPanel } from "./PermissionsPanel";
 import { ProvidersPanel } from "./providers/ProvidersPanel";
 import { SkillsPanel } from "./SkillsPanel";
+import { UiPluginsSection } from "./UiPluginsSection";
+import { WorkflowOverviewPanel } from "./WorkflowOverview";
 
 const STATIC_CATEGORIES = [
 	"general",
@@ -26,11 +29,18 @@ const STATIC_CATEGORIES = [
 	"models",
 	"skills",
 	"mcp",
-	"knowledge",
 	"zotero",
 	"extensions",
-	"lan",
 	"about",
+] as const satisfies readonly SettingsCategory[];
+
+/** 「高级」分组：治理与维护类功能保留，但不出现在主流程分类里 */
+const ADVANCED_CATEGORIES = [
+	"knowledge",
+	"lan",
+	"uiPlugins",
+	"workflows",
+	"compute",
 ] as const satisfies readonly SettingsCategory[];
 
 /** 面板注册表：新增分类 = 写一个面板组件 + 在这里登记（未登记显示 coming soon） */
@@ -45,6 +55,9 @@ const PANELS: Partial<Record<SettingsCategory, ComponentType>> = {
 	zotero: ZoteroPanel,
 	extensions: ExtensionsPanel,
 	lan: LanObserverPanel,
+	uiPlugins: UiPluginsSection,
+	workflows: WorkflowOverviewPanel,
+	compute: ComputePane,
 	about: AboutPanel,
 };
 
@@ -109,6 +122,21 @@ export function SettingsDialog() {
 				<div className="flex min-h-0 flex-1">
 					<nav className="w-36 shrink-0 overflow-y-auto border-r border-border p-1">
 						{STATIC_CATEGORIES.map((id) => (
+							<button
+								key={id}
+								type="button"
+								className={`mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
+									category === id
+										? "bg-hover font-medium text-ink"
+										: "text-ink-dim hover:bg-hover hover:text-ink"
+								}`}
+								onClick={() => setCategory(id)}
+							>
+								{t(`settings.category.${id}`)}
+							</button>
+						))}
+						<p className="mb-0.5 mt-3 px-2 text-[11px] text-ink-faint">{t("settings.category.advanced")}</p>
+						{ADVANCED_CATEGORIES.map((id) => (
 							<button
 								key={id}
 								type="button"

@@ -55,9 +55,9 @@ export const useKnowledgeStore = create<State>((set) => ({
 		if (event.kind === "notice") set({ notice: event });
 	},
 	invalidate: () => set((state) => ({ revision: state.revision + 1 })),
-	// 知识库 / 研究工作台是全屏视图（不再是弹窗）：open 同时切 view，close 回到聊天
+	// 知识库是全屏视图（不再是弹窗）：open 同时切 view，close 回到聊天
 	open: (dialog) => {
-		useUiStore.getState().setView(dialog.tab === "overview" ? "research" : "knowledge");
+		useUiStore.getState().setView("knowledge");
 		set({ dialog });
 	},
 	openReview: (request) =>
@@ -74,7 +74,7 @@ export const useKnowledgeStore = create<State>((set) => ({
 		})),
 	close: () => {
 		const ui = useUiStore.getState();
-		if (ui.view === "research" || ui.view === "knowledge") ui.setView("chat");
+		if (ui.view === "knowledge") ui.setView("chat");
 		set({ dialog: null });
 	},
 	dismiss: () => set({ notice: null }),

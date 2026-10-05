@@ -3,11 +3,12 @@ import { useEffect, useMemo, useRef } from "react";
 import { useT } from "../../i18n";
 import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "../../plugins/PluginRegions";
 import { UI_REGIONS } from "../../plugins/slots";
+import { selectHosts, selectJobs, useComputeStore } from "../../stores/compute";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { summarizeRuns, useSubagentsStore } from "../../stores/subagents";
 import { EMPTY_TODOS, selectTranscript, useTranscriptStore } from "../../stores/transcript";
-import { PANEL_TABS, type PanelTab, useUiStore } from "../../stores/ui";
+import { type CorePanelTab, type PanelTab, useUiStore, visiblePanelTabs } from "../../stores/ui";
 import { PanelRightIcon } from "../icons";
 import { mergeKnowledgeArtifacts } from "../knowledge/artifacts";
 import { useSessionStatus } from "../session/session-status";
@@ -22,8 +23,8 @@ import { TasksPane } from "./TasksPane";
 export const CONTEXT_PANEL_WIDTH = 372;
 
 /**
- * 右侧上下文面板：任务 / 过程 / 变更 / 产物 / 子智能体 / 计算 六页签，替代原 DiffSidebar + TaskSidebar + Todo 悬浮胶囊 +
- * 知识流横条。固定栏位、push 式收展（聊天列自然压缩），永远只有一个右栏。
+ * 右侧上下文面板：任务 / 过程 / 产物 三个常驻页签（文件变更并入「过程」），子智能体仅在本会话有运行时出现，
+ * 计算仅在已配置主机或有作业时出现；当前选中的页签总是可见。固定栏位、push 式收展（聊天列自然压缩），永远只有一个右栏。
  *
  * 展开规则（用户确认）：运行开始自动展开；运行结束回到空闲选择；空闲时的手动开关被记住。
  */
@@ -36,6 +37,7 @@ export function ContextPanel() {
 	const setPanelOpen = useUiStore((s) => s.setPanelOpen);
 	const onRunStart = useUiStore((s) => s.onRunStart);
 	const onRunEnd = useUiStore((s) => s.onRunEnd);
+	const visibleTabs = useVisibleTabs(activeSessionId, tab);
 	const agentActive = useTranscriptStore((s) => selectTranscript(s, activeSessionId).agentActive);
 	// 插件页签（panel.tab 区域贡献，挂钩 4）：被禁用/卸载后若仍选中，回到「任务」
 	const pluginTabs = usePluginEntries(UI_REGIONS.PanelTab);
@@ -63,14 +65,14 @@ export function ContextPanel() {
 				<PanelHeader
 					sessionId={activeSessionId}
 					tab={tab}
+					tabs={visibleTabs}
 					onTab={setTab}
 					onCollapse={() => setPanelOpen(false, agentActive)}
 					collapseLabel={t("panel.collapse")}
 				/>
 				<div className="context-panel-body">
 					{tab === "tasks" && <TasksPane sessionId={activeSessionId} />}
-					{tab === "process" && <ProcessPane sessionId={activeSessionId} />}
-					{tab === "changes" && <ChangesPane sessionId={activeSessionId} />}
+					{tab === "process" && <ProcessTab sessionId={activeSessionId} />}
 					{tab === "artifacts" && <ArtifactsPane sessionId={activeSessionId} />}
 					{tab === "subagents" && <SubagentsPane sessionId={activeSessionId} />}
 					{tab === "compute" && <ComputePane />}
@@ -82,13 +84,60 @@ export function ContextPanel() {
 	);
 }
 
+/** 按需页签：子智能体 = 本会话有运行；计算 = 已配置主机或有作业；当前选中的页签（如 @ 派发跳转）总是保留 */
+function useVisibleTabs(sessionId: string | null, current: PanelTab): readonly CorePanelTab[] {
+	const hasRuns = useSubagentsStore((s) =>
+		sessionId ? Object.keys(s.runsBySession[sessionId] ?? {}).length > 0 : false,
+	);
+	const hasCompute = useComputeStore((s) => selectHosts(s).length > 0 || selectJobs(s).length > 0);
+	const subagents = hasRuns || current === "subagents";
+	const compute = hasCompute || current === "compute";
+	return useMemo(() => visiblePanelTabs({ subagents, compute }), [subagents, compute]);
+}
+
+/** 「过程」页签：运行过程泳道 / 文件变更 两个视图（原「变更」页签并入此处） */
+function ProcessTab({ sessionId }: { sessionId: string | null }) {
+	const t = useT();
+	const view = useUiStore((s) => s.processView);
+	const setView = useUiStore((s) => s.setProcessView);
+	const { badges } = useTabBadges(sessionId);
+	return (
+		<>
+			<div className="process-view-switch">
+				<div className="diff-seg" role="tablist" aria-label={t("panel.tabs.process")}>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={view === "lanes"}
+						className={view === "lanes" ? "on" : ""}
+						onClick={() => setView("lanes")}
+					>
+						{t("panel.tabs.process")}
+					</button>
+					<button
+						type="button"
+						role="tab"
+						aria-selected={view === "changes"}
+						className={view === "changes" ? "on" : ""}
+						onClick={() => setView("changes")}
+					>
+						{t("panel.tabs.changes")}
+						{badges.process ? ` ${badges.process}` : ""}
+					</button>
+				</div>
+			</div>
+			{view === "changes" ? <ChangesPane sessionId={sessionId} /> : <ProcessPane sessionId={sessionId} />}
+		</>
+	);
+}
+
 interface TabBadges {
 	badges: Partial<Record<PanelTab, string>>;
 	/** 徽标琥珀态：子智能体存在「需要回复 / 等待审批」（有活要等你 ≠ 有活在跑） */
 	attention: Partial<Record<PanelTab, boolean>>;
 }
 
-/** 页签计数：任务 done/total、变更文件数、产物数、子智能体运行中数（过程页不计数） */
+/** 页签计数：任务 done/total、变更文件数（记在「过程」页签）、产物数、子智能体运行中数 */
 function useTabBadges(sessionId: string | null): TabBadges {
 	const todos =
 		useTranscriptStore((s) => (sessionId ? s.bySession[sessionId]?.todos : undefined)) ?? EMPTY_TODOS;
@@ -113,7 +162,7 @@ function useTabBadges(sessionId: string | null): TabBadges {
 			badges.tasks = String(tasks.length);
 		}
 		const files = deriveTurnChanges(messages).reduce((sum, tc) => sum + tc.files.length, 0);
-		if (files > 0) badges.changes = String(files);
+		if (files > 0) badges.process = String(files);
 		const artifacts = mergeKnowledgeArtifacts(flow?.cards || [], tasks, cwd || "");
 		if (artifacts.length > 0) badges.artifacts = String(artifacts.length);
 		return { badges, attention };
@@ -123,12 +172,14 @@ function useTabBadges(sessionId: string | null): TabBadges {
 function PanelHeader({
 	sessionId,
 	tab,
+	tabs,
 	onTab,
 	onCollapse,
 	collapseLabel,
 }: {
 	sessionId: string | null;
 	tab: PanelTab;
+	tabs: readonly CorePanelTab[];
 	onTab: (tab: PanelTab) => void;
 	onCollapse: () => void;
 	collapseLabel: string;
@@ -150,7 +201,7 @@ function PanelHeader({
 				</button>
 			</div>
 			<div className="context-panel-tabs" role="tablist" aria-label={t("panel.title")}>
-				{PANEL_TABS.map((key) => (
+				{tabs.map((key) => (
 					<button
 						key={key}
 						type="button"

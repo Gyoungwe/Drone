@@ -85,11 +85,15 @@ export function ProcessPane({ sessionId }: { sessionId: string | null }) {
 				onOpenReconcile={() => openPanel("tasks")}
 			/>
 			{transcript.reviewerFindings.length ? (
-				<section className="reviewer-cards" aria-label={t("process.reviewerTitle")}>
+				// 审稿发现默认折叠：只在有发现时出现一行摘要，展开才看卡片
+				<details className="reviewer-cards" aria-label={t("process.reviewerTitle")}>
+					<summary className="cursor-pointer text-[12px] text-ink-2">
+						{t("process.reviewerTitle")} · {transcript.reviewerFindings.length}
+					</summary>
 					{transcript.reviewerFindings.map((finding) => (
 						<ReviewerCard key={finding.id} finding={finding} />
 					))}
-				</section>
+				</details>
 			) : null}
 		</div>
 	);

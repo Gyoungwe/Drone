@@ -1,23 +1,21 @@
 import { useEffect } from "react";
-import { useT } from "../../i18n";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { useUiStore } from "../../stores/ui";
 import { CloseIcon } from "../icons";
 import { useKnowledgeText } from "./copy";
+import { KnowledgeHome } from "./KnowledgeHome";
 import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
-import { KnowledgePanel } from "./KnowledgePanel";
 
 /**
- * 研究工作台 / 知识库 全屏视图（替代原 z-60 弹窗）：占据主区整列，左侧导航高亮对应项，
- * Esc / × 回到聊天。内容仍是 KnowledgePanel（overview = 研究工作台；reviews/maintenance = 知识库）
- * 或 KnowledgeNoteViewer（打开单篇笔记时）。
+ * 知识库全屏视图（替代原 z-60 弹窗；原「研究工作台」入口已并入）：占据主区整列，Esc / × 回到聊天。
+ * 内容是 KnowledgeHome（Vault 状态 + 最近沉淀 + 待处理修改），打开单篇笔记时是 KnowledgeNoteViewer。
+ * 维护类功能（绑定、索引、语义、主题、审核模式）在 设置 › 高级 › 知识库维护。
  *
  * 通过左侧导航直接进入而 store 里还没有上下文时，用当前会话/目录补一份（刷新后也能打开）。
  */
-export function KnowledgeView({ mode }: { mode: "research" | "knowledge" }) {
+export function KnowledgeView() {
 	const t = useKnowledgeText();
-	const appT = useT();
 	const dialog = useKnowledgeStore((s) => s.dialog);
 	const close = useKnowledgeStore((s) => s.close);
 	const open = useKnowledgeStore((s) => s.open);
@@ -27,8 +25,8 @@ export function KnowledgeView({ mode }: { mode: "research" | "knowledge" }) {
 
 	useEffect(() => {
 		if (dialog) return;
-		open({ cwd, sessionId: activeSessionId, tab: mode === "research" ? "overview" : "reviews" });
-	}, [dialog, open, cwd, activeSessionId, mode]);
+		open({ cwd, sessionId: activeSessionId, tab: "reviews" });
+	}, [dialog, open, cwd, activeSessionId]);
 
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
@@ -49,8 +47,8 @@ export function KnowledgeView({ mode }: { mode: "research" | "knowledge" }) {
 		<section className="knowledge-view" aria-label={t("title")}>
 			<header className="knowledge-view-head">
 				<p className="text-[13px] font-medium text-ink">
-					{mode === "research" ? appT("workbench.views.research") : appT("workbench.views.knowledge")}
-					<span className="ml-2 text-[11px] font-normal text-ink-faint">Obsidian · {t(dialog.tab)}</span>
+					{t("title")}
+					<span className="ml-2 text-[11px] font-normal text-ink-faint">Obsidian</span>
 				</p>
 				<button
 					type="button"
@@ -75,7 +73,7 @@ export function KnowledgeView({ mode }: { mode: "research" | "knowledge" }) {
 							onClose={close}
 						/>
 					) : (
-						<KnowledgePanel context={dialog} headless />
+						<KnowledgeHome cwd={dialog.cwd} sessionId={dialog.sessionId} reviewId={dialog.id} />
 					)}
 				</div>
 			</div>
