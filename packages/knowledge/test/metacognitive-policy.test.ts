@@ -28,6 +28,15 @@ describe("metacognitive publication policy", () => {
 		expect(result.failures.some((item) => item.code === "report-number-unbound")).toBe(true);
 	});
 
+	it("fails closed when a cited artifact is pending review", () => {
+		const result = evaluateMetacognitivePublication("Result: 12.3 [[Runs/run-1/report]]", {
+			numbers: [{ value: 12.3, rendered: "12.3", artifactPath: "Runs/run-1/report.md" }],
+			artifacts: [{ ...artifact(), status: "pending-review" }],
+		});
+		expect(result.ok).toBe(false);
+		expect(result.failures[0]).toMatchObject({ code: "artifact-pending-review" });
+	});
+
 	it("blocks stale checksums, method drift and diagnostic drift together", () => {
 		const result = evaluateMetacognitivePublication("Used wrong method [[Runs/run-1/report]]", {
 			artifacts: [{ ...artifact(), currentSha256: "b".repeat(64) }],

@@ -1,4 +1,6 @@
-import type { TodoItem } from "@drone/shared";
+import type { DecisionRecord, TodoItem } from "@drone/shared";
+import { useEffect, useState } from "react";
+import { getPi } from "../../api";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
@@ -41,6 +43,93 @@ function TodoLine({ todo, spinnerPaused }: { todo: TodoItem; spinnerPaused: bool
 			<TodoPendingIcon size={14} className="mt-[3px] shrink-0 text-ink-faint" />
 			<span className="min-w-0 flex-1 break-words text-[13px] leading-5 text-ink-2">{todo.content}</span>
 		</li>
+	);
+}
+
+function DecisionsSection({ projectId }: { projectId: string | null }) {
+	const t = useT();
+	const [decisions, setDecisions] = useState<readonly DecisionRecord[]>([]);
+	const [busyId, setBusyId] = useState<string | null>(null);
+
+	useEffect(() => {
+		let disposed = false;
+		if (!projectId) {
+			setDecisions([]);
+			return () => {
+				disposed = true;
+			};
+		}
+		void getPi()
+			.list(projectId)
+			.then((next) => {
+				if (!disposed) setDecisions(next);
+			})
+			.catch(() => {
+				if (!disposed) setDecisions([]);
+			});
+		return () => {
+			disposed = true;
+		};
+	}, [projectId]);
+
+	const revoke = async (decision: DecisionRecord) => {
+		if (
+			decision.status !== "active" ||
+			busyId ||
+			!window.confirm(t("panel.decisionConfirm", { summary: decision.summary }))
+		)
+			return;
+		setBusyId(decision.id);
+		try {
+			const revoked = await getPi().revoke(decision.id, t("panel.decisionRevokeReason"));
+			setDecisions((current) => current.map((item) => (item.id === revoked.id ? revoked : item)));
+		} finally {
+			setBusyId(null);
+		}
+	};
+
+	return (
+		<section className="panel-card" data-testid="decisions-section">
+			<header className="flex items-center gap-2">
+				<span className="text-[12px] font-medium text-ink">{t("panel.decisionsTitle")}</span>
+				<span className="text-[11px] tabular-nums text-ink-faint">{decisions.length}</span>
+			</header>
+			{decisions.length === 0 ? (
+				<p className="mt-1 text-[11px] text-ink-faint">{t("panel.decisionsEmpty")}</p>
+			) : (
+				<ul className="mt-2 space-y-2">
+					{decisions.map((decision) => (
+						<li
+							key={decision.id}
+							className="rounded-md border border-edge/60 px-2 py-1.5"
+							data-testid="decision-row"
+						>
+							<div className="flex items-start gap-2">
+								<div className="min-w-0 flex-1">
+									<p className="break-words text-[12px] text-ink">{decision.summary}</p>
+									<p className="text-[11px] text-ink-faint">
+										{t("panel.decisionAffected", { count: decision.affectedArtifactIds.length })} ·{" "}
+										{decision.kind}
+									</p>
+								</div>
+								{decision.status === "active" ? (
+									<button
+										type="button"
+										className="shrink-0 text-[11px] text-err hover:underline disabled:opacity-50"
+										disabled={busyId !== null}
+										onClick={() => void revoke(decision)}
+									>
+										{busyId === decision.id ? t("panel.decisionRevoking") : t("panel.decisionRevoke")}
+									</button>
+								) : (
+									<span className="shrink-0 text-[11px] text-ink-faint">{t("panel.decisionRevoked")}</span>
+								)}
+							</div>
+						</li>
+					))}
+				</ul>
+			)}
+		</section>
 	);
 }
 
@@ -91,6 +180,7 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 	const messages = useTranscriptStore((s) => selectTranscript(s, sessionId).messages);
 	const agentActive = useAgentActive(sessionId);
 	const readOnly = useSessionReadOnly();
+	const projectId = useSessionsStore((s) => s.cwd);
 	const latestMessage = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
 	const view = latestMessage?.kind === "assistant" ? latestMessage.taskView : undefined;
 	const empty = todoCount === 0 && !(view && view.tasks.length > 0);
@@ -103,6 +193,7 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 				</div>
 			)}
 			<Slot name={UI_SLOTS.TodoPanel} props={{}} fallback={TodoCard} />
+			<DecisionsSection projectId={projectId} />
 			{view && view.tasks.length > 0 && (
 				<section className="panel-card">
 					<header className="flex items-center gap-2">

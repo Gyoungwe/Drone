@@ -22,6 +22,7 @@ export function registerComputeIpc(
 	sendEvent: (channel: string, payload: unknown) => void = () => {},
 ): () => void {
 	const compute = "computeAdapter" in backendOrCompute ? backendOrCompute.computeAdapter : backendOrCompute;
+	const inquiry = "inquiry" in backendOrCompute ? backendOrCompute.inquiry : undefined;
 	const authorized = async <T>(
 		operation: Parameters<ComputeHostAdapter["authorizeRemoteOperation"]>[0],
 		action: () => Promise<T>,
@@ -38,8 +39,22 @@ export function registerComputeIpc(
 		getHealthSnapshot: () => compute.getHealthSnapshot(),
 		listJobs: (filter) => compute.listJobs(filter),
 		getJob: (id) => compute.getJob(id),
-		submitJob: (input) =>
-			authorized({ kind: "submit_job", hostId: input.hostId }, () => compute.submitJob(input)),
+		submitJob: async (input) => {
+			const job = await authorized({ kind: "submit_job", hostId: input.hostId }, () =>
+				compute.submitJob(input),
+			);
+			void inquiry
+				?.recordDecision({
+					id: `compute-submit:${job.id}`,
+					kind: "compute-submit",
+					summary: `Submitted compute workflow ${input.workflow.name}`,
+					basis: [job.id, ...(input.workflow.specHash ? [input.workflow.specHash] : [])],
+					projectId: (input as { workDir?: string }).workDir,
+					at: new Date().toISOString(),
+				})
+				.catch(() => {});
+			return job;
+		},
 		getLogs: (id, cursor) => compute.getLogs(id, cursor),
 		cancelJob: (id) => authorized({ kind: "cancel_job", jobId: id }, () => compute.cancelJob(id)),
 		openTerminal: (input) =>

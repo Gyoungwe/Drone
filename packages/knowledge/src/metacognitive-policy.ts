@@ -18,6 +18,8 @@ export interface MetacognitiveArtifactNumber {
 
 export interface MetacognitiveArtifact {
 	path: string;
+	/** Inquiry lineage status; pending review is never publishable. */
+	status?: "valid" | "superseded" | "cleanup-candidate" | "archived" | "pending-review";
 	/** Hash recorded when the artifact was cited. */
 	sha256?: string;
 	/** Hash observed immediately before publication. */
@@ -87,6 +89,7 @@ export type MetacognitiveFailureCode =
 	| "method-mismatch"
 	| "finding-label-conflict"
 	| "diagnostic-drift"
+	| "artifact-pending-review"
 	| "metacognition-invalid";
 
 export interface MetacognitiveFailure {
@@ -190,7 +193,16 @@ export function evaluateMetacognitivePublication(
 	const citations = citedPaths(answer);
 	const artifacts = new Map<string, MetacognitiveArtifact>();
 	for (const artifact of Array.isArray(input.artifacts) ? input.artifacts : []) {
-		if (artifact && typeof artifact.path === "string") artifacts.set(artifact.path, artifact);
+		if (artifact && typeof artifact.path === "string") {
+			artifacts.set(artifact.path, artifact);
+			if (artifact.status === "pending-review")
+				addFailure(failures, {
+					code: "artifact-pending-review",
+					subject: artifact.path,
+					detail: `Artifact ${bounded(artifact.path, 240)} is pending review after a revoked decision`,
+					path: artifact.path,
+				});
+		}
 	}
 	const checkedPaths = new Set<string>();
 	const checkArtifact = (path: string, subject: string): MetacognitiveArtifact | undefined => {

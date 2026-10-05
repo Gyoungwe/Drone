@@ -1,9 +1,10 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
 	type ArtifactRecord,
+	decisionRecord,
 	FileInquiryStorage,
 	type FindingRecord,
 	InquiryService,
@@ -113,6 +114,97 @@ describe("inquiry ledger records", () => {
 			);
 			await reopened.close();
 			expect(() => new SqliteInquiryStorage("another-project", path)).toThrow("another project");
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("reads a legacy file schema and adds the decision ledger", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-inquiry-legacy-file-"));
+		try {
+			const path = join(root, "ledger.json");
+			await writeFile(
+				path,
+				JSON.stringify({
+					schemaVersion: 1,
+					projectId: "project-1",
+					revision: 2,
+					updatedAt: "2026-01-01T00:00:00.000Z",
+					artifacts: [artifact()],
+					findings: [],
+					questions: [],
+					attempts: [],
+				}),
+			);
+			const storage = new FileInquiryStorage("project-1", path);
+			const snapshot = await storage.snapshot();
+			expect(snapshot.schemaVersion).toBe(2);
+			expect(snapshot.artifacts[0]?.schemaVersion).toBe(1);
+			expect(snapshot.decisions).toEqual([]);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("records every decision kind and revokes two downstream lineage levels", async () => {
+		const storage = new MemoryInquiryStorage("project-1");
+		const service = new InquiryService(storage);
+		await service.recordArtifact(artifact({ id: "root" }));
+		await service.recordArtifact(
+			artifact({ id: "child", parentIds: ["root"], path: "runs/task-1/run-1/child.tsv" }),
+		);
+		await service.recordArtifact(
+			artifact({ id: "grandchild", parentIds: ["child"], path: "runs/task-1/run-1/grandchild.tsv" }),
+		);
+		const kinds = [
+			"task-authorization",
+			"workflow-repair",
+			"subagent-dispatch",
+			"compute-submit",
+			"zotero-write",
+			"rebind",
+		] as const;
+		for (const kind of kinds)
+			await service.recordDecision(
+				decisionRecord({
+					id: `decision-${kind}`,
+					projectId: "project-1",
+					kind,
+					summary: `Recorded ${kind}`,
+					basis: [`basis-${kind}`],
+					affectedArtifactIds: kind === "task-authorization" ? ["root"] : [],
+				}),
+			);
+		expect((await service.listDecisions()).map((item) => item.kind)).toHaveLength(kinds.length);
+		const revoked = await service.revokeDecision("decision-task-authorization", "Needs human review");
+		expect(revoked.status).toBe("revoked");
+		const statuses = (await storage.snapshot()).artifacts.map((item) => item.status);
+		expect(statuses).toEqual(["pending-review", "pending-review", "pending-review"]);
+	});
+
+	it("legacy SQLite metadata migrates and preserves old records", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-inquiry-legacy-sqlite-"));
+		try {
+			const path = join(root, "ledger.sqlite");
+			const { DatabaseSync } = await import("node:sqlite");
+			const database = new DatabaseSync(path);
+			database.exec(`
+				CREATE TABLE inquiry_meta (project_id TEXT PRIMARY KEY NOT NULL, schema_version INTEGER NOT NULL CHECK (schema_version = 1), revision INTEGER NOT NULL, updated_at TEXT NOT NULL);
+				INSERT INTO inquiry_meta VALUES ('project-1', 1, 0, '2026-01-01T00:00:00.000Z');
+				CREATE TABLE artifacts (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
+				CREATE TABLE findings (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
+				CREATE TABLE questions (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
+				CREATE TABLE attempts (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
+			`);
+			database
+				.prepare("INSERT INTO artifacts VALUES (?, ?, ?, ?)")
+				.run("artifact-1", "project-1", JSON.stringify(artifact()), "2026-01-01T00:00:00.000Z");
+			database.close();
+			const storage = new SqliteInquiryStorage("project-1", path);
+			expect((await storage.snapshot()).schemaVersion).toBe(2);
+			expect((await storage.artifacts.get("artifact-1"))?.schemaVersion).toBe(1);
+			expect(await storage.decisions.list()).toEqual([]);
+			await storage.close();
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}

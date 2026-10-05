@@ -64,7 +64,16 @@ function evaluateMetacognitivePublication(answer, snapshot) {
   const citations = citedPaths(answer);
   const artifacts = /* @__PURE__ */ new Map();
   for (const artifact of Array.isArray(input.artifacts) ? input.artifacts : []) {
-    if (artifact && typeof artifact.path === "string") artifacts.set(artifact.path, artifact);
+    if (artifact && typeof artifact.path === "string") {
+      artifacts.set(artifact.path, artifact);
+      if (artifact.status === "pending-review")
+        addFailure(failures, {
+          code: "artifact-pending-review",
+          subject: artifact.path,
+          detail: `Artifact ${bounded(artifact.path, 240)} is pending review after a revoked decision`,
+          path: artifact.path
+        });
+    }
   }
   const checkedPaths = /* @__PURE__ */ new Set();
   const checkArtifact = (path, subject) => {

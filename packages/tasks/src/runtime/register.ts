@@ -634,6 +634,15 @@ export function registerWorkbench(
 					send("你没有确认，任务不会开始。想执行的时候再点一次就行。");
 					return;
 				}
+				const authorizedTask = journal.view().tasks.find((task) => task.id === input.taskId);
+				pi.events?.emit?.("drone:decision-record/v1", {
+					id: `task-authorization:${input.taskId}:${input.revision}`,
+					kind: "task-authorization",
+					summary:
+						authorizedTask?.authorizationSummary || authorizedTask?.goal || "Task authorization approved",
+					basis: [`task:${input.taskId}`, `revision:${input.revision}`],
+					at: new Date().toISOString(),
+				});
 				send("已确认，接下来会自动做完并交付结果。你随时可以停；要做计划之外的事仍会先问你。");
 				continueAuthorized(ctx);
 				return;
@@ -656,6 +665,14 @@ export function registerWorkbench(
 					const accepted = await askAuthorization({ ...input, action: "ask-authorization" }, ctx);
 					send();
 					if (accepted) {
+						if (action?.kind === "rebind")
+							pi.events?.emit?.("drone:decision-record/v1", {
+								id: `rebind:${input.taskId}:${input.actionId}`,
+								kind: "rebind",
+								summary: action.title || "Rebind approved",
+								basis: [`task:${input.taskId}`, `action:${input.actionId}`],
+								at: new Date().toISOString(),
+							});
 						journal.command({ taskId: input.taskId, revision: journal.view().revision, action: "select" });
 						continueAuthorized(ctx);
 					}

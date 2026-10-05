@@ -5,12 +5,12 @@ import {
 } from "./chunk-GC2J7ECB.mjs";
 import {
   evaluateMetacognitivePublication
-} from "./chunk-CVD67FIU.mjs";
+} from "./chunk-GVLY5KQR.mjs";
 import {
   advisoryLine,
   knowledgeFailure,
   publicationNotices
-} from "./chunk-IDLVS5M7.mjs";
+} from "./chunk-U3GNWHNQ.mjs";
 import {
   advisoryCodes,
   readReviewMode
@@ -215,7 +215,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
     const evaluation = evaluateMetacognitivePublication(text, snapshot);
     if (!evaluation.ok)
       throw Object.assign(new Error("Metacognitive publication checks failed"), {
-        code: "metacognitive-inconsistency",
+        code: evaluation.failures.some((failure2) => failure2.code === "artifact-pending-review") ? "artifact-pending-review" : "metacognitive-inconsistency",
         paths: evaluation.failures.map((item) => item.path).filter(Boolean).slice(0, 6),
         metacognition: evaluation,
         verified: { metacognition: evaluation }

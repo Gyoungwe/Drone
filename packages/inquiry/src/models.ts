@@ -3,11 +3,13 @@
  * references and summaries, never source contents or credentials.
  */
 
-export const INQUIRY_SCHEMA_VERSION = 1 as const;
+export const INQUIRY_SCHEMA_VERSION = 2 as const;
+export const LEGACY_INQUIRY_SCHEMA_VERSION = 1 as const;
+export type InquirySchemaVersion = typeof LEGACY_INQUIRY_SCHEMA_VERSION | typeof INQUIRY_SCHEMA_VERSION;
 
 export type ArtifactLocation = "local" | "remote";
 export type ArtifactPurpose = "input" | "draft" | "intermediate" | "deliverable" | "evidence";
-export type ArtifactStatus = "valid" | "superseded" | "cleanup-candidate" | "archived";
+export type ArtifactStatus = "valid" | "superseded" | "cleanup-candidate" | "archived" | "pending-review";
 
 export interface ArtifactSource {
 	readonly kind: "task" | "run" | "input" | "tool" | "workflow" | "manual";
@@ -17,7 +19,7 @@ export interface ArtifactSource {
 
 export interface ArtifactRecord {
 	readonly id: string;
-	readonly schemaVersion: typeof INQUIRY_SCHEMA_VERSION;
+	readonly schemaVersion: InquirySchemaVersion;
 	readonly projectId: string;
 	readonly location: ArtifactLocation;
 	readonly path: string;
@@ -28,6 +30,9 @@ export interface ArtifactRecord {
 	readonly status: ArtifactStatus;
 	/** Parent artifacts form the immutable lineage graph. */
 	readonly parentIds: readonly string[];
+	/** Revocations still awaiting an explicit human review. */
+	readonly pendingReviewDecisionIds?: readonly string[];
+	readonly reviews?: readonly { decisionId: string; reason: string; at: string }[];
 	readonly runId?: string;
 	readonly createdAt: string;
 	readonly updatedAt: string;
@@ -52,7 +57,7 @@ export interface FindingRobustness {
 
 export interface FindingRecord {
 	readonly id: string;
-	readonly schemaVersion: typeof INQUIRY_SCHEMA_VERSION;
+	readonly schemaVersion: InquirySchemaVersion;
 	readonly projectId: string;
 	readonly statement: string;
 	readonly values: readonly FindingValue[];
@@ -88,7 +93,7 @@ export interface QuestionPosterior {
 
 export interface QuestionRecord {
 	readonly id: string;
-	readonly schemaVersion: typeof INQUIRY_SCHEMA_VERSION;
+	readonly schemaVersion: InquirySchemaVersion;
 	readonly projectId: string;
 	readonly kind: QuestionKind;
 	readonly statement: string;
@@ -109,7 +114,7 @@ export type AttemptOutcome = "running" | "succeeded" | "failed" | "blocked" | "u
 
 export interface AttemptRecord {
 	readonly id: string;
-	readonly schemaVersion: typeof INQUIRY_SCHEMA_VERSION;
+	readonly schemaVersion: InquirySchemaVersion;
 	readonly projectId: string;
 	readonly hypothesisIds: readonly string[];
 	readonly codeFingerprint?: string;
@@ -122,8 +127,33 @@ export interface AttemptRecord {
 	readonly finishedAt?: string;
 }
 
-export interface InquirySnapshot {
+export type DecisionKind =
+	| "task-authorization"
+	| "workflow-repair"
+	| "subagent-dispatch"
+	| "compute-submit"
+	| "zotero-write"
+	| "rebind";
+export type DecisionStatus = "active" | "revoked";
+
+/** A durable, user-visible record of a decision the agent made on the user's behalf. */
+export interface DecisionRecord {
+	readonly id: string;
 	readonly schemaVersion: typeof INQUIRY_SCHEMA_VERSION;
+	readonly projectId: string;
+	readonly kind: DecisionKind;
+	readonly summary: string;
+	/** Stable references such as contract hashes, repair records or tool call ids. */
+	readonly basis: readonly string[];
+	readonly affectedArtifactIds: readonly string[];
+	readonly status: DecisionStatus;
+	readonly revokedAt?: string;
+	readonly revokeReason?: string;
+	readonly createdAt: string;
+}
+
+export interface InquirySnapshot {
+	readonly schemaVersion: InquirySchemaVersion;
 	readonly projectId: string;
 	readonly revision: number;
 	readonly updatedAt: string;
@@ -131,6 +161,7 @@ export interface InquirySnapshot {
 	readonly findings: readonly FindingRecord[];
 	readonly questions: readonly QuestionRecord[];
 	readonly attempts: readonly AttemptRecord[];
+	readonly decisions: readonly DecisionRecord[];
 }
 
-export type InquiryRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord;
+export type InquiryRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | DecisionRecord;

@@ -71,6 +71,8 @@ export interface AutonomousRepairOptions {
 	readonly repair?: WorkflowRepairer;
 	readonly maxAttempts?: number;
 	readonly now?: () => string;
+	/** Optional observational sink; the repair loop never depends on its result. */
+	readonly onDecisionMade?: (decision: DecisionMadeForYou) => void | Promise<void>;
 }
 
 export type AutonomousRepairStatus = "succeeded" | "failed" | "blocked";
@@ -237,14 +239,20 @@ export async function runAutonomousRepair(options: AutonomousRepairOptions): Pro
 				reason: "Repair did not produce a changed WorkflowSpec",
 			};
 		}
-		decisionsMadeForYou.push({
+		const decision: DecisionMadeForYou = {
 			label: "我替你决定的",
 			attempt,
 			action: proposal.decision.action,
 			rationale: proposal.decision.rationale,
 			...(proposal.decision.changedFields ? { changedFields: proposal.decision.changedFields } : {}),
 			at: now(),
-		});
+		};
+		decisionsMadeForYou.push(decision);
+		try {
+			void options.onDecisionMade?.(decision);
+		} catch {
+			// Decision journaling is observational and cannot change repair semantics.
+		}
 		spec = proposal.spec;
 	}
 

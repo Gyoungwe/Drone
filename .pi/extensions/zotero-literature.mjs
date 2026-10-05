@@ -8,7 +8,7 @@ import { isAbsolute as isAbsolute4, join as join4, relative as relative3, resolv
 import { access, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
 import { dirname, isAbsolute as isAbsolute2, join as join2, relative, resolve as resolve2, sep } from "node:path";
 
-// ../Drone/packages/knowledge/src/config.ts
+// packages/knowledge/src/config.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
@@ -56,7 +56,7 @@ async function readKnowledgeBinding(options = {}) {
 }
 var defaultState = createKnowledgeConfigState();
 
-// ../Drone/packages/knowledge/src/flow-cards.ts
+// packages/knowledge/src/flow-cards.ts
 var OK = /* @__PURE__ */ new Set([
   "verified",
   "saved",
@@ -331,10 +331,10 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
   };
 }
 
-// ../Drone/packages/research/src/literature-operations.ts
+// packages/research/src/literature-operations.ts
 import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
 
-// ../Drone/packages/research/src/literature-receipt.ts
+// packages/research/src/literature-receipt.ts
 import { createHash as createHash2 } from "node:crypto";
 import { readFile as readFile3, realpath as realpath3, stat } from "node:fs/promises";
 import { isAbsolute as isAbsolute3, relative as relative2, resolve as resolve3, sep as sep2 } from "node:path";
@@ -426,7 +426,7 @@ async function verifyLiteratureReceipt({
   return receipt;
 }
 
-// ../Drone/packages/research/src/literature-operations.ts
+// packages/research/src/literature-operations.ts
 function destinationRecovery(receipt = {}) {
   const zotero = receipt.zotero?.status || "unavailable";
   const obsidian = receipt.obsidian?.status || "unavailable";
@@ -541,7 +541,7 @@ function createLiteratureOperations(ports) {
   };
 }
 
-// ../Drone/packages/research/src/zotero-identity.ts
+// packages/research/src/zotero-identity.ts
 var ZOTERO_KEY_PATTERN = /^[A-Z0-9]{8}$/;
 function normalizeZoteroDoi(value) {
   return normalizeDoi(value);
@@ -577,7 +577,7 @@ function summarizeZoteroAttachments(children, parentKey) {
   }));
 }
 
-// ../Drone/packages/research/src/zotero-reconcile.ts
+// packages/research/src/zotero-reconcile.ts
 async function lookupZoteroByDoi(get, expected, context = {}) {
   const doi = normalizeZoteroDoi(expected.doi);
   if (!doi || !isValidZoteroDoi(doi)) return { state: "blocked", reason: "exact-doi-required" };
@@ -611,7 +611,7 @@ async function lookupZoteroByDoi(get, expected, context = {}) {
   };
 }
 
-// ../Drone/packages/research/src/zotero-reconcile-runtime.ts
+// packages/research/src/zotero-reconcile-runtime.ts
 var LOCAL_API = "http://127.0.0.1:23119/api/users/0";
 function createZoteroReconciler({
   libraryType = process.env.ZOTERO_LIBRARY_TYPE || "users",
@@ -710,7 +710,7 @@ function createCompositeZoteroReconciler({ local, web, env = process.env } = {})
   };
 }
 
-// ../Drone/packages/research/src/zotero-setup-runtime.ts
+// packages/research/src/zotero-setup-runtime.ts
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, mkdir as mkdir3, readFile as readFile4, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
@@ -718,7 +718,7 @@ import { homedir as osHomedir } from "node:os";
 import { dirname as dirname2, join as join3 } from "node:path";
 import { promisify } from "node:util";
 
-// ../Drone/packages/research/src/zotero-setup.ts
+// packages/research/src/zotero-setup.ts
 var ZOTERO_SETUP_BINDING = Object.freeze({
   command: "zotero-setup",
   skill: "zotero-literature",
@@ -789,7 +789,7 @@ function remainingZoteroSetupSteps(status) {
   return steps;
 }
 
-// ../Drone/packages/research/src/zotero-setup-runtime.ts
+// packages/research/src/zotero-setup-runtime.ts
 var execFileAsync = promisify(execFile);
 var ZOTERO_SETUP_BINDING2 = Object.freeze({
   ...ZOTERO_SETUP_BINDING,
@@ -1138,10 +1138,10 @@ Zotero \u7BA1\u6587\u732E\uFF08PDF\u3001\u6761\u76EE\u3001\u6807\u6CE8\uFF09\uFF
 ${JSON.stringify({ binding: ZOTERO_SETUP_BINDING2, status, bootstrap, userPreferences: preferences }, null, 2)}`;
 }
 
-// ../Drone/packages/research/src/zotero-write-runtime.ts
+// packages/research/src/zotero-write-runtime.ts
 import { randomUUID as randomUUID3 } from "node:crypto";
 
-// ../Drone/packages/research/src/zotero-write.ts
+// packages/research/src/zotero-write.ts
 var ZOTERO_ITEM_SPECS = Object.freeze({
   journalArticle: { container: "publicationTitle", doi: true, fields: ["volume", "issue", "pages"] },
   conferencePaper: { container: "proceedingsTitle", doi: true, fields: ["volume", "pages"] },
@@ -1304,7 +1304,7 @@ function connectorTargetId(value) {
   return text;
 }
 
-// ../Drone/packages/research/src/zotero-write-runtime.ts
+// packages/research/src/zotero-write-runtime.ts
 var ZOTERO_ENDPOINTS = Object.freeze({
   connector: "http://127.0.0.1:23119",
   localApi: "http://127.0.0.1:23119/api",
@@ -1764,7 +1764,7 @@ function describeZoteroSavePlan(plan) {
   ].join("\n\n");
 }
 
-// ../Drone/packages/tasks/src/runtime-compiled/runtime-bridge.mjs
+// packages/tasks/src/runtime-compiled/runtime-bridge.mjs
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
 var contexts = new AsyncLocalStorage2();
 var installedRuntime = null;
@@ -1998,9 +1998,9 @@ function runRuntimeExclusive(namespace, key, operation) {
 }
 var RUNTIME_BRIDGE_VERSION = 1;
 
-// ../Drone/packages/tasks/src/runtime-compiled/acceptance.mjs
+// packages/tasks/src/runtime-compiled/acceptance.mjs
 var CORE_ACCEPTANCE_KINDS = Object.freeze(["file", "human_review"]);
-var CORE_FIELDS = Object.freeze(["kind", "path", "sha256"]);
+var CORE_FIELDS = Object.freeze(["kind", "path", "sha256", "rootKind"]);
 var KIND = /^[a-z][a-z0-9_]{1,40}$/;
 var FIELD = /^[a-zA-Z][a-zA-Z0-9]{0,40}$/;
 var stringField = { type: "string", minLength: 1, maxLength: 512 };
@@ -2012,7 +2012,12 @@ var createRegistry = () => {
   return {
     verifiers: /* @__PURE__ */ new Map(),
     kinds,
-    properties: { kind: { type: "string", enum: kinds }, path: stringField, sha256: stringField }
+    properties: {
+      kind: { type: "string", enum: kinds },
+      path: stringField,
+      sha256: stringField,
+      rootKind: { type: "string", enum: ["workspace", "vault", "research-run"], minLength: 1, maxLength: 32 }
+    }
   };
 };
 var registry = runtimeSlot("tasks", "acceptance", createRegistry);
@@ -2023,6 +2028,12 @@ function ensureRegistryShape() {
   registry.properties.kind ??= { type: "string", enum: registry.kinds };
   registry.properties.path ??= stringField;
   registry.properties.sha256 ??= stringField;
+  registry.properties.rootKind ??= {
+    type: "string",
+    enum: ["workspace", "vault", "research-run"],
+    minLength: 1,
+    maxLength: 32
+  };
 }
 ensureRegistryShape();
 function definitionOf(verifier) {
@@ -2107,12 +2118,12 @@ function acceptanceVerifiers() {
   return [...registry.verifiers.values()];
 }
 
-// ../Drone/packages/tasks/src/runtime-compiled/process-events.mjs
+// packages/tasks/src/runtime-compiled/process-events.mjs
 function emitProcessEvent(event, ...args) {
   process.emit(event, ...args);
 }
 
-// ../Drone/packages/tasks/src/runtime-compiled/tool-manifest.mjs
+// packages/tasks/src/runtime-compiled/tool-manifest.mjs
 var registry2 = runtimeSlot("tools", "manifest", () => ({ tools: /* @__PURE__ */ new Map(), families: /* @__PURE__ */ new Map() }));
 var compatibilityTools = /* @__PURE__ */ new Map();
 var compatibilityFamilies = /* @__PURE__ */ new Map();
@@ -2373,6 +2384,17 @@ async function runZoteroSave(pi, params, ctx, signal, deps = {}) {
     taskId: consent.taskId || null,
     milestoneId: consent.milestoneId || null
   };
+  if (SAVE_BOUND_STATUSES.has(receipt.status))
+    pi.events?.emit?.("drone:decision-record/v1", {
+      id: `zotero-write:${receipt.zoteroKey || receipt.doi}`,
+      kind: "zotero-write",
+      summary: `Zotero write receipt for ${receipt.doi}`,
+      basis: [
+        receipt.zoteroKey || receipt.doi,
+        ...receipt.journal?.operationId ? [receipt.journal.operationId] : []
+      ],
+      at: (/* @__PURE__ */ new Date()).toISOString()
+    });
   if (params.run_dir) {
     try {
       receipt.journal = await recordZoteroWrite({ cwd: ctx.cwd, runDir: params.run_dir, receipt });

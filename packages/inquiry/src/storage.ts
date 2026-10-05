@@ -3,7 +3,16 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { validateArtifactLineage, validateFindingReferences } from "./lineage";
-import type { ArtifactRecord, AttemptRecord, FindingRecord, InquirySnapshot, QuestionRecord } from "./models";
+import {
+	type ArtifactRecord,
+	type AttemptRecord,
+	type DecisionRecord,
+	type FindingRecord,
+	INQUIRY_SCHEMA_VERSION,
+	type InquirySnapshot,
+	LEGACY_INQUIRY_SCHEMA_VERSION,
+	type QuestionRecord,
+} from "./models";
 
 export interface LedgerCollection<T extends { readonly id: string }> {
 	get(id: string): Promise<T | undefined>;
@@ -15,6 +24,7 @@ export interface ArtifactLedger extends LedgerCollection<ArtifactRecord> {}
 export interface FindingLedger extends LedgerCollection<FindingRecord> {}
 export interface QuestionLedger extends LedgerCollection<QuestionRecord> {}
 export interface AttemptLedger extends LedgerCollection<AttemptRecord> {}
+export interface DecisionLedger extends LedgerCollection<DecisionRecord> {}
 
 /** Host-facing storage boundary. A backend may implement this with SQLite. */
 export interface InquiryStorage {
@@ -23,6 +33,7 @@ export interface InquiryStorage {
 	readonly findings: FindingLedger;
 	readonly questions: QuestionLedger;
 	readonly attempts: AttemptLedger;
+	readonly decisions: DecisionLedger;
 	snapshot(): Promise<InquirySnapshot>;
 	close?(): Promise<void>;
 }
@@ -71,9 +82,9 @@ interface PersistedDocument extends InquirySnapshot {
 
 const queues = new Map<string, Promise<void>>();
 
-const SQLITE_TABLES = ["artifacts", "findings", "questions", "attempts"] as const;
+const SQLITE_TABLES = ["artifacts", "findings", "questions", "attempts", "decisions"] as const;
 type SqliteLedgerKey = (typeof SQLITE_TABLES)[number];
-type LedgerRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord;
+type LedgerRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | DecisionRecord;
 
 interface SqliteMetaRow {
 	project_id: string;
@@ -107,7 +118,7 @@ function enqueue<T>(path: string, operation: () => Promise<T>): Promise<T> {
 
 function emptyDocument(projectId: string): PersistedDocument {
 	return {
-		schemaVersion: 1,
+		schemaVersion: INQUIRY_SCHEMA_VERSION,
 		projectId,
 		revision: 0,
 		updatedAt: new Date(0).toISOString(),
@@ -115,6 +126,7 @@ function emptyDocument(projectId: string): PersistedDocument {
 		findings: [],
 		questions: [],
 		attempts: [],
+		decisions: [],
 	};
 }
 
@@ -129,13 +141,15 @@ function stableDocument(document: PersistedDocument): PersistedDocument {
 		findings: sortRecords(document.findings),
 		questions: sortRecords(document.questions),
 		attempts: sortRecords(document.attempts),
+		decisions: sortRecords(document.decisions),
 	};
 }
 
 function parseDocument(raw: string, projectId: string): PersistedDocument {
-	const parsed = JSON.parse(raw) as Partial<PersistedDocument>;
+	const parsed = JSON.parse(raw) as Partial<PersistedDocument> & { schemaVersion?: number };
+	const schemaVersion = parsed.schemaVersion;
 	if (
-		parsed.schemaVersion !== 1 ||
+		(schemaVersion !== LEGACY_INQUIRY_SCHEMA_VERSION && schemaVersion !== INQUIRY_SCHEMA_VERSION) ||
 		parsed.projectId !== projectId ||
 		!Array.isArray(parsed.artifacts) ||
 		!Array.isArray(parsed.findings) ||
@@ -147,7 +161,15 @@ function parseDocument(raw: string, projectId: string): PersistedDocument {
 	const revision = parsed.revision;
 	if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0)
 		throw new Error("Invalid inquiry ledger revision");
-	return stableDocument(parsed as PersistedDocument);
+	return stableDocument({
+		...parsed,
+		schemaVersion: INQUIRY_SCHEMA_VERSION,
+		artifacts: parsed.artifacts,
+		findings: parsed.findings,
+		questions: parsed.questions,
+		attempts: parsed.attempts,
+		decisions: Array.isArray(parsed.decisions) ? parsed.decisions : [],
+	} as PersistedDocument);
 }
 
 async function readDocument(path: string, projectId: string): Promise<PersistedDocument> {
@@ -178,7 +200,7 @@ async function writeDocument(path: string, document: PersistedDocument): Promise
 class FileLedgerCollection<T extends { readonly id: string }> implements LedgerCollection<T> {
 	constructor(
 		private readonly owner: FileInquiryStorage,
-		private readonly key: "artifacts" | "findings" | "questions" | "attempts",
+		private readonly key: "artifacts" | "findings" | "questions" | "attempts" | "decisions",
 	) {}
 
 	async get(id: string): Promise<T | undefined> {
@@ -193,7 +215,7 @@ class FileLedgerCollection<T extends { readonly id: string }> implements LedgerC
 	async put(record: T): Promise<void> {
 		await this.owner.update(
 			this.key,
-			record as unknown as ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord,
+			record as unknown as ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | DecisionRecord,
 		);
 	}
 }
@@ -209,6 +231,7 @@ export class FileInquiryStorage implements InquiryStorage {
 	readonly findings: FindingLedger;
 	readonly questions: QuestionLedger;
 	readonly attempts: AttemptLedger;
+	readonly decisions: DecisionLedger;
 
 	constructor(
 		readonly projectId: string,
@@ -220,6 +243,7 @@ export class FileInquiryStorage implements InquiryStorage {
 		this.findings = new FileLedgerCollection<FindingRecord>(this, "findings");
 		this.questions = new FileLedgerCollection<QuestionRecord>(this, "questions");
 		this.attempts = new FileLedgerCollection<AttemptRecord>(this, "attempts");
+		this.decisions = new FileLedgerCollection<DecisionRecord>(this, "decisions");
 	}
 
 	async snapshot(): Promise<InquirySnapshot> {
@@ -227,8 +251,8 @@ export class FileInquiryStorage implements InquiryStorage {
 	}
 
 	async update(
-		key: "artifacts" | "findings" | "questions" | "attempts",
-		record: ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord,
+		key: "artifacts" | "findings" | "questions" | "attempts" | "decisions",
+		record: ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | DecisionRecord,
 	): Promise<void> {
 		return enqueue(this.path, async () => {
 			const current = await readDocument(this.path, this.projectId);
@@ -246,13 +270,26 @@ export class FileInquiryStorage implements InquiryStorage {
 			} else if (key === "questions") {
 				if (
 					!record ||
-					(record as QuestionRecord).schemaVersion !== 1 ||
+					((record as QuestionRecord).schemaVersion !== INQUIRY_SCHEMA_VERSION &&
+						(record as QuestionRecord).schemaVersion !== LEGACY_INQUIRY_SCHEMA_VERSION) ||
 					(record as QuestionRecord).projectId !== this.projectId
 				)
 					throw new Error("Invalid question record");
+			} else if (key === "decisions") {
+				const decision = record as DecisionRecord;
+				if (
+					!decision ||
+					decision.schemaVersion !== INQUIRY_SCHEMA_VERSION ||
+					decision.projectId !== this.projectId ||
+					!decision.summary.trim() ||
+					!Array.isArray(decision.basis) ||
+					!Array.isArray(decision.affectedArtifactIds)
+				)
+					throw new Error("Invalid decision record");
 			} else if (
 				!record ||
-				(record as AttemptRecord).schemaVersion !== 1 ||
+				((record as AttemptRecord).schemaVersion !== INQUIRY_SCHEMA_VERSION &&
+					(record as AttemptRecord).schemaVersion !== LEGACY_INQUIRY_SCHEMA_VERSION) ||
 				(record as AttemptRecord).projectId !== this.projectId
 			) {
 				throw new Error("Invalid attempt record");
@@ -284,6 +321,7 @@ export class SqliteInquiryStorage implements InquiryStorage {
 	readonly findings: FindingLedger;
 	readonly questions: QuestionLedger;
 	readonly attempts: AttemptLedger;
+	readonly decisions: DecisionLedger;
 	private readonly database: DatabaseSync;
 	private closed = false;
 
@@ -302,7 +340,7 @@ export class SqliteInquiryStorage implements InquiryStorage {
 		this.database.exec(`
 			CREATE TABLE IF NOT EXISTS inquiry_meta (
 				project_id TEXT PRIMARY KEY NOT NULL,
-				schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+				schema_version INTEGER NOT NULL CHECK (schema_version = ${INQUIRY_SCHEMA_VERSION}),
 				revision INTEGER NOT NULL CHECK (revision >= 0),
 				updated_at TEXT NOT NULL
 			);
@@ -330,25 +368,63 @@ export class SqliteInquiryStorage implements InquiryStorage {
 				payload TEXT NOT NULL,
 				updated_at TEXT NOT NULL
 			);
+			CREATE TABLE IF NOT EXISTS decisions (
+				id TEXT PRIMARY KEY NOT NULL,
+				project_id TEXT NOT NULL,
+				payload TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
 		`);
-		const meta = this.database
+		let meta = this.database
 			.prepare("SELECT project_id, schema_version, revision, updated_at FROM inquiry_meta LIMIT 1")
 			.get() as SqliteMetaRow | undefined;
 		if (meta && meta.project_id !== projectId) {
 			this.database.close();
 			throw new Error("Inquiry SQLite ledger belongs to another project");
 		}
+		if (meta && meta.schema_version === LEGACY_INQUIRY_SCHEMA_VERSION) {
+			this.database.exec("BEGIN IMMEDIATE");
+			try {
+				this.database.exec("ALTER TABLE inquiry_meta RENAME TO inquiry_meta_v1");
+				this.database.exec(`
+					CREATE TABLE inquiry_meta (
+						project_id TEXT PRIMARY KEY NOT NULL,
+						schema_version INTEGER NOT NULL CHECK (schema_version = ${INQUIRY_SCHEMA_VERSION}),
+						revision INTEGER NOT NULL CHECK (revision >= 0),
+						updated_at TEXT NOT NULL
+					);
+				`);
+				this.database
+					.prepare(
+						"INSERT INTO inquiry_meta (project_id, schema_version, revision, updated_at) SELECT project_id, ?, revision, updated_at FROM inquiry_meta_v1",
+					)
+					.run(INQUIRY_SCHEMA_VERSION);
+				this.database.exec("DROP TABLE inquiry_meta_v1");
+				this.database.exec("COMMIT");
+				meta = this.database
+					.prepare("SELECT project_id, schema_version, revision, updated_at FROM inquiry_meta LIMIT 1")
+					.get() as SqliteMetaRow | undefined;
+			} catch (error) {
+				try {
+					this.database.exec("ROLLBACK");
+				} catch {
+					// Preserve the original migration error.
+				}
+				throw error;
+			}
+		}
 		if (!meta) {
 			this.database
 				.prepare(
-					"INSERT INTO inquiry_meta (project_id, schema_version, revision, updated_at) VALUES (?, 1, 0, ?)",
+					"INSERT INTO inquiry_meta (project_id, schema_version, revision, updated_at) VALUES (?, ?, 0, ?)",
 				)
-				.run(projectId, new Date(0).toISOString());
+				.run(projectId, INQUIRY_SCHEMA_VERSION, new Date(0).toISOString());
 		}
 		this.artifacts = new SqliteLedgerCollection<ArtifactRecord>(this, "artifacts");
 		this.findings = new SqliteLedgerCollection<FindingRecord>(this, "findings");
 		this.questions = new SqliteLedgerCollection<QuestionRecord>(this, "questions");
 		this.attempts = new SqliteLedgerCollection<AttemptRecord>(this, "attempts");
+		this.decisions = new SqliteLedgerCollection<DecisionRecord>(this, "decisions");
 	}
 
 	async snapshot(): Promise<InquirySnapshot> {
@@ -360,7 +436,7 @@ export class SqliteInquiryStorage implements InquiryStorage {
 		const meta = this.database
 			.prepare("SELECT project_id, schema_version, revision, updated_at FROM inquiry_meta LIMIT 1")
 			.get() as SqliteMetaRow | undefined;
-		if (!meta || meta.project_id !== this.projectId || meta.schema_version !== 1)
+		if (!meta || meta.project_id !== this.projectId || meta.schema_version !== INQUIRY_SCHEMA_VERSION)
 			throw new Error("Invalid inquiry SQLite metadata");
 		const read = <T extends LedgerRecord>(key: SqliteLedgerKey): readonly T[] =>
 			(
@@ -369,7 +445,7 @@ export class SqliteInquiryStorage implements InquiryStorage {
 					.all(this.projectId) as unknown as SqlitePayloadRow[]
 			).map((row) => JSON.parse(row.payload) as T);
 		return {
-			schemaVersion: 1,
+			schemaVersion: INQUIRY_SCHEMA_VERSION,
 			projectId: this.projectId,
 			revision: meta.revision,
 			updatedAt: meta.updated_at,
@@ -377,6 +453,7 @@ export class SqliteInquiryStorage implements InquiryStorage {
 			findings: read<FindingRecord>("findings"),
 			questions: read<QuestionRecord>("questions"),
 			attempts: read<AttemptRecord>("attempts"),
+			decisions: read<DecisionRecord>("decisions"),
 		};
 	}
 
@@ -409,7 +486,12 @@ export class SqliteInquiryStorage implements InquiryStorage {
 	}
 
 	private validateRecord(key: SqliteLedgerKey, record: LedgerRecord, current: InquirySnapshot): void {
-		if (!record.id || record.projectId !== this.projectId || record.schemaVersion !== 1)
+		if (
+			!record.id ||
+			record.projectId !== this.projectId ||
+			(record.schemaVersion !== INQUIRY_SCHEMA_VERSION &&
+				record.schemaVersion !== LEGACY_INQUIRY_SCHEMA_VERSION)
+		)
 			throw new Error(`Invalid ${key.slice(0, -1)} record`);
 		if (key === "artifacts") {
 			const errors = validateArtifactLineage(record as ArtifactRecord, current.artifacts);
@@ -418,6 +500,15 @@ export class SqliteInquiryStorage implements InquiryStorage {
 		if (key === "findings") {
 			const errors = validateFindingReferences(record as FindingRecord, current);
 			if (errors.length) throw new Error(`Invalid finding record: ${errors.join("; ")}`);
+		}
+		if (key === "decisions") {
+			const decision = record as DecisionRecord;
+			if (
+				!decision.summary.trim() ||
+				!Array.isArray(decision.basis) ||
+				!Array.isArray(decision.affectedArtifactIds)
+			)
+				throw new Error("Invalid decision record");
 		}
 	}
 
@@ -459,6 +550,7 @@ export class MemoryInquiryStorage implements InquiryStorage {
 	readonly findings: FindingLedger;
 	readonly questions: QuestionLedger;
 	readonly attempts: AttemptLedger;
+	readonly decisions: DecisionLedger;
 
 	constructor(
 		readonly projectId: string,
@@ -466,7 +558,7 @@ export class MemoryInquiryStorage implements InquiryStorage {
 	) {
 		if (!projectId.trim()) throw new Error("Inquiry projectId cannot be empty");
 		this.state = {
-			schemaVersion: 1,
+			schemaVersion: INQUIRY_SCHEMA_VERSION,
 			projectId,
 			revision: initial?.revision ?? 0,
 			updatedAt: initial?.updatedAt ?? new Date(0).toISOString(),
@@ -474,11 +566,13 @@ export class MemoryInquiryStorage implements InquiryStorage {
 			findings: sortRecords(initial?.findings ?? []),
 			questions: sortRecords(initial?.questions ?? []),
 			attempts: sortRecords(initial?.attempts ?? []),
+			decisions: sortRecords(initial?.decisions ?? []),
 		};
 		this.artifacts = new MemoryLedgerCollection(this, "artifacts");
 		this.findings = new MemoryLedgerCollection(this, "findings");
 		this.questions = new MemoryLedgerCollection(this, "questions");
 		this.attempts = new MemoryLedgerCollection(this, "attempts");
+		this.decisions = new MemoryLedgerCollection(this, "decisions");
 	}
 
 	async snapshot(): Promise<InquirySnapshot> {
@@ -486,8 +580,8 @@ export class MemoryInquiryStorage implements InquiryStorage {
 	}
 
 	async update(
-		key: "artifacts" | "findings" | "questions" | "attempts",
-		record: ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord,
+		key: "artifacts" | "findings" | "questions" | "attempts" | "decisions",
+		record: ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | DecisionRecord,
 	): Promise<void> {
 		if (key === "artifacts") {
 			const artifact = record as ArtifactRecord;
@@ -500,6 +594,17 @@ export class MemoryInquiryStorage implements InquiryStorage {
 		if (key === "findings") {
 			const errors = validateFindingReferences(record as FindingRecord, this.state);
 			if (errors.length) throw new Error(`Invalid finding record: ${errors.join("; ")}`);
+		}
+		if (key === "decisions") {
+			const decision = record as DecisionRecord;
+			if (
+				decision.schemaVersion !== INQUIRY_SCHEMA_VERSION ||
+				decision.projectId !== this.projectId ||
+				!decision.summary.trim() ||
+				!Array.isArray(decision.basis) ||
+				!Array.isArray(decision.affectedArtifactIds)
+			)
+				throw new Error("Invalid decision record");
 		}
 		const values = [...this.state[key]] as Array<typeof record>;
 		const index = values.findIndex((item) => item.id === record.id);
@@ -517,7 +622,7 @@ export class MemoryInquiryStorage implements InquiryStorage {
 class MemoryLedgerCollection<T extends { readonly id: string }> implements LedgerCollection<T> {
 	constructor(
 		private readonly owner: MemoryInquiryStorage,
-		private readonly key: "artifacts" | "findings" | "questions" | "attempts",
+		private readonly key: "artifacts" | "findings" | "questions" | "attempts" | "decisions",
 	) {}
 	async get(id: string): Promise<T | undefined> {
 		return (await this.list()).find((record) => record.id === id);
@@ -529,7 +634,7 @@ class MemoryLedgerCollection<T extends { readonly id: string }> implements Ledge
 	async put(record: T): Promise<void> {
 		await this.owner.update(
 			this.key,
-			record as unknown as ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord,
+			record as unknown as ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord | DecisionRecord,
 		);
 	}
 }
