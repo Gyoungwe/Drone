@@ -195,6 +195,17 @@ describe("水位口径（窗口分母陷阱，plan §7-5）", () => {
 });
 
 describe("决策生命周期", () => {
+	it("session_shutdown invalidates queued work from the replaced session", async () => {
+		const batches: EvapBatchInfo[] = [];
+		const pi = await wire({ enabled: true, reporter: (_sessionId, batch) => batches.push(batch) });
+		const oldCtx = makeFakeCtx();
+		await pi.emit({ type: "session_start", reason: "new" }, oldCtx);
+		const pending = pi.emit({ type: "context", messages: makeWire() }, oldCtx);
+		await pi.emit({ type: "session_shutdown" }, oldCtx);
+		expect(await pending).toBeUndefined();
+		expect(batches).toHaveLength(0);
+	});
+
 	it("session_compact 重置决策：重置后同水位不再带旧 stub（Tier 0 放行验证 Map 已清）", async () => {
 		const pi = await wire({ enabled: true });
 		await pi.emit({ type: "session_start", reason: "new" }, makeFakeCtx());

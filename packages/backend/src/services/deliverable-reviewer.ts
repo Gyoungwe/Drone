@@ -52,6 +52,7 @@ export class DeliverableReviewerService {
 	private readonly calls = new Map<string, Map<string, Record<string, unknown>>>();
 	private readonly receipts = new Map<string, Map<string, ReviewReadReceipt>>();
 	private disposed = false;
+	private readonly generations = new Map<string, number>();
 
 	constructor(private readonly options: ReviewerHostOptions) {
 		this.reviewer = new BackgroundReviewer({
@@ -108,13 +109,15 @@ export class DeliverableReviewerService {
 		trigger: BackgroundReviewRequest["trigger"];
 	}): void {
 		this.options.onSchedule?.(request);
+		const generation = this.generations.get(request.sessionId) ?? 0;
+		const current = () => !this.disposed && generation === (this.generations.get(request.sessionId) ?? 0);
 		// File I/O and ledger projection are deferred along with the review.
 		setTimeout(() => {
-			if (this.disposed) return;
+			if (!current()) return;
 			const snapshot = this.record(request.snapshot) as DeliverableReviewSnapshot;
 			void this.snapshot(request.sessionId, snapshot)
 				.then((prepared) => {
-					if (!this.disposed)
+					if (current())
 						this.reviewer.schedule({
 							...request,
 							mainProvider: this.options.getMainProvider?.(request.sessionId),
@@ -132,6 +135,7 @@ export class DeliverableReviewerService {
 		return this.reviewer.getCached(sessionId, this.record(snapshot) as DeliverableReviewSnapshot);
 	}
 	clearSession(sessionId: string): void {
+		this.generations.set(sessionId, (this.generations.get(sessionId) ?? 0) + 1);
 		this.calls.delete(sessionId);
 		this.receipts.delete(sessionId);
 		this.reviewer.clearSession(sessionId);

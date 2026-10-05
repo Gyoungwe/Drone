@@ -129,7 +129,7 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-HOZCVMSX.mjs";
+} from "./chunks/chunk-VESKWNFJ.mjs";
 import {
   beginKnowledgeFlow,
   clearKnowledgeFlow,

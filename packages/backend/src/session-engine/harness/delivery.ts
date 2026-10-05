@@ -58,7 +58,24 @@ export function makeHarnessDeliveryExtension(
 		name: "harness-delivery",
 		factory: (pi) => {
 			let last = "";
+			let activeSessionId = "";
+			let shutDown = false;
+			const sessionId = (ctx: ExtensionContext): string | undefined => {
+				try {
+					const id = ctx.sessionManager.getSessionId();
+					if (!activeSessionId && !shutDown) activeSessionId = id;
+					return id === activeSessionId ? id : undefined;
+				} catch {
+					return undefined;
+				}
+			};
 			const restore = (_event: unknown, ctx: ExtensionContext) => {
+				try {
+					shutDown = false;
+					activeSessionId = ctx.sessionManager.getSessionId();
+				} catch {
+					return;
+				}
 				last = "";
 				for (const entry of ctx.sessionManager.getBranch()) {
 					if (entry.type === "custom" && entry.customType === DELIVERY_TYPE) {
@@ -69,7 +86,14 @@ export function makeHarnessDeliveryExtension(
 			};
 			pi.on("session_start", restore);
 			pi.on("session_tree", restore);
+			pi.on("session_shutdown", () => {
+				shutDown = true;
+				activeSessionId = "";
+				last = "";
+			});
 			pi.on("agent_before_settle", (_event, ctx) => {
+				const id = sessionId(ctx);
+				if (!id) return;
 				try {
 					const view = taskViewFromBranch(ctx.sessionManager.getBranch());
 					if (!view) return;
@@ -79,16 +103,16 @@ export function makeHarnessDeliveryExtension(
 					last = fingerprint;
 					const data = { ...status, message: renderDeliveryStatus(status) };
 					pi.appendEntry(DELIVERY_TYPE, { fingerprint, status });
-					options.report?.(ctx.sessionManager.getSessionId(), "harness_delivery", data);
+					options.report?.(id, "harness_delivery", data);
 					if (!status.complete) {
-						options.recordUnit?.(ctx.sessionManager.getSessionId(), "delivery", "gap");
+						options.recordUnit?.(id, "delivery", "gap");
 					}
 					const completedMilestones =
 						view.tasks
 							.find((task) => task.id === view.activeTaskId)
 							?.milestones.filter((milestone) => milestone.state === "completed") ?? [];
 					if (completedMilestones.length)
-						options.review?.(ctx.sessionManager.getSessionId(), {
+						options.review?.(id, {
 							enabled: true,
 							body: "",
 							milestoneId: status.taskId,

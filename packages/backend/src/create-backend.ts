@@ -27,6 +27,7 @@ import {
 } from "./discovery/service";
 import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
+import { canonicalProjectId } from "./project-id";
 import { createDroneRuntime } from "./runtime";
 import type { ApprovalService } from "./services/approvals";
 import { type ComputeExecutor, ComputeService, type ComputeServicePort } from "./services/compute";
@@ -189,6 +190,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	projectsDir?: string;
 	/** Stable project identity for the inquiry ledger. */
 	inquiryProjectId?: string;
+	/** Existing v0.19.0 ledger mounted read-only while project ledgers are enabled. */
+	legacyInquiryDir?: string;
 	/** Project root used by the discovery kernel and run-file boundary. */
 	discoveryProjectRoot?: string;
 	/** Stable project identity for discovery records. */
@@ -205,6 +208,9 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
 	const sessions = new SessionService({ ...options, runtime, permissions, inquiryDir: options.inquiryDir });
+	const defaultProjectId = canonicalProjectId(
+		options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
+	);
 	const inquiry = new InquiryService({
 		inquiryDir: options.inquiryDir,
 		projectsDir:
@@ -213,10 +219,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				? join(options.userDataDir, "inquiry-projects")
 				: undefined),
 		storageRegistry: sessions.storage,
-		projectId: options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
+		projectId: defaultProjectId,
+		legacyInquiryDir: options.legacyInquiryDir,
 	});
 	const discovery = new DiscoveryService({
-		projectId: options.discoveryProjectId ?? options.inquiryProjectId ?? options.defaultCwd ?? "default",
+		projectId: canonicalProjectId(options.discoveryProjectId ?? "default"),
 		projectRoot: options.discoveryProjectRoot ?? options.defaultCwd ?? process.cwd(),
 		agentDir: options.discoveryAgentDir ?? join(getAgentDir(), "discovery"),
 		storage: sessions.getStorageRegistry(),
@@ -270,11 +277,13 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					.then((job) =>
 						handler({
 							...event,
-							projectId: options.inquiryProjectId ?? options.defaultCwd,
+							projectId: canonicalProjectId(
+								job?.spec.workDir ?? options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
+							),
 							...(job ? computeInquiryMetadata(job) : {}),
 						}),
 					)
-					.catch(() => handler({ ...event, projectId: options.inquiryProjectId ?? options.defaultCwd }));
+					.catch(() => handler({ ...event, projectId: defaultProjectId }));
 			}),
 		onTaskTerminal: (handler) =>
 			sessions.onEvent((sessionId, event) => {
@@ -285,7 +294,12 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					taskId: sessionId,
 					status: value.willRetry ? "partial" : "succeeded",
 					at: Date.now(),
-					projectId: options.inquiryProjectId ?? options.defaultCwd ?? sessionId,
+					projectId: canonicalProjectId(
+						sessions.registry.get(sessionId)?.cwd ??
+							options.inquiryProjectId ??
+							options.defaultCwd ??
+							process.cwd(),
+					),
 					sessionId,
 				});
 			}),

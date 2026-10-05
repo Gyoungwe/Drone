@@ -6,10 +6,10 @@ import type {
 } from "../inquiry";
 import { defineDomain } from "./define";
 
-const ArtifactIdArgs = Type.Tuple([
-	Type.String({ minLength: 1, maxLength: 512, pattern: "^[^\\u0000-\\u001f\\u007f]+$" }),
-]);
-const EmptyArgs = Type.Tuple([]);
+const ProjectId = Type.Union([Type.String({ minLength: 1, maxLength: 4096 }), Type.Undefined()]);
+const ArtifactId = Type.String({ minLength: 1, maxLength: 512, pattern: "^[^\\u0000-\\u001f\\u007f]+$" });
+const ArtifactIdArgs = Type.Union([Type.Tuple([ArtifactId]), Type.Tuple([ArtifactId, ProjectId])]);
+const ProjectArgs = Type.Union([Type.Tuple([]), Type.Tuple([ProjectId])]);
 const ObjectResult = <T>() => Type.Unsafe<T>({ type: "object" });
 const ArrayResult = <T>() => Type.Array(ObjectResult<T>(), { maxItems: 256 });
 const UiErrorSchema = Type.Object(
@@ -27,7 +27,7 @@ const UiErrorSchema = Type.Object(
 
 export const InquiryContract = defineDomain("inquiry", {
 	methods: {
-		listArtifacts: { args: EmptyArgs, result: ArrayResult<InquiryArtifactRecord>(), access: "lan-read" },
+		listArtifacts: { args: ProjectArgs, result: ArrayResult<InquiryArtifactRecord>(), access: "lan-read" },
 		artifactProvenance: {
 			args: ArtifactIdArgs,
 			result: Type.Union([ObjectResult<InquiryArtifactProvenance>(), UiErrorSchema]),

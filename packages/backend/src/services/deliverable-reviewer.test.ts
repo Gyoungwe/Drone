@@ -21,6 +21,17 @@ function toolEvent(type: "tool_execution_start" | "tool_execution_end", toolName
 }
 
 describe("DeliverableReviewerService", () => {
+	it("cancels a deferred review when its session is replaced", async () => {
+		const getCwd = vi.fn(() => undefined);
+		const onResult = vi.fn();
+		const service = new DeliverableReviewerService({ getCwd, onResult });
+		service.schedule({ sessionId: "old", snapshot: { body: "old" }, trigger: "publication-projection" });
+		service.clearSession("old");
+		await waitForReview();
+		expect(getCwd).not.toHaveBeenCalled();
+		expect(onResult).not.toHaveBeenCalled();
+		service.dispose();
+	});
 	it("只对白名单写入工具触发，归档/下载类工具不触发", () => {
 		const scheduled: unknown[] = [];
 		const service = new DeliverableReviewerService({

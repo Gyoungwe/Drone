@@ -42,7 +42,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 		setExpandedId(null);
 		setRerunResults({});
 		void getPi()
-			.listArtifacts()
+			.listArtifacts(cwd || undefined)
 			.then((records) => {
 				if (live) setLedgerArtifacts(records.filter((record) => record.purpose === "deliverable"));
 			})
@@ -52,7 +52,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 		return () => {
 			live = false;
 		};
-	}, [inquiryScope]);
+	}, [inquiryScope, cwd]);
 	useEffect(() => {
 		const unsubscribe = getPi().onRerunUpdated((result) => {
 			const key = rerunStatusKey(result.status);
@@ -74,13 +74,13 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 			});
 			if (result.status === "superseded") {
 				void getPi()
-					.listArtifacts()
+					.listArtifacts(cwd || undefined)
 					.then((records) => setLedgerArtifacts(records.filter((record) => record.purpose === "deliverable")))
 					.catch(() => {});
 			}
 		});
 		return unsubscribe;
-	}, []);
+	}, [cwd]);
 
 	const empty =
 		!flow &&
@@ -96,14 +96,14 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 		}
 		setExpandedId(record.id);
 		if (provenanceById[record.id]) return;
-		const result = await getPi().artifactProvenance(record.id);
+		const result = await getPi().artifactProvenance(record.id, cwd || undefined);
 		if ("reproducibility" in result) setProvenanceById((current) => ({ ...current, [record.id]: result }));
 	}
 
 	async function rerun(record: InquiryArtifactRecord): Promise<void> {
 		setRerunningId(record.id);
 		try {
-			const result = await getPi().rerunArtifact(record.id);
+			const result = await getPi().rerunArtifact(record.id, cwd || undefined);
 			setRerunResults((current) => ({
 				...current,
 				[record.id]:

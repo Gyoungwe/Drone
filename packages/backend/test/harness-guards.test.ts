@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	createHarnessGuardState,
 	makeHarnessGuardExtension,
@@ -67,5 +67,23 @@ describe("harness loop guard", () => {
 			{ sessionId: "session-1", unit: "guard", action: "blocked-call" },
 		]);
 		expect(JSON.stringify(records)).not.toContain("private-tool-argument");
+	});
+
+	it("drops old-session failures after replacement instead of persisting through stale ctx", async () => {
+		const handlers = new Map<string, (...args: any[]) => any>();
+		const appendEntry = vi.fn();
+		const pi = {
+			on(name: string, handler: (...args: any[]) => any) {
+				handlers.set(name, handler);
+			},
+			appendEntry,
+		};
+		const extension = makeHarnessGuardExtension();
+		(await (extension as any).factory(pi)) as unknown;
+		const oldContext = { sessionManager: { getSessionId: () => "old", getBranch: () => [] } };
+		await handlers.get("session_start")?.({}, oldContext);
+		await handlers.get("session_shutdown")?.({}, oldContext);
+		await handlers.get("tool_result")?.({ isError: true, toolName: "bash", content: "exit 1" }, oldContext);
+		expect(appendEntry).not.toHaveBeenCalled();
 	});
 });

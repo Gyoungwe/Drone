@@ -814,7 +814,7 @@ export const en: Messages = {
 			"While a task is running, shows an enlarged status animation at the center of the conversation area (above the text, with a translucent scrim dimming whatever is behind it). Only controls the centered animation — the small orb before the Working/Thinking row always stays.",
 		lan: {
 			title: "LAN Observer",
-			hint: "View live agent progress from your phone on a trusted local network. Off by default; the access token rotates every time it is enabled.",
+			hint: "View live agent progress from your phone on a trusted local network. The observer page is read-only. Off by default; the access token rotates every time it is enabled.",
 			port: "Listening port: {port}",
 			clients: "{count} connected device(s)",
 			copy: "Copy",

@@ -68,11 +68,30 @@ export function makeHarnessGuardExtension(
 		name: "harness-guard",
 		factory: (pi) => {
 			let state = createHarnessGuardState();
+			let activeSessionId = "";
+			let shutDown = false;
+			const sessionId = (ctx: ExtensionContext): string | undefined => {
+				try {
+					const id = ctx.sessionManager.getSessionId();
+					if (!activeSessionId && !shutDown) activeSessionId = id;
+					return id === activeSessionId ? id : undefined;
+				} catch {
+					return undefined;
+				}
+			};
 			const persist = (ctx: ExtensionContext) => {
+				const id = sessionId(ctx);
+				if (!id) return;
 				pi.appendEntry(HARNESS_GUARD_CUSTOM_TYPE, state);
-				options.report?.(ctx.sessionManager.getSessionId(), "harness_guard", state);
+				options.report?.(id, "harness_guard", state);
 			};
 			const restore = (_event: unknown, ctx: ExtensionContext) => {
+				try {
+					shutDown = false;
+					activeSessionId = ctx.sessionManager.getSessionId();
+				} catch {
+					return;
+				}
 				const saved = latestCustom(ctx.sessionManager.getBranch(), HARNESS_GUARD_CUSTOM_TYPE)?.data as
 					| Partial<HarnessGuardState>
 					| undefined;
@@ -99,8 +118,14 @@ export function makeHarnessGuardExtension(
 			};
 			pi.on("session_start", restore);
 			pi.on("session_tree", restore);
+			pi.on("session_shutdown", () => {
+				shutDown = true;
+				activeSessionId = "";
+				state = createHarnessGuardState();
+			});
 			// A fresh user turn can choose a new approach. The previous stop remains in the trace.
 			pi.on("before_agent_start", (_event, ctx) => {
+				if (!sessionId(ctx)) return;
 				try {
 					state = createHarnessGuardState();
 					persist(ctx);
@@ -109,6 +134,8 @@ export function makeHarnessGuardExtension(
 				}
 			});
 			pi.on("tool_result", (event, ctx) => {
+				const id = sessionId(ctx);
+				if (!id) return;
 				try {
 					const details = event.details as { exitCode?: unknown; status?: unknown } | undefined;
 					const failed =
@@ -129,7 +156,7 @@ export function makeHarnessGuardExtension(
 							: undefined,
 					);
 					if (next.blocked && !state.blocked) {
-						options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "block");
+						options.recordUnit?.(id, "guard", "block");
 					}
 					if (JSON.stringify(next) !== JSON.stringify(state)) {
 						state = next;
@@ -145,11 +172,13 @@ export function makeHarnessGuardExtension(
 					: renderHarnessRedirect(state.tool, state.redirects, state.reason);
 			pi.on("context", (event, ctx) => {
 				if (!state.pending) return;
+				const id = sessionId(ctx);
+				if (!id) return;
 				try {
 					state = { ...state, pending: false };
 					persist(ctx);
 					if (!state.blocked) {
-						options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "redirect");
+						options.recordUnit?.(id, "guard", "redirect");
 					}
 					return {
 						messages: [
@@ -170,18 +199,22 @@ export function makeHarnessGuardExtension(
 			});
 			pi.on("tool_call", (event, ctx) => {
 				if (!state.blocked || ["task_status", "harness_recall"].includes(event.toolName)) return undefined;
-				options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "blocked-call");
+				const id = sessionId(ctx);
+				if (!id) return undefined;
+				options.recordUnit?.(id, "guard", "blocked-call");
 				return { block: true, terminate: true, reason: content() };
 			});
 			pi.on("agent_before_settle", (event, ctx) => {
 				if (!state.pending || event.outcome !== "completed" || !event.context.canContinue) return;
+				const id = sessionId(ctx);
+				if (!id) return;
 				try {
 					const message = content();
 					const blocked = state.blocked;
 					state = { ...state, pending: false };
 					persist(ctx);
 					if (!blocked) {
-						options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "redirect");
+						options.recordUnit?.(id, "guard", "redirect");
 					}
 					return {
 						entries: [

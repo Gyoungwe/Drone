@@ -21,7 +21,7 @@ import { restoreTaskToolOrder } from "./tool-protocol.mjs";
 import { shouldAskToContinue } from "./turn-end-prompt.mjs";
 import { clean, createTaskWorkbench, inspectTaskFile, WORKBENCH_ENTRY } from "./workbench.mjs";
 function registerWorkbench(pi, options = {}) {
-  let context, prepared = false, awaitingUser = false, halted = false;
+  let context, activeSessionId, prepared = false, awaitingUser = false, halted = false;
   let pendingStatus = null;
   let providerTurnOpen = false;
   const authorize = async (cwd, path) => {
@@ -91,6 +91,7 @@ function registerWorkbench(pi, options = {}) {
   });
   const attach = (ctx, force = false) => {
     context = ctx;
+    activeSessionId = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || void 0;
     const scope = createHash("sha256").update(`${ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated"}\0${resolve(ctx.cwd)}`).digest("hex");
     journal.attach(scope, ctx.sessionManager?.getBranch?.() || [], force);
     evidence.attach(scope, journal.snapshot()?.id, ctx.sessionManager?.getBranch?.() || [], force);
@@ -178,7 +179,11 @@ function registerWorkbench(pi, options = {}) {
     };
     handoffTimer = setTimeout(() => void handoff().catch(cancelHandoff), 0);
   };
-  pi.on("session_shutdown", cancelHandoff);
+  pi.on("session_shutdown", () => {
+    cancelHandoff();
+    activeSessionId = void 0;
+    context = void 0;
+  });
   pi.events?.on?.("drone:task-write-consent", (request) => {
     if (context && request.cwd === context.cwd && request.sessionId === context.sessionManager?.getSessionId?.())
       request.respond?.(journal.authorization(true));
@@ -317,9 +322,13 @@ Host observations only. For substantial execution, first do read-only preparatio
     }
   });
   pi.events?.on?.("drone:context-evicted", (event) => {
-    if (event.sessionId === context?.sessionManager?.getSessionId?.()) evidence.evict(event.toolCallIds);
+    if (event.sessionId === activeSessionId) evidence.evict(event.toolCallIds);
   });
   pi.on("agent_end", async (event, ctx) => {
+    const turnContext = context;
+    const turnSessionId = activeSessionId;
+    if (!turnContext || !turnSessionId || turnSessionId !== (ctx?.sessionManager?.getSessionId?.() || ctx?.sessionId))
+      return;
     const last = [...event.messages || []].reverse().find((m) => m.role === "assistant");
     providerTurnOpen = false;
     const held = pendingStatus;
@@ -334,24 +343,27 @@ Host observations only. For substantial execution, first do read-only preparatio
     journal.settle();
     if (journal.authorization()) {
       try {
-        await journal.reconcile(context.cwd);
+        await journal.reconcile(turnContext.cwd);
       } catch {
       }
       if (last?.knowledgePublication?.status === "blocked" && last.stopReason !== "error" && journal.reserveContinuation(last.knowledgePublication.reason)) {
         send("\u521A\u624D\u505C\u4E86\u4E00\u4E0B\uFF0C\u6B63\u5728\u6309\u4F60\u4E4B\u524D\u7684\u6388\u6743\u63A5\u7740\u505A\uFF1A\u5148\u6838\u5BF9\u5DF2\u6709\u7ED3\u679C\uFF0C\u518D\u7EE7\u7EED\u5269\u4E0B\u7684\u90E8\u5206\uFF0C\u4E0D\u7528\u4F60\u518D\u786E\u8BA4\u3002");
-        continueAuthorized(context);
+        if (activeSessionId !== turnSessionId || context !== turnContext) return;
+        continueAuthorized(turnContext);
         return;
       }
       if (last?.stopReason !== "error" && !ctx?.signal?.aborted && journal.reserveHandoff()) {
         send();
-        continueAuthorized(context);
+        if (activeSessionId !== turnSessionId || context !== turnContext) return;
+        continueAuthorized(turnContext);
         return;
       }
       const snapshot = journal.snapshot();
       if (last?.stopReason !== "error" && !ctx?.signal?.aborted && shouldAskToContinue(snapshot ? journal.view().tasks.find((t) => t.id === snapshot.id) : null)) {
         send();
         try {
-          await progressTask({ taskId: snapshot.id, revision: journal.view().revision }, context);
+          if (activeSessionId !== turnSessionId || context !== turnContext) return;
+          await progressTask({ taskId: snapshot.id, revision: journal.view().revision }, turnContext);
         } catch {
         }
         return;

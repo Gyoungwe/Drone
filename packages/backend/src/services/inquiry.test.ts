@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { createDefaultStorageRegistry } from "../storage/registry";
 import type { InquiryComputeEvent, InquiryTaskTerminalEvent } from "./inquiry";
 import { InquiryService } from "./inquiry";
 
@@ -188,6 +189,52 @@ describe("backend inquiry composition adapter", () => {
 			await service.revokeDecision(projectADecision.id, "Review");
 			expect(projectBDecision.status).toBe("active");
 			service.dispose();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("canonicalizes /tmp and /private/tmp workspace identities in project mode", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-canonical-"));
+		const workspace = await mkdtemp(join(tmpdir(), "drone-backend-workspace-"));
+		try {
+			const service = new InquiryService({ projectsDir: root, projectId: workspace });
+			await service.recordDecision({
+				id: "subagent-dispatch-1",
+				kind: "subagent-dispatch",
+				summary: "Dispatched a subagent",
+				projectId: workspace,
+			});
+			const alias = workspace.replace(/^\/tmp/, "/private/tmp");
+			expect(await service.listDecisions(alias)).toHaveLength(1);
+			service.dispose();
+		} finally {
+			await rm(workspace, { recursive: true, force: true });
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("mounts a legacy desktop ledger without opening or rewriting it", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-legacy-"));
+		const legacy = join(root, "inquiry");
+		const registry = createDefaultStorageRegistry({
+			agentDir: join(root, "agent"),
+			legacyInquiryDir: legacy,
+		});
+		const ledger = join(legacy, "ledger.sqlite");
+		try {
+			const old = new InquiryService({ inquiryDir: legacy, projectId: "desktop" });
+			await old.recordDecision({
+				id: "legacy-1",
+				kind: "workflow-repair",
+				summary: "Legacy decision",
+				projectId: "desktop",
+			});
+			old.dispose();
+			const before = await import("node:fs/promises").then(({ readFile }) => readFile(ledger));
+			expect(registry.get("inquiry-legacy-ledger")).toMatchObject({ schema: "preserve", path: ledger });
+			const after = await import("node:fs/promises").then(({ readFile }) => readFile(ledger));
+			expect(after.equals(before)).toBe(true);
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}

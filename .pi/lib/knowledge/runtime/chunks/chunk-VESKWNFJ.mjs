@@ -246,9 +246,13 @@ ${String(footer).slice(0, 2e3)}` }] : [];
   const handleMessageEnd = async (event, ctx) => {
     const message = event.message;
     if (message.role !== "assistant") return;
+    const sessionId = sessionIdFor(ctx);
+    const cwd = ctx?.cwd;
+    const signal = ctx?.signal;
+    const flowCtx = { sessionId };
     const report = (message2) => {
       if (message2[FIELD]?.status !== "tool-only" && message2[FIELD]?.reason !== "model-error")
-        publicationKnowledgeFlow(ctx, message2[FIELD]);
+        publicationKnowledgeFlow(flowCtx, message2[FIELD]);
       return { message: message2 };
     };
     const blocks = Array.isArray(message.content) ? message.content : [];
@@ -287,7 +291,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
           scientificallyVerified: false
         })
       );
-    if (["aborted", "length", "pending"].includes(message.stopReason) || ctx.signal?.aborted || isUserAbortError(message))
+    if (["aborted", "length", "pending"].includes(message.stopReason) || signal?.aborted || isUserAbortError(message))
       return report(failure(message, { code: "interrupted" }));
     const content = blocks.filter((b) => b.type === "text");
     if (!evidenceOnly) getTaskRuntime?.()?.takeReport();
@@ -344,15 +348,17 @@ ${String(footer).slice(0, 2e3)}` }] : [];
     const text = content.map((b) => b.text).join("\n");
     if (Buffer.byteLength(text, "utf8") > 128 * 1024)
       return report(blocked(message, "answer-too-large", turnId));
-    updateKnowledgeFlow(ctx, { phase: "checking" });
+    updateKnowledgeFlow(flowCtx, { phase: "checking" });
+    let currentTurn;
     try {
       const c = getCurrent(ctx);
+      currentTurn = c;
       if (!c) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
       let publishText = text;
       let publishContent = content;
       const attachMaterializedCitations = async (refresh = false) => {
         if (typeof c.service.materializeCitations !== "function") return;
-        const paths = await c.service.materializeCitations(c.ticket, ctx.cwd, c.query, { refresh });
+        const paths = await c.service.materializeCitations(c.ticket, cwd, c.query, { refresh });
         if (!paths.length || /\[\[[^\]]+\]\]/.test(publishText)) return;
         const suffix = `
 
@@ -366,7 +372,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
         let timer;
         try {
           return await Promise.race([
-            c.service.validateAnswer(c.ticket, ctx.cwd, publishText, {
+            c.service.validateAnswer(c.ticket, cwd, publishText, {
               deliveries: [...deliveries.values()]
             }),
             new Promise((_, reject) => {
@@ -390,8 +396,8 @@ ${String(footer).slice(0, 2e3)}` }] : [];
         await attachMaterializedCitations(true);
         proof = await validateWithTimeout();
       }
-      if (ctx.signal?.aborted) return report(failure(message, { code: "interrupted" }));
-      const metacognitive = await evaluateMetacognition(ctx, c, publishText);
+      if (signal?.aborted) return report(failure(message, { code: "interrupted" }));
+      const metacognitive = await evaluateMetacognition(flowCtx, c, publishText);
       const warnings = [
         ...Array.isArray(proof.warnings) ? proof.warnings : [],
         ...(metacognitive?.warnings || []).map((warning) => ({ code: warning.code, message: warning.detail }))
@@ -399,16 +405,16 @@ ${String(footer).slice(0, 2e3)}` }] : [];
       let reviewerWarnings = [];
       if (reviewer && typeof getMetacognition === "function") {
         try {
-          const reviewSnapshot = await getMetacognition(ctx, c);
+          const reviewSnapshot = await getMetacognition(flowCtx, c);
           if (reviewSnapshot && typeof reviewSnapshot === "object") {
             const snapshot = { ...reviewSnapshot, body: publishText };
-            const cached = reviewer.getCached?.(sessionIdFor(ctx), snapshot);
-            const prior = reviewer.getFindings?.(sessionIdFor(ctx));
+            const cached = reviewer.getCached?.(sessionId, snapshot);
+            const prior = reviewer.getFindings?.(sessionId);
             reviewerWarnings = [
               ...Array.isArray(cached?.findings) ? cached.findings : [],
               ...Array.isArray(prior) ? prior : []
             ].filter((finding, index, all) => finding.severity === "high" && !finding.handled && all.findIndex((item) => item.id === finding.id) === index);
-            scheduleReview(ctx, snapshot, "publication-projection");
+            scheduleReview(flowCtx, snapshot, "publication-projection");
           }
         } catch {
         }
@@ -420,7 +426,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
         },
         ...publishContent
       ] : publishContent;
-      const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(ctx) : null;
+      const footer = typeof getDeliveryFooter === "function" ? getDeliveryFooter(flowCtx) : null;
       const visible = footer ? [...published, { type: "text", text: `
 
 ${String(footer).slice(0, 2e3)}` }] : published;
@@ -436,10 +442,11 @@ ${String(footer).slice(0, 2e3)}` }] : published;
       );
     } catch (error) {
       const info = knowledgeFailure(error);
-      if (await readReviewMode() === "automatic" && advisoryCodes.has(info.code) && !ctx.signal?.aborted) {
+      if (await readReviewMode() === "automatic" && advisoryCodes.has(info.code) && !signal?.aborted) {
         try {
-          const current = getCurrent(ctx);
-          await current.service.check(current.ticket, ctx.cwd);
+          const current = currentTurn;
+          if (!current) throw new Error("not prepared");
+          await current.service.check(current.ticket, cwd);
         } catch (authorityError) {
           return report(failure(message, authorityError));
         }
@@ -452,7 +459,7 @@ ${String(footer).slice(0, 2e3)}` }] : published;
             [
               ...content,
               ...advisoryContent,
-              ...advisoryFooter(ctx)
+              ...advisoryFooter(flowCtx)
             ],
             {
               status: "released",
@@ -473,12 +480,15 @@ ${String(footer).slice(0, 2e3)}` }] : published;
     attachRuntime,
     attachReviewer,
     async recordDelivery(ctx, path) {
+      const sessionId = sessionIdFor(ctx);
+      const cwd = ctx?.cwd;
+      const flowCtx = { sessionId };
       const c = getCurrent(ctx);
       if (!c) return;
-      const receipt = await c.service.deliveryReceipt(c.ticket, ctx.cwd, path);
+      const receipt = await c.service.deliveryReceipt(c.ticket, cwd, path);
       deliveries.set(receipt.path, receipt);
       scheduleReview(
-        ctx,
+        flowCtx,
         {
           enabled: true,
           deliverables: [{ id: receipt.path, path: receipt.path, sha256: receipt.hash }]
@@ -488,22 +498,25 @@ ${String(footer).slice(0, 2e3)}` }] : published;
       while (deliveries.size > 12) deliveries.delete(deliveries.keys().next().value);
     },
     async preflight(ctx, text) {
+      const sessionId = sessionIdFor(ctx);
+      const cwd = ctx?.cwd;
+      const flowCtx = { sessionId };
       let timer;
       try {
         if (typeof text !== "string" || Buffer.byteLength(text, "utf8") > 128 * 1024)
           throw { code: "answer-too-large" };
         const c = getCurrent(ctx), proof = await Promise.race([
-          c.service.validateAnswer(c.ticket, ctx.cwd, text, { deliveries: [...deliveries.values()] }),
+          c.service.validateAnswer(c.ticket, cwd, text, { deliveries: [...deliveries.values()] }),
           new Promise((_, reject) => {
             timer = setTimeout(() => reject({ code: "check-timeout" }), 5e3);
           })
         ]);
-        const metacognition = await evaluateMetacognition(ctx, c, text);
+        const metacognition = await evaluateMetacognition(flowCtx, c, text);
         if (reviewer && typeof getMetacognition === "function") {
           try {
-            const snapshot = await getMetacognition(ctx, c);
+            const snapshot = await getMetacognition(flowCtx, c);
             if (snapshot && typeof snapshot === "object")
-              scheduleReview(ctx, { ...snapshot, body: text }, "publication-projection");
+              scheduleReview(flowCtx, { ...snapshot, body: text }, "publication-projection");
           } catch {
           }
         }
@@ -513,7 +526,7 @@ ${String(footer).slice(0, 2e3)}` }] : published;
         if (await readReviewMode() === "automatic" && advisoryCodes.has(info.code)) {
           try {
             const current = getCurrent(ctx);
-            await current.service.check(current.ticket, ctx.cwd);
+            await current.service.check(current.ticket, cwd);
           } catch {
             return {
               ok: false,
