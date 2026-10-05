@@ -212,7 +212,7 @@ Harness 单元默认全部开启。`harnessContext: false` 仍是向后兼容的
 
 | 单元 | 开关名 | 删除条件 |
 |---|---|---|
-| context | `harness.context` | SDK compaction 能恢复目标、交付物和下一步后删除 |
+| context | `harness.context` | SDK compaction 能恢复目标、交付物和下一步后删除；`familyPrompt` 及 HARNESS/SCIENCE/RESPONSE 合同都由 context 单元注入，关闭 context 时一并失效 |
 | recall | `harness.recall` | 现有会话/任务索引能覆盖历史导航且评测集不再需要受控 recall 后删除 |
 | guard | `harness.guard` | Pi SDK 原生提供循环保护后删除 |
 | delivery | `harness.delivery` | 任务 acceptance 在 loop boundary 已能稳定阻止未完成交付声明后删除 |

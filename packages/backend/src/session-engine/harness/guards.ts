@@ -55,7 +55,7 @@ export function observeHarnessFailure(
 }
 export interface HarnessGuardExtensionOptions {
 	report?: (sessionId: string, kind: string, data: unknown) => void;
-	recordUnit?: (sessionId: string, unit: "guard", action: "redirect" | "block") => void;
+	recordUnit?: (sessionId: string, unit: "guard", action: "redirect" | "block" | "blocked-call") => void;
 }
 
 type HarnessGuardReporter = HarnessGuardExtensionOptions["report"];
@@ -128,6 +128,9 @@ export function makeHarnessGuardExtension(
 								}
 							: undefined,
 					);
+					if (next.blocked && !state.blocked) {
+						options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "block");
+					}
 					if (JSON.stringify(next) !== JSON.stringify(state)) {
 						state = next;
 						persist(ctx);
@@ -145,11 +148,9 @@ export function makeHarnessGuardExtension(
 				try {
 					state = { ...state, pending: false };
 					persist(ctx);
-					options.recordUnit?.(
-						ctx.sessionManager.getSessionId(),
-						"guard",
-						state.blocked ? "block" : "redirect",
-					);
+					if (!state.blocked) {
+						options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "redirect");
+					}
 					return {
 						messages: [
 							...event.messages,
@@ -169,7 +170,7 @@ export function makeHarnessGuardExtension(
 			});
 			pi.on("tool_call", (event, ctx) => {
 				if (!state.blocked || ["task_status", "harness_recall"].includes(event.toolName)) return undefined;
-				options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "block");
+				options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "blocked-call");
 				return { block: true, terminate: true, reason: content() };
 			});
 			pi.on("agent_before_settle", (event, ctx) => {
@@ -179,7 +180,9 @@ export function makeHarnessGuardExtension(
 					const blocked = state.blocked;
 					state = { ...state, pending: false };
 					persist(ctx);
-					options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", blocked ? "block" : "redirect");
+					if (!blocked) {
+						options.recordUnit?.(ctx.sessionManager.getSessionId(), "guard", "redirect");
+					}
 					return {
 						entries: [
 							{

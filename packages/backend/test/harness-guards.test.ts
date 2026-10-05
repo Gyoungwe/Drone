@@ -57,10 +57,14 @@ describe("harness loop guard", () => {
 		for (let i = 0; i < 3; i++) await handlers.get("tool_result")?.(failure, context);
 		await handlers.get("context")?.({ messages: [] }, context);
 		for (let i = 0; i < 3; i++) await handlers.get("tool_result")?.(failure, context);
+		await handlers.get("context")?.({ messages: [] }, context);
+		await handlers.get("tool_call")?.({ toolName: "bash", input: failure.input }, context);
 		await handlers.get("tool_call")?.({ toolName: "bash", input: failure.input }, context);
 		expect(records).toEqual([
 			{ sessionId: "session-1", unit: "guard", action: "redirect" },
 			{ sessionId: "session-1", unit: "guard", action: "block" },
+			{ sessionId: "session-1", unit: "guard", action: "blocked-call" },
+			{ sessionId: "session-1", unit: "guard", action: "blocked-call" },
 		]);
 		expect(JSON.stringify(records)).not.toContain("private-tool-argument");
 	});
