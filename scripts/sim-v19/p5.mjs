@@ -113,13 +113,25 @@ await runScenario("p5", async (page, result, step) => {
 		await page.waitForSelector('[data-testid="settings-dialog"] input[readonly]', 10_000);
 		const url = await page.eval('document.querySelector(\'[data-testid="settings-dialog"] input[readonly]\')?.value || null');
 		if (!url) return { ok: false, selectors: ['[data-testid="settings-dialog"] [role="switch"]', '[data-testid="settings-dialog"] input[readonly]'], tab, switchCount, url };
-		await page.send("Page.navigate", { url });
+		let navigated = false;
+		try {
+			await page.send("Page.navigate", { url });
+			navigated = true;
+		} catch {
+			// Electron's embedded CDP target can reject Page.navigate; use the same
+			// visible page location as the CDP-driven fallback and keep the DOM check.
+			navigated = await page.eval(`(() => { location.assign(${JSON.stringify(url)}); return true; })()`);
+		}
 		await sleep(1_000);
 		const dom = await page.eval("(() => { const writes=[...document.querySelectorAll('button,input,textarea,[contenteditable=\"true\"],[role=\"textbox\"]')].filter(n=>{ if(n.matches('input[readonly]')) return false; const text=(n.textContent||'')+' '+(n.getAttribute('aria-label')||'')+' '+(n.getAttribute('title')||''); return /发送|写|编辑|删除|保存|提交|send|write|edit|delete|save|submit/i.test(text) || n.matches('textarea,[contenteditable=\"true\"],[role=\"textbox\"]'); }); return {textarea:document.querySelectorAll('textarea').length,send:document.querySelectorAll('[data-testid=\"composer-send\"],button[aria-label=\"发送\"],button[aria-label=\"Send\"]').length,writeControls:writes.length,buttons:document.querySelectorAll('button').length,inputs:document.querySelectorAll('input').length,url:location.href}; })()");
-		await page.send("Page.navigate", { url: "http://localhost:5173/" });
+		try {
+			await page.send("Page.navigate", { url: "http://localhost:5173/" });
+		} catch {
+			await page.eval("(() => { location.assign('http://localhost:5173/'); return true; })()");
+		}
 		await sleep(1_000);
 		await page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
-		return { ok: Boolean(tab && dom.textarea === 0 && dom.send === 0 && dom.writeControls === 0), selectors: ['LAN page textarea', 'LAN page [data-testid="composer-send"]', 'LAN page button,input,[contenteditable]'], tab, dom };
+		return { ok: Boolean(tab && navigated && dom.textarea === 0 && dom.send === 0 && dom.writeControls === 0), selectors: ['LAN page textarea', 'LAN page [data-testid="composer-send"]', 'LAN page button,input,[contenteditable]'], tab, navigated, dom };
 	});
 
 	await step("responsive-light-dark-screens", async () => {

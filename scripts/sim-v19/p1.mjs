@@ -15,7 +15,9 @@ async function waitThroughTask(page, result, timeoutMs = 120_000) {
 		await sleep(500);
 	}
 	result.interactions.confirmations += handled.filter((item) => item === "permission" || item.startsWith("ask-user")).length;
-	result.interactions.postAuthorizationInterruptions += Math.max(0, handled.filter((item) => item.startsWith("ask-user")).length - 1);
+	// Any ask-user card is a follow-up interruption; the one expected card is
+	// the tool permission card and is counted separately above.
+	result.interactions.postAuthorizationInterruptions += handled.filter((item) => item.startsWith("ask-user")).length;
 	return { startedRun, settled: await page.waitForIdle(1_000), handled };
 }
 
@@ -61,8 +63,9 @@ await runScenario("p1", async (page, result, step) => {
 		const launched = await page.clickSelector('[data-testid="example-task-launch"]');
 		result.interactions.clicks += 1;
 		const run = await waitThroughTask(page, result, 90_000);
-		const authorizationCount = run.handled.filter((item) => item === "permission" || item.startsWith("ask-user")).length;
-		return { ok: Boolean(launched && authorizationCount >= 1), selectors: ['[data-testid="example-task-launch"]', '[data-testid="ask-simple"]', '[data-testid="permission-allow-run"]'], launched, handled: run.handled, authorizationCount };
+		const permissionCount = run.handled.filter((item) => item === "permission").length;
+		const askUserCount = run.handled.filter((item) => item.startsWith("ask-user")).length;
+		return { ok: Boolean(launched && run.startedRun && run.settled && permissionCount === 1 && askUserCount === 0), selectors: ['[data-testid="example-task-launch"]', '[data-testid="permission-allow-run"]', '[data-testid="ask-simple"]', '[data-testid="ask-dialog"]'], launched, startedRun: run.startedRun, settled: run.settled, handled: run.handled, permissionCount, askUserCount };
 	});
 
 	await step("run-to-completion-without-second-ask", async () => {
@@ -71,7 +74,7 @@ await runScenario("p1", async (page, result, step) => {
 		const dialogs = await page.eval("document.querySelectorAll('[data-testid=\"ask-simple\"],[data-testid=\"ask-dialog\"],[data-testid=\"permission-allow-run\"]').length");
 		const expectedFiles = ["search-log.md", "evidence-cards.md"].map((name) => ({ name, exists: existsSync(PROJECT + "/" + name) }));
 		const completedFiles = expectedFiles.filter((file) => file.exists).length;
-		return { ok: Boolean(settled && assistantReplies > 0 && dialogs === 0 && completedFiles === expectedFiles.length), selectors: ['[data-testid="composer-input"]', 'button[aria-label="停止"]', '.markdown-body', '[data-testid="ask-simple"]'], settled, assistantReplies, dialogs, expectedFiles };
+		return { ok: Boolean(settled && assistantReplies > 0 && dialogs === 0 && result.interactions.postAuthorizationInterruptions === 0 && completedFiles === expectedFiles.length), selectors: ['[data-testid="composer-input"]', 'button[aria-label="停止"]', '.markdown-body', '[data-testid="ask-simple"]', '[data-testid="ask-dialog"]'], settled, assistantReplies, dialogs, postAuthorizationInterruptions: result.interactions.postAuthorizationInterruptions, expectedFiles };
 	});
 
 	await step("bilingual-key-audit", async () => {

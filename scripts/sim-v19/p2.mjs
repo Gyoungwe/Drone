@@ -70,7 +70,7 @@ async function propose(page, result, label) {
 	return { filled, sent, startedRun, handled, settled: await page.waitForIdle(1_000) };
 }
 
-async function runMode(page, result, label, mode, priorTotal) {
+async function runMode(page, result, label, mode, priorTotal, decisionAction) {
 	await openKnowledge(page);
 	const modeSet = await page.setSelect('select[aria-label="知识审核模式"]', mode);
 	const modeValue = await page.eval('document.querySelector("select[aria-label=\\"知识审核模式\\"]")?.value || null');
@@ -78,18 +78,31 @@ async function runMode(page, result, label, mode, priorTotal) {
 	const proposal = await propose(page, result, label);
 	let state = await openReviews(page);
 	const started = Date.now();
-	while (Date.now() - started < 120_000 && !(state.total > priorTotal && state.pendingControls >= 2)) {
+	while (Date.now() - started < 120_000 && !(state.total > priorTotal && state.queueItems > 0)) {
 		await sleep(1_000);
 		state = await reviewState(page);
 	}
+	let selected = false;
+	if (state.total > priorTotal && state.queueItems > 0) {
+		selected = await page.clickSelector('[data-testid="wiki-review-panel"] aside button');
+		await page.waitForSelector('[data-testid="wiki-review-panel"] h3', 10_000);
+		state = await reviewState(page);
+	}
 	const afterHash = sha256();
-	const pendingEvidence = { totalBefore: priorTotal, totalAfter: state.total, queueItems: state.queueItems, pendingControls: state.pendingControls, selected: state.selected, beforeHash, afterHash, hashUnchanged: beforeHash === afterHash };
+	const pendingEvidence = { totalBefore: priorTotal, totalAfter: state.total, queueItems: state.queueItems, pendingControls: state.pendingControls, selected: state.selected, selectedClick: selected, beforeHash, afterHash, hashUnchanged: beforeHash === afterHash };
 	let decision = null;
 	if (state.total > priorTotal && state.queueItems > 0) {
-		const clicked = await page.clickRegexWithin('[data-testid="wiki-review-panel"]', "拒绝|reject");
-		decision = { action: "reject", clicked };
+		const pattern = decisionAction === "approve" ? "批准|应用|approve|apply" : "拒绝|reject";
+		if (decisionAction === "approve") {
+			const checked = await page.clickSelector('[data-testid="wiki-review-panel"] input[type="checkbox"]');
+			const clicked = await page.clickRegexWithin('[data-testid="wiki-review-panel"]', pattern);
+			decision = { action: decisionAction, checked, clicked };
+		} else {
+			const clicked = await page.clickRegexWithin('[data-testid="wiki-review-panel"]', pattern);
+			decision = { action: decisionAction, clicked };
+		}
 	}
-	return { modeSet, modeValue, proposal, review: pendingEvidence, decision, ok: modeSet?.value === mode && pendingEvidence.totalAfter > priorTotal && pendingEvidence.pendingControls >= 2 && pendingEvidence.hashUnchanged };
+	return { modeSet, modeValue, proposal, review: pendingEvidence, decision, ok: modeSet?.value === mode && pendingEvidence.totalAfter > priorTotal && pendingEvidence.pendingControls >= 2 && pendingEvidence.selected && pendingEvidence.hashUnchanged && Boolean(decision?.clicked) };
 }
 
 await runScenario("p2", async (page, result, step) => {
@@ -109,7 +122,7 @@ await runScenario("p2", async (page, result, step) => {
 	});
 	await step("automatic-wiki-pending-hash-and-zotero-degrade", async () => {
 		const state = await reviewState(page);
-		const run = await runMode(page, result, "automatic-v19", "automatic", state.total);
+		const run = await runMode(page, result, "automatic-v19", "automatic", state.total, "reject");
 		await page.clickText("设置", { exact: true });
 		const zoteroTab = await page.clickTextWithin('[data-testid="settings-dialog"]', "Zotero", { exact: true });
 		const zotero = await page.waitForSelector('[data-testid="zotero-panel"]', 10_000);
@@ -119,7 +132,7 @@ await runScenario("p2", async (page, result, step) => {
 	});
 	await step("manual-wiki-pending-hash-and-approval", async () => {
 		const state = await openReviews(page);
-		const run = await runMode(page, result, "manual-v19", "strict", state.total);
+		const run = await runMode(page, result, "manual-v19", "strict", state.total, "approve");
 		const hashBeforeDecision = run.review.beforeHash;
 		const hashAfterDecision = sha256();
 		return { ok: run.ok, selectors: ['select[aria-label="知识审核模式"]', '[data-testid="wiki-review-panel"] aside button', '[data-testid="wiki-review-panel"] input[type="checkbox"]'], run, hashBeforeDecision, hashAfterDecision, noteChangedAfterDecision: hashBeforeDecision !== hashAfterDecision };
