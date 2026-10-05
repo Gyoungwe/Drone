@@ -67,20 +67,26 @@ async function propose(page, result, label) {
 	].join(" ");
 	const filled = await page.fill('[data-testid="composer-input"]', prompt);
 	const sent = await page.clickSelector('[data-testid="composer-send"]');
-	const startedRun = await page.waitForRunStart();
+	const startedRun = await page.waitForRunStart(60_000);
 	result.interactions.inputs++;
 	result.interactions.clicks++;
 	const handled = [];
 	const started = Date.now();
 	while (Date.now() - started < 120_000) {
 		handled.push(...(await page.handleDialogs()));
-		if (await page.waitForIdle(1_000)) break;
+		if (startedRun && (await page.waitForIdle(1_000))) break;
 		await sleep(500);
 	}
 	result.interactions.confirmations += handled.filter(
 		(item) => item === "permission" || item.startsWith("ask-user"),
 	).length;
-	return { filled, sent, startedRun, handled, settled: await page.waitForIdle(1_000) };
+	return {
+		filled,
+		sent,
+		startedRun,
+		handled,
+		settled: Boolean(startedRun && (await page.waitForIdle(1_000))),
+	};
 }
 
 async function runMode(page, result, label, mode, priorTotal, decisionAction) {

@@ -10,20 +10,26 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function sendRound(page, result, prompt, timeoutMs = 30_000) {
 	const filled = await page.fill('[data-testid="composer-input"]', prompt);
 	const sent = await page.clickSelector('[data-testid="composer-send"]');
-	const startedRun = await page.waitForRunStart();
+	const startedRun = await page.waitForRunStart(Math.min(60_000, timeoutMs));
 	result.interactions.inputs++;
 	result.interactions.clicks++;
 	const handled = [];
 	const started = Date.now();
 	while (Date.now() - started < timeoutMs) {
 		handled.push(...(await page.handleDialogs()));
-		if (await page.waitForIdle(1_000)) break;
+		if (startedRun && (await page.waitForIdle(1_000))) break;
 		await sleep(500);
 	}
 	result.interactions.confirmations += handled.filter(
 		(item) => item === "permission" || item.startsWith("ask-user"),
 	).length;
-	return { filled, sent, startedRun, settled: await page.waitForIdle(1_000), handled };
+	return {
+		filled,
+		sent,
+		startedRun,
+		settled: Boolean(startedRun && (await page.waitForIdle(1_000))),
+		handled,
+	};
 }
 
 async function decisionClosure(page) {

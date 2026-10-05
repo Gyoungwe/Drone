@@ -23,17 +23,17 @@ function prepareFixture() {
 
 async function runTask(page, result) {
 	const handled = [];
-	const startedRun = await page.waitForRunStart();
+	const startedRun = await page.waitForRunStart(60_000);
 	const started = Date.now();
 	while (Date.now() - started < 120_000) {
 		handled.push(...(await page.handleDialogs()));
-		if (await page.waitForIdle(1_000)) break;
+		if (startedRun && (await page.waitForIdle(1_000))) break;
 		await sleep(500);
 	}
 	result.interactions.confirmations += handled.filter(
 		(item) => item === "permission" || item.startsWith("ask-user"),
 	).length;
-	return { startedRun, settled: await page.waitForIdle(1_000), handled };
+	return { startedRun, settled: Boolean(startedRun && (await page.waitForIdle(1_000))), handled };
 }
 
 await runScenario("p3", async (page, result, step) => {

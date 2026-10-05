@@ -68,13 +68,13 @@ async function runPseudoError(page, result, status) {
 			"伪 provider 错误事件测试：只发送一次短请求，不要调用工具。",
 		);
 		const sent = await page.clickSelector('[data-testid="composer-send"]');
-		const startedRun = await page.waitForRunStart();
+		const startedRun = await page.waitForRunStart(60_000);
 		result.interactions.inputs++;
 		result.interactions.clicks++;
 		const started = Date.now();
 		while (Date.now() - started < 45_000) {
 			await page.handleDialogs();
-			if (await page.waitForIdle(1_000)) break;
+			if (startedRun && (await page.waitForIdle(1_000))) break;
 			await sleep(500);
 		}
 		const evidence = await page.eval(
@@ -189,7 +189,7 @@ await runScenario("p5", async (page, result, step) => {
 			"开始一个长回答，但我会立刻取消；不要调用工具。",
 		);
 		const sent = await page.clickSelector('[data-testid="composer-send"]');
-		const startedRun = await page.waitForRunStart();
+		const startedRun = await page.waitForRunStart(60_000);
 		const appeared = await page.waitForSelector(
 			'button[aria-label="停止"],button[aria-label="Stop"]',
 			10_000,

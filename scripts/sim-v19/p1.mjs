@@ -7,11 +7,11 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function waitThroughTask(page, result, timeoutMs = 120_000) {
 	const started = Date.now();
 	const handled = [];
-	const startedRun = await page.waitForRunStart();
+	const startedRun = await page.waitForRunStart(Math.min(60_000, timeoutMs));
 	while (Date.now() - started < timeoutMs) {
 		const events = await page.handleDialogs();
 		handled.push(...events);
-		if (await page.waitForIdle(1_000)) break;
+		if (startedRun && (await page.waitForIdle(1_000))) break;
 		await sleep(500);
 	}
 	result.interactions.confirmations += handled.filter(
@@ -22,7 +22,7 @@ async function waitThroughTask(page, result, timeoutMs = 120_000) {
 	result.interactions.postAuthorizationInterruptions += handled.filter((item) =>
 		item.startsWith("ask-user"),
 	).length;
-	return { startedRun, settled: await page.waitForIdle(1_000), handled };
+	return { startedRun, settled: Boolean(startedRun && (await page.waitForIdle(1_000))), handled };
 }
 
 await runScenario("p1", async (page, result, step) => {
