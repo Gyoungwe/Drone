@@ -153,7 +153,16 @@ export function buildSessionExtensionFactories(
 	if (deps.harnessContext !== false) {
 		const report = (sessionId: string, kind: string, data: unknown) =>
 			deps.traces.recordCustom(sessionId, kind, data);
-		factories.push(makeHarnessGuardExtension(report), makeHarnessDeliveryExtension(report));
+		factories.push(
+			makeHarnessGuardExtension(report),
+			makeHarnessDeliveryExtension(report, (sessionId, snapshot) => {
+				deps.runtime.knowledge.reviewer?.schedule({
+					sessionId,
+					snapshot,
+					trigger: "milestone-complete",
+				});
+			}),
+		);
 	}
 	factories.push(
 		makeEvapExtension({

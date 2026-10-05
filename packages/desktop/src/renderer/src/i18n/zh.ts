@@ -330,6 +330,9 @@ export const zh = {
 		stages: "{count} 个阶段",
 		tools: "{count} 次工具",
 		subagents: "{count} 个子代理",
+		reviewerTitle: "后台审稿",
+		reviewerLocation: "位置：{location}",
+		reviewerSuggestion: "建议：",
 	},
 	turnFooter: {
 		files: "{count} 个文件",

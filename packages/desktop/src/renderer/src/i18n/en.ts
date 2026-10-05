@@ -340,6 +340,9 @@ export const en: Messages = {
 		stages: "{count} stages",
 		tools: "{count} tool calls",
 		subagents: "{count} subagents",
+		reviewerTitle: "Background review",
+		reviewerLocation: "Location: {location}",
+		reviewerSuggestion: "Suggested action:",
 	},
 	turnFooter: {
 		files: "{count} files",

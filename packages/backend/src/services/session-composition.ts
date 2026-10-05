@@ -8,6 +8,7 @@ import { buildSessionExtensionFactories } from "../session-engine/extensions";
 import type { SessionServiceOptions } from "../session-service";
 import { createDefaultStorageRegistry } from "../storage/registry";
 import { ApprovalService } from "./approvals";
+import { DeliverableReviewerService } from "./deliverable-reviewer";
 import { KnowledgeSessionService } from "./knowledge-session";
 import { PermissionSettingsService } from "./permissions";
 import { ProjectTrustService } from "./project-trust";
@@ -72,6 +73,35 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 			log,
 		}),
 	);
+	const reviewer = new DeliverableReviewerService({
+		getCwd: (sessionId) => service.registry.get(sessionId)?.cwd,
+		onResult: (sessionId, result, trigger) => {
+			if (!result.findings.length) return;
+			service.traces.recordCustom(sessionId, "reviewer_finding", {
+				contentHash: result.contentHash,
+				trigger,
+				findings: result.findings,
+			});
+			for (const finding of result.findings)
+				service.emitEvent(sessionId, {
+					type: "reviewer_finding",
+					finding: { ...finding, trigger, contentHash: result.contentHash },
+				});
+		},
+	});
+	service.runtime.knowledge.reviewer = {
+		observe: (sessionId, event) => reviewer.observe(sessionId, event),
+		schedule: (request) =>
+			reviewer.schedule({
+				sessionId: request.sessionId,
+				snapshot: request.snapshot,
+				trigger: request.trigger,
+			}),
+		getCached: (sessionId, snapshot) => reviewer.getCached(sessionId, snapshot),
+		getFindings: (sessionId) => reviewer.getFindings(sessionId),
+		clearSession: (sessionId) => reviewer.clearSession(sessionId),
+	};
+	service.runtime.registerDisposable?.(reviewer);
 	service.messageService = new SessionMessageService({
 		runtime: service.runtime,
 		registry: service.registry,

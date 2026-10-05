@@ -397,6 +397,35 @@ export interface SubagentRunEvent {
 	run: SubagentPanelRun;
 }
 
+/** Public, actionable background reviewer output. It carries no hidden model reasoning. */
+export interface ReviewerFindingEvent {
+	type: "reviewer_finding";
+	finding: {
+		id: string;
+		code:
+			| "untraceable-number"
+			| "figure-code-mismatch"
+			| "citation-without-receipt"
+			| "review-timeout"
+			| "review-budget-exhausted";
+		severity: "low" | "medium" | "high";
+		location: {
+			kind: "body" | "paragraph" | "line" | "artifact";
+			paragraph?: number;
+			line?: number;
+			artifactId?: string;
+			path?: string;
+		};
+		detail: string;
+		suggestion: string;
+		handled: boolean;
+		independent?: boolean;
+		nonIndependentReason?: string;
+		trigger?: "deliverable-write" | "milestone-complete" | "publication-projection";
+		contentHash?: string;
+	};
+}
+
 /** 宿主状态条文案：后端在 tool_execution_start 上按工具清单（drone.activity，挂钩 1）盖章，渲染层不再按工具名猜测。 */
 export interface HostActivityStamp {
 	text: string;
@@ -412,7 +441,8 @@ export type SessionEvent =
 	| SubagentMutexEvent
 	| StreamGuardTrippedEvent
 	| ModelWaitEvent
-	| SubagentRunEvent;
+	| SubagentRunEvent
+	| ReviewerFindingEvent;
 
 /** 渲染进程收到的统一事件包络 */
 export interface SessionEventEnvelope {

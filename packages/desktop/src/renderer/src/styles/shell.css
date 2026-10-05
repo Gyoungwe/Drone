@@ -728,6 +728,59 @@
 .process-lane-details [data-testid="run-inspector"] > .grid > * {
 	min-width: 0;
 }
+
+.reviewer-cards {
+	display: grid;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.reviewer-card {
+	border: 1px solid var(--color-border);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+	padding: 8px 10px;
+}
+
+.reviewer-card.severity-high {
+	border-color: color-mix(in srgb, var(--color-err) 48%, var(--color-border));
+}
+
+.reviewer-card summary {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	font-size: 12px;
+}
+
+.reviewer-card-code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	color: var(--color-ink-faint);
+}
+
+.reviewer-card-severity {
+	margin-left: auto;
+	text-transform: uppercase;
+	font-size: 10px;
+	letter-spacing: 0.06em;
+	color: var(--color-ink-faint);
+}
+
+.reviewer-card-body {
+	padding: 8px 18px 2px;
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--color-ink-dim);
+}
+
+.reviewer-card-body p {
+	margin: 0 0 6px;
+}
+
+.reviewer-card-location {
+	color: var(--color-ink-faint);
+}
 @media (prefers-reduced-motion: reduce) {
 	.process-lane-node {
 		transition: none;

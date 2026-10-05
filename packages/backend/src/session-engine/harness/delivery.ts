@@ -40,6 +40,7 @@ export function renderDeliveryStatus(status: HarnessDeliveryStatus): string {
 /** Observe delivery at the loop boundary; task runtime remains the only continuation owner. */
 export function makeHarnessDeliveryExtension(
 	report?: (sessionId: string, kind: string, data: unknown) => void,
+	review?: (sessionId: string, snapshot: unknown) => void,
 ): InlineExtension {
 	return {
 		name: "harness-delivery",
@@ -67,6 +68,12 @@ export function makeHarnessDeliveryExtension(
 					const data = { ...status, message: renderDeliveryStatus(status) };
 					pi.appendEntry(DELIVERY_TYPE, { fingerprint, status });
 					report?.(ctx.sessionManager.getSessionId(), "harness_delivery", data);
+					if (status.complete)
+						review?.(ctx.sessionManager.getSessionId(), {
+							enabled: true,
+							body: "",
+							milestoneId: status.taskId,
+						});
 				} catch (error) {
 					log.warn("harness delivery failed", { error: String(error) });
 				}

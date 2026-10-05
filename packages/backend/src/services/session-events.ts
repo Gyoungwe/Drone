@@ -40,6 +40,7 @@ export class SessionEventService {
 
 	emit(sessionId: string, input: SessionEvent): void {
 		let event = input;
+		this.deps.runtime.knowledge.reviewer?.observe?.(sessionId, event);
 		this.deps.modelWait.inspect(sessionId, event);
 		if (event.type === "auto_retry_start")
 			event = {
@@ -96,7 +97,13 @@ export class SessionEventService {
 				failMode: "open",
 				run: (current, sid) => {
 					if (
-						!["subagent_mutex", "stream_guard_tripped", "model_wait", "subagent_run"].includes(current.type)
+						![
+							"subagent_mutex",
+							"stream_guard_tripped",
+							"model_wait",
+							"subagent_run",
+							"reviewer_finding",
+						].includes(current.type)
 					)
 						this.deps.traces.record(sid, current as AgentSessionEvent);
 					return current;

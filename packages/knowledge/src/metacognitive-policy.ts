@@ -25,6 +25,8 @@ export interface MetacognitiveArtifact {
 	/** Optional bounded text/number index supplied by the host. */
 	text?: string;
 	numbers?: readonly MetacognitiveArtifactNumber[];
+	/** Optional current-turn read receipt reference for source citations. */
+	receiptId?: string;
 }
 
 export interface MetacognitiveNumberClaim {

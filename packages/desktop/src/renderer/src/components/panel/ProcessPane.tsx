@@ -10,6 +10,7 @@ import { useT } from "../../i18n";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { ProcessLaneView } from "./ProcessLaneView";
+import { ReviewerCard } from "./ReviewerCard";
 
 /** Public transcript receipts projected into six lanes, with historical turn navigation. */
 export function ProcessPane({ sessionId }: { sessionId: string | null }) {
@@ -83,6 +84,13 @@ export function ProcessPane({ sessionId }: { sessionId: string | null }) {
 				onOpenTask={() => openPanel("tasks")}
 				onOpenReconcile={() => openPanel("tasks")}
 			/>
+			{transcript.reviewerFindings.length ? (
+				<section className="reviewer-cards" aria-label={t("process.reviewerTitle")}>
+					{transcript.reviewerFindings.map((finding) => (
+						<ReviewerCard key={finding.id} finding={finding} />
+					))}
+				</section>
+			) : null}
 		</div>
 	);
 }

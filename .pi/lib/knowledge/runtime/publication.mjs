@@ -3,7 +3,7 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-UZQ2XGMZ.mjs";
+} from "./chunks/chunk-NUHI5G5B.mjs";
 import "./chunks/chunk-GC2J7ECB.mjs";
 import "./chunks/chunk-CVD67FIU.mjs";
 import {

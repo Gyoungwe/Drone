@@ -108,7 +108,7 @@ packages/
 
 ## packages/knowledge — 知识领域包（迁移中）
 
-`@drone/knowledge` 的 canonical runtime source 位于 `src/`：`files.ts`、`layout.ts`、`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts`、`experience-store.ts`、`wiki-review.ts` 以及各项 policy/provider 合约；根 `scripts/build-knowledge-runtime.mjs` 生成 `.pi/lib/knowledge/runtime/` worker/runtime 产物。`.pi/lib/knowledge/*` 保留为宿主兼容适配层，跨 bundle 的 UI、验收器与 host ports 仍由它桥接。
+`@drone/knowledge` 的 canonical runtime source 位于 `src/`：`files.ts`、`layout.ts`、`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts`、`experience-store.ts`、`wiki-review.ts`、`deliverable-review.ts` 以及各项 policy/provider 合约；`deliverable-review.ts` 提供 B5b 交付物后台审稿纯函数、缓存/超时调度与 provider 选择，意见通过共享会话事件进入过程面板并写入 trace；根 `scripts/build-knowledge-runtime.mjs` 生成 `.pi/lib/knowledge/runtime/` worker/runtime 产物。`.pi/lib/knowledge/*` 保留为宿主兼容适配层，跨 bundle 的 UI、验收器与 host ports 仍由它桥接。
 
 ## packages/tasks — 任务领域包（迁移中）
 
