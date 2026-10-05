@@ -1,103 +1,72 @@
-# Drone v0.19.0 模拟用户测试报告
+# Drone v0.19.1 模拟用户测试报告（T2 重跑中）
 
 日期：2026-10-05  
-被测 tag：`v0.19.0`（合并提交 `44f1f0d`）  
+测试分支：`codex/sim-v19`  
+正式被测 tag：`v0.19.1`（等待 `git ls-remote` 出现）  
 对比基线：`v0.18.0`（`a5ba4b8`）  
-测试分支：`codex/sim-v19`
+脚本加固提交：`737946b`
 
-## 1. 一页结论
+## 1. 当前结论
 
-v0.19.0 的 Release macOS arm64 安装包可以冷启动；“关于”页显示 `0.19.0`，包内 `research-workbench/extensions/knowledge-extension.mjs` 与 v0.19.0 tag 中的文件 SHA-256 都是 `897477b8e57148f2afc2238a176de01f9a5e234d1980295c7ec18eeda5a4ba92`。开发态首个可输入页面为 6.06 秒，Release 包为 3.37 秒。首屏、模型设置、权限设置、响应式布局和错误中止路径可用。
+本文件已替换上一轮不能作为验收证据的报告。v0.19.0 空跑只用于验证脚本不会假阳性，不计入验收结论、阻断数或 v0.18/v0.19 性能对比。远端目前没有 `refs/tags/v0.19.1`，因此 v0.19.1 与 v0.18.0 的正式双版本重跑尚未开始；正式报告将在 tag 出现后写回本文件。
 
-核心聊天可以完成一次研究型任务：P1 在用户手动点击一次“同意本次请求”后完成交付，授权后没有再次追问。P4 的 25 轮会话、`/compact`、`@` 入口和应用内撤销确认框均可见；trace 中记录到 55 个 `harness_unit`。
+当前阻断问题数：**未判定**。B-01、B-02 属于另一聊天的产品修复范围，本分支没有改产品代码，也不把上一轮报告中的问题状态复制到本轮结论。
 
-验收结论为“可运行，但不能宣称 v0.19.0 全部通过”：有 **2 个阻断问题**。其一，切换/重载会话后 harness 扩展捕获的 context 变陈旧，guard、projection、delivery 和 context-evaporation 连续失败；其二，任务面板读取决策账本时出现 `Decision project does not match inquiry project`，使本测试项目无法完成撤销决策到发布门禁的闭环。P2 的实际 Wiki proposal 以及 P3 的真实产物篡改审稿卡未能在本轮完成，因此不能把这两项记作通过。
+## 2. T2 加固与 v0.19.0 空跑
 
-所有测试都使用 `/tmp/drone-v19-sim/` 下的项目、Vault、开发态 agent 目录和 userData；未读写正式 `~/.pi/agent/`。原始截图、JSON、日志和 trace 均在该目录，未提交仓库。
+| 场景 | 加固检查 | 空跑观察 | 验收状态 |
+|---|---|---|---|
+| P1 | 设置/模型用 `[data-testid="settings-dialog"] li` 读取 DeepSeek 行；Slash 用 `div.shadow-pop button[data-command]`；@ 用 `[data-testid="at-menu-agent"]`；授权分别识别 `[data-testid="ask-simple"]`、`[data-testid="ask-dialog"]`、`[data-testid="permission-allow-run"]` | 模型行取到 DeepSeek 且“已配置”；@ 菜单取到 1 个 agent；空跑中授权后交付文件未全部出现，步骤按失败记录 | 未完成，不计通过 |
+| P2 | Vault `Wiki/Existing.md` 预置；模式值读取 `select[aria-label="知识审核模式"]`；队列总数读取 Wiki 审核 aside 的 `reviews · N`；条目读取 `aside button span.block.break-words`；候选状态通过可用批准/拒绝按钮；目标文件用 SHA-256 前后比对 | 未绑定/未形成可核验 pending 队列时，`totalAfter > totalBefore` 断言失败；“没有待审核”不会通过 | 未完成，不计通过 |
+| P3 | 固定 `data.csv` + `plot_fixed.py`；文件存在与数字由文件读取；产物用 `[data-testid="artifact-provenance-details"]`、`[data-reproducibility]`、代码指纹/父链节点；审稿用 `.reviewer-card-code` 精确匹配两类 code | v0.19.0 空跑未生成两个固定产物，因此 provenance 与两张审稿卡均失败 | 未完成，不计通过 |
+| P4 | 第 1 轮随机 `RECALL-XXXXXXXX`；后续提示不再包含口令；只在助手 `.markdown-body` 查找；trace 需有真实 `harness_recall` 调用；每轮等 `waitForIdle(30s)`，统计实际完成轮数；trace 的 `familyPrompt`/`guard` 必须为 0 | 5 轮空跑完成 5 轮；助手明确回答 harness_recall 不可用，`secretInAssistant=false`、`harnessRecallCalls=0`；trace 有 `familyPrompt=6`，因此失败 | 未完成，不计通过 |
+| P5 | 权限使用 `[data-testid="pattern-table"][data-tool="bash"] select`、`probe-run`、`probe-result`、`permissions-status[data-state="saved"]`；锁定行用 `data-locked="true"` 与 disabled input/无删除按钮；LAN 必须统计 textarea、发送按钮和写控件 DOM | 权限、自保护、取消、响应式亮暗截图有选择器证据；伪 provider 未产生请求，LAN 独立页面在当前 Electron CDP 端点无法建立新 target，均按未完成 | 未完成，不计通过 |
 
-## 2. 问题表
+原始空跑产物位于 /tmp/drone-v19-sim/out-v19-hardening/。这些文件只证明脚本按严格条件拒绝不完整场景。
 
-| 编号 | 严重度 | 维度 | 复现步骤与观察 | 截图/原始证据 | 疑似模块 |
-|---|---|---|---|---|---|
-| B-01 | 阻断 | 功能/体验 | 开发态启动后连续新建会话，或执行会话切换/重载；随后运行 P4 的 compaction/harness 流程。主进程记录 `This extension ctx is stale after session replacement or reload`，随后 harness guard、projection、delivery、evaporation 都失败。 | `/tmp/drone-v19-sim/out/p4/2-harness-recall-and-trace-unit.png`；`/tmp/drone-v19-sim/userData-dev-dev/logs/main-2026-10-05.log` | `packages/extensions` harness/context-evaporation 生命周期接线 |
-| B-02 | 阻断 | 功能 | 绑定 `/tmp/drone-v19-sim/project` 后打开“任务”面板。决策小节加载失败，主进程报 `Decision project does not match inquiry project`；无法在 UI 中完成“撤销一条 → artifact-pending-review → 发布拦截 → 确认放行”。 | `/tmp/drone-v19-sim/out/p4/4-decision-ledger-and-revoke-dialog.png`；同一主进程日志 | inquiry/decision scope 与项目 identity 传递 |
-| G-01 | 一般 | 体验 | 打开“设置 → 局域网观察”。本轮页面能打开，但没有明确的“只读/无写操作入口”提示文本；脚本 `readOnlyHint=false`。 | `/tmp/drone-v19-sim/out/p5/4-lan-observer-read-only.png` | LAN observer 设置页文案 |
-| G-02 | 一般（未完成验收） | 功能 | P3 可打开分析示例、产物面板和无计算主机空态，但在真实 Agent 回合结束前没有生成图和数字结论，所以未观察到 `figure-code-mismatch` / `untraceable-number` 审稿卡。 | `/tmp/drone-v19-sim/out/p3/4-mismatch-review-cards.png`；`/tmp/drone-v19-sim/out/p3.json` | C1/C3 产物 provenance 与 reviewer 卡的端到端触发路径 |
-| G-03 | 一般（未完成验收） | 功能 | P2 能打开研究、知识库和话题入口，但 DOI 发送步骤被已有会话状态提前匹配，未形成可核验的两条 Wiki proposal；因此 automatic/manual 两种模式的 pending 对比没有被本轮端到端确认。 | `/tmp/drone-v19-sim/out/p2/4-doi-archive-ui-flow.png`、`/tmp/drone-v19-sim/out/p2/5-automatic-and-manual-pending-observation.png` | research route 与 Wiki review 状态机 |
-| R-01 | 基线问题（非 v0.19.0 新问题） | 功能/性能 | 同一脚本跑 v0.18.0 时，多次创建会话触发 `npm install @eko24ive/pi-ask` / `pi-mcp-extension@1.5.0` code 190/254；v0.19.0 未出现该安装失败。 | `/tmp/drone-v19-sim/out-v18/p1/4-launch-and-single-authorization.png`；v0.18 主进程日志 | v0.18 扩展依赖安装与临时 npm 目录 |
+## 3. 正式性能表
 
-## 3. 性能与回归
+正式 tag 出现并完成两边同工作量重跑后填写。P2、P3、P5 的短场景不进入性能对比；P4 只有在两版本的实际完成轮数与渲染消息数相等时才计算回归百分比。否则记录“工作量不一致，未比较”。
 
-数值来自同一 CDP 脚本的 `Performance.getMetrics`。百分比为 `(v0.19.0 - v0.18.0) / v0.18.0`；脚本耗时含 UI 等待和超时，适合回归方向判断，不等同于纯模型基准。
-
-| 指标 | v0.18.0 | v0.19.0 | 变化 |
+| 指标 | v0.18.0 | v0.19.1 | 变化 |
 |---|---:|---:|---:|
-| 开发态冷启动到可输入 | 未单独记录 | 6.06 s | — |
-| Release 包冷启动到可输入 | — | 3.37 s | — |
-| P1 场景总耗时 | 122.77 s | 122.14 s | -0.5% |
-| P1 `TaskDuration` 增量 | 21.267 s | 15.774 s | -25.8% |
-| P1 `LayoutDuration` 增量 | 58.7 ms | 53.9 ms | -8.2% |
-| P1 结束 JS heap | 23.46 MB | 25.85 MB | +10.2% |
-| P2 场景总耗时 | 1.56 s | 1.05 s | -33.1% |
-| P3 场景总耗时 | 1.04 s | 0.95 s | -8.1% |
-| P4 场景总耗时 | 6.15 s | 35.61 s | +479.0% |
-| P4 `TaskDuration` 增量 | 0.295 s | 10.172 s | +3353% |
-| P4 `LayoutDuration` 增量 | 17.3 ms | 281.2 ms | +1526% |
-| P4 结束 JS heap | 19.57 MB | 40.09 MB | +104.8% |
-| P4 结束 DOM nodes | 864 | 3,557 | +311.7% |
-| P4 trace 总大小 | 1.68 MiB | 1.78 MiB | +6.0% |
-| trace 中 `harness_unit` | 0 | 55 | — |
-| P5 场景总耗时 | 6.88 s | 2.45 s | -64.4% |
+| 冷启动到可输入 | 待正式重跑 | 待正式重跑 | — |
+| P4 实际完成轮数 | 待正式重跑 | 待正式重跑 | 仅同轮数时计算 |
+| P4 渲染消息数 | 待正式重跑 | 待正式重跑 | 仅同消息数时计算 |
+| P4 首 token 中位数（3 次） | 待正式重跑 | 待正式重跑 | — |
+| renderer/main 内存起止 | 待正式重跑 | 待正式重跑 | — |
+| 长任务 >50ms、滚动帧率、trace 大小 | 待正式重跑 | 待正式重跑 | — |
 
-P4 的耗时、长任务和内存增长需要优先复测：v0.19.0 同时完成了 25 轮 UI 交互和 harness 记录，不能把增量全部归因给单一模块，但它已经超过普通页面切换的体验阈值。v0.19.0 的 renderer heartbeat 为 145–287 MB，结束值 243 MB；对应 v0.18.0 为 179–291 MB，结束值 226 MB。
+## 4. 五组用户正式结果
 
-CDP 页面审计没有发现可见字号低于 11 px，也没有发现可见的原始 i18n key。结构性滚动容器审计在 v0.19.0 首尾各返回 20 个候选溢出节点，需要结合截图逐项收敛；本报告没有把它们全部升级为产品缺陷。
+正式重跑前，“通过”列表为空；未完成步骤不计通过。
 
-## 4. 五组模拟用户结果
-
-### P1 新手研究生
-
-- 通过：首屏、设置中 DeepSeek 已配置、`/` 与 `@` 入口、内置“文献”示例表单、中文/English 页面审计。
-- 通过：用户手动完成一次“同意本次请求”后，任务写出两份交付文件并结束；授权后额外追问次数为 0。
-- 初始脚本把 ask-user 卡片误当成 permission 卡而超时；手动按真实用户路径继续后完成，原始截图保留该状态，不能把脚本的两步 false negative 误报为产品失败。
-
-### P2 文献综述者
-
-- 通过：研究视图、知识视图、搜索/话题入口、Wiki 审核入口、Zotero 未运行时的降级路径可见。
-- 未完成：两篇 DOI 的真实归档、阅读、Vault 笔记、Wiki 一条批准和一条拒绝；automatic/manual pending 对比未达到可核验状态。命中不等于已读的 UI 文案没有被端到端任务结果验证。
-
-### P3 数据分析
-
-- 通过：分析示例表单、产物面板入口、计算面板无远程主机空态；主回合不会因审稿卡入口而被 UI 阻塞。
-- 未完成：没有生成可篡改的真实图与数字结论，因此两类审稿卡和父链/代码指纹的真实篡改检测未验收。
-
-### P4 长会话重度用户
-
-- 通过：25 轮 UI 交互、一次 `/compact` 请求、`@` 子代理入口、应用内 `[role=dialog]` 撤销确认框；未见原生系统弹窗。
-- 部分通过：trace 有 55 个 `harness_unit`，但复述检查中 `harness_recall` 文本可能来自测试输入回显；同时 B-01 的 stale context 日志使 C4 不能判通过。
-- 失败：决策账本闭环被 B-02 阻断。`DRONE_HARNESS_DISABLE=familyPrompt,guard` 的重启只记录了可重跑计划，本轮没有把它当作通过证据。
-
-### P5 设置与异常
-
-- 通过：权限规则编辑、试算、保存、自保护规则可见；停止生成、错误/恢复文案；1024×700 与 1920×1080 的亮暗截图。
-- 部分通过：局域网观察页能打开，但没有清晰的只读提示；401/429 伪 provider smoke 两版均通过，未改产品代码。
+- P1：待 v0.19.1 tag；需完成首屏、DeepSeek、示例任务、ask-user/permission 区分、一次授权后到完成。
+- P2：待 v0.19.1 tag；需 automatic 与 strict 各产生一个 pending 候选、哈希不变，并在队列中各完成一次拒绝/批准。
+- P3：待 v0.19.1 tag；需固定夹具生成两个产物，替换图与数字后精确出现 `figure-code-mismatch`、`untraceable-number`，主回合仍可输入。
+- P4：待 v0.19.1 tag；需 25 轮、一次 compaction、随机口令助手复述、trace recall、决策撤销到发布放行，以及真实禁用重启 5 轮。
+- P5：待 v0.19.1 tag；需 bash 规则试算/保存/命中、自保护不可删、401/429、取消恢复、LAN DOM 只读、四个视口/主题截图。
 
 ## 5. 费用与 token
 
-测试预算上限：2,000,000 tokens、5.00 USD。使用隔离 `agent-dev` 中已缓存的 DeepSeek V4 系列模型；报告不记录任何凭证。
+正式运行设置总上限 2,000,000 tokens、5.00 USD，凭证不写入报告。v0.19.0 空跑没有满足正式任务完成条件，不计入正式费用表；正式费用将在两版本 run receipts 与模型 usage settlement 汇总后填写。
 
-| 版本 | 计费 token 总数 | SDK 费用 | 有计费的会话 |
-|---|---:|---:|---:|
-| v0.18.0 | 1,395,853 | $0.095033124 | 1 |
-| v0.19.0 | 1,055,165 | $0.088574844 | 3 |
+## 6. 脚本自检（防假阳性）
 
-v0.19.0 实际合计约占 token 上限 52.8%、费用上限 1.8%。P1 完整任务约 516,980 tokens / $0.042934296；P4 长会话约 259,011 tokens / $0.016827540。P2/P3/P5 的脚本未达到真实模型回合完成条件，没有把 UI 预检查误计入模型费用。
+1. 所有“空闲”断言同时检查 composer、停止按钮、ask/permission modal；超时返回失败。
+2. P4 口令只从助手 `.markdown-body` 读取，用户气泡 `.bg-bubble` 单独统计；文本提示本身不能通过。
+3. P4 的 harness 断言来自 trace JSONL 的真实 tool/harness 记录；`familyPrompt` 与 `guard` 的分布单独列出。
+4. P2 的通过条件是队列总数增长、队列条目、可用决策控件和目标文件 SHA-256 不变的合取；空态文案不会通过。
+5. P3 的通过条件是固定文件内容、产物 provenance DOM、两个 reviewer code 和主回合可输入的合取；模型没有生成固定文件时必败。
+6. P1/P5 只使用 testid、role、aria-label、data 属性和具体卡片节点；不使用 `document.body.innerText` 正则。
+7. 每一步结果 JSON 都记录选择器、取到的值、耗时、截图、控制台 error、unhandled rejection、交互计数；未完成步骤的 `ok` 为 false。
+8. 溢出审计最多列出 20 个候选，并为每个候选单独截图；正式报告逐张人工判定，不把候选数直接当缺陷数。
+9. 禁用 harness 脚本真实启动带 `DRONE_HARNESS_DISABLE=familyPrompt,guard` 的独立 Electron 进程，读取子运行的 `p4.json`；进程可启动与语义断言分开记录。
 
-## 6. 可复现入口与原始产物
+## 7. 路径
 
-- 测试脚本：`scripts/sim-v19/common.mjs`、`p1.mjs`、`p2.mjs`、`p3.mjs`、`p4.mjs`、`p5.mjs`。
-- v0.19.0 原始产物：`/tmp/drone-v19-sim/out/`。
-- v0.18.0 原始产物：`/tmp/drone-v19-sim/out-v18/`。
-- Release DMG、冷启动 CDP JSON、截图和日志：`/tmp/drone-v19-sim/out/release/`。
-- 开发态构建：v0.19.0 与 v0.18.0 均执行 `npm ci`、`npm run build` 成功；Release 包检查未修改产品文件。
+- 加固脚本：`scripts/sim-v19/`
+- 正式报告（本文件）：`docs/superpowers/reports/2026-10-05-v19-simulated-users.md`
+- v0.19.0 空跑原始产物：`/tmp/drone-v19-sim/out-v19-hardening/`
+- 原始用户内容、Vault、项目和凭证均保留在 `/tmp/drone-v19-sim/` 隔离目录，不进入仓库。
 
