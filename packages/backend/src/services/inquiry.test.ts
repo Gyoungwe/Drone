@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -205,7 +205,12 @@ describe("backend inquiry composition adapter", () => {
 				summary: "Dispatched a subagent",
 				projectId: workspace,
 			});
-			const alias = workspace.replace(/^\/tmp/, "/private/tmp");
+			const alias =
+				process.platform === "darwin"
+					? workspace.replace(/^\/tmp/, "/private/tmp")
+					: join(root, "workspace-alias");
+			if (process.platform !== "darwin")
+				await symlink(workspace, alias, process.platform === "win32" ? "junction" : "dir");
 			expect(await service.listDecisions(alias)).toHaveLength(1);
 			service.dispose();
 		} finally {
