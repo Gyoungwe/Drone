@@ -5,6 +5,9 @@ import { WebSocket } from "ws";
 
 const PORT = Number(process.env.DRONE_CDP_PORT || 9224);
 const OUT = process.env.DRONE_SIM_OUT || "/tmp/drone-v19-sim/out";
+const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || "/tmp/drone-v19-sim/agent-dev";
+const MAX_TOKENS = Number(process.env.DRONE_SIM_MAX_TOKENS || 2_000_000);
+const MAX_COST_USD = Number(process.env.DRONE_SIM_MAX_COST_USD || 5);
 mkdirSync(OUT, { recursive: true });
 
 function target(targetUrl = null, targetId = null) {
@@ -18,6 +21,51 @@ function target(targetUrl = null, targetId = null) {
 		pages[0];
 	if (!page) throw new Error(`CDP page target not found on ${PORT}`);
 	return page;
+}
+
+function usageSummary(root = AGENT_DIR) {
+	const summary = { totalTokens: 0, costUSD: 0, messageCount: 0 };
+	const walk = (dir) => {
+		let entries;
+		try {
+			entries = readdirSync(dir, { withFileTypes: true });
+		} catch {
+			return;
+		}
+		for (const entry of entries) {
+			const path = resolve(dir, entry.name);
+			if (entry.isDirectory()) {
+				if (entry.name !== "traces") walk(path);
+				continue;
+			}
+			if (!entry.isFile() || !path.endsWith(".jsonl")) continue;
+			let lines;
+			try {
+				lines = readFileSync(path, "utf8").split("\n");
+			} catch {
+				continue;
+			}
+			for (const line of lines) {
+				if (!line.trim()) continue;
+				try {
+					const value = JSON.parse(line);
+					const usage = value?.message?.usage;
+					if (!usage) continue;
+					summary.messageCount++;
+					summary.totalTokens += Number(usage.totalTokens || 0);
+					summary.costUSD += Number(usage.cost?.total || 0);
+				} catch {
+					// Ignore non-message lines and malformed partial writes.
+				}
+			}
+		}
+	};
+	walk(root);
+	return summary;
+}
+
+function budgetExceeded(summary) {
+	return summary.totalTokens > MAX_TOKENS || summary.costUSD > MAX_COST_USD;
 }
 
 export class CdpPage {
@@ -222,7 +270,7 @@ export class CdpPage {
 			}
 			if (await this.visibleCount('[data-testid="ask-dialog"]')) {
 				const chosen = await this.eval(
-					`(() => { const root=document.querySelector('[data-testid="ask-dialog"]'); const sections=[...root.querySelectorAll('section')]; const choices=sections.map(section=>[...section.querySelectorAll('button')].find(x=>!x.disabled)); const all=choices.filter(Boolean); if(!all.length)return false; all.forEach(button=>button.click()); return true; })()`,
+					`(() => { const root=document.querySelector('[data-testid="ask-dialog"]'); const sections=[...root.querySelectorAll('section')]; const choose=(section)=>{ const buttons=[...section.querySelectorAll('button')].filter(x=>!x.disabled); return buttons.find(x=>/同意|确认|允许|继续|approve|confirm|allow|yes|accept/iu.test(x.textContent||''))||buttons[0]; }; const choices=sections.map(choose); const fallback=[...root.querySelectorAll('button')].filter(x=>!x.disabled&&!/(提交|取消|submit|cancel)/iu.test(x.textContent||'')); const all=(choices.length?choices:fallback).filter(Boolean); if(!all.length)return false; all.forEach(button=>button.click()); return true; })()`,
 				);
 				if (!chosen) throw new Error("ask-dialog has no option button");
 				const submitted = await this.clickRegexWithin('[data-testid="ask-dialog"]', "提交|完成|submit");
@@ -369,6 +417,7 @@ export async function runScenario(name, fn) {
 		unhandledRejections: [],
 		metrics: {},
 		notes: [],
+		budget: { maxTokens: MAX_TOKENS, maxCostUSD: MAX_COST_USD, initial: usageSummary() },
 	};
 	await withPage(async (page) => {
 		result.initialMetrics = await page.metrics();
@@ -380,6 +429,21 @@ export async function runScenario(name, fn) {
 			screenshotName = `${name}/${result.steps.length + 1}-${slug(stepName)}.png`,
 		) => {
 			const t0 = Date.now();
+			const beforeBudget = usageSummary();
+			if (budgetExceeded(beforeBudget)) {
+				result.budget.exceededBeforeStep = beforeBudget;
+				result.steps.push({
+					name: stepName,
+					ok: false,
+					elapsedMs: 0,
+					consoleErrors: [],
+					unhandledRejections: [],
+					screenshot: null,
+					budgetExceeded: true,
+					budget: beforeBudget,
+				});
+				return false;
+			}
 			const beforeErrors = page.consoleErrors.length;
 			const beforeUnhandled = page.unhandled.length;
 			let ok = false;
@@ -402,6 +466,8 @@ export async function runScenario(name, fn) {
 				screenshot: shot,
 				...detail,
 			});
+			const afterBudget = usageSummary();
+			if (budgetExceeded(afterBudget)) result.budget.exceededAfterStep = afterBudget;
 			return ok;
 		};
 		await fn(page, result, step);
@@ -411,6 +477,7 @@ export async function runScenario(name, fn) {
 		result.consoleErrors = page.consoleErrors;
 		result.unhandledRejections = page.unhandled;
 	});
+	result.budget.final = usageSummary();
 	result.elapsedMs = Date.now() - started;
 	const file = resolve(OUT, `${name}.json`);
 	writeFileSync(file, JSON.stringify(result, null, 2));
