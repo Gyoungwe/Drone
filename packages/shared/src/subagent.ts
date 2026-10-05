@@ -63,6 +63,10 @@ export interface SubagentRunData {
 	agent: string;
 	/** 子会话 id（live progress / 内联 transcript 绑定） */
 	sessionId?: string;
+	parentSessionId?: string;
+	attempt?: number;
+	artifactRefs?: string[];
+	evidenceRefs?: string[];
 	task?: string;
 	status: "done" | "error";
 	model?: string;
@@ -131,6 +135,10 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 			tokens?: unknown;
 			statusText?: unknown;
 			statusPhase?: unknown;
+			parentSessionId?: unknown;
+			attempt?: unknown;
+			artifactRefs?: unknown;
+			evidenceRefs?: unknown;
 			currentAction?: unknown;
 			currentTool?: unknown;
 			startedAt?: unknown;
@@ -155,6 +163,14 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 			sessionFile,
 			statusText: typeof rest.statusText === "string" ? rest.statusText : undefined,
 			statusPhase: typeof rest.statusPhase === "string" ? rest.statusPhase : undefined,
+			parentSessionId: typeof rest.parentSessionId === "string" ? rest.parentSessionId : undefined,
+			attempt: typeof rest.attempt === "number" ? rest.attempt : undefined,
+			artifactRefs: Array.isArray(rest.artifactRefs)
+				? rest.artifactRefs.filter((value): value is string => typeof value === "string").slice(0, 8)
+				: undefined,
+			evidenceRefs: Array.isArray(rest.evidenceRefs)
+				? rest.evidenceRefs.filter((value): value is string => typeof value === "string").slice(0, 8)
+				: undefined,
 			currentAction: typeof rest.currentAction === "string" ? rest.currentAction : undefined,
 			currentTool: typeof rest.currentTool === "string" ? rest.currentTool : undefined,
 			startedAt: typeof rest.startedAt === "number" ? rest.startedAt : undefined,
@@ -239,6 +255,10 @@ export function extractSubagentRuns(details: unknown): SubagentRunData[] | null 
 			currentTool: r.currentTool,
 			startedAt: r.startedAt,
 			lastSteerAt: r.lastSteerAt,
+			parentSessionId: r.parentSessionId,
+			attempt: r.attempt,
+			artifactRefs: r.artifactRefs,
+			evidenceRefs: r.evidenceRefs,
 			supervisorRequest: r.supervisorRequest,
 		});
 	}
@@ -395,6 +415,8 @@ export function isSubagentRunAttention(status: SubagentPanelRunStatus): boolean 
 export function subagentRunDataFromPanelRun(run: SubagentPanelRun): SubagentRunData {
 	return {
 		agent: run.agent,
+		parentSessionId: run.parentSessionId,
+		attempt: 1,
 		sessionId: run.childSessionId,
 		task: run.task,
 		status: run.status === "error" ? "error" : "done",

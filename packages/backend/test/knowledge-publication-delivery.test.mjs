@@ -387,7 +387,10 @@ it("real SDK displays public stage → tools → next stage → tools → summar
 		buildChatRows(state, "fixture").flatMap((row) =>
 			row.kind === "metaGroup"
 				? row.items.flatMap((i) => i.tools.map((t) => t.name))
-				: row.kind === "message" && row.message.kind === "assistant" && !row.message.taskView
+				: row.kind === "message" &&
+						row.message.kind === "assistant" &&
+						!row.message.taskView &&
+						!row.message.route
 					? [row.message.progress?.text || row.message.text]
 					: [],
 		);
@@ -407,6 +410,11 @@ it("real SDK displays public stage → tools → next stage → tools → summar
 		messages: messagesToUIMessages(await backend.getSessionMessages(sid)),
 	};
 	expect(live.messages.some((m) => m.kind === "assistant" && m.taskView?.version === 2)).toBe(true);
+	// Route cards remain visible, but are not model-authored stage or answer text.
+	const routes = (state) =>
+		state.messages.filter((m) => m.kind === "assistant" && m.route).map((m) => m.route);
+	expect(routes(live)).toHaveLength(1);
+	expect(routes(history)).toEqual(routes(live));
 	expect(labels(live)).toEqual(expected);
 	expect(labels(history)).toEqual(expected);
 	expect(deriveTurnUsage(live.messages)[0].requests).toBe(5);
@@ -419,6 +427,7 @@ it("real SDK displays public stage → tools → next stage → tools → summar
 		await readFile(await backend.exportSession(sid, "jsonl"), "utf8"),
 	);
 	expect(labels({ ...emptyTranscript(), messages: messagesToUIMessages(exported) })).toEqual(expected);
+	expect(routes({ ...emptyTranscript(), messages: messagesToUIMessages(exported) })).toEqual(routes(live));
 });
 
 it("real SDK repeated review commands open UI without model calls or fabricated run events", async () => {

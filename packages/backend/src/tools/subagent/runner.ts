@@ -3,7 +3,12 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { PROTECTED_KNOWLEDGE_AGENTS } from "@drone/shared";
+import {
+	type HarnessWorkerAttempt,
+	PROTECTED_KNOWLEDGE_AGENTS,
+	renderHarnessPromptLayer,
+	resolveHarnessModelFamily,
+} from "@drone/shared";
 import type { Model } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import { makePermissionGateExtension } from "../../permissions/extension";
@@ -52,6 +57,10 @@ export interface SingleResult {
 	content?: string;
 	usage: SubagentUsage;
 	artifactPaths: { jsonlPath?: string };
+	parentSessionId?: string;
+	attempt?: number;
+	artifactRefs?: string[];
+	evidenceRefs?: string[];
 	/** Live user-visible status propagated to the parent subagent card. */
 	statusText?: string;
 	statusPhase?: string;
@@ -76,6 +85,8 @@ export interface RunSubagentInput {
 	/** 父会话的项目信任态（子会话 SettingsManager 对齐，不硬编码 trusted） */
 	projectTrusted: boolean;
 	model?: Model<any>;
+	parentSessionId?: string;
+	attempt?: number;
 	signal?: AbortSignal;
 	onProgress?: (result: SingleResult) => void;
 }
@@ -300,12 +311,44 @@ export function assertSubagentTools(available: readonly string[], required: read
 		);
 }
 export async function runSubagent(deps: RunSubagentDeps, input: RunSubagentInput): Promise<SingleResult> {
-	assertSubagentTools(input.agent.tools, input.requiredTools);
-	if (PROTECTED_KNOWLEDGE_AGENTS.some((agent) => agent.name === input.agent.name))
-		throw new Error(
-			"Knowledge specialists use research_delegate_knowledge and its capability broker, not the generic subagent runner",
+	const report = (status: HarnessWorkerAttempt["status"], extra: Record<string, unknown> = {}) => {
+		if (!input.parentSessionId) return;
+		try {
+			deps.traces.recordCustom(input.parentSessionId, "harness_worker_attempt", {
+				parentSessionId: input.parentSessionId,
+				attempt: input.attempt ?? 1,
+				agent: input.agent.name,
+				status,
+				...extra,
+			});
+		} catch {
+			/* trace is observational */
+		}
+	};
+	report("started");
+	try {
+		assertSubagentTools(input.agent.tools, input.requiredTools);
+		if (PROTECTED_KNOWLEDGE_AGENTS.some((agent) => agent.name === input.agent.name))
+			throw new Error(
+				"Knowledge specialists use research_delegate_knowledge and its capability broker, not the generic subagent runner",
+			);
+		const result = await withNativeSubagentSlot(input.cwd, input.signal, () =>
+			runSubagentInSlot(deps, input),
 		);
-	return withNativeSubagentSlot(input.cwd, input.signal, () => runSubagentInSlot(deps, input));
+		report(result.exitCode === 0 ? "done" : input.signal?.aborted ? "aborted" : "error", {
+			childSessionId: result.sessionId,
+			usage: result.usage,
+			artifactRefs: result.artifactRefs,
+			evidenceRefs: result.evidenceRefs,
+			error: result.error,
+		});
+		return result;
+	} catch (error) {
+		report(input.signal?.aborted ? "aborted" : "error", {
+			error: error instanceof Error ? error.message : String(error),
+		});
+		throw error;
+	}
 }
 
 async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput): Promise<SingleResult> {
@@ -416,6 +459,12 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		noSkills: true,
 		noPromptTemplates: true,
 		appendSystemPrompt: [
+			renderHarnessPromptLayer(resolveHarnessModelFamily(model?.provider, model?.id), {
+				effort: "normal",
+				delegation: "off",
+				autonomy: "autonomous",
+				mode: "execute",
+			}),
 			input.agent.systemPrompt,
 			"For multi-step work, use set_status when the current activity meaningfully changes. Keep status short, concrete, present-tense, and user-visible; never include hidden reasoning, conclusions, confidence, or percentages.",
 			"You have a live supervisor channel. Use contact_supervisor(reason=progress_update) only for meaningful discoveries that change the plan. Use need_decision when blocked and interview_request when structured clarification is required. Do not wait silently when a decision is required.",
@@ -441,15 +490,34 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 	await session.bindExtensions({ uiContext: makeUiContext(deps.gate), mode: "tui" });
 	const result: SingleResult = {
 		agent: input.agent.name,
+		parentSessionId: input.parentSessionId,
+		attempt: input.attempt,
 		sessionId: session.sessionId,
 		task: input.task,
 		model: modelLabel(session.model),
 		exitCode: -1,
 		usage: structuredClone(EMPTY_USAGE),
 		artifactPaths: { jsonlPath: session.sessionFile },
+		artifactRefs: session.sessionFile ? [session.sessionFile] : [],
+		evidenceRefs: [],
 		startedAt: Date.now(),
 	};
 	resultRef = result;
+	if (input.parentSessionId) {
+		try {
+			deps.traces.recordCustom(input.parentSessionId, "harness_worker_attempt", {
+				parentSessionId: input.parentSessionId,
+				childSessionId: session.sessionId,
+				attempt: input.attempt ?? 1,
+				agent: input.agent.name,
+				status: "running",
+				artifactRefs: result.artifactRefs,
+				evidenceRefs: result.evidenceRefs,
+			});
+		} catch {
+			/* trace is observational */
+		}
+	}
 	let settled = false;
 	let failure: string | undefined;
 	let unsubscribeEvents: (() => void) | undefined;
@@ -587,6 +655,7 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 	// 子会话在任何消息落盘前失败时 sessionFile 不存在——不给卡片一个打不开的点击目标
 	if (result.artifactPaths.jsonlPath && !existsSync(result.artifactPaths.jsonlPath)) {
 		result.artifactPaths = {};
+		result.artifactRefs = [];
 	}
 	return result;
 }

@@ -68,6 +68,8 @@ export interface SessionServiceOptions {
 	permissionGates?: boolean;
 	/** 是否注册内置权限门控扩展（false 时逐工具规则不生效；用户换用自己的权限扩展时关闭）。permissionGates=false 时强制不注册 */
 	permissionExtension?: boolean;
+	/** 是否注册模型上下文合同与 compact checkpoint 扩展（默认 true）。 */
+	harnessContext?: boolean;
 	/** 是否启用项目信任门控（false 时所有项目自动信任，项目资源直接加载；供无人值守场景用） */
 	projectTrust?: boolean;
 	/** 是否内置 webfetch 工具（默认 true）；传对象可配置 CIDR 放行 */
@@ -242,6 +244,7 @@ export class SessionService extends SessionServiceApi {
 			runtime: this.runtime,
 			permissionGates: this.options.permissionGates,
 			permissionExtension: this.options.permissionExtension,
+			harnessContext: this.options.harnessContext,
 			subagentPreferBuiltin: this.options.subagentPreferBuiltin,
 			webFetch: this.options.webFetch,
 			tools: this.options.tools,

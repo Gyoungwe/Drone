@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { type KnowledgeSpecialistRole, PROTECTED_KNOWLEDGE_AGENTS } from "@drone/shared";
+import {
+	type KnowledgeSpecialistRole,
+	PROTECTED_KNOWLEDGE_AGENTS,
+	renderHarnessSpecialistLayer,
+	resolveHarnessModelFamily,
+} from "@drone/shared";
 import type { Context, Message, Model, ModelThinkingLevel, Tool } from "@earendil-works/pi-ai";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -245,6 +250,16 @@ export async function runKnowledgeSpecialist(
 				request.skillText
 					? `Task-specific show-me skill (only its presentation requirements apply; capability restrictions above remain):\n${request.skillText}`
 					: "",
+				renderHarnessSpecialistLayer(
+					resolveHarnessModelFamily(model.provider, model.id),
+					{
+						effort: "normal",
+						delegation: "off",
+						autonomy: "autonomous",
+						mode: "execute",
+					},
+					request.role,
+				),
 			]
 				.filter(Boolean)
 				.join("\n\n"),

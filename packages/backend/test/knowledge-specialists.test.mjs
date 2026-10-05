@@ -90,6 +90,8 @@ describe("isolated capability runner", () => {
 		expect(JSON.stringify(result)).not.toContain("CHILD_PRIVATE_REASONING");
 		expect(JSON.stringify(result)).not.toContain("SOURCE_TEXT_NOT_A_PARENT_TRANSCRIPT");
 		expect(r.contexts[0].messages).toHaveLength(1);
+		expect(r.contexts[0].systemPrompt).toContain("Scientific contract:");
+		expect(r.contexts[0].systemPrompt).toContain("Response contract:");
 		expect(r.contexts[0].tools.map((t) => t.name)).toEqual(["knowledge_read", "knowledge_submit"]);
 		expect(JSON.stringify(r.contexts[1])).toContain("CHILD_PRIVATE_REASONING");
 	});
