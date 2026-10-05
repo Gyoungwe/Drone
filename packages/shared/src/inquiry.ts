@@ -52,12 +52,30 @@ export interface InquiryArtifactProvenance {
 	readonly sourceSessionId?: string;
 	readonly sourceTurn?: number;
 	readonly reproducibility: InquiryReproducibilityStatus;
+	readonly rerun?: InquiryArtifactRerunRecord | InquiryArtifactRerunResult;
+}
+export interface InquiryArtifactRerunRecord {
+	readonly id: string;
+	readonly schemaVersion: 1;
+	readonly projectId: string;
+	readonly sourceArtifactId: string;
+	readonly jobId: string;
+	readonly status: "submitted" | "running" | "reproduced" | "superseded" | "failed";
+	readonly previousSha256: string;
+	readonly resultArtifactId?: string;
+	readonly sha256?: string;
+	readonly difference?: string;
+	readonly error?: string;
+	readonly submittedAt: string;
+	readonly updatedAt: string;
 }
 export interface InquiryArtifactRerunResult {
-	readonly status: "reproduced" | "superseded";
+	readonly status: "submitted" | "running" | "reproduced" | "superseded" | "failed";
+	readonly jobId: string;
 	readonly previousArtifactId: string;
-	readonly artifactId: string;
 	readonly previousSha256: string;
-	readonly sha256: string;
+	readonly artifactId?: string;
+	readonly sha256?: string;
 	readonly difference?: string;
+	readonly error?: string;
 }

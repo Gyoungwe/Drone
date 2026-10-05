@@ -4,6 +4,7 @@ import {
 	type ArtifactProvenance,
 	type ArtifactPurpose,
 	type ArtifactRecord,
+	type ArtifactRerunRecord,
 	type ArtifactRerunResult,
 	type ArtifactSource,
 	type ArtifactStatus,
@@ -84,7 +85,10 @@ export interface InquiryEventSource {
 	readonly enrichComputeEvent?: (event: InquiryComputeEvent) => Promise<InquiryComputeEvent>;
 }
 
-export type InquiryRerunHandler = (provenance: ArtifactProvenance) => Promise<ArtifactRecord>;
+export type InquiryRerunHandler = (
+	provenance: ArtifactProvenance,
+) => Promise<{ readonly jobId: string } | ArtifactRecord>;
+export type InquiryRerunCompletionHandler = (pending: ArtifactRerunRecord) => Promise<ArtifactRecord>;
 
 export type InquiryReadOnlySnapshot = Awaited<ReturnType<DomainInquiryService["readOnlyState"]>> & {
 	readonly attempts: readonly AttemptRecord[];
@@ -115,6 +119,8 @@ export interface InquiryServicePort {
 	artifactProvenance(artifactId: string): Promise<ArtifactProvenance | undefined>;
 	rerunArtifact(artifactId: string): Promise<ArtifactRerunResult>;
 	setRerunHandler(handler: InquiryRerunHandler): void;
+	setRerunCompletionHandler(handler: InquiryRerunCompletionHandler): void;
+	onRerunUpdated(handler: (result: ArtifactRerunResult) => void): () => void;
 	drainEvents(): Promise<void>;
 	attachEventSource(source: InquiryEventSource): () => void;
 	dispose(): void;
@@ -158,6 +164,9 @@ export class InquiryService implements InquiryServicePort {
 	private readonly unsubscribers: Array<() => void> = [];
 	private readonly onEventError?: (error: unknown) => void;
 	private rerunHandler?: InquiryRerunHandler;
+	private rerunCompletionHandler?: InquiryRerunCompletionHandler;
+	private readonly rerunListeners = new Set<(result: ArtifactRerunResult) => void>();
+	private readonly activeReruns = new Set<string>();
 	private eventTail: Promise<void> = Promise.resolve();
 	private disposed = false;
 
@@ -326,12 +335,28 @@ export class InquiryService implements InquiryServicePort {
 
 	async rerunArtifact(artifactId: string): Promise<ArtifactRerunResult> {
 		if (!this.domain) throw new Error("Inquiry service is unavailable");
-		return this.domain.rerunArtifact(artifactId);
+		const result = await this.domain.rerunArtifact(artifactId);
+		this.emitRerun(result);
+		if (result.status === "submitted") {
+			const pending = (await this.domain.pendingReruns()).find((item) => item.jobId === result.jobId);
+			if (pending) void this.processRerun(pending);
+		}
+		return result;
 	}
 
 	setRerunHandler(handler: InquiryRerunHandler): void {
 		this.rerunHandler = handler;
 		this.domain?.setRerunHandler(handler);
+	}
+
+	setRerunCompletionHandler(handler: InquiryRerunCompletionHandler): void {
+		this.rerunCompletionHandler = handler;
+		if (this.domain) void this.resumePendingReruns();
+	}
+
+	onRerunUpdated(handler: (result: ArtifactRerunResult) => void): () => void {
+		this.rerunListeners.add(handler);
+		return () => this.rerunListeners.delete(handler);
 	}
 
 	/** Wait until all host events observed so far have finished writing. */
@@ -344,6 +369,58 @@ export class InquiryService implements InquiryServicePort {
 		this.disposed = true;
 		for (const unsubscribe of [...this.unsubscribers]) unsubscribe();
 		if (this.storage) void this.storage.close();
+	}
+
+	private emitRerun(result: ArtifactRerunResult): void {
+		for (const listener of this.rerunListeners) {
+			try {
+				listener(result);
+			} catch (error) {
+				this.onEventError?.(error);
+			}
+		}
+	}
+
+	private async resumePendingReruns(): Promise<void> {
+		if (!this.domain || !this.rerunCompletionHandler) return;
+		for (const pending of await this.domain.pendingReruns()) void this.processRerun(pending);
+	}
+
+	private async processRerun(pending: ArtifactRerunRecord): Promise<void> {
+		if (this.disposed || !this.domain || !this.rerunCompletionHandler || this.activeReruns.has(pending.id))
+			return;
+		this.activeReruns.add(pending.id);
+		try {
+			const running = await this.domain.markRerunRunning(pending.id);
+			if (running) this.emitRerun(this.toRerunResult(running));
+			const artifact = await this.rerunCompletionHandler(pending);
+			const result = await this.domain.completeRerun(pending.id, { artifact });
+			if (result) this.emitRerun(result);
+		} catch (error) {
+			try {
+				const result = await this.domain.completeRerun(pending.id, {
+					error: error instanceof Error ? error.message : String(error),
+				});
+				if (result) this.emitRerun(result);
+			} catch (completionError) {
+				this.onEventError?.(completionError);
+			}
+		} finally {
+			this.activeReruns.delete(pending.id);
+		}
+	}
+
+	private toRerunResult(record: ArtifactRerunRecord): ArtifactRerunResult {
+		return {
+			status: record.status,
+			jobId: record.jobId,
+			previousArtifactId: record.sourceArtifactId,
+			previousSha256: record.previousSha256,
+			...(record.resultArtifactId ? { artifactId: record.resultArtifactId } : {}),
+			...(record.sha256 ? { sha256: record.sha256 } : {}),
+			...(record.difference ? { difference: record.difference } : {}),
+			...(record.error ? { error: record.error } : {}),
+		};
 	}
 
 	private enqueue(work: () => Promise<void>): void {

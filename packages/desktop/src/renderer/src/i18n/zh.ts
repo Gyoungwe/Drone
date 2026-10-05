@@ -203,8 +203,11 @@ export const zh = {
 			openSession: "跳转来源会话",
 			rerun: "一键重跑",
 			rerunning: "重跑中…",
+			submitted: "已提交重跑",
+			running: "重跑运行中",
 			reproduced: "已复现：sha256 一致",
 			superseded: "结果有差异：旧产物已标记 superseded",
+			failed: "重跑失败",
 			difference: "差异",
 			rerunFailed: "重跑未完成",
 			badge: {

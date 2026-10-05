@@ -56,4 +56,24 @@ describe("registerInquiryIpc", () => {
 		);
 		expect(result).toMatchObject({ code: "artifact_not_found", severity: "error", source: "app" });
 	});
+
+	it("returns a submitted rerun receipt without waiting for completion", async () => {
+		const service = {
+			listArtifacts: vi.fn(async () => []),
+			artifactProvenance: vi.fn(async () => undefined),
+			rerunArtifact: vi.fn(async () => ({
+				status: "submitted" as const,
+				jobId: "job-1",
+				previousArtifactId: "artifact-1",
+				previousSha256: "a".repeat(64),
+			})),
+		};
+		registerInquiryIpc(service as never);
+		const frame = {};
+		const result = await mocks.handlers.get(IpcChannels.InquiryRerunArtifact)!(
+			{ sender: { mainFrame: frame }, senderFrame: frame },
+			"artifact-1",
+		);
+		expect(result).toMatchObject({ status: "submitted", jobId: "job-1" });
+	});
 });

@@ -38,7 +38,9 @@ export const InquiryContract = defineDomain("inquiry", {
 			result: Type.Union([ObjectResult<InquiryArtifactRerunResult>(), UiErrorSchema]),
 		},
 	},
-	events: {},
+	events: {
+		rerunUpdated: ObjectResult<InquiryArtifactRerunResult>(),
+	},
 });
 
 export type InquiryApi = import("./define").ClientOf<typeof InquiryContract>;

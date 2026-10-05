@@ -52,7 +52,7 @@ export function registerIpc(
 	registerPackagesIpc(backendServices);
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);
-	registerInquiryIpc(backendServices);
+	registerInquiryIpc(backendServices, sendToRenderer);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerLanIpc(lan);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）

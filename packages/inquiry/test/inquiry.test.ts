@@ -1,6 +1,7 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import {
 	type ArtifactRecord,
@@ -121,6 +122,55 @@ describe("inquiry ledger records", () => {
 		});
 		expect((await storage.artifacts.get("same"))?.status).toBe("valid");
 	});
+	it("submits reruns immediately, persists pending state, and completes asynchronously", async () => {
+		const storage = new MemoryInquiryStorage("project-1");
+		const service = new InquiryService(storage);
+		await service.recordArtifact(artifact({ id: "async", runProvenance: { workflow: "rnaseq" } }));
+		await service.recordAttempt({
+			id: "attempt-async",
+			schemaVersion: 1,
+			projectId: "project-1",
+			hypothesisIds: [],
+			codeFingerprint: "code-1",
+			parameters: {},
+			artifactIds: ["async"],
+			outcome: "succeeded",
+			enteredReport: false,
+			startedAt: "2026-01-01T00:00:00.000Z",
+		});
+		service.setRerunHandler(async () => ({ jobId: "job-async" }));
+		const result = await service.rerunArtifact("async");
+		expect(result).toMatchObject({ status: "submitted", jobId: "job-async" });
+		expect(await service.pendingReruns()).toHaveLength(1);
+		await service.markRerunRunning("rerun:async:job-async");
+		const completed = await service.completeRerun("rerun:async:job-async", {
+			artifact: artifact({ id: "async-result", sha256: "b".repeat(64), parentIds: ["async"] }),
+		});
+		expect(completed).toMatchObject({ status: "superseded", artifactId: "async-result" });
+		expect((await storage.artifacts.get("async"))?.status).toBe("superseded");
+	});
+	it("marks a failed rerun without entering a new artifact", async () => {
+		const storage = new MemoryInquiryStorage("project-1");
+		const service = new InquiryService(storage);
+		await service.recordArtifact(artifact({ id: "failed", runProvenance: { workflow: "rnaseq" } }));
+		await service.recordAttempt({
+			id: "attempt-failed",
+			schemaVersion: 1,
+			projectId: "project-1",
+			hypothesisIds: [],
+			codeFingerprint: "code-1",
+			parameters: {},
+			artifactIds: ["failed"],
+			outcome: "succeeded",
+			enteredReport: false,
+			startedAt: "2026-01-01T00:00:00.000Z",
+		});
+		service.setRerunHandler(async () => ({ jobId: "job-failed" }));
+		await expect(service.rerunArtifact("failed")).resolves.toMatchObject({ status: "submitted" });
+		await service.completeRerun("rerun:failed:job-failed", { error: "runner failed" });
+		expect((await storage.snapshot()).artifacts).toHaveLength(1);
+		expect((await service.artifactProvenance("failed"))?.rerun).toMatchObject({ status: "failed" });
+	});
 	it("gets source session and turn from an associated attempt when absent on the artifact", async () => {
 		const service = new InquiryService(new MemoryInquiryStorage("project-1"));
 		await service.recordArtifact(artifact());
@@ -200,7 +250,110 @@ describe("inquiry ledger records", () => {
 		}
 	});
 
-	it("persists all four ledgers in a SQLite database and reopens safely", async () => {
+	it("reads pre-rerun file and SQLite ledgers with missing optional provenance fields", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-inquiry-legacy-"));
+		const legacyArtifact = artifact({
+			id: "legacy",
+			runProvenance: undefined,
+			sessionId: undefined,
+			turn: undefined,
+		});
+		const legacyAttempt = {
+			id: "legacy-attempt",
+			schemaVersion: 1,
+			projectId: "project-1",
+			hypothesisIds: [],
+			parameters: {},
+			artifactIds: ["legacy"],
+			outcome: "succeeded",
+			enteredReport: false,
+			startedAt: "2026-01-01T00:00:00.000Z",
+		};
+		try {
+			const filePath = join(root, "legacy.json");
+			await writeFile(
+				filePath,
+				JSON.stringify({
+					schemaVersion: 1,
+					projectId: "project-1",
+					revision: 1,
+					updatedAt: "2026-01-01T00:00:00.000Z",
+					artifacts: [legacyArtifact],
+					findings: [],
+					questions: [],
+					attempts: [legacyAttempt],
+				}),
+			);
+			const file = new FileInquiryStorage("project-1", filePath);
+			expect((await new InquiryService(file).artifactProvenance("legacy"))?.reproducibility).toBe(
+				"not-reproducible",
+			);
+
+			const sqlitePath = join(root, "legacy.sqlite");
+			const db = new DatabaseSync(sqlitePath);
+			db.exec(
+				"CREATE TABLE inquiry_meta (project_id TEXT PRIMARY KEY, schema_version INTEGER, revision INTEGER, updated_at TEXT);" +
+					"CREATE TABLE artifacts (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);" +
+					"CREATE TABLE findings (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);" +
+					"CREATE TABLE questions (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);" +
+					"CREATE TABLE attempts (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);",
+			);
+			db.prepare("INSERT INTO inquiry_meta VALUES (?, 1, 1, ?)").run("project-1", legacyAttempt.startedAt);
+			db.prepare("INSERT INTO artifacts VALUES (?, ?, ?, ?)").run(
+				"legacy",
+				"project-1",
+				JSON.stringify(legacyArtifact),
+				legacyAttempt.startedAt,
+			);
+			db.prepare("INSERT INTO attempts VALUES (?, ?, ?, ?)").run(
+				"legacy-attempt",
+				"project-1",
+				JSON.stringify(legacyAttempt),
+				legacyAttempt.startedAt,
+			);
+			db.close();
+			const sqlite = new SqliteInquiryStorage("project-1", sqlitePath);
+			expect(
+				(await new InquiryService(sqlite).artifactProvenance("legacy"))?.sourceSessionId,
+			).toBeUndefined();
+			await sqlite.close();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("recovers a submitted rerun after reopening the file ledger", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-inquiry-rerun-restart-"));
+		try {
+			const path = join(root, "ledger.json");
+			const first = new InquiryService(new FileInquiryStorage("project-1", path));
+			await first.recordArtifact(artifact({ id: "restart", runProvenance: { workflow: "wf" } }));
+			await first.recordAttempt({
+				id: "restart-attempt",
+				schemaVersion: 1,
+				projectId: "project-1",
+				hypothesisIds: [],
+				codeFingerprint: "code",
+				parameters: {},
+				artifactIds: ["restart"],
+				outcome: "succeeded",
+				enteredReport: false,
+				startedAt: "2026-01-01T00:00:00.000Z",
+			});
+			first.setRerunHandler(async () => ({ jobId: "restart-job" }));
+			await first.rerunArtifact("restart");
+			const reopened = new InquiryService(new FileInquiryStorage("project-1", path));
+			expect(await reopened.pendingReruns()).toHaveLength(1);
+			await reopened.completeRerun("rerun:restart:restart-job", {
+				artifact: artifact({ id: "restart-result", parentIds: ["restart"] }),
+			});
+			expect((await reopened.artifactProvenance("restart"))?.rerun?.status).toBe("reproduced");
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("persists all inquiry ledgers in a SQLite database and reopens safely", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-inquiry-sqlite-"));
 		try {
 			const path = join(root, "ledger.sqlite");

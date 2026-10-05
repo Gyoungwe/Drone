@@ -53,6 +53,34 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 			live = false;
 		};
 	}, [inquiryScope]);
+	useEffect(() => {
+		const unsubscribe = getPi().onRerunUpdated((result) => {
+			const key = rerunStatusKey(result.status);
+			setRerunResults((current) => ({
+				...current,
+				[result.previousArtifactId]: {
+					key,
+					jobId: result.jobId,
+					difference: result.difference,
+					sha256: result.sha256,
+					error: result.error,
+				},
+			}));
+			setProvenanceById((current) => {
+				const previous = current[result.previousArtifactId];
+				return previous
+					? { ...current, [result.previousArtifactId]: { ...previous, rerun: result } }
+					: current;
+			});
+			if (result.status === "superseded") {
+				void getPi()
+					.listArtifacts()
+					.then((records) => setLedgerArtifacts(records.filter((record) => record.purpose === "deliverable")))
+					.catch(() => {});
+			}
+		});
+		return unsubscribe;
+	}, []);
 
 	const empty =
 		!flow &&
@@ -81,12 +109,11 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 				[record.id]:
 					"status" in result
 						? {
-								key:
-									result.status === "reproduced"
-										? "panel.artifactProvenance.reproduced"
-										: "panel.artifactProvenance.superseded",
+								key: rerunStatusKey(result.status),
+								jobId: result.jobId,
 								difference: result.difference,
 								sha256: result.sha256,
+								error: result.error,
 							}
 						: { key: "panel.artifactProvenance.rerunFailed" },
 			}));
@@ -165,12 +192,29 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 
 type RerunNotice = {
 	key:
+		| "panel.artifactProvenance.submitted"
+		| "panel.artifactProvenance.running"
 		| "panel.artifactProvenance.reproduced"
 		| "panel.artifactProvenance.superseded"
+		| "panel.artifactProvenance.failed"
 		| "panel.artifactProvenance.rerunFailed";
+	jobId?: string;
 	difference?: string;
 	sha256?: string;
+	error?: string;
 };
+
+function rerunStatusKey(
+	status: "submitted" | "running" | "reproduced" | "superseded" | "failed",
+): RerunNotice["key"] {
+	return {
+		submitted: "panel.artifactProvenance.submitted",
+		running: "panel.artifactProvenance.running",
+		reproduced: "panel.artifactProvenance.reproduced",
+		superseded: "panel.artifactProvenance.superseded",
+		failed: "panel.artifactProvenance.failed",
+	}[status] as RerunNotice["key"];
+}
 
 export function ArtifactProvenanceCard({
 	record,
@@ -194,6 +238,18 @@ export function ArtifactProvenanceCard({
 	const badge = status
 		? t(`panel.artifactProvenance.badge.${status}`)
 		: t("panel.artifactProvenance.loading");
+	const persistedRerun = provenance?.rerun;
+	const activePersistedRerun = persistedRerun?.status === "submitted" || persistedRerun?.status === "running";
+	const effectiveRerun =
+		rerunResult ??
+		(persistedRerun
+			? {
+					key: rerunStatusKey(persistedRerun.status),
+					difference: persistedRerun.difference,
+					sha256: persistedRerun.sha256,
+					error: persistedRerun.error,
+				}
+			: undefined);
 	return (
 		<article className="rounded-lg bg-hover p-2 text-[11px]" data-testid="artifact-provenance-card">
 			<div className="flex items-start justify-between gap-2">
@@ -272,19 +328,27 @@ export function ArtifactProvenanceCard({
 						</button>
 					)}
 					{provenance.reproducibility === "reproducible" && onRerun && (
-						<button type="button" className="panel-action ml-2" disabled={rerunning} onClick={onRerun}>
-							{rerunning ? t("panel.artifactProvenance.rerunning") : t("panel.artifactProvenance.rerun")}
+						<button
+							type="button"
+							className="panel-action ml-2"
+							disabled={rerunning || activePersistedRerun}
+							onClick={onRerun}
+						>
+							{rerunning || activePersistedRerun
+								? t("panel.artifactProvenance.rerunning")
+								: t("panel.artifactProvenance.rerun")}
 						</button>
 					)}
-					{rerunResult && (
+					{effectiveRerun && (
 						<div className="mt-1 text-warn">
-							<p>{t(rerunResult.key)}</p>
-							{rerunResult.difference && (
+							<p>{t(effectiveRerun.key)}</p>
+							{effectiveRerun.difference && (
 								<p>
-									{t("panel.artifactProvenance.difference")}: {rerunResult.difference}
-									{rerunResult.sha256 ? ` · sha256:${rerunResult.sha256}` : ""}
+									{t("panel.artifactProvenance.difference")}: {effectiveRerun.difference}
+									{effectiveRerun.sha256 ? ` · sha256:${effectiveRerun.sha256}` : ""}
 								</p>
 							)}
+							{effectiveRerun.error && <p>{effectiveRerun.error}</p>}
 						</div>
 					)}
 				</div>

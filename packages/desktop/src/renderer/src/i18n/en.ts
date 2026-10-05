@@ -209,8 +209,11 @@ export const en: Messages = {
 			openSession: "Open source session",
 			rerun: "Rerun",
 			rerunning: "Rerunning…",
+			submitted: "Rerun submitted",
+			running: "Rerun running",
 			reproduced: "Reproduced: sha256 matches",
 			superseded: "Result differs: old artifact marked superseded",
+			failed: "Rerun failed",
 			difference: "Difference",
 			rerunFailed: "Rerun did not complete",
 			badge: {

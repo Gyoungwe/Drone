@@ -122,4 +122,32 @@ describe("ArtifactProvenanceCard", () => {
 		);
 		expect(partial).not.toContain("panel.artifactProvenance.rerun");
 	});
+
+	it("renders persisted submitted, running, reproduced, inconsistent, and failed states", () => {
+		for (const status of ["submitted", "running", "reproduced", "superseded", "failed"] as const) {
+			const html = renderToStaticMarkup(
+				createElement(ArtifactProvenanceCard, {
+					record,
+					provenance: {
+						...provenance("reproducible"),
+						rerun: {
+							id: "rerun-1",
+							schemaVersion: 1,
+							projectId: "project-1",
+							sourceArtifactId: record.id,
+							jobId: "job-1",
+							status,
+							previousSha256: record.sha256,
+							submittedAt: "2026-01-01T00:00:00.000Z",
+							updatedAt: "2026-01-01T00:00:00.000Z",
+						},
+					},
+					expanded: true,
+					onToggle: () => {},
+					onRerun: () => {},
+				}),
+			);
+			expect(html).toContain(`panel.artifactProvenance.${status}`);
+		}
+	});
 });

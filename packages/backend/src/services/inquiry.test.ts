@@ -182,4 +182,46 @@ describe("backend inquiry composition adapter", () => {
 			await rm(root, { recursive: true, force: true });
 		}
 	});
+
+	it("submits reruns immediately and emits terminal status after background collection", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-backend-inquiry-rerun-"));
+		try {
+			const service = new InquiryService({ inquiryDir: root, projectId: "project-rerun" });
+			await service.recordComputeEvent({
+				id: "compute-rerun",
+				jobId: "job-original",
+				type: "collected",
+				status: "succeeded",
+				at: 5_000,
+				runId: "run-original",
+				codeFingerprint: "code-fingerprint",
+				runProvenance: { workflow: "wf" },
+				artifacts: [{ path: "results/output.tsv", bytes: 10, sha256: "a".repeat(64) }],
+			});
+			const source = (await service.listArtifacts())[0];
+			expect(source).toBeDefined();
+			const terminal = new Promise<void>((resolve) => {
+				service.onRerunUpdated((result) => {
+					if (result.status === "reproduced") resolve();
+				});
+			});
+			service.setRerunHandler(async () => ({ jobId: "job-rerun" }));
+			service.setRerunCompletionHandler(async (pending) => ({
+				...pending.artifact,
+				id: "rerun-result",
+				parentIds: [pending.artifact.id],
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			}));
+			const submitted = await service.rerunArtifact(source?.id ?? "");
+			expect(submitted).toMatchObject({ status: "submitted", jobId: "job-rerun" });
+			await terminal;
+			expect((await service.artifactProvenance(source?.id ?? ""))?.rerun).toMatchObject({
+				status: "reproduced",
+			});
+			service.dispose();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
 });

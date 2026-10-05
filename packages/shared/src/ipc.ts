@@ -135,6 +135,7 @@ export const IpcChannels = {
 	InquiryArtifacts: "inquiry:listArtifacts",
 	InquiryArtifactProvenance: "inquiry:artifactProvenance",
 	InquiryRerunArtifact: "inquiry:rerunArtifact",
+	InquiryRerunUpdatedEvent: "inquiry:rerunUpdated",
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
 	ZoteroStatus: "zotero:status",

@@ -23,7 +23,7 @@ function runProvenanceFor(
 
 /** Build a bounded, content-free provenance projection for one artifact. */
 export function artifactProvenance(
-	snapshot: Pick<InquirySnapshot, "artifacts" | "attempts">,
+	snapshot: Pick<InquirySnapshot, "artifacts" | "attempts" | "reruns">,
 	artifactId: string,
 ): ArtifactProvenance | undefined {
 	const artifact = snapshot.artifacts.find((item) => item.id === artifactId);
@@ -52,6 +52,9 @@ export function artifactProvenance(
 	const sourceAttemptSession = attempts.find((attempt) => attempt.sessionId);
 	const sourceAttemptTurn = attempts.find((attempt) => attempt.turn !== undefined);
 	const codeFingerprint = attempts.find((attempt) => attempt.codeFingerprint)?.codeFingerprint;
+	const rerun = [...(snapshot.reruns ?? [])]
+		.filter((item) => item.sourceArtifactId === artifact.id)
+		.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
 	return {
 		artifact,
 		parentChain,
@@ -65,5 +68,6 @@ export function artifactProvenance(
 			? { sourceTurn: artifact.turn ?? sourceAttemptTurn?.turn }
 			: {}),
 		reproducibility: reproducibilityStatus(codeFingerprint, runProvenance),
+		...(rerun ? { rerun } : {}),
 	};
 }

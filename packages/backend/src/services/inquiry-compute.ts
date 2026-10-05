@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import type { JobRecord } from "@drone/compute";
-import type { ArtifactRecord, RunProvenanceSummary } from "@drone/inquiry";
+import type { ArtifactRecord, ArtifactRerunRecord, RunProvenanceSummary } from "@drone/inquiry";
 import type { ComputeServicePort } from "./compute";
 import type { ComputeHostAdapter } from "./compute-adapter";
 import type { InquiryComputeEvent, InquiryRerunHandler } from "./inquiry";
@@ -42,48 +42,61 @@ export function computeInquiryMetadata(
 	};
 }
 
-/** Await completion and use the existing checksum-verifying collection path. */
+/** Submit only; the caller persists the job id before returning to the UI. */
 export function createInquiryComputeRerun(options: {
-	compute: Pick<ComputeServicePort, "getJob" | "status" | "collect">;
 	adapter: Pick<ComputeHostAdapter, "resubmitJob">;
+	compute?: Pick<ComputeServicePort, "getJob" | "status" | "collect">;
 	collectionRoot: string;
 	drainEvents: () => Promise<void>;
 	pollIntervalMs?: number;
 	maxWaitMs?: number;
 }): InquiryRerunHandler {
-	return async (provenance): Promise<ArtifactRecord> => {
+	return async (provenance): Promise<{ readonly jobId: string }> => {
 		const originalId =
 			provenance.attempts.find((attempt) => typeof attempt.parameters.jobId === "string")?.parameters.jobId ??
 			provenance.artifact.runId;
 		if (typeof originalId !== "string" || !options.adapter.resubmitJob)
 			throw new Error("No recorded compute workflow is available for this artifact");
 		const submitted = await options.adapter.resubmitJob(originalId);
+		return { jobId: submitted.id };
+	};
+}
+
+/** Wait for a submitted job and collect its verified output in the background. */
+export function createInquiryComputeRerunCompletion(options: {
+	compute: Pick<ComputeServicePort, "getJob" | "status" | "collect">;
+	collectionRoot: string;
+	drainEvents: () => Promise<void>;
+	pollIntervalMs?: number;
+	maxWaitMs?: number;
+}): (pending: ArtifactRerunRecord) => Promise<ArtifactRecord> {
+	return async (pending): Promise<ArtifactRecord> => {
+		let job = await options.compute.getJob(pending.jobId);
 		const deadline = Date.now() + (options.maxWaitMs ?? 24 * 60 * 60 * 1000);
-		let job = await options.compute.getJob(submitted.id);
 		while (job && job.status !== "succeeded") {
 			if (["failed", "cancelled", "blocked", "partial", "unknown"].includes(job.status))
 				throw new Error(`Rerun ended with ${job.status}`);
-			if (Date.now() >= deadline) throw new Error(`Rerun is still pending: ${submitted.id}`);
+			if (Date.now() >= deadline) throw new Error(`Rerun is still pending: ${pending.jobId}`);
 			await delay(options.pollIntervalMs ?? 1000);
-			job = await options.compute.status(submitted.id);
+			job = await options.compute.status(pending.jobId);
 		}
 		if (!job) throw new Error("Submitted rerun is unavailable");
 		const collection = await options.compute.collect(job.jobId, {
 			targetDir: join(options.collectionRoot, job.jobId),
-			expected: [provenance.artifact.path],
+			expected: [pending.artifact.path],
 		});
-		const output = collection.manifest.entries.find((entry) => entry.path === provenance.artifact.path);
+		const output = collection.manifest.entries.find((entry) => entry.path === pending.artifact.path);
 		if (!output?.sha256) throw new Error("Rerun did not collect the requested verified artifact");
 		await options.drainEvents();
 		const timestamp = new Date().toISOString();
 		return {
-			...provenance.artifact,
+			...pending.artifact,
 			id: `run:${job.jobId}:${output.path}:${output.sha256.toLowerCase()}`,
 			path: output.path,
 			bytes: output.bytes ?? output.size ?? 0,
 			sha256: output.sha256,
 			source: { kind: "run", id: job.jobId },
-			parentIds: [provenance.artifact.id],
+			parentIds: [pending.artifact.id],
 			runId: job.jobId,
 			runProvenance: computeInquiryMetadata(job).runProvenance,
 			status: "valid",

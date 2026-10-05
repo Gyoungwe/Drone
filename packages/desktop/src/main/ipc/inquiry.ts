@@ -29,7 +29,10 @@ function uiError(code: string, detail: string) {
 }
 
 /** Bind the renderer-facing B5 artifact provenance projection. */
-export function registerInquiryIpc(backendOrInquiry: BackendServices | InquiryServicePort): () => void {
+export function registerInquiryIpc(
+	backendOrInquiry: BackendServices | InquiryServicePort,
+	sendEvent: (channel: string, payload: unknown) => void = () => {},
+): () => void {
 	const inquiry = "inquiry" in backendOrInquiry ? backendOrInquiry.inquiry : backendOrInquiry;
 	const implementation: ContractImplementation<typeof InquiryContract> = {
 		listArtifacts: async () => [...(await inquiry.listArtifacts())],
@@ -45,7 +48,7 @@ export function registerInquiryIpc(backendOrInquiry: BackendServices | InquirySe
 			}
 		},
 	};
-	return bindContract(InquiryContract, implementation, {
+	const unbind = bindContract(InquiryContract, implementation, {
 		channelForMethod: (_contract, method) =>
 			({
 				listArtifacts: IpcChannels.InquiryArtifacts,
@@ -54,4 +57,12 @@ export function registerInquiryIpc(backendOrInquiry: BackendServices | InquirySe
 			})[method as keyof typeof InquiryContract.methods],
 		beforeInvoke: (event) => requireMainFrame(event),
 	});
+	const unsubscribe =
+		typeof inquiry.onRerunUpdated === "function"
+			? inquiry.onRerunUpdated((result) => sendEvent(IpcChannels.InquiryRerunUpdatedEvent, result))
+			: () => {};
+	return () => {
+		unbind();
+		unsubscribe();
+	};
 }

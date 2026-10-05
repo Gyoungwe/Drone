@@ -146,9 +146,16 @@ export interface InquirySnapshot {
 	readonly findings: readonly FindingRecord[];
 	readonly questions: readonly QuestionRecord[];
 	readonly attempts: readonly AttemptRecord[];
+	/** Durable one-click rerun state; absent in pre-rerun ledgers. */
+	readonly reruns?: readonly ArtifactRerunRecord[];
 }
 
-export type InquiryRecord = ArtifactRecord | FindingRecord | QuestionRecord | AttemptRecord;
+export type InquiryRecord =
+	| ArtifactRecord
+	| FindingRecord
+	| QuestionRecord
+	| AttemptRecord
+	| ArtifactRerunRecord;
 
 export type ReproducibilityStatus = "reproducible" | "partial" | "not-reproducible";
 
@@ -162,13 +169,35 @@ export interface ArtifactProvenance {
 	readonly sourceSessionId?: string;
 	readonly sourceTurn?: number;
 	readonly reproducibility: ReproducibilityStatus;
+	readonly rerun?: ArtifactRerunRecord;
+}
+
+export type ArtifactRerunStatus = "submitted" | "running" | "reproduced" | "superseded" | "failed";
+
+export interface ArtifactRerunRecord {
+	readonly id: string;
+	readonly schemaVersion: typeof INQUIRY_SCHEMA_VERSION;
+	readonly projectId: string;
+	readonly sourceArtifactId: string;
+	readonly artifact: ArtifactRecord;
+	readonly jobId: string;
+	readonly status: ArtifactRerunStatus;
+	readonly previousSha256: string;
+	readonly resultArtifactId?: string;
+	readonly sha256?: string;
+	readonly difference?: string;
+	readonly error?: string;
+	readonly submittedAt: string;
+	readonly updatedAt: string;
 }
 
 export interface ArtifactRerunResult {
-	readonly status: "reproduced" | "superseded";
+	readonly status: ArtifactRerunStatus;
+	readonly jobId: string;
 	readonly previousArtifactId: string;
-	readonly artifactId: string;
 	readonly previousSha256: string;
-	readonly sha256: string;
+	readonly artifactId?: string;
+	readonly sha256?: string;
 	readonly difference?: string;
+	readonly error?: string;
 }
