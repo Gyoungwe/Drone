@@ -64,7 +64,7 @@ await runScenario("p4", async (page, result, step) => {
 		const rounds = [];
 		for (let i = 1; i <= ROUNDS; i++) {
 			const prompt = i === 1
-				? "这是长会话第 1 轮。请记住随机口令 " + secret + " 及目标：交付物为 long-session-check.md，下一步为验证回忆。只回复 R1，不要在后续提示前重复口令。"
+				? "这是长会话第 1 轮。请记住随机口令 " + secret + " 及目标：交付物为 long-session-check.md，下一步为验证回忆。只回复 R1，不要在后续提示前重复口令。整个长会话预算上限 0.50 美元。"
 				: "这是长会话第 " + i + "/" + ROUNDS + " 轮：只回复 R" + i + "，不要调用工具、不要写文件、不要提问。保持第 1 轮的目标和交付物。";
 			const run = await sendRound(page, result, prompt, 30_000);
 			const assistantCount = await page.eval("document.querySelectorAll('.markdown-body').length");

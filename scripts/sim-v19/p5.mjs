@@ -21,11 +21,13 @@ async function browserTarget(url) {
 }
 
 function startErrorServer(status) {
+	let requests = 0;
 	const server = createServer((req, res) => {
+		requests++;
 		res.writeHead(status, { "content-type": "application/json" });
 		res.end(JSON.stringify({ error: { message: status === 401 ? "Unauthorized test response" : "Rate limit test response" } }));
 	});
-	return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port })));
+	return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port, get requests() { return requests; } })));
 }
 
 async function providerEdit(page, baseUrl) {
@@ -54,6 +56,8 @@ async function runPseudoError(page, result, status) {
 		const configured = await providerEdit(page, "http://127.0.0.1:" + fixture.port + "/v1");
 		await page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
 		await page.clickSelector('button[aria-label="新建会话"]');
+		const pickerOpened = await page.eval("(() => { const button=document.querySelector('.composer-model-group > div > button'); button?.click(); return Boolean(button); })()");
+		const selected = await page.eval("(() => { const button=[...document.querySelectorAll('.composer-model-group button')].find(n=>/DeepSeek|deepseek/i.test(n.textContent||'')); button?.click(); return button?.textContent.trim() || null; })()");
 		const filled = await page.fill('[data-testid="composer-input"]', "伪 provider 错误事件测试：只发送一次短请求，不要调用工具。");
 		const sent = await page.clickSelector('[data-testid="composer-send"]');
 		const startedRun = await page.waitForRunStart();
@@ -67,7 +71,7 @@ async function runPseudoError(page, result, status) {
 		}
 		const evidence = await page.eval("(() => { const cards=[...document.querySelectorAll('.error-note')]; const details=[...document.querySelectorAll('.error-note-detail')].map(n=>n.textContent.trim()); return {cards:cards.length,details,alerts:document.querySelectorAll('[role=\"alert\"]').length}; })()");
 		const restored = await restoreProvider(page);
-		return { status, configured, filled, sent, startedRun, evidence, restored, ok: Boolean(configured.filled && sent && startedRun && evidence.cards > 0 && evidence.details.some((text) => text.includes(String(status))) && restored.filled) };
+		return { status, configured, pickerOpened, selected, filled, sent, startedRun, evidence, requestCount: fixture.requests, restored, ok: Boolean(configured.filled && pickerOpened && selected && sent && startedRun && fixture.requests > 0 && evidence.cards > 0 && evidence.details.some((text) => text.includes(String(status))) && restored.filled) };
 	} finally {
 		fixture.server.close();
 	}

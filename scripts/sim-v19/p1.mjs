@@ -51,7 +51,7 @@ await runScenario("p1", async (page, result, step) => {
 		const dialog = await page.waitForSelector('[data-testid="example-task-dialog"]');
 		const input = await page.eval("document.querySelector('[data-testid=\"example-task-input\"] input, [data-testid=\"example-task-input\"] textarea')?.id || null");
 		if (!input) return { ok: false, selectors: ['[data-testid="example-task-dialog"]', '[data-testid="example-task-input"] input'] };
-		const filled = await page.fill("#" + input, "只研究两篇开放获取论文：DOI 10.1371/journal.pone.0000308 和 10.1371/journal.pone.0022596。限定只读这两篇，写简短检索日志和证据卡，不写 Zotero。完成后停止。");
+		const filled = await page.fill("#" + input, "只研究两篇开放获取论文：DOI 10.1371/journal.pone.0000308 和 10.1371/journal.pone.0022596。限定只读这两篇，写简短检索日志和证据卡，不写 Zotero。完成后停止。模型预算上限 0.25 美元。");
 		result.interactions.clicks += 1;
 		result.interactions.inputs += 1;
 		return { ok: Boolean(opened && dialog && filled), selectors: ['[data-testid="example-task-card"]', '[data-testid="example-task-input"] input'], inputId: input };

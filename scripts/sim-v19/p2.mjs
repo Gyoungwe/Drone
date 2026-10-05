@@ -52,7 +52,7 @@ async function propose(page, result, label) {
 		"读取当前测试 Vault 的 Wiki/Existing.md，但不要直接修改文件。",
 		"请调用 research_propose_wiki_update，targetPath 必须是 Wiki/Existing.md，title 为 " + label + "，",
 		"建议正文只增加一行 review-value: " + label + "，rationale 写明这是模拟用户测试，sources 只填 Wiki/Existing.md。",
-		"只提交一个候选，不要批准或应用它；先用 task_plan 规划，然后一次授权后自动完成。",
+		"只提交一个候选，不要批准或应用它；先用 task_plan 规划，然后一次授权后自动完成。模型预算上限 0.35 美元。",
 	].join(" ");
 	const filled = await page.fill('[data-testid="composer-input"]', prompt);
 	const sent = await page.clickSelector('[data-testid="composer-send"]');

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 
 const root = process.env.DRONE_REPO || process.cwd();
@@ -48,7 +48,11 @@ try {
 		child.once("error", reject);
 		child.once("exit", (code, signal) => resolve(code ?? (signal ? 1 : 0)));
 	});
-	result = { ok: exitCode === 0, ready, exitCode, disabled: env.DRONE_HARNESS_DISABLE, requestedRounds: 5, out: out + "/p4-disabled" };
+	const reportPath = out + "/p4-disabled/p4.json";
+	let scenario = null;
+	try { scenario = JSON.parse(readFileSync(reportPath, "utf8")); } catch {}
+	const semanticOk = Boolean(scenario?.steps?.find((step) => step.name === "long-session-settled-rounds")?.ok && scenario?.steps?.find((step) => step.name === "trace-harness-unit-distribution")?.ok);
+	result = { ok: Boolean(exitCode === 0 && semanticOk), executed: Boolean(ready && exitCode === 0 && scenario), ready, exitCode, disabled: env.DRONE_HARNESS_DISABLE, requestedRounds: 5, out: out + "/p4-disabled", scenario };
 } catch (error) {
 	result = { ok: false, error: String(error?.stack || error), disabled: env.DRONE_HARNESS_DISABLE, requestedRounds: 5 };
 } finally {

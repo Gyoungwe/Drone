@@ -44,6 +44,7 @@ await runScenario("p3", async (page, result, step) => {
 			"只执行当前项目里的确定性夹具：python3 plot_fixed.py --out .。",
 			"不要自行生成绘图代码，不要联网；该脚本必须生成 figure.png 和 result.md，result.md 的数字应为 n=4、mean=4、slope=2。",
 			"将这两个文件登记为带来源、代码指纹、父链和可复现性信息的产物，并用 inquiry artifact 记录；先 task_plan，一次授权后自动完成。",
+			"模型预算上限 0.30 美元。",
 		].join(" ");
 		const filled = await page.fill('[data-testid="composer-input"]', prompt);
 		const sent = await page.clickSelector('[data-testid="composer-send"]');
