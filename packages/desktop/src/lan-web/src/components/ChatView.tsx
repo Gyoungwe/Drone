@@ -6,7 +6,7 @@ import {
 	deriveTurnUsage,
 	groupProcessRows,
 } from "@drone/shared";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n";
 import { useLanStore } from "../store";
 import { healingTailSuffix } from "../store-pure";
@@ -34,14 +34,30 @@ const BOTTOM_THRESHOLD = 60;
  *  流式期间吸底（上滑解除）。无 transcript（历史会话）时按需拉取。
  *  底部跟随：ResizeObserver 监听内容/容器尺寸（流式追加、markstream 平滑揭示、键盘弹起），
  *  跟随中即时贴底；仅「向上滑动」脱离跟随，回到底部恢复；内容变矮（压缩重建）不误判。 */
-export function ChatView({ sessionId, isDark }: { sessionId: string; isDark: boolean }) {
+export function ChatView({
+	sessionId,
+	isDark,
+	onRespond,
+}: {
+	sessionId: string;
+	isDark: boolean;
+	onRespond?: (requestId: string, answer: "allowOnce" | "deny") => Promise<boolean>;
+}) {
 	const transcript = useLanStore((s) => s.transcripts[sessionId]);
+	const [recovering, setRecovering] = useState(false);
+	const [recoveryError, setRecoveryError] = useState("");
+	const recoveryLock = useRef(false);
+	const recoverAnswer = useLanStore((s) => s.recoverAnswer);
+	const readOnly = useLanStore((s) => s.list.find((item) => item.sessionId === sessionId)?.readOnly);
+	const lastError = transcript?.messages.at(-1)?.kind === "error" ? transcript.messages.at(-1) : undefined;
+	const lastUser = transcript?.messages.findLast((m) => m.kind === "user");
 	const view = useLanStore((s) => s.views[sessionId]);
 	const truncated = useLanStore((s) => s.truncated[sessionId]);
 	const perms = useLanStore((s) => s.pendingPerms[sessionId]);
 	// 中途进入自愈标记（错过 message_start 的 run：流式帧空转，用 view.assistantTail 的
 	// 尾部新增后缀渲染兑底气泡——种子已含 partial 正文，整段渲染会和消息流重复）
 	const healing = useLanStore((s) => s.streamHealing[sessionId]);
+	const remoteControl = useLanStore((s) => s.remoteControl);
 	const loadTranscript = useLanStore((s) => s.loadTranscript);
 	const seeded = useLanStore((s) => s.seeded);
 	const scrollRef = useRef<HTMLDivElement>(null);
@@ -78,7 +94,7 @@ export function ChatView({ sessionId, isDark }: { sessionId: string; isDark: boo
 
 	// A new turn/session resumes following; completing a turn preserves a reader's
 	// deliberate scroll-up, but settles the final answer when following is active.
-	const lastUserId = transcript?.messages.findLast((message) => message.kind === "user")?.id;
+	const lastUserId = lastUser?.id;
 	// biome-ignore lint/correctness/useExhaustiveDependencies: a new user message/session is the reset signal
 	useEffect(() => {
 		followingRef.current = true;
@@ -178,6 +194,34 @@ export function ChatView({ sessionId, isDark }: { sessionId: string; isDark: boo
 						renderRow(row)
 					),
 				)}
+				{remoteControl && !readOnly && lastError && lastUser && (
+					<div className="run-status-note">
+						<button
+							type="button"
+							disabled={recovering || !!view?.agentActive}
+							onClick={async () => {
+								if (recoveryLock.current) return;
+								recoveryLock.current = true;
+								setRecovering(true);
+								setRecoveryError("");
+								try {
+									const error = await recoverAnswer(sessionId, lastError.id, lastUser.timestamp);
+									if (error) setRecoveryError(error);
+								} finally {
+									recoveryLock.current = false;
+									setRecovering(false);
+								}
+							}}
+						>
+							{t("chat.recoverAnswer")}
+						</button>
+					</div>
+				)}
+				{recoveryError && (
+					<div role="alert" className="m-err">
+						{recoveryError}
+					</div>
+				)}
 				{transcript.retrying && (
 					<div className="run-status-note" role="status">
 						{t("chat.retrying", {
@@ -209,7 +253,12 @@ export function ChatView({ sessionId, isDark }: { sessionId: string; isDark: boo
 					</div>
 				)}
 				{(perms ?? []).map((request) => (
-					<PermissionCard key={request.id} request={request} />
+					<PermissionCard
+						key={request.id}
+						request={request}
+						remoteControl={remoteControl}
+						onRespond={onRespond}
+					/>
 				))}
 				{/* M1 只读兜底：perm 帧未覆盖时（旧服务）用 view 投影显示等待横幅 */}
 				{permCount === 0 && view?.pendingPermission && (

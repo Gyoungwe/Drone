@@ -75,6 +75,15 @@ export interface DiscoveryServiceOptions {
 	readonly runnerFactory?: (language: KernelLanguage) => Promise<ControlledKernelRunner>;
 	readonly container?: Omit<ContainerKernelRunnerOptions, "projectRoot">;
 	readonly criticProvider?: CriticProvider;
+	readonly onExecution?: (input: {
+		readonly sessionId: string;
+		readonly projectId: string;
+		readonly cwd: string;
+		readonly runDirectory: string;
+		readonly language: string;
+		readonly code: string;
+		readonly execution: Awaited<ReturnType<KernelSession["execute"]>>;
+	}) => void | Promise<void>;
 }
 
 interface PersistedSession {
@@ -469,6 +478,15 @@ export class DiscoveryService implements DiscoveryServicePort {
 				executionCount: session.status.executionCount,
 			});
 		await this.persistSessions();
+		await this.options.onExecution?.({
+			sessionId: id,
+			projectId: this.projectId,
+			cwd: this.projectRoot,
+			runDirectory: this.sessionMeta.get(id)?.runDirectory ?? "runs",
+			language: this.sessionMeta.get(id)?.language ?? "unknown",
+			code,
+			execution,
+		});
 		return execution;
 	}
 	async exportKernel(sessionId: string) {
