@@ -1,3 +1,8 @@
+import type {
+	DeliverableReviewFinding,
+	DeliverableReviewSnapshot,
+	ReviewerProviderSelection,
+} from "@drone/knowledge";
 import { createLogger } from "../log";
 import { McpService } from "../mcp/service";
 import { PackageAdmin } from "../packages/admin";
@@ -8,6 +13,7 @@ import { buildSessionExtensionFactories } from "../session-engine/extensions";
 import type { SessionServiceOptions } from "../session-service";
 import { createDefaultStorageRegistry } from "../storage/registry";
 import { ApprovalService } from "./approvals";
+import { DeliverableReviewerService } from "./deliverable-reviewer";
 import { KnowledgeSessionService } from "./knowledge-session";
 import { PermissionSettingsService } from "./permissions";
 import { ProjectTrustService } from "./project-trust";
@@ -24,6 +30,90 @@ import { SessionSettingsBoundary } from "./session-settings-boundary";
 import { SubagentService } from "./subagents";
 
 const log = createLogger("backend");
+
+const REVIEW_CODES = new Set<DeliverableReviewFinding["code"]>([
+	"untraceable-number",
+	"figure-code-mismatch",
+	"citation-without-receipt",
+]);
+const IMAGE_DELIVERABLE = /^(?:figure|image|plot)$/i;
+const IMAGE_FILE = /\.(?:png|jpe?g|gif|svg|tiff?|webp)$/i;
+
+function modelReviewFindings(value: unknown): DeliverableReviewFinding[] {
+	const text = Array.isArray(value)
+		? value
+				.map((item) => (item && typeof item === "object" && "text" in item ? String(item.text ?? "") : ""))
+				.join("\n")
+		: "";
+	const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] ?? text;
+	const json = fenced.match(/\[[\s\S]*\]/)?.[0];
+	if (!json) return [];
+	try {
+		const parsed: unknown = JSON.parse(json);
+		if (!Array.isArray(parsed)) return [];
+		return parsed.flatMap((item, index) => {
+			if (!item || typeof item !== "object") return [];
+			const finding = item as Record<string, unknown>;
+			const code = finding.code;
+			const severity = finding.severity;
+			if (!REVIEW_CODES.has(code as DeliverableReviewFinding["code"])) return [];
+			if (severity !== "low" && severity !== "medium" && severity !== "high") return [];
+			const location =
+				finding.location && typeof finding.location === "object" ? finding.location : { kind: "body" };
+			return [
+				{
+					id: `model-review-${index}-${code}`,
+					code: code as DeliverableReviewFinding["code"],
+					severity,
+					location: location as DeliverableReviewFinding["location"],
+					detail:
+						typeof finding.detail === "string"
+							? finding.detail.slice(0, 800)
+							: "模型审稿发现需要核对的内容。",
+					suggestion:
+						typeof finding.suggestion === "string"
+							? finding.suggestion.slice(0, 500)
+							: "请人工核对该意见并补充证据。",
+					handled: false,
+				},
+			];
+		});
+	} catch {
+		return [];
+	}
+}
+
+async function runModelReview(
+	runtime: Awaited<ReturnType<SessionHost["getModelRuntime"]>>,
+	snapshot: DeliverableReviewSnapshot,
+	selection: ReviewerProviderSelection,
+): Promise<DeliverableReviewFinding[]> {
+	const textDeliverables = snapshot.deliverables?.filter(
+		(item) => !IMAGE_DELIVERABLE.test(item.kind ?? "") && !IMAGE_FILE.test(item.path ?? ""),
+	);
+	if (snapshot.deliverables?.length && !textDeliverables?.length) return [];
+	if (!snapshot.body && !snapshot.answer) return [];
+	const textSnapshot = textDeliverables ? { ...snapshot, deliverables: textDeliverables } : snapshot;
+	const model =
+		runtime.getModel(selection.provider, selection.model ?? "") ?? runtime.getModels(selection.provider)[0];
+	if (!model) return [];
+	const response = await runtime.completeSimple(
+		model,
+		{
+			systemPrompt:
+				"你是后台交付物审稿人。只返回 JSON 数组，不修改文件、不回复用户。只报告 untraceable-number、figure-code-mismatch、citation-without-receipt 三类问题；每项包含 code、severity、location、detail、suggestion。",
+			messages: [
+				{
+					role: "user",
+					content: JSON.stringify(textSnapshot).slice(0, 120_000),
+					timestamp: Date.now(),
+				},
+			],
+		},
+		{ maxTokens: 1200, maxRetries: 0 },
+	);
+	return modelReviewFindings(response.content);
+}
 
 /** Composition-root initialization kept outside the compatibility façade. */
 export function initializeSessionComposition(service: SessionHost, options: SessionServiceOptions): void {
@@ -72,6 +162,45 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 			log,
 		}),
 	);
+	const reviewer = new DeliverableReviewerService({
+		getCwd: (sessionId) => service.registry.get(sessionId)?.cwd,
+		getProviders: async () =>
+			(await service.settings.listProviders())
+				.filter((provider) => provider.configured)
+				.flatMap((provider) =>
+					provider.models.length ? [{ provider: provider.id, model: provider.models[0]?.id }] : [],
+				),
+		getMainProvider: (sessionId) => service.registry.get(sessionId)?.session.model?.provider,
+		useModel: async () => (await service.modelPrefs.getPrefs()).backgroundReviewerModel,
+		modelReview: async (snapshot, selection) =>
+			runModelReview(await service.getModelRuntime(), snapshot, selection),
+		onResult: (sessionId, result, trigger) => {
+			if (!result.findings.length) return;
+			service.traces.recordCustom(sessionId, "reviewer_finding", {
+				contentHash: result.contentHash,
+				trigger,
+				findings: result.findings,
+			});
+			for (const finding of result.findings)
+				service.emitEvent(sessionId, {
+					type: "reviewer_finding",
+					finding: { ...finding, trigger, contentHash: result.contentHash },
+				});
+		},
+	});
+	service.runtime.knowledge.reviewer = {
+		observe: (sessionId, event) => reviewer.observe(sessionId, event),
+		schedule: (request) =>
+			reviewer.schedule({
+				sessionId: request.sessionId,
+				snapshot: request.snapshot,
+				trigger: request.trigger,
+			}),
+		getCached: (sessionId, snapshot) => reviewer.getCached(sessionId, snapshot),
+		getFindings: (sessionId) => reviewer.getFindings(sessionId),
+		clearSession: (sessionId) => reviewer.clearSession(sessionId),
+	};
+	service.runtime.registerDisposable?.(reviewer);
 	service.messageService = new SessionMessageService({
 		runtime: service.runtime,
 		registry: service.registry,

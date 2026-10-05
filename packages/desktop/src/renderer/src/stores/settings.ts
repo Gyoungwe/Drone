@@ -85,6 +85,7 @@ interface SettingsStore {
 		agent: string,
 		level: import("@drone/shared").SubagentThinkingLevel | null,
 	) => Promise<void>;
+	setBackgroundReviewerModel: (enabled: boolean) => Promise<void>;
 	setContextManagerMode: (mode: ContextManagerMode) => Promise<void>;
 	setChannelWatchEnabled: (enabled: boolean) => Promise<void>;
 	refreshLanStatus: () => Promise<void>;
@@ -308,7 +309,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 
 		setModelHidden: async (provider, modelId, hidden) => {
 			const previous = get().modelPrefs;
-			const base: ModelPrefs = previous ?? { hiddenModels: {}, subagentModels: {}, subagentThinking: {} };
+			const base: ModelPrefs = previous ?? {
+				hiddenModels: {},
+				subagentModels: {},
+				subagentThinking: {},
+				backgroundReviewerModel: false,
+			};
 			const ids = new Set(base.hiddenModels[provider] ?? []);
 			if (hidden) ids.add(modelId);
 			else ids.delete(modelId);
@@ -334,7 +340,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 
 		setModelsHidden: async (provider, modelIds, hidden) => {
 			const previous = get().modelPrefs;
-			const base: ModelPrefs = previous ?? { hiddenModels: {}, subagentModels: {}, subagentThinking: {} };
+			const base: ModelPrefs = previous ?? {
+				hiddenModels: {},
+				subagentModels: {},
+				subagentThinking: {},
+				backgroundReviewerModel: false,
+			};
 			const hiddenSet = new Set(base.hiddenModels[provider] ?? []);
 			for (const id of modelIds) {
 				if (hidden) hiddenSet.add(id);
@@ -378,6 +389,30 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 			} catch (error) {
 				set({ modelPrefs: previous, error: error instanceof Error ? error.message : String(error) });
 			}
+		},
+
+		setBackgroundReviewerModel: async (enabled) => {
+			const previous = get().modelPrefs;
+			const base: ModelPrefs = previous ?? {
+				hiddenModels: {},
+				subagentModels: {},
+				subagentThinking: {},
+				backgroundReviewerModel: false,
+			};
+			await optimisticUpdate({
+				apply: () => set({ modelPrefs: { ...base, backgroundReviewerModel: enabled } }),
+				sync: async () => {
+					const modelPrefs = await getPi().setBackgroundReviewerModel(enabled);
+					set({ modelPrefs });
+				},
+				revert: async () => {
+					const modelPrefs = await getPi()
+						.getModelPrefs()
+						.catch(() => previous);
+					set({ modelPrefs });
+				},
+				onError: (error) => set({ error: error instanceof Error ? error.message : String(error) }),
+			});
 		},
 
 		test: async (providerId) => {

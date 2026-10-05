@@ -58,6 +58,9 @@ export class SessionSettingsApi extends SessionApiDiagnostics {
 	async setSubagentThinking(agent: string, level: SubagentThinkingLevel | null): Promise<ModelPrefs> {
 		return this.host.modelsService.setSubagentThinking(agent, level);
 	}
+	async setBackgroundReviewerModel(enabled: boolean): Promise<ModelPrefs> {
+		return this.host.modelsService.setBackgroundReviewerModel(enabled);
+	}
 
 	getPermissionConfig(): { enabled: boolean } {
 		return this.host.settingsBoundary.getPermissionConfig();

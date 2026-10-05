@@ -12,6 +12,17 @@ export interface Logger {
 }
 export interface KnowledgeRuntime {
 	publication?: KnowledgePublicationBridge;
+	reviewer?: {
+		observe?(sessionId: string, event: unknown): void;
+		schedule(request: {
+			sessionId: string;
+			snapshot: unknown;
+			trigger: "deliverable-write" | "milestone-complete" | "publication-projection";
+		}): void;
+		getCached?(sessionId: string, snapshot: unknown): unknown;
+		getFindings?(sessionId: string): readonly unknown[];
+		clearSession?(sessionId: string): void;
+	};
 	binding?: KnowledgeBindingBridge;
 	workerPool?: unknown;
 	semanticLock?: unknown;

@@ -19,6 +19,8 @@ export function ProvidersPanel() {
 	const refreshing = useSettingsStore((s) => s.refreshing);
 	const refreshFromNetwork = useSettingsStore((s) => s.refreshProvidersFromNetwork);
 	const error = useSettingsStore((s) => s.error);
+	const modelPrefs = useSettingsStore((s) => s.modelPrefs);
+	const setBackgroundReviewerModel = useSettingsStore((s) => s.setBackgroundReviewerModel);
 
 	return (
 		<div>
@@ -40,6 +42,22 @@ export function ProvidersPanel() {
 				<SubagentPanel />
 			) : (
 				<>
+					<label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-border px-3 py-2">
+						<input
+							type="checkbox"
+							checked={modelPrefs?.backgroundReviewerModel === true}
+							onChange={(event) => void setBackgroundReviewerModel(event.target.checked)}
+							className="mt-0.5"
+						/>
+						<span>
+							<span className="block text-[12px] text-ink">
+								{t("settings.models.backgroundReviewerModel")}
+							</span>
+							<span className="mt-0.5 block text-[11px] text-ink-faint">
+								{t("settings.models.backgroundReviewerModelHint")}
+							</span>
+						</span>
+					</label>
 					<div className="mb-2 flex items-center justify-between gap-2">
 						<p className="text-[11px] text-ink-faint">{t("settings.providers.catalogHint")}</p>
 						<IconAction

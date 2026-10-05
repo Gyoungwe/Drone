@@ -28,6 +28,7 @@ const FORWARDABLE_EVENTS = new Set([
 	"subagent_run",
 	"model_wait",
 	"stream_guard_tripped",
+	"reviewer_finding",
 	"auto_retry_start",
 	"auto_retry_end",
 ]);

@@ -384,6 +384,9 @@ export const en: Messages = {
 		stages: "{count} stages",
 		tools: "{count} tool calls",
 		subagents: "{count} subagents",
+		reviewerTitle: "Background review",
+		reviewerLocation: "Location: {location}",
+		reviewerSuggestion: "Suggested action:",
 	},
 	turnFooter: {
 		files: "{count} files",
@@ -858,6 +861,9 @@ export const en: Messages = {
 		models: {
 			providers: "Provider configuration",
 			subagents: "Subagent configuration",
+			backgroundReviewerModel: "Use a model for background reviews",
+			backgroundReviewerModelHint:
+				"Off by default. When enabled, model review runs after rule checks and may incur cost.",
 			inherit: "Inherit parent session model",
 			subagentHint:
 				"Choose a model for each built-in or user-level subagent. Unconfigured agents inherit the parent session model.",

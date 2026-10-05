@@ -8,6 +8,7 @@ function copyPrefs(prefs: ModelPrefs): ModelPrefs {
 		),
 		subagentModels: { ...prefs.subagentModels },
 		subagentThinking: { ...prefs.subagentThinking },
+		backgroundReviewerModel: prefs.backgroundReviewerModel,
 	};
 }
 
@@ -66,6 +67,7 @@ export class ModelPrefsService {
 			hiddenModels: normalizeHiddenModels(data.hiddenModels),
 			subagentModels: normalizeStringMap(data.subagentModels),
 			subagentThinking,
+			backgroundReviewerModel: data.backgroundReviewerModel === true,
 		};
 		this.cache = prefs;
 		return prefs;
@@ -145,5 +147,12 @@ export class ModelPrefsService {
 
 	async getSubagentThinking(agent: string): Promise<SubagentThinkingLevel | undefined> {
 		return (await this.read()).subagentThinking[agent];
+	}
+
+	async setBackgroundReviewerModel(enabled: boolean): Promise<ModelPrefs> {
+		const prefs = copyPrefs(await this.read());
+		prefs.backgroundReviewerModel = enabled === true;
+		await this.write(prefs);
+		return copyPrefs(prefs);
 	}
 }

@@ -41,14 +41,16 @@ export function renderDeliveryStatus(status: HarnessDeliveryStatus): string {
 export interface HarnessDeliveryExtensionOptions {
 	report?: (sessionId: string, kind: string, data: unknown) => void;
 	recordUnit?: (sessionId: string, unit: "delivery", action: "gap") => void;
+	review?: (sessionId: string, snapshot: unknown) => void;
 }
 
 type HarnessDeliveryReporter = HarnessDeliveryExtensionOptions["report"];
 
 export function makeHarnessDeliveryExtension(
 	optionsOrReport: HarnessDeliveryExtensionOptions | HarnessDeliveryReporter = {},
+	review?: (sessionId: string, snapshot: unknown) => void,
 ): InlineExtension {
-	const options = typeof optionsOrReport === "function" ? { report: optionsOrReport } : optionsOrReport;
+	const options = typeof optionsOrReport === "function" ? { report: optionsOrReport, ...(review ? { review } : {}) } : optionsOrReport;
 	return {
 		name: "harness-delivery",
 		factory: (pi) => {
@@ -78,6 +80,19 @@ export function makeHarnessDeliveryExtension(
 					if (!status.complete) {
 						options.recordUnit?.(ctx.sessionManager.getSessionId(), "delivery", "gap");
 					}
+					const completedMilestones =
+						view.tasks
+							.find((task) => task.id === view.activeTaskId)
+							?.milestones.filter((milestone) => milestone.state === "completed") ?? [];
+					if (completedMilestones.length)
+						options.review?.(ctx.sessionManager.getSessionId(), {
+							enabled: true,
+							body: "",
+							milestoneId: status.taskId,
+							deliverables: completedMilestones
+								.filter((milestone) => typeof milestone.acceptance.path === "string")
+								.map((milestone) => ({ id: milestone.id, path: milestone.acceptance.path ?? undefined })),
+						});
 				} catch (error) {
 					log.warn("harness delivery failed", { error: String(error) });
 				}

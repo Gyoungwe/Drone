@@ -32,6 +32,7 @@ export {
 	type CompactionUiState,
 	emptyTranscript,
 	type RetryInfo,
+	type ReviewerFindingUi,
 	type SessionPhase,
 	type SessionTranscriptState,
 	type StreamingState,

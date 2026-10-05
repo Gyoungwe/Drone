@@ -37,7 +37,8 @@
 		"./specialist-delivery": "./src/specialist-delivery.ts",
 		"./wiki-model-review": "./src/wiki-model-review.ts",
 		"./ui-service": "./src/ui-service.ts",
-		"./experience-store": "./src/experience-store.ts"
+		"./experience-store": "./src/experience-store.ts",
+		"./deliverable-review": "./src/deliverable-review.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

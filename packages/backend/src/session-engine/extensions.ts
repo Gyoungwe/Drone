@@ -194,7 +194,20 @@ export function buildSessionExtensionFactories(
 		const recordUnit = (sessionId: string, unit: HarnessUnit, action: string) =>
 			deps.traces.recordCustom(sessionId, "harness_unit", { unit, action });
 		if (harness.guard) factories.push(makeHarnessGuardExtension({ report, recordUnit }));
-		if (harness.delivery) factories.push(makeHarnessDeliveryExtension({ report, recordUnit }));
+		if (harness.delivery)
+			factories.push(
+				makeHarnessDeliveryExtension({
+					report,
+					recordUnit,
+					review: (sessionId, snapshot) => {
+					deps.runtime.knowledge.reviewer?.schedule({
+						sessionId,
+						snapshot,
+						trigger: "milestone-complete",
+					});
+				},
+				}),
+			);
 	}
 	factories.push(
 		makeEvapExtension({

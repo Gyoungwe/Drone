@@ -374,6 +374,9 @@ export const zh = {
 		stages: "{count} 个阶段",
 		tools: "{count} 次工具",
 		subagents: "{count} 个子代理",
+		reviewerTitle: "后台审稿",
+		reviewerLocation: "位置：{location}",
+		reviewerSuggestion: "建议：",
 	},
 	turnFooter: {
 		files: "{count} 个文件",
@@ -828,6 +831,8 @@ export const zh = {
 		models: {
 			providers: "Provider 配置",
 			subagents: "Subagent 配置",
+			backgroundReviewerModel: "后台审稿使用模型",
+			backgroundReviewerModelHint: "默认关闭；开启后，规则审查之外会调用已配置模型，可能产生费用。",
 			inherit: "继承主会话模型",
 			subagentHint: "为各个内置或用户级子代理指定模型；不设置时继承发起任务的主会话模型。",
 			subagentsEmpty: "未发现可配置的子代理",

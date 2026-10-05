@@ -30,6 +30,8 @@ export interface ToolFamilyMeta {
 }
 
 export interface DroneToolMeta {
+	/** Successful execution produces a reviewable deliverable (explicit opt-in for extensions). */
+	deliverable?: boolean;
 	/** 无副作用的只读工具（任务工作台不记为效果操作；只读文献复用模式默认放行） */
 	readOnly?: boolean;
 	/** 只读文献复用模式（read-only library）下可用；缺省等于 readOnly（有副作用但该模式必需的工具显式声明） */
@@ -104,6 +106,7 @@ export function readDroneToolMeta(definition: unknown): DroneToolMeta | undefine
 		: undefined;
 	const flow = typeof d.flow === "boolean" ? d.flow : clip(d.flow, 40);
 	return {
+		...(typeof d.deliverable === "boolean" ? { deliverable: d.deliverable } : {}),
 		...(typeof d.readOnly === "boolean" ? { readOnly: d.readOnly } : {}),
 		...(typeof d.libraryMode === "boolean" ? { libraryMode: d.libraryMode } : {}),
 		...(capabilities ? { capabilities } : {}),
