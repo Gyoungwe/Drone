@@ -23,6 +23,7 @@ export const LAYOUT: any = {
         "Concepts",
         "Software",
         "Entities",
+        "Ideas",
         "Explainers"
     ],
     "templates": {

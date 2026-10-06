@@ -468,3 +468,32 @@ export async function archiveKnowledgeTopic({ cwd, bindingRevision, id, expected
 		memory = await mod.createTopicMemory({ binding, project });
 	return withKnowledgeBinding(binding, () => memory.archive(id, expectedRevision));
 }
+
+/**
+ * 知识库视图的搜索框：只读、不需要会话 ticket；范围 = 共享知识 + 当前项目（无项目时只查共享）。
+ * @param {Record<string, any>} options
+ */
+export async function searchKnowledge({ cwd = null, bindingRevision, query, limit = 12 } = {}) {
+	if (typeof query !== "string" || !query.trim()) throw new Error("Search query is required");
+	if (!Number.isSafeInteger(bindingRevision)) throw new Error("Binding revision is required");
+	const { binding, service } = await bound(bindingRevision);
+	const info = await projectAt(cwd);
+	return withKnowledgeBinding(binding, async () => {
+		const found = await service.request("search", {
+			query: query.trim().slice(0, 200),
+			limit: Math.max(1, Math.min(12, Math.floor(limit) || 12)),
+			project: info.project || "",
+		});
+		return {
+			query: found.query,
+			hits: found.hits.map((hit) => ({
+				path: hit.path,
+				title: hit.title,
+				kind: hit.kind,
+				text: typeof hit.text === "string" ? hit.text.slice(0, 600) : "",
+			})),
+			complete: Boolean(found.complete),
+			warning: found.warning ?? null,
+		};
+	});
+}

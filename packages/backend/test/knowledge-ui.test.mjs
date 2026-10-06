@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench";
+import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
 import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
 import * as ui from "@drone/knowledge/ui-service";
 import {
@@ -255,4 +255,31 @@ it("existing bare results paths become display-only links, without rewriting the
 	expect(
 		(await ui.knowledgeReadNote({ cwd: other, path: "Library/Methods/legacy.md", revision })).displayText,
 	).toBeUndefined();
+});
+
+describe("knowledge loop: deposited notes answer the next similar question locally", () => {
+	it("a software note saved after a web lookup is found by the knowledge search box", async () => {
+		const saved = await depositKnowledge({
+			cwd,
+			project: "project-a",
+			type: "software",
+			title: "samtools sort",
+			markdown: "Sort BAM by coordinate: `samtools sort -@ 4 -o out.bam in.bam`.",
+			sourceLinks: ["https://www.htslib.org/doc/samtools-sort.html"],
+		});
+		expect(saved.note).toContain(join("Library", "Software"));
+		const found = await ui.searchKnowledge({ cwd, bindingRevision: revision, query: "samtools sort" });
+		expect(found.hits.map((hit) => hit.path)).toContain("Library/Software/samtools-sort.md");
+		expect(found.hits[0].text).toContain("samtools sort");
+	});
+	it("ideas get their own library folder", async () => {
+		const saved = await depositKnowledge({
+			cwd,
+			project: "project-a",
+			type: "idea",
+			title: "Cross-species autotomy test",
+			markdown: "Hypothesis, basis and how to test it.",
+		});
+		expect(saved.note).toContain(join("Library", "Ideas"));
+	});
 });
