@@ -38,9 +38,8 @@ describe("LocalExecutionRecorder", () => {
 				isError: false,
 				result: { command },
 			} as never);
-			for (let attempt = 0; attempt < 20 && events.length === 0; attempt++)
-				await new Promise((resolve) => setTimeout(resolve, 10));
-			expect(events).toHaveLength(1);
+			// Recording hashes files asynchronously; Windows runners can take well over 200 ms.
+			await vi.waitFor(() => expect(events).toHaveLength(1), { timeout: 10_000, interval: 20 });
 			expect(events[0]).toMatchObject({
 				id: "call-1",
 				toolName: "bash",
