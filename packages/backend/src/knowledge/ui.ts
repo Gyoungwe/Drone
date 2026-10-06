@@ -57,6 +57,12 @@ export interface KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>[0],
 	): ReturnType<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
 	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]>;
+	noteLinks(
+		input: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeNoteLinks"]>;
+	graph(
+		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -199,6 +205,16 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]> {
 		return this.call("searchKnowledge", input);
+	}
+	noteLinks(
+		input: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeNoteLinks"]> {
+		return this.call("knowledgeNoteLinks", input);
+	}
+	graph(
+		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeGraph"]> {
+		return this.call("knowledgeGraph", input);
 	}
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],

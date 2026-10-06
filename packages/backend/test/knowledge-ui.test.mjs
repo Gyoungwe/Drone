@@ -283,3 +283,52 @@ describe("knowledge loop: deposited notes answer the next similar question local
 		expect(saved.note).toContain(join("Library", "Ideas"));
 	});
 });
+
+describe("bidirectional links and the knowledge network", () => {
+	it("returns backlinks for full-path and bare-name links, marks missing targets and builds the graph", async () => {
+		await note(
+			"Library/Methods/busco.md",
+			"# BUSCO\nCompleteness. See [[Library/Papers/source]] and [[NotYetWritten]].\n",
+		);
+		await note("Wiki/Assembly.md", "# Assembly\nUses [[busco]] for completeness.\n");
+		await service.request("reconcile");
+		const links = await ui.knowledgeNoteLinks({ path: "Library/Methods/busco.md", revision });
+		expect(links.outgoing).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ path: "Library/Papers/source.md", exists: true }),
+				expect.objectContaining({ title: "NotYetWritten", exists: false }),
+			]),
+		);
+		expect(links.incoming.map((item) => item.path)).toContain("Wiki/Assembly.md");
+		const source = await ui.knowledgeNoteLinks({ path: "Library/Papers/source.md", revision });
+		expect(source.incoming.map((item) => item.path)).toContain("Library/Methods/busco.md");
+		const graph = await ui.knowledgeGraph({ revision, limit: 50 });
+		const edges = graph.edges.map((edge) => [edge.source, edge.target].sort().join(" ↔ "));
+		expect(edges).toContain(["Library/Methods/busco.md", "Wiki/Assembly.md"].sort().join(" ↔ "));
+		expect(graph.nodes.find((node) => node.path === "Library/Methods/busco.md")?.degree).toBe(2);
+	});
+
+	it("links a newly deposited note to related existing notes", async () => {
+		await note("Library/Software/samtools.md", "# samtools\nSort and index BAM files.\n");
+		await service.request("reconcile");
+		const { findRelatedNotes } = await import("@drone/knowledge/related-notes");
+		const related = await findRelatedNotes("samtools sort BAM");
+		expect(related).toContain("Library/Software/samtools.md");
+		const saved = await depositKnowledge({
+			cwd,
+			project: "project-a",
+			type: "method",
+			title: "Coordinate sorting with samtools",
+			markdown: (await import("@drone/knowledge/related-notes")).appendRelatedLinks(
+				"Sort before indexing.",
+				related,
+			),
+		});
+		expect(await readFile(saved.note, "utf8")).toContain("[[Library/Software/samtools]]");
+		await service.request("reconcile");
+		const back = await ui.knowledgeNoteLinks({ path: "Library/Software/samtools.md", revision });
+		expect(back.incoming.map((item) => item.path)).toContain(
+			"Library/Methods/coordinate-sorting-with-samtools.md",
+		);
+	});
+});

@@ -780,6 +780,63 @@ function semanticCandidates(args) {
   Object.defineProperty(result, "partial", { value: rows.length >= 5e3, enumerable: false });
   return result;
 }
+function resolveLinkTarget(target) {
+  if (statements.get.get(target)) return target;
+  if (target.includes("/")) return null;
+  const rows = db.prepare("SELECT path FROM notes WHERE path LIKE ? LIMIT 2").all(`%/${target}`);
+  return rows.length === 1 ? rows[0].path : null;
+}
+function noteTitle(path) {
+  return db.prepare("SELECT title FROM notes WHERE path=?").get(path)?.title || path.split("/").at(-1).slice(0, -3);
+}
+async function noteLinks(args) {
+  await flushDirty();
+  const path = validateNote(String(args.path || ""));
+  const outgoing = [];
+  for (const { target } of db.prepare("SELECT target FROM links WHERE source=? ORDER BY target").all(path)) {
+    const resolved = resolveLinkTarget(target);
+    outgoing.push(
+      resolved ? { path: resolved, title: noteTitle(resolved), exists: true } : { path: target, title: target.split("/").at(-1).slice(0, -3), exists: false }
+    );
+  }
+  const name = path.split("/").at(-1);
+  const targets = resolveLinkTarget(name) === path ? [path, name] : [path, path];
+  const incoming = db.prepare("SELECT DISTINCT source FROM links WHERE target=? OR target=? ORDER BY source LIMIT 200").all(...targets).map(({ source }) => source).filter((source) => source !== path).map((source) => ({ path: source, title: noteTitle(source), exists: true }));
+  return { path, title: noteTitle(path), outgoing, incoming, revision };
+}
+async function knowledgeGraph(args) {
+  await flushDirty();
+  const limit = Math.max(10, Math.min(400, Math.floor(args.limit || 200)));
+  const notes = new Map(
+    db.prepare("SELECT path,title,kind FROM notes WHERE kind IN ('note','wiki')").all().map((row) => [row.path, row])
+  );
+  const edges = /* @__PURE__ */ new Map();
+  for (const { source, target } of db.prepare("SELECT source,target FROM links").all()) {
+    if (!notes.has(source)) continue;
+    const resolved = resolveLinkTarget(target);
+    if (!resolved || resolved === source || !notes.has(resolved)) continue;
+    const key = source < resolved ? `${source}\0${resolved}` : `${resolved}\0${source}`;
+    edges.set(key, [source, resolved]);
+  }
+  const degree = /* @__PURE__ */ new Map();
+  for (const [a, b] of edges.values()) {
+    degree.set(a, (degree.get(a) || 0) + 1);
+    degree.set(b, (degree.get(b) || 0) + 1);
+  }
+  const chosen = [...notes.keys()].sort((a, b) => (degree.get(b) || 0) - (degree.get(a) || 0) || a.localeCompare(b)).slice(0, limit);
+  const keep = new Set(chosen);
+  return {
+    nodes: chosen.map((path) => ({
+      path,
+      title: notes.get(path).title,
+      kind: notes.get(path).kind,
+      degree: degree.get(path) || 0
+    })),
+    edges: [...edges.values()].filter(([a, b]) => keep.has(a) && keep.has(b)).map(([source, target]) => ({ source, target })),
+    totalNotes: notes.size,
+    revision
+  };
+}
 async function dispatch(op, args) {
   if (op === "status") {
     if (args.flushPending) await flushDirty();
@@ -787,6 +844,8 @@ async function dispatch(op, args) {
   }
   if (op === "read") return read(args.path, args.project, args);
   if (op === "search") return search(args);
+  if (op === "noteLinks") return noteLinks(args);
+  if (op === "graph") return knowledgeGraph(args);
   if (op === "hydrateCandidates") return hydrateCandidates(args);
   if (op === "semanticBatch") return semanticBatch(args);
   if (op === "semanticStore") return semanticStore(args);

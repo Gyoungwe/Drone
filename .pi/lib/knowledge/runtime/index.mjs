@@ -1,5 +1,20 @@
 // @ts-nocheck
 import {
+  MANAGED_END,
+  MANAGED_START,
+  immutableWikiProposalHash,
+  managedParts,
+  proposedWikiText,
+  targetWikiPath,
+  validateSpecialistHtml,
+  validateWikiSourcePaths
+} from "./chunks/chunk-AKW2CMNR.mjs";
+import {
+  createKnowledgeSpecialists,
+  knowledgeReadStart,
+  shouldOrientKnowledge
+} from "./chunks/chunk-VJ65XVAJ.mjs";
+import {
   createTaskFeedback,
   guardResearchToolResult
 } from "./chunks/chunk-TW476WMJ.mjs";
@@ -27,8 +42,10 @@ import {
   getKnowledgeTopics,
   indexKnowledgeSemantic,
   knowledgeDecideReview,
+  knowledgeGraph,
   knowledgeJobs,
   knowledgeMaintenance,
+  knowledgeNoteLinks,
   knowledgeOpenTarget,
   knowledgeOverview,
   knowledgePreviewReview,
@@ -40,7 +57,7 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-AWJF4DPU.mjs";
+} from "./chunks/chunk-EKNNNQW6.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
@@ -57,37 +74,10 @@ import {
   wikiHistory
 } from "./chunks/chunk-RL6ZEBP3.mjs";
 import {
-  MANAGED_END,
-  MANAGED_START,
-  immutableWikiProposalHash,
-  managedParts,
-  proposedWikiText,
-  targetWikiPath,
-  validateSpecialistHtml,
-  validateWikiSourcePaths
-} from "./chunks/chunk-AKW2CMNR.mjs";
-import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
   tokenizeKnowledgeText
 } from "./chunks/chunk-4LTSNIAR.mjs";
-import {
-  KnowledgeService,
-  closeKnowledgeServices,
-  getKnowledgeService,
-  notifyKnowledgeChange
-} from "./chunks/chunk-7HHP6BXQ.mjs";
-import {
-  embedTexts,
-  validateSemanticConfig
-} from "./chunks/chunk-OWE2DUY5.mjs";
-import {
-  createSemanticSettingsApi,
-  createSemanticSettingsState,
-  readSemanticSettings,
-  saveSemanticSettings,
-  validateSemanticConfig as validateSemanticConfig2
-} from "./chunks/chunk-O536IQIE.mjs";
 import {
   normalizeSourceLinks,
   onlineSourceLink
@@ -95,11 +85,6 @@ import {
 import {
   saveSpecialistExplainer
 } from "./chunks/chunk-GMBJR4N3.mjs";
-import {
-  createKnowledgeSpecialists,
-  knowledgeReadStart,
-  shouldOrientKnowledge
-} from "./chunks/chunk-VJ65XVAJ.mjs";
 import {
   SPECIALIST_LIMITS,
   contextSessionId,
@@ -131,7 +116,35 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-VESKWNFJ.mjs";
+} from "./chunks/chunk-6CWP63QP.mjs";
+import {
+  evaluateMetacognitivePublication
+} from "./chunks/chunk-TT3YMRLM.mjs";
+import {
+  advisoryLine,
+  advisoryNotice,
+  knowledgeFailure,
+  publicationFallbackNotice,
+  publicationNotice,
+  publicationNotices
+} from "./chunks/chunk-U3GNWHNQ.mjs";
+import {
+  KnowledgeService,
+  closeKnowledgeServices,
+  getKnowledgeService,
+  notifyKnowledgeChange
+} from "./chunks/chunk-7HHP6BXQ.mjs";
+import {
+  embedTexts,
+  validateSemanticConfig
+} from "./chunks/chunk-OWE2DUY5.mjs";
+import {
+  createSemanticSettingsApi,
+  createSemanticSettingsState,
+  readSemanticSettings,
+  saveSemanticSettings,
+  validateSemanticConfig as validateSemanticConfig2
+} from "./chunks/chunk-O536IQIE.mjs";
 import {
   beginKnowledgeFlow,
   clearKnowledgeFlow,
@@ -148,17 +161,6 @@ import {
   subscribeKnowledgeUi,
   updateKnowledgeFlow
 } from "./chunks/chunk-GC2J7ECB.mjs";
-import {
-  evaluateMetacognitivePublication
-} from "./chunks/chunk-TT3YMRLM.mjs";
-import {
-  advisoryLine,
-  advisoryNotice,
-  knowledgeFailure,
-  publicationFallbackNotice,
-  publicationNotice,
-  publicationNotices
-} from "./chunks/chunk-U3GNWHNQ.mjs";
 import {
   advisoryCodes,
   readReviewMode,
@@ -294,8 +296,10 @@ export {
   knowledgeDecideReview,
   knowledgeDirectory,
   knowledgeFailure,
+  knowledgeGraph,
   knowledgeJobs,
   knowledgeMaintenance,
+  knowledgeNoteLinks,
   knowledgeOpenTarget,
   knowledgeOverview,
   knowledgePreviewReview,

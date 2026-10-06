@@ -33,6 +33,7 @@
 		"./worker": "./src/worker.ts",
 		"./service": "./src/service.ts",
 		"./wiki-review": "./src/wiki-review.ts",
+		"./related-notes": "./src/related-notes.ts",
 		"./specialist-host": "./src/specialist-host.ts",
 		"./specialists": "./src/specialists.ts",
 		"./specialist-delivery": "./src/specialist-delivery.ts",

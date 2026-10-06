@@ -497,3 +497,22 @@ export async function searchKnowledge({ cwd = null, bindingRevision, query, limi
 		};
 	});
 }
+
+/**
+ * 一篇笔记的双向链接（出链 + 反链），供笔记查看器显示。
+ * @param {Record<string, any>} options
+ */
+export async function knowledgeNoteLinks({ path, revision } = {}) {
+	if (typeof path !== "string" || !path) throw new Error("Note path is required");
+	const { binding, service } = await bound(revision);
+	return withKnowledgeBinding(binding, () => service.request("noteLinks", { path }));
+}
+
+/**
+ * 知识网络：笔记与 [[链接]] 组成的图（按连接数取前 limit 个节点）。
+ * @param {Record<string, any>} options
+ */
+export async function knowledgeGraph({ revision, limit = 200 } = {}) {
+	const { binding, service } = await bound(revision);
+	return withKnowledgeBinding(binding, () => service.request("graph", { limit }));
+}

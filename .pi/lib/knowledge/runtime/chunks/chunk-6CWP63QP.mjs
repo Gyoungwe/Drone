@@ -1,9 +1,5 @@
 // @ts-nocheck
 import {
-  publicationKnowledgeFlow,
-  updateKnowledgeFlow
-} from "./chunk-GC2J7ECB.mjs";
-import {
   evaluateMetacognitivePublication
 } from "./chunk-TT3YMRLM.mjs";
 import {
@@ -11,6 +7,10 @@ import {
   knowledgeFailure,
   publicationNotices
 } from "./chunk-U3GNWHNQ.mjs";
+import {
+  publicationKnowledgeFlow,
+  updateKnowledgeFlow
+} from "./chunk-GC2J7ECB.mjs";
 import {
   advisoryCodes,
   readReviewMode
