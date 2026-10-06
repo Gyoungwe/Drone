@@ -22,6 +22,8 @@ import type { AskGate } from "../session/ask-gate";
 import type { SessionTraces } from "../session/traces";
 import { bindAcceptanceVerifierEvents } from "../tasks/acceptance";
 import { makeAskUserTool } from "../tools/ask-user";
+import { makeBioExtension } from "../tools/bio/extension";
+import { makeBioEnvironmentTool } from "../tools/bio/tool";
 import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
@@ -108,6 +110,12 @@ export function buildSessionCustomTools(
 		}) as ToolDefinition,
 	);
 	if (deps.listSshHosts) tools.push(makeSshHostsTool(deps.listSshHosts));
+	tools.push(
+		makeBioEnvironmentTool({
+			confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
+			...(deps.listSshHosts ? { hosts: deps.listSshHosts } : {}),
+		}) as ToolDefinition,
+	);
 	tools.push(makeStatusTool());
 	tools.push(makeTodoTool());
 	if (harness.recall) {
@@ -224,6 +232,7 @@ export function buildSessionExtensionFactories(
 	);
 	factories.push(makeChannelWatchExtension({ agentDir: getAgentDir(), cwd }));
 	factories.push(makeTodoReminderExtension());
+	factories.push(makeBioExtension());
 	return factories;
 }
 

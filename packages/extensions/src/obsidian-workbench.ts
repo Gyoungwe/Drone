@@ -252,7 +252,7 @@ export default function obsidianWorkbench(pi) {
 			flowCards: depositCard,
 		},
 		description:
-			"Save a typed note straight into the Vault (no review); the host appends [[links]] to the most related existing notes so knowledge stays connected: paper → Library/Papers, method → Library/Methods, software → Library/Software, idea → Library/Ideas (proposed hypotheses with their basis and how to test them), plus project-scoped question/evidence/claim/decision. Use it after a web lookup so the next similar question is answered from local knowledge. Raw Obsidian MCP writes are intentionally not exposed.",
+			"Save a typed note straight into the Vault (no review); the host appends [[links]] to the most related existing notes so knowledge stays connected: paper → Library/Papers, method → Library/Methods, software → Library/Software, idea → Library/Ideas (proposed hypotheses with their basis and how to test them), dataset → Library/Datasets (reference genome, annotation or database: exact version/release, source URL, download date and checksum), plus project-scoped question/evidence/claim/decision. Use it after a web lookup so the next similar question is answered from local knowledge. Raw Obsidian MCP writes are intentionally not exposed.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -271,6 +271,7 @@ export default function obsidianWorkbench(pi) {
 						"entity",
 						"concept",
 						"idea",
+						"dataset",
 					],
 				},
 				title: { type: "string" },

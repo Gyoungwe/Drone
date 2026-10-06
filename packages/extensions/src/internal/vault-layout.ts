@@ -24,6 +24,7 @@ export const LAYOUT: any = {
         "Software",
         "Entities",
         "Ideas",
+        "Datasets",
         "Explainers"
     ],
     "templates": {

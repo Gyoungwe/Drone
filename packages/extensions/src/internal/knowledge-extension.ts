@@ -50,7 +50,7 @@ export const LOCAL_FIRST_GUIDANCE =
 	"Knowledge loop: (1) search the local Vault first with research_search_knowledge and read the best hits; " +
 	"(2) only if local notes do not answer the question, look it up on the web (web_search / fetch); " +
 	"(3) save what you learned from the web with research_deposit_knowledge as a new note of the right type " +
-	"(paper = a publication with authors/year/DOI; software = a tool, its version, install and usage; method = a protocol or analysis method; idea = a hypothesis with its basis and how to test it), " +
+	"(paper = a publication with authors/year/DOI; software = a tool, its version, install and usage; method = a protocol or analysis method; idea = a hypothesis with its basis and how to test it; dataset = a reference genome, annotation or database with its exact version, source URL and checksum), " +
 	"putting the URLs/DOIs in source_links — new notes go straight into the Vault without review; " +
 	"(4) answer citing the Vault note paths you used and the web sources. Say plainly which parts came from local knowledge and which from the web.";
 

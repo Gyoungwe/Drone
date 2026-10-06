@@ -158,7 +158,7 @@ src/
 ├── discovery/          B5d–B5f 内核容器运行、探索预算、独立批评、多路径与评测的 backend 组合根
 ├── services/           approvals / compute-data-design / compute-experience / compute-preflight / institutional / packages / permissions / project-trust / session-lifecycle / session-permissions / subagents / zotero（域服务，组合根暴露）
 ├── research-root.ts    研究 workbench 打包资源根解析（开发树与 extraResources 共用）
-└── tools/              show-image / todo / todo-reminder / webfetch / subagent / context-evaporation / channel-watch
+└── tools/              show-image / todo / todo-reminder / webfetch / subagent / context-evaporation / channel-watch / bio
 ```
 
 | 文件 | 关键导出 | 职责 |
@@ -193,6 +193,7 @@ src/
 | `src/tools/context-evaporation/` | `makeEvapExtension`、`readContextManagerMode`、`writeContextManagerMode` | 内置上下文蒸发扩展（**默认开启**，二态蒸发/off）：context 钩子把到龄工具输出按四级水位线蒸发为 stub（零 LLM、决策单调持久化保 KV cache）；核心三文件（types/estimate/evaporate）零 SDK/零仓库 import（replay `--core` 同构验证）；二态配置单 key 单一写者（写侧顺带清遗留键）；调参走 `scripts/replay-evaporation.mts`；批次观测 = log + trace_custom 行 |
 | `src/session-engine/harness/{context,branch}.ts` | `makeHarnessContextExtension`、`checkpointFromBranch` | 回答模式（shared `harness.ts` 的 `resolveAnswerMode` / `QUICK_ANSWER_CONTRACT` / `ACADEMIC_ANSWER_CONTRACT`：auto 按问题判断，`/answer-mode quick|academic|auto` 手动切换并随会话分支持久化；固定问题集与离线评分 `scripts/academic-eval/`）；学术回答末尾「可能被忽略的点」规则 `OVERLOOKED_POINTS_RULE`；`/发现`（别名 `/discover`）命令在 extensions `obsidian-workbench.ts` 注册，提示词 `extensions/src/internal/discovery-prompt.ts`（发散 → 新颖性/依据/可检验性自我质疑 + 独立批评子智能体 → 最多 3 条 → ask_user 选择后以 `idea` 类型沉淀）；`@drone/discovery` 内核/多路径冻结；OpenScience 式上下文合同与 bounded checkpoint：before_agent_start 注入模型族/科学/回复规则和每轮姿态，context 在会话开始、compact、分支切换和状态变化后投影真实 SDK 的 custom_message/custom entry；`drone-harness-checkpoint-v1` 只进模型上下文，不是证据或授权来源；合同/检查点观测写入 trace_custom |
 | `src/session-engine/harness/{recall,guards,delivery}.ts` | `makeHarnessRecallTool`、`makeHarnessGuardExtension`、`makeHarnessDeliveryExtension` | 受控历史导航、重复失败重定向和交付物/预算观察。recall 只返回有界来源片段并过滤私有状态；guard 三次同签名失败给一次换方法提示，第二次阻断当前回合；delivery 复用 task acceptance，只观察并记录，不接管既有授权续跑 |
+| `src/tools/bio/` | `makeBioEnvironmentTool`、`makeBioExtension`、`probeLocal`、`remoteProbeScript` | 生信执行：`environment.ts` 探测工具版本 / conda 环境 / 容器 / CPU·内存·磁盘（本地 Node 直探免审批；远程同清单转 POSIX sh 经 SSH，需审批）；`tool.ts` = `bio_environment` 工具；`extension.ts` = `/run-on local\|<host>\|auto`（customType `drone-run-on-v1` 随分支持久化）+ 每轮注入执行位置规则 + 拦截 read 整读 >4 MiB 的 FASTQ/BAM/VCF/FASTA/GFF/h5ad（回预览命令） |
 | `src/tools/channel-watch/` | `makeChannelWatchExtension` | 内置跨会话频道协作扩展（默认开）：订阅 `.local/agent-work/channel/<topic>/`，**消息 = 意图：写文件 ≠ 通知，channel_post 工具才唤醒**（根治一次任务写 N 文件 = N 唤醒）；防环三层（自写窗口 + hash 去重 + 乒乓上限暂停）；`closed:true` 终态退订；分模块 config/init/guard/watcher/subscriptions/post/tools/extension；配套 skill channel-pickup/design-handoff |
 | `src/settings/settings.ts` | `SettingsService` | provider/模型/凭证读写（key 走环境变量引用，绝不落明文）。listProviders 默认本地 refresh（`allowNetwork:false`），显式 forceNetwork 才联网；custom provider 增改走 `buildCustomEntry`（未设字段不落盘）；模型列表留空 = 覆写 baseUrl 共享官方列表；`setProviderBaseUrl` = 内置 provider 端点覆写专用；移除凭证走 `runtime.logout()`（直接删文件残留内存态）；`apiKeyLogin` 标记 = 内置 provider 有交互式 api_key 登录（UI 显示「登录」入口） |
 | `src/settings/model-prefs.ts` | `ModelPrefsService` | `model-prefs.json`：隐藏模型 + 停用 provider + per-agent 子代理模型；`listModels()` 唯一出口过滤 |

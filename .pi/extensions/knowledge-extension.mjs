@@ -2230,12 +2230,12 @@ var VAULT_PROFILES = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Datasets", "Explainers"]
   },
   literature: {
     id: "literature",
     projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"]
   },
   hybrid: {
     id: "hybrid",
@@ -2252,7 +2252,7 @@ var VAULT_PROFILES = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"]
   }
 };
 var DEFAULT_VAULT_PROFILE = "hybrid";
@@ -4282,7 +4282,7 @@ var VAULT_PROFILES2 = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Explainers"],
+    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Datasets", "Explainers"],
     deposition: {
       runSummaries: true,
       verifiedSources: true,
@@ -4297,7 +4297,7 @@ var VAULT_PROFILES2 = {
     label: "\u6587\u732E\u77E5\u8BC6\u5E93\u578B",
     description: "\u5F3A\u8C03\u8DE8\u9879\u76EE\u590D\u7528\u7684\u8BBA\u6587\u3001\u65B9\u6CD5\u3001\u6982\u5FF5\u3001\u5B9E\u4F53\u4E0E\u8F6F\u4EF6\u77E5\u8BC6\uFF0C\u540C\u65F6\u4FDD\u7559\u8F7B\u91CF\u9879\u76EE\u5C42\u3002",
     projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"],
     deposition: {
       runSummaries: true,
       verifiedSources: true,
@@ -4324,7 +4324,7 @@ var VAULT_PROFILES2 = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"],
     deposition: {
       runSummaries: true,
       verifiedSources: true,
@@ -4372,6 +4372,7 @@ var LAYOUT2 = {
     "Software",
     "Entities",
     "Ideas",
+    "Datasets",
     "Explainers"
   ],
   "templates": {
@@ -9410,7 +9411,7 @@ function autoTopicCandidate({
 init_topic_memory();
 init_ui_state();
 init_wiki_review();
-var LOCAL_FIRST_GUIDANCE = "Knowledge loop: (1) search the local Vault first with research_search_knowledge and read the best hits; (2) only if local notes do not answer the question, look it up on the web (web_search / fetch); (3) save what you learned from the web with research_deposit_knowledge as a new note of the right type (paper = a publication with authors/year/DOI; software = a tool, its version, install and usage; method = a protocol or analysis method; idea = a hypothesis with its basis and how to test it), putting the URLs/DOIs in source_links \u2014 new notes go straight into the Vault without review; (4) answer citing the Vault note paths you used and the web sources. Say plainly which parts came from local knowledge and which from the web.";
+var LOCAL_FIRST_GUIDANCE = "Knowledge loop: (1) search the local Vault first with research_search_knowledge and read the best hits; (2) only if local notes do not answer the question, look it up on the web (web_search / fetch); (3) save what you learned from the web with research_deposit_knowledge as a new note of the right type (paper = a publication with authors/year/DOI; software = a tool, its version, install and usage; method = a protocol or analysis method; idea = a hypothesis with its basis and how to test it; dataset = a reference genome, annotation or database with its exact version, source URL and checksum), putting the URLs/DOIs in source_links \u2014 new notes go straight into the Vault without review; (4) answer citing the Vault note paths you used and the web sources. Say plainly which parts came from local knowledge and which from the web.";
 async function stageWikiUpdate(service, ticket, cwd, input) {
   const staged = await stageWikiProposal(service, ticket, cwd, input);
   const applied = await autoApplyWikiProposal(service, staged.id, staged.project, staged.proposalHash);

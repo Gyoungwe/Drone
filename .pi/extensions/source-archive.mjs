@@ -3204,12 +3204,12 @@ var VAULT_PROFILES = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Datasets", "Explainers"]
   },
   literature: {
     id: "literature",
     projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"]
   },
   hybrid: {
     id: "hybrid",
@@ -3226,7 +3226,7 @@ var VAULT_PROFILES = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"]
   }
 };
 var DEFAULT_VAULT_PROFILE = "hybrid";
@@ -4815,7 +4815,7 @@ var VAULT_PROFILES2 = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Explainers"],
+    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Datasets", "Explainers"],
     deposition: {
       runSummaries: true,
       verifiedSources: true,
@@ -4830,7 +4830,7 @@ var VAULT_PROFILES2 = {
     label: "\u6587\u732E\u77E5\u8BC6\u5E93\u578B",
     description: "\u5F3A\u8C03\u8DE8\u9879\u76EE\u590D\u7528\u7684\u8BBA\u6587\u3001\u65B9\u6CD5\u3001\u6982\u5FF5\u3001\u5B9E\u4F53\u4E0E\u8F6F\u4EF6\u77E5\u8BC6\uFF0C\u540C\u65F6\u4FDD\u7559\u8F7B\u91CF\u9879\u76EE\u5C42\u3002",
     projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"],
     deposition: {
       runSummaries: true,
       verifiedSources: true,
@@ -4857,7 +4857,7 @@ var VAULT_PROFILES2 = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"],
     deposition: {
       runSummaries: true,
       verifiedSources: true,
@@ -4905,6 +4905,7 @@ var LAYOUT2 = {
     "Software",
     "Entities",
     "Ideas",
+    "Datasets",
     "Explainers"
   ],
   "templates": {

@@ -37,12 +37,12 @@ export const VAULT_PROFILES: Record<VaultProfileId, VaultProfile> = {
 			"Artifacts",
 			"Wiki",
 		],
-		libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Explainers"],
+		libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Datasets", "Explainers"],
 	},
 	literature: {
 		id: "literature",
 		projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-		libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
+		libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"],
 	},
 	hybrid: {
 		id: "hybrid",
@@ -59,7 +59,7 @@ export const VAULT_PROFILES: Record<VaultProfileId, VaultProfile> = {
 			"Artifacts",
 			"Wiki",
 		],
-		libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
+		libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"],
 	},
 };
 
