@@ -89,8 +89,8 @@
 			"output": "zotero-literature.mjs",
 			"status": "generated",
 			"sourceSha256": "b1445eca7de7e2b8a954835df433e7a5e89dae194bbbeab33ca1c57baad39fa6",
-			"inputsSha256": "b84db4dd3b1a7f32fd83a66a683b6243c67f4a574c0afd438122d33332210e8d",
-			"outputSha256": "50e5220f9253ff45cf6b49d834ec4a6c201ec9c7855441686a1027c23b1fa5c6"
+			"inputsSha256": "42df6fd9a6c937233ffd975f782984f9e1dea1fffe6ed9bc2faa71a1c1ec7c10",
+			"outputSha256": "744f0167aac0fa07131f159fbd4917049967df21485e39ba2df77954ce81fd19"
 		}
 	},
 	"legacyOutputs": []
