@@ -7,6 +7,7 @@ import {
 	renderHarnessPosture,
 	renderHarnessPromptLayer,
 	renderHarnessSpecialistLayer,
+	resolveAnswerMode,
 	resolveHarnessModelFamily,
 	resolveHarnessUnits,
 } from "./harness";
@@ -114,5 +115,39 @@ describe("harness context contract", () => {
 		expect(rendered).not.toContain("<script>");
 		expect(rendered).toContain("&lt;script&gt;");
 		expect(rendered.length).toBeLessThanOrEqual(8000);
+	});
+});
+
+describe("answer modes", () => {
+	const posture = { effort: "normal", delegation: "standard", autonomy: "balanced" } as const;
+	it("auto-detects academic questions and keeps everyday questions quick", () => {
+		expect(resolveAnswerMode("综述一下蚜虫翅型分化的机制和证据")).toBe("academic");
+		expect(resolveAnswerMode("What does the literature say about CRISPR off-target effects?")).toBe(
+			"academic",
+		);
+		expect(resolveAnswerMode("samtools 怎么按坐标排序？")).toBe("quick");
+		expect(resolveAnswerMode("简单说一下这个机制")).toBe("quick");
+	});
+	it("a manual setting always wins over auto-detection", () => {
+		expect(resolveAnswerMode("samtools 怎么排序", "academic")).toBe("academic");
+		expect(resolveAnswerMode("综述一下文献证据", "quick")).toBe("quick");
+	});
+	it("academic mode asks for structure, citations, evidence grading and references", () => {
+		const prompt = renderHarnessPromptLayer("default", posture, undefined, [], "academic");
+		expect(prompt).toContain("Background and question → Methods and evidence → Conclusion");
+		expect(prompt).toContain("(Author, Year)");
+		expect(prompt).toContain("References list");
+		expect(prompt).toContain("established");
+		expect(prompt).toContain("speculative");
+		expect(prompt).toContain("Never invent a reference");
+		expect(prompt).not.toContain("Answer mode: quick");
+	});
+	it("no longer tells every answer to be concise or to lead with files", () => {
+		const prompt = renderHarnessPromptLayer("default", posture, undefined, [], "quick");
+		expect(prompt).not.toMatch(/concise unless the user asks/);
+		expect(prompt).not.toMatch(
+			/lead with the result, then evidence, checks, limitations, and relevant files/,
+		);
+		expect(prompt).toContain("Answer mode: quick");
 	});
 });

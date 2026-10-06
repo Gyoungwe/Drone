@@ -1,4 +1,6 @@
 import {
+	ANSWER_MODES,
+	type AnswerMode,
 	checkpointFingerprint,
 	contractFingerprint,
 	HARNESS_CHECKPOINT_CUSTOM_TYPE,
@@ -10,6 +12,7 @@ import {
 	type HarnessUnit,
 	renderHarnessCheckpoint,
 	renderHarnessPromptLayer,
+	resolveAnswerMode,
 	resolveHarnessModelFamily,
 } from "@drone/shared";
 import { createLogger } from "../../log";
@@ -26,6 +29,13 @@ import {
 import { assessTaskDelivery, renderDeliveryStatus } from "./delivery";
 
 const log = createLogger("session-harness");
+/** 会话内手动设定的回答模式（/answer-mode），随会话分支持久化 */
+export const ANSWER_MODE_CUSTOM_TYPE = "drone-answer-mode-v1";
+const ANSWER_MODE_LABEL: Record<AnswerMode, string> = {
+	auto: "自动判断 / auto",
+	quick: "快速问答 / quick",
+	academic: "学术回答 / academic",
+};
 const DEFAULT_POSTURE: HarnessPosture = {
 	effort: "normal",
 	delegation: "standard",
@@ -142,6 +152,7 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 				| undefined;
 			let activeSessionId = "";
 			let shutDown = false;
+			let answerMode: AnswerMode = "auto";
 			const sessionId = (ctx: ExtensionContext): string | undefined => {
 				try {
 					const id = ctx.sessionManager.getSessionId();
@@ -165,7 +176,32 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 					.find((entry) => entry.customType === HARNESS_STATUS_CUSTOM_TYPE);
 				lastContract =
 					boundedText((saved?.data as { fingerprint?: unknown } | undefined)?.fingerprint, 64) ?? "";
+				const savedMode = customRecords(branch)
+					.reverse()
+					.find((entry) => entry.customType === ANSWER_MODE_CUSTOM_TYPE)?.data as
+					| { mode?: unknown }
+					| undefined;
+				answerMode = ANSWER_MODES.includes(savedMode?.mode as AnswerMode)
+					? (savedMode?.mode as AnswerMode)
+					: "auto";
 			};
+			pi.registerCommand?.("answer-mode", {
+				description: "回答模式：auto（自动判断）/ quick（快速问答）/ academic（学术回答）",
+				handler: async (args: string, ctx: ExtensionContext) => {
+					const requested = String(args || "")
+						.trim()
+						.toLowerCase();
+					if (requested) {
+						if (!ANSWER_MODES.includes(requested as AnswerMode)) {
+							ctx.ui?.notify?.(`未知回答模式「${requested}」，可选 auto / quick / academic`, "warning");
+							return;
+						}
+						answerMode = requested as AnswerMode;
+						pi.appendEntry?.(ANSWER_MODE_CUSTOM_TYPE, { mode: answerMode });
+					}
+					ctx.ui?.notify?.(`回答模式：${ANSWER_MODE_LABEL[answerMode]}`, "info");
+				},
+			});
 			pi.on("session_start", (_event, ctx) => {
 				try {
 					reset(ctx);
@@ -202,7 +238,13 @@ export function makeHarnessContextExtension(options: HarnessContextExtensionOpti
 							: resolveHarnessModelFamily(ctx.model?.provider, ctx.model?.id);
 					const systemPrompt = [
 						event.systemPrompt,
-						renderHarnessPromptLayer(family, posture, undefined, skills),
+						renderHarnessPromptLayer(
+							family,
+							posture,
+							undefined,
+							skills,
+							resolveAnswerMode(event.prompt, answerMode),
+						),
 					]
 						.filter(Boolean)
 						.join("\n\n");

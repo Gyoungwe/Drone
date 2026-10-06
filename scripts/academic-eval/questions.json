@@ -1,0 +1,44 @@
+{
+	"version": 1,
+	"note": "固定问题集：学术回答改动前后各跑一遍（同一模型、同一知识库），把回答存成 answers-<label>.json 后用 score.mjs 打分。",
+	"questions": [
+		{
+			"id": "q01",
+			"mode": "academic",
+			"text": "综述一下昆虫翅多型（如蚜虫有翅/无翅）分化的激素调控机制，以及目前证据的强弱。"
+		},
+		{
+			"id": "q02",
+			"mode": "academic",
+			"text": "CRISPR-Cas9 脱靶效应的主要检测方法有哪些？各自的灵敏度和局限是什么？"
+		},
+		{
+			"id": "q03",
+			"mode": "academic",
+			"text": "单细胞 RNA-seq 中批次效应校正的主流方法（Harmony、Seurat CCA、scVI）各自的原理和适用条件？"
+		},
+		{
+			"id": "q04",
+			"mode": "academic",
+			"text": "长读长测序（PacBio HiFi 与 ONT）在基因组组装中的准确率和成本现状如何？"
+		},
+		{
+			"id": "q05",
+			"mode": "academic",
+			"text": "What is the current evidence on the mechanism of action of metformin in glucose lowering?"
+		},
+		{
+			"id": "q06",
+			"mode": "academic",
+			"text": "比较 BUSCO 与 CheckM 在基因组完整性评估中的原理与适用对象。"
+		},
+		{
+			"id": "q07",
+			"mode": "academic",
+			"text": "Summarize the literature on horizontal gene transfer from bacteria to insects, distinguishing established cases from contested ones."
+		},
+		{ "id": "q08", "mode": "quick", "text": "samtools 怎么按坐标排序 BAM？" },
+		{ "id": "q09", "mode": "quick", "text": "DESeq2 的 padj 是什么？" },
+		{ "id": "q10", "mode": "quick", "text": "How do I convert a GFF3 file to GTF?" }
+	]
+}
