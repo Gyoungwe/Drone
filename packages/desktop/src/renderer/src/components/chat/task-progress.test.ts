@@ -6,11 +6,20 @@ import { TaskDecisionCard } from "./TaskDecisionCard";
 import { TaskRow } from "./TaskRow";
 import { TurnRouteCard } from "./TurnRouteCard";
 
-vi.mock("../../i18n", () => ({
-	useT: () => (key: string) => key,
-	useI18nStore: (selector: (s: { language: string }) => unknown) => selector({ language: "zh" }),
-	translateOptional: () => null,
-}));
+vi.mock("../../i18n", async () => {
+	const { zh } = await import("../../i18n/zh");
+	const lookup = (key: string, params?: Record<string, string | number>) => {
+		let node: unknown = zh;
+		for (const part of key.split(".")) node = (node as Record<string, unknown> | undefined)?.[part];
+		const template = typeof node === "string" ? node : key;
+		return template.replace(/\{(\w+)\}/g, (_, name: string) => String(params?.[name] ?? `{${name}}`));
+	};
+	return {
+		useT: () => lookup,
+		useI18nStore: (selector: (s: { language: string }) => unknown) => selector({ language: "zh" }),
+		translateOptional: () => null,
+	};
+});
 vi.stubGlobal("React", React);
 afterAll(() => vi.unstubAllGlobals());
 const task = {

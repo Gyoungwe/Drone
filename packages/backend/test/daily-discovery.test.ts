@@ -89,6 +89,21 @@ describe("DailyDiscoveryService", () => {
 	});
 });
 
+describe("daily discovery outcome", () => {
+	it("records why a run produced nothing", async () => {
+		const none = await setup("[]", []);
+		const quiet = await none.service.run();
+		expect(quiet.lastOutcome).toMatchObject({ kind: "no-new-notes" });
+		expect(quiet.lastRunAt).not.toBeNull();
+
+		const read = await setup("[]");
+		expect((await read.service.run()).lastOutcome).toMatchObject({ kind: "ran", notes: 1, added: 0 });
+
+		const found = await setup(JSON.stringify([idea]));
+		expect((await found.service.run()).lastOutcome).toMatchObject({ kind: "ran", added: 1 });
+	});
+});
+
 describe("completionText", () => {
 	it("throws on model errors, returns null for empty replies", () => {
 		expect(() => completionText({ stopReason: "error", errorMessage: "401", content: [] })).toThrow("401");

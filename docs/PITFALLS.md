@@ -29,7 +29,7 @@
 | 随便说「你好」就弹出「知识库检查未通过（interrupted）」 | 二 · 知识发布门禁把 LLM 失败误报成知识检查失败 |
 | `/obsidian-setup` 等斜杠技能填完路径后输入框像卡死 | 二 · 扩展命令里嵌套 await sendUserMessage 会占住 sending |
 | B3 RNA-seq 在本机无法直接验证 Nextflow/Slurm | 六 · Compute B3 只走 fake runner；真实集群条件单独确认 |
-| 设置页提示「已保存」但实际没保存（参数超出 schema 限制） | 四 · 宿主契约参数校验失败是 resolve 错误信封，不是 reject |
+| 设置页提示「已保存」但实际没保存（参数超出 schema 限制） | 四 · 宿主契约参数校验失败曾是 resolve 错误信封（已在 preload 统一转 reject） |
 
 ## 一、事故复盘（含可复用诊断手法）
 
@@ -194,7 +194,7 @@ pi SDK 必须声明进 `packages/desktop/package.json` dependencies（electron-b
 
 ### 宿主契约参数校验失败是 resolve 错误信封，不是 reject（2026-10-06）
 
-症状：设置 › Zotero › 网页 API 填 21 位群组 ID（schema `maxLength: 20`）点保存，界面显示「已保存」，上方仍是「未配置」。根因：`main/ipc/bind-contract.ts` 在 `Check(method.args, args)` 失败时**返回** `{ code: "invalid_arguments", titleKey, detail, ... }`，preload `exposeContract` 原样透传，`await window.pi.x()` 不会进 catch；调用方把任何返回值当成功。修复点：`ZoteroWebApiSection` 用 `isZoteroWebApiStatus` 校验返回形状。教训：调用经 `bindContract` 的方法时，凡是界面会据此显示「成功」的，都要检查返回形状（或前端先按 schema 限制校验输入），不能只靠 try/catch。
+症状：设置 › Zotero › 网页 API 填 21 位群组 ID（schema `maxLength: 20`）点保存，界面显示「已保存」，上方仍是「未配置」。根因：`main/ipc/bind-contract.ts` 在 `Check(method.args, args)` 失败时**返回** `{ code: "invalid_arguments", titleKey, detail, ... }`，preload `exposeContract` 原样透传，`await window.pi.x()` 不会进 catch；调用方把任何返回值当成功。修复点：先在 `ZoteroWebApiSection` 用 `isZoteroWebApiStatus` 校验返回形状；随后统一在 preload `exposeContract` 里把 `invalid_arguments` / `invalid_result` 信封转成 reject（`HostApiValidationFailure`，消息为信封 detail），所有经契约的 `window.pi.*` 调用失败都会进 catch。教训：IPC 层的「失败」必须是 reject，不能是 resolve 一个看起来像结果的对象。
 
 ## 五、工程纪律
 

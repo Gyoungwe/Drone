@@ -1,6 +1,8 @@
 import type { WorkbenchTask } from "@drone/shared";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { taskArtifactLinks } from "./TaskArtifactLinks";
+
+vi.mock("../../i18n", () => ({ useT: () => (key: string) => key, useI18nStore: () => "zh" }));
 
 const base = { milestones: [], operations: [] } as unknown as WorkbenchTask;
 it("proposed paths do not invent delivered files", () => {

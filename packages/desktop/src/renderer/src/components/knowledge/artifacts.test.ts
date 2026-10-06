@@ -1,6 +1,8 @@
 import type { WorkbenchTask } from "@drone/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mergeKnowledgeArtifacts } from "./artifacts";
+
+vi.mock("../../i18n", () => ({ useT: () => (key: string) => key, useI18nStore: () => "zh" }));
 
 function task(path: string, state = "completed"): WorkbenchTask {
 	return {

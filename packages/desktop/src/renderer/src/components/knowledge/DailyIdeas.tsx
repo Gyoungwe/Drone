@@ -10,6 +10,20 @@ import { useKnowledgeText } from "./copy";
  * 知识库主页「新想法」：每日发现（默认开，每天一次）根据最近更新的笔记与相关旧笔记提出的想法。
  * 每条可存为想法笔记或忽略；开关与「现在运行」也在这里。
  */
+/** 没有想法时说明原因：没绑定 / 没有新笔记（只扫 Library、Wiki、Projects）/ 读过但没想法 */
+export function emptyReason(
+	state: Pick<DailyDiscoveryState, "lastOutcome" | "lastError">,
+	t: (key: "dailyEmpty" | "dailyNoNewNotes" | "dailyRanNoIdeas" | "dailyNotBound") => string,
+): string {
+	const outcome = state.lastError ? null : state.lastOutcome;
+	if (outcome?.kind === "not-bound") return t("dailyNotBound");
+	if (outcome?.kind === "no-new-notes")
+		return t("dailyNoNewNotes").replace("{since}", new Date(outcome.since).toLocaleString());
+	if (outcome?.kind === "ran" && outcome.added === 0)
+		return t("dailyRanNoIdeas").replace("{notes}", String(outcome.notes));
+	return t("dailyEmpty");
+}
+
 export function DailyIdeas({
 	cwd,
 	sessionId,
@@ -87,7 +101,7 @@ export function DailyIdeas({
 				</p>
 			)}
 			{ideas.length === 0 ? (
-				<p className="text-[11px] text-ink-faint">{t("dailyEmpty")}</p>
+				<p className="text-[11px] text-ink-faint">{emptyReason(state, t)}</p>
 			) : (
 				<ul className="space-y-2">
 					{ideas.map((idea) => (

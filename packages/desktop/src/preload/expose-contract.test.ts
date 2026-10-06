@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => {
 	return {
 		listeners,
 		ipcRenderer: {
-			invoke: vi.fn(async (channel: string, ...args: unknown[]) => ({ channel, args })),
+			invoke: vi.fn(async (channel: string, ...args: unknown[]): Promise<unknown> => ({ channel, args })),
 			on: vi.fn((channel: string, listener: (...args: unknown[]) => void) => {
 				const set = listeners.get(channel) ?? new Set();
 				set.add(listener);
@@ -27,7 +27,7 @@ vi.mock("electron", () => ({
 	ipcMain: { handle: vi.fn(), removeHandler: vi.fn() },
 }));
 
-import { exposeContract } from "./expose-contract";
+import { exposeContract, isHostApiValidationEnvelope } from "./expose-contract";
 
 const Contract = defineDomain("test", {
 	methods: { echo: { args: Type.Tuple([Type.String()]), result: Type.String() } },
@@ -58,5 +58,25 @@ describe("exposeContract", () => {
 	it("can expose the generated client to an explicit bridge", () => {
 		const client = exposeContract(Contract, { bridge: mocks.bridge, globalName: "host" });
 		expect(mocks.bridge.exposeInMainWorld).toHaveBeenCalledWith("host", client);
+	});
+
+	it("rejects the host's validation envelope instead of resolving it as a result", async () => {
+		const envelope = {
+			code: "invalid_arguments",
+			severity: "error",
+			source: "app",
+			titleKey: "error.title.invalidArguments",
+			detail: "Invalid arguments for host method test:echo",
+			actions: ["copyDetail"],
+			timestamp: 1,
+		};
+		mocks.ipcRenderer.invoke.mockResolvedValueOnce(envelope);
+		const client = exposeContract(Contract);
+		await expect(client.echo("x".repeat(5))).rejects.toThrow("Invalid arguments for host method test:echo");
+		expect(isHostApiValidationEnvelope(envelope)).toBe(true);
+		// ordinary results that merely carry a "code" field are passed through
+		expect(isHostApiValidationEnvelope({ code: "invalid_arguments", detail: "x" })).toBe(false);
+		mocks.ipcRenderer.invoke.mockResolvedValueOnce({ code: "ok" });
+		expect(await client.echo("y")).toEqual({ code: "ok" });
 	});
 });

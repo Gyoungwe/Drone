@@ -1,6 +1,7 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: Read-only token and line positions are stable within this bounded source snapshot.
 import { useEffect, useMemo, useState } from "react";
 import type { BundledLanguage, ThemedToken } from "shiki";
+import { useT } from "../../i18n";
 import { useThemeStore } from "../../stores/theme";
 
 let highlighter: ReturnType<typeof import("shiki")["createHighlighter"]> | undefined;
@@ -14,6 +15,7 @@ async function tokensFor(code: string, language: string, dark: boolean) {
 	return h.codeToTokens(code, { lang, theme: dark ? "github-dark" : "github-light" }).tokens;
 }
 export function ResourceCode({ text, language = "text" }: { text: string; language?: string }) {
+	const t = useT();
 	const dark = useThemeStore((s) => s.resolved === "dark");
 	const [tokens, setTokens] = useState<ThemedToken[][]>(),
 		[wrap, setWrap] = useState(true),
@@ -38,11 +40,9 @@ export function ResourceCode({ text, language = "text" }: { text: string; langua
 	return (
 		<div className="resource-code" data-testid="resource-code">
 			<div className="resource-code-tools">
-				<span>
-					{language} · {sample.split("\n").length} 行片段
-				</span>
+				<span>{t("resource.viewer.codeSummary", { language, lines: sample.split("\n").length })}</span>
 				<button type="button" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>
-					自动换行
+					{t("resource.viewer.wrap")}
 				</button>
 				<button
 					type="button"
@@ -59,17 +59,15 @@ export function ResourceCode({ text, language = "text" }: { text: string; langua
 							});
 					}}
 				>
-					{copied ? "已复制" : "复制片段"}
+					{copied ? t("resource.viewer.copied") : t("resource.viewer.copy")}
 				</button>
 			</div>
 			{copyError && (
 				<p className="resource-notice" role="status">
-					复制失败，可以直接选中源码复制。
+					{t("resource.viewer.copyFailed")}
 				</p>
 			)}
-			{sample.length < text.length && (
-				<p className="resource-notice">源码视图仅展示前 1,000 行／64,000 字符。</p>
-			)}
+			{sample.length < text.length && <p className="resource-notice">{t("resource.viewer.codeClipped")}</p>}
 			<pre className={wrap ? "resource-source wrap" : "resource-source"}>
 				{(tokens || sample.split("\n").map((content) => [{ content }])).map((line, i) => (
 					<span className="resource-source-line" key={`line-${i}`}>

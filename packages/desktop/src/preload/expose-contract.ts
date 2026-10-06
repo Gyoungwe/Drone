@@ -20,6 +20,31 @@ export interface ExposeContractOptions {
 	channelForMethod?: (contract: DomainContract, method: string) => string;
 }
 
+/**
+ * main 的 bindContract 在参数 / 结果未通过 schema 时 resolve 一个错误信封（不是 reject）。
+ * 在这里统一转成 reject：调用方的 try/catch 才能拦住，界面不会把它当成功（PITFALLS 四）。
+ */
+export function isHostApiValidationEnvelope(value: unknown): value is { code: string; detail: string } {
+	if (!value || typeof value !== "object") return false;
+	const record = value as Record<string, unknown>;
+	return (
+		(record.code === "invalid_arguments" || record.code === "invalid_result") &&
+		record.source === "app" &&
+		typeof record.titleKey === "string" &&
+		record.titleKey.startsWith("error.title.") &&
+		typeof record.detail === "string"
+	);
+}
+
+export class HostApiValidationFailure extends Error {
+	readonly code: string;
+	constructor(envelope: { code: string; detail: string }) {
+		super(envelope.detail);
+		this.name = "HostApiValidationFailure";
+		this.code = envelope.code;
+	}
+}
+
 function eventClientName(name: string): string {
 	return name.startsWith("on") ? name : `on${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 }
@@ -36,7 +61,11 @@ export function exposeContract<TContract extends DomainContract>(
 	const api: Record<string, unknown> = {};
 	for (const methodName of Object.keys(contract.methods)) {
 		const channel = options.channelForMethod?.(contract, methodName) ?? channelOf(contract, methodName);
-		api[methodName] = (...args: unknown[]) => renderer.invoke(channel, ...args);
+		api[methodName] = async (...args: unknown[]) => {
+			const result = await renderer.invoke(channel, ...args);
+			if (isHostApiValidationEnvelope(result)) throw new HostApiValidationFailure(result);
+			return result;
+		};
 	}
 	for (const eventName of Object.keys(contract.events)) {
 		const channel = channelOf(contract, eventName);

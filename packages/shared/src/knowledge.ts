@@ -347,11 +347,18 @@ export interface DailyDiscoveryIdea {
 	status: "new" | "saved" | "dismissed";
 	savedPath?: string;
 }
+export type DailyDiscoveryOutcome =
+	| { kind: "not-bound"; at: number }
+	| { kind: "no-new-notes"; at: number; since: number }
+	| { kind: "ran"; at: number; notes: number; added: number };
+
 export interface DailyDiscoveryState {
 	enabled: boolean;
 	lastRunAt: number | null;
 	/** 最近一次运行失败的原因（模型不可用 / 调用出错）；成功后为 null */
 	lastError?: string | null;
+	/** 最近一次运行的结果：没有绑定 Vault / 没有新笔记 / 读了几篇、新增几条想法 */
+	lastOutcome?: DailyDiscoveryOutcome | null;
 	/** 未忽略的想法（最新在前） */
 	ideas: DailyDiscoveryIdea[];
 }

@@ -456,6 +456,12 @@ export const en: Messages = {
 		permissionFullAccessTitle: "Full access",
 		permissionFullAccessDesc:
 			"Nothing is blocked; high-risk command runs are written to an audit log — current session only",
+		permissionStrict: "Strict confirmation",
+		permissionAuto: "Auto-run",
+		permissionAutoTitle: "Auto-run (recommended)",
+		permissionStrictDesc: "Ordinary file writes also need confirmation; task authorization still applies.",
+		permissionAutoDesc:
+			"Ordinary edits inside the project run automatically; sensitive files, writes outside the project, deletions and publishing still need confirmation.",
 		permissionGateOff: "The built-in permission gate is disabled in permissions.json",
 		dispatch: "Dispatch",
 		dispatchHint:
@@ -619,6 +625,25 @@ export const en: Messages = {
 			mutex: "Detected subagent extension {path}; built-in subagent took over: {tools}",
 		},
 	},
+	taskRow: {
+		running:
+			"The task is still running; acceptance progress updates as results come in — no need to start it again.",
+		unconfirmed:
+			"Some items are not confirmed yet; this is an older record — check the existing results before generating them again.",
+		noDeliverables: "No deliverables have been agreed yet, so there is no progress to show.",
+		steps: "{n} steps run",
+		accepted: " · {done}/{total} accepted",
+		progressLabel: "Deliverable acceptance progress",
+		progressText: "{done} of {total} accepted",
+		continue: "Continue with the rest",
+	},
+	taskArtifacts: {
+		openSessionFirst: "Open the session this artifact belongs to first",
+		changed: "file changed — previews the current version",
+		notFound: "file needs to be located again",
+		preview: "preview in sidebar",
+		more: "{count} more artifacts in the full record",
+	},
 	resource: {
 		backToChanges: "← Changes",
 		openExternal: "Open externally",
@@ -649,6 +674,63 @@ export const en: Messages = {
 			interactiveNotice:
 				"Interactive mode: scripts run in a sandbox with no app origin and no network, reading only the file's own folder; remote CDN assets will not load.",
 			interactiveFailed: "Cannot open interactively: {error}",
+		},
+		viewer: {
+			filterLabel: "Filter the preview table",
+			filterPlaceholder: "Filter this excerpt…",
+			firstRowHeader: "First row is header",
+			tableSummary: "{rows} rows · {cols} columns in this excerpt",
+			tableFiltered: " · {rows} after filtering",
+			notWholeFile: " (not whole-file statistics)",
+			tableClipped: "The table shows at most 200 rows and 60 columns; long cells are truncated.",
+			metadata: "File header / metadata (up to 30 lines)",
+			rowIndex: "#",
+			column: "Column {n}",
+			noRecords: "No records to show in this excerpt.",
+			prevPage: "Previous",
+			nextPage: "Next",
+			seqSummary: "{kind} · {count} records in this excerpt (not whole-file statistics)",
+			seqFootnote:
+				"Up to 600 characters per sequence; colours are for reading only — no alignment, QC or biological judgement.",
+			seqClipped: "Showing the first 20 records / 600 characters each.",
+			unnamedSequence: "Unnamed sequence",
+			seqLength: " · {n} characters read in this excerpt",
+			seqIncomplete: " · incomplete / length mismatch",
+			qualityTitle: "Quality string (raw characters, encoding not inferred)",
+			seqNoHeader:
+				"No complete record header found; switch to source to check the format or the excerpt boundary.",
+			jsonInvalid:
+				"JSON could not be formatted (incomplete excerpt, invalid syntax or too deeply nested); showing it as-is, unrepaired.",
+			unsupportedLink: "This link type cannot be opened in the viewer.",
+			preview: "Preview",
+			source: "Source",
+			zoomOut: "Zoom out",
+			zoomIn: "Zoom in",
+			textTruncated:
+				"Read limit reached: at most 128 KiB of text is previewed; this is not the whole file or whole-file statistics.",
+			mediaTruncated:
+				"The media file exceeds the preview limit (images/PDF 16 MiB, SVG 128 KiB); open it externally to see all of it.",
+			imageDecodeFailed:
+				"The image could not be decoded; check that the file is complete. SVG can be viewed as source.",
+			binaryFormats:
+				"Binary research formats (BAM, CRAM, BCF, HDF5, Parquet…) need a dedicated viewer and are not decoded as text.",
+			mediaTooLarge: "The file exceeds the inline media preview limit; open it externally.",
+			compressed: " (compressed)",
+			gzipExcerpt: "gzip excerpt · not a whole-file integrity check",
+			markdownInvalid: "Markdown could not be parsed; showing the raw text.",
+			imageReference: "Image: {name} · click to preview",
+			unnamed: "unnamed",
+			markdownClipped:
+				"Only the first 64,000 characters of Markdown are rendered; switch to source or open externally.",
+			markdownTooComplex:
+				"The document exceeds the preview limits (2,500 nodes, 24 levels, tables 200 rows / 60 columns); the rest is omitted — open it externally.",
+			markdownFootnote: "Read-only rendering · raw HTML is not executed · images open on demand",
+			codeSummary: "{language} · {lines}-line excerpt",
+			wrap: "Wrap lines",
+			copied: "Copied",
+			copy: "Copy excerpt",
+			copyFailed: "Copy failed; select the source text and copy it directly.",
+			codeClipped: "The source view shows only the first 1,000 lines / 64,000 characters.",
 		},
 		tree: {
 			summary: "Phylogenetic tree · {leaves} leaves",

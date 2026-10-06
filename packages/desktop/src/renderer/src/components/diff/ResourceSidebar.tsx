@@ -82,7 +82,7 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 			.catch((e) => setNavigationError(String(e.message || e)));
 	const navigate = (href: string, label?: string) => {
 		if (!href || (!isLocalResourceTarget(href) && !/^(?:https?|mailto|obsidian|zotero):/i.test(href))) {
-			setNavigationError("此链接类型不能在预览器中打开。");
+			setNavigationError(t("resource.viewer.unsupportedLink"));
 			return;
 		}
 		const destination = isLocalResourceTarget(href) ? splitResourceLink(href) : { href };
@@ -124,10 +124,10 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 					{result.text !== undefined && (
 						<>
 							<button type="button" aria-pressed={mode === "preview"} onClick={() => setMode("preview")}>
-								预览
+								{t("resource.viewer.preview")}
 							</button>
 							<button type="button" aria-pressed={mode === "source"} onClick={() => setMode("source")}>
-								源码
+								{t("resource.viewer.source")}
 							</button>
 						</>
 					)}
@@ -135,7 +135,7 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 						<>
 							<button
 								type="button"
-								aria-label="缩小图片"
+								aria-label={t("resource.viewer.zoomOut")}
 								onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
 							>
 								−
@@ -145,7 +145,7 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 							</button>
 							<button
 								type="button"
-								aria-label="放大图片"
+								aria-label={t("resource.viewer.zoomIn")}
 								onClick={() => setZoom((z) => Math.min(3, z + 0.25))}
 							>
 								＋
@@ -161,9 +161,7 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 			)}
 			{result?.truncated && (
 				<p className="resource-notice" role="status">
-					{result.kind === "text"
-						? "文件受读取上限限制：最多预览 128 KiB 文本字节；这不是完整文件或全文件统计。"
-						: "媒体文件超过预览上限（图片/PDF 16 MiB，SVG 128 KiB），请在外部查看完整文件。"}
+					{result.kind === "text" ? t("resource.viewer.textTruncated") : t("resource.viewer.mediaTruncated")}
 				</p>
 			)}
 			<div className="resource-body">
@@ -195,7 +193,7 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 					<div className="resource-media">
 						{imageError ? (
 							<p className="resource-notice" role="status">
-								图像无法解码，请检查文件是否完整；SVG 可切换源码查看。
+								{t("resource.viewer.imageDecodeFailed")}
 							</p>
 						) : (
 							<FigureAnnotator
@@ -233,10 +231,10 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 						{result.kind === "binary" ? (
 							<>
 								{t("resource.binaryHint")}
-								<p>二进制科研格式（如 BAM、CRAM、BCF、HDF5、Parquet）需要专用查看器，不会按文本强行解码。</p>
+								<p>{t("resource.viewer.binaryFormats")}</p>
 							</>
 						) : (
-							<p>文件超过内嵌媒体预览上限，请在外部查看完整文件。</p>
+							<p>{t("resource.viewer.mediaTooLarge")}</p>
 						)}
 					</div>
 				)}
@@ -246,10 +244,10 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 					<span>{result.name}</span>
 					<span>
 						{formatBytes(result.size)}
-						{result.compression && "（压缩文件）"}
+						{result.compression && t("resource.viewer.compressed")}
 					</span>
 					{result.encoding && <span>{result.encoding}</span>}
-					{result.compression && <span>gzip 片段 · 不代表全文件完整性校验</span>}
+					{result.compression && <span>{t("resource.viewer.gzipExcerpt")}</span>}
 					<span>{result.mimeType}</span>
 					{result.truncated && <span>{t("resource.truncated")}</span>}
 				</div>

@@ -1,4 +1,5 @@
 import { localResourceHref, type WorkbenchTask } from "@drone/shared";
+import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
 import { useUiStore } from "../../stores/ui";
 
@@ -24,6 +25,7 @@ export function taskArtifactLinks(task: WorkbenchTask) {
 	return [...byPath.values()];
 }
 export function TaskArtifactLinks({ task, sessionId }: { task: WorkbenchTask; sessionId: string | null }) {
+	const t = useT();
 	const cwd = useSessionsStore(
 		(s) =>
 			s.sessions.find((session) => session.sessionId === sessionId)?.cwd ??
@@ -39,7 +41,7 @@ export function TaskArtifactLinks({ task, sessionId }: { task: WorkbenchTask; se
 					key={file.href}
 					href={file.href}
 					className="max-w-full break-all rounded border border-border px-2 py-1 underline underline-offset-2 hover:bg-hover"
-					title={!cwd && file.href.startsWith("./") ? "请先打开产物所属会话" : file.path}
+					title={!cwd && file.href.startsWith("./") ? t("taskArtifacts.openSessionFirst") : file.path}
 					aria-disabled={!cwd && file.href.startsWith("./")}
 					onClick={(e) => {
 						e.preventDefault();
@@ -49,13 +51,13 @@ export function TaskArtifactLinks({ task, sessionId }: { task: WorkbenchTask; se
 				>
 					{file.path.split(/[\\/]/).pop()} ·{" "}
 					{file.state === "changed"
-						? "文件已变化，预览当前版本"
+						? t("taskArtifacts.changed")
 						: file.state === "not-found"
-							? "文件待重新定位"
-							: "侧栏预览"}
+							? t("taskArtifacts.notFound")
+							: t("taskArtifacts.preview")}
 				</a>
 			))}
-			{files.length > 6 && <span>另有 {files.length - 6} 个产物，见详细记录</span>}
+			{files.length > 6 && <span>{t("taskArtifacts.more", { count: files.length - 6 })}</span>}
 		</div>
 	);
 }

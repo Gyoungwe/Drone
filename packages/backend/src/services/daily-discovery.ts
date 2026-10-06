@@ -5,7 +5,7 @@ import {
 	DAILY_DISCOVERY_SYSTEM,
 	parseDailyIdeas,
 } from "@drone/knowledge/daily-discovery-prompt";
-import type { DailyDiscoveryIdea, DailyDiscoveryState } from "@drone/shared";
+import type { DailyDiscoveryIdea, DailyDiscoveryOutcome, DailyDiscoveryState } from "@drone/shared";
 import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
 
@@ -20,6 +20,8 @@ interface StoredState {
 	enabled: boolean;
 	lastRunAt: number;
 	ideas: DailyDiscoveryIdea[];
+	/** 最近一次运行的结果说明（界面据此解释「为什么没有新想法」） */
+	lastOutcome?: DailyDiscoveryOutcome;
 }
 
 /**
@@ -106,6 +108,7 @@ export class DailyDiscoveryService {
 			enabled: state.enabled,
 			lastRunAt: state.lastRunAt || null,
 			lastError: this.lastError,
+			lastOutcome: state.lastOutcome ?? null,
 			ideas: state.ideas.filter((idea) => idea.status !== "dismissed"),
 		};
 	}
@@ -136,10 +139,18 @@ export class DailyDiscoveryService {
 		const state = await this.store.read();
 		const since = state.lastRunAt || startedAt - FIRST_LOOKBACK_MS;
 		const context = await this.options.context(since);
-		if (!context.bound) return this.getState();
+		if (!context.bound) {
+			await this.store.update((draft) => {
+				draft.lastOutcome = { kind: "not-bound", at: startedAt };
+			});
+			return this.getState();
+		}
 		if (!context.fresh.length) {
 			this.lastError = null;
-			await this.markRun(startedAt);
+			await this.store.update((draft) => {
+				draft.lastRunAt = startedAt;
+				draft.lastOutcome = { kind: "no-new-notes", at: startedAt, since };
+			});
 			return this.getState();
 		}
 		let reply: string | null;
@@ -166,6 +177,7 @@ export class DailyDiscoveryService {
 		let added = 0;
 		await this.store.update((draft) => {
 			draft.lastRunAt = startedAt;
+			draft.lastOutcome = { kind: "ran", at: startedAt, notes: context.fresh.length, added: 0 };
 			const known = new Set(draft.ideas.map((idea) => idea.title.toLowerCase()));
 			for (const idea of ideas) {
 				if (known.has(idea.title.toLowerCase())) continue;
@@ -173,15 +185,10 @@ export class DailyDiscoveryService {
 				added++;
 			}
 			draft.ideas = draft.ideas.slice(0, MAX_STORED_IDEAS);
+			if (draft.lastOutcome?.kind === "ran") draft.lastOutcome.added = added;
 		});
 		if (added) this.options.notify(`每日发现：根据最近更新的笔记提出了 ${added} 条新想法，去知识库查看。`);
 		return this.getState();
-	}
-
-	private async markRun(at: number): Promise<void> {
-		await this.store.update((draft) => {
-			draft.lastRunAt = at;
-		});
 	}
 
 	async decide(id: string, action: "save" | "dismiss"): Promise<DailyDiscoveryState> {
