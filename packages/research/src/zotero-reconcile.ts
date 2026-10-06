@@ -46,8 +46,20 @@ export async function lookupZoteroByDoi(
 	) {
 		return { state: "unknown", reason: "lookup-incomplete" };
 	}
-	const matches = findZoteroItemsByIdentity(result.data as ZoteroIdentityItem[], expected);
 	const observedAt = context.observedAt || new Date().toISOString();
+	let matches = findZoteroItemsByIdentity(result.data as ZoteroIdentityItem[], expected);
+	const named = expected.collection == null ? "" : String(expected.collection).trim();
+	// Milestones may name the collection ("test") instead of giving its key; items only carry keys, so a value
+	// that matched no key is resolved read-only as an exact collection name.
+	if (!matches.length && named && !isZoteroItemKey(named)) {
+		const collection = await resolveCollection(get, named);
+		if (collection.state !== "ok")
+			return { state: collection.state, doi, reason: collection.reason, observedAt, safeToAutoRetry: false };
+		matches = findZoteroItemsByIdentity(result.data as ZoteroIdentityItem[], {
+			...expected,
+			collection: collection.key,
+		});
+	}
 	if (!matches.length) return { state: "not-found", doi, observedAt, safeToAutoRetry: false };
 	if (matches.length !== 1) return { state: "ambiguous", doi, count: matches.length, safeToAutoRetry: false };
 	const item = matches[0];
@@ -70,4 +82,34 @@ export async function lookupZoteroByDoi(
 		scientificallyVerified: false,
 		safeToAutoRetry: false,
 	};
+}
+
+/** A collection key passes through; an exact (case-insensitive) collection name is resolved read-only to its key. */
+async function resolveCollection(
+	get: ZoteroReadRequest,
+	raw: unknown,
+): Promise<
+	{ state: "ok"; key: string | null } | { state: "not-found" | "ambiguous" | "unknown"; reason: string }
+> {
+	const wanted = raw == null ? "" : String(raw).trim();
+	if (!wanted) return { state: "ok", key: null };
+	if (isZoteroItemKey(wanted)) return { state: "ok", key: wanted };
+	const keys: string[] = [];
+	for (let start = 0; start < 1000; start += 100) {
+		const page = await get(`collections?format=json&limit=100&start=${start}`);
+		if (!Array.isArray(page.data)) return { state: "unknown", reason: "collection-lookup-incomplete" };
+		for (const entry of page.data as { key?: unknown; data?: { name?: unknown } }[])
+			if (
+				isZoteroItemKey(entry?.key) &&
+				String(entry.data?.name ?? "")
+					.trim()
+					.toLowerCase() === wanted.toLowerCase()
+			)
+				keys.push(String(entry.key));
+		if (page.data.length < 100 || !((page.total ?? 0) > start + 100)) break;
+	}
+	if (keys.length === 1) return { state: "ok", key: keys[0] as string };
+	return keys.length
+		? { state: "ambiguous", reason: `several collections are named "${wanted}"` }
+		: { state: "not-found", reason: `collection "${wanted}" not found` };
 }

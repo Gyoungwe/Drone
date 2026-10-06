@@ -48,8 +48,18 @@ async function lookupZoteroByDoi(get, expected, context = {}) {
   if (!Array.isArray(result.data) || result.data.length > 100 || result.total !== void 0 && result.total > 100) {
     return { state: "unknown", reason: "lookup-incomplete" };
   }
-  const matches = findZoteroItemsByIdentity(result.data, expected);
   const observedAt = context.observedAt || (/* @__PURE__ */ new Date()).toISOString();
+  let matches = findZoteroItemsByIdentity(result.data, expected);
+  const named = expected.collection == null ? "" : String(expected.collection).trim();
+  if (!matches.length && named && !isZoteroItemKey(named)) {
+    const collection = await resolveCollection(get, named);
+    if (collection.state !== "ok")
+      return { state: collection.state, doi, reason: collection.reason, observedAt, safeToAutoRetry: false };
+    matches = findZoteroItemsByIdentity(result.data, {
+      ...expected,
+      collection: collection.key
+    });
+  }
   if (!matches.length) return { state: "not-found", doi, observedAt, safeToAutoRetry: false };
   if (matches.length !== 1) return { state: "ambiguous", doi, count: matches.length, safeToAutoRetry: false };
   const item = matches[0];
@@ -73,9 +83,26 @@ async function lookupZoteroByDoi(get, expected, context = {}) {
     safeToAutoRetry: false
   };
 }
+async function resolveCollection(get, raw) {
+  const wanted = raw == null ? "" : String(raw).trim();
+  if (!wanted) return { state: "ok", key: null };
+  if (isZoteroItemKey(wanted)) return { state: "ok", key: wanted };
+  const keys = [];
+  for (let start = 0; start < 1e3; start += 100) {
+    const page = await get(`collections?format=json&limit=100&start=${start}`);
+    if (!Array.isArray(page.data)) return { state: "unknown", reason: "collection-lookup-incomplete" };
+    for (const entry of page.data)
+      if (isZoteroItemKey(entry?.key) && String(entry.data?.name ?? "").trim().toLowerCase() === wanted.toLowerCase())
+        keys.push(String(entry.key));
+    if (page.data.length < 100 || !((page.total ?? 0) > start + 100)) break;
+  }
+  if (keys.length === 1) return { state: "ok", key: keys[0] };
+  return keys.length ? { state: "ambiguous", reason: `several collections are named "${wanted}"` } : { state: "not-found", reason: `collection "${wanted}" not found` };
+}
 
 // packages/research/src/zotero-reconcile-runtime.ts
 var LOCAL_API = "http://127.0.0.1:23119/api/users/0";
+var LOCAL_USER_LIBRARY_IDS = /* @__PURE__ */ new Set(["0", "1"]);
 function createZoteroReconciler({
   libraryType = process.env.ZOTERO_LIBRARY_TYPE || "users",
   libraryId = process.env.ZOTERO_LIBRARY_ID || process.env.ZOTERO_USER_ID,
@@ -129,7 +156,7 @@ function createLocalZoteroReconciler({
     return { data: JSON.parse(body), total: Number(response.headers.get("Total-Results")) };
   });
   return async (expected) => {
-    if (expected.libraryId && expected.libraryId !== "0" && !userLibraryIds.includes(expected.libraryId))
+    if (expected.libraryId && !LOCAL_USER_LIBRARY_IDS.has(String(expected.libraryId)) && !userLibraryIds.includes(expected.libraryId))
       return { state: "unavailable", reason: "local-api-covers-only-the-user-library" };
     try {
       return await lookupZoteroByDoi(get, expected, {
@@ -167,7 +194,8 @@ function createCompositeZoteroReconciler({ local, web, env = process.env } = {})
     if (a.state === "unavailable" && b.state === "unavailable")
       return {
         state: "unavailable",
-        reason: "Zotero desktop local API is unreachable and no Web API credentials are configured; no library was queried."
+        // Report what each channel actually said; "unreachable" was printed even when the desktop answered.
+        reason: `No Zotero channel could check this item (desktop: ${a.reason || "unavailable"}; Web API: ${b.reason || "unavailable"}); no library was queried.`
       };
     return (RANK[b.state] ?? 0) >= (RANK[a.state] ?? 0) ? b : a;
   };

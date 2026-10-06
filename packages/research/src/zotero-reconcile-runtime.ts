@@ -5,6 +5,7 @@ type Result = Record<string, any>;
 type Reconciler = (expected: Options) => Promise<Result>;
 
 const LOCAL_API = "http://127.0.0.1:23119/api/users/0";
+const LOCAL_USER_LIBRARY_IDS = new Set(["0", "1"]);
 
 /** Read-only Web API adapter. Credentials come from the host environment only. */
 export function createZoteroReconciler({
@@ -67,7 +68,13 @@ export function createLocalZoteroReconciler({
 			return { data: JSON.parse(body), total: Number(response.headers.get("Total-Results")) };
 		});
 	return async (expected: Options) => {
-		if (expected.libraryId && expected.libraryId !== "0" && !userLibraryIds.includes(expected.libraryId))
+		// "0" is the personal library in local API paths; "1" is the desktop's own libraryID for it, which is what
+		// the connector reports (research_zotero_save receipts and task milestones built from them carry it).
+		if (
+			expected.libraryId &&
+			!LOCAL_USER_LIBRARY_IDS.has(String(expected.libraryId)) &&
+			!userLibraryIds.includes(expected.libraryId)
+		)
 			return { state: "unavailable", reason: "local-api-covers-only-the-user-library" };
 		try {
 			return await lookupZoteroByDoi(get, expected as { doi: unknown; collection?: unknown }, {
@@ -108,8 +115,8 @@ export function createCompositeZoteroReconciler({ local, web, env = process.env 
 		if (a.state === "unavailable" && b.state === "unavailable")
 			return {
 				state: "unavailable",
-				reason:
-					"Zotero desktop local API is unreachable and no Web API credentials are configured; no library was queried.",
+				// Report what each channel actually said; "unreachable" was printed even when the desktop answered.
+				reason: `No Zotero channel could check this item (desktop: ${a.reason || "unavailable"}; Web API: ${b.reason || "unavailable"}); no library was queried.`,
 			};
 		return (RANK[b.state] ?? 0) >= (RANK[a.state] ?? 0) ? b : a;
 	};

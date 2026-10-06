@@ -322,4 +322,42 @@ describe("composite zotero reconciler", () => {
 		const local = createLocalZoteroReconciler({ request: vi.fn() });
 		expect((await local({ doi: DOI, libraryId: "999" })).state).toBe("unavailable");
 	});
+	it("checks a milestone carrying the desktop's own user library id (connector libraryID 1) locally", async () => {
+		const request = vi.fn(async (path) => (path.startsWith("items?") ? found : children));
+		const local = createLocalZoteroReconciler({ request });
+		expect(await local({ doi: DOI, libraryId: "1" })).toMatchObject({ state: "found", itemId: "ABCD1234" });
+		expect(request).toHaveBeenCalled();
+	});
+	it("accepts a milestone that names the collection instead of giving its key", async () => {
+		const filed = { data: [{ ...ITEM, data: { ...ITEM.data, collections: ["SFNBU8VZ"] } }], total: 1 };
+		const collections = {
+			data: [
+				{ key: "SWDKZMWV", data: { name: "翅发育" } },
+				{ key: "SFNBU8VZ", data: { name: "test" } },
+			],
+			total: 2,
+		};
+		const local = createLocalZoteroReconciler({
+			request: async (path) =>
+				path.startsWith("collections?") ? collections : path.startsWith("items?") ? filed : children,
+		});
+		expect(await local({ doi: DOI, collection: "Test" })).toMatchObject({
+			state: "found",
+			itemId: "ABCD1234",
+		});
+		expect(await local({ doi: DOI, collection: "SFNBU8VZ" })).toMatchObject({ state: "found" });
+		expect(await local({ doi: DOI, collection: "翅发育" })).toMatchObject({ state: "not-found" });
+		expect(await local({ doi: DOI, collection: "missing" })).toMatchObject({
+			state: "not-found",
+			reason: 'collection "missing" not found',
+		});
+	});
+	it("names each channel's reason instead of always claiming the desktop is unreachable", async () => {
+		const local = createLocalZoteroReconciler({ request: vi.fn() });
+		const web = vi.fn(async () => ({ state: "unavailable", reason: "web-api-not-configured" }));
+		const result = await createCompositeZoteroReconciler({ local, web })({ doi: DOI, libraryId: "999" });
+		expect(result.reason).toContain("local-api-covers-only-the-user-library");
+		expect(result.reason).toContain("web-api-not-configured");
+		expect(result.reason).not.toMatch(/unreachable/);
+	});
 });

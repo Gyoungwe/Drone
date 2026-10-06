@@ -114,6 +114,10 @@ export function registerKnowledgeIpc(
 		getZoteroWebApi: () => (zotero.getWebApi ? zotero.getWebApi() : unavailable()),
 		saveZoteroWebApi: (input) => (zotero.saveWebApi ? zotero.saveWebApi(input) : unavailable()),
 		clearZoteroWebApi: () => (zotero.clearWebApi ? zotero.clearWebApi() : unavailable()),
+		getZoteroLocalWrite: () => (zotero.getLocalWrite ? zotero.getLocalWrite() : unavailable()),
+		authorizeZoteroLocalWrite: () =>
+			zotero.authorizeLocalWrite ? zotero.authorizeLocalWrite() : unavailable(),
+		clearZoteroLocalWrite: () => (zotero.clearLocalWrite ? zotero.clearLocalWrite() : unavailable()),
 	};
 	bindContract(KnowledgeContract, implementation, {
 		channelForMethod: (_contract, method) =>
@@ -149,6 +153,9 @@ export function registerKnowledgeIpc(
 				getZoteroWebApi: IpcChannels.ZoteroWebApiGet,
 				saveZoteroWebApi: IpcChannels.ZoteroWebApiSave,
 				clearZoteroWebApi: IpcChannels.ZoteroWebApiClear,
+				getZoteroLocalWrite: IpcChannels.ZoteroLocalWriteGet,
+				authorizeZoteroLocalWrite: IpcChannels.ZoteroLocalWriteAuthorize,
+				clearZoteroLocalWrite: IpcChannels.ZoteroLocalWriteClear,
 			})[method as keyof typeof KnowledgeContract.methods],
 		beforeInvoke: (event, _contract, method) => {
 			if (method === "getZoteroStatus") return;
