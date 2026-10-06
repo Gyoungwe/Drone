@@ -52,7 +52,7 @@ export interface BioEnvironment {
 	freeDiskGb: number | null;
 }
 
-const VERSION = /\d+\.\d+(?:\.\d+)?(?:[-.][0-9A-Za-z]+)?/;
+const VERSION = /\d+\.\d+(?:\.\d+)*[A-Za-z]?(?:[-+][0-9A-Za-z][0-9A-Za-z.]*)?/;
 
 /** 从命令输出里取版本号；找不到版本但命令存在时返回 "installed" */
 export function parseVersion(output: string): string {

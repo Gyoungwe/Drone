@@ -81,6 +81,11 @@ export function DailyIdeas({
 					{error}
 				</p>
 			)}
+			{!error && state.lastError && (
+				<p role="status" className="mb-2 break-words text-[11px] text-err">
+					{t("dailyFailed").replace("{error}", state.lastError)}
+				</p>
+			)}
 			{ideas.length === 0 ? (
 				<p className="text-[11px] text-ink-faint">{t("dailyEmpty")}</p>
 			) : (

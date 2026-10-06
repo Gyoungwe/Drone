@@ -45,7 +45,7 @@ import {
 	type ComputeExperienceRecorder,
 	createComputeExperienceRecorder,
 } from "./services/compute-experience";
-import { DailyDiscoveryService } from "./services/daily-discovery";
+import { completionText, DailyDiscoveryService } from "./services/daily-discovery";
 import { type InquiryDecisionEvent, InquiryService, type InquiryServicePort } from "./services/inquiry";
 import {
 	computeInquiryMetadata,
@@ -405,13 +405,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				{ systemPrompt: system, messages: [{ role: "user", content: message, timestamp: Date.now() }] },
 				{ maxTokens: 1500, maxRetries: 0 },
 			);
-			return Array.isArray(response.content)
-				? response.content
-						.map((item) =>
-							item && typeof item === "object" && "text" in item ? String(item.text ?? "") : "",
-						)
-						.join("\n")
-				: "";
+			return completionText(response);
 		},
 	});
 	if (options.dailyDiscovery !== false) dailyDiscovery.start();

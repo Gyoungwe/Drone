@@ -9,12 +9,28 @@ import {
 	residueClass,
 	type TreeLayout,
 } from "@drone/shared";
-import { useMemo, useState } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 
 const ROW = 16;
-const LABEL_WIDTH = 220;
-const PLOT_WIDTH = 420;
+/** 侧栏宽度未知时（首帧 / 服务端渲染）的默认总宽 */
+const DEFAULT_WIDTH = 440;
+
+/** 跟随容器宽度，让树在窄侧栏里也能完整显示 */
+function useContainerWidth(): [RefObject<HTMLDivElement | null>, number] {
+	const ref = useRef<HTMLDivElement | null>(null);
+	const [width, setWidth] = useState(DEFAULT_WIDTH);
+	useEffect(() => {
+		const element = ref.current;
+		if (!element || typeof ResizeObserver === "undefined") return;
+		const observer = new ResizeObserver(([entry]) => {
+			if (entry?.contentRect.width) setWidth(Math.floor(entry.contentRect.width));
+		});
+		observer.observe(element);
+		return () => observer.disconnect();
+	}, []);
+	return [ref, width];
+}
 
 function treeOrError(text: string): { layout: TreeLayout } | { error: string } {
 	try {
@@ -28,11 +44,18 @@ function treeOrError(text: string): { layout: TreeLayout } | { error: string } {
 export function TreeReader({ text }: { text: string }) {
 	const t = useT();
 	const [support, setSupport] = useState(true);
+	const [containerRef, containerWidth] = useContainerWidth();
 	const result = useMemo(() => treeOrError(text), [text]);
 	if ("error" in result)
 		return <p className="resource-notice">{t("resource.tree.parseFailed", { error: result.error })}</p>;
 	const { layout } = result;
-	const scale = PLOT_WIDTH / Math.max(layout.depth, 1e-9);
+	const longestLeaf = Math.max(
+		4,
+		...layout.nodes.filter((node) => node.leaf).map((node) => node.name.length),
+	);
+	const labelWidth = Math.min(220, 12 + longestLeaf * 6.5);
+	const plotWidth = Math.max(120, containerWidth - labelWidth - 24);
+	const scale = plotWidth / Math.max(layout.depth, 1e-9);
 	const height = Math.max(1, layout.leaves) * ROW + ROW;
 	const x = (value: number) => 10 + value * scale;
 	const y = (value: number) => ROW / 2 + 4 + value * ROW;
@@ -44,15 +67,17 @@ export function TreeReader({ text }: { text: string }) {
 			<p className="resource-preview-footnote">
 				{layout.hasLengths ? t("resource.tree.scaleLengths") : t("resource.tree.scaleDepth")}
 			</p>
-			<label className="resource-data-tools">
-				<input type="checkbox" checked={support} onChange={(event) => setSupport(event.target.checked)} />
-				{t("resource.tree.support")}
-			</label>
-			<div className="resource-tree-scroll">
+			<div className="resource-data-tools">
+				<label>
+					<input type="checkbox" checked={support} onChange={(event) => setSupport(event.target.checked)} />
+					{t("resource.tree.support")}
+				</label>
+			</div>
+			<div className="resource-tree-scroll" ref={containerRef}>
 				<svg
 					role="img"
 					aria-label={t("resource.tree.summary", { leaves: layout.leaves })}
-					width={PLOT_WIDTH + LABEL_WIDTH + 20}
+					width={plotWidth + labelWidth + 16}
 					height={height + (scaleBar ? 24 : 0)}
 				>
 					{byId.map((node) => {

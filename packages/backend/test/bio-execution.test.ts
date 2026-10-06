@@ -21,6 +21,10 @@ describe("bio environment probe", () => {
 	it("parses tool versions, conda envs and remote probe output", () => {
 		expect(parseVersion("samtools 1.19.2\nUsing htslib 1.19.1")).toBe("1.19.2");
 		expect(parseVersion("usage only")).toBe("installed");
+		expect(parseVersion("STAR_2.7.11b")).toBe("2.7.11b");
+		expect(parseVersion("Version: 0.7.17-r1188")).toBe("0.7.17-r1188");
+		expect(parseVersion("gatk 4.5.0.0\nHTSJDK Version: 4.1.0")).toBe("4.5.0.0");
+		expect(parseVersion("nextflow version 24.04.4.5917")).toBe("24.04.4.5917");
 		expect(
 			parseCondaEnvs("# conda environments:\nbase  *  /opt/conda\nbusco    /opt/conda/envs/busco\n"),
 		).toEqual(["base", "busco"]);
