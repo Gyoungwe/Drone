@@ -25,6 +25,11 @@ export function registerMcpIpc(
 				? mcp.setServerEnabled(args[0], args[1], args[2])
 				: (legacy.setMcpServerEnabled?.(args[0], args[1], args[2]) ??
 					Promise.reject(new Error("MCP toggle service unavailable"))),
+		addPreset: (id) => {
+			if (typeof mcp.addPreset !== "function")
+				return Promise.reject(new Error("MCP preset service unavailable"));
+			return mcp.addPreset(id);
+		},
 		openConfig: async (...args) => {
 			const config = await mcp.getConfig(args[0]);
 			await shell.openPath(config.path);
@@ -37,6 +42,7 @@ export function registerMcpIpc(
 				getConfig: IpcChannels.McpGetConfig,
 				setServerEnabled: IpcChannels.McpSetServerEnabled,
 				openConfig: IpcChannels.McpOpenConfig,
+				addPreset: IpcChannels.McpAddPreset,
 			})[method as keyof typeof McpContract.methods],
 	});
 }

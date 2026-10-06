@@ -11,9 +11,53 @@ import { type Static, Type } from "typebox";
  */
 export type SshApproval = (title: string, message: string) => Promise<boolean>;
 
+/** 设置 › 高级 › SSH 主机里登记的远程主机（来自计算主机登记表） */
+export interface SshHostEntry {
+	alias: string;
+	displayName: string;
+	kind: string;
+	platform?: string;
+	status?: string;
+}
+
 export interface SshToolOptions {
 	confirm?: SshApproval;
 	run?: SshRunner;
+	/** 登记主机目录：允许用显示名指代主机，执行时换成 SSH 别名 */
+	hosts?: () => Promise<SshHostEntry[]>;
+}
+
+/** 显示名或别名（不区分大小写）→ 登记主机的 SSH 别名；未登记则原样返回 */
+export function resolveRegisteredHost(host: string, hosts: readonly SshHostEntry[]): string {
+	const wanted = host.trim().toLowerCase();
+	const match = hosts.find(
+		(entry) => entry.alias.toLowerCase() === wanted || entry.displayName.trim().toLowerCase() === wanted,
+	);
+	return match ? match.alias : host;
+}
+
+/** 只读：列出已登记的远程主机，供 Agent 选择 ssh 的 host */
+export function makeSshHostsTool(hosts: () => Promise<SshHostEntry[]>): ToolDefinition {
+	return {
+		name: "ssh_hosts",
+		label: "SSH hosts",
+		description:
+			"List the remote machines the user registered in Settings › Advanced › SSH hosts (alias, display name, platform, last health). Use the alias as the host of the ssh tool. Read-only; it does not connect.",
+		promptSnippet: "ssh_hosts()",
+		parameters: Type.Object({}),
+		execute: async (): Promise<AgentToolResult<{ hosts: SshHostEntry[] }>> => {
+			const list = await hosts();
+			const text = list.length
+				? list
+						.map(
+							(h) =>
+								`- ${h.alias} (${h.displayName}; ${h.kind}${h.platform ? `, ${h.platform}` : ""}${h.status ? `, ${h.status}` : ""})`,
+						)
+						.join("\n")
+				: "No SSH hosts are registered. The user can add one in Settings › Advanced › SSH hosts, or you can use a host alias from ~/.ssh/config.";
+			return { content: [{ type: "text", text }], details: { hosts: list } };
+		},
+	};
 }
 
 export interface SshRunnerOptions {
@@ -225,11 +269,14 @@ export function makeSshTool(options: SshToolOptions = {}): ToolDefinition<typeof
 		promptGuidelines: [
 			"SSH uses a local key or SSH agent and always asks the user immediately before connecting.",
 			"Never include private key contents in a prompt or command; pass only a ~/.ssh key path when needed.",
+			"Call ssh_hosts to see the machines the user registered; their alias or display name can be used as host.",
 		],
 		parameters: sshParams,
 		executionMode: "sequential",
 		execute: async (_toolCallId, params, signal): Promise<AgentToolResult<SshToolDetails>> => {
 			if (signal?.aborted) throw new Error("ssh: operation aborted");
+			if (options.hosts)
+				params = { ...params, host: resolveRegisteredHost(params.host, await options.hosts()) };
 			const { args, keyPath } = buildSshArgs(params);
 			const destination = params.username ? `${params.username}@${params.host}` : params.host;
 			// Include the exact command in the memory key so an explicit allowAlways

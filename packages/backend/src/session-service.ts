@@ -57,6 +57,8 @@ import { withNativeSubagentSlot } from "./tools/subagent/slots";
 const _log = createLogger("backend");
 
 export interface SessionServiceOptions {
+	/** 已登记的远程主机目录（由组合根接到计算主机登记表），供 ssh / ssh_hosts 工具使用 */
+	listSshHosts?: () => Promise<import("./tools/ssh").SshHostEntry[]>;
 	/** 默认工作目录（createSession 未指定时使用） */
 	defaultCwd?: string;
 	/** 每会话工具白名单；缺省用 pi 默认（read/bash/edit/write） */

@@ -1,7 +1,13 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { buildSshArgs, makeSshTool, resolveSshKeyPath } from "../src/tools/ssh";
+import {
+	buildSshArgs,
+	makeSshHostsTool,
+	makeSshTool,
+	resolveRegisteredHost,
+	resolveSshKeyPath,
+} from "../src/tools/ssh";
 
 const cwd = process.cwd();
 const keyPath = join(homedir(), ".ssh", "id_ed25519");
@@ -78,5 +84,47 @@ describe("ssh tool", () => {
 		);
 		expect(result.details).toMatchObject({ destination: "build.example", exitCode: 0, timedOut: false });
 		expect(result.content[0]).toMatchObject({ type: "text" });
+	});
+});
+
+describe("registered SSH hosts", () => {
+	const hosts = [
+		{ alias: "hpc-01", displayName: "实验室 HPC", kind: "ssh", platform: "linux", status: "healthy" },
+	];
+	it("resolves a display name or alias to the registered SSH alias", () => {
+		expect(resolveRegisteredHost("实验室 HPC", hosts)).toBe("hpc-01");
+		expect(resolveRegisteredHost("HPC-01", hosts)).toBe("hpc-01");
+		expect(resolveRegisteredHost("other.example", hosts)).toBe("other.example");
+	});
+	it("ssh connects to the registered alias after approval", async () => {
+		const run = vi.fn(async () => ({
+			stdout: "ok",
+			stderr: "",
+			exitCode: 0,
+			timedOut: false,
+			truncated: false,
+		}));
+		const confirm = vi.fn(async () => true);
+		const tool = makeSshTool({ confirm, run, hosts: async () => hosts });
+		await tool.execute(
+			"call",
+			{ host: "实验室 HPC", command: "hostname" },
+			undefined,
+			undefined,
+			{} as never,
+		);
+		expect(confirm).toHaveBeenCalledOnce();
+		expect(run.mock.calls[0]?.[0]).toContain("hpc-01");
+	});
+	it("ssh_hosts lists registered machines without connecting", async () => {
+		const result = await makeSshHostsTool(async () => hosts).execute(
+			"call",
+			{},
+			undefined,
+			undefined,
+			{} as never,
+		);
+		expect(result.content[0]).toMatchObject({ type: "text" });
+		expect(JSON.stringify(result.content)).toContain("hpc-01 (实验室 HPC; ssh, linux, healthy)");
 	});
 });

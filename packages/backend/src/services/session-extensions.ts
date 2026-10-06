@@ -43,6 +43,7 @@ export class SessionExtensionsService {
 				};
 			},
 			setMcpStatus: (cwd, status) => this.host.setMcpStatus(cwd, status),
+			...(this.host.options.listSshHosts ? { listSshHosts: this.host.options.listSshHosts } : {}),
 		};
 	}
 }

@@ -1,7 +1,7 @@
-import type { McpConfigSnapshot, McpServerStatus, McpStatus } from "@drone/shared";
+import { MCP_PRESETS, type McpConfigSnapshot, type McpServerStatus, type McpStatus } from "@drone/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GearIcon, RefreshIcon } from "../../components/icons";
-import { useT } from "../../i18n";
+import { useI18nStore, useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
 import { Switch } from "../ui/Switch";
 
@@ -24,6 +24,8 @@ export function McpPanel() {
 	const [loading, setLoading] = useState(true);
 	const [pendingServer, setPendingServer] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const language = useI18nStore((state) => state.language);
+	const [pendingPreset, setPendingPreset] = useState<string | null>(null);
 
 	const refresh = useCallback(async () => {
 		setLoading(true);
@@ -113,6 +115,47 @@ export function McpPanel() {
 					</button>
 				</div>
 			</div>
+
+			<section className="mt-5" aria-label={t("settings.mcp.presets")} data-testid="mcp-presets">
+				<h4 className="text-[12px] font-medium text-ink-2">{t("settings.mcp.presets")}</h4>
+				<p className="mt-0.5 text-[11px] text-ink-faint">{t("settings.mcp.presetsHint")}</p>
+				<ul className="mt-2 space-y-2">
+					{MCP_PRESETS.map((preset) => {
+						const added = servers.some((server) => server.name === preset.name && !server.disabled);
+						return (
+							<li key={preset.id} className="rounded-lg border border-border px-3 py-2.5">
+								<div className="flex items-center gap-2">
+									<p className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink">
+										{preset.label[language === "zh" ? "zh" : "en"]}
+									</p>
+									<button
+										type="button"
+										className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-[11px] text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
+										disabled={added || pendingPreset !== null}
+										onClick={async () => {
+											setPendingPreset(preset.id);
+											setError(null);
+											try {
+												setConfig(await window.pi.addMcpPreset(preset.id));
+												void refresh();
+											} catch (err) {
+												setError(err instanceof Error ? err.message : t("settings.mcp.error"));
+											} finally {
+												setPendingPreset(null);
+											}
+										}}
+									>
+										{added ? t("settings.mcp.presetAdded") : t("settings.mcp.presetAdd")}
+									</button>
+								</div>
+								<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
+									{preset.description[language === "zh" ? "zh" : "en"]}
+								</p>
+							</li>
+						);
+					})}
+				</ul>
+			</section>
 
 			<div className="mt-5">
 				<div className="flex items-center justify-between">

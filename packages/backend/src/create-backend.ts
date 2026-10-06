@@ -4,6 +4,7 @@ import type { ExperienceStorePort } from "@drone/knowledge";
 import type {
 	AskRequest,
 	AskResponse,
+	ComputeHost,
 	ContextManagerMode,
 	DroneRuntime,
 	LoginEventPayload,
@@ -66,6 +67,7 @@ import { SessionService, type SessionServiceOptions } from "./session-service";
 import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
+import type { SshHostEntry } from "./tools/ssh";
 
 /**
  * Transitional composition root for the v2 migration.
@@ -208,7 +210,24 @@ export interface BackendOptions extends SessionServiceOptions {
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
-	const sessions = new SessionService({ ...options, runtime, permissions, inquiryDir: options.inquiryDir });
+	// The compute host registry is created after sessions; ssh tools read it lazily at execute time.
+	let listComputeHosts: (() => Promise<ComputeHost[]>) | null = null;
+	const sessions = new SessionService({
+		...options,
+		runtime,
+		permissions,
+		inquiryDir: options.inquiryDir,
+		listSshHosts: async (): Promise<SshHostEntry[]> =>
+			((await listComputeHosts?.()) ?? [])
+				.filter((host) => host.kind !== "local")
+				.map((host) => ({
+					alias: host.alias,
+					displayName: host.displayName,
+					kind: host.kind,
+					...(host.platform ? { platform: host.platform } : {}),
+					status: host.health.status,
+				})),
+	});
 	const defaultProjectId = canonicalProjectId(
 		options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
 	);
@@ -293,6 +312,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				? { authorizeRemoteOperation: options.computeAuthorizeRemoteOperation }
 				: {}),
 		});
+	listComputeHosts = () => computeAdapter.listHosts();
 	const detachInquiryComputeEvents = inquiry.attachEventSource({
 		onComputeEvent: (handler) =>
 			compute.onEvent((event) => {
