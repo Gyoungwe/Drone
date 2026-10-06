@@ -24,6 +24,16 @@ export function emptyReason(
 	return t("dailyEmpty");
 }
 
+/** 已有旧想法时，最近一次运行没有新增也要说明原因（否则「现在运行」看起来只刷新了时间） */
+export function lastRunNote(
+	state: Pick<DailyDiscoveryState, "lastOutcome" | "lastError">,
+	t: (key: "dailyEmpty" | "dailyNoNewNotes" | "dailyRanNoIdeas" | "dailyNotBound") => string,
+): string | null {
+	const outcome = state.lastError ? null : state.lastOutcome;
+	if (!outcome || (outcome.kind === "ran" && outcome.added > 0)) return null;
+	return emptyReason(state, t);
+}
+
 export function DailyIdeas({
 	cwd,
 	sessionId,
@@ -65,6 +75,7 @@ export function DailyIdeas({
 
 	if (!state) return null;
 	const ideas = state.ideas.filter((idea) => idea.status !== "dismissed");
+	const runNote = ideas.length > 0 ? lastRunNote(state, t) : null;
 	return (
 		<section aria-label={t("dailyTitle")} data-testid="daily-ideas">
 			<div className="mb-2 flex flex-wrap items-center gap-2">
@@ -98,6 +109,11 @@ export function DailyIdeas({
 			{!error && state.lastError && (
 				<p role="status" className="mb-2 break-words text-[11px] text-err">
 					{t("dailyFailed").replace("{error}", state.lastError)}
+				</p>
+			)}
+			{runNote && (
+				<p role="status" className="mb-2 text-[11px] text-ink-faint">
+					{runNote}
 				</p>
 			)}
 			{ideas.length === 0 ? (
