@@ -45,6 +45,7 @@ export const zoteroZh = {
 	webNotConfigured: "未配置：Agent 只能新建条目，不能修改已有条目的分类或附件。",
 	webFromEnv: "来自环境变量 ZOTERO_API_KEY（…{hint}），在设置里不可更改。",
 	webSaved: "已保存，Agent 现在可以修改已有条目（每次修改仍会先征求你的同意）。",
+	webInvalidInput: "没有保存：密钥应为 16–64 位字母或数字，群组库 ID 最多 20 位数字。",
 } as const;
 
 export const zoteroEn: Record<keyof typeof zoteroZh, string> = {
@@ -95,6 +96,8 @@ export const zoteroEn: Record<keyof typeof zoteroZh, string> = {
 		"Not configured: the agent can create items but cannot change collections or attachments of existing ones.",
 	webFromEnv: "From the ZOTERO_API_KEY environment variable (…{hint}); not editable here.",
 	webSaved: "Saved. The agent can now change existing items (it still asks you before each change).",
+	webInvalidInput:
+		"Not saved: the key must be 16–64 letters or digits and the group library ID at most 20 digits.",
 };
 
 export function useZoteroText() {

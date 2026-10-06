@@ -4,6 +4,14 @@ import { getPi } from "../../api";
 import { Button } from "../ui/Button";
 import { useZoteroText } from "./zotero-copy";
 
+/**
+ * 参数未通过宿主契约校验时 IPC 不抛错，而是返回错误信封（code/titleKey，无 configured 字段）：
+ * 不能当作已保存。
+ */
+export function isZoteroWebApiStatus(value: unknown): value is ZoteroWebApiStatus {
+	return typeof (value as Partial<ZoteroWebApiStatus> | null)?.configured === "boolean";
+}
+
 /** 设置 › Zotero › 网页 API：保存写权限密钥，让 Agent 能把已有条目归入分类、挂 PDF */
 export function ZoteroWebApiSection() {
 	const t = useZoteroText();
@@ -30,7 +38,9 @@ export function ZoteroWebApiSection() {
 		setError(null);
 		setNotice(null);
 		try {
-			setStatus(await operation());
+			const next = await operation();
+			if (!isZoteroWebApiStatus(next)) throw new Error(t("webInvalidInput"));
+			setStatus(next);
 			setApiKey("");
 			if (done) setNotice(done);
 		} catch (e) {
