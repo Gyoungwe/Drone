@@ -99,6 +99,8 @@ export const IpcChannels = {
 	KnowledgeSemanticIndex: "knowledge:semanticIndex",
 	KnowledgeSemanticIndexCancel: "knowledge:semanticIndexCancel",
 	KnowledgeSearch: "knowledge:search",
+	KnowledgeNoteLinks: "knowledge:noteLinks",
+	KnowledgeGraph: "knowledge:graph",
 	KnowledgeDailyDiscovery: "knowledge:dailyDiscovery",
 	KnowledgeDailyDiscoveryUpdate: "knowledge:dailyDiscoveryUpdate",
 	KnowledgeDailyIdeaDecide: "knowledge:dailyIdeaDecide",

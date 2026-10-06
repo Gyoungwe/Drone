@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { DailyIdeas } from "./DailyIdeas";
 import { reportKnowledgeError, useKnowledgeOverview } from "./hooks";
+import { KnowledgeGraph } from "./KnowledgeGraph";
 import { KnowledgeSearch } from "./KnowledgeSearch";
 import { WikiReviewPanel } from "./WikiReviewPanel";
 
@@ -73,6 +74,14 @@ export function KnowledgeHome({
 			)}
 			{binding && <KnowledgeSearch cwd={cwd} sessionId={sessionId} bindingRevision={binding.revision} />}
 			{binding && <DailyIdeas cwd={cwd} sessionId={sessionId} bindingRevision={binding.revision} />}
+			{binding && (
+				<details className="rounded-xl border border-border p-3">
+					<summary className="cursor-pointer text-xs font-semibold">{t("graphTitle")}</summary>
+					<div className="mt-2">
+						<KnowledgeGraph cwd={cwd} revision={binding.revision} />
+					</div>
+				</details>
+			)}
 			{binding && (
 				<section aria-label={t("homeRecent")}>
 					<h3 className="mb-2 text-xs font-semibold">{t("homeRecent")}</h3>

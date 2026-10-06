@@ -7,8 +7,10 @@ import {
   getKnowledgeTopics,
   indexKnowledgeSemantic,
   knowledgeDecideReview,
+  knowledgeGraph,
   knowledgeJobs,
   knowledgeMaintenance,
+  knowledgeNoteLinks,
   knowledgeOpenTarget,
   knowledgeOverview,
   knowledgePreviewReview,
@@ -21,7 +23,7 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-ATHXZ6Y4.mjs";
+} from "./chunks/chunk-7UOZ7HAE.mjs";
 import "./chunks/chunk-IMC2GAXA.mjs";
 import "./chunks/chunk-XSFQUT2B.mjs";
 import "./chunks/chunk-DAWMRSPO.mjs";
@@ -45,8 +47,10 @@ export {
   getKnowledgeTopics,
   indexKnowledgeSemantic,
   knowledgeDecideReview,
+  knowledgeGraph,
   knowledgeJobs,
   knowledgeMaintenance,
+  knowledgeNoteLinks,
   knowledgeOpenTarget,
   knowledgeOverview,
   knowledgePreviewReview,

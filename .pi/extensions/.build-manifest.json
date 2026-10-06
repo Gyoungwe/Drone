@@ -17,16 +17,16 @@
 			"output": "knowledge-extension.mjs",
 			"status": "generated",
 			"sourceSha256": "809a5be02436faea7bd05fab84d9ddfd94444194b425d94acb9ffb72d34940be",
-			"inputsSha256": "de74269cea9fa783d5a1d8e55ee5dec131a4cef494ab7661741ac31a153595e9",
+			"inputsSha256": "17fab98dc06f418dda75e3850aece4a6644cde6ec1a93441043416172f320542",
 			"outputSha256": "a949b906d6222814a82ce8cf2f123c078cc538d7470d2b315af4c810471414d9"
 		},
 		"obsidian-workbench": {
 			"source": "obsidian-workbench.ts",
 			"output": "obsidian-workbench.mjs",
 			"status": "generated",
-			"sourceSha256": "75b2e907f98eb0570fb3cba120d9c96561f9768f56d2603e08e47e537c2e6b7c",
-			"inputsSha256": "0087c707f39e768dd3eac1bc53f17218d068da4188214648e77148415db9975f",
-			"outputSha256": "a3e91ff7f1160177ec9ace080e9ba0b92d5236b97b3419c6c9d684f0d0e738d2"
+			"sourceSha256": "956381007d745f513ac6b9c940f808dff0e1ef3581694d015f91985401d48f85",
+			"inputsSha256": "2655d6520bb1e11469115d4213f03984a9a6557d195ac177dc20be1d39380c64",
+			"outputSha256": "3d862e3e0b69a493666baffcf1693bc78acda28f0399451a5dfc28e2b3910720"
 		},
 		"research-loop": {
 			"source": "research-loop.ts",
@@ -57,7 +57,7 @@
 			"output": "source-archive.mjs",
 			"status": "generated",
 			"sourceSha256": "3dcd6df0b98b082e9345151c2dc6a19d9ba7ca7aca942841af73bbbd280cc031",
-			"inputsSha256": "e5ba784b9d670293e091cb24ccf2f7a1cb6a0412ab08726fe606853f7f309596",
+			"inputsSha256": "c54c30576ec4c50e65428f67eb8dd78080ef27a0201b549912c4c552c42a10b2",
 			"outputSha256": "7f69be320575d66b6e1171bd7cbe6e90eb23b44d57977d2f8dbf7c3eeb19e70c"
 		},
 		"subagent-mcp-readonly": {
@@ -65,7 +65,7 @@
 			"output": "subagent-mcp-readonly.mjs",
 			"status": "generated",
 			"sourceSha256": "98106345b337390cd3cf9f40a96c7e4864cc34d44f4406c3cf57077e6d1c29f9",
-			"inputsSha256": "f5d656955c7cc50374246618dafa78d51e70508ee6d35d0cb6c6a0e586fe7907",
+			"inputsSha256": "7aaf4b1df4c05af869820ad08bea7ae0fce8a808cb4748bd0bb6f53eda81bd22",
 			"outputSha256": "29b6a9777d9ceb77a924effa0cb09f5082201e75fdee56511616886e44af4024"
 		},
 		"subagent-research": {

@@ -315,6 +315,25 @@ export interface WikiModelReviewResult {
 	writeResult?: WikiReviewResult;
 	sources?: { path: string; hash: string; startLine: number; endLine: number }[];
 }
+/** 双向链接：出链（本笔记链接到的）与反链（链接到本笔记的） */
+export interface KnowledgeLinkRef {
+	path: string;
+	title: string;
+	/** false = 链接目标还不存在（未建的笔记） */
+	exists: boolean;
+}
+export interface KnowledgeNoteLinks {
+	path: string;
+	title: string;
+	outgoing: KnowledgeLinkRef[];
+	incoming: KnowledgeLinkRef[];
+}
+/** 知识网络图：笔记节点与 [[链接]] 边 */
+export interface KnowledgeGraph {
+	nodes: { path: string; title: string; kind: string; degree: number }[];
+	edges: { source: string; target: string }[];
+	totalNotes: number;
+}
 /** 每日发现（新旧对照）提出的一条想法 */
 export interface DailyDiscoveryIdea {
 	id: string;
@@ -356,6 +375,8 @@ export interface KnowledgeSearchResult {
 }
 export interface KnowledgeApi {
 	searchKnowledge(input: KnowledgeSearchRequest): Promise<KnowledgeSearchResult>;
+	getKnowledgeNoteLinks(input: { path: string; revision: number }): Promise<KnowledgeNoteLinks>;
+	getKnowledgeGraph(input: { revision: number; limit?: number }): Promise<KnowledgeGraph>;
 	getDailyDiscovery(): Promise<DailyDiscoveryState>;
 	/** enabled: 开关；run: 立即运行一次 */
 	updateDailyDiscovery(input: { enabled?: boolean; run?: boolean }): Promise<DailyDiscoveryState>;

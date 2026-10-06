@@ -14,6 +14,9 @@ import {
   validateWikiSourcePaths
 } from "./chunks/chunk-AKW2CMNR.mjs";
 import {
+  saveSpecialistExplainer
+} from "./chunks/chunk-GMBJR4N3.mjs";
+import {
   createKnowledgeSpecialists,
   knowledgeReadStart,
   shouldOrientKnowledge
@@ -47,8 +50,10 @@ import {
   getKnowledgeTopics,
   indexKnowledgeSemantic,
   knowledgeDecideReview,
+  knowledgeGraph,
   knowledgeJobs,
   knowledgeMaintenance,
+  knowledgeNoteLinks,
   knowledgeOpenTarget,
   knowledgeOverview,
   knowledgePreviewReview,
@@ -61,7 +66,7 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-ATHXZ6Y4.mjs";
+} from "./chunks/chunk-7UOZ7HAE.mjs";
 import {
   autoApplyWikiProposal,
   decideWikiProposal,
@@ -109,9 +114,6 @@ import {
   normalizeSourceLinks,
   onlineSourceLink
 } from "./chunks/chunk-LE6NM7SB.mjs";
-import {
-  saveSpecialistExplainer
-} from "./chunks/chunk-GMBJR4N3.mjs";
 import {
   runNavigationMaintenance,
   updateNavigation
@@ -298,8 +300,10 @@ export {
   knowledgeDecideReview,
   knowledgeDirectory,
   knowledgeFailure,
+  knowledgeGraph,
   knowledgeJobs,
   knowledgeMaintenance,
+  knowledgeNoteLinks,
   knowledgeOpenTarget,
   knowledgeOverview,
   knowledgePreviewReview,
