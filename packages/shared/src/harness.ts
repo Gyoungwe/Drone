@@ -160,7 +160,7 @@ export const HARNESS_CONTRACT = [
 	"- Track the requested deliverables and check the final files under the conditions that will consume them.",
 	"- Report evidence and limitations, unresolved questions, and the next observable action precisely.",
 	"- Use the available tools and permissions; do not claim work, evidence, or review that did not happen.",
-	"- Keep progress updates concise and public. The final response leads with the result and names relevant files and checks.",
+	"- Keep progress updates concise and public. The final answer follows the answer mode below; for code or file work it also names the changed files and checks run.",
 	"- Private reasoning stays private; expose actions, observations, decisions, and conclusions that the evidence supports.",
 ].join("\n");
 
@@ -179,10 +179,51 @@ export const SCIENCE_CONTRACT = [
 export const RESPONSE_CONTRACT = [
 	"Response contract:",
 	"- Progress narration between tools is short and only reports a new observation, choice, result, or blocker.",
-	"- The final answer is the user-facing answer: lead with the result, then evidence, checks, limitations, and relevant files.",
+	"- The final answer is the user-facing answer; its length and structure follow the answer mode.",
 	"- Never claim a file was saved, a source was read, or a check passed unless the host returned that evidence.",
 	"- Keep private reasoning private; expose observable actions, evidence, decisions, and conclusions.",
 ].join("\n");
+
+/** 回答模式：auto = 按问题自动判断；quick = 快速问答；academic = 学术回答 */
+export type AnswerMode = "auto" | "quick" | "academic";
+export const ANSWER_MODES: readonly AnswerMode[] = ["auto", "quick", "academic"];
+
+export const QUICK_ANSWER_CONTRACT = [
+	"Answer mode: quick.",
+	"- Answer the question directly in a few sentences or a short list; no headings.",
+	"- Keep only the caveat that changes how the answer should be used.",
+	"- Cite a source (Vault path, DOI or URL) only for a specific fact that depends on it; never invent one.",
+].join("\n");
+
+export const ACADEMIC_ANSWER_CONTRACT = [
+	"Answer mode: academic. Write the final answer as a scholarly synthesis, in the user's language:",
+	"- Structure it as Background and question → Methods and evidence → Conclusion, with short headings.",
+	"- Cite each substantive claim inline as (Author, Year). End with a numbered References list: authors, year, title, venue, DOI; when the reference has a note in the local Vault, add its Vault path.",
+	"- Grade every claim explicitly as established (replicated or consensus), supported by evidence (one or a few studies), or speculative (hypothesis or inference); never upgrade weak evidence.",
+	"- Use precise terms, units and numbers together with their conditions (organism, sample size, method) instead of vague qualifiers.",
+	"- Never invent a reference, DOI, author or number. If a citation could not be checked against a source you actually read, say so next to it.",
+	"- Say which parts came from the local knowledge base and which from the web.",
+].join("\n");
+
+const ACADEMIC_CUES =
+	/学术|综述|文献|论文|参考文献|引用|证据|机制|研究进展|机理|假说|研究现状|\bliterature\b|\breview\b|\bevidence\b|\bmechanis(?:m|ms|tic)\b|\bcitations?\b|\breferences?\b|\bstate of the art\b|\bsystematic\b/i;
+const QUICK_CUES =
+	/简单说|简短|一句话|快速回答|直接告诉|\bbriefly\b|\bin short\b|\bquick(?:ly)?\b|\btl;?dr\b/i;
+
+/** 自动判断：显式「简短」优先；学术线索 → 学术回答；其余快速问答。手动设定（quick/academic）总是优先。 */
+export function resolveAnswerMode(
+	prompt: unknown,
+	setting: AnswerMode = "auto",
+): Exclude<AnswerMode, "auto"> {
+	if (setting === "quick" || setting === "academic") return setting;
+	const text = typeof prompt === "string" ? prompt : "";
+	if (QUICK_CUES.test(text)) return "quick";
+	return ACADEMIC_CUES.test(text) ? "academic" : "quick";
+}
+
+export function answerModeContract(mode: Exclude<AnswerMode, "auto">): string {
+	return mode === "academic" ? ACADEMIC_ANSWER_CONTRACT : QUICK_ANSWER_CONTRACT;
+}
 
 const ITEM_LIMIT = 1_200;
 const ITEM_COUNT_LIMIT = 8;
@@ -272,7 +313,7 @@ const FAMILY_GUIDANCE: Record<HarnessModelFamily, string> = {
 	"gpt-astra":
 		"Pursue independent branches only when they can materially change the result, then integrate their evidence before answering.",
 	default:
-		"Use the available tools carefully, verify observable results, and keep the final answer concise unless the user asks for depth.",
+		"Use the available tools carefully, verify observable results, and shape the final answer to the answer mode.",
 };
 
 export function renderHarnessPromptLayer(
@@ -280,6 +321,7 @@ export function renderHarnessPromptLayer(
 	posture: HarnessPosture,
 	role?: HarnessSpecialistRole,
 	skills: readonly string[] = [],
+	answerMode?: Exclude<AnswerMode, "auto">,
 ): string {
 	const roleText = role
 		? `Specialist handoff: you are the ${role} specialist. Return only Outcome, Findings, Evidence, Changes and outputs, Verification, Limitations, and Next action when those fields have content. Do not delegate or ask the user.`
@@ -295,6 +337,7 @@ export function renderHarnessPromptLayer(
 		HARNESS_CONTRACT,
 		SCIENCE_CONTRACT,
 		RESPONSE_CONTRACT,
+		answerMode ? answerModeContract(answerMode) : "",
 		roleText,
 		skillText,
 		renderHarnessPosture(posture),

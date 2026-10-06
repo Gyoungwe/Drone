@@ -18,7 +18,7 @@
 		"postinstall": "patch-package",
 		"build": "npm run build -w packages/desktop",
 		"typecheck": "npm run typecheck --workspaces && npm run check:pi",
-		"test": "npm run test --workspaces --if-present && node --test scripts/check-build-inputs.test.mjs",
+		"test": "npm run test --workspaces --if-present && node --test scripts/check-build-inputs.test.mjs scripts/academic-eval/score.test.mjs",
 		"test:unit": "npm run test:unit -w @drone/backend",
 		"test:sdk": "npm run test:sdk -w @drone/backend",
 		"dist": "npm run dist -w packages/desktop",
