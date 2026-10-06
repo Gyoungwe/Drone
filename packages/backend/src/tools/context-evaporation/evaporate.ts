@@ -111,6 +111,7 @@ function classifyTool(toolName: string | undefined, protectedTools: string[]): E
 		case "read":
 			return "read";
 		case "webfetch":
+		case "bio_db":
 		case "mcp":
 		case "mcpScript":
 		case "search_pi_packages":
