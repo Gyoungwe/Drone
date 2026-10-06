@@ -16,8 +16,12 @@ import {
 } from "@drone/research/zotero-setup-runtime";
 import {
 	describeZoteroSavePlan,
+	describeZoteroUpdatePlan,
 	executeZoteroSave,
+	executeZoteroUpdate,
 	prepareZoteroSave,
+	prepareZoteroUpdate,
+	receiptWithoutUpdate,
 	receiptWithoutWrite,
 	ZOTERO_ITEM_TYPES,
 } from "@drone/research/zotero-write-runtime";
@@ -216,6 +220,68 @@ async function consentToZoteroSave(pi, ctx, plan, signal) {
 	);
 	return { granted: selected === SAVE_ALLOW && !signal?.aborted, via: "ask-card" };
 }
+const UPDATE_ALLOW = "同意修改该条目",
+	UPDATE_DENY = "暂不修改";
+/** 修改已有条目：任务计划点名了这个 DOI 视为已授权；否则在桌面弹卡确认（不使用 DOI 空槽位）。 */
+async function consentToZoteroUpdate(pi, ctx, plan, signal) {
+	if (plan.doi) {
+		const task = await taskConsentFor(pi, ctx, plan.doi);
+		if (task?.via === "task-plan") return { granted: true, ...task };
+		task?.release?.();
+	}
+	if (!ctx.hasUI || !ctx.ui?.select)
+		throw new Error(
+			"Changing a Zotero item needs an authorized task plan naming its DOI, or an interactive desktop confirmation. Neither is available here; no change made.",
+		);
+	const selected = await ctx.ui.select(
+		`ask_user · 修改 Zotero 已有条目？\n\n${describeZoteroUpdatePlan(plan)}`,
+		[UPDATE_DENY, UPDATE_ALLOW],
+		{ signal },
+	);
+	return { granted: selected === UPDATE_ALLOW && !signal?.aborted, via: "ask-card" };
+}
+export async function runZoteroUpdate(pi, params, ctx, signal, deps = {}) {
+	const plan = await prepareZoteroUpdate(params, { signal, cwd: ctx.cwd, ...deps });
+	let receipt: any,
+		consent = { via: "not-needed" };
+	if (plan.action !== "update") receipt = receiptWithoutUpdate(plan);
+	else {
+		consent = await consentToZoteroUpdate(pi, ctx, plan, signal);
+		receipt = consent.granted
+			? await executeZoteroUpdate(plan, { signal, ...deps })
+			: receiptWithoutUpdate({ ...plan, action: "cancelled", reason: "user-declined" });
+	}
+	receipt.consent = {
+		via: consent.via,
+		taskId: consent.taskId || null,
+		milestoneId: consent.milestoneId || null,
+	};
+	if (receipt.write?.performed)
+		pi.events?.emit?.("drone:decision-record/v1", {
+			id: `zotero-update:${receipt.zoteroKey}:${receipt.write.at}`,
+			kind: "zotero-write",
+			summary: `Zotero update receipt for ${receipt.doi || receipt.zoteroKey}`,
+			basis: [receipt.zoteroKey],
+			at: new Date().toISOString(),
+		});
+	if (params.run_dir && receipt.write?.performed && receipt.doi) {
+		try {
+			receipt.journal = await recordZoteroWrite({
+				cwd: ctx.cwd,
+				runDir: params.run_dir,
+				receipt: {
+					...receipt,
+					collection: receipt.changes?.addCollection || null,
+					attachment: receipt.changes?.uploadFile || receipt.changes?.attachUrl || null,
+					writesToLibraries: 1,
+				},
+			});
+		} catch (error) {
+			receipt.journal = { error: String(error.message || error).slice(0, 200) };
+		}
+	}
+	return receipt;
+}
 export async function runZoteroSave(pi, params, ctx, signal, deps = {}) {
 	const plan = await prepareZoteroSave(params, { signal, ...deps });
 	let receipt: any,
@@ -257,6 +323,9 @@ export async function runZoteroSave(pi, params, ctx, signal, deps = {}) {
 			receipt.journal = { error: String(error.message || error).slice(0, 200) };
 		}
 	}
+	if (receipt.status === "reused" && (params.collection_key || params.attachment_url))
+		receipt.update =
+			"The item already exists, so nothing was changed. To file it into a collection or attach a PDF, call research_zotero_update with zotero_key and collection_key / collection_name / attachment_url / local_file.";
 	receipt.next = receipt.zoteroKey
 		? `research_deposit_knowledge type=paper zotero_key=${receipt.zoteroKey} doi=${receipt.doi}, then research_verify_literature.`
 		: "Do not retry automatically. Inspect Zotero or ask the user before any further write.";
@@ -401,7 +470,7 @@ export default function zoteroLiterature(pi) {
 			flowCards: (event) => literatureCard(event, { write: true }),
 		},
 		description:
-			"Write ONE bibliographic item into the user's Zotero library, keyed by exact DOI. Host-controlled: dedups by DOI first (an existing item is reused, never duplicated), asks the user on a native card unless an authorized task plan lists this DOI as a zotero_item milestone, writes once through Zotero desktop (connector, preferred) or the Zotero Web API (write-scoped ZOTERO_API_KEY from the environment), then reads the item back by DOI. Never retries, deletes, merges or moves items. Attachments are URL-based only: Zotero desktop downloads attachment_url itself; the Web API records it as a linked URL. Returns the receipt (status, zoteroKey, library, fulltextStatus). Follow with research_deposit_knowledge type=paper and research_verify_literature; the Vault note stays the citable object.",
+			"Write ONE bibliographic item into the user's Zotero library, keyed by exact DOI. Host-controlled: dedups by DOI first (an existing item is reused, never duplicated), asks the user on a native card unless an authorized task plan lists this DOI as a zotero_item milestone, writes once through Zotero desktop (connector, preferred) or the Zotero Web API (write-scoped ZOTERO_API_KEY from the environment), then reads the item back by DOI. Never retries, deletes, merges or moves items. Attachments are URL-based only: Zotero desktop downloads attachment_url itself; the Web API records it as a linked URL. An existing item is never modified here (status=reused): use research_zotero_update to file it into a collection or attach a PDF. Returns the receipt (status, zoteroKey, library, fulltextStatus). Follow with research_deposit_knowledge type=paper and research_verify_literature; the Vault note stays the citable object.",
 		parameters: {
 			type: "object",
 			required: ["doi", "title"],
@@ -437,7 +506,7 @@ export default function zoteroLiterature(pi) {
 				attachment_url: {
 					type: "string",
 					description:
-						"Optional http(s) URL of an open-access PDF whose license allows saving. The host never uploads local files.",
+						"Optional http(s) URL of an open-access PDF whose license allows saving. To upload a local PDF to an existing item use research_zotero_update local_file.",
 				},
 				attachment_title: { type: "string" },
 				channel: {
@@ -464,6 +533,59 @@ export default function zoteroLiterature(pi) {
 		async execute(_id, params, signal, _update, ctx) {
 			return run(async () => {
 				const receipt = await runZoteroSave(pi, params || {}, ctx, signal);
+				return { content: [{ type: "text", text: JSON.stringify(receipt, null, 2) }], details: receipt };
+			});
+		},
+	});
+
+	registerTool(pi, {
+		name: "research_zotero_update",
+		label: "Update an existing Zotero item (host-controlled)",
+		drone: {
+			capabilities: ["research", "external"],
+			subagent: "exclude",
+			activity: { text: "正在修改 Zotero 条目…", phase: "literature-write" },
+			flow: "literature",
+			flowCards: (event) => literatureCard(event, { write: true }),
+		},
+		description:
+			"Change ONE existing item in the user's Zotero library through the Zotero Web API (Zotero desktop's local API is read-only): add it to a collection (by collection_key or exact collection_name; existing collections are kept), attach an open-access PDF link (attachment_url) and/or upload a local PDF from the project (local_file, counts against the user's Zotero storage). Identify the item by zotero_key or exact DOI. Asks the user on a native card unless an authorized task plan names the DOI; writes once, then reads the item back. Never deletes, removes from collections, merges or retries. Needs a write-enabled API key (Drone Settings → Zotero → Web API); without one it returns status=blocked with the reason — tell the user, do not ask for the key in chat.",
+		parameters: {
+			type: "object",
+			properties: {
+				zotero_key: { type: "string", description: "8-character key of the existing item (preferred)." },
+				doi: {
+					type: "string",
+					description: "Exact DOI when the key is unknown; must match exactly one item.",
+				},
+				collection_key: {
+					type: "string",
+					description: "8-character key of the collection to add the item to.",
+				},
+				collection_name: {
+					type: "string",
+					description: "Exact collection name, used when the key is unknown.",
+				},
+				attachment_url: {
+					type: "string",
+					description: "http(s) URL of an open-access PDF to attach as a link.",
+				},
+				attachment_title: { type: "string" },
+				local_file: {
+					type: "string",
+					description:
+						"Path (inside the project) of a PDF to upload as a stored attachment, e.g. results/x/papers/a.pdf.",
+				},
+				run_dir: {
+					type: "string",
+					description:
+						"Research run directory; the receipt is journaled to <run>/literature-operations.json.",
+				},
+			},
+		},
+		async execute(_id, params, signal, _update, ctx) {
+			return run(async () => {
+				const receipt = await runZoteroUpdate(pi, params || {}, ctx, signal);
 				return { content: [{ type: "text", text: JSON.stringify(receipt, null, 2) }], details: receipt };
 			});
 		},

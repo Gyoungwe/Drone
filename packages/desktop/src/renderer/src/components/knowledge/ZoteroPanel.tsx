@@ -6,6 +6,7 @@ import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
 import { launchZoteroSetup, reportKnowledgeError } from "./hooks";
 import { InstitutionalAccessSection } from "./InstitutionalAccessSection";
+import { ZoteroWebApiSection } from "./ZoteroWebApiSection";
 import { useZoteroText } from "./zotero-copy";
 
 function StatusRow({ ok, label }: { ok: boolean; label: string }) {
@@ -156,6 +157,7 @@ export function ZoteroPanel() {
 					</section>
 
 					{/* 机构访问（合法通道） */}
+					<ZoteroWebApiSection />
 					<InstitutionalAccessSection />
 
 					{/* 与 Obsidian 知识库的交叉引导 */}

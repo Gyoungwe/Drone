@@ -30,6 +30,7 @@ import type {
 	WikiReviewResult,
 } from "../knowledge";
 import type { KnowledgeSpecialistSettings } from "../knowledge-specialists";
+import type { ZoteroWebApiSaveInput, ZoteroWebApiStatus } from "../zotero";
 import { defineDomain } from "./define";
 
 /**
@@ -198,6 +199,27 @@ export const KnowledgeContract = defineDomain("knowledge", {
 			args: Type.Tuple([]),
 			result: ZoteroStatusSchema,
 		},
+		getZoteroWebApi: {
+			args: Type.Tuple([]),
+			result: ResultObject<ZoteroWebApiStatus>(),
+		},
+		saveZoteroWebApi: {
+			args: Type.Tuple([
+				Type.Object(
+					{
+						apiKey: Type.String({ minLength: 16, maxLength: 64 }),
+						libraryType: Type.Optional(Type.Union([Type.Literal("users"), Type.Literal("groups")])),
+						libraryId: Type.Optional(Type.String({ maxLength: 20 })),
+					},
+					{ additionalProperties: false },
+				),
+			]),
+			result: ResultObject<ZoteroWebApiStatus>(),
+		},
+		clearZoteroWebApi: {
+			args: Type.Tuple([]),
+			result: ResultObject<ZoteroWebApiStatus>(),
+		},
 	},
 	events: {
 		event: ObjectPayload<KnowledgeUiEvent>(),
@@ -233,4 +255,7 @@ export type KnowledgeSchemaTypes = {
 	getTopics: Parameters<KnowledgeApi["getKnowledgeTopics"]>;
 	archiveTopic: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>;
 	getZoteroStatus: [];
+	getZoteroWebApi: [];
+	saveZoteroWebApi: [ZoteroWebApiSaveInput];
+	clearZoteroWebApi: [];
 };

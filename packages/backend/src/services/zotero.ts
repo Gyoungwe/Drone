@@ -1,5 +1,10 @@
-import type { ZoteroStatus } from "@drone/shared";
+import type { ZoteroStatus, ZoteroWebApiSaveInput, ZoteroWebApiStatus } from "@drone/shared";
 import { getZoteroStatus } from "../zotero/status";
+import {
+	clearZoteroWebCredentials,
+	getZoteroWebApiStatus,
+	saveZoteroWebCredentials,
+} from "../zotero/web-credentials";
 
 /**
  * Zotero integration boundary used by host adapters.
@@ -11,10 +16,26 @@ import { getZoteroStatus } from "../zotero/status";
  */
 export interface ZoteroServicePort {
 	getStatus(): Promise<ZoteroStatus>;
+	/** 网页 API（修改已有条目）配置状态，不含密钥 */
+	getWebApi?(): Promise<ZoteroWebApiStatus>;
+	saveWebApi?(input: ZoteroWebApiSaveInput): Promise<ZoteroWebApiStatus>;
+	clearWebApi?(): Promise<ZoteroWebApiStatus>;
 }
 
 export class ZoteroService implements ZoteroServicePort {
 	getStatus(): Promise<ZoteroStatus> {
 		return getZoteroStatus();
+	}
+
+	getWebApi(): Promise<ZoteroWebApiStatus> {
+		return getZoteroWebApiStatus();
+	}
+
+	saveWebApi(input: ZoteroWebApiSaveInput): Promise<ZoteroWebApiStatus> {
+		return saveZoteroWebCredentials(input);
+	}
+
+	clearWebApi(): Promise<ZoteroWebApiStatus> {
+		return clearZoteroWebCredentials();
 	}
 }

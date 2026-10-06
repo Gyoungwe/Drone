@@ -96,6 +96,9 @@ const knowledgeClient = exposeContract(KnowledgeContract, {
 				getTopics: IpcChannels.KnowledgeTopics,
 				archiveTopic: IpcChannels.KnowledgeTopicArchive,
 				getZoteroStatus: IpcChannels.ZoteroStatus,
+				getZoteroWebApi: IpcChannels.ZoteroWebApiGet,
+				saveZoteroWebApi: IpcChannels.ZoteroWebApiSave,
+				clearZoteroWebApi: IpcChannels.ZoteroWebApiClear,
 			},
 			method,
 		),
@@ -332,6 +335,9 @@ const knowledgeApi = {
 	getKnowledgeTopics: invoke(knowledgeClient, "getTopics"),
 	archiveKnowledgeTopic: invoke(knowledgeClient, "archiveTopic"),
 	getZoteroStatus: invoke(knowledgeClient, "getZoteroStatus"),
+	getZoteroWebApi: invoke(knowledgeClient, "getZoteroWebApi"),
+	saveZoteroWebApi: invoke(knowledgeClient, "saveZoteroWebApi"),
+	clearZoteroWebApi: invoke(knowledgeClient, "clearZoteroWebApi"),
 };
 const invokeApi = {
 	...computeClient,

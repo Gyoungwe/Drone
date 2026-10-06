@@ -1,8 +1,8 @@
 // @ts-nocheck
 // packages/extensions/src/zotero-literature.ts
 import { randomUUID as randomUUID4 } from "node:crypto";
-import { readFile as readFile5, realpath as realpath4, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
-import { isAbsolute as isAbsolute4, join as join4, relative as relative3, resolve as resolve4, sep as sep3 } from "node:path";
+import { readFile as readFile5, realpath as realpath5, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
+import { isAbsolute as isAbsolute5, join as join4, relative as relative4, resolve as resolve5, sep as sep4 } from "node:path";
 
 // packages/extensions/src/workspace-config.ts
 import { access, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
@@ -1139,7 +1139,9 @@ ${JSON.stringify({ binding: ZOTERO_SETUP_BINDING2, status, bootstrap, userPrefer
 }
 
 // packages/research/src/zotero-write-runtime.ts
-import { randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
+import { open, realpath as realpath4, stat as stat2 } from "node:fs/promises";
+import { basename as basename2, isAbsolute as isAbsolute4, relative as relative3, resolve as resolve4, sep as sep3 } from "node:path";
 
 // packages/research/src/zotero-write.ts
 var ZOTERO_ITEM_SPECS = Object.freeze({
@@ -1653,7 +1655,7 @@ async function executeZoteroSave(plan, {
   env = process.env,
   signal,
   now = () => /* @__PURE__ */ new Date(),
-  sleep = (ms) => new Promise((resolve5) => setTimeout(resolve5, ms)),
+  sleep = (ms) => new Promise((resolve6) => setTimeout(resolve6, ms)),
   readBackAttempts = 4,
   readBackDelayMs = 750
 } = {}) {
@@ -1763,6 +1765,392 @@ function describeZoteroSavePlan(plan) {
     "\u4E0D\u60F3\u5199\u5165\u5C31\u9009\u201C\u6682\u4E0D\u5199\u5165\u201D\u6216\u76F4\u63A5\u5173\u6389\uFF0CZotero \u4E0D\u4F1A\u6709\u4EFB\u4F55\u53D8\u5316\u3002"
   ].join("\n\n");
 }
+var MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+async function webJson(fetchImpl, config, path, signal) {
+  const response = await webRequest(fetchImpl, config, path, { signal });
+  if (!response.ok) throw new Error(`Zotero Web API HTTP ${response.status} for ${path.split("?")[0]}`);
+  return response;
+}
+async function webGetItem({ fetchImpl = fetch, config, key, signal } = {}) {
+  if (!KEY.test(key || "")) throw new Error("Valid Zotero key required");
+  const response = await webJson(
+    fetchImpl,
+    config,
+    `/${config.libraryType}/${config.libraryId}/items/${key}?format=json`,
+    signal
+  );
+  const item = response.json || {};
+  return {
+    key: item.key,
+    version: Number(item.version ?? item.data?.version ?? 0),
+    title: String(item.data?.title || "").slice(0, 300),
+    doi: normalizeDoi(item.data?.DOI || ""),
+    itemType: item.data?.itemType || null,
+    parentItem: item.data?.parentItem || null,
+    collections: Array.isArray(item.data?.collections) ? item.data.collections : []
+  };
+}
+async function webListCollections({ fetchImpl = fetch, config, signal } = {}) {
+  const collections = [];
+  for (let start = 0; start < 1e3; start += 100) {
+    const response = await webJson(
+      fetchImpl,
+      config,
+      `/${config.libraryType}/${config.libraryId}/collections?format=json&limit=100&start=${start}`,
+      signal
+    );
+    const page = Array.isArray(response.json) ? response.json : [];
+    for (const entry of page)
+      if (KEY.test(entry?.key || ""))
+        collections.push({
+          key: entry.key,
+          name: String(entry.data?.name || "").slice(0, 200),
+          parent: entry.data?.parentCollection || null
+        });
+    if (page.length < 100 || !(response.total > start + 100)) break;
+  }
+  return collections;
+}
+async function webWrite(fetchImpl, config, path, { method, headers = {}, body, signal, timeoutMs = 3e4 }) {
+  const response = await fetchImpl(`${ZOTERO_ENDPOINTS.webApi}${path}`, {
+    method,
+    headers: { "Zotero-API-Version": "3", "Zotero-API-Key": config.apiKey, ...headers },
+    body,
+    signal: timeoutSignal(timeoutMs, signal),
+    redirect: "error"
+  });
+  return { status: response.status, ok: response.ok, json: await readJson(response) };
+}
+async function inspectLocalPdf(cwd, rawPath) {
+  const path = textField(rawPath, 1e3, "local_file");
+  if (!path) return null;
+  const root = await realpath4(cwd);
+  const full = await realpath4(isAbsolute4(path) ? path : resolve4(root, path));
+  const rel = relative3(root, full);
+  if (rel === "" || rel === ".." || rel.startsWith(`..${sep3}`) || isAbsolute4(rel))
+    throw new Error("local_file must be inside the current project");
+  const info = await stat2(full);
+  if (!info.isFile()) throw new Error("local_file is not a file");
+  if (info.size > MAX_UPLOAD_BYTES) throw new Error("local_file is larger than 100 MB");
+  const handle = await open(full, "r");
+  const hash = createHash4("md5");
+  const head = Buffer.alloc(5);
+  try {
+    await handle.read(head, 0, 5, 0);
+    const stream = handle.createReadStream({ autoClose: false, start: 0 });
+    for await (const chunk of stream) hash.update(chunk);
+  } finally {
+    await handle.close();
+  }
+  if (head.toString("latin1") !== "%PDF-") throw new Error("local_file is not a PDF");
+  return {
+    path: full,
+    relativePath: rel.split(sep3).join("/"),
+    filename: basename2(full),
+    size: info.size,
+    mtime: Math.round(info.mtimeMs),
+    md5: hash.digest("hex")
+  };
+}
+async function prepareZoteroUpdate(input = {}, { fetchImpl = fetch, env = process.env, cwd = process.cwd(), signal } = {}) {
+  const config = zoteroWebApiConfig(env);
+  const plan = {
+    kind: "update",
+    channel: "web",
+    web: publicWebConfig(config),
+    action: "blocked",
+    reason: null,
+    item: null,
+    doi: null,
+    changes: { addCollection: null, attachUrl: null, uploadFile: null },
+    skipped: []
+  };
+  if (!config.configured) {
+    plan.reason = "Changing an existing Zotero item needs the Zotero Web API: Zotero desktop's local API is read-only. Ask the user to add a write-enabled API key in Drone Settings \u2192 Zotero \u2192 Web API (or set ZOTERO_API_KEY and ZOTERO_LIBRARY_ID). No change made.";
+    return plan;
+  }
+  const access2 = await webKeyAccess({ fetchImpl, config, signal });
+  if (!access2.write) {
+    plan.reason = `The Zotero API key has no write permission for ${config.libraryType}/${config.libraryId}; create a key with library write access. No change made.`;
+    return plan;
+  }
+  plan.target = {
+    kind: "web",
+    libraryType: config.libraryType,
+    libraryId: config.libraryId,
+    libraryName: config.libraryType === "groups" ? `group ${config.libraryId}` : access2.username || "My Library",
+    local: false
+  };
+  let key = textField(input.zotero_key ?? input.key, 8, "zotero_key") || null;
+  const doi = normalizeDoi(input.doi || "");
+  if (!key) {
+    if (!doi) throw new Error("zotero_key or doi is required");
+    const found = await webSearchByDoi({ fetchImpl, config, doi, signal });
+    if (!found.complete) {
+      plan.reason = "dedup-incomplete";
+      return plan;
+    }
+    if (found.items.length !== 1) {
+      plan.reason = found.items.length ? "multiple-items-share-doi: pass zotero_key to choose one" : "no item with this DOI in the library; create it with research_zotero_save first";
+      plan.candidates = found.items;
+      return plan;
+    }
+    key = found.items[0]?.key ?? null;
+  }
+  const item = await webGetItem({ fetchImpl, config, key, signal });
+  if (item.parentItem) throw new Error("zotero_key points to a child attachment/note, not a top-level item");
+  plan.item = item;
+  plan.doi = item.doi || doi || null;
+  const collectionKey = textField(input.collection_key, 8, "collection_key") || null;
+  const collectionName = textField(input.collection_name, 200, "collection_name") || null;
+  if (collectionKey || collectionName) {
+    const collections = await webListCollections({ fetchImpl, config, signal });
+    const match = collectionKey ? collections.filter((entry) => entry.key === collectionKey) : collections.filter(
+      (entry) => entry.name.trim().toLowerCase() === collectionName?.trim().toLowerCase()
+    );
+    if (match.length !== 1) {
+      plan.reason = match.length ? `several collections are named "${collectionName}"; pass collection_key` : `collection ${collectionKey || `"${collectionName}"`} not found in this library`;
+      plan.collections = collections.slice(0, 50).map(({ key: key2, name }) => ({ key: key2, name }));
+      return plan;
+    }
+    const target = match[0];
+    if (item.collections.includes(target.key)) plan.skipped.push(`already in collection "${target.name}"`);
+    else plan.changes.addCollection = { key: target.key, name: target.name };
+  }
+  const attachmentUrl = textField(input.attachment_url, 2e3, "attachment_url") || null;
+  const localFile = await inspectLocalPdf(cwd, input.local_file);
+  if (attachmentUrl || localFile) {
+    const children = await webChildren({ fetchImpl, config, key, signal });
+    const existing = children.map((child) => child?.data || {});
+    if (attachmentUrl) {
+      if (!/^https?:\/\//i.test(attachmentUrl)) throw new Error("attachment_url must be http(s)");
+      if (existing.some((child) => child.url === attachmentUrl))
+        plan.skipped.push("link already attached");
+      else
+        plan.changes.attachUrl = {
+          url: attachmentUrl,
+          title: textField(input.attachment_title, 200, "attachment_title") || "Full Text (link)"
+        };
+    }
+    if (localFile) {
+      if (existing.some((child) => child.md5 === localFile.md5))
+        plan.skipped.push("same PDF already attached");
+      else plan.changes.uploadFile = localFile;
+    }
+  }
+  plan.action = Object.values(plan.changes).some(Boolean) ? "update" : "unchanged";
+  if (plan.action === "unchanged") plan.reason = plan.skipped.join("; ") || "nothing to change";
+  return plan;
+}
+async function uploadAttachment(fetchImpl, config, parentKey, file, signal) {
+  const lib = `/${config.libraryType}/${config.libraryId}`;
+  const created = await webCreateItems({
+    fetchImpl,
+    config,
+    items: [
+      {
+        itemType: "attachment",
+        linkMode: "imported_file",
+        parentItem: parentKey,
+        title: file.filename,
+        contentType: "application/pdf",
+        filename: file.filename,
+        tags: []
+      }
+    ],
+    signal
+  });
+  const key = created.successful[0]?.key;
+  if (!key) return { key: null, error: created.failed[0]?.message || `web api HTTP ${created.status}` };
+  const form = { "Content-Type": "application/x-www-form-urlencoded", "If-None-Match": "*" };
+  const auth = await webWrite(fetchImpl, config, `${lib}/items/${key}/file`, {
+    method: "POST",
+    headers: form,
+    body: new URLSearchParams({
+      md5: file.md5,
+      filename: file.filename,
+      filesize: String(file.size),
+      mtime: String(file.mtime)
+    }).toString(),
+    signal
+  });
+  if (!auth.ok)
+    return {
+      key,
+      error: `upload authorization HTTP ${auth.status}${auth.json?.text ? `: ${auth.json.text.slice(0, 200)}` : ""}`
+    };
+  if (auth.json?.exists === 1) return { key, error: null, deduplicated: true };
+  const handle = await open(file.path, "r");
+  let bytes;
+  try {
+    bytes = await handle.readFile();
+  } finally {
+    await handle.close();
+  }
+  const body = Buffer.concat([
+    Buffer.from(auth.json.prefix || "", "utf8"),
+    bytes,
+    Buffer.from(auth.json.suffix || "", "utf8")
+  ]);
+  const uploadUrl = String(auth.json.url || "");
+  if (!/^https:\/\//.test(uploadUrl)) return { key, error: "upload authorization returned no https URL" };
+  const uploaded = await fetchImpl(uploadUrl, {
+    method: "POST",
+    headers: { "Content-Type": String(auth.json.contentType || "application/octet-stream") },
+    body,
+    signal: timeoutSignal(12e4, signal),
+    redirect: "error"
+  });
+  if (uploaded.status !== 201 && uploaded.status !== 204)
+    return { key, error: `file upload HTTP ${uploaded.status}` };
+  const registered = await webWrite(fetchImpl, config, `${lib}/items/${key}/file`, {
+    method: "POST",
+    headers: form,
+    body: new URLSearchParams({ upload: String(auth.json.uploadKey || "") }).toString(),
+    signal
+  });
+  return { key, error: registered.status === 204 ? null : `upload registration HTTP ${registered.status}` };
+}
+async function executeZoteroUpdate(plan, { fetchImpl = fetch, env = process.env, signal, now = () => /* @__PURE__ */ new Date() } = {}) {
+  if (plan.action !== "update") throw new Error(`Refusing to write: plan action is ${plan.action}`);
+  const config = zoteroWebApiConfig(env);
+  const lib = `/${config.libraryType}/${config.libraryId}`;
+  const at = now().toISOString();
+  const results = {};
+  if (plan.changes.addCollection) {
+    const patched = await webWrite(fetchImpl, config, `${lib}/items/${plan.item.key}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "If-Unmodified-Since-Version": String(plan.item.version)
+      },
+      body: JSON.stringify({ collections: [...plan.item.collections, plan.changes.addCollection.key] }),
+      signal
+    });
+    results.addCollection = {
+      ...plan.changes.addCollection,
+      httpStatus: patched.status,
+      error: patched.status === 204 ? null : patched.status === 412 ? "the item changed in Zotero after it was read; nothing was overwritten, run the update again" : `HTTP ${patched.status}`
+    };
+  }
+  if (plan.changes.attachUrl) {
+    const linked = await webCreateItems({
+      fetchImpl,
+      config,
+      items: [
+        {
+          itemType: "attachment",
+          linkMode: "linked_url",
+          parentItem: plan.item.key,
+          title: plan.changes.attachUrl.title,
+          url: plan.changes.attachUrl.url,
+          contentType: "application/pdf",
+          tags: []
+        }
+      ],
+      signal
+    });
+    results.attachUrl = {
+      url: plan.changes.attachUrl.url,
+      key: linked.successful[0]?.key || null,
+      error: linked.successful[0]?.key ? null : linked.failed[0]?.message || `HTTP ${linked.status}`
+    };
+  }
+  if (plan.changes.uploadFile) {
+    try {
+      results.uploadFile = {
+        file: plan.changes.uploadFile.relativePath,
+        size: plan.changes.uploadFile.size,
+        ...await uploadAttachment(fetchImpl, config, plan.item.key, plan.changes.uploadFile, signal)
+      };
+    } catch (error) {
+      results.uploadFile = {
+        file: plan.changes.uploadFile.relativePath,
+        key: null,
+        error: String(error.message || error).slice(0, 300)
+      };
+    }
+  }
+  const readBack = {};
+  try {
+    const item = await webGetItem({ fetchImpl, config, key: plan.item.key, signal });
+    readBack.collections = item.collections;
+    if (results.addCollection)
+      results.addCollection.verified = item.collections.includes(results.addCollection.key);
+    const children = await webChildren({ fetchImpl, config, key: plan.item.key, signal });
+    const childKeys = new Set(children.map((child) => child?.key));
+    if (results.attachUrl?.key) results.attachUrl.verified = childKeys.has(results.attachUrl.key);
+    if (results.uploadFile?.key) {
+      const child = children.find((entry) => entry?.key === results.uploadFile.key);
+      results.uploadFile.verified = Boolean(child) && (results.uploadFile.deduplicated || child?.data?.md5 === plan.changes.uploadFile.md5);
+    }
+  } catch (error) {
+    readBack.error = String(error.message || error).slice(0, 200);
+  }
+  const outcomes = Object.values(results);
+  const failed = outcomes.filter((entry) => entry.error);
+  const verified = outcomes.filter((entry) => entry.verified);
+  return {
+    kind: "update",
+    channel: "web",
+    doi: plan.doi,
+    title: plan.item.title,
+    zoteroKey: plan.item.key,
+    zoteroSelect: selectLink(plan.item.key),
+    library: {
+      type: config.libraryType,
+      id: config.libraryId,
+      name: plan.target?.libraryName || null,
+      local: false
+    },
+    changes: results,
+    skipped: plan.skipped,
+    readBack,
+    write: { performed: true, at },
+    status: failed.length === outcomes.length ? "failed" : failed.length ? "partial" : verified.length === outcomes.length ? "updated" : "unverified",
+    autoRetry: false,
+    attachmentContentsVerified: false
+  };
+}
+function receiptWithoutUpdate(plan) {
+  return {
+    kind: "update",
+    channel: "web",
+    doi: plan.doi,
+    title: plan.item?.title || null,
+    zoteroKey: plan.item?.key || null,
+    zoteroSelect: selectLink(plan.item?.key),
+    status: plan.action === "unchanged" ? "unchanged" : plan.action === "cancelled" ? "cancelled" : "blocked",
+    reason: plan.reason,
+    skipped: plan.skipped,
+    ...plan.candidates ? { candidates: plan.candidates } : {},
+    ...plan.collections ? { collections: plan.collections } : {},
+    write: { performed: false }
+  };
+}
+function describeZoteroUpdatePlan(plan) {
+  const lines = [
+    `\u8981\u4FEE\u6539\u7684\u5DF2\u6709\u6761\u76EE\uFF1A
+- \u6807\u9898\uFF1A${plan.item.title}
+- DOI\uFF1A${plan.doi || "\uFF08\u65E0\uFF09"}
+- Zotero \u952E\uFF1A${plan.item.key}`
+  ];
+  const changes = [];
+  if (plan.changes.addCollection)
+    changes.push(`\u52A0\u5165\u5206\u7C7B\u300C${plan.changes.addCollection.name}\u300D\uFF08\u4FDD\u7559\u539F\u6709\u5206\u7C7B\uFF09`);
+  if (plan.changes.attachUrl) changes.push(`\u6DFB\u52A0\u94FE\u63A5\u9644\u4EF6 ${plan.changes.attachUrl.url}`);
+  if (plan.changes.uploadFile)
+    changes.push(
+      `\u4E0A\u4F20\u672C\u5730 PDF ${plan.changes.uploadFile.relativePath}\uFF08${(plan.changes.uploadFile.size / 1024 / 1024).toFixed(1)} MB\uFF0C\u5360\u7528 Zotero \u4E91\u5B58\u50A8\u914D\u989D\uFF09`
+    );
+  lines.push(`\u4FEE\u6539\u5185\u5BB9\uFF1A
+${changes.map((line) => `- ${line}`).join("\n")}`);
+  if (plan.skipped.length) lines.push(`\u8DF3\u8FC7\uFF1A${plan.skipped.join("\uFF1B")}`);
+  lines.push(
+    `\u901A\u8FC7 Zotero \u7F51\u9875 API \u5199\u5165 ${plan.target.libraryType}/${plan.target.libraryId}\uFF1B\u53EA\u6DFB\u52A0\uFF0C\u4E0D\u5220\u9664\u3001\u4E0D\u79FB\u51FA\u4EFB\u4F55\u5206\u7C7B\uFF1B\u5199\u540E\u8BFB\u56DE\u6838\u5BF9\uFF0C\u4E0D\u81EA\u52A8\u91CD\u8BD5\u3002`
+  );
+  return lines.join("\n\n");
+}
 
 // packages/tasks/src/runtime-compiled/runtime-bridge.mjs
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
@@ -1778,8 +2166,8 @@ var KeyedScheduler = class {
     if (this.#disposed) throw new Error("Runtime scheduler has been disposed");
     const previous = this.#tails.get(key) || Promise.resolve();
     let unlock;
-    const gate = new Promise((resolve5) => {
-      unlock = resolve5;
+    const gate = new Promise((resolve6) => {
+      unlock = resolve6;
     });
     const tail = previous.then(() => gate);
     this.#tails.set(key, tail);
@@ -2214,20 +2602,20 @@ function registerTool(pi, definition) {
 
 // packages/extensions/src/zotero-literature.ts
 var contained = (root, target) => {
-  const rel = relative3(root, target);
-  return rel !== ".." && !rel.startsWith(`..${sep3}`) && !isAbsolute4(rel);
+  const rel = relative4(root, target);
+  return rel !== ".." && !rel.startsWith(`..${sep4}`) && !isAbsolute5(rel);
 };
 async function resolveRunJournal(cwd, runDir) {
   const config = await loadWorkspaceConfig(cwd);
-  const root = await realpath4(config.resultsRoot);
-  const run2 = await realpath4(resolve4(cwd, runDir || ""));
-  const parts = relative3(root, run2).split(sep3);
+  const root = await realpath5(config.resultsRoot);
+  const run2 = await realpath5(resolve5(cwd, runDir || ""));
+  const parts = relative4(root, run2).split(sep4);
   if (!contained(root, run2) || parts.length !== 2 || !parts[1].startsWith("run-"))
     throw new Error("Operation log must be inside a research run");
   await readFile5(join4(run2, "metadata.json"), "utf8");
   return {
     file: join4(run2, "literature-operations.json"),
-    vault: config.obsidianVault ? await realpath4(config.obsidianVault) : null,
+    vault: config.obsidianVault ? await realpath5(config.obsidianVault) : null,
     revision: Number(config.knowledgeBindingRevision || 0)
   };
 }
@@ -2365,6 +2753,66 @@ ${describeZoteroSavePlan(plan)}`,
   );
   return { granted: selected === SAVE_ALLOW && !signal?.aborted, via: "ask-card" };
 }
+var UPDATE_ALLOW = "\u540C\u610F\u4FEE\u6539\u8BE5\u6761\u76EE";
+var UPDATE_DENY = "\u6682\u4E0D\u4FEE\u6539";
+async function consentToZoteroUpdate(pi, ctx, plan, signal) {
+  if (plan.doi) {
+    const task = await taskConsentFor(pi, ctx, plan.doi);
+    if (task?.via === "task-plan") return { granted: true, ...task };
+    task?.release?.();
+  }
+  if (!ctx.hasUI || !ctx.ui?.select)
+    throw new Error(
+      "Changing a Zotero item needs an authorized task plan naming its DOI, or an interactive desktop confirmation. Neither is available here; no change made."
+    );
+  const selected = await ctx.ui.select(
+    `ask_user \xB7 \u4FEE\u6539 Zotero \u5DF2\u6709\u6761\u76EE\uFF1F
+
+${describeZoteroUpdatePlan(plan)}`,
+    [UPDATE_DENY, UPDATE_ALLOW],
+    { signal }
+  );
+  return { granted: selected === UPDATE_ALLOW && !signal?.aborted, via: "ask-card" };
+}
+async function runZoteroUpdate(pi, params, ctx, signal, deps = {}) {
+  const plan = await prepareZoteroUpdate(params, { signal, cwd: ctx.cwd, ...deps });
+  let receipt, consent = { via: "not-needed" };
+  if (plan.action !== "update") receipt = receiptWithoutUpdate(plan);
+  else {
+    consent = await consentToZoteroUpdate(pi, ctx, plan, signal);
+    receipt = consent.granted ? await executeZoteroUpdate(plan, { signal, ...deps }) : receiptWithoutUpdate({ ...plan, action: "cancelled", reason: "user-declined" });
+  }
+  receipt.consent = {
+    via: consent.via,
+    taskId: consent.taskId || null,
+    milestoneId: consent.milestoneId || null
+  };
+  if (receipt.write?.performed)
+    pi.events?.emit?.("drone:decision-record/v1", {
+      id: `zotero-update:${receipt.zoteroKey}:${receipt.write.at}`,
+      kind: "zotero-write",
+      summary: `Zotero update receipt for ${receipt.doi || receipt.zoteroKey}`,
+      basis: [receipt.zoteroKey],
+      at: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  if (params.run_dir && receipt.write?.performed && receipt.doi) {
+    try {
+      receipt.journal = await recordZoteroWrite({
+        cwd: ctx.cwd,
+        runDir: params.run_dir,
+        receipt: {
+          ...receipt,
+          collection: receipt.changes?.addCollection || null,
+          attachment: receipt.changes?.uploadFile || receipt.changes?.attachUrl || null,
+          writesToLibraries: 1
+        }
+      });
+    } catch (error) {
+      receipt.journal = { error: String(error.message || error).slice(0, 200) };
+    }
+  }
+  return receipt;
+}
 async function runZoteroSave(pi, params, ctx, signal, deps = {}) {
   const plan = await prepareZoteroSave(params, { signal, ...deps });
   let receipt, consent = { via: "not-needed" };
@@ -2402,6 +2850,8 @@ async function runZoteroSave(pi, params, ctx, signal, deps = {}) {
       receipt.journal = { error: String(error.message || error).slice(0, 200) };
     }
   }
+  if (receipt.status === "reused" && (params.collection_key || params.attachment_url))
+    receipt.update = "The item already exists, so nothing was changed. To file it into a collection or attach a PDF, call research_zotero_update with zotero_key and collection_key / collection_name / attachment_url / local_file.";
   receipt.next = receipt.zoteroKey ? `research_deposit_knowledge type=paper zotero_key=${receipt.zoteroKey} doi=${receipt.doi}, then research_verify_literature.` : "Do not retry automatically. Inspect Zotero or ask the user before any further write.";
   return receipt;
 }
@@ -2530,7 +2980,7 @@ function zoteroLiterature(pi) {
       flow: "literature",
       flowCards: (event) => literatureCard(event, { write: true })
     },
-    description: "Write ONE bibliographic item into the user's Zotero library, keyed by exact DOI. Host-controlled: dedups by DOI first (an existing item is reused, never duplicated), asks the user on a native card unless an authorized task plan lists this DOI as a zotero_item milestone, writes once through Zotero desktop (connector, preferred) or the Zotero Web API (write-scoped ZOTERO_API_KEY from the environment), then reads the item back by DOI. Never retries, deletes, merges or moves items. Attachments are URL-based only: Zotero desktop downloads attachment_url itself; the Web API records it as a linked URL. Returns the receipt (status, zoteroKey, library, fulltextStatus). Follow with research_deposit_knowledge type=paper and research_verify_literature; the Vault note stays the citable object.",
+    description: "Write ONE bibliographic item into the user's Zotero library, keyed by exact DOI. Host-controlled: dedups by DOI first (an existing item is reused, never duplicated), asks the user on a native card unless an authorized task plan lists this DOI as a zotero_item milestone, writes once through Zotero desktop (connector, preferred) or the Zotero Web API (write-scoped ZOTERO_API_KEY from the environment), then reads the item back by DOI. Never retries, deletes, merges or moves items. Attachments are URL-based only: Zotero desktop downloads attachment_url itself; the Web API records it as a linked URL. An existing item is never modified here (status=reused): use research_zotero_update to file it into a collection or attach a PDF. Returns the receipt (status, zoteroKey, library, fulltextStatus). Follow with research_deposit_knowledge type=paper and research_verify_literature; the Vault note stays the citable object.",
     parameters: {
       type: "object",
       required: ["doi", "title"],
@@ -2565,7 +3015,7 @@ function zoteroLiterature(pi) {
         tags: { type: "array", items: { type: "string" } },
         attachment_url: {
           type: "string",
-          description: "Optional http(s) URL of an open-access PDF whose license allows saving. The host never uploads local files."
+          description: "Optional http(s) URL of an open-access PDF whose license allows saving. To upload a local PDF to an existing item use research_zotero_update local_file."
         },
         attachment_title: { type: "string" },
         channel: {
@@ -2594,6 +3044,55 @@ function zoteroLiterature(pi) {
       });
     }
   });
+  registerTool(pi, {
+    name: "research_zotero_update",
+    label: "Update an existing Zotero item (host-controlled)",
+    drone: {
+      capabilities: ["research", "external"],
+      subagent: "exclude",
+      activity: { text: "\u6B63\u5728\u4FEE\u6539 Zotero \u6761\u76EE\u2026", phase: "literature-write" },
+      flow: "literature",
+      flowCards: (event) => literatureCard(event, { write: true })
+    },
+    description: "Change ONE existing item in the user's Zotero library through the Zotero Web API (Zotero desktop's local API is read-only): add it to a collection (by collection_key or exact collection_name; existing collections are kept), attach an open-access PDF link (attachment_url) and/or upload a local PDF from the project (local_file, counts against the user's Zotero storage). Identify the item by zotero_key or exact DOI. Asks the user on a native card unless an authorized task plan names the DOI; writes once, then reads the item back. Never deletes, removes from collections, merges or retries. Needs a write-enabled API key (Drone Settings \u2192 Zotero \u2192 Web API); without one it returns status=blocked with the reason \u2014 tell the user, do not ask for the key in chat.",
+    parameters: {
+      type: "object",
+      properties: {
+        zotero_key: { type: "string", description: "8-character key of the existing item (preferred)." },
+        doi: {
+          type: "string",
+          description: "Exact DOI when the key is unknown; must match exactly one item."
+        },
+        collection_key: {
+          type: "string",
+          description: "8-character key of the collection to add the item to."
+        },
+        collection_name: {
+          type: "string",
+          description: "Exact collection name, used when the key is unknown."
+        },
+        attachment_url: {
+          type: "string",
+          description: "http(s) URL of an open-access PDF to attach as a link."
+        },
+        attachment_title: { type: "string" },
+        local_file: {
+          type: "string",
+          description: "Path (inside the project) of a PDF to upload as a stored attachment, e.g. results/x/papers/a.pdf."
+        },
+        run_dir: {
+          type: "string",
+          description: "Research run directory; the receipt is journaled to <run>/literature-operations.json."
+        }
+      }
+    },
+    async execute(_id, params, signal, _update, ctx) {
+      return run2(async () => {
+        const receipt = await runZoteroUpdate(pi, params || {}, ctx, signal);
+        return { content: [{ type: "text", text: JSON.stringify(receipt, null, 2) }], details: receipt };
+      });
+    }
+  });
   pi.registerCommand(ZOTERO_SETUP_BINDING2.command, {
     droneMenu: {
       version: 1,
@@ -2610,5 +3109,6 @@ export {
   describeZoteroEvidence,
   identifyZoteroReceipt,
   registerZoteroAcceptance,
-  runZoteroSave
+  runZoteroSave,
+  runZoteroUpdate
 };
