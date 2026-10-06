@@ -22,6 +22,7 @@ import type { AskGate } from "../session/ask-gate";
 import type { SessionTraces } from "../session/traces";
 import { bindAcceptanceVerifierEvents } from "../tasks/acceptance";
 import { makeAskUserTool } from "../tools/ask-user";
+import { makeBioDatabaseTool } from "../tools/bio/databases";
 import { makeBioExtension } from "../tools/bio/extension";
 import { makeBioEnvironmentTool } from "../tools/bio/tool";
 import { makeCapabilityLoadTool } from "../tools/capability-load";
@@ -116,6 +117,7 @@ export function buildSessionCustomTools(
 			...(deps.listSshHosts ? { hosts: deps.listSshHosts } : {}),
 		}) as ToolDefinition,
 	);
+	tools.push(makeBioDatabaseTool() as ToolDefinition);
 	tools.push(makeStatusTool());
 	tools.push(makeTodoTool());
 	if (harness.recall) {
