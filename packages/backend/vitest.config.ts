@@ -40,6 +40,10 @@ export default defineConfig({
 		// predictable on both developer machines and CI.
 		pool: "forks",
 		maxWorkers: process.platform === "win32" ? 2 : 4,
+		// Windows runners do file and SQLite I/O several times slower; the 5 s default
+		// timed out file-heavy tests (discovery service, experience store) at random.
+		testTimeout: process.platform === "win32" ? 30_000 : 5_000,
+		hookTimeout: process.platform === "win32" ? 30_000 : 10_000,
 		minWorkers: 1,
 		projects: [
 			{
