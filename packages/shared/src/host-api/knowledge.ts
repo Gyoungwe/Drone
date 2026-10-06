@@ -30,7 +30,7 @@ import type {
 	WikiReviewResult,
 } from "../knowledge";
 import type { KnowledgeSpecialistSettings } from "../knowledge-specialists";
-import type { ZoteroWebApiSaveInput, ZoteroWebApiStatus } from "../zotero";
+import type { ZoteroLocalWriteStatus, ZoteroWebApiSaveInput, ZoteroWebApiStatus } from "../zotero";
 import { defineDomain } from "./define";
 
 /**
@@ -220,6 +220,18 @@ export const KnowledgeContract = defineDomain("knowledge", {
 			args: Type.Tuple([]),
 			result: ResultObject<ZoteroWebApiStatus>(),
 		},
+		getZoteroLocalWrite: {
+			args: Type.Tuple([]),
+			result: ResultObject<ZoteroLocalWriteStatus>(),
+		},
+		authorizeZoteroLocalWrite: {
+			args: Type.Tuple([]),
+			result: ResultObject<ZoteroLocalWriteStatus>(),
+		},
+		clearZoteroLocalWrite: {
+			args: Type.Tuple([]),
+			result: ResultObject<ZoteroLocalWriteStatus>(),
+		},
 	},
 	events: {
 		event: ObjectPayload<KnowledgeUiEvent>(),
@@ -258,4 +270,7 @@ export type KnowledgeSchemaTypes = {
 	getZoteroWebApi: [];
 	saveZoteroWebApi: [ZoteroWebApiSaveInput];
 	clearZoteroWebApi: [];
+	getZoteroLocalWrite: [];
+	authorizeZoteroLocalWrite: [];
+	clearZoteroLocalWrite: [];
 };

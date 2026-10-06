@@ -12,8 +12,13 @@ import {
 const env = { ZOTERO_API_KEY: "k".repeat(24), ZOTERO_LIBRARY_ID: "123", ZOTERO_LIBRARY_TYPE: "users" };
 const DOI = "10.1234/gut.2024";
 
-/** In-memory Zotero Web API: one item, two collections, a children list and the file upload protocol. */
-function fakeZotero({ write = true, staleVersion = false } = {}) {
+const localEnv = { ZOTERO_LOCAL_API_KEY: "LOCALKEY123", ZOTERO_LOCAL_SERVER_ID: "SRV1" };
+
+/**
+ * In-memory Zotero: one item, two collections, a children list and the file upload protocol, served either
+ * as the Web API (users/123) or as Zotero 10's local API (users/0, Zotero-Server-ID + local key on writes).
+ */
+function fakeZotero({ write = true, staleVersion = false, local = false, serverId = "SRV1" } = {}) {
 	const state = {
 		item: {
 			key: "DN97UI2G",
@@ -46,7 +51,29 @@ function fakeZotero({ write = true, staleVersion = false } = {}) {
 					? Buffer.from(init.body as Buffer).toString("latin1")
 					: undefined;
 		state.calls.push({ method, url, headers, body });
-		const path = url.replace("https://api.zotero.org", "");
+		const localUpload = "http://127.0.0.1:23119/upload/x";
+		if (local) {
+			if (url === "http://127.0.0.1:23119/api/")
+				return new Response("Nothing to see here.", {
+					status: 200,
+					headers: { "Zotero-Server-ID": serverId },
+				});
+			if (url === localUpload) {
+				if (headers["Zotero-Server-ID"] !== serverId) return new Response("", { status: 428 });
+				state.uploaded = Buffer.from(body || "", "latin1");
+				return new Response(null, { status: 201 });
+			}
+			if (!url.startsWith("http://127.0.0.1:23119/api/users/0/"))
+				return new Response("unexpected", { status: 500 });
+			if (method !== "GET") {
+				if (headers["Zotero-Server-ID"] !== serverId) return new Response("", { status: 428 });
+				if (headers["Zotero-API-Key"] !== localEnv.ZOTERO_LOCAL_API_KEY)
+					return new Response("", { status: 401 });
+			}
+		}
+		const path = local
+			? url.replace("http://127.0.0.1:23119/api", "").replace("/users/0/", "/users/123/")
+			: url.replace("https://api.zotero.org", "");
 		if (path === "/keys/current")
 			return json({ userID: 123, username: "lab", access: { user: { library: true, write } } });
 		if (path.startsWith("/users/123/items?") && path.includes("q="))
@@ -85,7 +112,7 @@ function fakeZotero({ write = true, staleVersion = false } = {}) {
 			}
 			state.pendingMd5 = params.get("md5") ?? undefined;
 			return json({
-				url: "https://storage.example/upload",
+				url: local ? localUpload : "https://storage.example/upload",
 				contentType: "multipart/form-data; boundary=x",
 				prefix: "PRE",
 				suffix: "SUF",
@@ -113,9 +140,10 @@ afterEach(async () => {
 });
 
 describe("zotero update of an existing item", () => {
-	it("blocks with guidance when no Web API key is configured", async () => {
+	it("blocks with guidance when neither local writes nor a Web API key are configured", async () => {
 		const plan = await prepareZoteroUpdate({ doi: DOI, collection_name: "x" }, { env: {}, cwd });
 		expect(plan.action).toBe("blocked");
+		expect(plan.reason).toMatch(/authorize local writes/);
 		expect(plan.reason).toMatch(/Settings → Zotero → Web API/);
 		expect(receiptWithoutUpdate(plan)).toMatchObject({ status: "blocked", write: { performed: false } });
 	});
@@ -176,5 +204,46 @@ describe("zotero update of an existing item", () => {
 		);
 		expect(blocked).toMatchObject({ action: "blocked" });
 		expect(blocked.reason).toMatch(/no write permission/);
+	});
+
+	it("writes through Zotero 10's local API with the local key, keeping the PDF on this computer", async () => {
+		const { state, fetchImpl } = fakeZotero({ local: true });
+		const plan = await prepareZoteroUpdate(
+			{ zotero_key: "DN97UI2G", collection_name: "脉翅目肠道微生物", local_file: "papers/paper.pdf" },
+			{ env: localEnv, cwd, fetchImpl },
+		);
+		expect(plan).toMatchObject({ action: "update", channel: "local", target: { local: true } });
+		expect(describeZoteroUpdatePlan(plan)).toContain("不占云存储配额");
+		const receipt = await executeZoteroUpdate(plan, { env: localEnv, fetchImpl });
+		expect(receipt).toMatchObject({ status: "updated", channel: "local", library: { local: true } });
+		expect(state.item.data.collections).toEqual(["AAAA1111", "97GKN8YV"]);
+		expect(state.uploaded?.toString("latin1")).toBe("PRE%PDF-1.7\nfixture pdf body\nSUF");
+		// every local request stays on the loopback API; nothing goes to api.zotero.org
+		expect(state.calls.every((call) => call.url.startsWith("http://127.0.0.1:23119/"))).toBe(true);
+		const patch = state.calls.find((call) => call.method === "PATCH");
+		expect(patch?.headers).toMatchObject({ "Zotero-Server-ID": "SRV1", "Zotero-API-Key": "LOCALKEY123" });
+	});
+
+	it("does not use a local key that belongs to another Zotero database", async () => {
+		const { fetchImpl } = fakeZotero({ local: true, serverId: "OTHERDB" });
+		const plan = await prepareZoteroUpdate(
+			{ zotero_key: "DN97UI2G", collection_key: "97GKN8YV" },
+			{
+				env: localEnv,
+				cwd,
+				fetchImpl,
+			},
+		);
+		expect(plan.action).toBe("blocked");
+		expect(plan.reason).toMatch(/different Zotero database/);
+	});
+
+	it("prefers the Web API when it is configured for a group library", async () => {
+		const { fetchImpl } = fakeZotero();
+		const plan = await prepareZoteroUpdate(
+			{ zotero_key: "DN97UI2G", collection_key: "97GKN8YV" },
+			{ env: { ...localEnv, ...env, ZOTERO_LIBRARY_TYPE: "groups" }, cwd, fetchImpl },
+		);
+		expect(plan.channel).toBe("web");
 	});
 });

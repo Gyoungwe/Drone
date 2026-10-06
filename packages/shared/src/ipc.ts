@@ -54,7 +54,12 @@ import type {
 } from "./subagent";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
-import type { ZoteroStatus, ZoteroWebApiSaveInput, ZoteroWebApiStatus } from "./zotero";
+import type {
+	ZoteroLocalWriteStatus,
+	ZoteroStatus,
+	ZoteroWebApiSaveInput,
+	ZoteroWebApiStatus,
+} from "./zotero";
 
 export interface ResourcePreviewResult {
 	encoding?: string;
@@ -160,6 +165,9 @@ export const IpcChannels = {
 	ZoteroWebApiGet: "zotero:webApiGet",
 	ZoteroWebApiSave: "zotero:webApiSave",
 	ZoteroWebApiClear: "zotero:webApiClear",
+	ZoteroLocalWriteGet: "zotero:localWriteGet",
+	ZoteroLocalWriteAuthorize: "zotero:localWriteAuthorize",
+	ZoteroLocalWriteClear: "zotero:localWriteClear",
 
 	/** 机构访问（合法机构通道，持久登录会话 + EZproxy 模板） */
 	InstitutionalGetStatus: "institutional:getStatus",
@@ -404,6 +412,11 @@ export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryA
 	/** 校验（须有写权限）后保存网页 API 密钥 */
 	saveZoteroWebApi(input: ZoteroWebApiSaveInput): Promise<ZoteroWebApiStatus>;
 	clearZoteroWebApi(): Promise<ZoteroWebApiStatus>;
+	/** Zotero 10+ 本机写入授权状态；不返回 key */
+	getZoteroLocalWrite(): Promise<ZoteroLocalWriteStatus>;
+	/** 让 Zotero 弹出授权对话框；选「始终允许」才保存 key */
+	authorizeZoteroLocalWrite(): Promise<ZoteroLocalWriteStatus>;
+	clearZoteroLocalWrite(): Promise<ZoteroLocalWriteStatus>;
 	/** 机构访问状态（配置 + 会话 Cookie + 是否已登录）；文献库面板用 */
 	getInstitutionalStatus(): Promise<InstitutionalStatus>;
 	/** 保存机构访问配置（EZproxy 模板 / OpenURL / 机构名 / 自动下载开关 / 上限） */

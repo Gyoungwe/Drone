@@ -6,6 +6,7 @@ import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
 import { launchZoteroSetup, reportKnowledgeError } from "./hooks";
 import { InstitutionalAccessSection } from "./InstitutionalAccessSection";
+import { ZoteroLocalWriteSection } from "./ZoteroLocalWriteSection";
 import { ZoteroWebApiSection } from "./ZoteroWebApiSection";
 import { useZoteroText } from "./zotero-copy";
 
@@ -157,6 +158,7 @@ export function ZoteroPanel() {
 					</section>
 
 					{/* 机构访问（合法通道） */}
+					<ZoteroLocalWriteSection />
 					<ZoteroWebApiSection />
 					<InstitutionalAccessSection />
 

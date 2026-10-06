@@ -223,6 +223,7 @@ export {
 	executeZoteroSave,
 	localApiChildren,
 	localApiSearchByDoi,
+	localServerId,
 	prepareZoteroSave,
 	probeZoteroConnector,
 	receiptWithoutWrite,
@@ -230,5 +231,6 @@ export {
 	webCreateItems,
 	webKeyAccess,
 	webSearchByDoi,
+	zoteroLocalWriteConfig,
 	zoteroWebApiConfig,
 } from "./zotero-write-runtime";

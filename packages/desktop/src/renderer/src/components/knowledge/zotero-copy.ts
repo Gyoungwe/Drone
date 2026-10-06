@@ -31,9 +31,25 @@ export const zoteroZh = {
 	crossHint:
 		"Zotero 只是来源上游；命中的文献要沉淀成 Obsidian 的 Library/Papers 笔记后才可被引用。先建 Vault。",
 	gotoObsidian: "打开 Obsidian 知识库",
+	localTitle: "本机写入（Zotero 10+，推荐）",
+	localHint:
+		"在 Zotero 里授权一次，Agent 就能在本机把已有条目归入分类、挂 PDF，不需要网页 API 密钥，PDF 不占 Zotero 云存储。每次修改仍会先征求你的同意。",
+	localAuthorize: "在 Zotero 中授权",
+	localAuthorizing: "请到 Zotero 弹出的对话框里选「始终允许」…",
+	localAuthorized: "已授权：Agent 可以在本机修改已有条目。",
+	localFromEnv: "来自环境变量 ZOTERO_LOCAL_API_KEY，在设置里不可更改。",
+	localNotAuthorized:
+		"未授权。点按钮后 Zotero 会弹出对话框，请选「始终允许」（「允许」只能用一次，不会保存）。",
+	localStale: "已保存的授权属于另一个 Zotero 数据库（换过数据目录），请重新授权。",
+	localUnsupported: "当前 Zotero 版本不支持本机写入（需要 Zotero 10 或更新），请用下面的网页 API。",
+	localUnreachable:
+		"连不上 Zotero 桌面端：请先启动 Zotero，并在 设置 → 高级 勾选「允许此计算机上的其他应用程序与 Zotero 通讯」。",
+	localClear: "移除授权",
+	localClearHint:
+		"移除后 Drone 不再保存这把 key；Zotero 自己的授权记录可在 Zotero 设置 → 高级 →「清除写入授权」里清除。",
 	webTitle: "网页 API（修改已有条目）",
 	webHint:
-		"把已有条目归入分类、给已有条目挂 PDF 只能走 Zotero 网页 API——Zotero 桌面端的本机 API 是只读的。新建条目不需要它。",
+		"Zotero 9 及更早版本的本机 API 是只读的：把已有条目归入分类、挂 PDF 要走网页 API。Zotero 10+ 优先用上面的本机写入，不需要这个密钥。新建条目也不需要它。",
 	webSteps:
 		"在 Zotero 网站 → Settings → Security → Applications → Create new private key，勾选「Allow library access」和「Allow write access」，复制密钥粘贴到这里。",
 	webKeyLabel: "API 密钥",
@@ -109,9 +125,27 @@ export const zoteroEn: Record<keyof typeof zoteroZh, string> = {
 	crossHint:
 		"Zotero is only the source upstream; hits must be deposited as Obsidian Library/Papers notes before they can be cited. Set up the Vault first.",
 	gotoObsidian: "Open Obsidian knowledge",
+	localTitle: "Local writes (Zotero 10+, recommended)",
+	localHint:
+		"Authorize once in Zotero and the agent can file existing items into collections and attach PDFs on this computer — no Web API key, and PDFs do not use Zotero storage. It still asks you before each change.",
+	localAuthorize: "Authorize in Zotero",
+	localAuthorizing: "In the dialog Zotero shows, choose “Always Allow”…",
+	localAuthorized: "Authorized: the agent can change existing items locally.",
+	localFromEnv: "From the ZOTERO_LOCAL_API_KEY environment variable; not editable here.",
+	localNotAuthorized:
+		"Not authorized. Zotero will show a dialog — choose “Always Allow” (“Allow” works for one write only and is not saved).",
+	localStale:
+		"The saved authorization belongs to a different Zotero database (data directory changed); authorize again.",
+	localUnsupported:
+		"This Zotero version has no local write support (Zotero 10 or newer is needed); use the Web API below.",
+	localUnreachable:
+		"Zotero desktop is not reachable: start Zotero and enable Settings → Advanced → “Allow other applications on this computer to communicate with Zotero”.",
+	localClear: "Remove authorization",
+	localClearHint:
+		"Drone forgets the key; Zotero's own record of the grant is cleared under Zotero Settings → Advanced → “Clear Write Authorizations”.",
 	webTitle: "Web API (change existing items)",
 	webHint:
-		"Filing an existing item into a collection or attaching a PDF to it only works through the Zotero Web API — Zotero desktop's local API is read-only. Creating new items does not need it.",
+		"On Zotero 9 and older the local API is read-only, so filing an existing item into a collection or attaching a PDF goes through the Web API. On Zotero 10+ local writes above are used first and this key is not needed. Creating new items does not need it either.",
 	webSteps:
 		"On zotero.org → Settings → Security → Applications → Create new private key, tick “Allow library access” and “Allow write access”, then paste the key here.",
 	webKeyLabel: "API key",

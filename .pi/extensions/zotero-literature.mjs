@@ -1411,17 +1411,45 @@ function zoteroWebApiConfig(env = process.env) {
   const configured = ["users", "groups"].includes(libraryType) && /^\d+$/.test(libraryId) && apiKey.length > 0;
   return { libraryType, libraryId, apiKey, configured };
 }
+function zoteroLocalWriteConfig(env = process.env) {
+  const apiKey = env.ZOTERO_LOCAL_API_KEY || "";
+  const serverId = env.ZOTERO_LOCAL_SERVER_ID || "";
+  return {
+    libraryType: "users",
+    libraryId: "0",
+    apiKey,
+    serverId,
+    base: ZOTERO_ENDPOINTS.localApi,
+    local: true,
+    configured: apiKey.length > 0 && /^[A-Za-z0-9]{1,64}$/.test(serverId)
+  };
+}
+async function localServerId({ fetchImpl = fetch, signal } = {}) {
+  try {
+    const response = await fetchImpl(`${ZOTERO_ENDPOINTS.localApi}/`, {
+      headers: { "Zotero-API-Version": "3" },
+      signal: timeoutSignal(3e3, signal),
+      redirect: "error"
+    });
+    return response.headers.get("zotero-server-id") || null;
+  } catch {
+    return null;
+  }
+}
+function authHeaders(config) {
+  return config.local ? { "Zotero-API-Key": config.apiKey, "Zotero-Server-ID": config.serverId } : { "Zotero-API-Key": config.apiKey };
+}
 async function webRequest(fetchImpl, config, path, { method = "GET", body, signal, timeoutMs = 2e4, write = false } = {}) {
   const headers = {
     "Zotero-API-Version": "3",
-    "Zotero-API-Key": config.apiKey,
+    ...authHeaders(config),
     Accept: "application/json"
   };
   if (write) {
     headers["Content-Type"] = "application/json";
     headers["Zotero-Write-Token"] = randomUUID3().replace(/-/g, "");
   }
-  const response = await fetchImpl(`${ZOTERO_ENDPOINTS.webApi}${path}`, {
+  const response = await fetchImpl(`${config.base || ZOTERO_ENDPOINTS.webApi}${path}`, {
     method,
     headers,
     body: body === void 0 ? void 0 : JSON.stringify(body),
@@ -1490,7 +1518,10 @@ async function webChildren({ fetchImpl = fetch, config, key, signal } = {}) {
     `/${config.libraryType}/${config.libraryId}/items/${key}/children?format=json&limit=100`,
     { signal }
   );
-  if (!response.ok) throw new Error(`Zotero Web API children lookup failed (HTTP ${response.status})`);
+  if (!response.ok)
+    throw new Error(
+      `Zotero ${config.local ? "local" : "Web"} API children lookup failed (HTTP ${response.status})`
+    );
   return Array.isArray(response.json) ? response.json : [];
 }
 function publicWebConfig(config) {
@@ -1768,7 +1799,10 @@ function describeZoteroSavePlan(plan) {
 var MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 async function webJson(fetchImpl, config, path, signal) {
   const response = await webRequest(fetchImpl, config, path, { signal });
-  if (!response.ok) throw new Error(`Zotero Web API HTTP ${response.status} for ${path.split("?")[0]}`);
+  if (!response.ok)
+    throw new Error(
+      config.local && response.status === 401 ? "Zotero rejected the local write key (revoked or expired); authorize local writes again in Drone Settings \u2192 Zotero" : `Zotero ${config.local ? "local" : "Web"} API HTTP ${response.status} for ${path.split("?")[0]}`
+    );
   return response;
 }
 async function webGetItem({ fetchImpl = fetch, config, key, signal } = {}) {
@@ -1812,9 +1846,9 @@ async function webListCollections({ fetchImpl = fetch, config, signal } = {}) {
   return collections;
 }
 async function webWrite(fetchImpl, config, path, { method, headers = {}, body, signal, timeoutMs = 3e4 }) {
-  const response = await fetchImpl(`${ZOTERO_ENDPOINTS.webApi}${path}`, {
+  const response = await fetchImpl(`${config.base || ZOTERO_ENDPOINTS.webApi}${path}`, {
     method,
-    headers: { "Zotero-API-Version": "3", "Zotero-API-Key": config.apiKey, ...headers },
+    headers: { "Zotero-API-Version": "3", ...authHeaders(config), ...headers },
     body,
     signal: timeoutSignal(timeoutMs, signal),
     redirect: "error"
@@ -1853,11 +1887,12 @@ async function inspectLocalPdf(cwd, rawPath) {
   };
 }
 async function prepareZoteroUpdate(input = {}, { fetchImpl = fetch, env = process.env, cwd = process.cwd(), signal } = {}) {
-  const config = zoteroWebApiConfig(env);
+  const web = zoteroWebApiConfig(env);
+  const localConfig = zoteroLocalWriteConfig(env);
   const plan = {
     kind: "update",
     channel: "web",
-    web: publicWebConfig(config),
+    web: publicWebConfig(web),
     action: "blocked",
     reason: null,
     item: null,
@@ -1865,22 +1900,40 @@ async function prepareZoteroUpdate(input = {}, { fetchImpl = fetch, env = proces
     changes: { addCollection: null, attachUrl: null, uploadFile: null },
     skipped: []
   };
-  if (!config.configured) {
-    plan.reason = "Changing an existing Zotero item needs the Zotero Web API: Zotero desktop's local API is read-only. Ask the user to add a write-enabled API key in Drone Settings \u2192 Zotero \u2192 Web API (or set ZOTERO_API_KEY and ZOTERO_LIBRARY_ID). No change made.";
-    return plan;
+  let config = web;
+  let staleLocalKey = false;
+  if (localConfig.configured && !(web.configured && web.libraryType === "groups")) {
+    const serverId = await localServerId({ fetchImpl, signal });
+    if (serverId === localConfig.serverId) config = localConfig;
+    else staleLocalKey = Boolean(serverId);
   }
-  const access2 = await webKeyAccess({ fetchImpl, config, signal });
-  if (!access2.write) {
-    plan.reason = `The Zotero API key has no write permission for ${config.libraryType}/${config.libraryId}; create a key with library write access. No change made.`;
-    return plan;
+  if (config.local) {
+    plan.channel = "local";
+    plan.target = {
+      kind: "local",
+      libraryType: "users",
+      libraryId: "0",
+      libraryName: "My Library",
+      local: true
+    };
+  } else {
+    if (!web.configured) {
+      plan.reason = staleLocalKey ? "The saved Zotero local write key belongs to a different Zotero database; authorize local writes again in Drone Settings \u2192 Zotero. No change made." : "Changing an existing Zotero item needs write access: on Zotero 10+ ask the user to authorize local writes in Drone Settings \u2192 Zotero (Zotero shows a dialog; choose \u201CAlways Allow\u201D), or to add a write-enabled API key under Settings \u2192 Zotero \u2192 Web API (or set ZOTERO_API_KEY and ZOTERO_LIBRARY_ID). No change made.";
+      return plan;
+    }
+    const access2 = await webKeyAccess({ fetchImpl, config, signal });
+    if (!access2.write) {
+      plan.reason = `The Zotero API key has no write permission for ${config.libraryType}/${config.libraryId}; create a key with library write access. No change made.`;
+      return plan;
+    }
+    plan.target = {
+      kind: "web",
+      libraryType: config.libraryType,
+      libraryId: config.libraryId,
+      libraryName: config.libraryType === "groups" ? `group ${config.libraryId}` : access2.username || "My Library",
+      local: false
+    };
   }
-  plan.target = {
-    kind: "web",
-    libraryType: config.libraryType,
-    libraryId: config.libraryId,
-    libraryName: config.libraryType === "groups" ? `group ${config.libraryId}` : access2.username || "My Library",
-    local: false
-  };
   let key = textField(input.zotero_key ?? input.key, 8, "zotero_key") || null;
   const doi = normalizeDoi(input.doi || "");
   if (!key) {
@@ -1993,10 +2046,15 @@ async function uploadAttachment(fetchImpl, config, parentKey, file, signal) {
     Buffer.from(auth.json.suffix || "", "utf8")
   ]);
   const uploadUrl = String(auth.json.url || "");
-  if (!/^https:\/\//.test(uploadUrl)) return { key, error: "upload authorization returned no https URL" };
+  const allowed = config.local ? uploadUrl.startsWith(`${new URL(ZOTERO_ENDPOINTS.localApi).origin}/`) : /^https:\/\//.test(uploadUrl);
+  if (!allowed) return { key, error: "upload authorization returned an unexpected upload URL" };
   const uploaded = await fetchImpl(uploadUrl, {
     method: "POST",
-    headers: { "Content-Type": String(auth.json.contentType || "application/octet-stream") },
+    headers: {
+      "Content-Type": String(auth.json.contentType || "application/octet-stream"),
+      // The local receiver rejects an upload without the database id; it does not take the key.
+      ...config.local ? { "Zotero-Server-ID": config.serverId } : {}
+    },
     body,
     signal: timeoutSignal(12e4, signal),
     redirect: "error"
@@ -2013,7 +2071,7 @@ async function uploadAttachment(fetchImpl, config, parentKey, file, signal) {
 }
 async function executeZoteroUpdate(plan, { fetchImpl = fetch, env = process.env, signal, now = () => /* @__PURE__ */ new Date() } = {}) {
   if (plan.action !== "update") throw new Error(`Refusing to write: plan action is ${plan.action}`);
-  const config = zoteroWebApiConfig(env);
+  const config = plan.channel === "local" ? zoteroLocalWriteConfig(env) : zoteroWebApiConfig(env);
   const lib = `/${config.libraryType}/${config.libraryId}`;
   const at = now().toISOString();
   const results = {};
@@ -2092,7 +2150,7 @@ async function executeZoteroUpdate(plan, { fetchImpl = fetch, env = process.env,
   const verified = outcomes.filter((entry) => entry.verified);
   return {
     kind: "update",
-    channel: "web",
+    channel: plan.channel,
     doi: plan.doi,
     title: plan.item.title,
     zoteroKey: plan.item.key,
@@ -2101,7 +2159,7 @@ async function executeZoteroUpdate(plan, { fetchImpl = fetch, env = process.env,
       type: config.libraryType,
       id: config.libraryId,
       name: plan.target?.libraryName || null,
-      local: false
+      local: Boolean(config.local)
     },
     changes: results,
     skipped: plan.skipped,
@@ -2115,7 +2173,7 @@ async function executeZoteroUpdate(plan, { fetchImpl = fetch, env = process.env,
 function receiptWithoutUpdate(plan) {
   return {
     kind: "update",
-    channel: "web",
+    channel: plan.channel,
     doi: plan.doi,
     title: plan.item?.title || null,
     zoteroKey: plan.item?.key || null,
@@ -2141,7 +2199,7 @@ function describeZoteroUpdatePlan(plan) {
   if (plan.changes.attachUrl) changes.push(`\u6DFB\u52A0\u94FE\u63A5\u9644\u4EF6 ${plan.changes.attachUrl.url}`);
   if (plan.changes.uploadFile)
     changes.push(
-      `\u4E0A\u4F20\u672C\u5730 PDF ${plan.changes.uploadFile.relativePath}\uFF08${(plan.changes.uploadFile.size / 1024 / 1024).toFixed(1)} MB\uFF0C\u5360\u7528 Zotero \u4E91\u5B58\u50A8\u914D\u989D\uFF09`
+      `\u4E0A\u4F20\u672C\u5730 PDF ${plan.changes.uploadFile.relativePath}\uFF08${(plan.changes.uploadFile.size / 1024 / 1024).toFixed(1)} MB\uFF0C${plan.channel === "local" ? "\u5B58\u5165\u672C\u673A Zotero\uFF0C\u4E0D\u5360\u4E91\u5B58\u50A8\u914D\u989D" : "\u5360\u7528 Zotero \u4E91\u5B58\u50A8\u914D\u989D"}\uFF09`
     );
   lines.push(`\u4FEE\u6539\u5185\u5BB9\uFF1A
 ${changes.map((line) => `- ${line}`).join("\n")}`);
@@ -3054,7 +3112,7 @@ function zoteroLiterature(pi) {
       flow: "literature",
       flowCards: (event) => literatureCard(event, { write: true })
     },
-    description: "Change ONE existing item in the user's Zotero library through the Zotero Web API (Zotero desktop's local API is read-only): add it to a collection (by collection_key or exact collection_name; existing collections are kept), attach an open-access PDF link (attachment_url) and/or upload a local PDF from the project (local_file, counts against the user's Zotero storage). Identify the item by zotero_key or exact DOI. Asks the user on a native card unless an authorized task plan names the DOI; writes once, then reads the item back. Never deletes, removes from collections, merges or retries. Needs a write-enabled API key (Drone Settings \u2192 Zotero \u2192 Web API); without one it returns status=blocked with the reason \u2014 tell the user, do not ask for the key in chat.",
+    description: "Change ONE existing item in the user's Zotero library: add it to a collection (by collection_key or exact collection_name; existing collections are kept), attach an open-access PDF link (attachment_url) and/or upload a local PDF from the project (local_file). Writes through Zotero 10's local API when the user has authorized local writes (channel=local, the PDF stays on this computer), otherwise through the Zotero Web API (channel=web, the PDF counts against the user's Zotero storage). Identify the item by zotero_key or exact DOI. Asks the user on a native card unless an authorized task plan names the DOI; writes once, then reads the item back. Never deletes, removes from collections, merges or retries. Without either channel it returns status=blocked with the reason \u2014 tell the user to authorize local writes or add a write-enabled key in Drone Settings \u2192 Zotero; never ask for a key in chat.",
     parameters: {
       type: "object",
       properties: {

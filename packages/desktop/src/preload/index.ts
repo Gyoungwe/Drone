@@ -99,6 +99,9 @@ const knowledgeClient = exposeContract(KnowledgeContract, {
 				getZoteroWebApi: IpcChannels.ZoteroWebApiGet,
 				saveZoteroWebApi: IpcChannels.ZoteroWebApiSave,
 				clearZoteroWebApi: IpcChannels.ZoteroWebApiClear,
+				getZoteroLocalWrite: IpcChannels.ZoteroLocalWriteGet,
+				authorizeZoteroLocalWrite: IpcChannels.ZoteroLocalWriteAuthorize,
+				clearZoteroLocalWrite: IpcChannels.ZoteroLocalWriteClear,
 			},
 			method,
 		),
@@ -338,6 +341,9 @@ const knowledgeApi = {
 	getZoteroWebApi: invoke(knowledgeClient, "getZoteroWebApi"),
 	saveZoteroWebApi: invoke(knowledgeClient, "saveZoteroWebApi"),
 	clearZoteroWebApi: invoke(knowledgeClient, "clearZoteroWebApi"),
+	getZoteroLocalWrite: invoke(knowledgeClient, "getZoteroLocalWrite"),
+	authorizeZoteroLocalWrite: invoke(knowledgeClient, "authorizeZoteroLocalWrite"),
+	clearZoteroLocalWrite: invoke(knowledgeClient, "clearZoteroLocalWrite"),
 };
 const invokeApi = {
 	...computeClient,
