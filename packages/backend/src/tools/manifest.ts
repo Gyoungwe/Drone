@@ -199,6 +199,7 @@ const VISUAL_TOOL = /(?:show_image|explainer|show_me|figure|plot|chart|image)/i;
 /** 未声明能力的工具：保留原有的核心启发式，不再包含任何领域工具名。 */
 export function heuristicCapabilities(name: string): CapabilityId[] {
 	if (/^(?:ask_user|set_status|todo|capability_load|task_[a-z_]+)$/.test(name)) return [];
+	if (name.startsWith("bio_")) return ["research"];
 	if (name.startsWith("research_"))
 		return VISUAL_TOOL.test(name) ? ["research", "visualization"] : ["research"];
 	if (/^(?:channel_|contact_supervisor$|scout$)/.test(name)) return ["external"];

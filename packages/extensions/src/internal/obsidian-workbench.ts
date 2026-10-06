@@ -544,6 +544,7 @@ export async function depositKnowledge({ cwd = process.cwd(), project, type, tit
         entity: ["library", "Entities"],
         concept: ["library", "Concepts"],
         idea: ["library", "Ideas"],
+        dataset: ["library", "Datasets"],
     };
     const route = routes[kind];
     if (!route)

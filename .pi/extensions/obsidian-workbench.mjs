@@ -2400,12 +2400,12 @@ var VAULT_PROFILES = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Datasets", "Explainers"]
   },
   literature: {
     id: "literature",
     projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"]
   },
   hybrid: {
     id: "hybrid",
@@ -2422,7 +2422,7 @@ var VAULT_PROFILES = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"]
   }
 };
 var DEFAULT_VAULT_PROFILE = "hybrid";
@@ -3103,6 +3103,18 @@ init_runtime_host();
 init_runtime_host();
 init_runtime_host();
 init_config();
+
+// packages/knowledge/src/daily-discovery.ts
+var DAILY_DISCOVERY_LIMITS = {
+  maxScannedFiles: 4e3,
+  maxNoteBytes: 256 * 1024,
+  maxNewNotes: 8,
+  maxRelatedNotes: 10,
+  maxNoteChars: 2400,
+  maxIdeas: 3
+};
+
+// packages/knowledge/src/ui-service.ts
 init_files();
 
 // packages/knowledge/src/maintenance.ts
@@ -4761,7 +4773,7 @@ var VAULT_PROFILES2 = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Explainers"],
+    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Datasets", "Explainers"],
     deposition: {
       runSummaries: true,
       verifiedSources: true,
@@ -4776,7 +4788,7 @@ var VAULT_PROFILES2 = {
     label: "\u6587\u732E\u77E5\u8BC6\u5E93\u578B",
     description: "\u5F3A\u8C03\u8DE8\u9879\u76EE\u590D\u7528\u7684\u8BBA\u6587\u3001\u65B9\u6CD5\u3001\u6982\u5FF5\u3001\u5B9E\u4F53\u4E0E\u8F6F\u4EF6\u77E5\u8BC6\uFF0C\u540C\u65F6\u4FDD\u7559\u8F7B\u91CF\u9879\u76EE\u5C42\u3002",
     projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"],
     deposition: {
       runSummaries: true,
       verifiedSources: true,
@@ -4803,7 +4815,7 @@ var VAULT_PROFILES2 = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Datasets", "Explainers"],
     deposition: {
       runSummaries: true,
       verifiedSources: true,
@@ -4851,6 +4863,7 @@ var LAYOUT3 = {
     "Software",
     "Entities",
     "Ideas",
+    "Datasets",
     "Explainers"
   ],
   "templates": {
@@ -5342,7 +5355,8 @@ async function depositKnowledge({ cwd = process.cwd(), project, type, title, mar
     software: ["library", "Software"],
     entity: ["library", "Entities"],
     concept: ["library", "Concepts"],
-    idea: ["library", "Ideas"]
+    idea: ["library", "Ideas"],
+    dataset: ["library", "Datasets"]
   };
   const route = routes[kind];
   if (!route)
@@ -10313,7 +10327,7 @@ function autoTopicCandidate({
 init_topic_memory();
 init_ui_state();
 init_wiki_review();
-var LOCAL_FIRST_GUIDANCE = "Knowledge loop: (1) search the local Vault first with research_search_knowledge and read the best hits; (2) only if local notes do not answer the question, look it up on the web (web_search / fetch); (3) save what you learned from the web with research_deposit_knowledge as a new note of the right type (paper = a publication with authors/year/DOI; software = a tool, its version, install and usage; method = a protocol or analysis method; idea = a hypothesis with its basis and how to test it), putting the URLs/DOIs in source_links \u2014 new notes go straight into the Vault without review; (4) answer citing the Vault note paths you used and the web sources. Say plainly which parts came from local knowledge and which from the web.";
+var LOCAL_FIRST_GUIDANCE = "Knowledge loop: (1) search the local Vault first with research_search_knowledge and read the best hits; (2) only if local notes do not answer the question, look it up on the web (web_search / fetch); (3) save what you learned from the web with research_deposit_knowledge as a new note of the right type (paper = a publication with authors/year/DOI; software = a tool, its version, install and usage; method = a protocol or analysis method; idea = a hypothesis with its basis and how to test it; dataset = a reference genome, annotation or database with its exact version, source URL and checksum), putting the URLs/DOIs in source_links \u2014 new notes go straight into the Vault without review; (4) answer citing the Vault note paths you used and the web sources. Say plainly which parts came from local knowledge and which from the web.";
 async function stageWikiUpdate(service, ticket, cwd, input) {
   const staged = await stageWikiProposal(service, ticket, cwd, input);
   const applied = await autoApplyWikiProposal(service, staged.id, staged.project, staged.proposalHash);
@@ -11834,7 +11848,7 @@ ${result2.scope === "application" ? "Application binding is active for subsequen
       flow: "note",
       flowCards: depositCard
     },
-    description: "Save a typed note straight into the Vault (no review): paper \u2192 Library/Papers, method \u2192 Library/Methods, software \u2192 Library/Software, idea \u2192 Library/Ideas (proposed hypotheses with their basis and how to test them), plus project-scoped question/evidence/claim/decision. Use it after a web lookup so the next similar question is answered from local knowledge. Raw Obsidian MCP writes are intentionally not exposed.",
+    description: "Save a typed note straight into the Vault (no review): paper \u2192 Library/Papers, method \u2192 Library/Methods, software \u2192 Library/Software, idea \u2192 Library/Ideas (proposed hypotheses with their basis and how to test them), dataset \u2192 Library/Datasets (reference genome, annotation or database: exact version/release, source URL, download date and checksum), plus project-scoped question/evidence/claim/decision. Use it after a web lookup so the next similar question is answered from local knowledge. Raw Obsidian MCP writes are intentionally not exposed.",
     parameters: {
       type: "object",
       properties: {
@@ -11852,7 +11866,8 @@ ${result2.scope === "application" ? "Application binding is active for subsequen
             "software",
             "entity",
             "concept",
-            "idea"
+            "idea",
+            "dataset"
           ]
         },
         title: { type: "string" },
