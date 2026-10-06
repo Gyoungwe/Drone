@@ -3,7 +3,12 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { observeExecutionReceipt, recordRunProvenance } from "../src/run-provenance";
+import {
+	observeExecutionReceipt,
+	readMethodsFacts,
+	recordRunProvenance,
+	saveMethodsSection,
+} from "../src/run-provenance";
 
 let cwd: string;
 let runDir: string;
@@ -95,5 +100,48 @@ describe("run provenance", () => {
 		await expect(
 			recordRunProvenance({ cwd, runDir, files: [{ path: process.execPath, role: "input" }] }),
 		).rejects.toThrow("permitted");
+	});
+});
+
+describe("methods facts", () => {
+	it("collects recorded facts and names the gaps instead of inventing them", async () => {
+		await writeFile(
+			join(runDir, "metadata.json"),
+			JSON.stringify({ query: "DE genes in liver", status: "completed", started_at: "2026-10-01T00:00:00Z" }),
+		);
+		let facts = await readMethodsFacts({ cwd, runDir });
+		expect(facts.query).toBe("DE genes in liver");
+		expect(facts.gaps.join(" ")).toMatch(/No reproducibility manifest/);
+
+		await writeFile(join(cwd, "counts.tsv"), "gene\tcount\n");
+		await recordRunProvenance({
+			cwd,
+			runDir,
+			files: [{ path: "counts.tsv", role: "input" }],
+			declarations: { software: { DESeq2: "1.44.0" }, alpha: 0.05 },
+		});
+		facts = await readMethodsFacts({ cwd, runDir });
+		expect(facts.inputs).toEqual([{ path: "counts.tsv", sha256: expect.stringMatching(/^[0-9a-f]{64}$/) }]);
+		expect(facts.declarations).toEqual({ software: { DESeq2: "1.44.0" }, alpha: 0.05 });
+		expect(facts.gaps.join(" ")).toMatch(/No executed commands/);
+		expect(facts.existingMethods).toBeNull();
+	});
+
+	it("saves an approved Methods section atomically inside the run only", async () => {
+		const saved = await saveMethodsSection({
+			cwd,
+			runDir,
+			text: "Reads were aligned with STAR.",
+			approvedAt: "T",
+		});
+		expect(saved.path).toBe(join(await realpath(runDir), "METHODS.md"));
+		const body = await readFile(saved.path, "utf8");
+		expect(body).toContain("approved_at=T");
+		expect(body).toContain("Reads were aligned with STAR.");
+		expect((await readMethodsFacts({ cwd, runDir })).existingMethods).toContain("STAR");
+		await expect(saveMethodsSection({ cwd, runDir, text: "  " })).rejects.toThrow(/empty/);
+		await expect(saveMethodsSection({ cwd, runDir: cwd, text: "x" })).rejects.toThrow(
+			/run inside results root/,
+		);
 	});
 });

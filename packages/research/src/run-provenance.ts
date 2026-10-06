@@ -265,3 +265,120 @@ export interface RunProvenanceManifest {
 export interface RunProvenanceResult extends RunProvenanceManifest {
 	path: string;
 }
+
+export interface MethodsFacts {
+	runDir: string;
+	query: string | null;
+	status: string | null;
+	startedAt: string | null;
+	finalizedAt: string | null;
+	hostRuntime: RunProvenanceManifest["hostRuntime"] | null;
+	inputs: { path: string; sha256: string }[];
+	outputs: { path: string; sha256: string }[];
+	scripts: { path: string; sha256: string }[];
+	/** 模型/用户在 research_record_run_manifest 里声明的软件版本、参数、种子、计算模块（未经独立验证） */
+	declarations: Record<string, unknown>;
+	commandsObserved: number;
+	commandsFailed: number;
+	existingMethods: string | null;
+	gaps: string[];
+}
+
+async function readJson(path: string): Promise<Record<string, unknown> | null> {
+	try {
+		const value: unknown = JSON.parse(await readFile(path, "utf8"));
+		return value && typeof value === "object" && !Array.isArray(value)
+			? (value as Record<string, unknown>)
+			: null;
+	} catch (error) {
+		if (isNodeError(error, "ENOENT")) return null;
+		throw error;
+	}
+}
+
+const text = (value: unknown): string | null => (typeof value === "string" && value ? value : null);
+
+/**
+ * 从运行目录收集写 Methods 段需要的事实：运行时间、输入/输出/脚本快照、声明的软件版本与参数、
+ * 命令执行回执计数。缺失项列在 gaps 里，模型不得自行补全版本号或参数。
+ */
+export async function readMethodsFacts({
+	cwd = process.cwd(),
+	runDir,
+	loadWorkspaceConfig = defaultWorkspaceConfig,
+}: {
+	cwd?: string;
+	runDir: string;
+	loadWorkspaceConfig?: WorkspaceConfigLoader;
+}): Promise<MethodsFacts> {
+	const run = await runPath(cwd, runDir, loadWorkspaceConfig);
+	const metadata = (await readJson(join(run, "metadata.json"))) ?? {};
+	const manifest = (await readJson(
+		join(run, "reproducibility-manifest.json"),
+	)) as Partial<RunProvenanceManifest> | null;
+	const files = Array.isArray(manifest?.files) ? manifest.files : [];
+	const pick = (role: ProvenanceFileDeclaration["role"]) =>
+		files.filter((file) => file.role === role).map((file) => ({ path: file.path, sha256: file.sha256 }));
+	const observations = Array.isArray(manifest?.executionObservations) ? manifest.executionObservations : [];
+	const declarations =
+		manifest?.declarations && typeof manifest.declarations === "object" ? manifest.declarations : {};
+	let existingMethods: string | null = null;
+	try {
+		existingMethods = await readFile(join(run, "METHODS.md"), "utf8");
+	} catch (error) {
+		if (!isNodeError(error, "ENOENT")) throw error;
+	}
+	const gaps: string[] = [];
+	if (!manifest)
+		gaps.push(
+			"No reproducibility manifest: call research_record_run_manifest with inputs, outputs, scripts and declarations first.",
+		);
+	if (!Object.keys(declarations).length)
+		gaps.push(
+			"No declared software versions or parameters; ask the user or check with bio_environment before stating any.",
+		);
+	if (!pick("input").length) gaps.push("No input files recorded.");
+	if (!observations.length) gaps.push("No executed commands were observed for this run.");
+	return {
+		runDir: relative(await realpath(cwd), run) || run,
+		query: text(metadata.query),
+		status: text(metadata.status),
+		startedAt: text(metadata.started_at),
+		finalizedAt: text(metadata.finalized_at),
+		hostRuntime: manifest?.hostRuntime ?? null,
+		inputs: pick("input"),
+		outputs: pick("output"),
+		scripts: pick("script"),
+		declarations,
+		commandsObserved: observations.length,
+		commandsFailed: observations.filter((record) => record.outcome === "failed-or-blocked").length,
+		existingMethods,
+		gaps,
+	};
+}
+
+/** 写入用户已确认的 Methods 段（METHODS.md，原子替换）；确认由调用方负责 */
+export async function saveMethodsSection({
+	cwd = process.cwd(),
+	runDir,
+	text: body,
+	approvedAt = new Date().toISOString(),
+	loadWorkspaceConfig = defaultWorkspaceConfig,
+}: {
+	cwd?: string;
+	runDir: string;
+	text: string;
+	approvedAt?: string;
+	loadWorkspaceConfig?: WorkspaceConfigLoader;
+}): Promise<{ path: string; bytes: number }> {
+	const content = String(body ?? "").trim();
+	if (!content) throw new Error("Methods text is empty");
+	if (content.length > 20_000) throw new Error("Methods text is longer than 20,000 characters");
+	const run = await runPath(cwd, runDir, loadWorkspaceConfig);
+	const path = join(run, "METHODS.md");
+	const document = `<!-- drone:methods approved_at=${approvedAt} — reviewed by the user; software versions are as declared in reproducibility-manifest.json -->\n\n${content}\n`;
+	const temp = `${path}.${randomUUID()}.tmp`;
+	await writeFile(temp, document, "utf8");
+	await rename(temp, path);
+	return { path, bytes: Buffer.byteLength(document) };
+}

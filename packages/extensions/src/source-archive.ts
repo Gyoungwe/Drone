@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { cardLink, flowCard, literatureCard } from "@drone/knowledge/flow-cards";
 import { verifyLiteratureReceipt } from "@drone/research/literature-receipt";
-import { recordRunProvenance } from "@drone/research/run-provenance";
+import { readMethodsFacts, recordRunProvenance, saveMethodsSection } from "@drone/research/run-provenance";
 import {
 	archiveSource as archiveTyped,
 	DEFAULT_MAX_BYTES,
@@ -226,6 +226,62 @@ export default function sourceArchive(pi) {
 				declarations: p.declarations || {},
 			});
 			return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], details: value };
+		},
+	});
+	registerTool(pi, {
+		name: "research_methods",
+		label: "Methods section",
+		drone: { capabilities: ["research"], subagent: "exclude" },
+		description:
+			"Draft a paper Methods paragraph from a run's records. action=facts returns what the run actually recorded (inputs/outputs/scripts with hashes, declared software versions, parameters and compute modules, executed-command counts, gaps). Write the paragraph only from those facts — never invent versions, parameters or thresholds; name missing ones as gaps or ask the user. action=save shows the draft to the user and writes METHODS.md in the run only if they approve.",
+		parameters: {
+			type: "object",
+			properties: {
+				run_dir: { type: "string", description: "Existing run directory inside the results root" },
+				action: { type: "string", enum: ["facts", "save"] },
+				text: {
+					type: "string",
+					maxLength: 20000,
+					description: "save: the Methods paragraph(s) to show the user",
+				},
+			},
+			required: ["run_dir", "action"],
+		},
+		async execute(_id, p, signal, _update, ctx) {
+			if (p.action === "facts") {
+				const facts = await readMethodsFacts({ cwd: ctx.cwd, runDir: p.run_dir, loadWorkspaceConfig });
+				return { content: [{ type: "text", text: JSON.stringify(facts, null, 2) }], details: facts };
+			}
+			const draft = String(p.text || "").trim();
+			if (!draft) throw new Error("save needs the Methods text");
+			if (!ctx.hasUI || !ctx.ui?.select)
+				throw new Error("Saving a Methods section needs the user's confirmation in the desktop app");
+			const approve = "保存到运行目录（METHODS.md）";
+			const choice = await ctx.ui.select(
+				`确认 Methods 段\n\n${draft.slice(0, 6000)}${draft.length > 6000 ? "\n…" : ""}\n\n版本与参数来自运行记录中的声明，未经独立验证。需要修改请选「先不保存」并在对话里说明。`,
+				[approve, "先不保存"],
+				{ signal },
+			);
+			if (choice !== approve) {
+				const value = { saved: false, reason: "user did not approve" };
+				return {
+					content: [
+						{
+							type: "text",
+							text: "The user did not approve this Methods draft; nothing was written. Ask what to change.",
+						},
+					],
+					details: value,
+				};
+			}
+			const value = {
+				saved: true,
+				...(await saveMethodsSection({ cwd: ctx.cwd, runDir: p.run_dir, text: draft, loadWorkspaceConfig })),
+			};
+			return {
+				content: [{ type: "text", text: `Saved the approved Methods section to ${value.path}.` }],
+				details: value,
+			};
 		},
 	});
 	pi.on("before_agent_start", async (event) => ({
