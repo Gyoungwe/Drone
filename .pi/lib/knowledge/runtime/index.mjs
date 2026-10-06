@@ -135,7 +135,7 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-ET7AMO7O.mjs";
+} from "./chunks/chunk-PJQRVYSJ.mjs";
 import {
   beginKnowledgeFlow,
   clearKnowledgeFlow,

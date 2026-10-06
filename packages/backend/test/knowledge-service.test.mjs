@@ -472,6 +472,31 @@ describe("navigation delivery and bounded maintenance", () => {
 			true,
 		);
 	});
+	it("a Zotero item edit keeps an ordinary turn ordinary so its receipt is published", async () => {
+		await prepared({ wiki: false });
+		const h = harness();
+		const ctx = { cwd: a, sessionId: "zotero-receipt" };
+		await h.interface.beforeStart({ prompt: "把条目 ABCD1234 加进 test 集合" }, ctx);
+		for (const name of ["tool_execution_start", "tool_execution_end"])
+			await h.events.get(name)(
+				{ toolCallId: "z", toolName: "research_zotero_update", args: {}, isError: false },
+				ctx,
+			);
+		const text = "Zotero 回执：blocked，需要在设置里添加 Web API key，未做改动。";
+		const end = await h.events.get("message_end")(
+			{
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text }],
+					stopReason: "stop",
+					timestamp: Date.now(),
+				},
+			},
+			ctx,
+		);
+		expect(end.message.knowledgePublication.status).toBe("unconfigured");
+		expect(end.message.content[0].text).toBe(text);
+	});
 	it("read-only children receive no maintenance or deposition tools", async () => {
 		await setup();
 		const h = harness(true);
