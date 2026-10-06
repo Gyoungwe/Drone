@@ -69,6 +69,7 @@ import type { LoginServicePort } from "./settings/login";
 import type { ModelSettingsServicePort } from "./settings/models";
 import type { SettingsServicePort } from "./settings/settings";
 import type { SshHostEntry } from "./tools/ssh";
+import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
 
 /**
  * Transitional composition root for the v2 migration.
@@ -215,6 +216,8 @@ export interface BackendOptions extends SessionServiceOptions {
 export function createBackend(options: BackendOptions = {}): BackendServices {
 	const runtime = options.runtime ?? createDroneRuntime();
 	const permissions = new PermissionSettingsService();
+	// Zotero Web API credentials saved in settings → process.env, so the research Zotero write channel sees them.
+	void applyStoredZoteroWebCredentials();
 	// The compute host registry is created after sessions; ssh tools read it lazily at execute time.
 	let listComputeHosts: (() => Promise<ComputeHost[]>) | null = null;
 	const sessions = new SessionService({

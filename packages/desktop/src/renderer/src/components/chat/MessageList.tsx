@@ -6,7 +6,7 @@ import {
 	deriveTurnTimings,
 	deriveTurnUsage,
 	groupProcessRows,
-	isAgentWorking,
+	isAwaitingFirstOutput,
 } from "@drone/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
@@ -43,20 +43,13 @@ export function MessageList() {
 	const t = useT();
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
 	const transcript = useTranscriptStore((s) => selectTranscript(s, activeSessionId));
-	const streaming = transcript.streaming;
-	/** agent 运行中且正文未出现 → 折叠组标题 working；正文已出但工具/子代理还在跑时不熄灯 */
-	const agentWorking = isAgentWorking(transcript);
 
-	// 中央状态动画（设置开关，与状态行小 orb 解耦）：与 MetaGroup 同一 working 信号 + 同一滞后缓冲，
-	// 显隐节奏一致；动画两态合一为中速单动画（无状态切换），CenterOrb 只收 visible。
-	// 滞后缓冲只在 run 存活期内生效：正文在输出或 run 已终结（!agentActive）时立即结束——
-	// 杜绝结束/中止后的 1.5s 滞留；resetKey=会话 id：切会话立即对齐新信号，不滞留旧动画
+	// 中央状态动画（设置开关，与状态行小 orb 解耦）：只在「本轮还没有任何可见输出」时显示——
+	// 工具卡 / 思考 / 正文一出现立即让位（endImmediately），长任务期间不再盖住文字；
+	// 运行中状态由 MetaGroup 状态行小 orb 持续表示。resetKey=会话 id：切会话立即对齐，不滞留旧动画
 	const centerOrbEnabled = useUiPreferencesStore((s) => s.centerOrbEnabled);
-	const shownWorking = useShownWorking(
-		agentWorking,
-		Boolean(streaming?.text) || !transcript.agentActive,
-		activeSessionId,
-	);
+	const awaitingFirstOutput = isAwaitingFirstOutput(transcript);
+	const shownWorking = useShownWorking(awaitingFirstOutput, !awaitingFirstOutput, activeSessionId);
 
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLDivElement>(null);

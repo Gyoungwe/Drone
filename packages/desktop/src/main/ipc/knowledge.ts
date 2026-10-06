@@ -111,6 +111,9 @@ export function registerKnowledgeIpc(
 		getTopics: (input) => knowledge.topics(input),
 		archiveTopic: (input) => knowledge.archiveTopic(input),
 		getZoteroStatus: () => zotero.getStatus(),
+		getZoteroWebApi: () => (zotero.getWebApi ? zotero.getWebApi() : unavailable()),
+		saveZoteroWebApi: (input) => (zotero.saveWebApi ? zotero.saveWebApi(input) : unavailable()),
+		clearZoteroWebApi: () => (zotero.clearWebApi ? zotero.clearWebApi() : unavailable()),
 	};
 	bindContract(KnowledgeContract, implementation, {
 		channelForMethod: (_contract, method) =>
@@ -143,6 +146,9 @@ export function registerKnowledgeIpc(
 				getTopics: IpcChannels.KnowledgeTopics,
 				archiveTopic: IpcChannels.KnowledgeTopicArchive,
 				getZoteroStatus: IpcChannels.ZoteroStatus,
+				getZoteroWebApi: IpcChannels.ZoteroWebApiGet,
+				saveZoteroWebApi: IpcChannels.ZoteroWebApiSave,
+				clearZoteroWebApi: IpcChannels.ZoteroWebApiClear,
 			})[method as keyof typeof KnowledgeContract.methods],
 		beforeInvoke: (event, _contract, method) => {
 			if (method === "getZoteroStatus") return;

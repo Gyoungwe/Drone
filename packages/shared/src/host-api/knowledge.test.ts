@@ -8,7 +8,7 @@ describe("KnowledgeContract", () => {
 		expect(channelOf(KnowledgeContract, "getOverview")).toBe("knowledge:getOverview");
 		expect(channelOf(KnowledgeContract, "reviewWithModel")).toBe("knowledge:reviewWithModel");
 		expect(channelOf(KnowledgeContract, "getZoteroStatus")).toBe("knowledge:getZoteroStatus");
-		expect(Object.keys(KnowledgeContract.methods)).toHaveLength(28);
+		expect(Object.keys(KnowledgeContract.methods)).toHaveLength(31);
 	});
 
 	it("keeps optional reads optional while requiring object payloads for mutations", () => {

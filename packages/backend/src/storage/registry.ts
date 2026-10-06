@@ -182,6 +182,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "config",
 		})
 		.register({
+			id: "agent-zotero-web",
+			path: `${agentDir}/zotero-web.json`,
+			owner: "zotero/web-credentials",
+			schema: 1,
+			sensitivity: "secret",
+		})
+		.register({
 			id: "agent-daily-discovery",
 			path: `${agentDir}/daily-discovery.json`,
 			owner: "knowledge/daily-discovery",

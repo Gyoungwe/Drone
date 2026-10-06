@@ -17,3 +17,24 @@ export interface ZoteroStatus {
 	/** Zotero 桌面端下载地址 */
 	downloadUrl: string;
 }
+
+/** Zotero 网页 API（修改已有条目：归入分类、挂附件）的配置状态；不含密钥本身 */
+export interface ZoteroWebApiStatus {
+	configured: boolean;
+	/** settings = 在 Drone 设置里保存的；env = 来自环境变量 ZOTERO_API_KEY（优先，不可在界面里改） */
+	source: "settings" | "env" | null;
+	libraryType: "users" | "groups";
+	libraryId: string | null;
+	username: string | null;
+	/** 密钥是否有该库的写权限（未知为 null） */
+	write: boolean | null;
+	/** 密钥末 4 位，便于辨认 */
+	keyHint: string | null;
+}
+
+export interface ZoteroWebApiSaveInput {
+	apiKey: string;
+	/** 默认个人库；群组库填 groups + 群组 ID */
+	libraryType?: "users" | "groups";
+	libraryId?: string;
+}

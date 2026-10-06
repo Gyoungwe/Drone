@@ -102,10 +102,14 @@ export function deriveProcessEvents(messages: readonly UIMessage[]): ProcessEven
 								: undefined,
 				});
 			}
-			if (tool.name === "research_propose_wiki_update" || tool.name === "research_zotero_save") {
+			if (
+				tool.name === "research_propose_wiki_update" ||
+				tool.name === "research_zotero_save" ||
+				tool.name === "research_zotero_update"
+			) {
 				if (typeof result.status === "string")
 					push({
-						type: tool.name === "research_zotero_save" ? "zotero" : "wiki",
+						type: tool.name === "research_propose_wiki_update" ? "wiki" : "zotero",
 						id,
 						seq: seq++,
 						status: result.status,

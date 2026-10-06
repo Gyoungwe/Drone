@@ -99,7 +99,7 @@ packages/
 
 | Area | Files | Responsibility |
 |---|---|---|
-| Zotero literature | `.pi/lib/zotero-setup.mjs` + `extensions/zotero-literature.mjs` + `skills/zotero-literature` | Zotero owns PDFs/metadata; Vault `Library/Papers` notes are citable knowledge; CLI preferred, MCP optional/disabled |
+| Zotero literature | `.pi/lib/zotero-setup.mjs` + `extensions/zotero-literature.mjs` + `skills/zotero-literature` | Zotero owns PDFs/metadata; Vault `Library/Papers` notes are citable knowledge; CLI preferred, MCP optional/disabled。写入：`research_zotero_save` 只新建；`research_zotero_update`（`research/src/zotero-write-runtime.ts` 的 `prepareZoteroUpdate`/`executeZoteroUpdate`）经网页 API 把已有条目归入分类、挂链接或上传本地 PDF（本机 API 只读）。网页 API 密钥 = 设置 › Zotero › 网页 API（`desktop/.../knowledge/ZoteroWebApiSection.tsx` → IPC `zotero:webApi*` → backend `zotero/web-credentials.ts`，存 `agentDir/zotero-web.json` 并注入 `ZOTERO_API_KEY` 等环境变量，用户自设环境变量优先） |
 | Topic lifecycle | `.pi/lib/knowledge/{topic-memory,extension}.mjs` | bounded Vault+project topic memory, continuation/resume, stale-source checks, proposal/artifact linkage; memory is navigation only |
 | Specialist orchestration | `.pi/lib/knowledge/{specialists,specialist-host,orchestration-policy}.mjs` + `backend/src/knowledge/specialist-runner.ts` | deterministic dispatch decisions, queue/concurrency/run/tool/token/reported-cost budgets, cancellation-safe isolated workers |
 | Human management | `knowledge/ui-service.mjs` + desktop knowledge IPC/preload + `SemanticManagement.tsx` / `TopicManagement.tsx` | opt-in semantic settings/index batches and project-scoped topic browsing/archive/resume |

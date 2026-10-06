@@ -54,7 +54,7 @@ import type {
 } from "./subagent";
 import type { UiPluginInfo, UiPluginManifest, UiPluginsConfig, UiPluginsEventPayload } from "./ui-plugins";
 import type { UpdateState } from "./update";
-import type { ZoteroStatus } from "./zotero";
+import type { ZoteroStatus, ZoteroWebApiSaveInput, ZoteroWebApiStatus } from "./zotero";
 
 export interface ResourcePreviewResult {
 	encoding?: string;
@@ -157,6 +157,9 @@ export const IpcChannels = {
 
 	/** Zotero 文献库接入状态（Zotero 面板；独立于 Obsidian 知识库） */
 	ZoteroStatus: "zotero:status",
+	ZoteroWebApiGet: "zotero:webApiGet",
+	ZoteroWebApiSave: "zotero:webApiSave",
+	ZoteroWebApiClear: "zotero:webApiClear",
 
 	/** 机构访问（合法机构通道，持久登录会话 + EZproxy 模板） */
 	InstitutionalGetStatus: "institutional:getStatus",
@@ -396,6 +399,11 @@ export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryA
 	onMcpEvent(cb: (event: McpStatusEvent) => void): () => void;
 	/** Zotero 文献库接入状态（注册/启用/本机 API 可达/桌面端检测）；面板用，只读 */
 	getZoteroStatus(): Promise<ZoteroStatus>;
+	/** Zotero 网页 API（修改已有条目）配置状态；不返回密钥 */
+	getZoteroWebApi(): Promise<ZoteroWebApiStatus>;
+	/** 校验（须有写权限）后保存网页 API 密钥 */
+	saveZoteroWebApi(input: ZoteroWebApiSaveInput): Promise<ZoteroWebApiStatus>;
+	clearZoteroWebApi(): Promise<ZoteroWebApiStatus>;
 	/** 机构访问状态（配置 + 会话 Cookie + 是否已登录）；文献库面板用 */
 	getInstitutionalStatus(): Promise<InstitutionalStatus>;
 	/** 保存机构访问配置（EZproxy 模板 / OpenURL / 机构名 / 自动下载开关 / 上限） */
