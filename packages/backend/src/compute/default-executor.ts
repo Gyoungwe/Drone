@@ -1302,11 +1302,23 @@ export class DefaultComputeExecutor implements ComputeExecutor {
 	async cancel(job: JobRecord, host: HostProfile): Promise<ComputeStatusResult> {
 		return await this.limited(host, async () => {
 			const { client } = await this.client(host);
-			const value = (await client.cancel(job.remoteId ?? job.jobId)) as {
-				status?: JobRecord["status"];
-				remoteId?: string;
-			};
-			return { status: value.status ?? "cancelled", remoteId: value.remoteId ?? job.remoteId };
+			// Right after start the runner may not see the worker process yet (slow on Windows) and
+			// answers a retryable "cancel-unknown"; honour that flag with a few short retries.
+			for (let attempt = 0; ; attempt++) {
+				try {
+					const value = (await client.cancel(job.remoteId ?? job.jobId)) as {
+						status?: JobRecord["status"];
+						remoteId?: string;
+					};
+					return { status: value.status ?? "cancelled", remoteId: value.remoteId ?? job.remoteId };
+				} catch (error) {
+					const retryable =
+						(error as { code?: unknown; retryable?: unknown })?.code === "cancel-unknown" &&
+						(error as { retryable?: unknown }).retryable === true;
+					if (!retryable || attempt >= 4) throw error;
+					await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+				}
+			}
 		});
 	}
 
