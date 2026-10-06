@@ -27,7 +27,7 @@ import { makeChannelWatchExtension } from "../tools/channel-watch";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
 import { bindToolManifestEvents } from "../tools/manifest";
 import { makeShowImageTool } from "../tools/show-image";
-import { makeSshTool } from "../tools/ssh";
+import { makeSshHostsTool, makeSshTool, type SshHostEntry } from "../tools/ssh";
 import { makeStatusTool } from "../tools/status";
 import { makeSubagentTool } from "../tools/subagent";
 import { makeTodoTool } from "../tools/todo";
@@ -80,6 +80,8 @@ export interface SessionExtensionDependencies {
 	onEvent: (sessionId: string, event: SessionEvent) => void;
 	registerLiveChild?: (sessionId: string, control: LiveChildControl) => () => void;
 	setMcpStatus: (cwd: string, status: McpStatus) => void;
+	/** 已登记的远程主机（设置 › 高级 › SSH 主机）；缺省则 ssh 只认 ~/.ssh/config 与直接主机名 */
+	listSshHosts?: () => Promise<SshHostEntry[]>;
 	/** Successful agent-made decisions emitted by first-party task/literature extensions. */
 	onDecision?: (sessionId: string, event: unknown) => void;
 }
@@ -102,8 +104,10 @@ export function buildSessionCustomTools(
 	tools.push(
 		makeSshTool({
 			confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
+			...(deps.listSshHosts ? { hosts: deps.listSshHosts } : {}),
 		}) as ToolDefinition,
 	);
+	if (deps.listSshHosts) tools.push(makeSshHostsTool(deps.listSshHosts));
 	tools.push(makeStatusTool());
 	tools.push(makeTodoTool());
 	if (harness.recall) {

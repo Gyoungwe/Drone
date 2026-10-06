@@ -678,7 +678,7 @@ export const en: Messages = {
 			lan: "LAN Observer",
 			uiPlugins: "UI Plugins",
 			workflows: "Workflow overview",
-			compute: "Compute hosts",
+			compute: "SSH hosts",
 			advanced: "Advanced",
 			about: "About",
 		},
@@ -943,6 +943,11 @@ export const en: Messages = {
 			diagnostics: "Load diagnostics",
 		},
 		mcp: {
+			presets: "Recommended",
+			presetsHint:
+				"Add a ready-made MCP server in one click (written to your user config; disable it any time).",
+			presetAdd: "Add",
+			presetAdded: "Added",
 			title: "MCP",
 			hint: "Manage MCP servers, connection status, and tools available to the current project. Project configuration overrides matching user servers.",
 			status: "Status",

@@ -133,3 +133,24 @@ describe("McpService", () => {
 		expect(result.servers.find((server) => server.name === "docs")?.disabled).toBe(false);
 	});
 });
+
+describe("MCP presets", () => {
+	it("adds the Playwright browser-control preset to the user config and re-enables it instead of overwriting", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "drone-mcp-preset-"));
+		const service = new McpService({ agentDir: dir, homeDir });
+		const added = await service.addPreset("playwright");
+		expect(added.servers.find((server) => server.name === "playwright")).toMatchObject({
+			command: "npx",
+			disabled: false,
+		});
+		const written = JSON.parse(await readFile(join(dir, "mcp.json"), "utf8"));
+		expect(written.mcpServers.playwright.args).toEqual(["-y", "@playwright/mcp@latest"]);
+		written.mcpServers.playwright = { command: "my-playwright", disabled: true };
+		await writeFile(join(dir, "mcp.json"), JSON.stringify(written));
+		const again = await service.addPreset("playwright");
+		expect(again.servers.find((server) => server.name === "playwright")).toMatchObject({
+			command: "my-playwright",
+			disabled: false,
+		});
+	});
+});
