@@ -628,6 +628,25 @@ export const en: Messages = {
 		binaryHint:
 			"Inline preview is not available for this file type. Open it with the system application instead.",
 		truncated: "Preview truncated",
+		tree: {
+			summary: "Phylogenetic tree · {leaves} leaves",
+			scaleLengths: "Drawn with branch lengths (units as in the file)",
+			scaleDepth: "No branch lengths in the file; drawn by depth",
+			support: "Show internal node labels (support)",
+			parseFailed: "Cannot parse as Newick: {error}. Switch to source to inspect it.",
+		},
+		alignment: {
+			summary: "{format} alignment · {records} sequences · {length} columns (this excerpt)",
+			columns: "Columns {start}–{end}",
+			prev: "← Left",
+			next: "Right →",
+			conservation: "Conservation",
+			viewAsAlignment: "View as alignment",
+			viewAsSequences: "View as sequences",
+			clipped: "Showing the first {max} sequences only.",
+			footnote:
+				"Colours are for reading only (nucleotides by base, proteins by property); nothing is realigned or scored.",
+		},
 	},
 	diff: {
 		workedFor: "Worked for {duration}",
