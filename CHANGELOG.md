@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.20.0 — 2026-10-06
+
+- 知识库成网：笔记查看器显示反链与出链，知识库主页新增「知识网络」图（悬停高亮邻居，点节点打开笔记）；`research_deposit_knowledge` 写入时自动链接最相关的已有笔记，裸 `[[名称]]` 按文件名解析。
+- 每日发现（默认开，每天一次）：拿最近更新的笔记与相关旧笔记对照，提出最多 3 条有依据、可检验的新想法，可保存为 Library/Ideas 笔记或忽略；模型调用失败不计入当天并显示原因。
+- 生信执行：`/run-on local|<主机>|auto` 选择执行位置（auto 时 Agent 先探测再判断并说明理由）；`bio_environment` 探测本地或远程（SSH，需审批）的工具版本、conda 环境、容器与 CPU/内存/磁盘；整读超过 4 MiB 的 FASTQ/BAM/VCF 等会被拦截并给出预览命令；新增 dataset 知识笔记类型。
+- `bio_db`：只读检索 NCBI E-utilities / GEO、UniProtKB、Ensembl（含 release）、ENA/SRA（含 FASTQ URL 与 MD5）。
+- 结果查看器：Newick 系统发育树、多序列比对（Clustal / Stockholm / PHYLIP / 比对 FASTA）；HTML 图可切换交互模式（独立 `drone-html://` 协议，脚本在无同源、无网络的沙箱中运行）；图片与 HTML 图支持标注，并可整理成文字发给 Agent 修改。
+- `research_methods`：按运行记录（输入/输出哈希、声明的软件版本与参数、执行回执）起草 Methods 段，缺失项列为缺口，用户确认后才写入 `METHODS.md`。
+
 ## 0.19.2 — 2026-10-06
 
 - 恢复局域网远程控制双态：关闭时观察页只读，开启后恢复发送和权限审批；设置说明同步更新中英文。
