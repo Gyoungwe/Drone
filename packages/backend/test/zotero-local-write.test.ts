@@ -67,7 +67,8 @@ describe("zotero local write authorization", () => {
 		expect(env).toMatchObject({ ZOTERO_LOCAL_API_KEY: LOCAL_KEY, ZOTERO_LOCAL_SERVER_ID: "SRV1" });
 		const file = join(dir, "zotero-local.json");
 		expect(JSON.parse(await readFile(file, "utf8"))).toMatchObject({ key: LOCAL_KEY, serverId: "SRV1" });
-		expect((await stat(file)).mode & 0o777).toBe(0o600);
+		if (process.platform === "win32") expect((await stat(file)).mode & 0o600).toBe(0o600);
+		else expect((await stat(file)).mode & 0o777).toBe(0o600);
 
 		const restarted: NodeJS.ProcessEnv = {};
 		await applyStoredZoteroLocalKey(restarted);
