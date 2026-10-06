@@ -28,6 +28,12 @@ describe("bio environment probe", () => {
 		expect(
 			parseCondaEnvs("# conda environments:\nbase  *  /opt/conda\nbusco    /opt/conda/envs/busco\n"),
 		).toEqual(["base", "busco"]);
+		// micromamba / mamba 2 print a table: header and separator are not environments
+		expect(
+			parseCondaEnvs(
+				"  Name       Active  Path\n──────────────────────────────\n  base       *       /opt/micromamba\n  scrna              /opt/micromamba/envs/scrna\n",
+			),
+		).toEqual(["base", "scrna"]);
 		const env = parseRemoteProbe(
 			"hpc-01",
 			[
