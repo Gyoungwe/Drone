@@ -142,12 +142,13 @@ export async function probeLocal(cwd: string): Promise<BioEnvironment> {
 	};
 }
 
-/** conda/mamba `env list` 的文本输出 → 环境名（或路径末段） */
+/** conda/mamba `env list` 的文本输出 → 环境名（或路径末段）；micromamba / mamba 2 的表头与分隔线跳过 */
 export function parseCondaEnvs(text: string): string[] {
 	const names: string[] = [];
 	for (const line of text.split(/\r?\n/)) {
 		const trimmed = line.trim();
 		if (!trimmed || trimmed.startsWith("#")) continue;
+		if (/^Name\s+Active\s+Path$/.test(trimmed) || /^[─━\-=\s]+$/.test(trimmed)) continue;
 		const first = trimmed.split(/\s+/)[0] ?? "";
 		const name = first.startsWith("/") || /^[A-Za-z]:\\/.test(first) ? first.split(/[\\/]/).pop() : first;
 		if (name && name !== "*" && !names.includes(name)) names.push(name);

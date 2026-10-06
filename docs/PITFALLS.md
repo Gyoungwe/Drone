@@ -29,6 +29,7 @@
 | 随便说「你好」就弹出「知识库检查未通过（interrupted）」 | 二 · 知识发布门禁把 LLM 失败误报成知识检查失败 |
 | `/obsidian-setup` 等斜杠技能填完路径后输入框像卡死 | 二 · 扩展命令里嵌套 await sendUserMessage 会占住 sending |
 | B3 RNA-seq 在本机无法直接验证 Nextflow/Slurm | 六 · Compute B3 只走 fake runner；真实集群条件单独确认 |
+| 设置页提示「已保存」但实际没保存（参数超出 schema 限制） | 四 · 宿主契约参数校验失败是 resolve 错误信封，不是 reject |
 
 ## 一、事故复盘（含可复用诊断手法）
 
@@ -190,6 +191,10 @@ pi SDK 必须声明进 `packages/desktop/package.json` dependencies（electron-b
 ### store 级 `error` 字段永不清理 + 裸字符串渲染 = 报错跨会话残留（2026-09-12 修复）
 
 症状：新会话空态页 Logo 下方永远悬着一条红色报错（如 `Error invoking remote method 'session:setModel': ...`），切会话/新建会话都不消失。根因：`useSessionsStore` 曾有全局 `error` 字段，7 处 catch 写入却无处重置，唯一渲染点是 EmptyState 里一段裸 `<p>`（统一报错系统建立前的遗留）。教训：**会话动作类失败（建/开/分叉/撤回/切模型）是 UI 动作反馈，走 toast（非阻塞自动消失），不进 store 长期态**；乐观更新失败按 `setSessionPermissionMode` 范式回滚。已删字段改 `pushToast` + 乐观回滚；`errText` 顺带剥 Electron IPC 包装前缀（`Error invoking remote method 'x': Error: `）保证 toast detail 可读。后续任何新 catch 不要再往 store 塞裸错误字符串。
+
+### 宿主契约参数校验失败是 resolve 错误信封，不是 reject（2026-10-06）
+
+症状：设置 › Zotero › 网页 API 填 21 位群组 ID（schema `maxLength: 20`）点保存，界面显示「已保存」，上方仍是「未配置」。根因：`main/ipc/bind-contract.ts` 在 `Check(method.args, args)` 失败时**返回** `{ code: "invalid_arguments", titleKey, detail, ... }`，preload `exposeContract` 原样透传，`await window.pi.x()` 不会进 catch；调用方把任何返回值当成功。修复点：`ZoteroWebApiSection` 用 `isZoteroWebApiStatus` 校验返回形状。教训：调用经 `bindContract` 的方法时，凡是界面会据此显示「成功」的，都要检查返回形状（或前端先按 schema 限制校验输入），不能只靠 try/catch。
 
 ## 五、工程纪律
 
