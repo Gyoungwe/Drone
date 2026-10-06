@@ -1,6 +1,6 @@
 import { Type } from "typebox";
 import type { DiagnosticsSnapshot } from "../diagnostics";
-import type { ImportedAttachment, ResourcePreviewResult } from "../ipc";
+import type { FigureAnnotation, ImportedAttachment, ResourcePreviewResult } from "../ipc";
 import type { AppInfo, SavedTabs, UiState } from "../session";
 import { defineDomain } from "./define";
 
@@ -25,6 +25,18 @@ const DiagnosticsSnapshotSchema = Type.Unsafe<DiagnosticsSnapshot>({ type: "obje
 const SavedTabsSchema = Type.Unsafe<SavedTabs>({ type: "object" });
 const UiStateSchema = Type.Unsafe<UiState>({ type: "object" });
 const ResourcePreviewResultSchema = Type.Unsafe<ResourcePreviewResult>({ type: "object" });
+const FigureAnnotationSchema = Type.Unsafe<FigureAnnotation>(
+	Type.Object(
+		{
+			id: Type.String({ minLength: 1, maxLength: 64 }),
+			x: Type.Number({ minimum: 0, maximum: 1 }),
+			y: Type.Number({ minimum: 0, maximum: 1 }),
+			text: Type.String({ maxLength: 2000 }),
+			createdAt: Type.String({ maxLength: 64 }),
+		},
+		{ additionalProperties: false },
+	),
+);
 const ImportedAttachmentSchema = Type.Object(
 	{ path: Type.String(), name: Type.String(), bytes: Type.Integer({ minimum: 0 }) },
 	{ additionalProperties: false },
@@ -54,6 +66,22 @@ export const AppContract = defineDomain("app", {
 		filePreview: {
 			args: Type.Union([Type.Tuple([Type.String()]), Type.Tuple([Type.String(), Type.String()])]),
 			result: ResourcePreviewResultSchema,
+		},
+		htmlPreviewUrl: {
+			args: Type.Union([Type.Tuple([Type.String()]), Type.Tuple([Type.String(), Type.String()])]),
+			result: Type.String({ minLength: 1 }),
+		},
+		getFigureAnnotations: {
+			args: Type.Union([Type.Tuple([Type.String()]), Type.Tuple([Type.String(), Type.String()])]),
+			result: Type.Array(FigureAnnotationSchema),
+		},
+		saveFigureAnnotations: {
+			args: Type.Tuple([
+				Type.String({ minLength: 1 }),
+				Type.Union([Type.String(), Type.Null()]),
+				Type.Array(FigureAnnotationSchema, { maxItems: 200 }),
+			]),
+			result: Type.Array(FigureAnnotationSchema),
 		},
 		importDroppedFile: {
 			args: Type.Tuple([Type.String({ minLength: 1 }), Type.String({ minLength: 1 })]),

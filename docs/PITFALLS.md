@@ -204,3 +204,7 @@ git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保
 ### ssh2 可选原生模块不能打进主进程 bundle（2026-10-03）
 
 新增 ssh2 后，electron-vite 会顺带把 `cpu-features`/`sshcrypto` 的 `.node` 文件复制进 `out/main/chunks`。这些文件是在运行构建的 Node ABI 下生成的，electron-builder 随后重编译依赖树时不会替换已经打进 bundle 的副本，因此 `.app` 在载入主模块时会报 `NODE_MODULE_VERSION` 不匹配，窗口和 CDP 端口都不会出现。`electron.vite.config.ts` 必须把 `ssh2` 保持为 external，让打包阶段按 Electron ABI 和目标架构准备依赖；用实际 `.app` 的隔离首次启动冒烟验证，不能只看 `npm run build` 成功。
+
+### 交互式 HTML 预览不能用 srcdoc / blob（2026-10-06）
+
+`<iframe srcdoc>` 和 renderer 创建的 `blob:` 文档会继承宿主页面的 CSP（`script-src 'self' blob:`），图表 HTML 里的内联脚本因此全部被拦，用户以为「交互模式坏了」。可运行脚本的预览必须走独立的自定义协议 `drone-html://<token>/…`：响应头自带严格 CSP（允许内联脚本，`connect-src 'none'` 禁网），iframe 用 `sandbox="allow-scripts"` 且**不加** `allow-same-origin`；宿主 `index.html` 的 `frame-src` 只放行 `'self' drone-html:`，脚本即使把自身 iframe 导航到外网地址也会被宿主 CSP 拦下，不能借此外传数据。
