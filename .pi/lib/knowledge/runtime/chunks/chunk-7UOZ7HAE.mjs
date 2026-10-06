@@ -5,28 +5,33 @@ import {
   previewWikiProposal,
   undoWikiUpdate,
   wikiHistory
-} from "./chunk-RL6ZEBP3.mjs";
+} from "./chunk-IMC2GAXA.mjs";
+import {
+  setSpecialistSettings,
+  specialistSettings
+} from "./chunk-XSFQUT2B.mjs";
+import {
+  getKnowledgeService
+} from "./chunk-DAWMRSPO.mjs";
 import {
   normalizeSourceLinks
 } from "./chunk-LE6NM7SB.mjs";
 import {
-  setSpecialistSettings,
-  specialistSettings
-} from "./chunk-K64ABPUJ.mjs";
-import {
   runNavigationMaintenance
 } from "./chunk-Q4ULDE2G.mjs";
 import {
-  getKnowledgeService
-} from "./chunk-7HHP6BXQ.mjs";
-import {
   flowFor,
   invalidateKnowledgeUi
-} from "./chunk-GC2J7ECB.mjs";
+} from "./chunk-6YLIZTKN.mjs";
 import {
   readReviewMode,
   saveReviewMode
 } from "./chunk-6LT3KQRY.mjs";
+import {
+  DAILY_DISCOVERY_LIMITS,
+  collectRecentNotes,
+  ideaNoteMarkdown
+} from "./chunk-EFQIVCL3.mjs";
 import {
   LAYOUT,
   inspectObsidianSetup,
@@ -47,8 +52,8 @@ import {
 } from "./chunk-AHEUR5VB.mjs";
 
 // packages/knowledge/src/ui-service.ts
-import { randomUUID } from "node:crypto";
-import { lstat, readFile, realpath, stat } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 var runtimeState = runtimeSlot("knowledge", "uiService", () => ({
@@ -456,6 +461,71 @@ async function knowledgeGraph({ revision, limit = 200 } = {}) {
   const { binding, service } = await bound(revision);
   return withKnowledgeBinding(binding, () => service.request("graph", { limit }));
 }
+async function dailyDiscoveryContext({ sinceMs = 0 } = {}) {
+  const binding = await readKnowledgeBinding({ fresh: true });
+  if (!binding) return { bound: false, fresh: [], related: [] };
+  const fresh = await collectRecentNotes(binding.vault, Number(sinceMs) || 0);
+  if (!fresh.length) return { bound: true, fresh, related: [] };
+  const service = await getKnowledgeService(binding);
+  const seen = new Set(fresh.map((note) => note.path));
+  const related = [];
+  await withKnowledgeBinding(binding, async () => {
+    for (const note of fresh) {
+      if (related.length >= DAILY_DISCOVERY_LIMITS.maxRelatedNotes) break;
+      let found;
+      try {
+        found = await service.request("search", { query: note.title.slice(0, 120), limit: 4, project: "" });
+      } catch {
+        continue;
+      }
+      for (const hit of found.hits || []) {
+        if (seen.has(hit.path) || hit.kind === "explainer") continue;
+        seen.add(hit.path);
+        related.push({
+          path: hit.path,
+          title: hit.title,
+          text: String(hit.text || "").slice(0, DAILY_DISCOVERY_LIMITS.maxNoteChars),
+          mtime: 0
+        });
+        if (related.length >= DAILY_DISCOVERY_LIMITS.maxRelatedNotes) break;
+      }
+    }
+  });
+  return { bound: true, fresh, related };
+}
+async function saveDiscoveryIdea({ idea } = {}) {
+  if (!idea || typeof idea.title !== "string" || !idea.title.trim()) throw new Error("Idea title is required");
+  const binding = await readKnowledgeBinding({ fresh: true });
+  if (!binding) throw new Error("No application knowledge Vault is bound");
+  const base = idea.title.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || `idea-${createHash("sha256").update(idea.title).digest("hex").slice(0, 12)}`;
+  const directory = join(binding.vault, "Library", "Ideas");
+  await mkdir(directory, { recursive: true });
+  const text = ideaNoteMarkdown(
+    {
+      title: idea.title.trim().slice(0, 160),
+      idea: String(idea.idea || ""),
+      basis: Array.isArray(idea.basis) ? idea.basis.filter((path) => typeof path === "string") : [],
+      test: String(idea.test || ""),
+      whyOverlooked: String(idea.whyOverlooked || "")
+    },
+    /* @__PURE__ */ new Date()
+  );
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const name = attempt ? `${base}-${attempt + 1}.md` : `${base}.md`;
+    try {
+      await writeFile(join(directory, name), text, { encoding: "utf8", flag: "wx" });
+      const path = `Library/Ideas/${name}`;
+      const service = await getKnowledgeService(binding);
+      await service.request("changed", { paths: [path] }).catch(() => {
+      });
+      invalidateKnowledgeUi();
+      return { path };
+    } catch (error) {
+      if (error?.code !== "EEXIST") throw error;
+    }
+  }
+  throw new Error("Could not find a free file name for this idea");
+}
 
 export {
   knowledgeOverview,
@@ -478,5 +548,7 @@ export {
   archiveKnowledgeTopic,
   searchKnowledge,
   knowledgeNoteLinks,
-  knowledgeGraph
+  knowledgeGraph,
+  dailyDiscoveryContext,
+  saveDiscoveryIdea
 };

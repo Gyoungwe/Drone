@@ -101,6 +101,9 @@ export const IpcChannels = {
 	KnowledgeSearch: "knowledge:search",
 	KnowledgeNoteLinks: "knowledge:noteLinks",
 	KnowledgeGraph: "knowledge:graph",
+	KnowledgeDailyDiscovery: "knowledge:dailyDiscovery",
+	KnowledgeDailyDiscoveryUpdate: "knowledge:dailyDiscoveryUpdate",
+	KnowledgeDailyIdeaDecide: "knowledge:dailyIdeaDecide",
 	KnowledgeTopics: "knowledge:topics",
 	KnowledgeTopicArchive: "knowledge:topicArchive",
 	/** 远程计算：主机、健康、作业、终端与引导（由 ComputeContract 投影） */

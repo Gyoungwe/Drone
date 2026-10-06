@@ -15,9 +15,9 @@ import {
   requestWikiReviewUi,
   subscribeKnowledgeUi,
   updateKnowledgeFlow
-} from "./chunks/chunk-GC2J7ECB.mjs";
-import "./chunks/chunk-4VUDROQV.mjs";
+} from "./chunks/chunk-6YLIZTKN.mjs";
 import "./chunks/chunk-H6MOV67K.mjs";
+import "./chunks/chunk-4VUDROQV.mjs";
 export {
   beginKnowledgeFlow,
   clearKnowledgeFlow,

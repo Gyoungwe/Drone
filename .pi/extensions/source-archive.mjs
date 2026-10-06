@@ -3457,6 +3457,18 @@ init_runtime_host();
 init_runtime_host();
 init_runtime_host();
 init_config();
+
+// packages/knowledge/src/daily-discovery.ts
+var DAILY_DISCOVERY_LIMITS = {
+  maxScannedFiles: 4e3,
+  maxNoteBytes: 256 * 1024,
+  maxNewNotes: 8,
+  maxRelatedNotes: 10,
+  maxNoteChars: 2400,
+  maxIdeas: 3
+};
+
+// packages/knowledge/src/ui-service.ts
 init_files();
 
 // packages/knowledge/src/layout.ts

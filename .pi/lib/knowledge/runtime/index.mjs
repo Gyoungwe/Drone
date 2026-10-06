@@ -1,5 +1,9 @@
 // @ts-nocheck
 import {
+  lastWikiModelReview,
+  reviewWikiWithModel
+} from "./chunks/chunk-TPF5L26G.mjs";
+import {
   MANAGED_END,
   MANAGED_START,
   immutableWikiProposalHash,
@@ -10,10 +14,13 @@ import {
   validateWikiSourcePaths
 } from "./chunks/chunk-AKW2CMNR.mjs";
 import {
+  saveSpecialistExplainer
+} from "./chunks/chunk-GMBJR4N3.mjs";
+import {
   createKnowledgeSpecialists,
   knowledgeReadStart,
   shouldOrientKnowledge
-} from "./chunks/chunk-VJ65XVAJ.mjs";
+} from "./chunks/chunk-36KZGYXK.mjs";
 import {
   createTaskFeedback,
   guardResearchToolResult
@@ -39,6 +46,7 @@ import {
   archiveKnowledgeTopic,
   cancelKnowledgeSemanticIndex,
   consumeKnowledgeReviewPreview,
+  dailyDiscoveryContext,
   getKnowledgeTopics,
   indexKnowledgeSemantic,
   knowledgeDecideReview,
@@ -54,14 +62,11 @@ import {
   knowledgeSemanticStatus,
   knowledgeSetupPreview,
   knowledgeSpecialistSettings,
+  saveDiscoveryIdea,
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-EKNNNQW6.mjs";
-import {
-  lastWikiModelReview,
-  reviewWikiWithModel
-} from "./chunks/chunk-WTRTGXYJ.mjs";
+} from "./chunks/chunk-7UOZ7HAE.mjs";
 import {
   autoApplyWikiProposal,
   decideWikiProposal,
@@ -72,19 +77,7 @@ import {
   undoWikiUpdate,
   validateWikiSourcePaths as validateWikiSourcePaths2,
   wikiHistory
-} from "./chunks/chunk-RL6ZEBP3.mjs";
-import {
-  buildKnowledgeSearchExpression,
-  splitKnowledgeChunks,
-  tokenizeKnowledgeText
-} from "./chunks/chunk-4LTSNIAR.mjs";
-import {
-  normalizeSourceLinks,
-  onlineSourceLink
-} from "./chunks/chunk-LE6NM7SB.mjs";
-import {
-  saveSpecialistExplainer
-} from "./chunks/chunk-GMBJR4N3.mjs";
+} from "./chunks/chunk-IMC2GAXA.mjs";
 import {
   SPECIALIST_LIMITS,
   contextSessionId,
@@ -94,7 +87,33 @@ import {
   specialistQueueSnapshot,
   specialistSettings,
   withSpecialistSlot
-} from "./chunks/chunk-K64ABPUJ.mjs";
+} from "./chunks/chunk-XSFQUT2B.mjs";
+import {
+  buildKnowledgeSearchExpression,
+  splitKnowledgeChunks,
+  tokenizeKnowledgeText
+} from "./chunks/chunk-4LTSNIAR.mjs";
+import {
+  KnowledgeService,
+  closeKnowledgeServices,
+  getKnowledgeService,
+  notifyKnowledgeChange
+} from "./chunks/chunk-DAWMRSPO.mjs";
+import {
+  embedTexts,
+  validateSemanticConfig
+} from "./chunks/chunk-OWE2DUY5.mjs";
+import {
+  createSemanticSettingsApi,
+  createSemanticSettingsState,
+  readSemanticSettings,
+  saveSemanticSettings,
+  validateSemanticConfig as validateSemanticConfig2
+} from "./chunks/chunk-O536IQIE.mjs";
+import {
+  normalizeSourceLinks,
+  onlineSourceLink
+} from "./chunks/chunk-LE6NM7SB.mjs";
 import {
   runNavigationMaintenance,
   updateNavigation
@@ -116,35 +135,7 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-6CWP63QP.mjs";
-import {
-  evaluateMetacognitivePublication
-} from "./chunks/chunk-TT3YMRLM.mjs";
-import {
-  advisoryLine,
-  advisoryNotice,
-  knowledgeFailure,
-  publicationFallbackNotice,
-  publicationNotice,
-  publicationNotices
-} from "./chunks/chunk-U3GNWHNQ.mjs";
-import {
-  KnowledgeService,
-  closeKnowledgeServices,
-  getKnowledgeService,
-  notifyKnowledgeChange
-} from "./chunks/chunk-7HHP6BXQ.mjs";
-import {
-  embedTexts,
-  validateSemanticConfig
-} from "./chunks/chunk-OWE2DUY5.mjs";
-import {
-  createSemanticSettingsApi,
-  createSemanticSettingsState,
-  readSemanticSettings,
-  saveSemanticSettings,
-  validateSemanticConfig as validateSemanticConfig2
-} from "./chunks/chunk-O536IQIE.mjs";
+} from "./chunks/chunk-ET7AMO7O.mjs";
 import {
   beginKnowledgeFlow,
   clearKnowledgeFlow,
@@ -160,16 +151,36 @@ import {
   requestWikiReviewUi,
   subscribeKnowledgeUi,
   updateKnowledgeFlow
-} from "./chunks/chunk-GC2J7ECB.mjs";
+} from "./chunks/chunk-6YLIZTKN.mjs";
 import {
   advisoryCodes,
   readReviewMode,
   saveReviewMode
 } from "./chunks/chunk-6LT3KQRY.mjs";
 import {
+  cardField,
+  cardLink,
+  failureCard,
+  flowCard,
+  literatureCard,
+  statusTone
+} from "./chunks/chunk-H6MOV67K.mjs";
+import {
+  evaluateMetacognitivePublication
+} from "./chunks/chunk-TT3YMRLM.mjs";
+import {
+  advisoryLine,
+  advisoryNotice,
+  knowledgeFailure,
+  publicationFallbackNotice,
+  publicationNotice,
+  publicationNotices
+} from "./chunks/chunk-U3GNWHNQ.mjs";
+import {
   compareClaimSets,
   compareClaims
 } from "./chunks/chunk-BMV53RD4.mjs";
+import "./chunks/chunk-EFQIVCL3.mjs";
 import {
   BackgroundReviewer,
   reviewDeliverable,
@@ -216,14 +227,6 @@ import {
   snippet,
   validateNote
 } from "./chunks/chunk-AHEUR5VB.mjs";
-import {
-  cardField,
-  cardLink,
-  failureCard,
-  flowCard,
-  literatureCard,
-  statusTone
-} from "./chunks/chunk-H6MOV67K.mjs";
 export {
   BackgroundReviewer,
   EXPERIENCE_LIMITS,
@@ -273,6 +276,7 @@ export {
   createTopicMemory,
   createVaultFileOnly,
   currentProject,
+  dailyDiscoveryContext,
   decideSpecialistRun,
   decideWikiProposal,
   embedTexts,
@@ -348,6 +352,7 @@ export {
   reviewWikiWithModel,
   runNavigationMaintenance,
   safeNotePath,
+  saveDiscoveryIdea,
   saveKnowledgeBinding,
   saveKnowledgeSemanticSettings,
   saveReviewMode,

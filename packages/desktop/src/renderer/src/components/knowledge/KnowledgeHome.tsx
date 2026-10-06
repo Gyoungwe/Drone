@@ -3,6 +3,7 @@ import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
+import { DailyIdeas } from "./DailyIdeas";
 import { reportKnowledgeError, useKnowledgeOverview } from "./hooks";
 import { KnowledgeGraph } from "./KnowledgeGraph";
 import { KnowledgeSearch } from "./KnowledgeSearch";
@@ -72,6 +73,7 @@ export function KnowledgeHome({
 				</p>
 			)}
 			{binding && <KnowledgeSearch cwd={cwd} sessionId={sessionId} bindingRevision={binding.revision} />}
+			{binding && <DailyIdeas cwd={cwd} sessionId={sessionId} bindingRevision={binding.revision} />}
 			{binding && (
 				<details className="rounded-xl border border-border p-3">
 					<summary className="cursor-pointer text-xs font-semibold">{t("graphTitle")}</summary>

@@ -63,6 +63,8 @@ export interface KnowledgeUiServicePort {
 	graph(
 		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
+	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
+	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -215,6 +217,12 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]> {
 		return this.call("knowledgeGraph", input);
+	}
+	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext> {
+		return this.call("dailyDiscoveryContext", { sinceMs });
+	}
+	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }> {
+		return this.call("saveDiscoveryIdea", { idea });
 	}
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],

@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Human-facing host API; no model calls, no new approval tool.
-import { randomUUID } from "node:crypto";
-import { lstat, readFile, realpath, stat } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadWorkspaceConfig } from "./runtime-host";
@@ -15,6 +15,7 @@ import {
 	readKnowledgeBinding,
 	withKnowledgeBinding,
 } from "./config";
+import { collectRecentNotes, DAILY_DISCOVERY_LIMITS, ideaNoteMarkdown } from "./daily-discovery";
 import { safeNotePath } from "./files";
 import { runNavigationMaintenance } from "./maintenance";
 import { readReviewMode, saveReviewMode } from "./review-policy";
@@ -515,4 +516,85 @@ export async function knowledgeNoteLinks({ path, revision } = {}) {
 export async function knowledgeGraph({ revision, limit = 200 } = {}) {
 	const { binding, service } = await bound(revision);
 	return withKnowledgeBinding(binding, () => service.request("graph", { limit }));
+}
+
+/**
+ * 每日发现的输入：上次运行后更新的笔记（NEW）+ 用它们的标题在本地检索到的相关旧笔记（OLD）。
+ * 只读；没有绑定 Vault 或没有新笔记时返回空。
+ * @param {Record<string, any>} options
+ */
+export async function dailyDiscoveryContext({ sinceMs = 0 } = {}) {
+	const binding = await readKnowledgeBinding({ fresh: true });
+	if (!binding) return { bound: false, fresh: [], related: [] };
+	const fresh = await collectRecentNotes(binding.vault, Number(sinceMs) || 0);
+	if (!fresh.length) return { bound: true, fresh, related: [] };
+	const service = await getKnowledgeService(binding);
+	const seen = new Set(fresh.map((note) => note.path));
+	const related = [];
+	await withKnowledgeBinding(binding, async () => {
+		for (const note of fresh) {
+			if (related.length >= DAILY_DISCOVERY_LIMITS.maxRelatedNotes) break;
+			let found;
+			try {
+				found = await service.request("search", { query: note.title.slice(0, 120), limit: 4, project: "" });
+			} catch {
+				continue;
+			}
+			for (const hit of found.hits || []) {
+				if (seen.has(hit.path) || hit.kind === "explainer") continue;
+				seen.add(hit.path);
+				related.push({
+					path: hit.path,
+					title: hit.title,
+					text: String(hit.text || "").slice(0, DAILY_DISCOVERY_LIMITS.maxNoteChars),
+					mtime: 0,
+				});
+				if (related.length >= DAILY_DISCOVERY_LIMITS.maxRelatedNotes) break;
+			}
+		}
+	});
+	return { bound: true, fresh, related };
+}
+
+/**
+ * 用户认可的想法存为 Library/Ideas 下的新笔记（只新建、不覆盖），并通知索引。
+ * @param {Record<string, any>} options
+ */
+export async function saveDiscoveryIdea({ idea } = {}) {
+	if (!idea || typeof idea.title !== "string" || !idea.title.trim()) throw new Error("Idea title is required");
+	const binding = await readKnowledgeBinding({ fresh: true });
+	if (!binding) throw new Error("No application knowledge Vault is bound");
+	const base =
+		idea.title
+			.normalize("NFKC")
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/^-|-$/g, "")
+			.slice(0, 72) || `idea-${createHash("sha256").update(idea.title).digest("hex").slice(0, 12)}`;
+	const directory = join(binding.vault, "Library", "Ideas");
+	await mkdir(directory, { recursive: true });
+	const text = ideaNoteMarkdown(
+		{
+			title: idea.title.trim().slice(0, 160),
+			idea: String(idea.idea || ""),
+			basis: Array.isArray(idea.basis) ? idea.basis.filter((path) => typeof path === "string") : [],
+			test: String(idea.test || ""),
+			whyOverlooked: String(idea.whyOverlooked || ""),
+		},
+		new Date(),
+	);
+	for (let attempt = 0; attempt < 20; attempt++) {
+		const name = attempt ? `${base}-${attempt + 1}.md` : `${base}.md`;
+		try {
+			await writeFile(join(directory, name), text, { encoding: "utf8", flag: "wx" });
+			const path = `Library/Ideas/${name}`;
+			const service = await getKnowledgeService(binding);
+			await service.request("changed", { paths: [path] }).catch(() => {});
+			invalidateKnowledgeUi();
+			return { path };
+		} catch (error) {
+			if (error?.code !== "EEXIST") throw error;
+		}
+	}
+	throw new Error("Could not find a free file name for this idea");
 }
