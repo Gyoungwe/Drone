@@ -404,6 +404,17 @@
 .resource-media {
 	justify-content: flex-start;
 }
+.resource-tree,
+.resource-alignment {
+	padding: 12px;
+}
+.resource-tree .resource-data-summary,
+.resource-alignment .resource-data-summary,
+.resource-tree .resource-data-tools,
+.resource-alignment .resource-data-tools {
+	padding-left: 0;
+	padding-right: 0;
+}
 .resource-tree-scroll,
 .resource-alignment-scroll {
 	overflow: auto;
@@ -554,6 +565,14 @@
 		600 11px / 20px system-ui,
 		sans-serif;
 	text-align: center;
+}
+.figure-notes button {
+	padding: 4px 8px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	color: var(--color-ink-dim);
+	font-size: 11px;
+	white-space: nowrap;
 }
 .figure-notes textarea {
 	flex: 1;

@@ -22,6 +22,28 @@ interface StoredState {
 	ideas: DailyDiscoveryIdea[];
 }
 
+/**
+ * 模型回复 → 文本。出错或被中止时抛出（带模型错误信息），没有文本时返回 null；
+ * 两种情况本次都不计为已运行，下个整点重试，避免一次网络/凭证故障把当天的发现吞掉。
+ */
+export function completionText(response: {
+	content?: unknown;
+	stopReason?: unknown;
+	errorMessage?: unknown;
+}): string | null {
+	if (response.stopReason === "error" || response.stopReason === "aborted") {
+		throw new Error(
+			String(response.errorMessage || `model call ${String(response.stopReason)}`).slice(0, 300),
+		);
+	}
+	const text = Array.isArray(response.content)
+		? response.content
+				.map((item) => (item && typeof item === "object" && "text" in item ? String(item.text ?? "") : ""))
+				.join("\n")
+		: "";
+	return text.trim() ? text : null;
+}
+
 const defaultState = (): StoredState => ({ version: 1, enabled: true, lastRunAt: 0, ideas: [] });
 
 export interface DailyDiscoveryContext {
@@ -51,6 +73,8 @@ export class DailyDiscoveryService {
 	private readonly store: JsonStore<StoredState>;
 	private timer: ReturnType<typeof setInterval> | null = null;
 	private running: Promise<DailyDiscoveryState> | null = null;
+	/** 最近一次运行失败的原因（只在内存里，给「现在看看」按钮反馈；成功或跳过后清空） */
+	private lastError: string | null = null;
 	private readonly now: () => number;
 
 	constructor(private readonly options: DailyDiscoveryOptions) {
@@ -81,6 +105,7 @@ export class DailyDiscoveryService {
 		return {
 			enabled: state.enabled,
 			lastRunAt: state.lastRunAt || null,
+			lastError: this.lastError,
 			ideas: state.ideas.filter((idea) => idea.status !== "dismissed"),
 		};
 	}
@@ -113,14 +138,26 @@ export class DailyDiscoveryService {
 		const context = await this.options.context(since);
 		if (!context.bound) return this.getState();
 		if (!context.fresh.length) {
+			this.lastError = null;
 			await this.markRun(startedAt);
 			return this.getState();
 		}
-		const reply = await this.options.complete(
-			DAILY_DISCOVERY_SYSTEM,
-			buildDailyDiscoveryMessage(context.fresh, context.related),
-		);
-		if (reply === null) return this.getState();
+		let reply: string | null;
+		try {
+			reply = await this.options.complete(
+				DAILY_DISCOVERY_SYSTEM,
+				buildDailyDiscoveryMessage(context.fresh, context.related),
+			);
+		} catch (error) {
+			this.lastError = error instanceof Error ? error.message : String(error);
+			log.warn("daily discovery model call failed", { error: this.lastError });
+			return this.getState();
+		}
+		if (reply === null) {
+			this.lastError = "No usable model is configured";
+			return this.getState();
+		}
+		this.lastError = null;
 		const ideas = parseDailyIdeas(
 			reply,
 			[...context.fresh, ...context.related].map((note) => note.path),

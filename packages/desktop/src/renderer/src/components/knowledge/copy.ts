@@ -102,6 +102,7 @@ export const knowledgeZh = {
 	dailyTitle: "新想法",
 	dailyLastRun: "上次运行：{time}",
 	dailyNeverRun: "尚未运行",
+	dailyFailed: "上次运行没有完成（{error}），下个整点会自动重试；也可检查模型设置后点「现在运行」。",
 	dailyEnabled: "每日发现",
 	dailyRunNow: "现在运行",
 	dailyHint:
@@ -413,6 +414,8 @@ const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
 	dailyTitle: "New ideas",
 	dailyLastRun: "Last run: {time}",
 	dailyNeverRun: "Not run yet",
+	dailyFailed:
+		"The last run did not finish ({error}); it retries on the hour. You can also check the model settings and click Run now.",
 	dailyEnabled: "Daily discovery",
 	dailyRunNow: "Run now",
 	dailyHint:

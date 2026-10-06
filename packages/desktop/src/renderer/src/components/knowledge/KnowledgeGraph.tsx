@@ -7,13 +7,22 @@ import { GRAPH_HEIGHT as HEIGHT, layoutGraph, type Point, GRAPH_WIDTH as WIDTH }
 import { openKnowledgeNote } from "./KnowledgeLinks";
 
 /** 知识网络：笔记与 [[双链]] 组成的图；点节点打开笔记，悬停高亮其邻居 */
-export function KnowledgeGraph({ cwd, revision }: { cwd: string | null; revision: number }) {
+export function KnowledgeGraph({
+	cwd,
+	revision,
+	indexKey = "",
+}: {
+	cwd: string | null;
+	revision: number;
+	/** 索引变化标记（笔记数 + 最近对账时间）：变化时重新取图 */
+	indexKey?: string;
+}) {
 	const t = useKnowledgeText();
 	const nonce = useKnowledgeStore((s) => s.revision);
 	const [data, setData] = useState<GraphData | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [hover, setHover] = useState<string | null>(null);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: nonce 是知识库变化后的刷新信号
+	// biome-ignore lint/correctness/useExhaustiveDependencies: nonce 与 indexKey 是知识库 / 索引变化后的刷新信号
 	useEffect(() => {
 		let live = true;
 		void getPi()
@@ -29,7 +38,7 @@ export function KnowledgeGraph({ cwd, revision }: { cwd: string | null; revision
 		return () => {
 			live = false;
 		};
-	}, [revision, nonce]);
+	}, [revision, nonce, indexKey]);
 	const points = useMemo(() => (data ? layoutGraph(data) : new Map<string, Point>()), [data]);
 	const neighbours = useMemo(() => {
 		const map = new Map<string, Set<string>>();

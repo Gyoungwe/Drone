@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DailyDiscoveryService } from "../src/services/daily-discovery";
+import { completionText, DailyDiscoveryService } from "../src/services/daily-discovery";
 
 const DAY = 24 * 60 * 60 * 1000;
 let dir = "";
@@ -72,5 +72,30 @@ describe("DailyDiscoveryService", () => {
 		options.complete.mockResolvedValueOnce(null as never);
 		await service.runIfDue();
 		expect((await service.getState()).lastRunAt).toBeNull();
+		expect((await service.getState()).lastError).toMatch(/No usable model/);
+	});
+
+	it("keeps the day open and reports the error when the model call fails", async () => {
+		const { service, options } = await setup();
+		options.complete.mockRejectedValueOnce(
+			new Error("The security token included in the request is invalid."),
+		);
+		const failed = await service.run();
+		expect(failed.lastRunAt).toBeNull();
+		expect(failed.lastError).toMatch(/security token/);
+		const ok = await service.run();
+		expect(ok.lastRunAt).not.toBeNull();
+		expect(ok.lastError).toBeNull();
+	});
+});
+
+describe("completionText", () => {
+	it("throws on model errors, returns null for empty replies", () => {
+		expect(() => completionText({ stopReason: "error", errorMessage: "401", content: [] })).toThrow("401");
+		expect(() => completionText({ stopReason: "aborted", content: [] })).toThrow(/aborted/);
+		expect(completionText({ stopReason: "stop", content: [{ type: "text", text: "  " }] })).toBeNull();
+		expect(
+			completionText({ stopReason: "stop", content: [{ type: "thinking" }, { type: "text", text: "[]" }] }),
+		).toBe("\n[]");
 	});
 });

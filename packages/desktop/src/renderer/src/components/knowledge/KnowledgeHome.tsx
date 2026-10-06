@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSettingsStore } from "../../stores/settings";
@@ -29,6 +30,7 @@ export function KnowledgeHome({
 	const binding = data?.binding;
 	const recent = (data?.wikiHistory ?? []).slice(0, RECENT_LIMIT);
 	const manage = () => useSettingsStore.getState().openWith("knowledge");
+	const [graphOpen, setGraphOpen] = useState(false);
 
 	return (
 		<div className="space-y-4 text-ink" data-testid="knowledge-home">
@@ -75,11 +77,21 @@ export function KnowledgeHome({
 			{binding && <KnowledgeSearch cwd={cwd} sessionId={sessionId} bindingRevision={binding.revision} />}
 			{binding && <DailyIdeas cwd={cwd} sessionId={sessionId} bindingRevision={binding.revision} />}
 			{binding && (
-				<details className="rounded-xl border border-border p-3">
+				<details
+					className="rounded-xl border border-border p-3"
+					onToggle={(event) => setGraphOpen(event.currentTarget.open)}
+				>
 					<summary className="cursor-pointer text-xs font-semibold">{t("graphTitle")}</summary>
-					<div className="mt-2">
-						<KnowledgeGraph cwd={cwd} revision={binding.revision} />
-					</div>
+					{/* 只在展开时挂载：每次展开都按当前索引重新取图，索引完成后也会刷新 */}
+					{graphOpen && (
+						<div className="mt-2">
+							<KnowledgeGraph
+								cwd={cwd}
+								revision={binding.revision}
+								indexKey={`${data?.index?.noteCount ?? 0}:${data?.index?.lastReconciledAt ?? ""}`}
+							/>
+						</div>
+					)}
 				</details>
 			)}
 			{binding && (

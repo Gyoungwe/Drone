@@ -350,6 +350,8 @@ export interface DailyDiscoveryIdea {
 export interface DailyDiscoveryState {
 	enabled: boolean;
 	lastRunAt: number | null;
+	/** 最近一次运行失败的原因（模型不可用 / 调用出错）；成功后为 null */
+	lastError?: string | null;
 	/** 未忽略的想法（最新在前） */
 	ideas: DailyDiscoveryIdea[];
 }
