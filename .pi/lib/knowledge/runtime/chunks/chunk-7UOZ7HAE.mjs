@@ -452,6 +452,15 @@ async function searchKnowledge({ cwd = null, bindingRevision, query, limit = 12 
     };
   });
 }
+async function knowledgeNoteLinks({ path, revision } = {}) {
+  if (typeof path !== "string" || !path) throw new Error("Note path is required");
+  const { binding, service } = await bound(revision);
+  return withKnowledgeBinding(binding, () => service.request("noteLinks", { path }));
+}
+async function knowledgeGraph({ revision, limit = 200 } = {}) {
+  const { binding, service } = await bound(revision);
+  return withKnowledgeBinding(binding, () => service.request("graph", { limit }));
+}
 async function dailyDiscoveryContext({ sinceMs = 0 } = {}) {
   const binding = await readKnowledgeBinding({ fresh: true });
   if (!binding) return { bound: false, fresh: [], related: [] };
@@ -538,6 +547,8 @@ export {
   getKnowledgeTopics,
   archiveKnowledgeTopic,
   searchKnowledge,
+  knowledgeNoteLinks,
+  knowledgeGraph,
   dailyDiscoveryContext,
   saveDiscoveryIdea
 };

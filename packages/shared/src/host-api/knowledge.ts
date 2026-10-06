@@ -2,7 +2,9 @@ import { Type } from "typebox";
 import type {
 	DailyDiscoveryState,
 	KnowledgeApi,
+	KnowledgeGraph,
 	KnowledgeNote,
+	KnowledgeNoteLinks,
 	KnowledgeOverview,
 	KnowledgePage,
 	KnowledgePageRequest,
@@ -164,6 +166,14 @@ export const KnowledgeContract = defineDomain("knowledge", {
 			args: OneObject<KnowledgeSearchRequest>(),
 			result: ResultObject<KnowledgeSearchResult>(),
 		},
+		getNoteLinks: {
+			args: OneObject<{ path: string; revision: number }>(),
+			result: ResultObject<KnowledgeNoteLinks>(),
+		},
+		getGraph: {
+			args: OneObject<{ revision: number; limit?: number }>(),
+			result: ResultObject<KnowledgeGraph>(),
+		},
 		getDailyDiscovery: {
 			args: Type.Tuple([]),
 			result: ResultObject<DailyDiscoveryState>(),
@@ -215,6 +225,8 @@ export type KnowledgeSchemaTypes = {
 	indexSemantic: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>;
 	cancelSemanticIndex: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
 	search: Parameters<KnowledgeApi["searchKnowledge"]>;
+	getNoteLinks: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>;
+	getGraph: Parameters<KnowledgeApi["getKnowledgeGraph"]>;
 	getDailyDiscovery: [];
 	updateDailyDiscovery: Parameters<KnowledgeApi["updateDailyDiscovery"]>;
 	decideDailyIdea: Parameters<KnowledgeApi["decideDailyIdea"]>;

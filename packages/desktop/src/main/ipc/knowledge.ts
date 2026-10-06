@@ -100,6 +100,8 @@ export function registerKnowledgeIpc(
 		indexSemantic: (input) => knowledge.indexSemantic(input),
 		cancelSemanticIndex: (input) => knowledge.cancelSemanticIndex(input),
 		search: (input) => knowledge.search(input),
+		getNoteLinks: (input) => knowledge.noteLinks(input),
+		getGraph: (input) => knowledge.graph(input),
 		getDailyDiscovery: () => dailyDiscovery.getState(),
 		updateDailyDiscovery: async (input) => {
 			if (typeof input.enabled === "boolean") await dailyDiscovery.setEnabled(input.enabled);
@@ -133,6 +135,8 @@ export function registerKnowledgeIpc(
 				indexSemantic: IpcChannels.KnowledgeSemanticIndex,
 				cancelSemanticIndex: IpcChannels.KnowledgeSemanticIndexCancel,
 				search: IpcChannels.KnowledgeSearch,
+				getNoteLinks: IpcChannels.KnowledgeNoteLinks,
+				getGraph: IpcChannels.KnowledgeGraph,
 				getDailyDiscovery: IpcChannels.KnowledgeDailyDiscovery,
 				updateDailyDiscovery: IpcChannels.KnowledgeDailyDiscoveryUpdate,
 				decideDailyIdea: IpcChannels.KnowledgeDailyIdeaDecide,

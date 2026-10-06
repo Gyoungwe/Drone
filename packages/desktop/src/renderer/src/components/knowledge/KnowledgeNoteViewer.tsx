@@ -5,6 +5,7 @@ import { getPi } from "../../api";
 import { Markdown } from "../chat/Markdown";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
+import { KnowledgeLinks } from "./KnowledgeLinks";
 export function KnowledgeNoteViewer({
 	cwd,
 	revision,
@@ -103,6 +104,7 @@ export function KnowledgeNoteViewer({
 					</pre>
 				</details>
 			)}
+			{note && !note.missing && <KnowledgeLinks cwd={cwd} path={path} revision={revision} />}
 			<div className="mt-2 flex flex-wrap gap-1">
 				{line > 1 && (
 					<Button size="sm" onClick={() => setLine(1)}>

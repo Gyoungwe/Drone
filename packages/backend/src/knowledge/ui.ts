@@ -57,6 +57,12 @@ export interface KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>[0],
 	): ReturnType<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
 	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]>;
+	noteLinks(
+		input: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeNoteLinks"]>;
+	graph(
+		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
 	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }>;
 	topics(
@@ -201,6 +207,16 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]> {
 		return this.call("searchKnowledge", input);
+	}
+	noteLinks(
+		input: Parameters<KnowledgeApi["getKnowledgeNoteLinks"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeNoteLinks"]> {
+		return this.call("knowledgeNoteLinks", input);
+	}
+	graph(
+		input: Parameters<KnowledgeApi["getKnowledgeGraph"]>[0],
+	): ReturnType<KnowledgeApi["getKnowledgeGraph"]> {
+		return this.call("knowledgeGraph", input);
 	}
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext> {
 		return this.call("dailyDiscoveryContext", { sinceMs });

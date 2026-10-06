@@ -3103,6 +3103,18 @@ init_runtime_host();
 init_runtime_host();
 init_runtime_host();
 init_config();
+
+// packages/knowledge/src/daily-discovery.ts
+var DAILY_DISCOVERY_LIMITS = {
+  maxScannedFiles: 4e3,
+  maxNoteBytes: 256 * 1024,
+  maxNewNotes: 8,
+  maxRelatedNotes: 10,
+  maxNoteChars: 2400,
+  maxIdeas: 3
+};
+
+// packages/knowledge/src/ui-service.ts
 init_files();
 
 // packages/knowledge/src/maintenance.ts
@@ -11627,6 +11639,45 @@ ${text3}`, [
 // packages/extensions/src/obsidian-workbench.ts
 init_config();
 init_flow_cards();
+
+// packages/knowledge/src/related-notes.ts
+init_config();
+async function findRelatedNotes(title, limit = 5) {
+  const query = String(title || "").trim().slice(0, 120);
+  if (!query) return [];
+  try {
+    const binding = await readKnowledgeBinding();
+    if (!binding) return [];
+    const service = await getKnowledgeService();
+    const found = await withKnowledgeBinding(
+      binding,
+      () => service.request("search", { query, limit: limit + 2, project: "" })
+    );
+    const wanted = query.toLowerCase();
+    const paths = [];
+    for (const hit of found?.hits ?? []) {
+      if (hit.kind === "explainer" || hit.kind === "navigation") continue;
+      if (String(hit.title || "").trim().toLowerCase() === wanted) continue;
+      paths.push(hit.path);
+      if (paths.length >= limit) break;
+    }
+    return paths;
+  } catch {
+    return [];
+  }
+}
+function appendRelatedLinks(markdown, paths) {
+  const text3 = String(markdown || "");
+  const fresh = paths.filter((path) => !text3.includes(`[[${path.replace(/\.md$/, "")}`));
+  if (!fresh.length) return text3;
+  return `${text3.trimEnd()}
+
+## \u76F8\u5173\u7B14\u8BB0
+${fresh.map((path) => `- [[${path.replace(/\.md$/, "")}]]`).join("\n")}
+`;
+}
+
+// packages/extensions/src/obsidian-workbench.ts
 var OBSIDIAN_FAMILY = {
   match: "research-obsidian",
   label: "Obsidian",
@@ -11834,7 +11885,7 @@ ${result2.scope === "application" ? "Application binding is active for subsequen
       flow: "note",
       flowCards: depositCard
     },
-    description: "Save a typed note straight into the Vault (no review): paper \u2192 Library/Papers, method \u2192 Library/Methods, software \u2192 Library/Software, idea \u2192 Library/Ideas (proposed hypotheses with their basis and how to test them), plus project-scoped question/evidence/claim/decision. Use it after a web lookup so the next similar question is answered from local knowledge. Raw Obsidian MCP writes are intentionally not exposed.",
+    description: "Save a typed note straight into the Vault (no review); the host appends [[links]] to the most related existing notes so knowledge stays connected: paper \u2192 Library/Papers, method \u2192 Library/Methods, software \u2192 Library/Software, idea \u2192 Library/Ideas (proposed hypotheses with their basis and how to test them), plus project-scoped question/evidence/claim/decision. Use it after a web lookup so the next similar question is answered from local knowledge. Raw Obsidian MCP writes are intentionally not exposed.",
     parameters: {
       type: "object",
       properties: {
@@ -11876,6 +11927,7 @@ ${result2.scope === "application" ? "Application binding is active for subsequen
       required: ["project", "type", "title", "markdown"]
     },
     async execute(_id, params, _signal, _update, ctx) {
+      const related = await findRelatedNotes(params.title);
       const result2 = await knowledge.withTurnBinding(
         ctx,
         () => depositKnowledge({
@@ -11883,7 +11935,7 @@ ${result2.scope === "application" ? "Application binding is active for subsequen
           project: params.project,
           type: params.type,
           title: params.title,
-          markdown: params.markdown,
+          markdown: appendRelatedLinks(params.markdown, related),
           sourceLinks: params.source_links || [],
           status: params.status || "verified",
           targetScope: params.scope || "project",

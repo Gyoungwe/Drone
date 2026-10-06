@@ -18,6 +18,7 @@ import { USER_QUESTION_FOCUS } from "@drone/extensions/internal/reply-focus";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import { knowledgeDirectory, readKnowledgeBinding } from "@drone/knowledge/config";
 import { cardLink, flowCard } from "@drone/knowledge/flow-cards";
+import { appendRelatedLinks, findRelatedNotes } from "@drone/knowledge/related-notes";
 import { registerAcceptanceVerifier } from "@drone/tasks/acceptance";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
 
@@ -251,7 +252,7 @@ export default function obsidianWorkbench(pi) {
 			flowCards: depositCard,
 		},
 		description:
-			"Save a typed note straight into the Vault (no review): paper → Library/Papers, method → Library/Methods, software → Library/Software, idea → Library/Ideas (proposed hypotheses with their basis and how to test them), plus project-scoped question/evidence/claim/decision. Use it after a web lookup so the next similar question is answered from local knowledge. Raw Obsidian MCP writes are intentionally not exposed.",
+			"Save a typed note straight into the Vault (no review); the host appends [[links]] to the most related existing notes so knowledge stays connected: paper → Library/Papers, method → Library/Methods, software → Library/Software, idea → Library/Ideas (proposed hypotheses with their basis and how to test them), plus project-scoped question/evidence/claim/decision. Use it after a web lookup so the next similar question is answered from local knowledge. Raw Obsidian MCP writes are intentionally not exposed.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -293,13 +294,15 @@ export default function obsidianWorkbench(pi) {
 			required: ["project", "type", "title", "markdown"],
 		},
 		async execute(_id, params, _signal, _update, ctx) {
+			// Link the new note to the most related existing notes so knowledge forms a network.
+			const related = await findRelatedNotes(params.title);
 			const result = await knowledge.withTurnBinding(ctx, () =>
 				depositKnowledge({
 					cwd: ctx.cwd,
 					project: params.project,
 					type: params.type,
 					title: params.title,
-					markdown: params.markdown,
+					markdown: appendRelatedLinks(params.markdown, related),
 					sourceLinks: params.source_links || [],
 					status: params.status || "verified",
 					targetScope: params.scope || "project",
