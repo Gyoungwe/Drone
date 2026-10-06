@@ -102,6 +102,10 @@ export const knowledgeZh = {
 	dailyTitle: "新想法",
 	dailyLastRun: "上次运行：{time}",
 	dailyNeverRun: "尚未运行",
+	dailyNoNewNotes:
+		"上次运行时，自 {since} 以来 Library/、Wiki/、Projects/ 下没有新增或修改的笔记，所以没有新想法。其他目录里的笔记不参与每日发现。",
+	dailyRanNoIdeas: "上次读了 {notes} 篇最近更新的笔记，没有找到足够有依据的新想法。",
+	dailyNotBound: "还没有绑定 Vault，绑定后才会运行。",
 	dailyFailed: "上次运行没有完成（{error}），下个整点会自动重试；也可检查模型设置后点「现在运行」。",
 	dailyEnabled: "每日发现",
 	dailyRunNow: "现在运行",
@@ -414,6 +418,11 @@ const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
 	dailyTitle: "New ideas",
 	dailyLastRun: "Last run: {time}",
 	dailyNeverRun: "Not run yet",
+	dailyNoNewNotes:
+		"On the last run no note under Library/, Wiki/ or Projects/ had been added or changed since {since}, so there were no new ideas. Notes in other folders are not part of daily discovery.",
+	dailyRanNoIdeas:
+		"The last run read {notes} recently updated notes and found no idea grounded enough to suggest.",
+	dailyNotBound: "No Vault is bound yet; daily discovery runs once one is.",
 	dailyFailed:
 		"The last run did not finish ({error}); it retries on the hour. You can also check the model settings and click Run now.",
 	dailyEnabled: "Daily discovery",
