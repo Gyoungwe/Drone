@@ -119,15 +119,15 @@ export default function App() {
 			<div className="relative z-10 flex h-full flex-col">
 				<SessionTabBar />
 				{/* 固定三栏：左导航（56px）· 主区 · 右侧上下文面板（chat 视图，push 式收展）。
-				    研究工作台 / 知识库 / 空间 是主区全屏视图，不再叠弹窗。 */}
+				    知识库 / 空间 是主区全屏视图，不再叠弹窗。 */}
 				<div className="relative flex min-h-0 flex-1">
 					<WorkbenchNav />
 					{view === "projects" ? (
 						<div className="min-h-0 min-w-0 flex-1">
 							<ProjectPage />
 						</div>
-					) : view === "research" || view === "knowledge" ? (
-						<KnowledgeView mode={view} />
+					) : view === "knowledge" ? (
+						<KnowledgeView />
 					) : pluginView ? (
 						<PluginEntryHost entry={pluginView} />
 					) : (

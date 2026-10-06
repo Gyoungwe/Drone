@@ -4,6 +4,7 @@ import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
+import { useSettingsStore } from "../../stores/settings";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { ChevronDownIcon, ObsidianIcon } from "../icons";
@@ -111,7 +112,9 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 	];
 	const activeStage = stages.findIndex(([, done]) => !done);
 	function manage(tab: "overview" | "reviews" | "maintenance" = "overview") {
-		useKnowledgeStore.getState().open({ cwd, sessionId, tab });
+		// 索引与维护在 设置 › 高级 › 知识库维护；其余打开知识库视图
+		if (tab === "maintenance") useSettingsStore.getState().openWith("knowledge");
+		else useKnowledgeStore.getState().open({ cwd, sessionId, tab });
 	}
 	async function resume() {
 		if (resuming || !sessionId) return;

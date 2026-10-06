@@ -1,19 +1,25 @@
 import { create } from "zustand";
 
-/** 主区视图：聊天 / 空间（项目）/ 研究工作台 / 知识库（后两者是全屏视图，不再是弹窗）/ 插件贡献的全屏视图（rail.view，挂钩 4） */
-export type AppView = "chat" | "projects" | "research" | "knowledge" | `plugin:${string}`;
+/** 主区视图：聊天 / 空间（项目）/ 知识库（全屏视图，不再是弹窗）/ 插件贡献的全屏视图（rail.view，挂钩 4） */
+export type AppView = "chat" | "projects" | "knowledge" | `plugin:${string}`;
 
-/** 右侧上下文面板页签：任务 / 过程 / 变更 / 产物 / 子智能体 / 计算 + 插件贡献的页签（panel.tab，挂钩 4） */
-export type CorePanelTab = "tasks" | "process" | "changes" | "artifacts" | "subagents" | "compute";
+/**
+ * 右侧上下文面板页签：任务 / 过程 / 产物 常驻；子智能体、计算按需出现（ContextPanel 决定可见性）
+ * + 插件贡献的页签（panel.tab，挂钩 4）。文件变更并入「过程」页签（processView = "changes"）。
+ */
+export type CorePanelTab = "tasks" | "process" | "artifacts" | "subagents" | "compute";
 export type PanelTab = CorePanelTab | `plugin:${string}`;
-export const PANEL_TABS: readonly CorePanelTab[] = [
-	"tasks",
-	"process",
-	"changes",
-	"artifacts",
-	"subagents",
-	"compute",
-];
+export const PANEL_TABS: readonly CorePanelTab[] = ["tasks", "process", "artifacts", "subagents", "compute"];
+
+/** 常驻页签之外，子智能体 / 计算 只在需要时出现（调用方决定 show 条件） */
+export function visiblePanelTabs(show: { subagents: boolean; compute: boolean }): readonly CorePanelTab[] {
+	return PANEL_TABS.filter(
+		(key) => (key !== "subagents" || show.subagents) && (key !== "compute" || show.compute),
+	);
+}
+
+/** 「过程」页签内的两个视图：运行过程泳道 / 文件变更 */
+export type ProcessView = "lanes" | "changes";
 
 /** chip → 面板跳转目标（nonce 保证重复跳同文件也重触发） */
 export interface ResourcePreviewTarget {
@@ -69,6 +75,8 @@ interface UiStore {
 	panelOpen: boolean;
 	idleOpen: boolean;
 	panelTab: PanelTab;
+	processView: ProcessView;
+	setProcessView: (view: ProcessView) => void;
 	/** 用户手动开关（区分空闲/运行由调用方传入 agentActive） */
 	togglePanel: (agentActive?: boolean) => void;
 	setPanelOpen: (open: boolean, agentActive?: boolean) => void;
@@ -79,14 +87,14 @@ interface UiStore {
 	onRunStart: () => void;
 	onRunEnd: () => void;
 
-	/** 当前资源预览；null 表示「变更」页签显示 Git Diff */
+	/** 当前资源预览；null 表示「过程 · 变更」显示 Git Diff */
 	resourcePreview: ResourcePreviewTarget | null;
 	openResourcePreview: (target: ResourcePreviewTarget) => void;
 	clearResourcePreview: () => void;
-	/** 兼容旧调用：打开「变更」页签 */
+	/** 兼容旧调用：打开「过程 · 变更」 */
 	showDiffSidebar: () => void;
 
-	/** chip 跳转「变更」页签的聚焦目标（面板消费后清除） */
+	/** chip 跳转「过程 · 变更」的聚焦目标（面板消费后清除） */
 	diffFocus: DiffFocus | null;
 	setDiffFocus: (sectionKey: string) => void;
 	clearDiffFocus: () => void;
@@ -106,7 +114,9 @@ export const useUiStore = create<UiStore>((set, get) => ({
 
 	panelOpen: storedIdleOpen !== "0",
 	idleOpen: storedIdleOpen !== "0",
-	panelTab: isPanelTab(storedTab) ? storedTab : "tasks",
+	panelTab: storedTab === "changes" ? "process" : isPanelTab(storedTab) ? storedTab : "tasks",
+	processView: storedTab === "changes" ? "changes" : "lanes",
+	setProcessView: (processView) => set({ processView }),
 	togglePanel: (agentActive = false) => get().setPanelOpen(!get().panelOpen, agentActive),
 	setPanelOpen: (open, agentActive = false) => {
 		if (agentActive) {
@@ -128,15 +138,18 @@ export const useUiStore = create<UiStore>((set, get) => ({
 	onRunEnd: () => set((state) => ({ panelOpen: state.idleOpen })),
 
 	resourcePreview: null,
-	openResourcePreview: (target) => set({ panelOpen: true, panelTab: "changes", resourcePreview: target }),
+	openResourcePreview: (target) =>
+		set({ panelOpen: true, panelTab: "process", processView: "changes", resourcePreview: target }),
 	clearResourcePreview: () => set({ resourcePreview: null }),
-	showDiffSidebar: () => set({ panelOpen: true, panelTab: "changes", resourcePreview: null }),
+	showDiffSidebar: () =>
+		set({ panelOpen: true, panelTab: "process", processView: "changes", resourcePreview: null }),
 
 	diffFocus: null,
 	setDiffFocus: (sectionKey) =>
 		set((state) => ({
 			panelOpen: true,
-			panelTab: "changes",
+			panelTab: "process",
+			processView: "changes",
 			resourcePreview: null,
 			diffFocus: { sectionKey, nonce: (state.diffFocus?.nonce ?? 0) + 1 },
 		})),
@@ -147,6 +160,7 @@ export const useUiStore = create<UiStore>((set, get) => ({
 		set((state) => ({
 			panelOpen: true,
 			panelTab: "process",
+			processView: "lanes",
 			processFocus: { turnIndex, nonce: (state.processFocus?.nonce ?? 0) + 1 },
 		})),
 	clearProcessFocus: () => set({ processFocus: null }),

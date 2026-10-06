@@ -12,7 +12,6 @@ import {
 	ObsidianIcon,
 	ProjectsIcon,
 	PuzzleIcon,
-	SearchIcon,
 	SubagentIcon,
 } from "../icons";
 
@@ -21,17 +20,16 @@ type NavKey = AppView | "extensions";
 const VIEW_ITEMS: {
 	key: AppView;
 	icon: typeof ComposeIcon;
-	label: "chat" | "projects" | "research" | "knowledge";
+	label: "chat" | "projects" | "knowledge";
 }[] = [
 	{ key: "chat", icon: ComposeIcon, label: "chat" },
 	{ key: "projects", icon: ProjectsIcon, label: "projects" },
-	{ key: "research", icon: SearchIcon, label: "research" },
 	{ key: "knowledge", icon: ObsidianIcon, label: "knowledge" },
 ];
 
 /**
  * 左侧导航栏（56px 图标栏）：导航即状态——高亮永远等于当前 view（读 store，不再自持 selected）。
- * 聊天 / 空间 / 研究工作台 / 知识库 是四个全屏视图；扩展 / 设置 / 帮助 走设置弹窗。
+ * 聊天 / 空间 / 知识库 是三个全屏视图（原「研究工作台」与知识库打开同一视图，已合并）；扩展 / 设置 / 帮助 走设置弹窗。
  */
 export function WorkbenchNav() {
 	const t = useT();
@@ -49,8 +47,8 @@ export function WorkbenchNav() {
 			useSettingsStore.getState().openWith("extensions");
 			return;
 		}
-		if (key === "research" || key === "knowledge") {
-			openKnowledge({ cwd, sessionId: activeSessionId, tab: key === "research" ? "overview" : "reviews" });
+		if (key === "knowledge") {
+			openKnowledge({ cwd, sessionId: activeSessionId, tab: "reviews" });
 			return;
 		}
 		closeKnowledge();

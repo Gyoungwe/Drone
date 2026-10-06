@@ -10,6 +10,18 @@ import { useState } from "react";
 import { useI18nStore, useT } from "../../i18n";
 import { useSettingsStore } from "../../stores/settings";
 
+/** 设置 › 高级 › 工作流总览：读当前会话已加载技能；「查看技能」跳到 Tools & Skills。 */
+export function WorkflowOverviewPanel() {
+	const t = useT();
+	const skills = useSettingsStore((s) => s.skills);
+	const setCategory = useSettingsStore((s) => s.setCategory);
+	if (skills === null)
+		return (
+			<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.skills.emptyNoSession")}</p>
+		);
+	return <WorkflowOverview skills={skills} onInspect={() => setCategory("skills")} />;
+}
+
 /** A browse view only. Expanding a direction never activates skills or executes a workflow. */
 export function WorkflowOverview({
 	skills,

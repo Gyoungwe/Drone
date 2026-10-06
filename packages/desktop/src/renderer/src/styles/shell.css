@@ -787,3 +787,9 @@
 		animation: none;
 	}
 }
+/* 「过程」页签内的 过程 / 变更 切换（原「变更」页签并入） */
+.process-view-switch {
+	flex: none;
+	display: flex;
+	padding: 8px 12px 0;
+}

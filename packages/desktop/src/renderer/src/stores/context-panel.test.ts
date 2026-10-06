@@ -1,11 +1,12 @@
 import { afterEach, expect, it } from "vitest";
-import { useUiStore } from "./ui";
+import { useUiStore, visiblePanelTabs } from "./ui";
 
 afterEach(() =>
 	useUiStore.setState({
 		panelOpen: true,
 		idleOpen: true,
 		panelTab: "tasks",
+		processView: "lanes",
 		resourcePreview: null,
 		diffFocus: null,
 		processFocus: null,
@@ -14,16 +15,17 @@ afterEach(() =>
 
 it("a chip jump opens the panel on the requested tab without touching the idle choice", () => {
 	useUiStore.setState({ panelOpen: false, idleOpen: false });
-	useUiStore.getState().openPanel("changes");
+	useUiStore.getState().openPanel("artifacts");
 	expect(useUiStore.getState().panelOpen).toBe(true);
-	expect(useUiStore.getState().panelTab).toBe("changes");
+	expect(useUiStore.getState().panelTab).toBe("artifacts");
 	expect(useUiStore.getState().idleOpen).toBe(false);
 });
 
-it("opening a resource switches to the changes tab and replaces the diff view", () => {
+it("opening a resource switches to the changes view inside the process tab", () => {
 	useUiStore.getState().setPanelTab("tasks");
 	useUiStore.getState().openResourcePreview({ href: "report.md" });
-	expect(useUiStore.getState().panelTab).toBe("changes");
+	expect(useUiStore.getState().panelTab).toBe("process");
+	expect(useUiStore.getState().processView).toBe("changes");
 	expect(useUiStore.getState().resourcePreview?.href).toBe("report.md");
 	useUiStore.getState().showDiffSidebar();
 	expect(useUiStore.getState().resourcePreview).toBeNull();
@@ -46,11 +48,29 @@ it("run boundaries auto-expand the panel and fall back to the remembered idle ch
 	expect(useUiStore.getState().panelOpen).toBe(false);
 });
 
-it("focusing a diff section or a process turn lands on the matching tab", () => {
+it("focusing a diff section or a process turn lands on the matching process view", () => {
 	useUiStore.getState().setDiffFocus("tool-1");
-	expect(useUiStore.getState().panelTab).toBe("changes");
+	expect(useUiStore.getState().panelTab).toBe("process");
+	expect(useUiStore.getState().processView).toBe("changes");
 	expect(useUiStore.getState().diffFocus?.sectionKey).toBe("tool-1");
 	useUiStore.getState().focusProcessTurn(2);
 	expect(useUiStore.getState().panelTab).toBe("process");
+	expect(useUiStore.getState().processView).toBe("lanes");
 	expect(useUiStore.getState().processFocus?.turnIndex).toBe(2);
+});
+
+it("shows tasks, process and artifacts by default; subagents and compute only on demand", () => {
+	expect(visiblePanelTabs({ subagents: false, compute: false })).toEqual(["tasks", "process", "artifacts"]);
+	expect(visiblePanelTabs({ subagents: true, compute: false })).toEqual([
+		"tasks",
+		"process",
+		"artifacts",
+		"subagents",
+	]);
+	expect(visiblePanelTabs({ subagents: false, compute: true })).toEqual([
+		"tasks",
+		"process",
+		"artifacts",
+		"compute",
+	]);
 });

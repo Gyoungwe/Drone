@@ -86,11 +86,11 @@ async function run() {
 			),
 			false,
 		);
-		assert.equal(await js("document.querySelectorAll('.context-panel-tabs button').length"), 5);
+		assert.equal(await js("document.querySelectorAll('.context-panel-tabs button').length"), 4);
 		assert.equal(await badge(), null);
 		assert.equal(await js("document.querySelectorAll('[data-testid=\"subagent-avatar\"]').length>=3"), true);
 		checks.push(
-			"panel renders three sources with avatars; untrusted project agent cannot be picked; five tabs, no badge yet",
+			"panel renders three sources with avatars; untrusted project agent cannot be picked; four tabs (compute hidden), no badge yet",
 		);
 		await shot("01-available.png");
 
