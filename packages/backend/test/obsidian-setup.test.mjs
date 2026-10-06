@@ -120,17 +120,30 @@ describe("slash command to current-model handoff", () => {
 	it("binds the canonical Obsidian command and compatibility aliases to research-vault", () => {
 		const h = harness();
 		expect([...h.commands.keys()].sort()).toEqual([
+			"discover",
 			"obsidian-setup",
 			"research-setup",
 			"setup",
 			"task-action",
 			"task-status",
+			"发现",
 		]);
 		for (const name of ["obsidian-setup", "research-setup", "setup"]) {
 			const command = h.commands.get(name);
 			expect(command.description).toContain("Obsidian MCP");
 			expect(command.description).toContain("research-vault");
 		}
+	});
+	it("/发现 hands the discovery task to the model after the slash command returns", async () => {
+		const h = harness();
+		await h.commands.get("发现").handler("蚜虫翅型分化", h.ctx);
+		expect(h.pi.sendUserMessage).not.toHaveBeenCalled();
+		await flushSetupHandoff();
+		expect(h.pi.sendUserMessage).toHaveBeenCalledOnce();
+		const [message, options] = h.pi.sendUserMessage.mock.calls[0];
+		expect(message).toContain("Discovery task on: 蚜虫翅型分化");
+		expect(message).toContain('type "idea"');
+		expect(options).toEqual({ deliverAs: "followUp" });
 	});
 	it("starts a model turn immediately without a preflight path dialog", async () => {
 		await writeFile(join(cwd, "README.md"), "not automatically read");

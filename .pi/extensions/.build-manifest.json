@@ -24,9 +24,9 @@
 			"source": "obsidian-workbench.ts",
 			"output": "obsidian-workbench.mjs",
 			"status": "generated",
-			"sourceSha256": "47aeddf87f8a8d77a6e70eeba18fee14a99a080f42857ffdf696ce46c6189adc",
-			"inputsSha256": "3579c186bd8200c0cce9c0e999b0431a86c482f750fcecaea376e7b830f3ea5f",
-			"outputSha256": "b7873e359ac505433ec08202300d2cbf3f6f677fa335f9ca816dd395adc9a019"
+			"sourceSha256": "e14be4466c444f9ebf14d3ae0dca030a92d53460ab524ab50c5c133f2bc2684e",
+			"inputsSha256": "362c1afed188c3f25afd808f62112602052693776061a309120292f26e157e4f",
+			"outputSha256": "d5d57a0d69798a6c9b51af6e2bb4d91956791950b11b92dfc6b4f0f7a082b334"
 		},
 		"research-loop": {
 			"source": "research-loop.ts",
