@@ -75,6 +75,33 @@ export function isAgentWorking(transcript: SessionTranscriptState): boolean {
 }
 
 /**
+ * 本轮还没有任何可见输出：agent 在跑，但最后一条用户消息之后既没有已提交的消息，
+ * 流式容器里也没有思考 / 工具 / 子代理 / 正文。中央大动画只在这段等待里显示——
+ * 一旦有内容可读就让位，长任务期间不再盖住工具卡与输出（运行状态由状态行小 orb 表示）。
+ */
+export function isAwaitingFirstOutput(transcript: SessionTranscriptState): boolean {
+	if (!transcript.agentActive) return false;
+	const messages = transcript.messages;
+	let lastUser = -1;
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i]?.kind === "user") {
+			lastUser = i;
+			break;
+		}
+	}
+	if (messages.length - 1 > lastUser) return false;
+	const streaming = transcript.streaming;
+	if (!streaming) return true;
+	return (
+		!streaming.text.trim() &&
+		!streaming.thinking.trim() &&
+		streaming.tools.length === 0 &&
+		streaming.subagentRuns.length === 0 &&
+		!streaming.progressEntries?.length
+	);
+}
+
+/**
  * 已提交消息的 MetaItem 缓存（WeakMap，键 = 消息对象）：
  * 历史 MessageList 每次渲染都重跑 buildChatRows，若 items 里的元素每次都是新字面量，
  * MetaGroup 的 memo 比较器会永远失败 → 历史折叠组随每条流式 delta 全量重渲染
