@@ -13,6 +13,7 @@ import { useT } from "../../i18n";
 import type { ResourcePreviewTarget } from "../../stores/ui";
 import { useUiStore } from "../../stores/ui";
 import { CloseIcon } from "../icons";
+import { FigureAnnotator } from "./FigureAnnotator";
 import { ResourceCode } from "./ResourceCode";
 import { ResourceTextPreview } from "./ResourceTextPreview";
 
@@ -197,12 +198,19 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 								图像无法解码，请检查文件是否完整；SVG 可切换源码查看。
 							</p>
 						) : (
-							<img
-								src={src}
-								alt={result.name}
-								style={{ width: `${zoom * 100}%`, maxWidth: "none", maxHeight: "none" }}
-								onError={() => setImageError(true)}
-							/>
+							<FigureAnnotator
+								source={{ href: target.href, cwd: target.cwd }}
+								name={result.name}
+								path={result.path}
+								width={`${zoom * 100}%`}
+							>
+								<img
+									src={src}
+									alt={result.name}
+									style={{ width: "100%", maxWidth: "none", maxHeight: "none" }}
+									onError={() => setImageError(true)}
+								/>
+							</FigureAnnotator>
 						)}
 					</div>
 				) : result.kind === "pdf" && src ? (
@@ -217,6 +225,8 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 						text={result.text || ""}
 						name={result.name}
 						onNavigate={navigate}
+						source={{ href: target.href, cwd: target.cwd }}
+						path={result.path}
 					/>
 				) : (
 					<div className="resource-empty">

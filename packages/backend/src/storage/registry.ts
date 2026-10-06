@@ -467,6 +467,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 				sensitivity: "private",
 			})
 			.register({
+				id: "desktop-figure-annotations",
+				path: `${userDataDir}/figure-annotations.json`,
+				owner: "desktop/figure-annotations",
+				schema: 1,
+				sensitivity: "private",
+			})
+			.register({
 				id: "desktop-backgrounds",
 				path: `${userDataDir}/backgrounds`,
 				owner: "desktop/background",

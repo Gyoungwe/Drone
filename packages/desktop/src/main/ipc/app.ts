@@ -7,8 +7,10 @@ import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
 import { app, BrowserWindow, dialog, nativeTheme, shell } from "electron";
 import { pickBackgroundImage } from "../background";
 import { ensureDailyDir } from "../daily";
+import { getFigureAnnotations, saveFigureAnnotations } from "../figure-annotations";
 import { previewLocalFile, resolveResourcePath } from "../file-preview";
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
+import { issueHtmlPreviewUrl } from "../html-preview-protocol";
 import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
 import { checkForUpdates, downloadUpdate, installUpdate } from "../updater";
@@ -62,6 +64,10 @@ export function registerAppIpc(
 			if (typeof url === "string" && /^https?:\/\//.test(url)) return shell.openExternal(url);
 		},
 		filePreview: (...args) => previewLocalFile(args[0], args[1]),
+		htmlPreviewUrl: (...args) => issueHtmlPreviewUrl(resolveResourcePath(args[0], args[1])),
+		getFigureAnnotations: (...args) => getFigureAnnotations(resolveResourcePath(args[0], args[1])),
+		saveFigureAnnotations: (target, cwd, annotations) =>
+			saveFigureAnnotations(resolveResourcePath(target, cwd ?? undefined), annotations),
 		importDroppedFile: async (sourcePath, sessionId) => {
 			const source = await realpath(sourcePath);
 			const info = await stat(source);
@@ -146,6 +152,9 @@ export function registerAppIpc(
 				getDailyDir: IpcChannels.AppGetDailyDir,
 				openExternal: IpcChannels.AppOpenExternal,
 				filePreview: IpcChannels.FilePreview,
+				htmlPreviewUrl: IpcChannels.FileHtmlPreviewUrl,
+				getFigureAnnotations: IpcChannels.FigureAnnotationsGet,
+				saveFigureAnnotations: IpcChannels.FigureAnnotationsSave,
 				importDroppedFile: IpcChannels.FileImportDropped,
 				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
 				loadTabs: IpcChannels.TabsLoad,

@@ -608,6 +608,26 @@ export const zh = {
 		loading: "正在加载资源…",
 		binaryHint: "此文件类型暂不支持内嵌预览，可使用系统默认应用打开。",
 		truncated: "预览已截断",
+		annotate: {
+			toggle: "标注",
+			done: "完成标注",
+			hint: "点击图上任意位置添加标注；拖动无效，点编号可选中。",
+			count: "{count} 处标注",
+			placeholder: "这里要改什么？",
+			remove: "删除",
+			clear: "清除全部",
+			send: "发送给 Agent",
+			message: "请根据我在图「{name}」上的标注修改（文件：{path}；坐标为相对宽高的百分比）：",
+			saveFailed: "标注保存失败：{error}",
+		},
+		html: {
+			staticNotice: "隔离 HTML 预览：脚本、外部子资源、链接跳转和表单已禁用。",
+			interactive: "运行交互内容",
+			static: "静态预览",
+			interactiveNotice:
+				"交互模式：脚本在无同源、无网络的沙箱中运行，只能读取该文件所在目录；外部 CDN 资源不会加载。",
+			interactiveFailed: "无法以交互模式打开：{error}",
+		},
 		tree: {
 			summary: "系统发育树 · {leaves} 个叶节点",
 			scaleLengths: "按枝长绘制（标尺单位同文件）",

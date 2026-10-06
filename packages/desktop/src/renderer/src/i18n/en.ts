@@ -628,6 +628,28 @@ export const en: Messages = {
 		binaryHint:
 			"Inline preview is not available for this file type. Open it with the system application instead.",
 		truncated: "Preview truncated",
+		annotate: {
+			toggle: "Annotate",
+			done: "Done",
+			hint: "Click anywhere on the figure to add a note; click a number to select it.",
+			count: "{count} notes",
+			placeholder: "What should change here?",
+			remove: "Delete",
+			clear: "Clear all",
+			send: "Send to agent",
+			message:
+				'Please revise the figure "{name}" according to my notes (file: {path}; positions are % of width/height):',
+			saveFailed: "Could not save notes: {error}",
+		},
+		html: {
+			staticNotice:
+				"Isolated HTML preview: scripts, remote subresources, link navigation and forms are disabled.",
+			interactive: "Run interactive content",
+			static: "Static preview",
+			interactiveNotice:
+				"Interactive mode: scripts run in a sandbox with no app origin and no network, reading only the file's own folder; remote CDN assets will not load.",
+			interactiveFailed: "Cannot open interactively: {error}",
+		},
 		tree: {
 			summary: "Phylogenetic tree · {leaves} leaves",
 			scaleLengths: "Drawn with branch lengths (units as in the file)",

@@ -1,7 +1,9 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: Bounded immutable preview positions, not editable record identities.
 import { looksAligned, resourceFormat, sequencePreview, tablePreview } from "@drone/shared";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { FigureAnnotator, type FigureSource } from "./FigureAnnotator";
 import { AlignmentReader, TreeReader } from "./ResourceBioViewers";
 import { ResourceCode } from "./ResourceCode";
 import { ResourceMarkdown } from "./ResourceMarkdown";
@@ -182,6 +184,90 @@ function SequenceReader({ text, kind }: { text: string; kind: "fasta" | "fastq" 
 		</div>
 	);
 }
+/** HTML 图：默认静态隔离预览；用户可切到交互模式（drone-html:// + sandbox allow-scripts，无同源、无网络） */
+function HtmlPreview({
+	text,
+	name,
+	source,
+	path,
+}: {
+	text: string;
+	name: string;
+	source?: FigureSource;
+	path?: string;
+}) {
+	const t = useT();
+	const [interactive, setInteractive] = useState(false);
+	const [url, setUrl] = useState<string | null>(null);
+	const [error, setError] = useState("");
+	const href = source?.href;
+	const cwd = source?.cwd;
+	useEffect(() => {
+		setUrl(null);
+		setError("");
+		if (!interactive || !href) return;
+		let cancelled = false;
+		void getPi()
+			.htmlPreviewUrl(href, cwd)
+			.then((next) => {
+				if (!cancelled) setUrl(next);
+			})
+			.catch((err: unknown) => {
+				if (cancelled) return;
+				setInteractive(false);
+				setError(
+					t("resource.html.interactiveFailed", { error: err instanceof Error ? err.message : String(err) }),
+				);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [interactive, href, cwd, t]);
+	const frame =
+		interactive && url ? (
+			<iframe
+				title={name}
+				className="resource-html-frame"
+				sandbox="allow-scripts"
+				referrerPolicy="no-referrer"
+				src={url}
+			/>
+		) : (
+			<iframe
+				title={name}
+				className="resource-html-frame"
+				sandbox=""
+				referrerPolicy="no-referrer"
+				srcDoc={htmlPreviewDocument(text)}
+			/>
+		);
+	return (
+		<>
+			<p className="resource-notice">
+				{interactive ? t("resource.html.interactiveNotice") : t("resource.html.staticNotice")}
+			</p>
+			{error && (
+				<p role="alert" className="resource-notice">
+					{error}
+				</p>
+			)}
+			{source && (
+				<div className="resource-data-tools">
+					<button type="button" aria-pressed={interactive} onClick={() => setInteractive(!interactive)}>
+						{interactive ? t("resource.html.static") : t("resource.html.interactive")}
+					</button>
+				</div>
+			)}
+			{source ? (
+				<FigureAnnotator source={source} name={name} path={path ?? source.href} block>
+					{frame}
+				</FigureAnnotator>
+			) : (
+				frame
+			)}
+		</>
+	);
+}
 /** FASTA：像比对结果（含 gap、等长）时默认按比对查看，可切回逐条序列 */
 function FastaReader({ text }: { text: string }) {
 	const t = useT();
@@ -207,10 +293,15 @@ export function ResourceTextPreview({
 	text,
 	name,
 	onNavigate,
+	source,
+	path,
 }: {
 	text: string;
 	name: string;
 	onNavigate: (href: string, label?: string) => void;
+	/** 预览目标（用于交互 HTML 与图标注）；缺省时只做静态预览 */
+	source?: FigureSource;
+	path?: string;
 }) {
 	const format = resourceFormat(name);
 	const json = useMemo(() => {
@@ -240,21 +331,7 @@ export function ResourceTextPreview({
 	if (format.kind === "fastq") return <SequenceReader text={text} kind="fastq" />;
 	if (format.kind === "alignment") return <AlignmentReader text={text} ext={format.ext} />;
 	if (format.kind === "tree") return <TreeReader text={text} />;
-	if (format.kind === "html")
-		return (
-			<>
-				<p className="resource-notice">
-					隔离 HTML 预览：脚本、外部子资源、链接跳转和表单已禁用。需要完整交互时请在外部打开。
-				</p>
-				<iframe
-					title="隔离 HTML 文件预览"
-					className="resource-html-frame"
-					sandbox=""
-					referrerPolicy="no-referrer"
-					srcDoc={htmlPreviewDocument(text)}
-				/>
-			</>
-		);
+	if (format.kind === "html") return <HtmlPreview text={text} name={name} source={source} path={path} />;
 	return (
 		<>
 			{json && !json.valid && (
