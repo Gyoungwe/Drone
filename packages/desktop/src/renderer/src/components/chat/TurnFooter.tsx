@@ -101,7 +101,7 @@ export function TurnFooter({
 				<span className="turn-footer-stat" title={usageTitle}>
 					{compactNumber(usage.total)} tok
 					{outputRate != null
-						? t("turnFooter.outputAverage", { rate: compactNumber(Math.round(outputRate)) })
+						? ` · ${t("turnFooter.outputAverage", { rate: compactNumber(Math.round(outputRate)) })}`
 						: ""}
 					{usage.cacheRate != null && usage.cacheRate > 0
 						? ` · ${(usage.cacheRate * 100).toFixed(0)}% cache`
