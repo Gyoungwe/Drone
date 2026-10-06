@@ -9,6 +9,7 @@ import { type BackendServices, createBackend, createLogger, initLogging } from "
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
+import { HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest } from "./html-preview-protocol";
 import { registerIpc } from "./ipc";
 import { initLanObserver, type LanObserverHandle } from "./lan";
 import { migrateLegacyUserDir } from "./legacy-migration";
@@ -80,6 +81,7 @@ function buildIncidentSnapshot(details: { reason: string; exitCode: number }): {
 
 protocol.registerSchemesAsPrivileged([
 	{ scheme: BG_PROTOCOL, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+	{ scheme: HTML_PREVIEW_PROTOCOL, privileges: { standard: true, secure: true } },
 ]);
 
 // Windows/Linux 不显示默认应用菜单（File/Edit/...）；macOS 菜单在系统菜单栏且承担复制粘贴等快捷键，保留
@@ -100,6 +102,9 @@ app.whenReady().then(async () => {
 		if (!/^[\w.-]+$/.test(name)) return new Response("invalid background name", { status: 400 });
 		return net.fetch(pathToFileURL(join(backgroundsDir(), name)).toString());
 	});
+
+	// 交互式 HTML 预览：只服务用户显式打开的 HTML 所在目录（token 签发见 html-preview-protocol.ts）
+	protocol.handle(HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest);
 
 	// renderer 异常/崩溃 → 日志（错误排查依赖 trace + 日志）+ 进程级死亡自动恢复
 	const crashLog = createLogger("renderer");

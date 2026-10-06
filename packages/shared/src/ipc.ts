@@ -69,6 +69,15 @@ export interface ResourcePreviewResult {
 	truncated?: boolean;
 }
 
+/** 图上的一处标注：坐标为相对图像/页面宽高的比例（0–1） */
+export interface FigureAnnotation {
+	id: string;
+	x: number;
+	y: number;
+	text: string;
+	createdAt: string;
+}
+
 /** A user-dropped file copied into the app-owned session attachment store. */
 export interface ImportedAttachment {
 	path: string;
@@ -203,6 +212,9 @@ export const IpcChannels = {
 	FileSaveDialog: "file:saveDialog",
 	FilePickPath: "file:pickPath",
 	FilePreview: "file:preview",
+	FileHtmlPreviewUrl: "file:htmlPreviewUrl",
+	FigureAnnotationsGet: "figure:annotationsGet",
+	FigureAnnotationsSave: "figure:annotationsSave",
 	FileImportDropped: "file:importDropped",
 	ResourceOpenExternal: "resource:openExternal",
 	ModelsList: "models:list",
@@ -359,6 +371,16 @@ export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryA
 	pickPath(kind: "file" | "directory", defaultPath?: string): Promise<string | null>;
 	/** 读取本地文件供右侧资源栏预览；路径可相对 cwd。大文本会截断，大二进制只返回元数据。 */
 	previewFile(target: string, cwd?: string): Promise<ResourcePreviewResult>;
+	/** 为本地 HTML 文件签发一次性 drone-html:// 地址：脚本可在无同源、无网络的沙箱里运行，只能读取该文件所在目录 */
+	htmlPreviewUrl(target: string, cwd?: string): Promise<string>;
+	/** 读取某个图像/HTML 图的标注 */
+	getFigureAnnotations(target: string, cwd?: string): Promise<FigureAnnotation[]>;
+	/** 整体替换某个图的标注（空数组即清除）；返回规整后的列表 */
+	saveFigureAnnotations(
+		target: string,
+		cwd: string | null,
+		annotations: FigureAnnotation[],
+	): Promise<FigureAnnotation[]>;
 	/** Copy a user-dropped file into the app-owned attachment directory. */
 	importDroppedFile(sourcePath: string, sessionId: string): Promise<ImportedAttachment>;
 	/** 使用系统默认应用打开资源：HTTP(S) 用浏览器，本地路径用系统文件关联。 */
