@@ -1,4 +1,14 @@
-export type TextPreviewKind = "markdown" | "table" | "fasta" | "fastq" | "html" | "json" | "code" | "text";
+export type TextPreviewKind =
+	| "markdown"
+	| "table"
+	| "fasta"
+	| "fastq"
+	| "alignment"
+	| "tree"
+	| "html"
+	| "json"
+	| "code"
+	| "text";
 export const TEXT_PREVIEW_BYTES = 128 * 1024;
 export const PREVIEW_ROWS = 200;
 export const PREVIEW_COLUMNS = 60;
@@ -67,6 +77,11 @@ export function resourceFormat(name: string): {
 		return make("table", ext.toUpperCase());
 	if (["fa", "fasta", "fna", "faa", "ffn", "frn", "fas"].includes(ext)) return make("fasta", "FASTA");
 	if (["fq", "fastq"].includes(ext)) return make("fastq", "FASTQ");
+	if (
+		["aln", "clustal", "clw", "sto", "stk", "stockholm", "phy", "phylip", "afa", "msa", "mfa"].includes(ext)
+	)
+		return make("alignment", "Alignment");
+	if (["nwk", "newick", "tree", "treefile", "tre", "contree"].includes(ext)) return make("tree", "Newick");
 	if (["html", "htm"].includes(ext)) return make("html", "HTML", "html");
 	if (ext === "json") return make("json", "JSON", "json");
 	if (languages[ext]) return make("code", ext.toUpperCase(), languages[ext]);
@@ -74,9 +89,7 @@ export function resourceFormat(name: string): {
 		"text",
 		ext.toUpperCase() || "文本",
 		"text",
-		["txt", "log", "out", "err", "fai", "dict", "aln", "phy", "nwk", "newick", "pdb", "cif", "sdf"].includes(
-			ext,
-		),
+		["txt", "log", "out", "err", "fai", "dict", "pdb", "cif", "sdf"].includes(ext),
 	);
 }
 export function filePreviewDirectory(path: string): string {

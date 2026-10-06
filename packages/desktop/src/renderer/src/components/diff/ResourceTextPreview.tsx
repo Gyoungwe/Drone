@@ -1,6 +1,8 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: Bounded immutable preview positions, not editable record identities.
-import { resourceFormat, sequencePreview, tablePreview } from "@drone/shared";
+import { looksAligned, resourceFormat, sequencePreview, tablePreview } from "@drone/shared";
 import { useMemo, useState } from "react";
+import { useT } from "../../i18n";
+import { AlignmentReader, TreeReader } from "./ResourceBioViewers";
 import { ResourceCode } from "./ResourceCode";
 import { ResourceMarkdown } from "./ResourceMarkdown";
 /** CSP + an empty sandbox deny scripts, forms, popups, remote subresources and privileged APIs. */
@@ -180,6 +182,27 @@ function SequenceReader({ text, kind }: { text: string; kind: "fasta" | "fastq" 
 		</div>
 	);
 }
+/** FASTA：像比对结果（含 gap、等长）时默认按比对查看，可切回逐条序列 */
+function FastaReader({ text }: { text: string }) {
+	const t = useT();
+	const aligned = useMemo(() => looksAligned(text), [text]);
+	const [asAlignment, setAsAlignment] = useState(true);
+	if (!aligned) return <SequenceReader text={text} kind="fasta" />;
+	return (
+		<>
+			<div className="resource-data-tools">
+				<button type="button" onClick={() => setAsAlignment(!asAlignment)}>
+					{asAlignment ? t("resource.alignment.viewAsSequences") : t("resource.alignment.viewAsAlignment")}
+				</button>
+			</div>
+			{asAlignment ? (
+				<AlignmentReader text={text} ext="fasta" />
+			) : (
+				<SequenceReader text={text} kind="fasta" />
+			)}
+		</>
+	);
+}
 export function ResourceTextPreview({
 	text,
 	name,
@@ -213,8 +236,10 @@ export function ResourceTextPreview({
 	}, [text, format.kind]);
 	if (format.kind === "markdown") return <ResourceMarkdown text={text} onNavigate={onNavigate} />;
 	if (format.kind === "table") return <TableReader text={text} ext={format.ext} />;
-	if (format.kind === "fasta" || format.kind === "fastq")
-		return <SequenceReader text={text} kind={format.kind} />;
+	if (format.kind === "fasta") return <FastaReader text={text} />;
+	if (format.kind === "fastq") return <SequenceReader text={text} kind="fastq" />;
+	if (format.kind === "alignment") return <AlignmentReader text={text} ext={format.ext} />;
+	if (format.kind === "tree") return <TreeReader text={text} />;
 	if (format.kind === "html")
 		return (
 			<>

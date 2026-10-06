@@ -1,4 +1,20 @@
 export * from "./ask";
+export {
+	ALIGNMENT_MAX_RECORDS,
+	type AlignmentPreview,
+	type AlignmentRecord,
+	alignmentPreview,
+	columnConservation,
+	isNucleotideAlignment,
+	layoutTree,
+	looksAligned,
+	parseNewick,
+	residueClass,
+	TREE_MAX_NODES,
+	type TreeLayout,
+	type TreeLayoutNode,
+	type TreeNode,
+} from "./bio-preview-format";
 export * from "./capabilities";
 export * from "./compute";
 export * from "./diagnostics";
