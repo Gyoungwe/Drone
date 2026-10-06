@@ -168,7 +168,88 @@ async function recordRunProvenance({
   await atomic(path, value);
   return { path, ...value };
 }
+async function readJson(path) {
+  try {
+    const value = JSON.parse(await readFile(path, "utf8"));
+    return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) return null;
+    throw error;
+  }
+}
+var text = (value) => typeof value === "string" && value ? value : null;
+async function readMethodsFacts({
+  cwd = process.cwd(),
+  runDir,
+  loadWorkspaceConfig = defaultWorkspaceConfig
+}) {
+  const run = await runPath(cwd, runDir, loadWorkspaceConfig);
+  const metadata = await readJson(join(run, "metadata.json")) ?? {};
+  const manifest = await readJson(
+    join(run, "reproducibility-manifest.json")
+  );
+  const files = Array.isArray(manifest?.files) ? manifest.files : [];
+  const pick = (role) => files.filter((file) => file.role === role).map((file) => ({ path: file.path, sha256: file.sha256 }));
+  const observations = Array.isArray(manifest?.executionObservations) ? manifest.executionObservations : [];
+  const declarations = manifest?.declarations && typeof manifest.declarations === "object" ? manifest.declarations : {};
+  let existingMethods = null;
+  try {
+    existingMethods = await readFile(join(run, "METHODS.md"), "utf8");
+  } catch (error) {
+    if (!isNodeError(error, "ENOENT")) throw error;
+  }
+  const gaps = [];
+  if (!manifest)
+    gaps.push(
+      "No reproducibility manifest: call research_record_run_manifest with inputs, outputs, scripts and declarations first."
+    );
+  if (!Object.keys(declarations).length)
+    gaps.push(
+      "No declared software versions or parameters; ask the user or check with bio_environment before stating any."
+    );
+  if (!pick("input").length) gaps.push("No input files recorded.");
+  if (!observations.length) gaps.push("No executed commands were observed for this run.");
+  return {
+    runDir: relative(await realpath(cwd), run) || run,
+    query: text(metadata.query),
+    status: text(metadata.status),
+    startedAt: text(metadata.started_at),
+    finalizedAt: text(metadata.finalized_at),
+    hostRuntime: manifest?.hostRuntime ?? null,
+    inputs: pick("input"),
+    outputs: pick("output"),
+    scripts: pick("script"),
+    declarations,
+    commandsObserved: observations.length,
+    commandsFailed: observations.filter((record) => record.outcome === "failed-or-blocked").length,
+    existingMethods,
+    gaps
+  };
+}
+async function saveMethodsSection({
+  cwd = process.cwd(),
+  runDir,
+  text: body,
+  approvedAt = (/* @__PURE__ */ new Date()).toISOString(),
+  loadWorkspaceConfig = defaultWorkspaceConfig
+}) {
+  const content = String(body ?? "").trim();
+  if (!content) throw new Error("Methods text is empty");
+  if (content.length > 2e4) throw new Error("Methods text is longer than 20,000 characters");
+  const run = await runPath(cwd, runDir, loadWorkspaceConfig);
+  const path = join(run, "METHODS.md");
+  const document = `<!-- drone:methods approved_at=${approvedAt} \u2014 reviewed by the user; software versions are as declared in reproducibility-manifest.json -->
+
+${content}
+`;
+  const temp = `${path}.${randomUUID()}.tmp`;
+  await writeFile(temp, document, "utf8");
+  await rename(temp, path);
+  return { path, bytes: Buffer.byteLength(document) };
+}
 export {
   observeExecutionReceipt,
-  recordRunProvenance
+  readMethodsFacts,
+  recordRunProvenance,
+  saveMethodsSection
 };

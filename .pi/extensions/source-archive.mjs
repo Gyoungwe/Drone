@@ -18,15 +18,15 @@ function statusTone(status) {
   return "warn";
 }
 function cardField(label2, value, extra = {}) {
-  const text2 = clip(String(value ?? ""), 200) || "unknown";
+  const text3 = clip(String(value ?? ""), 200) || "unknown";
   return {
     label: clip(label2, 60) || "",
     ...extra.i18n ? { i18n: extra.i18n } : {},
-    value: text2,
+    value: text3,
     ...extra.status === false ? {} : { status: true },
     ...extra.code !== void 0 ? { code: clip(extra.code, 4096) } : {},
     ...extra.note !== void 0 ? { note: clip(extra.note, 200) } : {},
-    tone: extra.tone || (extra.status === false ? "muted" : statusTone(text2))
+    tone: extra.tone || (extra.status === false ? "muted" : statusTone(text3))
   };
 }
 function cardLink(kind, target, label2, i18n) {
@@ -772,14 +772,14 @@ async function verifyLiteratureReceipt({
     const rel = relative(root, file);
     if (isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`)) throw new Error("outside-vault");
     if ((await stat(file)).size > 1024 * 1024) throw new Error("note-too-large");
-    const text2 = await readFile(file, "utf8");
-    const linked = text2.includes(`zotero:${zoteroKey}`) || new RegExp(`zotero://select/library/items/${zoteroKey}(?=[)\\s<>]|$)`).test(text2) || new RegExp(`^zotero_key: *["']?${zoteroKey}["']? *$`, "m").test(text2);
-    const dois = text2.match(/10\.\d{4,9}\/[^\s<>"'\])]+/gi) || [];
+    const text3 = await readFile(file, "utf8");
+    const linked = text3.includes(`zotero:${zoteroKey}`) || new RegExp(`zotero://select/library/items/${zoteroKey}(?=[)\\s<>]|$)`).test(text3) || new RegExp(`^zotero_key: *["']?${zoteroKey}["']? *$`, "m").test(text3);
+    const dois = text3.match(/10\.\d{4,9}\/[^\s<>"'\])]+/gi) || [];
     receipt.obsidian = {
       status: linked && dois.some((item) => normalizeDoi(item.replace(/[.,;]+$/, "")) === normalizedDoi) ? "verified" : "identity-mismatch",
       path: notePath,
       vault: root,
-      hash: createHash("sha256").update(text2).digest("hex")
+      hash: createHash("sha256").update(text3).digest("hex")
     };
   } catch (error) {
     if (vaultResolved && error instanceof Error && "code" in error && error.code === "ENOENT") {
@@ -912,6 +912,85 @@ async function recordRunProvenance({
   await atomic(path, value);
   return { path, ...value };
 }
+async function readJson(path) {
+  try {
+    const value = JSON.parse(await readFile2(path, "utf8"));
+    return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) return null;
+    throw error;
+  }
+}
+var text = (value) => typeof value === "string" && value ? value : null;
+async function readMethodsFacts({
+  cwd = process.cwd(),
+  runDir,
+  loadWorkspaceConfig: loadWorkspaceConfig3 = defaultWorkspaceConfig
+}) {
+  const run = await runPath(cwd, runDir, loadWorkspaceConfig3);
+  const metadata = await readJson(join(run, "metadata.json")) ?? {};
+  const manifest = await readJson(
+    join(run, "reproducibility-manifest.json")
+  );
+  const files = Array.isArray(manifest?.files) ? manifest.files : [];
+  const pick = (role) => files.filter((file) => file.role === role).map((file) => ({ path: file.path, sha256: file.sha256 }));
+  const observations = Array.isArray(manifest?.executionObservations) ? manifest.executionObservations : [];
+  const declarations = manifest?.declarations && typeof manifest.declarations === "object" ? manifest.declarations : {};
+  let existingMethods = null;
+  try {
+    existingMethods = await readFile2(join(run, "METHODS.md"), "utf8");
+  } catch (error) {
+    if (!isNodeError(error, "ENOENT")) throw error;
+  }
+  const gaps = [];
+  if (!manifest)
+    gaps.push(
+      "No reproducibility manifest: call research_record_run_manifest with inputs, outputs, scripts and declarations first."
+    );
+  if (!Object.keys(declarations).length)
+    gaps.push(
+      "No declared software versions or parameters; ask the user or check with bio_environment before stating any."
+    );
+  if (!pick("input").length) gaps.push("No input files recorded.");
+  if (!observations.length) gaps.push("No executed commands were observed for this run.");
+  return {
+    runDir: relative2(await realpath2(cwd), run) || run,
+    query: text(metadata.query),
+    status: text(metadata.status),
+    startedAt: text(metadata.started_at),
+    finalizedAt: text(metadata.finalized_at),
+    hostRuntime: manifest?.hostRuntime ?? null,
+    inputs: pick("input"),
+    outputs: pick("output"),
+    scripts: pick("script"),
+    declarations,
+    commandsObserved: observations.length,
+    commandsFailed: observations.filter((record2) => record2.outcome === "failed-or-blocked").length,
+    existingMethods,
+    gaps
+  };
+}
+async function saveMethodsSection({
+  cwd = process.cwd(),
+  runDir,
+  text: body,
+  approvedAt = (/* @__PURE__ */ new Date()).toISOString(),
+  loadWorkspaceConfig: loadWorkspaceConfig3 = defaultWorkspaceConfig
+}) {
+  const content = String(body ?? "").trim();
+  if (!content) throw new Error("Methods text is empty");
+  if (content.length > 2e4) throw new Error("Methods text is longer than 20,000 characters");
+  const run = await runPath(cwd, runDir, loadWorkspaceConfig3);
+  const path = join(run, "METHODS.md");
+  const document = `<!-- drone:methods approved_at=${approvedAt} \u2014 reviewed by the user; software versions are as declared in reproducibility-manifest.json -->
+
+${content}
+`;
+  const temp = `${path}.${randomUUID()}.tmp`;
+  await writeFile(temp, document, "utf8");
+  await rename(temp, path);
+  return { path, bytes: Buffer.byteLength(document) };
+}
 
 // packages/research/src/source-archive.ts
 import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
@@ -950,10 +1029,10 @@ function contactEmail(explicit, env = process.env) {
   return null;
 }
 var httpsUrl = (value) => {
-  const text2 = String(value || "").trim();
-  if (!/^https?:\/\//i.test(text2)) return null;
+  const text3 = String(value || "").trim();
+  if (!/^https?:\/\//i.test(text3)) return null;
   try {
-    const url = new URL(text2);
+    const url = new URL(text3);
     if (url.protocol === "ftp:") return null;
     return url.href;
   } catch {
@@ -961,10 +1040,10 @@ var httpsUrl = (value) => {
   }
 };
 var pmcCloudHttps = (value) => {
-  const text2 = String(value || "").trim();
-  if (/^s3:\/\/pmc-oa-opendata\//i.test(text2))
-    return `${PMC_CLOUD_BASE}/${text2.replace(/^s3:\/\/pmc-oa-opendata\//i, "")}`;
-  return text2.startsWith(`${PMC_CLOUD_BASE}/`) ? text2 : null;
+  const text3 = String(value || "").trim();
+  if (/^s3:\/\/pmc-oa-opendata\//i.test(text3))
+    return `${PMC_CLOUD_BASE}/${text3.replace(/^s3:\/\/pmc-oa-opendata\//i, "")}`;
+  return text3.startsWith(`${PMC_CLOUD_BASE}/`) ? text3 : null;
 };
 async function fetchJson(fetchImpl, url, {
   timeoutMs,
@@ -981,16 +1060,16 @@ async function fetchJson(fetchImpl, url, {
       headers: { accept },
       redirect: "follow"
     });
-    const text2 = await response.text();
+    const text3 = await response.text();
     if (!response.ok) return { ok: false, status: response.status, detail: `HTTP ${response.status}` };
     if (accept === "application/json") {
       try {
-        return { ok: true, status: response.status, body: JSON.parse(text2) };
+        return { ok: true, status: response.status, body: JSON.parse(text3) };
       } catch {
         return { ok: false, status: response.status, detail: "invalid JSON" };
       }
     }
-    return { ok: true, status: response.status, body: text2 };
+    return { ok: true, status: response.status, body: text3 };
   } catch (error) {
     const detail = error instanceof Error ? error.message : "fetch failed";
     return {
@@ -1341,8 +1420,8 @@ function assessManualPage(bytes, contentType, url) {
     };
   }
   const html = new TextDecoder().decode(bytes).slice(0, 25e4);
-  const text2 = html.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]*>/g, " ");
-  const flags = [...new Set(text2.match(/(?:^|\s)-{1,2}[a-zA-Z][a-zA-Z0-9_-]{2,}/g) || [])];
+  const text3 = html.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]*>/g, " ");
+  const flags = [...new Set(text3.match(/(?:^|\s)-{1,2}[a-zA-Z][a-zA-Z0-9_-]{2,}/g) || [])];
   const candidates = [];
   for (const match of html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
     try {
@@ -2463,7 +2542,7 @@ import { dirname as dirname2, isAbsolute as isAbsolute4, join as join3, relative
 
 // packages/research/src/claim-bindings.ts
 var RELATIONSHIPS = ["direct", "indirect", "hypothesis", "unsupported"];
-function text(value, label2, max = 4e3) {
+function text2(value, label2, max = 4e3) {
   if (typeof value !== "string" || !value.trim() || value.length > max) throw new Error(`Invalid ${label2}`);
   return value.trim();
 }
@@ -2474,8 +2553,8 @@ function validateClaimBindings(bindings, sources, reads) {
   return bindings.map((raw, index) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Invalid claim binding");
     const binding = raw;
-    const claim = text(binding.claim, "claim");
-    const limitations = text(binding.limitations, "limitations");
+    const claim = text2(binding.claim, "claim");
+    const limitations = text2(binding.limitations, "limitations");
     if (seen.has(claim)) throw new Error("Duplicate claim binding");
     seen.add(claim);
     const relationship = binding.relationship;
@@ -2498,7 +2577,7 @@ function validateClaimBindings(bindings, sources, reads) {
       const last = ref.end_line;
       if (!Number.isInteger(first) || !Number.isInteger(last) || first < read.startLine || last < first || last > read.endLine)
         throw new Error("Claim source range is outside the observed read");
-      const quote = text(ref.quote, "source quote", 6e3);
+      const quote = text2(ref.quote, "source quote", 6e3);
       const excerpt = read.text.split(/\r?\n/).slice(first - read.startLine, last - read.startLine + 1).join("\n");
       if (!excerpt.includes(quote)) throw new Error("Claim quote does not match the observed note range");
       return {
@@ -2509,7 +2588,7 @@ function validateClaimBindings(bindings, sources, reads) {
         start_line: first,
         end_line: last,
         quote,
-        ...ref.original_location ? { original_location: text(ref.original_location, "historical original location", 600) } : {},
+        ...ref.original_location ? { original_location: text2(ref.original_location, "historical original location", 600) } : {},
         reading_basis: "current-scope-literature-note",
         originalFulltextReadThisTurn: false
       };
@@ -2519,8 +2598,8 @@ function validateClaimBindings(bindings, sources, reads) {
       claim,
       relationship,
       limitations,
-      ...binding.organism ? { organism: text(binding.organism, "organism", 600) } : {},
-      ...binding.method ? { method: text(binding.method, "method", 1e3) } : {},
+      ...binding.organism ? { organism: text2(binding.organism, "organism", 600) } : {},
+      ...binding.method ? { method: text2(binding.method, "method", 1e3) } : {},
       sources: refs,
       supportAssessment: "model-asserted-unreviewed",
       provenanceChecked: true,
@@ -2658,9 +2737,9 @@ function createResearchLoop(ports) {
       );
   }
   function safeSlug(value, label2) {
-    const text2 = String(value ?? "").trim();
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text2)) throw new Error(`${label2} must be lowercase kebab-case`);
-    return text2;
+    const text3 = String(value ?? "").trim();
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text3)) throw new Error(`${label2} must be lowercase kebab-case`);
+    return text3;
   }
   function topicIdFromResultSlug(value) {
     const slug = safeSlug(value || "research-question", "result_slug");
@@ -2724,9 +2803,9 @@ function createResearchLoop(ports) {
       if (selected[index] !== shown || lines.join("\n").length + shown.length > 9e4) break;
       lines.push(shown);
     }
-    const text2 = lines.join("\n");
-    if (!text2.trim()) return false;
-    const read = { hash: fileHash(bytes), text: text2, startLine, endLine: startLine + lines.length - 1 };
+    const text3 = lines.join("\n");
+    if (!text3.trim()) return false;
+    const read = { hash: fileHash(bytes), text: text3, startLine, endLine: startLine + lines.length - 1 };
     const aliases = /* @__PURE__ */ new Set([
       String(path),
       absolute,
@@ -2736,7 +2815,7 @@ function createResearchLoop(ports) {
     for (const alias of aliases) ledger(cwd, runDir).reads.set(alias, read);
     return true;
   }
-  async function readJson2(path) {
+  async function readJson3(path) {
     const value = JSON.parse(await readFile4(path, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new Error(`Invalid JSON object: ${path}`);
@@ -2854,7 +2933,7 @@ function createResearchLoop(ports) {
     notes
   } = {}) {
     const { path, metadataPath } = await resolveRun(cwd, runDir);
-    const metadata = await readJson2(metadataPath);
+    const metadata = await readJson3(metadataPath);
     let gate = gateOf(metadata);
     const detail = {
       ...query ? { query: String(query).trim() } : {},
@@ -3376,14 +3455,14 @@ var REFERENCE = /^(?:readme(?:\.[^.]+)?|agents\.md|project\.md|package\.json|pyp
 function resolveSetupVault(value, _cwd) {
   if (typeof value !== "string" || !value.trim())
     throw new Error("Vault path is required");
-  const text2 = value.trim();
-  const expanded = text2 === "~" ? homedir() : /^~[/\\]/.test(text2) ? join6(homedir(), text2.slice(2)) : text2;
+  const text3 = value.trim();
+  const expanded = text3 === "~" ? homedir() : /^~[/\\]/.test(text3) ? join6(homedir(), text3.slice(2)) : text3;
   if (isAbsolute7(expanded))
     return resolve9(expanded);
-  const natural = text2.match(/(?:在)?(?:我的)?文档(?:文件夹)?(?:下面|下|中)?(?:创建|新建)?(?:一个)?(?:叫|名为|名称为)\s*[“"']?([^”"']+?)[”"']?(?:的目录|文件夹)?\s*$/i);
+  const natural = text3.match(/(?:在)?(?:我的)?文档(?:文件夹)?(?:下面|下|中)?(?:创建|新建)?(?:一个)?(?:叫|名为|名称为)\s*[“"']?([^”"']+?)[”"']?(?:的目录|文件夹)?\s*$/i);
   if (natural?.[1]?.trim())
     return resolve9(join6(homedir(), "Documents", natural[1].trim()));
-  const english = text2.match(/(?:create|make)\s+(?:a\s+)?(?:folder|directory)\s+(?:named|called)\s+["']?([^"']+?)["']?\s*$/i);
+  const english = text3.match(/(?:create|make)\s+(?:a\s+)?(?:folder|directory)\s+(?:named|called)\s+["']?([^"']+?)["']?\s*$/i);
   if (english?.[1]?.trim())
     return resolve9(join6(homedir(), "Documents", english[1].trim()));
   throw new Error("Please provide an absolute Vault path (or ~/...), or say to create a folder under Documents");
@@ -3608,9 +3687,9 @@ async function readBounded(response) {
     throw new Error("Semantic provider response is too large");
   const reader = response.body?.getReader();
   if (!reader) {
-    const text2 = await response.text();
-    if (Buffer.byteLength(text2) > MAX_RESPONSE) throw new Error("Semantic provider response is too large");
-    return text2;
+    const text3 = await response.text();
+    if (Buffer.byteLength(text3) > MAX_RESPONSE) throw new Error("Semantic provider response is too large");
+    return text3;
   }
   const chunks = [];
   let total = 0;
@@ -3653,7 +3732,7 @@ function vectors(value, expected) {
 async function embedTexts(rawConfig, texts, { signal } = {}) {
   const config = validateSemanticConfig(rawConfig);
   if (!config.enabled) throw new Error("Semantic embeddings are disabled");
-  if (!Array.isArray(texts) || !texts.length || texts.length > MAX_BATCH || texts.some((text2) => typeof text2 !== "string" || !text2.length || text2.length > 16e3) || texts.join("\n").length > MAX_CHARS)
+  if (!Array.isArray(texts) || !texts.length || texts.length > MAX_BATCH || texts.some((text3) => typeof text3 !== "string" || !text3.length || text3.length > 16e3) || texts.join("\n").length > MAX_CHARS)
     throw new Error("Semantic embedding batch is outside bounded limits");
   const headers = { "content-type": "application/json", accept: "application/json" };
   if (config.credentialEnv) {
@@ -4568,14 +4647,14 @@ var KnowledgeService = class {
       role: "delivery-only"
     };
   }
-  async validateAnswer(ticket, cwd, text2, { deliveries = [] } = {}) {
+  async validateAnswer(ticket, cwd, text3, { deliveries = [] } = {}) {
     const state3 = await this.check(ticket, cwd);
     const searched = state3.answerSearch;
     const citationLimit = 12;
     const verifiedSources = [], verifiedOutputs = [];
     const citedPaths = [
       ...new Set(
-        Array.from(String(text2).matchAll(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g), (match) => {
+        Array.from(String(text3).matchAll(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g), (match) => {
           const path = match[1].trim();
           return path.endsWith(".md") ? path : `${path}.md`;
         })
@@ -4754,8 +4833,8 @@ async function notifyKnowledgeChange(path) {
 }
 
 // packages/knowledge/src/source-links.ts
-function label(text2) {
-  return [...String(text2)].map(
+function label(text3) {
+  return [...String(text3)].map(
     (char) => "[]<>".includes(char) || char.charCodeAt(0) === 10 || char.charCodeAt(0) === 13 ? " " : char
   ).join("").slice(0, 220);
 }
@@ -5128,7 +5207,7 @@ async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) {
     throw new Error("Source must remain inside its research run");
   if (createHash8("sha256").update(await readFile9(entry.path)).digest("hex") !== entry.sha256)
     throw new Error("Source hash changed before indexing");
-  const metadata = await readJson(join13(runDir, "metadata.json"));
+  const metadata = await readJson2(join13(runDir, "metadata.json"));
   const project = validateProject(metadata.project || "research-workbench");
   const category = ["papers", "supplementary"].includes(entry.category) ? "Papers" : "Software";
   const title = String(entry.metadata?.title || basename5(entry.path)).replace(/[<>\r\n]/g, " ").trim().slice(0, 200);
@@ -5271,7 +5350,7 @@ updated: ${JSON.stringify((/* @__PURE__ */ new Date()).toISOString())}
     };
   });
 }
-async function readJson(file) {
+async function readJson2(file) {
   try {
     const data = JSON.parse((await readFile9(file, "utf8")).replace(/^\uFEFF/, ""));
     if (!data || typeof data !== "object" || Array.isArray(data))
@@ -5837,6 +5916,65 @@ function sourceArchive(pi) {
         declarations: p.declarations || {}
       });
       return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], details: value };
+    }
+  });
+  registerTool(pi, {
+    name: "research_methods",
+    label: "Methods section",
+    drone: { capabilities: ["research"], subagent: "exclude" },
+    description: "Draft a paper Methods paragraph from a run's records. action=facts returns what the run actually recorded (inputs/outputs/scripts with hashes, declared software versions, parameters and compute modules, executed-command counts, gaps). Write the paragraph only from those facts \u2014 never invent versions, parameters or thresholds; name missing ones as gaps or ask the user. action=save shows the draft to the user and writes METHODS.md in the run only if they approve.",
+    parameters: {
+      type: "object",
+      properties: {
+        run_dir: { type: "string", description: "Existing run directory inside the results root" },
+        action: { type: "string", enum: ["facts", "save"] },
+        text: {
+          type: "string",
+          maxLength: 2e4,
+          description: "save: the Methods paragraph(s) to show the user"
+        }
+      },
+      required: ["run_dir", "action"]
+    },
+    async execute(_id, p, signal, _update, ctx) {
+      if (p.action === "facts") {
+        const facts = await readMethodsFacts({ cwd: ctx.cwd, runDir: p.run_dir, loadWorkspaceConfig });
+        return { content: [{ type: "text", text: JSON.stringify(facts, null, 2) }], details: facts };
+      }
+      const draft = String(p.text || "").trim();
+      if (!draft) throw new Error("save needs the Methods text");
+      if (!ctx.hasUI || !ctx.ui?.select)
+        throw new Error("Saving a Methods section needs the user's confirmation in the desktop app");
+      const approve = "\u4FDD\u5B58\u5230\u8FD0\u884C\u76EE\u5F55\uFF08METHODS.md\uFF09";
+      const choice = await ctx.ui.select(
+        `\u786E\u8BA4 Methods \u6BB5
+
+${draft.slice(0, 6e3)}${draft.length > 6e3 ? "\n\u2026" : ""}
+
+\u7248\u672C\u4E0E\u53C2\u6570\u6765\u81EA\u8FD0\u884C\u8BB0\u5F55\u4E2D\u7684\u58F0\u660E\uFF0C\u672A\u7ECF\u72EC\u7ACB\u9A8C\u8BC1\u3002\u9700\u8981\u4FEE\u6539\u8BF7\u9009\u300C\u5148\u4E0D\u4FDD\u5B58\u300D\u5E76\u5728\u5BF9\u8BDD\u91CC\u8BF4\u660E\u3002`,
+        [approve, "\u5148\u4E0D\u4FDD\u5B58"],
+        { signal }
+      );
+      if (choice !== approve) {
+        const value2 = { saved: false, reason: "user did not approve" };
+        return {
+          content: [
+            {
+              type: "text",
+              text: "The user did not approve this Methods draft; nothing was written. Ask what to change."
+            }
+          ],
+          details: value2
+        };
+      }
+      const value = {
+        saved: true,
+        ...await saveMethodsSection({ cwd: ctx.cwd, runDir: p.run_dir, text: draft, loadWorkspaceConfig })
+      };
+      return {
+        content: [{ type: "text", text: `Saved the approved Methods section to ${value.path}.` }],
+        details: value
+      };
     }
   });
   pi.on("before_agent_start", async (event) => ({
