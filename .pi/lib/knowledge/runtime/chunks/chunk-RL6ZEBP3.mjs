@@ -505,6 +505,17 @@ async function decideWikiProposal(service, id, project, expectedHash, decision, 
     })
   );
 }
+async function autoApplyWikiProposal(service, id, project, expectedHash) {
+  if (await readReviewMode() !== "automatic") return { id, status: "pending", reason: "strict-review" };
+  try {
+    return await decideWikiProposal(service, id, project, expectedHash, "apply", {
+      actor: "automatic",
+      authority: AUTOMATIC_AUTHORITY
+    });
+  } catch (error) {
+    return { id, status: "pending", reason: String(error?.message || error).slice(0, 300) };
+  }
+}
 async function wikiHistory(service, project) {
   return withKnowledgeBinding(service.binding, async () => {
     let names;
@@ -579,6 +590,7 @@ export {
   previewWikiProposal,
   listWikiProposals,
   decideWikiProposal,
+  autoApplyWikiProposal,
   wikiHistory,
   undoWikiUpdate
 };

@@ -16,7 +16,7 @@ export const VAULT_PROFILES: any = {
             "Artifacts",
             "Wiki",
         ],
-        libraryTypes: ["Papers", "Methods", "Software", "Explainers"],
+        libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Explainers"],
         deposition: {
             runSummaries: true,
             verifiedSources: true,
@@ -31,7 +31,7 @@ export const VAULT_PROFILES: any = {
         label: "文献知识库型",
         description: "强调跨项目复用的论文、方法、概念、实体与软件知识，同时保留轻量项目层。",
         projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-        libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Explainers"],
+        libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
         deposition: {
             runSummaries: true,
             verifiedSources: true,
@@ -58,7 +58,7 @@ export const VAULT_PROFILES: any = {
             "Artifacts",
             "Wiki",
         ],
-        libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Explainers"],
+        libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"],
         deposition: {
             runSummaries: true,
             verifiedSources: true,

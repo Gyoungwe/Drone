@@ -17,9 +17,10 @@ import {
   knowledgeSetupPreview,
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
+  searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-X3UUGJ74.mjs";
-import "./chunks/chunk-NCQOEHSQ.mjs";
+} from "./chunks/chunk-AWJF4DPU.mjs";
+import "./chunks/chunk-RL6ZEBP3.mjs";
 import "./chunks/chunk-7HHP6BXQ.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";
 import "./chunks/chunk-O536IQIE.mjs";
@@ -51,5 +52,6 @@ export {
   knowledgeSetupPreview,
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
+  searchKnowledge,
   testKnowledgeSemanticProvider
 };
