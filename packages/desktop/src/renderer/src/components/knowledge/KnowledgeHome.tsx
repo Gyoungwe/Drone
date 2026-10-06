@@ -4,12 +4,13 @@ import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { reportKnowledgeError, useKnowledgeOverview } from "./hooks";
+import { KnowledgeSearch } from "./KnowledgeSearch";
 import { WikiReviewPanel } from "./WikiReviewPanel";
 
 const RECENT_LIMIT = 12;
 
 /**
- * 知识库主视图（左侧导航「知识库」）：Vault 状态 + 最近沉淀 + 待处理修改。
+ * 知识库主视图（左侧导航「知识库」）：Vault 状态 + 搜索 + 最近沉淀 + 待处理修改。
  * 绑定、索引、语义检索、主题、专家与审核模式等维护功能在 设置 › 高级 › 知识库维护（KnowledgePanel）。
  */
 export function KnowledgeHome({
@@ -69,6 +70,7 @@ export function KnowledgeHome({
 					{error}
 				</p>
 			)}
+			{binding && <KnowledgeSearch cwd={cwd} sessionId={sessionId} bindingRevision={binding.revision} />}
 			{binding && (
 				<section aria-label={t("homeRecent")}>
 					<h3 className="mb-2 text-xs font-semibold">{t("homeRecent")}</h3>

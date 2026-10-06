@@ -543,6 +543,7 @@ export async function depositKnowledge({ cwd = process.cwd(), project, type, tit
         software: ["library", "Software"],
         entity: ["library", "Entities"],
         concept: ["library", "Concepts"],
+        idea: ["library", "Ideas"],
     };
     const route = routes[kind];
     if (!route)

@@ -5,6 +5,7 @@ import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench
 import { readReviewMode, saveReviewMode } from "@drone/knowledge";
 import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
 import {
+	autoApplyWikiProposal,
 	decideWikiProposal,
 	stageWikiProposal,
 	undoWikiUpdate,
@@ -94,4 +95,29 @@ it("updates an unchanged AI-owned page and restores its previous version on undo
 	const item = (await wikiHistory(service, "test")).find((p) => p.id === updated.id);
 	await undoWikiUpdate(service, "test", updated.id, item.afterHash);
 	expect(await readFile(join(vault, path), "utf8")).toBe(before);
+});
+
+const auto = (candidate) => autoApplyWikiProposal(service, candidate.id, "test", candidate.proposalHash);
+it("automatic mode writes a new page straight into the Vault without human review", async () => {
+	const applied = await auto(await stage());
+	expect(applied.status).toBe("applied");
+	expect(applied.reviewMethod).toBe("automatic");
+	expect(applied.humanReviewed).toBe(false);
+	expect(await readFile(join(vault, path), "utf8")).toContain("Bounded observation");
+	expect(await wikiHistory(service, "test")).toHaveLength(1);
+});
+it("automatic mode keeps a human-edited page pending for review", async () => {
+	await auto(await stage());
+	await writeFile(join(vault, path), "# Human-authored revision\nKeep this.\n");
+	await service.read(prep.ticket, cwd, { path });
+	const result = await auto(await stage());
+	expect(result.status).toBe("pending");
+	expect(result.reason).toContain("requires confirmation");
+	expect(await readFile(join(vault, path), "utf8")).toContain("Keep this");
+});
+it("strict mode never auto-applies", async () => {
+	await saveReviewMode("strict");
+	const result = await auto(await stage());
+	expect(result).toMatchObject({ status: "pending", reason: "strict-review" });
+	await expect(readFile(join(vault, path))).rejects.toMatchObject({ code: "ENOENT" });
 });

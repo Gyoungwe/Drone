@@ -250,7 +250,7 @@ export default function obsidianWorkbench(pi) {
 			flowCards: depositCard,
 		},
 		description:
-			"Write a typed research object through the controlled managed-block deposition layer. Raw Obsidian MCP writes are intentionally not exposed.",
+			"Save a typed note straight into the Vault (no review): paper → Library/Papers, method → Library/Methods, software → Library/Software, idea → Library/Ideas (proposed hypotheses with their basis and how to test them), plus project-scoped question/evidence/claim/decision. Use it after a web lookup so the next similar question is answered from local knowledge. Raw Obsidian MCP writes are intentionally not exposed.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -268,6 +268,7 @@ export default function obsidianWorkbench(pi) {
 						"software",
 						"entity",
 						"concept",
+						"idea",
 					],
 				},
 				title: { type: "string" },
