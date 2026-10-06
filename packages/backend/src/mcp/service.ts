@@ -2,7 +2,13 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import type { McpConfigServer, McpConfigSnapshot, McpStatus } from "@drone/shared";
+import {
+	MCP_PRESETS,
+	type McpConfigServer,
+	type McpConfigSnapshot,
+	type McpPreset,
+	type McpStatus,
+} from "@drone/shared";
 import { getAgentDir } from "../session-engine/sdk";
 
 type RawServer = Record<string, unknown>;
@@ -74,6 +80,7 @@ export interface McpServicePort {
 	getStatus(cwd?: string): McpStatus;
 	getConfig(cwd?: string): Promise<McpConfigSnapshot>;
 	setServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot>;
+	addPreset?(id: McpPreset["id"]): Promise<McpConfigSnapshot>;
 }
 
 export class McpService implements McpServicePort {
@@ -168,13 +175,36 @@ export class McpService implements McpServicePort {
 		}
 		servers[name] = { ...(raw as RawServer | undefined), disabled: !enabled };
 		value[key] = servers;
+		await this.writeRaw(path, value);
+		await this.onServerEnabled?.(cwd);
+		return this.getConfig(cwd);
+	}
 
+	/** 一键接入预设 MCP：写入用户级 mcp.json；同名已存在时只重新启用，不覆盖用户改过的命令。 */
+	async addPreset(id: McpPreset["id"]): Promise<McpConfigSnapshot> {
+		const preset = MCP_PRESETS.find((item) => item.id === id);
+		if (!preset) throw new Error(`Unknown MCP preset: ${id}`);
+		const path = this.writePath();
+		const value = await readRaw(path);
+		const key =
+			value["mcp-servers"] !== undefined && value.mcpServers === undefined ? "mcp-servers" : "mcpServers";
+		const servers = serverMap(value);
+		const existing = servers[preset.name];
+		servers[preset.name] =
+			existing && typeof existing === "object" && !Array.isArray(existing)
+				? { ...(existing as RawServer), disabled: false }
+				: { command: preset.server.command, args: [...preset.server.args] };
+		value[key] = servers;
+		await this.writeRaw(path, value);
+		await this.onServerEnabled?.();
+		return this.getConfig();
+	}
+
+	private async writeRaw(path: string, value: Record<string, unknown>): Promise<void> {
 		await mkdir(dirname(path), { recursive: true });
 		const tempPath = `${path}.${process.pid}.tmp`;
 		await writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
 		await chmod(tempPath, 0o600);
 		await rename(tempPath, path);
-		await this.onServerEnabled?.(cwd);
-		return this.getConfig(cwd);
 	}
 }

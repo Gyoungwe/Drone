@@ -1,5 +1,5 @@
 import { Type } from "typebox";
-import type { McpConfigSnapshot, McpStatus } from "../mcp";
+import type { McpConfigSnapshot, McpPreset, McpStatus } from "../mcp";
 import { defineDomain } from "./define";
 
 const OptionalCwdArgs = Type.Union([
@@ -93,6 +93,10 @@ export const McpContract = defineDomain("mcp", {
 			args: OptionalCwdArgs,
 			result: Type.Void(),
 		},
+		addPreset: {
+			args: Type.Tuple([Type.Literal("playwright")]),
+			result: Type.Unsafe<McpConfigSnapshot>(ConfigSchema),
+		},
 	},
 });
 
@@ -101,6 +105,7 @@ export type McpSchemaTypes = {
 	getConfig: [cwd?: string];
 	setServerEnabled: [name: string, enabled: boolean, cwd?: string];
 	openConfig: [cwd?: string];
+	addPreset: [id: McpPreset["id"]];
 };
 
 export type { McpConfigSnapshot, McpStatus };

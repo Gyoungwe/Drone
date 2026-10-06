@@ -8,7 +8,7 @@ import type { LanStatus } from "./host-api/lan";
 import type { SessionsApi } from "./host-api/sessions";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
-import type { McpConfigSnapshot, McpStatus, McpStatusEvent } from "./mcp";
+import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
 import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "./packages";
 import type {
 	PermissionAuditTailEntry,
@@ -206,6 +206,7 @@ export const IpcChannels = {
 	McpGetStatus: "mcp:getStatus",
 	McpGetConfig: "mcp:getConfig",
 	McpSetServerEnabled: "mcp:setServerEnabled",
+	McpAddPreset: "mcp:addPreset",
 	McpOpenConfig: "mcp:openConfig",
 	McpEvent: "mcp:event",
 	SettingsSaveApiKey: "settings:saveApiKey",
@@ -363,6 +364,8 @@ export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryA
 	getMcpConfig(cwd?: string): Promise<McpConfigSnapshot>;
 	setMcpServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot>;
 	openMcpConfig(cwd?: string): Promise<void>;
+	/** 一键接入预设 MCP（写入用户级 mcp.json，已存在则只重新启用） */
+	addMcpPreset(id: McpPreset["id"]): Promise<McpConfigSnapshot>;
 	onMcpEvent(cb: (event: McpStatusEvent) => void): () => void;
 	/** Zotero 文献库接入状态（注册/启用/本机 API 可达/桌面端检测）；面板用，只读 */
 	getZoteroStatus(): Promise<ZoteroStatus>;
