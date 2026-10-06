@@ -209,7 +209,11 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 				String(prompt || ""),
 			),
 		);
-	const knowledgeTool = (name) => /^research_/.test(String(name || ""));
+	// Zotero item edits and status return host receipts and never read Vault evidence, so they
+	// must not promote an ordinary turn into one that requires research_prepare_knowledge.
+	const OPERATIONAL_RESEARCH_TOOLS = new Set(["research_zotero_update", "research_zotero_status"]);
+	const knowledgeTool = (name) =>
+		/^research_/.test(String(name || "")) && !OPERATIONAL_RESEARCH_TOOLS.has(String(name));
 	let turnKnowledgeRequested = false;
 	let turnBinding = null;
 	const promoteKnowledgeTurn = (ctx) => {

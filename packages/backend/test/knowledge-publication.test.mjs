@@ -319,3 +319,48 @@ describe("native answer readiness, not model self-certification", () => {
 		await expect(service.validateAnswer(next.ticket, cwd, answer)).rejects.toThrow("search");
 	});
 });
+
+describe("a turn promoted by a research tool without research_prepare_knowledge", () => {
+	const notPrepared = () => {
+		throw Object.assign(new Error("Call research_prepare_knowledge first"), { code: "not-prepared" });
+	};
+	const receipt = "Zotero: blocked — add a write-enabled key in Settings → Zotero → Web API. No change made.";
+	async function publish(mode) {
+		vi.stubEnv("DRONE_REVIEW_MODE", mode);
+		const events = new Map();
+		const gate = registerAnswerPublication(
+			{ on: (name, handler) => events.set(name, handler) },
+			{ getCurrent: notPrepared },
+		);
+		gate.begin(true);
+		const result = await events.get("message_end")(
+			{
+				message: {
+					role: "assistant",
+					stopReason: "stop",
+					content: [{ type: "text", text: receipt }],
+					timestamp: 1,
+				},
+			},
+			{ cwd },
+		);
+		return { gate, message: result.message };
+	}
+
+	it("automatic review keeps the answer with a not-prepared advisory instead of check-failed", async () => {
+		const { gate, message } = await publish("automatic");
+		expect(message.knowledgePublication).toMatchObject({ status: "released", scientificallyVerified: false });
+		expect(message.knowledgePublication.warnings).toEqual([
+			expect.objectContaining({ code: "not-prepared" }),
+		]);
+		const text = message.content.map((item) => item.text).join("");
+		expect(text).toContain(receipt);
+		expect(text).toContain("知识库准备步骤未完成");
+		expect(await gate.preflight({ cwd }, receipt)).toMatchObject({ ok: true, status: "warning" });
+	});
+
+	it("strict review still blocks, reporting not-prepared rather than a generic check failure", async () => {
+		const { message } = await publish("strict");
+		expect(message.knowledgePublication).toMatchObject({ status: "blocked", reason: "not-prepared" });
+	});
+});

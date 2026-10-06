@@ -443,13 +443,14 @@ ${String(footer).slice(0, 2e3)}` }] : published;
     } catch (error) {
       const info = knowledgeFailure(error);
       if (await readReviewMode() === "automatic" && advisoryCodes.has(info.code) && !signal?.aborted) {
-        try {
-          const current = currentTurn;
-          if (!current) throw new Error("not prepared");
-          await current.service.check(current.ticket, cwd);
-        } catch (authorityError) {
-          return report(failure(message, authorityError));
-        }
+        if (info.code !== "not-prepared")
+          try {
+            const current = currentTurn;
+            if (!current) throw Object.assign(new Error("not prepared"), { code: "not-prepared" });
+            await current.service.check(current.ticket, cwd);
+          } catch (authorityError) {
+            return report(failure(message, authorityError));
+          }
         const advisoryContent = info.code === "citation-required" ? [] : [{ type: "text", text: `
 
 \u3010\u6709\u63D0\u9192\u3011${advisoryLine(info.code, error)}` }];
@@ -524,16 +525,17 @@ ${String(footer).slice(0, 2e3)}` }] : published;
       } catch (error) {
         const info = knowledgeFailure(error);
         if (await readReviewMode() === "automatic" && advisoryCodes.has(info.code)) {
-          try {
-            const current = getCurrent(ctx);
-            await current.service.check(current.ticket, cwd);
-          } catch {
-            return {
-              ok: false,
-              code: "binding-changed",
-              message: "Refresh the current knowledge binding before continuing."
-            };
-          }
+          if (info.code !== "not-prepared")
+            try {
+              const current = getCurrent(ctx);
+              await current.service.check(current.ticket, cwd);
+            } catch {
+              return {
+                ok: false,
+                code: "binding-changed",
+                message: "Refresh the current knowledge binding before continuing."
+              };
+            }
           return {
             ok: true,
             status: "warning",
