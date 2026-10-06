@@ -46,6 +46,34 @@ export const zoteroZh = {
 	webFromEnv: "来自环境变量 ZOTERO_API_KEY（…{hint}），在设置里不可更改。",
 	webSaved: "已保存，Agent 现在可以修改已有条目（每次修改仍会先征求你的同意）。",
 	webInvalidInput: "没有保存：密钥应为 16–64 位字母或数字，群组库 ID 最多 20 位数字。",
+	instTitle: "机构访问（一次登录，自动保存模板）",
+	instIntro:
+		"Agent 在归档文献时若遇到付费墙，会自动请求机构登录。点“登录机构账号”后在弹出窗口完成学校/图书馆登录（支持 EZproxy / Shibboleth / CARSI / OpenAthens / WebVPN），系统会自动从 URL 中识别并保存 EZproxy 模板（例如 .../login?url=%s），无需手动填写。登录态保存在持久分区，重启仍有效。任务授权后会自动尝试下载（每任务最多 {limit} 篇），仅在过期或验证码时再次弹窗。",
+	instLoginState: "登录状态",
+	instLoggedIn: "已登录",
+	instLoggedOut: "未登录",
+	instCookies: "Cookie 数",
+	instLastLogin: "上次登录",
+	instNever: "从未",
+	instTemplate: "自动模板",
+	instNoTemplate: "未自动识别（直连会话）",
+	instName: "机构名",
+	instUnset: "未填",
+	instAutoDownload: "自动下载",
+	instOn: "开启",
+	instOff: "关闭",
+	instPerTask: "每任务上限",
+	instPapers: "{n} 篇",
+	instLogin: "登录机构账号（自动保存模板）",
+	instRefresh: "刷新状态",
+	instClear: "清除登录状态",
+	instTestTitle: "测试访问（经机构会话/自动模板尝试）",
+	instTesting: "测试中…",
+	instTest: "测试",
+	instWorkflow:
+		"工作流：Agent 调用 research_archive_source → OA 失败 → 返回 institutional_auth_required → Agent 自动调用 research_institutional_login 打开窗口 → 你登录 → 系统自动识别模板（如 https://ezproxy.xxx.edu/login?url=%s）并保存到 ~/.pi/agent/institutional.json → 重试下载。不需要手动设置模板。",
+	instWebvpn:
+		"提示：若你的学校使用 WebVPN（如 https://webvpn.xxx.edu.cn/https/443/www.nature.com/...），直接登录即可，无需模板，系统靠持久 Cookie 直连。EZproxy 会自动保存，下次无需再登录。",
 } as const;
 
 export const zoteroEn: Record<keyof typeof zoteroZh, string> = {
@@ -98,6 +126,34 @@ export const zoteroEn: Record<keyof typeof zoteroZh, string> = {
 	webSaved: "Saved. The agent can now change existing items (it still asks you before each change).",
 	webInvalidInput:
 		"Not saved: the key must be 16–64 letters or digits and the group library ID at most 20 digits.",
+	instTitle: "Institutional access (log in once, template saved automatically)",
+	instIntro:
+		"When the agent hits a paywall while archiving literature, it asks for an institutional login. Click “Log in to institution” and sign in to your university/library in the pop-up (EZproxy / Shibboleth / CARSI / OpenAthens / WebVPN); the EZproxy template (e.g. .../login?url=%s) is recognised from the URL and saved automatically. The login lives in a persistent partition and survives restarts. After a task is authorized, downloads are tried automatically (up to {limit} per task); you are only asked again when the login expires or a CAPTCHA appears.",
+	instLoginState: "Login state",
+	instLoggedIn: "Logged in",
+	instLoggedOut: "Not logged in",
+	instCookies: "Cookies",
+	instLastLogin: "Last login",
+	instNever: "Never",
+	instTemplate: "Template",
+	instNoTemplate: "Not detected (direct session)",
+	instName: "Institution",
+	instUnset: "Not set",
+	instAutoDownload: "Automatic download",
+	instOn: "On",
+	instOff: "Off",
+	instPerTask: "Per-task limit",
+	instPapers: "{n} papers",
+	instLogin: "Log in to institution (saves the template)",
+	instRefresh: "Refresh status",
+	instClear: "Clear login",
+	instTestTitle: "Test access (through the institutional session / template)",
+	instTesting: "Testing…",
+	instTest: "Test",
+	instWorkflow:
+		"Workflow: the agent calls research_archive_source → open access fails → institutional_auth_required → the agent calls research_institutional_login to open the window → you log in → the template (e.g. https://ezproxy.xxx.edu/login?url=%s) is detected and saved to ~/.pi/agent/institutional.json → the download is retried. No manual template setup is needed.",
+	instWebvpn:
+		"Tip: if your university uses WebVPN (e.g. https://webvpn.xxx.edu.cn/https/443/www.nature.com/...), just log in — no template is needed; the persistent cookies are used directly. EZproxy is saved automatically so you do not need to log in again.",
 };
 
 export function useZoteroText() {

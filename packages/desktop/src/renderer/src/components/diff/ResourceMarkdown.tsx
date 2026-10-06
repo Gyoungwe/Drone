@@ -2,6 +2,7 @@
 import { isLocalResourceTarget } from "@drone/shared";
 import { lexer } from "marked";
 import { createElement, type ReactNode, useMemo } from "react";
+import { useT } from "../../i18n";
 import { ResourceCode } from "./ResourceCode";
 
 type Cell = { text: string; tokens?: Node[] };
@@ -52,6 +53,7 @@ export function ResourceMarkdown({
 	text: string;
 	onNavigate: (href: string, label?: string) => void;
 }) {
+	const t = useT();
 	const parsed = useMemo(() => {
 		try {
 			return { nodes: lexer(text.slice(0, 64000), { gfm: true }) as unknown as Node[], error: false };
@@ -62,7 +64,7 @@ export function ResourceMarkdown({
 	if (parsed.error)
 		return (
 			<>
-				<p className="resource-notice">Markdown 无法解析，显示原文。</p>
+				<p className="resource-notice">{t("resource.viewer.markdownInvalid")}</p>
 				<ResourceCode text={text} />
 			</>
 		);
@@ -159,7 +161,7 @@ export function ResourceMarkdown({
 							key={key}
 							onClick={() => onNavigate(node.href || "", node.text)}
 						>
-							图片：{node.text || "未命名"} · 点击预览
+							{t("resource.viewer.imageReference", { name: node.text || t("resource.viewer.unnamed") })}
 						</button>
 					);
 				case "table":
@@ -204,17 +206,10 @@ export function ResourceMarkdown({
 	const body = render(parsed.nodes);
 	return (
 		<article className="resource-markdown" data-testid="resource-markdown">
-			{text.length > 64000 && (
-				<p className="resource-notice">Markdown 仅排版前 64,000 字符；可切换源码或外部打开。</p>
-			)}
+			{text.length > 64000 && <p className="resource-notice">{t("resource.viewer.markdownClipped")}</p>}
 			{body}
-			{clipped && (
-				<p className="resource-notice">
-					文档结构超过预览上限（2,500 个标记、24 层、表格 200 行／60
-					列），后续结构已省略；请在外部查看完整文件。
-				</p>
-			)}
-			<p className="resource-preview-footnote">只读排版 · 原始 HTML 不执行 · 图片按需打开</p>
+			{clipped && <p className="resource-notice">{t("resource.viewer.markdownTooComplex")}</p>}
+			<p className="resource-preview-footnote">{t("resource.viewer.markdownFootnote")}</p>
 		</article>
 	);
 }

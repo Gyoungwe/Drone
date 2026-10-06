@@ -54,8 +54,8 @@ export function PermissionPicker() {
 				{mode === "fullAccess"
 					? t("composer.permissionFullAccess")
 					: mode === "strict"
-						? "严格确认"
-						: "自动执行"}
+						? t("composer.permissionStrict")
+						: t("composer.permissionAuto")}
 			</span>
 		</button>
 	);
@@ -95,15 +95,15 @@ export function PermissionPicker() {
 										{m === "fullAccess"
 											? t("composer.permissionFullAccessTitle")
 											: m === "strict"
-												? "严格确认"
-												: "自动执行（推荐）"}
+												? t("composer.permissionStrict")
+												: t("composer.permissionAutoTitle")}
 									</span>
 									<span className="mt-0.5 block text-[11px] leading-relaxed text-ink-faint">
 										{m === "fullAccess"
 											? t("composer.permissionFullAccessDesc")
 											: m === "strict"
-												? "常规文件写入也需确认；仍可按任务授权。"
-												: "项目内常规编辑自动执行；敏感文件、越界写入、删除和发布仍需确认。"}
+												? t("composer.permissionStrictDesc")
+												: t("composer.permissionAutoDesc")}
 									</span>
 								</span>
 								{selected && <CheckIcon size={12} className="mt-1 shrink-0" />}

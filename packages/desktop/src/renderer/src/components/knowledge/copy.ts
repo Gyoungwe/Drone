@@ -102,6 +102,19 @@ export const knowledgeZh = {
 	dailyTitle: "新想法",
 	dailyLastRun: "上次运行：{time}",
 	dailyNeverRun: "尚未运行",
+	flowWarnings: "有提醒",
+	reviewModeTitle: "知识审核",
+	reviewModeLabel: "知识审核模式",
+	reviewAutomatic: "自动保存 · 非阻断提醒（推荐）",
+	reviewStrict: "严格审核 · 发布前检查",
+	reviewLegend:
+		"已保存：内容落盘，不代表科学验证。 有提醒：证据待核实，不阻断回答。 待确认：人工内容或冲突，不自动覆盖。",
+	reviewPermissions:
+		"工具权限在输入框的“自动执行 / 严格确认”中单独设置；删除、发布和费用边界不会因知识自动审核而放开。",
+	wikiHistory: "Wiki 保存历史与撤销",
+	wikiSaved: "已保存",
+	wikiUndoConfirm: "撤销 {path} 的这次保存？新建页面会删除，已修改的页面不会被覆盖。",
+	wikiUndo: "撤销",
 	dailyNoNewNotes:
 		"上次运行时，自 {since} 以来 Library/、Wiki/、Projects/ 下没有新增或修改的笔记，所以没有新想法。其他目录里的笔记不参与每日发现。",
 	dailyRanNoIdeas: "上次读了 {notes} 篇最近更新的笔记，没有找到足够有依据的新想法。",
@@ -418,6 +431,20 @@ const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
 	dailyTitle: "New ideas",
 	dailyLastRun: "Last run: {time}",
 	dailyNeverRun: "Not run yet",
+	flowWarnings: "Has warnings",
+	reviewModeTitle: "Knowledge review",
+	reviewModeLabel: "Knowledge review mode",
+	reviewAutomatic: "Save automatically · non-blocking warnings (recommended)",
+	reviewStrict: "Strict review · check before publishing",
+	reviewLegend:
+		"Saved: written to disk, not scientific validation. Has warnings: evidence still to be checked; answers are not blocked. Needs confirmation: human-written content or a conflict; never overwritten automatically.",
+	reviewPermissions:
+		"Tool permissions are set separately in the input box (Auto-run / Strict confirmation); automatic knowledge review never loosens deletion, publishing or cost limits.",
+	wikiHistory: "Wiki save history and undo",
+	wikiSaved: "saved",
+	wikiUndoConfirm:
+		"Undo this save of {path}? A newly created page is deleted; a page that was modified since is not overwritten.",
+	wikiUndo: "Undo",
 	dailyNoNewNotes:
 		"On the last run no note under Library/, Wiki/ or Projects/ had been added or changed since {since}, so there were no new ideas. Notes in other folders are not part of daily discovery.",
 	dailyRanNoIdeas:

@@ -194,9 +194,9 @@ export function KnowledgePanel({
 					{binding && (
 						<section className="rounded-xl border border-edge p-3 space-y-2">
 							<label className="flex items-center justify-between text-xs">
-								知识审核
+								{t("reviewModeTitle")}
 								<select
-									aria-label="知识审核模式"
+									aria-label={t("reviewModeLabel")}
 									value={data.reviewMode ?? "automatic"}
 									disabled={busy}
 									onChange={async (e) => {
@@ -214,18 +214,12 @@ export function KnowledgePanel({
 									}}
 									className="rounded bg-surface px-2 py-1"
 								>
-									<option value="automatic">自动保存 · 非阻断提醒（推荐）</option>
-									<option value="strict">严格审核 · 发布前检查</option>
+									<option value="automatic">{t("reviewAutomatic")}</option>
+									<option value="strict">{t("reviewStrict")}</option>
 								</select>
 							</label>
-							<p className="text-xs text-ink-dim">
-								已保存：内容落盘，不代表科学验证。 有提醒：证据待核实，不阻断回答。
-								待确认：人工内容或冲突，不自动覆盖。
-							</p>
-							<p className="text-xs text-ink-dim">
-								工具权限在输入框的“自动执行 /
-								严格确认”中单独设置；删除、发布和费用边界不会因知识自动审核而放开。
-							</p>
+							<p className="text-xs text-ink-dim">{t("reviewLegend")}</p>
+							<p className="text-xs text-ink-dim">{t("reviewPermissions")}</p>
 							{actionError && (
 								<p role="alert" className="text-xs text-err">
 									{actionError}
@@ -233,22 +227,17 @@ export function KnowledgePanel({
 							)}
 							{(data.wikiHistory ?? []).length > 0 && (
 								<details>
-									<summary className="text-xs cursor-pointer">Wiki 保存历史与撤销</summary>
+									<summary className="text-xs cursor-pointer">{t("wikiHistory")}</summary>
 									{data.wikiHistory?.map((item) => (
 										<div key={item.id} className="flex gap-2 items-center text-xs py-1">
 											<span className="flex-1 break-all">
-												{item.path} · 已保存 · {new Date(item.reviewedAt).toLocaleString()}
+												{item.path} · {t("wikiSaved")} · {new Date(item.reviewedAt).toLocaleString()}
 											</span>
 											<Button
 												size="sm"
 												disabled={busy}
 												onClick={async () => {
-													if (
-														!window.confirm(
-															`撤销 ${item.path} 的这次保存？新建页面会删除，已修改的页面不会被覆盖。`,
-														)
-													)
-														return;
+													if (!window.confirm(t("wikiUndoConfirm").replace("{path}", item.path))) return;
 													setBusy(true);
 													setActionError(null);
 													try {
@@ -267,7 +256,7 @@ export function KnowledgePanel({
 													}
 												}}
 											>
-												撤销
+												{t("wikiUndo")}
 											</Button>
 										</div>
 									))}

@@ -7,6 +7,7 @@ import {
 } from "@drone/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
+import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import { DefaultMilestoneEvidence, MilestoneEvidence } from "./MilestoneEvidence";
@@ -30,6 +31,7 @@ export function TaskRow({
 	sessionId: string | null;
 	agentActive: boolean;
 }) {
+	const t = useT();
 	const [busy, setBusy] = useState(false),
 		[error, setError] = useState("");
 	const done = task.milestones.filter((m) => m.state === "completed").length;
@@ -38,10 +40,8 @@ export function TaskRow({
 	const presentation = taskDeliveryPresentation(task, agentActive);
 	const pendingReview = task.actions.some((action) => action.kind === "review" && action.state === "pending");
 	const remainingSummary =
-		(agentActive ? "任务仍在执行；验收进度会随结果更新，无需重复发起。" : task.remainingSummary) ||
-		(task.milestones.length
-			? "还有几项没确认完成；这是较早的记录，先核对一下已有结果，别重复生成。"
-			: "还没约定要交付什么，暂不显示进度。");
+		(agentActive ? t("taskRow.running") : task.remainingSummary) ||
+		(task.milestones.length ? t("taskRow.unconfirmed") : t("taskRow.noDeliverables"));
 	return (
 		<article className="border-b border-border px-2 py-2 last:border-0">
 			<div className="flex items-start justify-between gap-2">
@@ -51,18 +51,18 @@ export function TaskRow({
 				</span>
 			</div>
 			<p className="mt-0.5 text-[11px] text-ink-dim">
-				已执行 {task.budget.calls} 步
-				{task.milestones.length > 0 && ` · 已验收 ${done}/${task.milestones.length}`}
+				{t("taskRow.steps", { n: task.budget.calls })}
+				{task.milestones.length > 0 && t("taskRow.accepted", { done, total: task.milestones.length })}
 			</p>
 			{task.milestones.length > 0 && (
 				<div
 					className="mt-1 h-0.5 overflow-hidden rounded-full bg-hover"
 					role="progressbar"
-					aria-label="交付验收进度"
+					aria-label={t("taskRow.progressLabel")}
 					aria-valuemin={0}
 					aria-valuemax={100}
 					aria-valuenow={pct}
-					aria-valuetext={`已验收 ${done}/${task.milestones.length} 项`}
+					aria-valuetext={t("taskRow.progressText", { done, total: task.milestones.length })}
 				>
 					<div
 						className={`h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${
@@ -102,7 +102,7 @@ export function TaskRow({
 						}
 					}}
 				>
-					继续做剩下的
+					{t("taskRow.continue")}
 				</button>
 			)}
 			{error && (

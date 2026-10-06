@@ -2,6 +2,7 @@ import type { InstitutionalStatus } from "@drone/shared";
 import { useCallback, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { Button } from "../ui/Button";
+import { useZoteroText } from "./zotero-copy";
 
 function Row({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
 	return (
@@ -15,6 +16,7 @@ function Row({ label, value, ok }: { label: string; value: string; ok?: boolean 
 }
 
 export function InstitutionalAccessSection() {
+	const t = useZoteroText();
 	const [status, setStatus] = useState<InstitutionalStatus | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -76,13 +78,9 @@ export function InstitutionalAccessSection() {
 
 	return (
 		<section className="rounded-xl border border-border p-4" data-testid="institutional-section">
-			<h3 className="text-xs font-semibold">机构访问（一次登录，自动保存模板）</h3>
+			<h3 className="text-xs font-semibold">{t("instTitle")}</h3>
 			<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">
-				Agent
-				在归档文献时若遇到付费墙，会自动请求机构登录。点“登录机构账号”后在弹出窗口完成学校/图书馆登录（支持
-				EZproxy / Shibboleth / CARSI / OpenAthens / WebVPN），系统会自动从 URL 中识别并保存 EZproxy 模板（例如
-				.../login?url=%s），无需手动填写。登录态保存在持久分区，重启仍有效。任务授权后会自动尝试下载（每任务最多{" "}
-				{status?.config.perTaskLimit ?? 20} 篇），仅在过期或验证码时再次弹窗。
+				{t("instIntro").replace("{limit}", String(status?.config.perTaskLimit ?? 20))}
 			</p>
 
 			{error && (
@@ -96,46 +94,57 @@ export function InstitutionalAccessSection() {
 
 			{status && (
 				<div className="mt-3 grid gap-1.5 rounded-lg bg-hover p-2">
-					<Row label="登录状态" value={status.loggedIn ? "已登录" : "未登录"} ok={status.loggedIn} />
 					<Row
-						label="Cookie 数"
+						label={t("instLoginState")}
+						value={status.loggedIn ? t("instLoggedIn") : t("instLoggedOut")}
+						ok={status.loggedIn}
+					/>
+					<Row
+						label={t("instCookies")}
 						value={`${status.session.cookiesCount}`}
 						ok={status.session.cookiesCount > 0}
 					/>
 					<Row
-						label="上次登录"
-						value={status.config.lastLoginAt ? new Date(status.config.lastLoginAt).toLocaleString() : "从未"}
+						label={t("instLastLogin")}
+						value={
+							status.config.lastLoginAt
+								? new Date(status.config.lastLoginAt).toLocaleString()
+								: t("instNever")
+						}
 					/>
 					<Row
-						label="自动模板"
-						value={status.config.ezproxyTemplate || "未自动识别（直连会话）"}
+						label={t("instTemplate")}
+						value={status.config.ezproxyTemplate || t("instNoTemplate")}
 						ok={Boolean(status.config.ezproxyTemplate)}
 					/>
-					<Row label="机构名" value={status.config.institutionName || "未填"} />
+					<Row label={t("instName")} value={status.config.institutionName || t("instUnset")} />
 					<Row
-						label="自动下载"
-						value={status.config.autoDownloadEnabled ? "开启" : "关闭"}
+						label={t("instAutoDownload")}
+						value={status.config.autoDownloadEnabled ? t("instOn") : t("instOff")}
 						ok={status.config.autoDownloadEnabled}
 					/>
-					<Row label="每任务上限" value={`${status.config.perTaskLimit} 篇`} />
+					<Row
+						label={t("instPerTask")}
+						value={t("instPapers").replace("{n}", String(status.config.perTaskLimit))}
+					/>
 				</div>
 			)}
 
 			<div className="mt-4 space-y-3">
 				<div className="flex flex-wrap gap-1.5">
 					<Button size="sm" variant="primary" onClick={() => void openLogin()}>
-						登录机构账号（自动保存模板）
+						{t("instLogin")}
 					</Button>
 					<Button size="sm" disabled={loading} onClick={() => void refresh()}>
-						刷新状态
+						{t("instRefresh")}
 					</Button>
 					<Button size="sm" onClick={() => void clear()}>
-						清除登录状态
+						{t("instClear")}
 					</Button>
 				</div>
 
 				<div className="rounded-lg border border-dashed border-border p-2">
-					<div className="text-[11px] font-medium text-ink">测试访问（经机构会话/自动模板尝试）</div>
+					<div className="text-[11px] font-medium text-ink">{t("instTestTitle")}</div>
 					<div className="mt-1 flex gap-1">
 						<input
 							className="flex-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs"
@@ -144,7 +153,7 @@ export function InstitutionalAccessSection() {
 							placeholder="https://doi.org/..."
 						/>
 						<Button size="sm" disabled={testing} onClick={() => void doTest()}>
-							{testing ? "测试中…" : "测试"}
+							{testing ? t("instTesting") : t("instTest")}
 						</Button>
 					</div>
 					{testResult && (
@@ -152,19 +161,10 @@ export function InstitutionalAccessSection() {
 							{testResult}
 						</pre>
 					)}
-					<p className="mt-2 text-[10px] leading-relaxed text-ink-faint">
-						工作流：Agent 调用 research_archive_source → OA 失败 → 返回 institutional_auth_required → Agent
-						自动调用 research_institutional_login 打开窗口 → 你登录 → 系统自动识别模板（如
-						https://ezproxy.xxx.edu/login?url=%s）并保存到 ~/.pi/agent/institutional.json →
-						重试下载。不需要手动设置模板。
-					</p>
+					<p className="mt-2 text-[10px] leading-relaxed text-ink-faint">{t("instWorkflow")}</p>
 				</div>
 
-				<p className="text-[10px] text-ink-faint">
-					提示：若你的学校使用 WebVPN（如
-					https://webvpn.xxx.edu.cn/https/443/www.nature.com/...），直接登录即可，无需模板，系统靠持久 Cookie
-					直连。EZproxy 会自动保存，下次无需再登录。
-				</p>
+				<p className="text-[10px] text-ink-faint">{t("instWebvpn")}</p>
 			</div>
 		</section>
 	);

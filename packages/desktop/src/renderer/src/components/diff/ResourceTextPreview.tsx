@@ -29,6 +29,7 @@ export function htmlPreviewDocument(html: string): string {
 	return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>body{font:15px/1.7 system-ui,sans-serif;padding:20px;margin:0;color:#202124;background:white;overflow-wrap:anywhere}img,svg,table{max-width:100%}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:6px}pre{white-space:pre-wrap}</style></head><body>${template.innerHTML}</body></html>`;
 }
 function TableReader({ text, ext }: { text: string; ext: string }) {
+	const t = useT();
 	const [header, setHeader] = useState(true),
 		[query, setQuery] = useState(""),
 		[page, setPage] = useState(0);
@@ -46,8 +47,8 @@ function TableReader({ text, ext }: { text: string; ext: string }) {
 		<div className="resource-table-reader" data-testid="resource-table">
 			<div className="resource-data-tools">
 				<input
-					aria-label="筛选预览表格"
-					placeholder="筛选当前片段…"
+					aria-label={t("resource.viewer.filterLabel")}
+					placeholder={t("resource.viewer.filterPlaceholder")}
 					value={query}
 					onChange={(e) => {
 						setQuery(e.target.value);
@@ -64,15 +65,16 @@ function TableReader({ text, ext }: { text: string; ext: string }) {
 								setPage(0);
 							}}
 						/>
-						首行表头
+						{t("resource.viewer.firstRowHeader")}
 					</label>
 				)}
 			</div>
 			<p className="resource-data-summary">
-				片段内 {table.rows.length} 行 · {table.headers.length} 列{query && ` · 筛选后 ${rows.length} 行`}
-				（不是全文件统计）
+				{t("resource.viewer.tableSummary", { rows: table.rows.length, cols: table.headers.length })}
+				{query && t("resource.viewer.tableFiltered", { rows: rows.length })}
+				{t("resource.viewer.notWholeFile")}
 			</p>
-			{table.clipped && <p className="resource-notice">表格最多显示 200 行、60 列；长单元格也会截断。</p>}
+			{table.clipped && <p className="resource-notice">{t("resource.viewer.tableClipped")}</p>}
 			{table.warnings.map((w) => (
 				<p key={w} className="resource-notice">
 					{w}
@@ -80,7 +82,7 @@ function TableReader({ text, ext }: { text: string; ext: string }) {
 			))}
 			{!!table.metadata.length && (
 				<details className="resource-metadata">
-					<summary>文件头／元数据（最多 30 行）</summary>
+					<summary>{t("resource.viewer.metadata")}</summary>
 					<pre>{table.metadata.join("\n")}</pre>
 				</details>
 			)}
@@ -89,10 +91,10 @@ function TableReader({ text, ext }: { text: string; ext: string }) {
 					<table>
 						<thead>
 							<tr>
-								<th scope="col">序</th>
+								<th scope="col">{t("resource.viewer.rowIndex")}</th>
 								{table.headers.map((h, i) => (
 									<th scope="col" key={`h-${i}`}>
-										{h || `列 ${i + 1}`}
+										{h || t("resource.viewer.column", { n: i + 1 })}
 									</th>
 								))}
 							</tr>
@@ -112,44 +114,43 @@ function TableReader({ text, ext }: { text: string; ext: string }) {
 					</table>
 				</div>
 			) : (
-				<p className="resource-empty">当前片段没有可显示的记录。</p>
+				<p className="resource-empty">{t("resource.viewer.noRecords")}</p>
 			)}
 			<div className="resource-data-tools">
 				<button type="button" disabled={current === 0} onClick={() => setPage(current - 1)}>
-					上一页
+					{t("resource.viewer.prevPage")}
 				</button>
 				<span>
 					{current + 1} / {pageCount}
 				</span>
 				<button type="button" disabled={current + 1 >= pageCount} onClick={() => setPage(current + 1)}>
-					下一页
+					{t("resource.viewer.nextPage")}
 				</button>
 			</div>
 		</div>
 	);
 }
 function SequenceReader({ text, kind }: { text: string; kind: "fasta" | "fastq" }) {
+	const t = useT();
 	const parsed = useMemo(() => sequencePreview(text, kind), [text, kind]);
 	return (
 		<div className="resource-sequences" data-testid="resource-sequences">
 			<p className="resource-data-summary">
-				{kind.toUpperCase()} · 当前片段 {parsed.records.length} 条记录（不是全文件统计）
+				{t("resource.viewer.seqSummary", { kind: kind.toUpperCase(), count: parsed.records.length })}
 			</p>
-			<p className="resource-preview-footnote">
-				每条最多显示 600 个序列字符；颜色用于阅读，不进行比对、质控或生物学判断。
-			</p>
+			<p className="resource-preview-footnote">{t("resource.viewer.seqFootnote")}</p>
 			{parsed.warnings.map((w) => (
 				<p className="resource-notice" key={w}>
 					{w}
 				</p>
 			))}
-			{parsed.clipped && <p className="resource-notice">仅展示前 20 条记录／每条 600 字符。</p>}
+			{parsed.clipped && <p className="resource-notice">{t("resource.viewer.seqClipped")}</p>}
 			{parsed.records.map((r, i) => (
 				<details className="resource-sequence" key={`seq-${i}`} open={i === 0}>
 					<summary>
-						{r.name || "未命名序列"}
-						<span> · 本片段读取 {r.length} 字符</span>
-						{r.warning && <span> · 不完整／长度不一致</span>}
+						{r.name || t("resource.viewer.unnamedSequence")}
+						<span>{t("resource.viewer.seqLength", { n: r.length })}</span>
+						{r.warning && <span>{t("resource.viewer.seqIncomplete")}</span>}
 					</summary>
 					{r.warning && <p className="resource-notice">{r.warning}</p>}
 					<div className="resource-sequence-scroll">
@@ -171,16 +172,14 @@ function SequenceReader({ text, kind }: { text: string; kind: "fasta" | "fastq" 
 						</pre>
 						{r.quality !== undefined && (
 							<>
-								<h5>质量字符串（原始字符，不推断编码）</h5>
+								<h5>{t("resource.viewer.qualityTitle")}</h5>
 								<pre className="resource-quality">{r.quality}</pre>
 							</>
 						)}
 					</div>
 				</details>
 			))}
-			{!parsed.records.length && (
-				<p className="resource-empty">未识别到完整标题，切换源码检查格式或片段边界。</p>
-			)}
+			{!parsed.records.length && <p className="resource-empty">{t("resource.viewer.seqNoHeader")}</p>}
 		</div>
 	);
 }
@@ -303,6 +302,7 @@ export function ResourceTextPreview({
 	source?: FigureSource;
 	path?: string;
 }) {
+	const t = useT();
 	const format = resourceFormat(name);
 	const json = useMemo(() => {
 		if (format.kind !== "json") return null;
@@ -334,11 +334,7 @@ export function ResourceTextPreview({
 	if (format.kind === "html") return <HtmlPreview text={text} name={name} source={source} path={path} />;
 	return (
 		<>
-			{json && !json.valid && (
-				<p className="resource-notice">
-					JSON 无法格式化（片段不完整、语法无效或嵌套／节点过多），显示原文，不自动修复。
-				</p>
-			)}
+			{json && !json.valid && <p className="resource-notice">{t("resource.viewer.jsonInvalid")}</p>}
 			<ResourceCode text={json?.text ?? text} language={format.language} />
 		</>
 	);

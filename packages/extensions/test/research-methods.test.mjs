@@ -41,7 +41,12 @@ test("research_methods writes METHODS.md only after the user approves", async (t
 	const decline = {
 		cwd,
 		hasUI: true,
-		ui: { select: async (title, options) => (prompts.push(title), options[1]) },
+		ui: {
+			select: async (title, options) => {
+				prompts.push(title);
+				return options[1];
+			},
+		},
 	};
 	const declined = await tool.execute(
 		"2",
