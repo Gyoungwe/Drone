@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => {
 	return {
 		listeners,
 		ipcRenderer: {
-			invoke: vi.fn(async (channel: string, ...args: unknown[]) => ({ channel, args })),
+			invoke: vi.fn(async (channel: string, ...args: unknown[]): Promise<unknown> => ({ channel, args })),
 			on: vi.fn((channel: string, listener: (...args: unknown[]) => void) => {
 				const set = listeners.get(channel) ?? new Set();
 				set.add(listener);
