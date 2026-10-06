@@ -3,6 +3,7 @@ import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
+import { DailyIdeas } from "./DailyIdeas";
 import { reportKnowledgeError, useKnowledgeOverview } from "./hooks";
 import { KnowledgeSearch } from "./KnowledgeSearch";
 import { WikiReviewPanel } from "./WikiReviewPanel";
@@ -71,6 +72,7 @@ export function KnowledgeHome({
 				</p>
 			)}
 			{binding && <KnowledgeSearch cwd={cwd} sessionId={sessionId} bindingRevision={binding.revision} />}
+			{binding && <DailyIdeas cwd={cwd} sessionId={sessionId} bindingRevision={binding.revision} />}
 			{binding && (
 				<section aria-label={t("homeRecent")}>
 					<h3 className="mb-2 text-xs font-semibold">{t("homeRecent")}</h3>

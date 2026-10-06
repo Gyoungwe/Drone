@@ -2,10 +2,10 @@
 import {
   decideWikiProposal,
   previewWikiProposal
-} from "./chunk-RL6ZEBP3.mjs";
+} from "./chunk-IMC2GAXA.mjs";
 import {
   specialistSettings
-} from "./chunk-K64ABPUJ.mjs";
+} from "./chunk-XSFQUT2B.mjs";
 import {
   consumeKnowledgeReviewPreview,
   runtimeSlot

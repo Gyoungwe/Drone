@@ -57,6 +57,8 @@ export interface KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>[0],
 	): ReturnType<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
 	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]>;
+	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
+	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -199,6 +201,12 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	search(input: Parameters<KnowledgeApi["searchKnowledge"]>[0]): ReturnType<KnowledgeApi["searchKnowledge"]> {
 		return this.call("searchKnowledge", input);
+	}
+	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext> {
+		return this.call("dailyDiscoveryContext", { sinceMs });
+	}
+	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }> {
+		return this.call("saveDiscoveryIdea", { idea });
 	}
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],

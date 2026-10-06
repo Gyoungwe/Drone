@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import type {
+	DailyDiscoveryState,
 	KnowledgeApi,
 	KnowledgeNote,
 	KnowledgeOverview,
@@ -163,6 +164,18 @@ export const KnowledgeContract = defineDomain("knowledge", {
 			args: OneObject<KnowledgeSearchRequest>(),
 			result: ResultObject<KnowledgeSearchResult>(),
 		},
+		getDailyDiscovery: {
+			args: Type.Tuple([]),
+			result: ResultObject<DailyDiscoveryState>(),
+		},
+		updateDailyDiscovery: {
+			args: OneObject<{ enabled?: boolean; run?: boolean }>(),
+			result: ResultObject<DailyDiscoveryState>(),
+		},
+		decideDailyIdea: {
+			args: OneObject<{ id: string; action: "save" | "dismiss" }>(),
+			result: ResultObject<DailyDiscoveryState>(),
+		},
 		getTopics: {
 			args: OneObject<KnowledgeTopicsRequest>(),
 			result: ResultObject<KnowledgeTopicListResult>(),
@@ -202,6 +215,9 @@ export type KnowledgeSchemaTypes = {
 	indexSemantic: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>;
 	cancelSemanticIndex: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
 	search: Parameters<KnowledgeApi["searchKnowledge"]>;
+	getDailyDiscovery: [];
+	updateDailyDiscovery: Parameters<KnowledgeApi["updateDailyDiscovery"]>;
+	decideDailyIdea: Parameters<KnowledgeApi["decideDailyIdea"]>;
 	getTopics: Parameters<KnowledgeApi["getKnowledgeTopics"]>;
 	archiveTopic: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>;
 	getZoteroStatus: [];
