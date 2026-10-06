@@ -199,12 +199,12 @@ var VAULT_PROFILES = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Software", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Software", "Ideas", "Explainers"]
   },
   literature: {
     id: "literature",
     projectTypes: ["Questions", "Papers", "Evidence", "Claims", "Runs", "Wiki"],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"]
   },
   hybrid: {
     id: "hybrid",
@@ -221,7 +221,7 @@ var VAULT_PROFILES = {
       "Artifacts",
       "Wiki"
     ],
-    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Explainers"]
+    libraryTypes: ["Papers", "Methods", "Concepts", "Software", "Entities", "Ideas", "Explainers"]
   }
 };
 var DEFAULT_VAULT_PROFILE = "hybrid";

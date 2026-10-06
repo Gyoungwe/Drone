@@ -236,6 +236,7 @@ export {
 export { KnowledgeService, closeKnowledgeServices, getKnowledgeService, notifyKnowledgeChange } from "./service";
 
 export {
+	autoApplyWikiProposal,
 	decideWikiProposal,
 	listWikiProposals,
 	mergeWikiProposal,

@@ -547,6 +547,23 @@ export async function decideWikiProposal(
 	);
 }
 
+/**
+ * 自动审核模式下由宿主直接应用候选：新页面或此前由 Agent 生成且未被人工改过的页面直接写入；
+ * 已有人工内容、冲突或严格审核模式则保持 pending，返回原因，交给 Wiki 审核页。
+ * @param {any} service @param {string} id @param {string} project @param {string} expectedHash
+ */
+export async function autoApplyWikiProposal(service, id, project, expectedHash) {
+	if ((await readReviewMode()) !== "automatic") return { id, status: "pending", reason: "strict-review" };
+	try {
+		return await decideWikiProposal(service, id, project, expectedHash, "apply", {
+			actor: "automatic",
+			authority: AUTOMATIC_AUTHORITY,
+		});
+	} catch (error) {
+		return { id, status: "pending", reason: String(error?.message || error).slice(0, 300) };
+	}
+}
+
 // History contains exact before/after content; ownership is proven by a prior applied hash,
 // not by a marker a human may have typed into a page.
 export async function wikiHistory(service, project) {

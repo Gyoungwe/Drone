@@ -5,6 +5,8 @@ import type {
 	KnowledgeOverview,
 	KnowledgePage,
 	KnowledgePageRequest,
+	KnowledgeSearchRequest,
+	KnowledgeSearchResult,
 	KnowledgeSemanticIndexCancelRequest,
 	KnowledgeSemanticIndexRequest,
 	KnowledgeSemanticIndexResult,
@@ -157,6 +159,10 @@ export const KnowledgeContract = defineDomain("knowledge", {
 			args: OneObject<KnowledgeSemanticIndexCancelRequest>(),
 			result: Type.Void(),
 		},
+		search: {
+			args: OneObject<KnowledgeSearchRequest>(),
+			result: ResultObject<KnowledgeSearchResult>(),
+		},
 		getTopics: {
 			args: OneObject<KnowledgeTopicsRequest>(),
 			result: ResultObject<KnowledgeTopicListResult>(),
@@ -195,6 +201,7 @@ export type KnowledgeSchemaTypes = {
 	testSemanticProvider: Parameters<KnowledgeApi["testKnowledgeSemanticProvider"]>;
 	indexSemantic: Parameters<KnowledgeApi["indexKnowledgeSemantic"]>;
 	cancelSemanticIndex: Parameters<KnowledgeApi["cancelKnowledgeSemanticIndex"]>;
+	search: Parameters<KnowledgeApi["searchKnowledge"]>;
 	getTopics: Parameters<KnowledgeApi["getKnowledgeTopics"]>;
 	archiveTopic: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>;
 	getZoteroStatus: [];

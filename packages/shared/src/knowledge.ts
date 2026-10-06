@@ -315,7 +315,28 @@ export interface WikiModelReviewResult {
 	writeResult?: WikiReviewResult;
 	sources?: { path: string; hash: string; startLine: number; endLine: number }[];
 }
+/** 知识库视图搜索框：共享知识 + 当前项目的只读检索 */
+export interface KnowledgeSearchRequest {
+	cwd?: string | null;
+	bindingRevision: number;
+	query: string;
+	limit?: number;
+}
+export interface KnowledgeSearchHit {
+	path: string;
+	title: string;
+	kind: string;
+	text: string;
+}
+export interface KnowledgeSearchResult {
+	query: string;
+	hits: KnowledgeSearchHit[];
+	/** false = 索引仍在核对，零结果不代表没有相关知识 */
+	complete: boolean;
+	warning: string | null;
+}
 export interface KnowledgeApi {
+	searchKnowledge(input: KnowledgeSearchRequest): Promise<KnowledgeSearchResult>;
 	getKnowledgeSemanticStatus(input?: {
 		cwd?: string | null;
 		bindingRevision?: number;

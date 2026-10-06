@@ -38,13 +38,15 @@ import {
   knowledgeSetupPreview,
   knowledgeSpecialistSettings,
   saveKnowledgeSemanticSettings,
+  searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-X3UUGJ74.mjs";
+} from "./chunks/chunk-AWJF4DPU.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
-} from "./chunks/chunk-6MZJ6XQ2.mjs";
+} from "./chunks/chunk-WTRTGXYJ.mjs";
 import {
+  autoApplyWikiProposal,
   decideWikiProposal,
   listWikiProposals,
   mergeWikiProposal,
@@ -53,7 +55,7 @@ import {
   undoWikiUpdate,
   validateWikiSourcePaths as validateWikiSourcePaths2,
   wikiHistory
-} from "./chunks/chunk-NCQOEHSQ.mjs";
+} from "./chunks/chunk-RL6ZEBP3.mjs";
 import {
   MANAGED_END,
   MANAGED_START,
@@ -238,6 +240,7 @@ export {
   allowedSegment,
   archiveKnowledgeTopic,
   archiveTopic,
+  autoApplyWikiProposal,
   autoTopicCandidate,
   beginKnowledgeFlow,
   buildKnowledgeSearchExpression,
@@ -347,6 +350,7 @@ export {
   saveSemanticSettings,
   saveSpecialistExplainer,
   searchExperiences,
+  searchKnowledge,
   selectReviewerProvider,
   sessionIdentity,
   setSpecialistSettings,
