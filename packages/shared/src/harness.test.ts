@@ -151,3 +151,18 @@ describe("answer modes", () => {
 		expect(prompt).toContain("Answer mode: quick");
 	});
 });
+
+describe("possibly overlooked points", () => {
+	it("academic answers may end with at most 3 grounded, testable, speculative points", () => {
+		const prompt = renderHarnessPromptLayer(
+			"default",
+			{ effort: "normal", delegation: "standard", autonomy: "balanced" },
+			undefined,
+			[],
+			"academic",
+		);
+		expect(prompt).toContain("可能被忽略的点");
+		expect(prompt).toContain("at most 3 items");
+		expect(prompt).toContain("Omit the section entirely");
+	});
+});

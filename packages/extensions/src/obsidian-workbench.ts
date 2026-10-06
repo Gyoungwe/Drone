@@ -1,5 +1,6 @@
 // @ts-nocheck
 
+import { discoveryPrompt } from "@drone/extensions/internal/discovery-prompt";
 import {
 	inspectObsidianSetup,
 	OBSIDIAN_SETUP_BINDING,
@@ -309,6 +310,18 @@ export default function obsidianWorkbench(pi) {
 			return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
 		},
 	});
+
+	// /发现（别名 /discover）：知识闭环之上的「发现」——发散、自我质疑、最多 3 条，可一键沉淀为想法。
+	for (const name of ["发现", "discover"]) {
+		pi.registerCommand(name, {
+			description: "发现：围绕主题提出最多 3 条可能被忽略的新想法（有依据、可检验），可一键存为想法笔记",
+			handler: async (args) => {
+				const prompt = discoveryPrompt(typeof args === "string" ? args : "");
+				// Same as /obsidian-setup: hand off after the slash command returns and the session is idle.
+				setTimeout(() => void pi.sendUserMessage(prompt, { deliverAs: "followUp" }), 0);
+			},
+		});
+	}
 
 	const { command: setupCommand, skill, aliases } = OBSIDIAN_SETUP_BINDING;
 	for (const name of [setupCommand, ...aliases]) {

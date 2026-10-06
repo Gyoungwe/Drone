@@ -2237,6 +2237,26 @@ var init_topic_memory = __esm({
   }
 });
 
+// packages/extensions/src/internal/discovery-prompt.ts
+function discoveryPrompt(topic) {
+  const subject = topic.trim() || "the current conversation topic and the user's recent work";
+  return [
+    `Discovery task on: ${subject}`,
+    "",
+    "Goal: propose up to 3 ideas the user has probably not considered, each new, grounded and testable.",
+    "",
+    "1. Ground: search the local Vault first (research_search_knowledge, then read the best notes); use the web only for what local notes lack.",
+    "2. Diverge: generate 8\u201312 candidate ideas from these angles: contradictions between sources; combinations nobody has studied; methods transferable from another field; default assumptions worth challenging; the next implication of an accepted conclusion.",
+    "3. Converge and self-critique each candidate on three tests, and drop any that fails one:",
+    "   - Novelty: is it already in the local Vault or a quick web search? If yes, drop it or cite where it already exists.",
+    "   - Basis: name the specific note or paper (author, year, DOI or Vault path) it rests on.",
+    "   - Testability: state the experiment, dataset or analysis that would confirm or refute it.",
+    "   If the subagent tool is available, give the surviving candidates to an independent critic subagent that did not see your reasoning, and drop what it shows to be known or unfounded.",
+    "4. Present at most 3 ideas, best first. For each: one-sentence idea; label speculative; basis; how to test; why it may have been overlooked. If nothing survives, say so plainly instead of padding.",
+    '5. Then call ask_user once (multiple choice) listing the ideas, so the user can pick which to keep. For each picked idea call research_deposit_knowledge with type "idea", the idea as title, its basis/test/status in markdown and the cited sources in source_links.'
+  ].join("\n");
+}
+
 // packages/extensions/src/internal/obsidian-setup.ts
 import { readdir, realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -11874,6 +11894,15 @@ ${result2.scope === "application" ? "Application binding is active for subsequen
       return { content: [{ type: "text", text: JSON.stringify(result2, null, 2) }], details: result2 };
     }
   });
+  for (const name of ["\u53D1\u73B0", "discover"]) {
+    pi.registerCommand(name, {
+      description: "\u53D1\u73B0\uFF1A\u56F4\u7ED5\u4E3B\u9898\u63D0\u51FA\u6700\u591A 3 \u6761\u53EF\u80FD\u88AB\u5FFD\u7565\u7684\u65B0\u60F3\u6CD5\uFF08\u6709\u4F9D\u636E\u3001\u53EF\u68C0\u9A8C\uFF09\uFF0C\u53EF\u4E00\u952E\u5B58\u4E3A\u60F3\u6CD5\u7B14\u8BB0",
+      handler: async (args) => {
+        const prompt = discoveryPrompt(typeof args === "string" ? args : "");
+        setTimeout(() => void pi.sendUserMessage(prompt, { deliverAs: "followUp" }), 0);
+      }
+    });
+  }
   const { command: setupCommand, skill, aliases } = OBSIDIAN_SETUP_BINDING;
   for (const name of [setupCommand, ...aliases]) {
     pi.registerCommand(name, {

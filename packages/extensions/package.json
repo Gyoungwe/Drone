@@ -30,6 +30,7 @@
 		"./zotero-literature": "./src/zotero-literature.ts",
 		"./obsidian-workbench": "./src/obsidian-workbench.ts",
 		"./internal/reply-focus": "./src/internal/reply-focus.ts",
+		"./internal/discovery-prompt": "./src/internal/discovery-prompt.ts",
 		"./source-archive": "./src/source-archive.ts"
 	}
 }

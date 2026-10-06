@@ -188,6 +188,10 @@ export const RESPONSE_CONTRACT = [
 export type AnswerMode = "auto" | "quick" | "academic";
 export const ANSWER_MODES: readonly AnswerMode[] = ["auto", "quick", "academic"];
 
+/** 学术回答末尾「可能被忽略的点」：仅在有实质内容时出现，每条标注推测、依据与验证方式 */
+export const OVERLOOKED_POINTS_RULE =
+	'Only if you found something substantive, end with a short section titled "可能被忽略的点" (or "Possibly overlooked" in English) with at most 3 items the user did not ask about: a contradiction between sources, an untested combination, a method from another field, a questionable default assumption, or a next implication of the conclusion. Mark each item as speculative, name its basis (a specific note or paper) and say what experiment or data would test it. Omit the section entirely rather than padding it.';
+
 export const QUICK_ANSWER_CONTRACT = [
 	"Answer mode: quick.",
 	"- Answer the question directly in a few sentences or a short list; no headings.",
@@ -203,6 +207,7 @@ export const ACADEMIC_ANSWER_CONTRACT = [
 	"- Use precise terms, units and numbers together with their conditions (organism, sample size, method) instead of vague qualifiers.",
 	"- Never invent a reference, DOI, author or number. If a citation could not be checked against a source you actually read, say so next to it.",
 	"- Say which parts came from the local knowledge base and which from the web.",
+	`- ${OVERLOOKED_POINTS_RULE}`,
 ].join("\n");
 
 const ACADEMIC_CUES =
