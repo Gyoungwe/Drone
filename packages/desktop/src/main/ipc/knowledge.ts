@@ -6,7 +6,8 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
 /** Deliberately desktop-only: approvals are not a model tool or an unauthenticated LAN route. */
 export function registerKnowledgeIpc(
 	backendOrServices: SessionServicePort | BackendServices,
-	services?: Pick<BackendServices, "knowledge" | "knowledgeSession" | "zotero">,
+	services?: Pick<BackendServices, "knowledge" | "knowledgeSession" | "zotero"> &
+		Partial<Pick<BackendServices, "dailyDiscovery">>,
 ): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
 	const hostServices =
@@ -26,6 +27,18 @@ export function registerKnowledgeIpc(
 		("knowledge" in backend
 			? (backend as SessionServicePort & Pick<BackendServices, "knowledge">).knowledge
 			: legacy.knowledge);
+	const unavailable = async (): Promise<never> => {
+		throw new Error("Daily discovery is unavailable");
+	};
+	const dailyDiscovery: Pick<
+		BackendServices["dailyDiscovery"],
+		"getState" | "setEnabled" | "run" | "decide"
+	> = (hostServices as Partial<Pick<BackendServices, "dailyDiscovery">> | undefined)?.dailyDiscovery ?? {
+		getState: async () => ({ enabled: false, lastRunAt: null, ideas: [] }),
+		setEnabled: unavailable,
+		run: unavailable,
+		decide: unavailable,
+	};
 	const zotero =
 		hostServices?.zotero ??
 		("zotero" in backend
@@ -87,6 +100,12 @@ export function registerKnowledgeIpc(
 		indexSemantic: (input) => knowledge.indexSemantic(input),
 		cancelSemanticIndex: (input) => knowledge.cancelSemanticIndex(input),
 		search: (input) => knowledge.search(input),
+		getDailyDiscovery: () => dailyDiscovery.getState(),
+		updateDailyDiscovery: async (input) => {
+			if (typeof input.enabled === "boolean") await dailyDiscovery.setEnabled(input.enabled);
+			return input.run ? dailyDiscovery.run() : dailyDiscovery.getState();
+		},
+		decideDailyIdea: (input) => dailyDiscovery.decide(input.id, input.action),
 		getTopics: (input) => knowledge.topics(input),
 		archiveTopic: (input) => knowledge.archiveTopic(input),
 		getZoteroStatus: () => zotero.getStatus(),
@@ -114,6 +133,9 @@ export function registerKnowledgeIpc(
 				indexSemantic: IpcChannels.KnowledgeSemanticIndex,
 				cancelSemanticIndex: IpcChannels.KnowledgeSemanticIndexCancel,
 				search: IpcChannels.KnowledgeSearch,
+				getDailyDiscovery: IpcChannels.KnowledgeDailyDiscovery,
+				updateDailyDiscovery: IpcChannels.KnowledgeDailyDiscoveryUpdate,
+				decideDailyIdea: IpcChannels.KnowledgeDailyIdeaDecide,
 				getTopics: IpcChannels.KnowledgeTopics,
 				archiveTopic: IpcChannels.KnowledgeTopicArchive,
 				getZoteroStatus: IpcChannels.ZoteroStatus,

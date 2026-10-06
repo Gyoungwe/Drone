@@ -182,6 +182,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "config",
 		})
 		.register({
+			id: "agent-daily-discovery",
+			path: `${agentDir}/daily-discovery.json`,
+			owner: "knowledge/daily-discovery",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
 			id: "agent-model-prefs",
 			path: `${agentDir}/model-prefs.json`,
 			owner: "settings/model-prefs",

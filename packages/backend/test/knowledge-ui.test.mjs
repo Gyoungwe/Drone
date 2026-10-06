@@ -283,3 +283,38 @@ describe("knowledge loop: deposited notes answer the next similar question local
 		expect(saved.note).toContain(join("Library", "Ideas"));
 	});
 });
+
+describe("daily discovery on a real Vault", () => {
+	it("pairs recently changed notes with related older notes and saves an accepted idea as a searchable note", async () => {
+		await note(
+			"Library/Papers/wing-polyphenism.md",
+			"# Wing polyphenism\nJuvenile hormone controls wing morphs.\n",
+		);
+		await service.request("reconcile");
+		await note(
+			"Library/Papers/new-wing-paper.md",
+			"# Wing polyphenism in lacewings\nNew evidence on wing morphs.\n",
+		);
+		const context = await ui.dailyDiscoveryContext({ sinceMs: Date.now() - 60_000 });
+		expect(context.bound).toBe(true);
+		expect(context.fresh.map((item) => item.path)).toContain("Library/Papers/new-wing-paper.md");
+		const saved = await ui.saveDiscoveryIdea({
+			idea: {
+				title: "Hormone timing in lacewings",
+				idea: "Test whether the same hormone window applies.",
+				basis: ["Library/Papers/new-wing-paper.md"],
+				test: "Juvenile hormone titres across instars",
+				whyOverlooked: "",
+			},
+		});
+		expect(saved.path).toBe("Library/Ideas/hormone-timing-in-lacewings.md");
+		const raw = await readFile(join(vault, saved.path), "utf8");
+		expect(raw).toContain('status: "speculative"');
+		const found = await ui.searchKnowledge({
+			cwd,
+			bindingRevision: revision,
+			query: "Hormone timing lacewings",
+		});
+		expect(found.hits.map((hit) => hit.path)).toContain(saved.path);
+	});
+});

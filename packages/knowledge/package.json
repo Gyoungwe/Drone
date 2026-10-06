@@ -33,6 +33,8 @@
 		"./worker": "./src/worker.ts",
 		"./service": "./src/service.ts",
 		"./wiki-review": "./src/wiki-review.ts",
+		"./daily-discovery": "./src/daily-discovery.ts",
+		"./daily-discovery-prompt": "./src/daily-discovery-prompt.ts",
 		"./specialist-host": "./src/specialist-host.ts",
 		"./specialists": "./src/specialists.ts",
 		"./specialist-delivery": "./src/specialist-delivery.ts",

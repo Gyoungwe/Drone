@@ -45,6 +45,7 @@ import {
 	type ComputeExperienceRecorder,
 	createComputeExperienceRecorder,
 } from "./services/compute-experience";
+import { DailyDiscoveryService } from "./services/daily-discovery";
 import { type InquiryDecisionEvent, InquiryService, type InquiryServicePort } from "./services/inquiry";
 import {
 	computeInquiryMetadata,
@@ -165,10 +166,14 @@ export interface BackendServices {
 	dataDesign: ComputeDataDesignServicePort;
 	/** Renderer-facing projection over the durable B1 compute service. */
 	computeAdapter: ComputeHostAdapter;
+	/** 每日发现：知识库更新后的新旧对照想法（默认开，每天一次） */
+	dailyDiscovery: DailyDiscoveryService;
 	dispose(): void;
 }
 
 export interface BackendOptions extends SessionServiceOptions {
+	/** false 时不启动每日发现的定时检查（测试或无知识库宿主）；服务本身仍可手动运行 */
+	dailyDiscovery?: boolean;
 	/** Inject the renderer-facing host adapter without coupling the composition root to SSH details. */
 	compute?: ComputeHostAdapter;
 	/** Optional runner used by tests or a host-specific transport integration. */
@@ -372,6 +377,44 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	}
 	void computeAdapter.init?.();
 	void discovery.init();
+	const dailyDiscovery = new DailyDiscoveryService({
+		path: join(getAgentDir(), "daily-discovery.json"),
+		context: (sinceMs) => sessions.knowledge.dailyContext(sinceMs),
+		saveIdea: (idea) => sessions.knowledge.saveIdea(idea),
+		notify: (text) => void sessions.knowledge.notify(text, "info").catch(() => {}),
+		complete: async (system, message) => {
+			const runtime = await sessions.getModelRuntime();
+			// Prefer the model the user used most recently; fall back to the first configured provider.
+			const recent = sessions.registry
+				.list()
+				.map((entry) => entry.session.model)
+				.filter((model) => !!model)
+				.at(-1);
+			let model = recent ? runtime.getModel(recent.provider, recent.id) : undefined;
+			if (!model) {
+				const provider = (await sessions.settings.listProviders()).find(
+					(item) => item.configured && item.models.length > 0,
+				);
+				if (provider)
+					model =
+						runtime.getModel(provider.id, provider.models[0]?.id ?? "") ?? runtime.getModels(provider.id)[0];
+			}
+			if (!model) return null;
+			const response = await runtime.completeSimple(
+				model,
+				{ systemPrompt: system, messages: [{ role: "user", content: message, timestamp: Date.now() }] },
+				{ maxTokens: 1500, maxRetries: 0 },
+			);
+			return Array.isArray(response.content)
+				? response.content
+						.map((item) =>
+							item && typeof item === "object" && "text" in item ? String(item.text ?? "") : "",
+						)
+						.join("\n")
+				: "";
+		},
+	});
+	if (options.dailyDiscovery !== false) dailyDiscovery.start();
 	const diagnostics: DiagnosticsServicePort = {
 		getDiagnostics: (diagnosticsOptions) => sessions.getDiagnostics(diagnosticsOptions),
 	};
@@ -400,7 +443,9 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		inquiry,
 		discovery,
 		dataDesign,
+		dailyDiscovery,
 		dispose: () => {
+			dailyDiscovery.dispose();
 			detachInquiryComputeEvents();
 			sessions.dispose();
 			void compute.dispose();

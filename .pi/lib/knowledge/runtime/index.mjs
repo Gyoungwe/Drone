@@ -1,5 +1,24 @@
 // @ts-nocheck
 import {
+  lastWikiModelReview,
+  reviewWikiWithModel
+} from "./chunks/chunk-TPF5L26G.mjs";
+import {
+  MANAGED_END,
+  MANAGED_START,
+  immutableWikiProposalHash,
+  managedParts,
+  proposedWikiText,
+  targetWikiPath,
+  validateSpecialistHtml,
+  validateWikiSourcePaths
+} from "./chunks/chunk-AKW2CMNR.mjs";
+import {
+  createKnowledgeSpecialists,
+  knowledgeReadStart,
+  shouldOrientKnowledge
+} from "./chunks/chunk-36KZGYXK.mjs";
+import {
   createTaskFeedback,
   guardResearchToolResult
 } from "./chunks/chunk-TW476WMJ.mjs";
@@ -24,6 +43,7 @@ import {
   archiveKnowledgeTopic,
   cancelKnowledgeSemanticIndex,
   consumeKnowledgeReviewPreview,
+  dailyDiscoveryContext,
   getKnowledgeTopics,
   indexKnowledgeSemantic,
   knowledgeDecideReview,
@@ -37,14 +57,11 @@ import {
   knowledgeSemanticStatus,
   knowledgeSetupPreview,
   knowledgeSpecialistSettings,
+  saveDiscoveryIdea,
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-AWJF4DPU.mjs";
-import {
-  lastWikiModelReview,
-  reviewWikiWithModel
-} from "./chunks/chunk-WTRTGXYJ.mjs";
+} from "./chunks/chunk-ATHXZ6Y4.mjs";
 import {
   autoApplyWikiProposal,
   decideWikiProposal,
@@ -55,17 +72,17 @@ import {
   undoWikiUpdate,
   validateWikiSourcePaths as validateWikiSourcePaths2,
   wikiHistory
-} from "./chunks/chunk-RL6ZEBP3.mjs";
+} from "./chunks/chunk-IMC2GAXA.mjs";
 import {
-  MANAGED_END,
-  MANAGED_START,
-  immutableWikiProposalHash,
-  managedParts,
-  proposedWikiText,
-  targetWikiPath,
-  validateSpecialistHtml,
-  validateWikiSourcePaths
-} from "./chunks/chunk-AKW2CMNR.mjs";
+  SPECIALIST_LIMITS,
+  contextSessionId,
+  knowledgeSpecialistHost,
+  registerKnowledgeSpecialistHost,
+  setSpecialistSettings,
+  specialistQueueSnapshot,
+  specialistSettings,
+  withSpecialistSlot
+} from "./chunks/chunk-XSFQUT2B.mjs";
 import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
@@ -76,7 +93,7 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-7HHP6BXQ.mjs";
+} from "./chunks/chunk-DAWMRSPO.mjs";
 import {
   embedTexts,
   validateSemanticConfig
@@ -95,21 +112,6 @@ import {
 import {
   saveSpecialistExplainer
 } from "./chunks/chunk-GMBJR4N3.mjs";
-import {
-  createKnowledgeSpecialists,
-  knowledgeReadStart,
-  shouldOrientKnowledge
-} from "./chunks/chunk-VJ65XVAJ.mjs";
-import {
-  SPECIALIST_LIMITS,
-  contextSessionId,
-  knowledgeSpecialistHost,
-  registerKnowledgeSpecialistHost,
-  setSpecialistSettings,
-  specialistQueueSnapshot,
-  specialistSettings,
-  withSpecialistSlot
-} from "./chunks/chunk-K64ABPUJ.mjs";
 import {
   runNavigationMaintenance,
   updateNavigation
@@ -131,7 +133,7 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-VESKWNFJ.mjs";
+} from "./chunks/chunk-ET7AMO7O.mjs";
 import {
   beginKnowledgeFlow,
   clearKnowledgeFlow,
@@ -147,7 +149,20 @@ import {
   requestWikiReviewUi,
   subscribeKnowledgeUi,
   updateKnowledgeFlow
-} from "./chunks/chunk-GC2J7ECB.mjs";
+} from "./chunks/chunk-6YLIZTKN.mjs";
+import {
+  advisoryCodes,
+  readReviewMode,
+  saveReviewMode
+} from "./chunks/chunk-6LT3KQRY.mjs";
+import {
+  cardField,
+  cardLink,
+  failureCard,
+  flowCard,
+  literatureCard,
+  statusTone
+} from "./chunks/chunk-H6MOV67K.mjs";
 import {
   evaluateMetacognitivePublication
 } from "./chunks/chunk-TT3YMRLM.mjs";
@@ -160,14 +175,10 @@ import {
   publicationNotices
 } from "./chunks/chunk-U3GNWHNQ.mjs";
 import {
-  advisoryCodes,
-  readReviewMode,
-  saveReviewMode
-} from "./chunks/chunk-6LT3KQRY.mjs";
-import {
   compareClaimSets,
   compareClaims
 } from "./chunks/chunk-BMV53RD4.mjs";
+import "./chunks/chunk-EFQIVCL3.mjs";
 import {
   BackgroundReviewer,
   reviewDeliverable,
@@ -214,14 +225,6 @@ import {
   snippet,
   validateNote
 } from "./chunks/chunk-AHEUR5VB.mjs";
-import {
-  cardField,
-  cardLink,
-  failureCard,
-  flowCard,
-  literatureCard,
-  statusTone
-} from "./chunks/chunk-H6MOV67K.mjs";
 export {
   BackgroundReviewer,
   EXPERIENCE_LIMITS,
@@ -271,6 +274,7 @@ export {
   createTopicMemory,
   createVaultFileOnly,
   currentProject,
+  dailyDiscoveryContext,
   decideSpecialistRun,
   decideWikiProposal,
   embedTexts,
@@ -344,6 +348,7 @@ export {
   reviewWikiWithModel,
   runNavigationMaintenance,
   safeNotePath,
+  saveDiscoveryIdea,
   saveKnowledgeBinding,
   saveKnowledgeSemanticSettings,
   saveReviewMode,

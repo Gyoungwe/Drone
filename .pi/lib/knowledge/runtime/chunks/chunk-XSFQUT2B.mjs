@@ -1,7 +1,7 @@
 // @ts-nocheck
 import {
   invalidateKnowledgeUi
-} from "./chunk-GC2J7ECB.mjs";
+} from "./chunk-6YLIZTKN.mjs";
 import {
   emitProcessEvent,
   runtimeSlot

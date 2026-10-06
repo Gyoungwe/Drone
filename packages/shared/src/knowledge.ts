@@ -315,6 +315,25 @@ export interface WikiModelReviewResult {
 	writeResult?: WikiReviewResult;
 	sources?: { path: string; hash: string; startLine: number; endLine: number }[];
 }
+/** 每日发现（新旧对照）提出的一条想法 */
+export interface DailyDiscoveryIdea {
+	id: string;
+	title: string;
+	idea: string;
+	/** 依据：Vault 内笔记路径 */
+	basis: string[];
+	test: string;
+	whyOverlooked: string;
+	createdAt: number;
+	status: "new" | "saved" | "dismissed";
+	savedPath?: string;
+}
+export interface DailyDiscoveryState {
+	enabled: boolean;
+	lastRunAt: number | null;
+	/** 未忽略的想法（最新在前） */
+	ideas: DailyDiscoveryIdea[];
+}
 /** 知识库视图搜索框：共享知识 + 当前项目的只读检索 */
 export interface KnowledgeSearchRequest {
 	cwd?: string | null;
@@ -337,6 +356,10 @@ export interface KnowledgeSearchResult {
 }
 export interface KnowledgeApi {
 	searchKnowledge(input: KnowledgeSearchRequest): Promise<KnowledgeSearchResult>;
+	getDailyDiscovery(): Promise<DailyDiscoveryState>;
+	/** enabled: 开关；run: 立即运行一次 */
+	updateDailyDiscovery(input: { enabled?: boolean; run?: boolean }): Promise<DailyDiscoveryState>;
+	decideDailyIdea(input: { id: string; action: "save" | "dismiss" }): Promise<DailyDiscoveryState>;
 	getKnowledgeSemanticStatus(input?: {
 		cwd?: string | null;
 		bindingRevision?: number;
