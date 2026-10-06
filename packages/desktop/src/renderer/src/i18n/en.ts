@@ -847,7 +847,7 @@ export const en: Messages = {
 		},
 		centerOrb: "Centered status animation",
 		centerOrbHint:
-			"While a task is running, shows an enlarged status animation at the center of the conversation area (above the text, with a translucent scrim dimming whatever is behind it). Only controls the centered animation — the small orb before the Working/Thinking row always stays.",
+			"After you send, shows an enlarged status animation at the center of the conversation area until the turn's first visible output (thinking, a tool card, a subagent or text) appears; it then hides, so it never covers the conversation during long runs. Only controls the centered animation — the small orb before the Working/Thinking row always stays.",
 		lan: {
 			title: "LAN Observer",
 			hint: "View live agent progress from your phone on a trusted local network. When remote control is off, the observer page is read-only. Off by default; the access token rotates every time it is enabled.",
