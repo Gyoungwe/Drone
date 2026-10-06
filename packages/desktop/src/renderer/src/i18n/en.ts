@@ -636,6 +636,8 @@ export const en: Messages = {
 		progressLabel: "Deliverable acceptance progress",
 		progressText: "{done} of {total} accepted",
 		continue: "Continue with the rest",
+		milestones: "Acceptance items {done}/{total}",
+		operations: "Operation log {n}",
 	},
 	taskArtifacts: {
 		openSessionFirst: "Open the session this artifact belongs to first",
