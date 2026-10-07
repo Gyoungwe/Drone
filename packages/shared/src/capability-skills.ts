@@ -1,4 +1,5 @@
 import type { CapabilityId } from "./capabilities";
+import { getSkillCategory, type SkillCategory } from "./skill-catalog";
 import { WORKFLOW_PROFILES, type WorkflowDirection, workflowProfile } from "./workflow-catalog";
 
 /**
@@ -43,4 +44,23 @@ export function skillsForCapability(id: CapabilityId): string[] {
 	const direction = CAPABILITY_SKILL_DIRECTIONS[id];
 	if (!direction) return [];
 	return WORKFLOW_PROFILES.filter((p) => p.direction === direction).map((p) => p.name);
+}
+
+/** Non-workflow skills (e.g. ~/.agents/skills) are grouped by catalog category into one capability. */
+export const CATEGORY_CAPABILITY: Record<SkillCategory, CapabilityId> = {
+	knowledge: "knowledge",
+	research: "analysis",
+	writing: "writing",
+	presentation: "visualization",
+	engineering: "coding",
+	setup: "coding",
+	collaboration: "external",
+	support: "external",
+	other: "external",
+};
+
+/** Owning capability of any skill: workflow direction first, then catalog category. */
+export function skillCapability(name: string): CapabilityId | undefined {
+	if (workflowProfile(name)) return capabilityForSkill(name);
+	return CATEGORY_CAPABILITY[getSkillCategory(name)];
 }

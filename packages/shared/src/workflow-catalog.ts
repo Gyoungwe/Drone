@@ -269,6 +269,17 @@ export const WORKFLOW_STAGES: readonly WorkflowStage[] = [
 			"Resolve species and accessions first, preserve database/release evidence, use a reproducible alignment or annotation method, and report unsupported species or missing annotations instead of improvising an unbounded remote script.",
 	},
 	{
+		id: "phylogeny",
+		direction: "analysis",
+		label: {
+			zh: "系统发育建树与渲染",
+			en: "Phylogenetic tree building and rendering",
+		},
+		commands: ["skill:phylogenetics", "skill:etetoolkit"],
+		contract:
+			"Resolve taxa and accessions first, align (MAFFT), trim (trimAl) and infer the tree (IQ-TREE/FastTree) with recorded versions and models, then render with ETE; if a tool is missing, check bio_environment and propose a mamba/bioconda environment instead of stopping.",
+	},
+	{
 		id: "chemistry",
 		direction: "analysis",
 		label: {

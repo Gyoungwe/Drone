@@ -29,6 +29,13 @@ export const BIO_TOOLS: Record<string, string[]> = {
 	mafft: ["--version"],
 	trimal: ["--version"],
 	iqtree2: ["--version"],
+	iqtree: ["--version"],
+	iqtree3: ["--version"],
+	FastTree: [],
+	fasttree: [],
+	"raxml-ng": ["--version"],
+	muscle: ["-version"],
+	clustalo: ["--version"],
 	busco: ["--version"],
 	orthofinder: ["-h"],
 	nextflow: ["-version"],
@@ -230,6 +237,34 @@ export function formatEnvironment(env: BioEnvironment): string {
 		`Containers: ${env.containers.length ? env.containers.join(", ") : "none"}`,
 		`Installed tools: ${installed.length ? installed.map(([name, version]) => `${name} ${version}`).join(", ") : "none of the common bioinformatics tools"}`,
 		`Not found: ${missing.join(", ") || "-"}`,
+		...installHints(env),
 		"Record the versions you actually use (they belong in the run record and the Methods section).",
 	].join("\n");
+}
+
+/** 常见分析所需工具组：缺失时给出 mamba/bioconda 安装建议，而不是让模型直接放弃。 */
+export const TOOL_GROUPS: { id: string; label: string; anyOf: string[][]; packages: string[] }[] = [
+	{
+		id: "phylogeny",
+		label: "phylogenetic trees (align → trim → infer)",
+		anyOf: [
+			["mafft", "muscle", "clustalo"],
+			["iqtree2", "iqtree", "iqtree3", "FastTree", "fasttree", "raxml-ng"],
+		],
+		packages: ["mafft", "trimal", "iqtree", "fasttree"],
+	},
+];
+export function missingToolGroups(env: BioEnvironment) {
+	return TOOL_GROUPS.filter((group) =>
+		group.anyOf.some((alternatives) => !alternatives.some((t) => env.tools[t])),
+	);
+}
+export function installHints(env: BioEnvironment): string[] {
+	return missingToolGroups(env).map((group) => {
+		const manager = env.envManager ?? "mamba";
+		const command = `${manager} create -n ${group.id} -c conda-forge -c bioconda ${group.packages.join(" ")}`;
+		return env.envManager
+			? `Missing for ${group.label}: install into a dedicated env with \`${command}\` (needs the user's approval through task_plan), then run inside it; Python-only steps can use the skill's packages (e.g. ete4, biopython).`
+			: `Missing for ${group.label}: no conda/mamba found; propose installing Miniforge (mamba) and then \`${command}\`, or a container (bioconda images) — ask the user, do not stop silently.`;
+	});
 }
