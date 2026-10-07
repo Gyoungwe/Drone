@@ -60,12 +60,20 @@ it("real SDK dispatches four isolated roles by stage; parent still reads evidenc
 			project: "project-a",
 			result_slug: "topic",
 			topic_id: "topic",
-			evidence_gate: {
-				stage: "answerable",
-				status: "ok",
-				answerable: true,
-				claim_refs: ["fixture:conditional-claim"],
-			},
+				evidence_gate: {
+					stage: "answerable",
+					status: "ok",
+					answerable: true,
+					claim_refs: ["fixture:conditional-claim"],
+					claim_bindings: [
+						{
+							claim: "fixture:conditional-claim",
+							relationship: "hypothesis",
+							limitations: "fixture only",
+							sources: [],
+						},
+					],
+				},
 		}),
 	);
 	const skill = join(root, "show-me/SKILL.md");

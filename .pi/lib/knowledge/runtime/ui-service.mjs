@@ -23,10 +23,10 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-7UOZ7HAE.mjs";
+} from "./chunks/chunk-4JPVAN2W.mjs";
 import "./chunks/chunk-IMC2GAXA.mjs";
 import "./chunks/chunk-XSFQUT2B.mjs";
-import "./chunks/chunk-DAWMRSPO.mjs";
+import "./chunks/chunk-DDCBYHAI.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";
 import "./chunks/chunk-O536IQIE.mjs";
 import "./chunks/chunk-LE6NM7SB.mjs";

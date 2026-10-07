@@ -947,6 +947,8 @@ function normalizeResearchRunSummary(input) {
   const gate = input.evidenceGate;
   if (gate?.status === "failed" || gate?.answerable !== true || gate?.stage !== "answerable")
     throw new Error("Only an answerable, evidence-gated research run can produce a proposal summary");
+  if (!Array.isArray(gate.claimBindings) || gate.claimBindings.length === 0 || gate.claimBindings.some((binding) => !binding || typeof binding !== "object" || Array.isArray(binding)))
+    throw new Error("Only a research run with structured claim bindings can produce a proposal summary");
   const receipts = /* @__PURE__ */ new Map();
   if (!Array.isArray(input.readReceipts) || input.readReceipts.length > RESEARCH_SUMMARY_LIMITS.readReceipts)
     throw new Error("Current-turn read receipts are required");
@@ -978,7 +980,10 @@ function normalizeResearchRunSummary(input) {
   ];
   if (sources.length > RESEARCH_SUMMARY_LIMITS.sources)
     throw new Error("Research summary has too many source notes");
-  const claimRefs = (Array.isArray(gate.claimRefs) ? gate.claimRefs : []).map((ref) => clean(ref, 240)).filter(Boolean).slice(0, 64);
+  const claimRefs = [
+    ...Array.isArray(gate.claimRefs) ? gate.claimRefs : [],
+    ...gate.claimBindings.map((binding) => binding.claim)
+  ].map((ref) => clean(ref, 240)).filter(Boolean).slice(0, 64);
   const artifactPaths = (Array.isArray(input.artifactPaths) ? input.artifactPaths : []).map((path) => clean(path, 480).replaceAll("\\", "/")).filter((path) => path && !path.startsWith("/") && !path.split("/").includes("..")).slice(0, 12);
   const topicId = clean(input.topicId, 120) || resultSlug.replace(/-20\d{6,14}$/, "") || resultSlug;
   if (!/^[a-z0-9][a-z0-9_-]{0,95}$/i.test(topicId)) throw new Error("Invalid topic id");

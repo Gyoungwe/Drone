@@ -1,7 +1,7 @@
 // packages/research/src/source-archive.ts
 import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
-import { basename as basename2, dirname, extname, join, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
+import { basename as basename2, dirname, extname, isAbsolute as isAbsolute2, join, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
 
 // packages/research/src/literature-receipt.ts
 function normalizeDoi(value) {
@@ -496,6 +496,45 @@ async function readManifest(file, runDir) {
     if (error.code !== "ENOENT") throw error;
     return { version: 1, run_dir: runDir, updated_at: null, items: [] };
   }
+}
+async function verifyManifestItems(manifest, runDir) {
+  const downloaded = manifest.items.filter((entry) => entry?.status === "downloaded");
+  if (downloaded.length === 0) return { ok: true, items: [] };
+  let sourcesRoot;
+  try {
+    sourcesRoot = await realpath(join(runDir, "sources"));
+  } catch {
+    return {
+      ok: false,
+      items: downloaded.map((item) => ({
+        id: item.id ?? null,
+        path: item.path ?? item.local_path ?? null,
+        ok: false,
+        reason: "sources directory is missing"
+      }))
+    };
+  }
+  const items = [];
+  for (const item of downloaded) {
+    const path = typeof item.path === "string" ? item.path : typeof item.local_path === "string" ? item.local_path : "";
+    if (!path) {
+      items.push({ id: item.id ?? null, path: null, ok: false, reason: "missing manifest path" });
+      continue;
+    }
+    try {
+      const canonical = await realpath(isAbsolute2(path) ? path : resolve2(runDir, path));
+      if (!isWithin(sourcesRoot, canonical)) throw new Error("path escapes run sources");
+      const bytes = await readFile(canonical);
+      const sha256 = createHash("sha256").update(bytes).digest("hex");
+      if (sha256 !== String(item.sha256 || "").toLowerCase()) throw new Error("sha256 mismatch");
+      if (item.size_bytes !== void 0 && Number(item.size_bytes) !== bytes.byteLength)
+        throw new Error("size mismatch");
+      items.push({ id: item.id ?? null, path: canonical, ok: true, sha256, size_bytes: bytes.byteLength });
+    } catch (error) {
+      items.push({ id: item.id ?? null, path, ok: false, reason: String(error?.message || error) });
+    }
+  }
+  return { ok: items.every((item) => item.ok === true), items };
 }
 async function appendFailure(file, failure) {
   let original = "# Source download failures\n\n";
@@ -1081,7 +1120,8 @@ async function sourceStatus(options = {}, ports) {
     manifest_path: manifestExists ? manifestPath : null,
     failures_path: failuresExists ? failuresPath : null,
     manifest,
-    failure_count: manifest.failures?.length ?? Math.max(0, (failures.match(/^## /gm) || []).length)
+    failure_count: manifest.failures?.length ?? Math.max(0, (failures.match(/^## /gm) || []).length),
+    ...options.verify ? { verification: await verifyManifestItems(manifest, runDir) } : {}
   };
 }
 var source_archive_default = { archiveSource, sourceStatus };

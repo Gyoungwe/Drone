@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
-import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { normalizeDoi } from "./literature-receipt";
 import { normalizePmcid, normalizePmid, OA_MAX_CANDIDATES, resolveOpenAccess } from "./open-access";
 import {
@@ -74,6 +74,46 @@ async function readManifest(file: string, runDir: string): Promise<any> {
 		if (error.code !== "ENOENT") throw error;
 		return { version: 1, run_dir: runDir, updated_at: null, items: [] };
 	}
+}
+
+async function verifyManifestItems(manifest: any, runDir: string): Promise<Record<string, unknown>> {
+	const downloaded = manifest.items.filter((entry: any) => entry?.status === "downloaded");
+	if (downloaded.length === 0) return { ok: true, items: [] };
+	let sourcesRoot: string;
+	try {
+		sourcesRoot = await realpath(join(runDir, "sources"));
+	} catch {
+		return {
+			ok: false,
+			items: downloaded.map((item: any) => ({
+				id: item.id ?? null,
+				path: item.path ?? item.local_path ?? null,
+				ok: false,
+				reason: "sources directory is missing",
+			})),
+		};
+	}
+	const items = [];
+	for (const item of downloaded) {
+		const path = typeof item.path === "string" ? item.path : typeof item.local_path === "string" ? item.local_path : "";
+		if (!path) {
+			items.push({ id: item.id ?? null, path: null, ok: false, reason: "missing manifest path" });
+			continue;
+		}
+		try {
+			const canonical = await realpath(isAbsolute(path) ? path : resolve(runDir, path));
+			if (!isWithin(sourcesRoot, canonical)) throw new Error("path escapes run sources");
+			const bytes = await readFile(canonical);
+			const sha256 = createHash("sha256").update(bytes).digest("hex");
+			if (sha256 !== String(item.sha256 || "").toLowerCase()) throw new Error("sha256 mismatch");
+			if (item.size_bytes !== undefined && Number(item.size_bytes) !== bytes.byteLength)
+				throw new Error("size mismatch");
+			items.push({ id: item.id ?? null, path: canonical, ok: true, sha256, size_bytes: bytes.byteLength });
+		} catch (error: any) {
+			items.push({ id: item.id ?? null, path, ok: false, reason: String(error?.message || error) });
+		}
+	}
+	return { ok: items.every((item: any) => item.ok === true), items };
 }
 
 async function appendFailure(file: string, failure: any) {
@@ -730,6 +770,7 @@ export async function sourceStatus(
 		failures_path: failuresExists ? failuresPath : null,
 		manifest,
 		failure_count: manifest.failures?.length ?? Math.max(0, (failures.match(/^## /gm) || []).length),
+		...(options.verify ? { verification: await verifyManifestItems(manifest, runDir) } : {}),
 	};
 }
 

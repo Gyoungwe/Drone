@@ -825,9 +825,9 @@ function registerWorkspaceConfig(pi, options = {}) {
       }
       const metadata = JSON.parse(await readFile3(join3(runDir, "metadata.json"), "utf8"));
       const gate = metadata.evidence_gate;
-      if (gate?.stage !== "answerable" || gate.status !== "ok" || gate.answerable !== true || !Array.isArray(gate.claim_refs) || gate.claim_refs.length === 0) {
+      if (gate?.stage !== "answerable" || gate.status !== "ok" || gate.answerable !== true || !Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0) {
         throw new Error(
-          "Evidence gate is closed: research_loop must complete retrieval, inspection, archiving and claim binding before summarization"
+          "Evidence gate is closed: research_loop must complete retrieval, inspection, archiving and structured claim binding before summarization"
         );
       }
       const outputs = await writeSummary(runDir, params.summary_markdown, "succeeded");

@@ -35,7 +35,15 @@ beforeEach(async () => {
 			project: "project-a",
 			run_id: "run-fixture",
 			result_slug: "topic",
-			evidence_gate: { stage: "answerable", status: "ok", answerable: true, claim_refs: ["fixture"] },
+			evidence_gate: {
+				stage: "answerable",
+				status: "ok",
+				answerable: true,
+				claim_refs: ["fixture"],
+				claim_bindings: [
+					{ claim: "fixture", relationship: "hypothesis", limitations: "fixture only", sources: [] },
+				],
+			},
 		}),
 	);
 });
