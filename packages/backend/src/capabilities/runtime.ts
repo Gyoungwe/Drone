@@ -8,6 +8,7 @@ import {
 	getSkillCategory,
 	isDeferReviewPhrase,
 	parseExpandedSkillInvocation,
+	RESEARCH_SKILL_CAPABILITIES,
 	researchSkillProfile,
 	type TurnRoute,
 	type TurnRouteHost,
@@ -19,9 +20,11 @@ import {
 	changesResearchWorkflow,
 	detectResearchIntent,
 	EMPTY_RESEARCH_INTENT,
+	intentCapabilities,
 	mergeResearchIntent,
 	normalizeResearchIntent,
 	type ResearchSkillIntent,
+	selectCapabilitySkills,
 	selectResearchSkills,
 } from "./research-skill-router";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
@@ -58,6 +61,10 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 	research: [
 		/(?:research|paper|literature|citation|zotero|experiment|scientific|methodology|transcriptom|genom|phylogen|species|biology|bioinformatics|sequencing|rna-?seq|fastq|\bbam\b|\bvcf\b|single[- ]cell|alignment|variant|blast|fasta|ncbi|uniprot|ensembl|protein|gene|domain|homolog|论文|文献|科研|研究|实验|转录组|基因组|系统发育|物种|生物信息|测序|比对|联配|基因|蛋白|序列|结构域|同源|变异|单细胞|组装|注释|昆虫|细菌|真菌|病毒)/i,
 	],
+	analysis: [],
+	literature: [],
+	writing: [],
+	planning: [],
 	coding: [
 		/(?:\bcode\b|coding|repo(?:sitory)?|git|commit|push|pull request|build|compile|typecheck|test(?:ing)?|debug|bug|implement|refactor|代码|仓库|提交|构建|编译|测试|调试|修复|实现|重构)/i,
 	],
@@ -68,7 +75,7 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 		/(?:\bfile\b|folder|directory|path|pdf|docx?|xlsx?|csv|spreadsheet|document|文件|文件夹|目录|路径|文档|表格)/i,
 	],
 	visualization: [
-		/(?:image|figure|plot|chart|diagram|visuali[sz]|show[ -]?me|slide|ppt|图片|图像|绘图|图表|可视化|流程图|幻灯片)/i,
+		/(?:image|figure|plot|chart|diagram|visuali[sz]|show[ -]?me|slide|ppt|redraw|schematic|flow.?chart|图片|图像|绘图|图表|可视化|流程图|幻灯片|配图|重绘|示意图|柱状图|折线图|散点图|热图|箱线图)/i,
 	],
 	external: [
 		/(?:mcp|plugin|connector|github|gitlab|slack|drive|notion|zotero|channel|ssh|远程主机|服务器|外部应用|插件|连接器)/i,
@@ -91,8 +98,18 @@ export function isTaskStatusQuery(text: string): boolean {
 export function detectCapabilities(text: string): CapabilityId[] {
 	const found = new Set<CapabilityId>();
 	const intent = detectResearchIntent(text);
-	if (intent.topics.length || intent.named.length) found.add("research");
+	if (intent.topics.length || intent.named.length) {
+		found.add("research");
+		for (const id of intentCapabilities(intent)) found.add(id);
+	}
 	for (const id of CAPABILITY_IDS) if (PATTERNS[id].some((pattern) => pattern.test(text))) found.add(id);
+	// 「构建系统发育树 / build a phylogenetic tree」is analysis, not coding, unless other coding words appear.
+	if (
+		found.has("coding") &&
+		intent.topics.includes("phylogeny") &&
+		!PATTERNS.coding.some((pattern) => pattern.test(text.replace(/构建|build/gi, "")))
+	)
+		found.delete("coding");
 	const directSkill = text.match(/^\/skill:([a-z0-9-]+)/i)?.[1];
 	if (directSkill) {
 		const category = getSkillCategory(directSkill);
@@ -195,6 +212,8 @@ export class CapabilityRuntime {
 	private academicManaged = false;
 	private academicEnabled = false;
 	private readonly active = new Set<CapabilityId>();
+	/** Capabilities loaded through capability_load (not keyword-detected); their skill lists are filled. */
+	private readonly loaded = new Set<CapabilityId>();
 	private readonly forcedSkills = new Set<string>();
 	private readonly excludedTools = new Set<string>();
 	private readonly extraAlwaysOn = new Set<string>();
@@ -330,6 +349,7 @@ export class CapabilityRuntime {
 		const directSkill = text.match(/^\/skill:([a-z0-9-]+)/i)?.[1];
 		if (!streaming && !continuation) {
 			this.active.clear();
+			this.loaded.clear();
 			this.forcedSkills.clear();
 			this.researchIntent = EMPTY_RESEARCH_INTENT;
 		}
@@ -354,8 +374,26 @@ export class CapabilityRuntime {
 						this.forcedSkills.delete(name);
 			this.researchIntent = mergeResearchIntent(this.researchIntent, incoming);
 		}
-		for (const id of capabilities) this.active.add(id);
+		for (const id of capabilities) {
+			this.active.add(id);
+			this.loaded.add(id);
+		}
+		// `research` is an umbrella: with a task it also loads the skill groups that task needs.
+		if (task && capabilities.includes("research"))
+			for (const id of intentCapabilities(detectResearchIntent(task))) {
+				this.active.add(id);
+				this.loaded.add(id);
+			}
 		return this.apply();
+	}
+
+	/** Metadata (never bodies) of currently visible skills, for capability_load results. */
+	visibleSkillMetadata(): { name: string; description: string; filePath?: string }[] {
+		if (!this.session) return [];
+		return allSkillsFromLoader(this.session.resourceLoader)
+			.skills.filter((skill) => this.skillVisibility.has(skill.name))
+			.map((skill) => ({ name: skill.name, description: skill.description ?? "", filePath: skill.filePath }))
+			.sort((a, b) => a.name.localeCompare(b.name));
 	}
 
 	isReadOnlyLibrary(): boolean {
@@ -520,6 +558,7 @@ export class CapabilityRuntime {
 		const manager = this.session?.sessionManager;
 		if (!manager) return;
 		this.active.clear();
+		this.loaded.clear();
 		this.forcedSkills.clear();
 		this.researchIntent = EMPTY_RESEARCH_INTENT;
 		const scope = `${manager.getSessionId()}\0${manager.getCwd()}`;
@@ -536,6 +575,7 @@ export class CapabilityRuntime {
 				skills?: unknown;
 				readOnlyLibrary?: boolean;
 				researchIntent?: unknown;
+				loaded?: unknown;
 			} | null;
 			if (
 				!data ||
@@ -551,7 +591,10 @@ export class CapabilityRuntime {
 			this.forcedSkills.clear();
 			this.readOnlyLibrary = data.readOnlyLibrary === true;
 			this.researchIntent = normalizeResearchIntent(data.researchIntent);
+			this.loaded.clear();
 			for (const id of data.capabilities) if (CAPABILITY_IDS.includes(id)) this.active.add(id);
+			if (Array.isArray(data.loaded))
+				for (const id of data.loaded) if (CAPABILITY_IDS.includes(id)) this.loaded.add(id);
 			for (const name of data.skills)
 				if (typeof name === "string" && /^[a-z0-9-]{1,100}$/.test(name)) this.forcedSkills.add(name);
 		}
@@ -563,6 +606,7 @@ export class CapabilityRuntime {
 			taskId: this.activeTaskRouting()?.id || null,
 			scope: `${manager.getSessionId()}\0${manager.getCwd()}`,
 			capabilities: [...this.active].sort(),
+			...(this.loaded.size ? { loaded: [...this.loaded].sort() } : {}),
 			readOnlyLibrary: this.readOnlyLibrary,
 			researchIntent: this.researchIntent,
 			skills: [...this.forcedSkills].sort().slice(0, 32),
@@ -578,9 +622,10 @@ export class CapabilityRuntime {
 		const beforeSkills = this.skillVisibility.list().join("\0");
 		const allSkills = allSkillsFromLoader(this.session.resourceLoader).skills;
 		const selectedResearch = new Set(
-			selectResearchSkills(allSkills, this.active, this.researchIntent, {
+			selectCapabilitySkills(allSkills, this.active, this.researchIntent, {
 				academicEnabled: this.academicEnabled,
-			}).names,
+				fill: this.loaded,
+			}),
 		);
 		this.skillVisibility.set(
 			allSkills
@@ -598,10 +643,12 @@ export class CapabilityRuntime {
 				.map((skill) => skill.name),
 		);
 		const selected = new Set<string>([...ALWAYS_ON, ...this.extraAlwaysOn]);
+		// Research sub-capabilities (analysis/literature/writing/planning) carry the research tool pack.
+		const toolPacks = new Set<CapabilityId>(this.active);
+		if (RESEARCH_SKILL_CAPABILITIES.some((id) => this.active.has(id))) toolPacks.add("research");
 		for (const tool of this.session.getAllTools()) {
 			if (this.excludedTools.has(tool.name)) continue;
-			if (toolCapabilities(tool.name, this.manifest).some((id) => this.active.has(id)))
-				selected.add(tool.name);
+			if (toolCapabilities(tool.name, this.manifest).some((id) => toolPacks.has(id))) selected.add(tool.name);
 		}
 		this.session.setActiveToolsByName(
 			[...selected].filter(
