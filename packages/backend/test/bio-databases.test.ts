@@ -127,7 +127,7 @@ describe("bio_db tool", () => {
 		const failing = makeBioDatabaseTool({ fetch: respond([[/search/, "bad query", 400]]) });
 		await expect(
 			failing.execute("t", { source: "ena", query: "x=" }, undefined, undefined, {} as never),
-		).rejects.toThrow(/HTTP 400/);
+		).rejects.toThrow(/HTTP 400[\s\S]*ENA portal query syntax/);
 	});
 
 	it("rejects unsupported NCBI databases and missing queries", async () => {

@@ -614,6 +614,8 @@ export const zh = {
 		progressLabel: "交付验收进度",
 		progressText: "已验收 {done}/{total} 项",
 		continue: "继续做剩下的",
+		milestones: "验收项 {done}/{total}",
+		operations: "操作记录 {n}",
 	},
 	taskArtifacts: {
 		openSessionFirst: "请先打开产物所属会话",

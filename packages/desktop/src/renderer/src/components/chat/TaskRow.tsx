@@ -114,7 +114,7 @@ export function TaskRow({
 			{!!task.milestones.length && (
 				<details className="mt-1.5">
 					<summary className="cursor-pointer text-[11px] text-ink-dim">
-						验收项 {done}/{task.milestones.length}
+						{t("taskRow.milestones", { done, total: task.milestones.length })}
 					</summary>
 					<ul className="mt-1 space-y-0.5">
 						{task.milestones.map((m) => (
@@ -145,7 +145,7 @@ export function TaskRow({
 			{!!task.operations.length && (
 				<details className="mt-1.5">
 					<summary className="cursor-pointer text-[11px] text-ink-dim">
-						操作记录 {task.operations.length}
+						{t("taskRow.operations", { n: task.operations.length })}
 					</summary>
 					<ul className="mt-1 space-y-0.5">
 						{task.operations.slice(-12).map((o) => (

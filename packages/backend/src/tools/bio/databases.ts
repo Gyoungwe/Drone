@@ -385,10 +385,20 @@ export function makeBioDatabaseTool(options: BioDbToolOptions = {}): ToolDefinit
 					break;
 				}
 				case "ena": {
-					const table = tsvToLines(
-						await call(action === "search" ? enaSearchUrl(needQuery(), limit) : enaFileReportUrl(needId())),
-						limit,
-					);
+					let raw: string;
+					try {
+						raw = await call(
+							action === "search" ? enaSearchUrl(needQuery(), limit) : enaFileReportUrl(needId()),
+						);
+					} catch (error) {
+						// ENA only indexes sequencing runs; a bare protein/gene accession is rejected with HTTP 400.
+						if (action === "search" && error instanceof Error && /HTTP 400/.test(error.message))
+							throw new Error(
+								`${error.message}\nENA search needs ENA portal query syntax over read runs, e.g. tax_tree(9606) AND library_strategy="RNA-Seq", or fetch a study/run accession (PRJNA…/SRR…). Use uniprot for protein accessions and ensembl/ncbi for genes.`,
+							);
+						throw error;
+					}
+					const table = tsvToLines(raw, limit);
 					count = table.count;
 					lines.push(`ENA read runs: ${table.count} row(s).`, ...table.lines);
 					break;
