@@ -4,9 +4,10 @@
  * B4 联配图/比对图等识别为绘图；B5 补满按任务文本排序；B6 不自动加 coding。
  */
 import { CAPABILITY_SKILL_LIMIT, skillCapability, WORKFLOW_PROFILES } from "@drone/shared";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { CapabilityResourceLoader, SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime, detectCapabilities } from "../src/capabilities/runtime";
+import { clearReplyLanguage, setReplyLanguage } from "../src/reply-language";
 import { makeCapabilityLoadTool } from "../src/tools/capability-load";
 import descriptions from "./fixtures/skill-descriptions.json";
 
@@ -120,6 +121,7 @@ const perCapabilityOk = (names: string[]) => {
 };
 
 describe("DHX16 联配图 replay (session 01a1172e)", () => {
+	afterEach(() => clearReplyLanguage());
 	it("prompt routing: primary scikit-bio, figure companion, no coding", () => {
 		const { runtime, visible } = setup();
 		expect(detectCapabilities(PROMPT)).not.toContain("coding");
@@ -172,6 +174,19 @@ describe("DHX16 联配图 replay (session 01a1172e)", () => {
 		expect(order).toContain("phylogenetics");
 		if (order.includes("bids")) expect(order.indexOf("phylogenetics")).toBeLessThan(order.indexOf("bids"));
 		expect(visible()).toContain("phylogenetics");
+	});
+	it("capability_load host lines follow the Chinese UI language (paths and skill names verbatim)", async () => {
+		const { runtime, load } = setup();
+		runtime.prepareForPrompt(PROMPT, false);
+		setReplyLanguage("zh");
+		const text = await load(["analysis", "visualization"], TASK);
+		const lines = text.split("\n");
+		expect(lines[0]).toMatch(/^先读：.*scikit-bio\\SKILL\.md（主技能 scikit-bio）/);
+		expect(text).toMatch(/已激活能力：.*analysis/);
+		expect(text).toContain("可见技能（按相关度排序");
+		expect(lines.at(-1)).toBe("后续阶段需要其他能力时，可以再次调用 capability_load。");
+		expect(text).not.toMatch(/Read first|Capabilities active|Visible skills|You may call/);
+		expect(lines.some((l) => l.startsWith("- scikit-bio"))).toBe(true);
 	});
 	it("capability_load description restricts coding to real code changes", () => {
 		const { runtime } = setup();

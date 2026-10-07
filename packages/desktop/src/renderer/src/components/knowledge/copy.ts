@@ -47,7 +47,7 @@ export const knowledgeZh = {
 		"每轮最多 4 次，知识子智能体全应用最多并发 2 个；单个最长 120 秒。无 shell、网络抓取、递归委派、正式 Wiki 写入或批准权限。",
 	specialistModels: "配置子智能体模型",
 	specialistModel: "模型",
-	specialistThinking: "Thinking",
+	specialistThinking: "思考强度",
 	specialistFollowMain: "跟随主会话",
 	specialistUnavailable: "当前不可用",
 	specialistBudget: "预算",

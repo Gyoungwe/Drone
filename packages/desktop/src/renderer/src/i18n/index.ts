@@ -20,11 +20,23 @@ interface I18nStore {
 	setLanguage: (language: Language) => void;
 }
 
+/** 把界面语言同步给主进程/后端（UiStateSave IPC）：决定 Agent 回复语言规则与宿主文案。 */
+export function syncLanguageToHost(language: Language): void {
+	const pi = (
+		globalThis as { window?: { pi?: { saveUiState?: (state: { language: Language }) => Promise<void> } } }
+	).window?.pi;
+	void pi?.saveUiState?.({ language })?.catch?.(() => undefined);
+}
+
+const initialLanguage = detectLanguage();
+syncLanguageToHost(initialLanguage);
+
 export const useI18nStore = create<I18nStore>((set) => ({
-	language: detectLanguage(),
+	language: initialLanguage,
 	setLanguage: (language) => {
 		localStorage.setItem(STORAGE_KEY, language);
 		set({ language });
+		syncLanguageToHost(language);
 	},
 }));
 

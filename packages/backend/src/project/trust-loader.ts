@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { createLogger } from "../log";
 import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
+import { replyLanguagePrompt } from "../reply-language";
 import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
 import { DefaultResourceLoader, getAgentDir, SettingsManager } from "../session-engine/sdk";
 import { resolveProjectTrust, type TrustOptionInternal } from "./trust";
@@ -46,15 +47,39 @@ export function preferBundledMcpRuntime(bundledPath: string) {
 	};
 }
 
-function desktopLoaderOptions(integration: DesktopIntegration | undefined) {
+export function desktopLoaderOptions(integration: DesktopIntegration | undefined) {
 	if (!integration) return {};
-	const { mcpRuntimePath, ...options } = integration;
+	const { mcpRuntimePath, ...rest } = integration;
+	// The UI language can change between sessions; read it on every (re)load.
+	const options = { ...rest, appendSystemPrompt: [...rest.appendSystemPrompt, ...replyLanguagePrompt()] };
 	if (!mcpRuntimePath) return options;
 	return {
 		...options,
 		additionalExtensionPaths: [...(options.additionalExtensionPaths ?? []), mcpRuntimePath],
 		extensionsOverride: preferBundledMcpRuntime(mcpRuntimePath),
 	};
+}
+
+/**
+ * Windows: Git Bash runs native programs whose output follows the console code page (CP936 on
+ * Chinese systems), which the shell tool decodes as UTF-8 → mojibake. Switch the code page to
+ * UTF-8 before each bash command, in memory only (the user's pi settings are never written).
+ * The powershell tool already forces UTF-8 output itself.
+ */
+export const WINDOWS_UTF8_SHELL_PREFIX = "chcp.com 65001 >/dev/null 2>&1";
+export function useUtf8WindowsShell<T extends Pick<SettingsManager, "getShellCommandPrefix">>(
+	settings: T,
+	platform: NodeJS.Platform = process.platform,
+): T {
+	if (platform !== "win32") return settings;
+	const original = settings.getShellCommandPrefix.bind(settings);
+	settings.getShellCommandPrefix = () => {
+		const prefix = original();
+		return prefix?.includes(WINDOWS_UTF8_SHELL_PREFIX)
+			? prefix
+			: [WINDOWS_UTF8_SHELL_PREFIX, prefix].filter(Boolean).join("\n");
+	};
+	return settings;
 }
 
 export class ProjectResourceLoader {
@@ -98,7 +123,9 @@ export class ProjectResourceLoader {
 		resourceLoader: DefaultResourceLoader;
 	}> {
 		const agentDir = getAgentDir();
-		const settingsManager = SettingsManager.create(cwd, agentDir, { projectTrusted: false });
+		const settingsManager = useUtf8WindowsShell(
+			SettingsManager.create(cwd, agentDir, { projectTrusted: false }),
+		);
 		const resourceLoader = new DefaultResourceLoader({
 			cwd,
 			agentDir,

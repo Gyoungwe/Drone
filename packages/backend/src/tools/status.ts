@@ -1,28 +1,35 @@
 import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { hostText } from "../reply-language";
 
 const statusParams = Type.Object({
 	kind: Type.Optional(
-		Type.Union([Type.Literal("plan"), Type.Literal("update"), Type.Literal("summary")], {
-			description:
-				"Public stage plan, progress update, or short completed-stage summary; not internal reasoning.",
-		}),
+		Type.Union(
+			[Type.Literal("plan"), Type.Literal("update"), Type.Literal("progress"), Type.Literal("summary")],
+			{
+				description:
+					'Public stage plan, progress update ("progress" is accepted as an alias of "update"), or short completed-stage summary; not internal reasoning.',
+			},
+		),
 	),
 	detail: Type.Optional(
 		Type.String({
 			maxLength: 400,
 			description:
-				"Brief public plan/progress explanation: goal, evidence gap, or observable reason for next action. Never hidden chain-of-thought, internal deliberation or unsupported conclusions.",
+				"Brief public plan/progress explanation in the user's language: goal, evidence gap, or observable reason for next action. Never hidden chain-of-thought, internal deliberation or unsupported conclusions.",
 		}),
 	),
 	next: Type.Optional(
-		Type.String({ maxLength: 160, description: "Next visible action, not a claim of completed work." }),
+		Type.String({
+			maxLength: 160,
+			description: "Next visible action in the user's language, not a claim of completed work.",
+		}),
 	),
 	text: Type.String({
 		minLength: 1,
 		maxLength: 60,
 		description:
-			"Short user-visible description of the current action. Do not include hidden reasoning, conclusions, or percentages.",
+			"Short user-visible description of the current action, written in the user's language (the UI language). Do not include hidden reasoning, conclusions, or percentages.",
 	}),
 	phase: Type.Optional(
 		Type.Union([
@@ -60,13 +67,14 @@ export function makeStatusTool(): ToolDefinition<typeof statusParams> {
 		parameters: statusParams,
 		execute: async (_id, params): Promise<AgentToolResult<StatusToolDetails>> => {
 			const status = params.text.replace(/\s+/g, " ").trim();
+			const kind = params.kind === "progress" ? "update" : params.kind;
 			return {
-				content: [{ type: "text", text: `Status updated: ${status}` }],
+				content: [{ type: "text", text: `${hostText("状态已更新：", "Status updated: ")}${status}` }],
 				details: {
 					status,
 					phase: params.phase ?? "other",
 					uiOnly: true,
-					...(params.kind ? { kind: params.kind } : {}),
+					...(kind ? { kind } : {}),
 					...(params.detail ? { detail: params.detail.trim() } : {}),
 					...(params.next ? { next: params.next.trim() } : {}),
 				},
