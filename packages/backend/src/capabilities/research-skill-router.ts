@@ -443,7 +443,12 @@ export function orderedCapabilitySkills(
 	const words = taskWords(intent, options.taskText);
 	const groups = new Set<CapabilityId>([...owned]);
 	for (const id of capabilities) groups.add(id);
+	// coding as a tool pack (shell for an analysis): no engineering skill page unless the task is engineering.
+	const toolOnlyCoding =
+		!intentCapabilities(intent).includes("coding") &&
+		[...groups].some((g) => g !== "coding" && !!CAPABILITY_SKILL_DIRECTIONS[g]);
 	for (const id of groups) {
+		if (id === "coding" && toolOnlyCoding) continue;
 		const ranked = skills
 			.filter((s) => {
 				if (s.disableModelInvocation || options.isPinned?.(s)) return false;

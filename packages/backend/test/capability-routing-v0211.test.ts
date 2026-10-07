@@ -161,6 +161,8 @@ describe("DHX16 联配图 replay (session 01a1172e)", () => {
 		expect(v.length).toBeLessThanOrEqual(counts.size * CAPABILITY_SKILL_LIMIT + BASE.length);
 		expect(v.length).toBeLessThanOrEqual(3 * CAPABILITY_SKILL_LIMIT + 3 + CAPABILITY_SKILL_LIMIT);
 		expect(v.filter((n) => AGENT_SKILLS.includes(n)).length).toBeLessThanOrEqual(2 * CAPABILITY_SKILL_LIMIT);
+		// coding loaded only for its shell next to analysis: no engineering skills are listed
+		expect(v.filter((n) => skillCapability(n) === "coding")).toEqual([]);
 	});
 	it("fill ranks by task text: alignment/tree skills beat unrelated catalog-first ones", async () => {
 		const { runtime, load, visible } = setup();
@@ -173,7 +175,9 @@ describe("DHX16 联配图 replay (session 01a1172e)", () => {
 	});
 	it("capability_load description restricts coding to real code changes", () => {
 		const { runtime } = setup();
-		expect(makeCapabilityLoadTool(runtime).description).toMatch(/Load coding only when code must/);
+		expect(makeCapabilityLoadTool(runtime).description).toMatch(
+			/coding carries the shell[\s\S]*adds tools only/,
+		);
 	});
 });
 
