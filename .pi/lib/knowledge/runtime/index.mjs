@@ -1,48 +1,5 @@
 // @ts-nocheck
 import {
-  lastWikiModelReview,
-  reviewWikiWithModel
-} from "./chunks/chunk-TPF5L26G.mjs";
-import {
-  MANAGED_END,
-  MANAGED_START,
-  immutableWikiProposalHash,
-  managedParts,
-  proposedWikiText,
-  targetWikiPath,
-  validateSpecialistHtml,
-  validateWikiSourcePaths
-} from "./chunks/chunk-AKW2CMNR.mjs";
-import {
-  saveSpecialistExplainer
-} from "./chunks/chunk-GMBJR4N3.mjs";
-import {
-  createKnowledgeSpecialists,
-  knowledgeReadStart,
-  shouldOrientKnowledge
-} from "./chunks/chunk-36KZGYXK.mjs";
-import {
-  createTaskFeedback,
-  guardResearchToolResult
-} from "./chunks/chunk-TW476WMJ.mjs";
-import {
-  createToolBudget
-} from "./chunks/chunk-BHQUJ6MZ.mjs";
-import {
-  autoTopicCandidate
-} from "./chunks/chunk-P4SVSIRY.mjs";
-import {
-  TOPIC_MEMORY_LIMITS,
-  TOPIC_MEMORY_VERSION,
-  archiveTopic,
-  classifyTopic,
-  createTopicMemory,
-  listTopics,
-  readTopic,
-  topicRunHash,
-  updateTopic
-} from "./chunks/chunk-MFL6DGIT.mjs";
-import {
   archiveKnowledgeTopic,
   cancelKnowledgeSemanticIndex,
   consumeKnowledgeReviewPreview,
@@ -66,7 +23,21 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-4JPVAN2W.mjs";
+} from "./chunks/chunk-IJHRYYDY.mjs";
+import {
+  lastWikiModelReview,
+  reviewWikiWithModel
+} from "./chunks/chunk-TPF5L26G.mjs";
+import {
+  MANAGED_END,
+  MANAGED_START,
+  immutableWikiProposalHash,
+  managedParts,
+  proposedWikiText,
+  targetWikiPath,
+  validateSpecialistHtml,
+  validateWikiSourcePaths
+} from "./chunks/chunk-AKW2CMNR.mjs";
 import {
   autoApplyWikiProposal,
   decideWikiProposal,
@@ -79,6 +50,18 @@ import {
   wikiHistory
 } from "./chunks/chunk-IMC2GAXA.mjs";
 import {
+  normalizeSourceLinks,
+  onlineSourceLink
+} from "./chunks/chunk-LE6NM7SB.mjs";
+import {
+  saveSpecialistExplainer
+} from "./chunks/chunk-GMBJR4N3.mjs";
+import {
+  createKnowledgeSpecialists,
+  knowledgeReadStart,
+  shouldOrientKnowledge
+} from "./chunks/chunk-6H2S6YM4.mjs";
+import {
   SPECIALIST_LIMITS,
   contextSessionId,
   knowledgeSpecialistHost,
@@ -89,6 +72,32 @@ import {
   withSpecialistSlot
 } from "./chunks/chunk-XSFQUT2B.mjs";
 import {
+  createTaskFeedback,
+  guardResearchToolResult
+} from "./chunks/chunk-TW476WMJ.mjs";
+import {
+  createToolBudget
+} from "./chunks/chunk-BHQUJ6MZ.mjs";
+import {
+  autoTopicCandidate
+} from "./chunks/chunk-P4SVSIRY.mjs";
+import {
+  TOPIC_MEMORY_LIMITS,
+  TOPIC_MEMORY_VERSION,
+  archiveTopic,
+  classifyTopic,
+  createTopicMemory,
+  listTopics,
+  readTopic,
+  topicRunHash,
+  updateTopic
+} from "./chunks/chunk-MFL6DGIT.mjs";
+import {
+  projectKnowledgeEvent,
+  projectKnowledgeSnapshot,
+  registerAnswerPublication
+} from "./chunks/chunk-PJQRVYSJ.mjs";
+import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
   tokenizeKnowledgeText
@@ -98,44 +107,7 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-DDCBYHAI.mjs";
-import {
-  embedTexts,
-  validateSemanticConfig
-} from "./chunks/chunk-OWE2DUY5.mjs";
-import {
-  createSemanticSettingsApi,
-  createSemanticSettingsState,
-  readSemanticSettings,
-  saveSemanticSettings,
-  validateSemanticConfig as validateSemanticConfig2
-} from "./chunks/chunk-O536IQIE.mjs";
-import {
-  normalizeSourceLinks,
-  onlineSourceLink
-} from "./chunks/chunk-LE6NM7SB.mjs";
-import {
-  runNavigationMaintenance,
-  updateNavigation
-} from "./chunks/chunk-Q4ULDE2G.mjs";
-import {
-  containedVaultFile,
-  createVaultFileOnly,
-  initializeProjectContext,
-  initializeSharedNavigation,
-  updateVaultNavigation
-} from "./chunks/chunk-DY4DWRNO.mjs";
-import {
-  SPECIALIST_DECISIONS,
-  createSpecialistBudget,
-  decideSpecialistRun,
-  specialistRequestSignature
-} from "./chunks/chunk-BRQ6C4CR.mjs";
-import {
-  projectKnowledgeEvent,
-  projectKnowledgeSnapshot,
-  registerAnswerPublication
-} from "./chunks/chunk-PJQRVYSJ.mjs";
+} from "./chunks/chunk-V6PECWHO.mjs";
 import {
   beginKnowledgeFlow,
   clearKnowledgeFlow,
@@ -158,6 +130,17 @@ import {
   saveReviewMode
 } from "./chunks/chunk-6LT3KQRY.mjs";
 import {
+  embedTexts,
+  validateSemanticConfig
+} from "./chunks/chunk-OWE2DUY5.mjs";
+import {
+  createSemanticSettingsApi,
+  createSemanticSettingsState,
+  readSemanticSettings,
+  saveSemanticSettings,
+  validateSemanticConfig as validateSemanticConfig2
+} from "./chunks/chunk-O536IQIE.mjs";
+import {
   cardField,
   cardLink,
   failureCard,
@@ -165,9 +148,27 @@ import {
   literatureCard,
   statusTone
 } from "./chunks/chunk-H6MOV67K.mjs";
+import "./chunks/chunk-RCUF5QK4.mjs";
+import {
+  runNavigationMaintenance,
+  updateNavigation
+} from "./chunks/chunk-Q4ULDE2G.mjs";
+import {
+  containedVaultFile,
+  createVaultFileOnly,
+  initializeProjectContext,
+  initializeSharedNavigation,
+  updateVaultNavigation
+} from "./chunks/chunk-DY4DWRNO.mjs";
 import {
   evaluateMetacognitivePublication
 } from "./chunks/chunk-TT3YMRLM.mjs";
+import {
+  SPECIALIST_DECISIONS,
+  createSpecialistBudget,
+  decideSpecialistRun,
+  specialistRequestSignature
+} from "./chunks/chunk-BRQ6C4CR.mjs";
 import {
   advisoryLine,
   advisoryNotice,

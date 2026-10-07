@@ -1,5 +1,5 @@
 import type { ImageInput, SubagentPanelAgent } from "@drone/shared";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useT } from "../../i18n";
@@ -25,7 +25,9 @@ import { QueueBar } from "./QueueBar";
 import { QuoteChip } from "./QuoteChip";
 import { SendErrorBar } from "./SendErrorBar";
 import { SlashMenu } from "./SlashMenu";
+import { SlashPill } from "./SlashPill";
 import { SubagentChip } from "./SubagentChip";
+import { COMPOSER_LINE_PX, caretAtStart, chipIndentPx, chipsFitInline, chipsTotalWidth } from "./slash-pill";
 import { ThinkingPicker } from "./ThinkingPicker";
 import { useAtCompletion } from "./use-at-completion";
 import { useComposerSend } from "./use-composer-send";
@@ -98,6 +100,10 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	const [dragActive, setDragActive] = useState(false);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const boxRef = useRef<HTMLElement>(null);
+	/** 行首胶囊容器（slash / @ 子智能体 / @ 文件）：测宽决定内联缩进还是独占上方一行 */
+	const chipsRef = useRef<HTMLDivElement>(null);
+	const bodyRef = useRef<HTMLDivElement>(null);
+	const [chipMetrics, setChipMetrics] = useState({ chips: 0, body: 0 });
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const followUpQueue = transcript.followUpQueue;
@@ -207,25 +213,53 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		const agent = subagent;
 		if (!agent) return;
 		setSubagent(null);
+		// 光标落在拼回的 `@name ` 之后（原任务正文之前）：与行内 token 后退格的直觉一致；空文本时即末尾
+		const caret = restoreSubagentText(agent, text).length - text.length;
 		setText((prev) => restoreSubagentText(agent, prev));
 		setAtDismissed(true);
 		requestAnimationFrame(() => {
 			const el = textareaRef.current;
 			if (el) {
 				el.focus();
-				const len = el.value.length;
-				el.setSelectionRange(len, len);
+				const pos = Math.min(Math.max(caret, 0) || el.value.length, el.value.length);
+				el.setSelectionRange(pos, pos);
 			}
 		});
 	};
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: 高度由文本 DOM 变化驱动，显式依赖 text 便于触发
+	const hasChips = Boolean(slashCommand) || Boolean(subagent) || attachments.length > 0;
+	/** 胶囊测宽：各胶囊自身宽度之和（与内联/换行布局无关，两态切换不会互相抖动）+ 正文区宽度 */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: 胶囊集合变化时重挂 ResizeObserver
+	useLayoutEffect(() => {
+		const chipsEl = chipsRef.current;
+		const bodyEl = bodyRef.current;
+		if (!chipsEl || !bodyEl) {
+			setChipMetrics((m) => (m.chips === 0 && m.body === 0 ? m : { chips: 0, body: 0 }));
+			return;
+		}
+		const measure = () => {
+			const chips = chipsTotalWidth(
+				Array.from(chipsEl.children).map((child) => child.getBoundingClientRect().width),
+			);
+			const body = bodyEl.clientWidth;
+			setChipMetrics((m) => (m.chips === chips && m.body === body ? m : { chips, body }));
+		};
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(bodyEl);
+		for (const child of Array.from(chipsEl.children)) observer.observe(child);
+		return () => observer.disconnect();
+	}, [hasChips, slashCommand, subagent, attachments]);
+	const chipsInline = hasChips && chipsFitInline(chipMetrics.chips, chipMetrics.body);
+	const textIndent = chipsInline ? chipIndentPx(chipMetrics.chips) : 0;
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: 高度由文本 DOM 变化驱动，显式依赖 text 便于触发；缩进变化影响折行
 	useEffect(() => {
 		const el = textareaRef.current;
 		if (!el) return;
 		el.style.height = "auto";
 		el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
-	}, [text]);
+	}, [text, textIndent]);
 
 	// 撤回回填草稿后聚焦输入框继续编辑（sessions store 派发，window 事件解耦组件间依赖）
 	useEffect(() => {
@@ -281,7 +315,13 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 			void send.handleStop();
 			return;
 		}
-		if (text === "" && (e.key === "Backspace" || e.key === "Delete")) {
+		// 胶囊是正文前的行内 token：空文本 Backspace/Delete，或光标停在正文最前时 Backspace，都整枚撤销
+		const emptyErase = text === "" && (e.key === "Backspace" || e.key === "Delete");
+		const eraseBeforeText =
+			e.key === "Backspace" &&
+			hasChips &&
+			caretAtStart(e.currentTarget.selectionStart, e.currentTarget.selectionEnd);
+		if (emptyErase || eraseBeforeText) {
 			// 胶囊撤销：视觉由近及远（@ 文件 → @ 子智能体 / slash 命令 → 引用）
 			if (attachments.length > 0) {
 				e.preventDefault();
@@ -296,7 +336,8 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 				slash.restoreSlashPill(e);
 				return;
 			}
-			if (quotes.length > 0) {
+			// 引用胶囊在上方独立一行，不与正文相邻：只在空文本时退格撤销
+			if (emptyErase && quotes.length > 0) {
 				e.preventDefault();
 				setQuotes((prev) => prev.slice(0, -1));
 				return;
@@ -449,28 +490,6 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						{feedback.message}
 					</p>
 				)}
-				{slash.slashOpen && (
-					<SlashMenu
-						commands={slash.slashCommands}
-						showSpecialized={slash.showSpecialized}
-						workflowDirection={slash.workflowDirection}
-						onBackToWorkflows={slash.backToWorkflows}
-						onToggleSpecialized={slash.toggleSpecialized}
-						query={slash.slashQuery}
-						selectedIndex={slash.slashSelected}
-						onSelectedIndexChange={slash.setSlashSelected}
-						onPick={(command) => void slash.handleSlashPick(command)}
-					/>
-				)}
-				{at.atOpen && (
-					<AtMenu
-						items={at.atItems}
-						agentsOffered={at.agentsOffered}
-						selectedIndex={at.atSelected}
-						onSelectedIndexChange={at.setAtSelected}
-						onPick={at.handleAtPick}
-					/>
-				)}
 				{followUpQueue.length > 0 && (
 					<QueueBar
 						text={followUpQueue[0] ?? ""}
@@ -492,7 +511,39 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						{t("composer.noModelHint")}
 					</button>
 				)}
-				<div className="rounded-2xl border-[0.5px] border-border bg-surface shadow-soft">
+				<div className="relative rounded-2xl border-[0.5px] border-border bg-surface shadow-soft">
+					{/* 斜杠 / @ 补全面板：锚定输入框上沿的浮层（absolute bottom-full），不占文档流——
+					    原先在流内渲染，空态居中布局（justify-center）里一开菜单整个输入框就被推下半个菜单高；
+					    浮层宽度与输入框一致、贴着输入框弹出，Composer 外层 relative z-20 保证盖住消息区 */}
+					{(slash.slashOpen || at.atOpen) && (
+						<div
+							className="absolute inset-x-0 bottom-full z-(--z-dropdown)"
+							data-testid="composer-menu-anchor"
+						>
+							{slash.slashOpen && (
+								<SlashMenu
+									commands={slash.slashCommands}
+									showSpecialized={slash.showSpecialized}
+									workflowDirection={slash.workflowDirection}
+									onBackToWorkflows={slash.backToWorkflows}
+									onToggleSpecialized={slash.toggleSpecialized}
+									query={slash.slashQuery}
+									selectedIndex={slash.slashSelected}
+									onSelectedIndexChange={slash.setSlashSelected}
+									onPick={(command) => void slash.handleSlashPick(command)}
+								/>
+							)}
+							{at.atOpen && (
+								<AtMenu
+									items={at.atItems}
+									agentsOffered={at.agentsOffered}
+									selectedIndex={at.atSelected}
+									onSelectedIndexChange={at.setAtSelected}
+									onPick={at.handleAtPick}
+								/>
+							)}
+						</div>
+					)}
 					{/* 引用胶囊区：独占顶部一行贴边（专为选中引用留的位置，不占正文宽度） */}
 					{quotes.length > 0 && (
 						<div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
@@ -505,43 +556,56 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 							))}
 						</div>
 					)}
-					{/* 正文行：slash/@ 子智能体/@ 文件胶囊内联在文本行首（有胶囊时 flex-wrap 同行，否则 textarea 独占整行）；
-					    外层容器恒定渲染，textarea 只切 className 不换位置 → 不重挂、不丢焦点；
-					    无引用时文本贴顶（可编辑区向上扩展），引用行临时加一行、不浪费空间 */}
+					{/* 正文行：slash / @ 子智能体 / @ 文件胶囊是正文前的行内 token——
+					    胶囊绝对定位在首行行首，textarea 用 text-indent 让出胶囊宽度：首行文字紧接胶囊、后续行回到左边缘，
+					    胶囊高度 = 行高（COMPOSER_LINE_PX）、顶对齐 → 与文字同一中线（原 flex-wrap + mt-0.5 + 24px 胶囊
+					    对 22.75px 行高错位约 2.6px，且折行文字挂在胶囊右侧形成悬挂缩进）。
+					    胶囊过宽（> 60% 宽度）时退为输入框上方独立一行。textarea 恒在同一位置 → 不重挂、不丢焦点 */}
 					<div className={`px-3 pb-4 ${quotes.length > 0 ? "pt-1.5" : "pt-2"}`}>
-						<div
-							className={
-								slashCommand || subagent || attachments.length > 0
-									? "flex flex-wrap items-start gap-x-1.5 gap-y-1"
-									: undefined
-							}
-						>
-							{slashCommand && (
-								<span className="mt-0.5 flex shrink-0 select-none items-center rounded-md bg-surface px-2 py-0.5 font-mono text-[12px] leading-5 text-ink-2 shadow-pop">
-									/{slashCommand}
-								</span>
+						<div ref={bodyRef} className="relative">
+							{hasChips && (
+								<div
+									ref={chipsRef}
+									data-testid="composer-chips"
+									data-layout={chipsInline ? "inline" : "row"}
+									className={
+										chipsInline
+											? "absolute top-0 left-0 z-[1] flex items-center gap-1.5"
+											: "mb-1 flex flex-wrap items-center gap-1.5"
+									}
+									style={chipsInline ? { height: COMPOSER_LINE_PX } : undefined}
+								>
+									{slashCommand && (
+										<SlashPill name={slashCommand} onRemove={() => slash.restoreSlashPill()} />
+									)}
+									{subagent && (
+										<SubagentChip
+											name={subagent}
+											source={subagentSource}
+											onRemove={() => restoreSubagentChip()}
+										/>
+									)}
+									{attachments.map((path, index) => (
+										<AttachmentChip
+											key={path}
+											path={path}
+											onRemove={() => at.handleAttachmentRemove(index)}
+										/>
+									))}
+								</div>
 							)}
-							{subagent && (
-								<SubagentChip
-									name={subagent}
-									source={subagentSource}
-									onRemove={() => restoreSubagentChip()}
-								/>
-							)}
-							{attachments.map((path, index) => (
-								<AttachmentChip key={path} path={path} onRemove={() => at.handleAttachmentRemove(index)} />
-							))}
 							<textarea
 								ref={textareaRef}
 								data-testid="composer-input"
-								className={`max-h-[200px] resize-none bg-transparent text-[14px] leading-relaxed outline-none placeholder:text-ink-faint select-text ${
-									slashCommand || subagent || attachments.length > 0 ? "min-w-[140px] flex-1" : "w-full"
-								}`}
+								className="block max-h-[200px] w-full resize-none bg-transparent text-[14px] outline-none placeholder:text-ink-faint select-text"
+								style={{ lineHeight: `${COMPOSER_LINE_PX}px`, textIndent }}
 								placeholder={
 									subagent
 										? t("composer.subagentTaskPlaceholder", { agent: subagent })
 										: slashCommand
-											? t("slash.argPlaceholder")
+											? slashCommand.startsWith("skill:")
+												? t("slash.skillArgPlaceholder")
+												: t("slash.argPlaceholder")
 											: placeholder
 								}
 								value={text}
