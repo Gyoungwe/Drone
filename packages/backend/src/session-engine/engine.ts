@@ -10,6 +10,7 @@ import {
 	ProjectTrustStore,
 	SessionManager,
 } from "@earendil-works/pi-coding-agent";
+import { createAntigravityProvider } from "./antigravity/provider";
 
 /**
  * SDK boundary for session lifecycle operations.
@@ -24,7 +25,12 @@ export class SessionEngine {
 
 	async getModelRuntime(): Promise<ModelRuntime> {
 		if (this.modelRuntime) return this.modelRuntime;
-		if (!this.modelPromise) this.modelPromise = ModelRuntime.create();
+		if (!this.modelPromise) {
+			this.modelPromise = ModelRuntime.create().then((runtime) => {
+				runtime.registerNativeProvider(createAntigravityProvider());
+				return runtime;
+			});
+		}
 		this.modelRuntime = await this.modelPromise;
 		return this.modelRuntime;
 	}

@@ -50,6 +50,8 @@ const TOPICS = {
 	singlecell: /单细胞|single.cell|scRNA|scanpy|scvelo|scvi/i,
 	rnaseq: /差异表达|bulk.{0,4}rna|rna.seq|RNA测序|转录组分析|deseq/i,
 	chemistry: /化学信息|分子对接|药物发现|cheminformatics|molecular docking|drug discovery|rdkit/i,
+	bioinformatics:
+		/基因(?:组|序列)?|蛋白(?:质)?|序列|结构域|保守域|联配|多序列比对|比对|同源|直系同源|blast|fasta|ncbi|uniprot|ensembl|转录本|昆虫|细菌|真菌|病毒|bioinformatics|sequence alignment|domain analysis/i,
 	methods: /实验设计|研究设计|experimental design|research design/i,
 	grants: /基金申请|研究计划书|项目申请书|research proposal|research grant|grant proposal/i,
 	pipeline:
@@ -155,6 +157,7 @@ const STAGE_PRIORITY: ResearchTopic[] = [
 	"de",
 	"enrichment",
 	"paperCard",
+	"bioinformatics",
 	"review",
 	"writing",
 	"synthesis",

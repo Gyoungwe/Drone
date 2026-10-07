@@ -1014,6 +1014,10 @@ export const en: Messages = {
 			removeCredential: "Remove credential",
 			login: "Sign in with subscription",
 			loginApiKey: "Sign in",
+			antigravityWarning:
+				"Antigravity uses a changing Google Cloud Code Assist protocol. Confirm that you accept Google service terms and account-policy risks.",
+			antigravityProjectHint:
+				"After sign-in, Drone discovers a Cloud Code Assist project for the account; OAuth credentials are never shown or logged.",
 			builtinEdit: "Endpoint & key",
 			builtinEditTitle: "Configure {name} endpoint",
 			builtinBaseUrl: "baseUrl (optional; blank = official endpoint)",
@@ -1054,6 +1058,8 @@ export const en: Messages = {
 			waitingInteractive: "Waiting for your input…",
 			submit: "Submit",
 			failed: "Sign-in failed",
+			antigravityWarning:
+				"This is a separate Google Antigravity sign-in flow. The protocol may change, and account access is subject to Google's terms and policies.",
 		},
 		skills: {
 			title: "Loaded Skills",

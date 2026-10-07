@@ -56,7 +56,7 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 		/(?:knowledge|wiki|obsidian|vault|evidence|知识库|知识图谱|维基|证据|来源|主题记忆|恢复主题|resume topic|topic memory)/i,
 	],
 	research: [
-		/(?:research|paper|literature|citation|zotero|experiment|scientific|methodology|transcriptom|genom|phylogen|species|biology|bioinformatics|sequencing|rna-?seq|fastq|\bbam\b|\bvcf\b|single[- ]cell|alignment|variant|论文|文献|科研|研究|实验|转录组|基因组|系统发育|物种|生物信息|测序|比对|变异|单细胞|组装|注释)/i,
+		/(?:research|paper|literature|citation|zotero|experiment|scientific|methodology|transcriptom|genom|phylogen|species|biology|bioinformatics|sequencing|rna-?seq|fastq|\bbam\b|\bvcf\b|single[- ]cell|alignment|variant|blast|fasta|ncbi|uniprot|ensembl|protein|gene|domain|homolog|论文|文献|科研|研究|实验|转录组|基因组|系统发育|物种|生物信息|测序|比对|联配|基因|蛋白|序列|结构域|同源|变异|单细胞|组装|注释|昆虫|细菌|真菌|病毒)/i,
 	],
 	coding: [
 		/(?:\bcode\b|coding|repo(?:sitory)?|git|commit|push|pull request|build|compile|typecheck|test(?:ing)?|debug|bug|implement|refactor|代码|仓库|提交|构建|编译|测试|调试|修复|实现|重构)/i,

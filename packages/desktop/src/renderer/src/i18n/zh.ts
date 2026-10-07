@@ -967,6 +967,10 @@ export const zh = {
 			removeCredential: "移除凭证",
 			login: "订阅登录",
 			loginApiKey: "登录",
+			antigravityWarning:
+				"Antigravity 使用可能变化的 Google Cloud Code Assist 协议；请确认你接受 Google 服务条款和账号策略风险。",
+			antigravityProjectHint:
+				"登录后 Drone 会为该账号发现 Cloud Code Assist 项目；不会显示或记录 OAuth 凭证。",
 			builtinEdit: "配置端点与 Key",
 			builtinEditTitle: "配置 {name} 端点",
 			builtinBaseUrl: "baseUrl（可选，留空走官方端点）",
@@ -1006,6 +1010,8 @@ export const zh = {
 			waitingInteractive: "等待应答…",
 			submit: "提交",
 			failed: "登录失败",
+			antigravityWarning:
+				"这是 Google Antigravity 的独立登录流程。协议可能变化，账号访问受 Google 服务条款和策略约束。",
 		},
 		skills: {
 			title: "已加载的 Skills",

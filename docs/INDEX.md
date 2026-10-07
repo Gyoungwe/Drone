@@ -156,6 +156,7 @@ src/
 ├── settings/           settings / model-prefs / login
 ├── packages/           admin / catalog
 ├── discovery/          B5d–B5f 内核容器运行、探索预算、独立批评、多路径与评测的 backend 组合根
+├── session-engine/     Pi SDK 运行时边界与原生 provider（含 Google Antigravity）
 ├── services/           approvals / compute-data-design / compute-experience / compute-preflight / institutional / packages / permissions / project-trust / session-lifecycle / session-permissions / subagents / zotero（域服务，组合根暴露）
 ├── research-root.ts    研究 workbench 打包资源根解析（开发树与 extraResources 共用）
 └── tools/              show-image / todo / todo-reminder / webfetch / subagent / context-evaporation / channel-watch / bio
@@ -165,6 +166,7 @@ src/
 |---|---|---|
 | `src/create-backend.ts` | `BackendServices`、`createBackend` | 组合根：注入每 host `DroneRuntime`，组装 session、knowledge、zotero、institutional、subagents、mcp、settings、models、login、packages、permissions、approvals、B5 discovery 与 B7 data-design 服务；compute preflight/experience bridge 通过显式 host 端口接入，desktop IPC 优先消费这些端口 |
 | `src/discovery/` | `DiscoveryService`、`ContainerKernelRunner` | B5d–B5f 的项目作用域宿主适配：Docker/Podman 无网络、只写 `runs/` 的内核会话，Inquiry 记录，独立批评、多路径稳健性、基线和评测持久化；无容器运行时 fail-closed |
+| `src/session-engine/antigravity/{oauth,transport,request,response,provider,catalog}.ts` | `createAntigravityProvider`、PKCE OAuth、Cloud Code Assist SSE | Google Antigravity 原生 provider：浏览器 OAuth + loopback/manual 回调、项目发现/开通、动态模型目录和 Gemini 请求/响应适配；凭证只经 Pi runtime 管理 |
 | `src/services/compute-{data-design,preflight,experience}.ts` | B7 registry/gate、`createComputeExperienceRecorder` | 数据集版本、公共数据回执、RO-Crate、设计/混杂检查在提交前阻断并生成 proposal questions；终态 compute 事件可写入知识 experience store，保留 observed/verified 边界 |
 | `src/pi-backend.ts` | `PiBackend` | **兼容门面**：create/open/close/delete/prompt（followUp 排队，preflight 回执见 `use-composer-send`）/abort/fork/recall/compact/stats/listModels（附 `thinkingLevels`/`imageInput`）/事件与权限·信任分发。新 host 通过 `BackendServices` 端口接入；兼容期保留旧委托 |
 | `src/json-store.ts` | `JsonStore`、`JsonStoreCorruptedError` | 统一 JSON 持久化：tmp+rename 原子写；read 损坏回退默认、update 损坏抛 CorruptedError 拒写；async 版 per-path 队列串行化、sync 变体热路径用；缓存/normalize 不进本层 |

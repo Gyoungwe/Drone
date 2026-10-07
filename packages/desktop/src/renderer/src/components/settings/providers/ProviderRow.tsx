@@ -108,6 +108,18 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 						)}
 						{provider.configured && provider.authLabel ? ` · ${provider.authLabel}` : ""}
 					</div>
+					{provider.id === "google-antigravity" && (
+						<>
+							<p className="mt-1 max-w-[560px] rounded bg-amber-50 px-2 py-1 text-[11px] leading-4 text-amber-800">
+								{t("settings.providers.antigravityWarning")}
+							</p>
+							{provider.configured && (
+								<p className="mt-1 max-w-[560px] text-[11px] leading-4 text-ink-faint">
+									{t("settings.providers.antigravityProjectHint")}
+								</p>
+							)}
+						</>
+					)}
 				</div>
 				<span
 					className={`mr-1 shrink-0 rounded-full px-2 py-0.5 text-[11px] ${

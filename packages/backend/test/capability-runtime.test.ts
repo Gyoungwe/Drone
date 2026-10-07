@@ -150,6 +150,9 @@ describe("lazy capability runtime", () => {
 		expect(detectCapabilities("在 zotero 里检索这篇论文")).toEqual(
 			expect.arrayContaining(["research", "external"]),
 		);
+		expect(
+			detectCapabilities("帮我搜索小菜蛾DHX16的相关信息，然后帮我联配一下，我想看看结构域是否和灰飞虱有差异"),
+		).toContain("research");
 	});
 
 	it("starts with only control tools and materially reduces tool schema", () => {

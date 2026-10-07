@@ -54,6 +54,7 @@ describe("task-scoped research skill routing", () => {
 		["请润色论文", "nature-polishing"],
 		["单细胞分析", "scanpy"],
 		["差异表达分析", "bulk-rnaseq"],
+		["搜索小菜蛾 DHX16 序列并和灰飞虱联配比较结构域", "scikit-bio"],
 		["科研绘图", "nature-figure"],
 		["统计分析", "statistical-analysis"],
 		["systematic review", "literature-review"],
@@ -68,6 +69,17 @@ describe("task-scoped research skill routing", () => {
 		expect(select("polish this manuscript").names).toEqual(["nature-polishing"]);
 		expect(select("use scientific-writing for manuscript").names).toEqual(["scientific-writing"]);
 		expect(select("nature-shared").names).toEqual([]);
+	});
+	it("routes biological sequence requests to the dedicated analysis stage", () => {
+		const text = "帮我搜索小菜蛾DHX16的相关信息，然后帮我联配一下，我想看看结构域是否和灰飞虱有差异";
+		expect(detectCapabilities(text)).toContain("research");
+		expect(detectResearchIntent(text).topics).toContain("bioinformatics");
+		expect(select(text)).toMatchObject({
+			names: ["scikit-bio"],
+			primaryWorkflow: "scikit-bio",
+			stage: "bioinformatics",
+			direction: "analysis",
+		});
 	});
 	it("falls back only to installed, automatically invocable skills", () => {
 		const available = skills

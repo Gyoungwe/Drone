@@ -30,6 +30,8 @@
 | `/obsidian-setup` 等斜杠技能填完路径后输入框像卡死 | 二 · 扩展命令里嵌套 await sendUserMessage 会占住 sending |
 | B3 RNA-seq 在本机无法直接验证 Nextflow/Slurm | 六 · Compute B3 只走 fake runner；真实集群条件单独确认 |
 | 设置页提示「已保存」但实际没保存（参数超出 schema 限制） | 四 · 宿主契约参数校验失败曾是 resolve 错误信封（已在 preload 统一转 reject） |
+| Google Antigravity 登录后返回 400 `INVALID_ARGUMENT` 或 403 `UNSUPPORTED_CLIENT` | 二 · Cloud Code Assist ClientMetadata 枚举 |
+| 生信任务 trace 显示 `skills: []`，模型退回临时脚本 | 二 · 研究 skill 路由与开发态资源同步 |
 
 ## 一、事故复盘（含可复用诊断手法）
 
@@ -68,6 +70,40 @@ glm-5.3 流式输出病态空白 thinking（纯 `\n    ` 洪流永不终止）�
 **诊断手法可复用**：正式版症状在 `logs/main-*.log` 搜 `error #185`；dev 复现 = 把 trace 事件序列直接注入 renderer（`useTranscriptStore.getState().applyEvent`，详见 `scripts/repro-full.mjs` + `docs/INDEX.md`），比猜快得多。
 
 ## 二、pi SDK 集成
+
+### 研究 skill 路由与开发态资源同步（2026-10-07）
+
+研究 skill 有两层边界：`scripts/sync-research-skills.py` 按锁定清单把允许分发的
+SKILL.md 同步到 `packages/desktop/resources/research-skills`，发布脚本会强制校验这些
+回执；`CapabilityRuntime` 再按当前用户消息识别能力和研究阶段，只把选中的 skill
+放进本轮模型上下文。开发态的 `npm run build` 和 `npm run dev` 不会下载外部 skill 包，
+因此资源目录为空时，发布清单里存在的 scientific/nature skill 也不会出现在 dev 会话，
+trace 的 `skills: []` 只说明本轮没有可见 skill，不能反推发布包缺 skill。先运行
+`npm run skills:sync -- --sources nature scientific`（或使用已校验缓存的 `--offline`），
+再测开发态路由。
+
+路由不能只依赖“研究/论文”这类宽词。基因、蛋白、序列、联配、结构域、NCBI、FASTA
+等生信术语需要命中 `bioinformatics` 阶段；否则能力和阶段都会是空集，即使 `bio_db`
+已经注册，模型也可能自行生成无超时保护的远程脚本。阶段应优先选择已安装的
+`scikit-bio`/`waypoint-bio`，缺包时明确报告 unavailable stage，不得假装 skill 已加载。
+
+### Cloud Code Assist ClientMetadata 枚举（2026-10-07）
+
+症状：Google Antigravity OAuth 回调和 token exchange 都成功，但项目发现的
+`loadCodeAssist` 请求返回 400 `INVALID_ARGUMENT`。
+
+原因：`MACOS`/`WINDOWS`/`LINUX` 不是协议的有效平台枚举。另一个误区是把
+Gemini CLI 的公开类型表当作完整协议：本机 Antigravity 2.19.1 的 descriptor
+明确包含 `ANTIGRAVITY=9`，使用 `IDE_UNSPECIFIED` 会被视为另一种客户端，
+真实登录返回了 403 `UNSUPPORTED_CLIENT`。
+
+发现、开通、模型目录、聊天请求统一使用 Antigravity metadata（`ideType=9`、
+`pluginType=2`，平台按 descriptor 的 Darwin/Linux/Windows 与架构映射到 1–5），
+请求体和请求头共用同一个值。平台名和编号以本机官方客户端 descriptor 为准，
+不要从过期第三方片段推断，也不要混用 Gemini CLI 与 Antigravity 的标识。
+
+诊断：先确认 loopback OAuth 回调页面显示完成，再只查看脱敏后的 UI 错误卡；
+不要打印授权 URL、code、access token 或响应正文。
 
 ### 权限注入点：`session.bindExtensions({ uiContext, mode: "tui" })`（不是 `createAgentSession` 选项）
 

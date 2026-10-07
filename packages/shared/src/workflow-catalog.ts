@@ -258,6 +258,17 @@ export const WORKFLOW_STAGES: readonly WorkflowStage[] = [
 		contract: "Standard analysis; keep AnnData structure and specialized models as distinct modules.",
 	},
 	{
+		id: "bioinformatics",
+		direction: "analysis",
+		label: {
+			zh: "序列、同源与结构域分析",
+			en: "Sequence, homology and domain analysis",
+		},
+		commands: ["skill:scikit-bio", "skill:waypoint-bio"],
+		contract:
+			"Resolve species and accessions first, preserve database/release evidence, use a reproducible alignment or annotation method, and report unsupported species or missing annotations instead of improvising an unbounded remote script.",
+	},
+	{
 		id: "chemistry",
 		direction: "analysis",
 		label: {

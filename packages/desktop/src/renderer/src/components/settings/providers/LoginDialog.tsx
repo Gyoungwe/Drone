@@ -46,6 +46,11 @@ export function LoginDialog() {
 						name: login.providerName,
 					})}
 				</h3>
+				{login.providerId === "google-antigravity" && (
+					<p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-800">
+						{t("settings.login.antigravityWarning")}
+					</p>
+				)}
 
 				{/* 设备码：验证码 + 验证链接，SDK 侧自行轮询 */}
 				{deviceCode && (

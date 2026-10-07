@@ -7,6 +7,7 @@ export const KNOWN_APIS = [
 	"anthropic-messages",
 	"google-generative-ai",
 	"google-vertex",
+	"google-antigravity",
 	"azure-openai-responses",
 	"mistral-conversations",
 	"bedrock-converse-stream",

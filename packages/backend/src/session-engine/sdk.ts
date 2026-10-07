@@ -10,7 +10,6 @@
 export type { Context, Message, Model, ModelThinkingLevel, Tool } from "@earendil-works/pi-ai";
 export { getSupportedThinkingLevels, validateToolArguments } from "@earendil-works/pi-ai";
 export { builtinProviders } from "@earendil-works/pi-ai/providers/all";
-
 export type {
 	AgentSession,
 	AgentSessionEvent,
@@ -47,3 +46,10 @@ export {
 	SettingsManager,
 	Theme,
 } from "@earendil-works/pi-coding-agent";
+export { createAntigravityProvider } from "./antigravity/provider";
+export {
+	ANTIGRAVITY_API,
+	ANTIGRAVITY_PROVIDER_ID,
+	AntigravityError,
+	safeAntigravityError,
+} from "./antigravity/types";

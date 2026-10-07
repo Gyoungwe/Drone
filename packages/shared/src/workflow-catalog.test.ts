@@ -54,6 +54,7 @@ describe("reviewed six-direction catalog", () => {
 		expect(stage("pipeline").commands).toEqual(["ars-full"]);
 		expect(stage("statistics").commands).not.toContain("skill:nature-statistics");
 		expect(stage("singlecell").commands).not.toContain("skill:scvi-tools");
+		expect(stage("bioinformatics").commands).toEqual(["skill:scikit-bio", "skill:waypoint-bio"]);
 		expect(new Set(WORKFLOW_STAGES.map((s) => s.id)).size).toBe(WORKFLOW_STAGES.length);
 	});
 });
