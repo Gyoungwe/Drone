@@ -152,6 +152,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # check-research-packaging.cjs (below) verifies the staged MCP runtime
+      # (packages/desktop/pi-packages/node_modules/pi-mcp-adapter), so stage it before that check.
+      - run: npm run stage:pi-packages
       # packages/desktop/resources/research-skills/ is gitignored and rebuilt from the
       # commit/checksum-pinned lock (packages/shared/src/research-skill-sources.json);
       # `npm run dist` and the electron-builder beforePack hook fail closed without it.
