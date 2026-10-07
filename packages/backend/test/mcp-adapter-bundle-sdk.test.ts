@@ -96,6 +96,10 @@ it("bundled pi-mcp-adapter loads in an SDK session, connects a stdio server and 
 	} finally {
 		session?.dispose?.();
 		vi.unstubAllEnvs();
-		await rm(root, { recursive: true, force: true });
+		// Windows: the adapter closes the stdio server asynchronously after dispose; until that child
+		// exits, its cwd (the temp project) stays locked (EBUSY). Retry, and never fail on temp cleanup.
+		await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 }).catch((error) => {
+			if (process.platform !== "win32") throw error;
+		});
 	}
 }, 60_000);
