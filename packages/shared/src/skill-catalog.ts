@@ -18,6 +18,7 @@ const groups: Partial<Record<SkillCategory, readonly string[]>> = {
 	research: [
 		"research-workflow",
 		"zotero-literature",
+		"bio-environment",
 		"research",
 		"nature-academic-search",
 		"nature-downloader",
@@ -113,6 +114,10 @@ const labels: Record<string, { zh: string; en: string }> = {
 	"research-vault": { zh: "Obsidian 知识库", en: "Obsidian knowledge" },
 	"research-workflow": { zh: "研究与证据工作流", en: "Research and evidence workflow" },
 	"zotero-literature": { zh: "Zotero 文献库", en: "Zotero literature" },
+	"bio-environment": {
+		zh: "分析环境 · 探测、复用与远程",
+		en: "Analysis environments · probe, reuse, remote",
+	},
 	"setup-matt-pocock-skills": {
 		zh: "工程技能配置 · 议题与项目文档",
 		en: "Engineering skills · issues and project docs",
