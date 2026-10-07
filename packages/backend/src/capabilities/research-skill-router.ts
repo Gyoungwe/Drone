@@ -221,7 +221,6 @@ const ACADEMIC: Partial<Record<ResearchTopic, string>> = {
 };
 /** Topics without a catalogued stage map straight to their specialist skill. */
 const TOPIC_SKILLS: Partial<Record<ResearchTopic, string[]>> = {
-	phylogeny: ["phylogenetics", "etetoolkit"],
 	structure: ["esm"],
 	variant: ["pysam", "tiledbvcf", "pacsomatic"],
 	epigenomics: ["deeptools", "gtars"],
@@ -243,7 +242,7 @@ function topicCapability(topic: ResearchTopic): CapabilityId | undefined {
 function topicSkills(topic: ResearchTopic): string[] {
 	const stage = workflowStage(topic);
 	const fromStage = stage?.commands.filter((n) => n.startsWith("skill:")).map((n) => n.slice(6)) ?? [];
-	return [...(TOPIC_SKILLS[topic] ?? []), ...fromStage];
+	return [...new Set([...(TOPIC_SKILLS[topic] ?? []), ...fromStage])];
 }
 /** Skill capabilities requested by an intent (topics, named skills, explicit command). */
 export function intentCapabilities(intent: ResearchSkillIntent): CapabilityId[] {
