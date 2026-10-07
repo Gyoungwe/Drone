@@ -1094,6 +1094,12 @@ export const en: Messages = {
 			needsAuth: "Needs auth",
 			notConnected: "Not connected",
 			disabled: "Disabled",
+			blocked: "Needs approval",
+			runtimeMissing:
+				"MCP runtime not installed: this build does not include pi-mcp-adapter, so servers in mcp.json never start and the agent gets no MCP tools. Reinstall or update Drone.",
+			runtimeStarting:
+				"MCP runtime not started: no runtime status for this project yet. It starts when you open or create a session; if this persists, check main.log.",
+			presetSetupOpen: "Open extension page",
 			empty: "No MCP servers configured",
 			emptyHint:
 				"Add servers through the current project or user MCP configuration. For Zotero, run /zotero-setup first: it can install the CLI from zero; zotero-cli is preferred; MCP is optional and disabled by default.",

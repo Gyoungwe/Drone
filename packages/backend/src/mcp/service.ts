@@ -7,6 +7,7 @@ import {
 	type McpConfigServer,
 	type McpConfigSnapshot,
 	type McpPreset,
+	type McpRuntimeState,
 	type McpStatus,
 } from "@drone/shared";
 import { getAgentDir } from "../session-engine/sdk";
@@ -17,16 +18,27 @@ type McpScope = McpConfigServer["scope"];
 interface ConfigSource {
 	path: string;
 	scope: McpScope;
+	/**
+	 * Pi's own `mcp.json` pair: a project `.pi/mcp.json` entry REPLACES the global
+	 * `<agentDir>/mcp.json` entry with the same name (other sources merge field by field),
+	 * matching pi-mcp-adapter's `loadMcpConfigWithSources`.
+	 */
+	piMcp?: "global" | "project";
 }
 
 export interface McpServiceOptions {
 	agentDir?: string;
 	homeDir?: string;
-	/** Reload active sessions after a host-facing configuration toggle. */
+	/**
+	 * Reload sessions after a host-facing configuration change. `cwd` limits the reload to one
+	 * project; undefined means every open session (user-level config affects all projects).
+	 */
 	onServerEnabled?: (cwd?: string) => Promise<void>;
+	/** Whether this host bundles/loads an MCP runtime (pi-mcp-adapter). */
+	runtimeBundled?: boolean;
 }
 
-function emptyStatus(): McpStatus {
+function emptyStatus(runtime?: McpRuntimeState): McpStatus {
 	return {
 		version: 1,
 		servers: [],
@@ -34,7 +46,68 @@ function emptyStatus(): McpStatus {
 		totalResources: 0,
 		connectedCount: 0,
 		disabledCount: 0,
+		...(runtime ? { runtime } : {}),
 	};
+}
+
+/** True for entries that only toggle `disabled` (older Drone builds wrote these into `.pi/mcp.json`). */
+function isDisableStub(server: unknown): boolean {
+	if (!server || typeof server !== "object" || Array.isArray(server)) return false;
+	const keys = Object.keys(server);
+	return keys.length > 0 && keys.every((key) => key === "disabled");
+}
+
+export interface McpStatusLogLine {
+	level: "info" | "warn";
+	message: string;
+	data: Record<string, unknown>;
+}
+
+/** Describe server state transitions between two runtime snapshots for main.log. */
+export function describeMcpStatusChange(
+	previous: McpStatus | undefined,
+	next: McpStatus,
+): McpStatusLogLine[] {
+	const lines: McpStatusLogLine[] = [];
+	const before = new Map((previous?.servers ?? []).map((server) => [server.name, server]));
+	for (const server of next.servers) {
+		const prior = before.get(server.name);
+		if (prior && prior.status === server.status && prior.toolCount === server.toolCount) continue;
+		const data: Record<string, unknown> = {
+			server: server.name,
+			status: server.status,
+			tools: server.toolCount,
+		};
+		if (server.blockedReason) data.reason = server.blockedReason;
+		if (server.status === "failed" || server.status === "needs-auth" || server.status === "blocked") {
+			lines.push({ level: "warn", message: `MCP server ${server.status}`, data });
+		} else if (server.status === "connected" || server.status === "cached") {
+			lines.push({ level: "info", message: "MCP server ready", data });
+		} else {
+			lines.push({ level: "info", message: `MCP server ${server.status}`, data });
+		}
+	}
+	for (const name of before.keys()) {
+		if (!next.servers.some((server) => server.name === name))
+			lines.push({ level: "info", message: "MCP server removed", data: { server: name } });
+	}
+	if (
+		!previous ||
+		previous.totalTools !== next.totalTools ||
+		previous.connectedCount !== next.connectedCount
+	) {
+		lines.push({
+			level: "info",
+			message: "MCP runtime status",
+			data: {
+				servers: next.servers.length,
+				connected: next.connectedCount,
+				disabled: next.disabledCount,
+				tools: next.totalTools,
+			},
+		});
+	}
+	return lines;
 }
 
 function transportOf(server: RawServer): McpConfigServer["transport"] {
@@ -80,61 +153,87 @@ export interface McpServicePort {
 	getStatus(cwd?: string): McpStatus;
 	getConfig(cwd?: string): Promise<McpConfigSnapshot>;
 	setServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot>;
-	addPreset?(id: McpPreset["id"]): Promise<McpConfigSnapshot>;
+	addPreset?(id: McpPreset["id"], cwd?: string): Promise<McpConfigSnapshot>;
 }
 
 export class McpService implements McpServicePort {
 	private readonly agentDir: string;
 	private readonly homeDir: string;
 	private readonly onServerEnabled?: (cwd?: string) => Promise<void>;
-	private lastStatus = emptyStatus();
+	private readonly runtimeBundled: boolean;
+	private lastStatus: McpStatus | undefined;
 	private readonly statusByCwd = new Map<string, McpStatus>();
 
 	constructor(options: McpServiceOptions = {}) {
 		this.agentDir = options.agentDir ?? getAgentDir();
 		this.homeDir = options.homeDir ?? homedir();
 		this.onServerEnabled = options.onServerEnabled;
+		this.runtimeBundled = options.runtimeBundled === true;
 	}
 
+	/** Same precedence order as pi-mcp-adapter 5.x (later sources win). */
 	private sources(cwd?: string): ConfigSource[] {
 		const sources: ConfigSource[] = [
 			{ path: join(this.homeDir, ".config", "mcp", "mcp.json"), scope: "user" },
 			{ path: join(this.homeDir, ".agents", "mcp.json"), scope: "user" },
 			{ path: join(this.homeDir, ".agents", "mcp", "mcp.json"), scope: "user" },
-			{ path: join(this.agentDir, "mcp.json"), scope: "user" },
+			{ path: join(this.agentDir, "mcp.json"), scope: "user", piMcp: "global" },
+			{ path: join(this.agentDir, "mcp-adapter.json"), scope: "user" },
 		];
 		if (cwd) {
 			const project = resolve(cwd);
 			sources.push(
 				{ path: join(project, ".mcp.json"), scope: "project" },
-				{ path: join(project, ".pi", "mcp.json"), scope: "project" },
+				{ path: join(project, ".pi", "mcp.json"), scope: "project", piMcp: "project" },
+				{ path: join(project, ".pi", "mcp-adapter.json"), scope: "project" },
 			);
 		}
-		return sources;
+		const seen = new Set<string>();
+		return sources.filter((source) => !seen.has(source.path) && seen.add(source.path));
 	}
 
-	private writePath(cwd?: string): string {
-		return cwd ? join(resolve(cwd), ".pi", "mcp.json") : join(this.agentDir, "mcp.json");
+	private async readSources(
+		cwd?: string,
+	): Promise<{ source: ConfigSource; value: Record<string, unknown>; servers: Record<string, unknown> }[]> {
+		const result = [];
+		for (const source of this.sources(cwd)) {
+			const value = await readRaw(source.path);
+			result.push({ source, value, servers: serverMap(value) });
+		}
+		return result;
 	}
 
 	setStatus(status: McpStatus, cwd?: string): void {
-		this.lastStatus = structuredClone(status);
-		if (cwd) this.statusByCwd.set(resolve(cwd), structuredClone(status));
+		const next = { ...structuredClone(status), runtime: "running" as const };
+		this.lastStatus = next;
+		if (cwd) this.statusByCwd.set(resolve(cwd), structuredClone(next));
+	}
+
+	/** Last runtime snapshot for a project (undefined until the runtime reports). */
+	peekStatus(cwd: string): McpStatus | undefined {
+		const status = this.statusByCwd.get(resolve(cwd));
+		return status ? structuredClone(status) : undefined;
 	}
 
 	getStatus(cwd?: string): McpStatus {
-		if (!cwd) return structuredClone(this.lastStatus);
-		return structuredClone(this.statusByCwd.get(resolve(cwd)) ?? emptyStatus());
+		const fallback = emptyStatus(this.runtimeBundled ? "starting" : "missing");
+		if (!cwd) return structuredClone(this.lastStatus ?? fallback);
+		return structuredClone(this.statusByCwd.get(resolve(cwd)) ?? fallback);
 	}
 
 	async getConfig(cwd?: string): Promise<McpConfigSnapshot> {
-		const sources = this.sources(cwd);
+		const loaded = await this.readSources(cwd);
+		const sources = loaded.map((item) => item.source);
 		const merged = new Map<string, { server: RawServer; source: ConfigSource }>();
+		const piProjectNames = new Set(
+			Object.keys(loaded.find((item) => item.source.piMcp === "project")?.servers ?? {}),
+		);
 
-		for (const source of sources) {
-			const value = await readRaw(source.path);
-			for (const [name, raw] of Object.entries(serverMap(value))) {
+		for (const { source, servers } of loaded) {
+			for (const [name, raw] of Object.entries(servers)) {
 				if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+				// pi-mcp-adapter: the project .pi/mcp.json entry replaces the global mcp.json one.
+				if (source.piMcp === "global" && piProjectNames.has(name)) continue;
 				const previous = merged.get(name);
 				merged.set(name, {
 					server: mergeServer(previous?.server, raw as RawServer),
@@ -144,7 +243,9 @@ export class McpService implements McpServicePort {
 		}
 
 		const preferredPath =
-			[...sources].reverse().find((source) => existsSync(source.path))?.path ??
+			[...sources]
+				.reverse()
+				.find((source) => !source.path.endsWith("mcp-adapter.json") && existsSync(source.path))?.path ??
 			(cwd ? join(resolve(cwd), ".mcp.json") : join(this.agentDir, "mcp.json"));
 		const servers = [...merged.entries()].map(([name, { server, source }]) => ({
 			name,
@@ -158,46 +259,80 @@ export class McpService implements McpServicePort {
 		return { path: preferredPath, cwd: cwd ? resolve(cwd) : null, servers };
 	}
 
+	/**
+	 * Toggle a server in the file that owns its definition (the highest-precedence source that
+	 * defines it with more than `disabled`). Never writes partial `{ disabled }` entries: in
+	 * pi's project `.pi/mcp.json` such a stub REPLACES the global definition and leaves a
+	 * server without command/url. Stubs left by older builds are removed while toggling.
+	 */
 	async setServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot> {
-		const effective = await this.getConfig(cwd);
-		if (!effective.servers.some((server) => server.name === name)) {
-			throw new Error(`MCP server not found: ${name}`);
+		const loaded = await this.readSources(cwd);
+		const definers = loaded.filter(({ servers }) => Object.hasOwn(servers, name));
+		if (definers.length === 0) throw new Error(`MCP server not found: ${name}`);
+		for (const { servers } of definers) {
+			const raw = servers[name];
+			if (!raw || typeof raw !== "object" || Array.isArray(raw))
+				throw new Error(`MCP server must be an object: ${name}`);
 		}
-
-		const path = this.writePath(cwd);
-		const value = await readRaw(path);
-		const key =
-			value["mcp-servers"] !== undefined && value.mcpServers === undefined ? "mcp-servers" : "mcpServers";
-		const servers = serverMap(value);
-		const raw = servers[name];
-		if (raw !== undefined && (!raw || typeof raw !== "object" || Array.isArray(raw))) {
-			throw new Error(`MCP server must be an object: ${name}`);
+		const owner =
+			[...definers].reverse().find(({ servers }) => !isDisableStub(servers[name])) ?? definers.at(-1);
+		if (!owner) throw new Error(`MCP server not found: ${name}`);
+		const touched = new Set<(typeof loaded)[number]>();
+		for (const item of definers) {
+			if (item === owner || !isDisableStub(item.servers[name])) continue;
+			delete item.servers[name];
+			touched.add(item);
 		}
-		servers[name] = { ...(raw as RawServer | undefined), disabled: !enabled };
-		value[key] = servers;
-		await this.writeRaw(path, value);
-		await this.onServerEnabled?.(cwd);
+		const current = { ...(owner.servers[name] as RawServer) };
+		if (enabled) delete current.disabled;
+		else current.disabled = true;
+		owner.servers[name] = current;
+		touched.add(owner);
+		// A lower-precedence definition that is still disabled would win the merge for `disabled`
+		// only when the owner omits the flag; make enabling explicit in that case.
+		if (
+			enabled &&
+			definers.some((item) => item !== owner && (item.servers[name] as RawServer)?.disabled === true)
+		)
+			current.disabled = false;
+		for (const item of touched) {
+			const key =
+				item.value["mcp-servers"] !== undefined && item.value.mcpServers === undefined
+					? "mcp-servers"
+					: "mcpServers";
+			item.value[key] = item.servers;
+			await this.writeRaw(item.source.path, item.value);
+		}
+		const projectScoped = [...touched].some((item) => item.source.scope === "project");
+		await this.onServerEnabled?.(projectScoped && cwd ? cwd : undefined);
 		return this.getConfig(cwd);
 	}
 
-	/** 一键接入预设 MCP：写入用户级 mcp.json；同名已存在时只重新启用，不覆盖用户改过的命令。 */
-	async addPreset(id: McpPreset["id"]): Promise<McpConfigSnapshot> {
+	/**
+	 * 一键接入预设 MCP：写入用户级 mcp.json；同名已存在时只重新启用，不覆盖用户改过的命令。
+	 * 用户级配置影响所有项目，所以重载全部会话；`cwd` 只决定返回哪个项目的有效配置。
+	 */
+	async addPreset(id: McpPreset["id"], cwd?: string): Promise<McpConfigSnapshot> {
 		const preset = MCP_PRESETS.find((item) => item.id === id);
 		if (!preset) throw new Error(`Unknown MCP preset: ${id}`);
-		const path = this.writePath();
+		const path = join(this.agentDir, "mcp.json");
 		const value = await readRaw(path);
 		const key =
 			value["mcp-servers"] !== undefined && value.mcpServers === undefined ? "mcp-servers" : "mcpServers";
 		const servers = serverMap(value);
 		const existing = servers[preset.name];
-		servers[preset.name] =
-			existing && typeof existing === "object" && !Array.isArray(existing)
-				? { ...(existing as RawServer), disabled: false }
-				: { command: preset.server.command, args: [...preset.server.args] };
+		if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+			const { disabled: _disabled, ...rest } = existing as RawServer;
+			servers[preset.name] = isDisableStub(existing)
+				? { command: preset.server.command, args: [...preset.server.args] }
+				: rest;
+		} else {
+			servers[preset.name] = { command: preset.server.command, args: [...preset.server.args] };
+		}
 		value[key] = servers;
 		await this.writeRaw(path, value);
 		await this.onServerEnabled?.();
-		return this.getConfig();
+		return this.getConfig(cwd);
 	}
 
 	private async writeRaw(path: string, value: Record<string, unknown>): Promise<void> {

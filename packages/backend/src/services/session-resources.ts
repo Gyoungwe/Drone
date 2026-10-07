@@ -1,11 +1,17 @@
 import { resolve } from "node:path";
-import type { LoadedResources, McpStatus, McpStatus as McpStatusType, SlashCommandInfo } from "@drone/shared";
+import {
+	type LoadedResources,
+	type McpStatus,
+	type McpStatus as McpStatusType,
+	normalizeMcpStatus,
+	type SlashCommandInfo,
+} from "@drone/shared";
 
 type McpHandler = (cwd: string, status: McpStatusType) => void;
 
 import { allSkillsFromLoader } from "../capabilities/resource-loader";
 import type { CapabilityRuntime } from "../capabilities/runtime";
-import type { McpService } from "./../mcp/service";
+import { describeMcpStatusChange, type McpService } from "./../mcp/service";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import type { RegisteredSession, SessionRegistry } from "../session/registry";
 import type { SessionEngine } from "../session-engine/engine";
@@ -105,13 +111,18 @@ export class SessionResourceService {
 		};
 	}
 
-	/** MCP 配置变更后热重载同项目的空闲会话，对齐 CLI /reload。 */
+	/**
+	 * MCP 配置变更后热重载空闲会话，对齐 CLI /reload。传 cwd 只重载该项目的会话；
+	 * 不传表示改的是用户级配置（影响所有项目），重载全部会话。
+	 */
 	async reloadMcpSessions(cwd?: string): Promise<void> {
-		const target = resolve(cwd || this.host.options.defaultCwd || process.cwd());
+		const target = cwd ? resolve(cwd) : undefined;
 		for (const entry of this.host.registry.list()) {
-			if (resolve(entry.cwd) !== target) continue;
+			if (target && resolve(entry.cwd) !== target) continue;
 			if (entry.session.isStreaming || entry.session.isCompacting) {
-				this.host.log.info("skip MCP reload while session busy", entry.session.sessionId, { cwd: target });
+				this.host.log.info("skip MCP reload while session busy", entry.session.sessionId, {
+					cwd: entry.cwd,
+				});
 				continue;
 			}
 			try {
@@ -128,8 +139,16 @@ export class SessionResourceService {
 		return () => this.mcpHandlers.delete(handler);
 	}
 
-	setMcpStatus(cwd: string, status: McpStatus): void {
+	setMcpStatus(cwd: string, payload: McpStatus): void {
+		const status = normalizeMcpStatus(payload);
+		if (!status) {
+			this.host.log.warn("ignored malformed MCP runtime status", { cwd });
+			return;
+		}
+		for (const line of describeMcpStatusChange(this.host.mcp.peekStatus(cwd), status))
+			this.host.log[line.level](line.message, { cwd, ...line.data });
 		this.host.mcp.setStatus(status, cwd);
-		for (const handler of this.mcpHandlers) handler(cwd, status);
+		const published = this.host.mcp.getStatus(cwd);
+		for (const handler of this.mcpHandlers) handler(cwd, published);
 	}
 }

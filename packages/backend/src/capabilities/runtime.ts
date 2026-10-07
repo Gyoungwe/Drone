@@ -79,6 +79,8 @@ const PATTERNS: Record<CapabilityId, RegExp[]> = {
 	],
 	external: [
 		/(?:mcp|plugin|connector|github|gitlab|slack|drive|notion|zotero|channel|ssh|远程主机|服务器|外部应用|插件|连接器)/i,
+		// Browser control goes through MCP servers (Playwright/Puppeteer MCP), which live under external.
+		/(?:浏览器|谷歌|网页操作|操作网页|网页自动化|打开网页|点击网页|填表|截图|截屏|\bbrowser\b|\bchrome\b|\bchromium\b|\bfirefox\b|\b(?:ms[- ]?)?edge\b(?![- ]cases?)|playwright|puppeteer|selenium|screenshot)/i,
 	],
 };
 

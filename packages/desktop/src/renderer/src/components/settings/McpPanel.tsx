@@ -4,15 +4,16 @@ import { GearIcon, RefreshIcon } from "../../components/icons";
 import { useI18nStore, useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
 import { Switch } from "../ui/Switch";
+import { mcpRuntimeNotice, mcpStatusKey } from "./mcp-runtime";
 
 function statusLabel(t: ReturnType<typeof useT>, status: McpServerStatus["status"]): string {
-	const key = status === "needs-auth" ? "needsAuth" : status === "not-connected" ? "notConnected" : status;
-	return t(`settings.mcp.${key}`);
+	return t(`settings.mcp.${mcpStatusKey(status)}`);
 }
 
 function statusTone(status: McpServerStatus["status"]): string {
 	if (status === "connected") return "bg-success/10 text-success";
 	if (status === "failed" || status === "needs-auth") return "bg-danger/10 text-danger";
+	if (status === "blocked") return "bg-warn/10 text-warn";
 	return "bg-hover text-ink-faint";
 }
 
@@ -56,6 +57,8 @@ export function McpPanel() {
 		[status],
 	);
 	const servers = config?.servers ?? [];
+	const runtimeNotice = mcpRuntimeNotice(status);
+	const lang = language === "zh" ? "zh" : "en";
 
 	return (
 		<div>
@@ -92,6 +95,15 @@ export function McpPanel() {
 				</div>
 			</div>
 
+			{runtimeNotice ? (
+				<p
+					className="mt-3 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-[11px] leading-relaxed text-ink-2"
+					data-testid="mcp-runtime-notice"
+				>
+					{t(`settings.mcp.${runtimeNotice}`)}
+				</p>
+			) : null}
+
 			{error ? (
 				<p className="mt-3 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-[11px] text-danger">
 					{error}
@@ -126,7 +138,7 @@ export function McpPanel() {
 							<li key={preset.id} className="rounded-lg border border-border px-3 py-2.5">
 								<div className="flex items-center gap-2">
 									<p className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink">
-										{preset.label[language === "zh" ? "zh" : "en"]}
+										{preset.label[lang]}
 									</p>
 									<button
 										type="button"
@@ -148,9 +160,19 @@ export function McpPanel() {
 										{added ? t("settings.mcp.presetAdded") : t("settings.mcp.presetAdd")}
 									</button>
 								</div>
-								<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
-									{preset.description[language === "zh" ? "zh" : "en"]}
-								</p>
+								<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{preset.description[lang]}</p>
+								{preset.setup ? (
+									<p className="mt-1 text-[11px] leading-relaxed text-ink-2">
+										{preset.setup[lang]}{" "}
+										<button
+											type="button"
+											className="text-accent underline-offset-2 hover:underline"
+											onClick={() => void window.pi.openExternal(preset.setup?.url ?? preset.homepage)}
+										>
+											{t("settings.mcp.presetSetupOpen")}
+										</button>
+									</p>
+								) : null}
 							</li>
 						);
 					})}

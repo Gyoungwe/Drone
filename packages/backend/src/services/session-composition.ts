@@ -126,6 +126,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 	service.permissions = options.permissions ?? new PermissionSettingsService();
 	service.mcp = new McpService({
 		onServerEnabled: (cwd) => service.reloadMcpSessions(cwd),
+		runtimeBundled: Boolean(options.desktopIntegration?.mcpRuntimePath),
 	});
 	service.knowledgeSession = new KnowledgeSessionService({
 		getContext: (sessionId) => {

@@ -32,6 +32,8 @@
 		"test:arch": "node --test scripts/check-architecture.test.mjs",
 		"check:pi": "tsc -p .pi --pretty false",
 		"build:extensions": "node scripts/build-extensions.mjs",
+		"stage:pi-packages": "node scripts/stage-pi-packages.mjs",
+		"check:pi-packages": "node scripts/check-pi-packages.mjs",
 		"build:research": "node scripts/build-research-runtime.mjs",
 		"check:extensions": "node scripts/check-extensions-build.mjs",
 		"generate:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs",

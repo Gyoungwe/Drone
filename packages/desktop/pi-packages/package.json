@@ -1,0 +1,8 @@
+{
+	"name": "drone-bundled-pi-packages",
+	"private": true,
+	"description": "pi packages shipped inside the Drone desktop installer (staged by scripts/stage-pi-packages.mjs). Pinned exactly; bump together with the bundled pi SDK.",
+	"dependencies": {
+		"pi-mcp-adapter": "5.1.0"
+	}
+}
