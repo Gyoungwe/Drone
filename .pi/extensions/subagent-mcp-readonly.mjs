@@ -5328,6 +5328,15 @@ function failureReceipt(task) {
 var taskProgressContext = (task) => task ? failureContext(task, void 0, true) : "";
 var TASK_HANDOFF_POLICY = `Once the user has authorized a task (the one ask_user authorization card), that authorization covers every listed deliverable: keep working in the same turn until they are all produced, one after another, instead of stopping after each file or command to report or to ask whether to continue. Do not create task_wait for routine decisions; write the judgement call into the deliverable and move on. If you do end a turn early with deliverables remaining, the host hands the task back to you automatically under the same authorization; treat that handoff as a normal continuation, not as new permission. For incomplete task progress, explain each remaining deliverable with its observed evidence, confirmed blocker or explicitly unknown cause, and the smallest next action. Separate agent-owned routine work from genuinely user-owned decisions; do not ask the user to keep saying continue. Never silently weaken acceptance criteria or mark unverified items complete. Point to the workbench ask_user remaining-items entry for user decisions; do not duplicate a pending host question. After substantial execution, including a user's simple "continue", give a natural-language handoff on the user's topic, not a copied task ledger and not a process-error postmortem. Recovered tool failures and host diagnostics stay out of that handoff. Before the final reply, query task_status once for fresh host verification if deliverables changed (do not loop on status). Say what was actually produced or checked, what remains and why, and the next concrete action. Clearly distinguish a generated script from executed analysis and verified scientific results. Provide clickable file links for delivered scripts (including .R/.r and .PY/.py), reports and data. If required counts, sample metadata or design information are missing, name the exact missing input rather than asking the user to keep saying continue. Use granted scope for routine work; do not require a new phase approval or silently expand scope. Stage is an execution checkpoint/budget counter, not milestone progress; do not claim it must increase on every continue. For a missing acceptance file, distinguish workspace-relative and actual returned output/Vault locations: inspect the existing receipt and authorized path before asserting nothing was saved or repeating a write. Do not silently change the agreed acceptance criteria or grant permissions. task_status provides facts to explain; it does not replace your final answer or bypass publication checks.`;
 
+// packages/tasks/src/runtime-compiled/host-language.mjs
+function hostLanguage() {
+  return String(process.env.DRONE_REPLY_LANGUAGE || "").toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+function bilingual(zh, en) {
+  return hostLanguage() === "zh" ? `${zh}
+${en}` : en;
+}
+
 // packages/tasks/src/runtime-compiled/pdf-identity.mjs
 import { Worker as Worker2 } from "node:worker_threads";
 async function readPdfIdentity(bytes) {
@@ -6218,7 +6227,10 @@ function createTaskWorkbench({
         return null;
       return {
         block: true,
-        reason: "No authorized task contract exists. Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables; the host opens ask_user for that exact contract. Commands and writes stay blocked until it is approved."
+        reason: bilingual(
+          "\u8FD8\u6CA1\u6709\u83B7\u6279\u7684\u4EFB\u52A1\u65B9\u6848\uFF1AAgent \u9700\u5148\u505A\u53EA\u8BFB\u51C6\u5907\uFF0C\u518D\u7528 task_plan \u63D0\u4EA4\u76EE\u6807\u3001\u8303\u56F4\u3001\u5199\u5165\u76EE\u5F55\u548C\u4EA4\u4ED8\u7269\uFF0C\u7531\u4F60\u5728\u5F39\u7A97\u4E2D\u6279\u51C6\uFF1B\u6279\u51C6\u524D\u547D\u4EE4\u548C\u5199\u5165\u90FD\u4F1A\u88AB\u62E6\u622A\u3002",
+          "No authorized task contract exists. Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables; the host opens ask_user for that exact contract. Commands and writes stay blocked until it is approved."
+        )
       };
     }
     if (t.budget.stageCalls >= LIMITS.stageCalls) advanceStage();
@@ -7034,7 +7046,7 @@ ${TASK_HANDOFF_POLICY}`,
         customType: "drone-task-context",
         display: false,
         content: `${journal.render()}
-Host observations only. For substantial execution, first do read-only preparation, consolidate necessary choices/assumptions and call task_plan ONCE with the original user goal, a plain-language scope summary, existing write directories, and file-based deliverables. task_plan automatically opens the host ask_user form for task execution, directory writes, acceptance and automatic stage continuation. Task cards are status and request-entry UI, not consent. Do not duplicate the host question or treat free text as authorization. If declined, stop at the checkpoint. Additional authorization actions from task_wait also open ask_user. Within approved scope, perform routine steps and bounded recovery autonomously; only new risk/scope, credentials, genuinely unavailable user data or actual required human review need intervention. Never claim human/scientific review happened automatically. Prefer machine-checkable deliverables over unnecessary human-review milestones. Preserve prior refusals. File/command denies, sensitive files, unknown effects, total call budget and provenance checks remain binding. task_status delivers host-only results.`
+${hostLanguage() === "zh" ? "\uFF08\u4EE5\u4E0B\u4E3A\u5BBF\u4E3B\u7EA6\u675F\uFF0C\u5199\u7ED9\u7528\u6237\u770B\u7684\u5185\u5BB9\u4E00\u5F8B\u7528\u7B80\u4F53\u4E2D\u6587\u3002\uFF09\n" : ""}Host observations only. For substantial execution, first do read-only preparation, consolidate necessary choices/assumptions and call task_plan ONCE with the original user goal, a plain-language scope summary, existing write directories, and file-based deliverables. task_plan automatically opens the host ask_user form for task execution, directory writes, acceptance and automatic stage continuation. Task cards are status and request-entry UI, not consent. Do not duplicate the host question or treat free text as authorization. If declined, stop at the checkpoint. Additional authorization actions from task_wait also open ask_user. Within approved scope, perform routine steps and bounded recovery autonomously; only new risk/scope, credentials, genuinely unavailable user data or actual required human review need intervention. Never claim human/scientific review happened automatically. Prefer machine-checkable deliverables over unnecessary human-review milestones. Preserve prior refusals. File/command denies, sensitive files, unknown effects, total call budget and provenance checks remain binding. task_status delivers host-only results.`
       }
     };
   });
