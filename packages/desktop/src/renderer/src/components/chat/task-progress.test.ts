@@ -203,3 +203,32 @@ it("embeds the task decision in the route card instead of rendering a second car
 	expect(html.match(/data-testid="task-decision"/g)).toHaveLength(1);
 	expect(html).toContain("请看一下结果");
 });
+
+it("renders the route as a compact roadmap with the full text opt-in", () => {
+	const route = {
+		utterance: "帮我画一个所有生物DHX16基因的联配图",
+		intake: "new-topic",
+		capabilities: ["visualization"],
+		topics: ["figures"],
+		direction: null,
+		stage: null,
+		contract: null,
+		primary: "nature-figure",
+		reason: "topic:figures",
+		unavailableStage: null,
+		comparison: false,
+		academic: false,
+		keptCheckpoint: false,
+		deferPhrase: false,
+		visiblePrimary: true,
+		landing: "workflow",
+		host: null,
+	} as TurnRoute;
+	const html = renderToStaticMarkup(createElement(TurnRouteCard, { route }));
+	expect(html).toContain('data-testid="turn-route-roadmap"');
+	for (const key of ["request", "capabilities", "skill", "stage", "tools", "result"])
+		expect(html).toContain(`data-testid="roadmap-node-${key}"`);
+	expect(html).toContain("nature-figure");
+	expect(html).not.toContain('data-testid="turn-route-text"');
+	expect(html).not.toContain('data-testid="route-mindmap"');
+});
