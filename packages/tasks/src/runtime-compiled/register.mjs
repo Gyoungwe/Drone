@@ -13,6 +13,7 @@ import {
   taskProgressContext,
   toolResultFailed
 } from "./failure-feedback.mjs";
+import { hostLanguage } from "./host-language.mjs";
 import { createTaskProgression } from "./progress-action.mjs";
 import { singleFlightCommand } from "./single-flight.mjs";
 import { restoreTaskToolOrder } from "./tool-protocol.mjs";
@@ -260,7 +261,7 @@ ${TASK_HANDOFF_POLICY}`,
         customType: "drone-task-context",
         display: false,
         content: `${journal.render()}
-Host observations only. For substantial execution, first do read-only preparation, consolidate necessary choices/assumptions and call task_plan ONCE with the original user goal, a plain-language scope summary, existing write directories, and file-based deliverables. task_plan automatically opens the host ask_user form for task execution, directory writes, acceptance and automatic stage continuation. Task cards are status and request-entry UI, not consent. Do not duplicate the host question or treat free text as authorization. If declined, stop at the checkpoint. Additional authorization actions from task_wait also open ask_user. Within approved scope, perform routine steps and bounded recovery autonomously; only new risk/scope, credentials, genuinely unavailable user data or actual required human review need intervention. Never claim human/scientific review happened automatically. Prefer machine-checkable deliverables over unnecessary human-review milestones. Preserve prior refusals. File/command denies, sensitive files, unknown effects, total call budget and provenance checks remain binding. task_status delivers host-only results.`
+${hostLanguage() === "zh" ? "\uFF08\u4EE5\u4E0B\u4E3A\u5BBF\u4E3B\u7EA6\u675F\uFF0C\u5199\u7ED9\u7528\u6237\u770B\u7684\u5185\u5BB9\u4E00\u5F8B\u7528\u7B80\u4F53\u4E2D\u6587\u3002\uFF09\n" : ""}Host observations only. For substantial execution, first do read-only preparation, consolidate necessary choices/assumptions and call task_plan ONCE with the original user goal, a plain-language scope summary, existing write directories, and file-based deliverables. task_plan automatically opens the host ask_user form for task execution, directory writes, acceptance and automatic stage continuation. Task cards are status and request-entry UI, not consent. Do not duplicate the host question or treat free text as authorization. If declined, stop at the checkpoint. Additional authorization actions from task_wait also open ask_user. Within approved scope, perform routine steps and bounded recovery autonomously; only new risk/scope, credentials, genuinely unavailable user data or actual required human review need intervention. Never claim human/scientific review happened automatically. Prefer machine-checkable deliverables over unnecessary human-review milestones. Preserve prior refusals. File/command denies, sensitive files, unknown effects, total call budget and provenance checks remain binding. task_status delivers host-only results.`
       }
     };
   });

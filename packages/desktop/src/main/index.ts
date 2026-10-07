@@ -1,12 +1,18 @@
 import { researchBundlePaths } from "./research-bundle";
 import { researchSkillPackPaths } from "./research-skill-packs";
-import { DESKTOP_SYSTEM_PROMPT } from "./system-prompt";
+import { desktopSystemPrompt } from "./system-prompt";
 import "./pi-package-dir";
 import "./dev-agent-dir";
 import "./fix-path";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { type BackendServices, createBackend, createLogger, initLogging } from "@drone/backend";
+import {
+	type BackendServices,
+	createBackend,
+	createLogger,
+	initLogging,
+	setReplyLanguage,
+} from "@drone/backend";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
@@ -181,6 +187,15 @@ app.whenReady().then(async () => {
 	});
 
 	process.env.DRONE_KNOWLEDGE_DIR ||= join(app.getPath("userData"), "knowledge");
+	// Reply language before any session loads: last UI choice, else the OS locale (renderer re-syncs on start).
+	setReplyLanguage(
+		(await loadUiState())?.language ?? (app.getLocale().toLowerCase().startsWith("zh") ? "zh" : "en"),
+	);
+	if (process.platform === "win32") {
+		// Python scripts run from the shell tools print UTF-8 instead of the ANSI code page (CP936 → mojibake).
+		process.env.PYTHONUTF8 ||= "1";
+		process.env.PYTHONIOENCODING ||= "utf-8";
+	}
 	process.env.DRONE_RESEARCH_WORKBENCH_ROOT = app.isPackaged
 		? join(process.resourcesPath, "research-workbench")
 		: join(__dirname, "../../../../.pi");
@@ -208,7 +223,7 @@ app.whenReady().then(async () => {
 		legacyInquiryDir: join(app.getPath("userData"), "inquiry"),
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
-			appendSystemPrompt: [...DESKTOP_SYSTEM_PROMPT],
+			appendSystemPrompt: desktopSystemPrompt(),
 			additionalSkillPaths: [
 				join(uiPluginsResourcesDir(), "skills"),
 				// 内置协作 skill（channel-pickup/design-handoff）：语义上与 UI 插件无关，独立目录分发

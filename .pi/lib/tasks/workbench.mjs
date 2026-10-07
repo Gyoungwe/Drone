@@ -13,6 +13,7 @@ import {
 } from "./acceptance.mjs";
 import { contractHash, hasTaskConsent, MAX_AUTO_RESUMES } from "./consent.mjs";
 import { failureObservation, failureReceipt, toolResultFailed } from "./failure-feedback.mjs";
+import { bilingual } from "./host-language.mjs";
 import { readPdfIdentity } from "./pdf-identity.mjs";
 import { remainingExplanation } from "./remaining.mjs";
 import { isReadOnlyTool } from "./tool-manifest.mjs";
@@ -813,7 +814,10 @@ function createTaskWorkbench({
         return null;
       return {
         block: true,
-        reason: "No authorized task contract exists. Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables; the host opens ask_user for that exact contract. Commands and writes stay blocked until it is approved."
+        reason: bilingual(
+          "\u8FD8\u6CA1\u6709\u83B7\u6279\u7684\u4EFB\u52A1\u65B9\u6848\uFF1AAgent \u9700\u5148\u505A\u53EA\u8BFB\u51C6\u5907\uFF0C\u518D\u7528 task_plan \u63D0\u4EA4\u76EE\u6807\u3001\u8303\u56F4\u3001\u5199\u5165\u76EE\u5F55\u548C\u4EA4\u4ED8\u7269\uFF0C\u7531\u4F60\u5728\u5F39\u7A97\u4E2D\u6279\u51C6\uFF1B\u6279\u51C6\u524D\u547D\u4EE4\u548C\u5199\u5165\u90FD\u4F1A\u88AB\u62E6\u622A\u3002",
+          "No authorized task contract exists. Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables; the host opens ask_user for that exact contract. Commands and writes stay blocked until it is approved."
+        )
       };
     }
     if (t.budget.stageCalls >= LIMITS.stageCalls) advanceStage();

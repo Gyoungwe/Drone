@@ -30,6 +30,8 @@ export interface UiState {
 	background: BackgroundSettings;
 	/** 中央状态动画开关（任务运行时对话区中央显示放大 orb，盖文字层之上 + 半透明遮罩压暗身后文字；与状态行小 orb 解耦；旧版本文件缺省为 false） */
 	centerOrbEnabled: boolean;
+	/** 界面语言：渲染进程经 UiStateSave 推给主进程/后端，决定 Agent 的回复语言规则与宿主文案 */
+	language?: "zh" | "en";
 }
 
 /** 会话元数据（IPC 往返用，独立于 pi 内部类型） */

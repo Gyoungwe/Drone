@@ -121,6 +121,14 @@ export {
 	workspaceConfigPath,
 } from "./project/workspace-store";
 export { canonicalProjectId, normalizeProjectId } from "./project-id";
+export {
+	getReplyLanguage,
+	hostText,
+	normalizeReplyLanguage,
+	type ReplyLanguage,
+	replyLanguagePrompt,
+	setReplyLanguage,
+} from "./reply-language";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
 export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
 export {

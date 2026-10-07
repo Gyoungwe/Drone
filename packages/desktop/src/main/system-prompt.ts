@@ -18,4 +18,13 @@ export const MCP_HONESTY_PROMPT: readonly string[] = [
 	"写入或修改 mcp.json 只是配置，不等于 MCP 已加载，不能据此宣称任务完成；配置改动要等会话重载后用 mcp 工具实际调用成功才算数。",
 ];
 
-export const DESKTOP_SYSTEM_PROMPT: readonly string[] = [...UI_PLUGIN_PROMPT, ...MCP_HONESTY_PROMPT];
+/** Windows 中文系统：Git Bash 里跑原生命令输出是 CP936，易乱码；powershell 工具已强制 UTF-8 输出。 */
+export const WINDOWS_SHELL_PROMPT: readonly string[] = [
+	"当前是 Windows：执行命令优先用 powershell 工具（输出为 UTF-8）；只有需要 POSIX 工具时才用 bash。看到乱码时改用 powershell 重跑，不要根据乱码下结论。",
+];
+
+export function desktopSystemPrompt(platform: NodeJS.Platform = process.platform): string[] {
+	return [...UI_PLUGIN_PROMPT, ...MCP_HONESTY_PROMPT, ...(platform === "win32" ? WINDOWS_SHELL_PROMPT : [])];
+}
+
+export const DESKTOP_SYSTEM_PROMPT: readonly string[] = desktopSystemPrompt();

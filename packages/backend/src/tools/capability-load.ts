@@ -8,6 +8,7 @@ import {
 import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import type { CapabilityRuntime } from "../capabilities/runtime";
+import { hostText } from "../reply-language";
 
 const capabilityLiteral = Type.Union(CAPABILITY_IDS.map((id) => Type.Literal(id)));
 const params = Type.Object({
@@ -43,17 +44,32 @@ export function makeCapabilityLoadTool(runtime: CapabilityRuntime): ToolDefiniti
 			const lines: string[] = [];
 			if (primary?.filePath)
 				lines.push(
-					`Read first: ${primary.filePath} (primary skill ${primary.name}) with the read tool before acting; follow it instead of general knowledge.`,
+					hostText(
+						`先读：${primary.filePath}（主技能 ${primary.name}），用 read 工具读完再动手；按它执行，不要凭通用知识。`,
+						`Read first: ${primary.filePath} (primary skill ${primary.name}) with the read tool before acting; follow it instead of general knowledge.`,
+					),
 				);
 			else if (skills.length)
 				lines.push(
-					"Read first: the SKILL.md of the skill you pick below, with the read tool, before acting; follow it instead of general knowledge.",
+					hostText(
+						"先读：从下面选定技能的 SKILL.md（用 read 工具）读完再动手；按它执行，不要凭通用知识。",
+						"Read first: the SKILL.md of the skill you pick below, with the read tool, before acting; follow it instead of general knowledge.",
+					),
 				);
+			const active = state.activeCapabilities.join(", ") || "core";
 			lines.push(
-				`Capabilities active: ${state.activeCapabilities.join(", ") || "core"}; ${state.activeTools.length} tools available${added.length ? `; newly added: ${added.join(", ")}` : "; no new pack was needed"}.`,
+				hostText(
+					`已激活能力：${active}；可用工具 ${state.activeTools.length} 个${added.length ? `；本次新增：${added.join(", ")}` : "；无需新增能力包"}。`,
+					`Capabilities active: ${active}; ${state.activeTools.length} tools available${added.length ? `; newly added: ${added.join(", ")}` : "; no new pack was needed"}.`,
+				),
 			);
 			if (skills.length) {
-				lines.push("Visible skills, most relevant first (metadata only, bodies are not loaded):");
+				lines.push(
+					hostText(
+						"可见技能（按相关度排序，只有元数据，正文未加载）：",
+						"Visible skills, most relevant first (metadata only, bodies are not loaded):",
+					),
+				);
 				const omitted: string[] = [];
 				let size = lines.join("\n").length;
 				for (const skill of skills) {
@@ -66,9 +82,20 @@ export function makeCapabilityLoadTool(runtime: CapabilityRuntime): ToolDefiniti
 					lines.push(line);
 					size += line.length + 1;
 				}
-				if (omitted.length) lines.push(`Also visible (see the skill list for paths): ${omitted.join(", ")}`);
+				if (omitted.length)
+					lines.push(
+						hostText(
+							`另有可见技能（路径见技能列表）：${omitted.join(", ")}`,
+							`Also visible (see the skill list for paths): ${omitted.join(", ")}`,
+						),
+					);
 			}
-			lines.push("You may call capability_load again when a later stage needs another contract.");
+			lines.push(
+				hostText(
+					"后续阶段需要其他能力时，可以再次调用 capability_load。",
+					"You may call capability_load again when a later stage needs another contract.",
+				),
+			);
 			return {
 				content: [{ type: "text", text: lines.join("\n") }],
 				details: { ...state, uiOnly: false },

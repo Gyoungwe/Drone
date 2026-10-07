@@ -18,7 +18,7 @@ function uiStateStore(): JsonStore<Partial<UiState> | null> {
 }
 
 /** 字段校验 + 默认值填充（旧版本文件缺 theme/background 时补齐） */
-function normalize(parsed: Partial<UiState>): UiState {
+export function normalizeUiState(parsed: Partial<UiState>): UiState {
 	const model = parsed.currentModel;
 	const theme =
 		parsed.theme === "light" || parsed.theme === "dark" || parsed.theme === "system"
@@ -33,6 +33,7 @@ function normalize(parsed: Partial<UiState>): UiState {
 		theme,
 		background: { image: typeof background?.image === "string" ? background.image : null, dim },
 		centerOrbEnabled: typeof parsed.centerOrbEnabled === "boolean" ? parsed.centerOrbEnabled : false,
+		...(parsed.language === "zh" || parsed.language === "en" ? { language: parsed.language } : {}),
 	};
 }
 
@@ -43,14 +44,14 @@ export async function loadUiState(): Promise<UiState | null> {
 	const model = parsed.currentModel;
 	if (model && typeof model.provider !== "string") return null;
 	if (model && typeof model.modelId !== "string") return null;
-	return normalize(parsed);
+	return normalizeUiState(parsed);
 }
 
 /** 持久化 UI 状态（与现有内容浅合并后原子写，调用方传补丁即可；失败不吞，UiStateSave 是 handle） */
 export async function saveUiState(patch: Partial<UiState>): Promise<void> {
 	try {
 		// 单次 update：读改写整体在 per-path 队列内串行（并发 patch 不互相覆盖）
-		await uiStateStore().update((draft) => normalize({ ...(draft ?? {}), ...patch }));
+		await uiStateStore().update((draft) => normalizeUiState({ ...(draft ?? {}), ...patch }));
 	} catch (err) {
 		log.error("ui-state save failed", err);
 		throw err;

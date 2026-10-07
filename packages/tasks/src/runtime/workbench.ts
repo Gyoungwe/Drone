@@ -11,6 +11,7 @@ import {
 } from "./acceptance";
 import { contractHash, hasTaskConsent, MAX_AUTO_RESUMES } from "./consent";
 import { failureObservation, failureReceipt, toolResultFailed } from "./failure-feedback";
+import { bilingual } from "./host-language";
 import { readPdfIdentity } from "./pdf-identity";
 import { remainingExplanation } from "./remaining";
 import { isReadOnlyTool } from "./tool-manifest";
@@ -1020,8 +1021,10 @@ export function createTaskWorkbench({
 				return null;
 			return {
 				block: true,
-				reason:
+				reason: bilingual(
+					"还没有获批的任务方案：Agent 需先做只读准备，再用 task_plan 提交目标、范围、写入目录和交付物，由你在弹窗中批准；批准前命令和写入都会被拦截。",
 					"No authorized task contract exists. Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables; the host opens ask_user for that exact contract. Commands and writes stay blocked until it is approved.",
+				),
 			};
 		}
 		if (t.budget.stageCalls >= LIMITS.stageCalls) advanceStage();

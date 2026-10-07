@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { copyFile, mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
-import type { DiagnosticsServicePort } from "@drone/backend";
+import { type DiagnosticsServicePort, setReplyLanguage } from "@drone/backend";
 import type { SavedTabs, UiState } from "@drone/shared";
 import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
 import { app, BrowserWindow, dialog, nativeTheme, shell } from "electron";
@@ -100,6 +100,8 @@ export function registerAppIpc(
 		loadUiState: () => loadUiState(),
 		saveUiState: (state) => {
 			if (state.theme) nativeTheme.themeSource = state.theme;
+			// UI language → reply-language rule for new/reloaded sessions and localized host strings.
+			if (state.language) setReplyLanguage(state.language);
 			return saveUiState(state as Partial<UiState>);
 		},
 		pickBackgroundImage: () => pickBackgroundImage(BrowserWindow.getAllWindows()[0]),
