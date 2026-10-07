@@ -3,6 +3,7 @@ import {
 	type CapabilityId,
 	capabilityForDirection,
 	capabilityForSkill,
+	skillCapability,
 	WORKFLOW_OWNER_NAMES,
 	WORKFLOW_PROFILES,
 	workflowProfile,
@@ -19,7 +20,8 @@ const TOPICS = {
 	vault: /知识库|obsidian|wiki.{0,10}(?:review|update|search)/i,
 	explore: /数据探索|探索性.{0,4}分析|数据质量检查|exploratory data|data quality check/i,
 	de: /已有.{0,8}(?:计数|counts)|从.{0,5}(?:计数|counts)|differential expression from counts/i,
-	enrichment: /通路富集|基因集富集|pathway enrichment|gene.set enrichment/i,
+	enrichment:
+		/通路富集|基因集富集|富集分析|功能注释|\bKEGG\b|gene ontology|\bGO\b.{0,4}(?:富集|注释|enrichment|analysis)|pathway enrichment|gene.set enrichment|\bGSEA\b/i,
 	blindReview: /互盲|三份.{0,5}评审|three blind reviews/i,
 	arsReview: /五席.{0,5}(?:评审|评议)|five.seat.{0,15}(?:review|panel)/i,
 	reporting: /统计(?:报告|审查|呈现)|统计方法小节|statistical reporting/i,
@@ -46,10 +48,26 @@ const TOPICS = {
 	review: /审稿|同行评审|peer review|review.{0,12}(?:paper|manuscript)/i,
 	response: /回复.{0,5}审稿|审稿.{0,5}回复|rebuttal|response to reviewers/i,
 	figures:
-		/科研绘图|论文配图|多面板图|科学.{0,5}可视化|scientific (?:figure|plot|visualization)|publication.ready (?:plot|figure)|volcano plot|火山图|(?:Nature|Science|Cell|期刊|杂志|顶刊).{0,10}(?:规范|风格|格式|标准|要求|级别?).{0,24}(?:图|figure|plot|chart)|重绘.{0,16}图|(?:期刊|Nature|Science|Cell).{0,6}(?:配图|插图|图表)|(?:redraw|re-draw|restyle).{0,30}(?:figure|plot|chart|graph)|(?:journal|nature|science|cell).{0,6}(?:style|format).{0,20}(?:figure|plot|chart)|(?:figure|plot|chart).{0,30}(?:journal|nature|science|cell).{0,6}(?:style|format|guidelines)|画.{0,12}(?:结果图|统计图|柱状图|折线图|散点图|热图|箱线图|小提琴图)|(?:make|draw|plot).{0,20}(?:publication|journal).{0,10}(?:figure|plot)/i,
+		/科研绘图|论文配图|多面板图|科学.{0,5}可视化|scientific (?:figure|plot|visualization)|publication.ready (?:plot|figure)|volcano plot|火山图|(?:Nature|Science|Cell|期刊|杂志|顶刊).{0,10}(?:规范|风格|格式|标准|要求|级别?).{0,24}(?:图|figure|plot|chart)|重绘.{0,16}图|(?:期刊|Nature|Science|Cell).{0,6}(?:配图|插图|图表)|(?:redraw|re-draw|restyle).{0,30}(?:figure|plot|chart|graph)|(?:journal|nature|science|cell).{0,6}(?:style|format).{0,20}(?:figure|plot|chart)|(?:figure|plot|chart).{0,30}(?:journal|nature|science|cell).{0,6}(?:style|format|guidelines)|画.{0,16}图|(?:联配|比对|进化树|系统发育树|结构域|保守性)(?:示意)?图|(?:alignment|tree|domain|phylogen\w*|conservation)\s+(?:figure|plot|chart|graph|visuali[sz]ation)|\bplot(?:s|ting)?\b|draw.{0,20}(?:figure|chart|graph|tree|alignment)|(?:make|draw|plot).{0,20}(?:publication|journal).{0,10}(?:figure|plot)/i,
 	schematic:
 		/示意图|流程示意|机制图|模式图|技术路线图|实验流程图|schematic|flow.?chart|graphical abstract|图形摘要/i,
-	phylogeny: /系统发育|进化树|系统树|phylogen|evolutionary tree/i,
+	phylogeny: /系统发育|进化树|系统树|phylogen|evolutionary tree|\biq-?tree\b|\braxml\b|newick/i,
+	structure:
+		/蛋白(?:质)?.{0,4}(?:结构预测|三维结构|折叠|语言模型)|结构预测|alphafold|esmfold|\besm[23c]?\b|\bpdb\b|protein (?:structure|folding|language model)|structure prediction/i,
+	variant:
+		/变异(?:检测|识别|注释|calling)|突变检测|体细胞突变|call.{0,6}variants?|variant call|\bvcf\b|\bbam\b|snp calling|somatic (?:mutation|variant)/i,
+	epigenomics:
+		/表观(?:遗传|基因组)|甲基化|chip.?seq|atac.?seq|bigwig|epigenom|chromatin accessibility|染色质(?:开放|可及)/i,
+	microbiome:
+		/宏基因组|微生物(?:组|群落)|16s|扩增子|metagenom|microbiome|alpha.diversity|beta.diversity|unifrac|多样性分析/i,
+	proteomics: /蛋白(?:质)?组学?|质谱|代谢组|proteomic|metabolom|mass spectrometry|\blc.?ms\b/i,
+	genomics:
+		/基因组(?:注释|坐标|区间)|genome annotation|genomic (?:coordinates|intervals)|\bbed (?:file|intervals)|liftover|alphagenome/i,
+	crispr: /crispr|sgrna|guide rna|引物设计|primer design|pcr.?引物|\bprimers?\b/i,
+	dynamics: /分子动力学|molecular dynamics|\bmd simulation|gromacs|openmm/i,
+	docking: /分子对接|molecular docking|\bdocking\b|diffdock/i,
+	bioDb:
+		/\bncbi\b|uniprot|ensembl|genbank|登录号|accession|\bgget\b|(?:基因|蛋白|序列).{0,6}(?:数据库|下载)|(?:public|biological) database/i,
 	slides: /论文.{0,5}(?:汇报|幻灯片|ppt)|科研汇报|research (?:slides|presentation)|paper.{0,5}slides/i,
 	statistics:
 		/统计(?:分析|检验|功效)|假设检验|效应量|statistical (?:analysis|test|power)|hypothesis test|effect size|anova|t.test/i,
@@ -164,18 +182,29 @@ const STAGE_PRIORITY: ResearchTopic[] = [
 	"enrichment",
 	"paperCard",
 	"phylogeny",
+	"structure",
+	"variant",
+	"epigenomics",
+	"microbiome",
+	"proteomics",
+	"genomics",
+	"crispr",
+	"dynamics",
+	"docking",
+	"bioDb",
 	"bioinformatics",
 	"review",
 	"writing",
 	"synthesis",
 	"subscription",
-	"schematic",
-	"figures",
-	"slides",
+	// Analysis stages own a mixed "analyse + plot" request; the figure skill joins as companion.
 	"singlecell",
 	"rnaseq",
 	"statistics",
 	"chemistry",
+	"schematic",
+	"figures",
+	"slides",
 	"methods",
 	"ideation",
 	"grants",
@@ -192,7 +221,16 @@ const ACADEMIC: Partial<Record<ResearchTopic, string>> = {
 };
 /** Topics without a catalogued stage map straight to their specialist skill. */
 const TOPIC_SKILLS: Partial<Record<ResearchTopic, string[]>> = {
-	phylogeny: ["phylogenetics"],
+	structure: ["esm"],
+	variant: ["pysam", "tiledbvcf", "pacsomatic"],
+	epigenomics: ["deeptools", "gtars"],
+	microbiome: ["scikit-bio", "waypoint-bio"],
+	proteomics: ["pyopenms", "matchms"],
+	genomics: ["genomic-coordinates", "pysam", "alphagenome"],
+	crispr: ["biopython"],
+	dynamics: ["molecular-dynamics"],
+	docking: ["diffdock", "rdkit"],
+	bioDb: ["gget", "bioservices", "database-lookup"],
 	schematic: ["scientific-schematics"],
 };
 function topicCapability(topic: ResearchTopic): CapabilityId | undefined {
@@ -204,7 +242,7 @@ function topicCapability(topic: ResearchTopic): CapabilityId | undefined {
 function topicSkills(topic: ResearchTopic): string[] {
 	const stage = workflowStage(topic);
 	const fromStage = stage?.commands.filter((n) => n.startsWith("skill:")).map((n) => n.slice(6)) ?? [];
-	return [...(TOPIC_SKILLS[topic] ?? []), ...fromStage];
+	return [...new Set([...(TOPIC_SKILLS[topic] ?? []), ...fromStage])];
 }
 /** Skill capabilities requested by an intent (topics, named skills, explicit command). */
 export function intentCapabilities(intent: ResearchSkillIntent): CapabilityId[] {
@@ -338,7 +376,14 @@ export function selectResearchSkills(
 		if (!intent.topics.includes(topic) || topic === stageId) continue;
 		const owner = topicCapability(topic);
 		if (!owner || owner === primaryCapability || !owned.has(owner)) continue;
-		if (owner !== "visualization" && primaryCapability !== "visualization") continue;
+		// Companions: the figure side of analysis/writing + plot, and public bio databases next to an analysis.
+		if (
+			owner !== "visualization" &&
+			primaryCapability !== "visualization" &&
+			topic !== "bioDb" &&
+			stageId !== "bioDb"
+		)
+			continue;
 		if (result.names.some((n) => capabilityForSkill(n) === owner)) continue;
 		for (const name of topicSkills(topic)) if (add(name, `topic:${topic}`, true)) break;
 	}
@@ -348,37 +393,77 @@ export function selectResearchSkills(
  * Visible workflow skills: the routed owner + supporting skills, then each loaded capability filled up to
  * RESEARCH_SKILL_LIMIT by task relevance (catalog order as tie-break). Never crosses capability ownership.
  */
+export interface CapabilitySkillOptions {
+	academicEnabled?: boolean;
+	/** Capabilities explicitly loaded through capability_load: their workflow skills are filled up to the limit. */
+	fill?: ReadonlySet<CapabilityId>;
+	/** Raw task / prompt text, used only in memory to rank fill candidates (never persisted). */
+	taskText?: string;
+	/** Skills pinned by `alwaysWith` are the always-on base and never count toward a capability. */
+	isPinned?: (skill: RoutableSkill) => boolean;
+}
+export interface CapabilitySkillList {
+	/** Ordered: primary → companion (routed) → fill. */
+	names: string[];
+	primary?: string;
+	companions: string[];
+}
+/**
+ * Visible skills: the routed owner + companion skills, then every active capability filled up to
+ * RESEARCH_SKILL_LIMIT by task relevance. Workflow skills are only filled for explicitly loaded capabilities;
+ * non-workflow skills (catalog category, e.g. ~/.agents) obey the same per-capability limit.
+ */
 export function selectCapabilitySkills(
 	skills: readonly RoutableSkill[],
 	capabilities: ReadonlySet<CapabilityId>,
 	intent: ResearchSkillIntent,
-	options: { academicEnabled?: boolean; fill?: ReadonlySet<CapabilityId> } = {},
+	options: CapabilitySkillOptions = {},
 ): string[] {
+	return orderedCapabilitySkills(skills, capabilities, intent, options).names;
+}
+export function orderedCapabilitySkills(
+	skills: readonly RoutableSkill[],
+	capabilities: ReadonlySet<CapabilityId>,
+	intent: ResearchSkillIntent,
+	options: CapabilitySkillOptions = {},
+): CapabilitySkillList {
 	const routed = selectResearchSkills(skills, capabilities, intent, options);
+	const primary = routed.primaryWorkflow;
+	const head = { names: [...routed.names], primary, companions: routed.names.filter((n) => n !== primary) };
 	// An explicit /skill: or named choice stays authoritative: do not pad it with other skills.
-	if (intent.primary || intent.comparison || (routed.names.length && intent.named.length))
-		return routed.names;
+	if (intent.primary || intent.comparison || (routed.names.length && intent.named.length)) return head;
 	const owned = effectiveSkillCapabilities(capabilities, intent);
-	// Fill only capabilities explicitly loaded through capability_load; keyword-detected packs on a normal
-	// turn (e.g. coding for "fix this build") keep just the routed skills instead of a catalog page.
 	const fill = new Set<CapabilityId>(options.fill ?? capabilities);
-	const names = [...routed.names];
+	const names = head.names;
 	const count = new Map<CapabilityId, number>();
 	for (const n of names) {
 		const id = capabilityForSkill(n);
 		if (id) count.set(id, (count.get(id) ?? 0) + 1);
 	}
-	const words = taskWords(intent);
-	for (const id of owned) {
-		if (!fill.has(id)) continue;
+	const words = taskWords(intent, options.taskText);
+	const groups = new Set<CapabilityId>([...owned]);
+	for (const id of capabilities) groups.add(id);
+	// coding as a tool pack (shell for an analysis): no engineering skill page unless the task is engineering.
+	const toolOnlyCoding =
+		!intentCapabilities(intent).includes("coding") &&
+		[...groups].some((g) => g !== "coding" && !!CAPABILITY_SKILL_DIRECTIONS[g]);
+	for (const id of groups) {
+		if (id === "coding" && toolOnlyCoding) continue;
 		const ranked = skills
 			.filter((s) => {
+				if (s.disableModelInvocation || options.isPinned?.(s)) return false;
 				const profile = workflowProfile(s.name);
-				if (!profile || capabilityForDirection(profile.direction) !== id || s.disableModelInvocation)
-					return false;
-				return profile.source !== "academic" || !!options.academicEnabled;
+				if (profile) {
+					if (!fill.has(id) || capabilityForDirection(profile.direction) !== id) return false;
+					return profile.source !== "academic" || !!options.academicEnabled;
+				}
+				return skillCapability(s.name) === id;
 			})
-			.map((s, index) => ({ s, index, score: relevance(s, words) }))
+			.map((s, index) => ({
+				s,
+				index,
+				score: relevance(s, words) + (workflowProfile(s.name) ? 0.5 : 0),
+			}))
 			.sort((a, b) => b.score - a.score || a.index - b.index);
 		for (const { s } of ranked) {
 			if ((count.get(id) ?? 0) >= RESEARCH_SKILL_LIMIT) break;
@@ -387,13 +472,32 @@ export function selectCapabilitySkills(
 			count.set(id, (count.get(id) ?? 0) + 1);
 		}
 	}
-	return names;
+	return head;
 }
-function taskWords(intent: ResearchSkillIntent): string[] {
-	return intent.topics.flatMap((t) => topicSkills(t)).flatMap((n) => n.split("-"));
+/** Ranking tokens: routed topic skill names + task words (latin ≥3 chars, CJK bigrams). */
+function taskWords(intent: ResearchSkillIntent, taskText = ""): string[] {
+	const words = intent.topics.flatMap((t) => topicSkills(t)).flatMap((n) => n.split("-"));
+	const text = taskText.toLowerCase().slice(0, 2000);
+	for (const m of text.matchAll(/[a-z][a-z0-9]{2,}/g)) words.push(m[0]);
+	for (const run of text.match(/[\u4e00-\u9fff]+/g) ?? [])
+		for (let i = 0; i + 1 < run.length; i++) words.push(run.slice(i, i + 2));
+	return [...new Set(words.filter((w) => w.length >= 2 && !STOP_WORDS.has(w)))];
 }
+const STOP_WORDS = new Set([
+	"the",
+	"and",
+	"for",
+	"with",
+	"this",
+	"that",
+	"from",
+	"into",
+	"帮我",
+	"一个",
+	"所有",
+]);
 function relevance(skill: RoutableSkill, words: string[]): number {
 	if (!words.length) return 0;
 	const text = `${skill.name} ${skill.description}`.toLowerCase();
-	return words.filter((w) => w.length > 2 && text.includes(w)).length;
+	return words.filter((w) => text.includes(w)).length;
 }

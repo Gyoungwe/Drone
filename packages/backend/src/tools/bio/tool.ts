@@ -8,6 +8,7 @@ import {
 	type SshHostEntry,
 	type SshRunner,
 } from "../ssh";
+import { envsOnHost, loadRegistry } from "./env-registry";
 import {
 	type BioEnvironment,
 	formatEnvironment,
@@ -21,6 +22,8 @@ export interface BioEnvironmentToolOptions {
 	hosts?: () => Promise<SshHostEntry[]>;
 	run?: SshRunner;
 	probe?: (cwd: string) => Promise<BioEnvironment>;
+	/** Agent dir holding environments.json; registered envs for the probed host are listed for reuse. */
+	agentDir?: string;
 }
 
 const params = Type.Object({
@@ -40,18 +43,23 @@ const params = Type.Object({
 export function makeBioEnvironmentTool(
 	options: BioEnvironmentToolOptions = {},
 ): ToolDefinition<typeof params> {
+	const registered = async (host: string) =>
+		options.agentDir ? envsOnHost(await loadRegistry(options.agentDir), host) : [];
 	return {
 		name: "bio_environment",
 		label: "Bioinformatics environment",
 		description:
-			"Inspect where analyses can run: installed bioinformatics tools with versions (samtools, bcftools, minimap2, STAR, BLAST, HMMER, BUSCO, IQ-TREE, Nextflow, Snakemake…), conda/mamba environments, container runtimes (Apptainer/Singularity/Docker), CPUs, memory and free disk. Omit host for this machine; pass a registered host (see ssh_hosts) to inspect it over SSH (needs the user's approval).",
+			"Inspect where analyses can run: OS/arch/shell/WSL/GPU, installed bioinformatics tools with versions (samtools, bcftools, minimap2, STAR, BLAST, HMMER, BUSCO, IQ-TREE, Nextflow, Snakemake…), conda/mamba environments, container runtimes (Apptainer/Singularity/Docker), CPUs, memory, free disk and the analysis environments already registered with bio_env_registry (reuse them before creating new ones). Omit host for this machine; pass a registered host (see ssh_hosts) to inspect it over SSH (needs the user's approval).",
 		promptSnippet: "bio_environment({host?})",
 		parameters: params,
 		execute: async (_id, input, signal, _update, ctx): Promise<AgentToolResult<BioEnvironment>> => {
 			const cwd = (ctx as { cwd?: string } | undefined)?.cwd ?? process.cwd();
 			if (!input.host) {
 				const env = await (options.probe ?? probeLocal)(cwd);
-				return { content: [{ type: "text", text: formatEnvironment(env) }], details: env };
+				return {
+					content: [{ type: "text", text: formatEnvironment(env, await registered("local")) }],
+					details: env,
+				};
 			}
 			const host = options.hosts ? resolveRegisteredHost(input.host, await options.hosts()) : input.host;
 			const { args } = buildSshArgs({ host, command: remoteProbeScript() });
@@ -70,7 +78,10 @@ export function makeBioEnvironmentTool(
 			if (result.exitCode !== 0 && !result.stdout)
 				throw new Error(`bio_environment: probe on ${host} failed: ${result.stderr.slice(0, 400)}`);
 			const env = parseRemoteProbe(host, result.stdout);
-			return { content: [{ type: "text", text: formatEnvironment(env) }], details: env };
+			return {
+				content: [{ type: "text", text: formatEnvironment(env, await registered(host)) }],
+				details: env,
+			};
 		},
 	};
 }

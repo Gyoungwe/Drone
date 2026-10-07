@@ -7,18 +7,15 @@ import {
   wikiHistory
 } from "./chunk-IMC2GAXA.mjs";
 import {
+  normalizeSourceLinks
+} from "./chunk-LE6NM7SB.mjs";
+import {
   setSpecialistSettings,
   specialistSettings
 } from "./chunk-XSFQUT2B.mjs";
 import {
   getKnowledgeService
-} from "./chunk-DDCBYHAI.mjs";
-import {
-  normalizeSourceLinks
-} from "./chunk-LE6NM7SB.mjs";
-import {
-  runNavigationMaintenance
-} from "./chunk-Q4ULDE2G.mjs";
+} from "./chunk-V6PECWHO.mjs";
 import {
   flowFor,
   invalidateKnowledgeUi
@@ -27,6 +24,9 @@ import {
   readReviewMode,
   saveReviewMode
 } from "./chunk-6LT3KQRY.mjs";
+import {
+  runNavigationMaintenance
+} from "./chunk-Q4ULDE2G.mjs";
 import {
   DAILY_DISCOVERY_LIMITS,
   collectRecentNotes,

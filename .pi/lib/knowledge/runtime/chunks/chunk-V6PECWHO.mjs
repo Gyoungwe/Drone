@@ -1,5 +1,11 @@
 // @ts-nocheck
 import {
+  invalidateKnowledgeUi
+} from "./chunk-6YLIZTKN.mjs";
+import {
+  readReviewMode
+} from "./chunk-6LT3KQRY.mjs";
+import {
   embedTexts,
   validateSemanticConfig
 } from "./chunk-OWE2DUY5.mjs";
@@ -8,11 +14,9 @@ import {
   saveSemanticSettings
 } from "./chunk-O536IQIE.mjs";
 import {
-  invalidateKnowledgeUi
-} from "./chunk-6YLIZTKN.mjs";
-import {
-  readReviewMode
-} from "./chunk-6LT3KQRY.mjs";
+  GRAPH_RETRIEVAL_DEFAULTS,
+  expandWithGraph
+} from "./chunk-RCUF5QK4.mjs";
 import {
   createKnowledgeWorker,
   emitProcessEvent,
@@ -513,6 +517,18 @@ var KnowledgeService = class {
         }
       };
       metrics.mergedCandidates = merged.length;
+    }
+    if (!wikiOnly && !explainerOnly && result.hits?.length) {
+      try {
+        const seeds = result.hits.slice(0, GRAPH_RETRIEVAL_DEFAULTS.seeds).map((hit) => hit.path);
+        const graph = await this.request("graphNeighbors", { paths: seeds, project: state.project, perSeed: 8 });
+        const expanded = expandWithGraph(result.hits, graph?.items || [], { limit: Number(limit) || 5 });
+        metrics.graphCandidates = (graph?.items || []).length;
+        metrics.graphAccepted = expanded.filter((hit) => hit.retrieval === "graph").length;
+        result = { ...result, hits: expanded };
+      } catch (error) {
+        metrics.graphError = String(error instanceof Error ? error.message : error).slice(0, 200);
+      }
     }
     metrics.elapsedMs = Date.now() - started;
     result = { ...result, retrievalMetrics: metrics, retrieval: metrics };
