@@ -130,6 +130,22 @@ function snippet(text, { startLine = 1, maxChars = 5e3 } = {}) {
   };
 }
 
+// packages/knowledge/src/graph-retrieval.ts
+function backlinkContext(body, target, max = 240) {
+  const bare = target.split("/").at(-1)?.replace(/\.md$/, "") || target;
+  const full = target.replace(/\.md$/, "");
+  for (const line of String(body || "").split(/\r?\n/)) {
+    for (const m of line.matchAll(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g)) {
+      const t = (m[1] || "").trim().replace(/\.md$/, "");
+      if (t === full || t.toLowerCase() === bare.toLowerCase()) {
+        const s = line.trim();
+        return s.length > max ? `${s.slice(0, max - 1)}\u2026` : s;
+      }
+    }
+  }
+  return void 0;
+}
+
 // packages/knowledge/src/search-policy.ts
 function tokenizeKnowledgeText(text) {
   const words = String(text).normalize("NFKC").toLowerCase().match(/[a-z0-9][a-z0-9._+-]*|[\p{Script=Han}]+/gu) || [];
@@ -814,6 +830,58 @@ async function noteLinks(args) {
   const incoming = db.prepare("SELECT DISTINCT source FROM links WHERE target=? OR target=? ORDER BY source LIMIT 200").all(...targets).map(({ source }) => source).filter((source) => source !== path).map((source) => ({ path: source, title: noteTitle(source), exists: true }));
   return { path, title: noteTitle(path), outgoing, incoming, revision };
 }
+async function graphNeighbors(args) {
+  await flushDirty();
+  const project = args.project || "";
+  const seeds = (Array.isArray(args.paths) ? args.paths : []).slice(0, 6).map(String);
+  const per = Math.max(1, Math.min(12, Math.floor(args.perSeed || 8)));
+  const noteRow = db.prepare("SELECT path,title,kind,hash,body,scope FROM notes WHERE path=?");
+  const visible = (row) => row && (row.kind === "note" || row.kind === "wiki") && (row.scope === "shared" || row.scope === project);
+  const degreeOf = (path) => {
+    const name = path.split("/").at(-1);
+    const out = db.prepare("SELECT COUNT(*) c FROM links WHERE source=?").get(path).c;
+    const inc = db.prepare("SELECT COUNT(DISTINCT source) c FROM links WHERE target=? OR target=?").get(path, name).c;
+    return out + inc;
+  };
+  const items = [];
+  for (const seed of seeds) {
+    let seedPath;
+    try {
+      seedPath = validateNote(seed);
+    } catch {
+      continue;
+    }
+    const seedRow = noteRow.get(seedPath);
+    if (!visible(seedRow)) continue;
+    const found = /* @__PURE__ */ new Map();
+    for (const { target } of db.prepare("SELECT target FROM links WHERE source=? ORDER BY target LIMIT 64").all(seedPath)) {
+      const resolved = resolveLinkTarget(target);
+      if (resolved && resolved !== seedPath && !found.has(resolved)) found.set(resolved, { direction: "outgoing" });
+    }
+    const name = seedPath.split("/").at(-1);
+    const targets = resolveLinkTarget(name) === seedPath ? [seedPath, name] : [seedPath, seedPath];
+    for (const { source } of db.prepare("SELECT DISTINCT source FROM links WHERE target=? OR target=? ORDER BY source LIMIT 64").all(...targets))
+      if (source !== seedPath && !found.has(source)) found.set(source, { direction: "backlink" });
+    const rows = [];
+    for (const [path, meta] of found) {
+      const row = noteRow.get(path);
+      if (!visible(row)) continue;
+      rows.push({
+        from: seedPath,
+        path,
+        title: row.title,
+        kind: row.kind,
+        hash: row.hash,
+        direction: meta.direction,
+        degree: degreeOf(path),
+        ...meta.direction === "backlink" ? { context: backlinkContext(row.body, seedPath) } : {}
+      });
+    }
+    rows.sort((a, b) => b.degree - a.degree || a.path.localeCompare(b.path));
+    items.push(...rows.slice(0, per));
+  }
+  return { items, revision };
+}
 async function knowledgeGraph(args) {
   await flushDirty();
   const limit = Math.max(10, Math.min(400, Math.floor(args.limit || 200)));
@@ -856,6 +924,7 @@ async function dispatch(op, args) {
   if (op === "search") return search(args);
   if (op === "noteLinks") return noteLinks(args);
   if (op === "graph") return knowledgeGraph(args);
+  if (op === "graphNeighbors") return graphNeighbors(args);
   if (op === "hydrateCandidates") return hydrateCandidates(args);
   if (op === "semanticBatch") return semanticBatch(args);
   if (op === "semanticStore") return semanticStore(args);
