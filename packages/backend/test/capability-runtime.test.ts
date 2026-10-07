@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { makeCapabilityExtension } from "../src/capabilities/extension";
 import { CapabilityResourceLoader, SkillVisibility } from "../src/capabilities/resource-loader";
 import { CapabilityRuntime, detectCapabilities } from "../src/capabilities/runtime";
+import { makeCapabilityLoadTool } from "../src/tools/capability-load";
 // 测试夹具：让真实扩展把 drone 元数据（libraryMode / readOnly）登记进工具清单（挂钩 1）
 import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
 
@@ -242,6 +243,25 @@ describe("lazy capability runtime", () => {
 		const { state } = runtime.activate(["web"]);
 		expect(state.activeCapabilities).toEqual(expect.arrayContaining(["coding", "web"]));
 		expect(state.activeTools).toEqual(expect.arrayContaining(["bash", "edit", "write", "webfetch"]));
+	});
+
+	it("supports additive repeated capability requests when a later stage needs another contract", async () => {
+		const visibility = new SkillVisibility();
+		const loader = new CapabilityResourceLoader(makeLoader(), visibility);
+		const session = makeSession(loader);
+		const runtime = new CapabilityRuntime(visibility);
+		runtime.bind(session as any);
+		runtime.prepareForPrompt("先整理现有结果", false);
+		const tool = makeCapabilityLoadTool(runtime);
+
+		const first = await tool.execute("call-1", { capabilities: ["coding"], task: "校验生成的实验文件" });
+		const second = await tool.execute("call-2", { capabilities: ["web"], task: "补充外部证据" });
+
+		expect(first.content[0]).toMatchObject({ type: "text" });
+		expect((first.content[0] as { text: string }).text).toContain("newly added: coding");
+		expect((second.content[0] as { text: string }).text).toContain("newly added: web");
+		expect(runtime.state().activeCapabilities).toEqual(expect.arrayContaining(["coding", "web"]));
+		expect((second.content[0] as { text: string }).text).toContain("call capability_load again");
 	});
 });
 
