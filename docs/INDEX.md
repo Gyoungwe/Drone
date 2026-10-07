@@ -111,6 +111,8 @@ packages/
 
 `@drone/knowledge` 的 canonical runtime source 位于 `src/`：`files.ts`、`layout.ts`、`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts`、`experience-store.ts`、`wiki-review.ts`、`deliverable-review.ts` 以及各项 policy/provider 合约；`deliverable-review.ts` 提供 B5b 交付物后台审稿纯函数、缓存/超时调度与 provider 选择，意见通过共享会话事件进入过程面板并写入 trace；根 `scripts/build-knowledge-runtime.mjs` 生成 `.pi/lib/knowledge/runtime/` worker/runtime 产物。`.pi/lib/knowledge/*` 保留为宿主兼容适配层，跨 bundle 的 UI、验收器与 host ports 仍由它桥接。
 
+知识入库标准（`drone-note/1`）：`ingest-policy.ts`（知识 / 运行结果 / 临时内容九条有序分类规则）、`ingest-frontmatter.ts`（frontmatter 模式、受限 YAML 解析、校验与确定性序列化）、`ingest-identity.ts`（DOI / PMID / arXiv / ISBN / URL 规范化、去重键、内容与结论哈希）；均为纯函数，尚未接入写入路径。规范见 [knowledge-ingest-standard.md](knowledge-ingest-standard.md)。
+
 ## packages/tasks — 任务领域包（迁移中）
 
 `@drone/tasks` 的 canonical runtime 位于 `src/runtime/*.ts`，并由 `scripts/build-runtime.mjs` 生成并提交 `src/runtime-compiled/*.mjs`；其中 workbench、register、acceptance、授权、方案提案卡、PDF worker、tool manifest 与 runtime bridge 通过 host ports 接入。`npm run build:tasks` 将同一 typed runtime 生成到无 workspace 依赖的 `.pi/lib/tasks/*` 兼容图；开发环境 acceptance adapter 复用包注册表，隔离发布包回退到自包含产物。

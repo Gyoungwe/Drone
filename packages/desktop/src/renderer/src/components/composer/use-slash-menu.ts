@@ -183,20 +183,24 @@ export function useSlashMenu(options: UseSlashMenuOptions) {
 		void confirmCommand(command, { allowInline: false });
 	};
 
-	/** 胶囊弹回文本（空文本 Backspace/Delete，或 Esc）：命令以 "/cmd " 拼回开头，等待继续编辑 */
-	const restoreSlashPill = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-		e.preventDefault();
+	/**
+	 * 胶囊弹回文本（空文本 Backspace/Delete、光标在最前时 Backspace、Esc 或 ×）：命令以 "/cmd " 拼回开头，等待继续编辑。
+	 * 光标落在拼回的 "/cmd " 之后（原正文之前）——与在行内 token 后按退格的直觉一致；空文本时即末尾。
+	 */
+	const restoreSlashPill = (e?: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		e?.preventDefault();
 		const cmd = options.slashCommand;
 		options.setSlashCommand(null);
 		options.setText((prev) => (cmd ? (prev ? `/${cmd} ${prev}` : `/${cmd} `) : prev));
 		setSlashToken(null);
 		setSlashDismissed(true);
+		const caret = cmd ? cmd.length + 2 : 0;
 		requestAnimationFrame(() => {
 			const el = options.textareaRef.current;
 			if (el) {
 				el.focus();
-				const len = el.value.length;
-				el.setSelectionRange(len, len);
+				const pos = Math.min(caret || el.value.length, el.value.length);
+				el.setSelectionRange(pos, pos);
 			}
 		});
 	};

@@ -489,6 +489,9 @@ export const en: Messages = {
 	slash: {
 		noMatch: "No matching commands",
 		argPlaceholder: "Type arguments…",
+		skillArgPlaceholder: "Describe what you want it to do…",
+		pillTitle: "{command} (Esc or × to undo)",
+		removePill: "Remove command",
 		group: {
 			setup: "Tool-specific setup",
 			support: "Internal shared references",
@@ -929,9 +932,9 @@ export const en: Messages = {
 			defaultHint:
 				"The approval request and execution result remain in session history. If you deny it, the agent can continue steps that do not need SSH.",
 		},
-		centerOrb: "Centered status animation",
+		centerOrb: "Enlarged status animation",
 		centerOrbHint:
-			"After you send, shows an enlarged status animation at the center of the conversation area until the turn's first visible output (thinking, a tool card, a subagent or text) appears; it then hides, so it never covers the conversation during long runs. Only controls the centered animation — the small orb before the Working/Thinking row always stays.",
+			"After you send, shows an enlarged status animation below the latest message (in its own space, never over the conversation text) until the turn's first visible output (thinking, a tool card, a subagent or text) appears; it then collapses. Only controls the centered animation — the small orb before the Working/Thinking row always stays.",
 		lan: {
 			title: "LAN Observer",
 			hint: "View live agent progress from your phone on a trusted local network. When remote control is off, the observer page is read-only. Off by default; the access token rotates every time it is enabled.",

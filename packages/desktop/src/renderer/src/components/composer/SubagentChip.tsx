@@ -19,7 +19,7 @@ export function SubagentChip({
 	const t = useT();
 	return (
 		<span
-			className="mt-0.5 flex shrink-0 select-none items-center gap-1 rounded-md bg-accent/10 px-1.5 py-0.5 text-[12px] font-semibold leading-5 text-accent"
+			className="flex h-[22px] shrink-0 select-none items-center gap-1 rounded-md bg-accent/10 px-1.5 text-[12px] leading-none font-semibold text-accent"
 			data-testid="composer-subagent-chip"
 			data-agent={name}
 			title={t("composer.subagentChipTitle", { agent: name })}

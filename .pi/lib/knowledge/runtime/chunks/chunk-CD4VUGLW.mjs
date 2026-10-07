@@ -1,13 +1,5 @@
 // @ts-nocheck
 import {
-  publicationKnowledgeFlow,
-  updateKnowledgeFlow
-} from "./chunk-6YLIZTKN.mjs";
-import {
-  advisoryCodes,
-  readReviewMode
-} from "./chunk-6LT3KQRY.mjs";
-import {
   evaluateMetacognitivePublication
 } from "./chunk-TT3YMRLM.mjs";
 import {
@@ -15,6 +7,14 @@ import {
   knowledgeFailure,
   publicationNotices
 } from "./chunk-U3GNWHNQ.mjs";
+import {
+  publicationKnowledgeFlow,
+  updateKnowledgeFlow
+} from "./chunk-6YLIZTKN.mjs";
+import {
+  advisoryCodes,
+  readReviewMode
+} from "./chunk-6LT3KQRY.mjs";
 import {
   diagnosticText,
   runtimeSlot

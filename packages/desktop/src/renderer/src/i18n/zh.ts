@@ -471,6 +471,9 @@ export const zh = {
 	slash: {
 		noMatch: "没有匹配的命令",
 		argPlaceholder: "输入参数…",
+		skillArgPlaceholder: "说说要用它做什么…",
+		pillTitle: "{command}（Esc 或 × 撤销）",
+		removePill: "移除命令",
 		group: {
 			setup: "工具专用初始化",
 			support: "内部共用参考",
@@ -887,9 +890,9 @@ export const zh = {
 			scope: "默认单次，可显式记住",
 			defaultHint: "审批请求与执行结果会留在会话记录中；拒绝后 Agent 仍可继续其他不需要 SSH 的步骤。",
 		},
-		centerOrb: "居中放大状态动画",
+		centerOrb: "放大状态动画",
 		centerOrbHint:
-			"发送后、本轮第一个可见输出（思考、工具卡片、子代理或正文）出现之前，在对话区域中央显示放大的状态动画；输出一出现即隐藏，不会在长任务中盖住对话。只控制中央动画，Working/Thinking 状态行前的小动画始终显示。",
+			"发送后、本轮第一个可见输出（思考、工具卡片、子代理或正文）出现之前，在最新消息下方显示放大的状态动画（独立占位，不覆盖对话文字）；输出一出现即收起。只控制中央动画，Working/Thinking 状态行前的小动画始终显示。",
 		lan: {
 			title: "局域网观察页",
 			hint: "在可信局域网内，用手机实时查看 agent 的运行进度。远程控制关闭时，观察页只读。默认关闭；每次开启会轮换访问令牌。",

@@ -1,11 +1,5 @@
 // @ts-nocheck
 import {
-  invalidateKnowledgeUi
-} from "./chunk-6YLIZTKN.mjs";
-import {
-  readReviewMode
-} from "./chunk-6LT3KQRY.mjs";
-import {
   embedTexts,
   validateSemanticConfig
 } from "./chunk-OWE2DUY5.mjs";
@@ -13,6 +7,12 @@ import {
   readSemanticSettings,
   saveSemanticSettings
 } from "./chunk-O536IQIE.mjs";
+import {
+  invalidateKnowledgeUi
+} from "./chunk-6YLIZTKN.mjs";
+import {
+  readReviewMode
+} from "./chunk-6LT3KQRY.mjs";
 import {
   GRAPH_RETRIEVAL_DEFAULTS,
   expandWithGraph
