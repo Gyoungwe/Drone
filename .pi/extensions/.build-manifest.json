@@ -33,8 +33,8 @@
 			"output": "research-loop.mjs",
 			"status": "generated",
 			"sourceSha256": "c046101d22b2b2a443818415a5a368f8842bdd110b7f3355bd87045f4e052acc",
-			"inputsSha256": "ff68a516c5dfdc6f44b6537deec97f833878215e02111d5a6d7ff901fce8fe37",
-			"outputSha256": "1493b9a54b6caf382e40b8905c9e5ebd49dfc2d5d206efa4d6b346c23a691312"
+			"inputsSha256": "b6cee388e4c0feb20b9faf3377a5131940db8a925ccea73266cfb4c759c3034a",
+			"outputSha256": "8687e549890ca1d1960fd84db9fbe268b29123423c195f1ae85540c87e23d5b1"
 		},
 		"research-policy": {
 			"source": "research-policy.ts",
@@ -65,8 +65,8 @@
 			"output": "source-archive.mjs",
 			"status": "generated",
 			"sourceSha256": "0bc28568068e218977ad7ebf97acc1a92e1a25cba355687758f4bf5c809dd143",
-			"inputsSha256": "0b8d3fb8e3ef07a0353c38284482d7123ec65831a64f2208a5c721463fadf787",
-			"outputSha256": "2ed115397a4be73fe82ee15f969cd071dc71cef5dc25f119f7eeeee622673058"
+			"inputsSha256": "044c24ea287e0e6e878e48d7e8f3c7cbd73f1c8e96f9b12939431b2267a2cee6",
+			"outputSha256": "43f443550e75c5ac03841a24aa9ec18f9eef00c5ec2a3ecb342639b590e22dd0"
 		},
 		"subagent-mcp-readonly": {
 			"source": "subagent-mcp-readonly.ts",

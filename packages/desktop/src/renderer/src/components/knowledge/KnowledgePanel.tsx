@@ -8,6 +8,7 @@ import { useKnowledgeText } from "./copy";
 import { launchKnowledgeSetup, reportKnowledgeError, useKnowledgeOverview } from "./hooks";
 import { KnowledgeMaintenance } from "./KnowledgeMaintenance";
 import { KnowledgeSpecialists } from "./KnowledgeSpecialists";
+import { ResearchRunsCard } from "./ResearchRunsCard";
 import { SemanticManagement } from "./SemanticManagement";
 import { TopicManagement } from "./TopicManagement";
 import { WikiReviewPanel } from "./WikiReviewPanel";
@@ -123,6 +124,7 @@ export function KnowledgePanel({
 			)}
 			{tab === "overview" && (
 				<div className="space-y-4">
+					<ResearchRunsCard cwd={cwd} project={data?.project || null} />
 					{data && !data.enabled && (
 						<p className="rounded-lg bg-hover p-3 text-xs text-warn">{t("disabled")}</p>
 					)}

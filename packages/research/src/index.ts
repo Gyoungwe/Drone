@@ -95,6 +95,12 @@ export {
 	type ResearchLoopWorkspace,
 } from "./research-loop";
 export {
+	getResearchRun,
+	listResearchRuns,
+	type ResearchRunUiDetailInput,
+	type ResearchRunUiListInput,
+} from "./research-run-ui";
+export {
 	type ExecutionReceiptInput,
 	observeExecutionReceipt,
 	type ProvenanceFileDeclaration,

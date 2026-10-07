@@ -6,6 +6,10 @@ import type {
 	KnowledgeNote,
 	KnowledgeNoteLinks,
 	KnowledgeOverview,
+	ResearchRunDetail,
+	ResearchRunListItem,
+	ResearchRunRequest,
+	ResearchRunsRequest,
 	KnowledgePage,
 	KnowledgePageRequest,
 	KnowledgeSearchRequest,
@@ -88,6 +92,14 @@ export const KnowledgeContract = defineDomain("knowledge", {
 		getOverview: {
 			args: OptionalObject<{ cwd?: string | null; sessionId?: string | null }>(),
 			result: ResultObject<KnowledgeOverview>(),
+		},
+		getResearchRuns: {
+			args: OptionalObject<ResearchRunsRequest>(),
+			result: ResultObject<{ items: ResearchRunListItem[]; total: number }>(),
+		},
+		getResearchRun: {
+			args: OneObject<ResearchRunRequest>(),
+			result: ResultObject<ResearchRunDetail>(),
 		},
 		previewSetup: {
 			args: OneObject<{ cwd?: string | null; path?: string | null }>(),
@@ -241,6 +253,8 @@ export const KnowledgeContract = defineDomain("knowledge", {
 export type KnowledgeSchemaTypes = {
 	setSpecialistSettings: Parameters<KnowledgeApi["setKnowledgeSpecialistSettings"]>;
 	getOverview: Parameters<KnowledgeApi["getKnowledgeOverview"]>;
+	getResearchRuns: Parameters<KnowledgeApi["getResearchRuns"]>;
+	getResearchRun: Parameters<KnowledgeApi["getResearchRun"]>;
 	previewSetup: Parameters<KnowledgeApi["previewKnowledgeSetup"]>;
 	startSetup: [{ sessionId: string; path?: string }];
 	getJobs: Parameters<KnowledgeApi["getKnowledgeJobs"]>;

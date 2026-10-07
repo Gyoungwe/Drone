@@ -384,7 +384,6 @@ function createResearchLoop(ports) {
       status: "running",
       revision: 0,
       requires_provenance: requiresProvenance === true,
-      provenance: { status: requiresProvenance === true ? "pending" : "not-required" },
       started_at: now,
       evidence_gate: {
         stage: "created",
