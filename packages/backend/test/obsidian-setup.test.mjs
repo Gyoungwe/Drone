@@ -116,17 +116,53 @@ describe("read-only project-aware setup discovery", () => {
 	});
 });
 
+describe("/project knowledge project command", () => {
+	it("keeps the workspace project fixed outside the daily space", async () => {
+		const h = harness();
+		h.pi.appendEntry = vi.fn();
+		await h.commands.get("project").handler("other-project", h.ctx);
+		expect(h.pi.appendEntry).not.toHaveBeenCalled();
+		expect(h.ctx.ui.notify).toHaveBeenCalledWith(expect.stringContaining("knowledgeProjectId"), "warning");
+		await h.commands.get("项目").handler("", h.ctx);
+		expect(h.ctx.ui.notify).toHaveBeenLastCalledWith(
+			expect.stringMatching(/^知识项目：actual-project-[a-f0-9]{10}/),
+			"info",
+		);
+	});
+
+	it("records a per-session choice in the daily space", async () => {
+		vi.stubEnv("HOME", root);
+		vi.stubEnv("USERPROFILE", root);
+		const daily = join(root, ".drone", "daily");
+		await mkdir(daily, { recursive: true });
+		const h = harness();
+		const entries = [];
+		h.pi.appendEntry = vi.fn((customType, data) => entries.push({ type: "custom", customType, data }));
+		const ctx = { ...h.ctx, cwd: daily, sessionManager: { getBranch: () => entries } };
+		await h.commands.get("project").handler("Gut Microbiome", ctx);
+		expect(h.pi.appendEntry).toHaveBeenCalledWith("drone-session-project-v1", { project: "gut-microbiome" });
+		expect(ctx.ui.notify).toHaveBeenLastCalledWith(expect.stringContaining("gut-microbiome"), "info");
+		await h.commands.get("project").handler("clear", ctx);
+		expect(h.pi.appendEntry).toHaveBeenLastCalledWith("drone-session-project-v1", { project: null });
+		expect(ctx.ui.notify).toHaveBeenLastCalledWith(expect.not.stringContaining("gut-microbiome"), "info");
+		await h.commands.get("project").handler("!!!", ctx);
+		expect(ctx.ui.notify).toHaveBeenLastCalledWith(expect.stringContaining("字母或数字"), "error");
+	});
+});
+
 describe("slash command to current-model handoff", () => {
 	it("binds the canonical Obsidian command and compatibility aliases to research-vault", () => {
 		const h = harness();
 		expect([...h.commands.keys()].sort()).toEqual([
 			"discover",
 			"obsidian-setup",
+			"project",
 			"research-setup",
 			"setup",
 			"task-action",
 			"task-status",
 			"发现",
+			"项目",
 		]);
 		for (const name of ["obsidian-setup", "research-setup", "setup"]) {
 			const command = h.commands.get(name);

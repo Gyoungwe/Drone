@@ -9,6 +9,13 @@ import { pathToFileURL } from "node:url";
 import { knowledgeDirectory, projectIdentity, readKnowledgeBinding } from "@drone/knowledge/config";
 import { cardLink, flowCard } from "@drone/knowledge/flow-cards";
 import {
+	describeProject,
+	normalizeProjectSlug,
+	resolveWorkspaceProject,
+	runProject,
+	sessionEntriesOf,
+} from "@drone/knowledge/project-identity";
+import {
 	containedFile,
 	DEFAULT_VAULT_PROFILE,
 	getVaultProfile,
@@ -288,7 +295,7 @@ async function writeSummary(runDir, summary, status) {
 }
 
 async function syncRunNote(vault, project, resultSlug, runDir, summary) {
-	const safeProject = safeSegment(project || "default", "project");
+	const safeProject = safeSegment(project, "project");
 	const safeSlug = safeSegment(resultSlug || "research-question", "result_slug");
 	const runPath = resolve(runDir);
 	const metadataPath = join(runPath, "metadata.json");
@@ -412,7 +419,11 @@ export function registerWorkspaceConfig(pi, options = {}) {
 			properties: {
 				run_dir: { type: "string" },
 				summary_markdown: { type: "string" },
-				project: { type: "string" },
+				project: {
+					type: "string",
+					description:
+						"Optional. The run's recorded project (or the workspace project) is used; a different value is ignored.",
+				},
 				result_slug: { type: "string" },
 				claims: {
 					type: "array",
@@ -484,8 +495,21 @@ export function registerWorkspaceConfig(pi, options = {}) {
 				indexes = null,
 				obsidianError = null,
 				indexError = null;
+			// The run's recorded project wins; legacy "research-workbench" runs follow the current
+			// workspace (or daily-space session) project. A different model-supplied project is ignored.
+			const resolution = await resolveWorkspaceProject({
+				cwd,
+				sessionEntries: sessionEntriesOf(ctx),
+				requested: params.project,
+			});
+			const project = runProject(metadata.project, resolution);
+			const projectResolution = describeProject({
+				...resolution,
+				project,
+				ignoredRequest:
+					resolution.requested !== null && normalizeProjectSlug(resolution.requested) !== project,
+			});
 			if (config.obsidianVault) {
-				const project = params.project || metadata.project;
 				try {
 					note = await syncRunNote(
 						config.obsidianVault,
@@ -512,6 +536,7 @@ export function registerWorkspaceConfig(pi, options = {}) {
 				...outputs,
 				claims: Array.isArray(params.claims) ? params.claims : [],
 				obsidian_note: note,
+				project: projectResolution,
 				indexes,
 				summary_saved: true,
 				partial: Boolean(obsidianError || indexError),

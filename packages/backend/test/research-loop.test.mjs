@@ -12,6 +12,7 @@ import {
 } from "@drone/extensions/research-host";
 import researchLoopExtension from "@drone/extensions/research-loop";
 import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
+import { currentProject } from "@drone/knowledge/extension-helpers";
 import { verifyLiteratureReceipt } from "@drone/research/literature-receipt";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { registerResearchToolMeta } from "./tool-manifest-fixture.mjs";
@@ -658,4 +659,47 @@ it("reconciliation's live verification receipt is accepted without a redundant i
 	const done = await finishJournal(j, p);
 	expect(done.evidence_gate).toMatchObject({ answerable: true, reuse_count: 1, archive_count: 0 });
 	expect(done.receipt_journal.buffered).toBe(2);
+});
+
+it("research_loop start uses the shared project identity instead of research-workbench", async () => {
+	let tool;
+	const ctx = { cwd, sessionId: "project-session" };
+	researchLoopExtension({
+		registerTool(t) {
+			tool = t;
+		},
+		on() {},
+	});
+	const implicit = await tool.execute(
+		"start",
+		{ action: "start", query: "Implicit project" },
+		null,
+		null,
+		ctx,
+	);
+	const expected = await currentProject(cwd);
+	expect(expected).not.toBe("research-workbench");
+	expect(implicit.details.metadata.project).toBe(expected);
+	expect(JSON.parse(implicit.content[0].text).project).toEqual({ project: expected, source: "workspace" });
+
+	const requested = await tool.execute(
+		"start-2",
+		{ action: "start", query: "Model-chosen project", project: "research-workbench" },
+		null,
+		null,
+		ctx,
+	);
+	expect(requested.details.metadata.project).toBe(expected);
+	expect(JSON.parse(requested.content[0].text).project.notice).toContain("research-workbench");
+
+	await mkdir(join(cwd, ".pi"), { recursive: true });
+	await writeFile(
+		join(cwd, ".pi/research-workspace.json"),
+		JSON.stringify({ knowledgeProjectId: "lab-notes" }),
+	);
+	const configured = await tool.execute("start-3", { action: "start", query: "Configured" }, null, null, ctx);
+	expect(configured.details.metadata.project).toBe("lab-notes");
+	expect(await currentProject(cwd)).toBe("lab-notes");
+	const direct = await startResearchRun({ cwd, resultSlug: "direct", query: "Direct caller" });
+	expect(direct.metadata.project).toBe("lab-notes");
 });

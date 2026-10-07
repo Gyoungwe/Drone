@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { projectIdentity } from "./config";
+import { resolveWorkspaceProject, type SessionContextLike, sessionEntriesOf } from "./project-identity";
 
 /** Tool result envelope shared by knowledge extension adapters. */
 export interface KnowledgeToolResult<T = unknown> {
@@ -16,17 +14,13 @@ export function result<T>(data: T): KnowledgeToolResult<T> {
 	};
 }
 
-/** Read the workspace project identity, falling back to the stable cwd identity. */
-export async function currentProject(cwd: string): Promise<string> {
-	let value: unknown;
-	try {
-		const parsed: unknown = JSON.parse(await readFile(join(cwd, ".pi/research-workspace.json"), "utf8"));
-		if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
-			value = (parsed as { knowledgeProjectId?: unknown }).knowledgeProjectId;
-	} catch {
-		// Missing or malformed workspace metadata uses the stable fallback below.
-	}
-	return projectIdentity(cwd, value);
+/**
+ * Resolve the knowledge project for a tool call or turn through the shared resolver
+ * (`project-identity.ts`): the daily-space session choice, then the workspace's configured
+ * `knowledgeProjectId`, then the stable directory-derived identity.
+ */
+export async function currentProject(cwd: string, ctx?: SessionContextLike | null): Promise<string> {
+	return (await resolveWorkspaceProject({ cwd, sessionEntries: sessionEntriesOf(ctx) })).project;
 }
 
 /** Normalise a stable explainer topic id, dropping generated timestamp suffixes. */

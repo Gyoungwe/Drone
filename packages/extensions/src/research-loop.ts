@@ -1,3 +1,8 @@
+import {
+	describeProject,
+	resolveWorkspaceProject,
+	sessionEntriesOf,
+} from "@drone/knowledge/project-identity";
 import { verifyLiteratureReceipt } from "@drone/research/literature-receipt";
 import { createResearchReceiptJournal } from "@drone/research/receipt-journal";
 import { createResearchLoop, type ResearchLoopPorts } from "@drone/research/research-loop";
@@ -115,7 +120,11 @@ export default function researchLoop(pi: Pi): void {
 					],
 				},
 				run_dir: { type: "string" },
-				project: { type: "string" },
+				project: {
+					type: "string",
+					description:
+						"Optional. The host resolves the project from the workspace (or the daily-space session choice); a different value is ignored.",
+				},
 				result_slug: { type: "string" },
 				query: { type: "string" },
 				requires_provenance: { type: "boolean" },
@@ -140,11 +149,21 @@ export default function researchLoop(pi: Pi): void {
 					};
 					return { content: [{ type: "text", text: JSON.stringify(value) }], details: value };
 				}
+				// One project identity per workspace (or per daily-space session); a different
+				// model-supplied project is ignored and reported back.
+				const projectResolution =
+					params.action === "start"
+						? await resolveWorkspaceProject({
+								cwd: ctx.cwd,
+								sessionEntries: sessionEntriesOf(ctx),
+								requested: params.project,
+							})
+						: null;
 				const result: any = await journal.execute(runDir, async () =>
 					params.action === "start"
 						? loop.startResearchRun({
 								cwd: ctx.cwd,
-								project: params.project,
+								project: projectResolution?.project,
 								resultSlug: params.result_slug,
 								query: params.query,
 								requiresProvenance: params.requires_provenance === true,
@@ -180,6 +199,7 @@ export default function researchLoop(pi: Pi): void {
 									scientificallyVerified: false,
 								},
 								receipt_journal: result?.receipt_journal,
+								...(projectResolution ? { project: describeProject(projectResolution) } : {}),
 							};
 				return { content: [{ type: "text", text: JSON.stringify(visible, null, 2) }], details: result };
 			});
