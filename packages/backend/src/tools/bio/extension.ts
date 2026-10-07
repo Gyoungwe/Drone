@@ -1,6 +1,7 @@
 import { stat } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import type { ExtensionContext, InlineExtension } from "../../session-engine/sdk";
+import { platformLine } from "./platform";
 
 /** 会话内的执行位置选择（/run-on），随会话分支持久化 */
 export const RUN_ON_CUSTOM_TYPE = "drone-run-on-v1";
@@ -64,6 +65,10 @@ export function runOnLabel(value: RunOn): string {
 	return value === "auto" ? "auto" : value === "local" ? "local" : value.host;
 }
 
+/** 环境工作流：探测 → 复用登记表 → mamba 创建 → 登记 → 运行；远程同理（带 host）。 */
+export const ENVIRONMENT_WORKFLOW =
+	"Analysis environments: bio_environment (platform, tools, registered envs) → bio_env_registry find + verify to reuse → only if none, create with mamba/bioconda inside the approved task plan (Windows: prefer WSL or a Linux host for bioconda tools) → bio_env_registry record → run via `<manager> run -n <env> <tool>`. Remote: the same steps with host=<alias> (ssh needs approval per connection; keys/ssh config only, never passwords). Missing tools are a setup step, not a reason to stop.";
+
 /** 每轮注入的执行位置说明：用户指定的位置优先，auto 时按规则判断并说明理由 */
 export function placementGuidance(value: RunOn): string {
 	if (value === "local")
@@ -123,7 +128,9 @@ export function makeBioExtension(): InlineExtension {
 				},
 			});
 			pi.on("before_agent_start", (event) => ({
-				systemPrompt: [event.systemPrompt, placementGuidance(runOn)].filter(Boolean).join("\n\n"),
+				systemPrompt: [event.systemPrompt, placementGuidance(runOn), platformLine(), ENVIRONMENT_WORKFLOW]
+					.filter(Boolean)
+					.join("\n\n"),
 			}));
 			pi.on("tool_call", async (event, ctx) => {
 				if (event.toolName !== "read") return undefined;

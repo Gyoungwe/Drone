@@ -1,7 +1,14 @@
-import { spawn } from "node:child_process";
-import { access, constants, statfs } from "node:fs/promises";
+import { statfs } from "node:fs/promises";
 import { cpus, freemem, totalmem } from "node:os";
-import { delimiter, join } from "node:path";
+import { onPath, run } from "./exec";
+import {
+	detectPlatform,
+	formatPlatform,
+	GPU_QUERY,
+	type PlatformInfo,
+	parseNvidiaSmi,
+	parseUname,
+} from "./platform";
 
 /**
  * 生信执行环境探测：常用命令行工具（含版本）、conda/mamba 环境、容器运行时、CPU/内存/磁盘。
@@ -57,6 +64,8 @@ export interface BioEnvironment {
 	memoryGb: number | null;
 	freeMemoryGb: number | null;
 	freeDiskGb: number | null;
+	/** OS / arch / shell / WSL / GPU of the probed machine (remote: from uname + nvidia-smi). */
+	platform?: PlatformInfo;
 }
 
 const VERSION = /\d+\.\d+(?:\.\d+)*[A-Za-z]?(?:[-+][0-9A-Za-z][0-9A-Za-z.]*)?/;
@@ -64,49 +73,6 @@ const VERSION = /\d+\.\d+(?:\.\d+)*[A-Za-z]?(?:[-+][0-9A-Za-z][0-9A-Za-z.]*)?/;
 /** 从命令输出里取版本号；找不到版本但命令存在时返回 "installed" */
 export function parseVersion(output: string): string {
 	return VERSION.exec(output)?.[0] ?? "installed";
-}
-
-async function onPath(name: string): Promise<string | null> {
-	const extensions = process.platform === "win32" ? ["", ".exe", ".cmd", ".bat"] : [""];
-	for (const dir of (process.env.PATH ?? "").split(delimiter).filter(Boolean)) {
-		for (const ext of extensions) {
-			const full = join(dir, name + ext);
-			try {
-				await access(full, process.platform === "win32" ? constants.F_OK : constants.X_OK);
-				return full;
-			} catch {
-				/* keep looking */
-			}
-		}
-	}
-	return null;
-}
-
-function run(command: string, args: string[], timeoutMs = 6000): Promise<string> {
-	return new Promise((resolve) => {
-		let output = "";
-		let child: ReturnType<typeof spawn>;
-		try {
-			child = spawn(command, args, { shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
-		} catch {
-			resolve("");
-			return;
-		}
-		const timer = setTimeout(() => child.kill(), timeoutMs);
-		const take = (chunk: Buffer) => {
-			if (output.length < 8000) output += chunk.toString("utf8");
-		};
-		child.stdout?.on("data", take);
-		child.stderr?.on("data", take);
-		child.once("error", () => {
-			clearTimeout(timer);
-			resolve(output);
-		});
-		child.once("close", () => {
-			clearTimeout(timer);
-			resolve(output);
-		});
-	});
 }
 
 /** 本地探测（不需要审批：只运行各工具的版本参数，不读写数据） */
@@ -136,8 +102,10 @@ export async function probeLocal(cwd: string): Promise<BioEnvironment> {
 	} catch {
 		/* unknown */
 	}
+	const platform = await detectPlatform().catch(() => undefined);
 	return {
 		where: "local",
+		...(platform ? { platform } : {}),
 		tools,
 		envManager,
 		condaEnvs,
@@ -184,6 +152,10 @@ export function remoteProbeScript(): string {
 		`printf 'cpus\\t%s\\n' "$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null)"`,
 		`awk '/MemTotal/{printf "memkb\\t%s\\n",$2} /MemAvailable/{printf "memfreekb\\t%s\\n",$2}' /proc/meminfo 2>/dev/null`,
 		`df -Pk . 2>/dev/null | awk 'NR==2{printf "diskfreekb\\t%s\\n",$4}'`,
+		`printf 'uname\\t%s\\n' "$(uname -srm 2>/dev/null)"`,
+		`grep -qi microsoft /proc/version 2>/dev/null && printf 'wsl\\tinside\\n'`,
+		`printf 'shell\\t%s\\n' "\${SHELL##*/}"`,
+		`command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi ${GPU_QUERY.join(" ")} 2>/dev/null | while IFS= read -r l; do printf 'gpu\\t%s\\n' "$l"; done; true`,
 	].join("\n");
 }
 
@@ -199,6 +171,10 @@ export function parseRemoteProbe(host: string, output: string): BioEnvironment {
 	let memKb: number | null = null;
 	let memFreeKb: number | null = null;
 	let diskKb: number | null = null;
+	let uname = "";
+	let shell = "sh";
+	let wsl: PlatformInfo["wsl"] = null;
+	const gpuLines: string[] = [];
 	for (const line of output.split(/\r?\n/)) {
 		const [key, a = "", b = ""] = line.split("\t");
 		if (key === "tool" && a in tools) tools[a] = parseVersion(b);
@@ -209,10 +185,16 @@ export function parseRemoteProbe(host: string, output: string): BioEnvironment {
 		else if (key === "memkb") memKb = Number(a) || null;
 		else if (key === "memfreekb") memFreeKb = Number(a) || null;
 		else if (key === "diskfreekb") diskKb = Number(a) || null;
+		else if (key === "uname") uname = a;
+		else if (key === "shell" && a.trim()) shell = a.trim();
+		else if (key === "wsl") wsl = "inside";
+		else if (key === "gpu") gpuLines.push([a, b].filter(Boolean).join("\t"));
 	}
+	const os = parseUname(uname);
 	return {
 		where: "remote",
 		host,
+		...(os ? { platform: { ...os, shell, wsl, gpus: parseNvidiaSmi(gpuLines.join("\n")) } } : {}),
 		tools,
 		envManager,
 		condaEnvs: parseCondaEnvs(envLines.join("\n")),
@@ -225,19 +207,33 @@ export function parseRemoteProbe(host: string, output: string): BioEnvironment {
 }
 
 /** 给模型看的摘要：已装工具（含版本）、缺失工具、环境与资源 */
-export function formatEnvironment(env: BioEnvironment): string {
+export function formatEnvironment(
+	env: BioEnvironment,
+	registered: readonly RegisteredEnvSummary[] = [],
+): string {
 	const installed = Object.entries(env.tools).filter(([, version]) => version);
 	const missing = Object.entries(env.tools)
 		.filter(([, version]) => !version)
 		.map(([name]) => name);
 	return [
 		`Environment: ${env.where}${env.host ? ` (${env.host})` : ""}`,
+		...(env.platform ? [formatPlatform(env.platform)] : []),
 		`Resources: ${env.cpus ?? "?"} CPUs, ${env.memoryGb ?? "?"} GB RAM (${env.freeMemoryGb ?? "?"} GB free), ${env.freeDiskGb ?? "?"} GB free disk in the working directory`,
 		`Environment manager: ${env.envManager ?? "none"}${env.condaEnvs.length ? `; envs: ${env.condaEnvs.join(", ")}` : ""}`,
 		`Containers: ${env.containers.length ? env.containers.join(", ") : "none"}`,
 		`Installed tools: ${installed.length ? installed.map(([name, version]) => `${name} ${version}`).join(", ") : "none of the common bioinformatics tools"}`,
 		`Not found: ${missing.join(", ") || "-"}`,
-		...installHints(env),
+		...(registered.length
+			? [
+					`Registered analysis environments here (reuse before creating; verify with bio_env_registry): ${registered
+						.map(
+							(r) =>
+								`${r.name} [${Object.keys(r.tools).slice(0, 8).join(", ")}]${r.verifiedAt ? ` verified ${r.verifiedAt.slice(0, 10)}` : ""}`,
+						)
+						.join("; ")}`,
+				]
+			: []),
+		...installHints(env, registered),
 		"Record the versions you actually use (they belong in the run record and the Methods section).",
 	].join("\n");
 }
@@ -259,12 +255,32 @@ export function missingToolGroups(env: BioEnvironment) {
 		group.anyOf.some((alternatives) => !alternatives.some((t) => env.tools[t])),
 	);
 }
-export function installHints(env: BioEnvironment): string[] {
+/** Minimal view of a registry record (see env-registry.ts) to avoid a dependency cycle. */
+export interface RegisteredEnvSummary {
+	name: string;
+	manager: string;
+	tools: Record<string, string>;
+	verifiedAt?: string;
+}
+export function installHints(
+	env: BioEnvironment,
+	registered: readonly RegisteredEnvSummary[] = [],
+): string[] {
 	return missingToolGroups(env).map((group) => {
+		const reusable = registered.find((r) =>
+			group.anyOf.every((alternatives) => alternatives.some((tool) => toolKnown(r.tools, tool))),
+		);
+		if (reusable)
+			return `For ${group.label}: reuse the registered env "${reusable.name}" (run via \`${reusable.manager} run -n ${reusable.name} <tool>\`) after bio_env_registry verify; do not create a new one.`;
 		const manager = env.envManager ?? "mamba";
 		const command = `${manager} create -n ${group.id} -c conda-forge -c bioconda ${group.packages.join(" ")}`;
 		return env.envManager
 			? `Missing for ${group.label}: install into a dedicated env with \`${command}\` (needs the user's approval through task_plan), then run inside it; Python-only steps can use the skill's packages (e.g. ete4, biopython).`
 			: `Missing for ${group.label}: no conda/mamba found; propose installing Miniforge (mamba) and then \`${command}\`, or a container (bioconda images) — ask the user, do not stop silently.`;
 	});
+}
+
+function toolKnown(tools: Record<string, string>, tool: string): boolean {
+	const wanted = tool.toLowerCase();
+	return Object.keys(tools).some((name) => name.toLowerCase() === wanted);
 }
