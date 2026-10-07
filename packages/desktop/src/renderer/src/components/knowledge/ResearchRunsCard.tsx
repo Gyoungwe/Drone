@@ -1,15 +1,9 @@
 import type { ResearchRunDetail, ResearchRunListItem } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
+import { RoadmapLane, roadmapStatus } from "../route/Roadmap";
 import { useKnowledgeText } from "./copy";
 import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
-
-function stateTone(state: string): string {
-	if (state === "complete") return "border-ok/30 bg-ok/5 text-ok";
-	if (state === "active") return "border-accent/40 bg-accent/8 text-accent";
-	if (state === "blocked") return "border-err/30 bg-err/5 text-err";
-	return "border-border bg-hover text-ink-dim";
-}
 
 export function ResearchRunsCard({
 	cwd,
@@ -124,16 +118,16 @@ export function ResearchRunsCard({
 								</div>
 								<p className="mt-1 text-ink-dim">{selected.query}</p>
 							</div>
-							<div className="mt-3 flex gap-1 overflow-x-auto pb-1">
-								{selected.route.map((node) => (
-									<div
-										key={node.key}
-										className={`min-w-[92px] rounded-lg border px-2 py-2 ${stateTone(node.state)}`}
-									>
-										<p className="text-[11px] font-medium">{node.label}</p>
-										<p className="mt-1 text-[10px] opacity-80">{node.state}</p>
-									</div>
-								))}
+							<div className="mt-3">
+								<RoadmapLane
+									testId="research-route"
+									nodes={selected.route.map((node) => ({
+										key: node.key,
+										label: node.label,
+										status: roadmapStatus(node.state),
+										detail: node.state,
+									}))}
+								/>
 							</div>
 							<p className="mt-2 text-[11px] text-ink-dim">{t("researchRouteHint")}</p>
 							{selected.gaps && selected.gaps.length > 0 && (

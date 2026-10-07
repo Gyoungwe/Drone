@@ -423,3 +423,153 @@ export function turnRouteLines(route: TurnRoute, lang: "zh" | "en" = "zh"): Turn
 	].filter((line): line is string => Boolean(line));
 	return { summary: summaryOf(route, lang), lines };
 }
+
+export type TurnRouteStepStatus = "ok" | "active" | "warn" | "blocked" | "skip";
+export type TurnRouteStepKey = "request" | "capabilities" | "skill" | "stage" | "tools" | "result";
+export interface TurnRouteStep {
+	key: TurnRouteStepKey;
+	/** Short label shown on the roadmap node (one or two words). */
+	label: string;
+	/** Compact value under the label, already truncated. */
+	value: string;
+	status: TurnRouteStepStatus;
+	/** Full explanation shown on hover / click. */
+	detail: string;
+}
+
+function clip(text: string, max = 18): string {
+	return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+/**
+ * Structured roadmap of one turn: request → capabilities → primary skill → stage → tools → result.
+ * Each step carries a short label, a status colour and the full sentence as detail, so the card can
+ * stay one line by default and reveal the explanation only on demand.
+ */
+export function turnRouteSteps(route: TurnRoute, lang: "zh" | "en" = "zh"): TurnRouteStep[] {
+	const zh = lang === "zh";
+	const caps = route.capabilities.map((id) => capabilityLabel(id, lang));
+	const stage = stageLabel(route.stage, lang);
+	const direction = directionLabel(route.direction, lang);
+	const host = route.host;
+	const intake: Record<TurnIntake, string> = zh
+		? {
+				"new-topic": "新话题",
+				continuation: "接续",
+				"task-command": "任务指令",
+				"read-only": "只读",
+				status: "问进度",
+			}
+		: {
+				"new-topic": "New topic",
+				continuation: "Continue",
+				"task-command": "Task cmd",
+				"read-only": "Read-only",
+				status: "Status",
+			};
+	const skillStatus: TurnRouteStepStatus = route.primary
+		? route.visiblePrimary || route.landing !== "workflow"
+			? "ok"
+			: "warn"
+		: route.unavailableStage
+			? "warn"
+			: route.comparison
+				? "ok"
+				: "skip";
+	const gate = route.landing === "host-gate";
+	const toolsStatus: TurnRouteStepStatus = !host
+		? "skip"
+		: gate && (host.pendingReview || host.stageLimited)
+			? "blocked"
+			: host.calls > 0
+				? "active"
+				: "skip";
+	const resultStatus: TurnRouteStepStatus = gate
+		? "blocked"
+		: route.landing === "workflow" && !route.visiblePrimary
+			? "warn"
+			: "ok";
+	const resultValue: Record<TurnLanding, string> = zh
+		? { workflow: "按技能回答", "host-gate": "宿主门", ordinary: "普通回答", library: "只读复用" }
+		: { workflow: "Skill reply", "host-gate": "Host gate", ordinary: "Ordinary", library: "Read-only" };
+	return [
+		{
+			key: "request",
+			label: zh ? "请求" : "Request",
+			value: intake[route.intake],
+			status: "ok",
+			detail: intakeLine(route, lang),
+		},
+		{
+			key: "capabilities",
+			label: zh ? "能力" : "Capabilities",
+			value: caps.length ? clip(caps.join(zh ? "、" : ", ")) : zh ? "无" : "none",
+			status: caps.length ? "ok" : "skip",
+			detail: caps.length
+				? zh
+					? `打开的能力：${caps.join("、")}。${route.topics.length ? ` 话题：${route.topics.join("、")}。` : ""}`
+					: `Capabilities opened: ${caps.join(", ")}.${route.topics.length ? ` Topics: ${route.topics.join(", ")}.` : ""}`
+				: zh
+					? "没有新打开的能力。"
+					: "No extra capability was opened.",
+		},
+		{
+			key: "skill",
+			label: zh ? "主技能" : "Skill",
+			value: route.primary
+				? clip(route.primary)
+				: route.comparison
+					? zh
+						? "对照"
+						: "compare"
+					: zh
+						? "无"
+						: "none",
+			status: skillStatus,
+			detail: skillLine(route, lang),
+		},
+		{
+			key: "stage",
+			label: zh ? "阶段" : "Stage",
+			value: stage ? clip(stage) : direction ? clip(direction) : zh ? "无" : "none",
+			status: stage || direction ? (route.unavailableStage ? "warn" : "ok") : "skip",
+			detail: [
+				direction || stage
+					? zh
+						? `方向：${direction ?? "没有方向"}。阶段：${stage ?? "没有阶段"}。`
+						: `Direction: ${direction ?? "none"}. Stage: ${stage ?? "none"}.`
+					: zh
+						? "没有落到具体的研究方向或阶段。"
+						: "No research direction or stage was selected.",
+				contractLine(route, lang),
+			]
+				.filter(Boolean)
+				.join(" "),
+		},
+		{
+			key: "tools",
+			label: zh ? "工具" : "Tools",
+			value: host
+				? zh
+					? `${host.stageCalls}/${host.calls} 步`
+					: `${host.stageCalls}/${host.calls} calls`
+				: "—",
+			status: toolsStatus,
+			detail: host
+				? hostLines(route, lang).join(" ") ||
+					(zh
+						? `本段 ${host.stageCalls} 步，共 ${host.calls} 步。`
+						: `${host.stageCalls} calls this stage, ${host.calls} total.`)
+				: zh
+					? "这一轮没有宿主执行记录。"
+					: "No host execution record for this turn.",
+		},
+		{
+			key: "result",
+			label: zh ? "结果" : "Result",
+			value: resultValue[route.landing],
+			status: resultStatus,
+			detail: landingLine(route, lang),
+		},
+	];
+}
