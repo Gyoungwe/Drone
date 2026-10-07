@@ -117,7 +117,7 @@ packages/
 
 ## packages/research — 研究来源领域包（迁移中）
 
-`@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`run-summary.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。`run-provenance.ts` 另提供 `readMethodsFacts` / `saveMethodsSection`：扩展工具 `research_methods`（`extensions/src/source-archive.ts`）先取运行记录事实（输入/输出/脚本哈希、声明的版本与参数、执行回执计数、缺口），模型据此起草 Methods，`save` 经 `ctx.ui.select` 让用户确认后才原子写入 `<run>/METHODS.md`。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。 `research-run-ui.ts` 只投影公开的运行元数据、路线、来源、结构化主张和覆盖率，桌面端嵌入现有 KnowledgePanel，不新增顶层页面。
+`@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`run-summary.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。`run-provenance.ts` 另提供 `readMethodsFacts` / `saveMethodsSection`：扩展工具 `research_methods`（`extensions/src/source-archive.ts`）先取运行记录事实（输入/输出/脚本哈希、声明的版本与参数、执行回执计数、缺口），模型据此起草 Methods，`save` 经 `ctx.ui.select` 让用户确认后才原子写入 `<run>/METHODS.md`。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。 `research-run-ui.ts` 投影公开的运行元数据、实际事件路线、来源完整性、结构化主张、证据缺口和复现状态；桌面端嵌入现有 KnowledgePanel，不新增顶层页面。设计约束和验收标准见 `docs/research-workbench-v2.md`。
 
 ## packages/compute — 远程计算与工作流领域包（B1–B3 / B5c / B7）
 

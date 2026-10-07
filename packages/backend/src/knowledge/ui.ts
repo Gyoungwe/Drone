@@ -171,7 +171,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		const cwd = input?.cwd || process.cwd();
 		const config = await this.workspaceConfig(cwd);
 		const mod = await this.researchModule("research-run-ui");
-		return mod.getResearchRun({ ...input, resultsRoot: config.resultsRoot });
+		return mod.getResearchRun({ ...input, resultsRoot: config.resultsRoot, vaultRoot: config.obsidianVault });
 	}
 	setupPreview(
 		input: Parameters<KnowledgeApi["previewKnowledgeSetup"]>[0],

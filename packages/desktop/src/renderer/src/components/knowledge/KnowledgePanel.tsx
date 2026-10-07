@@ -124,7 +124,7 @@ export function KnowledgePanel({
 			)}
 			{tab === "overview" && (
 				<div className="space-y-4">
-					<ResearchRunsCard cwd={cwd} project={data?.project || null} />
+					<ResearchRunsCard cwd={cwd} project={data?.project || null} revision={binding?.revision || 0} />
 					{data && !data.enabled && (
 						<p className="rounded-lg bg-hover p-3 text-xs text-warn">{t("disabled")}</p>
 					)}

@@ -379,7 +379,7 @@ describe("worker-owned hybrid retrieval", () => {
 						project: "project-a",
 					})
 				).hits,
-				).toEqual([]);
+			).toEqual([]);
 			await writeFile(join(vault, "Library/Papers/current.md"), "# Changed\nreplacement");
 			await service.request("changed", { paths: ["Library/Papers/current.md"] });
 			expect(
@@ -388,7 +388,7 @@ describe("worker-owned hybrid retrieval", () => {
 					project: "project-a",
 					vector: [1, 0],
 				}),
-				).toMatchObject({ items: [] });
+			).toMatchObject({ items: [] });
 		} finally {
 			await service.close();
 		}

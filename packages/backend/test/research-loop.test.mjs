@@ -549,7 +549,7 @@ it("extension captures tool events before start, returns current state, and igno
 		);
 		runDir = start.details.run_dir;
 		expect(start.details.evidence_gate.reuse_count).toBe(1);
-	const done = await tool.execute(
+		const done = await tool.execute(
 			"complete",
 			{ action: "complete", run_dir: runDir, claim_bindings: [binding(p)] },
 			null,
