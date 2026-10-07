@@ -5,6 +5,9 @@ import { useKnowledgeStore } from "../../stores/knowledge";
 import { useKnowledgeText } from "./copy";
 import { GRAPH_HEIGHT as HEIGHT, layoutGraph, type Point, GRAPH_WIDTH as WIDTH } from "./graph-layout";
 import { openKnowledgeNote } from "./KnowledgeLinks";
+import { KnowledgeNebula, supportsWebGL } from "./KnowledgeNebula";
+
+const GRAPH_LIMIT = 400;
 
 /** 知识网络：笔记与 [[双链]] 组成的图；点节点打开笔记，悬停高亮其邻居 */
 export function KnowledgeGraph({
@@ -22,11 +25,12 @@ export function KnowledgeGraph({
 	const [data, setData] = useState<GraphData | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [hover, setHover] = useState<string | null>(null);
+	const [webgl] = useState(supportsWebGL);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: nonce 与 indexKey 是知识库 / 索引变化后的刷新信号
 	useEffect(() => {
 		let live = true;
 		void getPi()
-			.getKnowledgeGraph({ revision, limit: 200 })
+			.getKnowledgeGraph({ revision, limit: GRAPH_LIMIT })
 			.then(
 				(value) => {
 					if (live) setData(value);
@@ -53,6 +57,27 @@ export function KnowledgeGraph({
 	if (error) return <p className="text-[11px] text-err">{error}</p>;
 	if (!data) return <p className="text-[11px] text-ink-faint">{t("loading")}</p>;
 	if (data.nodes.length === 0) return <p className="text-[11px] text-ink-faint">{t("graphEmpty")}</p>;
+	const summary = (
+		<p className="mb-1 text-[11px] text-ink-faint">
+			{t("graphSummary")
+				.replace("{nodes}", String(data.nodes.length))
+				.replace("{edges}", String(data.edges.length))
+				.replace("{total}", String(data.totalNotes))
+				.replace("{limit}", String(GRAPH_LIMIT))}
+		</p>
+	);
+	if (webgl)
+		return (
+			<div data-testid="knowledge-graph">
+				{summary}
+				<KnowledgeNebula
+					data={data}
+					onOpen={(path) => openKnowledgeNote(cwd, path, revision)}
+					labels={{ reset: t("graphReset"), relayout: t("graphRelayout") }}
+				/>
+				<p className="mt-1 text-[11px] text-ink-faint">{t("graphNebulaHint")}</p>
+			</div>
+		);
 	const active = hover ? new Set([hover, ...(neighbours.get(hover) ?? [])]) : null;
 	const labelled = new Set(
 		[...data.nodes]
@@ -62,12 +87,7 @@ export function KnowledgeGraph({
 	);
 	return (
 		<div data-testid="knowledge-graph">
-			<p className="mb-1 text-[11px] text-ink-faint">
-				{t("graphSummary")
-					.replace("{nodes}", String(data.nodes.length))
-					.replace("{edges}", String(data.edges.length))
-					.replace("{total}", String(data.totalNotes))}
-			</p>
+			{summary}
 			<svg
 				viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
 				className="h-auto w-full rounded-xl border border-border bg-hover/40"
