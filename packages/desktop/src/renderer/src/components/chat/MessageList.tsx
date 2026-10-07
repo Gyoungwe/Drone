@@ -235,14 +235,10 @@ export function MessageList() {
 
 	return (
 		<div className="relative h-full">
-			{/* 中央状态动画：z-20 在文字层（z-10 滚动容器）之上——canvas 一体遮罩压住身后文字、
-			    凸显动画本体（用户规格：工作中不看文字）；pointer-events-none 不拦截交互 */}
-			{centerOrbEnabled && <CenterOrb visible={shownWorking} />}
 			{/* overflow-x-hidden：任何行内容异常超宽都只裁剪，不产生页面级横向滚动条 */}
 			{/* scrollbar-gutter:stable：永久保留滚动条槽位——展开折叠组跨过溢出阈值时滚动条出现/消失
 			    会挤掉布局宽度，导致居中列（mx-auto max-w-760）整体左右横移；悬浮滚动条模式下无副作用 */}
-			{/* relative z-10：无背景；CenterOrb（z-20）连同其 canvas 遮罩盖在本层之上（工作中场景），
-			    交互不受影响（orb 整层 pointer-events-none） */}
+			{/* relative z-10：无背景；放大状态动画（CenterOrb）在内容列末尾的流内占位，不再覆盖在本层之上 */}
 			<div
 				ref={scrollRef}
 				onScroll={handleScroll}
@@ -251,6 +247,9 @@ export function MessageList() {
 			>
 				<div ref={contentRef} className="mx-auto flex max-w-[760px] flex-col gap-4 px-4 pt-5 pb-10">
 					{items}
+					{/* 放大状态动画：内容列末尾（最新消息 / Thinking 行下方）的独立块，不覆盖任何文字；
+					    原 absolute inset-0 z-20 覆盖整个滚动区正中，会压在历史消息上 */}
+					{centerOrbEnabled && <CenterOrb visible={shownWorking} />}
 					{transcript.retrying && <RetryNote info={transcript.retrying} />}
 					{transcript.modelWait && activeSessionId && (
 						<ModelWaitNote key={activeSessionId} info={transcript.modelWait} sessionId={activeSessionId} />
