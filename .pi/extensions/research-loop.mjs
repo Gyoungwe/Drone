@@ -1,8 +1,150 @@
 // @ts-nocheck
+// packages/knowledge/src/project-identity.ts
+import { readFile as readFile2 } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join as join2, resolve as resolve2 } from "node:path";
+
+// packages/knowledge/src/config.ts
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
+import { basename, isAbsolute, join, resolve } from "node:path";
+function createKnowledgeConfigState() {
+  return { local: new AsyncLocalStorage(), queues: /* @__PURE__ */ new Map() };
+}
+function errorCode(error) {
+  return error && typeof error === "object" && "code" in error ? error.code : void 0;
+}
+function knowledgeDirectory() {
+  const value = process.env.DRONE_KNOWLEDGE_DIR;
+  if (!value) return null;
+  if (!isAbsolute(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
+  return resolve(value);
+}
+function projectIdentity(cwd, configured) {
+  if (typeof configured === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured)) return configured;
+  const path = resolve(cwd);
+  const stem = basename(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
+  return `${stem}-${createHash("sha256").update(path).digest("hex").slice(0, 10)}`;
+}
+function validateBinding(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
+    throw new Error("Invalid application knowledge binding; no project fallback was used");
+}
+async function readKnowledgeBindingWithState(state, { fresh = false } = {}) {
+  if (!fresh && state.local.getStore()) return state.local.getStore() ?? null;
+  const directory = knowledgeDirectory();
+  if (!directory) return null;
+  let value;
+  try {
+    value = JSON.parse((await readFile(join(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return null;
+    throw new Error(
+      `Knowledge binding cannot be read: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+  validateBinding(value);
+  return value;
+}
+async function readKnowledgeBinding(options = {}) {
+  return readKnowledgeBindingWithState(defaultState, options);
+}
+var defaultState = createKnowledgeConfigState();
+
+// packages/knowledge/src/project-identity.ts
+var SESSION_PROJECT_ENTRY = "drone-session-project-v1";
+var SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+var RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
+function isProjectSlug(value) {
+  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED.test(value);
+}
+function normalizeProjectSlug(input) {
+  if (typeof input !== "string") return null;
+  const slug = input.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96).replace(/-+$/g, "");
+  return isProjectSlug(slug) ? slug : null;
+}
+function workspaceProjectId(cwd, configured) {
+  return projectIdentity(cwd, isProjectSlug(configured) ? configured : void 0);
+}
+function dailyWorkspaceDir(home = homedir()) {
+  return join2(home, ".drone", "daily");
+}
+function samePath(a, b) {
+  const left = resolve2(a).replace(/[\\/]+$/, "");
+  const right = resolve2(b).replace(/[\\/]+$/, "");
+  return process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+function isDailyWorkspace(cwd, home) {
+  return samePath(cwd, dailyWorkspaceDir(home));
+}
+function sessionProjectFromEntries(entries) {
+  if (!Array.isArray(entries)) return null;
+  let project = null;
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || entry.customType !== SESSION_PROJECT_ENTRY) continue;
+    if (entry.type !== void 0 && entry.type !== "custom") continue;
+    const value = entry.data?.project;
+    if (value === null) project = null;
+    else if (isProjectSlug(value)) project = value;
+  }
+  return project;
+}
+function sessionEntriesOf(ctx) {
+  try {
+    const manager = ctx?.sessionManager;
+    const entries = manager?.getBranch?.() ?? manager?.getEntries?.();
+    return Array.isArray(entries) ? entries : [];
+  } catch {
+    return [];
+  }
+}
+function resolveProjectIdentity(input) {
+  const daily = isDailyWorkspace(input.cwd, input.home);
+  const requestedText = typeof input.requested === "string" ? input.requested.trim() : "";
+  const requested = requestedText || null;
+  let project;
+  let source;
+  const session = daily ? sessionProjectFromEntries(input.sessionEntries) : null;
+  if (session) {
+    project = session;
+    source = "session";
+  } else if (isProjectSlug(input.configured)) {
+    project = input.configured;
+    source = "workspace-config";
+  } else {
+    project = workspaceProjectId(input.cwd);
+    source = "workspace";
+  }
+  const ignoredRequest = requested !== null && normalizeProjectSlug(requested) !== project;
+  return { project, source, daily, requested, ignoredRequest };
+}
+async function readConfiguredProject(cwd) {
+  try {
+    const parsed = JSON.parse(await readFile2(join2(cwd, ".pi", "research-workspace.json"), "utf8"));
+    if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
+      return parsed.knowledgeProjectId;
+  } catch {
+  }
+  return void 0;
+}
+async function resolveWorkspaceProject(input) {
+  return resolveProjectIdentity({ ...input, configured: await readConfiguredProject(input.cwd) });
+}
+function projectNotice(resolution) {
+  if (!resolution.ignoredRequest) return null;
+  const how = resolution.daily ? "In the daily space the user picks a project per session with /project <slug>." : "The project is fixed by the current workspace (knowledgeProjectId in .pi/research-workspace.json).";
+  return `Requested project "${resolution.requested}" was ignored; using "${resolution.project}". ${how}`;
+}
+function describeProject(resolution) {
+  const notice = projectNotice(resolution);
+  return { project: resolution.project, source: resolution.source, ...notice ? { notice } : {} };
+}
+
 // packages/research/src/literature-receipt.ts
-import { createHash } from "node:crypto";
-import { readFile, realpath, stat } from "node:fs/promises";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { createHash as createHash2 } from "node:crypto";
+import { readFile as readFile3, realpath as realpath2, stat } from "node:fs/promises";
+import { isAbsolute as isAbsolute2, relative, resolve as resolve3, sep } from "node:path";
 function normalizeDoi(value) {
   const doi = String(value || "").trim().replace(/^(?:https?:\/\/(?:dx\.)?doi\.org\/|doi:\s*)/i, "").toLowerCase();
   return /^10\.\d{4,9}\/\S+$/.test(doi) ? doi : null;
@@ -66,20 +208,20 @@ async function verifyLiteratureReceipt({
     const notePath = String(note_path || "");
     if (!vault || !/^(?:Library)\/Papers\/.+\.md$/.test(notePath) || notePath.split("/").includes("..") || notePath.includes("\\"))
       throw new Error("invalid-note-path");
-    const root = await realpath(String(vault));
+    const root = await realpath2(String(vault));
     vaultResolved = true;
-    const file = await realpath(resolve(root, notePath));
+    const file = await realpath2(resolve3(root, notePath));
     const rel = relative(root, file);
-    if (isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`)) throw new Error("outside-vault");
+    if (isAbsolute2(rel) || rel === ".." || rel.startsWith(`..${sep}`)) throw new Error("outside-vault");
     if ((await stat(file)).size > 1024 * 1024) throw new Error("note-too-large");
-    const text2 = await readFile(file, "utf8");
+    const text2 = await readFile3(file, "utf8");
     const linked = text2.includes(`zotero:${zoteroKey}`) || new RegExp(`zotero://select/library/items/${zoteroKey}(?=[)\\s<>]|$)`).test(text2) || new RegExp(`^zotero_key: *["']?${zoteroKey}["']? *$`, "m").test(text2);
     const dois = text2.match(/10\.\d{4,9}\/[^\s<>"'\])]+/gi) || [];
     receipt.obsidian = {
       status: linked && dois.some((item) => normalizeDoi(item.replace(/[.,;]+$/, "")) === normalizedDoi) ? "verified" : "identity-mismatch",
       path: notePath,
       vault: root,
-      hash: createHash("sha256").update(text2).digest("hex")
+      hash: createHash2("sha256").update(text2).digest("hex")
     };
   } catch (error) {
     if (vaultResolved && error instanceof Error && "code" in error && error.code === "ENOENT") {
@@ -92,10 +234,10 @@ async function verifyLiteratureReceipt({
 }
 
 // packages/research/src/receipt-journal.ts
-import { realpath as realpath2 } from "node:fs/promises";
+import { realpath as realpath3 } from "node:fs/promises";
 
 // packages/research/src/receipt-journal-policy.ts
-import { resolve as resolve2 } from "node:path";
+import { resolve as resolve4 } from "node:path";
 var CORE_RESEARCH_RECEIPT_TOOLS = [
   "bash",
   "powershell",
@@ -157,7 +299,7 @@ var ReceiptJournalBuffer = class {
 };
 function receiptBelongsToRun(receipt, cwd, runDir) {
   const ownedRun = receipt.args?.run_dir || receipt.details?.run_dir;
-  return !ownedRun || resolve2(cwd, String(ownedRun)) === resolve2(cwd, runDir);
+  return !ownedRun || resolve4(cwd, String(ownedRun)) === resolve4(cwd, runDir);
 }
 
 // packages/research/src/receipt-journal.ts
@@ -200,7 +342,7 @@ function createResearchReceiptJournal(cwd, { sessionId = null, ports }) {
     record(event) {
       if (!active || !shouldRecordResearchReceipt(event, ports.isJournalTool)) return Promise.resolve(null);
       const snapshot = event.toolName === "research_read_knowledge" ? ports.workspace(cwd).then(async (config) => ({
-        vault: config.obsidianVault ? await realpath2(config.obsidianVault) : null,
+        vault: config.obsidianVault ? await realpath3(config.obsidianVault) : null,
         revision: config.knowledgeBindingRevision || 0
       })).catch(() => ({ vault: null, revision: -1 })) : Promise.resolve(void 0);
       const receipt = {
@@ -249,9 +391,9 @@ function createResearchReceiptJournal(cwd, { sessionId = null, ports }) {
 }
 
 // packages/research/src/research-loop.ts
-import { createHash as createHash2, randomUUID } from "node:crypto";
-import { access, mkdir, readFile as readFile2, realpath as realpath3, rename, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute as isAbsolute2, join, relative as relative2, resolve as resolve3, sep as sep2 } from "node:path";
+import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
+import { access, mkdir as mkdir2, readFile as readFile4, realpath as realpath4, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
+import { dirname, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve as resolve5, sep as sep2 } from "node:path";
 
 // packages/research/src/claim-bindings.ts
 var RELATIONSHIPS = ["direct", "indirect", "hypothesis", "unsupported"];
@@ -380,7 +522,7 @@ function createResearchLoop(ports) {
       this.receiptQueues.clear();
     }
   };
-  const runKey = (cwd, runDir) => resolve3(cwd, runDir);
+  const runKey = (cwd, runDir) => resolve5(cwd, runDir);
   function ledger(cwd, runDir) {
     const key = runKey(cwd, runDir);
     if (!runtimeState.receiptLedger.has(key)) {
@@ -399,7 +541,7 @@ function createResearchLoop(ports) {
   async function reusableSources(cwd, runDir) {
     const config = await loadWorkspaceConfig2(cwd);
     if (!config.obsidianVault) return [];
-    const root = await realpath3(config.obsidianVault);
+    const root = await realpath4(config.obsidianVault);
     const state = ledger(cwd, runDir), result = [];
     for (const [path, proof] of state.verified) {
       const read = state.reads.get(path);
@@ -469,23 +611,23 @@ function createResearchLoop(ports) {
     return stable || slug;
   }
   function within2(root, target) {
-    const rel = relative2(resolve3(root), resolve3(target));
-    return rel === "" || !isAbsolute2(rel) && rel !== ".." && !rel.startsWith(`..${sep2}`);
+    const rel = relative2(resolve5(root), resolve5(target));
+    return rel === "" || !isAbsolute3(rel) && rel !== ".." && !rel.startsWith(`..${sep2}`);
   }
   function fileHash(bytes) {
-    return createHash2("sha256").update(bytes).digest("hex");
+    return createHash3("sha256").update(bytes).digest("hex");
   }
   async function archivedSourceRecords(cwd, runDir) {
-    const archive = await sourceStatus2({ cwd, run_dir: resolve3(cwd, runDir) });
+    const archive = await sourceStatus2({ cwd, run_dir: resolve5(cwd, runDir) });
     const records = [];
     for (const item of archive.manifest?.items || []) {
       if (item.status !== "downloaded" || !item.path || !item.sha256) continue;
-      const absolute = resolve3(cwd, item.path);
-      if (!within2(join(resolve3(cwd, runDir), "sources"), absolute)) continue;
+      const absolute = resolve5(cwd, item.path);
+      if (!within2(join3(resolve5(cwd, runDir), "sources"), absolute)) continue;
       try {
-        if (!within2(await realpath3(join(resolve3(cwd, runDir), "sources")), await realpath3(absolute)))
+        if (!within2(await realpath4(join3(resolve5(cwd, runDir), "sources")), await realpath4(absolute)))
           continue;
-        if (fileHash(await readFile2(absolute)) !== item.sha256) continue;
+        if (fileHash(await readFile4(absolute)) !== item.sha256) continue;
       } catch {
         continue;
       }
@@ -493,7 +635,7 @@ function createResearchLoop(ports) {
         String(item.path),
         absolute,
         relative2(cwd, absolute),
-        relative2(resolve3(cwd, runDir), absolute)
+        relative2(resolve5(cwd, runDir), absolute)
       ]);
       for (const path of aliases)
         records.push({
@@ -506,14 +648,14 @@ function createResearchLoop(ports) {
     return records;
   }
   async function recordArchivedRead(cwd, runDir, path, args, details, content) {
-    const absolute = resolve3(cwd, path);
-    const sourcesRoot = join(resolve3(cwd, runDir), "sources");
+    const absolute = resolve5(cwd, path);
+    const sourcesRoot = join3(resolve5(cwd, runDir), "sources");
     if (!within2(sourcesRoot, absolute)) return false;
-    if (!within2(await realpath3(sourcesRoot), await realpath3(absolute))) return false;
+    if (!within2(await realpath4(sourcesRoot), await realpath4(absolute))) return false;
     if (details.truncation?.firstLineExceedsLimit) return false;
     const returned = details.truncation?.content ?? content?.find((part) => part.type === "text")?.text;
     if (typeof returned !== "string" || !returned.trim()) return false;
-    const bytes = await readFile2(absolute);
+    const bytes = await readFile4(absolute);
     const sourceText = bytes.toString("utf8");
     if (sourceText.includes("\0") || sourceText.startsWith("%PDF-")) return false;
     const startLine = Number.isInteger(args.offset) && args.offset > 0 ? args.offset : 1;
@@ -532,23 +674,23 @@ function createResearchLoop(ports) {
       String(path),
       absolute,
       relative2(cwd, absolute),
-      relative2(resolve3(cwd, runDir), absolute)
+      relative2(resolve5(cwd, runDir), absolute)
     ]);
     for (const alias of aliases) ledger(cwd, runDir).reads.set(alias, read);
     return true;
   }
   async function readJson(path) {
-    const value = JSON.parse(await readFile2(path, "utf8"));
+    const value = JSON.parse(await readFile4(path, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new Error(`Invalid JSON object: ${path}`);
     return value;
   }
   async function atomicJson(path, value) {
-    await mkdir(dirname(path), { recursive: true });
-    const temp = `${path}.${randomUUID()}.tmp`;
-    await writeFile(temp, `${JSON.stringify(value, null, 2)}
+    await mkdir2(dirname(path), { recursive: true });
+    const temp = `${path}.${randomUUID2()}.tmp`;
+    await writeFile2(temp, `${JSON.stringify(value, null, 2)}
 `, "utf8");
-    await rename(temp, path);
+    await rename2(temp, path);
   }
   function gateOf(metadata) {
     const gate = metadata.evidence_gate && typeof metadata.evidence_gate === "object" ? metadata.evidence_gate : {};
@@ -601,14 +743,14 @@ function createResearchLoop(ports) {
   async function resolveRun(cwd, runDir) {
     const config = await loadWorkspaceConfig2(cwd);
     if (!runDir) throw new Error("run_dir is required for this action");
-    const path = resolve3(cwd, runDir);
+    const path = resolve5(cwd, runDir);
     if (!within2(config.resultsRoot, path))
       throw new Error("run_dir must stay inside the configured results root");
     const rel = relative2(config.resultsRoot, path).split(sep2);
     if (rel.length !== 2 || !rel[1]?.startsWith("run-"))
       throw new Error("run_dir must be directly inside a result slug");
-    await access(join(path, "metadata.json"));
-    return { config, path, metadataPath: join(path, "metadata.json") };
+    await access(join3(path, "metadata.json"));
+    return { config, path, metadataPath: join3(path, "metadata.json") };
   }
   async function startResearchRun({
     cwd = process.cwd(),
@@ -618,12 +760,12 @@ function createResearchLoop(ports) {
     requiresProvenance = false
   } = {}) {
     const config = await loadWorkspaceConfig2(cwd);
-    project = safeSlug(project || "research-workbench", "project");
+    project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
     resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
     if (typeof query !== "string" || !query.trim()) throw new Error("query is required");
     const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-    const runId = `run-${stamp}-${randomUUID().slice(0, 8)}`;
-    const runDir = join(config.resultsRoot, resultSlug, runId);
+    const runId = `run-${stamp}-${randomUUID2().slice(0, 8)}`;
+    const runDir = join3(config.resultsRoot, resultSlug, runId);
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const metadata = {
       run_id: runId,
@@ -647,8 +789,8 @@ function createResearchLoop(ports) {
       research_nodes: researchNodes({ stage: "created", answerable: false, events: [{ type: "created" }] }),
       provenance: provenanceFor({ source_refs: [], claim_bindings: [] })
     };
-    await mkdir(runDir, { recursive: true });
-    await atomicJson(join(runDir, "metadata.json"), metadata);
+    await mkdir2(runDir, { recursive: true });
+    await atomicJson(join3(runDir, "metadata.json"), metadata);
     return { run_dir: runDir, metadata };
   }
   async function updateResearchLoopUnlocked({
@@ -757,7 +899,7 @@ function createResearchLoop(ports) {
       if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
         throw new Error("archive verification and structured claim bindings are required before answerable");
       if (metadata.requires_provenance === true) {
-        const provenance = await readJson(join(path, "reproducibility-manifest.json"));
+        const provenance = await readJson(join3(path, "reproducibility-manifest.json"));
         if (!provenance || provenance.version !== 1)
           throw new Error("This run requires a reproducibility manifest before it can become answerable");
       }
@@ -908,7 +1050,7 @@ function createResearchLoop(ports) {
             ledger(cwd, runDir).reads.set(path, {
               hash: details.hash,
               text: details.text,
-              vault: readBinding ? readBinding.vault : await realpath3(config.obsidianVault),
+              vault: readBinding ? readBinding.vault : await realpath4(config.obsidianVault),
               revision: readBinding ? readBinding.revision : config.knowledgeBindingRevision || 0,
               startLine: details.startLine,
               endLine: details.endLine
@@ -1000,27 +1142,27 @@ function createResearchLoop(ports) {
 }
 
 // packages/research/src/run-provenance.ts
-import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
-import { lstat, readFile as readFile3, realpath as realpath4, rename as rename2, stat as stat2, writeFile as writeFile2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute3, join as join2, relative as relative3, resolve as resolve4, sep as sep3 } from "node:path";
+import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
+import { lstat, readFile as readFile5, realpath as realpath5, rename as rename3, stat as stat2, writeFile as writeFile3 } from "node:fs/promises";
+import { isAbsolute as isAbsolute4, join as join4, relative as relative3, resolve as resolve6, sep as sep3 } from "node:path";
 var queues = /* @__PURE__ */ new Map();
-var digest = (value) => createHash3("sha256").update(value).digest("hex");
+var digest = (value) => createHash4("sha256").update(value).digest("hex");
 var defaultWorkspaceConfig = async (cwd) => ({
-  resultsRoot: resolve4(cwd, "results")
+  resultsRoot: resolve6(cwd, "results")
 });
 function within(root, path) {
   const rel = relative3(root, path);
-  return rel !== ".." && !rel.startsWith(`..${sep3}`) && !isAbsolute3(rel);
+  return rel !== ".." && !rel.startsWith(`..${sep3}`) && !isAbsolute4(rel);
 }
 async function runPath(cwd, runDir, loadConfig) {
   const config = await loadConfig(cwd);
-  const root = await realpath4(config.resultsRoot);
-  const run = await realpath4(resolve4(cwd, runDir || ""));
+  const root = await realpath5(config.resultsRoot);
+  const run = await realpath5(resolve6(cwd, runDir || ""));
   const parts = relative3(root, run).split(sep3);
   if (!within(root, run) || parts.length !== 2 || !parts[1]?.startsWith("run-")) {
     throw new Error("Expected existing run inside results root");
   }
-  await readFile3(join2(run, "metadata.json"), "utf8");
+  await readFile5(join4(run, "metadata.json"), "utf8");
   return run;
 }
 async function readObservations(path) {
@@ -1029,7 +1171,7 @@ async function readObservations(path) {
     if (!info.isFile() || info.isSymbolicLink() || info.size > 2 * 1024 * 1024) {
       throw new Error("Invalid observation file");
     }
-    const data = JSON.parse(await readFile3(path, "utf8"));
+    const data = JSON.parse(await readFile5(path, "utf8"));
     if (data.version !== 1 || !Array.isArray(data.records) || data.records.length > 256 || data.records.some(
       (record) => !record || typeof record.toolCallId !== "string"
     )) {
@@ -1042,9 +1184,9 @@ async function readObservations(path) {
   }
 }
 async function atomic(path, value) {
-  const temp = `${path}.${randomUUID2()}.tmp`;
-  await writeFile2(temp, JSON.stringify(value, null, 2));
-  await rename2(temp, path);
+  const temp = `${path}.${randomUUID3()}.tmp`;
+  await writeFile3(temp, JSON.stringify(value, null, 2));
+  await rename3(temp, path);
 }
 function isNodeError(error, code) {
   return Boolean(error && typeof error === "object" && "code" in error && error.code === code);
@@ -1063,7 +1205,7 @@ async function observeExecutionReceipt({
 }) {
   if (!["bash", "powershell"].includes(toolName) || !toolCallId) return null;
   const run = await runPath(cwd, runDir, loadWorkspaceConfig2);
-  const file = join2(run, "execution-observations.json");
+  const file = join4(run, "execution-observations.json");
   const work = (queues.get(file) || Promise.resolve()).catch(() => {
   }).then(async () => {
     let records = [];
@@ -1099,9 +1241,9 @@ async function observeExecutionReceipt({
 }
 
 // packages/research/src/source-archive.ts
-import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
-import { access as access2, mkdir as mkdir2, readFile as readFile4, realpath as realpath5, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
-import { basename as basename2, dirname as dirname2, extname, isAbsolute as isAbsolute5, join as join3, relative as relative5, resolve as resolve6, sep as sep5 } from "node:path";
+import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
+import { access as access2, mkdir as mkdir3, readFile as readFile6, realpath as realpath6, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
+import { basename as basename3, dirname as dirname2, extname, isAbsolute as isAbsolute6, join as join5, relative as relative5, resolve as resolve8, sep as sep5 } from "node:path";
 
 // packages/research/src/open-access.ts
 var OA_SOURCES = Object.freeze([
@@ -1114,16 +1256,16 @@ var OA_SOURCES = Object.freeze([
 ]);
 
 // packages/research/src/source-archive-policy.ts
-import { basename, isAbsolute as isAbsolute4, relative as relative4, resolve as resolve5, sep as sep4 } from "node:path";
+import { basename as basename2, isAbsolute as isAbsolute5, relative as relative4, resolve as resolve7, sep as sep4 } from "node:path";
 var SOURCE_CATEGORIES = ["papers", "supplementary", "software", "manuals"];
 var DEFAULT_MAX_BYTES = 50 * 1024 * 1024;
 function isWithin(root, child) {
-  const rel = relative4(resolve5(root), resolve5(child));
-  return rel === "" || !isAbsolute4(rel) && !rel.startsWith(`..${sep4}`) && rel !== ".." && !rel.includes(`..${sep4}`);
+  const rel = relative4(resolve7(root), resolve7(child));
+  return rel === "" || !isAbsolute5(rel) && !rel.startsWith(`..${sep4}`) && rel !== ".." && !rel.includes(`..${sep4}`);
 }
 function validateRunDir(resultsRoot, candidate) {
-  const runDir = resolve5(candidate);
-  const rel = relative4(resolve5(resultsRoot), runDir);
+  const runDir = resolve7(candidate);
+  const rel = relative4(resolve7(resultsRoot), runDir);
   const parts = rel.split(sep4);
   if (!rel || !isWithin(resultsRoot, runDir) || parts.length !== 2 || !parts[1]?.startsWith("run-"))
     throw new Error("run_dir must point to a run directory directly inside the configured results root");
@@ -1133,7 +1275,7 @@ function validateRunDir(resultsRoot, candidate) {
 // packages/research/src/source-archive.ts
 async function readManifest(file, runDir) {
   try {
-    const parsed = JSON.parse(await readFile4(file, "utf8"));
+    const parsed = JSON.parse(await readFile6(file, "utf8"));
     if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.items))
       throw new Error("invalid manifest");
     return parsed;
@@ -1147,7 +1289,7 @@ async function verifyManifestItems(manifest, runDir) {
   if (downloaded.length === 0) return { ok: true, items: [] };
   let sourcesRoot;
   try {
-    sourcesRoot = await realpath5(join3(runDir, "sources"));
+    sourcesRoot = await realpath6(join5(runDir, "sources"));
   } catch {
     return {
       ok: false,
@@ -1167,10 +1309,10 @@ async function verifyManifestItems(manifest, runDir) {
       continue;
     }
     try {
-      const canonical = await realpath5(isAbsolute5(path) ? path : resolve6(runDir, path));
+      const canonical = await realpath6(isAbsolute6(path) ? path : resolve8(runDir, path));
       if (!isWithin(sourcesRoot, canonical)) throw new Error("path escapes run sources");
-      const bytes = await readFile4(canonical);
-      const sha256 = createHash4("sha256").update(bytes).digest("hex");
+      const bytes = await readFile6(canonical);
+      const sha256 = createHash5("sha256").update(bytes).digest("hex");
       if (sha256 !== String(item.sha256 || "").toLowerCase()) throw new Error("sha256 mismatch");
       if (item.size_bytes !== void 0 && Number(item.size_bytes) !== bytes.byteLength)
         throw new Error("size mismatch");
@@ -1185,14 +1327,14 @@ async function sourceStatus(options = {}, ports) {
   if (!ports) throw new Error("Source archive host ports are required");
   const { cwd = process.cwd(), run_dir } = options;
   const config = await ports.workspace(cwd);
-  const runDir = run_dir ? validateRunDir(config.resultsRoot, resolve6(cwd, run_dir)) : null;
+  const runDir = run_dir ? validateRunDir(config.resultsRoot, resolve8(cwd, run_dir)) : null;
   if (!runDir) return { results_root: config.resultsRoot, categories: SOURCE_CATEGORIES, run_dir: null };
-  const manifestPath = join3(runDir, "sources", "download-manifest.json");
-  const failuresPath = join3(runDir, "sources", "download-failures.md");
+  const manifestPath = join5(runDir, "sources", "download-manifest.json");
+  const failuresPath = join5(runDir, "sources", "download-failures.md");
   const manifest = await readManifest(manifestPath, runDir);
   let failures = "";
   try {
-    failures = await readFile4(failuresPath, "utf8");
+    failures = await readFile6(failuresPath, "utf8");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
@@ -1220,8 +1362,8 @@ function emitProcessEvent(event, ...args) {
 }
 
 // packages/tasks/src/runtime-compiled/runtime-bridge.mjs
-import { AsyncLocalStorage } from "node:async_hooks";
-var contexts = new AsyncLocalStorage();
+import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
+var contexts = new AsyncLocalStorage2();
 var installedRuntime = null;
 var standaloneRuntime = null;
 var runtimeBindings = /* @__PURE__ */ new WeakSet();
@@ -1233,8 +1375,8 @@ var KeyedScheduler = class {
     if (this.#disposed) throw new Error("Runtime scheduler has been disposed");
     const previous = this.#tails.get(key) || Promise.resolve();
     let unlock;
-    const gate = new Promise((resolve9) => {
-      unlock = resolve9;
+    const gate = new Promise((resolve10) => {
+      unlock = resolve10;
     });
     const tail = previous.then(() => gate);
     this.#tails.set(key, tail);
@@ -1540,11 +1682,11 @@ function registerTool(pi, definition) {
 }
 
 // packages/extensions/src/internal/runtime.ts
-import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
+import { AsyncLocalStorage as AsyncLocalStorage3 } from "node:async_hooks";
 var VERSION = 1;
 var RUNTIME_EVENT = "drone:runtime/v1";
 var RUNTIME_REQUEST_EVENT = "drone:runtime/request/v1";
-var contexts2 = new AsyncLocalStorage2();
+var contexts2 = new AsyncLocalStorage3();
 var hostRuntimes2 = /* @__PURE__ */ new WeakMap();
 var hostCleanups = /* @__PURE__ */ new WeakMap();
 var processRuntime;
@@ -1555,8 +1697,8 @@ var KeyedScheduler2 = class {
     if (this.disposed) throw new Error("Extension runtime scheduler has been disposed");
     const previous = this.tails.get(key) ?? Promise.resolve();
     let unlock;
-    const gate = new Promise((resolve9) => {
-      unlock = resolve9;
+    const gate = new Promise((resolve10) => {
+      unlock = resolve10;
     });
     const tail = previous.then(() => gate);
     this.tails.set(key, tail);
@@ -1643,56 +1785,8 @@ function standaloneRuntime2() {
 }
 
 // packages/extensions/src/workspace-config.ts
-import { access as access3, mkdir as mkdir4, readFile as readFile6, realpath as realpath7, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
-import { dirname as dirname3, isAbsolute as isAbsolute7, join as join5, relative as relative6, resolve as resolve8, sep as sep6 } from "node:path";
-
-// packages/knowledge/src/config.ts
-import { AsyncLocalStorage as AsyncLocalStorage3 } from "node:async_hooks";
-import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
-import { mkdir as mkdir3, readFile as readFile5, realpath as realpath6, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
-import { basename as basename3, isAbsolute as isAbsolute6, join as join4, resolve as resolve7 } from "node:path";
-function createKnowledgeConfigState() {
-  return { local: new AsyncLocalStorage3(), queues: /* @__PURE__ */ new Map() };
-}
-function errorCode(error) {
-  return error && typeof error === "object" && "code" in error ? error.code : void 0;
-}
-function knowledgeDirectory() {
-  const value = process.env.DRONE_KNOWLEDGE_DIR;
-  if (!value) return null;
-  if (!isAbsolute6(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
-  return resolve7(value);
-}
-function projectIdentity(cwd, configured) {
-  if (typeof configured === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured)) return configured;
-  const path = resolve7(cwd);
-  const stem = basename3(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
-  return `${stem}-${createHash5("sha256").update(path).digest("hex").slice(0, 10)}`;
-}
-function validateBinding(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute6(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
-    throw new Error("Invalid application knowledge binding; no project fallback was used");
-}
-async function readKnowledgeBindingWithState(state, { fresh = false } = {}) {
-  if (!fresh && state.local.getStore()) return state.local.getStore() ?? null;
-  const directory = knowledgeDirectory();
-  if (!directory) return null;
-  let value;
-  try {
-    value = JSON.parse((await readFile5(join4(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
-  } catch (error) {
-    if (errorCode(error) === "ENOENT") return null;
-    throw new Error(
-      `Knowledge binding cannot be read: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-  validateBinding(value);
-  return value;
-}
-async function readKnowledgeBinding(options = {}) {
-  return readKnowledgeBindingWithState(defaultState, options);
-}
-var defaultState = createKnowledgeConfigState();
+import { access as access3, mkdir as mkdir4, readFile as readFile7, realpath as realpath7, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
+import { dirname as dirname3, isAbsolute as isAbsolute7, join as join6, relative as relative6, resolve as resolve9, sep as sep6 } from "node:path";
 
 // packages/extensions/src/internal/vault.ts
 var VAULT_PROFILES = {
@@ -1767,11 +1861,11 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 });
 var CONFIG_NAME = ".pi/research-workspace.json";
 function configPath(cwd) {
-  return join5(cwd, CONFIG_NAME);
+  return join6(cwd, CONFIG_NAME);
 }
 function resolveConfiguredPath(cwd, value) {
   if (value == null || value === "") return null;
-  return resolve8(cwd, value);
+  return resolve9(cwd, value);
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
@@ -1796,7 +1890,7 @@ function validatePatch(config) {
 }
 async function loadWorkspaceConfig(cwd = process.cwd()) {
   if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
-    const desktop = JSON.parse(await readFile6(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
+    const desktop = JSON.parse(await readFile7(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
     return {
       ...DEFAULT_WORKSPACE_CONFIG,
       resultsRoot: desktop.resultsRoot,
@@ -1805,10 +1899,10 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
       mcpStatus: desktop.mcpStatus
     };
   }
-  const projectRoot = resolve8(cwd);
+  const projectRoot = resolve9(cwd);
   let raw = {};
   try {
-    raw = JSON.parse(await readFile6(configPath(projectRoot), "utf8"));
+    raw = JSON.parse(await readFile7(configPath(projectRoot), "utf8"));
   } catch (error) {
     if (error.code !== "ENOENT") raw = {};
   }
@@ -1926,7 +2020,10 @@ function researchLoop(pi) {
           ]
         },
         run_dir: { type: "string" },
-        project: { type: "string" },
+        project: {
+          type: "string",
+          description: "Optional. The host resolves the project from the workspace (or the daily-space session choice); a different value is ignored."
+        },
         result_slug: { type: "string" },
         query: { type: "string" },
         requires_provenance: { type: "boolean" },
@@ -1951,11 +2048,16 @@ function researchLoop(pi) {
           };
           return { content: [{ type: "text", text: JSON.stringify(value) }], details: value };
         }
+        const projectResolution = params.action === "start" ? await resolveWorkspaceProject({
+          cwd: ctx.cwd,
+          sessionEntries: sessionEntriesOf(ctx),
+          requested: params.project
+        }) : null;
         const result = await journal.execute(
           runDir,
           async () => params.action === "start" ? loop.startResearchRun({
             cwd: ctx.cwd,
-            project: params.project,
+            project: projectResolution?.project,
             resultSlug: params.result_slug,
             query: params.query,
             requiresProvenance: params.requires_provenance === true
@@ -1986,7 +2088,8 @@ function researchLoop(pi) {
             warnings: gate.warnings,
             scientificallyVerified: false
           },
-          receipt_journal: result?.receipt_journal
+          receipt_journal: result?.receipt_journal,
+          ...projectResolution ? { project: describeProject(projectResolution) } : {}
         };
         return { content: [{ type: "text", text: JSON.stringify(visible, null, 2) }], details: result };
       });

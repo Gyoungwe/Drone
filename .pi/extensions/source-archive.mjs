@@ -143,9 +143,9 @@ var init_flow_cards = __esm({
 
 // packages/knowledge/src/config.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
-import { createHash as createHash6, randomUUID as randomUUID5 } from "node:crypto";
-import { mkdir as mkdir3, readFile as readFile5, realpath as realpath5, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
-import { basename as basename3, isAbsolute as isAbsolute6, join as join4, resolve as resolve6 } from "node:path";
+import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
+import { mkdir as mkdir2, readFile as readFile4, realpath as realpath4, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
+import { basename as basename3, isAbsolute as isAbsolute5, join as join3, resolve as resolve5 } from "node:path";
 function createKnowledgeConfigState() {
   return { local: new AsyncLocalStorage2(), queues: /* @__PURE__ */ new Map() };
 }
@@ -155,17 +155,17 @@ function errorCode(error) {
 function knowledgeDirectory() {
   const value = process.env.DRONE_KNOWLEDGE_DIR;
   if (!value) return null;
-  if (!isAbsolute6(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
-  return resolve6(value);
+  if (!isAbsolute5(value)) throw new Error("DRONE_KNOWLEDGE_DIR must be absolute");
+  return resolve5(value);
 }
 function projectIdentity(cwd, configured2) {
   if (typeof configured2 === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured2)) return configured2;
-  const path = resolve6(cwd);
+  const path = resolve5(cwd);
   const stem = basename3(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
-  return `${stem}-${createHash6("sha256").update(path).digest("hex").slice(0, 10)}`;
+  return `${stem}-${createHash5("sha256").update(path).digest("hex").slice(0, 10)}`;
 }
 function validateBinding(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute6(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute5(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
     throw new Error("Invalid application knowledge binding; no project fallback was used");
 }
 async function readKnowledgeBindingWithState(state3, { fresh = false } = {}) {
@@ -174,7 +174,7 @@ async function readKnowledgeBindingWithState(state3, { fresh = false } = {}) {
   if (!directory) return null;
   let value;
   try {
-    value = JSON.parse((await readFile5(join4(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
+    value = JSON.parse((await readFile4(join3(directory, "binding.json"), "utf8")).replace(/^\uFEFF/, ""));
   } catch (error) {
     if (errorCode(error) === "ENOENT") return null;
     throw new Error(
@@ -216,7 +216,7 @@ function configureKnowledgeRuntime(host = {}) {
 function runtimeSlot2(domain, key, factory) {
   let hostProxy;
   let provider;
-  const resolve14 = () => {
+  const resolve15 = () => {
     if (hostSlotProvider) {
       if (provider !== hostSlotProvider) {
         provider = hostSlotProvider;
@@ -230,14 +230,14 @@ function runtimeSlot2(domain, key, factory) {
   };
   return new Proxy({}, {
     get: (_target, property) => {
-      const state3 = resolve14();
+      const state3 = resolve15();
       const value = Reflect.get(state3, property);
       return typeof value === "function" ? value.bind(state3) : value;
     },
-    set: (_target, property, value) => Reflect.set(resolve14(), property, value),
-    ownKeys: () => Reflect.ownKeys(resolve14()),
+    set: (_target, property, value) => Reflect.set(resolve15(), property, value),
+    ownKeys: () => Reflect.ownKeys(resolve15()),
     getOwnPropertyDescriptor: (_target, property) => {
-      const descriptor = Reflect.getOwnPropertyDescriptor(resolve14(), property);
+      const descriptor = Reflect.getOwnPropertyDescriptor(resolve15(), property);
       return descriptor ? { ...descriptor, configurable: true } : void 0;
     }
   });
@@ -269,8 +269,8 @@ var init_runtime_host = __esm({
     defaultRunRuntimeExclusive = async (_namespace, key, work) => {
       const previous = locks.get(key) ?? Promise.resolve();
       let release;
-      const current = new Promise((resolve14) => {
-        release = resolve14;
+      const current = new Promise((resolve15) => {
+        release = resolve15;
       });
       locks.set(key, previous.then(() => current));
       await previous;
@@ -314,7 +314,7 @@ var init_runtime_host = __esm({
 });
 
 // packages/knowledge/src/files.ts
-import { isAbsolute as isAbsolute9, join as join7, relative as relative7, sep as sep7 } from "node:path";
+import { isAbsolute as isAbsolute9, join as join8, relative as relative7, sep as sep7 } from "node:path";
 function allowedSegment(name) {
   return !!name && !name.startsWith(".") && !OMIT.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
 }
@@ -322,7 +322,7 @@ function validateNote(path) {
   if (typeof path !== "string" || isAbsolute9(path) || path.includes("\\") || !path.endsWith(".md") || !path.split("/").every(allowedSegment))
     throw new Error("Expected an allowed Vault-relative Markdown path");
   const first = path.split("/")[0] ?? "";
-  if (RESERVED.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
+  if (RESERVED2.some((name) => name.toLowerCase() === first.toLowerCase() && name !== first))
     throw new Error("Reserved Vault directories require canonical casing");
   return path;
 }
@@ -334,7 +334,7 @@ function canRead(path, project) {
   const scope = noteScope(path);
   return scope === "shared" || scope === project;
 }
-var MAX_NOTE_BYTES, OMIT, RESERVED;
+var MAX_NOTE_BYTES, OMIT, RESERVED2;
 var init_files = __esm({
   "packages/knowledge/src/files.ts"() {
     "use strict";
@@ -352,13 +352,13 @@ var init_files = __esm({
       "Templates",
       "_template"
     ]);
-    RESERVED = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
+    RESERVED2 = ["Projects", "Library", "Wiki", "Attachments", "Templates", "Indexes", "Inbox"];
   }
 });
 
 // packages/knowledge/src/review-policy.ts
 import { readFileSync } from "node:fs";
-import { join as join8 } from "node:path";
+import { join as join9 } from "node:path";
 function errorCode2(error) {
   return error && typeof error === "object" && "code" in error ? error.code : void 0;
 }
@@ -367,7 +367,7 @@ function readReviewMode() {
   const root = knowledgeDirectory();
   if (!root) return "automatic";
   try {
-    const value = JSON.parse(readFileSync(join8(root, "review-policy.json"), "utf8"));
+    const value = JSON.parse(readFileSync(join9(root, "review-policy.json"), "utf8"));
     const mode = value && typeof value === "object" && "mode" in value ? value.mode : void 0;
     return mode === "automatic" ? "automatic" : "strict";
   } catch (error) {
@@ -436,8 +436,8 @@ __export(specialist_host_exports, {
   withSpecialistSlot: () => withSpecialistSlot
 });
 import { randomUUID as randomUUID8 } from "node:crypto";
-import { mkdir as mkdir6, readFile as readFile8, rename as rename7, unlink as unlink2, writeFile as writeFile7 } from "node:fs/promises";
-import { join as join11 } from "node:path";
+import { mkdir as mkdir6, readFile as readFile9, rename as rename7, unlink as unlink2, writeFile as writeFile7 } from "node:fs/promises";
+import { join as join12 } from "node:path";
 function registerKnowledgeSpecialistHost(id, run) {
   if (!id || typeof run !== "function") throw new Error("A specialist host requires a session identity");
   if (state2.disposed) throw new Error("Knowledge specialist runtime has been disposed");
@@ -457,7 +457,7 @@ async function specialistSettings() {
   if (!dir) return { mode: "off", revision: 0, ...SPECIALIST_LIMITS };
   let data = { mode: "automatic", revision: 0 };
   try {
-    data = JSON.parse(await readFile8(join11(dir, "specialists.json"), "utf8"));
+    data = JSON.parse(await readFile9(join12(dir, "specialists.json"), "utf8"));
   } catch (e) {
     if (e.code !== "ENOENT") throw new Error("Knowledge specialist settings cannot be read");
   }
@@ -551,12 +551,12 @@ async function setSpecialistSettings({ mode, revision, bindingRevision, ...reque
         data[key] = Math.min(data[key] ?? SPECIALIST_LIMITS[key], SPECIALIST_LIMITS[key]);
       data.mode = mode;
       data.revision = revision + 1;
-      const dir = knowledgeDirectory(), temp = join11(dir, `specialists.${randomUUID8()}.tmp`);
+      const dir = knowledgeDirectory(), temp = join12(dir, `specialists.${randomUUID8()}.tmp`);
       await mkdir6(dir, { recursive: true, mode: 448 });
       try {
         await writeFile7(temp, `${JSON.stringify(data)}
 `, { flag: "wx", mode: 384 });
-        await rename7(temp, join11(dir, "specialists.json"));
+        await rename7(temp, join12(dir, "specialists.json"));
       } finally {
         await unlink2(temp).catch((e) => {
           if (e.code !== "ENOENT") throw e;
@@ -586,7 +586,7 @@ async function withSpecialistSlot(signal, work, options = {}) {
   );
   if (state2.active >= concurrency) {
     if (state2.queue.length >= queueLimit) throw new Error("Knowledge specialist queue is full");
-    await new Promise((resolve14, reject) => {
+    await new Promise((resolve15, reject) => {
       let settled = false;
       const item = {
         resolve: () => {
@@ -594,7 +594,7 @@ async function withSpecialistSlot(signal, work, options = {}) {
           settled = true;
           signal?.removeEventListener("abort", abort);
           clearTimeout(timer);
-          resolve14();
+          resolve15();
         },
         reject: () => {
           if (settled) return;
@@ -2132,8 +2132,8 @@ var KeyedScheduler = class {
     if (this.#disposed) throw new Error("Runtime scheduler has been disposed");
     const previous = this.#tails.get(key) || Promise.resolve();
     let unlock;
-    const gate = new Promise((resolve14) => {
-      unlock = resolve14;
+    const gate = new Promise((resolve15) => {
+      unlock = resolve15;
     });
     const tail = previous.then(() => gate);
     this.#tails.set(key, tail);
@@ -2456,8 +2456,8 @@ var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for 
 
 // packages/extensions/src/internal/research-host.ts
 import { randomUUID as randomUUID10 } from "node:crypto";
-import { readFile as readFile11, realpath as realpath9, rename as rename9, writeFile as writeFile10 } from "node:fs/promises";
-import { isAbsolute as isAbsolute12, join as join15, relative as relative11, resolve as resolve13, sep as sep10 } from "node:path";
+import { readFile as readFile12, realpath as realpath9, rename as rename9, writeFile as writeFile10 } from "node:fs/promises";
+import { isAbsolute as isAbsolute12, join as join16, relative as relative11, resolve as resolve14, sep as sep10 } from "node:path";
 
 // packages/research/src/literature-operations.ts
 import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
@@ -2576,9 +2576,89 @@ function createLiteratureOperations(ports) {
 }
 
 // packages/research/src/research-loop.ts
-import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
-import { access as access2, mkdir as mkdir2, readFile as readFile4, realpath as realpath4, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
-import { dirname as dirname2, isAbsolute as isAbsolute5, join as join3, relative as relative5, resolve as resolve5, sep as sep5 } from "node:path";
+import { createHash as createHash6, randomUUID as randomUUID5 } from "node:crypto";
+import { access as access2, mkdir as mkdir3, readFile as readFile6, realpath as realpath5, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
+import { dirname as dirname2, isAbsolute as isAbsolute6, join as join5, relative as relative5, resolve as resolve7, sep as sep5 } from "node:path";
+
+// packages/knowledge/src/project-identity.ts
+init_config();
+import { readFile as readFile5 } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join as join4, resolve as resolve6 } from "node:path";
+var SESSION_PROJECT_ENTRY = "drone-session-project-v1";
+var LEGACY_DEFAULT_PROJECT = "research-workbench";
+var SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+var RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
+function isProjectSlug(value) {
+  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED.test(value);
+}
+function normalizeProjectSlug(input) {
+  if (typeof input !== "string") return null;
+  const slug = input.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96).replace(/-+$/g, "");
+  return isProjectSlug(slug) ? slug : null;
+}
+function workspaceProjectId(cwd, configured2) {
+  return projectIdentity(cwd, isProjectSlug(configured2) ? configured2 : void 0);
+}
+function dailyWorkspaceDir(home = homedir()) {
+  return join4(home, ".drone", "daily");
+}
+function samePath(a, b) {
+  const left = resolve6(a).replace(/[\\/]+$/, "");
+  const right = resolve6(b).replace(/[\\/]+$/, "");
+  return process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+function isDailyWorkspace(cwd, home) {
+  return samePath(cwd, dailyWorkspaceDir(home));
+}
+function sessionProjectFromEntries(entries) {
+  if (!Array.isArray(entries)) return null;
+  let project = null;
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || entry.customType !== SESSION_PROJECT_ENTRY) continue;
+    if (entry.type !== void 0 && entry.type !== "custom") continue;
+    const value = entry.data?.project;
+    if (value === null) project = null;
+    else if (isProjectSlug(value)) project = value;
+  }
+  return project;
+}
+function resolveProjectIdentity(input) {
+  const daily = isDailyWorkspace(input.cwd, input.home);
+  const requestedText = typeof input.requested === "string" ? input.requested.trim() : "";
+  const requested = requestedText || null;
+  let project;
+  let source;
+  const session2 = daily ? sessionProjectFromEntries(input.sessionEntries) : null;
+  if (session2) {
+    project = session2;
+    source = "session";
+  } else if (isProjectSlug(input.configured)) {
+    project = input.configured;
+    source = "workspace-config";
+  } else {
+    project = workspaceProjectId(input.cwd);
+    source = "workspace";
+  }
+  const ignoredRequest = requested !== null && normalizeProjectSlug(requested) !== project;
+  return { project, source, daily, requested, ignoredRequest };
+}
+async function readConfiguredProject(cwd) {
+  try {
+    const parsed = JSON.parse(await readFile5(join4(cwd, ".pi", "research-workspace.json"), "utf8"));
+    if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
+      return parsed.knowledgeProjectId;
+  } catch {
+  }
+  return void 0;
+}
+async function resolveWorkspaceProject(input) {
+  return resolveProjectIdentity({ ...input, configured: await readConfiguredProject(input.cwd) });
+}
+function runProject(metadataProject, resolution) {
+  if (isProjectSlug(metadataProject) && metadataProject !== LEGACY_DEFAULT_PROJECT) return metadataProject;
+  return resolution.project;
+}
 
 // packages/research/src/claim-bindings.ts
 var RELATIONSHIPS = ["direct", "indirect", "hypothesis", "unsupported"];
@@ -2707,7 +2787,7 @@ function createResearchLoop(ports) {
       this.receiptQueues.clear();
     }
   };
-  const runKey = (cwd, runDir) => resolve5(cwd, runDir);
+  const runKey = (cwd, runDir) => resolve7(cwd, runDir);
   function ledger(cwd, runDir) {
     const key = runKey(cwd, runDir);
     if (!runtimeState3.receiptLedger.has(key)) {
@@ -2726,7 +2806,7 @@ function createResearchLoop(ports) {
   async function reusableSources(cwd, runDir) {
     const config = await loadWorkspaceConfig3(cwd);
     if (!config.obsidianVault) return [];
-    const root = await realpath4(config.obsidianVault);
+    const root = await realpath5(config.obsidianVault);
     const state3 = ledger(cwd, runDir), result = [];
     for (const [path, proof] of state3.verified) {
       const read = state3.reads.get(path);
@@ -2796,23 +2876,23 @@ function createResearchLoop(ports) {
     return stable || slug;
   }
   function within2(root, target) {
-    const rel = relative5(resolve5(root), resolve5(target));
-    return rel === "" || !isAbsolute5(rel) && rel !== ".." && !rel.startsWith(`..${sep5}`);
+    const rel = relative5(resolve7(root), resolve7(target));
+    return rel === "" || !isAbsolute6(rel) && rel !== ".." && !rel.startsWith(`..${sep5}`);
   }
   function fileHash(bytes) {
-    return createHash5("sha256").update(bytes).digest("hex");
+    return createHash6("sha256").update(bytes).digest("hex");
   }
   async function archivedSourceRecords(cwd, runDir) {
-    const archive = await sourceStatus2({ cwd, run_dir: resolve5(cwd, runDir) });
+    const archive = await sourceStatus2({ cwd, run_dir: resolve7(cwd, runDir) });
     const records = [];
     for (const item of archive.manifest?.items || []) {
       if (item.status !== "downloaded" || !item.path || !item.sha256) continue;
-      const absolute = resolve5(cwd, item.path);
-      if (!within2(join3(resolve5(cwd, runDir), "sources"), absolute)) continue;
+      const absolute = resolve7(cwd, item.path);
+      if (!within2(join5(resolve7(cwd, runDir), "sources"), absolute)) continue;
       try {
-        if (!within2(await realpath4(join3(resolve5(cwd, runDir), "sources")), await realpath4(absolute)))
+        if (!within2(await realpath5(join5(resolve7(cwd, runDir), "sources")), await realpath5(absolute)))
           continue;
-        if (fileHash(await readFile4(absolute)) !== item.sha256) continue;
+        if (fileHash(await readFile6(absolute)) !== item.sha256) continue;
       } catch {
         continue;
       }
@@ -2820,7 +2900,7 @@ function createResearchLoop(ports) {
         String(item.path),
         absolute,
         relative5(cwd, absolute),
-        relative5(resolve5(cwd, runDir), absolute)
+        relative5(resolve7(cwd, runDir), absolute)
       ]);
       for (const path of aliases)
         records.push({
@@ -2833,14 +2913,14 @@ function createResearchLoop(ports) {
     return records;
   }
   async function recordArchivedRead(cwd, runDir, path, args, details, content) {
-    const absolute = resolve5(cwd, path);
-    const sourcesRoot = join3(resolve5(cwd, runDir), "sources");
+    const absolute = resolve7(cwd, path);
+    const sourcesRoot = join5(resolve7(cwd, runDir), "sources");
     if (!within2(sourcesRoot, absolute)) return false;
-    if (!within2(await realpath4(sourcesRoot), await realpath4(absolute))) return false;
+    if (!within2(await realpath5(sourcesRoot), await realpath5(absolute))) return false;
     if (details.truncation?.firstLineExceedsLimit) return false;
     const returned = details.truncation?.content ?? content?.find((part) => part.type === "text")?.text;
     if (typeof returned !== "string" || !returned.trim()) return false;
-    const bytes = await readFile4(absolute);
+    const bytes = await readFile6(absolute);
     const sourceText = bytes.toString("utf8");
     if (sourceText.includes("\0") || sourceText.startsWith("%PDF-")) return false;
     const startLine = Number.isInteger(args.offset) && args.offset > 0 ? args.offset : 1;
@@ -2859,23 +2939,23 @@ function createResearchLoop(ports) {
       String(path),
       absolute,
       relative5(cwd, absolute),
-      relative5(resolve5(cwd, runDir), absolute)
+      relative5(resolve7(cwd, runDir), absolute)
     ]);
     for (const alias of aliases) ledger(cwd, runDir).reads.set(alias, read);
     return true;
   }
   async function readJson3(path) {
-    const value = JSON.parse(await readFile4(path, "utf8"));
+    const value = JSON.parse(await readFile6(path, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new Error(`Invalid JSON object: ${path}`);
     return value;
   }
   async function atomicJson2(path, value) {
-    await mkdir2(dirname2(path), { recursive: true });
-    const temp = `${path}.${randomUUID4()}.tmp`;
-    await writeFile3(temp, `${JSON.stringify(value, null, 2)}
+    await mkdir3(dirname2(path), { recursive: true });
+    const temp = `${path}.${randomUUID5()}.tmp`;
+    await writeFile4(temp, `${JSON.stringify(value, null, 2)}
 `, "utf8");
-    await rename3(temp, path);
+    await rename4(temp, path);
   }
   function gateOf(metadata) {
     const gate = metadata.evidence_gate && typeof metadata.evidence_gate === "object" ? metadata.evidence_gate : {};
@@ -2928,14 +3008,14 @@ function createResearchLoop(ports) {
   async function resolveRun(cwd, runDir) {
     const config = await loadWorkspaceConfig3(cwd);
     if (!runDir) throw new Error("run_dir is required for this action");
-    const path = resolve5(cwd, runDir);
+    const path = resolve7(cwd, runDir);
     if (!within2(config.resultsRoot, path))
       throw new Error("run_dir must stay inside the configured results root");
     const rel = relative5(config.resultsRoot, path).split(sep5);
     if (rel.length !== 2 || !rel[1]?.startsWith("run-"))
       throw new Error("run_dir must be directly inside a result slug");
-    await access2(join3(path, "metadata.json"));
-    return { config, path, metadataPath: join3(path, "metadata.json") };
+    await access2(join5(path, "metadata.json"));
+    return { config, path, metadataPath: join5(path, "metadata.json") };
   }
   async function startResearchRun({
     cwd = process.cwd(),
@@ -2945,12 +3025,12 @@ function createResearchLoop(ports) {
     requiresProvenance = false
   } = {}) {
     const config = await loadWorkspaceConfig3(cwd);
-    project = safeSlug(project || "research-workbench", "project");
+    project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
     resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
     if (typeof query !== "string" || !query.trim()) throw new Error("query is required");
     const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-    const runId = `run-${stamp}-${randomUUID4().slice(0, 8)}`;
-    const runDir = join3(config.resultsRoot, resultSlug, runId);
+    const runId = `run-${stamp}-${randomUUID5().slice(0, 8)}`;
+    const runDir = join5(config.resultsRoot, resultSlug, runId);
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const metadata = {
       run_id: runId,
@@ -2974,8 +3054,8 @@ function createResearchLoop(ports) {
       research_nodes: researchNodes({ stage: "created", answerable: false, events: [{ type: "created" }] }),
       provenance: provenanceFor({ source_refs: [], claim_bindings: [] })
     };
-    await mkdir2(runDir, { recursive: true });
-    await atomicJson2(join3(runDir, "metadata.json"), metadata);
+    await mkdir3(runDir, { recursive: true });
+    await atomicJson2(join5(runDir, "metadata.json"), metadata);
     return { run_dir: runDir, metadata };
   }
   async function updateResearchLoopUnlocked({
@@ -3084,7 +3164,7 @@ function createResearchLoop(ports) {
       if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
         throw new Error("archive verification and structured claim bindings are required before answerable");
       if (metadata.requires_provenance === true) {
-        const provenance = await readJson3(join3(path, "reproducibility-manifest.json"));
+        const provenance = await readJson3(join5(path, "reproducibility-manifest.json"));
         if (!provenance || provenance.version !== 1)
           throw new Error("This run requires a reproducibility manifest before it can become answerable");
       }
@@ -3235,7 +3315,7 @@ function createResearchLoop(ports) {
             ledger(cwd, runDir).reads.set(path, {
               hash: details.hash,
               text: details.text,
-              vault: readBinding ? readBinding.vault : await realpath4(config.obsidianVault),
+              vault: readBinding ? readBinding.vault : await realpath5(config.obsidianVault),
               revision: readBinding ? readBinding.revision : config.knowledgeBindingRevision || 0,
               startLine: details.startLine,
               endLine: details.endLine
@@ -3328,13 +3408,13 @@ function createResearchLoop(ports) {
 
 // packages/extensions/src/internal/obsidian-workbench.ts
 import { createHash as createHash8, randomUUID as randomUUID9 } from "node:crypto";
-import { access as access4, mkdir as mkdir7, readdir as readdir3, readFile as readFile9, realpath as realpath8, rename as rename8, stat as stat4, writeFile as writeFile8 } from "node:fs/promises";
-import { basename as basename5, dirname as dirname7, isAbsolute as isAbsolute11, join as join13, relative as relative10, resolve as resolve12, sep as sep9 } from "node:path";
+import { access as access4, mkdir as mkdir7, readdir as readdir3, readFile as readFile10, realpath as realpath8, rename as rename8, stat as stat4, writeFile as writeFile8 } from "node:fs/promises";
+import { basename as basename5, dirname as dirname7, isAbsolute as isAbsolute11, join as join14, relative as relative10, resolve as resolve13, sep as sep9 } from "node:path";
 import { fileURLToPath as fileURLToPath2, pathToFileURL as pathToFileURL2 } from "node:url";
 
 // packages/extensions/src/workspace-config.ts
-import { access as access3, mkdir as mkdir4, readFile as readFile6, realpath as realpath6, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
-import { dirname as dirname3, isAbsolute as isAbsolute7, join as join5, relative as relative6, resolve as resolve7, sep as sep6 } from "node:path";
+import { access as access3, mkdir as mkdir4, readFile as readFile7, realpath as realpath6, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
+import { dirname as dirname3, isAbsolute as isAbsolute7, join as join6, relative as relative6, resolve as resolve8, sep as sep6 } from "node:path";
 init_config();
 init_flow_cards();
 
@@ -3411,11 +3491,11 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 });
 var CONFIG_NAME = ".pi/research-workspace.json";
 function configPath(cwd) {
-  return join5(cwd, CONFIG_NAME);
+  return join6(cwd, CONFIG_NAME);
 }
 function resolveConfiguredPath(cwd, value) {
   if (value == null || value === "") return null;
-  return resolve7(cwd, value);
+  return resolve8(cwd, value);
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
@@ -3440,7 +3520,7 @@ function validatePatch(config) {
 }
 async function loadWorkspaceConfig(cwd = process.cwd()) {
   if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
-    const desktop = JSON.parse(await readFile6(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
+    const desktop = JSON.parse(await readFile7(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
     return {
       ...DEFAULT_WORKSPACE_CONFIG,
       resultsRoot: desktop.resultsRoot,
@@ -3449,10 +3529,10 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
       mcpStatus: desktop.mcpStatus
     };
   }
-  const projectRoot = resolve7(cwd);
+  const projectRoot = resolve8(cwd);
   let raw = {};
   try {
-    raw = JSON.parse(await readFile6(configPath(projectRoot), "utf8"));
+    raw = JSON.parse(await readFile7(configPath(projectRoot), "utf8"));
   } catch (error) {
     if (error.code !== "ENOENT") raw = {};
   }
@@ -3497,7 +3577,7 @@ init_runtime_host();
 import { Worker } from "node:worker_threads";
 import { existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname as dirname4, resolve as resolve8 } from "node:path";
+import { dirname as dirname4, resolve as resolve9 } from "node:path";
 var configured = false;
 function configureKnowledgeExtensionRuntime() {
   if (configured) return;
@@ -3511,15 +3591,15 @@ function configureKnowledgeExtensionRuntime() {
   });
   configureKnowledgeWorker((_url, options) => {
     const sibling = new URL("../lib/knowledge/runtime/worker.mjs", import.meta.url);
-    const workerUrl = sibling.protocol === "file:" && !existsSync(fileURLToPath(sibling)) ? pathToFileURL(resolve8(dirname4(fileURLToPath(import.meta.url)), "../../../../.pi/lib/knowledge/runtime/worker.mjs")) : sibling;
+    const workerUrl = sibling.protocol === "file:" && !existsSync(fileURLToPath(sibling)) ? pathToFileURL(resolve9(dirname4(fileURLToPath(import.meta.url)), "../../../../.pi/lib/knowledge/runtime/worker.mjs")) : sibling;
     return new Worker(workerUrl, options);
   });
 }
 
 // packages/extensions/src/internal/obsidian-setup.ts
 import { readdir, realpath as realpath7, stat as stat3 } from "node:fs/promises";
-import { homedir } from "node:os";
-import { basename as basename4, isAbsolute as isAbsolute8, join as join6, resolve as resolve9 } from "node:path";
+import { homedir as homedir2 } from "node:os";
+import { basename as basename4, isAbsolute as isAbsolute8, join as join7, resolve as resolve10 } from "node:path";
 var OBSIDIAN_SETUP_BINDING = Object.freeze({
   command: "obsidian-setup",
   skill: "research-vault",
@@ -3533,19 +3613,19 @@ function resolveSetupVault(value, _cwd) {
   if (typeof value !== "string" || !value.trim())
     throw new Error("Vault path is required");
   const text3 = value.trim();
-  const expanded = text3 === "~" ? homedir() : /^~[/\\]/.test(text3) ? join6(homedir(), text3.slice(2)) : text3;
+  const expanded = text3 === "~" ? homedir2() : /^~[/\\]/.test(text3) ? join7(homedir2(), text3.slice(2)) : text3;
   if (isAbsolute8(expanded))
-    return resolve9(expanded);
+    return resolve10(expanded);
   const natural = text3.match(/(?:在)?(?:我的)?文档(?:文件夹)?(?:下面|下|中)?(?:创建|新建)?(?:一个)?(?:叫|名为|名称为)\s*[“"']?([^”"']+?)[”"']?(?:的目录|文件夹)?\s*$/i);
   if (natural?.[1]?.trim())
-    return resolve9(join6(homedir(), "Documents", natural[1].trim()));
+    return resolve10(join7(homedir2(), "Documents", natural[1].trim()));
   const english = text3.match(/(?:create|make)\s+(?:a\s+)?(?:folder|directory)\s+(?:named|called)\s+["']?([^"']+?)["']?\s*$/i);
   if (english?.[1]?.trim())
-    return resolve9(join6(homedir(), "Documents", english[1].trim()));
+    return resolve10(join7(homedir2(), "Documents", english[1].trim()));
   throw new Error("Please provide an absolute Vault path (or ~/...), or say to create a folder under Documents");
 }
 async function inspectSetupDirectory(path, { maxEntries = 120, maxDepth = 2 } = {}) {
-  const requested = resolve9(path);
+  const requested = resolve10(path);
   let root;
   try {
     root = await realpath7(requested);
@@ -3579,7 +3659,7 @@ async function inspectSetupDirectory(path, { maxEntries = 120, maxDepth = 2 } = 
       entries.push({ path: relative12, type: child.isDirectory() ? "directory" : "file" });
       if (child.isDirectory()) {
         if (current.depth + 1 < maxDepth)
-          queue.push({ path: join6(current.path, child.name), prefix: relative12, depth: current.depth + 1 });
+          queue.push({ path: join7(current.path, child.name), prefix: relative12, depth: current.depth + 1 });
         else
           truncated = true;
       }
@@ -3606,7 +3686,7 @@ async function inspectObsidianSetup({ cwd, vault = null }) {
 init_runtime_host();
 
 // packages/knowledge/src/ui-service.ts
-import { dirname as dirname6, isAbsolute as isAbsolute10, join as join12, relative as relative9, resolve as resolve11 } from "node:path";
+import { dirname as dirname6, isAbsolute as isAbsolute10, join as join13, relative as relative9, resolve as resolve12 } from "node:path";
 init_runtime_host();
 init_runtime_host();
 init_runtime_host();
@@ -3701,7 +3781,7 @@ init_config();
 init_files();
 init_review_policy();
 import { createHash as createHash7, randomUUID as randomUUID7 } from "node:crypto";
-import { join as join10, relative as relative8, resolve as resolve10, sep as sep8 } from "node:path";
+import { join as join11, relative as relative8, resolve as resolve11, sep as sep8 } from "node:path";
 
 // packages/knowledge/src/semantic-provider.ts
 import { URL as URL2 } from "node:url";
@@ -3925,8 +4005,8 @@ var semanticLimits = Object.freeze({ MAX_BATCH, MAX_CHARS, MAX_RESPONSE });
 // packages/knowledge/src/semantic-settings.ts
 init_config();
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { lstat as lstat2, mkdir as mkdir5, readdir as readdir2, readFile as readFile7, rename as rename6, unlink, writeFile as writeFile6 } from "node:fs/promises";
-import { dirname as dirname5, join as join9 } from "node:path";
+import { lstat as lstat2, mkdir as mkdir5, readdir as readdir2, readFile as readFile8, rename as rename6, unlink, writeFile as writeFile6 } from "node:fs/promises";
+import { dirname as dirname5, join as join10 } from "node:path";
 var MAX_FILE_BYTES = 256 * 1024;
 var ENV_NAME2 = /^[A-Z_][A-Z0-9_]{0,127}$/;
 var SETTINGS_KEYS = /* @__PURE__ */ new Set([
@@ -4047,7 +4127,7 @@ function pathFor(vaultId) {
   if (!/^[a-f0-9]{24}$/.test(vaultId || "")) throw new Error("Invalid Vault binding");
   const directory = knowledgeDirectory();
   if (!directory) throw new Error("Application knowledge directory is not configured");
-  return join9(directory, vaultId, "semantic.json");
+  return join10(directory, vaultId, "semantic.json");
 }
 async function assertDirectory(path) {
   try {
@@ -4115,7 +4195,7 @@ async function readUnlocked(state3, path) {
   await assertDirectory(dirname5(path));
   await assertFile(path);
   try {
-    const raw = await readFile7(path, { encoding: "utf8", flag: "r" });
+    const raw = await readFile8(path, { encoding: "utf8", flag: "r" });
     if (Buffer.byteLength(raw) > MAX_FILE_BYTES) throw new Error("Semantic settings file is too large");
     const value = JSON.parse(raw);
     return normalize(value, value.revision, value.updatedAt);
@@ -4139,9 +4219,9 @@ function createSemanticSettingsApi(state3 = createSemanticSettingsState()) {
       const dir = dirname5(path);
       await assertDirectory(dir);
       for (const entry of await readdir2(dir))
-        if (/^semantic\.[a-f0-9-]+\.tmp$/.test(entry)) await unlink(join9(dir, entry)).catch(() => {
+        if (/^semantic\.[a-f0-9-]+\.tmp$/.test(entry)) await unlink(join10(dir, entry)).catch(() => {
         });
-      const temp = join9(dir, `semantic.${randomUUID6()}.tmp`);
+      const temp = join10(dir, `semantic.${randomUUID6()}.tmp`);
       try {
         await writeFile6(temp, `${JSON.stringify(value, null, 2)}
 `, { mode: 384, flag: "wx" });
@@ -4235,7 +4315,7 @@ var KnowledgeService = class {
     this.closing = false;
     this.closePromise = null;
     this.worker = createKnowledgeWorker(new URL("./worker.mjs", import.meta.url), {
-      workerData: { vault: binding.vault, database: join10(directory, binding.vaultId, "index.sqlite") },
+      workerData: { vault: binding.vault, database: join11(directory, binding.vaultId, "index.sqlite") },
       execArgv: process.execArgv.filter(
         (arg) => !arg.startsWith("--input-type") && !arg.startsWith("--test")
       )
@@ -4319,7 +4399,7 @@ var KnowledgeService = class {
       ];
       const ticket = randomUUID7();
       this.tickets.set(ticket, {
-        cwd: resolve10(cwd),
+        cwd: resolve11(cwd),
         project,
         queryHash: createHash7("sha256").update(query).digest("hex"),
         query,
@@ -4352,7 +4432,7 @@ var KnowledgeService = class {
     await withKnowledgeBinding(this.binding, async () => {
     });
     const state3 = this.tickets.get(ticket);
-    if (!state3 || state3.cwd !== resolve10(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
+    if (!state3 || state3.cwd !== resolve11(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
       throw new Error("Read current navigation with research_prepare_knowledge first");
     for (const page of state3.navigation) {
       const latest = await this.request("read", {
@@ -4775,7 +4855,7 @@ var KnowledgeService = class {
     await withKnowledgeBinding(this.binding, async () => {
     });
     const state3 = this.tickets.get(ticket);
-    if (!state3 || state3.cwd !== resolve10(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
+    if (!state3 || state3.cwd !== resolve11(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
       throw new Error("Read current navigation with research_prepare_knowledge first");
     const cap = Math.max(1, Math.min(12, Number(limit) || 12));
     const sources = [];
@@ -4792,7 +4872,7 @@ var KnowledgeService = class {
   /** A delivery receipt confirms a generated link, not that its text is evidence. Host-only API. */
   async deliveryReceipt(ticket, cwd, absolutePath) {
     const state3 = await this.check(ticket, cwd);
-    const path = relative8(this.binding.vault, resolve10(absolutePath)).split(sep8).join("/");
+    const path = relative8(this.binding.vault, resolve11(absolutePath)).split(sep8).join("/");
     validateNote(path);
     if (!canRead(path, state3.project) || !(path.startsWith("Library/Explainers/") || path.startsWith(`Projects/${state3.project}/Runs/`)))
       throw new Error("Not an allowed presentation/run delivery");
@@ -4924,9 +5004,9 @@ var KnowledgeService = class {
     if (this.closePromise) return this.closePromise;
     this.closing = true;
     this.closePromise = (async () => {
-      const exited = new Promise((resolve14) => {
-        if (this.worker.threadId === -1) resolve14();
-        else this.worker.once("exit", resolve14);
+      const exited = new Promise((resolve15) => {
+        if (this.worker.threadId === -1) resolve15();
+        else this.worker.once("exit", resolve15);
       });
       try {
         if (!this.closed) await this.request("close");
@@ -5021,7 +5101,7 @@ var runtimeState = runtimeSlot2("knowledge", "uiService", () => ({
 function pathCwd(cwd) {
   if (cwd !== null && cwd !== void 0 && (typeof cwd !== "string" || !isAbsolute10(cwd)))
     throw new Error("Workspace must be an absolute path");
-  return cwd ? resolve11(cwd) : null;
+  return cwd ? resolve12(cwd) : null;
 }
 function consumeKnowledgeReviewPreview(cwd, token) {
   const entry = runtimeState.previews.get(token);
@@ -5219,7 +5299,7 @@ async function configuredVault(cwd) {
   return canonical(obsidianVault);
 }
 async function vaultPath(vault, ...parts) {
-  const file = join13(vault, ...parts);
+  const file = join14(vault, ...parts);
   if (!contains(vault, await canonical(file)))
     throw new Error("Project path must stay inside the configured vault");
   return file;
@@ -5239,7 +5319,7 @@ async function updateVault(cwd, operation) {
 }
 async function readText(file) {
   try {
-    return await readFile9(file, "utf8");
+    return await readFile10(file, "utf8");
   } catch (error) {
     if (error.code === "ENOENT")
       return null;
@@ -5291,7 +5371,7 @@ async function childEntries(directory) {
 async function noteLinks(vault, directory) {
   const links = [];
   for (const entry of await childEntries(directory)) {
-    const file = join13(directory, entry.name);
+    const file = join14(directory, entry.name);
     if (entry.isDirectory())
       links.push(...await noteLinks(vault, file));
     else if (entry.isFile() && entry.name.endsWith(".md")) {
@@ -5364,10 +5444,10 @@ async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) {
     throw new Error("Only verified downloads can be indexed");
   if (!contains(await canonical(config.resultsRoot), await canonical(runDir)) || !contains(await canonical(runDir), await canonical(entry.path)))
     throw new Error("Source must remain inside its research run");
-  if (createHash8("sha256").update(await readFile9(entry.path)).digest("hex") !== entry.sha256)
+  if (createHash8("sha256").update(await readFile10(entry.path)).digest("hex") !== entry.sha256)
     throw new Error("Source hash changed before indexing");
-  const metadata = await readJson2(join13(runDir, "metadata.json"));
-  const project = validateProject(metadata.project || "research-workbench");
+  const metadata = await readJson2(join14(runDir, "metadata.json"));
+  const project = validateProject(runProject(metadata.project, await resolveWorkspaceProject({ cwd })));
   const category = ["papers", "supplementary"].includes(entry.category) ? "Papers" : "Software";
   const title = String(entry.metadata?.title || basename5(entry.path)).replace(/[<>\r\n]/g, " ").trim().slice(0, 200);
   const slug = (title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64) || entry.category) + "-" + entry.sha256.slice(0, 16);
@@ -5430,7 +5510,7 @@ async function publishExplainer({ cwd = process.cwd(), project, topicId, title, 
     throw new Error("Obsidian vault must be configured first");
   if (config.knowledgeDepositMode === "run-only")
     return { knowledge_status: "disabled-run-only", scientificallyVerified: false };
-  project = validateProject(project || config.knowledgeProjectId || "research-workbench");
+  project = validateProject(project || (await resolveWorkspaceProject({ cwd })).project);
   topicId = String(topicId || "").normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96);
   if (!topicId)
     throw new Error("Explainer topic_id must resolve to a non-empty kebab-case id");
@@ -5439,7 +5519,7 @@ async function publishExplainer({ cwd = process.cwd(), project, topicId, title, 
     throw new Error("Explainer title is required");
   if (typeof artifactPath !== "string" || !artifactPath.trim())
     throw new Error("Explainer result_file is required");
-  const root = await canonical(config.resultsRoot), artifact = await realpath8(resolve12(cwd, artifactPath));
+  const root = await canonical(config.resultsRoot), artifact = await realpath8(resolve13(cwd, artifactPath));
   if (!contains(root, artifact))
     throw new Error("Explainer file must stay inside the configured results root");
   const info = await stat4(artifact);
@@ -5448,7 +5528,7 @@ async function publishExplainer({ cwd = process.cwd(), project, topicId, title, 
   const ext = /\.md$/i.test(artifact) ? ".md" : /\.html?$/i.test(artifact) ? ".html" : null;
   if (!ext)
     throw new Error("Explainer must be HTML or Markdown");
-  const bytes = await readFile9(artifact), digest = createHash8("sha256").update(bytes).digest("hex");
+  const bytes = await readFile10(artifact), digest = createHash8("sha256").update(bytes).digest("hex");
   const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
   return updateVault(cwd, async (vault) => {
     const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest.slice(0, 12)}${ext}`;
@@ -5511,7 +5591,7 @@ updated: ${JSON.stringify((/* @__PURE__ */ new Date()).toISOString())}
 }
 async function readJson2(file) {
   try {
-    const data = JSON.parse((await readFile9(file, "utf8")).replace(/^\uFEFF/, ""));
+    const data = JSON.parse((await readFile10(file, "utf8")).replace(/^\uFEFF/, ""));
     if (!data || typeof data !== "object" || Array.isArray(data))
       throw new Error(`Invalid JSON object: ${file}`);
     return data;
@@ -5527,7 +5607,7 @@ async function canonical(file) {
   } catch (error) {
     if (error.code !== "ENOENT" || dirname7(file) === file)
       throw error;
-    return join13(await canonical(dirname7(file)), basename5(file));
+    return join14(await canonical(dirname7(file)), basename5(file));
   }
 }
 function contains(root, child) {
@@ -5565,9 +5645,9 @@ function researchSetupOptions2() {
 import { createRequire } from "node:module";
 
 // packages/research/src/institutional-access.ts
-import { mkdir as mkdir8, readFile as readFile10, writeFile as writeFile9 } from "node:fs/promises";
-import { homedir as homedir2 } from "node:os";
-import { dirname as dirname8, join as join14 } from "node:path";
+import { mkdir as mkdir8, readFile as readFile11, writeFile as writeFile9 } from "node:fs/promises";
+import { homedir as homedir3 } from "node:os";
+import { dirname as dirname8, join as join15 } from "node:path";
 
 // packages/research/src/institutional-proxy.ts
 function buildProxiedUrl(originalUrl, template) {
@@ -5604,8 +5684,8 @@ function buildProxiedUrl(originalUrl, template) {
 
 // packages/research/src/institutional-access.ts
 var INSTITUTIONAL_CONFIG_NAME = "institutional.json";
-var INSTITUTIONAL_AGENT_DIR = join14(homedir2(), ".pi", "agent");
-var INSTITUTIONAL_CONFIG_PATH = join14(INSTITUTIONAL_AGENT_DIR, INSTITUTIONAL_CONFIG_NAME);
+var INSTITUTIONAL_AGENT_DIR = join15(homedir3(), ".pi", "agent");
+var INSTITUTIONAL_CONFIG_PATH = join15(INSTITUTIONAL_AGENT_DIR, INSTITUTIONAL_CONFIG_NAME);
 function emptyInstitutionalConfig() {
   return { version: 1, autoDownloadEnabled: true, perTaskLimit: 20 };
 }
@@ -5638,7 +5718,7 @@ function normalizeInstitutionalConfig(raw) {
     configured: Boolean(ezproxyTemplate || openUrlResolver || institutionName || lastLoginAt)
   };
 }
-async function loadInstitutionalConfig(path = INSTITUTIONAL_CONFIG_PATH, io = { readFile: (file) => readFile10(file, "utf8") }) {
+async function loadInstitutionalConfig(path = INSTITUTIONAL_CONFIG_PATH, io = { readFile: (file) => readFile11(file, "utf8") }) {
   try {
     return normalizeInstitutionalConfig(JSON.parse(await io.readFile(path)));
   } catch {
@@ -5726,20 +5806,20 @@ var contained = (root, target) => {
 async function resolveRunJournal(cwd, runDir) {
   const config = await loadWorkspaceConfig(cwd);
   const root = await realpath9(config.resultsRoot);
-  const run = await realpath9(resolve13(cwd, runDir || ""));
+  const run = await realpath9(resolve14(cwd, runDir || ""));
   const parts = relative11(root, run).split(sep10);
   if (!contained(root, run) || parts.length !== 2 || !parts[1].startsWith("run-"))
     throw new Error("Operation log must be inside a research run");
-  await readFile11(join15(run, "metadata.json"), "utf8");
+  await readFile12(join16(run, "metadata.json"), "utf8");
   return {
-    file: join15(run, "literature-operations.json"),
+    file: join16(run, "literature-operations.json"),
     vault: config.obsidianVault ? await realpath9(config.obsidianVault) : null,
     revision: Number(config.knowledgeBindingRevision || 0)
   };
 }
 async function readJournal(file) {
   try {
-    const value = JSON.parse(await readFile11(file, "utf8"));
+    const value = JSON.parse(await readFile12(file, "utf8"));
     if (value?.version !== 1 || !value.operations || typeof value.operations !== "object")
       throw new Error("Invalid operation log");
     return value;
@@ -5786,8 +5866,8 @@ var KeyedScheduler2 = class {
     if (this.disposed) throw new Error("Extension runtime scheduler has been disposed");
     const previous = this.tails.get(key) ?? Promise.resolve();
     let unlock;
-    const gate = new Promise((resolve14) => {
-      unlock = resolve14;
+    const gate = new Promise((resolve15) => {
+      unlock = resolve15;
     });
     const tail = previous.then(() => gate);
     this.tails.set(key, tail);

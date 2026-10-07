@@ -313,7 +313,7 @@ import { createHash as createHash3 } from "node:crypto";
 init_claim_conflicts();
 init_config();
 
-// packages/knowledge/src/extension-helpers.ts
+// packages/knowledge/src/project-identity.ts
 init_config();
 
 // packages/knowledge/src/index.ts
