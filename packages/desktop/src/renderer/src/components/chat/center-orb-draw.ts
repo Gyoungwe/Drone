@@ -8,7 +8,7 @@
  * 哑光：亮暗全靠墨色透明度灰阶（浅底近黑 rgba(24,24,27) / 深底柔白 rgba(244,244,245)），无 shadowBlur 光晕。
  *
  * 遮罩一体：帧首画页面底色径向渐变圆盘（与底色同色 → 盘隐形，只压身后文字突出动画）。
- * 画布随 CenterOrb 整体 z-20 盖在文字层之上，故圆盘直接生效；边缘渐隐无硬边，哑光体系不要真模糊。
+ * 遮罩可选（mask 参数，默认开）：CenterOrb 现为文档流内独立块、身后无文字，传 mask:false 关闭。
  */
 
 const TAU = Math.PI * 2;
@@ -116,7 +116,13 @@ interface Pt {
  * 结构：粒子分内外两带对转 + 径向呼吸；每带两道对向亮度波绕行 + 个体周期放电；
  * 近邻连突触细线（两端越亮线越亮）；信号脉冲沿连接线从较亮端流向另一端；中心呼吸圆点锚点。
  */
-export function drawCenterOrb(ctx: CanvasRenderingContext2D, S: number, t: number, dark: boolean): void {
+export function drawCenterOrb(
+	ctx: CanvasRenderingContext2D,
+	S: number,
+	t: number,
+	dark: boolean,
+	{ mask = true }: { mask?: boolean } = {},
+): void {
 	const o = O;
 	const c = S / 2;
 	// 位置（闭式）：窄速差保持队形相干，角向摆动 + 径向呼吸带来有机感
@@ -143,10 +149,13 @@ export function drawCenterOrb(ctx: CanvasRenderingContext2D, S: number, t: numbe
 		pts.push({ p, x: c + r * Math.cos(th), y: c + r * Math.sin(th), b: Math.min(1.4, b) * ef });
 	}
 	// 遮罩圆盘（一体式，必先于粒子绘制）：压住身后文字、突出动画本体
-	ctx.fillStyle = maskGradient(ctx, c, dark);
-	ctx.beginPath();
-	ctx.arc(c, c, o.maskR, 0, TAU);
-	ctx.fill();
+	// 流内布局（CenterOrb 默认）身后没有文字，跳过遮罩，避免底色不一致时露出灰盘
+	if (mask) {
+		ctx.fillStyle = maskGradient(ctx, c, dark);
+		ctx.beginPath();
+		ctx.arc(c, c, o.maskR, 0, TAU);
+		ctx.fill();
+	}
 	ctx.lineCap = "round";
 	// 突触连接 + 信号脉冲
 	const slotDur = 1.0 / o.speed; // 脉冲行进时长随流转速度
