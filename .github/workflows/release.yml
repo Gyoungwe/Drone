@@ -125,11 +125,18 @@ jobs:
     needs: [resolve, prepare]
     strategy:
       fail-fast: false
-      # GitHub release asset storage is sensitive to concurrent multi-hundred-MB uploads.
-      # Serialize platform build/upload jobs so one release never receives three large streams at once.
-      max-parallel: 1
+      # Platforms build in parallel. Builds no longer talk to the release: each job only
+      # stores its outputs as a workflow artifact, and the single publish job uploads
+      # everything afterwards, so the release never receives concurrent large streams
+      # (the reason max-parallel: 1 was introduced in 4164df0 / #25).
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: windows
+          - os: ubuntu-latest
+            platform: linux
     runs-on: ${{ matrix.os }}
     env:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
@@ -158,38 +165,22 @@ jobs:
           python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
           node scripts/check-research-packaging.cjs
       - run: npm run dist -w packages/desktop -- --publish never
-      - name: Upload build outputs directly to draft release
-        timeout-minutes: 60
+      - name: Collect release assets
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Bound the upload and avoid stalled HTTP/2 streams in the Go-based gh client.
-          GODEBUG: http2client=0
         run: |
-          ASSET_LIST="$(mktemp)"
-          find packages/desktop/dist -maxdepth 1 -type f \
-            ! -name 'builder-debug.yml' \
-            -print | sort > "$ASSET_LIST"
-          if [ ! -s "$ASSET_LIST" ]; then
-            echo "No release assets were produced." >&2
-            exit 1
-          fi
-          while IFS= read -r ASSET; do
-            echo "Uploading $ASSET"
-            ATTEMPT=1
-            until gh release upload "$RELEASE_TAG" "$ASSET" \
-              -R "${{ github.repository }}" --clobber; do
-              if [ "$ATTEMPT" -ge 3 ]; then
-                echo "Failed to upload $ASSET after $ATTEMPT attempts." >&2
-                exit 1
-              fi
-              SLEEP_SECONDS=$((ATTEMPT * 15))
-              echo "Upload failed for $ASSET (attempt $ATTEMPT). Retrying in ${SLEEP_SECONDS}s..." >&2
-              sleep "$SLEEP_SECONDS"
-              ATTEMPT=$((ATTEMPT + 1))
-            done
-          done < "$ASSET_LIST"
-          rm -f "$ASSET_LIST"
+          set -euo pipefail
+          mkdir -p release-assets
+          find packages/desktop/dist -maxdepth 1 -type f ! -name 'builder-debug.yml' ! -name 'builder-effective-config.yaml' \
+            -exec cp {} release-assets/ \;
+          if [ -z "$(ls -A release-assets)" ]; then echo "No release assets were produced." >&2; exit 1; fi
+          ls -l release-assets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: release-assets/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
 
   publish:
     needs: [resolve, build]
@@ -197,23 +188,56 @@ jobs:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
     runs-on: ubuntu-latest
     steps:
-      - name: Verify required assets and publish draft
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - name: Verify required assets
+        run: |
+          set -euo pipefail
+          ls -l release-assets
+          # Updater metadata comes one file per platform (latest.yml / latest-mac.yml / latest-linux.yml),
+          # so no merging is needed; a name collision would mean two platforms wrote the same file.
+          for REQUIRED in \
+            drone-mac-arm64.dmg drone-mac-x64.dmg drone-mac-arm64.zip drone-mac-x64.zip \
+            drone-windows-x64.exe drone-windows-x64.zip \
+            drone-linux-x64.AppImage drone-linux-x64.deb \
+            latest.yml latest-mac.yml latest-linux.yml; do
+            [ -f "release-assets/$REQUIRED" ] || { echo "Missing required release asset: $REQUIRED" >&2; exit 1; }
+          done
+      - name: Upload assets to draft release (sequential, with retry)
+        timeout-minutes: 90
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Avoid stalled HTTP/2 streams in the Go-based gh client.
+          GODEBUG: http2client=0
+        run: |
+          set -uo pipefail
+          for ASSET in release-assets/*; do
+            echo "Uploading $ASSET"
+            ATTEMPT=1
+            until gh release upload "$RELEASE_TAG" "$ASSET" -R "${{ github.repository }}" --clobber; do
+              if [ "$ATTEMPT" -ge 5 ]; then
+                echo "Failed to upload $ASSET after $ATTEMPT attempts." >&2
+                exit 1
+              fi
+              SLEEP_SECONDS=$((ATTEMPT * 20))
+              echo "Upload failed for $ASSET (attempt $ATTEMPT). Retrying in ${SLEEP_SECONDS}s..." >&2
+              sleep "$SLEEP_SECONDS"
+              ATTEMPT=$((ATTEMPT + 1))
+            done
+          done
+      - name: Verify uploaded assets and publish draft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           TAG="$RELEASE_TAG"
           ASSETS="$(gh release view "$TAG" -R "${{ github.repository }}" --json assets --jq '.assets[].name')"
-          for REQUIRED in \
-            drone-mac-arm64.dmg \
-            drone-mac-x64.dmg \
-            drone-windows-x64.exe \
-            drone-windows-x64.zip \
-            drone-linux-x64.AppImage \
-            drone-linux-x64.deb; do
-            if ! grep -Fxq "$REQUIRED" <<<"$ASSETS"; then
-              echo "Missing required release asset: $REQUIRED" >&2
-              exit 1
-            fi
+          for LOCAL in release-assets/*; do
+            NAME="$(basename "$LOCAL")"
+            grep -Fxq "$NAME" <<<"$ASSETS" || { echo "Asset not on release: $NAME" >&2; exit 1; }
           done
           gh release edit "$TAG" -R "${{ github.repository }}" --draft=false
 
