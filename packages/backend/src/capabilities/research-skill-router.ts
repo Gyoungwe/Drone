@@ -1,5 +1,8 @@
 import {
+	CAPABILITY_SKILL_DIRECTIONS,
 	type CapabilityId,
+	capabilityForDirection,
+	capabilityForSkill,
 	WORKFLOW_OWNER_NAMES,
 	WORKFLOW_PROFILES,
 	workflowProfile,
@@ -15,7 +18,7 @@ const TOPICS = {
 	library: /zotero|文献库/i,
 	vault: /知识库|obsidian|wiki.{0,10}(?:review|update|search)/i,
 	explore: /数据探索|探索性.{0,4}分析|数据质量检查|exploratory data|data quality check/i,
-	de: /已有.{0,8}(?:计数|counts)|从.{0,5}计数|differential expression from counts/i,
+	de: /已有.{0,8}(?:计数|counts)|从.{0,5}(?:计数|counts)|differential expression from counts/i,
 	enrichment: /通路富集|基因集富集|pathway enrichment|gene.set enrichment/i,
 	blindReview: /互盲|三份.{0,5}评审|three blind reviews/i,
 	arsReview: /五席.{0,5}(?:评审|评议)|five.seat.{0,15}(?:review|panel)/i,
@@ -33,7 +36,7 @@ const TOPICS = {
 	resources: /(?:检查|检测).{0,8}(?:计算资源|GPU|内存)|inspect compute resources/i,
 	nextflow: /\bnextflow\b|nf-core/i,
 	search:
-		/文献检索|检索.{0,8}(?:论文|文献)|搜.{0,5}论文|literature search|search.{0,20}(?:papers|literature)/i,
+		/文献检索|检索.{0,24}(?:论文|文献)|(?:查找|查询|搜索|搜|找).{0,16}(?:相关)?(?:论文|文献)|literature search|search.{0,20}(?:papers|literature)|find.{0,20}(?:papers|literature)/i,
 	synthesis: /文献综述|系统综述|元分析|literature review|systematic review|meta.analysis/i,
 	reading: /读.{0,5}论文|解读.{0,5}论文|论文解读|read.{0,12}paper|paper summary/i,
 	citation: /引用.{0,6}(?:论文|文献)|引用核验|参考文献|引文|citation|bibliograph|verify references/i,
@@ -43,7 +46,10 @@ const TOPICS = {
 	review: /审稿|同行评审|peer review|review.{0,12}(?:paper|manuscript)/i,
 	response: /回复.{0,5}审稿|审稿.{0,5}回复|rebuttal|response to reviewers/i,
 	figures:
-		/科研绘图|论文配图|多面板图|科学.{0,5}可视化|scientific (?:figure|plot|visualization)|publication.ready (?:plot|figure)|volcano plot|火山图/i,
+		/科研绘图|论文配图|多面板图|科学.{0,5}可视化|scientific (?:figure|plot|visualization)|publication.ready (?:plot|figure)|volcano plot|火山图|(?:Nature|Science|Cell|期刊|杂志|顶刊).{0,10}(?:规范|风格|格式|标准|要求|级别?).{0,24}(?:图|figure|plot|chart)|重绘.{0,16}图|(?:期刊|Nature|Science|Cell).{0,6}(?:配图|插图|图表)|(?:redraw|re-draw|restyle).{0,30}(?:figure|plot|chart|graph)|(?:journal|nature|science|cell).{0,6}(?:style|format).{0,20}(?:figure|plot|chart)|(?:figure|plot|chart).{0,30}(?:journal|nature|science|cell).{0,6}(?:style|format|guidelines)|画.{0,12}(?:结果图|统计图|柱状图|折线图|散点图|热图|箱线图|小提琴图)|(?:make|draw|plot).{0,20}(?:publication|journal).{0,10}(?:figure|plot)/i,
+	schematic:
+		/示意图|流程示意|机制图|模式图|技术路线图|实验流程图|schematic|flow.?chart|graphical abstract|图形摘要/i,
+	phylogeny: /系统发育|进化树|系统树|phylogen|evolutionary tree/i,
 	slides: /论文.{0,5}(?:汇报|幻灯片|ppt)|科研汇报|research (?:slides|presentation)|paper.{0,5}slides/i,
 	statistics:
 		/统计(?:分析|检验|功效)|假设检验|效应量|statistical (?:analysis|test|power)|hypothesis test|effect size|anova|t.test/i,
@@ -157,11 +163,13 @@ const STAGE_PRIORITY: ResearchTopic[] = [
 	"de",
 	"enrichment",
 	"paperCard",
+	"phylogeny",
 	"bioinformatics",
 	"review",
 	"writing",
 	"synthesis",
 	"subscription",
+	"schematic",
 	"figures",
 	"slides",
 	"singlecell",
@@ -182,6 +190,48 @@ const ACADEMIC: Partial<Record<ResearchTopic, string>> = {
 	writing: "academic-paper",
 	search: "deep-research",
 };
+/** Topics without a catalogued stage map straight to their specialist skill. */
+const TOPIC_SKILLS: Partial<Record<ResearchTopic, string[]>> = {
+	phylogeny: ["phylogenetics"],
+	schematic: ["scientific-schematics"],
+};
+function topicCapability(topic: ResearchTopic): CapabilityId | undefined {
+	const stage = workflowStage(topic);
+	return capabilityForDirection(
+		stage?.direction ?? workflowProfile(TOPIC_SKILLS[topic]?.[0] ?? "")?.direction,
+	);
+}
+function topicSkills(topic: ResearchTopic): string[] {
+	const stage = workflowStage(topic);
+	const fromStage = stage?.commands.filter((n) => n.startsWith("skill:")).map((n) => n.slice(6)) ?? [];
+	return [...(TOPIC_SKILLS[topic] ?? []), ...fromStage];
+}
+/** Skill capabilities requested by an intent (topics, named skills, explicit command). */
+export function intentCapabilities(intent: ResearchSkillIntent): CapabilityId[] {
+	const found = new Set<CapabilityId>();
+	for (const topic of intent.topics) {
+		const id = topicCapability(topic);
+		if (id) found.add(id);
+	}
+	for (const name of [...intent.named, ...(intent.primary ? [intent.primary] : [])]) {
+		const id = capabilityForDirection(workflowProfile(name)?.direction);
+		if (id) found.add(id);
+	}
+	return [...found];
+}
+/**
+ * `research` is now an umbrella: on its own it owns no workflow skills, but a research task adds the
+ * skill capabilities its intent asks for. Sub-capabilities are always kept as loaded.
+ */
+export function effectiveSkillCapabilities(
+	capabilities: ReadonlySet<CapabilityId>,
+	intent: ResearchSkillIntent,
+): Set<CapabilityId> {
+	const out = new Set<CapabilityId>();
+	for (const id of capabilities) if (CAPABILITY_SKILL_DIRECTIONS[id]) out.add(id);
+	if (capabilities.has("research")) for (const id of intentCapabilities(intent)) out.add(id);
+	return out;
+}
 export const RESEARCH_SKILL_LIMIT = 6;
 export const RESEARCH_DISCOVERY_BYTES = 6000;
 export interface RoutableSkill {
@@ -207,11 +257,15 @@ export function selectResearchSkills(
 	options: { academicEnabled?: boolean } = {},
 ): ResearchSkillSelection {
 	const result: ResearchSkillSelection = { names: [], reasons: {}, discoveryBytes: 0 };
-	if (
-		!["research", "knowledge", "visualization", "coding"].some((id) => capabilities.has(id as CapabilityId))
-	)
-		return result;
-	const stageId = STAGE_PRIORITY.find((t) => intent.topics.includes(t));
+	const owned = effectiveSkillCapabilities(capabilities, intent);
+	if (!owned.size) return result;
+	// The primary stage is the highest-priority topic whose owning capability is loaded.
+	const stageId = STAGE_PRIORITY.find((t) => {
+		if (!intent.topics.includes(t)) return false;
+		const owner = topicCapability(t);
+		return !owner || owned.has(owner);
+	});
+	// Strict ownership: a workflow skill is a candidate only when its own capability is loaded (no cross-leak).
 	const candidates = new Map(
 		skills
 			.filter((s) => {
@@ -223,50 +277,123 @@ export function selectResearchSkills(
 				)
 					return false;
 				if (profile.source === "academic" && !options.academicEnabled) return false;
-				return profile.direction === "engineering"
-					? capabilities.has("coding") || capabilities.has("research")
-					: profile.direction === "presentation"
-						? capabilities.has("visualization") || capabilities.has("research")
-						: capabilities.has("research") || capabilities.has("knowledge");
+				const owner = capabilityForDirection(profile.direction);
+				return !!owner && owned.has(owner);
 			})
 			.map((s) => [s.name, s]),
 	);
-	const add = (name: string, reason: string) => {
+	const perCapability = new Map<CapabilityId, { count: number; bytes: number }>();
+	const add = (name: string, reason: string, supporting = false) => {
 		const skill = candidates.get(name);
 		if (!skill || result.names.includes(name)) return false;
-		if (!intent.comparison && result.primaryWorkflow && WORKFLOW_OWNER_NAMES.has(name)) return false;
+		if (!supporting && !intent.comparison && result.primaryWorkflow && WORKFLOW_OWNER_NAMES.has(name))
+			return false;
+		if (result.names.length >= RESEARCH_SKILL_LIMIT && !supporting) return false;
+		const owner = capabilityForDirection(workflowProfile(name)?.direction) as CapabilityId;
+		const used = perCapability.get(owner) ?? { count: 0, bytes: 0 };
 		const bytes =
 			Buffer.byteLength(
 				JSON.stringify({ name, description: skill.description, location: skill.filePath ?? "" }),
 			) + 96;
 		if (
-			result.names.length >= RESEARCH_SKILL_LIMIT ||
-			result.discoveryBytes + bytes > RESEARCH_DISCOVERY_BYTES
+			used.count >= RESEARCH_SKILL_LIMIT ||
+			(supporting ? used.bytes : result.discoveryBytes) + bytes > RESEARCH_DISCOVERY_BYTES
 		)
 			return false;
+		perCapability.set(owner, { count: used.count + 1, bytes: used.bytes + bytes });
 		result.names.push(name);
 		result.reasons[name] = reason;
 		result.discoveryBytes += bytes;
-		if (!intent.comparison && !result.primaryWorkflow) {
-			result.primaryWorkflow = name;
-			const stage = workflowStageForSkill(name);
-			result.stage = stage?.id;
-			result.direction = workflowProfile(name)?.direction;
-			result.contract = stage?.contract;
-		}
 		return true;
 	};
-	if (intent.primary) add(intent.primary, "explicit-command");
-	for (const name of intent.named) add(name, intent.comparison ? "comparison-reference" : "named-in-task");
+	const setPrimary = (name: string) => {
+		if (intent.comparison || result.primaryWorkflow || !result.names.includes(name)) return;
+		result.primaryWorkflow = name;
+		const stage = workflowStageForSkill(name);
+		result.stage = stage?.id;
+		result.direction = workflowProfile(name)?.direction;
+		result.contract = stage?.contract;
+	};
+	if (intent.primary && add(intent.primary, "explicit-command")) setPrimary(intent.primary);
+	for (const name of intent.named)
+		if (add(name, intent.comparison ? "comparison-reference" : "named-in-task")) setPrimary(name);
 	// Exact/native choices are authoritative; do not start a second broad workflow from words in their arguments.
 	if (result.names.length || intent.primary || intent.comparison) return result;
+	// 1) One primary workflow owner from the highest-priority stage (keeps the stage contract).
 	if (stageId) {
-		const stage = workflowStage(stageId);
-		const names = stage?.commands.filter((n) => n.startsWith("skill:")).map((n) => n.slice(6)) ?? [];
+		const names = topicSkills(stageId);
 		const academic = ACADEMIC[stageId];
 		if (options.academicEnabled && academic) names.unshift(academic);
-		for (const name of names) if (add(name, `topic:${stageId}`)) break;
+		for (const name of names)
+			if (add(name, `topic:${stageId}`)) {
+				setPrimary(name);
+				break;
+			}
 		if (!result.names.length) result.unavailableStage = stageId;
 	}
+	// 2) Mixed requests (analysis/writing + figure): one supporting skill from the other side (visualization
+	//    vs. the primary's capability), so the figure skill is not squeezed out by the analysis/writing owner.
+	const primaryCapability = capabilityForSkill(result.primaryWorkflow ?? "");
+	for (const topic of STAGE_PRIORITY) {
+		if (!intent.topics.includes(topic) || topic === stageId) continue;
+		const owner = topicCapability(topic);
+		if (!owner || owner === primaryCapability || !owned.has(owner)) continue;
+		if (owner !== "visualization" && primaryCapability !== "visualization") continue;
+		if (result.names.some((n) => capabilityForSkill(n) === owner)) continue;
+		for (const name of topicSkills(topic)) if (add(name, `topic:${topic}`, true)) break;
+	}
 	return result;
+}
+/**
+ * Visible workflow skills: the routed owner + supporting skills, then each loaded capability filled up to
+ * RESEARCH_SKILL_LIMIT by task relevance (catalog order as tie-break). Never crosses capability ownership.
+ */
+export function selectCapabilitySkills(
+	skills: readonly RoutableSkill[],
+	capabilities: ReadonlySet<CapabilityId>,
+	intent: ResearchSkillIntent,
+	options: { academicEnabled?: boolean; fill?: ReadonlySet<CapabilityId> } = {},
+): string[] {
+	const routed = selectResearchSkills(skills, capabilities, intent, options);
+	// An explicit /skill: or named choice stays authoritative: do not pad it with other skills.
+	if (intent.primary || intent.comparison || (routed.names.length && intent.named.length))
+		return routed.names;
+	const owned = effectiveSkillCapabilities(capabilities, intent);
+	// Fill only capabilities explicitly loaded through capability_load; keyword-detected packs on a normal
+	// turn (e.g. coding for "fix this build") keep just the routed skills instead of a catalog page.
+	const fill = new Set<CapabilityId>(options.fill ?? capabilities);
+	const names = [...routed.names];
+	const count = new Map<CapabilityId, number>();
+	for (const n of names) {
+		const id = capabilityForSkill(n);
+		if (id) count.set(id, (count.get(id) ?? 0) + 1);
+	}
+	const words = taskWords(intent);
+	for (const id of owned) {
+		if (!fill.has(id)) continue;
+		const ranked = skills
+			.filter((s) => {
+				const profile = workflowProfile(s.name);
+				if (!profile || capabilityForDirection(profile.direction) !== id || s.disableModelInvocation)
+					return false;
+				return profile.source !== "academic" || !!options.academicEnabled;
+			})
+			.map((s, index) => ({ s, index, score: relevance(s, words) }))
+			.sort((a, b) => b.score - a.score || a.index - b.index);
+		for (const { s } of ranked) {
+			if ((count.get(id) ?? 0) >= RESEARCH_SKILL_LIMIT) break;
+			if (names.includes(s.name)) continue;
+			names.push(s.name);
+			count.set(id, (count.get(id) ?? 0) + 1);
+		}
+	}
+	return names;
+}
+function taskWords(intent: ResearchSkillIntent): string[] {
+	return intent.topics.flatMap((t) => topicSkills(t)).flatMap((n) => n.split("-"));
+}
+function relevance(skill: RoutableSkill, words: string[]): number {
+	if (!words.length) return 0;
+	const text = `${skill.name} ${skill.description}`.toLowerCase();
+	return words.filter((w) => w.length > 2 && text.includes(w)).length;
 }

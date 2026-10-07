@@ -1,4 +1,4 @@
-import { RESEARCH_SKILL_SOURCES } from "@drone/shared";
+import { capabilityForSkill, RESEARCH_SKILL_SOURCES } from "@drone/shared";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 import {
@@ -172,8 +172,13 @@ describe("conflict-audit regressions", () => {
 		runtime.prepareForPrompt("/skill:nature-reviewer", false);
 		runtime.prepareForPrompt("补充：回复审稿意见", false);
 		expect(runtime.state().visibleSkills).toEqual(["nature-response"]);
+		// Explicit capability_load: research + task adds the writing group (owner first, then up to 6 writing skills).
 		runtime.activate(["research"], "polish manuscript");
-		expect(runtime.state().visibleSkills).toEqual(["nature-polishing"]);
+		expect(runtime.getWorkflowSelection().primaryWorkflow).toBe("nature-polishing");
+		const visible = runtime.state().visibleSkills;
+		expect(visible).toContain("nature-polishing");
+		expect(visible.length).toBeLessThanOrEqual(6);
+		for (const name of visible) expect(capabilityForSkill(name)).toBe("writing");
 	});
 	it("full publication is never silently replaced by a daily feed", () => {
 		expect(select("从研究到发表").names).toEqual([]);
