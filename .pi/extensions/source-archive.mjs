@@ -2937,7 +2937,13 @@ function createResearchLoop(ports) {
     await access2(join3(path, "metadata.json"));
     return { config, path, metadataPath: join3(path, "metadata.json") };
   }
-  async function startResearchRun({ cwd = process.cwd(), project, resultSlug, query } = {}) {
+  async function startResearchRun({
+    cwd = process.cwd(),
+    project,
+    resultSlug,
+    query,
+    requiresProvenance = false
+  } = {}) {
     const config = await loadWorkspaceConfig3(cwd);
     project = safeSlug(project || "research-workbench", "project");
     resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
@@ -2953,6 +2959,9 @@ function createResearchLoop(ports) {
       topic_id: topicIdFromResultSlug(resultSlug),
       query: query.trim(),
       status: "running",
+      revision: 0,
+      requires_provenance: requiresProvenance === true,
+      provenance: { status: requiresProvenance === true ? "pending" : "not-required" },
       started_at: now,
       evidence_gate: {
         stage: "created",
@@ -2970,7 +2979,7 @@ function createResearchLoop(ports) {
     await atomicJson2(join3(runDir, "metadata.json"), metadata);
     return { run_dir: runDir, metadata };
   }
-  async function updateResearchLoop({
+  async function updateResearchLoopUnlocked({
     cwd = process.cwd(),
     runDir,
     action,
@@ -2979,10 +2988,14 @@ function createResearchLoop(ports) {
     claimRefs = [],
     claimBindings = [],
     outcome,
-    notes
+    notes,
+    expectedRevision
   } = {}) {
     const { path, metadataPath } = await resolveRun(cwd, runDir);
     const metadata = await readJson3(metadataPath);
+    const revision = Number.isInteger(metadata.revision) ? metadata.revision : 0;
+    if (expectedRevision != null && Number(expectedRevision) !== revision)
+      throw new Error(`research run changed; expected revision ${expectedRevision}, found ${revision}`);
     let gate = gateOf(metadata);
     const detail = {
       ...query ? { query: String(query).trim() } : {},
@@ -2993,7 +3006,7 @@ function createResearchLoop(ports) {
       if (RESEARCH_STAGES.indexOf(gate.stage) < RESEARCH_STAGES.indexOf(stage))
         throw new Error(`research loop must reach ${stage} before ${action}`);
     };
-    if (action === "status") return { run_dir: path, metadata, evidence_gate: gate };
+    if (action === "status") return { run_dir: path, metadata, evidence_gate: gate, revision };
     if (action === "record_local") {
       if (!query?.trim()) throw new Error("query is required");
       gate = advance(gate, "local_query_recorded", detail);
@@ -3037,7 +3050,7 @@ function createResearchLoop(ports) {
       );
     } else if (action === "bind_claims") {
       if (gate.stage === "sources_inspected") {
-        const available = await updateResearchLoop({ cwd, runDir, action: "verify_archive" });
+        const available = await updateResearchLoopUnlocked({ cwd, runDir, action: "verify_archive" });
         gate = available.evidence_gate;
       }
       requireStage("sources_archived");
@@ -3055,7 +3068,9 @@ function createResearchLoop(ports) {
         gate = { ...gate, claim_bindings: checked, claim_refs: claimBindingRefs(checked), warnings: [] };
         claimRefs = claimBindingRefs(checked);
       } else if (claimRefs.length) {
-        throw new Error("Structured claim_bindings are required; legacy claim_refs cannot make a run answerable");
+        throw new Error(
+          "Structured claim_bindings are required; legacy claim_refs cannot make a run answerable"
+        );
       }
       if (!Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0)
         throw new Error("Structured claim_bindings must contain at least one validated claim");
@@ -3069,6 +3084,11 @@ function createResearchLoop(ports) {
       const refs = claimBindingRefs(checked);
       if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
         throw new Error("archive verification and structured claim bindings are required before answerable");
+      if (metadata.requires_provenance === true) {
+        const provenance = await readJson3(join3(path, "reproducibility-manifest.json"));
+        if (!provenance || provenance.version !== 1)
+          throw new Error("This run requires a reproducibility manifest before it can become answerable");
+      }
       gate = advance(
         { ...gate, claim_bindings: checked, claim_refs: refs, warnings: [], status: "ok", answerable: true },
         "answerable",
@@ -3087,8 +3107,16 @@ function createResearchLoop(ports) {
       metadata.finalized_at = metadata.finalized_at || (/* @__PURE__ */ new Date()).toISOString();
     }
     metadata.updated_at = (/* @__PURE__ */ new Date()).toISOString();
+    metadata.revision = revision + 1;
     await atomicJson2(metadataPath, metadata);
-    return { run_dir: path, evidence_gate: gate };
+    return { run_dir: path, evidence_gate: gate, revision: metadata.revision };
+  }
+  async function updateResearchLoop(input = {}) {
+    const cwd = input.cwd || process.cwd();
+    const key = runKey(cwd, input.runDir);
+    const work = () => updateResearchLoopUnlocked(input);
+    if (input.action === "complete" || !ports.exclusive) return work();
+    return ports.exclusive(key, work);
   }
   function isWikiPath(path) {
     return /(?:^|[\\/])Wiki[\\/]/i.test(String(path || ""));
@@ -5665,6 +5693,7 @@ var recordZoteroWrite = operations.recordZoteroWrite;
 var loop = createResearchLoop({
   workspace: async (cwd) => await loadWorkspaceConfig(cwd),
   verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input),
+  exclusive,
   sourceStatus: async ({ cwd, run_dir, verify }) => sourceStatus({ cwd, run_dir, verify }, archivePorts)
 });
 
