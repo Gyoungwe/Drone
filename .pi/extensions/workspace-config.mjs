@@ -423,6 +423,9 @@ project: ${JSON.stringify(slug)}
   return { projectsIndex, legacyIndex, libraryIndex, knowledgeIndex, projectIndexes };
 }
 
+// packages/extensions/src/research-policy.ts
+var MAX_CONCURRENT_RESEARCH_SUBAGENTS = 3;
+
 // packages/extensions/src/workspace-config.ts
 var TOOL_MANIFEST_EVENT = "drone:tool-manifest/v1";
 function registerTool(pi, definition) {
@@ -447,7 +450,7 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
   knowledgeProjectId: null,
   knowledgeBindingRevision: 0,
   legacyProjectVault: null,
-  maxConcurrentSubagents: 3,
+  maxConcurrentSubagents: MAX_CONCURRENT_RESEARCH_SUBAGENTS,
   timezone: "Asia/Shanghai",
   knowledgeProfile: DEFAULT_VAULT_PROFILE,
   knowledgeDepositMode: "verified",
@@ -463,8 +466,10 @@ function resolveConfiguredPath(cwd, value) {
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
-  if (!Number.isInteger(max) || max < 1 || max > 3) {
-    throw new Error("maxConcurrentSubagents must be an integer between 1 and 3");
+  if (!Number.isInteger(max) || max < 1 || max > MAX_CONCURRENT_RESEARCH_SUBAGENTS) {
+    throw new Error(
+      `maxConcurrentSubagents must be an integer between 1 and ${MAX_CONCURRENT_RESEARCH_SUBAGENTS}`
+    );
   }
   if (typeof config.timezone !== "string" || !config.timezone.trim()) {
     throw new Error("timezone must be a non-empty string");
