@@ -11,6 +11,7 @@ import { knowledgeDirectory, readKnowledgeBinding, saveKnowledgeBinding } from "
 import { initializeProjectContext, initializeSharedNavigation } from "@drone/knowledge/layout";
 import { getKnowledgeService, notifyKnowledgeChange } from "@drone/knowledge/service";
 import { normalizeSourceLinks, onlineSourceLink } from "@drone/knowledge/source-links";
+import { resolveWorkspaceProject, runProject } from "@drone/knowledge/project-identity";
 import { runtimeSlot } from "@drone/tasks/runtime-bridge";
 import { LAYOUT, renderTemplate } from "./vault-layout";
 import { getVaultProfile, listVaultProfiles } from "./vault-profiles";
@@ -253,7 +254,8 @@ export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }: 
         .digest("hex") !== entry.sha256)
         throw new Error("Source hash changed before indexing");
     const metadata = await readJson(join(runDir, "metadata.json"));
-    const project = validateProject(metadata.project || "research-workbench");
+    // The run's recorded project wins; legacy "research-workbench" runs follow the current workspace.
+    const project = validateProject(runProject(metadata.project, await resolveWorkspaceProject({ cwd })));
     const category = ["papers", "supplementary"].includes(entry.category) ? "Papers" : "Software";
     const title = String(entry.metadata?.title || basename(entry.path))
         .replace(/[<>\r\n]/g, " ")
@@ -300,7 +302,7 @@ export async function publishExplainer({ cwd = process.cwd(), project, topicId, 
         throw new Error("Obsidian vault must be configured first");
     if (config.knowledgeDepositMode === "run-only")
         return { knowledge_status: "disabled-run-only", scientificallyVerified: false };
-    project = validateProject(project || config.knowledgeProjectId || "research-workbench");
+    project = validateProject(project || (await resolveWorkspaceProject({ cwd })).project);
     topicId = String(topicId || "")
         .normalize("NFKC")
         .toLowerCase()
@@ -527,7 +529,7 @@ export async function depositKnowledge({ cwd = process.cwd(), project, type, tit
         throw new Error("Obsidian vault must be configured first");
     if (config.knowledgeDepositMode === "run-only")
         throw new Error("Knowledge deposition is disabled by run-only mode");
-    project = validateProject(project || "research-workbench");
+    project = validateProject(project || (await resolveWorkspaceProject({ cwd })).project);
     const profile = getVaultProfile(config.knowledgeProfile);
     const kind = String(type || "").toLowerCase();
     if (knowledgeDirectory() && kind === "wiki")

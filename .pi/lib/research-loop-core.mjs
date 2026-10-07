@@ -1,7 +1,98 @@
 // packages/research/src/research-loop.ts
+import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
+import { access, mkdir, readFile as readFile2, realpath, rename, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute as isAbsolute2, join as join3, relative, resolve as resolve3, sep } from "node:path";
+
+// packages/knowledge/src/project-identity.ts
+import { readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join as join2, resolve as resolve2 } from "node:path";
+
+// packages/knowledge/src/config.ts
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
-import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, isAbsolute, join, resolve } from "node:path";
+function createKnowledgeConfigState() {
+  return { local: new AsyncLocalStorage(), queues: /* @__PURE__ */ new Map() };
+}
+function projectIdentity(cwd, configured) {
+  if (typeof configured === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured)) return configured;
+  const path = resolve(cwd);
+  const stem = basename(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
+  return `${stem}-${createHash("sha256").update(path).digest("hex").slice(0, 10)}`;
+}
+var defaultState = createKnowledgeConfigState();
+
+// packages/knowledge/src/project-identity.ts
+var SESSION_PROJECT_ENTRY = "drone-session-project-v1";
+var SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+var RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
+function isProjectSlug(value) {
+  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED.test(value);
+}
+function normalizeProjectSlug(input) {
+  if (typeof input !== "string") return null;
+  const slug = input.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96).replace(/-+$/g, "");
+  return isProjectSlug(slug) ? slug : null;
+}
+function workspaceProjectId(cwd, configured) {
+  return projectIdentity(cwd, isProjectSlug(configured) ? configured : void 0);
+}
+function dailyWorkspaceDir(home = homedir()) {
+  return join2(home, ".drone", "daily");
+}
+function samePath(a, b) {
+  const left = resolve2(a).replace(/[\\/]+$/, "");
+  const right = resolve2(b).replace(/[\\/]+$/, "");
+  return process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+function isDailyWorkspace(cwd, home) {
+  return samePath(cwd, dailyWorkspaceDir(home));
+}
+function sessionProjectFromEntries(entries) {
+  if (!Array.isArray(entries)) return null;
+  let project = null;
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || entry.customType !== SESSION_PROJECT_ENTRY) continue;
+    if (entry.type !== void 0 && entry.type !== "custom") continue;
+    const value = entry.data?.project;
+    if (value === null) project = null;
+    else if (isProjectSlug(value)) project = value;
+  }
+  return project;
+}
+function resolveProjectIdentity(input) {
+  const daily = isDailyWorkspace(input.cwd, input.home);
+  const requestedText = typeof input.requested === "string" ? input.requested.trim() : "";
+  const requested = requestedText || null;
+  let project;
+  let source;
+  const session = daily ? sessionProjectFromEntries(input.sessionEntries) : null;
+  if (session) {
+    project = session;
+    source = "session";
+  } else if (isProjectSlug(input.configured)) {
+    project = input.configured;
+    source = "workspace-config";
+  } else {
+    project = workspaceProjectId(input.cwd);
+    source = "workspace";
+  }
+  const ignoredRequest = requested !== null && normalizeProjectSlug(requested) !== project;
+  return { project, source, daily, requested, ignoredRequest };
+}
+async function readConfiguredProject(cwd) {
+  try {
+    const parsed = JSON.parse(await readFile(join2(cwd, ".pi", "research-workspace.json"), "utf8"));
+    if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
+      return parsed.knowledgeProjectId;
+  } catch {
+  }
+  return void 0;
+}
+async function resolveWorkspaceProject(input) {
+  return resolveProjectIdentity({ ...input, configured: await readConfiguredProject(input.cwd) });
+}
 
 // packages/research/src/claim-bindings.ts
 var RELATIONSHIPS = ["direct", "indirect", "hypothesis", "unsupported"];
@@ -130,7 +221,7 @@ function createResearchLoop(ports) {
       this.receiptQueues.clear();
     }
   };
-  const runKey = (cwd, runDir) => resolve(cwd, runDir);
+  const runKey = (cwd, runDir) => resolve3(cwd, runDir);
   function ledger(cwd, runDir) {
     const key = runKey(cwd, runDir);
     if (!runtimeState.receiptLedger.has(key)) {
@@ -219,23 +310,23 @@ function createResearchLoop(ports) {
     return stable || slug;
   }
   function within(root, target) {
-    const rel = relative(resolve(root), resolve(target));
-    return rel === "" || !isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`);
+    const rel = relative(resolve3(root), resolve3(target));
+    return rel === "" || !isAbsolute2(rel) && rel !== ".." && !rel.startsWith(`..${sep}`);
   }
   function fileHash(bytes) {
-    return createHash("sha256").update(bytes).digest("hex");
+    return createHash2("sha256").update(bytes).digest("hex");
   }
   async function archivedSourceRecords(cwd, runDir) {
-    const archive = await sourceStatus({ cwd, run_dir: resolve(cwd, runDir) });
+    const archive = await sourceStatus({ cwd, run_dir: resolve3(cwd, runDir) });
     const records = [];
     for (const item of archive.manifest?.items || []) {
       if (item.status !== "downloaded" || !item.path || !item.sha256) continue;
-      const absolute = resolve(cwd, item.path);
-      if (!within(join(resolve(cwd, runDir), "sources"), absolute)) continue;
+      const absolute = resolve3(cwd, item.path);
+      if (!within(join3(resolve3(cwd, runDir), "sources"), absolute)) continue;
       try {
-        if (!within(await realpath(join(resolve(cwd, runDir), "sources")), await realpath(absolute)))
+        if (!within(await realpath(join3(resolve3(cwd, runDir), "sources")), await realpath(absolute)))
           continue;
-        if (fileHash(await readFile(absolute)) !== item.sha256) continue;
+        if (fileHash(await readFile2(absolute)) !== item.sha256) continue;
       } catch {
         continue;
       }
@@ -243,7 +334,7 @@ function createResearchLoop(ports) {
         String(item.path),
         absolute,
         relative(cwd, absolute),
-        relative(resolve(cwd, runDir), absolute)
+        relative(resolve3(cwd, runDir), absolute)
       ]);
       for (const path of aliases)
         records.push({
@@ -256,14 +347,14 @@ function createResearchLoop(ports) {
     return records;
   }
   async function recordArchivedRead(cwd, runDir, path, args, details, content) {
-    const absolute = resolve(cwd, path);
-    const sourcesRoot = join(resolve(cwd, runDir), "sources");
+    const absolute = resolve3(cwd, path);
+    const sourcesRoot = join3(resolve3(cwd, runDir), "sources");
     if (!within(sourcesRoot, absolute)) return false;
     if (!within(await realpath(sourcesRoot), await realpath(absolute))) return false;
     if (details.truncation?.firstLineExceedsLimit) return false;
     const returned = details.truncation?.content ?? content?.find((part) => part.type === "text")?.text;
     if (typeof returned !== "string" || !returned.trim()) return false;
-    const bytes = await readFile(absolute);
+    const bytes = await readFile2(absolute);
     const sourceText = bytes.toString("utf8");
     if (sourceText.includes("\0") || sourceText.startsWith("%PDF-")) return false;
     const startLine = Number.isInteger(args.offset) && args.offset > 0 ? args.offset : 1;
@@ -282,20 +373,20 @@ function createResearchLoop(ports) {
       String(path),
       absolute,
       relative(cwd, absolute),
-      relative(resolve(cwd, runDir), absolute)
+      relative(resolve3(cwd, runDir), absolute)
     ]);
     for (const alias of aliases) ledger(cwd, runDir).reads.set(alias, read);
     return true;
   }
   async function readJson(path) {
-    const value = JSON.parse(await readFile(path, "utf8"));
+    const value = JSON.parse(await readFile2(path, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new Error(`Invalid JSON object: ${path}`);
     return value;
   }
   async function atomicJson(path, value) {
     await mkdir(dirname(path), { recursive: true });
-    const temp = `${path}.${randomUUID()}.tmp`;
+    const temp = `${path}.${randomUUID2()}.tmp`;
     await writeFile(temp, `${JSON.stringify(value, null, 2)}
 `, "utf8");
     await rename(temp, path);
@@ -351,14 +442,14 @@ function createResearchLoop(ports) {
   async function resolveRun(cwd, runDir) {
     const config = await loadWorkspaceConfig(cwd);
     if (!runDir) throw new Error("run_dir is required for this action");
-    const path = resolve(cwd, runDir);
+    const path = resolve3(cwd, runDir);
     if (!within(config.resultsRoot, path))
       throw new Error("run_dir must stay inside the configured results root");
     const rel = relative(config.resultsRoot, path).split(sep);
     if (rel.length !== 2 || !rel[1]?.startsWith("run-"))
       throw new Error("run_dir must be directly inside a result slug");
-    await access(join(path, "metadata.json"));
-    return { config, path, metadataPath: join(path, "metadata.json") };
+    await access(join3(path, "metadata.json"));
+    return { config, path, metadataPath: join3(path, "metadata.json") };
   }
   async function startResearchRun({
     cwd = process.cwd(),
@@ -368,12 +459,12 @@ function createResearchLoop(ports) {
     requiresProvenance = false
   } = {}) {
     const config = await loadWorkspaceConfig(cwd);
-    project = safeSlug(project || "research-workbench", "project");
+    project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
     resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
     if (typeof query !== "string" || !query.trim()) throw new Error("query is required");
     const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-    const runId = `run-${stamp}-${randomUUID().slice(0, 8)}`;
-    const runDir = join(config.resultsRoot, resultSlug, runId);
+    const runId = `run-${stamp}-${randomUUID2().slice(0, 8)}`;
+    const runDir = join3(config.resultsRoot, resultSlug, runId);
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const metadata = {
       run_id: runId,
@@ -398,7 +489,7 @@ function createResearchLoop(ports) {
       provenance: provenanceFor({ source_refs: [], claim_bindings: [] })
     };
     await mkdir(runDir, { recursive: true });
-    await atomicJson(join(runDir, "metadata.json"), metadata);
+    await atomicJson(join3(runDir, "metadata.json"), metadata);
     return { run_dir: runDir, metadata };
   }
   async function updateResearchLoopUnlocked({
@@ -507,7 +598,7 @@ function createResearchLoop(ports) {
       if (gate.archive_count + gate.reuse_count < 1 || !refs.length)
         throw new Error("archive verification and structured claim bindings are required before answerable");
       if (metadata.requires_provenance === true) {
-        const provenance = await readJson(join(path, "reproducibility-manifest.json"));
+        const provenance = await readJson(join3(path, "reproducibility-manifest.json"));
         if (!provenance || provenance.version !== 1)
           throw new Error("This run requires a reproducibility manifest before it can become answerable");
       }

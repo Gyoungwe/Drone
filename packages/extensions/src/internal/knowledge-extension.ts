@@ -79,11 +79,13 @@ export function registerWikiReviewAcceptance() {
 			message: "Use the existing Wiki review entry; task cards cannot approve live Wiki.",
 		},
 		observe: (event, details) =>
-			event.toolName === "research_propose_wiki_update" && details?.id ? { id: String(details.id) } : null,
+			event.toolName === "research_propose_wiki_update" && details?.id
+				? { id: String(details.id), ...(details.project ? { project: String(details.project) } : {}) }
+				: null,
 		resolve: async (review, { cwd }) => {
 			try {
 				const service = await getKnowledgeService();
-				const p = await previewWikiProposal(service, review.id, await currentProject(cwd));
+				const p = await previewWikiProposal(service, review.id, review.project || (await currentProject(cwd)));
 				const stale = p.sources.some((s) => s.changed);
 				return {
 					status: p.status,
@@ -574,7 +576,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 		const binding = await readKnowledgeBinding();
 		if (!binding) throw new Error("Run /obsidian-setup to bind the application knowledge Vault");
 		const service = await getKnowledgeService(binding),
-			project = await currentProject(ctx.cwd);
+			project = await currentProject(ctx.cwd, ctx);
 		updateKnowledgeFlow(ctx, { phase: "preparing" });
 		const prepared = await service.prepare({ cwd: ctx.cwd, project, query });
 		updateKnowledgeFlow(ctx, {
@@ -948,7 +950,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 				bound: true,
 				scope: "application",
 				vault: binding.vault,
-				...(await service.request("jobs", { project: await currentProject(ctx.cwd) })),
+				...(await service.request("jobs", { project: await currentProject(ctx.cwd, ctx) })),
 			});
 		},
 	});
@@ -1264,7 +1266,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 				const binding = await readKnowledgeBinding();
 				if (!binding) throw new Error("No application Vault is bound");
 				const service = await getKnowledgeService(binding),
-					project = await currentProject(ctx.cwd);
+					project = await currentProject(ctx.cwd, ctx);
 				let id = args.trim();
 				if (!id) {
 					const pending = await listWikiProposals(service, project);

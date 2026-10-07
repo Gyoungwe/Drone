@@ -1,5 +1,9 @@
 // @ts-nocheck
 import {
+  createTaskFeedback,
+  guardResearchToolResult
+} from "./chunks/chunk-TW476WMJ.mjs";
+import {
   createToolBudget
 } from "./chunks/chunk-BHQUJ6MZ.mjs";
 import {
@@ -46,16 +50,6 @@ import {
   reviewWikiWithModel
 } from "./chunks/chunk-TPF5L26G.mjs";
 import {
-  MANAGED_END,
-  MANAGED_START,
-  immutableWikiProposalHash,
-  managedParts,
-  proposedWikiText,
-  targetWikiPath,
-  validateSpecialistHtml,
-  validateWikiSourcePaths
-} from "./chunks/chunk-AKW2CMNR.mjs";
-import {
   autoApplyWikiProposal,
   decideWikiProposal,
   listWikiProposals,
@@ -66,6 +60,21 @@ import {
   validateWikiSourcePaths as validateWikiSourcePaths2,
   wikiHistory
 } from "./chunks/chunk-IMC2GAXA.mjs";
+import {
+  MANAGED_END,
+  MANAGED_START,
+  immutableWikiProposalHash,
+  managedParts,
+  proposedWikiText,
+  targetWikiPath,
+  validateSpecialistHtml,
+  validateWikiSourcePaths
+} from "./chunks/chunk-AKW2CMNR.mjs";
+import {
+  buildKnowledgeSearchExpression,
+  splitKnowledgeChunks,
+  tokenizeKnowledgeText
+} from "./chunks/chunk-4LTSNIAR.mjs";
 import {
   normalizeSourceLinks,
   onlineSourceLink
@@ -88,10 +97,6 @@ import {
   specialistSettings,
   withSpecialistSlot
 } from "./chunks/chunk-XSFQUT2B.mjs";
-import {
-  createTaskFeedback,
-  guardResearchToolResult
-} from "./chunks/chunk-TW476WMJ.mjs";
 import {
   SPECIALIST_DECISIONS,
   createSpecialistBudget,
@@ -153,11 +158,6 @@ import {
   saveReviewMode
 } from "./chunks/chunk-6LT3KQRY.mjs";
 import {
-  buildKnowledgeSearchExpression,
-  splitKnowledgeChunks,
-  tokenizeKnowledgeText
-} from "./chunks/chunk-4LTSNIAR.mjs";
-import {
   cardField,
   cardLink,
   failureCard,
@@ -206,7 +206,8 @@ import {
   explainerTopicId,
   result,
   sessionIdentity
-} from "./chunks/chunk-56KZ2R3S.mjs";
+} from "./chunks/chunk-GSBWYZ2Z.mjs";
+import "./chunks/chunk-FQL2U4DN.mjs";
 import {
   createKnowledgeConfigApi,
   createKnowledgeConfigState,

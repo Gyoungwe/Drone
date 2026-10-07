@@ -1,8 +1,8 @@
 // @ts-nocheck
 // packages/extensions/src/workspace-config.ts
 import { randomUUID as randomUUID3 } from "node:crypto";
-import { access, mkdir as mkdir3, readFile as readFile3, realpath as realpath3, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
-import { dirname as dirname2, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve as resolve3, sep as sep2 } from "node:path";
+import { access, mkdir as mkdir3, readFile as readFile4, realpath as realpath3, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
+import { dirname as dirname2, isAbsolute as isAbsolute3, join as join4, relative as relative2, resolve as resolve4, sep as sep2 } from "node:path";
 import { pathToFileURL } from "node:url";
 
 // packages/knowledge/src/config.ts
@@ -120,6 +120,103 @@ function flowCard(input) {
   };
 }
 
+// packages/knowledge/src/project-identity.ts
+import { readFile as readFile2 } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join as join2, resolve as resolve2 } from "node:path";
+var SESSION_PROJECT_ENTRY = "drone-session-project-v1";
+var LEGACY_DEFAULT_PROJECT = "research-workbench";
+var SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+var RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
+function isProjectSlug(value) {
+  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED.test(value);
+}
+function normalizeProjectSlug(input) {
+  if (typeof input !== "string") return null;
+  const slug = input.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96).replace(/-+$/g, "");
+  return isProjectSlug(slug) ? slug : null;
+}
+function workspaceProjectId(cwd, configured) {
+  return projectIdentity(cwd, isProjectSlug(configured) ? configured : void 0);
+}
+function dailyWorkspaceDir(home = homedir()) {
+  return join2(home, ".drone", "daily");
+}
+function samePath(a, b) {
+  const left = resolve2(a).replace(/[\\/]+$/, "");
+  const right = resolve2(b).replace(/[\\/]+$/, "");
+  return process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+function isDailyWorkspace(cwd, home) {
+  return samePath(cwd, dailyWorkspaceDir(home));
+}
+function sessionProjectFromEntries(entries) {
+  if (!Array.isArray(entries)) return null;
+  let project = null;
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || entry.customType !== SESSION_PROJECT_ENTRY) continue;
+    if (entry.type !== void 0 && entry.type !== "custom") continue;
+    const value = entry.data?.project;
+    if (value === null) project = null;
+    else if (isProjectSlug(value)) project = value;
+  }
+  return project;
+}
+function sessionEntriesOf(ctx) {
+  try {
+    const manager = ctx?.sessionManager;
+    const entries = manager?.getBranch?.() ?? manager?.getEntries?.();
+    return Array.isArray(entries) ? entries : [];
+  } catch {
+    return [];
+  }
+}
+function resolveProjectIdentity(input) {
+  const daily = isDailyWorkspace(input.cwd, input.home);
+  const requestedText = typeof input.requested === "string" ? input.requested.trim() : "";
+  const requested = requestedText || null;
+  let project;
+  let source;
+  const session = daily ? sessionProjectFromEntries(input.sessionEntries) : null;
+  if (session) {
+    project = session;
+    source = "session";
+  } else if (isProjectSlug(input.configured)) {
+    project = input.configured;
+    source = "workspace-config";
+  } else {
+    project = workspaceProjectId(input.cwd);
+    source = "workspace";
+  }
+  const ignoredRequest = requested !== null && normalizeProjectSlug(requested) !== project;
+  return { project, source, daily, requested, ignoredRequest };
+}
+async function readConfiguredProject(cwd) {
+  try {
+    const parsed = JSON.parse(await readFile2(join2(cwd, ".pi", "research-workspace.json"), "utf8"));
+    if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
+      return parsed.knowledgeProjectId;
+  } catch {
+  }
+  return void 0;
+}
+async function resolveWorkspaceProject(input) {
+  return resolveProjectIdentity({ ...input, configured: await readConfiguredProject(input.cwd) });
+}
+function runProject(metadataProject, resolution) {
+  if (isProjectSlug(metadataProject) && metadataProject !== LEGACY_DEFAULT_PROJECT) return metadataProject;
+  return resolution.project;
+}
+function projectNotice(resolution) {
+  if (!resolution.ignoredRequest) return null;
+  const how = resolution.daily ? "In the daily space the user picks a project per session with /project <slug>." : "The project is fixed by the current workspace (knowledgeProjectId in .pi/research-workspace.json).";
+  return `Requested project "${resolution.requested}" was ignored; using "${resolution.project}". ${how}`;
+}
+function describeProject(resolution) {
+  const notice = projectNotice(resolution);
+  return { project: resolution.project, source: resolution.source, ...notice ? { notice } : {} };
+}
+
 // packages/extensions/src/internal/vault.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
 import {
@@ -127,14 +224,14 @@ import {
   lstat,
   mkdir as mkdir2,
   readdir,
-  readFile as readFile2,
+  readFile as readFile3,
   realpath as realpath2,
   rename as rename2,
   stat,
   unlink,
   writeFile as writeFile2
 } from "node:fs/promises";
-import { basename as basename2, dirname, isAbsolute as isAbsolute2, join as join2, relative, resolve as resolve2, sep } from "node:path";
+import { basename as basename2, dirname, isAbsolute as isAbsolute2, join as join3, relative, resolve as resolve3, sep } from "node:path";
 var VAULT_PROFILES = {
   project: {
     id: "project",
@@ -197,7 +294,7 @@ var LAYOUT = {
 var MANAGED_START = "<!-- pi-agent:managed:start -->";
 var MANAGED_END = "<!-- pi-agent:managed:end -->";
 function containsPath(root, target) {
-  const rel = relative(resolve2(root), resolve2(target));
+  const rel = relative(resolve3(root), resolve3(target));
   return rel === "" || !isAbsolute2(rel) && rel !== ".." && !rel.startsWith(`..${sep}`);
 }
 async function canonicalPath(path) {
@@ -205,11 +302,11 @@ async function canonicalPath(path) {
     return await realpath2(path);
   } catch (error) {
     if (error.code !== "ENOENT" || dirname(path) === path) throw error;
-    return join2(await canonicalPath(dirname(path)), basename2(path));
+    return join3(await canonicalPath(dirname(path)), basename2(path));
   }
 }
 async function containedFile(root, path) {
-  const target = resolve2(root, path);
+  const target = resolve3(root, path);
   if (!containsPath(root, target) || !containsPath(root, await canonicalPath(target)))
     throw new Error("Path must stay inside Vault");
   return target;
@@ -217,11 +314,11 @@ async function containedFile(root, path) {
 async function validateVaultPath(input, excluded = []) {
   if (typeof input !== "string" || !input.trim()) throw new Error("Vault path is required");
   if (input.split(/[\\/]/).includes("..")) throw new Error("Vault path must not contain traversal");
-  const path = await canonicalPath(resolve2(input.trim()));
-  if (path === resolve2(path, "..") || /^[a-z]:[\\/]*$/i.test(input))
+  const path = await canonicalPath(resolve3(input.trim()));
+  if (path === resolve3(path, "..") || /^[a-z]:[\\/]*$/i.test(input))
     throw new Error("Vault cannot be a filesystem root");
   for (const other of excluded.filter(Boolean)) {
-    const forbidden = await canonicalPath(resolve2(other));
+    const forbidden = await canonicalPath(resolve3(other));
     if (containsPath(path, forbidden) || containsPath(forbidden, path))
       throw new Error("Vault must be independent from workspace, results and product code");
   }
@@ -296,18 +393,18 @@ ${MANAGED_END}
     ".obsidian/community-plugins.json": "[]\n"
   });
   for (const file of Object.keys(notes)) await containedFile(vault, file);
-  for (const directory of directories) await mkdir2(join2(vault, directory), { recursive: true });
-  for (const [file, content] of Object.entries(notes)) await createOnly(join2(vault, file), content);
+  for (const directory of directories) await mkdir2(join3(vault, directory), { recursive: true });
+  for (const [file, content] of Object.entries(notes)) await createOnly(join3(vault, file), content);
   return {
     vault,
-    directories: directories.map((directory) => join2(vault, directory)),
+    directories: directories.map((directory) => join3(vault, directory)),
     templateVersion: LAYOUT.version,
     profile: selected
   };
 }
 async function readText(path) {
   try {
-    return await readFile2(path, "utf8");
+    return await readFile3(path, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -352,7 +449,7 @@ async function childEntries(directory) {
 async function noteLinks(vault, directory) {
   const links = [];
   for (const entry of await childEntries(directory)) {
-    const file = join2(directory, entry.name);
+    const file = join3(directory, entry.name);
     if (entry.isDirectory()) links.push(...await noteLinks(vault, file));
     else if (entry.isFile() && entry.name.endsWith(".md")) {
       const target = relative(vault, file).replaceAll(sep, "/").slice(0, -3);
@@ -458,11 +555,11 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 });
 var CONFIG_NAME = ".pi/research-workspace.json";
 function configPath(cwd) {
-  return join3(cwd, CONFIG_NAME);
+  return join4(cwd, CONFIG_NAME);
 }
 function resolveConfiguredPath(cwd, value) {
   if (value == null || value === "") return null;
-  return resolve3(cwd, value);
+  return resolve4(cwd, value);
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
@@ -487,7 +584,7 @@ function validatePatch(config) {
 }
 async function loadWorkspaceConfig(cwd = process.cwd()) {
   if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
-    const desktop = JSON.parse(await readFile3(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
+    const desktop = JSON.parse(await readFile4(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
     return {
       ...DEFAULT_WORKSPACE_CONFIG,
       resultsRoot: desktop.resultsRoot,
@@ -496,10 +593,10 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
       mcpStatus: desktop.mcpStatus
     };
   }
-  const projectRoot = resolve3(cwd);
+  const projectRoot = resolve4(cwd);
   let raw = {};
   try {
-    raw = JSON.parse(await readFile3(configPath(projectRoot), "utf8"));
+    raw = JSON.parse(await readFile4(configPath(projectRoot), "utf8"));
   } catch (error) {
     if (error.code !== "ENOENT") raw = {};
   }
@@ -540,12 +637,12 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
 }
 function storedPath(cwd, value) {
   if (value == null) return null;
-  const absolute = resolve3(cwd, value);
-  const rel = relative2(resolve3(cwd), absolute);
+  const absolute = resolve4(cwd, value);
+  const rel = relative2(resolve4(cwd), absolute);
   return rel && !isAbsolute3(rel) && !rel.startsWith(`..${sep2}`) && rel !== ".." ? `./${rel.replaceAll(sep2, "/")}` : absolute;
 }
 async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
-  const projectRoot = resolve3(cwd);
+  const projectRoot = resolve4(cwd);
   if (knowledgeDirectory() && ["obsidianVault", "knowledgeProfile", "knowledgeDepositMode", "subagentMcpPolicy"].some(
     (key) => key in patch
   )) {
@@ -588,8 +685,8 @@ async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
   await rename3(temporary, target);
   return {
     ...merged,
-    resultsRoot: resolve3(merged.resultsRoot),
-    obsidianVault: merged.obsidianVault && resolve3(merged.obsidianVault)
+    resultsRoot: resolve4(merged.resultsRoot),
+    obsidianVault: merged.obsidianVault && resolve4(merged.obsidianVault)
   };
 }
 function safeSegment(value, label) {
@@ -600,7 +697,7 @@ function safeSegment(value, label) {
   return segment;
 }
 function isWithin(root, target) {
-  const rel = relative2(resolve3(root), resolve3(target));
+  const rel = relative2(resolve4(root), resolve4(target));
   return rel === "" || !rel.startsWith(`..${sep2}`) && rel !== ".." && !isAbsolute3(rel);
 }
 function updateManagedBlock(original, body) {
@@ -625,41 +722,41 @@ async function atomicText(path, text) {
   await rename3(temporary, path);
 }
 async function writeSummary(runDir, summary, status) {
-  const runPath = resolve3(runDir);
+  const runPath = resolve4(runDir);
   const resultRoot = dirname2(runPath);
-  const historyRoot = join3(resultRoot, "summary-history");
+  const historyRoot = join4(resultRoot, "summary-history");
   await mkdir3(historyRoot, { recursive: true });
   const content = `${String(summary).trim()}
 `;
-  await atomicText(join3(runPath, "SUMMARY.md"), content);
-  await atomicText(join3(resultRoot, "SUMMARY.md"), content);
+  await atomicText(join4(runPath, "SUMMARY.md"), content);
+  await atomicText(join4(resultRoot, "SUMMARY.md"), content);
   const stamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(/[-:]/g, "").replace(".000", "").replace("Z", "Z");
-  const history = join3(historyRoot, `${stamp}.md`);
+  const history = join4(historyRoot, `${stamp}.md`);
   await atomicText(history, content);
-  const metadataPath = join3(runPath, "metadata.json");
+  const metadataPath = join4(runPath, "metadata.json");
   let metadata = {};
   try {
-    metadata = JSON.parse(await readFile3(metadataPath, "utf8"));
+    metadata = JSON.parse(await readFile4(metadataPath, "utf8"));
   } catch {
   }
   metadata.summary_status = status === "pending" ? "pending" : "written";
   metadata.summary_updated_at = (/* @__PURE__ */ new Date()).toISOString();
   await atomicText(metadataPath, `${JSON.stringify(metadata, null, 2)}
 `);
-  return { run: join3(runPath, "SUMMARY.md"), latest: join3(resultRoot, "SUMMARY.md"), history };
+  return { run: join4(runPath, "SUMMARY.md"), latest: join4(resultRoot, "SUMMARY.md"), history };
 }
 async function syncRunNote(vault, project, resultSlug, runDir, summary) {
-  const safeProject = safeSegment(project || "default", "project");
+  const safeProject = safeSegment(project, "project");
   const safeSlug = safeSegment(resultSlug || "research-question", "result_slug");
-  const runPath = resolve3(runDir);
-  const metadataPath = join3(runPath, "metadata.json");
+  const runPath = resolve4(runDir);
+  const metadataPath = join4(runPath, "metadata.json");
   let metadata = {};
   try {
-    metadata = JSON.parse(await readFile3(metadataPath, "utf8"));
+    metadata = JSON.parse(await readFile4(metadataPath, "utf8"));
   } catch {
   }
   const runId = safeSegment(metadata.run_id || runPath.split(sep2).at(-1), "run_id");
-  const note = await containedFile(vault, join3("Projects", safeProject, "Runs", `${safeSlug}-${runId}.md`));
+  const note = await containedFile(vault, join4("Projects", safeProject, "Runs", `${safeSlug}-${runId}.md`));
   if (!knowledgeDirectory()) await initializeVault(vault, safeProject);
   const frontmatter = [
     "---",
@@ -675,10 +772,10 @@ async function syncRunNote(vault, project, resultSlug, runDir, summary) {
     "---"
   ].join("\n");
   const resultUri = pathToFileURL(runPath).href;
-  const summaryUri = pathToFileURL(join3(runPath, "SUMMARY.md")).href;
+  const summaryUri = pathToFileURL(join4(runPath, "SUMMARY.md")).href;
   let original = "";
   try {
-    original = await readFile3(note, "utf8");
+    original = await readFile4(note, "utf8");
   } catch {
   }
   if (!original) {
@@ -721,7 +818,7 @@ function runSummaryCard(event) {
   });
 }
 function registerWorkspaceConfig(pi, options = {}) {
-  const baseCwd = options.cwd ? resolve3(options.cwd) : process.cwd();
+  const baseCwd = options.cwd ? resolve4(options.cwd) : process.cwd();
   registerTool(pi, {
     name: "research_workspace_status",
     label: "Research workspace status",
@@ -782,7 +879,10 @@ function registerWorkspaceConfig(pi, options = {}) {
       properties: {
         run_dir: { type: "string" },
         summary_markdown: { type: "string" },
-        project: { type: "string" },
+        project: {
+          type: "string",
+          description: "Optional. The run's recorded project (or the workspace project) is used; a different value is ignored."
+        },
         result_slug: { type: "string" },
         claims: {
           type: "array",
@@ -813,7 +913,7 @@ function registerWorkspaceConfig(pi, options = {}) {
     async execute(_id, params, _signal, _update, ctx) {
       const cwd = ctx?.cwd || baseCwd;
       const config = await loadWorkspaceConfig(cwd);
-      const runDir = resolve3(cwd, params.run_dir);
+      const runDir = resolve4(cwd, params.run_dir);
       if (!isWithin(config.resultsRoot, runDir))
         throw new Error("run_dir must be inside the configured results root");
       if (!isWithin(await realpath3(config.resultsRoot), await realpath3(runDir)))
@@ -822,13 +922,13 @@ function registerWorkspaceConfig(pi, options = {}) {
       if (!relativeRun || relativeRun.startsWith(`..${sep2}`) || relativeRun.split(sep2).length !== 2 || !relativeRun.split(sep2)[1].startsWith("run-")) {
         throw new Error("run_dir must point to a run directory directly inside a result slug");
       }
-      if (!await access(join3(runDir, "metadata.json")).then(
+      if (!await access(join4(runDir, "metadata.json")).then(
         () => true,
         () => false
       )) {
         throw new Error("run_dir is missing metadata.json");
       }
-      const metadata = JSON.parse(await readFile3(join3(runDir, "metadata.json"), "utf8"));
+      const metadata = JSON.parse(await readFile4(join4(runDir, "metadata.json"), "utf8"));
       const gate = metadata.evidence_gate;
       if (gate?.stage !== "answerable" || gate.status !== "ok" || gate.answerable !== true || !Array.isArray(gate.claim_bindings) || gate.claim_bindings.length === 0) {
         throw new Error(
@@ -837,8 +937,18 @@ function registerWorkspaceConfig(pi, options = {}) {
       }
       const outputs = await writeSummary(runDir, params.summary_markdown, "succeeded");
       let note = null, indexes = null, obsidianError = null, indexError = null;
+      const resolution = await resolveWorkspaceProject({
+        cwd,
+        sessionEntries: sessionEntriesOf(ctx),
+        requested: params.project
+      });
+      const project = runProject(metadata.project, resolution);
+      const projectResolution = describeProject({
+        ...resolution,
+        project,
+        ignoredRequest: resolution.requested !== null && normalizeProjectSlug(resolution.requested) !== project
+      });
       if (config.obsidianVault) {
-        const project = params.project || metadata.project;
         try {
           note = await syncRunNote(
             config.obsidianVault,
@@ -865,6 +975,7 @@ function registerWorkspaceConfig(pi, options = {}) {
         ...outputs,
         claims: Array.isArray(params.claims) ? params.claims : [],
         obsidian_note: note,
+        project: projectResolution,
         indexes,
         summary_saved: true,
         partial: Boolean(obsidianError || indexError),

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { resolveWorkspaceProject } from "@drone/knowledge/project-identity";
 import { claimBindingRefs, validateClaimBindings } from "./claim-bindings";
 
 export const RESEARCH_STAGES = Object.freeze([
@@ -314,7 +315,9 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		requiresProvenance = false,
 	}: any = {}) {
 		const config = await loadWorkspaceConfig(cwd);
-		project = safeSlug(project || "research-workbench", "project");
+		// No implicit "research-workbench": callers pass the resolved project; direct callers get the
+		// workspace identity from the shared resolver.
+		project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
 		resultSlug = safeSlug(resultSlug || "research-question", "result_slug");
 		if (typeof query !== "string" || !query.trim()) throw new Error("query is required");
 		const stamp = new Date()

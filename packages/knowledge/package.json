@@ -23,6 +23,7 @@
 		"./metacognitive-policy": "./src/metacognitive-policy.ts",
 		"./semantic-settings": "./src/semantic-settings.ts",
 		"./extension-helpers": "./src/extension-helpers.ts",
+		"./project-identity": "./src/project-identity.ts",
 		"./task-feedback": "./src/task-feedback.ts",
 		"./semantic-provider": "./src/semantic-provider.ts",
 		"./files": "./src/files.ts",

@@ -2,12 +2,13 @@
 // packages/extensions/src/research-wikiskill.ts
 import { spawn } from "node:child_process";
 import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
-import { access as access2, appendFile, cp, mkdir as mkdir3, readdir, readFile as readFile3, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
-import { basename as basename2, dirname as dirname2, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve as resolve3, sep as sep2 } from "node:path";
+import { access as access2, appendFile, cp, mkdir as mkdir3, readdir, readFile as readFile4, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
+import { basename as basename2, dirname as dirname2, isAbsolute as isAbsolute3, join as join4, relative as relative2, resolve as resolve4, sep as sep2 } from "node:path";
 
-// packages/extensions/src/workspace-config.ts
-import { access, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
-import { dirname, isAbsolute as isAbsolute2, join as join2, relative, resolve as resolve2, sep } from "node:path";
+// packages/knowledge/src/project-identity.ts
+import { readFile as readFile2 } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join as join2, resolve as resolve2 } from "node:path";
 
 // packages/knowledge/src/config.ts
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -56,6 +57,95 @@ async function readKnowledgeBinding(options = {}) {
   return readKnowledgeBindingWithState(defaultState, options);
 }
 var defaultState = createKnowledgeConfigState();
+
+// packages/knowledge/src/project-identity.ts
+var SESSION_PROJECT_ENTRY = "drone-session-project-v1";
+var LEGACY_DEFAULT_PROJECT = "research-workbench";
+var SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+var RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|shared)$/;
+function isProjectSlug(value) {
+  return typeof value === "string" && value.length <= 96 && SLUG.test(value) && !RESERVED.test(value);
+}
+function normalizeProjectSlug(input) {
+  if (typeof input !== "string") return null;
+  const slug = input.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96).replace(/-+$/g, "");
+  return isProjectSlug(slug) ? slug : null;
+}
+function workspaceProjectId(cwd, configured) {
+  return projectIdentity(cwd, isProjectSlug(configured) ? configured : void 0);
+}
+function dailyWorkspaceDir(home = homedir()) {
+  return join2(home, ".drone", "daily");
+}
+function samePath(a, b) {
+  const left = resolve2(a).replace(/[\\/]+$/, "");
+  const right = resolve2(b).replace(/[\\/]+$/, "");
+  return process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+function isDailyWorkspace(cwd, home) {
+  return samePath(cwd, dailyWorkspaceDir(home));
+}
+function sessionProjectFromEntries(entries) {
+  if (!Array.isArray(entries)) return null;
+  let project = null;
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || entry.customType !== SESSION_PROJECT_ENTRY) continue;
+    if (entry.type !== void 0 && entry.type !== "custom") continue;
+    const value = entry.data?.project;
+    if (value === null) project = null;
+    else if (isProjectSlug(value)) project = value;
+  }
+  return project;
+}
+function sessionEntriesOf(ctx) {
+  try {
+    const manager = ctx?.sessionManager;
+    const entries = manager?.getBranch?.() ?? manager?.getEntries?.();
+    return Array.isArray(entries) ? entries : [];
+  } catch {
+    return [];
+  }
+}
+function resolveProjectIdentity(input) {
+  const daily = isDailyWorkspace(input.cwd, input.home);
+  const requestedText = typeof input.requested === "string" ? input.requested.trim() : "";
+  const requested = requestedText || null;
+  let project;
+  let source;
+  const session = daily ? sessionProjectFromEntries(input.sessionEntries) : null;
+  if (session) {
+    project = session;
+    source = "session";
+  } else if (isProjectSlug(input.configured)) {
+    project = input.configured;
+    source = "workspace-config";
+  } else {
+    project = workspaceProjectId(input.cwd);
+    source = "workspace";
+  }
+  const ignoredRequest = requested !== null && normalizeProjectSlug(requested) !== project;
+  return { project, source, daily, requested, ignoredRequest };
+}
+async function readConfiguredProject(cwd) {
+  try {
+    const parsed = JSON.parse(await readFile2(join2(cwd, ".pi", "research-workspace.json"), "utf8"));
+    if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
+      return parsed.knowledgeProjectId;
+  } catch {
+  }
+  return void 0;
+}
+async function resolveWorkspaceProject(input) {
+  return resolveProjectIdentity({ ...input, configured: await readConfiguredProject(input.cwd) });
+}
+function runProject(metadataProject, resolution) {
+  if (isProjectSlug(metadataProject) && metadataProject !== LEGACY_DEFAULT_PROJECT) return metadataProject;
+  return resolution.project;
+}
+
+// packages/extensions/src/workspace-config.ts
+import { access, mkdir as mkdir2, readFile as readFile3, realpath as realpath2, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
+import { dirname, isAbsolute as isAbsolute2, join as join3, relative, resolve as resolve3, sep } from "node:path";
 
 // packages/extensions/src/internal/vault.ts
 var VAULT_PROFILES = {
@@ -130,11 +220,11 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
 });
 var CONFIG_NAME = ".pi/research-workspace.json";
 function configPath(cwd) {
-  return join2(cwd, CONFIG_NAME);
+  return join3(cwd, CONFIG_NAME);
 }
 function resolveConfiguredPath(cwd, value) {
   if (value == null || value === "") return null;
-  return resolve2(cwd, value);
+  return resolve3(cwd, value);
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
@@ -159,7 +249,7 @@ function validatePatch(config) {
 }
 async function loadWorkspaceConfig(cwd = process.cwd()) {
   if (process.env.PI_RESEARCH_DESKTOP_CONFIG) {
-    const desktop = JSON.parse(await readFile2(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
+    const desktop = JSON.parse(await readFile3(process.env.PI_RESEARCH_DESKTOP_CONFIG, "utf8"));
     return {
       ...DEFAULT_WORKSPACE_CONFIG,
       resultsRoot: desktop.resultsRoot,
@@ -168,10 +258,10 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
       mcpStatus: desktop.mcpStatus
     };
   }
-  const projectRoot = resolve2(cwd);
+  const projectRoot = resolve3(cwd);
   let raw = {};
   try {
-    raw = JSON.parse(await readFile2(configPath(projectRoot), "utf8"));
+    raw = JSON.parse(await readFile3(configPath(projectRoot), "utf8"));
   } catch (error) {
     if (error.code !== "ENOENT") raw = {};
   }
@@ -271,12 +361,12 @@ function safeSlug(value, label) {
   return text;
 }
 function within(root, target) {
-  const rel = relative2(resolve3(root), resolve3(target));
+  const rel = relative2(resolve4(root), resolve4(target));
   return rel === "" || !isAbsolute3(rel) && rel !== ".." && !rel.startsWith(`..${sep2}`);
 }
 async function readText(path, fallback = null) {
   try {
-    return await readFile3(path, "utf8");
+    return await readFile4(path, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return fallback;
     throw error;
@@ -284,7 +374,7 @@ async function readText(path, fallback = null) {
 }
 async function readJson(path, fallback = null) {
   try {
-    return JSON.parse(await readFile3(path, "utf8"));
+    return JSON.parse(await readFile4(path, "utf8"));
   } catch (error) {
     if (error.code === "ENOENT" && fallback !== null) return fallback;
     throw error;
@@ -303,16 +393,19 @@ async function atomicJson(path, value) {
 function sha(text) {
   return createHash2("sha256").update(text).digest("hex");
 }
+async function sessionProject(ctx) {
+  return (await resolveWorkspaceProject({ cwd: ctx.cwd, sessionEntries: sessionEntriesOf(ctx) })).project;
+}
 function evolutionRoot(resultsRoot, project) {
-  return join3(resultsRoot, ".wikiskill", project);
+  return join4(resultsRoot, ".wikiskill", project);
 }
 function skillPath(cwd, skill) {
-  return join3(cwd, ".pi", "skills", skill, "SKILL.md");
+  return join4(cwd, ".pi", "skills", skill, "SKILL.md");
 }
 var SOURCE_CATEGORIES = Object.freeze(["papers", "supplementary", "software", "manuals"]);
 function validateRunDir(resultsRoot, candidate) {
-  const runDir = resolve3(candidate);
-  const rel = relative2(resolve3(resultsRoot), runDir);
+  const runDir = resolve4(candidate);
+  const rel = relative2(resolve4(resultsRoot), runDir);
   const parts = rel.split(sep2);
   if (!rel || !within(resultsRoot, runDir) || parts.length !== 2 || !parts[1].startsWith("run-")) {
     throw new Error("run_dir must point to a run directory directly inside the configured results root");
@@ -321,7 +414,7 @@ function validateRunDir(resultsRoot, candidate) {
 }
 async function readSourceManifest(file, runDir) {
   try {
-    const parsed = JSON.parse(await readFile3(file, "utf8"));
+    const parsed = JSON.parse(await readFile4(file, "utf8"));
     if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.items))
       throw new Error("invalid manifest");
     return parsed;
@@ -332,14 +425,14 @@ async function readSourceManifest(file, runDir) {
 }
 async function sourceStatus({ cwd = process.cwd(), run_dir } = {}) {
   const config = await loadWorkspaceConfig(cwd);
-  const runDir = run_dir ? validateRunDir(config.resultsRoot, resolve3(cwd, run_dir)) : null;
+  const runDir = run_dir ? validateRunDir(config.resultsRoot, resolve4(cwd, run_dir)) : null;
   if (!runDir) return { results_root: config.resultsRoot, categories: SOURCE_CATEGORIES, run_dir: null };
-  const manifestPath = join3(runDir, "sources", "download-manifest.json");
-  const failuresPath = join3(runDir, "sources", "download-failures.md");
+  const manifestPath = join4(runDir, "sources", "download-manifest.json");
+  const failuresPath = join4(runDir, "sources", "download-failures.md");
   const manifest = await readSourceManifest(manifestPath, runDir);
   let failures = "";
   try {
-    failures = await readFile3(failuresPath, "utf8");
+    failures = await readFile4(failuresPath, "utf8");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
@@ -360,26 +453,26 @@ async function sourceStatus({ cwd = process.cwd(), run_dir } = {}) {
   };
 }
 async function ensureEvolution(root) {
-  await mkdir3(join3(root, "raw"), { recursive: true });
-  await mkdir3(join3(root, "wiki", "patterns"), { recursive: true });
-  await mkdir3(join3(root, "candidates"), { recursive: true });
-  await mkdir3(join3(root, "history"), { recursive: true });
+  await mkdir3(join4(root, "raw"), { recursive: true });
+  await mkdir3(join4(root, "wiki", "patterns"), { recursive: true });
+  await mkdir3(join4(root, "candidates"), { recursive: true });
+  await mkdir3(join4(root, "history"), { recursive: true });
   for (const [name, content] of [
     ["wiki/index.md", "# WikiSkill patterns\n\n"],
     ["wiki/logs.md", "# WikiSkill evolution log\n\n"],
     ["wiki/skill-impact.md", "# WikiSkill skill impact\n\n"]
   ])
-    if (await readText(join3(root, name)) === null) await atomicText(join3(root, name), content);
+    if (await readText(join4(root, name)) === null) await atomicText(join4(root, name), content);
 }
 async function resolveRun(cwd, runDir) {
   const config = await loadWorkspaceConfig(cwd);
-  const path = resolve3(cwd, runDir || "");
+  const path = resolve4(cwd, runDir || "");
   if (!runDir || !within(config.resultsRoot, path))
     throw new Error("run_dir must stay inside the configured results root");
   const rel = relative2(config.resultsRoot, path).split(sep2);
   if (rel.length !== 2 || !rel[1].startsWith("run-"))
     throw new Error("run_dir must point to one research run");
-  const metadata = await readJson(join3(path, "metadata.json"));
+  const metadata = await readJson(join4(path, "metadata.json"));
   return { config, path, metadata };
 }
 function renderPattern(pattern, occurrence) {
@@ -411,14 +504,17 @@ async function recordWikiSkillExperience({
   patterns = []
 } = {}) {
   const { config, path, metadata } = await resolveRun(cwd, runDir);
-  project = safeSlug(project || metadata.project || "research-workbench", "project");
+  project = safeSlug(
+    project || runProject(metadata.project, await resolveWorkspaceProject({ cwd })),
+    "project"
+  );
   if (!["success", "failure", "mixed"].includes(outcome))
     throw new Error("outcome must be success, failure, or mixed");
   if (!Array.isArray(patterns) || patterns.length === 0)
     throw new Error("patterns must contain at least one reusable observation");
   const root = evolutionRoot(config.resultsRoot, project);
   await ensureEvolution(root);
-  const summary = await readText(join3(path, "SUMMARY.md"), "");
+  const summary = await readText(join4(path, "SUMMARY.md"), "");
   const sources = await sourceStatus({ cwd, run_dir: path });
   const raw = {
     id: randomUUID2(),
@@ -440,7 +536,7 @@ async function recordWikiSkillExperience({
     },
     note: "Observable run metadata only; hidden chain-of-thought is intentionally not persisted."
   };
-  const rawPath = join3(root, "raw", `${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}-${raw.id}.json`);
+  const rawPath = join4(root, "raw", `${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}-${raw.id}.json`);
   await atomicJson(rawPath, raw);
   const occurrence = { at: raw.recorded_at, run_id: metadata.run_id, outcome, raw_path: rawPath };
   const touched = [];
@@ -448,7 +544,7 @@ async function recordWikiSkillExperience({
     const pattern = { ...item, id: safeSlug(item.id, "pattern id") };
     if (!pattern.title?.trim() || !pattern.problem?.trim() || !pattern.strategy?.trim())
       throw new Error(`pattern ${pattern.id} requires title, problem and strategy`);
-    const patternPath = join3(root, "wiki", "patterns", `${pattern.id}.md`);
+    const patternPath = join4(root, "wiki", "patterns", `${pattern.id}.md`);
     const existing = await readText(patternPath);
     if (existing === null) await atomicText(patternPath, renderPattern(pattern, occurrence));
     else
@@ -461,13 +557,13 @@ async function recordWikiSkillExperience({
       );
     touched.push({ id: pattern.id, path: patternPath });
   }
-  const entries = (await readdir(join3(root, "wiki", "patterns"))).filter((name) => name.endsWith(".md")).sort().map((name) => `- [${basename2(name, ".md")}](patterns/${name})`).join("\n");
-  await atomicText(join3(root, "wiki", "index.md"), `# WikiSkill patterns
+  const entries = (await readdir(join4(root, "wiki", "patterns"))).filter((name) => name.endsWith(".md")).sort().map((name) => `- [${basename2(name, ".md")}](patterns/${name})`).join("\n");
+  await atomicText(join4(root, "wiki", "index.md"), `# WikiSkill patterns
 
 ${entries}
 `);
   await appendFile(
-    join3(root, "wiki", "logs.md"),
+    join4(root, "wiki", "logs.md"),
     `## ${raw.recorded_at}
 - Run: ${metadata.run_id}
 - Outcome: ${outcome}
@@ -509,7 +605,7 @@ async function proposeWikiSkill({
   patternIds = [],
   rationale = ""
 } = {}) {
-  project = safeSlug(project || "research-workbench", "project");
+  project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
   targetSkill = safeSlug(targetSkill, "target_skill");
   if (!ALLOWED_SKILLS.has(targetSkill))
     throw new Error(`target_skill must be one of: ${[...ALLOWED_SKILLS].join(", ")}`);
@@ -521,14 +617,14 @@ async function proposeWikiSkill({
   const root = evolutionRoot(config.resultsRoot, project);
   await ensureEvolution(root);
   for (const id of patternIds)
-    await access2(join3(root, "wiki", "patterns", `${safeSlug(id, "pattern id")}.md`));
+    await access2(join4(root, "wiki", "patterns", `${safeSlug(id, "pattern id")}.md`));
   const active = await readText(skillPath(cwd, targetSkill));
   if (active === null) throw new Error(`active skill not found: ${targetSkill}`);
   const safety = safetyChecks(targetSkill, candidateMarkdown);
   const proposalId = `proposal-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}-${randomUUID2().slice(0, 8)}`;
-  const dir = join3(root, "candidates", proposalId, targetSkill);
+  const dir = join4(root, "candidates", proposalId, targetSkill);
   await mkdir3(dir, { recursive: true });
-  const candidatePath = join3(dir, "SKILL.md");
+  const candidatePath = join4(dir, "SKILL.md");
   await atomicText(candidatePath, `${candidateMarkdown.trimEnd()}
 `);
   const proposal = {
@@ -544,7 +640,7 @@ async function proposeWikiSkill({
     candidate_path: candidatePath,
     safety
   };
-  await atomicJson(join3(root, "candidates", proposalId, "proposal.json"), proposal);
+  await atomicJson(join4(root, "candidates", proposalId, "proposal.json"), proposal);
   return { root, proposal };
 }
 async function runAgent({ cwd, skillFile, prompt, provider, model, timeoutMs = 9e4 } = {}) {
@@ -624,11 +720,11 @@ async function gateWikiSkillProposal({
   model,
   runner = runAgent
 } = {}) {
-  project = safeSlug(project || "research-workbench", "project");
+  project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
   const config = await loadWorkspaceConfig(cwd);
   const root = evolutionRoot(config.resultsRoot, project);
   await ensureEvolution(root);
-  const proposal = await readJson(join3(root, "candidates", proposalId, "proposal.json"));
+  const proposal = await readJson(join4(root, "candidates", proposalId, "proposal.json"));
   if (!proposal.safety?.ok)
     throw new Error(`candidate safety gate failed: ${(proposal.safety?.errors || []).join("; ")}`);
   const skill = proposal.target_skill;
@@ -639,10 +735,10 @@ async function gateWikiSkillProposal({
     throw new Error("active skill changed after proposal; create a fresh proposal");
   const benchmarks = WIKISKILL_BENCHMARKS;
   const tasks = benchmarks[skill];
-  const evalCwd = join3(root, "eval-sandbox");
+  const evalCwd = join4(root, "eval-sandbox");
   await mkdir3(evalCwd, { recursive: true });
   if (!Array.isArray(tasks) || tasks.length === 0) throw new Error(`no validation benchmark for ${skill}`);
-  const statePath = join3(root, "state.json");
+  const statePath = join4(root, "state.json");
   const state = await readJson(statePath, { version: 1, best_scores: {}, baseline_cache: {} });
   const cacheKey = `${skill}:${proposal.active_sha256}:${provider || "default"}:${model || "default"}`;
   let baseline = state.baseline_cache?.[cacheKey];
@@ -667,13 +763,13 @@ async function gateWikiSkillProposal({
   const accepted = allCasesRan && changed && performancePass;
   const at = (/* @__PURE__ */ new Date()).toISOString();
   if (accepted) {
-    const backup = join3(
+    const backup = join4(
       root,
       "history",
       `${at.replace(/[:.]/g, "-")}-${skill}-${proposal.active_sha256.slice(0, 12)}.md`
     );
     await cp(activePath, backup);
-    await atomicText(activePath, await readFile3(proposal.candidate_path, "utf8"));
+    await atomicText(activePath, await readFile4(proposal.candidate_path, "utf8"));
     state.best_scores = { ...state.best_scores || {}, [skill]: candidate.score };
   }
   await atomicJson(statePath, state);
@@ -692,9 +788,9 @@ async function gateWikiSkillProposal({
     pattern_ids: proposal.pattern_ids,
     candidate_sha256: proposal.candidate_sha256
   };
-  await atomicJson(join3(root, "candidates", proposal.id, "validation.json"), { impact, baseline, candidate });
+  await atomicJson(join4(root, "candidates", proposal.id, "validation.json"), { impact, baseline, candidate });
   await appendFile(
-    join3(root, "wiki", "skill-impact.md"),
+    join4(root, "wiki", "skill-impact.md"),
     `## ${at} \xB7 ${skill}
 - Proposal: ${proposal.id}
 - Patterns: ${proposal.pattern_ids.join(", ")}
@@ -711,18 +807,18 @@ async function gateWikiSkillProposal({
   return { root, impact, baseline, candidate };
 }
 async function wikiSkillStatus({ cwd = process.cwd(), project } = {}) {
-  project = safeSlug(project || "research-workbench", "project");
+  project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
   const config = await loadWorkspaceConfig(cwd);
   const root = evolutionRoot(config.resultsRoot, project);
   await ensureEvolution(root);
   const count = async (path) => (await readdir(path).catch((error) => error.code === "ENOENT" ? [] : Promise.reject(error))).length;
-  const state = await readJson(join3(root, "state.json"), { version: 1, best_scores: {}, baseline_cache: {} });
+  const state = await readJson(join4(root, "state.json"), { version: 1, best_scores: {}, baseline_cache: {} });
   return {
     project,
     root,
-    raw_events: await count(join3(root, "raw")),
-    patterns: await count(join3(root, "wiki", "patterns")),
-    proposals: await count(join3(root, "candidates")),
+    raw_events: await count(join4(root, "raw")),
+    patterns: await count(join4(root, "wiki", "patterns")),
+    proposals: await count(join4(root, "candidates")),
     best_scores: state.best_scores || {}
   };
 }
@@ -805,7 +901,7 @@ function researchWikiSkill(pi) {
     async execute(_id, params, _signal, _update, ctx) {
       const result = await proposeWikiSkill({
         cwd: ctx.cwd,
-        project: params.project,
+        project: params.project || await sessionProject(ctx),
         targetSkill: params.target_skill,
         candidateMarkdown: params.candidate_markdown,
         patternIds: params.pattern_ids,
@@ -836,7 +932,7 @@ function researchWikiSkill(pi) {
     async execute(_id, params, _signal, _update, ctx) {
       const result = await gateWikiSkillProposal({
         cwd: ctx.cwd,
-        project: params.project,
+        project: params.project || await sessionProject(ctx),
         proposalId: params.proposal_id,
         provider: params.provider,
         model: params.model
@@ -855,7 +951,10 @@ function researchWikiSkill(pi) {
     description: "Show the persistent experience/raw/wiki/proposal counts and best accepted validation scores for a project.",
     parameters: { type: "object", properties: { project: { type: "string" } } },
     async execute(_id, params, _signal, _update, ctx) {
-      const result = await wikiSkillStatus({ cwd: ctx.cwd, project: params.project });
+      const result = await wikiSkillStatus({
+        cwd: ctx.cwd,
+        project: params.project || await sessionProject(ctx)
+      });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
     }
   });

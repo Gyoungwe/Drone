@@ -18,6 +18,14 @@ import { USER_QUESTION_FOCUS } from "@drone/extensions/internal/reply-focus";
 import { registerKnowledgeInterface } from "@drone/extensions/knowledge-extension";
 import { knowledgeDirectory, readKnowledgeBinding } from "@drone/knowledge/config";
 import { cardLink, flowCard } from "@drone/knowledge/flow-cards";
+import {
+	describeProject,
+	isDailyWorkspace,
+	normalizeProjectSlug,
+	resolveWorkspaceProject,
+	SESSION_PROJECT_ENTRY,
+	sessionEntriesOf,
+} from "@drone/knowledge/project-identity";
 import { appendRelatedLinks, findRelatedNotes } from "@drone/knowledge/related-notes";
 import { registerAcceptanceVerifier } from "@drone/tasks/acceptance";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
@@ -256,7 +264,11 @@ export default function obsidianWorkbench(pi) {
 		parameters: {
 			type: "object",
 			properties: {
-				project: { type: "string" },
+				project: {
+					type: "string",
+					description:
+						"Optional. The host resolves the project from the workspace (or the daily-space session choice); a different value is ignored.",
+				},
 				type: {
 					type: "string",
 					enum: [
@@ -292,15 +304,20 @@ export default function obsidianWorkbench(pi) {
 					description: "Optional Better BibTeX citekey for paper notes.",
 				},
 			},
-			required: ["project", "type", "title", "markdown"],
+			required: ["type", "title", "markdown"],
 		},
 		async execute(_id, params, _signal, _update, ctx) {
+			const resolution = await resolveWorkspaceProject({
+				cwd: ctx.cwd,
+				sessionEntries: sessionEntriesOf(ctx),
+				requested: params.project,
+			});
 			// Link the new note to the most related existing notes so knowledge forms a network.
 			const related = await findRelatedNotes(params.title);
-			const result = await knowledge.withTurnBinding(ctx, () =>
+			const deposited = await knowledge.withTurnBinding(ctx, () =>
 				depositKnowledge({
 					cwd: ctx.cwd,
-					project: params.project,
+					project: resolution.project,
 					type: params.type,
 					title: params.title,
 					markdown: appendRelatedLinks(params.markdown, related),
@@ -311,9 +328,55 @@ export default function obsidianWorkbench(pi) {
 					zoteroCitekey: params.zotero_citekey || null,
 				}),
 			);
+			const result = { ...deposited, project_resolution: describeProject(resolution) };
 			return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
 		},
 	});
+
+	// /project（别名 /项目）：查看当前知识项目；日常空间里按会话选择项目。
+	for (const name of ["project", "项目"]) {
+		pi.registerCommand(name, {
+			description:
+				"知识项目：查看当前项目；日常空间可用 /project <名称> 为本会话选择项目，/project clear 恢复默认",
+			handler: async (args, ctx) => {
+				const text = typeof args === "string" ? args.trim() : "";
+				const notify = (message, level = "info") => ctx.ui?.notify?.(message, level);
+				const daily = isDailyWorkspace(ctx.cwd);
+				if (text && !daily) {
+					const current = await resolveWorkspaceProject({ cwd: ctx.cwd });
+					notify(
+						`当前工作区的知识项目固定为 ${current.project}（由工作区目录决定）。如需改名，请在 .pi/research-workspace.json 中设置 knowledgeProjectId。`,
+						"warning",
+					);
+					return;
+				}
+				const entries = [...sessionEntriesOf(ctx)];
+				if (text) {
+					const clear = /^(?:clear|reset|default|清除|默认)$/i.test(text);
+					const project = clear ? null : normalizeProjectSlug(text);
+					if (!clear && !project) {
+						notify("项目名需要包含字母或数字，例如 /project gut-microbiome", "error");
+						return;
+					}
+					if (!pi.appendEntry) {
+						notify("当前会话不支持保存项目选择", "error");
+						return;
+					}
+					pi.appendEntry(SESSION_PROJECT_ENTRY, { project });
+					entries.push({ type: "custom", customType: SESSION_PROJECT_ENTRY, data: { project } });
+				}
+				const resolution = await resolveWorkspaceProject({ cwd: ctx.cwd, sessionEntries: entries });
+				const how = daily
+					? resolution.source === "session"
+						? "本会话已选择；/project clear 恢复日常空间默认项目"
+						: "日常空间默认项目；可用 /project <名称> 为本会话选择"
+					: resolution.source === "workspace-config"
+						? "来自 .pi/research-workspace.json"
+						: "由工作区目录派生";
+				notify(`知识项目：${resolution.project}（${how}）`);
+			},
+		});
+	}
 
 	// /发现（别名 /discover）：知识闭环之上的「发现」——发散、自我质疑、最多 3 条，可一键沉淀为想法。
 	for (const name of ["发现", "discover"]) {

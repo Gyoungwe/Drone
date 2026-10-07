@@ -204,16 +204,22 @@ it("findings and artifact events show bounded facts, never raw assistant/protoco
 });
 
 it("a Vault write failure does not erase the fact that the local summary was saved", async () => {
-	// Deliberately use a traversal project identifier; no external files are touched.
-	const result = await tools()
-		.get("research_summarize_run")
-		.execute(
-			"summary",
-			{ run_dir: runDir, project: "../escape", summary_markdown: "# Saved local summary" },
-			undefined,
-			undefined,
-			{ cwd },
-		);
+	// Deliberately use traversal identifiers; no external files are touched. The model-supplied
+	// project is ignored by the shared project resolver; the traversal result slug makes the Vault write fail.
+	const result = await tools().get("research_summarize_run").execute(
+		"summary",
+		{
+			run_dir: runDir,
+			project: "../escape",
+			result_slug: "../escape",
+			summary_markdown: "# Saved local summary",
+		},
+		undefined,
+		undefined,
+		{ cwd },
+	);
+	expect(result.details.project.project).not.toBe("../escape");
+	expect(result.details.project.notice).toContain("../escape");
 	expect(result.details.summary_saved).toBe(true);
 	expect(result.details.partial).toBe(true);
 	expect(result.details.obsidian_note).toBeNull();

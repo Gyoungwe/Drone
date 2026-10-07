@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { access, appendFile, cp, mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { resolveWorkspaceProject, runProject, sessionEntriesOf } from "@drone/knowledge/project-identity";
 import { loadWorkspaceConfig } from "./workspace-config";
 
 const ALLOWED_SKILLS = new Set(["research-workflow", "research-vault"]);
@@ -102,6 +103,10 @@ async function atomicJson(path, value) {
 }
 function sha(text) {
 	return createHash("sha256").update(text).digest("hex");
+}
+/** Default WikiSkill namespace: the shared project resolver, including a daily-space session choice. */
+async function sessionProject(ctx) {
+	return (await resolveWorkspaceProject({ cwd: ctx.cwd, sessionEntries: sessionEntriesOf(ctx) })).project;
 }
 function evolutionRoot(resultsRoot, project) {
 	return join(resultsRoot, ".wikiskill", project);
@@ -204,7 +209,10 @@ export async function recordWikiSkillExperience({
 	patterns = [],
 } = {}) {
 	const { config, path, metadata } = await resolveRun(cwd, runDir);
-	project = safeSlug(project || metadata.project || "research-workbench", "project");
+	project = safeSlug(
+		project || runProject(metadata.project, await resolveWorkspaceProject({ cwd })),
+		"project",
+	);
 	if (!["success", "failure", "mixed"].includes(outcome))
 		throw new Error("outcome must be success, failure, or mixed");
 	if (!Array.isArray(patterns) || patterns.length === 0)
@@ -300,7 +308,7 @@ export async function proposeWikiSkill({
 	patternIds = [],
 	rationale = "",
 } = {}) {
-	project = safeSlug(project || "research-workbench", "project");
+	project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
 	targetSkill = safeSlug(targetSkill, "target_skill");
 	if (!ALLOWED_SKILLS.has(targetSkill))
 		throw new Error(`target_skill must be one of: ${[...ALLOWED_SKILLS].join(", ")}`);
@@ -415,7 +423,7 @@ export async function gateWikiSkillProposal({
 	model,
 	runner = runAgent,
 } = {}) {
-	project = safeSlug(project || "research-workbench", "project");
+	project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
 	const config = await loadWorkspaceConfig(cwd);
 	const root = evolutionRoot(config.resultsRoot, project);
 	await ensureEvolution(root);
@@ -493,7 +501,7 @@ export async function gateWikiSkillProposal({
 }
 
 export async function wikiSkillStatus({ cwd = process.cwd(), project } = {}) {
-	project = safeSlug(project || "research-workbench", "project");
+	project = safeSlug(project || (await resolveWorkspaceProject({ cwd })).project, "project");
 	const config = await loadWorkspaceConfig(cwd);
 	const root = evolutionRoot(config.resultsRoot, project);
 	await ensureEvolution(root);
@@ -596,7 +604,7 @@ export default function researchWikiSkill(pi) {
 		async execute(_id, params, _signal, _update, ctx) {
 			const result = await proposeWikiSkill({
 				cwd: ctx.cwd,
-				project: params.project,
+				project: params.project || (await sessionProject(ctx)),
 				targetSkill: params.target_skill,
 				candidateMarkdown: params.candidate_markdown,
 				patternIds: params.pattern_ids,
@@ -629,7 +637,7 @@ export default function researchWikiSkill(pi) {
 		async execute(_id, params, _signal, _update, ctx) {
 			const result = await gateWikiSkillProposal({
 				cwd: ctx.cwd,
-				project: params.project,
+				project: params.project || (await sessionProject(ctx)),
 				proposalId: params.proposal_id,
 				provider: params.provider,
 				model: params.model,
@@ -650,7 +658,10 @@ export default function researchWikiSkill(pi) {
 			"Show the persistent experience/raw/wiki/proposal counts and best accepted validation scores for a project.",
 		parameters: { type: "object", properties: { project: { type: "string" } } },
 		async execute(_id, params, _signal, _update, ctx) {
-			const result = await wikiSkillStatus({ cwd: ctx.cwd, project: params.project });
+			const result = await wikiSkillStatus({
+				cwd: ctx.cwd,
+				project: params.project || (await sessionProject(ctx)),
+			});
 			return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
 		},
 	});

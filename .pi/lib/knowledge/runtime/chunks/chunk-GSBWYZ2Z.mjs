@@ -1,26 +1,18 @@
 // @ts-nocheck
 import {
-  projectIdentity
-} from "./chunk-CXEKIGAQ.mjs";
+  resolveWorkspaceProject,
+  sessionEntriesOf
+} from "./chunk-FQL2U4DN.mjs";
 
 // packages/knowledge/src/extension-helpers.ts
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 function result(data) {
   return {
     content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
     details: data
   };
 }
-async function currentProject(cwd) {
-  let value;
-  try {
-    const parsed = JSON.parse(await readFile(join(cwd, ".pi/research-workspace.json"), "utf8"));
-    if (parsed && typeof parsed === "object" && "knowledgeProjectId" in parsed)
-      value = parsed.knowledgeProjectId;
-  } catch {
-  }
-  return projectIdentity(cwd, value);
+async function currentProject(cwd, ctx) {
+  return (await resolveWorkspaceProject({ cwd, sessionEntries: sessionEntriesOf(ctx) })).project;
 }
 function explainerTopicId(value, title = "research-topic") {
   const base = String(value || title).normalize("NFKC").toLowerCase().replace(/[-_]20\d{6,14}$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96);
