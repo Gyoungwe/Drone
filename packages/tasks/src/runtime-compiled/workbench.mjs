@@ -359,9 +359,14 @@ function createTaskWorkbench({
     if (book.selectionRequired) throw error("task-selection-required", "Select a task first.");
     if (!Array.isArray(input.milestones) || !input.milestones.length || input.milestones.length > LIMITS.milestones)
       throw error("plan-limit", "Plan needs 1\u201324 milestones.");
+    const badId = input.milestones.find((m) => !/^[a-zA-Z0-9_-]{1,40}$/.test(String(m.id)));
+    if (badId)
+      throw error(
+        "plan-id-format",
+        `Milestone ID ${JSON.stringify(String(badId.id).slice(0, 60))} is invalid: use 1\u201340 letters, digits, "-" or "_".`
+      );
     const ids = new Set(input.milestones.map((m) => m.id));
-    if (ids.size !== input.milestones.length || [...ids].some((id) => !/^[a-zA-Z0-9-]{1,40}$/.test(String(id))))
-      throw error("plan-id", "Milestone IDs must be unique.");
+    if (ids.size !== input.milestones.length) throw error("plan-id", "Milestone IDs must be unique.");
     const seen = /* @__PURE__ */ new Set();
     const milestones = input.milestones.map((m) => {
       if ((m.dependsOn || []).some((id) => !seen.has(id)))

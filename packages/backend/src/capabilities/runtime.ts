@@ -23,8 +23,8 @@ import {
 	intentCapabilities,
 	mergeResearchIntent,
 	normalizeResearchIntent,
+	orderedCapabilitySkills,
 	type ResearchSkillIntent,
-	selectCapabilitySkills,
 	selectResearchSkills,
 } from "./research-skill-router";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
@@ -147,14 +147,9 @@ function skillMatches(
 		return false;
 	}
 	if (workflowProfile(name)) return selectedResearch.has(name);
-	const category = getSkillCategory(name);
-	if (category === "knowledge") return capabilities.has("knowledge") || capabilities.has("research");
-	if (category === "research" || category === "writing") return capabilities.has("research");
-	if (category === "presentation") return capabilities.has("visualization");
-	if (category === "engineering" || category === "setup") return capabilities.has("coding");
-	if (category === "collaboration" || category === "support" || category === "other")
-		return capabilities.has("external");
-	return false;
+	// Non-workflow skills (e.g. ~/.agents/skills) are grouped by category into a capability and selected
+	// by the same per-capability limit as workflow skills (see orderedCapabilitySkills).
+	return selectedResearch.has(name);
 }
 
 function schemaBytes(tool: {
@@ -214,6 +209,11 @@ export class CapabilityRuntime {
 	private readonly active = new Set<CapabilityId>();
 	/** Capabilities loaded through capability_load (not keyword-detected); their skill lists are filled. */
 	private readonly loaded = new Set<CapabilityId>();
+	/** In-memory only (never persisted): current prompt + capability_load task text, used to rank fill. */
+	private taskText = "";
+	/** Visible skill order from the last apply(): primary → companion → fill. */
+	private skillOrder: string[] = [];
+	private primarySkill: string | undefined;
 	private readonly forcedSkills = new Set<string>();
 	private readonly excludedTools = new Set<string>();
 	private readonly extraAlwaysOn = new Set<string>();
@@ -348,11 +348,13 @@ export class CapabilityRuntime {
 		const detected = detectCapabilities(text);
 		const directSkill = text.match(/^\/skill:([a-z0-9-]+)/i)?.[1];
 		if (!streaming && !continuation) {
+			this.taskText = "";
 			this.active.clear();
 			this.loaded.clear();
 			this.forcedSkills.clear();
 			this.researchIntent = EMPTY_RESEARCH_INTENT;
 		}
+		if (!streaming) this.taskText = `${this.taskText}\n${text}`.slice(-4000);
 		const incomingResearch = detectResearchIntent(text);
 		if (changesResearchWorkflow(incomingResearch)) {
 			for (const name of this.forcedSkills)
@@ -367,6 +369,7 @@ export class CapabilityRuntime {
 
 	activate(capabilities: readonly CapabilityId[], task?: string): CapabilityChange {
 		if (task) {
+			this.taskText = `${this.taskText}\n${task}`.slice(-4000);
 			const incoming = detectResearchIntent(task);
 			if (changesResearchWorkflow(incoming))
 				for (const name of this.forcedSkills)
@@ -388,12 +391,27 @@ export class CapabilityRuntime {
 	}
 
 	/** Metadata (never bodies) of currently visible skills, for capability_load results. */
-	visibleSkillMetadata(): { name: string; description: string; filePath?: string }[] {
+	visibleSkillMetadata(): {
+		name: string;
+		description: string;
+		filePath?: string;
+		role: "primary" | "routed" | "base";
+	}[] {
 		if (!this.session) return [];
+		const rank = new Map(this.skillOrder.map((name, index) => [name, index]));
+		const order = (name: string) => rank.get(name) ?? Number.MAX_SAFE_INTEGER;
 		return allSkillsFromLoader(this.session.resourceLoader)
 			.skills.filter((skill) => this.skillVisibility.has(skill.name))
-			.map((skill) => ({ name: skill.name, description: skill.description ?? "", filePath: skill.filePath }))
-			.sort((a, b) => a.name.localeCompare(b.name));
+			.map((skill) => ({
+				name: skill.name,
+				description: skill.description ?? "",
+				filePath: skill.filePath,
+				role: (skill.name === this.primarySkill ? "primary" : rank.has(skill.name) ? "routed" : "base") as
+					| "primary"
+					| "routed"
+					| "base",
+			}))
+			.sort((a, b) => order(a.name) - order(b.name) || a.name.localeCompare(b.name));
 	}
 
 	isReadOnlyLibrary(): boolean {
@@ -621,12 +639,15 @@ export class CapabilityRuntime {
 		const beforeTools = this.session.getActiveToolNames().slice().sort().join("\0");
 		const beforeSkills = this.skillVisibility.list().join("\0");
 		const allSkills = allSkillsFromLoader(this.session.resourceLoader).skills;
-		const selectedResearch = new Set(
-			selectCapabilitySkills(allSkills, this.active, this.researchIntent, {
-				academicEnabled: this.academicEnabled,
-				fill: this.loaded,
-			}),
-		);
+		const ordered = orderedCapabilitySkills(allSkills, this.active, this.researchIntent, {
+			academicEnabled: this.academicEnabled,
+			fill: this.loaded,
+			taskText: this.taskText,
+			isPinned: (skill) => skillAlwaysWith(skill).size > 0,
+		});
+		const selectedResearch = new Set(ordered.names);
+		this.skillOrder = ordered.names;
+		this.primarySkill = ordered.primary;
 		this.skillVisibility.set(
 			allSkills
 				.filter(
