@@ -14,6 +14,7 @@ import { failureObservation, failureReceipt, toolResultFailed } from "./failure-
 import { readPdfIdentity } from "./pdf-identity.mjs";
 import { remainingExplanation } from "./remaining.mjs";
 import { isReadOnlyTool } from "./tool-manifest.mjs";
+const MCP_CONFIG_FILE = /(?:^|[\\/])(?:\.?mcp|mcp-adapter)\.json$/i;
 const WORKBENCH_ENTRY = "drone-task-workbench-v2";
 const LIMITS = Object.freeze({
   tasks: 12,
@@ -378,6 +379,11 @@ function createTaskWorkbench({
         throw error(
           "acceptance-required",
           `Acceptance must be one of ${[...knownKinds()].join(" | ")} (observed by the host or confirmed by the user); model labels cannot complete it.`
+        );
+      if (m.acceptance.kind === "file" && MCP_CONFIG_FILE.test(String(m.acceptance.path || "")))
+        throw error(
+          "acceptance-config-write",
+          "Writing an MCP config file (mcp.json) does not load MCP tools, so it cannot complete a milestone. Use human_review, or finish only after the mcp tool actually ran in a reloaded session; if no MCP tools are available, tell the user instead."
         );
       seen.add(m.id);
       return {

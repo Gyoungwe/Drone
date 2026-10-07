@@ -1,5 +1,6 @@
 import { researchBundlePaths } from "./research-bundle";
 import { researchSkillPackPaths } from "./research-skill-packs";
+import { DESKTOP_SYSTEM_PROMPT } from "./system-prompt";
 import "./pi-package-dir";
 import "./dev-agent-dir";
 import "./fix-path";
@@ -23,17 +24,6 @@ let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
 let lanObserver: LanObserverHandle | undefined;
 let latestIncidentSnapshot: ReturnType<typeof buildIncidentSnapshot> | undefined;
-
-/**
- * 追加进每次会话系统提示词的桌面端段落（每次调用都付费，保持精简）。
- * 让 agent 知道自己跑在 Drone 桌面端、界面可被 UI 插件定制、以及定制流程与信任门。
- */
-const UI_PLUGIN_PROMPT: string[] = [
-	"你运行在 Drone 桌面端（Electron 图形界面），用户通过图形聊天界面与你交互，不是 CLI 终端。",
-	"Drone 的界面可以用 UI 插件定制：当前可替换「工具调用卡 / 子代理卡 / 任务列表面板」三处组件。",
-	"用户想改界面、或问「界面能改什么」时：读 ~/.drone/ui-plugins/SPEC.md（示例在 _examples/ 目录），按规范写一个插件，保存即自动热重载。",
-	"写完引导用户去「设置 → UI 插件」打开总开关并启用（信任门：agent 不能代劳）。",
-];
 
 /** renderer 加载自定义背景图的协议（pi-bg://background/<文件名>，只读 userData/backgrounds/） */
 const BG_PROTOCOL = "pi-bg";
@@ -194,7 +184,15 @@ app.whenReady().then(async () => {
 	process.env.DRONE_RESEARCH_WORKBENCH_ROOT = app.isPackaged
 		? join(process.resourcesPath, "research-workbench")
 		: join(__dirname, "../../../../.pi");
-	const researchBundle = researchBundlePaths(process.env.DRONE_RESEARCH_WORKBENCH_ROOT);
+	// Bundled pi packages (MCP runtime pi-mcp-adapter), staged by scripts/stage-pi-packages.mjs.
+	const researchBundle = researchBundlePaths(
+		process.env.DRONE_RESEARCH_WORKBENCH_ROOT,
+		app.isPackaged
+			? join(process.resourcesPath, "pi-packages", "node_modules")
+			: join(__dirname, "../../pi-packages/node_modules"),
+	);
+	for (const warning of researchBundle.warnings) log.warn(warning);
+	if (researchBundle.mcpRuntimePath) log.info("MCP runtime bundled", researchBundle.mcpRuntimePath);
 	const researchSkillPacks = researchSkillPackPaths(
 		app.isPackaged
 			? join(process.resourcesPath, "research-skills")
@@ -210,7 +208,7 @@ app.whenReady().then(async () => {
 		legacyInquiryDir: join(app.getPath("userData"), "inquiry"),
 		// 桌面端集成：UI 插件技能目录 + 内置协作 skill 目录（均随包分发）+ 系统提示词段落
 		desktopIntegration: {
-			appendSystemPrompt: UI_PLUGIN_PROMPT,
+			appendSystemPrompt: [...DESKTOP_SYSTEM_PROMPT],
 			additionalSkillPaths: [
 				join(uiPluginsResourcesDir(), "skills"),
 				// 内置协作 skill（channel-pickup/design-handoff）：语义上与 UI 插件无关，独立目录分发
@@ -221,6 +219,7 @@ app.whenReady().then(async () => {
 			additionalExtensionPaths: researchBundle.additionalExtensionPaths,
 			additionalPromptTemplatePaths: researchSkillPacks.promptPaths,
 			academicPiRoot: researchSkillPacks.academicPiRoot,
+			...(researchBundle.mcpRuntimePath ? { mcpRuntimePath: researchBundle.mcpRuntimePath } : {}),
 		},
 	});
 	await backendServices.sessions.init();

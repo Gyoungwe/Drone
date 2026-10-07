@@ -63,6 +63,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Bundled MCP runtime (pinned pi-mcp-adapter); the SDK suite loads it like the packaged app.
+      - run: npm run stage:pi-packages
       - run: npm run test:sdk
 
   desktop:
@@ -93,4 +95,7 @@ jobs:
       - run: npm run check:tasks-runtime
       - run: npm run check:research-runtime
       - run: npm run test:upgrade
+      # The installer ships pi-packages/node_modules; verify the mapping, pins and that the adapter loads.
+      - run: npm run stage:pi-packages
+      - run: npm run check:pi-packages
       - run: npm run build

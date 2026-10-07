@@ -104,6 +104,8 @@ export interface SessionServiceOptions {
 		additionalExtensionPaths?: string[];
 		additionalPromptTemplatePaths?: string[];
 		academicPiRoot?: string;
+		/** Entry file of the bundled MCP runtime (pi-mcp-adapter/index.ts); loaded as an extension. */
+		mcpRuntimePath?: string;
 	};
 }
 
@@ -274,6 +276,9 @@ export class SessionService extends SessionServiceApi {
 				};
 			},
 			setMcpStatus: (cwd, status) => this.setMcpStatus(cwd, status),
+			// Registers ssh_hosts and lets ssh/bio tools resolve registered host names; the ssh tool's
+			// prompt guideline tells the model to call ssh_hosts, so it must be present whenever the host has a registry.
+			...(this.options.listSshHosts ? { listSshHosts: this.options.listSshHosts } : {}),
 			onDecision: (sessionId, event) => {
 				for (const handler of this.decisionHandlers) {
 					try {
@@ -385,9 +390,9 @@ export class SessionService extends SessionServiceApi {
 		_log.info("capability tools reapplied after reload", sessionId, changed.state.footprint);
 	}
 
+	/** Runtime status flows through the resource service, which owns the onMcpStatus subscribers. */
 	setMcpStatus(cwd: string, status: McpStatus): void {
-		this.mcp.setStatus(status, cwd);
-		for (const handler of this.mcpHandlers) handler(cwd, status);
+		this.resources.setMcpStatus(cwd, status);
 	}
 
 	async evaluateKnowledgeReview(

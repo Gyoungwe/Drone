@@ -1041,6 +1041,12 @@ export const zh = {
 			needsAuth: "需要认证",
 			notConnected: "未连接",
 			disabled: "已禁用",
+			blocked: "待批准",
+			runtimeMissing:
+				"MCP 运行时未安装：此版本没有带上 pi-mcp-adapter，mcp.json 里的服务器不会启动，Agent 也拿不到 MCP 工具。请重新安装或升级 Drone。",
+			runtimeStarting:
+				"MCP 运行时未启动：还没有收到这个项目的运行时状态。打开或新建一个会话后会自动启动；如果一直如此，请查看日志 main.log。",
+			presetSetupOpen: "打开扩展页面",
 			empty: "尚未配置 MCP 服务器",
 			emptyHint:
 				"可通过当前项目或用户级 MCP 配置添加服务器。Zotero 文献库请先用 /zotero-setup：可从零安装 CLI，默认走 zotero-cli，MCP 可选且默认关闭。",

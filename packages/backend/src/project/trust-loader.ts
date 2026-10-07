@@ -1,3 +1,4 @@
+import { dirname, resolve } from "node:path";
 import { createLogger } from "../log";
 import type { PermissionConfirm, PermissionModeRef } from "../permissions/extension";
 import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
@@ -18,6 +19,44 @@ export type ExtensionFactoryBuilder = (
  * 先 projectTrusted=false 只加载用户级资源 → 解析项目信任 → 按结果重载。
  * 不信任时项目级 settings/extensions/skills/prompts/themes 不加载。
  */
+type DesktopIntegration = NonNullable<
+	ConstructorParameters<typeof ProjectResourceLoader>[0]["desktopIntegration"]
+>;
+type LoadedExtensions = ReturnType<DefaultResourceLoader["getExtensions"]>;
+
+const MCP_RUNTIME_SEGMENT = /[\\/]pi-mcp-adapter[\\/]/;
+
+/**
+ * Keep exactly one MCP runtime: the host-bundled pi-mcp-adapter wins over copies a user or
+ * project installed through pi packages (`npm:pi-mcp-adapter`), which would otherwise register
+ * the same `mcp` tool and `/mcp` command twice.
+ */
+export function preferBundledMcpRuntime(bundledPath: string) {
+	const bundledDir = dirname(resolve(bundledPath));
+	return (base: LoadedExtensions): LoadedExtensions => {
+		const extensions = base.extensions.filter((extension) => {
+			if (extension.path.startsWith("<inline:")) return true;
+			const path = resolve(extension.path);
+			if (!MCP_RUNTIME_SEGMENT.test(path)) return true;
+			const keep = path.startsWith(bundledDir);
+			if (!keep) log.info("ignored duplicate MCP runtime; using the bundled one", path);
+			return keep;
+		});
+		return extensions.length === base.extensions.length ? base : { ...base, extensions };
+	};
+}
+
+function desktopLoaderOptions(integration: DesktopIntegration | undefined) {
+	if (!integration) return {};
+	const { mcpRuntimePath, ...options } = integration;
+	if (!mcpRuntimePath) return options;
+	return {
+		...options,
+		additionalExtensionPaths: [...(options.additionalExtensionPaths ?? []), mcpRuntimePath],
+		extensionsOverride: preferBundledMcpRuntime(mcpRuntimePath),
+	};
+}
+
 export class ProjectResourceLoader {
 	constructor(
 		private readonly deps: {
@@ -37,6 +76,7 @@ export class ProjectResourceLoader {
 				additionalExtensionPaths?: string[];
 				additionalPromptTemplatePaths?: string[];
 				academicPiRoot?: string;
+				mcpRuntimePath?: string;
 			};
 		},
 	) {}
@@ -67,7 +107,7 @@ export class ProjectResourceLoader {
 				...this.deps.buildExtensions(cwd, options?.confirm, options?.modeRef),
 				...(options?.extensionFactories ?? []),
 			],
-			...this.deps.desktopIntegration,
+			...desktopLoaderOptions(this.deps.desktopIntegration),
 		});
 		if (this.deps.projectTrust === false) {
 			settingsManager.setProjectTrusted(true);

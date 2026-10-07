@@ -203,6 +203,8 @@ export function heuristicCapabilities(name: string): CapabilityId[] {
 	if (name.startsWith("research_"))
 		return VISUAL_TOOL.test(name) ? ["research", "visualization"] : ["research"];
 	if (/^(?:channel_|contact_supervisor$|scout$)/.test(name)) return ["external"];
+	// MCP runtime (pi-mcp-adapter): the `mcp` proxy and its direct `<server>_<tool>` tools are external.
+	if (name === "mcp" || name.startsWith("mcp__") || name.startsWith("mcp_")) return ["external"];
 	return VISUAL_TOOL.test(name) ? ["visualization", "external"] : ["external"];
 }
 

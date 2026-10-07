@@ -61,6 +61,13 @@ extraResources:
     to: "research-skills/academic/scripts/adapters/examples/zotero/input_fixture/.gitkeep"
   - from: "resources/research-skills/academic/scripts/adapters/tests/.gitkeep"
     to: "research-skills/academic/scripts/adapters/tests/.gitkeep"
+  # Bundled pi packages (exact pins in pi-packages/package.json + package-lock.json), staged by
+  # scripts/stage-pi-packages.mjs; beforePack fails closed when they are missing or stale.
+  # pi-mcp-adapter is the MCP runtime: main loads <resources>/pi-packages/node_modules/pi-mcp-adapter/index.ts.
+  # Kept outside research-workbench/ because that tree is audited to contain no node_modules.
+  - from: "pi-packages/node_modules"
+    to: "pi-packages/node_modules"
+    filter: ["**/*", "!.drone-staged.json", "!.package-lock.json"]
   # All first-party research capabilities, loaded from one versioned manifest.
   # Never package local settings, sessions, downloaded papers, credentials or the user skill directory.
   - from: "../../.pi/extensions"

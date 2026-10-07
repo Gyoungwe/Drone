@@ -17,13 +17,16 @@ const ServerStatusSchema = Type.Object(
 			Type.Literal("needs-auth"),
 			Type.Literal("not-connected"),
 			Type.Literal("disabled"),
+			Type.Literal("blocked"),
 		]),
 		toolCount: Type.Integer({ minimum: 0 }),
+		directToolCount: Type.Optional(Type.Integer({ minimum: 0 })),
 		resourceCount: Type.Optional(Type.Integer({ minimum: 0 })),
 		failedAgoSeconds: Type.Optional(Type.Number({ minimum: 0 })),
 		disabled: Type.Boolean(),
 		listenState: Type.Optional(Type.String()),
 		catalogStale: Type.Optional(Type.Boolean()),
+		blockedReason: Type.Optional(Type.String()),
 	},
 	{ additionalProperties: false },
 );
@@ -36,6 +39,9 @@ const StatusSchema = Type.Object(
 		totalResources: Type.Integer({ minimum: 0 }),
 		connectedCount: Type.Integer({ minimum: 0 }),
 		disabledCount: Type.Integer({ minimum: 0 }),
+		runtime: Type.Optional(
+			Type.Union([Type.Literal("missing"), Type.Literal("starting"), Type.Literal("running")]),
+		),
 	},
 	{ additionalProperties: false },
 );
@@ -94,7 +100,7 @@ export const McpContract = defineDomain("mcp", {
 			result: Type.Void(),
 		},
 		addPreset: {
-			args: Type.Tuple([Type.Literal("playwright")]),
+			args: Type.Tuple([Type.Union([Type.Literal("playwright"), Type.Literal("playwright-chrome")])]),
 			result: Type.Unsafe<McpConfigSnapshot>(ConfigSchema),
 		},
 	},
