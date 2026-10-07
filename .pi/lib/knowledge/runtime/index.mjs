@@ -1,5 +1,22 @@
 // @ts-nocheck
 import {
+  createToolBudget
+} from "./chunks/chunk-BHQUJ6MZ.mjs";
+import {
+  autoTopicCandidate
+} from "./chunks/chunk-P4SVSIRY.mjs";
+import {
+  TOPIC_MEMORY_LIMITS,
+  TOPIC_MEMORY_VERSION,
+  archiveTopic,
+  classifyTopic,
+  createTopicMemory,
+  listTopics,
+  readTopic,
+  topicRunHash,
+  updateTopic
+} from "./chunks/chunk-MFL6DGIT.mjs";
+import {
   archiveKnowledgeTopic,
   cancelKnowledgeSemanticIndex,
   consumeKnowledgeReviewPreview,
@@ -23,7 +40,7 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-IJHRYYDY.mjs";
+} from "./chunks/chunk-AN32SKKE.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
@@ -60,7 +77,7 @@ import {
   createKnowledgeSpecialists,
   knowledgeReadStart,
   shouldOrientKnowledge
-} from "./chunks/chunk-6H2S6YM4.mjs";
+} from "./chunks/chunk-36KZGYXK.mjs";
 import {
   SPECIALIST_LIMITS,
   contextSessionId,
@@ -76,38 +93,44 @@ import {
   guardResearchToolResult
 } from "./chunks/chunk-TW476WMJ.mjs";
 import {
-  createToolBudget
-} from "./chunks/chunk-BHQUJ6MZ.mjs";
-import {
-  autoTopicCandidate
-} from "./chunks/chunk-P4SVSIRY.mjs";
-import {
-  TOPIC_MEMORY_LIMITS,
-  TOPIC_MEMORY_VERSION,
-  archiveTopic,
-  classifyTopic,
-  createTopicMemory,
-  listTopics,
-  readTopic,
-  topicRunHash,
-  updateTopic
-} from "./chunks/chunk-MFL6DGIT.mjs";
+  SPECIALIST_DECISIONS,
+  createSpecialistBudget,
+  decideSpecialistRun,
+  specialistRequestSignature
+} from "./chunks/chunk-BRQ6C4CR.mjs";
 import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-PJQRVYSJ.mjs";
+} from "./chunks/chunk-CD4VUGLW.mjs";
 import {
-  buildKnowledgeSearchExpression,
-  splitKnowledgeChunks,
-  tokenizeKnowledgeText
-} from "./chunks/chunk-4LTSNIAR.mjs";
+  evaluateMetacognitivePublication
+} from "./chunks/chunk-TT3YMRLM.mjs";
+import {
+  advisoryLine,
+  advisoryNotice,
+  knowledgeFailure,
+  publicationFallbackNotice,
+  publicationNotice,
+  publicationNotices
+} from "./chunks/chunk-U3GNWHNQ.mjs";
 import {
   KnowledgeService,
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-V6PECWHO.mjs";
+} from "./chunks/chunk-LC5BF27U.mjs";
+import {
+  embedTexts,
+  validateSemanticConfig
+} from "./chunks/chunk-OWE2DUY5.mjs";
+import {
+  createSemanticSettingsApi,
+  createSemanticSettingsState,
+  readSemanticSettings,
+  saveSemanticSettings,
+  validateSemanticConfig as validateSemanticConfig2
+} from "./chunks/chunk-O536IQIE.mjs";
 import {
   beginKnowledgeFlow,
   clearKnowledgeFlow,
@@ -130,16 +153,10 @@ import {
   saveReviewMode
 } from "./chunks/chunk-6LT3KQRY.mjs";
 import {
-  embedTexts,
-  validateSemanticConfig
-} from "./chunks/chunk-OWE2DUY5.mjs";
-import {
-  createSemanticSettingsApi,
-  createSemanticSettingsState,
-  readSemanticSettings,
-  saveSemanticSettings,
-  validateSemanticConfig as validateSemanticConfig2
-} from "./chunks/chunk-O536IQIE.mjs";
+  buildKnowledgeSearchExpression,
+  splitKnowledgeChunks,
+  tokenizeKnowledgeText
+} from "./chunks/chunk-4LTSNIAR.mjs";
 import {
   cardField,
   cardLink,
@@ -160,23 +177,6 @@ import {
   initializeSharedNavigation,
   updateVaultNavigation
 } from "./chunks/chunk-DY4DWRNO.mjs";
-import {
-  evaluateMetacognitivePublication
-} from "./chunks/chunk-TT3YMRLM.mjs";
-import {
-  SPECIALIST_DECISIONS,
-  createSpecialistBudget,
-  decideSpecialistRun,
-  specialistRequestSignature
-} from "./chunks/chunk-BRQ6C4CR.mjs";
-import {
-  advisoryLine,
-  advisoryNotice,
-  knowledgeFailure,
-  publicationFallbackNotice,
-  publicationNotice,
-  publicationNotices
-} from "./chunks/chunk-U3GNWHNQ.mjs";
 import {
   compareClaimSets,
   compareClaims
