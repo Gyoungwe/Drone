@@ -2268,6 +2268,9 @@ function getVaultProfile(id = DEFAULT_VAULT_PROFILE) {
   return VAULT_PROFILES[id];
 }
 
+// packages/extensions/src/research-policy.ts
+var MAX_CONCURRENT_RESEARCH_SUBAGENTS = 3;
+
 // packages/extensions/src/workspace-config.ts
 var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
   resultsRoot: "./results",
@@ -2281,7 +2284,7 @@ var DEFAULT_WORKSPACE_CONFIG = Object.freeze({
   knowledgeProjectId: null,
   knowledgeBindingRevision: 0,
   legacyProjectVault: null,
-  maxConcurrentSubagents: 3,
+  maxConcurrentSubagents: MAX_CONCURRENT_RESEARCH_SUBAGENTS,
   timezone: "Asia/Shanghai",
   knowledgeProfile: DEFAULT_VAULT_PROFILE,
   knowledgeDepositMode: "verified",
@@ -2297,8 +2300,10 @@ function resolveConfiguredPath(cwd, value) {
 }
 function validatePatch(config) {
   const max = Number(config.maxConcurrentSubagents);
-  if (!Number.isInteger(max) || max < 1 || max > 3) {
-    throw new Error("maxConcurrentSubagents must be an integer between 1 and 3");
+  if (!Number.isInteger(max) || max < 1 || max > MAX_CONCURRENT_RESEARCH_SUBAGENTS) {
+    throw new Error(
+      `maxConcurrentSubagents must be an integer between 1 and ${MAX_CONCURRENT_RESEARCH_SUBAGENTS}`
+    );
   }
   if (typeof config.timezone !== "string" || !config.timezone.trim()) {
     throw new Error("timezone must be a non-empty string");
@@ -3852,8 +3857,20 @@ var KnowledgeService = class {
               limit: 24,
               minSimilarity: settings.minSimilarity
             });
-            semanticItems = (Array.isArray(candidateResult) ? candidateResult : candidateResult.items || []).map((item, index) => ({ ...item, rank: index + 1 }));
-            if (candidateResult?.partial) metrics.index.semanticPartial = true;
+            const semanticResult = Array.isArray(candidateResult) ? { items: candidateResult, partial: Boolean(candidateResult.partial) } : candidateResult && typeof candidateResult === "object" ? candidateResult : { items: [], partial: false };
+            semanticItems = (Array.isArray(semanticResult.items) ? semanticResult.items : []).map(
+              (item, index) => ({ ...item, rank: index + 1 })
+            );
+            metrics.index.semantic = {
+              ...metrics.index.semantic || {},
+              coverage: semanticResult.partial ? "partial" : "complete",
+              ...Number.isInteger(semanticResult.scanned) ? { scanned: semanticResult.scanned } : {},
+              ...Number.isInteger(semanticResult.totalEligible) ? { totalEligible: semanticResult.totalEligible } : {}
+            };
+            if (semanticResult.partial) metrics.index.semanticPartial = true;
+            if (Number.isInteger(semanticResult.scanned)) metrics.index.semanticScanned = semanticResult.scanned;
+            if (Number.isInteger(semanticResult.totalEligible))
+              metrics.index.semanticTotalEligible = semanticResult.totalEligible;
           }
         }
       } catch (error2) {
@@ -3895,6 +3912,7 @@ var KnowledgeService = class {
           enabled: semanticEnabled,
           candidateCount: semanticItems.length,
           acceptedCount: hydrated.hits.length,
+          ...metrics.index.semantic ? { coverage: metrics.index.semantic } : {},
           ...semanticError ? { error: semanticError } : {}
         }
       };

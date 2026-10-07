@@ -54,6 +54,7 @@ export interface ResearchEvidenceGate {
 	status?: unknown;
 	answerable?: unknown;
 	claimRefs?: readonly unknown[];
+	claimBindings?: readonly unknown[];
 }
 
 export interface ResearchRunSummaryInput {
@@ -204,6 +205,12 @@ export function normalizeResearchRunSummary(input: ResearchRunSummaryInput): Res
 	const gate = input.evidenceGate;
 	if (gate?.status === "failed" || gate?.answerable !== true || gate?.stage !== "answerable")
 		throw new Error("Only an answerable, evidence-gated research run can produce a proposal summary");
+	if (
+		!Array.isArray(gate.claimBindings) ||
+		gate.claimBindings.length === 0 ||
+		gate.claimBindings.some((binding) => !binding || typeof binding !== "object" || Array.isArray(binding))
+	)
+		throw new Error("Only a research run with structured claim bindings can produce a proposal summary");
 	const receipts = new Map<string, ResearchReadReceipt>();
 	if (!Array.isArray(input.readReceipts) || input.readReceipts.length > RESEARCH_SUMMARY_LIMITS.readReceipts)
 		throw new Error("Current-turn read receipts are required");
@@ -239,7 +246,10 @@ export function normalizeResearchRunSummary(input: ResearchRunSummaryInput): Res
 	];
 	if (sources.length > RESEARCH_SUMMARY_LIMITS.sources)
 		throw new Error("Research summary has too many source notes");
-	const claimRefs = (Array.isArray(gate.claimRefs) ? gate.claimRefs : [])
+	const claimRefs = [
+		...(Array.isArray(gate.claimRefs) ? gate.claimRefs : []),
+		...gate.claimBindings.map((binding: any) => binding.claim),
+	]
 		.map((ref) => clean(ref, 240))
 		.filter(Boolean)
 		.slice(0, 64);

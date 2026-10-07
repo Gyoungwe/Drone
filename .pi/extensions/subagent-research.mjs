@@ -106,8 +106,11 @@ function standaloneRuntime() {
   return processRuntime;
 }
 
+// packages/extensions/src/research-policy.ts
+var MAX_CONCURRENT_RESEARCH_SUBAGENTS = 3;
+
 // packages/extensions/src/subagent-research.ts
-var MAX_CONCURRENT_SUBAGENTS = 3;
+var MAX_CONCURRENT_SUBAGENTS = MAX_CONCURRENT_RESEARCH_SUBAGENTS;
 var ROLE_MAP = Object.freeze({
   scout: { purpose: "\u5FEB\u901F\u5B9A\u4F4D\u672C\u5730\u4EE3\u7801\u3001\u6570\u636E\u548C\u5DF2\u6709\u77E5\u8BC6", writes: "none", mcp: "read-local" },
   planner: { purpose: "\u63D0\u51FA\u7ADE\u4E89\u5047\u8BBE\u3001\u8BC1\u636E\u7F3A\u53E3\u548C\u53EF\u6267\u884C\u8BA1\u5212", writes: "plan.md", mcp: "read-local" },
@@ -134,7 +137,8 @@ async function loadWorkspacePolicy(cwd) {
   }
   const configuredResults = typeof raw.resultsRoot === "string" && raw.resultsRoot.trim() ? raw.resultsRoot : DEFAULT_WORKSPACE_CONFIG.resultsRoot;
   const configuredMax = raw.maxConcurrentSubagents;
-  const maxConcurrentSubagents = [1, 2, 3].includes(configuredMax) ? configuredMax : DEFAULT_WORKSPACE_CONFIG.maxConcurrentSubagents;
+  const configuredMaxNumber = Number(configuredMax);
+  const maxConcurrentSubagents = Number.isInteger(configuredMaxNumber) && configuredMaxNumber >= 1 && configuredMaxNumber <= MAX_CONCURRENT_SUBAGENTS ? configuredMaxNumber : DEFAULT_WORKSPACE_CONFIG.maxConcurrentSubagents;
   return {
     resultsRoot: resolve(projectRoot, configuredResults),
     maxConcurrentSubagents

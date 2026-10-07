@@ -21,7 +21,13 @@ const base = {
 		},
 	],
 	readReceipts: [{ path: source, hash, receiptRef: "read-1", startLine: 1, endLine: 4 }],
-	evidenceGate: { stage: "answerable", status: "ok", answerable: true, claimRefs: ["claim-1"] },
+	evidenceGate: {
+		stage: "answerable",
+		status: "ok",
+		answerable: true,
+		claimRefs: ["claim-1"],
+		claimBindings: [{ claim: "claim-1", relationship: "direct", limitations: "fixture" }],
+	},
 };
 
 describe("research run summary", () => {

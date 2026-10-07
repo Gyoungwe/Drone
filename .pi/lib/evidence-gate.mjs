@@ -38,11 +38,11 @@ function createEvidenceGate({ scope = "factual-answer" } = {}) {
   };
   return Object.freeze({ advance, fail, snapshot });
 }
-function assertEvidenceAnswerable(gate, { claimRefs = [] } = {}) {
+function assertEvidenceAnswerable(gate, { claimBindings = [] } = {}) {
   const state = gate.snapshot();
-  if (state.stage !== "answerable" || !Array.isArray(claimRefs) || claimRefs.length === 0) {
+  if (state.stage !== "answerable" || !Array.isArray(claimBindings) || claimBindings.length === 0 || claimBindings.some((binding) => !binding || typeof binding !== "object" || Array.isArray(binding))) {
     throw new Error(
-      "Evidence gate is closed: complete retrieval, inspection, archiving and claim binding first"
+      "Evidence gate is closed: complete retrieval, inspection, archiving and structured claim binding first"
     );
   }
   return state;

@@ -740,6 +740,11 @@ function semanticCandidates(args) {
   const rows = db.prepare(
     "SELECT s.path,s.hash,s.vector,s.dimension,s.chunk_index,s.start_char,s.end_char,n.title,n.kind FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer' ORDER BY s.path LIMIT 5000"
   ).all(fingerprint, args.project || "");
+  const totalEligible = Number(
+    db.prepare(
+      "SELECT COUNT(*) AS count FROM semantic_chunks s JOIN notes n ON n.path=s.path AND n.hash=s.hash WHERE s.fingerprint=? AND (n.scope='shared' OR n.scope=?) AND n.kind!='explainer'"
+    ).get(fingerprint, args.project || "").count
+  );
   const best = /* @__PURE__ */ new Map();
   for (const row of rows) {
     if (row.dimension !== query.length) continue;
@@ -777,8 +782,13 @@ function semanticCandidates(args) {
       });
   }
   const result = [...best.values()].sort((a, b) => b.score - a.score || a.path.localeCompare(b.path)).slice(0, limit);
-  Object.defineProperty(result, "partial", { value: rows.length >= 5e3, enumerable: false });
-  return result;
+  return {
+    items: result,
+    partial: totalEligible > rows.length,
+    scanned: rows.length,
+    totalEligible,
+    nextCursor: null
+  };
 }
 function resolveLinkTarget(target) {
   if (statements.get.get(target)) return target;

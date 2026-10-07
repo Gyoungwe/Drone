@@ -1,9 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { bindExtensionRuntime, runExtensionExclusive, withExtensionRuntime } from "./internal/runtime";
+import { MAX_CONCURRENT_RESEARCH_SUBAGENTS } from "./research-policy";
 
 /** Maximum number of concurrent research workers allowed by the host policy. */
-export const MAX_CONCURRENT_SUBAGENTS = 3;
+export const MAX_CONCURRENT_SUBAGENTS = MAX_CONCURRENT_RESEARCH_SUBAGENTS;
 
 export const ROLE_MAP = Object.freeze({
 	scout: { purpose: "快速定位本地代码、数据和已有知识", writes: "none", mcp: "read-local" },
@@ -74,9 +75,13 @@ async function loadWorkspacePolicy(cwd: string): Promise<WorkspaceConfig> {
 			? raw.resultsRoot
 			: DEFAULT_WORKSPACE_CONFIG.resultsRoot;
 	const configuredMax = raw.maxConcurrentSubagents;
-	const maxConcurrentSubagents = [1, 2, 3].includes(configuredMax as number)
-		? (configuredMax as number)
-		: DEFAULT_WORKSPACE_CONFIG.maxConcurrentSubagents;
+	const configuredMaxNumber = Number(configuredMax);
+	const maxConcurrentSubagents =
+		Number.isInteger(configuredMaxNumber) &&
+		configuredMaxNumber >= 1 &&
+		configuredMaxNumber <= MAX_CONCURRENT_SUBAGENTS
+			? configuredMaxNumber
+			: DEFAULT_WORKSPACE_CONFIG.maxConcurrentSubagents;
 	return {
 		resultsRoot: resolve(projectRoot, configuredResults),
 		maxConcurrentSubagents,

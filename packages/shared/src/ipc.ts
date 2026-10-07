@@ -93,6 +93,8 @@ export interface ImportedAttachment {
 /** IPC 通道名常量 */
 export const IpcChannels = {
 	KnowledgeOverview: "knowledge:overview",
+	KnowledgeResearchRuns: "knowledge:researchRuns",
+	KnowledgeResearchRun: "knowledge:researchRun",
 	KnowledgeSpecialistsSettings: "knowledge:specialistsSettings",
 	KnowledgeSetupPreview: "knowledge:setupPreview",
 	KnowledgeSetupStart: "knowledge:setupStart",

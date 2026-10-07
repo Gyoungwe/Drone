@@ -70,6 +70,8 @@ const knowledgeClient = exposeContract(KnowledgeContract, {
 			{
 				setSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
 				getOverview: IpcChannels.KnowledgeOverview,
+				getResearchRuns: IpcChannels.KnowledgeResearchRuns,
+				getResearchRun: IpcChannels.KnowledgeResearchRun,
 				previewSetup: IpcChannels.KnowledgeSetupPreview,
 				startSetup: IpcChannels.KnowledgeSetupStart,
 				getJobs: IpcChannels.KnowledgeJobs,
@@ -312,6 +314,8 @@ const inquiryClient = exposeContract(InquiryContract, {
 const knowledgeApi = {
 	setKnowledgeSpecialistSettings: invoke(knowledgeClient, "setSpecialistSettings"),
 	getKnowledgeOverview: invoke(knowledgeClient, "getOverview"),
+	getResearchRuns: invoke(knowledgeClient, "getResearchRuns"),
+	getResearchRun: invoke(knowledgeClient, "getResearchRun"),
 	previewKnowledgeSetup: invoke(knowledgeClient, "previewSetup"),
 	startKnowledgeSetup: invoke(knowledgeClient, "startSetup"),
 	getKnowledgeJobs: invoke(knowledgeClient, "getJobs"),

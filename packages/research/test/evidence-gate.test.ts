@@ -35,10 +35,15 @@ describe("evidence gate", () => {
 		},
 	);
 
-	it("requires completed evidence and at least one claim reference", () => {
+	it("requires completed evidence and at least one structured claim binding", () => {
 		const gate = createEvidenceGate();
 		for (const stage of EVIDENCE_STAGES.slice(1)) gate.advance(stage);
 		expect(() => assertEvidenceAnswerable(gate)).toThrow("Evidence gate is closed");
-		expect(assertEvidenceAnswerable(gate, { claimRefs: ["claim-1"] }).stage).toBe("answerable");
+		expect(() => assertEvidenceAnswerable(gate, { claimBindings: ["claim-1"] })).toThrow(
+			"structured claim binding",
+		);
+		expect(assertEvidenceAnswerable(gate, { claimBindings: [{ claim: "claim-1" }] }).stage).toBe(
+			"answerable",
+		);
 	});
 });

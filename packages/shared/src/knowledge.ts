@@ -184,6 +184,99 @@ export interface KnowledgeOverview {
 	error?: string | null;
 	flow: KnowledgeFlow | null;
 }
+export type ResearchRunRouteState = "pending" | "active" | "complete" | "blocked";
+export interface ResearchRunRouteNode {
+	key: string;
+	label: string;
+	state: ResearchRunRouteState;
+	at: string | null;
+	detail: string | null;
+	count?: number;
+}
+export interface ResearchRunListItem {
+	runId: string;
+	resultSlug: string;
+	project: string;
+	topicId: string | null;
+	query: string;
+	status: string;
+	stage: string;
+	answerable: boolean;
+	scientificallyVerified: false;
+	startedAt: string | null;
+	updatedAt: string | null;
+	runDir: string;
+}
+export interface ResearchRunSource {
+	path: string;
+	status: string;
+	hash: string | null;
+	verified: boolean;
+	size?: number | null;
+	location?: string | null;
+	metadata?: Record<string, unknown> | null;
+}
+export interface ResearchRunClaim {
+	id?: string | null;
+	claim: string;
+	support: string[];
+	status: string;
+	relationship?: "direct" | "indirect" | "hypothesis" | "unsupported" | null;
+	limitations?: string | null;
+	organism?: string | null;
+	method?: string | null;
+	evidence?: {
+		path: string;
+		startLine: number | null;
+		endLine: number | null;
+		quote: string | null;
+		hash: string | null;
+	}[];
+}
+export interface ResearchRunTimelineEvent {
+	type: string;
+	at: string | null;
+	detail: string | null;
+	status: "ok" | "failed" | "observed";
+	refs?: string[];
+}
+export interface ResearchRunDetail extends ResearchRunListItem {
+	route: ResearchRunRouteNode[];
+	timeline?: ResearchRunTimelineEvent[];
+	sources: ResearchRunSource[];
+	claims: ResearchRunClaim[];
+	warnings: string[];
+	coverage: Record<string, unknown> | null;
+	archive: { count: number; reused: number; verified: boolean };
+	integrity?: { checked: number; verified: number; changed: number; missing: number };
+	provenance?: {
+		status: "not-recorded" | "observed" | "changed" | "incomplete";
+		files: {
+			path: string;
+			role: string;
+			hash: string | null;
+			currentHash: string | null;
+			matches: boolean | null;
+		}[];
+		limitations: string[];
+	};
+	gaps?: string[];
+	governance?: {
+		duplicateSources: string[][];
+		staleSources: string[];
+		unavailableSources: string[];
+	};
+}
+export interface ResearchRunsRequest {
+	cwd?: string | null;
+	project?: string | null;
+	limit?: number;
+}
+export interface ResearchRunRequest {
+	cwd?: string | null;
+	runDir?: string | null;
+	runId?: string | null;
+}
 export interface KnowledgePage<T> {
 	items: T[];
 	total: number;
@@ -390,6 +483,8 @@ export interface KnowledgeApi {
 	/** enabled: 开关；run: 立即运行一次 */
 	updateDailyDiscovery(input: { enabled?: boolean; run?: boolean }): Promise<DailyDiscoveryState>;
 	decideDailyIdea(input: { id: string; action: "save" | "dismiss" }): Promise<DailyDiscoveryState>;
+	getResearchRuns(input?: ResearchRunsRequest): Promise<{ items: ResearchRunListItem[]; total: number }>;
+	getResearchRun(input: ResearchRunRequest): Promise<ResearchRunDetail>;
 	getKnowledgeSemanticStatus(input?: {
 		cwd?: string | null;
 		bindingRevision?: number;

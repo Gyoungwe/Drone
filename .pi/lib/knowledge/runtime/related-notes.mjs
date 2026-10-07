@@ -1,7 +1,7 @@
 // @ts-nocheck
 import {
   getKnowledgeService
-} from "./chunks/chunk-DAWMRSPO.mjs";
+} from "./chunks/chunk-DDCBYHAI.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";
 import "./chunks/chunk-O536IQIE.mjs";
 import "./chunks/chunk-6YLIZTKN.mjs";

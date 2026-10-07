@@ -6,12 +6,13 @@ import { KnowledgeContract } from "./knowledge";
 describe("KnowledgeContract", () => {
 	it("exposes stable domain channels for every knowledge action", () => {
 		expect(channelOf(KnowledgeContract, "getOverview")).toBe("knowledge:getOverview");
+		expect(channelOf(KnowledgeContract, "getResearchRuns")).toBe("knowledge:getResearchRuns");
 		expect(channelOf(KnowledgeContract, "reviewWithModel")).toBe("knowledge:reviewWithModel");
 		expect(channelOf(KnowledgeContract, "getZoteroStatus")).toBe("knowledge:getZoteroStatus");
 		expect(channelOf(KnowledgeContract, "authorizeZoteroLocalWrite")).toBe(
 			"knowledge:authorizeZoteroLocalWrite",
 		);
-		expect(Object.keys(KnowledgeContract.methods)).toHaveLength(34);
+		expect(Object.keys(KnowledgeContract.methods)).toHaveLength(36);
 	});
 
 	it("keeps optional reads optional while requiring object payloads for mutations", () => {

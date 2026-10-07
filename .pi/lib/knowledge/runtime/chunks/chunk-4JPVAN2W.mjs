@@ -12,7 +12,7 @@ import {
 } from "./chunk-XSFQUT2B.mjs";
 import {
   getKnowledgeService
-} from "./chunk-DAWMRSPO.mjs";
+} from "./chunk-DDCBYHAI.mjs";
 import {
   normalizeSourceLinks
 } from "./chunk-LE6NM7SB.mjs";

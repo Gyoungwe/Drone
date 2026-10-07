@@ -66,7 +66,7 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-7UOZ7HAE.mjs";
+} from "./chunks/chunk-4JPVAN2W.mjs";
 import {
   autoApplyWikiProposal,
   decideWikiProposal,
@@ -98,7 +98,7 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-DAWMRSPO.mjs";
+} from "./chunks/chunk-DDCBYHAI.mjs";
 import {
   embedTexts,
   validateSemanticConfig

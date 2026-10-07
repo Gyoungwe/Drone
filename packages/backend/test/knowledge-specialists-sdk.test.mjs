@@ -65,6 +65,14 @@ it("real SDK dispatches four isolated roles by stage; parent still reads evidenc
 				status: "ok",
 				answerable: true,
 				claim_refs: ["fixture:conditional-claim"],
+				claim_bindings: [
+					{
+						claim: "fixture:conditional-claim",
+						relationship: "hypothesis",
+						limitations: "fixture only",
+						sources: [],
+					},
+				],
 			},
 		}),
 	);

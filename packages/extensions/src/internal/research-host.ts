@@ -97,8 +97,9 @@ export const recordZoteroWrite = operations.recordZoteroWrite;
 const loop = createResearchLoop({
 	workspace: async (cwd) => (await loadWorkspaceConfig(cwd)) as any,
 	verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input as any),
-	sourceStatus: async ({ cwd, run_dir }) =>
-		sourceStatusTyped({ cwd, run_dir }, archivePorts),
+	exclusive,
+	sourceStatus: async ({ cwd, run_dir, verify }) =>
+		sourceStatusTyped({ cwd, run_dir, verify }, archivePorts),
 });
 export const startResearchRun = (...args: any[]) => loop.startResearchRun(...args);
 export const updateResearchLoop = (...args: any[]) => loop.updateResearchLoop(...args);
