@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { expandWithGraph, GRAPH_RETRIEVAL_DEFAULTS } from "./graph-retrieval";
 import { createHash, randomUUID } from "node:crypto";
 import { join, relative, resolve, sep } from "node:path";
 import { Worker } from "node:worker_threads";
@@ -568,6 +569,19 @@ export class KnowledgeService {
 				},
 			};
 			metrics.mergedCandidates = merged.length;
+		}
+		if (!wikiOnly && !explainerOnly && result.hits?.length) {
+			// Graph-augmented retrieval: 1-hop expansion over [[links]] and backlinks of the top hits.
+			try {
+				const seeds = result.hits.slice(0, GRAPH_RETRIEVAL_DEFAULTS.seeds).map((hit) => hit.path);
+				const graph = await this.request("graphNeighbors", { paths: seeds, project: state.project, perSeed: 8 });
+				const expanded = expandWithGraph(result.hits, graph?.items || [], { limit: Number(limit) || 5 });
+				metrics.graphCandidates = (graph?.items || []).length;
+				metrics.graphAccepted = expanded.filter((hit) => hit.retrieval === "graph").length;
+				result = { ...result, hits: expanded };
+			} catch (error) {
+				metrics.graphError = String(error instanceof Error ? error.message : error).slice(0, 200);
+			}
 		}
 		metrics.elapsedMs = Date.now() - started;
 		result = { ...result, retrievalMetrics: metrics, retrieval: metrics };

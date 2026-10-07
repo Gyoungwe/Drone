@@ -74,6 +74,8 @@ extraResources:
     to: "research-workbench/skills/research-show-me"
   - from: "../../.pi/skills/zotero-literature"
     to: "research-workbench/skills/zotero-literature"
+  - from: "../../.pi/skills/bio-environment"
+    to: "research-workbench/skills/bio-environment"
   - from: "../../.pi/lib"
     to: "research-workbench/lib"
 mac:

@@ -24,6 +24,7 @@ import { bindAcceptanceVerifierEvents } from "../tasks/acceptance";
 import { makeAskUserTool } from "../tools/ask-user";
 import { makeBioDatabaseTool } from "../tools/bio/databases";
 import { makeBioExtension } from "../tools/bio/extension";
+import { makeEnvRegistryTool } from "../tools/bio/registry-tool";
 import { makeBioEnvironmentTool } from "../tools/bio/tool";
 import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
@@ -113,6 +114,14 @@ export function buildSessionCustomTools(
 	if (deps.listSshHosts) tools.push(makeSshHostsTool(deps.listSshHosts));
 	tools.push(
 		makeBioEnvironmentTool({
+			confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
+			...(deps.listSshHosts ? { hosts: deps.listSshHosts } : {}),
+			agentDir: getAgentDir(),
+		}) as ToolDefinition,
+	);
+	tools.push(
+		makeEnvRegistryTool({
+			agentDir: getAgentDir(),
 			confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
 			...(deps.listSshHosts ? { hosts: deps.listSshHosts } : {}),
 		}) as ToolDefinition,

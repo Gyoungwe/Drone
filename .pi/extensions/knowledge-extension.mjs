@@ -2965,6 +2965,63 @@ async function runNavigationMaintenance(service, project, limit = 3) {
 // packages/knowledge/src/ui-service.ts
 init_review_policy();
 
+// packages/knowledge/src/graph-retrieval.ts
+var GRAPH_RETRIEVAL_DEFAULTS = {
+  seeds: 3,
+  decay: 0.5,
+  centralityWeight: 2e-3,
+  centralityCap: 4e-3,
+  maxNeighborsPerSeed: 4
+};
+function centralityBoost(degree, weight, cap) {
+  if (!(degree > 0)) return 0;
+  return Math.min(cap, weight * Math.log2(1 + degree));
+}
+function baseScore(hit, index) {
+  return typeof hit.fusionScore === "number" && Number.isFinite(hit.fusionScore) ? hit.fusionScore : 1 / (60 + index + 1);
+}
+function expandWithGraph(hits, neighbors, options) {
+  const o = { ...GRAPH_RETRIEVAL_DEFAULTS, ...options };
+  const limit = Math.max(1, Math.min(12, Math.floor(o.limit)));
+  const scored = /* @__PURE__ */ new Map();
+  for (const [index, hit] of hits.entries()) scored.set(hit.path, { hit, score: baseScore(hit, index) });
+  const seedScore = new Map(hits.slice(0, o.seeds).map((hit, index) => [hit.path, baseScore(hit, index)]));
+  const perSeed = /* @__PURE__ */ new Map();
+  const ordered = [...neighbors].sort(
+    (a, b) => b.degree - a.degree || a.path.localeCompare(b.path) || a.from.localeCompare(b.from)
+  );
+  for (const n of ordered) {
+    const parent = seedScore.get(n.from);
+    if (parent === void 0 || n.path === n.from) continue;
+    const used = perSeed.get(n.from) || 0;
+    const existing = scored.get(n.path);
+    const contribution = parent * o.decay + centralityBoost(n.degree, o.centralityWeight, o.centralityCap);
+    if (existing) {
+      if (existing.hit.retrieval !== "graph") existing.score += contribution * 0.25;
+      else {
+        existing.score = Math.max(existing.score, contribution);
+        const g = existing.hit.graph;
+        if (!g.from.includes(n.from)) g.from.push(n.from);
+      }
+      continue;
+    }
+    if (used >= o.maxNeighborsPerSeed) continue;
+    perSeed.set(n.from, used + 1);
+    scored.set(n.path, {
+      hit: {
+        path: n.path,
+        title: n.title,
+        kind: n.kind,
+        ...n.hash ? { hash: n.hash } : {},
+        retrieval: "graph",
+        graph: { from: [n.from], direction: n.direction, ...n.context ? { context: n.context } : {} }
+      },
+      score: contribution
+    });
+  }
+  return [...scored.values()].sort((a, b) => b.score - a.score || a.hit.path.localeCompare(b.hit.path)).slice(0, limit).map(({ hit, score }) => ({ ...hit, fusionScore: score }));
+}
+
 // packages/knowledge/src/service.ts
 init_runtime_host();
 init_runtime_host();
@@ -3911,6 +3968,18 @@ var KnowledgeService = class {
         }
       };
       metrics.mergedCandidates = merged.length;
+    }
+    if (!wikiOnly && !explainerOnly && result2.hits?.length) {
+      try {
+        const seeds = result2.hits.slice(0, GRAPH_RETRIEVAL_DEFAULTS.seeds).map((hit) => hit.path);
+        const graph = await this.request("graphNeighbors", { paths: seeds, project: state4.project, perSeed: 8 });
+        const expanded = expandWithGraph(result2.hits, graph?.items || [], { limit: Number(limit) || 5 });
+        metrics.graphCandidates = (graph?.items || []).length;
+        metrics.graphAccepted = expanded.filter((hit) => hit.retrieval === "graph").length;
+        result2 = { ...result2, hits: expanded };
+      } catch (error2) {
+        metrics.graphError = String(error2 instanceof Error ? error2.message : error2).slice(0, 200);
+      }
     }
     metrics.elapsedMs = Date.now() - started;
     result2 = { ...result2, retrievalMetrics: metrics, retrieval: metrics };
@@ -5607,9 +5676,14 @@ function createTaskWorkbench({
     if (book.selectionRequired) throw error("task-selection-required", "Select a task first.");
     if (!Array.isArray(input.milestones) || !input.milestones.length || input.milestones.length > LIMITS.milestones)
       throw error("plan-limit", "Plan needs 1\u201324 milestones.");
+    const badId = input.milestones.find((m) => !/^[a-zA-Z0-9_-]{1,40}$/.test(String(m.id)));
+    if (badId)
+      throw error(
+        "plan-id-format",
+        `Milestone ID ${JSON.stringify(String(badId.id).slice(0, 60))} is invalid: use 1\u201340 letters, digits, "-" or "_".`
+      );
     const ids = new Set(input.milestones.map((m) => m.id));
-    if (ids.size !== input.milestones.length || [...ids].some((id) => !/^[a-zA-Z0-9-]{1,40}$/.test(String(id))))
-      throw error("plan-id", "Milestone IDs must be unique.");
+    if (ids.size !== input.milestones.length) throw error("plan-id", "Milestone IDs must be unique.");
     const seen = /* @__PURE__ */ new Set();
     const milestones = input.milestones.map((m) => {
       if ((m.dependsOn || []).some((id) => !seen.has(id)))
