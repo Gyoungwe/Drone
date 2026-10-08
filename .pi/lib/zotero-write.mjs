@@ -13,6 +13,15 @@ function exactDoiItems(items, doi) {
   return wanted ? items.filter((item) => normalizeDoi(item.data?.DOI || item.doi || item.DOI) === wanted) : [];
 }
 
+// packages/research/src/zotero-library.ts
+function zoteroLibraryPath(value) {
+  if (value === void 0 || value === null) return "users";
+  const text = String(value).trim().toLowerCase();
+  if (text === "" || text === "user" || text === "users") return "users";
+  if (text === "group" || text === "groups") return "groups";
+  return null;
+}
+
 // packages/research/src/zotero-write.ts
 var ZOTERO_ITEM_SPECS = Object.freeze({
   journalArticle: { container: "publicationTitle", doi: true, fields: ["volume", "issue", "pages"] },
@@ -275,10 +284,11 @@ async function localApiChildren({ fetchImpl = fetch, key, signal } = {}) {
   return Array.isArray(result.data) ? result.data : [];
 }
 function zoteroWebApiConfig(env = process.env) {
-  const libraryType = env.ZOTERO_LIBRARY_TYPE || "users";
+  const path = zoteroLibraryPath(env.ZOTERO_LIBRARY_TYPE);
+  const libraryType = path ?? String(env.ZOTERO_LIBRARY_TYPE);
   const libraryId = env.ZOTERO_LIBRARY_ID || env.ZOTERO_USER_ID || "";
   const apiKey = env.ZOTERO_API_KEY || "";
-  const configured = ["users", "groups"].includes(libraryType) && /^\d+$/.test(libraryId) && apiKey.length > 0;
+  const configured = path !== null && /^\d+$/.test(libraryId) && apiKey.length > 0;
   return { libraryType, libraryId, apiKey, configured };
 }
 function zoteroLocalWriteConfig(env = process.env) {

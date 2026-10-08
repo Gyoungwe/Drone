@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { zoteroLibraryEnvValue, zoteroLibraryPath } from "@drone/research/zotero-library";
 import type { ZoteroWebApiSaveInput, ZoteroWebApiStatus } from "@drone/shared";
 import { JsonStore } from "../json-store";
 import { getAgentDir } from "../session-engine/sdk";
@@ -7,6 +8,8 @@ import { getAgentDir } from "../session-engine/sdk";
  * Zotero 网页 API 凭据：修改已有条目（归入分类、挂 PDF）只有网页 API 能做——Zotero 7 本机 API 只读。
  * 密钥保存在 agentDir/zotero-web.json（与 models.json 同级的 secret 文件），启动时与保存后注入
  * process.env（ZOTERO_API_KEY / ZOTERO_LIBRARY_ID / ZOTERO_LIBRARY_TYPE），研究扩展的写入通道直接读取。
+ * ZOTERO_LIBRARY_TYPE 注入单数 `user` / `group`：这是 pyzotero（zotero-mcp / zotero-cli，MCP 子进程继承环境）
+ * 认的拼写，它会自己补 "s"；注入复数 `users` 会拼出 `/userss/<id>` → 404。Drone 自己的读取方两种拼写都认。
  * 用户自己在环境里设置的变量优先，界面不覆盖。
  */
 interface StoredCredentials {
@@ -49,7 +52,7 @@ function inject(env: NodeJS.ProcessEnv, value: StoredCredentials | null): void {
 	}
 	env.ZOTERO_API_KEY = value.apiKey;
 	env.ZOTERO_LIBRARY_ID = value.libraryId;
-	env.ZOTERO_LIBRARY_TYPE = value.libraryType;
+	env.ZOTERO_LIBRARY_TYPE = zoteroLibraryEnvValue(value.libraryType);
 	env[INJECTED] = "1";
 }
 
@@ -126,7 +129,7 @@ export async function getZoteroWebApiStatus(
 		return {
 			configured: Boolean(env.ZOTERO_LIBRARY_ID || env.ZOTERO_USER_ID),
 			source: "env",
-			libraryType: env.ZOTERO_LIBRARY_TYPE === "groups" ? "groups" : "users",
+			libraryType: zoteroLibraryPath(env.ZOTERO_LIBRARY_TYPE) === "groups" ? "groups" : "users",
 			libraryId: env.ZOTERO_LIBRARY_ID || env.ZOTERO_USER_ID || null,
 			username: null,
 			write: null,

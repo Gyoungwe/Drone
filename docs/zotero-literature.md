@@ -31,13 +31,48 @@ A download, Zotero search hit, MCP tool result, or unread PDF is a source record
 
 `/zotero-setup` can install `zotero-mcp-server` from zero after a native confirm (uv, pipx, or `python -m pip`; otherwise the official uv script). It does not install Zotero desktop, does not write Claude Desktop config, and does not copy the library into the Vault.
 
+### MCP config dialects (pi-mcp-adapter 5.1.0)
+
+The bundled runtime reads two file formats, and the enabled-state field differs:
+
+| File | Format | Turn a server off | Hide tools |
+|---|---|---|---|
+| `~/.pi/agent/mcp.json`, project `.pi/mcp.json` | Pi's own `mcp.json` (translated by the adapter) | `"enabled": false` (remove it to enable). `disabled` is **ignored** — the server still starts | `"toolExposure": { "<tool>": "hidden" }` |
+| project `.mcp.json`, `~/.config/mcp/mcp.json`, `mcp-adapter.json` | adapter format | `"disabled": true` | `"excludeTools": [...]` |
+
+Pi-format files accept only `command`, `args`, `env`, `cwd`, `url`, `headers`, `description`, `enabled`, `timeout` (seconds), `exposure`, `toolExposure`, `oauth`, `auth`; anything else (`lifecycle`, `excludeTools`, `disabled`, …) is dropped with a startup notice. Settings → MCP and `/zotero-setup` write the right field for each file; on startup Drone rewrites legacy `disabled: true` in `~/.pi/agent/mcp.json` (written by builds up to v0.22.0) as `enabled: false`. A project `.pi/mcp.json` entry replaces the user entry of the same name as a whole, so never leave a `{ "disabled": … }`-only stub there.
+
+`/zotero-setup` registers this user-level entry (off until enabled in Settings → MCP; `command` is the resolved absolute path, e.g. `C:\Users\<you>\.local\bin\zotero-mcp.exe` after `uv tool install zotero-mcp-server`):
+
+```json
+{
+  "mcpServers": {
+    "zotero": {
+      "command": "C:\\Users\\<you>\\.local\\bin\\zotero-mcp.exe",
+      "args": ["serve"],
+      "env": { "ZOTERO_LOCAL": "true", "ZOTERO_LIBRARY_TYPE": "user", "ZOTERO_MCP_TOOLSETS": "none" },
+      "description": "Zotero library: search/read items and full text, add items by DOI/URL/file, file into collections, attach PDFs",
+      "timeout": 120,
+      "toolExposure": {
+        "zotero_delete_item": "hidden",
+        "zotero_delete_collection": "hidden",
+        "zotero_delete_annotation": "hidden"
+      },
+      "enabled": false
+    }
+  }
+}
+```
+
+Credentials are not written into `mcp.json`: the MCP child inherits `ZOTERO_API_KEY` / `ZOTERO_LIBRARY_ID` (Settings → Zotero → Web API) or `ZOTERO_LOCAL_API_KEY` / `ZOTERO_LOCAL_SERVER_ID` (Zotero 10 local writes) from the host environment. `ZOTERO_LIBRARY_TYPE` is injected and written in pyzotero's singular spelling (`user` / `group`); pyzotero appends the "s" itself, so the plural value older builds injected produced `https://api.zotero.org/userss/<id>` (404) in zotero-mcp / zotero-cli. Drone's own Zotero channels accept both spellings. `.mcp.example.json` shows the adapter-format (`.mcp.json`) equivalent.
+
 ## Writing to Zotero
 
 `research_zotero_save` is the only route that adds an item to Zotero, and it is host-controlled end to end:
 
 | Step | Behaviour |
 |---|---|
-| Channel | Zotero desktop connector (`127.0.0.1:23119/connector/saveItems`) when Zotero is running and the local API is enabled; otherwise the Zotero Web API v3 with a **write-scoped** `ZOTERO_API_KEY` plus `ZOTERO_LIBRARY_ID` / `ZOTERO_USER_ID` (and `ZOTERO_LIBRARY_TYPE=groups` for a group) from the host environment, or the key saved in Drone Settings → Zotero → Web API (stored in `agentDir/zotero-web.json`, injected into the same variables; a user-set environment variable wins). Credentials never come from chat or tool arguments. |
+| Channel | Zotero desktop connector (`127.0.0.1:23119/connector/saveItems`) when Zotero is running and the local API is enabled; otherwise the Zotero Web API v3 with a **write-scoped** `ZOTERO_API_KEY` plus `ZOTERO_LIBRARY_ID` / `ZOTERO_USER_ID` (and `ZOTERO_LIBRARY_TYPE=group` for a group; `groups` is accepted too) from the host environment, or the key saved in Drone Settings → Zotero → Web API (stored in `agentDir/zotero-web.json`, injected into the same variables; a user-set environment variable wins). Credentials never come from chat or tool arguments. |
 | Dedup | Exact-DOI lookup first (local API or Web API). One existing item ⇒ `reused`, no write. Several ⇒ `ambiguous`, no write. Incomplete lookup ⇒ `blocked`. |
 | Consent | If the authorized, unchanged task plan lists the DOI as a `zotero_item` milestone, that consent covers the write. Otherwise a native ask card (same AskGate as `ask_user` and task authorization) shows title, authors, DOI, type, target library/collection, attachment mode and dedup result; only “同意写入 Zotero” writes. Headless sessions without task consent are refused. There is no standing “always allow” setting. |
 | Write | Exactly one write. Metadata is whitelisted per item type (unknown fields are dropped, the DOI goes to `extra` for types without a DOI field). Attachments are URL-only here: the connector lets Zotero download `attachment_url` itself; the Web API records it as a `linked_url` attachment. Uploading a local PDF to an item is `research_zotero_update local_file`. |

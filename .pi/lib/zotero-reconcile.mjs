@@ -1,3 +1,12 @@
+// packages/research/src/zotero-library.ts
+function zoteroLibraryPath(value) {
+  if (value === void 0 || value === null) return "users";
+  const text = String(value).trim().toLowerCase();
+  if (text === "" || text === "user" || text === "users") return "users";
+  if (text === "group" || text === "groups") return "groups";
+  return null;
+}
+
 // packages/research/src/literature-receipt.ts
 function normalizeDoi(value) {
   const doi = String(value || "").trim().replace(/^(?:https?:\/\/(?:dx\.)?doi\.org\/|doi:\s*)/i, "").toLowerCase();
@@ -104,11 +113,12 @@ async function resolveCollection(get, raw) {
 var LOCAL_API = "http://127.0.0.1:23119/api/users/0";
 var LOCAL_USER_LIBRARY_IDS = /* @__PURE__ */ new Set(["0", "1"]);
 function createZoteroReconciler({
-  libraryType = process.env.ZOTERO_LIBRARY_TYPE || "users",
+  libraryType: rawLibraryType = process.env.ZOTERO_LIBRARY_TYPE,
   libraryId = process.env.ZOTERO_LIBRARY_ID || process.env.ZOTERO_USER_ID,
   apiKey = process.env.ZOTERO_API_KEY,
   request
 } = {}) {
+  const libraryType = zoteroLibraryPath(rawLibraryType);
   const get = request || (async (path) => {
     const response = await fetch(`https://api.zotero.org/${libraryType}/${libraryId}/${path}`, {
       headers: { "Zotero-API-Version": "3", "Zotero-API-Key": apiKey },
@@ -123,7 +133,7 @@ function createZoteroReconciler({
     return { data: JSON.parse(body), total: Number(response.headers.get("Total-Results")) };
   });
   return async (expected) => {
-    if (!["users", "groups"].includes(libraryType) || !/^\d+$/.test(libraryId || "") || !request && !apiKey)
+    if (!libraryType || !/^\d+$/.test(libraryId || "") || !request && !apiKey)
       return {
         state: "unavailable",
         reason: "Configure the existing local Zotero API environment securely; never paste keys in chat. No library was queried."
@@ -183,7 +193,7 @@ var RANK = {
 function createCompositeZoteroReconciler({ local, web, env = process.env } = {}) {
   const userIds = [
     env.ZOTERO_USER_ID,
-    env.ZOTERO_LIBRARY_TYPE === "groups" ? null : env.ZOTERO_LIBRARY_ID
+    zoteroLibraryPath(env.ZOTERO_LIBRARY_TYPE) === "groups" ? null : env.ZOTERO_LIBRARY_ID
   ].filter((value) => Boolean(value));
   const first = local || createLocalZoteroReconciler({ userLibraryIds: userIds });
   const second = web || createZoteroReconciler();

@@ -1,3 +1,4 @@
+import { zoteroLibraryPath } from "./zotero-library";
 import { lookupZoteroByDoi } from "./zotero-reconcile";
 
 type Options = Record<string, any>;
@@ -9,11 +10,13 @@ const LOCAL_USER_LIBRARY_IDS = new Set(["0", "1"]);
 
 /** Read-only Web API adapter. Credentials come from the host environment only. */
 export function createZoteroReconciler({
-	libraryType = process.env.ZOTERO_LIBRARY_TYPE || "users",
+	libraryType: rawLibraryType = process.env.ZOTERO_LIBRARY_TYPE,
 	libraryId = process.env.ZOTERO_LIBRARY_ID || process.env.ZOTERO_USER_ID,
 	apiKey = process.env.ZOTERO_API_KEY,
 	request,
 }: Options = {}): Reconciler {
+	// `user`/`group` (pyzotero spelling, what Drone injects) and `users`/`groups` both map to the URL segment.
+	const libraryType = zoteroLibraryPath(rawLibraryType);
 	const get =
 		request ||
 		(async (path: string) => {
@@ -30,7 +33,7 @@ export function createZoteroReconciler({
 			return { data: JSON.parse(body), total: Number(response.headers.get("Total-Results")) };
 		});
 	return async (expected: Options) => {
-		if (!["users", "groups"].includes(libraryType) || !/^\d+$/.test(libraryId || "") || (!request && !apiKey))
+		if (!libraryType || !/^\d+$/.test(libraryId || "") || (!request && !apiKey))
 			return {
 				state: "unavailable",
 				reason:
@@ -104,7 +107,7 @@ const RANK: Record<string, number> = {
 export function createCompositeZoteroReconciler({ local, web, env = process.env }: Options = {}): Reconciler {
 	const userIds = [
 		env.ZOTERO_USER_ID,
-		env.ZOTERO_LIBRARY_TYPE === "groups" ? null : env.ZOTERO_LIBRARY_ID,
+		zoteroLibraryPath(env.ZOTERO_LIBRARY_TYPE) === "groups" ? null : env.ZOTERO_LIBRARY_ID,
 	].filter((value): value is string => Boolean(value));
 	const first: Reconciler = local || createLocalZoteroReconciler({ userLibraryIds: userIds });
 	const second: Reconciler = web || createZoteroReconciler();

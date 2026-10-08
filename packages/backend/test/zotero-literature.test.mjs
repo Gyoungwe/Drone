@@ -105,7 +105,9 @@ describe("Windows BOM config compatibility", () => {
 		const value = JSON.parse(await readFile(path, "utf8"));
 		expect(value.mcpServers.other.command).toBe("keep");
 		expect(value.mcpServers.zotero.env.ZOTERO_API_KEY).toBe("fixture-only");
-		expect(value.mcpServers.zotero.disabled).toBe(true);
+		// pi-mcp-adapter ignores `disabled` in Pi's mcp.json; the legacy flag becomes `enabled: false`.
+		expect(value.mcpServers.zotero.enabled).toBe(false);
+		expect(value.mcpServers.zotero).not.toHaveProperty("disabled");
 	});
 	it("does not hide invalid JSON behind BOM tolerance", async () => {
 		await writeFile(join(agentDir, "mcp.json"), "\uFEFF{invalid");
@@ -147,9 +149,29 @@ describe("optional Zotero MCP registration", () => {
 		expect(result.registered).toBe(true);
 		expect(result.disabled).toBe(true);
 		expect(result.command).toBe("/usr/bin/zotero-mcp");
-		expect(
-			JSON.parse(await readFile(join(agentDir, "mcp.json"), "utf8")).mcpServers.zotero.env.ZOTERO_LOCAL,
-		).toBe("true");
+		expect(JSON.parse(await readFile(join(agentDir, "mcp.json"), "utf8")).mcpServers.zotero).toEqual({
+			command: "/usr/bin/zotero-mcp",
+			args: ["serve"],
+			env: { ZOTERO_LOCAL: "true", ZOTERO_LIBRARY_TYPE: "user", ZOTERO_MCP_TOOLSETS: "none" },
+			description: expect.any(String),
+			timeout: 120,
+			toolExposure: {
+				zotero_delete_item: "hidden",
+				zotero_delete_collection: "hidden",
+				zotero_delete_annotation: "hidden",
+			},
+			enabled: false,
+		});
+	});
+
+	it("registers the group spelling pyzotero expects when Drone injected a group library", async () => {
+		await registerZoteroMcp({
+			agentDirectory: agentDir,
+			command: "/usr/bin/zotero-mcp",
+			libraryType: "group",
+		});
+		const raw = JSON.parse(await readFile(join(agentDir, "mcp.json"), "utf8"));
+		expect(raw.mcpServers.zotero.env.ZOTERO_LIBRARY_TYPE).toBe("group");
 	});
 
 	it("reports unreachable local API without claiming the library is empty", async () => {

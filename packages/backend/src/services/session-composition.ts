@@ -128,6 +128,14 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		onServerEnabled: (cwd) => service.reloadMcpSessions(cwd),
 		runtimeBundled: Boolean(options.desktopIntegration?.mcpRuntimePath),
 	});
+	// pi-mcp-adapter ignores legacy `disabled: true` in ~/.pi/agent/mcp.json; rewrite it as `enabled: false`
+	// once at startup so servers the user turned off (or /zotero-setup registered off) really stay off.
+	void service.mcp
+		.normalizeLegacyUserConfig()
+		.then((changed) => {
+			if (changed) log.info("normalized legacy MCP disabled flags", { file: "mcp.json" });
+		})
+		.catch((error: unknown) => log.warn("MCP config normalization skipped", { error: String(error) }));
 	service.knowledgeSession = new KnowledgeSessionService({
 		getContext: (sessionId) => {
 			const entry = service.registry.get(sessionId);

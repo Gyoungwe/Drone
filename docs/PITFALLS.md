@@ -232,6 +232,12 @@ pi SDK 必须声明进 `packages/desktop/package.json` dependencies（electron-b
 
 症状：设置 › Zotero › 网页 API 填 21 位群组 ID（schema `maxLength: 20`）点保存，界面显示「已保存」，上方仍是「未配置」。根因：`main/ipc/bind-contract.ts` 在 `Check(method.args, args)` 失败时**返回** `{ code: "invalid_arguments", titleKey, detail, ... }`，preload `exposeContract` 原样透传，`await window.pi.x()` 不会进 catch；调用方把任何返回值当成功。修复点：先在 `ZoteroWebApiSection` 用 `isZoteroWebApiStatus` 校验返回形状；随后统一在 preload `exposeContract` 里把 `invalid_arguments` / `invalid_result` 信封转成 reject（`HostApiValidationFailure`，消息为信封 detail），所有经契约的 `window.pi.*` 调用失败都会进 catch。教训：IPC 层的「失败」必须是 reject，不能是 resolve 一个看起来像结果的对象。
 
+### Pi 的 mcp.json 认 `enabled: false`，不认 `disabled`；ZOTERO_LIBRARY_TYPE 要单数（2026-10-08）
+
+症状一：MCP 面板里关掉的服务器（以及 `/zotero-setup` 注册的「默认关闭」zotero）照样被 pi-mcp-adapter 启动。根因：`~/.pi/agent/mcp.json` 和项目 `.pi/mcp.json` 是 Pi 自己的格式，adapter 5.x 用 `translatePiMcpServer` 翻译，只把 `enabled: false` 变成禁用，`disabled` 当未知字段丢掉；`.mcp.json`、`~/.config/mcp/mcp.json`、`mcp-adapter.json` 才是 adapter 原生格式（`disabled: true`、`excludeTools`）。修复：`McpService` 按文件方言写字段（Pi 文件写/删 `enabled`，原生文件写/删 `disabled`），读取时两种都认，启动时把用户级 Pi 文件里遗留的 `disabled: true` 改写成 `enabled: false`；`test/mcp-enabled-adapter-sdk.test.ts` 用打包的 adapter 实际验证被关掉的服务器不会启动。
+
+症状二：在设置 › Zotero › 网页 API 保存密钥后，zotero-mcp / zotero-cli 的网页 API 请求全部 404，URL 是 `https://api.zotero.org/userss/<id>/…`。根因：Drone 往 process.env 注入 `ZOTERO_LIBRARY_TYPE=users`，MCP 子进程继承后交给 pyzotero，pyzotero 自己再补一个 "s"。修复：注入单数 `user` / `group`（`research/src/zotero-library.ts`），Drone 自己的读取方（`zoteroWebApiConfig`、对账 reconciler、网页 API 状态）两种拼写都认；`/zotero-setup` 生成的条目也显式写 `ZOTERO_LIBRARY_TYPE`。
+
 ## 五、工程纪律
 
 ### 绝不打印/提交 API key
