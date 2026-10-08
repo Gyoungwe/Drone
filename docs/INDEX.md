@@ -30,7 +30,7 @@ Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭
 
 任务路由过程看板的列式草图与边界：见 [任务路由过程看板设计](superpowers/specs/task-route-process-board-design.md)、`ui-preview/task-route-process-board.html` 和 `scripts/check-task-route-process-board-sketch.mjs`。
 
-全量历史 PR 模拟用户测试分类与执行规约：见 [simulated-user-testing-plan.md](simulated-user-testing-plan.md)（覆盖 PR #1–#97，九大用户任务分类、63 个核心用例矩阵与下一阶段实施优先级）。
+全量历史 PR 模拟用户测试分类与执行规约：见 [simulated-user-testing-plan.md](simulated-user-testing-plan.md)（覆盖 PR #1–#97，九大用户任务分类、63 个核心用例矩阵与下一阶段实施优先级）；测试执行汇总报告见 [simulated-user-testing-report.md](simulated-user-testing-report.md)。
 
 Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx electron-vite dev --remote-debugging-port=9224`；根目录 `npm run dev -- --remote-debugging-port=9224` 的参数不会穿过嵌套的 workspace 脚本。首次启动前运行根目录的 `npm run build:lan-web -w packages/desktop`。验证 `http://127.0.0.1:9224/json` 返回页面列表后再运行 CDP 冒烟脚本；普通开发仍用根目录 `npm run dev`。
 
