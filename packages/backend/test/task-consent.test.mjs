@@ -557,3 +557,18 @@ it.each(["ask-authorization", "acknowledge"])(
 		expect(pi.sendMessage.mock.calls.filter(([, options]) => options?.triggerTurn)).toHaveLength(1);
 	},
 );
+
+it("reconcile survives a concurrent state change (revision bump) while it awaits file checks", async () => {
+	const { j } = setup();
+	const dir = await mkdtemp(join(tmpdir(), "drone-reconcile-"));
+	dirs.push(dir);
+	await writeFile(join(dir, "report.csv"), "a,b\n1,2\n");
+	plan(j);
+	act(j, "authorize-task");
+	const before = j.view().revision;
+	const pending = j.reconcile(dir);
+	// 对账等待文件检查期间，并行调用修改任务状态（抬高 book.revision）
+	act(j, "approve-plan");
+	expect(j.view().revision).toBeGreaterThan(before);
+	await expect(pending).resolves.toBeTruthy();
+});

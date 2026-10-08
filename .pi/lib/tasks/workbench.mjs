@@ -627,8 +627,14 @@ function createTaskWorkbench({
     save();
     return clone(a);
   }
+  function stillCurrent(id, t) {
+    const cur = book.tasks.find((x) => x.id === id);
+    if (!cur) throw error("task-scope", "Task does not belong to this session/branch.");
+    if (cur !== t)
+      throw error("stale-task-view", "Task was replaced while reconciling; call task_reconcile again.");
+  }
   async function reconcile(cwd) {
-    const t = requireTask(), id = t.id, revision = book.revision;
+    const t = requireTask(), id = t.id;
     const updates = [];
     for (const m of t.milestones) {
       const verifier = verifierFor(m.acceptance.kind);
@@ -641,7 +647,7 @@ function createTaskWorkbench({
       } catch (e) {
         result = { state: "unknown", reason: clean(e?.message || "verifier-failed") };
       }
-      checkRevision(id, revision);
+      stillCurrent(id, t);
       m.state = result.state === "found" && depsDone(t, m) ? "completed" : result.state === "pending" ? "pending" : "blocked";
       m.evidence = { ...result, kind: verifier.evidenceKind, at: now() };
       if (result.state === "found") {
@@ -665,7 +671,7 @@ function createTaskWorkbench({
         updates.push({ id: m.id, error: e.code || "file-unavailable" });
       }
     }
-    checkRevision(id, revision);
+    stillCurrent(id, t);
     for (const update of updates) {
       const m = t.milestones.find((m2) => m2.id === update.id);
       if (update.error) {
@@ -691,7 +697,7 @@ function createTaskWorkbench({
         op.checkedAt = now();
       }
     }
-    checkRevision(id, revision);
+    stillCurrent(id, t);
     for (const op of t.operations.filter((o) => o.state === "awaiting-review" && o.review?.id)) {
       const verifier = verifierFor(op.review.kind);
       if (!verifier?.resolve) continue;
@@ -701,7 +707,7 @@ function createTaskWorkbench({
       } catch {
         result = null;
       }
-      checkRevision(id, revision);
+      stillCurrent(id, t);
       if (!result) continue;
       op.checkedAt = now();
       if (result.status === "applied" && !result.stale) {
