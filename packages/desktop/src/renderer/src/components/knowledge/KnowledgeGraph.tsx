@@ -46,7 +46,8 @@ export function KnowledgeGraph({
 		};
 	}, [revision, nonce, indexKey, view, mergeMirrors]);
 	useEffect(() => {
-		if (!selected || !(data?.semantic?.nodes ?? data?.nodes).some((node) => node.path === selected)) setSelected(null);
+		const nodes = data?.semantic?.nodes ?? data?.nodes ?? [];
+		if (!selected || !nodes.some((node) => node.path === selected)) setSelected(null);
 	}, [data, selected]);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: nonce refreshes link counts after index changes
 	useEffect(() => {
@@ -160,20 +161,20 @@ export function KnowledgeGraph({
 				<span className="rounded-full border border-border px-2 py-0.5">
 					{t("graphHealthIsolated").replace(
 						"{count}",
-										String(graph.health?.isolated ?? graph.nodes.filter((node) => node.degree === 0).length),
+						String(graph.health?.isolated ?? graph.nodes.filter((node) => node.degree === 0).length),
 					)}
 				</span>
 				<span className="rounded-full border border-border px-2 py-0.5">
 					{t("graphHealthDuplicates").replace(
 						"{count}",
-										String(graph.health?.duplicates ?? graph.duplicates?.length ?? 0),
+						String(graph.health?.duplicates ?? graph.duplicates?.length ?? 0),
 					)}
 				</span>
 			</div>
 			<div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_240px]">
 				{mode === "nebula" && webgl ? (
-						<KnowledgeNebula
-								data={graph}
+					<KnowledgeNebula
+						data={graph}
 						onSelect={setSelected}
 						labels={{ reset: t("graphReset"), relayout: t("graphRelayout") }}
 					/>

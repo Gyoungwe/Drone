@@ -270,14 +270,6 @@ function unboundClaimBinding(claim = "Limited claim") {
 		sources: [],
 	};
 }
-function claimBinding(p, claim = "Limited method claim") {
-	return {
-		claim,
-		relationship: "direct",
-		limitations: "fixture only",
-		sources: [{ path: p.path, start_line: 4, end_line: 4, quote: "Result and limitations." }],
-	};
-}
 async function noteRead(p, overrides = {}) {
 	return observeResearchReceipt({
 		cwd,

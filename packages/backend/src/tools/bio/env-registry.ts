@@ -53,8 +53,10 @@ export function emptyRegistry(): EnvRegistry {
 }
 export function normalizeRegistry(value: unknown): EnvRegistry {
 	const raw = value as Partial<EnvRegistry> | null;
-	if (!raw || raw.version !== 1 || !Array.isArray(raw.envs)) return emptyRegistry();
-	const envs = raw.envs.filter(
+	const version = raw?.version;
+	const recorded = raw?.envs;
+	if (version !== 1 || !Array.isArray(recorded)) return emptyRegistry();
+	const envs = recorded.filter(
 		(e): e is EnvRecord =>
 			!!e &&
 			typeof e.name === "string" &&

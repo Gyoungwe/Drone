@@ -599,7 +599,7 @@ function createResearchLoop(ports) {
         throw new Error("archive verification and structured claim bindings are required before answerable");
       if (metadata.requires_provenance === true) {
         const provenance = await readJson(join3(path, "reproducibility-manifest.json"));
-        if (!provenance || provenance.version !== 1)
+        if (provenance?.version !== 1)
           throw new Error("This run requires a reproducibility manifest before it can become answerable");
       }
       gate = advance(
