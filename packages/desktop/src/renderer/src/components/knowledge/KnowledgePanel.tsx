@@ -6,6 +6,7 @@ import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { launchKnowledgeSetup, reportKnowledgeError, useKnowledgeOverview } from "./hooks";
+import { KnowledgeCloudSection } from "./KnowledgeCloudSection";
 import { KnowledgeMaintenance } from "./KnowledgeMaintenance";
 import { KnowledgeSpecialists } from "./KnowledgeSpecialists";
 import { ResearchRunsCard } from "./ResearchRunsCard";
@@ -124,6 +125,7 @@ export function KnowledgePanel({
 			)}
 			{tab === "overview" && (
 				<div className="space-y-4">
+					<KnowledgeCloudSection />
 					<ResearchRunsCard cwd={cwd} project={data?.project || null} revision={binding?.revision || 0} />
 					{data && !data.enabled && (
 						<p className="rounded-lg bg-hover p-3 text-xs text-warn">{t("disabled")}</p>

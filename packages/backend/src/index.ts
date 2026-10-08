@@ -43,6 +43,14 @@ export {
 	type ReadResult,
 } from "./json-store";
 export { KnowledgeUiService, type KnowledgeUiServicePort } from "./knowledge/ui";
+export {
+	DEFAULT_WEBDAV_ENDPOINT,
+	DEFAULT_WEBDAV_FOLDER,
+	DEFAULT_WEBDAV_USERNAME,
+	KnowledgeWebDavError,
+	type KnowledgeWebDavOptions,
+	KnowledgeWebDavService,
+} from "./knowledge/webdav";
 export { LanConfigService } from "./lan/config";
 export {
 	applyEvent as applyLanEvent,
