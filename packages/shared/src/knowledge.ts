@@ -421,11 +421,52 @@ export interface KnowledgeNoteLinks {
 	outgoing: KnowledgeLinkRef[];
 	incoming: KnowledgeLinkRef[];
 }
-/** 知识网络图：笔记节点与 [[链接]] 边 */
-export interface KnowledgeGraph {
-	nodes: { path: string; title: string; kind: string; degree: number }[];
+export type KnowledgeGraphView = "semantic" | "all";
+export type KnowledgeGraphRelationType = "link" | "directory" | "duplicate";
+export interface KnowledgeGraphRelation {
+	source: string;
+	target: string;
+	type: KnowledgeGraphRelationType;
+}
+export interface KnowledgeGraphNode {
+	path: string;
+	title: string;
+	kind: string;
+	degree: number;
+	nodeType?: "note" | "wiki" | "navigation" | "mirror" | "infrastructure";
+	isInfrastructure?: boolean;
+	community?: number;
+	x?: number;
+	y?: number;
+	mirrors?: string[];
+	warnings?: string[];
+}
+export interface KnowledgeGraphSemantic {
+	nodes: KnowledgeGraphNode[];
 	edges: { source: string; target: string }[];
 	totalNotes: number;
+	view: KnowledgeGraphView;
+	mergeMirrors: boolean;
+	relations?: KnowledgeGraphRelation[];
+	duplicates?: { canonical: string; duplicate: string }[];
+	communities?: Record<string, number>;
+	layout?: Record<string, { x: number; y: number }>;
+	health?: { isolated: number; duplicates: number; infrastructure: number; missingLinks?: number };
+}
+/** 知识网络图：旧字段保留；语义投影字段全部为可选，兼容旧 worker/IPC。 */
+export interface KnowledgeGraph {
+	nodes: KnowledgeGraphNode[];
+	edges: { source: string; target: string }[];
+	totalNotes: number;
+	revision?: number;
+	view?: KnowledgeGraphView;
+	mergeMirrors?: boolean;
+	relations?: KnowledgeGraphRelation[];
+	duplicates?: { canonical: string; duplicate: string }[];
+	communities?: Record<string, number>;
+	layout?: Record<string, { x: number; y: number }>;
+	health?: { isolated: number; duplicates: number; infrastructure: number; missingLinks?: number };
+	semantic?: KnowledgeGraphSemantic;
 }
 /** 每日发现（新旧对照）提出的一条想法 */
 export interface DailyDiscoveryIdea {
@@ -478,7 +519,12 @@ export interface KnowledgeSearchResult {
 export interface KnowledgeApi {
 	searchKnowledge(input: KnowledgeSearchRequest): Promise<KnowledgeSearchResult>;
 	getKnowledgeNoteLinks(input: { path: string; revision: number }): Promise<KnowledgeNoteLinks>;
-	getKnowledgeGraph(input: { revision: number; limit?: number }): Promise<KnowledgeGraph>;
+	getKnowledgeGraph(input: {
+		revision: number;
+		limit?: number;
+		view?: KnowledgeGraphView;
+		mergeMirrors?: boolean;
+	}): Promise<KnowledgeGraph>;
 	getDailyDiscovery(): Promise<DailyDiscoveryState>;
 	/** enabled: 开关；run: 立即运行一次 */
 	updateDailyDiscovery(input: { enabled?: boolean; run?: boolean }): Promise<DailyDiscoveryState>;

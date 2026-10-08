@@ -513,9 +513,9 @@ export async function knowledgeNoteLinks({ path, revision } = {}) {
  * 知识网络：笔记与 [[链接]] 组成的图（按连接数取前 limit 个节点）。
  * @param {Record<string, any>} options
  */
-export async function knowledgeGraph({ revision, limit = 200 } = {}) {
+export async function knowledgeGraph({ revision, limit = 200, view = "semantic", mergeMirrors = true } = {}) {
 	const { binding, service } = await bound(revision);
-	return withKnowledgeBinding(binding, () => service.request("graph", { limit }));
+	return withKnowledgeBinding(binding, () => service.request("graph", { limit, view, mergeMirrors }));
 }
 
 /**
