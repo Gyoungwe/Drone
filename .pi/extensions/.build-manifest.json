@@ -17,7 +17,7 @@
 			"output": "knowledge-extension.mjs",
 			"status": "generated",
 			"sourceSha256": "809a5be02436faea7bd05fab84d9ddfd94444194b425d94acb9ffb72d34940be",
-			"inputsSha256": "d1be1caa99f9f256e024c24b05f321eef65c9800dbdfb23608b59c98a65ef833",
+			"inputsSha256": "972fd43ab4dea6173fb5544603d5516dc45226ab61319672bfc2f1b9a667e21d",
 			"outputSha256": "0166801ed6f34ccd0ebc990741890258ccece7e08002e4edff92d9b7e050e2d4"
 		},
 		"obsidian-workbench": {
@@ -25,7 +25,7 @@
 			"output": "obsidian-workbench.mjs",
 			"status": "generated",
 			"sourceSha256": "9790185cb005d8104d0043997a12382efe9e0bdf91037885a2311b5d2c989844",
-			"inputsSha256": "61517ad83be477cca1bdcf54355457b29fcbfe21720284130dfdcbb0a60216ae",
+			"inputsSha256": "312336b167b89bdd8464c2707dba12bda5c5f7754f3223a60f1253de2ea0d42c",
 			"outputSha256": "40b4364a2ed5c015fbffe1cb66497c9cb5aea65d5777c9661c91740bfd5fd47d"
 		},
 		"research-loop": {
@@ -73,7 +73,7 @@
 			"output": "subagent-mcp-readonly.mjs",
 			"status": "generated",
 			"sourceSha256": "98106345b337390cd3cf9f40a96c7e4864cc34d44f4406c3cf57077e6d1c29f9",
-			"inputsSha256": "b6b587e831f729b179da9ce2faa94be0ccf8fb805af629c307d4b5d1cff8d061",
+			"inputsSha256": "f720966c9374233c628b0135f32a8a301e02edd8931fab8769eb4b2b34e55262",
 			"outputSha256": "899936d129adea184ea0eb616cee83ed7d4e43635a94b561dd53f3a01cef7017"
 		},
 		"subagent-research": {

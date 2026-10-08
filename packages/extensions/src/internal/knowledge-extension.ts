@@ -730,7 +730,7 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 		},
 		label: "Obsidian · 阅读 Wiki / 证据片段",
 		description:
-			"Read a bounded Markdown range, version and human review from shared/current-project knowledge. Does not follow symlinks.",
+			"Read a bounded Markdown range, version and human review from shared/current-project knowledge. The first chunk also returns outgoing links and backlinks (related notes) so you can navigate without extra searches. Does not follow symlinks.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -775,8 +775,24 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 					while (recovery.size > 8) recovery.delete(recovery.keys().next().value);
 					saveRecovery();
 				}
+				// 双向链接：把出链/反链一并返回，省去 agent 再去搜索邻居笔记的往返
+				let links;
+				if (page.hash && !page.missing && (p.start_line ?? 1) === 1 && typeof c.service.request === "function") {
+					try {
+						const nl = await c.service.request("noteLinks", { path: page.path || p.path });
+						const slim = (xs) =>
+							(xs || [])
+								.filter((x) => x.exists !== false)
+								.slice(0, 12)
+								.map((x) => ({ path: x.path, title: x.title }));
+						links = { outgoing: slim(nl.outgoing), backlinks: slim(nl.incoming) };
+					} catch {
+						links = undefined;
+					}
+				}
 				return result({
 					...page,
+					...(links ? { links } : {}),
 					...(page.hash && !page.missing
 						? {
 								citation: `[[${page.path || p.path}]]`,
@@ -874,7 +890,15 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 						: undefined,
 				});
 				noteKnowledgeSearch(ctx, found, !!p.wiki_only);
-				return result(found);
+				// 只把定位所需的字段交给模型：片段 ≤700 字，去掉排序内部分数；全文用 research_read_knowledge 读
+				const slimHits = Array.isArray(found?.hits)
+					? found.hits.map(({ rank: _r, fusionScore: _f, ...hit }) =>
+						typeof hit.text === "string" && hit.text.length > 700
+							? { ...hit, text: hit.text.slice(0, 700), truncated: true }
+							: hit,
+					)
+					: found?.hits;
+				return result(slimHits ? { ...found, hits: slimHits } : found);
 			} catch (error) {
 				updateKnowledgeFlow(ctx, { phase: "blocked", error: String(error.message).slice(0, 400) });
 				throw error;
