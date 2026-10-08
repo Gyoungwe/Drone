@@ -1,9 +1,11 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+	cloudflareAskCopy,
 	hasMagic,
 	isWithin,
 	looksLikeChallenge,
+	looksLikeCloudflare,
 	normalizeMetadata,
 	safeFilename,
 	validateContent,
@@ -30,6 +32,42 @@ describe("source archive policy", () => {
 		expect(looksLikeChallenge(403, "application/pdf", "")).toBe(true);
 		expect(looksLikeChallenge(200, "text/html", "Please sign in")).toBe(true);
 		expect(looksLikeChallenge(200, "application/pdf", "sign in")).toBe(false);
+	});
+
+	it("recognizes a Cloudflare interstitial and ignores cf-ray, ordinary 403s and login pages", () => {
+		expect(looksLikeCloudflare(new Headers({ "cf-mitigated": "challenge" }), "")).toBe(true);
+		expect(looksLikeCloudflare({ "CF-Mitigated": "challenge" }, "")).toBe(true);
+		expect(looksLikeCloudflare(new Headers({ "cf-mitigated": "  " }), "")).toBe(false);
+		expect(looksLikeCloudflare(null, 'script src="/cdn-cgi/challenge-platform/"')).toBe(true);
+		expect(looksLikeCloudflare(null, "cf-chl-opt")).toBe(true);
+		expect(looksLikeCloudflare(null, "Just a moment...")).toBe(true);
+		expect(looksLikeCloudflare(null, "Checking your browser before accessing")).toBe(true);
+		expect(looksLikeCloudflare(new Headers({ "cf-ray": "abc123-SJC" }), "application/pdf")).toBe(false);
+		expect(looksLikeCloudflare(null, "Access denied")).toBe(false);
+		expect(looksLikeCloudflare(null, "Please sign in")).toBe(false);
+		expect(looksLikeChallenge(403, "text/html", "Access denied")).toBe(true);
+	});
+
+	it("writes the Cloudflare card in the UI language", () => {
+		const previous = process.env.DRONE_REPLY_LANGUAGE;
+		try {
+			delete process.env.DRONE_REPLY_LANGUAGE;
+			expect(cloudflareAskCopy().title).toBe("Browser verification needed");
+			expect(cloudflareAskCopy().continueLabel).toBe("I've finished, continue");
+			process.env.DRONE_REPLY_LANGUAGE = "zh-CN";
+			expect(cloudflareAskCopy()).toMatchObject({
+				title: "需要你完成浏览器验证",
+				body: "这是 Cloudflare 人机验证。请在已经打开的窗口里完成，程序不会绕过。",
+				continueLabel: "我已完成，继续",
+				skipLabel: "跳过这个来源",
+				retryNote: "请重新读取同一页面，不要绕过，刚才的挑战页不是证据",
+			});
+			process.env.DRONE_REPLY_LANGUAGE = "en";
+			expect(cloudflareAskCopy().skipLabel).toBe("Skip this source");
+		} finally {
+			if (previous === undefined) delete process.env.DRONE_REPLY_LANGUAGE;
+			else process.env.DRONE_REPLY_LANGUAGE = previous;
+		}
 	});
 
 	it("checks document signatures and rejects executable or unsuitable content", () => {
