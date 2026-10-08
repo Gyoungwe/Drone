@@ -3,7 +3,6 @@
 var WIDTH = 720;
 var HEIGHT = 440;
 var INFRASTRUCTURE = /(?:^|\/)(?:Index|Context|Home|Template|Templates)\.md$/i;
-var PAPER_PATH = /^(?:Library\/Papers|Projects\/[^/]+\/Papers)\//i;
 function isInfrastructureNode(node) {
   return node.kind === "navigation" || INFRASTRUCTURE.test(node.path);
 }
@@ -21,13 +20,14 @@ function classifyRelation(source, target, type) {
 function normalizeIdentity(value) {
   if (!value) return null;
   const normalized = value.trim().toLowerCase().replace(/^https?:\/\/(?:dx\.)?doi\.org\//, "");
+  if (/^doi:\s*/.test(normalized) || /^10\.\d{4,9}\//.test(normalized)) return `doi:${normalized.replace(/^doi:\s*/, "")}`;
+  if (/^pmid:\s*\d+$/.test(normalized) || /^\d{1,9}$/.test(normalized)) return `pmid:${normalized.replace(/^pmid:\s*/, "")}`;
+  if (/^arxiv:\s*/.test(normalized) || /^\d{4}\.\d{4,5}(?:v\d+)?$/.test(normalized)) return `arxiv:${normalized.replace(/^arxiv:\s*/, "")}`;
   return normalized || null;
 }
 function fallbackIdentity(node) {
   if (node.identity) return normalizeIdentity(node.identity);
-  if (!PAPER_PATH.test(node.path)) return null;
-  const title = node.title.trim().toLowerCase().replace(/\s+/g, " ");
-  return title.length >= 8 ? `title:${title}` : null;
+  return null;
 }
 function canonicalRank(path) {
   return [path.startsWith("Library/") ? 0 : path.startsWith("Projects/") ? 1 : 2, path];

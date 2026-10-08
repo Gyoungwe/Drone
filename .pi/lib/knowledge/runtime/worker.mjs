@@ -184,7 +184,6 @@ function splitKnowledgeChunks(text, maxChars = 1200) {
 var WIDTH = 720;
 var HEIGHT = 440;
 var INFRASTRUCTURE = /(?:^|\/)(?:Index|Context|Home|Template|Templates)\.md$/i;
-var PAPER_PATH = /^(?:Library\/Papers|Projects\/[^/]+\/Papers)\//i;
 function isInfrastructureNode(node) {
   return node.kind === "navigation" || INFRASTRUCTURE.test(node.path);
 }
@@ -202,13 +201,14 @@ function classifyRelation(source, target, type) {
 function normalizeIdentity(value) {
   if (!value) return null;
   const normalized = value.trim().toLowerCase().replace(/^https?:\/\/(?:dx\.)?doi\.org\//, "");
+  if (/^doi:\s*/.test(normalized) || /^10\.\d{4,9}\//.test(normalized)) return `doi:${normalized.replace(/^doi:\s*/, "")}`;
+  if (/^pmid:\s*\d+$/.test(normalized) || /^\d{1,9}$/.test(normalized)) return `pmid:${normalized.replace(/^pmid:\s*/, "")}`;
+  if (/^arxiv:\s*/.test(normalized) || /^\d{4}\.\d{4,5}(?:v\d+)?$/.test(normalized)) return `arxiv:${normalized.replace(/^arxiv:\s*/, "")}`;
   return normalized || null;
 }
 function fallbackIdentity(node) {
   if (node.identity) return normalizeIdentity(node.identity);
-  if (!PAPER_PATH.test(node.path)) return null;
-  const title = node.title.trim().toLowerCase().replace(/\s+/g, " ");
-  return title.length >= 8 ? `title:${title}` : null;
+  return null;
 }
 function canonicalRank(path) {
   return [path.startsWith("Library/") ? 0 : path.startsWith("Projects/") ? 1 : 2, path];
@@ -1050,14 +1050,17 @@ async function graphNeighbors(args) {
 function noteIdentity(body) {
   if (typeof body !== "string") return null;
   const match = body.match(/^(?:---[\s\S]*?\n)?(?:doi|DOI|pmid|PMID|arxiv|ArXiv)\s*:\s*([^\s#]+)\s*$/m);
-  return match?.[1]?.replace(/[<>"']/g, "").trim() || null;
+  if (!match?.[1]) return null;
+  const field = match[0].split(":", 1)[0]?.toLowerCase();
+  return `${field}:${match[1].replace(/[<>"']/g, "").trim()}`;
 }
 async function knowledgeGraph(args) {
   await flushDirty();
   const limit = Math.max(10, Math.min(400, Math.floor(args.limit || 200)));
-  const notes = new Map(
+  const allNotes = new Map(
     db.prepare("SELECT path,title,kind,scope,body FROM notes").all().map((row) => [row.path, row])
   );
+  const notes = new Map([...allNotes].filter(([, row]) => row.kind === "note" || row.kind === "wiki"));
   const rawEdges = [];
   for (const { source, target } of db.prepare("SELECT source,target FROM links").all()) {
     if (!notes.has(source)) continue;
@@ -1070,9 +1073,21 @@ async function knowledgeGraph(args) {
     degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
     degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
   }
+  const legacyEdges = /* @__PURE__ */ new Map();
+  for (const edge of rawEdges) {
+    const key = edge.source < edge.target ? `${edge.source}\0${edge.target}` : `${edge.target}\0${edge.source}`;
+    legacyEdges.set(key, [edge.source, edge.target]);
+  }
+  const legacyDegree = /* @__PURE__ */ new Map();
+  for (const [source, target] of legacyEdges.values()) {
+    legacyDegree.set(source, (legacyDegree.get(source) || 0) + 1);
+    legacyDegree.set(target, (legacyDegree.get(target) || 0) + 1);
+  }
+  const legacyChosen = [...notes.keys()].sort((a, b) => (legacyDegree.get(b) || 0) - (legacyDegree.get(a) || 0) || a.localeCompare(b)).slice(0, limit);
+  const legacyKeep = new Set(legacyChosen);
   const model = createSemanticModel(
     {
-      nodes: [...notes.values()].map((row) => ({
+      nodes: [...allNotes.values()].map((row) => ({
         path: row.path,
         title: row.title,
         kind: row.kind,
@@ -1089,20 +1104,25 @@ async function knowledgeGraph(args) {
   const links = model.edges.filter(({ source, target }) => keep.has(source) && keep.has(target));
   const relations = (model.relations || []).filter(({ source, target }) => keep.has(source) && keep.has(target));
   return {
-    nodes: chosen.map((node) => ({ ...node })),
-    edges: links,
-    totalNotes: model.nodes.length,
+    nodes: legacyChosen.map((path) => ({ path, title: notes.get(path).title, kind: notes.get(path).kind, degree: legacyDegree.get(path) || 0 })),
+    edges: [...legacyEdges.values()].filter(([source, target]) => legacyKeep.has(source) && legacyKeep.has(target)).map(([source, target]) => ({ source, target })),
+    totalNotes: notes.size,
     revision,
-    view: args.view === "all" ? "all" : "semantic",
-    mergeMirrors: args.mergeMirrors !== false,
-    relations,
-    duplicates: (model.duplicates || []).filter(({ canonical, duplicate }) => keep.has(canonical) || keep.has(duplicate)),
-    communities: Object.fromEntries(Object.entries(model.communities || {}).filter(([path]) => keep.has(path))),
-    layout: Object.fromEntries(Object.entries(model.layout || {}).filter(([path]) => keep.has(path))),
-    health: {
-      isolated: chosen.filter((node) => node.degree === 0).length,
-      duplicates: model.duplicates?.length || 0,
-      infrastructure: chosen.filter((node) => node.isInfrastructure).length
+    semantic: {
+      nodes: chosen.map((node) => ({ ...node })),
+      edges: links,
+      totalNotes: model.nodes.length,
+      view: args.view === "all" ? "all" : "semantic",
+      mergeMirrors: args.mergeMirrors !== false,
+      relations,
+      duplicates: (model.duplicates || []).filter(({ canonical, duplicate }) => keep.has(canonical) || keep.has(duplicate)),
+      communities: Object.fromEntries(Object.entries(model.communities || {}).filter(([path]) => keep.has(path))),
+      layout: Object.fromEntries(Object.entries(model.layout || {}).filter(([path]) => keep.has(path))),
+      health: {
+        isolated: chosen.filter((node) => node.degree === 0).length,
+        duplicates: model.duplicates?.length || 0,
+        infrastructure: chosen.filter((node) => node.isInfrastructure).length
+      }
     }
   };
 }
