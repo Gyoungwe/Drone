@@ -91,13 +91,29 @@ it("a task switch cannot steal an in-flight operation", () => {
 		"Stop the running agent",
 	);
 });
-it("two identical failures stop early while corrected arguments may proceed", async () => {
-	const { j } = setup();
-	for (const id of ["one", "two"]) {
+it("three identical failures trip the guard while corrected arguments may proceed", async () => {
+	const { j, entries } = setup();
+	for (const id of ["one", "two", "three"]) {
 		expect(j.guard(effect(id))).toBeNull();
 		await j.observe({ ...effect(id), isError: true });
 	}
-	expect(j.guard(effect("three"))).toMatchObject({ block: true });
+	expect(j.snapshot().operations.filter((operation) => operation.state === "failed")).toHaveLength(3);
+	expect(j.guard(effect("four"))).toMatchObject({
+		block: true,
+		reason: expect.stringContaining("failed three times"),
+	});
+
+	const legacyEntries = entries.map((entry) => {
+		const data = structuredClone(entry.data);
+		for (const task of data.tasks) delete task.failureCount;
+		return { ...entry, data };
+	});
+	const restored = createTaskWorkbench();
+	restored.attach("scope-a", legacyEntries);
+	expect(restored.guard(effect("restored-four"))).toMatchObject({
+		block: true,
+		reason: expect.stringContaining("failed three times"),
+	});
 	expect(j.guard(effect("fixed", "fixed.csv"))).toBeNull();
 });
 it("status spam cannot reset stage or lifetime budgets", () => {

@@ -26,7 +26,7 @@ const LIMITS = Object.freeze({
   totalCalls: 192,
   /** 授权后模型中途收口时宿主自动接续的上限：每次都要求有新进展，防止空转。 */
   autoHandoffs: 16,
-  retries: 2,
+  retries: 3,
   fileBytes: 8 * 1024 * 1024
 });
 const clean = (value, max = 180) => String(value ?? "").replace(/(?:bearer\s+|(?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s,;]+/gi, "[redacted]").split("").map((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127 || "<>".includes(c) ? " " : c).join("").slice(0, max);
@@ -870,7 +870,7 @@ function createTaskWorkbench({
     if (effect && t.operations.filter((o) => o.key === key && o.state === "failed").length >= LIMITS.retries)
       return {
         block: true,
-        reason: "no-progress: identical effect failed twice. Repair the input or deliver the checkpoint."
+        reason: "no-progress: identical effect failed three times. Repair the input or deliver the checkpoint."
       };
     if (t.operations.length >= LIMITS.operations && effect)
       return {
