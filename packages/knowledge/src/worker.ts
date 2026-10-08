@@ -20,6 +20,7 @@ import {
 	splitKnowledgeChunks,
 	tokenizeKnowledgeText,
 } from "./search-policy";
+import { createSemanticModel } from "./semantic-model";
 
 await mkdir(dirname(workerData.database), { recursive: true, mode: 0o700 });
 const db = new DatabaseSync(workerData.database, { timeout: 1500 });
@@ -832,45 +833,94 @@ async function graphNeighbors(args) {
 	}
 	return { items, revision };
 }
-/** 知识网络：笔记为节点、[[链接]] 为边；按连接数取前 limit 个节点（导航页与讲解页除外） */
+function noteIdentity(body) {
+	if (typeof body !== "string") return null;
+	const match = body.match(/^(?:---[\s\S]*?\n)?(?:doi|DOI|pmid|PMID|arxiv|ArXiv)\s*:\s*([^\s#]+)\s*$/m);
+	if (!match?.[1]) return null;
+	const field = match[0].split(":", 1)[0]?.toLowerCase();
+	return `${field}:${match[1].replace(/[<>"']/g, "").trim()}`;
+}
+
+/** 知识网络：保留旧 nodes/edges，并在可选字段中返回语义投影。 */
 async function knowledgeGraph(args) {
 	await flushDirty();
 	const limit = Math.max(10, Math.min(400, Math.floor(args.limit || 200)));
-	const notes = new Map(
+	const allNotes = new Map(
 		db
-			.prepare("SELECT path,title,kind FROM notes WHERE kind IN ('note','wiki')")
+			.prepare("SELECT path,title,kind,scope,body FROM notes")
 			.all()
 			.map((row) => [row.path, row]),
 	);
-	const edges = new Map();
+	const notes = new Map([...allNotes].filter(([, row]) => row.kind === "note" || row.kind === "wiki"));
+	const rawEdges = [];
 	for (const { source, target } of db.prepare("SELECT source,target FROM links").all()) {
 		if (!notes.has(source)) continue;
 		const resolved = resolveLinkTarget(target);
 		if (!resolved || resolved === source || !notes.has(resolved)) continue;
-		const key = source < resolved ? `${source}\u0000${resolved}` : `${resolved}\u0000${source}`;
-		edges.set(key, [source, resolved]);
+		rawEdges.push({ source, target: resolved, type: "link" });
 	}
 	const degree = new Map();
-	for (const [a, b] of edges.values()) {
-		degree.set(a, (degree.get(a) || 0) + 1);
-		degree.set(b, (degree.get(b) || 0) + 1);
+	for (const edge of rawEdges) {
+		degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
+		degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
 	}
-	const chosen = [...notes.keys()]
-		.sort((a, b) => (degree.get(b) || 0) - (degree.get(a) || 0) || a.localeCompare(b))
+	const legacyEdges = new Map();
+	for (const edge of rawEdges) {
+		const key = edge.source < edge.target ? `${edge.source}\u0000${edge.target}` : `${edge.target}\u0000${edge.source}`;
+		legacyEdges.set(key, [edge.source, edge.target]);
+	}
+	const legacyDegree = new Map();
+	for (const [source, target] of legacyEdges.values()) {
+		legacyDegree.set(source, (legacyDegree.get(source) || 0) + 1);
+		legacyDegree.set(target, (legacyDegree.get(target) || 0) + 1);
+	}
+	const legacyChosen = [...notes.keys()]
+		.sort((a, b) => (legacyDegree.get(b) || 0) - (legacyDegree.get(a) || 0) || a.localeCompare(b))
 		.slice(0, limit);
-	const keep = new Set(chosen);
+	const legacyKeep = new Set(legacyChosen);
+	const model = createSemanticModel(
+		{
+			nodes: [...allNotes.values()].map((row) => ({
+				path: row.path,
+				title: row.title,
+				kind: row.kind,
+				scope: row.scope,
+				degree: degree.get(row.path) || 0,
+				identity: noteIdentity(row.body),
+			})),
+			edges: rawEdges,
+		},
+		{ view: args.view === "all" ? "all" : "semantic", mergeMirrors: args.mergeMirrors !== false },
+	);
+	const chosen = [...model.nodes]
+		.sort((a, b) => b.degree - a.degree || a.path.localeCompare(b.path))
+		.slice(0, limit);
+	const keep = new Set(chosen.map((node) => node.path));
+	const links = model.edges.filter(({ source, target }) => keep.has(source) && keep.has(target));
+	const relations = (model.relations || []).filter(({ source, target }) => keep.has(source) && keep.has(target));
 	return {
-		nodes: chosen.map((path) => ({
-			path,
-			title: notes.get(path).title,
-			kind: notes.get(path).kind,
-			degree: degree.get(path) || 0,
-		})),
-		edges: [...edges.values()]
-			.filter(([a, b]) => keep.has(a) && keep.has(b))
+		nodes: legacyChosen.map((path) => ({ path, title: notes.get(path).title, kind: notes.get(path).kind, degree: legacyDegree.get(path) || 0 })),
+		edges: [...legacyEdges.values()]
+			.filter(([source, target]) => legacyKeep.has(source) && legacyKeep.has(target))
 			.map(([source, target]) => ({ source, target })),
 		totalNotes: notes.size,
 		revision,
+		semantic: {
+			nodes: chosen.map((node) => ({ ...node })),
+			edges: links,
+			totalNotes: model.nodes.length,
+			view: args.view === "all" ? "all" : "semantic",
+			mergeMirrors: args.mergeMirrors !== false,
+			relations,
+			duplicates: (model.duplicates || []).filter(({ canonical, duplicate }) => keep.has(canonical) || keep.has(duplicate)),
+			communities: Object.fromEntries(Object.entries(model.communities || {}).filter(([path]) => keep.has(path))),
+			layout: Object.fromEntries(Object.entries(model.layout || {}).filter(([path]) => keep.has(path))),
+			health: {
+				isolated: chosen.filter((node) => node.degree === 0).length,
+				duplicates: model.duplicates?.length || 0,
+				infrastructure: chosen.filter((node) => node.isInfrastructure).length,
+			},
+		},
 	};
 }
 async function dispatch(op, args) {

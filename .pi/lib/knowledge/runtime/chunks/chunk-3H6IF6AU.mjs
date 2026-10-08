@@ -457,9 +457,9 @@ async function knowledgeNoteLinks({ path, revision } = {}) {
   const { binding, service } = await bound(revision);
   return withKnowledgeBinding(binding, () => service.request("noteLinks", { path }));
 }
-async function knowledgeGraph({ revision, limit = 200 } = {}) {
+async function knowledgeGraph({ revision, limit = 200, view = "semantic", mergeMirrors = true } = {}) {
   const { binding, service } = await bound(revision);
-  return withKnowledgeBinding(binding, () => service.request("graph", { limit }));
+  return withKnowledgeBinding(binding, () => service.request("graph", { limit, view, mergeMirrors }));
 }
 async function dailyDiscoveryContext({ sinceMs = 0 } = {}) {
   const binding = await readKnowledgeBinding({ fresh: true });

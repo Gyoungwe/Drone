@@ -1,5 +1,20 @@
 // @ts-nocheck
 import {
+  MANAGED_END,
+  MANAGED_START,
+  immutableWikiProposalHash,
+  managedParts,
+  proposedWikiText,
+  targetWikiPath,
+  validateSpecialistHtml,
+  validateWikiSourcePaths
+} from "./chunks/chunk-AKW2CMNR.mjs";
+import {
+  createKnowledgeSpecialists,
+  knowledgeReadStart,
+  shouldOrientKnowledge
+} from "./chunks/chunk-36KZGYXK.mjs";
+import {
   createTaskFeedback,
   guardResearchToolResult
 } from "./chunks/chunk-TW476WMJ.mjs";
@@ -44,7 +59,7 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-AN32SKKE.mjs";
+} from "./chunks/chunk-3H6IF6AU.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
@@ -61,20 +76,17 @@ import {
   wikiHistory
 } from "./chunks/chunk-IMC2GAXA.mjs";
 import {
-  MANAGED_END,
-  MANAGED_START,
-  immutableWikiProposalHash,
-  managedParts,
-  proposedWikiText,
-  targetWikiPath,
-  validateSpecialistHtml,
-  validateWikiSourcePaths
-} from "./chunks/chunk-AKW2CMNR.mjs";
-import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
   tokenizeKnowledgeText
 } from "./chunks/chunk-4LTSNIAR.mjs";
+import {
+  assignCommunities,
+  classifyRelation,
+  createSemanticModel,
+  isInfrastructureNode,
+  nodeType
+} from "./chunks/chunk-3QUACHA7.mjs";
 import {
   normalizeSourceLinks,
   onlineSourceLink
@@ -82,11 +94,6 @@ import {
 import {
   saveSpecialistExplainer
 } from "./chunks/chunk-GMBJR4N3.mjs";
-import {
-  createKnowledgeSpecialists,
-  knowledgeReadStart,
-  shouldOrientKnowledge
-} from "./chunks/chunk-36KZGYXK.mjs";
 import {
   SPECIALIST_LIMITS,
   contextSessionId,
@@ -247,6 +254,7 @@ export {
   allowedSegment,
   archiveKnowledgeTopic,
   archiveTopic,
+  assignCommunities,
   autoApplyWikiProposal,
   autoTopicCandidate,
   beginKnowledgeFlow,
@@ -255,6 +263,7 @@ export {
   cancelKnowledgeSemanticIndex,
   cardField,
   cardLink,
+  classifyRelation,
   classifyTopic,
   clearKnowledgeFlow,
   closeKnowledgeServices,
@@ -270,6 +279,7 @@ export {
   createKnowledgeConfigApi,
   createKnowledgeConfigState,
   createKnowledgeSpecialists,
+  createSemanticModel,
   createSemanticSettingsApi,
   createSemanticSettingsState,
   createSpecialistBudget,
@@ -299,6 +309,7 @@ export {
   initializeSharedNavigation,
   inspectNote,
   invalidateKnowledgeUi,
+  isInfrastructureNode,
   knowledgeDecideReview,
   knowledgeDirectory,
   knowledgeFailure,
@@ -322,6 +333,7 @@ export {
   literatureCard,
   managedParts,
   mergeWikiProposal,
+  nodeType,
   normalizeSourceLinks,
   noteKnowledgeOperation,
   noteKnowledgeRead,

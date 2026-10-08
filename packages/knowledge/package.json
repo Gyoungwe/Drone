@@ -47,7 +47,8 @@
 		"./wiki-model-review": "./src/wiki-model-review.ts",
 		"./ui-service": "./src/ui-service.ts",
 		"./experience-store": "./src/experience-store.ts",
-		"./deliverable-review": "./src/deliverable-review.ts"
+		"./deliverable-review": "./src/deliverable-review.ts",
+		"./semantic-model": "./src/semantic-model.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

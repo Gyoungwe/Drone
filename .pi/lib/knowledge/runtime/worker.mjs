@@ -180,6 +180,171 @@ function splitKnowledgeChunks(text, maxChars = 1200) {
   return chunks;
 }
 
+// packages/knowledge/src/semantic-model.ts
+var WIDTH = 720;
+var HEIGHT = 440;
+var INFRASTRUCTURE = /(?:^|\/)(?:Index|Context|Home|Template|Templates)\.md$/i;
+var PAPER_PATH = /^(?:Library\/Papers|Projects\/[^/]+\/Papers)\//i;
+function isInfrastructureNode(node) {
+  return node.kind === "navigation" || INFRASTRUCTURE.test(node.path);
+}
+function nodeType(node) {
+  if (isInfrastructureNode(node)) return "infrastructure";
+  if (node.kind === "wiki") return "wiki";
+  return "note";
+}
+function classifyRelation(source, target, type) {
+  if (type) return type;
+  const sourceDir = source.path.slice(0, source.path.lastIndexOf("/"));
+  const targetDir = target.path.slice(0, target.path.lastIndexOf("/"));
+  return sourceDir && sourceDir === targetDir ? "directory" : "link";
+}
+function normalizeIdentity(value) {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase().replace(/^https?:\/\/(?:dx\.)?doi\.org\//, "");
+  return normalized || null;
+}
+function fallbackIdentity(node) {
+  if (node.identity) return normalizeIdentity(node.identity);
+  if (!PAPER_PATH.test(node.path)) return null;
+  const title = node.title.trim().toLowerCase().replace(/\s+/g, " ");
+  return title.length >= 8 ? `title:${title}` : null;
+}
+function canonicalRank(path) {
+  return [path.startsWith("Library/") ? 0 : path.startsWith("Projects/") ? 1 : 2, path];
+}
+function comparePath(a, b) {
+  return a.localeCompare(b);
+}
+function hash(value, seed = 42) {
+  let h = (2166136261 ^ seed) >>> 0;
+  for (let i = 0; i < value.length; i++) h = Math.imul(h ^ value.charCodeAt(i), 16777619);
+  return (h >>> 0) / 4294967296;
+}
+function assignCommunities(paths, edges, seed = 42) {
+  const ordered = [...new Set(paths)].sort(comparePath);
+  const adjacency = new Map(ordered.map((path) => [path, /* @__PURE__ */ new Set()]));
+  for (const edge of edges) {
+    if (edge.type !== "link" || !adjacency.has(edge.source) || !adjacency.has(edge.target)) continue;
+    adjacency.get(edge.source)?.add(edge.target);
+    adjacency.get(edge.target)?.add(edge.source);
+  }
+  const labels = new Map(ordered.map((path, index) => [path, index]));
+  const degree = new Map(ordered.map((path) => [path, adjacency.get(path)?.size ?? 0]));
+  const total = [...degree.values()].reduce((sum, value) => sum + value, 0) || 1;
+  for (let round = 0; round < 12; round++) {
+    let changed2 = false;
+    for (const path of ordered) {
+      const neighbours = [...adjacency.get(path) ?? []].sort(comparePath);
+      if (!neighbours.length) continue;
+      const scores = /* @__PURE__ */ new Map();
+      for (const neighbour of neighbours) {
+        const label = labels.get(neighbour) ?? 0;
+        scores.set(label, (scores.get(label) ?? 0) + 1 - (degree.get(path) ?? 0) * (degree.get(neighbour) ?? 0) / total);
+      }
+      const current = labels.get(path) ?? 0;
+      const best = [...scores.entries()].sort((a, b) => b[1] - a[1] || hash(`${path}:${a[0]}`, seed) - hash(`${path}:${b[0]}`, seed) || a[0] - b[0])[0];
+      if (best && best[1] > 0 && best[0] !== current) {
+        labels.set(path, best[0]);
+        changed2 = true;
+      }
+    }
+    if (!changed2) break;
+  }
+  const counts = /* @__PURE__ */ new Map();
+  for (const label of labels.values()) counts.set(label, (counts.get(label) ?? 0) + 1);
+  const rank = new Map([...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([label], index) => [label, index]));
+  return Object.fromEntries(ordered.map((path) => [path, degree.get(path) ?? 0 ? rank.get(labels.get(path) ?? -1) ?? -1 : -1]));
+}
+function createSemanticModel(input, options = {}) {
+  const view = options.view ?? "semantic";
+  const mergeMirrors = options.mergeMirrors ?? true;
+  const seed = options.seed ?? 42;
+  const sourceNodes = [...input.nodes].sort((a, b) => comparePath(a.path, b.path));
+  const visible = sourceNodes.filter((node) => view === "all" || !isInfrastructureNode(node));
+  const groups = /* @__PURE__ */ new Map();
+  for (const node of visible) {
+    const identity = fallbackIdentity(node);
+    if (mergeMirrors && identity) {
+      const group = groups.get(identity) ?? [];
+      group.push(node);
+      groups.set(identity, group);
+    }
+  }
+  const canonicalFor = /* @__PURE__ */ new Map();
+  const duplicates = [];
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const ordered = [...group].sort((a, b) => {
+      const [ar, ap] = canonicalRank(a.path);
+      const [br, bp] = canonicalRank(b.path);
+      return ar - br || ap.localeCompare(bp);
+    });
+    const first = ordered[0];
+    if (!first) continue;
+    const canonical = first.path;
+    for (const node of ordered) {
+      canonicalFor.set(node.path, canonical);
+      if (node.path !== canonical) duplicates.push({ canonical, duplicate: node.path });
+    }
+  }
+  const modelNodes = /* @__PURE__ */ new Map();
+  for (const node of visible) {
+    const canonical = canonicalFor.get(node.path) ?? node.path;
+    if (!modelNodes.has(canonical)) modelNodes.set(canonical, node);
+  }
+  const relations = [];
+  for (const raw of input.edges ?? []) {
+    const source = canonicalFor.get(raw.source) ?? raw.source;
+    const target = canonicalFor.get(raw.target) ?? raw.target;
+    if (source === target || !modelNodes.has(source) || !modelNodes.has(target)) continue;
+    const type = classifyRelation({ path: source }, { path: target }, raw.type);
+    if (!relations.some((edge) => edge.source === source && edge.target === target && edge.type === type)) relations.push({ source, target, type });
+  }
+  if (view === "all") {
+    const all = [...modelNodes.keys()].sort(comparePath);
+    const siblings = /* @__PURE__ */ new Map();
+    for (const path of all) {
+      const parent = path.slice(0, path.lastIndexOf("/"));
+      const group = siblings.get(parent) ?? [];
+      group.push(path);
+      siblings.set(parent, group);
+    }
+    for (const group of siblings.values()) {
+      for (let i = 1; i < group.length; i++) {
+        const source = group[i - 1];
+        const target = group[i];
+        if (source && target && !relations.some((edge) => edge.source === source && edge.target === target)) relations.push({ source, target, type: "directory" });
+      }
+    }
+  }
+  for (const duplicate of duplicates) relations.push({ source: duplicate.canonical, target: duplicate.duplicate, type: "duplicate" });
+  const communities = assignCommunities([...modelNodes.keys()], relations, seed);
+  const communitySizes = /* @__PURE__ */ new Map();
+  for (const community of Object.values(communities)) if (community >= 0) communitySizes.set(community, (communitySizes.get(community) ?? 0) + 1);
+  const communityCount = Math.max(1, communitySizes.size);
+  const layout = {};
+  for (const path of [...modelNodes.keys()].sort(comparePath)) {
+    const community = communities[path] ?? -1;
+    const centerAngle = community >= 0 ? 2 * Math.PI * community / communityCount : 2 * Math.PI * hash(path, seed);
+    const radius = community >= 0 ? 75 + 24 * hash(`${path}:r`, seed) : 150 + 35 * hash(`${path}:r`, seed);
+    const jitter = 2 * Math.PI * hash(`${path}:a`, seed);
+    layout[path] = { x: WIDTH / 2 + radius * Math.cos(centerAngle) + 18 * Math.cos(jitter), y: HEIGHT / 2 + radius * Math.sin(centerAngle) + 18 * Math.sin(jitter) };
+  }
+  const linkRelations = relations.filter((edge) => edge.type === "link");
+  const degree = /* @__PURE__ */ new Map();
+  for (const edge of linkRelations) {
+    degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
+    degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
+  }
+  const nodes = [...modelNodes.entries()].sort(([a], [b]) => comparePath(a, b)).map(([path, node]) => {
+    const mirrorPaths = [...canonicalFor.entries()].filter(([, canonical]) => canonical === path).map(([mirror]) => mirror).filter((mirror) => mirror !== path).sort(comparePath);
+    const type = nodeType(node);
+    return { path, title: node.title, kind: node.kind, degree: degree.get(path) ?? 0, nodeType: mirrorPaths.length ? "mirror" : type, isInfrastructure: type === "infrastructure", community: communities[path] ?? -1, ...layout[path] ?? { x: WIDTH / 2, y: HEIGHT / 2 }, ...mirrorPaths.length ? { mirrors: mirrorPaths, warnings: ["mirror"] } : {} };
+  });
+  return { nodes, edges: linkRelations.map(({ source, target }) => ({ source, target })), relations, duplicates, communities, layout };
+}
+
 // packages/knowledge/src/worker.ts
 await mkdir(dirname(workerData.database), { recursive: true, mode: 448 });
 var db = new DatabaseSync(workerData.database, { timeout: 1500 });
@@ -882,37 +1047,63 @@ async function graphNeighbors(args) {
   }
   return { items, revision };
 }
+function noteIdentity(body) {
+  if (typeof body !== "string") return null;
+  const match = body.match(/^(?:---[\s\S]*?\n)?(?:doi|DOI|pmid|PMID|arxiv|ArXiv)\s*:\s*([^\s#]+)\s*$/m);
+  return match?.[1]?.replace(/[<>"']/g, "").trim() || null;
+}
 async function knowledgeGraph(args) {
   await flushDirty();
   const limit = Math.max(10, Math.min(400, Math.floor(args.limit || 200)));
   const notes = new Map(
-    db.prepare("SELECT path,title,kind FROM notes WHERE kind IN ('note','wiki')").all().map((row) => [row.path, row])
+    db.prepare("SELECT path,title,kind,scope,body FROM notes").all().map((row) => [row.path, row])
   );
-  const edges = /* @__PURE__ */ new Map();
+  const rawEdges = [];
   for (const { source, target } of db.prepare("SELECT source,target FROM links").all()) {
     if (!notes.has(source)) continue;
     const resolved = resolveLinkTarget(target);
     if (!resolved || resolved === source || !notes.has(resolved)) continue;
-    const key = source < resolved ? `${source}\0${resolved}` : `${resolved}\0${source}`;
-    edges.set(key, [source, resolved]);
+    rawEdges.push({ source, target: resolved, type: "link" });
   }
   const degree = /* @__PURE__ */ new Map();
-  for (const [a, b] of edges.values()) {
-    degree.set(a, (degree.get(a) || 0) + 1);
-    degree.set(b, (degree.get(b) || 0) + 1);
+  for (const edge of rawEdges) {
+    degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
+    degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
   }
-  const chosen = [...notes.keys()].sort((a, b) => (degree.get(b) || 0) - (degree.get(a) || 0) || a.localeCompare(b)).slice(0, limit);
-  const keep = new Set(chosen);
+  const model = createSemanticModel(
+    {
+      nodes: [...notes.values()].map((row) => ({
+        path: row.path,
+        title: row.title,
+        kind: row.kind,
+        scope: row.scope,
+        degree: degree.get(row.path) || 0,
+        identity: noteIdentity(row.body)
+      })),
+      edges: rawEdges
+    },
+    { view: args.view === "all" ? "all" : "semantic", mergeMirrors: args.mergeMirrors !== false }
+  );
+  const chosen = [...model.nodes].sort((a, b) => b.degree - a.degree || a.path.localeCompare(b.path)).slice(0, limit);
+  const keep = new Set(chosen.map((node) => node.path));
+  const links = model.edges.filter(({ source, target }) => keep.has(source) && keep.has(target));
+  const relations = (model.relations || []).filter(({ source, target }) => keep.has(source) && keep.has(target));
   return {
-    nodes: chosen.map((path) => ({
-      path,
-      title: notes.get(path).title,
-      kind: notes.get(path).kind,
-      degree: degree.get(path) || 0
-    })),
-    edges: [...edges.values()].filter(([a, b]) => keep.has(a) && keep.has(b)).map(([source, target]) => ({ source, target })),
-    totalNotes: notes.size,
-    revision
+    nodes: chosen.map((node) => ({ ...node })),
+    edges: links,
+    totalNotes: model.nodes.length,
+    revision,
+    view: args.view === "all" ? "all" : "semantic",
+    mergeMirrors: args.mergeMirrors !== false,
+    relations,
+    duplicates: (model.duplicates || []).filter(({ canonical, duplicate }) => keep.has(canonical) || keep.has(duplicate)),
+    communities: Object.fromEntries(Object.entries(model.communities || {}).filter(([path]) => keep.has(path))),
+    layout: Object.fromEntries(Object.entries(model.layout || {}).filter(([path]) => keep.has(path))),
+    health: {
+      isolated: chosen.filter((node) => node.degree === 0).length,
+      duplicates: model.duplicates?.length || 0,
+      infrastructure: chosen.filter((node) => node.isInfrastructure).length
+    }
   };
 }
 async function dispatch(op, args) {

@@ -210,6 +210,20 @@ export {
 } from "./topic-memory";
 export { runNavigationMaintenance, updateNavigation } from "./maintenance";
 export { configureKnowledgeRuntime } from "./runtime-host";
+export {
+	assignCommunities,
+	classifyRelation,
+	createSemanticModel,
+	isInfrastructureNode,
+	nodeType,
+	type RelationType,
+	type SemanticEdgeInput,
+	type SemanticGraph,
+	type SemanticNode,
+	type SemanticNodeInput,
+	type SemanticRelation,
+	type SemanticView,
+} from "./semantic-model";
 
 export {
 	beginKnowledgeFlow,

@@ -184,7 +184,12 @@ export const KnowledgeContract = defineDomain("knowledge", {
 			result: ResultObject<KnowledgeNoteLinks>(),
 		},
 		getGraph: {
-			args: OneObject<{ revision: number; limit?: number }>(),
+			args: OneObject<{
+				revision: number;
+				limit?: number;
+				view?: "semantic" | "all";
+				mergeMirrors?: boolean;
+			}>(),
 			result: ResultObject<KnowledgeGraph>(),
 		},
 		getDailyDiscovery: {

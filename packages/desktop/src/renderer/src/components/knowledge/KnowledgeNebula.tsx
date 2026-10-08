@@ -26,20 +26,20 @@ const EDGE_ON = "rgba(200,215,255,0.65)";
  */
 export function KnowledgeNebula({
 	data,
-	onOpen,
+	onSelect,
 	height = 460,
 	labels,
 }: {
 	data: Pick<GraphData, "nodes" | "edges">;
-	onOpen: (path: string) => void;
+	onSelect: (path: string) => void;
 	height?: number;
 	labels: { reset: string; relayout: string };
 }) {
 	const container = useRef<HTMLDivElement | null>(null);
 	const controls = useRef<{ reset: () => void; relayout: () => void } | null>(null);
 	const [hovered, setHovered] = useState<string | null>(null);
-	const openRef = useRef(onOpen);
-	openRef.current = onOpen;
+	const selectRef = useRef(onSelect);
+	selectRef.current = onSelect;
 
 	useEffect(() => {
 		const element = container.current;
@@ -103,7 +103,7 @@ export function KnowledgeNebula({
 				element.style.cursor = "";
 				renderer.refresh({ skipIndexation: true });
 			});
-			renderer.on("clickNode", ({ node }) => openRef.current(node));
+			renderer.on("clickNode", ({ node }) => selectRef.current(node));
 
 			const settings = {
 				...forceAtlas2.inferSettings(graph),
