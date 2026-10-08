@@ -1,9 +1,14 @@
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import sourceArchive, { archiveSource, startResearchRun } from "@drone/extensions/research-host";
+import sourceArchive, {
+	archivePorts,
+	archiveSource,
+	startResearchRun,
+} from "@drone/extensions/research-host";
 import { saveWorkspaceConfig } from "@drone/extensions/workspace-config";
 import { contactEmail, normalizePmcid, pmcCloudHttps, resolveOpenAccess } from "@drone/research/open-access";
+import { archiveSource as archiveWithPorts } from "@drone/research/source-archive";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 });
@@ -12,8 +17,11 @@ const DOI = "10.1111/imb.12628";
 const PMCID = "PMC7079136";
 const PDF = new TextEncoder().encode("%PDF-1.7\n%fake open-access body\n");
 const pdf = () => new Response(PDF, { status: 200, headers: { "content-type": "application/pdf" } });
-const html = (body = "<html><body>landing page</body></html>", status = 200) =>
-	new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8" } });
+const html = (body = "<html><body>landing page</body></html>", status = 200, headers = {}) =>
+	new Response(body, {
+		status,
+		headers: { "content-type": "text/html; charset=utf-8", ...headers },
+	});
 const json = (body, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 /** 按 URL 正则路由的 fetch 桩；未命中一律 404。 */
@@ -392,6 +400,274 @@ describe("research_archive_source open-access acquisition", () => {
 		await expect(
 			archiveSource({ cwd, run_dir: runDir, category: "software", doi: DOI, fetchImpl }),
 		).rejects.toThrow("url is required");
+	});
+
+	it("asks once for Cloudflare and retries only that URL when the user continues", async () => {
+		let hits = 0;
+		const fetchImpl = vi.fn(async () => {
+			hits += 1;
+			if (hits === 1) return html("<html>Just a moment</html>", 403, { "cf-mitigated": "challenge" });
+			return pdf();
+		});
+		const askCloudflare = vi.fn(async () => "continue");
+		const result = await archiveWithPorts(
+			{
+				cwd,
+				run_dir: runDir,
+				category: "papers",
+				url: "https://example.org/paper.pdf",
+				doi: DOI,
+				resolve_open_access: false,
+				fetchImpl,
+				env: {},
+			},
+			{ ...archivePorts, askCloudflare },
+		);
+		expect(askCloudflare).toHaveBeenCalledTimes(1);
+		expect(askCloudflare.mock.calls[0][0]).toBe("https://example.org/paper.pdf");
+		expect(fetchImpl).toHaveBeenCalledTimes(2);
+		expect(result.status).toBe("downloaded");
+	});
+
+	it("does not fetch again when the user skips a Cloudflare challenge", async () => {
+		const fetchImpl = vi.fn(async () => html("<html>Checking your browser</html>", 200));
+		const askCloudflare = vi.fn(async () => "skip");
+		const result = await archiveWithPorts(
+			{
+				cwd,
+				run_dir: runDir,
+				category: "manuals",
+				url: "https://example.org/challenge",
+				fetchImpl,
+			},
+			{ ...archivePorts, askCloudflare },
+		);
+		expect(askCloudflare).toHaveBeenCalledTimes(1);
+		expect(fetchImpl).toHaveBeenCalledTimes(1);
+		expect(result).toMatchObject({
+			status: "browser_required",
+			browser_required: true,
+			browser_handoff: { url: "https://example.org/challenge" },
+		});
+	});
+
+	it("asks once per archive and does not retry a later Cloudflare candidate", async () => {
+		const first = "https://example.org/first.pdf";
+		const second = "https://example.org/second.pdf";
+		const hits = { first: 0, second: 0 };
+		const { fetchImpl } = router([
+			[
+				/example\.org\/first\.pdf/,
+				() => {
+					hits.first += 1;
+					return html("<html>Just a moment</html>", 403, { "cf-mitigated": "challenge" });
+				},
+			],
+			europePmc({ ...OA_HIT, pmcid: undefined, isOpenAccess: "N", inEPMC: "N", hasPDF: "N" }),
+			[
+				/api\.unpaywall\.org/,
+				() => json({ is_oa: false, oa_status: "closed", best_oa_location: null, oa_locations: [] }),
+			],
+			[/api\.openalex\.org/, () => json({ open_access: { is_oa: false }, locations: [] })],
+			[
+				/api\.crossref\.org/,
+				() =>
+					json({
+						message: { link: [{ URL: second, "content-type": "application/pdf" }] },
+					}),
+			],
+			[
+				/example\.org\/second\.pdf/,
+				() => {
+					hits.second += 1;
+					return html("<html>challenge-platform</html>", 403);
+				},
+			],
+		]);
+		const askCloudflare = vi.fn(async (url) => {
+			expect(url).toBe(first);
+			return "continue";
+		});
+		const result = await archiveWithPorts(
+			{
+				cwd,
+				run_dir: runDir,
+				category: "papers",
+				url: first,
+				doi: DOI,
+				email: "lab@example.org",
+				fetchImpl,
+				env: {},
+			},
+			{ ...archivePorts, askCloudflare },
+		);
+		expect(askCloudflare).toHaveBeenCalledTimes(1);
+		expect(hits).toEqual({ first: 2, second: 1 });
+		expect(result.status).toBe("no_open_access");
+		expect(result.browser_required).toBe(true);
+	});
+
+	it("keeps an ordinary 403 on the existing browser handoff and does not ask", async () => {
+		const fetchImpl = vi.fn(async () => html("<html>Access denied</html>", 403));
+		const askCloudflare = vi.fn(async () => "continue");
+		const result = await archiveWithPorts(
+			{
+				cwd,
+				run_dir: runDir,
+				category: "papers",
+				url: "https://example.org/closed.pdf",
+				doi: DOI,
+				resolve_open_access: false,
+				fetchImpl,
+			},
+			{ ...archivePorts, askCloudflare },
+		);
+		expect(askCloudflare).not.toHaveBeenCalled();
+		expect(fetchImpl).toHaveBeenCalledTimes(1);
+		expect(result.status).toBe("browser_required");
+	});
+
+	it("archives a PDF that only carries cf-ray", async () => {
+		const fetchImpl = vi.fn(
+			async () =>
+				new Response(PDF, {
+					status: 200,
+					headers: { "content-type": "application/pdf", "cf-ray": "abc123-SJC" },
+				}),
+		);
+		const askCloudflare = vi.fn(async () => "continue");
+		const result = await archiveWithPorts(
+			{
+				cwd,
+				run_dir: runDir,
+				category: "papers",
+				url: "https://example.org/ray.pdf",
+				doi: DOI,
+				resolve_open_access: false,
+				fetchImpl,
+			},
+			{ ...archivePorts, askCloudflare },
+		);
+		expect(askCloudflare).not.toHaveBeenCalled();
+		expect(result.status).toBe("downloaded");
+	});
+
+	it("asks once on an institutional Cloudflare response and does not label it as an institutional login", async () => {
+		const fetchImpl = vi.fn(async () => new Response("not found", { status: 404 }));
+		const institutionalFetch = vi.fn(async () => ({
+			status: 403,
+			headers: { "content-type": "text/html", "cf-mitigated": "challenge" },
+			body: new TextEncoder().encode("<html>Just a moment</html>"),
+			finalUrl: `https://doi.org/${DOI}`,
+		}));
+		const askCloudflare = vi.fn(async () => "skip");
+		const result = await archiveWithPorts(
+			{ cwd, run_dir: runDir, category: "papers", doi: DOI, email: "lab@example.org", fetchImpl, env: {} },
+			{
+				...archivePorts,
+				askCloudflare,
+				loadInstitutionalConfig: async () => ({ configured: true, autoDownloadEnabled: true }),
+				isElectronAvailable: () => true,
+				institutionalFetch,
+			},
+		);
+		expect(askCloudflare).toHaveBeenCalledTimes(1);
+		expect(institutionalFetch).toHaveBeenCalledTimes(1);
+		expect(result.status).toBe("no_open_access");
+		expect(result.browser_required).toBe(true);
+	});
+
+	it("still reports institutional_auth_required for a Shibboleth login page", async () => {
+		const fetchImpl = vi.fn(async () => new Response("not found", { status: 404 }));
+		const askCloudflare = vi.fn(async () => "continue");
+		const result = await archiveWithPorts(
+			{ cwd, run_dir: runDir, category: "papers", doi: DOI, email: "lab@example.org", fetchImpl, env: {} },
+			{
+				...archivePorts,
+				askCloudflare,
+				loadInstitutionalConfig: async () => ({ configured: true, autoDownloadEnabled: true }),
+				isElectronAvailable: () => true,
+				institutionalFetch: async () => ({
+					status: 200,
+					headers: { "content-type": "text/html" },
+					body: new TextEncoder().encode("<html>shibboleth</html>"),
+					finalUrl: `https://doi.org/${DOI}`,
+				}),
+			},
+		);
+		expect(askCloudflare).not.toHaveBeenCalled();
+		expect(result.status).toBe("institutional_auth_required");
+	});
+
+	it("retries an institutional Cloudflare URL once and archives the PDF", async () => {
+		const fetchImpl = vi.fn(async () => new Response("not found", { status: 404 }));
+		let hits = 0;
+		const institutionalFetch = vi.fn(async () => {
+			hits += 1;
+			if (hits === 1)
+				return {
+					status: 403,
+					headers: { "content-type": "text/html" },
+					body: new TextEncoder().encode("<html>Checking your browser</html>"),
+					finalUrl: `https://doi.org/${DOI}`,
+				};
+			return {
+				status: 200,
+				headers: { "content-type": "application/pdf" },
+				body: PDF,
+				finalUrl: `https://doi.org/${DOI}`,
+			};
+		});
+		const result = await archiveWithPorts(
+			{ cwd, run_dir: runDir, category: "papers", doi: DOI, email: "lab@example.org", fetchImpl, env: {} },
+			{
+				...archivePorts,
+				askCloudflare: async () => "continue",
+				loadInstitutionalConfig: async () => ({ configured: true, autoDownloadEnabled: true }),
+				isElectronAvailable: () => true,
+				institutionalFetch,
+			},
+		);
+		expect(institutionalFetch).toHaveBeenCalledTimes(2);
+		expect(result.status).toBe("downloaded");
+	});
+
+	it("opens the Cloudflare card from the archive tool and treats any other answer as skip", async () => {
+		const previous = process.env.DRONE_REPLY_LANGUAGE;
+		process.env.DRONE_REPLY_LANGUAGE = "zh";
+		try {
+			const tools = new Map();
+			const pi = {
+				registerTool: (tool) => tools.set(tool.name, tool),
+				on: () => {},
+				registerCommand: () => {},
+			};
+			sourceArchive(pi);
+			const tool = tools.get("research_archive_source");
+			const fetchImpl = vi.fn(async () => html("<html>Just a moment</html>", 403));
+			const select = vi.fn(async () => undefined);
+			const skipped = await tool.execute(
+				"1",
+				{
+					run_dir: runDir,
+					category: "manuals",
+					url: "https://example.org/widget",
+					fetchImpl,
+				},
+				undefined,
+				undefined,
+				{ cwd, ui: { select } },
+			);
+			expect(select).toHaveBeenCalledTimes(1);
+			expect(select.mock.calls[0][0].startsWith("需要你完成浏览器验证\n\n")).toBe(true);
+			expect(select.mock.calls[0][0]).toContain("https://example.org/widget");
+			expect(select.mock.calls[0][1]).toEqual(["我已完成，继续", "跳过这个来源"]);
+			expect(fetchImpl).toHaveBeenCalledTimes(1);
+			expect(skipped.details.status).toBe("browser_required");
+		} finally {
+			if (previous === undefined) delete process.env.DRONE_REPLY_LANGUAGE;
+			else process.env.DRONE_REPLY_LANGUAGE = previous;
+		}
 	});
 
 	it("exposes doi/pmcid/pmid on the tool schema and no longer requires url", () => {

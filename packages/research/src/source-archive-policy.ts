@@ -62,6 +62,61 @@ export function looksLikeChallenge(status: number, contentType: string, sample: 
 	);
 }
 
+/** Header or body signals that this response is a Cloudflare interstitial.
+ * `cf-ray` alone is not enough: successful CDN responses carry it too. */
+const CLOUDFLARE_BODY = /cf-chl|challenge-platform|just a moment|checking your browser/i;
+
+export function looksLikeCloudflare(headers: unknown, sample: string | null | undefined): boolean {
+	if (headerValue(headers, "cf-mitigated")) return true;
+	return CLOUDFLARE_BODY.test(sample ?? "");
+}
+
+function headerValue(headers: unknown, name: string): string {
+	if (!headers || typeof headers !== "object") return "";
+	const readable = headers as { get?: (header: string) => unknown };
+	if (typeof readable.get === "function") return String(readable.get(name) ?? "").trim();
+	for (const [key, value] of Object.entries(headers as Record<string, unknown>)) {
+		if (key.toLowerCase() === name.toLowerCase()) return String(value ?? "").trim();
+	}
+	return "";
+}
+
+export interface CloudflareAskCopy {
+	title: string;
+	body: string;
+	continueLabel: string;
+	skipLabel: string;
+	retryNote: string;
+	skipNote: string;
+}
+
+/** Dialog and the two sentences written back to the model. Chinese only when the UI language is zh. */
+export function cloudflareAskCopy(): CloudflareAskCopy {
+	if (
+		String(process.env.DRONE_REPLY_LANGUAGE || "")
+			.toLowerCase()
+			.startsWith("zh")
+	) {
+		return {
+			title: "需要你完成浏览器验证",
+			body: "这是 Cloudflare 人机验证。请在已经打开的窗口里完成，程序不会绕过。",
+			continueLabel: "我已完成，继续",
+			skipLabel: "跳过这个来源",
+			retryNote: "请重新读取同一页面，不要绕过，刚才的挑战页不是证据",
+			skipNote: "已跳过这个来源。挑战页不是证据，不要重试，也不要绕过。",
+		};
+	}
+	return {
+		title: "Browser verification needed",
+		body: "This is a Cloudflare human check. Finish it in the browser window that is already open. The program will not bypass it.",
+		continueLabel: "I've finished, continue",
+		skipLabel: "Skip this source",
+		retryNote: "Re-read the same page. Do not bypass it. The challenge page you just saw is not evidence.",
+		skipNote:
+			"This source was skipped. The challenge page is not evidence. Do not retry and do not bypass it.",
+	};
+}
+
 export function hasMagic(bytes: Uint8Array): boolean {
 	if (bytes.length >= 5 && new TextDecoder().decode(bytes.subarray(0, 5)) === "%PDF-") return true;
 	if (

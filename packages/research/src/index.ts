@@ -139,12 +139,15 @@ export {
 	sourceStatus,
 } from "./source-archive";
 export {
+	type CloudflareAskCopy,
 	type ContentValidation,
+	cloudflareAskCopy,
 	DEFAULT_MAX_BYTES,
 	DEFAULT_TIMEOUT_MS,
 	hasMagic,
 	isWithin,
 	looksLikeChallenge,
+	looksLikeCloudflare,
 	normalizeMetadata,
 	SOURCE_CATEGORIES,
 	type SourceCategory,

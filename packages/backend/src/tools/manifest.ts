@@ -31,6 +31,7 @@ export const CORE_TOOL_META: Readonly<Record<string, DroneToolMeta>> = Object.fr
 		capabilities: ["files", "coding", "knowledge", "research", "visualization"],
 	},
 	bash: { capabilities: ["coding"] },
+	powershell: { capabilities: ["coding"] },
 	edit: { capabilities: ["coding"] },
 	write: { capabilities: ["coding"] },
 	webfetch: { readOnly: true, capabilities: ["web", "research"] },

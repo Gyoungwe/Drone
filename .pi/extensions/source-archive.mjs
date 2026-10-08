@@ -1371,6 +1371,40 @@ function looksLikeChallenge(status, contentType, sample) {
     sample
   );
 }
+var CLOUDFLARE_BODY = /cf-chl|challenge-platform|just a moment|checking your browser/i;
+function looksLikeCloudflare(headers, sample) {
+  if (headerValue(headers, "cf-mitigated")) return true;
+  return CLOUDFLARE_BODY.test(sample ?? "");
+}
+function headerValue(headers, name) {
+  if (!headers || typeof headers !== "object") return "";
+  const readable = headers;
+  if (typeof readable.get === "function") return String(readable.get(name) ?? "").trim();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === name.toLowerCase()) return String(value ?? "").trim();
+  }
+  return "";
+}
+function cloudflareAskCopy() {
+  if (String(process.env.DRONE_REPLY_LANGUAGE || "").toLowerCase().startsWith("zh")) {
+    return {
+      title: "\u9700\u8981\u4F60\u5B8C\u6210\u6D4F\u89C8\u5668\u9A8C\u8BC1",
+      body: "\u8FD9\u662F Cloudflare \u4EBA\u673A\u9A8C\u8BC1\u3002\u8BF7\u5728\u5DF2\u7ECF\u6253\u5F00\u7684\u7A97\u53E3\u91CC\u5B8C\u6210\uFF0C\u7A0B\u5E8F\u4E0D\u4F1A\u7ED5\u8FC7\u3002",
+      continueLabel: "\u6211\u5DF2\u5B8C\u6210\uFF0C\u7EE7\u7EED",
+      skipLabel: "\u8DF3\u8FC7\u8FD9\u4E2A\u6765\u6E90",
+      retryNote: "\u8BF7\u91CD\u65B0\u8BFB\u53D6\u540C\u4E00\u9875\u9762\uFF0C\u4E0D\u8981\u7ED5\u8FC7\uFF0C\u521A\u624D\u7684\u6311\u6218\u9875\u4E0D\u662F\u8BC1\u636E",
+      skipNote: "\u5DF2\u8DF3\u8FC7\u8FD9\u4E2A\u6765\u6E90\u3002\u6311\u6218\u9875\u4E0D\u662F\u8BC1\u636E\uFF0C\u4E0D\u8981\u91CD\u8BD5\uFF0C\u4E5F\u4E0D\u8981\u7ED5\u8FC7\u3002"
+    };
+  }
+  return {
+    title: "Browser verification needed",
+    body: "This is a Cloudflare human check. Finish it in the browser window that is already open. The program will not bypass it.",
+    continueLabel: "I've finished, continue",
+    skipLabel: "Skip this source",
+    retryNote: "Re-read the same page. Do not bypass it. The challenge page you just saw is not evidence.",
+    skipNote: "This source was skipped. The challenge page is not evidence. Do not retry and do not bypass it."
+  };
+}
 function hasMagic(bytes) {
   if (bytes.length >= 5 && new TextDecoder().decode(bytes.subarray(0, 5)) === "%PDF-") return true;
   if (bytes.length >= 4 && bytes[0] === 80 && bytes[1] === 75 && (bytes[2] === 3 || bytes[2] === 5 || bytes[2] === 7))
@@ -1595,6 +1629,55 @@ async function readBody(response, maxBytes) {
   }
   return result;
 }
+async function readPrefix(response, maxBytes) {
+  if (!response.body?.getReader) {
+    const array = new Uint8Array(await response.arrayBuffer());
+    return array.subarray(0, maxBytes);
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (size < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      const room = maxBytes - size;
+      const slice = value.byteLength > room ? value.subarray(0, room) : value;
+      chunks.push(slice);
+      size += slice.byteLength;
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+    }
+  }
+  const result = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return result;
+}
+function institutionalText(inst) {
+  const headers = inst?.headers;
+  let contentType = "";
+  if (headers && typeof headers.get === "function") contentType = String(headers.get("content-type") || "");
+  else if (headers && typeof headers === "object") {
+    const found = Object.entries(headers).find(([key]) => key.toLowerCase() === "content-type");
+    contentType = found ? String(found[1] ?? "") : "";
+  }
+  let snippet = "";
+  try {
+    const body = inst?.body;
+    const bytes = body instanceof Uint8Array ? body : body ? new Uint8Array(body) : new Uint8Array();
+    snippet = new TextDecoder().decode(bytes.subarray(0, 8192));
+  } catch {
+    snippet = "";
+  }
+  return { contentType, snippet };
+}
 async function archiveSource(options = {}, ports) {
   if (!ports) throw new Error("Source archive host ports are required");
   const {
@@ -1772,15 +1855,26 @@ async function archiveSource(options = {}, ports) {
         }
       });
       const contentType = response.headers.get("content-type") || "application/octet-stream";
-      if (looksLikeChallenge(response.status, contentType, ""))
+      const headers = response.headers;
+      if (looksLikeCloudflare(headers, ""))
+        return { kind: "cloudflare", reason: "Cloudflare browser verification" };
+      const challengeStatus = [401, 403, 407, 429].includes(response.status);
+      const html = contentType.toLowerCase().includes("text/html");
+      if (challengeStatus) {
+        const sample2 = new TextDecoder().decode(await readPrefix(response, 8192));
+        if (looksLikeCloudflare(headers, sample2))
+          return { kind: "cloudflare", reason: "Cloudflare browser verification" };
         return {
           kind: "challenge",
           reason: `HTTP ${response.status} requires browser verification or login`
         };
+      }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const bytes = await readBody(response, limit);
       const resolvedUrl = response.url || target;
-      const sample = contentType.includes("text/html") ? new TextDecoder().decode(bytes.subarray(0, 8192)) : "";
+      const sample = html ? new TextDecoder().decode(bytes.subarray(0, 8192)) : "";
+      if (looksLikeCloudflare(headers, sample))
+        return { kind: "cloudflare", reason: "Cloudflare browser verification" };
       if (looksLikeChallenge(response.status, contentType, sample))
         return { kind: "challenge", reason: "Response requires browser verification or login" };
       return { kind: "ok", bytes, resolvedUrl, contentType, response };
@@ -1796,14 +1890,34 @@ async function archiveSource(options = {}, ports) {
       signal?.removeEventListener("abort", onAbort);
     }
   }
+  const needsBrowser = (attempt) => attempt.kind === "challenge" || attempt.kind === "cloudflare" || attempt.browserRequired === true;
   const failureFor = (target, attempt) => ({
     url: target,
     category,
     failed_at: (/* @__PURE__ */ new Date()).toISOString(),
     reason: attempt.reason,
-    browser_required: attempt.kind === "challenge" || attempt.browserRequired === true,
-    ...attempt.kind === "challenge" || attempt.browserRequired ? { browser_handoff: handoff(target) } : {}
+    browser_required: needsBrowser(attempt),
+    ...needsBrowser(attempt) ? { browser_handoff: handoff(target) } : {}
   });
+  let cloudflareAsked = false;
+  async function askCloudflareOnce(target) {
+    if (typeof ports.askCloudflare !== "function" || cloudflareAsked || signal?.aborted) return "unavailable";
+    cloudflareAsked = true;
+    try {
+      const answer = await ports.askCloudflare(target, signal);
+      return answer === "continue" ? "continue" : "skip";
+    } catch {
+      return "skip";
+    }
+  }
+  async function resolveAttempt(target) {
+    const attempt = await attemptDownload(target);
+    if (attempt.kind !== "cloudflare") return attempt;
+    if (await askCloudflareOnce(target) !== "continue") return { ...attempt, browserRequired: true };
+    const retry = await attemptDownload(target);
+    if (retry.kind === "cloudflare" || retry.kind === "challenge") return { ...retry, browserRequired: true };
+    return retry;
+  }
   const legacyFailure = async (failure2) => {
     await recordFailure(ports, manifestPath, failuresPath, runDir, failure2);
     return {
@@ -1815,7 +1929,7 @@ async function archiveSource(options = {}, ports) {
   };
   const attempts = [];
   if (url != null) {
-    const attempt = await attemptDownload(url);
+    const attempt = await resolveAttempt(url);
     let failure2 = null;
     if (attempt.kind === "ok") {
       const outputName = safeFilename(
@@ -1865,13 +1979,13 @@ async function archiveSource(options = {}, ports) {
   for (const key of ["doi", "pmcid", "pmid"]) identity[key] = identity[key] || resolution[key] || null;
   for (const candidate of resolution.candidates.slice(0, candidateLimit)) {
     if (signal?.aborted) break;
-    const attempt = await attemptDownload(candidate.url);
+    const attempt = await resolveAttempt(candidate.url);
     if (attempt.kind !== "ok") {
       attempts.push({
         url: candidate.url,
         source: candidate.source,
         reason: attempt.reason,
-        browser_required: attempt.kind === "challenge" || attempt.browserRequired === true
+        browser_required: needsBrowser(attempt)
       });
       continue;
     }
@@ -1968,9 +2082,29 @@ async function archiveSource(options = {}, ports) {
     for (const cand of candidates) {
       if (signal?.aborted) break;
       try {
-        const inst = await ports.institutionalFetch(cand.url, { timeoutMs: Math.min(timeout, 2e4) });
+        let inst = await ports.institutionalFetch(cand.url, { timeoutMs: Math.min(timeout, 2e4) });
+        let viewed = institutionalText(inst);
+        if (looksLikeCloudflare(inst.headers, viewed.snippet)) {
+          const choice = await askCloudflareOnce(cand.url);
+          let stillCloudflare = true;
+          if (choice === "continue") {
+            inst = await ports.institutionalFetch(cand.url, { timeoutMs: Math.min(timeout, 2e4) });
+            viewed = institutionalText(inst);
+            stillCloudflare = looksLikeCloudflare(inst.headers, viewed.snippet);
+          }
+          if (stillCloudflare) {
+            attempts.push({
+              url: cand.url,
+              source: cand.via === "ezproxy" ? "ezproxy" : "institutional_session",
+              reason: "Cloudflare browser verification",
+              browser_required: true,
+              cloudflare: true
+            });
+            continue;
+          }
+        }
         if (inst.status >= 200 && inst.status < 400) {
-          const ct = inst.headers?.["content-type"] || "";
+          const ct = viewed.contentType || inst.headers?.["content-type"] || "";
           const _isPdf = ct.includes("pdf") || cand.url.toLowerCase().includes(".pdf");
           const isHtmlLogin = ct.includes("text/html") && inst.body?.byteLength < 1e5 && (() => {
             try {
@@ -2032,7 +2166,7 @@ async function archiveSource(options = {}, ports) {
   const challenged = attempts.find((a) => a.browser_required);
   const label2 = identity.doi ? `doi:${identity.doi}` : identity.pmcid || `pmid:${identity.pmid}`;
   const institutionalAttempt = attempts.find(
-    (a) => a.source === "ezproxy" || a.source === "institutional_session"
+    (a) => (a.source === "ezproxy" || a.source === "institutional_session") && a.cloudflare !== true
   );
   const failure = {
     url: url || `https://doi.org/${identity.doi || ""}`.replace(/\/$/, ""),
@@ -6039,7 +6173,20 @@ function sourceArchive(pi) {
     },
     async execute(_id, params, signal, _update, ctx) {
       return run(async () => {
-        const result = await archiveSource({ ...params, cwd: ctx.cwd, signal }, archivePorts);
+        const askCloudflare = ctx.ui?.select ? async (url, askSignal) => {
+          const copy = cloudflareAskCopy();
+          const choice = await ctx.ui.select(
+            `${copy.title}
+
+${copy.body}
+${url}`,
+            [copy.continueLabel, copy.skipLabel],
+            { signal: askSignal ?? signal }
+          );
+          return choice === copy.continueLabel ? "continue" : "skip";
+        } : void 0;
+        const ports = askCloudflare ? { ...archivePorts, askCloudflare } : archivePorts;
+        const result = await archiveSource({ ...params, cwd: ctx.cwd, signal }, ports);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
       });
     }

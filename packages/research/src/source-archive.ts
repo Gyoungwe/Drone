@@ -8,6 +8,7 @@ import {
 	DEFAULT_TIMEOUT_MS,
 	isWithin,
 	looksLikeChallenge,
+	looksLikeCloudflare,
 	normalizeMetadata,
 	SOURCE_CATEGORIES,
 	safeFilename,
@@ -31,6 +32,8 @@ export interface SourceArchivePorts {
 	isElectronAvailable?(): boolean;
 	institutionalFetch?(url: string, options?: Record<string, unknown>): Promise<any>;
 	buildProxiedUrl?(url: string, template: string): string;
+	/** One Cloudflare card for this call. Missing means keep today's browser_required result. */
+	askCloudflare?(url: string, signal?: AbortSignal): Promise<"continue" | "skip">;
 }
 
 type ArchiveOptions = Record<string, any>;
@@ -196,6 +199,59 @@ async function readBody(response: any, maxBytes: number): Promise<Uint8Array> {
 		offset += chunk.byteLength;
 	}
 	return result;
+}
+
+/** First bytes of a challenge or HTML response, without pulling the rest of a large error page. */
+async function readPrefix(response: any, maxBytes: number): Promise<Uint8Array> {
+	if (!response.body?.getReader) {
+		const array = new Uint8Array(await response.arrayBuffer());
+		return array.subarray(0, maxBytes);
+	}
+	const reader = response.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let size = 0;
+	try {
+		while (size < maxBytes) {
+			const { done, value } = await reader.read();
+			if (done || !value) break;
+			const room = maxBytes - size;
+			const slice = value.byteLength > room ? value.subarray(0, room) : value;
+			chunks.push(slice);
+			size += slice.byteLength;
+		}
+	} finally {
+		try {
+			await reader.cancel();
+		} catch {
+			/* the prefix is enough */
+		}
+	}
+	const result = new Uint8Array(size);
+	let offset = 0;
+	for (const chunk of chunks) {
+		result.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return result;
+}
+
+function institutionalText(inst: any): { contentType: string; snippet: string } {
+	const headers = inst?.headers;
+	let contentType = "";
+	if (headers && typeof headers.get === "function") contentType = String(headers.get("content-type") || "");
+	else if (headers && typeof headers === "object") {
+		const found = Object.entries(headers).find(([key]) => key.toLowerCase() === "content-type");
+		contentType = found ? String(found[1] ?? "") : "";
+	}
+	let snippet = "";
+	try {
+		const body = inst?.body;
+		const bytes = body instanceof Uint8Array ? body : body ? new Uint8Array(body) : new Uint8Array();
+		snippet = new TextDecoder().decode(bytes.subarray(0, 8192));
+	} catch {
+		snippet = "";
+	}
+	return { contentType, snippet };
 }
 
 export async function archiveSource(
@@ -388,17 +444,26 @@ export async function archiveSource(
 				},
 			});
 			const contentType = response.headers.get("content-type") || "application/octet-stream";
-			if (looksLikeChallenge(response.status, contentType, ""))
+			const headers = response.headers;
+			if (looksLikeCloudflare(headers, ""))
+				return { kind: "cloudflare", reason: "Cloudflare browser verification" };
+			const challengeStatus = [401, 403, 407, 429].includes(response.status);
+			const html = contentType.toLowerCase().includes("text/html");
+			if (challengeStatus) {
+				const sample = new TextDecoder().decode(await readPrefix(response, 8192));
+				if (looksLikeCloudflare(headers, sample))
+					return { kind: "cloudflare", reason: "Cloudflare browser verification" };
 				return {
 					kind: "challenge",
 					reason: `HTTP ${response.status} requires browser verification or login`,
 				};
+			}
 			if (!response.ok) throw new Error(`HTTP ${response.status}`);
 			const bytes = await readBody(response, limit);
 			const resolvedUrl = response.url || target;
-			const sample = contentType.includes("text/html")
-				? new TextDecoder().decode(bytes.subarray(0, 8192))
-				: "";
+			const sample = html ? new TextDecoder().decode(bytes.subarray(0, 8192)) : "";
+			if (looksLikeCloudflare(headers, sample))
+				return { kind: "cloudflare", reason: "Cloudflare browser verification" };
 			if (looksLikeChallenge(response.status, contentType, sample))
 				return { kind: "challenge", reason: "Response requires browser verification or login" };
 			return { kind: "ok", bytes, resolvedUrl, contentType, response };
@@ -417,14 +482,36 @@ export async function archiveSource(
 			signal?.removeEventListener("abort", onAbort);
 		}
 	}
+	const needsBrowser = (attempt: any) =>
+		attempt.kind === "challenge" || attempt.kind === "cloudflare" || attempt.browserRequired === true;
 	const failureFor = (target: string, attempt: any) => ({
 		url: target,
 		category,
 		failed_at: new Date().toISOString(),
 		reason: attempt.reason,
-		browser_required: attempt.kind === "challenge" || attempt.browserRequired === true,
-		...(attempt.kind === "challenge" || attempt.browserRequired ? { browser_handoff: handoff(target) } : {}),
+		browser_required: needsBrowser(attempt),
+		...(needsBrowser(attempt) ? { browser_handoff: handoff(target) } : {}),
 	});
+	// One Cloudflare card per archiveSource call. Continue retries only the URL that was shown.
+	let cloudflareAsked = false;
+	async function askCloudflareOnce(target: string): Promise<"continue" | "skip" | "unavailable"> {
+		if (typeof ports.askCloudflare !== "function" || cloudflareAsked || signal?.aborted) return "unavailable";
+		cloudflareAsked = true;
+		try {
+			const answer = await ports.askCloudflare(target, signal);
+			return answer === "continue" ? "continue" : "skip";
+		} catch {
+			return "skip";
+		}
+	}
+	async function resolveAttempt(target: string): Promise<any> {
+		const attempt = await attemptDownload(target);
+		if (attempt.kind !== "cloudflare") return attempt;
+		if ((await askCloudflareOnce(target)) !== "continue") return { ...attempt, browserRequired: true };
+		const retry = await attemptDownload(target);
+		if (retry.kind === "cloudflare" || retry.kind === "challenge") return { ...retry, browserRequired: true };
+		return retry;
+	}
 	const legacyFailure = async (failure: any) => {
 		await recordFailure(ports, manifestPath, failuresPath, runDir, failure);
 		return {
@@ -437,7 +524,7 @@ export async function archiveSource(
 	const attempts = [];
 	// 1) 调用方给定的 URL：原有行为；papers 且已知身份时，失败后继续走合法 OA 解析
 	if (url != null) {
-		const attempt = await attemptDownload(url);
+		const attempt = await resolveAttempt(url);
 		let failure = null;
 		if (attempt.kind === "ok") {
 			const outputName = safeFilename(
@@ -489,13 +576,13 @@ export async function archiveSource(
 	for (const key of ["doi", "pmcid", "pmid"]) identity[key] = identity[key] || resolution[key] || null;
 	for (const candidate of resolution.candidates.slice(0, candidateLimit)) {
 		if (signal?.aborted) break;
-		const attempt = await attemptDownload(candidate.url);
+		const attempt = await resolveAttempt(candidate.url);
 		if (attempt.kind !== "ok") {
 			attempts.push({
 				url: candidate.url,
 				source: candidate.source,
 				reason: attempt.reason,
-				browser_required: attempt.kind === "challenge" || attempt.browserRequired === true,
+				browser_required: needsBrowser(attempt),
 			});
 			continue;
 		}
@@ -605,9 +692,29 @@ export async function archiveSource(
 		for (const cand of candidates) {
 			if (signal?.aborted) break;
 			try {
-				const inst = await ports.institutionalFetch(cand.url, { timeoutMs: Math.min(timeout, 20000) });
+				let inst = await ports.institutionalFetch(cand.url, { timeoutMs: Math.min(timeout, 20000) });
+				let viewed = institutionalText(inst);
+				if (looksLikeCloudflare(inst.headers, viewed.snippet)) {
+					const choice = await askCloudflareOnce(cand.url);
+					let stillCloudflare = true;
+					if (choice === "continue") {
+						inst = await ports.institutionalFetch(cand.url, { timeoutMs: Math.min(timeout, 20000) });
+						viewed = institutionalText(inst);
+						stillCloudflare = looksLikeCloudflare(inst.headers, viewed.snippet);
+					}
+					if (stillCloudflare) {
+						attempts.push({
+							url: cand.url,
+							source: cand.via === "ezproxy" ? "ezproxy" : "institutional_session",
+							reason: "Cloudflare browser verification",
+							browser_required: true,
+							cloudflare: true,
+						});
+						continue;
+					}
+				}
 				if (inst.status >= 200 && inst.status < 400) {
-					const ct = inst.headers?.["content-type"] || "";
+					const ct = viewed.contentType || inst.headers?.["content-type"] || "";
 					const _isPdf = ct.includes("pdf") || cand.url.toLowerCase().includes(".pdf");
 					const isHtmlLogin =
 						ct.includes("text/html") &&
@@ -683,7 +790,7 @@ export async function archiveSource(
 	const challenged = attempts.find((a) => a.browser_required);
 	const label = identity.doi ? `doi:${identity.doi}` : identity.pmcid || `pmid:${identity.pmid}`;
 	const institutionalAttempt = attempts.find(
-		(a) => a.source === "ezproxy" || a.source === "institutional_session",
+		(a) => (a.source === "ezproxy" || a.source === "institutional_session") && a.cloudflare !== true,
 	);
 	const failure = {
 		url: url || `https://doi.org/${identity.doi || ""}`.replace(/\/$/, ""),

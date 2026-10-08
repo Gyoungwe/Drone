@@ -9,6 +9,7 @@ import {
 	SOURCE_CATEGORIES,
 	sourceStatus as sourceStatusTyped,
 } from "@drone/research/source-archive";
+import { cloudflareAskCopy } from "@drone/research/source-archive-policy";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
 import { USER_QUESTION_FOCUS } from "./internal/reply-focus";
 import { archivePorts, reconcileLiteratureOperation } from "./internal/research-host";
@@ -106,7 +107,19 @@ export default function sourceArchive(pi) {
 		},
 		async execute(_id, params, signal, _update, ctx) {
 			return run(async () => {
-				const result = await archiveTyped({ ...params, cwd: ctx.cwd, signal }, archivePorts);
+				const askCloudflare = ctx.ui?.select
+					? async (url, askSignal) => {
+							const copy = cloudflareAskCopy();
+							const choice = await ctx.ui.select(
+								`${copy.title}\n\n${copy.body}\n${url}`,
+								[copy.continueLabel, copy.skipLabel],
+								{ signal: askSignal ?? signal },
+							);
+							return choice === copy.continueLabel ? "continue" : "skip";
+						}
+					: undefined;
+				const ports = askCloudflare ? { ...archivePorts, askCloudflare } : archivePorts;
+				const result = await archiveTyped({ ...params, cwd: ctx.cwd, signal }, ports);
 				return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }], details: result };
 			});
 		},

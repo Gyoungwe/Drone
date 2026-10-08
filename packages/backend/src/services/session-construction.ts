@@ -17,6 +17,7 @@ import { autoNameSession } from "../session/naming";
 import type { SessionRegistry } from "../session/registry";
 import type { SessionTraces } from "../session/traces";
 import { makeUiContext } from "../session/ui-context";
+import { excludedBuiltinTools } from "../session-engine/builtin-tools";
 import type { ModelRuntime, SessionEngine } from "../session-engine/engine";
 import type { SessionExtensionDependencies } from "../session-engine/extensions";
 import { buildSessionCustomTools, makeCapabilitySessionExtension } from "../session-engine/extensions";
@@ -100,6 +101,7 @@ export class SessionConstructionService {
 				model,
 				thinkingLevel: options.thinkingLevel as ThinkingLevel | undefined,
 				tools: this.host.options.tools,
+				excludeTools: excludedBuiltinTools(),
 				customTools: buildSessionCustomTools(
 					this.host.sessionExtensionDependencies(),
 					gate,
@@ -205,6 +207,7 @@ export class SessionConstructionService {
 			{
 				settingsManager,
 				resourceLoader,
+				excludeTools: excludedBuiltinTools(),
 				customTools: buildSessionCustomTools(
 					this.host.sessionExtensionDependencies(),
 					gate,

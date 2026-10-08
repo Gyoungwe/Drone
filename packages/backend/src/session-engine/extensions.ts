@@ -37,6 +37,7 @@ import { makeSubagentTool } from "../tools/subagent";
 import { makeTodoTool } from "../tools/todo";
 import { makeTodoReminderExtension } from "../tools/todo-reminder";
 import { makeWebFetchTool } from "../tools/webfetch";
+import { makeCloudflareAskExtension } from "./cloudflare-ask";
 import { makeHarnessContextExtension } from "./harness/context";
 import { makeHarnessDeliveryExtension } from "./harness/delivery";
 import { makeHarnessGuardExtension } from "./harness/guards";
@@ -244,6 +245,7 @@ export function buildSessionExtensionFactories(
 	factories.push(makeChannelWatchExtension({ agentDir: getAgentDir(), cwd }));
 	factories.push(makeTodoReminderExtension());
 	factories.push(makeBioExtension());
+	factories.push(makeCloudflareAskExtension());
 	return factories;
 }
 
