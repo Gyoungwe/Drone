@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { open, realpath, stat } from "node:fs/promises";
 import { basename, isAbsolute, relative, resolve, sep } from "node:path";
 import { exactDoiItems, normalizeDoi } from "./literature-receipt";
+import { zoteroLibraryPath } from "./zotero-library";
 import {
 	connectorTargetId,
 	normalizeZoteroAttachment,
@@ -143,11 +144,12 @@ export async function localApiChildren({ fetchImpl = fetch, key, signal }: Recor
 
 // --- Web API channel ----------------------------------------------------------------------------
 export function zoteroWebApiConfig(env: Record<string, string | undefined> = process.env) {
-	const libraryType = env.ZOTERO_LIBRARY_TYPE || "users";
+	// Accept both `user`/`group` (pyzotero / zotero-mcp, what Drone injects) and `users`/`groups`.
+	const path = zoteroLibraryPath(env.ZOTERO_LIBRARY_TYPE);
+	const libraryType: string = path ?? String(env.ZOTERO_LIBRARY_TYPE);
 	const libraryId = env.ZOTERO_LIBRARY_ID || env.ZOTERO_USER_ID || "";
 	const apiKey = env.ZOTERO_API_KEY || "";
-	const configured =
-		["users", "groups"].includes(libraryType) && /^\d+$/.test(libraryId) && apiKey.length > 0;
+	const configured = path !== null && /^\d+$/.test(libraryId) && apiKey.length > 0;
 	return { libraryType, libraryId, apiKey, configured };
 }
 /**

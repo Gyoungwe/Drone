@@ -546,6 +546,18 @@ function createLiteratureOperations(ports) {
   };
 }
 
+// packages/research/src/zotero-library.ts
+function zoteroLibraryPath(value) {
+  if (value === void 0 || value === null) return "users";
+  const text = String(value).trim().toLowerCase();
+  if (text === "" || text === "user" || text === "users") return "users";
+  if (text === "group" || text === "groups") return "groups";
+  return null;
+}
+function zoteroLibraryEnvValue(path) {
+  return zoteroLibraryPath(path) === "groups" ? "group" : "user";
+}
+
 // packages/research/src/zotero-identity.ts
 var ZOTERO_KEY_PATTERN = /^[A-Z0-9]{8}$/;
 function normalizeZoteroDoi(value) {
@@ -646,11 +658,12 @@ async function resolveCollection(get, raw) {
 var LOCAL_API = "http://127.0.0.1:23119/api/users/0";
 var LOCAL_USER_LIBRARY_IDS = /* @__PURE__ */ new Set(["0", "1"]);
 function createZoteroReconciler({
-  libraryType = process.env.ZOTERO_LIBRARY_TYPE || "users",
+  libraryType: rawLibraryType = process.env.ZOTERO_LIBRARY_TYPE,
   libraryId = process.env.ZOTERO_LIBRARY_ID || process.env.ZOTERO_USER_ID,
   apiKey = process.env.ZOTERO_API_KEY,
   request
 } = {}) {
+  const libraryType = zoteroLibraryPath(rawLibraryType);
   const get = request || (async (path) => {
     const response = await fetch(`https://api.zotero.org/${libraryType}/${libraryId}/${path}`, {
       headers: { "Zotero-API-Version": "3", "Zotero-API-Key": apiKey },
@@ -665,7 +678,7 @@ function createZoteroReconciler({
     return { data: JSON.parse(body), total: Number(response.headers.get("Total-Results")) };
   });
   return async (expected) => {
-    if (!["users", "groups"].includes(libraryType) || !/^\d+$/.test(libraryId || "") || !request && !apiKey)
+    if (!libraryType || !/^\d+$/.test(libraryId || "") || !request && !apiKey)
       return {
         state: "unavailable",
         reason: "Configure the existing local Zotero API environment securely; never paste keys in chat. No library was queried."
@@ -725,7 +738,7 @@ var RANK = {
 function createCompositeZoteroReconciler({ local, web, env = process.env } = {}) {
   const userIds = [
     env.ZOTERO_USER_ID,
-    env.ZOTERO_LIBRARY_TYPE === "groups" ? null : env.ZOTERO_LIBRARY_ID
+    zoteroLibraryPath(env.ZOTERO_LIBRARY_TYPE) === "groups" ? null : env.ZOTERO_LIBRARY_ID
   ].filter((value) => Boolean(value));
   const first = local || createLocalZoteroReconciler({ userLibraryIds: userIds });
   const second = web || createZoteroReconciler();
@@ -765,6 +778,27 @@ var ZOTERO_SETUP_BINDING = Object.freeze({
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+var ZOTERO_MCP_HIDDEN_TOOLS = Object.freeze([
+  "zotero_delete_item",
+  "zotero_delete_collection",
+  "zotero_delete_annotation"
+]);
+function zoteroMcpSpec(command, { enabled = false, libraryType = "user" } = {}) {
+  if (typeof command !== "string" || !command.trim()) throw new Error("zotero-mcp command is required");
+  return {
+    command: command.trim(),
+    args: ["serve"],
+    env: {
+      ZOTERO_LOCAL: "true",
+      ZOTERO_LIBRARY_TYPE: libraryType === "group" ? "group" : "user",
+      ZOTERO_MCP_TOOLSETS: "none"
+    },
+    description: "Zotero library: search/read items and full text, add items by DOI/URL/file, file into collections, attach PDFs",
+    timeout: 120,
+    toolExposure: Object.fromEntries(ZOTERO_MCP_HIDDEN_TOOLS.map((tool) => [tool, "hidden"])),
+    ...enabled ? {} : { enabled: false }
+  };
+}
 function readZoteroMcpConfig(value) {
   if (!isRecord(value)) return { registered: false, disabled: true, command: null };
   const servers = value.mcpServers ?? value["mcp-servers"];
@@ -773,30 +807,53 @@ function readZoteroMcpConfig(value) {
   if (!isRecord(raw)) return { registered: false, disabled: true, command: null };
   return {
     registered: true,
-    disabled: raw.disabled === true,
+    // `enabled: false` is the Pi field; legacy `disabled: true` (older builds) is read as intent.
+    disabled: raw.enabled === false || raw.disabled === true,
     command: typeof raw.command === "string" ? raw.command : null
   };
 }
-function zoteroMcpSpec(command, { disabled = true } = {}) {
-  if (typeof command !== "string" || !command.trim()) throw new Error("zotero-mcp command is required");
-  return { command: command.trim(), env: { ZOTERO_LOCAL: "true" }, disabled };
+function isAbsoluteCommand(command) {
+  return /^(?:[A-Za-z]:[\\/]|\\\\|\/)/.test(command);
 }
-function mergeZoteroMcpConfig(value, command, { enable = false } = {}) {
+function isBareZoteroMcp(command) {
+  return /^zotero-mcp(?:\.exe)?$/i.test(command.trim());
+}
+function singularLibraryType(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const path = zoteroLibraryPath(value);
+  return path ? zoteroLibraryEnvValue(path) : null;
+}
+function mergeZoteroMcpConfig(value, command, { enable = false, libraryType = "user" } = {}) {
   if (!isRecord(value)) throw new Error("mcp config must contain an object");
   const key = value["mcp-servers"] !== void 0 && value.mcpServers === void 0 ? "mcp-servers" : "mcpServers";
   const source = value[key];
   const servers = isRecord(source) ? { ...source } : {};
   const previousValue = servers[ZOTERO_SETUP_BINDING.mcpServer];
   const previous = isRecord(previousValue) ? previousValue : {};
+  const existed = Object.keys(previous).length > 0;
   const previousEnv = isRecord(previous.env) ? previous.env : {};
-  const previousCommand = typeof previous.command === "string" ? previous.command : null;
-  const spec = zoteroMcpSpec(command, { disabled: !enable });
-  servers[ZOTERO_SETUP_BINDING.mcpServer] = {
-    ...previous,
-    command: previousCommand || spec.command,
-    env: { ...spec.env, ...previousEnv, ZOTERO_LOCAL: previousEnv.ZOTERO_LOCAL || spec.env.ZOTERO_LOCAL },
-    disabled: !(enable || Object.keys(previous).length > 0 && previous.disabled !== true)
+  const previousCommand = typeof previous.command === "string" && previous.command.trim() ? previous.command : null;
+  const wasDisabled = previous.enabled === false || previous.disabled === true;
+  const spec = zoteroMcpSpec(command, { enabled: true, libraryType });
+  const keepCommand = previousCommand !== null && !(isBareZoteroMcp(previousCommand) && isAbsoluteCommand(spec.command));
+  const nextCommand = keepCommand ? previousCommand : spec.command;
+  const env = { ...spec.env, ...previousEnv };
+  env.ZOTERO_LOCAL = previousEnv.ZOTERO_LOCAL || spec.env.ZOTERO_LOCAL;
+  env.ZOTERO_LIBRARY_TYPE = singularLibraryType(previousEnv.ZOTERO_LIBRARY_TYPE) ?? spec.env.ZOTERO_LIBRARY_TYPE;
+  const { disabled: _legacy, enabled: _enabled, ...rest } = previous;
+  const next = {
+    ...rest,
+    command: nextCommand,
+    // `serve` only for the zotero-mcp binary itself; a custom launcher (uvx …) keeps its own args.
+    ...previous.args === void 0 && /zotero-mcp(?:\.exe)?$/i.test(nextCommand) ? { args: spec.args } : {},
+    env,
+    description: typeof previous.description === "string" ? previous.description : spec.description,
+    timeout: typeof previous.timeout === "number" ? previous.timeout : spec.timeout,
+    toolExposure: { ...spec.toolExposure, ...isRecord(previous.toolExposure) ? previous.toolExposure : {} }
   };
+  const enabled = enable || existed && !wasDisabled;
+  if (!enabled) next.enabled = false;
+  servers[ZOTERO_SETUP_BINDING.mcpServer] = next;
   return { ...value, [key]: servers };
 }
 function remainingZoteroSetupSteps(status) {
@@ -902,7 +959,9 @@ async function readZoteroMcp({ agentDirectory } = {}) {
 async function registerZoteroMcp({
   agentDirectory,
   command,
-  enable = false
+  enable = false,
+  // Same library the native Zotero tools use (Drone Settings → Zotero → Web API injects it), pyzotero spelling.
+  libraryType = zoteroLibraryEnvValue(process.env.ZOTERO_LIBRARY_TYPE)
 } = {}) {
   const path = mcpPath(agentDirectory);
   let value = {};
@@ -912,7 +971,7 @@ async function registerZoteroMcp({
       throw new Error(`${path} must contain an object`);
     value = parsed;
   }
-  value = mergeZoteroMcpConfig(value, command, { enable });
+  value = mergeZoteroMcpConfig(value, command, { enable, libraryType });
   await mkdir3(dirname2(path), { recursive: true });
   const tempPath = `${path}.${process.pid}.tmp`;
   await writeFile3(tempPath, `${JSON.stringify(value, null, 2)}
@@ -1438,10 +1497,11 @@ async function localApiChildren({ fetchImpl = fetch, key, signal } = {}) {
   return Array.isArray(result.data) ? result.data : [];
 }
 function zoteroWebApiConfig(env = process.env) {
-  const libraryType = env.ZOTERO_LIBRARY_TYPE || "users";
+  const path = zoteroLibraryPath(env.ZOTERO_LIBRARY_TYPE);
+  const libraryType = path ?? String(env.ZOTERO_LIBRARY_TYPE);
   const libraryId = env.ZOTERO_LIBRARY_ID || env.ZOTERO_USER_ID || "";
   const apiKey = env.ZOTERO_API_KEY || "";
-  const configured = ["users", "groups"].includes(libraryType) && /^\d+$/.test(libraryId) && apiKey.length > 0;
+  const configured = path !== null && /^\d+$/.test(libraryId) && apiKey.length > 0;
   return { libraryType, libraryId, apiKey, configured };
 }
 function zoteroLocalWriteConfig(env = process.env) {

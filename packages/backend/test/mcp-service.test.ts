@@ -129,9 +129,10 @@ describe("McpService", () => {
 			},
 		});
 		await service.setServerEnabled("zotero", false, cwd);
+		// Pi's mcp.json: pi-mcp-adapter honours `enabled: false` and ignores `disabled`.
 		expect(JSON.parse(await readFile(join(dir, "mcp.json"), "utf8")).mcpServers.zotero).toEqual({
 			command: "zotero-mcp",
-			disabled: true,
+			enabled: false,
 		});
 		// Regression: older builds wrote { zotero: { disabled: true } } into <project>/.pi/mcp.json, which
 		// replaces the global definition in pi-mcp-adapter and leaves a server without a command.
@@ -196,6 +197,127 @@ describe("McpService", () => {
 		const owner = JSON.parse(await readFile(join(cwd, ".mcp.json"), "utf8"));
 		expect(owner.mcpServers.docs).toEqual({ command: "node", disabled: false });
 		expect(result.servers.find((server) => server.name === "docs")?.disabled).toBe(false);
+	});
+
+	it("writes enabled:false in Pi's mcp.json, removes it to enable, and normalizes legacy disabled flags", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "drone-mcp-agent-"));
+		const path = join(dir, "mcp.json");
+		await writeFile(
+			path,
+			JSON.stringify({
+				mcpServers: {
+					zotero: { command: "zotero-mcp", disabled: true },
+					other: { command: "other-mcp", disabled: true },
+					stale: { command: "stale-mcp", disabled: false },
+				},
+			}),
+		);
+		const service = new McpService({ agentDir: dir, homeDir });
+		// Legacy `disabled: true` is still read as the user's intent.
+		expect((await service.getConfig()).servers.map((server) => [server.name, server.disabled])).toEqual([
+			["zotero", true],
+			["other", true],
+			["stale", false],
+		]);
+		const enabled = await service.setServerEnabled("zotero", true);
+		expect(JSON.parse(await readFile(path, "utf8")).mcpServers).toEqual({
+			zotero: { command: "zotero-mcp" },
+			other: { command: "other-mcp", enabled: false },
+			stale: { command: "stale-mcp" },
+		});
+		expect(enabled.servers.find((server) => server.name === "zotero")?.disabled).toBe(false);
+		const disabled = await service.setServerEnabled("zotero", false);
+		expect(JSON.parse(await readFile(path, "utf8")).mcpServers.zotero).toEqual({
+			command: "zotero-mcp",
+			enabled: false,
+		});
+		expect(disabled.servers.find((server) => server.name === "zotero")?.disabled).toBe(true);
+	});
+
+	it("reads enabled:false from Pi files and disabled:true from adapter-format files", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "drone-mcp-agent-"));
+		const cwd = await mkdtemp(join(tmpdir(), "drone-mcp-project-"));
+		await writeFile(
+			join(dir, "mcp.json"),
+			JSON.stringify({
+				mcpServers: { pi: { command: "a", enabled: false }, on: { command: "b", enabled: true } },
+			}),
+		);
+		await writeFile(
+			join(cwd, ".mcp.json"),
+			JSON.stringify({
+				mcpServers: { shared: { command: "c", disabled: true }, ignored: { command: "d", enabled: false } },
+			}),
+		);
+		const servers = (await new McpService({ agentDir: dir, homeDir }).getConfig(cwd)).servers;
+		expect(Object.fromEntries(servers.map((server) => [server.name, server.disabled]))).toEqual({
+			pi: true,
+			on: false,
+			shared: true,
+			// `enabled` is not an adapter-format field; the adapter starts this server.
+			ignored: false,
+		});
+	});
+
+	it("enabling a Pi-format owner clears a disable flag left in a lower-precedence source", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "drone-mcp-agent-"));
+		const home = await mkdtemp(join(tmpdir(), "drone-mcp-home-"));
+		await mkdir(join(home, ".config", "mcp"), { recursive: true });
+		await writeFile(
+			join(home, ".config", "mcp", "mcp.json"),
+			JSON.stringify({ mcpServers: { docs: { command: "node", disabled: true } } }),
+		);
+		await writeFile(
+			join(dir, "mcp.json"),
+			JSON.stringify({ mcpServers: { docs: { command: "node", enabled: false } } }),
+		);
+		const result = await new McpService({ agentDir: dir, homeDir: home }).setServerEnabled("docs", true);
+		expect(JSON.parse(await readFile(join(dir, "mcp.json"), "utf8")).mcpServers.docs).toEqual({
+			command: "node",
+		});
+		expect(
+			JSON.parse(await readFile(join(home, ".config", "mcp", "mcp.json"), "utf8")).mcpServers.docs,
+		).toEqual({
+			command: "node",
+		});
+		expect(result.servers.find((server) => server.name === "docs")?.disabled).toBe(false);
+	});
+
+	it("normalizes legacy disabled flags in the user-level Pi config once, leaving project files alone", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "drone-mcp-agent-"));
+		const path = join(dir, "mcp.json");
+		await writeFile(
+			path,
+			JSON.stringify({
+				mcpServers: {
+					zotero: { command: "zotero-mcp", disabled: true, env: { A: "1" } },
+					ok: { command: "x" },
+				},
+			}),
+		);
+		const service = new McpService({ agentDir: dir, homeDir });
+		expect(await service.normalizeLegacyUserConfig()).toBe(true);
+		expect(JSON.parse(await readFile(path, "utf8")).mcpServers).toEqual({
+			zotero: { command: "zotero-mcp", env: { A: "1" }, enabled: false },
+			ok: { command: "x" },
+		});
+		expect(await service.normalizeLegacyUserConfig()).toBe(false);
+		const empty = new McpService({ agentDir: await mkdtemp(join(tmpdir(), "drone-mcp-agent-")), homeDir });
+		expect(await empty.normalizeLegacyUserConfig()).toBe(false);
+	});
+
+	it("parses mcp.json files written with a UTF-8 BOM (Windows PowerShell 5)", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "drone-mcp-agent-"));
+		await writeFile(
+			join(dir, "mcp.json"),
+			`\uFEFF${JSON.stringify({ mcpServers: { zotero: { command: "z" } } })}`,
+		);
+		const service = new McpService({ agentDir: dir, homeDir });
+		expect((await service.getConfig()).servers.map((server) => server.name)).toEqual(["zotero"]);
+		await service.setServerEnabled("zotero", false);
+		const text = await readFile(join(dir, "mcp.json"), "utf8");
+		expect(text.startsWith("\uFEFF")).toBe(false);
+		expect(JSON.parse(text).mcpServers.zotero).toEqual({ command: "z", enabled: false });
 	});
 
 	it("reports the runtime as missing or starting until it publishes a status", () => {

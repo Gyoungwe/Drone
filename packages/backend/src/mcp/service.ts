@@ -50,11 +50,65 @@ function emptyStatus(runtime?: McpRuntimeState): McpStatus {
 	};
 }
 
-/** True for entries that only toggle `disabled` (older Drone builds wrote these into `.pi/mcp.json`). */
+/** True for entries that only toggle `disabled`/`enabled` (older Drone builds wrote these into `.pi/mcp.json`). */
 function isDisableStub(server: unknown): boolean {
 	if (!server || typeof server !== "object" || Array.isArray(server)) return false;
 	const keys = Object.keys(server);
-	return keys.length > 0 && keys.every((key) => key === "disabled");
+	return keys.length > 0 && keys.every((key) => key === "disabled" || key === "enabled");
+}
+
+/**
+ * Explicit enabled-state of one raw entry, in the dialect of the file that holds it:
+ * - Pi's own `mcp.json` pair (`<agentDir>/mcp.json`, `.pi/mcp.json`): pi-mcp-adapter 5.x translates
+ *   only `enabled: false` into a disabled server and IGNORES `disabled`. Older Drone builds and
+ *   `/zotero-setup` wrote `disabled: true` there; it is still read as the user's intent (back-compat)
+ *   and rewritten as `enabled: false` on the next toggle / startup normalization.
+ * - Every other source (`.mcp.json`, `~/.config/mcp/mcp.json`, `mcp-adapter.json`): the adapter's own
+ *   format, where only a literal `disabled: true` disables.
+ * Returns undefined when the entry does not set the state.
+ */
+export function rawServerDisabled(server: RawServer, piFormat: boolean): boolean | undefined {
+	if (piFormat) {
+		if (server.enabled === false) return true;
+		if (server.disabled === true) return true;
+		if (server.enabled === true) return false;
+		return undefined;
+	}
+	if (server.disabled === true) return true;
+	if (server.disabled === false) return false;
+	return undefined;
+}
+
+/** Copy of `server` with its enabled-state written in the dialect pi-mcp-adapter honours for that file. */
+export function withServerEnabled(server: RawServer, enabled: boolean, piFormat: boolean): RawServer {
+	const next = { ...server };
+	if (piFormat) {
+		// Pi format: `disabled` is not a Pi field (the adapter ignores it), so never keep it.
+		delete next.disabled;
+		if (enabled) delete next.enabled;
+		else next.enabled = false;
+		return next;
+	}
+	if (enabled) delete next.disabled;
+	else next.disabled = true;
+	return next;
+}
+
+/**
+ * Rewrite legacy `disabled` flags in a Pi-format server map (`disabled: true` → `enabled: false`,
+ * `disabled: false` → removed). Returns true when something changed.
+ */
+export function normalizeLegacyPiServers(servers: Record<string, unknown>): boolean {
+	let changed = false;
+	for (const [name, raw] of Object.entries(servers)) {
+		if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+		const server = raw as RawServer;
+		if (!Object.hasOwn(server, "disabled")) continue;
+		const disabled = rawServerDisabled(server, true) === true;
+		servers[name] = withServerEnabled(server, !disabled, true);
+		changed = true;
+	}
+	return changed;
 }
 
 export interface McpStatusLogLine {
@@ -126,7 +180,8 @@ function serverMap(value: Record<string, unknown>): Record<string, unknown> {
 
 async function readRaw(path: string): Promise<Record<string, unknown>> {
 	if (!existsSync(path)) return {};
-	const text = await readFile(path, "utf8");
+	// Windows PowerShell 5 (`Set-Content -Encoding UTF8`) writes a BOM, which JSON.parse rejects.
+	const text = (await readFile(path, "utf8")).replace(/^\uFEFF/, "");
 	const value: unknown = JSON.parse(text);
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
 		throw new Error(`${path} must contain an object`);
@@ -224,7 +279,7 @@ export class McpService implements McpServicePort {
 	async getConfig(cwd?: string): Promise<McpConfigSnapshot> {
 		const loaded = await this.readSources(cwd);
 		const sources = loaded.map((item) => item.source);
-		const merged = new Map<string, { server: RawServer; source: ConfigSource }>();
+		const merged = new Map<string, { server: RawServer; source: ConfigSource; disabled: boolean }>();
 		const piProjectNames = new Set(
 			Object.keys(loaded.find((item) => item.source.piMcp === "project")?.servers ?? {}),
 		);
@@ -235,9 +290,12 @@ export class McpService implements McpServicePort {
 				// pi-mcp-adapter: the project .pi/mcp.json entry replaces the global mcp.json one.
 				if (source.piMcp === "global" && piProjectNames.has(name)) continue;
 				const previous = merged.get(name);
+				// Later sources win the enabled-state only when they set it explicitly (adapter merge semantics).
+				const explicit = rawServerDisabled(raw as RawServer, source.piMcp !== undefined);
 				merged.set(name, {
 					server: mergeServer(previous?.server, raw as RawServer),
 					source,
+					disabled: explicit ?? previous?.disabled ?? false,
 				});
 			}
 		}
@@ -247,12 +305,12 @@ export class McpService implements McpServicePort {
 				.reverse()
 				.find((source) => !source.path.endsWith("mcp-adapter.json") && existsSync(source.path))?.path ??
 			(cwd ? join(resolve(cwd), ".mcp.json") : join(this.agentDir, "mcp.json"));
-		const servers = [...merged.entries()].map(([name, { server, source }]) => ({
+		const servers = [...merged.entries()].map(([name, { server, source, disabled }]) => ({
 			name,
 			transport: transportOf(server),
 			...(typeof server.command === "string" ? { command: server.command } : {}),
 			...(typeof server.url === "string" ? { url: server.url } : {}),
-			disabled: server.disabled === true,
+			disabled,
 			scope: source.scope,
 			sourcePath: source.path,
 		}));
@@ -261,9 +319,13 @@ export class McpService implements McpServicePort {
 
 	/**
 	 * Toggle a server in the file that owns its definition (the highest-precedence source that
-	 * defines it with more than `disabled`). Never writes partial `{ disabled }` entries: in
-	 * pi's project `.pi/mcp.json` such a stub REPLACES the global definition and leaves a
+	 * defines it with more than an enabled-state). Never writes partial `{ disabled }`/`{ enabled }`
+	 * entries: in pi's project `.pi/mcp.json` such a stub REPLACES the global definition and leaves a
 	 * server without command/url. Stubs left by older builds are removed while toggling.
+	 *
+	 * The state is written in the dialect pi-mcp-adapter 5.x honours for the owning file: `enabled: false`
+	 * (removed to enable) in Pi's `mcp.json` pair, `disabled: true` elsewhere. Legacy `disabled` flags in
+	 * Pi files are normalized on the way.
 	 */
 	async setServerEnabled(name: string, enabled: boolean, cwd?: string): Promise<McpConfigSnapshot> {
 		const loaded = await this.readSources(cwd);
@@ -283,19 +345,28 @@ export class McpService implements McpServicePort {
 			delete item.servers[name];
 			touched.add(item);
 		}
-		const current = { ...(owner.servers[name] as RawServer) };
-		if (enabled) delete current.disabled;
-		else current.disabled = true;
-		owner.servers[name] = current;
+		const piFormat = (item: (typeof loaded)[number]) => item.source.piMcp !== undefined;
+		owner.servers[name] = withServerEnabled(owner.servers[name] as RawServer, enabled, piFormat(owner));
 		touched.add(owner);
-		// A lower-precedence definition that is still disabled would win the merge for `disabled`
-		// only when the owner omits the flag; make enabling explicit in that case.
-		if (
-			enabled &&
-			definers.some((item) => item !== owner && (item.servers[name] as RawServer)?.disabled === true)
-		)
-			current.disabled = false;
+		if (enabled) {
+			// A lower-precedence definition that is still disabled would otherwise keep the server off
+			// (adapter sources merge field by field; a Pi-format owner cannot express `disabled: false`).
+			// Clear the flag where it lives, on full definitions only.
+			for (const item of definers) {
+				if (item === owner || !Object.hasOwn(item.servers, name)) continue;
+				const raw = item.servers[name] as RawServer;
+				if (rawServerDisabled(raw, piFormat(item)) !== true) continue;
+				if (piFormat(owner)) {
+					item.servers[name] = withServerEnabled(raw, true, piFormat(item));
+					touched.add(item);
+				} else {
+					// Adapter-format owner: an explicit `disabled: false` wins the merge without touching others.
+					owner.servers[name] = { ...(owner.servers[name] as RawServer), disabled: false };
+				}
+			}
+		}
 		for (const item of touched) {
+			if (piFormat(item)) normalizeLegacyPiServers(item.servers);
 			const key =
 				item.value["mcp-servers"] !== undefined && item.value.mcpServers === undefined
 					? "mcp-servers"
@@ -306,6 +377,24 @@ export class McpService implements McpServicePort {
 		const projectScoped = [...touched].some((item) => item.source.scope === "project");
 		await this.onServerEnabled?.(projectScoped && cwd ? cwd : undefined);
 		return this.getConfig(cwd);
+	}
+
+	/**
+	 * One-shot startup migration of the user-level Pi config (`<agentDir>/mcp.json`): legacy
+	 * `disabled: true` entries written by older Drone builds / `/zotero-setup` are ignored by
+	 * pi-mcp-adapter 5.x (so "disabled" servers still started). Rewrites them as `enabled: false`.
+	 * Project files are never touched here. Returns true when the file was rewritten.
+	 */
+	async normalizeLegacyUserConfig(): Promise<boolean> {
+		const path = join(this.agentDir, "mcp.json");
+		const value = await readRaw(path);
+		const servers = serverMap(value);
+		if (!normalizeLegacyPiServers(servers)) return false;
+		const key =
+			value["mcp-servers"] !== undefined && value.mcpServers === undefined ? "mcp-servers" : "mcpServers";
+		value[key] = servers;
+		await this.writeRaw(path, value);
+		return true;
 	}
 
 	/**
@@ -322,13 +411,14 @@ export class McpService implements McpServicePort {
 		const servers = serverMap(value);
 		const existing = servers[preset.name];
 		if (existing && typeof existing === "object" && !Array.isArray(existing)) {
-			const { disabled: _disabled, ...rest } = existing as RawServer;
+			const { disabled: _disabled, enabled: _enabled, ...rest } = existing as RawServer;
 			servers[preset.name] = isDisableStub(existing)
 				? { command: preset.server.command, args: [...preset.server.args] }
 				: rest;
 		} else {
 			servers[preset.name] = { command: preset.server.command, args: [...preset.server.args] };
 		}
+		normalizeLegacyPiServers(servers);
 		value[key] = servers;
 		await this.writeRaw(path, value);
 		await this.onServerEnabled?.();

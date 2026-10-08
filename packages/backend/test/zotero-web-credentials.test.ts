@@ -49,7 +49,8 @@ describe("zotero web api credentials", () => {
 		expect(env).toMatchObject({
 			ZOTERO_API_KEY: KEY,
 			ZOTERO_LIBRARY_ID: "4242",
-			ZOTERO_LIBRARY_TYPE: "users",
+			// pyzotero / zotero-mcp spelling: "users" would build /userss/<id> in MCP children.
+			ZOTERO_LIBRARY_TYPE: "user",
 		});
 		if (process.platform !== "win32")
 			expect((await stat(join(dir, "zotero-web.json"))).mode & 0o777).toBe(0o600);
@@ -76,5 +77,33 @@ describe("zotero web api credentials", () => {
 		).rejects.toThrow(/environment/);
 		await applyStoredZoteroWebCredentials(env);
 		expect(env.ZOTERO_API_KEY).toBe("fromenvironment1234");
+	});
+
+	it("injects the singular group spelling and reads either spelling from a user-set env", async () => {
+		const env: NodeJS.ProcessEnv = {};
+		const groupFetch = (async () =>
+			new Response(
+				JSON.stringify({
+					userID: 4242,
+					username: "lab",
+					access: { groups: { "99": { library: true, write: true } } },
+				}),
+				{ status: 200 },
+			)) as unknown as typeof fetch;
+		const status = await saveZoteroWebCredentials(
+			{ apiKey: KEY, libraryType: "groups", libraryId: "99" },
+			{ env, fetchImpl: groupFetch },
+		);
+		expect(status).toMatchObject({ libraryType: "groups", libraryId: "99" });
+		expect(env.ZOTERO_LIBRARY_TYPE).toBe("group");
+		for (const spelling of ["group", "groups", "GROUP"]) {
+			expect(
+				await getZoteroWebApiStatus({
+					ZOTERO_API_KEY: "fromenvironment1234",
+					ZOTERO_LIBRARY_ID: "99",
+					ZOTERO_LIBRARY_TYPE: spelling,
+				}),
+			).toMatchObject({ source: "env", libraryType: "groups" });
+		}
 	});
 });

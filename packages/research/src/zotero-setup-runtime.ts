@@ -4,6 +4,7 @@ import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir as osHomedir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
+import { zoteroLibraryEnvValue } from "./zotero-library";
 import {
 	mergeZoteroMcpConfig,
 	readZoteroMcpConfig,
@@ -117,6 +118,8 @@ export async function registerZoteroMcp({
 	agentDirectory,
 	command,
 	enable = false,
+	// Same library the native Zotero tools use (Drone Settings → Zotero → Web API injects it), pyzotero spelling.
+	libraryType = zoteroLibraryEnvValue(process.env.ZOTERO_LIBRARY_TYPE),
 }: Record<string, any> = {}) {
 	const path = mcpPath(agentDirectory);
 	let value: Record<string, any> = {};
@@ -126,7 +129,7 @@ export async function registerZoteroMcp({
 			throw new Error(`${path} must contain an object`);
 		value = parsed;
 	}
-	value = mergeZoteroMcpConfig(value, command, { enable });
+	value = mergeZoteroMcpConfig(value, command, { enable, libraryType });
 	await mkdir(dirname(path), { recursive: true });
 	const tempPath = `${path}.${process.pid}.tmp`;
 	await writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
