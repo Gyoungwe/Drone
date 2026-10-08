@@ -759,7 +759,8 @@ export function createTaskWorkbench({
 	function stillCurrent(id, t) {
 		const cur = book.tasks.find((x) => x.id === id);
 		if (!cur) throw error("task-scope", "Task does not belong to this session/branch.");
-		if (cur !== t) throw error("stale-task-view", "Task was replaced while reconciling; call task_reconcile again.");
+		if (cur !== t)
+			throw error("stale-task-view", "Task was replaced while reconciling; call task_reconcile again.");
 	}
 	async function reconcile(cwd) {
 		const t = requireTask(),
