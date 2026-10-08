@@ -754,10 +754,16 @@ export function createTaskWorkbench({
 		save();
 		return clone(a);
 	}
+	// reconcile 是只读验收 + 就地合并：期间 set_status 等并行调用会抬高 book.revision，
+	// 这不应让对账失败。只需确认任务仍在册且是同一个对象，再把结果合并进最新状态。
+	function stillCurrent(id, t) {
+		const cur = book.tasks.find((x) => x.id === id);
+		if (!cur) throw error("task-scope", "Task does not belong to this session/branch.");
+		if (cur !== t) throw error("stale-task-view", "Task was replaced while reconciling; call task_reconcile again.");
+	}
 	async function reconcile(cwd) {
 		const t = requireTask(),
-			id = t.id,
-			revision = book.revision;
+			id = t.id;
 		const updates = [];
 		// 扩展登记的里程碑级验收（挂钩 2）：只读回身份，不写入，不代表科学结论
 		for (const m of t.milestones) {
@@ -771,7 +777,7 @@ export function createTaskWorkbench({
 			} catch (e) {
 				result = { state: "unknown", reason: clean(e?.message || "verifier-failed") };
 			}
-			checkRevision(id, revision);
+			stillCurrent(id, t);
 			// pending = 身份尚未绑定（如 DOI 待精读后确定），不是核对失败
 			m.state =
 				result.state === "found" && depsDone(t, m)
@@ -801,7 +807,7 @@ export function createTaskWorkbench({
 				updates.push({ id: m.id, error: e.code || "file-unavailable" });
 			}
 		}
-		checkRevision(id, revision);
+		stillCurrent(id, t);
 		for (const update of updates) {
 			const m = t.milestones.find((m) => m.id === update.id);
 			if (update.error) {
@@ -827,7 +833,7 @@ export function createTaskWorkbench({
 				op.checkedAt = now();
 			}
 		}
-		checkRevision(id, revision);
+		stillCurrent(id, t);
 		// 操作级审阅（挂钩 2）：工具结果产生的待审对象由登记它的验收器读回
 		for (const op of t.operations.filter((o) => o.state === "awaiting-review" && o.review?.id)) {
 			const verifier = verifierFor(op.review.kind);
@@ -838,7 +844,7 @@ export function createTaskWorkbench({
 			} catch {
 				result = null;
 			}
-			checkRevision(id, revision);
+			stillCurrent(id, t);
 			if (!result) continue;
 			op.checkedAt = now();
 			if (result.status === "applied" && !result.stale) {
