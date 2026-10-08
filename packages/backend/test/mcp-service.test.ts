@@ -373,7 +373,12 @@ describe("MCP presets", () => {
 			disabled: false,
 		});
 		const written = JSON.parse(await readFile(join(dir, "mcp.json"), "utf8"));
-		expect(written.mcpServers.playwright.args).toEqual(["-y", "@playwright/mcp@latest"]);
+		expect(written.mcpServers.playwright.args).toEqual([
+			"-y",
+			"@playwright/mcp@latest",
+			"--browser",
+			"chrome",
+		]);
 		written.mcpServers.playwright = { command: "my-playwright", disabled: true };
 		await writeFile(join(dir, "mcp.json"), JSON.stringify(written));
 		const again = await service.addPreset("playwright");

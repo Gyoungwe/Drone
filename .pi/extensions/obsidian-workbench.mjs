@@ -6360,7 +6360,7 @@ var LIMITS = Object.freeze({
   totalCalls: 192,
   /** 授权后模型中途收口时宿主自动接续的上限：每次都要求有新进展，防止空转。 */
   autoHandoffs: 16,
-  retries: 2,
+  retries: 3,
   fileBytes: 8 * 1024 * 1024
 });
 var clean = (value, max = 180) => String(value ?? "").replace(/(?:bearer\s+|(?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s,;]+/gi, "[redacted]").split("").map((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127 || "<>".includes(c) ? " " : c).join("").slice(0, max);
@@ -6959,8 +6959,14 @@ function createTaskWorkbench({
     save();
     return clone(a);
   }
+  function stillCurrent(id, t) {
+    const cur = book.tasks.find((x) => x.id === id);
+    if (!cur) throw error("task-scope", "Task does not belong to this session/branch.");
+    if (cur !== t)
+      throw error("stale-task-view", "Task was replaced while reconciling; call task_reconcile again.");
+  }
   async function reconcile(cwd) {
-    const t = requireTask(), id = t.id, revision = book.revision;
+    const t = requireTask(), id = t.id;
     const updates = [];
     for (const m of t.milestones) {
       const verifier = verifierFor(m.acceptance.kind);
@@ -6973,7 +6979,7 @@ function createTaskWorkbench({
       } catch (e) {
         result2 = { state: "unknown", reason: clean(e?.message || "verifier-failed") };
       }
-      checkRevision(id, revision);
+      stillCurrent(id, t);
       m.state = result2.state === "found" && depsDone(t, m) ? "completed" : result2.state === "pending" ? "pending" : "blocked";
       m.evidence = { ...result2, kind: verifier.evidenceKind, at: now() };
       if (result2.state === "found") {
@@ -6997,7 +7003,7 @@ function createTaskWorkbench({
         updates.push({ id: m.id, error: e.code || "file-unavailable" });
       }
     }
-    checkRevision(id, revision);
+    stillCurrent(id, t);
     for (const update of updates) {
       const m = t.milestones.find((m2) => m2.id === update.id);
       if (update.error) {
@@ -7023,7 +7029,7 @@ function createTaskWorkbench({
         op.checkedAt = now();
       }
     }
-    checkRevision(id, revision);
+    stillCurrent(id, t);
     for (const op of t.operations.filter((o) => o.state === "awaiting-review" && o.review?.id)) {
       const verifier = verifierFor(op.review.kind);
       if (!verifier?.resolve) continue;
@@ -7033,7 +7039,7 @@ function createTaskWorkbench({
       } catch {
         result2 = null;
       }
-      checkRevision(id, revision);
+      stillCurrent(id, t);
       if (!result2) continue;
       op.checkedAt = now();
       if (result2.status === "applied" && !result2.stale) {
@@ -7204,7 +7210,7 @@ function createTaskWorkbench({
     if (effect && t.operations.filter((o) => o.key === key && o.state === "failed").length >= LIMITS.retries)
       return {
         block: true,
-        reason: "no-progress: identical effect failed twice. Repair the input or deliver the checkpoint."
+        reason: "no-progress: identical effect failed three times. Repair the input or deliver the checkpoint."
       };
     if (t.operations.length >= LIMITS.operations && effect)
       return {
@@ -11085,7 +11091,7 @@ ${JSON.stringify(visible)}`
       activity: { text: "\u6B63\u5728\u9605\u8BFB Wiki \u4E0E\u77E5\u8BC6\u8BC1\u636E\u2026", phase: "reading" }
     },
     label: "Obsidian \xB7 \u9605\u8BFB Wiki / \u8BC1\u636E\u7247\u6BB5",
-    description: "Read a bounded Markdown range, version and human review from shared/current-project knowledge. Does not follow symlinks.",
+    description: "Read a bounded Markdown range, version and human review from shared/current-project knowledge. The first chunk also returns outgoing links and backlinks (related notes) so you can navigate without extra searches. Does not follow symlinks.",
     parameters: {
       type: "object",
       properties: {
@@ -11130,8 +11136,19 @@ ${JSON.stringify(visible)}`
           while (recovery.size > 8) recovery.delete(recovery.keys().next().value);
           saveRecovery();
         }
+        let links;
+        if (page.hash && !page.missing && (p.start_line ?? 1) === 1 && typeof c.service.request === "function") {
+          try {
+            const nl = await c.service.request("noteLinks", { path: page.path || p.path });
+            const slim = (xs) => (xs || []).filter((x) => x.exists !== false).slice(0, 12).map((x) => ({ path: x.path, title: x.title }));
+            links = { outgoing: slim(nl.outgoing), backlinks: slim(nl.incoming) };
+          } catch {
+            links = void 0;
+          }
+        }
         return result({
           ...page,
+          ...links ? { links } : {},
           ...page.hash && !page.missing ? {
             citation: `[[${page.path || p.path}]]`,
             citationGuidance: "Use this exact citation only beside claims supported by the returned text. Reuse this receipt; do not reread via generic read."
@@ -11215,7 +11232,10 @@ ${JSON.stringify(visible)}`
           ) : void 0
         });
         noteKnowledgeSearch(ctx, found, !!p.wiki_only);
-        return result(found);
+        const slimHits = Array.isArray(found?.hits) ? found.hits.map(
+          ({ rank: _r, fusionScore: _f, ...hit }) => typeof hit.text === "string" && hit.text.length > 700 ? { ...hit, text: hit.text.slice(0, 700), truncated: true } : hit
+        ) : found?.hits;
+        return result(slimHits ? { ...found, hits: slimHits } : found);
       } catch (error2) {
         updateKnowledgeFlow(ctx, { phase: "blocked", error: String(error2.message).slice(0, 400) });
         throw error2;

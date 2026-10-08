@@ -143,11 +143,11 @@ export const MCP_PRESETS: readonly McpPreset[] = [
 		name: "playwright",
 		label: { zh: "浏览器控制（Playwright MCP）", en: "Browser control (Playwright MCP)" },
 		description: {
-			zh: "让 Agent 打开一个独立的浏览器窗口去打开网页、点击、填表、截图和读取页面结构；首次使用会通过 npx 下载，需要 Node.js。它看不到你已经打开的 Chrome 标签页。",
-			en: "Lets the agent drive a separate browser window: open pages, click, fill forms, take screenshots and read page structure. First use downloads it via npx and needs Node.js. It cannot see the Chrome tabs you already have open.",
+			zh: "让 Agent 用你电脑上的 Chrome 打开一个独立窗口，打开网页、点击、填表、截图和读取页面结构；登录状态会保存在该浏览器配置里，下次无需重登。遇到 Cloudflare 等人机验证时，Agent 会停下来请你在窗口里手动完成，不会尝试绕过。首次使用会通过 npx 下载，需要 Node.js。它看不到你已经打开的 Chrome 标签页。",
+			en: "Lets the agent drive a separate window of your installed Chrome: open pages, click, fill forms, take screenshots and read page structure. Sign-ins are kept in that browser profile so you do not log in again. On Cloudflare or other human checks the agent stops and asks you to complete them in the window; it never tries to bypass them. First use downloads it via npx and needs Node.js. It cannot see the Chrome tabs you already have open.",
 		},
 		homepage: "https://github.com/microsoft/playwright-mcp",
-		server: { command: "npx", args: ["-y", "@playwright/mcp@latest"] },
+		server: { command: "npx", args: ["-y", "@playwright/mcp@latest", "--browser", "chrome"] },
 	},
 	{
 		id: "playwright-chrome",
