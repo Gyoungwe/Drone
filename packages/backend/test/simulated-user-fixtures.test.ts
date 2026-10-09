@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { alignmentPreview, layoutTree, parseNewick } from "@drone/shared";
 import { afterEach, describe, expect, it } from "vitest";
-import { LARGE_BIO_FILE_BYTES, largeBioFileReason } from "../src/tools/bio/extension";
+import { largeBioFileReason } from "../src/tools/bio/extension";
 
 const WORKSPACE_ROOT = resolve(__dirname, "../../..");
 const FIXTURES_DIR = join(WORKSPACE_ROOT, "test/fixtures/simulated-user");

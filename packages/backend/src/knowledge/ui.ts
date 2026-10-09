@@ -81,6 +81,9 @@ export interface KnowledgeUiServicePort {
 	getCloudStatus(): ReturnType<KnowledgeApi["getKnowledgeCloudStatus"]>;
 	probeCloud(): ReturnType<KnowledgeApi["probeKnowledgeCloud"]>;
 	initializeCloud(): ReturnType<KnowledgeApi["initializeKnowledgeCloud"]>;
+	setCloudPassword(
+		input: Parameters<KnowledgeApi["setKnowledgeCloudPassword"]>[0],
+	): ReturnType<KnowledgeApi["setKnowledgeCloudPassword"]>;
 	readCloudNote(
 		input: Parameters<KnowledgeApi["readKnowledgeCloudNote"]>[0],
 	): ReturnType<KnowledgeApi["readKnowledgeCloudNote"]>;
@@ -287,6 +290,11 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	initializeCloud(): ReturnType<KnowledgeApi["initializeKnowledgeCloud"]> {
 		return this.cloud.initialize();
+	}
+	setCloudPassword(
+		input: Parameters<KnowledgeApi["setKnowledgeCloudPassword"]>[0],
+	): ReturnType<KnowledgeApi["setKnowledgeCloudPassword"]> {
+		return this.cloud.setPassword(input.password);
 	}
 	readCloudNote(
 		input: Parameters<KnowledgeApi["readKnowledgeCloudNote"]>[0],

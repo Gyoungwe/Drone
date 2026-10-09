@@ -84,10 +84,11 @@ async function runStream(
 			...options,
 			signal,
 		});
-		await options.onResponse?.(
-			{ status: response.status, headers: Object.fromEntries(response.headers.entries()) },
-			model,
-		);
+		const responseHeaders: Record<string, string> = {};
+		response.headers.forEach((value, key) => {
+			responseHeaders[key] = value;
+		});
+		await options.onResponse?.({ status: response.status, headers: responseHeaders }, model);
 		if (!response.body)
 			throw new AntigravityError("Cloud Code Assist returned an empty stream", { kind: "protocol" });
 		stream.push({ type: "start", partial: message });

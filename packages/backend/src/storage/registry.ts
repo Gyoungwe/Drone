@@ -189,6 +189,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "secret",
 		})
 		.register({
+			id: "agent-knowledge-webdav",
+			path: `${agentDir}/knowledge-webdav.json`,
+			owner: "knowledge/webdav-credentials",
+			schema: 1,
+			sensitivity: "secret",
+		})
+		.register({
 			id: "agent-zotero-local",
 			path: `${agentDir}/zotero-local.json`,
 			owner: "zotero/local-write",

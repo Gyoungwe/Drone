@@ -13,7 +13,7 @@ describe("KnowledgeContract", () => {
 			"knowledge:authorizeZoteroLocalWrite",
 		);
 		expect(channelOf(KnowledgeContract, "probeCloud")).toBe("knowledge:probeCloud");
-		expect(Object.keys(KnowledgeContract.methods)).toHaveLength(42);
+		expect(Object.keys(KnowledgeContract.methods)).toHaveLength(43);
 	});
 
 	it("keeps optional reads optional while requiring object payloads for mutations", () => {
