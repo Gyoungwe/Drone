@@ -138,6 +138,8 @@ jobs:
     env:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      # electron-vite OOMs at the default heap on macos-latest while bundling the Pi 1.1.0 runtime.
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@v6
         with:
