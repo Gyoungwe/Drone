@@ -1,7 +1,7 @@
 // Reproducible isolated GUI validation. Does not touch the user Vault or restart Drone.
 
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import tailwind from "@tailwindcss/vite";
@@ -12,6 +12,7 @@ import { build } from "vite";
 
 const repo = resolve(import.meta.dirname, "..");
 const root = await realpath(await mkdtemp(join(tmpdir(), "drone-specialists-ui-")));
+await symlink(join(repo, "node_modules"), join(root, "node_modules"), "junction");
 console.log("Isolated fixture:", root);
 await writeFile(
 	join(root, "index.html"),
@@ -32,11 +33,22 @@ await writeFile(
 		"\n",
 	),
 );
+const typeboxRoot = join(repo, "node_modules/typebox/build");
 const alias = {
 	"@drone/shared": join(repo, "packages/shared/src/index.ts"),
-	typebox: join(repo, "node_modules/typebox/build/index.mjs"),
-	"typebox/value": join(repo, "node_modules/typebox/build/value/index.mjs"),
+	typebox: join(typeboxRoot, "index.mjs"),
+	"typebox/value": join(typeboxRoot, "value/index.mjs"),
 };
+const viteAlias = [
+	{ find: /^@drone\/shared$/, replacement: join(repo, "packages/shared/src/index.ts") },
+	{ find: /^typebox\/value$/, replacement: join(typeboxRoot, "value/index.mjs") },
+	{ find: /^typebox$/, replacement: join(typeboxRoot, "index.mjs") },
+	{ find: /^react$/, replacement: join(repo, "node_modules/react") },
+	{ find: /^react-dom$/, replacement: join(repo, "node_modules/react-dom") },
+	{ find: /^react-dom\/client$/, replacement: join(repo, "node_modules/react-dom/client.js") },
+	{ find: /^react\/jsx-runtime$/, replacement: join(repo, "node_modules/react/jsx-runtime.js") },
+	{ find: /^react\/jsx-dev-runtime$/, replacement: join(repo, "node_modules/react/jsx-dev-runtime.js") },
+];
 await bundle({
 	entryPoints: [join(repo, "scripts/knowledge-ui-smoke/main.mjs")],
 	outfile: join(root, "main.mjs"),
@@ -45,6 +57,17 @@ await bundle({
 	bundle: true,
 	packages: "external",
 	alias,
+	plugins: [
+		{
+			name: "knowledge-source-alias",
+			setup(build) {
+				build.onResolve({ filter: /^@drone\/knowledge(?:\/.*)?$/ }, (args) => {
+					const subpath = args.path.slice("@drone/knowledge".length).replace(/^\//, "") || "index";
+					return { path: join(repo, "packages/knowledge/src", `${subpath}.ts`) };
+				});
+			},
+		},
+	],
 });
 await bundle({
 	entryPoints: [join(root, "preload-entry.ts")],
@@ -60,13 +83,18 @@ await build({
 	configFile: false,
 	base: "./",
 	plugins: [react(), tailwind()],
-	resolve: { alias },
+	resolve: { alias: viteAlias, dedupe: ["react", "react-dom"] },
 	build: { target: "esnext", outDir: join(root, "dist"), emptyOutDir: true },
 	logLevel: "warn",
 });
 const _output = await new Promise((res, rej) => {
 	const child = spawn(electron, [join(root, "main.mjs")], {
-		env: { ...process.env, DRONE_UI_FIXTURE: root, DRONE_UI_REPO: repo },
+		env: {
+			...process.env,
+			DRONE_UI_FIXTURE: root,
+			DRONE_UI_REPO: repo,
+			NODE_PATH: join(repo, "node_modules"),
+		},
 		stdio: ["ignore", "pipe", "pipe"],
 	});
 	let text = "";

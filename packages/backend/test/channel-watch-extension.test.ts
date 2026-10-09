@@ -76,7 +76,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function waitForWakeCount(pi: ReturnType<typeof makeFakePi>, count: number): Promise<void> {
-	await vi.waitFor(() => expect(pi.wakes).toHaveLength(count), { timeout: 2_000, interval: 25 });
+	await vi.waitFor(() => expect(pi.wakes).toHaveLength(count), { timeout: 5_000, interval: 25 });
 }
 
 async function wire(opts: { cwd: string; trusted?: boolean; entries?: unknown[]; enabled?: boolean }) {

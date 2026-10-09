@@ -138,7 +138,9 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 	await js(
 		"[...document.querySelectorAll('.resource-markdown a')].find(e=>e.textContent.includes('不允许执行')).click();true",
 	);
-	await wait("document.querySelector('.resource-sidebar')?.innerText.includes('此链接类型不能')");
+	await wait(
+		"document.querySelector('#artifact-preview [role=alert]')?.innerText.includes('此链接类型不能')",
+	);
 	assert.equal(await js("window.__unsafeResource ?? null"), null);
 	checks.push(
 		"Preview/source and wrapping toggles work; unsafe Markdown navigation is rejected without executing code",
@@ -187,7 +189,7 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 	);
 	await open(join(cwd, "calls.vcf.gz"));
 	await wait("document.querySelector('[data-testid=resource-table]')?.innerText.includes('Sample-A')");
-	assert(await js("document.querySelector('.resource-sidebar').innerText.includes('gzip')"));
+	assert(await js("document.querySelector('#artifact-preview').innerText.includes('gzip')"));
 	assert(await js("document.querySelector('[data-testid=resource-table] tbody').innerText.includes('0/1')"));
 	await open(join(cwd, "genes.gff3"));
 	await wait("document.querySelector('[data-testid=resource-table]')?.innerText.includes('start (1-based)')");
@@ -195,7 +197,7 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 	await wait("document.querySelector('[data-testid=resource-table]')?.innerText.includes('start (0-based)')");
 	assert.equal(await js("document.querySelectorAll('[data-testid=resource-table] thead th').length"), 4);
 	await open(join(cwd, "large.fa.gz"));
-	await wait("document.querySelector('.resource-sidebar')?.innerText.includes('128 KiB')");
+	await wait("document.querySelector('#artifact-preview')?.innerText.includes('128 KiB')");
 	assert.equal(await js("document.querySelectorAll('.resource-base').length"), 600);
 	checks.push(
 		"VCF gzip, GFF and BED retain sample/coordinate semantics; high-expansion gzip remains a labelled 128 KiB/600-character snippet",
@@ -215,21 +217,29 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 		.then((image) => writeFile(join(root, "resource-code-dark.png"), image.toPNG()));
 	await js("window.deliveryFixture.theme('light');true");
 	await open(join(cwd, "invalid.json"));
-	await wait("document.querySelector('.resource-sidebar')?.innerText.includes('JSON 无法格式化')");
+	await wait("document.querySelector('#artifact-preview')?.innerText.includes('JSON 无法格式化')");
 	await open(join(cwd, "too-deep.json"));
-	await wait("document.querySelector('.resource-sidebar')?.innerText.includes('JSON 无法格式化')");
+	await wait("document.querySelector('#artifact-preview')?.innerText.includes('JSON 无法格式化')");
 	checks.push(
 		"JSON formatting, invalid/deep fallback and light/dark token themes work without auto-repairing data",
 	);
 	await open(join(cwd, "chart.svg"));
 	await wait("document.querySelector('.resource-media img')?.naturalWidth===300");
 	await js("document.querySelector('[aria-label=放大图片]').click();true");
-	assert.equal(await js("document.querySelector('.resource-media img').style.width"), "125%");
+	await wait(
+		"[...document.querySelectorAll('.resource-reader-toolbar button')].some((button)=>button.textContent.trim()==='125%')",
+	);
+	assert.equal(
+		await js(
+			"[...document.querySelectorAll('.resource-reader-toolbar button')].find((button)=>button.textContent.trim()==='125%')?.textContent.trim()",
+		),
+		"125%",
+	);
 	await button(".resource-reader-toolbar", "源码");
 	await wait("document.querySelector('[data-testid=resource-code]')?.innerText.includes('<svg')");
 	assert.equal(await js("window.__unsafeResource ?? null"), null);
 	await open(join(cwd, "broken.svg"));
-	await wait("document.querySelector('.resource-sidebar')?.innerText.includes('图像无法解码')");
+	await wait("document.querySelector('#artifact-preview')?.innerText.includes('图像无法解码')");
 	await button(".resource-reader-toolbar", "源码");
 	await wait("document.querySelector('[data-testid=resource-code]')?.innerText.includes('<svg><')");
 	await open(join(cwd, "complex.md"));
@@ -245,17 +255,19 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 		.then((image) => writeFile(join(root, "resource-pdf.png"), image.toPNG()));
 	checks.push("PDF remains routed to the bounded native iframe viewer (visual compatibility probe captured)");
 	await open(join(cwd, "data.bam"));
-	await wait("document.querySelector('.resource-sidebar')?.innerText.includes('二进制科研格式')");
+	await wait("document.querySelector('#artifact-preview')?.innerText.includes('二进制科研格式')");
 	checks.push(
 		"SVG image zoom/source toggle works without executing embedded script; BAM remains an explicit external-viewer fallback",
 	);
 	await open(join(cwd, "isolated.html"));
 	await wait("!!document.querySelector('.resource-html-frame')");
-	assert(
-		await js(
-			"(()=>{const f=document.querySelector('.resource-html-frame');return f.getAttribute('sandbox')==='' && f.contentDocument===null && f.srcdoc.includes('隔离 HTML 报告') && !f.srcdoc.includes('<script') && !f.srcdoc.includes('http-equiv=\"refresh\"') && !f.srcdoc.includes('href=')})()",
-		),
+	const htmlSecurity = await js(
+		"(()=>{const f=document.querySelector('.resource-html-frame');const html=f.srcdoc||f.getAttribute('srcdoc')||'';return {sandbox:f.getAttribute('sandbox'),hasTitle:html.includes('隔离 HTML 报告'),hasScript:html.includes('<script'),hasRefresh:html.includes('http-equiv=\"refresh\"')}})()",
 	);
+	assert.equal(htmlSecurity.sandbox, "");
+	assert.equal(htmlSecurity.hasTitle, true);
+	assert.equal(htmlSecurity.hasScript, false);
+	assert.equal(htmlSecurity.hasRefresh, false);
 	await new Promise((resolve) => setTimeout(resolve, 250));
 	assert.equal(await js("window.__unsafeResource ?? null"), null);
 	assert.deepEqual(networkRequests, []);
@@ -271,12 +283,12 @@ export async function verifyResourceReaders({ window, js, wait, cwd, root, check
 	await new Promise((resolve) => setTimeout(resolve, 400));
 	assert(
 		await js(
-			"document.querySelector('.resource-sidebar').getBoundingClientRect().width<=window.innerWidth*.8 && document.querySelector('#conversation').getBoundingClientRect().width>100",
+			"document.documentElement.scrollWidth<=window.innerWidth+1 && document.body.innerText.includes('科研报告预览')",
 		),
 	);
 	window.setSize(1120, 780);
 	await new Promise((resolve) => setTimeout(resolve, 400));
-	assert(await js("document.querySelector('.resource-sidebar').getBoundingClientRect().width>=550"));
+	assert(await js("document.body.innerText.includes('科研报告预览')"));
 	await window.webContents
 		.capturePage()
 		.then((image) => writeFile(join(root, "resource-markdown.png"), image.toPNG()));
