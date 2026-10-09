@@ -54,6 +54,15 @@
 			}
 		},
 		{
+			"includes": ["test/fixtures/**"],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			}
+		},
+		{
 			"includes": [".pi/extensions/*.mjs"],
 			"formatter": {
 				"enabled": false
