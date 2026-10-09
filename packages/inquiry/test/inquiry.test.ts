@@ -20,7 +20,6 @@ import {
 	workspaceLayout,
 } from "../src";
 
-
 // node:sqlite on Windows keeps the file lock until the creating process exits,
 // even after DatabaseSync.close(). Seed legacy files in a child so the parent
 // can reopen them without waiting out busy_timeout.
