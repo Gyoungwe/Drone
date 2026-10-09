@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>交互式科研分析报告 (Interactive Scientific Report)</title>
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --border: #e2e8f0;
+      --up-color: #ef4444;
+      --down-color: #10b981;
+      --ns-color: #94a3b8;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #0f172a;
+        --card-bg: #1e293b;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --primary: #3b82f6;
+        --border: #334155;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+    header {
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+    h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 6px; }
+    p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: var(--border); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { opacity: 0.9; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .badge-up { background: rgba(239, 68, 68, 0.15); color: var(--up-color); }
+    .badge-down { background: rgba(16, 185, 129, 0.15); color: var(--down-color); }
+    .badge-ns { background: rgba(148, 163, 184, 0.15); color: var(--ns-color); }
+    .plot-container {
+      position: relative;
+      width: 100%;
+      height: 480px;
+      overflow: hidden;
+      user-select: none;
+    }
+    svg.chart-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .tooltip {
+      position: absolute;
+      display: none;
+      background: rgba(15, 23, 42, 0.92);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      pointer-events: none;
+      z-index: 10;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .grid-axis { stroke: var(--border); stroke-dasharray: 3 3; }
+    .axis-line { stroke: var(--text-muted); stroke-width: 1.5; }
+    .axis-text { fill: var(--text-muted); font-size: 11px; }
+    .point {
+      cursor: pointer;
+      transition: r 0.15s ease, opacity 0.15s ease;
+    }
+    .point:hover { r: 7; opacity: 1; }
+    footer {
+      margin-top: 20px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>转录组差异表达火山图 (Volcano Plot)</h1>
+    <p class="subtitle">离线自包含测试夹具 · 适配 Drone TC-53 结果查看器与严格无网络 CSP (HTML_PREVIEW_CSP)</p>
+  </header>
+
+  <div class="card">
+    <div class="toolbar">
+      <button type="button" class="btn" id="btn-zoom-in" title="放大">🔍+ 放大</button>
+      <button type="button" class="btn" id="btn-zoom-out" title="缩小">🔍- 缩小</button>
+      <button type="button" class="btn" id="btn-reset" title="复位视角">↺ 重置视图</button>
+      <span style="border-left: 1px solid var(--border); height: 20px;"></span>
+      <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+        <input type="checkbox" id="chk-up" checked>
+        <span class="badge badge-up">显著上调 (Up)</span>
+      </label>
+      <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+        <input type="checkbox" id="chk-down" checked>
+        <span class="badge badge-down">显著下调 (Down)</span>
+      </label>
+      <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+        <input type="checkbox" id="chk-ns" checked>
+        <span class="badge badge-ns">无显著变化 (NS)</span>
+      </label>
+    </div>
+
+    <div class="plot-container" id="plot-box">
+      <svg class="chart-svg" id="svg-chart" viewBox="0 0 800 480" role="img" aria-label="差异表达散点图"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <footer>
+      <span>数据点总数: 120 基因 | 阈值: |log2FC| ≥ 1.0, -log10(P) ≥ 2.0</span>
+      <span>协议: drone-html:// (离线安全沙箱)</span>
+    </footer>
+  </div>
+
+  <script>
+    // 离线确定性模拟数据 (120 个基因)
+    const rawData = [];
+    const geneNames = [
+      "BRCA1", "TP53", "EGFR", "MYC", "VEGFA", "TNF", "IL6", "GAPDH", "ACTB", "CDK1",
+      "ESR1", "PTEN", "ERBB2", "MTOR", "CASP3", "HIF1A", "AKT1", "CCND1", "MAPK1", "STAT3",
+      "SOX2", "NANOG", "POU5F1", "KLF4", "JUN", "FOS", "ATM", "RB1", "CDKN1A", "CDKN2A"
+    ];
+
+    // 确定性随机数发生器 (PRNG) 保障每次加载渲染一致
+    let seed = 42;
+    function deterministicRand() {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    }
+
+    for (let i = 0; i < 120; i++) {
+      const name = i < geneNames.length ? geneNames[i] : `GENE_${1000 + i}`;
+      const lfc = (deterministicRand() * 8) - 4; // -4 到 4
+      const pvalNegLog = (deterministicRand() * 6) + (Math.abs(lfc) > 1.2 ? deterministicRand() * 4 : 0);
+      let cat = "ns";
+      if (pvalNegLog >= 2.0 && lfc >= 1.0) cat = "up";
+      else if (pvalNegLog >= 2.0 && lfc <= -1.0) cat = "down";
+      rawData.push({ name, lfc, pvalNegLog, cat });
+    }
+
+    const svg = document.getElementById("svg-chart");
+    const tooltip = document.getElementById("tooltip");
+    const plotBox = document.getElementById("plot-box");
+
+    let currentScale = 1.0;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    const margin = { top: 30, right: 40, bottom: 50, left: 60 };
+    const width = 800;
+    const height = 480;
+    const innerW = width - margin.left - margin.right;
+    const innerH = height - margin.top - margin.bottom;
+
+    function render() {
+      const showUp = document.getElementById("chk-up").checked;
+      const showDown = document.getElementById("chk-down").checked;
+      const showNs = document.getElementById("chk-ns").checked;
+
+      const minX = -4.5 * currentScale + offsetX;
+      const maxX = 4.5 * currentScale + offsetX;
+      const minY = 0;
+      const maxY = 10 * currentScale + offsetY;
+
+      function scaleX(val) {
+        return margin.left + ((val - minX) / (maxX - minX)) * innerW;
+      }
+      function scaleY(val) {
+        return height - margin.bottom - ((val - minY) / (maxY - minY)) * innerH;
+      }
+
+      let content = "";
+
+      // 坐标轴与网格
+      content += `<line class="axis-line" x1="${margin.left}" y1="${scaleY(0)}" x2="${width - margin.right}" y2="${scaleY(0)}"/>`;
+      content += `<line class="axis-line" x1="${scaleX(0)}" y1="${margin.top}" x2="${scaleX(0)}" y2="${height - margin.bottom}"/>`;
+
+      // 阈值参考线 (虚线)
+      content += `<line class="grid-axis" stroke="#ef4444" stroke-dasharray="4 4" x1="${scaleX(1.0)}" y1="${margin.top}" x2="${scaleX(1.0)}" y2="${height - margin.bottom}"/>`;
+      content += `<line class="grid-axis" stroke="#10b981" stroke-dasharray="4 4" x1="${scaleX(-1.0)}" y1="${margin.top}" x2="${scaleX(-1.0)}" y2="${height - margin.bottom}"/>`;
+      content += `<line class="grid-axis" stroke="#94a3b8" stroke-dasharray="4 4" x1="${margin.left}" y1="${scaleY(2.0)}" x2="${width - margin.right}" y2="${scaleY(2.0)}"/>`;
+
+      // 刻度标签
+      for (let xVal = -4; xVal <= 4; xVal += 2) {
+        const xPos = scaleX(xVal);
+        if (xPos >= margin.left && xPos <= width - margin.right) {
+          content += `<text class="axis-text" x="${xPos}" y="${height - margin.bottom + 20}" text-anchor="middle">${xVal}</text>`;
+        }
+      }
+      for (let yVal = 0; yVal <= 10; yVal += 2) {
+        const yPos = scaleY(yVal);
+        if (yPos >= margin.top && yPos <= height - margin.bottom) {
+          content += `<text class="axis-text" x="${margin.left - 12}" y="${yPos + 4}" text-anchor="end">${yVal}</text>`;
+        }
+      }
+
+      // 轴名
+      content += `<text class="axis-text" x="${margin.left + innerW / 2}" y="${height - 12}" text-anchor="middle" font-weight="600">log2 Fold Change</text>`;
+      content += `<text class="axis-text" transform="rotate(-90)" x="${-(margin.top + innerH / 2)}" y="20" text-anchor="middle" font-weight="600">-log10 (p-value)</text>`;
+
+      // 绘制散点
+      rawData.forEach((d, idx) => {
+        if (d.cat === "up" && !showUp) return;
+        if (d.cat === "down" && !showDown) return;
+        if (d.cat === "ns" && !showNs) return;
+
+        const cx = scaleX(d.lfc);
+        const cy = scaleY(d.pvalNegLog);
+        if (cx < margin.left || cx > width - margin.right || cy < margin.top || cy > height - margin.bottom) return;
+
+        let fill = "#94a3b8";
+        if (d.cat === "up") fill = "#ef4444";
+        if (d.cat === "down") fill = "#10b981";
+
+        content += `<circle class="point" data-idx="${idx}" cx="${cx}" cy="${cy}" r="4.5" fill="${fill}" opacity="0.82" />`;
+      });
+
+      svg.innerHTML = content;
+
+      // 绑定点悬浮事件
+      svg.querySelectorAll(".point").forEach(pt => {
+        pt.addEventListener("mouseenter", e => {
+          const idx = e.target.getAttribute("data-idx");
+          const d = rawData[idx];
+          tooltip.style.display = "block";
+          tooltip.innerHTML = `<strong>${d.name}</strong><br/>log2FC: ${d.lfc.toFixed(2)}<br/>-log10(P): ${d.pvalNegLog.toFixed(2)}<br/>分类: ${d.cat.toUpperCase()}`;
+          const boxRect = plotBox.getBoundingClientRect();
+          tooltip.style.left = `${e.clientX - boxRect.left + 14}px`;
+          tooltip.style.top = `${e.clientY - boxRect.top - 20}px`;
+        });
+        pt.addEventListener("mouseleave", () => {
+          tooltip.style.display = "none";
+        });
+      });
+    }
+
+    document.getElementById("btn-zoom-in").addEventListener("click", () => {
+      currentScale = Math.max(0.4, currentScale * 0.8);
+      render();
+    });
+    document.getElementById("btn-zoom-out").addEventListener("click", () => {
+      currentScale = Math.min(2.5, currentScale * 1.25);
+      render();
+    });
+    document.getElementById("btn-reset").addEventListener("click", () => {
+      currentScale = 1.0;
+      offsetX = 0;
+      offsetY = 0;
+      render();
+    });
+
+    document.getElementById("chk-up").addEventListener("change", render);
+    document.getElementById("chk-down").addEventListener("change", render);
+    document.getElementById("chk-ns").addEventListener("change", render);
+
+    render();
+  </script>
+</body>
+</html>

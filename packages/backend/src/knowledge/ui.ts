@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
+import { KnowledgeWebDavService } from "./webdav";
 
 type Handler = (event: KnowledgeUiEvent) => void;
 
@@ -77,6 +78,18 @@ export interface KnowledgeUiServicePort {
 	archiveTopic(
 		input: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>[0],
 	): ReturnType<KnowledgeApi["archiveKnowledgeTopic"]>;
+	getCloudStatus(): ReturnType<KnowledgeApi["getKnowledgeCloudStatus"]>;
+	probeCloud(): ReturnType<KnowledgeApi["probeKnowledgeCloud"]>;
+	initializeCloud(): ReturnType<KnowledgeApi["initializeKnowledgeCloud"]>;
+	readCloudNote(
+		input: Parameters<KnowledgeApi["readKnowledgeCloudNote"]>[0],
+	): ReturnType<KnowledgeApi["readKnowledgeCloudNote"]>;
+	writeCloudNote(
+		input: Parameters<KnowledgeApi["writeKnowledgeCloudNote"]>[0],
+	): ReturnType<KnowledgeApi["writeKnowledgeCloudNote"]>;
+	syncCloud(
+		input: Parameters<KnowledgeApi["syncKnowledgeCloud"]>[0],
+	): ReturnType<KnowledgeApi["syncKnowledgeCloud"]>;
 	dispose(): void;
 }
 /** Dynamic resource boundary works in source and electron-builder layouts. */
@@ -85,6 +98,7 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	private unsubscribe: (() => void) | null = null;
 	private disposed = false;
 	private loading: Promise<void> | null = null;
+	private readonly cloud = new KnowledgeWebDavService();
 	private root() {
 		return (
 			process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url))
@@ -264,6 +278,30 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>[0],
 	): ReturnType<KnowledgeApi["archiveKnowledgeTopic"]> {
 		return this.call("archiveKnowledgeTopic", input);
+	}
+	getCloudStatus(): ReturnType<KnowledgeApi["getKnowledgeCloudStatus"]> {
+		return this.cloud.getStatus();
+	}
+	probeCloud(): ReturnType<KnowledgeApi["probeKnowledgeCloud"]> {
+		return this.cloud.probe();
+	}
+	initializeCloud(): ReturnType<KnowledgeApi["initializeKnowledgeCloud"]> {
+		return this.cloud.initialize();
+	}
+	readCloudNote(
+		input: Parameters<KnowledgeApi["readKnowledgeCloudNote"]>[0],
+	): ReturnType<KnowledgeApi["readKnowledgeCloudNote"]> {
+		return this.cloud.read(input.path);
+	}
+	writeCloudNote(
+		input: Parameters<KnowledgeApi["writeKnowledgeCloudNote"]>[0],
+	): ReturnType<KnowledgeApi["writeKnowledgeCloudNote"]> {
+		return this.cloud.write(input);
+	}
+	syncCloud(
+		input: Parameters<KnowledgeApi["syncKnowledgeCloud"]>[0],
+	): ReturnType<KnowledgeApi["syncKnowledgeCloud"]> {
+		return this.cloud.sync(input);
 	}
 	dispose(): void {
 		this.disposed = true;

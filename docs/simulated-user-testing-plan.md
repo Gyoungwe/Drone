@@ -382,11 +382,13 @@ flowchart TD
   1. 给定一个具有开放获取权限的 DOI（如 PMC 文章）。
   2. Agent 调用 `research_archive_source` 归档来源文献。
   3. 验证系统通过合法 OA 路由（Unpaywall / Europe PMC）自动解析直链并下载 PDF 正文，杜绝模型随机伪造不可达链接（#36）。
-- **场景 TC-37：机构访问（Institutional Access）一次登录与持久会话**
+- **场景 TC-37：机构访问（Institutional Access）一次登录与持久会话【当前阻塞 / Blocked：缺少真实机构订阅凭据】**
+  > ⚠️ **阻塞声明**：本用例依赖真实高校或科研院所统一身份认证（SAML/Shibboleth/CAS/CARSI）与订阅权限，测试服务器（`10.126.126.4`）与本地测试环境无可用凭证，目前明确标记为**阻塞状态**（详见 [`docs/research-test-fixtures.md`](research-test-fixtures.md)）。
   1. 用户开启机构访问设置（支持 EZproxy / Shibboleth / CARSI / OpenAthens / WebVPN）（#38）。
   2. 触发一次机构认证：系统弹出受控的专用 Electron 登录窗口，用户完成统一身份认证（#38）。
   3. 验证登录成功的 Cookie 会话被加密持久化到安全配置中；在后续任务执行中，Agent 自动利用该合法持久凭证请求文献正文，不再重复弹窗打扰（#38）。
-- **场景 TC-38：Agent 驱动的机构访问弹窗与 EZproxy 模板自动提取**
+- **场景 TC-38：Agent 驱动的机构访问弹窗与 EZproxy 模板自动提取【当前阻塞 / Blocked：缺少真实机构订阅凭据】**
+  > ⚠️ **阻塞声明**：依赖真实商业数据库与高校 EZproxy 代理重定向链条，无合规外部代理凭证环境，目前明确标记为**阻塞状态**（详见 [`docs/research-test-fixtures.md`](research-test-fixtures.md)）。
   1. 当 Agent 在静默下载文献时遇到机构权限要求，Agent 主动发起机构访问请求（#39）。
   2. 登录窗口弹出并引导用户登录；用户登录完成后，系统自动分析登录跳转路径，自动提取并保存机构的 EZproxy 代理模板，无需用户手动编写正则表达式配置（#39）。
 - **场景 TC-39：文献证据链完整回执与来源审查**
@@ -662,7 +664,7 @@ flowchart TD
 | 优先级 | 实施阶段目标 | 覆盖用例范围 | 判定通过标准（DoD） |
 |---|---|---|---|
 | **P0<br>阻断级** | **系统底座、安全防御与核心交互冒烟** | TC-01（闪屏与启动）<br>TC-02（多会话）<br>TC-04（文字不被动画遮挡）<br>TC-08（项目信任前置）<br>TC-09（读写分离）<br>TC-10（命令拦截与自保护）<br>TC-13（一次授权续跑） | - 零白屏、零 Renderer 崩溃、无 `Maximum update depth exceeded`。<br>- 敏感文件篡改与危险命令拦截率 100%。<br>- 一次授权后多步副作用无额外弹窗打断。 |
-| **P1<br>学术核心** | **本地知识库、Zotero 闭环与学术严谨性** | TC-23（本地优先检索）<br>TC-24（出反链内联读取）<br>TC-25/26（星云网络图与节点卡片）<br>TC-32/33（Zotero 面板与本地写场景）<br>TC-36/37（OA 下载与机构访问持久化）<br>TC-40/41（学术回答与自我质疑） | - 知识读取首包必带 links/backlinks。<br>- 星云网络图节点点击仅选中展示卡片，不发生意外误跳。<br>- Zotero 本地写 10 场景全部通过并生成有效回执。<br>- 机构登录 Cookie 持久化，后续请求零打扰。 |
+| **P1<br>学术核心** | **本地知识库、Zotero 闭环与学术严谨性** | TC-23（本地优先检索）<br>TC-24（出反链内联读取）<br>TC-25/26（星云网络图与节点卡片）<br>TC-32/33（Zotero 面板与本地写场景）<br>TC-36（OA 合法下载）<br>TC-37/38（机构访问，*当前阻塞*）<br>TC-40/41（学术回答与自我质疑） | - 知识读取首包必带 links/backlinks。<br>- 星云网络图节点点击仅选中展示卡片，不发生意外误跳。<br>- Zotero 本地写 10 场景全部通过并生成有效回执。<br>- TC-37/38 因无机构凭证暂时阻塞，其余学术用例全部通过。 |
 | **P2<br>任务弹性** | **任务过程看板、3次失败熔断与并发容灾** | TC-14/15（示例任务与计划）<br>TC-16（并发 reconcile 防卡死）<br>TC-17（11阶段过程看板）<br>TC-18（路线图与思维导图）<br>TC-19（能力路由与技能限额）<br>TC-20（3次失败熔断与重定向）<br>TC-22（上下文蒸发） | - 任务看板 11 列卡片流转状态与阻塞标记准确。<br>- 并行更新不触发 `stale-task-view`。<br>- 同一错误特征第 3 次必熔断，修正后可恢复。<br>- 长会话（>20轮）上下文自动蒸发为 stub，维持响应低延迟。 |
 | **P3<br>深度专业** | **生信计算工具链、大文件保护与方法学落盘** | TC-42（审稿人卡）<br>TC-44（产物来源卡与重跑）<br>TC-45（决策撤销闭环）<br>TC-46（Methods 起草与确认）<br>TC-48（bio_db 检索带 MD5）<br>TC-49/50（执行位置与大文件拦截）<br>TC-52/53（进化树、MSA 与可标注图表） | - >4MiB 生信文件整读拦截率 100% 并提供预览命令。<br>- Methods 必须经用户弹窗确认后才原子写入。<br>- 决策撤销后下游产物拦截生效，重新确认后放行。<br>- 进化树、MSA 与 Plotly 交互正常，图表标注准确回传。 |
 | **P4<br>生态发版** | **浏览器智能体、局域网远控与多平台更新** | TC-05（语言一致性与 UTF-8）<br>TC-06（LAN 只读与远控二态）<br>TC-54/55（内置 MCP 适配器）<br>TC-56/57（Chrome 接管与 Cloudflare 人机交接）<br>TC-58/59（跨平台抹平与 Windows 退出）<br>TC-61/62（检查更新流与并行构建） | - 遇到 Cloudflare 挑战弹出双语交接卡片，人工完成后继续。<br>- 局域网观察端只读/远控权限物理隔离。<br>- 非 Windows 环境无 powershell 痕迹，Windows 终端无乱码。<br>- 安装包内置打包完整，关于页更新下载顺畅。 |
@@ -684,16 +686,17 @@ flowchart TD
    - 准备专用的测试 Chrome 用户目录，预置模拟 Cookie，供浏览器 MCP 开展接管与免密测试。
 
 ### 5.2 专用测试数据集与文件夹具（Fixtures Library）
-建议在仓库 `test/fixtures/simulated-user/` 下固化以下标准化夹具：
+当前已在仓库 `test/fixtures/simulated-user/` 落地标准化生信与科研夹具库，并由测试服务器（`10.126.126.4`）真实大文件勘查与动态脱敏生成器支持（完整校验清单与规范详见 [`docs/research-test-fixtures.md`](research-test-fixtures.md)）：
 
-| 夹具名称 | 目标文件与规格 | 适配测试场景 | 预期检验点 |
+| 夹具编号与分类 | 目标文件与规格 | 适配测试场景 | 状态与检验点 |
 |---|---|---|---|
 | **Fix-01：小数据科学分析** | `data.csv`（29 bytes，标准二维表）<br>`plot_fixed.py`（matplotlib 确定性绘图脚本） | TC-13（一次授权）<br>TC-44（来源卡） | 验证一次授权完成分析并生成无篡改的确定性图像与来源血缘。 |
-| **Fix-02：生信大文件保护** | `sample_oversized.bam`（5.2 MiB 截断 BAM 文件）<br>`sample_variant.vcf.gz`（4.5 MiB VCF 文件） | TC-50（大文件拦截） | 验证触发 `>4MiB` 规则，工具调用报错并给出预览命令行。 |
-| **Fix-03：系统发育树与比对** | `species_tree.nwk`（标准 Newick 格式树）<br>`alignment.aln`（标准 Clustal 格式多序列） | TC-52（生信查看器） | 验证查看器正确解析分支与着色，无 DOM 崩溃。 |
-| **Fix-04：交互式 HTML 报告** | `report_interactive.html`（内嵌 Plotly.js 离线图表） | TC-53（交互式图表） | 验证在沙箱内切换“运行交互内容”后图表可缩放，不越权加载外链。 |
+| **Fix-02：生信大文件保护** | 动态生成器 `scripts/generate-simulated-fixtures.mjs`<br>生成 `sample_oversized.bam`（4.50 MB）<br>`sample_oversized.vcf`（4.50 MB）<br>`sample_oversized.fastq`（4.50 MB） | TC-50（大文件拦截） | **【已就绪】**服务器真实 23GB/32GB BAM 归档登记，本地通过生成器动态合成 >4.5 MiB 文件验证阻断，杜绝敏感私有数据入库。 |
+| **Fix-03：系统发育树与比对** | `tree/species_tree.nwk`（64 B，4叶物种时间树）<br>`tree/tree_with_support.treefile`（1.1 KiB，19叶 Bootstrap 支持率树）<br>`alignment/alignment.aln`（46 KiB，19条 FASTA 比对）<br>`alignment/alignment.phy`（177 KiB，111物种 PHYLIP） | TC-52（生信查看器） | **【已就绪】**真实多序列比对与系统发育树，验证 `@drone/shared` 的 Newick/MSA 解析与布局鲁棒性。 |
+| **Fix-04：交互式 HTML 报告** | `reports/report_interactive.html`（11 KiB，自包含火山图） | TC-53（交互式图表） | **【已就绪】**基于真实 Nextflow 报告提炼的自包含离线报告，严格遵守 `connect-src 'none'` CSP，支持缩放/过滤。 |
 | **Fix-05：标准知识库 Vault 样本** | `vault_sample/`（包含 20 篇互有 `[[link]]` 的双向链接笔记、frontmatter 规范样本） | TC-23~26（知识图与检索） | 验证出反链解析、Louvain 聚类社区着色与镜像文件合并。 |
 | **Fix-06：Cloudflare 挑战样本** | `mock_cloudflare_challenge.html`（携带 `cf-mitigated` 响应头与 `challenge-platform` 特征文本） | TC-57（人机验证交接） | 验证系统正确识别拦截特征并弹出人机接管卡片。 |
+| **Fix-07：QIIME 2 来源与变异** | `reads/sample-metadata.tsv`<br>`reads/provenance.json`（3.0 KiB）<br>`variants/clean.vcf` / `variants.vcf` | TC-44（产物来源卡）<br>TC-50（变异格式） | **【已就绪】**开源规范元数据与来源血缘 DAG，用于重跑与变异结构解析。 |
 
 ---
 

@@ -76,7 +76,17 @@ const server = await createServer({
 		include: ["react", "react-dom/client", "react/jsx-runtime", "markstream-react", "zustand"],
 	},
 	resolve: {
-		alias: { react: join(repo, "node_modules/react"), "react-dom": join(repo, "node_modules/react-dom") },
+		// The fixture imports renderer modules by absolute path. Dedupe every
+		// React entry point so those modules and the fixture share one React
+		// singleton; otherwise hooks fail with "Invalid hook call".
+		alias: {
+			react: join(repo, "node_modules/react"),
+			"react/jsx-runtime": join(repo, "node_modules/react/jsx-runtime.js"),
+			"react/jsx-dev-runtime": join(repo, "node_modules/react/jsx-dev-runtime.js"),
+			"react-dom": join(repo, "node_modules/react-dom"),
+			"react-dom/client": join(repo, "node_modules/react-dom/client.js"),
+		},
+		dedupe: ["react", "react-dom"],
 	},
 });
 await server.listen();
@@ -119,10 +129,17 @@ app.whenReady().then(async()=>{
    assert(link.text.length<=41 && !link.text.includes('ec996d3ae6a33ca7'), 'short source title');
    assert.equal(link.title,await js('window.reportFixture.source'),'full path tooltip');
    assert.equal(decodeURIComponent(link.href.split('=')[1]),link.title,'exact target');
-   const inspector=lan?'[data-testid=lan-run-inspector]':'[data-testid=run-inspector]';
+   // Desktop moved run details into the Process panel; the inline inspector
+   // remains part of the LAN surface. Assert the current desktop footer rather
+   // than the removed DiffSidebar-era selector.
+   const inspector=lan?'[data-testid=lan-run-inspector]':'[data-testid=turn-footer]';
    await until('Boolean(document.querySelector('+JSON.stringify(inspector)+'))');
-   await js('document.querySelector('+JSON.stringify(inspector+' summary')+').click()');
-   assert(await js('document.querySelector('+JSON.stringify(inspector)+').open'),'inspector opens');
+   if(lan){
+    await js('document.querySelector('+JSON.stringify(inspector+' summary')+').click()');
+    assert(await js('document.querySelector('+JSON.stringify(inspector)+').open'),'inspector opens');
+   } else {
+    assert(await js('document.querySelector('+JSON.stringify(inspector)+').innerText.includes("worked")||document.querySelector('+JSON.stringify(inspector)+').querySelector("[role=timer]")!==null'),'desktop turn footer renders');
+   }
    await js('document.querySelector('+JSON.stringify(citation)+').click()');
    if(lan) await until('Boolean(document.querySelector(".citation-detail"))');
    else await until('window.reportFixture.opened()===window.reportFixture.source');
@@ -145,7 +162,7 @@ app.whenReady().then(async()=>{
     await until('scrollNode.scrollHeight-scrollNode.clientHeight-scrollNode.scrollTop<4');
    }
    writeFileSync(${JSON.stringify(root)}+'/'+(lan?'lan':'desktop')+'.png',(await win.webContents.capturePage()).toPNG());
-   results.push({surface:lan?'lan':'desktop',shortTitle:link.text,tooltip:link.title,completionFollows:true,userScrollPreserved:true,linkClick:true,inspector:true});
+   results.push({surface:lan?'lan':'desktop',shortTitle:link.text,tooltip:link.title,completionFollows:true,userScrollPreserved:true,linkClick:true,inspector:lan?'inline':'turn-footer'});
   }
   assert.equal(errors.length,0,errors.join('\\n'));
   writeFileSync(${JSON.stringify(join(root, "result.json"))},JSON.stringify({passed:true,results},null,2));

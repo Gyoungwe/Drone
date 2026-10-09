@@ -1,7 +1,7 @@
 // Isolated real-Electron component/IPC smoke. Never opens the user's Vault or model credentials.
 
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import tailwind from "@tailwindcss/vite";
@@ -13,6 +13,7 @@ import { build as viteBuild } from "vite";
 const repo = resolve("."),
 	root = await realpath(await mkdtemp(join(tmpdir(), "drone-task-delivery-smoke-")));
 await mkdir(join(root, "electron-profile"));
+await symlink(join(repo, "node_modules"), join(root, "node_modules"), "junction");
 console.log("Isolated fixture:", root);
 await writeFile(
 	join(root, "entry.tsx"),
@@ -59,23 +60,29 @@ await bundle({
 	bundle: true,
 	platform: "node",
 	format: "esm",
+	// The app IPC graph includes optional SSH native bindings. Keep only those
+	// bindings in Electron instead of asking esbuild to parse .node files.
 	plugins: [
 		{
 			name: "isolate-updater",
 			setup(build) {
 				build.onResolve({ filter: /\/updater$/ }, () => ({ path: "isolated-updater", namespace: "fixture" }));
-				build.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
+				build.onLoad({ filter: /^isolated-updater$/, namespace: "fixture" }, () => ({
 					contents:
 						"const unexpected=()=>{throw new Error('Updater must not run in delivery UI tests')}; export {unexpected as checkForUpdates, unexpected as downloadUpdate, unexpected as installUpdate};",
 					loader: "js",
 				}));
+				build.onResolve({ filter: /^ssh2$/ }, () => ({ path: "ssh2-fixture", namespace: "fixture" }));
+				build.onLoad({ filter: /.*/, namespace: "fixture" }, (args) =>
+					args.path === "ssh2-fixture" ? { contents: "export class Client {}", loader: "js" } : undefined,
+				);
 			},
 		},
 	],
 	banner: {
 		js: "import {createRequire as __fixtureCreateRequire} from 'node:module'; const require=__fixtureCreateRequire(import.meta.url);",
 	},
-	external: ["electron"],
+	external: ["electron", "ssh2", "cpu-features", "*.node"],
 	logLevel: "warning",
 });
 const env = {

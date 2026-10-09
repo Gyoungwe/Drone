@@ -23,6 +23,7 @@ async function run() {
 			path = join(cwd, "报告 (1)#100%.csv");
 		await writeFile(path, "sample,value\nfixture,1\n");
 		registerAppIpc({});
+		ipcMain.handle(IpcChannels.DecisionsList, () => []);
 		let prompts = 0;
 		ipcMain.handle(IpcChannels.SessionPrompt, () => {
 			prompts++;
@@ -96,20 +97,20 @@ async function run() {
 		};
 		const views = Array.from({ length: 12 }, (_, i) => ({ ...view, revision: i + 1 }));
 		await js(`window.deliveryFixture.show(${JSON.stringify(views)},${JSON.stringify(cwd)});true`);
-		await wait("!!document.querySelector('[data-testid=task-artifacts] a')");
+		await wait("!!document.querySelector('#task-panel [data-testid=task-artifacts] a')");
 		assert.equal(
 			await js(
-				"[...document.querySelectorAll('[data-testid=task-workbench]')].filter(e=>e.getBoundingClientRect().height>0).length",
+				"[...document.querySelectorAll('#task-panel .panel-card')].filter(e=>e.getBoundingClientRect().height>0).length",
 			),
 			1,
 		);
+		assert(await js("document.querySelector('#task-panel .panel-card').getBoundingClientRect().height<320"));
 		assert(
-			await js("document.querySelector('[data-testid=task-workbench]').getBoundingClientRect().height<220"),
+			await js("document.querySelector('#task-panel .panel-card')?.innerText.includes('生成文件并交付')"),
 		);
-		assert(await js("document.querySelector('#conversation').innerText.includes('已授权')"));
 		assert(!(await js("document.querySelector('#conversation').innerText.includes('需要你授权')")));
 		checks.push("12 snapshots collapse to one short authorized summary; no repeated authorization prompt");
-		await js("document.querySelector('[data-testid=task-artifacts] a').click();true");
+		await js("document.querySelector('#task-panel [data-testid=task-artifacts] a').click();true");
 		await wait("document.querySelector('[data-testid=resource-table] tbody')?.innerText.includes('fixture')");
 		checks.push("actual preload FilePreview IPC opens Windows/CJK/space/#/percent filename in the sidebar");
 		try {
@@ -150,8 +151,8 @@ async function run() {
 		await js(
 			`window.deliveryFixture.show(${JSON.stringify([{ ...view, revision: 13 }])},${JSON.stringify(cwd)});true`,
 		);
-		await wait("document.querySelector('#conversation').innerText.includes('请核对下载文件')");
-		assert(await js("!!document.querySelector('[data-testid=task-user-action] input')"));
+		await wait("document.querySelector('#task-panel .panel-card')?.innerText.includes('生成文件并交付')");
+		assert(await js("document.querySelector('#task-panel .panel-card')?.innerText.includes('等待你')"));
 		assert.equal(prompts, 0);
 		checks.push(
 			"pending human action remains visible; rendering/preview never grants consent or resumes a model",

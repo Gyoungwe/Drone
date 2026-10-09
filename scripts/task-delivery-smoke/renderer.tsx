@@ -1,8 +1,8 @@
 import { createRoot } from "react-dom/client";
 import { getPi } from "../../packages/desktop/src/renderer/src/api";
 import { MessageItem } from "../../packages/desktop/src/renderer/src/components/chat/MessageItem";
-import { TaskSidebar } from "../../packages/desktop/src/renderer/src/components/chat/TaskSidebar";
-import { DiffSidebar } from "../../packages/desktop/src/renderer/src/components/diff/DiffSidebar";
+import { ResourceSidebar } from "../../packages/desktop/src/renderer/src/components/diff/ResourceSidebar";
+import { TasksPane } from "../../packages/desktop/src/renderer/src/components/panel/TasksPane";
 import { useSessionsStore } from "../../packages/desktop/src/renderer/src/stores/sessions";
 import { useThemeStore } from "../../packages/desktop/src/renderer/src/stores/theme";
 import {
@@ -63,10 +63,12 @@ function Fixture() {
 			</main>
 			{resource && (
 				<section id="artifact-preview" style={{ display: "contents" }}>
-					<DiffSidebar />
+					<ResourceSidebar target={resource} />
 				</section>
 			)}
-			<TaskSidebar />
+			<section id="task-panel" style={{ width: 360, overflow: "auto" }}>
+				<TasksPane sessionId="fixture" />
+			</section>
 		</div>
 	);
 }

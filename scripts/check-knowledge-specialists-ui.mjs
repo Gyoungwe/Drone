@@ -32,7 +32,11 @@ await writeFile(
 		"\n",
 	),
 );
-const alias = { "@drone/shared": join(repo, "packages/shared/src/index.ts") };
+const alias = {
+	"@drone/shared": join(repo, "packages/shared/src/index.ts"),
+	typebox: join(repo, "node_modules/typebox/build/index.mjs"),
+	"typebox/value": join(repo, "node_modules/typebox/build/value/index.mjs"),
+};
 await bundle({
 	entryPoints: [join(repo, "scripts/knowledge-ui-smoke/main.mjs")],
 	outfile: join(root, "main.mjs"),

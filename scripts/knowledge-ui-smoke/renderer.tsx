@@ -11,6 +11,7 @@ import { KnowledgeUiRoot } from "../../packages/desktop/src/renderer/src/compone
 import { KnowledgeView } from "../../packages/desktop/src/renderer/src/components/knowledge/KnowledgeView";
 import { TasksPane } from "../../packages/desktop/src/renderer/src/components/panel/TasksPane";
 import { SkillsPanel } from "../../packages/desktop/src/renderer/src/components/settings/SkillsPanel";
+import { WorkflowOverviewPanel } from "../../packages/desktop/src/renderer/src/components/settings/WorkflowOverview";
 import { useSessionsStore } from "../../packages/desktop/src/renderer/src/stores/sessions";
 import { useSettingsStore } from "../../packages/desktop/src/renderer/src/stores/settings";
 import { useTranscriptStore } from "../../packages/desktop/src/renderer/src/stores/transcript";
@@ -217,6 +218,7 @@ createRoot(rootEl).render(
 			<KnowledgeFixturePanel />
 		</div>
 		<div className="mt-4 rounded-2xl border border-border bg-surface p-4" data-testid="tools-skills-fixture">
+			<WorkflowOverviewPanel />
 			<SkillsPanel />
 		</div>
 		<div className="mt-4" data-testid="run-inspector-fixture">

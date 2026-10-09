@@ -96,6 +96,8 @@ async function run() {
 		backend.cancelKnowledgeModelReview = async () => {};
 		app.dock?.hide();
 		registerKnowledgeIpc(backend);
+		ipcMain.handle(IpcChannels.UiStateSave, () => {});
+		ipcMain.handle("decisions:list", () => []);
 		ipcMain.handle(IpcChannels.ProjectPickDirectory, () => join(root, "New Vault"));
 		let usageReads = 0;
 		ipcMain.handle(IpcChannels.SessionStats, () => {
@@ -199,16 +201,22 @@ async function run() {
 			"four specialist roles, explicit model-cost and permission information; real IPC mode change persists without calling a model",
 		);
 		await capture("06-specialist-settings");
-		// SkillsPanel now opens on the six-direction browse view. Reach the
-		// capability details through its real Advanced control before inspecting
-		// the footprint and registered tools, just as a user does.
+		// WorkflowOverview is a separate settings panel; SkillsPanel keeps its
+		// registry details behind a native details disclosure.
 		const skillsScope = "document.querySelector('[data-testid=tools-skills-fixture]')";
 		await wait(
 			`${skillsScope}.querySelectorAll('[data-testid=workflow-overview] [data-workflow-direction]').length===6`,
 			"six workflow directions before advanced tools",
 		);
-		assert(await js(`!${skillsScope}.querySelector('[data-testid=tools-skills-overview]')`));
-		await click("高级：全部原始技能（2）", skillsScope);
+		// 原生 details 的子节点始终存在，必须验证折叠状态并实际点击 summary。
+		assert(
+			await js(
+				`${skillsScope}.querySelector('[data-testid=tools-skills-overview]').closest('details:not([open])') !== null`,
+			),
+		);
+		await js(
+			`${skillsScope}.querySelector('[data-testid=tools-skills-overview]').closest('details').querySelector('summary').click()`,
+		);
 		await wait(
 			`${skillsScope}.querySelector('[data-testid=tools-skills-overview]')`,
 			"Tools & Skills capability overview",
@@ -222,9 +230,9 @@ async function run() {
 			),
 		);
 		for (const [tool, mode] of [
-			["ask_user", "Always-on"],
-			["research_search_knowledge", "Loaded"],
-			["bash", "Lazy"],
+			["ask_user", "常驻"],
+			["research_search_knowledge", "已加载"],
+			["bash", "按需"],
 		]) {
 			assert(
 				await js(
@@ -234,13 +242,11 @@ async function run() {
 			);
 		}
 		checks.push(
-			"six-direction browse view opens Advanced tools; active/lazy/always-on registry metadata and measured schema footprint remain visible",
+			"six-direction workflow overview plus the SkillsPanel registry disclosure show active/lazy/always-on metadata and measured schema footprint",
 		);
 		await capture("07-tools-skills");
-		await click("返回六方向浏览", skillsScope);
-		await wait(
-			`!${skillsScope}.querySelector('[data-testid=tools-skills-overview]')&&${skillsScope}.querySelectorAll('[data-workflow-direction]').length===6`,
-			"return to compact six-direction browse view",
+		await js(
+			`(()=>{const root=${skillsScope};const details=[...root.querySelectorAll('details')].find((node)=>node.querySelector('[data-testid=tools-skills-overview]'));if(details)details.open=false;return true;})()`,
 		);
 		await wait("document.querySelector('[data-testid=run-inspector]')", "Run Inspector");
 		await js("document.querySelector('[data-testid=run-inspector]').open=true");
@@ -651,7 +657,8 @@ async function run() {
 		});
 		await wait("window.sidebarFixture.state().view==='projects'", "Enter opens projects view");
 		await js("window.sidebarFixture.reset();true");
-		const settingsButton = (await actionGeometry())[5];
+		const settingsButton = (await actionGeometry()).find((row) => row.label === "设置");
+		assert(settingsButton, "settings row is present");
 		await window.webContents.debugger.sendCommand("Input.dispatchMouseEvent", {
 			type: "mousePressed",
 			x: Math.floor(settingsButton.x + settingsButton.width - 4),

@@ -23,6 +23,12 @@ import { useTranscriptStore } from "../../packages/desktop/src/renderer/src/stor
 import { useUiStore } from "../../packages/desktop/src/renderer/src/stores/ui";
 
 const SESSION_ID = "s1";
+window.addEventListener("error", (event) => {
+	console.error(`fixture window error: ${event.error?.stack ?? event.message}`);
+});
+window.addEventListener("unhandledrejection", (event) => {
+	console.error(`fixture unhandled rejection: ${String(event.reason?.stack ?? event.reason)}`);
+});
 const SESSION: SessionMeta = {
 	sessionId: SESSION_ID,
 	sessionFile: "/fixture/.pi/agent/sessions/s1.jsonl",
@@ -200,6 +206,11 @@ const api = {
 	openResourceExternal: async () => {},
 	getContextUsage: async () => null,
 	getTodos: async () => [],
+	// TasksPane may briefly mount while the context panel switches tabs; keep its
+	// project-decision query an empty list instead of the Proxy's null fallback.
+	list: async () => [],
+	confirm: async () => null,
+	revoke: async () => null,
 };
 // 其余 window.pi 方法：查询类返回空，订阅类返回退订函数——面板树里其它面板挂载时不会因缺方法崩溃
 (window as unknown as { pi: unknown }).pi = new Proxy(api, {

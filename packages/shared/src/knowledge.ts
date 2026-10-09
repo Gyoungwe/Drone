@@ -184,6 +184,63 @@ export interface KnowledgeOverview {
 	error?: string | null;
 	flow: KnowledgeFlow | null;
 }
+
+export type KnowledgeCloudMode =
+	| "disabled"
+	| "unchecked"
+	| "offline"
+	| "unauthorized"
+	| "read-only"
+	| "ready"
+	| "error";
+
+/** Cloud status is a transport projection; it never contains credentials or note content. */
+export interface KnowledgeCloudStatus {
+	configured: boolean;
+	endpoint: string;
+	folder: string;
+	mode: KnowledgeCloudMode;
+	reachable: boolean;
+	authenticated: boolean;
+	initialized: boolean;
+	writable: boolean | null;
+	lastCheckedAt: string | null;
+	message: string | null;
+	warnings: string[];
+}
+
+export interface KnowledgeCloudNote {
+	path: string;
+	text: string;
+	hash: string;
+	/** 仅强 ETag 可用于条件写入；缺省时只读。 */
+	version: string | null;
+	bytes: number;
+	lastModified: string | null;
+}
+
+export interface KnowledgeCloudWriteResult {
+	path: string;
+	status: "created" | "updated" | "conflict" | "offline" | "forbidden" | "unknown";
+	version: string | null;
+	hash: string;
+	message: string | null;
+}
+
+export interface KnowledgeCloudSyncItem {
+	path: string;
+	status: "unchanged" | "pulled" | "pushed" | "conflict" | "skipped" | "failed";
+	localHash: string | null;
+	remoteVersion: string | null;
+	message: string | null;
+}
+
+export interface KnowledgeCloudSyncResult {
+	mode: "pull" | "push";
+	completed: boolean;
+	items: KnowledgeCloudSyncItem[];
+	warnings: string[];
+}
 export type ResearchRunRouteState = "pending" | "active" | "complete" | "blocked";
 export interface ResearchRunRouteNode {
 	key: string;
@@ -517,6 +574,21 @@ export interface KnowledgeSearchResult {
 	warning: string | null;
 }
 export interface KnowledgeApi {
+	getKnowledgeCloudStatus(): Promise<KnowledgeCloudStatus>;
+	probeKnowledgeCloud(): Promise<KnowledgeCloudStatus>;
+	initializeKnowledgeCloud(): Promise<KnowledgeCloudStatus>;
+	readKnowledgeCloudNote(input: { path: string }): Promise<KnowledgeCloudNote>;
+	writeKnowledgeCloudNote(input: {
+		path: string;
+		text: string;
+		expectedVersion?: string;
+	}): Promise<KnowledgeCloudWriteResult>;
+	syncKnowledgeCloud(input: {
+		cwd?: string | null;
+		mode: "pull" | "push";
+		bindingRevision: number;
+		paths: string[];
+	}): Promise<KnowledgeCloudSyncResult>;
 	searchKnowledge(input: KnowledgeSearchRequest): Promise<KnowledgeSearchResult>;
 	getKnowledgeNoteLinks(input: { path: string; revision: number }): Promise<KnowledgeNoteLinks>;
 	getKnowledgeGraph(input: {

@@ -92,6 +92,12 @@ export interface ImportedAttachment {
 
 /** IPC 通道名常量 */
 export const IpcChannels = {
+	KnowledgeCloudStatus: "knowledge:cloudStatus",
+	KnowledgeCloudProbe: "knowledge:cloudProbe",
+	KnowledgeCloudInitialize: "knowledge:cloudInitialize",
+	KnowledgeCloudReadNote: "knowledge:cloudReadNote",
+	KnowledgeCloudWriteNote: "knowledge:cloudWriteNote",
+	KnowledgeCloudSync: "knowledge:cloudSync",
 	KnowledgeOverview: "knowledge:overview",
 	KnowledgeResearchRuns: "knowledge:researchRuns",
 	KnowledgeResearchRun: "knowledge:researchRun",

@@ -2,6 +2,10 @@ import { Type } from "typebox";
 import type {
 	DailyDiscoveryState,
 	KnowledgeApi,
+	KnowledgeCloudNote,
+	KnowledgeCloudStatus,
+	KnowledgeCloudSyncResult,
+	KnowledgeCloudWriteResult,
 	KnowledgeGraph,
 	KnowledgeNote,
 	KnowledgeNoteLinks,
@@ -85,6 +89,51 @@ const ZoteroStatusSchema = Type.Object(
 /** Host API contract for knowledge management, reviews, semantic indexing and Zotero status. */
 export const KnowledgeContract = defineDomain("knowledge", {
 	methods: {
+		getCloudStatus: {
+			args: Type.Tuple([]),
+			result: ResultObject<KnowledgeCloudStatus>(),
+		},
+		probeCloud: {
+			args: Type.Tuple([]),
+			result: ResultObject<KnowledgeCloudStatus>(),
+		},
+		initializeCloud: {
+			args: Type.Tuple([]),
+			result: ResultObject<KnowledgeCloudStatus>(),
+		},
+		readCloudNote: {
+			args: Type.Tuple([
+				Type.Object({ path: Type.String({ minLength: 1 }) }, { additionalProperties: false }),
+			]),
+			result: ResultObject<KnowledgeCloudNote>(),
+		},
+		writeCloudNote: {
+			args: Type.Tuple([
+				Type.Object(
+					{
+						path: Type.String({ minLength: 1 }),
+						text: Type.String({ maxLength: 1024 * 1024 }),
+						expectedVersion: Type.Optional(Type.String({ minLength: 1 })),
+					},
+					{ additionalProperties: false },
+				),
+			]),
+			result: ResultObject<KnowledgeCloudWriteResult>(),
+		},
+		syncCloud: {
+			args: Type.Tuple([
+				Type.Object(
+					{
+						cwd: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+						mode: Type.Union([Type.Literal("pull"), Type.Literal("push")]),
+						bindingRevision: Type.Integer({ minimum: 1 }),
+						paths: Type.Array(Type.String({ minLength: 1 }), { minItems: 1, maxItems: 64 }),
+					},
+					{ additionalProperties: false },
+				),
+			]),
+			result: ResultObject<KnowledgeCloudSyncResult>(),
+		},
 		setSpecialistSettings: {
 			args: Type.Tuple([SpecialistSettingsInput]),
 			result: ResultObject<KnowledgeSpecialistSettings>(),
@@ -256,6 +305,12 @@ export const KnowledgeContract = defineDomain("knowledge", {
 });
 
 export type KnowledgeSchemaTypes = {
+	getCloudStatus: [];
+	probeCloud: [];
+	initializeCloud: [];
+	readCloudNote: Parameters<KnowledgeApi["readKnowledgeCloudNote"]>;
+	writeCloudNote: Parameters<KnowledgeApi["writeKnowledgeCloudNote"]>;
+	syncCloud: Parameters<KnowledgeApi["syncKnowledgeCloud"]>;
 	setSpecialistSettings: Parameters<KnowledgeApi["setKnowledgeSpecialistSettings"]>;
 	getOverview: Parameters<KnowledgeApi["getKnowledgeOverview"]>;
 	getResearchRuns: Parameters<KnowledgeApi["getResearchRuns"]>;

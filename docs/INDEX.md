@@ -26,11 +26,15 @@
 
 云端知识库、科研化产品语言与知识库自动维护的升级方案：见 [knowledge-cloud-research-upgrade.md](knowledge-cloud-research-upgrade.md)。
 
+WebDAV 云端知识库第一阶段实现、读写边界、同步/冲突和离线提示：见 [knowledge-webdav.md](knowledge-webdav.md)。
+
 Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭代记录](superpowers/reports/2026-10-04-drone-five-round-iteration.md) 与 [状态链修复设计](superpowers/specs/2026-10-04-drone-state-chain-fixes-design.md)。
 
 任务路由过程看板的列式草图与边界：见 [任务路由过程看板设计](superpowers/specs/task-route-process-board-design.md)、`ui-preview/task-route-process-board.html` 和 `scripts/check-task-route-process-board-sketch.mjs`。
 
 全量历史 PR 模拟用户测试分类与执行规约：见 [simulated-user-testing-plan.md](simulated-user-testing-plan.md)（覆盖 PR #1–#97，九大用户任务分类、63 个核心用例矩阵与下一阶段实施优先级）。
+
+科研模拟测试脱敏夹具与大文件规范：见 [research-test-fixtures.md](research-test-fixtures.md)（服务器真实大文件勘查登记、脱敏样本 SHA-256 校验清单、动态大文件合成器与机构登录用例阻塞标记）。
 
 Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx electron-vite dev --remote-debugging-port=9224`；根目录 `npm run dev -- --remote-debugging-port=9224` 的参数不会穿过嵌套的 workspace 脚本。首次启动前运行根目录的 `npm run build:lan-web -w packages/desktop`。验证 `http://127.0.0.1:9224/json` 返回页面列表后再运行 CDP 冒烟脚本；普通开发仍用根目录 `npm run dev`。
 
