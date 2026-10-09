@@ -1,7 +1,7 @@
+import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import {
 	type ArtifactRecord,
@@ -19,6 +19,28 @@ import {
 	type WorkspaceRun,
 	workspaceLayout,
 } from "../src";
+
+
+// node:sqlite on Windows keeps the file lock until the creating process exits,
+// even after DatabaseSync.close(). Seed legacy files in a child so the parent
+// can reopen them without waiting out busy_timeout.
+function seedSqlite(path: string, sql: string): void {
+	const result = spawnSync(
+		process.execPath,
+		[
+			"--input-type=module",
+			"-e",
+			`import { DatabaseSync } from "node:sqlite";
+import { readFileSync } from "node:fs";
+const db = new DatabaseSync(process.argv[1]);
+db.exec(readFileSync(0, "utf8"));
+db.close();`,
+			path,
+		],
+		{ input: sql, encoding: "utf8" },
+	);
+	if (result.status !== 0) throw new Error(result.stderr || result.stdout || "sqlite seed failed");
+}
 
 const digest = "a".repeat(64);
 const artifact = (overrides: Partial<ArtifactRecord> = {}): ArtifactRecord => ({
@@ -298,28 +320,17 @@ describe("inquiry ledger records", () => {
 			);
 
 			const sqlitePath = join(root, "legacy.sqlite");
-			const db = new DatabaseSync(sqlitePath);
-			db.exec(
-				"CREATE TABLE inquiry_meta (project_id TEXT PRIMARY KEY, schema_version INTEGER, revision INTEGER, updated_at TEXT);" +
-					"CREATE TABLE artifacts (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);" +
-					"CREATE TABLE findings (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);" +
-					"CREATE TABLE questions (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);" +
-					"CREATE TABLE attempts (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);",
+			seedSqlite(
+				sqlitePath,
+				`CREATE TABLE inquiry_meta (project_id TEXT PRIMARY KEY, schema_version INTEGER, revision INTEGER, updated_at TEXT);
+CREATE TABLE artifacts (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);
+CREATE TABLE findings (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);
+CREATE TABLE questions (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);
+CREATE TABLE attempts (id TEXT PRIMARY KEY, project_id TEXT, payload TEXT, updated_at TEXT);
+INSERT INTO inquiry_meta VALUES ('project-1', 1, 1, '${legacyAttempt.startedAt}');
+INSERT INTO artifacts VALUES ('legacy', 'project-1', '${JSON.stringify(legacyArtifact).replaceAll("'", "''")}', '${legacyAttempt.startedAt}');
+INSERT INTO attempts VALUES ('legacy-attempt', 'project-1', '${JSON.stringify(legacyAttempt).replaceAll("'", "''")}', '${legacyAttempt.startedAt}');`,
 			);
-			db.prepare("INSERT INTO inquiry_meta VALUES (?, 1, 1, ?)").run("project-1", legacyAttempt.startedAt);
-			db.prepare("INSERT INTO artifacts VALUES (?, ?, ?, ?)").run(
-				"legacy",
-				"project-1",
-				JSON.stringify(legacyArtifact),
-				legacyAttempt.startedAt,
-			);
-			db.prepare("INSERT INTO attempts VALUES (?, ?, ?, ?)").run(
-				"legacy-attempt",
-				"project-1",
-				JSON.stringify(legacyAttempt),
-				legacyAttempt.startedAt,
-			);
-			db.close();
 			const sqlite = new SqliteInquiryStorage("project-1", sqlitePath);
 			expect(
 				(await new InquiryService(sqlite).artifactProvenance("legacy"))?.sourceSessionId,
@@ -495,20 +506,16 @@ describe("inquiry ledger records", () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-inquiry-legacy-sqlite-"));
 		try {
 			const path = join(root, "ledger.sqlite");
-			const { DatabaseSync } = await import("node:sqlite");
-			const database = new DatabaseSync(path);
-			database.exec(`
-				CREATE TABLE inquiry_meta (project_id TEXT PRIMARY KEY NOT NULL, schema_version INTEGER NOT NULL CHECK (schema_version = 1), revision INTEGER NOT NULL, updated_at TEXT NOT NULL);
-				INSERT INTO inquiry_meta VALUES ('project-1', 1, 0, '2026-01-01T00:00:00.000Z');
-				CREATE TABLE artifacts (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
-				CREATE TABLE findings (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
-				CREATE TABLE questions (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
-				CREATE TABLE attempts (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
-			`);
-			database
-				.prepare("INSERT INTO artifacts VALUES (?, ?, ?, ?)")
-				.run("artifact-1", "project-1", JSON.stringify(artifact()), "2026-01-01T00:00:00.000Z");
-			database.close();
+			seedSqlite(
+				path,
+				`CREATE TABLE inquiry_meta (project_id TEXT PRIMARY KEY NOT NULL, schema_version INTEGER NOT NULL CHECK (schema_version = 1), revision INTEGER NOT NULL, updated_at TEXT NOT NULL);
+INSERT INTO inquiry_meta VALUES ('project-1', 1, 0, '2026-01-01T00:00:00.000Z');
+CREATE TABLE artifacts (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE findings (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE questions (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE attempts (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
+INSERT INTO artifacts VALUES ('artifact-1', 'project-1', '${JSON.stringify(artifact()).replaceAll("'", "''")}', '2026-01-01T00:00:00.000Z');`,
+			);
 			const storage = new SqliteInquiryStorage("project-1", path);
 			expect((await storage.snapshot()).schemaVersion).toBe(2);
 			expect((await storage.artifacts.get("artifact-1"))?.schemaVersion).toBe(1);
