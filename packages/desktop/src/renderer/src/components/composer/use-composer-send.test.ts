@@ -61,7 +61,7 @@ it("omits the optional image argument when sending plain text", async () => {
 it("a fast SDK run cannot be restarted by a late prompt acknowledgement", async () => {
 	pi.prompt.mockImplementation(async () => {
 		useTranscriptStore.getState().applyEvent("s", { type: "agent_start" });
-		useTranscriptStore.getState().applyEvent("s", { type: "agent_settled" });
+		useTranscriptStore.getState().applyEvent("s", { type: "agent_settled", aborted: false });
 		return { kind: "agent" };
 	});
 	await composer().handleSend();
@@ -69,7 +69,7 @@ it("a fast SDK run cannot be restarted by a late prompt acknowledgement", async 
 });
 it("a queued-send failure cannot resurrect an already settled run", async () => {
 	pi.prompt.mockImplementation(async () => {
-		useTranscriptStore.getState().applyEvent("s", { type: "agent_settled" });
+		useTranscriptStore.getState().applyEvent("s", { type: "agent_settled", aborted: false });
 		throw new Error("queue rejected");
 	});
 	await composer().handleSend();
