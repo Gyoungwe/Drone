@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { MAX_NOTE_BYTES, validateNote } from "@drone/knowledge/files";
 import { DOMParser } from "@xmldom/xmldom";
 
@@ -77,9 +78,78 @@ export interface DavResponse {
 	body: Buffer;
 }
 
+interface DigestChallenge {
+	realm: string;
+	nonce: string;
+	algorithm: "MD5" | "MD5-SESS";
+	qop: "auth" | null;
+	opaque: string | null;
+}
+
+function digestHash(value: string): string {
+	return createHash("md5").update(value, "utf8").digest("hex");
+}
+
+function parseDigestChallenge(value: string | null): DigestChallenge | null {
+	const match = value?.match(/^\s*Digest\s+(.+)$/i);
+	if (!match) return null;
+	const challengeText = match[1];
+	if (!challengeText) return null;
+	const attributes: Record<string, string> = {};
+	let part = "";
+	let quoted = false;
+	let escaped = false;
+	const parts: string[] = [];
+	for (const character of challengeText) {
+		if (escaped) {
+			part += character;
+			escaped = false;
+		} else if (character === "\\" && quoted) {
+			escaped = true;
+		} else if (character === '"') {
+			quoted = !quoted;
+			part += character;
+		} else if (character === "," && !quoted) {
+			parts.push(part);
+			part = "";
+		} else {
+			part += character;
+		}
+	}
+	parts.push(part);
+	for (const item of parts) {
+		const separator = item.indexOf("=");
+		if (separator < 1) continue;
+		const key = item.slice(0, separator).trim().toLowerCase();
+		let itemValue = item.slice(separator + 1).trim();
+		if (itemValue.startsWith('"') && itemValue.endsWith('"')) itemValue = itemValue.slice(1, -1);
+		if (key) attributes[key] = itemValue;
+	}
+	const algorithm = (attributes.algorithm ?? "MD5").toUpperCase();
+	const qops = (attributes.qop ?? "")
+		.split(",")
+		.map((item) => item.trim().toLowerCase())
+		.filter(Boolean);
+	if (!attributes.realm || !attributes.nonce || !["MD5", "MD5-SESS"].includes(algorithm)) return null;
+	if (attributes.qop && !qops.includes("auth")) return null;
+	return {
+		realm: attributes.realm,
+		nonce: attributes.nonce,
+		algorithm: algorithm as DigestChallenge["algorithm"],
+		qop: attributes.qop ? "auth" : null,
+		opaque: attributes.opaque ?? null,
+	};
+}
+
+function quoteDigest(value: string): string {
+	return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+}
+
 /** 不跟随重定向，不返回原始异常或错误响应正文；超时覆盖 headers 和 body。 */
 export class WebDavTransport {
 	readonly endpoint: string;
+	private digestChallenge: DigestChallenge | null = null;
+	private readonly digestNonceCounts = new Map<string, number>();
 	constructor(private readonly options: WebDavTransportOptions) {
 		let url: URL;
 		try {
@@ -113,16 +183,37 @@ export class WebDavTransport {
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 10_000);
 		try {
-			const response = await (this.options.fetch ?? fetch)(`${this.endpoint}/${path}`, {
+			const url = `${this.endpoint}/${path}`;
+			const requestHeaders = {
+				...headers,
+				Authorization: this.digestChallenge
+					? this.digestAuthorization(this.digestChallenge, method, url, password)
+					: `Basic ${Buffer.from(`${this.options.username}:${password}`).toString("base64")}`,
+			};
+			let response = await (this.options.fetch ?? fetch)(url, {
 				method,
 				redirect: "manual",
 				signal: controller.signal,
 				body,
-				headers: {
-					...headers,
-					Authorization: `Basic ${Buffer.from(`${this.options.username}:${password}`).toString("base64")}`,
-				},
+				headers: requestHeaders,
 			});
+			if (response.status === 401) {
+				const challenge = parseDigestChallenge(response.headers.get("www-authenticate"));
+				await response.body?.cancel();
+				if (challenge) {
+					this.digestChallenge = challenge;
+					response = await (this.options.fetch ?? fetch)(url, {
+						method,
+						redirect: "manual",
+						signal: controller.signal,
+						body,
+						headers: {
+							...headers,
+							Authorization: this.digestAuthorization(challenge, method, url, password),
+						},
+					});
+				}
+			}
 			// 错误正文可能包含凭据或私有内容，直接丢弃。
 			if (!response.ok) {
 				await response.body?.cancel();
@@ -161,6 +252,38 @@ export class WebDavTransport {
 		} finally {
 			clearTimeout(timer);
 		}
+	}
+
+	private digestAuthorization(
+		challenge: DigestChallenge,
+		method: string,
+		url: string,
+		password: string,
+	): string {
+		const target = new URL(url);
+		const uri = `${target.pathname}${target.search}`;
+		const count = (this.digestNonceCounts.get(challenge.nonce) ?? 0) + 1;
+		this.digestNonceCounts.set(challenge.nonce, count);
+		const nonceCount = count.toString(16).padStart(8, "0");
+		const cnonce = randomBytes(16).toString("hex");
+		let ha1 = digestHash(`${this.options.username}:${challenge.realm}:${password}`);
+		if (challenge.algorithm === "MD5-SESS") ha1 = digestHash(`${ha1}:${challenge.nonce}:${cnonce}`);
+		const ha2 = digestHash(`${method}:${uri}`);
+		const response = challenge.qop
+			? digestHash(`${ha1}:${challenge.nonce}:${nonceCount}:${cnonce}:${challenge.qop}:${ha2}`)
+			: digestHash(`${ha1}:${challenge.nonce}:${ha2}`);
+		const parts = [
+			`username=${quoteDigest(this.options.username)}`,
+			`realm=${quoteDigest(challenge.realm)}`,
+			`nonce=${quoteDigest(challenge.nonce)}`,
+			`uri=${quoteDigest(uri)}`,
+			`response=${quoteDigest(response)}`,
+			`algorithm=${challenge.algorithm}`,
+		];
+		if (challenge.qop)
+			parts.push(`qop=${challenge.qop}`, `nc=${nonceCount}`, `cnonce=${quoteDigest(cnonce)}`);
+		if (challenge.opaque) parts.push(`opaque=${quoteDigest(challenge.opaque)}`);
+		return `Digest ${parts.join(", ")}`;
 	}
 
 	async collection(path: string): Promise<boolean> {

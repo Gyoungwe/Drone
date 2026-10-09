@@ -43,6 +43,31 @@ describe("KnowledgeWebDavService", () => {
 		expect(urls[0]).toBe("http://10.126.126.1:8080/Drone-Knowledge/");
 	});
 
+	it("negotiates Digest authentication without exposing the password", async () => {
+		const authorizations: string[] = [];
+		let calls = 0;
+		const service = new KnowledgeWebDavService({
+			password: () => "x".repeat(8),
+			fetch: async (_url, init) => {
+				calls++;
+				authorizations.push(String((init?.headers as Record<string, string>)?.Authorization));
+				return calls === 1
+					? response(401, "", {
+							"www-authenticate": 'Digest realm="WebDAV", nonce="nonce-1", algorithm=MD5, qop="auth"',
+						})
+					: response(207, collection);
+			},
+		});
+		const status = await service.probe();
+		expect(status.mode).toBe("ready");
+		expect(calls).toBe(2);
+		expect(authorizations[0]).toMatch(/^Basic /);
+		expect(authorizations[1]).toMatch(/^Digest username="gaoyangwei"/);
+		expect(authorizations[1]).toContain("qop=auth");
+		expect(authorizations[1]).toContain("nc=00000001");
+		expect(authorizations[1]).not.toContain("xxxxxxxx");
+	});
+
 	it("creates a missing folder without replacing an existing one", async () => {
 		const methods: string[] = [];
 		let first = true;

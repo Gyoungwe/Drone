@@ -6,6 +6,8 @@
 
 设置 → 知识库中的 WebDAV 卡片只显示连接地址、目录、最近一次结果和边界提示。打开设置不会联网；“检查连接”发起一次 `PROPFIND`， “初始化目录”在目录不存在时使用 `MKCOL`，已存在的目录复用，不清理或覆盖其中的文件。可用 `DRONE_WEBDAV_ENDPOINT` 覆盖地址用于部署和离线测试，默认地址为 `http://10.126.126.1:8080`。
 
+认证按服务端的 `WWW-Authenticate` 协商，兼容 Basic 和 Digest；密码始终只从 `DRONE_WEBDAV_PASSWORD` 读取。
+
 ## 读写边界
 
 云端只接受 Vault 允许的 Markdown 路径，并额外限制在 `Home.md` 或 `Wiki/`、`Library/`、`Projects/`、`Inbox/` 下；单笔正文上限 1 MiB。读取返回正文、SHA-256、强 ETag（如果服务提供）和最后修改时间。单笔写入必须是新建（`If-None-Match: *`）或带读取所得强 ETag 的条件更新（`If-Match`）；没有强 ETag 时拒绝把修改时间当作并发版本。写入响应未知时会返回“未确认”，不会自动重试。
