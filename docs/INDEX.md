@@ -32,7 +32,7 @@ Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭
 
 任务路由过程看板的列式草图与边界：见 [任务路由过程看板设计](superpowers/specs/task-route-process-board-design.md)、`ui-preview/task-route-process-board.html` 和 `scripts/check-task-route-process-board-sketch.mjs`。
 
-全量历史 PR 模拟用户测试分类与执行规约：见 [simulated-user-testing-plan.md](simulated-user-testing-plan.md)（覆盖 PR #1–#97，九大用户任务分类、63 个核心用例矩阵与下一阶段实施优先级）。
+全量历史 PR 模拟用户测试分类与执行规约：见 [simulated-user-testing-plan.md](simulated-user-testing-plan.md)（覆盖 PR #1–#97，九大用户任务分类、63 个核心用例矩阵与下一阶段实施优先级）；测试执行汇总报告见 [simulated-user-testing-report.md](simulated-user-testing-report.md)。
 
 科研模拟测试脱敏夹具与大文件规范：见 [research-test-fixtures.md](research-test-fixtures.md)（服务器真实大文件勘查登记、脱敏样本 SHA-256 校验清单、动态大文件合成器与机构登录用例阻塞标记）。
 

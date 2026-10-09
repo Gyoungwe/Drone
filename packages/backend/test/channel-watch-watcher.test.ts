@@ -81,11 +81,11 @@ describe("ChannelWatcher（fs.watch 模式）", () => {
 			await writeFile(join(root, "t2/A.md"), "a", { flag: "w" });
 			// Wait for the actual debounced event rather than assuming fs.watch latency under concurrent builds.
 			await vi.waitFor(() => expect(events.filter((x) => x === "t2/A.md")).toHaveLength(1), {
-				timeout: 2000,
+				timeout: 5000,
 			});
 			await writeFile(join(root, "t2/B.md"), "b", { flag: "w" });
 			await vi.waitFor(() => expect(events.filter((x) => x === "t2/B.md")).toHaveLength(1), {
-				timeout: 2000,
+				timeout: 5000,
 			});
 			expect(events.filter((x) => x === "t2/A.md")).toHaveLength(1);
 			w.stop();
