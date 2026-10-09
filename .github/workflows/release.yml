@@ -22,10 +22,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Resolve the release tag once. Sources, in order: explicit dispatch input, pushed v* tag,
-  # or v<version> from packages/desktop/package.json (main push / empty dispatch input).
-  # For the derived case the tag is created on the current commit only when it does not exist yet,
-  # so an ordinary main push without a version bump is a no-op.
   resolve:
     runs-on: ubuntu-latest
     outputs:
@@ -78,7 +74,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -126,22 +122,21 @@ jobs:
     needs: [resolve, prepare]
     strategy:
       fail-fast: false
-      # Platforms build in parallel. Builds no longer talk to the release: each job only
-      # stores its outputs as a workflow artifact, and the single publish job uploads
-      # everything afterwards, so the release never receives concurrent large streams
-      # (the reason max-parallel: 1 was introduced in 4164df0 / #25).
+      max-parallel: 3
       matrix:
         include:
           - os: macos-latest
-            platform: mac
+            platform: mac-arm64
+            builder_args: --arm64
+          - os: macos-latest
+            platform: mac-x64
+            builder_args: --x64
           - os: windows-latest
             platform: windows
-          - os: ubuntu-latest
-            platform: linux
+            builder_args: --x64
     runs-on: ${{ matrix.os }}
     env:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
-      # 无开发者证书：mac 显式走 adhoc 签名（identity: "-"），禁用 runner 上的证书自动发现
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
       - uses: actions/checkout@v6
@@ -152,15 +147,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # check-research-packaging.cjs (below) verifies the staged MCP runtime
-      # (packages/desktop/pi-packages/node_modules/pi-mcp-adapter), so stage it before that check.
       - run: npm run stage:pi-packages
-      # packages/desktop/resources/research-skills/ is gitignored and rebuilt from the
-      # commit/checksum-pinned lock (packages/shared/src/research-skill-sources.json);
-      # `npm run dist` and the electron-builder beforePack hook fail closed without it.
-      # ARS is CC BY-NC 4.0: Drone is distributed free of charge for noncommercial use, so the release
-      # ships it under the license's own NonCommercial grant with LICENSE/NOTICE intact; recipients are
-      # bound by the same terms. See docs/research-skill-packs.md ("Sources and licenses").
       - name: Acquire pinned research skill packs
         shell: bash
         run: |
@@ -168,8 +155,7 @@ jobs:
           python scripts/sync-research-skills.py --sources academic --acknowledge-noncommercial
           python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
           node scripts/check-research-packaging.cjs
-      - run: npm run dist -w packages/desktop -- --publish never
-      # The MCP runtime must be inside every packaged app (resources/pi-packages/node_modules/pi-mcp-adapter).
+      - run: npm run dist -w packages/desktop -- --publish never ${{ matrix.builder_args }}
       - name: Verify bundled MCP runtime in packaged app
         run: node scripts/check-pi-packages.mjs --packaged packages/desktop/dist
       - name: Collect release assets
@@ -204,20 +190,16 @@ jobs:
         run: |
           set -euo pipefail
           ls -l release-assets
-          # Updater metadata comes one file per platform (latest.yml / latest-mac.yml / latest-linux.yml),
-          # so no merging is needed; a name collision would mean two platforms wrote the same file.
           for REQUIRED in \
             drone-mac-arm64.dmg drone-mac-x64.dmg drone-mac-arm64.zip drone-mac-x64.zip \
             drone-windows-x64.exe drone-windows-x64.zip \
-            drone-linux-x64.AppImage drone-linux-x64.deb \
-            latest.yml latest-mac.yml latest-linux.yml; do
+            latest.yml latest-mac.yml; do
             [ -f "release-assets/$REQUIRED" ] || { echo "Missing required release asset: $REQUIRED" >&2; exit 1; }
           done
       - name: Upload assets to draft release (sequential, with retry)
         timeout-minutes: 90
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Avoid stalled HTTP/2 streams in the Go-based gh client.
           GODEBUG: http2client=0
         run: |
           set -uo pipefail
@@ -248,8 +230,6 @@ jobs:
           done
           gh release edit "$TAG" -R "${{ github.repository }}" --draft=false
 
-  # 刷新官网（drone-website，Cloudflare Pages）：触发 Deploy Hook 重建，同步版本号与 changelog。
-  # 需要 repo secret CF_PAGES_DEPLOY_HOOK（Cloudflare Pages → Settings → Builds → Deploy hooks 创建）；未配置时跳过不影响发布
   website:
     needs: publish
     runs-on: ubuntu-latest
