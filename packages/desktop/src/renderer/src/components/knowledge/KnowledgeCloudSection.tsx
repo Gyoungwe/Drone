@@ -4,14 +4,18 @@ import { getPi } from "../../api";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 
+const MODE_COPY_KEYS = {
+	disabled: "cloudModeDisabled",
+	unchecked: "cloudModeUnchecked",
+	offline: "cloudModeOffline",
+	unauthorized: "cloudModeUnauthorized",
+	"read-only": "cloudModeReadOnly",
+	ready: "cloudModeReady",
+	error: "cloudModeError",
+} as const satisfies Record<KnowledgeCloudStatus["mode"], string>;
+
 function modeLabel(mode: KnowledgeCloudStatus["mode"], t: (key: any) => string): string {
-	const key =
-		mode === "read-write" || mode === "ready"
-			? "Ready"
-			: mode === "read-only"
-				? "ReadOnly"
-				: mode[0].toUpperCase() + mode.slice(1);
-	return t(`cloudMode${key}` as any);
+	return t(MODE_COPY_KEYS[mode]);
 }
 
 export function KnowledgeCloudSection() {

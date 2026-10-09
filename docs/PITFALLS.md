@@ -259,3 +259,12 @@ git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保
 ## task_reconcile 不能用 book.revision 做并发校验
 
 `reconcile` 在 await 验收器/文件检查期间，同一批并行工具调用（如 `set_status`）会保存并抬高 `book.revision`。若 reconcile 仍按开始时的 revision 校验，会抛 `stale-task-view` 并逼 agent 多绕几轮。reconcile 只确认任务仍在册且是同一个对象，再就地合并；UI 的 `command()` 仍保留严格 revision 校验。
+
+## `npm run typecheck` 停在第一个出错的包（2026-10-09）
+
+根脚本是 `npm run typecheck --workspaces && npm run check:pi`，第一个失败的 workspace 会让后面的包和 `check:pi` 全部不执行。backend 有一个报错时，desktop 里的类型错误一直没人看到。修完一个包的报错后要重新跑完整的 `npm run typecheck`，直到退出码为 0，不要只看上一次的输出。
+
+## WebDAV 首个请求不能带 Basic（2026-10-09）
+
+默认地址是 HTTP。首个请求若直接带 `Authorization: Basic …`，只支持 Digest 的服务端也会收到可还原的密码。传输层现在首个请求不带凭据，由 401 的 `WWW-Authenticate` 决定用 Digest 还是 Basic；改认证逻辑时保留这个顺序，并保持 `webdav.test.ts` 里“只有服务端要求才发送 Basic”的测试。
+

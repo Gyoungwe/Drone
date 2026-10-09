@@ -1,6 +1,6 @@
 # WebDAV 云端知识库（第一阶段）
 
-桌面端通过 backend 的 `KnowledgeWebDavService` 访问固定 WebDAV 根地址，并在根目录使用 `Drone-Knowledge` 目录。用户名和地址属于连接配置；密码只从进程环境中的 `DRONE_WEBDAV_PASSWORD` 读取，状态、错误、诊断和提交内容都不会包含密码或授权头。
+桌面端通过 backend 的 `KnowledgeWebDavService` 访问固定 WebDAV 根地址，并在根目录使用 `Drone-Knowledge` 目录。用户名和地址属于连接配置；密码来自设置页手动输入的本机保存值或进程环境中的 `DRONE_WEBDAV_PASSWORD`（环境变量优先），状态、错误、诊断和提交内容都不会包含密码或授权头。
 
 ## 连接与目录
 
