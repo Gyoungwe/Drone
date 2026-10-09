@@ -91,7 +91,7 @@ function digestHash(value: string): string {
 }
 
 function parseDigestChallenge(value: string | null): DigestChallenge | null {
-	const match = value?.match(/^\s*Digest\s+(.+)$/i);
+	const match = value?.match(/(?:^|[\s,])Digest\s+(.+)$/i);
 	if (!match) return null;
 	const challengeText = match[1];
 	if (!challengeText) return null;
@@ -149,6 +149,8 @@ function quoteDigest(value: string): string {
 export class WebDavTransport {
 	readonly endpoint: string;
 	private digestChallenge: DigestChallenge | null = null;
+	/** 服务端明确要求 Basic 后才为 true；首次请求不带任何凭据，避免向只支持 Digest 的服务端泄露可还原的密码。 */
+	private basicRequested = false;
 	private readonly digestNonceCounts = new Map<string, number>();
 	constructor(private readonly options: WebDavTransportOptions) {
 		let url: URL;
@@ -179,39 +181,43 @@ export class WebDavTransport {
 	): Promise<DavResponse> {
 		const password = this.options.password();
 		if (!password)
-			throw new KnowledgeWebDavError("not_configured", "未配置 WebDAV 密码（DRONE_WEBDAV_PASSWORD）");
+			throw new KnowledgeWebDavError(
+				"not_configured",
+				"请在设置中输入 WebDAV 密码（或设置环境变量 DRONE_WEBDAV_PASSWORD）",
+			);
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 10_000);
 		try {
 			const url = `${this.endpoint}/${path}`;
-			const requestHeaders = {
-				...headers,
-				Authorization: this.digestChallenge
+			const send = (authorization: string | null) =>
+				(this.options.fetch ?? fetch)(url, {
+					method,
+					redirect: "manual",
+					signal: controller.signal,
+					body,
+					headers: authorization ? { ...headers, Authorization: authorization } : headers,
+				});
+			const basic = () => `Basic ${Buffer.from(`${this.options.username}:${password}`).toString("base64")}`;
+			// 只使用服务端已协商过的方案；尚未协商时先不带凭据，由 401 挑战决定。
+			let response = await send(
+				this.digestChallenge
 					? this.digestAuthorization(this.digestChallenge, method, url, password)
-					: `Basic ${Buffer.from(`${this.options.username}:${password}`).toString("base64")}`,
-			};
-			let response = await (this.options.fetch ?? fetch)(url, {
-				method,
-				redirect: "manual",
-				signal: controller.signal,
-				body,
-				headers: requestHeaders,
-			});
+					: this.basicRequested
+						? basic()
+						: null,
+			);
 			if (response.status === 401) {
-				const challenge = parseDigestChallenge(response.headers.get("www-authenticate"));
+				const header = response.headers.get("www-authenticate");
+				const challenge = parseDigestChallenge(header);
 				await response.body?.cancel();
 				if (challenge) {
 					this.digestChallenge = challenge;
-					response = await (this.options.fetch ?? fetch)(url, {
-						method,
-						redirect: "manual",
-						signal: controller.signal,
-						body,
-						headers: {
-							...headers,
-							Authorization: this.digestAuthorization(challenge, method, url, password),
-						},
-					});
+					this.basicRequested = false;
+					response = await send(this.digestAuthorization(challenge, method, url, password));
+				} else if (header && /(?:^|[\s,])Basic\b/i.test(header) && !this.basicRequested) {
+					this.basicRequested = true;
+					this.digestChallenge = null;
+					response = await send(basic());
 				}
 			}
 			// 错误正文可能包含凭据或私有内容，直接丢弃。

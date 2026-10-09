@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import { MAX_NOTE_BYTES } from "@drone/knowledge/files";
 import type { KnowledgeCloudNote, KnowledgeCloudStatus, KnowledgeCloudWriteResult } from "@drone/shared";
+import {
+	createWebDavCredentialStore,
+	validateWebDavPassword,
+	type WebDavCredentialStore,
+} from "./webdav-credentials";
 import { syncCloudNotes } from "./webdav-sync";
 import {
 	cloudError,
@@ -20,7 +25,10 @@ export interface KnowledgeWebDavOptions {
 	endpoint?: string;
 	username?: string;
 	folder?: string;
+	/** 测试注入：提供后完全绕过环境变量和本机保存的密码 */
 	password?: () => string | undefined;
+	/** 界面保存的密码存储；缺省使用 agentDir 下的 secret 文件 */
+	credentials?: WebDavCredentialStore;
 	fetch?: typeof fetch;
 	now?: () => Date;
 	timeoutMs?: number;
@@ -31,11 +39,18 @@ export class KnowledgeWebDavService {
 	private readonly transport: WebDavTransport;
 	private readonly folder: string;
 	private readonly password: () => string | undefined;
+	private readonly injectedPassword: boolean;
+	private readonly credentials: WebDavCredentialStore | null;
+	private savedPassword: string | null = null;
+	private savedLoaded: Promise<void> | null = null;
 	private readonly now: () => Date;
 	private lastStatus: KnowledgeCloudStatus;
 
 	constructor(options: KnowledgeWebDavOptions = {}) {
-		this.password = options.password ?? (() => process.env.DRONE_WEBDAV_PASSWORD);
+		this.injectedPassword = Boolean(options.password);
+		this.credentials = options.password ? null : (options.credentials ?? createWebDavCredentialStore());
+		this.password =
+			options.password ?? (() => process.env.DRONE_WEBDAV_PASSWORD || this.savedPassword || undefined);
 		this.folder = options.folder ?? DEFAULT_WEBDAV_FOLDER;
 		if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(this.folder))
 			throw new KnowledgeWebDavError("protocol", "WebDAV 知识库目录名无效");
@@ -50,9 +65,40 @@ export class KnowledgeWebDavService {
 		this.lastStatus = this.makeStatus("unchecked", null);
 	}
 
+	private passwordSource(): KnowledgeCloudStatus["passwordSource"] {
+		if (this.injectedPassword) return this.password() ? "env" : null;
+		if (process.env.DRONE_WEBDAV_PASSWORD) return "env";
+		return this.savedPassword ? "saved" : null;
+	}
+
+	private loadSaved(): Promise<void> {
+		if (!this.credentials) return Promise.resolve();
+		this.savedLoaded ??= this.credentials.load().then((value) => {
+			this.savedPassword = value;
+		});
+		return this.savedLoaded;
+	}
+
+	/** 保存（或清除）用户手动输入的密码；不联网，需再点“检查连接”验证。 */
+	async setPassword(password: string | null): Promise<KnowledgeCloudStatus> {
+		if (!this.credentials) throw new KnowledgeWebDavError("protocol", "当前配置不支持保存密码");
+		if (password === null) {
+			await this.credentials.clear();
+			this.savedPassword = null;
+		} else {
+			validateWebDavPassword(password);
+			await this.credentials.save(password);
+			this.savedPassword = password;
+		}
+		this.savedLoaded = Promise.resolve();
+		this.lastStatus = this.makeStatus("unchecked", null);
+		return this.getStatus();
+	}
+
 	private makeStatus(mode: KnowledgeCloudStatus["mode"], message: string | null): KnowledgeCloudStatus {
 		return {
 			configured: Boolean(this.password()),
+			passwordSource: this.passwordSource(),
 			endpoint: this.transport.endpoint,
 			folder: this.folder,
 			mode,
@@ -64,6 +110,9 @@ export class KnowledgeWebDavService {
 			message,
 			warnings: [
 				"显式传输所选笔记；不自动同步、不覆盖已有不同内容。权限由 WebDAV 账号决定，不提供项目级访问控制。",
+				...(!this.injectedPassword && process.env.DRONE_WEBDAV_PASSWORD && this.savedPassword
+					? ["环境变量 DRONE_WEBDAV_PASSWORD 优先于界面中保存的密码"]
+					: []),
 				...(this.transport.endpoint.startsWith("http:")
 					? ["当前使用 HTTP，凭据和笔记未经过 TLS 加密；仅在可信网络使用"]
 					: []),
@@ -73,16 +122,30 @@ export class KnowledgeWebDavService {
 
 	/** 获取最近观测，不在打开设置或启动时访问网络。 */
 	async getStatus(): Promise<KnowledgeCloudStatus> {
-		if (!this.password()) return this.makeStatus("disabled", "未配置 WebDAV 密码（DRONE_WEBDAV_PASSWORD）");
-		return structuredClone(this.lastStatus);
+		await this.loadSaved();
+		if (!this.password())
+			return this.makeStatus(
+				"disabled",
+				"请在设置中输入 WebDAV 密码（或设置环境变量 DRONE_WEBDAV_PASSWORD）",
+			);
+		return {
+			...structuredClone(this.lastStatus),
+			configured: true,
+			passwordSource: this.passwordSource(),
+			warnings: this.makeStatus("unchecked", null).warnings,
+		};
 	}
 
 	private async check(initialize: boolean): Promise<KnowledgeCloudStatus> {
+		await this.loadSaved();
 		const status = this.makeStatus("unchecked", null);
 		status.lastCheckedAt = this.now().toISOString();
 		try {
 			if (!this.password())
-				throw new KnowledgeWebDavError("not_configured", "未配置 WebDAV 密码（DRONE_WEBDAV_PASSWORD）");
+				throw new KnowledgeWebDavError(
+					"not_configured",
+					"请在设置中输入 WebDAV 密码（或设置环境变量 DRONE_WEBDAV_PASSWORD）",
+				);
 			let exists = await this.transport.collection(`${this.folder}/`);
 			if (!exists) {
 				if (!(await this.transport.collection("")))
@@ -127,6 +190,7 @@ export class KnowledgeWebDavService {
 	}
 
 	async read(path: string): Promise<KnowledgeCloudNote> {
+		await this.loadSaved();
 		const response = await this.transport.request("GET", this.notePath(path), {
 			Accept: "text/markdown, text/plain",
 		});
@@ -152,6 +216,7 @@ export class KnowledgeWebDavService {
 		text: string;
 		expectedVersion?: string;
 	}): Promise<KnowledgeCloudWriteResult> {
+		await this.loadSaved();
 		const path = this.notePath(input.path);
 		if (Buffer.byteLength(input.text, "utf8") > MAX_NOTE_BYTES)
 			throw new KnowledgeWebDavError("protocol", "云端笔记超过 1 MiB 限制");

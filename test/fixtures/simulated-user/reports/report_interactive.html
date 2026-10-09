@@ -129,9 +129,9 @@
 
   <div class="card">
     <div class="toolbar">
-      <button class="btn" id="btn-zoom-in" title="放大">🔍+ 放大</button>
-      <button class="btn" id="btn-zoom-out" title="缩小">🔍- 缩小</button>
-      <button class="btn" id="btn-reset" title="复位视角">↺ 重置视图</button>
+      <button type="button" class="btn" id="btn-zoom-in" title="放大">🔍+ 放大</button>
+      <button type="button" class="btn" id="btn-zoom-out" title="缩小">🔍- 缩小</button>
+      <button type="button" class="btn" id="btn-reset" title="复位视角">↺ 重置视图</button>
       <span style="border-left: 1px solid var(--border); height: 20px;"></span>
       <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
         <input type="checkbox" id="chk-up" checked>
@@ -148,7 +148,7 @@
     </div>
 
     <div class="plot-container" id="plot-box">
-      <svg class="chart-svg" id="svg-chart" viewBox="0 0 800 480"></svg>
+      <svg class="chart-svg" id="svg-chart" viewBox="0 0 800 480" role="img" aria-label="交互式散点图"></svg>
       <div class="tooltip" id="tooltip"></div>
     </div>
 

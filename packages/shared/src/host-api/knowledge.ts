@@ -101,6 +101,15 @@ export const KnowledgeContract = defineDomain("knowledge", {
 			args: Type.Tuple([]),
 			result: ResultObject<KnowledgeCloudStatus>(),
 		},
+		setCloudPassword: {
+			args: Type.Tuple([
+				Type.Object(
+					{ password: Type.Union([Type.String({ minLength: 1, maxLength: 256 }), Type.Null()]) },
+					{ additionalProperties: false },
+				),
+			]),
+			result: ResultObject<KnowledgeCloudStatus>(),
+		},
 		readCloudNote: {
 			args: Type.Tuple([
 				Type.Object({ path: Type.String({ minLength: 1 }) }, { additionalProperties: false }),
@@ -308,6 +317,7 @@ export type KnowledgeSchemaTypes = {
 	getCloudStatus: [];
 	probeCloud: [];
 	initializeCloud: [];
+	setCloudPassword: Parameters<KnowledgeApi["setKnowledgeCloudPassword"]>;
 	readCloudNote: Parameters<KnowledgeApi["readKnowledgeCloudNote"]>;
 	writeCloudNote: Parameters<KnowledgeApi["writeKnowledgeCloudNote"]>;
 	syncCloud: Parameters<KnowledgeApi["syncKnowledgeCloud"]>;

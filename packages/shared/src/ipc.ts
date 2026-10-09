@@ -95,6 +95,7 @@ export const IpcChannels = {
 	KnowledgeCloudStatus: "knowledge:cloudStatus",
 	KnowledgeCloudProbe: "knowledge:cloudProbe",
 	KnowledgeCloudInitialize: "knowledge:cloudInitialize",
+	KnowledgeCloudPassword: "knowledge:cloudPassword",
 	KnowledgeCloudReadNote: "knowledge:cloudReadNote",
 	KnowledgeCloudWriteNote: "knowledge:cloudWriteNote",
 	KnowledgeCloudSync: "knowledge:cloudSync",

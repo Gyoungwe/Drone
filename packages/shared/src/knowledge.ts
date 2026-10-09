@@ -197,6 +197,8 @@ export type KnowledgeCloudMode =
 /** Cloud status is a transport projection; it never contains credentials or note content. */
 export interface KnowledgeCloudStatus {
 	configured: boolean;
+	/** 密码来源：环境变量优先于界面保存；仅标识来源，不含密码本身 */
+	passwordSource: "env" | "saved" | null;
 	endpoint: string;
 	folder: string;
 	mode: KnowledgeCloudMode;
@@ -577,6 +579,8 @@ export interface KnowledgeApi {
 	getKnowledgeCloudStatus(): Promise<KnowledgeCloudStatus>;
 	probeKnowledgeCloud(): Promise<KnowledgeCloudStatus>;
 	initializeKnowledgeCloud(): Promise<KnowledgeCloudStatus>;
+	/** 保存或清除（null）用户手动输入的 WebDAV 密码；不联网 */
+	setKnowledgeCloudPassword(input: { password: string | null }): Promise<KnowledgeCloudStatus>;
 	readKnowledgeCloudNote(input: { path: string }): Promise<KnowledgeCloudNote>;
 	writeKnowledgeCloudNote(input: {
 		path: string;

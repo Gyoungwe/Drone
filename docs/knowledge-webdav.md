@@ -6,7 +6,9 @@
 
 设置 → 知识库中的 WebDAV 卡片只显示连接地址、目录、最近一次结果和边界提示。打开设置不会联网；“检查连接”发起一次 `PROPFIND`， “初始化目录”在目录不存在时使用 `MKCOL`，已存在的目录复用，不清理或覆盖其中的文件。可用 `DRONE_WEBDAV_ENDPOINT` 覆盖地址用于部署和离线测试，默认地址为 `http://10.126.126.1:8080`。
 
-认证按服务端的 `WWW-Authenticate` 协商，兼容 Basic 和 Digest；密码始终只从 `DRONE_WEBDAV_PASSWORD` 读取。
+认证按服务端的 `WWW-Authenticate` 协商：首个请求不带任何凭据，服务端要求 Digest 就用 Digest（同时提供时优先），明确要求 Basic 才发送 Basic 并在本次运行内复用。因此只支持 Digest 的服务端不会收到 Basic 头。
+
+密码有两个来源：设置 → 知识库 → WebDAV 卡片里手动输入保存（写入 agentDir 的 `knowledge-webdav.json`，权限 0600，不在界面、日志或 IPC 返回值中回显），或环境变量 `DRONE_WEBDAV_PASSWORD`。两者同时存在时环境变量优先。保存或清除密码不联网，需再点“检查连接”验证。
 
 ## 读写边界
 
