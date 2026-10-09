@@ -31,3 +31,6 @@ npm-debug.log*
 
 # Reproducible third-party skill data; restored from the committed source lock.
 packages/desktop/resources/research-skills/
+
+# Dynamically generated oversized test fixtures (>4 MiB)
+test/fixtures/simulated-user/generated/
