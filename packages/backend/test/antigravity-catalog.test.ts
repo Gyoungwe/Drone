@@ -12,6 +12,16 @@ describe("Antigravity catalog", () => {
 		expect(models.length).toBe(ANTIGRAVITY_MODEL_DEFINITIONS.length);
 		expect(models.every((model) => model.provider === ANTIGRAVITY_PROVIDER_ID)).toBe(true);
 		expect(models.some((model) => model.reasoning)).toBe(true);
+		expect(models.map((model) => model.id)).toEqual(
+			expect.arrayContaining([
+				"gemini-3.8-flash",
+				"gemini-3.6-flash",
+				"claude-sonnet-5-5-thinking",
+				"claude-opus-5-5-thinking",
+				"claude-sonnet-4-6-thinking",
+				"claude-opus-4-6-thinking",
+			]),
+		);
 	});
 
 	it("filters internal discovery rows and preserves image/reasoning metadata", () => {

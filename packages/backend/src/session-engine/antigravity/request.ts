@@ -8,6 +8,7 @@ import {
 } from "@earendil-works/pi-ai";
 import { convertMessages, convertTools } from "@earendil-works/pi-ai/api/google-shared";
 import { ANTIGRAVITY_MODEL_DEFINITIONS } from "./catalog";
+import { flashWireId } from "./catalog-data";
 import type { AntigravityEnvelope, AntigravityTransportOptions } from "./types";
 
 export interface GeminiRequest {
@@ -77,7 +78,7 @@ export function buildEnvelope(
 
 export function resolveWireModelId(modelId: string, thinking?: string): string {
 	const definition = ANTIGRAVITY_MODEL_DEFINITIONS.find((entry) => entry.id === modelId);
-	if (!definition) return modelId;
+	if (!definition) return flashWireId(modelId, thinking) ?? modelId;
 	const map = definition.wireThinkingLevelMap;
 	if (thinking === "xhigh" || thinking === "max") thinking = "high";
 	if (thinking && map && Object.hasOwn(map, thinking)) return map[thinking] ?? definition.wireId;
