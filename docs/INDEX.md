@@ -26,6 +26,8 @@
 
 云端知识库、科研化产品语言与知识库自动维护的升级方案：见 [knowledge-cloud-research-upgrade.md](knowledge-cloud-research-upgrade.md)。
 
+WebDAV 云端知识库第一阶段实现、读写边界、同步/冲突和离线提示：见 [knowledge-webdav.md](knowledge-webdav.md)。
+
 Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭代记录](superpowers/reports/2026-10-04-drone-five-round-iteration.md) 与 [状态链修复设计](superpowers/specs/2026-10-04-drone-state-chain-fixes-design.md)。
 
 任务路由过程看板的列式草图与边界：见 [任务路由过程看板设计](superpowers/specs/task-route-process-board-design.md)、`ui-preview/task-route-process-board.html` 和 `scripts/check-task-route-process-board-sketch.mjs`。

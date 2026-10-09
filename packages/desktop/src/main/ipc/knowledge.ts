@@ -72,6 +72,12 @@ export function registerKnowledgeIpc(
 	if (!knowledge || !zotero || !knowledgeSession)
 		throw new Error("Knowledge services are required by the desktop host");
 	const implementation: ContractImplementation<typeof KnowledgeContract> = {
+		getCloudStatus: () => knowledge.getCloudStatus(),
+		probeCloud: () => knowledge.probeCloud(),
+		initializeCloud: () => knowledge.initializeCloud(),
+		readCloudNote: (input) => knowledge.readCloudNote(input),
+		writeCloudNote: (input) => knowledge.writeCloudNote(input),
+		syncCloud: (input) => knowledge.syncCloud(input),
 		setSpecialistSettings: (input) => knowledge.specialistSettings(input),
 		getOverview: (...args) => knowledge.overview(args[0]),
 		getResearchRuns: (...args) => knowledge.researchRuns(args[0]),
@@ -124,6 +130,12 @@ export function registerKnowledgeIpc(
 	bindContract(KnowledgeContract, implementation, {
 		channelForMethod: (_contract, method) =>
 			({
+				getCloudStatus: IpcChannels.KnowledgeCloudStatus,
+				probeCloud: IpcChannels.KnowledgeCloudProbe,
+				initializeCloud: IpcChannels.KnowledgeCloudInitialize,
+				readCloudNote: IpcChannels.KnowledgeCloudReadNote,
+				writeCloudNote: IpcChannels.KnowledgeCloudWriteNote,
+				syncCloud: IpcChannels.KnowledgeCloudSync,
 				setSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
 				getOverview: IpcChannels.KnowledgeOverview,
 				getResearchRuns: IpcChannels.KnowledgeResearchRuns,

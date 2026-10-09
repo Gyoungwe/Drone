@@ -68,6 +68,12 @@ const knowledgeClient = exposeContract(KnowledgeContract, {
 	channelForMethod: (_contract, method) =>
 		channelFrom(
 			{
+				getCloudStatus: IpcChannels.KnowledgeCloudStatus,
+				probeCloud: IpcChannels.KnowledgeCloudProbe,
+				initializeCloud: IpcChannels.KnowledgeCloudInitialize,
+				readCloudNote: IpcChannels.KnowledgeCloudReadNote,
+				writeCloudNote: IpcChannels.KnowledgeCloudWriteNote,
+				syncCloud: IpcChannels.KnowledgeCloudSync,
 				setSpecialistSettings: IpcChannels.KnowledgeSpecialistsSettings,
 				getOverview: IpcChannels.KnowledgeOverview,
 				getResearchRuns: IpcChannels.KnowledgeResearchRuns,
@@ -312,6 +318,12 @@ const inquiryClient = exposeContract(InquiryContract, {
 		),
 });
 const knowledgeApi = {
+	getKnowledgeCloudStatus: invoke(knowledgeClient, "getCloudStatus"),
+	probeKnowledgeCloud: invoke(knowledgeClient, "probeCloud"),
+	initializeKnowledgeCloud: invoke(knowledgeClient, "initializeCloud"),
+	readKnowledgeCloudNote: invoke(knowledgeClient, "readCloudNote"),
+	writeKnowledgeCloudNote: invoke(knowledgeClient, "writeCloudNote"),
+	syncKnowledgeCloud: invoke(knowledgeClient, "syncCloud"),
 	setKnowledgeSpecialistSettings: invoke(knowledgeClient, "setSpecialistSettings"),
 	getKnowledgeOverview: invoke(knowledgeClient, "getOverview"),
 	getResearchRuns: invoke(knowledgeClient, "getResearchRuns"),
