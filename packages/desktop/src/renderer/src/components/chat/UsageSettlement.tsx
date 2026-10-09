@@ -142,6 +142,15 @@ export function SessionUsageFooter({ sessionId }: { sessionId: string | null }) 
 				.then(
 					(stats) => {
 						if (live) {
+							// A fixture, an older preload, or a backend that cannot
+							// provide SDK stats may legitimately return no usage yet.
+							// Keep the settlement in its empty state instead of dereferencing
+							// `inputTokens` on null and taking down the renderer tree.
+							if (!stats) {
+								setData(null);
+								setError(true);
+								return;
+							}
 							setData({ id: sessionId, usage: sdkTotal(stats) });
 							setError(false);
 						}
