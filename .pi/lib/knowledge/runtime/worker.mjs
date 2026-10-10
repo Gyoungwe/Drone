@@ -180,10 +180,344 @@ function splitKnowledgeChunks(text, maxChars = 1200) {
   return chunks;
 }
 
+// packages/knowledge/src/ingest-frontmatter.ts
+var KNOWLEDGE_TYPES = [
+  "paper",
+  "method",
+  "software",
+  "dataset",
+  "concept",
+  "entity",
+  "idea",
+  "claim",
+  "evidence",
+  "decision",
+  "question",
+  "wiki"
+];
+var RUN_RESULT_TYPES = ["run", "artifact", "explainer"];
+var NOTE_TYPES = [...KNOWLEDGE_TYPES, ...RUN_RESULT_TYPES];
+var MAX_FRONTMATTER_CHARS = 64 * 1024;
+var MAX_DEPTH = 6;
+var UNSAFE_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+function splitFrontmatter(text) {
+  const source = String(text ?? "").replace(/^\uFEFF/, "");
+  const open2 = source.match(/^---[ \t]*\r?\n/);
+  if (!open2) return { raw: null, body: source };
+  const start = open2[0].length;
+  const rest = source.slice(start);
+  const close = rest.match(/^(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/m);
+  if (!close || close.index === void 0) return { raw: null, body: source };
+  return { raw: rest.slice(0, close.index), body: rest.slice(close.index + close[0].length) };
+}
+function stripComment(text) {
+  let quote = null;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (quote) {
+      if (char === "\\" && quote === '"') i++;
+      else if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === "#" && (i === 0 || /\s/.test(text[i - 1] ?? ""))) return text.slice(0, i).trimEnd();
+  }
+  return text;
+}
+function splitFlow(inner) {
+  const items = [];
+  let current = "";
+  let quote = null;
+  let depth = 0;
+  for (let i = 0; i < inner.length; i++) {
+    const char = inner[i] ?? "";
+    if (quote) {
+      current += char;
+      if (char === "\\" && quote === '"') current += inner[++i] ?? "";
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'") quote = char;
+    else if (char === "[" || char === "{") depth++;
+    else if (char === "]" || char === "}") depth--;
+    if (char === "," && depth === 0) {
+      items.push(current.trim());
+      current = "";
+    } else current += char;
+  }
+  if (current.trim()) items.push(current.trim());
+  return items;
+}
+function parseScalar(raw) {
+  const text = raw.trim();
+  if (text === "" || text === "~" || text === "null" || text === "Null" || text === "NULL") return null;
+  if (text === "true" || text === "True") return true;
+  if (text === "false" || text === "False") return false;
+  if (text.startsWith('"')) {
+    if (text.endsWith('"') && text.length >= 2) {
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text.slice(1, -1).replace(/\\"/g, '"');
+      }
+    }
+    throw new Error("Unterminated double-quoted string");
+  }
+  if (text.startsWith("'")) {
+    if (text.endsWith("'") && text.length >= 2) return text.slice(1, -1).replace(/''/g, "'");
+    throw new Error("Unterminated single-quoted string");
+  }
+  if (text.startsWith("[")) {
+    if (!text.endsWith("]")) throw new Error("Unterminated flow sequence");
+    const inner = text.slice(1, -1).trim();
+    return inner ? splitFlow(inner).map(parseScalar) : [];
+  }
+  if (text.startsWith("{")) {
+    if (!text.endsWith("}")) throw new Error("Unterminated flow mapping");
+    const inner = text.slice(1, -1).trim();
+    const out = {};
+    if (!inner) return out;
+    for (const pair of splitFlow(inner)) {
+      const match = pair.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:\s*(.*)$/);
+      if (!match) throw new Error(`Invalid flow mapping entry: ${pair}`);
+      const key = String(parseScalar(match[1] ?? ""));
+      if (!UNSAFE_KEYS.has(key)) out[key] = parseScalar(match[2] ?? "");
+    }
+    return out;
+  }
+  if (/^[&*!|>]/.test(text)) throw new Error(`Unsupported YAML syntax: ${text.slice(0, 20)}`);
+  if (/^-?\d+(?:\.\d+)?$/.test(text) && text.length <= 15) return Number(text);
+  return text;
+}
+var KEY_LINE = /^("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^\s"'#\-[{][^:#]*?|-[^\s:#][^:#]*?)\s*:(?:\s+(.*)|\s*)$/;
+function isListItem(line) {
+  return line.text === "-" || line.text.startsWith("- ");
+}
+var Parser = class {
+  constructor(lines) {
+    this.lines = lines;
+  }
+  index = 0;
+  parseDocument() {
+    if (!this.lines.length) return {};
+    const first = this.lines[0];
+    if (first.indent !== 0) throw new Error(`Line ${first.number}: top-level key must not be indented`);
+    if (isListItem(first)) throw new Error(`Line ${first.number}: frontmatter must be a mapping`);
+    const value = this.parseMap(0, 0);
+    if (this.index < this.lines.length) {
+      const line = this.lines[this.index];
+      throw new Error(`Line ${line.number}: unexpected indentation`);
+    }
+    return value;
+  }
+  peek() {
+    return this.lines[this.index];
+  }
+  parseBlock(indent, depth) {
+    if (depth > MAX_DEPTH) throw new Error("Frontmatter nesting is too deep");
+    const line = this.peek();
+    if (!line) return null;
+    return isListItem(line) ? this.parseList(line.indent, depth) : this.parseMap(indent, depth);
+  }
+  valueAfterKey(indent, depth, rest) {
+    if (rest !== void 0 && rest.trim() !== "") {
+      const value = stripComment(rest);
+      if (/^[|>][+-]?$/.test(value.trim())) return this.parseBlockScalar(indent, value.trim());
+      return parseScalar(value);
+    }
+    const next = this.peek();
+    if (!next) return null;
+    if (next.indent > indent) return this.parseBlock(next.indent, depth + 1);
+    if (next.indent === indent && isListItem(next)) return this.parseList(indent, depth + 1);
+    return null;
+  }
+  parseBlockScalar(indent, style) {
+    const collected = [];
+    let blockIndent = null;
+    while (this.index < this.lines.length) {
+      const line = this.lines[this.index];
+      if (line.indent <= indent) break;
+      blockIndent ??= line.indent;
+      collected.push(`${" ".repeat(Math.max(0, line.indent - blockIndent))}${line.text}`);
+      this.index++;
+    }
+    const joined = style.startsWith("|") ? collected.join("\n") : collected.join(" ");
+    return style.endsWith("-") ? joined : `${joined}
+`;
+  }
+  parseMap(indent, depth) {
+    const out = {};
+    while (this.index < this.lines.length) {
+      const line = this.lines[this.index];
+      if (line.indent < indent) break;
+      if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
+      if (isListItem(line)) break;
+      const match = line.text.match(KEY_LINE);
+      if (!match) throw new Error(`Line ${line.number}: expected "key: value"`);
+      const key = String(parseScalar(match[1] ?? "")).trim();
+      this.index++;
+      const value = this.valueAfterKey(indent, depth, match[2]);
+      if (UNSAFE_KEYS.has(key)) continue;
+      if (Object.hasOwn(out, key)) throw new Error(`Line ${line.number}: duplicate key "${key}"`);
+      out[key] = value;
+    }
+    return out;
+  }
+  parseList(indent, depth) {
+    const out = [];
+    while (this.index < this.lines.length) {
+      const line = this.lines[this.index];
+      if (line.indent !== indent || !isListItem(line)) {
+        if (line.indent > indent) throw new Error(`Line ${line.number}: unexpected indentation`);
+        break;
+      }
+      const rest = line.text === "-" ? "" : line.text.slice(2);
+      const offset = line.text === "-" ? 1 : 2 + (rest.length - rest.trimStart().length);
+      const content = rest.trim();
+      if (!content) {
+        this.index++;
+        const next = this.peek();
+        out.push(next && next.indent > indent ? this.parseBlock(next.indent, depth + 1) : null);
+        continue;
+      }
+      if (KEY_LINE.test(stripComment(content)) && !/^["'[{]/.test(content)) {
+        this.lines[this.index] = { indent: indent + offset, text: content, number: line.number };
+        out.push(this.parseMap(indent + offset, depth + 1));
+        continue;
+      }
+      this.index++;
+      out.push(parseScalar(stripComment(content)));
+    }
+    return out;
+  }
+};
+function toLines(raw) {
+  const lines = [];
+  const source = raw.replace(/\r\n?/g, "\n").split("\n");
+  for (let i = 0; i < source.length; i++) {
+    const text = source[i] ?? "";
+    if (!text.trim() || /^\s*#/.test(text)) continue;
+    const leading = text.match(/^[ \t]*/)?.[0] ?? "";
+    if (leading.includes("	")) throw new Error(`Line ${i + 2}: tabs are not allowed for indentation`);
+    lines.push({ indent: leading.length, text: text.slice(leading.length).trimEnd(), number: i + 2 });
+  }
+  return lines;
+}
+function parseFrontmatter(text) {
+  const { raw, body } = splitFrontmatter(text);
+  if (raw === null) return { data: null, body, errors: [] };
+  if (raw.length > MAX_FRONTMATTER_CHARS) return { data: null, body, errors: ["Frontmatter exceeds 64 KiB"] };
+  try {
+    return { data: new Parser(toLines(raw)).parseDocument(), body, errors: [] };
+  } catch (error) {
+    return { data: null, body, errors: [error instanceof Error ? error.message : String(error)] };
+  }
+}
+
 // packages/knowledge/src/semantic-model.ts
 var WIDTH = 720;
 var HEIGHT = 440;
 var INFRASTRUCTURE = /(?:^|\/)(?:Index|Context|Home|Template|Templates)\.md$/i;
+var MAIN_TYPES = /* @__PURE__ */ new Set(["question", "concept", "claim", "decision"]);
+var CATEGORY_BY_PATH = [
+  [/\/Papers\//i, "paper"],
+  [/\/Methods?\//i, "method"],
+  [/\/Software\//i, "software"],
+  [/\/Datasets?\//i, "dataset"],
+  [/\/(?:Wiki|Wikis)\//i, "wiki"],
+  [/\/(?:Questions?|Research)\//i, "question"]
+];
+function contentCategory(node) {
+  const explicit = node.contentType?.trim().toLowerCase();
+  if (explicit) return explicit;
+  for (const [pattern, category] of CATEGORY_BY_PATH) if (pattern.test(node.path)) return category;
+  if (node.kind === "wiki") return "wiki";
+  return "other";
+}
+function isMainNode(node, category) {
+  if (MAIN_TYPES.has(category)) return true;
+  return /(?:^|\/)(?:Questions?|Research[-_ ]?Questions?)\/|(?:研究问题|研究主题|research question)/i.test(
+    `${node.path} ${node.title}`
+  );
+}
+var SECTOR_ANGLES = {
+  // SVG y grows downwards: 7 o'clock is 120° and 8 o'clock is 150°.
+  paper: 2 * Math.PI / 3,
+  software: 5 * Math.PI / 6,
+  method: Math.PI,
+  dataset: 7 * Math.PI / 6,
+  evidence: 4 * Math.PI / 3,
+  claim: 3 * Math.PI / 2,
+  concept: 11 * Math.PI / 6,
+  entity: 0,
+  idea: Math.PI / 6,
+  decision: Math.PI / 3,
+  question: Math.PI / 2,
+  wiki: 3 * Math.PI / 4,
+  other: 11 * Math.PI / 6
+};
+function sectorLayout(nodes, relations, seed) {
+  const paths = [...nodes.keys()].sort(comparePath);
+  const adjacency = new Map(paths.map((path) => [path, /* @__PURE__ */ new Set()]));
+  for (const relation of relations) {
+    if (relation.type !== "link") continue;
+    adjacency.get(relation.source)?.add(relation.target);
+    adjacency.get(relation.target)?.add(relation.source);
+  }
+  const categories = new Map(paths.map((path) => [path, contentCategory(nodes.get(path))]));
+  const mains = new Set(paths.filter((path) => isMainNode(nodes.get(path), categories.get(path) ?? "other")));
+  if (!mains.size) {
+    paths.slice().sort((a, b) => (adjacency.get(b)?.size ?? 0) - (adjacency.get(a)?.size ?? 0) || comparePath(a, b)).slice(0, Math.min(3, paths.length)).forEach((path) => {
+      mains.add(path);
+    });
+  }
+  const sharedWith = /* @__PURE__ */ new Map();
+  for (const path of paths) {
+    if (mains.has(path)) continue;
+    const connected = [...adjacency.get(path) ?? []].filter((candidate) => mains.has(candidate)).sort(comparePath);
+    if (connected.length > 1) sharedWith.set(path, connected);
+  }
+  const mainPaths = [...mains].sort(comparePath);
+  const centers = /* @__PURE__ */ new Map();
+  const centerY = HEIGHT * 0.48;
+  const spacing = Math.min(270, Math.max(170, (WIDTH - 190) / Math.max(1, mainPaths.length - 1)));
+  const startX = WIDTH / 2 - (mainPaths.length - 1) * spacing / 2;
+  mainPaths.forEach((path, index) => {
+    centers.set(path, { x: startX + index * spacing, y: centerY });
+  });
+  const layout = {};
+  for (const path of mainPaths) layout[path] = centers.get(path);
+  for (const path of paths) {
+    if (mains.has(path)) continue;
+    const bridges = sharedWith.get(path);
+    if (bridges?.length) {
+      const average = bridges.reduce(
+        (point, main) => ({ x: point.x + (centers.get(main)?.x ?? WIDTH / 2), y: point.y + (centers.get(main)?.y ?? centerY) }),
+        { x: 0, y: 0 }
+      );
+      const jitter2 = (hash(`${path}:bridge`, seed) - 0.5) * 30;
+      layout[path] = { x: average.x / bridges.length, y: average.y / bridges.length - 36 + jitter2 };
+      continue;
+    }
+    const connectedMain = [...adjacency.get(path) ?? []].find((candidate) => mains.has(candidate));
+    const anchor = connectedMain ? centers.get(connectedMain) : { x: WIDTH / 2, y: centerY };
+    const category = categories.get(path) ?? "other";
+    const angle = SECTOR_ANGLES[category] ?? SECTOR_ANGLES.other ?? 0;
+    const siblings = paths.filter(
+      (candidate) => !mains.has(candidate) && !sharedWith.has(candidate) && categories.get(candidate) === category && [...adjacency.get(candidate) ?? []].includes(connectedMain ?? "")
+    );
+    const index = Math.max(0, siblings.indexOf(path));
+    const spread = Math.min(0.22, 0.08 + siblings.length * 0.012);
+    const offset = (index - (siblings.length - 1) / 2) * spread;
+    const radius = 92 + Math.floor(index / 3) * 26 + hash(`${path}:radius`, seed) * 10;
+    const jitter = (hash(`${path}:angle`, seed) - 0.5) * 0.06;
+    layout[path] = { x: (anchor?.x ?? WIDTH / 2) + radius * Math.cos(angle + offset + jitter), y: (anchor?.y ?? centerY) + radius * Math.sin(angle + offset + jitter) };
+  }
+  for (const path of paths) {
+    if (layout[path]) continue;
+    const angle = 2 * Math.PI * hash(`${path}:outer`, seed);
+    layout[path] = { x: WIDTH / 2 + 175 * Math.cos(angle), y: centerY + 145 * Math.sin(angle) };
+  }
+  return { layout, mains, sharedWith };
+}
 function isInfrastructureNode(node) {
   return node.kind === "navigation" || INFRASTRUCTURE.test(node.path);
 }
@@ -198,7 +532,7 @@ function classifyRelation(source, target, type) {
   const targetDir = target.path.slice(0, target.path.lastIndexOf("/"));
   return sourceDir && sourceDir === targetDir ? "directory" : "link";
 }
-function normalizeIdentity(value) {
+function normalizeIdentity2(value) {
   if (!value) return null;
   const normalized = value.trim().toLowerCase().replace(/^https?:\/\/(?:dx\.)?doi\.org\//, "");
   if (/^doi:\s*/.test(normalized) || /^10\.\d{4,9}\//.test(normalized)) return `doi:${normalized.replace(/^doi:\s*/, "")}`;
@@ -207,7 +541,7 @@ function normalizeIdentity(value) {
   return normalized || null;
 }
 function fallbackIdentity(node) {
-  if (node.identity) return normalizeIdentity(node.identity);
+  if (node.identity) return normalizeIdentity2(node.identity);
   return null;
 }
 function canonicalRank(path) {
@@ -320,17 +654,7 @@ function createSemanticModel(input, options = {}) {
   }
   for (const duplicate of duplicates) relations.push({ source: duplicate.canonical, target: duplicate.duplicate, type: "duplicate" });
   const communities = assignCommunities([...modelNodes.keys()], relations, seed);
-  const communitySizes = /* @__PURE__ */ new Map();
-  for (const community of Object.values(communities)) if (community >= 0) communitySizes.set(community, (communitySizes.get(community) ?? 0) + 1);
-  const communityCount = Math.max(1, communitySizes.size);
-  const layout = {};
-  for (const path of [...modelNodes.keys()].sort(comparePath)) {
-    const community = communities[path] ?? -1;
-    const centerAngle = community >= 0 ? 2 * Math.PI * community / communityCount : 2 * Math.PI * hash(path, seed);
-    const radius = community >= 0 ? 75 + 24 * hash(`${path}:r`, seed) : 150 + 35 * hash(`${path}:r`, seed);
-    const jitter = 2 * Math.PI * hash(`${path}:a`, seed);
-    layout[path] = { x: WIDTH / 2 + radius * Math.cos(centerAngle) + 18 * Math.cos(jitter), y: HEIGHT / 2 + radius * Math.sin(centerAngle) + 18 * Math.sin(jitter) };
-  }
+  const { layout, mains, sharedWith } = sectorLayout(modelNodes, relations, seed);
   const linkRelations = relations.filter((edge) => edge.type === "link");
   const degree = /* @__PURE__ */ new Map();
   for (const edge of linkRelations) {
@@ -340,7 +664,21 @@ function createSemanticModel(input, options = {}) {
   const nodes = [...modelNodes.entries()].sort(([a], [b]) => comparePath(a, b)).map(([path, node]) => {
     const mirrorPaths = [...canonicalFor.entries()].filter(([, canonical]) => canonical === path).map(([mirror]) => mirror).filter((mirror) => mirror !== path).sort(comparePath);
     const type = nodeType(node);
-    return { path, title: node.title, kind: node.kind, degree: degree.get(path) ?? 0, nodeType: mirrorPaths.length ? "mirror" : type, isInfrastructure: type === "infrastructure", community: communities[path] ?? -1, ...layout[path] ?? { x: WIDTH / 2, y: HEIGHT / 2 }, ...mirrorPaths.length ? { mirrors: mirrorPaths, warnings: ["mirror"] } : {} };
+    const category = contentCategory(node);
+    return {
+      path,
+      title: node.title,
+      kind: node.kind,
+      degree: degree.get(path) ?? 0,
+      nodeType: mirrorPaths.length ? "mirror" : type,
+      isInfrastructure: type === "infrastructure",
+      community: communities[path] ?? -1,
+      contentType: category,
+      isMain: mains.has(path),
+      ...sharedWith.has(path) ? { sharedWith: sharedWith.get(path) } : {},
+      ...layout[path] ?? { x: WIDTH / 2, y: HEIGHT / 2 },
+      ...mirrorPaths.length ? { mirrors: mirrorPaths, warnings: ["mirror"] } : {}
+    };
   });
   return { nodes, edges: linkRelations.map(({ source, target }) => ({ source, target })), relations, duplicates, communities, layout };
 }
@@ -1093,7 +1431,11 @@ async function knowledgeGraph(args) {
         kind: row.kind,
         scope: row.scope,
         degree: degree.get(row.path) || 0,
-        identity: noteIdentity(row.body)
+        identity: noteIdentity(row.body),
+        contentType: (() => {
+          const type = parseFrontmatter(row.body).data?.type;
+          return typeof type === "string" ? type : null;
+        })()
       })),
       edges: rawEdges
     },

@@ -79,4 +79,68 @@ describe("syncCloudNotes", () => {
 		expect(result.completed).toBe(false);
 		expect(result.items[0]?.status).toBe("conflict");
 	});
+
+	it("requires a fresh strong remote version before resolving locally", async () => {
+		const { vault, binding } = await fixture();
+		await writeFile(join(vault, "Home.md"), "# local\n");
+		const remote: KnowledgeCloudNote = {
+			path: "Home.md",
+			text: "# remote\n",
+			hash: "remote-hash",
+			version: '"v2"',
+			bytes: 9,
+			lastModified: null,
+		};
+		let written = false;
+		const cloud = {
+			read: async () => remote,
+			write: async (input: { path: string; text: string; expectedVersion?: string }) => {
+				written = input.expectedVersion === '"v2"' && input.text === "# local\n";
+				return {
+					path: input.path,
+					status: "updated" as const,
+					version: '"v3"',
+					hash: "local-hash",
+					message: null,
+				};
+			},
+		};
+		const result = await syncCloudNotes(cloud, {
+			mode: "push",
+			resolution: "local",
+			bindingRevision: binding.revision,
+			paths: ["Home.md"],
+		});
+		expect(written).toBe(true);
+		expect(result.items[0]?.status).toBe("pushed");
+	});
+
+	it("can explicitly replace a local conflict with the remote copy", async () => {
+		const { vault, binding } = await fixture();
+		await writeFile(join(vault, "Home.md"), "# local\n");
+		const cloud = {
+			read: async () =>
+				({
+					path: "Home.md",
+					text: "# remote\n",
+					hash: "remote-hash",
+					version: '"v2"',
+					bytes: 9,
+					lastModified: null,
+				}) satisfies KnowledgeCloudNote,
+			write: async () => {
+				throw new Error("must not write");
+			},
+		};
+		const result = await syncCloudNotes(cloud, {
+			mode: "pull",
+			resolution: "remote",
+			bindingRevision: binding.revision,
+			paths: ["Home.md"],
+		});
+		expect(result.items[0]?.status).toBe("pulled");
+		expect(
+			await import("node:fs/promises").then(({ readFile: read }) => read(join(vault, "Home.md"), "utf8")),
+		).toBe("# remote\n");
+	});
 });

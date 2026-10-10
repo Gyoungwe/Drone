@@ -46,4 +46,29 @@ describe("semantic knowledge graph model", () => {
 		expect(first.layout).toEqual(second.layout);
 		expect(first.nodes.find((item) => item.path === "lonely.md")?.community).toBe(-1);
 	});
+
+	it("anchors research questions and places shared evidence between them", () => {
+		const model = createSemanticModel({
+			nodes: [
+				{ ...node("q1.md", "Question one"), contentType: "question" },
+				{ ...node("q2.md", "Question two"), contentType: "question" },
+				{ ...node("paper.md", "Paper"), contentType: "paper" },
+				{ ...node("software.md", "Software"), contentType: "software" },
+			],
+			edges: [
+				{ source: "q1.md", target: "paper.md" },
+				{ source: "q2.md", target: "paper.md" },
+				{ source: "q1.md", target: "software.md" },
+			],
+		});
+		const q1 = model.nodes.find((item) => item.path === "q1.md");
+		const q2 = model.nodes.find((item) => item.path === "q2.md");
+		const paper = model.nodes.find((item) => item.path === "paper.md");
+		const software = model.nodes.find((item) => item.path === "software.md");
+		expect(q1?.isMain).toBe(true);
+		expect(q2?.isMain).toBe(true);
+		expect(paper?.sharedWith).toEqual(["q1.md", "q2.md"]);
+		expect(paper?.x).toBeCloseTo(((q1?.x ?? 0) + (q2?.x ?? 0)) / 2, 0);
+		expect(software?.y ?? 0).toBeGreaterThan(q1?.y ?? 0);
+	});
 });

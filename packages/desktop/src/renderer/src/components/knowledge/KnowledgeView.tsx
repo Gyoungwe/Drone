@@ -64,7 +64,7 @@ export function KnowledgeView() {
 				</button>
 			</header>
 			<div className="knowledge-view-body">
-				<div className="mx-auto w-full max-w-[1120px]">
+				<div className="mx-auto w-full max-w-[1440px]">
 					{dialog.note && dialog.noteRevision ? (
 						<KnowledgeNoteViewer
 							cwd={dialog.cwd}

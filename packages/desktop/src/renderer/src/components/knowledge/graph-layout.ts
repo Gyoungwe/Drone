@@ -94,6 +94,7 @@ export function placeGraphLabels(
 	points: Map<string, Point>,
 	labelled: Set<string>,
 	selected?: string | null,
+	options: { uniformOrientation?: boolean } = {},
 ): Map<string, LabelPlacement> {
 	const placed: Array<{ x: number; y: number; width: number; height: number }> = [];
 	const result = new Map<string, LabelPlacement>();
@@ -114,17 +115,24 @@ export function placeGraphLabels(
 	for (const node of nodes) {
 		const point = points.get(node.path);
 		if (!point) continue;
-		const text = node.title.length > 24 ? `${node.title.slice(0, 23)}…` : node.title;
+		const text = node.title.length > 18 ? `${node.title.slice(0, 17)}…` : node.title;
 		const width = Math.min(156, Math.max(42, text.length * 6.4));
 		const radius = 10;
-		const candidates = [
-			{ x: point.x + radius, y: point.y - 15, anchor: "start" as const },
-			{ x: point.x + radius, y: point.y + 5, anchor: "start" as const },
-			{ x: point.x - radius - width, y: point.y - 15, anchor: "end" as const },
-			{ x: point.x - radius - width, y: point.y + 5, anchor: "end" as const },
-			{ x: point.x - width / 2, y: point.y - 24, anchor: "start" as const },
-			{ x: point.x - width / 2, y: point.y + 14, anchor: "start" as const },
-		];
+		const candidates = options.uniformOrientation
+			? [
+					{ x: point.x + radius, y: point.y - 15, anchor: "start" as const },
+					{ x: point.x + radius, y: point.y + 5, anchor: "start" as const },
+					{ x: point.x + radius + 8, y: point.y - 27, anchor: "start" as const },
+					{ x: point.x + radius + 8, y: point.y + 17, anchor: "start" as const },
+				]
+			: [
+					{ x: point.x + radius, y: point.y - 15, anchor: "start" as const },
+					{ x: point.x + radius, y: point.y + 5, anchor: "start" as const },
+					{ x: point.x - radius - width, y: point.y - 15, anchor: "end" as const },
+					{ x: point.x - radius - width, y: point.y + 5, anchor: "end" as const },
+					{ x: point.x - width / 2, y: point.y - 24, anchor: "start" as const },
+					{ x: point.x - width / 2, y: point.y + 14, anchor: "start" as const },
+				];
 		let best = candidates[0] as (typeof candidates)[number];
 		let bestScore = Number.POSITIVE_INFINITY;
 		for (const candidate of candidates) {

@@ -243,6 +243,7 @@ export interface KnowledgeCloudSyncResult {
 	items: KnowledgeCloudSyncItem[];
 	warnings: string[];
 }
+export type KnowledgeCloudConflictResolution = "local" | "remote";
 export type ResearchRunRouteState = "pending" | "active" | "complete" | "blocked";
 export interface ResearchRunRouteNode {
 	key: string;
@@ -494,6 +495,12 @@ export interface KnowledgeGraphNode {
 	degree: number;
 	/** Optional frontmatter type, kept additive for older runtimes. */
 	type?: string;
+	/** Normalized knowledge category used by the sector layout. */
+	contentType?: string;
+	/** Research topic/question anchor for surrounding category sectors. */
+	isMain?: boolean;
+	/** Paths of main nodes connected through this shared bridge node. */
+	sharedWith?: string[];
 	/** Optional project/shared scope, kept additive for older runtimes. */
 	scope?: string;
 	/** Normalized paper identifiers used to surface likely duplicates. */
@@ -598,6 +605,8 @@ export interface KnowledgeApi {
 		mode: "pull" | "push";
 		bindingRevision: number;
 		paths: string[];
+		/** Optional explicit choice after a preview found divergent local and remote content. */
+		resolution?: KnowledgeCloudConflictResolution;
 	}): Promise<KnowledgeCloudSyncResult>;
 	searchKnowledge(input: KnowledgeSearchRequest): Promise<KnowledgeSearchResult>;
 	getKnowledgeNoteLinks(input: { path: string; revision: number }): Promise<KnowledgeNoteLinks>;
