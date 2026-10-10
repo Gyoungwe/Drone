@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutGraph } from "./graph-layout";
+import { GRAPH_HEIGHT, GRAPH_WIDTH, layoutGraph, placeGraphLabels } from "./graph-layout";
 
 describe("knowledge graph layout", () => {
 	it("is deterministic, keeps nodes inside the canvas and pulls linked nodes closer", () => {
@@ -21,5 +21,29 @@ describe("knowledge graph layout", () => {
 			return Math.hypot(a.x - b.x, a.y - b.y);
 		};
 		expect(distance("a", "b")).toBeLessThan(distance("c", "d"));
+	});
+
+	it("places labels without overlapping earlier labels or leaving the canvas", () => {
+		const data = {
+			nodes: [
+				{ path: "a", title: "A very important research topic", kind: "note", degree: 5 },
+				{ path: "b", title: "Another important research topic", kind: "note", degree: 4 },
+				{ path: "c", title: "Third topic", kind: "note", degree: 3 },
+			],
+		};
+		const points = new Map([
+			["a", { x: GRAPH_WIDTH / 2, y: GRAPH_HEIGHT / 2, vx: 0, vy: 0 }],
+			["b", { x: GRAPH_WIDTH / 2 + 4, y: GRAPH_HEIGHT / 2 + 4, vx: 0, vy: 0 }],
+			["c", { x: 20, y: 20, vx: 0, vy: 0 }],
+		]);
+		const first = placeGraphLabels(data, points, new Set(data.nodes.map((node) => node.path)));
+		const second = placeGraphLabels(data, points, new Set(data.nodes.map((node) => node.path)));
+		expect(first).toEqual(second);
+		for (const placement of first.values()) {
+			expect(placement.x).toBeGreaterThanOrEqual(0);
+			expect(placement.x).toBeLessThanOrEqual(GRAPH_WIDTH);
+			expect(placement.y).toBeGreaterThanOrEqual(0);
+			expect(placement.y).toBeLessThanOrEqual(GRAPH_HEIGHT);
+		}
 	});
 });
