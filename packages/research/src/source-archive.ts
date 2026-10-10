@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { externalEffectKey } from "@drone/compute/jobs/idempotency";
 import { normalizeDoi } from "./literature-receipt";
 import { normalizePmcid, normalizePmid, OA_MAX_CANDIDATES, resolveOpenAccess } from "./open-access";
 import {
@@ -324,6 +325,12 @@ export async function archiveSource(
 			const validation = validateContent(category, contentType, outputName, bytes);
 			if (!validation.ok) throw new Error(validation.reason);
 			const sha256 = createHash("sha256").update(bytes).digest("hex");
+			const idempotencyKey = externalEffectKey("research.download", {
+				category,
+				identity,
+				url: url ?? resolvedUrl,
+				outputName,
+			});
 			let outputPath = join(sourcesDir, outputName);
 			if (!isWithin(sourcesDir, outputPath)) throw new Error("filename escapes source category directory");
 			try {
@@ -353,6 +360,7 @@ export async function archiveSource(
 					? { manualCoverage: assessManualPage(bytes, contentType, resolvedUrl) }
 					: {}),
 				id: randomUUID(),
+				idempotency_key: idempotencyKey,
 				status: "downloaded",
 				category,
 				// 仅凭 DOI 归档时没有调用方 URL：以实际取得文件的地址作为来源
@@ -373,6 +381,14 @@ export async function archiveSource(
 				}),
 			};
 			const manifest = await readManifest(manifestPath, runDir);
+			const prior = manifest.items.find((item: any) => item?.idempotency_key === idempotencyKey);
+			if (prior) {
+				if (prior.sha256 !== sha256)
+					throw new Error(
+						"Download idempotency key already exists with different content; reconcile the manifest first",
+					);
+				return { ...prior, manifest_path: manifestPath, manifestPath, idempotent_replay: true };
+			}
 			manifest.updated_at = downloadedAt;
 			manifest.items = [...manifest.items, entry];
 			await atomicJson(manifestPath, manifest);

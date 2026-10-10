@@ -151,6 +151,7 @@ describe("prepareZoteroSave", () => {
 		const plan = await prepareZoteroSave(paper(), { fetchImpl: z.fetchImpl, env: {} });
 		expect(plan.channel).toBe("connector");
 		expect(plan.action).toBe("create");
+		expect(plan.idempotencyKey).toMatch(/^zotero\.create:[a-f0-9]{64}$/);
 		expect(plan.target).toMatchObject({
 			libraryName: "My Library",
 			collectionName: "Reading",

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { open, realpath, stat } from "node:fs/promises";
 import { basename, isAbsolute, relative, resolve, sep } from "node:path";
+import { externalEffectKey } from "@drone/compute/jobs/idempotency";
 import { exactDoiItems, normalizeDoi } from "./literature-receipt";
 import { zoteroLibraryPath } from "./zotero-library";
 import {
@@ -326,6 +327,10 @@ export async function prepareZoteroSave(
 		);
 	const plan: Record<string, any> = {
 		doi: item.doi,
+		idempotencyKey: externalEffectKey("zotero.create", {
+			doi: item.doi,
+			collectionKey,
+		}),
 		item,
 		attachment,
 		channel,
@@ -437,6 +442,7 @@ async function readBackByDoi(
 function baseReceipt(plan: Record<string, any>, at: string): Record<string, any> {
 	return {
 		doi: plan.doi,
+		idempotencyKey: plan.idempotencyKey,
 		title: plan.item.title,
 		itemType: plan.item.itemType,
 		channel: plan.channel,

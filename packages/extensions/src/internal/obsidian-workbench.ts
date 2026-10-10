@@ -272,6 +272,7 @@ export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }: 
         const note = await vaultPath(vault, "Library", category, `${slug}.md`);
         const projectNote = await vaultPath(vault, "Projects", project, category, `${slug}.md`);
         const provenance = JSON.stringify({
+            idempotency_key: entry.idempotency_key || null,
             url: entry.url,
             final_url: entry.final_url,
             downloaded_at: entry.downloaded_at,
@@ -285,7 +286,7 @@ export async function publishSourceNote({ cwd = process.cwd(), runDir, entry }: 
             .map((c: any) => `- ${onlineSourceLink(c.url, c.title || c.url)}`)
             .join("\n");
         const body = `[[Projects/${project}/Index]] | [[Library/Index]]\n\n${online}${doi ? ` | ${doi}` : ""}\n\n[Original file](${pathToFileURL(entry.path).href})\n\n## Provenance\n\n\`\`\`json\n${provenance}\n\`\`\`\n\n## Evidence status\n\nArchived source only; scientific claims have not been independently verified. This note is a source record, not a completed paper explanation or command reference.\n\n${entry.manualCoverage ? `Manual coverage: ${entry.manualCoverage.status}. Commands and parameters require reading the appropriate reference chapters; a landing page is not a complete manual.` : ""}${chapters ? `\n\n## Reference chapters (not yet archived)\n\n${chapters}` : ""}`;
-        await writeManagedIndex(note, `---\nid: pi-${randomUUID()}\ntype: ${category === "Papers" ? "paper" : "software"}\nsource_sha256: ${entry.sha256}\n---\n\n# ${title}`, body);
+        await writeManagedIndex(note, `---\nid: pi-${randomUUID()}\ntype: ${category === "Papers" ? "paper" : "software"}\nsource_sha256: ${entry.sha256}\nsource_idempotency_key: ${entry.idempotency_key || "unknown"}\n---\n\n# ${title}`, body);
         await writeManagedIndex(projectNote, `# ${title}`, `[[Library/${category}/${slug}]]\n\n[Run files](${pathToFileURL(runDir).href})`);
         return {
             obsidian_note: note,
