@@ -492,6 +492,12 @@ export interface KnowledgeGraphNode {
 	title: string;
 	kind: string;
 	degree: number;
+	/** Optional frontmatter type, kept additive for older runtimes. */
+	type?: string;
+	/** Optional project/shared scope, kept additive for older runtimes. */
+	scope?: string;
+	/** Normalized paper identifiers used to surface likely duplicates. */
+	identifiers?: string[];
 	nodeType?: "note" | "wiki" | "navigation" | "mirror" | "infrastructure";
 	isInfrastructure?: boolean;
 	community?: number;
@@ -502,7 +508,7 @@ export interface KnowledgeGraphNode {
 }
 export interface KnowledgeGraphSemantic {
 	nodes: KnowledgeGraphNode[];
-	edges: { source: string; target: string }[];
+	edges: { source: string; target: string; directory?: boolean }[];
 	totalNotes: number;
 	view: KnowledgeGraphView;
 	mergeMirrors: boolean;
@@ -515,7 +521,7 @@ export interface KnowledgeGraphSemantic {
 /** 知识网络图：旧字段保留；语义投影字段全部为可选，兼容旧 worker/IPC。 */
 export interface KnowledgeGraph {
 	nodes: KnowledgeGraphNode[];
-	edges: { source: string; target: string }[];
+	edges: { source: string; target: string; directory?: boolean }[];
 	totalNotes: number;
 	revision?: number;
 	view?: KnowledgeGraphView;
