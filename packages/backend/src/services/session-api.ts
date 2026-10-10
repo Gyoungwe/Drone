@@ -129,8 +129,13 @@ export class SessionServiceApi extends SessionSettingsApi {
 		await this.host.knowledgeSession.resumeCheck(sessionId);
 	}
 
-	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt> {
-		return this.host.control.prompt(sessionId, text, images);
+	async prompt(
+		sessionId: string,
+		text: string,
+		images?: ImageInput[],
+		requestId?: string,
+	): Promise<PromptReceipt> {
+		return this.host.control.prompt(sessionId, text, images, requestId);
 	}
 	async retry(sessionId: string, requestId: string, expectedUserTimestamp?: number): Promise<PromptReceipt> {
 		return this.host.control.retry(sessionId, requestId, expectedUserTimestamp);

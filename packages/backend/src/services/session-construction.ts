@@ -14,8 +14,10 @@ import { createLogger } from "../log";
 import type { PermissionConfirm } from "../permissions/extension";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import { AskGate } from "../session/ask-gate";
+import { inboxFor, observeInbox } from "../session/durable-inbox";
 import { bindToolIntentJournal } from "../session/intent-binding";
 import {
+	AUTO_RESUME_WINDOW_MS,
 	type InterruptedToolCall,
 	repairInterruptedToolCalls,
 	shouldAutoResume,
@@ -166,6 +168,7 @@ export class SessionConstructionService {
 		);
 		const unsubscribe = session.subscribe((event) => {
 			recordIntent(event);
+			observeInbox(session.sessionFile, event);
 			autoNameSession(session, event);
 			this.host.emitEvent(session.sessionId, event);
 		});
@@ -285,6 +288,7 @@ export class SessionConstructionService {
 		);
 		const unsubscribe = session.subscribe((event) => {
 			recordIntent(event);
+			observeInbox(session.sessionFile, event);
 			autoNameSession(session, event);
 			this.host.emitEvent(session.sessionId, event);
 		});
@@ -299,17 +303,47 @@ export class SessionConstructionService {
 		});
 		if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 		log.info("session opened", session.sessionId, { file: filePath });
+		const autoResume = this.host.options.autoResumeInterrupted !== false;
+		let resumed: Promise<unknown> = Promise.resolve();
 		if (interrupted.length) {
 			log.info("interrupted tool calls repaired", session.sessionId, {
 				calls: interrupted.map((c) => ({ tool: c.toolName, replay: c.replay, started: c.started })),
 			});
-			if (this.host.options.autoResumeInterrupted !== false && shouldAutoResume(interrupted))
-				void this.host
-					.resumeInterrupted?.(session, interrupted)
-					?.catch((error) =>
-						log.error("interrupted tool resume failed", session.sessionId, { error: String(error) }),
-					);
+			if (autoResume && shouldAutoResume(interrupted))
+				resumed =
+					this.host
+						.resumeInterrupted?.(session, interrupted)
+						?.catch((error) =>
+							log.error("interrupted tool resume failed", session.sessionId, { error: String(error) }),
+						) ?? resumed;
+		}
+		// 崩溃前已受理、未进入上下文的排队消息：最近 24 小时内的按原顺序重新投递，更早的保留在侧车文件里。
+		if (!readOnly && autoResume) {
+			const restored = restorableInbox(filePath);
+			if (restored.length) {
+				log.info("restoring queued messages", session.sessionId, { count: restored.length });
+				void resumed.then(async () => {
+					for (const item of restored)
+						await this.host.sessionEngine
+							.prompt(session, item.text, { streamingBehavior: "followUp" })
+							.catch((error) =>
+								log.error("restored message delivery failed", session.sessionId, { error: String(error) }),
+							);
+				});
+			}
 		}
 		return this.host.toMetaOrThrow(session.sessionId);
+	}
+}
+
+/** 取出可自动恢复的排队消息（最近 24 小时）；取出即清空，避免重复打开时二次投递。 */
+function restorableInbox(sessionFile: string) {
+	try {
+		const inbox = inboxFor(sessionFile);
+		const cutoff = Date.now() - AUTO_RESUME_WINDOW_MS;
+		if (!inbox.pending().some((item) => item.ts > cutoff)) return [];
+		return inbox.drain().filter((item) => item.ts > cutoff);
+	} catch {
+		return [];
 	}
 }
