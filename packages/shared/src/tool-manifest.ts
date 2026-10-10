@@ -29,6 +29,8 @@ export interface ToolFamilyMeta {
 	activity?: ToolActivity;
 }
 
+export type ToolReplayPolicy = "safe" | "unsafe";
+
 export interface DroneToolMeta {
 	/** Successful execution produces a reviewable deliverable (explicit opt-in for extensions). */
 	deliverable?: boolean;
@@ -40,6 +42,12 @@ export interface DroneToolMeta {
 	capabilities?: CapabilityId[];
 	/** 只读恢复（恢复上一未完成回答）时允许重放 */
 	recoverySafe?: boolean;
+	/**
+	 * 重放安全声明（借鉴 Pi Durable 的 replay policy）：进程在工具执行中途退出后，
+	 * safe = 重开会话时可以原样重跑；unsafe = 可能已部分执行，只合成“已中断”结果。
+	 * 缺省：recoverySafe/readOnly 为 true 时视为 safe，其余一律 unsafe。
+	 */
+	replay?: ToolReplayPolicy;
 	/** 子代理会话中是否注册：exclude = 不注册 */
 	subagent?: "exclude" | "inherit";
 	/** 工具执行中的宿主状态条文案 */
@@ -111,6 +119,7 @@ export function readDroneToolMeta(definition: unknown): DroneToolMeta | undefine
 		...(typeof d.libraryMode === "boolean" ? { libraryMode: d.libraryMode } : {}),
 		...(capabilities ? { capabilities } : {}),
 		...(typeof d.recoverySafe === "boolean" ? { recoverySafe: d.recoverySafe } : {}),
+		...(d.replay === "safe" || d.replay === "unsafe" ? { replay: d.replay } : {}),
 		...(d.subagent === "exclude" || d.subagent === "inherit" ? { subagent: d.subagent } : {}),
 		...(activity ? { activity } : {}),
 		...(typeof d.journal === "boolean" ? { journal: d.journal } : {}),

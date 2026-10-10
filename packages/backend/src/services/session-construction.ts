@@ -13,6 +13,7 @@ import { createLogger } from "../log";
 import type { PermissionConfirm } from "../permissions/extension";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import { AskGate } from "../session/ask-gate";
+import { bindToolIntentJournal } from "../session/intent-binding";
 import { autoNameSession } from "../session/naming";
 import type { SessionRegistry } from "../session/registry";
 import type { SessionTraces } from "../session/traces";
@@ -151,7 +152,12 @@ export class SessionConstructionService {
 			});
 		}
 
+		const recordIntent = bindToolIntentJournal(
+			session,
+			this.host.capabilityRuntimes.get(session.sessionId)?.tools,
+		);
 		const unsubscribe = session.subscribe((event) => {
+			recordIntent(event);
 			autoNameSession(session, event);
 			this.host.emitEvent(session.sessionId, event);
 		});
@@ -254,7 +260,12 @@ export class SessionConstructionService {
 				mode: "tui",
 			});
 		}
+		const recordIntent = bindToolIntentJournal(
+			session,
+			this.host.capabilityRuntimes.get(session.sessionId)?.tools,
+		);
 		const unsubscribe = session.subscribe((event) => {
+			recordIntent(event);
 			autoNameSession(session, event);
 			this.host.emitEvent(session.sessionId, event);
 		});
