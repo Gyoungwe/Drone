@@ -1,5 +1,6 @@
 # 本地文件
 .local/
+.superpowers/
 
 # 依赖
 node_modules/

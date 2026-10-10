@@ -798,3 +798,126 @@
 .knowledge-nebula canvas.sigma-nodes {
 	filter: drop-shadow(0 0 3px rgba(150, 180, 255, 0.55)) drop-shadow(0 0 8px rgba(120, 140, 255, 0.25));
 }
+
+/* 知识网络科研观测台：控件更易触达，画布保持沉浸式宽高。 */
+.knowledge-graph-toolbar > button,
+.knowledge-graph-toolbar label,
+.knowledge-graph-toolbar span > button {
+	min-height: 32px;
+}
+.knowledge-graph-zoom-button,
+.knowledge-graph-fit-button {
+	display: inline-flex;
+	min-height: 32px;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	color: #dce7ff;
+	font-size: 12px;
+	line-height: 1;
+	transition:
+		background-color 0.15s,
+		color 0.15s,
+		transform 0.15s;
+}
+.knowledge-graph-zoom-button {
+	width: 32px;
+	font-size: 18px;
+}
+.knowledge-graph-fit-button {
+	padding: 0 10px;
+	font-size: 11px;
+}
+.knowledge-graph-zoom-button:hover,
+.knowledge-graph-fit-button:hover {
+	background: rgba(124, 151, 216, 0.22);
+	color: #fff;
+}
+.knowledge-graph-zoom-button:active,
+.knowledge-graph-fit-button:active {
+	transform: scale(0.95);
+}
+.knowledge-graph-zoom-value {
+	min-width: 42px;
+	color: #aabde6;
+	font:
+		10px ui-monospace,
+		SFMono-Regular,
+		Menlo,
+		monospace;
+	text-align: center;
+}
+.knowledge-graph-scene {
+	transform-box: fill-box;
+	transform-origin: center;
+}
+.knowledge-graph-edge {
+	transition:
+		stroke-opacity 0.2s,
+		stroke-width 0.2s;
+}
+.knowledge-graph-edge--active {
+	stroke-dasharray: 3 7;
+	animation: knowledge-graph-flow 1.8s linear infinite;
+}
+.knowledge-graph-node-aura {
+	animation: knowledge-graph-pulse 3.2s ease-in-out infinite;
+}
+.knowledge-graph-selection-halo {
+	animation: knowledge-graph-selection 1.8s ease-in-out infinite;
+}
+.knowledge-node-drawer {
+	opacity: 0;
+	pointer-events: none;
+	transform: translateX(calc(100% + 24px));
+}
+.knowledge-node-drawer.is-open {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateX(0);
+}
+@keyframes knowledge-graph-flow {
+	to {
+		stroke-dashoffset: -20;
+	}
+}
+@keyframes knowledge-graph-pulse {
+	0%,
+	100% {
+		opacity: 0.12;
+	}
+	50% {
+		opacity: 0.28;
+	}
+}
+@keyframes knowledge-graph-selection {
+	0%,
+	100% {
+		stroke-opacity: 0.28;
+		transform: scale(1);
+	}
+	50% {
+		stroke-opacity: 0.7;
+		transform: scale(1.12);
+	}
+}
+@media (max-width: 760px) {
+	.knowledge-node-drawer {
+		top: auto;
+		bottom: 12px;
+		left: 12px;
+		width: calc(100% - 24px);
+		max-height: min(62%, 420px);
+		transform: translateY(calc(100% + 24px));
+	}
+	.knowledge-node-drawer.is-open {
+		transform: translateY(0);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.knowledge-graph-edge--active,
+	.knowledge-graph-node-aura,
+	.knowledge-graph-selection-halo {
+		animation: none;
+	}
+}
