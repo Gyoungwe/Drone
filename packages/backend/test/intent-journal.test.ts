@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	createIntentObserver,
@@ -97,7 +98,7 @@ describe("tool intent journal", () => {
 		const dir = tmp();
 		const path = intentJournalPath(join(dir, "s.jsonl"));
 		const script = join(dir, "child.mjs");
-		const mod = resolve(__dirname, "../src/session/intent-journal.ts");
+		const mod = pathToFileURL(resolve(__dirname, "../src/session/intent-journal.ts")).href;
 		writeFileSync(
 			script,
 			`const { ToolIntentJournal } = await import(${JSON.stringify(mod)});
