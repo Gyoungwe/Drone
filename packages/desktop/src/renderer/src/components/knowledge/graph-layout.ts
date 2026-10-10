@@ -10,6 +10,13 @@ export interface Point {
 	vy: number;
 }
 
+export interface LabelPlacement {
+	x: number;
+	y: number;
+	anchor: "start" | "end";
+	width: number;
+}
+
 /** 简单力导向布局：节点互斥 + 边弹簧 + 向心，固定迭代次数（确定性初始位置，结果稳定） */
 export function layoutGraph(data: Pick<GraphData, "nodes" | "edges">, iterations = 220): Map<string, Point> {
 	const points = new Map<string, Point>();
@@ -76,4 +83,83 @@ export function layoutGraph(data: Pick<GraphData, "nodes" | "edges">, iterations
 		}
 	}
 	return points;
+}
+
+/**
+ * 给重要节点计算稳定的标签锚点。候选位置按 8 个方向尝试，优先避免
+ * 已放置标签和画布边界；这样密集图中标签会分散到节点周围而不会互相盖住。
+ */
+export function placeGraphLabels(
+	data: Pick<GraphData, "nodes">,
+	points: Map<string, Point>,
+	labelled: Set<string>,
+	selected?: string | null,
+): Map<string, LabelPlacement> {
+	const placed: Array<{ x: number; y: number; width: number; height: number }> = [];
+	const result = new Map<string, LabelPlacement>();
+	const nodes = [...data.nodes]
+		.filter((node) => labelled.has(node.path) || node.path === selected)
+		.sort((a, b) =>
+			a.path === selected
+				? -1
+				: b.path === selected
+					? 1
+					: b.degree - a.degree || a.path.localeCompare(b.path),
+		);
+	const overlap = (a: { x: number; y: number; width: number; height: number }, b: (typeof placed)[number]) =>
+		a.x < b.x + b.width + 4 &&
+		a.x + a.width + 4 > b.x &&
+		a.y < b.y + b.height + 4 &&
+		a.y + a.height + 4 > b.y;
+	for (const node of nodes) {
+		const point = points.get(node.path);
+		if (!point) continue;
+		const text = node.title.length > 24 ? `${node.title.slice(0, 23)}…` : node.title;
+		const width = Math.min(156, Math.max(42, text.length * 6.4));
+		const radius = 10;
+		const candidates = [
+			{ x: point.x + radius, y: point.y - 15, anchor: "start" as const },
+			{ x: point.x + radius, y: point.y + 5, anchor: "start" as const },
+			{ x: point.x - radius - width, y: point.y - 15, anchor: "end" as const },
+			{ x: point.x - radius - width, y: point.y + 5, anchor: "end" as const },
+			{ x: point.x - width / 2, y: point.y - 24, anchor: "start" as const },
+			{ x: point.x - width / 2, y: point.y + 14, anchor: "start" as const },
+		];
+		let best = candidates[0] as (typeof candidates)[number];
+		let bestScore = Number.POSITIVE_INFINITY;
+		for (const candidate of candidates) {
+			const box = {
+				x: candidate.anchor === "end" ? candidate.x - width : candidate.x,
+				y: candidate.y - 10,
+				width,
+				height: 14,
+			};
+			const collisions = placed.reduce((count, other) => count + (overlap(box, other) ? 1 : 0), 0);
+			const edgePenalty =
+				Math.max(0, -box.x) +
+				Math.max(0, box.x + width - GRAPH_WIDTH) +
+				Math.max(0, -box.y) +
+				Math.max(0, box.y + box.height - GRAPH_HEIGHT);
+			const score =
+				collisions * 1000 + edgePenalty * 10 + Math.hypot(candidate.x - point.x, candidate.y - point.y);
+			if (score < bestScore) {
+				best = candidate;
+				bestScore = score;
+			}
+		}
+		const finalX =
+			best.anchor === "end"
+				? Math.min(GRAPH_WIDTH, Math.max(width, best.x))
+				: Math.min(GRAPH_WIDTH - width, Math.max(0, best.x));
+		const finalY = Math.min(GRAPH_HEIGHT - 4, Math.max(12, best.y));
+		const finalBox = {
+			x: best.anchor === "end" ? finalX - width : finalX,
+			y: finalY - 10,
+			width,
+			height: 14,
+		};
+		placed.push(finalBox);
+		result.set(node.path, { x: finalX, y: finalY, anchor: best.anchor, width });
+	}
+	return result;
 }
