@@ -14,6 +14,7 @@ export const RESEARCH_STAGES = Object.freeze([
 	"claims_bound",
 	"answerable",
 ]);
+export const RESEARCH_DOCUMENT_KIND = "drone.research.run";
 
 export interface ResearchLoopWorkspace {
 	resultsRoot: string;
@@ -228,6 +229,13 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		const value = JSON.parse(await readFile(path, "utf8"));
 		if (!value || typeof value !== "object" || Array.isArray(value))
 			throw new Error(`Invalid JSON object: ${path}`);
+		if (path.endsWith("metadata.json") && !value.kind) {
+			// Legacy run metadata stays readable and is upgraded in memory. The next
+			// research-loop checkpoint writes the versioned fields atomically.
+			return { ...value, kind: RESEARCH_DOCUMENT_KIND, version: 1 };
+		}
+		if (path.endsWith("metadata.json") && (value.kind !== RESEARCH_DOCUMENT_KIND || value.version !== 1))
+			throw new Error(`Unsupported research metadata document: ${path}`);
 		return value;
 	}
 
@@ -328,6 +336,8 @@ export function createResearchLoop(ports: ResearchLoopPorts) {
 		const runDir = join(config.resultsRoot, resultSlug, runId);
 		const now = new Date().toISOString();
 		const metadata: any = {
+			kind: RESEARCH_DOCUMENT_KIND,
+			version: 1,
 			run_id: runId,
 			project,
 			result_slug: resultSlug,
