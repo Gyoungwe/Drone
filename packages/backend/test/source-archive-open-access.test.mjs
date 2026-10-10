@@ -275,6 +275,16 @@ describe("research_archive_source open-access acquisition", () => {
 		const m = await manifest();
 		expect(m.items).toHaveLength(1);
 		expect(m.failures || []).toHaveLength(0);
+		const replay = await archiveSource({
+			cwd,
+			run_dir: runDir,
+			category: "papers",
+			doi: DOI,
+			fetchImpl,
+			env: {},
+		});
+		expect(replay.idempotent_replay).toBe(true);
+		expect((await manifest()).items).toHaveLength(1);
 		// 只访问过公开元数据服务与 Europe PMC；没有任何影子图书馆
 		for (const u of calls) expect(LEGIT_HOSTS).toContain(new URL(u).hostname);
 	});
