@@ -6,6 +6,7 @@ import {
 	readDroneToolMeta,
 	type ToolActivity,
 	type ToolFamilyMeta,
+	type ToolReplayPolicy,
 } from "@drone/shared";
 
 /**
@@ -169,6 +170,14 @@ export class ToolManifest {
 		return this.meta(name)?.recoverySafe === true;
 	}
 
+	/**
+	 * 中断后的重放策略：显式 `replay` 声明优先；其次 recoverySafe / readOnly 为 true 视为 safe；
+	 * 未声明的工具一律 unsafe（宁可报“可能已部分执行”，也不重复导入、写入或下载）。
+	 */
+	replayPolicy(name: string): ToolReplayPolicy {
+		return replayPolicyOf(this.meta(name));
+	}
+
 	/** 能力路由：声明优先；未声明的按核心启发式（research_ 前缀 → research；其余 → external）。 */
 	capabilities(name: string): CapabilityId[] {
 		const meta = this.meta(name);
@@ -216,3 +225,9 @@ export function coreActivity(name: string): ToolActivity | null {
 
 /** 无会话句柄时的全局清单（只看运行时桥 + 核心默认）。 */
 export const globalToolManifest = new ToolManifest();
+
+/** 纯函数版本，便于在没有会话句柄时（重开前的会话修复）使用。 */
+export function replayPolicyOf(meta: DroneToolMeta | undefined): ToolReplayPolicy {
+	if (meta?.replay) return meta.replay;
+	return meta?.recoverySafe === true || meta?.readOnly === true ? "safe" : "unsafe";
+}
