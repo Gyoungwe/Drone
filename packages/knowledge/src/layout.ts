@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { link, lstat, mkdir, realpath, rename, unlink, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { link, lstat, mkdir, open, realpath, rename, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { readNoteFile } from "./files";
 
@@ -7,6 +8,16 @@ const MANAGED_START = "<!-- pi-agent:managed:start -->";
 const MANAGED_END = "<!-- pi-agent:managed:end -->";
 const PROJECT_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const NAVIGATION_TARGETS = new Set(["Home.md", "Wiki/Index.md", "Library/Index.md"]);
+
+async function hashRegularFile(path: string): Promise<string> {
+	const flags = constants.O_RDONLY | (constants.O_NOFOLLOW || 0);
+	const handle = await open(path, flags);
+	try {
+		return createHash("sha256").update(await handle.readFile()).digest("hex");
+	} finally {
+		await handle.close();
+	}
+}
 
 type ContainedFile = (root: string, path: string) => Promise<string>;
 type CreateOnly = (path: string, content: string) => Promise<boolean>;
@@ -20,6 +31,23 @@ type UpdateNavigation = (
 export interface NavigationUpdateResult {
 	path: string;
 	changed: boolean;
+}
+
+/** Raised when a conditional Vault write observes a newer local version. */
+export class VaultFileConflictError extends Error {
+	readonly code = "conflict" as const;
+
+	constructor(path: string) {
+		super(`Vault file changed while it was being updated: ${path}`);
+		this.name = "VaultFileConflictError";
+	}
+}
+
+export interface ReplaceVaultFileOptions {
+	/** SHA-256 of the version the caller showed to the user. */
+	expectedHash?: string;
+	/** Test seam used to deterministically model an editor write before commit. */
+	beforeCommit?: () => void | Promise<void>;
 }
 
 /**
@@ -75,6 +103,39 @@ export async function createVaultFileOnly(path: string, content: string): Promis
 		return false;
 	} finally {
 		await unlink(temporary);
+	}
+}
+
+/**
+ * Atomically replace an existing regular Vault file with an optional content CAS.
+ *
+ * The second hash check runs immediately before rename. It closes the stale-preview
+ * window for callers that show a version before asking for confirmation; if another
+ * writer changes the file during that window, the write is rejected and the caller
+ * can report a conflict without replacing the newer edit.
+ */
+export async function replaceVaultFile(
+	path: string,
+	content: string,
+	options: ReplaceVaultFileOptions = {},
+): Promise<void> {
+	const current = await lstat(path);
+	if (!current.isFile() || current.isSymbolicLink()) throw new Error(`Expected a regular Vault file: ${path}`);
+	if (options.expectedHash !== undefined) {
+		const observed = await hashRegularFile(path);
+		if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
+	}
+	const temporary = `${path}.${randomUUID()}.tmp`;
+	await writeFile(temporary, content, { encoding: "utf8", flag: "wx" });
+	try {
+		await options.beforeCommit?.();
+		if (options.expectedHash !== undefined) {
+			const observed = await hashRegularFile(path);
+			if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
+		}
+		await rename(temporary, path);
+	} finally {
+		await unlink(temporary).catch(() => undefined);
 	}
 }
 

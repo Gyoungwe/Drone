@@ -1,7 +1,124 @@
 // packages/research/src/zotero-write-runtime.ts
-import { createHash, randomUUID } from "node:crypto";
+import { createHash as createHash3, randomUUID } from "node:crypto";
 import { open, realpath, stat } from "node:fs/promises";
 import { basename, isAbsolute, relative, resolve, sep } from "node:path";
+
+// packages/compute/src/jobs/idempotency.ts
+import { createHash as createHash2 } from "node:crypto";
+
+// packages/compute/src/authorization.ts
+import { createHash } from "node:crypto";
+
+// packages/compute/src/workflow.ts
+function stableJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  const object = value;
+  return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${stableJson(object[key])}`).join(",")}}`;
+}
+
+// packages/compute/src/authorization.ts
+function computeContractHash(authorization) {
+  return createHash("sha256").update(stableJson(authorization)).digest("hex");
+}
+function computeJobContractHash(job) {
+  const { contractHash: _ignored, ...authorization } = job.authorization;
+  return createHash("sha256").update(
+    stableJson({
+      jobId: job.jobId,
+      host: job.host,
+      authorization,
+      workflowSpecSha256: job.workflow.workflowSpecSha256,
+      executionMode: job.workflow.executionMode,
+      moduleCommits: job.workflow.moduleCommits,
+      containerDigests: job.workflow.containerDigests,
+      executor: job.executor,
+      remoteRead: job.remoteRead,
+      remoteWrite: job.remoteWrite
+    })
+  ).digest("hex");
+}
+function withinRoots(path, roots) {
+  return roots.some((root) => {
+    const normalizedRoot = root.replace(/\/+$/, "") || "/";
+    return path === normalizedRoot || path.startsWith(normalizedRoot === "/" ? "/" : `${normalizedRoot}/`);
+  });
+}
+function checkJobAuthorization(job, expectedContractHash) {
+  const auth = job.authorization;
+  if (!auth.approved) return { ok: false, reason: "compute authorization is not approved" };
+  const { contractHash: suppliedHash, ...unsignedAuthorization } = auth;
+  if (!suppliedHash || suppliedHash !== computeContractHash(unsignedAuthorization)) {
+    return { ok: false, reason: "compute authorization contract hash is invalid" };
+  }
+  if (expectedContractHash && suppliedHash !== expectedContractHash)
+    return { ok: false, reason: "compute authorization does not match the approved task contract" };
+  if (job.contractHash !== computeJobContractHash(job))
+    return { ok: false, reason: "job contract hash is invalid" };
+  if (job.workflow.executionMode !== "ready")
+    return { ok: false, reason: "workflow is a preview fixture and cannot be submitted" };
+  if (!auth.hosts.includes(job.host))
+    return { ok: false, reason: `host ${job.host} is outside the approved scope` };
+  if (!auth.workflows.some(
+    (workflow) => workflow === "*" || Object.keys(job.workflow.moduleCommits).some((module) => module === workflow)
+  )) {
+    return { ok: false, reason: "workflow is outside the approved scope" };
+  }
+  if (job.remoteRead.some((path) => !validRemotePath(path) || !withinRoots(path, auth.remoteRead)))
+    return { ok: false, reason: "remote read path is outside the approved scope" };
+  if (job.remoteWrite.some((path) => !validRemotePath(path) || !withinRoots(path, auth.remoteWrite)))
+    return { ok: false, reason: "remote write path is outside the approved scope" };
+  const coreHours = job.executor.cpus * job.executor.walltimeMinutes / 60;
+  if (coreHours > auth.budget.maxCoreHours)
+    return { ok: false, reason: "job exceeds the approved core-hour budget" };
+  if (job.executor.walltimeMinutes > auth.budget.maxWalltimeMinutes)
+    return { ok: false, reason: "job exceeds the approved wall-time budget" };
+  if (Object.keys(job.workflow.moduleCommits).some((module) => module.startsWith("agent/") && !auth.agentCode))
+    return { ok: false, reason: "agent modules require agentCode authorization" };
+  return { ok: true };
+}
+function validRemotePath(path) {
+  return Boolean(path) && !path.startsWith("-") && !path.includes("\\") && !path.split("/").includes("..") && !path.includes("//");
+}
+function assertJobAuthorized(job, expectedContractHash) {
+  const result = checkJobAuthorization(job, expectedContractHash);
+  if (!result.ok) throw new Error(result.reason);
+}
+
+// packages/compute/src/jobs.ts
+function workflowAdapter(kind) {
+  return {
+    kind,
+    prepare: (job, runner) => {
+      assertJobAuthorized(job);
+      return runner.request({
+        operation: "prepare",
+        jobId: job.jobId,
+        payload: { executor: kind, workflowSpecSha256: job.workflow.workflowSpecSha256 }
+      });
+    },
+    start: (job, runner) => {
+      assertJobAuthorized(job);
+      return runner.request({ operation: "start", jobId: job.jobId, payload: { executor: kind } });
+    },
+    status: (job, runner) => runner.request({ operation: "status", jobId: job.jobId }),
+    logs: (job, cursor, runner) => runner.request({ operation: "logs", jobId: job.jobId, cursor }),
+    cancel: (job, runner) => runner.request({ operation: "cancel", jobId: job.jobId }),
+    collect: (job, runner) => runner.request({ operation: "collect", jobId: job.jobId, payload: { remoteWrite: job.remoteWrite } })
+  };
+}
+var directScheduler = workflowAdapter("direct");
+var slurmScheduler = workflowAdapter("slurm");
+
+// packages/compute/src/jobs/idempotency.ts
+function externalEffectKey(namespace, identity) {
+  if (!namespace.trim()) throw new Error("external effect namespace is required");
+  const stable = JSON.stringify(
+    identity,
+    (_key, entry) => entry && typeof entry === "object" && !Array.isArray(entry) ? Object.fromEntries(Object.entries(entry).sort(([a], [b]) => a.localeCompare(b))) : entry
+  );
+  return `${namespace.trim()}:${createHash2("sha256").update(stable).digest("hex")}`;
+}
 
 // packages/research/src/literature-receipt.ts
 function normalizeDoi(value) {
@@ -426,6 +543,10 @@ async function prepareZoteroSave(input = {}, { fetchImpl = fetch, env = process.
     );
   const plan = {
     doi: item.doi,
+    idempotencyKey: externalEffectKey("zotero.create", {
+      doi: item.doi,
+      collectionKey
+    }),
     item,
     attachment,
     channel,
@@ -520,6 +641,7 @@ async function readBackByDoi(plan, { fetchImpl, env, signal, attempts, delayMs, 
 function baseReceipt(plan, at) {
   return {
     doi: plan.doi,
+    idempotencyKey: plan.idempotencyKey,
     title: plan.item.title,
     itemType: plan.item.itemType,
     channel: plan.channel,
@@ -747,7 +869,7 @@ async function inspectLocalPdf(cwd, rawPath) {
   if (!info.isFile()) throw new Error("local_file is not a file");
   if (info.size > MAX_UPLOAD_BYTES) throw new Error("local_file is larger than 100 MB");
   const handle = await open(full, "r");
-  const hash = createHash("md5");
+  const hash = createHash3("md5");
   const head = Buffer.alloc(5);
   try {
     await handle.read(head, 0, 5, 0);

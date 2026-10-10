@@ -209,6 +209,7 @@ var RESEARCH_STAGES = Object.freeze([
   "claims_bound",
   "answerable"
 ]);
+var RESEARCH_DOCUMENT_KIND = "drone.research.run";
 function createResearchLoop(ports) {
   const loadWorkspaceConfig = ports.workspace;
   const verifyLiteratureReceipt = ports.verifyLiteratureReceipt;
@@ -382,6 +383,11 @@ function createResearchLoop(ports) {
     const value = JSON.parse(await readFile2(path, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new Error(`Invalid JSON object: ${path}`);
+    if (path.endsWith("metadata.json") && !value.kind) {
+      return { ...value, kind: RESEARCH_DOCUMENT_KIND, version: 1 };
+    }
+    if (path.endsWith("metadata.json") && (value.kind !== RESEARCH_DOCUMENT_KIND || value.version !== 1))
+      throw new Error(`Unsupported research metadata document: ${path}`);
     return value;
   }
   async function atomicJson(path, value) {
@@ -467,6 +473,8 @@ function createResearchLoop(ports) {
     const runDir = join3(config.resultsRoot, resultSlug, runId);
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const metadata = {
+      kind: RESEARCH_DOCUMENT_KIND,
+      version: 1,
       run_id: runId,
       project,
       result_slug: resultSlug,
@@ -840,6 +848,7 @@ function createResearchLoop(ports) {
   };
 }
 export {
+  RESEARCH_DOCUMENT_KIND,
   RESEARCH_STAGES,
   createResearchLoop
 };

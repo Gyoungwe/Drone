@@ -639,6 +639,26 @@ init_files();
 
 // packages/knowledge/src/index.ts
 init_runtime_host();
+
+// packages/knowledge/src/semantic-model.ts
+var SECTOR_ANGLES = {
+  // SVG y grows downwards: 7 o'clock is 120° and 8 o'clock is 150°.
+  paper: 2 * Math.PI / 3,
+  software: 5 * Math.PI / 6,
+  method: Math.PI,
+  dataset: 7 * Math.PI / 6,
+  evidence: 4 * Math.PI / 3,
+  claim: 3 * Math.PI / 2,
+  concept: 11 * Math.PI / 6,
+  entity: 0,
+  idea: Math.PI / 6,
+  decision: Math.PI / 3,
+  question: Math.PI / 2,
+  wiki: 3 * Math.PI / 4,
+  other: 11 * Math.PI / 6
+};
+
+// packages/knowledge/src/index.ts
 init_ui_state();
 
 // packages/knowledge/src/publication.ts

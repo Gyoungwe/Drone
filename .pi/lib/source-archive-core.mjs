@@ -1,7 +1,124 @@
 // packages/research/src/source-archive.ts
-import { createHash, randomUUID } from "node:crypto";
+import { createHash as createHash3, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { basename as basename2, dirname, extname, isAbsolute as isAbsolute2, join, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
+
+// packages/compute/src/jobs/idempotency.ts
+import { createHash as createHash2 } from "node:crypto";
+
+// packages/compute/src/authorization.ts
+import { createHash } from "node:crypto";
+
+// packages/compute/src/workflow.ts
+function stableJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  const object = value;
+  return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${stableJson(object[key])}`).join(",")}}`;
+}
+
+// packages/compute/src/authorization.ts
+function computeContractHash(authorization) {
+  return createHash("sha256").update(stableJson(authorization)).digest("hex");
+}
+function computeJobContractHash(job) {
+  const { contractHash: _ignored, ...authorization } = job.authorization;
+  return createHash("sha256").update(
+    stableJson({
+      jobId: job.jobId,
+      host: job.host,
+      authorization,
+      workflowSpecSha256: job.workflow.workflowSpecSha256,
+      executionMode: job.workflow.executionMode,
+      moduleCommits: job.workflow.moduleCommits,
+      containerDigests: job.workflow.containerDigests,
+      executor: job.executor,
+      remoteRead: job.remoteRead,
+      remoteWrite: job.remoteWrite
+    })
+  ).digest("hex");
+}
+function withinRoots(path, roots) {
+  return roots.some((root) => {
+    const normalizedRoot = root.replace(/\/+$/, "") || "/";
+    return path === normalizedRoot || path.startsWith(normalizedRoot === "/" ? "/" : `${normalizedRoot}/`);
+  });
+}
+function checkJobAuthorization(job, expectedContractHash) {
+  const auth = job.authorization;
+  if (!auth.approved) return { ok: false, reason: "compute authorization is not approved" };
+  const { contractHash: suppliedHash, ...unsignedAuthorization } = auth;
+  if (!suppliedHash || suppliedHash !== computeContractHash(unsignedAuthorization)) {
+    return { ok: false, reason: "compute authorization contract hash is invalid" };
+  }
+  if (expectedContractHash && suppliedHash !== expectedContractHash)
+    return { ok: false, reason: "compute authorization does not match the approved task contract" };
+  if (job.contractHash !== computeJobContractHash(job))
+    return { ok: false, reason: "job contract hash is invalid" };
+  if (job.workflow.executionMode !== "ready")
+    return { ok: false, reason: "workflow is a preview fixture and cannot be submitted" };
+  if (!auth.hosts.includes(job.host))
+    return { ok: false, reason: `host ${job.host} is outside the approved scope` };
+  if (!auth.workflows.some(
+    (workflow) => workflow === "*" || Object.keys(job.workflow.moduleCommits).some((module) => module === workflow)
+  )) {
+    return { ok: false, reason: "workflow is outside the approved scope" };
+  }
+  if (job.remoteRead.some((path) => !validRemotePath(path) || !withinRoots(path, auth.remoteRead)))
+    return { ok: false, reason: "remote read path is outside the approved scope" };
+  if (job.remoteWrite.some((path) => !validRemotePath(path) || !withinRoots(path, auth.remoteWrite)))
+    return { ok: false, reason: "remote write path is outside the approved scope" };
+  const coreHours = job.executor.cpus * job.executor.walltimeMinutes / 60;
+  if (coreHours > auth.budget.maxCoreHours)
+    return { ok: false, reason: "job exceeds the approved core-hour budget" };
+  if (job.executor.walltimeMinutes > auth.budget.maxWalltimeMinutes)
+    return { ok: false, reason: "job exceeds the approved wall-time budget" };
+  if (Object.keys(job.workflow.moduleCommits).some((module) => module.startsWith("agent/") && !auth.agentCode))
+    return { ok: false, reason: "agent modules require agentCode authorization" };
+  return { ok: true };
+}
+function validRemotePath(path) {
+  return Boolean(path) && !path.startsWith("-") && !path.includes("\\") && !path.split("/").includes("..") && !path.includes("//");
+}
+function assertJobAuthorized(job, expectedContractHash) {
+  const result = checkJobAuthorization(job, expectedContractHash);
+  if (!result.ok) throw new Error(result.reason);
+}
+
+// packages/compute/src/jobs.ts
+function workflowAdapter(kind) {
+  return {
+    kind,
+    prepare: (job, runner) => {
+      assertJobAuthorized(job);
+      return runner.request({
+        operation: "prepare",
+        jobId: job.jobId,
+        payload: { executor: kind, workflowSpecSha256: job.workflow.workflowSpecSha256 }
+      });
+    },
+    start: (job, runner) => {
+      assertJobAuthorized(job);
+      return runner.request({ operation: "start", jobId: job.jobId, payload: { executor: kind } });
+    },
+    status: (job, runner) => runner.request({ operation: "status", jobId: job.jobId }),
+    logs: (job, cursor, runner) => runner.request({ operation: "logs", jobId: job.jobId, cursor }),
+    cancel: (job, runner) => runner.request({ operation: "cancel", jobId: job.jobId }),
+    collect: (job, runner) => runner.request({ operation: "collect", jobId: job.jobId, payload: { remoteWrite: job.remoteWrite } })
+  };
+}
+var directScheduler = workflowAdapter("direct");
+var slurmScheduler = workflowAdapter("slurm");
+
+// packages/compute/src/jobs/idempotency.ts
+function externalEffectKey(namespace, identity) {
+  if (!namespace.trim()) throw new Error("external effect namespace is required");
+  const stable = JSON.stringify(
+    identity,
+    (_key, entry) => entry && typeof entry === "object" && !Array.isArray(entry) ? Object.fromEntries(Object.entries(entry).sort(([a], [b]) => a.localeCompare(b))) : entry
+  );
+  return `${namespace.trim()}:${createHash2("sha256").update(stable).digest("hex")}`;
+}
 
 // packages/research/src/literature-receipt.ts
 function normalizeDoi(value) {
@@ -539,7 +656,7 @@ async function verifyManifestItems(manifest, runDir) {
       const canonical = await realpath(isAbsolute2(path) ? path : resolve2(runDir, path));
       if (!isWithin(sourcesRoot, canonical)) throw new Error("path escapes run sources");
       const bytes = await readFile(canonical);
-      const sha256 = createHash("sha256").update(bytes).digest("hex");
+      const sha256 = createHash3("sha256").update(bytes).digest("hex");
       if (sha256 !== String(item.sha256 || "").toLowerCase()) throw new Error("sha256 mismatch");
       if (item.size_bytes !== void 0 && Number(item.size_bytes) !== bytes.byteLength)
         throw new Error("size mismatch");
@@ -731,12 +848,18 @@ async function archiveSource(options = {}, ports) {
   const persist = async (bytes, { resolvedUrl, contentType, outputName, verified = false, openAccess = null }) => withRunLock(ports, manifestPath, async () => {
     const validation = validateContent(category, contentType, outputName, bytes);
     if (!validation.ok) throw new Error(validation.reason);
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const sha256 = createHash3("sha256").update(bytes).digest("hex");
+    const idempotencyKey = externalEffectKey("research.download", {
+      category,
+      identity,
+      url: url ?? resolvedUrl,
+      outputName
+    });
     let outputPath = join(sourcesDir, outputName);
     if (!isWithin(sourcesDir, outputPath)) throw new Error("filename escapes source category directory");
     try {
       const existing = new Uint8Array(await readFile(outputPath));
-      const existingHash = createHash("sha256").update(existing).digest("hex");
+      const existingHash = createHash3("sha256").update(existing).digest("hex");
       if (existingHash !== sha256) {
         const extension = extname(outputName);
         const stem = outputName.slice(0, outputName.length - extension.length);
@@ -747,7 +870,7 @@ async function archiveSource(options = {}, ports) {
     }
     try {
       const existing = await readFile(outputPath);
-      if (createHash("sha256").update(existing).digest("hex") !== sha256)
+      if (createHash3("sha256").update(existing).digest("hex") !== sha256)
         throw new Error("Archived version path has different content");
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
@@ -759,6 +882,7 @@ async function archiveSource(options = {}, ports) {
     const entry = {
       ...category === "manuals" ? { manualCoverage: assessManualPage(bytes, contentType, resolvedUrl) } : {},
       id: randomUUID(),
+      idempotency_key: idempotencyKey,
       status: "downloaded",
       category,
       // 仅凭 DOI 归档时没有调用方 URL：以实际取得文件的地址作为来源
@@ -779,6 +903,14 @@ async function archiveSource(options = {}, ports) {
       })
     };
     const manifest = await readManifest(manifestPath, runDir);
+    const prior = manifest.items.find((item) => item?.idempotency_key === idempotencyKey);
+    if (prior) {
+      if (prior.sha256 !== sha256)
+        throw new Error(
+          "Download idempotency key already exists with different content; reconcile the manifest first"
+        );
+      return { ...prior, manifest_path: manifestPath, manifestPath, idempotent_replay: true };
+    }
     manifest.updated_at = downloadedAt;
     manifest.items = [...manifest.items, entry];
     await atomicJson(manifestPath, manifest);

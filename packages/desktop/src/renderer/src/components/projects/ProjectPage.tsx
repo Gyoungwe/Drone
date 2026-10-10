@@ -13,7 +13,7 @@ export function ProjectPage() {
 	}, [load]);
 
 	return (
-		<div className="flex h-full flex-col overflow-hidden">
+		<div className="project-page flex h-full flex-col overflow-hidden">
 			<SearchBar />
 			<div className="flex min-h-0 flex-1">
 				<ProjectSidebar />

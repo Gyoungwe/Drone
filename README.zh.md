@@ -12,7 +12,7 @@
   <a href="https://github.com/Gyoungwe/Drone/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Gyoungwe/Drone/ci.yml?style=flat-square" alt="CI"></a>
   <a href="https://github.com/Gyoungwe/Drone"><img src="https://img.shields.io/github/stars/Gyoungwe/Drone?style=flat-square" alt="Stars"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=nodedotjs&style=flat-square" alt="Node >=22.19">
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue?style=flat-square" alt="macOS | Windows | Linux">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-blue?style=flat-square" alt="macOS | Windows">
 </p>
 <p align="center">
   <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a>
@@ -202,9 +202,8 @@ Drone 把官方 Pi SDK 跑在 Electron 主进程里。**不是 fork，也不是�
 | macOS (Apple Silicon) | `drone-mac-arm64.dmg` |
 | macOS (Intel) | `drone-mac-x64.dmg` |
 | Windows | `drone-windows-x64.exe` 或 `drone-windows-x64.zip` |
-| Linux (x64) | `drone-linux-x64.AppImage` 或 `drone-linux-x64.deb` |
 
-> Linux AppImage 需 FUSE 2（`libfuse2`）或 `APPIMAGE_EXTRACT_AND_RUN=1`。`.deb` 需 `libsecret-1-0`。构建为 ad-hoc 签名（无证书）。macOS 首次打开可能提示“Apple 无法验证…”，系统设置 → 隐私与安全性 → 仍要打开，或 `xattr -cr "/Applications/Drone.app"`。应用内检查更新；Windows 可自动安装，macOS 会跳 Releases 页（再次 Gatekeeper）。SmartScreen：更多信息 → 仍要运行。
+> v0.26.0 当前发布 macOS arm64/x64 与 Windows x64 安装包，Linux 尚未纳入本版本的发布矩阵。构建为 ad-hoc 签名（无证书）。macOS 首次打开可能提示“Apple 无法验证…”，系统设置 → 隐私与安全性 → 仍要打开，或 `xattr -cr "/Applications/Drone.app"`。应用内检查更新；Windows 可自动安装，macOS 会跳 Releases 页（再次 Gatekeeper）。SmartScreen：更多信息 → 仍要运行。
 
 ## 配置
 

@@ -1,0 +1,44 @@
+{
+	"version": "0.26.1",
+	"candidate": {
+		"source": "main commit that changes packages/desktop/package.json",
+		"tag": "v0.26.1",
+		"validationRunner": "windows-latest"
+	},
+	"generatedResourceChecks": [
+		"npm run stage:pi-packages",
+		"npm run check:extensions",
+		"npm run check:knowledge-runtime",
+		"npm run check:tasks-runtime",
+		"npm run check:research-runtime",
+		"npm run check:pi-packages"
+	],
+	"requiredGates": [
+		"npm run lint",
+		"npm run typecheck",
+		"npm run check:arch",
+		"npm run test:arch",
+		"npm run check:plugin-api",
+		"npm run test:research-packaging",
+		"npm test",
+		"npm run test:upgrade",
+		"npm run build"
+	],
+	"releaseAssets": [
+		"drone-mac-arm64.dmg",
+		"drone-mac-x64.dmg",
+		"drone-mac-arm64.zip",
+		"drone-mac-x64.zip",
+		"drone-windows-x64.exe",
+		"drone-windows-x64.zip",
+		"latest.yml",
+		"latest-mac.yml"
+	],
+	"releaseOrder": [
+		"validate candidate ref",
+		"create or verify tag",
+		"prepare draft release",
+		"build and verify platform assets",
+		"publish draft after asset verification"
+	]
+}

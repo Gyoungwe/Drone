@@ -17,8 +17,36 @@ export interface LabelPlacement {
 	width: number;
 }
 
+const FORCE_LAYOUT_NODE_LIMIT = 800;
+
+function boundedGridLayout(data: Pick<GraphData, "nodes">): Map<string, Point> {
+	const points = new Map<string, Point>();
+	const count = data.nodes.length;
+	const columns = Math.max(1, Math.ceil(Math.sqrt((count * GRAPH_WIDTH) / GRAPH_HEIGHT)));
+	const rows = Math.ceil(count / columns);
+	const margin = 12;
+	const xStep = columns === 1 ? 0 : (GRAPH_WIDTH - margin * 2) / (columns - 1);
+	const yStep = rows === 1 ? 0 : (GRAPH_HEIGHT - margin * 2) / (rows - 1);
+	for (const [index, node] of data.nodes.entries()) {
+		const row = Math.floor(index / columns);
+		const column = index % columns;
+		points.set(node.path, {
+			x: columns === 1 ? GRAPH_WIDTH / 2 : margin + column * xStep,
+			y: rows === 1 ? GRAPH_HEIGHT / 2 : margin + row * yStep,
+			vx: 0,
+			vy: 0,
+		});
+	}
+	return points;
+}
+
 /** 简单力导向布局：节点互斥 + 边弹簧 + 向心，固定迭代次数（确定性初始位置，结果稳定） */
 export function layoutGraph(data: Pick<GraphData, "nodes" | "edges">, iterations = 220): Map<string, Point> {
+	// The exact force pass is useful for a small interactive graph, but its
+	// pairwise repulsion is quadratic. Large legacy graphs should still open
+	// promptly; the server-provided semantic layout is preferred, and this
+	// deterministic bounded fallback keeps older payloads usable.
+	if (data.nodes.length > FORCE_LAYOUT_NODE_LIMIT) return boundedGridLayout(data);
 	const points = new Map<string, Point>();
 	const n = data.nodes.length || 1;
 	data.nodes.forEach((node, index) => {
@@ -94,6 +122,7 @@ export function placeGraphLabels(
 	points: Map<string, Point>,
 	labelled: Set<string>,
 	selected?: string | null,
+	options: { uniformOrientation?: boolean } = {},
 ): Map<string, LabelPlacement> {
 	const placed: Array<{ x: number; y: number; width: number; height: number }> = [];
 	const result = new Map<string, LabelPlacement>();
@@ -114,17 +143,24 @@ export function placeGraphLabels(
 	for (const node of nodes) {
 		const point = points.get(node.path);
 		if (!point) continue;
-		const text = node.title.length > 24 ? `${node.title.slice(0, 23)}…` : node.title;
+		const text = node.title.length > 18 ? `${node.title.slice(0, 17)}…` : node.title;
 		const width = Math.min(156, Math.max(42, text.length * 6.4));
 		const radius = 10;
-		const candidates = [
-			{ x: point.x + radius, y: point.y - 15, anchor: "start" as const },
-			{ x: point.x + radius, y: point.y + 5, anchor: "start" as const },
-			{ x: point.x - radius - width, y: point.y - 15, anchor: "end" as const },
-			{ x: point.x - radius - width, y: point.y + 5, anchor: "end" as const },
-			{ x: point.x - width / 2, y: point.y - 24, anchor: "start" as const },
-			{ x: point.x - width / 2, y: point.y + 14, anchor: "start" as const },
-		];
+		const candidates = options.uniformOrientation
+			? [
+					{ x: point.x + radius, y: point.y - 15, anchor: "start" as const },
+					{ x: point.x + radius, y: point.y + 5, anchor: "start" as const },
+					{ x: point.x + radius + 8, y: point.y - 27, anchor: "start" as const },
+					{ x: point.x + radius + 8, y: point.y + 17, anchor: "start" as const },
+				]
+			: [
+					{ x: point.x + radius, y: point.y - 15, anchor: "start" as const },
+					{ x: point.x + radius, y: point.y + 5, anchor: "start" as const },
+					{ x: point.x - radius - width, y: point.y - 15, anchor: "end" as const },
+					{ x: point.x - radius - width, y: point.y + 5, anchor: "end" as const },
+					{ x: point.x - width / 2, y: point.y - 24, anchor: "start" as const },
+					{ x: point.x - width / 2, y: point.y + 14, anchor: "start" as const },
+				];
 		let best = candidates[0] as (typeof candidates)[number];
 		let bestScore = Number.POSITIVE_INFINITY;
 		for (const candidate of candidates) {

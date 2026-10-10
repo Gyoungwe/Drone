@@ -60,7 +60,11 @@ export function ContextPanel() {
 	}, [activeSessionId, agentActive, onRunStart, onRunEnd]);
 
 	return (
-		<aside className={`context-panel${open ? " open" : ""}`} aria-hidden={!open} data-testid="context-panel">
+		<aside
+			className={`context-panel context-panel--research${open ? " open" : ""}`}
+			aria-hidden={!open}
+			data-testid="context-panel"
+		>
 			<div className="context-panel-in">
 				<PanelHeader
 					sessionId={activeSessionId}

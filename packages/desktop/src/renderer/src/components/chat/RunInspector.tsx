@@ -151,7 +151,7 @@ export function RunInspector({
 				)}
 				{run.artifacts.length > 0 && (
 					<section>
-						<p className="font-medium text-ink-2">{zh ? "产物" : "Artifacts"}</p>
+						<p className="font-medium text-ink-2">{t("runInspector.outputsLabel")}</p>
 						{run.artifacts.map((path) => (
 							<div key={path} className="break-all font-mono text-[11px] text-ink-faint">
 								{path}
@@ -212,7 +212,7 @@ export function RunInspector({
 					</section>
 				)}
 				<section>
-					<p className="font-medium text-ink-2">Publication gate</p>
+					<p className="font-medium text-ink-2">{t("runInspector.publicationCheck")}</p>
 					<p className={run.publication.status === "blocked" ? "mt-1 text-warn" : "mt-1"}>
 						{gate}
 						{run.publication.reason ? ` · ${run.publication.reason}` : ""}
@@ -220,7 +220,7 @@ export function RunInspector({
 				</section>
 				{run.skill && (
 					<section>
-						<p className="font-medium text-ink-2">Skill</p>
+						<p className="font-medium text-ink-2">{t("runInspector.toolUsed")}</p>
 						<code className="text-[11px]">/skill:{run.skill}</code>
 					</section>
 				)}
@@ -229,11 +229,7 @@ export function RunInspector({
 						{zh ? `本轮 ${run.errors} 个错误卡` : `${run.errors} error card(s) in this turn`}
 					</p>
 				)}
-				<p className="text-[11px] text-ink-faint">
-					{zh
-						? "这里展示可观察的公开摘要、工具和回执，不展示模型私有思考链。"
-						: "Shows observable public summaries, tools and receipts; private chain-of-thought is not displayed."}
-				</p>
+				<p className="text-[11px] text-ink-faint">{t("runInspector.publicRecordHint")}</p>
 			</div>
 		</details>
 	);

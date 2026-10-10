@@ -59,7 +59,7 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-3H6IF6AU.mjs";
+} from "./chunks/chunk-GXEK2HSC.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
@@ -86,7 +86,7 @@ import {
   createSemanticModel,
   isInfrastructureNode,
   nodeType
-} from "./chunks/chunk-D47OUZYO.mjs";
+} from "./chunks/chunk-W74KFO4J.mjs";
 import {
   normalizeSourceLinks,
   onlineSourceLink
@@ -176,14 +176,15 @@ import "./chunks/chunk-RCUF5QK4.mjs";
 import {
   runNavigationMaintenance,
   updateNavigation
-} from "./chunks/chunk-Q4ULDE2G.mjs";
+} from "./chunks/chunk-EJFIMVBU.mjs";
 import {
+  VaultFileConflictError,
   containedVaultFile,
   createVaultFileOnly,
   initializeProjectContext,
   initializeSharedNavigation,
   updateVaultNavigation
-} from "./chunks/chunk-DY4DWRNO.mjs";
+} from "./chunks/chunk-KUCMRWBG.mjs";
 import {
   compareClaimSets,
   compareClaims
@@ -248,6 +249,7 @@ export {
   SPECIALIST_LIMITS,
   TOPIC_MEMORY_LIMITS,
   TOPIC_MEMORY_VERSION,
+  VaultFileConflictError,
   advisoryCodes,
   advisoryLine,
   advisoryNotice,

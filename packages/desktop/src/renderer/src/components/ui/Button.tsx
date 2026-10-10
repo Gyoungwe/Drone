@@ -35,5 +35,11 @@ export function Button({
 	type = "button",
 	...props
 }: ButtonProps) {
-	return <button type={type} className={`${SIZE[size]} ${TONE[tone][variant]} ${className}`} {...props} />;
+	return (
+		<button
+			type={type}
+			className={`drone-button drone-button--${variant} drone-button--${tone} drone-button--${size} ${SIZE[size]} ${TONE[tone][variant]} ${className}`}
+			{...props}
+		/>
+	);
 }

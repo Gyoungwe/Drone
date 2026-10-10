@@ -36,6 +36,6 @@ describe("MCP runtime notice", () => {
 			] as const)
 				expect(mcp[mcpStatusKey(status)]).toBeTypeOf("string");
 		}
-		expect(zh.settings.mcp.runtimeMissing).toMatch(/MCP 运行时未安装/);
+		expect(zh.settings.mcp.runtimeMissing).toMatch(/MCP 运行组件未安装/);
 	});
 });

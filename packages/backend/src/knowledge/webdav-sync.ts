@@ -1,7 +1,17 @@
 import { readKnowledgeBinding } from "@drone/knowledge/config";
 import { readNoteFile } from "@drone/knowledge/files";
-import { containedVaultFile, createVaultFileOnly } from "@drone/knowledge/layout";
-import type { KnowledgeApi, KnowledgeCloudSyncItem, KnowledgeCloudSyncResult } from "@drone/shared";
+import {
+	containedVaultFile,
+	createVaultFileOnly,
+	replaceVaultFile,
+	VaultFileConflictError,
+} from "@drone/knowledge/layout";
+import type {
+	KnowledgeApi,
+	KnowledgeCloudSyncItem,
+	KnowledgeCloudSyncPreview,
+	KnowledgeCloudSyncResult,
+} from "@drone/shared";
 import type { KnowledgeWebDavService } from "./webdav";
 import { cloudError, cloudNotePath, KnowledgeWebDavError } from "./webdav-transport";
 
@@ -18,6 +28,15 @@ export async function syncCloudNotes(
 	)
 		throw new KnowledgeWebDavError("protocol", "每次同步需选择 1–64 篇笔记和有效方向");
 	const paths = [...new Set(input.paths.map(cloudNotePath))];
+	if (!Array.isArray(input.previews) || input.previews.length !== paths.length)
+		throw new KnowledgeWebDavError("conflict", "同步必须基于最新预览；请重新读取所选笔记");
+	const previews = new Map<string, KnowledgeCloudSyncPreview>();
+	for (const preview of input.previews) {
+		const path = cloudNotePath(preview.path);
+		if (!paths.includes(path) || previews.has(path))
+			throw new KnowledgeWebDavError("protocol", "同步预览与所选笔记不一致");
+		previews.set(path, { ...preview, path });
+	}
 	const binding = await readKnowledgeBinding({ fresh: true });
 	if (!binding || binding.revision !== input.bindingRevision)
 		throw new KnowledgeWebDavError("conflict", "本地知识库绑定已变化，请刷新后重新选择笔记");
@@ -28,6 +47,8 @@ export async function syncCloudNotes(
 	};
 	const items: KnowledgeCloudSyncItem[] = [];
 	for (const path of paths) {
+		const preview = previews.get(path);
+		if (!preview) throw new KnowledgeWebDavError("protocol", "同步预览缺少所选笔记");
 		let localHash: string | null = null;
 		let remoteVersion: string | null = null;
 		try {
@@ -47,12 +68,54 @@ export async function syncCloudNotes(
 			}
 			remoteVersion = remote?.version ?? null;
 			await checkBinding();
+			if (
+				localHash !== preview.localHash ||
+				(remote?.hash ?? null) !== preview.remoteHash ||
+				remoteVersion !== preview.remoteVersion
+			)
+				throw new KnowledgeWebDavError("conflict", "笔记在预览后发生变化，请重新预览后再同步");
 			let status: KnowledgeCloudSyncItem["status"];
 			let message: string | null = null;
 			if (local && remote && local.hash === remote.hash) status = "unchanged";
 			else if (local && remote) {
-				status = "conflict";
-				message = "两端内容不同，已保留原文；请先人工核对";
+				if (input.resolution === "local" && input.mode === "push") {
+					if (!remote.version) {
+						status = "conflict";
+						message = "云端未返回强 ETag，无法安全覆盖；请重新读取后人工处理";
+					} else {
+						if ((await readNoteFile(binding.vault, path)).hash !== local.hash)
+							throw new KnowledgeWebDavError("conflict", "本地笔记在冲突处理期间发生变化，请重新预览");
+						await checkBinding();
+						const result = await cloud.write({ path, text: local.text, expectedVersion: remote.version });
+						status =
+							result.status === "updated" ? "pushed" : result.status === "conflict" ? "conflict" : "failed";
+						remoteVersion = result.version;
+						message = result.message ?? "已用本地版本更新云端";
+					}
+				} else if (input.resolution === "remote" && input.mode === "pull") {
+					if (!remote.version || !preview.remoteVersion)
+						throw new KnowledgeWebDavError(
+							"conflict",
+							"云端未返回强 ETag，无法安全覆盖本地；请重新读取后人工处理",
+						);
+					if ((await readNoteFile(binding.vault, path)).hash !== local.hash)
+						throw new KnowledgeWebDavError("conflict", "本地笔记在冲突处理期间发生变化，请重新预览");
+					const target = await containedVaultFile(binding.vault, path);
+					await checkBinding();
+					try {
+						await replaceVaultFile(target, remote.text, { expectedHash: preview.localHash ?? local.hash });
+					} catch (error) {
+						if (error instanceof VaultFileConflictError)
+							throw new KnowledgeWebDavError("conflict", "本地笔记在写入前发生变化，未覆盖新编辑");
+						throw error;
+					}
+					status = "pulled";
+					localHash = remote.hash;
+					message = "已用云端版本覆盖本地笔记；本地索引尚待更新";
+				} else {
+					status = "conflict";
+					message = "两端内容不同，已保留原文；请先人工核对";
+				}
 			} else if (input.mode === "push" && local) {
 				// 读取云端可能耗时；提交前核对本地仍是同一份正文。
 				if ((await readNoteFile(binding.vault, path)).hash !== local.hash)
@@ -64,6 +127,8 @@ export async function syncCloudNotes(
 				remoteVersion = result.version;
 				message = result.message;
 			} else if (input.mode === "pull" && remote) {
+				if (!remote.version || !preview.remoteVersion)
+					throw new KnowledgeWebDavError("conflict", "云端未返回强 ETag，无法安全取回；请重新读取后人工处理");
 				const target = await containedVaultFile(binding.vault, path);
 				await checkBinding();
 				const created = await createVaultFileOnly(target, remote.text);

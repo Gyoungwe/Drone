@@ -82,7 +82,7 @@ export function KnowledgePanel({
 		void launchKnowledgeSetup(cwd, sessionId, target).catch(reportKnowledgeError);
 	}
 	return (
-		<div className="text-ink" data-testid="knowledge-panel">
+		<div className="knowledge-panel text-ink" data-testid="knowledge-panel">
 			<header className={`flex items-start gap-3 ${headless ? "justify-end" : "justify-between"}`}>
 				{!headless && (
 					<div>
@@ -125,7 +125,7 @@ export function KnowledgePanel({
 			)}
 			{tab === "overview" && (
 				<div className="space-y-4">
-					<KnowledgeCloudSection />
+					<KnowledgeCloudSection cwd={cwd} bindingRevision={binding?.revision} />
 					<ResearchRunsCard cwd={cwd} project={data?.project || null} revision={binding?.revision || 0} />
 					{data && !data.enabled && (
 						<p className="rounded-lg bg-hover p-3 text-xs text-warn">{t("disabled")}</p>

@@ -237,12 +237,21 @@ export interface KnowledgeCloudSyncItem {
 	message: string | null;
 }
 
+/** Versions shown in the cloud sync preview and accepted as the write baseline. */
+export interface KnowledgeCloudSyncPreview {
+	path: string;
+	localHash: string | null;
+	remoteHash: string | null;
+	remoteVersion: string | null;
+}
+
 export interface KnowledgeCloudSyncResult {
 	mode: "pull" | "push";
 	completed: boolean;
 	items: KnowledgeCloudSyncItem[];
 	warnings: string[];
 }
+export type KnowledgeCloudConflictResolution = "local" | "remote";
 export type ResearchRunRouteState = "pending" | "active" | "complete" | "blocked";
 export interface ResearchRunRouteNode {
 	key: string;
@@ -494,6 +503,12 @@ export interface KnowledgeGraphNode {
 	degree: number;
 	/** Optional frontmatter type, kept additive for older runtimes. */
 	type?: string;
+	/** Normalized knowledge category used by the sector layout. */
+	contentType?: string;
+	/** Research topic/question anchor for surrounding category sectors. */
+	isMain?: boolean;
+	/** Paths of main nodes connected through this shared bridge node. */
+	sharedWith?: string[];
 	/** Optional project/shared scope, kept additive for older runtimes. */
 	scope?: string;
 	/** Normalized paper identifiers used to surface likely duplicates. */
@@ -516,7 +531,16 @@ export interface KnowledgeGraphSemantic {
 	duplicates?: { canonical: string; duplicate: string }[];
 	communities?: Record<string, number>;
 	layout?: Record<string, { x: number; y: number }>;
-	health?: { isolated: number; duplicates: number; infrastructure: number; missingLinks?: number };
+	health?: {
+		isolated: number;
+		duplicates: number;
+		infrastructure: number;
+		missingLinks?: number;
+		/** Semantic graph was built from a bounded neighbourhood rather than every file. */
+		truncated?: boolean;
+		candidateNodes?: number;
+		candidateLimit?: number;
+	};
 }
 /** 知识网络图：旧字段保留；语义投影字段全部为可选，兼容旧 worker/IPC。 */
 export interface KnowledgeGraph {
@@ -530,7 +554,15 @@ export interface KnowledgeGraph {
 	duplicates?: { canonical: string; duplicate: string }[];
 	communities?: Record<string, number>;
 	layout?: Record<string, { x: number; y: number }>;
-	health?: { isolated: number; duplicates: number; infrastructure: number; missingLinks?: number };
+	health?: {
+		isolated: number;
+		duplicates: number;
+		infrastructure: number;
+		missingLinks?: number;
+		truncated?: boolean;
+		candidateNodes?: number;
+		candidateLimit?: number;
+	};
 	semantic?: KnowledgeGraphSemantic;
 }
 /** 每日发现（新旧对照）提出的一条想法 */
@@ -598,6 +630,10 @@ export interface KnowledgeApi {
 		mode: "pull" | "push";
 		bindingRevision: number;
 		paths: string[];
+		/** Must match the versions shown by the latest preview for every path. */
+		previews?: KnowledgeCloudSyncPreview[];
+		/** Optional explicit choice after a preview found divergent local and remote content. */
+		resolution?: KnowledgeCloudConflictResolution;
 	}): Promise<KnowledgeCloudSyncResult>;
 	searchKnowledge(input: KnowledgeSearchRequest): Promise<KnowledgeSearchResult>;
 	getKnowledgeNoteLinks(input: { path: string; revision: number }): Promise<KnowledgeNoteLinks>;

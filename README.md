@@ -12,7 +12,7 @@
   <a href="https://github.com/Gyoungwe/Drone/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Gyoungwe/Drone/ci.yml?style=flat-square" alt="CI"></a>
   <a href="https://github.com/Gyoungwe/Drone"><img src="https://img.shields.io/github/stars/Gyoungwe/Drone?style=flat-square" alt="Stars"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=nodedotjs&style=flat-square" alt="Node >=22.19">
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue?style=flat-square" alt="macOS | Windows | Linux">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-blue?style=flat-square" alt="macOS | Windows">
 </p>
 <p align="center">
   <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a>
@@ -202,9 +202,8 @@ Prebuilt installers on [Releases](https://github.com/Gyoungwe/Drone/releases).
 | macOS (Apple Silicon) | `drone-mac-arm64.dmg` |
 | macOS (Intel) | `drone-mac-x64.dmg` |
 | Windows | `drone-windows-x64.exe` or `drone-windows-x64.zip` |
-| Linux (x64) | `drone-linux-x64.AppImage` or `drone-linux-x64.deb` |
 
-> Linux AppImage needs FUSE 2 (`libfuse2`) or `APPIMAGE_EXTRACT_AND_RUN=1`. `.deb` needs `libsecret-1-0`. Builds are ad-hoc signed (no cert). macOS first launch may show “Apple cannot verify…”: System Settings → Privacy & Security → Open Anyway, or `xattr -cr "/Applications/Drone.app"`. Updates checked in-app; Windows auto-installs, macOS jumps to Releases (Gatekeeper again). SmartScreen: More info → Run anyway.
+> v0.26.0 currently publishes macOS arm64/x64 and Windows x64 installers. Linux packages are not included in this release matrix yet. Builds are ad-hoc signed (no cert). macOS first launch may show “Apple cannot verify…”: System Settings → Privacy & Security → Open Anyway, or `xattr -cr "/Applications/Drone.app"`. Updates checked in-app; Windows auto-installs, macOS jumps to Releases (Gatekeeper again). SmartScreen: More info → Run anyway.
 
 ## Configuration
 

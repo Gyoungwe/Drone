@@ -20,6 +20,7 @@ import {
 	splitKnowledgeChunks,
 	tokenizeKnowledgeText,
 } from "./search-policy";
+import { parseFrontmatter } from "./ingest-frontmatter";
 import { createSemanticModel } from "./semantic-model";
 
 await mkdir(dirname(workerData.database), { recursive: true, mode: 0o700 });
@@ -878,17 +879,61 @@ async function knowledgeGraph(args) {
 		.sort((a, b) => (legacyDegree.get(b) || 0) - (legacyDegree.get(a) || 0) || a.localeCompare(b))
 		.slice(0, limit);
 	const legacyKeep = new Set(legacyChosen);
+	// Build the semantic projection from the visible high-degree set and its
+	// immediate neighbours. The old implementation materialised every Vault
+	// note and edge before slicing, making a large Vault pay the full semantic
+	// model/layout cost for data that could never be shown. Keep a bounded,
+	// deterministic neighbourhood so shared evidence and local context survive
+	// without allowing graph work to grow with the whole Vault.
+	const semanticCandidateLimit = Math.min(1600, Math.max(limit, limit * 4));
+	const neighbours = new Map(legacyChosen.map((path) => [path, []]));
+	for (const edge of rawEdges) {
+		if (neighbours.has(edge.source)) neighbours.get(edge.source).push(edge.target);
+		if (neighbours.has(edge.target)) neighbours.get(edge.target).push(edge.source);
+	}
+	for (const paths of neighbours.values())
+		paths.sort((a, b) => (degree.get(b) || 0) - (degree.get(a) || 0) || a.localeCompare(b));
+	const semanticCandidatePaths = new Set(legacyChosen);
+	for (let offset = 0; semanticCandidatePaths.size < semanticCandidateLimit; offset++) {
+		let added = false;
+		for (const path of legacyChosen) {
+			const neighbour = neighbours.get(path)?.[offset];
+			if (!neighbour || semanticCandidatePaths.size >= semanticCandidateLimit) continue;
+			const previousSize = semanticCandidatePaths.size;
+			semanticCandidatePaths.add(neighbour);
+			added ||= semanticCandidatePaths.size !== previousSize;
+		}
+		if (!added) break;
+	}
+	const semanticCandidateNodes = [...semanticCandidatePaths]
+		.map((path) => allNotes.get(path))
+		.filter(Boolean);
+	const semanticCandidateEdges = rawEdges.filter(
+		(edge) => semanticCandidatePaths.has(edge.source) && semanticCandidatePaths.has(edge.target),
+	);
+	const duplicateCounts = new Map();
+	if (args.mergeMirrors !== false) {
+		for (const row of notes.values()) {
+			const identity = noteIdentity(row.body);
+			if (identity) duplicateCounts.set(identity, (duplicateCounts.get(identity) || 0) + 1);
+		}
+	}
+	const totalDuplicateCount = [...duplicateCounts.values()].reduce((sum, count) => sum + Math.max(0, count - 1), 0);
 	const model = createSemanticModel(
 		{
-			nodes: [...allNotes.values()].map((row) => ({
+			nodes: semanticCandidateNodes.map((row) => ({
 				path: row.path,
 				title: row.title,
 				kind: row.kind,
 				scope: row.scope,
 				degree: degree.get(row.path) || 0,
 				identity: noteIdentity(row.body),
+				contentType: (() => {
+					const type = parseFrontmatter(row.body).data?.type;
+					return typeof type === "string" ? type : null;
+				})(),
 			})),
-			edges: rawEdges,
+			edges: semanticCandidateEdges,
 		},
 		{ view: args.view === "all" ? "all" : "semantic", mergeMirrors: args.mergeMirrors !== false },
 	);
@@ -908,7 +953,7 @@ async function knowledgeGraph(args) {
 		semantic: {
 			nodes: chosen.map((node) => ({ ...node })),
 			edges: links,
-			totalNotes: model.nodes.length,
+			totalNotes: notes.size,
 			view: args.view === "all" ? "all" : "semantic",
 			mergeMirrors: args.mergeMirrors !== false,
 			relations,
@@ -917,8 +962,11 @@ async function knowledgeGraph(args) {
 			layout: Object.fromEntries(Object.entries(model.layout || {}).filter(([path]) => keep.has(path))),
 			health: {
 				isolated: chosen.filter((node) => node.degree === 0).length,
-				duplicates: model.duplicates?.length || 0,
+				duplicates: totalDuplicateCount,
 				infrastructure: chosen.filter((node) => node.isInfrastructure).length,
+				truncated: semanticCandidatePaths.size < notes.size,
+				candidateNodes: semanticCandidatePaths.size,
+				candidateLimit: semanticCandidateLimit,
 			},
 		},
 	};

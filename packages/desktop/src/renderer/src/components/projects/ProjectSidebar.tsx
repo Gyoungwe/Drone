@@ -22,7 +22,7 @@ export function ProjectSidebar() {
 	const dailyDir = getDailyDirCached();
 
 	return (
-		<aside className="flex w-60 shrink-0 flex-col border-r border-border">
+		<aside className="project-sidebar flex w-60 shrink-0 flex-col border-r border-border">
 			<div className="flex items-center justify-between px-4 pt-3 pb-2">
 				<span className="text-[13px] font-medium text-ink">{t("projects.title")}</span>
 				<Tooltip label={t("projects.addProject")}>
