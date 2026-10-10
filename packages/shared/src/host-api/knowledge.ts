@@ -137,6 +137,7 @@ export const KnowledgeContract = defineDomain("knowledge", {
 						mode: Type.Union([Type.Literal("pull"), Type.Literal("push")]),
 						bindingRevision: Type.Integer({ minimum: 1 }),
 						paths: Type.Array(Type.String({ minLength: 1 }), { minItems: 1, maxItems: 64 }),
+						resolution: Type.Optional(Type.Union([Type.Literal("local"), Type.Literal("remote")])),
 					},
 					{ additionalProperties: false },
 				),

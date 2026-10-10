@@ -78,6 +78,19 @@ export async function createVaultFileOnly(path: string, content: string): Promis
 	}
 }
 
+/** Atomically replace an existing regular Vault file after the caller verified its current version. */
+export async function replaceVaultFile(path: string, content: string): Promise<void> {
+	const current = await lstat(path);
+	if (!current.isFile() || current.isSymbolicLink()) throw new Error(`Expected a regular Vault file: ${path}`);
+	const temporary = `${path}.${randomUUID()}.tmp`;
+	await writeFile(temporary, content, { encoding: "utf8", flag: "wx" });
+	try {
+		await rename(temporary, path);
+	} finally {
+		await unlink(temporary).catch(() => undefined);
+	}
+}
+
 function navigationBase(heading: string): string {
 	return `${heading}\n\n## Human review\n`;
 }

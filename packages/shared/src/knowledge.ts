@@ -243,6 +243,7 @@ export interface KnowledgeCloudSyncResult {
 	items: KnowledgeCloudSyncItem[];
 	warnings: string[];
 }
+export type KnowledgeCloudConflictResolution = "local" | "remote";
 export type ResearchRunRouteState = "pending" | "active" | "complete" | "blocked";
 export interface ResearchRunRouteNode {
 	key: string;
@@ -604,6 +605,8 @@ export interface KnowledgeApi {
 		mode: "pull" | "push";
 		bindingRevision: number;
 		paths: string[];
+		/** Optional explicit choice after a preview found divergent local and remote content. */
+		resolution?: KnowledgeCloudConflictResolution;
 	}): Promise<KnowledgeCloudSyncResult>;
 	searchKnowledge(input: KnowledgeSearchRequest): Promise<KnowledgeSearchResult>;
 	getKnowledgeNoteLinks(input: { path: string; revision: number }): Promise<KnowledgeNoteLinks>;
