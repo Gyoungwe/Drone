@@ -168,17 +168,48 @@ interface ToolEventLike {
 	toolName?: string;
 	args?: unknown;
 	isError?: boolean;
+	partialResult?: unknown;
+}
+
+/** 部分输出刷盘的默认节流间隔与保留上限（尾部）。 */
+export const PARTIAL_OUTPUT_INTERVAL_MS = 2000;
+export const PARTIAL_OUTPUT_MAX_CHARS = 16 * 1024;
+
+/** 从 tool_execution_update 的 partialResult 提取累计文本（pi 的 bash 等工具每次给出截至此刻的输出）。 */
+export function partialText(partialResult: unknown): string {
+	const content = (partialResult as { content?: unknown } | null)?.content;
+	if (!Array.isArray(content)) return typeof partialResult === "string" ? partialResult : "";
+	return content
+		.map((block) =>
+			block && typeof block === "object" && (block as { type?: string }).type === "text"
+				? String((block as { text?: unknown }).text ?? "")
+				: "",
+		)
+		.join("");
+}
+
+export interface IntentObserverOptions {
+	onError?: (error: unknown) => void;
+	/** 同一调用两次刷盘的最小间隔（Pi Durable 默认 100ms；桌面端用 2s 降低写盘量） */
+	outputIntervalMs?: number;
+	now?: () => number;
 }
 
 /**
  * 会话事件观察器：tool_execution_start 在 pi 的 agent loop 里先于参数准备与执行被 await 发出，
- * 所以在这里同步落盘即可保证“意图先于效果”。写盘失败不能打断会话，只报告。
+ * 所以在这里同步落盘即可保证“意图先于效果”。长时间运行的工具，其 tool_execution_update
+ * 的部分输出按节流间隔刷盘，崩溃后在恢复结果里呈现。写盘失败不能打断会话，只报告。
  */
 export function createIntentObserver(
 	journal: ToolIntentJournal,
 	replayPolicy: (toolName: string) => ToolReplayPolicy,
-	onError: (error: unknown) => void = () => {},
+	options: IntentObserverOptions | ((error: unknown) => void) = {},
 ): (event: ToolEventLike) => void {
+	const opts = typeof options === "function" ? { onError: options } : options;
+	const onError = opts.onError ?? (() => {});
+	const interval = opts.outputIntervalMs ?? PARTIAL_OUTPUT_INTERVAL_MS;
+	const now = opts.now ?? Date.now;
+	const lastFlush = new Map<string, { at: number; text: string }>();
 	return (event) => {
 		try {
 			if (event.type === "tool_execution_start" && event.toolCallId && event.toolName)
@@ -188,8 +219,18 @@ export function createIntentObserver(
 					args: event.args,
 					replay: replayPolicy(event.toolName),
 				});
-			else if (event.type === "tool_execution_end" && event.toolCallId)
+			else if (event.type === "tool_execution_update" && event.toolCallId) {
+				const text = partialText(event.partialResult).slice(-PARTIAL_OUTPUT_MAX_CHARS);
+				const previous = lastFlush.get(event.toolCallId);
+				const at = now();
+				if (!text || previous?.text === text) return;
+				if (previous && at - previous.at < interval) return;
+				journal.output(event.toolCallId, text);
+				lastFlush.set(event.toolCallId, { at, text });
+			} else if (event.type === "tool_execution_end" && event.toolCallId) {
+				lastFlush.delete(event.toolCallId);
 				journal.end(event.toolCallId, event.isError === true);
+			}
 		} catch (error) {
 			onError(error);
 		}

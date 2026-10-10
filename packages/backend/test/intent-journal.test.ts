@@ -113,3 +113,46 @@ process.kill(process.pid, "SIGKILL");`,
 		expect(calls.get("k1")).toMatchObject({ ended: false, start: { toolName: "bash", replay: "unsafe" } });
 	});
 });
+
+describe("partial output flushing", () => {
+	it("throttles cumulative output and keeps the newest tail for recovery", () => {
+		const file = join(tmp(), "s.jsonl");
+		let clock = 0;
+		const journal = new ToolIntentJournal(intentJournalPath(file), () => clock);
+		const observe = createIntentObserver(journal, () => "unsafe", {
+			outputIntervalMs: 1000,
+			now: () => clock,
+		});
+		const update = (text: string) =>
+			observe({
+				type: "tool_execution_update",
+				toolCallId: "b",
+				partialResult: { content: [{ type: "text", text }] },
+			});
+		observe({ type: "tool_execution_start", toolCallId: "b", toolName: "bash", args: {} });
+		update("line 1\n");
+		clock = 500;
+		update("line 1\nline 2\n"); // throttled
+		clock = 1500;
+		update("line 1\nline 2\nline 3\n");
+		clock = 3000;
+		update("line 1\nline 2\nline 3\n"); // unchanged → skipped
+		const records = readIntentRecords(intentJournalPath(file));
+		expect(records.filter((r) => r.kind === "output")).toHaveLength(2);
+		expect(summarizeIntents(records).get("b")?.partialOutput).toBe("line 1\nline 2\nline 3\n");
+	});
+
+	it("clips very long output to the tail", () => {
+		const file = join(tmp(), "s.jsonl");
+		const observe = createIntentObserver(new ToolIntentJournal(intentJournalPath(file)), () => "unsafe");
+		observe({ type: "tool_execution_start", toolCallId: "b", toolName: "bash", args: {} });
+		observe({
+			type: "tool_execution_update",
+			toolCallId: "b",
+			partialResult: { content: [{ type: "text", text: `${"x".repeat(40000)}END` }] },
+		});
+		const out = summarizeIntents(readIntentRecords(intentJournalPath(file))).get("b")?.partialOutput ?? "";
+		expect(out.length).toBe(16 * 1024);
+		expect(out.endsWith("END")).toBe(true);
+	});
+});
