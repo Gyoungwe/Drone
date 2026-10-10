@@ -20,6 +20,7 @@ import {
 	splitKnowledgeChunks,
 	tokenizeKnowledgeText,
 } from "./search-policy";
+import { parseFrontmatter } from "./ingest-frontmatter";
 import { createSemanticModel } from "./semantic-model";
 
 await mkdir(dirname(workerData.database), { recursive: true, mode: 0o700 });
@@ -887,6 +888,10 @@ async function knowledgeGraph(args) {
 				scope: row.scope,
 				degree: degree.get(row.path) || 0,
 				identity: noteIdentity(row.body),
+				contentType: (() => {
+					const type = parseFrontmatter(row.body).data?.type;
+					return typeof type === "string" ? type : null;
+				})(),
 			})),
 			edges: rawEdges,
 		},

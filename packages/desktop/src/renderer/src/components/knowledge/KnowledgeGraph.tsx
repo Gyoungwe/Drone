@@ -19,7 +19,56 @@ const MIN_ZOOM = 0.65;
 const MAX_ZOOM = 2.8;
 type RelationFilter = "all" | "link" | "directory";
 type Camera = { x: number; y: number; scale: number };
-const COMMUNITY_COLORS = ["#8ca8ff", "#c58ee8", "#79d5b1", "#e0b071", "#e4a0b5", "#7fc5e5"];
+type GraphCategory =
+	| "paper"
+	| "method"
+	| "software"
+	| "dataset"
+	| "concept"
+	| "entity"
+	| "idea"
+	| "claim"
+	| "evidence"
+	| "decision"
+	| "question"
+	| "wiki"
+	| "other";
+const CATEGORY_COLORS: Record<GraphCategory, string> = {
+	paper: "#f2b880",
+	method: "#79d5b1",
+	software: "#8ca8ff",
+	dataset: "#7fc5e5",
+	concept: "#c58ee8",
+	entity: "#e4a0b5",
+	idea: "#f08cae",
+	claim: "#f1d36b",
+	evidence: "#63d6d0",
+	decision: "#ff9f73",
+	question: "#b8a1ff",
+	wiki: "#9bb5ff",
+	other: "#9aa4b8",
+};
+
+const CATEGORY_LABELS: Record<GraphCategory, string> = {
+	paper: "文献",
+	method: "方法",
+	software: "软件",
+	dataset: "数据集",
+	concept: "概念",
+	entity: "实体",
+	idea: "想法",
+	claim: "主张",
+	evidence: "证据",
+	decision: "决策",
+	question: "问题",
+	wiki: "Wiki",
+	other: "其他",
+};
+
+function categoryOf(node: GraphData["nodes"][number]): GraphCategory {
+	const value = (node.contentType ?? node.type ?? "other").toLowerCase() as GraphCategory;
+	return value in CATEGORY_COLORS ? value : node.kind === "wiki" ? "wiki" : "other";
+}
 
 function clampZoom(scale: number): number {
 	return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale));
@@ -48,13 +97,11 @@ function graphEdges(data: GraphData) {
 
 function nodeColor(node: GraphData["nodes"][number]): string {
 	if (node.isInfrastructure || node.nodeType === "infrastructure") return "#9aa4b8";
-	if (node.nodeType === "mirror") return "#c58ee8";
-	if (node.nodeType === "wiki" || node.kind === "wiki") return "#8ca8ff";
-	return COMMUNITY_COLORS[(node.community ?? 0) % COMMUNITY_COLORS.length] ?? "#79d5b1";
+	return CATEGORY_COLORS[categoryOf(node)];
 }
 
 function labelText(node: GraphData["nodes"][number]): string {
-	return node.title.length > 24 ? `${node.title.slice(0, 23)}…` : node.title;
+	return node.title.length > 18 ? `${node.title.slice(0, 17)}…` : node.title;
 }
 
 /** 单一科研观测台：主题关系、证据路径、节点详情与知识库操作共用一个视图。 */
@@ -75,6 +122,7 @@ export function KnowledgeGraph({
 	const [view, setView] = useState<"semantic" | "all">("semantic");
 	const [mergeMirrors, setMergeMirrors] = useState(true);
 	const [relationFilter, setRelationFilter] = useState<RelationFilter>("all");
+	const [categoryFilter, setCategoryFilter] = useState<GraphCategory | null>(null);
 	const [links, setLinks] = useState<KnowledgeNoteLinks | null>(null);
 	const [hovered, setHovered] = useState<string | null>(null);
 	const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, scale: 1 });
@@ -137,14 +185,17 @@ export function KnowledgeGraph({
 			new Set(
 				[...nodes]
 					.sort((a, b) => b.degree - a.degree || a.path.localeCompare(b.path))
-					.slice(0, 16)
+					.slice(0, 6)
+					.concat(nodes.filter((node) => node.isMain || (node.sharedWith?.length ?? 0) > 1))
 					.map((node) => node.path),
 			),
 		[nodes],
 	);
 	const labels = useMemo(
 		() =>
-			data ? placeGraphLabels({ nodes }, points, labelled, selected) : new Map<string, LabelPlacement>(),
+			data
+				? placeGraphLabels({ nodes }, points, labelled, selected, { uniformOrientation: true })
+				: new Map<string, LabelPlacement>(),
 		[data, nodes, points, labelled, selected],
 	);
 	const neighbours = useMemo(() => {
@@ -165,9 +216,29 @@ export function KnowledgeGraph({
 	const graph = data?.semantic ?? data;
 	const isolated = graph?.health?.isolated ?? nodes.filter((node) => node.degree === 0).length;
 	const duplicates = graph?.health?.duplicates ?? graph?.duplicates?.length ?? 0;
+	const resetCamera = () => setCamera({ x: 0, y: 0, scale: 1 });
 	const zoomBy = (factor: number) =>
 		setCamera((current) => clampCamera({ ...current, scale: current.scale * factor }));
-	const resetCamera = () => setCamera({ x: 0, y: 0, scale: 1 });
+	const fitCamera = () => {
+		if (!points.size) return resetCamera();
+		const values = [...points.values()];
+		const minX = Math.min(...values.map((point) => point.x));
+		const maxX = Math.max(...values.map((point) => point.x));
+		const minY = Math.min(...values.map((point) => point.y));
+		const maxY = Math.max(...values.map((point) => point.y));
+		const padding = 72;
+		const scale = clampZoom(
+			Math.min(
+				(WIDTH - padding * 2) / Math.max(1, maxX - minX),
+				(HEIGHT - padding * 2) / Math.max(1, maxY - minY),
+			),
+		);
+		setCamera({
+			x: WIDTH / 2 - ((minX + maxX) / 2) * scale,
+			y: HEIGHT / 2 - ((minY + maxY) / 2) * scale,
+			scale,
+		});
+	};
 	const focusNode = (path: string | null) => {
 		if (!path) return resetCamera();
 		const point = points.get(path);
@@ -176,8 +247,18 @@ export function KnowledgeGraph({
 		setCamera({ x: WIDTH / 2 - point.x * scale, y: HEIGHT / 2 - point.y * scale, scale });
 	};
 	const onCanvasWheel = (event: React.WheelEvent<SVGSVGElement>) => {
-		event.preventDefault();
-		zoomBy(event.deltaY > 0 ? 0.88 : 1.14);
+		const rect = event.currentTarget.getBoundingClientRect();
+		const anchor = {
+			x: ((event.clientX - rect.left) / rect.width) * WIDTH,
+			y: ((event.clientY - rect.top) / rect.height) * HEIGHT,
+		};
+		const factor = event.deltaY > 0 ? 0.88 : 1.14;
+		setCamera((current) => {
+			const scale = clampZoom(current.scale * factor);
+			const worldX = (anchor.x - current.x) / current.scale;
+			const worldY = (anchor.y - current.y) / current.scale;
+			return { x: anchor.x - worldX * scale, y: anchor.y - worldY * scale, scale };
+		});
 	};
 	const onCanvasPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
 		if (event.button !== 0) return;
@@ -269,6 +350,21 @@ export function KnowledgeGraph({
 					))}
 				</span>
 			</div>
+			<div className="flex flex-wrap items-center gap-1 text-[10px] text-ink-faint">
+				<span className="mr-1 uppercase tracking-[0.12em]">{t("graphCategory")}</span>
+				{([...new Set(nodes.map(categoryOf))] as GraphCategory[]).map((category) => (
+					<button
+						key={category}
+						type="button"
+						className={`knowledge-graph-category-filter ${categoryFilter === category ? "is-active" : ""}`}
+						aria-pressed={categoryFilter === category}
+						onClick={() => setCategoryFilter((current) => (current === category ? null : category))}
+					>
+						<i style={{ backgroundColor: CATEGORY_COLORS[category] }} />
+						{CATEGORY_LABELS[category]}
+					</button>
+				))}
+			</div>
 			<div className="flex flex-wrap gap-1 text-[11px] text-ink-faint">
 				<span className="rounded-full border border-border px-2 py-0.5">
 					{t("graphSummary")
@@ -324,7 +420,7 @@ export function KnowledgeGraph({
 							<button
 								type="button"
 								className="knowledge-graph-fit-button"
-								onClick={() => focusNode(null)}
+								onClick={fitCamera}
 								title={t("graphFit")}
 							>
 								{t("graphFit")}
@@ -360,14 +456,14 @@ export function KnowledgeGraph({
 						<rect width={WIDTH} height={HEIGHT} fill="url(#knowledge-grid)" />
 						<ellipse cx={WIDTH / 2} cy={HEIGHT / 2} rx="300" ry="210" fill="url(#knowledge-glow)" />
 						<g fill="none" stroke="#8396c2" strokeOpacity=".2" strokeWidth="1">
-							<line x1="24" y1={HEIGHT - 26} x2={WIDTH - 22} y2={HEIGHT - 26} />
-							<line x1="28" y1={HEIGHT - 22} x2="28" y2="22" />
+							<line x1="48" y1={HEIGHT - 54} x2={WIDTH - 22} y2={HEIGHT - 54} />
+							<line x1="44" y1={HEIGHT - 50} x2="44" y2="22" />
 						</g>
 						<g className="text-[9px] fill-[#8396c2] opacity-70">
-							<text x="38" y={HEIGHT - 10}>
+							<text x="54" y={HEIGHT - 36}>
 								evidence density →
 							</text>
-							<text x="11" y={HEIGHT - 34} transform={`rotate(-90 11 ${HEIGHT - 34})`}>
+							<text x="27" y={HEIGHT - 58} transform={`rotate(-90 27 ${HEIGHT - 58})`}>
 								concept depth
 							</text>
 						</g>
@@ -375,34 +471,21 @@ export function KnowledgeGraph({
 							className="knowledge-graph-scene"
 							transform={`translate(${camera.x} ${camera.y}) scale(${camera.scale})`}
 						>
-							{[
-								...new Set(
-									nodes
-										.map((node) => node.community)
-										.filter((community): community is number => community !== undefined),
-								),
-							]
-								.slice(0, 6)
-								.map((community, index) => {
-									const cluster = nodes
-										.filter((node) => node.community === community)
-										.map((node) => points.get(node.path))
-										.filter((point): point is Point => Boolean(point));
-									if (cluster.length < 2) return null;
-									const cx = cluster.reduce((sum, point) => sum + point.x, 0) / cluster.length;
-									const cy = cluster.reduce((sum, point) => sum + point.y, 0) / cluster.length;
+							{nodes
+								.filter((node) => node.isMain)
+								.map((node) => {
+									const point = points.get(node.path);
+									if (!point) return null;
 									return (
-										<ellipse
-											key={community}
-											cx={cx}
-											cy={cy}
-											rx={Math.min(170, 45 + cluster.length * 9)}
-											ry={Math.min(120, 34 + cluster.length * 7)}
-											fill={COMMUNITY_COLORS[index % COMMUNITY_COLORS.length]}
-											fillOpacity=".055"
-											stroke={COMMUNITY_COLORS[index % COMMUNITY_COLORS.length]}
-											strokeOpacity=".22"
-											strokeDasharray="4 5"
+										<circle
+											key={`main-orbit-${node.path}`}
+											cx={point.x}
+											cy={point.y}
+											r="40"
+											fill="none"
+											stroke={nodeColor(node)}
+											strokeOpacity=".18"
+											strokeDasharray="2 7"
 										/>
 									);
 								})}
@@ -411,7 +494,15 @@ export function KnowledgeGraph({
 									const a = points.get(edge.source),
 										b = points.get(edge.target);
 									if (!a || !b) return null;
-									const on = !active || (active.has(edge.source) && active.has(edge.target));
+									const categoryOn =
+										!categoryFilter ||
+										categoryOf(
+											nodeByPath.get(edge.source) ?? ({ kind: "note" } as GraphData["nodes"][number]),
+										) === categoryFilter ||
+										categoryOf(
+											nodeByPath.get(edge.target) ?? ({ kind: "note" } as GraphData["nodes"][number]),
+										) === categoryFilter;
+									const on = categoryOn && (!active || (active.has(edge.source) && active.has(edge.target)));
 									return (
 										<line
 											key={`${edge.source}|${edge.target}|${edge.type}`}
@@ -425,7 +516,7 @@ export function KnowledgeGraph({
 											x2={b.x}
 											y2={b.y}
 											stroke={edge.type === "directory" ? "#c58ee8" : "#8ca8ff"}
-											strokeOpacity={on ? (edge.type === "directory" ? 0.6 : 0.5) : 0.08}
+											strokeOpacity={on ? (edge.type === "directory" ? 0.6 : 0.5) : categoryOn ? 0.08 : 0.025}
 											strokeWidth={edge.type === "directory" ? 1 : 1.4}
 											strokeDasharray={edge.type === "directory" ? "4 4" : undefined}
 										/>
@@ -435,11 +526,12 @@ export function KnowledgeGraph({
 							{nodes.map((node) => {
 								const point = points.get(node.path);
 								if (!point) return null;
-								const on = !active || active.has(node.path);
-								const radius = 4 + Math.min(9, Math.sqrt(node.degree) * 1.7);
+								const categoryOn = !categoryFilter || categoryOf(node) === categoryFilter;
+								const on = categoryOn && (!active || active.has(node.path));
+								const radius = 4 + Math.min(9, Math.sqrt(node.degree) * 1.7) + (node.isMain ? 3 : 0);
 								const placement = labels.get(node.path);
 								const showLabel = Boolean(
-									placement && (camera.scale >= 0.92 || selected === node.path || hovered === node.path),
+									placement && (camera.scale >= 1.05 || selected === node.path || hovered === node.path),
 								);
 								const showMetadata = camera.scale >= 1.15 || selected === node.path || hovered === node.path;
 								return (
@@ -449,7 +541,7 @@ export function KnowledgeGraph({
 										role="button"
 										tabIndex={0}
 										aria-label={node.title}
-										opacity={on ? 1 : 0.2}
+										opacity={on ? 1 : categoryOn ? 0.2 : 0.06}
 										style={{ cursor: "pointer" }}
 										onClick={() => setSelected(node.path)}
 										onMouseEnter={() => setHovered(node.path)}
@@ -481,6 +573,30 @@ export function KnowledgeGraph({
 											fill={nodeColor(node)}
 											fillOpacity=".1"
 										/>
+										{node.isMain && (
+											<circle
+												cx={point.x}
+												cy={point.y}
+												r={radius + 6}
+												fill="none"
+												stroke={nodeColor(node)}
+												strokeOpacity=".78"
+												strokeWidth="1.5"
+												strokeDasharray="7 4"
+											/>
+										)}
+										{(node.sharedWith?.length ?? 0) > 1 && (
+											<circle
+												cx={point.x}
+												cy={point.y}
+												r={radius + 4}
+												fill="none"
+												stroke="#ffffff"
+												strokeOpacity=".45"
+												strokeWidth="1"
+												strokeDasharray="2 3"
+											/>
+										)}
 										<circle
 											cx={point.x}
 											cy={point.y}
@@ -510,18 +626,23 @@ export function KnowledgeGraph({
 							})}
 						</g>
 					</svg>
-					<div className="absolute bottom-2 left-3 flex flex-wrap gap-3 text-[10px] text-[#8392b1]">
+					<div className="knowledge-graph-legend absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-md border border-[#526a9f]/40 bg-[#101a2d]/75 px-2 py-1.5 text-[10px] text-[#aab8d4] shadow-lg backdrop-blur">
+						{([...new Set(nodes.map(categoryOf))] as GraphCategory[]).map((category) => (
+							<span key={`legend-${category}`}>
+								<i
+									className="mr-1 inline-block h-2 w-2 rounded-full"
+									style={{ backgroundColor: CATEGORY_COLORS[category] }}
+								/>
+								{CATEGORY_LABELS[category]}
+							</span>
+						))}
 						<span>
-							<i className="mr-1 inline-block h-2 w-2 rounded-full bg-[#8ca8ff]" />
-							{t("graphLegendNote")}
+							<i className="mr-1 inline-block h-2 w-2 rounded-full border border-[#f6d58a]" />
+							{t("graphLegendMain")}
 						</span>
 						<span>
-							<i className="mr-1 inline-block h-2 w-2 rounded-full bg-[#c58ee8]" />
-							{t("graphLegendMirror")}
-						</span>
-						<span>
-							<i className="mr-1 inline-block h-2 w-2 rounded-full bg-[#79d5b1]" />
-							{t("graphLegendMethod")}
+							<i className="mr-1 inline-block h-2 w-2 rounded-full border border-white/70 border-dashed" />
+							{t("graphLegendShared")}
 						</span>
 						<span>
 							<i className="mr-1 inline-block h-[1px] w-3 align-middle bg-[#8ca8ff]" />

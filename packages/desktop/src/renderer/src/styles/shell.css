@@ -851,6 +851,40 @@
 	transform-box: fill-box;
 	transform-origin: center;
 }
+.knowledge-graph-svg {
+	overscroll-behavior: contain;
+}
+.knowledge-graph-legend {
+	line-height: 1.2;
+}
+
+.knowledge-graph-category-filter {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	padding: 2px 7px;
+	color: #8494b3;
+	transition:
+		border-color 160ms ease,
+		background-color 160ms ease,
+		color 160ms ease;
+}
+
+.knowledge-graph-category-filter i {
+	display: inline-block;
+	height: 7px;
+	width: 7px;
+	border-radius: 999px;
+}
+
+.knowledge-graph-category-filter:hover,
+.knowledge-graph-category-filter.is-active {
+	border-color: #526a9f;
+	background: #192844;
+	color: #dce7ff;
+}
 .knowledge-graph-edge {
 	transition:
 		stroke-opacity 0.2s,

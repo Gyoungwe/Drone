@@ -16,6 +16,8 @@ export interface SemanticNodeInput {
 	scope?: string;
 	/** Stable bibliographic identity (DOI, PMID, arXiv, or a producer key). */
 	identity?: string | null;
+	/** Frontmatter type used to build the fixed research-sector layout. */
+	contentType?: string | null;
 }
 
 export interface SemanticEdgeInput {
@@ -36,6 +38,12 @@ export interface SemanticNode {
 	y: number;
 	mirrors?: string[];
 	warnings?: string[];
+	/** Normalized content category (paper, method, software, …). */
+	contentType?: string;
+	/** Research question/topic nodes anchor the surrounding category sectors. */
+	isMain?: boolean;
+	/** Main nodes this item bridges; shared items are placed between their anchors. */
+	sharedWith?: string[];
 }
 
 export interface SemanticRelation {
@@ -56,6 +64,121 @@ export interface SemanticGraph {
 const WIDTH = 720;
 const HEIGHT = 440;
 const INFRASTRUCTURE = /(?:^|\/)(?:Index|Context|Home|Template|Templates)\.md$/i;
+const MAIN_TYPES = new Set(["question", "concept", "claim", "decision"]);
+const CATEGORY_BY_PATH: Array<[RegExp, string]> = [
+	[/\/Papers\//i, "paper"],
+	[/\/Methods?\//i, "method"],
+	[/\/Software\//i, "software"],
+	[/\/Datasets?\//i, "dataset"],
+	[/\/(?:Wiki|Wikis)\//i, "wiki"],
+	[/\/(?:Questions?|Research)\//i, "question"],
+];
+
+/** Keep category colors and sectors stable even for older notes without typed frontmatter. */
+export function contentCategory(node: Pick<SemanticNodeInput, "path" | "kind" | "contentType">): string {
+	const explicit = node.contentType?.trim().toLowerCase();
+	if (explicit) return explicit;
+	for (const [pattern, category] of CATEGORY_BY_PATH) if (pattern.test(node.path)) return category;
+	if (node.kind === "wiki") return "wiki";
+	return "other";
+}
+
+function isMainNode(node: Pick<SemanticNodeInput, "path" | "title" | "contentType">, category: string): boolean {
+	if (MAIN_TYPES.has(category)) return true;
+	return /(?:^|\/)(?:Questions?|Research[-_ ]?Questions?)\/|(?:研究问题|研究主题|research question)/i.test(
+		`${node.path} ${node.title}`,
+	);
+}
+
+const SECTOR_ANGLES: Record<string, number> = {
+	// SVG y grows downwards: 7 o'clock is 120° and 8 o'clock is 150°.
+	paper: (2 * Math.PI) / 3,
+	software: (5 * Math.PI) / 6,
+	method: Math.PI,
+	dataset: (7 * Math.PI) / 6,
+	evidence: (4 * Math.PI) / 3,
+	claim: (3 * Math.PI) / 2,
+	concept: (11 * Math.PI) / 6,
+	entity: 0,
+	idea: Math.PI / 6,
+	decision: Math.PI / 3,
+	question: Math.PI / 2,
+	wiki: (3 * Math.PI) / 4,
+	other: (11 * Math.PI) / 6,
+};
+
+function sectorLayout(
+	nodes: Map<string, SemanticNodeInput>,
+	relations: SemanticRelation[],
+	seed: number,
+): { layout: Record<string, { x: number; y: number }>; mains: Set<string>; sharedWith: Map<string, string[]> } {
+	const paths = [...nodes.keys()].sort(comparePath);
+	const adjacency = new Map<string, Set<string>>(paths.map((path) => [path, new Set()]));
+	for (const relation of relations) {
+		if (relation.type !== "link") continue;
+		adjacency.get(relation.source)?.add(relation.target);
+		adjacency.get(relation.target)?.add(relation.source);
+	}
+	const categories = new Map(paths.map((path) => [path, contentCategory(nodes.get(path) as SemanticNodeInput)]));
+	const mains = new Set(paths.filter((path) => isMainNode(nodes.get(path) as SemanticNodeInput, categories.get(path) ?? "other")));
+	if (!mains.size) {
+		paths
+			.slice()
+			.sort((a, b) => (adjacency.get(b)?.size ?? 0) - (adjacency.get(a)?.size ?? 0) || comparePath(a, b))
+			.slice(0, Math.min(3, paths.length))
+			.forEach((path) => {
+				mains.add(path);
+			});
+	}
+	const sharedWith = new Map<string, string[]>();
+	for (const path of paths) {
+		if (mains.has(path)) continue;
+		const connected = [...(adjacency.get(path) ?? [])].filter((candidate) => mains.has(candidate)).sort(comparePath);
+		if (connected.length > 1) sharedWith.set(path, connected);
+	}
+	const mainPaths = [...mains].sort(comparePath);
+	const centers = new Map<string, { x: number; y: number }>();
+	const centerY = HEIGHT * 0.48;
+	const spacing = Math.min(270, Math.max(170, (WIDTH - 190) / Math.max(1, mainPaths.length - 1)));
+	const startX = WIDTH / 2 - ((mainPaths.length - 1) * spacing) / 2;
+	mainPaths.forEach((path, index) => {
+		centers.set(path, { x: startX + index * spacing, y: centerY });
+	});
+	const layout: Record<string, { x: number; y: number }> = {};
+	for (const path of mainPaths) layout[path] = centers.get(path) as { x: number; y: number };
+	for (const path of paths) {
+		if (mains.has(path)) continue;
+		const bridges = sharedWith.get(path);
+		if (bridges?.length) {
+			const average = bridges.reduce(
+				(point, main) => ({ x: point.x + (centers.get(main)?.x ?? WIDTH / 2), y: point.y + (centers.get(main)?.y ?? centerY) }),
+				{ x: 0, y: 0 },
+			);
+			const jitter = (hash(`${path}:bridge`, seed) - 0.5) * 30;
+			layout[path] = { x: average.x / bridges.length, y: average.y / bridges.length - 36 + jitter };
+			continue;
+		}
+		const connectedMain = [...(adjacency.get(path) ?? [])].find((candidate) => mains.has(candidate));
+		const anchor = connectedMain ? centers.get(connectedMain) : { x: WIDTH / 2, y: centerY };
+		const category = categories.get(path) ?? "other";
+		const angle = SECTOR_ANGLES[category] ?? SECTOR_ANGLES.other ?? 0;
+		const siblings = paths.filter(
+			(candidate) => !mains.has(candidate) && !sharedWith.has(candidate) && categories.get(candidate) === category && [...(adjacency.get(candidate) ?? [])].includes(connectedMain ?? ""),
+		);
+		const index = Math.max(0, siblings.indexOf(path));
+		const spread = Math.min(0.22, 0.08 + siblings.length * 0.012);
+		const offset = (index - (siblings.length - 1) / 2) * spread;
+		const radius = 92 + Math.floor(index / 3) * 26 + hash(`${path}:radius`, seed) * 10;
+		const jitter = (hash(`${path}:angle`, seed) - 0.5) * 0.06;
+		layout[path] = { x: (anchor?.x ?? WIDTH / 2) + radius * Math.cos(angle + offset + jitter), y: (anchor?.y ?? centerY) + radius * Math.sin(angle + offset + jitter) };
+	}
+	for (const path of paths) {
+		if (layout[path]) continue;
+		const angle = 2 * Math.PI * hash(`${path}:outer`, seed);
+		layout[path] = { x: WIDTH / 2 + 175 * Math.cos(angle), y: centerY + 145 * Math.sin(angle) };
+	}
+	return { layout, mains, sharedWith };
+}
 
 export function isInfrastructureNode(node: Pick<SemanticNodeInput, "path" | "kind">): boolean {
 	return node.kind === "navigation" || INFRASTRUCTURE.test(node.path);
@@ -212,17 +335,7 @@ export function createSemanticModel(
 	}
 	for (const duplicate of duplicates) relations.push({ source: duplicate.canonical, target: duplicate.duplicate, type: "duplicate" });
 	const communities = assignCommunities([...modelNodes.keys()], relations, seed);
-	const communitySizes = new Map<number, number>();
-	for (const community of Object.values(communities)) if (community >= 0) communitySizes.set(community, (communitySizes.get(community) ?? 0) + 1);
-	const communityCount = Math.max(1, communitySizes.size);
-	const layout: Record<string, { x: number; y: number }> = {};
-	for (const path of [...modelNodes.keys()].sort(comparePath)) {
-		const community = communities[path] ?? -1;
-		const centerAngle = community >= 0 ? (2 * Math.PI * community) / communityCount : 2 * Math.PI * hash(path, seed);
-		const radius = community >= 0 ? 75 + 24 * hash(`${path}:r`, seed) : 150 + 35 * hash(`${path}:r`, seed);
-		const jitter = 2 * Math.PI * hash(`${path}:a`, seed);
-		layout[path] = { x: WIDTH / 2 + radius * Math.cos(centerAngle) + 18 * Math.cos(jitter), y: HEIGHT / 2 + radius * Math.sin(centerAngle) + 18 * Math.sin(jitter) };
-	}
+	const { layout, mains, sharedWith } = sectorLayout(modelNodes, relations, seed);
 	const linkRelations = relations.filter((edge) => edge.type === "link");
 	const degree = new Map<string, number>();
 	for (const edge of linkRelations) {
@@ -232,7 +345,21 @@ export function createSemanticModel(
 	const nodes = [...modelNodes.entries()].sort(([a], [b]) => comparePath(a, b)).map(([path, node]) => {
 		const mirrorPaths = [...canonicalFor.entries()].filter(([, canonical]) => canonical === path).map(([mirror]) => mirror).filter((mirror) => mirror !== path).sort(comparePath);
 		const type = nodeType(node);
-		return { path, title: node.title, kind: node.kind, degree: degree.get(path) ?? 0, nodeType: mirrorPaths.length ? "mirror" : type, isInfrastructure: type === "infrastructure", community: communities[path] ?? -1, ...(layout[path] ?? { x: WIDTH / 2, y: HEIGHT / 2 }), ...(mirrorPaths.length ? { mirrors: mirrorPaths, warnings: ["mirror"] } : {}) };
+		const category = contentCategory(node);
+		return {
+			path,
+			title: node.title,
+			kind: node.kind,
+			degree: degree.get(path) ?? 0,
+			nodeType: mirrorPaths.length ? "mirror" : type,
+			isInfrastructure: type === "infrastructure",
+			community: communities[path] ?? -1,
+			contentType: category,
+			isMain: mains.has(path),
+			...(sharedWith.has(path) ? { sharedWith: sharedWith.get(path) } : {}),
+			...(layout[path] ?? { x: WIDTH / 2, y: HEIGHT / 2 }),
+			...(mirrorPaths.length ? { mirrors: mirrorPaths, warnings: ["mirror"] } : {}),
+		};
 	});
 	return { nodes, edges: linkRelations.map(({ source, target }) => ({ source, target })), relations, duplicates, communities, layout };
 }

@@ -86,7 +86,7 @@ import {
   createSemanticModel,
   isInfrastructureNode,
   nodeType
-} from "./chunks/chunk-D47OUZYO.mjs";
+} from "./chunks/chunk-IKQMHJXA.mjs";
 import {
   normalizeSourceLinks,
   onlineSourceLink

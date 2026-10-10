@@ -494,6 +494,12 @@ export interface KnowledgeGraphNode {
 	degree: number;
 	/** Optional frontmatter type, kept additive for older runtimes. */
 	type?: string;
+	/** Normalized knowledge category used by the sector layout. */
+	contentType?: string;
+	/** Research topic/question anchor for surrounding category sectors. */
+	isMain?: boolean;
+	/** Paths of main nodes connected through this shared bridge node. */
+	sharedWith?: string[];
 	/** Optional project/shared scope, kept additive for older runtimes. */
 	scope?: string;
 	/** Normalized paper identifiers used to surface likely duplicates. */
