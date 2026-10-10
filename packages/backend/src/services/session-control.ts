@@ -10,6 +10,7 @@ import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { isTaskStatusQuery } from "../capabilities/runtime";
 import { createLogger } from "../log";
+import { inboxFor } from "../session/durable-inbox";
 import type { ModelWaitMonitor } from "../session/model-wait";
 import type { EventRateTracker } from "../session/rates";
 import type { SessionRecovery } from "../session/recovery";
@@ -35,7 +36,12 @@ export interface SessionControlHost {
 export class SessionControlService {
 	constructor(private readonly host: SessionControlHost) {}
 
-	async prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<PromptReceipt> {
+	async prompt(
+		sessionId: string,
+		text: string,
+		images?: ImageInput[],
+		requestId?: string,
+	): Promise<PromptReceipt> {
 		const entry = this.host.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
 		if (this.host.recovery.isRecovering(sessionId))
@@ -59,6 +65,19 @@ export class SessionControlService {
 			: entry.session.isStreaming
 				? { kind: "queued" }
 				: { kind: "agent" };
+		// 持久化队列 + requestId 去重：排队消息崩溃后可恢复；重复提交（双击 / IPC 重试）不再二次投递。
+		// 带图片的消息无法完整持久化，不进入持久队列。
+		const sessionFile = entry.session.sessionFile;
+		if (sessionFile && !isExtensionCommand && !images?.length && (receipt.kind === "queued" || requestId)) {
+			try {
+				if (!inboxFor(sessionFile).accept(text, requestId, receipt.kind === "queued")) {
+					log.info("duplicate prompt ignored", sessionId, { requestId });
+					return receipt;
+				}
+			} catch (error) {
+				log.info("durable inbox unavailable", sessionId, { error: String(error) });
+			}
+		}
 		// session.prompt() 非流式路径会 await 整个 run（直到 agent_settled）；渲染端只需要
 		// “已受理/已入队”回执——用 preflightResult 提前返回，否则 IPC 挂一整轮，渲染端
 		// sending 状态被占住，运行中的 followUp 排队发送被防重发守卫静默拦截。
