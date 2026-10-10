@@ -67,6 +67,8 @@ export interface SessionServiceOptions {
 	customTools?: ToolDefinition[];
 	/** Tool/Skill 能力按需暴露（默认 true）；false 保留 SDK 全量工具行为，供兼容/测试。 */
 	lazyCapabilities?: boolean;
+	/** 重开会话发现最近被中断的 safe 工具时，自动发起只读恢复重跑（默认 true）。 */
+	autoResumeInterrupted?: boolean;
 	/** 是否启用权限确认门控（false 时 confirm 直接通过） */
 	permissionGates?: boolean;
 	/** 是否注册内置权限门控扩展（false 时逐工具规则不生效；用户换用自己的权限扩展时关闭）。permissionGates=false 时强制不注册 */

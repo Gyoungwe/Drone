@@ -287,6 +287,7 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		dispatchAskRequest: (req) => service.dispatchAskRequest(req),
 		emitEvent: (id, event) => service.emitEvent(id, event),
 		toMetaOrThrow: (id) => service.toMetaOrThrow(id),
+		resumeInterrupted: (session, calls) => service.recovery.resumeInterrupted(session, calls),
 	});
 	service.resources = new SessionResourceService({
 		options: service.options,

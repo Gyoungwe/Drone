@@ -6,6 +6,7 @@ import type {
 	SessionMeta,
 } from "@drone/shared";
 import type { ThinkingLevel } from "@earendil-works/pi-ai";
+import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { CapabilityResourceLoader, SkillVisibility } from "../capabilities/resource-loader";
 import { CapabilityRuntime, type CapabilityRuntime as CapabilityRuntimeType } from "../capabilities/runtime";
 import type { KnowledgeUiService } from "../knowledge/ui";
@@ -14,6 +15,11 @@ import type { PermissionConfirm } from "../permissions/extension";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import { AskGate } from "../session/ask-gate";
 import { bindToolIntentJournal } from "../session/intent-binding";
+import {
+	type InterruptedToolCall,
+	repairInterruptedToolCalls,
+	shouldAutoResume,
+} from "../session/interrupted-tools";
 import { autoNameSession } from "../session/naming";
 import type { SessionRegistry } from "../session/registry";
 import type { SessionTraces } from "../session/traces";
@@ -25,6 +31,7 @@ import { buildSessionCustomTools, makeCapabilitySessionExtension } from "../sess
 import type { SessionServiceOptions } from "../session-service";
 import type { StorageRegistry } from "../storage/registry";
 import { agentWorkRoot } from "../tools/channel-watch";
+import { globalToolManifest } from "../tools/manifest";
 import { isSubagentSessionPath } from "../tools/subagent";
 import { applySubagentMutex } from "../tools/subagent/mutex";
 import type { ApprovalService } from "./approvals";
@@ -50,6 +57,7 @@ export interface SessionConstructionHost {
 	dispatchAskRequest(req: AskRequest): boolean;
 	emitEvent(sessionId: string, event: SessionEvent): void;
 	toMetaOrThrow(sessionId: string): SessionMeta;
+	resumeInterrupted?(session: AgentSession, calls: InterruptedToolCall[]): Promise<unknown>;
 }
 
 export class SessionConstructionService {
@@ -175,6 +183,17 @@ export class SessionConstructionService {
 		const runtime = await this.host.getModelRuntime();
 		const sessionManager = this.host.sessionEngine.openManager(filePath);
 		const cwd = sessionManager.getCwd() || process.cwd();
+		// 进程在工具执行中途退出：先补齐悬空 toolResult（必须早于 createAgentSession 读转录）。
+		let interrupted: InterruptedToolCall[] = [];
+		if (!isSubagentSessionPath(filePath)) {
+			try {
+				interrupted = repairInterruptedToolCalls(sessionManager as never, (name) =>
+					globalToolManifest.replayPolicy(name),
+				);
+			} catch (error) {
+				log.error("interrupted tool repair failed", filePath, { error: String(error) });
+			}
+		}
 		this.host.storage.registerDiscoveredRoot(
 			"project-work",
 			agentWorkRoot(cwd),
@@ -280,6 +299,17 @@ export class SessionConstructionService {
 		});
 		if (!readOnly) await this.host.traces.start(session.sessionId, session.sessionManager.getSessionDir());
 		log.info("session opened", session.sessionId, { file: filePath });
+		if (interrupted.length) {
+			log.info("interrupted tool calls repaired", session.sessionId, {
+				calls: interrupted.map((c) => ({ tool: c.toolName, replay: c.replay, started: c.started })),
+			});
+			if (this.host.options.autoResumeInterrupted !== false && shouldAutoResume(interrupted))
+				void this.host
+					.resumeInterrupted?.(session, interrupted)
+					?.catch((error) =>
+						log.error("interrupted tool resume failed", session.sessionId, { error: String(error) }),
+					);
+		}
 		return this.host.toMetaOrThrow(session.sessionId);
 	}
 }
