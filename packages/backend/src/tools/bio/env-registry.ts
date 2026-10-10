@@ -1,10 +1,6 @@
 import { join } from "node:path";
-import {
-	decodeDurableDocument,
-	makeDurableDocument,
-	readDurableDocument,
-	writeDurableDocument,
-} from "@drone/shared";
+import { decodeDurableDocument, makeDurableDocument } from "@drone/shared";
+import { readDurableDocument, writeDurableDocument } from "../../state/durable-doc";
 import { BIO_TOOLS, parseVersion } from "./environment";
 
 /**
