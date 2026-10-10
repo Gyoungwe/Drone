@@ -1,5 +1,10 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
+import {
+	decodeDurableDocument,
+	makeDurableDocument,
+	readDurableDocument,
+	writeDurableDocument,
+} from "@drone/shared";
 import { BIO_TOOLS, parseVersion } from "./environment";
 
 /**
@@ -28,6 +33,7 @@ export interface EnvRegistry {
 	version: 1;
 	envs: EnvRecord[];
 }
+const ENV_REGISTRY_KIND = "drone.bio.environment-registry";
 export const ENV_REGISTRY_FILE = "environments.json";
 export const ENV_REGISTRY_LIMIT = 100;
 const NAME = /^[A-Za-z0-9._-]{1,64}$/;
@@ -52,7 +58,17 @@ export function emptyRegistry(): EnvRegistry {
 	return { version: 1, envs: [] };
 }
 export function normalizeRegistry(value: unknown): EnvRegistry {
-	const raw = value as Partial<EnvRegistry> | null;
+	const raw = decodeDurableDocument(value, {
+		kind: ENV_REGISTRY_KIND,
+		version: 1,
+		migrate: (legacy) => {
+			if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
+				const record = legacy as Record<string, unknown>;
+				if (record.kind === ENV_REGISTRY_KIND && record.version === 1 && "data" in record) return record.data;
+			}
+			return legacy;
+		},
+	}) as Partial<EnvRegistry> | null;
 	const version = raw?.version;
 	const recorded = raw?.envs;
 	if (version !== 1 || !Array.isArray(recorded)) return emptyRegistry();
@@ -70,17 +86,23 @@ export function normalizeRegistry(value: unknown): EnvRegistry {
 }
 export async function loadRegistry(agentDir: string): Promise<EnvRegistry> {
 	try {
-		return normalizeRegistry(JSON.parse(await readFile(registryPath(agentDir), "utf8")));
+		return normalizeRegistry(
+			await readDurableDocument(registryPath(agentDir), {
+				kind: ENV_REGISTRY_KIND,
+				version: 1,
+				migrate: (legacy) => legacy,
+			}),
+		);
 	} catch {
 		return emptyRegistry();
 	}
 }
 export async function saveRegistry(agentDir: string, registry: EnvRegistry): Promise<void> {
 	const file = registryPath(agentDir);
-	await mkdir(dirname(file), { recursive: true });
-	const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-	await writeFile(tmp, `${JSON.stringify(normalizeRegistry(registry), null, "\t")}\n`, "utf8");
-	await rename(tmp, file);
+	await writeDurableDocument(
+		file,
+		makeDurableDocument(ENV_REGISTRY_KIND, 1, normalizeRegistry(registry), { scope: "agent" }),
+	);
 }
 
 export function upsertEnv(registry: EnvRegistry, record: EnvRecord): EnvRegistry {

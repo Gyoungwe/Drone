@@ -5,6 +5,7 @@ import { registerWorkbench } from "./register";
 import { isReadOnlyTool } from "./tool-manifest";
 
 export const TASK_ENTRY = "drone-task-checkpoint-v1";
+export const TASK_DOCUMENT_KIND = "drone.task.workbench";
 const CONTROL = new Set(["set_status", "todo", "capability_load", "task_status", "research_task_status"]);
 // 只读判定来自工具清单（挂钩 1）：扩展在 registerTool 的 drone.readOnly 声明，核心不再按名字枚举。
 const READ: any = { test: (name: any) => isReadOnlyTool(name) };
@@ -30,6 +31,7 @@ export function isTaskStatusQuery(text) {
 const clone = (value) => structuredClone(value);
 const valid = (value, scope) =>
 	value?.version === 1 &&
+	(!value.kind || value.kind === TASK_DOCUMENT_KIND) &&
 	value.scope === scope &&
 	typeof value.id === "string" &&
 	typeof value.goal === "string" &&
@@ -69,6 +71,7 @@ export function createTaskJournal({ persist = () => {}, now = () => new Date().t
 	function begin(query) {
 		if (!task || !continuesTask(query))
 			task = {
+				kind: TASK_DOCUMENT_KIND,
 				version: 1,
 				scope,
 				id: randomUUID(),

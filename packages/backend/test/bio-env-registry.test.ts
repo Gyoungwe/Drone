@@ -6,6 +6,7 @@ import {
 	canonicalTool,
 	emptyRegistry,
 	findReusable,
+	loadRegistry,
 	parseVerifyOutput,
 	registryPath,
 	remoteVerifyScript,
@@ -107,7 +108,8 @@ describe("environment registry", () => {
 		});
 		expect(recorded.envs[0]).toMatchObject({ status: "ok", tools: { mafft: "7.526", iqtree2: "2.3.6" } });
 		const file = JSON.parse(await readFile(registryPath(dir), "utf8"));
-		expect(file.envs[0]).toMatchObject({ name: "phylogeny", host: "local", manager: "mamba" });
+		expect(file).toMatchObject({ kind: "drone.bio.environment-registry", version: 1, scope: "agent" });
+		expect(file.data.envs[0]).toMatchObject({ name: "phylogeny", host: "local", manager: "mamba" });
 
 		const session2 = makeEnvRegistryTool({
 			agentDir: dir,
@@ -194,6 +196,14 @@ describe("environment registry", () => {
 			mafft: "7.520",
 			x: null,
 		});
+	});
+	it("reads the pre-envelope registry format during migration", async () => {
+		const dir = await agentDir();
+		await (await import("node:fs/promises")).writeFile(
+			registryPath(dir),
+			JSON.stringify({ version: 1, envs: [{ name: "legacy", host: "local", manager: "mamba", tools: {} }] }),
+		);
+		expect((await loadRegistry(dir)).envs[0]).toMatchObject({ name: "legacy", manager: "mamba" });
 	});
 });
 
