@@ -1,6 +1,7 @@
 import type { PromptReceipt } from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { ToolManifest } from "../tools/manifest";
+import type { InterruptedToolCall } from "./interrupted-tools";
 
 /**
  * Explicit allow-list: resuming an answer must never replay an import, shell command or Vault write.
@@ -112,6 +113,81 @@ export class SessionRecovery {
 		}
 		return pending;
 	}
+	/**
+	 * 重开会话后的中断恢复：悬空调用已由 repairInterruptedToolCalls 补成 isError 结果。
+	 * 这里发起一轮只读恢复：只放行 recoverySafe 工具和本次要重跑的 safe 工具，
+	 * 让模型原样重跑 safe 调用；unsafe 调用只核对、不重做。
+	 */
+	resumeInterrupted(session: AgentSession, calls: readonly InterruptedToolCall[]): Promise<PromptReceipt> {
+		const key = `${session.sessionId}:interrupted:${calls.map((c) => c.toolCallId).join(",")}`;
+		const previous = this.requests.get(key);
+		if (previous) return previous;
+		if (this.active.has(session.sessionId) || !session.isIdle || session.pendingMessageCount > 0)
+			return Promise.reject(new Error("Wait for the active task before resuming interrupted tools"));
+		const safe = calls.filter((c) => c.started && c.replay === "safe");
+		const unsafe = calls.filter((c) => c.started && c.replay !== "safe");
+		if (!safe.length && !unsafe.length)
+			return Promise.reject(new Error("No interrupted tool calls to resume"));
+		this.active.add(session.sessionId);
+		const originalTools = session.getActiveToolNames();
+		const allowed = recoveryReadTools(session, originalTools);
+		for (const call of safe) if (originalTools.includes(call.toolName)) allowed.add(call.toolName);
+		const lines = [
+			"上一进程在工具执行中途退出，现在恢复这次任务（只读恢复）。",
+			...(safe.length
+				? [
+						"以下调用声明为可安全重跑，请用相同参数重新调用一次，然后继续原任务：",
+						...safe.map((c) => `- ${c.toolName} ${JSON.stringify(c.args ?? {}).slice(0, 2000)}`),
+					]
+				: []),
+			...(unsafe.length
+				? [
+						"以下调用可能已经部分执行，不要重做；先核对其效果是否已经发生，并在答复中如实说明：",
+						...unsafe.map((c) => `- ${c.toolName}`),
+					]
+				: []),
+			"不要重复导入、下载或写入。",
+		];
+		const receipt: PromptReceipt = { kind: "agent" };
+		const pending = new Promise<PromptReceipt>((resolve, reject) => {
+			const finish = () => {
+				try {
+					session.setActiveToolsByName(originalTools);
+				} finally {
+					this.active.delete(session.sessionId);
+				}
+			};
+			try {
+				session.setActiveToolsByName(originalTools.filter((name) => allowed.has(name)));
+				void session
+					.sendCustomMessage(
+						{
+							customType: "research-recovery",
+							display: true,
+							content: lines.join("\n"),
+							details: {
+								version: 1,
+								mode: "interrupted-tool-recovery",
+								replayed: safe.map((c) => ({ toolCallId: c.toolCallId, toolName: c.toolName })),
+								unsafe: unsafe.map((c) => ({ toolCallId: c.toolCallId, toolName: c.toolName })),
+								scientificallyVerified: false,
+							},
+						},
+						{ triggerTurn: true },
+					)
+					.then(() => session.waitForIdle())
+					.finally(finish)
+					.then(() => resolve(receipt), reject);
+			} catch (error) {
+				finish();
+				reject(error);
+			}
+		});
+		this.requests.set(key, pending);
+		void pending.catch(() => this.requests.delete(key));
+		return pending;
+	}
+
 	forget(sessionId: string) {
 		for (const key of this.requests.keys()) if (key.startsWith(`${sessionId}:`)) this.requests.delete(key);
 	}
