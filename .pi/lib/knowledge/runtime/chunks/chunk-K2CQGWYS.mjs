@@ -5,17 +5,20 @@ import {
   previewWikiProposal,
   undoWikiUpdate,
   wikiHistory
-} from "./chunk-IMC2GAXA.mjs";
-import {
-  normalizeSourceLinks
-} from "./chunk-LE6NM7SB.mjs";
+} from "./chunk-BFEXNQ42.mjs";
 import {
   setSpecialistSettings,
   specialistSettings
 } from "./chunk-XSFQUT2B.mjs";
 import {
+  normalizeSourceLinks
+} from "./chunk-LE6NM7SB.mjs";
+import {
+  runNavigationMaintenance
+} from "./chunk-EJFIMVBU.mjs";
+import {
   getKnowledgeService
-} from "./chunk-LC5BF27U.mjs";
+} from "./chunk-J5WZKQZN.mjs";
 import {
   flowFor,
   invalidateKnowledgeUi
@@ -25,8 +28,8 @@ import {
   saveReviewMode
 } from "./chunk-6LT3KQRY.mjs";
 import {
-  runNavigationMaintenance
-} from "./chunk-EJFIMVBU.mjs";
+  safeNotePath
+} from "./chunk-AHEUR5VB.mjs";
 import {
   DAILY_DISCOVERY_LIMITS,
   collectRecentNotes,
@@ -47,9 +50,6 @@ import {
   readKnowledgeBinding,
   withKnowledgeBinding
 } from "./chunk-CXEKIGAQ.mjs";
-import {
-  safeNotePath
-} from "./chunk-AHEUR5VB.mjs";
 
 // packages/knowledge/src/ui-service.ts
 import { createHash, randomUUID } from "node:crypto";

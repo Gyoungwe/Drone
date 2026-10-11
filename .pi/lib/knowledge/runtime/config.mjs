@@ -8,6 +8,7 @@ import {
   saveKnowledgeBinding,
   withKnowledgeBinding
 } from "./chunks/chunk-CXEKIGAQ.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   createKnowledgeConfigApi,
   createKnowledgeConfigState,

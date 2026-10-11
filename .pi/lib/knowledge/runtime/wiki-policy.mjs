@@ -9,6 +9,7 @@ import {
   validateSpecialistHtml,
   validateWikiSourcePaths
 } from "./chunks/chunk-AKW2CMNR.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   MANAGED_END,
   MANAGED_START,

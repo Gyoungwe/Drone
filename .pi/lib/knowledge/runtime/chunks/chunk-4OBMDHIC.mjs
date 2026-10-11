@@ -2,10 +2,15 @@
 import {
   decideWikiProposal,
   previewWikiProposal
-} from "./chunk-IMC2GAXA.mjs";
+} from "./chunk-BFEXNQ42.mjs";
 import {
   specialistSettings
 } from "./chunk-XSFQUT2B.mjs";
+import {
+  canRead,
+  readNoteFile,
+  validateNote
+} from "./chunk-AHEUR5VB.mjs";
 import {
   consumeKnowledgeReviewPreview,
   runtimeSlot
@@ -14,11 +19,6 @@ import {
   knowledgeDirectory,
   withKnowledgeBinding
 } from "./chunk-CXEKIGAQ.mjs";
-import {
-  canRead,
-  readNoteFile,
-  validateNote
-} from "./chunk-AHEUR5VB.mjs";
 
 // packages/knowledge/src/wiki-model-review.ts
 import { randomUUID } from "node:crypto";

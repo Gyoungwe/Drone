@@ -17,6 +17,7 @@ import {
   workspaceProjectId
 } from "./chunks/chunk-FQL2U4DN.mjs";
 import "./chunks/chunk-CXEKIGAQ.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   LEGACY_DEFAULT_PROJECT,
   SESSION_PROJECT_ENTRY,

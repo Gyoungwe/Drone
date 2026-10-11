@@ -20,6 +20,7 @@ import {
   validateFrontmatter
 } from "./chunks/chunk-E2MDDLA3.mjs";
 import "./chunks/chunk-4LFII7Y4.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   FRONTMATTER_KEY_ORDER,
   KNOWLEDGE_TYPES,

@@ -11,6 +11,7 @@ import {
   snippet,
   validateNote
 } from "./chunks/chunk-AHEUR5VB.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   MAX_NOTE_BYTES,
   allowedSegment,
