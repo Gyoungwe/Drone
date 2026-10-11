@@ -10,6 +10,7 @@ import { useT } from "../../i18n";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { ProcessLaneView } from "./ProcessLaneView";
+import { ProcessRouteSummary } from "./ProcessRouteSummary";
 import { ReviewerCard } from "./ReviewerCard";
 
 /** Public transcript receipts projected into six lanes, with historical turn navigation. */
@@ -52,6 +53,7 @@ export function ProcessPane({ sessionId }: { sessionId: string | null }) {
 		focus?.turnIndex ?? (selection?.sessionId === sessionId ? selection.index : turns.length - 1);
 	const index = Math.max(0, Math.min(requested, turns.length - 1));
 	const laneState = turns[index] ?? initialProcessLaneState();
+	const route = laneState.nodes.find((node) => node.id === "picked")?.route;
 
 	if (!sessionId || messages.length === 0) return <p className="panel-empty">{t("panel.processEmpty")}</p>;
 	return (
@@ -70,6 +72,7 @@ export function ProcessPane({ sessionId }: { sessionId: string | null }) {
 					))}
 				</select>
 			) : null}
+			{route ? <ProcessRouteSummary route={route} /> : null}
 			<ProcessLaneView
 				key={sessionId}
 				state={laneState}

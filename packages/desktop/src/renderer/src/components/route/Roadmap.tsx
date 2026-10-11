@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 
 export type RoadmapStatus = "ok" | "active" | "warn" | "blocked" | "skip";
 export interface RoadmapNode {
@@ -24,6 +24,28 @@ export const ROADMAP_DOT: Record<RoadmapStatus, string> = {
 	blocked: "bg-err",
 	skip: "bg-ink-faint/50",
 };
+
+export interface RoadmapSummary {
+	status: RoadmapStatus;
+	settled: number;
+	total: number;
+}
+
+/** Summarise a route for the console header without hiding warnings or gates. */
+export function summarizeRoadmap(nodes: RoadmapNode[]): RoadmapSummary {
+	const status: RoadmapStatus = nodes.some((node) => node.status === "blocked")
+		? "blocked"
+		: nodes.some((node) => node.status === "active")
+			? "active"
+			: nodes.some((node) => node.status === "warn")
+				? "warn"
+				: "ok";
+	return {
+		status,
+		settled: nodes.filter((node) => node.status === "ok" || node.status === "skip").length,
+		total: nodes.length,
+	};
+}
 
 /** 研究运行等其它路由状态映射到统一的路线图状态 */
 export function roadmapStatus(state: string): RoadmapStatus {
@@ -51,7 +73,8 @@ export function RoadmapChip({
 			data-status={node.status}
 			data-testid={`roadmap-node-${node.key}`}
 			onClick={() => onSelect?.(node.key)}
-			className={`flex min-w-0 shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] leading-5 ${ROADMAP_TONE[node.status]} ${selected ? "ring-1 ring-current" : ""}`}
+			aria-current={selected ? "step" : undefined}
+			className={`flex min-w-0 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] leading-5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${ROADMAP_TONE[node.status]} ${selected ? "ring-1 ring-current" : ""}`}
 		>
 			<span className={`h-1.5 w-1.5 shrink-0 rounded-full ${ROADMAP_DOT[node.status]}`} />
 			<span className="font-medium">{node.label}</span>
@@ -61,14 +84,22 @@ export function RoadmapChip({
 }
 
 /** 横向技术路线图：节点之间用细箭头连接，点击节点在下方展开该步详情 */
-export function RoadmapLane({ nodes, testId = "roadmap" }: { nodes: RoadmapNode[]; testId?: string }) {
+export function RoadmapLane({
+	nodes,
+	testId = "roadmap",
+	ariaLabel = "Route steps",
+}: {
+	nodes: RoadmapNode[];
+	testId?: string;
+	ariaLabel?: string;
+}) {
 	const [open, setOpen] = useState<string | null>(null);
 	const current = nodes.find((node) => node.key === open);
 	return (
 		<div data-testid={testId}>
-			<div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+			<ol className="flex items-center gap-1 overflow-x-auto pb-0.5" aria-label={ariaLabel}>
 				{nodes.map((node, index) => (
-					<Fragment key={node.key}>
+					<li key={node.key} className="flex items-center gap-1">
 						{index > 0 && (
 							<span aria-hidden className="shrink-0 text-[10px] text-ink-faint">
 								→
@@ -79,9 +110,9 @@ export function RoadmapLane({ nodes, testId = "roadmap" }: { nodes: RoadmapNode[
 							selected={node.key === open}
 							onSelect={(key) => setOpen((value) => (value === key ? null : key))}
 						/>
-					</Fragment>
+					</li>
 				))}
-			</div>
+			</ol>
 			{current?.detail && (
 				<p
 					data-testid={`${testId}-detail`}

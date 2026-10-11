@@ -144,7 +144,10 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 				state = { ...initialProcessLaneState(), turnIndex: state.turnIndex, nodes: ask ? [ask] : [] };
 			}
 			const selected = state.nodes.find((n) => n.id === "picked");
-			if (!selected || route.primary !== null) {
+			// A continuation is a new public route explanation even when it keeps the
+			// previous workflow. Refresh the picked node so the Process panel does not
+			// show the older turn's route while the user is deciding what to do next.
+			if (!selected || route.primary !== null || route.intake === "continuation") {
 				const stage = route.stage ? workflowStage(route.stage) : undefined;
 				const landing = {
 					workflow: textPair("落点 · 工作流", "Landing · workflow"),

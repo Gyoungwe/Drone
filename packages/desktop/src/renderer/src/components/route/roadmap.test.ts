@@ -1,7 +1,7 @@
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { RoadmapLane, roadmapStatus } from "./Roadmap";
+import { RoadmapLane, roadmapStatus, summarizeRoadmap } from "./Roadmap";
 import { layoutMindMap } from "./RouteMindMap";
 
 vi.stubGlobal("React", React);
@@ -26,6 +26,14 @@ describe("roadmap", () => {
 		expect(roadmapStatus("active")).toBe("active");
 		expect(roadmapStatus("blocked")).toBe("blocked");
 		expect(roadmapStatus("pending")).toBe("skip");
+	});
+	it("summarises the most urgent route state and settled steps", () => {
+		expect(summarizeRoadmap(nodes)).toEqual({ status: "blocked", settled: 1, total: 3 });
+		expect(summarizeRoadmap(nodes.map((node) => ({ ...node, status: "ok" as const })))).toEqual({
+			status: "ok",
+			settled: 3,
+			total: 3,
+		});
 	});
 	it("lays the mind map out left to right with one edge per step", () => {
 		const flow = layoutMindMap(nodes);

@@ -93,6 +93,34 @@ describe("process lane projection", () => {
 		expect(processDemoState(1).nodes.find((n) => n.id === "picked")?.route?.primary).toBe("research-vault");
 		expect(processDemoState(2).nodes.find((n) => n.id === "picked")?.route?.primary).toBe("pydeseq2");
 	});
+	it("refreshes the picked route for a continuation instead of showing the previous turn", () => {
+		const continued = reduceProcessEvent(processDemoState(6), {
+			type: "turn-route",
+			seq: 20,
+			id: "continue-route",
+			route: {
+				utterance: "继续做完",
+				intake: "continuation",
+				capabilities: ["research"],
+				topics: [],
+				direction: null,
+				stage: null,
+				contract: null,
+				primary: null,
+				reason: null,
+				unavailableStage: null,
+				comparison: false,
+				academic: false,
+				keptCheckpoint: true,
+				deferPhrase: true,
+				visiblePrimary: false,
+				landing: "host-gate",
+				host: null,
+			},
+		});
+		expect(continued.nodes.find((n) => n.id === "picked")?.route?.intake).toBe("continuation");
+		expect(continued.nodes.find((n) => n.id === "picked")?.route?.keptCheckpoint).toBe(true);
+	});
 	it("deduplicates final tool records and keeps their observable identity", () => {
 		const m = tool("read", { text: "done" });
 		expect(
