@@ -1,4 +1,5 @@
 import {
+	assertResearchContract,
 	buildValidationEvidenceCapsule,
 	type CapabilityCandidate,
 	type CapabilityEnvironmentProbe,
@@ -9,7 +10,6 @@ import {
 	type ContractParentRef,
 	capabilityReference,
 	createCapabilityRequest,
-	createCapabilityResearchPlan,
 	parseCapabilityReference,
 	transitionCapabilityRequest,
 	type ValidationEvidenceCapsule,
@@ -193,17 +193,19 @@ export class CapabilityDiscoveryService {
 			objective: input.objective,
 			questions: [...(input.questions ?? [])],
 		});
-		const plan =
-			result.plan.kind === "capability-research-plan"
-				? result.plan
-				: createCapabilityResearchPlan({
-						id: `plan-${id}`,
-						requestRef: { kind: current.request.kind, id },
-						objective: input.objective,
-						questions: [...(input.questions ?? [])],
-						sourceRefs: [],
-						createdAt: this.now(),
-					});
+		if (result.plan.kind !== "capability-research-plan" || result.plan.readOnly !== true)
+			throw new Error("Capability research plan must be read-only");
+		for (const source of result.sources) {
+			assertResearchContract(source);
+			if (source.kind !== "capability-source-receipt" || source.readOnly !== true)
+				throw new Error("Capability source receipt must be read-only");
+		}
+		for (const candidate of result.candidates) {
+			assertResearchContract(candidate);
+			if (candidate.kind !== "capability-candidate" || candidate.executable !== false)
+				throw new Error("Capability candidate is not an executable description");
+		}
+		const plan = result.plan;
 		const request = transitionCapabilityRequest(researching, "researching", {
 			now: this.now(),
 			researchPlanRef: ref(plan),
