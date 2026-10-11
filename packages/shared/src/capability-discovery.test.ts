@@ -86,5 +86,13 @@ describe("capability discovery contracts", () => {
 		});
 		expect(capsule.status).toBe("validated");
 		expect(capsule.gateRefs).toHaveLength(3);
+		expect(
+			buildValidationEvidenceCapsule({
+				id: "capsule-incomplete",
+				capabilityRef: "assembly@1.0.0",
+				gates: [gates[0] as (typeof gates)[number]],
+				createdAt: now,
+			}).status,
+		).toBe("incomplete");
 	});
 });

@@ -119,11 +119,14 @@ export interface ValidationEvidenceInput {
 export function buildValidationEvidenceCapsule(input: ValidationEvidenceInput): ValidationEvidenceCapsule {
 	parseCapabilityReference(input.capabilityRef);
 	if (input.gates.length === 0) throw new Error("At least one validation gate is required");
-	const status = input.gates.every((gate) => gate.status === "passed")
-		? "validated"
-		: input.gates.some((gate) => gate.status === "failed")
-			? "failed"
-			: "incomplete";
+	const requiredKinds = ["static", "fixture", "scientific"] as const;
+	const complete = requiredKinds.every((kind) => input.gates.some((gate) => gate.validation === kind));
+	const status =
+		complete && input.gates.every((gate) => gate.status === "passed")
+			? "validated"
+			: input.gates.some((gate) => gate.status === "failed")
+				? "failed"
+				: "incomplete";
 	return createValidationEvidenceCapsule({
 		id: input.id,
 		capabilityRef: input.capabilityRef,
