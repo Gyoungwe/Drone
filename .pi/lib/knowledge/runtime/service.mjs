@@ -4,16 +4,17 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-LC5BF27U.mjs";
+} from "./chunks/chunk-J5WZKQZN.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";
 import "./chunks/chunk-O536IQIE.mjs";
 import "./chunks/chunk-6YLIZTKN.mjs";
 import "./chunks/chunk-6LT3KQRY.mjs";
 import "./chunks/chunk-H6MOV67K.mjs";
 import "./chunks/chunk-RCUF5QK4.mjs";
+import "./chunks/chunk-AHEUR5VB.mjs";
 import "./chunks/chunk-4VUDROQV.mjs";
 import "./chunks/chunk-CXEKIGAQ.mjs";
-import "./chunks/chunk-AHEUR5VB.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   KnowledgeService,
   closeKnowledgeServices,

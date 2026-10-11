@@ -7,6 +7,7 @@ import {
   isInfrastructureNode,
   nodeType
 } from "./chunks/chunk-W74KFO4J.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   assignCommunities,
   classifyRelation,

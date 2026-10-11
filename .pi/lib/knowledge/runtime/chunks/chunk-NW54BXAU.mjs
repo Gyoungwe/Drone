@@ -1,5 +1,10 @@
 // @ts-nocheck
 import {
+  canRead,
+  readNoteFile,
+  validateNote
+} from "./chunk-AHEUR5VB.mjs";
+import {
   compareClaimSets
 } from "./chunk-BMV53RD4.mjs";
 import {
@@ -8,11 +13,6 @@ import {
 import {
   knowledgeDirectory
 } from "./chunk-CXEKIGAQ.mjs";
-import {
-  canRead,
-  readNoteFile,
-  validateNote
-} from "./chunk-AHEUR5VB.mjs";
 
 // packages/knowledge/src/topic-memory.ts
 import { createHash, randomUUID } from "node:crypto";

@@ -19,6 +19,7 @@ import {
   sameIdentity,
   stripFrontmatter
 } from "./chunks/chunk-4LFII7Y4.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   IDENTITY_FIELDS,
   claimHash,

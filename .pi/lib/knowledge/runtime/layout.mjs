@@ -9,6 +9,7 @@ import {
   updateVaultNavigation
 } from "./chunks/chunk-KUCMRWBG.mjs";
 import "./chunks/chunk-AHEUR5VB.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   VaultFileConflictError,
   containedVaultFile,

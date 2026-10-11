@@ -14,15 +14,15 @@ import {
   noteKnowledgeSpecialist
 } from "./chunk-6YLIZTKN.mjs";
 import {
+  canRead,
+  validateNote
+} from "./chunk-AHEUR5VB.mjs";
+import {
   deliveryContract
 } from "./chunk-4VUDROQV.mjs";
 import {
   readKnowledgeBinding
 } from "./chunk-CXEKIGAQ.mjs";
-import {
-  canRead,
-  validateNote
-} from "./chunk-AHEUR5VB.mjs";
 
 // packages/knowledge/src/specialists.ts
 import { randomUUID } from "node:crypto";

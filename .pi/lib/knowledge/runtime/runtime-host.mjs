@@ -25,6 +25,7 @@ import {
   specialistSettings,
   toolMeta
 } from "./chunks/chunk-4VUDROQV.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   LAYOUT,
   configureKnowledgeEvidence,

@@ -1,5 +1,9 @@
 // @ts-nocheck
 import {
+  lastWikiModelReview,
+  reviewWikiWithModel
+} from "./chunks/chunk-4OBMDHIC.mjs";
+import {
   MANAGED_END,
   MANAGED_START,
   immutableWikiProposalHash,
@@ -10,10 +14,13 @@ import {
   validateWikiSourcePaths
 } from "./chunks/chunk-AKW2CMNR.mjs";
 import {
+  saveSpecialistExplainer
+} from "./chunks/chunk-GMBJR4N3.mjs";
+import {
   createKnowledgeSpecialists,
   knowledgeReadStart,
   shouldOrientKnowledge
-} from "./chunks/chunk-36KZGYXK.mjs";
+} from "./chunks/chunk-IMVE6DZY.mjs";
 import {
   createTaskFeedback,
   guardResearchToolResult
@@ -34,7 +41,7 @@ import {
   readTopic,
   topicRunHash,
   updateTopic
-} from "./chunks/chunk-MFL6DGIT.mjs";
+} from "./chunks/chunk-NW54BXAU.mjs";
 import {
   archiveKnowledgeTopic,
   cancelKnowledgeSemanticIndex,
@@ -59,11 +66,7 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-GXEK2HSC.mjs";
-import {
-  lastWikiModelReview,
-  reviewWikiWithModel
-} from "./chunks/chunk-TPF5L26G.mjs";
+} from "./chunks/chunk-K2CQGWYS.mjs";
 import {
   autoApplyWikiProposal,
   decideWikiProposal,
@@ -74,7 +77,17 @@ import {
   undoWikiUpdate,
   validateWikiSourcePaths as validateWikiSourcePaths2,
   wikiHistory
-} from "./chunks/chunk-IMC2GAXA.mjs";
+} from "./chunks/chunk-BFEXNQ42.mjs";
+import {
+  SPECIALIST_LIMITS,
+  contextSessionId,
+  knowledgeSpecialistHost,
+  registerKnowledgeSpecialistHost,
+  setSpecialistSettings,
+  specialistQueueSnapshot,
+  specialistSettings,
+  withSpecialistSlot
+} from "./chunks/chunk-XSFQUT2B.mjs";
 import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
@@ -92,18 +105,9 @@ import {
   onlineSourceLink
 } from "./chunks/chunk-LE6NM7SB.mjs";
 import {
-  saveSpecialistExplainer
-} from "./chunks/chunk-GMBJR4N3.mjs";
-import {
-  SPECIALIST_LIMITS,
-  contextSessionId,
-  knowledgeSpecialistHost,
-  registerKnowledgeSpecialistHost,
-  setSpecialistSettings,
-  specialistQueueSnapshot,
-  specialistSettings,
-  withSpecialistSlot
-} from "./chunks/chunk-XSFQUT2B.mjs";
+  runNavigationMaintenance,
+  updateNavigation
+} from "./chunks/chunk-EJFIMVBU.mjs";
 import {
   SPECIALIST_DECISIONS,
   createSpecialistBudget,
@@ -131,7 +135,7 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-LC5BF27U.mjs";
+} from "./chunks/chunk-J5WZKQZN.mjs";
 import {
   embedTexts,
   validateSemanticConfig
@@ -165,6 +169,16 @@ import {
   saveReviewMode
 } from "./chunks/chunk-6LT3KQRY.mjs";
 import {
+  KnowledgeReuseIndex,
+  checkKnowledgeReceiptFreshness,
+  checkKnowledgeSnapshotReuse,
+  ingestKnowledgeSnapshot,
+  knowledgeEvidenceGradeRank,
+  knowledgeReuseLevelRank,
+  resolveKnowledgeContext,
+  validateKnowledgeSourceReceipt
+} from "./chunks/chunk-CFVY5SPZ.mjs";
+import {
   cardField,
   cardLink,
   failureCard,
@@ -174,10 +188,6 @@ import {
 } from "./chunks/chunk-H6MOV67K.mjs";
 import "./chunks/chunk-RCUF5QK4.mjs";
 import {
-  runNavigationMaintenance,
-  updateNavigation
-} from "./chunks/chunk-EJFIMVBU.mjs";
-import {
   VaultFileConflictError,
   containedVaultFile,
   createVaultFileOnly,
@@ -185,6 +195,21 @@ import {
   initializeSharedNavigation,
   updateVaultNavigation
 } from "./chunks/chunk-KUCMRWBG.mjs";
+import {
+  MAX_NOTE_BYTES,
+  allowedSegment,
+  canRead,
+  fileVersion,
+  inspectNote,
+  noteScope,
+  readNoteFile,
+  safeNotePath,
+  snippet,
+  validateNote
+} from "./chunks/chunk-AHEUR5VB.mjs";
+import {
+  readCapabilitySources
+} from "./chunks/chunk-EUGIYDMB.mjs";
 import {
   compareClaimSets,
   compareClaims
@@ -225,22 +250,12 @@ import {
   saveKnowledgeBinding,
   withKnowledgeBinding
 } from "./chunks/chunk-CXEKIGAQ.mjs";
-import {
-  MAX_NOTE_BYTES,
-  allowedSegment,
-  canRead,
-  fileVersion,
-  inspectNote,
-  noteScope,
-  readNoteFile,
-  safeNotePath,
-  snippet,
-  validateNote
-} from "./chunks/chunk-AHEUR5VB.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   BackgroundReviewer,
   EXPERIENCE_LIMITS,
   EXPERIENCE_VERSION,
+  KnowledgeReuseIndex,
   KnowledgeService,
   MANAGED_END,
   MANAGED_START,
@@ -265,6 +280,8 @@ export {
   cancelKnowledgeSemanticIndex,
   cardField,
   cardLink,
+  checkKnowledgeReceiptFreshness,
+  checkKnowledgeSnapshotReuse,
   classifyRelation,
   classifyTopic,
   clearKnowledgeFlow,
@@ -307,6 +324,7 @@ export {
   guardResearchToolResult,
   immutableWikiProposalHash,
   indexKnowledgeSemantic,
+  ingestKnowledgeSnapshot,
   initializeProjectContext,
   initializeSharedNavigation,
   inspectNote,
@@ -314,6 +332,7 @@ export {
   isInfrastructureNode,
   knowledgeDecideReview,
   knowledgeDirectory,
+  knowledgeEvidenceGradeRank,
   knowledgeFailure,
   knowledgeGraph,
   knowledgeJobs,
@@ -324,6 +343,7 @@ export {
   knowledgePreviewReview,
   knowledgeReadNote,
   knowledgeReadStart,
+  knowledgeReuseLevelRank,
   knowledgeReviews,
   knowledgeSemanticStatus,
   knowledgeSetupPreview,
@@ -354,6 +374,7 @@ export {
   publicationKnowledgeFlow,
   publicationNotice,
   publicationNotices,
+  readCapabilitySources,
   readKnowledgeBinding,
   readNoteFile,
   readReviewMode,
@@ -363,6 +384,7 @@ export {
   registerAnswerPublication,
   registerKnowledgeSpecialistHost,
   requestWikiReviewUi,
+  resolveKnowledgeContext,
   result,
   reviewDeliverable,
   reviewWikiWithModel,
@@ -398,6 +420,7 @@ export {
   updateNavigation,
   updateTopic,
   updateVaultNavigation,
+  validateKnowledgeSourceReceipt,
   validateNote,
   validateWikiSourcePaths2 as validateRuntimeWikiSourcePaths,
   validateSemanticConfig2 as validateSemanticConfig,

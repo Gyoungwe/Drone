@@ -18,6 +18,10 @@ import {
   expandWithGraph
 } from "./chunk-RCUF5QK4.mjs";
 import {
+  canRead,
+  validateNote
+} from "./chunk-AHEUR5VB.mjs";
+import {
   createKnowledgeWorker,
   emitProcessEvent,
   hasPaperCitation,
@@ -30,10 +34,6 @@ import {
   readKnowledgeBinding,
   withKnowledgeBinding
 } from "./chunk-CXEKIGAQ.mjs";
-import {
-  canRead,
-  validateNote
-} from "./chunk-AHEUR5VB.mjs";
 
 // packages/knowledge/src/service.ts
 import { createHash, randomUUID } from "node:crypto";

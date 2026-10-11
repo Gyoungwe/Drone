@@ -2,6 +2,7 @@
 import {
   DAILY_DISCOVERY_LIMITS
 } from "./chunks/chunk-EFQIVCL3.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 
 // packages/knowledge/src/daily-discovery-prompt.ts
 var DAILY_DISCOVERY_SYSTEM = [

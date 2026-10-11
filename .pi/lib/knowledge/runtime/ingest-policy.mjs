@@ -9,6 +9,7 @@ import {
 import {
   extractIdentifiers
 } from "./chunks/chunk-4LFII7Y4.mjs";
+import "./chunks/chunk-VIHIR2BE.mjs";
 
 // packages/knowledge/src/ingest-policy.ts
 var INGEST_RULES = {
