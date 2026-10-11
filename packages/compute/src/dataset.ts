@@ -556,31 +556,63 @@ export function validateAnalysisPlan(plan: Partial<ComputeAnalysisPlan>): Analys
 		errors.push(
 			issue("invalid-version", "Analysis plan version must be a positive integer", { path: "version" }),
 		);
+	if (plan.design === "descriptive") {
+		for (const field of [
+			"alpha",
+			"targetPower",
+			"effectSize",
+			"groups",
+			"covariates",
+			"totalSampleSize",
+			"perGroupSampleSize",
+		]) {
+			if (field in plan)
+				errors.push(
+					issue("invalid-descriptive-plan", `Descriptive plans cannot contain ${field}`, { path: field }),
+				);
+		}
+		return { ok: errors.length === 0, valid: errors.length === 0, errors, warnings: [] };
+	}
+	const statisticalPlan = plan as Partial<{
+		alpha: number;
+		targetPower: number;
+		effectSize: number;
+		totalSampleSize: number;
+		perGroupSampleSize: number;
+	}>;
 	if (plan.design !== undefined && !["two-group", "paired", "factorial", "regression"].includes(plan.design))
 		errors.push(issue("invalid-design", "Analysis plan design is not supported", { path: "design" }));
-	if (!Number.isFinite(plan.alpha) || (plan.alpha ?? 0) <= 0 || (plan.alpha ?? 0) >= 1)
+	if (
+		!Number.isFinite(statisticalPlan.alpha) ||
+		(statisticalPlan.alpha ?? 0) <= 0 ||
+		(statisticalPlan.alpha ?? 0) >= 1
+	)
 		errors.push(issue("invalid-alpha", "Alpha must be between 0 and 1", { path: "alpha" }));
-	if (!Number.isFinite(plan.targetPower) || (plan.targetPower ?? 0) <= 0 || (plan.targetPower ?? 0) >= 1)
+	if (
+		!Number.isFinite(statisticalPlan.targetPower) ||
+		(statisticalPlan.targetPower ?? 0) <= 0 ||
+		(statisticalPlan.targetPower ?? 0) >= 1
+	)
 		errors.push(issue("invalid-power", "Target power must be between 0 and 1", { path: "targetPower" }));
-	if (!Number.isFinite(plan.effectSize) || (plan.effectSize ?? 0) <= 0)
+	if (!Number.isFinite(statisticalPlan.effectSize) || (statisticalPlan.effectSize ?? 0) <= 0)
 		errors.push(
 			issue("invalid-effect-size", "Effect size must be finite and positive", { path: "effectSize" }),
 		);
 	if (
-		plan.totalSampleSize !== undefined &&
-		(!Number.isInteger(plan.totalSampleSize) || plan.totalSampleSize < 2)
+		statisticalPlan.totalSampleSize !== undefined &&
+		(!Number.isInteger(statisticalPlan.totalSampleSize) || statisticalPlan.totalSampleSize < 2)
 	)
 		errors.push(
 			issue("invalid-sample-size", "Total sample size must be at least 2", { path: "totalSampleSize" }),
 		);
 	if (
-		plan.perGroupSampleSize !== undefined &&
-		(!Number.isInteger(plan.perGroupSampleSize) || plan.perGroupSampleSize < 1)
+		statisticalPlan.perGroupSampleSize !== undefined &&
+		(!Number.isInteger(statisticalPlan.perGroupSampleSize) || statisticalPlan.perGroupSampleSize < 1)
 	)
 		errors.push(
 			issue("invalid-sample-size", "Per-group sample size must be positive", { path: "perGroupSampleSize" }),
 		);
-	if (plan.totalSampleSize === undefined && plan.perGroupSampleSize === undefined) {
+	if (statisticalPlan.totalSampleSize === undefined && statisticalPlan.perGroupSampleSize === undefined) {
 		const warnings = [
 			issue(
 				"sample-size-not-planned",
@@ -837,9 +869,16 @@ export function checkAnalysisPlanDeviation(
 		"covariates",
 	] as const;
 	const deviations = fields.flatMap((field) =>
-		canonicalOptional(planned[field]) === canonicalOptional(observed[field])
+		canonicalOptional((planned as Record<string, unknown>)[field]) ===
+		canonicalOptional((observed as Record<string, unknown>)[field])
 			? []
-			: [{ field, planned: planned[field], observed: observed[field] }],
+			: [
+					{
+						field,
+						planned: (planned as Record<string, unknown>)[field],
+						observed: (observed as Record<string, unknown>)[field],
+					},
+				],
 	);
 	return { ok: deviations.length === 0, deviations };
 }
@@ -958,9 +997,9 @@ export function buildROCrateManifest(input: ROCrateInput): ROCrateManifest {
 			outcome: input.analysisPlan.outcome,
 			primaryTest: input.analysisPlan.primaryTest,
 			design: input.analysisPlan.design,
-			alpha: input.analysisPlan.alpha,
-			targetPower: input.analysisPlan.targetPower,
-			effectSize: input.analysisPlan.effectSize,
+			alpha: "alpha" in input.analysisPlan ? input.analysisPlan.alpha : undefined,
+			targetPower: "targetPower" in input.analysisPlan ? input.analysisPlan.targetPower : undefined,
+			effectSize: "effectSize" in input.analysisPlan ? input.analysisPlan.effectSize : undefined,
 		});
 	}
 	if (input.designContract) {

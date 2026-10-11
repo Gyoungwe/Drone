@@ -175,6 +175,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "secret",
 		})
 		.register({
+			id: "agent-analysis-evidence",
+			path: `${agentDir}/analysis/evidence`,
+			owner: "analysis/evidence",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
 			id: "agent-settings",
 			path: `${agentDir}/settings.json`,
 			owner: "settings/settings",
@@ -290,6 +297,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			id: "agent-compute-events-root",
 			path: `${agentDir}/compute/events`,
 			owner: "compute/events",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "agent-analysis-runs",
+			path: `${agentDir}/analysis/runs.json`,
+			owner: "analysis/orchestration",
 			schema: 1,
 			sensitivity: "private",
 		})

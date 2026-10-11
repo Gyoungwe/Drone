@@ -15,6 +15,14 @@
 - 新增 renderer hook/store 要暴露给插件 = 源模块 + `plugins/host-api.ts` + `plugins/env.d.ts`（DroneUiApi）+ `main/ui-plugins/build.ts` SHIM + `resources/drone-ui.d.ts`（必要时 SPEC.md 导出清单）五处同步
 - JSON 持久化一律走 backend `JsonStore`（原子写 + 损坏语义），不自写 fs
 - `@drone/compute` 只依赖 `@drone/shared` 与 Node 标准库；宿主连接、SSH、Pi SDK 和 Electron 适配留在组合根（R7）。
+- NGS/生信编排门禁见 `packages/shared/src/analysis-orchestration.ts`：阶段到 `capability_load` 能力映射、数据/重复数/参考版本/授权检查，以及执行、结果审查和发布暂停状态机。
+- 持久化宿主门面见 `packages/backend/src/services/analysis-orchestration.ts`：通过 `JsonStore` 保存分析快照并在重启后恢复；计算提交仍必须经过既有 Compute 授权与 B7 preflight。
+- NGS 任务控制器适配见 `packages/backend/src/services/analysis-task-controller.ts`：按阶段自动激活 `capability_load` 能力，绑定已评估的 Compute 规格，并在提交和重启恢复后继续执行门禁。
+- NGS review→delivery 闭环也由该控制器负责：收集并读取已校验产物，调用会话模型生成审查报告，持久化限制说明，并仅在审查通过后完成交付。
+- 分析适配器位于 `packages/backend/src/services/analysis-adapters/`：通用编排器只消费版本化的 adapter contract、readiness 与确定性结果检查；契约快照、工具合同和宿主执行上下文会进入 provenance。当前提供 bulk RNA-seq/DESeq2 和 assembly 适配器，并持久化 adapter、workflow、method 版本及 artifact lineage/reproducibility 状态。
+- 分析证据与不可变 checkpoint 位于 `packages/backend/src/services/analysis-evidence.ts`，通过 `shared/host-api/evidence.ts`、preload、main IPC 和 Artifacts 面板提供本地查看、分叉、导入/导出和重现回执；checkpoint 分支不会继承执行授权或 review。
+- checkpoint、分支工作区和可复现 evidence capsule 见 `packages/backend/src/services/analysis-evidence.ts`：冻结内容寻址字节，分支不继承执行审批，replay 分开记录环境与输出匹配状态；capsule 支持 private/restricted/public 三档发布，导入会重新校验 manifest、字节哈希和 omission 清单。桌面端通过 `packages/shared/src/host-api/evidence.ts`、`packages/desktop/src/main/ipc/evidence.ts` 和产物面板 `packages/desktop/src/renderer/src/components/panel/EvidencePane.tsx` 提供冻结、分支、导入/导出、回放及复现结果查看。
+- Wisp/OpenScience 的 REA 调查、官方源码快照和迁移建议见 [open-science-wisp-adapter-research.md](open-science-wisp-adapter-research.md)。
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 

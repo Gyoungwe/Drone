@@ -97,6 +97,25 @@ describe("ComputeService", () => {
 		await service.dispose();
 	});
 
+	it("accepts a terminal success from an active job", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-compute-"));
+		let remoteStatus: "running" | "succeeded" = "running";
+		const service = new ComputeService({
+			storage: new StorageRegistry(),
+			agentDir: root,
+			executor: {
+				submit: async () => ({ status: "running" }),
+				status: async () => ({ status: remoteStatus }),
+			},
+		});
+		await service.upsertHost(host());
+		const job = await service.submit(spec("terminal-success"));
+		expect((await service.status(job.jobId)).status).toBe("running");
+		remoteStatus = "succeeded";
+		expect((await service.status(job.jobId)).status).toBe("succeeded");
+		await service.dispose();
+	});
+
 	it("verifies collected artifact checksums and rejects traversal", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-compute-"));
 		const output = join(root, "output");

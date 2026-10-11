@@ -300,8 +300,12 @@ def registered_argv(spec, directory):
     fixture = load_fixture_argv()
     if fixture:
         return fixture, "fixture"
-    registry_path = os.environ.get("DRONE_RUNNER_WORKFLOW_REGISTRY")
-    registry = read_json(registry_path, {}) if registry_path else {}
+    # A host may register fixed argv workflows without modifying the
+    # transport's environment.  The explicit environment variable remains an
+    # override for managed deployments; the runner-root registry is the
+    # durable default used by SSH transports and survives reconnects.
+    registry_path = os.environ.get("DRONE_RUNNER_WORKFLOW_REGISTRY") or str(root_dir() / "workflow-registry.json")
+    registry = read_json(registry_path, {})
     workflow = spec["workflow"]
     name = workflow.get("name") or workflow.get("id") or ("compiled" if "version" in workflow else None)
     if isinstance(registry, dict) and name in registry:

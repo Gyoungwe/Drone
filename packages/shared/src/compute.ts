@@ -206,7 +206,7 @@ export const ComputeSampleSheetSchema = Type.Object(
 );
 export type ComputeSampleSheet = Static<typeof ComputeSampleSheetSchema>;
 
-export const ComputeAnalysisPlanSchema = Type.Object(
+const ComputeStatisticalAnalysisPlanSchema = Type.Object(
 	{
 		id: ComputeIdSchema,
 		version: Type.Integer({ minimum: 1, maximum: 100 }),
@@ -232,6 +232,22 @@ export const ComputeAnalysisPlanSchema = Type.Object(
 	},
 	{ additionalProperties: false },
 );
+export const ComputeDescriptiveAnalysisPlanSchema = Type.Object(
+	{
+		id: ComputeIdSchema,
+		version: Type.Integer({ minimum: 1, maximum: 100 }),
+		outcome: Type.String({ minLength: 1, maxLength: 256 }),
+		design: Type.Literal("descriptive"),
+		primaryTest: Type.String({ minLength: 1, maxLength: 256 }),
+		datasetVersion: Type.Optional(ComputeDatasetVersionRefSchema),
+		sampleSheetSchemaId: Type.Optional(ComputeIdSchema),
+	},
+	{ additionalProperties: false },
+);
+export const ComputeAnalysisPlanSchema = Type.Union([
+	ComputeStatisticalAnalysisPlanSchema,
+	ComputeDescriptiveAnalysisPlanSchema,
+]);
 export type ComputeAnalysisPlan = Static<typeof ComputeAnalysisPlanSchema>;
 
 export const ComputePublicDataFetchRecordSchema = Type.Object(

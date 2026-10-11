@@ -224,7 +224,7 @@ function mergeStatus(previous: JobState, next: JobState): JobState {
 	if (isTerminal(previous)) return previous;
 	if (next === "unknown") return "unknown";
 	if (previous === "unknown") return next;
-	if (next === "failed" || next === "cancelled") return next;
+	if (isTerminal(next)) return next;
 	if ((STATUS_RANK[next] ?? -1) < (STATUS_RANK[previous] ?? -1)) return previous;
 	return next;
 }

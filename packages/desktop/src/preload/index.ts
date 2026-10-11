@@ -3,6 +3,7 @@ import {
 	ComputeContract,
 	DecisionsContract,
 	DiscoveryContract,
+	EvidenceContract,
 	InquiryContract,
 	InstitutionalContract,
 	IpcChannels,
@@ -277,6 +278,21 @@ const computeClient = exposeContract(ComputeContract, {
 			method,
 		),
 });
+const evidenceClient = exposeContract(EvidenceContract, {
+	ipc: ipcRenderer,
+	channelForMethod: (_contract, method) =>
+		channelFrom(
+			{
+				getEvidenceOverview: IpcChannels.EvidenceOverview,
+				freezeAnalysisEvidence: IpcChannels.EvidenceFreeze,
+				forkEvidenceCheckpoint: IpcChannels.EvidenceFork,
+				exportEvidenceCapsule: IpcChannels.EvidenceExport,
+				importEvidenceCapsule: IpcChannels.EvidenceImport,
+				replayEvidenceCheckpoint: IpcChannels.EvidenceReplay,
+			},
+			method,
+		),
+});
 const discoveryClient = exposeContract(DiscoveryContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
@@ -366,6 +382,7 @@ const knowledgeApi = {
 const invokeApi = {
 	...computeClient,
 	...discoveryClient,
+	...evidenceClient,
 	...decisionsClient,
 	...inquiryClient,
 	...knowledgeApi,

@@ -9,6 +9,7 @@ import { registerAppIpc } from "./app";
 import { registerComputeIpc } from "./compute";
 import { registerDecisionsIpc } from "./decisions";
 import { registerDiscoveryIpc } from "./discovery";
+import { registerEvidenceIpc } from "./evidence";
 import { registerInquiryIpc } from "./inquiry";
 import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
@@ -50,6 +51,7 @@ export function registerIpc(
 	registerKnowledgeIpc(backendServices);
 	registerComputeIpc(backendServices, sendToRenderer);
 	registerDiscoveryIpc(backendServices);
+	registerEvidenceIpc(backendServices.analysisEvidence);
 	registerDecisionsIpc(backendServices);
 	registerPackagesIpc(backendServices);
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);

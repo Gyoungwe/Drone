@@ -3,6 +3,7 @@ import type { DecisionsApi } from "./decisions";
 import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { ComputeApi } from "./host-api/compute";
 import type { DiscoveryApi } from "./host-api/discovery";
+import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
 import type { LanStatus } from "./host-api/lan";
 import type { SessionsApi } from "./host-api/sessions";
@@ -92,6 +93,12 @@ export interface ImportedAttachment {
 
 /** IPC 通道名常量 */
 export const IpcChannels = {
+	EvidenceOverview: "evidence:getEvidenceOverview",
+	EvidenceFreeze: "evidence:freezeAnalysisEvidence",
+	EvidenceFork: "evidence:forkEvidenceCheckpoint",
+	EvidenceExport: "evidence:exportEvidenceCapsule",
+	EvidenceImport: "evidence:importEvidenceCapsule",
+	EvidenceReplay: "evidence:replayEvidenceCheckpoint",
 	KnowledgeCloudStatus: "knowledge:cloudStatus",
 	KnowledgeCloudProbe: "knowledge:cloudProbe",
 	KnowledgeCloudInitialize: "knowledge:cloudInitialize",
@@ -366,7 +373,14 @@ export const IpcChannels = {
 export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
-export interface PiApi extends KnowledgeApi, SessionsApi, ComputeApi, DiscoveryApi, DecisionsApi, InquiryApi {
+export interface PiApi
+	extends KnowledgeApi,
+		SessionsApi,
+		ComputeApi,
+		DiscoveryApi,
+		DecisionsApi,
+		InquiryApi,
+		EvidenceApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */

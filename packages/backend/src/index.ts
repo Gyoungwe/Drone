@@ -138,6 +138,50 @@ export {
 	setReplyLanguage,
 } from "./reply-language";
 export { createDroneRuntime, KeyedScheduler } from "./runtime";
+export {
+	type AnalysisAdapter,
+	type AnalysisAdapterContract,
+	type AnalysisAdapterPlan,
+	AnalysisAdapterRegistry,
+	type AnalysisArtifactEvidence,
+	type AnalysisResearchStage,
+	type AnalysisSchemaField,
+	type AnalysisSideEffect,
+	AssemblyAdapter,
+	adapterSnapshotSha256,
+	assessBulkRnaseqReadiness,
+	BulkRnaseqAdapter,
+	createAnalysisAdapterRegistry,
+	validateAdapterContract,
+} from "./services/analysis-adapters";
+export {
+	AnalysisEvidenceService,
+	CAPSULE_LIMIT,
+	type EvidenceAudience,
+	type EvidenceCapsule,
+	type EvidenceCheckpoint,
+	type EvidenceReplayReceipt,
+	type EvidenceReplayRunner,
+	type FrozenFile,
+} from "./services/analysis-evidence";
+export {
+	type AnalysisComputeBinding,
+	type AnalysisLedger,
+	AnalysisOrchestrationService,
+	type AnalysisOrchestrationServiceOptions,
+	analysisStatus,
+	emptyAnalysisLedger,
+} from "./services/analysis-orchestration";
+export {
+	type AnalysisComputeSubmission,
+	type AnalysisResultReviewer,
+	type AnalysisReviewArtifact,
+	type AnalysisReviewDecision,
+	type AnalysisReviewRequest,
+	AnalysisTaskController,
+	type AnalysisTaskControllerOptions,
+	AnalysisTaskGateError,
+} from "./services/analysis-task-controller";
 export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
 export {
 	artifactSha256,

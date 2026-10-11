@@ -81,6 +81,18 @@ class RunnerTest(unittest.TestCase):
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], "workflow-not-registered")
 
+    def test_runner_root_registry_registers_fixed_argv(self):
+        self.env.pop("DRONE_RUNNER_FIXTURE", None)
+        self.env.pop("DRONE_RUNNER_FIXTURE_ARGV", None)
+        registry = Path(self.tmp.name) / "workflow-registry.json"
+        registry.write_text(json.dumps({"registered": [sys.executable, str(FIXTURE)]}))
+        spec = {**self.spec("job-registered"), "workflow": {"name": "registered", "version": "1"}}
+        self.call("prepare", "job-registered", {"spec": spec})
+        started = self.call("start", "job-registered")
+        self.assertEqual(started["payload"]["executionMode"], "registered")
+        time.sleep(0.4)
+        self.assertEqual(self.call("status", "job-registered")["payload"]["state"], "succeeded")
+
     def test_lock_without_submission_is_unknown_and_never_replayed(self):
         self.call("prepare", "job-4", {"spec": self.spec("job-4")})
         (Path(self.tmp.name) / "runs" / "job-4" / "submit.lock").mkdir()
