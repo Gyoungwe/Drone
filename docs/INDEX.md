@@ -22,7 +22,7 @@
 - 分析适配器位于 `packages/backend/src/services/analysis-adapters/`：通用编排器只消费版本化的 adapter contract、readiness 与确定性结果检查；契约快照、工具合同和宿主执行上下文会进入 provenance。当前提供 bulk RNA-seq/DESeq2 和 assembly 适配器，并持久化 adapter、workflow、method 版本及 artifact lineage/reproducibility 状态。
 - 分析证据与不可变 checkpoint 位于 `packages/backend/src/services/analysis-evidence.ts`，通过 `shared/host-api/evidence.ts`、preload、main IPC 和 Artifacts 面板提供本地查看、分叉、导入/导出和重现回执；checkpoint 分支不会继承执行授权或 review。
 - checkpoint、分支工作区和可复现 evidence capsule 见 `packages/backend/src/services/analysis-evidence.ts`：冻结内容寻址字节，分支不继承执行审批，replay 分开记录环境与输出匹配状态；capsule 支持 private/restricted/public 三档发布，导入会重新校验 manifest、字节哈希和 omission 清单。桌面端通过 `packages/shared/src/host-api/evidence.ts`、`packages/desktop/src/main/ipc/evidence.ts` 和产物面板 `packages/desktop/src/renderer/src/components/panel/EvidencePane.tsx` 提供冻结、分支、导入/导出、回放及复现结果查看。
-- Wisp/OpenScience 的 REA 调查、官方源码快照和迁移建议见 [open-science-wisp-adapter-research.md](open-science-wisp-adapter-research.md)。
+- Wisp/OpenScience 的官方源码快照、功能研究和迁移建议见 [open-science-wisp-adapter-research.md](open-science-wisp-adapter-research.md)。
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 

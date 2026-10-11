@@ -3,7 +3,7 @@
 - 研究日期：2026-10-11
 - 范围：仅使用一方产品文档、官方仓库/规范、标准组织页面和论文；不修改实现代码。
 - 目标：比较 synthetic-sciences/openscience 与 xuzhougeng/wisp-science 的一方源码/文档，并映射到 Drone 的 `AnalysisAdapter`/Registry、assembly 适配器和 artifact/provenance 边界。
-- 证据级别：以下产品行为均是官方文档或源码观察，**不是本机运行验证**。OpenScience 检索快照为 `a7b9fa3a8c1bd52a9a0c171de58bc14759a0f850`，Wisp 官方仓库快照为 `565deb134343dad98b9b231f7aba80b72a70655f`。父任务 REA 只确认本机 Wisp 为 v1.9.0、arm64 Mach-O（sha256 `61730c3a239b40dc6ed02b5091a11d1f4bc4990f5a6ebc2f0c69dfdc2ac5e9de`，Evidence `ev_60df3a393d7fa27330de315706f08859c3ed00a4a92dae03488caa442057048b`）；不能把 main 源码功能等同安装版功能。
+- 证据级别：以下产品行为均是官方文档或源码观察，**不是本机运行验证**。OpenScience 检索快照为 `a7b9fa3a8c1bd52a9a0c171de58bc14759a0f850`，Wisp 官方仓库快照为 `565deb134343dad98b9b231f7aba80b72a70655f`；不能把 main 源码功能等同安装版功能。
 
 ## Wisp Science 的准确身份
 
@@ -101,7 +101,7 @@ Registry 应只返回精确版本的 immutable snapshot，并拒绝未知 schema
 
 ## 结论与未确认项
 
-- OpenScience 已确认为 synthetic-sciences/openscience；Wisp Science 已确认为 xuzhougeng/wisp-science。两者是一方工作台源码/文档证据，本机安装版能力必须由 REA/运行证据另行确认。
+- OpenScience 已确认为 synthetic-sciences/openscience；Wisp Science 已确认为 xuzhougeng/wisp-science。两者是一方工作台源码/文档证据，本机安装版能力需要在接入前单独做运行验证。
 - 可直接迁移到 Drone 的核心是：能力声明与权限分离、版本化 DAG/输入输出 contract、先计划后获取、精确 ArtifactVersion、运行级 provenance、容器/环境指纹、受限数据引用和独立科学审查。
 - 未确认项：没有确认两产品现有 `AnalysisAdapter` 公共标准接口，也没有确认本机 Wisp v1.9.0 已拥有 main 的全部 Capsule/Workflow 功能。实际接入前须对目标 release/commit 和具体 Skill 运行正反例验证。
 
