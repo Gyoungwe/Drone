@@ -1,6 +1,7 @@
 # 本地文件
 .local/
 .superpowers/
+.archify/
 
 # 依赖
 node_modules/
