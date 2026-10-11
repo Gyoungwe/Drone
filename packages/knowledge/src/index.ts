@@ -250,6 +250,30 @@ export {
 export { KnowledgeService, closeKnowledgeServices, getKnowledgeService, notifyKnowledgeChange } from "./service";
 
 export {
+	checkKnowledgeReceiptFreshness,
+	checkKnowledgeSnapshotReuse,
+	KnowledgeReuseIndex,
+	ingestKnowledgeSnapshot,
+	knowledgeEvidenceGradeRank,
+	knowledgeReuseLevelRank,
+	resolveKnowledgeContext,
+	validateKnowledgeSourceReceipt,
+	type KnowledgeContext,
+	type KnowledgeContextInput,
+	type KnowledgeFreshnessCheck,
+	type KnowledgeFreshnessOptions,
+	type KnowledgeFreshnessStatus,
+	type KnowledgeReceiptInput,
+	type KnowledgeReuseIndexEntry,
+	type KnowledgeReuseIndexStore,
+	type KnowledgeReuseRequest,
+	type KnowledgeReuseDecision,
+	type KnowledgeReuseStatus,
+	type KnowledgeSnapshotInput,
+	type KnowledgeSourceState,
+} from "./reuse";
+
+export {
 	autoApplyWikiProposal,
 	decideWikiProposal,
 	listWikiProposals,

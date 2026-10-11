@@ -65,6 +65,15 @@ export type KnowledgeReuseLevel =
 	| "validated-capability"
 	| "reproduced-capability";
 
+/** A conservative evidence grade attached to a source read receipt. */
+export type KnowledgeEvidenceGrade = "navigation" | "contextual" | "primary" | "validated" | "reproduced";
+
+export interface KnowledgeFreshness {
+	readonly checkedAt: string;
+	readonly expiresAt?: string;
+	readonly status?: "fresh" | "stale" | "unknown";
+}
+
 export interface KnowledgeSourceReceipt {
 	readonly sourceRef: string;
 	readonly version?: string;
@@ -72,6 +81,13 @@ export interface KnowledgeSourceReceipt {
 	readonly contentHash: string;
 	readonly receiptRef: string;
 	readonly readAt: string;
+	/** Evidence grade is intentionally separate from reuse level. */
+	readonly evidenceGrade?: KnowledgeEvidenceGrade;
+	/** Compatibility spelling used by older research notes. */
+	readonly evidenceLevel?: KnowledgeEvidenceGrade;
+	readonly freshness?: KnowledgeFreshness;
+	readonly analysisRefs?: readonly ContractParentRef[];
+	readonly checkpointRefs?: readonly ContractParentRef[];
 }
 
 export interface KnowledgeSnapshot extends VersionedResearchContract {
@@ -79,14 +95,22 @@ export interface KnowledgeSnapshot extends VersionedResearchContract {
 	readonly kind: "knowledge-snapshot";
 	readonly id: string;
 	readonly caseRef?: ContractParentRef;
+	readonly projectId?: string;
+	readonly workspaceId?: string;
+	readonly assay?: string;
 	readonly environmentFingerprint?: string;
 	readonly sources: readonly KnowledgeSourceReceipt[];
 	readonly reuseLevel: KnowledgeReuseLevel;
-	readonly freshness?: { readonly checkedAt: string; readonly expiresAt?: string };
+	readonly evidenceGrade?: KnowledgeEvidenceGrade;
+	readonly evidenceLevel?: KnowledgeEvidenceGrade;
+	readonly freshness?: KnowledgeFreshness;
 	readonly methodVersion?: string;
 	readonly referenceVersion?: string;
 	readonly inputManifestHash?: string;
+	readonly analysisRefs?: readonly ContractParentRef[];
+	readonly evidenceCheckpointRefs?: readonly ContractParentRef[];
 	readonly createdAt: string;
+	readonly ingestedAt?: string;
 }
 
 export type CapabilityRequestStatus = "open" | "researching" | "resolved" | "blocked" | "cancelled";
