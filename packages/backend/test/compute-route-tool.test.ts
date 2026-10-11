@@ -7,8 +7,10 @@ describe("compute_route tool", () => {
 			"route-1",
 			{
 				intent: "Run bulk RNA-seq QC",
-				samplesheet: "fixtures/samplesheet.csv",
+				samplesheet: "/data/rnaseq/samplesheet.csv",
 				hostAlias: "hpc-a",
+				remoteWorkDir: "/data/rnaseq/runs/route-1",
+				outdir: "results",
 				executionMode: "production",
 			},
 			undefined,

@@ -30,6 +30,21 @@ const params = Type.Object({
 	),
 	profile: Type.Optional(Type.String({ minLength: 1, maxLength: 64 })),
 	genome: Type.Optional(Type.String({ minLength: 1, maxLength: 128 })),
+	strandedness: Type.Optional(
+		Type.Union([Type.Literal("unstranded"), Type.Literal("forward"), Type.Literal("reverse")]),
+	),
+	remoteWorkDir: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+	outdir: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+	resources: Type.Optional(
+		Type.Object(
+			{
+				cpus: Type.Optional(Type.Integer({ minimum: 1, maximum: 1_000_000 })),
+				memoryBytes: Type.Optional(Type.Integer({ minimum: 1, maximum: Number.MAX_SAFE_INTEGER })),
+				wallTimeSeconds: Type.Optional(Type.Integer({ minimum: 1, maximum: Number.MAX_SAFE_INTEGER })),
+			},
+			{ additionalProperties: false },
+		),
+	),
 	executionMode: Type.Optional(Type.Union([Type.Literal("fixture"), Type.Literal("production")])),
 });
 
@@ -61,7 +76,8 @@ export function makeComputeRouteTool(): ToolDefinition<typeof params> {
 		label: "Plan compute route",
 		description:
 			"Translate a supported bulk RNA-seq request into a structured, reviewable execution route. This is declaration-only: it cannot connect to SSH, run commands, submit jobs, or approve a host. After reviewing the route, use the desktop compute panel or an approved compute workflow to execute it.",
-		promptSnippet: "compute_route({intent, samplesheet?, hostAlias?, profile?, genome?, executionMode?})",
+		promptSnippet:
+			"compute_route({intent, samplesheet, hostAlias, profile?, genome?, strandedness?, remoteWorkDir, outdir, resources?, executionMode?})",
 		parameters: params,
 		execute: async (_id, input): Promise<AgentToolResult<ComputeRouteToolDetails>> => {
 			const request: RnaseqIntentInput = {
@@ -70,6 +86,10 @@ export function makeComputeRouteTool(): ToolDefinition<typeof params> {
 				...(input.hostAlias ? { hostAlias: input.hostAlias } : {}),
 				...(input.profile ? { profile: input.profile } : {}),
 				...(input.genome ? { genome: input.genome } : {}),
+				...(input.strandedness ? { strandedness: input.strandedness } : {}),
+				...(input.remoteWorkDir ? { remoteWorkDir: input.remoteWorkDir } : {}),
+				...(input.outdir ? { outdir: input.outdir } : {}),
+				...(input.resources ? { resources: input.resources } : {}),
 				...(input.executionMode ? { executionMode: input.executionMode } : {}),
 			};
 			const preflight = preflightRnaseqExecution(request);

@@ -230,6 +230,13 @@ export interface WorkflowRef {
 	readonly version: string;
 	readonly source?: string;
 	readonly specHash?: string;
+	/**
+	 * Typed invocation fields for registered workflows.  These remain data
+	 * fields; the runner turns them into individual argv values and never
+	 * evaluates a shell command string.
+	 */
+	readonly profile?: string;
+	readonly parameters?: Readonly<Record<string, string>>;
 }
 
 /** Declarative workflow input; there is intentionally no script or shell field. */

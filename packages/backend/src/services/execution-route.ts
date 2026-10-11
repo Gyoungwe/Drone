@@ -7,6 +7,7 @@ import {
 	type JobRecord,
 	type JobSpec,
 	type JobState,
+	type ResourceRequest,
 	RNASEQ_PIPELINE,
 	RNASEQ_REVISION,
 	RNASEQ_TEST_PROFILE,
@@ -23,8 +24,7 @@ import type {
 import type { ComputeJobInput, ComputeServicePort } from "./compute";
 
 const MAX_INTENT_LENGTH = 400;
-const DEFAULT_SAMPLESHEET = "samplesheet.csv";
-const DEFAULT_HOST = "local";
+const FIXTURE_HOST = "fixture-local";
 
 /** Input accepted by the route resolver. The route remains deterministic for a given value. */
 export interface RnaseqIntentInput {
@@ -38,6 +38,8 @@ export interface RnaseqIntentInput {
 	readonly executionMode?: "fixture" | "production";
 	readonly remoteWorkDir?: string;
 	readonly outdir?: string;
+	/** Optional scheduler request; omitted means the registered host/profile chooses it. */
+	readonly resources?: ResourceRequest;
 }
 
 export interface RnaseqExecutionPlan {
@@ -100,6 +102,35 @@ function safePath(value: string, label: string): string {
 	return value;
 }
 
+function safeAbsolutePath(value: string, label: string): string {
+	const checked = safePath(value, label);
+	if (!checked.startsWith("/"))
+		throw new Error(`${label} must be an absolute remote path for production execution`);
+	return checked;
+}
+
+function safeRunnerOutputPath(value: string, label: string): string {
+	const checked = safePath(value, label);
+	if (checked.startsWith("/"))
+		throw new Error(`${label} must be relative to the runner output root for production execution`);
+	return checked;
+}
+
+function safeResources(value: ResourceRequest | undefined): ResourceRequest | undefined {
+	if (!value) return undefined;
+	const entries: Array<[keyof ResourceRequest, number | undefined]> = [
+		["cpus", value.cpus],
+		["memoryBytes", value.memoryBytes],
+		["wallTimeSeconds", value.wallTimeSeconds],
+	];
+	for (const [label, amount] of entries) {
+		if (amount === undefined) continue;
+		if (!Number.isSafeInteger(amount) || amount <= 0)
+			throw new Error(`RNA-seq ${label} must be a positive safe integer when provided`);
+	}
+	return { ...value };
+}
+
 function parameterFromIntent(intent: string, pattern: RegExp): string | undefined {
 	const match = pattern.exec(intent);
 	return match?.[1] ? match[1].replace(/[),.;]+$/gu, "") : undefined;
@@ -108,18 +139,36 @@ function parameterFromIntent(intent: string, pattern: RegExp): string | undefine
 function taskIdFor(input: RnaseqIntentInput, route: ExecutionRoute): string {
 	if (input.taskId) return safeIdentifier(input.taskId, "task id");
 	const fingerprint = createHash("sha256")
-		.update(JSON.stringify({ intent: route.intent, samplesheet: route.samplesheet, profile: route.profile }))
+		.update(
+			JSON.stringify({
+				intent: route.intent,
+				route,
+				hostAlias: input.hostAlias,
+				remoteWorkDir: input.remoteWorkDir,
+				outdir: input.outdir,
+				resources: input.resources,
+				executionMode: input.executionMode ?? "production",
+			}),
+		)
 		.digest("hex")
 		.slice(0, 20);
 	return `rnaseq-${fingerprint}`;
 }
 
-function workflowRef(_spec: ComputeWorkflowSpec, specHash: string): WorkflowRef {
+function workflowRef(spec: ComputeWorkflowSpec, specHash: string): WorkflowRef {
+	const parameters = Object.fromEntries(
+		Object.entries(spec.parameters ?? {}).filter(
+			(entry): entry is [string, string] => typeof entry[1] === "string",
+		),
+	);
+	const profile = spec.steps.find((step) => step.module === RNASEQ_PIPELINE)?.params?.profile;
 	return {
 		name: RNASEQ_PIPELINE,
 		version: RNASEQ_REVISION,
 		source: "nf-core",
 		specHash,
+		...(typeof profile === "string" ? { profile } : {}),
+		...(Object.keys(parameters).length > 0 ? { parameters } : {}),
 	};
 }
 
@@ -157,15 +206,14 @@ export function routeRnaseqIntent(
 	if (!/(?:rna(?:[- ]?seq(?:uencing)?|\s+sequencing)|rna测序|转录组|转录组学|transcriptom)/iu.test(intent))
 		return null;
 	if (/(?:differential|差异|deSeq2|富集|pathway|火山图|gsea)/iu.test(intent)) return null;
-	const samplesheet = safePath(
+	const samplesheetValue =
 		value.samplesheet ??
-			parameterFromIntent(
-				intent,
-				/(?:samplesheet|sample\s*sheet|样本表)\s*(?:=|:|是|为|of|is|at)?\s*([^\s,;]+)/iu,
-			) ??
-			DEFAULT_SAMPLESHEET,
-		"RNA-seq samplesheet",
-	);
+		parameterFromIntent(
+			intent,
+			/(?:samplesheet|sample\s*sheet|样本表)\s*(?:=|:|是|为|of|is|at)?\s*([^\s,;]+)/iu,
+		);
+	if (!samplesheetValue) throw new Error("RNA-seq samplesheet is required; provide the staged remote path");
+	const samplesheet = safePath(samplesheetValue, "RNA-seq samplesheet");
 	const profile =
 		value.profile ??
 		parameterFromIntent(intent, /(?:profile|配置)\s*(?:=|:|是|为|is)?\s*([A-Za-z0-9_.-]+)/iu) ??
@@ -187,6 +235,10 @@ export function routeRnaseqIntent(
 		profile,
 		samplesheet,
 		...(genome ? { genome } : {}),
+		...(value.outdir ? { outdir: safePath(value.outdir, "RNA-seq output directory") } : {}),
+		...(value.remoteWorkDir
+			? { remoteWorkDir: safePath(value.remoteWorkDir, "RNA-seq remote work directory") }
+			: {}),
 		...(value.strandedness ? { strandedness: value.strandedness } : {}),
 	};
 }
@@ -199,12 +251,35 @@ export function planRnaseqExecution(input: string | RnaseqIntentInput): RnaseqEx
 	const normalized: RnaseqIntentInput = typeof input === "string" ? { intent: input } : input;
 	const route = routeRnaseqIntent(normalized);
 	if (!route) throw new Error("Intent is not a supported bulk RNA-seq execution request");
+	const executionMode = normalized.executionMode ?? "production";
+	if (executionMode !== "fixture" && executionMode !== "production")
+		throw new Error("Invalid RNA-seq execution mode");
+	if (executionMode === "production" && !normalized.hostAlias)
+		throw new Error("Production RNA-seq execution requires a registered host alias");
+	const hostAlias = safeIdentifier(normalized.hostAlias ?? FIXTURE_HOST, "compute host alias");
+	const resources = safeResources(normalized.resources);
+	const remoteWorkDir = normalized.remoteWorkDir
+		? executionMode === "production"
+			? safeAbsolutePath(normalized.remoteWorkDir, "RNA-seq remote work directory")
+			: safePath(normalized.remoteWorkDir, "RNA-seq remote work directory")
+		: undefined;
+	const outdir = normalized.outdir
+		? executionMode === "production"
+			? safeRunnerOutputPath(normalized.outdir, "RNA-seq output directory")
+			: safePath(normalized.outdir, "RNA-seq output directory")
+		: undefined;
+	if (executionMode === "production" && !route.samplesheet.startsWith("/"))
+		throw new Error("Production RNA-seq execution requires an absolute staged remote samplesheet path");
+	if (executionMode === "production" && !outdir)
+		throw new Error(
+			"Production RNA-seq execution requires an output directory relative to the runner output root",
+		);
 	const workflowSpec = createRnaseqWorkflowSpec({
 		samplesheet: route.samplesheet,
 		profile: route.profile,
 		...(route.genome ? { genome: route.genome } : {}),
 		...(route.strandedness ? { strandedness: route.strandedness } : {}),
-		...(normalized.outdir ? { outdir: safePath(normalized.outdir, "RNA-seq output directory") } : {}),
+		...(outdir ? { outdir } : {}),
 	});
 	const catalog = rnaseqModuleCatalog();
 	const validation = validateWorkflowSpec(workflowSpec, catalog);
@@ -214,10 +289,6 @@ export function planRnaseqExecution(input: string | RnaseqIntentInput): RnaseqEx
 		);
 	const compiledWorkflow = compileWorkflow(workflowSpec, catalog);
 	const taskId = taskIdFor(normalized, route);
-	const hostAlias = safeIdentifier(normalized.hostAlias ?? DEFAULT_HOST, "compute host alias");
-	const executionMode = normalized.executionMode ?? "fixture";
-	if (executionMode !== "fixture" && executionMode !== "production")
-		throw new Error("Invalid RNA-seq execution mode");
 	const idempotencyKey = `execution:${taskId}:${validation.workflowSpecSha256.slice(0, 16)}`;
 	const binding: ComputeTaskBinding = {
 		version: 1,
@@ -228,6 +299,8 @@ export function planRnaseqExecution(input: string | RnaseqIntentInput): RnaseqEx
 		hostAlias,
 		workflowSpecSha256: validation.workflowSpecSha256,
 		samplesheet: route.samplesheet,
+		...(outdir ? { outdir } : {}),
+		...(remoteWorkDir ? { remoteWorkDir } : {}),
 		revision: RNASEQ_REVISION,
 		profile: route.profile,
 		executionMode,
@@ -238,17 +311,13 @@ export function planRnaseqExecution(input: string | RnaseqIntentInput): RnaseqEx
 		idempotencyKey,
 		hostAlias,
 		workflow: workflowRef(workflowSpec, validation.workflowSpecSha256),
-		...(normalized.remoteWorkDir
-			? { remoteWorkDir: safePath(normalized.remoteWorkDir, "remote work directory") }
-			: {}),
-		resources: {
-			cpus: 4,
-			memoryBytes: 8 * 1024 * 1024 * 1024,
-			wallTimeSeconds: 60 * 60,
-		},
+		...(remoteWorkDir ? { remoteWorkDir } : {}),
+		...(resources ? { resources } : {}),
 		remoteRead: [route.samplesheet],
-		...(normalized.outdir ? { remoteWrite: [safePath(normalized.outdir, "RNA-seq output directory")] } : {}),
-		outputs: ["multiqc_report.html", "counts.tsv"],
+		...(outdir ? { remoteWrite: [outdir] } : {}),
+		...(executionMode === "fixture"
+			? { outputs: ["results/multiqc_report.html", "results/counts.tsv"] }
+			: {}),
 	};
 	return { route, workflowSpec, compiledWorkflow, binding, job };
 }

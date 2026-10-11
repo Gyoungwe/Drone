@@ -82,6 +82,7 @@ packages/
 | `scripts/test-compute-runner.py` / `scripts/test-compute-runner.sh` | 使用显式真实可执行 fixture 验证 runner 协议、断线后持久化、幂等提交、取消与校验回收 |
 | `scripts/test-compute-docker.sh`、`scripts/compute-fixtures/` | 可选 Docker SSHD + 单节点 Slurm 集成 fixture；需用户启动 Docker daemon，不用于生产 runner；细节见 [compute.md](compute.md) |
 | `scripts/b3-pipeline/` | 显式 opt-in 的真实 nf-core/rnaseq 3.18.0 test-profile smoke 与 digest-backed provenance；缺 Nextflow/OCI digest 时拒绝提交 |
+| `docs/real-rnaseq-execution-plan.md` | 从本地 fixture 到真实 RNA-seq 结果的输入、设计、运行、QC、绘图和写作门禁；禁止把演示产物当科研结论 |
 
 依赖补丁：`patches/` + patch-package（root devDep + postinstall）。目前一处 `thinking-orbs+0.3.1.patch`（移除 IntersectionObserver+visibilitychange 门控，Win11 恢复事件丢失会冻住 rAF）。改法：手改 `node_modules/thinking-orbs/dist/index.{es.js,cjs}` 两份 → `npx patch-package thinking-orbs`；升级该包前重评补丁是否仍需要。
 

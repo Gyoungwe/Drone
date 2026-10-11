@@ -37,21 +37,48 @@ describe("RNA-seq execution route", () => {
 			intent: "Run RNA-seq",
 			samplesheet: "fixtures/samplesheet.csv",
 			taskId: "task-rna-1",
+			hostAlias: "fixture-local",
+			executionMode: "fixture",
 		});
 		const second = planRnaseqExecution({
 			intent: "Run RNA-seq",
 			samplesheet: "fixtures/samplesheet.csv",
 			taskId: "task-rna-1",
+			hostAlias: "fixture-local",
+			executionMode: "fixture",
 		});
 		expect(first.binding.workflowSpecSha256).toBe(second.binding.workflowSpecSha256);
-		expect(first.job.workflow).toMatchObject({ name: "nf-core/rnaseq", version: "3.18.0" });
+		expect(first.job.workflow).toMatchObject({
+			name: "nf-core/rnaseq",
+			version: "3.18.0",
+			profile: "test",
+			parameters: { input: "fixtures/samplesheet.csv" },
+		});
 		expect(first.workflowSpec.metadata).toMatchObject({
 			pipeline: "nf-core/rnaseq",
 			profile: "test",
 			revision: "3.18.0",
 		});
+		expect(first.job.resources).toBeUndefined();
 		expect(first.compiledWorkflow.executionMode).toBe("ready");
 		expect(Check(ComputeTaskBindingSchema, first.binding)).toBe(true);
+	});
+
+	it("carries an explicit scheduler request without inventing a default", () => {
+		const plan = planRnaseqExecution({
+			intent: "Run RNA-seq",
+			samplesheet: "/data/rnaseq/samplesheet.csv",
+			hostAlias: "hpc-a",
+			remoteWorkDir: "/data/rnaseq/runs/resource-contract",
+			outdir: "results",
+			resources: { cpus: 8, memoryBytes: 16 * 1024 * 1024 * 1024, wallTimeSeconds: 7_200 },
+			executionMode: "production",
+		});
+		expect(plan.job.resources).toEqual({
+			cpus: 8,
+			memoryBytes: 16 * 1024 * 1024 * 1024,
+			wallTimeSeconds: 7_200,
+		});
 	});
 
 	it("blocks malformed input in preflight without invoking an executor", async () => {
@@ -100,7 +127,13 @@ describe("RNA-seq execution route", () => {
 				return { jobId: spec.jobId, remoteId: "runner-42", status: "queued" };
 			},
 		});
-		const receipt = await service.execute({ intent: "Run RNA-seq", taskId: "real-seam" });
+		const receipt = await service.execute({
+			intent: "Run RNA-seq",
+			taskId: "real-seam",
+			samplesheet: "fixtures/samplesheet.csv",
+			hostAlias: "fixture-local",
+			executionMode: "fixture",
+		});
 		expect(receipt.status).toBe("queued");
 		expect(receipt.fixture).toBe(true);
 		expect(submitted).toMatchObject({
@@ -114,6 +147,10 @@ describe("RNA-seq execution route", () => {
 		const receipt = await new RnaseqExecutionService().execute({
 			intent: "Run RNA sequencing",
 			taskId: "production-without-host",
+			samplesheet: "/data/rnaseq/samplesheet.csv",
+			hostAlias: "hpc-a",
+			remoteWorkDir: "/data/rnaseq/runs/production-without-host",
+			outdir: "results",
 			executionMode: "production",
 		});
 		expect(receipt.status).toBe("blocked");

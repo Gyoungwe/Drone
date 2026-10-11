@@ -20,6 +20,8 @@ export const ExecutionRouteSchema = Type.Object(
 		profile: Type.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9_.-]+$" }),
 		samplesheet: Type.String({ minLength: 1, maxLength: 1024 }),
 		genome: Type.Optional(Type.String({ minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9_.-]+$" })),
+		outdir: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+		remoteWorkDir: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
 		strandedness: Type.Optional(
 			Type.Union([Type.Literal("unstranded"), Type.Literal("forward"), Type.Literal("reverse")]),
 		),
@@ -38,6 +40,8 @@ export const ComputeTaskBindingSchema = Type.Object(
 		hostAlias: Type.String({ minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" }),
 		workflowSpecSha256: Type.String({ pattern: "^[a-fA-F0-9]{64}$" }),
 		samplesheet: Type.String({ minLength: 1, maxLength: 1024 }),
+		outdir: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+		remoteWorkDir: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
 		revision: Type.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9_.-]+$" }),
 		profile: Type.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9_.-]+$" }),
 		executionMode: Type.Union([Type.Literal("fixture"), Type.Literal("production")]),
