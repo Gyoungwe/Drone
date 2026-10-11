@@ -17,6 +17,7 @@ export {
 	type TreeNode,
 } from "./bio-preview-format";
 export * from "./capabilities";
+export * from "./capability-discovery";
 export * from "./capability-skills";
 export * from "./compute";
 export * from "./contracts";

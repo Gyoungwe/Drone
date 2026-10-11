@@ -184,6 +184,15 @@ export {
 } from "./services/analysis-task-controller";
 export { type ApprovalDecision, ApprovalService, type ApprovalServiceOptions } from "./services/approvals";
 export {
+	type CapabilityDiscoveryResearchPort,
+	CapabilityDiscoveryService,
+	type CapabilityDiscoveryServiceOptions,
+	type CapabilityDiscoverySnapshot,
+	type CapabilityEnvironmentPort,
+	type CapabilityRequestStore,
+	type CapabilityValidationPort,
+} from "./services/capability-discovery";
+export {
 	artifactSha256,
 	type ComputeCollectOptions,
 	type ComputeCollectResult,

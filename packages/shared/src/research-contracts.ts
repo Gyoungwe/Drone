@@ -115,6 +115,13 @@ export interface KnowledgeSnapshot extends VersionedResearchContract {
 
 export type CapabilityRequestStatus = "open" | "researching" | "resolved" | "blocked" | "cancelled";
 
+/** A capability can be recommended before it is registered or enabled. */
+export interface CapabilityAvailability {
+	readonly recommendedVersionRef?: ContractParentRef;
+	readonly registeredVersionRef?: ContractParentRef;
+	readonly enabledVersionRef?: ContractParentRef;
+}
+
 export interface CapabilityRequest extends VersionedResearchContract {
 	readonly kind: "capability-request";
 	readonly id: string;
@@ -124,6 +131,12 @@ export interface CapabilityRequest extends VersionedResearchContract {
 	readonly requirements: readonly string[];
 	readonly status: CapabilityRequestStatus;
 	readonly recommendedVersionRef?: ContractParentRef;
+	readonly registeredVersionRef?: ContractParentRef;
+	readonly enabledVersionRef?: ContractParentRef;
+	readonly gapReason?: "unknown-assay" | "ambiguous-version" | "unregistered" | "environment-not-ready";
+	readonly researchPlanRef?: ContractParentRef;
+	readonly candidateRefs?: readonly ContractParentRef[];
+	readonly validationCapsuleRef?: ContractParentRef;
 	readonly createdAt: string;
 	readonly updatedAt: string;
 }
@@ -142,6 +155,87 @@ export interface CapabilityVersion extends VersionedResearchContract {
 	readonly methodRef?: string;
 	readonly readiness?: "unknown" | "ready" | "not-ready";
 	readonly validationRefs: readonly ContractParentRef[];
+	readonly createdAt: string;
+}
+
+export type CapabilityCandidateStatus = "described" | "recommended" | "registered" | "enabled" | "rejected";
+
+/** Candidate adapter/workflow description. It is never executable by itself. */
+export interface CapabilityCandidate extends VersionedResearchContract {
+	readonly kind: "capability-candidate";
+	readonly id: string;
+	readonly capabilityId: string;
+	readonly version?: string;
+	readonly assay: string;
+	readonly title: string;
+	readonly description: string;
+	readonly adapterRef?: string;
+	readonly workflowRef?: string;
+	readonly status: CapabilityCandidateStatus;
+	readonly executable: false;
+	readonly sourceRefs: readonly ContractParentRef[];
+	readonly validationRefs: readonly ContractParentRef[];
+	readonly environmentProbeRef?: ContractParentRef;
+	readonly createdAt: string;
+}
+
+export interface CapabilityResearchPlan extends VersionedResearchContract {
+	readonly kind: "capability-research-plan";
+	readonly id: string;
+	readonly requestRef: ContractParentRef;
+	readonly objective: string;
+	readonly questions: readonly string[];
+	readonly sourceRefs: readonly ContractParentRef[];
+	readonly readOnly: true;
+	readonly createdAt: string;
+}
+
+export interface CapabilitySourceReceipt extends VersionedResearchContract {
+	readonly kind: "capability-source-receipt";
+	readonly id: string;
+	readonly sourceRef: string;
+	/** Hash of the observed source; envelope contentHash remains the receipt hash. */
+	readonly sourceHash: string;
+	readonly locator?: string;
+	readonly observedAt: string;
+	readonly readOnly: true;
+}
+
+export type EnvironmentReadiness = "unknown" | "ready" | "not-ready";
+
+export interface CapabilityEnvironmentProbe extends VersionedResearchContract {
+	readonly kind: "capability-environment-probe";
+	readonly id: string;
+	readonly capabilityRef: string;
+	readonly readiness: EnvironmentReadiness;
+	readonly observed: Readonly<Record<string, string | number | boolean | null>>;
+	readonly missing: readonly string[];
+	readonly fingerprint?: string;
+	readonly probedAt: string;
+}
+
+export type CapabilityValidationKind = "static" | "fixture" | "scientific";
+export type CapabilityValidationStatus = "passed" | "failed" | "blocked" | "not-run";
+
+export interface CapabilityValidationGate extends VersionedResearchContract {
+	readonly kind: "capability-validation-gate";
+	readonly id: string;
+	readonly capabilityRef: string;
+	readonly validation: CapabilityValidationKind;
+	readonly status: CapabilityValidationStatus;
+	readonly detail: string;
+	readonly evidenceRefs: readonly ContractParentRef[];
+	readonly checkedAt: string;
+}
+
+/** Immutable, bounded proof bundle. It is evidence, never an execution grant. */
+export interface ValidationEvidenceCapsule extends VersionedResearchContract {
+	readonly kind: "validation-evidence-capsule";
+	readonly id: string;
+	readonly capabilityRef: string;
+	readonly gateRefs: readonly ContractParentRef[];
+	readonly sourceRefs: readonly ContractParentRef[];
+	readonly status: "validated" | "failed" | "incomplete";
 	readonly createdAt: string;
 }
 
@@ -243,6 +337,12 @@ export type AnyResearchContract =
 	| KnowledgeSnapshot
 	| CapabilityRequest
 	| CapabilityVersion
+	| CapabilityCandidate
+	| CapabilityResearchPlan
+	| CapabilitySourceReceipt
+	| CapabilityEnvironmentProbe
+	| CapabilityValidationGate
+	| ValidationEvidenceCapsule
 	| DecisionProposal
 	| Decision
 	| RunAttempt;
@@ -366,6 +466,57 @@ export function createCapabilityVersion(
 	input: Omit<CapabilityVersion, keyof VersionedResearchContract | "kind"> & ContractVersionOptions,
 ): CapabilityVersion {
 	return base({ ...input, kind: "capability-version" as const }, input) as CapabilityVersion;
+}
+
+export function createCapabilityCandidate(
+	input: Omit<CapabilityCandidate, keyof VersionedResearchContract | "kind" | "executable"> &
+		ContractVersionOptions,
+): CapabilityCandidate {
+	return base(
+		{ ...input, kind: "capability-candidate" as const, executable: false as const },
+		input,
+	) as CapabilityCandidate;
+}
+
+export function createCapabilityResearchPlan(
+	input: Omit<CapabilityResearchPlan, keyof VersionedResearchContract | "kind" | "readOnly"> &
+		ContractVersionOptions,
+): CapabilityResearchPlan {
+	return base(
+		{ ...input, kind: "capability-research-plan" as const, readOnly: true as const },
+		input,
+	) as CapabilityResearchPlan;
+}
+
+export function createCapabilitySourceReceipt(
+	input: Omit<CapabilitySourceReceipt, keyof VersionedResearchContract | "kind" | "readOnly"> &
+		ContractVersionOptions,
+): CapabilitySourceReceipt {
+	return base(
+		{ ...input, kind: "capability-source-receipt" as const, readOnly: true as const },
+		input,
+	) as CapabilitySourceReceipt;
+}
+
+export function createCapabilityEnvironmentProbe(
+	input: Omit<CapabilityEnvironmentProbe, keyof VersionedResearchContract | "kind"> & ContractVersionOptions,
+): CapabilityEnvironmentProbe {
+	return base(
+		{ ...input, kind: "capability-environment-probe" as const },
+		input,
+	) as CapabilityEnvironmentProbe;
+}
+
+export function createCapabilityValidationGate(
+	input: Omit<CapabilityValidationGate, keyof VersionedResearchContract | "kind"> & ContractVersionOptions,
+): CapabilityValidationGate {
+	return base({ ...input, kind: "capability-validation-gate" as const }, input) as CapabilityValidationGate;
+}
+
+export function createValidationEvidenceCapsule(
+	input: Omit<ValidationEvidenceCapsule, keyof VersionedResearchContract | "kind"> & ContractVersionOptions,
+): ValidationEvidenceCapsule {
+	return base({ ...input, kind: "validation-evidence-capsule" as const }, input) as ValidationEvidenceCapsule;
 }
 
 export function createDecisionProposal(

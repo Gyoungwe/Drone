@@ -5,6 +5,7 @@ export {
 	compareClaims,
 	type KnowledgeClaim,
 } from "./claim-conflicts";
+export { readCapabilitySources, type CapabilityKnowledgeSourcePort } from "./capability-discovery";
 export {
 	createKnowledgeConfigApi,
 	createKnowledgeConfigState,

@@ -1,4 +1,9 @@
 export {
+	type CapabilityResearchPorts,
+	type CapabilityResearchResult,
+	runCapabilityResearch,
+} from "./capability-discovery";
+export {
 	CLAIM_BINDING_SCHEMA,
 	type ClaimBinding,
 	type ClaimBindingSource,

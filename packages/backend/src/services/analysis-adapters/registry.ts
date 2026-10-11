@@ -85,6 +85,16 @@ export class AnalysisAdapterRegistry {
 			);
 		return candidates[0];
 	}
+	/** Immutable registry view used by capability discovery and diagnostics. */
+	list(): readonly AnalysisAdapter[] {
+		return [...this.adapters.values()];
+	}
+	find(identity: AnalysisIdentity): AnalysisAdapter | undefined {
+		return this.adapters.get(this.key(identity));
+	}
+	findByAssay(assay: string): readonly AnalysisAdapter[] {
+		return [...this.adapters.values()].filter((adapter) => adapter.supports(assay));
+	}
 	private key(identity: AnalysisIdentity): string {
 		return `${identity.id}@${identity.version}`;
 	}
