@@ -18,6 +18,7 @@ import {
 	migrateEvidenceCheckpoint,
 	migrateLegacyContract,
 	migratePlanProposal,
+	transitionRunAttempt,
 	type VersionedRecord,
 } from "./contracts";
 
@@ -193,6 +194,33 @@ describe("portable versioned research contracts", () => {
 		valid(migrated);
 		expect(old.schemaVersion).toBe(0);
 		expect(migrated.migration?.fromSchemaVersion).toBe(0);
+		expect(migrateLegacyContract(old)).toEqual(migrated);
+		expect(() => migrateLegacyContract({ id: "future", schemaVersion: 2 })).toThrow(
+			"Unsupported future schemaVersion",
+		);
+	});
+
+	it("keeps RunAttempt recovery explicit and rejects malformed terminal records", () => {
+		const unknown = createRunAttempt({
+			id: "attempt-1",
+			caseRef,
+			status: "unknown",
+			attempt: 1,
+			inputRefs: [],
+			outputRefs: [],
+			startedAt: now,
+			finishedAt: now,
+		});
+		const queued = transitionRunAttempt(unknown, "queued", { now });
+		expect(queued.status).toBe("queued");
+		expect(queued).not.toHaveProperty("finishedAt");
+		const running = transitionRunAttempt(queued, "running", { now });
+		expect(running.startedAt).toBe(now);
+		const succeeded = transitionRunAttempt(running, "succeeded", { now });
+		expect(succeeded.finishedAt).toBe(now);
+		expect(() =>
+			createRunAttempt({ id: "bad", caseRef, status: "failed", attempt: 1, inputRefs: [], outputRefs: [] }),
+		).toThrow("finishedAt");
 	});
 
 	it("records an explicit choice and scope, rejects stale proposals, and gates high-risk actions", () => {

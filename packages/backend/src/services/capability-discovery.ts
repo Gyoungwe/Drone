@@ -204,7 +204,17 @@ export class CapabilityDiscoveryService {
 			assertResearchContract(candidate);
 			if (candidate.kind !== "capability-candidate" || candidate.executable !== false)
 				throw new Error("Capability candidate is not an executable description");
+			if (candidate.assay !== current.request.assay)
+				throw new Error("Capability candidate assay does not match the request");
 		}
+		const requestRef = result.plan.requestRef;
+		if (
+			typeof requestRef === "string" ||
+			requestRef.kind !== current.request.kind ||
+			requestRef.id !== current.request.id ||
+			(requestRef.contentHash && requestRef.contentHash !== current.request.contentHash)
+		)
+			throw new Error("Capability research plan is bound to a different request");
 		const plan = result.plan;
 		const request = transitionCapabilityRequest(researching, "researching", {
 			now: this.now(),
@@ -227,6 +237,8 @@ export class CapabilityDiscoveryService {
 		const snapshot = await this.require(id);
 		const candidate = snapshot.candidates.find((value) => value.id === candidateId);
 		if (!candidate) throw new Error(`Unknown capability candidate: ${candidateId}`);
+		if (candidate.executable !== false || candidate.assay !== snapshot.request.assay)
+			throw new Error("Only a read-only candidate for this request can be recommended");
 		const recommendation = {
 			kind: candidate.kind,
 			id: candidate.id,
@@ -256,6 +268,9 @@ export class CapabilityDiscoveryService {
 		const probe = await this.environment.probe({ candidate, capabilityRef: candidateRef(candidate) });
 		if (probe.kind !== "capability-environment-probe")
 			throw new Error("Invalid capability environment probe");
+		assertResearchContract(probe);
+		if (probe.capabilityRef !== candidateRef(candidate))
+			throw new Error("Capability environment probe is bound to a different candidate");
 		const updated = {
 			...snapshot,
 			probes: [...snapshot.probes.filter((value) => value.id !== probe.id), probe],
@@ -275,6 +290,11 @@ export class CapabilityDiscoveryService {
 			...(environment ? { environment } : {}),
 		});
 		if (!gates.length) throw new Error("Capability validation returned no gates");
+		for (const gate of gates) {
+			assertResearchContract(gate);
+			if (gate.kind !== "capability-validation-gate" || gate.capabilityRef !== candidateRef(candidate))
+				throw new Error("Capability validation gate is bound to a different candidate");
+		}
 		const capsule = buildValidationEvidenceCapsule({
 			capabilityRef: candidateRef(candidate),
 			gates,
@@ -305,6 +325,15 @@ export class CapabilityDiscoveryService {
 		const capsule = snapshot.validationCapsule;
 		if (!capsule || capsule.capabilityRef !== requested || capsule.status !== "validated")
 			throw new Error("Capability validation evidence is incomplete");
+		const recommendation = snapshot.request.recommendedVersionRef;
+		if (
+			!recommendation ||
+			typeof recommendation !== "object" ||
+			recommendation.kind !== candidate.kind ||
+			recommendation.id !== candidate.id ||
+			recommendation.contentHash !== candidate.contentHash
+		)
+			throw new Error("Capability must be explicitly recommended before enabling");
 		const versionRef = {
 			kind: "capability-version",
 			id: requested,

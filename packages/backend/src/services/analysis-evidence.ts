@@ -79,6 +79,14 @@ function safePath(path: string): void {
 		path.split("/").some((p) => !p || p === "." || p === "..")
 	)
 		throw new Error("Unsafe evidence path");
+	const sensitive = path
+		.split("/")
+		.some((part) =>
+			/^(?:\.env(?:\.|$)|auth\.json$|credentials(?:\.|$)|secrets?(?:\.|$)|tokens?(?:\.|$)|password(?:\.|$)|\.ssh$|\.git$)/i.test(
+				part,
+			),
+		);
+	if (sensitive) throw new Error("Evidence path points to credentials or private state");
 }
 function safeBranch(id: string): void {
 	if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,100}$/.test(id)) throw new Error("Unsafe branch id");
@@ -408,6 +416,18 @@ export class AnalysisEvidenceService {
 		if (!stat.isFile() || stat.size > CAPSULE_LIMIT * 2) throw new Error("Invalid capsule file size");
 		const capsule = JSON.parse(await readFile(path, "utf8")) as EvidenceCapsule;
 		validateCapsule(capsule);
+		// Public/restricted capsules are metadata-only for omitted files. They
+		// remain useful for provenance, but cannot be replayed as if private bytes
+		// were present. Keep that distinction in the persisted checkpoint.
+		if (capsule.publication?.audience !== "private" && capsule.publication?.omittedPaths.length) {
+			const omitted = new Set(capsule.publication.omittedPaths);
+			if (
+				capsule.checkpoint.files.some(
+					(file) => omitted.has(file.artifact.path) && capsule.blobs[file.artifact.sha256] !== undefined,
+				)
+			)
+				throw new Error("Published capsule contains a blob for an omitted private result");
+		}
 		for (const [hash, encoded] of Object.entries(capsule.blobs))
 			await this.putBlob(hash, Buffer.from(encoded, "base64"));
 		await this.store.update((ledger) => {
@@ -436,19 +456,36 @@ export class AnalysisEvidenceService {
 		safeBranch(branchId);
 		const capsule = await this.capsule(checkpointId);
 		const workspace = join(this.root, "branches", branchId);
+		const previous = await this.branch(branchId);
 		await this.store.update((ledger) => {
-			if (ledger.branches[branchId]) throw new Error("Branch already exists; use its persisted status");
+			const existing = ledger.branches[branchId];
+			if (existing && existing.status !== "failed")
+				throw new Error("Branch already exists; use its persisted status");
+			if (existing && existing.checkpointId !== checkpointId)
+				throw new Error("Failed branch belongs to a different checkpoint");
 			ledger.branches[branchId] = { checkpointId, workspace, status: "preparing" };
 		});
 		try {
 			await mkdir(dirname(workspace), { recursive: true, mode: 0o700 });
+			if (previous?.status === "failed") await rm(workspace, { recursive: true, force: true });
 			await mkdir(workspace, { mode: 0o700 });
 			await this.materialize(capsule, workspace, capsule.checkpoint.files);
-			const context = await this.options.analysis.forkCheckpoint(capsule.checkpoint.analysis, {
-				id: branchId,
-				checkpointId,
-				workspace,
-			});
+			const existingContext = await this.options.analysis.get(branchId);
+			const context = existingContext
+				? existingContext
+				: await this.options.analysis.forkCheckpoint(capsule.checkpoint.analysis, {
+						id: branchId,
+						checkpointId,
+						workspace,
+					});
+			const branchOf = context.branchOf;
+			if (
+				!branchOf ||
+				branchOf.analysisId !== capsule.checkpoint.analysis.id ||
+				branchOf.checkpointId !== checkpointId ||
+				branchOf.workspace !== workspace
+			)
+				throw new Error("Persisted branch context does not match the evidence checkpoint");
 			await this.store.update((ledger) => {
 				const branch = ledger.branches[branchId];
 				if (!branch) throw new Error("Branch record disappeared");

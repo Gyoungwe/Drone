@@ -156,6 +156,44 @@ describe("analysis evidence checkpoints", () => {
 				}),
 			);
 			await expect(evidence.importCapsule(forgedPath)).rejects.toThrow("omission list mismatch");
+			const omittedBlob = join(root, "omitted-blob.json");
+			await writeFile(
+				omittedBlob,
+				JSON.stringify({
+					...capsule,
+					blobs: { ...capsule.blobs, [frozen[0]!.artifact.sha256]: Buffer.from("reads").toString("base64") },
+				}),
+			);
+			await expect(evidence.importCapsule(omittedBlob)).rejects.toThrow(/Unexpected capsule blobs/);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("refuses credential and private-state paths before freezing evidence", async () => {
+		const { root, evidence, source } = await setup();
+		try {
+			await writeFile(join(source, ".env"), "API_KEY=private-fixture");
+			const credential: FrozenFile = {
+				kind: "input",
+				artifact: {
+					artifactId: "credential",
+					versionId: "credential-v1",
+					path: ".env",
+					sha256: sha256("API_KEY=private-fixture"),
+					bytes: Buffer.byteLength("API_KEY=private-fixture"),
+					role: "input",
+					accessLevel: "private",
+					parentVersionIds: [],
+				},
+			};
+			await expect(
+				evidence.freeze({
+					analysisId: "run-1",
+					sourceRoot: source,
+					files: [credential],
+				}),
+			).rejects.toThrow(/credentials or private state/);
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}

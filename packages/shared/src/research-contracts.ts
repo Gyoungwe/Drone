@@ -472,6 +472,17 @@ export function assertResearchContract(value: VersionedResearchContract): void {
 	if (!Number.isSafeInteger(value.revision) || value.revision < 0) throw new Error("Invalid revision");
 	if (!/^[a-f0-9]{64}$/.test(value.contentHash)) throw new Error("Invalid contentHash");
 	if (!Array.isArray(value.parentRefs)) throw new Error("Invalid parentRefs");
+	if (value.migration) {
+		if (
+			!Number.isSafeInteger(value.migration.fromSchemaVersion) ||
+			value.migration.fromSchemaVersion < 0 ||
+			value.migration.fromSchemaVersion > value.migration.toSchemaVersion ||
+			value.migration.toSchemaVersion !== RESEARCH_CONTRACT_SCHEMA_VERSION ||
+			!value.migration.migrationId.trim() ||
+			Number.isNaN(Date.parse(value.migration.migratedAt))
+		)
+			throw new Error("Invalid migration metadata");
+	}
 	if (value.contentHash !== computeResearchContractHash(value))
 		throw new Error("Contract contentHash mismatch");
 }
@@ -708,7 +719,84 @@ export function canExecuteDecision(
 export function createRunAttempt(
 	input: Omit<RunAttempt, keyof VersionedResearchContract | "kind"> & ContractVersionOptions,
 ): RunAttempt {
+	if (!Number.isSafeInteger(input.attempt) || input.attempt < 1)
+		throw new Error("Run attempt number must be a positive integer");
+	if (input.idempotencyKey !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(input.idempotencyKey))
+		throw new Error("Run attempt idempotency key is invalid");
+	if (input.startedAt !== undefined && !Number.isNaN(Date.parse(input.startedAt))) {
+		if (input.finishedAt !== undefined && Date.parse(input.finishedAt) < Date.parse(input.startedAt))
+			throw new Error("Run attempt finishedAt precedes startedAt");
+	}
+	if (
+		["succeeded", "failed", "blocked", "cancelled", "delivery_failed", "replay-failed"].includes(input.status)
+	) {
+		if (!input.finishedAt) throw new Error("Terminal run attempts require finishedAt");
+	}
 	return base({ ...input, kind: "run-attempt" as const }, input) as RunAttempt;
+}
+
+const runAttemptTransitions: Readonly<Record<RunAttemptStatus, readonly RunAttemptStatus[]>> = {
+	queued: ["running", "blocked", "cancelled", "unknown"],
+	running: ["succeeded", "failed", "blocked", "cancelled", "unknown", "delivery_failed"],
+	succeeded: ["delivery_failed", "replay-failed"],
+	failed: ["queued", "replay-failed"],
+	blocked: ["queued", "replay-failed"],
+	cancelled: ["replay-failed"],
+	unknown: ["queued", "blocked", "cancelled", "replay-failed"],
+	delivery_failed: ["queued", "replay-failed"],
+	"replay-failed": [],
+};
+
+/**
+ * Advance a durable attempt without silently replaying an uncertain effect.
+ * Recovery from `unknown` must explicitly return to `queued`, which creates a
+ * new revision and lets the host attach a fresh authorization/receipt.
+ */
+export function transitionRunAttempt(
+	attempt: RunAttempt,
+	status: RunAttemptStatus,
+	input: {
+		readonly now: string;
+		readonly startedAt?: string;
+		readonly finishedAt?: string;
+		readonly errorCode?: string;
+		readonly failureSignature?: string;
+		readonly outputRefs?: readonly ContractParentRef[];
+	},
+): RunAttempt {
+	assertResearchContract(attempt);
+	if (attempt.status !== status && !runAttemptTransitions[attempt.status].includes(status))
+		throw new Error(`Invalid run attempt transition: ${attempt.status} -> ${status}`);
+	const {
+		schemaVersion: _schemaVersion,
+		revision: _oldRevision,
+		contentHash: _oldContentHash,
+		parentRefs: _oldParentRefs,
+		migration: _oldMigration,
+		status: _oldStatus,
+		startedAt: _oldStartedAt,
+		finishedAt: _oldFinishedAt,
+		errorCode: _oldErrorCode,
+		failureSignature: _oldFailureSignature,
+		...body
+	} = attempt;
+	const next = {
+		...body,
+		status,
+		...(input.errorCode ? { errorCode: input.errorCode } : {}),
+		...(input.failureSignature ? { failureSignature: input.failureSignature } : {}),
+		...(input.startedAt || status === "running" ? { startedAt: input.startedAt ?? input.now } : {}),
+		...(input.finishedAt ||
+		["succeeded", "failed", "blocked", "cancelled", "delivery_failed", "replay-failed"].includes(status)
+			? { finishedAt: input.finishedAt ?? input.now }
+			: {}),
+		...(input.outputRefs ? { outputRefs: [...input.outputRefs] } : {}),
+		parentRefs: [
+			{ kind: attempt.kind, id: attempt.id, revision: attempt.revision, contentHash: attempt.contentHash },
+		],
+		revision: attempt.revision + 1,
+	} as Omit<RunAttempt, keyof VersionedResearchContract | "kind"> & ContractVersionOptions;
+	return createRunAttempt(next);
 }
 
 /**
@@ -740,8 +828,23 @@ export function forkResearchCase(
 
 function migrateBase(input: Record<string, unknown>, migrationId: string): VersionedResearchContract {
 	const schemaVersion = typeof input.schemaVersion === "number" ? input.schemaVersion : 0;
+	if (!Number.isSafeInteger(schemaVersion) || schemaVersion < 0)
+		throw new Error("Invalid legacy schemaVersion");
+	if (schemaVersion > RESEARCH_CONTRACT_SCHEMA_VERSION)
+		throw new Error(`Unsupported future schemaVersion: ${schemaVersion}`);
 	const revision = typeof input.revision === "number" && input.revision >= 0 ? input.revision : 0;
 	const parentRefs = Array.isArray(input.parentRefs) ? (input.parentRefs as ContractParentRef[]) : [];
+	const migration = input.migration;
+	const migratedAt =
+		typeof migration === "object" &&
+		migration !== null &&
+		typeof (migration as { migratedAt?: unknown }).migratedAt === "string"
+			? (migration as { migratedAt: string }).migratedAt
+			: typeof input.updatedAt === "string"
+				? input.updatedAt
+				: typeof input.createdAt === "string"
+					? input.createdAt
+					: "1970-01-01T00:00:00.000Z";
 	return {
 		schemaVersion: RESEARCH_CONTRACT_SCHEMA_VERSION,
 		revision,
@@ -750,7 +853,7 @@ function migrateBase(input: Record<string, unknown>, migrationId: string): Versi
 			fromSchemaVersion: schemaVersion,
 			toSchemaVersion: RESEARCH_CONTRACT_SCHEMA_VERSION,
 			migrationId,
-			migratedAt: new Date().toISOString(),
+			migratedAt,
 		},
 		contentHash: "",
 	};
@@ -761,6 +864,10 @@ export function migrateLegacyContract<T extends Record<string, unknown>>(
 	input: T,
 	migrationId = "research-contracts/v1",
 ): T & VersionedResearchContract {
+	if (input.schemaVersion === RESEARCH_CONTRACT_SCHEMA_VERSION) {
+		assertResearchContract(input as T & VersionedResearchContract);
+		return { ...input } as T & VersionedResearchContract;
+	}
 	const metadata = migrateBase(input, migrationId);
 	const {
 		contentHash: _oldHash,
@@ -815,9 +922,9 @@ export function runAttemptFromLegacy(
 	caseRef: ContractParentRef,
 ): RunAttempt {
 	const status: RunAttemptStatus =
-		input.outcome === "succeeded"
+		input.outcome === "succeeded" && input.finishedAt
 			? "succeeded"
-			: input.outcome === "failed"
+			: input.outcome === "failed" && input.finishedAt
 				? "failed"
 				: input.outcome === "unknown"
 					? "unknown"
