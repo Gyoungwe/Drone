@@ -71,7 +71,8 @@ export interface ProposalQuestionInput {
 export interface ProposalQuestion {
 	id: string;
 	question: string;
-	defaultValue: string;
+	/** Legacy display hint only; it is never submitted as the user's answer. */
+	defaultValue?: string;
 	options: string[];
 }
 export interface ProposalConflictInput {
@@ -293,11 +294,11 @@ export function normalizePlanProposal(input: PlanProposalInput): PlanProposal {
 	const questions = questionsInput.map((item, index) => {
 		const question = clean(item.question, 600);
 		const defaultValue = clean(item.defaultValue, 320);
-		if (!question || !defaultValue) throw new Error(`Question ${index + 1} requires a default value`);
+		if (!question) throw new Error(`Question ${index + 1} requires a question`);
 		return {
 			id: safeId(item.id, `question ${index + 1}`),
 			question,
-			defaultValue,
+			...(defaultValue ? { defaultValue } : {}),
 			options: boundedList(item.options, 8, `question ${index + 1} options`),
 		};
 	});
@@ -454,7 +455,7 @@ export function renderPlanProposalCard(proposal: PlanProposal): string {
 		? proposal.questions
 				.map(
 					(item) =>
-						`- ${item.question}\n  默认值：${item.defaultValue}${item.options.length ? `\n  可选：${item.options.join(" / ")}` : ""}`,
+						`- ${item.question}${item.defaultValue ? `\n  默认值：${item.defaultValue}（仅作模型参考，不代表你的选择）` : ""}${item.options.length ? `\n  可选：${item.options.join(" / ")}` : ""}`,
 				)
 				.join("\n")
 		: "- 无";
@@ -489,7 +490,7 @@ export function renderPlanProposalCard(proposal: PlanProposal): string {
 		`${proposal.candidates.find((item) => item.id === proposal.recommendation.candidateId)?.title || proposal.recommendation.candidateId}：${proposal.recommendation.reason}`,
 		`依据：${proposal.recommendation.citations.map(renderCitation).join(" ")}`,
 		"",
-		"## 待确认问题（默认值）",
+		"## 待确认问题（模型参考，不自动提交）",
 		questions,
 		"",
 		"## 冲突与不确定性",

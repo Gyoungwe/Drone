@@ -9,6 +9,7 @@ import { TaskArtifactLinks, taskArtifactLinks } from "../chat/TaskArtifactLinks"
 import { ObsidianIcon } from "../icons";
 import { mergeKnowledgeArtifacts } from "../knowledge/artifacts";
 import { KnowledgeFlowCard } from "../knowledge/KnowledgeFlowCard";
+import { EvidencePane } from "./EvidencePane";
 import { FlowCards } from "./FlowCards";
 
 /**
@@ -146,6 +147,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 					</div>
 				</section>
 			)}
+			<EvidencePane defaultRoot={cwd} />
 			<div className="panel-flow">
 				<KnowledgeFlowCard sessionId={sessionId} />
 			</div>

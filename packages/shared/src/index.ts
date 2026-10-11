@@ -1,3 +1,4 @@
+export * from "./analysis-orchestration";
 export * from "./ask";
 export {
 	ALIGNMENT_MAX_RECORDS,
@@ -16,8 +17,10 @@ export {
 	type TreeNode,
 } from "./bio-preview-format";
 export * from "./capabilities";
+export * from "./capability-discovery";
 export * from "./capability-skills";
 export * from "./compute";
+export * from "./contracts";
 export * from "./diagnostics";
 export * from "./discovery";
 export * from "./durable-doc";

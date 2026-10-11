@@ -5,6 +5,7 @@ export {
 	compareClaims,
 	type KnowledgeClaim,
 } from "./claim-conflicts";
+export { readCapabilitySources, type CapabilityKnowledgeSourcePort } from "./capability-discovery";
 export {
 	createKnowledgeConfigApi,
 	createKnowledgeConfigState,
@@ -250,6 +251,30 @@ export {
 } from "./publication";
 
 export { KnowledgeService, closeKnowledgeServices, getKnowledgeService, notifyKnowledgeChange } from "./service";
+
+export {
+	checkKnowledgeReceiptFreshness,
+	checkKnowledgeSnapshotReuse,
+	KnowledgeReuseIndex,
+	ingestKnowledgeSnapshot,
+	knowledgeEvidenceGradeRank,
+	knowledgeReuseLevelRank,
+	resolveKnowledgeContext,
+	validateKnowledgeSourceReceipt,
+	type KnowledgeContext,
+	type KnowledgeContextInput,
+	type KnowledgeFreshnessCheck,
+	type KnowledgeFreshnessOptions,
+	type KnowledgeFreshnessStatus,
+	type KnowledgeReceiptInput,
+	type KnowledgeReuseIndexEntry,
+	type KnowledgeReuseIndexStore,
+	type KnowledgeReuseRequest,
+	type KnowledgeReuseDecision,
+	type KnowledgeReuseStatus,
+	type KnowledgeSnapshotInput,
+	type KnowledgeSourceState,
+} from "./reuse";
 
 export {
 	autoApplyWikiProposal,

@@ -75,6 +75,14 @@ describe("plan proposal policy", () => {
 		const approved = approvePlanProposal(proposal, proposal.contractHash);
 		expect(canExecutePlanProposal(approved)).toBe(true);
 	});
+	it("allows an open question without turning a legacy default into a submitted answer", () => {
+		const proposal = createPlanProposal({
+			...input,
+			questions: [{ id: "samples", question: "How should samples be handled?" }],
+		});
+		expect(proposal.questions[0]).not.toHaveProperty("defaultValue");
+		expect(renderPlanProposalCard(proposal)).toContain("不自动提交");
+	});
 	it("invalidates an old authorization when a key proposal input changes", () => {
 		const proposal = createPlanProposal(input);
 		const changed = { ...proposal, compute: { ...proposal.compute, workflows: ["nf-core/chipseq"] } };

@@ -1,4 +1,4 @@
-import type { AskAnswer, AskQuestion, AskRequest, AskResponse } from "@drone/shared";
+import type { AskAnswer, AskDecisionProposal, AskQuestion, AskRequest, AskResponse } from "@drone/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { Button } from "../ui/Button";
@@ -42,6 +42,49 @@ function Recommendation({ question, t }: { question: AskQuestion; t: ReturnType<
 	);
 }
 
+function ProposalProjection({ proposal }: { proposal: AskDecisionProposal }) {
+	const sections: Array<[string, string[] | undefined]> = [
+		["收益", proposal.benefits],
+		["代价", proposal.costs],
+		["风险", proposal.risks],
+		["资源", proposal.resources],
+	];
+	return (
+		<section
+			className="space-y-2 rounded-xl border border-accent/20 bg-accent/5 px-3 py-3"
+			data-testid="decision-proposal"
+		>
+			<div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">方案提案</div>
+			{proposal.recommendation && (
+				<div className="text-[12px] text-ink-2">
+					<span className="font-medium">推荐：{proposal.recommendation.value}</span>
+					<span className="ml-2 text-ink-dim">{proposal.recommendation.reason}</span>
+				</div>
+			)}
+			{proposal.reason && <p className="text-[12px] text-ink-2">理由：{proposal.reason}</p>}
+			{proposal.evidence?.length ? (
+				<p className="text-[11px] text-ink-dim">依据：{proposal.evidence.join(" · ")}</p>
+			) : null}
+			{sections.map(([label, values]) =>
+				values?.length ? (
+					<div key={label} className="text-[11px] text-ink-dim">
+						<span className="font-medium text-ink-2">{label}：</span>
+						{values.join("；")}
+					</div>
+				) : null,
+			)}
+			{proposal.authorizationActions?.length ? (
+				<div className="text-[11px] text-ink-dim">
+					<span className="font-medium text-ink-2">授权动作：</span>
+					{proposal.authorizationActions
+						.map((action) => `${action.label}${action.risk === "high" ? "（高风险，需单独授权）" : ""}`)
+						.join("；")}
+				</div>
+			) : null}
+		</section>
+	);
+}
+
 export function AskDialog({
 	requests,
 	onRespond,
@@ -51,6 +94,7 @@ export function AskDialog({
 }) {
 	const t = useT();
 	const request = requests[0];
+	const proposal = request?.proposal ?? request?.decisionProposal;
 	const dialogRef = useRef<HTMLDivElement>(null);
 	const [drafts, setDrafts] = useState<Drafts>({});
 	const [sending, setSending] = useState(false);
@@ -127,8 +171,14 @@ export function AskDialog({
 							{t("ask.eyebrow")}
 						</p>
 						<h3 className="mt-1 text-base font-semibold text-ink">{request.title ?? t("ask.title")}</h3>
+						{(request.kind ?? request.purpose) && (
+							<p className="mt-1 text-[11px] text-ink-dim">
+								{request.kind === "authorization" ? "授权" : "澄清"}
+							</p>
+						)}
 					</div>
 					<div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+						{proposal && <ProposalProjection proposal={proposal} />}
 						<p className="whitespace-pre-wrap break-words rounded-lg bg-hover px-3 py-2.5 text-[13px] leading-relaxed text-ink select-text">
 							{formatCardText(question.prompt)}
 						</p>
@@ -208,11 +258,17 @@ export function AskDialog({
 						{t("ask.eyebrow")}
 					</div>
 					<h3 className="mt-1 text-base font-semibold text-ink">{request.title ?? t("ask.title")}</h3>
+					{(request.kind ?? request.purpose) && (
+						<p className="mt-1 text-[11px] text-ink-dim">
+							{request.kind === "authorization" ? "授权" : "澄清"}
+						</p>
+					)}
 					<p className="mt-1 text-[12px] text-ink-dim">
 						{t("ask.progress", { answered, total: request.questions.length })}
 					</p>
 				</div>
 				<div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
+					{proposal && <ProposalProjection proposal={proposal} />}
 					{request.questions.map((item, questionIndex) => {
 						const draft = drafts[item.id] ?? {};
 						const selected = draft.values ?? [];
