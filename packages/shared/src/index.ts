@@ -27,6 +27,7 @@ export * from "./durable-doc";
 export * from "./errors";
 export * from "./evidence-labels";
 export * from "./example-tasks";
+export * from "./execution";
 export * from "./harness";
 export * from "./host-api";
 export * from "./inquiry";

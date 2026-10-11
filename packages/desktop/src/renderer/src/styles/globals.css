@@ -53,7 +53,8 @@
 	   （若用 ink-dim 本身偏深，扫光加深不明显） */
 	--color-ink-working: #a1a1aa;
 	--color-on-ink: #ffffff;
-	--color-accent: #7c3aed;
+	/* 科研风主色：冷静的蓝色，保证浅色背景上的控件层级清晰。 */
+	--color-accent: #2563eb;
 	--color-on-accent: #ffffff;
 	/* z-index 六档：内容层 < 面板内浮层 < 下拉 < 对话框 < 叠加对话框/工具提示 < 提示条。
 	   Tailwind 侧用 z-(--z-xxx) 引用；禁止再出现 z-[60]/z-[70]/z-[80] 之类散值 */
@@ -87,8 +88,8 @@
 	--markdown-quote-text: #71717a;
 	--markdown-table-border: #e4e4e7;
 	--markdown-table-head-bg: #f8fafc;
-	--markdown-link-decoration: #c4b5fd;
-	--markdown-link-hover: #6d28d9;
+	--markdown-link-decoration: #bfdbfe;
+	--markdown-link-hover: #1d4ed8;
 	/* 扫光高光色 = 文字颜色的推移方向：日间往黑推（文字加深，对比度升高）；
 	   用白色会把文字推向近白背景，像消散而非高光。深色值与 --color-ink 一致 */
 	--shimmer-highlight: rgba(24, 24, 27, 0.9);
@@ -97,6 +98,25 @@
 	--shadow-dialog: 0 12px 40px rgba(0, 0, 0, 0.18);
 	--scrollbar-thumb: #d4d4d4;
 	--scrollbar-thumb-hover: #bfbfbf;
+	/* Knowledge workspace: restrained research notebook palette.  These tokens
+	   keep the graph, cloud sync and evidence surfaces readable without making
+	   the rest of the workbench inherit their blue accents. */
+	--knowledge-canvas: #f7f9fc;
+	--knowledge-surface: #ffffff;
+	--knowledge-surface-muted: #f8fafc;
+	--knowledge-border: #d9e2ec;
+	--knowledge-border-strong: #c4d0dc;
+	--knowledge-ink: #172536;
+	--knowledge-ink-muted: #617286;
+	--knowledge-ink-faint: #8b9aab;
+	--knowledge-accent: #2e6f8e;
+	--knowledge-accent-soft: #e8f2f5;
+	--knowledge-grid: #e6edf3;
+	--knowledge-edge: #9bafbe;
+	--knowledge-main: #b88a3a;
+	--knowledge-directory: #9b7ac6;
+	--knowledge-shadow: 0 10px 28px rgba(35, 58, 78, 0.08);
+	--knowledge-shadow-soft: 0 3px 12px rgba(35, 58, 78, 0.07);
 }
 
 [data-theme="dark"] {
@@ -143,6 +163,22 @@
 	--shadow-dialog: 0 12px 40px rgba(255, 255, 255, 0.18);
 	--scrollbar-thumb: #4b4b53;
 	--scrollbar-thumb-hover: #5d5d66;
+	--knowledge-canvas: #17191d;
+	--knowledge-surface: #212328;
+	--knowledge-surface-muted: #272a30;
+	--knowledge-border: #3a414a;
+	--knowledge-border-strong: #4a5562;
+	--knowledge-ink: #edf1f5;
+	--knowledge-ink-muted: #a9b4bf;
+	--knowledge-ink-faint: #778390;
+	--knowledge-accent: #7eb5c8;
+	--knowledge-accent-soft: #263940;
+	--knowledge-grid: #39434d;
+	--knowledge-edge: #6f8190;
+	--knowledge-main: #d4ad68;
+	--knowledge-directory: #b899de;
+	--knowledge-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+	--knowledge-shadow-soft: 0 3px 12px rgba(0, 0, 0, 0.22);
 }
 
 /* 预览行上滑切换：新行从下方滑入，旧行向上滑出（时长恒定 0.32s，与 PreviewTicker 的 ANIMATION_MS 同步；不随队列积压变化）。slide-out 必须 forwards：动画结束后保持透明/位移终态，否则旧行在 React 移除前弹回可见造成重叠 */
@@ -1878,4 +1914,288 @@ code {
 	padding: 7px 12px;
 	font-size: 11px;
 	color: var(--color-ink-faint);
+}
+
+/* -----------------------------------------------------------------------
+   Research workstation controls
+   Shared controls use one quiet white surface, a blue focus/selection cue
+   and explicit danger/success states.  Page-specific components inherit
+   this layer through their small semantic scope classes; behavior and IPC
+   remain owned by the component that renders each control.
+   ----------------------------------------------------------------------- */
+.drone-button {
+	min-height: 30px;
+	border: 1px solid var(--color-border);
+	border-radius: 8px;
+	background: var(--color-surface);
+	color: var(--color-ink-2);
+	font-weight: 500;
+	box-shadow: 0 1px 1px rgb(15 23 42 / 0.03);
+	transition:
+		background-color 0.14s ease,
+		border-color 0.14s ease,
+		color 0.14s ease,
+		box-shadow 0.14s ease,
+		transform 0.14s ease;
+}
+.drone-button--sm {
+	min-height: 29px;
+}
+.drone-button--md {
+	min-height: 34px;
+}
+.drone-button:hover:not(:disabled) {
+	border-color: var(--color-border-strong);
+	background: var(--color-hover);
+	color: var(--color-ink);
+	box-shadow: 0 2px 6px rgb(15 23 42 / 0.06);
+}
+.drone-button:active:not(:disabled) {
+	transform: translateY(1px);
+}
+.drone-button:focus-visible,
+.drone-switch:focus-visible,
+.drone-dropdown__trigger:focus-visible {
+	outline: 2px solid color-mix(in srgb, var(--color-accent) 42%, transparent);
+	outline-offset: 2px;
+}
+.drone-button:disabled,
+.drone-switch:disabled {
+	cursor: not-allowed;
+	opacity: 0.48;
+	box-shadow: none;
+}
+.drone-button--primary {
+	border-color: var(--color-accent);
+	background: var(--color-accent);
+	color: var(--color-on-accent);
+	box-shadow: 0 2px 7px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+.drone-button--primary:hover:not(:disabled) {
+	border-color: color-mix(in srgb, var(--color-accent) 82%, var(--color-ink));
+	background: color-mix(in srgb, var(--color-accent) 88%, var(--color-ink));
+	color: var(--color-on-accent);
+}
+.drone-button--danger {
+	color: var(--color-err);
+	border-color: color-mix(in srgb, var(--color-err) 30%, var(--color-border));
+	background: color-mix(in srgb, var(--color-err) 5%, var(--color-surface));
+}
+.drone-button--danger:hover:not(:disabled) {
+	border-color: color-mix(in srgb, var(--color-err) 48%, var(--color-border));
+	background: color-mix(in srgb, var(--color-err) 10%, var(--color-surface));
+	color: var(--color-err);
+}
+.drone-switch {
+	border: 1px solid var(--color-border-strong);
+	background: var(--color-switch-off);
+	box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.02);
+}
+.drone-switch[aria-checked="true"] {
+	border-color: var(--color-accent);
+	background: var(--color-accent);
+}
+.drone-switch[aria-checked="mixed"] {
+	border-color: var(--color-accent);
+	background: color-mix(in srgb, var(--color-accent) 62%, var(--color-switch-off));
+}
+.drone-switch__thumb {
+	border: 1px solid rgb(15 23 42 / 0.1);
+	box-shadow: 0 1px 3px rgb(15 23 42 / 0.14);
+}
+.drone-dropdown__trigger {
+	min-height: 30px;
+	border: 1px solid transparent;
+	color: var(--color-ink-2);
+}
+.drone-dropdown__trigger:hover {
+	border-color: var(--color-border);
+	background: var(--color-hover);
+	color: var(--color-ink);
+}
+.drone-dropdown__menu {
+	border-color: var(--color-border-strong);
+	background: var(--color-surface);
+	box-shadow: var(--shadow-pop);
+}
+
+/* Shared form fields: only the scoped workbench surfaces are affected. */
+.settings-dialog-shell input:not([type="checkbox"]):not([type="radio"]),
+.settings-dialog-shell textarea,
+.settings-dialog-shell select,
+.project-page input,
+.drone-composer textarea,
+.drone-composer input[type="text"] {
+	border-color: var(--color-border);
+	background: var(--color-surface);
+	color: var(--color-ink);
+	transition:
+		border-color 0.14s ease,
+		box-shadow 0.14s ease,
+		background-color 0.14s ease;
+}
+.settings-dialog-shell input:not([type="checkbox"]):not([type="radio"]):hover,
+.settings-dialog-shell textarea:hover,
+.settings-dialog-shell select:hover,
+.project-page input:hover,
+.drone-composer textarea:hover {
+	border-color: var(--color-border-strong);
+}
+.settings-dialog-shell input:not([type="checkbox"]):not([type="radio"]):focus,
+.settings-dialog-shell textarea:focus,
+.settings-dialog-shell select:focus,
+.project-page input:focus,
+.drone-composer textarea:focus {
+	border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-border));
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 12%, transparent);
+	outline: none;
+}
+.settings-dialog-shell input:disabled,
+.settings-dialog-shell textarea:disabled,
+.settings-dialog-shell select:disabled,
+.project-page input:disabled,
+.drone-composer textarea:disabled {
+	background: color-mix(in srgb, var(--color-hover) 72%, var(--color-surface));
+	cursor: not-allowed;
+}
+.settings-dialog-shell input[aria-invalid="true"],
+.settings-dialog-shell textarea[aria-invalid="true"],
+.settings-dialog-shell select[aria-invalid="true"] {
+	border-color: color-mix(in srgb, var(--color-err) 70%, var(--color-border));
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-err) 10%, transparent);
+}
+
+/* Page surfaces --------------------------------------------------------- */
+.settings-dialog-shell {
+	background: color-mix(in srgb, var(--color-ink) 20%, transparent);
+	backdrop-filter: blur(3px);
+}
+.settings-dialog-shell .settings-dialog {
+	border-color: var(--color-border-strong);
+	background: var(--color-surface);
+	box-shadow: var(--shadow-dialog);
+}
+.settings-dialog-shell .settings-dialog > div:first-child {
+	background: color-mix(in srgb, var(--color-surface) 96%, var(--color-hover));
+}
+.settings-dialog-shell nav {
+	background: color-mix(in srgb, var(--color-canvas) 70%, var(--color-surface));
+}
+.settings-dialog-shell nav .settings-nav-item.is-active {
+	background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
+	color: var(--color-accent);
+}
+.project-page {
+	background: var(--color-canvas);
+}
+.project-search {
+	border-bottom: 1px solid var(--color-border);
+	background: var(--color-surface);
+}
+.project-search input {
+	border: 1px solid var(--color-border);
+	box-shadow: 0 1px 2px rgb(15 23 42 / 0.03);
+}
+.project-sidebar {
+	background: var(--color-surface);
+	border-color: var(--color-border);
+}
+.project-sessions {
+	background: var(--color-canvas);
+}
+.drone-composer > div > .rounded-2xl.border-border {
+	border-color: var(--color-border-strong);
+	background: var(--color-surface);
+	box-shadow: 0 8px 22px rgb(15 23 42 / 0.06);
+}
+.drone-composer textarea::placeholder {
+	color: var(--color-ink-faint);
+}
+.drone-composer [data-testid="composer-drop-target"] {
+	border-color: color-mix(in srgb, var(--color-accent) 56%, transparent);
+	background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+}
+
+/* Context, diff and resource panes inherit the same paper-like surface. */
+.context-panel--research .context-panel-in,
+.context-panel--research .context-panel-head,
+.context-panel--research .context-panel-foot {
+	background: var(--color-surface);
+}
+.context-panel--research .context-panel-body {
+	background: color-mix(in srgb, var(--color-canvas) 82%, var(--color-surface));
+}
+.diff-seg button:focus-visible,
+.diff-branch-btn:focus-visible,
+.diff-side-close:focus-visible,
+.resource-reader-toolbar button:focus-visible,
+.resource-data-tools button:focus-visible {
+	outline: 2px solid color-mix(in srgb, var(--color-accent) 42%, transparent);
+	outline-offset: 2px;
+}
+.context-panel--research .context-panel-tabs > button:focus-visible,
+.context-panel--research .context-panel-collapse:focus-visible {
+	outline: 2px solid color-mix(in srgb, var(--color-accent) 42%, transparent);
+	outline-offset: 2px;
+}
+.context-panel--research .context-panel-tabs > button.on {
+	color: var(--color-accent);
+}
+.context-panel--research .bg-violet-500,
+.context-panel--research .bg-emerald-500,
+.context-panel--research .bg-amber-500 {
+	box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
+}
+.context-panel--research .bg-violet-500 {
+	background: var(--color-accent);
+}
+.context-panel--research .bg-emerald-500 {
+	background: var(--color-ok);
+}
+.context-panel--research .bg-amber-500 {
+	background: var(--color-warn);
+}
+.context-panel--research .context-panel-body [role="alert"] {
+	border: 1px solid color-mix(in srgb, var(--color-err) 24%, var(--color-border));
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--color-err) 5%, var(--color-surface));
+	padding: 8px 10px;
+}
+.settings-dialog-shell .settings-nav-item {
+	border: 1px solid transparent;
+	text-align: left;
+}
+.settings-dialog-shell .settings-nav-item:hover {
+	border-color: var(--color-border);
+	background: var(--color-hover);
+}
+.settings-dialog-shell nav .settings-nav-item.is-active {
+	border-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-border));
+	background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
+	color: var(--color-accent);
+}
+.diff-seg button.on,
+.resource-reader-toolbar button[aria-pressed="true"],
+.resource-code-tools button[aria-pressed="true"] {
+	background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
+	color: var(--color-accent);
+}
+.diff-file-card,
+.resource-reader-toolbar,
+.resource-data-tools {
+	border-color: var(--color-border);
+	background: var(--color-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.drone-button,
+	.drone-switch,
+	.drone-dropdown__trigger,
+	.settings-dialog-shell input,
+	.settings-dialog-shell textarea,
+	.settings-dialog-shell select,
+	.project-page input,
+	.drone-composer textarea {
+		transition: none;
+	}
 }

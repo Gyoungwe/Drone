@@ -68,6 +68,8 @@ export {
 	initializeSharedNavigation,
 	type KnowledgeLayoutDependencies,
 	type NavigationUpdateResult,
+	type ReplaceVaultFileOptions,
+	VaultFileConflictError,
 	updateVaultNavigation,
 } from "./layout";
 export {

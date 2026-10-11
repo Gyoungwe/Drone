@@ -415,6 +415,7 @@ function parseFrontmatter(text) {
 // packages/knowledge/src/semantic-model.ts
 var WIDTH = 720;
 var HEIGHT = 440;
+var LAYOUT_MARGIN = 28;
 var INFRASTRUCTURE = /(?:^|\/)(?:Index|Context|Home|Template|Templates)\.md$/i;
 var MAIN_TYPES = /* @__PURE__ */ new Set(["question", "concept", "claim", "decision"]);
 var CATEGORY_BY_PATH = [
@@ -478,13 +479,37 @@ function sectorLayout(nodes, relations, seed) {
   const mainPaths = [...mains].sort(comparePath);
   const centers = /* @__PURE__ */ new Map();
   const centerY = HEIGHT * 0.48;
-  const spacing = Math.min(270, Math.max(170, (WIDTH - 190) / Math.max(1, mainPaths.length - 1)));
-  const startX = WIDTH / 2 - (mainPaths.length - 1) * spacing / 2;
+  const columns = Math.max(1, Math.min(8, Math.ceil(Math.sqrt(mainPaths.length * WIDTH / HEIGHT))));
+  const rows = Math.ceil(mainPaths.length / columns);
+  const xStep = columns === 1 ? 0 : (WIDTH - LAYOUT_MARGIN * 2) / (columns - 1);
+  const yStep = rows === 1 ? 0 : (HEIGHT - LAYOUT_MARGIN * 2) / (rows - 1);
   mainPaths.forEach((path, index) => {
-    centers.set(path, { x: startX + index * spacing, y: centerY });
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    const rowSize = Math.min(columns, mainPaths.length - row * columns);
+    const rowWidth = rowSize === 1 ? 0 : xStep * (rowSize - 1);
+    centers.set(path, {
+      x: columns === 1 ? WIDTH / 2 : WIDTH / 2 - rowWidth / 2 + column * xStep,
+      y: rows === 1 ? centerY : LAYOUT_MARGIN + row * yStep
+    });
+  });
+  const clampPoint = (point) => ({
+    x: Math.min(WIDTH - LAYOUT_MARGIN, Math.max(LAYOUT_MARGIN, point.x)),
+    y: Math.min(HEIGHT - LAYOUT_MARGIN, Math.max(LAYOUT_MARGIN, point.y))
   });
   const layout = {};
-  for (const path of mainPaths) layout[path] = centers.get(path);
+  for (const path of mainPaths) layout[path] = clampPoint(centers.get(path));
+  const siblingGroups = /* @__PURE__ */ new Map();
+  for (const path of paths) {
+    if (mains.has(path) || sharedWith.has(path)) continue;
+    const connectedMain = [...adjacency.get(path) ?? []].find((candidate) => mains.has(candidate)) ?? "";
+    const category = categories.get(path) ?? "other";
+    const key = `${connectedMain}\0${category}`;
+    const group = siblingGroups.get(key) ?? [];
+    group.push(path);
+    siblingGroups.set(key, group);
+  }
+  for (const group of siblingGroups.values()) group.sort(comparePath);
   for (const path of paths) {
     if (mains.has(path)) continue;
     const bridges = sharedWith.get(path);
@@ -494,27 +519,28 @@ function sectorLayout(nodes, relations, seed) {
         { x: 0, y: 0 }
       );
       const jitter2 = (hash(`${path}:bridge`, seed) - 0.5) * 30;
-      layout[path] = { x: average.x / bridges.length, y: average.y / bridges.length - 36 + jitter2 };
+      layout[path] = clampPoint({ x: average.x / bridges.length, y: average.y / bridges.length - 36 + jitter2 });
       continue;
     }
     const connectedMain = [...adjacency.get(path) ?? []].find((candidate) => mains.has(candidate));
     const anchor = connectedMain ? centers.get(connectedMain) : { x: WIDTH / 2, y: centerY };
     const category = categories.get(path) ?? "other";
     const angle = SECTOR_ANGLES[category] ?? SECTOR_ANGLES.other ?? 0;
-    const siblings = paths.filter(
-      (candidate) => !mains.has(candidate) && !sharedWith.has(candidate) && categories.get(candidate) === category && [...adjacency.get(candidate) ?? []].includes(connectedMain ?? "")
-    );
+    const siblings = siblingGroups.get(`${connectedMain ?? ""}\0${category}`) ?? [];
     const index = Math.max(0, siblings.indexOf(path));
     const spread = Math.min(0.22, 0.08 + siblings.length * 0.012);
     const offset = (index - (siblings.length - 1) / 2) * spread;
     const radius = 92 + Math.floor(index / 3) * 26 + hash(`${path}:radius`, seed) * 10;
     const jitter = (hash(`${path}:angle`, seed) - 0.5) * 0.06;
-    layout[path] = { x: (anchor?.x ?? WIDTH / 2) + radius * Math.cos(angle + offset + jitter), y: (anchor?.y ?? centerY) + radius * Math.sin(angle + offset + jitter) };
+    layout[path] = clampPoint({
+      x: (anchor?.x ?? WIDTH / 2) + radius * Math.cos(angle + offset + jitter),
+      y: (anchor?.y ?? centerY) + radius * Math.sin(angle + offset + jitter)
+    });
   }
   for (const path of paths) {
     if (layout[path]) continue;
     const angle = 2 * Math.PI * hash(`${path}:outer`, seed);
-    layout[path] = { x: WIDTH / 2 + 175 * Math.cos(angle), y: centerY + 145 * Math.sin(angle) };
+    layout[path] = clampPoint({ x: WIDTH / 2 + 175 * Math.cos(angle), y: centerY + 145 * Math.sin(angle) });
   }
   return { layout, mains, sharedWith };
 }
@@ -628,12 +654,19 @@ function createSemanticModel(input, options = {}) {
     if (!modelNodes.has(canonical)) modelNodes.set(canonical, node);
   }
   const relations = [];
+  const relationKeys = /* @__PURE__ */ new Set();
+  const addRelation = (relation) => {
+    const key = `${relation.type}\0${relation.source}\0${relation.target}`;
+    if (relationKeys.has(key)) return;
+    relationKeys.add(key);
+    relations.push(relation);
+  };
   for (const raw of input.edges ?? []) {
     const source = canonicalFor.get(raw.source) ?? raw.source;
     const target = canonicalFor.get(raw.target) ?? raw.target;
     if (source === target || !modelNodes.has(source) || !modelNodes.has(target)) continue;
     const type = classifyRelation({ path: source }, { path: target }, raw.type);
-    if (!relations.some((edge) => edge.source === source && edge.target === target && edge.type === type)) relations.push({ source, target, type });
+    addRelation({ source, target, type });
   }
   if (view === "all") {
     const all = [...modelNodes.keys()].sort(comparePath);
@@ -648,11 +681,11 @@ function createSemanticModel(input, options = {}) {
       for (let i = 1; i < group.length; i++) {
         const source = group[i - 1];
         const target = group[i];
-        if (source && target && !relations.some((edge) => edge.source === source && edge.target === target)) relations.push({ source, target, type: "directory" });
+        if (source && target) addRelation({ source, target, type: "directory" });
       }
     }
   }
-  for (const duplicate of duplicates) relations.push({ source: duplicate.canonical, target: duplicate.duplicate, type: "duplicate" });
+  for (const duplicate of duplicates) addRelation({ source: duplicate.canonical, target: duplicate.duplicate, type: "duplicate" });
   const communities = assignCommunities([...modelNodes.keys()], relations, seed);
   const { layout, mains, sharedWith } = sectorLayout(modelNodes, relations, seed);
   const linkRelations = relations.filter((edge) => edge.type === "link");
@@ -661,8 +694,16 @@ function createSemanticModel(input, options = {}) {
     degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
     degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
   }
+  const mirrorsByCanonical = /* @__PURE__ */ new Map();
+  for (const [mirror, canonical] of canonicalFor) {
+    if (mirror === canonical) continue;
+    const mirrors = mirrorsByCanonical.get(canonical) ?? [];
+    mirrors.push(mirror);
+    mirrorsByCanonical.set(canonical, mirrors);
+  }
+  for (const mirrors of mirrorsByCanonical.values()) mirrors.sort(comparePath);
   const nodes = [...modelNodes.entries()].sort(([a], [b]) => comparePath(a, b)).map(([path, node]) => {
-    const mirrorPaths = [...canonicalFor.entries()].filter(([, canonical]) => canonical === path).map(([mirror]) => mirror).filter((mirror) => mirror !== path).sort(comparePath);
+    const mirrorPaths = mirrorsByCanonical.get(path) ?? [];
     const type = nodeType(node);
     const category = contentCategory(node);
     return {
@@ -1423,9 +1464,41 @@ async function knowledgeGraph(args) {
   }
   const legacyChosen = [...notes.keys()].sort((a, b) => (legacyDegree.get(b) || 0) - (legacyDegree.get(a) || 0) || a.localeCompare(b)).slice(0, limit);
   const legacyKeep = new Set(legacyChosen);
+  const semanticCandidateLimit = Math.min(1600, Math.max(limit, limit * 4));
+  const neighbours = new Map(legacyChosen.map((path) => [path, []]));
+  for (const edge of rawEdges) {
+    if (neighbours.has(edge.source)) neighbours.get(edge.source).push(edge.target);
+    if (neighbours.has(edge.target)) neighbours.get(edge.target).push(edge.source);
+  }
+  for (const paths of neighbours.values())
+    paths.sort((a, b) => (degree.get(b) || 0) - (degree.get(a) || 0) || a.localeCompare(b));
+  const semanticCandidatePaths = new Set(legacyChosen);
+  for (let offset = 0; semanticCandidatePaths.size < semanticCandidateLimit; offset++) {
+    let added = false;
+    for (const path of legacyChosen) {
+      const neighbour = neighbours.get(path)?.[offset];
+      if (!neighbour || semanticCandidatePaths.size >= semanticCandidateLimit) continue;
+      const previousSize = semanticCandidatePaths.size;
+      semanticCandidatePaths.add(neighbour);
+      added ||= semanticCandidatePaths.size !== previousSize;
+    }
+    if (!added) break;
+  }
+  const semanticCandidateNodes = [...semanticCandidatePaths].map((path) => allNotes.get(path)).filter(Boolean);
+  const semanticCandidateEdges = rawEdges.filter(
+    (edge) => semanticCandidatePaths.has(edge.source) && semanticCandidatePaths.has(edge.target)
+  );
+  const duplicateCounts = /* @__PURE__ */ new Map();
+  if (args.mergeMirrors !== false) {
+    for (const row of notes.values()) {
+      const identity = noteIdentity(row.body);
+      if (identity) duplicateCounts.set(identity, (duplicateCounts.get(identity) || 0) + 1);
+    }
+  }
+  const totalDuplicateCount = [...duplicateCounts.values()].reduce((sum, count) => sum + Math.max(0, count - 1), 0);
   const model = createSemanticModel(
     {
-      nodes: [...allNotes.values()].map((row) => ({
+      nodes: semanticCandidateNodes.map((row) => ({
         path: row.path,
         title: row.title,
         kind: row.kind,
@@ -1437,7 +1510,7 @@ async function knowledgeGraph(args) {
           return typeof type === "string" ? type : null;
         })()
       })),
-      edges: rawEdges
+      edges: semanticCandidateEdges
     },
     { view: args.view === "all" ? "all" : "semantic", mergeMirrors: args.mergeMirrors !== false }
   );
@@ -1453,7 +1526,7 @@ async function knowledgeGraph(args) {
     semantic: {
       nodes: chosen.map((node) => ({ ...node })),
       edges: links,
-      totalNotes: model.nodes.length,
+      totalNotes: notes.size,
       view: args.view === "all" ? "all" : "semantic",
       mergeMirrors: args.mergeMirrors !== false,
       relations,
@@ -1462,8 +1535,11 @@ async function knowledgeGraph(args) {
       layout: Object.fromEntries(Object.entries(model.layout || {}).filter(([path]) => keep.has(path))),
       health: {
         isolated: chosen.filter((node) => node.degree === 0).length,
-        duplicates: model.duplicates?.length || 0,
-        infrastructure: chosen.filter((node) => node.isInfrastructure).length
+        duplicates: totalDuplicateCount,
+        infrastructure: chosen.filter((node) => node.isInfrastructure).length,
+        truncated: semanticCandidatePaths.size < notes.size,
+        candidateNodes: semanticCandidatePaths.size,
+        candidateLimit: semanticCandidateLimit
       }
     }
   };

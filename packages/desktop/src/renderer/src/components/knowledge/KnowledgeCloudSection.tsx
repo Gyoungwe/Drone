@@ -136,6 +136,10 @@ export function KnowledgeCloudSection({
 	}
 	async function sync(mode: "pull" | "push", resolution?: "local" | "remote") {
 		if (!bindingRevision || !selectedPath) return;
+		if (resolution) {
+			const label = t(resolution === "local" ? "cloudResolveLocal" : "cloudResolveRemote");
+			if (!window.confirm(`${label}?`)) return;
+		}
 		setBusy("sync");
 		setError(null);
 		try {
@@ -144,6 +148,14 @@ export function KnowledgeCloudSection({
 				mode,
 				bindingRevision,
 				paths: [selectedPath],
+				previews: [
+					{
+						path: selectedPath,
+						localHash: localNote?.hash ?? null,
+						remoteHash: remoteNote?.hash ?? null,
+						remoteVersion: remoteNote?.version ?? null,
+					},
+				],
 				...(resolution ? { resolution } : {}),
 			});
 			await preview(selectedPath);
@@ -159,7 +171,7 @@ export function KnowledgeCloudSection({
 	const state = comparison(localNote, remoteNote, remoteMissing);
 	const canOperate = Boolean(bindingRevision && status.mode === "ready" && selectedPath && !busy);
 	return (
-		<section className="space-y-3 rounded-xl border border-border p-3" data-testid="knowledge-cloud">
+		<section className="knowledge-cloud-section space-y-3" data-testid="knowledge-cloud">
 			<div className="flex flex-wrap items-center justify-between gap-2">
 				<h3 className="text-xs font-semibold">{t("cloudTitle")}</h3>
 				<span className={`text-[11px] ${status.mode === "ready" ? "text-ok" : "text-warn"}`} role="status">

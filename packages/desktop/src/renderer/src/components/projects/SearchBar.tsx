@@ -21,7 +21,7 @@ export function SearchBar() {
 	const spaceName = isDailyCwd(selectedCwd) ? t("projects.daily") : (project?.name ?? "");
 
 	return (
-		<div className="flex shrink-0 justify-center px-6 pt-5 pb-2">
+		<div className="project-search flex shrink-0 justify-center px-6 pt-5 pb-2">
 			<div className="relative w-full max-w-md">
 				<SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
 				<input

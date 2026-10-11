@@ -6,6 +6,7 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import { registerWorkbench } from "./register.mjs";
 import { isReadOnlyTool } from "./tool-manifest.mjs";
 const TASK_ENTRY = "drone-task-checkpoint-v1";
+const TASK_DOCUMENT_KIND = "drone.task.workbench";
 const CONTROL = /* @__PURE__ */ new Set(["set_status", "todo", "capability_load", "task_status", "research_task_status"]);
 const READ = { test: (name) => isReadOnlyTool(name) };
 const safe = (value, length = 180) => String(value ?? "").replace(/(?:bearer\s+|(?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s,;]+/gi, "[redacted]").split("").map(
@@ -22,7 +23,7 @@ function isTaskStatusQuery(text) {
   );
 }
 const clone = (value) => structuredClone(value);
-const valid = (value, scope) => value?.version === 1 && value.scope === scope && typeof value.id === "string" && typeof value.goal === "string" && value.goal.length <= 180 && Array.isArray(value.receipts) && value.receipts.length <= 24 && Array.isArray(value.pending) && value.pending.length <= 32 && JSON.stringify(value).length <= 24e3;
+const valid = (value, scope) => value?.version === 1 && (!value.kind || value.kind === TASK_DOCUMENT_KIND) && value.scope === scope && typeof value.id === "string" && typeof value.goal === "string" && value.goal.length <= 180 && Array.isArray(value.receipts) && value.receipts.length <= 24 && Array.isArray(value.pending) && value.pending.length <= 32 && JSON.stringify(value).length <= 24e3;
 function createTaskJournal({ persist = () => {
 }, now = () => (/* @__PURE__ */ new Date()).toISOString() } = {}) {
   let task = null, scope = null, requested = false;
@@ -47,6 +48,7 @@ function createTaskJournal({ persist = () => {
   function begin(query) {
     if (!task || !continuesTask(query))
       task = {
+        kind: TASK_DOCUMENT_KIND,
         version: 1,
         scope,
         id: randomUUID(),
@@ -251,6 +253,7 @@ Use task_status for operational delivery. Verify unknown outcomes before repeati
   return journal;
 }
 export {
+  TASK_DOCUMENT_KIND,
   TASK_ENTRY,
   continuesTask,
   createTaskJournal,

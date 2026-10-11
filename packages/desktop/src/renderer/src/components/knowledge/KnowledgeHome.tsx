@@ -31,7 +31,7 @@ export function KnowledgeHome({
 	const manage = () => useSettingsStore.getState().openWith("knowledge");
 
 	return (
-		<div className="space-y-4 text-ink" data-testid="knowledge-home">
+		<div className="knowledge-home space-y-4 text-ink" data-testid="knowledge-home">
 			<section className="flex flex-wrap items-center gap-2 rounded-xl border border-border p-3">
 				<div className="min-w-0 flex-1">
 					{binding ? (

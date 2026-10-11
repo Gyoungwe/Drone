@@ -28,6 +28,7 @@ import { makeEnvRegistryTool } from "../tools/bio/registry-tool";
 import { makeBioEnvironmentTool } from "../tools/bio/tool";
 import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
+import { makeComputeRouteTool } from "../tools/compute-route";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
 import { bindToolManifestEvents } from "../tools/manifest";
 import { makeShowImageTool } from "../tools/show-image";
@@ -105,6 +106,9 @@ export function buildSessionCustomTools(
 		tools.push(makeWebFetchTool(typeof deps.webFetch === "object" ? deps.webFetch : undefined));
 	tools.push(makeAskUserTool({ ask: (request, signal) => askGate.ask(request, signal) }));
 	if (capabilities) tools.push(makeCapabilityLoadTool(capabilities));
+	// Declaration-only compute routing. It produces a bounded workflow plan;
+	// submission remains behind the desktop approval and compute preflight gates.
+	tools.push(makeComputeRouteTool());
 	tools.push(makeShowImageTool());
 	tools.push(
 		makeSshTool({

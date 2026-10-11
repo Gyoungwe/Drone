@@ -7,6 +7,7 @@ Docker daemon is unavailable.
 """
 
 import json
+import importlib.util
 import os
 import subprocess
 import sys
@@ -19,6 +20,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT / "packages/backend/resources/compute-runner/runner.py"
 FIXTURE = ROOT / "scripts/compute-fixtures/fixture_job.py"
+
+
+def load_runner_module():
+    spec = importlib.util.spec_from_file_location("drone_runner_under_test", RUNNER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class RunnerTest(unittest.TestCase):
@@ -99,6 +107,62 @@ class RunnerTest(unittest.TestCase):
         response = self.call("start", "job-4")
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], "submission-unknown")
+
+    def test_registered_rnaseq_argv_uses_typed_invocation_parameters(self):
+        runner = load_runner_module()
+        self.env.pop("DRONE_RUNNER_FIXTURE", None)
+        spec = {
+            "jobId": "job-rnaseq-argv",
+            "workflow": {
+                "name": "nf-core/rnaseq",
+                "version": "3.18.0",
+                "profile": "full",
+                "parameters": {
+                    "input": "/data/rnaseq/samplesheet.csv",
+                    "outdir": "results",
+                    "strandedness": "reverse",
+                },
+            },
+            "remoteWrite": ["results"],
+        }
+        argv, mode = runner.registered_argv(spec, Path(self.tmp.name) / "runs" / "job-rnaseq-argv")
+        self.assertEqual(mode, "production")
+        self.assertEqual(
+            argv,
+            [
+                "nextflow",
+                "run",
+                "nf-core/rnaseq",
+                "-r",
+                "3.18.0",
+                "-profile",
+                "full",
+                "--input",
+                "/data/rnaseq/samplesheet.csv",
+                "--outdir",
+                "results",
+                "--strandedness",
+                "reverse",
+            ],
+        )
+
+    def test_registered_rnaseq_rejects_outdir_outside_collection_contract(self):
+        runner = load_runner_module()
+        self.env.pop("DRONE_RUNNER_FIXTURE", None)
+        with self.assertRaises(runner.RunnerError) as error:
+            runner.registered_argv(
+                {
+                    "jobId": "job-rnaseq-outdir",
+                    "workflow": {
+                        "name": "nf-core/rnaseq",
+                        "version": "3.18.0",
+                        "parameters": {"input": "/data/samples.csv", "outdir": "/tmp/results"},
+                    },
+                    "remoteWrite": ["results"],
+                },
+                Path(self.tmp.name) / "runs" / "job-rnaseq-outdir",
+            )
+        self.assertEqual(error.exception.code, "out-of-bounds-write")
 
 
 if __name__ == "__main__":

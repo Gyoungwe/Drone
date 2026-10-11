@@ -26,7 +26,7 @@ import {
 } from "./chunk-6LT3KQRY.mjs";
 import {
   runNavigationMaintenance
-} from "./chunk-Q4ULDE2G.mjs";
+} from "./chunk-EJFIMVBU.mjs";
 import {
   DAILY_DISCOVERY_LIMITS,
   collectRecentNotes,

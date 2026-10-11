@@ -46,4 +46,24 @@ describe("knowledge graph layout", () => {
 			expect(placement.y).toBeLessThanOrEqual(GRAPH_HEIGHT);
 		}
 	});
+
+	it.each([1000, 2000, 5000, 10000])("keeps a large fallback graph bounded (%i nodes)", (count) => {
+		const data = {
+			nodes: Array.from({ length: count }, (_, index) => ({
+				path: `node-${index}.md`,
+				title: `Node ${index}`,
+				kind: "note",
+				degree: 0,
+			})),
+			edges: [],
+		};
+		const points = layoutGraph(data);
+		expect(points.size).toBe(count);
+		for (const point of points.values()) {
+			expect(point.x).toBeGreaterThanOrEqual(12);
+			expect(point.x).toBeLessThanOrEqual(GRAPH_WIDTH - 12);
+			expect(point.y).toBeGreaterThanOrEqual(12);
+			expect(point.y).toBeLessThanOrEqual(GRAPH_HEIGHT - 12);
+		}
+	});
 });

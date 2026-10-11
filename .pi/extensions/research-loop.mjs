@@ -510,6 +510,7 @@ var RESEARCH_STAGES = Object.freeze([
   "claims_bound",
   "answerable"
 ]);
+var RESEARCH_DOCUMENT_KIND = "drone.research.run";
 function createResearchLoop(ports) {
   const loadWorkspaceConfig2 = ports.workspace;
   const verifyLiteratureReceipt2 = ports.verifyLiteratureReceipt;
@@ -683,6 +684,11 @@ function createResearchLoop(ports) {
     const value = JSON.parse(await readFile4(path, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new Error(`Invalid JSON object: ${path}`);
+    if (path.endsWith("metadata.json") && !value.kind) {
+      return { ...value, kind: RESEARCH_DOCUMENT_KIND, version: 1 };
+    }
+    if (path.endsWith("metadata.json") && (value.kind !== RESEARCH_DOCUMENT_KIND || value.version !== 1))
+      throw new Error(`Unsupported research metadata document: ${path}`);
     return value;
   }
   async function atomicJson(path, value) {
@@ -768,6 +774,8 @@ function createResearchLoop(ports) {
     const runDir = join3(config.resultsRoot, resultSlug, runId);
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const metadata = {
+      kind: RESEARCH_DOCUMENT_KIND,
+      version: 1,
       run_id: runId,
       project,
       result_slug: resultSlug,
@@ -1241,9 +1249,113 @@ async function observeExecutionReceipt({
 }
 
 // packages/research/src/source-archive.ts
-import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash6, randomUUID as randomUUID4 } from "node:crypto";
 import { access as access2, mkdir as mkdir3, readFile as readFile6, realpath as realpath6, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
 import { basename as basename3, dirname as dirname2, extname, isAbsolute as isAbsolute6, join as join5, relative as relative5, resolve as resolve8, sep as sep5 } from "node:path";
+
+// packages/compute/src/authorization.ts
+import { createHash as createHash5 } from "node:crypto";
+
+// packages/compute/src/workflow.ts
+function stableJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  const object = value;
+  return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${stableJson(object[key])}`).join(",")}}`;
+}
+
+// packages/compute/src/authorization.ts
+function computeContractHash(authorization) {
+  return createHash5("sha256").update(stableJson(authorization)).digest("hex");
+}
+function computeJobContractHash(job) {
+  const { contractHash: _ignored, ...authorization } = job.authorization;
+  return createHash5("sha256").update(
+    stableJson({
+      jobId: job.jobId,
+      host: job.host,
+      authorization,
+      workflowSpecSha256: job.workflow.workflowSpecSha256,
+      executionMode: job.workflow.executionMode,
+      moduleCommits: job.workflow.moduleCommits,
+      containerDigests: job.workflow.containerDigests,
+      executor: job.executor,
+      remoteRead: job.remoteRead,
+      remoteWrite: job.remoteWrite
+    })
+  ).digest("hex");
+}
+function withinRoots(path, roots) {
+  return roots.some((root) => {
+    const normalizedRoot = root.replace(/\/+$/, "") || "/";
+    return path === normalizedRoot || path.startsWith(normalizedRoot === "/" ? "/" : `${normalizedRoot}/`);
+  });
+}
+function checkJobAuthorization(job, expectedContractHash) {
+  const auth = job.authorization;
+  if (!auth.approved) return { ok: false, reason: "compute authorization is not approved" };
+  const { contractHash: suppliedHash, ...unsignedAuthorization } = auth;
+  if (!suppliedHash || suppliedHash !== computeContractHash(unsignedAuthorization)) {
+    return { ok: false, reason: "compute authorization contract hash is invalid" };
+  }
+  if (expectedContractHash && suppliedHash !== expectedContractHash)
+    return { ok: false, reason: "compute authorization does not match the approved task contract" };
+  if (job.contractHash !== computeJobContractHash(job))
+    return { ok: false, reason: "job contract hash is invalid" };
+  if (job.workflow.executionMode !== "ready")
+    return { ok: false, reason: "workflow is a preview fixture and cannot be submitted" };
+  if (!auth.hosts.includes(job.host))
+    return { ok: false, reason: `host ${job.host} is outside the approved scope` };
+  if (!auth.workflows.some(
+    (workflow) => workflow === "*" || Object.keys(job.workflow.moduleCommits).some((module) => module === workflow)
+  )) {
+    return { ok: false, reason: "workflow is outside the approved scope" };
+  }
+  if (job.remoteRead.some((path) => !validRemotePath(path) || !withinRoots(path, auth.remoteRead)))
+    return { ok: false, reason: "remote read path is outside the approved scope" };
+  if (job.remoteWrite.some((path) => !validRemotePath(path) || !withinRoots(path, auth.remoteWrite)))
+    return { ok: false, reason: "remote write path is outside the approved scope" };
+  const coreHours = job.executor.cpus * job.executor.walltimeMinutes / 60;
+  if (coreHours > auth.budget.maxCoreHours)
+    return { ok: false, reason: "job exceeds the approved core-hour budget" };
+  if (job.executor.walltimeMinutes > auth.budget.maxWalltimeMinutes)
+    return { ok: false, reason: "job exceeds the approved wall-time budget" };
+  if (Object.keys(job.workflow.moduleCommits).some((module) => module.startsWith("agent/") && !auth.agentCode))
+    return { ok: false, reason: "agent modules require agentCode authorization" };
+  return { ok: true };
+}
+function validRemotePath(path) {
+  return Boolean(path) && !path.startsWith("-") && !path.includes("\\") && !path.split("/").includes("..") && !path.includes("//");
+}
+function assertJobAuthorized(job, expectedContractHash) {
+  const result = checkJobAuthorization(job, expectedContractHash);
+  if (!result.ok) throw new Error(result.reason);
+}
+
+// packages/compute/src/jobs.ts
+function workflowAdapter(kind) {
+  return {
+    kind,
+    prepare: (job, runner) => {
+      assertJobAuthorized(job);
+      return runner.request({
+        operation: "prepare",
+        jobId: job.jobId,
+        payload: { executor: kind, workflowSpecSha256: job.workflow.workflowSpecSha256 }
+      });
+    },
+    start: (job, runner) => {
+      assertJobAuthorized(job);
+      return runner.request({ operation: "start", jobId: job.jobId, payload: { executor: kind } });
+    },
+    status: (job, runner) => runner.request({ operation: "status", jobId: job.jobId }),
+    logs: (job, cursor, runner) => runner.request({ operation: "logs", jobId: job.jobId, cursor }),
+    cancel: (job, runner) => runner.request({ operation: "cancel", jobId: job.jobId }),
+    collect: (job, runner) => runner.request({ operation: "collect", jobId: job.jobId, payload: { remoteWrite: job.remoteWrite } })
+  };
+}
+var directScheduler = workflowAdapter("direct");
+var slurmScheduler = workflowAdapter("slurm");
 
 // packages/research/src/open-access.ts
 var OA_SOURCES = Object.freeze([
@@ -1312,7 +1424,7 @@ async function verifyManifestItems(manifest, runDir) {
       const canonical = await realpath6(isAbsolute6(path) ? path : resolve8(runDir, path));
       if (!isWithin(sourcesRoot, canonical)) throw new Error("path escapes run sources");
       const bytes = await readFile6(canonical);
-      const sha256 = createHash5("sha256").update(bytes).digest("hex");
+      const sha256 = createHash6("sha256").update(bytes).digest("hex");
       if (sha256 !== String(item.sha256 || "").toLowerCase()) throw new Error("sha256 mismatch");
       if (item.size_bytes !== void 0 && Number(item.size_bytes) !== bytes.byteLength)
         throw new Error("size mismatch");

@@ -82,7 +82,7 @@ export function KnowledgePanel({
 		void launchKnowledgeSetup(cwd, sessionId, target).catch(reportKnowledgeError);
 	}
 	return (
-		<div className="text-ink" data-testid="knowledge-panel">
+		<div className="knowledge-panel text-ink" data-testid="knowledge-panel">
 			<header className={`flex items-start gap-3 ${headless ? "justify-end" : "justify-between"}`}>
 				{!headless && (
 					<div>

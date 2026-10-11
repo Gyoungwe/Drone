@@ -36,6 +36,12 @@
 
 WebDAV 云端知识库第一阶段实现、读写边界、同步/冲突和离线提示：见 [knowledge-webdav.md](knowledge-webdav.md)。
 
+PR #113 与 1–6 的整合证据、生成物修复和未决风险：见 [PR113 整合审查](superpowers/reports/2026-10-11-pr113-integration-review.md) 与 [PR113 逐项审查](superpowers/reports/2026-10-11-pr113-review.md)。
+
+客户端控件、事件、IPC 行为和科研风格 UI 升级基线：见 [核心客户端 UI 盘点](ui-audit/2026-10-11-core-client-ui-inventory.md)、[设置/知识/WebDAV/研究 UI 盘点](ui-audit/2026-10-11-settings-knowledge-ui-inventory.md)、[白色科研风格覆盖矩阵](ui-audit/2026-10-11-white-ui-coverage.md)、[术语审计](ui-audit/2026-10-11-terminology-audit.md)、[术语改写表](ui-audit/2026-10-11-terminology-map.md) 与 [发布治理和 UI 升级计划](superpowers/plans/2026-10-11-release-governance-and-ui-upgrade.md)。
+
+v0.26.1 的验证命令、生成物检查、资产清单和“先验证再建标签”顺序见 [发布门禁清单](releases/v0.26.1-gate-manifest.json) 与 [验证记录](releases/v0.26.1-validation.md)。
+
 Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭代记录](superpowers/reports/2026-10-04-drone-five-round-iteration.md) 与 [状态链修复设计](superpowers/specs/2026-10-04-drone-state-chain-fixes-design.md)。
 
 任务路由过程看板的列式草图与边界：见 [任务路由过程看板设计](superpowers/specs/task-route-process-board-design.md)、`ui-preview/task-route-process-board.html` 和 `scripts/check-task-route-process-board-sketch.mjs`。
@@ -86,6 +92,7 @@ packages/
 | `scripts/test-compute-runner.py` / `scripts/test-compute-runner.sh` | 使用显式真实可执行 fixture 验证 runner 协议、断线后持久化、幂等提交、取消与校验回收 |
 | `scripts/test-compute-docker.sh`、`scripts/compute-fixtures/` | 可选 Docker SSHD + 单节点 Slurm 集成 fixture；需用户启动 Docker daemon，不用于生产 runner；细节见 [compute.md](compute.md) |
 | `scripts/b3-pipeline/` | 显式 opt-in 的真实 nf-core/rnaseq 3.18.0 test-profile smoke 与 digest-backed provenance；缺 Nextflow/OCI digest 时拒绝提交 |
+| `docs/real-rnaseq-execution-plan.md` | 从本地 fixture 到真实 RNA-seq 结果的输入、设计、运行、QC、绘图和写作门禁；禁止把演示产物当科研结论 |
 
 依赖补丁：`patches/` + patch-package（root devDep + postinstall）。目前一处 `thinking-orbs+0.3.1.patch`（移除 IntersectionObserver+visibilitychange 门控，Win11 恢复事件丢失会冻住 rAF）。改法：手改 `node_modules/thinking-orbs/dist/index.{es.js,cjs}` 两份 → `npx patch-package thinking-orbs`；升级该包前重评补丁是否仍需要。
 
@@ -195,6 +202,7 @@ src/
 | `src/discovery/` | `DiscoveryService`、`ContainerKernelRunner` | B5d–B5f 的项目作用域宿主适配：Docker/Podman 无网络、只写 `runs/` 的内核会话，Inquiry 记录，独立批评、多路径稳健性、基线和评测持久化；无容器运行时 fail-closed |
 | `src/session-engine/antigravity/{oauth,transport,request,response,provider,catalog}.ts` | `createAntigravityProvider`、PKCE OAuth、Cloud Code Assist SSE | Google Antigravity 原生 provider：浏览器 OAuth + loopback/manual 回调、项目发现/开通、动态模型目录和 Gemini 请求/响应适配；凭证只经 Pi runtime 管理 |
 | `src/services/compute-{data-design,preflight,experience}.ts` | B7 registry/gate、`createComputeExperienceRecorder` | 数据集版本、公共数据回执、RO-Crate、设计/混杂检查在提交前阻断并生成 proposal questions；终态 compute 事件可写入知识 experience store，保留 observed/verified 边界 |
+| `src/services/execution-route.ts` | `routeRnaseqIntent`、`preflightRnaseqExecution`、`RnaseqExecutionService` | 将受支持的 bulk RNA-seq 自然语言意图绑定到固定 `nf-core/rnaseq` spec；在调用注入的 ComputeService 前完成纯 preflight，并提供离线 fixture 回执 |
 | `src/pi-backend.ts` | `PiBackend` | **兼容门面**：create/open/close/delete/prompt（followUp 排队，preflight 回执见 `use-composer-send`）/abort/fork/recall/compact/stats/listModels（附 `thinkingLevels`/`imageInput`）/事件与权限·信任分发。新 host 通过 `BackendServices` 端口接入；兼容期保留旧委托 |
 | `src/json-store.ts` | `JsonStore`、`JsonStoreCorruptedError` | 统一 JSON 持久化：tmp+rename 原子写；read 损坏回退默认、update 损坏抛 CorruptedError 拒写；async 版 per-path 队列串行化、sync 变体热路径用；缓存/normalize 不进本层 |
 | `src/slash-commands.ts` | `BUILTIN_SLASH_COMMANDS` | 内置静态表（compact/name/export/settings）+ 模板/skill/扩展命令映射（纯函数） |

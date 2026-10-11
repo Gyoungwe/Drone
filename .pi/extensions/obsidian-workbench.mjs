@@ -3221,9 +3221,9 @@ import { mkdir as mkdir5, rename as rename5, writeFile as writeFile5 } from "nod
 import { dirname as dirname5 } from "node:path";
 
 // packages/knowledge/src/layout.ts
-init_files();
 import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
-import { link as link2, lstat as lstat3, mkdir as mkdir4, realpath as realpath6, rename as rename4, unlink as unlink2, writeFile as writeFile4 } from "node:fs/promises";
+init_files();
+import { link as link2, lstat as lstat3, mkdir as mkdir4, open as open2, realpath as realpath6, rename as rename4, unlink as unlink2, writeFile as writeFile4 } from "node:fs/promises";
 import { basename as basename4, dirname as dirname4, isAbsolute as isAbsolute6, join as join7, relative as relative4, resolve as resolve7, sep as sep4 } from "node:path";
 var MANAGED_START2 = "<!-- pi-agent:managed:start -->";
 var MANAGED_END2 = "<!-- pi-agent:managed:end -->";
@@ -6151,7 +6151,7 @@ import { resolve as resolve14 } from "node:path";
 
 // packages/tasks/src/runtime-compiled/workbench.mjs
 import { createHash as createHash9, randomUUID as randomUUID12 } from "node:crypto";
-import { lstat as lstat6, open as open2, realpath as realpath10 } from "node:fs/promises";
+import { lstat as lstat6, open as open3, realpath as realpath10 } from "node:fs/promises";
 import { isAbsolute as isAbsolute11, relative as relative10, resolve as resolve13, sep as sep8 } from "node:path";
 
 // packages/tasks/src/runtime-compiled/failure-feedback.mjs
@@ -6428,7 +6428,7 @@ async function inspectTaskFile(cwd, input, expected = {}) {
       "file-limit",
       "Expected a regular file of at most 8 MiB; larger files need a dedicated read-only adapter."
     );
-  const file = await open2(path, "r");
+  const file = await open3(path, "r");
   try {
     const opened = await file.stat();
     if (await realpath10(path) !== path || opened.ino !== stat6.ino || opened.dev !== stat6.dev || opened.size > LIMITS.fileBytes)
@@ -8334,6 +8334,7 @@ ${hostLanguage() === "zh" ? "\uFF08\u4EE5\u4E0B\u4E3A\u5BBF\u4E3B\u7EA6\u675F\uF
 
 // packages/tasks/src/runtime-compiled/runtime.mjs
 var TASK_ENTRY = "drone-task-checkpoint-v1";
+var TASK_DOCUMENT_KIND = "drone.task.workbench";
 var CONTROL = /* @__PURE__ */ new Set(["set_status", "todo", "capability_load", "task_status", "research_task_status"]);
 var READ = { test: (name) => isReadOnlyTool(name) };
 var safe = (value, length = 180) => String(value ?? "").replace(/(?:bearer\s+|(?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s,;]+/gi, "[redacted]").split("").map(
@@ -8345,7 +8346,7 @@ function continuesTask(text3) {
   );
 }
 var clone2 = (value) => structuredClone(value);
-var valid = (value, scope) => value?.version === 1 && value.scope === scope && typeof value.id === "string" && typeof value.goal === "string" && value.goal.length <= 180 && Array.isArray(value.receipts) && value.receipts.length <= 24 && Array.isArray(value.pending) && value.pending.length <= 32 && JSON.stringify(value).length <= 24e3;
+var valid = (value, scope) => value?.version === 1 && (!value.kind || value.kind === TASK_DOCUMENT_KIND) && value.scope === scope && typeof value.id === "string" && typeof value.goal === "string" && value.goal.length <= 180 && Array.isArray(value.receipts) && value.receipts.length <= 24 && Array.isArray(value.pending) && value.pending.length <= 32 && JSON.stringify(value).length <= 24e3;
 function createTaskJournal({ persist = () => {
 }, now = () => (/* @__PURE__ */ new Date()).toISOString() } = {}) {
   let task = null, scope = null, requested = false;
@@ -8370,6 +8371,7 @@ function createTaskJournal({ persist = () => {
   function begin(query) {
     if (!task || !continuesTask(query))
       task = {
+        kind: TASK_DOCUMENT_KIND,
         version: 1,
         scope,
         id: randomUUID14(),

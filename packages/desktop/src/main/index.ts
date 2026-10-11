@@ -37,6 +37,46 @@ const BG_PROTOCOL = "pi-bg";
 /** 心跳周期（60s：事故形态是小时级爬坡，太快会把心跳自己变成噪音） */
 const HEARTBEAT_INTERVAL_MS = 60_000;
 
+/**
+ * The compute adapter deliberately fails closed when no host approval bridge is
+ * supplied.  Desktop is the host that can actually show that approval, so keep
+ * the bridge here instead of silently granting remote effects in the backend.
+ * Local fixture jobs are side-effect free with respect to another machine and
+ * can proceed without interrupting the demo path.
+ */
+function authorizeComputeOperation(operation: {
+	kind: string;
+	hostId?: string;
+	jobId?: string;
+	terminalId?: string;
+}): Promise<void> {
+	if (operation.hostId === "local") return Promise.resolve();
+	const target = operation.hostId ?? operation.jobId ?? operation.terminalId ?? "selected host";
+	const labels: Record<string, string> = {
+		probe_host: "检查远程主机环境",
+		submit_job: "提交科研计算任务",
+		get_logs: "读取任务日志",
+		cancel_job: "取消科研计算任务",
+		open_terminal: "打开远程终端",
+		write_terminal: "向远程终端发送内容",
+		close_terminal: "关闭远程终端",
+	};
+	return dialog
+		.showMessageBox({
+			type: "question",
+			title: "确认远程操作",
+			message: labels[operation.kind] ?? "执行远程操作",
+			detail: `目标：${target}\n这次确认只覆盖当前一次操作。任务的工作目录、版本和资源限制仍由计算任务契约检查。`,
+			buttons: ["允许", "取消"],
+			defaultId: 1,
+			cancelId: 1,
+			noLink: true,
+		})
+		.then(({ response }) => {
+			if (response !== 0) throw new Error("用户取消了远程操作");
+		});
+}
+
 /** 每会话事件速率摘要（心跳与临终快照共用）：短 id 可 grep 反查，只记数字不记内容 */
 function summarizeRates(
 	rates: Map<string, { window60s: number[]; lastEventAt: number }>,
@@ -217,6 +257,7 @@ app.whenReady().then(async () => {
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
+		computeAuthorizeRemoteOperation: authorizeComputeOperation,
 		// Use one ledger per canonical workspace. The old single ledger remains
 		// mounted read-only so an upgrade never rewrites unknown future schemas.
 		projectsDir: join(app.getPath("userData"), "inquiry-projects"),

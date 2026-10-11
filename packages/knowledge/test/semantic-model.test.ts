@@ -71,4 +71,21 @@ describe("semantic knowledge graph model", () => {
 		expect(paper?.x).toBeCloseTo(((q1?.x ?? 0) + (q2?.x ?? 0)) / 2, 0);
 		expect(software?.y ?? 0).toBeGreaterThan(q1?.y ?? 0);
 	});
+
+	it.each([1, 5, 10, 50])("keeps %i research anchors inside the graph canvas", (count) => {
+		const model = createSemanticModel({
+			nodes: Array.from({ length: count }, (_, index) => ({
+				...node(`question-${index}.md`, `Question ${index}`),
+				contentType: "question",
+			})),
+		});
+		expect(model.nodes).toHaveLength(count);
+		for (const item of model.nodes) {
+			expect(item.isMain).toBe(true);
+			expect(item.x).toBeGreaterThanOrEqual(28);
+			expect(item.x).toBeLessThanOrEqual(692);
+			expect(item.y).toBeGreaterThanOrEqual(28);
+			expect(item.y).toBeLessThanOrEqual(412);
+		}
+	});
 });

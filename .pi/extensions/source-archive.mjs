@@ -143,7 +143,7 @@ var init_flow_cards = __esm({
 
 // packages/knowledge/src/config.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
-import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash7, randomUUID as randomUUID4 } from "node:crypto";
 import { mkdir as mkdir2, readFile as readFile4, realpath as realpath4, rename as rename3, writeFile as writeFile3 } from "node:fs/promises";
 import { basename as basename3, isAbsolute as isAbsolute5, join as join3, resolve as resolve5 } from "node:path";
 function createKnowledgeConfigState() {
@@ -162,7 +162,7 @@ function projectIdentity(cwd, configured2) {
   if (typeof configured2 === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(configured2)) return configured2;
   const path = resolve5(cwd);
   const stem = basename3(path).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
-  return `${stem}-${createHash5("sha256").update(path).digest("hex").slice(0, 10)}`;
+  return `${stem}-${createHash7("sha256").update(path).digest("hex").slice(0, 10)}`;
 }
 function validateBinding(value) {
   if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1 || !isAbsolute5(String(value.vault || "")) || !/^[a-f0-9]{24}$/.test(String(value.vaultId || "")) || !Number.isSafeInteger(value.revision) || Number(value.revision) < 1 || !["project", "literature", "hybrid"].includes(String(value.profile)) || !["run-only", "verified", "rich"].includes(String(value.depositMode)) || !["none", "read-local"].includes(String(value.subagentPolicy)) || typeof value.updatedAt !== "string")
@@ -993,9 +993,126 @@ ${content}
 }
 
 // packages/research/src/source-archive.ts
-import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
+import { createHash as createHash5, randomUUID as randomUUID2 } from "node:crypto";
 import { access, mkdir, readFile as readFile3, realpath as realpath3, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
 import { basename as basename2, dirname, extname, isAbsolute as isAbsolute4, join as join2, relative as relative4, resolve as resolve4, sep as sep4 } from "node:path";
+
+// packages/compute/src/jobs/idempotency.ts
+import { createHash as createHash4 } from "node:crypto";
+
+// packages/compute/src/authorization.ts
+import { createHash as createHash3 } from "node:crypto";
+
+// packages/compute/src/workflow.ts
+function stableJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  const object = value;
+  return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${stableJson(object[key])}`).join(",")}}`;
+}
+
+// packages/compute/src/authorization.ts
+function computeContractHash(authorization) {
+  return createHash3("sha256").update(stableJson(authorization)).digest("hex");
+}
+function computeJobContractHash(job) {
+  const { contractHash: _ignored, ...authorization } = job.authorization;
+  return createHash3("sha256").update(
+    stableJson({
+      jobId: job.jobId,
+      host: job.host,
+      authorization,
+      workflowSpecSha256: job.workflow.workflowSpecSha256,
+      executionMode: job.workflow.executionMode,
+      moduleCommits: job.workflow.moduleCommits,
+      containerDigests: job.workflow.containerDigests,
+      executor: job.executor,
+      remoteRead: job.remoteRead,
+      remoteWrite: job.remoteWrite
+    })
+  ).digest("hex");
+}
+function withinRoots(path, roots) {
+  return roots.some((root) => {
+    const normalizedRoot = root.replace(/\/+$/, "") || "/";
+    return path === normalizedRoot || path.startsWith(normalizedRoot === "/" ? "/" : `${normalizedRoot}/`);
+  });
+}
+function checkJobAuthorization(job, expectedContractHash) {
+  const auth = job.authorization;
+  if (!auth.approved) return { ok: false, reason: "compute authorization is not approved" };
+  const { contractHash: suppliedHash, ...unsignedAuthorization } = auth;
+  if (!suppliedHash || suppliedHash !== computeContractHash(unsignedAuthorization)) {
+    return { ok: false, reason: "compute authorization contract hash is invalid" };
+  }
+  if (expectedContractHash && suppliedHash !== expectedContractHash)
+    return { ok: false, reason: "compute authorization does not match the approved task contract" };
+  if (job.contractHash !== computeJobContractHash(job))
+    return { ok: false, reason: "job contract hash is invalid" };
+  if (job.workflow.executionMode !== "ready")
+    return { ok: false, reason: "workflow is a preview fixture and cannot be submitted" };
+  if (!auth.hosts.includes(job.host))
+    return { ok: false, reason: `host ${job.host} is outside the approved scope` };
+  if (!auth.workflows.some(
+    (workflow) => workflow === "*" || Object.keys(job.workflow.moduleCommits).some((module) => module === workflow)
+  )) {
+    return { ok: false, reason: "workflow is outside the approved scope" };
+  }
+  if (job.remoteRead.some((path) => !validRemotePath(path) || !withinRoots(path, auth.remoteRead)))
+    return { ok: false, reason: "remote read path is outside the approved scope" };
+  if (job.remoteWrite.some((path) => !validRemotePath(path) || !withinRoots(path, auth.remoteWrite)))
+    return { ok: false, reason: "remote write path is outside the approved scope" };
+  const coreHours = job.executor.cpus * job.executor.walltimeMinutes / 60;
+  if (coreHours > auth.budget.maxCoreHours)
+    return { ok: false, reason: "job exceeds the approved core-hour budget" };
+  if (job.executor.walltimeMinutes > auth.budget.maxWalltimeMinutes)
+    return { ok: false, reason: "job exceeds the approved wall-time budget" };
+  if (Object.keys(job.workflow.moduleCommits).some((module) => module.startsWith("agent/") && !auth.agentCode))
+    return { ok: false, reason: "agent modules require agentCode authorization" };
+  return { ok: true };
+}
+function validRemotePath(path) {
+  return Boolean(path) && !path.startsWith("-") && !path.includes("\\") && !path.split("/").includes("..") && !path.includes("//");
+}
+function assertJobAuthorized(job, expectedContractHash) {
+  const result = checkJobAuthorization(job, expectedContractHash);
+  if (!result.ok) throw new Error(result.reason);
+}
+
+// packages/compute/src/jobs.ts
+function workflowAdapter(kind) {
+  return {
+    kind,
+    prepare: (job, runner) => {
+      assertJobAuthorized(job);
+      return runner.request({
+        operation: "prepare",
+        jobId: job.jobId,
+        payload: { executor: kind, workflowSpecSha256: job.workflow.workflowSpecSha256 }
+      });
+    },
+    start: (job, runner) => {
+      assertJobAuthorized(job);
+      return runner.request({ operation: "start", jobId: job.jobId, payload: { executor: kind } });
+    },
+    status: (job, runner) => runner.request({ operation: "status", jobId: job.jobId }),
+    logs: (job, cursor, runner) => runner.request({ operation: "logs", jobId: job.jobId, cursor }),
+    cancel: (job, runner) => runner.request({ operation: "cancel", jobId: job.jobId }),
+    collect: (job, runner) => runner.request({ operation: "collect", jobId: job.jobId, payload: { remoteWrite: job.remoteWrite } })
+  };
+}
+var directScheduler = workflowAdapter("direct");
+var slurmScheduler = workflowAdapter("slurm");
+
+// packages/compute/src/jobs/idempotency.ts
+function externalEffectKey(namespace, identity) {
+  if (!namespace.trim()) throw new Error("external effect namespace is required");
+  const stable = JSON.stringify(
+    identity,
+    (_key, entry) => entry && typeof entry === "object" && !Array.isArray(entry) ? Object.fromEntries(Object.entries(entry).sort(([a], [b]) => a.localeCompare(b))) : entry
+  );
+  return `${namespace.trim()}:${createHash4("sha256").update(stable).digest("hex")}`;
+}
 
 // packages/research/src/open-access.ts
 var OA_SOURCES = Object.freeze([
@@ -1547,7 +1664,7 @@ async function verifyManifestItems(manifest, runDir) {
       const canonical2 = await realpath3(isAbsolute4(path) ? path : resolve4(runDir, path));
       if (!isWithin(sourcesRoot, canonical2)) throw new Error("path escapes run sources");
       const bytes = await readFile3(canonical2);
-      const sha256 = createHash3("sha256").update(bytes).digest("hex");
+      const sha256 = createHash5("sha256").update(bytes).digest("hex");
       if (sha256 !== String(item.sha256 || "").toLowerCase()) throw new Error("sha256 mismatch");
       if (item.size_bytes !== void 0 && Number(item.size_bytes) !== bytes.byteLength)
         throw new Error("size mismatch");
@@ -1739,12 +1856,18 @@ async function archiveSource(options = {}, ports) {
   const persist = async (bytes, { resolvedUrl, contentType, outputName, verified = false, openAccess = null }) => withRunLock(ports, manifestPath, async () => {
     const validation = validateContent(category, contentType, outputName, bytes);
     if (!validation.ok) throw new Error(validation.reason);
-    const sha256 = createHash3("sha256").update(bytes).digest("hex");
+    const sha256 = createHash5("sha256").update(bytes).digest("hex");
+    const idempotencyKey = externalEffectKey("research.download", {
+      category,
+      identity,
+      url: url ?? resolvedUrl,
+      outputName
+    });
     let outputPath = join2(sourcesDir, outputName);
     if (!isWithin(sourcesDir, outputPath)) throw new Error("filename escapes source category directory");
     try {
       const existing = new Uint8Array(await readFile3(outputPath));
-      const existingHash = createHash3("sha256").update(existing).digest("hex");
+      const existingHash = createHash5("sha256").update(existing).digest("hex");
       if (existingHash !== sha256) {
         const extension = extname(outputName);
         const stem = outputName.slice(0, outputName.length - extension.length);
@@ -1755,7 +1878,7 @@ async function archiveSource(options = {}, ports) {
     }
     try {
       const existing = await readFile3(outputPath);
-      if (createHash3("sha256").update(existing).digest("hex") !== sha256)
+      if (createHash5("sha256").update(existing).digest("hex") !== sha256)
         throw new Error("Archived version path has different content");
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
@@ -1767,6 +1890,7 @@ async function archiveSource(options = {}, ports) {
     const entry = {
       ...category === "manuals" ? { manualCoverage: assessManualPage(bytes, contentType, resolvedUrl) } : {},
       id: randomUUID2(),
+      idempotency_key: idempotencyKey,
       status: "downloaded",
       category,
       // 仅凭 DOI 归档时没有调用方 URL：以实际取得文件的地址作为来源
@@ -1787,6 +1911,14 @@ async function archiveSource(options = {}, ports) {
       })
     };
     const manifest = await readManifest(manifestPath, runDir);
+    const prior = manifest.items.find((item) => item?.idempotency_key === idempotencyKey);
+    if (prior) {
+      if (prior.sha256 !== sha256)
+        throw new Error(
+          "Download idempotency key already exists with different content; reconcile the manifest first"
+        );
+      return { ...prior, manifest_path: manifestPath, manifestPath, idempotent_replay: true };
+    }
     manifest.updated_at = downloadedAt;
     manifest.items = [...manifest.items, entry];
     await atomicJson(manifestPath, manifest);
@@ -2594,7 +2726,7 @@ import { readFile as readFile12, realpath as realpath9, rename as rename9, write
 import { isAbsolute as isAbsolute12, join as join16, relative as relative11, resolve as resolve14, sep as sep10 } from "node:path";
 
 // packages/research/src/literature-operations.ts
-import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash6, randomUUID as randomUUID3 } from "node:crypto";
 function destinationRecovery(receipt = {}) {
   const zotero = receipt.zotero?.status || "unavailable";
   const obsidian = receipt.obsidian?.status || "unavailable";
@@ -2616,7 +2748,7 @@ function destinationRecovery(receipt = {}) {
 function literatureOperationId(vault, revision, doi) {
   const normalized = normalizeDoi(doi);
   if (!normalized) throw new Error("Valid DOI required");
-  return createHash4("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
+  return createHash6("sha256").update(JSON.stringify([vault, revision, normalized])).digest("hex");
 }
 function createLiteratureOperations(ports) {
   const now = ports.now || (() => (/* @__PURE__ */ new Date()).toISOString());
@@ -2710,7 +2842,7 @@ function createLiteratureOperations(ports) {
 }
 
 // packages/research/src/research-loop.ts
-import { createHash as createHash6, randomUUID as randomUUID5 } from "node:crypto";
+import { createHash as createHash8, randomUUID as randomUUID5 } from "node:crypto";
 import { access as access2, mkdir as mkdir3, readFile as readFile6, realpath as realpath5, rename as rename4, writeFile as writeFile4 } from "node:fs/promises";
 import { dirname as dirname2, isAbsolute as isAbsolute6, join as join5, relative as relative5, resolve as resolve7, sep as sep5 } from "node:path";
 
@@ -2909,6 +3041,7 @@ var RESEARCH_STAGES = Object.freeze([
   "claims_bound",
   "answerable"
 ]);
+var RESEARCH_DOCUMENT_KIND = "drone.research.run";
 function createResearchLoop(ports) {
   const loadWorkspaceConfig3 = ports.workspace;
   const verifyLiteratureReceipt2 = ports.verifyLiteratureReceipt;
@@ -3014,7 +3147,7 @@ function createResearchLoop(ports) {
     return rel === "" || !isAbsolute6(rel) && rel !== ".." && !rel.startsWith(`..${sep5}`);
   }
   function fileHash(bytes) {
-    return createHash6("sha256").update(bytes).digest("hex");
+    return createHash8("sha256").update(bytes).digest("hex");
   }
   async function archivedSourceRecords(cwd, runDir) {
     const archive = await sourceStatus2({ cwd, run_dir: resolve7(cwd, runDir) });
@@ -3082,6 +3215,11 @@ function createResearchLoop(ports) {
     const value = JSON.parse(await readFile6(path, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw new Error(`Invalid JSON object: ${path}`);
+    if (path.endsWith("metadata.json") && !value.kind) {
+      return { ...value, kind: RESEARCH_DOCUMENT_KIND, version: 1 };
+    }
+    if (path.endsWith("metadata.json") && (value.kind !== RESEARCH_DOCUMENT_KIND || value.version !== 1))
+      throw new Error(`Unsupported research metadata document: ${path}`);
     return value;
   }
   async function atomicJson2(path, value) {
@@ -3167,6 +3305,8 @@ function createResearchLoop(ports) {
     const runDir = join5(config.resultsRoot, resultSlug, runId);
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const metadata = {
+      kind: RESEARCH_DOCUMENT_KIND,
+      version: 1,
       run_id: runId,
       project,
       result_slug: resultSlug,
@@ -3541,7 +3681,7 @@ function createResearchLoop(ports) {
 }
 
 // packages/extensions/src/internal/obsidian-workbench.ts
-import { createHash as createHash8, randomUUID as randomUUID9 } from "node:crypto";
+import { createHash as createHash10, randomUUID as randomUUID9 } from "node:crypto";
 import { access as access4, mkdir as mkdir7, readdir as readdir3, readFile as readFile10, realpath as realpath8, rename as rename8, stat as stat4, writeFile as writeFile8 } from "node:fs/promises";
 import { basename as basename5, dirname as dirname7, isAbsolute as isAbsolute11, join as join14, relative as relative10, resolve as resolve13, sep as sep9 } from "node:path";
 import { fileURLToPath as fileURLToPath2, pathToFileURL as pathToFileURL2 } from "node:url";
@@ -3914,7 +4054,7 @@ init_runtime_host();
 init_config();
 init_files();
 init_review_policy();
-import { createHash as createHash7, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash9, randomUUID as randomUUID7 } from "node:crypto";
 import { join as join11, relative as relative8, resolve as resolve11, sep as sep8 } from "node:path";
 
 // packages/knowledge/src/semantic-provider.ts
@@ -4421,7 +4561,7 @@ function providerConfig(settings) {
   };
 }
 function fingerprintFor(settings) {
-  return createHash7("sha256").update(`${settings.provider}\0${settings.baseUrl}\0${settings.model}\0${settings.chunkChars || 1200}`).digest("hex");
+  return createHash9("sha256").update(`${settings.provider}\0${settings.baseUrl}\0${settings.model}\0${settings.chunkChars || 1200}`).digest("hex");
 }
 function awaitSemanticDeadline(operation, controller) {
   let onAbort;
@@ -4535,7 +4675,7 @@ var KnowledgeService = class {
       this.tickets.set(ticket, {
         cwd: resolve11(cwd),
         project,
-        queryHash: createHash7("sha256").update(query).digest("hex"),
+        queryHash: createHash9("sha256").update(query).digest("hex"),
         query,
         navigation,
         linkedWiki: [...linkedWiki],
@@ -4608,7 +4748,7 @@ var KnowledgeService = class {
         hash: page.hash,
         startLine: page.startLine,
         endLine: page.endLine,
-        excerptHash: createHash7("sha256").update(page.text).digest("hex")
+        excerptHash: createHash9("sha256").update(page.text).digest("hex")
       };
       state3.reads.delete(path);
       state3.reads.set(path, receipt);
@@ -5578,7 +5718,7 @@ async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) {
     throw new Error("Only verified downloads can be indexed");
   if (!contains(await canonical(config.resultsRoot), await canonical(runDir)) || !contains(await canonical(runDir), await canonical(entry.path)))
     throw new Error("Source must remain inside its research run");
-  if (createHash8("sha256").update(await readFile10(entry.path)).digest("hex") !== entry.sha256)
+  if (createHash10("sha256").update(await readFile10(entry.path)).digest("hex") !== entry.sha256)
     throw new Error("Source hash changed before indexing");
   const metadata = await readJson2(join14(runDir, "metadata.json"));
   const project = validateProject(runProject(metadata.project, await resolveWorkspaceProject({ cwd })));
@@ -5589,6 +5729,7 @@ async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) {
     const note = await vaultPath(vault, "Library", category, `${slug}.md`);
     const projectNote = await vaultPath(vault, "Projects", project, category, `${slug}.md`);
     const provenance = JSON.stringify({
+      idempotency_key: entry.idempotency_key || null,
       url: entry.url,
       final_url: entry.final_url,
       downloaded_at: entry.downloaded_at,
@@ -5624,6 +5765,7 @@ ${chapters}` : ""}`;
 id: pi-${randomUUID9()}
 type: ${category === "Papers" ? "paper" : "software"}
 source_sha256: ${entry.sha256}
+source_idempotency_key: ${entry.idempotency_key || "unknown"}
 ---
 
 # ${title}`, body);
@@ -5662,7 +5804,7 @@ async function publishExplainer({ cwd = process.cwd(), project, topicId, title, 
   const ext = /\.md$/i.test(artifact) ? ".md" : /\.html?$/i.test(artifact) ? ".html" : null;
   if (!ext)
     throw new Error("Explainer must be HTML or Markdown");
-  const bytes = await readFile10(artifact), digest = createHash8("sha256").update(bytes).digest("hex");
+  const bytes = await readFile10(artifact), digest = createHash10("sha256").update(bytes).digest("hex");
   const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
   return updateVault(cwd, async (vault) => {
     const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest.slice(0, 12)}${ext}`;

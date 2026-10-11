@@ -1,7 +1,7 @@
 // @ts-nocheck
 import {
   containedVaultFile
-} from "./chunk-DY4DWRNO.mjs";
+} from "./chunk-KUCMRWBG.mjs";
 import {
   readNoteFile
 } from "./chunk-AHEUR5VB.mjs";

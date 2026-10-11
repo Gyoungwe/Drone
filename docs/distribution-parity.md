@@ -1,4 +1,6 @@
-# Release capability parity — 2026-09-12
+# Release capability parity — 2026-10-10
+
+> **Current release scope (v0.26.0).** The published release currently contains macOS arm64/x64 and Windows x64 artifacts. Linux AppImage/deb artifacts are not part of the v0.26.0 release matrix; references to Linux below describe historical or future parity work and must not be used as a download promise.
 
 ## What a push does and does not do
 
@@ -32,4 +34,4 @@ Release resources are code and named first-party skill directories, not the user
 
 Use `node scripts/check-knowledge-package.mjs`, also under the actual Electron Node runtime, to test copied package resources in an unrelated project with no ambient user skills. The test proves native resource availability and scoped indexing, not external service connectivity or successful installation on every OS. SDK model-review tests are offline with a scripted provider.
 
-The repository lint gate was cleaned without disabling rules. Before v0.6.0, local lint/typecheck/build and 1,102 tests passed; remote GitHub CI repeated npm ci, lint, typecheck, tests and build successfully. A real arm64 DMG was mounted/copied/launched with isolated HOME/userData/agentDir/knowledgeDir, and the final GitHub Release workflow built both macOS architectures plus Windows, verified required assets, and published v0.6.0. Linux x64 AppImage/deb packaging is added to the same Release matrix for subsequent tagged releases.
+The repository lint gate was cleaned without disabling rules. Before v0.6.0, local lint/typecheck/build and 1,102 tests passed; remote GitHub CI repeated npm ci, lint, typecheck, tests and build successfully. A real arm64 DMG was mounted/copied/launched with isolated HOME/userData/agentDir/knowledgeDir, and the final GitHub Release workflow built both macOS architectures plus Windows, verified required assets, and published v0.6.0. That historical parity note does not describe the current v0.26.0 artifact set: Linux packaging remains a follow-up item until a tagged release publishes and smoke-tests those assets.

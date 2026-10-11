@@ -224,6 +224,9 @@ function mergeStatus(previous: JobState, next: JobState): JobState {
 	if (isTerminal(previous)) return previous;
 	if (next === "unknown") return "unknown";
 	if (previous === "unknown") return next;
+	// Terminal runner states are authoritative even though they are not part of
+	// the in-flight rank table. Without this branch a queued job could never
+	// reconcile to succeeded because the fallback rank (-1) looked stale.
 	if (isTerminal(next)) return next;
 	if ((STATUS_RANK[next] ?? -1) < (STATUS_RANK[previous] ?? -1)) return previous;
 	return next;

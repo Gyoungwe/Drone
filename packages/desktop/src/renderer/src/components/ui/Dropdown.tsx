@@ -22,17 +22,17 @@ export function Dropdown({
 	}, [open]);
 
 	return (
-		<div ref={ref} className="relative">
+		<div ref={ref} className="drone-dropdown relative">
 			<button
 				type="button"
-				className="flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-hover hover:text-ink"
+				className="drone-dropdown__trigger flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-hover hover:text-ink"
 				onClick={() => setOpen((v) => !v)}
 			>
 				{trigger}
 				<ChevronDownIcon />
 			</button>
 			{open && (
-				<div className="absolute bottom-full left-1/2 z-30 mb-1 max-h-64 w-56 -translate-x-1/2 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-pop">
+				<div className="drone-dropdown__menu absolute bottom-full left-1/2 z-30 mb-1 max-h-64 w-56 -translate-x-1/2 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-pop">
 					{children(() => setOpen(false))}
 				</div>
 			)}

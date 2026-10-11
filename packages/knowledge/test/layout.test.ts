@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,7 +8,9 @@ import {
 	createVaultFileOnly,
 	initializeProjectContext,
 	initializeSharedNavigation,
+	replaceVaultFile,
 	updateVaultNavigation,
+	VaultFileConflictError,
 } from "../src/layout";
 
 let vault: string;
@@ -93,5 +96,19 @@ describe("knowledge Vault layout", () => {
 		await writeFile(path, "human", "utf8");
 		expect(await createVaultFileOnly(path, "replacement")).toBe(false);
 		expect(await readFile(path, "utf8")).toBe("human");
+	});
+
+	it("rejects a newer editor write during a conditional replacement", async () => {
+		const path = join(vault, "Wiki/Index.md");
+		await mkdir(join(vault, "Wiki"), { recursive: true });
+		await writeFile(path, "# previewed\n", "utf8");
+		const expectedHash = createHash("sha256").update("# previewed\n").digest("hex");
+		await expect(
+			replaceVaultFile(path, "# remote\n", {
+				expectedHash,
+				beforeCommit: () => writeFile(path, "# edited after preview\n", "utf8"),
+			}),
+		).rejects.toBeInstanceOf(VaultFileConflictError);
+		expect(await readFile(path, "utf8")).toBe("# edited after preview\n");
 	});
 });

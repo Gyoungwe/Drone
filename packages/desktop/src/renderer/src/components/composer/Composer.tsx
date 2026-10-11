@@ -464,7 +464,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 	return (
 		<section
 			ref={boxRef}
-			className={`${centered ? "w-full max-w-[760px]" : "shrink-0 px-4 pb-2"} relative`}
+			className={`drone-composer ${centered ? "w-full max-w-[760px]" : "shrink-0 px-4 pb-2"} relative`}
 			aria-label={t("composer.dropRegion")}
 			onDragOver={(event) => {
 				event.preventDefault();

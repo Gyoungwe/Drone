@@ -1,5 +1,7 @@
 # Drone 基于历史 PR 的模拟用户测试执行汇总报告
 
+> **当前发布校准（v0.26.0，2026-10-10）**：本报告保留历史用例与执行证据，但发布平台以当前 Release 为准：已发布 macOS arm64/x64 与 Windows x64，Linux 安装包尚未进入发布矩阵。TC-60 及任何把 Linux 包视为现成下载物的结论均应视为待后续版本验证，不能作为 v0.26.0 的已交付能力。
+
 > **报告版本**：v1.0.0  
 > **执行日期**：2026-10-09  
 > **被测基线**：Drone v0.24.0（HEAD @ commit `9c388ad`）  
@@ -557,9 +559,9 @@
 - **所属分类**：CAT-09 跨平台兼容、发版打包与客户端升级（涉及 PR #2）
 - **前置条件**：构建 AppImage / deb 包并在 Linux 环境中启动。
 - **实际操作**：核对 CI Release 工作流配置与构建声明。
-- **执行结果**：`Blocked / 待补环境（本机为 macOS 宿主环境）`
-- **支撑证据**：`package.json` 与 CI 工作流已声明 Linux 打包流水线；但当前运行机为 macOS，无法直接运行 Linux 二进制程序进行真机烟测。
-- **环境限制**：需 Linux x64/arm64 真实容器或虚拟机。
+- **执行结果**：`Blocked / 不在 v0.26.0 发布范围`
+- **支撑证据**：当前 v0.26.0 Release 仅发布 macOS arm64/x64 与 Windows x64 资产；现有历史用例中的 Linux AppImage/deb 声明尚未形成可下载、可安装、可启动的当前发布证据。
+- **环境限制**：恢复 Linux Release 矩阵后，仍需 Linux x64 真实容器或虚拟机完成安装与启动烟测。
 
 #### TC-63：全量功能回归测试基线验证 (Full Functional Regression Baseline)
 - **所属分类**：CAT-09 跨平台兼容、发版打包与客户端升级（涉及 PR #50, #67, #70）
@@ -624,7 +626,7 @@
    - **机构访问（TC-37/38）**：协调获取一套合规的高校内网/EZproxy 账号，用于闭环验证真实 PDF 静默下载与模板提取。
    - **浏览器 Chrome 接管（TC-56）**：在 CI 或本地准备带有测试网站登录 Cookie 的受控 `Chrome Test Profile`。
    - **大生物文件夹具（TC-50）**：在 `test/fixtures/` 中固化微型截断的 4.5MB BAM/VCF 样本文件。
-   - **多平台交叉验证（TC-59/60）**：依赖 GitHub Actions CI 矩阵在真实 Windows 和 Linux 虚拟机上完成最终发版冒烟。
+   - **多平台交叉验证（TC-59/60）**：v0.26.x 当前先以 Windows x64 与 macOS arm64/x64 为发版门禁；Linux 只有在重新纳入 Release 矩阵并产出可验证资产后，才转为最终发版冒烟项。
 4. **收敛烟测脚本技术债务**：
    - 统一梳理 `scripts/` 下的 7 个独立 Electron UI 烟测脚本，移除已下线组件（如 `DiffSidebar`）的引用，统一绑定根目录 React 单例，使自动化 E2E 测试集保持可持续演进。
 

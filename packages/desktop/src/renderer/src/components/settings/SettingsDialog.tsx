@@ -103,7 +103,11 @@ export function SettingsDialog() {
 	const Panel = PANELS[category];
 
 	return (
-		<div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/20" role="dialog" aria-modal>
+		<div
+			className="settings-dialog-shell fixed inset-0 z-40 flex items-center justify-center bg-ink/20"
+			role="dialog"
+			aria-modal
+		>
 			<div
 				data-testid="settings-dialog"
 				className="settings-dialog flex h-[74vh] w-[min(900px,94vw)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-dialog"
@@ -125,9 +129,9 @@ export function SettingsDialog() {
 							<button
 								key={id}
 								type="button"
-								className={`mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
+								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
 									category === id
-										? "bg-hover font-medium text-ink"
+										? "is-active bg-hover font-medium text-ink"
 										: "text-ink-dim hover:bg-hover hover:text-ink"
 								}`}
 								onClick={() => setCategory(id)}
@@ -140,9 +144,9 @@ export function SettingsDialog() {
 							<button
 								key={id}
 								type="button"
-								className={`mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
+								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
 									category === id
-										? "bg-hover font-medium text-ink"
+										? "is-active bg-hover font-medium text-ink"
 										: "text-ink-dim hover:bg-hover hover:text-ink"
 								}`}
 								onClick={() => setCategory(id)}
@@ -157,9 +161,9 @@ export function SettingsDialog() {
 								<button
 									key={id}
 									type="button"
-									className={`mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
+									className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
 										category === id
-											? "bg-hover font-medium text-ink"
+											? "is-active bg-hover font-medium text-ink"
 											: "text-ink-dim hover:bg-hover hover:text-ink"
 									}`}
 									onClick={() => setCategory(id)}

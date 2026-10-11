@@ -5,12 +5,29 @@ import {
 
 // packages/knowledge/src/layout.ts
 import { createHash, randomUUID } from "node:crypto";
-import { link, lstat, mkdir, realpath, rename, unlink, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { link, lstat, mkdir, open, realpath, rename, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 var MANAGED_START = "<!-- pi-agent:managed:start -->";
 var MANAGED_END = "<!-- pi-agent:managed:end -->";
 var PROJECT_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 var NAVIGATION_TARGETS = /* @__PURE__ */ new Set(["Home.md", "Wiki/Index.md", "Library/Index.md"]);
+async function hashRegularFile(path) {
+  const flags = constants.O_RDONLY | (constants.O_NOFOLLOW || 0);
+  const handle = await open(path, flags);
+  try {
+    return createHash("sha256").update(await handle.readFile()).digest("hex");
+  } finally {
+    await handle.close();
+  }
+}
+var VaultFileConflictError = class extends Error {
+  code = "conflict";
+  constructor(path) {
+    super(`Vault file changed while it was being updated: ${path}`);
+    this.name = "VaultFileConflictError";
+  }
+};
 function containsPath(root, target) {
   const relativePath = relative(root, target);
   return relativePath === "" || !isAbsolute(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep}`);
@@ -45,6 +62,26 @@ async function createVaultFileOnly(path, content) {
     return false;
   } finally {
     await unlink(temporary);
+  }
+}
+async function replaceVaultFile(path, content, options = {}) {
+  const current = await lstat(path);
+  if (!current.isFile() || current.isSymbolicLink()) throw new Error(`Expected a regular Vault file: ${path}`);
+  if (options.expectedHash !== void 0) {
+    const observed = await hashRegularFile(path);
+    if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
+  }
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  await writeFile(temporary, content, { encoding: "utf8", flag: "wx" });
+  try {
+    await options.beforeCommit?.();
+    if (options.expectedHash !== void 0) {
+      const observed = await hashRegularFile(path);
+      if (observed !== options.expectedHash) throw new VaultFileConflictError(path);
+    }
+    await rename(temporary, path);
+  } finally {
+    await unlink(temporary).catch(() => void 0);
   }
 }
 function navigationBase(heading) {
@@ -149,8 +186,10 @@ project: ${JSON.stringify(project)}
 }
 
 export {
+  VaultFileConflictError,
   containedVaultFile,
   createVaultFileOnly,
+  replaceVaultFile,
   updateVaultNavigation,
   initializeSharedNavigation,
   initializeProjectContext

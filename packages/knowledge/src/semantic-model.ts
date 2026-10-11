@@ -63,6 +63,7 @@ export interface SemanticGraph {
 
 const WIDTH = 720;
 const HEIGHT = 440;
+const LAYOUT_MARGIN = 28;
 const INFRASTRUCTURE = /(?:^|\/)(?:Index|Context|Home|Template|Templates)\.md$/i;
 const MAIN_TYPES = new Set(["question", "concept", "claim", "decision"]);
 const CATEGORY_BY_PATH: Array<[RegExp, string]> = [
@@ -139,13 +140,40 @@ function sectorLayout(
 	const mainPaths = [...mains].sort(comparePath);
 	const centers = new Map<string, { x: number; y: number }>();
 	const centerY = HEIGHT * 0.48;
-	const spacing = Math.min(270, Math.max(170, (WIDTH - 190) / Math.max(1, mainPaths.length - 1)));
-	const startX = WIDTH / 2 - ((mainPaths.length - 1) * spacing) / 2;
+	// Keep anchors inside the fixed SVG canvas even when a Vault has many
+	// research questions. A compact deterministic grid scales to dozens of
+	// anchors without sending the first/last node beyond the viewBox.
+	const columns = Math.max(1, Math.min(8, Math.ceil(Math.sqrt((mainPaths.length * WIDTH) / HEIGHT))));
+	const rows = Math.ceil(mainPaths.length / columns);
+	const xStep = columns === 1 ? 0 : (WIDTH - LAYOUT_MARGIN * 2) / (columns - 1);
+	const yStep = rows === 1 ? 0 : (HEIGHT - LAYOUT_MARGIN * 2) / (rows - 1);
 	mainPaths.forEach((path, index) => {
-		centers.set(path, { x: startX + index * spacing, y: centerY });
+		const row = Math.floor(index / columns);
+		const column = index % columns;
+		const rowSize = Math.min(columns, mainPaths.length - row * columns);
+		const rowWidth = rowSize === 1 ? 0 : xStep * (rowSize - 1);
+		centers.set(path, {
+			x: columns === 1 ? WIDTH / 2 : WIDTH / 2 - rowWidth / 2 + column * xStep,
+			y: rows === 1 ? centerY : LAYOUT_MARGIN + row * yStep,
+		});
+	});
+	const clampPoint = (point: { x: number; y: number }) => ({
+		x: Math.min(WIDTH - LAYOUT_MARGIN, Math.max(LAYOUT_MARGIN, point.x)),
+		y: Math.min(HEIGHT - LAYOUT_MARGIN, Math.max(LAYOUT_MARGIN, point.y)),
 	});
 	const layout: Record<string, { x: number; y: number }> = {};
-	for (const path of mainPaths) layout[path] = centers.get(path) as { x: number; y: number };
+	for (const path of mainPaths) layout[path] = clampPoint(centers.get(path) as { x: number; y: number });
+	const siblingGroups = new Map<string, string[]>();
+	for (const path of paths) {
+		if (mains.has(path) || sharedWith.has(path)) continue;
+		const connectedMain = [...(adjacency.get(path) ?? [])].find((candidate) => mains.has(candidate)) ?? "";
+		const category = categories.get(path) ?? "other";
+		const key = `${connectedMain}\u0000${category}`;
+		const group = siblingGroups.get(key) ?? [];
+		group.push(path);
+		siblingGroups.set(key, group);
+	}
+	for (const group of siblingGroups.values()) group.sort(comparePath);
 	for (const path of paths) {
 		if (mains.has(path)) continue;
 		const bridges = sharedWith.get(path);
@@ -155,27 +183,28 @@ function sectorLayout(
 				{ x: 0, y: 0 },
 			);
 			const jitter = (hash(`${path}:bridge`, seed) - 0.5) * 30;
-			layout[path] = { x: average.x / bridges.length, y: average.y / bridges.length - 36 + jitter };
+			layout[path] = clampPoint({ x: average.x / bridges.length, y: average.y / bridges.length - 36 + jitter });
 			continue;
 		}
 		const connectedMain = [...(adjacency.get(path) ?? [])].find((candidate) => mains.has(candidate));
 		const anchor = connectedMain ? centers.get(connectedMain) : { x: WIDTH / 2, y: centerY };
 		const category = categories.get(path) ?? "other";
 		const angle = SECTOR_ANGLES[category] ?? SECTOR_ANGLES.other ?? 0;
-		const siblings = paths.filter(
-			(candidate) => !mains.has(candidate) && !sharedWith.has(candidate) && categories.get(candidate) === category && [...(adjacency.get(candidate) ?? [])].includes(connectedMain ?? ""),
-		);
+		const siblings = siblingGroups.get(`${connectedMain ?? ""}\u0000${category}`) ?? [];
 		const index = Math.max(0, siblings.indexOf(path));
 		const spread = Math.min(0.22, 0.08 + siblings.length * 0.012);
 		const offset = (index - (siblings.length - 1) / 2) * spread;
 		const radius = 92 + Math.floor(index / 3) * 26 + hash(`${path}:radius`, seed) * 10;
 		const jitter = (hash(`${path}:angle`, seed) - 0.5) * 0.06;
-		layout[path] = { x: (anchor?.x ?? WIDTH / 2) + radius * Math.cos(angle + offset + jitter), y: (anchor?.y ?? centerY) + radius * Math.sin(angle + offset + jitter) };
+		layout[path] = clampPoint({
+			x: (anchor?.x ?? WIDTH / 2) + radius * Math.cos(angle + offset + jitter),
+			y: (anchor?.y ?? centerY) + radius * Math.sin(angle + offset + jitter),
+		});
 	}
 	for (const path of paths) {
 		if (layout[path]) continue;
 		const angle = 2 * Math.PI * hash(`${path}:outer`, seed);
-		layout[path] = { x: WIDTH / 2 + 175 * Math.cos(angle), y: centerY + 145 * Math.sin(angle) };
+		layout[path] = clampPoint({ x: WIDTH / 2 + 175 * Math.cos(angle), y: centerY + 145 * Math.sin(angle) });
 	}
 	return { layout, mains, sharedWith };
 }
@@ -309,12 +338,19 @@ export function createSemanticModel(
 		if (!modelNodes.has(canonical)) modelNodes.set(canonical, node);
 	}
 	const relations: SemanticRelation[] = [];
+	const relationKeys = new Set<string>();
+	const addRelation = (relation: SemanticRelation) => {
+		const key = `${relation.type}\u0000${relation.source}\u0000${relation.target}`;
+		if (relationKeys.has(key)) return;
+		relationKeys.add(key);
+		relations.push(relation);
+	};
 	for (const raw of input.edges ?? []) {
 		const source = canonicalFor.get(raw.source) ?? raw.source;
 		const target = canonicalFor.get(raw.target) ?? raw.target;
 		if (source === target || !modelNodes.has(source) || !modelNodes.has(target)) continue;
 		const type = classifyRelation({ path: source }, { path: target }, raw.type);
-		if (!relations.some((edge) => edge.source === source && edge.target === target && edge.type === type)) relations.push({ source, target, type });
+		addRelation({ source, target, type });
 	}
 	if (view === "all") {
 		const all = [...modelNodes.keys()].sort(comparePath);
@@ -329,11 +365,11 @@ export function createSemanticModel(
 			for (let i = 1; i < group.length; i++) {
 				const source = group[i - 1];
 				const target = group[i];
-				if (source && target && !relations.some((edge) => edge.source === source && edge.target === target)) relations.push({ source, target, type: "directory" });
+				if (source && target) addRelation({ source, target, type: "directory" });
 			}
 		}
 	}
-	for (const duplicate of duplicates) relations.push({ source: duplicate.canonical, target: duplicate.duplicate, type: "duplicate" });
+	for (const duplicate of duplicates) addRelation({ source: duplicate.canonical, target: duplicate.duplicate, type: "duplicate" });
 	const communities = assignCommunities([...modelNodes.keys()], relations, seed);
 	const { layout, mains, sharedWith } = sectorLayout(modelNodes, relations, seed);
 	const linkRelations = relations.filter((edge) => edge.type === "link");
@@ -342,8 +378,16 @@ export function createSemanticModel(
 		degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
 		degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
 	}
+	const mirrorsByCanonical = new Map<string, string[]>();
+	for (const [mirror, canonical] of canonicalFor) {
+		if (mirror === canonical) continue;
+		const mirrors = mirrorsByCanonical.get(canonical) ?? [];
+		mirrors.push(mirror);
+		mirrorsByCanonical.set(canonical, mirrors);
+	}
+	for (const mirrors of mirrorsByCanonical.values()) mirrors.sort(comparePath);
 	const nodes = [...modelNodes.entries()].sort(([a], [b]) => comparePath(a, b)).map(([path, node]) => {
-		const mirrorPaths = [...canonicalFor.entries()].filter(([, canonical]) => canonical === path).map(([mirror]) => mirror).filter((mirror) => mirror !== path).sort(comparePath);
+		const mirrorPaths = mirrorsByCanonical.get(path) ?? [];
 		const type = nodeType(node);
 		const category = contentCategory(node);
 		return {

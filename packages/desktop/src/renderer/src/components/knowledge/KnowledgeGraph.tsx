@@ -1,6 +1,7 @@
 import type { KnowledgeGraph as GraphData, KnowledgeNoteLinks } from "@drone/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
+import { useI18nStore } from "../../i18n";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
@@ -49,7 +50,7 @@ const CATEGORY_COLORS: Record<GraphCategory, string> = {
 	other: "#9aa4b8",
 };
 
-const CATEGORY_LABELS: Record<GraphCategory, string> = {
+const CATEGORY_LABELS_ZH: Record<GraphCategory, string> = {
 	paper: "文献",
 	method: "方法",
 	software: "软件",
@@ -63,6 +64,21 @@ const CATEGORY_LABELS: Record<GraphCategory, string> = {
 	question: "问题",
 	wiki: "Wiki",
 	other: "其他",
+};
+const CATEGORY_LABELS_EN: Record<GraphCategory, string> = {
+	paper: "Paper",
+	method: "Method",
+	software: "Software",
+	dataset: "Dataset",
+	concept: "Concept",
+	entity: "Entity",
+	idea: "Idea",
+	claim: "Claim",
+	evidence: "Evidence",
+	decision: "Decision",
+	question: "Question",
+	wiki: "Wiki",
+	other: "Other",
 };
 
 function categoryOf(node: GraphData["nodes"][number]): GraphCategory {
@@ -115,6 +131,8 @@ export function KnowledgeGraph({
 	indexKey?: string;
 }) {
 	const t = useKnowledgeText();
+	const language = useI18nStore((state) => state.language);
+	const categoryLabels = language === "zh" ? CATEGORY_LABELS_ZH : CATEGORY_LABELS_EN;
 	const nonce = useKnowledgeStore((s) => s.revision);
 	const [data, setData] = useState<GraphData | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -361,7 +379,7 @@ export function KnowledgeGraph({
 						onClick={() => setCategoryFilter((current) => (current === category ? null : category))}
 					>
 						<i style={{ backgroundColor: CATEGORY_COLORS[category] }} />
-						{CATEGORY_LABELS[category]}
+						{categoryLabels[category]}
 					</button>
 				))}
 			</div>
@@ -381,12 +399,12 @@ export function KnowledgeGraph({
 				</span>
 			</div>
 			<div className="relative">
-				<div className="knowledge-observatory-canvas relative overflow-hidden rounded-xl border border-[#33415f] bg-[#0d1320]">
+				<div className="knowledge-observatory-canvas relative overflow-hidden rounded-xl">
 					<div className="knowledge-graph-canvas-tools absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-3">
-						<span className="rounded-lg border border-[#526a9f]/60 bg-[#101a2d]/90 px-3 py-2 text-[11px] text-[#c3d2f2] shadow-lg backdrop-blur">
+						<span className="knowledge-graph-observatory-label rounded-lg px-3 py-2 text-[11px]">
 							{t("graphObservatoryLabel")}
 						</span>
-						<div className="flex items-center gap-1 rounded-lg border border-[#526a9f]/60 bg-[#101a2d]/90 p-1 shadow-lg backdrop-blur">
+						<div className="knowledge-graph-controls flex items-center gap-1 rounded-lg p-1">
 							<button
 								type="button"
 								className="knowledge-graph-zoom-button"
@@ -430,41 +448,41 @@ export function KnowledgeGraph({
 					<svg
 						viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
 						className="knowledge-graph-svg h-[clamp(520px,68vh,760px)] w-full touch-none select-none"
-						role="img"
-						aria-label={t("graphTitle")}
+						aria-labelledby="knowledge-graph-title"
 						onWheel={onCanvasWheel}
 						onPointerDown={onCanvasPointerDown}
 						onPointerMove={onCanvasPointerMove}
 						onPointerUp={onCanvasPointerUp}
 						onPointerCancel={onCanvasPointerUp}
 					>
+						<title id="knowledge-graph-title">{t("graphTitle")}</title>
 						<defs>
 							<pattern id="knowledge-grid" width="32" height="32" patternUnits="userSpaceOnUse">
 								<path
 									d="M 32 0 L 0 0 0 32"
 									fill="none"
-									stroke="#8295c4"
-									strokeOpacity=".09"
+									stroke="var(--knowledge-grid)"
+									strokeOpacity=".8"
 									strokeWidth="1"
 								/>
 							</pattern>
 							<radialGradient id="knowledge-glow">
-								<stop offset="0" stopColor="#4669b0" stopOpacity=".36" />
-								<stop offset="1" stopColor="#0d1320" stopOpacity="0" />
+								<stop offset="0" stopColor="var(--knowledge-accent)" stopOpacity=".2" />
+								<stop offset="1" stopColor="var(--knowledge-canvas)" stopOpacity="0" />
 							</radialGradient>
 						</defs>
 						<rect width={WIDTH} height={HEIGHT} fill="url(#knowledge-grid)" />
 						<ellipse cx={WIDTH / 2} cy={HEIGHT / 2} rx="300" ry="210" fill="url(#knowledge-glow)" />
-						<g fill="none" stroke="#8396c2" strokeOpacity=".2" strokeWidth="1">
+						<g fill="none" stroke="var(--knowledge-edge)" strokeOpacity=".38" strokeWidth="1">
 							<line x1="48" y1={HEIGHT - 54} x2={WIDTH - 22} y2={HEIGHT - 54} />
 							<line x1="44" y1={HEIGHT - 50} x2="44" y2="22" />
 						</g>
-						<g className="text-[9px] fill-[#8396c2] opacity-70">
+						<g className="knowledge-graph-axis-labels">
 							<text x="54" y={HEIGHT - 36}>
-								evidence density →
+								{t("graphAxisRelations")} →
 							</text>
 							<text x="27" y={HEIGHT - 58} transform={`rotate(-90 27 ${HEIGHT - 58})`}>
-								concept depth
+								{t("graphAxisConcepts")}
 							</text>
 						</g>
 						<g
@@ -515,7 +533,9 @@ export function KnowledgeGraph({
 											y1={a.y}
 											x2={b.x}
 											y2={b.y}
-											stroke={edge.type === "directory" ? "#c58ee8" : "#8ca8ff"}
+											stroke={
+												edge.type === "directory" ? "var(--knowledge-directory)" : "var(--knowledge-edge)"
+											}
 											strokeOpacity={on ? (edge.type === "directory" ? 0.6 : 0.5) : categoryOn ? 0.08 : 0.025}
 											strokeWidth={edge.type === "directory" ? 1 : 1.4}
 											strokeDasharray={edge.type === "directory" ? "4 4" : undefined}
@@ -549,7 +569,10 @@ export function KnowledgeGraph({
 										onPointerDown={(event) => event.stopPropagation()}
 										onFocus={() => setSelected(node.path)}
 										onKeyDown={(event) => {
-											if (event.key === "Enter" || event.key === " ") setSelected(node.path);
+											if (event.key === "Enter" || event.key === " ") {
+												event.preventDefault();
+												setSelected(node.path);
+											}
 										}}
 									>
 										<title>{`${node.title}\n${node.path}`}</title>
@@ -560,7 +583,7 @@ export function KnowledgeGraph({
 												cy={point.y}
 												r={radius + 8}
 												fill="none"
-												stroke="#dbe7ff"
+												stroke="var(--knowledge-accent)"
 												strokeOpacity=".35"
 												strokeDasharray="2 3"
 											/>
@@ -591,7 +614,7 @@ export function KnowledgeGraph({
 												cy={point.y}
 												r={radius + 4}
 												fill="none"
-												stroke="#ffffff"
+												stroke="var(--knowledge-edge)"
 												strokeOpacity=".45"
 												strokeWidth="1"
 												strokeDasharray="2 3"
@@ -602,7 +625,7 @@ export function KnowledgeGraph({
 											cy={point.y}
 											r={radius}
 											fill={nodeColor(node)}
-											stroke="#0d1320"
+											stroke="var(--knowledge-surface)"
 											strokeWidth="2"
 										/>
 										{showLabel && placement && (
@@ -611,12 +634,13 @@ export function KnowledgeGraph({
 												y={placement.y}
 												textAnchor={placement.anchor}
 												fontSize="10"
-												fill="#dce7ff"
+												fill="var(--knowledge-ink)"
 											>
 												<tspan>{labelText(node)}</tspan>
 												{showMetadata && (
-													<tspan x={placement.x} dy="12" fontSize="8" fill="#8494b3">
-														{node.degree} links · {node.nodeType ?? node.kind}
+													<tspan x={placement.x} dy="12" fontSize="8" fill="var(--knowledge-ink-muted)">
+														{t("graphLinks").replace("{count}", String(node.degree))} ·{" "}
+														{categoryLabels[categoryOf(node)]}
 													</tspan>
 												)}
 											</text>
@@ -626,36 +650,36 @@ export function KnowledgeGraph({
 							})}
 						</g>
 					</svg>
-					<div className="knowledge-graph-legend absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-md border border-[#526a9f]/40 bg-[#101a2d]/75 px-2 py-1.5 text-[10px] text-[#aab8d4] shadow-lg backdrop-blur">
+					<div className="knowledge-graph-legend absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-md px-2 py-1.5 text-[10px]">
 						{([...new Set(nodes.map(categoryOf))] as GraphCategory[]).map((category) => (
 							<span key={`legend-${category}`}>
 								<i
 									className="mr-1 inline-block h-2 w-2 rounded-full"
 									style={{ backgroundColor: CATEGORY_COLORS[category] }}
 								/>
-								{CATEGORY_LABELS[category]}
+								{categoryLabels[category]}
 							</span>
 						))}
 						<span>
-							<i className="mr-1 inline-block h-2 w-2 rounded-full border border-[#f6d58a]" />
+							<i className="knowledge-graph-legend-main mr-1 inline-block h-2 w-2 rounded-full border" />
 							{t("graphLegendMain")}
 						</span>
 						<span>
-							<i className="mr-1 inline-block h-2 w-2 rounded-full border border-white/70 border-dashed" />
+							<i className="mr-1 inline-block h-2 w-2 rounded-full border border-[var(--knowledge-edge)] border-dashed" />
 							{t("graphLegendShared")}
 						</span>
 						<span>
-							<i className="mr-1 inline-block h-[1px] w-3 align-middle bg-[#8ca8ff]" />
+							<i className="mr-1 inline-block h-[1px] w-3 align-middle bg-[var(--knowledge-edge)]" />
 							{t("graphLegendDirect")}
 						</span>
 						<span>
-							<i className="mr-1 inline-block w-3 border-t border-dashed border-[#c58ee8] align-middle" />
+							<i className="knowledge-graph-legend-directory mr-1 inline-block w-3 border-t border-dashed align-middle" />
 							{t("graphLegendDirectory")}
 						</span>
 					</div>
 				</div>
 				<aside
-					className={`knowledge-node-drawer absolute right-3 top-16 bottom-12 z-20 w-[min(360px,calc(100%-24px))] overflow-y-auto rounded-xl border border-[#526a9f]/70 bg-[#111b2d]/95 p-4 shadow-2xl backdrop-blur transition duration-200 ${selectedNode ? "is-open" : ""}`}
+					className={`knowledge-node-drawer absolute right-3 top-16 bottom-12 z-20 w-[min(360px,calc(100%-24px))] overflow-y-auto rounded-xl p-4 transition duration-200 ${selectedNode ? "is-open" : ""}`}
 					aria-label={t("graphNodeCard")}
 					aria-hidden={!selectedNode}
 				>
@@ -677,10 +701,10 @@ export function KnowledgeGraph({
 							<p className="mt-1 break-all font-mono text-[10px] text-ink-faint">{selectedNode.path}</p>
 							<div className="mt-2 flex flex-wrap gap-1">
 								<span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-ink-dim">
-									{selectedNode.nodeType ?? selectedNode.kind}
+									{categoryLabels[categoryOf(selectedNode)]}
 								</span>
 								<span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-ink-dim">
-									{selectedNode.degree} links
+									{t("graphLinks").replace("{count}", String(selectedNode.degree))}
 								</span>
 							</div>
 							<dl className="mt-3 space-y-1.5 text-[11px] text-ink-dim">
