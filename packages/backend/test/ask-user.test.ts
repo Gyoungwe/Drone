@@ -91,6 +91,32 @@ describe("desktop ask_user", () => {
 		});
 	});
 
+	it("persists the actual custom choice hash and never submits the recommendation", async () => {
+		const tool = makeAskUserTool({
+			ask: async () => ({
+				kind: "answer",
+				answers: { source: { values: [], customText: "a third route" } },
+			}),
+		});
+		const result = await tool.execute(
+			"tc-decision",
+			{
+				...params,
+				kind: "clarification",
+				proposal: { proposalHash: "p-hash", recommendation: params.questions[0].recommendation },
+			},
+			undefined,
+			() => {},
+			{} as never,
+		);
+		expect(result.details.decision).toMatchObject({
+			proposalHash: "p-hash",
+			customText: "a third route",
+			decisionHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+		});
+		expect(result.details.decision.choice).toBe("a third route");
+	});
+
 	it("fails closed as a cancellation when the ask UI returns no response", async () => {
 		const tool = makeAskUserTool({ ask: async () => undefined });
 		const result = await tool.execute("tc-missing", params, undefined, () => {}, {} as never);

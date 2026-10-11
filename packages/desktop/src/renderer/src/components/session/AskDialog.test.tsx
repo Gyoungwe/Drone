@@ -44,3 +44,39 @@ it("formats model recommendation lists inside the ask card", () => {
 	expect(html).not.toContain("建议：1. 保留当前结果 2. 继续执行");
 	expect(html).toMatch(/依据：\s+• 证据完整\s+• 风险可控/);
 });
+
+it("renders the dynamic proposal projection without selecting its recommendation", () => {
+	const request: AskRequest = {
+		id: "ask-proposal",
+		sessionId: "session-1",
+		toolCallId: "tool-1",
+		kind: "authorization",
+		proposal: {
+			proposalHash: "p-hash",
+			recommendation: { value: "keep", reason: "Evidence is complete" },
+			benefits: ["Reproducible result"],
+			costs: ["Uses two core hours"],
+			risks: ["Input quality"],
+			resources: ["hpc-a"],
+			authorizationActions: [{ id: "write", label: "Write output", risk: "high" }],
+		},
+		questions: [
+			{
+				id: "choice",
+				label: "Choice",
+				prompt: "Choose",
+				type: "single",
+				required: true,
+				options: [
+					{ value: "keep", label: "Keep" },
+					{ value: "custom", label: "Custom" },
+				],
+				allowCustomText: true,
+			},
+		],
+	};
+	const html = renderToStaticMarkup(createElement(AskDialog, { requests: [request], onRespond: vi.fn() }));
+	expect(html).toContain("收益");
+	expect(html).toContain("高风险，需单独授权");
+	expect(html).not.toContain('checked=""');
+});

@@ -9,6 +9,8 @@ import {
 	createCapabilityRequest,
 	createCapabilityVersion,
 	createDecision,
+	createDecisionFromProposal,
+	createDecisionProposal,
 	createResearchCase,
 	createRunAttempt,
 	forkResearchCase,
@@ -191,5 +193,50 @@ describe("portable versioned research contracts", () => {
 		valid(migrated);
 		expect(old.schemaVersion).toBe(0);
 		expect(migrated.migration?.fromSchemaVersion).toBe(0);
+	});
+
+	it("records an explicit choice and scope, rejects stale proposals, and gates high-risk actions", () => {
+		const proposal = createDecisionProposal({
+			id: "proposal-1",
+			caseRef,
+			contextSnapshot: { kind: "context", id: "ctx", contentHash: "c".repeat(64) },
+			capabilityVersionRef: { kind: "capability-version", id: "cap", contentHash: "a".repeat(64) },
+			workflowRef: { kind: "workflow", id: "wf", contentHash: "b".repeat(64) },
+			findings: [],
+			candidates: [],
+			questions: [{ id: "q", question: "Choose", allowCustomText: true }],
+			authorizationScope: {
+				actions: [{ id: "write", label: "Write output", risk: "high" }],
+				capabilityVersionRef: { kind: "capability-version", id: "cap", contentHash: "a".repeat(64) },
+				workflowRef: { kind: "workflow", id: "wf", contentHash: "b".repeat(64) },
+			},
+			highRiskActions: [{ id: "write", label: "Write output", risk: "high" }],
+			status: "pending",
+			createdAt: now,
+		});
+		const decision = createDecisionFromProposal(proposal, {
+			id: "decision-1",
+			proposalHash: proposal.contentHash,
+			contextHash: "c".repeat(64),
+			capabilityHash: "a".repeat(64),
+			workflowHash: "b".repeat(64),
+			customText: "my answer",
+			authorizedActionIds: ["write"],
+			decidedAt: now,
+		});
+		valid(decision);
+		expect(decision.choice).toBe("my answer");
+		expect(decision.authorizationScopeHash).toMatch(/^[a-f0-9]{64}$/);
+		expect(decision.decisionHash).toBe(decision.contentHash);
+		expect(() =>
+			createDecisionFromProposal(proposal, {
+				id: "stale",
+				proposalHash: proposal.contentHash,
+				contextHash: "d".repeat(64),
+			}),
+		).toThrow(/context changed/);
+		expect(() =>
+			createDecisionFromProposal(proposal, { id: "risk", proposalHash: proposal.contentHash }),
+		).toThrow(/High-risk/);
 	});
 });

@@ -1,4 +1,11 @@
-import type { AskQuestion, AskRecommendation, AskRequest, AskResponse } from "@drone/shared";
+import {
+	type AskDecision,
+	type AskQuestion,
+	type AskRecommendation,
+	type AskRequest,
+	type AskResponse,
+	askDecisionHash,
+} from "@drone/shared";
 import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
@@ -49,13 +56,47 @@ const questionSchema = Type.Object({
 	recommendation: Type.Optional(recommendationSchema),
 	allowCustomText: Type.Optional(Type.Boolean()),
 });
+const proposalSchema = Type.Object({
+	proposalHash: Type.String({ minLength: 1 }),
+	contextHash: Type.Optional(Type.String()),
+	capabilityHash: Type.Optional(Type.String()),
+	workflowHash: Type.Optional(Type.String()),
+	recommendation: Type.Optional(recommendationSchema),
+	reason: Type.Optional(Type.String()),
+	evidence: Type.Optional(Type.Array(Type.String(), { maxItems: 16 })),
+	benefits: Type.Optional(Type.Array(Type.String(), { maxItems: 16 })),
+	costs: Type.Optional(Type.Array(Type.String(), { maxItems: 16 })),
+	risks: Type.Optional(Type.Array(Type.String(), { maxItems: 16 })),
+	resources: Type.Optional(Type.Array(Type.String(), { maxItems: 16 })),
+	authorizationActions: Type.Optional(
+		Type.Array(
+			Type.Object({
+				id: Type.String(),
+				label: Type.String(),
+				description: Type.Optional(Type.String()),
+				risk: Type.Optional(Type.Union([Type.Literal("low"), Type.Literal("high")])),
+				independent: Type.Optional(Type.Boolean()),
+			}),
+			{ maxItems: 32 },
+		),
+	),
+	authorizationScopeHash: Type.Optional(Type.String()),
+});
 const paramsSchema = Type.Object({
 	title: Type.Optional(Type.String()),
+	kind: Type.Optional(Type.Union([Type.Literal("clarification"), Type.Literal("authorization")])),
+	purpose: Type.Optional(Type.Union([Type.Literal("clarification"), Type.Literal("authorization")])),
 	questions: Type.Array(questionSchema, { minItems: 1 }),
+	proposal: Type.Optional(proposalSchema),
+	decisionProposal: Type.Optional(proposalSchema),
 });
 
 type RawParams = {
 	title?: string;
+	kind?: AskRequest["kind"];
+	purpose?: AskRequest["purpose"];
+	proposal?: AskRequest["proposal"];
+	decisionProposal?: AskRequest["decisionProposal"];
 	questions: Array<{
 		id: string;
 		label?: string;
@@ -162,7 +203,9 @@ function resultFromResponse(params: RawParams, questions: AskQuestion[], respons
 			if (!option) throw new Error(`Missing option value "${value}" for question "${id}"`);
 			return { value, label: option.label, index: index + 1 };
 		});
-		const customText = input.customText?.trim() ? input.customText : undefined;
+		const customText = input.customText?.trim() ? input.customText.trim() : undefined;
+		if (customText && question.allowCustomText === false)
+			throw new Error(`Question "${id}" does not accept custom text`);
 		if (question.type === "single" && selected.length > 1)
 			throw new Error(`Question "${id}" accepts one option`);
 		if (!selected.length && !customText && !input.note?.trim()) continue;
@@ -183,12 +226,32 @@ function resultFromResponse(params: RawParams, questions: AskQuestion[], respons
 			...(question.recommendation ? { recommendation: question.recommendation } : {}),
 		};
 	}
+	const proposal = params.proposal ?? params.decisionProposal;
+	const decisionInputs = Object.values(answers).flatMap((answer) =>
+		answer.values.filter((value) => value !== answer.customText),
+	);
+	const customText = Object.values(answers).find((answer) => answer.customText)?.customText;
+	const decision: AskDecision | undefined = proposal
+		? {
+				proposalHash: proposal.proposalHash,
+				choice: decisionInputs[0] ?? customText,
+				choices: decisionInputs.length ? decisionInputs : undefined,
+				customText,
+				decisionHash: askDecisionHash(proposal.proposalHash, {
+					choice: decisionInputs[0] ?? customText,
+					choices: decisionInputs,
+					customText,
+				}),
+				authorizationScopeHash: proposal.authorizationScopeHash,
+			}
+		: undefined;
 	return {
 		title: params.title,
 		cancelled: false,
 		mode: response.mode ?? "submit",
 		questions: questions.map(summary),
 		answers,
+		...(decision ? { decision } : {}),
 	};
 }
 
@@ -226,7 +289,19 @@ export function makeAskUserTool(deps: AskUserToolDeps): ToolDefinition<typeof pa
 			const raw = params as RawParams;
 			const questions = normalizeQuestions(raw);
 			const response = await deps.ask(
-				{ toolCallId, title: raw.title?.trim() || undefined, questions },
+				{
+					toolCallId,
+					title: raw.title?.trim() || undefined,
+					kind: raw.purpose ?? raw.kind,
+					purpose: raw.purpose ?? raw.kind,
+					questions,
+					...((raw.proposal ?? raw.decisionProposal)
+						? {
+								proposal: raw.proposal ?? raw.decisionProposal,
+								decisionProposal: raw.proposal ?? raw.decisionProposal,
+							}
+						: {}),
+				},
 				signal,
 			);
 			const details = resultFromResponse(raw, questions, response);

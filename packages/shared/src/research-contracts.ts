@@ -257,10 +257,31 @@ export interface DecisionCandidate {
 	readonly parentRefs: readonly ContractParentRef[];
 }
 
+/** A bounded action shown in a decision card. Authorization is explicit per action. */
+export interface DecisionAuthorizationAction {
+	readonly id: string;
+	readonly label: string;
+	readonly description?: string;
+	readonly risk?: "low" | "high";
+	readonly scope?: readonly string[];
+}
+
+export interface DecisionAuthorizationScope {
+	readonly actions: readonly DecisionAuthorizationAction[];
+	readonly writeRoots?: readonly string[];
+	readonly hosts?: readonly string[];
+	readonly workflows?: readonly string[];
+	readonly capabilityVersionRef?: ContractParentRef;
+	readonly workflowRef?: ContractParentRef;
+}
+
 export interface DecisionQuestion {
 	readonly id: string;
 	readonly question: string;
 	readonly options?: readonly string[];
+	readonly type?: "single" | "multi" | "text";
+	readonly required?: boolean;
+	readonly allowCustomText?: boolean;
 	/** A recommendation is optional and is never treated as a submitted answer. */
 	readonly recommendation?: string;
 }
@@ -273,6 +294,9 @@ export interface DecisionProposal extends VersionedResearchContract {
 	readonly id: string;
 	readonly caseRef: ContractParentRef;
 	readonly contextSnapshot?: ContractParentRef;
+	/** Content hashes of moving inputs are retained so an old proposal cannot authorize a new run. */
+	readonly capabilityVersionRef?: ContractParentRef;
+	readonly workflowRef?: ContractParentRef;
 	readonly project?: string;
 	readonly goal?: string;
 	readonly query?: string;
@@ -285,6 +309,8 @@ export interface DecisionProposal extends VersionedResearchContract {
 		readonly parentRefs: readonly ContractParentRef[];
 	};
 	readonly questions: readonly DecisionQuestion[];
+	readonly authorizationScope?: DecisionAuthorizationScope;
+	readonly highRiskActions?: readonly DecisionAuthorizationAction[];
 	readonly status: DecisionProposalStatus;
 	readonly expiresAt?: string;
 	readonly createdAt: string;
@@ -297,6 +323,8 @@ export interface Decision extends VersionedResearchContract {
 	readonly id: string;
 	readonly proposalRef: ContractParentRef;
 	readonly proposalHash: string;
+	/** Alias for the immutable decision content hash, retained for audit projections. */
+	readonly decisionHash?: string;
 	readonly choice?: string;
 	readonly notes?: string;
 	readonly authorizationScopeHash?: string;
@@ -368,8 +396,75 @@ export function contractContentHash(value: unknown): string {
 
 /** Hash a contract without trusting a persisted contentHash field. */
 export function computeResearchContractHash<T extends VersionedResearchContract>(value: T): string {
-	const { contentHash: _contentHash, ...body } = value;
+	const {
+		contentHash: _contentHash,
+		decisionHash: _decisionHash,
+		...body
+	} = value as T & {
+		decisionHash?: unknown;
+	};
 	return contractContentHash(body);
+}
+
+/** Stable hash for the decision payload selected by a user. */
+export function decisionChoiceHash(input: {
+	readonly proposalHash: string;
+	readonly choice?: string;
+	readonly choices?: readonly string[];
+	readonly customText?: string;
+	readonly notes?: string;
+}): string {
+	return contractContentHash({
+		proposalHash: input.proposalHash,
+		choice: input.choice,
+		choices: input.choices ? [...input.choices] : undefined,
+		customText: input.customText,
+		notes: input.notes,
+	});
+}
+
+/** Scope hash deliberately includes moving capability/workflow references. */
+export function decisionAuthorizationScopeHash(scope: DecisionAuthorizationScope | undefined): string {
+	return contractContentHash(scope ?? { actions: [] });
+}
+
+function refHash(ref: ContractParentRef | undefined): string | undefined {
+	return typeof ref === "object" && typeof ref.contentHash === "string" ? ref.contentHash : undefined;
+}
+
+export interface DecisionProposalFreshness {
+	readonly proposalHash?: string;
+	readonly contextHash?: string;
+	readonly capabilityHash?: string;
+	readonly workflowHash?: string;
+	readonly now?: string;
+}
+
+/** Throws when a proposal no longer describes the context/capability/workflow being authorized. */
+export function assertDecisionProposalCurrent(
+	proposal: DecisionProposal,
+	expected: DecisionProposalFreshness = {},
+): void {
+	const actualProposalHash = computeResearchContractHash(proposal);
+	if (
+		proposal.contentHash !== actualProposalHash ||
+		(expected.proposalHash && expected.proposalHash !== actualProposalHash)
+	)
+		throw new Error("Decision proposal is stale; refresh before choosing");
+	if (
+		proposal.status === "expired" ||
+		(proposal.expiresAt && expected.now && proposal.expiresAt <= expected.now)
+	)
+		throw new Error("Decision proposal has expired; regenerate it from current context");
+	const checks: Array<[string | undefined, string | undefined, string]> = [
+		[expected.contextHash, refHash(proposal.contextSnapshot), "context"],
+		[expected.capabilityHash, refHash(proposal.capabilityVersionRef), "capability"],
+		[expected.workflowHash, refHash(proposal.workflowRef), "workflow"],
+	];
+	for (const [want, actual, label] of checks) {
+		if (want && want !== actual)
+			throw new Error(`Decision proposal ${label} changed; refresh before choosing`);
+	}
 }
 
 export function assertResearchContract(value: VersionedResearchContract): void {
@@ -528,7 +623,86 @@ export function createDecisionProposal(
 export function createDecision(
 	input: Omit<Decision, keyof VersionedResearchContract | "kind"> & ContractVersionOptions,
 ): Decision {
-	return base({ ...input, kind: "decision" as const }, input) as Decision;
+	const result = base({ ...input, kind: "decision" as const }, input) as Decision;
+	return { ...result, decisionHash: result.contentHash };
+}
+
+export interface DecisionSelection {
+	readonly choice?: string;
+	readonly choices?: readonly string[];
+	readonly customText?: string;
+	readonly notes?: string;
+	readonly authorizedActionIds?: readonly string[];
+	readonly authorizationScopeHash?: string;
+}
+
+export interface DecisionFromProposalInput extends DecisionSelection, DecisionProposalFreshness {
+	readonly id: string;
+	readonly status?: Extract<DecisionStatus, "accepted" | "rejected">;
+	readonly decidedAt?: string;
+}
+
+/** Convert one current proposal and one explicit user selection into an auditable decision. */
+export function createDecisionFromProposal(
+	proposal: DecisionProposal,
+	input: DecisionFromProposalInput,
+): Decision {
+	assertDecisionProposalCurrent(proposal, input);
+	const scopeHash = decisionAuthorizationScopeHash(proposal.authorizationScope);
+	if (input.authorizationScopeHash && input.authorizationScopeHash !== scopeHash)
+		throw new Error("Authorization scope changed; refresh before choosing");
+	const highRisk = (proposal.highRiskActions ?? proposal.authorizationScope?.actions ?? []).filter(
+		(action) => action.risk === "high",
+	);
+	if (highRisk.length) {
+		const authorized = new Set(input.authorizedActionIds ?? []);
+		if (highRisk.some((action) => !authorized.has(action.id)))
+			throw new Error("High-risk actions require separate authorization");
+	}
+	const proposalHash = computeResearchContractHash(proposal);
+	return createDecision({
+		id: input.id,
+		proposalRef: {
+			kind: proposal.kind,
+			id: proposal.id,
+			revision: proposal.revision,
+			contentHash: proposalHash,
+		},
+		proposalHash,
+		choice: input.choice ?? input.choices?.[0] ?? input.customText,
+		notes: input.notes,
+		authorizationScopeHash: scopeHash,
+		status: input.status ?? "accepted",
+		decidedAt: input.decidedAt ?? new Date().toISOString(),
+	});
+}
+
+/** Re-check an accepted decision immediately before execution. */
+export function assertDecisionCurrent(
+	decision: Decision,
+	proposal: DecisionProposal,
+	expected: Omit<DecisionProposalFreshness, "proposalHash"> = {},
+): void {
+	if (decision.status !== "accepted") throw new Error("Decision is not accepted");
+	if (decision.proposalHash !== computeResearchContractHash(proposal))
+		throw new Error("Decision proposal changed; authorization is stale");
+	assertDecisionProposalCurrent(proposal, { ...expected, proposalHash: decision.proposalHash });
+	const scopeHash = decisionAuthorizationScopeHash(proposal.authorizationScope);
+	if (decision.authorizationScopeHash !== scopeHash)
+		throw new Error("Authorization scope changed; authorization is stale");
+}
+
+export function canExecuteDecision(
+	decision: Decision,
+	proposal: DecisionProposal,
+	expected: Omit<DecisionProposalFreshness, "proposalHash"> = {},
+): boolean {
+	try {
+		assertDecisionCurrent(decision, proposal, expected);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 export function createRunAttempt(
