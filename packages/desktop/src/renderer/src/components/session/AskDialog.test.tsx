@@ -6,8 +6,16 @@ import { expect, it, vi } from "vitest";
 import { AskDialog } from "./AskDialog";
 
 vi.mock("../../i18n", () => ({
-	useT: () => (key: string, params?: Record<string, string | number>) =>
-		params ? `${key}:${Object.values(params).join(",")}` : key,
+	useT: () => (key: string, params?: Record<string, string | number>) => {
+		const labels: Record<string, string> = {
+			"ask.proposal.benefits": "收益",
+			"ask.proposal.costs": "代价",
+			"ask.proposal.risks": "风险",
+			"ask.proposal.resources": "资源",
+			"ask.proposal.highRisk": "高风险，需单独授权",
+		};
+		return params ? `${labels[key] ?? key}:${Object.values(params).join(",")}` : (labels[key] ?? key);
+	},
 }));
 
 vi.mock("../ui/Button", () => ({

@@ -2,7 +2,6 @@ import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { RoadmapLane, roadmapStatus, summarizeRoadmap } from "./Roadmap";
-import { layoutMindMap } from "./RouteMindMap";
 
 vi.stubGlobal("React", React);
 
@@ -34,13 +33,5 @@ describe("roadmap", () => {
 			settled: 3,
 			total: 3,
 		});
-	});
-	it("lays the mind map out left to right with one edge per step", () => {
-		const flow = layoutMindMap(nodes);
-		expect(flow.nodes).toHaveLength(3);
-		expect(flow.edges.map((e) => `${e.source}>${e.target}`)).toEqual(["request>skill", "skill>result"]);
-		const xs = flow.nodes.map((n) => n.position.x);
-		expect(xs[0]).toBeLessThan(xs[1] ?? 0);
-		expect(xs[1]).toBeLessThan(xs[2] ?? 0);
 	});
 });

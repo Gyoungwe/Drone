@@ -12,7 +12,6 @@ import { CopyButton, ForkButton } from "./message-actions";
 import { SubagentRunCard } from "./SubagentRunCard";
 import { SystemMessage } from "./SystemMessage";
 import { TaskDecisionCard } from "./TaskDecisionCard";
-import { TurnRouteCard } from "./TurnRouteCard";
 import { UserMessage } from "./UserMessage";
 
 /** 单条消息：按类型分发（用户气泡 / 图片块 / 子代理卡 / 错误卡 / 系统分割线 / 助手消息体） */
@@ -100,20 +99,10 @@ export const MessageItem = memo(function MessageItem({
 		const pending = tasks.some((task) =>
 			task.actions.some((action) => action.kind === "review" && action.state === "pending"),
 		);
-		if (!message.text && !message.route && tasks.length === 0) return null;
+		if (!message.text && tasks.length === 0) return null;
 		return (
 			<div className="group" data-testid={pending ? "chat-task-review" : undefined}>
-				{message.route ? (
-					<TurnRouteCard
-						route={message.route}
-						tasks={tasks}
-						view={view}
-						sessionId={sessionId ?? null}
-						agentActive={agentActive}
-					/>
-				) : null}
-				{!message.route &&
-					view &&
+				{view &&
 					tasks.map((task) => (
 						<TaskDecisionCard
 							key={task.id}

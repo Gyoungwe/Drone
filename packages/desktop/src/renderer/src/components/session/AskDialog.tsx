@@ -42,28 +42,36 @@ function Recommendation({ question, t }: { question: AskQuestion; t: ReturnType<
 	);
 }
 
-function ProposalProjection({ proposal }: { proposal: AskDecisionProposal }) {
+function ProposalProjection({ proposal, t }: { proposal: AskDecisionProposal; t: ReturnType<typeof useT> }) {
 	const sections: Array<[string, string[] | undefined]> = [
-		["收益", proposal.benefits],
-		["代价", proposal.costs],
-		["风险", proposal.risks],
-		["资源", proposal.resources],
+		[t("ask.proposal.benefits"), proposal.benefits],
+		[t("ask.proposal.costs"), proposal.costs],
+		[t("ask.proposal.risks"), proposal.risks],
+		[t("ask.proposal.resources"), proposal.resources],
 	];
 	return (
 		<section
 			className="space-y-2 rounded-xl border border-accent/20 bg-accent/5 px-3 py-3"
 			data-testid="decision-proposal"
 		>
-			<div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">方案提案</div>
+			<div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
+				{t("ask.proposal.title")}
+			</div>
 			{proposal.recommendation && (
 				<div className="text-[12px] text-ink-2">
-					<span className="font-medium">推荐：{proposal.recommendation.value}</span>
+					<span className="font-medium">
+						{t("ask.proposal.recommendation", { value: proposal.recommendation.value })}
+					</span>
 					<span className="ml-2 text-ink-dim">{proposal.recommendation.reason}</span>
 				</div>
 			)}
-			{proposal.reason && <p className="text-[12px] text-ink-2">理由：{proposal.reason}</p>}
+			{proposal.reason && (
+				<p className="text-[12px] text-ink-2">{t("ask.proposal.reason", { value: proposal.reason })}</p>
+			)}
 			{proposal.evidence?.length ? (
-				<p className="text-[11px] text-ink-dim">依据：{proposal.evidence.join(" · ")}</p>
+				<p className="text-[11px] text-ink-dim">
+					{t("ask.proposal.evidence", { value: proposal.evidence.join(" · ") })}
+				</p>
 			) : null}
 			{sections.map(([label, values]) =>
 				values?.length ? (
@@ -75,9 +83,12 @@ function ProposalProjection({ proposal }: { proposal: AskDecisionProposal }) {
 			)}
 			{proposal.authorizationActions?.length ? (
 				<div className="text-[11px] text-ink-dim">
-					<span className="font-medium text-ink-2">授权动作：</span>
+					<span className="font-medium text-ink-2">{t("ask.proposal.authorization")}：</span>
 					{proposal.authorizationActions
-						.map((action) => `${action.label}${action.risk === "high" ? "（高风险，需单独授权）" : ""}`)
+						.map(
+							(action) =>
+								`${action.label}${action.risk === "high" ? `（${t("ask.proposal.highRisk")}）` : ""}`,
+						)
 						.join("；")}
 				</div>
 			) : null}
@@ -173,12 +184,12 @@ export function AskDialog({
 						<h3 className="mt-1 text-base font-semibold text-ink">{request.title ?? t("ask.title")}</h3>
 						{(request.kind ?? request.purpose) && (
 							<p className="mt-1 text-[11px] text-ink-dim">
-								{request.kind === "authorization" ? "授权" : "澄清"}
+								{request.kind === "authorization" ? t("ask.authorization") : t("ask.clarification")}
 							</p>
 						)}
 					</div>
 					<div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-						{proposal && <ProposalProjection proposal={proposal} />}
+						{proposal && <ProposalProjection proposal={proposal} t={t} />}
 						<p className="whitespace-pre-wrap break-words rounded-lg bg-hover px-3 py-2.5 text-[13px] leading-relaxed text-ink select-text">
 							{formatCardText(question.prompt)}
 						</p>
@@ -260,7 +271,7 @@ export function AskDialog({
 					<h3 className="mt-1 text-base font-semibold text-ink">{request.title ?? t("ask.title")}</h3>
 					{(request.kind ?? request.purpose) && (
 						<p className="mt-1 text-[11px] text-ink-dim">
-							{request.kind === "authorization" ? "授权" : "澄清"}
+							{request.kind === "authorization" ? t("ask.authorization") : t("ask.clarification")}
 						</p>
 					)}
 					<p className="mt-1 text-[12px] text-ink-dim">
@@ -268,7 +279,7 @@ export function AskDialog({
 					</p>
 				</div>
 				<div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
-					{proposal && <ProposalProjection proposal={proposal} />}
+					{proposal && <ProposalProjection proposal={proposal} t={t} />}
 					{request.questions.map((item, questionIndex) => {
 						const draft = drafts[item.id] ?? {};
 						const selected = draft.values ?? [];

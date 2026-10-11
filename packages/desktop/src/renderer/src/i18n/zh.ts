@@ -58,6 +58,28 @@ export const zh = {
 			engineering: "工程",
 		},
 	},
+	firstRun: {
+		title: "先把研究环境接好",
+		subtitle: "只需完成一次配置；之后每个新会话都可以直接从问题开始。",
+		dismiss: "知道了",
+		open: "去配置",
+		knowledge: {
+			title: "知识库",
+			description: "绑定 Obsidian 知识库，让已核验的研究记录可以被检索和复用。",
+		},
+		zotero: {
+			title: "Zotero",
+			description: "接入文献库，管理条目、附件和精读后的文献记录。",
+		},
+		compute: {
+			title: "远程主机",
+			description: "登记 SSH 或计算节点，先检查环境，再提交分析任务。",
+		},
+		example: {
+			title: "想先看看完整流程？",
+			button: "打开文献示例",
+		},
+	},
 	runInspector: {
 		title: "运行记录",
 		label: "运行记录：工具、来源与模型响应",
@@ -103,6 +125,8 @@ export const zh = {
 	ask: {
 		eyebrow: "需要你的输入",
 		title: "请确认接下来的选择",
+		authorization: "授权",
+		clarification: "澄清",
 		progress: "已回答 {answered} / {total}",
 		singleHint: "单选，也可以填写自己的答案",
 		multiHint: "可多选，也可以填写自己的答案",
@@ -117,6 +141,18 @@ export const zh = {
 		timeout: "提交超时，请重试或取消",
 		footerHint: "回答会直接返回给当前 Agent",
 		queued: "还有 {count} 个问题等待处理",
+		proposal: {
+			title: "方案提案",
+			recommendation: "推荐：{value}",
+			reason: "理由：{value}",
+			evidence: "依据：{value}",
+			benefits: "收益",
+			costs: "代价",
+			risks: "风险",
+			resources: "资源",
+			authorization: "授权动作",
+			highRisk: "高风险，需单独授权",
+		},
 	},
 	appError: {
 		title: "界面出现异常",
@@ -174,6 +210,13 @@ export const zh = {
 		reviewLater: "稍后处理可保留此卡",
 		tasksEmpty: "还没有任务清单——Agent 建立计划后会显示在这里。",
 		processEmpty: "还没有运行记录。",
+		processRoute: {
+			ariaLabel: "本轮处理进度",
+			title: "处理进度",
+			current: "当前节点",
+			steps: "处理步骤",
+			stepCount: "{current}/{total} 步",
+		},
 		processLanes: {
 			selectTurn: "选择要查看的轮次",
 			empty: "这一泳道本轮没有公开回执。",

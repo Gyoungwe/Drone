@@ -6,6 +6,8 @@ import { ProcessRouteSummary } from "./ProcessRouteSummary";
 
 vi.mock("../../i18n", () => ({
 	useI18nStore: (selector: (state: { language: string }) => unknown) => selector({ language: "zh" }),
+	useT: () => (key: string, params?: Record<string, string | number>) =>
+		key === "panel.processRoute.stepCount" ? `${params?.current}/${params?.total} 步` : key,
 }));
 vi.stubGlobal("React", React);
 
@@ -42,12 +44,13 @@ const route: TurnRoute = {
 	},
 };
 
-it("shows the route status, progress and the actionable blocked step", () => {
+it("shows the current processing node and compact progress", () => {
 	const html = renderToStaticMarkup(createElement(ProcessRouteSummary, { route }));
 	expect(html).toContain('data-testid="process-route-summary"');
 	expect(html).toContain('data-route-status="blocked"');
 	expect(html).toContain('data-testid="process-route-progress"');
-	expect(html).toContain("当前需要关注：");
+	expect(html).toContain('data-testid="process-route-current"');
 	expect(html).toContain(">工具</span>");
-	expect(html).toContain("48/76 步");
+	expect(html).toContain("5/6 步");
+	expect(html).not.toContain("当前需要关注");
 });

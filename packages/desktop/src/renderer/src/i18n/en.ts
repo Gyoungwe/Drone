@@ -63,6 +63,28 @@ export const en: Messages = {
 			engineering: "Engineering",
 		},
 	},
+	firstRun: {
+		title: "Set up your research workspace",
+		subtitle: "Configure it once; every new session can then start from the question itself.",
+		dismiss: "Got it",
+		open: "Set up",
+		knowledge: {
+			title: "Knowledge base",
+			description: "Bind an Obsidian vault so verified research records can be searched and reused.",
+		},
+		zotero: {
+			title: "Zotero",
+			description: "Connect your literature library for items, attachments and close-reading records.",
+		},
+		compute: {
+			title: "Remote host",
+			description: "Register an SSH or compute node, check its environment, then submit analyses.",
+		},
+		example: {
+			title: "Want to see the full flow first?",
+			button: "Open literature example",
+		},
+	},
 	runInspector: {
 		title: "Run Inspector",
 		label: "Run details: tools, sources and model responses",
@@ -110,6 +132,8 @@ export const en: Messages = {
 	ask: {
 		eyebrow: "Your input is needed",
 		title: "Confirm the next choice",
+		authorization: "Authorization",
+		clarification: "Clarification",
 		progress: "Answered {answered} / {total}",
 		singleHint: "Choose one, or enter your own answer",
 		multiHint: "Choose any that apply, or enter your own answer",
@@ -124,6 +148,18 @@ export const en: Messages = {
 		timeout: "Submit timed out — retry or cancel",
 		footerHint: "Your answers go directly back to the current agent",
 		queued: "{count} more question form(s) waiting",
+		proposal: {
+			title: "Decision proposal",
+			recommendation: "Recommended: {value}",
+			reason: "Rationale: {value}",
+			evidence: "Evidence: {value}",
+			benefits: "Benefits",
+			costs: "Costs",
+			risks: "Risks",
+			resources: "Resources",
+			authorization: "Authorized actions",
+			highRisk: "high risk; separate authorization required",
+		},
 	},
 	appError: {
 		title: "Something went wrong",
@@ -181,6 +217,13 @@ export const en: Messages = {
 		reviewLater: "This card stays here until you decide",
 		tasksEmpty: "No task list yet — it appears here once the agent makes a plan.",
 		processEmpty: "No run records yet.",
+		processRoute: {
+			ariaLabel: "Current turn progress",
+			title: "Progress",
+			current: "Current step",
+			steps: "Processing steps",
+			stepCount: "{current}/{total} steps",
+		},
 		processLanes: {
 			selectTurn: "Select a turn to inspect",
 			empty: "No public activity record in this lane for this turn.",
