@@ -184,6 +184,23 @@ export {
 	type ComputeProposalQuestion,
 	preflightComputeSubmission,
 } from "./services/compute-preflight";
+export {
+	createRnaseqExecutionService,
+	executeRnaseqFixture,
+	planRnaseqExecution,
+	preflightExecution,
+	preflightRnaseqExecution,
+	type RnaseqExecutionPlan,
+	RnaseqExecutionService,
+	type RnaseqExecutionServiceOptions,
+	type RnaseqIntentInput,
+	type RnaseqPreflight,
+	type RnaseqSubmitResult,
+	type RnaseqSubmitter,
+	routeExecutionIntent,
+	routeRnaseqIntent,
+	runRnaseqFixture,
+} from "./services/execution-route";
 export { InquiryService, type InquiryServiceOptions, type InquiryServicePort } from "./services/inquiry";
 export { InstitutionalService, type InstitutionalServicePort } from "./services/institutional";
 export {

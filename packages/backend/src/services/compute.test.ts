@@ -97,6 +97,23 @@ describe("ComputeService", () => {
 		await service.dispose();
 	});
 
+	it("promotes a queued job to succeeded when the runner reports completion", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-compute-"));
+		const service = new ComputeService({
+			storage: new StorageRegistry(),
+			agentDir: root,
+			executor: {
+				submit: async () => ({ status: "queued", remoteId: "runner-1" }),
+				status: async () => ({ status: "succeeded", remoteId: "runner-1" }),
+			},
+		});
+		await service.upsertHost(host());
+		const job = await service.submit(spec("queued-to-succeeded"));
+		expect(job.status).toBe("queued");
+		expect((await service.status(job.jobId)).status).toBe("succeeded");
+		await service.dispose();
+	});
+
 	it("verifies collected artifact checksums and rejects traversal", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-compute-"));
 		const output = join(root, "output");
