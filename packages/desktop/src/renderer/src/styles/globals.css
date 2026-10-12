@@ -2199,3 +2199,14 @@ code {
 		transition: none;
 	}
 }
+
+@keyframes action-surface-in {
+	from {
+		opacity: 0;
+		transform: translateX(12px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}

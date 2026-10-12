@@ -1,8 +1,11 @@
 import { exampleTaskForDirection } from "@drone/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getPi } from "../../api";
 import { useI18nStore, useT } from "../../i18n";
 import { useExampleTaskStore } from "../../stores/example-tasks";
+import { useProjectsStore } from "../../stores/projects";
 import { useSettingsStore } from "../../stores/settings";
+import { type FirstRunStatus, firstRunComplete, probeFirstRunStatus } from "./first-run-status";
 
 const STORAGE_KEY = "drone.first-run-guide.dismissed.v1";
 
@@ -28,7 +31,19 @@ export function FirstRunGuide() {
 	const language = useI18nStore((state) => state.language);
 	const [visible, setVisible] = useState(() => !wasDismissed());
 	const [phase, setPhase] = useState<"start" | "setup">("start");
-	if (!visible) return null;
+	const cwd = useProjectsStore((state) => state.selectedCwd);
+	const [status, setStatus] = useState<FirstRunStatus | null>(null);
+	useEffect(() => {
+		if (!visible || typeof window === "undefined" || !window.pi) return;
+		let live = true;
+		void probeFirstRunStatus(getPi(), cwd).then((next) => {
+			if (live) setStatus(next);
+		});
+		return () => {
+			live = false;
+		};
+	}, [visible, cwd]);
+	if (!visible || firstRunComplete(status)) return null;
 
 	const choose = (action: () => void) => {
 		dismiss();
@@ -121,6 +136,8 @@ export function FirstRunGuide() {
 					button={t("firstRun.open")}
 					onClick={() => useSettingsStore.getState().openWith("knowledge")}
 					dataTestId="first-run-knowledge"
+					done={status?.knowledge ?? false}
+					doneLabel={t("firstRun.configured")}
 				/>
 				<GuideAction
 					title={t("firstRun.zotero.title")}
@@ -128,6 +145,8 @@ export function FirstRunGuide() {
 					button={t("firstRun.open")}
 					onClick={() => useSettingsStore.getState().openWith("zotero")}
 					dataTestId="first-run-zotero"
+					done={status?.zotero ?? false}
+					doneLabel={t("firstRun.configured")}
 				/>
 				<GuideAction
 					title={t("firstRun.compute.title")}
@@ -135,6 +154,8 @@ export function FirstRunGuide() {
 					button={t("firstRun.open")}
 					onClick={() => useSettingsStore.getState().openWith("compute")}
 					dataTestId="first-run-compute"
+					done={status?.compute ?? false}
+					doneLabel={t("firstRun.configured")}
 				/>
 			</div>
 		</section>
@@ -147,16 +168,31 @@ function GuideAction({
 	button,
 	onClick,
 	dataTestId,
+	done = false,
+	doneLabel,
 }: {
 	title: string;
 	description: string;
 	button: string;
 	onClick: () => void;
 	dataTestId: string;
+	done?: boolean;
+	doneLabel?: string;
 }) {
 	return (
-		<div className="rounded-lg border border-border px-2.5 py-2" data-testid={dataTestId}>
-			<strong className="block text-[12px] text-ink">{title}</strong>
+		<div
+			className={`rounded-lg border px-2.5 py-2 ${done ? "border-ok/40 bg-ok/5" : "border-border"}`}
+			data-testid={dataTestId}
+			data-done={done ? "true" : undefined}
+		>
+			<strong className="flex items-center justify-between gap-2 text-[12px] text-ink">
+				{title}
+				{done ? (
+					<span className="rounded-full bg-ok/12 px-1.5 py-0.5 text-[10px] font-medium text-ok">
+						{doneLabel}
+					</span>
+				) : null}
+			</strong>
 			<p className="mt-1 min-h-8 text-[11px] leading-relaxed text-ink-faint">{description}</p>
 			<button
 				type="button"

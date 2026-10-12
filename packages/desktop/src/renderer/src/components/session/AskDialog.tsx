@@ -169,6 +169,7 @@ export function AskDialog({
 				contentRef={dialogRef}
 				ariaLabel={request.title ?? t("ask.title")}
 				tone={request.kind === "authorization" ? "warn" : "accent"}
+				height="fit"
 				testId="ask-simple"
 			>
 				<div className="border-b border-border px-5 py-4">
