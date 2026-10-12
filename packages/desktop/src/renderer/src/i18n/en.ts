@@ -435,6 +435,13 @@ export const en: Messages = {
 				"Call the subagent tool to dispatch {agent} for the task below, then fold its conclusion into the current work:\n{task}",
 			promptRequired: "Required tools: {tools}",
 		},
+		contextUsage: {
+			title: "Context",
+			unknown: "unknown",
+			high: "Near the limit — compact soon",
+			compact: "Compact",
+			compacting: "Compacting…",
+		},
 		hostEnv: {
 			title: "This machine",
 			hint: "CPU / memory / disk and toolchain probe",

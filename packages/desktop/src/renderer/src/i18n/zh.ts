@@ -421,6 +421,13 @@ export const zh = {
 				"请调用 subagent 工具派发子智能体 {agent} 执行以下任务，完成后把结论整合进当前工作：\n{task}",
 			promptRequired: "必需工具：{tools}",
 		},
+		contextUsage: {
+			title: "上下文",
+			unknown: "暂未知",
+			high: "接近上限，建议压缩",
+			compact: "压缩",
+			compacting: "正在压缩…",
+		},
 		hostEnv: {
 			title: "本机环境",
 			hint: "CPU / 内存 / 磁盘与工具链探测",

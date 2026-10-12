@@ -43,6 +43,7 @@ import { makeHarnessContextExtension } from "./harness/context";
 import { makeHarnessDeliveryExtension } from "./harness/delivery";
 import { makeHarnessGuardExtension } from "./harness/guards";
 import { makeHarnessRecallTool } from "./harness/recall";
+import { makeTurnContextExtension } from "./harness/turn-context";
 
 const log = createLogger("session-harness");
 const warnedHarnessUnits = new Set<string>();
@@ -214,6 +215,12 @@ export function buildSessionExtensionFactories(
 					deps.traces.recordCustom(sessionId, "harness_checkpoint", checkpoint),
 				recordUnit: (sessionId, unit, action, details) =>
 					deps.traces.recordCustom(sessionId, "harness_unit", { unit, action, ...details }),
+			}),
+		);
+	if (harness.context)
+		factories.push(
+			makeTurnContextExtension({
+				recordMeta: (sessionId, meta) => deps.traces.recordCustom(sessionId, "turn_meta", meta),
 			}),
 		);
 	if (harness.guard || harness.delivery) {

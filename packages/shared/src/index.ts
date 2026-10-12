@@ -21,6 +21,7 @@ export * from "./capabilities";
 export * from "./capability-discovery";
 export * from "./capability-skills";
 export * from "./compute";
+export * from "./context-meta";
 export * from "./contracts";
 export * from "./desktop-command";
 export * from "./desktop-prefs";

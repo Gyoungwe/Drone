@@ -15,6 +15,7 @@ import { useSessionStatus } from "../session/session-status";
 import { ArtifactsPane } from "./ArtifactsPane";
 import { ChangesPane } from "./ChangesPane";
 import { ComputePane } from "./ComputePane";
+import { ContextUsageMeter } from "./ContextUsageMeter";
 import { ProcessPane } from "./ProcessPane";
 import { SubagentsPane } from "./SubagentsPane";
 import { TasksPane } from "./TasksPane";
@@ -75,6 +76,7 @@ export function ContextPanel() {
 					collapseLabel={t("panel.collapse")}
 				/>
 				<div className="context-panel-body">
+					<ContextUsageMeter sessionId={activeSessionId} />
 					{tab === "tasks" && <TasksPane sessionId={activeSessionId} />}
 					{tab === "process" && <ProcessTab sessionId={activeSessionId} />}
 					{tab === "artifacts" && <ArtifactsPane sessionId={activeSessionId} />}

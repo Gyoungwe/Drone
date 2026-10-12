@@ -2827,3 +2827,46 @@ code {
 .settings-dialog-content {
 	scrollbar-gutter: stable;
 }
+
+/* P16 右栏上下文用量计 */
+.context-usage {
+	border: 1px solid var(--color-border);
+	border-radius: 10px;
+	padding: 8px 10px;
+	margin: 0 0 10px;
+	font-size: 11px;
+	color: var(--color-ink-dim);
+}
+.context-usage-head,
+.context-usage-foot {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+}
+.context-usage-head > span:first-child {
+	color: var(--color-ink);
+	font-weight: 500;
+}
+.context-usage-bar {
+	height: 4px;
+	border-radius: 2px;
+	background: var(--color-hover);
+	margin: 6px 0;
+	overflow: hidden;
+}
+.context-usage-bar > span {
+	display: block;
+	height: 100%;
+	background: var(--color-ink-faint);
+	transition: width var(--duration-fast, 150ms) var(--ease-standard, ease);
+}
+.context-usage--warn .context-usage-bar > span {
+	background: var(--color-warn);
+}
+.context-usage--high .context-usage-bar > span {
+	background: var(--color-err);
+}
+.context-usage--high .context-usage-foot > span {
+	color: var(--color-err);
+}
