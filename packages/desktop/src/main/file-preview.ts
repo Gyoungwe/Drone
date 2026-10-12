@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { open, stat } from "node:fs/promises";
 import { basename, extname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createGunzip } from "node:zlib";
+import { createGunzip, gunzipSync } from "node:zlib";
 import {
 	fileTypeOf,
 	isLocalResourceTarget,
@@ -12,6 +12,7 @@ import {
 } from "@drone/shared";
 
 const BINARY_PREVIEW_LIMIT = 16 * 1024 * 1024;
+const VOLUME_GUNZIP_LIMIT = 64 * 1024 * 1024;
 const COMPRESSED_READ_LIMIT = 2 * 1024 * 1024;
 export function resolveResourcePath(target: string, cwd?: string): string {
 	if (typeof target !== "string" || !isLocalResourceTarget(target))
@@ -102,6 +103,23 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 		base = { path, name, size: info.size, previewKind: type.previewKind };
 	const isImage = type.previewKind === "image" || type.previewKind === "svg";
 	const mimeType = isImage || type.previewKind === "pdf" ? type.mime : "text/plain";
+	// P4 体数据：.nii.gz 先解压（压缩前 ≤16 MiB，解压后 ≤64 MiB），渲染层解析
+	if (type.previewKind === "volume" && type.gzip) {
+		if (info.size > BINARY_PREVIEW_LIMIT)
+			return { ...base, kind: "binary", mimeType: type.mime, truncated: true };
+		try {
+			const raw = gunzipSync(await readPrefix(path, info.size), { maxOutputLength: VOLUME_GUNZIP_LIMIT });
+			return {
+				...base,
+				kind: "binary",
+				mimeType: type.mime,
+				data: raw.toString("base64"),
+				compression: "gzip",
+			};
+		} catch {
+			return { ...base, kind: "binary", mimeType: type.mime, truncated: true, compression: "gzip" };
+		}
+	}
 	if (ext === ".gz" && format.supported) {
 		const decoded = await gzipPrefix(path, info.size);
 		const content = decodeText(decoded.bytes);
@@ -141,7 +159,9 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 		type.previewKind === "audio" ||
 		type.previewKind === "video" ||
 		type.previewKind === "array" ||
-		type.previewKind === "mesh"
+		type.previewKind === "mesh" ||
+		type.previewKind === "tiff" ||
+		type.previewKind === "volume"
 	) {
 		if (info.size > BINARY_PREVIEW_LIMIT)
 			return { ...base, kind: "binary", mimeType: type.mime, truncated: true };
