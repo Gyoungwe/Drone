@@ -153,6 +153,24 @@ export class SessionControlService {
 		await this.host.sessionEngine.setModel(entry.session, model);
 	}
 
+	/** P18：切换模式 = 换工具白名单（会重置提示缓存），返回工具增减供 UI 提示。 */
+	async setAgentMode(
+		sessionId: string,
+		mode: "single" | "lead" | "swarm",
+	): Promise<{ added: string[]; removed: string[] }> {
+		const entry = this.host.requireSession(sessionId);
+		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
+		const runtime = this.host.capabilityRuntimes.get(sessionId);
+		if (!runtime) return { added: [], removed: [] };
+		const before = new Set(entry.session.getActiveToolNames());
+		runtime.setAgentMode(mode);
+		const after = new Set(entry.session.getActiveToolNames());
+		return {
+			added: [...after].filter((n) => !before.has(n)).sort(),
+			removed: [...before].filter((n) => !after.has(n)).sort(),
+		};
+	}
+
 	async setThinkingLevel(sessionId: string, level: string): Promise<void> {
 		const entry = this.host.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");

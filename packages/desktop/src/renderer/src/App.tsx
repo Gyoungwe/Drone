@@ -4,6 +4,7 @@ import { getPi } from "./api";
 import { EmptyState } from "./components/chat/EmptyState";
 import { InlineAskCard } from "./components/chat/InlineAskCard";
 import { MessageList } from "./components/chat/MessageList";
+import { ComposerStatusBar } from "./components/composer/ComposerStatusBar";
 import { RunStatusStrip } from "./components/composer/RunStatusStrip";
 import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
 import { KnowledgeView } from "./components/knowledge/KnowledgeView";
@@ -180,6 +181,7 @@ export default function App() {
 										/>
 									</div>
 								)}
+								{!showEmpty && <ComposerStatusBar />}
 								{!showEmpty && <RunStatusStrip sessionId={activeSessionId} pendingAsks={sessionAsks} />}
 								<ApprovalDock sessionId={activeSessionId} hideComposer={showEmpty} />
 							</div>

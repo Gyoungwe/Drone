@@ -569,6 +569,18 @@ export const zh = {
 		checkFailed: "检查更新失败：{message}",
 	},
 	composer: {
+		mode: {
+			title: "模式（决定可用工具）",
+			single: "单体",
+			singleHint: "只用自己的工具，不派发子智能体",
+			lead: "主从",
+			leadHint: "可一次派发 1 个子智能体",
+			swarm: "集群",
+			swarmHint: "可并行派发最多 4 个子智能体",
+			changed: "已切换到{mode}",
+			cacheReset: "工具变化会重置提示缓存",
+		},
+		status: { local: "本机" },
 		placeholder: "随便问点什么，/ 命令，@ 上下文",
 		placeholderQueued: "排队消息，当前任务完成后自动发送",
 		placeholderCompacting: "正在压缩上下文…",

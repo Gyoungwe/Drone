@@ -155,6 +155,13 @@ export class SessionServiceApi extends SessionSettingsApi {
 	async setModel(sessionId: string, provider: string, modelId: string): Promise<void> {
 		return this.host.control.setModel(sessionId, provider, modelId);
 	}
+	async setAgentMode(
+		sessionId: string,
+		mode: "single" | "lead" | "swarm",
+	): Promise<{ added: string[]; removed: string[] }> {
+		return this.host.control.setAgentMode(sessionId, mode);
+	}
+
 	async setThinkingLevel(sessionId: string, level: string): Promise<void> {
 		return this.host.control.setThinkingLevel(sessionId, level);
 	}

@@ -211,6 +211,7 @@ export const IpcChannels = {
 	SessionRetry: "session:retry",
 	SessionSetModel: "session:setModel",
 	SessionSetThinkingLevel: "session:setThinkingLevel",
+	SessionSetAgentMode: "session:setAgentMode",
 	SessionGetMessages: "session:getMessages",
 	/** 只读预览子智能体会话文件，不注册/打开顶栏会话 */
 	SessionPeekSubagentMessages: "session:peekSubagentMessages",

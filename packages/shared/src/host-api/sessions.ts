@@ -128,6 +128,17 @@ export const SessionsContract = defineDomain("sessions", {
 		},
 		setModel: { args: Type.Tuple([Id, Id, Id]), result: Type.Void() },
 		setThinkingLevel: { args: Type.Tuple([Id, Id]), result: Type.Void() },
+		/** P18：模式即工具白名单（single / lead / swarm）；返回本次增减的工具，供 UI 提示 */
+		setAgentMode: {
+			args: Type.Tuple([
+				Id,
+				Type.Union([Type.Literal("single"), Type.Literal("lead"), Type.Literal("swarm")]),
+			]),
+			result: Type.Object(
+				{ added: Type.Array(Type.String()), removed: Type.Array(Type.String()) },
+				{ additionalProperties: false },
+			),
+		},
 		compact: {
 			args: Type.Union([Type.Tuple([Id]), Type.Tuple([Id, Type.String()])]),
 			result: Type.Void(),
@@ -219,6 +230,7 @@ export type SessionsSchemaTypes = {
 		| [sessionId: string, requestId: string, expectedUserTimestamp: number];
 	setModel: [sessionId: string, provider: string, modelId: string];
 	setThinkingLevel: [sessionId: string, level: string];
+	setAgentMode: [sessionId: string, mode: "single" | "lead" | "swarm"];
 	compact: [sessionId: string] | [sessionId: string, customInstructions: string];
 	getStats: [sessionId: string];
 	getContextUsage: [sessionId: string];

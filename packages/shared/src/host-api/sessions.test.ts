@@ -14,6 +14,7 @@ const methodNames = [
 	"retry",
 	"setModel",
 	"setThinkingLevel",
+	"setAgentMode",
 	"compact",
 	"getStats",
 	"getContextUsage",

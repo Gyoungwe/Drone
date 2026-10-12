@@ -21,6 +21,7 @@ import { ContextRing } from "./ContextRing";
 import { composerRunActive } from "./composer-run";
 import { ImageTray } from "./ImageTray";
 import { ModelPicker } from "./ModelPicker";
+import { ModePicker } from "./ModePicker";
 import { PermissionPicker } from "./PermissionPicker";
 import { QueueBar } from "./QueueBar";
 import { QuoteChip } from "./QuoteChip";
@@ -655,6 +656,8 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 							className={`composer-model-group${readOnly ? " pointer-events-none opacity-40" : ""}`}
 							title={t("composer.modelGroupHint")}
 						>
+							<ModePicker />
+							<span className="composer-model-sep" aria-hidden="true" />
 							<ModelPicker />
 							<span className="composer-model-sep" aria-hidden="true" />
 							<ThinkingPicker />

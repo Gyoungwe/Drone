@@ -584,6 +584,18 @@ export const en: Messages = {
 		checkFailed: "Update check failed: {message}",
 	},
 	composer: {
+		mode: {
+			title: "Mode (decides available tools)",
+			single: "Solo",
+			singleHint: "Own tools only, no subagents",
+			lead: "Lead",
+			leadHint: "Dispatch one subagent at a time",
+			swarm: "Swarm",
+			swarmHint: "Dispatch up to 4 subagents in parallel",
+			changed: "Switched to {mode}",
+			cacheReset: "tool changes reset the prompt cache",
+		},
+		status: { local: "Local" },
 		placeholder: "Ask anything, / for commands, @ for context",
 		placeholderQueued: "Queue a message — sent when the current task finishes",
 		placeholderCompacting: "Compacting context…",
