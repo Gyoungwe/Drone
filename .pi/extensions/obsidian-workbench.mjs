@@ -1450,7 +1450,7 @@ async function decideWikiProposal(service, id, project, expectedHash, decision, 
             await verifySources(service, p);
             await review.checkCurrent?.();
             if (p.before === null) await link3(temp, full);
-            else await rename8(temp, full);
+            else await renameWithRetry(temp, full);
           } finally {
             await unlink5(temp).catch((error2) => {
               if (error2.code !== "ENOENT") throw error2;
@@ -1532,7 +1532,22 @@ async function wikiHistory(service, project) {
 async function knownGeneratedPage(service, project, path, hash5) {
   return (await wikiHistory(service, project)).some((p) => p.path === path && p.afterHash === hash5);
 }
-var AUTOMATIC_AUTHORITY, START2, END2, digest, MAX_PENDING, MAX_AGE;
+async function renameWithRetry(from, to, options = {}) {
+  const attempts = options.attempts ?? 6;
+  const delay = options.delayMs ?? 40;
+  const doRename = options.renameImpl ?? rename8;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await doRename(from, to);
+      return;
+    } catch (error2) {
+      const code = error2?.code;
+      if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts) throw error2;
+      await new Promise((resolve21) => setTimeout(resolve21, delay * attempt));
+    }
+  }
+}
+var AUTOMATIC_AUTHORITY, START2, END2, digest, MAX_PENDING, MAX_AGE, RENAME_RETRY_CODES;
 var init_wiki_review = __esm({
   "packages/knowledge/src/wiki-review.ts"() {
     "use strict";
@@ -1547,6 +1562,7 @@ var init_wiki_review = __esm({
     digest = (text3) => createHash6("sha256").update(text3).digest("hex");
     MAX_PENDING = 100;
     MAX_AGE = 24 * 60 * 60 * 1e3;
+    RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
   }
 });
 
