@@ -7,6 +7,7 @@ import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
 import { KnowledgeView } from "./components/knowledge/KnowledgeView";
 import { ContextPanel } from "./components/panel/ContextPanel";
 import { ProjectPage } from "./components/projects/ProjectPage";
+import { SearchPalette } from "./components/search/SearchPalette";
 import { ApprovalDock } from "./components/session/ApprovalDock";
 import { AskDialog } from "./components/session/AskDialog";
 import { SessionTabBar } from "./components/session/SessionTabBar";
@@ -153,6 +154,7 @@ export default function App() {
 			{/* 悬浮贡献层：内容列之后、设置弹窗之前（z-20 < z-40，插件层永在弹窗之下） */}
 			<RegionHost region={UI_REGIONS.AppOverlay} />
 			<SettingsDialog />
+			<SearchPalette />
 			<KnowledgeUiRoot />
 			<AskDialog requests={askRequests} onRespond={respondAsk} />
 			<TrustDialog requests={trustRequests} onRespond={respondTrust} />

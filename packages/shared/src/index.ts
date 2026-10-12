@@ -69,6 +69,7 @@ export {
 	tablePreview,
 } from "./resource-preview-format";
 export * from "./runtime";
+export * from "./search-palette";
 export * from "./session";
 export * from "./settings";
 export * from "./skill-catalog";

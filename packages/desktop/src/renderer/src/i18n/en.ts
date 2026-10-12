@@ -1365,6 +1365,16 @@ export const en: Messages = {
 		modelStopping: "Model silent; requesting stop. Completion is not confirmed yet.",
 		modelStopFailed: "Stop failed; the task may still be running. Try stopping again or check the service.",
 	},
+	search: {
+		title: "Search",
+		placeholder: "Search tasks and projects…",
+		filter: { all: "All", pinned: "Pinned", project: "Projects", task: "Tasks" },
+		kind: { task: "Task", project: "Project" },
+		pinned: "Pinned",
+		empty: "No matches",
+		untitled: "Untitled task",
+		hint: "↑↓ select · ↵ open · Tab switch filter · Esc close",
+	},
 	toast: {
 		tabsSaveFailed: "Failed to save tabs",
 		uiStateSaveFailed: "Failed to save UI state",

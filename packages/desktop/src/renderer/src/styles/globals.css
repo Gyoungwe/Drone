@@ -2319,3 +2319,119 @@ code {
 	list-style: none;
 	font-size: 12px;
 }
+
+/* P6 ⌘K 搜索面板 */
+.search-palette-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 60;
+	display: flex;
+	justify-content: center;
+	padding-top: 12vh;
+	background: oklch(0 0 0 / 0.18);
+}
+.search-palette {
+	width: min(560px, calc(100vw - 2rem));
+	max-height: 60vh;
+	display: flex;
+	flex-direction: column;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 12px;
+	box-shadow: 0 16px 48px oklch(0 0 0 / 0.18);
+	overflow: hidden;
+	font-size: 13px;
+}
+.search-palette-input {
+	border: 0;
+	outline: 0;
+	background: transparent;
+	padding: 14px 16px;
+	font-size: 14px;
+	border-bottom: 1px solid var(--color-border);
+	color: inherit;
+}
+.search-palette-filters {
+	display: flex;
+	gap: 4px;
+	padding: 8px 12px;
+}
+.search-palette-filter {
+	border: 0;
+	background: transparent;
+	border-radius: 999px;
+	padding: 3px 10px;
+	color: var(--color-muted, #6b6b6b);
+	cursor: pointer;
+}
+.search-palette-filter[aria-selected="true"] {
+	background: var(--color-hover);
+	color: inherit;
+	font-weight: 600;
+}
+.search-palette-list {
+	list-style: none;
+	margin: 0;
+	padding: 4px 6px 6px;
+	overflow: auto;
+}
+.search-palette .search-palette-item {
+	box-sizing: border-box;
+	width: 100%;
+	text-align: left;
+	justify-items: start;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	grid-template-areas: "kind title pin" ". sub sub";
+	column-gap: 8px;
+	padding: 7px 10px;
+	border-radius: 8px;
+	cursor: pointer;
+}
+.search-palette .search-palette-item[aria-selected="true"] {
+	background: var(--color-hover);
+}
+.search-palette-kind {
+	grid-area: kind;
+	font-size: 11px;
+	color: var(--color-muted, #6b6b6b);
+	border: 1px solid var(--color-border);
+	border-radius: 4px;
+	padding: 0 5px;
+	align-self: center;
+}
+.search-palette-title {
+	grid-area: title;
+	justify-self: stretch;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.search-palette-pin {
+	grid-area: pin;
+	font-size: 11px;
+	color: var(--color-muted, #6b6b6b);
+}
+.search-palette-sub {
+	grid-area: sub;
+	font-size: 11px;
+	color: var(--color-muted, #6b6b6b);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.search-palette-empty {
+	padding: 18px;
+	text-align: center;
+	color: var(--color-muted, #6b6b6b);
+}
+.search-palette-foot {
+	border-top: 1px solid var(--color-border);
+	padding: 6px 12px;
+	font-size: 11px;
+	color: var(--color-muted, #6b6b6b);
+}

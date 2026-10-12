@@ -1306,6 +1306,16 @@ export const zh = {
 		modelStopping: "模型长时间无响应，正在请求停止；尚未确认结束。",
 		modelStopFailed: "停止请求失败，任务可能仍在运行。请再次停止或检查服务。",
 	},
+	search: {
+		title: "搜索",
+		placeholder: "搜索任务和项目…",
+		filter: { all: "全部", pinned: "置顶", project: "项目", task: "任务" },
+		kind: { task: "任务", project: "项目" },
+		pinned: "已置顶",
+		empty: "没有匹配的结果",
+		untitled: "未命名任务",
+		hint: "↑↓ 选择 · ↵ 打开 · Tab 切换筛选 · Esc 关闭",
+	},
 	toast: {
 		tabsSaveFailed: "标签页保存失败",
 		uiStateSaveFailed: "界面设置保存失败",
