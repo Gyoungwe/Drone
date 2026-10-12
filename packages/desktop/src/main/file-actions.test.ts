@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { clipboardFormats, type FileActionHost, runFileAction } from "./file-actions";
 
@@ -32,7 +33,7 @@ describe("file actions (P7)", () => {
 		await runFileAction(h, "openInEditor", file, null, null);
 		expect(h.showItemInFolder).toHaveBeenCalledWith(file);
 		expect(h.openPath).toHaveBeenCalledWith(file);
-		expect(h.openExternal).toHaveBeenCalledWith(`vscode://file${file}`);
+		expect(h.openExternal).toHaveBeenCalledWith(`vscode://file${pathToFileURL(file).pathname}`);
 	});
 	it("downloads a copy to the chosen path", async () => {
 		const { dir, file } = await fixture();
@@ -71,7 +72,9 @@ describe("file actions (P7)", () => {
 			clipboardFormats("C:\\p\\a.txt", "win32", false).buffers?.["Preferred DropEffect"],
 		).toBeUndefined();
 		const linux = clipboardFormats("/p/a b.txt", "linux", true);
-		expect(linux.buffers?.["x-special/gnome-copied-files"]?.toString()).toBe("cut\nfile:///p/a%20b.txt");
+		expect(linux.buffers?.["x-special/gnome-copied-files"]?.toString()).toBe(
+			`cut\n${pathToFileURL("/p/a b.txt").href}`,
+		);
 		const mac = clipboardFormats("/p/<a>.txt", "darwin", false);
 		expect(mac.buffers?.NSFilenamesPboardType?.toString()).toContain("<string>/p/&lt;a&gt;.txt</string>");
 	});
