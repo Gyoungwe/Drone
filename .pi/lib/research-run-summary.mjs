@@ -10463,6 +10463,17 @@ var SessionsContract = defineDomain("sessions", {
     },
     setModel: { args: typebox_exports.Tuple([Id2, Id2, Id2]), result: typebox_exports.Void() },
     setThinkingLevel: { args: typebox_exports.Tuple([Id2, Id2]), result: typebox_exports.Void() },
+    /** P18：模式即工具白名单（single / lead / swarm）；返回本次增减的工具，供 UI 提示 */
+    setAgentMode: {
+      args: typebox_exports.Tuple([
+        Id2,
+        typebox_exports.Union([typebox_exports.Literal("single"), typebox_exports.Literal("lead"), typebox_exports.Literal("swarm")])
+      ]),
+      result: typebox_exports.Object(
+        { added: typebox_exports.Array(typebox_exports.String()), removed: typebox_exports.Array(typebox_exports.String()) },
+        { additionalProperties: false }
+      )
+    },
     compact: {
       args: typebox_exports.Union([typebox_exports.Tuple([Id2]), typebox_exports.Tuple([Id2, typebox_exports.String()])]),
       result: typebox_exports.Void()
