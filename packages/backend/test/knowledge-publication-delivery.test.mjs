@@ -185,7 +185,7 @@ describe("same checked result across stream, history, LAN polling and exports", 
 		]);
 		const final = session.messages.filter((m) => m.role === "assistant").at(-1);
 		expect(final.knowledgePublication.status).toBe("no-hits");
-		expect(final.content[0].text).toContain("知识库检索无命中");
+		expect(final.content[0].text).toContain("知识库没有找到匹配内容");
 	});
 	it("prevents forged publication metadata and draft snapshots from bypassing projection", () => {
 		const message = {
