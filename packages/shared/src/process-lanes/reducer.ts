@@ -370,7 +370,7 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 						"保存的知识不会自动作为本轮引用",
 						"Saved knowledge is not automatically cited in this turn",
 					),
-					textPair(`内容类型：${event.kind}`),
+					textPair(`内容类型：${event.kind}`, `Content type: ${event.kind}`),
 				],
 				{ paths: event.path ? [event.path] : [] },
 			);

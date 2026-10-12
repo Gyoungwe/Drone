@@ -1,5 +1,6 @@
 import type { TrustOption, TrustRequest } from "@drone/shared";
 import { useT } from "../../i18n";
+import { ActionSurface } from "../ui/ActionSurface";
 import { Button } from "../ui/Button";
 
 /** 项目信任对话框：添加项目/创建会话前确认是否加载项目本地资源（.pi/ 扩展、skills 等） */
@@ -24,8 +25,8 @@ export function TrustDialog({
 	};
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/20" role="dialog" aria-modal>
-			<div className="w-[440px] rounded-xl border border-border bg-surface p-4 shadow-dialog">
+		<ActionSurface ariaLabel={t("trust.title")} tone="warn" width="compact" testId="trust-dialog">
+			<div className="flex min-h-0 flex-1 flex-col p-4">
 				<h3 className="text-sm font-semibold text-ink">{t("trust.title")}</h3>
 				<p className="mt-1.5 rounded-lg bg-hover px-2.5 py-1.5 font-mono text-[12px] break-all text-ink-2 select-text">
 					{request.cwd}
@@ -50,6 +51,6 @@ export function TrustDialog({
 					</p>
 				)}
 			</div>
-		</div>
+		</ActionSurface>
 	);
 }

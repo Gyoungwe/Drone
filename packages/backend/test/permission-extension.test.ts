@@ -9,11 +9,12 @@ import type {
 	ToolCallEvent,
 	ToolCallEventResult,
 } from "@earendil-works/pi-coding-agent";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { PermissionAuditEntry } from "../src/permissions/audit";
 import { permissionAuditPath } from "../src/permissions/audit";
 import { makePermissionGateExtension, type PermissionConfirm } from "../src/permissions/extension";
 import { PermissionGate } from "../src/permissions/gate";
+import * as tmpZone from "../src/permissions/tmp-zone";
 import { workspaceConfigPath } from "../src/project/workspace-store";
 
 type ToolCallHandler = ExtensionHandler<ToolCallEvent, ToolCallEventResult>;
@@ -253,13 +254,19 @@ describe("permission-gate 扩展", () => {
 	it("ask 元数据：path 类带 kind/suggestDir（git 根候选）；bash 为 command 无 suggestDir", async () => {
 		const dir = makeAgentDir();
 		const root = join(dir, "proj");
-		// git 根候选 fixture 必须在临时区之外（tmp 路径走 temporary 分支：默认放行不弹窗，
-		// 收紧后也不给 suggestDir）；放包目录下临时目录（用后清理），不写用户家目录
+		// This case tests non-temporary workspace suggestions. Classify only its
+		// fixture as non-temporary even when the checkout itself lives under /tmp.
 		const fixtureBase = mkdtempSync(join(process.cwd(), ".perm-ext-fixture-"));
 		const repo = join(fixtureBase, "other-repo");
 		mkdirSync(root, { recursive: true });
 		mkdirSync(join(repo, "sub"), { recursive: true });
 		mkdirSync(join(repo, ".git")); // git 根候选
+		const isTemporaryPath = tmpZone.isTemporaryPath;
+		const temporarySpy = vi
+			.spyOn(tmpZone, "isTemporaryPath")
+			.mockImplementation((path) =>
+				path.startsWith(`${fixtureBase}${sep}`) ? false : isTemporaryPath(path),
+			);
 		try {
 			const calls: ConfirmCall[] = [];
 			const { call } = makeHarness(dir, false, { projectRoot: root, confirmCalls: calls });
@@ -269,6 +276,7 @@ describe("permission-gate 扩展", () => {
 			expect(calls[1]).toMatchObject({ kind: "command" });
 			expect(calls[1].suggestDir).toBeUndefined();
 		} finally {
+			temporarySpy.mockRestore();
 			rmSync(fixtureBase, { recursive: true, force: true });
 		}
 	});

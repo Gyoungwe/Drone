@@ -54,3 +54,20 @@ it("shows the current processing node and compact progress", () => {
 	expect(html).toContain("5/6 步");
 	expect(html).not.toContain("当前需要关注");
 });
+
+it("shows the final step when the route is already settled", () => {
+	const html = renderToStaticMarkup(
+		createElement(ProcessRouteSummary, {
+			route: {
+				...route,
+				intake: "new-topic",
+				landing: "ordinary",
+				host: null,
+				keptCheckpoint: false,
+				deferPhrase: false,
+			},
+		}),
+	);
+	expect(html).toContain("6/6 步");
+	expect(html).toContain(">结果</strong>");
+});

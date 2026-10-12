@@ -10,12 +10,12 @@ export function ProcessRouteSummary({ route }: { route: TurnRoute }) {
 	const lang = language === "en" ? "en" : "zh";
 	const steps = useMemo(() => turnRouteSteps(route, lang), [route, lang]);
 	const summary = useMemo(() => summarizeRoadmap(steps), [steps]);
-	const currentIndex = Math.max(
-		0,
-		steps.findIndex(
-			(step) => step.status === "active" || step.status === "warn" || step.status === "blocked",
-		),
+	const activeIndex = steps.findIndex(
+		(step) => step.status === "active" || step.status === "warn" || step.status === "blocked",
 	);
+	// A settled route has no active node. Keep the summary at the final step
+	// instead of falling back to the first node and showing 1/total.
+	const currentIndex = activeIndex >= 0 ? activeIndex : Math.max(0, steps.length - 1);
 	const current = steps[currentIndex] ?? steps[steps.length - 1];
 
 	return (

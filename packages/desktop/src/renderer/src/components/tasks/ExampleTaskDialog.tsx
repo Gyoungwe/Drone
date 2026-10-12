@@ -20,6 +20,7 @@ import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
 import { pushToast } from "../../stores/toasts";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { ensureActiveSession } from "../composer/use-composer-send";
+import { ActionSurface } from "../ui/ActionSurface";
 import { Button } from "../ui/Button";
 
 const INPUT_CLASS =
@@ -159,17 +160,15 @@ export function ExampleTaskForm({
 	const launchDisabled = sending || readOnly || (needsNewSession && !hasCwd);
 
 	return (
-		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-ink/20"
-			role="dialog"
-			aria-modal
-			aria-labelledby="example-task-title"
-			data-testid="example-task-dialog"
-			onMouseDown={(event) => {
+		<ActionSurface
+			ariaLabel={task.title[language]}
+			width="wide"
+			testId="example-task-dialog"
+			onBackdropMouseDown={(event) => {
 				if (event.target === event.currentTarget) close();
 			}}
 		>
-			<div className="flex max-h-[85vh] w-[560px] flex-col rounded-xl border border-border bg-surface shadow-dialog">
+			<div className="flex min-h-0 flex-1 flex-col">
 				<header className="px-5 pt-4 pb-3">
 					<p className="text-[11px] font-medium text-ink-faint">
 						{t("examples.eyebrow")} · {direction?.label[language]}
@@ -328,6 +327,6 @@ export function ExampleTaskForm({
 					</Button>
 				</footer>
 			</div>
-		</div>
+		</ActionSurface>
 	);
 }

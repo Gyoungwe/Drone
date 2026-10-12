@@ -89,6 +89,16 @@ describe("process lane projection", () => {
 		const messages = [user("q"), tool("research_read_knowledge", { path: "a.md", text: "", hash: "h" })];
 		expect(deriveProcessLaneState(messages).reads).toEqual([]);
 	});
+	it("keeps deposit details bilingual", () => {
+		const state = reduceProcessEvent(initialProcessLaneState(), {
+			type: "deposit",
+			seq: 1,
+			id: "deposit-1",
+			kind: "research-note",
+		});
+		const lines = state.nodes.find((node) => node.id === "deposit")?.lines;
+		expect(lines?.[2]).toEqual({ zh: "内容类型：research-note", en: "Content type: research-note" });
+	});
 	it("clears cards on a new topic and preserves historical snapshots", () => {
 		expect(processDemoState(1).nodes.find((n) => n.id === "picked")?.route?.primary).toBe("research-vault");
 		expect(processDemoState(2).nodes.find((n) => n.id === "picked")?.route?.primary).toBe("pydeseq2");
