@@ -1,4 +1,5 @@
 import type { ImageInput, UiError } from "@drone/shared";
+import { newPromptIds, receiptMatches } from "@drone/shared";
 import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -242,12 +243,11 @@ export function useComposerSend(options: UseComposerSendOptions) {
 		options.setAttachments([]);
 		options.setQuotes([]);
 		try {
-			// The IPC contract has two valid tuple shapes: [sessionId, text] and
-			// [sessionId, text, images]. Passing an explicit undefined third
-			// argument matches neither shape and is rejected before the backend
-			// handler runs.
-			if (sentImages.length > 0) await getPi().prompt(sessionId, content, sentImages);
-			else await getPi().prompt(sessionId, content);
+			// IPC 契约：带 id 时走 [sessionId, text, images, ids] 四元组（images 可为空数组）。
+			// P14 Optimistic：发送前生成 messageId / assistantMessageId，随请求发出，回执须原样带回
+			const ids = newPromptIds();
+			const receipt = await getPi().prompt(sessionId, content, sentImages, ids);
+			if (!receiptMatches(receipt, ids)) console.warn("[prompt] receipt id mismatch", ids, receipt);
 			// SDK events own agent activity. An acknowledgement can arrive after agent_settled,
 			// and UI-only commands need not emit any agent events. sending covers preflight.
 		} catch (err) {

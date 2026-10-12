@@ -4,10 +4,13 @@ import {
 	canTransition,
 	deriveRunState,
 	groupRunningFirst,
+	isStoppedTurn,
+	newPromptIds,
 	planBarLabel,
 	RUN_STATES,
 	type RunSnapshot,
 	type RunState,
+	receiptMatches,
 	stepGroupHeader,
 	stepLabel,
 	thinkingLabel,
@@ -125,5 +128,25 @@ describe("run state copy (P14)", () => {
 		expect(writtenPath("write", { path: "a.md" })).toBe("a.md");
 		expect(writtenPath("read", { path: "a.md" })).toBeNull();
 		expect(groupRunningFirst([1, 2, 3, 4], (n) => n % 2 === 0)).toEqual({ running: [2, 4], rest: [1, 3] });
+	});
+});
+
+describe("P14 Optimistic / Stopped helpers", () => {
+	it("newPromptIds 生成两个不同 id，回执一致才匹配", () => {
+		const ids = newPromptIds();
+		expect(ids.clientMessageId).toMatch(/^u-/);
+		expect(ids.assistantMessageId).toMatch(/^a-/);
+		expect(newPromptIds().clientMessageId).not.toBe(ids.clientMessageId);
+		expect(receiptMatches({ kind: "agent", ...ids } as never, ids)).toBe(true);
+		expect(receiptMatches({ clientMessageId: "x", assistantMessageId: ids.assistantMessageId }, ids)).toBe(
+			false,
+		);
+		expect(receiptMatches({}, ids)).toBe(true);
+	});
+	it("isStoppedTurn 识别 aborted 与中止错误文案，不误判真实错误", () => {
+		expect(isStoppedTurn("aborted", undefined)).toBe(true);
+		expect(isStoppedTurn("error", "This operation was aborted")).toBe(true);
+		expect(isStoppedTurn("error", "rate limited")).toBe(false);
+		expect(isStoppedTurn("stop", undefined)).toBe(false);
 	});
 });

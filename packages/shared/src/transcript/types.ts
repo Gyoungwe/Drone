@@ -97,6 +97,8 @@ export type UIMessage =
 			thinking: string;
 			tools: UIToolCall[];
 			timestamp: number;
+			/** P14 Stopped：本轮被用户停止（已写入内容保留，折叠组末尾显示「已停止」） */
+			stopped?: boolean;
 			/** 会话树 entry id（仅历史回放消息有；fork 精确定位，缺省时 fork 按正文文本兜底） */
 			entryId?: string;
 			/** 完整持久化正文（展示净化后保留），仅供 fork fallback 匹配；绝不能渲染、复制或进入可访问文本 */

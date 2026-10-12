@@ -9161,6 +9161,9 @@ var ROWS = [
   ["npy", "application/x-npy", "array"],
   ["stl", "model/stl", "mesh"],
   ["obj", "model/obj", "mesh"],
+  ["tif tiff", "image/tiff", "tiff"],
+  ["nii", "application/x-nifti", "volume"],
+  ["mrc map rec ccp4", "application/x-mrc", "volume"],
   ["py pyi pyw ipy smk", "text/x-python", "code", "python"],
   ["r rprofile rhistory rscript", "text/x-r", "code", "r"],
   ["js mjs cjs", "text/javascript", "code", "javascript"],
@@ -10402,11 +10405,19 @@ var SessionMetaSchema = typebox_exports.Object(
   },
   { additionalProperties: false }
 );
+var ReceiptIds = {
+  clientMessageId: typebox_exports.Optional(typebox_exports.String()),
+  assistantMessageId: typebox_exports.Optional(typebox_exports.String())
+};
 var PromptReceiptSchema = typebox_exports.Union([
-  typebox_exports.Object({ kind: typebox_exports.Literal("agent") }, { additionalProperties: false }),
-  typebox_exports.Object({ kind: typebox_exports.Literal("queued") }, { additionalProperties: false }),
-  typebox_exports.Object({ kind: typebox_exports.Literal("command") }, { additionalProperties: false })
+  typebox_exports.Object({ kind: typebox_exports.Literal("agent"), ...ReceiptIds }, { additionalProperties: false }),
+  typebox_exports.Object({ kind: typebox_exports.Literal("queued"), ...ReceiptIds }, { additionalProperties: false }),
+  typebox_exports.Object({ kind: typebox_exports.Literal("command"), ...ReceiptIds }, { additionalProperties: false })
 ]);
+var PromptIdsSchema = typebox_exports.Object(
+  { clientMessageId: typebox_exports.String({ minLength: 1 }), assistantMessageId: typebox_exports.String({ minLength: 1 }) },
+  { additionalProperties: false }
+);
 var QueuedMessagesSchema = typebox_exports.Object(
   { steering: typebox_exports.Array(typebox_exports.String()), followUp: typebox_exports.Array(typebox_exports.String()) },
   { additionalProperties: false }
@@ -10452,7 +10463,8 @@ var SessionsContract = defineDomain("sessions", {
     prompt: {
       args: typebox_exports.Union([
         typebox_exports.Tuple([Id2, typebox_exports.String()]),
-        typebox_exports.Tuple([Id2, typebox_exports.String(), typebox_exports.Array(ImageInputSchema)])
+        typebox_exports.Tuple([Id2, typebox_exports.String(), typebox_exports.Array(ImageInputSchema)]),
+        typebox_exports.Tuple([Id2, typebox_exports.String(), typebox_exports.Array(ImageInputSchema), PromptIdsSchema])
       ]),
       result: typebox_exports.Unsafe(PromptReceiptSchema)
     },
