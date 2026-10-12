@@ -6,7 +6,7 @@ const __dirname = import.meta.dirname;
 
 /** 窗口启动底色跟随主题，避免深色模式下启动白闪（也是开屏动画的底色）。与 renderer bg-canvas 同色 */
 function windowBackground(theme: "dark" | "light"): string {
-	return theme === "dark" ? "#17171a" : "#fafafa";
+	return theme === "dark" ? "#171717" : "#ffffff";
 }
 
 /** 解析保存的主题为明确的深浅色（system 时跟随系统），窗口底色与 ?theme= 传参同源 */

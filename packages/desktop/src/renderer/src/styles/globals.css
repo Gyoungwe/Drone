@@ -37,21 +37,21 @@
 }
 
 :root {
-	--color-canvas: #ffffff;
+	--color-canvas: oklch(100% 0 0);
 	--color-surface: #ffffff;
 	/* hover/选中底：中性锌灰，不带蓝调（slate 系 #f1f5f9 偏蓝，已弃） */
-	--color-hover: #f4f4f5;
-	--color-border: #e2e8f0;
-	--color-border-strong: #cbd5e1;
+	--color-hover: oklch(97% 0 0);
+	--color-border: oklch(92.2% 0 0);
+	--color-border-strong: oklch(87% 0 0);
 	/* 用户气泡底色：原 border（zinc-200 #e4e4e7）的变浅版，中性灰不带冷调 */
-	--color-bubble: #f0f0f2;
-	--color-ink: #18181b;
-	--color-ink-2: #3f3f46;
-	--color-ink-dim: #71717a;
-	--color-ink-faint: #a1a1aa;
+	--color-bubble: oklch(97% 0 0);
+	--color-ink: oklch(14.5% 0 0);
+	--color-ink-2: oklch(37.1% 0 0);
+	--color-ink-dim: oklch(55.6% 0 0);
+	--color-ink-faint: oklch(70.8% 0 0);
 	/* 工作中状态行文字基色：日间用浅一档灰（= ink-faint），给加深扫光让出对比空间
 	   （若用 ink-dim 本身偏深，扫光加深不明显） */
-	--color-ink-working: #a1a1aa;
+	--color-ink-working: oklch(70.8% 0 0);
 	--color-on-ink: #ffffff;
 	/* 科研风主色：冷静的蓝色，保证浅色背景上的控件层级清晰。 */
 	--color-accent: #2563eb;
@@ -79,7 +79,7 @@
 	/* 正常运转状态色（UI 插件状态点等）：与 severity 同类的 graphics 专用 token */
 	--color-ok: #059669;
 	/* 开关（Switch）关闭态轨道：独立中性浅灰，不随 border-strong 走 slate 蓝调 */
-	--color-switch-off: #d4d4d8;
+	--color-switch-off: oklch(87% 0 0);
 	/* 自定义背景图遮罩（rgb 分量；不透明度由 .app-bg-scrim 的 inline opacity 控制） */
 	--color-scrim: 255 255 255;
 	--markdown-code-bg: #f4f4f5;
@@ -117,22 +117,40 @@
 	--knowledge-directory: #9b7ac6;
 	--knowledge-shadow: 0 10px 28px rgba(35, 58, 78, 0.08);
 	--knowledge-shadow-soft: 0 3px 12px rgba(35, 58, 78, 0.07);
+	/* P15：ClawGo token —— 悬停 / 选中底、功能区三色（墨 / 纸 / 强调）、动效、滚动渐隐 */
+	--highlight: color-mix(in oklab, var(--color-ink) 5%, transparent);
+	--route-ink: oklch(37% 0.09 250);
+	--route-paper: oklch(97% 0.015 250);
+	--route-accent: oklch(55% 0.16 250);
+	--compute-ink: oklch(38% 0.08 160);
+	--compute-paper: oklch(97% 0.02 160);
+	--compute-accent: oklch(58% 0.14 160);
+	--wiki-ink: oklch(40% 0.07 75);
+	--wiki-paper: oklch(97.5% 0.02 85);
+	--wiki-accent: oklch(66% 0.13 75);
+	--zotero-ink: oklch(40% 0.12 25);
+	--zotero-paper: oklch(97% 0.015 25);
+	--zotero-accent: oklch(58% 0.19 25);
+	--ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+	--duration-fast: 150ms;
+	--scroll-fade-size: 64px;
+	--radius-card: 1.5rem;
 }
 
 [data-theme="dark"] {
-	--color-canvas: #17171a;
-	--color-surface: #212126;
-	--color-hover: #2b2b31;
-	--color-border: #38383f;
-	--color-border-strong: #4b4b53;
-	--color-bubble: #38383f;
-	--color-ink: #e6e6ea;
-	--color-ink-2: #c6c6cd;
-	--color-ink-dim: #9a9aa3;
-	--color-ink-faint: #6e6e77;
+	--color-canvas: oklch(20.5% 0 0);
+	--color-surface: oklch(26.9% 0 0);
+	--color-hover: oklch(31% 0 0);
+	--color-border: oklch(100% 0 0 / 0.1);
+	--color-border-strong: oklch(100% 0 0 / 0.15);
+	--color-bubble: oklch(37.1% 0 0);
+	--color-ink: oklch(98.5% 0 0);
+	--color-ink-2: oklch(87% 0 0);
+	--color-ink-dim: oklch(70.8% 0 0);
+	--color-ink-faint: oklch(55.6% 0 0);
 	/* 工作中状态行文字基色：夜间保持 ink-dim（提亮扫光在浅灰上正好） */
-	--color-ink-working: #9a9aa3;
-	--color-on-ink: #17171a;
+	--color-ink-working: oklch(70.8% 0 0);
+	--color-on-ink: oklch(20.5% 0 0);
 	--color-accent: #8b5cf6;
 	--color-on-accent: #ffffff;
 	/* 首页字标手稿构造版深色：描边与构造线压到 canvas 上刚好可辨的灰 */
@@ -146,7 +164,7 @@
 	--color-warn: #f0b84a;
 	--color-info: #6e6e77;
 	--color-ok: #34d399;
-	--color-switch-off: #4b4b53;
+	--color-switch-off: oklch(37.1% 0 0);
 	--color-scrim: 23 23 26;
 	--markdown-code-bg: #2b2b31;
 	--markdown-code-text: #d4d4db;
@@ -179,6 +197,19 @@
 	--knowledge-directory: #b899de;
 	--knowledge-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
 	--knowledge-shadow-soft: 0 3px 12px rgba(0, 0, 0, 0.22);
+	--highlight: color-mix(in oklab, var(--color-ink) 10%, transparent);
+	--route-ink: oklch(85% 0.06 250);
+	--route-paper: oklch(27% 0.03 250);
+	--route-accent: oklch(70% 0.14 250);
+	--compute-ink: oklch(86% 0.06 160);
+	--compute-paper: oklch(27% 0.03 160);
+	--compute-accent: oklch(72% 0.13 160);
+	--wiki-ink: oklch(88% 0.06 85);
+	--wiki-paper: oklch(28% 0.03 75);
+	--wiki-accent: oklch(78% 0.12 75);
+	--zotero-ink: oklch(86% 0.06 25);
+	--zotero-paper: oklch(28% 0.03 25);
+	--zotero-accent: oklch(70% 0.16 25);
 }
 
 /* 预览行上滑切换：新行从下方滑入，旧行向上滑出（时长恒定 0.32s，与 PreviewTicker 的 ANIMATION_MS 同步；不随队列积压变化）。slide-out 必须 forwards：动画结束后保持透明/位移终态，否则旧行在 React 移除前弹回可见造成重叠 */
@@ -394,11 +425,11 @@ body,
 
 body {
 	font-family:
-		-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei",
+		"Inter Variable", Inter, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
 		sans-serif;
 	background: var(--color-canvas);
 	color: var(--color-ink);
-	font-size: 14px;
+	font-size: 13px;
 	-webkit-font-smoothing: antialiased;
 	user-select: none;
 	transition: background-color 0.15s ease;
@@ -2720,4 +2751,79 @@ code {
 	cursor: pointer;
 	color: var(--color-muted, #6b6b6b);
 	margin-bottom: 4px;
+}
+
+/* ---------- P15：滚动边缘渐隐 / 流式文字微光 / 主区浮卡 / 统一动效 ---------- */
+.scroll-fade {
+	mask-image: linear-gradient(
+		to bottom,
+		transparent 0,
+		#000 var(--scroll-fade-size),
+		#000 calc(100% - var(--scroll-fade-size)),
+		transparent 100%
+	);
+}
+.scroll-fade-bottom {
+	mask-image: linear-gradient(to bottom, #000 calc(100% - var(--scroll-fade-size)), transparent 100%);
+}
+@keyframes shimmer {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+.shimmer {
+	background:
+		linear-gradient(
+			90deg,
+			var(--color-ink-faint) 0%,
+			var(--shimmer-highlight) 50%,
+			var(--color-ink-faint) 100%
+		)
+		0 0 / 200% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	animation: shimmer 2s linear infinite;
+}
+.hover-highlight {
+	transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.hover-highlight:hover {
+	background: var(--highlight);
+}
+[data-theme="dark"] .main-float {
+	margin: 8px;
+	border-radius: var(--radius-card);
+	background: var(--color-surface);
+	overflow: hidden;
+	box-shadow: 0 0 0 1px var(--color-border);
+}
+@media (prefers-reduced-motion: reduce) {
+	.shimmer {
+		animation: none;
+		color: var(--color-ink-dim);
+		background: none;
+	}
+}
+/* P15：两栏设置弹窗（ClawGo）：左栏侧边底色、选中项用 --highlight、大圆角 */
+.settings-dialog {
+	border-radius: 1rem;
+}
+.settings-dialog nav {
+	width: 11rem;
+	padding: 6px;
+	background: color-mix(in oklab, var(--color-canvas) 60%, var(--color-hover));
+}
+.settings-dialog .settings-nav-item {
+	font-size: 13px;
+	transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.settings-dialog .settings-nav-item:hover {
+	background: var(--highlight);
+}
+.settings-dialog-content {
+	scrollbar-gutter: stable;
 }

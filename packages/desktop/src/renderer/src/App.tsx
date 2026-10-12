@@ -157,7 +157,7 @@ export default function App() {
 					) : (
 						<>
 							<div className="relative flex min-w-0 flex-1 flex-col">
-								<main className="relative min-h-0 flex-1">
+								<main className="main-float relative min-h-0 flex-1">
 									{showEmpty ? <EmptyState /> : <MessageList />}
 									{/* 聊天区四角贡献层（TodoPanel 悬浮胶囊已并入右侧面板「任务」页签） */}
 									<RegionHost region={UI_REGIONS.CornerTopLeft} />
