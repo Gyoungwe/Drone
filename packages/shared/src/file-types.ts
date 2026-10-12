@@ -21,6 +21,8 @@ export type PreviewKind =
 	| "video"
 	| "array"
 	| "mesh"
+	| "tiff"
+	| "volume"
 	| "typst"
 	| "latex"
 	| "molecule"
@@ -90,6 +92,9 @@ const ROWS: Row[] = [
 	["npy", "application/x-npy", "array"],
 	["stl", "model/stl", "mesh"],
 	["obj", "model/obj", "mesh"],
+	["tif tiff", "image/tiff", "tiff"],
+	["nii", "application/x-nifti", "volume"],
+	["mrc map rec ccp4", "application/x-mrc", "volume"],
 	["py pyi pyw ipy smk", "text/x-python", "code", "python"],
 	["r rprofile rhistory rscript", "text/x-r", "code", "r"],
 	["js mjs cjs", "text/javascript", "code", "javascript"],

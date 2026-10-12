@@ -1,3 +1,5 @@
+import { isUserAbortError } from "./errors";
+
 /**
  * 运行中间态（P14，对应报告第 11 节）：11 态状态机 + 由 transcript 快照推导当前态 + 各态的文案规则。
  *
@@ -180,4 +182,37 @@ export function groupRunningFirst<T>(
 	const rest: T[] = [];
 	for (const item of items) (isRunning(item) ? running : rest).push(item);
 	return { running, rest };
+}
+
+/** Optimistic：客户端在发送前生成的两个 id，随 prompt 一起发出并由回执原样带回，用于对账。 */
+export interface PromptIds {
+	clientMessageId: string;
+	assistantMessageId: string;
+}
+
+function uuid(): string {
+	const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+	if (c?.randomUUID) return c.randomUUID();
+	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+export function newPromptIds(): PromptIds {
+	return { clientMessageId: `u-${uuid()}`, assistantMessageId: `a-${uuid()}` };
+}
+
+/** 回执是否与本次发送的 id 一致（旧后端不回 id 时视为一致，保持兼容）。 */
+export function receiptMatches(
+	receipt: { clientMessageId?: string; assistantMessageId?: string } | null | undefined,
+	ids: PromptIds,
+): boolean {
+	if (!receipt || receipt.clientMessageId === undefined) return true;
+	return (
+		receipt.clientMessageId === ids.clientMessageId && receipt.assistantMessageId === ids.assistantMessageId
+	);
+}
+
+/** Stopped：一轮是否被用户停止（SDK 用 stopReason=aborted，或 error + 中止文案）。 */
+export function isStoppedTurn(stopReason: unknown, errorMessage: unknown): boolean {
+	if (stopReason === "aborted") return true;
+	return stopReason === "error" && typeof errorMessage === "string" && isUserAbortError(errorMessage);
 }

@@ -31,6 +31,8 @@ export interface ProcessSegment {
 	latestStage?: ProgressDisplay;
 	/** 运行中的实时状态文本（来自最新折叠组） */
 	statusText?: string;
+	/** P14 Stopped：本段所属轮次被用户停止，末尾显示「已停止」 */
+	stopped?: boolean;
 }
 
 export type ChatRowOrProcess = ChatRow | ProcessSegment;
@@ -54,7 +56,11 @@ function isProcessRow(row: ChatRow): boolean {
 	return row.kind === "metaGroup" || isProgressRow(row) || isTaskViewRow(row);
 }
 
-function buildSegment(rows: ChatRow[]): ProcessSegment {
+function isStoppedRow(row: ChatRow | undefined): boolean {
+	return row?.kind === "message" && row.message.kind === "assistant" && row.message.stopped === true;
+}
+
+function buildSegment(rows: ChatRow[], stoppedAfter = false): ProcessSegment {
 	const metaRows = rows.filter((r): r is Extract<ChatRow, { kind: "metaGroup" }> => r.kind === "metaGroup");
 	const items = metaRows.flatMap((r) => r.items);
 	const subagents = metaRows.reduce((sum, r) => sum + r.subagentCount, 0);
@@ -76,6 +82,7 @@ function buildSegment(rows: ChatRow[]): ProcessSegment {
 		categories,
 		...(latestStage ? { latestStage } : {}),
 		...(statusText ? { statusText } : {}),
+		...(!working && (stoppedAfter || rows.some(isStoppedRow)) ? { stopped: true } : {}),
 	};
 }
 
@@ -86,12 +93,13 @@ function buildSegment(rows: ChatRow[]): ProcessSegment {
 export function groupProcessRows(rows: ChatRow[]): ChatRowOrProcess[] {
 	const out: ChatRowOrProcess[] = [];
 	let pending: ChatRow[] = [];
-	const flush = () => {
+	const flush = (next?: ChatRow) => {
 		if (pending.length === 0) return;
-		if (pending.length === 1 && pending[0]?.kind === "metaGroup") {
+		const stoppedAfter = isStoppedRow(next);
+		if (pending.length === 1 && pending[0]?.kind === "metaGroup" && !stoppedAfter) {
 			out.push(pending[0]);
 		} else {
-			out.push(buildSegment(pending));
+			out.push(buildSegment(pending, stoppedAfter));
 		}
 		pending = [];
 	};
@@ -100,7 +108,7 @@ export function groupProcessRows(rows: ChatRow[]): ChatRowOrProcess[] {
 			pending.push(row);
 			continue;
 		}
-		flush();
+		flush(row);
 		out.push(row);
 	}
 	flush();

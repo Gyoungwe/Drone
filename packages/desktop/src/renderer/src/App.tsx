@@ -32,6 +32,7 @@ import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "./plugins/Pl
 import { RegionHost } from "./plugins/RegionHost";
 import { UI_REGIONS } from "./plugins/slots";
 import { finishSplash } from "./splash";
+import { useAskCountsStore } from "./stores/ask-counts";
 import { useComputeStore } from "./stores/compute";
 import { useSessionsStore } from "./stores/sessions";
 import { backgroundImageUrl, useThemeStore } from "./stores/theme";
@@ -79,6 +80,7 @@ export default function App() {
 	const inlineAsk = askRequests.find((r) => r.sessionId === activeSessionId && isInlineAsk(r));
 	const sessionAsks = askRequests.filter((r) => r.sessionId === activeSessionId).length;
 	useAttentionBadge(askRequests.length);
+	useEffect(() => useAskCountsStore.getState().setFromRequests(askRequests), [askRequests]);
 	useAutoPreviewWrites();
 	const drawerAsks = useMemo(() => askRequests.filter((r) => !isInlineAsk(r)), [askRequests]);
 
