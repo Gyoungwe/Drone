@@ -145,6 +145,8 @@ export class SessionConstructionService {
 				excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
 				extraAlwaysOn: this.host.options.tools ?? [],
 			});
+			// P12：技能清单预算按当前模型窗口算
+			capabilities.setContextWindow(session.model?.contextWindow);
 			this.host.capabilityRuntimes.set(session.sessionId, capabilities);
 		}
 
@@ -266,6 +268,8 @@ export class SessionConstructionService {
 				excludedToolNames: mutex.shadowed.flatMap((item) => item.tools),
 				extraAlwaysOn: this.host.options.tools ?? [],
 			});
+			// P12：技能清单预算按当前模型窗口算
+			capabilities.setContextWindow(session.model?.contextWindow);
 			this.host.capabilityRuntimes.set(session.sessionId, capabilities);
 		}
 

@@ -15,6 +15,7 @@ import {
 	workflowProfile,
 } from "@drone/shared";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
+import { type AgentMode, toolAllowedInMode } from "../tools/agent-mode";
 import { globalToolManifest, ToolManifest } from "../tools/manifest";
 import {
 	changesResearchWorkflow,
@@ -28,6 +29,7 @@ import {
 	selectResearchSkills,
 } from "./research-skill-router";
 import { allSkillsFromLoader, type SkillVisibility } from "./resource-loader";
+import { applySkillBudget } from "./skill-budget";
 import { type SkillLike, skillAlwaysWith } from "./skill-frontmatter";
 
 const ALWAYS_ON = new Set([
@@ -220,6 +222,11 @@ export class CapabilityRuntime {
 	private readonly excludedTools = new Set<string>();
 	private readonly extraAlwaysOn = new Set<string>();
 	private readonly toolUsage = new Map<string, { lastUsedAt: number; invocations: number }>();
+	/** P12：模式即工具白名单；默认主从（保持既有行为：subagent 可用） */
+	private mode: AgentMode = "lead";
+	/** P12：技能清单预算的上下文窗口（token），未知时按默认窗口算 */
+	private contextWindow: number | undefined;
+	private skillBudgetDropped: string[] = [];
 
 	constructor(private readonly skillVisibility: SkillVisibility) {}
 
@@ -233,6 +240,22 @@ export class CapabilityRuntime {
 		for (const name of options?.extraAlwaysOn ?? []) this.extraAlwaysOn.add(name);
 		this.restoreCheckpoint();
 		return this.apply();
+	}
+
+	agentMode(): AgentMode {
+		return this.mode;
+	}
+	setAgentMode(mode: AgentMode): CapabilityChange {
+		this.mode = mode;
+		return this.apply();
+	}
+	setContextWindow(tokens: number | undefined): CapabilityChange {
+		this.contextWindow = tokens;
+		return this.apply();
+	}
+	/** 上一次 apply() 因预算被挤出清单的技能（仍可显式 /skill: 调用） */
+	skillsDroppedByBudget(): string[] {
+		return [...this.skillBudgetDropped];
 	}
 
 	manageAcademic(): void {
@@ -650,21 +673,38 @@ export class CapabilityRuntime {
 		const selectedResearch = new Set(ordered.names);
 		this.skillOrder = ordered.names;
 		this.primarySkill = ordered.primary;
-		this.skillVisibility.set(
-			allSkills
-				.filter(
-					(skill) =>
-						(researchSkillProfile(skill.name)?.source !== "academic" ||
-							!this.academicManaged ||
-							this.academicEnabled) &&
-						skillMatches(skill, this.active, this.forcedSkills, selectedResearch) &&
-						(!this.readOnlyLibrary ||
-							// 只读文献复用：仅保留声明 `alwaysWith: research` 的技能与显式 /skill: 技能
-							skillAlwaysWith(skill).has("research") ||
-							this.forcedSkills.has(skill.name)),
-				)
-				.map((skill) => skill.name),
+		const candidates = allSkills
+			.filter(
+				(skill) =>
+					(researchSkillProfile(skill.name)?.source !== "academic" ||
+						!this.academicManaged ||
+						this.academicEnabled) &&
+					skillMatches(skill, this.active, this.forcedSkills, selectedResearch) &&
+					(!this.readOnlyLibrary ||
+						// 只读文献复用：仅保留声明 `alwaysWith: research` 的技能与显式 /skill: 技能
+						skillAlwaysWith(skill).has("research") ||
+						this.forcedSkills.has(skill.name)),
+			)
+			.map((skill) => skill.name);
+		// P12：技能清单 ≤ 上下文 8%；按路由顺序保留，常驻 / 显式技能不受预算影响
+		const rank = new Map(this.skillOrder.map((name, index) => [name, index]));
+		const byName = new Map(allSkills.map((skill) => [skill.name, skill]));
+		const budget = applySkillBudget(
+			candidates
+				.slice()
+				.sort((x, y) => (rank.get(x) ?? Number.MAX_SAFE_INTEGER) - (rank.get(y) ?? Number.MAX_SAFE_INTEGER))
+				.map((name) => {
+					const skill = byName.get(name);
+					return {
+						name,
+						description: skill?.description ?? "",
+						pinned: this.forcedSkills.has(name) || (skill ? skillAlwaysWith(skill).size > 0 : false),
+					};
+				}),
+			this.contextWindow,
 		);
+		this.skillBudgetDropped = budget.dropped;
+		this.skillVisibility.set(budget.kept);
 		const selected = new Set<string>([...ALWAYS_ON, ...this.extraAlwaysOn]);
 		// Research sub-capabilities (analysis/literature/writing/planning) carry the research tool pack.
 		const toolPacks = new Set<CapabilityId>(this.active);
@@ -677,6 +717,7 @@ export class CapabilityRuntime {
 			[...selected].filter(
 				(name) =>
 					!this.excludedTools.has(name) &&
+					toolAllowedInMode(this.mode, name) &&
 					(!this.readOnlyLibrary || this.manifest.allowedInLibraryMode(name)),
 			),
 		);
