@@ -2226,13 +2226,21 @@ code {
 }
 /* Respect reduced motion everywhere, not only on the animations that remembered to opt out. */
 @media (prefers-reduced-motion: reduce) {
+	/* biome-ignore lint/style/noDescendingSpecificity: global reduced-motion fallback must apply to every element */
 	*,
 	*::before,
 	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: must beat component animation declarations */
 		animation-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: must beat component animation declarations */
 		animation-iteration-count: 1 !important;
+		/* biome-ignore lint/complexity/noImportantStyles: must beat component transition declarations */
 		transition-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: must beat smooth-scroll utilities */
 		scroll-behavior: auto !important;
+	}
+}
+
 @keyframes action-surface-in {
 	from {
 		opacity: 0;
