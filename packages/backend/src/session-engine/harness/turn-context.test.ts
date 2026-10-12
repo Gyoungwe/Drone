@@ -24,7 +24,7 @@ describe("turn context extension (P16)", () => {
 			now: () => new Date("2026-10-12T17:30:00Z"),
 			timeZone: () => "Asia/Shanghai",
 		});
-		ext.factory(pi as never);
+		(ext as { factory: (pi: never) => void }).factory(pi as never);
 		const first = pi.handlers.context?.({ messages: [{ role: "user", content: "hi" }] }, ctx) as {
 			messages: Array<{ content: string; role: string }>;
 		};
@@ -37,7 +37,9 @@ describe("turn context extension (P16)", () => {
 	it("records mode / model / effort / context per turn", () => {
 		const pi = fakePi();
 		const recordMeta = vi.fn();
-		makeTurnContextExtension({ recordMeta, getMode: () => "single" }).factory(pi as never);
+		(
+			makeTurnContextExtension({ recordMeta, getMode: () => "single" }) as { factory: (pi: never) => void }
+		).factory(pi as never);
 		pi.handlers.before_agent_start?.({ prompt: "x" }, ctx);
 		expect(recordMeta).toHaveBeenCalledWith("s1", {
 			mode: "single",
