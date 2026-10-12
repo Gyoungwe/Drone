@@ -15,6 +15,7 @@ import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { Toaster } from "./components/Toaster";
 import { ExampleTaskDialog } from "./components/tasks/ExampleTaskDialog";
 import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
+import { useDesktopCommands } from "./hooks/use-desktop-commands";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
 import { initDailyDir } from "./lib/daily";
 import { initUiPlugins } from "./plugins/loader";
@@ -59,6 +60,7 @@ export default function App() {
 		setTrustRequests((prev) => [...prev, req]);
 	}, []);
 	useSessionEventBridge({ onTrustRequest: pushTrustRequest });
+	useDesktopCommands();
 
 	useEffect(
 		() =>

@@ -1,5 +1,6 @@
 import type { AskRequest, AskResponse } from "./ask";
 import type { DecisionsApi } from "./decisions";
+import type { DesktopCommand } from "./desktop-command";
 import type { DiagnosticsSnapshot } from "./diagnostics";
 import type { PreviewKind } from "./file-types";
 import type { ComputeApi } from "./host-api/compute";
@@ -337,6 +338,8 @@ export const IpcChannels = {
 	UpdateInstall: "update:install",
 	/** main → renderer 更新状态 */
 	UpdateEvent: "update:event",
+	/** main 原生菜单 → renderer 桌面命令（P5） */
+	DesktopCommand: "desktop:command",
 	/** UI 插件：读全局配置 */
 	UiPluginsGetConfig: "uiPlugins:getConfig",
 	/** UI 插件：设全局总开关 */
@@ -561,6 +564,8 @@ export interface PiApi
 	installUpdate(): Promise<void>;
 	/** 订阅更新状态（checking/available/downloading/downloaded/error）；返回取消函数 */
 	onUpdateEvent(cb: (state: UpdateState) => void): () => void;
+	/** 原生菜单触发的桌面命令（P5） */
+	onDesktopCommand(cb: (command: DesktopCommand) => void): () => void;
 	/** 读 UI 插件全局配置（总开关/启用信任表/槽位指派） */
 	uiPluginsGetConfig(): Promise<UiPluginsConfig>;
 	/** 设 UI 插件全局总开关 */

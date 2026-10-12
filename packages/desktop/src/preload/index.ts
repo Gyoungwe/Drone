@@ -537,6 +537,7 @@ const api: PiApi = {
 	onAskRequest: (cb) => subscribe(IpcChannels.AskRequest, cb),
 	onUiPluginsEvent: (cb) => subscribe(IpcChannels.UiPluginsEvent, cb),
 	onUpdateEvent: (cb) => subscribe(IpcChannels.UpdateEvent, cb),
+	onDesktopCommand: (cb) => subscribe(IpcChannels.DesktopCommand, cb),
 	onEvent: (cb) => subscribe(IpcChannels.Event, cb),
 	onPermissionRequest: (cb) => subscribe(IpcChannels.PermissionRequest, cb),
 	onPermissionResolved: (cb) => subscribe(IpcChannels.PermissionResolved, cb),

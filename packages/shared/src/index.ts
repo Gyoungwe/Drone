@@ -21,6 +21,7 @@ export * from "./capability-discovery";
 export * from "./capability-skills";
 export * from "./compute";
 export * from "./contracts";
+export * from "./desktop-command";
 export * from "./diagnostics";
 export * from "./discovery";
 export * from "./durable-doc";
