@@ -10,6 +10,7 @@ import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
 import type { LanStatus } from "./host-api/lan";
 import type { SessionsApi } from "./host-api/sessions";
+import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
 import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
@@ -246,6 +247,7 @@ export const IpcChannels = {
 	FilePreview: "file:preview",
 	/** 文件右键菜单宿主动作（P7） */
 	FileAction: "file:action",
+	HostEnvironment: "host:environment",
 	FileHtmlPreviewUrl: "file:htmlPreviewUrl",
 	FigureAnnotationsGet: "figure:annotationsGet",
 	FigureAnnotationsSave: "figure:annotationsSave",
@@ -435,6 +437,8 @@ export interface PiApi
 		cwd: string | null,
 		arg: string | null,
 	): Promise<string | null>;
+	/** 本机环境探测（P10） */
+	hostEnvironment(): Promise<HostEnvironment>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
 	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
 	getMcpStatus(cwd?: string): Promise<McpStatus>;

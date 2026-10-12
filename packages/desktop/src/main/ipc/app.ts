@@ -11,6 +11,7 @@ import { getFigureAnnotations, saveFigureAnnotations } from "../figure-annotatio
 import { runFileAction } from "../file-actions";
 import { previewLocalFile, resolveResourcePath } from "../file-preview";
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
+import { defaultHostEnvDeps, probeHostEnvironment } from "../host-env";
 import { issueHtmlPreviewUrl } from "../html-preview-protocol";
 import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
@@ -96,6 +97,7 @@ export function registerAppIpc(
 			}
 			await shell.openPath(resolveResourcePath(target, cwd));
 		},
+		hostEnvironment: () => probeHostEnvironment(defaultHostEnvDeps(app.getPath("home"))),
 		fileAction: (action, target, cwd, arg) =>
 			runFileAction(
 				{
@@ -188,6 +190,7 @@ export function registerAppIpc(
 				importDroppedFile: IpcChannels.FileImportDropped,
 				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
 				fileAction: IpcChannels.FileAction,
+				hostEnvironment: IpcChannels.HostEnvironment,
 				loadTabs: IpcChannels.TabsLoad,
 				saveTabs: IpcChannels.TabsSave,
 				loadUiState: IpcChannels.UiStateLoad,

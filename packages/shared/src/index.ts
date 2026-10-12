@@ -36,6 +36,7 @@ export * from "./file-actions";
 export * from "./file-types";
 export * from "./harness";
 export * from "./host-api";
+export * from "./host-env";
 export * from "./inquiry";
 export * from "./institutional";
 export * from "./ipc";

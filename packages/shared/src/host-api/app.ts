@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import type { DiagnosticsSnapshot } from "../diagnostics";
+import type { HostEnvironment } from "../host-env";
 import type { FigureAnnotation, ImportedAttachment, ResourcePreviewResult } from "../ipc";
 import type { AppInfo, SavedTabs, UiState } from "../session";
 import { defineDomain } from "./define";
@@ -104,6 +105,11 @@ export const AppContract = defineDomain("app", {
 				NullableString,
 			]),
 			result: NullableString,
+		},
+		/** 本机环境探测（P10）：固定只读命令 */
+		hostEnvironment: {
+			args: Type.Tuple([]),
+			result: Type.Unsafe<HostEnvironment>(Type.Object({}, { additionalProperties: true })),
 		},
 		loadTabs: { args: Type.Tuple([]), result: Type.Union([SavedTabsSchema, Type.Null()]) },
 		saveTabs: { args: Type.Tuple([SavedTabsSchema]), result: Type.Void() },

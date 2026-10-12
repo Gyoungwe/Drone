@@ -2,6 +2,7 @@ import type { ComputeHost, ComputeJob } from "@drone/shared";
 import { type FormEvent, useState } from "react";
 import { type MessageKey, useT } from "../../i18n";
 import { selectHosts, selectJobs, selectOnboarding, useComputeStore } from "../../stores/compute";
+import { HostEnvironmentCard, HostPermissions } from "./HostEnvironmentCard";
 
 function statusTone(status: string): string {
 	if (status === "healthy" || status === "succeeded" || status === "ready") return "text-emerald-600";
@@ -113,6 +114,12 @@ function HostRow({
 					</div>
 				)}
 			</div>
+			<HostPermissions
+				authState={host.authState}
+				managed={host.managed}
+				capabilities={host.capabilities.map((c) => (c.version ? `${c.name} ${c.version}` : c.name))}
+				workspaceRoot={host.workspaceRoot}
+			/>
 			<div className="flex flex-wrap gap-2 border-t border-border/70 pt-2">
 				<button type="button" className="panel-action" onClick={onCheckEnvironment}>
 					{t("panel.compute.checkEnvironment")}
@@ -286,6 +293,7 @@ export function ComputePane() {
 				</button>
 			</div>
 			{error && <p className="panel-empty text-red-600">{error}</p>}
+			<HostEnvironmentCard />
 			<section className="mb-4">
 				<div className="mb-2 flex items-end justify-between gap-2">
 					<div>

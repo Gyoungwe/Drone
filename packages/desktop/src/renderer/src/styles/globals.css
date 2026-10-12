@@ -2651,3 +2651,73 @@ code {
 	color: var(--color-muted, #6b6b6b);
 	padding: 2px 4px;
 }
+
+/* P10 本机环境 */
+.host-env-meters {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+	margin-bottom: 8px;
+}
+.host-env-meter {
+	border: 1px solid var(--color-border);
+	border-radius: 10px;
+	padding: 8px 10px;
+	font-size: 11px;
+}
+.host-env-meter-head {
+	display: flex;
+	justify-content: space-between;
+	color: var(--color-ink, inherit);
+	font-weight: 500;
+}
+.host-env-bar {
+	height: 4px;
+	border-radius: 2px;
+	background: var(--color-hover);
+	margin: 6px 0 4px;
+	overflow: hidden;
+}
+.host-env-bar > span {
+	display: block;
+	height: 100%;
+	background: var(--color-ink, #111);
+	opacity: 0.7;
+	transition: width 150ms ease;
+}
+.host-env-meter-detail {
+	color: var(--color-muted, #6b6b6b);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.host-env-table {
+	display: grid;
+	gap: 2px;
+	font-size: 11px;
+	margin: 0;
+}
+.host-env-table > div {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 3px 2px;
+	border-bottom: 1px dashed var(--color-border);
+}
+.host-env-table dt {
+	color: var(--color-muted, #6b6b6b);
+}
+.host-env-table dd {
+	margin: 0;
+	text-align: right;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.host-perms {
+	font-size: 11px;
+}
+.host-perms > summary {
+	cursor: pointer;
+	color: var(--color-muted, #6b6b6b);
+	margin-bottom: 4px;
+}
