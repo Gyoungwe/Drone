@@ -33,7 +33,9 @@ describe("file actions (P7)", () => {
 		await runFileAction(h, "openInEditor", file, null, null);
 		expect(h.showItemInFolder).toHaveBeenCalledWith(file);
 		expect(h.openPath).toHaveBeenCalledWith(file);
-		expect(h.openExternal).toHaveBeenCalledWith(`vscode://file${pathToFileURL(file).pathname}`);
+		expect(h.openExternal).toHaveBeenCalledWith(
+			`vscode://file${file.startsWith("/") ? "" : "/"}${encodeURI(file.replaceAll("\\", "/"))}`,
+		);
 	});
 	it("downloads a copy to the chosen path", async () => {
 		const { dir, file } = await fixture();
