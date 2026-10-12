@@ -194,7 +194,7 @@ describe("observed work and useful failures survive a blocked answer", () => {
 		);
 		const text = feedback.report("source-unread", "未阅读实际引用条目", ["Library/missing.md"]);
 		expect(text).toContain("report.md");
-		expect(text).toContain("归档来源 1 项");
+		expect(text).toContain("已保存来源 1 项");
 		expect(text).toContain("timed out");
 		expect(text).toContain("不需要重新下载");
 		expect(feedback.facts().summarySaved).toBe(false);

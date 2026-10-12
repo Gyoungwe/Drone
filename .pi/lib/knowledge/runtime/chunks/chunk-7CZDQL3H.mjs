@@ -6,7 +6,7 @@ import {
   advisoryLine,
   knowledgeFailure,
   publicationNotices
-} from "./chunk-U3GNWHNQ.mjs";
+} from "./chunk-CBTQ2Q6U.mjs";
 import {
   publicationKnowledgeFlow,
   updateKnowledgeFlow
@@ -195,7 +195,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
     if (task?.snapshot()) task.pause(info.code);
     const report = task?.snapshot() ? `${task.render()}
 
-\u7814\u7A76\u8BF4\u660E\u5C1A\u672A\u53D1\u5E03\uFF1A${info.message}` : getTaskFeedback?.()?.report(info.code, info.message, info.paths);
+\u7814\u7A76\u8BF4\u660E\u6682\u672A\u5C55\u793A\uFF1A${info.message}` : getTaskFeedback?.()?.report(info.code, info.message, info.paths);
     return blocked(
       message,
       info.code,
@@ -313,7 +313,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
                 "\u77E5\u8BC6\u5E93\u521D\u59CB\u5316\u5DF2\u5B8C\u6210\u3002",
                 `\u5F53\u524D\u77E5\u8BC6\u5E93\uFF1A${done.vault}`,
                 `\u4F5C\u7528\u8303\u56F4\uFF1A\u6574\u4E2A Drone\uFF1B\u5F53\u524D\u9879\u76EE\uFF1A${done.project || "\u5C1A\u672A\u521B\u5EFA\u9879\u76EE\u5206\u533A"}\u3002`,
-                `\u7ED3\u6784\uFF1A${done.profile}\uFF1B\u6C89\u6DC0\u7B56\u7565\uFF1A${done.depositMode}\uFF1B\u5B50\u667A\u80FD\u4F53\u8BBF\u95EE\uFF1A${done.subagentMcpPolicy}\u3002`,
+                "\u77E5\u8BC6\u5E93\u5DF2\u6309\u5F53\u524D\u8BBE\u7F6E\u542F\u7528\uFF1B\u534F\u4F5C\u8005\u53EA\u4F1A\u8BBF\u95EE\u672C\u6B21\u4EFB\u52A1\u5141\u8BB8\u7684\u8D44\u6599\u3002",
                 "\u5DF2\u4FDD\u5B58\u7ED1\u5B9A\u5E76\u521B\u5EFA\u7F3A\u5931\u7684\u5BFC\u822A\u548C\u6A21\u677F\uFF0C\u672A\u642C\u8FC1\u6216\u5220\u9664\u5DF2\u6709\u7B14\u8BB0\u3002",
                 "\u8FD9\u53EA\u662F\u521D\u59CB\u5316\u5B8C\u6210\uFF0C\u4E0D\u4EE3\u8868\u8BBA\u6587\u5DF2\u7ECF\u4E0B\u8F7D\u3001\u77E5\u8BC6\u5DF2\u7ECF\u6574\u7406\u6216\u539F\u59CB MCP \u5DF2\u8FDE\u63A5\u3002",
                 "\u63A5\u4E0B\u6765\u53EF\u4EE5\u8981\u6C42\u68C0\u7D22\u6216\u4E0B\u8F7D\u8D44\u6599\uFF1B\u8BBA\u6587\u5E94\u4EA4\u4ED8\u4E3B\u8981\u89C2\u70B9\u4E0E\u65B9\u6CD5\uFF0C\u8F6F\u4EF6\u5E94\u4EA4\u4ED8\u7248\u672C\u5BF9\u5E94\u7684\u547D\u4EE4\u3001\u53C2\u6570\u4E0E\u793A\u4F8B\u3002"
@@ -336,7 +336,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
       return {
         message: seal(
           message,
-          [{ type: "text", text: "\u3010\u5B50\u667A\u80FD\u4F53\u5F85\u6838\u9A8C\u6750\u6599\u3011\u4EE5\u4E0B\u4E0D\u662F\u4E3B\u4F1A\u8BDD\u5DF2\u6838\u9A8C\u7684\u6700\u7EC8\u7ED3\u8BBA\u3002\n\n" }, ...content],
+          [{ type: "text", text: "\u3010\u5C1A\u672A\u6838\u5B9E\u7684\u8865\u5145\u6750\u6599\u3011\u4EE5\u4E0B\u5185\u5BB9\u4E0D\u662F\u4E3B\u4F1A\u8BDD\u5DF2\u786E\u8BA4\u7684\u6700\u7EC8\u7ED3\u8BBA\u3002\n\n" }, ...content],
           { status: "evidence-only", turnId, scientificallyVerified: false }
         )
       };
@@ -422,7 +422,7 @@ ${String(footer).slice(0, 2e3)}` }] : [];
       const published = proof.status === "no-hits" ? [
         {
           type: "text",
-          text: "\u3010\u77E5\u8BC6\u5E93\u68C0\u7D22\u65E0\u547D\u4E2D\u3011\u672C\u8F6E\u67E5\u8BE2\u672A\u627E\u5230\u5339\u914D\u6761\u76EE\uFF1B\u4E0B\u6587\u4E0D\u662F\u57FA\u4E8E\u672C\u5E93\u8BC1\u636E\u7684\u7ED3\u8BBA\uFF0C\u4E5F\u4E0D\u8868\u793A\u5168\u5E93\u4E0D\u5B58\u5728\u76F8\u5173\u77E5\u8BC6\u3002\n\n"
+          text: "\u3010\u77E5\u8BC6\u5E93\u6CA1\u6709\u627E\u5230\u5339\u914D\u5185\u5BB9\u3011\u672C\u8F6E\u67E5\u8BE2\u672A\u627E\u5230\u5339\u914D\u6761\u76EE\uFF1B\u4E0B\u6587\u4E0D\u662F\u57FA\u4E8E\u672C\u5E93\u8BC1\u636E\u7684\u7ED3\u8BBA\uFF0C\u4E5F\u4E0D\u8868\u793A\u5168\u5E93\u4E0D\u5B58\u5728\u76F8\u5173\u77E5\u8BC6\u3002\n\n"
         },
         ...publishContent
       ] : publishContent;

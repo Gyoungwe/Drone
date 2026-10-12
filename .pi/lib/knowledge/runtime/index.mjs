@@ -24,7 +24,7 @@ import {
 import {
   createTaskFeedback,
   guardResearchToolResult
-} from "./chunks/chunk-TW476WMJ.mjs";
+} from "./chunks/chunk-YQFL2X6C.mjs";
 import {
   createToolBudget
 } from "./chunks/chunk-BHQUJ6MZ.mjs";
@@ -118,7 +118,7 @@ import {
   projectKnowledgeEvent,
   projectKnowledgeSnapshot,
   registerAnswerPublication
-} from "./chunks/chunk-CD4VUGLW.mjs";
+} from "./chunks/chunk-7CZDQL3H.mjs";
 import {
   evaluateMetacognitivePublication
 } from "./chunks/chunk-TT3YMRLM.mjs";
@@ -129,7 +129,7 @@ import {
   publicationFallbackNotice,
   publicationNotice,
   publicationNotices
-} from "./chunks/chunk-U3GNWHNQ.mjs";
+} from "./chunks/chunk-CBTQ2Q6U.mjs";
 import {
   KnowledgeService,
   closeKnowledgeServices,
@@ -219,7 +219,7 @@ import {
   BackgroundReviewer,
   reviewDeliverable,
   selectReviewerProvider
-} from "./chunks/chunk-O7VIOV5D.mjs";
+} from "./chunks/chunk-N7KIJQYP.mjs";
 import {
   EXPERIENCE_LIMITS,
   EXPERIENCE_VERSION,

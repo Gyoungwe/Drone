@@ -90,7 +90,7 @@ function reviewRules(snapshot) {
         severity: "high",
         location: locationFor(body, offset),
         detail: `\u6B63\u6587\u6570\u5B57 ${bounded(token, 80)} \u627E\u4E0D\u5230\u4EA4\u4ED8\u7269\u6570\u503C\u6216\u5E26\u8BFB\u56DE\u6267\u7684\u6765\u6E90\u3002`,
-        suggestion: "\u8865\u5145\u5BF9\u5E94\u4EA7\u7269\u6570\u503C\u6216\u5B9E\u9645\u8BFB\u53D6\u6765\u6E90\u7684\u56DE\u6267\uFF0C\u518D\u4FDD\u7559\u8BE5\u6570\u5B57\u3002"
+        suggestion: "\u8865\u5145\u5BF9\u5E94\u7ED3\u679C\u6570\u503C\u6216\u5B9E\u9645\u8BFB\u53D6\u6765\u6E90\u7684\u8BB0\u5F55\uFF0C\u518D\u4FDD\u7559\u8BE5\u6570\u5B57\u3002"
       },
       token
     );
@@ -141,8 +141,8 @@ function reviewRules(snapshot) {
         code: "citation-without-receipt",
         severity: "medium",
         location: locationFor(body, offset >= 0 ? offset : 0, path),
-        detail: `\u5F15\u7528 ${bounded(path, 240)} \u6CA1\u6709\u5BF9\u5E94\u7684\u8BFB\u56DE\u6267\u3002`,
-        suggestion: "\u5148\u8BFB\u53D6\u6765\u6E90\u5E76\u4FDD\u7559\u5F53\u524D\u5185\u5BB9\u54C8\u5E0C\u4E0E\u56DE\u6267\uFF0C\u518D\u5F15\u7528\u8BE5\u6765\u6E90\u3002"
+        detail: `\u5F15\u7528 ${bounded(path, 240)} \u6CA1\u6709\u5BF9\u5E94\u7684\u8BFB\u53D6\u8BB0\u5F55\u3002`,
+        suggestion: "\u5148\u8BFB\u53D6\u6765\u6E90\u5E76\u4FDD\u7559\u5F53\u524D\u5185\u5BB9\u6821\u9A8C\u4FE1\u606F\uFF0C\u518D\u5F15\u7528\u8BE5\u6765\u6E90\u3002"
       },
       path
     );

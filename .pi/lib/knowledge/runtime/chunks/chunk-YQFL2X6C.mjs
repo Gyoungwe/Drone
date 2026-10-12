@@ -5,6 +5,17 @@ import { relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 var replaceControl = (text) => [...String(text || "")].map((char) => char.charCodeAt(0) < 32 ? " " : char).join("");
 var clean = (text, limit = 300) => replaceControl(text).replace(/(?:bearer\s+|api[_-]?key[=:]\s*)[^\s]+/gi, "[redacted]").trim().slice(0, limit);
+var feedbackReason = (reason) => {
+  const labels = {
+    "not-prepared": "\u77E5\u8BC6\u5E93\u51C6\u5907\u5C1A\u672A\u5B8C\u6210",
+    "model-error": "\u6A21\u578B\u8BF7\u6C42\u5931\u8D25",
+    "check-timeout": "\u56DE\u7B54\u68C0\u67E5\u8D85\u65F6",
+    "check-failed": "\u56DE\u7B54\u68C0\u67E5\u53D1\u751F\u9519\u8BEF",
+    "tool-loop-stopped": "\u5F53\u524D\u5904\u7406\u9636\u6BB5\u5DF2\u6682\u505C",
+    interrupted: "\u672C\u6B21\u8BF7\u6C42\u5DF2\u4E2D\u65AD"
+  };
+  return labels[String(reason)] || "\u9700\u8981\u5148\u5904\u7406\u76F8\u5173\u8D44\u6599";
+};
 function createTaskFeedback() {
   let failures = [];
   let files = /* @__PURE__ */ new Map();
@@ -77,16 +88,16 @@ function createTaskFeedback() {
     const interrupted = reason === "interrupted";
     const current = facts();
     const lines = [
-      interrupted ? "\u672C\u6B21\u8BF7\u6C42\u5DF2\u4E2D\u65AD\uFF0C\u672A\u5B8C\u6210\u7684\u56DE\u7B54\u6CA1\u6709\u53D1\u5E03\u3002" : `\u3010\u77E5\u8BC6\u5E93\u68C0\u67E5\u672A\u901A\u8FC7\u3011\u672C\u8F6E\u7684\u6700\u7EC8\u56DE\u7B54\u5C1A\u672A\u5B8C\u6210\u53D1\u5E03\uFF08${clean(reason, 60)}\uFF09\u3002`,
+      interrupted ? "\u672C\u6B21\u8BF7\u6C42\u5DF2\u4E2D\u65AD\uFF0C\u672A\u5B8C\u6210\u7684\u56DE\u7B54\u6682\u672A\u5C55\u793A\u3002" : `\u3010\u56DE\u7B54\u68C0\u67E5\u672A\u5B8C\u6210\u3011\u672C\u8F6E\u56DE\u7B54\u6682\u672A\u5C55\u793A\uFF08${feedbackReason(reason)}\uFF09\u3002`,
       ...interrupted ? [] : [clean(message, 450)]
     ];
     if (paths.length)
       lines.push(
-        "\u9700\u8981\u5904\u7406\u7684\u6761\u76EE\uFF1A" + paths.slice(0, 6).map((path) => `\`${clean(path, 512).replaceAll("`", "")}\``).join("\u3001")
+        "\u9700\u8981\u5904\u7406\u7684\u5185\u5BB9\uFF1A" + paths.slice(0, 6).map((path) => `\`${clean(path, 512).replaceAll("`", "")}\``).join("\u3001")
       );
     if (current.archivedSources || current.summarySaved || current.files.length)
       lines.push(
-        `\u5DF2\u5B8C\u6210\u7684\u5DE5\u4F5C\u4ECD\u7136\u4FDD\u7559\uFF1A\u5F52\u6863\u6765\u6E90 ${current.archivedSources} \u9879\uFF1B\u7814\u7A76\u6458\u8981${current.summarySaved ? "\u5DF2\u4FDD\u5B58" : "\u5C1A\u672A\u786E\u8BA4\u4FDD\u5B58"}\uFF1BShow Me ${current.explainerSaved ? "\u5DF2\u5F52\u6863" : "\u5C1A\u672A\u786E\u8BA4\u5F52\u6863"}\uFF1B\u5F85\u5BA1\u6838 Wiki \u5019\u9009 ${current.pendingWikiCandidates} \u4E2A\u3002`
+        `\u5DF2\u5B8C\u6210\u7684\u5DE5\u4F5C\u4ECD\u7136\u4FDD\u7559\uFF1A\u5DF2\u4FDD\u5B58\u6765\u6E90 ${current.archivedSources} \u9879\uFF1B\u7814\u7A76\u6458\u8981${current.summarySaved ? "\u5DF2\u4FDD\u5B58" : "\u5C1A\u672A\u786E\u8BA4\u4FDD\u5B58"}\uFF1BShow Me ${current.explainerSaved ? "\u5DF2\u4FDD\u5B58" : "\u5C1A\u672A\u786E\u8BA4\u4FDD\u5B58"}\uFF1B\u7B49\u5F85\u5BA1\u6838\u7684 Wiki \u6761\u76EE ${current.pendingWikiCandidates} \u4E2A\u3002`
       );
     if (current.files.length)
       lines.push(
@@ -97,7 +108,7 @@ function createTaskFeedback() {
         "\u8FC7\u7A0B\u4E2D\u8FD8\u53D1\u751F\u8FC7\u4EE5\u4E0B\u5DE5\u5177\u95EE\u9898\uFF1B\u90E8\u5206\u53EF\u80FD\u5DF2\u6539\u7528\u5176\u4ED6\u8DEF\u5F84\u7EE7\u7EED\uFF1A\n" + current.failures.slice(-3).map((entry) => `- ${entry.tool}\uFF1A${entry.reason}`).join("\n")
       );
     lines.push(
-      interrupted ? "\u5DF2\u8BB0\u5F55\u7684\u5DE5\u5177\u7ED3\u679C\u4ECD\u53EF\u5728\u672C\u4F1A\u8BDD\u67E5\u770B\u3002\u53EF\u4EE5\u7EE7\u7EED\u5269\u4F59\u5DE5\u4F5C\uFF1B\u4E0D\u9700\u8981\u91CD\u65B0\u4E0B\u8F7D\u5DF2\u7ECF\u4FDD\u5B58\u7684\u8D44\u6599\u3002" : "\u63A5\u4E0B\u6765\u5E94\u6839\u636E\u5177\u4F53\u68C0\u67E5\u539F\u56E0\u8865\u8BFB\u6216\u4FEE\u6B63\u5F15\u7528\uFF0C\u518D\u9884\u68C0\u56DE\u7B54\uFF1B\u4E0D\u9700\u8981\u91CD\u65B0\u4E0B\u8F7D\u5DF2\u7ECF\u4FDD\u5B58\u7684\u8D44\u6599\u3002\u8FD9\u91CC\u62A5\u544A\u7684\u662F\u6267\u884C\u72B6\u6001\uFF0C\u4E0D\u662F\u5BF9\u672A\u53D1\u5E03\u7814\u7A76\u7ED3\u8BBA\u7684\u8BA4\u53EF\u3002"
+      interrupted ? "\u5DF2\u8BB0\u5F55\u7684\u5DE5\u5177\u7ED3\u679C\u4ECD\u53EF\u5728\u672C\u4F1A\u8BDD\u67E5\u770B\u3002\u53EF\u4EE5\u7EE7\u7EED\u5269\u4F59\u5DE5\u4F5C\uFF1B\u4E0D\u9700\u8981\u91CD\u65B0\u4E0B\u8F7D\u5DF2\u7ECF\u4FDD\u5B58\u7684\u8D44\u6599\u3002" : "\u63A5\u4E0B\u6765\u5E94\u6839\u636E\u5177\u4F53\u68C0\u67E5\u539F\u56E0\u8865\u8BFB\u6216\u4FEE\u6B63\u5F15\u7528\uFF0C\u518D\u68C0\u67E5\u56DE\u7B54\uFF1B\u4E0D\u9700\u8981\u91CD\u65B0\u4E0B\u8F7D\u5DF2\u7ECF\u4FDD\u5B58\u7684\u8D44\u6599\u3002\u8FD9\u91CC\u62A5\u544A\u7684\u662F\u5904\u7406\u72B6\u6001\uFF0C\u4E0D\u4EE3\u8868\u672A\u5C55\u793A\u7684\u7814\u7A76\u7ED3\u8BBA\u5DF2\u7ECF\u5F97\u5230\u786E\u8BA4\u3002"
     );
     return lines.join("\n\n");
   };
