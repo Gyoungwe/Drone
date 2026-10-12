@@ -834,6 +834,17 @@ export const en: Messages = {
 			notebookClipped: "Only the first 200 cells are shown.",
 			mermaidFailed: "Mermaid diagram failed to render; switch to Source.",
 			mermaidLoading: "Rendering diagram…",
+			npyFailed: "Could not parse .npy:",
+			npySummary: "dtype {dtype} · shape {shape}",
+			npySlice: " · showing the first 2-D slice",
+			meshFailed: "Could not parse mesh:",
+			meshSummary: "{faces} triangles",
+			meshSampled: " · {shown} drawn for responsiveness",
+			meshHint: "Drag to rotate · flat-shaded orthographic view",
+			latexNote:
+				"LaTeX outline (not compiled): sections, paragraphs and math source. Compile with latexmk for full layout.",
+			typstNote:
+				"Typst outline (not compiled): headings, paragraphs and math source. Use typst compile for full layout.",
 			compressed: " (compressed)",
 			gzipExcerpt: "gzip excerpt · not a whole-file integrity check",
 			markdownInvalid: "Markdown could not be parsed; showing the raw text.",

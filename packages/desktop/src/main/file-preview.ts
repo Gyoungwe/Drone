@@ -136,8 +136,13 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 		const bytes = await readPrefix(path, Math.min(BINARY_PREVIEW_LIMIT, info.size));
 		return { ...base, mimeType, kind, data: bytes.toString("base64"), truncated: info.size > bytes.length };
 	}
-	// 音视频（P3）：16 MiB 内整读 base64，渲染层 <audio>/<video> 播放；超限只回元数据
-	if (type.previewKind === "audio" || type.previewKind === "video") {
+	// 音视频（P3）、npy 数组 / STL·OBJ 网格（P4）：16 MiB 内整读 base64，渲染层 <audio>/<video> 播放；超限只回元数据
+	if (
+		type.previewKind === "audio" ||
+		type.previewKind === "video" ||
+		type.previewKind === "array" ||
+		type.previewKind === "mesh"
+	) {
 		if (info.size > BINARY_PREVIEW_LIMIT)
 			return { ...base, kind: "binary", mimeType: type.mime, truncated: true };
 		const bytes = await readPrefix(path, info.size);

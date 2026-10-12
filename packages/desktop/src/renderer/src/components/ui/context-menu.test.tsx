@@ -58,7 +58,11 @@ describe("context menus (P7)", () => {
 		expect(item("delete")?.disabled).toBe(true);
 		item("pin")?.onSelect();
 		expect(usePinsStore.getState().isPinned("task", "b")).toBe(true);
-		expect(buildTabMenu("b", t).flat().find((i) => i.id === "pin")?.label).toBe("contextMenu.tab.unpin");
+		expect(
+			buildTabMenu("b", t)
+				.flat()
+				.find((i) => i.id === "pin")?.label,
+		).toBe("contextMenu.tab.unpin");
 	});
 	it("renders groups with menuitems", () => {
 		const html = renderToStaticMarkup(
