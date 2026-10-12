@@ -67,6 +67,11 @@ export function ProcessBlock({ segment, children }: { segment: ProcessSegment; c
 				)}
 			</button>
 			{open && <div className="process-block-body">{children}</div>}
+			{segment.stopped && (
+				<div className="process-block-stopped" data-testid="process-stopped">
+					{t("process.stopped")}
+				</div>
+			)}
 		</section>
 	);
 }
