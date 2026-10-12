@@ -732,6 +732,7 @@
 .preview-volume-grid {
 	display: grid;
 	grid-template-columns: repeat(2, 180px);
+	align-items: start;
 	gap: 12px;
 }
 .preview-volume-cell {
