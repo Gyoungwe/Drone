@@ -13,9 +13,8 @@ import { useT } from "../../i18n";
 import type { ResourcePreviewTarget } from "../../stores/ui";
 import { useUiStore } from "../../stores/ui";
 import { CloseIcon } from "../icons";
-import { FigureAnnotator } from "./FigureAnnotator";
-import { ResourceCode } from "./ResourceCode";
-import { ResourceTextPreview } from "./ResourceTextPreview";
+import { PreviewHost } from "../preview/PreviewHost";
+import { hasSourceTab } from "../preview/preview-registry";
 
 function isWeb(href: string): boolean {
 	return /^https?:\/\//i.test(href);
@@ -121,7 +120,7 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 					<span className="resource-format">
 						{result.kind === "text" ? format.label : result.kind.toUpperCase()}
 					</span>
-					{result.text !== undefined && (
+					{hasSourceTab(result) && (
 						<>
 							<button type="button" aria-pressed={mode === "preview"} onClick={() => setMode("preview")}>
 								{t("resource.viewer.preview")}
@@ -184,59 +183,17 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 					</div>
 				) : !result ? (
 					<div className="resource-empty">{t("resource.loading")}</div>
-				) : mode === "source" && result.text !== undefined ? (
-					<ResourceCode
-						text={result.text}
-						language={result.name.toLowerCase().endsWith(".svg") ? "xml" : format.language}
-					/>
-				) : result.kind === "image" && src ? (
-					<div className="resource-media">
-						{imageError ? (
-							<p className="resource-notice" role="status">
-								{t("resource.viewer.imageDecodeFailed")}
-							</p>
-						) : (
-							<FigureAnnotator
-								source={{ href: target.href, cwd: target.cwd }}
-								name={result.name}
-								path={result.path}
-								width={`${zoom * 100}%`}
-							>
-								<img
-									src={src}
-									alt={result.name}
-									style={{ width: "100%", maxWidth: "none", maxHeight: "none" }}
-									onError={() => setImageError(true)}
-								/>
-							</FigureAnnotator>
-						)}
-					</div>
-				) : result.kind === "pdf" && src ? (
-					<iframe
-						className="resource-frame"
-						src={`${src}#toolbar=1&navpanes=0&view=FitH`}
-						title={result.name}
-					/>
-				) : result.kind === "text" ? (
-					<ResourceTextPreview
-						key={result.path}
-						text={result.text || ""}
-						name={result.name}
+				) : (
+					<PreviewHost
+						result={result}
+						src={src}
+						mode={mode}
+						zoom={zoom}
+						imageError={imageError}
+						onImageError={() => setImageError(true)}
 						onNavigate={navigate}
 						source={{ href: target.href, cwd: target.cwd }}
-						path={result.path}
 					/>
-				) : (
-					<div className="resource-empty">
-						{result.kind === "binary" ? (
-							<>
-								{t("resource.binaryHint")}
-								<p>{t("resource.viewer.binaryFormats")}</p>
-							</>
-						) : (
-							<p>{t("resource.viewer.mediaTooLarge")}</p>
-						)}
-					</div>
 				)}
 			</div>
 			{result && (
