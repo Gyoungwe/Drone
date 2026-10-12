@@ -10207,6 +10207,24 @@ var McpContract = defineDomain("mcp", {
   }
 });
 
+// packages/shared/src/host-api/memory.ts
+var MemoryProjectStatusSchema = typebox_exports.Object(
+  {
+    enabled: typebox_exports.Boolean(),
+    count: typebox_exports.Integer({ minimum: 0 }),
+    lastLoaded: typebox_exports.Integer({ minimum: 0 })
+  },
+  { additionalProperties: false }
+);
+var status = typebox_exports.Unsafe(MemoryProjectStatusSchema);
+var MemoryContract = defineDomain("memory", {
+  methods: {
+    getStatus: { args: typebox_exports.Tuple([typebox_exports.String()]), result: status, access: "desktop" },
+    setEnabled: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.Boolean()]), result: status, access: "desktop" },
+    clear: { args: typebox_exports.Tuple([typebox_exports.String()]), result: status, access: "desktop" }
+  }
+});
+
 // packages/shared/src/host-api/packages.ts
 var CatalogPackageTypeSchema = typebox_exports.Union([
   typebox_exports.Literal(""),

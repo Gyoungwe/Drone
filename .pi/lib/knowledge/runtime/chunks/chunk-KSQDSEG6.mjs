@@ -9574,6 +9574,24 @@ var McpContract = defineDomain("mcp", {
   }
 });
 
+// packages/shared/src/host-api/memory.ts
+var MemoryProjectStatusSchema = typebox_exports.Object(
+  {
+    enabled: typebox_exports.Boolean(),
+    count: typebox_exports.Integer({ minimum: 0 }),
+    lastLoaded: typebox_exports.Integer({ minimum: 0 })
+  },
+  { additionalProperties: false }
+);
+var status = typebox_exports.Unsafe(MemoryProjectStatusSchema);
+var MemoryContract = defineDomain("memory", {
+  methods: {
+    getStatus: { args: typebox_exports.Tuple([typebox_exports.String()]), result: status, access: "desktop" },
+    setEnabled: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.Boolean()]), result: status, access: "desktop" },
+    clear: { args: typebox_exports.Tuple([typebox_exports.String()]), result: status, access: "desktop" }
+  }
+});
+
 // packages/shared/src/host-api/packages.ts
 var CatalogPackageTypeSchema = typebox_exports.Union([
   typebox_exports.Literal(""),
@@ -13870,18 +13888,18 @@ function checkKnowledgeSnapshotReuse(snapshot, request) {
     reasons.push("evidence checkpoint reference is not linked");
   if (freshness.some((item) => item.status === "stale" || item.status === "invalid")) reasons.push("one or more source receipts are stale");
   if (freshness.some((item) => item.status === "unknown")) reasons.push("source freshness is unknown");
-  let status = "reusable";
+  let status2 = "reusable";
   if (reasons.length) {
-    if (freshness.some((item) => item.status === "stale" || item.status === "invalid")) status = "stale";
-    else if (snapshot.projectId !== request.context.projectId || snapshot.workspaceId !== request.context.workspaceId) status = "context-mismatch";
-    else if (request.requiredLevel && knowledgeReuseLevelRank(snapshot.reuseLevel) < knowledgeReuseLevelRank(request.requiredLevel)) status = "insufficient-evidence";
-    else if (request.methodVersion && snapshot.methodVersion !== request.methodVersion) status = "method-mismatch";
-    else if (request.referenceVersion && snapshot.referenceVersion !== request.referenceVersion) status = "reference-mismatch";
-    else if (request.inputManifestHash && snapshot.inputManifestHash !== request.inputManifestHash) status = "input-mismatch";
-    else if (request.analysisRef || request.evidenceCheckpointRef) status = "unlinked";
-    else status = "stale";
+    if (freshness.some((item) => item.status === "stale" || item.status === "invalid")) status2 = "stale";
+    else if (snapshot.projectId !== request.context.projectId || snapshot.workspaceId !== request.context.workspaceId) status2 = "context-mismatch";
+    else if (request.requiredLevel && knowledgeReuseLevelRank(snapshot.reuseLevel) < knowledgeReuseLevelRank(request.requiredLevel)) status2 = "insufficient-evidence";
+    else if (request.methodVersion && snapshot.methodVersion !== request.methodVersion) status2 = "method-mismatch";
+    else if (request.referenceVersion && snapshot.referenceVersion !== request.referenceVersion) status2 = "reference-mismatch";
+    else if (request.inputManifestHash && snapshot.inputManifestHash !== request.inputManifestHash) status2 = "input-mismatch";
+    else if (request.analysisRef || request.evidenceCheckpointRef) status2 = "unlinked";
+    else status2 = "stale";
   }
-  return { snapshotId: snapshot.id, reusable: reasons.length === 0, status, reasons, freshness };
+  return { snapshotId: snapshot.id, reusable: reasons.length === 0, status: status2, reasons, freshness };
 }
 var KnowledgeReuseIndex = class {
   constructor(store, snapshots = []) {
