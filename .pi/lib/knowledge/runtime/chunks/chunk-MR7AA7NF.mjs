@@ -8796,6 +8796,11 @@ var AppContract = defineDomain("app", {
       ]),
       result: NullableString
     },
+    /** 本机环境探测（P10）：固定只读命令 */
+    hostEnvironment: {
+      args: typebox_exports.Tuple([]),
+      result: typebox_exports.Unsafe(typebox_exports.Object({}, { additionalProperties: true }))
+    },
     loadTabs: { args: typebox_exports.Tuple([]), result: typebox_exports.Union([SavedTabsSchema, typebox_exports.Null()]) },
     saveTabs: { args: typebox_exports.Tuple([SavedTabsSchema]), result: typebox_exports.Void() },
     loadUiState: { args: typebox_exports.Tuple([]), result: typebox_exports.Union([UiStateSchema, typebox_exports.Null()]) },
