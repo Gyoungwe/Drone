@@ -130,3 +130,17 @@ it("refuses a redirected runtime directory even when file bytes match the pin", 
 	expect(result.academicPiRoot).toBeUndefined();
 	expect(result.warnings.join(" ")).toContain("Redirected ARS runtime");
 });
+it("treats an interrupted install (files present, no receipt) as not loaded", () => {
+	const { root } = fixture("nature");
+	rmSync(join(root, "nature", ".drone-pack.json"));
+	const result = researchSkillPackPaths(root);
+	expect(result.paths).toEqual([]);
+	expect(result.warnings.join(" ")).toContain("nature not loaded");
+});
+it("ignores a leftover staging directory from an interrupted sync", () => {
+	const { root } = fixture("nature");
+	mkdirSync(join(root, ".nature.staging-123", "skills"), { recursive: true });
+	const result = researchSkillPackPaths(root);
+	expect(result.paths.some((p) => p.includes("staging"))).toBe(false);
+	expect(result.paths.length).toBeGreaterThan(0);
+});

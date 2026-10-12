@@ -555,6 +555,7 @@ export const zh = {
 		},
 	},
 	update: {
+		confirmRunning: "还有 {count} 个回合正在运行，重启安装更新会中断它们。仍要重启吗？",
 		checkForUpdates: "检查更新",
 		checking: "正在检查更新…",
 		available: "发现新版本 {version}，点击下载",

@@ -570,6 +570,8 @@ export const en: Messages = {
 		},
 	},
 	update: {
+		confirmRunning:
+			"{count} turn(s) are still running. Restarting to install the update will interrupt them. Restart anyway?",
 		checkForUpdates: "Check for updates",
 		checking: "Checking for updates…",
 		available: "Version {version} available, click to download",

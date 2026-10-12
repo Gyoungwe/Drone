@@ -2,6 +2,7 @@ import { type AppInfo, serializeDiagnosticsArchive } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { installUpdateWithGuard } from "../../lib/install-update-app";
 import { useUpdateStore } from "../../stores/update";
 
 /** 关于面板：应用标识 + 软件版本 + 检查更新 + 仓库入口，居中展示 */
@@ -87,7 +88,7 @@ export function AboutPanel() {
 					type="button"
 					className="rounded-lg border border-border px-4 py-1.5 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover hover:text-ink"
 					onClick={() => {
-						if (state?.phase === "downloaded") void getPi().installUpdate();
+						if (state?.phase === "downloaded") void installUpdateWithGuard();
 						else if (state?.phase === "available" && state.manual) void openReleasePage(state.version);
 						else if (state?.phase === "available") void getPi().downloadUpdate();
 						else void getPi().checkForUpdates();

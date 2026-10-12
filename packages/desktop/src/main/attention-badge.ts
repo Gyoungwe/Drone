@@ -7,7 +7,7 @@ export interface BadgeWindow {
 
 export interface BadgeHost {
 	platform: string;
-	setBadgeCount(count: number): boolean | void;
+	setBadgeCount(count: number): unknown;
 	window: BadgeWindow | null;
 	imageFromDataUrl(url: string): unknown;
 }

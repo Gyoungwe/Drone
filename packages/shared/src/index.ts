@@ -95,6 +95,7 @@ export * from "./transcript/run-inspector";
 export * from "./turn-route";
 export * from "./ui-plugins";
 export * from "./update";
+export * from "./update-guard";
 export * from "./usage-display";
 export * from "./workflow-catalog";
 export * from "./zotero";
