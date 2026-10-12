@@ -149,3 +149,16 @@ it.each(["lower.r", "upper.R", "lower.py", "upper.PY", "mixed.Py", ".Rprofile", 
 		expect(await readdir(root)).toEqual([name]);
 	},
 );
+
+describe("file preview registry kind (P1)", () => {
+	it("attaches previewKind from the shared registry", async () => {
+		const { mkdtemp, writeFile } = await import("node:fs/promises");
+		const { tmpdir } = await import("node:os");
+		const { join } = await import("node:path");
+		const dir = await mkdtemp(join(tmpdir(), "drone-p1-"));
+		await writeFile(join(dir, "t.csv"), "a,b\n1,2\n");
+		const result = await previewLocalFile(join(dir, "t.csv"));
+		expect(result.kind).toBe("text");
+		expect(result.previewKind).toBe("table");
+	});
+});

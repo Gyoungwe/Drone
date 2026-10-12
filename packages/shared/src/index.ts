@@ -28,6 +28,7 @@ export * from "./errors";
 export * from "./evidence-labels";
 export * from "./example-tasks";
 export * from "./execution";
+export * from "./file-types";
 export * from "./harness";
 export * from "./host-api";
 export * from "./inquiry";

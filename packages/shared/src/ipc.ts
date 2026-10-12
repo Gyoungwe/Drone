@@ -1,6 +1,7 @@
 import type { AskRequest, AskResponse } from "./ask";
 import type { DecisionsApi } from "./decisions";
 import type { DiagnosticsSnapshot } from "./diagnostics";
+import type { PreviewKind } from "./file-types";
 import type { ComputeApi } from "./host-api/compute";
 import type { DiscoveryApi } from "./host-api/discovery";
 import type { EvidenceApi } from "./host-api/evidence";
@@ -70,6 +71,8 @@ export interface ResourcePreviewResult {
 	mimeType: string;
 	size: number;
 	kind: "text" | "image" | "pdf" | "binary";
+	/** 注册表给出的细分预览类型（P1）；旧调用方可忽略 */
+	previewKind?: PreviewKind;
 	text?: string;
 	data?: string;
 	truncated?: boolean;
