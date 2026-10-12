@@ -8,7 +8,7 @@ import {
   knowledgeReuseLevelRank,
   resolveKnowledgeContext,
   validateKnowledgeSourceReceipt
-} from "./chunks/chunk-LDNWOK4U.mjs";
+} from "./chunks/chunk-HBGTVQBB.mjs";
 import "./chunks/chunk-CXEKIGAQ.mjs";
 import "./chunks/chunk-VIHIR2BE.mjs";
 export {
