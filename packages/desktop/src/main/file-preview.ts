@@ -4,22 +4,13 @@ import { basename, extname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createGunzip } from "node:zlib";
 import {
+	fileTypeOf,
 	isLocalResourceTarget,
 	type ResourcePreviewResult,
 	resourceFormat,
 	TEXT_PREVIEW_BYTES,
 } from "@drone/shared";
 
-const IMAGE_MIME: Record<string, string> = {
-	".png": "image/png",
-	".jpg": "image/jpeg",
-	".jpeg": "image/jpeg",
-	".gif": "image/gif",
-	".webp": "image/webp",
-	".bmp": "image/bmp",
-	".ico": "image/x-icon",
-	".svg": "image/svg+xml",
-};
 const BINARY_PREVIEW_LIMIT = 16 * 1024 * 1024;
 const COMPRESSED_READ_LIMIT = 2 * 1024 * 1024;
 export function resolveResourcePath(target: string, cwd?: string): string {
@@ -107,8 +98,10 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 	const name = basename(path),
 		ext = extname(path).toLowerCase(),
 		format = resourceFormat(name),
-		base = { path, name, size: info.size };
-	const mimeType = IMAGE_MIME[ext] ?? (ext === ".pdf" ? "application/pdf" : "text/plain");
+		type = fileTypeOf(name),
+		base = { path, name, size: info.size, previewKind: type.previewKind };
+	const isImage = type.previewKind === "image" || type.previewKind === "svg";
+	const mimeType = isImage || type.previewKind === "pdf" ? type.mime : "text/plain";
 	if (ext === ".gz" && format.supported) {
 		const decoded = await gzipPrefix(path, info.size);
 		const content = decodeText(decoded.bytes);
@@ -137,7 +130,7 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 			truncated: info.size > bytes.length,
 		};
 	}
-	if (IMAGE_MIME[ext] || ext === ".pdf") {
+	if (isImage || ext === ".pdf") {
 		const kind = ext === ".pdf" ? "pdf" : "image";
 		if (info.size > BINARY_PREVIEW_LIMIT) return { ...base, mimeType, kind, truncated: true };
 		const bytes = await readPrefix(path, Math.min(BINARY_PREVIEW_LIMIT, info.size));
