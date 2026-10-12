@@ -16,10 +16,15 @@ export function Toaster() {
 
 	if (toasts.length === 0) return null;
 	return (
-		<div className="pointer-events-none fixed right-4 top-14 z-(--z-toast) flex w-[330px] flex-col gap-2.5">
+		<div
+			className="pointer-events-none fixed right-4 top-14 z-(--z-toast) flex w-[330px] flex-col gap-2.5"
+			aria-live="polite"
+			aria-relevant="additions"
+		>
 			{toasts.map((toast) => (
-				<div key={toast.id} className="toast">
+				<div key={toast.id} className="toast" role={toast.severity === "error" ? "alert" : "status"}>
 					<span
+						aria-hidden
 						className={`t-glyph ${toast.severity === "error" ? "text-err" : toast.severity === "warning" ? "text-warn" : "text-info"}`}
 					>
 						<ErrorCircleIcon />
