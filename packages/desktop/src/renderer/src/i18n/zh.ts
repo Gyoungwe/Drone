@@ -59,6 +59,7 @@ export const zh = {
 		},
 	},
 	firstRun: {
+		configured: "已配置",
 		startTitle: "先选择一个开始方式",
 		startSubtitle: "可以先跑一个完整示例，也可以只配置当前工作真正需要的连接。",
 		dismiss: "知道了",
@@ -635,6 +636,7 @@ export const zh = {
 		viewRun: "查看该运行",
 	},
 	trust: {
+		eyebrow: "安全确认",
 		title: "信任此项目文件夹？",
 		message:
 			"该项目包含 .pi 配置或 .agents/skills，信任后将加载项目级设置、提示词并执行项目扩展。只信任你了解的文件夹。",
