@@ -1,5 +1,6 @@
 export * from "./analysis-orchestration";
 export * from "./ask";
+export * from "./ask-inline";
 export {
 	ALIGNMENT_MAX_RECORDS,
 	type AlignmentPreview,

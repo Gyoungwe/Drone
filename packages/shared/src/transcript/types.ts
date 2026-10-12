@@ -118,6 +118,8 @@ export type UIMessage =
 			compact?: CompactionUiState;
 			/** subagent 互斥接管通知（结构化字段，渲染层 i18n；dedup 以 extensionPath 为准） */
 			mutex?: { extensionPath: string; tools: string[] };
+			/** 内联问询卡回答后的回执行（P9，仅 UI，不持久化） */
+			askReceipt?: { summary: string; waitedMs: number };
 	  }
 	| {
 			/** show_image 工具发给用户看的图片（assistant 侧独立消息，tool_execution_end 时立即落 messages） */

@@ -1,7 +1,8 @@
-import type { AskRequest, AskResponse, TrustRequest } from "@drone/shared";
-import { useCallback, useEffect, useState } from "react";
+import { type AskRequest, type AskResponse, isInlineAsk, type TrustRequest } from "@drone/shared";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "./api";
 import { EmptyState } from "./components/chat/EmptyState";
+import { InlineAskCard } from "./components/chat/InlineAskCard";
 import { MessageList } from "./components/chat/MessageList";
 import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
 import { KnowledgeView } from "./components/knowledge/KnowledgeView";
@@ -56,6 +57,10 @@ export default function App() {
 	});
 	const [trustRequests, setTrustRequests] = useState<TrustRequest[]>([]);
 	const [askRequests, setAskRequests] = useState<AskRequest[]>([]);
+	const askReceivedAt = useRef(new Map<string, number>());
+	// P9：简单问询进对话流内联卡，复杂题（方案投影 / 授权 / 预览选项）仍走 AskDialog 抽屉
+	const inlineAsk = askRequests.find((r) => r.sessionId === activeSessionId && isInlineAsk(r));
+	const drawerAsks = useMemo(() => askRequests.filter((r) => !isInlineAsk(r)), [askRequests]);
 
 	// 事件桥：conflator 装配 + 事件/权限/信任订阅（回调稳定引用，桥只订阅一次不重挂）
 	const pushTrustRequest = useCallback((req: TrustRequest) => {
@@ -70,6 +75,7 @@ export default function App() {
 				setAskRequests((current) =>
 					current.some((item) => item.id === request.id) ? current : [...current, request],
 				);
+				askReceivedAt.current.set(request.id, Date.now());
 			}),
 		[],
 	);
@@ -145,6 +151,16 @@ export default function App() {
 									<RegionHost region={UI_REGIONS.CornerBottomLeft} />
 									<RegionHost region={UI_REGIONS.CornerBottomRight} />
 								</main>
+								{inlineAsk && (
+									<div className="inline-ask-dock">
+										<InlineAskCard
+											key={inlineAsk.id}
+											request={inlineAsk}
+											receivedAt={askReceivedAt.current.get(inlineAsk.id) ?? Date.now()}
+											onRespond={respondAsk}
+										/>
+									</div>
+								)}
 								<ApprovalDock sessionId={activeSessionId} hideComposer={showEmpty} />
 							</div>
 							<ContextPanel />
@@ -158,7 +174,7 @@ export default function App() {
 			<SearchPalette />
 			<ContextMenuHost />
 			<KnowledgeUiRoot />
-			<AskDialog requests={askRequests} onRespond={respondAsk} />
+			<AskDialog requests={drawerAsks} onRespond={respondAsk} />
 			<TrustDialog requests={trustRequests} onRespond={respondTrust} />
 			<ExampleTaskDialog />
 			<Toaster />

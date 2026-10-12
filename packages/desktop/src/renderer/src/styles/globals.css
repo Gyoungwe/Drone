@@ -2529,3 +2529,125 @@ code {
 	color: var(--color-on-ink, #fff);
 	border-color: transparent;
 }
+
+/* P9 内联问询卡 */
+.inline-ask-dock {
+	padding: 0 16px 8px;
+	display: flex;
+	justify-content: center;
+}
+.inline-ask {
+	width: 100%;
+	max-width: 760px;
+	border: 1px solid var(--color-border);
+	background: var(--color-surface);
+	border-radius: 12px;
+	padding: 12px 14px;
+	font-size: 13px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.inline-ask-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--color-muted, #6b6b6b);
+}
+.inline-ask-title {
+	font-weight: 600;
+	color: var(--color-ink, inherit);
+}
+.inline-ask-wait {
+	margin-left: auto;
+	font-variant-numeric: tabular-nums;
+}
+.inline-ask-prompt {
+	font-size: 13.5px;
+}
+.inline-ask-required {
+	color: oklch(0.6 0.15 30);
+	margin-left: 2px;
+}
+.inline-ask-options {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.inline-ask .inline-ask-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	text-align: left;
+	border: 1px solid var(--color-border);
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	border-radius: 8px;
+	padding: 6px 10px;
+	cursor: pointer;
+}
+.inline-ask .inline-ask-option[aria-pressed="true"] {
+	border-color: var(--color-ink, #111);
+	background: var(--color-hover);
+}
+.inline-ask-option kbd {
+	font:
+		11px ui-monospace,
+		monospace;
+	border: 1px solid var(--color-border);
+	border-radius: 4px;
+	padding: 0 5px;
+	color: var(--color-muted, #6b6b6b);
+}
+.inline-ask-rec {
+	font-size: 11px;
+	border-radius: 999px;
+	padding: 0 6px;
+	background: var(--color-hover);
+	color: var(--color-muted, #6b6b6b);
+}
+.inline-ask-option-desc {
+	margin-left: auto;
+	font-size: 12px;
+	color: var(--color-muted, #6b6b6b);
+}
+.inline-ask-custom {
+	border: 1px solid var(--color-border);
+	border-radius: 8px;
+	padding: 6px 10px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+}
+.inline-ask-missing {
+	color: oklch(0.6 0.15 30);
+	font-size: 12px;
+	margin: 0;
+}
+.inline-ask-actions {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+.inline-ask-actions button {
+	border: 1px solid var(--color-border);
+	background: transparent;
+	color: inherit;
+	border-radius: 8px;
+	padding: 4px 12px;
+	cursor: pointer;
+	font: inherit;
+}
+.inline-ask-actions button.strong {
+	background: var(--color-ink, #111);
+	color: var(--color-on-ink, #fff);
+	border-color: transparent;
+}
+.ask-receipt {
+	text-align: right;
+	font-size: 12px;
+	color: var(--color-muted, #6b6b6b);
+	padding: 2px 4px;
+}
