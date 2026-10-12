@@ -519,6 +519,7 @@ export const zh = {
 	process: {
 		label: "过程",
 		running: "进行中",
+		stopped: "已停止",
 		stages: "{count} 个阶段",
 		tools: "{count} 次工具",
 		subagents: "{count} 个子代理",
@@ -907,6 +908,8 @@ export const zh = {
 		noSessions: "暂无会话",
 		noProjects: "暂无项目，点击右上角添加",
 		today: "今天",
+		running: "进行中",
+		awaitingInput: "等待输入",
 		yesterday: "昨天",
 		earlier: "更早",
 		untitled: "未命名会话",

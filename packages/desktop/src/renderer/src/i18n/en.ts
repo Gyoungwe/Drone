@@ -534,6 +534,7 @@ export const en: Messages = {
 	process: {
 		label: "Process",
 		running: "In progress",
+		stopped: "Stopped",
 		stages: "{count} stages",
 		tools: "{count} tool calls",
 		subagents: "{count} subagents",
@@ -948,6 +949,8 @@ export const en: Messages = {
 		noSessions: "No sessions yet",
 		noProjects: "No projects yet — add one from the top right",
 		today: "Today",
+		running: "In progress",
+		awaitingInput: "Waiting for input",
 		yesterday: "Yesterday",
 		earlier: "Earlier",
 		untitled: "Untitled session",

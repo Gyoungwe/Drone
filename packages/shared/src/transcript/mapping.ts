@@ -1,4 +1,5 @@
 import { buildLlmUiError, isUserAbortError, type UiError } from "../errors";
+import { isStoppedTurn } from "../run-state";
 import type { SessionMessage } from "../session";
 import { newSubagentKey, newToolKey } from "./helpers";
 import type { UIMessage, UIToolCall } from "./types";
@@ -85,6 +86,7 @@ export function messagesToUIMessages(messages: SessionMessage[]): UIMessage[] {
 			timestamp: m.timestamp,
 			entryId: m.entryId,
 			...(sourceText !== undefined ? { sourceText } : {}),
+			...(isStoppedTurn(m.stopReason, m.errorMessage) ? { stopped: true } : {}),
 		};
 		// 错误轮：partial 正文照常展示（保留），错误卡挂起——连续错误轮合并，非 error 消息或流结束才落卡
 		if (

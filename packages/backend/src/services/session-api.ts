@@ -6,6 +6,7 @@ import type {
 	ImageInput,
 	PermissionAnswer,
 	PermissionRequest,
+	PromptIds,
 	PromptReceipt,
 	SessionMessage,
 	SessionMeta,
@@ -133,9 +134,14 @@ export class SessionServiceApi extends SessionSettingsApi {
 		sessionId: string,
 		text: string,
 		images?: ImageInput[],
-		requestId?: string,
+		requestIdOrIds?: string | PromptIds,
 	): Promise<PromptReceipt> {
-		return this.host.control.prompt(sessionId, text, images, requestId);
+		// P14 Optimistic：渲染端传客户端 id 时原样回执（不参与去重，去重仍只认 requestId）
+		if (requestIdOrIds && typeof requestIdOrIds === "object") {
+			const receipt = await this.host.control.prompt(sessionId, text, images?.length ? images : undefined);
+			return { ...receipt, ...requestIdOrIds };
+		}
+		return this.host.control.prompt(sessionId, text, images, requestIdOrIds);
 	}
 	async retry(sessionId: string, requestId: string, expectedUserTimestamp?: number): Promise<PromptReceipt> {
 		return this.host.control.retry(sessionId, requestId, expectedUserTimestamp);

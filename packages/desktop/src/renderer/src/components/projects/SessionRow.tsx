@@ -9,7 +9,14 @@ import { Tooltip } from "../ui/Tooltip";
 import { buildDiagnosticsText } from "./diagnostics";
 
 /** 历史会话行：点击打开，hover 出现复制诊断信息 + 删除（二次确认） */
-export function SessionRow({ session }: { session: SessionMeta }) {
+export function SessionRow({
+	session,
+	live,
+}: {
+	session: SessionMeta;
+	/** P14：进行中分组里的实时状态 */
+	live?: "running" | "awaiting";
+}) {
 	const t = useT();
 	const openSession = useProjectsStore((s) => s.openSession);
 	const deleteSession = useProjectsStore((s) => s.deleteSession);
@@ -49,11 +56,20 @@ export function SessionRow({ session }: { session: SessionMeta }) {
 					}
 				}}
 			>
+				{live === "running" && <span className="session-live-spin" aria-hidden="true" />}
+				{live === "awaiting" && <span className="session-live-dot" aria-hidden="true" />}
 				<span className="min-w-0 flex-1 truncate text-[13px] text-ink">
 					{session.name ?? t("projects.untitled")}
 				</span>
 				<span className="shrink-0 text-[11px] text-ink-faint group-hover:invisible">
-					{t("projects.messages", { count: session.messageCount })}
+					{live === "awaiting"
+						? t("projects.awaitingInput")
+						: live === "running"
+							? new Date(session.modifiedAt ?? session.createdAt).toLocaleTimeString([], {
+									hour: "2-digit",
+									minute: "2-digit",
+								})
+							: t("projects.messages", { count: session.messageCount })}
 				</span>
 			</button>
 			{/* 复制按钮：自研 Tooltip（替代 native title：延迟可控+样式统一）。定位类不能传给

@@ -6,6 +6,7 @@ import {
 	type UiError,
 } from "../errors";
 import { progressDisplay } from "../progress-display";
+import { isStoppedTurn } from "../run-state";
 import type { ImageInput, SessionEvent } from "../session";
 import { parseExpandedSkillInvocation } from "../skill-invocation";
 import {
@@ -194,6 +195,18 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 /** Consume the authoritative public snapshot even when the host withholds all deltas.
  * Never read private provider state: this is the same checked event used by history/LAN.
  */
+/** P14 Stopped：给最后一条 assistant 消息打停止标记（内容不动）。 */
+function markLastAssistantStopped(state: SessionTranscriptState): SessionTranscriptState {
+	for (let i = state.messages.length - 1; i >= 0; i--) {
+		const m = state.messages[i];
+		if (m?.kind !== "assistant") continue;
+		const messages = state.messages.slice();
+		messages[i] = { ...m, stopped: true };
+		return { ...state, messages };
+	}
+	return state;
+}
+
 function acceptFinalSnapshot(state: SessionTranscriptState, raw: unknown): SessionTranscriptState {
 	if (!raw || typeof raw !== "object") return state;
 	const message = raw as { role?: string; content?: unknown; knowledgePublication?: unknown };
@@ -798,6 +811,9 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 			// LLM 错误轮：不当场落卡，挂 pending 等 agent_end 的 willRetry 判定（决策 D1：
 			// SDK 每个 retry 轮都发 turn_end(error)，只有最终失败才落卡）
 			const message = event.message as { role?: unknown; stopReason?: unknown; errorMessage?: unknown };
+			if (message?.role === "assistant" && isStoppedTurn(message.stopReason, message.errorMessage)) {
+				return markLastAssistantStopped(final);
+			}
 			if (
 				message?.role === "assistant" &&
 				message.stopReason === "error" &&

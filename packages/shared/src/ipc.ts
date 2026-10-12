@@ -383,7 +383,11 @@ export const IpcChannels = {
  * v0.7.2 regression). Consumers must keep using `sending` for preflight and SDK
  * events for the live run — do not set agentActive from this value.
  */
-export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
+export type PromptReceipt = ({ kind: "agent" } | { kind: "queued" } | { kind: "command" }) & {
+	/** P14 Optimistic：回执原样带回客户端生成的 id */
+	clientMessageId?: string;
+	assistantMessageId?: string;
+};
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
 export interface PiApi
