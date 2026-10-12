@@ -177,7 +177,7 @@ import {
   knowledgeReuseLevelRank,
   resolveKnowledgeContext,
   validateKnowledgeSourceReceipt
-} from "./chunks/chunk-JYEB6VQ7.mjs";
+} from "./chunks/chunk-IDRJAJT6.mjs";
 import {
   cardField,
   cardLink,

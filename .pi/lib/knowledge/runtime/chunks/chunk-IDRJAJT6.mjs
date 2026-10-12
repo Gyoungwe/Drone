@@ -8782,6 +8782,20 @@ var AppContract = defineDomain("app", {
       args: typebox_exports.Union([typebox_exports.Tuple([typebox_exports.String()]), typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()])]),
       result: typebox_exports.Void()
     },
+    /** 文件右键菜单的宿主动作（P7）：action, target, cwd, arg（rename 的新文件名） */
+    fileAction: {
+      args: typebox_exports.Tuple([
+        typebox_exports.Union(
+          ["download", "openDefault", "reveal", "openInEditor", "cut", "copy", "rename", "trash"].map(
+            (a) => typebox_exports.Literal(a)
+          )
+        ),
+        typebox_exports.String({ minLength: 1 }),
+        NullableString,
+        NullableString
+      ]),
+      result: NullableString
+    },
     loadTabs: { args: typebox_exports.Tuple([]), result: typebox_exports.Union([SavedTabsSchema, typebox_exports.Null()]) },
     saveTabs: { args: typebox_exports.Tuple([SavedTabsSchema]), result: typebox_exports.Void() },
     loadUiState: { args: typebox_exports.Tuple([]), result: typebox_exports.Union([UiStateSchema, typebox_exports.Null()]) },
