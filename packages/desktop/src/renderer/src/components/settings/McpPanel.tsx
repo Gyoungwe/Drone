@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { GearIcon, RefreshIcon } from "../../components/icons";
 import { useI18nStore, useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
+import { StatePanel } from "../ui/StatePanel";
 import { Switch } from "../ui/Switch";
 import { mcpRuntimeNotice, mcpStatusKey } from "./mcp-runtime";
 
@@ -186,7 +187,7 @@ export function McpPanel() {
 				</div>
 				{!loading && servers.length === 0 ? (
 					<div className="mt-2 rounded-xl border border-dashed border-border px-4 py-8 text-center">
-						<p className="text-[13px] text-ink-dim">{t("settings.mcp.empty")}</p>
+						<StatePanel compact title={t("settings.mcp.empty")} />
 						<p className="mt-1 text-[11px] text-ink-faint">{t("settings.mcp.emptyHint")}</p>
 					</div>
 				) : (

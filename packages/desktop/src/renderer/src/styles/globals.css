@@ -2200,6 +2200,47 @@ code {
 	}
 }
 
+/* ── Design system baseline (UI upgrade) ───────────────────────────────
+ * One focus ring for every operable control (WCAG 2.4.7 / 2.4.11). :where() keeps specificity at 0
+ * so domain styles (knowledge panel, nebula) can still override with their own accent.
+ */
+:where(
+	button,
+	a[href],
+	input,
+	select,
+	textarea,
+	summary,
+	[role="button"],
+	[role="tab"],
+	[role="menuitem"],
+	[role="option"],
+	[tabindex]:not([tabindex="-1"])
+):focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+	border-radius: inherit;
+}
+:where(input, textarea, select):focus-visible {
+	outline-offset: 0;
+}
+/* Respect reduced motion everywhere, not only on the animations that remembered to opt out. */
+@media (prefers-reduced-motion: reduce) {
+	/* biome-ignore lint/style/noDescendingSpecificity: global reduced-motion fallback must apply to every element */
+	*,
+	*::before,
+	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: must beat component animation declarations */
+		animation-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: must beat component animation declarations */
+		animation-iteration-count: 1 !important;
+		/* biome-ignore lint/complexity/noImportantStyles: must beat component transition declarations */
+		transition-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: must beat smooth-scroll utilities */
+		scroll-behavior: auto !important;
+	}
+}
+
 @keyframes action-surface-in {
 	from {
 		opacity: 0;

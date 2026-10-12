@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useT } from "../../../i18n";
 import { useCatalogStore } from "../../../stores/catalog";
 import { useSettingsStore } from "../../../stores/settings";
+import { StatePanel } from "../../ui/StatePanel";
 import { ExtensionRow } from "./rows";
 
 /** 已加载：当前项目（活跃会话）加载的扩展及其注册的工具/命令 */
@@ -21,14 +22,12 @@ export function LoadedSection() {
 	}, [configuredPackages]);
 
 	if (extensions === null) {
-		return (
-			<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.extensions.emptyNoSession")}</p>
-		);
+		return <StatePanel title={t("settings.extensions.emptyNoSession")} />;
 	}
 	return (
 		<div>
 			{extensions.length === 0 && errors.length === 0 ? (
-				<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.extensions.empty")}</p>
+				<StatePanel title={t("settings.extensions.empty")} />
 			) : (
 				<ul className="divide-y divide-border">
 					{extensions.map((extension) => (

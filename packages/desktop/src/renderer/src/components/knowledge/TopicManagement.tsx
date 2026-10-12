@@ -4,6 +4,7 @@ import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";
 import { useAgentActive } from "../session/session-status";
 import { Button } from "../ui/Button";
+import { StatePanel } from "../ui/StatePanel";
 import { useKnowledgeText } from "./copy";
 
 export function TopicManagement({
@@ -152,7 +153,7 @@ export function TopicManagement({
 					) : null}
 				</article>
 			))}
-			{data && data.topics.length === 0 && <p className="text-xs text-ink-dim">{t("empty")}</p>}
+			{data && data.topics.length === 0 && <StatePanel compact title={t("empty")} />}
 			{error && (
 				<p role="alert" className="break-words text-xs text-err">
 					{error}

@@ -13,6 +13,7 @@ import {
 import { useMemo, useState } from "react";
 import { useI18nStore, useT } from "../../i18n";
 import { useSettingsStore } from "../../stores/settings";
+import { StatePanel } from "../ui/StatePanel";
 
 function ScopeBadge({ scope }: { scope: ResourceScope }) {
 	const t = useT();
@@ -192,10 +193,7 @@ export function SkillsPanel() {
 			else next.add(key);
 			return next;
 		});
-	if (skills === null)
-		return (
-			<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.skills.emptyNoSession")}</p>
-		);
+	if (skills === null) return <StatePanel title={t("settings.skills.emptyNoSession")} />;
 	return (
 		<div>
 			{/* 工作流总览已移到 设置 › 高级；工具清单默认折叠 */}

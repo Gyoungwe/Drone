@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { Button } from "../ui/Button";
+import { StatePanel } from "../ui/StatePanel";
 import { useKnowledgeText } from "./copy";
 import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
 import { knowledgeLineDiff } from "./line-diff";
@@ -182,9 +183,7 @@ export function WikiReviewPanel({
 								)}
 							</button>
 						))}
-						{page && !page.items.length && !loading && (
-							<p className="py-5 text-center text-xs text-ink-faint">{t("empty")}</p>
-						)}
+						{page && !page.items.length && !loading && <StatePanel compact title={t("empty")} />}
 					</div>
 					<div className="mt-2 flex justify-between">
 						<Button
