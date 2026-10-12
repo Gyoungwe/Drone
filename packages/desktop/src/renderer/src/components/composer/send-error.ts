@@ -12,6 +12,7 @@ export function buildSendUiError(message: string, now: number = Date.now()): UiE
 	const lower = message.toLowerCase();
 	if (lower.includes("read-only")) {
 		return {
+			code: "SEND_READ_ONLY",
 			severity: "error",
 			source: "session",
 			titleKey: "error.title.sendReadOnly",
@@ -22,9 +23,11 @@ export function buildSendUiError(message: string, now: number = Date.now()): UiE
 	}
 	const cls = classifyLlmError(message);
 	const base = buildLlmUiError(message, now);
+	const generic = cls.titleKey === "error.title.llmGeneric";
 	return {
 		...base,
-		titleKey: cls.titleKey === "error.title.llmGeneric" ? "error.title.sendFailed" : cls.titleKey,
+		...(generic ? { code: "SEND_FAILED" } : {}),
+		titleKey: generic ? "error.title.sendFailed" : cls.titleKey,
 	};
 }
 

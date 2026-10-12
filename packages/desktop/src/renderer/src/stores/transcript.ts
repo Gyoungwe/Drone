@@ -11,6 +11,7 @@ import {
 	type UIToolCall,
 } from "@drone/shared";
 import { create } from "zustand";
+import { emitTurnSettled } from "../lib/turn-settled";
 
 export type { ActivityEntry, SessionPhase, StreamingState, SubagentRunUi, UIMessage, UIToolCall };
 
@@ -37,6 +38,8 @@ interface TranscriptStore {
 	addPermission: (sessionId: string, req: PermissionRequest) => void;
 	resolvePermission: (sessionId: string, requestId: string) => void;
 	resetSession: (sessionId: string) => void;
+	/** 追加一条仅 UI 的系统行（P9 问询回执） */
+	appendAskReceipt: (sessionId: string, summary: string, waitedMs: number) => void;
 	/** 打开历史会话时回放已有消息（不触发 reducer 事件流） */
 	loadHistory: (sessionId: string, messages: UIMessage[]) => void;
 	/** 直接设置排队中的 followUp（打开/切换会话时从 backend 拉初始值；运行中由 queue_update 事件驱动） */
@@ -45,9 +48,10 @@ interface TranscriptStore {
 	loadTodos: (sessionId: string, todos: TodoItem[]) => void;
 }
 
-export const useTranscriptStore = create<TranscriptStore>((set) => ({
+export const useTranscriptStore = create<TranscriptStore>((set, get) => ({
 	bySession: {},
 	applyEvent: (sessionId, event, opts) => {
+		const wasActive = get().bySession[sessionId]?.agentActive === true;
 		set((state) => {
 			const current = state.bySession[sessionId];
 			const prev = current ?? emptyTranscript();
@@ -67,6 +71,10 @@ export const useTranscriptStore = create<TranscriptStore>((set) => ({
 				},
 			};
 		});
+		// P11：回合结束（true→false）时后台通知 / 提示音
+		if (wasActive && get().bySession[sessionId]?.agentActive === false) {
+			emitTurnSettled(sessionId);
+		}
 	},
 	markAgentActive: (sessionId, active) => {
 		set((state) => {
@@ -121,6 +129,24 @@ export const useTranscriptStore = create<TranscriptStore>((set) => ({
 				bySession: {
 					...state.bySession,
 					[sessionId]: { ...current, pendingPermissions },
+				},
+			};
+		});
+	},
+	appendAskReceipt: (sessionId, summary, waitedMs) => {
+		set((state) => {
+			const current = state.bySession[sessionId] ?? EMPTY_ENTRY;
+			const receipt: UIMessage = {
+				kind: "system",
+				id: `ask-receipt-${Date.now()}-${current.messages.length}`,
+				text: summary,
+				timestamp: Date.now(),
+				askReceipt: { summary, waitedMs },
+			};
+			return {
+				bySession: {
+					...state.bySession,
+					[sessionId]: { ...current, messages: [...current.messages, receipt] },
 				},
 			};
 		});

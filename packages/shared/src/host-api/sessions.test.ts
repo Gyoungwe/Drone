@@ -14,6 +14,7 @@ const methodNames = [
 	"retry",
 	"setModel",
 	"setThinkingLevel",
+	"setAgentMode",
 	"compact",
 	"getStats",
 	"getContextUsage",
@@ -66,5 +67,12 @@ describe("SessionsContract", () => {
 		expect(Check(SessionsContract.methods.prompt.args, ["session-1", "hello"])).toBe(true);
 		expect(Check(SessionsContract.methods.prompt.args, ["session-1", "hello", []])).toBe(true);
 		expect(Check(SessionsContract.methods.prompt.args, ["session-1", "hello", undefined])).toBe(false);
+		// P14 Optimistic：客户端 id 第四参
+		const ids = { clientMessageId: "u-1", assistantMessageId: "a-1" };
+		expect(Check(SessionsContract.methods.prompt.args, ["session-1", "hello", [], ids])).toBe(true);
+		expect(
+			Check(SessionsContract.methods.prompt.args, ["session-1", "hello", [], { clientMessageId: "" }]),
+		).toBe(false);
+		expect(Check(SessionsContract.methods.prompt.result, { kind: "agent", ...ids })).toBe(true);
 	});
 });

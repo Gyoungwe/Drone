@@ -8,6 +8,15 @@ export function SystemMessage({ message }: { message: Extract<UIMessage, { kind:
 	const [expanded, setExpanded] = useState(false);
 	const compact = message.compact;
 	if (!compact) {
+		if (message.askReceipt)
+			return (
+				<div className="ask-receipt" data-testid="ask-receipt">
+					{t("ask.inline.receipt", {
+						summary: message.askReceipt.summary,
+						seconds: Math.max(1, Math.round(message.askReceipt.waitedMs / 1000)),
+					})}
+				</div>
+			);
 		const mutex = message.mutex;
 		if (mutex) {
 			const fileName = mutex.extensionPath.split(/[\\/]/).pop() ?? mutex.extensionPath;

@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import type { PromptReceipt } from "../ipc";
+import type { PromptIds } from "../run-state";
 import type {
 	AvailableModel,
 	ContextUsageInfo,
@@ -54,11 +55,19 @@ const SessionMetaSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
+const ReceiptIds = {
+	clientMessageId: Type.Optional(Type.String()),
+	assistantMessageId: Type.Optional(Type.String()),
+};
 const PromptReceiptSchema = Type.Union([
-	Type.Object({ kind: Type.Literal("agent") }, { additionalProperties: false }),
-	Type.Object({ kind: Type.Literal("queued") }, { additionalProperties: false }),
-	Type.Object({ kind: Type.Literal("command") }, { additionalProperties: false }),
+	Type.Object({ kind: Type.Literal("agent"), ...ReceiptIds }, { additionalProperties: false }),
+	Type.Object({ kind: Type.Literal("queued"), ...ReceiptIds }, { additionalProperties: false }),
+	Type.Object({ kind: Type.Literal("command"), ...ReceiptIds }, { additionalProperties: false }),
 ]);
+const PromptIdsSchema = Type.Object(
+	{ clientMessageId: Type.String({ minLength: 1 }), assistantMessageId: Type.String({ minLength: 1 }) },
+	{ additionalProperties: false },
+);
 
 const QueuedMessagesSchema = Type.Object(
 	{ steering: Type.Array(Type.String()), followUp: Type.Array(Type.String()) },
@@ -118,6 +127,7 @@ export const SessionsContract = defineDomain("sessions", {
 			args: Type.Union([
 				Type.Tuple([Id, Type.String()]),
 				Type.Tuple([Id, Type.String(), Type.Array(ImageInputSchema)]),
+				Type.Tuple([Id, Type.String(), Type.Array(ImageInputSchema), PromptIdsSchema]),
 			]),
 			result: Type.Unsafe<PromptReceipt>(PromptReceiptSchema),
 		},
@@ -128,6 +138,17 @@ export const SessionsContract = defineDomain("sessions", {
 		},
 		setModel: { args: Type.Tuple([Id, Id, Id]), result: Type.Void() },
 		setThinkingLevel: { args: Type.Tuple([Id, Id]), result: Type.Void() },
+		/** P18：模式即工具白名单（single / lead / swarm）；返回本次增减的工具，供 UI 提示 */
+		setAgentMode: {
+			args: Type.Tuple([
+				Id,
+				Type.Union([Type.Literal("single"), Type.Literal("lead"), Type.Literal("swarm")]),
+			]),
+			result: Type.Object(
+				{ added: Type.Array(Type.String()), removed: Type.Array(Type.String()) },
+				{ additionalProperties: false },
+			),
+		},
 		compact: {
 			args: Type.Union([Type.Tuple([Id]), Type.Tuple([Id, Type.String()])]),
 			result: Type.Void(),
@@ -187,7 +208,12 @@ type SessionResult<K extends keyof SessionClient> = Awaited<ReturnType<SessionCl
 type OptionalSessionClient = {
 	listSessions(cwd?: string): Promise<SessionResult<"listSessions">>;
 	deleteSession(sessionId: string, sessionFile?: string): Promise<SessionResult<"deleteSession">>;
-	prompt(sessionId: string, text: string, images?: ImageInput[]): Promise<SessionResult<"prompt">>;
+	prompt(
+		sessionId: string,
+		text: string,
+		images?: ImageInput[],
+		ids?: PromptIds,
+	): Promise<SessionResult<"prompt">>;
 	retry(
 		sessionId: string,
 		requestId: string,
@@ -212,13 +238,17 @@ export type SessionsSchemaTypes = {
 	openSession: [filePath: string];
 	closeSession: [sessionId: string];
 	deleteSession: [sessionId: string] | [sessionId: string, sessionFile: string];
-	prompt: [sessionId: string, text: string] | [sessionId: string, text: string, images: ImageInput[]];
+	prompt:
+		| [sessionId: string, text: string]
+		| [sessionId: string, text: string, images: ImageInput[]]
+		| [sessionId: string, text: string, images: ImageInput[], ids: PromptIds];
 	abort: [sessionId: string];
 	retry:
 		| [sessionId: string, requestId: string]
 		| [sessionId: string, requestId: string, expectedUserTimestamp: number];
 	setModel: [sessionId: string, provider: string, modelId: string];
 	setThinkingLevel: [sessionId: string, level: string];
+	setAgentMode: [sessionId: string, mode: "single" | "lead" | "swarm"];
 	compact: [sessionId: string] | [sessionId: string, customInstructions: string];
 	getStats: [sessionId: string];
 	getContextUsage: [sessionId: string];

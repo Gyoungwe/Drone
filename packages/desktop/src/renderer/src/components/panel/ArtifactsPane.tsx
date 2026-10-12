@@ -1,10 +1,11 @@
-import type { InquiryArtifactProvenance, InquiryArtifactRecord } from "@drone/shared";
+import { collectDeliveries, type InquiryArtifactProvenance, type InquiryArtifactRecord } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
+import { DeliveryCards } from "../chat/DeliveryCards";
 import { TaskArtifactLinks, taskArtifactLinks } from "../chat/TaskArtifactLinks";
 import { ObsidianIcon } from "../icons";
 import { mergeKnowledgeArtifacts } from "../knowledge/artifacts";
@@ -22,6 +23,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 	const messages = useTranscriptStore((s) => selectTranscript(s, sessionId).messages);
 	const flow = useKnowledgeStore((s) => (sessionId ? s.flows[sessionId] : undefined));
 	const openKnowledge = useKnowledgeStore((s) => s.open);
+	const deliveries = collectDeliveries(messages);
 	const latestMessage = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
 	const view = latestMessage?.kind === "assistant" ? latestMessage.taskView : undefined;
 	const tasksWithArtifacts = (view?.tasks ?? []).filter((task) => taskArtifactLinks(task).length > 0);
@@ -128,6 +130,12 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 
 	return (
 		<div className="context-pane">
+			{deliveries.length > 0 && (
+				<section className="panel-card" data-testid="panel-deliveries">
+					<header className="text-[12px] font-medium text-ink">{t("delivery.title")}</header>
+					<DeliveryCards files={deliveries} sessionId={sessionId} />
+				</section>
+			)}
 			{ledgerArtifacts.length > 0 && (
 				<section className="panel-card" data-testid="inquiry-artifacts">
 					<header className="text-[12px] font-medium text-ink">{t("panel.artifactProvenance.title")}</header>

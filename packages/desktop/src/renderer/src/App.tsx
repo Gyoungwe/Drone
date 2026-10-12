@@ -1,12 +1,16 @@
-import type { AskRequest, AskResponse, TrustRequest } from "@drone/shared";
-import { useCallback, useEffect, useState } from "react";
+import { type AskRequest, type AskResponse, isInlineAsk, type TrustRequest } from "@drone/shared";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "./api";
 import { EmptyState } from "./components/chat/EmptyState";
+import { InlineAskCard } from "./components/chat/InlineAskCard";
 import { MessageList } from "./components/chat/MessageList";
+import { ComposerStatusBar } from "./components/composer/ComposerStatusBar";
+import { RunStatusStrip } from "./components/composer/RunStatusStrip";
 import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
 import { KnowledgeView } from "./components/knowledge/KnowledgeView";
 import { ContextPanel } from "./components/panel/ContextPanel";
 import { ProjectPage } from "./components/projects/ProjectPage";
+import { SearchPalette } from "./components/search/SearchPalette";
 import { ApprovalDock } from "./components/session/ApprovalDock";
 import { AskDialog } from "./components/session/AskDialog";
 import { SessionTabBar } from "./components/session/SessionTabBar";
@@ -14,14 +18,21 @@ import { TrustDialog } from "./components/session/TrustDialog";
 import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { Toaster } from "./components/Toaster";
 import { ExampleTaskDialog } from "./components/tasks/ExampleTaskDialog";
+import { ContextMenuHost } from "./components/ui/ContextMenu";
 import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
+import { useDesktopCommands } from "./hooks/use-desktop-commands";
+import { useAttentionBadge, useAutoPreviewWrites } from "./hooks/use-run-attention";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
+import { useT } from "./i18n";
+import { notifyCompletion } from "./lib/completion-notify";
 import { initDailyDir } from "./lib/daily";
+import { onTurnSettled } from "./lib/turn-settled";
 import { initUiPlugins } from "./plugins/loader";
 import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "./plugins/PluginRegions";
 import { RegionHost } from "./plugins/RegionHost";
 import { UI_REGIONS } from "./plugins/slots";
 import { finishSplash } from "./splash";
+import { useAskCountsStore } from "./stores/ask-counts";
 import { useComputeStore } from "./stores/compute";
 import { useSessionsStore } from "./stores/sessions";
 import { backgroundImageUrl, useThemeStore } from "./stores/theme";
@@ -42,6 +53,17 @@ export default function App() {
 	// 插件全屏视图（rail.view，挂钩 4）：插件被禁用/卸载后若仍处于该视图，回到聊天
 	const pluginViews = usePluginEntries(UI_REGIONS.RailView);
 	const pluginView = pluginViews.find((entry) => entry.id === view);
+	const tNotify = useT();
+	// P11：回合结束 → 后台系统通知 / 提示音；点击通知切到该会话
+	useEffect(
+		() =>
+			onTurnSettled((sessionId) =>
+				notifyCompletion("done", tNotify("notify.doneTitle"), tNotify("notify.doneBody"), () =>
+					useSessionsStore.getState().switchSession(sessionId),
+				),
+			),
+		[tNotify],
+	);
 	useEffect(() => {
 		if (isPluginEntryId(view) && !pluginView) useUiStore.getState().setView("chat");
 	}, [view, pluginView]);
@@ -53,12 +75,21 @@ export default function App() {
 	});
 	const [trustRequests, setTrustRequests] = useState<TrustRequest[]>([]);
 	const [askRequests, setAskRequests] = useState<AskRequest[]>([]);
+	const askReceivedAt = useRef(new Map<string, number>());
+	// P9：简单问询进对话流内联卡，复杂题（方案投影 / 授权 / 预览选项）仍走 AskDialog 抽屉
+	const inlineAsk = askRequests.find((r) => r.sessionId === activeSessionId && isInlineAsk(r));
+	const sessionAsks = askRequests.filter((r) => r.sessionId === activeSessionId).length;
+	useAttentionBadge(askRequests.length);
+	useEffect(() => useAskCountsStore.getState().setFromRequests(askRequests), [askRequests]);
+	useAutoPreviewWrites();
+	const drawerAsks = useMemo(() => askRequests.filter((r) => !isInlineAsk(r)), [askRequests]);
 
 	// 事件桥：conflator 装配 + 事件/权限/信任订阅（回调稳定引用，桥只订阅一次不重挂）
 	const pushTrustRequest = useCallback((req: TrustRequest) => {
 		setTrustRequests((prev) => [...prev, req]);
 	}, []);
 	useSessionEventBridge({ onTrustRequest: pushTrustRequest });
+	useDesktopCommands();
 
 	useEffect(
 		() =>
@@ -66,6 +97,7 @@ export default function App() {
 				setAskRequests((current) =>
 					current.some((item) => item.id === request.id) ? current : [...current, request],
 				);
+				askReceivedAt.current.set(request.id, Date.now());
 			}),
 		[],
 	);
@@ -133,7 +165,7 @@ export default function App() {
 					) : (
 						<>
 							<div className="relative flex min-w-0 flex-1 flex-col">
-								<main className="relative min-h-0 flex-1">
+								<main className="main-float relative min-h-0 flex-1">
 									{showEmpty ? <EmptyState /> : <MessageList />}
 									{/* 聊天区四角贡献层（TodoPanel 悬浮胶囊已并入右侧面板「任务」页签） */}
 									<RegionHost region={UI_REGIONS.CornerTopLeft} />
@@ -141,6 +173,18 @@ export default function App() {
 									<RegionHost region={UI_REGIONS.CornerBottomLeft} />
 									<RegionHost region={UI_REGIONS.CornerBottomRight} />
 								</main>
+								{inlineAsk && (
+									<div className="inline-ask-dock">
+										<InlineAskCard
+											key={inlineAsk.id}
+											request={inlineAsk}
+											receivedAt={askReceivedAt.current.get(inlineAsk.id) ?? Date.now()}
+											onRespond={respondAsk}
+										/>
+									</div>
+								)}
+								{!showEmpty && <ComposerStatusBar />}
+								{!showEmpty && <RunStatusStrip sessionId={activeSessionId} pendingAsks={sessionAsks} />}
 								<ApprovalDock sessionId={activeSessionId} hideComposer={showEmpty} />
 							</div>
 							<ContextPanel />
@@ -151,8 +195,10 @@ export default function App() {
 			{/* 悬浮贡献层：内容列之后、设置弹窗之前（z-20 < z-40，插件层永在弹窗之下） */}
 			<RegionHost region={UI_REGIONS.AppOverlay} />
 			<SettingsDialog />
+			<SearchPalette />
+			<ContextMenuHost />
 			<KnowledgeUiRoot />
-			<AskDialog requests={askRequests} onRespond={respondAsk} />
+			<AskDialog requests={drawerAsks} onRespond={respondAsk} />
 			<TrustDialog requests={trustRequests} onRespond={respondTrust} />
 			<ExampleTaskDialog />
 			<Toaster />

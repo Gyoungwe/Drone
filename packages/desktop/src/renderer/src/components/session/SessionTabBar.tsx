@@ -27,6 +27,8 @@ import { pushToast } from "../../stores/toasts";
 import { useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { CloseIcon, CoffeeIcon, ListIcon, PanelRightIcon, PlusIcon, SubagentIcon } from "../icons";
+import { contextMenuHandler } from "../ui/ContextMenu";
+import { buildTabMenu } from "../ui/file-menu";
 import { sessionLetter, sessionTitle, useSessionStatus } from "./session-status";
 import { UpdateButton } from "./UpdateButton";
 
@@ -253,6 +255,7 @@ function SessionTab({
 	isActive: boolean;
 	suffix?: string;
 }) {
+	const t = useT();
 	const switchSession = useSessionsStore((s) => s.switchSession);
 	const setView = useUiStore((s) => s.setView);
 	const [renaming, setRenaming] = useState(false);
@@ -267,10 +270,14 @@ function SessionTab({
 	// 动态宽度：flex-1 均分剩余空间（每胶囊 ≤ max-w-52），空间不足时平均压缩（≥ min-w-24），
 	// 全到最短后溢出由外层 scroller 滚动兜底；ghost 拖拽层用拾起时的实测宽度（ghostWidth），不参与 flex 布局
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: right-click menu duplicates tab actions (click / double-click / close)
 		<div
 			ref={setNodeRef}
 			data-tab-id={session.sessionId}
 			className="min-w-28 max-w-56 flex-1"
+			onContextMenu={contextMenuHandler(() =>
+				buildTabMenu(session.sessionId, t, canRename ? () => setRenaming(true) : undefined),
+			)}
 			style={{
 				transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
 				transition: transition || undefined,

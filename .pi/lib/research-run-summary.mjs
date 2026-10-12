@@ -9161,6 +9161,9 @@ var ROWS = [
   ["npy", "application/x-npy", "array"],
   ["stl", "model/stl", "mesh"],
   ["obj", "model/obj", "mesh"],
+  ["tif tiff", "image/tiff", "tiff"],
+  ["nii", "application/x-nifti", "volume"],
+  ["mrc map rec ccp4", "application/x-mrc", "volume"],
   ["py pyi pyw ipy smk", "text/x-python", "code", "python"],
   ["r rprofile rhistory rscript", "text/x-r", "code", "r"],
   ["js mjs cjs", "text/javascript", "code", "javascript"],
@@ -9414,6 +9417,31 @@ var AppContract = defineDomain("app", {
     resourceOpenExternal: {
       args: typebox_exports.Union([typebox_exports.Tuple([typebox_exports.String()]), typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()])]),
       result: typebox_exports.Void()
+    },
+    /** 文件右键菜单的宿主动作（P7）：action, target, cwd, arg（rename 的新文件名） */
+    fileAction: {
+      args: typebox_exports.Tuple([
+        typebox_exports.Union(
+          ["download", "openDefault", "reveal", "openInEditor", "cut", "copy", "rename", "trash"].map(
+            (a) => typebox_exports.Literal(a)
+          )
+        ),
+        typebox_exports.String({ minLength: 1 }),
+        NullableString,
+        NullableString
+      ]),
+      result: NullableString
+    },
+    /** 本机环境探测（P10）：固定只读命令 */
+    pickDownloadDir: { args: typebox_exports.Tuple([]), result: NullableString },
+    /** 待答数角标（P14）：count, Windows overlay 图（data URL）或 null */
+    setAttentionBadge: {
+      args: typebox_exports.Tuple([typebox_exports.Integer({ minimum: 0, maximum: 999 }), NullableString]),
+      result: typebox_exports.Void()
+    },
+    hostEnvironment: {
+      args: typebox_exports.Tuple([]),
+      result: typebox_exports.Unsafe(typebox_exports.Object({}, { additionalProperties: true }))
     },
     loadTabs: { args: typebox_exports.Tuple([]), result: typebox_exports.Union([SavedTabsSchema, typebox_exports.Null()]) },
     saveTabs: { args: typebox_exports.Tuple([SavedTabsSchema]), result: typebox_exports.Void() },
@@ -10377,11 +10405,19 @@ var SessionMetaSchema = typebox_exports.Object(
   },
   { additionalProperties: false }
 );
+var ReceiptIds = {
+  clientMessageId: typebox_exports.Optional(typebox_exports.String()),
+  assistantMessageId: typebox_exports.Optional(typebox_exports.String())
+};
 var PromptReceiptSchema = typebox_exports.Union([
-  typebox_exports.Object({ kind: typebox_exports.Literal("agent") }, { additionalProperties: false }),
-  typebox_exports.Object({ kind: typebox_exports.Literal("queued") }, { additionalProperties: false }),
-  typebox_exports.Object({ kind: typebox_exports.Literal("command") }, { additionalProperties: false })
+  typebox_exports.Object({ kind: typebox_exports.Literal("agent"), ...ReceiptIds }, { additionalProperties: false }),
+  typebox_exports.Object({ kind: typebox_exports.Literal("queued"), ...ReceiptIds }, { additionalProperties: false }),
+  typebox_exports.Object({ kind: typebox_exports.Literal("command"), ...ReceiptIds }, { additionalProperties: false })
 ]);
+var PromptIdsSchema = typebox_exports.Object(
+  { clientMessageId: typebox_exports.String({ minLength: 1 }), assistantMessageId: typebox_exports.String({ minLength: 1 }) },
+  { additionalProperties: false }
+);
 var QueuedMessagesSchema = typebox_exports.Object(
   { steering: typebox_exports.Array(typebox_exports.String()), followUp: typebox_exports.Array(typebox_exports.String()) },
   { additionalProperties: false }
@@ -10427,7 +10463,8 @@ var SessionsContract = defineDomain("sessions", {
     prompt: {
       args: typebox_exports.Union([
         typebox_exports.Tuple([Id2, typebox_exports.String()]),
-        typebox_exports.Tuple([Id2, typebox_exports.String(), typebox_exports.Array(ImageInputSchema)])
+        typebox_exports.Tuple([Id2, typebox_exports.String(), typebox_exports.Array(ImageInputSchema)]),
+        typebox_exports.Tuple([Id2, typebox_exports.String(), typebox_exports.Array(ImageInputSchema), PromptIdsSchema])
       ]),
       result: typebox_exports.Unsafe(PromptReceiptSchema)
     },
@@ -10438,6 +10475,17 @@ var SessionsContract = defineDomain("sessions", {
     },
     setModel: { args: typebox_exports.Tuple([Id2, Id2, Id2]), result: typebox_exports.Void() },
     setThinkingLevel: { args: typebox_exports.Tuple([Id2, Id2]), result: typebox_exports.Void() },
+    /** P18：模式即工具白名单（single / lead / swarm）；返回本次增减的工具，供 UI 提示 */
+    setAgentMode: {
+      args: typebox_exports.Tuple([
+        Id2,
+        typebox_exports.Union([typebox_exports.Literal("single"), typebox_exports.Literal("lead"), typebox_exports.Literal("swarm")])
+      ]),
+      result: typebox_exports.Object(
+        { added: typebox_exports.Array(typebox_exports.String()), removed: typebox_exports.Array(typebox_exports.String()) },
+        { additionalProperties: false }
+      )
+    },
     compact: {
       args: typebox_exports.Union([typebox_exports.Tuple([Id2]), typebox_exports.Tuple([Id2, typebox_exports.String()])]),
       result: typebox_exports.Void()

@@ -53,10 +53,18 @@ beforeEach(() => {
 	useSessionsStore.setState({ activeSessionId: "s" });
 	useSubagentsStore.setState({ runsBySession: {} });
 });
-it("omits the optional image argument when sending plain text", async () => {
+it("sends client-generated message ids with plain text (P14 Optimistic)", async () => {
 	pi.prompt.mockResolvedValue({ kind: "agent" });
 	await composer("hello").handleSend();
-	expect(pi.prompt).toHaveBeenCalledWith("s", "hello");
+	expect(pi.prompt).toHaveBeenCalledWith(
+		"s",
+		"hello",
+		[],
+		expect.objectContaining({
+			clientMessageId: expect.stringMatching(/^u-/),
+			assistantMessageId: expect.stringMatching(/^a-/),
+		}),
+	);
 });
 it("a fast SDK run cannot be restarted by a late prompt acknowledgement", async () => {
 	pi.prompt.mockImplementation(async () => {

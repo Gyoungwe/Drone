@@ -2,11 +2,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import { isGalleryRoute } from "./dev/gallery-route";
 // 宿主 API 挂载（副作用）：必须在任何插件代码可能运行之前执行，因此置于 theme store init 之前
 import "./plugins/host-api";
 // monaco 缺失服务补注册（副作用，详见文件头）：代码块编辑器 UNKNOWN service 报错修复
 import "./monaco-contribs";
 import { initSplash } from "./splash";
+import { useDesktopPrefsStore } from "./stores/desktop-prefs";
 import { useThemeStore } from "./stores/theme";
 import { useUiPreferencesStore } from "./stores/ui-preferences";
 import "./styles/globals.css";
@@ -18,7 +20,18 @@ if (!root) throw new Error("root element not found");
 initSplash();
 
 // render 前先恢复主题/背景/UI 偏好（一次 IPC），避免深色模式启动闪白与轨道开关闪现
-void Promise.all([useThemeStore.getState().init(), useUiPreferencesStore.getState().init()]).finally(() => {
+void Promise.all([
+	useThemeStore.getState().init(),
+	useUiPreferencesStore.getState().init(),
+	useDesktopPrefsStore.getState().init(),
+]).finally(() => {
+	if (isGalleryRoute(location.hash, import.meta.env.DEV)) {
+		// 开发态画廊：动态 import，生产包不含
+		void import("./dev/StatesGallery").then(({ StatesGallery }) =>
+			createRoot(root).render(<StatesGallery />),
+		);
+		return;
+	}
 	createRoot(root).render(
 		<StrictMode>
 			{/* 全局边界：渲染期异常（含 #185 无限更新类）落到可恢复错误页而非整窗白屏 */}

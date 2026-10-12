@@ -30,6 +30,7 @@ import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
 import { makeComputeRouteTool } from "../tools/compute-route";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
+import { makeDeliverFilesTool } from "../tools/deliver-files";
 import { bindToolManifestEvents } from "../tools/manifest";
 import { makeShowImageTool } from "../tools/show-image";
 import { makeSshHostsTool, makeSshTool, type SshHostEntry } from "../tools/ssh";
@@ -43,6 +44,7 @@ import { makeHarnessContextExtension } from "./harness/context";
 import { makeHarnessDeliveryExtension } from "./harness/delivery";
 import { makeHarnessGuardExtension } from "./harness/guards";
 import { makeHarnessRecallTool } from "./harness/recall";
+import { makeTurnContextExtension } from "./harness/turn-context";
 
 const log = createLogger("session-harness");
 const warnedHarnessUnits = new Set<string>();
@@ -110,6 +112,7 @@ export function buildSessionCustomTools(
 	// submission remains behind the desktop approval and compute preflight gates.
 	tools.push(makeComputeRouteTool());
 	tools.push(makeShowImageTool());
+	tools.push(makeDeliverFilesTool());
 	tools.push(
 		makeSshTool({
 			confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),
@@ -214,6 +217,12 @@ export function buildSessionExtensionFactories(
 					deps.traces.recordCustom(sessionId, "harness_checkpoint", checkpoint),
 				recordUnit: (sessionId, unit, action, details) =>
 					deps.traces.recordCustom(sessionId, "harness_unit", { unit, action, ...details }),
+			}),
+		);
+	if (harness.context)
+		factories.push(
+			makeTurnContextExtension({
+				recordMeta: (sessionId, meta) => deps.traces.recordCustom(sessionId, "turn_meta", meta),
 			}),
 		);
 	if (harness.guard || harness.delivery) {

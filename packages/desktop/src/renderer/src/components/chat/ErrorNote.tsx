@@ -1,4 +1,4 @@
-import type { UiError } from "@drone/shared";
+import { CONTINUE_MESSAGE, ERROR_CODES, errorCardActions, errorCodeOf, type UiError } from "@drone/shared";
 import { useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { type MessageKey, useT } from "../../i18n";
@@ -64,6 +64,25 @@ export function ErrorNote({
 		}
 	};
 
+	// 「继续」：会话级重做 = 发一条普通用户消息（P8），回复后卡片定格为「已恢复运行」
+	const [continued, setContinued] = useState(false);
+	const sendContinue = async () => {
+		if (!sessionId || active || recoveryLock.current) return;
+		recoveryLock.current = true;
+		setRecovering(true);
+		setRecoveryError("");
+		try {
+			await getPi().prompt(sessionId, CONTINUE_MESSAGE);
+			setContinued(true);
+			useSessionsStore.getState().switchSession(sessionId);
+		} catch (e) {
+			setRecoveryError(e instanceof Error ? e.message : String(e));
+		} finally {
+			recoveryLock.current = false;
+			setRecovering(false);
+		}
+	};
+
 	const copyDetail = async () => {
 		if (!error.detail) return;
 		try {
@@ -79,16 +98,90 @@ export function ErrorNote({
 	const severityClass =
 		error.severity === "warning" ? "text-warn" : error.severity === "info" ? "text-info" : "text-err";
 
+	const code = errorCodeOf(error);
+	const spec = ERROR_CODES[code];
 	const actions = useMemo(() => {
 		const list = [];
-		for (const action of error.actions) {
+		for (const action of spec.turnLevel ? errorCardActions(error) : error.actions) {
+			if (action === "continue") {
+				list.push({ action, label: t("error.action.continue") });
+				continue;
+			}
 			if (action === "retry") list.push({ action, label: t("error.action.retry") });
 			else if (action === "compact") list.push({ action, label: t("error.action.compact") });
 			else if (action === "openSettings") list.push({ action, label: t("error.action.openSettings") });
 			else if (action === "copyDetail") list.push({ action, label: t("error.action.copyDetail") });
 		}
 		return list;
-	}, [error.actions, t]);
+	}, [error, spec.turnLevel, t]);
+
+	if (spec.turnLevel) {
+		const others = actions.filter((a) => a.action !== "continue");
+		const canContinue = spec.continuable && actions.some((a) => a.action === "continue");
+		return (
+			<div className="error-card" data-error-code={code} data-continued={continued || undefined}>
+				<div className="error-card-row">
+					<span className="error-card-icon" aria-hidden>
+						<ErrorCircleIcon />
+					</span>
+					<div className="error-card-text">
+						<div className="error-card-title">
+							{continued ? t("error.card.resumed") : t(error.titleKey as MessageKey, error.titleParams)}
+						</div>
+						{!continued && (
+							<div className="error-card-sub">
+								{canContinue
+									? t("error.card.continueHint")
+									: error.hintKey
+										? t(error.hintKey as MessageKey)
+										: t("error.card.noContinue")}
+							</div>
+						)}
+					</div>
+					{canContinue && !continued && (
+						<button
+							type="button"
+							className="error-card-continue"
+							disabled={!!active || recovering}
+							onClick={() => void sendContinue()}
+						>
+							{t("error.action.continue")}
+						</button>
+					)}
+				</div>
+				{recoveryError && <p role="alert">{recoveryError}</p>}
+				{(error.detail || others.length > 0) && (
+					<details className="error-card-details">
+						<summary>
+							<span className="error-note-meta">{meta}</span>
+						</summary>
+						{error.detail && <pre className="error-note-detail">{error.detail}</pre>}
+						<div className="error-note-actions">
+							{others.map(({ action, label }) => (
+								<button
+									key={action}
+									type="button"
+									className="error-note-act"
+									onClick={() => {
+										if (action === "compact" && sessionId) void getPi().compact(sessionId);
+										else if (action === "openSettings") useSettingsStore.getState().openWith();
+										else if (action === "copyDetail") void copyDetail();
+										else if (action === "retry") void retry();
+									}}
+								>
+									{action === "openSettings" ? <GearIcon /> : action === "copyDetail" ? <CopyIcon /> : null}
+									{label}
+								</button>
+							))}
+							{error.detail && (
+								<span className={`error-note-copied${copied ? " on" : ""}`}>{t("error.copied")}</span>
+							)}
+						</div>
+					</details>
+				)}
+			</div>
+		);
+	}
 
 	return (
 		<details className="error-note drawer-details">

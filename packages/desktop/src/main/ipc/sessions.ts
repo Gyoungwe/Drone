@@ -18,6 +18,7 @@ const CONTRACT_CHANNELS = {
 	retry: IpcChannels.SessionRetry,
 	setModel: IpcChannels.SessionSetModel,
 	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
+	setAgentMode: IpcChannels.SessionSetAgentMode,
 	compact: IpcChannels.SessionCompact,
 	getStats: IpcChannels.SessionStats,
 	getContextUsage: IpcChannels.SessionGetContextUsage,

@@ -1,6 +1,7 @@
 import type { ImageInput, SubagentPanelAgent } from "@drone/shared";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
+import { onDesktopCommand } from "../../hooks/use-desktop-commands";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useT } from "../../i18n";
 import { COMPOSER_FOCUS_EVENT, EMPTY_DRAFT, NEW_SESSION_DRAFT_KEY, useDraftStore } from "../../stores/drafts";
@@ -20,6 +21,7 @@ import { ContextRing } from "./ContextRing";
 import { composerRunActive } from "./composer-run";
 import { ImageTray } from "./ImageTray";
 import { ModelPicker } from "./ModelPicker";
+import { ModePicker } from "./ModePicker";
 import { PermissionPicker } from "./PermissionPicker";
 import { QueueBar } from "./QueueBar";
 import { QuoteChip } from "./QuoteChip";
@@ -267,6 +269,11 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 		window.addEventListener(COMPOSER_FOCUS_EVENT, onFocusRequest);
 		return () => window.removeEventListener(COMPOSER_FOCUS_EVENT, onFocusRequest);
 	}, []);
+
+	// ⌘↵ / Ctrl+↵ 在输入框外按下：经 desktop-command 总线发送当前草稿（P5）
+	const sendRef = useRef(handleSend);
+	sendRef.current = handleSend;
+	useEffect(() => onDesktopCommand("send", () => void sendRef.current()), []);
 
 	// 点击输入框容器外部时收起命令/文件面板（文本保留；继续输入时恢复）
 	const { setSlashDismissed } = slash;
@@ -649,6 +656,8 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 							className={`composer-model-group${readOnly ? " pointer-events-none opacity-40" : ""}`}
 							title={t("composer.modelGroupHint")}
 						>
+							<ModePicker />
+							<span className="composer-model-sep" aria-hidden="true" />
 							<ModelPicker />
 							<span className="composer-model-sep" aria-hidden="true" />
 							<ThinkingPicker />

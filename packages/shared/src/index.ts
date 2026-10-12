@@ -1,5 +1,6 @@
 export * from "./analysis-orchestration";
 export * from "./ask";
+export * from "./ask-inline";
 export {
 	ALIGNMENT_MAX_RECORDS,
 	type AlignmentPreview,
@@ -20,17 +21,25 @@ export * from "./capabilities";
 export * from "./capability-discovery";
 export * from "./capability-skills";
 export * from "./compute";
+export * from "./context-meta";
 export * from "./contracts";
+export * from "./deliver";
+export * from "./desktop-command";
+export * from "./desktop-prefs";
 export * from "./diagnostics";
 export * from "./discovery";
+export * from "./doc-outline";
 export * from "./durable-doc";
+export * from "./error-codes";
 export * from "./errors";
 export * from "./evidence-labels";
 export * from "./example-tasks";
 export * from "./execution";
+export * from "./file-actions";
 export * from "./file-types";
 export * from "./harness";
 export * from "./host-api";
+export * from "./host-env";
 export * from "./inquiry";
 export * from "./institutional";
 export * from "./ipc";
@@ -42,6 +51,10 @@ export * from "./lan";
 export { literatureRecoverySummary } from "./literature-recovery";
 export * from "./marquee-motion";
 export * from "./mcp";
+export * from "./mcp-cost";
+export * from "./mesh-preview";
+export * from "./notebook-preview";
+export * from "./npy-preview";
 export * from "./packages";
 export * from "./permission-settings";
 export * from "./process-lanes";
@@ -65,7 +78,9 @@ export {
 	TEXT_PREVIEW_BYTES,
 	tablePreview,
 } from "./resource-preview-format";
+export * from "./run-state";
 export * from "./runtime";
+export * from "./search-palette";
 export * from "./session";
 export * from "./settings";
 export * from "./skill-catalog";
@@ -73,6 +88,7 @@ export * from "./skill-invocation";
 export * from "./subagent";
 export * from "./task-status";
 export * from "./task-workbench";
+export * from "./tiff-preview";
 export * from "./todo";
 export * from "./tool-manifest";
 export * from "./transcript";
@@ -80,6 +96,8 @@ export * from "./transcript/run-inspector";
 export * from "./turn-route";
 export * from "./ui-plugins";
 export * from "./update";
+export * from "./update-guard";
 export * from "./usage-display";
+export * from "./volume-preview";
 export * from "./workflow-catalog";
 export * from "./zotero";

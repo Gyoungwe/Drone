@@ -2,14 +2,19 @@ import { randomUUID } from "node:crypto";
 import { copyFile, mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { type DiagnosticsServicePort, setReplyLanguage } from "@drone/backend";
-import type { SavedTabs, UiState } from "@drone/shared";
+import type { HostFileAction, SavedTabs, UiState } from "@drone/shared";
 import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
-import { app, BrowserWindow, dialog, nativeTheme, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, nativeImage, nativeTheme, shell } from "electron";
+import { applyAttentionBadge } from "../attention-badge";
 import { pickBackgroundImage } from "../background";
 import { ensureDailyDir } from "../daily";
+import { electronDesktopHost } from "../desktop-host";
+import { applyDesktopPrefs, currentDesktopPrefs } from "../desktop-prefs";
 import { getFigureAnnotations, saveFigureAnnotations } from "../figure-annotations";
+import { runFileAction } from "../file-actions";
 import { previewLocalFile, resolveResourcePath } from "../file-preview";
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
+import { defaultHostEnvDeps, probeHostEnvironment } from "../host-env";
 import { issueHtmlPreviewUrl } from "../html-preview-protocol";
 import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
@@ -95,6 +100,57 @@ export function registerAppIpc(
 			}
 			await shell.openPath(resolveResourcePath(target, cwd));
 		},
+		setAttentionBadge: async (count, overlay) => {
+			applyAttentionBadge(
+				{
+					platform: process.platform,
+					setBadgeCount: (n) => app.setBadgeCount(n),
+					window: BrowserWindow.getAllWindows()[0] ?? null,
+					imageFromDataUrl: (url) => nativeImage.createFromDataURL(url),
+				},
+				count,
+				overlay,
+			);
+		},
+		pickDownloadDir: async () => {
+			const window = BrowserWindow.getAllWindows()[0];
+			const options = {
+				properties: ["openDirectory", "createDirectory"] as Array<"openDirectory" | "createDirectory">,
+			};
+			const result = window
+				? await dialog.showOpenDialog(window, options)
+				: await dialog.showOpenDialog(options);
+			return result.canceled ? null : (result.filePaths[0] ?? null);
+		},
+		hostEnvironment: () => probeHostEnvironment(defaultHostEnvDeps(app.getPath("home"))),
+		fileAction: (action, target, cwd, arg) =>
+			runFileAction(
+				{
+					platform: process.platform,
+					showItemInFolder: (path) => shell.showItemInFolder(path),
+					openPath: (path) => shell.openPath(path),
+					openExternal: (url) => shell.openExternal(url),
+					trashItem: (path) => shell.trashItem(path),
+					showSaveDialog: async (name) => {
+						const defaultPath = join(currentDesktopPrefs().downloadDir ?? app.getPath("downloads"), name);
+						const window = BrowserWindow.getAllWindows()[0];
+						const result = window
+							? await dialog.showSaveDialog(window, { defaultPath })
+							: await dialog.showSaveDialog({ defaultPath });
+						return result.canceled || !result.filePath ? null : result.filePath;
+					},
+					writeClipboard: ({ text, buffers }) => {
+						clipboard.clear();
+						if (text) clipboard.writeText(text);
+						for (const [format, buffer] of Object.entries(buffers ?? {}))
+							clipboard.writeBuffer(format, buffer);
+					},
+				},
+				action as HostFileAction,
+				target,
+				cwd,
+				arg,
+			),
 		loadTabs: () => loadTabs(),
 		saveTabs: (tabs) => saveTabs(tabs as SavedTabs),
 		loadUiState: () => loadUiState(),
@@ -102,6 +158,7 @@ export function registerAppIpc(
 			if (state.theme) nativeTheme.themeSource = state.theme;
 			// UI language → reply-language rule for new/reloaded sessions and localized host strings.
 			if (state.language) setReplyLanguage(state.language);
+			if (state.desktop) applyDesktopPrefs(state.desktop, electronDesktopHost, app.isPackaged);
 			return saveUiState(state as Partial<UiState>);
 		},
 		pickBackgroundImage: () => pickBackgroundImage(BrowserWindow.getAllWindows()[0]),
@@ -159,6 +216,10 @@ export function registerAppIpc(
 				saveFigureAnnotations: IpcChannels.FigureAnnotationsSave,
 				importDroppedFile: IpcChannels.FileImportDropped,
 				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
+				fileAction: IpcChannels.FileAction,
+				hostEnvironment: IpcChannels.HostEnvironment,
+				pickDownloadDir: IpcChannels.DownloadDirPick,
+				setAttentionBadge: IpcChannels.AttentionBadgeSet,
 				loadTabs: IpcChannels.TabsLoad,
 				saveTabs: IpcChannels.TabsSave,
 				loadUiState: IpcChannels.UiStateLoad,

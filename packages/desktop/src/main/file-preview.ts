@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { open, stat } from "node:fs/promises";
 import { basename, extname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createGunzip } from "node:zlib";
+import { createGunzip, gunzipSync } from "node:zlib";
 import {
 	fileTypeOf,
 	isLocalResourceTarget,
@@ -12,6 +12,7 @@ import {
 } from "@drone/shared";
 
 const BINARY_PREVIEW_LIMIT = 16 * 1024 * 1024;
+const VOLUME_GUNZIP_LIMIT = 64 * 1024 * 1024;
 const COMPRESSED_READ_LIMIT = 2 * 1024 * 1024;
 export function resolveResourcePath(target: string, cwd?: string): string {
 	if (typeof target !== "string" || !isLocalResourceTarget(target))
@@ -102,6 +103,23 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 		base = { path, name, size: info.size, previewKind: type.previewKind };
 	const isImage = type.previewKind === "image" || type.previewKind === "svg";
 	const mimeType = isImage || type.previewKind === "pdf" ? type.mime : "text/plain";
+	// P4 体数据：.nii.gz 先解压（压缩前 ≤16 MiB，解压后 ≤64 MiB），渲染层解析
+	if (type.previewKind === "volume" && type.gzip) {
+		if (info.size > BINARY_PREVIEW_LIMIT)
+			return { ...base, kind: "binary", mimeType: type.mime, truncated: true };
+		try {
+			const raw = gunzipSync(await readPrefix(path, info.size), { maxOutputLength: VOLUME_GUNZIP_LIMIT });
+			return {
+				...base,
+				kind: "binary",
+				mimeType: type.mime,
+				data: raw.toString("base64"),
+				compression: "gzip",
+			};
+		} catch {
+			return { ...base, kind: "binary", mimeType: type.mime, truncated: true, compression: "gzip" };
+		}
+	}
 	if (ext === ".gz" && format.supported) {
 		const decoded = await gzipPrefix(path, info.size);
 		const content = decodeText(decoded.bytes);
@@ -116,7 +134,7 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 			truncated: decoded.truncated,
 		};
 	}
-	if (format.supported || ext === ".svg") {
+	if (format.supported || ext === ".svg" || (type.text && type.previewKind !== "binary")) {
 		const bytes = await readPrefix(path, Math.min(TEXT_PREVIEW_BYTES, info.size)),
 			decoded = decodeText(bytes);
 		if (decoded.text.includes("\u0000"))
@@ -135,6 +153,20 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 		if (info.size > BINARY_PREVIEW_LIMIT) return { ...base, mimeType, kind, truncated: true };
 		const bytes = await readPrefix(path, Math.min(BINARY_PREVIEW_LIMIT, info.size));
 		return { ...base, mimeType, kind, data: bytes.toString("base64"), truncated: info.size > bytes.length };
+	}
+	// 音视频（P3）、npy 数组 / STL·OBJ 网格（P4）：16 MiB 内整读 base64，渲染层 <audio>/<video> 播放；超限只回元数据
+	if (
+		type.previewKind === "audio" ||
+		type.previewKind === "video" ||
+		type.previewKind === "array" ||
+		type.previewKind === "mesh" ||
+		type.previewKind === "tiff" ||
+		type.previewKind === "volume"
+	) {
+		if (info.size > BINARY_PREVIEW_LIMIT)
+			return { ...base, kind: "binary", mimeType: type.mime, truncated: true };
+		const bytes = await readPrefix(path, info.size);
+		return { ...base, kind: "binary", mimeType: type.mime, data: bytes.toString("base64") };
 	}
 	return { ...base, kind: "binary", mimeType: "application/octet-stream" };
 }

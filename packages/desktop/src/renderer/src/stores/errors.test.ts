@@ -85,6 +85,7 @@ describe("buildLlmUiError — 信封构造", () => {
 	it("组装完整 UiError（severity/source/titleKey/detail/timestamp/actions）", () => {
 		const err = buildLlmUiError('401: {"error":"nope"}', 123456);
 		expect(err).toEqual({
+			code: "AUTH",
 			severity: "error",
 			source: "llm",
 			titleKey: "error.title.llmAuth",

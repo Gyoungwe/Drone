@@ -1,4 +1,13 @@
-import { MCP_PRESETS, type McpConfigSnapshot, type McpServerStatus, type McpStatus } from "@drone/shared";
+import {
+	estimateMcpServerTokens,
+	formatTokenCost,
+	MCP_PRESETS,
+	type McpConfigSnapshot,
+	type McpProbeResult,
+	type McpServerStatus,
+	type McpStatus,
+	mcpProbeResult,
+} from "@drone/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GearIcon, RefreshIcon } from "../../components/icons";
 import { useI18nStore, useT } from "../../i18n";
@@ -28,6 +37,8 @@ export function McpPanel() {
 	const [error, setError] = useState<string | null>(null);
 	const language = useI18nStore((state) => state.language);
 	const [pendingPreset, setPendingPreset] = useState<string | null>(null);
+	const [probing, setProbing] = useState<string | null>(null);
+	const [probe, setProbe] = useState<Record<string, McpProbeResult>>({});
 
 	const refresh = useCallback(async () => {
 		setLoading(true);
@@ -227,8 +238,45 @@ export function McpPanel() {
 													<span>
 														{runtime.toolCount} {t("settings.mcp.tools")}
 													</span>
+													<span>·</span>
+													<span title={t("settings.mcp.costHint")}>
+														{formatTokenCost(estimateMcpServerTokens(runtime))} tokens
+													</span>
 												</>
 											) : null}
+											<button
+												type="button"
+												className="rounded border border-border px-1.5 py-0.5 text-[11px] hover:bg-hover disabled:opacity-50"
+												disabled={probing === server.name}
+												onClick={() => {
+													setProbing(server.name);
+													void window.pi
+														.getMcpStatus(cwd ?? undefined)
+														.then((next) => {
+															setStatus(next);
+															setProbe((p) => ({ ...p, [server.name]: mcpProbeResult(next, server.name) }));
+														})
+														.catch((err) =>
+															setProbe((p) => ({
+																...p,
+																[server.name]: {
+																	ok: false,
+																	reason: err instanceof Error ? err.message : "error",
+																},
+															})),
+														)
+														.finally(() => setProbing(null));
+												}}
+											>
+												{probing === server.name ? t("settings.mcp.testing") : t("settings.mcp.test")}
+											</button>
+											{probe[server.name] && (
+												<span className={probe[server.name]?.ok ? "text-emerald-600" : "text-red-600"}>
+													{probe[server.name]?.ok
+														? t("settings.mcp.testOk")
+														: `${t("settings.mcp.testFail")}: ${(probe[server.name] as { reason: string }).reason}`}
+												</span>
+											)}
 										</div>
 										<p
 											className="mt-1 truncate font-mono text-[11px] text-ink-faint/80"

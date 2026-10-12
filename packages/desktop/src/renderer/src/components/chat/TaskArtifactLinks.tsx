@@ -2,6 +2,8 @@ import { localResourceHref, type WorkbenchTask } from "@drone/shared";
 import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
 import { useUiStore } from "../../stores/ui";
+import { contextMenuHandler } from "../ui/ContextMenu";
+import { buildFileMenu } from "../ui/file-menu";
 
 /** Use observed artifacts, not proposed acceptance paths or model-authored prose. */
 export function taskArtifactLinks(task: WorkbenchTask) {
@@ -43,6 +45,11 @@ export function TaskArtifactLinks({ task, sessionId }: { task: WorkbenchTask; se
 					className="max-w-full break-all rounded border border-border px-2 py-1 underline underline-offset-2 hover:bg-hover"
 					title={!cwd && file.href.startsWith("./") ? t("taskArtifacts.openSessionFirst") : file.path}
 					aria-disabled={!cwd && file.href.startsWith("./")}
+					onContextMenu={
+						!cwd && file.href.startsWith("./")
+							? undefined
+							: contextMenuHandler(() => buildFileMenu({ path: file.href, cwd: cwd ?? undefined }, t))
+					}
 					onClick={(e) => {
 						e.preventDefault();
 						if (!cwd && file.href.startsWith("./")) return;

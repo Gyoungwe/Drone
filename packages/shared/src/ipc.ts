@@ -1,6 +1,8 @@
 import type { AskRequest, AskResponse } from "./ask";
 import type { DecisionsApi } from "./decisions";
+import type { DesktopCommand } from "./desktop-command";
 import type { DiagnosticsSnapshot } from "./diagnostics";
+import type { HostFileAction } from "./file-actions";
 import type { PreviewKind } from "./file-types";
 import type { ComputeApi } from "./host-api/compute";
 import type { DiscoveryApi } from "./host-api/discovery";
@@ -8,6 +10,7 @@ import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
 import type { LanStatus } from "./host-api/lan";
 import type { SessionsApi } from "./host-api/sessions";
+import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
 import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
@@ -208,6 +211,7 @@ export const IpcChannels = {
 	SessionRetry: "session:retry",
 	SessionSetModel: "session:setModel",
 	SessionSetThinkingLevel: "session:setThinkingLevel",
+	SessionSetAgentMode: "session:setAgentMode",
 	SessionGetMessages: "session:getMessages",
 	/** 只读预览子智能体会话文件，不注册/打开顶栏会话 */
 	SessionPeekSubagentMessages: "session:peekSubagentMessages",
@@ -242,6 +246,11 @@ export const IpcChannels = {
 	FileSaveDialog: "file:saveDialog",
 	FilePickPath: "file:pickPath",
 	FilePreview: "file:preview",
+	/** 文件右键菜单宿主动作（P7） */
+	FileAction: "file:action",
+	HostEnvironment: "host:environment",
+	DownloadDirPick: "download-dir:pick",
+	AttentionBadgeSet: "attention-badge:set",
 	FileHtmlPreviewUrl: "file:htmlPreviewUrl",
 	FigureAnnotationsGet: "figure:annotationsGet",
 	FigureAnnotationsSave: "figure:annotationsSave",
@@ -337,6 +346,8 @@ export const IpcChannels = {
 	UpdateInstall: "update:install",
 	/** main → renderer 更新状态 */
 	UpdateEvent: "update:event",
+	/** main 原生菜单 → renderer 桌面命令（P5） */
+	DesktopCommand: "desktop:command",
 	/** UI 插件：读全局配置 */
 	UiPluginsGetConfig: "uiPlugins:getConfig",
 	/** UI 插件：设全局总开关 */
@@ -373,7 +384,11 @@ export const IpcChannels = {
  * v0.7.2 regression). Consumers must keep using `sending` for preflight and SDK
  * events for the live run — do not set agentActive from this value.
  */
-export type PromptReceipt = { kind: "agent" } | { kind: "queued" } | { kind: "command" };
+export type PromptReceipt = ({ kind: "agent" } | { kind: "queued" } | { kind: "command" }) & {
+	/** P14 Optimistic：回执原样带回客户端生成的 id */
+	clientMessageId?: string;
+	assistantMessageId?: string;
+};
 
 /** 渲染进程经 preload 暴露的 window.pi 类型 */
 export interface PiApi
@@ -422,6 +437,19 @@ export interface PiApi
 	importDroppedFile(sourcePath: string, sessionId: string): Promise<ImportedAttachment>;
 	/** 使用系统默认应用打开资源：HTTP(S) 用浏览器，本地路径用系统文件关联。 */
 	openResourceExternal(target: string, cwd?: string): Promise<void>;
+	/** 文件右键菜单宿主动作（P7）；返回新路径（download / rename）或 null */
+	fileAction(
+		action: HostFileAction,
+		target: string,
+		cwd: string | null,
+		arg: string | null,
+	): Promise<string | null>;
+	/** 本机环境探测（P10） */
+	hostEnvironment(): Promise<HostEnvironment>;
+	/** 选择下载目录（P11）；取消返回 null */
+	pickDownloadDir(): Promise<string | null>;
+	/** 待答数角标（P14）：dock / 任务栏；Windows 用 overlay icon */
+	setAttentionBadge(count: number, overlayDataUrl: string | null): Promise<void>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
 	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
 	getMcpStatus(cwd?: string): Promise<McpStatus>;
@@ -561,6 +589,8 @@ export interface PiApi
 	installUpdate(): Promise<void>;
 	/** 订阅更新状态（checking/available/downloading/downloaded/error）；返回取消函数 */
 	onUpdateEvent(cb: (state: UpdateState) => void): () => void;
+	/** 原生菜单触发的桌面命令（P5） */
+	onDesktopCommand(cb: (command: DesktopCommand) => void): () => void;
 	/** 读 UI 插件全局配置（总开关/启用信任表/槽位指派） */
 	uiPluginsGetConfig(): Promise<UiPluginsConfig>;
 	/** 设 UI 插件全局总开关 */

@@ -4,6 +4,7 @@ import type { PermissionConfirm, PermissionModeRef } from "../permissions/extens
 import { replyLanguagePrompt } from "../reply-language";
 import type { InlineExtension, ProjectTrustStore } from "../session-engine/sdk";
 import { DefaultResourceLoader, getAgentDir, SettingsManager } from "../session-engine/sdk";
+import { memoryIndexPrompt } from "./memory";
 import { resolveProjectTrust, type TrustOptionInternal } from "./trust";
 
 const log = createLogger("backend");
@@ -47,11 +48,19 @@ export function preferBundledMcpRuntime(bundledPath: string) {
 	};
 }
 
-export function desktopLoaderOptions(integration: DesktopIntegration | undefined) {
+export function desktopLoaderOptions(integration: DesktopIntegration | undefined, cwd?: string) {
 	if (!integration) return {};
 	const { mcpRuntimePath, ...rest } = integration;
 	// The UI language can change between sessions; read it on every (re)load.
-	const options = { ...rest, appendSystemPrompt: [...rest.appendSystemPrompt, ...replyLanguagePrompt()] };
+	// P12: project memory index (.pi/memory/MEMORY.md) only — bodies are read on demand.
+	const options = {
+		...rest,
+		appendSystemPrompt: [
+			...rest.appendSystemPrompt,
+			...replyLanguagePrompt(),
+			...(cwd ? memoryIndexPrompt(cwd) : []),
+		],
+	};
 	if (!mcpRuntimePath) return options;
 	return {
 		...options,
@@ -134,7 +143,7 @@ export class ProjectResourceLoader {
 				...this.deps.buildExtensions(cwd, options?.confirm, options?.modeRef),
 				...(options?.extensionFactories ?? []),
 			],
-			...desktopLoaderOptions(this.deps.desktopIntegration),
+			...desktopLoaderOptions(this.deps.desktopIntegration, cwd),
 		});
 		if (this.deps.projectTrust === false) {
 			settingsManager.setProjectTrusted(true);

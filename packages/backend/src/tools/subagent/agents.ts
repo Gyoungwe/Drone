@@ -14,6 +14,8 @@ export interface SubagentDefinition {
 	tools: string[];
 	model?: string;
 	mcpAccess?: SubagentMcpAccess;
+	/** P19：子智能体专属 MCP 白名单（frontmatter `mcpServers: [a, b]`）；缺省 = 全部只读 MCP */
+	mcpServers?: string[];
 	systemPrompt: string;
 	source: AgentSource;
 	path?: string;
@@ -86,12 +88,15 @@ export function parseAgentMarkdown(
 	const model = parseScalar(metadata.get("model") ?? "") || undefined;
 	const mcpRaw = parseScalar(metadata.get("mcp") ?? "") || undefined;
 	const mcpAccess = mcpRaw === "none" || mcpRaw === "read-local" ? mcpRaw : undefined;
+	const mcpServersRaw = metadata.get("mcpServers") ?? metadata.get("mcp-servers");
+	const mcpServers = mcpServersRaw ? parseTools(mcpServersRaw) : undefined;
 	return {
 		name,
 		description,
 		tools,
 		model,
 		mcpAccess,
+		...(mcpServers?.length ? { mcpServers } : {}),
 		systemPrompt: lines
 			.slice(end + 1)
 			.join("\n")
@@ -158,4 +163,30 @@ export function findAgent(agents: SubagentDefinition[], name: string): SubagentD
 			`Unknown subagent agent "${name}". Available agents: ${agents.map((a) => a.name).join(", ")}`,
 		);
 	return agent;
+}
+
+/** P19：子智能体可见的 MCP 服务 = 专属白名单 ∩ 当前可用服务；没声明白名单则全部可用；mcp: none 时为空。 */
+export function scopeSubagentMcpServers(
+	agent: Pick<SubagentDefinition, "mcpAccess" | "mcpServers">,
+	available: readonly string[],
+): string[] {
+	if (agent.mcpAccess === "none") return [];
+	if (!agent.mcpServers?.length) return [...available];
+	const allow = new Set(agent.mcpServers);
+	return available.filter((name) => allow.has(name));
+}
+
+/** 作用域合并（与 discoverAgents 同规则）：builtin < user < project，同名后者覆盖；受保护名不可覆盖。 */
+export function mergeAgentScopes(
+	layers: ReadonlyArray<readonly SubagentDefinition[]>,
+	protectedNames: ReadonlySet<string> = new Set(),
+): SubagentDefinition[] {
+	const byName = new Map<string, SubagentDefinition>();
+	for (const layer of layers)
+		for (const agent of layer) {
+			const existing = byName.get(agent.name);
+			if (existing && protectedNames.has(agent.name) && existing.source === "builtin") continue;
+			byName.set(agent.name, agent);
+		}
+	return [...byName.values()];
 }

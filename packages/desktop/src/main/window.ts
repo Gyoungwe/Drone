@@ -6,7 +6,7 @@ const __dirname = import.meta.dirname;
 
 /** 窗口启动底色跟随主题，避免深色模式下启动白闪（也是开屏动画的底色）。与 renderer bg-canvas 同色 */
 function windowBackground(theme: "dark" | "light"): string {
-	return theme === "dark" ? "#17171a" : "#fafafa";
+	return theme === "dark" ? "#171717" : "#ffffff";
 }
 
 /** 解析保存的主题为明确的深浅色（system 时跟随系统），窗口底色与 ?theme= 传参同源 */
@@ -35,7 +35,8 @@ export function applyChromeTheme(mode: ThemeMode): void {
 	}
 }
 
-export function createWindow(theme: "dark" | "light" = "light"): BrowserWindow {
+/** hidden：登录启动只开托盘（P11/P20），窗口创建但不显示，从托盘唤出。 */
+export function createWindow(theme: "dark" | "light" = "light", hidden = false): BrowserWindow {
 	const window = new BrowserWindow({
 		width: 1100,
 		height: 750,
@@ -62,7 +63,9 @@ export function createWindow(theme: "dark" | "light" = "light"): BrowserWindow {
 		},
 	});
 
-	window.on("ready-to-show", () => window.show());
+	window.on("ready-to-show", () => {
+		if (!hidden) window.show();
+	});
 
 	window.webContents.setWindowOpenHandler((details) => {
 		void shell.openExternal(details.url);

@@ -12,7 +12,8 @@ export type UiErrorSeverity = "error" | "warning" | "info";
 /** 责任域（元信息行 + 未来 P2 面板的分类维度） */
 export type UiErrorSource = "llm" | "session" | "tool" | "extension" | "app" | "network";
 
-export type UiErrorAction = "retry" | "compact" | "openSettings" | "copyDetail";
+/** continue（P8）：会话级重做，发一条普通用户消息「继续」 */
+export type UiErrorAction = "retry" | "continue" | "compact" | "openSettings" | "copyDetail";
 
 export interface UiError {
 	/** Stable machine-readable code for adapters that need to branch without parsing titleKey. */
@@ -140,6 +141,15 @@ const LLM_ERROR_PATTERNS: ReadonlyArray<{ pattern: RegExp; cls: LlmErrorClass }>
 	},
 ];
 
+/** titleKey → 错误码（与 error-codes.ts 的码表一致，这里内联避免循环 import） */
+const LLM_TITLE_CODE: Record<string, string> = {
+	"error.title.llmAuth": "AUTH",
+	"error.title.llmRateLimit": "RATE_LIMIT",
+	"error.title.llmOverflow": "CONTEXT_EXCEEDED",
+	"error.title.llmNetwork": "NETWORK",
+	"error.title.llmGeneric": "TURN_FAILED",
+};
+
 /** 兜底：无法归类的模型请求失败 */
 const LLM_ERROR_FALLBACK: LlmErrorClass = {
 	titleKey: "error.title.llmGeneric",
@@ -161,6 +171,7 @@ export function classifyLlmError(errorMessage: string): LlmErrorClass {
 export function buildLlmUiError(errorMessage: string, now: number = Date.now()): UiError {
 	const cls = classifyLlmError(errorMessage);
 	return {
+		code: LLM_TITLE_CODE[cls.titleKey] ?? "TURN_FAILED",
 		severity: "error",
 		source: cls.source,
 		titleKey: cls.titleKey,
@@ -176,6 +187,7 @@ export function buildLlmUiError(errorMessage: string, now: number = Date.now()):
  */
 export function buildStreamGuardUiError(verdict: string, now: number = Date.now()): UiError {
 	return {
+		code: "STREAM_GUARD",
 		severity: "warning",
 		source: "app",
 		titleKey: "error.title.streamGuard",

@@ -192,3 +192,26 @@ describe("groupProcessRows", () => {
 		]);
 	});
 });
+
+describe("P14 Stopped", () => {
+	const stoppedText = (id: string): ChatRow => {
+		const row = text(id);
+		if (row.kind === "message" && row.message.kind === "assistant")
+			row.message = { ...row.message, stopped: true };
+		return row;
+	};
+	it("停止轮的过程段末尾标记已停止（单个折叠组也包成段）", () => {
+		const out = groupProcessRows([user("u1"), meta("m1", [tool("read", "t1")]), stoppedText("a1")]);
+		const seg = out[1];
+		expect(seg?.kind).toBe("process");
+		expect(seg?.kind === "process" && seg.stopped).toBe(true);
+	});
+	it("正常结束不标记", () => {
+		const out = groupProcessRows([user("u1"), meta("m1", [tool("read", "t1")]), text("a1")]);
+		expect(out[1]?.kind).toBe("metaGroup");
+	});
+	it("仍在工作的段不标记", () => {
+		const out = groupProcessRows([meta("m1", [tool("read", "t1", "running")], true), stoppedText("a1")]);
+		expect(out[0]?.kind === "process" && out[0].stopped).toBeFalsy();
+	});
+});

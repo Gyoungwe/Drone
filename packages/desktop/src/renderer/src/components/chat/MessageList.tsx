@@ -1,12 +1,14 @@
 import {
 	buildChatRows,
 	type ChatRow,
+	DELIVER_TOOL,
 	deriveRunInspectors,
 	deriveTurnChanges,
 	deriveTurnTimings,
 	deriveTurnUsage,
 	groupProcessRows,
 	isAwaitingFirstOutput,
+	parseDeliveryArgs,
 } from "@drone/shared";
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
@@ -16,6 +18,7 @@ import { useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiPreferencesStore } from "../../stores/ui-preferences";
 import { CenterOrb } from "./CenterOrb";
+import { DeliveryCards } from "./DeliveryCards";
 import { MessageItem } from "./MessageItem";
 import { MetaGroup } from "./MetaGroup";
 import { ModelWaitNote } from "./ModelWaitNote";
@@ -186,6 +189,24 @@ export function MessageList() {
 			);
 		}
 		if (row.kind === "metaGroup") {
+			const delivered = row.items.flatMap((item) =>
+				item.tools
+					.filter((tool) => tool.name === DELIVER_TOOL && tool.state === "done")
+					.flatMap((tool) => parseDeliveryArgs(tool.args)),
+			);
+			if (delivered.length)
+				return (
+					<div key={row.key}>
+						<MetaGroup
+							items={row.items}
+							working={row.working}
+							endImmediately={row.endImmediately}
+							subagentCount={row.subagentCount}
+							statusText={row.statusText}
+						/>
+						<DeliveryCards files={delivered} sessionId={activeSessionId ? String(activeSessionId) : null} />
+					</div>
+				);
 			return (
 				<MetaGroup
 					key={row.key}

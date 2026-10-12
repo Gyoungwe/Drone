@@ -1,5 +1,6 @@
 import { Type } from "typebox";
 import type { DiagnosticsSnapshot } from "../diagnostics";
+import type { HostEnvironment } from "../host-env";
 import type { FigureAnnotation, ImportedAttachment, ResourcePreviewResult } from "../ipc";
 import type { AppInfo, SavedTabs, UiState } from "../session";
 import { defineDomain } from "./define";
@@ -90,6 +91,31 @@ export const AppContract = defineDomain("app", {
 		resourceOpenExternal: {
 			args: Type.Union([Type.Tuple([Type.String()]), Type.Tuple([Type.String(), Type.String()])]),
 			result: Type.Void(),
+		},
+		/** 文件右键菜单的宿主动作（P7）：action, target, cwd, arg（rename 的新文件名） */
+		fileAction: {
+			args: Type.Tuple([
+				Type.Union(
+					["download", "openDefault", "reveal", "openInEditor", "cut", "copy", "rename", "trash"].map((a) =>
+						Type.Literal(a),
+					),
+				),
+				Type.String({ minLength: 1 }),
+				NullableString,
+				NullableString,
+			]),
+			result: NullableString,
+		},
+		/** 本机环境探测（P10）：固定只读命令 */
+		pickDownloadDir: { args: Type.Tuple([]), result: NullableString },
+		/** 待答数角标（P14）：count, Windows overlay 图（data URL）或 null */
+		setAttentionBadge: {
+			args: Type.Tuple([Type.Integer({ minimum: 0, maximum: 999 }), NullableString]),
+			result: Type.Void(),
+		},
+		hostEnvironment: {
+			args: Type.Tuple([]),
+			result: Type.Unsafe<HostEnvironment>(Type.Object({}, { additionalProperties: true })),
 		},
 		loadTabs: { args: Type.Tuple([]), result: Type.Union([SavedTabsSchema, Type.Null()]) },
 		saveTabs: { args: Type.Tuple([SavedTabsSchema]), result: Type.Void() },

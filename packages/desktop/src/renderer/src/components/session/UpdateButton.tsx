@@ -1,5 +1,6 @@
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { installUpdateWithGuard } from "../../lib/install-update-app";
 import { useUpdateStore } from "../../stores/update";
 import { DownloadIcon } from "../icons";
 import { Tooltip } from "../ui/Tooltip";
@@ -37,7 +38,7 @@ export function UpdateButton() {
 					type="button"
 					aria-label={label}
 					className="no-drag flex h-5 shrink-0 items-center rounded-full bg-update px-2 text-[11px] font-medium text-on-update transition-colors hover:brightness-95"
-					onClick={() => void getPi().installUpdate()}
+					onClick={() => void installUpdateWithGuard()}
 				>
 					{t("update.restart")}
 				</button>

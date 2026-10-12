@@ -16,10 +16,13 @@ import {
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
+import { electronDesktopHost, launchedHidden } from "./desktop-host";
+import { applyDesktopPrefs } from "./desktop-prefs";
 import { HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest } from "./html-preview-protocol";
-import { registerIpc } from "./ipc";
+import { registerIpc, sendToRenderer } from "./ipc";
 import { initLanObserver, type LanObserverHandle } from "./lan";
 import { migrateLegacyUserDir } from "./legacy-migration";
+import { buildMenuTemplate, DESKTOP_COMMAND_CHANNEL } from "./menu";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
 import { loadUiState } from "./ui-state";
 import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
@@ -121,7 +124,22 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // Windows/Linux 不显示默认应用菜单（File/Edit/...）；macOS 菜单在系统菜单栏且承担复制粘贴等快捷键，保留
+// macOS：安装带 ⌘K/⌘N/⌘W/⌘,/⌘⇧[ ] 的原生菜单，点击经 IPC 推给 renderer 的 desktop-command 总线（P5）
 if (process.platform !== "darwin") Menu.setApplicationMenu(null);
+else
+	app
+		.whenReady()
+		.then(() =>
+			Menu.setApplicationMenu(
+				Menu.buildFromTemplate(
+					buildMenuTemplate(
+						(command) => sendToRenderer(DESKTOP_COMMAND_CHANNEL, command),
+						app.getLocale().startsWith("zh") ? "zh" : "en",
+						app.getName(),
+					),
+				),
+			),
+		);
 // 系统深浅色变化（或用户切换主题导致 themeSource 变更）→ 同步窗口底色与 Windows 窗口按钮覆盖层
 nativeTheme.on("updated", () => applyChromeTheme(nativeTheme.themeSource));
 
@@ -313,7 +331,8 @@ app.whenReady().then(async () => {
 	const uiState = await loadUiState();
 	// main 进程原生主题与 app 设置对齐（Windows 窗口按钮覆盖层/后续主题切换的 system 解析依赖它）
 	nativeTheme.themeSource = uiState?.theme ?? "system";
-	createWindow(resolveTheme(uiState?.theme));
+	applyDesktopPrefs(uiState?.desktop, electronDesktopHost, app.isPackaged);
+	createWindow(resolveTheme(uiState?.theme), launchedHidden);
 
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow(resolveTheme(uiState?.theme));

@@ -162,3 +162,23 @@ describe("file preview registry kind (P1)", () => {
 		expect(result.previewKind).toBe("table");
 	});
 });
+
+describe("media and mermaid previews (P3)", () => {
+	it("inlines small audio as data and reads .mmd as text", async () => {
+		const { mkdtemp, writeFile } = await import("node:fs/promises");
+		const { tmpdir } = await import("node:os");
+		const { join } = await import("node:path");
+		const dir = await mkdtemp(join(tmpdir(), "drone-p3-"));
+		await writeFile(join(dir, "a.mp3"), Buffer.from([1, 2, 3]));
+		await writeFile(join(dir, "g.mmd"), "graph TD; A-->B");
+		const audio = await previewLocalFile(join(dir, "a.mp3"));
+		expect(audio).toMatchObject({
+			kind: "binary",
+			mimeType: "audio/mpeg",
+			previewKind: "audio",
+			data: "AQID",
+		});
+		const mmd = await previewLocalFile(join(dir, "g.mmd"));
+		expect(mmd).toMatchObject({ kind: "text", previewKind: "mermaid", text: "graph TD; A-->B" });
+	});
+});
