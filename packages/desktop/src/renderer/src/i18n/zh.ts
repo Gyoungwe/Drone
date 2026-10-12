@@ -1225,6 +1225,11 @@ export const zh = {
 			diagnostics: "加载诊断",
 		},
 		mcp: {
+			costHint: "估算：直接暴露的工具每个约 350 token 进系统提示，代理入口约 120 token",
+			test: "测试连接",
+			testing: "测试中…",
+			testOk: "连接正常",
+			testFail: "未连接",
 			presets: "推荐接入",
 			presetsHint: "一键接入现成的 MCP（写入用户级配置，可随时停用）。",
 			presetAdd: "添加",

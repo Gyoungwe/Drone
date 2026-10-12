@@ -51,6 +51,7 @@ export * from "./lan";
 export { literatureRecoverySummary } from "./literature-recovery";
 export * from "./marquee-motion";
 export * from "./mcp";
+export * from "./mcp-cost";
 export * from "./mesh-preview";
 export * from "./notebook-preview";
 export * from "./npy-preview";

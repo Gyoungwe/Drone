@@ -1281,6 +1281,12 @@ export const en: Messages = {
 			diagnostics: "Load diagnostics",
 		},
 		mcp: {
+			costHint:
+				"Estimate: each directly exposed tool adds ~350 tokens to the system prompt; a proxy entry ~120",
+			test: "Test connection",
+			testing: "Testing…",
+			testOk: "Connected",
+			testFail: "Not connected",
 			presets: "Recommended",
 			presetsHint:
 				"Add a ready-made MCP server in one click (written to your user config; disable it any time).",
