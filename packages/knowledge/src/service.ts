@@ -909,8 +909,15 @@ export async function getKnowledgeService(binding = null) {
 	binding ||= await readKnowledgeBinding();
 	const directory = knowledgeDirectory();
 	if (!binding || !directory) throw new Error("No application knowledge Vault is bound");
-	const key = `${directory}:${binding.vaultId}:${binding.revision}`;
+	// One worker per index database: two workers on the same SQLite file race on FTS rowids.
+	const key = join(directory, binding.vaultId, "index.sqlite");
 	let service = pool.get(key);
+	if (service && !service.closed && service.binding?.revision !== binding.revision) {
+		// A rebound Vault reuses the same database; retire the old worker before starting a new one.
+		pool.delete(key);
+		await service.close();
+		service = null;
+	}
 	if (!service || service.closed) {
 		emitProcessEvent(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
 		service = pool.get(key);

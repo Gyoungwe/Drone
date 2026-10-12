@@ -18,7 +18,7 @@ import {
 } from "./chunk-EJFIMVBU.mjs";
 import {
   getKnowledgeService
-} from "./chunk-J5WZKQZN.mjs";
+} from "./chunk-5PIDULPV.mjs";
 import {
   flowFor,
   invalidateKnowledgeUi
