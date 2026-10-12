@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { Button } from "../ui/Button";
+import { StatePanel } from "../ui/StatePanel";
 import { useKnowledgeText } from "./copy";
 import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
 export function KnowledgeMaintenance({
@@ -162,9 +163,7 @@ export function KnowledgeMaintenance({
 						</div>
 					))}
 				</div>
-				{page && !page.items.length && !loading && (
-					<p className="py-4 text-center text-xs text-ink-faint">{t("empty")}</p>
-				)}
+				{page && !page.items.length && !loading && <StatePanel compact title={t("empty")} />}
 				<div className="mt-2 flex justify-between">
 					<Button size="sm" disabled={!offset || loading} onClick={() => setOffset(Math.max(0, offset - 20))}>
 						{t("previous")}

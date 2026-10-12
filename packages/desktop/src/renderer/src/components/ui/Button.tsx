@@ -15,8 +15,8 @@ const TONE: Record<Tone, Record<Variant, string>> = {
 		primary: "bg-ink font-medium text-on-ink transition-colors hover:bg-ink-2 disabled:opacity-40",
 	},
 	danger: {
-		ghost: "text-red-500 transition-colors hover:bg-red-50",
-		primary: "bg-red-600 font-medium text-white transition-colors hover:bg-red-500 disabled:opacity-40",
+		ghost: "text-err transition-colors hover:bg-err/10",
+		primary: "bg-err font-medium text-white transition-colors hover:bg-err/90 disabled:opacity-40",
 	},
 };
 
@@ -38,7 +38,7 @@ export function Button({
 	return (
 		<button
 			type={type}
-			className={`drone-button drone-button--${variant} drone-button--${tone} drone-button--${size} ${SIZE[size]} ${TONE[tone][variant]} ${className}`}
+			className={`drone-button disabled:cursor-not-allowed drone-button--${variant} drone-button--${tone} drone-button--${size} ${SIZE[size]} ${TONE[tone][variant]} ${className}`}
 			{...props}
 		/>
 	);
