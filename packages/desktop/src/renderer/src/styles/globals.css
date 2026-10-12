@@ -3016,6 +3016,11 @@ code {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
+.composer-status-memory {
+	color: var(--color-ink-dim);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
 
 /* P14 Stopped / 侧栏进行中 */
 .process-block-stopped {

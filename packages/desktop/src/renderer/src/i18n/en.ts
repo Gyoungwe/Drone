@@ -598,7 +598,7 @@ export const en: Messages = {
 			changed: "Switched to {mode}",
 			cacheReset: "tool changes reset the prompt cache",
 		},
-		status: { local: "Local" },
+		status: { local: "Local", memoryLoaded: "{count} memories loaded" },
 		placeholder: "Ask anything, / for commands, @ for context",
 		placeholderQueued: "Queue a message — sent when the current task finishes",
 		placeholderCompacting: "Compacting context…",
@@ -1130,6 +1130,11 @@ export const en: Messages = {
 			evaporation:
 				"On by default. Evaporates aged tool output into self-describing stubs by watermark (e.g. “output evicted, re-read with the same arguments”): tool output truncated from 60%, evicted into placeholders from 85%; zero LLM calls, conversation text preserved, session files untouched. Switching applies without restarting sessions.",
 			off: "Disables all context management: no active compression/evaporation; the SDK's native compaction kicks in near the window limit. Long sessions may pause for compaction.",
+		},
+		memory: {
+			title: "Project memory",
+			hint: "{count} entries · Notes changed files, commands and failures (summaries only, <private> skipped); new sessions load the most relevant few (≤600 tokens). Local only.",
+			clear: "Clear",
 		},
 		channelWatch: "Cross-session channel collaboration (channel-watch)",
 		channelWatchHint:

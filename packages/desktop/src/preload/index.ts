@@ -10,6 +10,7 @@ import {
 	KnowledgeContract,
 	LanContract,
 	McpContract,
+	MemoryContract,
 	PackagesContract,
 	PermissionsContract,
 	type PiApi,
@@ -225,6 +226,18 @@ const lanClient = exposeContract(LanContract, {
 			method,
 		),
 });
+const memoryClient = exposeContract(MemoryContract, {
+	ipc: ipcRenderer,
+	channelForMethod: (_contract, method) =>
+		channelFrom(
+			{
+				getStatus: IpcChannels.MemoryGetStatus,
+				setEnabled: IpcChannels.MemorySetEnabled,
+				clear: IpcChannels.MemoryClear,
+			},
+			method,
+		),
+});
 const mcpClient = exposeContract(McpContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
@@ -407,6 +420,9 @@ const invokeApi = {
 	lanGetStatus: invoke(lanClient, "getStatus"),
 	lanSetEnabled: invoke(lanClient, "setEnabled"),
 	lanSetRemoteControl: invoke(lanClient, "setRemoteControl"),
+	memoryGetStatus: invoke(memoryClient, "getStatus"),
+	memorySetEnabled: invoke(memoryClient, "setEnabled"),
+	memoryClear: invoke(memoryClient, "clear"),
 	getMcpStatus: invoke(mcpClient, "getStatus"),
 	getMcpConfig: invoke(mcpClient, "getConfig"),
 	setMcpServerEnabled: invoke(mcpClient, "setServerEnabled"),

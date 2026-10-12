@@ -582,7 +582,7 @@ export const zh = {
 			changed: "已切换到{mode}",
 			cacheReset: "工具变化会重置提示缓存",
 		},
-		status: { local: "本机" },
+		status: { local: "本机", memoryLoaded: "已载入 {count} 条记忆" },
 		placeholder: "随便问点什么，/ 命令，@ 上下文",
 		placeholderQueued: "排队消息，当前任务完成后自动发送",
 		placeholderCompacting: "正在压缩上下文…",
@@ -1082,6 +1082,11 @@ export const zh = {
 			evaporation:
 				"默认开启。按水位线把到龄的工具输出蒸发为带恢复指令的占位符（如「输出已淘汰，可用相同参数重读」）：60% 起截断工具输出、85% 起淘汰为占位；零 LLM 调用、对话原文保留、会话文件不动。切换后无需重开会话。",
 			off: "关闭全部上下文管理：不做主动压缩/蒸发，依赖 SDK 在接近窗口上限时的原生压缩兜底。长会话可能中断等待压缩。",
+		},
+		memory: {
+			title: "本项目记忆",
+			hint: "已记 {count} 条 · 自动记下改过的文件、跑过的命令和失败原因（只存摘要，跳过 <private>），新会话开始时载入最相关的几条（≤600 token），只存本机。",
+			clear: "清空",
 		},
 		channelWatch: "跨会话频道协作（channel-watch）",
 		channelWatchHint:

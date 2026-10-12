@@ -9,6 +9,7 @@ export * from "./institutional";
 export * from "./knowledge";
 export * from "./lan";
 export * from "./mcp";
+export * from "./memory";
 export * from "./packages";
 export * from "./permissions";
 export * from "./sessions";
