@@ -5312,8 +5312,13 @@ async function getKnowledgeService(binding = null) {
   binding ||= await readKnowledgeBinding();
   const directory = knowledgeDirectory();
   if (!binding || !directory) throw new Error("No application knowledge Vault is bound");
-  const key = `${directory}:${binding.vaultId}:${binding.revision}`;
+  const key = join11(directory, binding.vaultId, "index.sqlite");
   let service = pool.get(key);
+  if (service && !service.closed && service.binding?.revision !== binding.revision) {
+    pool.delete(key);
+    await service.close();
+    service = null;
+  }
   if (!service || service.closed) {
     emitProcessEvent2(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
     service = pool.get(key);

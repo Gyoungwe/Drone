@@ -6,7 +6,7 @@ import { configureObsidian } from "@drone/extensions/internal/obsidian-workbench
 import { readKnowledgeBinding } from "@drone/knowledge/config";
 import { embedTexts, validateSemanticConfig } from "@drone/knowledge/semantic-provider";
 import { readSemanticSettings } from "@drone/knowledge/semantic-settings";
-import { closeKnowledgeServices, KnowledgeService } from "@drone/knowledge/service";
+import { closeKnowledgeServices, getKnowledgeService, KnowledgeService } from "@drone/knowledge/service";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let root, vault, cwd, app;
@@ -217,7 +217,7 @@ describe("worker-owned hybrid retrieval", () => {
 	it("re-scans semantic batches so new paths and remaining chunks are never skipped", async () => {
 		await configureObsidian({ cwd, vault, project: "project-a" });
 		await note("Library/Papers/z-last.md", `# Last\n${"z".repeat(700)}`);
-		const service = new KnowledgeService(await readKnowledgeBinding(), app);
+		const service = await getKnowledgeService(await readKnowledgeBinding());
 		try {
 			await service.request("reconcile");
 			const fingerprint = "cursor-regression";

@@ -875,8 +875,9 @@ async function updatePath(path, force = false) {
       const kind = /(?:^|\/)(?:Index|Context|Home)\.md$/i.test(path) ? "navigation" : /(?:^|\/)Wiki\//.test(path) ? "wiki" : path.startsWith("Library/Explainers/") ? "explainer" : "note";
       db.exec("BEGIN IMMEDIATE");
       try {
-        if (previous) statements.removeFts.run(previous.id);
-        if (previous && (previous.hash !== file.hash || previous.signature !== file.signature))
+        const current = statements.get.get(path);
+        if (current) statements.removeFts.run(current.id);
+        if (current && (current.hash !== file.hash || current.signature !== file.signature))
           statements.semanticDelete.run(path);
         db.prepare(`INSERT INTO notes(path,title,body,hash,signature,scope,kind,bytes) VALUES(?,?,?,?,?,?,?,?)
           ON CONFLICT(path) DO UPDATE SET title=excluded.title,body=excluded.body,hash=excluded.hash,
@@ -891,6 +892,7 @@ async function updatePath(path, force = false) {
           file.bytes
         );
         const row = statements.get.get(path);
+        statements.removeFts.run(row.id);
         db.prepare("INSERT INTO search(rowid,title,terms) VALUES(?,?,?)").run(
           row.id,
           tokenizeKnowledgeText(title).join(" "),
@@ -912,7 +914,8 @@ async function updatePath(path, force = false) {
       if (previous) {
         db.exec("BEGIN IMMEDIATE");
         try {
-          statements.removeFts.run(previous.id);
+          const current = statements.get.get(path);
+          if (current) statements.removeFts.run(current.id);
           statements.remove.run(path);
           statements.semanticDelete.run(path);
           statements.links.run(path);
