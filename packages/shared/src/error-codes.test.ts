@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ERROR_CODES, errorCardActions, errorCodeOf } from "./error-codes";
 import { buildLlmUiError, buildStreamGuardUiError } from "./errors";
-import { pinTrailingErrorRow } from "./transcript/chat-rows";
 import type { ChatRow } from "./transcript/chat-rows";
+import { pinTrailingErrorRow } from "./transcript/chat-rows";
 
 describe("error code table (P8)", () => {
 	it("assigns codes when building errors", () => {
