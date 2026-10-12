@@ -248,6 +248,7 @@ export const IpcChannels = {
 	/** 文件右键菜单宿主动作（P7） */
 	FileAction: "file:action",
 	HostEnvironment: "host:environment",
+	DownloadDirPick: "download-dir:pick",
 	FileHtmlPreviewUrl: "file:htmlPreviewUrl",
 	FigureAnnotationsGet: "figure:annotationsGet",
 	FigureAnnotationsSave: "figure:annotationsSave",
@@ -439,6 +440,8 @@ export interface PiApi
 	): Promise<string | null>;
 	/** 本机环境探测（P10） */
 	hostEnvironment(): Promise<HostEnvironment>;
+	/** 选择下载目录（P11）；取消返回 null */
+	pickDownloadDir(): Promise<string | null>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
 	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
 	getMcpStatus(cwd?: string): Promise<McpStatus>;

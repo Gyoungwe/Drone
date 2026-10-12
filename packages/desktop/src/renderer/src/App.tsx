@@ -20,7 +20,10 @@ import { ContextMenuHost } from "./components/ui/ContextMenu";
 import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
 import { useDesktopCommands } from "./hooks/use-desktop-commands";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
+import { useT } from "./i18n";
+import { notifyCompletion } from "./lib/completion-notify";
 import { initDailyDir } from "./lib/daily";
+import { onTurnSettled } from "./lib/turn-settled";
 import { initUiPlugins } from "./plugins/loader";
 import { isPluginEntryId, PluginEntryHost, usePluginEntries } from "./plugins/PluginRegions";
 import { RegionHost } from "./plugins/RegionHost";
@@ -46,6 +49,17 @@ export default function App() {
 	// 插件全屏视图（rail.view，挂钩 4）：插件被禁用/卸载后若仍处于该视图，回到聊天
 	const pluginViews = usePluginEntries(UI_REGIONS.RailView);
 	const pluginView = pluginViews.find((entry) => entry.id === view);
+	const tNotify = useT();
+	// P11：回合结束 → 后台系统通知 / 提示音；点击通知切到该会话
+	useEffect(
+		() =>
+			onTurnSettled((sessionId) =>
+				notifyCompletion("done", tNotify("notify.doneTitle"), tNotify("notify.doneBody"), () =>
+					useSessionsStore.getState().switchSession(sessionId),
+				),
+			),
+		[tNotify],
+	);
 	useEffect(() => {
 		if (isPluginEntryId(view) && !pluginView) useUiStore.getState().setView("chat");
 	}, [view, pluginView]);

@@ -35,7 +35,8 @@ export function applyChromeTheme(mode: ThemeMode): void {
 	}
 }
 
-export function createWindow(theme: "dark" | "light" = "light"): BrowserWindow {
+/** hidden：登录启动只开托盘（P11/P20），窗口创建但不显示，从托盘唤出。 */
+export function createWindow(theme: "dark" | "light" = "light", hidden = false): BrowserWindow {
 	const window = new BrowserWindow({
 		width: 1100,
 		height: 750,
@@ -62,7 +63,9 @@ export function createWindow(theme: "dark" | "light" = "light"): BrowserWindow {
 		},
 	});
 
-	window.on("ready-to-show", () => window.show());
+	window.on("ready-to-show", () => {
+		if (!hidden) window.show();
+	});
 
 	window.webContents.setWindowOpenHandler((details) => {
 		void shell.openExternal(details.url);

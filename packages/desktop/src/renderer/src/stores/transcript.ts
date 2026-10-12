@@ -11,6 +11,7 @@ import {
 	type UIToolCall,
 } from "@drone/shared";
 import { create } from "zustand";
+import { emitTurnSettled } from "../lib/turn-settled";
 
 export type { ActivityEntry, SessionPhase, StreamingState, SubagentRunUi, UIMessage, UIToolCall };
 
@@ -47,9 +48,10 @@ interface TranscriptStore {
 	loadTodos: (sessionId: string, todos: TodoItem[]) => void;
 }
 
-export const useTranscriptStore = create<TranscriptStore>((set) => ({
+export const useTranscriptStore = create<TranscriptStore>((set, get) => ({
 	bySession: {},
 	applyEvent: (sessionId, event, opts) => {
+		const wasActive = get().bySession[sessionId]?.agentActive === true;
 		set((state) => {
 			const current = state.bySession[sessionId];
 			const prev = current ?? emptyTranscript();
@@ -69,6 +71,10 @@ export const useTranscriptStore = create<TranscriptStore>((set) => ({
 				},
 			};
 		});
+		// P11：回合结束（true→false）时后台通知 / 提示音
+		if (wasActive && get().bySession[sessionId]?.agentActive === false) {
+			emitTurnSettled(sessionId);
+		}
 	},
 	markAgentActive: (sessionId, active) => {
 		set((state) => {

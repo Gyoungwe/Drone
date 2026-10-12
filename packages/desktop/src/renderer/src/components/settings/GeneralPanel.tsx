@@ -3,6 +3,7 @@ import type { Language } from "../../i18n";
 import { useI18nStore, useT } from "../../i18n";
 import { useSettingsStore } from "../../stores/settings";
 import { Switch } from "../ui/Switch";
+import { DesktopSettings } from "./DesktopSettings";
 import { SettingsRow } from "./SettingsRow";
 
 const CONTEXT_MANAGER_MODES: ContextManagerMode[] = ["evaporation", "off"];
@@ -66,6 +67,7 @@ export function GeneralPanel() {
 					onCheckedChange={(enabled) => void setChannelWatchEnabled(enabled)}
 				/>
 			</SettingsRow>
+			<DesktopSettings />
 			<details className="settings-disclosure" data-testid="ssh-guard-card" aria-labelledby="ssh-guard-title">
 				<summary className="settings-disclosure-summary">
 					<div className="min-w-0">

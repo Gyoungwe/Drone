@@ -23,6 +23,7 @@ export * from "./capability-skills";
 export * from "./compute";
 export * from "./contracts";
 export * from "./desktop-command";
+export * from "./desktop-prefs";
 export * from "./diagnostics";
 export * from "./discovery";
 export * from "./doc-outline";

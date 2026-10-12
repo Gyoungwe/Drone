@@ -16,6 +16,8 @@ import {
 import { app, BrowserWindow, dialog, Menu, nativeTheme, net, protocol } from "electron";
 import { backgroundsDir } from "./background";
 import { consoleDedupLogLine, consoleSignature, createConsoleDeduper } from "./console-dedup";
+import { electronDesktopHost, launchedHidden } from "./desktop-host";
+import { applyDesktopPrefs } from "./desktop-prefs";
 import { HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest } from "./html-preview-protocol";
 import { registerIpc, sendToRenderer } from "./ipc";
 import { initLanObserver, type LanObserverHandle } from "./lan";
@@ -329,7 +331,8 @@ app.whenReady().then(async () => {
 	const uiState = await loadUiState();
 	// main 进程原生主题与 app 设置对齐（Windows 窗口按钮覆盖层/后续主题切换的 system 解析依赖它）
 	nativeTheme.themeSource = uiState?.theme ?? "system";
-	createWindow(resolveTheme(uiState?.theme));
+	applyDesktopPrefs(uiState?.desktop, electronDesktopHost, app.isPackaged);
+	createWindow(resolveTheme(uiState?.theme), launchedHidden);
 
 	app.on("activate", () => {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow(resolveTheme(uiState?.theme));

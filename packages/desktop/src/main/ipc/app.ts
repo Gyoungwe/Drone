@@ -7,6 +7,8 @@ import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
 import { app, BrowserWindow, clipboard, dialog, nativeTheme, shell } from "electron";
 import { pickBackgroundImage } from "../background";
 import { ensureDailyDir } from "../daily";
+import { electronDesktopHost } from "../desktop-host";
+import { applyDesktopPrefs, currentDesktopPrefs } from "../desktop-prefs";
 import { getFigureAnnotations, saveFigureAnnotations } from "../figure-annotations";
 import { runFileAction } from "../file-actions";
 import { previewLocalFile, resolveResourcePath } from "../file-preview";
@@ -97,6 +99,16 @@ export function registerAppIpc(
 			}
 			await shell.openPath(resolveResourcePath(target, cwd));
 		},
+		pickDownloadDir: async () => {
+			const window = BrowserWindow.getAllWindows()[0];
+			const options = {
+				properties: ["openDirectory", "createDirectory"] as Array<"openDirectory" | "createDirectory">,
+			};
+			const result = window
+				? await dialog.showOpenDialog(window, options)
+				: await dialog.showOpenDialog(options);
+			return result.canceled ? null : (result.filePaths[0] ?? null);
+		},
 		hostEnvironment: () => probeHostEnvironment(defaultHostEnvDeps(app.getPath("home"))),
 		fileAction: (action, target, cwd, arg) =>
 			runFileAction(
@@ -106,7 +118,8 @@ export function registerAppIpc(
 					openPath: (path) => shell.openPath(path),
 					openExternal: (url) => shell.openExternal(url),
 					trashItem: (path) => shell.trashItem(path),
-					showSaveDialog: async (defaultPath) => {
+					showSaveDialog: async (name) => {
+						const defaultPath = join(currentDesktopPrefs().downloadDir ?? app.getPath("downloads"), name);
 						const window = BrowserWindow.getAllWindows()[0];
 						const result = window
 							? await dialog.showSaveDialog(window, { defaultPath })
@@ -132,6 +145,7 @@ export function registerAppIpc(
 			if (state.theme) nativeTheme.themeSource = state.theme;
 			// UI language → reply-language rule for new/reloaded sessions and localized host strings.
 			if (state.language) setReplyLanguage(state.language);
+			if (state.desktop) applyDesktopPrefs(state.desktop, electronDesktopHost, app.isPackaged);
 			return saveUiState(state as Partial<UiState>);
 		},
 		pickBackgroundImage: () => pickBackgroundImage(BrowserWindow.getAllWindows()[0]),
@@ -191,6 +205,7 @@ export function registerAppIpc(
 				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
 				fileAction: IpcChannels.FileAction,
 				hostEnvironment: IpcChannels.HostEnvironment,
+				pickDownloadDir: IpcChannels.DownloadDirPick,
 				loadTabs: IpcChannels.TabsLoad,
 				saveTabs: IpcChannels.TabsSave,
 				loadUiState: IpcChannels.UiStateLoad,

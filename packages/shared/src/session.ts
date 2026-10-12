@@ -32,6 +32,8 @@ export interface UiState {
 	centerOrbEnabled: boolean;
 	/** 界面语言：渲染进程经 UiStateSave 推给主进程/后端，决定 Agent 的回复语言规则与宿主文案 */
 	language?: "zh" | "en";
+	/** 桌面端偏好（P11）；缺省按 DEFAULT_DESKTOP_PREFS */
+	desktop?: import("./desktop-prefs").DesktopPrefs;
 }
 
 /** 会话元数据（IPC 往返用，独立于 pi 内部类型） */

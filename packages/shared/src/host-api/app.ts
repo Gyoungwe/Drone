@@ -107,6 +107,7 @@ export const AppContract = defineDomain("app", {
 			result: NullableString,
 		},
 		/** 本机环境探测（P10）：固定只读命令 */
+		pickDownloadDir: { args: Type.Tuple([]), result: NullableString },
 		hostEnvironment: {
 			args: Type.Tuple([]),
 			result: Type.Unsafe<HostEnvironment>(Type.Object({}, { additionalProperties: true })),
