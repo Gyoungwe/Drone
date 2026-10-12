@@ -43,6 +43,7 @@ export * from "./lan";
 export { literatureRecoverySummary } from "./literature-recovery";
 export * from "./marquee-motion";
 export * from "./mcp";
+export * from "./notebook-preview";
 export * from "./packages";
 export * from "./permission-settings";
 export * from "./process-lanes";

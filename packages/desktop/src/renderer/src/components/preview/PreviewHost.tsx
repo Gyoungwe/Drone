@@ -5,6 +5,7 @@ import { FigureAnnotator, type FigureSource } from "../diff/FigureAnnotator";
 import { ResourceCode } from "../diff/ResourceCode";
 import { ResourceTextPreview } from "../diff/ResourceTextPreview";
 import { previewRendererFor, routePreview } from "./preview-registry";
+import "./viewers";
 
 export interface PreviewHostProps {
 	result: ResourcePreviewResult;

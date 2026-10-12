@@ -116,7 +116,7 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 			truncated: decoded.truncated,
 		};
 	}
-	if (format.supported || ext === ".svg") {
+	if (format.supported || ext === ".svg" || (type.text && type.previewKind !== "binary")) {
 		const bytes = await readPrefix(path, Math.min(TEXT_PREVIEW_BYTES, info.size)),
 			decoded = decodeText(bytes);
 		if (decoded.text.includes("\u0000"))
@@ -135,6 +135,13 @@ export async function previewLocalFile(target: string, cwd?: string): Promise<Re
 		if (info.size > BINARY_PREVIEW_LIMIT) return { ...base, mimeType, kind, truncated: true };
 		const bytes = await readPrefix(path, Math.min(BINARY_PREVIEW_LIMIT, info.size));
 		return { ...base, mimeType, kind, data: bytes.toString("base64"), truncated: info.size > bytes.length };
+	}
+	// 音视频（P3）：16 MiB 内整读 base64，渲染层 <audio>/<video> 播放；超限只回元数据
+	if (type.previewKind === "audio" || type.previewKind === "video") {
+		if (info.size > BINARY_PREVIEW_LIMIT)
+			return { ...base, kind: "binary", mimeType: type.mime, truncated: true };
+		const bytes = await readPrefix(path, info.size);
+		return { ...base, kind: "binary", mimeType: type.mime, data: bytes.toString("base64") };
 	}
 	return { ...base, kind: "binary", mimeType: "application/octet-stream" };
 }

@@ -8,6 +8,9 @@ vi.mock("../../i18n", () => ({
 }));
 vi.mock("../../api", () => ({ getPi: () => ({}) }));
 vi.mock("../diff/ResourceCode", () => ({ ResourceCode: ({ text }: { text: string }) => `code:${text}` }));
+vi.mock("../diff/ResourceMarkdown", () => ({
+	ResourceMarkdown: ({ text }: { text: string }) => `md:${text}`,
+}));
 vi.mock("../diff/ResourceTextPreview", () => ({ ResourceTextPreview: () => "text-preview" }));
 vi.mock("../diff/FigureAnnotator", () => ({
 	FigureAnnotator: ({ children }: { children: unknown }) => children,

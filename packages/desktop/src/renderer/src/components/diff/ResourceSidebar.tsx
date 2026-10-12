@@ -118,7 +118,11 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 			{result && (
 				<div className="resource-reader-toolbar">
 					<span className="resource-format">
-						{result.kind === "text" ? format.label : result.kind.toUpperCase()}
+						{result.kind === "text"
+							? format.label
+							: result.previewKind && result.previewKind !== "binary" && result.kind === "binary"
+								? (result.name.split(".").pop() || result.previewKind).toUpperCase()
+								: result.kind.toUpperCase()}
 					</span>
 					{hasSourceTab(result) && (
 						<>

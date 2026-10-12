@@ -830,6 +830,10 @@ export const en: Messages = {
 			binaryFormats:
 				"Binary research formats (BAM, CRAM, BCF, HDF5, Parquet…) need a dedicated viewer and are not decoded as text.",
 			mediaTooLarge: "The file exceeds the inline media preview limit; open it externally.",
+			notebookParseFailed: "Could not parse the notebook (it may be truncated); switch to Source.",
+			notebookClipped: "Only the first 200 cells are shown.",
+			mermaidFailed: "Mermaid diagram failed to render; switch to Source.",
+			mermaidLoading: "Rendering diagram…",
 			compressed: " (compressed)",
 			gzipExcerpt: "gzip excerpt · not a whole-file integrity check",
 			markdownInvalid: "Markdown could not be parsed; showing the raw text.",
