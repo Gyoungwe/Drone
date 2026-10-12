@@ -9431,6 +9431,11 @@ var AppContract = defineDomain("app", {
     },
     /** 本机环境探测（P10）：固定只读命令 */
     pickDownloadDir: { args: typebox_exports.Tuple([]), result: NullableString },
+    /** 待答数角标（P14）：count, Windows overlay 图（data URL）或 null */
+    setAttentionBadge: {
+      args: typebox_exports.Tuple([typebox_exports.Integer({ minimum: 0, maximum: 999 }), NullableString]),
+      result: typebox_exports.Void()
+    },
     hostEnvironment: {
       args: typebox_exports.Tuple([]),
       result: typebox_exports.Unsafe(typebox_exports.Object({}, { additionalProperties: true }))
