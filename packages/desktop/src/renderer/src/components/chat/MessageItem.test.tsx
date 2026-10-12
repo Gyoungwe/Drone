@@ -1,7 +1,7 @@
-import type { UIMessage } from "../../stores/transcript";
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it, vi } from "vitest";
+import type { UIMessage } from "../../stores/transcript";
 import { MessageItem } from "./MessageItem";
 
 vi.mock("../../i18n", () => ({ useT: () => (key: string) => key }));

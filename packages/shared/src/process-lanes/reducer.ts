@@ -11,6 +11,30 @@ import type {
 } from "./types";
 
 export const textPair = (zh: string, en = zh): ProcessText => ({ zh, en });
+const reasonLine = (reason: string): ProcessText => {
+	const labels: Record<string, ProcessText> = {
+		"task-authorization-required": textPair(
+			"等待你确认任务范围",
+			"Waiting for you to confirm the task scope",
+		),
+		"task-selection-required": textPair(
+			"等待你选择要继续的任务",
+			"Waiting for you to choose a task to continue",
+		),
+		"reconcile-before-retry": textPair(
+			"先核对上一次操作结果",
+			"Check the previous operation before retrying",
+		),
+		"stage-budget": textPair(
+			"本阶段暂告一段落，当前结果已保留",
+			"This stage is paused; current results are kept",
+		),
+		"total-budget": textPair("已达到本次任务的执行上限", "The execution limit for this task was reached"),
+		"binding-changed": textPair("知识库绑定已变化，请重新读取", "The knowledge base changed; read it again"),
+		waiting_user: textPair("等待你处理一项请求", "Waiting for you to handle a request"),
+	};
+	return labels[reason] ?? textPair("需要先处理一项请求", "A request needs attention first");
+};
 export function initialProcessLaneState(): ProcessLaneState {
 	return {
 		lanes: [
@@ -31,9 +55,9 @@ export function initialProcessLaneState(): ProcessLaneState {
 	};
 }
 const stopLines = (reason: string): ProcessNode["lines"] => [
-	textPair("停在宿主门", "Stopped at host gate"),
-	textPair(reason),
-	textPair("这句不重试", "This question does not retry"),
+	textPair("等待应用完成处理", "Waiting for the application to finish"),
+	reasonLine(reason),
+	textPair("这条消息不会自动重试", "This message will not retry automatically"),
 ];
 const knownStages: Record<string, [ProcessNodeId, ProcessLaneId, string, string]> = {
 	local_query_recorded: ["local", "evidence", "本地查询已记录", "Local query recorded"],
@@ -41,7 +65,7 @@ const knownStages: Record<string, [ProcessNodeId, ProcessLaneId, string, string]
 	sources_archived: ["archived", "evidence", "原文归档已记录", "Source archive recorded"],
 	sources_reused: ["archived", "evidence", "已有来源复用已记录", "Source reuse recorded"],
 	claims_bound: ["bound", "evidence", "主张绑定已记录", "Claim binding recorded"],
-	answerable: ["answer", "answer", "可回答回执已到", "Answerable receipt arrived"],
+	answerable: ["answer", "answer", "已收到可用于回答的信息", "Answerable information received"],
 };
 /** Pure, immutable projection. It neither grants consent nor verifies files. */
 export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEvent): ProcessLaneState {
@@ -85,9 +109,9 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 			"hostGate",
 			"gate",
 			[
-				textPair("停在宿主门", "Stopped at host gate"),
-				textPair("等待宿主处理", "Host action required"),
-				textPair(reason),
+				textPair("等待应用完成处理", "Waiting for the application to finish"),
+				textPair("需要你处理一项请求", "A request needs your attention"),
+				reasonLine(reason),
 			],
 			{ state: "blocked", code: reason },
 		);
@@ -100,17 +124,17 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 			"taskGate",
 			"gate",
 			[
-				textPair("写盘前等你点头", "Consent required before writes"),
-				textPair("research_* 照常放行", "research_* remains allowed"),
-				textPair(reason),
+				textPair("保存文件前需要你确认", "Your confirmation is needed before saving files"),
+				textPair("只读研究操作仍可继续", "Read-only research operations may continue"),
+				reasonLine(reason),
 			],
 			{ state: "waiting", code: reason },
 		);
 		edge("picked", "taskGate", "branch");
 		doing([
 			textPair("等待确认", "Waiting for consent"),
-			textPair("写盘先停住", "Writes are paused"),
-			textPair("research_* 仍放行", "research_* remains allowed"),
+			textPair("文件保存已暂停", "File saving is paused"),
+			textPair("只读研究操作仍可继续", "Read-only research operations may continue"),
 		]);
 		state.current = "taskGate";
 	};
@@ -151,7 +175,7 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 				const stage = route.stage ? workflowStage(route.stage) : undefined;
 				const landing = {
 					workflow: textPair("落点 · 工作流", "Landing · workflow"),
-					"host-gate": textPair("落点 · 宿主门", "Landing · host gate"),
+					"host-gate": textPair("落点 · 需要处理", "Landing · needs attention"),
 					library: textPair("落点 · 文献只读", "Landing · read-only literature"),
 					ordinary: textPair("落点 · 普通", "Landing · ordinary"),
 				};
@@ -174,26 +198,29 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 						? [
 								textPair("先核对计数和设计", "Check counts and design first"),
 								textPair("生物学重复要齐", "Biological replicates are required"),
-								textPair("写盘要任务门", "Writes require a task contract"),
+								textPair("保存文件前需要任务授权", "Task authorization is required before saving files"),
 							]
 						: route.stage === "vault"
 							? [
-									textPair("工作流换成知识库", "Workflow changed to knowledge management"),
-									textPair("阅读和绑定等回执", "Waiting for read and binding receipts"),
-									textPair("沉淀不进引用门", "Deposits do not add citations"),
+									textPair("已切换到知识库", "Switched to the knowledge base"),
+									textPair("等待阅读结果", "Waiting for reading results"),
+									textPair(
+										"保存的知识不会自动作为引用",
+										"Saved knowledge is not automatically used as a citation",
+									),
 								]
 							: [
-									textPair("技能写入系统提示", "Workflow added to the system prompt"),
+									textPair("已准备本轮使用的技能", "The workflow is ready for this turn"),
 									textPair("这一轮还没执行", "No execution receipt this turn"),
-									textPair("命中不算读过", "Search hits are not reads"),
+									textPair("检索到的条目仍需阅读", "Retrieved items still need to be read"),
 								],
 				);
 				edge("picked", "doing");
 			} else if (route.landing === "library") {
 				put("libGate", "gate", [
 					textPair("只读复用已有文献", "Reuse existing literature read-only"),
-					textPair("等待真实阅读回执", "Waiting for actual read receipts"),
-					textPair("landing=library"),
+					textPair("等待确认已读取的文献", "Waiting for confirmation that the literature was read"),
+					textPair("当前为只读复用", "Read-only reuse is active"),
 				]);
 				edge("picked", "libGate", "branch");
 			} else if (route.landing === "host-gate") hostGate(route.host?.reason ?? "waiting_user", "picked");
@@ -217,25 +244,25 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 							]
 						: event.type === "tool-receipt" && event.name === "read" && event.state === "done"
 							? [
-									textPair("改为调用 read", "Read call recorded"),
-									textPair("只读与 research_* 放行", "Read-only and research_* calls remain allowed"),
-									textPair("写盘要契约", "Writes require a contract"),
+									textPair("读取操作已记录", "Read operation recorded"),
+									textPair("只读研究操作仍可继续", "Read-only research operations may continue"),
+									textPair("保存文件前需要任务授权", "Task authorization is required before saving files"),
 								]
 							: [
-									textPair(`调用 ${event.name}`, `Calling ${event.name}`),
+									textPair("正在执行操作", "Running an operation"),
 									textPair(
 										event.state === "running"
-											? "等待回执"
+											? "等待操作结果"
 											: event.state === "error"
-												? "调用失败，保留回执"
-												: "调用回执已到",
+												? "操作失败，已保留记录"
+												: "操作结果已收到",
 										event.state === "running"
-											? "Awaiting receipt"
+											? "Waiting for the operation result"
 											: event.state === "error"
 												? "Failed call recorded"
-												: "Call receipt received",
+												: "Operation result received",
 									),
-									textPair("写盘仍按任务契约", "Writes remain bound by task consent"),
+									textPair("保存仍受任务授权约束", "Saving remains subject to task authorization"),
 								],
 				);
 			const n = state.nodes.find((n) => n.id === "doing");
@@ -265,16 +292,16 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 					"taskGate",
 					"gate",
 					[
-						textPair("你点了这一次头", "You approved this contract"),
-						textPair("写盘契约生效", "Write contract is active"),
+						textPair("你已确认这次任务", "You approved this task"),
+						textPair("已获得保存文件的授权", "Authorization to save files is active"),
 						textPair("planApproved"),
 					],
 					{ state: "open", code: "planApproved", demo: event.demo },
 				);
 				if (!state.statusQuery)
 					doing([
-						textPair("按契约写盘", "Writing within the contract"),
-						textPair("任务门这一次开过", "Task consent was granted"),
+						textPair("按已确认的范围保存文件", "Saving files within the confirmed scope"),
+						textPair("任务授权已确认", "Task authorization was confirmed"),
 						textPair("哈希仍要核对", "Hashes still require checking"),
 					]);
 			}
@@ -297,7 +324,7 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 				doing([
 					textPair("外部检索已记录", "External search recorded"),
 					textPair("命中不算已读", "Search hits are not reads"),
-					textPair(event.stage),
+					textPair("已记录当前处理阶段"),
 				]);
 				break;
 			}
@@ -308,8 +335,8 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 				stage[1],
 				[
 					textPair(stage[2], stage[3]),
-					textPair("以宿主回执为准", "Based on the host receipt"),
-					textPair(event.stage),
+					textPair("以应用记录的结果为准", "Based on the recorded result"),
+					textPair("已记录当前处理阶段"),
 				],
 				{ code: event.stage },
 			);
@@ -322,9 +349,9 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 				"read",
 				"evidence",
 				[
-					textPair(`${state.reads.length} 条进入本轮读过`, `${state.reads.length} reads this turn`),
-					textPair("阅读时哈希已记录", "Read-time hashes recorded"),
-					textPair("state.reads"),
+					textPair(`本轮已读取 ${state.reads.length} 项`, `${state.reads.length} items read this turn`),
+					textPair("已记录读取时的文件校验信息", "Read-time file checks recorded"),
+					textPair("这些内容可用于当前回答"),
 				],
 				{ paths: state.reads.map((r) => r.path) },
 			);
@@ -338,9 +365,12 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 				"deposit",
 				"deposit",
 				[
-					textPair("知识沉淀回执已到", "Knowledge deposit recorded"),
-					textPair("沉淀不进本轮引用", "Deposit does not add citations"),
-					textPair(`type=${event.kind}`),
+					textPair("知识已保存", "Knowledge saved"),
+					textPair(
+						"保存的知识不会自动作为本轮引用",
+						"Saved knowledge is not automatically cited in this turn",
+					),
+					textPair(`内容类型：${event.kind}`),
 				],
 				{ paths: event.path ? [event.path] : [] },
 			);
@@ -350,12 +380,12 @@ export function reduceProcessEvent(previous: ProcessLaneState, event: ProcessEve
 		case "zotero":
 			put(event.type, "deposit", [
 				textPair(
-					event.type === "wiki" ? "Wiki 提案回执" : "Zotero 独立回执",
+					event.type === "wiki" ? "Wiki 建议已生成" : "Zotero 记录已保存",
 					event.type === "wiki" ? "Wiki proposal receipt" : "Separate Zotero receipt",
 				),
 				textPair(event.status),
 				textPair(
-					event.type === "wiki" ? "不代表人工批准" : "与 Vault 回执分开",
+					event.type === "wiki" ? "尚未经过人工批准" : "与知识库记录分别保存",
 					event.type === "wiki" ? "Does not imply human approval" : "Separate from Vault receipt",
 				),
 			]);

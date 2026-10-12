@@ -29,7 +29,7 @@ export const zoteroZh = {
 	download: "下载 Zotero",
 	crossTitle: "与知识库的关系",
 	crossHint:
-		"Zotero 只是来源上游；命中的文献要沉淀成 Obsidian 的 Library/Papers 笔记后才可被引用。先建 Vault。",
+		"Zotero 只是来源上游；命中的文献要整理为 Obsidian 的 Library/Papers 笔记后才可被引用。先建 Vault。",
 	gotoObsidian: "打开 Obsidian 知识库",
 	localTitle: "本机写入（Zotero 10+，推荐）",
 	localHint:

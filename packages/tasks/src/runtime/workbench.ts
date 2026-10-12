@@ -1030,7 +1030,7 @@ export function createTaskWorkbench({
 				block: true,
 				reason: bilingual(
 					"还没有获批的任务方案：Agent 需先做只读准备，再用 task_plan 提交目标、范围、写入目录和交付物，由你在弹窗中批准；批准前命令和写入都会被拦截。",
-					"No authorized task contract exists. Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables; the host opens ask_user for that exact contract. Commands and writes stay blocked until it is approved.",
+					"No approved task plan exists yet. First prepare the inputs without side effects, then call task_plan once with the goal, scope, write directories and deliverables; the application will ask you to approve that plan. Commands and writes stay blocked until approval.",
 				),
 			};
 		}
@@ -1056,7 +1056,7 @@ export function createTaskWorkbench({
 			return {
 				block: true,
 				reason:
-					"Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables. The host opens ask_user for that exact task contract; the card alone never authorizes it. Do not start commands/writes or ask for separate stage approvals.",
+					"First prepare the inputs without side effects, then call task_plan once with the goal, scope, write directories and deliverables. The application will ask you to approve that plan; the card alone never authorizes execution. Do not start commands or writes, and do not ask for separate stage approvals.",
 			};
 		}
 		if (t.budget.calls >= LIMITS.totalCalls || t.budget.stageCalls >= LIMITS.stageCalls) {

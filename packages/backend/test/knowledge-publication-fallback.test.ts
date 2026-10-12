@@ -5,7 +5,7 @@ import { projectKnowledgeEvent, projectKnowledgeSnapshot } from "../src/session/
 type E = Parameters<typeof projectKnowledgeEvent>[0];
 type M = Parameters<typeof projectKnowledgeSnapshot>[0][number];
 const ev = (o: unknown): E => o as E;
-const NOTICE = "发布检查未加载";
+const NOTICE = "回答检查未完成";
 
 describe("knowledge-publication fallback（bridge 缺失）", () => {
 	const prevDir = process.env.DRONE_KNOWLEDGE_DIR;

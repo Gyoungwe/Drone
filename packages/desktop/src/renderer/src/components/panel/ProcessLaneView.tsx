@@ -54,6 +54,20 @@ function nodeLabel(node: ProcessNode, t: ReturnType<typeof useT>): string {
 	return t(nodeLabelKeys[node.id]);
 }
 
+function operationStateLabel(state: string, zh: boolean): string {
+	const labels: Record<string, [string, string]> = {
+		queued: ["排队中", "queued"],
+		running: ["处理中", "running"],
+		done: ["已完成", "completed"],
+		completed: ["已完成", "completed"],
+		error: ["未完成", "needs attention"],
+		failed: ["未完成", "needs attention"],
+		blocked: ["需要处理", "needs attention"],
+	};
+	const pair = labels[state];
+	return pair ? pair[zh ? 0 : 1] : state;
+}
+
 function NodeDetails({
 	node,
 	inspectors,
@@ -67,6 +81,7 @@ function NodeDetails({
 	showRun: boolean;
 }) {
 	const t = useT();
+	const zh = useI18nStore((store) => store.language) === "zh";
 	const run = showRun ? inspectors[turnIndex] : undefined;
 	if (!run && !node.receipts?.length && !node.paths?.length) return null;
 	return (
@@ -76,7 +91,7 @@ function NodeDetails({
 				<ul className="process-lane-receipts">
 					{node.receipts.map((receipt) => (
 						<li key={receipt.id}>
-							<code>{receipt.name}</code> · {receipt.state}
+							<code>{receipt.name}</code> · {operationStateLabel(receipt.state, zh)}
 						</li>
 					))}
 				</ul>

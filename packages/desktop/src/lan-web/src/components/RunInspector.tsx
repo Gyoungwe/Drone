@@ -6,6 +6,23 @@ const compact = (n: number) =>
 const seconds = (timing?: TurnTiming) =>
 	timing?.endedAt ? `${((timing.endedAt - timing.startedAt) / 1000).toFixed(1)}s` : "—";
 
+function statusLabel(status: string): string {
+	const zh = navigator.language.toLowerCase().startsWith("zh");
+	const labels: Record<string, [string, string]> = {
+		queued: ["排队中", "queued"],
+		running: ["处理中", "running"],
+		done: ["已完成", "completed"],
+		completed: ["已完成", "completed"],
+		error: ["未完成", "needs attention"],
+		failed: ["未完成", "needs attention"],
+		blocked: ["需要处理", "needs attention"],
+		cancelled: ["已停止", "stopped"],
+		pending: ["等待处理", "pending"],
+	};
+	const pair = labels[status];
+	return pair ? pair[zh ? 0 : 1] : status;
+}
+
 export function RunInspector({
 	run,
 	timing,
@@ -67,7 +84,7 @@ export function RunInspector({
 						{run.tools.length ? (
 							run.tools.map((tool) => (
 								<code key={tool.key} data-state={tool.state}>
-									{tool.name} · {tool.state}
+									{tool.name} · {statusLabel(tool.state)}
 								</code>
 							))
 						) : (
@@ -82,7 +99,8 @@ export function RunInspector({
 							<div key={agent.key}>
 								{agent.agent}
 								{agent.model ? ` · ${agent.model}` : ""}
-								{agent.tokens != null ? ` · ${agent.tokens.toLocaleString()} tokens` : ""} · {agent.status}
+								{agent.tokens != null ? ` · ${agent.tokens.toLocaleString()} tokens` : ""} ·{" "}
+								{statusLabel(agent.status)}
 							</div>
 						))}
 					</section>
@@ -140,7 +158,7 @@ export function RunInspector({
 								className="run-observation run-warn"
 								key={item.id || `${item.tool}:${item.status}:${item.reason}`}
 							>
-								<code>{item.tool}</code> · {item.status} · {item.reason}
+								<code>{item.tool}</code> · {statusLabel(item.status)} · {item.reason}
 								{item.nextAction && (
 									<div>
 										{t("run.next")}: {item.nextAction}
@@ -151,7 +169,7 @@ export function RunInspector({
 					</section>
 				)}
 				<section>
-					<b>Publication gate</b>
+					<b>{t("run.publicationCheck")}</b>
 					<div className={gate === "blocked" ? "run-warn" : undefined}>
 						{gate}
 						{run.publication.reason ? ` · ${run.publication.reason}` : ""}
@@ -159,7 +177,7 @@ export function RunInspector({
 				</section>
 				{run.skill && (
 					<section>
-						<b>Skill</b>
+						<b>{t("run.skill")}</b>
 						<code>/skill:{run.skill}</code>
 					</section>
 				)}

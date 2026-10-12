@@ -6,6 +6,22 @@ const compact = (n: number) =>
 const seconds = (timing?: TurnTiming) =>
 	timing?.endedAt ? `${((timing.endedAt - timing.startedAt) / 1000).toFixed(1)}s` : "—";
 
+function statusLabel(status: string, zh: boolean): string {
+	const labels: Record<string, [string, string]> = {
+		queued: ["排队中", "queued"],
+		running: ["处理中", "running"],
+		done: ["已完成", "completed"],
+		completed: ["已完成", "completed"],
+		error: ["未完成", "needs attention"],
+		failed: ["未完成", "needs attention"],
+		blocked: ["需要处理", "needs attention"],
+		cancelled: ["已停止", "stopped"],
+		pending: ["等待处理", "pending"],
+	};
+	const pair = labels[status];
+	return pair ? pair[zh ? 0 : 1] : status;
+}
+
 export function RunInspector({
 	run,
 	timing,
@@ -31,7 +47,7 @@ export function RunInspector({
 				: "passed"
 			: run.publication.status === "blocked"
 				? zh
-					? "阻塞"
+					? "需要处理"
 					: "blocked"
 				: run.publication.status === "checked"
 					? zh
@@ -115,7 +131,7 @@ export function RunInspector({
 									key={tool.key}
 									className={`rounded px-1.5 py-0.5 font-mono text-[11px] ${tool.state === "error" ? "bg-err/10 text-err" : "bg-hover"}`}
 								>
-									{tool.name} · {tool.state}
+									{tool.name} · {statusLabel(tool.state, zh)}
 								</span>
 							))
 						) : (
@@ -131,7 +147,8 @@ export function RunInspector({
 								<div key={agent.key} className="rounded bg-hover px-2 py-1">
 									<span className="font-medium text-ink">{agent.agent}</span>
 									{agent.model ? ` · ${agent.model}` : ""}
-									{agent.tokens != null ? ` · ${agent.tokens.toLocaleString()} tokens` : ""} · {agent.status}
+									{agent.tokens != null ? ` · ${agent.tokens.toLocaleString()} tokens` : ""} ·{" "}
+									{statusLabel(agent.status, zh)}
 								</div>
 							))}
 						</div>
@@ -199,7 +216,7 @@ export function RunInspector({
 									className="break-words rounded bg-warn/5 px-2 py-1"
 								>
 									<p>
-										<code>{item.tool}</code> · {item.status} · {item.reason}
+										<code>{item.tool}</code> · {statusLabel(item.status, zh)} · {item.reason}
 									</p>
 									{item.nextAction && (
 										<p className="mt-1 text-ink-2">

@@ -45,7 +45,7 @@ describe("ProcessLaneView", () => {
 		expect(html).toContain('aria-label="Evidence"');
 		expect(html).toContain("No literature search this turn");
 		expect(html).toContain("View reconciliation");
-		expect(html).toContain("reconcile-before-retry");
+		expect(html).toContain("Check the previous operation before retrying");
 		expect(html).not.toContain("宿主门");
 	});
 	it("renders six lanes, gray empty evidence, and the step 7 host gate", () => {
@@ -62,7 +62,22 @@ describe("ProcessLaneView", () => {
 		expect(html).toContain("这一轮没查文献");
 		expect(html).toContain('data-process-node="doing"');
 		expect(html).toContain('data-process-node="hostGate"');
-		expect(html).toContain("reconcile-before-retry");
+		expect(html).toContain("先核对上一次操作结果");
+		expect(html).toContain('data-code="reconcile-before-retry"');
+	});
+	it("shows plain-language process copy in the visible example task", () => {
+		const html = renderToStaticMarkup(
+			createElement(ProcessLaneView, {
+				state: processDemoState(6),
+				inspectors: [],
+				timings: [],
+				usages: [],
+			}),
+		);
+		const visible = html.replace(/\sdata-code="[^"]*"/g, "");
+		expect(visible).toContain("先核对上一次操作结果");
+		expect(visible).toContain("已获得保存文件的授权");
+		expect(visible).not.toMatch(/宿主门|任务门|文献门|沉淀不进|宿主记录|回执/);
 	});
 
 	it("keeps the rule demonstration on the open task gate and exposes navigation actions", () => {

@@ -207,7 +207,7 @@ export function assessAnalysisReadiness(input: AnalysisReadinessInput): Analysis
 			makeGate(
 				"compute-authorization-required",
 				"pause",
-				"Compute execution is outside the approved task contract.",
+				"Compute execution is outside the approved task scope.",
 				"computeAuthorized",
 			),
 		);

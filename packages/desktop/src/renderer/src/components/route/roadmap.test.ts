@@ -8,7 +8,13 @@ vi.stubGlobal("React", React);
 const nodes = [
 	{ key: "request", label: "请求", value: "新话题", status: "ok" as const, detail: "「画联配图」是新话题。" },
 	{ key: "skill", label: "主技能", value: "nature-figure", status: "warn" as const, detail: "主技能不可见" },
-	{ key: "result", label: "结果", value: "宿主门", status: "blocked" as const, detail: "停在宿主门。" },
+	{
+		key: "result",
+		label: "结果",
+		value: "需要处理",
+		status: "blocked" as const,
+		detail: "需要先处理一项请求。",
+	},
 ];
 
 describe("roadmap", () => {
@@ -16,7 +22,7 @@ describe("roadmap", () => {
 		const html = renderToStaticMarkup(createElement(RoadmapLane, { nodes }));
 		expect(html).toContain('data-testid="roadmap-node-skill"');
 		expect(html).toContain('data-status="blocked"');
-		expect(html).toContain('title="停在宿主门。"');
+		expect(html).toContain('title="需要先处理一项请求。"');
 		expect(html.match(/→/g)).toHaveLength(2);
 		expect(html).not.toContain('data-testid="roadmap-detail"');
 	});

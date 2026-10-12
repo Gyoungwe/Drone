@@ -25,9 +25,9 @@ export interface WorkflowExecutionObservation {
 	readonly commandResult?: CommandResult;
 }
 
-/** A bounded, reviewable record for the report's “我替你决定的” section. */
+/** A bounded, reviewable record for decisions the system made within the user's scope. */
 export interface DecisionMadeForYou {
-	readonly label: "我替你决定的";
+	readonly label: "已替你处理";
 	readonly attempt: number;
 	readonly action: string;
 	readonly rationale: string;
@@ -240,7 +240,7 @@ export async function runAutonomousRepair(options: AutonomousRepairOptions): Pro
 			};
 		}
 		const decision: DecisionMadeForYou = {
-			label: "我替你决定的",
+			label: "已替你处理",
 			attempt,
 			action: proposal.decision.action,
 			rationale: proposal.decision.rationale,

@@ -85,7 +85,7 @@ describe("B5c autonomous repair", () => {
 		});
 		expect(result.status).toBe("succeeded");
 		expect(result.attempts).toHaveLength(2);
-		expect(result.decisionsMadeForYou[0]).toMatchObject({ label: "我替你决定的", attempt: 1 });
+		expect(result.decisionsMadeForYou[0]).toMatchObject({ label: "已替你处理", attempt: 1 });
 		expect(journaled).toEqual(["enable the indexed fixture"]);
 		expect(calls).toEqual(["failure:missing-index", "negative:missing-index"]);
 	});

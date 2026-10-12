@@ -55,6 +55,18 @@ const clean = (text: unknown, limit = 300): string =>
 		.trim()
 		.slice(0, limit);
 
+const feedbackReason = (reason: unknown): string => {
+	const labels: Record<string, string> = {
+		"not-prepared": "知识库准备尚未完成",
+		"model-error": "模型请求失败",
+		"check-timeout": "回答检查超时",
+		"check-failed": "回答检查发生错误",
+		"tool-loop-stopped": "当前处理阶段已暂停",
+		interrupted: "本次请求已中断",
+	};
+	return labels[String(reason)] || "需要先处理相关资料";
+};
+
 /** Observed tool receipts only; raw model drafts and thinking are never retained. */
 export function createTaskFeedback(): TaskFeedback {
 	let failures: TaskFeedbackFailure[] = [];
@@ -140,13 +152,13 @@ export function createTaskFeedback(): TaskFeedback {
 		const current = facts();
 		const lines = [
 			interrupted
-				? "本次请求已中断，未完成的回答没有发布。"
-				: `【知识库检查未通过】本轮的最终回答尚未完成发布（${clean(reason, 60)}）。`,
+				? "本次请求已中断，未完成的回答暂未展示。"
+				: `【回答检查未完成】本轮回答暂未展示（${feedbackReason(reason)}）。`,
 			...(interrupted ? [] : [clean(message, 450)]),
 		];
 		if (paths.length)
 			lines.push(
-				"需要处理的条目：" +
+				"需要处理的内容：" +
 					paths
 						.slice(0, 6)
 						.map((path) => `\`${clean(path, 512).replaceAll("`", "")}\``)
@@ -154,7 +166,7 @@ export function createTaskFeedback(): TaskFeedback {
 			);
 		if (current.archivedSources || current.summarySaved || current.files.length)
 			lines.push(
-				`已完成的工作仍然保留：归档来源 ${current.archivedSources} 项；研究摘要${current.summarySaved ? "已保存" : "尚未确认保存"}；Show Me ${current.explainerSaved ? "已归档" : "尚未确认归档"}；待审核 Wiki 候选 ${current.pendingWikiCandidates} 个。`,
+				`已完成的工作仍然保留：已保存来源 ${current.archivedSources} 项；研究摘要${current.summarySaved ? "已保存" : "尚未确认保存"}；Show Me ${current.explainerSaved ? "已保存" : "尚未确认保存"}；等待审核的 Wiki 条目 ${current.pendingWikiCandidates} 个。`,
 			);
 		if (current.files.length)
 			lines.push(
@@ -174,7 +186,7 @@ export function createTaskFeedback(): TaskFeedback {
 		lines.push(
 			interrupted
 				? "已记录的工具结果仍可在本会话查看。可以继续剩余工作；不需要重新下载已经保存的资料。"
-				: "接下来应根据具体检查原因补读或修正引用，再预检回答；不需要重新下载已经保存的资料。这里报告的是执行状态，不是对未发布研究结论的认可。",
+				: "接下来应根据具体检查原因补读或修正引用，再检查回答；不需要重新下载已经保存的资料。这里报告的是处理状态，不代表未展示的研究结论已经得到确认。",
 		);
 		return lines.join("\n\n");
 	};

@@ -20,12 +20,12 @@ it("unauthorized-task block is bilingual for the Chinese UI", () => {
 	expect(result).toMatchObject({ block: true });
 	const [zh, en] = result.reason.split("\n");
 	expect(zh).toMatch(/^还没有获批的任务方案：.*task_plan.*弹窗中批准/);
-	expect(en).toMatch(/^No authorized task contract exists\./);
+	expect(en).toMatch(/^No approved task plan exists yet\./);
 });
 
 it("stays English-only otherwise", () => {
 	delete process.env.DRONE_REPLY_LANGUAGE;
-	expect(blockedReason().reason).toMatch(/^No authorized task contract exists\./);
+	expect(blockedReason().reason).toMatch(/^No approved task plan exists yet\./);
 	process.env.DRONE_REPLY_LANGUAGE = "en";
 	expect(blockedReason().reason).not.toMatch(/[\u4e00-\u9fff]/);
 });

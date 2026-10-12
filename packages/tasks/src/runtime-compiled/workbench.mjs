@@ -820,7 +820,7 @@ function createTaskWorkbench({
         block: true,
         reason: bilingual(
           "\u8FD8\u6CA1\u6709\u83B7\u6279\u7684\u4EFB\u52A1\u65B9\u6848\uFF1AAgent \u9700\u5148\u505A\u53EA\u8BFB\u51C6\u5907\uFF0C\u518D\u7528 task_plan \u63D0\u4EA4\u76EE\u6807\u3001\u8303\u56F4\u3001\u5199\u5165\u76EE\u5F55\u548C\u4EA4\u4ED8\u7269\uFF0C\u7531\u4F60\u5728\u5F39\u7A97\u4E2D\u6279\u51C6\uFF1B\u6279\u51C6\u524D\u547D\u4EE4\u548C\u5199\u5165\u90FD\u4F1A\u88AB\u62E6\u622A\u3002",
-          "No authorized task contract exists. Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables; the host opens ask_user for that exact contract. Commands and writes stay blocked until it is approved."
+          "No approved task plan exists yet. First prepare the inputs without side effects, then call task_plan once with the goal, scope, write directories and deliverables; the application will ask you to approve that plan. Commands and writes stay blocked until approval."
         )
       };
     }
@@ -835,7 +835,7 @@ function createTaskWorkbench({
       save();
       return {
         block: true,
-        reason: "Do read-only preparation, then call task_plan once with the goal, scope, write directories and deliverables. The host opens ask_user for that exact task contract; the card alone never authorizes it. Do not start commands/writes or ask for separate stage approvals."
+        reason: "First prepare the inputs without side effects, then call task_plan once with the goal, scope, write directories and deliverables. The application will ask you to approve that plan; the card alone never authorizes execution. Do not start commands or writes, and do not ask for separate stage approvals."
       };
     }
     if (t.budget.calls >= LIMITS.totalCalls || t.budget.stageCalls >= LIMITS.stageCalls) {

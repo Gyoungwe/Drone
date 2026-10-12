@@ -367,7 +367,7 @@ export function checkComputeAuthorization(
 		return {
 			allowed: false,
 			code: "missing_authorization",
-			detail: "Compute is not part of the approved task contract.",
+			detail: "Compute is outside the approved task scope.",
 		};
 	if (
 		!Number.isFinite(request.wallMinutes) ||

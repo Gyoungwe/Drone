@@ -119,7 +119,7 @@ describe("persisted history publication boundary", () => {
 		makeBackend();
 		const messages = await peek(path);
 		expect(JSON.stringify(messages)).not.toContain("HISTORY_DRAFT");
-		expect(JSON.stringify(messages)).toContain("发布检查未加载");
+		expect(JSON.stringify(messages)).toContain("回答检查未完成");
 	});
 
 	it.each(paths)("%s peek fails closed when the runtime projector throws", async (path) => {
@@ -131,6 +131,6 @@ describe("persisted history publication boundary", () => {
 		};
 		const messages = await peek(path);
 		expect(JSON.stringify(messages)).not.toMatch(/HISTORY_DRAFT|PROJECTOR_PRIVATE_ERROR/);
-		expect(JSON.stringify(messages)).toContain("发布检查未加载");
+		expect(JSON.stringify(messages)).toContain("回答检查未完成");
 	});
 });

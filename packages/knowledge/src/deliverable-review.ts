@@ -228,7 +228,7 @@ function reviewRules(snapshot: DeliverableReviewSnapshot): DeliverableReviewFind
 				severity: "high",
 				location: locationFor(body, offset),
 				detail: `正文数字 ${bounded(token, 80)} 找不到交付物数值或带读回执的来源。`,
-				suggestion: "补充对应产物数值或实际读取来源的回执，再保留该数字。",
+				suggestion: "补充对应结果数值或实际读取来源的记录，再保留该数字。",
 			},
 			token,
 		);
@@ -281,8 +281,8 @@ function reviewRules(snapshot: DeliverableReviewSnapshot): DeliverableReviewFind
 				code: "citation-without-receipt",
 				severity: "medium",
 				location: locationFor(body, offset >= 0 ? offset : 0, path),
-				detail: `引用 ${bounded(path, 240)} 没有对应的读回执。`,
-				suggestion: "先读取来源并保留当前内容哈希与回执，再引用该来源。",
+				detail: `引用 ${bounded(path, 240)} 没有对应的读取记录。`,
+				suggestion: "先读取来源并保留当前内容校验信息，再引用该来源。",
 			},
 			path,
 		);

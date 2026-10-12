@@ -7,11 +7,25 @@ import {
 } from "@drone/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
-import { useT } from "../../i18n";
+import { useI18nStore, useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import { DefaultMilestoneEvidence, MilestoneEvidence } from "./MilestoneEvidence";
 import { TaskArtifactLinks } from "./TaskArtifactLinks";
+
+function operationStateLabel(state: string, zh: boolean): string {
+	const labels: Record<string, [string, string]> = {
+		queued: ["排队中", "queued"],
+		running: ["处理中", "running"],
+		done: ["已完成", "completed"],
+		completed: ["已完成", "completed"],
+		error: ["未完成", "needs attention"],
+		failed: ["未完成", "needs attention"],
+		blocked: ["需要处理", "needs attention"],
+	};
+	const pair = labels[state];
+	return pair ? pair[zh ? 0 : 1] : state;
+}
 
 /**
  * 任务卡：一份 TaskView 里的单个任务（目标 / 交付状态 / 验收进度 / 继续做剩下的 / 产物链接 / 验收项 / 操作记录）。
@@ -32,6 +46,7 @@ export function TaskRow({
 	agentActive: boolean;
 }) {
 	const t = useT();
+	const zh = useI18nStore((store) => store.language) === "zh";
 	const [busy, setBusy] = useState(false),
 		[error, setError] = useState("");
 	const done = task.milestones.filter((m) => m.state === "completed").length;
@@ -150,7 +165,7 @@ export function TaskRow({
 					<ul className="mt-1 space-y-0.5">
 						{task.operations.slice(-12).map((o) => (
 							<li key={o.id} className="truncate text-[11px] text-ink-dim">
-								<code>{o.tool}</code> · {o.state}
+								<code>{o.tool}</code> · {operationStateLabel(o.state, zh)}
 							</li>
 						))}
 					</ul>

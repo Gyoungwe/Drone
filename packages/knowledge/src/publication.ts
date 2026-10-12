@@ -234,7 +234,7 @@ export function registerAnswerPublication(
 		const task = getTaskRuntime?.();
 		if (task?.snapshot()) task.pause(info.code);
 		const report = task?.snapshot()
-			? `${task.render()}\n\n研究说明尚未发布：${info.message}`
+			? `${task.render()}\n\n研究说明暂未展示：${info.message}`
 			: getTaskFeedback?.()?.report(info.code, info.message, info.paths);
 		return blocked(
 			message,
@@ -375,7 +375,7 @@ export function registerAnswerPublication(
 								"知识库初始化已完成。",
 								`当前知识库：${done.vault}`,
 								`作用范围：整个 Drone；当前项目：${done.project || "尚未创建项目分区"}。`,
-								`结构：${done.profile}；沉淀策略：${done.depositMode}；子智能体访问：${done.subagentMcpPolicy}。`,
+								"知识库已按当前设置启用；协作者只会访问本次任务允许的资料。",
 								"已保存绑定并创建缺失的导航和模板，未搬迁或删除已有笔记。",
 								"这只是初始化完成，不代表论文已经下载、知识已经整理或原始 MCP 已连接。",
 								"接下来可以要求检索或下载资料；论文应交付主要观点与方法，软件应交付版本对应的命令、参数与示例。",
@@ -398,7 +398,7 @@ export function registerAnswerPublication(
 			return {
 				message: seal(
 					message,
-					[{ type: "text", text: "【子智能体待核验材料】以下不是主会话已核验的最终结论。\n\n" }, ...content],
+					[{ type: "text", text: "【尚未核实的补充材料】以下内容不是主会话已确认的最终结论。\n\n" }, ...content],
 					{ status: "evidence-only", turnId, scientificallyVerified: false },
 				),
 			};
@@ -489,7 +489,7 @@ export function registerAnswerPublication(
 					? [
 							{
 								type: "text",
-								text: "【知识库检索无命中】本轮查询未找到匹配条目；下文不是基于本库证据的结论，也不表示全库不存在相关知识。\n\n",
+								text: "【知识库没有找到匹配内容】本轮查询未找到匹配条目；下文不是基于本库证据的结论，也不表示全库不存在相关知识。\n\n",
 							},
 							...publishContent,
 						]

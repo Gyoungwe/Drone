@@ -154,7 +154,7 @@ it("child material is labeled instead of certified as a parent answer", async ()
 		}, true),
 		result = await h.end(message("Child observation"));
 	expect(result.message.knowledgePublication.status).toBe("evidence-only");
-	expect(result.message.content[0].text).toContain("子智能体待核验材料");
+	expect(result.message.content[0].text).toContain("尚未核实的补充材料");
 	expect(h.called).not.toHaveBeenCalled();
 });
 it("a tampered finalized body loses its host proof", async () => {

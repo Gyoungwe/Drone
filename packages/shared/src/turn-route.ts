@@ -215,7 +215,7 @@ function intakeLine(route: TurnRoute, lang: "zh" | "en"): string {
 		if (route.intake === "task-command")
 			return `${said} is a task command, so this turn does not pick a new workflow.`;
 		if (route.intake === "read-only")
-			return `${said} is read-only reuse of literature already on hand. No new task contract is opened.`;
+			return `${said} is read-only reuse of literature already on hand. No new task is opened.`;
 		if (route.intake === "status")
 			return `${said} asks for status. The checkpoint stays, and this is not a new topic.`;
 		if (route.intake === "continuation")
@@ -225,7 +225,7 @@ function intakeLine(route: TurnRoute, lang: "zh" | "en"): string {
 		return `${said} is a new topic.`;
 	}
 	if (route.intake === "task-command") return `${said}是任务指令，这一轮不另选工作流。`;
-	if (route.intake === "read-only") return `${said}是只读复用已有文献，不开新的任务契约。`;
+	if (route.intake === "read-only") return `${said}是只读复用已有文献，不会新建任务。`;
 	if (route.intake === "status") return `${said}是在问进度。检查点留着，这不是新话题。`;
 	if (route.intake === "continuation")
 		return route.keptCheckpoint ? `${said}接着做还没结束的任务，沿用检查点。` : `${said}是接续。`;
@@ -283,7 +283,33 @@ function landingLine(route: TurnRoute, lang: "zh" | "en"): string {
 		return lang === "zh"
 			? "没有进入研究工作流，按普通对话回答。"
 			: "No research workflow was entered. This is an ordinary reply.";
-	return lang === "zh" ? "这一轮停在宿主门上。" : "This turn stops at a host gate.";
+	return lang === "zh" ? "这一轮需要先处理一项请求。" : "This turn needs attention before it can continue.";
+}
+
+function routeReason(reason: string, lang: "zh" | "en"): string {
+	const labels = {
+		"stage-budget": {
+			zh: "本阶段暂告一段落，当前结果已保留",
+			en: "This stage is paused; current results are kept",
+		},
+		"total-budget": { zh: "已达到本次任务的执行上限", en: "The execution limit for this task was reached" },
+		"reconcile-before-retry": {
+			zh: "先核对上一次操作结果",
+			en: "Check the previous operation before retrying",
+		},
+		"task-authorization-required": {
+			zh: "等待你确认任务范围",
+			en: "Waiting for you to confirm the task scope",
+		},
+		"task-selection-required": {
+			zh: "等待你选择要继续的任务",
+			en: "Waiting for you to choose a task to continue",
+		},
+	};
+	return (
+		labels[reason as keyof typeof labels]?.[lang] ??
+		(lang === "zh" ? "需要先处理一项请求" : "A request needs attention first")
+	);
 }
 
 function hostLines(route: TurnRoute, lang: "zh" | "en"): string[] {
@@ -316,11 +342,11 @@ function hostLines(route: TurnRoute, lang: "zh" | "en"): string[] {
 		} else if (host.pendingReview) {
 			lines.push("A review is still waiting. This is not “continue”, so the stage quota stays.");
 		} else if (host.stageLimited && host.reason === "stage-budget") {
-			lines.push("The host is stopped at this stage's step limit.");
+			lines.push("This stage is paused after reaching its processing limit.");
 		}
 		if (host.reason)
 			lines.push(
-				`Host record: reason ${host.reason}, this stage ${host.stageCalls} calls, progress ${host.progressCount} from ${host.stageStartProgress}.`,
+				`Application record: ${routeReason(host.reason, lang)}; ${host.stageCalls} operations in this stage, progress ${host.progressCount} from ${host.stageStartProgress}.`,
 			);
 		return lines;
 	}
@@ -345,11 +371,11 @@ function hostLines(route: TurnRoute, lang: "zh" | "en"): string[] {
 	} else if (host.pendingReview) {
 		lines.push("审阅还挂着。这句不是「继续」，阶段配额不会放开。");
 	} else if (host.stageLimited && host.reason === "stage-budget") {
-		lines.push("宿主停在这一段的步数上限。");
+		lines.push("这一阶段已达到处理次数上限，当前结果已保留。");
 	}
 	if (host.reason)
 		lines.push(
-			`宿主记录：原因 ${host.reason}，这一段 ${host.stageCalls} 步，进展 ${host.progressCount}，起点 ${host.stageStartProgress}。`,
+			`应用记录：${routeReason(host.reason, lang)}；这一段已处理 ${host.stageCalls} 次，进展 ${host.progressCount}，起点 ${host.stageStartProgress}。`,
 		);
 	return lines;
 }
@@ -363,8 +389,8 @@ function summaryOf(route: TurnRoute, lang: "zh" | "en"): string {
 			if (route.host?.pendingReview)
 				return "Checkpoint kept. The review is still waiting, so the stage quota stays.";
 			return route.host?.reason
-				? `Stopped at the host gate (${route.host.reason}).`
-				: "Stopped at the host gate.";
+				? `Needs attention (${route.host.reason}).`
+				: "Needs attention before continuing.";
 		}
 		if (route.landing === "workflow" && route.primary)
 			return stage ? `Enters ${stage} via ${route.primary}.` : `Follows ${route.primary}.`;
@@ -375,7 +401,7 @@ function summaryOf(route: TurnRoute, lang: "zh" | "en"): string {
 		if (route.deferPhrase && (route.host?.pendingReview || route.host?.deferredReviews))
 			return "沿用检查点。审阅先放下，阶段步数看这一段有没有进展。";
 		if (route.host?.pendingReview) return "沿用检查点。审阅还在，阶段配额不放开。";
-		return route.host?.reason ? `停在宿主门（${route.host.reason}）。` : "停在宿主门。";
+		return route.host?.reason ? `需要先处理：${route.host.reason}。` : "需要先处理一项请求。";
 	}
 	if (route.landing === "workflow" && route.primary)
 		return stage ? `进入${stage}，主技能 ${route.primary}。` : `按 ${route.primary} 回答。`;
@@ -490,8 +516,8 @@ export function turnRouteSteps(route: TurnRoute, lang: "zh" | "en" = "zh"): Turn
 			? "warn"
 			: "ok";
 	const resultValue: Record<TurnLanding, string> = zh
-		? { workflow: "按技能回答", "host-gate": "宿主门", ordinary: "普通回答", library: "只读复用" }
-		: { workflow: "Skill reply", "host-gate": "Host gate", ordinary: "Ordinary", library: "Read-only" };
+		? { workflow: "按技能回答", "host-gate": "需要处理", ordinary: "普通回答", library: "只读复用" }
+		: { workflow: "Skill reply", "host-gate": "Needs attention", ordinary: "Ordinary", library: "Read-only" };
 	return [
 		{
 			key: "request",
