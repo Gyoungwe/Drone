@@ -64,6 +64,7 @@ export const en: Messages = {
 		},
 	},
 	firstRun: {
+		configured: "Configured",
 		startTitle: "Choose how to begin",
 		startSubtitle:
 			"Try a complete example first, or configure only the connection you need for your own work.",
@@ -660,6 +661,7 @@ export const en: Messages = {
 		viewRun: "View this run",
 	},
 	trust: {
+		eyebrow: "Security check",
 		title: "Trust this project folder?",
 		message:
 			"This project contains .pi config or .agents/skills. Trusting loads project settings, prompts and executes project extensions. Only trust folders you know.",
