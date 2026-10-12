@@ -4,7 +4,8 @@ import { basename, join } from "node:path";
 import { type DiagnosticsServicePort, setReplyLanguage } from "@drone/backend";
 import type { HostFileAction, SavedTabs, UiState } from "@drone/shared";
 import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
-import { app, BrowserWindow, clipboard, dialog, nativeTheme, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, nativeImage, nativeTheme, shell } from "electron";
+import { applyAttentionBadge } from "../attention-badge";
 import { pickBackgroundImage } from "../background";
 import { ensureDailyDir } from "../daily";
 import { electronDesktopHost } from "../desktop-host";
@@ -98,6 +99,18 @@ export function registerAppIpc(
 				return;
 			}
 			await shell.openPath(resolveResourcePath(target, cwd));
+		},
+		setAttentionBadge: async (count, overlay) => {
+			applyAttentionBadge(
+				{
+					platform: process.platform,
+					setBadgeCount: (n) => app.setBadgeCount(n),
+					window: BrowserWindow.getAllWindows()[0] ?? null,
+					imageFromDataUrl: (url) => nativeImage.createFromDataURL(url),
+				},
+				count,
+				overlay,
+			);
 		},
 		pickDownloadDir: async () => {
 			const window = BrowserWindow.getAllWindows()[0];
@@ -206,6 +219,7 @@ export function registerAppIpc(
 				fileAction: IpcChannels.FileAction,
 				hostEnvironment: IpcChannels.HostEnvironment,
 				pickDownloadDir: IpcChannels.DownloadDirPick,
+				setAttentionBadge: IpcChannels.AttentionBadgeSet,
 				loadTabs: IpcChannels.TabsLoad,
 				saveTabs: IpcChannels.TabsSave,
 				loadUiState: IpcChannels.UiStateLoad,

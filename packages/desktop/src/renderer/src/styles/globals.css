@@ -2786,7 +2786,7 @@ code {
 	-webkit-background-clip: text;
 	background-clip: text;
 	color: transparent;
-	animation: shimmer 2s linear infinite;
+	animation: shimmer 2.4s linear infinite;
 }
 .hover-highlight {
 	transition: background-color var(--duration-fast) var(--ease-standard);
@@ -2946,4 +2946,35 @@ code {
 	border: 1px solid var(--color-border);
 	border-radius: 6px;
 	padding: 1px 8px;
+}
+
+/* P14 运行状态条 */
+.run-status {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	max-width: 760px;
+	margin: 0 auto;
+	padding: 2px 16px 6px;
+	font-size: 12px;
+	color: var(--color-ink-dim);
+}
+.run-status-main {
+	color: var(--color-ink-2);
+}
+.run-status-tag {
+	font-size: 11px;
+	color: var(--color-ink-faint);
+}
+.run-status-plan {
+	margin-left: auto;
+	border: 1px solid var(--color-border);
+	border-radius: 999px;
+	padding: 1px 10px;
+	font-size: 11px;
+	color: var(--color-ink-2);
+	background: var(--color-surface);
+}
+.run-status--awaitinginput .run-status-main {
+	color: var(--color-warn);
 }

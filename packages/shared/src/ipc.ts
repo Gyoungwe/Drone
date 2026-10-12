@@ -249,6 +249,7 @@ export const IpcChannels = {
 	FileAction: "file:action",
 	HostEnvironment: "host:environment",
 	DownloadDirPick: "download-dir:pick",
+	AttentionBadgeSet: "attention-badge:set",
 	FileHtmlPreviewUrl: "file:htmlPreviewUrl",
 	FigureAnnotationsGet: "figure:annotationsGet",
 	FigureAnnotationsSave: "figure:annotationsSave",
@@ -442,6 +443,8 @@ export interface PiApi
 	hostEnvironment(): Promise<HostEnvironment>;
 	/** 选择下载目录（P11）；取消返回 null */
 	pickDownloadDir(): Promise<string | null>;
+	/** 待答数角标（P14）：dock / 任务栏；Windows 用 overlay icon */
+	setAttentionBadge(count: number, overlayDataUrl: string | null): Promise<void>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
 	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
 	getMcpStatus(cwd?: string): Promise<McpStatus>;

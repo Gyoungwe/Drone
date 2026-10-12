@@ -4,6 +4,7 @@ import { getPi } from "./api";
 import { EmptyState } from "./components/chat/EmptyState";
 import { InlineAskCard } from "./components/chat/InlineAskCard";
 import { MessageList } from "./components/chat/MessageList";
+import { RunStatusStrip } from "./components/composer/RunStatusStrip";
 import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
 import { KnowledgeView } from "./components/knowledge/KnowledgeView";
 import { ContextPanel } from "./components/panel/ContextPanel";
@@ -19,6 +20,7 @@ import { ExampleTaskDialog } from "./components/tasks/ExampleTaskDialog";
 import { ContextMenuHost } from "./components/ui/ContextMenu";
 import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
 import { useDesktopCommands } from "./hooks/use-desktop-commands";
+import { useAttentionBadge, useAutoPreviewWrites } from "./hooks/use-run-attention";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
 import { useT } from "./i18n";
 import { notifyCompletion } from "./lib/completion-notify";
@@ -74,6 +76,9 @@ export default function App() {
 	const askReceivedAt = useRef(new Map<string, number>());
 	// P9：简单问询进对话流内联卡，复杂题（方案投影 / 授权 / 预览选项）仍走 AskDialog 抽屉
 	const inlineAsk = askRequests.find((r) => r.sessionId === activeSessionId && isInlineAsk(r));
+	const sessionAsks = askRequests.filter((r) => r.sessionId === activeSessionId).length;
+	useAttentionBadge(askRequests.length);
+	useAutoPreviewWrites();
 	const drawerAsks = useMemo(() => askRequests.filter((r) => !isInlineAsk(r)), [askRequests]);
 
 	// 事件桥：conflator 装配 + 事件/权限/信任订阅（回调稳定引用，桥只订阅一次不重挂）
@@ -175,6 +180,7 @@ export default function App() {
 										/>
 									</div>
 								)}
+								{!showEmpty && <RunStatusStrip sessionId={activeSessionId} pendingAsks={sessionAsks} />}
 								<ApprovalDock sessionId={activeSessionId} hideComposer={showEmpty} />
 							</div>
 							<ContextPanel />

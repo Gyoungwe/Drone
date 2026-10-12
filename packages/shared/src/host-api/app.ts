@@ -108,6 +108,11 @@ export const AppContract = defineDomain("app", {
 		},
 		/** 本机环境探测（P10）：固定只读命令 */
 		pickDownloadDir: { args: Type.Tuple([]), result: NullableString },
+		/** 待答数角标（P14）：count, Windows overlay 图（data URL）或 null */
+		setAttentionBadge: {
+			args: Type.Tuple([Type.Integer({ minimum: 0, maximum: 999 }), NullableString]),
+			result: Type.Void(),
+		},
 		hostEnvironment: {
 			args: Type.Tuple([]),
 			result: Type.Unsafe<HostEnvironment>(Type.Object({}, { additionalProperties: true })),
