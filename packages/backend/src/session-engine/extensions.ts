@@ -30,6 +30,7 @@ import { makeCapabilityLoadTool } from "../tools/capability-load";
 import { makeChannelWatchExtension } from "../tools/channel-watch";
 import { makeComputeRouteTool } from "../tools/compute-route";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
+import { makeDeliverFilesTool } from "../tools/deliver-files";
 import { bindToolManifestEvents } from "../tools/manifest";
 import { makeShowImageTool } from "../tools/show-image";
 import { makeSshHostsTool, makeSshTool, type SshHostEntry } from "../tools/ssh";
@@ -111,6 +112,7 @@ export function buildSessionCustomTools(
 	// submission remains behind the desktop approval and compute preflight gates.
 	tools.push(makeComputeRouteTool());
 	tools.push(makeShowImageTool());
+	tools.push(makeDeliverFilesTool());
 	tools.push(
 		makeSshTool({
 			confirm: (title, message) => gate.confirm(title, message, { kind: "command" }),

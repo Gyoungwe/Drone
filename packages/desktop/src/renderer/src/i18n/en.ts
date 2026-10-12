@@ -958,6 +958,10 @@ export const en: Messages = {
 		selectProject: "Pick project directory",
 		noGit: "No Git",
 	},
+	delivery: {
+		open: "Open",
+		title: "Deliverables",
+	},
 	notify: {
 		doneTitle: "Drone · Task finished",
 		doneBody: "Switch back to Drone to see the result",

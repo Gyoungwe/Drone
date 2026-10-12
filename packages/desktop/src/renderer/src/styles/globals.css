@@ -2870,3 +2870,80 @@ code {
 .context-usage--high .context-usage-foot > span {
 	color: var(--color-err);
 }
+
+/* P17 交付卡 */
+.delivery-cards {
+	display: flex;
+	gap: 8px;
+	overflow-x: auto;
+	padding: 4px 0 6px;
+}
+.context-pane .delivery-cards {
+	flex-direction: column;
+	overflow: visible;
+}
+.delivery-card {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 220px;
+	max-width: 320px;
+	text-align: left;
+	border: 1px solid var(--color-border);
+	border-radius: 12px;
+	padding: 8px 10px;
+	background: var(--color-surface);
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	transition: background-color var(--duration-fast, 150ms) var(--ease-standard, ease);
+}
+.context-pane .delivery-card {
+	max-width: none;
+	min-width: 0;
+}
+.delivery-card:hover {
+	background: var(--highlight, var(--color-hover));
+}
+.delivery-card-icon {
+	flex: none;
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	display: grid;
+	place-items: center;
+	font:
+		600 10px ui-monospace,
+		monospace;
+	background: var(--color-hover);
+	color: var(--color-ink-2);
+}
+.delivery-card-text {
+	min-width: 0;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+.delivery-card-title {
+	font-size: 13px;
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.delivery-card-desc {
+	font-size: 11px;
+	color: var(--color-ink-dim);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.delivery-card-open {
+	flex: none;
+	font-size: 11px;
+	color: var(--color-ink-dim);
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	padding: 1px 8px;
+}

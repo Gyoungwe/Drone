@@ -34,6 +34,7 @@ import { type SkillLike, skillAlwaysWith } from "./skill-frontmatter";
 
 const ALWAYS_ON = new Set([
 	"ask_user",
+	"deliver_files",
 	"set_status",
 	"todo",
 	"capability_load",

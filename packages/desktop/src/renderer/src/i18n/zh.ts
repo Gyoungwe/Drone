@@ -917,6 +917,10 @@ export const zh = {
 		selectProject: "选择项目目录",
 		noGit: "无 Git",
 	},
+	delivery: {
+		open: "打开",
+		title: "交付物",
+	},
 	notify: {
 		doneTitle: "Drone · 任务完成",
 		doneBody: "回到 Drone 查看结果",

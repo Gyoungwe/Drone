@@ -21,7 +21,7 @@ import { isRmSegment, isTemporaryPath, rmSegmentExempt } from "./tmp-zone";
 const log = createLogger("permission-gate");
 
 /** 观察类路径工具：越界默认放行（outside.read） */
-const READ_TOOLS = new Set(["read", "ls", "show_image"]);
+const READ_TOOLS = new Set(["read", "ls", "show_image", "deliver_files"]);
 /** 变更类路径工具：越界默认确认（outside.write） */
 const WRITE_TOOLS = new Set(["edit", "write"]);
 const PATH_TOOLS = new Set([...READ_TOOLS, ...WRITE_TOOLS]);
