@@ -12,6 +12,7 @@ export {
 	isAgentWorking,
 	isAwaitingFirstOutput,
 	type MetaItem,
+	pinTrailingErrorRow,
 } from "./chat-rows";
 export { messagesToUIMessages } from "./mapping";
 export {

@@ -2251,3 +2251,71 @@ code {
 		transform: none;
 	}
 }
+
+/* P8 一轮失败的琥珀色错误卡（报告 4.6 / 图 9）：琥珀描边 + 浅琥珀底 + 左警示图标 + 右「继续」 */
+.error-card {
+	margin: 6px 0;
+	border: 1px solid oklch(0.78 0.13 75 / 0.55);
+	background: oklch(0.96 0.04 85 / 0.6);
+	border-radius: 10px;
+	padding: 10px 12px;
+	font-size: 13px;
+}
+[data-theme="dark"] .error-card {
+	border-color: oklch(0.7 0.13 75 / 0.5);
+	background: oklch(0.32 0.05 75 / 0.35);
+}
+.error-card-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.error-card-icon {
+	color: oklch(0.68 0.15 70);
+	display: inline-flex;
+	flex: none;
+}
+.error-card-icon svg {
+	width: 16px;
+	height: 16px;
+}
+.error-card-text {
+	flex: 1;
+	min-width: 0;
+}
+.error-card-title {
+	font-weight: 600;
+	color: oklch(0.55 0.13 65);
+}
+[data-theme="dark"] .error-card-title {
+	color: oklch(0.82 0.13 80);
+}
+.error-card-sub {
+	color: var(--color-muted, #6b6b6b);
+	margin-top: 2px;
+}
+.error-card-continue {
+	flex: none;
+	border: 1px solid var(--color-border);
+	background: var(--color-surface);
+	border-radius: 8px;
+	padding: 4px 12px;
+	font-size: 13px;
+	cursor: pointer;
+}
+.error-card-continue:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+.error-card[data-continued] .error-card-title {
+	color: var(--color-muted, #6b6b6b);
+	font-weight: 500;
+}
+.error-card-details {
+	margin-top: 6px;
+}
+.error-card-details summary {
+	cursor: pointer;
+	list-style: none;
+	font-size: 12px;
+}

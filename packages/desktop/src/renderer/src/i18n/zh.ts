@@ -1270,9 +1270,15 @@ export const zh = {
 		},
 		action: {
 			retry: "重试",
+			continue: "继续",
 			compact: "压缩上下文",
 			openSettings: "打开设置",
 			copyDetail: "复制详情",
+		},
+		card: {
+			continueHint: "进度已保存，回复「继续」恢复运行",
+			resumed: "运行失败 · 已恢复运行",
+			noContinue: "此错误不能直接继续，请先压缩上下文或新建任务。",
 		},
 		copied: "已复制",
 		title: {

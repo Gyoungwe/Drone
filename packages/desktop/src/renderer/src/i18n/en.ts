@@ -1328,9 +1328,15 @@ export const en: Messages = {
 		},
 		action: {
 			retry: "Retry",
+			continue: "Continue",
 			compact: "Compact context",
 			openSettings: "Open settings",
 			copyDetail: "Copy detail",
+		},
+		card: {
+			continueHint: "Progress is saved. Reply “continue” to resume.",
+			resumed: "Run failed · resumed",
+			noContinue: "This error can't be continued; compact the context or start a new task.",
 		},
 		copied: "Copied",
 		title: {

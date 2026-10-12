@@ -364,5 +364,25 @@ export function buildChatRows(
 	if (changeByTurn || timingByTurn) {
 		if (hasFooterRow(userRowCount - 1)) pushTurnDiffRow(userRowCount - 1, transcript.agentActive);
 	}
-	return rows;
+	return pinTrailingErrorRow(rows);
+}
+
+/**
+ * 一轮失败的错误卡固定在列表末尾（P8）：错误卡之后若只有轮末附属行（计时 / diff / 折叠组），
+ * 把错误卡挪到最后；之后出现了新的用户消息或正文则保持原位（已被后续对话覆盖）。
+ */
+export function pinTrailingErrorRow(rows: ChatRow[]): ChatRow[] {
+	let index = -1;
+	for (let i = rows.length - 1; i >= 0; i--) {
+		const row = rows[i];
+		if (row?.kind === "message") {
+			if (row.message.kind === "error") index = i;
+			break;
+		}
+	}
+	if (index < 0 || index === rows.length - 1) return rows;
+	const next = rows.slice();
+	const [row] = next.splice(index, 1);
+	if (row) next.push(row);
+	return next;
 }
