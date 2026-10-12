@@ -466,7 +466,7 @@ async function decideWikiProposal(service, id, project, expectedHash, decision, 
             await verifySources(service, p);
             await review.checkCurrent?.();
             if (p.before === null) await link(temp, full);
-            else await rename(temp, full);
+            else await renameWithRetry(temp, full);
           } finally {
             await unlink(temp).catch((error) => {
               if (error.code !== "ENOENT") throw error;
@@ -582,6 +582,22 @@ async function undoWikiUpdate(service, project, id, expectedHash) {
     })
   );
 }
+var RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
+async function renameWithRetry(from, to, options = {}) {
+  const attempts = options.attempts ?? 6;
+  const delay = options.delayMs ?? 40;
+  const doRename = options.renameImpl ?? rename;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await doRename(from, to);
+      return;
+    } catch (error) {
+      const code = error?.code;
+      if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delay * attempt));
+    }
+  }
+}
 
 export {
   validateWikiSourcePaths,
@@ -592,5 +608,6 @@ export {
   decideWikiProposal,
   autoApplyWikiProposal,
   wikiHistory,
-  undoWikiUpdate
+  undoWikiUpdate,
+  renameWithRetry
 };

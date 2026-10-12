@@ -2,7 +2,7 @@
 import {
   decideWikiProposal,
   previewWikiProposal
-} from "./chunk-BFEXNQ42.mjs";
+} from "./chunk-4QHZ475S.mjs";
 import {
   specialistSettings
 } from "./chunk-XSFQUT2B.mjs";

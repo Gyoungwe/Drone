@@ -5,11 +5,12 @@ import {
   listWikiProposals,
   mergeWikiProposal,
   previewWikiProposal,
+  renameWithRetry,
   stageWikiProposal,
   undoWikiUpdate,
   validateWikiSourcePaths,
   wikiHistory
-} from "./chunks/chunk-BFEXNQ42.mjs";
+} from "./chunks/chunk-4QHZ475S.mjs";
 import "./chunks/chunk-6YLIZTKN.mjs";
 import "./chunks/chunk-6LT3KQRY.mjs";
 import "./chunks/chunk-H6MOV67K.mjs";
@@ -23,6 +24,7 @@ export {
   listWikiProposals,
   mergeWikiProposal,
   previewWikiProposal,
+  renameWithRetry,
   stageWikiProposal,
   undoWikiUpdate,
   validateWikiSourcePaths,

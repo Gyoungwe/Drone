@@ -5,7 +5,7 @@ import {
   previewWikiProposal,
   undoWikiUpdate,
   wikiHistory
-} from "./chunk-BFEXNQ42.mjs";
+} from "./chunk-4QHZ475S.mjs";
 import {
   setSpecialistSettings,
   specialistSettings
