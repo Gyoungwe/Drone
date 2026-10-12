@@ -75,16 +75,7 @@ export function WikiReviewDialog({
 		const node = box.current?.querySelector<HTMLElement>("button:not([disabled])");
 		node?.focus();
 	}, [preview, error]);
-	useEffect(() => {
-		const onKey = (event: KeyboardEvent) => {
-			if (event.key !== "Escape") return;
-			if (pending && preview) return;
-			event.preventDefault();
-			onLater();
-		};
-		document.addEventListener("keydown", onKey);
-		return () => document.removeEventListener("keydown", onKey);
-	}, [onLater, pending, preview]);
+	// Escape defers only when nothing is in flight: deferring mid-load or mid-decision raced the IPC result.
 	const lines = useMemo(() => knowledgeLineDiff(preview?.before || "", preview?.after || ""), [preview]);
 	const visible = lines.slice(0, 200);
 	async function decide(decision: "apply" | "reject") {
@@ -122,6 +113,7 @@ export function WikiReviewDialog({
 			tone="warn"
 			width="wide"
 			testId="wiki-review-dialog"
+			onEscape={pending ? undefined : onLater}
 		>
 			<div className="shrink-0 border-b border-border px-5 py-4">
 				<p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">

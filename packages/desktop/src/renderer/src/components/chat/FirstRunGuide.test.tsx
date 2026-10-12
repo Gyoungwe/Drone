@@ -26,3 +26,14 @@ it("stays quiet after the user has dismissed it", () => {
 	vi.stubGlobal("localStorage", { getItem: () => "1", setItem: vi.fn() });
 	expect(renderToStaticMarkup(createElement(FirstRunGuide))).toBe("");
 });
+
+it("still shows the guide when storage is unavailable", () => {
+	vi.stubGlobal("React", React);
+	vi.stubGlobal("localStorage", {
+		getItem: () => {
+			throw new Error("blocked");
+		},
+		setItem: vi.fn(),
+	});
+	expect(renderToStaticMarkup(createElement(FirstRunGuide))).toContain('data-testid="first-run-guide"');
+});

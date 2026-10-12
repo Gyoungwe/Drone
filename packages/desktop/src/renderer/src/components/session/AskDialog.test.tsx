@@ -88,3 +88,34 @@ it("renders the dynamic proposal projection without selecting its recommendation
 	expect(html).toContain("高风险，需单独授权");
 	expect(html).not.toContain('checked=""');
 });
+
+it("renders nothing when no ask is pending", () => {
+	expect(renderToStaticMarkup(createElement(AskDialog, { requests: [], onRespond: vi.fn() }))).toBe("");
+});
+
+it("uses the warn tone for authorization asks", () => {
+	const request: AskRequest = {
+		id: "auth",
+		sessionId: "s",
+		toolCallId: "t",
+		kind: "authorization",
+		questions: [
+			{
+				id: "q",
+				label: "授权",
+				prompt: "允许写入 Zotero？",
+				type: "single",
+				required: true,
+				options: [
+					{ value: "yes", label: "允许" },
+					{ value: "no", label: "拒绝" },
+				],
+			},
+		],
+	};
+	const html = renderToStaticMarkup(
+		createElement(AskDialog, { requests: [request, { ...request, id: "auth-2" }], onRespond: vi.fn() }),
+	);
+	expect(html).toContain('data-tone="warn"');
+	expect(html).toContain("ask.queued:1");
+});

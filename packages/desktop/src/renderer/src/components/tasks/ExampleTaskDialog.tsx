@@ -10,7 +10,7 @@ import {
 	WORKFLOW_DIRECTIONS,
 	workflowStage,
 } from "@drone/shared";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getPi } from "../../api";
 import { useSessionReadOnly } from "../../hooks/use-session-state";
 import { useI18nStore, useT } from "../../i18n";
@@ -85,14 +85,6 @@ export function ExampleTaskForm({
 	const stages = task.stages.map((id) => workflowStage(id)?.label[language] ?? id);
 	const milestones = activeExampleTaskMilestones(task, values);
 
-	useEffect(() => {
-		const onKey = (event: KeyboardEvent) => {
-			if (event.key === "Escape") close();
-		};
-		window.addEventListener("keydown", onKey);
-		return () => window.removeEventListener("keydown", onKey);
-	}, [close]);
-
 	const setValue = (key: string, value: string) => setValues((prev) => ({ ...prev, [key]: value }));
 
 	const pick = async (input: ExampleTaskInput, kind: "file" | "directory") => {
@@ -164,9 +156,7 @@ export function ExampleTaskForm({
 			ariaLabel={task.title[language]}
 			width="wide"
 			testId="example-task-dialog"
-			onBackdropMouseDown={(event) => {
-				if (event.target === event.currentTarget) close();
-			}}
+			onBackdropMouseDown={close}
 		>
 			<div className="flex min-h-0 flex-1 flex-col">
 				<header className="px-5 pt-4 pb-3">
