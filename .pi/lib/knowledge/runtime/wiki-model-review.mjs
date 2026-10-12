@@ -2,8 +2,8 @@
 import {
   lastWikiModelReview,
   reviewWikiWithModel
-} from "./chunks/chunk-4OBMDHIC.mjs";
-import "./chunks/chunk-BFEXNQ42.mjs";
+} from "./chunks/chunk-XMIU2T7G.mjs";
+import "./chunks/chunk-4QHZ475S.mjs";
 import "./chunks/chunk-XSFQUT2B.mjs";
 import "./chunks/chunk-6YLIZTKN.mjs";
 import "./chunks/chunk-6LT3KQRY.mjs";

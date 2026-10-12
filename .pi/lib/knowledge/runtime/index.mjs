@@ -2,7 +2,7 @@
 import {
   lastWikiModelReview,
   reviewWikiWithModel
-} from "./chunks/chunk-4OBMDHIC.mjs";
+} from "./chunks/chunk-XMIU2T7G.mjs";
 import {
   MANAGED_END,
   MANAGED_START,
@@ -66,7 +66,7 @@ import {
   saveKnowledgeSemanticSettings,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-K2CQGWYS.mjs";
+} from "./chunks/chunk-L7EIB524.mjs";
 import {
   autoApplyWikiProposal,
   decideWikiProposal,
@@ -77,7 +77,7 @@ import {
   undoWikiUpdate,
   validateWikiSourcePaths as validateWikiSourcePaths2,
   wikiHistory
-} from "./chunks/chunk-BFEXNQ42.mjs";
+} from "./chunks/chunk-4QHZ475S.mjs";
 import {
   SPECIALIST_LIMITS,
   contextSessionId,

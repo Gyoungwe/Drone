@@ -504,7 +504,7 @@ export async function decideWikiProposal(
 						await verifySources(service, p);
 						await review.checkCurrent?.();
 						if (p.before === null) await link(temp, full);
-						else await rename(temp, full);
+						else await renameWithRetry(temp, full);
 					} finally {
 						await unlink(temp).catch((error) => {
 							if (error.code !== "ENOENT") throw error;
@@ -632,3 +632,29 @@ export async function undoWikiUpdate(service, project, id, expectedHash) {
 		}),
 	);
 }
+
+const RENAME_RETRY_CODES = new Set(["EPERM", "EACCES", "EBUSY"]);
+/**
+ * Windows briefly locks a freshly written target (Defender, Search indexer, the vault watcher), and
+ * MoveFileEx then fails with EPERM/EACCES/EBUSY. Retry a few times with backoff before giving up.
+ */
+export async function renameWithRetry(
+	from: string,
+	to: string,
+	options: { attempts?: number; delayMs?: number; renameImpl?: (a: string, b: string) => Promise<void> } = {},
+): Promise<void> {
+	const attempts = options.attempts ?? 6;
+	const delay = options.delayMs ?? 40;
+	const doRename = options.renameImpl ?? rename;
+	for (let attempt = 1; ; attempt++) {
+		try {
+			await doRename(from, to);
+			return;
+		} catch (error) {
+			const code = (error as NodeJS.ErrnoException)?.code;
+			if (!code || !RENAME_RETRY_CODES.has(code) || attempt >= attempts) throw error;
+			await new Promise((resolve) => setTimeout(resolve, delay * attempt));
+		}
+	}
+}
+
