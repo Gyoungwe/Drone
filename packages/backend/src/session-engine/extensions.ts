@@ -12,12 +12,14 @@ import { makeCapabilityExtension } from "../capabilities/extension";
 import type { CapabilityRuntime } from "../capabilities/runtime";
 import { makeKnowledgeSpecialistBridge } from "../knowledge/specialist-bridge";
 import { createLogger } from "../log";
+import type { MemoryStore } from "../memory/store";
 import {
 	makePermissionGateExtension,
 	type PermissionConfirm,
 	type PermissionModeRef,
 } from "../permissions/extension";
 import type { PermissionGate } from "../permissions/gate";
+import { canonicalProjectId } from "../project-id";
 import type { AskGate } from "../session/ask-gate";
 import type { SessionTraces } from "../session/traces";
 import { bindAcceptanceVerifierEvents } from "../tasks/acceptance";
@@ -43,6 +45,7 @@ import { makeCloudflareAskExtension } from "./cloudflare-ask";
 import { makeHarnessContextExtension } from "./harness/context";
 import { makeHarnessDeliveryExtension } from "./harness/delivery";
 import { makeHarnessGuardExtension } from "./harness/guards";
+import { makeMemoryExtension } from "./harness/memory";
 import { makeHarnessRecallTool } from "./harness/recall";
 import { makeTurnContextExtension } from "./harness/turn-context";
 
@@ -90,6 +93,8 @@ export interface SessionExtensionDependencies {
 	setMcpStatus: (cwd: string, status: McpStatus) => void;
 	/** 已登记的远程主机（设置 › 高级 › SSH 主机）；缺省则 ssh 只认 ~/.ssh/config 与直接主机名 */
 	listSshHosts?: () => Promise<SshHostEntry[]>;
+	/** 观察记忆库（随 recall 单元启用）；缺省不捕获、不注入。 */
+	memory?: MemoryStore;
 	/** Successful agent-made decisions emitted by first-party task/literature extensions. */
 	onDecision?: (sessionId: string, event: unknown) => void;
 }
@@ -255,6 +260,8 @@ export function buildSessionExtensionFactories(
 			},
 		}),
 	);
+	if (harness.recall && deps.memory)
+		factories.push(makeMemoryExtension({ store: deps.memory, projectId: canonicalProjectId(cwd) }));
 	factories.push(makeChannelWatchExtension({ agentDir: getAgentDir(), cwd }));
 	factories.push(makeTodoReminderExtension());
 	factories.push(makeBioExtension());

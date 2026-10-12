@@ -59,6 +59,8 @@ const _log = createLogger("backend");
 export interface SessionServiceOptions {
 	/** 已登记的远程主机目录（由组合根接到计算主机登记表），供 ssh / ssh_hosts 工具使用 */
 	listSshHosts?: () => Promise<import("./tools/ssh").SshHostEntry[]>;
+	/** 观察记忆库；缺省不捕获、不注入。 */
+	memory?: import("./memory/store").MemoryStore;
 	/** 默认工作目录（createSession 未指定时使用） */
 	defaultCwd?: string;
 	/** 每会话工具白名单；缺省用 pi 默认（read/bash/edit/write） */
@@ -281,6 +283,7 @@ export class SessionService extends SessionServiceApi {
 			// Registers ssh_hosts and lets ssh/bio tools resolve registered host names; the ssh tool's
 			// prompt guideline tells the model to call ssh_hosts, so it must be present whenever the host has a registry.
 			...(this.options.listSshHosts ? { listSshHosts: this.options.listSshHosts } : {}),
+			...(this.options.memory ? { memory: this.options.memory } : {}),
 			onDecision: (sessionId, event) => {
 				for (const handler of this.decisionHandlers) {
 					try {

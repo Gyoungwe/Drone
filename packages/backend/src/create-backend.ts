@@ -9,6 +9,7 @@ import type {
 	DroneRuntime,
 	LoginEventPayload,
 	McpStatus,
+	MemoryProjectStatus,
 	PermissionAnswer,
 	PermissionMode,
 	PermissionRequest,
@@ -29,6 +30,7 @@ import {
 import { JsonStore } from "./json-store";
 import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
+import { MemoryStore } from "./memory/store";
 import { canonicalProjectId } from "./project-id";
 import { createDroneRuntime } from "./runtime";
 import { AnalysisEvidenceService, type EvidenceReplayRunner } from "./services/analysis-evidence";
@@ -128,6 +130,12 @@ export interface SessionServicePort extends Omit<SessionsApi, "replySubagentSupe
 	checkSessionWritable(sessionId: string): "ok" | "not_found" | "read_only";
 }
 
+export interface MemoryServicePort {
+	getStatus(cwd: string): MemoryProjectStatus;
+	setEnabled(cwd: string, enabled: boolean): MemoryProjectStatus;
+	clear(cwd: string): MemoryProjectStatus;
+}
+
 export interface BackendServices {
 	/** Per-host runtime container; extension bridges must not use process globals. */
 	runtime: DroneRuntime;
@@ -169,6 +177,8 @@ export interface BackendServices {
 	projectTrust: ProjectTrustService;
 	/** Long-running remote compute jobs, persisted independently from sessions. */
 	compute: ComputeServicePort;
+	/** 观察记忆：按项目目录读状态、开关、清空。 */
+	memory: MemoryServicePort;
 	/** Optional project research-state ledger; disabled unless inquiryDir is configured. */
 	inquiry: InquiryServicePort;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
@@ -240,8 +250,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	void applyStoredZoteroLocalKey();
 	// The compute host registry is created after sessions; ssh tools read it lazily at execute time.
 	let listComputeHosts: (() => Promise<ComputeHost[]>) | null = null;
+	const memory = new MemoryStore(join(getAgentDir(), "memory", "memory.db"));
+	runtime.registerDisposable?.({ dispose: () => memory.close() });
 	const sessions = new SessionService({
 		...options,
+		memory,
 		runtime,
 		permissions,
 		inquiryDir: options.inquiryDir,
@@ -478,6 +491,17 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		subagents: sessions.subagents,
 		projectTrust: sessions.projectTrust,
 		compute,
+		memory: {
+			getStatus: (cwd) => memory.status(canonicalProjectId(cwd)),
+			setEnabled: (cwd, enabled) => {
+				memory.setEnabled(canonicalProjectId(cwd), enabled);
+				return memory.status(canonicalProjectId(cwd));
+			},
+			clear: (cwd) => {
+				memory.clear(canonicalProjectId(cwd));
+				return memory.status(canonicalProjectId(cwd));
+			},
+		},
 		computeAdapter,
 		inquiry,
 		discovery,

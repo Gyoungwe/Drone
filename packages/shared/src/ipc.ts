@@ -9,6 +9,7 @@ import type { DiscoveryApi } from "./host-api/discovery";
 import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
 import type { LanStatus } from "./host-api/lan";
+import type { MemoryProjectStatus } from "./host-api/memory";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
@@ -292,6 +293,9 @@ export const IpcChannels = {
 	LanSetEnabled: "lan:setEnabled",
 	/** 局域网远程控制二级开关（M2；默认关闭，开观察 ≠ 开控制）。 */
 	LanSetRemoteControl: "lan:setRemoteControl",
+	MemoryGetStatus: "memory:getStatus",
+	MemorySetEnabled: "memory:setEnabled",
+	MemoryClear: "memory:clear",
 	AskRequest: "ask:request",
 	AskRespond: "ask:respond",
 	PermissionRespond: "permission:respond",
@@ -523,6 +527,12 @@ export interface PiApi
 	lanSetEnabled(enabled: boolean): Promise<LanStatus>;
 	/** 设置远程控制开关（独立于观察开关；未开观察时允许配置但不生效）。 */
 	lanSetRemoteControl(enabled: boolean): Promise<LanStatus>;
+	/** 读取项目（cwd）观察记忆状态。 */
+	memoryGetStatus(cwd: string): Promise<MemoryProjectStatus>;
+	/** 开关项目观察记忆的捕获与注入。 */
+	memorySetEnabled(cwd: string, enabled: boolean): Promise<MemoryProjectStatus>;
+	/** 清空项目观察记忆。 */
+	memoryClear(cwd: string): Promise<MemoryProjectStatus>;
 	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
 	onAskRequest(cb: (req: AskRequest) => void): () => void;
 	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;
