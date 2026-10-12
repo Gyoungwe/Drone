@@ -91,6 +91,20 @@ export const AppContract = defineDomain("app", {
 			args: Type.Union([Type.Tuple([Type.String()]), Type.Tuple([Type.String(), Type.String()])]),
 			result: Type.Void(),
 		},
+		/** 文件右键菜单的宿主动作（P7）：action, target, cwd, arg（rename 的新文件名） */
+		fileAction: {
+			args: Type.Tuple([
+				Type.Union(
+					["download", "openDefault", "reveal", "openInEditor", "cut", "copy", "rename", "trash"].map((a) =>
+						Type.Literal(a),
+					),
+				),
+				Type.String({ minLength: 1 }),
+				NullableString,
+				NullableString,
+			]),
+			result: NullableString,
+		},
 		loadTabs: { args: Type.Tuple([]), result: Type.Union([SavedTabsSchema, Type.Null()]) },
 		saveTabs: { args: Type.Tuple([SavedTabsSchema]), result: Type.Void() },
 		loadUiState: { args: Type.Tuple([]), result: Type.Union([UiStateSchema, Type.Null()]) },

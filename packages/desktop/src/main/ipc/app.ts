@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import { copyFile, mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { type DiagnosticsServicePort, setReplyLanguage } from "@drone/backend";
-import type { SavedTabs, UiState } from "@drone/shared";
+import type { HostFileAction, SavedTabs, UiState } from "@drone/shared";
 import { AppContract, IpcChannels, isLocalResourceTarget } from "@drone/shared";
-import { app, BrowserWindow, dialog, nativeTheme, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, nativeTheme, shell } from "electron";
 import { pickBackgroundImage } from "../background";
 import { ensureDailyDir } from "../daily";
 import { getFigureAnnotations, saveFigureAnnotations } from "../figure-annotations";
+import { runFileAction } from "../file-actions";
 import { previewLocalFile, resolveResourcePath } from "../file-preview";
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
 import { issueHtmlPreviewUrl } from "../html-preview-protocol";
@@ -95,6 +96,33 @@ export function registerAppIpc(
 			}
 			await shell.openPath(resolveResourcePath(target, cwd));
 		},
+		fileAction: (action, target, cwd, arg) =>
+			runFileAction(
+				{
+					platform: process.platform,
+					showItemInFolder: (path) => shell.showItemInFolder(path),
+					openPath: (path) => shell.openPath(path),
+					openExternal: (url) => shell.openExternal(url),
+					trashItem: (path) => shell.trashItem(path),
+					showSaveDialog: async (defaultPath) => {
+						const window = BrowserWindow.getAllWindows()[0];
+						const result = window
+							? await dialog.showSaveDialog(window, { defaultPath })
+							: await dialog.showSaveDialog({ defaultPath });
+						return result.canceled || !result.filePath ? null : result.filePath;
+					},
+					writeClipboard: ({ text, buffers }) => {
+						clipboard.clear();
+						if (text) clipboard.writeText(text);
+						for (const [format, buffer] of Object.entries(buffers ?? {}))
+							clipboard.writeBuffer(format, buffer);
+					},
+				},
+				action as HostFileAction,
+				target,
+				cwd,
+				arg,
+			),
 		loadTabs: () => loadTabs(),
 		saveTabs: (tabs) => saveTabs(tabs as SavedTabs),
 		loadUiState: () => loadUiState(),
@@ -159,6 +187,7 @@ export function registerAppIpc(
 				saveFigureAnnotations: IpcChannels.FigureAnnotationsSave,
 				importDroppedFile: IpcChannels.FileImportDropped,
 				resourceOpenExternal: IpcChannels.ResourceOpenExternal,
+				fileAction: IpcChannels.FileAction,
 				loadTabs: IpcChannels.TabsLoad,
 				saveTabs: IpcChannels.TabsSave,
 				loadUiState: IpcChannels.UiStateLoad,

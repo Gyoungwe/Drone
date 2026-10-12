@@ -2,6 +2,7 @@ import type { AskRequest, AskResponse } from "./ask";
 import type { DecisionsApi } from "./decisions";
 import type { DesktopCommand } from "./desktop-command";
 import type { DiagnosticsSnapshot } from "./diagnostics";
+import type { HostFileAction } from "./file-actions";
 import type { PreviewKind } from "./file-types";
 import type { ComputeApi } from "./host-api/compute";
 import type { DiscoveryApi } from "./host-api/discovery";
@@ -243,6 +244,8 @@ export const IpcChannels = {
 	FileSaveDialog: "file:saveDialog",
 	FilePickPath: "file:pickPath",
 	FilePreview: "file:preview",
+	/** 文件右键菜单宿主动作（P7） */
+	FileAction: "file:action",
 	FileHtmlPreviewUrl: "file:htmlPreviewUrl",
 	FigureAnnotationsGet: "figure:annotationsGet",
 	FigureAnnotationsSave: "figure:annotationsSave",
@@ -425,6 +428,13 @@ export interface PiApi
 	importDroppedFile(sourcePath: string, sessionId: string): Promise<ImportedAttachment>;
 	/** 使用系统默认应用打开资源：HTTP(S) 用浏览器，本地路径用系统文件关联。 */
 	openResourceExternal(target: string, cwd?: string): Promise<void>;
+	/** 文件右键菜单宿主动作（P7）；返回新路径（download / rename）或 null */
+	fileAction(
+		action: HostFileAction,
+		target: string,
+		cwd: string | null,
+		arg: string | null,
+	): Promise<string | null>;
 	/** 列出 provider（默认只走内置目录+本地缓存；forceNetwork 时联网拉最新模型目录） */
 	listProviders(options?: ListProvidersOptions): Promise<ProviderInfo[]>;
 	getMcpStatus(cwd?: string): Promise<McpStatus>;

@@ -15,6 +15,7 @@ import { TrustDialog } from "./components/session/TrustDialog";
 import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { Toaster } from "./components/Toaster";
 import { ExampleTaskDialog } from "./components/tasks/ExampleTaskDialog";
+import { ContextMenuHost } from "./components/ui/ContextMenu";
 import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
 import { useDesktopCommands } from "./hooks/use-desktop-commands";
 import { useSessionEventBridge } from "./hooks/use-session-event-bridge";
@@ -155,6 +156,7 @@ export default function App() {
 			<RegionHost region={UI_REGIONS.AppOverlay} />
 			<SettingsDialog />
 			<SearchPalette />
+			<ContextMenuHost />
 			<KnowledgeUiRoot />
 			<AskDialog requests={askRequests} onRespond={respondAsk} />
 			<TrustDialog requests={trustRequests} onRespond={respondTrust} />

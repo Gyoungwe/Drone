@@ -15,6 +15,8 @@ import { useUiStore } from "../../stores/ui";
 import { CloseIcon } from "../icons";
 import { PreviewHost } from "../preview/PreviewHost";
 import { hasSourceTab } from "../preview/preview-registry";
+import { contextMenuHandler } from "../ui/ContextMenu";
+import { buildFileMenu } from "../ui/file-menu";
 
 function isWeb(href: string): boolean {
 	return /^https?:\/\//i.test(href);
@@ -97,7 +99,16 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 				<button type="button" className="resource-back" onClick={showDiff}>
 					{t("resource.backToChanges")}
 				</button>
-				<span className="resource-title" title={title}>
+				{/* biome-ignore lint/a11y/noStaticElementInteractions: right-click menu duplicates toolbar actions */}
+				<span
+					className="resource-title"
+					title={title}
+					onContextMenu={
+						result
+							? contextMenuHandler(() => buildFileMenu({ path: result.path, cwd: target.cwd }, t))
+							: undefined
+					}
+				>
 					{title}
 				</span>
 				<button type="button" className="resource-open" onClick={openExternal}>
