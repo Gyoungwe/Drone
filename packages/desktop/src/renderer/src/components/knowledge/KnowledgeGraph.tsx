@@ -145,6 +145,14 @@ export function KnowledgeGraph({
 	const [hovered, setHovered] = useState<string | null>(null);
 	const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, scale: 1 });
 	const dragRef = useRef<{ x: number; y: number; camera: Camera } | null>(null);
+	const dragFrameRef = useRef<number | null>(null);
+	const pendingCameraRef = useRef<Camera | null>(null);
+	useEffect(
+		() => () => {
+			if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+		},
+		[],
+	);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: nonce and indexKey are knowledge index refresh signals
 	useEffect(() => {
@@ -289,10 +297,13 @@ export function KnowledgeGraph({
 		const rect = event.currentTarget.getBoundingClientRect();
 		const dx = ((event.clientX - drag.x) / rect.width) * WIDTH;
 		const dy = ((event.clientY - drag.y) / rect.height) * HEIGHT;
-		setCamera({
-			...drag.camera,
-			x: drag.camera.x + dx / drag.camera.scale,
-			y: drag.camera.y + dy / drag.camera.scale,
+		// SVG translation is expressed in viewBox units. Do not divide by zoom:
+		// doing so makes a zoomed graph pan too far and causes extra React work.
+		pendingCameraRef.current = { ...drag.camera, x: drag.camera.x + dx, y: drag.camera.y + dy };
+		if (dragFrameRef.current !== null) return;
+		dragFrameRef.current = requestAnimationFrame(() => {
+			dragFrameRef.current = null;
+			if (pendingCameraRef.current) setCamera(pendingCameraRef.current);
 		});
 	};
 	const onCanvasPointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
