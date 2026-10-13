@@ -183,6 +183,7 @@ describe("memory extension", () => {
 	});
 
 	it("renderMemoryBlock reports injected ids and knowledge count", () => {
+		store = new MemoryStore(":memory:");
 		const r = renderMemoryBlock([{ id: 3, kind: "change", title: "修改 a.R", body: "", createdAt: 0 }], 600, [
 			{ path: "Library/x.md", title: "X", text: "" },
 		]);
