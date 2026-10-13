@@ -13,7 +13,9 @@ import { discoverAgents, findAgent } from "./agents";
 import { runSubagent, type SingleResult } from "./runner";
 
 const MAX_TASKS = 8;
+/** 未知模式（无能力运行时）时的默认并发；有模式时由 deps.maxConcurrency 决定（H1） */
 const MAX_CONCURRENCY = 3;
+const CONCURRENCY_CEILING = 8;
 const MAX_CONTENT = 50_000;
 
 const taskSchema = Type.Object({
@@ -75,6 +77,14 @@ export interface MakeSubagentToolDeps {
 			reply: (requestId: string, message: string) => boolean;
 		},
 	) => () => void;
+	/** H1：父会话模式决定的并发上限（主从 1 / 集群 4）；undefined → MAX_CONCURRENCY */
+	maxConcurrency?: (parentSessionId: string) => number | undefined;
+}
+
+/** 并发上限：模式给的值夹到 [1, 8]；单体模式工具本就不可见，0 也按 1 兜底 */
+export function resolveSubagentConcurrency(limit: number | undefined): number {
+	if (limit === undefined || !Number.isFinite(limit)) return MAX_CONCURRENCY;
+	return Math.min(CONCURRENCY_CEILING, Math.max(1, Math.floor(limit)));
 }
 
 interface SubagentDetails {
@@ -177,7 +187,7 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 		name: "subagent",
 		label: "Subagent",
 		description:
-			"Delegate a self-contained read-only or project-scoped task to an isolated subagent session. Use {agent, task} for one run or {tasks:[{agent, task}, ...]} for parallel exploration (up to 8 tasks, 3 native agents at once). Built-in scout is read-only and has no shell: do not assign CLI, installation or data-processing commands to it. Declare required_tools for executable tasks; the host rejects unavailable requirements without starting a model. Knowledge specialist identities use research_delegate_knowledge and its scoped broker instead of this tool. More agents may be defined in ~/.pi/agent/agents/. The subagent returns only its final conclusion while its full session remains available from the result card.",
+			"Delegate a self-contained read-only or project-scoped task to an isolated subagent session. Use {agent, task} for one run or {tasks:[{agent, task}, ...]} for parallel exploration (up to 8 tasks; how many run at once follows the agent mode: lead runs them one by one, swarm up to 4). Built-in scout is read-only and has no shell: do not assign CLI, installation or data-processing commands to it. Declare required_tools for executable tasks; the host rejects unavailable requirements without starting a model. Knowledge specialist identities use research_delegate_knowledge and its scoped broker instead of this tool. More agents may be defined in ~/.pi/agent/agents/. The subagent returns only its final conclusion while its full session remains available from the result card.",
 		parameters: subagentParams,
 		execute: async (
 			toolCallId,
@@ -218,47 +228,51 @@ export function makeSubagentTool(deps: MakeSubagentToolDeps): ToolDefinition {
 			const slots: Array<SingleResult | undefined> = new Array(definitions.length);
 			const filled = () => slots.filter((slot): slot is SingleResult => slot !== undefined);
 			const emit = () => onUpdate?.(partialResult(mode, filled()));
-			await withConcurrency(definitions, MAX_CONCURRENCY, async ({ task, cwd, agent }, index) => {
-				const attemptKey = `${parentSessionId}/${agent.name}/${task.task}`;
-				const attempt = (attempts.get(attemptKey) ?? 0) + 1;
-				attempts.set(attemptKey, attempt);
-				let result: SingleResult;
-				try {
-					result = await runSubagent(deps, {
-						agent,
-						task: task.task,
-						requiredTools: task.required_tools,
-						cwd,
-						projectTrusted,
-						model: ctx.model,
-						parentSessionId,
-						attempt,
-						signal,
-						onProgress: (progress) => {
-							slots[index] = progress;
-							emit();
-						},
-					});
-				} catch (error) {
-					result = {
-						agent: agent.name,
-						task: task.task,
-						exitCode: 1,
-						error: error instanceof Error ? error.message : String(error),
-						usage: {
-							input: 0,
-							output: 0,
-							cacheRead: 0,
-							cacheWrite: 0,
-							cost: 0,
-							totalTokens: { tokens: 0 },
-						},
-						artifactPaths: {},
-					};
-				}
-				slots[index] = result;
-				emit();
-			});
+			await withConcurrency(
+				definitions,
+				resolveSubagentConcurrency(deps.maxConcurrency?.(parentSessionId)),
+				async ({ task, cwd, agent }, index) => {
+					const attemptKey = `${parentSessionId}/${agent.name}/${task.task}`;
+					const attempt = (attempts.get(attemptKey) ?? 0) + 1;
+					attempts.set(attemptKey, attempt);
+					let result: SingleResult;
+					try {
+						result = await runSubagent(deps, {
+							agent,
+							task: task.task,
+							requiredTools: task.required_tools,
+							cwd,
+							projectTrusted,
+							model: ctx.model,
+							parentSessionId,
+							attempt,
+							signal,
+							onProgress: (progress) => {
+								slots[index] = progress;
+								emit();
+							},
+						});
+					} catch (error) {
+						result = {
+							agent: agent.name,
+							task: task.task,
+							exitCode: 1,
+							error: error instanceof Error ? error.message : String(error),
+							usage: {
+								input: 0,
+								output: 0,
+								cacheRead: 0,
+								cacheWrite: 0,
+								cost: 0,
+								totalTokens: { tokens: 0 },
+							},
+							artifactPaths: {},
+						};
+					}
+					slots[index] = result;
+					emit();
+				},
+			);
 			const results = filled();
 			return finalizeSubagentResult(mode, results);
 		},

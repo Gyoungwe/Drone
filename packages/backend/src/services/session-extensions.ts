@@ -4,6 +4,7 @@ import type { ModelRuntime } from "../session-engine/engine";
 import type { SessionExtensionDependencies } from "../session-engine/extensions";
 import type { SessionServiceOptions } from "../session-service";
 import type { ModelSettingsService } from "../settings/models";
+import { type AgentMode, maxParallelSubagents } from "../tools/agent-mode";
 import type { LiveSubagentControl } from "./session-host";
 
 export interface SessionExtensionsHost {
@@ -15,6 +16,8 @@ export interface SessionExtensionsHost {
 	getModelRuntime(): Promise<ModelRuntime>;
 	emitEvent(sessionId: string, event: SessionEvent): void;
 	setMcpStatus(cwd: string, status: McpStatus): void;
+	/** H1：会话当前的单体/主从/集群模式（未绑定能力运行时则 undefined） */
+	agentModeOf?(sessionId: string): AgentMode | undefined;
 }
 
 /** Builds the host-owned extension dependency port used by session construction. */
@@ -43,6 +46,11 @@ export class SessionExtensionsService {
 				};
 			},
 			setMcpStatus: (cwd, status) => this.host.setMcpStatus(cwd, status),
+			// H1：subagent 并发上限随模式走（主从 1 / 集群 4），不再写死 3
+			subagentMaxConcurrency: (sessionId) => {
+				const mode = this.host.agentModeOf?.(sessionId);
+				return mode ? maxParallelSubagents(mode) : undefined;
+			},
 			...(this.host.options.listSshHosts ? { listSshHosts: this.host.options.listSshHosts } : {}),
 			...(this.host.options.memory ? { memory: this.host.options.memory } : {}),
 		};
