@@ -50,6 +50,14 @@ const STATIC_CATEGORIES = [
 	"about",
 ] as const satisfies readonly SettingsCategory[];
 
+/** U7：主分类按「身份 / 能力 / 资源 / 通用」分组（组名小灰字）；顺序即导航顺序 */
+const NAV_GROUPS: ReadonlyArray<{ id: string; items: readonly (typeof STATIC_CATEGORIES)[number][] }> = [
+	{ id: "identity", items: ["models", "permissions"] },
+	{ id: "capability", items: ["skills", "mcp", "extensions"] },
+	{ id: "resource", items: ["zotero"] },
+	{ id: "general", items: ["general", "appearance", "about"] },
+];
+
 /** 导航项图标 + 英文副标（中文界面下显示，ClawsGO 式「中文 English」） */
 const NAV_META: Record<string, { icon: typeof GearIcon; en: string }> = {
 	general: { icon: GearIcon, en: "General" },
@@ -174,19 +182,26 @@ export function SettingsDialog() {
 				</div>
 				<div className="flex min-h-0 flex-1">
 					<nav className="w-36 shrink-0 scroll-fade overflow-y-auto border-r border-border p-1">
-						{STATIC_CATEGORIES.map((id) => (
-							<button
-								key={id}
-								type="button"
-								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
-									category === id
-										? "is-active bg-hover font-medium text-ink"
-										: "text-ink-dim hover:bg-hover hover:text-ink"
-								}`}
-								onClick={() => setCategory(id)}
-							>
-								<NavLabel id={id} label={t(`settings.category.${id}`)} />
-							</button>
+						{NAV_GROUPS.map((group, gi) => (
+							<div key={group.id}>
+								<p className={`mb-0.5 px-2 text-[11px] text-ink-faint ${gi ? "mt-3" : "mt-1"}`}>
+									{t(`settings.navGroup.${group.id as "identity"}`)}
+								</p>
+								{group.items.map((id) => (
+									<button
+										key={id}
+										type="button"
+										className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
+											category === id
+												? "is-active bg-hover font-medium text-ink"
+												: "text-ink-dim hover:bg-hover hover:text-ink"
+										}`}
+										onClick={() => setCategory(id)}
+									>
+										<NavLabel id={id} label={t(`settings.category.${id}`)} />
+									</button>
+								))}
+							</div>
 						))}
 						<p className="mb-0.5 mt-3 px-2 text-[11px] text-ink-faint">{t("settings.category.advanced")}</p>
 						{ADVANCED_CATEGORIES.map((id) => (

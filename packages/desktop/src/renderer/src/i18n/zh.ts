@@ -975,6 +975,7 @@ export const zh = {
 		doneBody: "回到 Drone 查看结果",
 	},
 	settings: {
+		navGroup: { identity: "身份", capability: "能力", resource: "资源", general: "通用" },
 		desktop: {
 			section: "桌面端",
 			notify: "后台时发送系统通知",

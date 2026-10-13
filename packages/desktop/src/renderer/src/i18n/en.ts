@@ -1018,6 +1018,7 @@ export const en: Messages = {
 		doneBody: "Switch back to Drone to see the result",
 	},
 	settings: {
+		navGroup: { identity: "Identity", capability: "Capabilities", resource: "Resources", general: "General" },
 		desktop: {
 			section: "Desktop",
 			notify: "Notify when in background",
