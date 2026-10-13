@@ -2,10 +2,10 @@ import { exampleTaskForDirection } from "@drone/shared";
 import { useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { useExampleTaskStore } from "../../stores/example-tasks";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
-import { useExampleTaskStore } from "../../stores/example-tasks";
 import { type FirstRunStatus, probeFirstRunStatus } from "./first-run-status";
 
 function CardIllustration({ kind }: { kind: "research" | "knowledge" | "relay" }) {
@@ -33,9 +33,14 @@ function CardIllustration({ kind }: { kind: "research" | "knowledge" | "relay" }
 		);
 	return (
 		<svg aria-hidden="true" viewBox="0 0 88 42" className="h-10 w-20 opacity-80">
-			<path d="M16 21a15 15 0 0 1 25-11l5 5M72 21a15 15 0 0 1-25 11l-5-5" fill="none" stroke="currentColor" strokeWidth="2" />
+			<path
+				d="M16 21a15 15 0 0 1 25-11l5 5M72 21a15 15 0 0 1-25 11l-5-5"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="2"
+			/>
 			<path d="m39 10 7 5-7 5M49 22l-7 5 7 5" fill="none" stroke="currentColor" strokeWidth="2" />
-			</svg>
+		</svg>
 	);
 }
 
@@ -88,7 +93,12 @@ export function HomeCards() {
 					key={card.key}
 					className={`flex min-h-28 flex-col justify-between rounded-2xl px-4 py-3 text-left transition-opacity ${card.tone} ${"disabled" in card && card.disabled ? "opacity-50" : ""}`}
 				>
-					<button type="button" disabled={"disabled" in card ? card.disabled : false} onClick={card.onClick} className="flex flex-1 flex-col justify-between text-left disabled:cursor-default">
+					<button
+						type="button"
+						disabled={"disabled" in card ? card.disabled : false}
+						onClick={card.onClick}
+						className="flex flex-1 flex-col justify-between text-left disabled:cursor-default"
+					>
 						<span className="flex items-start justify-between gap-2">
 							<span className="font-serif-sc text-[17px]">{t(`home.cards.${card.key}.title`)}</span>
 							<CardIllustration kind={card.key} />
@@ -99,7 +109,11 @@ export function HomeCards() {
 						<button
 							type="button"
 							className="mt-2 self-start text-[11px] font-medium underline decoration-current/40 underline-offset-2 hover:opacity-80"
-							onClick={() => useSettingsStore.getState().openWith(setupCard(card.key) as "knowledge" | "zotero" | "compute")}
+							onClick={() =>
+								useSettingsStore
+									.getState()
+									.openWith(setupCard(card.key) as "knowledge" | "zotero" | "compute")
+							}
 						>
 							{t("home.cards.setup")}
 						</button>
