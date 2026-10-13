@@ -483,7 +483,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 			<div className="mx-auto max-w-[760px]">
 				{dragActive && (
 					<div
-						className="pointer-events-none absolute inset-x-0 top-0 z-10 rounded-2xl border-2 border-dashed border-ink-faint bg-[var(--highlight)] px-3 py-2 text-center text-xs text-accent"
+						className="pointer-events-none absolute inset-x-0 top-0 z-10 rounded-2xl border-2 border-dashed border-ink-faint bg-[var(--highlight)] px-3 py-2 text-center text-xs text-ink-dim"
 						data-testid="composer-drop-target"
 					>
 						{t("composer.dropTarget")}

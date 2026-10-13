@@ -336,6 +336,27 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 				],
 			};
 		}
+		case "context_evaporated": {
+			if (!(event.count > 0)) return state;
+			const last = state.messages[state.messages.length - 1];
+			if (last?.kind === "system" && last.evaporated) {
+				const merged = { ...last, evaporated: { count: last.evaporated.count + event.count } };
+				return { ...state, messages: [...state.messages.slice(0, -1), merged] };
+			}
+			return {
+				...state,
+				messages: [
+					...state.messages,
+					{
+						kind: "system" as const,
+						id: newMessageId(),
+						text: "",
+						timestamp: Date.now(),
+						evaporated: { count: event.count },
+					},
+				],
+			};
+		}
 		case "subagent_mutex": {
 			// 同一扩展的通知只保留一条：每次 openSession 都会重发互斥事件，而 loadHistory 会保留系统通知
 			if (

@@ -595,7 +595,7 @@ export const zh = {
 			cacheReset: "工具变化会重置提示缓存",
 		},
 		status: { local: "本机", memoryLoaded: "已载入 {count} 条记忆" },
-		placeholder: "随便问点什么，/ 命令，@ 上下文",
+		placeholder: "描述你的任务，/ 触发指令或技能，@ 引用文件、任务、软件与数据库",
 		placeholderQueued: "排队消息，当前任务完成后自动发送",
 		placeholderCompacting: "正在压缩上下文…",
 		placeholderReadOnly: "子代理会话为只读检视，不可继续对话",
@@ -785,6 +785,7 @@ export const zh = {
 			noFollowUp: "未交给主模型 · 可引用",
 			mutex: "检测到 subagent 扩展 {path}，其工具已由内置 subagent 接管：{tools}",
 		},
+		contextEvaporated: "已精简 {count} 条旧工具结果",
 	},
 	taskRow: {
 		running: "任务仍在执行；完成进度会随结果更新，无需重复发起。",

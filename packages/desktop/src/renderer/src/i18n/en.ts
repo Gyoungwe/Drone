@@ -611,7 +611,8 @@ export const en: Messages = {
 			cacheReset: "tool changes reset the prompt cache",
 		},
 		status: { local: "Local", memoryLoaded: "{count} memories loaded" },
-		placeholder: "Ask anything, / for commands, @ for context",
+		placeholder:
+			"Describe your task — / for commands or skills, @ to reference files, tasks, software and databases",
 		placeholderQueued: "Queue a message — sent when the current task finishes",
 		placeholderCompacting: "Compacting context…",
 		placeholderReadOnly: "Subagent transcript is read-only — continue in the parent session",
@@ -811,6 +812,7 @@ export const en: Messages = {
 			noFollowUp: "Not handed to the main model · cite it yourself",
 			mutex: "Detected subagent extension {path}; built-in subagent took over: {tools}",
 		},
+		contextEvaporated: "Trimmed {count} old tool results",
 	},
 	taskRow: {
 		running:
