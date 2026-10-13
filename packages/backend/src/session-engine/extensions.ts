@@ -34,6 +34,7 @@ import { makeComputeRouteTool } from "../tools/compute-route";
 import { makeEvapExtension, reportEvapBatch } from "../tools/context-evaporation";
 import { makeDeliverFilesTool } from "../tools/deliver-files";
 import { bindToolManifestEvents } from "../tools/manifest";
+import { makeMemorySaveTool } from "../tools/memory-save";
 import { makeShowImageTool } from "../tools/show-image";
 import { makeSshHostsTool, makeSshTool, type SshHostEntry } from "../tools/ssh";
 import { makeStatusTool } from "../tools/status";
@@ -146,6 +147,7 @@ export function buildSessionCustomTools(
 	tools.push(makeBioDatabaseTool() as ToolDefinition);
 	tools.push(makeStatusTool());
 	tools.push(makeTodoTool());
+	tools.push(makeMemorySaveTool() as ToolDefinition);
 	if (harness.recall) {
 		tools.push(
 			makeHarnessRecallTool({
