@@ -1,0 +1,97 @@
+{
+	"$comment": "U0 对照画面：drone = harness 场景名；clawgo = ClawsGO 截图文件名（l-/d- 前缀按主题取，{t} 替换为 l 或 d）。diff = 已知差异清单，随各 PR 勾掉。",
+	"screens": [
+		{
+			"id": "home",
+			"title": "首页",
+			"drone": "app-home",
+			"clawgo": "{t}-01-home.png",
+			"diff": ["问候语 + 三张插画卡缺失（U8）", "浅色无主区浮卡（U2）", "字标仍在首页（U8）"]
+		},
+		{
+			"id": "modelmenu",
+			"title": "模型菜单展开",
+			"drone": "ui-composer-mode",
+			"clawgo": "{t}-02-modelmenu.png",
+			"diff": ["二级菜单 hover 说明缺失（U5）"]
+		},
+		{
+			"id": "running",
+			"title": "运行中",
+			"drone": "ui-timeline",
+			"clawgo": "l-35-running-tools.png",
+			"diff": ["助手消息头（模型图标 + 名称）缺失（U4）"]
+		},
+		{
+			"id": "ask",
+			"title": "提问卡",
+			"drone": "p9-ask",
+			"clawgo": "l-32-askcard.png",
+			"diff": ["选中态仍用强调色（U1/U4）"]
+		},
+		{
+			"id": "error",
+			"title": "错误卡",
+			"drone": "p8-errors",
+			"clawgo": "n12-error-card.png",
+			"diff": ["琥珀描边/底色深浅待核（U4）"]
+		},
+		{
+			"id": "delivery",
+			"title": "交付卡 + 右侧预览",
+			"drone": "p17-delivery",
+			"clawgo": "{t}-18-split-preview.png",
+			"diff": ["标题衬线体、描边 pill「打开」（U4）"]
+		},
+		{
+			"id": "compacted",
+			"title": "压缩后",
+			"drone": "p14-run-states",
+			"clawgo": "l-41-compressed.png",
+			"diff": ["系统行居中灰字 + 两侧细线（U4）", "Drone 暂用运行态画面近似"]
+		},
+		{
+			"id": "panel",
+			"title": "右栏总览",
+			"drone": "ui-right-panel",
+			"clawgo": "n08-overview-plan.png",
+			"diff": ["页签 总览/文件/变更/主机（U6）", "分节可折叠（U6）"]
+		},
+		{
+			"id": "settings-agent",
+			"title": "设置·智能体",
+			"drone": "app-settings",
+			"clawgo": "{t}-20-agent-人格与指令.png",
+			"diff": ["左栏分组 身份/能力/资源/通用（U7）"]
+		},
+		{
+			"id": "mcp-form",
+			"title": "MCP 表单",
+			"drone": "app-settings",
+			"clawgo": "n23-form-mcp.png",
+			"diff": ["Drone 暂以设置页近似；表单布局（U7）"]
+		},
+		{
+			"id": "skill-detail",
+			"title": "技能详情",
+			"drone": "app-settings",
+			"clawgo": "n32-skill-detail.png",
+			"diff": ["Drone 暂以设置页近似（U7）"]
+		},
+		{
+			"id": "hosts",
+			"title": "主机概览",
+			"drone": "p10-hostenv",
+			"clawgo": "n16-host-page.png",
+			"diff": ["计算并入主机页签（U6）"]
+		},
+		{ "id": "search", "title": "⌘K 搜索", "drone": "p6-search", "clawgo": "{t}-08-search.png", "diff": [] },
+		{
+			"id": "ctxmenu",
+			"title": "右键菜单",
+			"drone": "p7-menus",
+			"clawgo": "d_ctx_file.png",
+			"diff": ["图标库统一 stroke 1.5（U3）"]
+		}
+	]
+}
