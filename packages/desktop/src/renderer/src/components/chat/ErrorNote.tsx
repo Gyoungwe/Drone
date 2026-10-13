@@ -1,4 +1,4 @@
-import { CONTINUE_MESSAGE, ERROR_CODES, errorCardActions, errorCodeOf, type UiError } from "@drone/shared";
+import { ERROR_CODES, errorCardActions, errorCodeOf, findContinuePoint, type UiError } from "@drone/shared";
 import { useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { type MessageKey, useT } from "../../i18n";
@@ -72,7 +72,14 @@ export function ErrorNote({
 		setRecovering(true);
 		setRecoveryError("");
 		try {
-			await getPi().prompt(sessionId, CONTINUE_MESSAGE);
+			// H3：文案走 i18n；有中断工具时附上「从第 N 步、工具 X 继续」作为结构化上下文
+			const messages = useTranscriptStore.getState().bySession[sessionId]?.messages ?? [];
+			const cardIndex = messages.findLastIndex((m) => m.kind === "error" && m.id === cardId);
+			const point = findContinuePoint(messages, cardIndex < 0 ? messages.length : cardIndex);
+			const text = point
+				? `${t("error.continueMessage")}\n${t("error.continueFrom", { step: point.step, tool: point.tool })}`
+				: t("error.continueMessage");
+			await getPi().prompt(sessionId, text);
 			setContinued(true);
 			useSessionsStore.getState().switchSession(sessionId);
 		} catch (e) {

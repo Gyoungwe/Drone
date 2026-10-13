@@ -1393,6 +1393,8 @@ export const zh = {
 		en: "English",
 	},
 	error: {
+		continueMessage: "继续",
+		continueFrom: "（从第 {step} 步、工具 {tool} 继续；已完成的步骤不要重做）",
 		meta: {
 			llm: "模型请求",
 			session: "会话",
