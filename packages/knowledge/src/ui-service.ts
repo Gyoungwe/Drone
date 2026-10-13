@@ -601,6 +601,20 @@ export async function saveDiscoveryIdea({ idea } = {}) {
 }
 
 /**
+ * 记忆注入用：本项目 + 共享知识里与提问相关的条目（复用知识库索引与语义向量）。没有绑定 Vault 时返回空。
+ * @param {Record<string, any>} options
+ */
+export async function memoryRelatedKnowledge({ cwd = null, query = "", limit = 4 } = {}) {
+	const binding = await readKnowledgeBinding({ fresh: true });
+	if (!binding) return [];
+	const info = await projectAt(cwd);
+	const service = await getKnowledgeService(binding);
+	return withKnowledgeBinding(binding, () =>
+		service.relatedForMemory({ query, project: info.project || "", limit: Math.max(1, Math.min(8, limit)) }),
+	);
+}
+
+/**
  * 观察记忆沉淀为本项目知识库「记忆」分类下的笔记（Projects/<项目>/Memory/，type: memory）。
  * 只新建；附上按标题检索到的相关笔记链接，知识网络据此把记忆节点连到相关条目。
  * @param {Record<string, any>} options

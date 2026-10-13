@@ -284,6 +284,7 @@ export class SessionService extends SessionServiceApi {
 			// prompt guideline tells the model to call ssh_hosts, so it must be present whenever the host has a registry.
 			...(this.options.listSshHosts ? { listSshHosts: this.options.listSshHosts } : {}),
 			...(this.options.memory ? { memory: this.options.memory } : {}),
+			relatedKnowledge: (cwd, query) => this.knowledge.relatedForMemory(cwd, query, 4),
 			onDecision: (sessionId, event) => {
 				for (const handler of this.decisionHandlers) {
 					try {

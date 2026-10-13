@@ -72,6 +72,12 @@ export interface KnowledgeUiServicePort {
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
 	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }>;
+	/** 记忆注入用的相关知识条目（复用知识库索引与语义向量）。 */
+	relatedForMemory(
+		cwd: string,
+		query: string,
+		limit?: number,
+	): Promise<Array<{ path: string; title: string; text: string }>>;
 	/** 观察记忆沉淀为本项目知识库「记忆」笔记。 */
 	saveMemory(
 		cwd: string,
@@ -276,6 +282,13 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }> {
 		return this.call("saveDiscoveryIdea", { idea });
+	}
+	relatedForMemory(
+		cwd: string,
+		query: string,
+		limit = 4,
+	): Promise<Array<{ path: string; title: string; text: string }>> {
+		return this.call("memoryRelatedKnowledge", { cwd, query, limit });
 	}
 	saveMemory(
 		cwd: string,
