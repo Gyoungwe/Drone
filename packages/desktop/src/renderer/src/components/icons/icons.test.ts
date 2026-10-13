@@ -68,7 +68,8 @@ const pathDataList = [...source.matchAll(/\bd="([^"]+)"/g)].map((m) => m[1] ?? "
 
 describe("icons/index.tsx 内联 SVG path 数据", () => {
 	it("至少采集到一批 path（防止正则失效后测试空转）", () => {
-		expect(pathDataList.length).toBeGreaterThan(10);
+		// U3 后大部分图标改用 Hugeicons，只剩品牌/实心等少量自绘 path
+		expect(pathDataList.length).toBeGreaterThan(0);
 	});
 
 	it("所有 d 属性均符合 SVG path 语法（命令参数数完整）", () => {
