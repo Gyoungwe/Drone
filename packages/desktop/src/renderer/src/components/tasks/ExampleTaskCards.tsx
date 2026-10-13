@@ -23,7 +23,7 @@ export function ExampleTaskCards() {
 							type="button"
 							data-testid="example-task-card"
 							data-example-task={task.id}
-							className="flex w-full items-start gap-2.5 rounded-lg border border-border px-2.5 py-2 text-left transition-colors hover:border-border-strong hover:bg-hover"
+							className="flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-hover"
 							onClick={() => open(task.id)}
 						>
 							<span className="mt-[1px] shrink-0 rounded-md bg-hover px-1.5 py-0.5 text-[11px] font-medium text-ink-dim">
