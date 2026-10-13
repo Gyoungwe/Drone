@@ -3011,7 +3011,7 @@ code {
 	max-width: 280px;
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 4px;
 	z-index: var(--z-float, 20);
 	white-space: nowrap;
 	font-size: 11px;
