@@ -180,7 +180,7 @@ export function AskDialog({
 						</p>
 					)}
 				</div>
-				<div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+				<div className="min-h-0 flex-1 scroll-fade overflow-y-auto px-5 py-4">
 					{proposal && <ProposalProjection proposal={proposal} t={t} />}
 					<p className="whitespace-pre-wrap break-words rounded-lg bg-hover px-3 py-3 text-[13px] leading-relaxed text-ink select-text">
 						{formatCardText(question.prompt)}
@@ -266,7 +266,7 @@ export function AskDialog({
 					{t("ask.progress", { answered, total: request.questions.length })}
 				</p>
 			</div>
-			<div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
+			<div className="min-h-0 flex-1 space-y-5 scroll-fade overflow-y-auto px-5 py-4">
 				{proposal && <ProposalProjection proposal={proposal} t={t} />}
 				{request.questions.map((item, questionIndex) => {
 					const draft = drafts[item.id] ?? {};

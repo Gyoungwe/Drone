@@ -64,7 +64,7 @@ export function SessionPanel() {
 					{t("projects.newSession")}
 				</button>
 			</div>
-			<div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+			<div className="min-h-0 flex-1 scroll-fade overflow-y-auto px-5 pb-4">
 				{sessions.length === 0 && (
 					<p className="py-10 text-center text-[13px] text-ink-faint">{t("projects.noSessions")}</p>
 				)}

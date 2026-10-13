@@ -175,7 +175,7 @@ export function ExampleTaskForm({
 					</p>
 				</header>
 
-				<div className="min-h-0 flex-1 overflow-y-auto border-t border-border px-5 py-3">
+				<div className="min-h-0 flex-1 scroll-fade overflow-y-auto border-t border-border px-5 py-3">
 					<section>
 						<h4 className="text-[12px] font-medium text-ink">{t("examples.inputs")}</h4>
 						<div className="mt-2 flex flex-col gap-2">

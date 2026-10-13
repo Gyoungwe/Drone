@@ -71,7 +71,7 @@ export function PatternTable({
 				<span>{t("settings.permissions.colAction")}</span>
 				<span />
 			</div>
-			<ol className="max-h-96 overflow-y-auto">
+			<ol className="max-h-96 scroll-fade overflow-y-auto">
 				{rows.map((row, index) => {
 					const invalid = invalidPatterns?.has(row.pattern) ?? false;
 					const hit =

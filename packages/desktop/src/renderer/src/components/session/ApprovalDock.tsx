@@ -160,7 +160,7 @@ export function ApprovalDock({
 							</span>
 						)}
 					</div>
-					<p className="mt-2 max-h-24 overflow-y-auto rounded-lg bg-hover p-2 font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap text-ink-2 select-text">
+					<p className="mt-2 max-h-24 scroll-fade overflow-y-auto rounded-lg bg-hover p-2 font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap text-ink-2 select-text">
 						{shown.message}
 					</p>
 					{error && (

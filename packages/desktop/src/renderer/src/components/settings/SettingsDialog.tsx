@@ -173,7 +173,7 @@ export function SettingsDialog() {
 					</button>
 				</div>
 				<div className="flex min-h-0 flex-1">
-					<nav className="w-36 shrink-0 overflow-y-auto border-r border-border p-1">
+					<nav className="w-36 shrink-0 scroll-fade overflow-y-auto border-r border-border p-1">
 						{STATIC_CATEGORIES.map((id) => (
 							<button
 								key={id}
@@ -222,7 +222,7 @@ export function SettingsDialog() {
 							);
 						})}
 					</nav>
-					<div className="settings-dialog-content min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-2">
+					<div className="settings-dialog-content min-w-0 flex-1 scroll-fade overflow-y-auto overflow-x-hidden px-3 py-2">
 						{Panel ? (
 							<Panel />
 						) : activePluginContribution ? (
