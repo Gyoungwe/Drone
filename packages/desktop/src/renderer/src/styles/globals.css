@@ -3033,7 +3033,9 @@ code {
 	flex-direction: column;
 }
 .delivery-card-title {
-	font-size: 13px;
+	/* U4b：交付卡标题用衬线体（子集缺字回退系统衬线） */
+	font-family: "Noto Serif SC", "Songti SC", ui-serif, Georgia, serif;
+	font-size: 14px;
 	font-weight: 500;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -3050,9 +3052,10 @@ code {
 	flex: none;
 	font-size: 11px;
 	color: var(--color-ink-dim);
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius-sm);
-	padding: 1px var(--space-2);
+	border: 1px solid var(--color-border-strong);
+	border-radius: 9999px;
+	padding: 2px var(--space-3);
+	color: var(--color-ink-2);
 }
 
 /* P14 运行状态条 */
