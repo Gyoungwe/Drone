@@ -82,7 +82,7 @@ export function GeneralPanel() {
 					</div>
 					<div className="flex shrink-0 items-center gap-2">
 						<span className="inline-flex items-center gap-2 rounded-full border border-border px-2 py-0.5 text-xs font-medium text-ink-dim">
-							<span className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true" />
+							<span className="h-1.5 w-1.5 rounded-full bg-ok" aria-hidden="true" />
 							{t("settings.sshGuard.enabled")}
 						</span>
 						<span className="settings-disclosure-chevron" aria-hidden="true">

@@ -50,7 +50,7 @@ export function SystemMessage({ message }: { message: Extract<UIMessage, { kind:
 	if (compact.status === "error") {
 		// 提醒级信息（多为无可压缩内容等非致命原因），琥珀色而非错误红
 		return (
-			<CompactionDivider className="text-amber-500">
+			<CompactionDivider className="text-warn">
 				{t("compaction.failed", { error: compact.errorMessage ?? "" })}
 			</CompactionDivider>
 		);

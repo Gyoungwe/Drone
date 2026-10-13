@@ -136,7 +136,7 @@ export function DailyIdeas({
 										{index > 0 && "、"}
 										<button
 											type="button"
-											className="font-mono text-accent hover:underline"
+											className="font-mono text-link hover:underline"
 											onClick={() =>
 												useKnowledgeStore.getState().open({
 													cwd,

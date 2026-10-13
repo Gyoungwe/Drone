@@ -48,7 +48,7 @@ export function WorkflowOverview({
 							key={d.id}
 							data-workflow-direction={d.id}
 							aria-expanded={direction === d.id}
-							className={`rounded-xl border p-3 text-left focus-visible:outline focus-visible:outline-accent ${direction === d.id ? "border-accent bg-accent/10" : "border-border bg-hover/30 hover:bg-hover"}`}
+							className={`rounded-xl border p-3 text-left focus-visible:outline focus-visible:outline-accent ${direction === d.id ? "border-ink-faint bg-[var(--highlight)]" : "border-border bg-hover/30 hover:bg-hover"}`}
 							onClick={() => setDirection((previous) => (previous === d.id ? null : d.id))}
 						>
 							<span className="block text-sm font-medium text-ink">{d.label[language]}</span>
@@ -79,7 +79,7 @@ export function WorkflowOverview({
 					</ul>
 					<button
 						type="button"
-						className="mt-2 text-xs text-accent hover:underline"
+						className="mt-2 text-xs text-link hover:underline"
 						onClick={() => onInspect(direction)}
 					>
 						{t("workflows.inspect")}

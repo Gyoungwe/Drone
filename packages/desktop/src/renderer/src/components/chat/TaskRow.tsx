@@ -81,7 +81,7 @@ export function TaskRow({
 				>
 					<div
 						className={`h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${
-							pct < 100 ? "bg-amber-500" : "bg-green-500"
+							pct < 100 ? "bg-warn" : "bg-ok"
 						}`}
 						style={{ width: `${pct}%` }}
 					/>
@@ -103,7 +103,7 @@ export function TaskRow({
 				<button
 					type="button"
 					disabled={busy || agentActive || !sessionId}
-					className="mt-2 w-full rounded-md bg-amber-500/10 px-2 py-2 text-left text-xs text-amber-600 disabled:opacity-40"
+					className="mt-2 w-full rounded-md bg-warn/10 px-2 py-2 text-left text-xs text-warn disabled:opacity-40"
 					onClick={async () => {
 						if (!sessionId) return;
 						setBusy(true);
@@ -121,7 +121,7 @@ export function TaskRow({
 				</button>
 			)}
 			{error && (
-				<p role="alert" className="text-xs text-red-500">
+				<p role="alert" className="text-xs text-err">
 					{error}
 				</p>
 			)}
@@ -135,7 +135,7 @@ export function TaskRow({
 						{task.milestones.map((m) => (
 							<li key={m.id} className="text-xs leading-4">
 								<div className="flex items-start gap-2">
-									<span className={m.state === "completed" ? "text-green-500" : "text-ink-dim"}>
+									<span className={m.state === "completed" ? "text-ok" : "text-ink-dim"}>
 										{m.state === "completed" ? "\u2713" : "\u25cb"}
 									</span>
 									<span className={m.state === "completed" ? "text-ink-dim line-through" : ""}>

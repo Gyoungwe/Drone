@@ -41,7 +41,7 @@ function UninstallButton({ source, scope }: { source: string; scope: "user" | "p
 		return (
 			<button
 				type="button"
-				className="rounded-lg px-2 py-1 text-[12px] font-medium text-red-500 transition-colors hover:text-red-600 disabled:opacity-40"
+				className="rounded-lg px-2 py-1 text-[12px] font-medium text-err transition-colors hover:text-err disabled:opacity-40"
 				disabled={removing}
 				onClick={() => void removeConfiguredPackage(source, scope)}
 				onMouseLeave={() => setConfirming(false)}
@@ -61,7 +61,7 @@ function UninstallButton({ source, scope }: { source: string; scope: "user" | "p
 		<Tooltip label={t("settings.extensions.uninstall")}>
 			<button
 				type="button"
-				className="rounded-lg px-2 py-1 text-ink-faint transition-colors hover:bg-hover hover:text-red-500"
+				className="rounded-lg px-2 py-1 text-ink-faint transition-colors hover:bg-hover hover:text-err"
 				onClick={enterConfirm}
 				aria-label={t("settings.extensions.uninstall")}
 			>
@@ -83,7 +83,7 @@ function ScopeBadge({ scope }: { scope: ResourceScope }) {
 	return (
 		<span
 			className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
-				scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"
+				scope === "project" ? "bg-hover text-ink-2" : "bg-hover text-ink-2"
 			}`}
 		>
 			{t(key)}
@@ -113,7 +113,7 @@ export function ExtensionRow({
 					</span>
 				)}
 				{extension.tools.some(isSubagentToolName) && (
-					<span className="shrink-0 rounded bg-accent/10 px-2 py-0.5 text-xs text-accent">
+					<span className="shrink-0 rounded bg-hover px-2 py-0.5 text-xs text-ink-2">
 						{t("settings.extensions.subagentBuiltin")}
 					</span>
 				)}
@@ -144,7 +144,7 @@ function TypeBadge({ type }: { type: string }) {
 	return (
 		<span
 			className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
-				type === "extension" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"
+				type === "extension" ? "bg-hover text-ink-2" : "bg-hover text-ink-2"
 			}`}
 		>
 			{type}
@@ -196,7 +196,7 @@ export function CatalogRow({
 					<span>{t("settings.extensions.downloadsPerMonth", { count: formatDownloads(pkg.downloads) })}</span>
 				</div>
 				{installError && (
-					<p className="mt-1 text-xs text-red-500">
+					<p className="mt-1 text-xs text-err">
 						{installError.includes(NPM_NOT_FOUND_SENTINEL)
 							? t("settings.extensions.npmNotFound")
 							: installError}

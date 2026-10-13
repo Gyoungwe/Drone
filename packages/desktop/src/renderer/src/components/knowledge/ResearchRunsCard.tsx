@@ -90,7 +90,7 @@ export function ResearchRunsCard({
 								key={run.runId}
 								type="button"
 								onClick={() => void select(run)}
-								className={`w-full rounded-lg border px-3 py-2 text-left text-xs ${selected?.runId === run.runId ? "border-accent bg-accent/5" : "border-border hover:bg-hover"}`}
+								className={`w-full rounded-lg border px-3 py-2 text-left text-xs ${selected?.runId === run.runId ? "border-ink-faint bg-[var(--highlight)]" : "border-border hover:bg-hover"}`}
 							>
 								<div className="flex items-center justify-between gap-2">
 									<span className="truncate font-medium">{run.resultSlug}</span>
@@ -191,7 +191,7 @@ export function ResearchRunsCard({
 											key={source.path}
 											type="button"
 											onClick={() => setSourcePath(source.path)}
-											className="block max-w-full truncate text-left text-accent hover:underline"
+											className="block max-w-full truncate text-left text-link hover:underline"
 										>
 											{source.verified ? "✓" : "!"} {source.path}
 										</button>

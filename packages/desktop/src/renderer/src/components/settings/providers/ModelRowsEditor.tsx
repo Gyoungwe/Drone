@@ -46,7 +46,7 @@ export function ModelRowsEditor({
 		return (
 			<Tooltip label={tooltip} className="w-[4.5rem] shrink-0">
 				<input
-					className={`${inputClass} text-center ${invalid ? "border-red-400" : ""}`}
+					className={`${inputClass} text-center ${invalid ? "border-err" : ""}`}
 					placeholder={placeholder}
 					value={value}
 					onChange={(e) => onValue(e.target.value)}

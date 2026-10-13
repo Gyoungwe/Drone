@@ -73,7 +73,7 @@ export function ProvidersPanel() {
 							)}
 						</IconAction>
 					</div>
-					{error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-[12px] text-red-600">{error}</p>}
+					{error && <p className="mb-2 rounded-lg bg-err/10 px-3 py-2 text-[12px] text-err">{error}</p>}
 					{loading && providers.length === 0 ? (
 						<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.loading")}</p>
 					) : (

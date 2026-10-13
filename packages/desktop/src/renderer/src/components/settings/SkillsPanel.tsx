@@ -25,7 +25,7 @@ function ScopeBadge({ scope }: { scope: ResourceScope }) {
 				: "settings.skills.scopeUser";
 	return (
 		<span
-			className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"}`}
+			className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${scope === "project" ? "bg-hover text-ink-2" : "bg-hover text-ink-2"}`}
 		>
 			{t(key)}
 		</span>
@@ -107,7 +107,7 @@ function ToolsOverview() {
 						<span
 							key={item.id}
 							title={item.summary}
-							className={`rounded-full border px-2 py-1 text-xs ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-ink-faint"}`}
+							className={`rounded-full border px-2 py-1 text-xs ${active ? "border-ink-faint bg-[var(--highlight)] text-ink" : "border-border text-ink-faint"}`}
 						>
 							{item.label[language === "zh" ? "zh" : "en"]}
 						</span>
@@ -131,7 +131,7 @@ function ToolsOverview() {
 								<div className="flex flex-wrap items-center gap-2">
 									<code className="text-xs text-ink">{tool.name}</code>
 									<span
-										className={`rounded px-2 py-0.5 ${tool.active ? "bg-accent/10 text-accent" : "bg-hover text-ink-faint"}`}
+										className={`rounded px-2 py-0.5 ${tool.active ? "bg-hover text-ink-2" : "bg-hover text-ink-faint"}`}
 									>
 										{mode}
 									</span>
@@ -208,7 +208,7 @@ export function SkillsPanel() {
 					<p className="mt-1 text-xs leading-relaxed text-ink-dim">{t("skillsCatalog.ownerHint")}</p>
 					<button
 						type="button"
-						className="mt-2 rounded px-2 py-1 text-xs text-accent hover:bg-hover"
+						className="mt-2 rounded px-2 py-1 text-xs text-link hover:bg-hover"
 						onClick={() => useSettingsStore.getState().openWith("knowledge")}
 					>
 						{t("skillsCatalog.manage")}

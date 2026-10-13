@@ -21,7 +21,7 @@ function TodoLine({ todo, spinnerPaused }: { todo: TodoItem; spinnerPaused: bool
 	if (todo.status === "completed") {
 		return (
 			<li className="flex items-start gap-2 px-1 py-1">
-				<TodoCompleteIcon size={14} className="mt-[3px] shrink-0 text-green-500" />
+				<TodoCompleteIcon size={14} className="mt-[3px] shrink-0 text-ok" />
 				<span className="min-w-0 flex-1 break-words text-[13px] leading-5 text-ink-dim line-through">
 					{todo.content}
 				</span>
@@ -167,7 +167,7 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 								) : (
 									<button
 										type="button"
-										className="shrink-0 text-xs text-accent hover:underline disabled:opacity-50"
+										className="shrink-0 text-xs text-link hover:underline disabled:opacity-50"
 										disabled={busyId !== null}
 										onClick={() => setConfirmation({ decision, action: "confirm" })}
 									>
@@ -205,7 +205,7 @@ export function TodoCard() {
 			</header>
 			<div className="mt-2 h-1 overflow-hidden rounded-full bg-hover" role="progressbar" aria-valuenow={pct}>
 				<div
-					className="h-full rounded-full bg-green-500 transition-[width] duration-500 ease-out motion-reduce:transition-none"
+					className="h-full rounded-full bg-ok transition-[width] duration-500 ease-out motion-reduce:transition-none"
 					style={{ width: `${pct}%` }}
 				/>
 			</div>
@@ -240,7 +240,7 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 	return (
 		<div className="context-pane">
 			{pendingCount > 0 && (
-				<div className="panel-card border-amber-500/40 bg-amber-500/5 text-[12px] text-amber-700">
+				<div className="panel-card border-warn/40 bg-warn/5 text-[12px] text-warn">
 					{t("panel.approvalPending")}
 				</div>
 			)}

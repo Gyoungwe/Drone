@@ -1057,7 +1057,7 @@ function StatusPill({ status }: { status: SubagentPanelRun["status"] }) {
 					? "bg-warn/10 text-warn"
 					: status === "aborted" || status === "queued"
 						? "bg-surface-2 text-ink-faint"
-						: "bg-accent/10 text-accent";
+						: "bg-hover text-ink-2";
 	return (
 		<span
 			className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}

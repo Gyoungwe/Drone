@@ -53,7 +53,7 @@ function ExtensionEvidence({ milestone }: { milestone: TaskMilestone }) {
 					<button
 						key={`${link.kind}:${link.target}`}
 						type="button"
-						className="text-accent hover:underline"
+						className="text-link hover:underline"
 						onClick={() => followCardLink(link, { cwd, label: milestone.title })}
 					>
 						{(link.i18n ? translateOptional(language, link.i18n) : null) ?? link.label}

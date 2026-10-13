@@ -81,7 +81,7 @@ function AppearanceBasics() {
 							{background.image && (
 								<button
 									type="button"
-									className="rounded-md px-2 py-1 text-xs text-red-500 transition-colors hover:bg-red-50"
+									className="rounded-md px-2 py-1 text-xs text-err transition-colors hover:bg-err/10"
 									onClick={clearBackground}
 								>
 									{t("settings.backgroundClear")}
@@ -99,7 +99,7 @@ function AppearanceBasics() {
 							max={100}
 							value={Math.round(background.dim * 100)}
 							onChange={(e) => setBackgroundDim(Number(e.target.value) / 100)}
-							className="h-1 flex-1 accent-[#7c3aed]"
+							className="h-1 flex-1 accent-[var(--color-ink)]"
 							aria-label={t("settings.backgroundDim")}
 						/>
 						<span className="w-8 shrink-0 text-right text-xs tabular-nums text-ink-dim">

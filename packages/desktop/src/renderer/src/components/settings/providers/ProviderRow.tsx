@@ -36,7 +36,7 @@ export function IconAction({
 				disabled={disabled}
 				className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${
 					danger
-						? "text-ink-dim hover:bg-red-50 hover:text-red-600"
+						? "text-ink-dim hover:bg-err/10 hover:text-err"
 						: "text-ink-dim hover:bg-hover hover:text-ink"
 				}`}
 				onClick={onClick}
@@ -110,7 +110,7 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 					</div>
 					{provider.id === "google-antigravity" && (
 						<>
-							<p className="mt-1 max-w-[560px] rounded bg-amber-50 px-2 py-1 text-xs leading-4 text-amber-800">
+							<p className="mt-1 max-w-[560px] rounded bg-warn/10 px-2 py-1 text-xs leading-4 text-warn">
 								{t("settings.providers.antigravityWarning")}
 							</p>
 							{provider.configured && (
@@ -123,7 +123,7 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 				</div>
 				<span
 					className={`mr-1 shrink-0 rounded-full px-2 py-0.5 text-xs ${
-						provider.configured ? "bg-emerald-50 text-emerald-600" : "bg-hover text-ink-faint"
+						provider.configured ? "bg-ok/10 text-ok" : "bg-hover text-ink-faint"
 					}`}
 				>
 					{provider.configured ? t("settings.providers.configured") : t("settings.providers.unconfigured")}
@@ -209,7 +209,7 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 			{testResult && testResult !== "testing" && (
 				<p
 					className={`mt-2 rounded-lg px-3 py-2 text-xs ${
-						testResult.ok ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+						testResult.ok ? "bg-ok/10 text-ok" : "bg-err/10 text-err"
 					}`}
 				>
 					{testResult.ok

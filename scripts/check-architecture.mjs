@@ -160,6 +160,16 @@ function scanFile(file, text, findings) {
 			addFinding(findings, "R8", file, lineNumber(text, offset), `inquiry import ${match[1]}`);
 		}
 	}
+	// R9 (UI 追平 U1): renderer 组件的 className 只用语义 token —— 禁止 Tailwind 调色板类
+	// （red-600、amber-500…）和任意值 6 位 hex（text-[#c9d3f5]）。canvas/图表的数据配色常量不在此列。
+	if (/^packages\/desktop\/src\/renderer\/.*\.tsx$/.test(rel) && !/\.test\.tsx$/.test(rel)) {
+		const palette =
+			/\b(?:bg|text|border|ring|fill|stroke|outline|from|to|via|divide|decoration|accent)-(?:red|rose|amber|yellow|orange|green|emerald|lime|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|slate|gray|zinc|neutral|stone)-\d{2,3}\b|-\[#[0-9a-fA-F]{6}\]/g;
+		for (const match of text.matchAll(palette)) {
+			const offset = match.index ?? 0;
+			addFinding(findings, "R9", file, lineNumber(text, offset), `palette class ${match[0]}`);
+		}
+	}
 }
 
 async function scan() {

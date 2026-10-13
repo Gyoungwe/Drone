@@ -150,18 +150,18 @@ export function KnowledgeNebula({
 						"radial-gradient(ellipse at 30% 20%, rgba(90,110,200,0.25), transparent 55%), radial-gradient(ellipse at 75% 80%, rgba(200,80,160,0.18), transparent 50%), #0b0e17",
 				}}
 			/>
-			<div className="pointer-events-none absolute left-2 top-2 text-xs text-[#c9d3f5]">{hovered ?? ""}</div>
+			<div className="pointer-events-none absolute left-2 top-2 text-xs text-white/80">{hovered ?? ""}</div>
 			<div className="absolute right-2 top-2 flex gap-1">
 				<button
 					type="button"
-					className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-[#dfe6ff] hover:bg-white/20"
+					className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/90 hover:bg-white/20"
 					onClick={() => controls.current?.reset()}
 				>
 					{labels.reset}
 				</button>
 				<button
 					type="button"
-					className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-[#dfe6ff] hover:bg-white/20"
+					className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/90 hover:bg-white/20"
 					onClick={() => controls.current?.relayout()}
 				>
 					{labels.relayout}

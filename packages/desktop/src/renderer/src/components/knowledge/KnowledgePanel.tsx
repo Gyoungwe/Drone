@@ -140,7 +140,7 @@ export function KnowledgePanel({
 						<section className="rounded-xl border border-border p-4">
 							<div className="flex flex-wrap items-center gap-2">
 								<h3 className="text-xs font-semibold">{t("vault")}</h3>
-								<span className="rounded-full bg-accent/8 px-2 py-0.5 text-xs text-accent">
+								<span className="rounded-full bg-hover px-2 py-0.5 text-xs text-ink-2">
 									{t("scopeValue")}
 								</span>
 							</div>

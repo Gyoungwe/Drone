@@ -483,7 +483,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 			<div className="mx-auto max-w-[760px]">
 				{dragActive && (
 					<div
-						className="pointer-events-none absolute inset-x-0 top-0 z-10 rounded-2xl border-2 border-dashed border-accent bg-accent/10 px-3 py-2 text-center text-xs text-accent"
+						className="pointer-events-none absolute inset-x-0 top-0 z-10 rounded-2xl border-2 border-dashed border-ink-faint bg-[var(--highlight)] px-3 py-2 text-center text-xs text-accent"
 						data-testid="composer-drop-target"
 					>
 						{t("composer.dropTarget")}
@@ -491,7 +491,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 				)}
 				{error && <SendErrorBar error={error} onRetry={() => void handleSend()} />}
 				{feedback && !error && (
-					<p className={`mb-2 text-xs ${feedback.tone === "warn" ? "text-amber-500" : "text-ink-dim"}`}>
+					<p className={`mb-2 text-xs ${feedback.tone === "warn" ? "text-warn" : "text-ink-dim"}`}>
 						{feedback.message}
 					</p>
 				)}
@@ -662,7 +662,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						{isStreaming ? (
 							<button
 								type="button"
-								className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-on-ink transition-colors hover:bg-red-600"
+								className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-on-ink transition-colors hover:bg-err"
 								onClick={() => void send.handleStop()}
 								aria-label={t("composer.stop")}
 								title={t("composer.stop")}
