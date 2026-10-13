@@ -95,6 +95,9 @@ export type UIMessage =
 			id: string;
 			text: string;
 			thinking: string;
+			/** 本轮思考起止（仅 live 记录；历史回放无持久化时间 → 缺省，思考行不显示时长） */
+			thinkingStartedAt?: number;
+			thinkingEndedAt?: number;
 			tools: UIToolCall[];
 			timestamp: number;
 			/** P14 Stopped：本轮被用户停止（已写入内容保留，折叠组末尾显示「已停止」） */
@@ -191,6 +194,9 @@ export interface StreamingState {
 	id: string;
 	text: string;
 	thinking: string;
+	/** 首个 thinking_delta 到达时刻 / 首个非思考内容（正文、工具）或 turn 结束时刻 */
+	thinkingStartedAt?: number;
+	thinkingEndedAt?: number;
 	tools: UIToolCall[];
 	/** show_image 发图缓冲：tool_execution_end 先入缓冲，turn_end 固化时排在 assistant 消息之后（与历史回放顺序一致） */
 	pendingImages: { images: ImageInput[]; paths: string[] }[];
