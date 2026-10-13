@@ -538,6 +538,7 @@ export const en: Messages = {
 		stages: "{count} stages",
 		tools: "{count} tool calls",
 		subagents: "{count} subagents",
+		earlier: "{count} earlier steps",
 		reviewerTitle: "Background review",
 		reviewerLocation: "Location: {location}",
 		reviewerSuggestion: "Suggested action:",

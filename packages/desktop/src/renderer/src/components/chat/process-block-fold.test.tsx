@@ -14,7 +14,7 @@ const seg = (working: boolean) =>
 const kids = ["a", "b", "c", "d", "e"].map((k) => createElement("p", { key: k }, `row-${k}`));
 
 it("while running shows only the latest two rows and folds the rest", () => {
-	const html = renderToStaticMarkup(createElement(ProcessBlock, { segment: seg(true) }, kids));
+	const html = renderToStaticMarkup(createElement(ProcessBlock, { segment: seg(true), children: kids }));
 	expect(html).toContain("process.earlier:3");
 	expect(html).not.toContain("row-a");
 	expect(html).toContain("row-d");
