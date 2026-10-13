@@ -23,9 +23,7 @@ function ThinkingPreviewRow({ text }: { text: string }) {
 function ToolPreviewRow({ name, text }: { name: string; text: string }) {
 	return (
 		<div className="flex min-w-0 items-center gap-2 py-0.5">
-			<span data-shimmer-name className="sweep-target shrink-0 font-mono text-[13px] text-ink-working">
-				{displayName(name)}
-			</span>
+			<span className="shimmer shrink-0 font-mono text-[13px] text-ink-working">{displayName(name)}</span>
 			{text && <StreamingMarquee text={text} />}
 		</div>
 	);
