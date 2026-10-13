@@ -14,6 +14,7 @@
 		"packages/*"
 	],
 	"scripts": {
+		"test:preload": "npm run test:preload -w packages/desktop",
 		"dev": "npm run dev -w packages/desktop",
 		"postinstall": "patch-package",
 		"build": "npm run build -w packages/desktop",

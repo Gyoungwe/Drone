@@ -36,7 +36,7 @@ export function ImageTray({
 					</button>
 					<button
 						type="button"
-						className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-ink text-on-ink shadow transition-colors hover:bg-red-600"
+						className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-ink text-on-ink shadow transition-colors hover:bg-err"
 						aria-label={t("composer.removeImage")}
 						onClick={() => onRemove(index)}
 					>

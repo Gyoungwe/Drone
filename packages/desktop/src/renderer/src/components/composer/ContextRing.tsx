@@ -14,7 +14,7 @@ export function ContextRing({ extra }: { extra?: ReactNode } = {}) {
 	const percent = usage.percent !== null && Number.isFinite(usage.percent) ? usage.percent : null;
 	const known = tokens !== null && percent !== null;
 	const pct = Math.max(0, Math.min(100, percent ?? 0));
-	const color = pct < 60 ? "stroke-ink-faint" : pct < 85 ? "stroke-amber-500" : "stroke-red-500";
+	const color = pct < 60 ? "stroke-ink-faint" : pct < 85 ? "stroke-warn" : "stroke-err";
 	const r = 7,
 		c = 2 * Math.PI * r;
 	const label = known

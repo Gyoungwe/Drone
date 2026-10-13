@@ -56,7 +56,7 @@ export function KnowledgeLinks({
 						{item.exists ? (
 							<button
 								type="button"
-								className="text-left text-xs text-accent hover:underline"
+								className="text-left text-xs text-link hover:underline"
 								title={item.path}
 								onClick={() => openKnowledgeNote(cwd, item.path, revision)}
 							>

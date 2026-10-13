@@ -178,7 +178,7 @@ export function KnowledgeCloudSection({
 					{modeLabel(status.mode, t)}
 				</span>
 			</div>
-			<p className="rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-ink-dim">
+			<p className="rounded-lg border border-border bg-hover px-3 py-2 text-xs leading-relaxed text-ink-dim">
 				{t("cloudManualSyncNotice")}
 			</p>
 			<p className="text-xs leading-relaxed text-ink-dim">{t("cloudHint")}</p>

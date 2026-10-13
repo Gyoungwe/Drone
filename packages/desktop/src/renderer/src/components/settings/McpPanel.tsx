@@ -178,7 +178,7 @@ export function McpPanel() {
 										{preset.setup[lang]}{" "}
 										<button
 											type="button"
-											className="text-accent underline-offset-2 hover:underline"
+											className="text-link underline-offset-2 hover:underline"
 											onClick={() => void window.pi.openExternal(preset.setup?.url ?? preset.homepage)}
 										>
 											{t("settings.mcp.presetSetupOpen")}
@@ -225,7 +225,7 @@ export function McpPanel() {
 											<span
 												className={
 													server.scope === "project"
-														? "rounded bg-accent/10 px-2 py-0.5 font-medium text-accent"
+														? "rounded bg-hover px-2 py-0.5 font-medium text-ink-2"
 														: "rounded bg-hover px-2 py-0.5 text-ink-2"
 												}
 											>
@@ -271,7 +271,7 @@ export function McpPanel() {
 												{probing === server.name ? t("settings.mcp.testing") : t("settings.mcp.test")}
 											</button>
 											{probe[server.name] && (
-												<span className={probe[server.name]?.ok ? "text-emerald-600" : "text-red-600"}>
+												<span className={probe[server.name]?.ok ? "text-ok" : "text-err"}>
 													{probe[server.name]?.ok
 														? t("settings.mcp.testOk")
 														: `${t("settings.mcp.testFail")}: ${(probe[server.name] as { reason: string }).reason}`}

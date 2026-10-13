@@ -25,7 +25,7 @@ export function AttachmentChip({ path, onRemove }: { path: string; onRemove: () 
 	}, []);
 
 	const chip = (
-		<span className="flex h-[22px] max-w-[150px] shrink-0 select-none items-center gap-1 rounded-md bg-accent/10 px-2 font-mono text-[12px] leading-none text-accent">
+		<span className="flex h-[22px] max-w-[150px] shrink-0 select-none items-center gap-1 rounded-md bg-chip-accent/10 px-2 font-mono text-[12px] leading-none text-chip-accent">
 			<span aria-hidden="true">@</span>
 			<span ref={pathRef} className="min-w-0 truncate" style={{ direction: "rtl", textAlign: "left" }}>
 				{path}
@@ -34,7 +34,7 @@ export function AttachmentChip({ path, onRemove }: { path: string; onRemove: () 
 				type="button"
 				aria-label={t("composer.removeAttachment")}
 				onClick={onRemove}
-				className="shrink-0 text-accent/60 transition-colors hover:text-accent"
+				className="shrink-0 text-chip-accent/60 transition-colors hover:text-chip-accent"
 			>
 				<CloseIcon size={8} />
 			</button>

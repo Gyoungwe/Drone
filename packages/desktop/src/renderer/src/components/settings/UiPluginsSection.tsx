@@ -217,7 +217,7 @@ function AssignmentSection() {
 													key={p.name}
 													type="button"
 													className={`block w-full rounded-lg px-2 py-1 text-left text-[12px] transition-colors hover:bg-hover ${
-														current === p.name ? "text-accent" : "text-ink"
+														current === p.name ? "font-medium text-ink" : "text-ink"
 													}`}
 													onClick={() => {
 														void assignSlot(slot, p.name);

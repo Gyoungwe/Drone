@@ -78,7 +78,7 @@ export function FirstRunGuide() {
 						>
 							<strong className="block text-[12px] text-ink">{t("firstRun.example.title")}</strong>
 							<span className="mt-1 block truncate text-xs text-ink-dim">{example.title[language]}</span>
-							<span className="mt-2 block text-xs font-medium text-accent">
+							<span className="mt-2 block text-xs font-medium text-ink-2">
 								{t("firstRun.example.button")} →
 							</span>
 						</button>
@@ -189,11 +189,7 @@ function GuideAction({
 				) : null}
 			</strong>
 			<p className="mt-1 min-h-8 text-[11px] leading-relaxed text-ink-faint">{description}</p>
-			<button
-				type="button"
-				className="mt-2 text-xs font-medium text-accent hover:underline"
-				onClick={onClick}
-			>
+			<button type="button" className="mt-2 text-xs font-medium text-link hover:underline" onClick={onClick}>
 				{button} →
 			</button>
 		</div>

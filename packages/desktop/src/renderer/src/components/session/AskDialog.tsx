@@ -14,13 +14,10 @@ function Recommendation({ question, t }: { question: AskQuestion; t: ReturnType<
 	const label =
 		question.options.find((option) => option.value === recommendation.value)?.label ?? recommendation.value;
 	return (
-		<div
-			className="mt-3 rounded-xl border border-accent/25 bg-accent/5 px-3 py-3"
-			data-testid="ask-recommendation"
-		>
+		<div className="mt-3 rounded-xl border border-border bg-hover px-3 py-3" data-testid="ask-recommendation">
 			<div className="flex flex-wrap items-center gap-2 text-xs">
-				<span className="font-semibold text-accent">{t("ask.modelRecommendation")}</span>
-				<span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">{label}</span>
+				<span className="font-semibold text-ink-2">{t("ask.modelRecommendation")}</span>
+				<span className="rounded-full bg-hover px-2 py-0.5 font-medium text-ink-2">{label}</span>
 				{recommendation.confidence && (
 					<span className="text-[11px] text-ink-faint">
 						{t("ask.confidence", { value: recommendation.confidence })}
@@ -48,10 +45,10 @@ function ProposalProjection({ proposal, t }: { proposal: AskDecisionProposal; t:
 	];
 	return (
 		<section
-			className="space-y-2 rounded-xl border border-accent/20 bg-accent/5 px-3 py-3"
+			className="space-y-2 rounded-xl border border-border bg-hover px-3 py-3"
 			data-testid="decision-proposal"
 		>
-			<div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
+			<div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
 				{t("ask.proposal.title")}
 			</div>
 			{proposal.recommendation && (
@@ -307,11 +304,11 @@ export function AskDialog({
 												key={option.value}
 												type="button"
 												onClick={() => toggle(item.id, option.value, multi)}
-												className={`rounded-xl border px-3 py-3 text-left transition-colors ${active ? "border-accent bg-accent/8" : "border-border bg-surface hover:bg-hover"}`}
+												className={`rounded-xl border px-3 py-3 text-left transition-colors ${active ? "border-ink-faint bg-[var(--highlight)]" : "border-border bg-surface hover:bg-hover"}`}
 											>
 												<div className="flex items-center gap-2">
 													<span
-														className={`flex h-4 w-4 shrink-0 items-center justify-center ${multi ? "rounded" : "rounded-full"} border ${active ? "border-accent bg-accent text-white" : "border-border"}`}
+														className={`flex h-4 w-4 shrink-0 items-center justify-center ${multi ? "rounded" : "rounded-full"} border ${active ? "border-ink bg-ink text-on-ink" : "border-border"}`}
 													>
 														{active ? "✓" : ""}
 													</span>

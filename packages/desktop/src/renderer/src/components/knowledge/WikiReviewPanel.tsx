@@ -172,7 +172,7 @@ export function WikiReviewPanel({
 								type="button"
 								disabled={pending}
 								onClick={() => void load(item.id)}
-								className={`w-full rounded-lg border p-3 text-left transition-colors ${selected === item.id ? "border-accent bg-accent/5" : "border-border hover:bg-hover"}`}
+								className={`w-full rounded-lg border p-3 text-left transition-colors ${selected === item.id ? "border-ink-faint bg-[var(--highlight)]" : "border-border hover:bg-hover"}`}
 							>
 								<span className="block break-words text-xs font-medium">{item.title}</span>
 								<span className="mt-1 block break-all font-mono text-[11px] text-ink-dim">{item.path}</span>

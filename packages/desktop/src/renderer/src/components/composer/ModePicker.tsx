@@ -70,7 +70,7 @@ export function ModePicker({ row }: { row?: string } = {}) {
 								<span className="font-medium">{t(`composer.mode.${id}`)}</span>
 								<span className="text-xs leading-snug text-ink-dim">{t(`composer.mode.${id}Hint`)}</span>
 							</span>
-							{id === mode && <CheckIcon size={13} className="shrink-0 text-accent" />}
+							{id === mode && <CheckIcon size={13} className="shrink-0 text-ink" />}
 						</button>
 					))}
 				</div>

@@ -139,7 +139,7 @@ export function ApprovalDock({
 					aria-modal
 				>
 					<div className="flex items-center gap-2">
-						<span className="text-amber-500" aria-hidden="true">
+						<span className="text-warn" aria-hidden="true">
 							⚠
 						</span>
 						<h3 className="min-w-0 flex-1 truncate font-mono text-[13px] font-medium text-ink">
@@ -164,7 +164,7 @@ export function ApprovalDock({
 						{shown.message}
 					</p>
 					{error && (
-						<p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[12px] break-all text-red-600">{error}</p>
+						<p className="mt-2 rounded-lg bg-err/10 px-3 py-2 text-[12px] break-all text-err">{error}</p>
 					)}
 					<div className="mt-2 flex flex-wrap items-center justify-end gap-2">
 						{sourceRun && (

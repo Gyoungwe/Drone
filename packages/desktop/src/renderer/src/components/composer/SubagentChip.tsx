@@ -19,7 +19,7 @@ export function SubagentChip({
 	const t = useT();
 	return (
 		<span
-			className="flex h-[22px] shrink-0 select-none items-center gap-1 rounded-md bg-accent/10 px-2 text-[12px] leading-none font-semibold text-accent"
+			className="flex h-[22px] shrink-0 select-none items-center gap-1 rounded-md bg-hover px-2 text-[12px] leading-none font-semibold text-ink-2"
 			data-testid="composer-subagent-chip"
 			data-agent={name}
 			title={t("composer.subagentChipTitle", { agent: name })}
@@ -30,7 +30,7 @@ export function SubagentChip({
 				type="button"
 				aria-label={t("composer.removeSubagent")}
 				onClick={onRemove}
-				className="shrink-0 text-accent/60 transition-colors hover:text-accent"
+				className="shrink-0 text-ink-faint transition-colors hover:text-ink"
 			>
 				<CloseIcon size={8} />
 			</button>
