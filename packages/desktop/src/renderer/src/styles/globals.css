@@ -3469,3 +3469,25 @@ code {
 .turn-footer:focus-within > .turn-footer-chip {
 	opacity: 1;
 }
+
+/* U9：动效与数字细节——消息 0.3s 淡入；计数/耗时/token 等宽数字；降低动效时关闭 */
+@keyframes msg-enter-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+.msg-enter {
+	animation: msg-enter-fade 300ms var(--ease-standard) both;
+}
+.turn-footer,
+.ask-receipt {
+	font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+	.msg-enter {
+		animation: none;
+	}
+}
