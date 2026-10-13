@@ -2037,11 +2037,12 @@ code {
 		box-shadow 0.14s ease,
 		transform 0.14s ease;
 }
+/* U3：sm 28px / md 32px（与 Button 的 h-7/h-8 一致） */
 .drone-button--sm {
-	min-height: 29px;
+	min-height: 28px;
 }
 .drone-button--md {
-	min-height: 34px;
+	min-height: 32px;
 }
 .drone-button:hover:not(:disabled) {
 	border-color: var(--color-border-strong);
@@ -2064,6 +2065,12 @@ code {
 	opacity: 0.48;
 	box-shadow: none;
 }
+/* U3：主按钮黑色 pill；次按钮描边 pill（ClawsGO「刷新」「测试连接」）；危险按钮红底 pill */
+.drone-button--primary,
+.drone-button--secondary,
+.drone-button--danger.drone-button--default {
+	border-radius: 999px;
+}
 .drone-button--primary {
 	border-color: var(--color-ink);
 	background: var(--color-ink);
@@ -2074,6 +2081,19 @@ code {
 	border-color: color-mix(in srgb, var(--color-ink) 82%, var(--color-surface));
 	background: color-mix(in srgb, var(--color-ink) 88%, var(--color-surface));
 	color: var(--color-on-ink);
+}
+.drone-button--secondary:hover:not(:disabled) {
+	background: var(--highlight);
+	box-shadow: none;
+}
+.drone-button--danger.drone-button--default {
+	border-color: var(--color-err);
+	background: var(--color-err);
+	color: #fff;
+}
+.drone-button--danger.drone-button--default:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--color-err) 88%, var(--color-ink));
+	color: #fff;
 }
 .drone-button--danger {
 	color: var(--color-err);
