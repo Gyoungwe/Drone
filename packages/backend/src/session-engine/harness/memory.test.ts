@@ -6,6 +6,7 @@ import {
 	makeMemoryExtension,
 	observeToolResult,
 	renderMemoryBlock,
+	turnTranscript,
 } from "./memory";
 
 let store: MemoryStore;
@@ -16,6 +17,7 @@ type Tool = { name: string; execute: (...args: unknown[]) => Promise<{ details: 
 function session(
 	id: string,
 	isTrusted = true,
+	summarize?: (t: string, m: unknown) => Promise<string>,
 	related?: (q: string) => Promise<Array<{ path: string; title: string; text: string }>>,
 ) {
 	const handlers: Record<string, (event: unknown, ctx: unknown) => unknown> = {};
@@ -25,17 +27,27 @@ function session(
 		registerTool: (tool: Tool) => (tools[tool.name] = tool),
 	};
 	(
-		makeMemoryExtension({ store, projectId: "p1", ...(related ? { relatedKnowledge: related } : {}) }) as {
+		makeMemoryExtension({
+			store,
+			projectId: "p1",
+			...(summarize ? { summarize } : {}),
+			...(related ? { relatedKnowledge: related } : {}),
+		}) as {
 			factory: (pi: never) => void;
 		}
 	).factory(pi as never);
-	const ctx = { sessionManager: { getSessionId: () => id }, isProjectTrusted: () => isTrusted };
+	const ctx = {
+		sessionManager: { getSessionId: () => id },
+		isProjectTrusted: () => isTrusted,
+		model: { id: "m" },
+	};
 	return {
 		call: (name: string, params: unknown) => tools[name]!.execute("t", params, undefined, undefined, ctx),
 		prompt: async (prompt: string, systemPrompt = "base") =>
 			(await handlers.before_agent_start?.({ prompt, systemPrompt }, ctx)) as
 				| { systemPrompt: string }
 				| undefined,
+		end: (messages: unknown[]) => handlers.agent_end?.({ messages }, ctx),
 		tool: (event: Record<string, unknown>) =>
 			handlers.tool_result?.({ input: {}, content: [], isError: false, ...event }, ctx),
 	};
@@ -171,12 +183,12 @@ describe("memory extension", () => {
 			title: `差异表达方法论文第${i}篇`,
 			text: "比较 DESeq2 与 edgeR 的收缩估计".repeat(3),
 		}));
-		const s2 = session("s2", true, async () => many);
+		const s2 = session("s2", true, undefined, async () => many);
 		const out = (await s2.prompt("差异表达"))!.systemPrompt;
 		expect(out.indexOf("修改 deseq2.R")).toBeLessThan(out.indexOf("[[Library/Papers/p0.md]]"));
 		expect(estimateTokens(out.slice("base\n\n".length))).toBeLessThanOrEqual(600);
 		expect(out).not.toContain("p39.md");
-		const failing = session("s3", true, async () => {
+		const failing = session("s3", true, undefined, async () => {
 			throw new Error("kb down");
 		});
 		expect((await failing.prompt("差异表达"))?.systemPrompt).toContain("修改 deseq2.R");
@@ -188,5 +200,51 @@ describe("memory extension", () => {
 			{ path: "Library/x.md", title: "X", text: "" },
 		]);
 		expect(r).toMatchObject({ count: 1, knowledgeCount: 1, ids: [3] });
+	});
+
+	it("writes one redacted turn-end summary per session, trust-gated", async () => {
+		store = new MemoryStore(":memory:");
+		const seen: string[] = [];
+		const summarize = async (t: string) => {
+			seen.push(t);
+			return "DESeq2 差异分析\n完成计数，下一步画火山图";
+		};
+		const msgs = [
+			{ role: "user", content: "跑 DESeq2 <private>病人 张三</private> key sk-abcdefghijklmnop123" },
+			{
+				role: "assistant",
+				content: [
+					{ type: "thinking", thinking: "秘密思考" },
+					{ type: "text", text: "好的" },
+				],
+			},
+			{ role: "toolResult", content: [{ type: "text", text: "原始输出" }] },
+		];
+		const s1 = session("s1", true, summarize);
+		s1.end(msgs);
+		s1.end(msgs);
+		await new Promise((r) => setTimeout(r, 0));
+		expect(seen[0]).not.toContain("张三");
+		expect(seen[0]).not.toContain("sk-abcdefghijklmnop123");
+		expect(seen[0]).not.toContain("秘密思考");
+		expect(seen[0]).not.toContain("原始输出");
+		const sums = store.list("p1").filter((h) => h.kind === "summary");
+		expect(sums).toHaveLength(1);
+		expect(sums[0]).toMatchObject({ title: "DESeq2 差异分析" });
+		session("s2", false, summarize).end(msgs);
+		store.setEnabled("p1", false);
+		session("s3", true, summarize).end(msgs);
+		await new Promise((r) => setTimeout(r, 0));
+		expect(seen).toHaveLength(2);
+	});
+
+	it("summary failure never throws", async () => {
+		store = new MemoryStore(":memory:");
+		const s = session("s1", true, async () => {
+			throw new Error("boom");
+		});
+		expect(() => s.end([{ role: "user", content: "hi" }])).not.toThrow();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(turnTranscript([{ role: "user", content: "hi" }])).toBe("用户：hi");
 	});
 });
