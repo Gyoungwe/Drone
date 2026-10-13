@@ -16,10 +16,18 @@ export const NEBULA_PALETTE = [
 	"#e0e6ff",
 ] as const;
 export const NEBULA_ISOLATED = "#5b6478";
+/** 记忆节点（从观察记忆沉淀的笔记）固定用琥珀色，与主题簇配色区分。 */
+export const NEBULA_MEMORY = "#ffb547";
+
+export function isMemoryNode(node: { nodeType?: string; contentType?: string; path: string }): boolean {
+	return node.nodeType === "memory" || node.contentType === "memory" || /(?:^|\/)Memory\//.test(node.path);
+}
 
 export interface NebulaNodeAttributes {
 	label: string;
 	kind: string;
+	/** 记忆节点。 */
+	memory?: boolean;
 	degree: number;
 	community: number;
 	x: number;
@@ -51,6 +59,7 @@ export function buildNebulaGraph(data: Pick<GraphData, "nodes" | "edges">): Grap
 			graph.addNode(node.path, {
 				label: node.title,
 				kind: node.kind,
+				memory: isMemoryNode(node),
 				degree: node.degree,
 				community: -1,
 				x: 0,
@@ -81,7 +90,11 @@ export function buildNebulaGraph(data: Pick<GraphData, "nodes" | "edges">): Grap
 		const jitter = 2 * Math.PI * hash(`${path}a`);
 		graph.mergeNodeAttributes(path, {
 			community,
-			color: community >= 0 ? NEBULA_PALETTE[community % NEBULA_PALETTE.length] : NEBULA_ISOLATED,
+			color: attrs.memory
+				? NEBULA_MEMORY
+				: community >= 0
+					? NEBULA_PALETTE[community % NEBULA_PALETTE.length]
+					: NEBULA_ISOLATED,
 			x: radius * Math.cos(angle) + 3 * Math.cos(jitter),
 			y: radius * Math.sin(angle) + 3 * Math.sin(jitter),
 			size: nebulaNodeSize(attrs.degree || graph.degree(path)),

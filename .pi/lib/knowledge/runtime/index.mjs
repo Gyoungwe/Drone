@@ -1,5 +1,31 @@
 // @ts-nocheck
 import {
+  archiveKnowledgeTopic,
+  cancelKnowledgeSemanticIndex,
+  consumeKnowledgeReviewPreview,
+  dailyDiscoveryContext,
+  getKnowledgeTopics,
+  indexKnowledgeSemantic,
+  knowledgeDecideReview,
+  knowledgeGraph,
+  knowledgeJobs,
+  knowledgeMaintenance,
+  knowledgeNoteLinks,
+  knowledgeOpenTarget,
+  knowledgeOverview,
+  knowledgePreviewReview,
+  knowledgeReadNote,
+  knowledgeReviews,
+  knowledgeSemanticStatus,
+  knowledgeSetupPreview,
+  knowledgeSpecialistSettings,
+  saveDiscoveryIdea,
+  saveKnowledgeSemanticSettings,
+  saveMemoryNote,
+  searchKnowledge,
+  testKnowledgeSemanticProvider
+} from "./chunks/chunk-3LVUZMVD.mjs";
+import {
   lastWikiModelReview,
   reviewWikiWithModel
 } from "./chunks/chunk-XMIU2T7G.mjs";
@@ -14,6 +40,21 @@ import {
   validateWikiSourcePaths
 } from "./chunks/chunk-AKW2CMNR.mjs";
 import {
+  autoApplyWikiProposal,
+  decideWikiProposal,
+  listWikiProposals,
+  mergeWikiProposal,
+  previewWikiProposal,
+  stageWikiProposal,
+  undoWikiUpdate,
+  validateWikiSourcePaths as validateWikiSourcePaths2,
+  wikiHistory
+} from "./chunks/chunk-4QHZ475S.mjs";
+import {
+  normalizeSourceLinks,
+  onlineSourceLink
+} from "./chunks/chunk-LE6NM7SB.mjs";
+import {
   saveSpecialistExplainer
 } from "./chunks/chunk-GMBJR4N3.mjs";
 import {
@@ -21,6 +62,16 @@ import {
   knowledgeReadStart,
   shouldOrientKnowledge
 } from "./chunks/chunk-IMVE6DZY.mjs";
+import {
+  SPECIALIST_LIMITS,
+  contextSessionId,
+  knowledgeSpecialistHost,
+  registerKnowledgeSpecialistHost,
+  setSpecialistSettings,
+  specialistQueueSnapshot,
+  specialistSettings,
+  withSpecialistSlot
+} from "./chunks/chunk-XSFQUT2B.mjs";
 import {
   createTaskFeedback,
   guardResearchToolResult
@@ -43,52 +94,15 @@ import {
   updateTopic
 } from "./chunks/chunk-NW54BXAU.mjs";
 import {
-  archiveKnowledgeTopic,
-  cancelKnowledgeSemanticIndex,
-  consumeKnowledgeReviewPreview,
-  dailyDiscoveryContext,
-  getKnowledgeTopics,
-  indexKnowledgeSemantic,
-  knowledgeDecideReview,
-  knowledgeGraph,
-  knowledgeJobs,
-  knowledgeMaintenance,
-  knowledgeNoteLinks,
-  knowledgeOpenTarget,
-  knowledgeOverview,
-  knowledgePreviewReview,
-  knowledgeReadNote,
-  knowledgeReviews,
-  knowledgeSemanticStatus,
-  knowledgeSetupPreview,
-  knowledgeSpecialistSettings,
-  memoryRelatedKnowledge,
-  saveDiscoveryIdea,
-  saveKnowledgeSemanticSettings,
-  searchKnowledge,
-  testKnowledgeSemanticProvider
-} from "./chunks/chunk-7AFPG34E.mjs";
-import {
-  autoApplyWikiProposal,
-  decideWikiProposal,
-  listWikiProposals,
-  mergeWikiProposal,
-  previewWikiProposal,
-  stageWikiProposal,
-  undoWikiUpdate,
-  validateWikiSourcePaths as validateWikiSourcePaths2,
-  wikiHistory
-} from "./chunks/chunk-4QHZ475S.mjs";
-import {
-  SPECIALIST_LIMITS,
-  contextSessionId,
-  knowledgeSpecialistHost,
-  registerKnowledgeSpecialistHost,
-  setSpecialistSettings,
-  specialistQueueSnapshot,
-  specialistSettings,
-  withSpecialistSlot
-} from "./chunks/chunk-XSFQUT2B.mjs";
+  KnowledgeReuseIndex,
+  checkKnowledgeReceiptFreshness,
+  checkKnowledgeSnapshotReuse,
+  ingestKnowledgeSnapshot,
+  knowledgeEvidenceGradeRank,
+  knowledgeReuseLevelRank,
+  resolveKnowledgeContext,
+  validateKnowledgeSourceReceipt
+} from "./chunks/chunk-GKXRSN5Y.mjs";
 import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
@@ -100,15 +114,12 @@ import {
   createSemanticModel,
   isInfrastructureNode,
   nodeType
-} from "./chunks/chunk-W74KFO4J.mjs";
-import {
-  normalizeSourceLinks,
-  onlineSourceLink
-} from "./chunks/chunk-LE6NM7SB.mjs";
+} from "./chunks/chunk-DM7D3MNK.mjs";
 import {
   runNavigationMaintenance,
   updateNavigation
 } from "./chunks/chunk-EJFIMVBU.mjs";
+import "./chunks/chunk-W4BONNYJ.mjs";
 import {
   SPECIALIST_DECISIONS,
   createSpecialistBudget,
@@ -136,7 +147,7 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-GYO4NFUS.mjs";
+} from "./chunks/chunk-5PIDULPV.mjs";
 import {
   embedTexts,
   validateSemanticConfig
@@ -169,16 +180,6 @@ import {
   readReviewMode,
   saveReviewMode
 } from "./chunks/chunk-6LT3KQRY.mjs";
-import {
-  KnowledgeReuseIndex,
-  checkKnowledgeReceiptFreshness,
-  checkKnowledgeSnapshotReuse,
-  ingestKnowledgeSnapshot,
-  knowledgeEvidenceGradeRank,
-  knowledgeReuseLevelRank,
-  resolveKnowledgeContext,
-  validateKnowledgeSourceReceipt
-} from "./chunks/chunk-EDXFFXYA.mjs";
 import {
   cardField,
   cardLink,
@@ -355,7 +356,6 @@ export {
   listWikiProposals,
   literatureCard,
   managedParts,
-  memoryRelatedKnowledge,
   mergeWikiProposal,
   nodeType,
   normalizeSourceLinks,
@@ -395,6 +395,7 @@ export {
   saveDiscoveryIdea,
   saveKnowledgeBinding,
   saveKnowledgeSemanticSettings,
+  saveMemoryNote,
   saveReviewMode,
   saveSemanticSettings,
   saveSpecialistExplainer,

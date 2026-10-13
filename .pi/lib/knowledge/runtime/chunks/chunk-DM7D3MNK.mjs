@@ -11,7 +11,8 @@ var CATEGORY_BY_PATH = [
   [/\/Software\//i, "software"],
   [/\/Datasets?\//i, "dataset"],
   [/\/(?:Wiki|Wikis)\//i, "wiki"],
-  [/\/(?:Questions?|Research)\//i, "question"]
+  [/\/(?:Questions?|Research)\//i, "question"],
+  [/\/Memory\//i, "memory"]
 ];
 function contentCategory(node) {
   const explicit = node.contentType?.trim().toLowerCase();
@@ -136,6 +137,7 @@ function isInfrastructureNode(node) {
 }
 function nodeType(node) {
   if (isInfrastructureNode(node)) return "infrastructure";
+  if (contentCategory(node) === "memory") return "memory";
   if (node.kind === "wiki") return "wiki";
   return "note";
 }

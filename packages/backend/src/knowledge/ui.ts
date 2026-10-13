@@ -78,6 +78,11 @@ export interface KnowledgeUiServicePort {
 		query: string,
 		limit?: number,
 	): Promise<Array<{ path: string; title: string; text: string }>>;
+	/** 观察记忆沉淀为本项目知识库「记忆」笔记。 */
+	saveMemory(
+		cwd: string,
+		memory: import("@drone/knowledge/memory-note").MemoryNoteInput,
+	): Promise<{ path: string }>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -284,50 +289,44 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		limit = 4,
 	): Promise<Array<{ path: string; title: string; text: string }>> {
 		return this.call("memoryRelatedKnowledge", { cwd, query, limit });
-	}
+	saveMemory(
+		cwd: string,
+		memory: import("@drone/knowledge/memory-note").MemoryNoteInput,
+	): Promise<path: string > 
+		return this.call("saveMemoryNote", { cwd, memory });
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
-	): ReturnType<KnowledgeApi["getKnowledgeTopics"]> {
+	): ReturnType<KnowledgeApi["getKnowledgeTopics"]> 
 		return this.call("getKnowledgeTopics", input);
-	}
 	archiveTopic(
 		input: Parameters<KnowledgeApi["archiveKnowledgeTopic"]>[0],
-	): ReturnType<KnowledgeApi["archiveKnowledgeTopic"]> {
+	): ReturnType<KnowledgeApi["archiveKnowledgeTopic"]> 
 		return this.call("archiveKnowledgeTopic", input);
-	}
-	getCloudStatus(): ReturnType<KnowledgeApi["getKnowledgeCloudStatus"]> {
+	getCloudStatus(): ReturnType<KnowledgeApi["getKnowledgeCloudStatus"]> 
 		return this.cloud.getStatus();
-	}
-	probeCloud(): ReturnType<KnowledgeApi["probeKnowledgeCloud"]> {
+	probeCloud(): ReturnType<KnowledgeApi["probeKnowledgeCloud"]> 
 		return this.cloud.probe();
-	}
-	initializeCloud(): ReturnType<KnowledgeApi["initializeKnowledgeCloud"]> {
+	initializeCloud(): ReturnType<KnowledgeApi["initializeKnowledgeCloud"]> 
 		return this.cloud.initialize();
-	}
 	setCloudPassword(
 		input: Parameters<KnowledgeApi["setKnowledgeCloudPassword"]>[0],
-	): ReturnType<KnowledgeApi["setKnowledgeCloudPassword"]> {
+	): ReturnType<KnowledgeApi["setKnowledgeCloudPassword"]> 
 		return this.cloud.setPassword(input.password);
-	}
 	readCloudNote(
 		input: Parameters<KnowledgeApi["readKnowledgeCloudNote"]>[0],
-	): ReturnType<KnowledgeApi["readKnowledgeCloudNote"]> {
+	): ReturnType<KnowledgeApi["readKnowledgeCloudNote"]> 
 		return this.cloud.read(input.path);
-	}
 	writeCloudNote(
 		input: Parameters<KnowledgeApi["writeKnowledgeCloudNote"]>[0],
-	): ReturnType<KnowledgeApi["writeKnowledgeCloudNote"]> {
+	): ReturnType<KnowledgeApi["writeKnowledgeCloudNote"]> 
 		return this.cloud.write(input);
-	}
 	syncCloud(
 		input: Parameters<KnowledgeApi["syncKnowledgeCloud"]>[0],
-	): ReturnType<KnowledgeApi["syncKnowledgeCloud"]> {
+	): ReturnType<KnowledgeApi["syncKnowledgeCloud"]> 
 		return this.cloud.sync(input);
-	}
-	dispose(): void {
+	dispose(): void 
 		this.disposed = true;
 		this.unsubscribe?.();
 		this.unsubscribe = null;
 		this.listeners.clear();
-	}
 }

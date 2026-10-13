@@ -17,6 +17,7 @@ import {
 } from "./config";
 import { collectRecentNotes, DAILY_DISCOVERY_LIMITS, ideaNoteMarkdown } from "./daily-discovery";
 import { safeNotePath } from "./files";
+import { memoryNoteMarkdown, memoryNoteSlug } from "./memory-note";
 import { runNavigationMaintenance } from "./maintenance";
 import { readReviewMode, saveReviewMode } from "./review-policy";
 import { getKnowledgeService } from "./service";
@@ -611,4 +612,45 @@ export async function memoryRelatedKnowledge({ cwd = null, query = "", limit = 4
 	return withKnowledgeBinding(binding, () =>
 		service.relatedForMemory({ query, project: info.project || "", limit: Math.max(1, Math.min(8, limit)) }),
 	);
+ * 观察记忆沉淀为本项目知识库「记忆」分类下的笔记（Projects/<项目>/Memory/，type: memory）。
+ * 只新建；附上按标题检索到的相关笔记链接，知识网络据此把记忆节点连到相关条目。
+ * @param Record<string, any>options
+ */
+export async function saveMemoryNote({ cwd, memory } = {}) {
+	if (!memory || typeof memory.title !== "string" || !memory.title.trim()) throw new Error("Memory title is required");
+	const binding = await readKnowledgeBinding({ fresh: true });
+	if (!binding) throw new Error("No application knowledge Vault is bound");
+	const info = await projectAt(cwd);
+	const project = info.project || "shared";
+	const service = await getKnowledgeService(binding);
+	let related = [];
+	await withKnowledgeBinding(binding, async () => {
+		try {
+			const found = await service.request("search", {
+				query: memory.title.slice(0, 120),
+				limit: 5,
+				project: info.project || "",
+			});
+			related = (found.hits || []).map((hit) => hit.path).filter((path) => !/\/Memory\//.test(path));
+		} catch {
+			related = [];
+		}
+	});
+	const directory = join(binding.vault, "Projects", project, "Memory");
+	await mkdir(directory, { recursive: true });
+	const base = memoryNoteSlug(memory);
+	const text = memoryNoteMarkdown(memory, related);
+	for (let attempt = 0; attempt < 20; attempt++) {
+		const name = attempt ? `${base}-${attempt + 1}.md` : `${base}.md`;
+		try {
+			await writeFile(join(directory, name), text, { encoding: "utf8", flag: "wx" });
+			const path = `Projects/${project}/Memory/${name}`;
+			await service.request("changed", { paths: [path] }).catch(() => {});
+			invalidateKnowledgeUi();
+			return { path };
+		} catch (error) {
+			if (error?.code !== "EEXIST") throw error;
+		}
+	}
+	throw new Error("Could not find a free file name for this memory");
 }

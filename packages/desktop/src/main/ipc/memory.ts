@@ -11,6 +11,7 @@ export function registerMemoryIpc(services: Pick<BackendServices, "memory">): vo
 		list: (cwd) => services.memory.list(cwd),
 		remove: (cwd, id) => services.memory.remove(cwd, id),
 		promote: (cwd, id) => services.memory.promote(cwd, id),
+		promoteToKnowledge: (cwd, id) => services.memory.promoteToKnowledge(cwd, id),
 	};
 	bindContract(MemoryContract, implementation, {
 		channelForMethod: (_contract, method) =>
@@ -21,6 +22,7 @@ export function registerMemoryIpc(services: Pick<BackendServices, "memory">): vo
 				list: IpcChannels.MemoryList,
 				remove: IpcChannels.MemoryRemove,
 				promote: IpcChannels.MemoryPromote,
+				promoteToKnowledge: IpcChannels.MemoryPromoteToKnowledge,
 			})[method as keyof typeof MemoryContract.methods],
 	});
 }

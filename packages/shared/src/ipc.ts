@@ -299,6 +299,7 @@ export const IpcChannels = {
 	MemoryList: "memory:list",
 	MemoryRemove: "memory:remove",
 	MemoryPromote: "memory:promote",
+	MemoryPromoteToKnowledge: "memory:promoteToKnowledge",
 	AskRequest: "ask:request",
 	AskRespond: "ask:respond",
 	PermissionRespond: "permission:respond",
@@ -542,6 +543,8 @@ export interface PiApi
 	memoryRemove(cwd: string, id: number): Promise<MemoryProjectStatus>;
 	/** 把一条观察提升为项目记忆（.pi/memory/）。 */
 	memoryPromote(cwd: string, id: number): Promise<MemoryProjectStatus>;
+	/** 把一条观察沉淀到知识库「记忆」分类。 */
+	memoryPromoteToKnowledge(cwd: string, id: number): Promise<{ path: string }>;
 	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
 	onAskRequest(cb: (req: AskRequest) => void): () => void;
 	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;

@@ -33,6 +33,25 @@ it("lists entries with promote and delete actions when expanded", () => {
 	expect(html).toContain("Rscript deseq2.R");
 	expect(html).toContain("settings.memory.promote");
 	expect(html).toContain("settings.memory.hide");
+	expect(html).toContain("settings.memory.distill");
+	const done = renderToStaticMarkup(
+		createElement(MemorySettingsView, {
+			status: { enabled: true, count: 1, lastLoaded: 0 },
+			onToggle: vi.fn(),
+			onClear: vi.fn(),
+			items: [
+				{
+					id: 7,
+					kind: "summary",
+					title: "t",
+					body: "",
+					createdAt: 0,
+					promotedTo: "Projects/p/Memory/t-m7.md",
+				},
+			],
+		}),
+	);
+	expect(done).toContain("settings.memory.distilled");
 	expect(view({ enabled: true, count: 1, lastLoaded: 0 })).not.toContain("memory-list");
 });
 
