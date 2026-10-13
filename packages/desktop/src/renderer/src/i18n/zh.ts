@@ -703,6 +703,7 @@ export const zh = {
 		queued: "还有 {count} 个项目等待确认",
 	},
 	message: {
+		memoryUsed: "使用了 {count} 条记忆",
 		copy: "复制",
 		copied: "已复制",
 		recall: "撤回并放回输入框",
