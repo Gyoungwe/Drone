@@ -1,4 +1,5 @@
 import { useT } from "../../i18n";
+import { useSessionsStore } from "../../stores/sessions";
 import type { UIToolCall } from "../../stores/transcript";
 import { Markdown } from "./Markdown";
 import { MemoryCitationRow } from "./MemoryCitationRow";
@@ -21,12 +22,26 @@ export function AssistantMessage({
 	metaInGroup?: boolean;
 }) {
 	const t = useT();
+	const model = useSessionsStore((s) => s.currentModel);
 	const cited = streaming ? [] : memoryCitations(text, tools);
 	const items: MetaItem[] = [];
 	if (!metaInGroup && (thinking || tools.length > 0)) items.push({ thinking, tools });
 
 	return (
 		<div className="flex flex-col gap-2">
+			<div className="flex items-center gap-2 text-[11px] text-ink-faint" data-testid="assistant-header">
+				<span
+					className="grid h-5 w-5 place-items-center rounded-full bg-ink text-[10px] text-on-ink"
+					aria-hidden="true"
+				>
+					✦
+				</span>
+				<span className="font-medium text-ink-2">{model?.modelId ?? t("message.assistant")}</span>
+				<span aria-hidden="true">·</span>
+				<span className="tabular-nums">
+					{t("message.stepsSummary", { count: tools.length + (thinking ? 1 : 0) })}
+				</span>
+			</div>
 			{items.length > 0 && <MetaGroup items={items} working={Boolean(streaming) && !text} />}
 			{text && <Markdown text={text} streaming={streaming} />}
 			{cited.length > 0 && (

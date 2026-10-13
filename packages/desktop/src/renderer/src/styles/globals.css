@@ -3026,6 +3026,31 @@ code {
 	background: var(--color-hover);
 	color: var(--color-ink-2);
 }
+.delivery-card-thumb {
+	flex: none;
+	width: 36px;
+	height: 36px;
+	border-radius: var(--radius-md);
+	object-fit: cover;
+	background: var(--color-hover);
+}
+.delivery-card-thumb-wrap {
+	position: relative;
+	flex: none;
+}
+.delivery-card-thumb-label {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	font: 600 10px ui-monospace, monospace;
+	color: white;
+	text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+}
+.error-card--amber {
+	border-color: color-mix(in srgb, var(--color-warn) 34%, var(--color-border));
+	background: color-mix(in srgb, var(--color-warn) 6%, var(--color-surface));
+}
 .delivery-card-text {
 	min-width: 0;
 	flex: 1;

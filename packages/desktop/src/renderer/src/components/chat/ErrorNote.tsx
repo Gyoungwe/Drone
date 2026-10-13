@@ -126,7 +126,11 @@ export function ErrorNote({
 		const others = actions.filter((a) => a.action !== "continue");
 		const canContinue = spec.continuable && actions.some((a) => a.action === "continue");
 		return (
-			<div className="error-card" data-error-code={code} data-continued={continued || undefined}>
+			<div
+				className="error-card error-card--amber"
+				data-error-code={code}
+				data-continued={continued || undefined}
+			>
 				<div className="error-card-row">
 					<span className="error-card-icon" aria-hidden>
 						<ErrorCircleIcon />
