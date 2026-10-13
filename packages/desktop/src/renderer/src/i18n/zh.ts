@@ -734,6 +734,8 @@ export const zh = {
 		skillInvocation: "技能 · {name}",
 		scrollToBottom: "回到底部",
 		thinking: "思考过程",
+		assistant: "助手",
+		stepsSummary: "{count} 步",
 		working: "处理中",
 		thinkingLabel: "思考中",
 		worked: "已完成",

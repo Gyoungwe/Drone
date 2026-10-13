@@ -761,6 +761,8 @@ export const en: Messages = {
 		skillInvocation: "Skill · {name}",
 		scrollToBottom: "Back to bottom",
 		thinking: "Thinking",
+		assistant: "Assistant",
+		stepsSummary: "{count} steps",
 		working: "Working",
 		thinkingLabel: "Thinking",
 		worked: "Worked",

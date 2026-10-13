@@ -57,9 +57,18 @@ export function DeliveryCards({ files, sessionId }: { files: DeliveredFile[]; se
 						onClick={onOpen}
 						onContextMenu={contextMenuHandler(() => buildFileMenu({ path: href, cwd: cwd ?? undefined }, t))}
 					>
-						<span className="delivery-card-icon" aria-hidden="true">
-							{glyph(file.path)}
-						</span>
+						{fileTypeOf(file.path).previewKind === "image" ? (
+							<span className="delivery-card-thumb-wrap">
+								<img className="delivery-card-thumb" src={href} alt="" aria-hidden="true" />
+								<span className="delivery-card-thumb-label" aria-hidden="true">
+									{glyph(file.path)}
+								</span>
+							</span>
+						) : (
+							<span className="delivery-card-icon" aria-hidden="true">
+								{glyph(file.path)}
+							</span>
+						)}
 						<span className="delivery-card-text">
 							<span className="delivery-card-title">{file.title}</span>
 							<span className="delivery-card-desc">{file.description ?? basenameOf(file.path)}</span>
