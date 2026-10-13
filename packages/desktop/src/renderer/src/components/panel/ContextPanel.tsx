@@ -255,7 +255,7 @@ function StatusLine({ sessionId }: { sessionId: string | null }) {
 		status === "attention"
 			? "bg-amber-500"
 			: status === "working"
-				? "bg-violet-500 animate-pulse"
+				? "bg-accent animate-pulse"
 				: status === "done"
 					? "bg-emerald-500"
 					: "bg-ink-faint";

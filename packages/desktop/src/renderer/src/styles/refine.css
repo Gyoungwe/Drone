@@ -1,0 +1,113 @@
+/* UI 对照整改（ClawsGO 参照）：页面级降噪。
+   放在 globals / shell 之后统一覆盖；只用现有 token，不新增颜色。
+   品牌强调色只由 --color-accent 一个变量决定（浅色 / 深色各一行）。 */
+
+/* ---------- 左侧图标栏：选中态用中性高亮，不再强调色底 + 左侧色条 ---------- */
+.workbench-nav {
+	border-right-color: transparent;
+	background: var(--color-canvas);
+}
+.workbench-nav-item {
+	height: 36px;
+	width: 36px;
+	border-radius: 10px;
+	transition:
+		background-color var(--duration-fast) var(--ease-standard),
+		color var(--duration-fast) var(--ease-standard);
+}
+.workbench-nav-item.is-active {
+	background: var(--highlight);
+	color: var(--color-ink);
+}
+.workbench-nav-item.is-active::before {
+	display: none;
+}
+
+/* ---------- 设置弹窗：两栏，导航中性选中，标题更醒目，内容留白更大 ---------- */
+.settings-dialog-shell .settings-dialog {
+	border-radius: 18px;
+	border-color: var(--color-border);
+}
+.settings-dialog-shell .settings-dialog > div:first-child {
+	border-bottom-color: transparent;
+	background: transparent;
+	padding: 14px 16px 6px 20px;
+}
+.settings-dialog-shell .settings-dialog > div:first-child h2 {
+	font-size: 15px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+.settings-dialog-shell nav {
+	width: 168px;
+	padding: 6px 10px 12px;
+	border-right-color: transparent;
+	background: transparent;
+}
+.settings-dialog-shell .settings-nav-item {
+	border: 0;
+	padding: 6px 10px;
+	font-size: 13px;
+	border-radius: 8px;
+}
+.settings-dialog-shell .settings-nav-item:hover {
+	background: var(--highlight);
+}
+.settings-dialog-shell nav .settings-nav-item.is-active {
+	border: 0;
+	background: var(--color-hover);
+	color: var(--color-ink);
+	font-weight: 500;
+}
+.settings-dialog-shell nav > p {
+	margin-top: 14px;
+	padding: 0 10px 2px;
+	font-size: 11px;
+	letter-spacing: 0.02em;
+	color: var(--color-ink-faint);
+}
+.settings-dialog-shell .settings-dialog-content {
+	padding: 8px 24px 24px 16px;
+}
+
+/* ---------- 空间 / 会话列表：搜索栏去底色、行高与字号统一 ---------- */
+.project-search {
+	border-bottom-color: transparent;
+	background: transparent;
+}
+.project-page {
+	background: var(--color-surface);
+}
+
+/* ---------- 知识库：页头去分隔线、状态卡去阴影，与工作台同一套层级 ---------- */
+.knowledge-view-head {
+	border-bottom-color: transparent;
+	background: transparent;
+	padding: 14px 24px 6px;
+}
+.knowledge-view-body {
+	padding: 10px 24px 40px;
+	background: var(--knowledge-canvas);
+}
+.knowledge-home > section:first-child {
+	box-shadow: none;
+	border-color: var(--knowledge-border);
+	background: var(--knowledge-surface);
+}
+
+/* ---------- 文件预览侧栏：工具条去框，内容区更安静 ---------- */
+.resource-reader-toolbar {
+	border-color: transparent;
+	box-shadow: none;
+}
+
+/* ---------- 滚动区边缘渐隐（ClawsGO scroll-fade） ---------- */
+.scroll-fade {
+	mask-image: linear-gradient(
+		to bottom,
+		transparent,
+		#000 calc(var(--scroll-fade-size) / 4),
+		#000 calc(100% - var(--scroll-fade-size) / 2),
+		transparent
+	);
+}

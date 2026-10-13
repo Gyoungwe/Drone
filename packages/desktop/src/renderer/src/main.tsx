@@ -12,6 +12,7 @@ import { useDesktopPrefsStore } from "./stores/desktop-prefs";
 import { useThemeStore } from "./stores/theme";
 import { useUiPreferencesStore } from "./stores/ui-preferences";
 import "./styles/globals.css";
+import "./styles/refine.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("root element not found");
