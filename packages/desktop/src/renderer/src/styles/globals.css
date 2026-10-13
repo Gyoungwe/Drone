@@ -3456,3 +3456,16 @@ code {
 	background: var(--knowledge-surface-muted);
 	box-shadow: none;
 }
+
+/* U4：轮末页脚只常驻计时与错误；变更 / token / 步骤明细悬停或键盘聚焦时显示 */
+.turn-footer > .turn-footer-stat,
+.turn-footer > .turn-footer-chip:not(.has-error) {
+	opacity: 0;
+	transition: opacity 150ms var(--ease-standard, ease);
+}
+.turn-footer:hover > .turn-footer-stat,
+.turn-footer:hover > .turn-footer-chip,
+.turn-footer:focus-within > .turn-footer-stat,
+.turn-footer:focus-within > .turn-footer-chip {
+	opacity: 1;
+}
