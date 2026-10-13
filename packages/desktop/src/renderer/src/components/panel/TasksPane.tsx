@@ -14,6 +14,8 @@ import { useAgentActive } from "../session/session-status";
 import { ExampleTaskCards } from "../tasks/ExampleTaskCards";
 import { decisionConfirmationChoice, decisionConfirmationRequest } from "./decision-confirm";
 import { stableEmptyConfirmedIds, stableEmptyDecisions } from "./decision-projection";
+import { RunOverviewCard } from "./RunOverviewCard";
+import { runOverview } from "./run-overview";
 
 function TodoLine({ todo, spinnerPaused }: { todo: TodoItem; spinnerPaused: boolean }) {
 	if (todo.status === "completed") {
@@ -235,6 +237,7 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 	const latestMessage = [...messages].reverse().find((m) => m.kind === "assistant" && m.taskView);
 	const view = latestMessage?.kind === "assistant" ? latestMessage.taskView : undefined;
 	const empty = todoCount === 0 && !(view && view.tasks.length > 0);
+	const overview = runOverview(messages);
 
 	return (
 		<div className="context-pane">
@@ -264,7 +267,24 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 					</div>
 				</section>
 			)}
-			{empty && (readOnly ? <p className="panel-empty">{t("panel.tasksEmpty")}</p> : <ExampleTaskCards />)}
+			{empty &&
+				(messages.length > 0 || agentActive ? (
+					<RunOverviewCard
+						overview={overview}
+						running={agentActive}
+						labels={{
+							running: t("panel.runOverview.running"),
+							idle: t("panel.runOverview.idle"),
+							tools: t("panel.runOverview.tools", { count: overview.tools }),
+							files: t("panel.runOverview.files", { count: overview.files.length }),
+							waiting: t("panel.runOverview.waiting"),
+						}}
+					/>
+				) : readOnly ? (
+					<p className="panel-empty">{t("panel.tasksEmpty")}</p>
+				) : (
+					<ExampleTaskCards />
+				))}
 		</div>
 	);
 }
