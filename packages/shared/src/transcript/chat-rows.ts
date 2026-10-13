@@ -14,6 +14,9 @@ import type { ActivityEntry, SessionTranscriptState, SubagentRunUi, UIMessage, U
 /** 折叠组中的一条元数据项（一条消息的思考/工具，或流式中的进行中部分） */
 export interface MetaItem {
 	thinking: string;
+	/** 思考起止（live 与本会话内固化的消息有；历史回放缺省 → 不显示时长） */
+	thinkingStartedAt?: number;
+	thinkingEndedAt?: number;
 	tools: UIToolCall[];
 	/** 流式项的活动序列（到达顺序），预览行数据源；仅流式（未提交）项携带 */
 	activity?: ActivityEntry[];
@@ -112,7 +115,13 @@ const committedMetaCache = new WeakMap<Extract<UIMessage, { kind: "assistant" }>
 function committedMetaItem(message: Extract<UIMessage, { kind: "assistant" }>): MetaItem {
 	let item = committedMetaCache.get(message);
 	if (!item) {
-		item = { thinking: message.thinking, tools: message.tools };
+		item = {
+			thinking: message.thinking,
+			tools: message.tools,
+			...(message.thinkingStartedAt != null
+				? { thinkingStartedAt: message.thinkingStartedAt, thinkingEndedAt: message.thinkingEndedAt }
+				: {}),
+		};
 		committedMetaCache.set(message, item);
 	}
 	return item;
@@ -322,6 +331,8 @@ export function buildChatRows(
 		if (streaming.thinking || preTools.length > 0) {
 			metaItems.push({
 				thinking: streaming.thinking,
+				thinkingStartedAt: streaming.thinkingStartedAt,
+				thinkingEndedAt: streaming.thinkingEndedAt,
 				tools: preTools,
 				// 正文已出现时 pre 组被强制结束（endImmediately），不再携带活动序列；未出正文时维持现状
 				activity: textIdx == null ? streaming.activity : undefined,

@@ -1,8 +1,14 @@
-import { dotsFromItems, type MetaDot, type MetaItem, summarizeCategories } from "@drone/shared";
-import { Fragment, memo, useMemo } from "react";
+import {
+	dotsFromItems,
+	type MetaDot,
+	type MetaItem,
+	summarizeCategories,
+	thinkingLabel,
+} from "@drone/shared";
+import { Fragment, memo, useEffect, useMemo, useState } from "react";
 import type { OrbState } from "thinking-orbs";
 import { ThinkingOrb } from "thinking-orbs";
-import { useT } from "../../i18n";
+import { useI18nStore, useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import { ExpandArrowIcon } from "../icons";
@@ -14,14 +20,40 @@ import { useSweepHighlight } from "./use-sweep-highlight";
 
 export type { MetaItem };
 
+/** 思考计时：思考中每秒刷新「思考中 Ns」；endedAt 落定（首个正文/工具到达）后冻结为「深度思考 X.Xs」。
+ * 无起点（历史回放未持久化思考时间）→ null，调用方回退静态标签，不留空位 */
+function useThinkingTimer(startedAt?: number, endedAt?: number): string | null {
+	const zh = useI18nStore((st) => st.language) === "zh";
+	const live = startedAt != null && endedAt == null;
+	const [now, setNow] = useState(() => Date.now());
+	useEffect(() => {
+		if (!live) return;
+		setNow(Date.now());
+		const id = setInterval(() => setNow(Date.now()), 1000);
+		return () => clearInterval(id);
+	}, [live]);
+	return startedAt != null ? thinkingLabel(startedAt, endedAt ?? null, now, zh) : null;
+}
+
 /** 思考过程行（内层折叠，与 tool call 行同风格） */
-function ThinkingRow({ thinking }: { thinking: string }) {
+function ThinkingRow({
+	thinking,
+	startedAt,
+	endedAt,
+}: {
+	thinking: string;
+	startedAt?: number;
+	endedAt?: number;
+}) {
 	const t = useT();
+	const label = useThinkingTimer(startedAt, endedAt) ?? t("message.thinking");
 	return (
 		<details className="group/dets drawer-details">
 			<summary className="group/row flex cursor-pointer items-center gap-2 py-0.5 select-none [&::-webkit-details-marker]:hidden">
 				<span className="shrink-0 text-[13px] font-semibold text-ink-faint transition-colors group-hover/row:text-ink">
-					{t("message.thinking")}
+					<span data-testid="thinking-label" className="tabular-nums">
+						{label}
+					</span>
 				</span>
 				<ExpandArrowIcon className="shrink-0 text-ink-faint opacity-0 transition-[opacity,transform,color] group-hover/row:opacity-100 group-hover/row:text-ink-2 group-open/dets:rotate-90" />
 			</summary>
@@ -111,7 +143,14 @@ export const MetaGroup = memo(function MetaGroup({
 
 	const rows = items.flatMap((item, i) => [
 		// biome-ignore lint/suspicious/noArrayIndexKey: 折叠组内项无独立 id，列表顺序稳定
-		item.thinking ? <ThinkingRow key={`thinking-${i}`} thinking={item.thinking} /> : null,
+		item.thinking ? (
+			<ThinkingRow
+				key={`thinking-${i}`}
+				thinking={item.thinking}
+				startedAt={item.thinkingStartedAt}
+				endedAt={item.thinkingEndedAt}
+			/>
+		) : null,
 		...item.tools.map((tool) => (
 			<Slot key={tool.key} name={UI_SLOTS.ToolCallCard} props={{ tool }} fallback={ToolCallCard} />
 		)),
@@ -132,6 +171,18 @@ export const MetaGroup = memo(function MetaGroup({
 	const isTool = latestActivity?.kind === "tool";
 	const orbState: OrbState = isTool ? "connecting" : "working";
 	const labelKey = isTool ? "message.working" : "message.thinkingLabel";
+	// 组内最近一段带计时的思考：working 期标题显示实时秒数，结束后冻结时长
+	const timedThinking = useMemo(() => {
+		for (let i = items.length - 1; i >= 0; i--) {
+			const it = items[i];
+			if (it?.thinking && it.thinkingStartedAt != null) return it;
+		}
+		return null;
+	}, [items]);
+	const thinkingTimerLabel = useThinkingTimer(
+		timedThinking?.thinkingStartedAt,
+		timedThinking?.thinkingEndedAt,
+	);
 
 	// 实时预览：完整活动序列按到达顺序展开，ticker 在 thinking/tool 间保持 latest-wins。
 	// 内容已由 reducer 分块累计；这里不重新合并、解析或摘要。
@@ -181,7 +232,7 @@ export const MetaGroup = memo(function MetaGroup({
 										ref={labelRef}
 										className="sweep-target text-[14px] font-bold text-ink-working transition-colors group-hover/row:text-ink"
 									>
-										{statusText || t(labelKey)}
+										{statusText || (!isTool && thinkingTimerLabel) || t(labelKey)}
 									</span>
 								</div>
 								{/* 实时预览内联进标题行（单行截断，展开组时隐藏） */}
@@ -204,7 +255,7 @@ export const MetaGroup = memo(function MetaGroup({
 								ref={labelRef}
 								className="text-[14px] font-bold text-ink-dim transition-colors group-hover/row:text-ink"
 							>
-								{t("message.worked")}
+								{thinkingTimerLabel ?? t("message.worked")}
 							</span>
 						)}
 					</div>
