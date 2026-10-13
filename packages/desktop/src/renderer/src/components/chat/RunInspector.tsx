@@ -238,7 +238,7 @@ export function RunInspector({
 				{run.skill && (
 					<section>
 						<p className="font-medium text-ink-2">{t("runInspector.toolUsed")}</p>
-						<code className="text-[11px]">/skill:{run.skill}</code>
+						<code className="text-xs">/skill:{run.skill}</code>
 					</section>
 				)}
 				{run.errors > 0 && (

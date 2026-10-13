@@ -26,7 +26,7 @@ export function ExampleTaskCards() {
 							className="flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-hover"
 							onClick={() => open(task.id)}
 						>
-							<span className="mt-[1px] shrink-0 rounded-md bg-hover px-1.5 py-0.5 text-[11px] font-medium text-ink-dim">
+							<span className="mt-[1px] shrink-0 rounded-md bg-hover px-1.5 py-0.5 text-xs font-medium text-ink-dim">
 								{t(`examples.tag.${task.direction}`)}
 							</span>
 							<span className="min-w-0 flex-1">

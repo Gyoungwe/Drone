@@ -69,7 +69,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 				data-testid="knowledge-flow-card"
 			>
 				<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-					<p className="text-[11px] font-medium text-ink-dim">
+					<p className="text-xs font-medium text-ink-dim">
 						{t("outputs")} {artifacts.length}
 					</p>
 					{artifacts.map(
@@ -78,7 +78,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 								<button
 									key={item.key}
 									type="button"
-									className="block max-w-full truncate text-left text-[11px] underline underline-offset-2"
+									className="block max-w-full truncate text-left text-xs underline underline-offset-2"
 									onClick={() =>
 										useUiStore.getState().openResourcePreview({
 											href: item.path || "",
@@ -184,16 +184,16 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 				<div className="max-h-[28vh] overflow-auto border-t border-border px-2 py-1.5">
 					{flow.vault && <p className="mb-2 break-all font-mono text-[11px] text-ink-dim">{flow.vault}</p>}
 					{flow.search && (
-						<p className="mb-2 break-words text-[11px]">
+						<p className="mb-2 break-words text-xs">
 							{t("search")}：{flow.search.query} · {t("matched")} {flow.search.hits} ·{" "}
 							{flow.search.complete ? t("coverageReady") : t("coveragePartial")}
 						</p>
 					)}
 					{!!flow.specialists?.length && (
 						<div className="mb-3" data-testid="knowledge-specialist-runs">
-							<h4 className="mb-2 text-[11px] font-semibold">{t("specialistRuns")}</h4>
+							<h4 className="mb-2 text-xs font-semibold">{t("specialistRuns")}</h4>
 							{flow.specialists.map((agent) => (
-								<div key={agent.id} className="mb-2 rounded-lg border border-border p-2 text-[11px]">
+								<div key={agent.id} className="mb-2 rounded-lg border border-border p-2 text-xs">
 									<div className="flex justify-between gap-2">
 										<strong>{t(`specialist_${agent.role}`)}</strong>
 										<span>{t(`worker_${agent.status}`)}</span>
@@ -214,11 +214,11 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 													{t("openSource")}
 												</Button>
 											</div>
-											{ref.excerpt && <p className="break-words text-[11px] text-ink-dim">{ref.excerpt}</p>}
+											{ref.excerpt && <p className="break-words text-xs text-ink-dim">{ref.excerpt}</p>}
 										</div>
 									))}
 									{agent.inputTokens !== undefined && (
-										<p className="mt-1 text-[11px] text-ink-dim">
+										<p className="mt-1 text-xs text-ink-dim">
 											{t("specialistUsage")} {agent.inputTokens} / {agent.outputTokens ?? 0} · {t("sources")}{" "}
 											{agent.sourceCount ?? 0}
 										</p>
@@ -228,9 +228,9 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 							<p className="text-[11px] text-ink-faint">{t("specialistUnverified")}</p>
 						</div>
 					)}
-					<h4 className="mb-2 text-[11px] font-semibold">{t("findings")}</h4>
+					<h4 className="mb-2 text-xs font-semibold">{t("findings")}</h4>
 					{(flow.search?.previews || []).map((row) => (
-						<div key={row.path} className="mb-2 rounded-lg border border-border p-2 text-[11px]">
+						<div key={row.path} className="mb-2 rounded-lg border border-border p-2 text-xs">
 							<div className="flex items-start justify-between gap-2">
 								<strong className="min-w-0 break-words">{row.title || row.path}</strong>
 								<Button size="sm" onClick={() => setPath(row.path)}>
@@ -243,13 +243,13 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 							</p>
 						</div>
 					))}
-					{!flow.search?.hits && <p className="mb-2 text-[11px] text-ink-dim">{t("noFindings")}</p>}
+					{!flow.search?.hits && <p className="mb-2 text-xs text-ink-dim">{t("noFindings")}</p>}
 					<p className="mb-3 text-[11px] text-ink-faint">{t("candidateHint")}</p>
 					{!!artifacts.length && (
 						<div className="mb-3">
-							<h4 className="mb-1 text-[11px] font-semibold">{t("outputs")}</h4>
+							<h4 className="mb-1 text-xs font-semibold">{t("outputs")}</h4>
 							{artifacts.map((item) => (
-								<div key={item.key} className="mb-1 rounded-lg bg-hover p-2 text-[11px]">
+								<div key={item.key} className="mb-1 rounded-lg bg-hover p-2 text-xs">
 									<div className="flex items-start justify-between gap-2">
 										<span className="min-w-0 break-words">
 											{item.title} · {item.status}
@@ -277,25 +277,25 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 							))}
 						</div>
 					)}
-					{flow.phase === "no-hits" && <p className="mb-2 text-[11px] text-warn">{t("noHitsHint")}</p>}
+					{flow.phase === "no-hits" && <p className="mb-2 text-xs text-warn">{t("noHitsHint")}</p>}
 					{(flow.error || flow.publication?.reason) && (
-						<p className="mb-2 break-words rounded-lg bg-hover p-2 text-[11px] text-warn">
+						<p className="mb-2 break-words rounded-lg bg-hover p-2 text-xs text-warn">
 							{flow.error || flow.publication?.reason}
 						</p>
 					)}
 					{!!flow.publication?.warnings?.length && (
-						<div className="mb-2 space-y-1 rounded-lg bg-hover p-2 text-[11px] text-warn">
+						<div className="mb-2 space-y-1 rounded-lg bg-hover p-2 text-xs text-warn">
 							{flow.publication.warnings.map((warning) => (
 								<p key={`${warning.code}:${warning.message}`}>{warning.message}</p>
 							))}
 						</div>
 					)}
-					<h4 className="mb-1 text-[11px] font-semibold">{t("readScope")}</h4>
+					<h4 className="mb-1 text-xs font-semibold">{t("readScope")}</h4>
 					<div className="space-y-1">
 						{records.map((row: KnowledgeReadRecord) => (
 							<div
 								key={`${row.path}:${row.startLine}:${row.endLine}:${row.hash ?? "missing"}`}
-								className="flex items-center justify-between gap-2 text-[11px]"
+								className="flex items-center justify-between gap-2 text-xs"
 							>
 								<div className="min-w-0">
 									<span className="block truncate font-mono" title={row.path}>
@@ -329,9 +329,9 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 							/>
 						</div>
 					)}
-					<p className="mt-3 text-[11px] text-ink-dim">{t("checksNotFacts")}</p>
+					<p className="mt-3 text-xs text-ink-dim">{t("checksNotFacts")}</p>
 					{!!flow.publication?.paths?.length && (
-						<div className="my-2 text-[11px] text-warn">
+						<div className="my-2 text-xs text-warn">
 							{flow.publication.paths.map((p) => (
 								<code key={p} className="block break-all">
 									{p}

@@ -58,7 +58,7 @@ export function FirstRunGuide() {
 				<header className="flex items-start justify-between gap-3">
 					<div>
 						<h2 className="text-[13px] font-semibold text-ink">{t("firstRun.startTitle")}</h2>
-						<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">{t("firstRun.startSubtitle")}</p>
+						<p className="mt-1 text-xs leading-relaxed text-ink-dim">{t("firstRun.startSubtitle")}</p>
 					</div>
 					<button
 						type="button"
@@ -77,8 +77,8 @@ export function FirstRunGuide() {
 							data-testid="first-run-example"
 						>
 							<strong className="block text-[12px] text-ink">{t("firstRun.example.title")}</strong>
-							<span className="mt-1 block truncate text-[11px] text-ink-dim">{example.title[language]}</span>
-							<span className="mt-2 block text-[11px] font-medium text-accent">
+							<span className="mt-1 block truncate text-xs text-ink-dim">{example.title[language]}</span>
+							<span className="mt-2 block text-xs font-medium text-accent">
 								{t("firstRun.example.button")} →
 							</span>
 						</button>
@@ -90,7 +90,7 @@ export function FirstRunGuide() {
 						data-testid="first-run-setup"
 					>
 						<strong className="block text-[12px] text-ink">{t("firstRun.setup.title")}</strong>
-						<span className="mt-1 block text-[11px] leading-relaxed text-ink-dim">
+						<span className="mt-1 block text-xs leading-relaxed text-ink-dim">
 							{t("firstRun.setup.description")}
 						</span>
 					</button>
@@ -107,7 +107,7 @@ export function FirstRunGuide() {
 			<header className="flex items-start justify-between gap-3">
 				<div>
 					<h2 className="text-[13px] font-semibold text-ink">{t("firstRun.setup.title")}</h2>
-					<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">{t("firstRun.setup.subtitle")}</p>
+					<p className="mt-1 text-xs leading-relaxed text-ink-dim">{t("firstRun.setup.subtitle")}</p>
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
 					<button
@@ -185,15 +185,13 @@ function GuideAction({
 			<strong className="flex items-center justify-between gap-2 text-[12px] text-ink">
 				{title}
 				{done ? (
-					<span className="rounded-full bg-ok/12 px-1.5 py-0.5 text-[10px] font-medium text-ok">
-						{doneLabel}
-					</span>
+					<span className="rounded-full bg-ok/12 px-1.5 py-0.5 text-xs font-medium text-ok">{doneLabel}</span>
 				) : null}
 			</strong>
 			<p className="mt-1 min-h-8 text-[11px] leading-relaxed text-ink-faint">{description}</p>
 			<button
 				type="button"
-				className="mt-2 text-[11px] font-medium text-accent hover:underline"
+				className="mt-2 text-xs font-medium text-accent hover:underline"
 				onClick={onClick}
 			>
 				{button} →

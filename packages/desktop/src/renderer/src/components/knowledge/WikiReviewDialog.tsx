@@ -139,7 +139,7 @@ export function WikiReviewDialog({
 						<p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink">
 							{t("reason")}：{preview.rationale}
 						</p>
-						<p className="rounded-lg bg-hover px-3 py-2 text-[11px] leading-relaxed text-ink-dim">
+						<p className="rounded-lg bg-hover px-3 py-2 text-xs leading-relaxed text-ink-dim">
 							{t("preserve")}
 						</p>
 						<div className="flex flex-wrap gap-1" role="tablist" aria-label={t("reviewTitle")}>
@@ -185,7 +185,7 @@ export function WikiReviewDialog({
 								{(["before", "after"] as const).map((side) => (
 									<div key={side} className="min-w-0">
 										<p className="mb-1 text-xs font-medium">{t(side)}</p>
-										<pre className="max-h-[22vh] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-[11px] leading-relaxed">
+										<pre className="max-h-[22vh] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-xs leading-relaxed">
 											{preview[side] || "—"}
 										</pre>
 									</div>
@@ -193,7 +193,7 @@ export function WikiReviewDialog({
 							</div>
 						)}
 						{view === "protected" && (
-							<pre className="max-h-[32vh] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-[11px] leading-relaxed">
+							<pre className="max-h-[32vh] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-xs leading-relaxed">
 								{preview.protectedText || "—"}
 							</pre>
 						)}
@@ -204,12 +204,12 @@ export function WikiReviewDialog({
 							<div className="max-h-28 space-y-1 overflow-auto">
 								{preview.sources.map((source) => (
 									<div key={source.path} className="rounded-lg border border-border px-2 py-1.5">
-										<p className="break-all text-[11px]">{source.path}</p>
+										<p className="break-all text-xs">{source.path}</p>
 										<p className="font-mono text-[11px] text-ink-faint">
 											L{source.startLine}–{source.endLine}
 											{source.hash ? ` · ${source.hash.slice(0, 12)}` : ""}
 										</p>
-										{source.changed && <p className="text-[11px] text-warn">{t("sourceChanged")}</p>}
+										{source.changed && <p className="text-xs text-warn">{t("sourceChanged")}</p>}
 									</div>
 								))}
 							</div>
@@ -253,7 +253,7 @@ export function WikiReviewDialog({
 								}
 							}}
 						/>
-						<p className="text-[11px] text-ink-dim">{t("notScience")}</p>
+						<p className="text-xs text-ink-dim">{t("notScience")}</p>
 					</>
 				)}
 			</div>

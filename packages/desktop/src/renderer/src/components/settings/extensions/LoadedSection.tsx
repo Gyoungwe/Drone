@@ -41,12 +41,12 @@ export function LoadedSection() {
 			)}
 			{errors.length > 0 && (
 				<div className="mt-4 rounded-lg bg-red-50 px-3 py-2">
-					<p className="text-[11px] font-medium text-red-600">
+					<p className="text-xs font-medium text-red-600">
 						{t("settings.extensions.loadErrors", { count: errors.length })}
 					</p>
 					<ul className="mt-1 space-y-1">
 						{errors.map((err) => (
-							<li key={err.path} className="text-[11px] leading-relaxed text-red-500">
+							<li key={err.path} className="text-xs leading-relaxed text-red-500">
 								<span className="font-mono">{err.path}</span> — {err.error}
 							</li>
 						))}

@@ -327,7 +327,7 @@ export function KnowledgeGraph({
 		return () => document.removeEventListener("keydown", onKeyDown);
 	}, [camera, points, selected]);
 
-	if (error) return <p className="rounded-lg border border-border p-3 text-[11px] text-err">{error}</p>;
+	if (error) return <p className="rounded-lg border border-border p-3 text-xs text-err">{error}</p>;
 	if (!data || !graph) return <p className="text-[11px] text-ink-faint">{t("loading")}</p>;
 	if (nodes.length === 0)
 		return (
@@ -343,7 +343,7 @@ export function KnowledgeGraph({
 				<Button size="sm" aria-pressed={view === "all"} onClick={() => setView("all")}>
 					{t("graphAllFiles")}
 				</Button>
-				<label className="ml-1 flex items-center gap-1 text-[11px] text-ink-dim">
+				<label className="ml-1 flex items-center gap-1 text-xs text-ink-dim">
 					<input
 						type="checkbox"
 						checked={mergeMirrors}
@@ -368,7 +368,7 @@ export function KnowledgeGraph({
 					))}
 				</span>
 			</div>
-			<div className="flex flex-wrap items-center gap-1 text-[10px] text-ink-faint">
+			<div className="flex flex-wrap items-center gap-1 text-[11px] text-ink-faint">
 				<span className="mr-1 uppercase tracking-[0.12em]">{t("graphCategory")}</span>
 				{([...new Set(nodes.map(categoryOf))] as GraphCategory[]).map((category) => (
 					<button
@@ -401,7 +401,7 @@ export function KnowledgeGraph({
 			<div className="relative">
 				<div className="knowledge-observatory-canvas relative overflow-hidden rounded-xl">
 					<div className="knowledge-graph-canvas-tools absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-3">
-						<span className="knowledge-graph-observatory-label rounded-lg px-3 py-2 text-[11px]">
+						<span className="knowledge-graph-observatory-label rounded-lg px-3 py-2 text-xs">
 							{t("graphObservatoryLabel")}
 						</span>
 						<div className="knowledge-graph-controls flex items-center gap-1 rounded-lg p-1">
@@ -650,7 +650,7 @@ export function KnowledgeGraph({
 							})}
 						</g>
 					</svg>
-					<div className="knowledge-graph-legend absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-md px-2 py-1.5 text-[10px]">
+					<div className="knowledge-graph-legend absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-md px-2 py-1.5 text-xs">
 						{([...new Set(nodes.map(categoryOf))] as GraphCategory[]).map((category) => (
 							<span key={`legend-${category}`}>
 								<i
@@ -694,20 +694,20 @@ export function KnowledgeGraph({
 							>
 								×
 							</button>
-							<p className="text-[10px] uppercase tracking-[0.12em] text-ink-faint">
+							<p className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">
 								{t("graphSelectedNode")}
 							</p>
 							<h4 className="mt-1 truncate text-xs font-semibold">{selectedNode.title}</h4>
-							<p className="mt-1 break-all font-mono text-[10px] text-ink-faint">{selectedNode.path}</p>
+							<p className="mt-1 break-all font-mono text-[11px] text-ink-faint">{selectedNode.path}</p>
 							<div className="mt-2 flex flex-wrap gap-1">
-								<span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-ink-dim">
+								<span className="rounded border border-border px-1.5 py-0.5 text-xs text-ink-dim">
 									{categoryLabels[categoryOf(selectedNode)]}
 								</span>
-								<span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-ink-dim">
+								<span className="rounded border border-border px-1.5 py-0.5 text-xs text-ink-dim">
 									{t("graphLinks").replace("{count}", String(selectedNode.degree))}
 								</span>
 							</div>
-							<dl className="mt-3 space-y-1.5 text-[11px] text-ink-dim">
+							<dl className="mt-3 space-y-1.5 text-xs text-ink-dim">
 								<div className="flex justify-between">
 									<dt>{t("graphOutgoing")}</dt>
 									<dd>{links?.outgoing.length ?? 0}</dd>
@@ -722,18 +722,18 @@ export function KnowledgeGraph({
 								</div>
 							</dl>
 							{selectedNode.warnings?.length || selectedNode.mirrors?.length ? (
-								<p className="mt-3 rounded bg-hover px-2 py-1.5 text-[11px] text-warn">
+								<p className="mt-3 rounded bg-hover px-2 py-1.5 text-xs text-warn">
 									{t("graphMirrorWarning").replace("{count}", String(selectedNode.mirrors?.length ?? 0))}
 								</p>
 							) : null}
 							{links && (
 								<div className="mt-3 border-t border-border pt-2">
-									<p className="text-[10px] font-semibold text-ink-dim">{t("graphRelatedNotes")}</p>
+									<p className="text-xs font-semibold text-ink-dim">{t("graphRelatedNotes")}</p>
 									{[...links.outgoing, ...links.incoming].slice(0, 4).map((link) => (
 										<button
 											key={`${link.path}-${link.exists}`}
 											type="button"
-											className="mt-1 block w-full truncate text-left text-[10px] text-ink-faint hover:text-ink"
+											className="mt-1 block w-full truncate text-left text-[11px] text-ink-faint hover:text-ink"
 											onClick={() => setSelected(link.path)}
 										>
 											{link.exists ? "↗" : "＋"} {link.title}
@@ -751,16 +751,16 @@ export function KnowledgeGraph({
 						</>
 					) : (
 						<div className="flex h-full min-h-[220px] flex-col justify-between">
-							<p className="text-[10px] uppercase tracking-[0.12em] text-ink-faint">
+							<p className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">
 								{t("graphSelectedNode")}
 							</p>
 							<p className="mt-3 text-[11px] leading-relaxed text-ink-faint">{t("graphSelectHint")}</p>
-							<p className="text-[10px] leading-relaxed text-ink-faint">{t("graphCollisionHint")}</p>
+							<p className="text-[11px] leading-relaxed text-ink-faint">{t("graphCollisionHint")}</p>
 						</div>
 					)}
 				</aside>
 			</div>
-			<p className="text-[10px] text-ink-faint">
+			<p className="text-[11px] text-ink-faint">
 				{t("graphHint")} · {t("graphShortcuts")}
 			</p>
 		</div>

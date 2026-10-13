@@ -9,6 +9,32 @@
 /* 语义 token → Tailwind 工具类（bg-canvas / bg-surface / text-ink / border-border ...）。
    inline 让工具类直接引用运行时变量，[data-theme] 改写变量值即完成主题切换 */
 @theme inline {
+	/* G1/G2：字体栈（拉丁 → 中文各平台 → 兜底）与等宽 token，font-sans / font-mono 工具类同源 */
+	--font-sans:
+		"Inter Variable", Inter, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+		"Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+	--font-mono:
+		ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono",
+		"Noto Sans Mono CJK SC", monospace;
+	/* G3：字号梯度 7 档（最小 11px） */
+	--text-meta: 11px;
+	--text-meta--line-height: 16px;
+	--text-ui: 12px;
+	--text-ui--line-height: 18px;
+	--text-body: 13px;
+	--text-body--line-height: 20px;
+	--text-heading: 14px;
+	--text-heading--line-height: 22px;
+	--text-title: 15px;
+	--text-title--line-height: 22px;
+	--text-display: 20px;
+	--text-display--line-height: 28px;
+	/* G7：圆角梯度（与 Tailwind md/lg/xl/2xl 同值，CSS 里统一引用） */
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+	--radius-xl: 16px;
+	--radius-dialog: 18px;
 	--color-canvas: var(--color-canvas);
 	--color-surface: var(--color-surface);
 	--color-hover: var(--color-hover);
@@ -424,9 +450,9 @@ body,
 }
 
 body {
-	font-family:
-		"Inter Variable", Inter, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
-		sans-serif;
+	font-family: var(--font-sans);
+	/* G9：计数 / 耗时 / token 数字等宽，避免跳动 */
+	font-variant-numeric: tabular-nums;
 	background: var(--color-canvas);
 	color: var(--color-ink);
 	font-size: 13px;
@@ -472,7 +498,7 @@ body {
 
 pre,
 code {
-	font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+	font-family: var(--font-mono);
 }
 
 /* shiki 高亮：透明背景融入卡片容器 */
@@ -667,7 +693,7 @@ code {
 /* 悬浮操作按钮：半透明胶囊 + 毛玻璃，颜色全走 token 自动适配深浅 */
 .markdown-body .code-block-header .code-action-btn {
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	background: color-mix(in srgb, var(--color-canvas) 72%, transparent);
 	backdrop-filter: blur(8px);
 	padding: 0.25rem;
@@ -714,7 +740,7 @@ code {
 /* monaco 就绪前/失败时的纯文本 fallback：库默认 font-family/background 全 inherit（混入正文体），
    补齐等宽字体与主题色表面，加载瞬间不突兀 */
 .markdown-body .code-fallback-plain {
-	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+	font-family: var(--font-mono);
 	font-size: 13px;
 	padding: 0.75rem 1rem;
 }
@@ -841,7 +867,7 @@ code {
 }
 /* mono path RTL 截断：优先保留文件名端 */
 .diff-file-path {
-	font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+	font-family: var(--font-mono);
 	font-size: 12px;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -891,7 +917,7 @@ code {
 	flex: none;
 	align-items: center;
 	justify-content: center;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
 	color: var(--color-accent);
 }
@@ -933,7 +959,7 @@ code {
 	min-width: 0;
 	align-items: flex-start;
 	gap: 9px;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: var(--color-hover);
 	padding: 10px;
 }
@@ -1029,7 +1055,7 @@ code {
 	gap: 6px;
 	max-width: 100%;
 	padding: 3px 6px;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	font-size: 12px;
 	color: var(--color-ink-faint);
 	transition:
@@ -1057,7 +1083,7 @@ code {
 	max-height: 288px;
 	overflow-y: auto;
 	padding: 6px;
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	background: var(--color-surface);
 	box-shadow: var(--shadow-pop);
 }
@@ -1066,7 +1092,7 @@ code {
 	align-items: center;
 	gap: 8px;
 	padding: 5px 8px;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	font-size: 13px;
 	color: var(--color-ink-2);
 }
@@ -1100,7 +1126,7 @@ code {
 .diff-seg {
 	display: flex;
 	background: var(--color-hover);
-	border-radius: 7px;
+	border-radius: var(--radius-sm);
 	padding: 2px;
 	margin-left: auto;
 }
@@ -1128,7 +1154,7 @@ code {
 	background: none;
 	cursor: pointer;
 	color: var(--color-ink-dim);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 6px;
 	display: flex;
 	align-items: center;
@@ -1169,7 +1195,7 @@ code {
 	border-bottom: 1px solid var(--color-border);
 }
 .settings-row-title {
-	font-size: 12px;
+	font-size: 13px;
 	font-weight: 550;
 	line-height: 1.35;
 	color: var(--color-ink);
@@ -1178,7 +1204,7 @@ code {
 	max-width: min(560px, 58vw);
 	overflow: hidden;
 	margin-top: 2px;
-	font-size: 11px;
+	font-size: 12px;
 	line-height: 1.35;
 	color: var(--color-ink-faint);
 	text-overflow: ellipsis;
@@ -1233,7 +1259,7 @@ code {
 }
 .settings-disclosure-grid > div {
 	min-width: 0;
-	border-radius: 7px;
+	border-radius: var(--radius-sm);
 	background: var(--color-hover);
 	padding: 7px 8px;
 	font-size: 11px;
@@ -1295,7 +1321,7 @@ code {
 /* 文件卡片（手风琴） */
 .diff-file-card {
 	border: none;
-	border-radius: 10px;
+	border-radius: var(--radius-md);
 	background: var(--color-surface);
 	box-shadow: var(--shadow-soft);
 	margin-bottom: 10px;
@@ -1381,7 +1407,7 @@ code {
 /* diff 行自带 grid，才能让增删背景覆盖双 gutter 与代码区的整行；
    min-width: max-content 保留长代码的横向滚动。 */
 .diff-table {
-	font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+	font-family: var(--font-mono);
 	font-size: 11px;
 	line-height: 20px;
 	min-width: max-content;
@@ -1463,7 +1489,7 @@ code {
 	border: none;
 	border-top: 1px dashed var(--color-border);
 	background: none;
-	font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+	font-family: var(--font-mono);
 	font-size: 11px;
 	color: var(--color-ink-faint);
 	padding: 5px;
@@ -1513,7 +1539,7 @@ code {
 /* ---- 会话内错误条（<details> 折叠卡；抽屉动画复用 .drawer-details） ---- */
 .error-note {
 	background: var(--color-surface);
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow-soft);
 	overflow: hidden;
 }
@@ -1522,7 +1548,7 @@ code {
 	align-items: center;
 	gap: 8px;
 	padding: 9px 12px;
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	cursor: pointer;
 	user-select: none;
 	list-style: none;
@@ -1586,12 +1612,12 @@ code {
 	gap: 9px;
 }
 .error-note-detail {
-	font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+	font-family: var(--font-mono);
 	font-size: 12px;
 	line-height: 1.7;
 	color: var(--color-ink-dim);
 	background: var(--color-hover);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 8px 10px;
 	max-height: 112px;
 	overflow: auto;
@@ -1619,7 +1645,7 @@ code {
 	background: none;
 	border: none;
 	cursor: pointer;
-	border-radius: 7px;
+	border-radius: var(--radius-sm);
 	padding: 4px 8px;
 	display: inline-flex;
 	align-items: center;
@@ -1660,7 +1686,7 @@ code {
 	align-items: center;
 	gap: 8px;
 	background: var(--color-surface);
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow-soft);
 	padding: 8px 12px;
 }
@@ -1693,7 +1719,7 @@ code {
 	background: none;
 	border: none;
 	cursor: pointer;
-	border-radius: 7px;
+	border-radius: var(--radius-sm);
 	padding: 4px 9px;
 	display: inline-flex;
 	align-items: center;
@@ -1829,7 +1855,7 @@ code {
 .resource-back,
 .resource-open {
 	flex: none;
-	border-radius: 7px;
+	border-radius: var(--radius-sm);
 	padding: 4px 7px;
 	font-size: 11px;
 	color: var(--color-ink-dim);
@@ -1886,7 +1912,7 @@ code {
 .resource-media img {
 	max-width: 100%;
 	max-height: calc(100vh - 170px);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	object-fit: contain;
 }
 .resource-text {
@@ -1918,7 +1944,7 @@ code {
 	color: var(--color-ink-faint);
 }
 .resource-primary {
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: var(--color-hover);
 	padding: 6px 10px;
 	font-size: 11px;
@@ -1957,7 +1983,7 @@ code {
 .drone-button {
 	min-height: 30px;
 	border: 1px solid var(--color-border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: var(--color-surface);
 	color: var(--color-ink-2);
 	font-weight: 500;
@@ -2188,7 +2214,7 @@ code {
 }
 .context-panel--research .context-panel-body [role="alert"] {
 	border: 1px solid color-mix(in srgb, var(--color-err) 24%, var(--color-border));
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: color-mix(in srgb, var(--color-err) 5%, var(--color-surface));
 	padding: 8px 10px;
 }
@@ -2288,7 +2314,7 @@ code {
 	margin: 6px 0;
 	border: 1px solid oklch(0.78 0.13 75 / 0.55);
 	background: oklch(0.96 0.04 85 / 0.6);
-	border-radius: 10px;
+	border-radius: var(--radius-md);
 	padding: 10px 12px;
 	font-size: 13px;
 }
@@ -2329,7 +2355,7 @@ code {
 	flex: none;
 	border: 1px solid var(--color-border);
 	background: var(--color-surface);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 4px 12px;
 	font-size: 13px;
 	cursor: pointer;
@@ -2368,7 +2394,7 @@ code {
 	flex-direction: column;
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	box-shadow: 0 16px 48px oklch(0 0 0 / 0.18);
 	overflow: hidden;
 	font-size: 13px;
@@ -2420,7 +2446,7 @@ code {
 	grid-template-areas: "kind title pin" ". sub sub";
 	column-gap: 8px;
 	padding: 7px 10px;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
 }
 .search-palette .search-palette-item[aria-selected="true"] {
@@ -2475,7 +2501,7 @@ code {
 	padding: 4px;
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
-	border-radius: 10px;
+	border-radius: var(--radius-md);
 	box-shadow: 0 10px 32px oklch(0 0 0 / 0.16);
 	font-size: 13px;
 }
@@ -2495,7 +2521,7 @@ code {
 	font: inherit;
 	text-align: left;
 	padding: 5px 10px;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
 }
 .context-menu .context-menu-item:hover:not(:disabled),
@@ -2524,7 +2550,7 @@ code {
 	width: min(380px, calc(100vw - 2rem));
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	padding: 14px;
 	display: flex;
 	flex-direction: column;
@@ -2536,7 +2562,7 @@ code {
 }
 .context-prompt input {
 	border: 1px solid var(--color-border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 6px 8px;
 	background: transparent;
 	color: inherit;
@@ -2550,7 +2576,7 @@ code {
 .context-prompt-actions button {
 	border: 1px solid var(--color-border);
 	background: transparent;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 4px 12px;
 	color: inherit;
 	cursor: pointer;
@@ -2572,7 +2598,7 @@ code {
 	max-width: 760px;
 	border: 1px solid var(--color-border);
 	background: var(--color-surface);
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	padding: 12px 14px;
 	font-size: 13px;
 	display: flex;
@@ -2615,7 +2641,7 @@ code {
 	background: transparent;
 	color: inherit;
 	font: inherit;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 6px 10px;
 	cursor: pointer;
 }
@@ -2646,7 +2672,7 @@ code {
 }
 .inline-ask-custom {
 	border: 1px solid var(--color-border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 6px 10px;
 	background: transparent;
 	color: inherit;
@@ -2666,7 +2692,7 @@ code {
 	border: 1px solid var(--color-border);
 	background: transparent;
 	color: inherit;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 4px 12px;
 	cursor: pointer;
 	font: inherit;
@@ -2692,7 +2718,7 @@ code {
 }
 .host-env-meter {
 	border: 1px solid var(--color-border);
-	border-radius: 10px;
+	border-radius: var(--radius-md);
 	padding: 8px 10px;
 	font-size: 11px;
 }
@@ -2890,7 +2916,7 @@ code {
 	max-width: 320px;
 	text-align: left;
 	border: 1px solid var(--color-border);
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	padding: 8px 10px;
 	background: var(--color-surface);
 	color: inherit;
@@ -2909,7 +2935,7 @@ code {
 	flex: none;
 	width: 36px;
 	height: 36px;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	display: grid;
 	place-items: center;
 	font:
@@ -2943,7 +2969,7 @@ code {
 	font-size: 11px;
 	color: var(--color-ink-dim);
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	padding: 1px 8px;
 }
 
@@ -2987,7 +3013,7 @@ code {
 	white-space: nowrap;
 	font-size: 11px;
 	border: 1px solid var(--color-border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: var(--color-surface);
 	color: var(--color-ink-2);
 	padding: 3px 8px;

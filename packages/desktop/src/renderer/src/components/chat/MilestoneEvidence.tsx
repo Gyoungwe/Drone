@@ -37,7 +37,7 @@ function ExtensionEvidence({ milestone }: { milestone: TaskMilestone }) {
 		([key, value]) => !CORE_FIELDS.has(key) && typeof value === "string" && value,
 	);
 	return (
-		<div className="ml-5 mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-ink-dim">
+		<div className="ml-5 mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-ink-dim">
 			<span className={CARD_TONE_CLASS[toneForStatus(state)]}>{text}</span>
 			{evidence?.note ? <span className="text-ink-faint">{evidence.note}</span> : null}
 			{state !== "found" && evidence?.reason && !evidence.summary ? (

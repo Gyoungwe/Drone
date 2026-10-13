@@ -31,7 +31,7 @@
 	width: 40px;
 	align-items: center;
 	justify-content: center;
-	border-radius: 10px;
+	border-radius: var(--radius-md);
 	color: var(--color-ink-dim);
 	transition:
 		background-color 0.16s ease,
@@ -113,7 +113,7 @@
 	align-items: center;
 	justify-content: center;
 	margin-left: auto;
-	border-radius: 7px;
+	border-radius: var(--radius-sm);
 	color: var(--color-ink-faint);
 	transition:
 		background-color 0.15s,
@@ -135,7 +135,7 @@
 	padding: 6px 9px 8px;
 	font-size: 12px;
 	color: var(--color-ink-dim);
-	border-radius: 6px 6px 0 0;
+	border-radius: var(--radius-sm) 6px 0 0;
 	transition: color 0.15s;
 }
 .context-panel-tabs > button:hover {
@@ -208,7 +208,7 @@
 /* 会话产物 / 知识流卡片并入「产物」页签：去掉原顶部横条时代的外边距，对齐 panel-card */
 .panel-flow > [data-testid="knowledge-flow-card"] {
 	margin: 0 0 10px;
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	box-shadow: var(--shadow-soft);
 }
 .panel-flow > [data-testid="knowledge-flow-card"]:not(.sunburst-flow-card) {
@@ -250,7 +250,7 @@
 	align-items: center;
 	gap: 6px;
 	border: 1px solid var(--color-border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 6px 10px;
 	font-size: 12px;
 	color: var(--color-ink-2);
@@ -270,7 +270,7 @@
 .process-block {
 	margin: 2px 0 6px;
 	border: 1px solid transparent;
-	border-radius: 10px;
+	border-radius: var(--radius-md);
 	font-size: 12px;
 	transition:
 		background-color 0.2s,
@@ -304,7 +304,7 @@
 	align-items: center;
 	gap: 7px;
 	padding: 5px 8px;
-	border-radius: 9px;
+	border-radius: var(--radius-md);
 	text-align: left;
 	color: var(--color-ink-dim);
 	cursor: pointer;
@@ -474,7 +474,7 @@
 	min-width: 0;
 	align-items: center;
 	gap: 2px;
-	border-radius: 9px;
+	border-radius: var(--radius-md);
 	padding: 1px 2px;
 	transition: background-color 0.15s;
 }
@@ -508,7 +508,7 @@
 	gap: 1px;
 	overflow-y: auto;
 	border: 1px solid var(--color-border);
-	border-radius: 12px;
+	border-radius: var(--radius-lg);
 	background: var(--color-surface);
 	padding: 5px;
 	box-shadow: var(--shadow-pop);
@@ -519,7 +519,7 @@
 	min-width: 0;
 	align-items: center;
 	gap: 8px;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 7px 9px;
 	font-size: 13px;
 	text-align: left;
@@ -560,7 +560,7 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	padding: 5px 9px;
 	font-size: 12px;
 	color: var(--knowledge-ink-muted);
@@ -602,7 +602,7 @@
 }
 .knowledge-home > section,
 .knowledge-panel > section {
-	border-radius: 14px;
+	border-radius: var(--radius-xl);
 }
 .knowledge-home [data-testid="knowledge-graph"] {
 	min-width: 0;
@@ -615,7 +615,7 @@
 	gap: 3px;
 }
 .knowledge-panel [role="tab"] {
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	color: var(--knowledge-ink-muted);
 }
 .knowledge-panel [role="tab"][aria-selected="true"] {
@@ -633,7 +633,7 @@
 
 .knowledge-cloud-section {
 	border: 1px solid var(--knowledge-border);
-	border-radius: 14px;
+	border-radius: var(--radius-xl);
 	background: var(--knowledge-surface);
 	box-shadow: var(--knowledge-shadow);
 	padding: 16px;
@@ -692,7 +692,7 @@
 	margin: 0 0 10px;
 	max-width: 100%;
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	background: var(--color-surface);
 	color: var(--color-ink-2);
 	padding: 4px 8px;
@@ -714,7 +714,7 @@
 	left: 0;
 	margin: 0;
 	max-width: 30px;
-	font-size: 10px;
+	font-size: 11px;
 	color: var(--color-ink-faint);
 }
 .process-lane-empty {
@@ -744,7 +744,7 @@
 	box-sizing: border-box;
 	padding: 8px;
 	border: 1px solid var(--color-border);
-	border-radius: 9px;
+	border-radius: var(--radius-md);
 	background: var(--color-surface);
 	font-size: 11px;
 	overflow-wrap: anywhere;
@@ -785,7 +785,7 @@
 }
 .process-lane-demo {
 	color: var(--color-ok);
-	font-size: 10px;
+	font-size: 11px;
 }
 .process-lane-node button {
 	margin-top: 6px;
@@ -794,7 +794,7 @@
 	border-radius: 5px;
 	color: var(--color-ink-2);
 	background: var(--color-canvas);
-	font-size: 10px;
+	font-size: 11px;
 }
 .process-lane-details {
 	margin-top: 5px;
@@ -808,7 +808,7 @@
 .process-lane-paths {
 	padding-left: 12px;
 	margin: 6px 0;
-	font-size: 10px;
+	font-size: 11px;
 }
 .process-lane-details [data-testid="run-inspector"] > .grid {
 	grid-template-columns: minmax(0, 1fr);
@@ -825,7 +825,7 @@
 
 .reviewer-card {
 	border: 1px solid var(--color-border);
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	background: color-mix(in srgb, var(--color-surface) 82%, transparent);
 	padding: 8px 10px;
 }
@@ -843,14 +843,14 @@
 }
 
 .reviewer-card-code {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-family: var(--font-mono);
 	color: var(--color-ink-faint);
 }
 
 .reviewer-card-severity {
 	margin-left: auto;
 	text-transform: uppercase;
-	font-size: 10px;
+	font-size: 11px;
 	letter-spacing: 0.06em;
 	color: var(--color-ink-faint);
 }
@@ -931,7 +931,7 @@
 	min-height: 32px;
 	align-items: center;
 	justify-content: center;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	color: var(--knowledge-ink-muted);
 	font-size: 12px;
 	line-height: 1;
@@ -977,7 +977,7 @@
 }
 .knowledge-graph-axis-labels {
 	fill: var(--knowledge-ink-faint);
-	font-size: 9px;
+	font-size: 11px;
 	opacity: 0.85;
 }
 .knowledge-graph-legend {
@@ -1110,7 +1110,7 @@
 	min-height: 32px;
 	align-items: center;
 	justify-content: center;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	color: #dce7ff;
 	font-size: 12px;
 	line-height: 1;

@@ -87,7 +87,7 @@ export function KnowledgePanel({
 				{!headless && (
 					<div>
 						<h2 className="text-base font-semibold">{t("title")}</h2>
-						<p className="mt-1 text-[11px] text-ink-dim">{t("subtitle")}</p>
+						<p className="mt-1 text-xs text-ink-dim">{t("subtitle")}</p>
 					</div>
 				)}
 				<Button size="sm" disabled={loading || busy} onClick={() => void refresh()}>
@@ -140,7 +140,7 @@ export function KnowledgePanel({
 						<section className="rounded-xl border border-border p-4">
 							<div className="flex flex-wrap items-center gap-2">
 								<h3 className="text-xs font-semibold">{t("vault")}</h3>
-								<span className="rounded-full bg-accent/8 px-2 py-0.5 text-[11px] text-accent">
+								<span className="rounded-full bg-accent/8 px-2 py-0.5 text-xs text-accent">
 									{t("scopeValue")}
 								</span>
 							</div>
@@ -176,7 +176,7 @@ export function KnowledgePanel({
 					<section className="rounded-xl border border-border p-4">
 						<div className="flex flex-wrap items-center justify-between gap-2">
 							<h3 className="text-xs font-semibold">{t("literature")}</h3>
-							<span className="rounded-full bg-hover px-2 py-0.5 text-[11px] text-ink-dim">
+							<span className="rounded-full bg-hover px-2 py-0.5 text-xs text-ink-dim">
 								{t("literatureBound")}
 							</span>
 						</div>
@@ -286,7 +286,7 @@ export function KnowledgePanel({
 						<section>
 							<div className="mb-2 flex flex-wrap items-center justify-between gap-2">
 								<h3 className="text-xs font-semibold">{t("index")}</h3>
-								<span className="text-[11px] text-ink-dim">{index ? coverage : t("unknown")}</span>
+								<span className="text-xs text-ink-dim">{index ? coverage : t("unknown")}</span>
 							</div>
 							<div className="grid grid-cols-3 gap-2">
 								{[
@@ -295,17 +295,17 @@ export function KnowledgePanel({
 									[t("jobs"), index?.jobs],
 								].map(([label, value]) => (
 									<div key={String(label)} className="rounded-lg bg-hover px-3 py-2">
-										<p className="text-[11px] text-ink-dim">{label}</p>
+										<p className="text-xs text-ink-dim">{label}</p>
 										<p className="mt-1 text-lg font-medium tabular-nums">{value ?? "—"}</p>
 									</div>
 								))}
 							</div>
-							<p className="mt-2 text-[11px] text-ink-dim">
+							<p className="mt-2 text-xs text-ink-dim">
 								{t("lastChecked")}：
 								{index?.lastReconciledAt ? new Date(index.lastReconciledAt).toLocaleString() : t("unknown")}
 							</p>
 							{index && (
-								<p className={`mt-1 text-[11px] ${index.watching ? "text-ink-dim" : "text-warn"}`}>
+								<p className={`mt-1 text-xs ${index.watching ? "text-ink-dim" : "text-warn"}`}>
 									{index.watching ? t("watching") : t("notWatching")}
 								</p>
 							)}
@@ -323,14 +323,14 @@ export function KnowledgePanel({
 						<aside className="rounded-xl border border-border p-3">
 							<h3 className="text-xs font-medium text-warn">{t("legacy")}</h3>
 							<p className="my-1 break-all font-mono text-[11px]">{data.legacyProjectVault}</p>
-							<p className="text-[11px] text-ink-dim">{t("legacyHint")}</p>
+							<p className="text-xs text-ink-dim">{t("legacyHint")}</p>
 						</aside>
 					)}
 					<section className="rounded-xl border border-border p-4">
 						<h3 className="text-xs font-semibold">{t("newPath")}</h3>
-						<p className="mt-1 text-[11px] text-ink-dim">{t("skillBound")}</p>
-						<p className="my-2 text-[11px] leading-relaxed text-ink-dim">{t("globalSwitch")}</p>
-						<label className="block text-[11px] text-ink-dim">
+						<p className="mt-1 text-xs text-ink-dim">{t("skillBound")}</p>
+						<p className="my-2 text-xs leading-relaxed text-ink-dim">{t("globalSwitch")}</p>
+						<label className="block text-xs text-ink-dim">
 							{t("vault")}
 							<input
 								aria-label={t("vault")}
@@ -359,19 +359,17 @@ export function KnowledgePanel({
 						)}
 						{preview && (
 							<div className="mt-3 space-y-3">
-								<p className="text-[11px] text-ink-dim">{t("previewOnly")}</p>
+								<p className="text-xs text-ink-dim">{t("previewOnly")}</p>
 								<div>
 									<p className="text-xs font-medium">
 										{preview.context.vault?.exists ? t("existing") : t("newVault")}
 									</p>
-									<pre className="mt-1 max-h-44 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-[11px]">
+									<pre className="mt-1 max-h-44 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-xs">
 										{(preview.context.vault?.entries || [])
 											.map((e) => (e.type === "directory" ? "▸ " : "  ") + e.path)
 											.join("\n") || t("emptyPreview")}
 									</pre>
-									{preview.context.vault?.truncated && (
-										<p className="text-[11px] text-warn">{t("truncated")}</p>
-									)}
+									{preview.context.vault?.truncated && <p className="text-xs text-warn">{t("truncated")}</p>}
 								</div>
 								<div>
 									<h4 className="mb-1 text-xs font-semibold">{t("templates")}</h4>
@@ -383,10 +381,10 @@ export function KnowledgePanel({
 										>
 											<summary className="cursor-pointer">{profile.label}</summary>
 											<p className="mt-2 text-ink-dim">{profile.description}</p>
-											<p className="mt-2 text-[11px]">
+											<p className="mt-2 text-xs">
 												{t("library")}：{profile.libraryTypes.join(" · ")}
 											</p>
-											<p className="mt-1 text-[11px]">
+											<p className="mt-1 text-xs">
 												{t("projectFolders")}：{profile.projectTypes.join(" · ")}
 											</p>
 											<pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-hover p-3 font-mono text-[11px]">
@@ -400,7 +398,7 @@ export function KnowledgePanel({
 									{preview.templateSamples.map((sample) => (
 										<details key={sample.path} className="mt-1 rounded-lg border border-border p-2">
 											<summary className="cursor-pointer font-mono text-xs">{sample.path}</summary>
-											<pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap break-words bg-hover p-3 text-[11px]">
+											<pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap break-words bg-hover p-3 text-xs">
 												{sample.text}
 											</pre>
 										</details>
@@ -418,7 +416,7 @@ export function KnowledgePanel({
 							</Button>
 						</div>
 					</section>
-					<p className="text-[11px] leading-relaxed text-ink-dim">{t("privacy")}</p>
+					<p className="text-xs leading-relaxed text-ink-dim">{t("privacy")}</p>
 				</div>
 			)}
 			{tab === "reviews" && binding && (

@@ -72,7 +72,7 @@ export function TopicManagement({
 	}
 	return (
 		<section className="space-y-3" data-testid="knowledge-topics">
-			<p className="text-[11px] text-ink-dim">{t("topicNeutral")}</p>
+			<p className="text-xs text-ink-dim">{t("topicNeutral")}</p>
 			<div className="flex gap-1">
 				<input
 					value={query}
@@ -90,7 +90,7 @@ export function TopicManagement({
 					<div className="flex items-start justify-between gap-2">
 						<div>
 							<h3 className="text-sm font-medium">{topic.title}</h3>
-							<p className="mt-1 text-[11px] text-ink-dim">
+							<p className="mt-1 text-xs text-ink-dim">
 								{t("topicStatus")}: {topic.status} · {topic.updatedAt}
 							</p>
 						</div>
@@ -114,7 +114,7 @@ export function TopicManagement({
 						</div>
 					</div>
 					<p className="mt-2 text-xs leading-relaxed">{topic.summary}</p>
-					<dl className="mt-2 grid gap-1 text-[11px] sm:grid-cols-2">
+					<dl className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
 						<dt className="text-ink-dim">{t("topicEntities")}</dt>
 						<dd>{topic.entities.join(", ") || "—"}</dd>
 						<dt className="text-ink-dim">{t("topicQuestions")}</dt>
@@ -132,12 +132,12 @@ export function TopicManagement({
 							<summary className="cursor-pointer text-xs font-medium text-warn">
 								{t("topicConflicts")} · {topic.conflicts.length}
 							</summary>
-							<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">{t("topicConflictHint")}</p>
+							<p className="mt-1 text-xs leading-relaxed text-ink-dim">{t("topicConflictHint")}</p>
 							<ul className="mt-2 space-y-2">
 								{topic.conflicts.slice(-4).map((conflict) => (
 									<li
 										key={`${conflict.detectedAt}-${conflict.previousSourcePath}-${conflict.incomingSourcePath}-${conflict.relation}`}
-										className="text-[11px] leading-relaxed"
+										className="text-xs leading-relaxed"
 									>
 										<div className="font-medium text-ink-2">
 											{conflict.relation} · {conflict.confidence}

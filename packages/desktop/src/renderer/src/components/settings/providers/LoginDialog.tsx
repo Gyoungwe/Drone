@@ -47,7 +47,7 @@ export function LoginDialog() {
 					})}
 				</h3>
 				{login.providerId === "google-antigravity" && (
-					<p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-800">
+					<p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-4 text-amber-800">
 						{t("settings.login.antigravityWarning")}
 					</p>
 				)}
@@ -61,7 +61,7 @@ export function LoginDialog() {
 						</p>
 						<button
 							type="button"
-							className="mt-1 block w-full truncate text-center text-[11px] text-ink-dim underline underline-offset-2 hover:text-ink"
+							className="mt-1 block w-full truncate text-center text-xs text-ink-dim underline underline-offset-2 hover:text-ink"
 							onClick={() => void window.pi.openExternal(deviceCode.verificationUri)}
 						>
 							{deviceCode.verificationUri}
@@ -79,7 +79,7 @@ export function LoginDialog() {
 				{/* 浏览器授权：已自动打开，URL 可点击/复制兜底 */}
 				{authUrl && (
 					<div className="mt-3 rounded-lg bg-hover px-3 py-2.5">
-						<p className="text-[11px] text-ink-2">{t("settings.login.browserHint")}</p>
+						<p className="text-xs text-ink-2">{t("settings.login.browserHint")}</p>
 						<button
 							type="button"
 							className="mt-1 block w-full truncate text-left font-mono text-[11px] text-ink-dim underline underline-offset-2 hover:text-ink"
@@ -108,7 +108,7 @@ export function LoginDialog() {
 								>
 									{option.label}
 									{option.description && (
-										<span className="ml-1 text-[11px] opacity-70">{option.description}</span>
+										<span className="ml-1 text-xs opacity-70">{option.description}</span>
 									)}
 								</Button>
 							))}
@@ -128,7 +128,7 @@ export function LoginDialog() {
 							<button
 								key={link.url}
 								type="button"
-								className="text-[11px] text-ink-dim underline underline-offset-2 hover:text-ink"
+								className="text-xs text-ink-dim underline underline-offset-2 hover:text-ink"
 								onClick={() => void window.pi.openExternal(link.url)}
 							>
 								{link.label ?? link.url}

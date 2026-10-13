@@ -8,14 +8,14 @@
 	flex: none;
 	display: inline-block;
 	color: #fff;
-	border-radius: 7px;
+	border-radius: var(--radius-sm);
 	vertical-align: middle;
 	animation: sa-breathe 3.2s ease-in-out infinite;
 }
 .sa-av.lg {
 	width: 28px;
 	height: 28px;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 	--sa-ew: 6px;
 	--sa-eh: 8.5px;
 	--sa-ex: 6px;
@@ -282,10 +282,10 @@
 	display: inline-flex;
 	align-items: center;
 	border: 1px solid var(--color-border);
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	padding: 0 5px;
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 10.5px;
+	font-family: var(--font-mono);
+	font-size: 11px;
 	line-height: 17px;
 	color: var(--color-ink-2);
 	background: var(--color-hover);

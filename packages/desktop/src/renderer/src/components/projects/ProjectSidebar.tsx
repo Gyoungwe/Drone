@@ -107,7 +107,7 @@ function ProjectItem({
 				onClick={onSelect}
 			>
 				<span
-					className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] font-semibold text-on-ink ${
+					className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs font-semibold text-on-ink ${
 						isActive ? "bg-ink" : "bg-ink-faint"
 					}`}
 				>
@@ -117,7 +117,7 @@ function ProjectItem({
 			</button>
 			<button
 				type="button"
-				className={`invisible absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[11px] transition-colors group-hover:visible ${
+				className={`invisible absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-xs transition-colors group-hover:visible ${
 					confirming ? "bg-red-50 text-red-600" : "text-ink-faint hover:bg-hover hover:text-ink-2"
 				}`}
 				onClick={() => {

@@ -109,7 +109,7 @@ export function McpPanel() {
 
 			{runtimeNotice ? (
 				<p
-					className="mt-3 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-[11px] leading-relaxed text-ink-2"
+					className="mt-3 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs leading-relaxed text-ink-2"
 					data-testid="mcp-runtime-notice"
 				>
 					{t(`settings.mcp.${runtimeNotice}`)}
@@ -117,7 +117,7 @@ export function McpPanel() {
 			) : null}
 
 			{error ? (
-				<p className="mt-3 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-[11px] text-danger">
+				<p className="mt-3 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-xs text-danger">
 					{error}
 				</p>
 			) : null}
@@ -132,7 +132,7 @@ export function McpPanel() {
 					</div>
 					<button
 						type="button"
-						className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-[11px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover"
+						className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-ink-2 transition-colors hover:border-border-strong hover:bg-hover"
 						onClick={() => void window.pi.openMcpConfig(cwd ?? undefined)}
 					>
 						<GearIcon size={13} /> {t("settings.mcp.openConfig")}
@@ -154,7 +154,7 @@ export function McpPanel() {
 									</p>
 									<button
 										type="button"
-										className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-[11px] text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
+										className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
 										disabled={added || pendingPreset !== null}
 										onClick={async () => {
 											setPendingPreset(preset.id);
@@ -174,7 +174,7 @@ export function McpPanel() {
 								</div>
 								<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{preset.description[lang]}</p>
 								{preset.setup ? (
-									<p className="mt-1 text-[11px] leading-relaxed text-ink-2">
+									<p className="mt-1 text-xs leading-relaxed text-ink-2">
 										{preset.setup[lang]}{" "}
 										<button
 											type="button"
@@ -216,7 +216,7 @@ export function McpPanel() {
 										<div className="flex items-center gap-2">
 											<span className="truncate text-[13px] font-medium text-ink">{server.name}</span>
 											<span
-												className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${statusTone(displayStatus)}`}
+												className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${statusTone(displayStatus)}`}
 											>
 												{statusLabel(t, displayStatus)}
 											</span>
@@ -246,7 +246,7 @@ export function McpPanel() {
 											) : null}
 											<button
 												type="button"
-												className="rounded border border-border px-1.5 py-0.5 text-[11px] hover:bg-hover disabled:opacity-50"
+												className="rounded border border-border px-1.5 py-0.5 text-xs hover:bg-hover disabled:opacity-50"
 												disabled={probing === server.name}
 												onClick={() => {
 													setProbing(server.name);

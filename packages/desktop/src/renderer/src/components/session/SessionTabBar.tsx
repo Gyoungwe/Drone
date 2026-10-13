@@ -140,7 +140,7 @@ function TabPill({
 			title={ghost ? undefined : onRename ? `${title} · ${t("tabbar.renameHint")}` : title}
 		>
 			<span
-				className={`relative flex h-4 w-4 shrink-0 items-center justify-center rounded text-[11px] font-semibold ${avatarClass}`}
+				className={`relative flex h-4 w-4 shrink-0 items-center justify-center rounded text-xs font-semibold ${avatarClass}`}
 			>
 				{session.readOnly ? (
 					<SubagentIcon size={11} />

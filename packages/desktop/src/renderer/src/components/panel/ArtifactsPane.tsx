@@ -166,7 +166,7 @@ export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {
 					<div className="mt-1 space-y-2">
 						{tasksWithArtifacts.map((task) => (
 							<div key={task.id}>
-								<p className="truncate text-[11px] text-ink-dim" title={task.goal}>
+								<p className="truncate text-xs text-ink-dim" title={task.goal}>
 									{task.goal}
 								</p>
 								<TaskArtifactLinks task={task} sessionId={sessionId} />
@@ -251,7 +251,7 @@ export function ArtifactProvenanceCard({
 				}
 			: undefined);
 	return (
-		<article className="rounded-lg bg-hover p-2 text-[11px]" data-testid="artifact-provenance-card">
+		<article className="rounded-lg bg-hover p-2 text-xs" data-testid="artifact-provenance-card">
 			<div className="flex items-start justify-between gap-2">
 				<div className="min-w-0">
 					<p className="break-words font-medium text-ink">{record.path}</p>
@@ -264,7 +264,7 @@ export function ArtifactProvenanceCard({
 			{expanded && provenance && (
 				<div className="mt-2 space-y-1 border-t border-border pt-2" data-testid="artifact-provenance-details">
 					<p data-reproducibility={provenance.reproducibility}>
-						<span className="mr-1 rounded px-1 py-0.5 text-[10px]">{badge}</span>
+						<span className="mr-1 rounded px-1 py-0.5 text-xs">{badge}</span>
 					</p>
 					{provenance.attempts.map((attempt) => (
 						<div key={attempt.id} className="space-y-0.5">

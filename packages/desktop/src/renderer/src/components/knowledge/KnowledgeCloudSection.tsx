@@ -174,15 +174,15 @@ export function KnowledgeCloudSection({
 		<section className="knowledge-cloud-section space-y-3" data-testid="knowledge-cloud">
 			<div className="flex flex-wrap items-center justify-between gap-2">
 				<h3 className="text-xs font-semibold">{t("cloudTitle")}</h3>
-				<span className={`text-[11px] ${status.mode === "ready" ? "text-ok" : "text-warn"}`} role="status">
+				<span className={`text-xs ${status.mode === "ready" ? "text-ok" : "text-warn"}`} role="status">
 					{modeLabel(status.mode, t)}
 				</span>
 			</div>
-			<p className="rounded-lg border border-accent/30 bg-accent/5 px-2.5 py-2 text-[11px] leading-relaxed text-ink-dim">
+			<p className="rounded-lg border border-accent/30 bg-accent/5 px-2.5 py-2 text-xs leading-relaxed text-ink-dim">
 				{t("cloudManualSyncNotice")}
 			</p>
-			<p className="text-[11px] leading-relaxed text-ink-dim">{t("cloudHint")}</p>
-			<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px]">
+			<p className="text-xs leading-relaxed text-ink-dim">{t("cloudHint")}</p>
+			<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
 				<dt className="text-ink-dim">{t("cloudEndpoint")}</dt>
 				<dd className="break-all font-mono">{status.endpoint}</dd>
 				<dt className="text-ink-dim">{t("cloudFolder")}</dt>
@@ -195,7 +195,7 @@ export function KnowledgeCloudSection({
 					if (password) void savePassword(password);
 				}}
 			>
-				<label className="text-[11px] text-ink-dim" htmlFor="knowledge-cloud-password">
+				<label className="text-xs text-ink-dim" htmlFor="knowledge-cloud-password">
 					{t("cloudPassword")}
 				</label>
 				<input
@@ -220,13 +220,11 @@ export function KnowledgeCloudSection({
 					{t("cloudPasswordClear")}
 				</Button>
 			</form>
-			{status.passwordSource === "saved" && (
-				<p className="text-[11px] text-ink-dim">{t("cloudPasswordSaved")}</p>
-			)}
-			{status.passwordSource === "env" && <p className="text-[11px] text-ink-dim">{t("cloudPasswordEnv")}</p>}
-			{status.message && <p className="break-words text-[11px] text-ink-dim">{status.message}</p>}
+			{status.passwordSource === "saved" && <p className="text-xs text-ink-dim">{t("cloudPasswordSaved")}</p>}
+			{status.passwordSource === "env" && <p className="text-xs text-ink-dim">{t("cloudPasswordEnv")}</p>}
+			{status.message && <p className="break-words text-xs text-ink-dim">{status.message}</p>}
 			{status.warnings.map((warning) => (
-				<p key={warning} className="break-words text-[11px] text-warn">
+				<p key={warning} className="break-words text-xs text-warn">
 					{warning}
 				</p>
 			))}
@@ -278,7 +276,7 @@ export function KnowledgeCloudSection({
 											onClick={() => void preview(hit.path)}
 										>
 											<span className="block truncate text-xs font-medium">{hit.title || hit.path}</span>
-											<span className="block truncate font-mono text-[10px] text-ink-faint">{hit.path}</span>
+											<span className="block truncate font-mono text-[11px] text-ink-faint">{hit.path}</span>
 										</button>
 									</li>
 								))
@@ -296,7 +294,7 @@ export function KnowledgeCloudSection({
 								{busy === "preview" ? (
 									<span className="text-[11px] text-ink-faint">{t("loading")}</span>
 								) : (
-									<span className="text-[11px] text-ink-dim">
+									<span className="text-xs text-ink-dim">
 										{t(
 											`cloudCompare${
 												state === "same"
@@ -313,22 +311,22 @@ export function KnowledgeCloudSection({
 									</span>
 								)}
 							</div>
-							{remoteError && <p className="text-[11px] text-err">{remoteError}</p>}
+							{remoteError && <p className="text-xs text-err">{remoteError}</p>}
 							{state === "conflict" && (
 								<div className="grid gap-2 md:grid-cols-2">
 									<div>
-										<p className="mb-1 text-[10px] uppercase tracking-wide text-ink-faint">
+										<p className="mb-1 text-[11px] uppercase tracking-wide text-ink-faint">
 											{t("cloudLocalVersion")}
 										</p>
-										<pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-hover p-2 text-[10px]">
+										<pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-hover p-2 text-xs">
 											{compactText(localNote?.text)}
 										</pre>
 									</div>
 									<div>
-										<p className="mb-1 text-[10px] uppercase tracking-wide text-ink-faint">
+										<p className="mb-1 text-[11px] uppercase tracking-wide text-ink-faint">
 											{t("cloudRemoteVersion")}
 										</p>
-										<pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-hover p-2 text-[10px]">
+										<pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-hover p-2 text-xs">
 											{compactText(remoteNote?.text)}
 										</pre>
 									</div>
@@ -367,7 +365,7 @@ export function KnowledgeCloudSection({
 						</div>
 					)}
 					{syncResult && (
-						<p className="text-[11px] text-ink-dim">
+						<p className="text-xs text-ink-dim">
 							{syncResult.items[0]?.message ||
 								(syncResult.completed ? t("cloudSyncDone") : t("cloudSyncNeedsReview"))}
 						</p>
@@ -377,7 +375,7 @@ export function KnowledgeCloudSection({
 				<p className="text-[11px] text-ink-faint">{t("cloudSyncNeedsBinding")}</p>
 			)}
 			{error && (
-				<p role="alert" className="break-words text-[11px] text-err">
+				<p role="alert" className="break-words text-xs text-err">
 					{error}
 				</p>
 			)}

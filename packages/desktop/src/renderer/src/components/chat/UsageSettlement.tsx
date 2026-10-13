@@ -26,7 +26,7 @@ export function UsageSettlement({
 	const rate = usage?.cacheRate == null ? "—" : `${(usage.cacheRate * 100).toFixed(1)}%`;
 	return (
 		<details
-			className={`rounded-lg border border-border bg-surface/60 text-[11px] text-ink-dim ${total ? "px-2.5 py-1.5" : "mt-2 px-2.5 py-1.5"}`}
+			className={`rounded-lg border border-border bg-surface/60 text-xs text-ink-dim ${total ? "px-2.5 py-1.5" : "mt-2 px-2.5 py-1.5"}`}
 			data-testid={total ? "session-usage" : "turn-usage"}
 		>
 			<summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">

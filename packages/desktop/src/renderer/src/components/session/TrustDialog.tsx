@@ -33,7 +33,7 @@ export function TrustDialog({
 			testId="trust-dialog"
 		>
 			<div className="px-5 pt-5 pb-4">
-				<span className="inline-flex items-center rounded-full bg-warn/12 px-2 py-0.5 text-[11px] font-medium text-warn">
+				<span className="inline-flex items-center rounded-full bg-warn/12 px-2 py-0.5 text-xs font-medium text-warn">
 					{t("trust.eyebrow")}
 				</span>
 				<h3 className="mt-2 text-[15px] font-semibold text-ink">{t("trust.title")}</h3>

@@ -78,18 +78,18 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 					<div className="flex items-center gap-1.5">
 						<span className="truncate text-[13px] font-medium text-ink">{provider.name}</span>
 						{provider.overridesBuiltin ? (
-							<span className="rounded bg-hover px-1.5 py-0.5 text-[11px] text-ink-dim">
+							<span className="rounded bg-hover px-1.5 py-0.5 text-xs text-ink-dim">
 								{t("settings.providers.overrideBuiltin")}
 							</span>
 						) : provider.custom ? (
-							<span className="rounded bg-hover px-1.5 py-0.5 text-[11px] text-ink-dim">
+							<span className="rounded bg-hover px-1.5 py-0.5 text-xs text-ink-dim">
 								{t("settings.providers.custom")}
 							</span>
 						) : null}
 					</div>
 					<div className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-faint">
 						{provider.overridesBuiltin && provider.baseUrl && (
-							<span className="mr-1 max-w-[220px] truncate text-[11px] text-ink-dim" title={provider.baseUrl}>
+							<span className="mr-1 max-w-[220px] truncate text-xs text-ink-dim" title={provider.baseUrl}>
 								→ {provider.baseUrl}
 							</span>
 						)}
@@ -110,7 +110,7 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 					</div>
 					{provider.id === "google-antigravity" && (
 						<>
-							<p className="mt-1 max-w-[560px] rounded bg-amber-50 px-2 py-1 text-[11px] leading-4 text-amber-800">
+							<p className="mt-1 max-w-[560px] rounded bg-amber-50 px-2 py-1 text-xs leading-4 text-amber-800">
 								{t("settings.providers.antigravityWarning")}
 							</p>
 							{provider.configured && (
@@ -122,7 +122,7 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 					)}
 				</div>
 				<span
-					className={`mr-1 shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
+					className={`mr-1 shrink-0 rounded-full px-2 py-0.5 text-xs ${
 						provider.configured ? "bg-emerald-50 text-emerald-600" : "bg-hover text-ink-faint"
 					}`}
 				>
@@ -208,7 +208,7 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 			</div>
 			{testResult && testResult !== "testing" && (
 				<p
-					className={`mt-1.5 rounded-lg px-2.5 py-1.5 text-[11px] ${
+					className={`mt-1.5 rounded-lg px-2.5 py-1.5 text-xs ${
 						testResult.ok ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
 					}`}
 				>
@@ -227,7 +227,7 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 							const visible = !hiddenModelIds.includes(model.id);
 							return (
 								<li key={model.id}>
-									<div className="flex items-center gap-2 rounded px-1 py-1 text-[11px] text-ink-dim hover:bg-surface">
+									<div className="flex items-center gap-2 rounded px-1 py-1 text-xs text-ink-dim hover:bg-surface">
 										<span className="min-w-0 flex-1 truncate">{model.name}</span>
 										<Switch
 											checked={visible}

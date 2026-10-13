@@ -56,7 +56,7 @@ export function KnowledgeLinks({
 						{item.exists ? (
 							<button
 								type="button"
-								className="text-left text-[11px] text-accent hover:underline"
+								className="text-left text-xs text-accent hover:underline"
 								title={item.path}
 								onClick={() => openKnowledgeNote(cwd, item.path, revision)}
 							>
@@ -77,13 +77,13 @@ export function KnowledgeLinks({
 			data-testid="knowledge-links"
 		>
 			<div>
-				<h5 className="mb-1 text-[11px] font-semibold">
+				<h5 className="mb-1 text-xs font-semibold">
 					{t("linksIncoming")} · {links.incoming.length}
 				</h5>
 				{list(links.incoming, t("linksIncomingEmpty"))}
 			</div>
 			<div>
-				<h5 className="mb-1 text-[11px] font-semibold">
+				<h5 className="mb-1 text-xs font-semibold">
 					{t("linksOutgoing")} · {links.outgoing.length}
 				</h5>
 				{list(links.outgoing, t("linksOutgoingEmpty"))}

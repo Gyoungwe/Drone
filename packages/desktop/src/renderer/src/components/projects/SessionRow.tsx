@@ -1,7 +1,8 @@
 import type { SessionMeta } from "@drone/shared";
 import { useState } from "react";
 import { getPi } from "../../api";
-import { useT } from "../../i18n";
+import { useI18nStore, useT } from "../../i18n";
+import { dirName, relativeTime } from "../../lib/relative-time";
 import { useProjectsStore } from "../../stores/projects";
 import { useUiStore } from "../../stores/ui";
 import { CheckIcon, CloseIcon, CopyIcon } from "../icons";
@@ -12,12 +13,16 @@ import { buildDiagnosticsText } from "./diagnostics";
 export function SessionRow({
 	session,
 	live,
+	showDir = false,
 }: {
 	session: SessionMeta;
 	/** P14：进行中分组里的实时状态 */
 	live?: "running" | "awaiting";
+	/** 第二行显示目录名（跨项目列表，如侧栏「最近」）；否则显示消息数 */
+	showDir?: boolean;
 }) {
 	const t = useT();
+	const language = useI18nStore((s) => s.language);
 	const openSession = useProjectsStore((s) => s.openSession);
 	const deleteSession = useProjectsStore((s) => s.deleteSession);
 	const setView = useUiStore((s) => s.setView);
@@ -58,18 +63,17 @@ export function SessionRow({
 			>
 				{live === "running" && <span className="session-live-spin" aria-hidden="true" />}
 				{live === "awaiting" && <span className="session-live-dot" aria-hidden="true" />}
-				<span className="min-w-0 flex-1 truncate text-[13px] text-ink">
-					{session.name ?? t("projects.untitled")}
-				</span>
-				<span className="shrink-0 text-[11px] text-ink-faint group-hover:invisible">
-					{live === "awaiting"
-						? t("projects.awaitingInput")
-						: live === "running"
-							? new Date(session.modifiedAt ?? session.createdAt).toLocaleTimeString([], {
-									hour: "2-digit",
-									minute: "2-digit",
-								})
-							: t("projects.messages", { count: session.messageCount })}
+				<span className="flex min-w-0 flex-1 flex-col">
+					<span className="truncate text-[13px] leading-5 text-ink">
+						{session.name ?? t("projects.untitled")}
+					</span>
+					<span className="truncate text-[11px] leading-4 text-ink-faint" data-testid="session-row-meta">
+						{live === "awaiting"
+							? t("projects.awaitingInput")
+							: `${relativeTime(session.modifiedAt ?? session.createdAt, language)} · ${
+									showDir ? dirName(session.cwd) : t("projects.messages", { count: session.messageCount })
+								}`}
+					</span>
 				</span>
 			</button>
 			{/* 复制按钮：自研 Tooltip（替代 native title：延迟可控+样式统一）。定位类不能传给
@@ -91,7 +95,7 @@ export function SessionRow({
 			</span>
 			<button
 				type="button"
-				className={`invisible absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[11px] transition-colors group-hover:visible ${
+				className={`invisible absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-xs transition-colors group-hover:visible ${
 					confirming ? "bg-red-50 text-red-600" : "text-ink-faint hover:bg-hover hover:text-ink-2"
 				}`}
 				onClick={() => {

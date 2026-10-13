@@ -106,11 +106,11 @@ export function WikiModelReview({
 						{t("modelReviewButton")}
 					</Button>
 				)}
-				<span className="break-all text-[11px] text-ink-dim">
+				<span className="break-all text-xs text-ink-dim">
 					{t("modelReviewModel")}：{pref || t("modelReviewInherit")}
 				</span>
 			</div>
-			{!chosen && <p className="text-[11px] text-warn">{t("modelReviewSession")}</p>}
+			{!chosen && <p className="text-xs text-warn">{t("modelReviewSession")}</p>}
 			{(adviceOnly || expanded) && (
 				<div className="space-y-2 text-xs">
 					<p className="leading-relaxed text-ink-dim">
@@ -131,7 +131,7 @@ export function WikiModelReview({
 							{t("modelReviewAutoApply")}
 						</label>
 					)}
-					<p className="text-[11px] text-ink-dim">
+					<p className="text-xs text-ink-dim">
 						{adviceOnly ? t("modelReviewNotHuman") : t("modelReviewWriteHint")}
 					</p>
 					<div className="flex gap-2">
@@ -183,12 +183,12 @@ export function WikiModelReview({
 					{(report.applyError || report.auditSaveError) && (
 						<p className="text-warn">{report.applyError || report.auditSaveError}</p>
 					)}
-					<p className="text-[11px] text-ink-dim">
+					<p className="text-xs text-ink-dim">
 						{t("modelReviewNotHuman")} · {report.model}
 					</p>
 					{report.usage && (
 						<details
-							className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] text-ink-dim"
+							className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-ink-dim"
 							data-testid="wiki-model-review-usage"
 						>
 							<summary className="cursor-pointer list-none tabular-nums">
@@ -209,7 +209,7 @@ export function WikiModelReview({
 						</details>
 					)}
 					<details>
-						<summary className="cursor-pointer text-[11px]">{t("modelReviewAudit")}</summary>
+						<summary className="cursor-pointer text-xs">{t("modelReviewAudit")}</summary>
 						<p className="break-all font-mono text-[11px]">{report.auditId}</p>
 						<p>{new Date(report.completedAt).toLocaleString()}</p>
 						{Object.entries(report.checks).map(([key, value]) => (

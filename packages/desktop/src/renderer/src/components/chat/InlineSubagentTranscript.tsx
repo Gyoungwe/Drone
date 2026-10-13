@@ -113,7 +113,7 @@ export function InlineSubagentTranscript({ run }: { run: SubagentRunUi }) {
 	}
 	if (error && rows.length === 0) {
 		return (
-			<div className="px-3 py-3 text-[11px] text-err">
+			<div className="px-3 py-3 text-xs text-err">
 				{t("message.subagent.transcriptError")}: {error}
 			</div>
 		);

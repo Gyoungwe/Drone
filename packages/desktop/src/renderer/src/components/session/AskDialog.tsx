@@ -18,7 +18,7 @@ function Recommendation({ question, t }: { question: AskQuestion; t: ReturnType<
 			className="mt-3 rounded-xl border border-accent/25 bg-accent/5 px-3 py-2.5"
 			data-testid="ask-recommendation"
 		>
-			<div className="flex flex-wrap items-center gap-2 text-[11px]">
+			<div className="flex flex-wrap items-center gap-2 text-xs">
 				<span className="font-semibold text-accent">{t("ask.modelRecommendation")}</span>
 				<span className="rounded-full bg-accent/10 px-1.5 py-0.5 font-medium text-accent">{label}</span>
 				{recommendation.confidence && (
@@ -27,11 +27,11 @@ function Recommendation({ question, t }: { question: AskQuestion; t: ReturnType<
 					</span>
 				)}
 			</div>
-			<p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-ink-2">
+			<p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-ink-2">
 				{formatCardText(recommendation.reason)}
 			</p>
 			{recommendation.basedOn?.length ? (
-				<p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-ink-dim">
+				<p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-ink-dim">
 					{formatCardText(t("ask.basedOn", { value: recommendation.basedOn.join(" · ") }))}
 				</p>
 			) : null}
@@ -66,20 +66,20 @@ function ProposalProjection({ proposal, t }: { proposal: AskDecisionProposal; t:
 				<p className="text-[12px] text-ink-2">{t("ask.proposal.reason", { value: proposal.reason })}</p>
 			)}
 			{proposal.evidence?.length ? (
-				<p className="text-[11px] text-ink-dim">
+				<p className="text-xs text-ink-dim">
 					{t("ask.proposal.evidence", { value: proposal.evidence.join(" · ") })}
 				</p>
 			) : null}
 			{sections.map(([label, values]) =>
 				values?.length ? (
-					<div key={label} className="text-[11px] text-ink-dim">
+					<div key={label} className="text-xs text-ink-dim">
 						<span className="font-medium text-ink-2">{label}：</span>
 						{values.join("；")}
 					</div>
 				) : null,
 			)}
 			{proposal.authorizationActions?.length ? (
-				<div className="text-[11px] text-ink-dim">
+				<div className="text-xs text-ink-dim">
 					<span className="font-medium text-ink-2">{t("ask.proposal.authorization")}：</span>
 					{proposal.authorizationActions
 						.map(
@@ -178,7 +178,7 @@ export function AskDialog({
 					</p>
 					<h3 className="mt-1 text-base font-semibold text-ink">{request.title ?? t("ask.title")}</h3>
 					{(request.kind ?? request.purpose) && (
-						<p className="mt-1 text-[11px] text-ink-dim">
+						<p className="mt-1 text-xs text-ink-dim">
 							{request.kind === "authorization" ? t("ask.authorization") : t("ask.clarification")}
 						</p>
 					)}
@@ -189,7 +189,7 @@ export function AskDialog({
 						{formatCardText(question.prompt)}
 					</p>
 					<Recommendation question={question} t={t} />
-					{error && <p className="mt-3 text-[11px] text-err">{error}</p>}
+					{error && <p className="mt-3 text-xs text-err">{error}</p>}
 				</div>
 				<div className="border-t border-border px-5 py-3">
 					<div className="flex items-center justify-between gap-3">
@@ -261,7 +261,7 @@ export function AskDialog({
 				</div>
 				<h3 className="mt-1 text-base font-semibold text-ink">{request.title ?? t("ask.title")}</h3>
 				{(request.kind ?? request.purpose) && (
-					<p className="mt-1 text-[11px] text-ink-dim">
+					<p className="mt-1 text-xs text-ink-dim">
 						{request.kind === "authorization" ? t("ask.authorization") : t("ask.clarification")}
 					</p>
 				)}
@@ -317,18 +317,18 @@ export function AskDialog({
 													</span>
 													<span className="text-[12px] font-medium text-ink-2">{option.label}</span>
 													{option.recommended && (
-														<span className="rounded-full bg-warn/10 px-1.5 py-0.5 text-[11px] font-medium text-warn">
+														<span className="rounded-full bg-warn/10 px-1.5 py-0.5 text-xs font-medium text-warn">
 															{t("ask.recommended")}
 														</span>
 													)}
 												</div>
 												{option.description && (
-													<p className="mt-1 pl-6 whitespace-pre-wrap text-[11px] leading-relaxed text-ink-dim">
+													<p className="mt-1 pl-6 whitespace-pre-wrap text-xs leading-relaxed text-ink-dim">
 														{formatCardText(option.description)}
 													</p>
 												)}
 												{option.preview && (
-													<pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-hover p-2 text-[11px] leading-relaxed text-ink-2">
+													<pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-hover p-2 text-xs leading-relaxed text-ink-2">
 														{option.preview}
 													</pre>
 												)}
@@ -349,7 +349,7 @@ export function AskDialog({
 				})}
 			</div>
 			<div className="border-t border-border px-5 py-3">
-				{error && <p className="mb-2 text-[11px] text-err">{error}</p>}
+				{error && <p className="mb-2 text-xs text-err">{error}</p>}
 				<div className="flex items-center justify-between gap-3">
 					<span className="min-w-0 truncate text-[11px] text-ink-faint">
 						{requests.length > 1 ? t("ask.queued", { count: requests.length - 1 }) : t("ask.footerHint")}

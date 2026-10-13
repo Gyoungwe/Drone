@@ -718,6 +718,25 @@ export function PanelRightIcon({ size = 14, className }: IconProps) {
 	);
 }
 
+/** 侧栏收起 / 展开 glyph */
+export function PanelLeftIcon({ size = 14, className }: IconProps) {
+	return (
+		<svg
+			className={className}
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			{...strokeProps}
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<rect x="3" y="4" width="18" height="16" rx="3" />
+			<path d="M9 4v16" />
+		</svg>
+	);
+}
+
 /** 过程/时间线 glyph（面板「过程」页签） */
 export function TimelineIcon({ size = 14, className }: IconProps) {
 	return (
