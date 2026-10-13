@@ -41,8 +41,8 @@
 	--color-surface: #ffffff;
 	/* hover/选中底：中性锌灰，不带蓝调（slate 系 #f1f5f9 偏蓝，已弃） */
 	--color-hover: oklch(97% 0 0);
-	--color-border: oklch(92.2% 0 0);
-	--color-border-strong: oklch(87% 0 0);
+	--color-border: oklch(93.5% 0 0);
+	--color-border-strong: oklch(88% 0 0);
 	/* 用户气泡底色：原 border（zinc-200 #e4e4e7）的变浅版，中性灰不带冷调 */
 	--color-bubble: oklch(97% 0 0);
 	--color-ink: oklch(14.5% 0 0);
@@ -93,8 +93,8 @@
 	/* 扫光高光色 = 文字颜色的推移方向：日间往黑推（文字加深，对比度升高）；
 	   用白色会把文字推向近白背景，像消散而非高光。深色值与 --color-ink 一致 */
 	--shimmer-highlight: rgba(24, 24, 27, 0.9);
-	--shadow-soft: 0 0 14px -2px rgba(24, 24, 27, 0.08);
-	--shadow-pop: 0 4px 16px rgba(0, 0, 0, 0.12);
+	--shadow-soft: 0 1px 12px -4px rgba(24, 24, 27, 0.08);
+	--shadow-pop: 0 6px 24px -6px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.02);
 	--shadow-dialog: 0 12px 40px rgba(0, 0, 0, 0.18);
 	--scrollbar-thumb: #d4d4d4;
 	--scrollbar-thumb-hover: #bfbfbf;
@@ -151,7 +151,7 @@
 	/* 工作中状态行文字基色：夜间保持 ink-dim（提亮扫光在浅灰上正好） */
 	--color-ink-working: oklch(70.8% 0 0);
 	--color-on-ink: oklch(20.5% 0 0);
-	--color-accent: #8b5cf6;
+	--color-accent: #7c9cff;
 	--color-on-accent: #ffffff;
 	/* 首页字标手稿构造版深色：描边与构造线压到 canvas 上刚好可辨的灰 */
 	--lg-ol: #5f5f66;
@@ -176,9 +176,9 @@
 	--markdown-link-hover: #a78bfa;
 	/* 扫光高光色 = 往白推（文字提亮，与日间方向相反） */
 	--shimmer-highlight: rgba(255, 255, 255, 0.95);
-	--shadow-soft: 0 0 14px -2px rgba(255, 255, 255, 0.1);
-	--shadow-pop: 0 4px 16px rgba(255, 255, 255, 0.14);
-	--shadow-dialog: 0 12px 40px rgba(255, 255, 255, 0.18);
+	--shadow-soft: 0 1px 12px -4px rgba(0, 0, 0, 0.4);
+	--shadow-pop: 0 6px 24px -6px rgba(0, 0, 0, 0.55);
+	--shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.6);
 	--scrollbar-thumb: #4b4b53;
 	--scrollbar-thumb-hover: #5d5d66;
 	--knowledge-canvas: #17191d;

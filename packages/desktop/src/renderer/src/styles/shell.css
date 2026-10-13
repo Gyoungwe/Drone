@@ -220,24 +220,23 @@
 	display: flex;
 	flex-direction: column;
 }
+/* 右栏区块：不再一块块描边卡片（卡中卡），用留白 + 细分隔线分层 */
 .panel-card {
-	margin-bottom: 10px;
+	margin-bottom: 14px;
 	overflow: hidden;
-	border: 1px solid var(--color-border);
-	border-radius: 12px;
-	background: var(--color-surface);
-	box-shadow: var(--shadow-soft);
-	padding: 10px 12px;
+	border-bottom: 1px solid var(--color-border);
+	padding: 2px 2px 14px;
 	font-size: 12px;
 }
 .panel-card:last-child {
 	margin-bottom: 0;
+	border-bottom: 0;
 }
 .panel-card h3,
 .panel-card-title {
-	margin: 0 0 6px;
+	margin: 0 0 8px;
 	font-size: 12px;
-	font-weight: 650;
+	font-weight: 600;
 	color: var(--color-ink);
 }
 .panel-empty {
