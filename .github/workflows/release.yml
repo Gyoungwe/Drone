@@ -67,6 +67,7 @@ jobs:
     if: needs.resolve.outputs.release == 'true'
     env:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+      NODE_OPTIONS: --max-old-space-size=8192
     strategy:
       fail-fast: false
       matrix:

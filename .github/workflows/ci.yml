@@ -74,6 +74,9 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      # electron-vite OOMs at the default heap on macos-latest (same as release.yml build).
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
