@@ -152,7 +152,7 @@ export default function App() {
 				<SessionTabBar />
 				{/* 固定三栏：左导航（56px）· 主区 · 右侧上下文面板（chat 视图，push 式收展）。
 				    知识库 / 空间 是主区全屏视图，不再叠弹窗。 */}
-				<div className="relative flex min-h-0 flex-1">
+				<div className="app-frame relative flex min-h-0 flex-1">
 					<WorkbenchNav />
 					{view === "projects" ? (
 						<div className="min-h-0 min-w-0 flex-1">
@@ -164,8 +164,9 @@ export default function App() {
 						<PluginEntryHost entry={pluginView} />
 					) : (
 						<>
-							<div className="relative flex min-w-0 flex-1 flex-col">
-								<main className="main-float relative min-h-0 flex-1">
+							{/* U2：主区浮卡包住消息区 + 输入框（浅/深统一），外层为 --sidebar 底 */}
+							<div className="main-float relative flex min-w-0 flex-1 flex-col">
+								<main className="relative min-h-0 flex-1">
 									{showEmpty ? <EmptyState /> : <MessageList />}
 									{/* 聊天区四角贡献层（TodoPanel 悬浮胶囊已并入右侧面板「任务」页签） */}
 									<RegionHost region={UI_REGIONS.CornerTopLeft} />
