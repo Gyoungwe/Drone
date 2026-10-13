@@ -598,3 +598,17 @@ export async function saveDiscoveryIdea({ idea } = {}) {
 	}
 	throw new Error("Could not find a free file name for this idea");
 }
+
+/**
+ * 记忆注入用：本项目 + 共享知识里与提问相关的条目（复用知识库索引与语义向量）。没有绑定 Vault 时返回空。
+ * @param {Record<string, any>} options
+ */
+export async function memoryRelatedKnowledge({ cwd = null, query = "", limit = 4 } = {}) {
+	const binding = await readKnowledgeBinding({ fresh: true });
+	if (!binding) return [];
+	const info = await projectAt(cwd);
+	const service = await getKnowledgeService(binding);
+	return withKnowledgeBinding(binding, () =>
+		service.relatedForMemory({ query, project: info.project || "", limit: Math.max(1, Math.min(8, limit)) }),
+	);
+}

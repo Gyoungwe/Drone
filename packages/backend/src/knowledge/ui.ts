@@ -72,6 +72,12 @@ export interface KnowledgeUiServicePort {
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
 	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }>;
+	/** 记忆注入用的相关知识条目（复用知识库索引与语义向量）。 */
+	relatedForMemory(
+		cwd: string,
+		query: string,
+		limit?: number,
+	): Promise<Array<{ path: string; title: string; text: string }>>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -271,6 +277,13 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }> {
 		return this.call("saveDiscoveryIdea", { idea });
+	}
+	relatedForMemory(
+		cwd: string,
+		query: string,
+		limit = 4,
+	): Promise<Array<{ path: string; title: string; text: string }>> {
+		return this.call("memoryRelatedKnowledge", { cwd, query, limit });
 	}
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
