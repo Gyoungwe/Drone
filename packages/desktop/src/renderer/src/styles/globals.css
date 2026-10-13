@@ -3370,7 +3370,7 @@ code {
 	color: var(--color-ink);
 }
 .workbench-nav.is-wide {
-	width: 200px;
+	width: 180px;
 	align-items: stretch;
 	padding: var(--space-3) var(--space-2) var(--space-3);
 }
