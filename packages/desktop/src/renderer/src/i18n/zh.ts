@@ -196,12 +196,12 @@ export const zh = {
 		collapse: "收起面板",
 		expand: "展开面板",
 		tabs: {
-			tasks: "任务",
+			tasks: "总览",
 			process: "过程",
 			changes: "变更",
-			artifacts: "产物",
+			artifacts: "文件",
 			subagents: "子智能体",
-			compute: "计算",
+			compute: "主机",
 		},
 		status: {
 			attention: "等待你确认",

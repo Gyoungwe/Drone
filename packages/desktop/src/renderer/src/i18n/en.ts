@@ -206,12 +206,12 @@ export const en: Messages = {
 		collapse: "Collapse panel",
 		expand: "Expand panel",
 		tabs: {
-			tasks: "Tasks",
+			tasks: "Overview",
 			process: "Process",
 			changes: "Changes",
-			artifacts: "Research outputs",
+			artifacts: "Files",
 			subagents: "Collaborators",
-			compute: "Compute",
+			compute: "Hosts",
 		},
 		status: {
 			attention: "Needs your decision",
