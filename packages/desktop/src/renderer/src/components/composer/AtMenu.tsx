@@ -50,7 +50,7 @@ export function AtMenu({
 
 	if (items.length === 0) {
 		return (
-			<div className="mb-1.5 rounded-lg border border-border bg-surface py-2 text-center text-xs text-ink-faint shadow-pop">
+			<div className="mb-2 rounded-lg border border-border bg-surface py-2 text-center text-xs text-ink-faint shadow-pop">
 				{agentsOffered ? t("at.noMatchAny") : t("at.noMatch")}
 			</div>
 		);
@@ -59,7 +59,7 @@ export function AtMenu({
 	return (
 		<div
 			ref={listRef}
-			className="mb-1.5 max-h-64 overflow-y-auto rounded-lg border border-border bg-surface shadow-pop"
+			className="mb-2 max-h-64 overflow-y-auto rounded-lg border border-border bg-surface shadow-pop"
 			data-testid="at-menu"
 		>
 			{items.map((item, index) => {
@@ -130,7 +130,7 @@ function AgentRow({
 			data-availability={availability}
 			disabled={untrusted}
 			onMouseDown={(event) => event.preventDefault()}
-			className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] transition-colors ${
+			className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors ${
 				selected ? "bg-hover text-ink" : "text-ink-2 hover:bg-hover"
 			} ${untrusted ? "cursor-not-allowed opacity-60" : ""}`}
 			onMouseEnter={onHover}
@@ -146,7 +146,7 @@ function AgentRow({
 				</span>
 			</span>
 			<span
-				className={`shrink-0 rounded-full border px-1.5 text-xs leading-4 ${
+				className={`shrink-0 rounded-full border px-2 text-xs leading-4 ${
 					untrusted ? "border-warn/50 text-warn" : "border-border text-ink-dim"
 				}`}
 			>
@@ -179,7 +179,7 @@ function FileRow({
 			data-index={index}
 			data-testid="at-menu-file"
 			onMouseDown={(event) => event.preventDefault()}
-			className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] transition-colors ${
+			className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors ${
 				selected ? "bg-hover text-ink" : "text-ink-2 hover:bg-hover"
 			}`}
 			onMouseEnter={onHover}

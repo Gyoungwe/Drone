@@ -64,7 +64,7 @@ export function SubagentResultCard({ run, panel }: { run: SubagentRunUi; panel: 
 			data-testid="subagent-result-card"
 			data-context-state={panel.contextState}
 		>
-			<div className="px-3 py-2.5">
+			<div className="px-3 py-3">
 				<div className="flex min-w-0 items-center gap-2">
 					<SubagentAvatar name={panel.agent} source={panel.source} size="lg" state="done" />
 					<span className="truncate text-[13px] font-semibold text-ink">
@@ -87,11 +87,11 @@ export function SubagentResultCard({ run, panel }: { run: SubagentRunUi; panel: 
 					<div className="mt-2 text-[11px] text-ink-faint">{t("message.subagent.noTranscript")}</div>
 				)}
 				{panel.sessionFile && (
-					<div className="mt-1.5 truncate font-mono text-[11px] text-ink-faint" title={panel.sessionFile}>
+					<div className="mt-2 truncate font-mono text-[11px] text-ink-faint" title={panel.sessionFile}>
 						{panel.sessionFile}
 					</div>
 				)}
-				<div className="mt-2 flex flex-wrap items-center gap-1.5">
+				<div className="mt-2 flex flex-wrap items-center gap-2">
 					<Button size="sm" onClick={cite} data-testid="subagent-result-cite">
 						{t("message.subagent.cite")}
 					</Button>

@@ -24,7 +24,7 @@ import { ActionSurface } from "../ui/ActionSurface";
 import { Button } from "../ui/Button";
 
 const INPUT_CLASS =
-	"w-full rounded-lg border border-border bg-canvas px-2.5 py-1.5 text-[13px] text-ink outline-none placeholder:text-ink-faint focus:border-border-strong";
+	"w-full rounded-lg border border-border bg-canvas px-3 py-2 text-[13px] text-ink outline-none placeholder:text-ink-faint focus:border-border-strong";
 
 /** 对话框需要知道的会话事实（由 ExampleTaskDialog 从 store 读出；表单本身不订阅 store，便于按 props 测试） */
 export interface ExampleTaskSessionContext {
@@ -167,7 +167,7 @@ export function ExampleTaskForm({
 						{task.title[language]}
 					</h3>
 					<p className="mt-1 text-[12px] leading-relaxed text-ink-2">{task.goal[language]}</p>
-					<p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
+					<p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-ink-faint">
 						<span>
 							{t("examples.stages")}：{stages.join(" → ")}
 						</span>
@@ -178,7 +178,7 @@ export function ExampleTaskForm({
 				<div className="min-h-0 flex-1 overflow-y-auto border-t border-border px-5 py-3">
 					<section>
 						<h4 className="text-[12px] font-medium text-ink">{t("examples.inputs")}</h4>
-						<div className="mt-1.5 flex flex-col gap-2">
+						<div className="mt-2 flex flex-col gap-2">
 							{task.inputs.map((input) => {
 								const invalid = showErrors && missing.includes(input.key);
 								const id = `example-input-${input.key}`;
@@ -208,7 +208,7 @@ export function ExampleTaskForm({
 												))}
 											</select>
 										) : (
-											<div className="flex items-center gap-1.5">
+											<div className="flex items-center gap-2">
 												<input
 													id={id}
 													type="text"
@@ -243,7 +243,7 @@ export function ExampleTaskForm({
 
 					<section className="mt-4">
 						<h4 className="text-[12px] font-medium text-ink">{t("examples.milestones")}</h4>
-						<ol className="mt-1.5 flex flex-col gap-1">
+						<ol className="mt-2 flex flex-col gap-1">
 							{milestones.map((milestone, index) => (
 								<li
 									key={milestone.title.en}
@@ -259,7 +259,7 @@ export function ExampleTaskForm({
 											</span>
 										)}
 									</span>
-									<span className="shrink-0 rounded-md bg-hover px-1.5 py-0.5 font-mono text-[11px] text-ink-dim">
+									<span className="shrink-0 rounded-md bg-hover px-2 py-0.5 font-mono text-[11px] text-ink-dim">
 										{milestone.acceptance.kind}
 									</span>
 								</li>
@@ -269,7 +269,7 @@ export function ExampleTaskForm({
 
 					<section className="mt-4">
 						<h4 className="text-[12px] font-medium text-ink">{t("examples.confirmations")}</h4>
-						<ul className="mt-1.5 flex flex-col gap-1 text-[12px] text-ink-2">
+						<ul className="mt-2 flex flex-col gap-1 text-[12px] text-ink-2">
 							{task.authorizations.map((authorization) => (
 								<li key={authorization} className="flex items-start gap-2">
 									<span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />

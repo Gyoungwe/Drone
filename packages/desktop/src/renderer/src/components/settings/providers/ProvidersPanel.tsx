@@ -29,7 +29,7 @@ export function ProvidersPanel() {
 					<button
 						key={id}
 						type="button"
-						className={`px-2.5 py-1.5 text-[12px] transition-colors ${
+						className={`px-3 py-2 text-[12px] transition-colors ${
 							tab === id ? "border-b-2 border-ink text-ink" : "text-ink-faint hover:text-ink"
 						}`}
 						onClick={() => setTab(id)}

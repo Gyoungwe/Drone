@@ -5,7 +5,7 @@ import { skillDisplayName } from "@drone/shared";
  * 不再依赖 leading-relaxed（14px × 1.625 = 22.75px 的小数行高在 Windows 125%/150% 缩放下取整漂移）。
  */
 export const COMPOSER_LINE_PX = 22;
-/** 胶囊与正文首字之间的间距（px），与胶囊之间的 gap-1.5 一致 */
+/** 胶囊与正文首字之间的间距（px），与胶囊之间的 gap-2 一致 */
 export const COMPOSER_CHIP_GAP_PX = 6;
 /** 行首胶囊总宽超过输入框宽度的这一比例时，改为输入框上方独立一行（避免首行只剩几个字） */
 export const INLINE_CHIP_MAX_RATIO = 0.6;

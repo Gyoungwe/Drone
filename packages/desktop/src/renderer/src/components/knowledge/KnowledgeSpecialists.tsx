@@ -107,7 +107,7 @@ export function KnowledgeSpecialists({
 									<select
 										value={selected}
 										onChange={(e) => void setSubagentModel(agent.name, e.target.value || null)}
-										className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-xs text-ink"
+										className="w-full rounded-lg border border-border bg-surface px-2 py-2 text-xs text-ink"
 									>
 										<option value="">{t("specialistFollowMain")}</option>
 										{selected && !selectedModel && (
@@ -132,7 +132,7 @@ export function KnowledgeSpecialists({
 												(e.target.value || null) as SubagentThinkingLevel | null,
 											)
 										}
-										className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-xs text-ink"
+										className="w-full rounded-lg border border-border bg-surface px-2 py-2 text-xs text-ink"
 									>
 										<option value="">{t("specialistFollowMain")}</option>
 										{selectedThinking && !supportedThinking.includes(selectedThinking) && (

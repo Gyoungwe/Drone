@@ -61,7 +61,7 @@ export function ModelPicker({ row }: { row?: string } = {}) {
 				type="button"
 				className={
 					row
-						? "flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-[13px] text-ink transition-colors hover:bg-hover disabled:opacity-50"
+						? "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] text-ink transition-colors hover:bg-hover disabled:opacity-50"
 						: "flex max-w-[160px] items-center gap-1 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
 				}
 				onClick={() => setOpen((v) => !v)}
@@ -101,7 +101,7 @@ export function ModelPicker({ row }: { row?: string } = {}) {
 									<button
 										key={`${m.provider}/${m.id}`}
 										type="button"
-										className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${
+										className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors ${
 											selected ? "bg-hover text-ink" : "text-ink-2 hover:bg-hover"
 										}`}
 										onClick={() => {

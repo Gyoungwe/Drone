@@ -132,7 +132,7 @@ function TabPill({
 				...(ghost ? { width: ghostWidth ?? 208 } : null),
 				...(hidden ? { opacity: 0 } : null),
 			}}
-			className={`no-drag tab-pill group relative flex ${ghost ? "" : "w-full"} cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm ${
+			className={`no-drag tab-pill group relative flex ${ghost ? "" : "w-full"} cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm ${
 				isActive ? "bg-bubble text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
 			} ${ghost ? "tab-dragging" : ""}`}
 			onClick={ghost ? undefined : buttonProps?.onClick}
@@ -221,7 +221,7 @@ function TabRenameInput({ session, onDone }: { session: SessionMeta; onDone: () 
 	return (
 		<input
 			ref={inputRef}
-			className="no-drag w-full rounded-lg bg-bubble px-2.5 py-1.5 text-sm text-ink outline-none ring-1 ring-accent"
+			className="no-drag w-full rounded-lg bg-bubble px-3 py-2 text-sm text-ink outline-none ring-1 ring-accent"
 			value={value}
 			spellCheck={false}
 			aria-label={t("tabbar.rename")}
@@ -506,7 +506,7 @@ export function SessionTabBar() {
 				<div ref={listRef} className="no-drag relative shrink-0">
 					<button
 						type="button"
-						className={`no-drag shrink-0 rounded-lg p-1.5 transition-colors ${
+						className={`no-drag shrink-0 rounded-lg p-2 transition-colors ${
 							listOpen ? "bg-hover text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
 						}`}
 						onClick={() => setListOpen((v) => !v)}
@@ -537,7 +537,7 @@ export function SessionTabBar() {
 			)}
 			<button
 				type="button"
-				className="no-drag shrink-0 rounded-lg p-1.5 text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+				className="no-drag shrink-0 rounded-lg p-2 text-ink-dim transition-colors hover:bg-hover hover:text-ink"
 				onClick={() => {
 					// 只建内存 draft tab（空 tab 重启自动消失）；发送首条消息时才真正创建后端会话
 					createDraftSession();
@@ -553,7 +553,7 @@ export function SessionTabBar() {
 			{view === "chat" && (
 				<button
 					type="button"
-					className={`no-drag relative shrink-0 rounded-lg p-1.5 transition-colors ${
+					className={`no-drag relative shrink-0 rounded-lg p-2 transition-colors ${
 						panelOpen ? "bg-hover text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
 					}`}
 					onClick={() => togglePanel(agentActive)}

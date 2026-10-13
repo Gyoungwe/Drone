@@ -58,7 +58,7 @@ export function BrowseSection() {
 					<button
 						key={id || "all"}
 						type="button"
-						className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
+						className={`rounded-full px-3 py-1 text-xs transition-colors ${
 							type === id ? "bg-ink font-medium text-on-ink" : "bg-hover text-ink-dim hover:text-ink"
 						}`}
 						onClick={() => setCatalogType(id)}
@@ -90,7 +90,7 @@ export function BrowseSection() {
 						<div className="mt-2 flex justify-center">
 							<Button size="sm" disabled={loadingMore} onClick={() => void searchCatalog(true)}>
 								{loadingMore ? (
-									<span className="inline-flex items-center gap-1.5">
+									<span className="inline-flex items-center gap-2">
 										<span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
 										{t("settings.extensions.loading")}
 									</span>

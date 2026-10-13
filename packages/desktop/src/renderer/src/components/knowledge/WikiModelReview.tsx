@@ -188,7 +188,7 @@ export function WikiModelReview({
 					</p>
 					{report.usage && (
 						<details
-							className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-ink-dim"
+							className="rounded-lg border border-border px-3 py-2 text-xs text-ink-dim"
 							data-testid="wiki-model-review-usage"
 						>
 							<summary className="cursor-pointer list-none tabular-nums">

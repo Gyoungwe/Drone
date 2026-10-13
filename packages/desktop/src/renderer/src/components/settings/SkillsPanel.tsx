@@ -25,7 +25,7 @@ function ScopeBadge({ scope }: { scope: ResourceScope }) {
 				: "settings.skills.scopeUser";
 	return (
 		<span
-			className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"}`}
+			className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"}`}
 		>
 			{t(key)}
 		</span>
@@ -36,7 +36,7 @@ function SkillRow({ skill }: { skill: LoadedSkill }) {
 		language = useI18nStore((s) => s.language);
 	const title = skillDisplayName(skill.name, language);
 	return (
-		<li className="py-2.5">
+		<li className="py-3">
 			<div className="flex items-center gap-2">
 				<span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink" title={title}>
 					{title}
@@ -100,7 +100,7 @@ function ToolsOverview() {
 					</div>
 				))}
 			</div>
-			<div className="mt-3 flex flex-wrap gap-1.5">
+			<div className="mt-3 flex flex-wrap gap-2">
 				{CAPABILITY_CATALOG.map((item) => {
 					const active = capabilities.activeCapabilities.includes(item.id);
 					return (
@@ -131,7 +131,7 @@ function ToolsOverview() {
 								<div className="flex flex-wrap items-center gap-2">
 									<code className="text-xs text-ink">{tool.name}</code>
 									<span
-										className={`rounded px-1.5 py-0.5 ${tool.active ? "bg-accent/10 text-accent" : "bg-hover text-ink-faint"}`}
+										className={`rounded px-2 py-0.5 ${tool.active ? "bg-accent/10 text-accent" : "bg-hover text-ink-faint"}`}
 									>
 										{mode}
 									</span>

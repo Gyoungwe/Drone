@@ -42,7 +42,7 @@ export function ModePicker({ row }: { row?: string } = {}) {
 				type="button"
 				className={
 					row
-						? "flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-[13px] text-ink transition-colors hover:bg-hover disabled:opacity-50"
+						? "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] text-ink transition-colors hover:bg-hover disabled:opacity-50"
 						: "flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
 				}
 				onClick={() => setOpen((v) => !v)}
@@ -72,14 +72,14 @@ export function ModePicker({ row }: { row?: string } = {}) {
 			)}
 			{open && (
 				<div
-					className={`absolute ${row ? "left-full bottom-0 ml-2 z-40" : "bottom-full left-0 z-30 mb-2"} w-72 overflow-hidden rounded-xl border border-border bg-surface p-1.5 shadow-pop`}
+					className={`absolute ${row ? "left-full bottom-0 ml-2 z-40" : "bottom-full left-0 z-30 mb-2"} w-72 overflow-hidden rounded-xl border border-border bg-surface p-2 shadow-pop`}
 				>
-					<p className="px-2.5 pt-1.5 pb-1 text-[11px] text-ink-faint">{t("composer.mode.title")}</p>
+					<p className="px-3 pt-2 pb-1 text-[11px] text-ink-faint">{t("composer.mode.title")}</p>
 					{AGENT_MODE_IDS.map((id) => (
 						<button
 							key={id}
 							type="button"
-							className={`flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
+							className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs transition-colors ${
 								id === mode ? "bg-hover text-ink" : "text-ink-2 hover:bg-hover"
 							}`}
 							onClick={() => {

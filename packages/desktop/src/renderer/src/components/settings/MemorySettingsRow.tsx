@@ -55,7 +55,7 @@ export function MemorySettingsView({
 				>
 					{items.map((item) => (
 						<li key={item.id} className="flex items-start gap-2 px-3 py-2 text-[12px]">
-							<span className="shrink-0 rounded bg-hover px-1.5 py-0.5 text-[11px] text-ink-faint">
+							<span className="shrink-0 rounded bg-hover px-2 py-0.5 text-[11px] text-ink-faint">
 								{item.kind}
 							</span>
 							<div className="min-w-0 flex-1">

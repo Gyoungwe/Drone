@@ -54,7 +54,7 @@ export function SessionRow({
 			    层叠上下文困在本行内，出不去）。把悬停行抬到正层级，其内气泡即浮到相邻行之上。 */}
 			<button
 				type="button"
-				className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-hover"
+				className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-hover"
 				onClick={() => {
 					if (session.sessionFile) {
 						void openSession(session).then(() => setView("chat"));
@@ -86,7 +86,7 @@ export function SessionRow({
 				<Tooltip label={t("projects.copyDiagnostics")} align="end">
 					<button
 						type="button"
-						className="invisible rounded-md px-1.5 py-0.5 text-[11px] text-ink-faint transition-colors hover:bg-hover hover:text-ink-2 group-hover:visible"
+						className="invisible rounded-md px-2 py-0.5 text-[11px] text-ink-faint transition-colors hover:bg-hover hover:text-ink-2 group-hover:visible"
 						onClick={copyDiagnostics}
 					>
 						{copied ? <CheckIcon size={15} /> : <CopyIcon size={15} />}
@@ -95,7 +95,7 @@ export function SessionRow({
 			</span>
 			<button
 				type="button"
-				className={`invisible absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-xs transition-colors group-hover:visible ${
+				className={`invisible absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-0.5 text-xs transition-colors group-hover:visible ${
 					confirming ? "bg-red-50 text-red-600" : "text-ink-faint hover:bg-hover hover:text-ink-2"
 				}`}
 				onClick={() => {

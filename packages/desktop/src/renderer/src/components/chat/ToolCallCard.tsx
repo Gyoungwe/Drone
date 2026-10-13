@@ -87,7 +87,7 @@ export function ToolCallCard({ tool }: { tool: UIToolCall }) {
 					</span>
 				)}
 			</summary>
-			<div className="flex flex-col gap-1.5 py-1 pl-4">
+			<div className="flex flex-col gap-2 py-1 pl-4">
 				{tool.args && (
 					<pre className="max-h-56 overflow-y-auto font-mono text-[12px] leading-relaxed break-all whitespace-pre-wrap text-ink-dim select-text">
 						{tool.args}

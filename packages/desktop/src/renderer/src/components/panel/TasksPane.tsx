@@ -142,7 +142,7 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 					{decisions.map((decision) => (
 						<li
 							key={decision.id}
-							className="rounded-md border border-edge/60 px-2 py-1.5"
+							className="rounded-md border border-edge/60 px-2 py-2"
 							data-testid="decision-row"
 						>
 							<div className="flex items-start gap-2">
@@ -209,7 +209,7 @@ export function TodoCard() {
 					style={{ width: `${pct}%` }}
 				/>
 			</div>
-			<ul className="mt-1.5">
+			<ul className="mt-2">
 				{todos.map((todo, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: 全量替换列表无稳定 id，顺序稳定
 					<TodoLine key={i} todo={todo} spinnerPaused={!agentActive} />

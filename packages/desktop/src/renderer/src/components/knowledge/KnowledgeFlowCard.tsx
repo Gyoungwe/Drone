@@ -181,7 +181,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 				})}
 			</div>
 			{open && (
-				<div className="max-h-[28vh] overflow-auto border-t border-border px-2 py-1.5">
+				<div className="max-h-[28vh] overflow-auto border-t border-border px-2 py-2">
 					{flow.vault && <p className="mb-2 break-all font-mono text-[11px] text-ink-dim">{flow.vault}</p>}
 					{flow.search && (
 						<p className="mb-2 break-words text-xs">

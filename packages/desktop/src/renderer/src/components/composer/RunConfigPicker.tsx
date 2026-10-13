@@ -55,7 +55,7 @@ export function RunConfigPicker() {
 		<div ref={ref} className="relative" data-testid="run-config-picker">
 			<button
 				type="button"
-				className="flex max-w-[260px] items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+				className="flex max-w-[260px] items-center gap-2 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
 				onClick={() => setOpen((v) => !v)}
 				aria-expanded={open}
 				title={t("composer.modelGroupHint")}
@@ -68,7 +68,7 @@ export function RunConfigPicker() {
 				<ChevronDownIcon className={open ? "rotate-180 transition-transform" : "transition-transform"} />
 			</button>
 			{open && (
-				<div className="absolute right-0 bottom-full z-30 mb-2 w-64 rounded-xl border border-border bg-surface p-1.5 shadow-pop">
+				<div className="absolute right-0 bottom-full z-30 mb-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-pop">
 					<ModePicker row={t("composer.config.mode")} />
 					<ModelPicker row={t("composer.config.model")} />
 					<ThinkingPicker row={t("composer.config.effort")} />

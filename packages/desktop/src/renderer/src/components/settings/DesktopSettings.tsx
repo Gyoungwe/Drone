@@ -36,7 +36,7 @@ export function DesktopSettings() {
 				title={t("settings.desktop.download")}
 				hint={prefs.downloadDir ?? t("settings.desktop.downloadDefault")}
 			>
-				<div className="flex gap-1.5">
+				<div className="flex gap-2">
 					<button
 						type="button"
 						className="rounded-md border border-border px-2 py-1 text-xs hover:bg-hover"

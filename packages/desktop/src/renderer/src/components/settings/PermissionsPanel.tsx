@@ -145,7 +145,7 @@ export function PermissionsEditor(props: PermissionsEditorProps) {
 
 	return (
 		<div data-testid="permissions-panel" className="space-y-4 pb-2">
-			<header className="space-y-1.5">
+			<header className="space-y-2">
 				<div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
 					<h3 className="text-[13px] font-semibold text-ink">{t("settings.permissions.title")}</h3>
 					<span className="text-[11px] text-ink-faint">{t("settings.permissions.effectHint")}</span>
@@ -241,7 +241,7 @@ export function PermissionsEditor(props: PermissionsEditorProps) {
 						.filter((tool) => tool.kind === "action")
 						.map((tool) => (
 							<SettingsRow key={tool.tool} title={tool.tool}>
-								<div className="flex items-center gap-1.5">
+								<div className="flex items-center gap-2">
 									<ActionSelect
 										value={tool.kind === "action" ? tool.action : "ask"}
 										onChange={(action) =>
@@ -297,13 +297,13 @@ export function PermissionsEditor(props: PermissionsEditorProps) {
 					onOpen={props.onLoadAudit}
 				/>
 				<div className="flex flex-wrap items-center justify-between gap-2">
-					<div className="flex items-center gap-1.5">
+					<div className="flex items-center gap-2">
 						<Button size="sm" onClick={props.onOpenLocation}>
 							{t("settings.permissions.openLocation")}
 						</Button>
 						<ResetButton onReset={props.onReset} disabled={saving} />
 					</div>
-					<div className="flex items-center gap-1.5">
+					<div className="flex items-center gap-2">
 						<Button
 							size="sm"
 							disabled={!dirty || saving}
@@ -364,9 +364,9 @@ function ToolPatternBlock({
 		}
 	};
 	return (
-		<div className="space-y-1.5" data-testid="tool-patterns" data-tool={tool.tool}>
+		<div className="space-y-2" data-testid="tool-patterns" data-tool={tool.tool}>
 			<div className="flex items-center justify-between gap-2">
-				<div className="flex items-center gap-1.5">
+				<div className="flex items-center gap-2">
 					<span className="font-mono text-[12px] font-medium text-ink">{tool.tool}</span>
 					<span className="text-[11px] text-ink-faint">{t("settings.permissions.patternTable")}</span>
 				</div>
@@ -391,7 +391,7 @@ function ToolPatternBlock({
 			/>
 			{probe && (
 				<div className="space-y-1" data-testid="permissions-probe">
-					<div className="flex items-center gap-1.5">
+					<div className="flex items-center gap-2">
 						<span className="shrink-0 text-xs text-ink-dim">{t("settings.permissions.probe")}</span>
 						<input
 							className="min-w-0 flex-1 rounded-md border border-border bg-bg px-2 py-0.5 font-mono text-[11px] text-ink outline-none focus:border-ink-faint"
@@ -468,10 +468,10 @@ function AddToolRule({
 		setChoice(rest[0] ?? "__custom");
 	};
 	return (
-		<div className="flex flex-wrap items-center gap-1.5" data-testid="add-tool-rule">
+		<div className="flex flex-wrap items-center gap-2" data-testid="add-tool-rule">
 			<span className="text-xs text-ink-dim">{t("settings.permissions.addTool")}</span>
 			<select
-				className="rounded-md border border-border bg-bg px-1.5 py-0.5 text-[11px] text-ink outline-none focus:border-ink-faint"
+				className="rounded-md border border-border bg-bg px-2 py-0.5 text-[11px] text-ink outline-none focus:border-ink-faint"
 				value={candidates.includes(choice) || choice === "__custom" ? choice : "__custom"}
 				onChange={(event) => setChoice(event.target.value)}
 			>
@@ -577,7 +577,7 @@ function ResetButton({ onReset, disabled }: { onReset: () => void; disabled: boo
 		);
 	}
 	return (
-		<span className="flex items-center gap-1.5 text-xs text-ink-dim" data-testid="permissions-reset-confirm">
+		<span className="flex items-center gap-2 text-xs text-ink-dim" data-testid="permissions-reset-confirm">
 			{t("settings.permissions.restoreConfirm")}
 			<Button
 				size="sm"
@@ -618,12 +618,12 @@ function StatusLine({
 	if (conflict) {
 		return (
 			<div
-				className="space-y-1 rounded-md border border-warn/40 bg-warn/10 px-2 py-1.5 text-xs text-ink"
+				className="space-y-1 rounded-md border border-warn/40 bg-warn/10 px-2 py-2 text-xs text-ink"
 				data-testid="permissions-conflict"
 			>
 				<p className="font-medium">{t("settings.permissions.conflictTitle")}</p>
 				<p className="text-ink-dim">{t("settings.permissions.conflictHint")}</p>
-				<div className="flex gap-1.5">
+				<div className="flex gap-2">
 					<Button size="sm" onClick={onReload}>
 						{t("settings.permissions.conflictReload")}
 					</Button>

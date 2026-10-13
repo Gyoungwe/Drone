@@ -33,7 +33,7 @@ function AppearanceBasics() {
 						{t("settings.themeHint")}
 					</p>
 				</div>
-				<div className="flex shrink-0 gap-1.5">
+				<div className="flex shrink-0 gap-2">
 					{THEME_MODES.map((m) => (
 						<button
 							key={m}
@@ -70,7 +70,7 @@ function AppearanceBasics() {
 								—
 							</div>
 						)}
-						<div className="flex gap-1.5">
+						<div className="flex gap-2">
 							<button
 								type="button"
 								className="rounded-md border border-border px-2 py-1 text-xs text-ink-2 transition-colors hover:border-border-strong hover:bg-hover"

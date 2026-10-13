@@ -74,7 +74,7 @@ export function AboutPanel() {
 	};
 
 	return (
-		<div className="flex flex-col items-center gap-1.5 py-10 text-center">
+		<div className="flex flex-col items-center gap-2 py-10 text-center">
 			<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink text-[16px] font-bold text-on-ink">
 				P
 			</div>
@@ -86,7 +86,7 @@ export function AboutPanel() {
 			<div className="mt-4 flex items-center gap-2">
 				<button
 					type="button"
-					className="rounded-lg border border-border px-4 py-1.5 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover hover:text-ink"
+					className="rounded-lg border border-border px-4 py-2 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover hover:text-ink"
 					onClick={() => {
 						if (state?.phase === "downloaded") void installUpdateWithGuard();
 						else if (state?.phase === "available" && state.manual) void openReleasePage(state.version);
@@ -98,7 +98,7 @@ export function AboutPanel() {
 				</button>
 				<button
 					type="button"
-					className="rounded-lg border border-border px-4 py-1.5 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover hover:text-ink"
+					className="rounded-lg border border-border px-4 py-2 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover hover:text-ink"
 					onClick={() => {
 						if (info?.repoUrl) void getPi().openExternal(info.repoUrl);
 					}}
@@ -109,7 +109,7 @@ export function AboutPanel() {
 			<div className="mt-2 flex items-center gap-2">
 				<button
 					type="button"
-					className="rounded-lg border border-border px-4 py-1.5 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover hover:text-ink disabled:opacity-60"
+					className="rounded-lg border border-border px-4 py-2 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover hover:text-ink disabled:opacity-60"
 					disabled={diagnosticsState === "saving"}
 					onClick={() => void exportDiagnostics()}
 				>

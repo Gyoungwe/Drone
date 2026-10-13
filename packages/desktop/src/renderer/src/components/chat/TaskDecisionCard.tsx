@@ -60,7 +60,7 @@ export function TaskDecisionCard({
 					{formatCardText(decision.cannotComplete)}
 				</p>
 			)}
-			<div className="mt-2 flex flex-wrap gap-1.5">
+			<div className="mt-2 flex flex-wrap gap-2">
 				{decision.canComplete && decision.completeActionId && (
 					<button
 						type="button"

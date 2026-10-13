@@ -41,7 +41,7 @@ export function ProcessRouteSummary({ route }: { route: TurnRoute }) {
 			</header>
 			{current ? (
 				<div
-					className="mt-2 flex items-center gap-2 rounded-lg bg-hover/60 px-2.5 py-1.5"
+					className="mt-2 flex items-center gap-2 rounded-lg bg-hover/60 px-3 py-2"
 					data-testid="process-route-current"
 				>
 					<span className="text-[11px] text-ink-faint">{t("panel.processRoute.current")}</span>

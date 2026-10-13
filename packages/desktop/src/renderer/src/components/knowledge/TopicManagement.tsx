@@ -126,7 +126,7 @@ export function TopicManagement({
 					</dl>
 					{topic.conflicts?.length ? (
 						<details
-							className="mt-3 rounded-lg border border-warn/30 bg-warn/5 p-2.5"
+							className="mt-3 rounded-lg border border-warn/30 bg-warn/5 p-3"
 							open={topic.status === "conflict-candidate"}
 						>
 							<summary className="cursor-pointer text-xs font-medium text-warn">

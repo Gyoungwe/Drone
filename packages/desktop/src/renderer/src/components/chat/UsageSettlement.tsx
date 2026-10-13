@@ -26,7 +26,7 @@ export function UsageSettlement({
 	const rate = usage?.cacheRate == null ? "—" : `${(usage.cacheRate * 100).toFixed(1)}%`;
 	return (
 		<details
-			className={`rounded-lg border border-border bg-surface/60 text-xs text-ink-dim ${total ? "px-2.5 py-1.5" : "mt-2 px-2.5 py-1.5"}`}
+			className={`rounded-lg border border-border bg-surface/60 text-xs text-ink-dim ${total ? "px-3 py-2" : "mt-2 px-3 py-2"}`}
 			data-testid={total ? "session-usage" : "turn-usage"}
 		>
 			<summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
@@ -180,7 +180,7 @@ export function SessionUsageSummary({ sessionId }: { sessionId: string | null })
 	const { usage, error } = state;
 	const rate = usage?.cacheRate == null ? "—" : `${(usage.cacheRate * 100).toFixed(1)}%`;
 	return (
-		<div className="mt-1.5 border-t border-border pt-1.5 tabular-nums" data-testid="session-usage-summary">
+		<div className="mt-2 border-t border-border pt-2 tabular-nums" data-testid="session-usage-summary">
 			<div>
 				{zh ? "会话累计" : "Session total"} {usage ? compact(usage.total) : "—"} tokens ·{" "}
 				{zh ? "缓存命中" : "Cache hits"} {rate}

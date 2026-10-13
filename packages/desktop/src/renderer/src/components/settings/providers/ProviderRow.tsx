@@ -72,17 +72,17 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 	const [modelsOpen, setModelsOpen] = useState(false);
 
 	return (
-		<li className="py-2.5">
+		<li className="py-3">
 			<div className="flex items-center gap-1">
 				<div className="min-w-0 flex-1">
-					<div className="flex items-center gap-1.5">
+					<div className="flex items-center gap-2">
 						<span className="truncate text-[13px] font-medium text-ink">{provider.name}</span>
 						{provider.overridesBuiltin ? (
-							<span className="rounded bg-hover px-1.5 py-0.5 text-xs text-ink-dim">
+							<span className="rounded bg-hover px-2 py-0.5 text-xs text-ink-dim">
 								{t("settings.providers.overrideBuiltin")}
 							</span>
 						) : provider.custom ? (
-							<span className="rounded bg-hover px-1.5 py-0.5 text-xs text-ink-dim">
+							<span className="rounded bg-hover px-2 py-0.5 text-xs text-ink-dim">
 								{t("settings.providers.custom")}
 							</span>
 						) : null}
@@ -208,7 +208,7 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 			</div>
 			{testResult && testResult !== "testing" && (
 				<p
-					className={`mt-1.5 rounded-lg px-2.5 py-1.5 text-xs ${
+					className={`mt-2 rounded-lg px-3 py-2 text-xs ${
 						testResult.ok ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
 					}`}
 				>
@@ -218,7 +218,7 @@ export function ProviderRow({ provider }: { provider: ProviderInfo }) {
 				</p>
 			)}
 			{provider.configured && modelsOpen && provider.models.length > 0 && (
-				<div className="mt-2 rounded-lg bg-hover/60 px-2.5 py-2">
+				<div className="mt-2 rounded-lg bg-hover/60 px-3 py-2">
 					<p className="mb-1 text-[11px] font-medium text-ink-faint">
 						{t("settings.providers.modelVisibility")}
 					</p>

@@ -36,12 +36,12 @@ export function StatePanel({
 			aria-busy={kind === "loading" ? true : undefined}
 			data-state={kind}
 			data-testid={testId}
-			className={`flex flex-col items-center justify-center gap-1.5 text-center ${compact ? "py-4" : "py-8"} ${className}`}
+			className={`flex flex-col items-center justify-center gap-2 text-center ${compact ? "py-4" : "py-8"} ${className}`}
 		>
 			<span aria-hidden className={`size-1.5 rounded-full ${DOT[kind]}`} />
 			<p className={`text-[12.5px] ${kind === "error" ? "text-err" : "text-ink-dim"}`}>{title}</p>
 			{hint ? <p className="max-w-[36ch] text-[11.5px] leading-relaxed text-ink-faint">{hint}</p> : null}
-			{action ? <div className="mt-1.5">{action}</div> : null}
+			{action ? <div className="mt-2">{action}</div> : null}
 		</div>
 	);
 }

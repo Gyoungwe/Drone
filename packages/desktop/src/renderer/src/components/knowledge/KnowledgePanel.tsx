@@ -107,7 +107,7 @@ export function KnowledgePanel({
 						aria-selected={tab === item}
 						disabled={item !== "overview" && !binding}
 						onClick={() => setTab(item)}
-						className={`rounded-lg px-3 py-1.5 text-xs disabled:opacity-40 ${tab === item ? "bg-hover font-semibold" : "text-ink-dim hover:bg-hover"}`}
+						className={`rounded-lg px-3 py-2 text-xs disabled:opacity-40 ${tab === item ? "bg-hover font-semibold" : "text-ink-dim hover:bg-hover"}`}
 					>
 						{t(item)}
 					</button>

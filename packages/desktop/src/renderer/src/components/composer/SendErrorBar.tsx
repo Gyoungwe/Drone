@@ -9,7 +9,7 @@ import { ErrorCircleIcon, RefreshIcon } from "../icons";
 export function SendErrorBar({ error, onRetry }: { error: UiError; onRetry: () => void }) {
 	const t = useT();
 	return (
-		<div className="send-error mb-1.5" role="alert">
+		<div className="send-error mb-2" role="alert">
 			<span className="se-glyph">
 				<ErrorCircleIcon />
 			</span>

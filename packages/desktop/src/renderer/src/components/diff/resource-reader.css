@@ -14,8 +14,8 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 6px;
-	padding: 10px 14px;
+	gap: var(--space-2);
+	padding: var(--space-3) var(--space-4);
 	border-bottom: 1px solid var(--color-border);
 	font-size: 12px;
 	flex: none;
@@ -25,14 +25,14 @@
 	font-weight: 700;
 	letter-spacing: 0.05em;
 	background: var(--color-hover);
-	padding: 4px 7px;
+	padding: var(--space-1) 7px;
 	border-radius: 5px;
 	margin-right: auto;
 }
 .resource-reader-toolbar button,
 .resource-data-tools button,
 .resource-code-tools button {
-	padding: 4px 8px;
+	padding: var(--space-1) var(--space-2);
 	border: 1px solid var(--color-border);
 	border-radius: 6px;
 	color: var(--color-ink-dim);
@@ -48,7 +48,7 @@
 	cursor: default;
 }
 .resource-notice {
-	padding: 8px 12px;
+	padding: var(--space-2) var(--space-3);
 	margin: 0;
 	border-bottom: 1px solid var(--color-border);
 	background: color-mix(in srgb, #d97706 7%, transparent);
@@ -60,11 +60,11 @@
 	font-size: 11px;
 	line-height: 1.7;
 	color: var(--color-ink-faint);
-	padding: 8px 0;
-	margin-top: 12px;
+	padding: var(--space-2) 0;
+	margin-top: var(--space-3);
 }
 .resource-markdown {
-	padding: 22px 24px;
+	padding: var(--space-6) var(--space-6);
 	font-size: 14px;
 	line-height: 1.85;
 	overflow-wrap: anywhere;
@@ -74,36 +74,36 @@
 .resource-markdown h1 {
 	font-size: 25px;
 	line-height: 1.4;
-	margin: 0 0 20px;
+	margin: 0 0 var(--space-5);
 	font-weight: 700;
 	letter-spacing: -0.025em;
 }
 .resource-markdown h2 {
 	font-size: 19px;
 	line-height: 1.5;
-	margin: 28px 0 12px;
-	padding-bottom: 8px;
+	margin: var(--space-7) 0 var(--space-3);
+	padding-bottom: var(--space-2);
 	border-bottom: 1px solid var(--color-border);
 	font-weight: 650;
 }
 .resource-markdown h3 {
 	font-size: 16px;
-	margin: 22px 0 8px;
+	margin: var(--space-6) 0 var(--space-2);
 	font-weight: 650;
 }
 .resource-markdown h4,
 .resource-markdown h5,
 .resource-markdown h6 {
 	font-weight: 650;
-	margin: 16px 0 8px;
+	margin: var(--space-4) 0 var(--space-2);
 }
 .resource-markdown p {
-	margin: 10px 0;
+	margin: var(--space-3) 0;
 }
 .resource-markdown ul,
 .resource-markdown ol {
-	padding-left: 22px;
-	margin: 10px 0;
+	padding-left: var(--space-6);
+	margin: var(--space-3) 0;
 }
 .resource-markdown ul {
 	list-style: disc;
@@ -122,8 +122,8 @@
 .resource-markdown blockquote {
 	border-left: 3px solid var(--color-border);
 	background: var(--color-hover);
-	margin: 16px 0;
-	padding: 6px 14px;
+	margin: var(--space-4) 0;
+	padding: var(--space-2) var(--space-4);
 	color: var(--color-ink-dim);
 }
 .resource-markdown p code,
@@ -136,12 +136,12 @@
 .resource-markdown hr {
 	border: 0;
 	border-top: 1px solid var(--color-border);
-	margin: 24px 0;
+	margin: var(--space-6) 0;
 }
 .resource-image-reference {
 	display: block;
-	margin: 10px 0;
-	padding: 10px 12px;
+	margin: var(--space-3) 0;
+	padding: var(--space-3) var(--space-3);
 	border: 1px dashed var(--color-border);
 	border-radius: 7px;
 	font-size: 12px;
@@ -165,8 +165,8 @@
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
-	gap: 10px;
-	padding: 10px 12px;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-3);
 	font-size: 11px;
 	border-bottom: 1px solid var(--color-border);
 }
@@ -175,7 +175,7 @@
 	flex: 1;
 	border: 1px solid var(--color-border);
 	border-radius: 6px;
-	padding: 6px 8px;
+	padding: var(--space-2) var(--space-2);
 	background: var(--color-canvas);
 }
 .resource-data-tools label {
@@ -186,7 +186,7 @@
 }
 .resource-data-summary {
 	margin: 0;
-	padding: 9px 12px;
+	padding: 9px var(--space-3);
 	font-size: 11px;
 	color: var(--color-ink-dim);
 }
@@ -244,7 +244,7 @@
 	font-variant-numeric: tabular-nums;
 }
 .resource-metadata {
-	padding: 8px 12px;
+	padding: var(--space-2) var(--space-3);
 	font-size: 11px;
 	color: var(--color-ink-dim);
 }
@@ -256,7 +256,7 @@
 	overflow: auto;
 	white-space: pre-wrap;
 	font-size: 11px;
-	margin: 8px 0;
+	margin: var(--space-2) 0;
 }
 .resource-code {
 	min-width: 0;
@@ -266,8 +266,8 @@
 .resource-code-tools {
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	padding: 8px 12px;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
 	font-size: 11px;
 	color: var(--color-ink-faint);
 	border-bottom: 1px solid var(--color-border);
@@ -275,7 +275,7 @@
 .resource-source {
 	margin: 0;
 	overflow: auto;
-	padding: 12px 10px 18px 0;
+	padding: var(--space-3) var(--space-3) var(--space-5) 0;
 	font:
 		12px / 1.8 ui-monospace,
 		SFMono-Regular,
@@ -298,7 +298,7 @@
 .resource-line-number {
 	color: var(--color-ink-faint);
 	text-align: right;
-	padding-right: 12px;
+	padding-right: var(--space-3);
 	user-select: none;
 	font-size: 11px;
 }
@@ -306,24 +306,24 @@
 	border: 1px solid var(--color-border);
 	border-radius: 8px;
 	overflow: hidden;
-	margin: 14px 0;
+	margin: var(--space-4) 0;
 	background: var(--color-canvas);
 }
 .resource-sequences {
-	padding: 12px;
+	padding: var(--space-3);
 }
 .resource-sequences > .resource-preview-footnote {
 	margin: 0;
-	padding: 0 12px 12px;
+	padding: 0 var(--space-3) var(--space-3);
 }
 .resource-sequence {
-	margin: 8px 0;
+	margin: var(--space-2) 0;
 	border: 1px solid var(--color-border);
 	border-radius: 8px;
 	overflow: hidden;
 }
 .resource-sequence summary {
-	padding: 10px 12px;
+	padding: var(--space-3) var(--space-3);
 	font-size: 12px;
 	font-weight: 600;
 	overflow-wrap: anywhere;
@@ -336,7 +336,7 @@
 	color: var(--color-ink-faint);
 }
 .resource-sequence-scroll {
-	padding: 12px;
+	padding: var(--space-3);
 	overflow: auto;
 }
 .resource-sequence-scroll pre {
@@ -351,7 +351,7 @@
 .resource-sequence-scroll h5 {
 	font-size: 11px;
 	color: var(--color-ink-faint);
-	margin: 12px 0 5px;
+	margin: var(--space-3) 0 5px;
 }
 .resource-base-offset {
 	display: inline-block;
@@ -391,7 +391,7 @@
 		width: min(520px, 78vw);
 	}
 	.resource-markdown {
-		padding: 16px;
+		padding: var(--space-4);
 		font-size: 13px;
 	}
 }
@@ -406,7 +406,7 @@
 }
 .resource-tree,
 .resource-alignment {
-	padding: 12px;
+	padding: var(--space-3);
 }
 .resource-tree .resource-data-summary,
 .resource-alignment .resource-data-summary,
@@ -421,7 +421,7 @@
 	max-height: 70vh;
 	border: 1px solid var(--color-border);
 	border-radius: 6px;
-	padding: 6px;
+	padding: var(--space-2);
 }
 .resource-tree-edge {
 	fill: none;
@@ -455,7 +455,7 @@
 }
 .resource-alignment-name {
 	display: inline-block;
-	margin-right: 8px;
+	margin-right: var(--space-2);
 	color: var(--color-ink-dim);
 }
 .resource-alignment-ruler {
@@ -545,14 +545,14 @@
 }
 .figure-notes {
 	list-style: none;
-	margin: 8px 0 0;
+	margin: var(--space-2) 0 0;
 	padding: 0;
 	display: grid;
-	gap: 6px;
+	gap: var(--space-2);
 }
 .figure-notes li {
 	display: flex;
-	gap: 6px;
+	gap: var(--space-2);
 	align-items: flex-start;
 }
 .figure-note-index {
@@ -567,7 +567,7 @@
 	text-align: center;
 }
 .figure-notes button {
-	padding: 4px 8px;
+	padding: var(--space-1) var(--space-2);
 	border: 1px solid var(--color-border);
 	border-radius: 6px;
 	color: var(--color-ink-dim);
@@ -579,7 +579,7 @@
 	min-width: 0;
 	font: inherit;
 	font-size: 12px;
-	padding: 4px 6px;
+	padding: var(--space-1) var(--space-2);
 	border: 1px solid var(--color-border);
 	border-radius: 4px;
 	background: transparent;
@@ -594,13 +594,13 @@
 .preview-notebook {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 12px 16px;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-4);
 }
 .preview-nb-cell {
 	position: relative;
 	border-left: 2px solid transparent;
-	padding-left: 10px;
+	padding-left: var(--space-3);
 }
 .preview-nb-code {
 	border-left-color: var(--border, #e5e5e5);
@@ -614,7 +614,7 @@
 }
 .preview-nb-output,
 .preview-nb-error {
-	margin: 6px 0 0;
+	margin: var(--space-2) 0 0;
 	font:
 		12px / 1.5 ui-monospace,
 		monospace;
@@ -627,10 +627,10 @@
 .preview-nb-image {
 	display: block;
 	max-width: 100%;
-	margin-top: 6px;
+	margin-top: var(--space-2);
 }
 .preview-mermaid {
-	padding: 16px;
+	padding: var(--space-4);
 	display: flex;
 	justify-content: center;
 }
@@ -639,16 +639,16 @@
 	height: auto;
 }
 .preview-media {
-	padding: 16px;
+	padding: var(--space-4);
 }
 
 /* P4 预览器 */
 .preview-npy,
 .preview-mesh {
-	padding: 12px 16px;
+	padding: var(--space-3) var(--space-4);
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--space-2);
 	align-items: flex-start;
 }
 .preview-npy svg {
@@ -660,7 +660,7 @@
 .preview-npy-scale {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-2);
 	font:
 		11px ui-monospace,
 		monospace;
@@ -684,20 +684,20 @@
 	max-width: 100%;
 }
 .preview-doc {
-	padding: 16px 20px;
+	padding: var(--space-4) var(--space-5);
 	font-size: 14px;
 	line-height: 1.7;
 }
 .preview-doc-title {
 	font-size: 20px;
 	font-weight: 700;
-	margin: 4px 0 12px;
+	margin: var(--space-1) 0 var(--space-3);
 }
 .preview-doc h2,
 .preview-doc h3,
 .preview-doc h4 {
 	font-weight: 650;
-	margin: 14px 0 6px;
+	margin: var(--space-4) 0 var(--space-2);
 }
 .preview-doc h2 {
 	font-size: 17px;
@@ -714,14 +714,14 @@
 		monospace;
 	background: var(--color-hover);
 	border-radius: 6px;
-	padding: 8px 10px;
+	padding: var(--space-2) var(--space-3);
 	white-space: pre-wrap;
 }
 
 /* P4 补充：TIFF / 体数据 */
 .preview-tiff,
 .preview-volume {
-	padding: 12px;
+	padding: var(--space-3);
 }
 .preview-pixels {
 	image-rendering: pixelated;
@@ -733,18 +733,18 @@
 	display: grid;
 	grid-template-columns: repeat(2, 180px);
 	align-items: start;
-	gap: 12px;
+	gap: var(--space-3);
 }
 .preview-volume-cell {
 	margin: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-1);
 }
 .preview-volume-cell figcaption {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-2);
 	font-size: 11px;
 	color: var(--color-ink-dim, #666);
 }
@@ -760,7 +760,7 @@
 }
 .preview-volume-mip {
 	font-size: 11px;
-	padding: 2px 8px;
+	padding: 2px var(--space-2);
 	border-radius: 6px;
 	border: 1px solid var(--color-border, #ddd);
 }
