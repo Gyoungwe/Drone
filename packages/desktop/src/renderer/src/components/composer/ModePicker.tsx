@@ -10,8 +10,6 @@ export function ModePicker({ row }: { row?: string } = {}) {
 	const sessionId = useSessionsStore((s) => s.activeSessionId);
 	const mode = useAgentModeStore((s) => (sessionId ? (s.bySession[sessionId] ?? "lead") : "lead"));
 	const setMode = useAgentModeStore((s) => s.setMode);
-	const change = useAgentModeStore((s) => (s.lastChange?.sessionId === sessionId ? s.lastChange : null));
-	const clearChange = useAgentModeStore((s) => s.clearChange);
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
 	useEffect(() => {
@@ -22,20 +20,7 @@ export function ModePicker({ row }: { row?: string } = {}) {
 		window.addEventListener("pointerdown", onDown);
 		return () => window.removeEventListener("pointerdown", onDown);
 	}, [open]);
-	useEffect(() => {
-		if (!change) return;
-		const id = setTimeout(clearChange, 6000);
-		return () => clearTimeout(id);
-	}, [change, clearChange]);
 	const disabled = !sessionId || isDraftSessionId(sessionId);
-	const diffText = change
-		? [
-				change.added.length ? `+${change.added.join(", ")}` : "",
-				change.removed.length ? `−${change.removed.join(", ")}` : "",
-			]
-				.filter(Boolean)
-				.join(" ")
-		: "";
 	return (
 		<div ref={ref} className={row ? "relative w-full" : "relative"}>
 			<button
@@ -64,12 +49,6 @@ export function ModePicker({ row }: { row?: string } = {}) {
 					</>
 				)}
 			</button>
-			{change && !open && (
-				<div className="mode-change-note" role="status">
-					{t("composer.mode.changed", { mode: t(`composer.mode.${change.mode}`) })}
-					{diffText ? ` ${diffText}` : ""} · {t("composer.mode.cacheReset")}
-				</div>
-			)}
 			{open && (
 				<div
 					className={`absolute ${row ? "left-full bottom-0 ml-2 z-40" : "bottom-full left-0 z-30 mb-2"} w-72 overflow-hidden rounded-xl border border-border bg-surface p-1.5 shadow-pop`}
