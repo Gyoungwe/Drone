@@ -22,6 +22,7 @@ import {
 } from "./search-policy";
 import { parseFrontmatter } from "./ingest-frontmatter";
 import { createSemanticModel } from "./semantic-model";
+import { createRevisionCache } from "./graph-cache";
 
 await mkdir(dirname(workerData.database), { recursive: true, mode: 0o700 });
 const db = new DatabaseSync(workerData.database, { timeout: 1500 });
@@ -90,6 +91,7 @@ let closePromise;
 const dirty = new Set(),
 	inflight = new Map();
 const stats = { bodyReads: 0, metadataChecks: 0, reconciliations: 0, changes: 0, searches: 0 };
+const graphSnapshots = createRevisionCache<Record<string, unknown>>();
 const statements = {
 	get: db.prepare("SELECT * FROM notes WHERE path=?"),
 	count: db.prepare("SELECT count(*) count FROM notes"),
@@ -850,7 +852,15 @@ function noteIdentity(body) {
 /** 知识网络：保留旧 nodes/edges，并在可选字段中返回语义投影。 */
 async function knowledgeGraph(args) {
 	await flushDirty();
+	// Another request may have committed a revision while this worker was idle.
+	// Read it after the flush so a cached snapshot never crosses an index boundary.
+	revision = Number(db.prepare("SELECT value FROM meta WHERE key='revision'").get().value);
 	const limit = Math.max(10, Math.min(400, Math.floor(args.limit || 200)));
+	const view = args.view === "all" ? "all" : "semantic";
+	const mergeMirrors = args.mergeMirrors !== false;
+	const cacheKey = `${view}\u0000${limit}\u0000${mergeMirrors ? "merge" : "raw"}`;
+	const cached = graphSnapshots.get(revision, cacheKey);
+	if (cached) return cached;
 	const allNotes = new Map(
 		db
 			.prepare("SELECT path,title,kind,scope,body FROM notes")
@@ -917,7 +927,7 @@ async function knowledgeGraph(args) {
 		(edge) => semanticCandidatePaths.has(edge.source) && semanticCandidatePaths.has(edge.target),
 	);
 	const duplicateCounts = new Map();
-	if (args.mergeMirrors !== false) {
+	if (mergeMirrors) {
 		for (const row of notes.values()) {
 			const identity = noteIdentity(row.body);
 			if (identity) duplicateCounts.set(identity, (duplicateCounts.get(identity) || 0) + 1);
@@ -940,7 +950,7 @@ async function knowledgeGraph(args) {
 			})),
 			edges: semanticCandidateEdges,
 		},
-		{ view: args.view === "all" ? "all" : "semantic", mergeMirrors: args.mergeMirrors !== false },
+			{ view, mergeMirrors },
 	);
 	const chosen = [...model.nodes]
 		.sort((a, b) => b.degree - a.degree || a.path.localeCompare(b.path))
@@ -948,7 +958,7 @@ async function knowledgeGraph(args) {
 	const keep = new Set(chosen.map((node) => node.path));
 	const links = model.edges.filter(({ source, target }) => keep.has(source) && keep.has(target));
 	const relations = (model.relations || []).filter(({ source, target }) => keep.has(source) && keep.has(target));
-	return {
+	const result = {
 		nodes: legacyChosen.map((path) => ({ path, title: notes.get(path).title, kind: notes.get(path).kind, degree: legacyDegree.get(path) || 0 })),
 		edges: [...legacyEdges.values()]
 			.filter(([source, target]) => legacyKeep.has(source) && legacyKeep.has(target))
@@ -959,8 +969,8 @@ async function knowledgeGraph(args) {
 			nodes: chosen.map((node) => ({ ...node })),
 			edges: links,
 			totalNotes: notes.size,
-			view: args.view === "all" ? "all" : "semantic",
-			mergeMirrors: args.mergeMirrors !== false,
+		view,
+		mergeMirrors,
 			relations,
 			duplicates: (model.duplicates || []).filter(({ canonical, duplicate }) => keep.has(canonical) || keep.has(duplicate)),
 			communities: Object.fromEntries(Object.entries(model.communities || {}).filter(([path]) => keep.has(path))),
@@ -975,6 +985,8 @@ async function knowledgeGraph(args) {
 			},
 		},
 	};
+	graphSnapshots.set(revision, cacheKey, result);
+	return result;
 }
 async function dispatch(op, args) {
 	if (op === "status") {
