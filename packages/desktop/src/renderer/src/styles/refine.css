@@ -180,6 +180,8 @@
 }
 .workbench-nav-sessions li button {
 	padding: 6px 10px;
+}
+
 /* 设置导航：图标 + 中文 + 英文副标，左栏加宽 */
 .settings-dialog-shell nav {
 	width: 208px;
