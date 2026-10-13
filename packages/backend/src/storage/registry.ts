@@ -364,6 +364,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
+			id: "agent-memory",
+			path: `${agentDir}/memory/memory.db`,
+			owner: "memory",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
 			id: "agent-sessions",
 			path: `${agentDir}/sessions`,
 			owner: "session-engine/sdk",

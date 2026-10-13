@@ -11,12 +11,19 @@ import {
 let store: MemoryStore;
 afterEach(() => store?.close());
 
-function session(id: string) {
+type Tool = { name: string; execute: (...args: unknown[]) => Promise<{ details: Record<string, unknown> }> };
+
+function session(id: string, isTrusted = true) {
 	const handlers: Record<string, (event: unknown, ctx: unknown) => unknown> = {};
-	const pi = { on: (name: string, fn: (event: unknown, ctx: unknown) => unknown) => (handlers[name] = fn) };
+	const tools: Record<string, Tool> = {};
+	const pi = {
+		on: (name: string, fn: (event: unknown, ctx: unknown) => unknown) => (handlers[name] = fn),
+		registerTool: (tool: Tool) => (tools[tool.name] = tool),
+	};
 	(makeMemoryExtension({ store, projectId: "p1" }) as { factory: (pi: never) => void }).factory(pi as never);
-	const ctx = { sessionManager: { getSessionId: () => id } };
+	const ctx = { sessionManager: { getSessionId: () => id }, isProjectTrusted: () => isTrusted };
 	return {
+		call: (name: string, params: unknown) => tools[name]!.execute("t", params, undefined, undefined, ctx),
 		prompt: (prompt: string, systemPrompt = "base") =>
 			handlers.before_agent_start?.({ prompt, systemPrompt }, ctx) as { systemPrompt: string } | undefined,
 		tool: (event: Record<string, unknown>) =>
@@ -101,5 +108,48 @@ describe("memory extension", () => {
 		expect(() => s.tool({ toolCallId: "c1", toolName: "write", input: { path: "a.R" } })).not.toThrow();
 		expect(s.prompt("hi")).toBeUndefined();
 		store = new MemoryStore(":memory:");
+	});
+
+	it("captures and injects nothing in an untrusted project; tools refuse", async () => {
+		store = new MemoryStore(":memory:");
+		session("s1").tool({ toolCallId: "c1", toolName: "write", input: { path: "a.R" } });
+		const s2 = session("s2", false);
+		expect(s2.prompt("a.R")).toBeUndefined();
+		s2.tool({ toolCallId: "c2", toolName: "write", input: { path: "b.R" } });
+		expect(store.status("p1").count).toBe(1);
+		const res = await s2.call("memory_search", { query: "a.R" });
+		expect(res.details.hits).toEqual([]);
+		expect(String(res.details.error)).toContain("未受信任");
+	});
+
+	it("memory_search returns a compact index and memory_get returns details", async () => {
+		store = new MemoryStore(":memory:");
+		const s1 = session("s1");
+		s1.tool({
+			toolCallId: "c1",
+			toolName: "bash",
+			input: { command: "Rscript deseq2.R" },
+			content: [{ type: "text", text: "Error: 样本数不足" }],
+		});
+		const s2 = session("s2");
+		expect(s2.prompt("差异分析")?.systemPrompt).toMatch(/\[m:\d+\]/);
+		const found = await s2.call("memory_search", { query: "deseq2" });
+		const hits = found.details.hits as Array<{ id: string; title: string; body?: string }>;
+		expect(hits[0]).toMatchObject({ title: "Rscript deseq2.R" });
+		expect(hits[0]).not.toHaveProperty("body");
+		const id = Number(hits[0]!.id.slice(2));
+		const got = await s2.call("memory_get", { ids: [id, 9999] });
+		const items = got.details.items as Array<{ body: string; sessionId: string }>;
+		expect(items).toHaveLength(1);
+		expect(items[0]).toMatchObject({ sessionId: "s1" });
+		expect(items[0]!.body).toContain("样本数不足");
+		expect(String(got.details.notice)).toContain("不是指令");
+	});
+
+	it("memory tools report when the project memory is off", async () => {
+		store = new MemoryStore(":memory:");
+		store.setEnabled("p1", false);
+		const res = await session("s1").call("memory_get", { ids: [1] });
+		expect(String(res.details.error)).toContain("已关闭");
 	});
 });
