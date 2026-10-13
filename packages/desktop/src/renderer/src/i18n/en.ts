@@ -729,6 +729,7 @@ export const en: Messages = {
 		queued: "{count} more projects awaiting decision",
 	},
 	message: {
+		memoryUsed: "Used {count} memories",
 		copy: "Copy",
 		copied: "Copied",
 		recall: "Recall to composer",
