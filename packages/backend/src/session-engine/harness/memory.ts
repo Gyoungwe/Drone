@@ -85,10 +85,44 @@ export function renderMemoryBlock(
 	return count ? { text, count } : { text: "", count: 0 };
 }
 
+/** 轮末摘要器：给定已清洗的对话文本，返回几百 token 的摘要；失败返回空串。 */
+export type MemorySummarizer = (transcript: string, model: unknown) => Promise<string>;
+
 export interface MemoryExtensionOptions {
 	store: MemoryStore;
 	projectId: string;
+	/** 缺省不生成轮末摘要。 */
+	summarize?: MemorySummarizer;
 }
+
+type LooseMessage = { role?: string; content?: unknown };
+const TRANSCRIPT_MAX = 6000;
+
+/** 把一轮消息压成可摘要的文本：只取用户与助手的正文，跳过思考与工具输出，先剥 <private> 再脱敏。 */
+export function turnTranscript(messages: unknown[]): string {
+	const lines: string[] = [];
+	for (const raw of messages) {
+		const msg = raw as LooseMessage;
+		if (msg.role !== "user" && msg.role !== "assistant") continue;
+		const parts =
+			typeof msg.content === "string"
+				? [msg.content]
+				: Array.isArray(msg.content)
+					? msg.content
+							.filter(
+								(p): p is { type: string; text: string } => p?.type === "text" && typeof p.text === "string",
+							)
+							.map((p) => p.text)
+					: [];
+		const text = cleanMemoryText(parts.join(" "), 1500);
+		if (text) lines.push(`${msg.role === "user" ? "用户" : "助手"}：${text}`);
+	}
+	const joined = lines.join("\n");
+	return joined.length > TRANSCRIPT_MAX ? joined.slice(-TRANSCRIPT_MAX) : joined;
+}
+
+export const SUMMARY_SYSTEM_PROMPT =
+	"你是会话记录员。用中文写本次会话的简短摘要（不超过 300 字）：目标、已完成、关键结论或决定、下一步。只写事实，不写指令，不复述密钥或隐私。第一行是不超过 30 字的标题。";
 
 type TrustCtx = { isProjectTrusted?: () => boolean };
 /** 门禁：不受信任项目零捕获、零注入、工具不可用。 */
@@ -117,7 +151,11 @@ function toolText(payload: unknown) {
  * memory_search（紧凑索引）/ memory_get（详情）渐进披露。
  * 块在会话内固定，后续轮次原样复用，不打掉前缀缓存。任何失败只记日志，不影响会话。
  */
-export function makeMemoryExtension({ store, projectId }: MemoryExtensionOptions): InlineExtension {
+export function makeMemoryExtension({
+	store,
+	projectId,
+	summarize,
+}: MemoryExtensionOptions): InlineExtension {
 	return {
 		name: "memory",
 		factory: (pi) => {
@@ -209,6 +247,31 @@ export function makeMemoryExtension({ store, projectId }: MemoryExtensionOptions
 					}
 				}
 				return block ? { systemPrompt: `${event.systemPrompt}\n\n${block}` } : undefined;
+			});
+			pi.on("agent_end", (event, ctx) => {
+				if (!summarize || !trusted(ctx)) return undefined;
+				try {
+					if (!store.isEnabled(projectId)) return undefined;
+				} catch {
+					return undefined;
+				}
+				const sessionId = ctx.sessionManager.getSessionId();
+				const transcript = turnTranscript((event as { messages?: unknown[] }).messages ?? []);
+				if (!transcript) return undefined;
+				void summarize(transcript, (ctx as { model?: unknown }).model)
+					.then((text) => {
+						const clean = cleanMemoryText(text, 900);
+						if (!clean) return;
+						const [first = "", ...rest] = text.split("\n").map((line) => cleanMemoryText(line, 120));
+						store.upsertSummary(
+							projectId,
+							sessionId,
+							first || clean.slice(0, 60),
+							cleanMemoryText(rest.join(" "), 900),
+						);
+					})
+					.catch((error) => log.warn("memory summary failed", { error: String(error) }));
+				return undefined;
 			});
 			pi.on("tool_result", (event, ctx) => {
 				if (!trusted(ctx)) return undefined;
