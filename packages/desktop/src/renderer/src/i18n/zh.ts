@@ -582,6 +582,7 @@ export const zh = {
 		checkFailed: "检查更新失败：{message}",
 	},
 	composer: {
+		config: { mode: "模式", model: "模型", effort: "推理强度" },
 		mode: {
 			title: "模式（决定可用工具）",
 			single: "单体",
