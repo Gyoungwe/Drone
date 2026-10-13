@@ -4,6 +4,7 @@ import { useProjectsStore } from "../../stores/projects";
 import { Composer } from "../composer/Composer";
 import { ProjectBranchPicker } from "../projects/ProjectBranchPicker";
 import { FirstRunGuide } from "./FirstRunGuide";
+import { HomeCards } from "./HomeCards";
 
 /** 空态（U8）：问候语 + 一句介绍（Wordmark 移到「关于」） + 居中输入框 + 项目/分支选择（对标 opencode 新会话页） */
 export function EmptyState() {
@@ -19,9 +20,10 @@ export function EmptyState() {
 	return (
 		<div className="flex h-full flex-col items-center justify-center gap-8 px-8 pb-[8vh]">
 			<div className="text-center" data-testid="home-greeting">
-				<h1 className="font-serif text-[28px] text-ink">{t(`home.greeting.${greeting}`)}</h1>
+				<h1 className="font-serif-sc text-[28px] text-ink">{t(`home.greeting.${greeting}`)}</h1>
 				<p className="mt-2 text-[13px] text-ink-faint">{t("home.intro")}</p>
 			</div>
+			<HomeCards />
 			<Composer centered />
 			<ProjectBranchPicker />
 			<FirstRunGuide />

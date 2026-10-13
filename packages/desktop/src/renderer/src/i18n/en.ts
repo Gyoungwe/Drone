@@ -1475,6 +1475,11 @@ export const en: Messages = {
 		en: "English",
 	},
 	home: {
+		cards: {
+			research: { title: "Research", hint: "From literature to conclusions" },
+			knowledge: { title: "Knowledge", hint: "Search and recent deposits" },
+			relay: { title: "Relay", hint: "Continue the last task" },
+		},
 		greeting: { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening" },
 		intro:
 			"From literature to conclusions — Drone searches, reads, analyzes and deposits into your knowledge base.",

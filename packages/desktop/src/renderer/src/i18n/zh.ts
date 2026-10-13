@@ -1410,6 +1410,11 @@ export const zh = {
 		en: "English",
 	},
 	home: {
+		cards: {
+			research: { title: "研究", hint: "从文献到结论" },
+			knowledge: { title: "知识库", hint: "搜索与最近沉淀" },
+			relay: { title: "接力", hint: "继续上一个任务" },
+		},
 		greeting: { morning: "早上好", afternoon: "下午好", evening: "晚上好" },
 		intro: "从文献到结论，Drone 帮你检索、阅读、分析并沉淀到知识库。",
 	},
