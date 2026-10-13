@@ -240,6 +240,13 @@ export const en: Messages = {
 		reviewAcknowledge: "Confirm reviewed",
 		reviewLater: "This card stays here until you decide",
 		tasksEmpty: "No task list yet — it appears here once the agent makes a plan.",
+		runOverview: {
+			running: "Running",
+			idle: "This session",
+			tools: "{count} tool calls",
+			files: "Changed files · {count}",
+			waiting: "Getting ready — stage updates will appear here.",
+		},
 		processEmpty: "No run records yet.",
 		processRoute: {
 			ariaLabel: "Current turn progress",

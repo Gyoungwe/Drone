@@ -230,6 +230,13 @@ export const zh = {
 		reviewAcknowledge: "确认已查看",
 		reviewLater: "稍后处理可保留此卡",
 		tasksEmpty: "还没有任务清单——Agent 建立计划后会显示在这里。",
+		runOverview: {
+			running: "正在运行",
+			idle: "本次会话",
+			tools: "{count} 次工具",
+			files: "改动的文件 · {count}",
+			waiting: "正在准备，阶段进展会显示在这里。",
+		},
 		processEmpty: "还没有运行记录。",
 		processRoute: {
 			ariaLabel: "本轮处理进度",

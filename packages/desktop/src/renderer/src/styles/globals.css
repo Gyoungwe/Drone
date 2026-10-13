@@ -2830,10 +2830,9 @@ code {
 
 /* P16 右栏上下文用量计 */
 .context-usage {
-	border: 1px solid var(--color-border);
-	border-radius: 10px;
-	padding: 8px 10px;
-	margin: 0 0 10px;
+	padding: 2px 2px 12px;
+	margin: 0 0 12px;
+	border-bottom: 1px solid var(--color-border);
 	font-size: 11px;
 	color: var(--color-ink-dim);
 }
@@ -2849,10 +2848,10 @@ code {
 	font-weight: 500;
 }
 .context-usage-bar {
-	height: 4px;
+	height: 3px;
 	border-radius: 2px;
 	background: var(--color-hover);
-	margin: 6px 0;
+	margin: 7px 0 6px;
 	overflow: hidden;
 }
 .context-usage-bar > span {
@@ -3049,4 +3048,87 @@ code {
 	to {
 		transform: rotate(360deg);
 	}
+}
+
+/* 右栏：本次运行概览（无任务清单时代替示例卡） */
+.run-overview {
+	padding: 2px 2px 0;
+	font-size: 12px;
+	color: var(--color-ink-2);
+}
+.run-overview-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 10px;
+}
+.run-overview-dot {
+	height: 6px;
+	width: 6px;
+	border-radius: 999px;
+	background: var(--color-ink-faint);
+}
+.run-overview-dot.live {
+	background: var(--color-accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+.run-overview-title {
+	font-weight: 500;
+	color: var(--color-ink);
+}
+.run-overview-meta {
+	margin-left: auto;
+	color: var(--color-ink-faint);
+	font-variant-numeric: tabular-nums;
+}
+.run-overview-steps {
+	margin: 0;
+	padding: 0 0 0 14px;
+	list-style: none;
+	border-left: 1px solid var(--color-border);
+}
+.run-overview-steps li {
+	position: relative;
+	padding: 3px 0 5px;
+	line-height: 1.5;
+	color: var(--color-ink-dim);
+}
+.run-overview-steps li::before {
+	content: "";
+	position: absolute;
+	left: -17.5px;
+	top: 10px;
+	height: 6px;
+	width: 6px;
+	border-radius: 999px;
+	background: var(--color-surface);
+	border: 1px solid var(--color-ink-faint);
+}
+.run-overview-steps li.current {
+	color: var(--color-ink);
+}
+.run-overview-steps li.current::before {
+	background: var(--color-accent);
+	border-color: var(--color-accent);
+}
+.run-overview-empty {
+	margin: 0;
+	color: var(--color-ink-faint);
+}
+.run-overview-files {
+	margin-top: 14px;
+}
+.run-overview-label {
+	margin-bottom: 4px;
+	font-size: 11px;
+	color: var(--color-ink-faint);
+}
+.run-overview-file {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	padding: 2px 0;
+	font-family: var(--font-mono, ui-monospace, monospace);
+	font-size: 11.5px;
+	color: var(--color-ink-2);
 }
