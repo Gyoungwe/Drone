@@ -3514,3 +3514,12 @@ code {
 	box-shadow: var(--shadow-pop);
 	pointer-events: none;
 }
+/* U8b：Noto Serif SC 子集（只含首页标题用字 + ASCII，OFL 许可；scripts 见 PR），其余字回退系统衬线 */
+@font-face {
+	font-family: "Noto Serif SC Subset";
+	src: url("../assets/fonts/noto-serif-sc-subset.woff2") format("woff2");
+	font-display: swap;
+}
+.font-serif-sc {
+	font-family: "Noto Serif SC Subset", "Noto Serif SC", "Songti SC", ui-serif, Georgia, serif;
+}
