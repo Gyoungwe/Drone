@@ -68,7 +68,7 @@ export function BuiltinProviderEditForm({
 				</button>
 				<button
 					type="button"
-					className="rounded-lg bg-ink px-3 py-1.5 text-[12px] font-medium text-on-ink transition-colors hover:bg-ink-2 disabled:opacity-40"
+					className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-on-ink transition-colors hover:bg-ink-2 disabled:opacity-40"
 					onClick={() => void save()}
 					disabled={submitting}
 				>
