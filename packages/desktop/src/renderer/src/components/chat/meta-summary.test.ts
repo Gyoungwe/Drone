@@ -18,7 +18,8 @@ describe("categoryOf", () => {
 	});
 
 	it("未知工具归 other（含中文/自定义名）", () => {
-		expect(categoryOf("webfetch")).toBe("other");
+		expect(categoryOf("webfetch")).toBe("fetch");
+		expect(categoryOf("todo_custom")).toBe("other");
 		expect(categoryOf("editor")).toBe("other");
 		expect(categoryOf("show_image")).toBe("other");
 	});
@@ -65,9 +66,9 @@ describe("summarizeCategories", () => {
 	});
 
 	it("other 按原始工具名各自成段", () => {
-		const segs = summarizeCategories([{ tools: [tool("webfetch"), tool("webfetch"), tool("todo")] }]);
+		const segs = summarizeCategories([{ tools: [tool("mytool"), tool("mytool"), tool("todo")] }]);
 		expect(segs.map((s) => [s.key, s.category, s.count])).toEqual([
-			["webfetch", "other", 2],
+			["mytool", "other", 2],
 			["todo", "other", 1],
 		]);
 	});

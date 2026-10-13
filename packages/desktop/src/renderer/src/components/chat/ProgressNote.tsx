@@ -8,15 +8,7 @@ import { useI18nStore } from "../../i18n";
 export function ProgressNote({ progress }: { progress: ProgressDisplay }) {
 	const zh = useI18nStore((s) => s.language) === "zh";
 	const kindLabel =
-		progress.kind === "summary"
-			? zh
-				? "小结"
-				: "Summary"
-			: progress.kind === "update"
-				? null
-				: zh
-					? "计划"
-					: "Plan";
+		progress.kind === "summary" ? (zh ? "小结" : "Summary") : progress.kind === "update" ? null : null;
 	return (
 		<div className="progress-stage" data-testid="progress-note" data-stage-kind={progress.kind || "plan"}>
 			<span className="progress-stage-dot" aria-hidden="true" />

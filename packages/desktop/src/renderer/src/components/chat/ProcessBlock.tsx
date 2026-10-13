@@ -1,5 +1,5 @@
 import type { ProcessSegment } from "@drone/shared";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Children, type ReactNode, useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { ChevronRightIcon } from "../icons";
 
@@ -10,6 +10,9 @@ import { ChevronRightIcon } from "../icons";
  * - 用户手动展开/收起后，本块不再自动改变（记住用户意图，直到块被卸载）。
  * - 子行仍由 MessageList 按原规则渲染（MetaGroup 的 working / ticker / 圆点行为原样保留）。
  */
+/** 运行中默认可见的最近子行数。 */
+const KEEP_LIVE = 2;
+
 export function ProcessBlock({ segment, children }: { segment: ProcessSegment; children: ReactNode }) {
 	const t = useT();
 	const [open, setOpen] = useState(segment.working);
@@ -23,6 +26,10 @@ export function ProcessBlock({ segment, children }: { segment: ProcessSegment; c
 		if (!userToggled.current) setOpen(segment.working);
 	}, [segment.working]);
 
+	const [showEarlier, setShowEarlier] = useState(false);
+	const all = Children.toArray(children);
+	// 运行中只露出最近两步（当前阶段 + 当前工具组），更早的收成一行，点开再看
+	const hidden = segment.working && !showEarlier ? Math.max(0, all.length - KEEP_LIVE) : 0;
 	const stageText = segment.working
 		? (segment.statusText ?? segment.latestStage?.text)
 		: segment.latestStage?.text;
@@ -66,7 +73,17 @@ export function ProcessBlock({ segment, children }: { segment: ProcessSegment; c
 					</span>
 				)}
 			</button>
-			{open && <div className="process-block-body">{children}</div>}
+			{open && (
+				<div className="process-block-body">
+					{hidden > 0 && (
+						<button type="button" className="process-block-earlier" onClick={() => setShowEarlier(true)}>
+							<ChevronRightIcon size={11} />
+							{t("process.earlier", { count: hidden })}
+						</button>
+					)}
+					{all.slice(hidden)}
+				</div>
+			)}
 			{segment.stopped && (
 				<div className="process-block-stopped" data-testid="process-stopped">
 					{t("process.stopped")}

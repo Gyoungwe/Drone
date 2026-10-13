@@ -16,6 +16,8 @@ export function summaryLabel(t: ReturnType<typeof useT>, seg: SummarySegment): s
 			return t("message.summaryExplore", { n: seg.count, unit: pluralUnit(seg.count, "time", "times") });
 		case "search":
 			return t("message.summarySearch", { n: seg.count, unit: pluralUnit(seg.count, "time", "times") });
+		case "fetch":
+			return t("message.summaryFetch", { n: seg.count, unit: pluralUnit(seg.count, "source", "sources") });
 		case "bash":
 			return t("message.summaryBash", { n: seg.count, unit: pluralUnit(seg.count, "command", "commands") });
 		case "subagent":
@@ -24,6 +26,6 @@ export function summaryLabel(t: ReturnType<typeof useT>, seg: SummarySegment): s
 				unit: pluralUnit(seg.count, "subagent", "subagents"),
 			});
 		default:
-			return `${displayName(seg.name)} ×${seg.count}`;
+			return t("message.summaryOther", { name: displayName(seg.name), n: seg.count });
 	}
 }
