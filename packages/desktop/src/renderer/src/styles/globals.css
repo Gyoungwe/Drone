@@ -32,9 +32,10 @@
 	/* G7：圆角梯度（与 Tailwind md/lg/xl/2xl 同值，CSS 里统一引用） */
 	--radius-sm: 6px;
 	--radius-md: 8px;
-	--radius-lg: 12px;
-	--radius-xl: 16px;
+	--radius-lg: 10px;
+	--radius-xl: 14px;
 	--radius-dialog: 18px;
+	--radius-3xl: 24px;
 	--color-canvas: var(--color-canvas);
 	--color-surface: var(--color-surface);
 	--color-hover: var(--color-hover);
@@ -56,6 +57,14 @@
 	--color-info: var(--color-info);
 	--color-ok: var(--color-ok);
 	--color-switch-off: var(--color-switch-off);
+	/* U1：ClawsGO 语义 token（报告 5.2） */
+	--color-sidebar: var(--sidebar);
+	--color-chat-input: var(--chat-input);
+	--color-chat-status: var(--chat-status);
+	--color-chip-accent: var(--chip-accent);
+	--color-link: var(--link);
+	--color-ring: var(--ring);
+	--color-destructive: var(--destructive);
 	/* 阴影 token（shadow-soft/shadow-pop/shadow-dialog 工具类）：浅色深色系投影，深色白色发光 */
 	--shadow-soft: var(--shadow-soft);
 	--shadow-pop: var(--shadow-pop);
@@ -123,33 +132,42 @@
 	--color-switch-off: oklch(87% 0 0);
 	/* 自定义背景图遮罩（rgb 分量；不透明度由 .app-bg-scrim 的 inline opacity 控制） */
 	--color-scrim: 255 255 255;
-	--markdown-code-bg: #f4f4f5;
-	--markdown-code-text: #3f3f46;
-	--markdown-quote-border: #e4e4e7;
-	--markdown-quote-text: #71717a;
-	--markdown-table-border: #e4e4e7;
-	--markdown-table-head-bg: #f8fafc;
-	--markdown-link-decoration: #bfdbfe;
-	--markdown-link-hover: #1d4ed8;
+	/* U1：Markdown 从语义 token 推导（链接统一 --link，深色不再用紫色） */
+	--markdown-code-bg: var(--color-hover);
+	--markdown-code-text: var(--color-ink-2);
+	--markdown-quote-border: var(--color-border);
+	--markdown-quote-text: var(--color-ink-dim);
+	--markdown-table-border: var(--color-border);
+	--markdown-table-head-bg: var(--color-hover);
+	--markdown-link-decoration: color-mix(in oklab, var(--link) 35%, transparent);
+	--markdown-link-hover: var(--link);
+	--sidebar: oklch(98.5% 0 0);
+	--chat-input: var(--color-surface);
+	--chat-status: oklch(97% 0 0);
+	--chip-accent: oklch(48.8% 0.243 264.376);
+	--link: oklch(54.6% 0.245 262.881);
+	--ring: color-mix(in oklab, var(--color-accent) 45%, transparent);
+	--destructive: var(--color-err);
 	/* 扫光高光色 = 文字颜色的推移方向：日间往黑推（文字加深，对比度升高）；
 	   用白色会把文字推向近白背景，像消散而非高光。深色值与 --color-ink 一致 */
 	--shimmer-highlight: rgba(24, 24, 27, 0.9);
 	--shadow-soft: 0 1px 12px -4px rgba(24, 24, 27, 0.08);
 	--shadow-pop: 0 6px 24px -6px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.02);
 	--shadow-dialog: 0 12px 40px rgba(0, 0, 0, 0.18);
-	--scrollbar-thumb: #d4d4d4;
-	--scrollbar-thumb-hover: #bfbfbf;
+	--scrollbar-thumb: color-mix(in oklab, var(--color-ink) 18%, transparent);
+	--scrollbar-thumb-hover: color-mix(in oklab, var(--color-ink) 28%, transparent);
 	/* Knowledge workspace: restrained research notebook palette.  These tokens
 	   keep the graph, cloud sync and evidence surfaces readable without making
 	   the rest of the workbench inherit their blue accents. */
-	--knowledge-canvas: #f7f9fc;
-	--knowledge-surface: #ffffff;
-	--knowledge-surface-muted: #f8fafc;
-	--knowledge-border: #d9e2ec;
-	--knowledge-border-strong: #c4d0dc;
-	--knowledge-ink: #172536;
-	--knowledge-ink-muted: #617286;
-	--knowledge-ink-faint: #8b9aab;
+	/* U1：知识库回到通用中性灰；只保留星云图用的 accent/main/directory */
+	--knowledge-canvas: var(--color-canvas);
+	--knowledge-surface: var(--color-surface);
+	--knowledge-surface-muted: var(--color-hover);
+	--knowledge-border: var(--color-border);
+	--knowledge-border-strong: var(--color-border-strong);
+	--knowledge-ink: var(--color-ink);
+	--knowledge-ink-muted: var(--color-ink-dim);
+	--knowledge-ink-faint: var(--color-ink-faint);
 	--knowledge-accent: #2e6f8e;
 	--knowledge-accent-soft: #e8f2f5;
 	--knowledge-grid: #e6edf3;
@@ -175,7 +193,7 @@
 	--ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 	--duration-fast: 150ms;
 	--scroll-fade-size: 64px;
-	--radius-card: 1.5rem;
+	--radius-card: var(--radius-3xl);
 }
 
 [data-theme="dark"] {
@@ -207,29 +225,38 @@
 	--color-ok: #34d399;
 	--color-switch-off: oklch(37.1% 0 0);
 	--color-scrim: 23 23 26;
-	--markdown-code-bg: #2b2b31;
-	--markdown-code-text: #d4d4db;
-	--markdown-quote-border: #4b4b53;
-	--markdown-quote-text: #9a9aa3;
-	--markdown-table-border: #38383f;
-	--markdown-table-head-bg: #212126;
-	--markdown-link-decoration: #6d28d9;
-	--markdown-link-hover: #a78bfa;
+	/* U1：Markdown 从语义 token 推导（链接统一 --link，深色不再用紫色） */
+	--markdown-code-bg: var(--color-hover);
+	--markdown-code-text: var(--color-ink-2);
+	--markdown-quote-border: var(--color-border);
+	--markdown-quote-text: var(--color-ink-dim);
+	--markdown-table-border: var(--color-border);
+	--markdown-table-head-bg: var(--color-hover);
+	--markdown-link-decoration: color-mix(in oklab, var(--link) 35%, transparent);
+	--markdown-link-hover: var(--link);
+	--sidebar: oklch(25% 0 0);
+	--chat-input: var(--color-surface);
+	--chat-status: oklch(28% 0 0);
+	--chip-accent: oklch(62.3% 0.214 259.815);
+	--link: oklch(70.7% 0.165 254.624);
+	--ring: color-mix(in oklab, var(--color-accent) 50%, transparent);
+	--destructive: var(--color-err);
 	/* 扫光高光色 = 往白推（文字提亮，与日间方向相反） */
 	--shimmer-highlight: rgba(255, 255, 255, 0.95);
 	--shadow-soft: 0 1px 12px -4px rgba(0, 0, 0, 0.4);
 	--shadow-pop: 0 6px 24px -6px rgba(0, 0, 0, 0.55);
 	--shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.6);
-	--scrollbar-thumb: #4b4b53;
-	--scrollbar-thumb-hover: #5d5d66;
-	--knowledge-canvas: #17191d;
-	--knowledge-surface: #212328;
-	--knowledge-surface-muted: #272a30;
-	--knowledge-border: #3a414a;
-	--knowledge-border-strong: #4a5562;
-	--knowledge-ink: #edf1f5;
-	--knowledge-ink-muted: #a9b4bf;
-	--knowledge-ink-faint: #778390;
+	--scrollbar-thumb: color-mix(in oklab, var(--color-ink) 22%, transparent);
+	--scrollbar-thumb-hover: color-mix(in oklab, var(--color-ink) 32%, transparent);
+	/* U1：知识库回到通用中性灰；只保留星云图用的 accent/main/directory */
+	--knowledge-canvas: var(--color-canvas);
+	--knowledge-surface: var(--color-surface);
+	--knowledge-surface-muted: var(--color-hover);
+	--knowledge-border: var(--color-border);
+	--knowledge-border-strong: var(--color-border-strong);
+	--knowledge-ink: var(--color-ink);
+	--knowledge-ink-muted: var(--color-ink-dim);
+	--knowledge-ink-faint: var(--color-ink-faint);
 	--knowledge-accent: #7eb5c8;
 	--knowledge-accent-soft: #263940;
 	--knowledge-grid: #39434d;
@@ -603,7 +630,7 @@ code {
 
 /* markstream-react 视觉覆写：组件样式均为 :where() 零优先级，此处规则必覆盖；对齐原 react-markdown 设计 */
 .markdown-body {
-	--link-color: var(--color-accent);
+	--link-color: var(--link);
 	/* 库的 rounded-lg 等工具类吃 --ms-radius，CSS 里无默认定义（→ 直角）；在此补上 */
 	--ms-radius: 10px;
 }
@@ -954,7 +981,7 @@ code {
 }
 .sunburst-flow-meta button,
 .sunburst-link {
-	color: var(--color-accent);
+	color: var(--link);
 	font-size: 11px;
 	font-weight: 600;
 	transition: color 0.16s ease;
@@ -1017,12 +1044,12 @@ code {
 	color: var(--color-ink);
 }
 .sunburst-stage.is-active .sunburst-stage-mark {
-	background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
-	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 12%, transparent);
-	color: var(--color-accent);
+	background: var(--highlight);
+	box-shadow: none;
+	color: var(--color-ink);
 }
 .sunburst-stage.is-active span:last-child {
-	color: var(--color-accent);
+	color: var(--color-ink);
 }
 @media (max-width: 1180px) {
 	.sunburst-stage-grid {
@@ -2038,15 +2065,15 @@ code {
 	box-shadow: none;
 }
 .drone-button--primary {
-	border-color: var(--color-accent);
-	background: var(--color-accent);
-	color: var(--color-on-accent);
-	box-shadow: 0 2px 7px color-mix(in srgb, var(--color-accent) 18%, transparent);
+	border-color: var(--color-ink);
+	background: var(--color-ink);
+	color: var(--color-on-ink);
+	box-shadow: none;
 }
 .drone-button--primary:hover:not(:disabled) {
-	border-color: color-mix(in srgb, var(--color-accent) 82%, var(--color-ink));
-	background: color-mix(in srgb, var(--color-accent) 88%, var(--color-ink));
-	color: var(--color-on-accent);
+	border-color: color-mix(in srgb, var(--color-ink) 82%, var(--color-surface));
+	background: color-mix(in srgb, var(--color-ink) 88%, var(--color-surface));
+	color: var(--color-on-ink);
 }
 .drone-button--danger {
 	color: var(--color-err);
@@ -2064,12 +2091,12 @@ code {
 	box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.02);
 }
 .drone-switch[aria-checked="true"] {
-	border-color: var(--color-accent);
-	background: var(--color-accent);
+	border-color: var(--color-ink);
+	background: var(--color-ink);
 }
 .drone-switch[aria-checked="mixed"] {
-	border-color: var(--color-accent);
-	background: color-mix(in srgb, var(--color-accent) 62%, var(--color-switch-off));
+	border-color: var(--color-ink);
+	background: color-mix(in srgb, var(--color-ink) 62%, var(--color-switch-off));
 }
 .drone-switch__thumb {
 	border: 1px solid rgb(15 23 42 / 0.1);
@@ -2154,8 +2181,8 @@ code {
 	background: color-mix(in srgb, var(--color-canvas) 70%, var(--color-surface));
 }
 .settings-dialog-shell nav .settings-nav-item.is-active {
-	background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
-	color: var(--color-accent);
+	background: var(--highlight);
+	color: var(--color-ink);
 }
 .project-page {
 	background: var(--color-canvas);
@@ -2184,8 +2211,8 @@ code {
 	color: var(--color-ink-faint);
 }
 .drone-composer [data-testid="composer-drop-target"] {
-	border-color: color-mix(in srgb, var(--color-accent) 56%, transparent);
-	background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+	border-color: var(--color-border-strong);
+	background: var(--highlight);
 }
 
 /* Context, diff and resource panes inherit the same paper-like surface. */
@@ -2211,7 +2238,7 @@ code {
 	outline-offset: 2px;
 }
 .context-panel--research .context-panel-tabs > button.on {
-	color: var(--color-accent);
+	color: var(--color-ink);
 }
 .context-panel--research .bg-violet-500,
 .context-panel--research .bg-emerald-500,
@@ -2242,15 +2269,15 @@ code {
 	background: var(--color-hover);
 }
 .settings-dialog-shell nav .settings-nav-item.is-active {
-	border-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-border));
-	background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
-	color: var(--color-accent);
+	border-color: var(--color-border-strong);
+	background: var(--highlight);
+	color: var(--color-ink);
 }
 .diff-seg button.on,
 .resource-reader-toolbar button[aria-pressed="true"],
 .resource-code-tools button[aria-pressed="true"] {
-	background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
-	color: var(--color-accent);
+	background: var(--highlight);
+	color: var(--color-ink);
 }
 .diff-file-card,
 .resource-reader-toolbar,

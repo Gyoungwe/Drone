@@ -13,13 +13,13 @@ export function SlashPill({ name, onRemove }: { name: string; onRemove: () => vo
 	const view = slashPillView(name, language);
 	return (
 		<span
-			className="inline-flex h-[22px] max-w-[220px] shrink-0 select-none items-center gap-1 rounded-md bg-accent/10 pr-1 pl-2 text-[12.5px] leading-none font-medium text-accent"
+			className="inline-flex h-[22px] max-w-[220px] shrink-0 select-none items-center gap-1 rounded-md bg-hover pr-1 pl-2 text-[12.5px] leading-none font-medium text-ink-2"
 			data-testid="composer-slash-pill"
 			data-command={name}
 			title={t("slash.pillTitle", { command: view.command })}
 		>
 			{view.isSkill && (
-				<span aria-hidden="true" className="text-accent/60">
+				<span aria-hidden="true" className="text-ink-faint">
 					/
 				</span>
 			)}
@@ -28,7 +28,7 @@ export function SlashPill({ name, onRemove }: { name: string; onRemove: () => vo
 				type="button"
 				aria-label={t("slash.removePill")}
 				onClick={onRemove}
-				className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-accent/60 transition-colors hover:bg-accent/15 hover:text-accent"
+				className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-ink-faint transition-colors hover:bg-[var(--highlight)] hover:text-ink"
 			>
 				<CloseIcon size={8} />
 			</button>

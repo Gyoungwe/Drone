@@ -124,7 +124,7 @@ export function CopyActionIcon({ size = 14, className }: IconProps) {
 	);
 }
 
-/** 复制成功对勾（消息操作行复制态，14px，着色由使用方 text-green-500 控制） */
+/** 复制成功对勾（消息操作行复制态，14px，着色由使用方 text-ok 控制） */
 export function CopyCheckIcon({ size = 14, className }: IconProps) {
 	return (
 		<svg

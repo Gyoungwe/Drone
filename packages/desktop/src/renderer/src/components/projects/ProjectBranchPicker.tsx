@@ -184,7 +184,7 @@ function BranchPicker({ cwd }: { cwd: string | null }) {
 					</>
 				)}
 			</Dropdown>
-			{error && <span className="text-xs text-red-500">{error}</span>}
+			{error && <span className="text-xs text-err">{error}</span>}
 		</>
 	);
 }

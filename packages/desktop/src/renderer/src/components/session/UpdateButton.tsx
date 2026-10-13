@@ -85,7 +85,7 @@ export function UpdateButton() {
 					<DownloadIcon size={14} />
 				)}
 				{state.phase === "available" && (
-					<span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-sky-400 ring-1 ring-canvas" />
+					<span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-accent ring-1 ring-canvas" />
 				)}
 			</button>
 		</Tooltip>

@@ -79,7 +79,7 @@ export function TaskDecisionCard({
 					<button
 						type="button"
 						disabled={busy || !sessionId || agentActive}
-						className="rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-600 disabled:opacity-40"
+						className="rounded-md bg-warn/10 px-2 py-1 text-xs text-warn disabled:opacity-40"
 						onClick={() => void send("继续")}
 					>
 						{decision.deferLabel}
@@ -107,7 +107,7 @@ export function TaskDecisionCard({
 				</ul>
 			</details>
 			{error && (
-				<p role="alert" className="mt-1 whitespace-pre-wrap text-xs text-red-500">
+				<p role="alert" className="mt-1 whitespace-pre-wrap text-xs text-err">
 					{formatCardText(error)}
 				</p>
 			)}
@@ -131,7 +131,7 @@ export function TaskDecisionCard({
 		</div>
 	) : (
 		<section
-			className="mt-2 rounded-xl border border-amber-500/35 bg-surface px-3 py-2"
+			className="mt-2 rounded-xl border border-warn/35 bg-surface px-3 py-2"
 			data-testid="task-decision"
 		>
 			{content}

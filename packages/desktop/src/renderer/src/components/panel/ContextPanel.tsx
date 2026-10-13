@@ -253,11 +253,11 @@ function StatusLine({ sessionId }: { sessionId: string | null }) {
 	});
 	const tone =
 		status === "attention"
-			? "bg-amber-500"
+			? "bg-warn"
 			: status === "working"
 				? "bg-accent animate-pulse"
 				: status === "done"
-					? "bg-emerald-500"
+					? "bg-ok"
 					: "bg-ink-faint";
 	return (
 		<div className="flex min-w-0 flex-1 items-center gap-2 text-[12px] text-ink-2">

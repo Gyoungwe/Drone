@@ -155,11 +155,11 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 					{run.status === "running" && !aborted ? (
 						<span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />
 					) : failed ? (
-						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-err" />
 					) : aborted ? (
 						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ink-faint" />
 					) : (
-						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
+						<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ok" />
 					)}
 					<span className="truncate text-[13px] font-semibold text-ink">{displayName(run.agent)}</span>
 					<span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-faint">
@@ -257,7 +257,7 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 								type="button"
 								disabled={sending || !reply.trim()}
 								onClick={() => void sendReply()}
-								className="rounded-md bg-accent px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
+								className="rounded-full bg-ink px-3 py-2 text-xs font-medium text-on-ink disabled:opacity-40"
 							>
 								{t("message.subagent.reply")}
 							</button>

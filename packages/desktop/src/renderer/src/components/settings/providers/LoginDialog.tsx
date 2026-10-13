@@ -47,7 +47,7 @@ export function LoginDialog() {
 					})}
 				</h3>
 				{login.providerId === "google-antigravity" && (
-					<p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-4 text-amber-800">
+					<p className="mt-2 rounded-lg bg-warn/10 px-3 py-2 text-xs leading-4 text-warn">
 						{t("settings.login.antigravityWarning")}
 					</p>
 				)}
@@ -153,7 +153,7 @@ export function LoginDialog() {
 				)}
 
 				{login.error && (
-					<p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-[12px] break-all text-red-600">
+					<p className="mt-3 rounded-lg bg-err/10 px-3 py-2 text-[12px] break-all text-err">
 						{t("settings.login.failed")}：{login.error}
 					</p>
 				)}

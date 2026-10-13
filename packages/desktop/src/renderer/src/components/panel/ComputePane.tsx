@@ -5,9 +5,9 @@ import { selectHosts, selectJobs, selectOnboarding, useComputeStore } from "../.
 import { HostEnvironmentCard, HostPermissions } from "./HostEnvironmentCard";
 
 function statusTone(status: string): string {
-	if (status === "healthy" || status === "succeeded" || status === "ready") return "text-emerald-600";
-	if (status === "checking" || status === "running" || status === "queued") return "text-amber-600";
-	if (status === "offline" || status === "failed" || status === "blocked") return "text-red-600";
+	if (status === "healthy" || status === "succeeded" || status === "ready") return "text-ok";
+	if (status === "checking" || status === "running" || status === "queued") return "text-warn";
+	if (status === "offline" || status === "failed" || status === "blocked") return "text-err";
 	return "text-ink-dim";
 }
 
@@ -146,12 +146,12 @@ function HostRow({
 			</div>
 			{previewing && (
 				<div
-					className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-3"
+					className="rounded-lg border border-border bg-hover px-3 py-3"
 					data-testid={`compute-plan-${host.id}`}
 				>
 					<div className="flex items-start justify-between gap-2">
 						<div>
-							<p className="text-[11px] font-medium uppercase tracking-[0.08em] text-accent">
+							<p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-2">
 								{t("panel.compute.planPreview")}
 							</p>
 							<p className="mt-1 text-[12px] text-ink">
@@ -292,7 +292,7 @@ export function ComputePane() {
 					{t("panel.compute.refresh")}
 				</button>
 			</div>
-			{error && <p className="panel-empty text-red-600">{error}</p>}
+			{error && <p className="panel-empty text-err">{error}</p>}
 			<HostEnvironmentCard />
 			<section className="mb-4">
 				<div className="mb-2 flex items-end justify-between gap-2">

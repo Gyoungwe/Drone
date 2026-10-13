@@ -187,7 +187,7 @@ export function ExampleTaskForm({
 										<label htmlFor={id} className="mb-0.5 block text-xs text-ink-dim">
 											{input.label[language]}
 											{input.required ? (
-												<span className="ml-1 text-red-500" title={t("examples.required")}>
+												<span className="ml-1 text-err" title={t("examples.required")}>
 													*
 												</span>
 											) : (
@@ -212,7 +212,7 @@ export function ExampleTaskForm({
 												<input
 													id={id}
 													type="text"
-													className={`${INPUT_CLASS} ${invalid ? "border-red-500" : ""}`}
+													className={`${INPUT_CLASS} ${invalid ? "border-err" : ""}`}
 													value={values[input.key] ?? ""}
 													placeholder={input.placeholder?.[language]}
 													spellCheck={false}
@@ -234,7 +234,7 @@ export function ExampleTaskForm({
 												)}
 											</div>
 										)}
-										{invalid && <p className="mt-0.5 text-xs text-red-500">{t("examples.missing")}</p>}
+										{invalid && <p className="mt-0.5 text-xs text-err">{t("examples.missing")}</p>}
 									</div>
 								);
 							})}
@@ -272,7 +272,7 @@ export function ExampleTaskForm({
 						<ul className="mt-2 flex flex-col gap-1 text-[12px] text-ink-2">
 							{task.authorizations.map((authorization) => (
 								<li key={authorization} className="flex items-start gap-2">
-									<span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+									<span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-warn" />
 									<span>{t(`examples.auth.${authorization}`)}</span>
 								</li>
 							))}

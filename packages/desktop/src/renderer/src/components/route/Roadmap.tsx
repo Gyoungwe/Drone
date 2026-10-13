@@ -12,7 +12,7 @@ export interface RoadmapNode {
 /** 状态配色：成功 / 进行中 / 注意 / 阻塞 / 跳过，路由卡、科研运行和泳道共用 */
 export const ROADMAP_TONE: Record<RoadmapStatus, string> = {
 	ok: "border-ok/35 bg-ok/5 text-ok",
-	active: "border-accent/45 bg-accent/8 text-accent",
+	active: "border-accent/45 bg-hover text-ink-2",
 	warn: "border-warn/40 bg-warn/5 text-warn",
 	blocked: "border-err/35 bg-err/5 text-err",
 	skip: "border-border bg-hover/60 text-ink-faint",

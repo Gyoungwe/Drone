@@ -51,8 +51,8 @@
 	color: var(--color-ink);
 }
 .workbench-nav-item.is-active {
-	background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
-	color: var(--color-accent);
+	background: var(--highlight);
+	color: var(--color-ink);
 }
 .workbench-nav-item.is-active::before {
 	content: "";
@@ -168,8 +168,8 @@
 	text-align: center;
 }
 .context-panel-tabs > button.on .context-panel-badge {
-	background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
-	color: var(--color-accent);
+	background: var(--highlight);
+	color: var(--color-ink);
 }
 .context-panel-body {
 	position: relative;
@@ -531,7 +531,7 @@
 	color: var(--color-ink);
 }
 .session-list-item.on {
-	background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+	background: var(--highlight);
 	color: var(--color-ink);
 	font-weight: 550;
 }

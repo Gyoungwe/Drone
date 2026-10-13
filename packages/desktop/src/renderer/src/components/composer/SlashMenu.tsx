@@ -73,7 +73,7 @@ export function SlashMenu({
 			{!query && workflowDirection && !showSpecialized && onBackToWorkflows && (
 				<button
 					type="button"
-					className="sticky top-0 z-10 w-full border-b border-border bg-surface px-3 py-2 text-left text-xs text-accent"
+					className="sticky top-0 z-10 w-full border-b border-border bg-surface px-3 py-2 text-left text-xs text-ink-2"
 					onMouseDown={(event) => event.preventDefault()}
 					onClick={onBackToWorkflows}
 				>

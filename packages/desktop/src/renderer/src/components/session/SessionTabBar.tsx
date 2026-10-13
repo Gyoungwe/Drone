@@ -112,9 +112,9 @@ function TabPill({
 	const daily = isDailyCwd(session.cwd);
 	const letter = sessionLetter(session);
 	const avatarClass = session.readOnly
-		? "bg-accent text-on-accent"
+		? "bg-ink-dim text-on-ink"
 		: status === "attention"
-			? "bg-amber-500 text-on-ink"
+			? "bg-warn text-on-ink"
 			: status === "working"
 				? "bg-ink text-on-ink tab-avatar-working"
 				: daily
@@ -150,7 +150,7 @@ function TabPill({
 					letter.toUpperCase()
 				)}
 				{!session.readOnly && status === "done" && (
-					<span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-green-500 ring-1 ring-canvas" />
+					<span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-ok ring-1 ring-canvas" />
 				)}
 			</span>
 			<span className="relative min-w-0 flex-1">
@@ -322,11 +322,11 @@ function SessionListItem({
 	const status = useSessionStatus(session.sessionId);
 	const dot =
 		status === "attention"
-			? "bg-amber-500"
+			? "bg-warn"
 			: status === "working"
 				? "bg-accent"
 				: status === "done"
-					? "bg-emerald-500"
+					? "bg-ok"
 					: "bg-ink-faint";
 	return (
 		<button
@@ -563,7 +563,7 @@ export function SessionTabBar() {
 					title={panelOpen ? t("panel.collapse") : t("panel.expand")}
 				>
 					<PanelRightIcon size={16} />
-					{taskAwaiting && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-500" />}
+					{taskAwaiting && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-warn" />}
 				</button>
 			)}
 		</div>

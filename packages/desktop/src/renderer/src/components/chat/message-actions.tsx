@@ -30,7 +30,7 @@ export function CopyButton({ text }: { text: string }) {
 			aria-label={copied ? t("message.copied") : t("message.copy")}
 			className="flex h-6 w-6 items-center justify-center rounded-md text-ink-faint transition-colors duration-150 hover:bg-border/70 hover:text-ink-2 disabled:cursor-not-allowed"
 		>
-			{copied ? <CopyCheckIcon className="text-green-500" /> : <CopyActionIcon />}
+			{copied ? <CopyCheckIcon className="text-ok" /> : <CopyActionIcon />}
 		</button>
 	);
 }
