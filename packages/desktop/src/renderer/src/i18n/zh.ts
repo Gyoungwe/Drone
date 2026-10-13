@@ -1101,6 +1101,12 @@ export const zh = {
 		},
 		memory: {
 			title: "本项目记忆",
+			layers: {
+				observe: { title: "观察库", hint: "自动记录，按会话召回" },
+				project: { title: "项目记忆", hint: ".pi/memory · 偏好与事实" },
+				knowledge: { title: "知识库「记忆」", hint: "跨项目沉淀，可检索" },
+				note: "观察可「提升」为项目记忆，项目记忆可再沉淀进知识库；越往右越持久、越少。",
+			},
 			hint: "已记 {count} 条 · 自动记下改过的文件、跑过的命令和失败原因（只存摘要，跳过 <private>），新会话开始时载入最相关的几条（≤600 token），只存本机。",
 			clear: "清空",
 			view: "查看记录",
