@@ -3,6 +3,7 @@ import { newPromptIds, receiptMatches } from "@drone/shared";
 import { useEffect, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+import { useAgentModeStore } from "../../stores/agent-mode";
 import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
 import { useSubagentsStore } from "../../stores/subagents";
@@ -247,6 +248,9 @@ export function useComposerSend(options: UseComposerSendOptions) {
 			// P14 Optimistic：发送前生成 messageId / assistantMessageId，随请求发出，回执须原样带回
 			const ids = newPromptIds();
 			const receipt = await getPi().prompt(sessionId, content, sentImages, ids);
+			// 模式切换提示常驻到下一次发送：发出即视为已知晓
+			if (useAgentModeStore.getState().lastChange?.sessionId === sessionId)
+				useAgentModeStore.getState().clearChange();
 			if (!receiptMatches(receipt, ids)) console.warn("[prompt] receipt id mismatch", ids, receipt);
 			// SDK events own agent activity. An acknowledgement can arrive after agent_settled,
 			// and UI-only commands need not emit any agent events. sending covers preflight.
