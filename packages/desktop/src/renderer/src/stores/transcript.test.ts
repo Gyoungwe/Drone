@@ -1,6 +1,6 @@
 import type { AgentSessionEvent } from "@drone/shared";
 import { emptyTranscript, messagesToUIMessages, reduceEvent } from "@drone/shared";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useTranscriptStore } from "./transcript";
 
 function ev(type: string, extra: Record<string, unknown> = {}): AgentSessionEvent {
@@ -138,6 +138,39 @@ describe("transcript reducer", () => {
 			assistantMessageEvent: { type: "thinking_delta", contentIndex: 0, delta: "想" },
 		} as unknown as AgentSessionEvent);
 		expect(state.streaming?.activity).toEqual([{ id: "h0", kind: "thinking", text: "先想" }]);
+	});
+
+	it("思考计时：首个 thinking 记起点，首个工具/正文冻结终点，固化消息携带时长", () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1000);
+		let state = reduceEvent(emptyTranscript(), ev("agent_start"));
+		state = reduceEvent(state, ev("turn_start"));
+		state = reduceEvent(state, {
+			type: "message_update",
+			assistantMessageEvent: { type: "thinking_delta", contentIndex: 0, delta: "想" },
+		} as unknown as AgentSessionEvent);
+		vi.setSystemTime(3500);
+		state = reduceEvent(state, {
+			type: "message_update",
+			assistantMessageEvent: { type: "thinking_delta", contentIndex: 0, delta: "再想" },
+		} as unknown as AgentSessionEvent);
+		expect(state.streaming?.thinkingStartedAt).toBe(1000);
+		expect(state.streaming?.thinkingEndedAt).toBeUndefined();
+		vi.setSystemTime(5200);
+		state = reduceEvent(state, {
+			type: "message_update",
+			assistantMessageEvent: { type: "text_delta", contentIndex: 1, delta: "答" },
+		} as unknown as AgentSessionEvent);
+		vi.setSystemTime(9000);
+		state = reduceEvent(state, {
+			type: "message_update",
+			assistantMessageEvent: { type: "text_delta", contentIndex: 1, delta: "案" },
+		} as unknown as AgentSessionEvent);
+		expect(state.streaming?.thinkingEndedAt).toBe(5200);
+		state = reduceEvent(state, ev("turn_end", { message: { role: "assistant", content: [] } }));
+		const msg = state.messages.find((m) => m.kind === "assistant");
+		expect(msg).toMatchObject({ thinkingStartedAt: 1000, thinkingEndedAt: 5200 });
+		vi.useRealTimers();
 	});
 
 	it("交错 thinking 与 tool 活动各自保留内容和到达顺序", () => {

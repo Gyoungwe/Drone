@@ -36,7 +36,13 @@ import {
 	updateToolActivity,
 } from "./helpers";
 import { stageMessages } from "./stage-messages";
-import type { CompactionUiState, SessionTranscriptState, SubagentRunUi, UIMessage } from "./types";
+import type {
+	CompactionUiState,
+	SessionTranscriptState,
+	StreamingState,
+	SubagentRunUi,
+	UIMessage,
+} from "./types";
 
 const STATUS_TOOL_NAME = "set_status";
 
@@ -170,6 +176,7 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 			cycleId: streaming.id,
 			text: streaming.text,
 			thinking: streaming.thinking,
+			...thinkingTimes(streaming),
 			tools: preTools,
 			timestamp: Date.now(),
 		});
@@ -460,9 +467,10 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 			return acceptFinalSnapshot(state, event.message);
 		}
 		case "message_update": {
-			const streaming = state.streaming;
-			if (!streaming) return state;
+			const prev = state.streaming;
+			if (!prev) return state;
 			const e = event.assistantMessageEvent;
+			const streaming = stampThinking(prev, e.type);
 			switch (e.type) {
 				case "text_delta": {
 					const text = streaming.text + e.delta;
@@ -907,4 +915,26 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 		default:
 			return state;
 	}
+}
+
+/** 思考计时：首个 thinking 事件记起点；之后第一个正文/工具事件记终点（冻结） */
+function stampThinking(streaming: StreamingState, type: string): StreamingState {
+	if (type === "thinking_delta" || type === "thinking_start") {
+		return streaming.thinkingStartedAt == null ? { ...streaming, thinkingStartedAt: Date.now() } : streaming;
+	}
+	if (
+		streaming.thinkingStartedAt != null &&
+		streaming.thinkingEndedAt == null &&
+		(type.startsWith("text_") || type.startsWith("toolcall_"))
+	) {
+		return { ...streaming, thinkingEndedAt: Date.now() };
+	}
+	return streaming;
+}
+function thinkingTimes(streaming: StreamingState): { thinkingStartedAt?: number; thinkingEndedAt?: number } {
+	if (streaming.thinkingStartedAt == null) return {};
+	return {
+		thinkingStartedAt: streaming.thinkingStartedAt,
+		thinkingEndedAt: streaming.thinkingEndedAt ?? Date.now(),
+	};
 }
