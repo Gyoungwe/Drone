@@ -2862,6 +2862,17 @@ code {
 		background-position: -200% 0;
 	}
 }
+.page-fade {
+	animation: page-fade-in 0.5s var(--ease-standard) both;
+}
+@keyframes page-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
 .shimmer {
 	background:
 		linear-gradient(
@@ -2896,6 +2907,7 @@ code {
 	box-shadow: 0 0 0 1px var(--color-border);
 }
 @media (prefers-reduced-motion: reduce) {
+	.page-fade,
 	.shimmer {
 		animation: none;
 		color: var(--color-ink-dim);
