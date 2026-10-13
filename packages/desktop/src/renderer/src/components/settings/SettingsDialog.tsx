@@ -1,12 +1,28 @@
 import type { ComponentType } from "react";
 import { useMemo } from "react";
-import { useT } from "../../i18n";
+import { useI18nStore, useT } from "../../i18n";
 import { PluginBoundary } from "../../plugins/PluginBoundary";
 import { EMPTY_CONTRIBUTIONS } from "../../plugins/RegionHost";
 import { type Contribution, useUiPluginRegistry } from "../../plugins/registry";
 import { UI_REGIONS } from "../../plugins/slots";
 import { type SettingsCategory, useSettingsStore } from "../../stores/settings";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
+import {
+	DiffIcon,
+	EditIcon,
+	GearIcon,
+	HelpIcon,
+	ListIcon,
+	ObsidianIcon,
+	ProjectsIcon,
+	PuzzleIcon,
+	ShieldIcon,
+	SubagentIcon,
+	TaskBoardIcon,
+	TestIcon,
+	TimelineIcon,
+	ZoteroIcon,
+} from "../icons";
 import { KnowledgePanel } from "../knowledge/KnowledgePanel";
 import { ZoteroPanel } from "../knowledge/ZoteroPanel";
 import { ComputePane } from "../panel/ComputePane";
@@ -33,6 +49,39 @@ const STATIC_CATEGORIES = [
 	"extensions",
 	"about",
 ] as const satisfies readonly SettingsCategory[];
+
+/** 导航项图标 + 英文副标（中文界面下显示，ClawsGO 式「中文 English」） */
+const NAV_META: Record<string, { icon: typeof GearIcon; en: string }> = {
+	general: { icon: GearIcon, en: "General" },
+	permissions: { icon: ShieldIcon, en: "Permissions" },
+	appearance: { icon: EditIcon, en: "Appearance" },
+	models: { icon: SubagentIcon, en: "Models" },
+	skills: { icon: TaskBoardIcon, en: "Skills" },
+	mcp: { icon: ListIcon, en: "MCP" },
+	zotero: { icon: ZoteroIcon, en: "Zotero" },
+	extensions: { icon: PuzzleIcon, en: "Extensions" },
+	about: { icon: HelpIcon, en: "About" },
+	knowledge: { icon: ObsidianIcon, en: "Knowledge" },
+	lan: { icon: ProjectsIcon, en: "LAN" },
+	uiPlugins: { icon: DiffIcon, en: "UI Plugins" },
+	workflows: { icon: TimelineIcon, en: "Workflows" },
+	compute: { icon: TestIcon, en: "SSH Hosts" },
+};
+
+function NavLabel({ id, label }: { id: string; label: string }) {
+	const zh = useI18nStore((s) => s.language) === "zh";
+	const meta = NAV_META[id];
+	const Icon = meta?.icon ?? PuzzleIcon;
+	return (
+		<span className="flex min-w-0 items-center gap-2">
+			<Icon size={14} className="shrink-0 text-ink-dim" />
+			<span className="truncate">{label}</span>
+			{zh && meta && label !== meta.en && (
+				<span className="truncate text-[11px] text-ink-faint">{meta.en}</span>
+			)}
+		</span>
+	);
+}
 
 /** 「高级」分组：治理与维护类功能保留，但不出现在主流程分类里 */
 const ADVANCED_CATEGORIES = [
@@ -136,7 +185,7 @@ export function SettingsDialog() {
 								}`}
 								onClick={() => setCategory(id)}
 							>
-								{t(`settings.category.${id}`)}
+								<NavLabel id={id} label={t(`settings.category.${id}`)} />
 							</button>
 						))}
 						<p className="mb-0.5 mt-3 px-2 text-[11px] text-ink-faint">{t("settings.category.advanced")}</p>
@@ -151,7 +200,7 @@ export function SettingsDialog() {
 								}`}
 								onClick={() => setCategory(id)}
 							>
-								{t(`settings.category.${id}`)}
+								<NavLabel id={id} label={t(`settings.category.${id}`)} />
 							</button>
 						))}
 						{/* 插件自带设置页分类：标题取 contribution.title（插件自定义字符串，不走宿主 i18n） */}
@@ -168,7 +217,7 @@ export function SettingsDialog() {
 									}`}
 									onClick={() => setCategory(id)}
 								>
-									{c.title ?? c.pluginName}
+									<NavLabel id="plugin" label={c.title ?? c.pluginName} />
 								</button>
 							);
 						})}

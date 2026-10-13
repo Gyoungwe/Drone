@@ -181,3 +181,35 @@
 .workbench-nav-sessions li button {
 	padding: 6px 10px;
 }
+
+/* 设置导航：图标 + 中文 + 英文副标，左栏加宽 */
+.settings-dialog-shell nav {
+	width: 208px;
+}
+
+/* G6：弹窗 / 表单按钮约定 —— 左：次要操作（测试连接 / 复制），中间 flex-1，右：取消 + 主按钮。
+   主按钮统一为黑色 pill（ClawsGO 式），强调色只留给选中 / 运行 / 链接。 */
+.drone-button--primary {
+	border-color: var(--color-ink);
+	border-radius: 999px;
+	background: var(--color-ink);
+	color: var(--color-on-ink);
+	box-shadow: none;
+}
+.drone-button--primary:hover:not(:disabled) {
+	border-color: var(--color-ink-2);
+	background: var(--color-ink-2);
+	color: var(--color-on-ink);
+}
+
+/* G5：知识库内部子卡去卡中卡 —— 外层卡保留描边，内层改为浅底无框，阴影只留一层 */
+.knowledge-view {
+	--knowledge-shadow: 0 1px 2px rgba(35, 58, 78, 0.04);
+	--knowledge-shadow-soft: none;
+}
+.knowledge-home :is(section, article) :is(section, article, div).rounded-xl.border,
+.knowledge-home :is(section, article) :is(section, article, div).rounded-lg.border {
+	border-color: transparent;
+	background: var(--knowledge-surface-muted);
+	box-shadow: none;
+}
