@@ -9,6 +9,7 @@ import type {
 	DroneRuntime,
 	LoginEventPayload,
 	McpStatus,
+	MemoryListItem,
 	MemoryProjectStatus,
 	PermissionAnswer,
 	PermissionMode,
@@ -30,6 +31,7 @@ import {
 import { JsonStore } from "./json-store";
 import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
+import { promoteObservation } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
 import { canonicalProjectId } from "./project-id";
 import { createDroneRuntime } from "./runtime";
@@ -134,6 +136,9 @@ export interface MemoryServicePort {
 	getStatus(cwd: string): MemoryProjectStatus;
 	setEnabled(cwd: string, enabled: boolean): MemoryProjectStatus;
 	clear(cwd: string): MemoryProjectStatus;
+	list(cwd: string): MemoryListItem[];
+	remove(cwd: string, id: number): MemoryProjectStatus;
+	promote(cwd: string, id: number): MemoryProjectStatus;
 }
 
 export interface BackendServices {
@@ -499,6 +504,15 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			},
 			clear: (cwd) => {
 				memory.clear(canonicalProjectId(cwd));
+				return memory.status(canonicalProjectId(cwd));
+			},
+			list: (cwd) => memory.list(canonicalProjectId(cwd)),
+			remove: (cwd, id) => {
+				memory.remove(canonicalProjectId(cwd), id);
+				return memory.status(canonicalProjectId(cwd));
+			},
+			promote: (cwd, id) => {
+				promoteObservation(memory, cwd, canonicalProjectId(cwd), id);
 				return memory.status(canonicalProjectId(cwd));
 			},
 		},

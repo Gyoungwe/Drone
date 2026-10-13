@@ -19,6 +19,23 @@ it("shows the per-project count and disables clear when empty", () => {
 	expect(view(null)).toContain('aria-checked="false"');
 });
 
+it("lists entries with promote and delete actions when expanded", () => {
+	const html = renderToStaticMarkup(
+		createElement(MemorySettingsView, {
+			status: { enabled: true, count: 1, lastLoaded: 0 },
+			onToggle: vi.fn(),
+			onClear: vi.fn(),
+			onToggleList: vi.fn(),
+			items: [{ id: 7, kind: "command", title: "Rscript deseq2.R", body: "ok", createdAt: 0 }],
+		}),
+	);
+	expect(html).toContain("memory-list");
+	expect(html).toContain("Rscript deseq2.R");
+	expect(html).toContain("settings.memory.promote");
+	expect(html).toContain("settings.memory.hide");
+	expect(view({ enabled: true, count: 1, lastLoaded: 0 })).not.toContain("memory-list");
+});
+
 it("status bar shows loaded memories only when some were injected", () => {
 	const bar = (memory: string | null) =>
 		renderToStaticMarkup(

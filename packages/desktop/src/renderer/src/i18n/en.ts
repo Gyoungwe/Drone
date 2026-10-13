@@ -1135,6 +1135,13 @@ export const en: Messages = {
 			title: "Project memory",
 			hint: "{count} entries · Notes changed files, commands and failures (summaries only, <private> skipped); new sessions load the most relevant few (≤600 tokens). Local only.",
 			clear: "Clear",
+			view: "View",
+			hide: "Hide",
+			remove: "Delete",
+			promote: "Promote",
+			promoteHint:
+				"Save to this project's .pi/memory/ (reviewable, can be committed) as long-term project memory",
+			empty: "No entries",
 		},
 		channelWatch: "Cross-session channel collaboration (channel-watch)",
 		channelWatchHint:

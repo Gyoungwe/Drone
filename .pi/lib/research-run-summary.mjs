@@ -4416,8 +4416,8 @@ function AddOptionalInstantiate(context, state5, type, options) {
 }
 
 // node_modules/typebox/build/type/types/array.mjs
-function _Array_(items, options) {
-  return memory_exports.Create({ "~kind": "Array" }, { type: "array", items }, options);
+function _Array_(items2, options) {
+  return memory_exports.Create({ "~kind": "Array" }, { type: "array", items: items2 }, options);
 }
 function IsArray2(value) {
   return IsKind(value, "Array");
@@ -5143,8 +5143,8 @@ function FromBooleanKey(value) {
 
 // node_modules/typebox/build/type/types/tuple.mjs
 function Tuple(types, options = {}) {
-  const [items, minItems, additionalItems] = [types, types.length, false];
-  return memory_exports.Create({ ["~kind"]: "Tuple" }, { type: "array", additionalItems, items, minItems }, options);
+  const [items2, minItems, additionalItems] = [types, types.length, false];
+  return memory_exports.Create({ ["~kind"]: "Tuple" }, { type: "array", additionalItems, items: items2, minItems }, options);
 }
 function IsTuple(value) {
   return IsKind(value, "Tuple");
@@ -10217,11 +10217,28 @@ var MemoryProjectStatusSchema = typebox_exports.Object(
   { additionalProperties: false }
 );
 var status = typebox_exports.Unsafe(MemoryProjectStatusSchema);
+var MemoryListItemSchema = typebox_exports.Object(
+  {
+    id: typebox_exports.Integer({ minimum: 1 }),
+    kind: typebox_exports.String(),
+    title: typebox_exports.String(),
+    body: typebox_exports.String(),
+    createdAt: typebox_exports.Integer({ minimum: 0 })
+  },
+  { additionalProperties: false }
+);
+var items = typebox_exports.Unsafe(typebox_exports.Array(MemoryListItemSchema));
 var MemoryContract = defineDomain("memory", {
   methods: {
     getStatus: { args: typebox_exports.Tuple([typebox_exports.String()]), result: status, access: "desktop" },
     setEnabled: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.Boolean()]), result: status, access: "desktop" },
-    clear: { args: typebox_exports.Tuple([typebox_exports.String()]), result: status, access: "desktop" }
+    clear: { args: typebox_exports.Tuple([typebox_exports.String()]), result: status, access: "desktop" },
+    /** 最近的观察（最多 50 条）。 */
+    list: { args: typebox_exports.Tuple([typebox_exports.String()]), result: items, access: "desktop" },
+    /** 删除一条观察。 */
+    remove: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.Integer()]), result: status, access: "desktop" },
+    /** 提升为项目记忆：写入 <cwd>/.pi/memory/（可进 git 审阅），并从观察记忆移除以免重复注入。 */
+    promote: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.Integer()]), result: status, access: "desktop" }
   }
 });
 
@@ -13992,10 +14009,10 @@ function FromRef7(context, type, value) {
 function FromTuple7(context, schema, value) {
   if (!guard_exports.IsArray(value))
     return value;
-  const [items, max] = [schema.items, Math.max(schema.items.length, value.length)];
+  const [items2, max] = [schema.items, Math.max(schema.items.length, value.length)];
   for (let i = 0; i < max; i++) {
-    if (i < items.length)
-      value[i] = FromType22(context, items[i], value[i]);
+    if (i < items2.length)
+      value[i] = FromType22(context, items2[i], value[i]);
   }
   return value;
 }

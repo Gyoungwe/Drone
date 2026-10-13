@@ -148,6 +148,34 @@ export class MemoryStore {
 		};
 	}
 
+	/** 本项目最近的观察（设置列表用）。 */
+	list(projectId: string, limit = 50): MemoryHit[] {
+		return this.db
+			.prepare(
+				"SELECT id, kind, title, body, created_at AS createdAt FROM mem_observations WHERE project_id = ? ORDER BY created_at DESC, id DESC LIMIT ?",
+			)
+			.all(projectId, limit) as unknown as MemoryHit[];
+	}
+
+	/** 取本项目的一条观察；不属于本项目返回 undefined。 */
+	find(projectId: string, id: number): MemoryHit | undefined {
+		return this.db
+			.prepare(
+				"SELECT id, session_id AS sessionId, kind, title, body, created_at AS createdAt FROM mem_observations WHERE project_id = ? AND id = ?",
+			)
+			.get(projectId, id) as unknown as MemoryHit | undefined;
+	}
+
+	/** 删除本项目的一条观察（含 FTS 行）。返回是否删除。 */
+	remove(projectId: string, id: number): boolean {
+		const result = this.db
+			.prepare("DELETE FROM mem_observations WHERE project_id = ? AND id = ?")
+			.run(projectId, id);
+		if (result.changes === 0) return false;
+		this.db.prepare("DELETE FROM mem_fts WHERE rowid = ?").run(id);
+		return true;
+	}
+
 	clear(projectId: string): void {
 		this.db.exec("BEGIN");
 		try {
