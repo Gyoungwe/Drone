@@ -84,7 +84,7 @@ export function ModelPicker() {
 										key={`${m.provider}/${m.id}`}
 										type="button"
 										className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${
-											selected ? "text-blue-600" : "text-ink-2 hover:bg-hover"
+											selected ? "bg-hover text-ink" : "text-ink-2 hover:bg-hover"
 										}`}
 										onClick={() => {
 											void setCurrentModel(m.provider, m.id);

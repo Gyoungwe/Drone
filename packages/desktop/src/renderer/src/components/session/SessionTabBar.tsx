@@ -324,7 +324,7 @@ function SessionListItem({
 		status === "attention"
 			? "bg-amber-500"
 			: status === "working"
-				? "bg-violet-500"
+				? "bg-accent"
 				: status === "done"
 					? "bg-emerald-500"
 					: "bg-ink-faint";

@@ -54,10 +54,7 @@ export function FirstRunGuide() {
 
 	if (phase === "start") {
 		return (
-			<section
-				className="w-full max-w-[620px] rounded-xl border border-border bg-surface/90 p-3"
-				data-testid="first-run-guide"
-			>
+			<section className="w-full max-w-[620px] px-1 py-2" data-testid="first-run-guide">
 				<header className="flex items-start justify-between gap-3">
 					<div>
 						<h2 className="text-[13px] font-semibold text-ink">{t("firstRun.startTitle")}</h2>
@@ -75,7 +72,7 @@ export function FirstRunGuide() {
 					{example ? (
 						<button
 							type="button"
-							className="rounded-lg border border-accent/35 bg-accent/5 px-3 py-2 text-left hover:border-accent/60"
+							className="rounded-2xl bg-hover px-4 py-3 text-left transition-colors hover:bg-[var(--highlight)]"
 							onClick={() => choose(() => useExampleTaskStore.getState().open(example.id))}
 							data-testid="first-run-example"
 						>
@@ -88,7 +85,7 @@ export function FirstRunGuide() {
 					) : null}
 					<button
 						type="button"
-						className="rounded-lg border border-border px-3 py-2 text-left hover:border-accent/45"
+						className="rounded-2xl bg-hover px-4 py-3 text-left transition-colors hover:bg-[var(--highlight)]"
 						onClick={() => setPhase("setup")}
 						data-testid="first-run-setup"
 					>
