@@ -22,7 +22,7 @@ import {
 } from "./chunk-W4BONNYJ.mjs";
 import {
   getKnowledgeService
-} from "./chunk-5PIDULPV.mjs";
+} from "./chunk-GYO4NFUS.mjs";
 import {
   flowFor,
   invalidateKnowledgeUi
@@ -530,6 +530,16 @@ async function saveDiscoveryIdea({ idea } = {}) {
   }
   throw new Error("Could not find a free file name for this idea");
 }
+async function memoryRelatedKnowledge({ cwd = null, query = "", limit = 4 } = {}) {
+  const binding = await readKnowledgeBinding({ fresh: true });
+  if (!binding) return [];
+  const info = await projectAt(cwd);
+  const service = await getKnowledgeService(binding);
+  return withKnowledgeBinding(
+    binding,
+    () => service.relatedForMemory({ query, project: info.project || "", limit: Math.max(1, Math.min(8, limit)) })
+  );
+}
 async function saveMemoryNote({ cwd, memory } = {}) {
   if (!memory || typeof memory.title !== "string" || !memory.title.trim()) throw new Error("Memory title is required");
   const binding = await readKnowledgeBinding({ fresh: true });
@@ -594,5 +604,6 @@ export {
   knowledgeGraph,
   dailyDiscoveryContext,
   saveDiscoveryIdea,
+  memoryRelatedKnowledge,
   saveMemoryNote
 };

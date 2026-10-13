@@ -4315,6 +4315,58 @@ var KnowledgeService = class {
       return this.materializeCitations(ticket, cwd, searchQuery, { refresh: true });
     return citations;
   }
+  /**
+   * 记忆注入用的相关知识：复用知识库现有的词法索引与语义向量（同一 embedding 设置与索引，不另起服务）。
+   * 语义命中排前，词法补齐；1.5s 截止，语义失败只退回词法。只读，不需要会话 ticket。
+   * @param {{ query: string, project?: string, limit?: number }} options
+   */
+  async relatedForMemory({ query, project = "", limit = 4 }) {
+    const text3 = String(query || "").slice(0, 2e3);
+    if (!text3.trim()) return [];
+    const lexical = await this.request("search", { query: text3.slice(0, 200), limit: 8, project });
+    const byPath = new Map((lexical.hits || []).map((hit) => [hit.path, hit]));
+    const order = [];
+    try {
+      const settings = await readSemanticSettings(this.binding.vaultId);
+      if (settings.enabled) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(new Error("semantic deadline exceeded")), 1500);
+        try {
+          const embedded = await awaitSemanticDeadline(
+            embedTexts(providerConfig(settings), [text3], { signal: controller.signal }),
+            controller
+          );
+          const result2 = await this.request("semanticCandidates", {
+            vector: embedded.vectors[0],
+            fingerprint: fingerprintFor(settings),
+            project,
+            limit: 8,
+            minSimilarity: settings.minSimilarity
+          });
+          const items = Array.isArray(result2) ? result2 : Array.isArray(result2?.items) ? result2.items : [];
+          for (const item of items) if (typeof item?.path === "string") order.push(item.path);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+    } catch {
+    }
+    for (const hit of lexical.hits || []) order.push(hit.path);
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const path of order) {
+      if (seen.has(path) || /(?:^|\/)(?:Runs|Explainers)\//i.test(path)) continue;
+      seen.add(path);
+      const hit = byPath.get(path);
+      out.push({
+        path,
+        title: hit?.title || path.split("/").pop().replace(/\.md$/i, ""),
+        text: typeof hit?.text === "string" ? hit.text.slice(0, 200) : ""
+      });
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
   /** @param {any} ticket @param {string} cwd @param {Record<string, any>} [options] */
   async search(ticket, cwd, { query, context = null, wikiOnly = false, explainerOnly = false, limit = 5, signal } = {}) {
     const state4 = await this.check(ticket, cwd);

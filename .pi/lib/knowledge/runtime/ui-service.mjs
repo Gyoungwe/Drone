@@ -19,18 +19,19 @@ import {
   knowledgeSemanticStatus,
   knowledgeSetupPreview,
   knowledgeSpecialistSettings,
+  memoryRelatedKnowledge,
   saveDiscoveryIdea,
   saveKnowledgeSemanticSettings,
   saveMemoryNote,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-3LVUZMVD.mjs";
+} from "./chunks/chunk-3ZYAAKO2.mjs";
 import "./chunks/chunk-4QHZ475S.mjs";
 import "./chunks/chunk-LE6NM7SB.mjs";
 import "./chunks/chunk-XSFQUT2B.mjs";
 import "./chunks/chunk-EJFIMVBU.mjs";
 import "./chunks/chunk-W4BONNYJ.mjs";
-import "./chunks/chunk-5PIDULPV.mjs";
+import "./chunks/chunk-GYO4NFUS.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";
 import "./chunks/chunk-O536IQIE.mjs";
 import "./chunks/chunk-6YLIZTKN.mjs";
@@ -63,6 +64,7 @@ export {
   knowledgeSemanticStatus,
   knowledgeSetupPreview,
   knowledgeSpecialistSettings,
+  memoryRelatedKnowledge,
   saveDiscoveryIdea,
   saveKnowledgeSemanticSettings,
   saveMemoryNote,

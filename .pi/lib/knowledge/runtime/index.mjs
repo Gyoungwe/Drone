@@ -19,12 +19,13 @@ import {
   knowledgeSemanticStatus,
   knowledgeSetupPreview,
   knowledgeSpecialistSettings,
+  memoryRelatedKnowledge,
   saveDiscoveryIdea,
   saveKnowledgeSemanticSettings,
   saveMemoryNote,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-3LVUZMVD.mjs";
+} from "./chunks/chunk-3ZYAAKO2.mjs";
 import {
   lastWikiModelReview,
   reviewWikiWithModel
@@ -147,7 +148,7 @@ import {
   closeKnowledgeServices,
   getKnowledgeService,
   notifyKnowledgeChange
-} from "./chunks/chunk-5PIDULPV.mjs";
+} from "./chunks/chunk-GYO4NFUS.mjs";
 import {
   embedTexts,
   validateSemanticConfig
@@ -356,6 +357,7 @@ export {
   listWikiProposals,
   literatureCard,
   managedParts,
+  memoryRelatedKnowledge,
   mergeWikiProposal,
   nodeType,
   normalizeSourceLinks,
