@@ -378,6 +378,13 @@ export interface SubagentMutexEvent {
 	tools: string[];
 }
 
+/** H4：上下文蒸发本轮精简了旧工具结果 → 对话里一行系统提示（不进 trace）。 */
+export interface ContextEvaporatedEvent {
+	type: "context_evaporated";
+	/** 本轮新精简（snip + stub）的旧工具结果条数 */
+	count: number;
+}
+
 /** StreamGuard 熔断 trip（病态输出流自动中止）→ 合成 UI 事件（不进 trace，reducer 产 warning 条）。 */
 export interface StreamGuardTrippedEvent {
 	type: "stream_guard_tripped";
@@ -446,6 +453,7 @@ export type SessionEvent =
 	| Exclude<PiAgentSessionEvent, { type: "tool_execution_start" }>
 	| ToolExecutionStartEvent
 	| SubagentMutexEvent
+	| ContextEvaporatedEvent
 	| StreamGuardTrippedEvent
 	| ModelWaitEvent
 	| SubagentRunEvent

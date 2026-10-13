@@ -264,6 +264,8 @@ export function buildSessionExtensionFactories(
 			reporter: (sessionId, batch) => {
 				reportEvapBatch(sessionId, batch);
 				deps.traces.recordCustom(sessionId, "evap_batch", batch);
+				const count = batch.snipped + batch.pruned;
+				if (count > 0) deps.onEvent(sessionId, { type: "context_evaporated", count });
 			},
 		}),
 	);

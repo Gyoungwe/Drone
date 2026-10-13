@@ -125,6 +125,8 @@ export type UIMessage =
 			mutex?: { extensionPath: string; tools: string[] };
 			/** 内联问询卡回答后的回执行（P9，仅 UI，不持久化） */
 			askReceipt?: { summary: string; waitedMs: number };
+			/** H4：上下文蒸发精简了 N 条旧工具结果（连续批次合并为一行） */
+			evaporated?: { count: number };
 	  }
 	| {
 			/** show_image 工具发给用户看的图片（assistant 侧独立消息，tool_execution_end 时立即落 messages） */

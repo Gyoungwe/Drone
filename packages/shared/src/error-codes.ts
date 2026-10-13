@@ -80,4 +80,33 @@ export function errorCardActions(error: UiError): UiErrorAction[] {
 	return spec.actions.filter((a) => a !== "copyDetail" || !!error.detail);
 }
 
+/** @deprecated H3：渲染层改用 i18n 的 error.continueMessage；保留给旧调用方。 */
 export const CONTINUE_MESSAGE = "继续";
+
+/** H3：「继续」的结构化续跑上下文——中断前本轮已跑过的工具步数与最后（未完成/失败）的工具。 */
+export interface ContinuePoint {
+	/** 1-based：从第 N 步继续 */
+	step: number;
+	tool: string;
+}
+
+/**
+ * 从错误卡之前的转录里找续跑点：自最后一条 user 消息起累计工具步数，取最后一个 running/error 的工具；
+ * 全部完成则返回 undefined（只做会话级「继续」）。
+ */
+export function findContinuePoint(
+	messages: ReadonlyArray<{ kind: string; tools?: ReadonlyArray<{ name: string; state: string }> }>,
+	beforeIndex = messages.length,
+): ContinuePoint | undefined {
+	const tools: Array<{ name: string; state: string }> = [];
+	for (let i = Math.min(beforeIndex, messages.length) - 1; i >= 0; i--) {
+		const m = messages[i];
+		if (!m || m.kind === "user") break;
+		if (m.tools?.length) tools.unshift(...m.tools);
+	}
+	for (let i = tools.length - 1; i >= 0; i--) {
+		const tool = tools[i];
+		if (tool && tool.state !== "done") return { step: i + 1, tool: tool.name };
+	}
+	return undefined;
+}
