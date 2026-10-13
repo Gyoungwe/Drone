@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -106,4 +106,13 @@ export function memoryIndexPrompt(cwd: string): string[] {
 	return [
 		`项目记忆索引（.pi/memory/MEMORY.md，正文按需用 read 读取 .pi/memory/<文件>）：\n${shown.join("\n")}${lines.length > shown.length ? `\n…另有 ${lines.length - shown.length} 条` : ""}`,
 	];
+}
+
+/** H2：撤销一条记忆（删除文件并重建索引）。文件名必须是 listMemories 能列出的条目；返回是否删除。 */
+export function forgetMemory(cwd: string, file: string): boolean {
+	if (!/^[^\\/]+\.md$/.test(file) || file === MEMORY_INDEX) return false;
+	if (!listMemories(cwd).some((e) => e.file === file)) return false;
+	rmSync(join(memoryDir(cwd), file));
+	atomicWrite(join(memoryDir(cwd), MEMORY_INDEX), renderMemoryIndex(listMemories(cwd)));
+	return true;
 }

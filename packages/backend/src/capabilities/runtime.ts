@@ -45,6 +45,7 @@ const ALWAYS_ON = new Set([
 	"task_evidence_restore",
 	"memory_search",
 	"memory_get",
+	"memory_save",
 ]);
 
 /** 只读文献复用模式下可用的工具：由工具清单（drone.readOnly / drone.libraryMode）决定，核心不再枚举。 */
