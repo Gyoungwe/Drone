@@ -55,7 +55,7 @@ export const MessageItem = memo(function MessageItem({
 						? "h-20 w-20 object-cover"
 						: "h-16 w-16 object-cover";
 		return (
-			<div>
+			<div className="msg-enter">
 				<div className="flex flex-wrap gap-2">
 					{message.images.map((image, index) => (
 						<button
@@ -101,7 +101,7 @@ export const MessageItem = memo(function MessageItem({
 		);
 		if (!message.text && tasks.length === 0) return null;
 		return (
-			<div className="group" data-testid={pending ? "chat-task-review" : undefined}>
+			<div className="group msg-enter" data-testid={pending ? "chat-task-review" : undefined}>
 				{view &&
 					tasks.map((task) => (
 						<TaskDecisionCard
@@ -118,7 +118,7 @@ export const MessageItem = memo(function MessageItem({
 	}
 	if (message.kind === "assistant" && message.taskView) return null;
 	return (
-		<div className="group">
+		<div className="group msg-enter">
 			<AssistantMessage
 				text={message.text}
 				thinking={message.thinking}
