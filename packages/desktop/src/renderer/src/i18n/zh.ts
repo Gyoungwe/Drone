@@ -196,12 +196,12 @@ export const zh = {
 		collapse: "收起面板",
 		expand: "展开面板",
 		tabs: {
-			tasks: "任务",
-			process: "过程",
+			tasks: "总览",
+			process: "变更",
 			changes: "变更",
-			artifacts: "产物",
+			artifacts: "文件",
 			subagents: "子智能体",
-			compute: "计算",
+			compute: "主机",
 		},
 		status: {
 			attention: "等待你确认",
@@ -238,6 +238,7 @@ export const zh = {
 			waiting: "正在准备，阶段进展会显示在这里。",
 		},
 		processEmpty: "还没有运行记录。",
+		processDetails: "运行细节",
 		processRoute: {
 			ariaLabel: "本轮处理进度",
 			title: "处理进度",

@@ -206,12 +206,12 @@ export const en: Messages = {
 		collapse: "Collapse panel",
 		expand: "Expand panel",
 		tabs: {
-			tasks: "Tasks",
-			process: "Process",
+			tasks: "Overview",
+			process: "Changes",
 			changes: "Changes",
-			artifacts: "Research outputs",
+			artifacts: "Files",
 			subagents: "Collaborators",
-			compute: "Compute",
+			compute: "Hosts",
 		},
 		status: {
 			attention: "Needs your decision",
@@ -248,6 +248,7 @@ export const en: Messages = {
 			waiting: "Getting ready — stage updates will appear here.",
 		},
 		processEmpty: "No run records yet.",
+		processDetails: "Run details",
 		processRoute: {
 			ariaLabel: "Current turn progress",
 			title: "Progress",

@@ -40,6 +40,9 @@ export function ContextPanel() {
 	const onRunEnd = useUiStore((s) => s.onRunEnd);
 	const visibleTabs = useVisibleTabs(activeSessionId, tab);
 	const agentActive = useTranscriptStore((s) => selectTranscript(s, activeSessionId).agentActive);
+	const hasRuns = useSubagentsStore((s) =>
+		activeSessionId ? Object.keys(s.runsBySession[activeSessionId] ?? {}).length > 0 : false,
+	);
 	// 插件页签（panel.tab 区域贡献，挂钩 4）：被禁用/卸载后若仍选中，回到「任务」
 	const pluginTabs = usePluginEntries(UI_REGIONS.PanelTab);
 	const pluginTab = pluginTabs.find((entry) => entry.id === tab);
@@ -77,10 +80,23 @@ export function ContextPanel() {
 				/>
 				<div className="context-panel-body">
 					<ContextUsageMeter sessionId={activeSessionId} />
-					{tab === "tasks" && <TasksPane sessionId={activeSessionId} />}
+					{tab === "tasks" && (
+						<>
+							<TasksPane sessionId={activeSessionId} />
+							{hasRuns && (
+								<details className="mt-3 rounded-lg border border-border px-3 py-2">
+									<summary className="cursor-pointer text-[12px] font-medium text-ink-2">
+										{t("panel.tabs.subagents")}
+									</summary>
+									<div className="mt-2">
+										<SubagentsPane sessionId={activeSessionId} />
+									</div>
+								</details>
+							)}
+						</>
+					)}
 					{tab === "process" && <ProcessTab sessionId={activeSessionId} />}
 					{tab === "artifacts" && <ArtifactsPane sessionId={activeSessionId} />}
-					{tab === "subagents" && <SubagentsPane sessionId={activeSessionId} />}
 					{tab === "compute" && <ComputePane />}
 					{pluginTab && <PluginEntryHost entry={pluginTab} />}
 				</div>
@@ -92,47 +108,27 @@ export function ContextPanel() {
 
 /** 按需页签：子智能体 = 本会话有运行；计算 = 已配置主机或有作业；当前选中的页签（如 @ 派发跳转）总是保留 */
 function useVisibleTabs(sessionId: string | null, current: PanelTab): readonly CorePanelTab[] {
-	const hasRuns = useSubagentsStore((s) =>
-		sessionId ? Object.keys(s.runsBySession[sessionId] ?? {}).length > 0 : false,
-	);
 	const hasCompute = useComputeStore((s) => selectHosts(s).length > 0 || selectJobs(s).length > 0);
-	const subagents = hasRuns || current === "subagents";
-	const compute = hasCompute || current === "compute";
-	return useMemo(() => visiblePanelTabs({ subagents, compute }), [subagents, compute]);
+	return useMemo(
+		() => visiblePanelTabs({ subagents: false, compute: hasCompute || current === "compute" }),
+		[hasCompute, current],
+	);
 }
 
-/** 「过程」页签：运行过程泳道 / 文件变更 两个视图（原「变更」页签并入此处） */
+/** 「变更」页签：文件变更优先，运行过程收进默认折叠的明细。 */
 function ProcessTab({ sessionId }: { sessionId: string | null }) {
 	const t = useT();
-	const view = useUiStore((s) => s.processView);
-	const setView = useUiStore((s) => s.setProcessView);
-	const { badges } = useTabBadges(sessionId);
 	return (
 		<>
-			<div className="process-view-switch">
-				<div className="diff-seg" role="tablist" aria-label={t("panel.tabs.process")}>
-					<button
-						type="button"
-						role="tab"
-						aria-selected={view === "lanes"}
-						className={view === "lanes" ? "on" : ""}
-						onClick={() => setView("lanes")}
-					>
-						{t("panel.tabs.process")}
-					</button>
-					<button
-						type="button"
-						role="tab"
-						aria-selected={view === "changes"}
-						className={view === "changes" ? "on" : ""}
-						onClick={() => setView("changes")}
-					>
-						{t("panel.tabs.changes")}
-						{badges.process ? ` ${badges.process}` : ""}
-					</button>
+			<ChangesPane sessionId={sessionId} />
+			<details className="mt-3 rounded-lg border border-border px-3 py-2">
+				<summary className="cursor-pointer text-[12px] font-medium text-ink-2">
+					{t("panel.processDetails")}
+				</summary>
+				<div className="mt-2">
+					<ProcessPane sessionId={sessionId} />
 				</div>
-			</div>
-			{view === "changes" ? <ChangesPane sessionId={sessionId} /> : <ProcessPane sessionId={sessionId} />}
+			</details>
 		</>
 	);
 }
