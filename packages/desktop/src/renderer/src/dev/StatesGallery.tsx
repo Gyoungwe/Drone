@@ -4,8 +4,13 @@ import { DeliveryCards } from "../components/chat/DeliveryCards";
 import { ErrorNote } from "../components/chat/ErrorNote";
 import { InlineAskCard } from "../components/chat/InlineAskCard";
 import { RunStatusView } from "../components/composer/RunStatusStrip";
+import { CopyIcon, GearIcon, RefreshIcon, SearchIcon, TrashIcon } from "../components/icons";
 import { ContextUsageView } from "../components/panel/ContextUsageMeter";
 import { HostEnvironmentView } from "../components/panel/HostEnvironmentCard";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Chip } from "../components/ui/Chip";
+import { IconButton } from "../components/ui/IconButton";
 
 /** P13：开发态状态画廊（#/__states，仅 import.meta.env.DEV）。集中渲染各 UI 状态，便于目测回归。 */
 const TOKENS = [
@@ -68,6 +73,49 @@ export function StatesGallery() {
 	return (
 		<div className="bg-canvas" style={{ padding: 32, minHeight: "100vh", overflow: "auto", maxWidth: 960 }}>
 			<h1 style={{ fontSize: 20, marginBottom: 24 }}>Drone · UI states</h1>
+			<Section title="基础组件（U3）">
+				<div data-testid="states-base-components" style={{ display: "grid", gap: 12 }}>
+					{(["sm", "md"] as const).map((size) => (
+						<div key={size} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+							<Button variant="primary" size={size}>
+								主按钮
+							</Button>
+							<Button variant="secondary" size={size}>
+								<RefreshIcon size={13} /> 刷新
+							</Button>
+							<Button variant="ghost" size={size}>
+								取消
+							</Button>
+							<Button variant="danger" size={size}>
+								卸载
+							</Button>
+							<Button variant="primary" size={size} disabled>
+								禁用
+							</Button>
+						</div>
+					))}
+					<div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+						<IconButton label="搜索">
+							<SearchIcon size={15} />
+						</IconButton>
+						<IconButton label="复制">
+							<CopyIcon size={15} />
+						</IconButton>
+						<IconButton label="设置" active>
+							<GearIcon size={15} />
+						</IconButton>
+						<IconButton label="删除" disabled>
+							<TrashIcon size={15} />
+						</IconButton>
+					</div>
+					<div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+						<Chip>DESeq2</Chip>
+						<Chip tone="reference">@counts.R</Chip>
+						<Badge>项目</Badge>
+						<Badge>扩展</Badge>
+					</div>
+				</div>
+			</Section>
 			<Section title="Tokens">
 				<div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
 					{TOKENS.map((v) => (
