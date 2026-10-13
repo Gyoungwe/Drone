@@ -12,6 +12,7 @@ import type { AgentSession, SessionEntry } from "@earendil-works/pi-coding-agent
 import { projectKnowledgeSnapshot } from "../session/knowledge-publication";
 import {
 	assignEntryIds,
+	assignToolStartTimes,
 	blockImages,
 	blockText,
 	type RawMessage,
@@ -73,6 +74,7 @@ export class SessionMessageService {
 			liveSubagentRunIds: new Set(this.host.subagentPanel.listRuns(sessionId).map((run) => run.runId)),
 		});
 		assignEntryIds(messages, branch);
+		assignToolStartTimes(messages, branch);
 		return messages;
 	}
 

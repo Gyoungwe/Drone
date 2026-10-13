@@ -94,6 +94,9 @@ export interface SessionToolCall {
 	diff?: string;
 	/** 工具执行结束时刻（jsonl toolResult entry 的 timestamp；历史回放轮次计时用） */
 	endedAt?: number;
+	/** 工具开始执行时刻（历史回放推导：所属 assistant entry 的落盘时刻 = 模型输出结束、工具开始执行；
+	 * 无 entry 时间或推导结果不合理时缺省 → 不显示步骤时长） */
+	startedAt?: number;
 	isError: boolean;
 }
 
