@@ -3,9 +3,10 @@ import { useT } from "../../i18n";
 import { clampThinkingLevel, THINKING_LEVELS } from "../../lib/thinking";
 import { useAgentModeStore } from "../../stores/agent-mode";
 import { useSessionsStore } from "../../stores/sessions";
-import { ChevronDownIcon, CloseIcon } from "../icons";
+import { ChevronDownIcon, CloseIcon, WarningIcon } from "../icons";
 import { ModelPicker } from "./ModelPicker";
 import { ModePicker } from "./ModePicker";
+import { PermissionPicker } from "./PermissionPicker";
 import { ThinkingPicker } from "./ThinkingPicker";
 
 /**
@@ -58,6 +59,7 @@ export function RunConfigPicker() {
 	const globalThinking = useSessionsStore((s) => s.thinkingLevel);
 	const activeSession = useSessionsStore((s) => s.sessions.find((x) => x.sessionId === s.activeSessionId));
 	const mode = useAgentModeStore((s) => (sessionId ? (s.bySession[sessionId] ?? "lead") : "lead"));
+	const fullAccess = useSessionsStore((s) => s.permissionModes[s.activeSessionId ?? ""] === "fullAccess");
 
 	useEffect(() => {
 		if (!open) return;
@@ -97,6 +99,13 @@ export function RunConfigPicker() {
 				aria-expanded={open}
 				title={t("composer.modelGroupHint")}
 			>
+				{fullAccess && (
+					<WarningIcon
+						size={12}
+						className="shrink-0 text-warn"
+						aria-label={t("composer.permissionFullAccess")}
+					/>
+				)}
 				<span className="truncate text-ink-2">{modelLabel}</span>
 				<span aria-hidden="true">·</span>
 				<span className="shrink-0">{t(`composer.mode.${mode}`)}</span>
@@ -106,9 +115,20 @@ export function RunConfigPicker() {
 			</button>
 			{open && (
 				<div className="absolute right-0 bottom-full z-30 mb-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-pop">
-					<ModePicker row={t("composer.config.mode")} />
-					<ModelPicker row={t("composer.config.model")} />
-					<ThinkingPicker row={t("composer.config.effort")} />
+					<p className="px-3 pt-1 pb-1 text-[11px] text-ink-faint">{t("composer.config.runConfig")}</p>
+					<div className="run-config-row" data-hint={t("composer.config.modeHint")}>
+						<ModePicker row={t("composer.config.mode")} />
+					</div>
+					<div className="run-config-row" data-hint={t("composer.config.modelHint")}>
+						<ModelPicker row={t("composer.config.model")} />
+					</div>
+					<div className="run-config-row" data-hint={t("composer.config.effortHint")}>
+						<ThinkingPicker row={t("composer.config.effort")} />
+					</div>
+					<div className="my-1 h-px bg-border" />
+					<div className="run-config-row" data-hint={t("composer.config.permissionHint")}>
+						<PermissionPicker row={t("composer.config.permission")} />
+					</div>
 				</div>
 			)}
 		</div>

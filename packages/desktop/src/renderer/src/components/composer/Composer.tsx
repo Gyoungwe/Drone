@@ -20,7 +20,6 @@ import { atAgentAvailability, restoreSubagentText } from "./at-subagents";
 import { ContextRing } from "./ContextRing";
 import { composerRunActive } from "./composer-run";
 import { ImageTray } from "./ImageTray";
-import { PermissionPicker } from "./PermissionPicker";
 import { QueueBar } from "./QueueBar";
 import { QuoteChip } from "./QuoteChip";
 import { RunConfigPicker } from "./RunConfigPicker";
@@ -648,15 +647,12 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						<div className="min-w-0 flex-1 truncate text-[11px] text-ink-faint" data-testid="composer-hint">
 							{subagent ? t("composer.dispatchHint") : null}
 						</div>
-						{/* 右侧控件组（一处一事）：[模型 · 强度] [权限] [上下文环] [发送] */}
+						{/* 右侧控件组（U5b）：[模型 · 模式 · 强度 pill（含权限/运行配置）] [上下文环] [发送/停止] */}
 						<div
 							className={`composer-model-group${readOnly ? " pointer-events-none opacity-40" : ""}`}
 							title={t("composer.modelGroupHint")}
 						>
 							<RunConfigPicker />
-						</div>
-						<div className={readOnly ? "pointer-events-none opacity-40" : undefined}>
-							<PermissionPicker />
 						</div>
 						<ContextRing extra={<SessionUsageSummary sessionId={activeSessionId} />} />
 						{isStreaming ? (

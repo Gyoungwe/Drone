@@ -598,7 +598,17 @@ export const en: Messages = {
 		checkFailed: "Update check failed: {message}",
 	},
 	composer: {
-		config: { mode: "Mode", model: "Model", effort: "Effort" },
+		config: {
+			mode: "Mode",
+			model: "Model",
+			effort: "Effort",
+			permission: "Permissions",
+			runConfig: "Run config",
+			modeHint: "Decides available tools and subagent concurrency",
+			modelHint: "Model used by this session",
+			effortHint: "Reasoning depth; higher is slower and costlier",
+			permissionHint: "When tool calls need your confirmation",
+		},
 		mode: {
 			title: "Mode (decides available tools)",
 			single: "Solo",

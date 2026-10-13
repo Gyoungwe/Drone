@@ -582,7 +582,17 @@ export const zh = {
 		checkFailed: "检查更新失败：{message}",
 	},
 	composer: {
-		config: { mode: "模式", model: "模型", effort: "推理强度" },
+		config: {
+			mode: "模式",
+			model: "模型",
+			effort: "推理强度",
+			permission: "权限",
+			runConfig: "运行配置",
+			modeHint: "决定可用工具与子智能体并发",
+			modelHint: "本会话使用的模型",
+			effortHint: "思考深度，越高越慢越贵",
+			permissionHint: "工具调用何时需要你确认",
+		},
 		mode: {
 			title: "模式（决定可用工具）",
 			single: "单体",
