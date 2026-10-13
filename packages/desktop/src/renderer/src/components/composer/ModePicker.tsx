@@ -55,25 +55,25 @@ export function ModePicker() {
 				</div>
 			)}
 			{open && (
-				<div className="absolute bottom-full left-0 z-30 mb-1 w-64 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-pop">
-					<p className="px-2 pt-1 pb-0.5 text-[11px] text-ink-faint">{t("composer.mode.title")}</p>
+				<div className="absolute bottom-full left-0 z-30 mb-2 w-72 overflow-hidden rounded-xl border border-border bg-surface p-1.5 shadow-pop">
+					<p className="px-2.5 pt-1.5 pb-1 text-[11px] text-ink-faint">{t("composer.mode.title")}</p>
 					{AGENT_MODE_IDS.map((id) => (
 						<button
 							key={id}
 							type="button"
-							className={`flex w-full items-start justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${
-								id === mode ? "text-blue-600" : "text-ink-2 hover:bg-hover"
+							className={`flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
+								id === mode ? "bg-hover text-ink" : "text-ink-2 hover:bg-hover"
 							}`}
 							onClick={() => {
 								setOpen(false);
 								if (sessionId) void setMode(sessionId, id).catch(() => {});
 							}}
 						>
-							<span className="flex flex-col">
-								<span>{t(`composer.mode.${id}`)}</span>
-								<span className="text-[11px] text-ink-faint">{t(`composer.mode.${id}Hint`)}</span>
+							<span className="flex flex-col gap-0.5">
+								<span className="font-medium">{t(`composer.mode.${id}`)}</span>
+								<span className="text-[11px] leading-snug text-ink-dim">{t(`composer.mode.${id}Hint`)}</span>
 							</span>
-							{id === mode && <CheckIcon size={12} />}
+							{id === mode && <CheckIcon size={13} className="shrink-0 text-accent" />}
 						</button>
 					))}
 				</div>

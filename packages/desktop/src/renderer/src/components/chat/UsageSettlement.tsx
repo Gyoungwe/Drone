@@ -117,7 +117,7 @@ function sdkTotal(stats: SessionStats): UsageDisplayTotal {
 	};
 }
 /** Query the existing SDK stats IPC at completed-response/settled boundaries, never for token deltas. */
-export function SessionUsageFooter({ sessionId }: { sessionId: string | null }) {
+export function useSessionUsage(sessionId: string | null) {
 	const transcript = useTranscriptStore((s) => selectTranscript(s, sessionId));
 	const count = transcript.messages.length;
 	// Stable at committed-response/run boundaries; token deltas never trigger stats IPC.
@@ -169,14 +169,40 @@ export function SessionUsageFooter({ sessionId }: { sessionId: string | null }) 
 		};
 	}, [statsRequest]);
 	if (!sessionId || !count) return null;
+	return { usage: data?.id === sessionId ? data.usage : undefined, pending, error };
+}
+
+/** 会话累计用量的悬浮摘要（放进输入框上下文环的 tooltip，不再常驻一条带框的统计条）。 */
+export function SessionUsageSummary({ sessionId }: { sessionId: string | null }) {
+	const zh = useI18nStore((s) => s.language) === "zh";
+	const state = useSessionUsage(sessionId);
+	if (!state) return null;
+	const { usage, error } = state;
+	const rate = usage?.cacheRate == null ? "—" : `${(usage.cacheRate * 100).toFixed(1)}%`;
+	return (
+		<div className="mt-1.5 border-t border-border pt-1.5 tabular-nums" data-testid="session-usage-summary">
+			<div>
+				{zh ? "会话累计" : "Session total"} {usage ? compact(usage.total) : "—"} tokens ·{" "}
+				{zh ? "缓存命中" : "Cache hits"} {rate}
+			</div>
+			{usage && (
+				<div className="text-ink-dim">
+					{zh ? "模型响应" : "Model responses"} {usage.requests}
+					{usage.cost && usage.cost > 0 ? ` · $${usage.cost.toFixed(4)}` : ""}
+				</div>
+			)}
+			{error && <div className="text-warn">{zh ? "暂未取得统计" : "Stats unavailable"}</div>}
+		</div>
+	);
+}
+
+/** 带明细的会话累计卡（输入框不再常驻；保留给需要完整明细的视图与冒烟脚本）。 */
+export function SessionUsageFooter({ sessionId }: { sessionId: string | null }) {
+	const state = useSessionUsage(sessionId);
+	if (!state) return null;
 	return (
 		<div className="mt-2">
-			<UsageSettlement
-				usage={data?.id === sessionId ? data.usage : undefined}
-				total
-				pending={pending}
-				error={error}
-			/>
+			<UsageSettlement usage={state.usage} total pending={state.pending} error={state.error} />
 		</div>
 	);
 }

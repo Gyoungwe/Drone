@@ -1,9 +1,10 @@
+import type { ReactNode } from "react";
 import { useContextUsage } from "../../hooks/use-context-usage";
 import { useI18nStore } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 
-export function ContextRing() {
+export function ContextRing({ extra }: { extra?: ReactNode } = {}) {
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
 	const hasMessages = useTranscriptStore((s) => selectTranscript(s, activeSessionId).messages.length > 0);
 	const usage = useContextUsage(activeSessionId);
@@ -50,6 +51,7 @@ export function ContextRing() {
 							? "压缩后需等待下一次模型响应，未知不等于 0。"
 							: "After compaction, wait for the next response; unknown is not zero."}
 				</div>
+				{extra}
 			</div>
 		</div>
 	);
