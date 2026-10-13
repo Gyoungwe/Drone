@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
-import { CheckIcon, ShieldIcon, WarningIcon } from "../icons";
+import { CheckIcon, ChevronRightIcon, ShieldIcon, WarningIcon } from "../icons";
 import { Tooltip } from "../ui/Tooltip";
 
 /** 档位定义：glyph / 标题 / 描述（spec permission-mode §6） */
@@ -14,7 +14,7 @@ const MODES: PermissionMode[] = ["default", "strict", "fullAccess"];
  * 模式按会话隔离（切 tab 跟随各会话档位）；enabled=false（手改 permissions.json 的
  * 逃生舱态）时禁用 + Tooltip 指路。fullAccess 激活时 warn 色 glyph 常驻可瞥见提醒。
  */
-export function PermissionPicker() {
+export function PermissionPicker({ row }: { row?: string } = {}) {
 	const t = useT();
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
 	const mode = useSessionsStore((s) => s.permissionModes[s.activeSessionId ?? ""] ?? "default");
@@ -39,7 +39,30 @@ export function PermissionPicker() {
 		};
 	}, [open]);
 
-	const chip = (
+	const label =
+		mode === "fullAccess"
+			? t("composer.permissionFullAccess")
+			: mode === "strict"
+				? t("composer.permissionStrict")
+				: t("composer.permissionAuto");
+	const chip = row ? (
+		<button
+			type="button"
+			className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-[13px] text-ink transition-colors hover:bg-hover disabled:opacity-50"
+			aria-label={t("composer.permissionMode")}
+			disabled={gateOff === true}
+			onClick={() => setOpen((v) => !v)}
+			data-testid="permission-row"
+		>
+			<span>{row}</span>
+			<span
+				className={`flex min-w-0 items-center gap-1 ${mode === "fullAccess" ? "text-warn" : "text-ink-dim"}`}
+			>
+				<span className="truncate">{label}</span>
+				<ChevronRightIcon size={12} />
+			</span>
+		</button>
+	) : (
 		<button
 			type="button"
 			className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors hover:bg-hover ${
@@ -61,7 +84,7 @@ export function PermissionPicker() {
 	);
 
 	return (
-		<div ref={ref} className="relative">
+		<div ref={ref} className={row ? "relative w-full" : "relative"}>
 			{gateOff === true ? (
 				<Tooltip label={t("composer.permissionGateOff")} align="end">
 					{chip}
@@ -70,7 +93,9 @@ export function PermissionPicker() {
 				chip
 			)}
 			{open && !gateOff && (
-				<div className="absolute bottom-full left-0 z-30 mb-1 w-64 rounded-xl bg-surface p-1 shadow-pop">
+				<div
+					className={`absolute ${row ? "left-full bottom-0 z-40 ml-2 border border-border" : "bottom-full left-0 z-30 mb-1"} w-64 rounded-xl bg-surface p-1 shadow-pop`}
+				>
 					{MODES.map((m) => {
 						const selected = mode === m;
 						return (

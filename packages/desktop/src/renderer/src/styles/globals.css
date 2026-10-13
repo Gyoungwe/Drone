@@ -3491,3 +3491,26 @@ code {
 		animation: none;
 	}
 }
+
+/* U5b：pill 菜单每一项悬停时在右侧弹出一句说明（子菜单展开时让位） */
+.run-config-row {
+	position: relative;
+}
+.run-config-row[data-hint]:hover:not(:has([aria-expanded="true"], .shadow-pop))::after {
+	content: attr(data-hint);
+	position: absolute;
+	top: 50%;
+	left: calc(100% + 8px);
+	z-index: 40;
+	transform: translateY(-50%);
+	width: max-content;
+	max-width: 220px;
+	border: 1px solid var(--color-border);
+	border-radius: 8px;
+	background: var(--color-surface);
+	padding: 4px 8px;
+	font-size: 11px;
+	color: var(--color-ink-dim);
+	box-shadow: var(--shadow-pop);
+	pointer-events: none;
+}
