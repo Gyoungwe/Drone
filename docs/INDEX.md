@@ -23,6 +23,7 @@
 - 分析证据与不可变 checkpoint 位于 `packages/backend/src/services/analysis-evidence.ts`，通过 `shared/host-api/evidence.ts`、preload、main IPC 和 Artifacts 面板提供本地查看、分叉、导入/导出和重现回执；checkpoint 分支不会继承执行授权或 review。
 - checkpoint、分支工作区和可复现 evidence capsule 见 `packages/backend/src/services/analysis-evidence.ts`：冻结内容寻址字节，分支不继承执行审批，失败分支可在校验 checkpoint/context 后重试，replay 分开记录环境与输出匹配状态；capsule 支持 private/restricted/public 三档发布，导入会重新校验 manifest、字节哈希和 omission 清单，并拒绝凭据/私有状态路径与被省略的私有 blob。桌面端通过 `packages/shared/src/host-api/evidence.ts`、`packages/desktop/src/main/ipc/evidence.ts` 和产物面板 `packages/desktop/src/renderer/src/components/panel/EvidencePane.tsx` 提供冻结、分支、导入/导出、回放及复现结果查看。
 - Wisp/OpenScience 的官方源码快照、功能研究和迁移建议见 [open-science-wisp-adapter-research.md](open-science-wisp-adapter-research.md)。
+- ClawsGO Science CD-Search 在 Drone v0.32.0 基线上的复核、证据边界和后续研究计划见 [clawgo-science-v0320-follow-up-plan.md](clawgo-science-v0320-follow-up-plan.md)。
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 
