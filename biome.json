@@ -155,6 +155,12 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["scripts/ui-parity/harness/**"],
+			"linter": {
+				"enabled": false
+			}
 		}
 	],
 	"assist": {

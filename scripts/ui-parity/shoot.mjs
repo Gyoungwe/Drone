@@ -1,0 +1,67 @@
+/**
+ * U0 对照基线截图：node scripts/ui-parity/shoot.mjs [--only id,id] [--out dir]
+ * 起 harness 的 vite（端口 5210），用无头 Chrome 在 1440×900 下分别截浅色/深色，
+ * 输出 <out>/<id>-<light|dark>.png（默认 scripts/ui-parity/out，已 gitignore）。
+ * 场景数据全部来自 harness 内置桩，每次截图一致。需要本机 google-chrome / chromium。
+ */
+import { execFileSync, spawn } from "node:child_process";
+import { mkdirSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const args = process.argv.slice(2);
+const opt = (k) => {
+	const i = args.indexOf(k);
+	return i >= 0 ? args[i + 1] : undefined;
+};
+const out = resolve(opt("--out") ?? join(here, "out"));
+const only = opt("--only")?.split(",");
+const { screens } = JSON.parse(readFileSync(join(here, "parity.json"), "utf8"));
+const chrome = process.env.CHROME ?? "google-chrome";
+const PORT = 5210;
+
+mkdirSync(out, { recursive: true });
+const vite = spawn(
+	process.execPath,
+	[
+		join(here, "../../node_modules/vite/bin/vite.js"),
+		"--config",
+		join(here, "harness/vite.config.mts"),
+		"--port",
+		String(PORT),
+		"--strictPort",
+	],
+	{ stdio: "ignore" },
+);
+const stop = () => vite.kill();
+process.on("exit", stop);
+for (let i = 0; i < 60; i++) {
+	try {
+		const r = await fetch(`http://localhost:${PORT}/`);
+		if (r.ok) break;
+	} catch {}
+	await new Promise((r) => setTimeout(r, 500));
+}
+for (const s of screens) {
+	if (only && !only.includes(s.id)) continue;
+	for (const theme of ["light", "dark"]) {
+		const file = join(out, `${s.id}-${theme}.png`);
+		execFileSync(
+			chrome,
+			[
+				"--headless=new",
+				"--no-sandbox",
+				"--disable-gpu",
+				"--hide-scrollbars",
+				"--virtual-time-budget=6000",
+				"--window-size=1440,900",
+				`--screenshot=${file}`,
+				`http://localhost:${PORT}/?scene=${s.drone}&theme=${theme}`,
+			],
+			{ stdio: "ignore" },
+		);
+		console.log(file);
+	}
+}
+stop();
