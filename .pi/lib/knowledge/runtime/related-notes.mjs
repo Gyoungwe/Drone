@@ -1,14 +1,14 @@
 // @ts-nocheck
 import {
   getKnowledgeService
-} from "./chunks/chunk-GYO4NFUS.mjs";
+} from "./chunks/chunk-UXPVRBKA.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";
 import "./chunks/chunk-O536IQIE.mjs";
 import "./chunks/chunk-6YLIZTKN.mjs";
 import "./chunks/chunk-6LT3KQRY.mjs";
+import "./chunks/chunk-AHEUR5VB.mjs";
 import "./chunks/chunk-H6MOV67K.mjs";
 import "./chunks/chunk-RCUF5QK4.mjs";
-import "./chunks/chunk-AHEUR5VB.mjs";
 import "./chunks/chunk-4VUDROQV.mjs";
 import {
   readKnowledgeBinding,

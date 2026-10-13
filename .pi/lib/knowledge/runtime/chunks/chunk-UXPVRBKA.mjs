@@ -14,13 +14,13 @@ import {
   readReviewMode
 } from "./chunk-6LT3KQRY.mjs";
 import {
-  GRAPH_RETRIEVAL_DEFAULTS,
-  expandWithGraph
-} from "./chunk-RCUF5QK4.mjs";
-import {
   canRead,
   validateNote
 } from "./chunk-AHEUR5VB.mjs";
+import {
+  GRAPH_RETRIEVAL_DEFAULTS,
+  expandWithGraph
+} from "./chunk-RCUF5QK4.mjs";
 import {
   createKnowledgeWorker,
   emitProcessEvent,

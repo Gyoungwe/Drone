@@ -14,15 +14,15 @@ import {
   specialistSettings
 } from "./chunk-XSFQUT2B.mjs";
 import {
+  getKnowledgeService
+} from "./chunk-UXPVRBKA.mjs";
+import {
   runNavigationMaintenance
 } from "./chunk-EJFIMVBU.mjs";
 import {
   memoryNoteMarkdown,
   memoryNoteSlug
 } from "./chunk-W4BONNYJ.mjs";
-import {
-  getKnowledgeService
-} from "./chunk-GYO4NFUS.mjs";
 import {
   flowFor,
   invalidateKnowledgeUi

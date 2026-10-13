@@ -726,6 +726,31 @@ function createSemanticModel(input, options = {}) {
   return { nodes, edges: linkRelations.map(({ source, target }) => ({ source, target })), relations, duplicates, communities, layout };
 }
 
+// packages/knowledge/src/graph-cache.ts
+function createRevisionCache() {
+  let activeRevision = null;
+  const values = /* @__PURE__ */ new Map();
+  const align = (revision2) => {
+    if (activeRevision === revision2) return;
+    activeRevision = revision2;
+    values.clear();
+  };
+  return {
+    get(revision2, key) {
+      align(revision2);
+      return values.get(key);
+    },
+    set(revision2, key, value) {
+      align(revision2);
+      values.set(key, value);
+    },
+    clear() {
+      activeRevision = null;
+      values.clear();
+    }
+  };
+}
+
 // packages/knowledge/src/worker.ts
 await mkdir(dirname(workerData.database), { recursive: true, mode: 448 });
 var db = new DatabaseSync(workerData.database, { timeout: 1500 });
@@ -791,6 +816,7 @@ var closePromise;
 var dirty = /* @__PURE__ */ new Set();
 var inflight = /* @__PURE__ */ new Map();
 var stats = { bodyReads: 0, metadataChecks: 0, reconciliations: 0, changes: 0, searches: 0 };
+var graphSnapshots = createRevisionCache();
 var statements = {
   get: db.prepare("SELECT * FROM notes WHERE path=?"),
   count: db.prepare("SELECT count(*) count FROM notes"),
@@ -1440,7 +1466,13 @@ function noteIdentity(body) {
 }
 async function knowledgeGraph(args) {
   await flushDirty();
+  revision = Number(db.prepare("SELECT value FROM meta WHERE key='revision'").get().value);
   const limit = Math.max(10, Math.min(400, Math.floor(args.limit || 200)));
+  const view = args.view === "all" ? "all" : "semantic";
+  const mergeMirrors = args.mergeMirrors !== false;
+  const cacheKey = `${view}\0${limit}\0${mergeMirrors ? "merge" : "raw"}`;
+  const cached = graphSnapshots.get(revision, cacheKey);
+  if (cached) return cached;
   const allNotes = new Map(
     db.prepare("SELECT path,title,kind,scope,body FROM notes").all().map((row) => [row.path, row])
   );
@@ -1494,7 +1526,7 @@ async function knowledgeGraph(args) {
     (edge) => semanticCandidatePaths.has(edge.source) && semanticCandidatePaths.has(edge.target)
   );
   const duplicateCounts = /* @__PURE__ */ new Map();
-  if (args.mergeMirrors !== false) {
+  if (mergeMirrors) {
     for (const row of notes.values()) {
       const identity = noteIdentity(row.body);
       if (identity) duplicateCounts.set(identity, (duplicateCounts.get(identity) || 0) + 1);
@@ -1517,13 +1549,13 @@ async function knowledgeGraph(args) {
       })),
       edges: semanticCandidateEdges
     },
-    { view: args.view === "all" ? "all" : "semantic", mergeMirrors: args.mergeMirrors !== false }
+    { view, mergeMirrors }
   );
   const chosen = [...model.nodes].sort((a, b) => b.degree - a.degree || a.path.localeCompare(b.path)).slice(0, limit);
   const keep = new Set(chosen.map((node) => node.path));
   const links = model.edges.filter(({ source, target }) => keep.has(source) && keep.has(target));
   const relations = (model.relations || []).filter(({ source, target }) => keep.has(source) && keep.has(target));
-  return {
+  const result = {
     nodes: legacyChosen.map((path) => ({ path, title: notes.get(path).title, kind: notes.get(path).kind, degree: legacyDegree.get(path) || 0 })),
     edges: [...legacyEdges.values()].filter(([source, target]) => legacyKeep.has(source) && legacyKeep.has(target)).map(([source, target]) => ({ source, target })),
     totalNotes: notes.size,
@@ -1532,8 +1564,8 @@ async function knowledgeGraph(args) {
       nodes: chosen.map((node) => ({ ...node })),
       edges: links,
       totalNotes: notes.size,
-      view: args.view === "all" ? "all" : "semantic",
-      mergeMirrors: args.mergeMirrors !== false,
+      view,
+      mergeMirrors,
       relations,
       duplicates: (model.duplicates || []).filter(({ canonical, duplicate }) => keep.has(canonical) || keep.has(duplicate)),
       communities: Object.fromEntries(Object.entries(model.communities || {}).filter(([path]) => keep.has(path))),
@@ -1548,6 +1580,8 @@ async function knowledgeGraph(args) {
       }
     }
   };
+  graphSnapshots.set(revision, cacheKey, result);
+  return result;
 }
 async function dispatch(op, args) {
   if (op === "status") {
