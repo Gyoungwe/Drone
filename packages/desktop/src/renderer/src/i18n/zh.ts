@@ -785,6 +785,7 @@ export const zh = {
 			noFollowUp: "未交给主模型 · 可引用",
 			mutex: "检测到 subagent 扩展 {path}，其工具已由内置 subagent 接管：{tools}",
 		},
+		contextEvaporated: "已精简 {count} 条旧工具结果",
 	},
 	taskRow: {
 		running: "任务仍在执行；完成进度会随结果更新，无需重复发起。",
