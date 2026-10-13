@@ -309,5 +309,6 @@ export function initializeSessionComposition(service: SessionHost, options: Sess
 		getModelRuntime: () => service.getModelRuntime(),
 		emitEvent: (id, event) => service.emitEvent(id, event),
 		setMcpStatus: (cwd, status) => service.setMcpStatus(cwd, status),
+		agentModeOf: (id) => service.capabilityRuntimes.get(id)?.agentMode(),
 	});
 }
