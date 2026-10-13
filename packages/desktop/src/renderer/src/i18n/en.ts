@@ -1459,6 +1459,8 @@ export const en: Messages = {
 		en: "English",
 	},
 	error: {
+		continueMessage: "Continue",
+		continueFrom: "(Resume from step {step}, tool {tool}; do not redo completed steps)",
 		meta: {
 			llm: "Model request",
 			session: "Session",
