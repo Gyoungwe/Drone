@@ -612,9 +612,12 @@ export async function memoryRelatedKnowledge({ cwd = null, query = "", limit = 4
 	return withKnowledgeBinding(binding, () =>
 		service.relatedForMemory({ query, project: info.project || "", limit: Math.max(1, Math.min(8, limit)) }),
 	);
+}
+
+/**
  * 观察记忆沉淀为本项目知识库「记忆」分类下的笔记（Projects/<项目>/Memory/，type: memory）。
  * 只新建；附上按标题检索到的相关笔记链接，知识网络据此把记忆节点连到相关条目。
- * @param Record<string, any>options
+ * @param {Record<string, any>} options
  */
 export async function saveMemoryNote({ cwd, memory } = {}) {
 	if (!memory || typeof memory.title !== "string" || !memory.title.trim()) throw new Error("Memory title is required");
