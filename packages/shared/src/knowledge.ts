@@ -513,7 +513,7 @@ export interface KnowledgeGraphNode {
 	scope?: string;
 	/** Normalized paper identifiers used to surface likely duplicates. */
 	identifiers?: string[];
-	nodeType?: "note" | "wiki" | "navigation" | "mirror" | "infrastructure";
+	nodeType?: "note" | "wiki" | "navigation" | "mirror" | "infrastructure" | "memory";
 	isInfrastructure?: boolean;
 	community?: number;
 	x?: number;

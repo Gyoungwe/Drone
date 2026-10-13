@@ -6,7 +6,7 @@ import {
   createSemanticModel,
   isInfrastructureNode,
   nodeType
-} from "./chunks/chunk-W74KFO4J.mjs";
+} from "./chunks/chunk-DM7D3MNK.mjs";
 import "./chunks/chunk-VIHIR2BE.mjs";
 export {
   assignCommunities,

@@ -27,6 +27,7 @@
 		"./task-feedback": "./src/task-feedback.ts",
 		"./semantic-provider": "./src/semantic-provider.ts",
 		"./files": "./src/files.ts",
+		"./memory-note": "./src/memory-note.ts",
 		"./layout": "./src/layout.ts",
 		"./wiki-policy": "./src/wiki-policy.ts",
 		"./topic-memory": "./src/topic-memory.ts",

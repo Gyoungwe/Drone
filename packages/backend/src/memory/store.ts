@@ -16,6 +16,8 @@ export interface MemoryObservation {
 
 export interface MemoryHit {
 	id: number;
+	/** 已沉淀到知识库的笔记路径；沉淀后不再注入。 */
+	promotedTo?: string | null;
 	sessionId?: string;
 	kind: MemoryObservation["kind"];
 	title: string;
@@ -62,6 +64,9 @@ export class MemoryStore {
 			CREATE VIRTUAL TABLE IF NOT EXISTS mem_fts USING fts5(grams, tokenize = 'unicode61');
 			CREATE TABLE IF NOT EXISTS mem_settings (project_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL);
 		`);
+		const columns = this.db.prepare("PRAGMA table_info(mem_observations)").all() as Array<{ name: string }>;
+		if (!columns.some((column) => column.name === "promoted_to"))
+			this.db.exec("ALTER TABLE mem_observations ADD COLUMN promoted_to TEXT");
 	}
 
 	isEnabled(projectId: string): boolean {
@@ -129,13 +134,13 @@ export class MemoryStore {
 		const matched = terms.length
 			? (this.db
 					.prepare(
-						`${select} JOIN mem_fts f ON f.rowid = o.id WHERE mem_fts MATCH ? AND o.project_id = ? AND o.session_id != ? ORDER BY bm25(mem_fts), o.created_at DESC LIMIT ?`,
+						`${select} JOIN mem_fts f ON f.rowid = o.id WHERE mem_fts MATCH ? AND o.project_id = ? AND o.session_id != ? AND o.promoted_to IS NULL ORDER BY bm25(mem_fts), o.created_at DESC LIMIT ?`,
 					)
 					.all(terms.join(" OR "), projectId, exclude, limit) as unknown as MemoryHit[])
 			: [];
 		const recent = this.db
 			.prepare(
-				`${select} WHERE o.project_id = ? AND o.session_id != ? ORDER BY o.created_at DESC, o.id DESC LIMIT ?`,
+				`${select} WHERE o.project_id = ? AND o.session_id != ? AND o.promoted_to IS NULL ORDER BY o.created_at DESC, o.id DESC LIMIT ?`,
 			)
 			.all(projectId, exclude, limit) as unknown as MemoryHit[];
 		const seen = new Set(matched.map((hit) => hit.id));
@@ -174,7 +179,7 @@ export class MemoryStore {
 	list(projectId: string, limit = 50): MemoryHit[] {
 		return this.db
 			.prepare(
-				"SELECT id, kind, title, body, created_at AS createdAt FROM mem_observations WHERE project_id = ? ORDER BY created_at DESC, id DESC LIMIT ?",
+				"SELECT id, session_id AS sessionId, kind, title, body, created_at AS createdAt, promoted_to AS promotedTo FROM mem_observations WHERE project_id = ? ORDER BY created_at DESC, id DESC LIMIT ?",
 			)
 			.all(projectId, limit) as unknown as MemoryHit[];
 	}
@@ -183,7 +188,7 @@ export class MemoryStore {
 	find(projectId: string, id: number): MemoryHit | undefined {
 		return this.db
 			.prepare(
-				"SELECT id, session_id AS sessionId, kind, title, body, created_at AS createdAt FROM mem_observations WHERE project_id = ? AND id = ?",
+				"SELECT id, session_id AS sessionId, kind, title, body, created_at AS createdAt, promoted_to AS promotedTo FROM mem_observations WHERE project_id = ? AND id = ?",
 			)
 			.get(projectId, id) as unknown as MemoryHit | undefined;
 	}
@@ -196,6 +201,27 @@ export class MemoryStore {
 		if (result.changes === 0) return false;
 		this.db.prepare("DELETE FROM mem_fts WHERE rowid = ?").run(id);
 		return true;
+	}
+
+	/** 同一会话改过的文件（沉淀笔记的来源信息）。 */
+	sessionFiles(projectId: string, sessionId: string): string[] {
+		const rows = this.db
+			.prepare(
+				"SELECT title FROM mem_observations WHERE project_id = ? AND session_id = ? AND kind = 'change' ORDER BY id LIMIT 50",
+			)
+			.all(projectId, sessionId) as Array<{ title: string }>;
+		return rows.map((row) => row.title.replace(/^修改 /u, ""));
+	}
+
+	/** 标记为已沉淀（单向）：之后不再参与召回与注入。 */
+	markPromoted(projectId: string, id: number, path: string): boolean {
+		return (
+			this.db
+				.prepare(
+					"UPDATE mem_observations SET promoted_to = ? WHERE project_id = ? AND id = ? AND promoted_to IS NULL",
+				)
+				.run(path, projectId, id).changes > 0
+		);
 	}
 
 	clear(projectId: string): void {

@@ -9590,7 +9590,10 @@ var MemoryListItemSchema = typebox_exports.Object(
     kind: typebox_exports.String(),
     title: typebox_exports.String(),
     body: typebox_exports.String(),
-    createdAt: typebox_exports.Integer({ minimum: 0 })
+    createdAt: typebox_exports.Integer({ minimum: 0 }),
+    sessionId: typebox_exports.Optional(typebox_exports.String()),
+    /** 已沉淀到知识库的笔记路径。 */
+    promotedTo: typebox_exports.Optional(typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]))
   },
   { additionalProperties: false }
 );
@@ -9605,7 +9608,13 @@ var MemoryContract = defineDomain("memory", {
     /** 删除一条观察。 */
     remove: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.Integer()]), result: status, access: "desktop" },
     /** 提升为项目记忆：写入 <cwd>/.pi/memory/（可进 git 审阅），并从观察记忆移除以免重复注入。 */
-    promote: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.Integer()]), result: status, access: "desktop" }
+    promote: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.Integer()]), result: status, access: "desktop" },
+    /** 沉淀到知识库（单向）：写成本项目「记忆」分类笔记并带来源；原记录标记已沉淀、不再注入。 */
+    promoteToKnowledge: {
+      args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.Integer()]),
+      result: typebox_exports.Object({ path: typebox_exports.String() }, { additionalProperties: false }),
+      access: "desktop"
+    }
   }
 });
 

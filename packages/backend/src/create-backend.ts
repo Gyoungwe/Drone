@@ -31,7 +31,7 @@ import {
 import { JsonStore } from "./json-store";
 import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
-import { promoteObservation } from "./memory/promote";
+import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
 import { canonicalProjectId } from "./project-id";
 import { createDroneRuntime } from "./runtime";
@@ -139,6 +139,7 @@ export interface MemoryServicePort {
 	list(cwd: string): MemoryListItem[];
 	remove(cwd: string, id: number): MemoryProjectStatus;
 	promote(cwd: string, id: number): MemoryProjectStatus;
+	promoteToKnowledge(cwd: string, id: number): Promise<{ path: string }>;
 }
 
 export interface BackendServices {
@@ -515,6 +516,8 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				promoteObservation(memory, cwd, canonicalProjectId(cwd), id);
 				return memory.status(canonicalProjectId(cwd));
 			},
+			promoteToKnowledge: (cwd, id) =>
+				promoteToKnowledge(memory, sessions.knowledge, cwd, canonicalProjectId(cwd), id),
 		},
 		computeAdapter,
 		inquiry,

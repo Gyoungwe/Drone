@@ -31,7 +31,7 @@ export interface SemanticNode {
 	title: string;
 	kind: string;
 	degree: number;
-	nodeType: "note" | "wiki" | "navigation" | "mirror" | "infrastructure";
+	nodeType: "note" | "wiki" | "navigation" | "mirror" | "infrastructure" | "memory";
 	isInfrastructure: boolean;
 	community: number;
 	x: number;
@@ -73,6 +73,7 @@ const CATEGORY_BY_PATH: Array<[RegExp, string]> = [
 	[/\/Datasets?\//i, "dataset"],
 	[/\/(?:Wiki|Wikis)\//i, "wiki"],
 	[/\/(?:Questions?|Research)\//i, "question"],
+	[/\/Memory\//i, "memory"],
 ];
 
 /** Keep category colors and sectors stable even for older notes without typed frontmatter. */
@@ -213,8 +214,9 @@ export function isInfrastructureNode(node: Pick<SemanticNodeInput, "path" | "kin
 	return node.kind === "navigation" || INFRASTRUCTURE.test(node.path);
 }
 
-export function nodeType(node: Pick<SemanticNodeInput, "path" | "kind">): SemanticNode["nodeType"] {
+export function nodeType(node: Pick<SemanticNodeInput, "path" | "kind"> & { contentType?: string | null }): SemanticNode["nodeType"] {
 	if (isInfrastructureNode(node)) return "infrastructure";
+	if (contentCategory(node) === "memory") return "memory";
 	if (node.kind === "wiki") return "wiki";
 	return "note";
 }

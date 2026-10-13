@@ -1093,6 +1093,9 @@ export const zh = {
 			promote: "提升",
 			promoteHint: "写入本项目 .pi/memory/（可审阅、可进 git），作为长期项目记忆",
 			empty: "暂无记录",
+			distill: "沉淀到知识库",
+			distillHint: "写成知识库中本项目「记忆」分类的笔记（带会话、日期、文件来源），原记录不再注入",
+			distilled: "已沉淀",
 		},
 		channelWatch: "跨会话频道协作（channel-watch）",
 		channelWatchHint:

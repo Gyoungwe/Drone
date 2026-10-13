@@ -72,6 +72,11 @@ export interface KnowledgeUiServicePort {
 	): ReturnType<KnowledgeApi["getKnowledgeGraph"]>;
 	dailyContext(sinceMs: number): Promise<import("../services/daily-discovery").DailyDiscoveryContext>;
 	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }>;
+	/** 观察记忆沉淀为本项目知识库「记忆」笔记。 */
+	saveMemory(
+		cwd: string,
+		memory: import("@drone/knowledge/memory-note").MemoryNoteInput,
+	): Promise<{ path: string }>;
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],
 	): ReturnType<KnowledgeApi["getKnowledgeTopics"]>;
@@ -271,6 +276,12 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	saveIdea(idea: import("@drone/knowledge/daily-discovery").DailyIdea): Promise<{ path: string }> {
 		return this.call("saveDiscoveryIdea", { idea });
+	}
+	saveMemory(
+		cwd: string,
+		memory: import("@drone/knowledge/memory-note").MemoryNoteInput,
+	): Promise<{ path: string }> {
+		return this.call("saveMemoryNote", { cwd, memory });
 	}
 	topics(
 		input: Parameters<KnowledgeApi["getKnowledgeTopics"]>[0],

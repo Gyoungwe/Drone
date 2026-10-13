@@ -7,15 +7,19 @@ import {
   wikiHistory
 } from "./chunk-4QHZ475S.mjs";
 import {
+  normalizeSourceLinks
+} from "./chunk-LE6NM7SB.mjs";
+import {
   setSpecialistSettings,
   specialistSettings
 } from "./chunk-XSFQUT2B.mjs";
 import {
-  normalizeSourceLinks
-} from "./chunk-LE6NM7SB.mjs";
-import {
   runNavigationMaintenance
 } from "./chunk-EJFIMVBU.mjs";
+import {
+  memoryNoteMarkdown,
+  memoryNoteSlug
+} from "./chunk-W4BONNYJ.mjs";
 import {
   getKnowledgeService
 } from "./chunk-5PIDULPV.mjs";
@@ -526,6 +530,45 @@ async function saveDiscoveryIdea({ idea } = {}) {
   }
   throw new Error("Could not find a free file name for this idea");
 }
+async function saveMemoryNote({ cwd, memory } = {}) {
+  if (!memory || typeof memory.title !== "string" || !memory.title.trim()) throw new Error("Memory title is required");
+  const binding = await readKnowledgeBinding({ fresh: true });
+  if (!binding) throw new Error("No application knowledge Vault is bound");
+  const info = await projectAt(cwd);
+  const project = info.project || "shared";
+  const service = await getKnowledgeService(binding);
+  let related = [];
+  await withKnowledgeBinding(binding, async () => {
+    try {
+      const found = await service.request("search", {
+        query: memory.title.slice(0, 120),
+        limit: 5,
+        project: info.project || ""
+      });
+      related = (found.hits || []).map((hit) => hit.path).filter((path) => !/\/Memory\//.test(path));
+    } catch {
+      related = [];
+    }
+  });
+  const directory = join(binding.vault, "Projects", project, "Memory");
+  await mkdir(directory, { recursive: true });
+  const base = memoryNoteSlug(memory);
+  const text = memoryNoteMarkdown(memory, related);
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const name = attempt ? `${base}-${attempt + 1}.md` : `${base}.md`;
+    try {
+      await writeFile(join(directory, name), text, { encoding: "utf8", flag: "wx" });
+      const path = `Projects/${project}/Memory/${name}`;
+      await service.request("changed", { paths: [path] }).catch(() => {
+      });
+      invalidateKnowledgeUi();
+      return { path };
+    } catch (error) {
+      if (error?.code !== "EEXIST") throw error;
+    }
+  }
+  throw new Error("Could not find a free file name for this memory");
+}
 
 export {
   knowledgeOverview,
@@ -550,5 +593,6 @@ export {
   knowledgeNoteLinks,
   knowledgeGraph,
   dailyDiscoveryContext,
-  saveDiscoveryIdea
+  saveDiscoveryIdea,
+  saveMemoryNote
 };
