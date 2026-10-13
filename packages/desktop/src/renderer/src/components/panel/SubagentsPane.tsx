@@ -173,7 +173,7 @@ function AvailableSection({
 				<span className="ml-auto flex items-center gap-2">
 					<button
 						type="button"
-						className="text-[11px] text-ink-dim hover:text-ink disabled:opacity-50"
+						className="text-xs text-ink-dim hover:text-ink disabled:opacity-50"
 						disabled={loading}
 						onClick={() => void loadAgents(sessionId, true)}
 					>
@@ -182,7 +182,7 @@ function AvailableSection({
 					{snapshot && (
 						<button
 							type="button"
-							className="text-[11px] text-ink-dim hover:text-ink"
+							className="text-xs text-ink-dim hover:text-ink"
 							onClick={() => openDir(snapshot.userAgentsDir)}
 							title={snapshot.userAgentsDir}
 						>
@@ -191,7 +191,7 @@ function AvailableSection({
 					)}
 				</span>
 			</header>
-			{error && <p className="mt-2 text-[11px] text-err">{t("panel.subagents.loadError", { error })}</p>}
+			{error && <p className="mt-2 text-xs text-err">{t("panel.subagents.loadError", { error })}</p>}
 			{loading && !snapshot && <p className="mt-2 text-[11px] text-ink-faint">{t("settings.loading")}</p>}
 			{snapshot && agents.length === 0 && (
 				<div className="mt-2 text-[12px] text-ink-faint" data-testid="subagents-empty-agents">
@@ -209,7 +209,7 @@ function AvailableSection({
 				</div>
 			)}
 			{untrustedCount > 0 && (
-				<p className="mt-2 rounded-lg border border-warn/40 bg-warn/5 px-2 py-1.5 text-[11px] text-warn">
+				<p className="mt-2 rounded-lg border border-warn/40 bg-warn/5 px-2 py-1.5 text-xs text-warn">
 					{t("panel.subagents.untrustedHint", { n: untrustedCount })}
 				</p>
 			)}
@@ -252,14 +252,14 @@ function AgentRow({
 						<span className="flex flex-wrap items-center gap-1.5">
 							<span className="text-[13px] font-semibold text-ink">{agent.name}</span>
 							<span
-								className={`rounded-full border px-1.5 text-[10px] leading-4 ${
+								className={`rounded-full border px-1.5 text-xs leading-4 ${
 									disabled ? "border-warn/50 text-warn" : "border-border text-ink-dim"
 								}`}
 							>
 								{disabled ? t("panel.subagents.untrusted") : t(SOURCE_KEYS[agent.source])}
 							</span>
 						</span>
-						<span className="mt-0.5 line-clamp-2 block text-[11px] text-ink-dim">{agent.description}</span>
+						<span className="mt-0.5 line-clamp-2 block text-xs text-ink-dim">{agent.description}</span>
 					</span>
 					<ChevronDownIcon
 						className={`mt-1 shrink-0 text-ink-faint transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -276,7 +276,7 @@ function AgentRow({
 				</Button>
 			</div>
 			{expanded && (
-				<dl className="mx-1.5 mb-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg bg-surface-2/40 px-2 py-1.5 text-[11px]">
+				<dl className="mx-1.5 mb-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg bg-surface-2/40 px-2 py-1.5 text-xs">
 					<dt className="text-ink-faint">{t("panel.subagents.tools")}</dt>
 					<dd className="flex flex-wrap gap-1">
 						{agent.tools.map((tool) => (
@@ -433,7 +433,7 @@ function DispatchSection({
 			<div className="mt-2 flex flex-col gap-2">
 				{fullAccess && (
 					<p
-						className="rounded-lg border border-warn/40 bg-warn/5 px-2 py-1.5 text-[11px] text-warn"
+						className="rounded-lg border border-warn/40 bg-warn/5 px-2 py-1.5 text-xs text-warn"
 						data-testid="subagents-full-access"
 					>
 						{t("panel.subagents.fullAccessHint")}
@@ -456,7 +456,7 @@ function DispatchSection({
 						}
 					/>
 				))}
-				<div className="flex items-center gap-2 text-[11px]">
+				<div className="flex items-center gap-2 text-xs">
 					<label htmlFor="subagent-stage" className="w-16 shrink-0 text-ink-faint">
 						{t("panel.subagents.stage")}
 					</label>
@@ -479,7 +479,7 @@ function DispatchSection({
 						{t("panel.subagents.stageHint", { contract: stage.contract })}
 					</p>
 				)}
-				<div className="flex items-center gap-2 text-[11px]">
+				<div className="flex items-center gap-2 text-xs">
 					<label htmlFor="subagent-cwd" className="w-16 shrink-0 text-ink-faint">
 						{t("panel.subagents.cwd")}
 					</label>
@@ -494,7 +494,7 @@ function DispatchSection({
 						…
 					</Button>
 				</div>
-				<label className="flex items-start gap-2 text-[11px] text-ink-2">
+				<label className="flex items-start gap-2 text-xs text-ink-2">
 					<input
 						type="checkbox"
 						className="mt-0.5"
@@ -505,7 +505,7 @@ function DispatchSection({
 					<span>{t("panel.subagents.followUp")}</span>
 				</label>
 				{needsTrust && (
-					<label className="flex items-start gap-2 rounded-lg border border-warn/40 bg-warn/5 px-2 py-1.5 text-[11px] text-ink-2">
+					<label className="flex items-start gap-2 rounded-lg border border-warn/40 bg-warn/5 px-2 py-1.5 text-xs text-ink-2">
 						<input
 							type="checkbox"
 							className="mt-0.5"
@@ -518,7 +518,7 @@ function DispatchSection({
 				)}
 				{failure && (
 					<div
-						className="rounded-lg border border-err/40 bg-err/5 px-2 py-1.5 text-[11px] text-err"
+						className="rounded-lg border border-err/40 bg-err/5 px-2 py-1.5 text-xs text-err"
 						data-testid="subagent-dispatch-error"
 					>
 						<p>{t("panel.subagents.dispatchFailed", { error: failure })}</p>
@@ -605,7 +605,7 @@ function TaskRow({
 			className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-2/40 p-2"
 			data-testid="subagent-task-row"
 		>
-			<div className="flex items-center gap-2 text-[11px] text-ink-dim">
+			<div className="flex items-center gap-2 text-xs text-ink-dim">
 				{agent ? (
 					<SubagentAvatar name={agent.name} source={agent.source} size="sm" state="idle" />
 				) : (
@@ -661,7 +661,7 @@ function TaskRow({
 				</div>
 			)}
 			{errorText && (
-				<p className="text-[11px] text-err" data-testid="subagent-task-error">
+				<p className="text-xs text-err" data-testid="subagent-task-error">
 					{errorText}
 				</p>
 			)}
@@ -690,7 +690,7 @@ function RunsSection({
 				<span className="text-[12px] font-medium text-ink">{t("panel.subagents.runs")}</span>
 				<span className="text-[11px] tabular-nums text-ink-faint">{runs.length}</span>
 				{runs.length > 0 && (
-					<span className="ml-auto flex items-center gap-1 text-[11px]">
+					<span className="ml-auto flex items-center gap-1 text-xs">
 						<button
 							type="button"
 							className={`rounded-md px-1.5 py-0.5 ${filter === "active" ? "bg-hover text-ink" : "text-ink-faint hover:text-ink"}`}
@@ -837,7 +837,7 @@ function RunCard({
 					<StatusPill status={run.status} />
 					{run.status === "done" && run.followUp && run.contextState !== "none" && (
 						<span
-							className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] ${
+							className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs ${
 								run.contextState === "delivered" ? "bg-ok/10 text-ok" : "bg-surface-2 text-ink-faint"
 							}`}
 						>
@@ -858,7 +858,7 @@ function RunCard({
 						</button>
 					)}
 				</div>
-				<div className="mt-2 grid gap-1 text-[11px]">
+				<div className="mt-2 grid gap-1 text-xs">
 					<div className="flex min-w-0 gap-2">
 						<span className="shrink-0 text-ink-faint">{t("message.subagent.goal")}</span>
 						<span className="truncate text-ink-2" title={run.task}>
@@ -905,7 +905,7 @@ function RunCard({
 				</div>
 				{request && (
 					<div
-						className={`mt-2 rounded-lg border px-2.5 py-2 text-[11px] ${request.expectsReply ? "border-warn/30 bg-warn/5" : "border-border/60 bg-surface-2/40"}`}
+						className={`mt-2 rounded-lg border px-2.5 py-2 text-xs ${request.expectsReply ? "border-warn/30 bg-warn/5" : "border-border/60 bg-surface-2/40"}`}
 					>
 						<div className="font-medium text-ink-2">
 							{request.reason === "need_decision"
@@ -1029,7 +1029,7 @@ function RunCard({
 						</Button>
 					)}
 				</div>
-				{actionError && <p className="mt-1 text-[11px] text-err">{actionError}</p>}
+				{actionError && <p className="mt-1 text-xs text-err">{actionError}</p>}
 			</div>
 			{expanded && run.sessionFile && (
 				<InlineSubagentTranscript
@@ -1060,7 +1060,7 @@ function StatusPill({ status }: { status: SubagentPanelRun["status"] }) {
 						: "bg-accent/10 text-accent";
 	return (
 		<span
-			className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium ${tone}`}
+			className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium ${tone}`}
 			data-testid="subagent-run-status"
 		>
 			{t(STATUS_KEYS[status])}

@@ -140,13 +140,13 @@ function AgentRow({
 			<SubagentAvatar name={agent.name} source={agent.source} size="md" state="idle" />
 			<span className="min-w-0 flex-1">
 				<span className="block truncate font-semibold text-ink">{agent.name}</span>
-				<span className="block truncate text-[11px] text-ink-dim">
+				<span className="block truncate text-xs text-ink-dim">
 					{agent.description}
 					{availability === "needs_panel" ? ` · ${t("at.subagentNeedsPanel")}` : ""}
 				</span>
 			</span>
 			<span
-				className={`shrink-0 rounded-full border px-1.5 text-[10px] leading-4 ${
+				className={`shrink-0 rounded-full border px-1.5 text-xs leading-4 ${
 					untrusted ? "border-warn/50 text-warn" : "border-border text-ink-dim"
 				}`}
 			>

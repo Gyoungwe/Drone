@@ -58,7 +58,7 @@ export function BrowseSection() {
 					<button
 						key={id || "all"}
 						type="button"
-						className={`rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+						className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
 							type === id ? "bg-ink font-medium text-on-ink" : "bg-hover text-ink-dim hover:text-ink"
 						}`}
 						onClick={() => setCatalogType(id)}

@@ -116,7 +116,7 @@ export function KnowledgeMaintenance({
 			{!!index?.problems.length && (
 				<section className="rounded-xl border border-border p-3">
 					<h4 className="text-xs font-semibold">{t("problems")}</h4>
-					<p className="mt-1 text-[11px] text-ink-dim">{t("problemHint")}</p>
+					<p className="mt-1 text-xs text-ink-dim">{t("problemHint")}</p>
 					<ul className="mt-2 max-h-48 overflow-auto space-y-2">
 						{index.problems.map((item) => (
 							<li key={item.path} className="break-words text-xs">

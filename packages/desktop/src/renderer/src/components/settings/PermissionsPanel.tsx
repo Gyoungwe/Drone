@@ -150,7 +150,7 @@ export function PermissionsEditor(props: PermissionsEditorProps) {
 					<h3 className="text-[13px] font-semibold text-ink">{t("settings.permissions.title")}</h3>
 					<span className="text-[11px] text-ink-faint">{t("settings.permissions.effectHint")}</span>
 				</div>
-				<p className="flex flex-wrap items-center gap-x-2 text-[11px] text-ink-dim">
+				<p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-dim">
 					<span>{t("settings.permissions.file")}</span>
 					<code className="break-all font-mono text-[11px] text-ink-2" data-testid="permissions-path">
 						{snapshot.path}
@@ -160,13 +160,13 @@ export function PermissionsEditor(props: PermissionsEditorProps) {
 					<p className="text-[11px] text-ink-faint">{t("settings.permissions.missingFile")}</p>
 				)}
 				{snapshot.parseError && (
-					<p className="rounded-md border border-err/40 bg-err/5 px-2 py-1 text-[11px] text-err">
+					<p className="rounded-md border border-err/40 bg-err/5 px-2 py-1 text-xs text-err">
 						{t("settings.permissions.parseError", { error: snapshot.parseError })}
 					</p>
 				)}
 				{!snapshot.effective.enabled && (
 					<p
-						className="rounded-md border border-warn/40 bg-warn/10 px-2 py-1 text-[11px] text-ink"
+						className="rounded-md border border-warn/40 bg-warn/10 px-2 py-1 text-xs text-ink"
 						data-testid="permissions-disabled-banner"
 					>
 						⚠ {t("settings.permissions.disabledBanner")}
@@ -392,7 +392,7 @@ function ToolPatternBlock({
 			{probe && (
 				<div className="space-y-1" data-testid="permissions-probe">
 					<div className="flex items-center gap-1.5">
-						<span className="shrink-0 text-[11px] text-ink-dim">{t("settings.permissions.probe")}</span>
+						<span className="shrink-0 text-xs text-ink-dim">{t("settings.permissions.probe")}</span>
 						<input
 							className="min-w-0 flex-1 rounded-md border border-border bg-bg px-2 py-0.5 font-mono text-[11px] text-ink outline-none focus:border-ink-faint"
 							value={command}
@@ -416,7 +416,7 @@ function ToolPatternBlock({
 						</Button>
 					</div>
 					{result && <ProbeSummary rows={tool.rows} result={result} />}
-					<p className="text-[10px] text-ink-faint">{t("settings.permissions.probeNote")}</p>
+					<p className="text-[11px] text-ink-faint">{t("settings.permissions.probeNote")}</p>
 				</div>
 			)}
 		</div>
@@ -428,7 +428,7 @@ export function ProbeSummary({ rows, result }: { rows: PatternRow[]; result: Per
 	const t = useT();
 	const hitIndex = rowNumber(rows, result.pattern);
 	return (
-		<p className="text-[11px] text-ink-dim" data-testid="probe-result" data-action={result.action}>
+		<p className="text-xs text-ink-dim" data-testid="probe-result" data-action={result.action}>
 			{result.pattern && hitIndex !== null
 				? t("settings.permissions.probeHit", {
 						index: hitIndex,
@@ -469,7 +469,7 @@ function AddToolRule({
 	};
 	return (
 		<div className="flex flex-wrap items-center gap-1.5" data-testid="add-tool-rule">
-			<span className="text-[11px] text-ink-dim">{t("settings.permissions.addTool")}</span>
+			<span className="text-xs text-ink-dim">{t("settings.permissions.addTool")}</span>
 			<select
 				className="rounded-md border border-border bg-bg px-1.5 py-0.5 text-[11px] text-ink outline-none focus:border-ink-faint"
 				value={candidates.includes(choice) || choice === "__custom" ? choice : "__custom"}
@@ -540,7 +540,7 @@ function AuditDisclosure({
 				) : entries.length === 0 ? (
 					<p className="text-[11px] text-ink-faint">{t("settings.permissions.auditEmpty")}</p>
 				) : (
-					<ol className="max-h-56 space-y-1 overflow-y-auto font-mono text-[10.5px] text-ink-dim">
+					<ol className="max-h-56 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-dim">
 						{entries.map((entry) => (
 							<li key={`${entry.t}|${entry.tool}|${entry.text}|${entry.cwd ?? ""}`} className="flex gap-2">
 								<span className="shrink-0 text-ink-faint">{entry.t.replace("T", " ").slice(0, 19)}</span>
@@ -577,10 +577,7 @@ function ResetButton({ onReset, disabled }: { onReset: () => void; disabled: boo
 		);
 	}
 	return (
-		<span
-			className="flex items-center gap-1.5 text-[11px] text-ink-dim"
-			data-testid="permissions-reset-confirm"
-		>
+		<span className="flex items-center gap-1.5 text-xs text-ink-dim" data-testid="permissions-reset-confirm">
 			{t("settings.permissions.restoreConfirm")}
 			<Button
 				size="sm"
@@ -621,7 +618,7 @@ function StatusLine({
 	if (conflict) {
 		return (
 			<div
-				className="space-y-1 rounded-md border border-warn/40 bg-warn/10 px-2 py-1.5 text-[11px] text-ink"
+				className="space-y-1 rounded-md border border-warn/40 bg-warn/10 px-2 py-1.5 text-xs text-ink"
 				data-testid="permissions-conflict"
 			>
 				<p className="font-medium">{t("settings.permissions.conflictTitle")}</p>
@@ -639,7 +636,7 @@ function StatusLine({
 	}
 	if (error) {
 		return (
-			<p className="text-[11px] text-err" data-testid="permissions-status">
+			<p className="text-xs text-err" data-testid="permissions-status">
 				{error}
 			</p>
 		);
@@ -647,7 +644,7 @@ function StatusLine({
 	if (issues.length > 0) {
 		const codes = Array.from(new Set(issues.map((issue) => issue.code)));
 		return (
-			<div className="text-[11px] text-err" data-testid="permissions-status" data-state="invalid">
+			<div className="text-xs text-err" data-testid="permissions-status" data-state="invalid">
 				<p>{t("settings.permissions.invalid", { count: issues.length })}</p>
 				<ul className="mt-0.5 list-disc pl-4 text-ink-dim">
 					{codes.map((code) => (
@@ -659,14 +656,14 @@ function StatusLine({
 	}
 	if (dirty) {
 		return (
-			<p className="text-[11px] text-ink-dim" data-testid="permissions-status" data-state="dirty">
+			<p className="text-xs text-ink-dim" data-testid="permissions-status" data-state="dirty">
 				{t("settings.permissions.unsaved")}
 			</p>
 		);
 	}
 	if (savedAt) {
 		return (
-			<p className="text-[11px] text-ok" data-testid="permissions-status" data-state="saved">
+			<p className="text-xs text-ok" data-testid="permissions-status" data-state="saved">
 				{t("settings.permissions.saved")}
 			</p>
 		);

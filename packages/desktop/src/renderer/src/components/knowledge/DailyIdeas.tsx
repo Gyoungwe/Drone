@@ -85,7 +85,7 @@ export function DailyIdeas({
 						? t("dailyLastRun").replace("{time}", new Date(state.lastRunAt).toLocaleString())
 						: t("dailyNeverRun")}
 				</span>
-				<span className="ml-auto flex items-center gap-2 text-[11px] text-ink-dim">
+				<span className="ml-auto flex items-center gap-2 text-xs text-ink-dim">
 					{t("dailyEnabled")}
 					<Switch
 						checked={state.enabled}
@@ -107,7 +107,7 @@ export function DailyIdeas({
 				</p>
 			)}
 			{!error && state.lastError && (
-				<p role="status" className="mb-2 break-words text-[11px] text-err">
+				<p role="status" className="mb-2 break-words text-xs text-err">
 					{t("dailyFailed").replace("{error}", state.lastError)}
 				</p>
 			)}
@@ -124,12 +124,12 @@ export function DailyIdeas({
 						<li key={idea.id} className="rounded-xl border border-border p-3 text-xs">
 							<div className="flex items-start gap-2">
 								<p className="min-w-0 flex-1 font-medium">{idea.title}</p>
-								<span className="shrink-0 rounded-full bg-hover px-2 py-0.5 text-[11px] text-warn">
+								<span className="shrink-0 rounded-full bg-hover px-2 py-0.5 text-xs text-warn">
 									{t("dailySpeculative")}
 								</span>
 							</div>
 							<p className="mt-1 leading-relaxed">{idea.idea}</p>
-							<p className="mt-2 text-[11px] text-ink-dim">
+							<p className="mt-2 text-xs text-ink-dim">
 								<span className="font-medium">{t("dailyBasis")}</span>{" "}
 								{idea.basis.map((path, index) => (
 									<span key={path}>
@@ -152,7 +152,7 @@ export function DailyIdeas({
 									</span>
 								))}
 							</p>
-							<p className="mt-1 text-[11px] text-ink-dim">
+							<p className="mt-1 text-xs text-ink-dim">
 								<span className="font-medium">{t("dailyTest")}</span> {idea.test}
 							</p>
 							{idea.whyOverlooked && <p className="mt-1 text-[11px] text-ink-faint">{idea.whyOverlooked}</p>}

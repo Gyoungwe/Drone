@@ -54,7 +54,7 @@ function ProjectPicker() {
 							<CoffeeIcon size={10} />
 						</span>
 					) : (
-						<span className="flex h-4.5 w-4.5 items-center justify-center rounded bg-ink text-[11px] font-semibold text-on-ink">
+						<span className="flex h-4.5 w-4.5 items-center justify-center rounded bg-ink text-xs font-semibold text-on-ink">
 							{(name?.[0] ?? "P").toUpperCase()}
 						</span>
 					)}
@@ -103,7 +103,7 @@ function ProjectPicker() {
 							</span>
 							<span className="min-w-0 text-left">
 								<span className="block truncate">{project.name}</span>
-								<span className="block break-all text-[11px] text-ink-dim">{project.cwd}</span>
+								<span className="block break-all text-xs text-ink-dim">{project.cwd}</span>
 							</span>
 						</button>
 					))}
@@ -184,7 +184,7 @@ function BranchPicker({ cwd }: { cwd: string | null }) {
 					</>
 				)}
 			</Dropdown>
-			{error && <span className="text-[11px] text-red-500">{error}</span>}
+			{error && <span className="text-xs text-red-500">{error}</span>}
 		</>
 	);
 }

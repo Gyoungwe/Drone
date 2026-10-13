@@ -27,7 +27,7 @@ export function GeneralPanel() {
 						<button
 							key={lang}
 							type="button"
-							className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+							className={`rounded-md border px-2 py-1 text-xs transition-colors ${
 								language === lang
 									? "border-ink bg-ink text-on-ink"
 									: "border-border text-ink-2 hover:border-border-strong hover:bg-hover"
@@ -49,7 +49,7 @@ export function GeneralPanel() {
 							key={mode}
 							type="button"
 							disabled={contextManagerMode === null}
-							className={`rounded-md border px-2 py-1 text-[11px] transition-colors disabled:opacity-50 ${
+							className={`rounded-md border px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
 								contextManagerMode === mode
 									? "border-ink bg-ink text-on-ink"
 									: "border-border text-ink-2 hover:border-border-strong hover:bg-hover"
@@ -81,7 +81,7 @@ export function GeneralPanel() {
 						</p>
 					</div>
 					<div className="flex shrink-0 items-center gap-1.5">
-						<span className="inline-flex items-center gap-1.5 rounded-full border border-border px-1.5 py-0.5 text-[11px] font-medium text-ink-dim">
+						<span className="inline-flex items-center gap-1.5 rounded-full border border-border px-1.5 py-0.5 text-xs font-medium text-ink-dim">
 							<span className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true" />
 							{t("settings.sshGuard.enabled")}
 						</span>

@@ -140,7 +140,7 @@ export function WikiReviewPanel({
 	}
 	return (
 		<div className="space-y-3" data-testid="wiki-review-panel">
-			<p className="text-[11px] leading-relaxed text-ink-dim">{t("originProject")}</p>
+			<p className="text-xs leading-relaxed text-ink-dim">{t("originProject")}</p>
 			{!cwd && <p className="text-xs text-warn">{t("selectProject")}</p>}
 			{result && (
 				<p role="status" className="rounded-lg bg-hover p-3 text-xs">
@@ -177,7 +177,7 @@ export function WikiReviewPanel({
 								<span className="block break-words text-xs font-medium">{item.title}</span>
 								<span className="mt-1 block break-all font-mono text-[11px] text-ink-dim">{item.path}</span>
 								{(item.expired || item.bindingChanged) && (
-									<span className="mt-1 block text-[11px] text-warn">
+									<span className="mt-1 block text-xs text-warn">
 										{item.expired ? t("expired") : t("stalePreview")}
 									</span>
 								)}
@@ -227,7 +227,7 @@ export function WikiReviewPanel({
 									{t("reason")}：{preview.rationale}
 								</p>
 							</div>
-							<p className="rounded-lg bg-hover p-2 text-[11px] text-ink-dim">{t("preserve")}</p>
+							<p className="rounded-lg bg-hover p-2 text-xs text-ink-dim">{t("preserve")}</p>
 							<div className="flex flex-wrap gap-1" role="tablist" aria-label={t("reviewTitle")}>
 								{(["diff", "both", "protected"] as const).map((tab) => (
 									<button
@@ -268,7 +268,7 @@ export function WikiReviewPanel({
 									{(["before", "after"] as const).map((side) => (
 										<div key={side} className="min-w-0">
 											<p className="mb-1 text-xs font-medium">{t(side)}</p>
-											<pre className="max-h-[38vh] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-[11px] leading-relaxed">
+											<pre className="max-h-[38vh] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-xs leading-relaxed">
 												{preview[side] || "—"}
 											</pre>
 										</div>
@@ -276,7 +276,7 @@ export function WikiReviewPanel({
 								</div>
 							)}
 							{view === "protected" && (
-								<pre className="max-h-[38vh] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-[11px] leading-relaxed">
+								<pre className="max-h-[38vh] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-hover p-3 text-xs leading-relaxed">
 									{preview.protectedText || "—"}
 								</pre>
 							)}
@@ -289,11 +289,11 @@ export function WikiReviewPanel({
 											className="flex flex-wrap items-start justify-between gap-1 rounded-lg border border-border px-2 py-1.5"
 										>
 											<div className="min-w-0">
-												<p className="break-all text-[11px]">{source.path}</p>
+												<p className="break-all text-xs">{source.path}</p>
 												<p className="font-mono text-[11px] text-ink-faint">
 													L{source.startLine}–{source.endLine} · {source.hash?.slice(0, 12)}
 												</p>
-												{source.changed && <p className="text-[11px] text-warn">{t("sourceChanged")}</p>}
+												{source.changed && <p className="text-xs text-warn">{t("sourceChanged")}</p>}
 											</div>
 											<Button size="sm" onClick={() => setReadPath(source.path)}>
 												{t("openSource")}
@@ -340,7 +340,7 @@ export function WikiReviewPanel({
 									}}
 								/>
 							)}
-							<p className="text-[11px] text-ink-dim">{t("notScience")}</p>
+							<p className="text-xs text-ink-dim">{t("notScience")}</p>
 							<label className="flex items-start gap-2 text-xs">
 								<input
 									type="checkbox"

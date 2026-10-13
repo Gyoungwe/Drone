@@ -37,7 +37,7 @@ export function KnowledgeHome({
 					{binding ? (
 						<>
 							<p className="break-all font-mono text-xs">{binding.vault}</p>
-							<p className="mt-1 text-[11px] text-ink-dim">
+							<p className="mt-1 text-xs text-ink-dim">
 								{t("notes")} {data?.index?.noteCount ?? "—"} · {t("pending")}{" "}
 								{data?.index?.pendingChanges ?? "—"}
 							</p>
@@ -126,7 +126,7 @@ export function KnowledgeHome({
 				</section>
 			)}
 			{!binding && data?.enabled && (
-				<p className="text-[11px] leading-relaxed text-ink-dim">{t("homeManageHint")}</p>
+				<p className="text-xs leading-relaxed text-ink-dim">{t("homeManageHint")}</p>
 			)}
 		</div>
 	);

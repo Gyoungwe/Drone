@@ -10,7 +10,7 @@
 .workbench-nav-item {
 	height: 36px;
 	width: 36px;
-	border-radius: 10px;
+	border-radius: var(--radius-md);
 	transition:
 		background-color var(--duration-fast) var(--ease-standard),
 		color var(--duration-fast) var(--ease-standard);
@@ -25,7 +25,7 @@
 
 /* ---------- 设置弹窗：两栏，导航中性选中，标题更醒目，内容留白更大 ---------- */
 .settings-dialog-shell .settings-dialog {
-	border-radius: 18px;
+	border-radius: var(--radius-dialog);
 	border-color: var(--color-border);
 }
 .settings-dialog-shell .settings-dialog > div:first-child {
@@ -48,7 +48,7 @@
 	border: 0;
 	padding: 6px 10px;
 	font-size: 13px;
-	border-radius: 8px;
+	border-radius: var(--radius-md);
 }
 .settings-dialog-shell .settings-nav-item:hover {
 	background: var(--highlight);

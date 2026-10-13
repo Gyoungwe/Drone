@@ -71,10 +71,10 @@ export function ResearchRunsCard({
 			<div className="flex flex-wrap items-center justify-between gap-2">
 				<div>
 					<h3 className="text-xs font-semibold">{t("researchRuns")}</h3>
-					<p className="mt-1 text-[11px] text-ink-dim">{t("researchRunsHint")}</p>
+					<p className="mt-1 text-xs text-ink-dim">{t("researchRunsHint")}</p>
 				</div>
 				{selected && (
-					<span className="rounded-full bg-hover px-2 py-0.5 text-[11px] text-ink-dim">
+					<span className="rounded-full bg-hover px-2 py-0.5 text-xs text-ink-dim">
 						{selected.answerable ? t("researchAnswerable") : t("researchInProgress")}
 					</span>
 				)}
@@ -94,9 +94,9 @@ export function ResearchRunsCard({
 							>
 								<div className="flex items-center justify-between gap-2">
 									<span className="truncate font-medium">{run.resultSlug}</span>
-									<span className="text-[10px] text-ink-faint">{run.stage}</span>
+									<span className="text-[11px] text-ink-faint">{run.stage}</span>
 								</div>
-								<p className="mt-1 line-clamp-2 text-[11px] text-ink-dim">{run.query || run.runId}</p>
+								<p className="mt-1 line-clamp-2 text-xs text-ink-dim">{run.query || run.runId}</p>
 							</button>
 						))}
 					</div>
@@ -129,9 +129,9 @@ export function ResearchRunsCard({
 									}))}
 								/>
 							</div>
-							<p className="mt-2 text-[11px] text-ink-dim">{t("researchRouteHint")}</p>
+							<p className="mt-2 text-xs text-ink-dim">{t("researchRouteHint")}</p>
 							{selected.gaps && selected.gaps.length > 0 && (
-								<div className="mt-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-[11px] text-warn">
+								<div className="mt-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs text-warn">
 									<span className="font-medium">{t("researchGaps")}: </span>
 									{selected.gaps.join(" · ")}
 								</div>
@@ -140,14 +140,14 @@ export function ResearchRunsCard({
 								(selected.governance.duplicateSources.length > 0 ||
 									selected.governance.staleSources.length > 0 ||
 									selected.governance.unavailableSources.length > 0) && (
-									<p className="mt-2 text-[11px] text-warn">
+									<p className="mt-2 text-xs text-warn">
 										{t("researchGovernance")}: {selected.governance.duplicateSources.length}{" "}
 										{t("researchDuplicates")}, {selected.governance.staleSources.length} {t("researchStale")},{" "}
 										{selected.governance.unavailableSources.length} {t("researchUnavailable")}
 									</p>
 								)}
 							{selected.timeline && selected.timeline.length > 0 && (
-								<details className="mt-2 text-[11px]">
+								<details className="mt-2 text-xs">
 									<summary className="cursor-pointer font-medium">
 										{t("researchTimeline")} ({selected.timeline.length})
 									</summary>
@@ -181,10 +181,10 @@ export function ResearchRunsCard({
 								</div>
 							</div>
 							{selected.warnings.length > 0 && (
-								<p className="mt-2 text-[11px] text-warn">{selected.warnings.join(" · ")}</p>
+								<p className="mt-2 text-xs text-warn">{selected.warnings.join(" · ")}</p>
 							)}
 							{selected.sources.length > 0 && (
-								<div className="mt-2 space-y-1 text-[11px]">
+								<div className="mt-2 space-y-1 text-xs">
 									<p className="text-ink-dim">{t("researchSourceList")}</p>
 									{selected.sources.slice(0, 8).map((source) => (
 										<button
@@ -199,7 +199,7 @@ export function ResearchRunsCard({
 								</div>
 							)}
 							{selected.claims.length > 0 && (
-								<ul className="mt-2 space-y-1 text-[11px] text-ink-dim">
+								<ul className="mt-2 space-y-1 text-xs text-ink-dim">
 									{selected.claims.slice(0, 6).map((claim) => (
 										<li key={claim.id || claim.claim}>
 											<span className="font-medium">[{claim.relationship || claim.status}]</span>{" "}
@@ -212,7 +212,7 @@ export function ResearchRunsCard({
 								</ul>
 							)}
 							{selected.provenance && (
-								<div className="mt-3 rounded-lg border border-border px-3 py-2 text-[11px]">
+								<div className="mt-3 rounded-lg border border-border px-3 py-2 text-xs">
 									<span className="text-ink-dim">{t("researchProvenance")}: </span>
 									<span>{selected.provenance.status}</span>
 									{selected.provenance.limitations.length > 0 && (

@@ -144,7 +144,7 @@ export function SemanticManagement({
 	}
 	return (
 		<section className="space-y-3" data-testid="knowledge-semantic">
-			<p className="text-[11px] text-ink-dim">{t("semanticOptIn")}</p>
+			<p className="text-xs text-ink-dim">{t("semanticOptIn")}</p>
 			<div className="grid gap-2 sm:grid-cols-2">
 				<label className="text-xs text-ink-dim">
 					{t("provider")}
@@ -213,7 +213,7 @@ export function SemanticManagement({
 				/>
 				<span>{t("remoteConsent")}</span>
 			</label>
-			<p className="text-[11px] text-ink-dim">{t("testSemanticHint")}</p>
+			<p className="text-xs text-ink-dim">{t("testSemanticHint")}</p>
 			<div className="flex flex-wrap gap-1">
 				<Button size="sm" disabled={busy} onClick={() => void save()}>
 					{t("saveSemantic")}
@@ -227,7 +227,7 @@ export function SemanticManagement({
 				</Button>
 			</div>
 			<div className="border-t border-border pt-3">
-				<p className="text-[11px] text-ink-dim">{t("semanticIndexHint")}</p>
+				<p className="text-xs text-ink-dim">{t("semanticIndexHint")}</p>
 				<div className="mt-2 flex flex-wrap gap-1">
 					<Button
 						size="sm"
@@ -241,10 +241,10 @@ export function SemanticManagement({
 						{t("semanticCancel")}
 					</Button>
 				</div>
-				{(!config.enabled || !saved) && <p className="mt-2 text-[11px] text-warn">{t("semanticDisabled")}</p>}
+				{(!config.enabled || !saved) && <p className="mt-2 text-xs text-warn">{t("semanticDisabled")}</p>}
 			</div>
 			{status?.index && (
-				<p className="text-[11px] text-ink-dim">
+				<p className="text-xs text-ink-dim">
 					{t("topicStatus")}: {String(status.index.coverage ?? status.index.status ?? t("unknown"))}
 					{status.index.semantic?.vectors !== undefined
 						? ` · ${t("processed")}: ${status.index.semantic.vectors}`
@@ -252,7 +252,7 @@ export function SemanticManagement({
 				</p>
 			)}
 			{result && (
-				<p className="text-[11px] text-ink-dim">
+				<p className="text-xs text-ink-dim">
 					{t("processed")}: {result.processed ?? "—"}
 					{result.dimension ? ` · ${t("semanticDimension")}: ${result.dimension}` : ""}.{" "}
 					{t("semanticFallback")}

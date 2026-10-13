@@ -166,17 +166,17 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 						{stateLabel}
 					</span>
 					{phase && (
-						<span className="shrink-0 rounded-full border border-border/60 px-1.5 py-0.5 text-[11px] text-ink-dim">
+						<span className="shrink-0 rounded-full border border-border/60 px-1.5 py-0.5 text-xs text-ink-dim">
 							{phase}
 						</span>
 					)}
 					{panel?.status === "waiting_approval" && (
-						<span className="shrink-0 rounded-full bg-warn/10 px-1.5 py-0.5 text-[11px] font-medium text-warn">
+						<span className="shrink-0 rounded-full bg-warn/10 px-1.5 py-0.5 text-xs font-medium text-warn">
 							{t("message.subagent.waitingApproval")}
 						</span>
 					)}
 					{request?.expectsReply && (
-						<span className="shrink-0 rounded-full bg-warn/10 px-1.5 py-0.5 text-[11px] font-medium text-warn">
+						<span className="shrink-0 rounded-full bg-warn/10 px-1.5 py-0.5 text-xs font-medium text-warn">
 							{t("message.subagent.replyNeeded")}
 						</span>
 					)}
@@ -187,7 +187,7 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 					)}
 				</div>
 
-				<div className="mt-2 grid gap-1.5 text-[11px]">
+				<div className="mt-2 grid gap-1.5 text-xs">
 					{run.task && (
 						<div className="flex min-w-0 gap-2">
 							<span className="shrink-0 text-ink-faint">{t("message.subagent.goal")}</span>
@@ -238,7 +238,7 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 
 			{request && (
 				<div
-					className={`mx-3 mb-2 rounded-lg border px-2.5 py-2 text-[11px] ${request.expectsReply ? "border-warn/30 bg-warn/5" : "border-border/60 bg-surface-2/40"}`}
+					className={`mx-3 mb-2 rounded-lg border px-2.5 py-2 text-xs ${request.expectsReply ? "border-warn/30 bg-warn/5" : "border-border/60 bg-surface-2/40"}`}
 				>
 					<div className="font-medium text-ink-2">{supervisorReasonLabel(t, request.reason)}</div>
 					<div className="mt-1 whitespace-pre-wrap text-ink-dim">{request.message}</div>
@@ -251,13 +251,13 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 									if (e.key === "Enter" && !e.shiftKey) void sendReply();
 								}}
 								placeholder={t("message.subagent.replyPlaceholder")}
-								className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] text-ink outline-none focus:border-accent"
+								className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-ink outline-none focus:border-accent"
 							/>
 							<button
 								type="button"
 								disabled={sending || !reply.trim()}
 								onClick={() => void sendReply()}
-								className="rounded-md bg-accent px-2.5 py-1.5 text-[11px] font-medium text-white disabled:opacity-40"
+								className="rounded-md bg-accent px-2.5 py-1.5 text-xs font-medium text-white disabled:opacity-40"
 							>
 								{t("message.subagent.reply")}
 							</button>
@@ -275,19 +275,19 @@ function SubagentRunRow({ run }: { run: SubagentRunUi }) {
 							if (e.key === "Enter" && !e.shiftKey) void sendGuide();
 						}}
 						placeholder={t("message.subagent.guidePlaceholder")}
-						className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] text-ink outline-none focus:border-accent"
+						className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-ink outline-none focus:border-accent"
 					/>
 					<button
 						type="button"
 						disabled={sending || !guide.trim()}
 						onClick={() => void sendGuide()}
-						className="rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[11px] font-medium text-ink-2 hover:bg-hover disabled:opacity-40"
+						className="rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-xs font-medium text-ink-2 hover:bg-hover disabled:opacity-40"
 					>
 						{t("message.subagent.send")}
 					</button>
 				</div>
 			)}
-			{controlError && <div className="mx-3 mb-2 text-[11px] text-err">{controlError}</div>}
+			{controlError && <div className="mx-3 mb-2 text-xs text-err">{controlError}</div>}
 			{expanded && expandable && <InlineSubagentTranscript run={run} />}
 		</div>
 	);
@@ -307,7 +307,7 @@ export function SubagentRunCard({ runs }: { runs: SubagentRunUi[] }) {
 			{first ? (
 				// 面板派发的系统条目：解释「这个子智能体是谁派发的」（custom entry 持久化，模型不可见）
 				<div
-					className="flex items-center gap-1.5 border-l-2 border-border px-2 text-[11px] text-ink-dim"
+					className="flex items-center gap-1.5 border-l-2 border-border px-2 text-xs text-ink-dim"
 					data-testid="subagent-dispatch-line"
 				>
 					<SubagentAvatar name={first.agent} source={first.source} size="sm" state="idle" />

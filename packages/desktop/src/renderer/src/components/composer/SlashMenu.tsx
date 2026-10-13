@@ -84,7 +84,7 @@ export function SlashMenu({
 			{!query && specializedCount > 0 && onToggleSpecialized && (
 				<button
 					type="button"
-					className="sticky top-0 z-10 w-full border-b border-border bg-surface px-3 py-2 text-left text-[11px] text-ink-dim hover:bg-hover"
+					className="sticky top-0 z-10 w-full border-b border-border bg-surface px-3 py-2 text-left text-xs text-ink-dim hover:bg-hover"
 					aria-expanded={showSpecialized}
 					onMouseDown={(event) => event.preventDefault()}
 					onClick={onToggleSpecialized}

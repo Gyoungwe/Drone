@@ -63,8 +63,8 @@ export function KnowledgeSpecialists({
 					<option value="off">{t("specialistOff")}</option>
 				</select>
 			</div>
-			<p className="mt-2 text-[11px] leading-relaxed text-ink-dim">{t("specialistCost")}</p>
-			{!permitted && <p className="mt-2 text-[11px] text-warn">{t("specialistDenied")}</p>}
+			<p className="mt-2 text-xs leading-relaxed text-ink-dim">{t("specialistCost")}</p>
+			{!permitted && <p className="mt-2 text-xs text-warn">{t("specialistDenied")}</p>}
 			{error && (
 				<p role="alert" className="mt-2 break-words text-xs text-err">
 					{error}
@@ -98,7 +98,7 @@ export function KnowledgeSpecialists({
 									{trigger}
 								</span>
 							</div>
-							<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">
+							<p className="mt-1 text-xs leading-relaxed text-ink-dim">
 								{agent.role === "reviewer" ? agent.description : t(`specialist_${agent.role}_hint`)}
 							</p>
 							<div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -107,7 +107,7 @@ export function KnowledgeSpecialists({
 									<select
 										value={selected}
 										onChange={(e) => void setSubagentModel(agent.name, e.target.value || null)}
-										className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-[11px] text-ink"
+										className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-xs text-ink"
 									>
 										<option value="">{t("specialistFollowMain")}</option>
 										{selected && !selectedModel && (
@@ -132,7 +132,7 @@ export function KnowledgeSpecialists({
 												(e.target.value || null) as SubagentThinkingLevel | null,
 											)
 										}
-										className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-[11px] text-ink"
+										className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-xs text-ink"
 									>
 										<option value="">{t("specialistFollowMain")}</option>
 										{selectedThinking && !supportedThinking.includes(selectedThinking) && (
@@ -170,7 +170,7 @@ export function KnowledgeSpecialists({
 					);
 				})}
 			</div>
-			<p className="mt-3 text-[11px] text-ink-dim">{t("specialistLimits")}</p>
+			<p className="mt-3 text-xs text-ink-dim">{t("specialistLimits")}</p>
 			<Button
 				size="sm"
 				className="mt-2"

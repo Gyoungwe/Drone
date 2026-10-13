@@ -67,12 +67,12 @@ function HostRow({
 					<span className="mt-0.5 block truncate font-mono text-[11px] text-ink-faint">{host.alias}</span>
 				</div>
 				<span
-					className={`rounded-full border border-border px-2 py-0.5 text-[11px] ${statusTone(host.health.status)}`}
+					className={`rounded-full border border-border px-2 py-0.5 text-xs ${statusTone(host.health.status)}`}
 				>
 					{statusLabel(t, host.health.status)}
 				</span>
 			</div>
-			<div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-ink-dim">
+			<div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-ink-dim">
 				<div>
 					<span className="mr-1 text-ink-faint">{t("panel.compute.kind")}:</span>
 					{host.kind}
@@ -157,7 +157,7 @@ function HostRow({
 							<p className="mt-1 text-[12px] text-ink">
 								nf-core/rnaseq <span className="text-ink-faint">· {t("panel.compute.planVersion")}</span>
 							</p>
-							<p className="mt-0.5 text-[11px] text-ink-dim">{t("panel.compute.planSummary")}</p>
+							<p className="mt-0.5 text-xs text-ink-dim">{t("panel.compute.planSummary")}</p>
 						</div>
 						<button
 							type="button"
@@ -190,9 +190,9 @@ function JobRow({
 				<button type="button" className="truncate text-left text-[12px] text-ink" onClick={onSelect}>
 					{job.label || job.id}
 				</button>
-				<span className={`text-[11px] ${statusTone(job.state)}`}>{statusLabel(t, job.state)}</span>
+				<span className={`text-xs ${statusTone(job.state)}`}>{statusLabel(t, job.state)}</span>
 			</div>
-			<div className="text-[11px] text-ink-dim">{job.hostId}</div>
+			<div className="text-xs text-ink-dim">{job.hostId}</div>
 			{(job.state === "queued" || job.state === "running") && (
 				<button type="button" className="panel-action self-start" onClick={onCancel}>
 					{t("panel.compute.cancel")}
@@ -300,7 +300,7 @@ export function ComputePane() {
 						<h4 className="text-[12px] font-medium text-ink">{t("panel.compute.hosts")}</h4>
 						<p className="mt-0.5 text-[11px] text-ink-faint">{t("panel.compute.hostsHint")}</p>
 					</div>
-					<span className="font-mono text-[10px] text-ink-faint">
+					<span className="font-mono text-[11px] text-ink-faint">
 						{health
 							? `${t("panel.compute.updated")} ${new Date(health.checkedAt).toLocaleTimeString()}`
 							: "—"}
@@ -417,7 +417,7 @@ export function ComputePane() {
 				</form>
 			</section>
 			<section className="mb-3">
-				<div className="mb-1 text-[11px] text-ink-dim">{t("panel.compute.jobs")}</div>
+				<div className="mb-1 text-xs text-ink-dim">{t("panel.compute.jobs")}</div>
 				{jobs.length ? (
 					<ul className="space-y-2">
 						{jobs.map((job) => (
@@ -436,14 +436,14 @@ export function ComputePane() {
 					<p className="panel-empty">{t("panel.compute.noJobs")}</p>
 				)}
 				{selectedJobId && (
-					<pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-ink/5 p-2 text-[11px] text-ink">
+					<pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-ink/5 p-2 text-xs text-ink">
 						{logsByJob[selectedJobId]?.text || t("panel.compute.noLogs")}
 					</pre>
 				)}
 			</section>
 			{terminal && (
 				<section className="panel-card mb-3" data-testid="compute-terminal">
-					<div className="mb-1 flex items-center justify-between text-[11px] text-ink-dim">
+					<div className="mb-1 flex items-center justify-between text-xs text-ink-dim">
 						<span>{t("panel.compute.terminal")}</span>
 						<span>{terminal.state}</span>
 						<button
@@ -457,12 +457,12 @@ export function ComputePane() {
 							{t("panel.compute.close")}
 						</button>
 					</div>
-					<pre className="max-h-36 overflow-auto whitespace-pre-wrap rounded bg-ink/5 p-2 text-[11px] text-ink">
+					<pre className="max-h-36 overflow-auto whitespace-pre-wrap rounded bg-ink/5 p-2 text-xs text-ink">
 						{terminal.output || t("panel.compute.terminalEmpty")}
 					</pre>
 					<div className="mt-2 flex gap-1">
 						<input
-							className="min-w-0 flex-1 rounded border border-ink/20 px-2 py-1 text-[11px]"
+							className="min-w-0 flex-1 rounded border border-ink/20 px-2 py-1 text-xs"
 							value={terminalInput}
 							onChange={(event) => setTerminalInput(event.target.value)}
 							onKeyDown={(event) => {
@@ -477,12 +477,12 @@ export function ComputePane() {
 				</section>
 			)}
 			<section>
-				<div className="mb-1 text-[11px] text-ink-dim">{t("panel.compute.onboarding")}</div>
+				<div className="mb-1 text-xs text-ink-dim">{t("panel.compute.onboarding")}</div>
 				<ul className="space-y-1">
 					{onboarding.map((item) => (
 						<li
 							key={item.step}
-							className={`flex items-center justify-between gap-2 text-[11px] ${statusTone(item.state)}`}
+							className={`flex items-center justify-between gap-2 text-xs ${statusTone(item.state)}`}
 						>
 							<span>
 								{item.step}: {item.summary}

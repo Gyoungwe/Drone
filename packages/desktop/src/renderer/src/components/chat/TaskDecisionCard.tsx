@@ -65,7 +65,7 @@ export function TaskDecisionCard({
 					<button
 						type="button"
 						disabled={busy || !sessionId || agentActive}
-						className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-40"
+						className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-ink-2 hover:bg-hover disabled:opacity-40"
 						onClick={() => {
 							const actionId = decision.completeActionId;
 							if (!actionId) return;
@@ -79,7 +79,7 @@ export function TaskDecisionCard({
 					<button
 						type="button"
 						disabled={busy || !sessionId || agentActive}
-						className="rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-600 disabled:opacity-40"
+						className="rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-600 disabled:opacity-40"
 						onClick={() => void send("继续")}
 					>
 						{decision.deferLabel}
@@ -89,7 +89,7 @@ export function TaskDecisionCard({
 					<button
 						type="button"
 						disabled={busy || !sessionId || agentActive}
-						className="rounded-md border border-border px-2 py-1 text-[11px] text-ink-dim hover:bg-hover disabled:opacity-40"
+						className="rounded-md border border-border px-2 py-1 text-xs text-ink-dim hover:bg-hover disabled:opacity-40"
 						onClick={() => void send(taskActionCommand(view, task.id, "cancel"))}
 					>
 						{decision.endLabel}
@@ -97,17 +97,17 @@ export function TaskDecisionCard({
 				)}
 			</div>
 			<details className="mt-2">
-				<summary className="cursor-pointer text-[11px] text-ink-dim">{decision.detailsLabel}</summary>
+				<summary className="cursor-pointer text-xs text-ink-dim">{decision.detailsLabel}</summary>
 				<ul className="mt-1 list-disc space-y-0.5 pl-4">
 					{decision.details.map((line) => (
-						<li key={line} className="whitespace-pre-wrap text-[11px] leading-4 text-ink-dim">
+						<li key={line} className="whitespace-pre-wrap text-xs leading-4 text-ink-dim">
 							{formatCardText(line)}
 						</li>
 					))}
 				</ul>
 			</details>
 			{error && (
-				<p role="alert" className="mt-1 whitespace-pre-wrap text-[11px] text-red-500">
+				<p role="alert" className="mt-1 whitespace-pre-wrap text-xs text-red-500">
 					{formatCardText(error)}
 				</p>
 			)}

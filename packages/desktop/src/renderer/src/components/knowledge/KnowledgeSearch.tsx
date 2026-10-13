@@ -83,7 +83,7 @@ export function KnowledgeSearch({
 										</span>
 										<span className="block truncate font-mono text-[11px] text-ink-faint">{hit.path}</span>
 										{hit.text && (
-											<span className="mt-1 line-clamp-2 block whitespace-pre-wrap text-[11px] text-ink-dim">
+											<span className="mt-1 line-clamp-2 block whitespace-pre-wrap text-xs text-ink-dim">
 												{hit.text}
 											</span>
 										)}

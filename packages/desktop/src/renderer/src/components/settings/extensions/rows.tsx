@@ -82,7 +82,7 @@ function ScopeBadge({ scope }: { scope: ResourceScope }) {
 				: "settings.extensions.scopeUser";
 	return (
 		<span
-			className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${
+			className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${
 				scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"
 			}`}
 		>
@@ -113,7 +113,7 @@ export function ExtensionRow({
 					</span>
 				)}
 				{extension.tools.some(isSubagentToolName) && (
-					<span className="shrink-0 rounded bg-accent/10 px-1.5 py-0.5 text-[11px] text-accent">
+					<span className="shrink-0 rounded bg-accent/10 px-1.5 py-0.5 text-xs text-accent">
 						{t("settings.extensions.subagentBuiltin")}
 					</span>
 				)}
@@ -143,7 +143,7 @@ export function ExtensionRow({
 function TypeBadge({ type }: { type: string }) {
 	return (
 		<span
-			className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${
+			className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${
 				type === "extension" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"
 			}`}
 		>
@@ -196,7 +196,7 @@ export function CatalogRow({
 					<span>{t("settings.extensions.downloadsPerMonth", { count: formatDownloads(pkg.downloads) })}</span>
 				</div>
 				{installError && (
-					<p className="mt-1 text-[11px] text-red-500">
+					<p className="mt-1 text-xs text-red-500">
 						{installError.includes(NPM_NOT_FOUND_SENTINEL)
 							? t("settings.extensions.npmNotFound")
 							: installError}
@@ -233,7 +233,7 @@ export function CatalogRow({
 							)}
 						</Button>
 						{warnConfirming && (
-							<p className="max-w-56 text-right text-[11px] leading-snug text-ink-dim">
+							<p className="max-w-56 text-right text-xs leading-snug text-ink-dim">
 								{t("settings.extensions.subagentInstallWarning")}
 							</p>
 						)}

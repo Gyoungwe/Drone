@@ -60,7 +60,7 @@ export function KnowledgeNoteViewer({
 					×
 				</Button>
 			</div>
-			<p className="my-2 text-[11px] text-ink-dim">{t("uiRead")}</p>
+			<p className="my-2 text-xs text-ink-dim">{t("uiRead")}</p>
 			{loading && (
 				<p role="status" className="text-xs">
 					{t("loading")}
