@@ -120,6 +120,7 @@ const VERBS: Record<string, [string, string]> = {
 	web_search: ["搜索", "Search"],
 	subagent: ["派发", "Dispatch"],
 	deliver_files: ["交付", "Deliver"],
+	memory_save: ["记住", "Remember"],
 };
 
 function objectOf(args: Record<string, unknown>): string {
