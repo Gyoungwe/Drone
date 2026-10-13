@@ -9,7 +9,7 @@ export interface MemoryObservation {
 	sessionId: string;
 	/** 去重键：同一会话里的同一来源（如工具调用 id）只记一次。 */
 	sourceKey: string;
-	kind: "prompt" | "change" | "command" | "error";
+	kind: "prompt" | "change" | "command" | "error" | "summary";
 	title: string;
 	body: string;
 }
@@ -92,6 +92,28 @@ export class MemoryStore {
 			.prepare("INSERT INTO mem_fts (rowid, grams) VALUES (?, ?)")
 			.run(result.lastInsertRowid, searchGrams(`${obs.title} ${obs.body}`).join(" "));
 		return true;
+	}
+
+	/** 会话摘要：每个会话只保留最新一条（每轮结束覆盖）。 */
+	upsertSummary(projectId: string, sessionId: string, title: string, body: string, now = Date.now()): void {
+		if (!this.isEnabled(projectId)) return;
+		this.db.exec("BEGIN");
+		try {
+			const old = this.db
+				.prepare(
+					"SELECT id FROM mem_observations WHERE project_id = ? AND session_id = ? AND source_key = 'summary'",
+				)
+				.get(projectId, sessionId) as { id: number } | undefined;
+			if (old) {
+				this.db.prepare("DELETE FROM mem_fts WHERE rowid = ?").run(old.id);
+				this.db.prepare("DELETE FROM mem_observations WHERE id = ?").run(old.id);
+			}
+			this.db.exec("COMMIT");
+		} catch (error) {
+			this.db.exec("ROLLBACK");
+			throw error;
+		}
+		this.add({ projectId, sessionId, sourceKey: "summary", kind: "summary", title, body }, now);
 	}
 
 	/** 召回本项目观察（排除当前会话自身）：先按相关度，不足 limit 时用最近的观察补齐。 */

@@ -45,7 +45,7 @@ import { makeCloudflareAskExtension } from "./cloudflare-ask";
 import { makeHarnessContextExtension } from "./harness/context";
 import { makeHarnessDeliveryExtension } from "./harness/delivery";
 import { makeHarnessGuardExtension } from "./harness/guards";
-import { makeMemoryExtension } from "./harness/memory";
+import { makeMemoryExtension, SUMMARY_SYSTEM_PROMPT } from "./harness/memory";
 import { makeHarnessRecallTool } from "./harness/recall";
 import { makeTurnContextExtension } from "./harness/turn-context";
 
@@ -261,7 +261,29 @@ export function buildSessionExtensionFactories(
 		}),
 	);
 	if (harness.recall && deps.memory)
-		factories.push(makeMemoryExtension({ store: deps.memory, projectId: canonicalProjectId(cwd) }));
+		factories.push(
+			makeMemoryExtension({
+				store: deps.memory,
+				projectId: canonicalProjectId(cwd),
+				summarize: async (transcript, model) => {
+					if (!model) return "";
+					const runtime = await deps.getModelRuntime();
+					const response = await runtime.completeSimple(
+						model as Parameters<ModelRuntime["completeSimple"]>[0],
+						{
+							systemPrompt: SUMMARY_SYSTEM_PROMPT,
+							messages: [{ role: "user", content: transcript, timestamp: Date.now() }],
+						},
+						{ maxTokens: 500, maxRetries: 0 },
+					);
+					return (response.content as Array<{ type: string; text?: string }>)
+						.filter((part) => part.type === "text")
+						.map((part) => part.text ?? "")
+						.join("\n")
+						.trim();
+				},
+			}),
+		);
 	factories.push(makeChannelWatchExtension({ agentDir: getAgentDir(), cwd }));
 	factories.push(makeTodoReminderExtension());
 	factories.push(makeBioExtension());
