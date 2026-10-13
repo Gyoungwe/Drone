@@ -1148,6 +1148,12 @@ export const en: Messages = {
 		},
 		memory: {
 			title: "Project memory",
+			layers: {
+				observe: { title: "Observations", hint: "Auto-recorded, recalled per session" },
+				project: { title: "Project memory", hint: ".pi/memory · preferences & facts" },
+				knowledge: { title: "Knowledge “Memory”", hint: "Cross-project, searchable" },
+				note: "Observations can be promoted to project memory, which can be deposited into the knowledge base; further right is more durable and more selective.",
+			},
 			hint: "{count} entries · Notes changed files, commands and failures (summaries only, <private> skipped); new sessions load the most relevant few (≤600 tokens). Local only.",
 			clear: "Clear",
 			view: "View",

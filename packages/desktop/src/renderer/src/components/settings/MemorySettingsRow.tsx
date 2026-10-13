@@ -8,6 +8,32 @@ import { SettingsRow } from "./SettingsRow";
 const BTN =
 	"rounded-md border border-border px-2 py-1 text-[11px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover disabled:opacity-50";
 
+/** H6：三层记忆流转示意（观察库 → 项目记忆 → 知识库「记忆」），只做说明，不新增层。 */
+export function MemoryLayersDiagram() {
+	const t = useT();
+	const layers = ["observe", "project", "knowledge"] as const;
+	return (
+		<div className="mb-3 rounded-lg border border-border px-3 py-3" data-testid="memory-layers">
+			<ol className="flex items-stretch gap-2 text-[12px]">
+				{layers.map((layer, i) => (
+					<li key={layer} className="flex min-w-0 flex-1 items-center gap-2">
+						<div className="min-w-0 flex-1 rounded-md bg-hover px-2 py-2">
+							<div className="font-medium text-ink">{t(`settings.memory.layers.${layer}.title`)}</div>
+							<div className="text-[11px] text-ink-faint">{t(`settings.memory.layers.${layer}.hint`)}</div>
+						</div>
+						{i < layers.length - 1 ? (
+							<span aria-hidden className="shrink-0 text-ink-faint">
+								→
+							</span>
+						) : null}
+					</li>
+				))}
+			</ol>
+			<p className="mt-2 text-[11px] text-ink-faint">{t("settings.memory.layers.note")}</p>
+		</div>
+	);
+}
+
 /** 当前项目的观察记忆：开关 + 清空 + 记录列表（删除 / 提升为项目记忆）。展示层，便于样张与测试直接渲染。 */
 export function MemorySettingsView({
 	status,
@@ -32,6 +58,7 @@ export function MemorySettingsView({
 	const t = useT();
 	return (
 		<>
+			<MemoryLayersDiagram />
 			<SettingsRow
 				title={t("settings.memory.title")}
 				hint={t("settings.memory.hint", { count: status?.count ?? 0 })}
