@@ -172,7 +172,7 @@ export function WikiReviewPanel({
 								type="button"
 								disabled={pending}
 								onClick={() => void load(item.id)}
-								className={`w-full rounded-lg border p-2.5 text-left transition-colors ${selected === item.id ? "border-accent bg-accent/5" : "border-border hover:bg-hover"}`}
+								className={`w-full rounded-lg border p-3 text-left transition-colors ${selected === item.id ? "border-accent bg-accent/5" : "border-border hover:bg-hover"}`}
 							>
 								<span className="block break-words text-xs font-medium">{item.title}</span>
 								<span className="mt-1 block break-all font-mono text-[11px] text-ink-dim">{item.path}</span>
@@ -236,7 +236,7 @@ export function WikiReviewPanel({
 										role="tab"
 										aria-selected={view === tab}
 										onClick={() => setView(tab)}
-										className={`rounded-lg px-2.5 py-1.5 text-xs ${view === tab ? "bg-ink text-on-ink" : "text-ink-dim hover:bg-hover"}`}
+										className={`rounded-lg px-3 py-2 text-xs ${view === tab ? "bg-ink text-on-ink" : "text-ink-dim hover:bg-hover"}`}
 									>
 										{t(tab)}
 									</button>
@@ -286,7 +286,7 @@ export function WikiReviewPanel({
 									{preview.sources.map((source) => (
 										<div
 											key={source.path}
-											className="flex flex-wrap items-start justify-between gap-1 rounded-lg border border-border px-2 py-1.5"
+											className="flex flex-wrap items-start justify-between gap-1 rounded-lg border border-border px-2 py-2"
 										>
 											<div className="min-w-0">
 												<p className="break-all text-xs">{source.path}</p>

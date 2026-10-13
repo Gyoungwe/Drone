@@ -16,17 +16,17 @@ export function ExampleTaskCards() {
 				<span className="text-[12px] font-medium text-ink">{t("examples.emptyTitle")}</span>
 			</header>
 			<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{t("examples.emptyHint")}</p>
-			<ul className="mt-2 flex flex-col gap-1.5">
+			<ul className="mt-2 flex flex-col gap-2">
 				{EXAMPLE_TASKS.map((task) => (
 					<li key={task.id}>
 						<button
 							type="button"
 							data-testid="example-task-card"
 							data-example-task={task.id}
-							className="flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-hover"
+							className="flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-hover"
 							onClick={() => open(task.id)}
 						>
-							<span className="mt-[1px] shrink-0 rounded-md bg-hover px-1.5 py-0.5 text-xs font-medium text-ink-dim">
+							<span className="mt-[1px] shrink-0 rounded-md bg-hover px-2 py-0.5 text-xs font-medium text-ink-dim">
 								{t(`examples.tag.${task.direction}`)}
 							</span>
 							<span className="min-w-0 flex-1">

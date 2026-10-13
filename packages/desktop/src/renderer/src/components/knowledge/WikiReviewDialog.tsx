@@ -150,7 +150,7 @@ export function WikiReviewDialog({
 									role="tab"
 									aria-selected={view === tab}
 									onClick={() => setView(tab)}
-									className={`rounded-lg px-2.5 py-1.5 text-xs ${view === tab ? "bg-ink text-on-ink" : "text-ink-dim hover:bg-hover"}`}
+									className={`rounded-lg px-3 py-2 text-xs ${view === tab ? "bg-ink text-on-ink" : "text-ink-dim hover:bg-hover"}`}
 								>
 									{t(tab)}
 								</button>
@@ -203,7 +203,7 @@ export function WikiReviewDialog({
 							</h4>
 							<div className="max-h-28 space-y-1 overflow-auto">
 								{preview.sources.map((source) => (
-									<div key={source.path} className="rounded-lg border border-border px-2 py-1.5">
+									<div key={source.path} className="rounded-lg border border-border px-2 py-2">
 										<p className="break-all text-xs">{source.path}</p>
 										<p className="font-mono text-[11px] text-ink-faint">
 											L{source.startLine}–{source.endLine}

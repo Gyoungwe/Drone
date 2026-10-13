@@ -47,7 +47,7 @@ function UninstallButton({ source, scope }: { source: string; scope: "user" | "p
 				onMouseLeave={() => setConfirming(false)}
 			>
 				{removing ? (
-					<span className="inline-flex items-center gap-1.5">
+					<span className="inline-flex items-center gap-2">
 						<span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
 						{t("settings.extensions.removing")}
 					</span>
@@ -61,7 +61,7 @@ function UninstallButton({ source, scope }: { source: string; scope: "user" | "p
 		<Tooltip label={t("settings.extensions.uninstall")}>
 			<button
 				type="button"
-				className="rounded-lg px-1.5 py-1 text-ink-faint transition-colors hover:bg-hover hover:text-red-500"
+				className="rounded-lg px-2 py-1 text-ink-faint transition-colors hover:bg-hover hover:text-red-500"
 				onClick={enterConfirm}
 				aria-label={t("settings.extensions.uninstall")}
 			>
@@ -82,7 +82,7 @@ function ScopeBadge({ scope }: { scope: ResourceScope }) {
 				: "settings.extensions.scopeUser";
 	return (
 		<span
-			className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${
+			className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
 				scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"
 			}`}
 		>
@@ -104,16 +104,16 @@ export function ExtensionRow({
 }) {
 	const t = useT();
 	return (
-		<li className="py-2.5">
+		<li className="py-3">
 			<div className="flex items-center gap-2">
 				<span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">{extension.name}</span>
 				{extension.hidden && (
-					<span className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-ink-faint">
+					<span className="shrink-0 rounded px-2 py-0.5 text-[11px] text-ink-faint">
 						{t("settings.extensions.hidden")}
 					</span>
 				)}
 				{extension.tools.some(isSubagentToolName) && (
-					<span className="shrink-0 rounded bg-accent/10 px-1.5 py-0.5 text-xs text-accent">
+					<span className="shrink-0 rounded bg-accent/10 px-2 py-0.5 text-xs text-accent">
 						{t("settings.extensions.subagentBuiltin")}
 					</span>
 				)}
@@ -143,7 +143,7 @@ export function ExtensionRow({
 function TypeBadge({ type }: { type: string }) {
 	return (
 		<span
-			className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${
+			className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
 				type === "extension" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"
 			}`}
 		>
@@ -179,9 +179,9 @@ export function CatalogRow({
 	};
 
 	return (
-		<li className="flex items-start gap-3 py-2.5">
+		<li className="flex items-start gap-3 py-3">
 			<div className="min-w-0 flex-1">
-				<div className="flex items-center gap-1.5">
+				<div className="flex items-center gap-2">
 					<span className="min-w-0 truncate text-[13px] font-medium text-ink">{pkg.name}</span>
 					{pkg.types.map((type) => (
 						<TypeBadge key={type} type={type} />
@@ -206,7 +206,7 @@ export function CatalogRow({
 			<div className="shrink-0 pt-0.5">
 				{configured ? (
 					<div className="flex items-center gap-0.5">
-						<span className="inline-flex items-center gap-1 px-1.5 py-1 text-[12px] text-ink-faint">
+						<span className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-ink-faint">
 							<CheckIcon size={11} />
 							{t("settings.extensions.installed")}
 						</span>
@@ -222,7 +222,7 @@ export function CatalogRow({
 							onClick={handleInstall}
 						>
 							{installing ? (
-								<span className="inline-flex items-center gap-1.5">
+								<span className="inline-flex items-center gap-2">
 									<span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
 									{t("settings.extensions.installing")}
 								</span>

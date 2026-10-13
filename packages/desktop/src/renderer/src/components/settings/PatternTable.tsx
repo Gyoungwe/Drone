@@ -3,7 +3,7 @@ import { useT } from "../../i18n";
 import { appendRow, moveRow, type PatternRow, removeRow, updateRow } from "./permissions-model";
 
 const SELECT_CLASS =
-	"rounded-md border border-border bg-bg px-1.5 py-0.5 text-[11px] text-ink outline-none focus:border-ink-faint disabled:cursor-not-allowed disabled:opacity-60";
+	"rounded-md border border-border bg-bg px-2 py-0.5 text-[11px] text-ink outline-none focus:border-ink-faint disabled:cursor-not-allowed disabled:opacity-60";
 const INPUT_CLASS =
 	"w-full rounded-md border border-border bg-bg px-2 py-0.5 font-mono text-[11px] text-ink outline-none focus:border-ink-faint disabled:cursor-not-allowed disabled:bg-transparent disabled:opacity-70";
 const ICON_BUTTON =
@@ -89,7 +89,7 @@ export function PatternTable({
 							}`}
 						>
 							<span className="font-mono text-[11px] text-ink-faint">{index + 1}</span>
-							<div className="flex min-w-0 items-center gap-1.5">
+							<div className="flex min-w-0 items-center gap-2">
 								{row.locked && (
 									<span
 										className="shrink-0 text-xs"
@@ -163,7 +163,7 @@ export function PatternTable({
 			<div className="flex items-center justify-between gap-2 border-t border-border px-2 py-1">
 				<button
 					type="button"
-					className="rounded px-1.5 py-0.5 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+					className="rounded px-2 py-0.5 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
 					data-testid="pattern-add"
 					onClick={() => onChange(appendRow(rows))}
 				>

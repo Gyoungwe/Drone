@@ -178,7 +178,7 @@ export function KnowledgeCloudSection({
 					{modeLabel(status.mode, t)}
 				</span>
 			</div>
-			<p className="rounded-lg border border-accent/30 bg-accent/5 px-2.5 py-2 text-xs leading-relaxed text-ink-dim">
+			<p className="rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-ink-dim">
 				{t("cloudManualSyncNotice")}
 			</p>
 			<p className="text-xs leading-relaxed text-ink-dim">{t("cloudHint")}</p>
@@ -259,7 +259,7 @@ export function KnowledgeCloudSection({
 							value={query}
 							onChange={(event) => setQuery(event.target.value)}
 							placeholder={t("cloudSearchPlaceholder")}
-							className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-2 py-1.5 text-xs"
+							className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-2 py-2 text-xs"
 						/>
 						<Button size="sm" type="submit" disabled={busy !== null || !query.trim()}>
 							{busy === "search" ? t("loading") : t("cloudSearch")}
@@ -272,7 +272,7 @@ export function KnowledgeCloudSection({
 									<li key={hit.path}>
 										<button
 											type="button"
-											className="w-full px-2.5 py-2 text-left hover:bg-hover"
+											className="w-full px-3 py-2 text-left hover:bg-hover"
 											onClick={() => void preview(hit.path)}
 										>
 											<span className="block truncate text-xs font-medium">{hit.title || hit.path}</span>
@@ -281,12 +281,12 @@ export function KnowledgeCloudSection({
 									</li>
 								))
 							) : (
-								<li className="px-2.5 py-2 text-[11px] text-ink-faint">{t("homeSearchEmpty")}</li>
+								<li className="px-3 py-2 text-[11px] text-ink-faint">{t("homeSearchEmpty")}</li>
 							)}
 						</ul>
 					)}
 					{selectedPath && (
-						<div className="space-y-2 rounded-md border border-border p-2.5">
+						<div className="space-y-2 rounded-md border border-border p-3">
 							<div className="flex flex-wrap items-center justify-between gap-2">
 								<span className="min-w-0 truncate font-mono text-[11px]" title={selectedPath}>
 									{selectedPath}

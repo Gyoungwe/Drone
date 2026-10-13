@@ -142,7 +142,7 @@ export function KnowledgeMaintenance({
 					{page?.items.map((item) => (
 						<div
 							key={item.key}
-							className="flex items-start justify-between gap-2 rounded-lg border border-border p-2.5"
+							className="flex items-start justify-between gap-2 rounded-lg border border-border p-3"
 						>
 							<div className="min-w-0">
 								<p className="text-xs font-medium">

@@ -491,7 +491,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 				)}
 				{error && <SendErrorBar error={error} onRetry={() => void handleSend()} />}
 				{feedback && !error && (
-					<p className={`mb-1.5 text-xs ${feedback.tone === "warn" ? "text-amber-500" : "text-ink-dim"}`}>
+					<p className={`mb-2 text-xs ${feedback.tone === "warn" ? "text-amber-500" : "text-ink-dim"}`}>
 						{feedback.message}
 					</p>
 				)}
@@ -550,7 +550,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 					)}
 					{/* 引用胶囊区：独占顶部一行贴边（专为选中引用留的位置，不占正文宽度） */}
 					{quotes.length > 0 && (
-						<div className="flex flex-wrap items-center gap-1.5 px-3 pt-2">
+						<div className="flex flex-wrap items-center gap-2 px-3 pt-2">
 							{quotes.map((quote) => (
 								<QuoteChip
 									key={quote}
@@ -565,7 +565,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 					    胶囊高度 = 行高（COMPOSER_LINE_PX）、顶对齐 → 与文字同一中线（原 flex-wrap + mt-0.5 + 24px 胶囊
 					    对 22.75px 行高错位约 2.6px，且折行文字挂在胶囊右侧形成悬挂缩进）。
 					    胶囊过宽（> 60% 宽度）时退为输入框上方独立一行。textarea 恒在同一位置 → 不重挂、不丢焦点 */}
-					<div className={`px-3 pb-4 ${quotes.length > 0 ? "pt-1.5" : "pt-2"}`}>
+					<div className={`px-3 pb-4 ${quotes.length > 0 ? "pt-2" : "pt-2"}`}>
 						<div ref={bodyRef} className="relative">
 							{hasChips && (
 								<div
@@ -574,8 +574,8 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 									data-layout={chipsInline ? "inline" : "row"}
 									className={
 										chipsInline
-											? "absolute top-0 left-0 z-[1] flex items-center gap-1.5"
-											: "mb-1 flex flex-wrap items-center gap-1.5"
+											? "absolute top-0 left-0 z-[1] flex items-center gap-2"
+											: "mb-1 flex flex-wrap items-center gap-2"
 									}
 									style={chipsInline ? { height: COMPOSER_LINE_PX } : undefined}
 								>
@@ -622,7 +622,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 							/>
 						</div>
 					</div>
-					<div className="flex items-center gap-1.5 px-2.5 pb-1.5">
+					<div className="flex items-center gap-2 px-3 pb-2">
 						<input
 							ref={fileInputRef}
 							type="file"

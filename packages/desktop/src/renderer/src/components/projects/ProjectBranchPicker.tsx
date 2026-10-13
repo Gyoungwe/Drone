@@ -48,7 +48,7 @@ function ProjectPicker() {
 	return (
 		<Dropdown
 			trigger={
-				<span className="flex items-center gap-1.5" title={cwd ?? undefined}>
+				<span className="flex items-center gap-2" title={cwd ?? undefined}>
 					{daily ? (
 						<span className="flex h-4.5 w-4.5 items-center justify-center rounded border border-border-strong bg-canvas text-ink">
 							<CoffeeIcon size={10} />
@@ -69,7 +69,7 @@ function ProjectPicker() {
 						<>
 							<button
 								type="button"
-								className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-hover ${
+								className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] transition-colors hover:bg-hover ${
 									daily ? "text-ink" : "text-ink-2"
 								}`}
 								onClick={() => {
@@ -89,7 +89,7 @@ function ProjectPicker() {
 						<button
 							key={project.cwd}
 							type="button"
-							className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-hover ${
+							className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] transition-colors hover:bg-hover ${
 								project.cwd === cwd ? "text-ink" : "text-ink-2"
 							}`}
 							onClick={() => {
@@ -109,7 +109,7 @@ function ProjectPicker() {
 					))}
 					<button
 						type="button"
-						className="mt-0.5 flex w-full items-center gap-2 rounded-md border-t border-border px-2 py-1.5 text-left text-[13px] text-ink-dim transition-colors hover:bg-hover"
+						className="mt-0.5 flex w-full items-center gap-2 rounded-md border-t border-border px-2 py-2 text-left text-[13px] text-ink-dim transition-colors hover:bg-hover"
 						onClick={() => {
 							void pickDirectory();
 							close();
@@ -152,7 +152,7 @@ function BranchPicker({ cwd }: { cwd: string | null }) {
 		<>
 			<Dropdown
 				trigger={
-					<span className="flex items-center gap-1.5">
+					<span className="flex items-center gap-2">
 						<span aria-hidden="true">⎇</span>
 						{current}
 					</span>
@@ -164,7 +164,7 @@ function BranchPicker({ cwd }: { cwd: string | null }) {
 							<button
 								key={branch}
 								type="button"
-								className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-hover ${
+								className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] transition-colors hover:bg-hover ${
 									branch === current ? "font-medium text-ink" : "text-ink-2"
 								}`}
 								onClick={() => {

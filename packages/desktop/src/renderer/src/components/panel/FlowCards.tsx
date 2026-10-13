@@ -103,7 +103,7 @@ export function FlowCardBody({
 				</dl>
 			) : null}
 			{card.links?.length ? (
-				<div className="mt-1.5 flex flex-wrap gap-1.5">
+				<div className="mt-2 flex flex-wrap gap-2">
 					{card.links.map((link) =>
 						canFollow(link) ? (
 							<Button

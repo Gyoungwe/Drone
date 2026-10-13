@@ -93,7 +93,7 @@ export function InstitutionalAccessSection() {
 			)}
 
 			{status && (
-				<div className="mt-3 grid gap-1.5 rounded-lg bg-hover p-2">
+				<div className="mt-3 grid gap-2 rounded-lg bg-hover p-2">
 					<Row
 						label={t("instLoginState")}
 						value={status.loggedIn ? t("instLoggedIn") : t("instLoggedOut")}
@@ -131,7 +131,7 @@ export function InstitutionalAccessSection() {
 			)}
 
 			<div className="mt-4 space-y-3">
-				<div className="flex flex-wrap gap-1.5">
+				<div className="flex flex-wrap gap-2">
 					<Button size="sm" variant="primary" onClick={() => void openLogin()}>
 						{t("instLogin")}
 					</Button>

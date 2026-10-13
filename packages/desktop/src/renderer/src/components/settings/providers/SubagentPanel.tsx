@@ -59,13 +59,13 @@ export function SubagentPanel() {
 								</span>
 							</div>
 							{agent.description && (
-								<p className="mt-1.5 text-xs leading-relaxed text-ink-dim">{agent.description}</p>
+								<p className="mt-2 text-xs leading-relaxed text-ink-dim">{agent.description}</p>
 							)}
 							<div className="mt-3 grid gap-2 sm:grid-cols-2">
 								<label className="text-[11px] text-ink-faint">
 									<span className="mb-1 block">{t("settings.models.agentModel")}</span>
 									<select
-										className="w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-ink-faint"
+										className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-[12px] text-ink outline-none focus:border-ink-faint"
 										value={selected}
 										onChange={(event) => void setSubagentModel(agent.name, event.target.value || null)}
 									>
@@ -85,7 +85,7 @@ export function SubagentPanel() {
 								<label className="text-[11px] text-ink-faint">
 									<span className="mb-1 block">{t("settings.models.agentThinking")}</span>
 									<select
-										className="w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-ink-faint"
+										className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-[12px] text-ink outline-none focus:border-ink-faint"
 										value={selectedThinking}
 										onChange={(event) =>
 											void setSubagentThinking(

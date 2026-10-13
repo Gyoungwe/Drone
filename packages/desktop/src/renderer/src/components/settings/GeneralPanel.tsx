@@ -22,7 +22,7 @@ export function GeneralPanel() {
 	return (
 		<div className="settings-rows">
 			<SettingsRow title={t("settings.language")} hint={t("settings.languageHint")}>
-				<div className="flex gap-1.5">
+				<div className="flex gap-2">
 					{(["zh", "en"] as Language[]).map((lang) => (
 						<button
 							key={lang}
@@ -43,7 +43,7 @@ export function GeneralPanel() {
 				title={t("settings.contextManager")}
 				hint={contextManagerMode ? t(`settings.contextManagerHint.${contextManagerMode}`) : undefined}
 			>
-				<div className="flex gap-1.5">
+				<div className="flex gap-2">
 					{CONTEXT_MANAGER_MODES.map((mode) => (
 						<button
 							key={mode}
@@ -80,8 +80,8 @@ export function GeneralPanel() {
 							{t("settings.sshGuard.description")}
 						</p>
 					</div>
-					<div className="flex shrink-0 items-center gap-1.5">
-						<span className="inline-flex items-center gap-1.5 rounded-full border border-border px-1.5 py-0.5 text-xs font-medium text-ink-dim">
+					<div className="flex shrink-0 items-center gap-2">
+						<span className="inline-flex items-center gap-2 rounded-full border border-border px-2 py-0.5 text-xs font-medium text-ink-dim">
 							<span className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true" />
 							{t("settings.sshGuard.enabled")}
 						</span>

@@ -147,7 +147,7 @@ export function ApprovalDock({
 						</h3>
 						{sourceRun && (
 							<span
-								className="flex shrink-0 items-center gap-1 rounded-full border border-warn/40 bg-warn/5 px-1.5 py-0.5 text-xs text-warn"
+								className="flex shrink-0 items-center gap-1 rounded-full border border-warn/40 bg-warn/5 px-2 py-0.5 text-xs text-warn"
 								data-testid="approval-subagent-source"
 							>
 								<SubagentAvatar name={sourceRun.agent} source={sourceRun.source} size="sm" state="waiting" />
@@ -160,13 +160,13 @@ export function ApprovalDock({
 							</span>
 						)}
 					</div>
-					<p className="mt-1.5 max-h-24 overflow-y-auto rounded-lg bg-hover p-2 font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap text-ink-2 select-text">
+					<p className="mt-2 max-h-24 overflow-y-auto rounded-lg bg-hover p-2 font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap text-ink-2 select-text">
 						{shown.message}
 					</p>
 					{error && (
 						<p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[12px] break-all text-red-600">{error}</p>
 					)}
-					<div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
+					<div className="mt-2 flex flex-wrap items-center justify-end gap-2">
 						{sourceRun && (
 							<Button
 								className="mr-auto"
@@ -181,29 +181,29 @@ export function ApprovalDock({
 						)}
 						<Button onClick={() => respond("deny")}>
 							{t("permission.deny")}
-							<kbd className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[11px] text-ink-faint">Esc</kbd>
+							<kbd className="ml-2 rounded bg-hover px-1 py-0.5 text-[11px] text-ink-faint">Esc</kbd>
 						</Button>
 						{shown.suggestDir && (
 							<Tooltip label={t("permission.allowDirHint", { dir: shown.suggestDir })}>
 								<Button onClick={() => respond("allowDir")}>
 									{t("permission.allowDir")}
-									<kbd className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[11px] text-ink-faint">D</kbd>
+									<kbd className="ml-2 rounded bg-hover px-1 py-0.5 text-[11px] text-ink-faint">D</kbd>
 								</Button>
 							</Tooltip>
 						)}
 						<Button onClick={() => respond("allowAlways")}>
 							{t("permission.allowAlways")}
-							<kbd className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[11px] text-ink-faint">A</kbd>
+							<kbd className="ml-2 rounded bg-hover px-1 py-0.5 text-[11px] text-ink-faint">A</kbd>
 						</Button>
 						<Tooltip label={t("permission.allowRunHint")}>
 							<Button onClick={() => respond("allowRun")} data-testid="permission-allow-run">
 								{t("permission.allowRun")}
-								<kbd className="ml-1.5 rounded bg-hover px-1 py-0.5 text-[11px] text-ink-faint">T</kbd>
+								<kbd className="ml-2 rounded bg-hover px-1 py-0.5 text-[11px] text-ink-faint">T</kbd>
 							</Button>
 						</Tooltip>
 						<Button variant="primary" onClick={() => respond("allow")}>
 							{t("permission.allowOnce")}
-							<kbd className="ml-1.5 rounded bg-on-ink/15 px-1 py-0.5 text-xs text-on-ink/80">Enter</kbd>
+							<kbd className="ml-2 rounded bg-on-ink/15 px-1 py-0.5 text-xs text-on-ink/80">Enter</kbd>
 						</Button>
 					</div>
 				</div>

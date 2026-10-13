@@ -13,7 +13,7 @@ export function SlashPill({ name, onRemove }: { name: string; onRemove: () => vo
 	const view = slashPillView(name, language);
 	return (
 		<span
-			className="inline-flex h-[22px] max-w-[220px] shrink-0 select-none items-center gap-1 rounded-md bg-accent/10 pr-1 pl-1.5 text-[12.5px] leading-none font-medium text-accent"
+			className="inline-flex h-[22px] max-w-[220px] shrink-0 select-none items-center gap-1 rounded-md bg-accent/10 pr-1 pl-2 text-[12.5px] leading-none font-medium text-accent"
 			data-testid="composer-slash-pill"
 			data-command={name}
 			title={t("slash.pillTitle", { command: view.command })}

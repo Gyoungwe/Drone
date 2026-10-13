@@ -2,7 +2,7 @@
 export function MemoryCitationRow({ ids, label }: { ids: number[]; label: string }) {
 	return (
 		<div
-			className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-faint"
+			className="flex flex-wrap items-center gap-2 text-[11px] text-ink-faint"
 			data-testid="memory-citations"
 		>
 			<span>{label}</span>

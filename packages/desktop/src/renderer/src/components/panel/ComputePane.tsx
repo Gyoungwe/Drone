@@ -146,7 +146,7 @@ function HostRow({
 			</div>
 			{previewing && (
 				<div
-					className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-2.5"
+					className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-3"
 					data-testid={`compute-plan-${host.id}`}
 				>
 					<div className="flex items-start justify-between gap-2">
@@ -307,7 +307,7 @@ export function ComputePane() {
 					</span>
 				</div>
 				{hosts.length ? (
-					<ul className="space-y-2.5">
+					<ul className="space-y-3">
 						{hosts.map((host) => (
 							<HostRow
 								key={host.id}
@@ -326,7 +326,7 @@ export function ComputePane() {
 					<p className="panel-empty">{t("panel.compute.noHosts")}</p>
 				)}
 				<form
-					className="panel-card mt-3 grid gap-2.5 border-dashed bg-canvas/60"
+					className="panel-card mt-3 grid gap-3 border-dashed bg-canvas/60"
 					onSubmit={(event) => void addHost(event)}
 				>
 					<div>
@@ -337,14 +337,14 @@ export function ComputePane() {
 					</div>
 					<div className="grid grid-cols-2 gap-2">
 						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
 							value={hostForm.alias}
 							onChange={(event) => setHostForm((form) => ({ ...form, alias: event.target.value }))}
 							placeholder={t("panel.compute.alias")}
 							aria-label={t("panel.compute.alias")}
 						/>
 						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
 							value={hostForm.displayName}
 							onChange={(event) => setHostForm((form) => ({ ...form, displayName: event.target.value }))}
 							placeholder={t("panel.compute.displayName")}
@@ -353,7 +353,7 @@ export function ComputePane() {
 					</div>
 					<div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
 						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
 							value={hostForm.endpoint}
 							onChange={(event) => setHostForm((form) => ({ ...form, endpoint: event.target.value }))}
 							placeholder={t("panel.compute.endpoint")}
@@ -363,7 +363,7 @@ export function ComputePane() {
 							type="number"
 							min={1}
 							max={65535}
-							className="min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
 							value={hostForm.port}
 							onChange={(event) => setHostForm((form) => ({ ...form, port: event.target.value }))}
 							placeholder={t("panel.compute.port")}
@@ -372,14 +372,14 @@ export function ComputePane() {
 					</div>
 					<div className="grid grid-cols-2 gap-2">
 						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
 							value={hostForm.user}
 							onChange={(event) => setHostForm((form) => ({ ...form, user: event.target.value }))}
 							placeholder={t("panel.compute.user")}
 							aria-label={t("panel.compute.user")}
 						/>
 						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
 							value={hostForm.workspaceRoot}
 							onChange={(event) => setHostForm((form) => ({ ...form, workspaceRoot: event.target.value }))}
 							placeholder={t("panel.compute.workspaceRoot")}
@@ -388,21 +388,21 @@ export function ComputePane() {
 					</div>
 					<div className="grid gap-2">
 						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
 							value={hostForm.identityFile}
 							onChange={(event) => setHostForm((form) => ({ ...form, identityFile: event.target.value }))}
 							placeholder={t("panel.compute.identityFile")}
 							aria-label={t("panel.compute.identityFile")}
 						/>
 						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-faint"
+							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
 							value={hostForm.jumpHosts}
 							onChange={(event) => setHostForm((form) => ({ ...form, jumpHosts: event.target.value }))}
 							placeholder={t("panel.compute.jumpHosts")}
 							aria-label={t("panel.compute.jumpHosts")}
 						/>
 						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-faint"
+							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
 							value={hostForm.hostKeyFingerprint}
 							onChange={(event) =>
 								setHostForm((form) => ({ ...form, hostKeyFingerprint: event.target.value }))

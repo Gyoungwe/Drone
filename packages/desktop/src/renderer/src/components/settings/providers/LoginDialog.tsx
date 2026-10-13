@@ -54,7 +54,7 @@ export function LoginDialog() {
 
 				{/* 设备码：验证码 + 验证链接，SDK 侧自行轮询 */}
 				{deviceCode && (
-					<div className="mt-3 rounded-lg bg-hover px-3 py-2.5">
+					<div className="mt-3 rounded-lg bg-hover px-3 py-3">
 						<p className="text-[11px] text-ink-faint">{t("settings.login.deviceCodeHint")}</p>
 						<p className="mt-1 select-all text-center font-mono text-lg font-semibold tracking-widest text-ink">
 							{deviceCode.userCode}
@@ -78,7 +78,7 @@ export function LoginDialog() {
 
 				{/* 浏览器授权：已自动打开，URL 可点击/复制兜底 */}
 				{authUrl && (
-					<div className="mt-3 rounded-lg bg-hover px-3 py-2.5">
+					<div className="mt-3 rounded-lg bg-hover px-3 py-3">
 						<p className="text-xs text-ink-2">{t("settings.login.browserHint")}</p>
 						<button
 							type="button"
@@ -98,7 +98,7 @@ export function LoginDialog() {
 				{prompt?.type === "select" && (
 					<div className="mt-3">
 						<p className="text-[12px] text-ink-2">{prompt.message}</p>
-						<div className="mt-2 flex flex-col items-stretch gap-1.5">
+						<div className="mt-2 flex flex-col items-stretch gap-2">
 							{prompt.options.map((option) => (
 								<Button
 									key={option.id}
@@ -201,7 +201,7 @@ function PromptInput({
 				<input
 					ref={inputRef}
 					type={prompt.type === "secret" ? "password" : "text"}
-					className="min-w-0 flex-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] outline-none focus:border-ink-faint"
+					className="min-w-0 flex-1 rounded-lg border border-border px-3 py-2 text-[12px] outline-none focus:border-ink-faint"
 					placeholder={prompt.placeholder}
 					value={input}
 					onChange={(e) => setInput(e.target.value)}

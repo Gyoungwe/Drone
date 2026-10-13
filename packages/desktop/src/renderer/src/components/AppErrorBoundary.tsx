@@ -20,7 +20,7 @@ class ErrorFallback extends Component<{ error: Error; t: TFunc }> {
 				<button
 					type="button"
 					onClick={() => window.location.reload()}
-					className="rounded-lg bg-ink px-4 py-1.5 text-[12px] font-medium text-surface transition-opacity hover:opacity-80"
+					className="rounded-lg bg-ink px-4 py-2 text-[12px] font-medium text-surface transition-opacity hover:opacity-80"
 				>
 					{t("appError.reload")}
 				</button>

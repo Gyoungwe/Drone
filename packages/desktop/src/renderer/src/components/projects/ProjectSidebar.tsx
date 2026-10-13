@@ -68,7 +68,7 @@ function DailyItem({ isActive, onSelect }: { isActive: boolean; onSelect: () => 
 		<div className="group relative mb-0.5">
 			<button
 				type="button"
-				className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors ${
+				className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] transition-colors ${
 					isActive ? "bg-hover text-ink" : "text-ink-2 hover:bg-hover"
 				}`}
 				onClick={onSelect}
@@ -101,7 +101,7 @@ function ProjectItem({
 		<div className="group relative mb-0.5">
 			<button
 				type="button"
-				className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors ${
+				className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] transition-colors ${
 					isActive ? "bg-hover text-ink" : "text-ink-2 hover:bg-hover"
 				}`}
 				onClick={onSelect}
@@ -117,7 +117,7 @@ function ProjectItem({
 			</button>
 			<button
 				type="button"
-				className={`invisible absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-xs transition-colors group-hover:visible ${
+				className={`invisible absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md px-2 py-0.5 text-xs transition-colors group-hover:visible ${
 					confirming ? "bg-red-50 text-red-600" : "text-ink-faint hover:bg-hover hover:text-ink-2"
 				}`}
 				onClick={() => {

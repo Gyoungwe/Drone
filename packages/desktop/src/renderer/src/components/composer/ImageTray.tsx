@@ -16,7 +16,7 @@ export function ImageTray({
 	const t = useT();
 	if (images.length === 0) return null;
 	return (
-		<div className="mb-1.5 flex flex-wrap items-end gap-2">
+		<div className="mb-2 flex flex-wrap items-end gap-2">
 			{images.map((image, index) => (
 				<div
 					// biome-ignore lint/suspicious/noArrayIndexKey: 缩略图列表不可变（删除为整列表替换）

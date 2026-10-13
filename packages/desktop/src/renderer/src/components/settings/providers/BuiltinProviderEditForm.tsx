@@ -4,7 +4,7 @@ import { useT } from "../../../i18n";
 import { useSettingsStore } from "../../../stores/settings";
 
 const inputClass =
-	"w-full rounded-lg border border-border px-2.5 py-1.5 text-[12px] outline-none focus:border-ink-faint disabled:cursor-not-allowed disabled:text-ink-faint";
+	"w-full rounded-lg border border-border px-3 py-2 text-[12px] outline-none focus:border-ink-faint disabled:cursor-not-allowed disabled:text-ink-faint";
 
 /**
  * 内置 provider 的端点覆写编辑（pi 官方语义）：只填 baseUrl（可选）+ Key。
@@ -61,14 +61,14 @@ export function BuiltinProviderEditForm({
 			<div className="mt-2 flex justify-end gap-2">
 				<button
 					type="button"
-					className="rounded-lg px-3 py-1.5 text-[12px] text-ink-dim transition-colors hover:bg-hover"
+					className="rounded-lg px-3 py-2 text-[12px] text-ink-dim transition-colors hover:bg-hover"
 					onClick={onDone}
 				>
 					{t("common.cancel")}
 				</button>
 				<button
 					type="button"
-					className="rounded-full bg-ink px-3 py-1.5 text-[12px] font-medium text-on-ink transition-colors hover:bg-ink-2 disabled:opacity-40"
+					className="rounded-full bg-ink px-3 py-2 text-[12px] font-medium text-on-ink transition-colors hover:bg-ink-2 disabled:opacity-40"
 					onClick={() => void save()}
 					disabled={submitting}
 				>

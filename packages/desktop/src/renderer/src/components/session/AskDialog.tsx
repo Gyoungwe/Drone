@@ -15,12 +15,12 @@ function Recommendation({ question, t }: { question: AskQuestion; t: ReturnType<
 		question.options.find((option) => option.value === recommendation.value)?.label ?? recommendation.value;
 	return (
 		<div
-			className="mt-3 rounded-xl border border-accent/25 bg-accent/5 px-3 py-2.5"
+			className="mt-3 rounded-xl border border-accent/25 bg-accent/5 px-3 py-3"
 			data-testid="ask-recommendation"
 		>
 			<div className="flex flex-wrap items-center gap-2 text-xs">
 				<span className="font-semibold text-accent">{t("ask.modelRecommendation")}</span>
-				<span className="rounded-full bg-accent/10 px-1.5 py-0.5 font-medium text-accent">{label}</span>
+				<span className="rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent">{label}</span>
 				{recommendation.confidence && (
 					<span className="text-[11px] text-ink-faint">
 						{t("ask.confidence", { value: recommendation.confidence })}
@@ -185,7 +185,7 @@ export function AskDialog({
 				</div>
 				<div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
 					{proposal && <ProposalProjection proposal={proposal} t={t} />}
-					<p className="whitespace-pre-wrap break-words rounded-lg bg-hover px-3 py-2.5 text-[13px] leading-relaxed text-ink select-text">
+					<p className="whitespace-pre-wrap break-words rounded-lg bg-hover px-3 py-3 text-[13px] leading-relaxed text-ink select-text">
 						{formatCardText(question.prompt)}
 					</p>
 					<Recommendation question={question} t={t} />
@@ -279,10 +279,10 @@ export function AskDialog({
 					return (
 						<section
 							key={item.id}
-							className="space-y-2.5 rounded-xl border border-border bg-surface px-3 py-3 shadow-soft"
+							className="space-y-3 rounded-xl border border-border bg-surface px-3 py-3 shadow-soft"
 						>
 							<div className="flex items-start gap-2">
-								<span className="mt-0.5 rounded-md bg-hover px-1.5 py-0.5 text-[11px] font-medium text-ink-faint">
+								<span className="mt-0.5 rounded-md bg-hover px-2 py-0.5 text-[11px] font-medium text-ink-faint">
 									{item.label || `Q${questionIndex + 1}`}
 								</span>
 								<div className="min-w-0 flex-1">
@@ -298,7 +298,7 @@ export function AskDialog({
 								</div>
 							</div>
 							<Recommendation question={item} t={t} />
-							<div className="grid gap-1.5">
+							<div className="grid gap-2">
 								{!textOnly &&
 									item.options.map((option) => {
 										const active = selected.includes(option.value);
@@ -307,7 +307,7 @@ export function AskDialog({
 												key={option.value}
 												type="button"
 												onClick={() => toggle(item.id, option.value, multi)}
-												className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${active ? "border-accent bg-accent/8" : "border-border bg-surface hover:bg-hover"}`}
+												className={`rounded-xl border px-3 py-3 text-left transition-colors ${active ? "border-accent bg-accent/8" : "border-border bg-surface hover:bg-hover"}`}
 											>
 												<div className="flex items-center gap-2">
 													<span
@@ -317,7 +317,7 @@ export function AskDialog({
 													</span>
 													<span className="text-[12px] font-medium text-ink-2">{option.label}</span>
 													{option.recommended && (
-														<span className="rounded-full bg-warn/10 px-1.5 py-0.5 text-xs font-medium text-warn">
+														<span className="rounded-full bg-warn/10 px-2 py-0.5 text-xs font-medium text-warn">
 															{t("ask.recommended")}
 														</span>
 													)}

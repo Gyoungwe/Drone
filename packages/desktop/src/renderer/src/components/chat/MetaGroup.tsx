@@ -211,7 +211,7 @@ export const MetaGroup = memo(function MetaGroup({
 	const showWrapper = count >= 2 || shownWorking || subagentCount > 0;
 	if (!showWrapper) {
 		return (
-			<div data-testid="tool-phase-group" className="-mb-4 flex flex-col gap-1.5">
+			<div data-testid="tool-phase-group" className="-mb-4 flex flex-col gap-2">
 				{rows}
 			</div>
 		);
@@ -260,7 +260,7 @@ export const MetaGroup = memo(function MetaGroup({
 						)}
 					</div>
 				</summary>
-				<div className="flex flex-col gap-1.5 py-1">{rows}</div>
+				<div className="flex flex-col gap-2 py-1">{rows}</div>
 			</details>
 		</div>
 	);

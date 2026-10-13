@@ -336,7 +336,7 @@ export function KnowledgeGraph({
 
 	return (
 		<div data-testid="knowledge-graph" className="knowledge-observatory space-y-3">
-			<div className="knowledge-graph-toolbar flex flex-wrap items-center gap-1.5">
+			<div className="knowledge-graph-toolbar flex flex-wrap items-center gap-2">
 				<Button size="sm" aria-pressed={view === "semantic"} onClick={() => setView("semantic")}>
 					{t("graphSemantic")}
 				</Button>
@@ -650,7 +650,7 @@ export function KnowledgeGraph({
 							})}
 						</g>
 					</svg>
-					<div className="knowledge-graph-legend absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-md px-2 py-1.5 text-xs">
+					<div className="knowledge-graph-legend absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-md px-2 py-2 text-xs">
 						{([...new Set(nodes.map(categoryOf))] as GraphCategory[]).map((category) => (
 							<span key={`legend-${category}`}>
 								<i
@@ -700,14 +700,14 @@ export function KnowledgeGraph({
 							<h4 className="mt-1 truncate text-xs font-semibold">{selectedNode.title}</h4>
 							<p className="mt-1 break-all font-mono text-[11px] text-ink-faint">{selectedNode.path}</p>
 							<div className="mt-2 flex flex-wrap gap-1">
-								<span className="rounded border border-border px-1.5 py-0.5 text-xs text-ink-dim">
+								<span className="rounded border border-border px-2 py-0.5 text-xs text-ink-dim">
 									{categoryLabels[categoryOf(selectedNode)]}
 								</span>
-								<span className="rounded border border-border px-1.5 py-0.5 text-xs text-ink-dim">
+								<span className="rounded border border-border px-2 py-0.5 text-xs text-ink-dim">
 									{t("graphLinks").replace("{count}", String(selectedNode.degree))}
 								</span>
 							</div>
-							<dl className="mt-3 space-y-1.5 text-xs text-ink-dim">
+							<dl className="mt-3 space-y-2 text-xs text-ink-dim">
 								<div className="flex justify-between">
 									<dt>{t("graphOutgoing")}</dt>
 									<dd>{links?.outgoing.length ?? 0}</dd>
@@ -722,7 +722,7 @@ export function KnowledgeGraph({
 								</div>
 							</dl>
 							{selectedNode.warnings?.length || selectedNode.mirrors?.length ? (
-								<p className="mt-3 rounded bg-hover px-2 py-1.5 text-xs text-warn">
+								<p className="mt-3 rounded bg-hover px-2 py-2 text-xs text-warn">
 									{t("graphMirrorWarning").replace("{count}", String(selectedNode.mirrors?.length ?? 0))}
 								</p>
 							) : null}

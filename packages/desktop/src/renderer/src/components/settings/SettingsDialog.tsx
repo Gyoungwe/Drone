@@ -178,7 +178,7 @@ export function SettingsDialog() {
 							<button
 								key={id}
 								type="button"
-								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
+								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
 									category === id
 										? "is-active bg-hover font-medium text-ink"
 										: "text-ink-dim hover:bg-hover hover:text-ink"
@@ -193,7 +193,7 @@ export function SettingsDialog() {
 							<button
 								key={id}
 								type="button"
-								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
+								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
 									category === id
 										? "is-active bg-hover font-medium text-ink"
 										: "text-ink-dim hover:bg-hover hover:text-ink"
@@ -210,7 +210,7 @@ export function SettingsDialog() {
 								<button
 									key={id}
 									type="button"
-									className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-1.5 text-left text-[12px] transition-colors ${
+									className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
 										category === id
 											? "is-active bg-hover font-medium text-ink"
 											: "text-ink-dim hover:bg-hover hover:text-ink"

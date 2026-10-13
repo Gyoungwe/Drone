@@ -61,7 +61,7 @@ export function TaskRow({
 		<article className="border-b border-border px-2 py-2 last:border-0">
 			<div className="flex items-start justify-between gap-2">
 				<h4 className="min-w-0 break-words text-[12px] font-medium leading-4">{task.goal}</h4>
-				<span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-xs">
+				<span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs">
 					{presentation.label}
 				</span>
 			</div>
@@ -103,7 +103,7 @@ export function TaskRow({
 				<button
 					type="button"
 					disabled={busy || agentActive || !sessionId}
-					className="mt-1.5 w-full rounded-md bg-amber-500/10 px-2 py-1.5 text-left text-xs text-amber-600 disabled:opacity-40"
+					className="mt-2 w-full rounded-md bg-amber-500/10 px-2 py-2 text-left text-xs text-amber-600 disabled:opacity-40"
 					onClick={async () => {
 						if (!sessionId) return;
 						setBusy(true);
@@ -127,14 +127,14 @@ export function TaskRow({
 			)}
 			<TaskArtifactLinks task={task} sessionId={sessionId} />
 			{!!task.milestones.length && (
-				<details className="mt-1.5">
+				<details className="mt-2">
 					<summary className="cursor-pointer text-xs text-ink-dim">
 						{t("taskRow.milestones", { done, total: task.milestones.length })}
 					</summary>
 					<ul className="mt-1 space-y-0.5">
 						{task.milestones.map((m) => (
 							<li key={m.id} className="text-xs leading-4">
-								<div className="flex items-start gap-1.5">
+								<div className="flex items-start gap-2">
 									<span className={m.state === "completed" ? "text-green-500" : "text-ink-dim"}>
 										{m.state === "completed" ? "\u2713" : "\u25cb"}
 									</span>
@@ -158,7 +158,7 @@ export function TaskRow({
 				</details>
 			)}
 			{!!task.operations.length && (
-				<details className="mt-1.5">
+				<details className="mt-2">
 					<summary className="cursor-pointer text-xs text-ink-dim">
 						{t("taskRow.operations", { n: task.operations.length })}
 					</summary>

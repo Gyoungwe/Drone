@@ -56,7 +56,7 @@ export function SessionPanel() {
 			<div className="flex shrink-0 items-center justify-end px-5 pt-3">
 				<button
 					type="button"
-					className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] text-ink-2 transition-colors hover:bg-hover disabled:opacity-40"
+					className="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-[13px] text-ink-2 transition-colors hover:bg-hover disabled:opacity-40"
 					onClick={newSession}
 					disabled={!selectedCwd}
 				>

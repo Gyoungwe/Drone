@@ -88,12 +88,12 @@ export function RunInspector({
 			<div className="mt-2 grid gap-2 border-t border-border pt-2">
 				<section>
 					<p className="font-medium text-ink-2">{zh ? "主模型" : "Main model"}</p>
-					<div className="mt-1 flex flex-wrap gap-1.5">
+					<div className="mt-1 flex flex-wrap gap-2">
 						{run.models.length ? (
 							run.models.map((m) => (
 								<span
 									key={`${m.provider}/${m.model}`}
-									className="rounded bg-hover px-1.5 py-0.5 font-mono text-[11px]"
+									className="rounded bg-hover px-2 py-0.5 font-mono text-[11px]"
 								>
 									{m.provider || "?"}/{m.model || "?"} · {m.responses}
 								</span>
@@ -102,7 +102,7 @@ export function RunInspector({
 							<span>—</span>
 						)}
 						{usage && (
-							<span className="rounded bg-hover px-1.5 py-0.5">
+							<span className="rounded bg-hover px-2 py-0.5">
 								{compact(usage.total)} tokens ·{" "}
 								{usage.cacheRate == null ? "—" : `${(usage.cacheRate * 100).toFixed(1)}% cache`}
 							</span>
@@ -124,12 +124,12 @@ export function RunInspector({
 				)}
 				<section>
 					<p className="font-medium text-ink-2">{zh ? "工具" : "Tools"}</p>
-					<div className="mt-1 flex flex-wrap gap-1.5">
+					<div className="mt-1 flex flex-wrap gap-2">
 						{run.tools.length ? (
 							run.tools.map((tool) => (
 								<span
 									key={tool.key}
-									className={`rounded px-1.5 py-0.5 font-mono text-[11px] ${tool.state === "error" ? "bg-err/10 text-err" : "bg-hover"}`}
+									className={`rounded px-2 py-0.5 font-mono text-[11px] ${tool.state === "error" ? "bg-err/10 text-err" : "bg-hover"}`}
 								>
 									{tool.name} · {statusLabel(tool.state, zh)}
 								</span>
@@ -181,7 +181,7 @@ export function RunInspector({
 						<p className="font-medium text-ink-2">{zh ? "知识检索" : "Knowledge retrieval"}</p>
 						<div className="mt-1 space-y-2">
 							{run.retrievals.map((item) => (
-								<div key={item.toolId} className="rounded bg-hover px-2 py-1.5">
+								<div key={item.toolId} className="rounded bg-hover px-2 py-2">
 									<p className="break-words text-ink">{item.query}</p>
 									<p className="mt-1 tabular-nums">
 										{item.mode} · {zh ? "词法候选" : "Lexical"} {item.lexicalCandidates ?? "—"} ·{" "}

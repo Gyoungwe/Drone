@@ -178,14 +178,14 @@ function GuideAction({
 }) {
 	return (
 		<div
-			className={`rounded-lg border px-2.5 py-2 ${done ? "border-ok/40 bg-ok/5" : "border-border"}`}
+			className={`rounded-lg border px-3 py-2 ${done ? "border-ok/40 bg-ok/5" : "border-border"}`}
 			data-testid={dataTestId}
 			data-done={done ? "true" : undefined}
 		>
 			<strong className="flex items-center justify-between gap-2 text-[12px] text-ink">
 				{title}
 				{done ? (
-					<span className="rounded-full bg-ok/12 px-1.5 py-0.5 text-xs font-medium text-ok">{doneLabel}</span>
+					<span className="rounded-full bg-ok/12 px-2 py-0.5 text-xs font-medium text-ok">{doneLabel}</span>
 				) : null}
 			</strong>
 			<p className="mt-1 min-h-8 text-[11px] leading-relaxed text-ink-faint">{description}</p>

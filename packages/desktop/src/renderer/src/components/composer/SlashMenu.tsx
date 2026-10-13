@@ -59,7 +59,7 @@ export function SlashMenu({
 
 	if (flat.length === 0 && (query || !specializedCount)) {
 		return (
-			<div className="mb-1.5 rounded-lg border border-border bg-surface py-2 text-center text-xs text-ink-faint shadow-pop">
+			<div className="mb-2 rounded-lg border border-border bg-surface py-2 text-center text-xs text-ink-faint shadow-pop">
 				{t("slash.noMatch")}
 			</div>
 		);
@@ -68,7 +68,7 @@ export function SlashMenu({
 	return (
 		<div
 			ref={listRef}
-			className="mb-1.5 max-h-64 overflow-y-auto rounded-lg border border-border bg-surface shadow-pop"
+			className="mb-2 max-h-64 overflow-y-auto rounded-lg border border-border bg-surface shadow-pop"
 		>
 			{!query && workflowDirection && !showSpecialized && onBackToWorkflows && (
 				<button
@@ -119,7 +119,7 @@ export function SlashMenu({
 								data-example-task={command.exampleTask}
 								disabled={unsupported}
 								onMouseDown={(event) => event.preventDefault()}
-								className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] transition-colors ${
+								className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors ${
 									index === active ? "bg-hover text-ink" : "text-ink-2 hover:bg-hover"
 								} ${unsupported ? "cursor-not-allowed opacity-50" : ""}`}
 								onMouseEnter={() => onSelectedIndexChange(index)}

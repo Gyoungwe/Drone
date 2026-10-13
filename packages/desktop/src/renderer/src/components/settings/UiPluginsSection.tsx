@@ -169,7 +169,7 @@ function PluginRow({ plugin }: { plugin: UiPluginInfo }) {
 				{contributionNames ? ` · ${t("settings.uiPlugins.contributionsLabel")} ${contributionNames}` : ""}
 			</div>
 			{errorText && (
-				<div className="ml-4 mt-2 rounded-lg bg-hover px-2.5 py-1.5 font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap text-ink-dim select-text">
+				<div className="ml-4 mt-2 rounded-lg bg-hover px-3 py-2 font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap text-ink-dim select-text">
 					<div className="font-sans text-err">{errorLabel}</div>
 					{errorText}
 				</div>
@@ -275,7 +275,7 @@ export function UiPluginsSection() {
 			</p>
 
 			{!config.enabled ? (
-				<p className="mt-2.5 text-[11px] text-ink-faint">
+				<p className="mt-3 text-[11px] text-ink-faint">
 					{t("settings.uiPlugins.pluginCount", { count: plugins.length })} ·{" "}
 					<button
 						type="button"
@@ -291,14 +291,14 @@ export function UiPluginsSection() {
 					<p className="mt-1 text-[11px] text-ink-faint">{t("settings.uiPlugins.agentHint")}</p>
 					<button
 						type="button"
-						className="mt-3 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+						className="mt-3 rounded-lg px-3 py-2 text-[12px] font-medium text-ink-dim transition-colors hover:bg-hover hover:text-ink"
 						onClick={() => void openDir()}
 					>
 						{t("settings.uiPlugins.openDir")}
 					</button>
 				</div>
 			) : (
-				<div className="mt-2.5 flex flex-col gap-5">
+				<div className="mt-3 flex flex-col gap-5">
 					<div className="flex flex-col gap-2">
 						{plugins.map((p) => (
 							<PluginRow key={p.name} plugin={p} />

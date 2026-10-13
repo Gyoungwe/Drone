@@ -81,7 +81,7 @@ export function McpPanel() {
 				</div>
 				<button
 					type="button"
-					className="rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-hover hover:text-ink"
+					className="rounded-lg p-2 text-ink-faint transition-colors hover:bg-hover hover:text-ink"
 					onClick={() => void refresh()}
 					disabled={loading}
 					title={t("settings.mcp.reload")}
@@ -91,17 +91,17 @@ export function McpPanel() {
 			</div>
 
 			<div className="mt-4 grid grid-cols-3 gap-2">
-				<div className="rounded-lg bg-hover/70 px-3 py-2.5">
+				<div className="rounded-lg bg-hover/70 px-3 py-3">
 					<p className="text-[11px] text-ink-faint">{t("settings.mcp.servers")}</p>
 					<p className="mt-0.5 text-[16px] font-medium tabular-nums text-ink">{servers.length}</p>
 				</div>
-				<div className="rounded-lg bg-hover/70 px-3 py-2.5">
+				<div className="rounded-lg bg-hover/70 px-3 py-3">
 					<p className="text-[11px] text-ink-faint">{t("settings.mcp.connected")}</p>
 					<p className="mt-0.5 text-[16px] font-medium tabular-nums text-ink">
 						{status?.connectedCount ?? 0}
 					</p>
 				</div>
-				<div className="rounded-lg bg-hover/70 px-3 py-2.5">
+				<div className="rounded-lg bg-hover/70 px-3 py-3">
 					<p className="text-[11px] text-ink-faint">{t("settings.mcp.tools")}</p>
 					<p className="mt-0.5 text-[16px] font-medium tabular-nums text-ink">{status?.totalTools ?? 0}</p>
 				</div>
@@ -132,7 +132,7 @@ export function McpPanel() {
 					</div>
 					<button
 						type="button"
-						className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-ink-2 transition-colors hover:border-border-strong hover:bg-hover"
+						className="flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-ink-2 transition-colors hover:border-border-strong hover:bg-hover"
 						onClick={() => void window.pi.openMcpConfig(cwd ?? undefined)}
 					>
 						<GearIcon size={13} /> {t("settings.mcp.openConfig")}
@@ -147,14 +147,14 @@ export function McpPanel() {
 					{MCP_PRESETS.map((preset) => {
 						const added = servers.some((server) => server.name === preset.name && !server.disabled);
 						return (
-							<li key={preset.id} className="rounded-lg border border-border px-3 py-2.5">
+							<li key={preset.id} className="rounded-lg border border-border px-3 py-3">
 								<div className="flex items-center gap-2">
 									<p className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink">
 										{preset.label[lang]}
 									</p>
 									<button
 										type="button"
-										className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
+										className="shrink-0 rounded-lg border border-border px-3 py-1 text-xs text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
 										disabled={added || pendingPreset !== null}
 										onClick={async () => {
 											setPendingPreset(preset.id);
@@ -216,17 +216,17 @@ export function McpPanel() {
 										<div className="flex items-center gap-2">
 											<span className="truncate text-[13px] font-medium text-ink">{server.name}</span>
 											<span
-												className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${statusTone(displayStatus)}`}
+												className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${statusTone(displayStatus)}`}
 											>
 												{statusLabel(t, displayStatus)}
 											</span>
 										</div>
-										<div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-ink-faint">
+										<div className="mt-1 flex min-w-0 items-center gap-2 text-[11px] text-ink-faint">
 											<span
 												className={
 													server.scope === "project"
-														? "rounded bg-accent/10 px-1.5 py-0.5 font-medium text-accent"
-														: "rounded bg-hover px-1.5 py-0.5 text-ink-2"
+														? "rounded bg-accent/10 px-2 py-0.5 font-medium text-accent"
+														: "rounded bg-hover px-2 py-0.5 text-ink-2"
 												}
 											>
 												{t(`settings.mcp.scope.${server.scope}`)}
@@ -246,7 +246,7 @@ export function McpPanel() {
 											) : null}
 											<button
 												type="button"
-												className="rounded border border-border px-1.5 py-0.5 text-xs hover:bg-hover disabled:opacity-50"
+												className="rounded border border-border px-2 py-0.5 text-xs hover:bg-hover disabled:opacity-50"
 												disabled={probing === server.name}
 												onClick={() => {
 													setProbing(server.name);

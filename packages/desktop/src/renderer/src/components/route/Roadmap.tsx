@@ -74,7 +74,7 @@ export function RoadmapChip({
 			data-testid={`roadmap-node-${node.key}`}
 			onClick={() => onSelect?.(node.key)}
 			aria-current={selected ? "step" : undefined}
-			className={`flex min-w-0 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs leading-5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${ROADMAP_TONE[node.status]} ${selected ? "ring-1 ring-current" : ""}`}
+			className={`flex min-w-0 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-2 py-0.5 text-xs leading-5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${ROADMAP_TONE[node.status]} ${selected ? "ring-1 ring-current" : ""}`}
 		>
 			<span className={`h-1.5 w-1.5 shrink-0 rounded-full ${ROADMAP_DOT[node.status]}`} />
 			<span className="font-medium">{node.label}</span>
@@ -116,7 +116,7 @@ export function RoadmapLane({
 			{current?.detail && (
 				<p
 					data-testid={`${testId}-detail`}
-					className="mt-1.5 whitespace-pre-wrap text-[12px] leading-5 text-ink-dim"
+					className="mt-2 whitespace-pre-wrap text-[12px] leading-5 text-ink-dim"
 				>
 					{current.detail}
 				</p>
