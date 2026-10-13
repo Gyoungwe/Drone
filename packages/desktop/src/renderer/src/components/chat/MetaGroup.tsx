@@ -142,9 +142,9 @@ export const MetaGroup = memo(function MetaGroup({
 	// 状态行小 orb 恒显示：中央动画开关（centerOrbEnabled）与本行解耦，互不让位
 
 	const rows = items.flatMap((item, i) => [
-		// biome-ignore lint/suspicious/noArrayIndexKey: 折叠组内项无独立 id，列表顺序稳定
 		item.thinking ? (
 			<ThinkingRow
+				// biome-ignore lint/suspicious/noArrayIndexKey: 折叠组内项无独立 id，列表顺序稳定
 				key={`thinking-${i}`}
 				thinking={item.thinking}
 				startedAt={item.thinkingStartedAt}
