@@ -11,6 +11,7 @@
 	"type": "module",
 	"main": "./out/main/index.js",
 	"scripts": {
+		"test:preload": "vitest run src/preload/preload-load.test.ts",
 		"dev": "electron-vite dev",
 		"predev": "npm run build:lan-web",
 		"build:lan-web": "vite build --config src/lan-web/vite.config.ts",

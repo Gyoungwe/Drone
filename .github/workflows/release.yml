@@ -67,10 +67,11 @@ jobs:
     if: needs.resolve.outputs.release == 'true'
     env:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+      NODE_OPTIONS: --max-old-space-size=8192
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -82,6 +83,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run stage:pi-packages
+      # 发版前必跑：用假 electron 真实加载 preload（v0.29.0 白屏回归），失败即阻断发布
+      - name: Preload real-load (required)
+        run: npm run test:preload
       - run: npm run lint
       - run: npm run typecheck
       # Keep release validation aligned with the main CI static gate. These
