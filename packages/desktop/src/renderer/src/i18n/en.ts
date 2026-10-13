@@ -1458,6 +1458,11 @@ export const en: Messages = {
 		zh: "中文",
 		en: "English",
 	},
+	home: {
+		greeting: { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening" },
+		intro:
+			"From literature to conclusions — Drone searches, reads, analyzes and deposits into your knowledge base.",
+	},
 	error: {
 		continueMessage: "Continue",
 		continueFrom: "(Resume from step {step}, tool {tool}; do not redo completed steps)",
