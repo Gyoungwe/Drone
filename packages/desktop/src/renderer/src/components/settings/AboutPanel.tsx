@@ -4,6 +4,7 @@ import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { installUpdateWithGuard } from "../../lib/install-update-app";
 import { useUpdateStore } from "../../stores/update";
+import { WordmarkConstruct } from "../chat/WordmarkConstruct";
 
 /** 关于面板：应用标识 + 软件版本 + 检查更新 + 仓库入口，居中展示 */
 export function AboutPanel() {
@@ -75,9 +76,7 @@ export function AboutPanel() {
 
 	return (
 		<div className="flex flex-col items-center gap-2 py-10 text-center">
-			<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink text-[16px] font-bold text-on-ink">
-				P
-			</div>
+			<WordmarkConstruct />
 			<p className="mt-2 text-[14px] font-semibold text-ink">{info?.name ?? "Drone"}</p>
 			<p className="text-[11px] text-ink-faint">{t("settings.about.poweredBy")}</p>
 			<p className="mt-2 font-mono text-[12px] text-ink-dim">

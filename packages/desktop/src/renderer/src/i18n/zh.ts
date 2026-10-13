@@ -1393,6 +1393,10 @@ export const zh = {
 		zh: "中文",
 		en: "English",
 	},
+	home: {
+		greeting: { morning: "早上好", afternoon: "下午好", evening: "晚上好" },
+		intro: "从文献到结论，Drone 帮你检索、阅读、分析并沉淀到知识库。",
+	},
 	error: {
 		continueMessage: "继续",
 		continueFrom: "（从第 {step} 步、工具 {tool} 继续；已完成的步骤不要重做）",
