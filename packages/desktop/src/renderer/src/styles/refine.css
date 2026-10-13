@@ -111,3 +111,73 @@
 		transparent
 	);
 }
+
+/* ---------- 侧栏：180px 带文字 + 进行中 / 最近会话（可收起为 56px 图标栏） ---------- */
+.workbench-nav-collapse {
+	display: flex;
+	height: 28px;
+	width: 36px;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-md);
+	color: var(--color-ink-faint);
+	transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.workbench-nav-collapse:hover {
+	background: var(--highlight);
+	color: var(--color-ink);
+}
+.workbench-nav.is-wide {
+	width: 200px;
+	align-items: stretch;
+	padding: 10px 8px 12px;
+}
+.workbench-nav.is-wide .workbench-nav-collapse {
+	align-self: flex-end;
+	margin-bottom: 4px;
+}
+.workbench-nav.is-wide .workbench-nav-list {
+	align-items: stretch;
+	gap: 2px;
+}
+.workbench-nav.is-wide .workbench-nav-item {
+	width: 100%;
+	height: 32px;
+	justify-content: flex-start;
+	gap: 10px;
+	padding: 0 10px;
+	border-radius: var(--radius-md);
+	font-size: 13px;
+}
+.workbench-nav.is-wide .workbench-nav-item > span {
+	position: static;
+	width: auto;
+	height: auto;
+	overflow: visible;
+	clip: auto;
+}
+.workbench-nav-sessions {
+	min-height: 0;
+	flex: 1 1 auto;
+	overflow-y: auto;
+	margin: 12px -4px 0;
+	padding: 0 4px;
+}
+.workbench-nav-group {
+	margin: 12px 0 4px;
+	padding: 0 10px;
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--color-ink-faint);
+}
+.workbench-nav-sessions ul {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.workbench-nav-sessions li button {
+	padding: 6px 10px;
+}
