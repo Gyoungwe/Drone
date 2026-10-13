@@ -87,6 +87,8 @@ export interface SessionExtensionDependencies {
 	getModelRuntime: () => Promise<ModelRuntime>;
 	getSubagentModel: (agentName: string) => Promise<string | undefined>;
 	getSubagentThinking?: (agentName: string) => Promise<ModelThinkingLevel | undefined>;
+	/** H1：按父会话模式给出 subagent 并发上限；undefined → 工具默认值 */
+	subagentMaxConcurrency?: (sessionId: string) => number | undefined;
 	traces: SessionTraces;
 	onEvent: (sessionId: string, event: SessionEvent) => void;
 	registerLiveChild?: (sessionId: string, control: LiveChildControl) => () => void;
@@ -161,6 +163,7 @@ export function buildSessionCustomTools(
 				traces: deps.traces,
 				onEvent: deps.onEvent,
 				registerLiveChild: deps.registerLiveChild,
+				maxConcurrency: deps.subagentMaxConcurrency,
 			}),
 		);
 	}
