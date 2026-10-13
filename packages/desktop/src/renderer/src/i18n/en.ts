@@ -1479,6 +1479,8 @@ export const en: Messages = {
 			research: { title: "Research", hint: "From literature to conclusions" },
 			knowledge: { title: "Knowledge", hint: "Search and recent deposits" },
 			relay: { title: "Relay", hint: "Continue the last task" },
+			setup: "Set up the connection you need",
+			example: "See a complete example first →",
 		},
 		greeting: { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening" },
 		intro:
