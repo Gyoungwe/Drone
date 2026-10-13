@@ -60,4 +60,14 @@ describe("memory store", () => {
 		expect(store.status("p2").count).toBe(1);
 		expect(store.search("p1", "deseq2")).toEqual([]);
 	});
+
+	it("get returns only this project's items by id", () => {
+		store = new MemoryStore(":memory:");
+		store.add(obs({ projectId: "p2", sourceKey: "x" }));
+		store.add(obs());
+		const [mine] = store.search("p1", "deseq2");
+		const other = store.search("p2", "deseq2")[0]!;
+		expect(store.get("p1", [mine!.id, other.id]).map((h) => h.id)).toEqual([mine!.id]);
+		expect(store.get("p1", [])).toEqual([]);
+	});
 });

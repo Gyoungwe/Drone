@@ -16,6 +16,7 @@ export interface MemoryObservation {
 
 export interface MemoryHit {
 	id: number;
+	sessionId?: string;
 	kind: MemoryObservation["kind"];
 	title: string;
 	body: string;
@@ -117,6 +118,17 @@ export class MemoryStore {
 			.all(projectId, exclude, limit) as unknown as MemoryHit[];
 		const seen = new Set(matched.map((hit) => hit.id));
 		return [...matched, ...recent.filter((hit) => !seen.has(hit.id))].slice(0, limit);
+	}
+
+	/** 按 id 取本项目观察详情（memory_get）；跨项目 id 一律不返回。 */
+	get(projectId: string, ids: number[]): MemoryHit[] {
+		const wanted = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))].slice(0, 20);
+		if (!wanted.length) return [];
+		return this.db
+			.prepare(
+				`SELECT id, session_id AS sessionId, kind, title, body, created_at AS createdAt FROM mem_observations WHERE project_id = ? AND id IN (${wanted.map(() => "?").join(", ")}) ORDER BY created_at DESC, id DESC`,
+			)
+			.all(projectId, ...wanted) as unknown as MemoryHit[];
 	}
 
 	markLoaded(projectId: string, count: number): void {
