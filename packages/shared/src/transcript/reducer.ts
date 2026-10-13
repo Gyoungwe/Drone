@@ -496,6 +496,7 @@ export function reduceEvent(state: SessionTranscriptState, event: SessionEvent):
 							args: "",
 							output: "",
 							state: "running" as const,
+							startedAt: Date.now(),
 							blockIndex: e.contentIndex,
 						},
 					];

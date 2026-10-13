@@ -20,17 +20,15 @@ import { atAgentAvailability, restoreSubagentText } from "./at-subagents";
 import { ContextRing } from "./ContextRing";
 import { composerRunActive } from "./composer-run";
 import { ImageTray } from "./ImageTray";
-import { ModelPicker } from "./ModelPicker";
-import { ModePicker } from "./ModePicker";
 import { PermissionPicker } from "./PermissionPicker";
 import { QueueBar } from "./QueueBar";
 import { QuoteChip } from "./QuoteChip";
+import { RunConfigPicker } from "./RunConfigPicker";
 import { SendErrorBar } from "./SendErrorBar";
 import { SlashMenu } from "./SlashMenu";
 import { SlashPill } from "./SlashPill";
 import { SubagentChip } from "./SubagentChip";
 import { COMPOSER_LINE_PX, caretAtStart, chipIndentPx, chipsFitInline, chipsTotalWidth } from "./slash-pill";
-import { ThinkingPicker } from "./ThinkingPicker";
 import { useAtCompletion } from "./use-at-completion";
 import { useComposerSend } from "./use-composer-send";
 import { useSlashMenu } from "./use-slash-menu";
@@ -655,11 +653,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 							className={`composer-model-group${readOnly ? " pointer-events-none opacity-40" : ""}`}
 							title={t("composer.modelGroupHint")}
 						>
-							<ModePicker />
-							<span className="composer-model-sep" aria-hidden="true" />
-							<ModelPicker />
-							<span className="composer-model-sep" aria-hidden="true" />
-							<ThinkingPicker />
+							<RunConfigPicker />
 						</div>
 						<div className={readOnly ? "pointer-events-none opacity-40" : undefined}>
 							<PermissionPicker />

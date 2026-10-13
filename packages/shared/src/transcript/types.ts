@@ -162,6 +162,8 @@ export interface UIToolCall {
 	/** unified patch（仅 edit 工具成功时由 SDK details.patch 写入；write/其他工具无此字段） */
 	diff?: string;
 	state: "running" | "done" | "error";
+	/** 开始时刻（live = reducer 在 toolcall_start 盖戳；历史回放无此字段，步骤耗时回退为不显示） */
+	startedAt?: number;
 	/** 执行结束时刻（live = reducer 在 tool_execution_end 盖戳；历史 = toolResult entry timestamp 透传）；
 	 * 轮次计时（deriveTurnTimings）用，子代理工具除外（独立行 timestamp 承担） */
 	endedAt?: number;

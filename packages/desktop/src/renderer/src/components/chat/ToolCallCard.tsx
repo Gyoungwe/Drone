@@ -9,6 +9,14 @@ export const summarizeArgs = summarizeToolArgs;
 export const displayName = (name: string) => name.charAt(0).toUpperCase() + name.slice(1);
 
 /** 工具调用行：无边框、默认折叠；折叠态 = 工具名 + 执行对象（单行渐变截断），展开显示完整参数与结果 */
+/** 步骤耗时（ClawsGO 式行尾「5.3s」）：<1s 显示 0.Ns，<60s 一位小数，否则「m 分 s 秒」 */
+export function formatStepDuration(ms: number): string {
+	const s = Math.max(0, ms) / 1000;
+	if (s < 60) return `${s < 10 ? s.toFixed(1) : Math.round(s)}s`;
+	const m = Math.floor(s / 60);
+	return `${m}m ${Math.round(s % 60)}s`;
+}
+
 export function ToolCallCard({ tool }: { tool: UIToolCall }) {
 	const recovery =
 		tool.name === "research_reconcile_literature"
@@ -70,6 +78,14 @@ export function ToolCallCard({ tool }: { tool: UIToolCall }) {
 					</span>
 				)}
 				<ExpandArrowIcon className="shrink-0 text-ink-faint opacity-0 transition-[opacity,transform,color] group-hover/row:opacity-100 group-hover/row:text-ink-2 group-open/dets:rotate-90" />
+				{tool.state !== "running" && tool.startedAt != null && tool.endedAt != null && (
+					<span
+						className="ml-auto shrink-0 pl-2 text-[11px] text-ink-faint tabular-nums"
+						data-testid="tool-duration"
+					>
+						{formatStepDuration(tool.endedAt - tool.startedAt)}
+					</span>
+				)}
 			</summary>
 			<div className="flex flex-col gap-1.5 py-1 pl-4">
 				{tool.args && (

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { clampThinkingLevel, THINKING_LEVELS } from "../../lib/thinking";
 import { useSessionsStore } from "../../stores/sessions";
-import { CheckIcon, ChevronDownIcon } from "../icons";
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from "../icons";
 
 function isThinkingLevel(value: string): value is (typeof THINKING_LEVELS)[number] {
 	return (THINKING_LEVELS as readonly string[]).includes(value);
@@ -13,7 +13,7 @@ function levelLabel(t: ReturnType<typeof useT>, level: string): string {
 }
 
 /** 输入框思考深度切换：chip 按钮 + 上弹单选列表（每个会话独立持有，未设置回退全局默认） */
-export function ThinkingPicker() {
+export function ThinkingPicker({ row }: { row?: string } = {}) {
 	const t = useT();
 	const thinkingLevel = useSessionsStore((s) => s.thinkingLevel);
 	const activeSession = useSessionsStore((s) => s.sessions.find((x) => x.sessionId === s.activeSessionId));
@@ -52,17 +52,35 @@ export function ThinkingPicker() {
 	const label = levelLabel(t, displayLevel);
 
 	return (
-		<div ref={ref} className="relative">
+		<div ref={ref} className={row ? "relative w-full" : "relative"}>
 			<button
 				type="button"
-				className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+				className={
+					row
+						? "flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-[13px] text-ink transition-colors hover:bg-hover disabled:opacity-50"
+						: "flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+				}
 				onClick={() => setOpen((v) => !v)}
 			>
-				<span>{label}</span>
-				<ChevronDownIcon className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+				{row ? (
+					<>
+						<span>{row}</span>
+						<span className="flex min-w-0 items-center gap-1 text-ink-dim">
+							<span className="truncate">{label}</span>
+							<ChevronRightIcon size={12} />
+						</span>
+					</>
+				) : (
+					<>
+						<span>{label}</span>
+						<ChevronDownIcon className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+					</>
+				)}
 			</button>
 			{open && (
-				<div className="absolute bottom-full left-0 z-30 mb-1 w-40 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-pop">
+				<div
+					className={`absolute ${row ? "left-full bottom-0 ml-2 z-40" : "bottom-full left-0 z-30 mb-1"} w-40 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-pop`}
+				>
 					{THINKING_LEVELS.filter((level) => (supported as readonly string[]).includes(level)).map(
 						(level) => {
 							const selected = level === displayLevel;
