@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { AGENT_MODE_IDS, useAgentModeStore } from "../../stores/agent-mode";
 import { isDraftSessionId, useSessionsStore } from "../../stores/sessions";
-import { CheckIcon, ChevronDownIcon } from "../icons";
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from "../icons";
 
 /** 模式 pill（P18）：单体 / 主从 / 集群，带说明；切换后提示工具变化与提示缓存重置。 */
-export function ModePicker() {
+export function ModePicker({ row }: { row?: string } = {}) {
 	const t = useT();
 	const sessionId = useSessionsStore((s) => s.activeSessionId);
 	const mode = useAgentModeStore((s) => (sessionId ? (s.bySession[sessionId] ?? "lead") : "lead"));
@@ -37,16 +37,32 @@ export function ModePicker() {
 				.join(" ")
 		: "";
 	return (
-		<div ref={ref} className="relative">
+		<div ref={ref} className={row ? "relative w-full" : "relative"}>
 			<button
 				type="button"
-				className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
+				className={
+					row
+						? "flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-[13px] text-ink transition-colors hover:bg-hover disabled:opacity-50"
+						: "flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
+				}
 				onClick={() => setOpen((v) => !v)}
 				disabled={disabled}
 				data-testid="mode-picker"
 			>
-				<span>{t(`composer.mode.${mode}`)}</span>
-				<ChevronDownIcon className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+				{row ? (
+					<>
+						<span>{row}</span>
+						<span className="flex min-w-0 items-center gap-1 text-ink-dim">
+							<span className="truncate">{t(`composer.mode.${mode}`)}</span>
+							<ChevronRightIcon size={12} />
+						</span>
+					</>
+				) : (
+					<>
+						<span>{t(`composer.mode.${mode}`)}</span>
+						<ChevronDownIcon className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+					</>
+				)}
 			</button>
 			{change && !open && (
 				<div className="mode-change-note" role="status">
@@ -55,7 +71,9 @@ export function ModePicker() {
 				</div>
 			)}
 			{open && (
-				<div className="absolute bottom-full left-0 z-30 mb-2 w-72 overflow-hidden rounded-xl border border-border bg-surface p-1.5 shadow-pop">
+				<div
+					className={`absolute ${row ? "left-full bottom-0 ml-2 z-40" : "bottom-full left-0 z-30 mb-2"} w-72 overflow-hidden rounded-xl border border-border bg-surface p-1.5 shadow-pop`}
+				>
 					<p className="px-2.5 pt-1.5 pb-1 text-[11px] text-ink-faint">{t("composer.mode.title")}</p>
 					{AGENT_MODE_IDS.map((id) => (
 						<button

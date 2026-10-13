@@ -595,6 +595,7 @@ export const en: Messages = {
 		checkFailed: "Update check failed: {message}",
 	},
 	composer: {
+		config: { mode: "Mode", model: "Model", effort: "Effort" },
 		mode: {
 			title: "Mode (decides available tools)",
 			single: "Solo",

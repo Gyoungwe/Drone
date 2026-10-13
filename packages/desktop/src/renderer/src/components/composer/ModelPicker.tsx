@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
-import { CheckIcon, ChevronDownIcon } from "../icons";
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from "../icons";
 
 /** 输入框模型快速切换：chip 按钮 + 向上弹出分组列表（只显示已配置 provider，参考 codex/opencode） */
-export function ModelPicker() {
+export function ModelPicker({ row }: { row?: string } = {}) {
 	const t = useT();
 	const models = useSessionsStore((s) => s.models);
 	const currentModel = useSessionsStore((s) => s.currentModel);
@@ -56,17 +56,35 @@ export function ModelPicker() {
 		current?.label ?? (effective ? `${effective.provider}/${effective.modelId}` : t("composer.modelDefault"));
 
 	return (
-		<div ref={ref} className="relative">
+		<div ref={ref} className={row ? "relative w-full" : "relative"}>
 			<button
 				type="button"
-				className="flex max-w-[160px] items-center gap-1 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+				className={
+					row
+						? "flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-[13px] text-ink transition-colors hover:bg-hover disabled:opacity-50"
+						: "flex max-w-[160px] items-center gap-1 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+				}
 				onClick={() => setOpen((v) => !v)}
 			>
-				<span className="truncate">{label}</span>
-				<ChevronDownIcon className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+				{row ? (
+					<>
+						<span>{row}</span>
+						<span className="flex min-w-0 items-center gap-1 text-ink-dim">
+							<span className="truncate">{label}</span>
+							<ChevronRightIcon size={12} />
+						</span>
+					</>
+				) : (
+					<>
+						<span className="truncate">{label}</span>
+						<ChevronDownIcon className={open ? "rotate-180 transition-transform" : "transition-transform"} />
+					</>
+				)}
 			</button>
 			{open && (
-				<div className="absolute bottom-full left-0 z-30 mb-1 max-h-72 w-72 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-pop">
+				<div
+					className={`absolute ${row ? "left-full bottom-0 ml-2 z-40" : "bottom-full left-0 z-30 mb-1"} max-h-72 w-72 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-pop`}
+				>
 					{groups.length === 0 && (
 						<div className="px-2 py-3 text-center text-xs text-ink-faint">
 							{t("settings.providers.empty")}
