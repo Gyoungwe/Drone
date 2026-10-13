@@ -25,6 +25,7 @@ const FORWARDABLE_EVENTS = new Set([
 	"compaction_start",
 	"compaction_end",
 	"subagent_mutex",
+	"context_evaporated",
 	"subagent_run",
 	"model_wait",
 	"stream_guard_tripped",

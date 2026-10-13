@@ -17,6 +17,12 @@ export function SystemMessage({ message }: { message: Extract<UIMessage, { kind:
 					})}
 				</div>
 			);
+		if (message.evaporated)
+			return (
+				<CompactionDivider>
+					{t("message.contextEvaporated", { count: message.evaporated.count })}
+				</CompactionDivider>
+			);
 		const mutex = message.mutex;
 		if (mutex) {
 			const fileName = mutex.extensionPath.split(/[\\/]/).pop() ?? mutex.extensionPath;

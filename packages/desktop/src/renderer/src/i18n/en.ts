@@ -811,6 +811,7 @@ export const en: Messages = {
 			noFollowUp: "Not handed to the main model · cite it yourself",
 			mutex: "Detected subagent extension {path}; built-in subagent took over: {tools}",
 		},
+		contextEvaporated: "Trimmed {count} old tool results",
 	},
 	taskRow: {
 		running:
