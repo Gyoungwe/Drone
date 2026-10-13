@@ -158,6 +158,7 @@ export function SettingsDialog() {
 	if (!open) return null;
 
 	const Panel = PANELS[category];
+	const panelDescription = t(`settings.panelDescription.${category as "general"}`);
 
 	return (
 		<div
@@ -238,6 +239,18 @@ export function SettingsDialog() {
 						})}
 					</nav>
 					<div className="settings-dialog-content min-w-0 flex-1 scroll-fade overflow-y-auto overflow-x-hidden px-3 py-2">
+						{Panel && (
+							<header className="mb-4 flex items-start justify-between gap-4 border-b border-border pb-3">
+								<div className="min-w-0">
+									<h1 className="text-[16px] font-semibold tracking-[-0.01em] text-ink">
+										{t(`settings.category.${category as "general"}`)}
+									</h1>
+									<p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-ink-faint">
+										{panelDescription}
+									</p>
+								</div>
+							</header>
+						)}
 						{Panel ? (
 							<Panel />
 						) : activePluginContribution ? (

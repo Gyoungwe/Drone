@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useT } from "../../../i18n";
 import { useCatalogStore } from "../../../stores/catalog";
 import { CheckIcon, TrashIcon } from "../../icons";
+import { ActionSurface } from "../../ui/ActionSurface";
 import { Button } from "../../ui/Button";
 import { Tooltip } from "../../ui/Tooltip";
 
@@ -24,7 +25,15 @@ export function npmSourceToName(source: string): string | null {
 }
 
 /** 卸载按钮：点击进入确认态（红字，再点执行）；鼠标移出或 3s 后自动恢复 */
-function UninstallButton({ source, scope }: { source: string; scope: "user" | "project" }) {
+function UninstallButton({
+	source,
+	scope,
+	itemName,
+}: {
+	source: string;
+	scope: "user" | "project";
+	itemName: string;
+}) {
 	const t = useT();
 	const [confirming, setConfirming] = useState(false);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -36,38 +45,51 @@ function UninstallButton({ source, scope }: { source: string; scope: "user" | "p
 		clearTimeout(timerRef.current);
 		timerRef.current = setTimeout(() => setConfirming(false), 3000);
 	};
-
-	if (confirming) {
-		return (
-			<button
-				type="button"
-				className="rounded-lg px-2 py-1 text-[12px] font-medium text-err transition-colors hover:text-err disabled:opacity-40"
-				disabled={removing}
-				onClick={() => void removeConfiguredPackage(source, scope)}
-				onMouseLeave={() => setConfirming(false)}
-			>
-				{removing ? (
-					<span className="inline-flex items-center gap-2">
-						<span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
-						{t("settings.extensions.removing")}
-					</span>
-				) : (
-					t("settings.extensions.confirmUninstall")
-				)}
-			</button>
-		);
-	}
 	return (
-		<Tooltip label={t("settings.extensions.uninstall")}>
-			<button
-				type="button"
-				className="rounded-lg px-2 py-1 text-ink-faint transition-colors hover:bg-hover hover:text-err"
-				onClick={enterConfirm}
-				aria-label={t("settings.extensions.uninstall")}
-			>
-				<TrashIcon size={13} />
-			</button>
-		</Tooltip>
+		<>
+			<Tooltip label={t("settings.extensions.uninstall")}>
+				<button
+					type="button"
+					className="rounded-lg px-2 py-1 text-ink-faint transition-colors hover:bg-hover hover:text-err"
+					onClick={enterConfirm}
+					aria-label={t("settings.extensions.uninstall")}
+				>
+					<TrashIcon size={13} />
+				</button>
+			</Tooltip>
+			{confirming && (
+				<ActionSurface
+					ariaLabel={t("settings.extensions.confirmTitle")}
+					tone="danger"
+					width="compact"
+					height="fit"
+					onEscape={() => setConfirming(false)}
+				>
+					<div className="flex flex-col gap-4 p-5">
+						<div>
+							<h2 className="text-[15px] font-semibold text-ink">{t("settings.extensions.confirmTitle")}</h2>
+							<p className="mt-2 text-[13px] font-medium text-ink">{itemName}</p>
+							<p className="mt-1 text-[12px] leading-relaxed text-ink-dim">
+								{t("settings.extensions.confirmConsequence")}
+							</p>
+						</div>
+						<div className="flex justify-end gap-2">
+							<Button size="sm" variant="secondary" onClick={() => setConfirming(false)}>
+								{t("common.cancel")}
+							</Button>
+							<Button
+								size="sm"
+								variant="danger"
+								disabled={removing}
+								onClick={() => void removeConfiguredPackage(source, scope)}
+							>
+								{removing ? t("settings.extensions.removing") : t("settings.extensions.confirmUninstall")}
+							</Button>
+						</div>
+					</div>
+				</ActionSurface>
+			)}
+		</>
 	);
 }
 
@@ -118,7 +140,9 @@ export function ExtensionRow({
 					</span>
 				)}
 				<ScopeBadge scope={extension.scope} />
-				{configured && <UninstallButton source={configured.source} scope={configured.scope} />}
+				{configured && (
+					<UninstallButton itemName={extension.name} source={configured.source} scope={configured.scope} />
+				)}
 			</div>
 			<div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
 				{extension.toolsCount > 0 && (
@@ -210,7 +234,7 @@ export function CatalogRow({
 							<CheckIcon size={11} />
 							{t("settings.extensions.installed")}
 						</span>
-						<UninstallButton source={configured.source} scope={configured.scope} />
+						<UninstallButton itemName={pkg.name} source={configured.source} scope={configured.scope} />
 					</div>
 				) : (
 					<div className="flex flex-col items-end gap-1">
