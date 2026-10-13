@@ -2835,11 +2835,17 @@ code {
 .hover-highlight:hover {
 	background: var(--highlight);
 }
-[data-theme="dark"] .main-float {
+/* U2：主区浮卡（浅/深一致）：外层 --sidebar 底，主卡 surface、24px 圆角、四周 8px、1px 描边 + 最弱阴影 */
+.main-float {
 	margin: var(--space-2);
 	border-radius: var(--radius-card);
 	background: var(--color-surface);
 	overflow: hidden;
+	box-shadow:
+		0 0 0 1px var(--color-border),
+		0 1px 2px color-mix(in oklab, var(--color-ink) 4%, transparent);
+}
+[data-theme="dark"] .main-float {
 	box-shadow: 0 0 0 1px var(--color-border);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -3185,4 +3191,221 @@ code {
 .mode-change-note-close:hover {
 	background: var(--color-hover);
 	color: var(--color-ink);
+}
+
+/* ======== 壳层与页面降噪（原 refine.css，U2 并入；位于文件末尾以保持原有层叠顺序） ======== */
+/* ---------- 左侧图标栏：选中态用中性高亮，不再强调色底 + 左侧色条 ---------- */
+.app-frame {
+	background: var(--sidebar);
+}
+.workbench-nav {
+	border-right-color: transparent;
+	background: transparent;
+}
+.workbench-nav-item {
+	height: 36px;
+	width: 36px;
+	border-radius: var(--radius-md);
+	transition:
+		background-color var(--duration-fast) var(--ease-standard),
+		color var(--duration-fast) var(--ease-standard);
+}
+.workbench-nav-item.is-active {
+	background: var(--highlight);
+	color: var(--color-ink);
+}
+.workbench-nav-item.is-active::before {
+	display: none;
+}
+
+/* ---------- 设置弹窗：两栏，导航中性选中，标题更醒目，内容留白更大 ---------- */
+.settings-dialog-shell .settings-dialog {
+	border-radius: var(--radius-dialog);
+	border-color: var(--color-border);
+}
+.settings-dialog-shell .settings-dialog > div:first-child {
+	border-bottom-color: transparent;
+	background: transparent;
+	padding: var(--space-4) var(--space-4) var(--space-2) var(--space-5);
+}
+.settings-dialog-shell .settings-dialog > div:first-child h2 {
+	font-size: 15px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+.settings-dialog-shell nav {
+	width: 168px;
+	padding: var(--space-2) var(--space-2) var(--space-3);
+	border-right-color: transparent;
+	background: transparent;
+}
+.settings-dialog-shell .settings-nav-item {
+	border: 0;
+	padding: var(--space-2) var(--space-2);
+	font-size: 13px;
+	border-radius: var(--radius-md);
+}
+.settings-dialog-shell .settings-nav-item:hover {
+	background: var(--highlight);
+}
+.settings-dialog-shell nav .settings-nav-item.is-active {
+	border: 0;
+	background: var(--color-hover);
+	color: var(--color-ink);
+	font-weight: 500;
+}
+.settings-dialog-shell nav > p {
+	margin-top: var(--space-4);
+	padding: 0 var(--space-2) 2px;
+	font-size: 11px;
+	letter-spacing: 0.02em;
+	color: var(--color-ink-faint);
+}
+.settings-dialog-shell .settings-dialog-content {
+	padding: var(--space-2) var(--space-6) var(--space-6) var(--space-4);
+}
+
+/* ---------- 空间 / 会话列表：搜索栏去底色、行高与字号统一 ---------- */
+.project-search {
+	border-bottom-color: transparent;
+	background: transparent;
+}
+.project-page {
+	background: var(--color-surface);
+}
+
+/* ---------- 知识库：页头去分隔线、状态卡去阴影，与工作台同一套层级 ---------- */
+.knowledge-view-head {
+	border-bottom-color: transparent;
+	background: transparent;
+	padding: var(--space-4) var(--space-6) var(--space-2);
+}
+.knowledge-view-body {
+	padding: var(--space-3) var(--space-6) var(--space-10);
+	background: var(--knowledge-canvas);
+}
+.knowledge-home > section:first-child {
+	box-shadow: none;
+	border-color: var(--knowledge-border);
+	background: var(--knowledge-surface);
+}
+
+/* ---------- 文件预览侧栏：工具条去框，内容区更安静 ---------- */
+.resource-reader-toolbar {
+	border-color: transparent;
+	box-shadow: none;
+}
+
+/* ---------- 滚动区边缘渐隐（ClawsGO scroll-fade） ---------- */
+.scroll-fade {
+	mask-image: linear-gradient(
+		to bottom,
+		transparent,
+		#000 calc(var(--scroll-fade-size) / 4),
+		#000 calc(100% - var(--scroll-fade-size) / 2),
+		transparent
+	);
+}
+
+/* ---------- 侧栏：180px 带文字 + 进行中 / 最近会话（可收起为 56px 图标栏） ---------- */
+.workbench-nav-collapse {
+	display: flex;
+	height: 28px;
+	width: 36px;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-md);
+	color: var(--color-ink-faint);
+	transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.workbench-nav-collapse:hover {
+	background: var(--highlight);
+	color: var(--color-ink);
+}
+.workbench-nav.is-wide {
+	width: 200px;
+	align-items: stretch;
+	padding: var(--space-3) var(--space-2) var(--space-3);
+}
+.workbench-nav.is-wide .workbench-nav-collapse {
+	align-self: flex-end;
+	margin-bottom: var(--space-1);
+}
+.workbench-nav.is-wide .workbench-nav-list {
+	align-items: stretch;
+	gap: 2px;
+}
+.workbench-nav.is-wide .workbench-nav-item {
+	width: 100%;
+	height: 32px;
+	justify-content: flex-start;
+	gap: var(--space-2);
+	padding: 0 var(--space-2);
+	border-radius: var(--radius-md);
+	font-size: 13px;
+}
+.workbench-nav.is-wide .workbench-nav-item > span {
+	position: static;
+	width: auto;
+	height: auto;
+	overflow: visible;
+	clip: auto;
+}
+.workbench-nav-sessions {
+	min-height: 0;
+	flex: 1 1 auto;
+	overflow-y: auto;
+	margin: var(--space-3) -4px 0;
+	padding: 0 var(--space-1);
+}
+.workbench-nav-group {
+	margin: var(--space-3) 0 var(--space-1);
+	padding: 0 var(--space-2);
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--color-ink-faint);
+}
+.workbench-nav-sessions ul {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.workbench-nav-sessions li button {
+	/* 窄侧栏两行会话：横向 10→8（向下取整，避免 200px 栏内标题截断），纵向 6→8 */
+	padding: var(--space-2);
+}
+
+/* 设置导航：图标 + 中文 + 英文副标，左栏加宽 */
+.settings-dialog-shell nav {
+	width: 208px;
+}
+
+/* G6：弹窗 / 表单按钮约定 —— 左：次要操作（测试连接 / 复制），中间 flex-1，右：取消 + 主按钮。
+   主按钮统一为黑色 pill（ClawsGO 式），强调色只留给选中 / 运行 / 链接。 */
+.drone-button--primary {
+	border-color: var(--color-ink);
+	border-radius: 999px;
+	background: var(--color-ink);
+	color: var(--color-on-ink);
+	box-shadow: none;
+}
+.drone-button--primary:hover:not(:disabled) {
+	border-color: var(--color-ink-2);
+	background: var(--color-ink-2);
+	color: var(--color-on-ink);
+}
+
+/* G5：知识库内部子卡去卡中卡 —— 外层卡保留描边，内层改为浅底无框，阴影只留一层 */
+.knowledge-view {
+	--knowledge-shadow: 0 1px 2px rgba(35, 58, 78, 0.04);
+	--knowledge-shadow-soft: none;
+}
+.knowledge-home :is(section, article) :is(section, article, div).rounded-xl.border,
+.knowledge-home :is(section, article) :is(section, article, div).rounded-lg.border {
+	border-color: transparent;
+	background: var(--knowledge-surface-muted);
+	box-shadow: none;
 }
