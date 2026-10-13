@@ -744,6 +744,8 @@ export const en: Messages = {
 		summaryEdit: "Edited {n} {unit}",
 		summaryExplore: "Explored {n} {unit}",
 		summarySearch: "Searched {n} {unit}",
+		summaryFetch: "Fetched {n} {unit}",
+		summaryOther: "{name} · {n}",
 		summaryBash: "Ran {n} {unit}",
 		summarySubagents: "{n} {unit} dispatched",
 		image: "View image",

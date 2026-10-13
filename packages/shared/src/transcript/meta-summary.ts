@@ -1,7 +1,7 @@
 import type { UIToolCall } from "./types";
 
 /** 折叠组工具的语义分类（展示统计用）；未知工具归 other（按原始工具名各自计数）；subagent 为正向汇总段（不计工具明细） */
-export type ToolCategory = "read" | "edit" | "explore" | "search" | "bash" | "other" | "subagent";
+export type ToolCategory = "read" | "edit" | "explore" | "search" | "fetch" | "bash" | "other" | "subagent";
 
 /** 工具名 → 语义类目：edit/write 同为「编辑」，ls/glob 同为「探索」，grep 单独「搜索」 */
 export function categoryOf(toolName: string): ToolCategory {
@@ -18,6 +18,12 @@ export function categoryOf(toolName: string): ToolCategory {
 			return "search";
 		case "bash":
 			return "bash";
+		case "webfetch":
+		case "web_fetch":
+		case "fetch":
+		case "websearch":
+		case "web_search":
+			return "fetch";
 		default:
 			return "other";
 	}

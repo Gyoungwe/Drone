@@ -208,16 +208,6 @@ export const MetaGroup = memo(function MetaGroup({
 							</span>
 						)}
 					</div>
-					{/* 圆点行：一次 tool call 一粒（running 空心呼吸 → done 实心 ink-dim / error ink-faint），working 期实时追加、
-					    结束后随 items 冻结原位；超长 flex-wrap 换行；展开组时隐藏（展开区有完整工具卡）。
-					    左缘与状态行（orb/标签）对齐；gap-1 紧密成串（密度感） */}
-					{dots.length > 0 && (
-						<div className="mb-0.5 flex flex-wrap gap-1 py-0.5 group-open/outer:hidden">
-							{dots.map((dot) => (
-								<span key={dot.key} className={dotClass(dot.state)} />
-							))}
-						</div>
-					)}
 				</summary>
 				<div className="flex flex-col gap-1.5 py-1">{rows}</div>
 			</details>
