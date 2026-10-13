@@ -1087,6 +1087,12 @@ export const zh = {
 			title: "本项目记忆",
 			hint: "已记 {count} 条 · 自动记下改过的文件、跑过的命令和失败原因（只存摘要，跳过 <private>），新会话开始时载入最相关的几条（≤600 token），只存本机。",
 			clear: "清空",
+			view: "查看记录",
+			hide: "收起",
+			remove: "删除",
+			promote: "提升",
+			promoteHint: "写入本项目 .pi/memory/（可审阅、可进 git），作为长期项目记忆",
+			empty: "暂无记录",
 		},
 		channelWatch: "跨会话频道协作（channel-watch）",
 		channelWatchHint:

@@ -9,7 +9,7 @@ import type { DiscoveryApi } from "./host-api/discovery";
 import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
 import type { LanStatus } from "./host-api/lan";
-import type { MemoryProjectStatus } from "./host-api/memory";
+import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
@@ -296,6 +296,9 @@ export const IpcChannels = {
 	MemoryGetStatus: "memory:getStatus",
 	MemorySetEnabled: "memory:setEnabled",
 	MemoryClear: "memory:clear",
+	MemoryList: "memory:list",
+	MemoryRemove: "memory:remove",
+	MemoryPromote: "memory:promote",
 	AskRequest: "ask:request",
 	AskRespond: "ask:respond",
 	PermissionRespond: "permission:respond",
@@ -533,6 +536,12 @@ export interface PiApi
 	memorySetEnabled(cwd: string, enabled: boolean): Promise<MemoryProjectStatus>;
 	/** 清空项目观察记忆。 */
 	memoryClear(cwd: string): Promise<MemoryProjectStatus>;
+	/** 列出项目最近的观察记忆。 */
+	memoryList(cwd: string): Promise<MemoryListItem[]>;
+	/** 删除一条观察记忆。 */
+	memoryRemove(cwd: string, id: number): Promise<MemoryProjectStatus>;
+	/** 把一条观察提升为项目记忆（.pi/memory/）。 */
+	memoryPromote(cwd: string, id: number): Promise<MemoryProjectStatus>;
 	respondAsk(requestId: string, response: AskResponse): Promise<boolean>;
 	onAskRequest(cb: (req: AskRequest) => void): () => void;
 	respondPermission(requestId: string, answer: PermissionAnswer): Promise<void>;
