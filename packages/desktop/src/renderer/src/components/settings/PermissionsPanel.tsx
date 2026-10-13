@@ -540,7 +540,7 @@ function AuditDisclosure({
 				) : entries.length === 0 ? (
 					<p className="text-[11px] text-ink-faint">{t("settings.permissions.auditEmpty")}</p>
 				) : (
-					<ol className="max-h-56 space-y-1 overflow-y-auto font-mono text-[11px] text-ink-dim">
+					<ol className="max-h-56 space-y-1 scroll-fade overflow-y-auto font-mono text-[11px] text-ink-dim">
 						{entries.map((entry) => (
 							<li key={`${entry.t}|${entry.tool}|${entry.text}|${entry.cwd ?? ""}`} className="flex gap-2">
 								<span className="shrink-0 text-ink-faint">{entry.t.replace("T", " ").slice(0, 19)}</span>

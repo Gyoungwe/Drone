@@ -124,7 +124,7 @@ export function WikiReviewDialog({
 					<p className="mt-1 break-all font-mono text-[11px] text-ink-dim select-text">{preview.path}</p>
 				)}
 			</div>
-			<div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
+			<div className="min-h-0 flex-1 space-y-3 scroll-fade overflow-y-auto px-5 py-4">
 				{pending && !preview && <p className="text-xs text-ink-dim">{t("loading")}</p>}
 				{errorText && (
 					<div role="alert" className="rounded-lg border border-border p-3 text-xs text-err">

@@ -49,7 +49,7 @@ export function ProcessBlock({ segment, children }: { segment: ProcessSegment; c
 				}}
 			>
 				<ChevronRightIcon size={12} className={`process-block-chevron${open ? " open" : ""}`} />
-				<span className={`process-block-label${segment.working ? " shimmer-sweep" : ""}`}>
+				<span className={`process-block-label${segment.working ? " shimmer" : ""}`}>
 					{segment.working ? t("process.running") : t("process.label")}
 				</span>
 				<span className="process-block-meta">
@@ -68,7 +68,7 @@ export function ProcessBlock({ segment, children }: { segment: ProcessSegment; c
 					)}
 				</span>
 				{!open && stageText && (
-					<span className={`process-block-stage${segment.working ? " shimmer-sweep" : ""}`} title={stageText}>
+					<span className={`process-block-stage${segment.working ? " shimmer" : ""}`} title={stageText}>
 						{stageText}
 					</span>
 				)}

@@ -49,7 +49,7 @@ export function ToolCallCard({ tool }: { tool: UIToolCall }) {
 
 	// running 时工具名加高光扫过动画（与 MetaGroup 状态行同款光带渐变）
 	const nameClass = `shrink-0 font-mono text-[13px] font-semibold text-ink-dim transition-colors group-hover/row:text-ink${
-		tool.state === "running" ? " shimmer-sweep" : ""
+		tool.state === "running" ? " shimmer" : ""
 	}`;
 	const summaryClass =
 		"relative overflow-hidden whitespace-nowrap font-mono text-[12px] text-ink-faint transition-colors group-hover/row:text-ink";

@@ -123,7 +123,7 @@ export function InlineSubagentTranscript({ run }: { run: SubagentRunUi }) {
 	}
 
 	return (
-		<div className="max-h-[420px] overflow-y-auto border-t border-border/60 bg-surface-2/30 px-3 py-3">
+		<div className="max-h-[420px] scroll-fade overflow-y-auto border-t border-border/60 bg-surface-2/30 px-3 py-3">
 			<div className="flex flex-col gap-4">
 				{rows.map((row) => {
 					if (row.kind === "turnDiff") return null;

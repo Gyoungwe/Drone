@@ -1,10 +1,4 @@
-import {
-	dotsFromItems,
-	type MetaDot,
-	type MetaItem,
-	summarizeCategories,
-	thinkingLabel,
-} from "@drone/shared";
+import { type MetaItem, summarizeCategories, thinkingLabel } from "@drone/shared";
 import { Fragment, memo, useEffect, useMemo, useState } from "react";
 import type { OrbState } from "thinking-orbs";
 import { ThinkingOrb } from "thinking-orbs";
@@ -16,7 +10,6 @@ import { summaryLabel } from "./meta-summary-label";
 import { type LivePreviewItem, PreviewTicker } from "./PreviewTicker";
 import { ToolCallCard } from "./ToolCallCard";
 import { useShownWorking } from "./use-shown-working";
-import { useSweepHighlight } from "./use-sweep-highlight";
 
 export type { MetaItem };
 
@@ -63,13 +56,6 @@ function ThinkingRow({
 		</details>
 	);
 }
-/** 圆点样式：done = 实心 ink-dim（与 worked 态标题同色，弱化存在感），error = 琥珀 warn token，running = 空心呼吸（globals.css meta-dot-running）；4px 小点紧密成串 */
-function dotClass(state: MetaDot["state"]): string {
-	const base = "h-1 w-1 shrink-0 rounded-full";
-	if (state === "running") return `${base} meta-dot-running`;
-	return state === "error" ? `${base} bg-warn` : `${base} bg-ink-dim`;
-}
-
 /**
  * 外层折叠组：聚合多条非正文消息的思考/工具。
  * 标题行：working 期 = Working/Thinking 标签 + 内联预览行；worked 期 = 分类统计单行
@@ -131,8 +117,6 @@ export const MetaGroup = memo(function MetaGroup({
 }) {
 	const t = useT();
 	const count = items.reduce((n, item) => n + (item.thinking ? 1 : 0) + item.tools.length, 0);
-	// 圆点序列：组内工具按到达顺序展开（working 期实时追加；组结束后随 items 冻结在原位）
-	const dots = useMemo(() => dotsFromItems(items), [items]);
 	// 分类汇总：worked 态标题行（working 期不显示；展开组时标题仍在）
 	const segments = useMemo(() => summarizeCategories(items, subagentCount), [items, subagentCount]);
 
@@ -202,8 +186,6 @@ export const MetaGroup = memo(function MetaGroup({
 	}, [items]);
 
 	// 扫光目标集合（预览行 id）标识：集合变化 → hook 内同帧补样式，消除新行首帧实色闪烁
-	const liveKey = liveItems.map((i) => i.id).join(",");
-	const { labelRef, wrapRef: tickerWrapRef } = useSweepHighlight(shownWorking, liveKey);
 
 	/** 单条已结束（如正文前的思考）直接裸行展示，不套 "已完成 · 1" 外壳；-mb-4 与包装组一致：
 	 * 与后续正文净距 8px（容器 gap-6 - 16px），单行/成组间距统一 */
@@ -228,15 +210,12 @@ export const MetaGroup = memo(function MetaGroup({
 							<>
 								<div className="flex shrink-0 items-center gap-2">
 									<ThinkingOrb state={orbState} size={20} paused={false} />
-									<span
-										ref={labelRef}
-										className="sweep-target text-[14px] font-bold text-ink-working transition-colors group-hover/row:text-ink"
-									>
+									<span className="shimmer text-[14px] font-bold text-ink-working transition-colors group-hover/row:text-ink">
 										{statusText || (!isTool && thinkingTimerLabel) || t(labelKey)}
 									</span>
 								</div>
 								{/* 实时预览内联进标题行（单行截断，展开组时隐藏） */}
-								<div ref={tickerWrapRef} className="min-w-0 flex-1 group-open/outer:hidden">
+								<div className="min-w-0 flex-1 group-open/outer:hidden">
 									<PreviewTicker items={liveItems} reserveSpace />
 								</div>
 							</>
@@ -251,10 +230,7 @@ export const MetaGroup = memo(function MetaGroup({
 								))}
 							</span>
 						) : (
-							<span
-								ref={labelRef}
-								className="text-[14px] font-bold text-ink-dim transition-colors group-hover/row:text-ink"
-							>
+							<span className="text-[14px] font-bold text-ink-dim transition-colors group-hover/row:text-ink">
 								{thinkingTimerLabel ?? t("message.worked")}
 							</span>
 						)}

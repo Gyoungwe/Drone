@@ -155,17 +155,21 @@ export default function App() {
 				<div className="app-frame relative flex min-h-0 flex-1">
 					<WorkbenchNav />
 					{view === "projects" ? (
-						<div className="min-h-0 min-w-0 flex-1">
+						<div className="page-fade min-h-0 min-w-0 flex-1">
 							<ProjectPage />
 						</div>
 					) : view === "knowledge" ? (
-						<KnowledgeView />
+						<div className="page-fade min-h-0 min-w-0 flex-1">
+							<KnowledgeView />
+						</div>
 					) : pluginView ? (
-						<PluginEntryHost entry={pluginView} />
+						<div className="page-fade min-h-0 min-w-0 flex-1">
+							<PluginEntryHost entry={pluginView} />
+						</div>
 					) : (
 						<>
 							{/* U2：主区浮卡包住消息区 + 输入框（浅/深统一），外层为 --sidebar 底 */}
-							<div className="main-float relative flex min-w-0 flex-1 flex-col">
+							<div className="main-float page-fade relative flex min-w-0 flex-1 flex-col">
 								<main className="relative min-h-0 flex-1">
 									{showEmpty ? <EmptyState /> : <MessageList />}
 									{/* 聊天区四角贡献层（TodoPanel 悬浮胶囊已并入右侧面板「任务」页签） */}

@@ -36,7 +36,7 @@ export function ProjectSidebar() {
 					</button>
 				</Tooltip>
 			</div>
-			<div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
+			<div className="min-h-0 flex-1 scroll-fade overflow-y-auto px-3 pb-2">
 				{/* 内置日常空间钉顶：不参与项目排序、不可删除（无 hover ×）；
 				    选中后右栏经 deriveSessions 按 cwd===dailyDir 过滤出日常会话 */}
 				{dailyDir && <DailyItem isActive={selectedCwd === dailyDir} onSelect={() => select(dailyDir)} />}
