@@ -40,3 +40,40 @@ it("refuses ids from another project and remove only touches this project", () =
 	expect(store.remove("p2", other.id)).toBe(true);
 	expect(store.status("p2").count).toBe(0);
 });
+
+it("distills into the knowledge base once, with provenance, and stops injecting", async () => {
+	const { promoteToKnowledge } = await import("./promote");
+	store = new MemoryStore(":memory:");
+	store.add({
+		projectId: "p1",
+		sessionId: "s1",
+		sourceKey: "c1",
+		kind: "change",
+		title: "修改 deseq2.R",
+		body: "",
+	});
+	store.add({
+		projectId: "p1",
+		sessionId: "s1",
+		sourceKey: "c2",
+		kind: "command",
+		title: "Rscript deseq2.R",
+		body: "ok",
+	});
+	const cmd = store.list("p1").find((h) => h.kind === "command")!;
+	const calls: unknown[] = [];
+	const knowledge = {
+		saveMemory: async (_cwd: string, memory: unknown) => {
+			calls.push(memory);
+			return { path: "Projects/p1/Memory/x-m2.md" };
+		},
+	};
+	await expect(promoteToKnowledge(store, knowledge, "/w", "p1", cmd.id)).resolves.toEqual({
+		path: "Projects/p1/Memory/x-m2.md",
+	});
+	expect(calls[0]).toMatchObject({ sessionId: "s1", files: ["deseq2.R"], title: "Rscript deseq2.R" });
+	expect(store.find("p1", cmd.id)?.promotedTo).toBe("Projects/p1/Memory/x-m2.md");
+	expect(store.search("p1", "Rscript").map((h) => h.id)).not.toContain(cmd.id);
+	await promoteToKnowledge(store, knowledge, "/w", "p1", cmd.id);
+	expect(calls).toHaveLength(1);
+});

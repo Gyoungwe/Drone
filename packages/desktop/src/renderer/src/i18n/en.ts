@@ -1142,6 +1142,10 @@ export const en: Messages = {
 			promoteHint:
 				"Save to this project's .pi/memory/ (reviewable, can be committed) as long-term project memory",
 			empty: "No entries",
+			distill: "Save to knowledge",
+			distillHint:
+				"Write it as a note in this project's Memory category of the knowledge base (with session, date and files); the entry stops being injected",
+			distilled: "In knowledge",
 		},
 		channelWatch: "Cross-session channel collaboration (channel-watch)",
 		channelWatchHint:

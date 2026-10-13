@@ -426,6 +426,7 @@ const invokeApi = {
 	memoryList: invoke(memoryClient, "list"),
 	memoryRemove: invoke(memoryClient, "remove"),
 	memoryPromote: invoke(memoryClient, "promote"),
+	memoryPromoteToKnowledge: invoke(memoryClient, "promoteToKnowledge"),
 	getMcpStatus: invoke(mcpClient, "getStatus"),
 	getMcpConfig: invoke(mcpClient, "getConfig"),
 	setMcpServerEnabled: invoke(mcpClient, "setServerEnabled"),

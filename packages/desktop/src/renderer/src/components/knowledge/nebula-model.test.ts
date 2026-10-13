@@ -3,6 +3,7 @@ import {
 	buildNebulaGraph,
 	labelledNodes,
 	NEBULA_ISOLATED,
+	NEBULA_MEMORY,
 	nebulaNodeSize,
 	neighbourhood,
 } from "./nebula-model";
@@ -58,5 +59,19 @@ describe("knowledge nebula model", () => {
 		expect(labelledNodes({ nodes: [node("x", 5), node("y", 1), node("z", 3)] }, 2)).toEqual(
 			new Set(["x", "z"]),
 		);
+	});
+
+	it("paints memory notes as their own node type, still linked to related notes", () => {
+		const g = buildNebulaGraph({
+			nodes: [
+				node("Library/Papers/a.md"),
+				{ ...node("Projects/p/Memory/m-m1.md"), nodeType: "memory" as const },
+			],
+			edges: [{ source: "Projects/p/Memory/m-m1.md", target: "Library/Papers/a.md" }],
+		});
+		expect(g.getNodeAttribute("Projects/p/Memory/m-m1.md", "color")).toBe(NEBULA_MEMORY);
+		expect(g.getNodeAttribute("Projects/p/Memory/m-m1.md", "memory")).toBe(true);
+		expect(g.getNodeAttribute("Library/Papers/a.md", "color")).not.toBe(NEBULA_MEMORY);
+		expect(g.hasEdge("Projects/p/Memory/m-m1.md", "Library/Papers/a.md")).toBe(true);
 	});
 });

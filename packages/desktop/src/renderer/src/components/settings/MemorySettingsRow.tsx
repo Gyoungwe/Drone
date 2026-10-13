@@ -17,6 +17,7 @@ export function MemorySettingsView({
 	onToggleList,
 	onRemove,
 	onPromote,
+	onDistill,
 }: {
 	status: MemoryProjectStatus | null;
 	onToggle: (enabled: boolean) => void;
@@ -26,6 +27,7 @@ export function MemorySettingsView({
 	onToggleList?: () => void;
 	onRemove?: (id: number) => void;
 	onPromote?: (id: number) => void;
+	onDistill?: (id: number) => void;
 }) {
 	const t = useT();
 	return (
@@ -63,6 +65,20 @@ export function MemorySettingsView({
 								{item.body ? <div className="truncate text-[11px] text-ink-faint">{item.body}</div> : null}
 								<div className="text-[10px] text-ink-faint">{new Date(item.createdAt).toLocaleString()}</div>
 							</div>
+							{item.promotedTo ? (
+								<span className="shrink-0 text-[11px] text-ink-faint" title={item.promotedTo}>
+									{t("settings.memory.distilled")}
+								</span>
+							) : (
+								<button
+									type="button"
+									className={BTN}
+									title={t("settings.memory.distillHint")}
+									onClick={() => onDistill?.(item.id)}
+								>
+									{t("settings.memory.distill")}
+								</button>
+							)}
 							<button
 								type="button"
 								className={BTN}
@@ -117,6 +133,12 @@ export function MemorySettingsRow() {
 			}
 			onRemove={(id) => void window.pi.memoryRemove(cwd, id).then(refresh)}
 			onPromote={(id) => void window.pi.memoryPromote(cwd, id).then(refresh)}
+			onDistill={(id) =>
+				void window.pi
+					.memoryPromoteToKnowledge(cwd, id)
+					.then(() => window.pi.memoryGetStatus(cwd))
+					.then(refresh)
+			}
 		/>
 	);
 }

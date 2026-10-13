@@ -22,6 +22,9 @@ export const MemoryListItemSchema = Type.Object(
 		title: Type.String(),
 		body: Type.String(),
 		createdAt: Type.Integer({ minimum: 0 }),
+		sessionId: Type.Optional(Type.String()),
+		/** 已沉淀到知识库的笔记路径。 */
+		promotedTo: Type.Optional(Type.Union([Type.String(), Type.Null()])),
 	},
 	{ additionalProperties: false },
 );
@@ -40,5 +43,11 @@ export const MemoryContract = defineDomain("memory", {
 		remove: { args: Type.Tuple([Type.String(), Type.Integer()]), result: status, access: "desktop" },
 		/** 提升为项目记忆：写入 <cwd>/.pi/memory/（可进 git 审阅），并从观察记忆移除以免重复注入。 */
 		promote: { args: Type.Tuple([Type.String(), Type.Integer()]), result: status, access: "desktop" },
+		/** 沉淀到知识库（单向）：写成本项目「记忆」分类笔记并带来源；原记录标记已沉淀、不再注入。 */
+		promoteToKnowledge: {
+			args: Type.Tuple([Type.String(), Type.Integer()]),
+			result: Type.Object({ path: Type.String() }, { additionalProperties: false }),
+			access: "desktop",
+		},
 	},
 });
