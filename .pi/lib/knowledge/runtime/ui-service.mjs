@@ -21,13 +21,15 @@ import {
   knowledgeSpecialistSettings,
   saveDiscoveryIdea,
   saveKnowledgeSemanticSettings,
+  saveMemoryNote,
   searchKnowledge,
   testKnowledgeSemanticProvider
-} from "./chunks/chunk-4N3CQY4U.mjs";
+} from "./chunks/chunk-3LVUZMVD.mjs";
 import "./chunks/chunk-4QHZ475S.mjs";
-import "./chunks/chunk-XSFQUT2B.mjs";
 import "./chunks/chunk-LE6NM7SB.mjs";
+import "./chunks/chunk-XSFQUT2B.mjs";
 import "./chunks/chunk-EJFIMVBU.mjs";
+import "./chunks/chunk-W4BONNYJ.mjs";
 import "./chunks/chunk-5PIDULPV.mjs";
 import "./chunks/chunk-OWE2DUY5.mjs";
 import "./chunks/chunk-O536IQIE.mjs";
@@ -63,6 +65,7 @@ export {
   knowledgeSpecialistSettings,
   saveDiscoveryIdea,
   saveKnowledgeSemanticSettings,
+  saveMemoryNote,
   searchKnowledge,
   testKnowledgeSemanticProvider
 };
