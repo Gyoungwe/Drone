@@ -12,7 +12,7 @@ import { pushToast } from "../../stores/toasts";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
 import { useUiStore } from "../../stores/ui";
 import { ImagePreviewOverlay } from "../chat/ImagePreview";
-import { SessionUsageFooter } from "../chat/UsageSettlement";
+import { SessionUsageSummary } from "../chat/UsageSettlement";
 import { ArrowUpIcon, PlusIcon, StopIcon } from "../icons";
 import { AtMenu } from "./AtMenu";
 import { AttachmentChip } from "./AttachmentChip";
@@ -503,7 +503,6 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						onRestore={() => void send.handleRestoreQueue(focusTextarea)}
 					/>
 				)}
-				<SessionUsageFooter sessionId={activeSessionId} />
 				<ImageTray
 					images={images}
 					onPreview={setPreviewImage}
@@ -665,7 +664,7 @@ export function Composer({ centered = false }: { centered?: boolean }) {
 						<div className={readOnly ? "pointer-events-none opacity-40" : undefined}>
 							<PermissionPicker />
 						</div>
-						<ContextRing />
+						<ContextRing extra={<SessionUsageSummary sessionId={activeSessionId} />} />
 						{isStreaming ? (
 							<button
 								type="button"
