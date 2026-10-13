@@ -557,3 +557,32 @@ export function assignEntryIds(messages: SessionMessage[], branch: readonly Sess
 		}
 	}
 }
+
+/**
+ * 历史回放步骤时长：jsonl 只持久化 assistant 消息的 timestamp（= 开始流式输出）与 toolResult 的
+ * timestamp（= 工具结束），没有工具开始时刻。assistant entry 的落盘时间（entry.timestamp，ISO）
+ * 发生在 message_end —— 即模型写完工具调用、工具开始执行的时刻（pi 默认并行执行，同轮工具同时起跑）。
+ * 以它作为同轮各工具的 startedAt；缺 entry 时间、或推导出负值/超 24h 的异常值时不写，UI 不显示时长。
+ * 原地修改 messages 中 tools 的 startedAt 字段。
+ */
+export function assignToolStartTimes(messages: SessionMessage[], branch: readonly SessionEntry[]): void {
+	const endByTimestamp = new Map<number, number>();
+	for (const e of branch) {
+		if (e.type !== "message") continue;
+		const m = e.message as RawMessage;
+		if (m.role !== "assistant" || typeof m.timestamp !== "number") continue;
+		const appended = e.timestamp ? Date.parse(e.timestamp) : Number.NaN;
+		if (Number.isFinite(appended) && !endByTimestamp.has(m.timestamp))
+			endByTimestamp.set(m.timestamp, appended);
+	}
+	for (const message of messages) {
+		if (message.role !== "assistant" || message.tools.length === 0) continue;
+		const start = endByTimestamp.get(message.timestamp);
+		if (start === undefined) continue;
+		for (const tool of message.tools) {
+			if (tool.endedAt === undefined || tool.startedAt !== undefined) continue;
+			const ms = tool.endedAt - start;
+			if (ms >= 0 && ms < 86_400_000) tool.startedAt = start;
+		}
+	}
+}
