@@ -28,11 +28,11 @@ export function ProcessRouteSummary({ route }: { route: TurnRoute }) {
 			<header className="flex items-start gap-3">
 				<div className="min-w-0 flex-1">
 					<h3 className="text-[12px] font-semibold text-ink">{t("panel.processRoute.title")}</h3>
-					<p className="mt-0.5 truncate text-[11px] text-ink-dim" title={route.utterance}>
+					<p className="mt-0.5 truncate text-xs text-ink-dim" title={route.utterance}>
 						{route.utterance}
 					</p>
 				</div>
-				<span className="shrink-0 pt-0.5 text-[10px] text-ink-faint" data-testid="process-route-progress">
+				<span className="shrink-0 pt-0.5 text-[11px] text-ink-faint" data-testid="process-route-progress">
 					{t("panel.processRoute.stepCount", {
 						current: Math.min(currentIndex + 1, summary.total),
 						total: summary.total,
@@ -44,18 +44,16 @@ export function ProcessRouteSummary({ route }: { route: TurnRoute }) {
 					className="mt-2 flex items-center gap-2 rounded-lg bg-hover/60 px-2.5 py-1.5"
 					data-testid="process-route-current"
 				>
-					<span className="text-[10px] text-ink-faint">{t("panel.processRoute.current")}</span>
+					<span className="text-[11px] text-ink-faint">{t("panel.processRoute.current")}</span>
 					<strong className="text-[12px] text-ink">{current.label}</strong>
-					<span className="min-w-0 truncate text-[11px] text-ink-dim">{current.value}</span>
+					<span className="min-w-0 truncate text-xs text-ink-dim">{current.value}</span>
 				</div>
 			) : null}
 			<div className="mt-2">
 				<RoadmapLane nodes={steps} testId="process-route-roadmap" ariaLabel={t("panel.processRoute.steps")} />
 			</div>
 			{current?.detail ? (
-				<p className="mt-2 border-t border-border/70 pt-2 text-[11px] leading-5 text-ink-dim">
-					{current.detail}
-				</p>
+				<p className="mt-2 border-t border-border/70 pt-2 text-xs leading-5 text-ink-dim">{current.detail}</p>
 			) : null}
 		</section>
 	);

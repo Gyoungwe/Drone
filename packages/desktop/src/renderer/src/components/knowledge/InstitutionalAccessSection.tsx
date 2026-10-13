@@ -6,7 +6,7 @@ import { useZoteroText } from "./zotero-copy";
 
 function Row({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
 	return (
-		<div className="flex items-center justify-between gap-2 text-[11px]">
+		<div className="flex items-center justify-between gap-2 text-xs">
 			<span className="text-ink-dim">{label}</span>
 			<span className={`truncate ${ok === true ? "text-ok" : ok === false ? "text-warn" : "text-ink"}`}>
 				{value}
@@ -79,14 +79,14 @@ export function InstitutionalAccessSection() {
 	return (
 		<section className="rounded-xl border border-border p-4" data-testid="institutional-section">
 			<h3 className="text-xs font-semibold">{t("instTitle")}</h3>
-			<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">
+			<p className="mt-1 text-xs leading-relaxed text-ink-dim">
 				{t("instIntro").replace("{limit}", String(status?.config.perTaskLimit ?? 20))}
 			</p>
 
 			{error && (
 				<p
 					role="alert"
-					className="mt-3 break-words rounded-lg border border-border bg-err/10 p-2 text-[11px] text-err"
+					className="mt-3 break-words rounded-lg border border-border bg-err/10 p-2 text-xs text-err"
 				>
 					{error}
 				</p>
@@ -144,7 +144,7 @@ export function InstitutionalAccessSection() {
 				</div>
 
 				<div className="rounded-lg border border-dashed border-border p-2">
-					<div className="text-[11px] font-medium text-ink">{t("instTestTitle")}</div>
+					<div className="text-xs font-medium text-ink">{t("instTestTitle")}</div>
 					<div className="mt-1 flex gap-1">
 						<input
 							className="flex-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs"
@@ -157,14 +157,14 @@ export function InstitutionalAccessSection() {
 						</Button>
 					</div>
 					{testResult && (
-						<pre className="mt-2 max-h-48 overflow-auto rounded bg-hover p-2 text-[10px] leading-relaxed">
+						<pre className="mt-2 max-h-48 overflow-auto rounded bg-hover p-2 text-xs leading-relaxed">
 							{testResult}
 						</pre>
 					)}
-					<p className="mt-2 text-[10px] leading-relaxed text-ink-faint">{t("instWorkflow")}</p>
+					<p className="mt-2 text-[11px] leading-relaxed text-ink-faint">{t("instWorkflow")}</p>
 				</div>
 
-				<p className="text-[10px] text-ink-faint">{t("instWebvpn")}</p>
+				<p className="text-[11px] text-ink-faint">{t("instWebvpn")}</p>
 			</div>
 		</section>
 	);

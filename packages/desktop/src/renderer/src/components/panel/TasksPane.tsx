@@ -134,9 +134,7 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 				<span className="text-[12px] font-medium text-ink">{t("panel.decisionsTitle")}</span>
 				<span className="text-[11px] tabular-nums text-ink-faint">{decisions.length}</span>
 				{pendingCount > 0 && (
-					<span className="text-[11px] text-warn">
-						{t("panel.decisionsPending", { count: pendingCount })}
-					</span>
+					<span className="text-xs text-warn">{t("panel.decisionsPending", { count: pendingCount })}</span>
 				)}
 			</summary>
 			{decisions.length > 0 && (
@@ -158,7 +156,7 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 								{decision.status === "active" ? (
 									<button
 										type="button"
-										className="shrink-0 text-[11px] text-err hover:underline disabled:opacity-50"
+										className="shrink-0 text-xs text-err hover:underline disabled:opacity-50"
 										disabled={busyId !== null}
 										onClick={() => setConfirmation({ decision, action: "revoke" })}
 									>
@@ -169,7 +167,7 @@ function DecisionsSection({ projectId }: { projectId: string | null }) {
 								) : (
 									<button
 										type="button"
-										className="shrink-0 text-[11px] text-accent hover:underline disabled:opacity-50"
+										className="shrink-0 text-xs text-accent hover:underline disabled:opacity-50"
 										disabled={busyId !== null}
 										onClick={() => setConfirmation({ decision, action: "confirm" })}
 									>

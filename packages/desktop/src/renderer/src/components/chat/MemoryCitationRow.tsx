@@ -7,7 +7,7 @@ export function MemoryCitationRow({ ids, label }: { ids: number[]; label: string
 		>
 			<span>{label}</span>
 			{ids.map((id) => (
-				<span key={id} className="rounded border border-border px-1 py-px font-mono text-[10px] text-ink-dim">
+				<span key={id} className="rounded border border-border px-1 py-px font-mono text-[11px] text-ink-dim">
 					m:{id}
 				</span>
 			))}

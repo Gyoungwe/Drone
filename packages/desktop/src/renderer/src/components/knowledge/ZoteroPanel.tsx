@@ -61,7 +61,7 @@ export function ZoteroPanel() {
 			<header className="flex items-start justify-between gap-3">
 				<div>
 					<h2 className="text-base font-semibold">{t("title")}</h2>
-					<p className="mt-1 text-[11px] text-ink-dim">{t("subtitle")}</p>
+					<p className="mt-1 text-xs text-ink-dim">{t("subtitle")}</p>
 				</div>
 				<Button size="sm" disabled={loading || busy} onClick={() => void refresh()}>
 					{t("refresh")}
@@ -111,7 +111,7 @@ export function ZoteroPanel() {
 							/>
 							<span>{t("enableLabel")}</span>
 						</label>
-						{!status.registered && <p className="mt-2 text-[11px] text-warn">{t("enableHintNeedSetup")}</p>}
+						{!status.registered && <p className="mt-2 text-xs text-warn">{t("enableHintNeedSetup")}</p>}
 						<p className="mt-2 text-[11px] text-ink-faint">{t("reloadHint")}</p>
 					</section>
 
@@ -119,8 +119,8 @@ export function ZoteroPanel() {
 					<section className="rounded-xl border border-border p-4">
 						<h3 className="text-xs font-semibold">{t("setupTitle")}</h3>
 						<p className="mt-2 text-xs leading-relaxed text-ink-dim">{t("setupHint")}</p>
-						<p className="mt-2 rounded-lg bg-hover p-2 text-[11px] text-ink-dim">{t("setupSteps")}</p>
-						{!cwd && <p className="mt-2 text-[11px] text-warn">{t("setupNoCwd")}</p>}
+						<p className="mt-2 rounded-lg bg-hover p-2 text-xs text-ink-dim">{t("setupSteps")}</p>
+						{!cwd && <p className="mt-2 text-xs text-warn">{t("setupNoCwd")}</p>}
 						<div className="mt-3 flex flex-wrap gap-1">
 							<Button
 								size="sm"

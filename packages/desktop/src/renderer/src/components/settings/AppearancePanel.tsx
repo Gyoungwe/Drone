@@ -38,7 +38,7 @@ function AppearanceBasics() {
 						<button
 							key={m}
 							type="button"
-							className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+							className={`rounded-md border px-2 py-1 text-xs transition-colors ${
 								mode === m
 									? "border-ink bg-ink text-on-ink"
 									: "border-border text-ink-2 hover:border-border-strong hover:bg-hover"
@@ -73,7 +73,7 @@ function AppearanceBasics() {
 						<div className="flex gap-1.5">
 							<button
 								type="button"
-								className="rounded-md border border-border px-2 py-1 text-[11px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover"
+								className="rounded-md border border-border px-2 py-1 text-xs text-ink-2 transition-colors hover:border-border-strong hover:bg-hover"
 								onClick={() => void pickBackground()}
 							>
 								{t(background.image ? "settings.backgroundChange" : "settings.backgroundPick")}
@@ -81,7 +81,7 @@ function AppearanceBasics() {
 							{background.image && (
 								<button
 									type="button"
-									className="rounded-md px-2 py-1 text-[11px] text-red-500 transition-colors hover:bg-red-50"
+									className="rounded-md px-2 py-1 text-xs text-red-500 transition-colors hover:bg-red-50"
 									onClick={clearBackground}
 								>
 									{t("settings.backgroundClear")}
@@ -92,7 +92,7 @@ function AppearanceBasics() {
 				</div>
 				{background.image && (
 					<div className="settings-row-sub mt-2 flex items-center gap-2">
-						<span className="w-16 shrink-0 text-[11px] text-ink-dim">{t("settings.backgroundDim")}</span>
+						<span className="w-16 shrink-0 text-xs text-ink-dim">{t("settings.backgroundDim")}</span>
 						<input
 							type="range"
 							min={20}
@@ -102,7 +102,7 @@ function AppearanceBasics() {
 							className="h-1 flex-1 accent-[#7c3aed]"
 							aria-label={t("settings.backgroundDim")}
 						/>
-						<span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-ink-dim">
+						<span className="w-8 shrink-0 text-right text-xs tabular-nums text-ink-dim">
 							{Math.round(background.dim * 100)}%
 						</span>
 					</div>

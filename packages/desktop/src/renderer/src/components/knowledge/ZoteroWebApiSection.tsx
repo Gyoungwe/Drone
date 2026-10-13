@@ -62,12 +62,12 @@ export function ZoteroWebApiSection() {
 	return (
 		<section className="space-y-2 rounded-xl border border-border p-3" data-testid="zotero-web-api">
 			<h4 className="text-xs font-semibold">{t("webTitle")}</h4>
-			<p className="text-[11px] leading-relaxed text-ink-dim">{t("webHint")}</p>
+			<p className="text-xs leading-relaxed text-ink-dim">{t("webHint")}</p>
 			{status?.source === "env" ? (
-				<p className="text-[11px] text-ok">{t("webFromEnv").replace("{hint}", status.keyHint ?? "")}</p>
+				<p className="text-xs text-ok">{t("webFromEnv").replace("{hint}", status.keyHint ?? "")}</p>
 			) : status?.configured ? (
 				<div className="flex flex-wrap items-center gap-2">
-					<p className="flex-1 text-[11px] text-ok">
+					<p className="flex-1 text-xs text-ok">
 						{t("webConfigured")
 							.replace("{library}", library)
 							.replace("{hint}", status.keyHint ?? "")}
@@ -78,9 +78,9 @@ export function ZoteroWebApiSection() {
 				</div>
 			) : (
 				<>
-					<p className="text-[11px] text-warn">{t("webNotConfigured")}</p>
+					<p className="text-xs text-warn">{t("webNotConfigured")}</p>
 					<p className="text-[11px] leading-relaxed text-ink-faint">{t("webSteps")}</p>
-					<label className="block text-[11px] text-ink-dim">
+					<label className="block text-xs text-ink-dim">
 						{t("webKeyLabel")}
 						<input
 							type="password"
@@ -92,7 +92,7 @@ export function ZoteroWebApiSection() {
 							onChange={(event) => setApiKey(event.target.value)}
 						/>
 					</label>
-					<label className="block text-[11px] text-ink-dim">
+					<label className="block text-xs text-ink-dim">
 						{t("webGroupLabel")}
 						<input
 							inputMode="numeric"
@@ -120,9 +120,9 @@ export function ZoteroWebApiSection() {
 					</Button>
 				</>
 			)}
-			{notice && <p className="text-[11px] text-ok">{notice}</p>}
+			{notice && <p className="text-xs text-ok">{notice}</p>}
 			{error && (
-				<p role="alert" className="break-words text-[11px] text-err">
+				<p role="alert" className="break-words text-xs text-err">
 					{error}
 				</p>
 			)}

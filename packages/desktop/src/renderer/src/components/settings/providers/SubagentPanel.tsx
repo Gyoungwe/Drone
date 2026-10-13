@@ -59,7 +59,7 @@ export function SubagentPanel() {
 								</span>
 							</div>
 							{agent.description && (
-								<p className="mt-1.5 text-[11px] leading-relaxed text-ink-dim">{agent.description}</p>
+								<p className="mt-1.5 text-xs leading-relaxed text-ink-dim">{agent.description}</p>
 							)}
 							<div className="mt-3 grid gap-2 sm:grid-cols-2">
 								<label className="text-[11px] text-ink-faint">

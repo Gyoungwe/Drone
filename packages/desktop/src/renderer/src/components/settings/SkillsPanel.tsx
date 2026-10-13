@@ -25,7 +25,7 @@ function ScopeBadge({ scope }: { scope: ResourceScope }) {
 				: "settings.skills.scopeUser";
 	return (
 		<span
-			className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"}`}
+			className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${scope === "project" ? "bg-accent/10 text-accent" : "bg-hover text-ink-2"}`}
 		>
 			{t(key)}
 		</span>
@@ -47,7 +47,7 @@ function SkillRow({ skill }: { skill: LoadedSkill }) {
 				<ScopeBadge scope={skill.scope} />
 			</div>
 			<p className="mt-1 break-all font-mono text-[11px] text-ink-dim">/skill:{skill.name}</p>
-			<details className="mt-1 text-[11px] text-ink-dim">
+			<details className="mt-1 text-xs text-ink-dim">
 				<summary className="cursor-pointer rounded py-1 focus-visible:outline focus-visible:outline-accent">
 					{t("skillsCatalog.details")}
 				</summary>
@@ -80,7 +80,7 @@ function ToolsOverview() {
 					<h3 className="text-[13px] font-medium text-ink">{t("settings.tools.title")}</h3>
 					<p className="mt-1 text-[11px] text-ink-faint">{t("settings.tools.hint")}</p>
 				</div>
-				<span className="rounded-full bg-hover px-2 py-1 text-[11px] text-ink-dim">
+				<span className="rounded-full bg-hover px-2 py-1 text-xs text-ink-dim">
 					{Math.round(footprint.reductionRatio * 100)}% {t("settings.tools.schemaSaved")}
 				</span>
 			</div>
@@ -107,7 +107,7 @@ function ToolsOverview() {
 						<span
 							key={item.id}
 							title={item.summary}
-							className={`rounded-full border px-2 py-1 text-[11px] ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-ink-faint"}`}
+							className={`rounded-full border px-2 py-1 text-xs ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-ink-faint"}`}
 						>
 							{item.label[language === "zh" ? "zh" : "en"]}
 						</span>
@@ -115,7 +115,7 @@ function ToolsOverview() {
 				})}
 			</div>
 			<details className="mt-3 rounded-lg border border-border" open>
-				<summary className="cursor-pointer px-3 py-2 text-[11px] font-medium text-ink">
+				<summary className="cursor-pointer px-3 py-2 text-xs font-medium text-ink">
 					{t("settings.tools.registeredTools")} · {capabilities.tools.length}
 				</summary>
 				<ul className="divide-y divide-border px-3">
@@ -127,9 +127,9 @@ function ToolsOverview() {
 								? t("settings.tools.loaded")
 								: t("settings.tools.lazy");
 						return (
-							<li key={tool.name} className="py-2 text-[11px]">
+							<li key={tool.name} className="py-2 text-xs">
 								<div className="flex flex-wrap items-center gap-2">
-									<code className="text-[11px] text-ink">{tool.name}</code>
+									<code className="text-xs text-ink">{tool.name}</code>
 									<span
 										className={`rounded px-1.5 py-0.5 ${tool.active ? "bg-accent/10 text-accent" : "bg-hover text-ink-faint"}`}
 									>
@@ -205,10 +205,10 @@ export function SkillsPanel() {
 			{skills.some((skill) => skill.name === "research-vault") && (
 				<section className="mt-3 rounded-lg border border-border bg-hover/40 p-3">
 					<h4 className="text-[12px] font-medium text-ink">{t("skillsCatalog.owner")}</h4>
-					<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">{t("skillsCatalog.ownerHint")}</p>
+					<p className="mt-1 text-xs leading-relaxed text-ink-dim">{t("skillsCatalog.ownerHint")}</p>
 					<button
 						type="button"
-						className="mt-2 rounded px-2 py-1 text-[11px] text-accent hover:bg-hover"
+						className="mt-2 rounded px-2 py-1 text-xs text-accent hover:bg-hover"
 						onClick={() => useSettingsStore.getState().openWith("knowledge")}
 					>
 						{t("skillsCatalog.manage")}
@@ -301,12 +301,12 @@ export function SkillsPanel() {
 			</details>
 			{diagnostics.length > 0 && (
 				<section className="mt-4">
-					<h4 className="text-[11px] font-medium text-ink-2">{t("settings.skills.diagnostics")}</h4>
+					<h4 className="text-xs font-medium text-ink-2">{t("settings.skills.diagnostics")}</h4>
 					<ul className="mt-1 space-y-2">
 						{diagnostics.map((diagnostic) => (
 							<li
 								key={`${diagnostic.type}:${diagnostic.path ?? ""}:${diagnostic.message}`}
-								className="break-words text-[11px] leading-relaxed text-ink-dim"
+								className="break-words text-xs leading-relaxed text-ink-dim"
 							>
 								<span className={diagnostic.type === "error" ? "text-err" : "text-warn"}>
 									{diagnostic.type}

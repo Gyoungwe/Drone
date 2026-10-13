@@ -184,7 +184,7 @@ export function ExampleTaskForm({
 								const id = `example-input-${input.key}`;
 								return (
 									<div key={input.key} data-testid="example-task-input" data-invalid={invalid || undefined}>
-										<label htmlFor={id} className="mb-0.5 block text-[11px] text-ink-dim">
+										<label htmlFor={id} className="mb-0.5 block text-xs text-ink-dim">
 											{input.label[language]}
 											{input.required ? (
 												<span className="ml-1 text-red-500" title={t("examples.required")}>
@@ -234,7 +234,7 @@ export function ExampleTaskForm({
 												)}
 											</div>
 										)}
-										{invalid && <p className="mt-0.5 text-[11px] text-red-500">{t("examples.missing")}</p>}
+										{invalid && <p className="mt-0.5 text-xs text-red-500">{t("examples.missing")}</p>}
 									</div>
 								);
 							})}

@@ -91,7 +91,7 @@ export function SessionRow({
 			</span>
 			<button
 				type="button"
-				className={`invisible absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-[11px] transition-colors group-hover:visible ${
+				className={`invisible absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-xs transition-colors group-hover:visible ${
 					confirming ? "bg-red-50 text-red-600" : "text-ink-faint hover:bg-hover hover:text-ink-2"
 				}`}
 				onClick={() => {

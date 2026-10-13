@@ -65,7 +65,7 @@ export function PatternTable({
 	const t = useT();
 	return (
 		<div className="rounded-lg border border-border" data-testid="pattern-table" data-tool={tool}>
-			<div className="grid grid-cols-[2rem_minmax(0,1fr)_7.5rem_4.5rem] items-center gap-2 border-b border-border px-2 py-1 text-[10px] uppercase tracking-wide text-ink-faint">
+			<div className="grid grid-cols-[2rem_minmax(0,1fr)_7.5rem_4.5rem] items-center gap-2 border-b border-border px-2 py-1 text-[11px] uppercase tracking-wide text-ink-faint">
 				<span>{t("settings.permissions.colIndex")}</span>
 				<span>{t("settings.permissions.colPattern")}</span>
 				<span>{t("settings.permissions.colAction")}</span>
@@ -92,7 +92,7 @@ export function PatternTable({
 							<div className="flex min-w-0 items-center gap-1.5">
 								{row.locked && (
 									<span
-										className="shrink-0 text-[11px]"
+										className="shrink-0 text-xs"
 										title={t("settings.permissions.lockedHint")}
 										aria-hidden="true"
 									>
@@ -117,7 +117,7 @@ export function PatternTable({
 							<div className="flex items-center justify-end gap-0.5">
 								{row.locked ? (
 									<span
-										className="truncate text-[10px] text-ink-faint"
+										className="truncate text-[11px] text-ink-faint"
 										title={t("settings.permissions.lockedHint")}
 									>
 										{t("settings.permissions.locked")}
@@ -163,13 +163,13 @@ export function PatternTable({
 			<div className="flex items-center justify-between gap-2 border-t border-border px-2 py-1">
 				<button
 					type="button"
-					className="rounded px-1.5 py-0.5 text-[11px] text-ink-dim transition-colors hover:bg-hover hover:text-ink"
+					className="rounded px-1.5 py-0.5 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
 					data-testid="pattern-add"
 					onClick={() => onChange(appendRow(rows))}
 				>
 					+ {t("settings.permissions.addPattern")}
 				</button>
-				<span className="text-[10px] text-ink-faint">{t("settings.permissions.orderHint")}</span>
+				<span className="text-[11px] text-ink-faint">{t("settings.permissions.orderHint")}</span>
 			</div>
 		</div>
 	);

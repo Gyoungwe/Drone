@@ -121,7 +121,7 @@ export function AboutPanel() {
 					<span className="text-[11px] text-ink-faint">{t("settings.about.diagnosticsSaved")}</span>
 				)}
 				{diagnosticsState === "failed" && (
-					<span className="text-[11px] text-danger">{t("settings.about.diagnosticsFailed")}</span>
+					<span className="text-xs text-danger">{t("settings.about.diagnosticsFailed")}</span>
 				)}
 			</div>
 			<p className="max-w-[280px] text-[11px] text-ink-faint">{t("settings.about.diagnosticsHint")}</p>

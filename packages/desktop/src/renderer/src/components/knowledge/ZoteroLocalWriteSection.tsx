@@ -69,10 +69,10 @@ export function ZoteroLocalWriteSection() {
 	return (
 		<section className="space-y-2 rounded-xl border border-border p-3" data-testid="zotero-local-write">
 			<h4 className="text-xs font-semibold">{t("localTitle")}</h4>
-			<p className="text-[11px] leading-relaxed text-ink-dim">{t("localHint")}</p>
+			<p className="text-xs leading-relaxed text-ink-dim">{t("localHint")}</p>
 			<p
 				role="status"
-				className={`text-[11px] ${state === "localAuthorized" || state === "localFromEnv" ? "text-ok" : "text-warn"}`}
+				className={`text-xs ${state === "localAuthorized" || state === "localFromEnv" ? "text-ok" : "text-warn"}`}
 			>
 				{busy === "authorize" ? t("localAuthorizing") : t(state)}
 			</p>
@@ -100,7 +100,7 @@ export function ZoteroLocalWriteSection() {
 				<p className="text-[11px] leading-relaxed text-ink-faint">{t("localClearHint")}</p>
 			)}
 			{error && (
-				<p role="alert" className="break-words text-[11px] text-err">
+				<p role="alert" className="break-words text-xs text-err">
 					{error}
 				</p>
 			)}

@@ -39,7 +39,7 @@ export function DesktopSettings() {
 				<div className="flex gap-1.5">
 					<button
 						type="button"
-						className="rounded-md border border-border px-2 py-1 text-[11px] hover:bg-hover"
+						className="rounded-md border border-border px-2 py-1 text-xs hover:bg-hover"
 						onClick={() => void pickDir()}
 					>
 						{t("settings.desktop.downloadPick")}
@@ -47,7 +47,7 @@ export function DesktopSettings() {
 					{prefs.downloadDir && (
 						<button
 							type="button"
-							className="rounded-md border border-border px-2 py-1 text-[11px] hover:bg-hover"
+							className="rounded-md border border-border px-2 py-1 text-xs hover:bg-hover"
 							onClick={() => update({ downloadDir: null })}
 						>
 							{t("settings.desktop.downloadReset")}

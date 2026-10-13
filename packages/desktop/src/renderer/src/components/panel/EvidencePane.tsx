@@ -135,12 +135,12 @@ export function EvidencePane({ defaultRoot }: { defaultRoot: string | null }) {
 					</div>
 				</div>
 				{notice && (
-					<p className="break-words text-[11px] text-ink-dim" role="status">
+					<p className="break-words text-xs text-ink-dim" role="status">
 						{notice}
 					</p>
 				)}
 				{overview?.checkpoints.map((c) => (
-					<article key={c.id} className="rounded-lg bg-hover p-2 text-[11px]">
+					<article key={c.id} className="rounded-lg bg-hover p-2 text-xs">
 						<p className="font-medium text-ink">
 							{c.assay} · {c.analysisId}
 						</p>
@@ -190,14 +190,14 @@ export function EvidencePane({ defaultRoot }: { defaultRoot: string | null }) {
 					</article>
 				))}
 				{overview?.branches.map((b) => (
-					<p key={b.id} className="text-[11px] text-ink-dim">
+					<p key={b.id} className="text-xs text-ink-dim">
 						{t("panel.evidence.branch")}: <span className="font-mono">{b.id}</span> · {b.status}
 					</p>
 				))}
 				{overview?.replays.map((r) => (
 					<article
 						key={r.id}
-						className="rounded-lg border border-border p-2 text-[11px]"
+						className="rounded-lg border border-border p-2 text-xs"
 						data-replay-status={r.status}
 					>
 						<p className="font-medium text-ink">

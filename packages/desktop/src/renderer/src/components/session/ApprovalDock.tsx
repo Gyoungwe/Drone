@@ -147,7 +147,7 @@ export function ApprovalDock({
 						</h3>
 						{sourceRun && (
 							<span
-								className="flex shrink-0 items-center gap-1 rounded-full border border-warn/40 bg-warn/5 px-1.5 py-0.5 text-[11px] text-warn"
+								className="flex shrink-0 items-center gap-1 rounded-full border border-warn/40 bg-warn/5 px-1.5 py-0.5 text-xs text-warn"
 								data-testid="approval-subagent-source"
 							>
 								<SubagentAvatar name={sourceRun.agent} source={sourceRun.source} size="sm" state="waiting" />
@@ -203,7 +203,7 @@ export function ApprovalDock({
 						</Tooltip>
 						<Button variant="primary" onClick={() => respond("allow")}>
 							{t("permission.allowOnce")}
-							<kbd className="ml-1.5 rounded bg-on-ink/15 px-1 py-0.5 text-[11px] text-on-ink/80">Enter</kbd>
+							<kbd className="ml-1.5 rounded bg-on-ink/15 px-1 py-0.5 text-xs text-on-ink/80">Enter</kbd>
 						</Button>
 					</div>
 				</div>

@@ -34,7 +34,7 @@ export function FlowCards({ sessionId }: { sessionId: string | null }) {
 			<p className="mt-0.5 text-[11px] text-ink-faint">{t("flow.hint")}</p>
 			<ul className="mt-1 space-y-2">
 				{[...cards].reverse().map((card) => (
-					<li key={card.key} className="rounded-lg bg-hover p-2 text-[11px]" data-card-kind={card.kind}>
+					<li key={card.key} className="rounded-lg bg-hover p-2 text-xs" data-card-kind={card.kind}>
 						<Slot
 							name={UI_SLOTS.ArtifactsCard}
 							props={{

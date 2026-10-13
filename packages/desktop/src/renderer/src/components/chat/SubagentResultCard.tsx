@@ -87,7 +87,7 @@ export function SubagentResultCard({ run, panel }: { run: SubagentRunUi; panel: 
 					<div className="mt-2 text-[11px] text-ink-faint">{t("message.subagent.noTranscript")}</div>
 				)}
 				{panel.sessionFile && (
-					<div className="mt-1.5 truncate font-mono text-[10.5px] text-ink-faint" title={panel.sessionFile}>
+					<div className="mt-1.5 truncate font-mono text-[11px] text-ink-faint" title={panel.sessionFile}>
 						{panel.sessionFile}
 					</div>
 				)}
@@ -104,7 +104,7 @@ export function SubagentResultCard({ run, panel }: { run: SubagentRunUi; panel: 
 						</Button>
 					)}
 					<span
-						className={`ml-auto flex items-center gap-1 text-[11px] ${
+						className={`ml-auto flex items-center gap-1 text-xs ${
 							panel.followUp && panel.contextState === "delivered" ? "text-ok" : "text-ink-faint"
 						}`}
 						data-testid="subagent-result-context"

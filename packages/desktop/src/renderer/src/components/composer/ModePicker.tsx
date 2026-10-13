@@ -71,7 +71,7 @@ export function ModePicker() {
 						>
 							<span className="flex flex-col gap-0.5">
 								<span className="font-medium">{t(`composer.mode.${id}`)}</span>
-								<span className="text-[11px] leading-snug text-ink-dim">{t(`composer.mode.${id}Hint`)}</span>
+								<span className="text-xs leading-snug text-ink-dim">{t(`composer.mode.${id}Hint`)}</span>
 							</span>
 							{id === mode && <CheckIcon size={13} className="shrink-0 text-accent" />}
 						</button>

@@ -55,7 +55,7 @@ export function MemorySettingsView({
 				>
 					{items.map((item) => (
 						<li key={item.id} className="flex items-start gap-2 px-3 py-2 text-[12px]">
-							<span className="shrink-0 rounded bg-hover px-1.5 py-0.5 text-[10px] text-ink-faint">
+							<span className="shrink-0 rounded bg-hover px-1.5 py-0.5 text-[11px] text-ink-faint">
 								{item.kind}
 							</span>
 							<div className="min-w-0 flex-1">
@@ -63,7 +63,7 @@ export function MemorySettingsView({
 									{item.title}
 								</div>
 								{item.body ? <div className="truncate text-[11px] text-ink-faint">{item.body}</div> : null}
-								<div className="text-[10px] text-ink-faint">{new Date(item.createdAt).toLocaleString()}</div>
+								<div className="text-[11px] text-ink-faint">{new Date(item.createdAt).toLocaleString()}</div>
 							</div>
 							{item.promotedTo ? (
 								<span className="shrink-0 text-[11px] text-ink-faint" title={item.promotedTo}>

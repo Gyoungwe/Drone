@@ -59,7 +59,7 @@ export function ModelRowsEditor({
 		<button
 			type="button"
 			aria-pressed={active}
-			className={`shrink-0 rounded-md border px-1.5 py-1 text-[11px] transition-colors ${
+			className={`shrink-0 rounded-md border px-1.5 py-1 text-xs transition-colors ${
 				active ? "border-ink-faint bg-hover text-ink" : "border-border text-ink-faint hover:text-ink-dim"
 			}`}
 			onClick={onToggle}
@@ -112,7 +112,7 @@ export function ModelRowsEditor({
 			<div className="flex items-center gap-3">
 				<button
 					type="button"
-					className="rounded-md px-1.5 py-1 text-[11px] text-ink-dim transition-colors hover:bg-hover"
+					className="rounded-md px-1.5 py-1 text-xs text-ink-dim transition-colors hover:bg-hover"
 					onClick={() => onChange([...rows, { ...EMPTY_MODEL_ROW }])}
 				>
 					{t("settings.providers.addModelRow")}
@@ -120,7 +120,7 @@ export function ModelRowsEditor({
 				{rows.some((row) => row.id.trim()) && (
 					<button
 						type="button"
-						className="rounded-md px-1.5 py-1 text-[11px] text-ink-dim transition-colors hover:bg-hover"
+						className="rounded-md px-1.5 py-1 text-xs text-ink-dim transition-colors hover:bg-hover"
 						onClick={() => onChange([{ ...EMPTY_MODEL_ROW }])}
 					>
 						{t("settings.providers.clearModelRows")}
@@ -131,7 +131,7 @@ export function ModelRowsEditor({
 				{t("settings.providers.customModelsHint")}
 			</p>
 			{rows.every((row) => !row.id.trim()) && (
-				<p className="mt-1 text-[11px] leading-relaxed text-ink-dim">
+				<p className="mt-1 text-xs leading-relaxed text-ink-dim">
 					{t("settings.providers.customModelsEmptyHint")}
 				</p>
 			)}

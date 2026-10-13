@@ -37,7 +37,7 @@ export function UpdateButton() {
 				<button
 					type="button"
 					aria-label={label}
-					className="no-drag flex h-5 shrink-0 items-center rounded-full bg-update px-2 text-[11px] font-medium text-on-update transition-colors hover:brightness-95"
+					className="no-drag flex h-5 shrink-0 items-center rounded-full bg-update px-2 text-xs font-medium text-on-update transition-colors hover:brightness-95"
 					onClick={() => void installUpdateWithGuard()}
 				>
 					{t("update.restart")}
