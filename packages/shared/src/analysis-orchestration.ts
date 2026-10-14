@@ -1,4 +1,5 @@
 import type { CapabilityId } from "./capabilities";
+import type { CausalEnvelope } from "./causality";
 
 /** Durable analysis stages. Capability loading follows the current stage. */
 export const ANALYSIS_STAGES = Object.freeze([
@@ -69,6 +70,7 @@ export interface AnalysisProvenance {
 	readonly toolContractSha256?: string;
 	readonly executionContext?: AnalysisExecutionContext;
 	readonly artifacts: readonly AnalysisArtifactVersion[];
+	readonly lineage?: CausalEnvelope;
 	readonly reproducibility: {
 		readonly status: "not-assessed" | "recorded" | "verified" | "failed";
 		readonly detail: string;

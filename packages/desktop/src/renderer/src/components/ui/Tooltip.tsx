@@ -1,12 +1,9 @@
-import type { ReactNode } from "react";
+import { type PointerEvent, type ReactNode, useId, useState } from "react";
 
-/** 轻量自定义 tooltip，替代原生 title（延迟不可控/跟随鼠标/系统样式）：
-   悬停 300ms 后淡入（防扫过闪烁），离开立即消失；固定锚在触发元素下方居中。
-   纯色悬浮卡片：浅色纯白 / 深色纯黑 + 悬浮阴影（无边框）
+let lastTooltipExitAt = 0;
+let resetTooltipTimer: ReturnType<typeof setTimeout> | undefined;
 
-   注意：气泡即使 opacity-0 也始终渲染，绝对定位盒子会计入滚动容器的
-   scrollable overflow —— 居中锚点在滚动容器右缘时会撑出幻影横向滚动条。
-   靠右缘的触发元素请用 align="end"（气泡右对齐、向左伸展，不溢出右缘）。 */
+/** 轻量自定义 tooltip：首次悬停延迟，连续浏览相邻控件时立即切换。 */
 export function Tooltip({
 	label,
 	align = "center",
@@ -20,14 +17,33 @@ export function Tooltip({
 	className?: string;
 	children: ReactNode;
 }) {
+	const tooltipId = useId();
+	const [instant, setInstant] = useState(false);
+	const enter = () => {
+		if (resetTooltipTimer) clearTimeout(resetTooltipTimer);
+		setInstant(Date.now() - lastTooltipExitAt < 240);
+	};
+	const leave = (_event: PointerEvent<HTMLSpanElement>) => {
+		lastTooltipExitAt = Date.now();
+		setInstant(false);
+		resetTooltipTimer = setTimeout(() => {
+			lastTooltipExitAt = 0;
+		}, 180);
+	};
 	return (
-		<span className={`group/tooltip relative inline-flex shrink-0 ${className ?? ""}`}>
+		<span
+			className={`group/tooltip relative inline-flex shrink-0 ${className ?? ""}`}
+			onPointerEnter={enter}
+			onPointerLeave={leave}
+		>
 			{children}
 			<span
+				id={tooltipId}
 				role="tooltip"
-				className={`pointer-events-none absolute top-full z-50 mt-2 whitespace-nowrap rounded-md bg-white px-2 py-1 text-xs text-ink opacity-0 shadow-pop transition-opacity duration-150 group-hover/tooltip:opacity-100 group-hover/tooltip:delay-300 dark:bg-black ${
-					align === "end" ? "right-0" : "left-1/2 -translate-x-1/2"
-				}`}
+				className={`drone-tooltip pointer-events-none absolute top-full z-50 mt-2 whitespace-nowrap rounded-md bg-white px-2 py-1 text-xs text-ink opacity-0 shadow-pop group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100 dark:bg-black ${
+					instant ? "drone-tooltip--instant" : "group-hover/tooltip:delay-300"
+				} ${align === "end" ? "right-0" : "left-1/2 -translate-x-1/2"}`}
+				data-instant={instant ? "true" : undefined}
 			>
 				{label}
 			</span>

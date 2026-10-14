@@ -5,9 +5,11 @@ import {
 	type AskRequest,
 	type AskResponse,
 	askDecisionHash,
+	CausalEnvelopeSchema,
 } from "@drone/shared";
 import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { nextCausalEnvelope } from "../causality";
 
 const optionSchema = Type.Object({
 	value: Type.String(),
@@ -58,6 +60,7 @@ const questionSchema = Type.Object({
 });
 const proposalSchema = Type.Object({
 	proposalHash: Type.String({ minLength: 1 }),
+	lineage: Type.Optional(CausalEnvelopeSchema),
 	contextHash: Type.Optional(Type.String()),
 	capabilityHash: Type.Optional(Type.String()),
 	workflowHash: Type.Optional(Type.String()),
@@ -234,6 +237,7 @@ function resultFromResponse(params: RawParams, questions: AskQuestion[], respons
 	const decision: AskDecision | undefined = proposal
 		? {
 				proposalHash: proposal.proposalHash,
+				...(proposal.lineage ? { lineage: nextCausalEnvelope(proposal.lineage) } : {}),
 				choice: decisionInputs[0] ?? customText,
 				choices: decisionInputs.length ? decisionInputs : undefined,
 				customText,

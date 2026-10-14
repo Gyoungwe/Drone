@@ -21,7 +21,7 @@ export function IconButton({
 			type={type}
 			aria-label={label}
 			title={props.title ?? label}
-			className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-dim transition-colors hover:bg-[var(--highlight)] hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-[var(--highlight)] text-ink" : ""} ${className}`}
+			className={`drone-icon-button inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-dim hover:bg-[var(--highlight)] hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-[var(--highlight)] text-ink" : ""} ${className}`}
 			{...props}
 		>
 			{children}

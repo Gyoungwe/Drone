@@ -240,6 +240,8 @@ export const en: Messages = {
 		reviewAcknowledge: "Confirm reviewed",
 		reviewLater: "This card stays here until you decide",
 		tasksEmpty: "No task list yet — it appears here once the agent makes a plan.",
+		listTruncated:
+			"This list is long, so only the first {count} items are rendered; the summary keeps the full count.",
 		runOverview: {
 			running: "Running",
 			idle: "This session",

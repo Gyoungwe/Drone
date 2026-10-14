@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, writeSync } from "node:fs";
 import { dirname } from "node:path";
-import type { ToolReplayPolicy } from "@drone/shared";
+import type { CausalContext, CausalEnvelope, ToolReplayPolicy } from "@drone/shared";
 
 /**
  * 工具意图日志（借鉴 Pi Durable 的 “effect sandwich”）。
@@ -26,6 +26,7 @@ export interface ToolStartRecord {
 	/** 仅 safe 工具且大小在上限内时保存，用于重开后原样重跑 */
 	args?: unknown;
 	ts: number;
+	lineage?: CausalEnvelope;
 }
 
 export interface ToolEndRecord {
@@ -34,6 +35,7 @@ export interface ToolEndRecord {
 	toolCallId: string;
 	isError: boolean;
 	ts: number;
+	lineage?: CausalEnvelope;
 }
 
 export interface ToolOutputRecord {
@@ -43,6 +45,7 @@ export interface ToolOutputRecord {
 	/** 截至此刻的累计部分输出（尾部截断） */
 	text: string;
 	ts: number;
+	lineage?: CausalEnvelope;
 }
 
 export type IntentRecord = ToolStartRecord | ToolEndRecord | ToolOutputRecord;
@@ -69,11 +72,45 @@ export function stableStringify(value: unknown): string {
 export class ToolIntentJournal {
 	readonly path: string;
 	private readonly now: () => number;
+	private readonly causality?:
+		| CausalContext
+		| CausalEnvelope
+		| (() => CausalContext | CausalEnvelope | undefined);
+	private readonly lastLineage = new Map<string, CausalEnvelope>();
 
 	// 不用参数属性：保持可被 node --experimental-strip-types 直接加载（崩溃注入测试）。
-	constructor(path: string, now: () => number = Date.now) {
+	constructor(
+		path: string,
+		now: () => number = Date.now,
+		causality?: CausalContext | CausalEnvelope | (() => CausalContext | CausalEnvelope | undefined),
+	) {
 		this.path = path;
 		this.now = now;
+		this.causality = causality;
+	}
+
+	private lineage(toolCallId: string, parent?: CausalEnvelope): CausalEnvelope | undefined {
+		const context = typeof this.causality === "function" ? this.causality() : this.causality;
+		const contextParent: CausalEnvelope["causationId"] = context
+			? "eventId" in context
+				? (context as CausalEnvelope).eventId
+				: (context as CausalContext).causationId
+			: undefined;
+		if (!context?.runAttemptId && !context?.causationId && !parent) return undefined;
+		const lineage: CausalEnvelope = {
+			schemaVersion: 1,
+			eventId: `event:${randomUUID()}` as CausalEnvelope["eventId"],
+			...(parent?.eventId
+				? { causationId: parent.eventId }
+				: contextParent
+					? { causationId: contextParent }
+					: {}),
+			...((context?.runAttemptId ?? parent?.runAttemptId)
+				? { runAttemptId: context?.runAttemptId ?? parent?.runAttemptId }
+				: {}),
+		};
+		this.lastLineage.set(toolCallId, lineage);
+		return lineage;
 	}
 
 	/** 同步追加并 fsync：返回时记录已落盘，之后工具才会执行。 */
@@ -103,6 +140,8 @@ export class ToolIntentJournal {
 			replay: input.replay,
 			ts: this.now(),
 		};
+		const lineage = this.lineage(input.toolCallId);
+		if (lineage) record.lineage = lineage;
 		if (input.replay === "safe") {
 			const raw = stableStringify(input.args);
 			if (Buffer.byteLength(raw) <= MAX_ARGS_BYTES) record.args = input.args;
@@ -112,11 +151,33 @@ export class ToolIntentJournal {
 	}
 
 	end(toolCallId: string, isError: boolean): void {
-		this.append({ v: INTENT_JOURNAL_VERSION, kind: "end", toolCallId, isError, ts: this.now() }, false);
+		const lineage = this.lineage(toolCallId, this.lastLineage.get(toolCallId));
+		this.append(
+			{
+				v: INTENT_JOURNAL_VERSION,
+				kind: "end",
+				toolCallId,
+				isError,
+				ts: this.now(),
+				...(lineage ? { lineage } : {}),
+			},
+			false,
+		);
 	}
 
 	output(toolCallId: string, text: string): void {
-		this.append({ v: INTENT_JOURNAL_VERSION, kind: "output", toolCallId, text, ts: this.now() }, true);
+		const lineage = this.lineage(toolCallId, this.lastLineage.get(toolCallId));
+		this.append(
+			{
+				v: INTENT_JOURNAL_VERSION,
+				kind: "output",
+				toolCallId,
+				text,
+				ts: this.now(),
+				...(lineage ? { lineage } : {}),
+			},
+			true,
+		);
 	}
 }
 

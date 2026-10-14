@@ -9,7 +9,7 @@ import type {
 	JobSpec,
 	JobState,
 } from "@drone/compute";
-import type { DroneRuntime } from "@drone/shared";
+import { createCausalEnvelope, type DroneRuntime } from "@drone/shared";
 import { JsonStore } from "../json-store";
 import { createLogger } from "../log";
 import { getAgentDir } from "../session-engine/engine";
@@ -138,6 +138,7 @@ export interface ComputeEvent {
 	readonly detail?: string;
 	/** Verified runner entries emitted when collection completes. */
 	readonly artifacts?: ArtifactManifest["entries"];
+	readonly lineage?: import("@drone/shared").CausalEnvelope;
 }
 
 export interface ComputeServicePort {
@@ -244,7 +245,7 @@ function safeJobId(jobId: string): string {
 
 function specFingerprint(spec: unknown): string {
 	const row = asRecord(spec);
-	const { jobId: _jobId, ...withoutId } = row;
+	const { jobId: _jobId, lineage: _lineage, ...withoutId } = row;
 	return createHash("sha256").update(JSON.stringify(withoutId)).digest("hex");
 }
 
@@ -811,16 +812,29 @@ export class ComputeService implements ComputeServicePort {
 	}
 
 	private async appendEvent(event: ComputeEvent): Promise<void> {
-		await this.eventStore(event.jobId).update((events) => [...events, event]);
+		const job = this.jobs.get(event.jobId);
+		const events = await this.eventStore(event.jobId).read();
+		const parent = events.at(-1)?.id ?? job?.spec.lineage?.eventId;
+		const lineage =
+			event.lineage ??
+			(job?.spec.lineage
+				? createCausalEnvelope({
+						eventId: event.id,
+						...(parent ? { causationId: parent } : {}),
+						...(job.spec.lineage.runAttemptId ? { runAttemptId: job.spec.lineage.runAttemptId } : {}),
+					})
+				: undefined);
+		const recorded = lineage ? { ...event, lineage } : event;
+		await this.eventStore(event.jobId).update((current) => [...current, recorded]);
 		const observedJob = this.jobs.get(event.jobId);
 		if (observedJob && this.experienceRecorder) {
-			await Promise.resolve(this.experienceRecorder.record(event, observedJob)).catch((error) => {
+			await Promise.resolve(this.experienceRecorder.record(recorded, observedJob)).catch((error) => {
 				log.warn("compute experience recording failed", error);
 			});
 		}
 		for (const handler of this.events) {
 			try {
-				handler(event);
+				handler(recorded);
 			} catch (error) {
 				log.warn("compute event handler failed", error);
 			}

@@ -13,6 +13,7 @@ import type {
 } from "@drone/shared";
 import { capabilityLoadRequest } from "@drone/shared";
 import type { CapabilityRuntime } from "../capabilities/runtime";
+import { newRunAttemptId, rootCausalEnvelope } from "../causality";
 import {
 	type AnalysisAdapterRegistry,
 	adapterSnapshotSha256,
@@ -136,6 +137,7 @@ export class AnalysisTaskController {
 			outputs: spec.outputs,
 		});
 		const executionContext = observedExecutionContext(evidence);
+		const lineage = rootCausalEnvelope(newRunAttemptId());
 		return this.sync(
 			await this.analysis.assessReadiness(
 				id,
@@ -158,6 +160,7 @@ export class AnalysisTaskController {
 					...(executionContext ? { executionContext } : {}),
 					requiredOutputs: plan.requiredOutputs,
 					inputs: inputArtifacts(spec),
+					lineage,
 				},
 			),
 		);
@@ -353,7 +356,10 @@ export class AnalysisTaskController {
 		this.adapters.resolve(context.assay, binding.adapter);
 		assertComputePreflight(spec);
 		this.sync(context);
-		const job = await this.compute.submit(spec);
+		const job = await this.compute.submit({
+			...spec,
+			...(binding.lineage ? { lineage: binding.lineage } : {}),
+		});
 		return { context, job };
 	}
 
@@ -400,7 +406,8 @@ export class AnalysisTaskController {
 }
 
 function submissionHash(spec: ComputePreflightJobSpec): string {
-	return createHash("sha256").update(stableJson(spec)).digest("hex");
+	const { lineage: _lineage, ...content } = spec;
+	return createHash("sha256").update(stableJson(content)).digest("hex");
 }
 
 function workflowIdentity(spec: ComputePreflightJobSpec): { id: string; version: string } {

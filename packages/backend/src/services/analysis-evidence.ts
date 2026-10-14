@@ -6,9 +6,12 @@ import { stableJson } from "@drone/compute";
 import type {
 	AnalysisArtifactVersion,
 	AnalysisContext,
+	CausalEnvelope,
 	EvidenceCheckpointSummary,
 	EvidenceOverview,
 } from "@drone/shared";
+import { childCausalEnvelope } from "@drone/shared";
+import { newEventId, newRunAttemptId } from "../causality";
 import { JsonStore } from "../json-store";
 import type { StorageRegistry } from "../storage/registry";
 import type { AnalysisOrchestrationService } from "./analysis-orchestration";
@@ -27,6 +30,7 @@ export interface EvidenceCheckpoint {
 	readonly files: readonly FrozenFile[];
 	readonly environmentFingerprint?: string;
 	readonly createdAt: string;
+	readonly lineage?: CausalEnvelope;
 }
 export interface EvidenceCapsule {
 	readonly format: "drone-evidence-capsule";
@@ -47,6 +51,7 @@ export interface EvidenceReplayReceipt {
 	readonly outputChecks: readonly { path: string; matched: boolean }[];
 	readonly environmentMatched: boolean;
 	readonly completedAt: string;
+	readonly lineage?: CausalEnvelope;
 }
 interface EvidenceLedger {
 	version: 1;
@@ -68,7 +73,8 @@ export interface EvidenceReplayRunner {
 const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const canonical = (value: unknown) => `${stableJson(value)}\n`;
 function checkpointId(value: Omit<EvidenceCheckpoint, "id">): string {
-	return digest(canonical(value));
+	const { lineage: _lineage, ...content } = value;
+	return digest(canonical(content));
 }
 function safePath(path: string): void {
 	if (
@@ -337,6 +343,14 @@ export class AnalysisEvidenceService {
 			files: [...input.files].sort((a, b) => (a.artifact.path < b.artifact.path ? -1 : 1)),
 			...(input.environmentFingerprint ? { environmentFingerprint: input.environmentFingerprint } : {}),
 			createdAt: new Date().toISOString(),
+			...(analysis.provenance?.lineage
+				? {
+						lineage: childCausalEnvelope(analysis.provenance.lineage, {
+							eventId: newEventId(),
+							runAttemptId: analysis.provenance.lineage.runAttemptId,
+						}),
+					}
+				: {}),
 		};
 		const checkpoint = { ...body, id: checkpointId(body) };
 		validateCheckpoint(checkpoint);
@@ -560,6 +574,14 @@ export class AnalysisEvidenceService {
 			outputChecks: checks,
 			environmentMatched,
 			completedAt: new Date().toISOString(),
+			...(checkpoint.lineage
+				? {
+						lineage: childCausalEnvelope(checkpoint.lineage, {
+							eventId: newEventId(),
+							runAttemptId: newRunAttemptId(),
+						}),
+					}
+				: {}),
 		};
 		await this.store.update((ledger) => {
 			ledger.replays[receipt.id] = receipt;

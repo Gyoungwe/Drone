@@ -20,6 +20,7 @@ export {
 export * from "./capabilities";
 export * from "./capability-discovery";
 export * from "./capability-skills";
+export * from "./causality";
 export * from "./compute";
 export * from "./context-meta";
 export * from "./contracts";

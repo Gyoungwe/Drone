@@ -24,7 +24,7 @@ import { TasksPane } from "./TasksPane";
 export const CONTEXT_PANEL_WIDTH = 372;
 
 /**
- * 右侧上下文面板：任务 / 过程 / 产物 三个常驻页签（文件变更并入「过程」），子智能体仅在本会话有运行时出现，
+ * 右侧上下文面板：任务 / 变更 / 文件 三个常驻页签（运行过程收进「变更」细节），子智能体仅在本会话有运行时出现，
  * 计算仅在已配置主机或有作业时出现；当前选中的页签总是可见。固定栏位、push 式收展（聊天列自然压缩），永远只有一个右栏。
  *
  * 展开规则（用户确认）：运行开始自动展开；运行结束回到空闲选择；空闲时的手动开关被记住。
@@ -78,7 +78,13 @@ export function ContextPanel() {
 					onCollapse={() => setPanelOpen(false, agentActive)}
 					collapseLabel={t("panel.collapse")}
 				/>
-				<div className="context-panel-body">
+				<div
+					id={panelContentId(tab)}
+					role="tabpanel"
+					aria-labelledby={panelTabId(tab)}
+					tabIndex={-1}
+					className="context-panel-body"
+				>
 					<ContextUsageMeter sessionId={activeSessionId} />
 					{tab === "tasks" && (
 						<>
@@ -107,7 +113,7 @@ export function ContextPanel() {
 }
 
 /** 按需页签：子智能体 = 本会话有运行；计算 = 已配置主机或有作业；当前选中的页签（如 @ 派发跳转）总是保留 */
-function useVisibleTabs(sessionId: string | null, current: PanelTab): readonly CorePanelTab[] {
+function useVisibleTabs(_sessionId: string | null, current: PanelTab): readonly CorePanelTab[] {
 	const hasCompute = useComputeStore((s) => selectHosts(s).length > 0 || selectJobs(s).length > 0);
 	return useMemo(
 		() => visiblePanelTabs({ subagents: false, compute: hasCompute || current === "compute" }),
@@ -139,7 +145,7 @@ interface TabBadges {
 	attention: Partial<Record<PanelTab, boolean>>;
 }
 
-/** 页签计数：任务 done/total、变更文件数（记在「过程」页签）、产物数、子智能体运行中数 */
+/** 页签计数：任务 done/total、变更文件数、文件数、子智能体运行中数 */
 function useTabBadges(sessionId: string | null): TabBadges {
 	const todos =
 		useTranscriptStore((s) => (sessionId ? s.bySession[sessionId]?.todos : undefined)) ?? EMPTY_TODOS;
@@ -189,6 +195,32 @@ function PanelHeader({
 	const t = useT();
 	const { badges, attention } = useTabBadges(sessionId);
 	const pluginTabs = usePluginEntries(UI_REGIONS.PanelTab);
+	const tabKeys = [...tabs, ...pluginTabs.map((entry) => entry.id)] as PanelTab[];
+	const tabsRef = useRef<HTMLDivElement>(null);
+	const focusTab = (next: PanelTab) => {
+		onTab(next);
+		const button = Array.from(tabsRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []).find(
+			(item) => item.dataset.tabKey === next,
+		);
+		button?.focus();
+	};
+	const onTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, current: PanelTab) => {
+		const index = tabKeys.indexOf(current);
+		if (index < 0) return;
+		const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+		const nextIndex =
+			event.key === "Home"
+				? 0
+				: event.key === "End"
+					? tabKeys.length - 1
+					: delta
+						? (index + delta + tabKeys.length) % tabKeys.length
+						: -1;
+		if (nextIndex < 0) return;
+		event.preventDefault();
+		const next = tabKeys[nextIndex];
+		if (next) focusTab(next);
+	};
 	return (
 		<div className="context-panel-head">
 			<div className="flex items-center gap-2">
@@ -202,15 +234,20 @@ function PanelHeader({
 					<PanelRightIcon size={14} />
 				</button>
 			</div>
-			<div className="context-panel-tabs" role="tablist" aria-label={t("panel.title")}>
+			<div ref={tabsRef} className="context-panel-tabs" role="tablist" aria-label={t("panel.title")}>
 				{tabs.map((key) => (
 					<button
 						key={key}
 						type="button"
 						role="tab"
+						id={panelTabId(key)}
+						aria-controls={panelContentId(key)}
 						aria-selected={tab === key}
+						tabIndex={tab === key ? 0 : -1}
+						data-tab-key={key}
 						className={tab === key ? "on" : ""}
 						onClick={() => onTab(key)}
+						onKeyDown={(event) => onTabKeyDown(event, key)}
 					>
 						<span>{t(`panel.tabs.${key}`)}</span>
 						{badges[key] && (
@@ -225,9 +262,14 @@ function PanelHeader({
 						key={entry.id}
 						type="button"
 						role="tab"
+						id={panelTabId(entry.id as PanelTab)}
+						aria-controls={panelContentId(entry.id as PanelTab)}
 						aria-selected={tab === entry.id}
+						tabIndex={tab === entry.id ? 0 : -1}
+						data-tab-key={entry.id}
 						className={tab === entry.id ? "on" : ""}
 						onClick={() => onTab(entry.id as PanelTab)}
+						onKeyDown={(event) => onTabKeyDown(event, entry.id as PanelTab)}
 						data-plugin={entry.pluginName}
 					>
 						<span>{entry.title}</span>
@@ -236,6 +278,14 @@ function PanelHeader({
 			</div>
 		</div>
 	);
+}
+
+function panelTabId(tab: PanelTab): string {
+	return `context-panel-tab-${tab.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
+function panelContentId(tab: PanelTab): string {
+	return `context-panel-content-${tab.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
 /** 状态行：等待确认 > 运行中 · 实时活动 > 已完成 > 空闲（导航即状态：面板头永远能看出 agent 在干嘛） */

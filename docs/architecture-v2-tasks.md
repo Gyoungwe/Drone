@@ -142,6 +142,19 @@
 
 ---
 
+## C1 · RunAttempt / causation lineage
+
+设计和当前代码基线：[run-attempt-causality-design.md](superpowers/specs/2026-10-14-run-attempt-causality-design.md)。这一组任务以 v0.32.0 的 `VersionedRecord` / `parentRefs` / content hash 为基线，先做 additive lineage，再接入副作用和证据；不合并领域账本。
+
+- [x] **C1-1 契约**：新增 shared `CausalEnvelope`；研究合同、execution、ask、analysis provenance 增加可选 lineage；hash 排除 lineage；覆盖旧 schema 兼容和安全校验。
+- [x] **C1-2 attempt 根**：`AnalysisTaskController.prepareCompute` 创建 attempt 根和 binding lineage；analysis ledger 双读兼容，fork 不继承 execution binding。
+- [x] **C1-3 副作用回执**：`ExecutionReceipt`、`ComputeTaskBinding`、compute `JobSpec` / `SubmissionRecord` 和 direct scheduler 传播 lineage；unknown 只 reconcile。
+- [x] **C1-4 intent/evidence**：intent journal start-before-effect 带 envelope；checkpoint hash 排除 lineage；replay 新建 attempt，branch 不继承授权。
+- [x] **C1-5 只读投影**：提供按 attempt/event 的 backend/host 脱敏投影；只有实际需要跨进程展示时才扩展 IPC。
+- [ ] **C1-6 收尾**：完成旧数据 partial/legacy 兼容、crash/restart/reconcile/retry/branch/hash/capsule 回归和完整 DoD。
+
+---
+
 ## 执行日志
 
 | 日期 | 任务 | 结果 / 数字 | 遗留 |

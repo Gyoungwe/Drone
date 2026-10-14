@@ -1,4 +1,4 @@
-import type { ComputeDataDesignContract } from "@drone/shared";
+import type { CausalEnvelope, ComputeDataDesignContract } from "@drone/shared";
 
 /** A host profile is safe to persist: it deliberately contains no credentials. */
 export interface HostProfile {
@@ -251,6 +251,7 @@ export interface WorkflowSpec {
 export interface JobSpec {
 	readonly jobId: string;
 	readonly idempotencyKey?: string;
+	readonly lineage?: CausalEnvelope;
 	readonly hostAlias: string;
 	readonly workflow: WorkflowSpec | WorkflowRef;
 	readonly workDir?: string;
@@ -356,6 +357,7 @@ export interface JobEvent {
 	readonly type: "state" | "runner" | "log" | "artifact" | "reconcile" | "submission";
 	readonly state?: JobState;
 	readonly payload?: unknown;
+	readonly lineage?: CausalEnvelope;
 }
 
 export interface SubmissionRecord {
@@ -365,6 +367,7 @@ export interface SubmissionRecord {
 	readonly pid?: number;
 	readonly processStartedAt?: string;
 	readonly submittedAt: string;
+	readonly lineage?: CausalEnvelope;
 }
 
 export type SubmissionOutcome =

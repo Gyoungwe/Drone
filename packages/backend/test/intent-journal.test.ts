@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { createCausalEnvelope } from "@drone/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	createIntentObserver,
@@ -71,6 +72,25 @@ describe("tool intent journal", () => {
 		expect(calls.get("c2")?.ended).toBe(false);
 		expect(calls.get("c2")?.start.args).toBeUndefined();
 		expect(calls.get("c2")?.start.argsHash).toBe(hashArgs({ command: "rm x" }));
+	});
+
+	it("chains intent records to one execution attempt", () => {
+		const file = join(tmp(), "lineage.jsonl");
+		const journal = new ToolIntentJournal(
+			intentJournalPath(file),
+			() => 42,
+			createCausalEnvelope({ eventId: "event:proposal", runAttemptId: "run:one" }),
+		);
+		journal.start({ toolCallId: "c1", toolName: "read", args: { path: "a" }, replay: "safe" });
+		journal.output("c1", "partial");
+		journal.end("c1", false);
+		const records = readIntentRecords(intentJournalPath(file));
+		const start = records.find((record) => record.kind === "start");
+		const output = records.find((record) => record.kind === "output");
+		const end = records.find((record) => record.kind === "end");
+		expect(start?.lineage).toMatchObject({ causationId: "event:proposal", runAttemptId: "run:one" });
+		expect(output?.lineage).toMatchObject({ causationId: start?.lineage?.eventId, runAttemptId: "run:one" });
+		expect(end?.lineage).toMatchObject({ causationId: output?.lineage?.eventId, runAttemptId: "run:one" });
 	});
 
 	it("tolerates a torn last line", () => {

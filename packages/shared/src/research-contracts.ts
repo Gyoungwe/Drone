@@ -1,4 +1,5 @@
 import type { AnalysisContext } from "./analysis-orchestration";
+import { assertCausalEnvelope, type CausalEnvelope } from "./causality";
 import { sha256 } from "./contract-hash";
 
 /**
@@ -30,6 +31,8 @@ export interface VersionedRecord {
 	readonly revision: number;
 	readonly contentHash: string;
 	readonly parentRefs: readonly ContractParentRef[];
+	/** Audit lineage; excluded from content hashes so it can be added compatibly. */
+	readonly lineage?: CausalEnvelope;
 	readonly migration?: ContractMigration;
 }
 
@@ -399,6 +402,7 @@ export function computeResearchContractHash<T extends VersionedResearchContract>
 	const {
 		contentHash: _contentHash,
 		decisionHash: _decisionHash,
+		lineage: _lineage,
 		...body
 	} = value as T & {
 		decisionHash?: unknown;
@@ -472,6 +476,7 @@ export function assertResearchContract(value: VersionedResearchContract): void {
 	if (!Number.isSafeInteger(value.revision) || value.revision < 0) throw new Error("Invalid revision");
 	if (!/^[a-f0-9]{64}$/.test(value.contentHash)) throw new Error("Invalid contentHash");
 	if (!Array.isArray(value.parentRefs)) throw new Error("Invalid parentRefs");
+	if (value.lineage !== undefined) assertCausalEnvelope(value.lineage);
 	if (value.migration) {
 		if (
 			!Number.isSafeInteger(value.migration.fromSchemaVersion) ||
@@ -490,6 +495,7 @@ export function assertResearchContract(value: VersionedResearchContract): void {
 export interface ContractVersionOptions {
 	readonly revision?: number;
 	readonly parentRefs?: readonly ContractParentRef[];
+	readonly lineage?: CausalEnvelope;
 	readonly migration?: ContractMigration;
 }
 
@@ -501,10 +507,11 @@ function base<T extends Record<string, unknown>>(
 		schemaVersion: RESEARCH_CONTRACT_SCHEMA_VERSION,
 		revision: options.revision ?? 0,
 		parentRefs: [...(options.parentRefs ?? [])],
+		...(options.lineage ? { lineage: options.lineage } : {}),
 		...(options.migration ? { migration: options.migration } : {}),
 	};
 	const record = JSON.parse(canonicalContractJson({ ...body, ...metadata })) as T & VersionedResearchContract;
-	const result = { ...record, contentHash: contractContentHash(record) };
+	const result = { ...record, contentHash: computeResearchContractHash(record) };
 	assertResearchContract(result);
 	return result;
 }

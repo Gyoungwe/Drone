@@ -193,6 +193,12 @@ export {
 	type CapabilityValidationPort,
 } from "./services/capability-discovery";
 export {
+	type CausalityProjection,
+	type CausalityProjectionInput,
+	type CausalityProjectionRecord,
+	projectCausality,
+} from "./services/causality-projection";
+export {
 	artifactSha256,
 	type ComputeCollectOptions,
 	type ComputeCollectResult,
