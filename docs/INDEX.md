@@ -53,6 +53,8 @@ PR #113 与 1–6 的整合证据、生成物修复和未决风险：见 [PR113 
 
 v0.32.0 P5 UI/局域网只读收口的证据矩阵、长列表和窄屏验收边界见 [P5 UI/LAN 只读证据矩阵](ui-audit/2026-10-15-v0320-p5-evidence-matrix.md)。
 
+v0.32.0 P6 发布审阅、能力矩阵、许可证/技能锁定和未完成项见 [P6 发布审阅与能力矩阵](releases/2026-10-15-v0320-p6-release-audit.md)。
+
 v0.32.0 基线上的客户端 UI 全面整改调查与实施范围：见 [客户端 UI 全面整改调查与实施计划](superpowers/specs/2026-10-14-client-ui-overhaul-investigation-design.md)。
 
 v0.26.1 的验证命令、生成物检查、资产清单和“先验证再建标签”顺序见 [发布门禁清单](releases/v0.26.1-gate-manifest.json) 与 [验证记录](releases/v0.26.1-validation.md)。
