@@ -9,6 +9,7 @@ import {
 	createValidationEvidenceCapsule,
 	type ValidationEvidenceCapsule,
 } from "./research-contracts";
+import { type ResearchValidationScope, statusForValidationCapsule } from "./research-status";
 
 export interface CapabilityReference {
 	readonly capabilityId: string;
@@ -113,6 +114,8 @@ export interface ValidationEvidenceInput {
 	readonly sourceRefs?: readonly ContractParentRef[];
 	readonly id: string;
 	readonly createdAt: string;
+	/** Defaults to fixture so a capsule cannot imply real-data validation. */
+	readonly validationScope?: ResearchValidationScope;
 }
 
 /** Build an evidence capsule from all three independent validation gates. */
@@ -127,6 +130,10 @@ export function buildValidationEvidenceCapsule(input: ValidationEvidenceInput): 
 			: input.gates.some((gate) => gate.status === "failed")
 				? "failed"
 				: "incomplete";
+	const researchStatus = statusForValidationCapsule({
+		status,
+		validationScope: input.validationScope,
+	});
 	return createValidationEvidenceCapsule({
 		id: input.id,
 		capabilityRef: input.capabilityRef,
@@ -138,6 +145,11 @@ export function buildValidationEvidenceCapsule(input: ValidationEvidenceInput): 
 		})),
 		sourceRefs: [...(input.sourceRefs ?? [])],
 		status,
+		evidenceState: researchStatus.evidenceState,
+		claimState: researchStatus.claimState,
+		validationScope: researchStatus.validationScope,
+		freshness: researchStatus.freshness,
+		scientificallyVerified: false,
 		createdAt: input.createdAt,
 	});
 }

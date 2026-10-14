@@ -1,6 +1,13 @@
 import type { AnalysisContext } from "./analysis-orchestration";
 import { assertCausalEnvelope, type CausalEnvelope } from "./causality";
 import { sha256 } from "./contract-hash";
+import type {
+	ResearchClaimState,
+	ResearchEvidenceState,
+	ResearchFreshnessState,
+	ResearchValidationScope,
+} from "./research-status";
+import { assertResearchStatus, statusForValidationCapsule } from "./research-status";
 
 /**
  * Versioned records shared by the research, capability, decision and execution
@@ -239,6 +246,12 @@ export interface ValidationEvidenceCapsule extends VersionedResearchContract {
 	readonly gateRefs: readonly ContractParentRef[];
 	readonly sourceRefs: readonly ContractParentRef[];
 	readonly status: "validated" | "failed" | "incomplete";
+	/** Cross-package projection; legacy capsules may omit these fields. */
+	readonly evidenceState?: ResearchEvidenceState;
+	readonly claimState?: ResearchClaimState;
+	readonly validationScope?: ResearchValidationScope;
+	readonly freshness?: ResearchFreshnessState;
+	readonly scientificallyVerified?: false;
 	readonly createdAt: string;
 }
 
@@ -490,6 +503,23 @@ export function assertResearchContract(value: VersionedResearchContract): void {
 	}
 	if (value.contentHash !== computeResearchContractHash(value))
 		throw new Error("Contract contentHash mismatch");
+	if ((value as { kind?: unknown }).kind === "validation-evidence-capsule") {
+		const capsule = value as ValidationEvidenceCapsule;
+		const projection = statusForValidationCapsule({
+			status: capsule.status,
+			validationScope: capsule.validationScope,
+			freshness: capsule.freshness,
+		});
+		if (
+			(capsule.evidenceState !== undefined && capsule.evidenceState !== projection.evidenceState) ||
+			(capsule.claimState !== undefined && capsule.claimState !== projection.claimState) ||
+			(capsule.validationScope !== undefined && capsule.validationScope !== projection.validationScope) ||
+			(capsule.freshness !== undefined && capsule.freshness !== projection.freshness) ||
+			(capsule.scientificallyVerified !== undefined && capsule.scientificallyVerified !== false)
+		)
+			throw new Error("Validation capsule status projection is inconsistent");
+		assertResearchStatus(projection);
+	}
 }
 
 export interface ContractVersionOptions {
@@ -629,7 +659,32 @@ export function createCapabilityValidationGate(
 export function createValidationEvidenceCapsule(
 	input: Omit<ValidationEvidenceCapsule, keyof VersionedResearchContract | "kind"> & ContractVersionOptions,
 ): ValidationEvidenceCapsule {
-	return base({ ...input, kind: "validation-evidence-capsule" as const }, input) as ValidationEvidenceCapsule;
+	const projection = statusForValidationCapsule({
+		status: input.status,
+		validationScope: input.validationScope,
+		freshness: input.freshness,
+	});
+	if (
+		(input.evidenceState !== undefined && input.evidenceState !== projection.evidenceState) ||
+		(input.claimState !== undefined && input.claimState !== projection.claimState) ||
+		(input.validationScope !== undefined && input.validationScope !== projection.validationScope) ||
+		(input.freshness !== undefined && input.freshness !== projection.freshness) ||
+		(input.scientificallyVerified !== undefined && input.scientificallyVerified !== false)
+	)
+		throw new Error("Validation capsule status projection is inconsistent");
+	assertResearchStatus(projection);
+	return base(
+		{
+			...input,
+			kind: "validation-evidence-capsule" as const,
+			evidenceState: projection.evidenceState,
+			claimState: projection.claimState,
+			validationScope: projection.validationScope,
+			freshness: projection.freshness,
+			scientificallyVerified: false as const,
+		},
+		input,
+	) as ValidationEvidenceCapsule;
 }
 
 export function createDecisionProposal(
