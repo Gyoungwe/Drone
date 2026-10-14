@@ -19,6 +19,7 @@ export {
 } from "./bio-preview-format";
 export * from "./capabilities";
 export * from "./capability-discovery";
+export * from "./capability-governance";
 export * from "./capability-skills";
 export * from "./causality";
 export * from "./compute";
