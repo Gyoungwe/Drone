@@ -34,6 +34,7 @@ export * from "./durable-doc";
 export * from "./error-codes";
 export * from "./errors";
 export * from "./evidence-labels";
+export * from "./evolution";
 export * from "./example-tasks";
 export * from "./execution";
 export * from "./file-actions";
