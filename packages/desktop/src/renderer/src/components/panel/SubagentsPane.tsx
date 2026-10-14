@@ -38,7 +38,7 @@ const SELECT_CLASS =
 	"min-w-0 flex-1 rounded-lg border border-border bg-surface px-2 py-1 text-[12px] text-ink outline-none focus:border-accent disabled:opacity-50";
 const INPUT_CLASS =
 	"min-w-0 flex-1 rounded-lg border border-border bg-surface px-2 py-1 text-[12px] text-ink outline-none focus:border-accent";
-const RUNS_VISIBLE_LIMIT = 100;
+const RUNS_PAGE_SIZE = 100;
 
 function formatTokens(value: number): string {
 	if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
@@ -138,7 +138,7 @@ export function SubagentsPane({ sessionId }: { sessionId: string | null }) {
 			{snapshot && snapshot.agents.length > 0 && (
 				<DispatchSection sessionId={sessionId} snapshot={snapshot} active={summary.active + summary.queued} />
 			)}
-			<RunsSection sessionId={sessionId} runs={runs} snapshot={snapshot} />
+			<RunsSection key={sessionId} sessionId={sessionId} runs={runs} snapshot={snapshot} />
 		</div>
 	);
 }
@@ -685,8 +685,18 @@ function RunsSection({
 	const [filter, setFilter] = useState<"active" | "all">("all");
 	const summary = useMemo(() => summarizeRuns(runs), [runs]);
 	const shown = filter === "active" ? runs.filter((run) => !isSubagentRunSettled(run.status)) : runs;
-	const visibleRuns = shown.slice(0, RUNS_VISIBLE_LIMIT);
-	const hiddenCount = Math.max(0, shown.length - visibleRuns.length);
+	const [page, setPage] = useState(0);
+	const pageCount = Math.max(1, Math.ceil(shown.length / RUNS_PAGE_SIZE));
+	const currentPage = Math.min(page, pageCount - 1);
+	const visibleRuns = shown.slice(currentPage * RUNS_PAGE_SIZE, (currentPage + 1) * RUNS_PAGE_SIZE);
+	const focusRunId = useSubagentsStore((s) => s.focusRunId);
+	useEffect(() => {
+		if (!focusRunId) return;
+		const index = runs.findIndex((run) => run.runId === focusRunId);
+		if (index < 0) return;
+		setFilter("all");
+		setPage(Math.floor(index / RUNS_PAGE_SIZE));
+	}, [focusRunId, runs]);
 	return (
 		<section className="panel-card" data-testid="subagents-runs">
 			<header className="flex items-center gap-2">
@@ -699,7 +709,10 @@ function RunsSection({
 							className={`rounded-md px-2 py-0.5 ${filter === "active" ? "bg-hover text-ink" : "text-ink-faint hover:text-ink"}`}
 							aria-pressed={filter === "active"}
 							aria-controls="subagents-runs-list"
-							onClick={() => setFilter("active")}
+							onClick={() => {
+								setFilter("active");
+								setPage(0);
+							}}
 						>
 							{t("panel.subagents.filterActive")}
 							{summary.active + summary.queued > 0 && (
@@ -711,7 +724,10 @@ function RunsSection({
 							className={`rounded-md px-2 py-0.5 ${filter === "all" ? "bg-hover text-ink" : "text-ink-faint hover:text-ink"}`}
 							aria-pressed={filter === "all"}
 							aria-controls="subagents-runs-list"
-							onClick={() => setFilter("all")}
+							onClick={() => {
+								setFilter("all");
+								setPage(0);
+							}}
 						>
 							{t("panel.subagents.filterAll")}
 						</button>
@@ -719,21 +735,48 @@ function RunsSection({
 				)}
 			</header>
 			{shown.length === 0 ? (
-				<p className="mt-2 text-[12px] text-ink-faint" data-testid="subagents-runs-empty">
+				<p
+					id="subagents-runs-list"
+					className="mt-2 text-[12px] text-ink-faint"
+					data-testid="subagents-runs-empty"
+					role="status"
+				>
 					{t(runs.length === 0 ? "panel.subagents.runsEmpty" : "panel.subagents.runsActiveEmpty")}
 				</p>
 			) : (
-				<div id="subagents-runs-list" className="mt-2 flex flex-col gap-2" aria-live="polite">
+				<div id="subagents-runs-list" className="mt-2 flex flex-col gap-2">
 					{visibleRuns.map((run) => (
 						<RunCard key={run.runId} run={run} sessionId={sessionId} snapshot={snapshot} />
 					))}
-					{hiddenCount > 0 && (
-						<p
-							className="rounded-lg border border-border/70 px-3 py-2 text-[11px] text-ink-faint"
-							role="status"
+					{pageCount > 1 && (
+						<div
+							className="flex flex-wrap items-center gap-2 border-t border-border pt-2"
+							data-testid="subagents-pagination"
 						>
-							{t("panel.subagents.runsLimit", { limit: RUNS_VISIBLE_LIMIT, count: hiddenCount })}
-						</p>
+							<p className="w-full text-[11px] text-ink-faint" role="status">
+								{t("panel.subagents.runsPage", {
+									start: currentPage * RUNS_PAGE_SIZE + 1,
+									end: currentPage * RUNS_PAGE_SIZE + visibleRuns.length,
+									total: shown.length,
+								})}
+							</p>
+							<Button
+								size="sm"
+								disabled={currentPage === 0}
+								onClick={() => setPage(currentPage - 1)}
+								data-testid="subagents-page-previous"
+							>
+								{t("panel.subagents.pagePrevious")}
+							</Button>
+							<Button
+								size="sm"
+								disabled={currentPage === pageCount - 1}
+								onClick={() => setPage(currentPage + 1)}
+								data-testid="subagents-page-next"
+							>
+								{t("panel.subagents.pageNext")}
+							</Button>
+						</div>
 					)}
 				</div>
 			)}
@@ -773,7 +816,10 @@ function RunCard({
 		if (focusRunId !== run.runId) return;
 		focusRun(null);
 		setFocused(true);
-		ref.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+		ref.current?.scrollIntoView({
+			block: "center",
+			behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+		});
 		const timer = setTimeout(() => setFocused(false), 1800);
 		return () => clearTimeout(timer);
 	}, [focusRunId, run.runId, focusRun]);
@@ -947,6 +993,7 @@ function RunCard({
 												setReply("");
 											});
 									}}
+									aria-label={t("message.subagent.replyPlaceholder")}
 									placeholder={t("message.subagent.replyPlaceholder")}
 									className={INPUT_CLASS}
 								/>
@@ -983,6 +1030,7 @@ function RunCard({
 										setGuide("");
 									});
 							}}
+							aria-label={t("message.subagent.guidePlaceholder")}
 							placeholder={t("message.subagent.guidePlaceholder")}
 							className={INPUT_CLASS}
 						/>

@@ -238,7 +238,7 @@ describe("SubagentsPane · 状态渲染", () => {
 		useSubagentsStore.setState({ runsBySession: { s1: many } });
 		const html = render();
 		expect(html.match(/data-testid="subagent-run-card"/g)).toHaveLength(100);
-		expect(html).toContain("panel.subagents.runsLimit:100,900");
+		expect(html).toContain("panel.subagents.runsPage:1,100,1000");
 	});
 
 	it("fullAccess 会话：派发表单顶部提示子智能体同样不再逐项确认", () => {

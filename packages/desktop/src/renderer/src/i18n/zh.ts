@@ -399,7 +399,9 @@ export const zh = {
 			filterAll: "全部",
 			runsEmpty: "本会话还没有派发过子智能体。",
 			runsActiveEmpty: "当前筛选没有运行中的子智能体。",
-			runsLimit: "仅显示前 {limit} 条运行记录，另有 {count} 条记录已隐藏。",
+			runsPage: "显示第 {start}–{end} 条，共 {total} 条运行记录",
+			pagePrevious: "上一页",
+			pageNext: "下一页",
 			status: {
 				queued: "排队中",
 				running: "运行中",

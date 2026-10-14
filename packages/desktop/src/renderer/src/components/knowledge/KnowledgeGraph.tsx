@@ -144,6 +144,7 @@ export function KnowledgeGraph({
 	const [links, setLinks] = useState<KnowledgeNoteLinks | null>(null);
 	const [hovered, setHovered] = useState<string | null>(null);
 	const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, scale: 1 });
+	const rootRef = useRef<HTMLDivElement>(null);
 	const dragRef = useRef<{ x: number; y: number; camera: Camera } | null>(null);
 	const dragFrameRef = useRef<number | null>(null);
 	const pendingCameraRef = useRef<Camera | null>(null);
@@ -315,7 +316,21 @@ export function KnowledgeGraph({
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
 			const target = event.target as HTMLElement | null;
-			if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable) return;
+			if (
+				event.defaultPrevented ||
+				event.ctrlKey ||
+				event.metaKey ||
+				event.altKey ||
+				!rootRef.current?.contains(target)
+			)
+				return;
+			if (
+				target?.tagName === "INPUT" ||
+				target?.tagName === "TEXTAREA" ||
+				target?.tagName === "SELECT" ||
+				target?.isContentEditable
+			)
+				return;
 			if (event.key === "+" || event.key === "=") {
 				event.preventDefault();
 				zoomBy(1.14);
@@ -357,6 +372,7 @@ export function KnowledgeGraph({
 
 	return (
 		<div
+			ref={rootRef}
 			data-testid="knowledge-graph"
 			className="knowledge-observatory space-y-3"
 			aria-describedby="knowledge-graph-summary knowledge-graph-keyboard-help"
@@ -424,8 +440,7 @@ export function KnowledgeGraph({
 				</span>
 			</div>
 			<p id="knowledge-graph-keyboard-help" className="sr-only">
-				{t("graphTitle")} · + / − {t("graphZoomIn")} · 0 {t("graphResetView")} · F {t("graphFit")} · Escape{" "}
-				{t("graphDrawerClose")}
+				{t("graphKeyboardHelp")}
 			</p>
 			<div className="relative">
 				<div className="knowledge-observatory-canvas relative overflow-hidden rounded-xl">
@@ -477,7 +492,6 @@ export function KnowledgeGraph({
 					<svg
 						viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
 						className="knowledge-graph-svg h-[clamp(520px,68vh,760px)] w-full touch-none select-none"
-						role="application"
 						aria-labelledby="knowledge-graph-title"
 						aria-describedby="knowledge-graph-summary knowledge-graph-keyboard-help"
 						aria-keyshortcuts="+ - 0 F Escape"

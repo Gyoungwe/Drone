@@ -225,3 +225,23 @@
 | P2 worst-case | 已完成知识图谱大图与子智能体空 / 单条 / 1000 条夹具；子智能体面板最多渲染 100 条并显示隐藏数量 | 当前定向测试 15 tests passed |
 
 本记录只覆盖 UI 项目批次；RunAttempt 远程 CI、ClawsGO 科学证据和发布生成物仍按各自计划独立推进。完整门禁在本记录之后执行，门禁结果以实际命令退出码为准。
+
+
+## 8. UI 批次最终收口与发布门禁（2026-10-14）
+
+在第二轮 UI 收口中，P0/P1/P2 的实现与验证已全部完成。子智能体列表从“超过 100 条隐藏数量提示”修正为每页 100 条的分页策略，筛选会回到第一页，聚焦指定运行记录时自动跳转到对应页；这条记录 supersede 第 7 节中“最多渲染 100 条并显示隐藏数量”的旧表述。设置弹窗补齐 Tab/Shift+Tab 焦点循环；知识图谱快捷键限定在图谱容器内，并提供中英文键盘帮助；运行状态条改为单一的屏幕阅读器状态播报，避免每秒刷新造成重复播报；聚焦滚动遵守 reduced-motion。
+
+本轮完整门禁结果：
+
+| 门禁 | 结果 |
+| --- | --- |
+| `npm run lint` | 通过；仅 3 条既有 CSS specificity warning |
+| `npm run typecheck` | 通过，所有 workspace 与 Pi 检查 |
+| `npm test` | 通过，1859 backend、26 compute、762 desktop 等测试及根级检查 |
+| `npm run build` | 通过，LAN web、Electron main/preload/renderer 全部成功 |
+| `npm run check:arch` | 通过，0 baseline finding |
+| `npm run test:upgrade` | 通过，orchestration-stress、hybrid-fixture、packaged-resources 全部通过 |
+
+隔离 Electron UI 冒烟脚本仍受现有 harness/打包环境限制：subagents 脚本等待不到 pane，knowledge 脚本遇到 bundled main 中 dynamic require child_process，task-delivery/permissions 脚本在其独立构建阶段失败。这些失败没有出现在单元测试、全量测试或正式构建门禁中，保留为发布后续的独立 harness 修复项，不改变本轮 UI 代码结论。
+
+本节记录后，集成分支可进入合并与推送；原始 worktree 和主工作区用户未提交内容继续保持不变。

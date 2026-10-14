@@ -142,12 +142,33 @@ export function SettingsDialog() {
 	const category = useSettingsStore((s) => s.category);
 	const setCategory = useSettingsStore((s) => s.setCategory);
 	const closeButtonRef = useRef<HTMLButtonElement>(null);
+	const dialogRef = useRef<HTMLDivElement>(null);
 	const previousFocusRef = useRef<HTMLElement | null>(null);
 	useEffect(() => {
 		if (!open) return;
 		previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		closeButtonRef.current?.focus();
 		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.defaultPrevented) return;
+			if (event.key === "Tab") {
+				const focusable = Array.from(
+					dialogRef.current?.querySelectorAll<HTMLElement>(
+						'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex="0"]',
+					) ?? [],
+				).filter(
+					(element) =>
+						element.getClientRects().length > 0 && !element.closest('[inert], [aria-hidden="true"]'),
+				);
+				const first = focusable[0],
+					last = focusable.at(-1);
+				if (event.shiftKey && document.activeElement === first) {
+					event.preventDefault();
+					last?.focus();
+				} else if (!event.shiftKey && document.activeElement === last) {
+					event.preventDefault();
+					first?.focus();
+				}
+			}
 			if (event.key === "Escape") {
 				event.preventDefault();
 				setOpen(false);
@@ -198,6 +219,7 @@ export function SettingsDialog() {
 			aria-labelledby="settings-dialog-title"
 		>
 			<div
+				ref={dialogRef}
 				data-testid="settings-dialog"
 				className="settings-dialog flex h-[min(74vh,720px)] max-h-[calc(100dvh-24px)] w-[min(900px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-dialog"
 			>
@@ -287,11 +309,12 @@ export function SettingsDialog() {
 							);
 						})}
 					</nav>
-					<div
+					<section
 						id="settings-dialog-panel"
 						className="settings-dialog-content min-w-0 flex-1 scroll-fade overflow-y-auto overflow-x-hidden px-3 py-2"
-						role="tabpanel"
-						aria-labelledby={`settings-nav-${category}`}
+						aria-labelledby={
+							Panel || activePluginContribution ? `settings-nav-${category}` : "settings-dialog-title"
+						}
 					>
 						{Panel && (
 							<header className="mb-4 flex items-start justify-between gap-4 border-b border-border pb-3">
@@ -321,7 +344,7 @@ export function SettingsDialog() {
 						) : (
 							<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.comingSoon")}</p>
 						)}
-					</div>
+					</section>
 				</div>
 			</div>
 		</div>
