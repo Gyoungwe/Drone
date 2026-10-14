@@ -128,9 +128,11 @@ export class EvolutionIndex {
 	private async persist(): Promise<void> {
 		const store = this.store;
 		if (!store) return;
-		this.writeQueue = this.writeQueue.then(() =>
+		const operation = this.writeQueue.then(() =>
 			store.write({ candidates: this.listCandidates(), decisions: this.listReuseDecisions() }),
 		);
-		await this.writeQueue;
+		// Keep the current failure observable while allowing later mutations to retry.
+		this.writeQueue = operation.catch(() => undefined);
+		await operation;
 	}
 }

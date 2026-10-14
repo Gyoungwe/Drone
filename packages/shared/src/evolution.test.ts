@@ -34,6 +34,17 @@ describe("evidence-gated evolution contracts", () => {
 				createdAt: "2026-10-15T00:00:00.000Z",
 			}),
 		).toThrow(/repeated observations/);
+		expect(() =>
+			createEvolutionCandidate({
+				id: "evo-2",
+				projectRef: ref("research-case", "case-1"),
+				runRefs: [ref("run-attempt", "run-1")],
+				experienceRefs: [ref("experience", "exp-1")],
+				observationCount: 2,
+				proposal: "incomplete lineage",
+				createdAt: "2026-10-15T00:00:00.000Z",
+			}),
+		).toThrow(/lineage must cover/);
 		expect(base().executionEligible).toBe(false);
 	});
 

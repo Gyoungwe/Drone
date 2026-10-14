@@ -104,6 +104,8 @@ export function createEvolutionCandidate(input: {
 		throw new Error("Evolution candidate minimum observations must be at least two");
 	if (!input.runRefs.length || !input.experienceRefs.length)
 		throw new Error("Evolution candidate lineage is required");
+	if (input.experienceRefs.length < minimumObservations)
+		throw new Error("Evolution candidate experience lineage must cover every required observation");
 	return contract({
 		kind: "evolution-candidate" as const,
 		id: input.id,

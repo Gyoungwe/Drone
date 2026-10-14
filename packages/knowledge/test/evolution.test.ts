@@ -50,4 +50,39 @@ describe("EvolutionIndex", () => {
 			index.approveReuse("reuse-1", ref("decision", "decision-2"), "2026-10-15T01:00:00.000Z"),
 		).rejects.toThrow(/eligible reuse/);
 	});
+
+	it("resets the write queue after a persistence failure", async () => {
+		let attempts = 0;
+		const store: EvolutionIndexStore = {
+			read: async () => ({ candidates: [], decisions: [] }),
+			write: async () => {
+				attempts += 1;
+				if (attempts === 1) throw new Error("temporary persistence failure");
+			},
+		};
+		const index = new EvolutionIndex(store);
+		await expect(
+			index.propose({
+				id: "evo-fail",
+				projectRef: ref("research-case", "case-1"),
+				runRefs: [ref("run-attempt", "run-1")],
+				experienceRefs: [ref("experience", "exp-1"), ref("experience", "exp-2")],
+				observationCount: 2,
+				proposal: "retry persistence",
+				createdAt: "2026-10-15T00:00:00.000Z",
+			}),
+		).rejects.toThrow(/temporary persistence failure/);
+		await expect(
+			index.propose({
+				id: "evo-retry",
+				projectRef: ref("research-case", "case-1"),
+				runRefs: [ref("run-attempt", "run-1")],
+				experienceRefs: [ref("experience", "exp-3"), ref("experience", "exp-4")],
+				observationCount: 2,
+				proposal: "retry persistence",
+				createdAt: "2026-10-15T00:00:00.000Z",
+			}),
+		).resolves.toMatchObject({ id: "evo-retry" });
+		expect(attempts).toBe(2);
+	});
 });
