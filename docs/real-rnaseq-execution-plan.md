@@ -89,6 +89,13 @@ The existing `scripts/b3-pipeline/run-rnaseq-smoke.sh` is the explicit real
 Nextflow entry point. It requires Nextflow, an OCI runtime/cache and a complete
 digest map. It must remain separate from the fixture launcher.
 
+Each real smoke owns a new empty output directory and an `attemptId`. The
+receipt is written for both successful and failed processes, hashes every
+collected output and any explicit samplesheet, and records the Nextflow version
+and required artifact gates. A retry must use a new directory, so a failed or
+partial attempt cannot overwrite a prior success. The receipt keeps QC and
+scientific review pending until a later evidence review.
+
 ## Gate 4: execution and collection
 
 The production adapter should submit through `ComputeService`, reconcile the
