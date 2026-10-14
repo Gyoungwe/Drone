@@ -337,3 +337,4 @@ export {
 	type WorkflowSpecDiff,
 	type WorkflowSpecDiffValue,
 } from "./experience-store";
+export { EvolutionIndex, type EvolutionIndexStore } from "./evolution";
