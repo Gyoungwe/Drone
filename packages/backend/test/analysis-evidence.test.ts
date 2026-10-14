@@ -83,6 +83,48 @@ describe("analysis evidence checkpoints", () => {
 		}
 	});
 
+	it("follows an explicit provenance checkpoint when several snapshots exist", async () => {
+		const { root, runs } = await setup();
+		try {
+			const analysis = await runs.get("run-1");
+			if (!analysis) throw new Error("analysis fixture missing");
+			const selected = "b".repeat(64);
+			const bound = {
+				...analysis,
+				provenance: {
+					adapter: { id: "assembly", version: "1.0.0" },
+					workflow: { id: "assembly", version: "1.0.0" },
+					method: { id: "assembly", version: "1.0.0" },
+					specSha256: "c".repeat(64),
+					artifacts: [],
+					reproducibility: { status: "verified" as const, detail: "ok", checkpointId: selected },
+				},
+			};
+			const checkpoints = [
+				{
+					id: "a".repeat(64),
+					analysisId: "run-1",
+					assay: "assembly",
+					createdAt: "2026-10-15",
+					files: [],
+					replayReady: false,
+				},
+				{
+					id: selected,
+					analysisId: "run-1",
+					assay: "assembly",
+					createdAt: "2026-10-14",
+					files: [],
+					replayReady: false,
+				},
+			] as never;
+			const [card] = projectCapabilityEvidence([bound], checkpoints, []);
+			expect(card?.evidenceCapsuleRef).toBe(selected);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
 	it("freezes immutable bytes and forks an isolated branch without approval inheritance", async () => {
 		const { root, runs, evidence, source, frozen } = await setup();
 		try {

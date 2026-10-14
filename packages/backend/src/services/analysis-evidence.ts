@@ -612,7 +612,10 @@ export function projectCapabilityEvidence(
 ): CapabilityEvidenceCard[] {
 	return analyses.flatMap((analysis) => {
 		const provenance = analysis.provenance;
-		const checkpoint = checkpoints.find((value) => value.analysisId === analysis.id);
+		const explicitCheckpointId = provenance?.reproducibility.checkpointId;
+		const checkpoint = explicitCheckpointId
+			? checkpoints.find((value) => value.id === explicitCheckpointId)
+			: checkpoints.find((value) => value.analysisId === analysis.id);
 		const linkedReplays = checkpoint ? replays.filter((value) => value.checkpointId === checkpoint.id) : [];
 		const evidenceState =
 			provenance?.reproducibility.status === "verified"
