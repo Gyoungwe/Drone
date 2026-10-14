@@ -1,3 +1,4 @@
+import { createCausalEnvelope } from "@drone/shared";
 import { describe, expect, it, vi } from "vitest";
 import {
 	createStateEvent,
@@ -138,5 +139,31 @@ describe("DirectRunner", () => {
 		expect(
 			transport.requests.filter((request) => JSON.parse(textOf(request.stdin ?? "")).command === "start"),
 		).toHaveLength(1);
+	});
+
+	it("carries attempt lineage into the durable submission record", async () => {
+		const spec: JobSpec = {
+			jobId: "lineage-job",
+			hostAlias: "host",
+			workflow: { name: "workflow", version: "1" },
+			lineage: createCausalEnvelope({ eventId: "event:submit", runAttemptId: "run:one" }),
+		};
+		const ledger = new MemorySubmissionLedger();
+		const runner = new DirectRunner(
+			new RunnerClient(
+				new MemoryTransport(async ({ stdin }) => {
+					const command = JSON.parse(textOf(stdin ?? "")).command;
+					return { exitCode: 0, stdout: response(command, { pid: 10, processStartedAt: "now" }), stderr: "" };
+				}),
+			),
+			{ ledger },
+		);
+		await runner.prepare(spec);
+		await runner.submit(spec);
+		const first = ledger.read(spec.jobId);
+		expect(first?.lineage).toMatchObject({ causationId: spec.lineage?.eventId, runAttemptId: "run:one" });
+		expect(first?.lineage?.eventId).not.toBe(spec.lineage?.eventId);
+		await runner.submit(spec);
+		expect(ledger.read(spec.jobId)?.lineage).toEqual(first?.lineage);
 	});
 });

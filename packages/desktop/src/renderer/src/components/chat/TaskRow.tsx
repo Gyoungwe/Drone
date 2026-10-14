@@ -80,7 +80,7 @@ export function TaskRow({
 					aria-valuetext={t("taskRow.progressText", { done, total: task.milestones.length })}
 				>
 					<div
-						className={`h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${
+						className={`h-full rounded-full transition-[width] duration-200 ease-out motion-reduce:transition-none ${
 							pct < 100 ? "bg-warn" : "bg-ok"
 						}`}
 						style={{ width: `${pct}%` }}

@@ -4,8 +4,8 @@ import { create } from "zustand";
 export type AppView = "chat" | "projects" | "knowledge" | `plugin:${string}`;
 
 /**
- * 右侧上下文面板页签：任务 / 过程 / 产物 常驻；子智能体、计算按需出现（ContextPanel 决定可见性）
- * + 插件贡献的页签（panel.tab，挂钩 4）。文件变更并入「过程」页签（processView = "changes"）。
+ * 右侧上下文面板页签：任务 / 变更 / 文件 常驻；子智能体、计算按需出现（ContextPanel 决定可见性）
+ * + 插件贡献的页签（panel.tab，挂钩 4）。运行过程作为「变更」里的二级细节（processView = "lanes"）。
  */
 export type CorePanelTab = "tasks" | "process" | "artifacts" | "subagents" | "compute";
 export type PanelTab = CorePanelTab | `plugin:${string}`;
@@ -18,7 +18,7 @@ export function visiblePanelTabs(show: { subagents: boolean; compute: boolean })
 	);
 }
 
-/** 「过程」页签内的两个视图：运行过程泳道 / 文件变更 */
+/** 「变更」页签内的两个视图：运行过程泳道 / 文件变更 */
 export type ProcessView = "lanes" | "changes";
 
 /** chip → 面板跳转目标（nonce 保证重复跳同文件也重触发） */
@@ -35,7 +35,7 @@ export interface DiffFocus {
 	nonce: number;
 }
 
-/** 过程页签内定位到某一轮（TurnFooter「N 次工具」点击） */
+/** 变更页签内定位到某一轮（TurnFooter「N 次工具」点击） */
 export interface ProcessFocus {
 	turnIndex: number;
 	nonce: number;
@@ -99,7 +99,7 @@ interface UiStore {
 	setDiffFocus: (sectionKey: string) => void;
 	clearDiffFocus: () => void;
 
-	/** TurnFooter → 「过程」页签定位某轮 */
+	/** TurnFooter → 「变更」页签定位某轮 */
 	processFocus: ProcessFocus | null;
 	focusProcessTurn: (turnIndex: number) => void;
 	clearProcessFocus: () => void;

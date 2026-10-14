@@ -1,4 +1,5 @@
 import { type Static, Type } from "typebox";
+import { CausalEnvelopeSchema } from "./causality";
 
 /**
  * The small, transport-safe contract used by an execution host.
@@ -46,6 +47,7 @@ export const ComputeTaskBindingSchema = Type.Object(
 		profile: Type.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9_.-]+$" }),
 		executionMode: Type.Union([Type.Literal("fixture"), Type.Literal("production")]),
 		idempotencyKey: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
+		lineage: Type.Optional(CausalEnvelopeSchema),
 	},
 	{ additionalProperties: false },
 );
@@ -86,6 +88,7 @@ export const ExecutionReceiptSchema = Type.Object(
 		submittedAt: Type.Optional(Type.String({ minLength: 1, maxLength: 64 })),
 		finishedAt: Type.Optional(Type.String({ minLength: 1, maxLength: 64 })),
 		error: Type.Optional(Type.String({ minLength: 1, maxLength: 1024 })),
+		lineage: Type.Optional(CausalEnvelopeSchema),
 	},
 	{ additionalProperties: false },
 );

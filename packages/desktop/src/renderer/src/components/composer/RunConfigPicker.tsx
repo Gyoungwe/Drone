@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { clampThinkingLevel, THINKING_LEVELS } from "../../lib/thinking";
 import { useAgentModeStore } from "../../stores/agent-mode";
@@ -53,6 +53,7 @@ export function RunConfigPicker() {
 	const t = useT();
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
+	const menuId = useId();
 	const sessionId = useSessionsStore((s) => s.activeSessionId);
 	const models = useSessionsStore((s) => s.models);
 	const currentModel = useSessionsStore((s) => s.currentModel);
@@ -97,6 +98,8 @@ export function RunConfigPicker() {
 				className="flex max-w-[260px] items-center gap-2 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-hover hover:text-ink"
 				onClick={() => setOpen((v) => !v)}
 				aria-expanded={open}
+				aria-controls={menuId}
+				aria-haspopup="menu"
 				title={t("composer.modelGroupHint")}
 			>
 				{fullAccess && (
@@ -114,7 +117,11 @@ export function RunConfigPicker() {
 				<ChevronDownIcon className={open ? "rotate-180 transition-transform" : "transition-transform"} />
 			</button>
 			{open && (
-				<div className="absolute right-0 bottom-full z-30 mb-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-pop">
+				<div
+					id={menuId}
+					role="menu"
+					className="run-config-menu absolute right-0 bottom-full z-30 mb-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-pop"
+				>
 					<p className="px-3 pt-1 pb-1 text-[11px] text-ink-faint">{t("composer.config.runConfig")}</p>
 					<div className="run-config-row" data-hint={t("composer.config.modeHint")}>
 						<ModePicker row={t("composer.config.mode")} />

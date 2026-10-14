@@ -30,6 +30,8 @@ export interface AnalysisComputeBinding {
 	readonly executionContext?: AnalysisExecutionContext;
 	readonly requiredOutputs: readonly string[];
 	readonly inputs: AnalysisProvenance["artifacts"];
+	/** Additive execution lineage; old ledgers may omit it. */
+	readonly lineage?: AnalysisProvenance["lineage"];
 }
 
 export interface AnalysisOrchestrationServiceOptions {
@@ -130,6 +132,7 @@ export class AnalysisOrchestrationService {
 						toolContractSha256: binding.toolContractSha256,
 						...(binding.executionContext ? { executionContext: binding.executionContext } : {}),
 						artifacts: binding.inputs,
+						...(binding.lineage ? { lineage: binding.lineage } : {}),
 						reproducibility: { status: "not-assessed", detail: "Execution and output evidence pending" },
 					},
 				};

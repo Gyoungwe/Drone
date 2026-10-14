@@ -230,6 +230,7 @@ export const zh = {
 		reviewAcknowledge: "确认已查看",
 		reviewLater: "稍后处理可保留此卡",
 		tasksEmpty: "还没有任务清单——Agent 建立计划后会显示在这里。",
+		listTruncated: "列表较长，仅渲染前 {count} 项；完整数量仍保留在汇总中。",
 		runOverview: {
 			running: "正在运行",
 			idle: "本次会话",

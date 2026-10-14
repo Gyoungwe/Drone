@@ -21,10 +21,15 @@
 - NGS review→delivery 闭环也由该控制器负责：收集并读取已校验产物，调用会话模型生成审查报告，持久化限制说明，并仅在审查通过后完成交付。
 - 分析适配器位于 `packages/backend/src/services/analysis-adapters/`：通用编排器只消费版本化的 adapter contract、readiness 与确定性结果检查；契约快照、工具合同和宿主执行上下文会进入 provenance。当前提供 bulk RNA-seq/DESeq2 和 assembly 适配器，并持久化 adapter、workflow、method 版本及 artifact lineage/reproducibility 状态。
 - 分析证据与不可变 checkpoint 位于 `packages/backend/src/services/analysis-evidence.ts`，通过 `shared/host-api/evidence.ts`、preload、main IPC 和 Artifacts 面板提供本地查看、分叉、导入/导出和重现回执；checkpoint 分支不会继承执行授权或 review。
+- RunAttempt / compute / intent / checkpoint 的脱敏因果链只读投影位于 `packages/backend/src/services/causality-projection.ts`，按显式 `eventId`、`causationId` 和 `runAttemptId` 聚合，不猜测旧记录关系。
 - checkpoint、分支工作区和可复现 evidence capsule 见 `packages/backend/src/services/analysis-evidence.ts`：冻结内容寻址字节，分支不继承执行审批，失败分支可在校验 checkpoint/context 后重试，replay 分开记录环境与输出匹配状态；capsule 支持 private/restricted/public 三档发布，导入会重新校验 manifest、字节哈希和 omission 清单，并拒绝凭据/私有状态路径与被省略的私有 blob。桌面端通过 `packages/shared/src/host-api/evidence.ts`、`packages/desktop/src/main/ipc/evidence.ts` 和产物面板 `packages/desktop/src/renderer/src/components/panel/EvidencePane.tsx` 提供冻结、分支、导入/导出、回放及复现结果查看。
 - Wisp/OpenScience 的官方源码快照、功能研究和迁移建议见 [open-science-wisp-adapter-research.md](open-science-wisp-adapter-research.md)。
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
+
+v0.32.0 UI、RunAttempt 因果链与 ClawsGO Science 的统一交付顺序、验收门禁和合并护栏：见 [统一交付计划](superpowers/plans/2026-10-14-v0320-unified-delivery-plan.md)。
+
+RunAttempt、ExecutionReceipt、proposal/decision、intent journal 与 checkpoint 的统一因果链设计及 C1-1 至 C1-6 迁移计划：见 [run-attempt-causality-design.md](superpowers/specs/2026-10-14-run-attempt-causality-design.md)。
 
 `.pi/tsconfig.json` 开启 `allowJs` + `checkJs`；当前覆盖兼容入口与任务/知识运行时，生成的 `.pi/lib/knowledge/runtime/**/*.mjs` 明确排除在检查图之外（源代码由领域包 typecheck 覆盖），根 `npm run typecheck` 会串接 `npm run check:pi`。
 
@@ -39,6 +44,9 @@ WebDAV 云端知识库第一阶段实现、读写边界、同步/冲突和离线
 PR #113 与 1–6 的整合证据、生成物修复和未决风险：见 [PR113 整合审查](superpowers/reports/2026-10-11-pr113-integration-review.md) 与 [PR113 逐项审查](superpowers/reports/2026-10-11-pr113-review.md)。
 
 客户端控件、事件、IPC 行为和科研风格 UI 升级基线：见 [核心客户端 UI 盘点](ui-audit/2026-10-11-core-client-ui-inventory.md)、[设置/知识/WebDAV/研究 UI 盘点](ui-audit/2026-10-11-settings-knowledge-ui-inventory.md)、[白色科研风格覆盖矩阵](ui-audit/2026-10-11-white-ui-coverage.md)、[术语审计](ui-audit/2026-10-11-terminology-audit.md)、[术语改写表](ui-audit/2026-10-11-terminology-map.md) 与 [发布治理和 UI 升级计划](superpowers/plans/2026-10-11-release-governance-and-ui-upgrade.md)。
+- v0.32.0 后的 P0/P1 UI 行为收口见 [客户端 UI 全面整改调查与实施计划](superpowers/specs/2026-10-14-client-ui-overhaul-investigation-design.md)：ContextPanel tabs、设置 dialog、共享控件反馈、窄屏布局与 100 项列表上限已同步实现。
+
+v0.32.0 基线上的客户端 UI 全面整改调查与实施范围：见 [客户端 UI 全面整改调查与实施计划](superpowers/specs/2026-10-14-client-ui-overhaul-investigation-design.md)。
 
 v0.26.1 的验证命令、生成物检查、资产清单和“先验证再建标签”顺序见 [发布门禁清单](releases/v0.26.1-gate-manifest.json) 与 [验证记录](releases/v0.26.1-validation.md)。
 

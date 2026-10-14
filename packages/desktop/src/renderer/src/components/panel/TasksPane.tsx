@@ -17,6 +17,8 @@ import { stableEmptyConfirmedIds, stableEmptyDecisions } from "./decision-projec
 import { RunOverviewCard } from "./RunOverviewCard";
 import { runOverview } from "./run-overview";
 
+const MAX_PANEL_ROWS = 100;
+
 function TodoLine({ todo, spinnerPaused }: { todo: TodoItem; spinnerPaused: boolean }) {
 	if (todo.status === "completed") {
 		return (
@@ -194,6 +196,7 @@ export function TodoCard() {
 	if (todos.length === 0) return null;
 	const done = todos.filter((x) => x.status === "completed").length;
 	const pct = Math.round((done / todos.length) * 100);
+	const visibleTodos = todos.slice(0, MAX_PANEL_ROWS);
 	return (
 		<section className="panel-card" data-testid="todo-card">
 			<header className="flex items-center gap-2">
@@ -205,16 +208,21 @@ export function TodoCard() {
 			</header>
 			<div className="mt-2 h-1 overflow-hidden rounded-full bg-hover" role="progressbar" aria-valuenow={pct}>
 				<div
-					className="h-full rounded-full bg-ok transition-[width] duration-500 ease-out motion-reduce:transition-none"
+					className="h-full rounded-full bg-ok transition-[width] duration-200 ease-out motion-reduce:transition-none"
 					style={{ width: `${pct}%` }}
 				/>
 			</div>
 			<ul className="mt-2">
-				{todos.map((todo, i) => (
+				{visibleTodos.map((todo, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: 全量替换列表无稳定 id，顺序稳定
 					<TodoLine key={i} todo={todo} spinnerPaused={!agentActive} />
 				))}
 			</ul>
+			{todos.length > MAX_PANEL_ROWS && (
+				<p className="mt-2 text-[11px] text-ink-faint">
+					{t("panel.listTruncated", { count: MAX_PANEL_ROWS })}
+				</p>
+			)}
 		</section>
 	);
 }
@@ -253,7 +261,7 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 						<span className="text-[11px] tabular-nums text-ink-faint">{view.tasks.length}</span>
 					</header>
 					<div className="mt-1">
-						{view.tasks.map((task) => (
+						{view.tasks.slice(0, MAX_PANEL_ROWS).map((task) => (
 							<TaskRow
 								key={task.id}
 								task={task}
@@ -263,6 +271,11 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 							/>
 						))}
 					</div>
+					{view.tasks.length > MAX_PANEL_ROWS && (
+						<p className="mt-2 text-[11px] text-ink-faint">
+							{t("panel.listTruncated", { count: MAX_PANEL_ROWS })}
+						</p>
+					)}
 				</section>
 			)}
 			{empty &&

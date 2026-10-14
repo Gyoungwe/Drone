@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useI18nStore, useT } from "../../i18n";
 import { PluginBoundary } from "../../plugins/PluginBoundary";
 import { EMPTY_CONTRIBUTIONS } from "../../plugins/RegionHost";
@@ -85,7 +85,7 @@ function NavLabel({ id, label }: { id: string; label: string }) {
 			<Icon size={14} className="shrink-0 text-ink-dim" />
 			<span className="truncate">{label}</span>
 			{zh && meta && label !== meta.en && (
-				<span className="truncate text-[11px] text-ink-faint">{meta.en}</span>
+				<span className="settings-nav-en truncate text-[11px] text-ink-faint">{meta.en}</span>
 			)}
 		</span>
 	);
@@ -141,6 +141,25 @@ export function SettingsDialog() {
 	const setOpen = useSettingsStore((s) => s.setOpen);
 	const category = useSettingsStore((s) => s.category);
 	const setCategory = useSettingsStore((s) => s.setCategory);
+	const closeButtonRef = useRef<HTMLButtonElement>(null);
+	const previousFocusRef = useRef<HTMLElement | null>(null);
+	useEffect(() => {
+		if (!open) return;
+		previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		closeButtonRef.current?.focus();
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				event.preventDefault();
+				setOpen(false);
+			}
+		};
+		document.addEventListener("keydown", onKeyDown);
+		return () => {
+			document.removeEventListener("keydown", onKeyDown);
+			previousFocusRef.current?.focus();
+			previousFocusRef.current = null;
+		};
+	}, [open, setOpen]);
 
 	// settings.panel 贡献：动态分类（插件停用/卸载即消失）；稳定引用（空用模块级 EMPTY）
 	// 全局总开关关闭时隐藏插件分类（与 RegionHost 同一开关语义；当前正在看的分类回落 comingSoon 空态）
@@ -165,14 +184,18 @@ export function SettingsDialog() {
 			className="settings-dialog-shell fixed inset-0 z-40 flex items-center justify-center bg-ink/20"
 			role="dialog"
 			aria-modal
+			aria-labelledby="settings-dialog-title"
 		>
 			<div
 				data-testid="settings-dialog"
-				className="settings-dialog flex h-[74vh] w-[min(900px,94vw)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-dialog"
+				className="settings-dialog flex h-[min(74vh,720px)] max-h-[calc(100dvh-24px)] w-[min(900px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-dialog"
 			>
 				<div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
-					<h2 className="text-[13px] font-semibold text-ink">{t("settings.title")}</h2>
+					<h2 id="settings-dialog-title" className="text-[13px] font-semibold text-ink">
+						{t("settings.title")}
+					</h2>
 					<button
+						ref={closeButtonRef}
 						type="button"
 						className="rounded-lg px-2 py-1 text-ink-faint transition-colors hover:bg-hover hover:text-ink-2"
 						onClick={() => setOpen(false)}
