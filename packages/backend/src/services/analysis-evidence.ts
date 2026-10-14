@@ -625,24 +625,26 @@ export function projectCapabilityEvidence(
 					: provenance
 						? "observed"
 						: "unknown";
-		const gates = (analysis.readiness?.gates ?? []).map((gate) => ({
-			id: gate.evidenceKey,
-			status: gate.severity === "block" ? ("blocked" as const) : ("review" as const),
-			detail: gate.message,
-		}));
 		return analysis.capabilities.map((capabilityId) => ({
 			id: `${analysis.id}:${capabilityId}`,
 			analysisId: analysis.id,
 			capabilityId,
 			...(analysis.adapter ? { versionRef: `${analysis.adapter.id}@${analysis.adapter.version}` } : {}),
-			...(checkpoint ? { evidenceCapsuleRef: checkpoint.id } : {}),
+			// A checkpoint freezes run inputs/outputs. It is not a validation capsule
+			// and must never be rendered as proof that a capability is scientifically
+			// validated.
+			...(checkpoint ? { checkpointRef: checkpoint.id } : {}),
 			evidenceState,
 			claimState: analysis.review?.approved ? ("inferred" as const) : ("unsupported" as const),
 			capabilityState: analysis.adapter ? ("registered" as const) : ("candidate" as const),
 			reuseLevel: "navigation-only" as const,
-			freshness: provenance ? ("fresh" as const) : ("unknown" as const),
+			// Provenance presence records that a run described itself; it does not
+			// establish a freshness policy or validation scope.
+			freshness: "unknown" as const,
 			scientificallyVerified: false,
-			gates,
+			// Readiness gates are execution preflight gates, not capability validation
+			// gates. Keep this empty until a real validation capsule is linked.
+			gates: [],
 			runRefs: provenance ? [analysis.id] : [],
 			artifactRefs: (provenance?.artifacts ?? []).map((artifact) => ({
 				path: artifact.path,

@@ -311,6 +311,7 @@ export const zh = {
 			capabilityEvidence: "证据",
 			capabilityOpenEvidence: "打开关联 checkpoint",
 			capabilityNoEvidence: "尚未关联验证证据",
+			capabilityCheckpoint: "运行检查点",
 			capabilityGates: "验证门",
 			capabilityNoGates: "没有记录验证门",
 			capabilityArtifacts: "关联产物",

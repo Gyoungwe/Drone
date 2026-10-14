@@ -322,6 +322,7 @@ export const en: Messages = {
 			capabilityEvidence: "Evidence",
 			capabilityOpenEvidence: "Open linked checkpoint",
 			capabilityNoEvidence: "Validation evidence is not linked",
+			capabilityCheckpoint: "Run checkpoint",
 			capabilityGates: "Validation gates",
 			capabilityNoGates: "No validation gates recorded",
 			capabilityArtifacts: "Linked artifacts",

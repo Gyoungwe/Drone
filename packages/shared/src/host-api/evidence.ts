@@ -36,6 +36,8 @@ const CapabilityEvidenceCard = Type.Object({
 	capabilityId: Id,
 	requestRef: Type.Optional(Id),
 	versionRef: Type.Optional(Id),
+	/** Immutable execution snapshot; distinct from a validation evidence capsule. */
+	checkpointRef: Type.Optional(Hash),
 	evidenceCapsuleRef: Type.Optional(Hash),
 	evidenceState: Type.Union([
 		Type.Literal("observed"),

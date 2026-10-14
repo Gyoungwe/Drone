@@ -281,6 +281,11 @@ export function CapabilityEvidenceCardView({ card }: { card: CapabilityEvidenceC
 					) : (
 						t("panel.evidence.capabilityNoEvidence")
 					)}
+					{card.checkpointRef && (
+						<span className="ml-2 text-ink-faint">
+							{t("panel.evidence.capabilityCheckpoint")}: {card.checkpointRef.slice(0, 16)}…
+						</span>
+					)}
 				</p>
 				<p className="font-medium text-ink-2">{t("panel.evidence.capabilityGates")}</p>
 				{card.gates.length > 0 ? (

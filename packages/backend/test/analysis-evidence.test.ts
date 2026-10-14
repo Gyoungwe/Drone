@@ -77,6 +77,7 @@ describe("analysis evidence checkpoints", () => {
 				scientificallyVerified: false,
 			});
 			expect(card?.evidenceCapsuleRef).toBeUndefined();
+			expect(card?.checkpointRef).toBeUndefined();
 			expect(card?.requestRef).toBeUndefined();
 		} finally {
 			await rm(root, { recursive: true, force: true });
@@ -119,7 +120,7 @@ describe("analysis evidence checkpoints", () => {
 				},
 			] as never;
 			const [card] = projectCapabilityEvidence([bound], checkpoints, []);
-			expect(card?.evidenceCapsuleRef).toBe(selected);
+			expect(card?.checkpointRef).toBe(selected);
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
