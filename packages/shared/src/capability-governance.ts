@@ -44,6 +44,7 @@ export interface CapabilityGovernanceManifest extends VersionedResearchContract 
 		readonly readiness: GovernanceEnvironmentReadiness;
 		readonly requirements: readonly string[];
 		readonly fingerprint?: string;
+		readonly observedAt?: string;
 		readonly probeRef?: ContractParentRef;
 	};
 	readonly createdAt: string;
@@ -56,6 +57,7 @@ export type CapabilityGovernanceBlockCode =
 	| "missing-schema"
 	| "invalid-permissions"
 	| "invalid-resources"
+	| "invalid-contract"
 	| "environment-not-ready";
 
 export interface CapabilityGovernanceFinding {
@@ -90,8 +92,17 @@ function contract<T extends Record<string, unknown>>(body: T): T & VersionedRese
 }
 
 const sha256 = (value: string): boolean => /^[a-f0-9]{64}$/.test(value);
-const semver = (value: string): boolean =>
-	/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(value);
+const semver = (value: string): boolean => {
+	const match =
+		/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/.exec(value);
+	if (!match) return false;
+	const prerelease = match[4]?.split(".") ?? [];
+	const build = match[5]?.split(".") ?? [];
+	return (
+		prerelease.every((identifier) => identifier.length > 0 && !/^0\d+$/.test(identifier)) &&
+		build.every((identifier) => identifier.length > 0)
+	);
+};
 const nonempty = (value: string): boolean => value.trim().length > 0;
 
 export function createCapabilityGovernanceManifest(input: ManifestInput): CapabilityGovernanceManifest {
@@ -122,6 +133,14 @@ export function assessCapabilityGovernance(
 	manifest: CapabilityGovernanceManifest,
 ): CapabilityGovernanceAssessment {
 	const findings: CapabilityGovernanceFinding[] = [];
+	try {
+		assertResearchContract(manifest);
+	} catch {
+		findings.push({
+			code: "invalid-contract",
+			message: "Manifest content hash or versioned envelope is invalid",
+		});
+	}
 	if (!manifest.registered)
 		findings.push({
 			code: "unregistered",
@@ -163,7 +182,12 @@ export function assessCapabilityGovernance(
 			code: "invalid-resources",
 			message: "Positive CPU, memory and wall-time limits are required",
 		});
-	if (manifest.environment.readiness !== "ready")
+	if (
+		manifest.environment.readiness !== "ready" ||
+		!nonempty(manifest.environment.fingerprint ?? "") ||
+		!nonempty(manifest.environment.observedAt ?? "") ||
+		Number.isNaN(Date.parse(manifest.environment.observedAt ?? ""))
+	)
 		findings.push({
 			code: "environment-not-ready",
 			message: "A successful environment probe is required before submission",
