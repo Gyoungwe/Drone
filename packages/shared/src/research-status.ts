@@ -153,13 +153,21 @@ export function statusForValidationCapsule(input: {
 		throw new Error("Invalid validation capsule status");
 	const evidenceState: ResearchEvidenceState =
 		input.status === "validated" ? "verified" : input.status === "incomplete" ? "partial" : "blocked";
+	const freshness = input.freshness ?? "fresh";
 	const result: ResearchStatus = {
 		evidenceState,
 		claimState: input.status === "validated" ? "inferred" : "unsupported",
 		capabilityState: "candidate",
-		reuseLevel: input.status === "validated" ? "validated-capability" : "navigation-only",
+		// Validated evidence that is stale/unknown remains inspectable, but cannot
+		// be reused as a validated capability until freshness is restored.
+		reuseLevel:
+			input.status === "validated"
+				? freshness === "fresh"
+					? "validated-capability"
+					: "evidence-eligible"
+				: "navigation-only",
 		validationScope: input.validationScope ?? "fixture",
-		freshness: input.freshness ?? "fresh",
+		freshness,
 		scientificallyVerified: false,
 	};
 	assertResearchStatus(result);

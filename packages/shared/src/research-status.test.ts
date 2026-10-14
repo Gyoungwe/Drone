@@ -54,6 +54,20 @@ describe("research status red lines", () => {
 		expect(isScientificClaimGreen(status)).toBe(true);
 	});
 
+	it.each(["stale", "unknown"] as const)(
+		"keeps validated evidence representable but non-reusable when freshness is %s",
+		(freshness) => {
+			const status = statusForValidationCapsule({ status: "validated", freshness });
+			expect(status).toMatchObject({
+				evidenceState: "verified",
+				reuseLevel: "evidence-eligible",
+				freshness,
+			});
+			assertResearchStatus(status);
+			expect(isResearchEvidenceGreen(status)).toBe(false);
+		},
+	);
+
 	it("rejects a scientific verification marker outside scientific review", () => {
 		expect(() =>
 			assertResearchStatus({
