@@ -4,6 +4,8 @@
 日期：2026-10-14  
 对象：小菜蛾（*Plutella xylostella*）DHX16 是否通过 RNA 剪接影响发育与应激适应
 
+收敛状态：本文件保留原始 ClawsGO Science 专项计划，已纳入 [v0.32.0 统一交付计划](superpowers/plans/2026-10-14-v0320-unified-delivery-plan.md)；独立 PR 边界、合并门禁和后续推进以统一计划为准。
+
 ## 1. 这次核对确认了什么
 
 本计划建立在一次独立 worktree 的发布基线核对和 ClawsGO 外部项目复核之上：

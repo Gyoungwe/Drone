@@ -26,6 +26,7 @@ vi.mock("../store", () => ({
 	useLanStore: (selector: (value: typeof state) => unknown) => selector(state),
 }));
 
+import { t } from "../i18n";
 import { ChatView } from "./ChatView";
 import { Composer } from "./Composer";
 
@@ -49,8 +50,8 @@ describe("LAN observer DOM", () => {
 		);
 		const composer = renderToStaticMarkup(<Composer sessionId="s1" />);
 		expect(html).toContain("perm-btns");
-		expect(html).toContain("Allow once");
+		expect(html).toContain(t("perm.allowOnce"));
 		expect(composer).toContain("<textarea");
-		expect(composer).toContain('aria-label="Send"');
+		expect(composer).toContain(`aria-label="${t("composer.send")}"`);
 	});
 });

@@ -151,7 +151,7 @@
 - [x] **C1-3 副作用回执**：`ExecutionReceipt`、`ComputeTaskBinding`、compute `JobSpec` / `SubmissionRecord` 和 direct scheduler 传播 lineage；unknown 只 reconcile。
 - [x] **C1-4 intent/evidence**：intent journal start-before-effect 带 envelope；checkpoint hash 排除 lineage；replay 新建 attempt，branch 不继承授权。
 - [x] **C1-5 只读投影**：提供按 attempt/event 的 backend/host 脱敏投影；只有实际需要跨进程展示时才扩展 IPC。
-- [ ] **C1-6 收尾**：完成旧数据 partial/legacy 兼容、crash/restart/reconcile/retry/branch/hash/capsule 回归和完整 DoD。
+- [x] **C1-6 收尾**：完成旧数据 partial/legacy 兼容、crash/restart/reconcile/retry/branch/hash/capsule 回归和完整 DoD；远程 CI 还需在包含生成物的统一提交上复核。
 
 ---
 

@@ -72,9 +72,12 @@ export interface EvidenceReplayRunner {
 }
 const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const canonical = (value: unknown) => `${stableJson(value)}\n`;
-function checkpointId(value: Omit<EvidenceCheckpoint, "id">): string {
-	const { lineage: _lineage, ...content } = value;
-	return digest(canonical(content));
+export function checkpointId(value: Omit<EvidenceCheckpoint, "id">): string {
+	const { lineage: _lineage, analysis, ...content } = value;
+	const provenance = analysis.provenance;
+	const { lineage: _provenanceLineage, ...provenanceContent } = provenance ?? {};
+	const contentAnalysis = provenance ? { ...analysis, provenance: provenanceContent } : analysis;
+	return digest(canonical({ ...content, analysis: contentAnalysis }));
 }
 function safePath(path: string): void {
 	if (
