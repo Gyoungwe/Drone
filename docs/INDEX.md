@@ -51,6 +51,8 @@ PR #113 与 1–6 的整合证据、生成物修复和未决风险：见 [PR113 
 客户端控件、事件、IPC 行为和科研风格 UI 升级基线：见 [核心客户端 UI 盘点](ui-audit/2026-10-11-core-client-ui-inventory.md)、[设置/知识/WebDAV/研究 UI 盘点](ui-audit/2026-10-11-settings-knowledge-ui-inventory.md)、[白色科研风格覆盖矩阵](ui-audit/2026-10-11-white-ui-coverage.md)、[术语审计](ui-audit/2026-10-11-terminology-audit.md)、[术语改写表](ui-audit/2026-10-11-terminology-map.md) 与 [发布治理和 UI 升级计划](superpowers/plans/2026-10-11-release-governance-and-ui-upgrade.md)。
 - v0.32.0 后的 P0/P1 UI 行为收口见 [客户端 UI 全面整改调查与实施计划](superpowers/specs/2026-10-14-client-ui-overhaul-investigation-design.md)：ContextPanel tabs、设置 dialog、共享控件反馈、窄屏布局与 100 项列表上限已同步实现。
 
+v0.32.0 P5 UI/局域网只读收口的证据矩阵、长列表和窄屏验收边界见 [P5 UI/LAN 只读证据矩阵](ui-audit/2026-10-15-v0320-p5-evidence-matrix.md)。
+
 v0.32.0 基线上的客户端 UI 全面整改调查与实施范围：见 [客户端 UI 全面整改调查与实施计划](superpowers/specs/2026-10-14-client-ui-overhaul-investigation-design.md)。
 
 v0.26.1 的验证命令、生成物检查、资产清单和“先验证再建标签”顺序见 [发布门禁清单](releases/v0.26.1-gate-manifest.json) 与 [验证记录](releases/v0.26.1-validation.md)。
