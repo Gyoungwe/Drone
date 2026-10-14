@@ -4,7 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";
-import { AnalysisEvidenceService, checkpointId, type FrozenFile } from "../src/services/analysis-evidence";
+import {
+	AnalysisEvidenceService,
+	checkpointId,
+	type FrozenFile,
+	projectCapabilityEvidence,
+} from "../src/services/analysis-evidence";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "../src/services/analysis-orchestration";
 import { StorageRegistry } from "../src/storage/registry";
 
@@ -54,6 +59,30 @@ async function setup() {
 }
 
 describe("analysis evidence checkpoints", () => {
+	it("projects capability cards without inventing validation evidence", async () => {
+		const { root, runs } = await setup();
+		try {
+			const analysis = await runs.get("run-1");
+			if (!analysis) throw new Error("analysis fixture missing");
+			const [card] = projectCapabilityEvidence([analysis], [], []);
+			expect(card).toMatchObject({
+				analysisId: "run-1",
+				capabilityId: "analysis",
+				versionRef: "assembly@1.0.0",
+				evidenceState: "unknown",
+				claimState: "unsupported",
+				capabilityState: "registered",
+				reuseLevel: "navigation-only",
+				freshness: "unknown",
+				scientificallyVerified: false,
+			});
+			expect(card?.evidenceCapsuleRef).toBeUndefined();
+			expect(card?.requestRef).toBeUndefined();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
 	it("freezes immutable bytes and forks an isolated branch without approval inheritance", async () => {
 		const { root, runs, evidence, source, frozen } = await setup();
 		try {
