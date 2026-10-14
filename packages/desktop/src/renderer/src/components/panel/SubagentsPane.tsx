@@ -38,6 +38,7 @@ const SELECT_CLASS =
 	"min-w-0 flex-1 rounded-lg border border-border bg-surface px-2 py-1 text-[12px] text-ink outline-none focus:border-accent disabled:opacity-50";
 const INPUT_CLASS =
 	"min-w-0 flex-1 rounded-lg border border-border bg-surface px-2 py-1 text-[12px] text-ink outline-none focus:border-accent";
+const RUNS_VISIBLE_LIMIT = 100;
 
 function formatTokens(value: number): string {
 	if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
@@ -684,6 +685,8 @@ function RunsSection({
 	const [filter, setFilter] = useState<"active" | "all">("all");
 	const summary = useMemo(() => summarizeRuns(runs), [runs]);
 	const shown = filter === "active" ? runs.filter((run) => !isSubagentRunSettled(run.status)) : runs;
+	const visibleRuns = shown.slice(0, RUNS_VISIBLE_LIMIT);
+	const hiddenCount = Math.max(0, shown.length - visibleRuns.length);
 	return (
 		<section className="panel-card" data-testid="subagents-runs">
 			<header className="flex items-center gap-2">
@@ -694,6 +697,8 @@ function RunsSection({
 						<button
 							type="button"
 							className={`rounded-md px-2 py-0.5 ${filter === "active" ? "bg-hover text-ink" : "text-ink-faint hover:text-ink"}`}
+							aria-pressed={filter === "active"}
+							aria-controls="subagents-runs-list"
 							onClick={() => setFilter("active")}
 						>
 							{t("panel.subagents.filterActive")}
@@ -704,6 +709,8 @@ function RunsSection({
 						<button
 							type="button"
 							className={`rounded-md px-2 py-0.5 ${filter === "all" ? "bg-hover text-ink" : "text-ink-faint hover:text-ink"}`}
+							aria-pressed={filter === "all"}
+							aria-controls="subagents-runs-list"
 							onClick={() => setFilter("all")}
 						>
 							{t("panel.subagents.filterAll")}
@@ -711,15 +718,23 @@ function RunsSection({
 					</span>
 				)}
 			</header>
-			{runs.length === 0 ? (
+			{shown.length === 0 ? (
 				<p className="mt-2 text-[12px] text-ink-faint" data-testid="subagents-runs-empty">
-					{t("panel.subagents.runsEmpty")}
+					{t(runs.length === 0 ? "panel.subagents.runsEmpty" : "panel.subagents.runsActiveEmpty")}
 				</p>
 			) : (
-				<div className="mt-2 flex flex-col gap-2">
-					{shown.map((run) => (
+				<div id="subagents-runs-list" className="mt-2 flex flex-col gap-2" aria-live="polite">
+					{visibleRuns.map((run) => (
 						<RunCard key={run.runId} run={run} sessionId={sessionId} snapshot={snapshot} />
 					))}
+					{hiddenCount > 0 && (
+						<p
+							className="rounded-lg border border-border/70 px-3 py-2 text-[11px] text-ink-faint"
+							role="status"
+						>
+							{t("panel.subagents.runsLimit", { limit: RUNS_VISIBLE_LIMIT, count: hiddenCount })}
+						</p>
+					)}
 				</div>
 			)}
 		</section>
@@ -852,6 +867,7 @@ function RunCard({
 							className="ml-auto shrink-0 text-ink-faint hover:text-ink"
 							onClick={() => setExpanded((value) => !value)}
 							aria-expanded={expanded}
+							aria-controls={`subagent-transcript-${run.runId}`}
 							aria-label={expanded ? t("message.subagent.collapse") : t("message.subagent.expand")}
 						>
 							<ChevronDownIcon className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -1009,7 +1025,12 @@ function RunCard({
 						</Button>
 					)}
 					{run.sessionFile && (
-						<Button size="sm" onClick={() => setExpanded((value) => !value)}>
+						<Button
+							size="sm"
+							aria-expanded={expanded}
+							aria-controls={`subagent-transcript-${run.runId}`}
+							onClick={() => setExpanded((value) => !value)}
+						>
 							{expanded ? t("panel.subagents.actions.collapse") : t("panel.subagents.actions.replay")}
 						</Button>
 					)}
@@ -1032,15 +1053,17 @@ function RunCard({
 				{actionError && <p className="mt-1 text-xs text-err">{actionError}</p>}
 			</div>
 			{expanded && run.sessionFile && (
-				<InlineSubagentTranscript
-					run={{
-						key: run.runId,
-						agent: run.agent,
-						sessionId: run.childSessionId,
-						sessionFile: run.sessionFile,
-						status: settled ? (run.status === "error" ? "error" : "done") : "running",
-					}}
-				/>
+				<div id={`subagent-transcript-${run.runId}`}>
+					<InlineSubagentTranscript
+						run={{
+							key: run.runId,
+							agent: run.agent,
+							sessionId: run.childSessionId,
+							sessionFile: run.sessionFile,
+							status: settled ? (run.status === "error" ? "error" : "done") : "running",
+						}}
+					/>
+				</div>
 			)}
 		</div>
 	);
@@ -1062,6 +1085,8 @@ function StatusPill({ status }: { status: SubagentPanelRun["status"] }) {
 		<span
 			className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}
 			data-testid="subagent-run-status"
+			role="status"
+			aria-live="polite"
 		>
 			{t(STATUS_KEYS[status])}
 		</span>

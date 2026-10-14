@@ -398,6 +398,8 @@ export const zh = {
 			filterActive: "运行中",
 			filterAll: "全部",
 			runsEmpty: "本会话还没有派发过子智能体。",
+			runsActiveEmpty: "当前筛选没有运行中的子智能体。",
+			runsLimit: "仅显示前 {limit} 条运行记录，另有 {count} 条记录已隐藏。",
 			status: {
 				queued: "排队中",
 				running: "运行中",

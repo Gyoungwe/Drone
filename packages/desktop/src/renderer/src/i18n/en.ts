@@ -413,6 +413,8 @@ export const en: Messages = {
 			filterActive: "Active",
 			filterAll: "All",
 			runsEmpty: "No subagent has been dispatched in this session yet.",
+			runsActiveEmpty: "No active subagent runs match this filter.",
+			runsLimit: "Showing the first {limit} runs; {count} additional runs are hidden.",
 			status: {
 				queued: "Queued",
 				running: "Running",

@@ -34,6 +34,9 @@ export function RunStatusView({
 			className={`run-status run-status--${state.toLowerCase()}`}
 			data-testid="run-status"
 			data-state={state}
+			role="status"
+			aria-live="polite"
+			aria-atomic="true"
 		>
 			{main && <span className={shimmer ? "shimmer" : "run-status-main"}>{main}</span>}
 			{thinking.frozen && state !== "Thinking" && <span className="run-status-tag">{thinking.frozen}</span>}

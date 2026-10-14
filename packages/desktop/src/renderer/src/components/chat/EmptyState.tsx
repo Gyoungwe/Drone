@@ -17,7 +17,7 @@ export function EmptyState() {
 	}, [load]);
 
 	return (
-		<div className="flex h-full flex-col items-center justify-center gap-8 px-8 pb-[8vh]">
+		<div className="empty-state flex h-full flex-col items-center justify-center gap-8 px-8 pb-[8vh]">
 			<div className="text-center" data-testid="home-greeting">
 				<h1 className="font-serif-sc text-[28px] text-ink">{t(`home.greeting.${greeting}`)}</h1>
 				<p className="mt-2 text-[13px] text-ink-faint">{t("home.intro")}</p>

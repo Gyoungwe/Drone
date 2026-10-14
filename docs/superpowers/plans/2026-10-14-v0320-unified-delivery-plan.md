@@ -210,3 +210,18 @@
 - 非 UI：RunAttempt 的远程 CI/发布前复核和 ClawsGO 的科学证据后续仍按各自计划推进，不并入 UI commit。
 
 这份对齐记录只更新集成审阅依据，不改变 UI-only 范围，也不把未完成的后续批次标记为已完成。
+
+
+## 7. UI 批次实施完成记录（2026-10-14）
+
+用户确认的方案 A 已在当前 integration 分支完成 UI-only 收口：
+
+| 批次 | 实施结果 | 证据 |
+| --- | --- | --- |
+| P0 | 已完成并保持原有窄屏、焦点、Escape、ARIA、状态层级契约 | 既有 UI 定向测试 + 当前类型检查 |
+| P1 | 已完成并保持 Composer、选择器、文件预览、长内容与列表限制边界 | 既有 workspace 测试 + 当前桌面定向测试 |
+| P2 token / surface | 已完成方案 A 的 token、面板、卡片、状态、空态、运行条和图谱视觉收口 | `globals.css` / `shell.css` 与组件定向审查 |
+| P2 graph / subagents / settings | 已完成键盘、ARIA、live region、聚焦态、筛选、回放关系和设置导航循环 | `knowledge-graph.test.ts`、`subagents-pane.test.tsx`、`FirstRunGuide.test.tsx` |
+| P2 worst-case | 已完成知识图谱大图与子智能体空 / 单条 / 1000 条夹具；子智能体面板最多渲染 100 条并显示隐藏数量 | 当前定向测试 15 tests passed |
+
+本记录只覆盖 UI 项目批次；RunAttempt 远程 CI、ClawsGO 科学证据和发布生成物仍按各自计划独立推进。完整门禁在本记录之后执行，门禁结果以实际命令退出码为准。

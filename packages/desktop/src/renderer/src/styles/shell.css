@@ -1272,3 +1272,37 @@
 		animation: none;
 	}
 }
+
+/* v0.32.0 research control room finishing pass */
+.knowledge-state-card {
+	border-color: var(--knowledge-border);
+	background: color-mix(in srgb, var(--knowledge-surface) 92%, transparent);
+	box-shadow: var(--knowledge-shadow-soft);
+}
+.knowledge-state-card--error {
+	border-color: color-mix(in srgb, var(--color-err) 38%, var(--knowledge-border));
+	background: color-mix(in srgb, var(--color-err) 7%, var(--knowledge-surface));
+}
+.knowledge-graph-svg :where(g[role="button"]):focus-visible {
+	outline: 2px solid var(--knowledge-accent);
+	outline-offset: 4px;
+}
+.knowledge-graph-svg :where(g[role="button"]):focus-visible circle:last-of-type {
+	stroke: var(--knowledge-accent);
+	stroke-width: 3;
+}
+.first-run-guide {
+	border-color: var(--color-border-strong);
+}
+.first-run-guide .first-run-card {
+	border-color: var(--color-border-strong);
+	background: color-mix(in srgb, var(--color-surface) 86%, var(--color-hover));
+	box-shadow: var(--shadow-soft);
+}
+.first-run-guide .first-run-card:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+}
+.empty-state [data-testid="home-greeting"] {
+	text-wrap: balance;
+}

@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useI18nStore, useT } from "../../i18n";
 import { PluginBoundary } from "../../plugins/PluginBoundary";
@@ -173,6 +173,17 @@ export function SettingsDialog() {
 		() => findPluginContribution(category, pluginCategories),
 		[category, pluginCategories],
 	);
+	const handleNavKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+		if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+		event.preventDefault();
+		const nav = event.currentTarget.closest("nav");
+		const items = nav ? Array.from(nav.querySelectorAll<HTMLButtonElement>("[data-settings-nav]")) : [];
+		const index = items.indexOf(event.currentTarget);
+		const delta = event.key === "ArrowUp" ? -1 : 1;
+		const next = items[(index + delta + items.length) % items.length];
+		next?.focus();
+		next?.click();
+	};
 
 	if (!open) return null;
 
@@ -215,6 +226,11 @@ export function SettingsDialog() {
 									<button
 										key={id}
 										type="button"
+										id={`settings-nav-${id}`}
+										data-settings-nav="true"
+										aria-current={category === id ? "page" : undefined}
+										aria-controls="settings-dialog-panel"
+										onKeyDown={handleNavKeyDown}
 										className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
 											category === id
 												? "is-active bg-hover font-medium text-ink"
@@ -232,6 +248,11 @@ export function SettingsDialog() {
 							<button
 								key={id}
 								type="button"
+								id={`settings-nav-${id}`}
+								data-settings-nav="true"
+								aria-current={category === id ? "page" : undefined}
+								aria-controls="settings-dialog-panel"
+								onKeyDown={handleNavKeyDown}
 								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
 									category === id
 										? "is-active bg-hover font-medium text-ink"
@@ -249,6 +270,11 @@ export function SettingsDialog() {
 								<button
 									key={id}
 									type="button"
+									id={`settings-nav-${id}`}
+									data-settings-nav="true"
+									aria-current={category === id ? "page" : undefined}
+									aria-controls="settings-dialog-panel"
+									onKeyDown={handleNavKeyDown}
 									className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
 										category === id
 											? "is-active bg-hover font-medium text-ink"
@@ -261,7 +287,12 @@ export function SettingsDialog() {
 							);
 						})}
 					</nav>
-					<div className="settings-dialog-content min-w-0 flex-1 scroll-fade overflow-y-auto overflow-x-hidden px-3 py-2">
+					<div
+						id="settings-dialog-panel"
+						className="settings-dialog-content min-w-0 flex-1 scroll-fade overflow-y-auto overflow-x-hidden px-3 py-2"
+						role="tabpanel"
+						aria-labelledby={`settings-nav-${category}`}
+					>
 						{Panel && (
 							<header className="mb-4 flex items-start justify-between gap-4 border-b border-border pb-3">
 								<div className="min-w-0">

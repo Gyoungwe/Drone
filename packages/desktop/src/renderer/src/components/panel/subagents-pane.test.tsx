@@ -225,6 +225,22 @@ describe("SubagentsPane · 状态渲染", () => {
 		expect(html).toContain("panel.subagents.dispatchQueue");
 	});
 
+	it("空 / 单条 / 1000 条运行夹具都有明确边界", () => {
+		useSubagentsStore.setState({ runsBySession: { s1: { one: run({ runId: "one", status: "done" }) } } });
+		const one = render();
+		expect(one.match(/data-testid="subagent-run-card"/g)).toHaveLength(1);
+		const many = Object.fromEntries(
+			Array.from({ length: 1000 }, (_, index) => {
+				const runId = `bulk-${index}`;
+				return [runId, run({ runId, status: "done", content: `result ${index}` })];
+			}),
+		);
+		useSubagentsStore.setState({ runsBySession: { s1: many } });
+		const html = render();
+		expect(html.match(/data-testid="subagent-run-card"/g)).toHaveLength(100);
+		expect(html).toContain("panel.subagents.runsLimit:100,900");
+	});
+
 	it("fullAccess 会话：派发表单顶部提示子智能体同样不再逐项确认", () => {
 		expect(render()).not.toContain("subagents-full-access");
 		useSessionsStore.setState({ permissionModes: { s1: "fullAccess" } });
