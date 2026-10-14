@@ -10,6 +10,7 @@ import {
 	createCapabilityRequest,
 	createCapabilityValidationGate,
 	createCapabilityVersion,
+	createValidationEvidenceCapsule,
 } from "./research-contracts";
 
 const now = "2026-10-12T00:00:00.000Z";
@@ -84,7 +85,16 @@ describe("capability discovery contracts", () => {
 			gates,
 			createdAt: now,
 		});
-		expect(capsule.status).toBe("validated");
+		expect(capsule).toMatchObject({
+			status: "validated",
+			evidenceState: "verified",
+			claimState: "inferred",
+			capabilityState: "candidate",
+			reuseLevel: "validated-capability",
+			validationScope: "fixture",
+			freshness: "fresh",
+			scientificallyVerified: false,
+		});
 		expect(capsule.gateRefs).toHaveLength(3);
 		expect(
 			buildValidationEvidenceCapsule({
@@ -94,5 +104,38 @@ describe("capability discovery contracts", () => {
 				createdAt: now,
 			}).status,
 		).toBe("incomplete");
+	});
+
+	it("rejects a capsule that tries to promote a fixture to a scientific claim", () => {
+		expect(() =>
+			createValidationEvidenceCapsule({
+				id: "capsule-invalid",
+				capabilityRef: "assembly@1.0.0",
+				gateRefs: [],
+				sourceRefs: [],
+				status: "validated",
+				evidenceState: "verified",
+				claimState: "supported",
+				capabilityState: "candidate",
+				reuseLevel: "validated-capability",
+				validationScope: "fixture",
+				freshness: "fresh",
+				scientificallyVerified: false,
+				createdAt: now,
+			}),
+		).toThrow(/status projection/i);
+	});
+
+	it("fails closed for an unknown persisted capsule status", () => {
+		expect(() =>
+			createValidationEvidenceCapsule({
+				id: "capsule-unknown",
+				capabilityRef: "assembly@1.0.0",
+				gateRefs: [],
+				sourceRefs: [],
+				status: "unknown" as never,
+				createdAt: now,
+			}),
+		).toThrow(/invalid validation capsule status/i);
 	});
 });

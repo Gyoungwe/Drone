@@ -63,6 +63,7 @@ export * from "./progress-display";
 export * from "./project-id";
 export * from "./public-timeline";
 export * from "./research-skills";
+export * from "./research-status";
 export {
 	isLocalResourceTarget,
 	localResourceHref,
