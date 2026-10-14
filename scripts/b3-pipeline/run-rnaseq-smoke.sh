@@ -41,7 +41,7 @@ if [ -L "$OUTDIR" ]; then
 fi
 if [ -e "$OUTDIR" ]; then
   [ -d "$OUTDIR" ] || { echo "DRONE_RNASEQ_OUTDIR must be a directory" >&2; exit 2; }
-  if [ -n "$(find "$OUTDIR" -mindepth 1 -print -quit)" ]; then
+  if [ -n "$(ls -A "$OUTDIR" 2>/dev/null)" ]; then
     echo "DRONE_RNASEQ_OUTDIR must be empty; use a new directory for every attempt" >&2
     exit 2
   fi
@@ -49,7 +49,7 @@ else
   mkdir -p "$OUTDIR"
 fi
 
-STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
+STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 NEXTFLOW_VERSION=$(nextflow -version 2>&1 | head -1 || true)
 [ -n "$NEXTFLOW_VERSION" ] || { echo "unable to probe Nextflow version" >&2; exit 2; }
 set -- nextflow run nf-core/rnaseq -r 3.18.0 -profile test \
@@ -69,7 +69,7 @@ exit_status=0
   exit_status=$?
   status=failed
 }
-FINISHED_AT=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)
+FINISHED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 set +e
 python3 - "$OUTDIR" "$status" "$exit_status" "$DIGESTS" "$ATTEMPT_ID" "$STARTED_AT" "$FINISHED_AT" "$NEXTFLOW_VERSION" "$SAMPLESHEET" "$@" <<'PY'
 import hashlib
