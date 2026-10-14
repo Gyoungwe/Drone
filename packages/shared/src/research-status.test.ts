@@ -12,6 +12,8 @@ describe("research status red lines", () => {
 		expect(status).toMatchObject({
 			evidenceState: "verified",
 			claimState: "inferred",
+			capabilityState: "candidate",
+			reuseLevel: "validated-capability",
 			validationScope: "fixture",
 			freshness: "fresh",
 			scientificallyVerified: false,
@@ -26,6 +28,8 @@ describe("research status red lines", () => {
 			const status = {
 				evidenceState,
 				claimState: "supported" as const,
+				capabilityState: "candidate" as const,
+				reuseLevel: "navigation-only" as const,
 				validationScope: "scientific-review" as const,
 				freshness: "fresh" as const,
 				scientificallyVerified: false,
@@ -40,6 +44,8 @@ describe("research status red lines", () => {
 		const status = {
 			evidenceState: "reproduced" as const,
 			claimState: "supported" as const,
+			capabilityState: "registered" as const,
+			reuseLevel: "reproduced-capability" as const,
 			validationScope: "scientific-review" as const,
 			freshness: "fresh" as const,
 			scientificallyVerified: true,
@@ -53,6 +59,8 @@ describe("research status red lines", () => {
 			assertResearchStatus({
 				evidenceState: "verified",
 				claimState: "supported",
+				capabilityState: "registered",
+				reuseLevel: "reproduced-capability",
 				validationScope: "real-data",
 				freshness: "fresh",
 				scientificallyVerified: true,

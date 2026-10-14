@@ -30,6 +30,25 @@ export const RESEARCH_CLAIM_STATES = Object.freeze([
 
 export type ResearchClaimState = (typeof RESEARCH_CLAIM_STATES)[number];
 
+export const RESEARCH_CAPABILITY_STATES = Object.freeze([
+	"candidate",
+	"recommended",
+	"registered",
+	"enabled",
+	"retired",
+] as const);
+
+export type ResearchCapabilityState = (typeof RESEARCH_CAPABILITY_STATES)[number];
+
+export const RESEARCH_REUSE_LEVELS = Object.freeze([
+	"navigation-only",
+	"evidence-eligible",
+	"validated-capability",
+	"reproduced-capability",
+] as const);
+
+export type ResearchReuseLevel = (typeof RESEARCH_REUSE_LEVELS)[number];
+
 export const RESEARCH_VALIDATION_SCOPES = Object.freeze([
 	"fixture",
 	"integration",
@@ -45,6 +64,8 @@ export type ResearchFreshnessState = (typeof RESEARCH_FRESHNESS_STATES)[number];
 export interface ResearchStatus {
 	readonly evidenceState: ResearchEvidenceState;
 	readonly claimState: ResearchClaimState;
+	readonly capabilityState: ResearchCapabilityState;
+	readonly reuseLevel: ResearchReuseLevel;
 	readonly validationScope: ResearchValidationScope;
 	readonly freshness: ResearchFreshnessState;
 	readonly scientificallyVerified: boolean;
@@ -96,6 +117,9 @@ export function assertResearchStatus(status: ResearchStatus): void {
 	if (!includes(RESEARCH_EVIDENCE_STATES, status.evidenceState))
 		throw new Error("Invalid research evidence state");
 	if (!includes(RESEARCH_CLAIM_STATES, status.claimState)) throw new Error("Invalid research claim state");
+	if (!includes(RESEARCH_CAPABILITY_STATES, status.capabilityState))
+		throw new Error("Invalid research capability state");
+	if (!includes(RESEARCH_REUSE_LEVELS, status.reuseLevel)) throw new Error("Invalid research reuse level");
 	if (!includes(RESEARCH_VALIDATION_SCOPES, status.validationScope))
 		throw new Error("Invalid research validation scope");
 	if (!includes(RESEARCH_FRESHNESS_STATES, status.freshness))
@@ -106,6 +130,13 @@ export function assertResearchStatus(status: ResearchStatus): void {
 		throw new Error("Blocked or incomplete evidence cannot be green");
 	if (status.scientificallyVerified && !isScientificClaimGreen(status))
 		throw new Error("Scientific verification requires fresh supported evidence and scientific-review scope");
+	if (status.capabilityState === "enabled" && !isResearchEvidenceGreen(status))
+		throw new Error("An enabled capability requires fresh verified or reproduced evidence");
+	if (
+		(status.reuseLevel === "validated-capability" || status.reuseLevel === "reproduced-capability") &&
+		!isResearchEvidenceGreen(status)
+	)
+		throw new Error("A reusable capability requires fresh verified or reproduced evidence");
 }
 
 /**
@@ -123,6 +154,8 @@ export function statusForValidationCapsule(input: {
 	const result: ResearchStatus = {
 		evidenceState,
 		claimState: input.status === "validated" ? "inferred" : "unsupported",
+		capabilityState: "candidate",
+		reuseLevel: input.status === "validated" ? "validated-capability" : "navigation-only",
 		validationScope: input.validationScope ?? "fixture",
 		freshness: input.freshness ?? "fresh",
 		scientificallyVerified: false,

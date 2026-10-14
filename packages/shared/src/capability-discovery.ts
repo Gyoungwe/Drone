@@ -147,6 +147,8 @@ export function buildValidationEvidenceCapsule(input: ValidationEvidenceInput): 
 		status,
 		evidenceState: researchStatus.evidenceState,
 		claimState: researchStatus.claimState,
+		capabilityState: researchStatus.capabilityState,
+		reuseLevel: researchStatus.reuseLevel,
 		validationScope: researchStatus.validationScope,
 		freshness: researchStatus.freshness,
 		scientificallyVerified: false,

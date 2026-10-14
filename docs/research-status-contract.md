@@ -8,6 +8,8 @@ validation scope and freshness. The contract lives in
 |---|---|---|
 | Evidence state | `observed`, `reproduced`, `verified`, `partial`, `stale`, `unsupported`, `unknown`, `blocked` | What the host actually observed and validated |
 | Claim state | `supported`, `mixed`, `inferred`, `hypothesis`, `unsupported` | How far a statement may be interpreted |
+| Capability state | `candidate`, `recommended`, `registered`, `enabled`, `retired` | Lifecycle of the exact capability version |
+| Reuse level | `navigation-only`, `evidence-eligible`, `validated-capability`, `reproduced-capability` | What may be reused after context checks |
 | Validation scope | `fixture`, `integration`, `real-data`, `scientific-review` | The data and review boundary behind the status |
 | Freshness | `fresh`, `stale`, `unknown` | Whether the evidence still matches the current source/input |
 
@@ -20,6 +22,8 @@ represented conservatively as:
 {
   "evidenceState": "verified",
   "claimState": "inferred",
+  "capabilityState": "candidate",
+  "reuseLevel": "validated-capability",
   "validationScope": "fixture",
   "freshness": "fresh",
   "scientificallyVerified": false
