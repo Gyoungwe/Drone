@@ -245,3 +245,16 @@
 隔离 Electron UI 冒烟脚本仍受现有 harness/打包环境限制：subagents 脚本等待不到 pane，knowledge 脚本遇到 bundled main 中 dynamic require child_process，task-delivery/permissions 脚本在其独立构建阶段失败。这些失败没有出现在单元测试、全量测试或正式构建门禁中，保留为发布后续的独立 harness 修复项，不改变本轮 UI 代码结论。
 
 本节记录后，集成分支可进入合并与推送；原始 worktree 和主工作区用户未提交内容继续保持不变。
+
+
+## 9. 非 UI 改动最终收口与合并说明（2026-10-14）
+
+本轮除 UI 外的有效改动已经在当前 integration/main 中，未从原始 RunAttempt worktree 回灌其旧副本：
+
+- **RunAttempt / causality lineage**：shared 增加可校验的 `CausalEnvelope`；分析任务在可执行 binding 建立 `runAttemptId`；compute job、submission、事件、intent journal、checkpoint 和 replay receipt 传播脱敏 lineage；业务 hash、授权 scope、幂等键和 checkpoint identity 不被 lineage 改变。
+- **恢复与副作用边界**：unknown 仍只 reconcile；安全重试才创建新的子 attempt；branch/fork/replay 不继承 execution binding、approval 或 review；backend 提供按显式 `eventId`、`causationId`、`runAttemptId` 聚合的只读 projection。
+- **研究运行时产物**：`.pi/extensions`、`.pi/lib` 与 build manifest 已由当前源文件重建；远端 integration 分支的 runtime 生成提交与当前树内容等价，尝试 cherry-pick 为空，因此没有重复提交。
+- **ClawsGO Science**：只合入研究计划、证据分层、CD-Search 状态和 P2/P3/P5 前置门禁；没有把外部会话、凭据、Vault 正文、`results/` 或科学结论复制到仓库。
+- **未回灌内容**：RunAttempt worktree 目前剩余内容是格式、导出顺序和较旧文档快照；其中 checkpoint hash 处理等关键实现以 integration 中更完整版本为准。ClawsGO worktree 的文档提交已由远端 main 的 `4b9ff132` 覆盖；UI worktree 的旧计划也不再重复 cherry-pick。
+
+当前验证以 `713ba47f` 为准：完整本地门禁已通过，GitHub API 当前没有返回该提交的状态检查记录；这不等于远程 CI 失败，表示没有可读的状态项。主仓库和三个原始 worktree 的用户未提交内容保持不变。
