@@ -23,7 +23,13 @@ describe("evidence IPC", () => {
 	});
 	it("binds overview, freeze and export through the main-frame guard", async () => {
 		const service = {
-			overview: vi.fn(async () => ({ analyses: [], checkpoints: [], branches: [], replays: [] })),
+			overview: vi.fn(async () => ({
+				analyses: [],
+				capabilities: [],
+				checkpoints: [],
+				branches: [],
+				replays: [],
+			})),
 			freezeRecorded: vi.fn(async () => ({
 				id: "a".repeat(64),
 				analysisId: "run-1",
@@ -67,6 +73,7 @@ describe("evidence IPC", () => {
 		const event = { sender: { mainFrame: frame }, senderFrame: frame };
 		expect(await mocks.handlers.get(IpcChannels.EvidenceOverview)!(event)).toEqual({
 			analyses: [],
+			capabilities: [],
 			checkpoints: [],
 			branches: [],
 			replays: [],
@@ -82,7 +89,13 @@ describe("evidence IPC", () => {
 	});
 	it("rejects renderer frames before dispatch", async () => {
 		const service = {
-			overview: vi.fn(async () => ({ analyses: [], checkpoints: [], branches: [], replays: [] })),
+			overview: vi.fn(async () => ({
+				analyses: [],
+				capabilities: [],
+				checkpoints: [],
+				branches: [],
+				replays: [],
+			})),
 		};
 		registerEvidenceIpc(service as never);
 		const frame = {};

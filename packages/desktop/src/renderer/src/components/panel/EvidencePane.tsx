@@ -1,4 +1,4 @@
-import type { EvidenceOverview } from "@drone/shared";
+import type { CapabilityEvidenceCard, EvidenceOverview } from "@drone/shared";
 import { useCallback, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -139,8 +139,18 @@ export function EvidencePane({ defaultRoot }: { defaultRoot: string | null }) {
 						{notice}
 					</p>
 				)}
+				{overview && overview.capabilities.length > 0 && (
+					<section className="space-y-2" data-testid="capability-evidence-panel">
+						<h3 className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">
+							{t("panel.evidence.capabilitiesTitle")}
+						</h3>
+						{overview.capabilities.map((capability) => (
+							<CapabilityEvidenceCardView key={capability.id} card={capability} />
+						))}
+					</section>
+				)}
 				{overview?.checkpoints.map((c) => (
-					<article key={c.id} className="rounded-lg bg-hover p-2 text-xs">
+					<article key={c.id} id={`evidence-checkpoint-${c.id}`} className="rounded-lg bg-hover p-2 text-xs">
 						<p className="font-medium text-ink">
 							{c.assay} · {c.analysisId}
 						</p>
@@ -218,5 +228,98 @@ export function EvidencePane({ defaultRoot }: { defaultRoot: string | null }) {
 				)}
 			</div>
 		</section>
+	);
+}
+
+export function CapabilityEvidenceCardView({ card }: { card: CapabilityEvidenceCard }) {
+	const t = useT();
+	return (
+		<article
+			className="rounded-lg border border-border bg-hover p-2 text-xs"
+			data-testid="capability-evidence-card"
+			data-capability-id={card.capabilityId}
+			data-evidence-state={card.evidenceState}
+		>
+			<div className="flex items-start justify-between gap-2">
+				<div className="min-w-0">
+					<p className="break-words font-medium text-ink">{card.capabilityId}</p>
+					<p className="break-words font-mono text-[11px] text-ink-faint">
+						{card.analysisId}
+						{card.versionRef ? ` · ${t("panel.evidence.capabilityVersion")}: ${card.versionRef}` : ""}
+						{card.requestRef
+							? ` · ${t("panel.evidence.capabilityRequest")}: ${card.requestRef}`
+							: ` · ${t("panel.evidence.capabilityNoRequest")}`}
+					</p>
+				</div>
+				<span className="rounded bg-surface px-2 py-1 font-mono text-[11px] text-ink-2">
+					{card.evidenceState}
+				</span>
+			</div>
+			<div className="mt-2 flex flex-wrap gap-1 text-[11px] text-ink-dim">
+				<span className="rounded bg-surface px-2 py-0.5">
+					{t("panel.evidence.capabilityStatus")}: {card.capabilityState}
+				</span>
+				<span className="rounded bg-surface px-2 py-0.5">claim: {card.claimState}</span>
+				<span className="rounded bg-surface px-2 py-0.5">reuse: {card.reuseLevel}</span>
+				<span className="rounded bg-surface px-2 py-0.5">freshness: {card.freshness}</span>
+				{card.validationScope ? (
+					<span className="rounded bg-surface px-2 py-0.5">scope: {card.validationScope}</span>
+				) : (
+					<span className="rounded bg-surface px-2 py-0.5">{t("panel.evidence.capabilityScope")}</span>
+				)}
+			</div>
+			<div className="mt-2 space-y-1 text-ink-dim">
+				<p>
+					{t("panel.evidence.capabilityEvidence")}:{" "}
+					{card.evidenceCapsuleRef ? (
+						<a
+							href={`#evidence-checkpoint-${card.evidenceCapsuleRef}`}
+							className="font-mono text-accent underline underline-offset-2"
+						>
+							{card.evidenceCapsuleRef.slice(0, 16)}… · {t("panel.evidence.capabilityOpenEvidence")}
+						</a>
+					) : (
+						t("panel.evidence.capabilityNoEvidence")
+					)}
+					{card.checkpointRef && (
+						<span className="ml-2 text-ink-faint">
+							{t("panel.evidence.capabilityCheckpoint")}: {card.checkpointRef.slice(0, 16)}…
+						</span>
+					)}
+				</p>
+				<p className="font-medium text-ink-2">{t("panel.evidence.capabilityGates")}</p>
+				{card.gates.length > 0 ? (
+					<ul className="space-y-1">
+						{card.gates.map((gate) => (
+							<li key={`${card.id}:${gate.id}`} className="break-words">
+								<span className="font-mono text-ink-faint">{gate.status}</span> · {gate.detail}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p className="text-ink-faint">{t("panel.evidence.capabilityNoGates")}</p>
+				)}
+				{card.artifactRefs.length > 0 && (
+					<div className="text-ink-faint">
+						<p>
+							{t("panel.evidence.capabilityArtifacts")}: {card.artifactRefs.length}
+						</p>
+						<ul className="mt-1 space-y-1">
+							{card.artifactRefs.slice(0, 4).map((artifact) => (
+								<li key={artifact.path} className="break-all font-mono text-[11px]">
+									{artifact.path}
+								</li>
+							))}
+						</ul>
+					</div>
+				)}
+				<p className="text-ink-faint">
+					{t("panel.evidence.capabilityReceipts")}:{" "}
+					{card.receiptRefs.length > 0
+						? card.receiptRefs.join(", ")
+						: t("panel.evidence.capabilityNoReceipts")}
+				</p>
+			</div>
+		</article>
 	);
 }
