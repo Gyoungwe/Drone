@@ -125,4 +125,17 @@ describe("capability discovery contracts", () => {
 			}),
 		).toThrow(/status projection/i);
 	});
+
+	it("fails closed for an unknown persisted capsule status", () => {
+		expect(() =>
+			createValidationEvidenceCapsule({
+				id: "capsule-unknown",
+				capabilityRef: "assembly@1.0.0",
+				gateRefs: [],
+				sourceRefs: [],
+				status: "unknown" as never,
+				createdAt: now,
+			}),
+		).toThrow(/invalid validation capsule status/i);
+	});
 });

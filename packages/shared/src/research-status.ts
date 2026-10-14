@@ -149,6 +149,8 @@ export function statusForValidationCapsule(input: {
 	readonly validationScope?: ResearchValidationScope;
 	readonly freshness?: ResearchFreshnessState;
 }): ResearchStatus {
+	if (!["validated", "failed", "incomplete"].includes(input.status))
+		throw new Error("Invalid validation capsule status");
 	const evidenceState: ResearchEvidenceState =
 		input.status === "validated" ? "verified" : input.status === "incomplete" ? "partial" : "blocked";
 	const result: ResearchStatus = {
