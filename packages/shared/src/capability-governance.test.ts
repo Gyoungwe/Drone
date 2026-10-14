@@ -18,7 +18,12 @@ const base = (overrides: Partial<Parameters<typeof createCapabilityGovernanceMan
 		permissions: { filesystem: "read", network: "none", process: "sandbox", secrets: [] },
 		resources: { cpus: 2, memoryBytes: 4_000_000_000, wallTimeSeconds: 3_600 },
 		sideEffects: ["read"],
-		environment: { readiness: "ready", requirements: ["nextflow>=23"] },
+		environment: {
+			readiness: "ready",
+			requirements: ["nextflow>=23"],
+			fingerprint: "host-fingerprint",
+			observedAt: "2026-10-15T00:00:00.000Z",
+		},
 		createdAt: "2026-10-15T00:00:00.000Z",
 		...overrides,
 	});
@@ -54,6 +59,25 @@ describe("capability governance", () => {
 		});
 		const codes = assessCapabilityGovernance(manifest).findings.map((finding) => finding.code);
 		expect(codes).toEqual(expect.arrayContaining(["missing-provenance", "missing-schema"]));
+	});
+
+	it("rejects tampered manifests and self-asserted readiness", () => {
+		const manifest = base();
+		const tampered = { ...manifest, source: { ...manifest.source, commit: "changed" } };
+		expect(assessCapabilityGovernance(tampered).findings.map((finding) => finding.code)).toContain(
+			"invalid-contract",
+		);
+		const withoutProbe = base({ environment: { readiness: "ready", requirements: [] } });
+		expect(assessCapabilityGovernance(withoutProbe).findings.map((finding) => finding.code)).toContain(
+			"environment-not-ready",
+		);
+	});
+
+	it("rejects malformed prerelease identifiers", () => {
+		for (const version of ["1.2.3-01", "1.2.3-alpha..1"]) {
+			const assessment = assessCapabilityGovernance(base({ version }));
+			expect(assessment.findings.map((finding) => finding.code)).toContain("unknown-version");
+		}
 	});
 
 	it("catalogs manifests and fails closed for unknown ids or duplicate ids", () => {
