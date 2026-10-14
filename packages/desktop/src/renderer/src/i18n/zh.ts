@@ -306,6 +306,8 @@ export const zh = {
 			exportAudience: { private: "导出私有", restricted: "导出受限", public: "导出公开" },
 			capabilitiesTitle: "能力证据",
 			capabilityVersion: "已登记版本",
+			capabilityRequest: "能力请求",
+			capabilityNoRequest: "尚未关联能力请求",
 			capabilityEvidence: "证据",
 			capabilityOpenEvidence: "打开关联 checkpoint",
 			capabilityNoEvidence: "尚未关联验证证据",

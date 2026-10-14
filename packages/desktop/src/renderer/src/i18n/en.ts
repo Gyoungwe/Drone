@@ -317,6 +317,8 @@ export const en: Messages = {
 			exportAudience: { private: "Export private", restricted: "Export restricted", public: "Export public" },
 			capabilitiesTitle: "Capability evidence",
 			capabilityVersion: "Registered version",
+			capabilityRequest: "Request",
+			capabilityNoRequest: "Request not linked",
 			capabilityEvidence: "Evidence",
 			capabilityOpenEvidence: "Open linked checkpoint",
 			capabilityNoEvidence: "Validation evidence is not linked",

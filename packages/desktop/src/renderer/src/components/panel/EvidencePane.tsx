@@ -246,6 +246,9 @@ export function CapabilityEvidenceCardView({ card }: { card: CapabilityEvidenceC
 					<p className="break-words font-mono text-[11px] text-ink-faint">
 						{card.analysisId}
 						{card.versionRef ? ` · ${t("panel.evidence.capabilityVersion")}: ${card.versionRef}` : ""}
+						{card.requestRef
+							? ` · ${t("panel.evidence.capabilityRequest")}: ${card.requestRef}`
+							: ` · ${t("panel.evidence.capabilityNoRequest")}`}
 					</p>
 				</div>
 				<span className="rounded bg-surface px-2 py-1 font-mono text-[11px] text-ink-2">
