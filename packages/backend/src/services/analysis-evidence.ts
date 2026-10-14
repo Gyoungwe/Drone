@@ -614,7 +614,7 @@ export function projectCapabilityEvidence(
 		const provenance = analysis.provenance;
 		const explicitCheckpointId = provenance?.reproducibility.checkpointId;
 		const checkpoint = explicitCheckpointId
-			? checkpoints.find((value) => value.id === explicitCheckpointId)
+			? checkpoints.find((value) => value.id === explicitCheckpointId && value.analysisId === analysis.id)
 			: checkpoints.find((value) => value.analysisId === analysis.id);
 		const linkedReplays = checkpoint ? replays.filter((value) => value.checkpointId === checkpoint.id) : [];
 		const evidenceState =
@@ -622,7 +622,7 @@ export function projectCapabilityEvidence(
 				? "verified"
 				: provenance?.reproducibility.status === "failed"
 					? "blocked"
-					: provenance
+					: provenance?.reproducibility.status === "recorded"
 						? "observed"
 						: "unknown";
 		return analysis.capabilities.map((capabilityId) => ({

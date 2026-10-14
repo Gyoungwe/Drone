@@ -121,6 +121,37 @@ describe("analysis evidence checkpoints", () => {
 			] as never;
 			const [card] = projectCapabilityEvidence([bound], checkpoints, []);
 			expect(card?.checkpointRef).toBe(selected);
+			const foreign = checkpoints.map((value) => ({ ...value, analysisId: "other-run" }));
+			const [foreignCard] = projectCapabilityEvidence([bound], foreign, []);
+			expect(foreignCard?.checkpointRef).toBeUndefined();
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("does not call not-assessed provenance observed evidence", async () => {
+		const { root, runs } = await setup();
+		try {
+			const analysis = await runs.get("run-1");
+			if (!analysis) throw new Error("analysis fixture missing");
+			const [card] = projectCapabilityEvidence(
+				[
+					{
+						...analysis,
+						provenance: {
+							adapter: { id: "assembly", version: "1.0.0" },
+							workflow: { id: "assembly", version: "1.0.0" },
+							method: { id: "assembly", version: "1.0.0" },
+							specSha256: "c".repeat(64),
+							artifacts: [],
+							reproducibility: { status: "not-assessed" as const, detail: "pending" },
+						},
+					},
+				],
+				[],
+				[],
+			);
+			expect(card?.evidenceState).toBe("unknown");
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
