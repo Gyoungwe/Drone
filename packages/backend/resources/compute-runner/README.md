@@ -4,6 +4,11 @@
 or newer. Every invocation reads one JSON request from stdin and writes one
 JSON response to stdout:
 
+The `workflows/` directory contains the pinned `drone/pasilla-public-demo`
+bundle. Drone's SSH executor uploads the bundle beside the versioned runner
+and the runner exposes it through a fixed argv only; arbitrary commands and
+private input paths are not accepted.
+
 ```json
 {"protocolVersion":1,"requestId":"...","command":"status","jobId":"..."}
 ```
