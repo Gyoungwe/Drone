@@ -308,6 +308,17 @@ def registered_argv(spec, directory):
     registry = read_json(registry_path, {})
     workflow = spec["workflow"]
     name = workflow.get("name") or workflow.get("id") or ("compiled" if "version" in workflow else None)
+    # Public Pasilla is a bundled, fixed-argv workflow.  The bundle is
+    # deployed beside this versioned runner by the Drone SSH executor; it has
+    # no user-provided command or input path.
+    if name == "drone/pasilla-public-demo":
+        version = workflow.get("version") or "1.0.0"
+        if version != "1.0.0":
+            raise RunnerError("invalid-workflow", "drone/pasilla-public-demo is pinned to version 1.0.0")
+        workflow = Path(__file__).resolve().parent / "workflows" / "pasilla_public_demo.py"
+        if not workflow.is_file():
+            raise RunnerError("workflow-not-installed", "Pasilla public demo bundle is not installed")
+        return [sys.executable, str(workflow)], "production"
     if isinstance(registry, dict) and name in registry:
         argv = registry[name]
         if not isinstance(argv, list) or not argv or any(not isinstance(value, str) for value in argv):
@@ -693,213 +704,7 @@ def slurm_state(directory, value):
         mapped = {"PENDING": "queued", "CONFIGURING": "queued", "RUNNING": "running",
                   "COMPLETING": "running", "SUSPENDED": "running"}.get(state)
         if mapped:
-            return write_status(directory, mapped, schedulerState=state)
-    accounting = command_output(["sacct", "-n", "-X", "-j", str(scheduler_id), "--format=State,ExitCode"], 10)
-    if not accounting:
-        return write_status(directory, "unknown", message="scheduler state is unavailable")
-    row = accounting.splitlines()[0].strip()
-    state_word = row.split()[0].upper() if row else ""
-    if state_word.startswith("COMPLETED"):
-        return write_status(directory, "succeeded", exitCode=0, finishedAt=status.get("finishedAt") or utc_now())
-    if state_word.startswith(("CANCELLED", "TIMEOUT")):
-        return write_status(directory, "cancelled" if state_word.startswith("CANCELLED") else "failed",
-                            message=state_word, finishedAt=status.get("finishedAt") or utc_now())
-    if state_word.startswith(("FAILED", "NODE_FAIL", "OUT_OF_MEMORY")):
-        return write_status(directory, "failed", message=state_word, finishedAt=status.get("finishedAt") or utc_now())
-    return write_status(directory, "unknown", message="unrecognized scheduler state %s" % state_word)
-
-
-def status(job_id):
-    directory = ensure_prepared(job_id)
-    value = read_json(status_path(directory), None)
-    if not isinstance(value, dict):
-        raise RunnerError("corrupt-status", "status.json is missing or invalid")
-    if value.get("schedulerJobId") and scheduler_kind() == "slurm":
-        return slurm_state(directory, value)
-    if value.get("state") in ("queued", "running"):
-        pid = value.get("pid")
-        if isinstance(pid, int) and process_matches(pid, value.get("processStartMarker")):
-            value["state"] = "running"
-            return value
-        # A missing worker with no terminal status is an unknown outcome.  Do
-        # not infer success from process disappearance.
-        return write_status(directory, "unknown", message="worker process is no longer present")
-    return value
-
-
-def decode_cursor(cursor):
-    if not cursor:
-        return {"events": 0, "stdout": 0, "stderr": 0}
-    try:
-        value = json.loads(base64.urlsafe_b64decode(cursor.encode("ascii")).decode("utf-8"))
-        if isinstance(value, dict):
-            return {name: max(0, int(value.get(name, 0))) for name in ("events", "stdout", "stderr")}
-    except (ValueError, TypeError, binascii.Error, UnicodeError):
-        pass
-    try:
-        return {"events": max(0, int(cursor)), "stdout": 0, "stderr": 0}
-    except ValueError:
-        raise RunnerError("invalid-cursor", "logs cursor is invalid")
-
-
-def encode_cursor(value):
-    return base64.urlsafe_b64encode(json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")).decode("ascii")
-
-
-def read_increment(path, offset, budget):
-    try:
-        size = os.path.getsize(path)
-    except OSError:
-        return b"", offset, False
-    if offset > size:
-        offset = 0
-    read_size = min(max(0, size - offset), budget)
-    try:
-        with open(path, "rb") as handle:
-            handle.seek(offset)
-            data = handle.read(read_size)
-    except OSError:
-        return b"", offset, False
-    return data, offset + len(data), offset + len(data) < size
-
-
-def logs(job_id, payload):
-    directory = ensure_prepared(job_id)
-    cursor = decode_cursor((payload or {}).get("cursor") if isinstance(payload, dict) else None)
-    entries = []
-    next_cursor = dict(cursor)
-    remaining = MAX_LOG_BYTES
-    any_truncated = False
-    for stream, filename in (("events", "events.jsonl"), ("stdout", "stdout.log"), ("stderr", "stderr.log")):
-        if remaining <= 0:
-            break
-        data, offset, truncated = read_increment(directory / filename, cursor[stream], remaining)
-        any_truncated = any_truncated or truncated
-        next_cursor[stream] = offset
-        remaining -= len(data)
-        for line in data.splitlines():
-            text = line.decode("utf-8", "replace")
-            at = utc_now()
-            if stream == "events":
-                parsed = read_json_line(text)
-                if isinstance(parsed, dict):
-                    at = parsed.get("at") or at
-                    text = json.dumps(parsed, sort_keys=True, separators=(",", ":"))
-            stream_name = "event" if stream == "events" else stream
-            entries.append({"timestamp": at, "stream": stream_name, "type": stream_name,
-                            "at": int(time.time() * 1000), "text": text})
-    next_value = encode_cursor(next_cursor)
-    # ``entries`` is the runner protocol spelling; ``events``/``cursor`` are
-    # retained as a small compatibility projection for the host adapter.
-    return {"jobId": job_id, "cursor": next_value, "nextCursor": next_value,
-            "entries": entries, "events": entries, "truncated": any_truncated}
-
-
-def read_json_line(text):
-    try:
-        return json.loads(text)
-    except ValueError:
-        return None
-
-
-def sha256_file(path):
-    digest = hashlib.sha256()
-    with open(path, "rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def collect(job_id, payload):
-    directory = ensure_prepared(job_id)
-    output_root = directory / "outputs"
-    max_bytes = MAX_COLLECT_BYTES
-    requested = (payload or {}).get("maxBytes") if isinstance(payload, dict) else None
-    if requested is not None:
-        if isinstance(requested, bool) or not isinstance(requested, int) or requested <= 0:
-            raise RunnerError("invalid-collect-limit", "maxBytes must be positive")
-        max_bytes = min(max_bytes, requested)
-    wanted = None
-    expected = (payload or {}).get("manifest") if isinstance(payload, dict) else None
-    if isinstance(expected, list):
-        wanted = set()
-        for item in expected:
-            path = item.get("path") if isinstance(item, dict) else item
-            wanted.add(safe_relative_path(path, "manifest path"))
-    entries = []
-    total = 0
-    if output_root.is_symlink():
-        raise RunnerError("symlink-output", "collect refuses a symlink outputs directory")
-    if output_root.exists():
-        for base, dirs, files in os.walk(str(output_root), followlinks=False):
-            for directory_name in list(dirs):
-                if (Path(base) / directory_name).is_symlink():
-                    raise RunnerError("symlink-output", "collect refuses symlink output directory %s" % directory_name)
-            dirs[:] = sorted(dirs)
-            files[:] = sorted(files)
-            for name in files:
-                absolute = Path(base) / name
-                relative = absolute.relative_to(output_root).as_posix()
-                safe_relative_path(relative, "output path")
-                if wanted is not None and relative not in wanted:
-                    continue
-                if absolute.is_symlink() or not absolute.is_file():
-                    raise RunnerError("symlink-output", "collect refuses symlink or non-file output %s" % relative)
-                size = absolute.stat().st_size
-                total += size
-                if total > max_bytes:
-                    raise RunnerError("collect-limit", "output manifest exceeds the collection limit")
-                entries.append({"path": relative, "bytes": size, "size": size, "sha256": sha256_file(absolute), "symlink": False})
-    if wanted is not None:
-        observed = {entry["path"] for entry in entries}
-        missing = sorted(wanted - observed)
-        if missing:
-            raise RunnerError("missing-output", "expected output is missing: %s" % ", ".join(missing))
-    manifest = {"version": 1, "entries": entries, "totalBytes": total, "maxBytes": max_bytes}
-    atomic_json(directory / "collected-manifest.json", manifest)
-    return {"jobId": job_id, "manifest": manifest}
-
-
-def cancel(job_id):
-    directory = ensure_prepared(job_id)
-    value = read_json(status_path(directory), {})
-    if value.get("state") in ("succeeded", "failed", "cancelled"):
-        return value
-    scheduler_id = value.get("schedulerJobId")
-    if scheduler_id:
-        try:
-            result = subprocess.run(["scancel", str(scheduler_id)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20, check=False)
-        except (OSError, subprocess.TimeoutExpired) as error:
-            raise RunnerError("cancel-unknown", "scancel could not be invoked: %s" % error, True)
-        if result.returncode != 0:
-            raise RunnerError("cancel-failed", result.stderr.decode("utf-8", "replace").strip() or "scancel failed", True)
-    elif isinstance(value.get("pid"), int) and process_matches(value["pid"], value.get("processStartMarker")):
-        child = read_json(directory / "child.json", {})
-        if isinstance(child, dict) and isinstance(child.get("pid"), int) and process_matches(child["pid"], child.get("startMarker")):
-            terminate_process_group(child["pid"])
-        terminate_process_group(value["pid"])
-    else:
-        raise RunnerError("cancel-unknown", "worker process is not present", True)
-    return write_status(directory, "cancelled", finishedAt=utc_now(), message="cancelled by request")
-
-
-def dispatch(request):
-    if not isinstance(request, dict):
-        raise RunnerError("invalid-message", "runner request must be an object")
-    if request.get("protocolVersion") != PROTOCOL_VERSION:
-        raise RunnerError("protocol-mismatch", "unsupported runner protocol version")
-    request_id = request.get("requestId")
-    if not isinstance(request_id, str) or not request_id:
-        raise RunnerError("invalid-message", "requestId must be non-empty")
-    command = request.get("command")
-    if command not in ("version", "capabilities", "prepare", "start", "status", "logs", "cancel", "collect"):
-        raise RunnerError("unsupported-command", "unsupported runner command")
-    if command == "version":
-        return {"runnerVersion": RUNNER_VERSION, "version": RUNNER_VERSION, "protocolVersion": PROTOCOL_VERSION,
-                "compatibleVersions": [RUNNER_VERSION]}
-    if command == "capabilities":
-        return capabilities()
-    job_id = request.get("jobId")
+            return write_status(directory, mapped, schedulerState=stateequest.get("jobId")
     if command == "prepare":
         payload = request.get("payload") if isinstance(request.get("payload"), dict) else {}
         spec = payload.get("spec")
