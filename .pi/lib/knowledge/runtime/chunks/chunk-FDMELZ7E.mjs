@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 143672)
-Total output lines: 14059
-
 // @ts-nocheck
 import {
   __export
@@ -4194,7 +4191,5021 @@ function FromCyclic4(defs, ref) {
 
 // node_modules/typebox/build/type/engine/readonly_object/from_dependent.mjs
 function FromDependent4(if_, then_, else_) {
-  const evaluated = EvaluateDependent(if_, then_,…43672 tokens truncated…   access: "lan-read"
+  const evaluated = EvaluateDependent(if_, then_, else_);
+  const result = FromType17(evaluated);
+  return result;
+}
+
+// node_modules/typebox/build/type/engine/readonly_object/from_intersect.mjs
+function FromIntersect4(types) {
+  const evaluated = EvaluateIntersect(types);
+  const result = FromType17(evaluated);
+  return result;
+}
+
+// node_modules/typebox/build/type/engine/readonly_object/from_object.mjs
+function FromObject8(properties) {
+  const mapped = guard_exports.Keys(properties).reduce((result2, left) => {
+    return { ...result2, [left]: AddReadonly(properties[left]) };
+  }, {});
+  const result = _Object_(mapped);
+  return result;
+}
+
+// node_modules/typebox/build/type/engine/readonly_object/from_tuple.mjs
+function FromTuple4(types) {
+  const result = AddImmutable(Tuple(types));
+  return result;
+}
+
+// node_modules/typebox/build/type/engine/readonly_object/from_union.mjs
+function FromUnion7(types) {
+  const result = types.map((type) => FromType17(type));
+  return Union(result);
+}
+
+// node_modules/typebox/build/type/engine/readonly_object/from_type.mjs
+function FromType17(type) {
+  return IsArray2(type) ? FromArray5(type.items) : IsCyclic(type) ? FromCyclic4(type.$defs, type.$ref) : IsDependent(type) ? FromDependent4(type.if, type.then, type.else) : IsIntersect(type) ? FromIntersect4(type.allOf) : IsObject2(type) ? FromObject8(type.properties) : IsTuple(type) ? FromTuple4(type.items) : IsUnion(type) ? FromUnion7(type.anyOf) : type;
+}
+
+// node_modules/typebox/build/type/engine/readonly_object/instantiate.mjs
+function ReadonlyObjectAction(type, options) {
+  const result = CanInstantiate([type]) ? memory_exports.Update(FromType17(type), {}, options) : ReadonlyObjectDeferred(type);
+  return result;
+}
+function ReadonlyObjectInstantiate(context, state, type, options) {
+  const instantiatedType = InstantiateType(context, state, type);
+  return ReadonlyObjectAction(instantiatedType, options);
+}
+
+// node_modules/typebox/build/type/engine/ref/instantiate.mjs
+function RefInstantiate(context, state, type, ref) {
+  return state.visited.includes(ref) ? type : ref in context ? InstantiateType(context, State(state["callstack"], [...state["visited"], ref]), context[ref]) : type;
+}
+
+// node_modules/typebox/build/type/engine/required/from_cyclic.mjs
+function FromCyclic5(defs, ref) {
+  const target = CyclicTarget(defs, ref);
+  const partial = FromType18(target);
+  const result = Cyclic(memory_exports.Assign(defs, { [ref]: partial }), ref);
+  return result;
+}
+
+// node_modules/typebox/build/type/engine/required/from_dependent.mjs
+function FromDependent5(if_, then_, else_) {
+  const evaluated = EvaluateDependent(if_, then_, else_);
+  const result = FromType18(evaluated);
+  return result;
+}
+
+// node_modules/typebox/build/type/engine/required/from_intersect.mjs
+function FromIntersect5(types) {
+  const evaluated = EvaluateIntersect(types);
+  const result = FromType18(evaluated);
+  return result;
+}
+
+// node_modules/typebox/build/type/engine/required/from_union.mjs
+function FromUnion8(types) {
+  const result = types.map((type) => FromType18(type));
+  return Union(result);
+}
+
+// node_modules/typebox/build/type/engine/required/from_object.mjs
+function FromObject9(properties) {
+  const mapped = guard_exports.Keys(properties).reduce((result2, left) => {
+    return { ...result2, [left]: RemoveOptional(properties[left]) };
+  }, {});
+  const result = _Object_(mapped);
+  return result;
+}
+
+// node_modules/typebox/build/type/engine/required/from_type.mjs
+function FromType18(type) {
+  return IsCyclic(type) ? FromCyclic5(type.$defs, type.$ref) : IsDependent(type) ? FromDependent5(type.if, type.then, type.else) : IsIntersect(type) ? FromIntersect5(type.allOf) : IsUnion(type) ? FromUnion8(type.anyOf) : IsObject2(type) ? FromObject9(type.properties) : _Object_({});
+}
+
+// node_modules/typebox/build/type/action/required.mjs
+function RequiredDeferred(type, options = {}) {
+  return Deferred("Required", [type], options);
+}
+function Required(type, options = {}) {
+  return RequiredAction(type, options);
+}
+
+// node_modules/typebox/build/type/engine/required/instantiate.mjs
+function RequiredAction(type, options) {
+  const result = CanInstantiate([type]) ? memory_exports.Update(FromType18(type), {}, options) : RequiredDeferred(type, options);
+  return result;
+}
+function RequiredInstantiate(context, state, type, options) {
+  const instaniatedType = InstantiateType(context, state, type);
+  return RequiredAction(instaniatedType, options);
+}
+
+// node_modules/typebox/build/type/action/return_type.mjs
+function ReturnTypeDeferred(type, options = {}) {
+  return Deferred("ReturnType", [type], options);
+}
+function ReturnType(type, options = {}) {
+  return ReturnTypeAction(type, options);
+}
+
+// node_modules/typebox/build/type/engine/return_type/instantiate.mjs
+function ReturnTypeOperation(type) {
+  return IsFunction2(type) ? type["returnType"] : Never();
+}
+function ReturnTypeAction(type, options) {
+  const result = CanInstantiate([type]) ? memory_exports.Update(ReturnTypeOperation(type), {}, options) : ReturnTypeDeferred(type, options);
+  return result;
+}
+function ReturnTypeInstantiate(context, state, type, options = {}) {
+  const instantiatedType = InstantiateType(context, state, type);
+  return ReturnTypeAction(instantiatedType, options);
+}
+
+// node_modules/typebox/build/type/action/with.mjs
+function WithDeferred(type, options) {
+  return Deferred("With", [type, options], {});
+}
+function With2(type, options) {
+  return WithAction(type, options);
+}
+
+// node_modules/typebox/build/type/engine/with/instantiate.mjs
+function WithAction(type, options) {
+  const result = CanInstantiate([type]) ? memory_exports.Update(type, {}, options) : WithDeferred(type, options);
+  return result;
+}
+function WithInstantiate(context, state, type, options) {
+  const instaniatedType = InstantiateType(context, state, type);
+  return WithAction(instaniatedType, options);
+}
+
+// node_modules/typebox/build/type/engine/rest/spread.mjs
+function SpreadElement(type) {
+  const result = IsRest(type) ? IsTuple(type.items) ? RestSpread(type.items.items) : IsInfer(type.items) ? [type] : IsRef(type.items) ? [type] : [Never()] : [type];
+  return result;
+}
+function RestSpread(types) {
+  const result = types.reduce((result2, left) => {
+    return [...result2, ...SpreadElement(left)];
+  }, []);
+  return result;
+}
+
+// node_modules/typebox/build/type/engine/instantiate.mjs
+function State(callstack, visited) {
+  return { callstack, visited };
+}
+function CanInstantiate(types) {
+  return guard_exports.ShiftLeft(types, (left, right) => IsRef(left) ? false : CanInstantiate(right), () => true);
+}
+function InstantiateProperties(context, state, properties) {
+  return guard_exports.Keys(properties).reduce((result, key) => {
+    return { ...result, [key]: InstantiateType(context, state, properties[key]) };
+  }, {});
+}
+function InstantiateElements(context, state, types) {
+  const elements = InstantiateTypes(context, state, types);
+  const result = RestSpread(elements);
+  return result;
+}
+function InstantiateTypes(context, state, types) {
+  return types.map((type) => InstantiateType(context, state, type));
+}
+function WithModifiers(type, instantiatedType) {
+  const withOptional = IsOptional(type) ? AddOptionalAction(instantiatedType, {}) : instantiatedType;
+  const withReadonly = IsReadonly(type) ? AddReadonlyAction(withOptional, {}) : withOptional;
+  const withImmutable = IsImmutable(type) ? AddImmutableAction(withReadonly, {}) : withReadonly;
+  return withImmutable;
+}
+function InstantiateDeferred(context, state, action, parameters, options) {
+  return (
+    // Modifiers
+    guard_exports.IsEqual(action, "AddImmutable") ? AddImmutableInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "RemoveImmutable") ? RemoveImmutableInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "AddReadonly") ? AddReadonlyInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "RemoveReadonly") ? RemoveReadonlyInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "AddOptional") ? AddOptionalInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "RemoveOptional") ? RemoveOptionalInstantiate(context, state, parameters[0], options) : (
+      // Actions
+      guard_exports.IsEqual(action, "Capitalize") ? CapitalizeInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Conditional") ? ConditionalInstantiate(context, state, parameters[0], parameters[1], parameters[2], parameters[3], options) : guard_exports.IsEqual(action, "ConstructorParameters") ? ConstructorParametersInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Evaluate") ? EvaluateInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Exclude") ? ExcludeInstantiate(context, state, parameters[0], parameters[1], options) : guard_exports.IsEqual(action, "Extract") ? ExtractInstantiate(context, state, parameters[0], parameters[1], options) : guard_exports.IsEqual(action, "Index") ? IndexInstantiate(context, state, parameters[0], parameters[1], options) : guard_exports.IsEqual(action, "InstanceType") ? InstanceTypeInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Interface") ? InterfaceInstantiate(context, state, parameters[0], parameters[1], options) : guard_exports.IsEqual(action, "KeyOf") ? KeyOfInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Lowercase") ? LowercaseInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Mapped") ? MappedInstantiate(context, state, parameters[0], parameters[1], parameters[2], parameters[3], options) : guard_exports.IsEqual(action, "Module") ? ModuleInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "NonNullable") ? NonNullableInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Pick") ? PickInstantiate(context, state, parameters[0], parameters[1], options) : guard_exports.IsEqual(action, "Parameters") ? ParametersInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Partial") ? PartialInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Omit") ? OmitInstantiate(context, state, parameters[0], parameters[1], options) : guard_exports.IsEqual(action, "ReadonlyObject") ? ReadonlyObjectInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Record") ? RecordInstantiate(context, state, parameters[0], parameters[1], options) : guard_exports.IsEqual(action, "Required") ? RequiredInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "ReturnType") ? ReturnTypeInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "TemplateLiteral") ? TemplateLiteralInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Uncapitalize") ? UncapitalizeInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "Uppercase") ? UppercaseInstantiate(context, state, parameters[0], options) : guard_exports.IsEqual(action, "With") ? WithInstantiate(context, state, parameters[0], parameters[1]) : Deferred(action, parameters, options)
+    )
+  );
+}
+function InstantiateImmediate(context, state, type) {
+  const instantiatedType = IsRef(type) ? RefInstantiate(context, state, type, type.$ref) : IsArray2(type) ? _Array_(InstantiateType(context, state, type.items), ArrayOptions(type)) : IsCall(type) ? CallInstantiate(context, state, type.target, type.arguments) : IsConstructor2(type) ? Constructor(InstantiateTypes(context, state, type.parameters), InstantiateType(context, state, type.instanceType), ConstructorOptions(type)) : IsFunction2(type) ? _Function_(InstantiateTypes(context, state, type.parameters), InstantiateType(context, state, type.returnType), FunctionOptions(type)) : IsDependent(type) ? Dependent(InstantiateType(context, state, type.if), InstantiateType(context, state, type.then), InstantiateType(context, state, type.else), DependentOptions(type)) : IsIntersect(type) ? Intersect(InstantiateTypes(context, state, type.allOf), IntersectOptions(type)) : IsObject2(type) ? _Object_(InstantiateProperties(context, state, type.properties), ObjectOptions(type)) : IsRecord(type) ? RecordFromPattern(RecordPattern(type), InstantiateType(context, state, RecordValue(type))) : IsRest(type) ? Rest(InstantiateType(context, state, type.items)) : IsTuple(type) ? Tuple(InstantiateElements(context, state, type.items), TupleOptions(type)) : IsUnion(type) ? Union(InstantiateTypes(context, state, type.anyOf), UnionOptions(type)) : type;
+  const withModifiers = WithModifiers(type, instantiatedType);
+  return withModifiers;
+}
+function InstantiateType(context, state, type) {
+  const result = IsDeferred(type) ? InstantiateDeferred(context, state, type.action, type.parameters, type.options) : InstantiateImmediate(context, state, type);
+  return result;
+}
+function Instantiate(context, type) {
+  return InstantiateType(context, State([], []), type);
+}
+
+// node_modules/typebox/build/type/engine/immutable/instantiate_add.mjs
+function AddImmutableOperation(type) {
+  return memory_exports.Update(type, { "~immutable": true }, {});
+}
+function AddImmutableAction(type, options) {
+  const result = memory_exports.Update(AddImmutableOperation(type), {}, options);
+  return result;
+}
+function AddImmutableInstantiate(context, state, type, options) {
+  const instantiatedType = InstantiateType(context, state, type);
+  return AddImmutableAction(instantiatedType, options);
+}
+
+// node_modules/typebox/build/type/action/_add_immutable.mjs
+function AddImmutableDeferred(type, options = {}) {
+  return Deferred("AddImmutable", [type], options);
+}
+function AddImmutable(type, options = {}) {
+  return AddImmutableAction(type, options);
+}
+
+// node_modules/typebox/build/type/action/evaluate.mjs
+function EvaluateDeferred(type, options = {}) {
+  return Deferred("Evaluate", [type], options);
+}
+function Evaluate(type, options = {}) {
+  return EvaluateAction(type, options);
+}
+
+// node_modules/typebox/build/type/action/module.mjs
+function ModuleDeferred(declarations, options = {}) {
+  return Deferred("Module", [declarations], options);
+}
+function Module2(declarations, options = {}) {
+  return ModuleInstantiate({}, State([], []), declarations, options);
+}
+
+// node_modules/typebox/build/type/engine/priority/priority.mjs
+function Comparer(left, right) {
+  const compareResult = Compare(left, right);
+  const result = guard_exports.IsEqual(compareResult, "right-inside") ? 1 : guard_exports.IsEqual(compareResult, "disjoint") ? 1 : 0;
+  return result;
+}
+function Insert(type, types, result = []) {
+  return guard_exports.ShiftLeft(types, (left, right) => guard_exports.IsEqual(Comparer(type, left), 1) ? Insert(type, right, [...result, left]) : [...result, type, ...types], () => [...result, type]);
+}
+function Sort(types, result = []) {
+  return guard_exports.ShiftLeft(types, (left, right) => Sort(right, Insert(left, result)), () => result);
+}
+function Priority(types) {
+  const result = Sort(types);
+  return result;
+}
+
+// node_modules/typebox/build/type/script/script.mjs
+function Script2(...args) {
+  const [context, input, options] = arguments_exports.Match(args, {
+    2: (script, options2) => guard_exports.IsString(script) ? [{}, script, options2] : [script, options2, {}],
+    3: (context2, script, options2) => [context2, script, options2],
+    1: (script) => [{}, script, {}]
+  });
+  const result = Script(input);
+  const parsed = guard_exports.IsArray(result) && guard_exports.IsEqual(result.length, 2) ? InstantiateType(context, State([], []), result[0]) : Never();
+  return memory_exports.Update(parsed, {}, options);
+}
+
+// node_modules/typebox/build/typebox.mjs
+var typebox_exports = {};
+__export(typebox_exports, {
+  Any: () => Any,
+  Array: () => _Array_,
+  BigInt: () => BigInt2,
+  Boolean: () => Boolean2,
+  Call: () => Call,
+  Capitalize: () => Capitalize,
+  Codec: () => Codec,
+  Conditional: () => Conditional,
+  Constructor: () => Constructor,
+  ConstructorParameters: () => ConstructorParameters,
+  Cyclic: () => Cyclic,
+  Decode: () => Decode,
+  DecodeBuilder: () => DecodeBuilder,
+  Dependent: () => Dependent,
+  Encode: () => Encode,
+  EncodeBuilder: () => EncodeBuilder,
+  Enum: () => Enum,
+  Evaluate: () => Evaluate,
+  Exclude: () => Exclude,
+  Extends: () => Extends,
+  ExtendsResult: () => result_exports,
+  Extract: () => Extract,
+  Function: () => _Function_,
+  Generic: () => Generic,
+  Identifier: () => Identifier,
+  Immutable: () => Immutable,
+  Index: () => Index,
+  Infer: () => Infer,
+  InstanceType: () => InstanceType,
+  Instantiate: () => Instantiate,
+  Integer: () => Integer,
+  Interface: () => Interface,
+  Intersect: () => Intersect,
+  IsAny: () => IsAny,
+  IsArray: () => IsArray2,
+  IsBigInt: () => IsBigInt2,
+  IsBoolean: () => IsBoolean3,
+  IsCall: () => IsCall,
+  IsCodec: () => IsCodec,
+  IsConstructor: () => IsConstructor2,
+  IsCyclic: () => IsCyclic,
+  IsDependent: () => IsDependent,
+  IsEnum: () => IsEnum,
+  IsEnumValue: () => IsEnumValue,
+  IsFunction: () => IsFunction2,
+  IsGeneric: () => IsGeneric,
+  IsIdentifier: () => IsIdentifier,
+  IsImmutable: () => IsImmutable,
+  IsInfer: () => IsInfer,
+  IsInteger: () => IsInteger2,
+  IsIntersect: () => IsIntersect,
+  IsKind: () => IsKind,
+  IsLiteral: () => IsLiteral,
+  IsNever: () => IsNever,
+  IsNull: () => IsNull2,
+  IsNumber: () => IsNumber3,
+  IsObject: () => IsObject2,
+  IsOptional: () => IsOptional,
+  IsParameter: () => IsParameter,
+  IsReadonly: () => IsReadonly,
+  IsRecord: () => IsRecord,
+  IsRef: () => IsRef,
+  IsRefine: () => IsRefine,
+  IsRest: () => IsRest,
+  IsSchema: () => IsSchema,
+  IsString: () => IsString3,
+  IsSymbol: () => IsSymbol2,
+  IsTemplateLiteral: () => IsTemplateLiteral,
+  IsThis: () => IsThis,
+  IsTuple: () => IsTuple,
+  IsUndefined: () => IsUndefined2,
+  IsUnion: () => IsUnion,
+  IsUnknown: () => IsUnknown,
+  IsUnsafe: () => IsUnsafe,
+  IsVoid: () => IsVoid,
+  KeyOf: () => KeyOf2,
+  Literal: () => Literal,
+  Lowercase: () => Lowercase,
+  Mapped: () => Mapped,
+  Module: () => Module2,
+  Never: () => Never,
+  NonNullable: () => NonNullable,
+  Null: () => Null,
+  Number: () => Number2,
+  Object: () => _Object_,
+  Omit: () => Omit,
+  Optional: () => Optional,
+  Parameter: () => Parameter,
+  Parameters: () => Parameters,
+  Partial: () => Partial,
+  Pick: () => Pick,
+  Readonly: () => Readonly,
+  ReadonlyObject: () => ReadonlyObject,
+  ReadonlyType: () => ReadonlyType,
+  Record: () => Record,
+  RecordKey: () => RecordKey,
+  RecordPattern: () => RecordPattern,
+  RecordValue: () => RecordValue,
+  Ref: () => Ref,
+  Refine: () => Refine,
+  Required: () => Required,
+  Rest: () => Rest,
+  ReturnType: () => ReturnType,
+  Script: () => Script2,
+  String: () => String2,
+  Symbol: () => Symbol2,
+  TemplateLiteral: () => TemplateLiteral2,
+  This: () => This,
+  Tuple: () => Tuple,
+  Uncapitalize: () => Uncapitalize,
+  Undefined: () => Undefined,
+  Union: () => Union,
+  Unknown: () => Unknown,
+  Unsafe: () => Unsafe,
+  Uppercase: () => Uppercase,
+  Void: () => Void,
+  With: () => With2
+});
+
+// packages/shared/src/causality.ts
+var CAUSALITY_SCHEMA_VERSION = 1;
+var SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+var CausalEnvelopeSchema = typebox_exports.Object(
+  {
+    schemaVersion: typebox_exports.Literal(CAUSALITY_SCHEMA_VERSION),
+    eventId: typebox_exports.String({ minLength: 1, maxLength: 128, pattern: SAFE_ID.source }),
+    causationId: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 128, pattern: SAFE_ID.source })),
+    runAttemptId: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 128, pattern: SAFE_ID.source }))
+  },
+  { additionalProperties: false }
+);
+function causalId(value, label = "Causal ID") {
+  if (!SAFE_ID.test(value)) throw new Error(`${label} is invalid`);
+  return value;
+}
+function runAttemptId(value) {
+  return causalId(value, "Run attempt ID");
+}
+function assertCausalEnvelope(value) {
+  if (!value || typeof value !== "object") throw new Error("Invalid causal envelope");
+  const record = value;
+  if (Object.keys(record).some(
+    (key) => !["schemaVersion", "eventId", "causationId", "runAttemptId"].includes(key)
+  ))
+    throw new Error("Unexpected causal envelope field");
+  if (record.schemaVersion !== CAUSALITY_SCHEMA_VERSION)
+    throw new Error("Invalid causal envelope schemaVersion");
+  if (typeof record.eventId !== "string") throw new Error("Invalid causal envelope eventId");
+  causalId(record.eventId, "Event ID");
+  if (record.causationId !== void 0) {
+    if (typeof record.causationId !== "string") throw new Error("Invalid causal envelope causationId");
+    causalId(record.causationId, "Causation ID");
+    if (record.causationId === record.eventId) throw new Error("An event cannot cause itself");
+  }
+  if (record.runAttemptId !== void 0) {
+    if (typeof record.runAttemptId !== "string") throw new Error("Invalid causal envelope runAttemptId");
+    runAttemptId(record.runAttemptId);
+  }
+}
+
+// packages/shared/src/contract-hash.ts
+function sha256(text) {
+  const bytes = [];
+  for (const character of text) {
+    let point = character.codePointAt(0) ?? 0;
+    if (point >= 55296 && point <= 57343) point = 65533;
+    if (point < 128) bytes.push(point);
+    else if (point < 2048) bytes.push(192 | point >> 6, 128 | point & 63);
+    else if (point < 65536)
+      bytes.push(224 | point >> 12, 128 | point >> 6 & 63, 128 | point & 63);
+    else
+      bytes.push(
+        240 | point >> 18,
+        128 | point >> 12 & 63,
+        128 | point >> 6 & 63,
+        128 | point & 63
+      );
+  }
+  const length = bytes.length * 8;
+  bytes.push(128);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  const high = Math.floor(length / 4294967296);
+  for (const word of [high, length >>> 0])
+    for (let shift = 24; shift >= 0; shift -= 8) bytes.push(word >>> shift & 255);
+  const state = [
+    1779033703,
+    3144134277,
+    1013904242,
+    2773480762,
+    1359893119,
+    2600822924,
+    528734635,
+    1541459225
+  ];
+  const constants = [
+    1116352408,
+    1899447441,
+    3049323471,
+    3921009573,
+    961987163,
+    1508970993,
+    2453635748,
+    2870763221,
+    3624381080,
+    310598401,
+    607225278,
+    1426881987,
+    1925078388,
+    2162078206,
+    2614888103,
+    3248222580,
+    3835390401,
+    4022224774,
+    264347078,
+    604807628,
+    770255983,
+    1249150122,
+    1555081692,
+    1996064986,
+    2554220882,
+    2821834349,
+    2952996808,
+    3210313671,
+    3336571891,
+    3584528711,
+    113926993,
+    338241895,
+    666307205,
+    773529912,
+    1294757372,
+    1396182291,
+    1695183700,
+    1986661051,
+    2177026350,
+    2456956037,
+    2730485921,
+    2820302411,
+    3259730800,
+    3345764771,
+    3516065817,
+    3600352804,
+    4094571909,
+    275423344,
+    430227734,
+    506948616,
+    659060556,
+    883997877,
+    958139571,
+    1322822218,
+    1537002063,
+    1747873779,
+    1955562222,
+    2024104815,
+    2227730452,
+    2361852424,
+    2428436474,
+    2756734187,
+    3204031479,
+    3329325298
+  ];
+  const rotate = (value, bits) => value >>> bits | value << 32 - bits;
+  for (let offset = 0; offset < bytes.length; offset += 64) {
+    const words = [];
+    for (let i = 0; i < 16; i++) {
+      const j = offset + i * 4;
+      words[i] = (bytes[j] ?? 0) << 24 | (bytes[j + 1] ?? 0) << 16 | (bytes[j + 2] ?? 0) << 8 | (bytes[j + 3] ?? 0);
+    }
+    for (let i = 16; i < 64; i++) {
+      const x = words[i - 15] ?? 0;
+      const y = words[i - 2] ?? 0;
+      words[i] = (words[i - 16] ?? 0) + (rotate(x, 7) ^ rotate(x, 18) ^ x >>> 3) + (words[i - 7] ?? 0) + (rotate(y, 17) ^ rotate(y, 19) ^ y >>> 10) | 0;
+    }
+    let [a = 0, b = 0, c = 0, d = 0, e = 0, f = 0, g = 0, h = 0] = state;
+    for (let i = 0; i < 64; i++) {
+      const t1 = h + (rotate(e, 6) ^ rotate(e, 11) ^ rotate(e, 25)) + (e & f ^ ~e & g) + (constants[i] ?? 0) + (words[i] ?? 0) | 0;
+      const t2 = (rotate(a, 2) ^ rotate(a, 13) ^ rotate(a, 22)) + (a & b ^ a & c ^ b & c) | 0;
+      h = g;
+      g = f;
+      f = e;
+      e = d + t1 | 0;
+      d = c;
+      c = b;
+      b = a;
+      a = t1 + t2 | 0;
+    }
+    for (const [i, value] of [a, b, c, d, e, f, g, h].entries()) state[i] = (state[i] ?? 0) + value | 0;
+  }
+  return state.map((value) => (value >>> 0).toString(16).padStart(8, "0")).join("");
+}
+
+// packages/shared/src/research-status.ts
+var RESEARCH_EVIDENCE_STATES = Object.freeze([
+  "observed",
+  "reproduced",
+  "verified",
+  "partial",
+  "stale",
+  "unsupported",
+  "unknown",
+  "blocked"
+]);
+var RESEARCH_CLAIM_STATES = Object.freeze([
+  "supported",
+  "mixed",
+  "inferred",
+  "hypothesis",
+  "unsupported"
+]);
+var RESEARCH_CAPABILITY_STATES = Object.freeze([
+  "candidate",
+  "recommended",
+  "registered",
+  "enabled",
+  "retired"
+]);
+var RESEARCH_REUSE_LEVELS = Object.freeze([
+  "navigation-only",
+  "evidence-eligible",
+  "validated-capability",
+  "reproduced-capability"
+]);
+var RESEARCH_VALIDATION_SCOPES = Object.freeze([
+  "fixture",
+  "integration",
+  "real-data",
+  "scientific-review"
+]);
+var RESEARCH_FRESHNESS_STATES = Object.freeze(["fresh", "stale", "unknown"]);
+var GREEN_EVIDENCE = /* @__PURE__ */ new Set(["verified", "reproduced"]);
+var BLOCKED_EVIDENCE = /* @__PURE__ */ new Set([
+  "partial",
+  "stale",
+  "unsupported",
+  "unknown",
+  "blocked"
+]);
+function includes(values, value) {
+  return typeof value === "string" && values.includes(value);
+}
+function isResearchEvidenceGreen(status2) {
+  return GREEN_EVIDENCE.has(status2.evidenceState) && status2.freshness === "fresh";
+}
+function isScientificClaimGreen(status2) {
+  return isResearchEvidenceGreen(status2) && status2.claimState === "supported" && status2.validationScope === "scientific-review" && status2.scientificallyVerified === true;
+}
+function assertResearchStatus(status2) {
+  if (!status2 || typeof status2 !== "object") throw new Error("Research status is required");
+  if (!includes(RESEARCH_EVIDENCE_STATES, status2.evidenceState))
+    throw new Error("Invalid research evidence state");
+  if (!includes(RESEARCH_CLAIM_STATES, status2.claimState)) throw new Error("Invalid research claim state");
+  if (!includes(RESEARCH_CAPABILITY_STATES, status2.capabilityState))
+    throw new Error("Invalid research capability state");
+  if (!includes(RESEARCH_REUSE_LEVELS, status2.reuseLevel)) throw new Error("Invalid research reuse level");
+  if (!includes(RESEARCH_VALIDATION_SCOPES, status2.validationScope))
+    throw new Error("Invalid research validation scope");
+  if (!includes(RESEARCH_FRESHNESS_STATES, status2.freshness))
+    throw new Error("Invalid research freshness state");
+  if (typeof status2.scientificallyVerified !== "boolean")
+    throw new Error("scientificallyVerified must be boolean");
+  if (BLOCKED_EVIDENCE.has(status2.evidenceState) && isResearchEvidenceGreen(status2))
+    throw new Error("Blocked or incomplete evidence cannot be green");
+  if (status2.scientificallyVerified && !isScientificClaimGreen(status2))
+    throw new Error("Scientific verification requires fresh supported evidence and scientific-review scope");
+  if (status2.capabilityState === "enabled" && !isResearchEvidenceGreen(status2))
+    throw new Error("An enabled capability requires fresh verified or reproduced evidence");
+  if ((status2.reuseLevel === "validated-capability" || status2.reuseLevel === "reproduced-capability") && !isResearchEvidenceGreen(status2))
+    throw new Error("A reusable capability requires fresh verified or reproduced evidence");
+}
+function statusForValidationCapsule(input) {
+  if (!["validated", "failed", "incomplete"].includes(input.status))
+    throw new Error("Invalid validation capsule status");
+  const evidenceState = input.status === "validated" ? "verified" : input.status === "incomplete" ? "partial" : "blocked";
+  const freshness = input.freshness ?? "fresh";
+  const result = {
+    evidenceState,
+    claimState: input.status === "validated" ? "inferred" : "unsupported",
+    capabilityState: "candidate",
+    // Validated evidence that is stale/unknown remains inspectable, but cannot
+    // be reused as a validated capability until freshness is restored.
+    reuseLevel: input.status === "validated" ? freshness === "fresh" ? "validated-capability" : "evidence-eligible" : "navigation-only",
+    validationScope: input.validationScope ?? "fixture",
+    freshness,
+    scientificallyVerified: false
+  };
+  assertResearchStatus(result);
+  return result;
+}
+
+// packages/shared/src/research-contracts.ts
+var RESEARCH_CONTRACT_SCHEMA_VERSION = 1;
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== void 0).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, item]) => [key, canonicalize(item)])
+  );
+}
+function canonicalContractJson(value) {
+  return JSON.stringify(canonicalize(value));
+}
+function contractContentHash(value) {
+  return sha256(canonicalContractJson(value));
+}
+function computeResearchContractHash(value) {
+  const {
+    contentHash: _contentHash,
+    decisionHash: _decisionHash,
+    lineage: _lineage,
+    ...body
+  } = value;
+  return contractContentHash(body);
+}
+function assertResearchContract(value) {
+  if (value.schemaVersion !== RESEARCH_CONTRACT_SCHEMA_VERSION) throw new Error("Invalid schemaVersion");
+  if (!Number.isSafeInteger(value.revision) || value.revision < 0) throw new Error("Invalid revision");
+  if (!/^[a-f0-9]{64}$/.test(value.contentHash)) throw new Error("Invalid contentHash");
+  if (!Array.isArray(value.parentRefs)) throw new Error("Invalid parentRefs");
+  if (value.lineage !== void 0) assertCausalEnvelope(value.lineage);
+  if (value.migration) {
+    if (!Number.isSafeInteger(value.migration.fromSchemaVersion) || value.migration.fromSchemaVersion < 0 || value.migration.fromSchemaVersion > value.migration.toSchemaVersion || value.migration.toSchemaVersion !== RESEARCH_CONTRACT_SCHEMA_VERSION || !value.migration.migrationId.trim() || Number.isNaN(Date.parse(value.migration.migratedAt)))
+      throw new Error("Invalid migration metadata");
+  }
+  if (value.contentHash !== computeResearchContractHash(value))
+    throw new Error("Contract contentHash mismatch");
+  if (value.kind === "validation-evidence-capsule") {
+    const capsule = value;
+    const projection = statusForValidationCapsule({
+      status: capsule.status,
+      validationScope: capsule.validationScope,
+      freshness: capsule.freshness
+    });
+    if (capsule.evidenceState !== void 0 && capsule.evidenceState !== projection.evidenceState || capsule.claimState !== void 0 && capsule.claimState !== projection.claimState || capsule.capabilityState !== void 0 && capsule.capabilityState !== projection.capabilityState || capsule.reuseLevel !== void 0 && capsule.reuseLevel !== projection.reuseLevel || capsule.validationScope !== void 0 && capsule.validationScope !== projection.validationScope || capsule.freshness !== void 0 && capsule.freshness !== projection.freshness || capsule.scientificallyVerified !== void 0 && capsule.scientificallyVerified !== false)
+      throw new Error("Validation capsule status projection is inconsistent");
+    assertResearchStatus(projection);
+  }
+}
+function base(body, options = {}) {
+  const metadata = {
+    schemaVersion: RESEARCH_CONTRACT_SCHEMA_VERSION,
+    revision: options.revision ?? 0,
+    parentRefs: [...options.parentRefs ?? []],
+    ...options.lineage ? { lineage: options.lineage } : {},
+    ...options.migration ? { migration: options.migration } : {}
+  };
+  const record = JSON.parse(canonicalContractJson({ ...body, ...metadata }));
+  const result = { ...record, contentHash: computeResearchContractHash(record) };
+  assertResearchContract(result);
+  return result;
+}
+function createKnowledgeSnapshot(input) {
+  return base({ ...input, kind: "knowledge-snapshot" }, input);
+}
+
+// packages/shared/src/evolution.ts
+function contract(body, options = {}) {
+  const record = {
+    ...body,
+    schemaVersion: RESEARCH_CONTRACT_SCHEMA_VERSION,
+    revision: options.revision ?? 0,
+    parentRefs: [...options.parentRefs ?? []]
+  };
+  const result = { ...record, contentHash: computeResearchContractHash(record) };
+  assertResearchContract(result);
+  return result;
+}
+function requireRef(ref, label) {
+  if (!ref || (typeof ref === "string" ? !ref.trim() : !ref.id.trim() || !ref.kind.trim()))
+    throw new Error(`${label} is required`);
+  return ref;
+}
+function refOf(value) {
+  return { kind: value.kind, id: value.id, revision: value.revision, contentHash: value.contentHash };
+}
+function createEvolutionCandidate(input) {
+  const minimumObservations = input.minimumObservations ?? 2;
+  if (!input.id.trim() || !input.proposal.trim())
+    throw new Error("Evolution candidate identity and proposal are required");
+  if (!Number.isSafeInteger(input.observationCount) || input.observationCount < minimumObservations)
+    throw new Error("Evolution candidate requires repeated observations before approval");
+  if (!Number.isSafeInteger(minimumObservations) || minimumObservations < 2)
+    throw new Error("Evolution candidate minimum observations must be at least two");
+  if (!input.runRefs.length || !input.experienceRefs.length)
+    throw new Error("Evolution candidate lineage is required");
+  if (input.experienceRefs.length < minimumObservations)
+    throw new Error("Evolution candidate experience lineage must cover every required observation");
+  return contract({
+    kind: "evolution-candidate",
+    id: input.id,
+    projectRef: requireRef(input.projectRef, "projectRef"),
+    runRefs: [...input.runRefs],
+    knowledgeSnapshotRefs: [...input.knowledgeSnapshotRefs ?? []],
+    experienceRefs: [...input.experienceRefs],
+    observationCount: input.observationCount,
+    minimumObservations,
+    proposal: input.proposal,
+    status: "proposed",
+    executionEligible: false,
+    createdAt: input.createdAt,
+    updatedAt: input.createdAt
+  });
+}
+function approveEvolutionCandidate(candidate, approvalRef, updatedAt) {
+  if (candidate.status !== "proposed") throw new Error("Only a proposed evolution candidate can be approved");
+  if (candidate.observationCount < candidate.minimumObservations)
+    throw new Error("Evolution candidate does not meet its repeated-observation gate");
+  const approval = requireRef(approvalRef, "approvalRef");
+  return contract(
+    {
+      ...candidate,
+      status: "approved",
+      executionEligible: true,
+      approvalRef: approval,
+      updatedAt
+    },
+    { revision: candidate.revision + 1, parentRefs: [refOf(candidate), approval] }
+  );
+}
+function supersedeEvolutionCandidate(candidate, supersedingRef, updatedAt) {
+  if (candidate.status === "revoked") throw new Error("A revoked evolution candidate cannot be superseded");
+  const superseding = requireRef(supersedingRef, "supersedingRef");
+  return contract(
+    {
+      ...candidate,
+      status: "superseded",
+      executionEligible: false,
+      supersedesRef: superseding,
+      updatedAt
+    },
+    { revision: candidate.revision + 1, parentRefs: [refOf(candidate), superseding] }
+  );
+}
+function revokeEvolutionCandidate(candidate, revokedByRef, reason, updatedAt) {
+  if (!reason.trim()) throw new Error("Revocation reason is required");
+  const revokedBy = requireRef(revokedByRef, "revokedByRef");
+  return contract(
+    {
+      ...candidate,
+      status: "revoked",
+      executionEligible: false,
+      revokedByRef: revokedBy,
+      reason,
+      updatedAt
+    },
+    { revision: candidate.revision + 1, parentRefs: [refOf(candidate), revokedBy] }
+  );
+}
+function createKnowledgeReuseDecision(input) {
+  return contract({
+    kind: "knowledge-reuse-decision",
+    id: input.id,
+    projectRef: requireRef(input.projectRef, "projectRef"),
+    runRef: requireRef(input.runRef, "runRef"),
+    snapshotRef: requireRef(input.snapshotRef, "snapshotRef"),
+    status: input.reusable ? "eligible" : "blocked",
+    reusable: input.reusable,
+    reasons: [...input.reasons],
+    executionEligible: false,
+    evaluatedAt: input.evaluatedAt
+  });
+}
+function approveKnowledgeReuse(decision, approvalRef, evaluatedAt) {
+  if (decision.status !== "eligible" || !decision.reusable)
+    throw new Error("Only an eligible reuse decision can be approved");
+  const approval = requireRef(approvalRef, "approvalRef");
+  return contract(
+    {
+      ...decision,
+      status: "approved",
+      executionEligible: true,
+      approvalRef: approval,
+      evaluatedAt
+    },
+    { revision: decision.revision + 1, parentRefs: [refOf(decision), approval] }
+  );
+}
+function revokeKnowledgeReuse(decision, revokedByRef, evaluatedAt) {
+  const revokedBy = requireRef(revokedByRef, "revokedByRef");
+  return contract(
+    {
+      ...decision,
+      status: "revoked",
+      executionEligible: false,
+      revokedByRef: revokedBy,
+      evaluatedAt
+    },
+    { revision: decision.revision + 1, parentRefs: [refOf(decision), revokedBy] }
+  );
+}
+
+// packages/shared/src/analysis-orchestration.ts
+var ANALYSIS_STAGES = Object.freeze([
+  "intake",
+  "design",
+  "readiness",
+  "execution",
+  "review",
+  "delivery",
+  "completed"
+]);
+
+// packages/shared/src/research-skill-sources.json
+var research_skill_sources_default = {
+  schemaVersion: 1,
+  sources: [
+    {
+      id: "nature",
+      repository: "Yuan1z0825/nature-skills",
+      commit: "2375e0abdf42158ef149256f2c64b1f759a0d274",
+      archiveSha256: "d5017c0e6415275306f3b1774a70ffc88a865969adc10816eb8e9a795464b363",
+      license: "Apache-2.0",
+      licenseFiles: ["LICENSE"],
+      skills: [
+        {
+          name: "nature-academic-search",
+          path: "skills/nature-academic-search/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-citation",
+          path: "skills/nature-citation/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-data",
+          path: "skills/nature-data/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-downloader",
+          path: "skills/nature-downloader/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-experiment-log",
+          path: "skills/nature-experiment-log/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "nature-figure",
+          path: "skills/nature-figure/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-image2ppt",
+          path: "skills/nature-image2ppt/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-literature-pipeline",
+          path: "skills/nature-literature-pipeline/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "nature-paper-card",
+          path: "skills/nature-paper-card/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-paper-to-patent",
+          path: "skills/nature-paper-to-patent/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-paper2ppt",
+          path: "skills/nature-paper2ppt/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-polishing",
+          path: "skills/nature-polishing/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "researchwrite",
+          path: "skills/nature-proposal-writer/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "nature-reader",
+          path: "skills/nature-reader/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-ref-verifier",
+          path: "skills/nature-ref-verifier/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-response",
+          path: "skills/nature-response/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-reviewer",
+          path: "skills/nature-reviewer/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-shared",
+          path: "skills/nature-shared/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-statistics",
+          path: "skills/nature-statistics/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "nature-writing",
+          path: "skills/nature-writing/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        }
+      ],
+      runtimeFiles: []
+    },
+    {
+      id: "scientific",
+      repository: "K-Dense-AI/scientific-agent-skills",
+      commit: "330c8e764435a731eff571e3efdda70b363d0792",
+      archiveSha256: "559c0a1c32666e08854e0276399cdb961d5ab5faf31183b2dc94382ee38c90f3",
+      license: "MIT",
+      licenseFiles: ["LICENSE.md"],
+      skills: [
+        {
+          name: "adaptyv",
+          path: "skills/adaptyv/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "aeon",
+          path: "skills/aeon/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "alphagenome",
+          path: "skills/alphagenome/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "analytical-method-validation",
+          path: "skills/analytical-method-validation/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "anndata",
+          path: "skills/anndata/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "arbor",
+          path: "skills/arbor/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "arboreto",
+          path: "skills/arboreto/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "astropy",
+          path: "skills/astropy/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "autoskill",
+          path: "skills/autoskill/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "benchling-integration",
+          path: "skills/benchling-integration/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "bgpt-paper-search",
+          path: "skills/bgpt-paper-search/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "bids",
+          path: "skills/bids/SKILL.md",
+          license: "https://creativecommons.org/licenses/by/4.0/",
+          bundled: true
+        },
+        {
+          name: "biopython",
+          path: "skills/biopython/SKILL.md",
+          license: "Biopython License Agreement",
+          bundled: false
+        },
+        {
+          name: "bioservices",
+          path: "skills/bioservices/SKILL.md",
+          license: "GPLv3 license",
+          bundled: false
+        },
+        {
+          name: "bulk-rnaseq",
+          path: "skills/bulk-rnaseq/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "cellxgene-census",
+          path: "skills/cellxgene-census/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "cirq",
+          path: "skills/cirq/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "citation-management",
+          path: "skills/citation-management/SKILL.md",
+          license: "MIT License",
+          bundled: true
+        },
+        {
+          name: "clinical-decision-support",
+          path: "skills/clinical-decision-support/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "clinical-reports",
+          path: "skills/clinical-reports/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "cobrapy",
+          path: "skills/cobrapy/SKILL.md",
+          license: "GPL-2.0 license",
+          bundled: false
+        },
+        {
+          name: "consciousness-council",
+          path: "skills/consciousness-council/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "dask",
+          path: "skills/dask/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "database-lookup",
+          path: "skills/database-lookup/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "datalad",
+          path: "skills/datalad/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "datamol",
+          path: "skills/datamol/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "deepchem",
+          path: "skills/deepchem/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "deepspot-m",
+          path: "skills/deepspot-m/SKILL.md",
+          license: "PolyForm-Noncommercial-1.0.0",
+          bundled: false
+        },
+        {
+          name: "deeptools",
+          path: "skills/deeptools/SKILL.md",
+          license: "BSD license",
+          bundled: true
+        },
+        {
+          name: "depmap",
+          path: "skills/depmap/SKILL.md",
+          license: "CC-BY-4.0",
+          bundled: true
+        },
+        {
+          name: "dhdna-profiler",
+          path: "skills/dhdna-profiler/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "diffdock",
+          path: "skills/diffdock/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "dnanexus-integration",
+          path: "skills/dnanexus-integration/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "docx",
+          path: "skills/docx/SKILL.md",
+          license: "Proprietary. LICENSE.txt has complete terms",
+          bundled: false
+        },
+        {
+          name: "esm",
+          path: "skills/esm/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "etetoolkit",
+          path: "skills/etetoolkit/SKILL.md",
+          license: "GPL-3.0-or-later",
+          bundled: false
+        },
+        {
+          name: "exa-search",
+          path: "skills/exa-search/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "experimental-design",
+          path: "skills/experimental-design/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "exploratory-data-analysis",
+          path: "skills/exploratory-data-analysis/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "flowio",
+          path: "skills/flowio/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "fluidsim",
+          path: "skills/fluidsim/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "folklore-variant-evidence",
+          path: "skills/folklore-variant-evidence/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "generate-image",
+          path: "skills/generate-image/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "geniml",
+          path: "skills/geniml/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "genomic-coordinates",
+          path: "skills/genomic-coordinates/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "genomic-intelligence",
+          path: "skills/genomic-intelligence/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "geomaster",
+          path: "skills/geomaster/SKILL.md",
+          license: "MIT License",
+          bundled: true
+        },
+        {
+          name: "geopandas",
+          path: "skills/geopandas/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "get-available-resources",
+          path: "skills/get-available-resources/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "gget",
+          path: "skills/gget/SKILL.md",
+          license: "BSD-2-Clause license",
+          bundled: true
+        },
+        {
+          name: "ginkgo-cloud-lab",
+          path: "skills/ginkgo-cloud-lab/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "glycoengineering",
+          path: "skills/glycoengineering/SKILL.md",
+          license: "Unknown",
+          bundled: false
+        },
+        {
+          name: "gtars",
+          path: "skills/gtars/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "histolab",
+          path: "skills/histolab/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "hugging-science",
+          path: "skills/hugging-science/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "hypogenic",
+          path: "skills/hypogenic/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "hypothesis-generation",
+          path: "skills/hypothesis-generation/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "imaging-data-commons",
+          path: "skills/imaging-data-commons/SKILL.md",
+          license: "This skill is provided under the MIT License. IDC data itself has individual licensing (mostly CC-BY, some CC-NC) that must be respected when using the data.",
+          bundled: false
+        },
+        {
+          name: "infographics",
+          path: "skills/infographics/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "iso-standards-readiness",
+          path: "skills/iso-standards-readiness/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "lab-hardware-cad",
+          path: "skills/lab-hardware-cad/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "labarchive-integration",
+          path: "skills/labarchive-integration/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "lamindb",
+          path: "skills/lamindb/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "latchbio-integration",
+          path: "skills/latchbio-integration/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "latex-posters",
+          path: "skills/latex-posters/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "liteparse",
+          path: "skills/liteparse/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "literature-review",
+          path: "skills/literature-review/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "markdown-mermaid-writing",
+          path: "skills/markdown-mermaid-writing/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "market-research-reports",
+          path: "skills/market-research-reports/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "markitdown",
+          path: "skills/markitdown/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "matchms",
+          path: "skills/matchms/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "matlab",
+          path: "skills/matlab/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "matplotlib",
+          path: "skills/matplotlib/SKILL.md",
+          license: "https://github.com/matplotlib/matplotlib/tree/main/LICENSE",
+          bundled: false
+        },
+        {
+          name: "medchem",
+          path: "skills/medchem/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "modal",
+          path: "skills/modal/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "molecular-dynamics",
+          path: "skills/molecular-dynamics/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "molfeat",
+          path: "skills/molfeat/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "ncats-arax",
+          path: "skills/ncats-arax/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "networkx",
+          path: "skills/networkx/SKILL.md",
+          license: "3-clause BSD license",
+          bundled: true
+        },
+        {
+          name: "neurokit2",
+          path: "skills/neurokit2/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "neuropixels-analysis",
+          path: "skills/neuropixels-analysis/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "nextflow",
+          path: "skills/nextflow/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "omero-integration",
+          path: "skills/omero-integration/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "onekgpd",
+          path: "skills/onekgpd/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "ontology-term-resolution",
+          path: "skills/ontology-term-resolution/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "open-notebook",
+          path: "skills/open-notebook/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "openpiv",
+          path: "skills/openpiv/SKILL.md",
+          license: "BSD-3-Clause",
+          bundled: true
+        },
+        {
+          name: "opentrons-integration",
+          path: "skills/opentrons-integration/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "optimize-for-gpu",
+          path: "skills/optimize-for-gpu/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pacsomatic",
+          path: "skills/pacsomatic/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "paper-lookup",
+          path: "skills/paper-lookup/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "paperclip",
+          path: "skills/paperclip/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "paperzilla",
+          path: "skills/paperzilla/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "parallel-web",
+          path: "skills/parallel-web/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pathml",
+          path: "skills/pathml/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pathogen-variant-surveillance",
+          path: "skills/pathogen-variant-surveillance/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pathway-enrichment",
+          path: "skills/pathway-enrichment/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pdf",
+          path: "skills/pdf/SKILL.md",
+          license: "Proprietary. LICENSE.txt has complete terms",
+          bundled: false
+        },
+        {
+          name: "peer-review",
+          path: "skills/peer-review/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pennylane",
+          path: "skills/pennylane/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "phylogenetics",
+          path: "skills/phylogenetics/SKILL.md",
+          license: "Unknown",
+          bundled: false
+        },
+        {
+          name: "pi-agent",
+          path: "skills/pi-agent/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pkpd-modeling",
+          path: "skills/pkpd-modeling/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "polars",
+          path: "skills/polars/SKILL.md",
+          license: "https://github.com/pola-rs/polars/blob/main/LICENSE",
+          bundled: false
+        },
+        {
+          name: "polars-bio",
+          path: "skills/polars-bio/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "pptx",
+          path: "skills/pptx/SKILL.md",
+          license: "Proprietary. LICENSE.txt has complete terms",
+          bundled: false
+        },
+        {
+          name: "pptx-posters",
+          path: "skills/pptx-posters/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "primekg",
+          path: "skills/primekg/SKILL.md",
+          license: "Unknown",
+          bundled: false
+        },
+        {
+          name: "protocolsio-integration",
+          path: "skills/protocolsio-integration/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pufferlib",
+          path: "skills/pufferlib/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pydeseq2",
+          path: "skills/pydeseq2/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "pydicom",
+          path: "skills/pydicom/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pyhealth",
+          path: "skills/pyhealth/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pylabrobot",
+          path: "skills/pylabrobot/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pymatgen",
+          path: "skills/pymatgen/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pymc",
+          path: "skills/pymc/SKILL.md",
+          license: "Apache License, Version 2.0",
+          bundled: true
+        },
+        {
+          name: "pymoo",
+          path: "skills/pymoo/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "pyopenms",
+          path: "skills/pyopenms/SKILL.md",
+          license: "3 clause BSD license",
+          bundled: true
+        },
+        {
+          name: "pysam",
+          path: "skills/pysam/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pytdc",
+          path: "skills/pytdc/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "pytorch-lightning",
+          path: "skills/pytorch-lightning/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "pyzotero",
+          path: "skills/pyzotero/SKILL.md",
+          license: "MIT License",
+          bundled: true
+        },
+        {
+          name: "qiskit",
+          path: "skills/qiskit/SKILL.md",
+          license: "Apache-2.0",
+          bundled: true
+        },
+        {
+          name: "qutip",
+          path: "skills/qutip/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "rdkit",
+          path: "skills/rdkit/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "relsa-severity-assessment",
+          path: "skills/relsa-severity-assessment/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "research-grants",
+          path: "skills/research-grants/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "research-lookup",
+          path: "skills/research-lookup/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "rowan",
+          path: "skills/rowan/SKILL.md",
+          license: "Proprietary (API key required)",
+          bundled: false
+        },
+        {
+          name: "scanpy",
+          path: "skills/scanpy/SKILL.md",
+          license: "BSD-3-Clause",
+          bundled: true
+        },
+        {
+          name: "scholar-evaluation",
+          path: "skills/scholar-evaluation/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "scientific-brainstorming",
+          path: "skills/scientific-brainstorming/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "scientific-critical-thinking",
+          path: "skills/scientific-critical-thinking/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "scientific-schematics",
+          path: "skills/scientific-schematics/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "scientific-slides",
+          path: "skills/scientific-slides/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "scientific-visualization",
+          path: "skills/scientific-visualization/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "scientific-writing",
+          path: "skills/scientific-writing/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "scikit-bio",
+          path: "skills/scikit-bio/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "scikit-learn",
+          path: "skills/scikit-learn/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "scikit-survival",
+          path: "skills/scikit-survival/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "scvelo",
+          path: "skills/scvelo/SKILL.md",
+          license: "BSD-3-Clause",
+          bundled: true
+        },
+        {
+          name: "scvi-tools",
+          path: "skills/scvi-tools/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "seaborn",
+          path: "skills/seaborn/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "shap",
+          path: "skills/shap/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "simpy",
+          path: "skills/simpy/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "stable-baselines3",
+          path: "skills/stable-baselines3/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "statistical-analysis",
+          path: "skills/statistical-analysis/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "statistical-power",
+          path: "skills/statistical-power/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "statsmodels",
+          path: "skills/statsmodels/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "sympy",
+          path: "skills/sympy/SKILL.md",
+          license: "https://github.com/sympy/sympy/blob/master/LICENSE",
+          bundled: false
+        },
+        {
+          name: "tamarind",
+          path: "skills/tamarind/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "tiledbvcf",
+          path: "skills/tiledbvcf/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "timesfm-forecasting",
+          path: "skills/timesfm-forecasting/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "torch-geometric",
+          path: "skills/torch-geometric/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "torchdrug",
+          path: "skills/torchdrug/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "transformers",
+          path: "skills/transformers/SKILL.md",
+          license: "Apache-2.0 license",
+          bundled: true
+        },
+        {
+          name: "treatment-plans",
+          path: "skills/treatment-plans/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "umap-learn",
+          path: "skills/umap-learn/SKILL.md",
+          license: "BSD-3-Clause license",
+          bundled: true
+        },
+        {
+          name: "uncertainty-and-units",
+          path: "skills/uncertainty-and-units/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "usfiscaldata",
+          path: "skills/usfiscaldata/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "vaex",
+          path: "skills/vaex/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "venue-templates",
+          path: "skills/venue-templates/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        },
+        {
+          name: "waypoint-bio",
+          path: "skills/waypoint-bio/SKILL.md",
+          license: "MIT",
+          bundled: true
+        },
+        {
+          name: "what-if-oracle",
+          path: "skills/what-if-oracle/SKILL.md",
+          license: "CC BY-NC-SA 4.0",
+          bundled: false
+        },
+        {
+          name: "xlsx",
+          path: "skills/xlsx/SKILL.md",
+          license: "Proprietary. LICENSE.txt has complete terms",
+          bundled: false
+        },
+        {
+          name: "zarr-python",
+          path: "skills/zarr-python/SKILL.md",
+          license: "MIT license",
+          bundled: true
+        }
+      ],
+      runtimeFiles: []
+    },
+    {
+      id: "academic",
+      repository: "Imbad0202/academic-research-skills",
+      commit: "3c546bc08c56f79e0068f1ea4f0acedf5bf69b5e",
+      archiveSha256: "98aa80d4d160c6e92d7b73d902998ffcb8599b8ab89f0b6727ae738584838217",
+      license: "CC-BY-NC-4.0",
+      licenseFiles: ["LICENSE", "NOTICE.md"],
+      skills: [
+        {
+          name: "academic-paper",
+          path: "academic-paper/SKILL.md",
+          license: "CC-BY-NC-4.0",
+          bundled: true
+        },
+        {
+          name: "academic-paper-reviewer",
+          path: "academic-paper-reviewer/SKILL.md",
+          license: "CC-BY-NC-4.0",
+          bundled: true
+        },
+        {
+          name: "academic-pipeline",
+          path: "academic-pipeline/SKILL.md",
+          license: "CC-BY-NC-4.0",
+          bundled: true
+        },
+        {
+          name: "deep-research",
+          path: "deep-research/SKILL.md",
+          license: "CC-BY-NC-4.0",
+          bundled: true
+        }
+      ],
+      runtimeFiles: [
+        {
+          path: "MODE_REGISTRY.md",
+          sha256: "fe3974f9cd139801c935f9dffb0031e73901f3548cb3c887f1a15a1001a1eb5d"
+        },
+        {
+          path: "commands/ars-3w.md",
+          sha256: "2db86727d54541ef4ea605805018b6c68ee2aa497cfdc2844dff3015d6e23b94"
+        },
+        {
+          path: "commands/ars-abstract.md",
+          sha256: "c2040a286ac382001a61ea81c7f6fb165716320406ec31379ce1f1eda5cc2104"
+        },
+        {
+          path: "commands/ars-cache-invalidate.md",
+          sha256: "60c6dc0d42eaf881d52e781dc1528904438b9a6ab23a5f0d8f56d426f311933e"
+        },
+        {
+          path: "commands/ars-citation-check.md",
+          sha256: "5834a3cf8ca5caae07ec85dbbe833ca09930e64b2eb60adaeabadbbe8bef6435"
+        },
+        {
+          path: "commands/ars-disclosure.md",
+          sha256: "5108d232b745ba085e45f94ca85f468abdf4bc8370180634c7bfc7fd9cb8fdfb"
+        },
+        {
+          path: "commands/ars-format-convert.md",
+          sha256: "49364fcd2a0a5b96ed3e979931b6db73f18ca0667d79268ef5c33b60f16e4b5c"
+        },
+        {
+          path: "commands/ars-full.md",
+          sha256: "b310bb23b83fc7b11460068b22fd5d56b28d8c151f524956fb5f5feee15e2606"
+        },
+        {
+          path: "commands/ars-lit-review.md",
+          sha256: "08cacaa17125aa386774683ad2bc8c360c003ab1323dfc931941f7f16768dbc8"
+        },
+        {
+          path: "commands/ars-mark-read.md",
+          sha256: "1272790ecd5a34835fc90584b48b6aa06985fb609410f191c1b55c9ad4259de1"
+        },
+        {
+          path: "commands/ars-outline.md",
+          sha256: "f1c993aa598ef67337109c8367c800d43cbcae760c0bdc2fe7c5bb469e395a05"
+        },
+        {
+          path: "commands/ars-plan.md",
+          sha256: "c231143a84bbe086091f5fcd94b1f3117fd91a00fa2e8c19707f386be49909b1"
+        },
+        {
+          path: "commands/ars-rebuttal-audit.md",
+          sha256: "4b48c4cd799417fe5d5cd62f55fc87050a562d47d5a7084ee6446454f0908ba4"
+        },
+        {
+          path: "commands/ars-reviewer.md",
+          sha256: "c8316335cfa054962afc6dd87a6a45036d0c07efe8c1d1911f013498d036c17b"
+        },
+        {
+          path: "commands/ars-revision-coach.md",
+          sha256: "975591bf5e9fd1d4a697798844c6d1604a6f1d5220da24b090b3d895c8125745"
+        },
+        {
+          path: "commands/ars-revision.md",
+          sha256: "7135f32bca5cc125539de4d8170ea673d2bb73cdccd9272d2d72f514b5290fb0"
+        },
+        {
+          path: "commands/ars-unmark-read.md",
+          sha256: "4ce45672f07da9d48bb3350b273523e1b0e9cb021ddf1849ca1b7d8cc8d896ca"
+        },
+        {
+          path: "package.json",
+          sha256: "5497d262a2af42e25d0e31ab65f115735c2b85c6c256576494cafda760165550"
+        },
+        {
+          path: "pi/package.json",
+          sha256: "a4fceb32c55830f4cbd0116482414707de4a37067036bfa8243321186f06687a"
+        },
+        {
+          path: "pi/wrapper.js",
+          sha256: "4ec8a6884f87b55d2e201dbe93aaaabc0ba33a46ef9ae0677b212c53fcc9ce2a"
+        }
+      ]
+    }
+  ]
+};
+
+// packages/shared/src/workflow-profiles.json
+var workflow_profiles_default = [
+  {
+    name: "nature-academic-search",
+    direction: "evidence",
+    subdomain: "\u8BC1\u636E\u68C0\u7D22\u4E0E\u7EFC\u8FF0",
+    source: "nature"
+  },
+  {
+    name: "nature-citation",
+    direction: "evidence",
+    subdomain: "\u5F15\u6587\u4E0E\u8BBA\u636E\u6838\u9A8C",
+    source: "nature"
+  },
+  {
+    name: "nature-data",
+    direction: "writing",
+    subdomain: "\u62A5\u544A\u89C4\u8303\u3001\u7EDF\u8BA1\u5448\u73B0\u4E0E\u6570\u636E\u58F0\u660E",
+    source: "nature"
+  },
+  {
+    name: "nature-downloader",
+    direction: "evidence",
+    subdomain: "\u83B7\u53D6\u3001\u9605\u8BFB\u4E0E\u8BBA\u6587\u5361",
+    source: "nature"
+  },
+  {
+    name: "nature-experiment-log",
+    direction: "evidence",
+    subdomain: "\u8BA2\u9605\u4E0E\u5B9E\u9A8C\u65E5\u5FD7",
+    source: "nature"
+  },
+  {
+    name: "nature-figure",
+    direction: "presentation",
+    subdomain: "\u6570\u636E\u56FE\u8868",
+    source: "nature"
+  },
+  {
+    name: "nature-image2ppt",
+    direction: "presentation",
+    subdomain: "\u5E7B\u706F\u7247\u4E0E\u6D77\u62A5",
+    source: "nature"
+  },
+  {
+    name: "nature-literature-pipeline",
+    direction: "evidence",
+    subdomain: "\u8BA2\u9605\u4E0E\u5B9E\u9A8C\u65E5\u5FD7",
+    source: "nature"
+  },
+  {
+    name: "nature-paper-card",
+    direction: "evidence",
+    subdomain: "\u83B7\u53D6\u3001\u9605\u8BFB\u4E0E\u8BBA\u6587\u5361",
+    source: "nature"
+  },
+  {
+    name: "nature-paper-to-patent",
+    direction: "writing",
+    subdomain: "\u4E13\u5229\u4E0E\u4E13\u4E1A\u62A5\u544A\uFF08\u53D7\u9650\u5206\u652F\uFF09",
+    source: "nature"
+  },
+  {
+    name: "nature-paper2ppt",
+    direction: "presentation",
+    subdomain: "\u5E7B\u706F\u7247\u4E0E\u6D77\u62A5",
+    source: "nature"
+  },
+  {
+    name: "nature-polishing",
+    direction: "writing",
+    subdomain: "\u6B63\u6587\u4E0E\u8BED\u8A00\u7F16\u8F91",
+    source: "nature"
+  },
+  {
+    name: "researchwrite",
+    direction: "planning",
+    subdomain: "\u9879\u76EE\u7533\u8BF7\u4E0E\u7814\u7A76\u8BA1\u5212",
+    source: "nature"
+  },
+  {
+    name: "nature-reader",
+    direction: "evidence",
+    subdomain: "\u83B7\u53D6\u3001\u9605\u8BFB\u4E0E\u8BBA\u6587\u5361",
+    source: "nature"
+  },
+  {
+    name: "nature-ref-verifier",
+    direction: "evidence",
+    subdomain: "\u5F15\u6587\u4E0E\u8BBA\u636E\u6838\u9A8C",
+    source: "nature"
+  },
+  {
+    name: "nature-response",
+    direction: "writing",
+    subdomain: "\u5BA1\u7A3F\u3001\u56DE\u590D\u4E0E\u8BC4\u4EF7",
+    source: "nature"
+  },
+  {
+    name: "nature-reviewer",
+    direction: "writing",
+    subdomain: "\u5BA1\u7A3F\u3001\u56DE\u590D\u4E0E\u8BC4\u4EF7",
+    source: "nature"
+  },
+  {
+    name: "nature-shared",
+    direction: "internal",
+    subdomain: "\u8BC1\u636E\u4E0E\u4EFB\u52A1\u63A7\u5236/\u5171\u4EAB\u8D44\u6E90",
+    source: "nature"
+  },
+  {
+    name: "nature-statistics",
+    direction: "writing",
+    subdomain: "\u62A5\u544A\u89C4\u8303\u3001\u7EDF\u8BA1\u5448\u73B0\u4E0E\u6570\u636E\u58F0\u660E",
+    source: "nature"
+  },
+  {
+    name: "nature-writing",
+    direction: "writing",
+    subdomain: "\u6B63\u6587\u4E0E\u8BED\u8A00\u7F16\u8F91",
+    source: "nature"
+  },
+  {
+    name: "adaptyv",
+    direction: "engineering",
+    subdomain: "\u5B9E\u9A8C\u5E73\u53F0\u3001\u8BB0\u5F55\u7CFB\u7EDF\u4E0E\u8BBE\u5907",
+    source: "scientific"
+  },
+  {
+    name: "aeon",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "alphagenome",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "analytical-method-validation",
+    direction: "planning",
+    subdomain: "\u65B9\u6CD5\u9A8C\u8BC1\u4E0E\u5408\u89C4\u51C6\u5907",
+    source: "scientific"
+  },
+  {
+    name: "anndata",
+    direction: "analysis",
+    subdomain: "\u8F6C\u5F55\u7EC4\u4E0E\u5355\u7EC6\u80DE",
+    source: "scientific"
+  },
+  {
+    name: "arbor",
+    direction: "engineering",
+    subdomain: "\u81EA\u52A8\u4F18\u5316\u4E0E\u6280\u80FD\u63D0\u6848\uFF08\u663E\u5F0F\u6388\u6743\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "arboreto",
+    direction: "analysis",
+    subdomain: "\u8F6C\u5F55\u7EC4\u4E0E\u5355\u7EC6\u80DE",
+    source: "scientific"
+  },
+  {
+    name: "astropy",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "autoskill",
+    direction: "engineering",
+    subdomain: "\u81EA\u52A8\u4F18\u5316\u4E0E\u6280\u80FD\u63D0\u6848\uFF08\u663E\u5F0F\u6388\u6743\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "benchling-integration",
+    direction: "engineering",
+    subdomain: "\u5B9E\u9A8C\u5E73\u53F0\u3001\u8BB0\u5F55\u7CFB\u7EDF\u4E0E\u8BBE\u5907",
+    source: "scientific"
+  },
+  {
+    name: "bgpt-paper-search",
+    direction: "evidence",
+    subdomain: "\u68C0\u7D22\u670D\u52A1\u9002\u914D",
+    source: "scientific"
+  },
+  {
+    name: "bids",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "biopython",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "bioservices",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "bulk-rnaseq",
+    direction: "analysis",
+    subdomain: "\u8F6C\u5F55\u7EC4\u4E0E\u5355\u7EC6\u80DE",
+    source: "scientific"
+  },
+  {
+    name: "cellxgene-census",
+    direction: "analysis",
+    subdomain: "\u8F6C\u5F55\u7EC4\u4E0E\u5355\u7EC6\u80DE",
+    source: "scientific"
+  },
+  {
+    name: "cirq",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "citation-management",
+    direction: "evidence",
+    subdomain: "\u5F15\u6587\u4E0E\u8BBA\u636E\u6838\u9A8C",
+    source: "scientific"
+  },
+  {
+    name: "clinical-decision-support",
+    direction: "writing",
+    subdomain: "\u4E13\u5229\u4E0E\u4E13\u4E1A\u62A5\u544A\uFF08\u53D7\u9650\u5206\u652F\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "clinical-reports",
+    direction: "writing",
+    subdomain: "\u4E13\u5229\u4E0E\u4E13\u4E1A\u62A5\u544A\uFF08\u53D7\u9650\u5206\u652F\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "cobrapy",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "consciousness-council",
+    direction: "planning",
+    subdomain: "\u63A2\u7D22\u6027\u63A8\u6F14\uFF08\u975E\u6838\u5FC3\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "dask",
+    direction: "analysis",
+    subdomain: "\u6570\u636E\u6574\u7406\u3001\u5B58\u50A8\u4E0E\u6EAF\u6E90",
+    source: "scientific"
+  },
+  {
+    name: "database-lookup",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "datalad",
+    direction: "analysis",
+    subdomain: "\u6570\u636E\u6574\u7406\u3001\u5B58\u50A8\u4E0E\u6EAF\u6E90",
+    source: "scientific"
+  },
+  {
+    name: "datamol",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "deepchem",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "deepspot-m",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "deeptools",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "depmap",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "dhdna-profiler",
+    direction: "planning",
+    subdomain: "\u63A2\u7D22\u6027\u63A8\u6F14\uFF08\u975E\u6838\u5FC3\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "diffdock",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "dnanexus-integration",
+    direction: "engineering",
+    subdomain: "\u7B97\u529B\u3001\u4E91\u5E73\u53F0\u4E0E\u7BA1\u7EBF",
+    source: "scientific"
+  },
+  {
+    name: "docx",
+    direction: "presentation",
+    subdomain: "\u6587\u6863\u4E0E\u8868\u683C\u683C\u5F0F\uFF08\u5F85\u8BB8\u53EF\u590D\u6838\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "esm",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "etetoolkit",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "exa-search",
+    direction: "evidence",
+    subdomain: "\u68C0\u7D22\u670D\u52A1\u9002\u914D",
+    source: "scientific"
+  },
+  {
+    name: "experimental-design",
+    direction: "planning",
+    subdomain: "\u9009\u9898\u3001\u5047\u8BBE\u4E0E\u5B9E\u9A8C\u8BBE\u8BA1",
+    source: "scientific"
+  },
+  {
+    name: "exploratory-data-analysis",
+    direction: "analysis",
+    subdomain: "\u6570\u636E\u6574\u7406\u3001\u5B58\u50A8\u4E0E\u6EAF\u6E90",
+    source: "scientific"
+  },
+  {
+    name: "flowio",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "fluidsim",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "folklore-variant-evidence",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "generate-image",
+    direction: "presentation",
+    subdomain: "\u89E3\u91CA\u56FE\u4E0E\u89C6\u89C9\u7D20\u6750",
+    source: "scientific"
+  },
+  {
+    name: "geniml",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "genomic-coordinates",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "genomic-intelligence",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "geomaster",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "geopandas",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "get-available-resources",
+    direction: "engineering",
+    subdomain: "\u7B97\u529B\u3001\u4E91\u5E73\u53F0\u4E0E\u7BA1\u7EBF",
+    source: "scientific"
+  },
+  {
+    name: "gget",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "ginkgo-cloud-lab",
+    direction: "engineering",
+    subdomain: "\u5B9E\u9A8C\u5E73\u53F0\u3001\u8BB0\u5F55\u7CFB\u7EDF\u4E0E\u8BBE\u5907",
+    source: "scientific"
+  },
+  {
+    name: "glycoengineering",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "gtars",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "histolab",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "hugging-science",
+    direction: "engineering",
+    subdomain: "\u7B97\u529B\u3001\u4E91\u5E73\u53F0\u4E0E\u7BA1\u7EBF",
+    source: "scientific"
+  },
+  {
+    name: "hypogenic",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "hypothesis-generation",
+    direction: "planning",
+    subdomain: "\u9009\u9898\u3001\u5047\u8BBE\u4E0E\u5B9E\u9A8C\u8BBE\u8BA1",
+    source: "scientific"
+  },
+  {
+    name: "imaging-data-commons",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "infographics",
+    direction: "presentation",
+    subdomain: "\u89E3\u91CA\u56FE\u4E0E\u89C6\u89C9\u7D20\u6750",
+    source: "scientific"
+  },
+  {
+    name: "iso-standards-readiness",
+    direction: "planning",
+    subdomain: "\u65B9\u6CD5\u9A8C\u8BC1\u4E0E\u5408\u89C4\u51C6\u5907",
+    source: "scientific"
+  },
+  {
+    name: "lab-hardware-cad",
+    direction: "engineering",
+    subdomain: "\u5B9E\u9A8C\u5E73\u53F0\u3001\u8BB0\u5F55\u7CFB\u7EDF\u4E0E\u8BBE\u5907",
+    source: "scientific"
+  },
+  {
+    name: "labarchive-integration",
+    direction: "engineering",
+    subdomain: "\u5B9E\u9A8C\u5E73\u53F0\u3001\u8BB0\u5F55\u7CFB\u7EDF\u4E0E\u8BBE\u5907",
+    source: "scientific"
+  },
+  {
+    name: "lamindb",
+    direction: "analysis",
+    subdomain: "\u6570\u636E\u6574\u7406\u3001\u5B58\u50A8\u4E0E\u6EAF\u6E90",
+    source: "scientific"
+  },
+  {
+    name: "latchbio-integration",
+    direction: "engineering",
+    subdomain: "\u7B97\u529B\u3001\u4E91\u5E73\u53F0\u4E0E\u7BA1\u7EBF",
+    source: "scientific"
+  },
+  {
+    name: "latex-posters",
+    direction: "presentation",
+    subdomain: "\u5E7B\u706F\u7247\u4E0E\u6D77\u62A5",
+    source: "scientific"
+  },
+  {
+    name: "liteparse",
+    direction: "evidence",
+    subdomain: "\u83B7\u53D6\u3001\u9605\u8BFB\u4E0E\u8BBA\u6587\u5361",
+    source: "scientific"
+  },
+  {
+    name: "literature-review",
+    direction: "evidence",
+    subdomain: "\u8BC1\u636E\u68C0\u7D22\u4E0E\u7EFC\u8FF0",
+    source: "scientific"
+  },
+  {
+    name: "markdown-mermaid-writing",
+    direction: "presentation",
+    subdomain: "\u89E3\u91CA\u56FE\u4E0E\u89C6\u89C9\u7D20\u6750",
+    source: "scientific"
+  },
+  {
+    name: "market-research-reports",
+    direction: "writing",
+    subdomain: "\u4E13\u5229\u4E0E\u4E13\u4E1A\u62A5\u544A\uFF08\u53D7\u9650\u5206\u652F\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "markitdown",
+    direction: "evidence",
+    subdomain: "\u83B7\u53D6\u3001\u9605\u8BFB\u4E0E\u8BBA\u6587\u5361",
+    source: "scientific"
+  },
+  {
+    name: "matchms",
+    direction: "analysis",
+    subdomain: "\u8D28\u8C31\u4E0E\u86CB\u767D\u7EC4",
+    source: "scientific"
+  },
+  {
+    name: "matlab",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "matplotlib",
+    direction: "presentation",
+    subdomain: "\u6570\u636E\u56FE\u8868",
+    source: "scientific"
+  },
+  {
+    name: "medchem",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "modal",
+    direction: "engineering",
+    subdomain: "\u7B97\u529B\u3001\u4E91\u5E73\u53F0\u4E0E\u7BA1\u7EBF",
+    source: "scientific"
+  },
+  {
+    name: "molecular-dynamics",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "molfeat",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "ncats-arax",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "networkx",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "neurokit2",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "neuropixels-analysis",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "nextflow",
+    direction: "engineering",
+    subdomain: "\u7B97\u529B\u3001\u4E91\u5E73\u53F0\u4E0E\u7BA1\u7EBF",
+    source: "scientific"
+  },
+  {
+    name: "omero-integration",
+    direction: "engineering",
+    subdomain: "\u5B9E\u9A8C\u5E73\u53F0\u3001\u8BB0\u5F55\u7CFB\u7EDF\u4E0E\u8BBE\u5907",
+    source: "scientific"
+  },
+  {
+    name: "onekgpd",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "ontology-term-resolution",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "open-notebook",
+    direction: "evidence",
+    subdomain: "\u77E5\u8BC6\u5E93\u4E0E\u6587\u732E\u5E93",
+    source: "scientific"
+  },
+  {
+    name: "openpiv",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "opentrons-integration",
+    direction: "engineering",
+    subdomain: "\u5B9E\u9A8C\u5E73\u53F0\u3001\u8BB0\u5F55\u7CFB\u7EDF\u4E0E\u8BBE\u5907",
+    source: "scientific"
+  },
+  {
+    name: "optimize-for-gpu",
+    direction: "engineering",
+    subdomain: "\u7B97\u529B\u3001\u4E91\u5E73\u53F0\u4E0E\u7BA1\u7EBF",
+    source: "scientific"
+  },
+  {
+    name: "pacsomatic",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "paper-lookup",
+    direction: "evidence",
+    subdomain: "\u8BC1\u636E\u68C0\u7D22\u4E0E\u7EFC\u8FF0",
+    source: "scientific"
+  },
+  {
+    name: "paperclip",
+    direction: "evidence",
+    subdomain: "\u68C0\u7D22\u670D\u52A1\u9002\u914D",
+    source: "scientific"
+  },
+  {
+    name: "paperzilla",
+    direction: "evidence",
+    subdomain: "\u68C0\u7D22\u670D\u52A1\u9002\u914D",
+    source: "scientific"
+  },
+  {
+    name: "parallel-web",
+    direction: "evidence",
+    subdomain: "\u68C0\u7D22\u670D\u52A1\u9002\u914D",
+    source: "scientific"
+  },
+  {
+    name: "pathml",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "pathogen-variant-surveillance",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "pathway-enrichment",
+    direction: "analysis",
+    subdomain: "\u8F6C\u5F55\u7EC4\u4E0E\u5355\u7EC6\u80DE",
+    source: "scientific"
+  },
+  {
+    name: "pdf",
+    direction: "presentation",
+    subdomain: "\u6587\u6863\u4E0E\u8868\u683C\u683C\u5F0F\uFF08\u5F85\u8BB8\u53EF\u590D\u6838\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "peer-review",
+    direction: "writing",
+    subdomain: "\u5BA1\u7A3F\u3001\u56DE\u590D\u4E0E\u8BC4\u4EF7",
+    source: "scientific"
+  },
+  {
+    name: "pennylane",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "phylogenetics",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "pi-agent",
+    direction: "engineering",
+    subdomain: "\u4EA4\u63A5\u4E0E\u5E94\u7528\u5B9A\u5236",
+    source: "scientific"
+  },
+  {
+    name: "pkpd-modeling",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "polars-bio",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "polars",
+    direction: "analysis",
+    subdomain: "\u6570\u636E\u6574\u7406\u3001\u5B58\u50A8\u4E0E\u6EAF\u6E90",
+    source: "scientific"
+  },
+  {
+    name: "pptx-posters",
+    direction: "presentation",
+    subdomain: "\u5E7B\u706F\u7247\u4E0E\u6D77\u62A5",
+    source: "scientific"
+  },
+  {
+    name: "pptx",
+    direction: "presentation",
+    subdomain: "\u6587\u6863\u4E0E\u8868\u683C\u683C\u5F0F\uFF08\u5F85\u8BB8\u53EF\u590D\u6838\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "primekg",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "protocolsio-integration",
+    direction: "engineering",
+    subdomain: "\u5B9E\u9A8C\u5E73\u53F0\u3001\u8BB0\u5F55\u7CFB\u7EDF\u4E0E\u8BBE\u5907",
+    source: "scientific"
+  },
+  {
+    name: "pufferlib",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "pydeseq2",
+    direction: "analysis",
+    subdomain: "\u8F6C\u5F55\u7EC4\u4E0E\u5355\u7EC6\u80DE",
+    source: "scientific"
+  },
+  {
+    name: "pydicom",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "pyhealth",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "pylabrobot",
+    direction: "engineering",
+    subdomain: "\u5B9E\u9A8C\u5E73\u53F0\u3001\u8BB0\u5F55\u7CFB\u7EDF\u4E0E\u8BBE\u5907",
+    source: "scientific"
+  },
+  {
+    name: "pymatgen",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "pymc",
+    direction: "analysis",
+    subdomain: "\u7EDF\u8BA1\u5EFA\u6A21\u4E0E\u4E0D\u786E\u5B9A\u6027",
+    source: "scientific"
+  },
+  {
+    name: "pymoo",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "pyopenms",
+    direction: "analysis",
+    subdomain: "\u8D28\u8C31\u4E0E\u86CB\u767D\u7EC4",
+    source: "scientific"
+  },
+  {
+    name: "pysam",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "pytdc",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "pytorch-lightning",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "pyzotero",
+    direction: "evidence",
+    subdomain: "\u77E5\u8BC6\u5E93\u4E0E\u6587\u732E\u5E93",
+    source: "scientific"
+  },
+  {
+    name: "qiskit",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "qutip",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "rdkit",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "relsa-severity-assessment",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "research-grants",
+    direction: "planning",
+    subdomain: "\u9879\u76EE\u7533\u8BF7\u4E0E\u7814\u7A76\u8BA1\u5212",
+    source: "scientific"
+  },
+  {
+    name: "research-lookup",
+    direction: "evidence",
+    subdomain: "\u8BC1\u636E\u68C0\u7D22\u4E0E\u7EFC\u8FF0",
+    source: "scientific"
+  },
+  {
+    name: "rowan",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "scanpy",
+    direction: "analysis",
+    subdomain: "\u8F6C\u5F55\u7EC4\u4E0E\u5355\u7EC6\u80DE",
+    source: "scientific"
+  },
+  {
+    name: "scholar-evaluation",
+    direction: "writing",
+    subdomain: "\u5BA1\u7A3F\u3001\u56DE\u590D\u4E0E\u8BC4\u4EF7",
+    source: "scientific"
+  },
+  {
+    name: "scientific-brainstorming",
+    direction: "planning",
+    subdomain: "\u9009\u9898\u3001\u5047\u8BBE\u4E0E\u5B9E\u9A8C\u8BBE\u8BA1",
+    source: "scientific"
+  },
+  {
+    name: "scientific-critical-thinking",
+    direction: "evidence",
+    subdomain: "\u5F15\u6587\u4E0E\u8BBA\u636E\u6838\u9A8C",
+    source: "scientific"
+  },
+  {
+    name: "scientific-schematics",
+    direction: "presentation",
+    subdomain: "\u89E3\u91CA\u56FE\u4E0E\u89C6\u89C9\u7D20\u6750",
+    source: "scientific"
+  },
+  {
+    name: "scientific-slides",
+    direction: "presentation",
+    subdomain: "\u5E7B\u706F\u7247\u4E0E\u6D77\u62A5",
+    source: "scientific"
+  },
+  {
+    name: "scientific-visualization",
+    direction: "presentation",
+    subdomain: "\u6570\u636E\u56FE\u8868",
+    source: "scientific"
+  },
+  {
+    name: "scientific-writing",
+    direction: "writing",
+    subdomain: "\u6B63\u6587\u4E0E\u8BED\u8A00\u7F16\u8F91",
+    source: "scientific"
+  },
+  {
+    name: "scikit-bio",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "scikit-learn",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "scikit-survival",
+    direction: "analysis",
+    subdomain: "\u5F71\u50CF\u3001\u751F\u7406\u4E0E\u533B\u5B66\u7814\u7A76",
+    source: "scientific"
+  },
+  {
+    name: "scvelo",
+    direction: "analysis",
+    subdomain: "\u8F6C\u5F55\u7EC4\u4E0E\u5355\u7EC6\u80DE",
+    source: "scientific"
+  },
+  {
+    name: "scvi-tools",
+    direction: "analysis",
+    subdomain: "\u8F6C\u5F55\u7EC4\u4E0E\u5355\u7EC6\u80DE",
+    source: "scientific"
+  },
+  {
+    name: "seaborn",
+    direction: "presentation",
+    subdomain: "\u6570\u636E\u56FE\u8868",
+    source: "scientific"
+  },
+  {
+    name: "shap",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "simpy",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "stable-baselines3",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "statistical-analysis",
+    direction: "analysis",
+    subdomain: "\u7EDF\u8BA1\u5EFA\u6A21\u4E0E\u4E0D\u786E\u5B9A\u6027",
+    source: "scientific"
+  },
+  {
+    name: "statistical-power",
+    direction: "planning",
+    subdomain: "\u9009\u9898\u3001\u5047\u8BBE\u4E0E\u5B9E\u9A8C\u8BBE\u8BA1",
+    source: "scientific"
+  },
+  {
+    name: "statsmodels",
+    direction: "analysis",
+    subdomain: "\u7EDF\u8BA1\u5EFA\u6A21\u4E0E\u4E0D\u786E\u5B9A\u6027",
+    source: "scientific"
+  },
+  {
+    name: "sympy",
+    direction: "analysis",
+    subdomain: "\u7269\u7406\u3001\u5730\u7406\u3001\u6750\u6599\u4E0E\u91CF\u5B50",
+    source: "scientific"
+  },
+  {
+    name: "tamarind",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "tiledbvcf",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "timesfm-forecasting",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "torch-geometric",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "torchdrug",
+    direction: "analysis",
+    subdomain: "\u5316\u5B66\u3001\u5206\u5B50\u4E0E\u836F\u7269",
+    source: "scientific"
+  },
+  {
+    name: "transformers",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "treatment-plans",
+    direction: "writing",
+    subdomain: "\u4E13\u5229\u4E0E\u4E13\u4E1A\u62A5\u544A\uFF08\u53D7\u9650\u5206\u652F\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "umap-learn",
+    direction: "analysis",
+    subdomain: "\u673A\u5668\u5B66\u4E60\u3001\u65F6\u95F4\u5E8F\u5217\u4E0E\u89E3\u91CA",
+    source: "scientific"
+  },
+  {
+    name: "uncertainty-and-units",
+    direction: "analysis",
+    subdomain: "\u7EDF\u8BA1\u5EFA\u6A21\u4E0E\u4E0D\u786E\u5B9A\u6027",
+    source: "scientific"
+  },
+  {
+    name: "usfiscaldata",
+    direction: "evidence",
+    subdomain: "\u4E13\u4E1A\u6570\u636E\u5E93\u4E0E\u6807\u8BC6",
+    source: "scientific"
+  },
+  {
+    name: "vaex",
+    direction: "analysis",
+    subdomain: "\u6570\u636E\u6574\u7406\u3001\u5B58\u50A8\u4E0E\u6EAF\u6E90",
+    source: "scientific"
+  },
+  {
+    name: "venue-templates",
+    direction: "writing",
+    subdomain: "\u62A5\u544A\u89C4\u8303\u3001\u7EDF\u8BA1\u5448\u73B0\u4E0E\u6570\u636E\u58F0\u660E",
+    source: "scientific"
+  },
+  {
+    name: "waypoint-bio",
+    direction: "analysis",
+    subdomain: "\u57FA\u56E0\u7EC4\u3001\u5E8F\u5217\u4E0E\u8FDB\u5316",
+    source: "scientific"
+  },
+  {
+    name: "what-if-oracle",
+    direction: "planning",
+    subdomain: "\u63A2\u7D22\u6027\u63A8\u6F14\uFF08\u975E\u6838\u5FC3\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "xlsx",
+    direction: "presentation",
+    subdomain: "\u6587\u6863\u4E0E\u8868\u683C\u683C\u5F0F\uFF08\u5F85\u8BB8\u53EF\u590D\u6838\uFF09",
+    source: "scientific"
+  },
+  {
+    name: "zarr-python",
+    direction: "analysis",
+    subdomain: "\u6570\u636E\u6574\u7406\u3001\u5B58\u50A8\u4E0E\u6EAF\u6E90",
+    source: "scientific"
+  },
+  {
+    name: "academic-paper-reviewer",
+    direction: "writing",
+    subdomain: "\u5BA1\u7A3F\u3001\u56DE\u590D\u4E0E\u8BC4\u4EF7",
+    source: "academic"
+  },
+  {
+    name: "academic-paper",
+    direction: "writing",
+    subdomain: "\u6B63\u6587\u4E0E\u8BED\u8A00\u7F16\u8F91",
+    source: "academic"
+  },
+  {
+    name: "academic-pipeline",
+    direction: "planning",
+    subdomain: "\u5B8C\u6574\u79D1\u7814\u8BA1\u5212\uFF08\u663E\u5F0F\u6A21\u5F0F\uFF09",
+    source: "academic"
+  },
+  {
+    name: "deep-research",
+    direction: "evidence",
+    subdomain: "\u8BC1\u636E\u68C0\u7D22\u4E0E\u7EFC\u8FF0",
+    source: "academic"
+  },
+  {
+    name: "research-show-me",
+    direction: "presentation",
+    subdomain: "\u89E3\u91CA\u56FE\u4E0E\u89C6\u89C9\u7D20\u6750",
+    source: "project"
+  },
+  {
+    name: "research-vault",
+    direction: "evidence",
+    subdomain: "\u77E5\u8BC6\u5E93\u4E0E\u6587\u732E\u5E93",
+    source: "project"
+  },
+  {
+    name: "research-workflow",
+    direction: "internal",
+    subdomain: "\u8BC1\u636E\u4E0E\u4EFB\u52A1\u63A7\u5236/\u5171\u4EAB\u8D44\u6E90",
+    source: "project"
+  },
+  {
+    name: "zotero-literature",
+    direction: "evidence",
+    subdomain: "\u77E5\u8BC6\u5E93\u4E0E\u6587\u732E\u5E93",
+    source: "project"
+  },
+  {
+    name: "channel-pickup",
+    direction: "engineering",
+    subdomain: "\u4EA4\u63A5\u4E0E\u5E94\u7528\u5B9A\u5236",
+    source: "project"
+  },
+  {
+    name: "design-handoff",
+    direction: "engineering",
+    subdomain: "\u4EA4\u63A5\u4E0E\u5E94\u7528\u5B9A\u5236",
+    source: "project"
+  },
+  {
+    name: "drone-ui-plugin",
+    direction: "engineering",
+    subdomain: "\u4EA4\u63A5\u4E0E\u5E94\u7528\u5B9A\u5236",
+    source: "project"
+  }
+];
+
+// packages/shared/src/workflow-catalog.ts
+var WORKFLOW_PROFILES = workflow_profiles_default;
+var byName = new Map(WORKFLOW_PROFILES.map((p) => [p.name, p]));
+var WORKFLOW_STAGES = [
+  {
+    id: "ideation",
+    direction: "planning",
+    label: {
+      zh: "\u79D1\u7814\u9009\u9898\u4E0E\u5047\u8BBE",
+      en: "Questions and hypotheses"
+    },
+    commands: ["skill:hypothesis-generation", "skill:scientific-brainstorming"],
+    contract: "Question, rival hypotheses, discriminating evidence; no claim of completed experiments."
+  },
+  {
+    id: "methods",
+    direction: "planning",
+    label: {
+      zh: "\u5B9E\u9A8C\u8BBE\u8BA1",
+      en: "Experimental design"
+    },
+    commands: ["skill:experimental-design"],
+    contract: "Design, experimental units, controls and assumptions before data collection."
+  },
+  {
+    id: "power",
+    direction: "planning",
+    label: {
+      zh: "\u6837\u672C\u91CF\u4E0E\u7EDF\u8BA1\u6548\u80FD",
+      en: "Sample size and power"
+    },
+    commands: ["skill:statistical-power"],
+    contract: "Prospective sample-size assumptions, effect size and uncertainty."
+  },
+  {
+    id: "grants",
+    direction: "planning",
+    label: {
+      zh: "\u5F00\u9898\u4E0E\u9879\u76EE\u7533\u8BF7",
+      en: "Proposals and grants"
+    },
+    commands: ["skill:researchwrite", "skill:research-grants"],
+    contract: "Evidence-grounded proposal; preserve the selected funder or opening-report format."
+  },
+  {
+    id: "pipeline",
+    direction: "planning",
+    label: {
+      zh: "ARS \u5B8C\u6574\u9879\u76EE \xB7 \u9010\u9636\u6BB5\u786E\u8BA4",
+      en: "ARS full project \xB7 stage confirmations"
+    },
+    commands: ["ars-full"],
+    contract: "ARS original stage confirmations and resume semantics; host owns task state."
+  },
+  {
+    id: "search",
+    direction: "evidence",
+    label: {
+      zh: "\u6587\u732E\u53D1\u73B0",
+      en: "Literature discovery"
+    },
+    commands: ["skill:nature-academic-search", "skill:paper-lookup", "skill:research-lookup"],
+    contract: "Bounded search scope, provenance and failures; a search hit is not a source read."
+  },
+  {
+    id: "reading",
+    direction: "evidence",
+    label: {
+      zh: "\u8BBA\u6587\u9605\u8BFB\u4E0E\u5BF9\u7167\u7FFB\u8BD1",
+      en: "Paper reading and translation"
+    },
+    commands: ["skill:nature-reader"],
+    contract: "Source-linked reading within requested scope; do not translate the full paper for a local question."
+  },
+  {
+    id: "paperCard",
+    direction: "evidence",
+    label: {
+      zh: "\u8BBA\u6587\u8BC1\u636E\u5361",
+      en: "Evidence-grounded paper card"
+    },
+    commands: ["skill:nature-paper-card"],
+    contract: "Reuse supplied reader source maps; mark unsupported sections rather than invent evidence."
+  },
+  {
+    id: "synthesis",
+    direction: "evidence",
+    label: {
+      zh: "\u7CFB\u7EDF\u6587\u732E\u7EFC\u8FF0",
+      en: "Systematic literature review"
+    },
+    commands: ["skill:literature-review"],
+    contract: "Search, eligibility and synthesis; no mandatory AI images, payments or uploads."
+  },
+  {
+    id: "citation",
+    direction: "evidence",
+    label: {
+      zh: "\u5F15\u6587\u6838\u9A8C\u4E0E\u5BFC\u51FA",
+      en: "Citation verification and export"
+    },
+    commands: ["skill:nature-ref-verifier", "skill:citation-management"],
+    contract: "Bibliographic identity and formatting are distinct from scientific claim support."
+  },
+  {
+    id: "library",
+    direction: "evidence",
+    label: {
+      zh: "Zotero \u6587\u732E\u5E93",
+      en: "Zotero library"
+    },
+    commands: ["skill:zotero-literature"],
+    contract: "Use host-controlled library writes and separate Zotero/Vault receipts."
+  },
+  {
+    id: "vault",
+    direction: "evidence",
+    label: {
+      zh: "\u77E5\u8BC6\u5E93\u68C0\u7D22\u4E0E\u7EF4\u62A4",
+      en: "Knowledge retrieval and maintenance"
+    },
+    commands: ["skill:research-vault"],
+    contract: "Keep application binding, evidence reads and Wiki approval under host control."
+  },
+  {
+    id: "subscription",
+    direction: "evidence",
+    label: {
+      zh: "\u6587\u732E\u8BA2\u9605 \xB7 \u9700\u6388\u6743\u63A8\u9001",
+      en: "Literature feeds \xB7 authorized delivery"
+    },
+    commands: ["skill:nature-literature-pipeline"],
+    contract: "Subscription is not publication orchestration; scheduling and delivery require authorization."
+  },
+  {
+    id: "explore",
+    direction: "analysis",
+    label: {
+      zh: "\u6570\u636E\u63A2\u7D22\u4E0E\u8D28\u91CF\u68C0\u67E5",
+      en: "Data exploration and QC"
+    },
+    commands: ["skill:exploratory-data-analysis"],
+    contract: "Inspect supplied data locally and disclose supported formats and actual executed checks."
+  },
+  {
+    id: "statistics",
+    direction: "analysis",
+    label: {
+      zh: "\u7EDF\u8BA1\u5206\u6790",
+      en: "Statistical analysis"
+    },
+    commands: ["skill:statistical-analysis"],
+    contract: "Assumptions, effect sizes, uncertainty and provenance; do not infer analysis from manuscript prose."
+  },
+  {
+    id: "rnaseq",
+    direction: "analysis",
+    label: {
+      zh: "Bulk RNA-seq",
+      en: "Bulk RNA-seq"
+    },
+    commands: ["skill:bulk-rnaseq"],
+    contract: "Enter at the supplied input stage; existing counts must not trigger a fresh FASTQ pipeline."
+  },
+  {
+    id: "de",
+    direction: "analysis",
+    label: {
+      zh: "\u5DF2\u6709\u8BA1\u6570\u7684\u5DEE\u5F02\u8868\u8FBE",
+      en: "Differential expression from counts"
+    },
+    commands: ["skill:pydeseq2"],
+    contract: "Validate counts, biological replicates, design and contrasts before differential expression."
+  },
+  {
+    id: "enrichment",
+    direction: "analysis",
+    label: {
+      zh: "\u901A\u8DEF\u4E0E\u57FA\u56E0\u96C6\u5BCC\u96C6",
+      en: "Pathway enrichment"
+    },
+    commands: ["skill:pathway-enrichment"],
+    contract: "Preserve gene identifiers, method and background universe."
+  },
+  {
+    id: "singlecell",
+    direction: "analysis",
+    label: {
+      zh: "\u5355\u7EC6\u80DE\u6807\u51C6\u5206\u6790",
+      en: "Standard single-cell analysis"
+    },
+    commands: ["skill:scanpy"],
+    contract: "Standard analysis; keep AnnData structure and specialized models as distinct modules."
+  },
+  {
+    id: "bioinformatics",
+    direction: "analysis",
+    label: {
+      zh: "\u5E8F\u5217\u3001\u540C\u6E90\u4E0E\u7ED3\u6784\u57DF\u5206\u6790",
+      en: "Sequence, homology and domain analysis"
+    },
+    commands: ["skill:scikit-bio", "skill:waypoint-bio"],
+    contract: "Resolve species and accessions first, preserve database/release evidence, use a reproducible alignment or annotation method, and report unsupported species or missing annotations instead of improvising an unbounded remote script."
+  },
+  {
+    id: "phylogeny",
+    direction: "analysis",
+    label: {
+      zh: "\u7CFB\u7EDF\u53D1\u80B2\u5EFA\u6811\u4E0E\u6E32\u67D3",
+      en: "Phylogenetic tree building and rendering"
+    },
+    commands: ["skill:phylogenetics", "skill:etetoolkit"],
+    contract: "Resolve taxa and accessions first, align (MAFFT), trim (trimAl) and infer the tree (IQ-TREE/FastTree) with recorded versions and models, then render with ETE; if a tool is missing, check bio_environment and propose a mamba/bioconda environment instead of stopping."
+  },
+  {
+    id: "chemistry",
+    direction: "analysis",
+    label: {
+      zh: "\u5316\u5B66\u4FE1\u606F\u4E0E\u5206\u5B50\u5904\u7406",
+      en: "Cheminformatics"
+    },
+    commands: ["skill:rdkit", "skill:datamol"],
+    contract: "Choose molecular operations explicitly; docking, dynamics and property prediction are different tasks."
+  },
+  {
+    id: "writing",
+    direction: "writing",
+    label: {
+      zh: "\u8BBA\u6587\u8D77\u8349\u4E0E\u91CD\u6784",
+      en: "Draft or restructure a manuscript"
+    },
+    commands: ["skill:nature-writing", "skill:scientific-writing"],
+    contract: "Complete the requested section; preserve evidence scope and do not force a full pipeline."
+  },
+  {
+    id: "polishing",
+    direction: "writing",
+    label: {
+      zh: "\u8BED\u8A00\u6DA6\u8272\u4E0E\u5B66\u672F\u7FFB\u8BD1",
+      en: "Polish or translate prose"
+    },
+    commands: ["skill:nature-polishing"],
+    contract: "Preserve facts and terminology; no new study design or automatic full rewrite."
+  },
+  {
+    id: "review",
+    direction: "writing",
+    label: {
+      zh: "\u666E\u901A\u5BA1\u6821",
+      en: "Manuscript assessment"
+    },
+    commands: ["skill:peer-review"],
+    contract: "Evidence-bounded assessment with confidentiality and venue-policy checks."
+  },
+  {
+    id: "blindReview",
+    direction: "writing",
+    label: {
+      zh: "Nature \u4E09\u4EFD\u4E92\u76F2\u8BC4\u5BA1",
+      en: "Nature: three blind reviews"
+    },
+    commands: ["skill:nature-reviewer"],
+    contract: "Three genuinely isolated reports frozen before synthesis; disclose inability to isolate."
+  },
+  {
+    id: "arsReview",
+    direction: "writing",
+    label: {
+      zh: "ARS \u4E94\u5E2D\u89D2\u8272\u8BC4\u8BAE",
+      en: "ARS: five-seat role-separated panel"
+    },
+    commands: ["ars-reviewer"],
+    contract: "Original five-seat contract and provenance; role separation is not independent error processes."
+  },
+  {
+    id: "response",
+    direction: "writing",
+    label: {
+      zh: "\u9010\u70B9\u56DE\u590D\u4E0E\u8FD4\u4FEE",
+      en: "Respond to reviewers"
+    },
+    commands: ["skill:nature-response"],
+    contract: "Respond to actual reviewer comments and trace manuscript changes; do not run another review panel."
+  },
+  {
+    id: "reporting",
+    direction: "writing",
+    label: {
+      zh: "\u7EDF\u8BA1\u62A5\u544A\u5BA1\u67E5",
+      en: "Statistical reporting audit"
+    },
+    commands: ["skill:nature-statistics"],
+    contract: "Review reported units, replication and uncertainty; compute only if requested with data."
+  },
+  {
+    id: "availability",
+    direction: "writing",
+    label: {
+      zh: "\u6570\u636E\u4E0E\u4EE3\u7801\u53EF\u7528\u6027\u58F0\u660E",
+      en: "Data/code availability statements"
+    },
+    commands: ["skill:nature-data"],
+    contract: "Availability/FAIR statements, not data cleaning; never invent accessions or permissions."
+  },
+  {
+    id: "patent",
+    direction: "writing",
+    label: {
+      zh: "\u4E13\u5229\u6280\u672F\u4EA4\u5E95",
+      en: "Patent disclosure drafting"
+    },
+    commands: ["skill:nature-paper-to-patent"],
+    contract: "Source-grounded disclosure with original stage gates; do not infer inventorship or rights."
+  },
+  {
+    id: "figures",
+    direction: "presentation",
+    label: {
+      zh: "\u771F\u5B9E\u6570\u636E\u56FE\u8868",
+      en: "Data-backed figures"
+    },
+    commands: ["skill:nature-figure", "skill:scientific-visualization"],
+    contract: "Truthful data, uncertainty and accessible figures; AI diagrams are not data plots."
+  },
+  {
+    id: "slides",
+    direction: "presentation",
+    label: {
+      zh: "\u8BBA\u6587\u6C47\u62A5\u4E0E\u6F14\u793A",
+      en: "Research presentations"
+    },
+    commands: ["skill:nature-paper2ppt", "skill:scientific-slides"],
+    contract: "Preserve source figures, speaker notes and requested output format."
+  },
+  {
+    id: "reconstruct",
+    direction: "presentation",
+    label: {
+      zh: "\u56FE\u7247\u91CD\u5EFA\u53EF\u7F16\u8F91 PPT",
+      en: "Editable slides from images"
+    },
+    commands: ["skill:nature-image2ppt"],
+    contract: "Reconstruct object-level editable slides; this is not authoring a new deck."
+  },
+  {
+    id: "poster",
+    direction: "presentation",
+    label: {
+      zh: "LaTeX \u5B66\u672F\u6D77\u62A5",
+      en: "LaTeX research poster"
+    },
+    commands: ["skill:latex-posters"],
+    contract: "Deliver the requested poster format using authorized content and assets."
+  },
+  {
+    id: "pptPoster",
+    direction: "presentation",
+    label: {
+      zh: "\u53EF\u7F16\u8F91 PPT \u6D77\u62A5",
+      en: "Editable PowerPoint poster"
+    },
+    commands: ["skill:pptx-posters"],
+    contract: "Preserve editable poster objects; do not silently substitute a PDF-only artifact."
+  },
+  {
+    id: "explainer",
+    direction: "presentation",
+    label: {
+      zh: "\u6765\u6E90\u53EF\u8FFD\u6EAF\u7684\u89E3\u91CA\u9875",
+      en: "Source-grounded explainer"
+    },
+    commands: ["skill:research-show-me"],
+    contract: "Static self-contained presentation, not evidence; use authorized artifact sinks."
+  },
+  {
+    id: "handoff",
+    direction: "engineering",
+    label: {
+      zh: "\u8BBE\u8BA1\u5E76\u4EA4\u63A5\u4EFB\u52A1",
+      en: "Design and hand off work"
+    },
+    commands: ["skill:design-handoff"],
+    contract: "Produce spec, plan and HANDOFF; notify in batches and preserve channel protocol."
+  },
+  {
+    id: "pickup",
+    direction: "engineering",
+    label: {
+      zh: "\u63A5\u624B\u5DF2\u6709\u4EA4\u63A5",
+      en: "Pick up a handoff"
+    },
+    commands: ["skill:channel-pickup"],
+    contract: "Read HANDOFF/spec/plan; verify changes, report completion and unsubscribe at termination."
+  },
+  {
+    id: "plugin",
+    direction: "engineering",
+    label: {
+      zh: "\u5B9A\u5236 Drone \u754C\u9762",
+      en: "Customize Drone UI"
+    },
+    commands: ["skill:drone-ui-plugin"],
+    contract: "Respect UI plugin SPEC, sandbox and user-only enablement; do not auto-enable."
+  },
+  {
+    id: "resources",
+    direction: "engineering",
+    label: {
+      zh: "\u68C0\u67E5\u8BA1\u7B97\u8D44\u6E90",
+      en: "Inspect compute resources"
+    },
+    commands: ["skill:get-available-resources"],
+    contract: "Bounded inventory only; no installation, cloud job or paid resource reservation."
+  },
+  {
+    id: "nextflow",
+    direction: "engineering",
+    label: {
+      zh: "Nextflow \u7BA1\u7EBF",
+      en: "Nextflow pipelines"
+    },
+    commands: ["skill:nextflow"],
+    contract: "Preserve samplesheets, executor/container versions and execution authorization."
+  }
+];
+var WORKFLOW_OWNER_NAMES = /* @__PURE__ */ new Set([
+  ...WORKFLOW_STAGES.flatMap((s) => s.commands.filter((n) => n.startsWith("skill:")).map((n) => n.slice(6))),
+  "academic-paper",
+  "academic-paper-reviewer",
+  "academic-pipeline",
+  "deep-research"
+]);
+
+// packages/shared/src/research-skills.ts
+var RESEARCH_SKILL_SOURCES = research_skill_sources_default.sources;
+var profiles = new Map(
+  research_skill_sources_default.sources.flatMap(
+    (source) => source.skills.map(
+      (skill) => [skill.name, { ...skill, source: source.id }]
+    )
+  )
+);
+
+// packages/shared/src/skill-catalog.ts
+var groups = {
+  knowledge: ["research-vault", "nature-experiment-log"],
+  research: [
+    "research-workflow",
+    "zotero-literature",
+    "bio-environment",
+    "research",
+    "nature-academic-search",
+    "nature-downloader",
+    "nature-literature-pipeline",
+    "nature-paper-card",
+    "nature-reader",
+    "nature-ref-verifier",
+    "nature-statistics"
+  ],
+  writing: [
+    "nature-citation",
+    "nature-data",
+    "nature-paper-to-patent",
+    "nature-polishing",
+    "nature-response",
+    "nature-reviewer",
+    "nature-writing",
+    "researchwrite",
+    "writing-beats",
+    "writing-for-agents",
+    "writing-fragments",
+    "writing-great-skills",
+    "writing-shape"
+  ],
+  presentation: [
+    "show-me",
+    "teach",
+    "nature-figure",
+    "nature-image2ppt",
+    "nature-paper2ppt",
+    "drone-ui-plugin"
+  ],
+  engineering: [
+    "code-review",
+    "codebase-design",
+    "diagnosing-bugs",
+    "domain-modeling",
+    "git-guardrails-claude-code",
+    "grill-me",
+    "grill-with-docs",
+    "grilling",
+    "implement",
+    "implement-spec",
+    "improve-codebase-architecture",
+    "loop-me",
+    "migrate-to-shoehorn",
+    "prototype",
+    "resolving-merge-conflicts",
+    "retro",
+    "scaffold-exercises",
+    "tdd",
+    "to-questionnaire",
+    "to-spec",
+    "to-tickets",
+    "triage",
+    "wait-what",
+    "wayfinder"
+  ],
+  collaboration: [
+    "channel-pickup",
+    "design-handoff",
+    "claude-handoff",
+    "codexhost-delegation",
+    "handoff",
+    "council-mode",
+    "pi-subagents",
+    "ask-user",
+    "ask-matt",
+    "find-skills",
+    "wizard",
+    "mcp-scripting"
+  ],
+  support: ["nature-shared"]
+};
+var categoryByName = new Map(
+  Object.entries(groups).flatMap(
+    ([category, names]) => (names ?? []).map((name) => [name, category])
+  )
+);
+
+// packages/shared/src/compute.ts
+var ComputeIdSchema = typebox_exports.String({ minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9._:-]+$" });
+var ComputeHostKindSchema = typebox_exports.Union([
+  typebox_exports.Literal("ssh"),
+  typebox_exports.Literal("scheduler"),
+  typebox_exports.Literal("local")
+]);
+var ComputeHealthStatusSchema = typebox_exports.Union([
+  typebox_exports.Literal("unknown"),
+  typebox_exports.Literal("checking"),
+  typebox_exports.Literal("healthy"),
+  typebox_exports.Literal("degraded"),
+  typebox_exports.Literal("offline"),
+  typebox_exports.Literal("blocked")
+]);
+var ComputeAuthStateSchema = typebox_exports.Union([
+  typebox_exports.Literal("not_configured"),
+  typebox_exports.Literal("ready"),
+  typebox_exports.Literal("needs_login"),
+  typebox_exports.Literal("rejected")
+]);
+var ComputeCapabilitySchema = typebox_exports.Object(
+  {
+    name: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    version: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 })),
+    available: typebox_exports.Boolean(),
+    details: typebox_exports.Optional(typebox_exports.String({ maxLength: 512 }))
+  },
+  { additionalProperties: false }
+);
+var ComputeResourcesSchema = typebox_exports.Object(
+  {
+    cpuCores: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 1e6 })),
+    memoryBytes: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER })),
+    gpuCount: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0, maximum: 1e6 })),
+    diskFreeBytes: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }))
+  },
+  { additionalProperties: false }
+);
+var ComputeHostSchema = typebox_exports.Object(
+  {
+    id: ComputeIdSchema,
+    alias: typebox_exports.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9._-]+$" }),
+    displayName: typebox_exports.String({ minLength: 1, maxLength: 160 }),
+    kind: ComputeHostKindSchema,
+    endpoint: typebox_exports.Optional(typebox_exports.String({ maxLength: 512, pattern: "^[^@]*$" })),
+    port: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 65535 })),
+    user: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 })),
+    platform: typebox_exports.Optional(typebox_exports.String({ maxLength: 64 })),
+    arch: typebox_exports.Optional(typebox_exports.String({ maxLength: 64 })),
+    workspaceRoot: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+    authState: ComputeAuthStateSchema,
+    managed: typebox_exports.Boolean(),
+    health: typebox_exports.Object(
+      {
+        status: ComputeHealthStatusSchema,
+        checkedAt: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 64 })),
+        latencyMs: typebox_exports.Optional(typebox_exports.Number({ minimum: 0 })),
+        version: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 })),
+        details: typebox_exports.Optional(typebox_exports.String({ maxLength: 512 })),
+        errorCode: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 }))
+      },
+      { additionalProperties: false }
+    ),
+    capabilities: typebox_exports.Array(ComputeCapabilitySchema, { maxItems: 256 }),
+    resources: typebox_exports.Optional(ComputeResourcesSchema),
+    createdAt: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    updatedAt: typebox_exports.String({ minLength: 1, maxLength: 64 })
+  },
+  { additionalProperties: false }
+);
+var ComputeHostInputSchema = typebox_exports.Object(
+  {
+    alias: typebox_exports.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9._-]+$" }),
+    displayName: typebox_exports.String({ minLength: 1, maxLength: 160 }),
+    kind: ComputeHostKindSchema,
+    endpoint: typebox_exports.Optional(typebox_exports.String({ maxLength: 512, pattern: "^[^@]*$" })),
+    port: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 65535 })),
+    user: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 })),
+    identityFile: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 1024 })),
+    jumpHosts: typebox_exports.Optional(
+      typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9._-]+$" }), { maxItems: 8 })
+    ),
+    hostKeyFingerprint: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 256 })),
+    workspaceRoot: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+    managed: typebox_exports.Optional(typebox_exports.Boolean())
+  },
+  { additionalProperties: false }
+);
+var ComputeBudgetSchema = typebox_exports.Object(
+  {
+    /** Total CPU core-hours allowed for this task. */
+    maxCoreHours: typebox_exports.Number({ minimum: 0, maximum: 1e9 }),
+    /** Longest wall-clock duration of one job. */
+    maxWalltimeMinutes: typebox_exports.Integer({ minimum: 1, maximum: 2e6 }),
+    maxConcurrentJobs: typebox_exports.Integer({ minimum: 1, maximum: 1e4 }),
+    maxDiskGb: typebox_exports.Integer({ minimum: 1, maximum: 1e6 })
+  },
+  { additionalProperties: false }
+);
+var ComputeSha256Schema = typebox_exports.String({ pattern: "^[a-fA-F0-9]{64}$" });
+var ComputeDatasetFileSchema = typebox_exports.Object(
+  {
+    path: typebox_exports.String({ minLength: 1, maxLength: 1024 }),
+    bytes: typebox_exports.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
+    sha256: ComputeSha256Schema,
+    mediaType: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 256 }))
+  },
+  { additionalProperties: false }
+);
+var ComputeDatasetSourceSchema = typebox_exports.Object(
+  {
+    kind: typebox_exports.Union([
+      typebox_exports.Literal("local"),
+      typebox_exports.Literal("public"),
+      typebox_exports.Literal("generated"),
+      typebox_exports.Literal("imported")
+    ]),
+    uri: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 2048 })),
+    accession: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 256 })),
+    license: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 512 }))
+  },
+  { additionalProperties: false }
+);
+var ComputeDatasetVersionSchema = typebox_exports.Object(
+  {
+    datasetId: ComputeIdSchema,
+    versionId: typebox_exports.String({ minLength: 1, maxLength: 128, pattern: "^sha256:[a-fA-F0-9]{64}$" }),
+    contentSha256: ComputeSha256Schema,
+    schemaVersion: typebox_exports.Integer({ minimum: 1, maximum: 100 }),
+    files: typebox_exports.Array(ComputeDatasetFileSchema, { maxItems: 1e6 }),
+    sizeBytes: typebox_exports.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
+    source: typebox_exports.Optional(ComputeDatasetSourceSchema),
+    createdAt: typebox_exports.String({ minLength: 1, maxLength: 64 })
+  },
+  { additionalProperties: false }
+);
+var ComputeDatasetVersionRefSchema = typebox_exports.Object(
+  {
+    datasetId: ComputeIdSchema,
+    versionId: typebox_exports.String({ minLength: 1, maxLength: 128, pattern: "^sha256:[a-fA-F0-9]{64}$" })
+  },
+  { additionalProperties: false }
+);
+var ComputeSampleColumnSchema = typebox_exports.Object(
+  {
+    name: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    type: typebox_exports.Union([
+      typebox_exports.Literal("string"),
+      typebox_exports.Literal("integer"),
+      typebox_exports.Literal("number"),
+      typebox_exports.Literal("boolean")
+    ]),
+    required: typebox_exports.Optional(typebox_exports.Boolean()),
+    unique: typebox_exports.Optional(typebox_exports.Boolean()),
+    allowedValues: typebox_exports.Optional(
+      typebox_exports.Array(typebox_exports.Union([typebox_exports.String(), typebox_exports.Number(), typebox_exports.Boolean()]), { maxItems: 512 })
+    )
+  },
+  { additionalProperties: false }
+);
+var ComputeSampleSheetSchema = typebox_exports.Object(
+  {
+    id: ComputeIdSchema,
+    version: typebox_exports.Integer({ minimum: 1, maximum: 100 }),
+    idColumn: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    columns: typebox_exports.Array(ComputeSampleColumnSchema, { minItems: 1, maxItems: 512 })
+  },
+  { additionalProperties: false }
+);
+var ComputeStatisticalAnalysisPlanSchema = typebox_exports.Object(
+  {
+    id: ComputeIdSchema,
+    version: typebox_exports.Integer({ minimum: 1, maximum: 100 }),
+    outcome: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+    design: typebox_exports.Union([
+      typebox_exports.Literal("two-group"),
+      typebox_exports.Literal("paired"),
+      typebox_exports.Literal("factorial"),
+      typebox_exports.Literal("regression")
+    ]),
+    primaryTest: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+    alpha: typebox_exports.Number({ exclusiveMinimum: 0, exclusiveMaximum: 1 }),
+    targetPower: typebox_exports.Number({ exclusiveMinimum: 0, exclusiveMaximum: 1 }),
+    effectSize: typebox_exports.Number({ exclusiveMinimum: 0 }),
+    totalSampleSize: typebox_exports.Optional(typebox_exports.Integer({ minimum: 2, maximum: 1e7 })),
+    perGroupSampleSize: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 5e6 })),
+    groups: typebox_exports.Optional(
+      typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 128 }), { minItems: 2, maxItems: 256 })
+    ),
+    covariates: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 128 }), { maxItems: 256 })),
+    datasetVersion: typebox_exports.Optional(ComputeDatasetVersionRefSchema),
+    sampleSheetSchemaId: typebox_exports.Optional(ComputeIdSchema)
+  },
+  { additionalProperties: false }
+);
+var ComputeDescriptiveAnalysisPlanSchema = typebox_exports.Object(
+  {
+    id: ComputeIdSchema,
+    version: typebox_exports.Integer({ minimum: 1, maximum: 100 }),
+    outcome: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+    design: typebox_exports.Literal("descriptive"),
+    primaryTest: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+    datasetVersion: typebox_exports.Optional(ComputeDatasetVersionRefSchema),
+    sampleSheetSchemaId: typebox_exports.Optional(ComputeIdSchema)
+  },
+  { additionalProperties: false }
+);
+var ComputeAnalysisPlanSchema = typebox_exports.Union([
+  ComputeStatisticalAnalysisPlanSchema,
+  ComputeDescriptiveAnalysisPlanSchema
+]);
+var ComputePublicDataFetchRecordSchema = typebox_exports.Object(
+  {
+    id: ComputeIdSchema,
+    uri: typebox_exports.String({ minLength: 1, maxLength: 2048 }),
+    accession: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 256 })),
+    source: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+    license: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 512 })),
+    termsAccepted: typebox_exports.Boolean(),
+    fetchedAt: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    bytes: typebox_exports.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
+    sha256: ComputeSha256Schema
+  },
+  { additionalProperties: false }
+);
+var ComputeDataDesignContractSchema = typebox_exports.Object(
+  {
+    datasetVersion: ComputeDatasetVersionRefSchema,
+    sampleSheetSchemaId: ComputeIdSchema,
+    sampleSheetSha256: ComputeSha256Schema,
+    analysisPlanId: ComputeIdSchema,
+    analysisPlanSha256: ComputeSha256Schema,
+    fetchRecordIds: typebox_exports.Optional(typebox_exports.Array(ComputeIdSchema, { maxItems: 256 }))
+  },
+  { additionalProperties: false }
+);
+var ComputeAuthorizationSchema = typebox_exports.Object(
+  {
+    hosts: typebox_exports.Array(ComputeIdSchema, { minItems: 1, maxItems: 32 }),
+    remoteRead: typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 1024 }), { maxItems: 64 }),
+    remoteWrite: typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 1024 }), { maxItems: 64 }),
+    budget: ComputeBudgetSchema,
+    workflows: typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 256 }), { maxItems: 128 }),
+    agentCode: typebox_exports.Optional(typebox_exports.Boolean()),
+    /** B7 records are optional for legacy compute tasks and required by B7-aware hosts. */
+    dataDesign: typebox_exports.Optional(ComputeDataDesignContractSchema)
+  },
+  { additionalProperties: false }
+);
+var ComputeUsageSchema = typebox_exports.Object(
+  {
+    coreHours: typebox_exports.Number({ minimum: 0 }),
+    activeJobs: typebox_exports.Integer({ minimum: 0 }),
+    diskBytes: typebox_exports.Integer({ minimum: 0 })
+  },
+  { additionalProperties: false }
+);
+var ComputeJobSchema = typebox_exports.Object(
+  {
+    id: ComputeIdSchema,
+    hostId: ComputeIdSchema,
+    taskId: typebox_exports.Optional(ComputeIdSchema),
+    sessionId: typebox_exports.Optional(ComputeIdSchema),
+    state: typebox_exports.Union([
+      typebox_exports.Literal("queued"),
+      typebox_exports.Literal("running"),
+      typebox_exports.Literal("succeeded"),
+      typebox_exports.Literal("failed"),
+      typebox_exports.Literal("cancelled"),
+      typebox_exports.Literal("unknown")
+    ]),
+    label: typebox_exports.Optional(typebox_exports.String({ maxLength: 160 })),
+    startedAt: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 64 })),
+    finishedAt: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 64 })),
+    exitCode: typebox_exports.Optional(typebox_exports.Integer()),
+    budget: typebox_exports.Object(
+      {
+        coreHours: typebox_exports.Number({ minimum: 0 }),
+        wallMinutes: typebox_exports.Number({ minimum: 0 }),
+        diskBytes: typebox_exports.Number({ minimum: 0 })
+      },
+      { additionalProperties: false }
+    ),
+    publicSummary: typebox_exports.Optional(typebox_exports.String({ maxLength: 1e3 })),
+    artifacts: typebox_exports.Array(
+      typebox_exports.Object(
+        {
+          name: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+          path: typebox_exports.String({ maxLength: 1024 }),
+          sha256: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 }))
+        },
+        { additionalProperties: false }
+      ),
+      { maxItems: 256 }
+    ),
+    updatedAt: typebox_exports.String({ minLength: 1, maxLength: 64 })
+  },
+  { additionalProperties: false }
+);
+var ComputeJobInputSchema = typebox_exports.Object(
+  {
+    hostId: ComputeIdSchema,
+    idempotencyKey: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 256 })),
+    remoteWorkDir: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 1024 })),
+    workflow: typebox_exports.Object(
+      {
+        name: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+        version: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+        source: typebox_exports.Optional(typebox_exports.String({ maxLength: 256 })),
+        specHash: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 }))
+      },
+      { additionalProperties: false }
+    ),
+    resources: typebox_exports.Optional(
+      typebox_exports.Object(
+        {
+          cpus: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 1e6 })),
+          memoryBytes: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER })),
+          wallTimeSeconds: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 1728e5 }))
+        },
+        { additionalProperties: false }
+      )
+    ),
+    readPaths: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 1024 }), { maxItems: 64 })),
+    writePaths: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 1024 }), { maxItems: 64 })),
+    outputs: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 1024 }), { maxItems: 256 }))
+  },
+  { additionalProperties: false }
+);
+var ComputeLogChunkSchema = typebox_exports.Object(
+  {
+    jobId: ComputeIdSchema,
+    cursor: typebox_exports.String({ minLength: 0, maxLength: 256 }),
+    text: typebox_exports.String({ maxLength: 1048576 }),
+    truncated: typebox_exports.Boolean(),
+    at: typebox_exports.String({ minLength: 1, maxLength: 64 })
+  },
+  { additionalProperties: false }
+);
+var ComputeTerminalSchema = typebox_exports.Object(
+  {
+    id: ComputeIdSchema,
+    hostId: ComputeIdSchema,
+    jobId: typebox_exports.Optional(ComputeIdSchema),
+    cwd: typebox_exports.String({ maxLength: 1024 }),
+    mode: typebox_exports.Union([typebox_exports.Literal("shell"), typebox_exports.Literal("command")]),
+    state: typebox_exports.Union([
+      typebox_exports.Literal("connecting"),
+      typebox_exports.Literal("open"),
+      typebox_exports.Literal("needs_login"),
+      typebox_exports.Literal("closed"),
+      typebox_exports.Literal("error")
+    ]),
+    output: typebox_exports.String({ maxLength: 131072 }),
+    truncated: typebox_exports.Boolean(),
+    startedAt: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    endedAt: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 64 }))
+  },
+  { additionalProperties: false }
+);
+var ComputeOnboardingStepSchema = typebox_exports.Union([
+  typebox_exports.Literal("model"),
+  typebox_exports.Literal("project"),
+  typebox_exports.Literal("knowledge"),
+  typebox_exports.Literal("literature"),
+  typebox_exports.Literal("mcp"),
+  typebox_exports.Literal("remote-host"),
+  typebox_exports.Literal("example-task")
+]);
+var ComputeOnboardingStatusSchema = typebox_exports.Object(
+  {
+    step: ComputeOnboardingStepSchema,
+    state: typebox_exports.Union([
+      typebox_exports.Literal("ready"),
+      typebox_exports.Literal("needs_action"),
+      typebox_exports.Literal("not_configured"),
+      typebox_exports.Literal("checking")
+    ]),
+    summary: typebox_exports.String({ maxLength: 512 }),
+    checkedAt: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 64 })),
+    action: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 }))
+  },
+  { additionalProperties: false }
+);
+var ProfileId = typebox_exports.String({ minLength: 1, maxLength: 256 });
+var ProfileAlias = typebox_exports.String({ pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" });
+var ComputeHostProfileSchema = typebox_exports.Object(
+  {
+    alias: ProfileAlias,
+    host: ProfileId,
+    port: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 65535 })),
+    username: typebox_exports.Optional(ProfileId),
+    transport: typebox_exports.Optional(typebox_exports.Union([typebox_exports.Literal("builtin-ssh"), typebox_exports.Literal("openssh")])),
+    identityFile: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    jumpHosts: typebox_exports.Optional(typebox_exports.Array(ProfileAlias, { maxItems: 8 })),
+    hostKeyFingerprint: typebox_exports.Optional(typebox_exports.String({ minLength: 1 }))
+  },
+  { additionalProperties: false }
+);
+var WorkflowModuleSchema = typebox_exports.Object(
+  {
+    id: ProfileId,
+    source: typebox_exports.Union([typebox_exports.Literal("nf-core"), typebox_exports.Literal("user"), typebox_exports.Literal("agent")]),
+    name: ProfileId,
+    version: ProfileId,
+    commit: typebox_exports.Optional(ProfileId),
+    containerDigest: typebox_exports.Optional(ProfileId)
+  },
+  { additionalProperties: false }
+);
+var WorkflowStepSchema = typebox_exports.Object(
+  {
+    id: ProfileId,
+    module: WorkflowModuleSchema,
+    dependsOn: typebox_exports.Optional(typebox_exports.Array(ProfileId)),
+    parameters: typebox_exports.Optional(
+      typebox_exports.Record(typebox_exports.String(), typebox_exports.Union([typebox_exports.String(), typebox_exports.Number(), typebox_exports.Boolean()]))
+    )
+  },
+  { additionalProperties: false }
+);
+var WorkflowSpecSchema = typebox_exports.Object(
+  {
+    version: typebox_exports.Literal(1),
+    modules: typebox_exports.Array(WorkflowModuleSchema),
+    steps: typebox_exports.Array(WorkflowStepSchema),
+    inputs: typebox_exports.Optional(typebox_exports.Record(typebox_exports.String(), typebox_exports.String())),
+    outputs: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String()))
+  },
+  { additionalProperties: false }
+);
+var WorkflowRefSchema = typebox_exports.Object(
+  {
+    name: ProfileId,
+    version: ProfileId,
+    source: typebox_exports.Optional(ProfileId),
+    specHash: typebox_exports.Optional(ProfileId)
+  },
+  { additionalProperties: false }
+);
+var ArtifactExpectationSchema = typebox_exports.Object(
+  {
+    path: typebox_exports.String({ minLength: 1 }),
+    bytes: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    sha256: typebox_exports.Optional(typebox_exports.String({ pattern: "^[a-fA-F0-9]{64}$" })),
+    maxBytes: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 }))
+  },
+  { additionalProperties: false }
+);
+var JobSpecSchema = typebox_exports.Object(
+  {
+    jobId: typebox_exports.Optional(ProfileId),
+    idempotencyKey: typebox_exports.Optional(ProfileId),
+    hostAlias: ProfileAlias,
+    workflow: typebox_exports.Union([WorkflowSpecSchema, WorkflowRefSchema]),
+    workDir: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    remoteWorkDir: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    resources: typebox_exports.Optional(
+      typebox_exports.Object(
+        {
+          cpus: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1 })),
+          memoryBytes: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+          wallTimeSeconds: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1 }))
+        },
+        { additionalProperties: false }
+      )
+    ),
+    remoteRead: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String())),
+    remoteWrite: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String())),
+    outputs: typebox_exports.Optional(typebox_exports.Array(typebox_exports.Union([typebox_exports.String(), ArtifactExpectationSchema])))
+  },
+  { additionalProperties: false }
+);
+
+// packages/shared/src/discovery.ts
+var DiscoveryKernelLanguageSchema = typebox_exports.Union([typebox_exports.Literal("python"), typebox_exports.Literal("r")]);
+var DiscoveryDataClassificationSchema = typebox_exports.Union([
+  typebox_exports.Literal("public"),
+  typebox_exports.Literal("internal"),
+  typebox_exports.Literal("controlled"),
+  typebox_exports.Literal("restricted")
+]);
+var DiscoveryKernelStatusSchema = typebox_exports.Union([
+  typebox_exports.Literal("ready"),
+  typebox_exports.Literal("running"),
+  typebox_exports.Literal("closed"),
+  typebox_exports.Literal("idle-timeout"),
+  typebox_exports.Literal("needs-container")
+]);
+var DiscoveryRunnerKindSchema = typebox_exports.Union([
+  typebox_exports.Literal("container"),
+  typebox_exports.Literal("fixture"),
+  typebox_exports.Literal("unavailable")
+]);
+var DiscoveryCapabilitiesSchema = typebox_exports.Object(
+  {
+    kind: DiscoveryRunnerKindSchema,
+    languages: typebox_exports.Array(DiscoveryKernelLanguageSchema, { maxItems: 2 }),
+    networkDisabled: typebox_exports.Boolean(),
+    writesOnlyToRunDirectory: typebox_exports.Boolean()
+  },
+  { additionalProperties: false }
+);
+var DiscoveryKernelSessionSchema = typebox_exports.Object(
+  {
+    sessionId: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    language: DiscoveryKernelLanguageSchema,
+    dataClassification: DiscoveryDataClassificationSchema,
+    runDirectory: typebox_exports.String({ pattern: "^runs/" }),
+    status: DiscoveryKernelStatusSchema,
+    executionCount: typebox_exports.Integer({ minimum: 0 }),
+    remainingExecutions: typebox_exports.Integer({ minimum: 0 }),
+    expiresAt: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 64 })),
+    capabilities: DiscoveryCapabilitiesSchema
+  },
+  { additionalProperties: false }
+);
+var DiscoveryExecutionSchema = typebox_exports.Object(
+  {
+    id: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    status: typebox_exports.Union([typebox_exports.Literal("succeeded"), typebox_exports.Literal("failed"), typebox_exports.Literal("blocked")]),
+    output: typebox_exports.String({ maxLength: 1e6 }),
+    outputClassification: DiscoveryDataClassificationSchema,
+    contentKinds: typebox_exports.Array(
+      typebox_exports.Union([typebox_exports.Literal("summary"), typebox_exports.Literal("plot"), typebox_exports.Literal("table"), typebox_exports.Literal("raw")]),
+      { maxItems: 4 }
+    ),
+    producedBytes: typebox_exports.Integer({ minimum: 0 }),
+    redactedBytes: typebox_exports.Integer({ minimum: 0 }),
+    blockedReason: typebox_exports.Optional(typebox_exports.String({ maxLength: 256 }))
+  },
+  { additionalProperties: false }
+);
+var DiscoveryCriticQuestionSchema = typebox_exports.Object(
+  {
+    checklistItem: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    question: typebox_exports.String({ minLength: 1, maxLength: 1e4 }),
+    severity: typebox_exports.Union([typebox_exports.Literal("high"), typebox_exports.Literal("medium"), typebox_exports.Literal("low")]),
+    evidenceArtifactIds: typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 128 }), { maxItems: 128 })
+  },
+  { additionalProperties: false }
+);
+var DiscoveryCriticReviewSchema = typebox_exports.Object(
+  {
+    findingId: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    status: typebox_exports.Union([
+      typebox_exports.Literal("complete"),
+      typebox_exports.Literal("blocked"),
+      typebox_exports.Literal("needs-independent-provider")
+    ]),
+    providerId: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 128 })),
+    questions: typebox_exports.Array(DiscoveryCriticQuestionSchema, { maxItems: 256 }),
+    reason: typebox_exports.Optional(typebox_exports.String({ maxLength: 1e4 }))
+  },
+  { additionalProperties: false }
+);
+var DiscoveryMultipathAssessmentSchema = typebox_exports.Object(
+  {
+    planId: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    findingId: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    grade: typebox_exports.Union([
+      typebox_exports.Literal("robust"),
+      typebox_exports.Literal("sensitive"),
+      typebox_exports.Literal("unstable"),
+      typebox_exports.Literal("unknown")
+    ]),
+    intent: typebox_exports.Union([typebox_exports.Literal("exploratory"), typebox_exports.Literal("confirmatory")]),
+    attemptCount: typebox_exports.Integer({ minimum: 0 }),
+    consistentCount: typebox_exports.Integer({ minimum: 0 }),
+    consistency: typebox_exports.Number({ minimum: 0, maximum: 1 })
+  },
+  { additionalProperties: false }
+);
+var DiscoveryExplorationPlanSchema = typebox_exports.Object(
+  {
+    id: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    projectId: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    hypothesisId: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    prior: typebox_exports.Unknown(),
+    budget: typebox_exports.Object(
+      {
+        maxExecutions: typebox_exports.Integer({ minimum: 1 }),
+        maxWallTimeMs: typebox_exports.Integer({ minimum: 1 }),
+        maxOutputBytes: typebox_exports.Integer({ minimum: 1 }),
+        maxCostUnits: typebox_exports.Number({ exclusiveMinimum: 0 })
+      },
+      { additionalProperties: false }
+    ),
+    rankedCandidateIds: typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 128 }), { maxItems: 1024 }),
+    createdAt: typebox_exports.String({ minLength: 1, maxLength: 64 })
+  },
+  { additionalProperties: false }
+);
+var DiscoveryEvaluationMetricSchema = typebox_exports.Union([
+  typebox_exports.Literal("bixbench-regression"),
+  typebox_exports.Literal("rediscovery-rate"),
+  typebox_exports.Literal("inconsistency-interception-rate"),
+  typebox_exports.Literal("confounder-detection-rate"),
+  typebox_exports.Literal("clue-hit-rate"),
+  typebox_exports.Literal("verification-time-ms"),
+  typebox_exports.Literal("repeated-failure-count")
+]);
+var DiscoveryEvaluationSchema = typebox_exports.Object(
+  {
+    runId: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    status: typebox_exports.Union([typebox_exports.Literal("complete"), typebox_exports.Literal("needs-data"), typebox_exports.Literal("blocked")]),
+    startedAt: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    finishedAt: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    missingData: typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 128 }), { maxItems: 256 }),
+    blockedCases: typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 128 }), { maxItems: 256 }),
+    metrics: typebox_exports.Array(
+      typebox_exports.Object(
+        {
+          metric: DiscoveryEvaluationMetricSchema,
+          value: typebox_exports.Number({ minimum: 0 }),
+          baseline: typebox_exports.Optional(typebox_exports.Number({ minimum: 0 })),
+          delta: typebox_exports.Optional(typebox_exports.Number()),
+          passed: typebox_exports.Boolean(),
+          baselineAvailable: typebox_exports.Boolean(),
+          caseIds: typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 128 }), { maxItems: 256 })
+        },
+        { additionalProperties: false }
+      ),
+      { maxItems: 16 }
+    )
+  },
+  { additionalProperties: false }
+);
+
+// packages/shared/src/execution.ts
+var ExecutionRouteSchema = typebox_exports.Object(
+  {
+    version: typebox_exports.Literal(1),
+    routeId: typebox_exports.Literal("rnaseq"),
+    /** Original user text, bounded for display and audit. */
+    intent: typebox_exports.String({ minLength: 1, maxLength: 400 }),
+    /** Stable task/workflow direction. */
+    workflow: typebox_exports.Literal("rnaseq"),
+    pipeline: typebox_exports.Literal("nf-core/rnaseq"),
+    inputStage: typebox_exports.Literal("fastq"),
+    profile: typebox_exports.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9_.-]+$" }),
+    samplesheet: typebox_exports.String({ minLength: 1, maxLength: 1024 }),
+    genome: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9_.-]+$" })),
+    outdir: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 1024 })),
+    remoteWorkDir: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 1024 })),
+    strandedness: typebox_exports.Optional(
+      typebox_exports.Union([typebox_exports.Literal("unstranded"), typebox_exports.Literal("forward"), typebox_exports.Literal("reverse")])
+    )
+  },
+  { additionalProperties: false }
+);
+var ComputeTaskBindingSchema = typebox_exports.Object(
+  {
+    version: typebox_exports.Literal(1),
+    taskId: typebox_exports.String({ minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" }),
+    routeId: typebox_exports.Literal("rnaseq"),
+    workflowId: typebox_exports.Literal("rnaseq"),
+    pipeline: typebox_exports.Literal("nf-core/rnaseq"),
+    hostAlias: typebox_exports.String({ minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" }),
+    workflowSpecSha256: typebox_exports.String({ pattern: "^[a-fA-F0-9]{64}$" }),
+    samplesheet: typebox_exports.String({ minLength: 1, maxLength: 1024 }),
+    outdir: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 1024 })),
+    remoteWorkDir: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 1024 })),
+    revision: typebox_exports.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9_.-]+$" }),
+    profile: typebox_exports.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9_.-]+$" }),
+    executionMode: typebox_exports.Union([typebox_exports.Literal("fixture"), typebox_exports.Literal("production")]),
+    idempotencyKey: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 256 })),
+    lineage: typebox_exports.Optional(CausalEnvelopeSchema)
+  },
+  { additionalProperties: false }
+);
+var ExecutionReceiptStatusSchema = typebox_exports.Union([
+  typebox_exports.Literal("preflight_passed"),
+  typebox_exports.Literal("submitted"),
+  typebox_exports.Literal("queued"),
+  typebox_exports.Literal("running"),
+  typebox_exports.Literal("succeeded"),
+  typebox_exports.Literal("failed"),
+  typebox_exports.Literal("unknown"),
+  typebox_exports.Literal("blocked")
+]);
+var ExecutionReceiptSchema = typebox_exports.Object(
+  {
+    version: typebox_exports.Literal(1),
+    executionId: typebox_exports.String({ minLength: 1, maxLength: 128 }),
+    status: ExecutionReceiptStatusSchema,
+    fixture: typebox_exports.Boolean(),
+    route: typebox_exports.Optional(ExecutionRouteSchema),
+    binding: typebox_exports.Optional(ComputeTaskBindingSchema),
+    workflowSpecSha256: typebox_exports.String({ pattern: "^[a-fA-F0-9]{64}$" }),
+    preflight: typebox_exports.Object(
+      {
+        ok: typebox_exports.Boolean(),
+        errors: typebox_exports.Array(typebox_exports.String({ maxLength: 512 }), { maxItems: 64 }),
+        warnings: typebox_exports.Array(typebox_exports.String({ maxLength: 512 }), { maxItems: 64 })
+      },
+      { additionalProperties: false }
+    ),
+    jobId: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 128 })),
+    remoteId: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 256 })),
+    createdAt: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    submittedAt: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 64 })),
+    finishedAt: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 64 })),
+    error: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 1024 })),
+    lineage: typebox_exports.Optional(CausalEnvelopeSchema)
+  },
+  { additionalProperties: false }
+);
+
+// packages/shared/src/file-types.ts
+var TEXT_KINDS = /* @__PURE__ */ new Set([
+  "text",
+  "code",
+  "markdown",
+  "json",
+  "table",
+  "notebook",
+  "mermaid",
+  "sequence",
+  "alignment",
+  "tree",
+  "html",
+  "svg",
+  "typst",
+  "latex",
+  "molecule"
+]);
+var ROWS = [
+  ["txt log out err fai dict", "text/plain", "text"],
+  ["md markdown mdown rmd", "text/markdown", "markdown", "markdown"],
+  ["json", "application/json", "json", "json"],
+  ["jsonl ndjson", "application/x-ndjson", "code", "json"],
+  ["csv", "text/csv", "table"],
+  ["tsv gff gff3 gtf bed bedgraph vcf sam", "text/tab-separated-values", "table"],
+  ["ipynb", "application/x-ipynb+json", "notebook", "json"],
+  ["mmd mermaid", "text/vnd.mermaid", "mermaid", "mermaid"],
+  ["fa fasta fna faa ffn frn fas fq fastq", "text/x-fasta", "sequence"],
+  ["aln clustal clw sto stk stockholm phy phylip afa msa mfa", "text/plain", "alignment"],
+  ["nwk newick tree treefile tre contree", "text/x-newick", "tree"],
+  ["html htm", "text/html", "html", "html"],
+  ["svg", "image/svg+xml", "svg", "xml"],
+  ["typ", "text/x-typst", "typst", "typst"],
+  ["tex latex", "text/x-latex", "latex", "latex"],
+  ["pdb cif mmcif sdf mol mol2 xyz", "chemical/x-pdb", "molecule"],
+  ["png", "image/png", "image"],
+  ["jpg jpeg", "image/jpeg", "image"],
+  ["gif", "image/gif", "image"],
+  ["webp", "image/webp", "image"],
+  ["bmp", "image/bmp", "image"],
+  ["ico", "image/x-icon", "image"],
+  ["avif", "image/avif", "image"],
+  ["pdf", "application/pdf", "pdf"],
+  ["mp3", "audio/mpeg", "audio"],
+  ["wav", "audio/wav", "audio"],
+  ["ogg oga", "audio/ogg", "audio"],
+  ["flac", "audio/flac", "audio"],
+  ["m4a aac", "audio/mp4", "audio"],
+  ["mp4 m4v", "video/mp4", "video"],
+  ["webm", "video/webm", "video"],
+  ["mov", "video/quicktime", "video"],
+  ["npy", "application/x-npy", "array"],
+  ["stl", "model/stl", "mesh"],
+  ["obj", "model/obj", "mesh"],
+  ["tif tiff", "image/tiff", "tiff"],
+  ["nii", "application/x-nifti", "volume"],
+  ["mrc map rec ccp4", "application/x-mrc", "volume"],
+  ["py pyi pyw ipy smk", "text/x-python", "code", "python"],
+  ["r rprofile rhistory rscript", "text/x-r", "code", "r"],
+  ["js mjs cjs", "text/javascript", "code", "javascript"],
+  ["jsx", "text/javascript", "code", "jsx"],
+  ["ts mts cts", "text/typescript", "code", "typescript"],
+  ["tsx", "text/typescript", "code", "tsx"],
+  ["yml yaml", "text/yaml", "code", "yaml"],
+  ["toml", "text/toml", "code", "toml"],
+  ["sh bash zsh", "text/x-shellscript", "code", "bash"],
+  ["fish", "text/x-shellscript", "code", "fish"],
+  ["ps1", "text/plain", "code", "powershell"],
+  ["sql", "text/x-sql", "code", "sql"],
+  ["c h", "text/x-c", "code", "c"],
+  ["cpp hpp cc cxx", "text/x-c++", "code", "cpp"],
+  ["java", "text/x-java", "code", "java"],
+  ["go", "text/x-go", "code", "go"],
+  ["rs", "text/x-rust", "code", "rust"],
+  ["css", "text/css", "code", "css"],
+  ["scss", "text/x-scss", "code", "scss"],
+  ["xml", "application/xml", "code", "xml"],
+  ["jl", "text/x-julia", "code", "julia"],
+  ["nf", "text/plain", "code", "groovy"],
+  ["zip tar 7z rar exe dll so dylib bin", "application/octet-stream", "binary"]
+];
+var RENDERED_WITH_SOURCE = /* @__PURE__ */ new Set([
+  "markdown",
+  "json",
+  "table",
+  "notebook",
+  "mermaid",
+  "sequence",
+  "alignment",
+  "tree",
+  "html",
+  "svg",
+  "typst",
+  "latex",
+  "molecule"
+]);
+var REGISTRY = /* @__PURE__ */ new Map();
+for (const [exts, mime, previewKind, language = "text"] of ROWS)
+  for (const ext of exts.split(" "))
+    REGISTRY.set(ext, {
+      ext,
+      mime,
+      text: TEXT_KINDS.has(previewKind),
+      language,
+      previewKind,
+      hasSource: RENDERED_WITH_SOURCE.has(previewKind)
+    });
+var UNKNOWN_FILE_TYPE = Object.freeze({
+  ext: "",
+  mime: "application/octet-stream",
+  text: false,
+  language: "text",
+  previewKind: "binary",
+  hasSource: false
+});
+
+// packages/shared/src/harness.ts
+var HARNESS_CONTRACT = [
+  "Drone harness contract:",
+  "- Inspect before assuming: read the relevant files, specifications, and tool results before choosing a method.",
+  "- Verify important claims, numbers, and outputs against current evidence or measured results.",
+  "- Preserve source data and existing work; keep partial results and state the blocker when a step fails.",
+  "- Track the requested deliverables and check the final files under the conditions that will consume them.",
+  "- Report evidence and limitations, unresolved questions, and the next observable action precisely.",
+  "- Use the available tools and permissions; do not claim work, evidence, or review that did not happen.",
+  "- Keep progress updates concise and public. The final answer follows the answer mode below; for code or file work it also names the changed files and checks run.",
+  "- Private reasoning stays private; expose actions, observations, decisions, and conclusions that the evidence supports."
+].join("\n");
+var SCIENCE_CONTRACT = [
+  "Scientific contract:",
+  "- Inspect relevant files, data, and source records before assuming or fitting.",
+  "- Keep observations, interpretations, hypotheses, and unknowns separate.",
+  "- Check numbers and generated outputs against the current source or a fresh run.",
+  "- Preserve source data and write new results beside existing work; do not silently overwrite or delete.",
+  "- Treat simulated data, teacher outputs, pseudo-labels, and self-generated validators as assumptions, not real-world error checks.",
+  "- State missing evidence, failed checks, and remaining limitations in the final answer."
+].join("\n");
+var RESPONSE_CONTRACT = [
+  "Response contract:",
+  "- Progress narration between tools is short and only reports a new observation, choice, result, or blocker.",
+  "- The final answer is the user-facing answer; its length and structure follow the answer mode.",
+  "- Never claim a file was saved, a source was read, or a check passed unless the host returned that evidence.",
+  "- Keep private reasoning private; expose observable actions, evidence, decisions, and conclusions."
+].join("\n");
+var OVERLOOKED_POINTS_RULE = 'Only if you found something substantive, end with a short section titled "\u53EF\u80FD\u88AB\u5FFD\u7565\u7684\u70B9" (or "Possibly overlooked" in English) with at most 3 items the user did not ask about: a contradiction between sources, an untested combination, a method from another field, a questionable default assumption, or a next implication of the conclusion. Mark each item as speculative, name its basis (a specific note or paper) and say what experiment or data would test it. Omit the section entirely rather than padding it.';
+var QUICK_ANSWER_CONTRACT = [
+  "Answer mode: quick.",
+  "- Answer the question directly in a few sentences or a short list; no headings.",
+  "- Keep only the caveat that changes how the answer should be used.",
+  "- Cite a source (Vault path, DOI or URL) only for a specific fact that depends on it; never invent one."
+].join("\n");
+var ACADEMIC_ANSWER_CONTRACT = [
+  "Answer mode: academic. Write the final answer as a scholarly synthesis, in the user's language:",
+  "- Structure it as Background and question \u2192 Methods and evidence \u2192 Conclusion, with short headings.",
+  "- Cite each substantive claim inline as (Author, Year). End with a numbered References list: authors, year, title, venue, DOI; when the reference has a note in the local Vault, add its Vault path.",
+  "- Grade every claim explicitly as established (replicated or consensus), supported by evidence (one or a few studies), or speculative (hypothesis or inference); never upgrade weak evidence.",
+  "- Use precise terms, units and numbers together with their conditions (organism, sample size, method) instead of vague qualifiers.",
+  "- Never invent a reference, DOI, author or number. If a citation could not be checked against a source you actually read, say so next to it.",
+  "- Say which parts came from the local knowledge base and which from the web.",
+  `- ${OVERLOOKED_POINTS_RULE}`
+].join("\n");
+
+// packages/shared/src/host-api/define.ts
+function defineDomain(name, spec) {
+  const methods = Object.fromEntries(
+    Object.entries(spec.methods).map(([methodName, method]) => [
+      methodName,
+      { ...method, access: method.access ?? "desktop" }
+    ])
+  );
+  return {
+    name,
+    methods,
+    events: spec.events ?? {}
+  };
+}
+
+// packages/shared/src/decisions.ts
+var DecisionKindSchema = typebox_exports.Union([
+  typebox_exports.Literal("task-authorization"),
+  typebox_exports.Literal("workflow-repair"),
+  typebox_exports.Literal("subagent-dispatch"),
+  typebox_exports.Literal("compute-submit"),
+  typebox_exports.Literal("zotero-write"),
+  typebox_exports.Literal("rebind")
+]);
+var DecisionRecordSchema = typebox_exports.Object(
+  {
+    id: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+    schemaVersion: typebox_exports.Literal(2),
+    projectId: typebox_exports.String({ minLength: 1, maxLength: 512 }),
+    kind: DecisionKindSchema,
+    summary: typebox_exports.String({ minLength: 1, maxLength: 2e3 }),
+    basis: typebox_exports.Array(typebox_exports.String({ maxLength: 512 }), { maxItems: 32 }),
+    affectedArtifactIds: typebox_exports.Array(typebox_exports.String({ maxLength: 256 }), { maxItems: 512 }),
+    status: typebox_exports.Union([typebox_exports.Literal("active"), typebox_exports.Literal("revoked")]),
+    revokedAt: typebox_exports.Optional(typebox_exports.String()),
+    revokeReason: typebox_exports.Optional(typebox_exports.String({ maxLength: 2e3 })),
+    createdAt: typebox_exports.String()
+  },
+  { additionalProperties: false }
+);
+var ProjectIdArgs = typebox_exports.Tuple([typebox_exports.String({ minLength: 1, maxLength: 512 })]);
+var RevokeArgs = typebox_exports.Tuple([
+  typebox_exports.String({ minLength: 1, maxLength: 256 }),
+  typebox_exports.String({ minLength: 1, maxLength: 2e3 })
+]);
+var ConfirmArgs = typebox_exports.Tuple([
+  typebox_exports.String({ minLength: 1, maxLength: 256 }),
+  typebox_exports.String({ minLength: 1, maxLength: 2e3 })
+]);
+var DecisionsContract = defineDomain("decisions", {
+  methods: {
+    list: {
+      args: ProjectIdArgs,
+      result: typebox_exports.Array(DecisionRecordSchema, { maxItems: 4096 })
+    },
+    revoke: {
+      args: RevokeArgs,
+      result: DecisionRecordSchema
+    },
+    confirm: {
+      args: ConfirmArgs,
+      result: DecisionRecordSchema
+    }
+  },
+  events: {}
+});
+
+// packages/shared/src/host-api/app.ts
+var AppInfoSchema = typebox_exports.Object(
+  {
+    name: typebox_exports.String(),
+    version: typebox_exports.String(),
+    electron: typebox_exports.String(),
+    chrome: typebox_exports.String(),
+    node: typebox_exports.String(),
+    platform: typebox_exports.String(),
+    arch: typebox_exports.String(),
+    repoUrl: typebox_exports.String()
+  },
+  { additionalProperties: false }
+);
+var DiagnosticsSnapshotSchema = typebox_exports.Unsafe({ type: "object" });
+var SavedTabsSchema = typebox_exports.Unsafe({ type: "object" });
+var UiStateSchema = typebox_exports.Unsafe({ type: "object" });
+var ResourcePreviewResultSchema = typebox_exports.Unsafe({ type: "object" });
+var FigureAnnotationSchema = typebox_exports.Unsafe(
+  typebox_exports.Object(
+    {
+      id: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+      x: typebox_exports.Number({ minimum: 0, maximum: 1 }),
+      y: typebox_exports.Number({ minimum: 0, maximum: 1 }),
+      text: typebox_exports.String({ maxLength: 2e3 }),
+      createdAt: typebox_exports.String({ maxLength: 64 })
+    },
+    { additionalProperties: false }
+  )
+);
+var ImportedAttachmentSchema = typebox_exports.Object(
+  { path: typebox_exports.String(), name: typebox_exports.String(), bytes: typebox_exports.Integer({ minimum: 0 }) },
+  { additionalProperties: false }
+);
+var GitBranchesSchema = typebox_exports.Object(
+  { current: typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]), branches: typebox_exports.Array(typebox_exports.String()) },
+  { additionalProperties: false }
+);
+var NullableString = typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]);
+var AppContract = defineDomain("app", {
+  methods: {
+    getInfo: {
+      args: typebox_exports.Tuple([]),
+      result: typebox_exports.Unsafe(AppInfoSchema)
+    },
+    getDiagnostics: {
+      args: typebox_exports.Tuple([]),
+      result: DiagnosticsSnapshotSchema
+    },
+    getDailyDir: {
+      args: typebox_exports.Tuple([]),
+      result: typebox_exports.String({ minLength: 1 })
+    },
+    openExternal: { args: typebox_exports.Tuple([typebox_exports.String()]), result: typebox_exports.Void() },
+    filePreview: {
+      args: typebox_exports.Union([typebox_exports.Tuple([typebox_exports.String()]), typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()])]),
+      result: ResourcePreviewResultSchema
+    },
+    htmlPreviewUrl: {
+      args: typebox_exports.Union([typebox_exports.Tuple([typebox_exports.String()]), typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()])]),
+      result: typebox_exports.String({ minLength: 1 })
+    },
+    getFigureAnnotations: {
+      args: typebox_exports.Union([typebox_exports.Tuple([typebox_exports.String()]), typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()])]),
+      result: typebox_exports.Array(FigureAnnotationSchema)
+    },
+    saveFigureAnnotations: {
+      args: typebox_exports.Tuple([
+        typebox_exports.String({ minLength: 1 }),
+        typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]),
+        typebox_exports.Array(FigureAnnotationSchema, { maxItems: 200 })
+      ]),
+      result: typebox_exports.Array(FigureAnnotationSchema)
+    },
+    importDroppedFile: {
+      args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 }), typebox_exports.String({ minLength: 1 })]),
+      result: typebox_exports.Unsafe(ImportedAttachmentSchema)
+    },
+    resourceOpenExternal: {
+      args: typebox_exports.Union([typebox_exports.Tuple([typebox_exports.String()]), typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()])]),
+      result: typebox_exports.Void()
+    },
+    /** 文件右键菜单的宿主动作（P7）：action, target, cwd, arg（rename 的新文件名） */
+    fileAction: {
+      args: typebox_exports.Tuple([
+        typebox_exports.Union(
+          ["download", "openDefault", "reveal", "openInEditor", "cut", "copy", "rename", "trash"].map(
+            (a) => typebox_exports.Literal(a)
+          )
+        ),
+        typebox_exports.String({ minLength: 1 }),
+        NullableString,
+        NullableString
+      ]),
+      result: NullableString
+    },
+    /** 本机环境探测（P10）：固定只读命令 */
+    pickDownloadDir: { args: typebox_exports.Tuple([]), result: NullableString },
+    /** 待答数角标（P14）：count, Windows overlay 图（data URL）或 null */
+    setAttentionBadge: {
+      args: typebox_exports.Tuple([typebox_exports.Integer({ minimum: 0, maximum: 999 }), NullableString]),
+      result: typebox_exports.Void()
+    },
+    hostEnvironment: {
+      args: typebox_exports.Tuple([]),
+      result: typebox_exports.Unsafe(typebox_exports.Object({}, { additionalProperties: true }))
+    },
+    loadTabs: { args: typebox_exports.Tuple([]), result: typebox_exports.Union([SavedTabsSchema, typebox_exports.Null()]) },
+    saveTabs: { args: typebox_exports.Tuple([SavedTabsSchema]), result: typebox_exports.Void() },
+    loadUiState: { args: typebox_exports.Tuple([]), result: typebox_exports.Union([UiStateSchema, typebox_exports.Null()]) },
+    saveUiState: {
+      args: typebox_exports.Tuple([typebox_exports.Unsafe({ type: "object" })]),
+      result: typebox_exports.Void()
+    },
+    pickBackgroundImage: { args: typebox_exports.Tuple([]), result: NullableString },
+    checkForUpdates: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
+    downloadUpdate: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
+    installUpdate: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
+    saveFileDialog: {
+      args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()]),
+      result: NullableString
+    },
+    pickPath: {
+      args: typebox_exports.Union([
+        typebox_exports.Tuple([typebox_exports.Union([typebox_exports.Literal("file"), typebox_exports.Literal("directory")])]),
+        typebox_exports.Tuple([typebox_exports.Union([typebox_exports.Literal("file"), typebox_exports.Literal("directory")]), typebox_exports.String()])
+      ]),
+      result: NullableString
+    },
+    pickDirectory: { args: typebox_exports.Tuple([]), result: NullableString },
+    getGitBranch: { args: typebox_exports.Tuple([typebox_exports.String()]), result: NullableString },
+    listGitBranches: { args: typebox_exports.Tuple([typebox_exports.String()]), result: GitBranchesSchema },
+    checkoutBranch: { args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()]), result: typebox_exports.String() }
+  }
+});
+
+// packages/shared/src/host-api/compute.ts
+var IdArgs = typebox_exports.Tuple([ComputeIdSchema]);
+var EmptyArgs = typebox_exports.Tuple([]);
+var HealthSnapshotSchema = typebox_exports.Object(
+  {
+    checkedAt: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    hosts: typebox_exports.Array(
+      typebox_exports.Object(
+        {
+          id: ComputeIdSchema,
+          alias: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+          status: ComputeHealthStatusSchema,
+          checkedAt: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 64 })),
+          latencyMs: typebox_exports.Optional(typebox_exports.Number({ minimum: 0 })),
+          details: typebox_exports.Optional(typebox_exports.String({ maxLength: 512 })),
+          errorCode: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 }))
+        },
+        { additionalProperties: false }
+      ),
+      { maxItems: 256 }
+    )
+  },
+  { additionalProperties: false }
+);
+var JobFilterSchema = typebox_exports.Object(
+  {
+    states: typebox_exports.Optional(
+      typebox_exports.Array(
+        typebox_exports.Union([
+          typebox_exports.Literal("queued"),
+          typebox_exports.Literal("running"),
+          typebox_exports.Literal("succeeded"),
+          typebox_exports.Literal("failed"),
+          typebox_exports.Literal("cancelled"),
+          typebox_exports.Literal("unknown")
+        ]),
+        { maxItems: 6 }
+      )
+    ),
+    hostId: typebox_exports.Optional(ComputeIdSchema),
+    limit: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 100 }))
+  },
+  { additionalProperties: false }
+);
+var LogArgsSchema = typebox_exports.Tuple([
+  ComputeIdSchema,
+  typebox_exports.Optional(typebox_exports.String({ minLength: 0, maxLength: 256 }))
+]);
+var TerminalOpenSchema = typebox_exports.Object(
+  {
+    hostId: ComputeIdSchema,
+    cwd: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+    mode: typebox_exports.Optional(typebox_exports.Union([typebox_exports.Literal("shell"), typebox_exports.Literal("command")]))
+  },
+  { additionalProperties: false }
+);
+var TerminalWriteSchema = typebox_exports.Tuple([ComputeIdSchema, typebox_exports.String({ maxLength: 16384 })]);
+var OnboardingStepArgs = typebox_exports.Tuple([
+  typebox_exports.Union([
+    typebox_exports.Literal("model"),
+    typebox_exports.Literal("project"),
+    typebox_exports.Literal("knowledge"),
+    typebox_exports.Literal("literature"),
+    typebox_exports.Literal("mcp"),
+    typebox_exports.Literal("remote-host"),
+    typebox_exports.Literal("example-task")
+  ])
+]);
+var ComputeContract = defineDomain("compute", {
+  methods: {
+    listHosts: { args: EmptyArgs, result: typebox_exports.Array(ComputeHostSchema, { maxItems: 256 }) },
+    getHost: { args: IdArgs, result: typebox_exports.Union([ComputeHostSchema, typebox_exports.Null()]) },
+    saveHost: { args: typebox_exports.Tuple([ComputeHostInputSchema]), result: ComputeHostSchema },
+    removeHost: { args: IdArgs, result: typebox_exports.Void() },
+    probeHost: { args: IdArgs, result: ComputeHostSchema },
+    // LAN has no compute projection yet; keep these desktop-only until the
+    // authenticated observer exposes the same schemas through its GET routes.
+    getHealthSnapshot: { args: EmptyArgs, result: HealthSnapshotSchema },
+    listJobs: {
+      args: typebox_exports.Tuple([typebox_exports.Optional(JobFilterSchema)]),
+      result: typebox_exports.Array(ComputeJobSchema, { maxItems: 100 }),
+      access: "lan-read"
     },
     getJob: { args: IdArgs, result: typebox_exports.Union([ComputeJobSchema, typebox_exports.Null()]) },
     submitJob: { args: typebox_exports.Tuple([ComputeJobInputSchema]), result: ComputeJobSchema },
