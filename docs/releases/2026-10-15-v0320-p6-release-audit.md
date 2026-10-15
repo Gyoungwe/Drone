@@ -2,8 +2,8 @@
 
 **对应计划**：Drone Scientific Workbench Upgrade Plan v2：Evidence-Gated Evolution Architecture  
 **批次**：P6 · 发布审阅：全量测试、架构检查、打包产物、许可证、技能锁定、升级夹具和远程 CI  
-**审阅基线**：P5 UI/LAN 证据 PR #199 已合入 `main`（merge `2ca43994e5d2148050841ccb47fa8e3307959480`）；本审阅分支包含同一 P5 内容。  
-**结论**：P6 审阅材料已完成，但发布条件仍有明确未完成项。本文件不把本地 fixture、UI 截图或受控 smoke 提升为真实科研结论。
+**审阅基线**：P5 UI/LAN 证据 PR #199 已合入 `main`（merge `2ca43994e5d2148050841ccb47fa8e3307959480`）；生成物修复 PR #201 已在远程 CI #610 全绿，等待合入。
+**结论**：P6 审阅材料已完成，生成物门禁已恢复；发布条件仍有明确未完成项。本文件不把本地 fixture、UI 截图或受控 smoke 提升为真实科研结论。
 
 ## 门禁记录
 
@@ -17,11 +17,11 @@
 | `npm run test:upgrade` | 通过 | `orchestration-stress`、`hybrid-fixture`、`packaged-resources` 全部通过；需要已安装依赖 |
 | `npm run test:research-packaging` | 通过 | 16 个离线许可证/收据/缓存测试通过 |
 | `npm run check:plugin-api` | 通过 | host API projections up to date |
-| `npm run check:extensions` | 有条件通过 | `build:extensions -- --force` 后本地映射检查通过；远程 CI #602 在干净 checkout 仍报告源/产物漂移，见“未完成项” |
-| `npm run check:research-runtime` | 有条件通过 | 当前源重建后通过；重建结果是派生产物，不等于 A5 迁移完成 |
+| `npm run check:extensions` | 通过 | 刷新 `.pi/extensions` manifest 与 3 个受影响 bundle 后，本地和远程 CI #610 干净 checkout 均通过；修复见 PR #201 |
+| `npm run check:research-runtime` | 通过 | 刷新 `.pi/lib` 下 3 个受影响 research bundle 与 manifest 后，本地和远程 CI #610 均通过；这不等于 A5 迁移完成 |
 | `npm run check:tasks-runtime` | 通过 | runtime 与 compatibility artifacts up to date |
 | `npm run check:pi-packages` | 通过 | `stage:pi-packages` 后 `pi-mcp-adapter@5.1.0` 已验证；staged 目录是本地构建产物，不入 PR |
-| `npm run check:knowledge-runtime` | 未通过 | 重建后仍有 esbuild chunk 名称/manifest 漂移；远程 CI #602 同样失败。没有把这类派生文件漂移伪装成源码通过 |
+| `npm run check:knowledge-runtime` | 通过 | 刷新知识 runtime manifest、入口、chunk graph 和 `evolution.mjs` 后，本地和远程 CI #610 均通过；修复见 PR #201 |
 | `npm run skills:check` | fail-closed | 当前环境没有受授权的 Nature/Scientific 资源包及 `.drone-pack.json`；不下载、不猜许可证、不把缺包标成通过 |
 
 P4 的受控 RNA-seq smoke 只验证 fixture、attempt 隔离、输入/输出哈希、Nextflow receipt 和失败回执。真实目标主机、真实 FASTQ、Nextflow cache、MultiQC 生物学结果仍需要授权环境，因此不在本表中标成完成。
@@ -39,12 +39,11 @@ P4 的受控 RNA-seq smoke 只验证 fixture、attempt 隔离、输入/输出哈
 
 ## 未完成项和下一步
 
-1. **生成物基线**：`check:extensions` 与 `check:knowledge-runtime` 在远程 CI #602 仍失败。需要单独的 artifact reproducibility 修复：固定构建输入/Node/esbuild 组合、清理 stale chunks、重建并审阅 manifest，再单独开 PR；不能在 P6 文档 PR 中盲目提交大批二进制/派生变化。
-2. **技能包发布前置**：在有明确 license basis 的环境获取锁定的 Nature/Scientific/ARS 资源，运行 `npm run skills:check` 和 release preflight。缺少受授权资源时保持 fail-closed。
-3. **UI B 档**：在发布环境按 P5 矩阵收集 375/768/1024/1440、浅色/深色/减动效截图和哈希；截图完成前不能写“全视口视觉验收完成”。
-4. **真实科研 C 档**：在用户授权主机执行真实 bulk RNA-seq/Nextflow smoke，保存 manifest、环境 digest、QC、count table、trace 和失败/重试 receipt；不能用 fixture 代替真实数据。
-5. **A5**：`.pi/lib` 架构迁移继续延期。本批次只审阅现有生成物状态，不删除兼容门面，不声称完成迁移。
-6. **因果链入口**：普通会话入口的完整 causal context 自动注入仍是后续设计/实现任务；当前 projection 保持 backend/host 只读范围。
+1. **技能包发布前置**：在有明确 license basis 的环境获取锁定的 Nature/Scientific/ARS 资源，运行 `npm run skills:check` 和 release preflight。缺少受授权资源时保持 fail-closed。
+2. **UI B 档**：在发布环境按 P5 矩阵收集 375/768/1024/1440、浅色/深色/减动效截图和哈希；截图完成前不能写“全视口视觉验收完成”。
+3. **真实科研 C 档**：在用户授权主机执行真实 bulk RNA-seq/Nextflow smoke，保存 manifest、环境 digest、QC、count table、trace 和失败/重试 receipt；不能用 fixture 代替真实数据。
+4. **A5**：`.pi/lib` 架构迁移继续延期。本批次只审阅现有生成物状态，不删除兼容门面，不声称完成迁移。
+5. **因果链入口**：普通会话入口的完整 causal context 自动注入仍是后续设计/实现任务；当前 projection 保持 backend/host 只读范围。
 
 ## 发布红线
 
