@@ -40,6 +40,8 @@ export interface CapabilityGovernanceManifest extends VersionedResearchContract 
 		readonly wallTimeSeconds: number;
 	};
 	readonly sideEffects: readonly string[];
+	/** Named evidence outputs are part of the auditable capability contract. */
+	readonly evidenceOutputs: readonly string[];
 	readonly environment: {
 		readonly readiness: GovernanceEnvironmentReadiness;
 		readonly requirements: readonly string[];
@@ -48,6 +50,65 @@ export interface CapabilityGovernanceManifest extends VersionedResearchContract 
 		readonly probeRef?: ContractParentRef;
 	};
 	readonly createdAt: string;
+}
+
+export type CapabilityGovernanceAuditEvent = "registered" | "assessed" | "submission-blocked";
+
+/** Immutable audit projection. Secrets are intentionally omitted. */
+export interface CapabilityGovernanceAuditRecord {
+	readonly id: string;
+	readonly manifestId: string;
+	readonly event: CapabilityGovernanceAuditEvent;
+	readonly at: string;
+	readonly capabilityId: CapabilityId;
+	readonly version: string;
+	readonly source: CapabilityGovernanceManifest["source"];
+	readonly schema: CapabilityGovernanceManifest["schema"];
+	readonly sideEffects: readonly string[];
+	readonly evidenceOutputs: readonly string[];
+	readonly environment: {
+		readonly readiness: GovernanceEnvironmentReadiness;
+		readonly fingerprint?: string;
+		readonly observedAt?: string;
+		readonly probeRef?: ContractParentRef;
+	};
+	readonly status: CapabilityGovernanceAssessment["status"];
+	readonly findings: readonly CapabilityGovernanceFinding[];
+}
+
+export interface CapabilityGovernanceAuditStore {
+	append(record: CapabilityGovernanceAuditRecord): void;
+	list(manifestId?: string): readonly CapabilityGovernanceAuditRecord[];
+}
+
+export class InMemoryCapabilityGovernanceAuditStore implements CapabilityGovernanceAuditStore {
+	private readonly records: CapabilityGovernanceAuditRecord[] = [];
+
+	append(record: CapabilityGovernanceAuditRecord): void {
+		this.records.push({
+			...record,
+			source: { ...record.source },
+			schema: { ...record.schema },
+			sideEffects: [...record.sideEffects],
+			evidenceOutputs: [...record.evidenceOutputs],
+			environment: { ...record.environment },
+			findings: record.findings.map((finding) => ({ ...finding })),
+		});
+	}
+
+	list(manifestId?: string): readonly CapabilityGovernanceAuditRecord[] {
+		return this.records
+			.filter((record) => manifestId === undefined || record.manifestId === manifestId)
+			.map((record) => ({
+				...record,
+				source: { ...record.source },
+				schema: { ...record.schema },
+				sideEffects: [...record.sideEffects],
+				evidenceOutputs: [...record.evidenceOutputs],
+				environment: { ...record.environment },
+				findings: record.findings.map((finding) => ({ ...finding })),
+			}));
+	}
 }
 
 export type CapabilityGovernanceBlockCode =
@@ -121,6 +182,7 @@ export function createCapabilityGovernanceManifest(input: ManifestInput): Capabi
 		permissions: { ...input.permissions, secrets: [...input.permissions.secrets] },
 		resources: { ...input.resources },
 		sideEffects: [...input.sideEffects],
+		evidenceOutputs: [...input.evidenceOutputs],
 		environment: {
 			...input.environment,
 			requirements: [...input.environment.requirements],
@@ -210,11 +272,43 @@ export function assertCapabilityGovernanceReady(manifest: CapabilityGovernanceMa
 
 export class CapabilityGovernanceCatalog {
 	private readonly manifests = new Map<string, CapabilityGovernanceManifest>();
+	private readonly auditStore: CapabilityGovernanceAuditStore;
+	private readonly now: () => string;
+
+	constructor(
+		options: { readonly auditStore?: CapabilityGovernanceAuditStore; readonly now?: () => string } = {},
+	) {
+		this.auditStore = options.auditStore ?? new InMemoryCapabilityGovernanceAuditStore();
+		this.now = options.now ?? (() => new Date().toISOString());
+	}
+
+	private appendAudit(
+		manifest: CapabilityGovernanceManifest,
+		event: CapabilityGovernanceAuditEvent,
+		assessment: CapabilityGovernanceAssessment,
+	): void {
+		this.auditStore.append({
+			id: `${manifest.id}:${event}:${this.now()}`,
+			manifestId: manifest.id,
+			event,
+			at: this.now(),
+			capabilityId: manifest.capabilityId,
+			version: manifest.version,
+			source: { ...manifest.source },
+			schema: { ...manifest.schema },
+			sideEffects: [...manifest.sideEffects],
+			evidenceOutputs: [...manifest.evidenceOutputs],
+			environment: { ...manifest.environment },
+			status: assessment.status,
+			findings: assessment.findings.map((finding) => ({ ...finding })),
+		});
+	}
 
 	register(manifest: CapabilityGovernanceManifest): void {
 		if (this.manifests.has(manifest.id))
 			throw new Error(`Capability manifest already registered: ${manifest.id}`);
 		this.manifests.set(manifest.id, manifest);
+		this.appendAudit(manifest, "registered", assessCapabilityGovernance(manifest));
 	}
 
 	get(id: string): CapabilityGovernanceManifest | undefined {
@@ -236,12 +330,20 @@ export class CapabilityGovernanceCatalog {
 					{ code: "unregistered", message: "Capability is not registered in the governance catalog" },
 				],
 			};
-		return assessCapabilityGovernance(manifest);
+		const assessment = assessCapabilityGovernance(manifest);
+		this.appendAudit(manifest, assessment.canSubmit ? "assessed" : "submission-blocked", assessment);
+		return assessment;
 	}
 
 	assertReady(id: string): void {
-		const manifest = this.manifests.get(id);
-		if (!manifest) throw new Error("Capability submission blocked: unregistered");
-		assertCapabilityGovernanceReady(manifest);
+		const assessment = this.assess(id);
+		if (!assessment.canSubmit)
+			throw new Error(
+				`Capability submission blocked: ${assessment.findings.map((finding) => finding.code).join(", ")}`,
+			);
+	}
+
+	audit(id?: string): readonly CapabilityGovernanceAuditRecord[] {
+		return this.auditStore.list(id);
 	}
 }
