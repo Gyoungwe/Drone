@@ -4,6 +4,7 @@ import {
 	CAPABILITY_GOVERNANCE_SCHEMA,
 	CapabilityGovernanceCatalog,
 	createCapabilityGovernanceManifest,
+	InMemoryCapabilityGovernanceAuditStore,
 } from "./capability-governance";
 
 const hash = "a".repeat(64);
@@ -18,6 +19,7 @@ const base = (overrides: Partial<Parameters<typeof createCapabilityGovernanceMan
 		permissions: { filesystem: "read", network: "none", process: "sandbox", secrets: [] },
 		resources: { cpus: 2, memoryBytes: 4_000_000_000, wallTimeSeconds: 3_600 },
 		sideEffects: ["read"],
+		evidenceOutputs: ["manifest.json", "qc.json"],
 		environment: {
 			readiness: "ready",
 			requirements: ["nextflow>=23"],
@@ -81,10 +83,15 @@ describe("capability governance", () => {
 	});
 
 	it("catalogs manifests and fails closed for unknown ids or duplicate ids", () => {
-		const catalog = new CapabilityGovernanceCatalog();
+		const auditStore = new InMemoryCapabilityGovernanceAuditStore();
+		const catalog = new CapabilityGovernanceCatalog({ auditStore, now: () => "2026-10-15T00:00:00.000Z" });
 		catalog.register(base());
 		expect(catalog.assess("missing").findings[0]?.code).toBe("unregistered");
 		expect(() => catalog.register(base())).toThrow(/already registered/);
 		catalog.assertReady("bulk-rnaseq@3.18.0");
+		expect(catalog.audit("bulk-rnaseq@3.18.0").map((record) => record.event)).toEqual([
+			"registered",
+			"assessed",
+		]);
 	});
 });

@@ -24,6 +24,12 @@ responsible for binding that port to its existing atomic `JsonStore`. This
 keeps knowledge pure and makes persistence, migration and sensitivity policy a
 host concern.
 
+An approved candidate can be materialized into a `CapabilityVersion` only by
+`materializeApprovedEvolutionCandidate`, which produces a `recommended` version
+with the approval and validation lineage attached. Version comparison and
+retirement are explicit immutable operations; retirement requires a reason and
+actor reference.
+
 These records are navigation and governance data. They do not grant compute,
 network, filesystem or publication authority. Any executable reuse must still
 pass the existing analysis, compute authorization, evidence and review gates.

@@ -28,7 +28,7 @@
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 
-P2 知识/记忆/进化复用契约与审批边界：见 [evolution-reuse-contract.md](evolution-reuse-contract.md)。\n\nP3 技能与工具治理 manifest、来源、许可证、权限和提交门禁：见 [capability-governance.md](capability-governance.md)。
+P2 知识/记忆/进化复用契约与审批边界：见 [evolution-reuse-contract.md](evolution-reuse-contract.md)。\n\nP3 技能与工具治理 manifest、来源、许可证、权限和提交门禁：见 [capability-governance.md](capability-governance.md)。v2 闭环契约（能力矩阵、跨对象证据晋级、进化候选物化与治理审计）见 [v2-closure-contracts.md](v2-closure-contracts.md)。
 
 v0.32.0 UI、RunAttempt 因果链与 ClawsGO Science 的统一交付顺序、验收门禁和合并护栏：见 [统一交付计划](superpowers/plans/2026-10-14-v0320-unified-delivery-plan.md)。
 
