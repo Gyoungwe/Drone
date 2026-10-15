@@ -146,6 +146,28 @@ class RunnerTest(unittest.TestCase):
             ],
         )
 
+    def test_public_pasilla_workflow_is_fixed_and_version_pinned(self):
+        runner = load_runner_module()
+        self.env.pop("DRONE_RUNNER_FIXTURE", None)
+        argv, mode = runner.registered_argv(
+            {
+                "jobId": "job-pasilla-public",
+                "workflow": {"name": "drone/pasilla-public-demo", "version": "1.0.0"},
+            },
+            Path(self.tmp.name) / "runs" / "job-pasilla-public",
+        )
+        self.assertEqual(mode, "production")
+        self.assertEqual(argv[0], sys.executable)
+        self.assertTrue(argv[1].endswith("workflows/pasilla_public_demo.py"))
+        with self.assertRaises(runner.RunnerError):
+            runner.registered_argv(
+                {
+                    "jobId": "job-pasilla-public-bad",
+                    "workflow": {"name": "drone/pasilla-public-demo", "version": "2.0.0"},
+                },
+                Path(self.tmp.name) / "runs" / "job-pasilla-public-bad",
+            )
+
     def test_registered_rnaseq_rejects_outdir_outside_collection_contract(self):
         runner = load_runner_module()
         self.env.pop("DRONE_RUNNER_FIXTURE", None)
