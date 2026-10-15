@@ -5435,6 +5435,45 @@ var CausalEnvelopeSchema = typebox_exports.Object(
   { additionalProperties: false }
 );
 
+// packages/shared/src/research-status.ts
+var RESEARCH_EVIDENCE_STATES = Object.freeze([
+  "observed",
+  "reproduced",
+  "verified",
+  "partial",
+  "stale",
+  "unsupported",
+  "unknown",
+  "blocked"
+]);
+var RESEARCH_CLAIM_STATES = Object.freeze([
+  "supported",
+  "mixed",
+  "inferred",
+  "hypothesis",
+  "unsupported"
+]);
+var RESEARCH_CAPABILITY_STATES = Object.freeze([
+  "candidate",
+  "recommended",
+  "registered",
+  "enabled",
+  "retired"
+]);
+var RESEARCH_REUSE_LEVELS = Object.freeze([
+  "navigation-only",
+  "evidence-eligible",
+  "validated-capability",
+  "reproduced-capability"
+]);
+var RESEARCH_VALIDATION_SCOPES = Object.freeze([
+  "fixture",
+  "integration",
+  "real-data",
+  "scientific-review"
+]);
+var RESEARCH_FRESHNESS_STATES = Object.freeze(["fresh", "stale", "unknown"]);
+
 // packages/shared/src/research-skill-sources.json
 var research_skill_sources_default = {
   schemaVersion: 1,
@@ -9668,6 +9707,66 @@ var Replay = typebox_exports.Object({
   environmentMatched: typebox_exports.Boolean(),
   completedAt: typebox_exports.String()
 });
+var CapabilityEvidenceCard = typebox_exports.Object({
+  id: Id,
+  analysisId: Id,
+  capabilityId: Id,
+  requestRef: typebox_exports.Optional(Id),
+  versionRef: typebox_exports.Optional(Id),
+  /** Immutable execution snapshot; distinct from a validation evidence capsule. */
+  checkpointRef: typebox_exports.Optional(Hash2),
+  evidenceCapsuleRef: typebox_exports.Optional(Hash2),
+  evidenceState: typebox_exports.Union([
+    typebox_exports.Literal("observed"),
+    typebox_exports.Literal("reproduced"),
+    typebox_exports.Literal("verified"),
+    typebox_exports.Literal("partial"),
+    typebox_exports.Literal("stale"),
+    typebox_exports.Literal("unsupported"),
+    typebox_exports.Literal("unknown"),
+    typebox_exports.Literal("blocked")
+  ]),
+  claimState: typebox_exports.Union([
+    typebox_exports.Literal("supported"),
+    typebox_exports.Literal("mixed"),
+    typebox_exports.Literal("inferred"),
+    typebox_exports.Literal("hypothesis"),
+    typebox_exports.Literal("unsupported")
+  ]),
+  capabilityState: typebox_exports.Union([
+    typebox_exports.Literal("candidate"),
+    typebox_exports.Literal("recommended"),
+    typebox_exports.Literal("registered"),
+    typebox_exports.Literal("enabled"),
+    typebox_exports.Literal("retired")
+  ]),
+  reuseLevel: typebox_exports.Union([
+    typebox_exports.Literal("navigation-only"),
+    typebox_exports.Literal("evidence-eligible"),
+    typebox_exports.Literal("validated-capability"),
+    typebox_exports.Literal("reproduced-capability")
+  ]),
+  validationScope: typebox_exports.Optional(
+    typebox_exports.Union([
+      typebox_exports.Literal("fixture"),
+      typebox_exports.Literal("integration"),
+      typebox_exports.Literal("real-data"),
+      typebox_exports.Literal("scientific-review")
+    ])
+  ),
+  freshness: typebox_exports.Union([typebox_exports.Literal("fresh"), typebox_exports.Literal("stale"), typebox_exports.Literal("unknown")]),
+  scientificallyVerified: typebox_exports.Boolean(),
+  gates: typebox_exports.Array(
+    typebox_exports.Object({
+      id: Id,
+      status: typebox_exports.Union([typebox_exports.Literal("blocked"), typebox_exports.Literal("review"), typebox_exports.Literal("not-recorded")]),
+      detail: typebox_exports.String()
+    })
+  ),
+  runRefs: typebox_exports.Array(Id),
+  artifactRefs: typebox_exports.Array(typebox_exports.Object({ path: typebox_exports.String(), sha256: Hash2 })),
+  receiptRefs: typebox_exports.Array(Id)
+});
 var Overview = typebox_exports.Object({
   analyses: typebox_exports.Array(
     typebox_exports.Object({
@@ -9678,6 +9777,7 @@ var Overview = typebox_exports.Object({
       artifactCount: typebox_exports.Number()
     })
   ),
+  capabilities: typebox_exports.Array(CapabilityEvidenceCard),
   checkpoints: typebox_exports.Array(Checkpoint),
   branches: typebox_exports.Array(Branch),
   replays: typebox_exports.Array(Replay)
