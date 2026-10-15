@@ -275,6 +275,20 @@ export {
 	PackageService,
 	type PackageServicePort,
 } from "./services/packages";
+export {
+	PASILLA_PUBLIC_OUTPUTS,
+	PASILLA_PUBLIC_WORKFLOW,
+	PASILLA_PUBLIC_WORKFLOW_VERSION,
+	type PasillaDemoIntentInput,
+	type PasillaDemoPlan,
+	type PasillaDemoPreflight,
+	type PasillaDemoReceipt,
+	type PasillaDemoRoute,
+	PasillaPublicExecutionService,
+	planPasillaPublicExecution,
+	preflightPasillaPublicExecution,
+	routePasillaPublicIntent,
+} from "./services/pasilla-demo-route";
 export { PermissionSettingsService } from "./services/permissions";
 export { ProjectTrustService } from "./services/project-trust";
 export { SessionLifecycleService, type SessionLifecycleServicePort } from "./services/session-lifecycle";
