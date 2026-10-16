@@ -273,10 +273,10 @@ export {
 	zoteroWebApiConfig,
 } from "./zotero-write-runtime";
 export {
-\tcreateDefaultResearchWriteAdapters,
-\tcreateZoteroWriteAdapter,
-\tResearchWriteAdapterRegistry,
-\ttype ResearchWriteAdapter,
-\ttype ResearchWriteExecutionContext,
-\ttype ResearchWritePort,
+	createDefaultResearchWriteAdapters,
+	createZoteroWriteAdapter,
+	ResearchWriteAdapterRegistry,
+	type ResearchWriteAdapter,
+	type ResearchWriteExecutionContext,
+	type ResearchWritePort,
 } from "./write-connectors";
