@@ -120,6 +120,28 @@ describe("ResearchResourceService", () => {
 		expect(revokedDecision.status).toBe("revoked");
 	});
 
+	it("refreshes an unchanged file after its receipt expires", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-project-"));
+		await writeFile(join(root, "notes.md"), "A time-bounded note", "utf8");
+		const research = await service();
+		const first = await research.capture({
+			cwd: root,
+			relativePath: "notes.md",
+			expiresAt: "2026-10-15T23:59:59.000Z",
+		});
+		const duplicate = await research.capture({
+			cwd: root,
+			relativePath: "notes.md",
+			expiresAt: "2026-10-17T23:59:59.000Z",
+		});
+		expect(duplicate.idempotent).toBe(false);
+		expect(duplicate.record.id).toBe(first.record.id);
+		expect(duplicate.record.revision).toBe(first.record.revision + 1);
+		expect(duplicate.record.approval).toBe("pending");
+		expect(duplicate.record.sourceReceipt.freshness?.expiresAt).toBe("2026-10-17T23:59:59.000Z");
+		expect((await research.list()).map((item) => item.id)).toEqual([first.record.id]);
+	});
+
 	it("persists connector toggles and blocks disabled searches", async () => {
 		const state = await mkdtemp(join(tmpdir(), "drone-research-connectors-"));
 		let calls = 0;

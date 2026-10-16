@@ -149,9 +149,12 @@ export class ResearchResourceService {
 		const scope = input.scope ?? "project";
 		const key = projectKey(file.root, file.relativePath, byteHash, scope);
 		const id = captureId(key);
-		const existing = (await this.options.store.read()).items.find((item) => item.id === id);
-		if (existing) return { record: existing, idempotent: true };
-		const previous = (await this.options.store.read()).items
+		const ledger = await this.options.store.read();
+		const existing = ledger.items.find((item) => item.id === id);
+		const existingExpiry = existing?.sourceReceipt.freshness?.expiresAt;
+		const existingExpired = Boolean(existingExpiry && Date.parse(existingExpiry) <= Date.now());
+		if (existing && !existingExpired) return { record: existing, idempotent: true };
+		const previous = ledger.items
 			.filter(
 				(item) => item.cwd === file.root && item.relativePath === file.relativePath && item.scope === scope,
 			)
@@ -202,7 +205,9 @@ export class ResearchResourceService {
 		};
 		await this.options.store.update((state) => {
 			state.version = 1;
-			state.items.push(record);
+			const index = state.items.findIndex((item) => item.id === record.id);
+			if (index >= 0) state.items[index] = record;
+			else state.items.push(record);
 		});
 		return { record, idempotent: false };
 	}
