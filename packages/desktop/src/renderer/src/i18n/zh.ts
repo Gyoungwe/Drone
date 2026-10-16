@@ -637,6 +637,8 @@ export const zh = {
 	},
 \tresearchWrite: {
 \t\ttitle: "科研写入连接器",
+		defaultTitle: "研究资料",
+
 \t\thint: "先生成受限写入计划；外部写入每次都需要新的明确确认。",
 \t\tunavailable: "暂无可用的写入连接器",
 \t\tauthorized: "已授权主机端口",
