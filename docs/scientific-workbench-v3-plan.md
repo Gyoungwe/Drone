@@ -34,7 +34,7 @@
 
 - [x] 在 `.local/docs/release.md` 恢复私有签名流程说明，并把签名身份、notarization、Windows 签名、更新 feed、回滚和跨平台验收写成可执行清单；Release workflow 已增加证书预检和产物验签。
 - [ ] 只有 macOS notarized、Windows signed、自动更新成功且回滚成功的证据齐全后，才关闭正式发布门槛；未签名构建只能标为测试包。
-- [ ] 发布前仍执行 `npm run lint && npm run typecheck && npm test && npm run build && npm run check:arch`，再加 `npm run test:upgrade`、扩展/runtime 产物检查和研究资料浏览器回归。
+- [x] 发布前仍执行 `npm run lint && npm run typecheck && npm test && npm run build && npm run check:arch`，再加 `npm run test:upgrade`、扩展/runtime 产物检查和研究资料浏览器回归；Release #119 的 macOS/Windows validate 已全部通过。
 
 ## 实施顺序
 
@@ -49,3 +49,4 @@
 - 2026-10-16（v0.32.1 发布尝试）：PR #206 已合并到 `main`，Release #118 的 macOS/Windows validate 与 prepare 均通过并创建 `v0.32.1` 标签；三个签名构建因仓库未提供授权证书/notarization secrets 按 fail-closed 规则停止，未生成签名安装包、更新 feed 或安装/更新/回滚证据，P11 正式发布门槛保持未关闭。
 - 2026-10-16（签名门禁）：`check-release-signing.mjs`、macOS hardened runtime/entitlements、Windows Authenticode 验签和 GitHub Release workflow 预检已加入；真实证书、notarization、跨平台安装/更新/回滚仍需在有授权 secrets 的 GitHub runner 上执行。
 - 2026-10-16（PR #208）：连接器列表/启停 IPC、JsonStore 持久化、科研资料页双语开关和过期捕获刷新已完成；评审指出的同内容过期快照无法续期问题已修复，PR #208 已以 squash 合并（`bcbf5b894eb48109507af6e85dc646642cecbae9`）。run [682](https://github.com/Gyoungwe/Drone/actions/runs/38920773631) 的 macOS/Windows 8 项 CI 全部通过。连接器分层剩余 Zotero、Protocols、机构登录和写入适配器；P9 手工边界验收与 P11 正式签名安装包、自动更新、回滚证据仍未关闭。
+- 2026-10-16（v0.32.2 发布验收）：PR #209 已合并，`main` 已更新到 v0.32.2。Release [#119](https://github.com/Gyoungwe/Drone/actions/runs/38924137138) 的 resolve、macOS/Windows validate 和 prepare 全部通过；macOS x64/arm64 与 Windows 构建在签名预检处因 `DRONE_MACOS_CERTIFICATE_*`、`DRONE_APPLE_*`、`DRONE_WINDOWS_CERTIFICATE_*` secrets 为空而 fail-closed，publish/website 被跳过且无安装包、更新 feed、安装/更新/回滚证据。P11 正式发布门槛保持未关闭。
