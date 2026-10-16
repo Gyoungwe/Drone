@@ -17,6 +17,7 @@ export default defineConfig({
 		resolve: {
 			alias: {
 				"@drone/backend": resolve(__dirname, "../backend/src/index.ts"),
+				"@drone/shared/causality": resolve(__dirname, "../shared/src/causality.ts"),
 				"@drone/shared": resolve(__dirname, "../shared/src/index.ts"),
 			},
 		},

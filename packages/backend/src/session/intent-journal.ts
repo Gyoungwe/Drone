@@ -1,12 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, writeSync } from "node:fs";
 import { dirname } from "node:path";
-import {
-	type CausalContext,
-	type CausalEnvelope,
-	childCausalEnvelope,
-	type ToolReplayPolicy,
-} from "@drone/shared";
+import type { CausalContext, CausalEnvelope, ToolReplayPolicy } from "@drone/shared";
+import { childCausalEnvelope } from "@drone/shared/causality";
 
 /**
  * 工具意图日志（借鉴 Pi Durable 的 “effect sandwich”）。
