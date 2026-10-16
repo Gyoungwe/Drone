@@ -83,9 +83,9 @@ export class ResearchWriteService {
 			return this.blocked(plan, "Research write plan is revoked or already consumed");
 		}
 		if (!input.approved) return this.blocked(plan, "Explicit user approval is required");
-		const adapter = this.requireAdapter(plan.adapterId);
 		let receipt: ResearchWriteReceipt;
 		try {
+			const adapter = this.requireAdapter(plan.adapterId);
 			receipt = await adapter.execute(plan, { approved: true });
 		} catch (cause) {
 			receipt = {
