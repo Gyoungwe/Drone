@@ -1,5 +1,10 @@
 import type { ResourcePreviewResult } from "@drone/shared";
-import { isLocalResourceTarget, resourceFormat, splitResourceLink } from "@drone/shared";
+import {
+	filePreviewDirectory,
+	isLocalResourceTarget,
+	resourceFormat,
+	splitResourceLink,
+} from "@drone/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -29,6 +34,7 @@ export function ResearchBrowserPage() {
 	const cwd = useSessionsStore((s) => s.cwd);
 	const [paths, setPaths] = useState<string[]>([]);
 	const [selectedPath, setSelectedPath] = useState<string | null>(null);
+	const [selectedCwd, setSelectedCwd] = useState<string | null>(null);
 	const [query, setQuery] = useState("");
 	const [result, setResult] = useState<ResourcePreviewResult | null>(null);
 	const [mode, setMode] = useState<"preview" | "source">("preview");
@@ -42,6 +48,7 @@ export function ResearchBrowserPage() {
 		if (!cwd) {
 			setPaths([]);
 			setSelectedPath(null);
+			setSelectedCwd(null);
 			return;
 		}
 		setLoading(true);
@@ -49,6 +56,7 @@ export function ResearchBrowserPage() {
 		try {
 			const next = await getPi().listProjectFiles(cwd);
 			setPaths(next);
+			setSelectedCwd(cwd);
 			setSelectedPath((current) => {
 				if (current && next.includes(current)) return current;
 				return next.find((path) => !isDirectory(path)) ?? null;
@@ -71,9 +79,10 @@ export function ResearchBrowserPage() {
 		setZoom(1);
 		setImageError(false);
 		if (!cwd || !selectedPath || isDirectory(selectedPath)) return;
+		const previewCwd = selectedCwd ?? cwd;
 		let cancelled = false;
 		void getPi()
-			.previewFile(selectedPath, cwd)
+			.previewFile(selectedPath, previewCwd)
 			.then((next) => {
 				if (!cancelled) setResult(next);
 			})
@@ -83,7 +92,7 @@ export function ResearchBrowserPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [cwd, selectedPath]);
+	}, [cwd, selectedCwd, selectedPath]);
 
 	const visiblePaths = useMemo(() => filterResearchPaths(paths, query), [paths, query]);
 
@@ -91,14 +100,16 @@ export function ResearchBrowserPage() {
 		if (!selectedPath || !cwd) return;
 		setActionError(null);
 		void getPi()
-			.openResourceExternal(selectedPath, cwd)
+			.openResourceExternal(selectedPath, selectedCwd ?? cwd)
 			.catch((cause) => setActionError(cause instanceof Error ? cause.message : String(cause)));
 	};
 
 	const navigate = (href: string) => {
 		if (!href) return;
 		if (isLocalResourceTarget(href)) {
-			setSelectedPath(splitResourceLink(href).href);
+			const destination = splitResourceLink(href);
+			setSelectedCwd(result ? filePreviewDirectory(result.path) : cwd);
+			setSelectedPath(destination.href);
 			return;
 		}
 		setActionError(t("researchBrowser.unsupportedLink"));
@@ -232,7 +243,7 @@ export function ResearchBrowserPage() {
 								imageError={imageError}
 								onImageError={() => setImageError(true)}
 								onNavigate={navigate}
-								source={{ href: selectedPath, cwd }}
+								source={{ href: selectedPath, cwd: selectedCwd ?? cwd }}
 							/>
 						)}
 					</div>
