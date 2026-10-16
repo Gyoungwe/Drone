@@ -658,6 +658,8 @@ export const en: Messages = {
 	},
 \tresearchWrite: {
 \t\ttitle: "Research write adapters",
+		defaultTitle: "Research material",
+
 \t\thint: "Prepare a bounded write plan first. External writes always need a fresh approval.",
 \t\tunavailable: "No write adapter is available",
 \t\tauthorized: "authorized host port",
