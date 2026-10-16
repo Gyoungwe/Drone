@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { type ResearchWriteAdapter, ResearchWriteAdapterRegistry } from "@drone/research";
 import type {
 	ResearchWriteAdapterDescriptor,
 	ResearchWriteAuditRecord,
@@ -7,7 +8,6 @@ import type {
 	ResearchWriteReceipt,
 	ResearchWriteRequest,
 } from "@drone/shared";
-import { ResearchWriteAdapterRegistry, type ResearchWriteAdapter } from "@drone/research";
 import type { JsonStore } from "../json-store";
 
 export interface ResearchWriteLedger {
