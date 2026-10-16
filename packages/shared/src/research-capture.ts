@@ -6,6 +6,8 @@ export interface ResearchCaptureRequest {
 	readonly cwd: string;
 	readonly relativePath: string;
 	readonly scope?: "project" | "workspace";
+	/** Optional source freshness deadline supplied by the capture caller. */
+	readonly expiresAt?: string;
 }
 
 export interface ResearchCaptureRecord {
