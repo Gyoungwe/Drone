@@ -7,10 +7,7 @@ import type {
 	ResearchWriteReceipt,
 	ResearchWriteRequest,
 } from "@drone/shared";
-import {
-	ResearchWriteAdapterRegistry,
-	type ResearchWriteAdapter,
-} from "@drone/research";
+import { ResearchWriteAdapterRegistry, type ResearchWriteAdapter } from "@drone/research";
 import type { JsonStore } from "../json-store";
 
 export interface ResearchWriteLedger {
@@ -196,7 +193,11 @@ export class ResearchWriteService {
 		return adapter;
 	}
 
-	private async blocked(plan: ResearchWritePlan, reason: string, approval: "explicit" | "missing"): Promise<ResearchWriteReceipt> {
+	private async blocked(
+		plan: ResearchWritePlan,
+		reason: string,
+		approval: "explicit" | "missing",
+	): Promise<ResearchWriteReceipt> {
 		const receipt: ResearchWriteReceipt = {
 			planId: plan.id,
 			adapterId: plan.adapterId,
