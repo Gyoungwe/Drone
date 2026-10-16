@@ -131,13 +131,13 @@ export class ResearchWriteService {
 			receipt = await adapter.execute(plan, { approved: true });
 		} catch (cause) {
 			receipt = {
-			planId: plan.id,
-			adapterId: plan.adapterId,
-			status: "failed",
-			at: new Date().toISOString(),
-			readBack: "not-applicable",
-			failureReason: cause instanceof Error ? cause.message.slice(0, 500) : String(cause).slice(0, 500),
-		};
+				planId: plan.id,
+				adapterId: plan.adapterId,
+				status: "failed",
+				at: new Date().toISOString(),
+				readBack: "not-applicable",
+				failureReason: cause instanceof Error ? cause.message.slice(0, 500) : String(cause).slice(0, 500),
+			};
 		}
 		await this.options.store.update((next) => {
 			const found = next.plans.find((item) => item.id === plan.id);
@@ -166,7 +166,7 @@ export class ResearchWriteService {
 		let changed = false;
 		await this.options.store.update((state) => {
 			const plan = state.plans.find((item) => item.id === planId);
-			if (!plan || plan.status !== "ready") return;
+			if (plan?.status !== "ready") return;
 			const index = state.plans.indexOf(plan);
 			state.plans[index] = { ...plan, status: "revoked" };
 			changed = true;
