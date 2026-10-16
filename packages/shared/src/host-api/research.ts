@@ -5,7 +5,12 @@ import type {
 	ResearchConnectorFailure,
 	ResearchConnectorHit,
 } from "../research-connectors";
-import type { ResearchWriteAdapterDescriptor, ResearchWriteAuditRecord, ResearchWritePlan, ResearchWriteReceipt } from "../research-writes";
+import type {
+	ResearchWriteAdapterDescriptor,
+	ResearchWriteAuditRecord,
+	ResearchWritePlan,
+	ResearchWriteReceipt,
+} from "../research-writes";
 import { defineDomain } from "./define";
 
 const Input = Type.Object(
@@ -93,11 +98,19 @@ export const ResearchContract = defineDomain("research", {
 			args: Type.Tuple([ConnectorToggleInput]),
 			result: Result<ResearchConnectorDescriptor>(),
 		},
-		listWriteAdapters: { args: Type.Tuple([]), result: Type.Object({ adapters: Type.Array(Type.Unsafe<ResearchWriteAdapterDescriptor>({ type: "object" })) }) },
+		listWriteAdapters: {
+			args: Type.Tuple([]),
+			result: Type.Object({
+				adapters: Type.Array(Type.Unsafe<ResearchWriteAdapterDescriptor>({ type: "object" })),
+			}),
+		},
 		prepareWrite: { args: Type.Tuple([WriteInput]), result: Result<ResearchWritePlan>() },
 		executeWrite: { args: Type.Tuple([WriteExecuteInput]), result: Result<ResearchWriteReceipt>() },
 		revokeWrite: { args: Type.Tuple([WritePlanInput]), result: Type.Object({ revoked: Type.Boolean() }) },
-		listWriteAudit: { args: Type.Tuple([]), result: Type.Object({ items: Type.Array(Type.Unsafe<ResearchWriteAuditRecord>({ type: "object" })) }) },
+		listWriteAudit: {
+			args: Type.Tuple([]),
+			result: Type.Object({ items: Type.Array(Type.Unsafe<ResearchWriteAuditRecord>({ type: "object" })) }),
+		},
 	},
 	events: {},
 });
