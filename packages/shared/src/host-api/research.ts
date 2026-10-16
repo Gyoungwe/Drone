@@ -5,6 +5,7 @@ import type {
 	ResearchConnectorFailure,
 	ResearchConnectorHit,
 } from "../research-connectors";
+import type { ResearchWriteAdapterDescriptor, ResearchWriteAuditRecord, ResearchWritePlan, ResearchWriteReceipt } from "../research-writes";
 import { defineDomain } from "./define";
 
 const Input = Type.Object(
