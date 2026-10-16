@@ -173,7 +173,10 @@ export function ResearchBrowserPage() {
 											type="button"
 											className={`research-browser-file${selectedPath === path ? " is-selected" : ""}${directory ? " is-directory" : ""}`}
 											disabled={directory}
-											onClick={() => setSelectedPath(path)}
+											onClick={() => {
+												setSelectedCwd(cwd);
+												setSelectedPath(path);
+											}}
 											title={path}
 										>
 											<span aria-hidden="true">{directory ? "▾" : "·"}</span>
