@@ -26,8 +26,10 @@
 
 - [x] 新增研究资料捕获合同：`cwd + relativePath + byteHash + format + sourceReceipt + scope + freshness + approval`；默认只保存元数据和可引用片段，禁止自动保存会话正文、凭据和未授权私有原文。已落地版本化 capture record、来源回执和待审快照。
 - [x] 在 backend/research 层提供 `captureResearchResource` 深模块，使用现有 `JsonStore` 原子写入 `SourceReceipt` 和待审 `KnowledgeSnapshot`；renderer 只调用 host API。已接入 `window.pi` 的 capture/approve/revoke/list 合同。
-- [x] 只读连接器分层：搜索（Crossref/PubMed/Europe PMC/OpenAlex）、文献与引用（Zotero/DOI）、数据与协议（ENA/SRA/Zenodo/OSF/Protocols）、机构资源（EZproxy/机构解析）和项目存储。每个适配器返回同一份来源回执、许可、访问时间、内容哈希和失败原因。\n- [x] 写入型连接器安全合同已接入：`prepare`/`dry-run` 计划、每次执行的显式用户批准、JsonStore 审计回执、撤销、失败记录和默认 fail-closed；首个 Zotero 写入 seam 默认无外部端口，只能准备或受控 fake 演练。\n- [ ] 真实 Zotero Web/Desktop write port 仍需在有授权凭据和可回读目标的环境中单独验收；未通过前禁止宣称真实外部写入可用。
-- [x] 连接器的网络、凭据、速率、缓存和重试策略留在 backend/research；知识库只接收通过来源、许可、完整性和用户审批的候选。只读 Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA、OpenAlex、DOI、ENA、Zotero、Protocols、机构资源和项目存储共 13 个连接器已接入 registry，失败结果带 retryable 原因。科研资料页提供逐项启用/关闭、启用计数和错误状态，状态通过 JsonStore 持久化，关闭后检索 fail-closed；写入型适配器仍未接入。
+- [x] 只读连接器分层：搜索（Crossref/PubMed/Europe PMC/OpenAlex）、文献与引用（Zotero/DOI）、数据与协议（ENA/SRA/Zenodo/OSF/Protocols）、机构资源（EZproxy/机构解析）和项目存储。每个适配器返回同一份来源回执、许可、访问时间、内容哈希和失败原因。
+- [x] 写入型连接器安全合同已接入：`prepare`/`dry-run` 计划、每次执行的显式用户批准、JsonStore 审计回执、撤销、失败记录和默认 fail-closed；首个 Zotero 写入 seam 默认无外部端口，只能准备或受控 fake 演练。
+- [ ] 真实 Zotero Web/Desktop write port 仍需在有授权凭据和可回读目标的环境中单独验收；未通过前禁止宣称真实外部写入可用。
+- [x] 连接器的网络、凭据、速率、缓存和重试策略留在 backend/research；知识库只接收通过来源、许可、完整性和用户审批的候选。只读 Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA、OpenAlex、DOI、ENA、Zotero、Protocols、机构资源和项目存储共 13 个连接器已接入 registry，失败结果带 retryable 原因。科研资料页提供逐项启用/关闭、启用计数和错误状态，状态通过 JsonStore 持久化，关闭后检索 fail-closed；写入型连接器安全 seam 已接入，真实第三方 write port 仍待授权主机与回读证据验收。
 - [x] 验收：同一文件重复捕获幂等、文件变更生成新 revision、连接器失败可重试但不伪造证据、撤回/过期能阻止旧快照继续发布。重复/变更/根目录/软链接/撤回、过期拒绝发布和同内容过期刷新已覆盖回归测试；PR #208 与 PR #210 的 macOS/Windows 8 项 CI 全部通过。
 
 ## P11 · 发布与更新门槛
@@ -53,4 +55,5 @@
 - 2026-10-17（PR #210）：补齐 Zotero、Protocols.io、机构资源元数据和项目存储四个只读连接器，统一来源回执与失败信息；科研资料页的连接器 UI 可逐项开关并通过 JsonStore 持久化，关闭后检索 fail-closed。PR #210 的 CI run [38931738909](https://github.com/Gyoungwe/Drone/actions/runs/38931738909) 在 macOS/Windows 8 项全部通过；写入型适配器、P9 人工桌面走查和 P11 签名发布门槛仍未关闭。
 
 - 2026-10-17（无证书发布策略）：根据用户决定，后续正式发布不再要求证书或 notarization；Release workflow 与 electron-builder 改为 unsigned 模式。历史版本中因证书为空而失败的签名预检只保留为历史记录，不再作为当前发布规则。
-- 2026-10-17（P10 写入连接器安全 seam）：新增跨层写入合同、Zotero prepare/dry-run/execute 适配器、JsonStore 计划/审计 ledger、撤销和 fail-closed 失败记录；桌面资料页显示写入计划/授权状态，默认无外部端口，真实第三方写入留待授权主机和回读证据。\n- 2026-10-17（v0.32.8 无证书发布验收）：PR [#220](https://github.com/Gyoungwe/Drone/pull/220) 修正 unsigned 标志的 build job 作用域并合入 `main`；Release [38963823008](https://github.com/Gyoungwe/Drone/actions/runs/38963823008) 的 macOS/Windows validate、prepare、macOS arm64/x64、Windows x64 构建和 publish 最终全部通过（publish 首次下载 artifact 漏列 Windows zip，单独重跑后通过）。正式 Release [v0.32.8](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.8) 已从 draft 发布，包含 macOS arm64/x64 DMG/ZIP、Windows EXE/ZIP、`latest-mac.yml` 和 `latest.yml`；所有产物明确为 unsigned，不读取证书或 notarization secrets，P11 无证书门槛已关闭。
+- 2026-10-17（P10 写入连接器安全 seam）：新增跨层写入合同、Zotero prepare/dry-run/execute 适配器、JsonStore 计划/审计 ledger、撤销和 fail-closed 失败记录；桌面资料页显示写入计划/授权状态，默认无外部端口，真实第三方写入留待授权主机和回读证据。
+- 2026-10-17（v0.32.8 无证书发布验收）：PR [#220](https://github.com/Gyoungwe/Drone/pull/220) 修正 unsigned 标志的 build job 作用域并合入 `main`；Release [38963823008](https://github.com/Gyoungwe/Drone/actions/runs/38963823008) 的 macOS/Windows validate、prepare、macOS arm64/x64、Windows x64 构建和 publish 最终全部通过（publish 首次下载 artifact 漏列 Windows zip，单独重跑后通过）。正式 Release [v0.32.8](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.8) 已从 draft 发布，包含 macOS arm64/x64 DMG/ZIP、Windows EXE/ZIP、`latest-mac.yml` 和 `latest.yml`；所有产物明确为 unsigned，不读取证书或 notarization secrets，P11 无证书门槛已关闭。
