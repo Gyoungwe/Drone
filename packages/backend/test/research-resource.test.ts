@@ -2,6 +2,7 @@ import { mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkKnowledgeSnapshotReuse } from "@drone/knowledge";
+import { type ResearchConnector, ResearchConnectorRegistry } from "@drone/research";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";
 import {
@@ -117,5 +118,53 @@ describe("ResearchResourceService", () => {
 		});
 		expect(revokedDecision.reusable).toBe(false);
 		expect(revokedDecision.status).toBe("revoked");
+	});
+
+	it("persists connector toggles and blocks disabled searches", async () => {
+		const state = await mkdtemp(join(tmpdir(), "drone-research-connectors-"));
+		let calls = 0;
+		const connector: ResearchConnector = {
+			id: "fixture",
+			kind: "dataset",
+			label: "Fixture dataset",
+			search: async () => {
+				calls += 1;
+				return [];
+			},
+		};
+		const registry = new ResearchConnectorRegistry([connector]);
+		const settings = new JsonStore({
+			path: join(state, "connectors.json"),
+			storageId: "test-research-connectors",
+			defaultValue: () => ({ version: 1 as const, disabled: [] }),
+		});
+		const first = new ResearchResourceService({
+			store: new JsonStore({
+				path: join(state, "captures-a.json"),
+				storageId: "test-research-captures-a",
+				defaultValue: emptyCaptureLedger,
+			}),
+			connectors: registry,
+			connectorSettings: settings,
+		});
+		expect((await first.listConnectors())[0]).toMatchObject({ id: "fixture", enabled: true });
+		expect(await first.setConnectorEnabled("fixture", false)).toMatchObject({ enabled: false });
+
+		const second = new ResearchResourceService({
+			store: new JsonStore({
+				path: join(state, "captures-b.json"),
+				storageId: "test-research-captures-b",
+				defaultValue: emptyCaptureLedger,
+			}),
+			connectors: registry,
+			connectorSettings: settings,
+		});
+		expect((await second.listConnectors())[0]).toMatchObject({ id: "fixture", enabled: false });
+		const result = await second.search({ query: "dataset", connectorIds: ["fixture"] });
+		expect(result.complete).toBe(false);
+		expect(result.failures).toEqual([
+			expect.objectContaining({ connectorId: "fixture", message: "Research connector is disabled" }),
+		]);
+		expect(calls).toBe(0);
 	});
 });
