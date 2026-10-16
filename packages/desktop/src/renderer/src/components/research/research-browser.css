@@ -77,6 +77,70 @@
 	border-right: 1px solid var(--color-border);
 	background: color-mix(in srgb, var(--color-surface) 92%, var(--color-canvas));
 }
+.research-browser-connectors {
+	flex: none;
+	border-bottom: 1px solid var(--color-border);
+	padding: var(--space-3) var(--space-4);
+}
+.research-browser-connectors-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+	font-size: var(--text-ui);
+	color: var(--color-ink-2);
+}
+.research-browser-connectors-head span {
+	font-size: var(--text-meta);
+	color: var(--color-ink-faint);
+}
+.research-browser-connectors-hint,
+.research-browser-connectors-empty {
+	margin: var(--space-1) 0 0;
+	font-size: var(--text-meta);
+	color: var(--color-ink-faint);
+}
+.research-browser-connectors-list {
+	display: grid;
+	max-height: 190px;
+	margin: var(--space-2) calc(var(--space-2) * -1) 0;
+	padding: 0 var(--space-2);
+	overflow: auto;
+	gap: var(--space-1);
+	list-style: none;
+}
+.research-browser-connector {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	border-radius: var(--radius-sm);
+	padding: var(--space-1) var(--space-2);
+	cursor: pointer;
+}
+.research-browser-connector:hover {
+	background: var(--color-hover);
+}
+.research-browser-connector input {
+	accent-color: var(--color-accent);
+}
+.research-browser-connector-copy {
+	display: grid;
+	min-width: 0;
+	gap: 1px;
+}
+.research-browser-connector-copy strong {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--text-meta);
+	font-weight: 600;
+	color: var(--color-ink-2);
+}
+.research-browser-connector-copy small {
+	font-size: 10px;
+	text-transform: uppercase;
+	color: var(--color-ink-faint);
+}
 .research-browser-search {
 	display: flex;
 	align-items: center;
