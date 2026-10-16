@@ -159,11 +159,16 @@ export class ResearchWriteService {
 			planId: plan.id,
 			adapterId: plan.adapterId,
 			status: "blocked",
-			 at: new Date().toISOString(),
+			at: new Date().toISOString(),
 			readBack: "not-applicable",
 			failureReason: reason,
 		};
 		await this.options.store.update((state) => {
+			const found = state.plans.find((item) => item.id === plan.id);
+			if (found?.status === "ready") {
+				const index = state.plans.indexOf(found);
+				state.plans[index] = { ...found, status: "revoked" };
+			}
 			state.audit.push({
 				id: auditId(plan.id, "blocked"),
 				planId: plan.id,
