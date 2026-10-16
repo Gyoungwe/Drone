@@ -77,25 +77,66 @@ export class ResearchWriteService {
 
 	async execute(input: ResearchWriteExecuteRequest): Promise<ResearchWriteReceipt> {
 		const state = await this.options.store.read();
-		const plan = state.plans.find((item) => item.id === input.planId);
-		if (!plan) throw new Error(`Research write plan not found: ${input.planId}`);
-		if (plan.status !== "ready") {
-			return this.blocked(plan, "Research write plan is revoked or already consumed");
+		const current = state.plans.find((item) => item.id === input.planId);
+		if (!current) throw new Error(`Research write plan not found: ${input.planId}`);
+		if (current.status !== "ready") {
+			return this.blocked(
+				current,
+				current.status === "executing"
+					? "Research write plan is already executing"
+					: "Research write plan is revoked or already consumed",
+				input.approved ? "explicit" : "missing",
+			);
 		}
-		if (!input.approved) return this.blocked(plan, "Explicit user approval is required");
+		if (!input.approved) return this.blocked(current, "Explicit user approval is required", "missing");
+
+		// Reserve the plan in the JsonStore queue before invoking any external port.
+		// A concurrent caller observes executing/revoked and cannot double-write.
+		let reservedPlan: ResearchWritePlan | undefined;
+		await this.options.store.update((next) => {
+			const candidate = next.plans.find((item) => item.id === input.planId);
+			if (candidate?.status !== "ready") return;
+			const index = next.plans.indexOf(candidate);
+			reservedPlan = { ...candidate, status: "executing" };
+			next.plans[index] = reservedPlan;
+			next.audit.push({
+				id: auditId(candidate.id, "executing"),
+				planId: candidate.id,
+				adapterId: candidate.adapterId,
+				targetRef: candidate.targetRef,
+				payloadHash: payloadHash(candidate),
+				status: "executing",
+				approval: "explicit",
+				at: new Date().toISOString(),
+			});
+			next.audit = next.audit.slice(-500);
+		});
+		if (!reservedPlan) {
+			const latest = await this.options.store.read();
+			const observed = latest.plans.find((item) => item.id === input.planId);
+			if (!observed) throw new Error(`Research write plan not found: ${input.planId}`);
+			return this.blocked(
+				observed,
+				observed.status === "executing"
+					? "Research write plan is already executing"
+					: "Research write plan is revoked or already consumed",
+				"explicit",
+			);
+		}
+		const plan = reservedPlan;
 		let receipt: ResearchWriteReceipt;
 		try {
 			const adapter = this.requireAdapter(plan.adapterId);
 			receipt = await adapter.execute(plan, { approved: true });
 		} catch (cause) {
 			receipt = {
-				planId: plan.id,
-				adapterId: plan.adapterId,
-				status: "failed",
-				at: new Date().toISOString(),
-				readBack: "not-applicable",
-				failureReason: cause instanceof Error ? cause.message.slice(0, 500) : String(cause).slice(0, 500),
-			};
+			planId: plan.id,
+			adapterId: plan.adapterId,
+			status: "failed",
+			at: new Date().toISOString(),
+			readBack: "not-applicable",
+			failureReason: cause instanceof Error ? cause.message.slice(0, 500) : String(cause).slice(0, 500),
+		};
 		}
 		await this.options.store.update((next) => {
 			const found = next.plans.find((item) => item.id === plan.id);
@@ -154,7 +195,7 @@ export class ResearchWriteService {
 		return adapter;
 	}
 
-	private async blocked(plan: ResearchWritePlan, reason: string): Promise<ResearchWriteReceipt> {
+	private async blocked(plan: ResearchWritePlan, reason: string, approval: "explicit" | "missing"): Promise<ResearchWriteReceipt> {
 		const receipt: ResearchWriteReceipt = {
 			planId: plan.id,
 			adapterId: plan.adapterId,
@@ -176,7 +217,7 @@ export class ResearchWriteService {
 				targetRef: plan.targetRef,
 				payloadHash: payloadHash(plan),
 				status: "blocked",
-				approval: "missing",
+				approval,
 				at: receipt.at,
 				failureReason: reason,
 			});
