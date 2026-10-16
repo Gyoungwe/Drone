@@ -78,6 +78,7 @@ import {
 	emptyResearchConnectorSettings,
 	ResearchResourceService,
 } from "./services/research-resource";
+import { emptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
