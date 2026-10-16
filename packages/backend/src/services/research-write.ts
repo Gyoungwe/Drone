@@ -97,8 +97,9 @@ export class ResearchWriteService {
 			const candidate = next.plans.find((item) => item.id === input.planId);
 			if (candidate?.status !== "ready") return;
 			const index = next.plans.indexOf(candidate);
-			reservedPlan = { ...candidate, status: "executing" };
-			next.plans[index] = reservedPlan;
+			const reservation = { ...candidate, status: "executing" as const };
+			reservedPlan = reservation;
+			next.plans[index] = reservation;
 			next.audit.push({
 				id: auditId(candidate.id, "executing"),
 				planId: candidate.id,
