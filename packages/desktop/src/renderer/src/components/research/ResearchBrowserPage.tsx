@@ -1,0 +1,251 @@
+import type { ResourcePreviewResult } from "@drone/shared";
+import { isLocalResourceTarget, resourceFormat, splitResourceLink } from "@drone/shared";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getPi } from "../../api";
+import { useT } from "../../i18n";
+import { useSessionsStore } from "../../stores/sessions";
+import { SearchIcon } from "../icons";
+import { PreviewHost } from "../preview/PreviewHost";
+import { hasSourceTab } from "../preview/preview-registry";
+import { filterResearchPaths } from "./research-browser";
+import "./research-browser.css";
+
+function dataUrl(result: ResourcePreviewResult): string | null {
+	return result.data ? `data:${result.mimeType};base64,${result.data}` : null;
+}
+
+function formatBytes(size: number): string {
+	if (size < 1024) return `${size} B`;
+	if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+	return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function isDirectory(path: string): boolean {
+	return path.endsWith("/");
+}
+
+export function ResearchBrowserPage() {
+	const t = useT();
+	const cwd = useSessionsStore((s) => s.cwd);
+	const [paths, setPaths] = useState<string[]>([]);
+	const [selectedPath, setSelectedPath] = useState<string | null>(null);
+	const [query, setQuery] = useState("");
+	const [result, setResult] = useState<ResourcePreviewResult | null>(null);
+	const [mode, setMode] = useState<"preview" | "source">("preview");
+	const [zoom, setZoom] = useState(1);
+	const [imageError, setImageError] = useState(false);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [actionError, setActionError] = useState<string | null>(null);
+
+	const refresh = useCallback(async () => {
+		if (!cwd) {
+			setPaths([]);
+			setSelectedPath(null);
+			return;
+		}
+		setLoading(true);
+		setError(null);
+		try {
+			const next = await getPi().listProjectFiles(cwd);
+			setPaths(next);
+			setSelectedPath((current) => {
+				if (current && next.includes(current)) return current;
+				return next.find((path) => !isDirectory(path)) ?? null;
+			});
+		} catch (cause) {
+			setError(cause instanceof Error ? cause.message : String(cause));
+		} finally {
+			setLoading(false);
+		}
+	}, [cwd]);
+
+	useEffect(() => {
+		void refresh();
+	}, [refresh]);
+
+	useEffect(() => {
+		setResult(null);
+		setActionError(null);
+		setMode("preview");
+		setZoom(1);
+		setImageError(false);
+		if (!cwd || !selectedPath || isDirectory(selectedPath)) return;
+		let cancelled = false;
+		void getPi()
+			.previewFile(selectedPath, cwd)
+			.then((next) => {
+				if (!cancelled) setResult(next);
+			})
+			.catch((cause) => {
+				if (!cancelled) setActionError(cause instanceof Error ? cause.message : String(cause));
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [cwd, selectedPath]);
+
+	const visiblePaths = useMemo(() => filterResearchPaths(paths, query), [paths, query]);
+
+	const openExternal = () => {
+		if (!selectedPath || !cwd) return;
+		setActionError(null);
+		void getPi()
+			.openResourceExternal(selectedPath, cwd)
+			.catch((cause) => setActionError(cause instanceof Error ? cause.message : String(cause)));
+	};
+
+	const navigate = (href: string) => {
+		if (!href) return;
+		if (isLocalResourceTarget(href)) {
+			setSelectedPath(splitResourceLink(href).href);
+			return;
+		}
+		setActionError(t("researchBrowser.unsupportedLink"));
+	};
+
+	const title = result?.name ?? selectedPath ?? t("researchBrowser.selectFile");
+	const format = resourceFormat(result?.name ?? "");
+
+	return (
+		<div className="research-browser" data-testid="research-browser">
+			<header className="research-browser-head">
+				<div>
+					<p className="research-browser-eyebrow">{t("researchBrowser.eyebrow")}</p>
+					<h1>{t("researchBrowser.title")}</h1>
+					<p className="research-browser-subtitle">{cwd ?? t("researchBrowser.noProject")}</p>
+				</div>
+				<div className="research-browser-actions">
+					<button
+						type="button"
+						className="research-browser-button"
+						onClick={() => void refresh()}
+						disabled={loading || !cwd}
+					>
+						{loading ? t("researchBrowser.refreshing") : t("researchBrowser.refresh")}
+					</button>
+					{selectedPath && (
+						<button type="button" className="research-browser-button" onClick={openExternal}>
+							{t("researchBrowser.openExternal")}
+						</button>
+					)}
+				</div>
+			</header>
+			<div className="research-browser-body">
+				<aside className="research-browser-files" aria-label={t("researchBrowser.fileList")}>
+					<label className="research-browser-search">
+						<SearchIcon size={14} />
+						<input
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							placeholder={t("researchBrowser.search")}
+							aria-label={t("researchBrowser.search")}
+						/>
+					</label>
+					<div className="research-browser-count">
+						{t("researchBrowser.fileCount", {
+							count: visiblePaths.filter((path) => !isDirectory(path)).length,
+						})}
+					</div>
+					{error && <p className="research-browser-error">{error}</p>}
+					{!cwd ? (
+						<p className="research-browser-empty">{t("researchBrowser.noProject")}</p>
+					) : visiblePaths.length === 0 && !loading ? (
+						<p className="research-browser-empty">{t("researchBrowser.noFiles")}</p>
+					) : (
+						<ul className="research-browser-list">
+							{visiblePaths.map((path) => {
+								const directory = isDirectory(path);
+								return (
+									<li key={path}>
+										<button
+											type="button"
+											className={`research-browser-file${selectedPath === path ? " is-selected" : ""}${directory ? " is-directory" : ""}`}
+											disabled={directory}
+											onClick={() => setSelectedPath(path)}
+											title={path}
+										>
+											<span aria-hidden="true">{directory ? "▾" : "·"}</span>
+											<strong>{path}</strong>
+										</button>
+									</li>
+								);
+							})}
+						</ul>
+					)}
+				</aside>
+				<section className="research-browser-preview" aria-label={t("researchBrowser.preview")}>
+					<div className="research-browser-preview-head">
+						<div className="research-browser-preview-title" title={title}>
+							{title}
+						</div>
+						{result && (
+							<div className="research-browser-toolbar">
+								<span>{result.kind === "text" ? format.label : result.kind.toUpperCase()}</span>
+								{hasSourceTab(result) && (
+									<>
+										<button
+											type="button"
+											aria-pressed={mode === "preview"}
+											onClick={() => setMode("preview")}
+										>
+											{t("researchBrowser.previewMode")}
+										</button>
+										<button type="button" aria-pressed={mode === "source"} onClick={() => setMode("source")}>
+											{t("researchBrowser.sourceMode")}
+										</button>
+									</>
+								)}
+								{result.kind === "image" && mode === "preview" && (
+									<>
+										<button type="button" onClick={() => setZoom((value) => Math.max(0.5, value - 0.25))}>
+											−
+										</button>
+										<span>{Math.round(zoom * 100)}%</span>
+										<button type="button" onClick={() => setZoom((value) => Math.min(3, value + 0.25))}>
+											＋
+										</button>
+									</>
+								)}
+							</div>
+						)}
+					</div>
+					{actionError && <p className="research-browser-error">{actionError}</p>}
+					<div
+						className="research-browser-preview-body"
+						aria-busy={Boolean(selectedPath && !result && !actionError)}
+					>
+						{!cwd ? (
+							<div className="research-browser-placeholder">{t("researchBrowser.noProject")}</div>
+						) : !selectedPath ? (
+							<div className="research-browser-placeholder">{t("researchBrowser.selectFile")}</div>
+						) : actionError && !result ? (
+							<div className="research-browser-placeholder">{t("researchBrowser.previewFailed")}</div>
+						) : !result ? (
+							<div className="research-browser-placeholder">{t("researchBrowser.loading")}</div>
+						) : (
+							<PreviewHost
+								result={result}
+								src={dataUrl(result)}
+								mode={mode}
+								zoom={zoom}
+								imageError={imageError}
+								onImageError={() => setImageError(true)}
+								onNavigate={navigate}
+								source={{ href: selectedPath, cwd }}
+							/>
+						)}
+					</div>
+					{result && (
+						<div className="research-browser-meta">
+							<span>{formatBytes(result.size)}</span>
+							<span>{result.mimeType}</span>
+							{result.encoding && <span>{result.encoding}</span>}
+							{result.truncated && <span>{t("researchBrowser.truncated")}</span>}
+						</div>
+					)}
+				</section>
+			</div>
+		</div>
+	);
+}

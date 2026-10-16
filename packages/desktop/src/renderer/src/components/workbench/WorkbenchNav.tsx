@@ -18,6 +18,7 @@ import {
 	PanelLeftIcon,
 	ProjectsIcon,
 	PuzzleIcon,
+	SearchIcon,
 	SubagentIcon,
 } from "../icons";
 import { SessionRow } from "../projects/SessionRow";
@@ -27,10 +28,11 @@ type NavKey = AppView | "extensions";
 const VIEW_ITEMS: {
 	key: AppView;
 	icon: typeof ComposeIcon;
-	label: "chat" | "projects" | "knowledge";
+	label: "chat" | "projects" | "research" | "knowledge";
 }[] = [
 	{ key: "chat", icon: ComposeIcon, label: "chat" },
 	{ key: "projects", icon: ProjectsIcon, label: "projects" },
+	{ key: "research", icon: SearchIcon, label: "research" },
 	{ key: "knowledge", icon: ObsidianIcon, label: "knowledge" },
 ];
 

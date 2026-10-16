@@ -329,3 +329,13 @@ vitest 使用 `projects` 分组；CI 拆成 `lint+typecheck+arch`、`unit`、`sd
 | IPC 参数运行时校验 | 0 / 124 | 124 / 124 |
 | backend 单元层测试耗时 | 336 s（混合） | unit < 60 s |
 | 分层规则自动化检查 | 无 | R1–R6 在 CI 中强制 |
+
+## 8. v3 产品架构增量：资料浏览器与连接器 seam
+
+v2 的领域分层保持不变，新增的产品入口落在 desktop renderer 的 `research` 视图；它只组合 shared host 类型和 `window.pi`，不直接触碰 backend、Electron 或 Pi SDK。文件读取和预览继续由 main/backend 现有资源 host 负责，避免再造一条文件 IPC。
+
+研究资料捕获是一个深模块：renderer 只提交项目根、相对路径和用户选择，backend/research 负责重新解析路径、计算字节哈希、生成来源回执、检查许可/范围/新鲜度，并通过 knowledge service 写入待审快照。连接器适配器在同一 seam 返回统一的 `SourceReceipt`，搜索、文献、数据集、协议、机构资源和项目存储因此可以替换而不改变知识投影。
+
+产品层的知识对象不再绑定某个 assay：`ResearchCase → RunAttempt → Artifact/SourceReceipt → KnowledgeSnapshot/Experience` 覆盖分析、实验、文献、数据集、协议和方法复用。默认捕获元数据和可引用片段，自动排除会话正文、凭据、未授权私有原文和未知二进制正文。
+
+LAN observer 已删除，不再作为工作台入口或验收面。正式签名与跨平台更新仍是发布门槛；当前 CI 只能证明源码、测试和打包构建可重复，不能证明签名身份、notarization、更新 feed 和回滚。
