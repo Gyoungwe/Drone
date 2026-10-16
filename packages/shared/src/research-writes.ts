@@ -1,7 +1,13 @@
 /** Explicitly authorized, auditable write-adapter contracts. */
 export type ResearchWriteAction = "dry-run" | "prepare";
 export type ResearchWritePlanStatus = "ready" | "executing" | "revoked";
-export type ResearchWriteAuditStatus = "prepared" | "executing" | "executed" | "blocked" | "failed" | "revoked";
+export type ResearchWriteAuditStatus =
+	| "prepared"
+	| "executing"
+	| "executed"
+	| "blocked"
+	| "failed"
+	| "revoked";
 
 /** Bounded metadata only; credentials and opaque source bodies are never accepted. */
 export interface ResearchWritePayload {
