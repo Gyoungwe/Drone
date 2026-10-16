@@ -656,21 +656,21 @@ export const en: Messages = {
 		unsupportedLink: "That link is outside the project materials",
 		truncated: "Content truncated",
 	},
-\tresearchWrite: {
-\t\ttitle: "Research write adapters",
+	researchWrite: {
+		title: "Research write adapters",
 		defaultTitle: "Research material",
 
-\t\thint: "Prepare a bounded write plan first. External writes always need a fresh approval.",
-\t\tunavailable: "No write adapter is available",
-\t\tauthorized: "authorized host port",
-\t\tdryRunOnly: "dry-run only (no authorized port)",
-\t\tprepare: "Prepare write plan",
-\t\tplanReady: "Plan {id} is ready",
-\t\texecute: "Confirm external write",
-\t\trevoke: "Revoke plan",
-\t\tconfirm: "This will write to the external connector. Continue?",
-\t\texecuted: "External write completed and receipt recorded",
-\t},
+		hint: "Prepare a bounded write plan first. External writes always need a fresh approval.",
+		unavailable: "No write adapter is available",
+		authorized: "authorized host port",
+		dryRunOnly: "dry-run only (no authorized port)",
+		prepare: "Prepare write plan",
+		planReady: "Plan {id} is ready",
+		execute: "Confirm external write",
+		revoke: "Revoke plan",
+		confirm: "This will write to the external connector. Continue?",
+		executed: "External write completed and receipt recorded",
+	},
 
 	update: {
 		confirmRunning:
