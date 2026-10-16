@@ -1,6 +1,6 @@
 import type { ResourcePreviewResult } from "@drone/shared";
 import { isLocalResourceTarget, resourceFormat, splitResourceLink } from "@drone/shared";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
@@ -38,9 +38,12 @@ export function ResearchBrowserPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
+	const refreshGeneration = useRef(0);
 
 	const refresh = useCallback(async () => {
-		if (!cwd) {
+		const requestCwd = cwd;
+		const generation = ++refreshGeneration.current;
+		if (!requestCwd) {
 			setPaths([]);
 			setSelectedPath(null);
 			setSelectedCwd(null);
@@ -49,17 +52,19 @@ export function ResearchBrowserPage() {
 		setLoading(true);
 		setError(null);
 		try {
-			const next = await getPi().listProjectFiles(cwd);
+			const next = await getPi().listProjectFiles(requestCwd);
+			if (generation !== refreshGeneration.current) return;
 			setPaths(next);
-			setSelectedCwd(cwd);
+			setSelectedCwd(requestCwd);
 			setSelectedPath((current) => {
 				if (current && next.includes(current)) return current;
 				return next.find((path) => !isDirectory(path)) ?? null;
 			});
 		} catch (cause) {
+			if (generation !== refreshGeneration.current) return;
 			setError(cause instanceof Error ? cause.message : String(cause));
 		} finally {
-			setLoading(false);
+			if (generation === refreshGeneration.current) setLoading(false);
 		}
 	}, [cwd]);
 
@@ -103,7 +108,8 @@ export function ResearchBrowserPage() {
 		if (!href || !cwd) return;
 		if (isLocalResourceTarget(href)) {
 			const destination = splitResourceLink(href);
-			const safeHref = normalizeProjectLink(destination.href, result?.path ?? cwd, cwd);
+			const currentPath = selectedPath ? `${cwd}/${selectedPath}` : cwd;
+			const safeHref = normalizeProjectLink(destination.href, currentPath, cwd);
 			if (!safeHref) {
 				setActionError(t("researchBrowser.unsupportedLink"));
 				return;
