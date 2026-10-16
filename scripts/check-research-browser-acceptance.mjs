@@ -16,7 +16,7 @@ function assert(condition, message) {
 async function walk(root, current = root, result = []) {
   for (const entry of await readdir(current, { withFileTypes: true })) {
     const absolute = join(current, entry.name);
-    const rel = relative(root, absolute).replaceAll("\\\\", "/");
+    const rel = relative(root, absolute).replaceAll("\\", "/");
     if (entry.isDirectory()) {
       result.push(`${rel}/`);
       await walk(root, absolute, result);
@@ -30,7 +30,7 @@ function confined(root, target) {
   const rootAbs = resolve(root);
   const targetAbs = resolve(root, target);
   const rel = relative(rootAbs, targetAbs);
-  const parent = process.platform === "win32" ? "\\\\" : "/";
+  const parent = process.platform === "win32" ? "\\" : "/";
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${parent}`));
 }
 function explainExternalOpenFailure(error) {
