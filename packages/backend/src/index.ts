@@ -277,8 +277,8 @@ export {
 } from "./services/research-resource";
 export {
 	emptyResearchWriteLedger,
-	ResearchWriteService,
 	type ResearchWriteLedger,
+	ResearchWriteService,
 	type ResearchWriteServiceOptions,
 } from "./services/research-write";
 export { SessionLifecycleService, type SessionLifecycleServicePort } from "./services/session-lifecycle";
