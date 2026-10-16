@@ -137,7 +137,7 @@ import {
   knowledgeReuseLevelRank,
   resolveKnowledgeContext,
   validateKnowledgeSourceReceipt
-} from "./chunks/chunk-M4JOQUA5.mjs";
+} from "./chunks/chunk-5TV334CZ.mjs";
 import {
   advisoryCodes,
   readReviewMode,
@@ -234,8 +234,8 @@ import {
 } from "./chunks/chunk-N7KIJQYP.mjs";
 import {
   EvolutionIndex
-} from "./chunks/chunk-2I646NKY.mjs";
-import "./chunks/chunk-FDMELZ7E.mjs";
+} from "./chunks/chunk-WQFDCIU6.mjs";
+import "./chunks/chunk-G442ABMP.mjs";
 import {
   EXPERIENCE_LIMITS,
   EXPERIENCE_VERSION,

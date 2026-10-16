@@ -6,6 +6,7 @@ import { stableJson } from "@drone/compute";
 import type {
 	AnalysisArtifactVersion,
 	AnalysisContext,
+	CapabilityEvidenceCard,
 	CausalEnvelope,
 	EvidenceCheckpointSummary,
 	EvidenceOverview,
@@ -259,6 +260,14 @@ export class AnalysisEvidenceService {
 	/** Small UI projection; persisted receipts remain the authority for reproduction. */
 	async overview(): Promise<EvidenceOverview> {
 		const [ledger, analyses] = await Promise.all([this.store.read(), this.options.analysis.list()]);
+		const checkpoints = await Promise.all(
+			Object.values(ledger.checkpoints)
+				.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+				.map((c) => this.summary(c)),
+		);
+		const replays = Object.values(ledger.replays)
+			.sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+			.map((r) => ({ ...r, outputChecks: [...r.outputChecks] }));
 		return {
 			analyses: analyses.map((a) => ({
 				id: a.id,
@@ -267,15 +276,10 @@ export class AnalysisEvidenceService {
 				stage: a.stage,
 				artifactCount: a.provenance?.artifacts.length ?? 0,
 			})),
-			checkpoints: await Promise.all(
-				Object.values(ledger.checkpoints)
-					.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-					.map((c) => this.summary(c)),
-			),
+			capabilities: projectCapabilityEvidence(analyses, checkpoints, replays),
+			checkpoints,
 			branches: Object.entries(ledger.branches).map(([id, b]) => ({ id, ...b })),
-			replays: Object.values(ledger.replays)
-				.sort((a, b) => b.completedAt.localeCompare(a.completedAt))
-				.map((r) => ({ ...r, outputChecks: [...r.outputChecks] })),
+			replays,
 		};
 	}
 	async summary(checkpoint: EvidenceCheckpoint): Promise<EvidenceCheckpointSummary> {
@@ -594,4 +598,59 @@ export class AnalysisEvidenceService {
 	async replayReceipts(checkpointId: string): Promise<readonly EvidenceReplayReceipt[]> {
 		return Object.values((await this.store.read()).replays).filter((r) => r.checkpointId === checkpointId);
 	}
+}
+
+/**
+ * Build a read-only capability card without inventing a request or validation
+ * capsule. Missing links stay absent so the Inspector can show the evidence
+ * gap instead of upgrading an analysis run into a scientific claim.
+ */
+export function projectCapabilityEvidence(
+	analyses: readonly AnalysisContext[],
+	checkpoints: readonly EvidenceCheckpointSummary[],
+	replays: EvidenceOverview["replays"],
+): CapabilityEvidenceCard[] {
+	return analyses.flatMap((analysis) => {
+		const provenance = analysis.provenance;
+		const explicitCheckpointId = provenance?.reproducibility.checkpointId;
+		const checkpoint = explicitCheckpointId
+			? checkpoints.find((value) => value.id === explicitCheckpointId && value.analysisId === analysis.id)
+			: checkpoints.find((value) => value.analysisId === analysis.id);
+		const linkedReplays = checkpoint ? replays.filter((value) => value.checkpointId === checkpoint.id) : [];
+		const evidenceState =
+			provenance?.reproducibility.status === "verified"
+				? "verified"
+				: provenance?.reproducibility.status === "failed"
+					? "blocked"
+					: provenance?.reproducibility.status === "recorded"
+						? "observed"
+						: "unknown";
+		return analysis.capabilities.map((capabilityId) => ({
+			id: `${analysis.id}:${capabilityId}`,
+			analysisId: analysis.id,
+			capabilityId,
+			...(analysis.adapter ? { versionRef: `${analysis.adapter.id}@${analysis.adapter.version}` } : {}),
+			// A checkpoint freezes run inputs/outputs. It is not a validation capsule
+			// and must never be rendered as proof that a capability is scientifically
+			// validated.
+			...(checkpoint ? { checkpointRef: checkpoint.id } : {}),
+			evidenceState,
+			claimState: analysis.review?.approved ? ("inferred" as const) : ("unsupported" as const),
+			capabilityState: analysis.adapter ? ("registered" as const) : ("candidate" as const),
+			reuseLevel: "navigation-only" as const,
+			// Provenance presence records that a run described itself; it does not
+			// establish a freshness policy or validation scope.
+			freshness: "unknown" as const,
+			scientificallyVerified: false,
+			// Readiness gates are execution preflight gates, not capability validation
+			// gates. Keep this empty until a real validation capsule is linked.
+			gates: [],
+			runRefs: provenance ? [analysis.id] : [],
+			artifactRefs: (provenance?.artifacts ?? []).map((artifact) => ({
+				path: artifact.path,
+				sha256: artifact.sha256,
+			})),
+			receiptRefs: linkedReplays.map((receipt) => receipt.id),
+		}));
+	});
 }
