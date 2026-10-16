@@ -10,8 +10,8 @@ import { useT } from "../../i18n";
 import { useSessionsStore } from "../../stores/sessions";
 import { SearchIcon } from "../icons";
 import { PreviewHost } from "../preview/PreviewHost";
-import { ResearchWritePanel } from "./ResearchWritePanel";
 import { hasSourceTab } from "../preview/preview-registry";
+import { ResearchWritePanel } from "./ResearchWritePanel";
 import { filterResearchPaths, normalizeProjectLink } from "./research-browser";
 import "./research-browser.css";
 
