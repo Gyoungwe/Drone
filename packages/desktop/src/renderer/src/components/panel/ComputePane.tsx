@@ -226,7 +226,7 @@ function JobRow({
 				<span className="text-ink-faint">·</span>
 				<span>{job.hostId}</span>
 			</div>
-			<div className="grid grid-cols-3 gap-2 rounded-md bg-ink/5 px-2 py-1.5 text-[10px] text-ink-dim">
+			<div className="grid grid-cols-3 gap-2 rounded-md bg-ink/5 px-2 py-2 text-[10px] text-ink-dim">
 				<span>
 					{taskCount
 						? t("panel.compute.runCard.tasks", { count: taskCount })
