@@ -71,7 +71,11 @@ import { LocalExecutionRecorder } from "./services/local-execution";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
-import { emptyCaptureLedger, ResearchResourceService } from "./services/research-resource";
+import {
+	emptyCaptureLedger,
+	emptyResearchConnectorSettings,
+	ResearchResourceService,
+} from "./services/research-resource";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
@@ -283,6 +287,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			path: join(getAgentDir(), "research", "captures.json"),
 			storageId: "agent-research-captures",
 			defaultValue: emptyCaptureLedger,
+		}),
+		connectorSettings: new JsonStore({
+			path: join(getAgentDir(), "research", "connectors.json"),
+			storageId: "agent-research-connectors",
+			defaultValue: emptyResearchConnectorSettings,
 		}),
 	});
 	const defaultProjectId = canonicalProjectId(
