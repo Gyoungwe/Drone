@@ -18,7 +18,7 @@ async function walk(root, current = root, result = []) {
     const absolute = join(current, entry.name);
     const rel = relative(root, absolute).replaceAll("\\\\", "/");
     if (entry.isDirectory()) {
-      result.push(\`\${rel}/\`);
+      result.push(rel + "/");
       await walk(root, absolute, result);
     } else {
       result.push(rel);
@@ -34,7 +34,7 @@ function confined(root, target) {
   return rel === "" || (rel !== ".." && !rel.startsWith(".." + parent));
 }
 function explainExternalOpenFailure(error) {
-  return \`无法使用系统应用打开资源：\${error}\`;
+  return "无法使用系统应用打开资源：" + error;
 }
 async function main() {
   const root = await mkdtemp(join(tmpdir(), "drone-research-browser-"));
@@ -45,12 +45,12 @@ async function main() {
     await mkdir(chineseDir, { recursive: true });
     await mkdir(longDir, { recursive: true });
     await mkdir(join(root, "目录"), { recursive: true });
-    await writeFile(join(chineseDir, "报告.md"), "# 脱敏报告\\n");
-    await writeFile(join(longDir, "长文件名-" + "z".repeat(120) + ".csv"), "sample,value\\nA,1\\n");
-    await writeFile(join(root, "数据.csv"), "sample,value\\nA,1\\n");
-    await writeFile(join(root, "图像.svg"), "<svg xmlns=\\"http://www.w3.org/2000/svg\\"><rect width=\\"4\\" height=\\"4\\"/></svg>\\n");
-    await writeFile(join(root, "报告.pdf"), "%PDF-1.4\\n");
-    await writeFile(join(root, "reads.fastq"), "@sample\\nACGT\\n+\\n!!!!\\n");
+    await writeFile(join(chineseDir, "报告.md"), "# 脱敏报告\n");
+    await writeFile(join(longDir, "长文件名-" + "z".repeat(120) + ".csv"), "sample,value\nA,1\n");
+    await writeFile(join(root, "数据.csv"), "sample,value\nA,1\n");
+    await writeFile(join(root, "图像.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"4\" height=\"4\"/></svg>\n");
+    await writeFile(join(root, "报告.pdf"), "%PDF-1.4\n");
+    await writeFile(join(root, "reads.fastq"), "@sample\nACGT\n+\n!!!!\n");
     await writeFile(join(root, "unknown.bin"), Buffer.from([0, 1, 2, 255]));
     const entries = await walk(root);
     const longEntry = entries.find((entry) => entry.includes("长文件名-"));
@@ -60,7 +60,7 @@ async function main() {
       ["long path", Boolean(longEntry && longEntry.length >= 180)],
       ["directory", entries.includes("目录/")],
       ["Markdown", entries.includes("中文资料/报告.md")],
-      ["CSV", entries.includes("数据.csv") && entries.includes(longEntry ?? "")],
+      ["CSV", entries.includes("数据.csv") && entries.includes(longEntry || "")],
       ["image", entries.includes("图像.svg")],
       ["PDF", entries.includes("报告.pdf")],
       ["FASTQ", entries.includes("reads.fastq")],
@@ -68,21 +68,21 @@ async function main() {
       ["project-root confinement", confined(root, "中文资料/报告.md") && !confined(root, "../outside.txt")],
       ["external-open failure explanation", explainExternalOpenFailure("No application is associated").startsWith("无法使用系统应用打开资源：")],
     ];
-    for (const [name, ok] of checks) assert(ok, \`acceptance failed: \${name}\`);
+    for (const check of checks) assert(check[1], "acceptance failed: " + check[0]);
     const evidence = {
       schema: "drone-research-browser-acceptance-v1",
       generatedAt: new Date().toISOString(),
       fixture: "ephemeral-redacted",
-      checks: checks.map(([name]) => ({ name, status: "passed" })),
+      checks: checks.map((check) => ({ name: check[0], status: "passed" })),
       externalOpenFailure: explainExternalOpenFailure("No application is associated"),
     };
     const outIndex = process.argv.indexOf("--out");
     if (outIndex >= 0 && process.argv[outIndex + 1]) {
       const output = resolve(process.argv[outIndex + 1]);
       await mkdir(dirname(output), { recursive: true });
-      await writeFile(output, JSON.stringify(evidence, null, 2) + "\\n", "utf8");
+      await writeFile(output, JSON.stringify(evidence, null, 2) + "\n", "utf8");
     }
-    process.stdout.write(JSON.stringify(evidence, null, 2) + "\\n");
+    process.stdout.write(JSON.stringify(evidence, null, 2) + "\n");
   } finally {
     await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   }
