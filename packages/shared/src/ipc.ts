@@ -431,7 +431,7 @@ export interface PiApi
 	/** 弹打开对话框选文件或文件夹（示例任务表单的路径输入）；用户取消返回 null，不读文件内容 */
 	pickPath(kind: "file" | "directory", defaultPath?: string): Promise<string | null>;
 	/** 读取本地文件供右侧资源栏预览；路径可相对 cwd。大文本会截断，大二进制只返回元数据。 */
-	previewFile(target: string, cwd?: string): Promise<ResourcePreviewResult>;
+	previewFile(target: string, cwd?: string, confineToCwd?: boolean): Promise<ResourcePreviewResult>;
 	/** 为本地 HTML 文件签发一次性 drone-html:// 地址：脚本可在无同源、无网络的沙箱里运行，只能读取该文件所在目录 */
 	htmlPreviewUrl(target: string, cwd?: string): Promise<string>;
 	/** 读取某个图像/HTML 图的标注 */
@@ -445,7 +445,7 @@ export interface PiApi
 	/** Copy a user-dropped file into the app-owned attachment directory. */
 	importDroppedFile(sourcePath: string, sessionId: string): Promise<ImportedAttachment>;
 	/** 使用系统默认应用打开资源：HTTP(S) 用浏览器，本地路径用系统文件关联。 */
-	openResourceExternal(target: string, cwd?: string): Promise<void>;
+	openResourceExternal(target: string, cwd?: string, confineToCwd?: boolean): Promise<void>;
 	/** 文件右键菜单宿主动作（P7）；返回新路径（download / rename）或 null */
 	fileAction(
 		action: HostFileAction,

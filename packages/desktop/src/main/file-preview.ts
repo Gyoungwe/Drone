@@ -1,6 +1,6 @@
 import { createReadStream } from "node:fs";
-import { open, stat } from "node:fs/promises";
-import { basename, extname, isAbsolute, resolve } from "node:path";
+import { open, realpath, stat } from "node:fs/promises";
+import { basename, extname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createGunzip, gunzipSync } from "node:zlib";
 import {
@@ -27,6 +27,16 @@ export function resolveResourcePath(target: string, cwd?: string): string {
 		}
 	}
 	return isAbsolute(raw) ? resolve(raw) : resolve(cwd || process.cwd(), raw);
+}
+export async function resolveConfinedResourcePath(target: string, cwd?: string): Promise<string> {
+	if (!cwd) throw new Error("a project root is required for confined resource access");
+	const candidate = resolveResourcePath(target, cwd);
+	const [root, resolved] = await Promise.all([realpath(cwd), realpath(candidate)]);
+	const relativePath = relative(root, resolved);
+	if (relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+		throw new Error("resource is outside the project root");
+	}
+	return resolved;
 }
 async function readPrefix(path: string, limit: number): Promise<Buffer> {
 	const file = await open(path, "r");
@@ -92,8 +102,14 @@ function decodeText(bytes: Buffer): { text: string; encoding: string } {
 		return { text: new TextDecoder("utf-16be").decode(bytes), encoding: "UTF-16BE" };
 	return { text: new TextDecoder("utf-8").decode(bytes), encoding: "UTF-8" };
 }
-export async function previewLocalFile(target: string, cwd?: string): Promise<ResourcePreviewResult> {
-	const path = resolveResourcePath(target, cwd),
+export async function previewLocalFile(
+	target: string,
+	cwd?: string,
+	confineToCwd = false,
+): Promise<ResourcePreviewResult> {
+	const path = confineToCwd
+			? await resolveConfinedResourcePath(target, cwd)
+			: resolveResourcePath(target, cwd),
 		info = await stat(path);
 	if (!info.isFile()) throw new Error("resource is not a file");
 	const name = basename(path),

@@ -65,7 +65,11 @@ export const AppContract = defineDomain("app", {
 		},
 		openExternal: { args: Type.Tuple([Type.String()]), result: Type.Void() },
 		filePreview: {
-			args: Type.Union([Type.Tuple([Type.String()]), Type.Tuple([Type.String(), Type.String()])]),
+			args: Type.Union([
+				Type.Tuple([Type.String()]),
+				Type.Tuple([Type.String(), Type.String()]),
+				Type.Tuple([Type.String(), Type.String(), Type.Boolean()]),
+			]),
 			result: ResourcePreviewResultSchema,
 		},
 		htmlPreviewUrl: {
@@ -89,7 +93,11 @@ export const AppContract = defineDomain("app", {
 			result: Type.Unsafe<ImportedAttachment>(ImportedAttachmentSchema),
 		},
 		resourceOpenExternal: {
-			args: Type.Union([Type.Tuple([Type.String()]), Type.Tuple([Type.String(), Type.String()])]),
+			args: Type.Union([
+				Type.Tuple([Type.String()]),
+				Type.Tuple([Type.String(), Type.String()]),
+				Type.Tuple([Type.String(), Type.String(), Type.Boolean()]),
+			]),
 			result: Type.Void(),
 		},
 		/** 文件右键菜单的宿主动作（P7）：action, target, cwd, arg（rename 的新文件名） */

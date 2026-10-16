@@ -29,6 +29,28 @@ function isDirectory(path: string): boolean {
 	return path.endsWith("/");
 }
 
+function normalizeProjectLink(href: string): string | null {
+	let decoded = href;
+	try {
+		decoded = decodeURIComponent(href);
+	} catch {
+		return null;
+	}
+	const normalized = decoded.replaceAll("\\", "/");
+	if (/^(?:file:|[a-z]:[\\/]|\/)/i.test(normalized)) return null;
+	const segments: string[] = [];
+	for (const segment of normalized.split("/")) {
+		if (!segment || segment === ".") continue;
+		if (segment === "..") {
+			if (!segments.length) return null;
+			segments.pop();
+			continue;
+		}
+		segments.push(segment);
+	}
+	return segments.join("/") || null;
+}
+
 export function ResearchBrowserPage() {
 	const t = useT();
 	const cwd = useSessionsStore((s) => s.cwd);
@@ -82,7 +104,7 @@ export function ResearchBrowserPage() {
 		const previewCwd = selectedCwd ?? cwd;
 		let cancelled = false;
 		void getPi()
-			.previewFile(selectedPath, previewCwd)
+			.previewFile(selectedPath, previewCwd, true)
 			.then((next) => {
 				if (!cancelled) setResult(next);
 			})
@@ -100,7 +122,7 @@ export function ResearchBrowserPage() {
 		if (!selectedPath || !cwd) return;
 		setActionError(null);
 		void getPi()
-			.openResourceExternal(selectedPath, selectedCwd ?? cwd)
+			.openResourceExternal(selectedPath, selectedCwd ?? cwd, true)
 			.catch((cause) => setActionError(cause instanceof Error ? cause.message : String(cause)));
 	};
 
@@ -108,8 +130,13 @@ export function ResearchBrowserPage() {
 		if (!href) return;
 		if (isLocalResourceTarget(href)) {
 			const destination = splitResourceLink(href);
+			const safeHref = normalizeProjectLink(destination.href);
+			if (!safeHref) {
+				setActionError(t("researchBrowser.unsupportedLink"));
+				return;
+			}
 			setSelectedCwd(result ? filePreviewDirectory(result.path) : cwd);
-			setSelectedPath(destination.href);
+			setSelectedPath(safeHref);
 			return;
 		}
 		setActionError(t("researchBrowser.unsupportedLink"));
