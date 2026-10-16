@@ -16,11 +16,15 @@ export interface ResearchWriteLedger {
 	audit: ResearchWriteAuditRecord[];
 }
 
-export const emptyResearchWriteLedger: ResearchWriteLedger = {
-	version: 1,
-	plans: [],
-	audit: [],
-};
+export function createEmptyResearchWriteLedger(): ResearchWriteLedger {
+	return {
+		version: 1,
+		plans: [],
+		audit: [],
+	};
+}
+
+export const emptyResearchWriteLedger: ResearchWriteLedger = createEmptyResearchWriteLedger();
 
 export interface ResearchWriteServiceOptions {
 	readonly store: JsonStore<ResearchWriteLedger>;
