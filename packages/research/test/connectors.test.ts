@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
 	createCrossrefConnector,
+	createDoiConnector,
+	createEnaConnector,
 	createEuropePmcConnector,
+	createOpenAlexConnector,
 	createPubmedConnector,
 	createSraConnector,
 	createZenodoConnector,
@@ -45,6 +48,39 @@ describe("research connectors", () => {
 		expect(calls).toBe(2);
 	});
 
+	it("normalizes OpenAlex literature records with a stable receipt", async () => {
+		const hits = await createOpenAlexConnector().search("single cell", {
+			fetchImpl: async () =>
+				response({
+					results: [
+						{
+							id: "https://openalex.org/W123",
+							title: "A work",
+							doi: "https://doi.org/10.1000/example",
+							primary_location: { source: { display_name: "Journal" } },
+						},
+					],
+				}),
+		});
+		expect(hits[0]).toMatchObject({ id: "openalex:W123", locator: "https://doi.org/10.1000/example" });
+		expect(hits[0]?.sourceReceipt).toMatchObject({ readOnly: true, sourceType: "literature" });
+	});
+
+	it("resolves an exact DOI and ignores ordinary free-text queries", async () => {
+		let calls = 0;
+		const connector = createDoiConnector();
+		const options = {
+			fetchImpl: async () => {
+				calls += 1;
+				return response({ message: { DOI: "10.1000/example", title: ["A DOI paper"] } });
+			},
+		};
+		expect(await connector.search("genomics", options)).toEqual([]);
+		const hits = await connector.search("https://doi.org/10.1000/example", options);
+		expect(hits[0]).toMatchObject({ id: "doi:10.1000/example", sourceType: "citation" });
+		expect(calls).toBe(1);
+	});
+
 	it("normalizes public dataset catalogs with the same provenance shape", async () => {
 		const zenodo = await createZenodoConnector().search("bee brain", {
 			fetchImpl: async () =>
@@ -65,6 +101,12 @@ describe("research connectors", () => {
 			fetchImpl: async () => response({ esearchresult: { idlist: ["SRR1"] } }),
 		});
 		expect(sra[0]?.locator).toContain("ncbi.nlm.nih.gov/sra/SRR1");
+		const ena = await createEnaConnector().search("ERR1", {
+			fetchImpl: async () =>
+				response([{ accession: "ERR1", study_accession: "PRJ1", study_title: "ENA study" }]),
+		});
+		expect(ena[0]).toMatchObject({ id: "ena:ERR1", sourceType: "dataset" });
+		expect(ena[0]?.sourceReceipt).toMatchObject({ readOnly: true, sourceType: "dataset" });
 	});
 
 	it("returns connector failures as retryable evidence gaps", async () => {
