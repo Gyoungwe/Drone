@@ -13,6 +13,7 @@ import {
 	PackagesContract,
 	PermissionsContract,
 	type PiApi,
+	ResearchContract,
 	SessionsContract,
 	SettingsContract,
 	SubagentsContract,
@@ -118,6 +119,20 @@ const knowledgeClient = exposeContract(KnowledgeContract, {
 				getZoteroLocalWrite: IpcChannels.ZoteroLocalWriteGet,
 				authorizeZoteroLocalWrite: IpcChannels.ZoteroLocalWriteAuthorize,
 				clearZoteroLocalWrite: IpcChannels.ZoteroLocalWriteClear,
+			},
+			method,
+		),
+});
+const researchClient = exposeContract(ResearchContract, {
+	ipc: ipcRenderer,
+	channelForMethod: (_contract, method) =>
+		channelFrom(
+			{
+				captureResource: IpcChannels.ResearchCapture,
+				approveCapture: IpcChannels.ResearchApproveCapture,
+				revokeCapture: IpcChannels.ResearchRevokeCapture,
+				listCaptures: IpcChannels.ResearchListCaptures,
+				searchResources: IpcChannels.ResearchSearch,
 			},
 			method,
 		),
@@ -396,6 +411,11 @@ const invokeApi = {
 	...decisionsClient,
 	...inquiryClient,
 	...knowledgeApi,
+	captureResource: invoke(researchClient, "captureResource"),
+	approveCapture: invoke(researchClient, "approveCapture"),
+	revokeCapture: invoke(researchClient, "revokeCapture"),
+	listCaptures: invoke(researchClient, "listCaptures"),
+	searchResources: invoke(researchClient, "searchResources"),
 	listSessionSubagents: invoke(subagentsClient, "list"),
 	dispatchSubagents: invoke(subagentsClient, "dispatch"),
 	abortSubagentRun: invoke(subagentsClient, "abort"),

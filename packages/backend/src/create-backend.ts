@@ -71,6 +71,7 @@ import { LocalExecutionRecorder } from "./services/local-execution";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
+import { emptyCaptureLedger, ResearchResourceService } from "./services/research-resource";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
@@ -187,6 +188,8 @@ export interface BackendServices {
 	memory: MemoryServicePort;
 	/** Optional project research-state ledger; disabled unless inquiryDir is configured. */
 	inquiry: InquiryServicePort;
+	/** Provenance-aware project capture and read-only connector search. */
+	research: ResearchResourceService;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
 	/** Durable B7 dataset, public-fetch and RO-Crate registry. */
@@ -274,6 +277,13 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					...(host.platform ? { platform: host.platform } : {}),
 					status: host.health.status,
 				})),
+	});
+	const research = new ResearchResourceService({
+		store: new JsonStore({
+			path: join(getAgentDir(), "research", "captures.json"),
+			storageId: "agent-research-captures",
+			defaultValue: emptyCaptureLedger,
+		}),
 	});
 	const defaultProjectId = canonicalProjectId(
 		options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
@@ -521,6 +531,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		},
 		computeAdapter,
 		inquiry,
+		research,
 		discovery,
 		dataDesign,
 		analysis,

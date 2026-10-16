@@ -17,6 +17,7 @@ import { registerMcpIpc } from "./mcp";
 import { registerMemoryIpc } from "./memory";
 import { registerPackagesIpc } from "./packages";
 import { registerPermissionSettingsIpc } from "./permissions";
+import { registerResearchIpc } from "./research";
 import { registerSessionsIpc } from "./sessions";
 import { registerSettingsIpc } from "./settings";
 import { registerSubagentsIpc } from "./subagents";
@@ -58,6 +59,7 @@ export function registerIpc(
 	registerInquiryIpc(backendServices, sendToRenderer);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerMemoryIpc(backendServices);
+	registerResearchIpc(backendServices);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
 	uiPluginsManager.startWatcher((name) => {
 		sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "changed", name });

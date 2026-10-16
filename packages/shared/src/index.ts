@@ -63,6 +63,8 @@ export * from "./process-lanes";
 export * from "./progress-display";
 export * from "./project-id";
 export * from "./public-timeline";
+export * from "./research-capture";
+export * from "./research-connectors";
 export * from "./research-skill-update";
 export * from "./research-skills";
 export * from "./research-status";

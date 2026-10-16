@@ -1,0 +1,72 @@
+import { mkdtemp, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { checkKnowledgeSnapshotReuse } from "@drone/knowledge";
+import { describe, expect, it } from "vitest";
+import { JsonStore } from "../src/json-store";
+import {
+	type CaptureLedger,
+	emptyCaptureLedger,
+	ResearchResourceService,
+} from "../src/services/research-resource";
+
+async function service(): Promise<ResearchResourceService> {
+	const state = await mkdtemp(join(tmpdir(), "drone-research-state-"));
+	return new ResearchResourceService({
+		store: new JsonStore<CaptureLedger>({
+			path: join(state, "captures.json"),
+			storageId: "test-research-captures",
+			defaultValue: emptyCaptureLedger,
+		}),
+	});
+}
+
+describe("ResearchResourceService", () => {
+	it("captures safely, is idempotent, and keeps the snapshot pending", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-project-"));
+		await writeFile(join(root, "notes.md"), "A small research note\n", "utf8");
+		const research = await service();
+		const first = await research.capture({ cwd: root, relativePath: "notes.md" });
+		const duplicate = await research.capture({ cwd: root, relativePath: "notes.md" });
+		expect(first.idempotent).toBe(false);
+		expect(duplicate.idempotent).toBe(true);
+		expect(first.record.approval).toBe("pending");
+		expect(
+			checkKnowledgeSnapshotReuse(first.record.snapshot, {
+				context: {
+					projectId: first.record.snapshot.projectId!,
+					workspaceId: first.record.snapshot.workspaceId!,
+				},
+			}).status,
+		).toBe("pending-approval");
+		const approved = await research.approve(first.record.id);
+		expect(approved.approval).toBe("approved");
+		expect(approved.revision).toBe(1);
+		expect(
+			checkKnowledgeSnapshotReuse(approved.snapshot, {
+				context: { projectId: approved.snapshot.projectId!, workspaceId: approved.snapshot.workspaceId! },
+			}).reusable,
+		).toBe(true);
+	});
+
+	it("creates a new revision when file bytes change and rejects root escape", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-project-"));
+		await writeFile(join(root, "notes.txt"), "first", "utf8");
+		const research = await service();
+		const first = await research.capture({ cwd: root, relativePath: "notes.txt" });
+		await writeFile(join(root, "notes.txt"), "second", "utf8");
+		const changed = await research.capture({ cwd: root, relativePath: "notes.txt" });
+		expect(changed.idempotent).toBe(false);
+		expect(changed.record.revision).toBe(1);
+		await expect(research.capture({ cwd: root, relativePath: "../outside.txt" })).rejects.toThrow(
+			/escapes project root/,
+		);
+		const outside = await mkdtemp(join(tmpdir(), "drone-research-outside-"));
+		await writeFile(join(outside, "secret.txt"), "secret", "utf8");
+		await symlink(join(outside, "secret.txt"), join(root, "link.txt"));
+		await expect(research.capture({ cwd: root, relativePath: "link.txt" })).rejects.toThrow(
+			/escapes project root/,
+		);
+		expect(first.record.sourceReceipt.contentHash).not.toBe(changed.record.sourceReceipt.contentHash);
+	});
+});

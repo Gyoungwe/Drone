@@ -267,6 +267,12 @@ export {
 } from "./services/packages";
 export { PermissionSettingsService } from "./services/permissions";
 export { ProjectTrustService } from "./services/project-trust";
+export {
+	type CaptureLedger,
+	emptyCaptureLedger,
+	ResearchResourceService,
+	type ResearchResourceServiceOptions,
+} from "./services/research-resource";
 export { SessionLifecycleService, type SessionLifecycleServicePort } from "./services/session-lifecycle";
 export { SessionPermissionService, type SessionPermissionServicePort } from "./services/session-permissions";
 export { SubagentService, type SubagentServicePort } from "./services/subagents";

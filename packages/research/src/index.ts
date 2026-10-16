@@ -13,6 +13,18 @@ export {
 	validateClaimBindings,
 } from "./claim-bindings";
 export {
+	createCrossrefConnector,
+	createDefaultResearchConnectors,
+	createEuropePmcConnector,
+	createOsfConnector,
+	createPubmedConnector,
+	createSraConnector,
+	createZenodoConnector,
+	type ResearchConnector,
+	type ResearchConnectorContext,
+	ResearchConnectorRegistry,
+} from "./connectors";
+export {
 	assertEvidenceAnswerable,
 	createEvidenceGate,
 	EVIDENCE_STAGES,
