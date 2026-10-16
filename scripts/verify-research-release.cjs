@@ -14,7 +14,6 @@ module.exports = async function verifyResearchRelease() {
 			"--sources",
 			"nature",
 			"scientific",
-			"academic",
 			"--check",
 			"--for-release",
 		],

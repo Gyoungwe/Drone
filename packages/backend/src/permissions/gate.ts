@@ -60,7 +60,7 @@ export class PermissionGate {
 		return { title: this.titles.get(requestId) ?? "", meta: this.pending.get(requestId)?.meta };
 	}
 
-	/** 全部未决请求的只读快照（LAN Observer 等被动观察者用）。 */
+	/** 全部未决请求的只读快照。 */
 	listPending(): PermissionRequest[] {
 		return [...this.pending.entries()].map(([id, entry]) => ({
 			id,

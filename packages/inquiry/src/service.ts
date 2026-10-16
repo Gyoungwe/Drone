@@ -383,7 +383,7 @@ export class InquiryService {
 		};
 	}
 
-	/** Read-only projection used by panel and LAN adapters. */
+	/** Read-only projection used by the desktop panel. */
 	async readOnlyState() {
 		const snapshot = await this.storage.snapshot();
 		return {

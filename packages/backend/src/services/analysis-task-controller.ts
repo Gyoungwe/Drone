@@ -13,7 +13,7 @@ import type {
 } from "@drone/shared";
 import { capabilityLoadRequest } from "@drone/shared";
 import type { CapabilityRuntime } from "../capabilities/runtime";
-import { newRunAttemptId, rootCausalEnvelope } from "../causality";
+import { newRunAttemptId, nextCausalEnvelope, rootCausalEnvelope } from "../causality";
 import {
 	type AnalysisAdapterRegistry,
 	adapterSnapshotSha256,
@@ -356,9 +356,10 @@ export class AnalysisTaskController {
 		this.adapters.resolve(context.assay, binding.adapter);
 		assertComputePreflight(spec);
 		this.sync(context);
+		const jobLineage = binding.lineage ? nextCausalEnvelope(binding.lineage) : undefined;
 		const job = await this.compute.submit({
 			...spec,
-			...(binding.lineage ? { lineage: binding.lineage } : {}),
+			...(jobLineage ? { lineage: jobLineage } : {}),
 		});
 		return { context, job };
 	}

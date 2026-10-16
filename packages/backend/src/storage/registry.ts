@@ -488,20 +488,6 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 				sensitivity: "private",
 			})
 			.register({
-				id: "desktop-lan-config",
-				path: `${userDataDir}/lan-observer.json`,
-				owner: "desktop/lan",
-				schema: 1,
-				sensitivity: "config",
-			})
-			.register({
-				id: "desktop-lan-audit",
-				path: `${userDataDir}/lan-audit.jsonl`,
-				owner: "desktop/lan",
-				schema: 1,
-				sensitivity: "private",
-			})
-			.register({
 				id: "desktop-ui-state",
 				path: `${userDataDir}/ui-state.json`,
 				owner: "desktop/ui-state",

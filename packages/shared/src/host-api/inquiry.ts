@@ -27,11 +27,10 @@ const UiErrorSchema = Type.Object(
 
 export const InquiryContract = defineDomain("inquiry", {
 	methods: {
-		listArtifacts: { args: ProjectArgs, result: ArrayResult<InquiryArtifactRecord>(), access: "lan-read" },
+		listArtifacts: { args: ProjectArgs, result: ArrayResult<InquiryArtifactRecord>() },
 		artifactProvenance: {
 			args: ArtifactIdArgs,
 			result: Type.Union([ObjectResult<InquiryArtifactProvenance>(), UiErrorSchema]),
-			access: "lan-read",
 		},
 		rerunArtifact: {
 			args: ArtifactIdArgs,

@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createCausalEnvelope } from "@drone/shared";
 import { afterEach, describe, expect, it } from "vitest";
+import { createSessionCausalityContext } from "../src/session/intent-binding";
 import {
 	createIntentObserver,
 	hashArgs,
@@ -50,6 +51,23 @@ describe("replay policy", () => {
 });
 
 describe("tool intent journal", () => {
+	it("creates and clears one causal attempt per agent run", () => {
+		const context = createSessionCausalityContext();
+		expect(context.current()).toBeUndefined();
+		context.observe({ type: "agent_start" });
+		const first = context.current();
+		expect(first).toMatchObject({
+			eventId: expect.stringMatching(/^event:/),
+			runAttemptId: expect.stringMatching(/^run:/),
+		});
+		context.observe({ type: "tool_execution_start" });
+		expect(context.current()).toEqual(first);
+		context.observe({ type: "agent_end" });
+		expect(context.current()).toBeUndefined();
+		context.observe({ type: "agent_start" });
+		expect(context.current()?.runAttemptId).not.toBe(first?.runAttemptId);
+	});
+
 	it("hashes args independent of key order", () => {
 		expect(hashArgs({ a: 1, b: [1, { c: 2, d: 3 }] })).toBe(hashArgs({ b: [1, { d: 3, c: 2 }], a: 1 }));
 		expect(hashArgs({ a: 1 })).not.toBe(hashArgs({ a: 2 }));

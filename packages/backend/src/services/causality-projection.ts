@@ -133,7 +133,8 @@ function push(
 }
 
 function compareRows(a: CausalityProjectionRecord, b: CausalityProjectionRecord): number {
-	const at = String(a.at ?? "");
-	const bt = String(b.at ?? "");
-	return at.localeCompare(bt) || a.eventId.localeCompare(b.eventId);
+	const at = a.at;
+	const bt = b.at;
+	if (typeof at === "number" && typeof bt === "number") return at - bt || a.eventId.localeCompare(b.eventId);
+	return String(at ?? "").localeCompare(String(bt ?? "")) || a.eventId.localeCompare(b.eventId);
 }

@@ -8,6 +8,7 @@ import type {
 	ComputeHostInput,
 	ComputeId,
 	ComputeJob,
+	ComputeJobProgress,
 	ComputeLogChunk,
 	ComputeOnboardingStatus,
 	ComputeOnboardingStep,
@@ -145,6 +146,71 @@ function workflowLabel(job: JobRecord): string | undefined {
 	return typeof first.name === "string" ? first.name : undefined;
 }
 
+function nonNegativeInt(value: unknown): number | undefined {
+	return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : undefined;
+}
+
+function traceProgress(job: JobRecord, failureReason?: string): ComputeJobProgress | undefined {
+	const row = asRecord(job);
+	const source = asRecord(row.progress ?? row.traceProgress ?? row.trace);
+	const counts = asRecord(source.counts);
+	const rawProcesses = Array.isArray(source.processes) ? source.processes : [];
+	const processes = rawProcesses.flatMap((item) => {
+		const process = asRecord(item);
+		if (typeof process.name !== "string" || process.name.length === 0) return [];
+		const processCounts = asRecord(process.counts);
+		return [
+			{
+				name: process.name.slice(0, 256),
+				...(typeof process.label === "string" ? { label: process.label.slice(0, 160) } : {}),
+				...Object.fromEntries(
+					["total", "completed", "running", "queued", "failed", "cached"].flatMap((key) => {
+						const value = nonNegativeInt(process[key] ?? processCounts[key]);
+						return value === undefined ? [] : [[key, value]];
+					}),
+				),
+			},
+		];
+	});
+	const artifactPaths = (asRecord(row.artifacts).entries as unknown[] | undefined) ?? [];
+	const multiqcPath = artifactPaths
+		.map((item) => asRecord(item).path)
+		.find((path): path is string => typeof path === "string" && /multiqc_report\.html$/i.test(path));
+	const value: ComputeJobProgress = {
+		processes,
+		...(typeof source.stage === "string" ? { stage: source.stage.slice(0, 160) } : {}),
+		...(nonNegativeInt(source.completedTasks ?? counts.completed) !== undefined
+			? { completedTasks: nonNegativeInt(source.completedTasks ?? counts.completed) }
+			: {}),
+		...(nonNegativeInt(source.totalTasks ?? counts.total) !== undefined
+			? { totalTasks: nonNegativeInt(source.totalTasks ?? counts.total) }
+			: {}),
+		...(nonNegativeInt(source.runningTasks ?? counts.running) !== undefined
+			? { runningTasks: nonNegativeInt(source.runningTasks ?? counts.running) }
+			: {}),
+		...(nonNegativeInt(source.queuedTasks ?? counts.queued) !== undefined
+			? { queuedTasks: nonNegativeInt(source.queuedTasks ?? counts.queued) }
+			: {}),
+		...(nonNegativeInt(source.failedTasks ?? counts.failed) !== undefined
+			? { failedTasks: nonNegativeInt(source.failedTasks ?? counts.failed) }
+			: {}),
+		...(typeof source.tracePath === "string" ? { tracePath: source.tracePath.slice(0, 1024) } : {}),
+		...(typeof source.timelinePath === "string" ? { timelinePath: source.timelinePath.slice(0, 1024) } : {}),
+		...(typeof source.reportPath === "string" ? { reportPath: source.reportPath.slice(0, 1024) } : {}),
+		...(typeof source.multiqcPath === "string"
+			? { multiqcPath: source.multiqcPath.slice(0, 1024) }
+			: multiqcPath
+				? { multiqcPath }
+				: {}),
+		...(typeof source.failureReason === "string"
+			? { failureReason: source.failureReason.slice(0, 1000) }
+			: failureReason
+				? { failureReason: failureReason.slice(0, 1000) }
+				: {}),
+	};
+	return Object.keys(value).length > 1 || value.processes.length > 0 ? value : undefined;
+}
+
 function operationKey(operation: ComputeRemoteOperation): string {
 	return JSON.stringify(operation);
 }
@@ -214,6 +280,7 @@ function computeJob(job: JobRecord): ComputeJob {
 			: typeof asRecord(error).message === "string"
 				? String(asRecord(error).message)
 				: undefined;
+	const progress = traceProgress(job, summary);
 	return {
 		id: String(row.jobId),
 		hostId: String(row.hostAlias),
@@ -228,6 +295,7 @@ function computeJob(job: JobRecord): ComputeJob {
 		...(typeof row.exitCode === "number" ? { exitCode: row.exitCode } : {}),
 		budget,
 		...(summary ? { publicSummary: summary } : {}),
+		...(progress ? { progress } : {}),
 		artifacts,
 		updatedAt: iso(row.updatedAt),
 	};

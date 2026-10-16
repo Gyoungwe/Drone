@@ -42,25 +42,13 @@ extraResources:
   # 内置协作 skill（channel-pickup/design-handoff）：additionalSkillPaths 扫描，与 UI 插件目录分列
   - from: "resources/skills"
     to: "skills"
-  # Reviewed release sources. ARS ships under its CC BY-NC 4.0 NonCommercial grant (noncommercial distribution only); preflight is mandatory.
+  # Reviewed built-in research sources. Each pack is pinned and receipt-verified before packaging.
   - from: "resources/research-skills/nature"
     to: "research-skills/nature"
     filter: ["**/*", ".drone-pack.json"]
   - from: "resources/research-skills/scientific"
     to: "research-skills/scientific"
     filter: ["**/*", ".drone-pack.json"]
-  - from: "resources/research-skills/academic"
-    to: "research-skills/academic"
-    filter: ["**/*", ".drone-pack.json"]
-  # builder-util skips .gitkeep during directory traversal; retain these pinned placeholders explicitly.
-  - from: "resources/research-skills/academic/academic-pipeline/references/adapters/.gitkeep"
-    to: "research-skills/academic/academic-pipeline/references/adapters/.gitkeep"
-  - from: "resources/research-skills/academic/scripts/adapters/examples/obsidian/input_fixture/vault/.gitkeep"
-    to: "research-skills/academic/scripts/adapters/examples/obsidian/input_fixture/vault/.gitkeep"
-  - from: "resources/research-skills/academic/scripts/adapters/examples/zotero/input_fixture/.gitkeep"
-    to: "research-skills/academic/scripts/adapters/examples/zotero/input_fixture/.gitkeep"
-  - from: "resources/research-skills/academic/scripts/adapters/tests/.gitkeep"
-    to: "research-skills/academic/scripts/adapters/tests/.gitkeep"
   # Bundled pi packages (exact pins in pi-packages/package.json + package-lock.json), staged by
   # scripts/stage-pi-packages.mjs; beforePack fails closed when they are missing or stale.
   # pi-mcp-adapter is the MCP runtime: main loads <resources>/pi-packages/node_modules/pi-mcp-adapter/index.ts.

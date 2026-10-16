@@ -89,13 +89,13 @@ import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
  * Transitional composition root for the v2 migration.
  *
  * The existing PiBackend remains the compatibility façade while callers move
- * to explicit service groups. Keeping construction here gives desktop, LAN
+ * to explicit service groups. Keeping construction here gives desktop
  * and future CLI hosts one place to assemble the runtime and makes the final
  * façade removal an internal change.
  */
 /**
- * Host-facing session boundary.  This is deliberately structural: desktop,
- * LAN, and future hosts depend on the transport/session contract and lifecycle
+ * Host-facing session boundary. This is deliberately structural: desktop and
+ * future hosts depend on the transport/session contract and lifecycle
  * events, while the concrete PiBackend remains an internal composition-root
  * implementation.  Compatibility-only domain delegates are intentionally not
  * part of this port.

@@ -23,7 +23,7 @@ type PermissionResolvedHandler = (result: PermissionResolved) => void;
  *
  * The service owns the per-session gates and the request/resolution event
  * fan-out.  PiBackend keeps its historical methods as compatibility delegates,
- * while desktop, LAN and future hosts can consume the same registry through
+ * while desktop and future hosts can consume the same registry through
  * BackendServices without constructing or discovering gates themselves.
  */
 export class ApprovalService {

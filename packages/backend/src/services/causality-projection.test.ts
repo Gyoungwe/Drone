@@ -51,4 +51,28 @@ describe("causality projection", () => {
 		});
 		expect(projection.records).toEqual([]);
 	});
+
+	it("sorts numeric timestamps numerically", () => {
+		const projection = projectCausality({
+			computeEvents: [
+				{
+					jobId: "job",
+					id: "ten",
+					type: "status",
+					status: "running",
+					at: 10,
+					lineage: createCausalEnvelope({ eventId: "event:ten", runAttemptId: "run:one" }),
+				},
+				{
+					jobId: "job",
+					id: "two",
+					type: "status",
+					status: "running",
+					at: 2,
+					lineage: createCausalEnvelope({ eventId: "event:two", runAttemptId: "run:one" }),
+				},
+			],
+		});
+		expect(projection.records.map((row) => row.eventId)).toEqual(["event:two", "event:ten"]);
+	});
 });

@@ -456,6 +456,41 @@ export function checkComputeAuthorization(
 }
 
 export type ComputeJobState = "queued" | "running" | "succeeded" | "failed" | "cancelled" | "unknown";
+export const ComputeJobProcessSchema = Type.Object(
+	{
+		name: Type.String({ minLength: 1, maxLength: 256 }),
+		label: Type.Optional(Type.String({ maxLength: 160 })),
+		total: Type.Optional(Type.Integer({ minimum: 0 })),
+		completed: Type.Optional(Type.Integer({ minimum: 0 })),
+		running: Type.Optional(Type.Integer({ minimum: 0 })),
+		queued: Type.Optional(Type.Integer({ minimum: 0 })),
+		failed: Type.Optional(Type.Integer({ minimum: 0 })),
+		cached: Type.Optional(Type.Integer({ minimum: 0 })),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeJobProcess = Static<typeof ComputeJobProcessSchema>;
+
+/** Bounded, renderer-safe projection of a workflow trace. */
+export const ComputeJobProgressSchema = Type.Object(
+	{
+		stage: Type.Optional(Type.String({ maxLength: 160 })),
+		completedTasks: Type.Optional(Type.Integer({ minimum: 0 })),
+		totalTasks: Type.Optional(Type.Integer({ minimum: 0 })),
+		runningTasks: Type.Optional(Type.Integer({ minimum: 0 })),
+		queuedTasks: Type.Optional(Type.Integer({ minimum: 0 })),
+		failedTasks: Type.Optional(Type.Integer({ minimum: 0 })),
+		processes: Type.Array(ComputeJobProcessSchema, { maxItems: 512 }),
+		tracePath: Type.Optional(Type.String({ maxLength: 1024 })),
+		timelinePath: Type.Optional(Type.String({ maxLength: 1024 })),
+		reportPath: Type.Optional(Type.String({ maxLength: 1024 })),
+		multiqcPath: Type.Optional(Type.String({ maxLength: 1024 })),
+		failureReason: Type.Optional(Type.String({ maxLength: 1000 })),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeJobProgress = Static<typeof ComputeJobProgressSchema>;
+
 export const ComputeJobSchema = Type.Object(
 	{
 		id: ComputeIdSchema,
@@ -483,6 +518,7 @@ export const ComputeJobSchema = Type.Object(
 			{ additionalProperties: false },
 		),
 		publicSummary: Type.Optional(Type.String({ maxLength: 1000 })),
+		progress: Type.Optional(ComputeJobProgressSchema),
 		artifacts: Type.Array(
 			Type.Object(
 				{

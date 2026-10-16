@@ -167,7 +167,12 @@ describe("NGS analysis task controller", () => {
 		await controller.approveExecution("pasilla");
 		await controller.submitCompute("pasilla", spec);
 		expect(compute.submit).toHaveBeenCalledOnce();
-		expect(compute.submit.mock.calls[0]?.[0]).toMatchObject({ lineage: binding?.lineage });
+		const submitted = compute.submit.mock.calls[0]?.[0] as ComputePreflightJobSpec;
+		expect(submitted.lineage).toMatchObject({
+			runAttemptId: binding?.lineage?.runAttemptId,
+			causationId: binding?.lineage?.eventId,
+		});
+		expect(submitted.lineage?.eventId).not.toBe(binding?.lineage?.eventId);
 		expect((await controller.reconcile("pasilla")).stage).toBe("execution");
 		compute.status.mockResolvedValue({ ...job, status: "succeeded" });
 		expect((await controller.reconcile("pasilla")).stage).toBe("review");

@@ -50,7 +50,6 @@ export * from "./knowledge";
 export * from "./knowledge-links";
 export * from "./knowledge-specialists";
 export * from "./knowledge-upgrade";
-export * from "./lan";
 export { literatureRecoverySummary } from "./literature-recovery";
 export * from "./marquee-motion";
 export * from "./mcp";
@@ -64,6 +63,7 @@ export * from "./process-lanes";
 export * from "./progress-display";
 export * from "./project-id";
 export * from "./public-timeline";
+export * from "./research-skill-update";
 export * from "./research-skills";
 export * from "./research-status";
 export {

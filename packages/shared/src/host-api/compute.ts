@@ -100,7 +100,6 @@ export const ComputeContract = defineDomain("compute", {
 		listJobs: {
 			args: Type.Tuple([Type.Optional(JobFilterSchema)]),
 			result: Type.Array(ComputeJobSchema, { maxItems: 100 }),
-			access: "lan-read",
 		},
 		getJob: { args: IdArgs, result: Type.Union([ComputeJobSchema, Type.Null()]) },
 		submitJob: { args: Type.Tuple([ComputeJobInputSchema]), result: ComputeJobSchema },

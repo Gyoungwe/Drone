@@ -314,7 +314,7 @@ describe("turnDiff chip 行（桌面路径）", () => {
 		expect(rows[rows.length - 2]?.kind).toBe("metaGroup");
 	});
 
-	it("不传 turnChanges 不生成 turnDiff 行（lan-web 路径零行为变化）", () => {
+	it("不传 turnChanges 不生成 turnDiff 行", () => {
 		const t = {
 			...emptyTranscript(),
 			messages: [user("一"), assistant("答一")],

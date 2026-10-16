@@ -1,6 +1,6 @@
 import { Type } from "typebox";
 import { describe, expect, it } from "vitest";
-import { type ClientOf, channelOf, defineDomain, methodsWithAccess } from "./define";
+import { type ClientOf, channelOf, defineDomain } from "./define";
 
 const C = defineDomain("demo", {
 	methods: { ping: { args: Type.Tuple([Type.String()]), result: Type.Number() } },
@@ -18,15 +18,15 @@ describe("host-api definitions", () => {
 	it("derives callable clients", async () => {
 		expect(await typedClient.ping("ok")).toBe(2);
 	});
-	it("selects methods by transport access for host adapters", () => {
+	it("defaults every method to the desktop host", () => {
 		const domain = defineDomain("demo", {
 			methods: {
-				read: { args: Type.Tuple([]), result: Type.String(), access: "lan-read" },
-				write: { args: Type.Tuple([]), result: Type.String(), access: "lan-control" },
+				read: { args: Type.Tuple([]), result: Type.String() },
+				write: { args: Type.Tuple([]), result: Type.String() },
 				local: { args: Type.Tuple([]), result: Type.String() },
 			},
 		});
-		expect(methodsWithAccess(domain, "lan-read")).toEqual(["read"]);
-		expect(methodsWithAccess(domain, "lan-control")).toEqual(["write"]);
+		expect(domain.methods.read.access).toBe("desktop");
+		expect(domain.methods.write.access).toBe("desktop");
 	});
 });

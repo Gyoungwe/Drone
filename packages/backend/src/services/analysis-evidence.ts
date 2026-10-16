@@ -11,8 +11,8 @@ import type {
 	EvidenceCheckpointSummary,
 	EvidenceOverview,
 } from "@drone/shared";
-import { childCausalEnvelope } from "@drone/shared";
-import { newEventId, newRunAttemptId } from "../causality";
+import { assertCausalEnvelope, childCausalEnvelope } from "@drone/shared";
+import { newEventId, rootCausalEnvelope } from "../causality";
 import { JsonStore } from "../json-store";
 import type { StorageRegistry } from "../storage/registry";
 import type { AnalysisOrchestrationService } from "./analysis-orchestration";
@@ -134,6 +134,8 @@ function validateCheckpoint(checkpoint: EvidenceCheckpoint): void {
 	const { id, ...body } = checkpoint;
 	if (checkpoint.schemaVersion !== 1 || id !== checkpointId(body))
 		throw new Error("Checkpoint manifest checksum mismatch");
+	if (checkpoint.lineage) assertCausalEnvelope(checkpoint.lineage);
+	if (checkpoint.analysis.provenance?.lineage) assertCausalEnvelope(checkpoint.analysis.provenance.lineage);
 	if (
 		checkpoint.analysis?.version !== 1 ||
 		!checkpoint.analysis.id ||
@@ -570,6 +572,11 @@ export class AnalysisEvidenceService {
 		} finally {
 			await rm(workspace, { recursive: true, force: true });
 		}
+		const lineage = checkpoint.lineage
+			? childCausalEnvelope(checkpoint.lineage, {
+					eventId: newEventId(),
+				})
+			: rootCausalEnvelope();
 		const receipt: EvidenceReplayReceipt = {
 			id: randomUUID(),
 			checkpointId: id,
@@ -581,14 +588,7 @@ export class AnalysisEvidenceService {
 			outputChecks: checks,
 			environmentMatched,
 			completedAt: new Date().toISOString(),
-			...(checkpoint.lineage
-				? {
-						lineage: childCausalEnvelope(checkpoint.lineage, {
-							eventId: newEventId(),
-							runAttemptId: newRunAttemptId(),
-						}),
-					}
-				: {}),
+			lineage,
 		};
 		await this.store.update((ledger) => {
 			ledger.replays[receipt.id] = receipt;
