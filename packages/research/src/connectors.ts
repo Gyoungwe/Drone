@@ -471,9 +471,8 @@ export class ResearchConnectorRegistry {
 	): Promise<ResearchSearchResponse> {
 		const query = input.query.normalize("NFKC").trim();
 		if (!query || query.length > 512) throw new Error("Research search query is required");
-		const requested = input.connectorIds?.length
-			? [...input.connectorIds]
-			: this.list().map((item) => item.id);
+		const requested =
+			input.connectorIds !== undefined ? [...input.connectorIds] : this.list().map((item) => item.id);
 		const selected = requested
 			.map((id) => this.connectors.get(id))
 			.filter((item): item is ResearchConnector => Boolean(item));
