@@ -8,6 +8,7 @@ const Input = Type.Object(
 		cwd: Type.String({ minLength: 1, maxLength: 4096 }),
 		relativePath: Type.String({ minLength: 1, maxLength: 4096 }),
 		scope: Type.Optional(Type.Union([Type.Literal("project"), Type.Literal("workspace")])),
+		expiresAt: Type.Optional(Type.String({ minLength: 20, maxLength: 64 })),
 	},
 	{ additionalProperties: false },
 );
