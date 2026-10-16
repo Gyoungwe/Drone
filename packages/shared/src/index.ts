@@ -68,6 +68,7 @@ export * from "./research-connectors";
 export * from "./research-skill-update";
 export * from "./research-skills";
 export * from "./research-status";
+export * from "./research-writes";
 export {
 	isLocalResourceTarget,
 	localResourceHref,
@@ -108,4 +109,3 @@ export * from "./v2-closure";
 export * from "./volume-preview";
 export * from "./workflow-catalog";
 export * from "./zotero";
-export * from "./research-writes";
