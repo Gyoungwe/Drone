@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RESEARCH_SKILL_SOURCES } from "@drone/shared";
 import { afterEach, expect, it, vi } from "vitest";
@@ -16,7 +17,7 @@ afterEach(() => {
 });
 
 it("checks the two built-in sources against their pinned current commits", async () => {
-	const root = mkdtempSync(join(process.env.TMPDIR ?? "/tmp", "research-skill-update-"));
+	const root = mkdtempSync(join(tmpdir(), "research-skill-update-"));
 	roots.push(root);
 	configureResearchSkillUpdater(root);
 	const sourceCommit = new Map(RESEARCH_SKILL_SOURCES.map((source) => [source.id, source.commit]));

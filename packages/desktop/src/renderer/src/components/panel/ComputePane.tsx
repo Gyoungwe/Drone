@@ -1,5 +1,6 @@
 import type { ComputeHost, ComputeJob } from "@drone/shared";
 import { type FormEvent, useState } from "react";
+import { getPi } from "../../api";
 import { type MessageKey, useT } from "../../i18n";
 import { selectHosts, selectJobs, selectOnboarding, useComputeStore } from "../../stores/compute";
 import { HostEnvironmentCard, HostPermissions } from "./HostEnvironmentCard";
@@ -178,10 +179,12 @@ function JobRow({
 	job,
 	onCancel,
 	onSelect,
+	onOpenMultiqc,
 }: {
 	job: ComputeJob;
 	onCancel: () => void;
 	onSelect: () => void;
+	onOpenMultiqc: (path: string) => void;
 }) {
 	const t = useT();
 	const stageKey =
@@ -275,7 +278,7 @@ function JobRow({
 					type="button"
 					className="truncate text-left text-[10px] text-accent underline"
 					title={multiqcPath}
-					onClick={onSelect}
+					onClick={() => onOpenMultiqc(multiqcPath)}
 				>
 					{t("panel.compute.runCard.openMultiqc")}: {multiqcPath}
 				</button>
@@ -317,6 +320,13 @@ export function ComputePane() {
 	const [checkedHostIds, setCheckedHostIds] = useState<Set<string>>(() => new Set());
 	const [previewHostId, setPreviewHostId] = useState<string | null>(null);
 	const terminal = useComputeStore((state) => (terminalId ? state.terminals[terminalId] : undefined));
+	const openMultiqc = (path: string) => {
+		void getPi()
+			.openResourceExternal(path)
+			.catch((reason) =>
+				useComputeStore.setState({ error: reason instanceof Error ? reason.message : String(reason) }),
+			);
+	};
 
 	const startTerminal = async (host: ComputeHost) => {
 		const opened = await openTerminal({ hostId: host.id, mode: "shell" });
@@ -512,6 +522,7 @@ export function ComputePane() {
 								key={job.id}
 								job={job}
 								onCancel={() => void cancelJob(job.id)}
+								onOpenMultiqc={openMultiqc}
 								onSelect={() => {
 									setSelectedJobId(job.id);
 									void loadLogs(job.id);
