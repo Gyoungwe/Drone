@@ -28,8 +28,11 @@ describe("ResearchWriteService", () => {
 		expect(plan.status).toBe("ready");
 		const blocked = await service.execute({ planId: plan.id, approved: false });
 		expect(blocked).toMatchObject({ status: "blocked" });
+		// A blocked attempt consumes the prepared plan; retries remain blocked until a new plan is prepared.
+		expect(await service.execute({ planId: plan.id, approved: true })).toMatchObject({ status: "blocked" });
 		const audit = await service.listAudit();
-		expect(audit.some((entry) => entry.status === "blocked" && entry.approval === "missing")).toBe(true);
+		expect(audit.filter((entry) => entry.status === "blocked")).toHaveLength(2);
+		expect(audit.every((entry) => entry.planId === plan.id)).toBe(true);
 	});
 
 	it("fails closed and records the adapter failure", async () => {
