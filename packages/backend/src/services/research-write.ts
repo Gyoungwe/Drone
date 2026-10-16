@@ -125,7 +125,8 @@ export class ResearchWriteService {
 		await this.options.store.update((state) => {
 			const plan = state.plans.find((item) => item.id === planId);
 			if (!plan || plan.status !== "ready") return;
-			plan.status = "revoked";
+			const index = state.plans.indexOf(plan);
+			state.plans[index] = { ...plan, status: "revoked" };
 			changed = true;
 			state.audit.push({
 				id: auditId(plan.id, "revoked"),
