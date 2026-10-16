@@ -49,7 +49,8 @@
 		"check:tasks-runtime": "npm run build:runtime --workspace @drone/tasks -- --check && node scripts/build-task-runtime.mjs --check",
 		"test:compute:runner": "python3 scripts/test-compute-runner.py",
 		"test:compute:docker": "sh scripts/test-compute-docker.sh",
-		"test:compute:rnaseq": "sh scripts/b3-pipeline/run-rnaseq-smoke.sh"
+		"test:compute:rnaseq": "sh scripts/b3-pipeline/run-rnaseq-smoke.sh",
+		"check:research-browser": "node scripts/check-research-browser-acceptance.mjs"
 	},
 	"engines": {
 		"node": ">=22.19"
