@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { createZoteroWriteAdapter, ResearchWriteAdapterRegistry } from "@drone/research";
 import { JsonStore } from "../src/json-store";
 import {
-	emptyResearchWriteLedger,
+	createEmptyResearchWriteLedger,
 	ResearchWriteService,
 	type ResearchWriteLedger,
 } from "../src/services/research-write";
@@ -17,7 +17,7 @@ describe("ResearchWriteService", () => {
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-writes",
-				defaultValue: emptyResearchWriteLedger,
+				defaultValue: createEmptyResearchWriteLedger,
 			}),
 		});
 		const plan = await service.prepare({
@@ -42,7 +42,7 @@ describe("ResearchWriteService", () => {
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-writes-fail",
-				defaultValue: emptyResearchWriteLedger,
+				defaultValue: createEmptyResearchWriteLedger,
 			}),
 		});
 		const plan = await service.prepare({
@@ -71,7 +71,7 @@ describe("ResearchWriteService", () => {
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-write-concurrent",
-				defaultValue: emptyResearchWriteLedger,
+				defaultValue: createEmptyResearchWriteLedger,
 			}),
 		});
 		const plan = await service.prepare({
@@ -95,7 +95,7 @@ describe("ResearchWriteService", () => {
 			store: new JsonStore<ResearchWriteLedger>({
 				path: join(root, "writes.json"),
 				storageId: "test-research-write-revoke",
-				defaultValue: emptyResearchWriteLedger,
+				defaultValue: createEmptyResearchWriteLedger,
 			}),
 		});
 		const plan = await service.prepare({
