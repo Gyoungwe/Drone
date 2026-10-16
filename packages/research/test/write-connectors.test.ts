@@ -31,7 +31,7 @@ describe("research write adapters", () => {
 		const adapter = createZoteroWriteAdapter({
 			write: async ({ targetRef }) => {
 				writes += 1;
-				return { externalRef: targetRef + "/ITEM1", readBack: true };
+				return { externalRef: `${targetRef}/ITEM1`, readBack: true };
 			},
 		});
 		const plan = adapter.prepare({
