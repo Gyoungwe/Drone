@@ -275,6 +275,12 @@ export {
 	ResearchResourceService,
 	type ResearchResourceServiceOptions,
 } from "./services/research-resource";
+export {
+	emptyResearchWriteLedger,
+	ResearchWriteService,
+	type ResearchWriteLedger,
+	type ResearchWriteServiceOptions,
+} from "./services/research-write";
 export { SessionLifecycleService, type SessionLifecycleServicePort } from "./services/session-lifecycle";
 export { SessionPermissionService, type SessionPermissionServicePort } from "./services/session-permissions";
 export { SubagentService, type SubagentServicePort } from "./services/subagents";
