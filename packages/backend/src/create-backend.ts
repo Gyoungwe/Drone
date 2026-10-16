@@ -78,7 +78,7 @@ import {
 	emptyResearchConnectorSettings,
 	ResearchResourceService,
 } from "./services/research-resource";
-import { emptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
+import { createEmptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
@@ -291,7 +291,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "writes.json"),
 			storageId: "agent-research-writes",
-			defaultValue: emptyResearchWriteLedger,
+			defaultValue: createEmptyResearchWriteLedger,
 		}),
 	});
 	const research = new ResearchResourceService({
