@@ -37,7 +37,20 @@ describe("file actions (P7)", () => {
 			`vscode://file${file.startsWith("/") ? "" : "/"}${encodeURI(file.replaceAll("\\", "/"))}`,
 		);
 	});
-	it("downloads a copy to the chosen path", async () => {
+	it("explains a system-association failure instead of silently succeeding", async () => {
+		const { file } = await fixture();
+		await expect(
+			runFileAction(
+				host({ openPath: async () => "No application is associated with this file type" }),
+				"openDefault",
+				file,
+				null,
+				null,
+			),
+		).rejects.toThrow("无法使用系统应用打开资源：No application is associated with this file type");
+	});
+
+	tit("downloads a copy to the chosen path", async () => {
 		const { dir, file } = await fixture();
 		const dest = join(dir, "copy.txt");
 		const result = await runFileAction(
