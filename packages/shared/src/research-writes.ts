@@ -13,7 +13,7 @@ export type ResearchWriteAuditStatus =
 export interface ResearchWritePayload {
 	readonly title: string;
 	readonly doi?: string;
-	readonly authors?: readonly string[];
+	readonly authors?: string[];
 	readonly abstract?: string;
 }
 
