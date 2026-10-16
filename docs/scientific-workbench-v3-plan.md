@@ -27,7 +27,7 @@
 - [x] 新增研究资料捕获合同：`cwd + relativePath + byteHash + format + sourceReceipt + scope + freshness + approval`；默认只保存元数据和可引用片段，禁止自动保存会话正文、凭据和未授权私有原文。已落地版本化 capture record、来源回执和待审快照。
 - [x] 在 backend/research 层提供 `captureResearchResource` 深模块，使用现有 `JsonStore` 原子写入 `SourceReceipt` 和待审 `KnowledgeSnapshot`；renderer 只调用 host API。已接入 `window.pi` 的 capture/approve/revoke/list 合同。
 - [x] 只读连接器分层：搜索（Crossref/PubMed/Europe PMC/OpenAlex）、文献与引用（Zotero/DOI）、数据与协议（ENA/SRA/Zenodo/OSF/Protocols）、机构资源（EZproxy/机构解析）和项目存储。每个适配器返回同一份来源回执、许可、访问时间、内容哈希和失败原因。
-- [x] 写入型连接器安全合同已接入：`prepare`/`dry-run` 计划、每次执行的显式用户批准、JsonStore 审计回执、撤销、失败记录和默认 fail-closed；首个 Zotero 写入 seam 默认无外部端口，只能准备或受控 fake 演练。
+- [x] 写入型连接器安全合同已接入：`prepare`/`dry-run` 计划、每次执行的显式用户批准、JsonStore 原子 `ready → executing → revoked` reservation、审计回执、撤销、失败记录和默认 fail-closed；首个 Zotero 写入 seam 默认无外部端口，只能准备或受控 fake 演练。
 - [ ] 真实 Zotero Web/Desktop write port 仍需在有授权凭据和可回读目标的环境中单独验收；未通过前禁止宣称真实外部写入可用。
 - [x] 连接器的网络、凭据、速率、缓存和重试策略留在 backend/research；知识库只接收通过来源、许可、完整性和用户审批的候选。只读 Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA、OpenAlex、DOI、ENA、Zotero、Protocols、机构资源和项目存储共 13 个连接器已接入 registry，失败结果带 retryable 原因。科研资料页提供逐项启用/关闭、启用计数和错误状态，状态通过 JsonStore 持久化，关闭后检索 fail-closed；写入型连接器安全 seam 已接入，真实第三方 write port 仍待授权主机与回读证据验收。
 - [x] 验收：同一文件重复捕获幂等、文件变更生成新 revision、连接器失败可重试但不伪造证据、撤回/过期能阻止旧快照继续发布。重复/变更/根目录/软链接/撤回、过期拒绝发布和同内容过期刷新已覆盖回归测试；PR #208 与 PR #210 的 macOS/Windows 8 项 CI 全部通过。
