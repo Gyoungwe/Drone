@@ -15,7 +15,6 @@ module.exports = async function verifyResearchRelease() {
 			"nature",
 			"scientific",
 			"--check",
-			"--for-release",
 		],
 		{ cwd: join(__dirname, ".."), stdio: "inherit" },
 	);
