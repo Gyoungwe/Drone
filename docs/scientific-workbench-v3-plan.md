@@ -7,7 +7,7 @@
 - v0.32.0 整合 PR [#203](https://github.com/Gyoungwe/Drone/pull/203) 已合并到 `main`，合并提交为 `81024cccac2d7a5cf4a7c3f6ccb26807e0e68c7e`。
 - 合并前的 CI run [623](https://github.com/Gyoungwe/Drone/actions/runs/38868473828) 在 macOS/Windows 上的静态检查、单元测试、SDK 测试和桌面打包均通过。
 - LAN observer 已移除；当前产品依赖本地项目目录、已授权计算主机和显式的 SSH/连接器门控。
-- 现有 `listProjectFiles`、`previewFile`、`openResourceExternal` 和 `PreviewHost` 已覆盖文件遍历、文本/表格/图像/PDF/二进制回退，缺口是它们仍藏在会话资源面板里，没有独立的研究资料入口。
+- 现有 `listProjectFiles`、`previewFile`、`openResourceExternal` 和 `PreviewHost` 已覆盖文件遍历、文本/表格/图像/PDF/二进制回退；独立的 `research` 资料视图已落地，并在资料页提供捕获动作和连接器管理入口。
 - `.local/docs/release.md` 在工作区缺失；正式签名安装包和跨平台自动更新验收因此仍是发布门槛，不能以本地 adhoc 包替代。
 
 ## P9 · 研究资料浏览器
@@ -26,9 +26,9 @@
 
 - [x] 新增研究资料捕获合同：`cwd + relativePath + byteHash + format + sourceReceipt + scope + freshness + approval`；默认只保存元数据和可引用片段，禁止自动保存会话正文、凭据和未授权私有原文。已落地版本化 capture record、来源回执和待审快照。
 - [x] 在 backend/research 层提供 `captureResearchResource` 深模块，使用现有 `JsonStore` 原子写入 `SourceReceipt` 和待审 `KnowledgeSnapshot`；renderer 只调用 host API。已接入 `window.pi` 的 capture/approve/revoke/list 合同。
-- [ ] 连接器分层：搜索（Crossref/PubMed/Europe PMC/数据集目录）、文献与引用（Zotero/DOI）、数据与协议（ENA/SRA/Zenodo/OSF/Protocols）、机构资源（EZproxy/机构登录）和项目存储。每个适配器返回同一份来源回执、许可、访问时间、内容哈希和失败原因。
-- [x] 连接器的网络、凭据、速率、缓存和重试策略留在 backend/research；知识库只接收通过来源、许可、完整性和用户审批的候选。首批只读 Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA、OpenAlex、DOI、ENA 已接入 registry，失败结果带 retryable 原因；连接器可在科研资料页逐项开关，状态通过 JsonStore 持久化，关闭后检索 fail-closed；Zotero、Protocols、机构登录和写入型适配器仍未接入。
-- [x] 验收：同一文件重复捕获幂等、文件变更生成新 revision、连接器失败可重试但不伪造证据、撤回/过期能阻止旧快照继续发布。重复/变更/根目录/软链接/撤回、过期拒绝发布和同内容过期刷新已覆盖回归测试；PR #208 的 macOS/Windows CI 全部通过。
+- [x] 只读连接器分层：搜索（Crossref/PubMed/Europe PMC/OpenAlex）、文献与引用（Zotero/DOI）、数据与协议（ENA/SRA/Zenodo/OSF/Protocols）、机构资源（EZproxy/机构解析）和项目存储。每个适配器返回同一份来源回执、许可、访问时间、内容哈希和失败原因；写入型适配器仍需单独的用户授权和审计合同。
+- [x] 连接器的网络、凭据、速率、缓存和重试策略留在 backend/research；知识库只接收通过来源、许可、完整性和用户审批的候选。只读 Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA、OpenAlex、DOI、ENA、Zotero、Protocols、机构资源和项目存储共 13 个连接器已接入 registry，失败结果带 retryable 原因。科研资料页提供逐项启用/关闭、启用计数和错误状态，状态通过 JsonStore 持久化，关闭后检索 fail-closed；写入型适配器仍未接入。
+- [x] 验收：同一文件重复捕获幂等、文件变更生成新 revision、连接器失败可重试但不伪造证据、撤回/过期能阻止旧快照继续发布。重复/变更/根目录/软链接/撤回、过期拒绝发布和同内容过期刷新已覆盖回归测试；PR #208 与 PR #210 的 macOS/Windows 8 项 CI 全部通过。
 
 ## P11 · 发布与更新门槛
 
@@ -50,3 +50,4 @@
 - 2026-10-16（签名门禁）：`check-release-signing.mjs`、macOS hardened runtime/entitlements、Windows Authenticode 验签和 GitHub Release workflow 预检已加入；真实证书、notarization、跨平台安装/更新/回滚仍需在有授权 secrets 的 GitHub runner 上执行。
 - 2026-10-16（PR #208）：连接器列表/启停 IPC、JsonStore 持久化、科研资料页双语开关和过期捕获刷新已完成；评审指出的同内容过期快照无法续期问题已修复，PR #208 已以 squash 合并（`bcbf5b894eb48109507af6e85dc646642cecbae9`）。run [682](https://github.com/Gyoungwe/Drone/actions/runs/38920773631) 的 macOS/Windows 8 项 CI 全部通过。连接器分层剩余 Zotero、Protocols、机构登录和写入适配器；P9 手工边界验收与 P11 正式签名安装包、自动更新、回滚证据仍未关闭。
 - 2026-10-16（v0.32.2 发布验收）：PR #209 已合并，`main` 已更新到 v0.32.2。Release [#119](https://github.com/Gyoungwe/Drone/actions/runs/38924137138) 的 resolve、macOS/Windows validate 和 prepare 全部通过；macOS x64/arm64 与 Windows 构建在签名预检处因 `DRONE_MACOS_CERTIFICATE_*`、`DRONE_APPLE_*`、`DRONE_WINDOWS_CERTIFICATE_*` secrets 为空而 fail-closed，publish/website 被跳过且无安装包、更新 feed、安装/更新/回滚证据。P11 正式发布门槛保持未关闭。
+- 2026-10-17（PR #210）：补齐 Zotero、Protocols.io、机构资源元数据和项目存储四个只读连接器，统一来源回执与失败信息；科研资料页的连接器 UI 可逐项开关并通过 JsonStore 持久化，关闭后检索 fail-closed。PR #210 的 CI run [38931738909](https://github.com/Gyoungwe/Drone/actions/runs/38931738909) 在 macOS/Windows 8 项全部通过；写入型适配器、P9 人工桌面走查和 P11 签名发布门槛仍未关闭。
