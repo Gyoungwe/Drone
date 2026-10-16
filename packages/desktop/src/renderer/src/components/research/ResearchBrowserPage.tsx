@@ -196,7 +196,7 @@ export function ResearchBrowserPage() {
 							{t("researchBrowser.openExternal")}
 						</button>
 					)}
-					{selectedPath && !selectedCapture && (
+					{selectedPath && (
 						<button type="button" className="research-browser-button" onClick={() => void captureCurrent()}>
 							{t("researchBrowser.capture")}
 						</button>

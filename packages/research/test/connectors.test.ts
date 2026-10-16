@@ -83,4 +83,27 @@ describe("research connectors", () => {
 			expect.objectContaining({ connectorId: "test-failing", retryable: true }),
 		]);
 	});
+
+	it("forwards cancellation and reports unknown connector ids", async () => {
+		const controller = new AbortController();
+		let receivedSignal: AbortSignal | undefined;
+		const connector: ResearchConnector = {
+			id: "test-signal",
+			kind: "dataset",
+			label: "Signal",
+			search: async (_query, options) => {
+				receivedSignal = options?.signal;
+				return [];
+			},
+		};
+		const result = await new ResearchConnectorRegistry([connector]).search({
+			query: "x",
+			connectorIds: ["test-signal", "missing"],
+			signal: controller.signal,
+		});
+		expect(receivedSignal).toBe(controller.signal);
+		expect(result.connectors).toEqual(["test-signal", "missing"]);
+		expect(result.failures).toEqual([expect.objectContaining({ connectorId: "missing", retryable: false })]);
+		expect(result.complete).toBe(false);
+	});
 });

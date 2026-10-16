@@ -69,4 +69,15 @@ describe("ResearchResourceService", () => {
 		);
 		expect(first.record.sourceReceipt.contentHash).not.toBe(changed.record.sourceReceipt.contentHash);
 	});
+
+	it("lists captures through a symlinked project root", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-project-"));
+		const aliasParent = await mkdtemp(join(tmpdir(), "drone-research-alias-"));
+		const alias = join(aliasParent, "project");
+		await writeFile(join(root, "notes.md"), "A note", "utf8");
+		await symlink(root, alias);
+		const research = await service();
+		const captured = await research.capture({ cwd: root, relativePath: "notes.md" });
+		expect((await research.list(alias)).map((item) => item.id)).toEqual([captured.record.id]);
+	});
 });

@@ -223,7 +223,8 @@ export class ResearchResourceService {
 
 	async list(cwd?: string): Promise<readonly ResearchCaptureRecord[]> {
 		const items = (await this.options.store.read()).items;
-		return items.filter((item) => !cwd || resolve(cwd) === item.cwd).map((item) => structuredClone(item));
+		const root = cwd ? await realpath(cwd).catch(() => resolve(cwd)) : undefined;
+		return items.filter((item) => !root || root === item.cwd).map((item) => structuredClone(item));
 	}
 
 	search(input: ResearchSearchRequest): Promise<ResearchSearchResponse> {

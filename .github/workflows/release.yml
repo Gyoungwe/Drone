@@ -158,12 +158,15 @@ jobs:
         include:
           - os: macos-latest
             platform: mac-arm64
+            artifact_zip: drone-mac-arm64.zip
             builder_args: --arm64
           - os: macos-latest
             platform: mac-x64
+            artifact_zip: drone-mac-x64.zip
             builder_args: --x64
           - os: windows-latest
             platform: windows
+            artifact_zip: ''
             builder_args: --x64
     runs-on: ${{ matrix.os }}
     env:
@@ -238,7 +241,7 @@ jobs:
           EXTRACTED="$RUNNER_TEMP/drone-macos-app"
           rm -rf "$EXTRACTED"
           mkdir -p "$EXTRACTED"
-          ditto -x -k "packages/desktop/dist/drone-${{ matrix.platform }}.zip" "$EXTRACTED"
+          ditto -x -k "packages/desktop/dist/${{ matrix.artifact_zip }}" "$EXTRACTED"
           APP="$(find "$EXTRACTED" -type d -name '*.app' -print -quit)"
           test -n "$APP"
           node scripts/check-release-signing.mjs --verify --platform mac --app "$APP"

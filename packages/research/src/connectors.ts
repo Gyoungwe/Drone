@@ -352,17 +352,27 @@ export class ResearchConnectorRegistry {
 	): Promise<ResearchSearchResponse> {
 		const query = input.query.normalize("NFKC").trim();
 		if (!query || query.length > 512) throw new Error("Research search query is required");
-		const selected = input.connectorIds?.length
-			? input.connectorIds
-					.map((id) => this.connectors.get(id))
-					.filter((item): item is ResearchConnector => Boolean(item))
-			: this.list();
+		const requested = input.connectorIds?.length
+			? [...input.connectorIds]
+			: this.list().map((item) => item.id);
+		const selected = requested
+			.map((id) => this.connectors.get(id))
+			.filter((item): item is ResearchConnector => Boolean(item));
 		const limit = clampLimit(input.limit);
+		const failures: ResearchConnectorFailure[] = requested
+			.filter((id) => !this.connectors.has(id))
+			.map((id) => ({
+				connectorId: id,
+				message: `Unknown research connector: ${id}`,
+				retryable: false,
+				at: isoNow(),
+			}));
 		const settled = await Promise.allSettled(
-			selected.map((connector) => connector.search(query, { ...context, limit })),
+			selected.map((connector) =>
+				connector.search(query, { ...context, signal: input.signal ?? context.signal, limit }),
+			),
 		);
 		const hits: ResearchConnectorHit[] = [];
-		const failures: ResearchConnectorFailure[] = [];
 		settled.forEach((result, index) => {
 			const connector = selected[index];
 			if (!connector) return;
@@ -377,7 +387,7 @@ export class ResearchConnectorRegistry {
 			query,
 			hits: deduped,
 			failures,
-			connectors: selected.map((connector) => connector.id),
+			connectors: requested,
 			complete: failures.length === 0,
 		};
 	}
