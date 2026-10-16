@@ -15,7 +15,10 @@ export {
 export {
 	createCrossrefConnector,
 	createDefaultResearchConnectors,
+	createDoiConnector,
+	createEnaConnector,
 	createEuropePmcConnector,
+	createOpenAlexConnector,
 	createOsfConnector,
 	createPubmedConnector,
 	createSraConnector,
