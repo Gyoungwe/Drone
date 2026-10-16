@@ -10,6 +10,7 @@ import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
 import { KnowledgeView } from "./components/knowledge/KnowledgeView";
 import { ContextPanel } from "./components/panel/ContextPanel";
 import { ProjectPage } from "./components/projects/ProjectPage";
+import { ResearchBrowserPage } from "./components/research/ResearchBrowserPage";
 import { SearchPalette } from "./components/search/SearchPalette";
 import { ApprovalDock } from "./components/session/ApprovalDock";
 import { AskDialog } from "./components/session/AskDialog";
@@ -159,6 +160,10 @@ export default function App() {
 					{view === "projects" ? (
 						<div className="page-fade min-h-0 min-w-0 flex-1">
 							<ProjectPage />
+						</div>
+					) : view === "research" ? (
+						<div className="page-fade min-h-0 min-w-0 flex-1">
+							<ResearchBrowserPage />
 						</div>
 					) : view === "knowledge" ? (
 						<div className="page-fade min-h-0 min-w-0 flex-1">

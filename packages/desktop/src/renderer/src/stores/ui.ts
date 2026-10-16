@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
-/** 主区视图：聊天 / 空间（项目）/ 知识库（全屏视图，不再是弹窗）/ 插件贡献的全屏视图（rail.view，挂钩 4） */
-export type AppView = "chat" | "projects" | "knowledge" | `plugin:${string}`;
+/** 主区视图：聊天 / 空间（项目）/ 资料 / 知识库（全屏视图）/ 插件贡献的全屏视图（rail.view，挂钩 4） */
+export type AppView = "chat" | "projects" | "research" | "knowledge" | `plugin:${string}`;
 
 /**
  * 右侧上下文面板页签：任务 / 变更 / 文件 常驻；子智能体、计算按需出现（ContextPanel 决定可见性）

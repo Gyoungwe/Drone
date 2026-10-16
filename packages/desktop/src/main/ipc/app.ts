@@ -12,7 +12,7 @@ import { electronDesktopHost } from "../desktop-host";
 import { applyDesktopPrefs, currentDesktopPrefs } from "../desktop-prefs";
 import { getFigureAnnotations, saveFigureAnnotations } from "../figure-annotations";
 import { runFileAction } from "../file-actions";
-import { previewLocalFile, resolveResourcePath } from "../file-preview";
+import { previewLocalFile, resolveConfinedResourcePath, resolveResourcePath } from "../file-preview";
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
 import { defaultHostEnvDeps, probeHostEnvironment } from "../host-env";
 import { issueHtmlPreviewUrl } from "../html-preview-protocol";
@@ -69,7 +69,7 @@ export function registerAppIpc(
 		openExternal: (url) => {
 			if (typeof url === "string" && /^https?:\/\//.test(url)) return shell.openExternal(url);
 		},
-		filePreview: (...args) => previewLocalFile(args[0], args[1]),
+		filePreview: (...args) => previewLocalFile(args[0], args[1], args[2]),
 		htmlPreviewUrl: (...args) => issueHtmlPreviewUrl(resolveResourcePath(args[0], args[1])),
 		getFigureAnnotations: (...args) => getFigureAnnotations(resolveResourcePath(args[0], args[1])),
 		saveFigureAnnotations: (target, cwd, annotations) =>
@@ -91,7 +91,7 @@ export function registerAppIpc(
 			return { path: target, name: basename(source), bytes: info.size };
 		},
 		resourceOpenExternal: async (...args) => {
-			const [target, cwd] = args;
+			const [target, cwd, confineToCwd] = args;
 			if (typeof target !== "string" || !target) return;
 			if (!isLocalResourceTarget(target)) {
 				if (!/^(?:https?|mailto|zotero|obsidian):/i.test(target))
@@ -99,7 +99,9 @@ export function registerAppIpc(
 				await shell.openExternal(target);
 				return;
 			}
-			await shell.openPath(resolveResourcePath(target, cwd));
+			await shell.openPath(
+				confineToCwd ? await resolveConfinedResourcePath(target, cwd) : resolveResourcePath(target, cwd),
+			);
 		},
 		setAttentionBadge: async (count, overlay) => {
 			applyAttentionBadge(

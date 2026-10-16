@@ -28,6 +28,8 @@
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 
+面向全科研场景的 v3 研究资料浏览器、连接器分层、知识沉淀与签名发布门槛：见 [scientific-workbench-v3-plan.md](scientific-workbench-v3-plan.md)。
+
 P2 知识/记忆/进化复用契约与审批边界：见 [evolution-reuse-contract.md](evolution-reuse-contract.md)。
 
 P3 技能与工具治理 manifest、来源、许可证、权限和提交门禁：见 [capability-governance.md](capability-governance.md)。v2 闭环契约（能力矩阵、跨对象证据晋级、进化候选物化与治理审计）见 [v2-closure-contracts.md](v2-closure-contracts.md)。

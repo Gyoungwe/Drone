@@ -9074,7 +9074,11 @@ var AppContract = defineDomain("app", {
     },
     openExternal: { args: typebox_exports.Tuple([typebox_exports.String()]), result: typebox_exports.Void() },
     filePreview: {
-      args: typebox_exports.Union([typebox_exports.Tuple([typebox_exports.String()]), typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()])]),
+      args: typebox_exports.Union([
+        typebox_exports.Tuple([typebox_exports.String()]),
+        typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()]),
+        typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String(), typebox_exports.Boolean()])
+      ]),
       result: ResourcePreviewResultSchema
     },
     htmlPreviewUrl: {
@@ -9098,7 +9102,11 @@ var AppContract = defineDomain("app", {
       result: typebox_exports.Unsafe(ImportedAttachmentSchema)
     },
     resourceOpenExternal: {
-      args: typebox_exports.Union([typebox_exports.Tuple([typebox_exports.String()]), typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()])]),
+      args: typebox_exports.Union([
+        typebox_exports.Tuple([typebox_exports.String()]),
+        typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()]),
+        typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String(), typebox_exports.Boolean()])
+      ]),
       result: typebox_exports.Void()
     },
     /** 文件右键菜单的宿主动作（P7）：action, target, cwd, arg（rename 的新文件名） */
