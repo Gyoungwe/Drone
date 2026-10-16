@@ -3,7 +3,6 @@ import type {
 	ContextManagerMode,
 	CustomProviderInput,
 	CustomProviderUpdateInput,
-	LanStatus,
 	LoadedExtension,
 	LoadedSkill,
 	ModelPrefs,
@@ -27,7 +26,6 @@ export type SettingsCategory =
 	| "knowledge"
 	| "zotero"
 	| "extensions"
-	| "lan"
 	| "uiPlugins"
 	| "workflows"
 	| "compute"
@@ -52,9 +50,6 @@ interface SettingsStore {
 	contextManagerMode: ContextManagerMode | null;
 	/** channel-watch 跨会话频道唤醒开关（null = 未加载） */
 	channelWatchEnabled: boolean | null;
-	/** 局域网观察服务运行状态（null = 未加载）。 */
-	lanStatus: LanStatus | null;
-	lanSaving: boolean;
 	/** 当前活跃会话已加载的 skills（null = 未加载/无会话） */
 	skills: LoadedSkill[] | null;
 	skillDiagnostics: ResourceDiagnosticInfo[];
@@ -91,9 +86,6 @@ interface SettingsStore {
 	setBackgroundReviewerModel: (enabled: boolean) => Promise<void>;
 	setContextManagerMode: (mode: ContextManagerMode) => Promise<void>;
 	setChannelWatchEnabled: (enabled: boolean) => Promise<void>;
-	refreshLanStatus: () => Promise<void>;
-	setLanEnabled: (enabled: boolean) => Promise<void>;
-	setLanRemoteControl: (enabled: boolean) => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => {
@@ -114,8 +106,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 		permissionGateOff: null,
 		contextManagerMode: null,
 		channelWatchEnabled: null,
-		lanStatus: null,
-		lanSaving: false,
 		skills: null,
 		skillDiagnostics: [],
 		capabilities: null,
@@ -153,10 +143,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 			void getPi()
 				.getChannelWatchConfig()
 				.then((cw) => set({ channelWatchEnabled: cw.enabled }))
-				.catch(() => {});
-			void getPi()
-				.lanGetStatus()
-				.then((lanStatus) => set({ lanStatus }))
 				.catch(() => {});
 			try {
 				const [providers, modelPrefs, subagents] = await Promise.all([
@@ -223,34 +209,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 				revert: () => set({ channelWatchEnabled: previous }),
 				onError: (error) => set({ error: error instanceof Error ? error.message : String(error) }),
 			});
-		},
-
-		refreshLanStatus: async () => {
-			try {
-				set({ lanStatus: await getPi().lanGetStatus() });
-			} catch (error) {
-				set({ error: error instanceof Error ? error.message : String(error) });
-			}
-		},
-
-		setLanEnabled: async (enabled) => {
-			set({ lanSaving: true });
-			try {
-				const lanStatus = await getPi().lanSetEnabled(enabled);
-				set({ lanStatus, lanSaving: false });
-			} catch (error) {
-				set({ lanSaving: false, error: error instanceof Error ? error.message : String(error) });
-			}
-		},
-
-		setLanRemoteControl: async (enabled) => {
-			set({ lanSaving: true });
-			try {
-				const lanStatus = await getPi().lanSetRemoteControl(enabled);
-				set({ lanStatus, lanSaving: false });
-			} catch (error) {
-				set({ lanSaving: false, error: error instanceof Error ? error.message : String(error) });
-			}
 		},
 
 		saveKey: async (providerId, key) => {

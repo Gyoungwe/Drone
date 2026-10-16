@@ -1,7 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, writeSync } from "node:fs";
 import { dirname } from "node:path";
-import type { CausalContext, CausalEnvelope, ToolReplayPolicy } from "@drone/shared";
+import {
+	type CausalContext,
+	type CausalEnvelope,
+	childCausalEnvelope,
+	type ToolReplayPolicy,
+} from "@drone/shared";
 
 /**
  * 工具意图日志（借鉴 Pi Durable 的 “effect sandwich”）。
@@ -91,24 +96,11 @@ export class ToolIntentJournal {
 
 	private lineage(toolCallId: string, parent?: CausalEnvelope): CausalEnvelope | undefined {
 		const context = typeof this.causality === "function" ? this.causality() : this.causality;
-		const contextParent: CausalEnvelope["causationId"] = context
-			? "eventId" in context
-				? (context as CausalEnvelope).eventId
-				: (context as CausalContext).causationId
-			: undefined;
-		if (!context?.runAttemptId && !context?.causationId && !parent) return undefined;
-		const lineage: CausalEnvelope = {
-			schemaVersion: 1,
-			eventId: `event:${randomUUID()}` as CausalEnvelope["eventId"],
-			...(parent?.eventId
-				? { causationId: parent.eventId }
-				: contextParent
-					? { causationId: contextParent }
-					: {}),
-			...((context?.runAttemptId ?? parent?.runAttemptId)
-				? { runAttemptId: context?.runAttemptId ?? parent?.runAttemptId }
-				: {}),
-		};
+		const lineage = childCausalEnvelope(parent ?? context, {
+			eventId: `event:${randomUUID()}`,
+			runAttemptId: context?.runAttemptId ?? parent?.runAttemptId,
+		});
+		if (!lineage) return undefined;
 		this.lastLineage.set(toolCallId, lineage);
 		return lineage;
 	}

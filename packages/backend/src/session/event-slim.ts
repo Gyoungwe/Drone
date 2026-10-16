@@ -5,7 +5,7 @@ import type { SessionEvent } from "@drone/shared";
  * （`assistantMessageEvent.partial` + 顶层 `message`），流式期按条数平方放大
  * （0.4.6 冻结事故：3 分钟 12.7GB trace / renderer 堆爆）。
  *
- * 全部下游消费者（shared transcript reducer、LAN projector/server 的 delta 合并）
+ * 全部下游消费者（shared transcript reducer 与 trace 的 delta 合并）
  * 只读 delta / contentIndex / `toolcall_start` 的 `partial`（工具名）/
  * `toolcall_end` 的 `toolCall`（id+name+arguments）——其余字段一律剥除。
  * `message_start` / `message_end` 仍携带权威全量消息，UI 终态与 trace 回放不受影响。
@@ -55,10 +55,10 @@ const IMAGE_DATA_STRIP_AT = 512;
  * toolResult 终态载荷瘦身（0.5.2 白屏事故降压层）：read 图片等大结果会被
  * tool_execution_end / message_start / message_end / turn_end 四份快照重复携带，
  * trace 落盘 + IPC 转发同步放大 4×（实测 504KB×4 ≈ 2MB/次，小时级累计把 renderer 压垮）。
- * 在 emitEvent 单点、分发给 trace/IPC/LAN 之前剥除：
+ * 在 emitEvent 单点、分发给 trace/IPC 之前剥除：
  * - content[].image 的 base64 data → 占位标记（下游零消费：renderer 工具卡 output 走
- *   tool_execution_update 增量、show_image 发图走 details.images、LAN sanitize 本就剥 data）
- * - content[].text 超长 → 截断保头（renderer/LAN 均不读 content 数组正文；trace replay 同构）
+ *   tool_execution_update 增量、show_image 发图走 details.images）
+ * - content[].text 超长 → 截断保头（renderer 不读 content 数组正文；trace replay 同构）
  * - details 一律不动（todos / subagent / edit patch / show_image 均在 details，UI 数据源）
  * - assistant / user 消息终态不动（UI 固化与历史回放的权威数据源）
  */

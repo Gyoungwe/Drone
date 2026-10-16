@@ -13,7 +13,6 @@ async function main() {
 	const entries = config.extraResources.filter((e) => e.from.startsWith("resources/research-skills/"));
 	const directories = entries.filter((e) => e.to.split("/").length === 2);
 	assert.deepEqual(directories.map((e) => e.to).sort(), [
-		"research-skills/academic",
 		"research-skills/nature",
 		"research-skills/scientific",
 	]);

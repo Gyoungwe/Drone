@@ -34,6 +34,7 @@ import { UI_REGIONS } from "./plugins/slots";
 import { finishSplash } from "./splash";
 import { useAskCountsStore } from "./stores/ask-counts";
 import { useComputeStore } from "./stores/compute";
+import { initResearchSkillUpdateStore } from "./stores/research-skill-update";
 import { useSessionsStore } from "./stores/sessions";
 import { backgroundImageUrl, useThemeStore } from "./stores/theme";
 import { useTranscriptStore } from "./stores/transcript";
@@ -110,6 +111,7 @@ export default function App() {
 			useSessionsStore.getState().restoreTabs(),
 		]).then(() => finishSplash());
 		initUpdateStore();
+		initResearchSkillUpdateStore();
 		// 日常空间目录缓存（pill/轨道/侧栏的空间归属判定依赖；失败静默，入口退化为不显示）
 		void initDailyDir();
 		// UI 插件加载链路（总开关关时只订阅事件，零开销）

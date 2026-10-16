@@ -16,6 +16,7 @@ import { previewLocalFile, resolveResourcePath } from "../file-preview";
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
 import { defaultHostEnvDeps, probeHostEnvironment } from "../host-env";
 import { issueHtmlPreviewUrl } from "../html-preview-protocol";
+import { restartForResearchSkills, updateResearchSkills } from "../research-skill-updater";
 import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
 import { checkForUpdates, downloadUpdate, installUpdate } from "../updater";
@@ -165,6 +166,8 @@ export function registerAppIpc(
 		checkForUpdates: () => checkForUpdates(),
 		downloadUpdate: () => downloadUpdate(),
 		installUpdate: () => installUpdate(),
+		updateResearchSkills: () => updateResearchSkills(),
+		restartForResearchSkills: () => restartForResearchSkills(),
 		saveFileDialog: async (defaultName, content) => {
 			const window = BrowserWindow.getAllWindows()[0];
 			const options: Electron.SaveDialogOptions = {
@@ -228,6 +231,8 @@ export function registerAppIpc(
 				checkForUpdates: IpcChannels.UpdateCheck,
 				downloadUpdate: IpcChannels.UpdateDownload,
 				installUpdate: IpcChannels.UpdateInstall,
+				updateResearchSkills: IpcChannels.ResearchSkillUpdate,
+				restartForResearchSkills: IpcChannels.ResearchSkillRestart,
 				saveFileDialog: IpcChannels.FileSaveDialog,
 				pickPath: IpcChannels.FilePickPath,
 				pickDirectory: IpcChannels.ProjectPickDirectory,

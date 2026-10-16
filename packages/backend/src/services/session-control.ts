@@ -121,7 +121,7 @@ export class SessionControlService {
 		await this.host.sessionEngine.abort(entry.session);
 	}
 
-	/** LAN 远程写端点前置检查（registry 直查，无磁盘 IO）。 */
+	/** Check that a session is writable (registry 直查，无磁盘 IO). */
 	checkSessionWritable(sessionId: string): "ok" | "not_found" | "read_only" {
 		const entry = this.host.registry.get(sessionId);
 		if (!entry) return "not_found";
@@ -219,8 +219,7 @@ export class SessionControlService {
 		}));
 	}
 
-	/** 全部未决权限请求的只读快照（LAN Observer 等被动观察者用）。 */
-	/** 全部未决权限请求快照（含 requestId；LAN 观察/远程应答与桌面共用） */
+	/** 全部未决权限请求快照（含 requestId）。 */
 	/** @deprecated 通过 BackendServices.approvals.listPending 使用。 */
 	getPendingPermissionRequests(): PermissionRequest[] {
 		return this.host.approvals.listPending();

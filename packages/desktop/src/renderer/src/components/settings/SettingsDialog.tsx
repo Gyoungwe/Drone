@@ -14,7 +14,6 @@ import {
 	HelpIcon,
 	ListIcon,
 	ObsidianIcon,
-	ProjectsIcon,
 	PuzzleIcon,
 	ShieldIcon,
 	SubagentIcon,
@@ -30,7 +29,6 @@ import { AboutPanel } from "./AboutPanel";
 import { AppearancePanel } from "./AppearancePanel";
 import { ExtensionsPanel } from "./extensions/ExtensionsPanel";
 import { GeneralPanel } from "./GeneralPanel";
-import { LanObserverPanel } from "./LanObserverPanel";
 import { McpPanel } from "./McpPanel";
 import { PermissionsPanel } from "./PermissionsPanel";
 import { ProvidersPanel } from "./providers/ProvidersPanel";
@@ -70,7 +68,6 @@ const NAV_META: Record<string, { icon: typeof GearIcon; en: string }> = {
 	extensions: { icon: PuzzleIcon, en: "Extensions" },
 	about: { icon: HelpIcon, en: "About" },
 	knowledge: { icon: ObsidianIcon, en: "Knowledge" },
-	lan: { icon: ProjectsIcon, en: "LAN" },
 	uiPlugins: { icon: DiffIcon, en: "UI Plugins" },
 	workflows: { icon: TimelineIcon, en: "Workflows" },
 	compute: { icon: TestIcon, en: "SSH Hosts" },
@@ -94,7 +91,6 @@ function NavLabel({ id, label }: { id: string; label: string }) {
 /** 「高级」分组：治理与维护类功能保留，但不出现在主流程分类里 */
 const ADVANCED_CATEGORIES = [
 	"knowledge",
-	"lan",
 	"uiPlugins",
 	"workflows",
 	"compute",
@@ -111,7 +107,6 @@ const PANELS: Partial<Record<SettingsCategory, ComponentType>> = {
 	knowledge: KnowledgePanel,
 	zotero: ZoteroPanel,
 	extensions: ExtensionsPanel,
-	lan: LanObserverPanel,
 	uiPlugins: UiPluginsSection,
 	workflows: WorkflowOverviewPanel,
 	compute: ComputePane,

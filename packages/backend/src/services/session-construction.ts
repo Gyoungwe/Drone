@@ -15,7 +15,7 @@ import type { PermissionConfirm } from "../permissions/extension";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import { AskGate } from "../session/ask-gate";
 import { inboxFor, observeInbox } from "../session/durable-inbox";
-import { bindToolIntentJournal } from "../session/intent-binding";
+import { bindToolIntentJournal, createSessionCausalityContext } from "../session/intent-binding";
 import {
 	AUTO_RESUME_WINDOW_MS,
 	type InterruptedToolCall,
@@ -164,11 +164,14 @@ export class SessionConstructionService {
 			});
 		}
 
+		const causality = createSessionCausalityContext();
 		const recordIntent = bindToolIntentJournal(
 			session,
 			this.host.capabilityRuntimes.get(session.sessionId)?.tools,
+			() => causality.current(),
 		);
 		const unsubscribe = session.subscribe((event) => {
+			causality.observe(event);
 			recordIntent(event);
 			observeInbox(session.sessionFile, event);
 			autoNameSession(session, event);
@@ -286,11 +289,14 @@ export class SessionConstructionService {
 				mode: "tui",
 			});
 		}
+		const causality = createSessionCausalityContext();
 		const recordIntent = bindToolIntentJournal(
 			session,
 			this.host.capabilityRuntimes.get(session.sessionId)?.tools,
+			() => causality.current(),
 		);
 		const unsubscribe = session.subscribe((event) => {
+			causality.observe(event);
 			recordIntent(event);
 			observeInbox(session.sessionFile, event);
 			autoNameSession(session, event);

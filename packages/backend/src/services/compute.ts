@@ -540,6 +540,7 @@ export class ComputeService implements ComputeServicePort {
 				remoteId: result?.remoteId,
 				pid: result?.pid,
 				startedAt: result?.startedAt ?? now(),
+				...(result?.progress && typeof result.progress === "object" ? { progress: result.progress } : {}),
 				updatedAt: now(),
 			});
 			await this.persistJob(submitted);

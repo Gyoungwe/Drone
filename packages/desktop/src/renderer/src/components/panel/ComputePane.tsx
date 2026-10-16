@@ -184,15 +184,102 @@ function JobRow({
 	onSelect: () => void;
 }) {
 	const t = useT();
+	const stageKey =
+		job.state === "queued"
+			? "queued"
+			: job.state === "running"
+				? "running"
+				: job.state === "succeeded"
+					? "succeeded"
+					: job.state === "failed"
+						? "failed"
+						: job.state === "cancelled"
+							? "cancelled"
+							: "unknown";
+	const elapsedMinutes = job.startedAt
+		? Math.max(
+				0,
+				Math.round(
+					((job.finishedAt ? Date.parse(job.finishedAt) : Date.now()) - Date.parse(job.startedAt)) / 60_000,
+				),
+			)
+		: null;
+	const progress = job.progress;
+	const completedTasks = progress?.completedTasks;
+	const totalTasks = progress?.totalTasks;
+	const taskCount =
+		completedTasks !== undefined && totalTasks !== undefined ? `${completedTasks}/${totalTasks}` : null;
+	const multiqcPath = progress?.multiqcPath;
 	return (
-		<li className="panel-card flex flex-col gap-1" data-testid={`compute-job-${job.id}`}>
+		<li className="panel-card flex flex-col gap-2" data-testid={`compute-job-${job.id}`}>
 			<div className="flex items-center justify-between gap-2">
 				<button type="button" className="truncate text-left text-[12px] text-ink" onClick={onSelect}>
 					{job.label || job.id}
 				</button>
 				<span className={`text-xs ${statusTone(job.state)}`}>{statusLabel(t, job.state)}</span>
 			</div>
-			<div className="text-xs text-ink-dim">{job.hostId}</div>
+			<div className="flex items-center gap-2 text-[11px] text-ink-dim">
+				<span
+					className={`inline-block h-2 w-2 rounded-full ${job.state === "running" ? "animate-pulse bg-warn" : job.state === "succeeded" ? "bg-ok" : job.state === "failed" ? "bg-err" : "bg-ink-faint"}`}
+				/>
+				<span>{progress?.stage || t(`panel.compute.runCard.stage.${stageKey}` as MessageKey)}</span>
+				<span className="text-ink-faint">·</span>
+				<span>{job.hostId}</span>
+			</div>
+			<div className="grid grid-cols-3 gap-2 rounded-md bg-ink/5 px-2 py-1.5 text-[10px] text-ink-dim">
+				<span>
+					{taskCount
+						? t("panel.compute.runCard.tasks", { count: taskCount })
+						: t("panel.compute.runCard.tasksUnknown")}
+				</span>
+				<span>{t("panel.compute.runCard.artifacts", { count: job.artifacts.length })}</span>
+				<span>{t("panel.compute.runCard.elapsed", { minutes: elapsedMinutes ?? "—" })}</span>
+			</div>
+			{progress?.failedTasks ? (
+				<p className="rounded-md border border-err/30 bg-err/5 px-2 py-1 text-[10px] text-err">
+					{t("panel.compute.runCard.failedTasks", { count: progress.failedTasks })}:{" "}
+					{progress.failureReason || job.publicSummary || t("panel.compute.runCard.unknownFailure")}
+				</p>
+			) : job.publicSummary ? (
+				<p className="truncate text-[10px] text-ink-dim" title={job.publicSummary}>
+					{job.publicSummary}
+				</p>
+			) : null}
+			{progress?.processes.length ? (
+				<details className="rounded-md border border-border/70 px-2 py-1 text-[10px] text-ink-dim">
+					<summary className="cursor-pointer">
+						{t("panel.compute.runCard.stages", { count: progress.processes.length })}
+					</summary>
+					<div className="mt-1 space-y-1">
+						{progress.processes.slice(0, 8).map((process) => {
+							const processCount =
+								process.completed !== undefined && process.total !== undefined
+									? `${process.completed}/${process.total}`
+									: process.failed !== undefined
+										? t("panel.compute.runCard.failedTasks", { count: process.failed })
+										: t("panel.compute.runCard.tasksUnknown");
+							return (
+								<div key={process.name} className="flex items-center justify-between gap-2">
+									<span className="truncate" title={process.name}>
+										{process.label || process.name}
+									</span>
+									<span className="shrink-0 font-mono">{processCount}</span>
+								</div>
+							);
+						})}
+					</div>
+				</details>
+			) : null}
+			{multiqcPath ? (
+				<button
+					type="button"
+					className="truncate text-left text-[10px] text-accent underline"
+					title={multiqcPath}
+					onClick={onSelect}
+				>
+					{t("panel.compute.runCard.openMultiqc")}: {multiqcPath}
+				</button>
+			) : null}
 			{(job.state === "queued" || job.state === "running") && (
 				<button type="button" className="panel-action self-start" onClick={onCancel}>
 					{t("panel.compute.cancel")}

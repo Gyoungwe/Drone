@@ -2,7 +2,7 @@ import type { BackendServices } from "@drone/backend";
 import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@drone/shared";
 import { IpcChannels } from "@drone/shared";
 import { BrowserWindow } from "electron";
-import type { LanObserverHandle } from "../lan";
+import { onResearchSkillUpdateState } from "../research-skill-updater";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
@@ -13,7 +13,6 @@ import { registerEvidenceIpc } from "./evidence";
 import { registerInquiryIpc } from "./inquiry";
 import { registerInstitutionalIpc } from "./institutional";
 import { registerKnowledgeIpc } from "./knowledge";
-import { registerLanIpc } from "./lan";
 import { registerMcpIpc } from "./mcp";
 import { registerMemoryIpc } from "./memory";
 import { registerPackagesIpc } from "./packages";
@@ -38,7 +37,6 @@ export function sendToRenderer(channel: string, payload: unknown): void {
 export function registerIpc(
 	backendServices: BackendServices,
 	uiPluginsManager: UiPluginManager,
-	lan: LanObserverHandle,
 	getIncidentSnapshot?: () => unknown,
 ): void {
 	// The desktop host binds contracts from the composition root directly. The
@@ -59,7 +57,6 @@ export function registerIpc(
 	registerInstitutionalIpc(backendServices);
 	registerInquiryIpc(backendServices, sendToRenderer);
 	registerUiPluginsIpc(uiPluginsManager);
-	registerLanIpc(lan);
 	registerMemoryIpc(backendServices);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
 	uiPluginsManager.startWatcher((name) => {
@@ -75,7 +72,7 @@ export function registerIpc(
 	backendServices.sessions.onPermissionRequest((req: PermissionRequest) => {
 		sendToRenderer(IpcChannels.PermissionRequest, req);
 	});
-	// 权限裁决也回投渲染端：LAN 远程应答 / 其他来源应答时桌面卡片要同步撤掉
+	// 权限裁决也回投渲染端，桌面卡片要同步撤掉
 	backendServices.sessions.onPermissionResolved((result: PermissionResolved) => {
 		sendToRenderer(IpcChannels.PermissionResolved, result);
 	});
@@ -90,5 +87,8 @@ export function registerIpc(
 	});
 	onUpdateState((state) => {
 		sendToRenderer(IpcChannels.UpdateEvent, state);
+	});
+	onResearchSkillUpdateState((state) => {
+		sendToRenderer(IpcChannels.ResearchSkillUpdateEvent, state);
 	});
 }

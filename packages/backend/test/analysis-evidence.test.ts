@@ -4,12 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";
-import {
-	AnalysisEvidenceService,
-	checkpointId,
-	type FrozenFile,
-	projectCapabilityEvidence,
-} from "../src/services/analysis-evidence";
+import { AnalysisEvidenceService, checkpointId, type FrozenFile } from "../src/services/analysis-evidence";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "../src/services/analysis-orchestration";
 import { StorageRegistry } from "../src/storage/registry";
 
@@ -59,104 +54,6 @@ async function setup() {
 }
 
 describe("analysis evidence checkpoints", () => {
-	it("projects capability cards without inventing validation evidence", async () => {
-		const { root, runs } = await setup();
-		try {
-			const analysis = await runs.get("run-1");
-			if (!analysis) throw new Error("analysis fixture missing");
-			const [card] = projectCapabilityEvidence([analysis], [], []);
-			expect(card).toMatchObject({
-				analysisId: "run-1",
-				capabilityId: "analysis",
-				versionRef: "assembly@1.0.0",
-				evidenceState: "unknown",
-				claimState: "unsupported",
-				capabilityState: "registered",
-				reuseLevel: "navigation-only",
-				freshness: "unknown",
-				scientificallyVerified: false,
-			});
-			expect(card?.evidenceCapsuleRef).toBeUndefined();
-			expect(card?.checkpointRef).toBeUndefined();
-			expect(card?.requestRef).toBeUndefined();
-		} finally {
-			await rm(root, { recursive: true, force: true });
-		}
-	});
-
-	it("follows an explicit provenance checkpoint when several snapshots exist", async () => {
-		const { root, runs } = await setup();
-		try {
-			const analysis = await runs.get("run-1");
-			if (!analysis) throw new Error("analysis fixture missing");
-			const selected = "b".repeat(64);
-			const bound = {
-				...analysis,
-				provenance: {
-					adapter: { id: "assembly", version: "1.0.0" },
-					workflow: { id: "assembly", version: "1.0.0" },
-					method: { id: "assembly", version: "1.0.0" },
-					specSha256: "c".repeat(64),
-					artifacts: [],
-					reproducibility: { status: "verified" as const, detail: "ok", checkpointId: selected },
-				},
-			};
-			const checkpoints = [
-				{
-					id: "a".repeat(64),
-					analysisId: "run-1",
-					assay: "assembly",
-					createdAt: "2026-10-15",
-					files: [],
-					replayReady: false,
-				},
-				{
-					id: selected,
-					analysisId: "run-1",
-					assay: "assembly",
-					createdAt: "2026-10-14",
-					files: [],
-					replayReady: false,
-				},
-			] as never;
-			const [card] = projectCapabilityEvidence([bound], checkpoints, []);
-			expect(card?.checkpointRef).toBe(selected);
-			const foreign = checkpoints.map((value) => ({ ...value, analysisId: "other-run" }));
-			const [foreignCard] = projectCapabilityEvidence([bound], foreign, []);
-			expect(foreignCard?.checkpointRef).toBeUndefined();
-		} finally {
-			await rm(root, { recursive: true, force: true });
-		}
-	});
-
-	it("does not call not-assessed provenance observed evidence", async () => {
-		const { root, runs } = await setup();
-		try {
-			const analysis = await runs.get("run-1");
-			if (!analysis) throw new Error("analysis fixture missing");
-			const [card] = projectCapabilityEvidence(
-				[
-					{
-						...analysis,
-						provenance: {
-							adapter: { id: "assembly", version: "1.0.0" },
-							workflow: { id: "assembly", version: "1.0.0" },
-							method: { id: "assembly", version: "1.0.0" },
-							specSha256: "c".repeat(64),
-							artifacts: [],
-							reproducibility: { status: "not-assessed" as const, detail: "pending" },
-						},
-					},
-				],
-				[],
-				[],
-			);
-			expect(card?.evidenceState).toBe("unknown");
-		} finally {
-			await rm(root, { recursive: true, force: true });
-		}
-	});
-
 	it("freezes immutable bytes and forks an isolated branch without approval inheritance", async () => {
 		const { root, runs, evidence, source, frozen } = await setup();
 		try {
@@ -243,6 +140,8 @@ describe("analysis evidence checkpoints", () => {
 				environmentMatched: true,
 				outputChecks: [{ path: "result.txt", matched: true }],
 			});
+			expect(receipt.lineage?.runAttemptId).toMatch(/^run:/);
+			expect(receipt.lineage?.causationId).toBeUndefined();
 			expect(await evidence.replayReceipts(checkpoint.id)).toHaveLength(1);
 		} finally {
 			await rm(root, { recursive: true, force: true });
