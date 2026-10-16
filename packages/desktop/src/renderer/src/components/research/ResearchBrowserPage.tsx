@@ -1,10 +1,5 @@
 import type { ResourcePreviewResult } from "@drone/shared";
-import {
-	filePreviewDirectory,
-	isLocalResourceTarget,
-	resourceFormat,
-	splitResourceLink,
-} from "@drone/shared";
+import { isLocalResourceTarget, resourceFormat, splitResourceLink } from "@drone/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -12,7 +7,7 @@ import { useSessionsStore } from "../../stores/sessions";
 import { SearchIcon } from "../icons";
 import { PreviewHost } from "../preview/PreviewHost";
 import { hasSourceTab } from "../preview/preview-registry";
-import { filterResearchPaths } from "./research-browser";
+import { filterResearchPaths, normalizeProjectLink } from "./research-browser";
 import "./research-browser.css";
 
 function dataUrl(result: ResourcePreviewResult): string | null {
@@ -27,28 +22,6 @@ function formatBytes(size: number): string {
 
 function isDirectory(path: string): boolean {
 	return path.endsWith("/");
-}
-
-function normalizeProjectLink(href: string): string | null {
-	let decoded = href;
-	try {
-		decoded = decodeURIComponent(href);
-	} catch {
-		return null;
-	}
-	const normalized = decoded.replaceAll("\\", "/");
-	if (/^(?:file:|[a-z]:[\\/]|\/)/i.test(normalized)) return null;
-	const segments: string[] = [];
-	for (const segment of normalized.split("/")) {
-		if (!segment || segment === ".") continue;
-		if (segment === "..") {
-			if (!segments.length) return null;
-			segments.pop();
-			continue;
-		}
-		segments.push(segment);
-	}
-	return segments.join("/") || null;
 }
 
 export function ResearchBrowserPage() {
@@ -127,15 +100,15 @@ export function ResearchBrowserPage() {
 	};
 
 	const navigate = (href: string) => {
-		if (!href) return;
+		if (!href || !cwd) return;
 		if (isLocalResourceTarget(href)) {
 			const destination = splitResourceLink(href);
-			const safeHref = normalizeProjectLink(destination.href);
+			const safeHref = normalizeProjectLink(destination.href, result?.path ?? cwd, cwd);
 			if (!safeHref) {
 				setActionError(t("researchBrowser.unsupportedLink"));
 				return;
 			}
-			setSelectedCwd(result ? filePreviewDirectory(result.path) : cwd);
+			setSelectedCwd(cwd);
 			setSelectedPath(safeHref);
 			return;
 		}

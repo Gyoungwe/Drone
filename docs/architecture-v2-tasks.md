@@ -154,7 +154,7 @@
 
 ## P9 · 研究资料浏览器与全科研场景知识闭环
 
-- [ ] **P9-1 资料工作台**：新增 `research` 视图，复用 `listProjectFiles`、`previewFile`、`openResourceExternal` 与 `PreviewHost`，支持任意项目文件的检索、预览、源码查看和外部打开；未知二进制只展示元数据。
+- [x] **P9-1 资料工作台**：新增 `research` 视图，复用 `listProjectFiles`、`previewFile`、`openResourceExternal` 与 `PreviewHost`，支持任意项目文件的检索、预览、源码查看和外部打开；未知二进制只展示元数据。
 - [ ] **P9-2 捕获 seam**：在 backend/research 提供 `captureResearchResource`，以 `cwd + relativePath + byteHash + sourceReceipt + scope + freshness + approval` 生成待审 `KnowledgeSnapshot`；禁止会话正文、凭据和未授权原文自动进入知识库。
 - [ ] **P9-3 连接器合同**：搜索、文献/引用、数据集、协议、机构资源和项目存储适配器统一返回来源、许可、访问时间、内容哈希和失败原因；网络与凭据停留在 backend/research，renderer 仅走 `window.pi`。
 - [ ] **P9-4 验收**：空项目、中文/超长路径、常见科研格式、未知二进制、重复捕获、文件变更、连接器失败和撤回/过期快照都有可解释状态。
