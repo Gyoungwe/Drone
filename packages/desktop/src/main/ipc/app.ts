@@ -11,7 +11,7 @@ import { ensureDailyDir } from "../daily";
 import { electronDesktopHost } from "../desktop-host";
 import { applyDesktopPrefs, currentDesktopPrefs } from "../desktop-prefs";
 import { getFigureAnnotations, saveFigureAnnotations } from "../figure-annotations";
-import { runFileAction } from "../file-actions";
+import { ensureExternalOpenSucceeded, runFileAction } from "../file-actions";
 import { previewLocalFile, resolveConfinedResourcePath, resolveResourcePath } from "../file-preview";
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
 import { defaultHostEnvDeps, probeHostEnvironment } from "../host-env";
@@ -99,9 +99,10 @@ export function registerAppIpc(
 				await shell.openExternal(target);
 				return;
 			}
-			await shell.openPath(
+			const error = await shell.openPath(
 				confineToCwd ? await resolveConfinedResourcePath(target, cwd) : resolveResourcePath(target, cwd),
 			);
+			ensureExternalOpenSucceeded(error);
 		},
 		setAttentionBadge: async (count, overlay) => {
 			applyAttentionBadge(
