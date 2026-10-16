@@ -13,6 +13,11 @@ on:
     branches: [main]
     paths:
       - packages/desktop/package.json
+      - packages/desktop/electron-builder.yml
+      - scripts/verify-research-release.cjs
+      - scripts/sync-research-skills.py
+      - scripts/check-research-packaging.cjs
+      - .github/workflows/release.yml
 
 permissions:
   contents: write
