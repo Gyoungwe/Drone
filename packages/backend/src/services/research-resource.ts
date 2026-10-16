@@ -62,8 +62,13 @@ function formatFor(path: string): string {
 	return ext.slice(1) || "binary";
 }
 
-function projectKey(cwd: string, relativePath: string, byteHash: string): string {
-	return contractContentHash({ cwd: resolve(cwd), relativePath, byteHash });
+function projectKey(
+	cwd: string,
+	relativePath: string,
+	byteHash: string,
+	scope: "project" | "workspace",
+): string {
+	return contractContentHash({ cwd: resolve(cwd), relativePath, byteHash, scope });
 }
 
 function captureId(key: string): string {
@@ -132,12 +137,15 @@ export class ResearchResourceService {
 		const bytes = await readFile(file.absolute);
 		const info = await stat(file.absolute);
 		const byteHash = hashBytes(bytes);
-		const key = projectKey(file.root, file.relativePath, byteHash);
+		const scope = input.scope ?? "project";
+		const key = projectKey(file.root, file.relativePath, byteHash, scope);
 		const id = captureId(key);
 		const existing = (await this.options.store.read()).items.find((item) => item.id === id);
 		if (existing) return { record: existing, idempotent: true };
 		const previous = (await this.options.store.read()).items
-			.filter((item) => item.cwd === file.root && item.relativePath === file.relativePath)
+			.filter(
+				(item) => item.cwd === file.root && item.relativePath === file.relativePath && item.scope === scope,
+			)
 			.sort((a, b) => b.revision - a.revision)[0];
 		const capturedAt = isoNow();
 		const sourceReceipt: KnowledgeSourceReceipt = {
@@ -172,7 +180,7 @@ export class ResearchResourceService {
 			format: formatFor(file.relativePath),
 			size: info.size,
 			modifiedAt: info.mtime.toISOString(),
-			scope: input.scope ?? "project",
+			scope,
 			approval: "pending",
 			revision: snapshot.revision,
 			snapshotId: snapshot.id,

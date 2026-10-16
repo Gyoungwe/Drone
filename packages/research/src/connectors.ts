@@ -34,7 +34,7 @@ function isoNow(): string {
 }
 
 function clampLimit(value: number | undefined): number {
-	return Math.max(1, Math.min(20, Math.trunc(value ?? 10)));
+	return Math.max(1, Math.min(50, Math.trunc(value ?? 10)));
 }
 
 function text(value: unknown): string {

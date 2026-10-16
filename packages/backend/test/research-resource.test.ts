@@ -80,4 +80,15 @@ describe("ResearchResourceService", () => {
 		const captured = await research.capture({ cwd: root, relativePath: "notes.md" });
 		expect((await research.list(alias)).map((item) => item.id)).toEqual([captured.record.id]);
 	});
+
+	it("keeps project and workspace captures distinct", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-project-"));
+		await writeFile(join(root, "notes.md"), "A note", "utf8");
+		const research = await service();
+		const project = await research.capture({ cwd: root, relativePath: "notes.md", scope: "project" });
+		const workspace = await research.capture({ cwd: root, relativePath: "notes.md", scope: "workspace" });
+		expect(workspace.idempotent).toBe(false);
+		expect(workspace.record.id).not.toBe(project.record.id);
+		expect(workspace.record.scope).toBe("workspace");
+	});
 });

@@ -106,4 +106,19 @@ describe("research connectors", () => {
 		expect(result.failures).toEqual([expect.objectContaining({ connectorId: "missing", retryable: false })]);
 		expect(result.complete).toBe(false);
 	});
+
+	it("passes the public limit through to 50", async () => {
+		let receivedLimit = 0;
+		const connector: ResearchConnector = {
+			id: "test-limit",
+			kind: "dataset",
+			label: "Limit",
+			search: async (_query, options) => {
+				receivedLimit = options?.limit ?? 0;
+				return [];
+			},
+		};
+		await new ResearchConnectorRegistry([connector]).search({ query: "x", limit: 50 });
+		expect(receivedLimit).toBe(50);
+	});
 });
