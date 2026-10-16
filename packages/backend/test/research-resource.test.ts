@@ -91,4 +91,31 @@ describe("ResearchResourceService", () => {
 		expect(workspace.record.id).not.toBe(project.record.id);
 		expect(workspace.record.scope).toBe("workspace");
 	});
+
+	it("blocks an approved capture after its source freshness expires", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-project-"));
+		await writeFile(join(root, "notes.md"), "A time-bounded note", "utf8");
+		const research = await service();
+		const captured = await research.capture({
+			cwd: root,
+			relativePath: "notes.md",
+			expiresAt: "2026-10-15T23:59:59.000Z",
+		});
+		const approved = await research.approve(captured.record.id);
+		const expired = checkKnowledgeSnapshotReuse(approved.snapshot, {
+			context: { projectId: approved.snapshot.projectId!, workspaceId: approved.snapshot.workspaceId! },
+			now: "2026-10-16T00:00:00.000Z",
+		});
+		expect(expired.reusable).toBe(false);
+		expect(expired.status).toBe("stale");
+		expect(expired.reasons).toContain("one or more source receipts are stale");
+
+		const revoked = await research.revoke(approved.id);
+		const revokedDecision = checkKnowledgeSnapshotReuse(revoked.snapshot, {
+			context: { projectId: revoked.snapshot.projectId!, workspaceId: revoked.snapshot.workspaceId! },
+			now: "2026-10-16T00:00:00.000Z",
+		});
+		expect(revokedDecision.reusable).toBe(false);
+		expect(revokedDecision.status).toBe("revoked");
+	});
 });
