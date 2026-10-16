@@ -75,15 +75,10 @@ extraResources:
     to: "research-workbench/lib"
 mac:
   category: public.app-category.developer-tools
-  # Formal releases must use a Developer ID Application certificate supplied
-  # through CSC_LINK/CSC_KEY_PASSWORD and Apple notarization credentials.
-  # The entitlements permit Electron's bundled native/runtime modules while
-  # keeping the signed bundle notarizable. Missing credentials fail the
-  # release workflow before electron-builder starts.
-  hardenedRuntime: true
-  entitlements: resources/entitlements.mac.plist
-  entitlementsInherit: resources/entitlements.mac.plist
-  notarize: true
+  # Releases intentionally remain unsigned. Signing and notarization are optional
+  # enhancements and are not required by the release workflow.
+  hardenedRuntime: false
+  notarize: false
   target:
     - target: dmg
       arch: [arm64, x64]
@@ -92,7 +87,8 @@ mac:
   # 产物名与 productName 解耦：保持 drone-mac-* 兼容 README 下载表（productName 带空格仅作显示名）
   artifactName: drone-mac-${arch}.${ext}
 win:
-  signAndEditExecutable: true
+  # Unsigned Windows artifacts are intentional; SmartScreen may prompt on install.
+  signAndEditExecutable: false
   target:
     - target: nsis
       arch: [x64]
