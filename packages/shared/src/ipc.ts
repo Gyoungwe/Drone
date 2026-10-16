@@ -112,6 +112,8 @@ export const IpcChannels = {
 	ResearchRevokeCapture: "research:revokeCapture",
 	ResearchListCaptures: "research:listCaptures",
 	ResearchSearch: "research:searchResources",
+	ResearchListConnectors: "research:listConnectors",
+	ResearchSetConnectorEnabled: "research:setConnectorEnabled",
 	KnowledgeCloudStatus: "knowledge:cloudStatus",
 	KnowledgeCloudProbe: "knowledge:cloudProbe",
 	KnowledgeCloudInitialize: "knowledge:cloudInitialize",
