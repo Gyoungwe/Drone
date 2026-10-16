@@ -44,6 +44,7 @@ export function ResearchBrowserPage() {
 		const requestCwd = cwd;
 		const generation = ++refreshGeneration.current;
 		if (!requestCwd) {
+			setLoading(false);
 			setPaths([]);
 			setSelectedPath(null);
 			setSelectedCwd(null);
@@ -79,7 +80,7 @@ export function ResearchBrowserPage() {
 		setZoom(1);
 		setImageError(false);
 		if (!cwd || !selectedPath || isDirectory(selectedPath)) return;
-		const previewCwd = selectedCwd ?? cwd;
+		const previewCwd = selectedCwd === cwd ? selectedCwd : cwd;
 		let cancelled = false;
 		void getPi()
 			.previewFile(selectedPath, previewCwd, true)
