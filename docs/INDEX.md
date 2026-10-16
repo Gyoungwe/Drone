@@ -266,7 +266,8 @@ src/
 | `src/services/session-api.ts` + `session-api-settings.ts` + `session-api-diagnostics.ts` | `SessionServiceApi`、`SessionSettingsApi` | 兼容 API 的薄委托层：会话/模型/设置/权限/诊断调用转发到专责服务，避免把业务实现重新集中到门面 |
 | `src/services/session-{construction,control,events,messages,models,resources,settings-boundary,extensions}.ts` | 会话专责服务 | 分别承载 create/open、prompt/abort/fork、事件管线、消息映射、模型偏好、资源/MCP、权限设置边界和扩展构造；单文件保持在 400 行以内 |
 | `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`PiBackend` 的资源加载与旧 `respondTrust` 继续委托 |
-| `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |\n| `src/services/research-write.ts` | `ResearchWriteService` | 受控写入计划与 JsonStore 审计 ledger；每次外部执行要求显式批准，撤销/失败均 fail-closed；通过 `BackendServices.researchWrites` 与 Research IPC 暴露 |
+| `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |
+| `src/services/research-write.ts` | `ResearchWriteService` | 受控写入计划与 JsonStore 审计 ledger；每次外部执行要求显式批准，撤销/失败均 fail-closed；通过 `BackendServices.researchWrites` 与 Research IPC 暴露 |
 | `src/services/subagents.ts` | `SubagentService` | 子代理面板发现、派发、中止与运行记录；通过 `BackendServices.subagents` 暴露 |
 | `src/services/compute-adapter.ts` | `ComputeHostAdapter`、`ComputeServiceAdapter`、`createComputeServiceAdapter` | B2 远程计算 host-facing adapter；默认投影 B1 的持久化主机、作业、日志和健康状态，runner/终端缺失时明确 unavailable，并在远端副作用前执行授权 |
 | `src/mcp/service.ts` | `McpService` | MCP 配置、状态读取和重载边界；通过 `BackendServices.mcp` 暴露 |
