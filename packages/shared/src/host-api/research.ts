@@ -27,6 +27,7 @@ const ListInput = Type.Object(
 const SearchInput = Type.Object(
 	{
 		query: Type.String({ minLength: 1, maxLength: 512 }),
+		cwd: Type.Optional(Type.String({ minLength: 1, maxLength: 4096 })),
 		connectorIds: Type.Optional(Type.Array(Type.String({ minLength: 1, maxLength: 64 }), { maxItems: 16 })),
 		limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 50 })),
 	},
