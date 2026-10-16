@@ -5,6 +5,12 @@ import type {
 	ResearchConnectorFailure,
 	ResearchConnectorHit,
 } from "../research-connectors";
+import type {
+	ResearchWriteAdapterDescriptor,
+	ResearchWriteAuditRecord,
+	ResearchWritePlan,
+	ResearchWriteReceipt,
+} from "../research-writes";
 import { defineDomain } from "./define";
 
 const Input = Type.Object(
@@ -53,8 +59,33 @@ const ConnectorToggleInput = Type.Object(
 	},
 	{ additionalProperties: false },
 );
+const WriteInput = Type.Object(
+	{
+		adapterId: Type.String({ minLength: 1, maxLength: 64 }),
+		targetRef: Type.String({ minLength: 1, maxLength: 512 }),
+		payload: Type.Object(
+			{
+				title: Type.String({ minLength: 1, maxLength: 500 }),
+				doi: Type.Optional(Type.String({ maxLength: 256 })),
+				authors: Type.Optional(Type.Array(Type.String({ maxLength: 200 }), { maxItems: 64 })),
+				abstract: Type.Optional(Type.String({ maxLength: 8000 })),
+			},
+			{ additionalProperties: false },
+		),
+		action: Type.Union([Type.Literal("dry-run"), Type.Literal("prepare")]),
+	},
+	{ additionalProperties: false },
+);
+const WriteExecuteInput = Type.Object(
+	{ planId: Type.String({ minLength: 1, maxLength: 128 }), approved: Type.Boolean() },
+	{ additionalProperties: false },
+);
+const WritePlanInput = Type.Object(
+	{ planId: Type.String({ minLength: 1, maxLength: 128 }) },
+	{ additionalProperties: false },
+);
 
-/** Host boundary for provenance-aware, read-only research capture and search. */
+/** Host boundary for provenance-aware research capture/search and explicit write plans. */
 export const ResearchContract = defineDomain("research", {
 	methods: {
 		captureResource: { args: Type.Tuple([Input]), result: Result<ResearchCaptureResult>() },
@@ -66,6 +97,19 @@ export const ResearchContract = defineDomain("research", {
 		setConnectorEnabled: {
 			args: Type.Tuple([ConnectorToggleInput]),
 			result: Result<ResearchConnectorDescriptor>(),
+		},
+		listWriteAdapters: {
+			args: Type.Tuple([]),
+			result: Type.Object({
+				adapters: Type.Array(Type.Unsafe<ResearchWriteAdapterDescriptor>({ type: "object" })),
+			}),
+		},
+		prepareWrite: { args: Type.Tuple([WriteInput]), result: Result<ResearchWritePlan>() },
+		executeWrite: { args: Type.Tuple([WriteExecuteInput]), result: Result<ResearchWriteReceipt>() },
+		revokeWrite: { args: Type.Tuple([WritePlanInput]), result: Type.Object({ revoked: Type.Boolean() }) },
+		listWriteAudit: {
+			args: Type.Tuple([]),
+			result: Type.Object({ items: Type.Array(Type.Unsafe<ResearchWriteAuditRecord>({ type: "object" })) }),
 		},
 	},
 	events: {},

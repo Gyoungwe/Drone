@@ -68,6 +68,7 @@ export * from "./research-connectors";
 export * from "./research-skill-update";
 export * from "./research-skills";
 export * from "./research-status";
+export * from "./research-writes";
 export {
 	isLocalResourceTarget,
 	localResourceHref,

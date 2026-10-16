@@ -635,6 +635,22 @@ export const zh = {
 		unsupportedLink: "该链接不在项目资料范围内",
 		truncated: "内容已截断",
 	},
+	researchWrite: {
+		title: "科研写入连接器",
+		defaultTitle: "研究资料",
+
+		hint: "先生成受限写入计划；外部写入每次都需要新的明确确认。",
+		unavailable: "暂无可用的写入连接器",
+		authorized: "已授权主机端口",
+		dryRunOnly: "仅演练（没有已授权端口）",
+		prepare: "生成写入计划",
+		planReady: "计划 {id} 已就绪",
+		execute: "确认执行外部写入",
+		revoke: "撤销计划",
+		confirm: "这将写入外部连接器，继续吗？",
+		executed: "外部写入已完成并记录回执",
+	},
+
 	update: {
 		confirmRunning: "还有 {count} 个回合正在运行，重启安装更新会中断它们。仍要重启吗？",
 		checkForUpdates: "检查更新",

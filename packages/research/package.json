@@ -29,7 +29,8 @@
 		"./claim-bindings": "./src/claim-bindings.ts",
 		"./source-archive": "./src/source-archive.ts",
 		"./research-loop": "./src/research-loop.ts",
-		"./run-summary": "./src/run-summary.ts"
+		"./run-summary": "./src/run-summary.ts",
+		"./write-connectors": "./src/write-connectors.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",

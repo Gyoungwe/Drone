@@ -385,6 +385,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
+			id: "agent-research-writes",
+			path: `${agentDir}/research/writes.json`,
+			owner: "research/writes",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
 			id: "agent-sessions",
 			path: `${agentDir}/sessions`,
 			owner: "session-engine/sdk",

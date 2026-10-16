@@ -78,6 +78,7 @@ import {
 	emptyResearchConnectorSettings,
 	ResearchResourceService,
 } from "./services/research-resource";
+import { createEmptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
@@ -196,6 +197,8 @@ export interface BackendServices {
 	inquiry: InquiryServicePort;
 	/** Provenance-aware project capture and read-only connector search. */
 	research: ResearchResourceService;
+	/** Explicitly authorized, auditable research write adapters. */
+	researchWrites: ResearchWriteService;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
 	/** Durable B7 dataset, public-fetch and RO-Crate registry. */
@@ -283,6 +286,13 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					...(host.platform ? { platform: host.platform } : {}),
 					status: host.health.status,
 				})),
+	});
+	const researchWrites = new ResearchWriteService({
+		store: new JsonStore({
+			path: join(getAgentDir(), "research", "writes.json"),
+			storageId: "agent-research-writes",
+			defaultValue: createEmptyResearchWriteLedger,
+		}),
 	});
 	const research = new ResearchResourceService({
 		store: new JsonStore({
@@ -584,6 +594,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		computeAdapter,
 		inquiry,
 		research,
+		researchWrites,
 		discovery,
 		dataDesign,
 		analysis,

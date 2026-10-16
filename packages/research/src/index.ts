@@ -194,6 +194,14 @@ export {
 	requiresPaperEvidence,
 } from "./source-delivery";
 export {
+	createDefaultResearchWriteAdapters,
+	createZoteroWriteAdapter,
+	type ResearchWriteAdapter,
+	ResearchWriteAdapterRegistry,
+	type ResearchWriteExecutionContext,
+	type ResearchWritePort,
+} from "./write-connectors";
+export {
 	findZoteroItemsByIdentity,
 	isValidZoteroDoi,
 	isZoteroItemKey,

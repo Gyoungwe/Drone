@@ -21,6 +21,11 @@ export function registerResearchIpc(backend: BackendServices): void {
 		},
 		listConnectors: async () => ({ connectors: [...(await backend.research.listConnectors())] }),
 		setConnectorEnabled: (input) => backend.research.setConnectorEnabled(input.id, input.enabled),
+		listWriteAdapters: async () => ({ adapters: [...backend.researchWrites.listAdapters()] }),
+		prepareWrite: (input) => backend.researchWrites.prepare(input),
+		executeWrite: (input) => backend.researchWrites.execute(input),
+		revokeWrite: async (input) => ({ revoked: await backend.researchWrites.revoke(input.planId) }),
+		listWriteAudit: async () => ({ items: [...(await backend.researchWrites.listAudit())] }),
 	};
 	bindContract(ResearchContract, implementation, {
 		channelForMethod: (_contract, method) =>
@@ -32,6 +37,11 @@ export function registerResearchIpc(backend: BackendServices): void {
 				searchResources: IpcChannels.ResearchSearch,
 				listConnectors: IpcChannels.ResearchListConnectors,
 				setConnectorEnabled: IpcChannels.ResearchSetConnectorEnabled,
+				listWriteAdapters: IpcChannels.ResearchListWriteAdapters,
+				prepareWrite: IpcChannels.ResearchPrepareWrite,
+				executeWrite: IpcChannels.ResearchExecuteWrite,
+				revokeWrite: IpcChannels.ResearchRevokeWrite,
+				listWriteAudit: IpcChannels.ResearchListWriteAudit,
 			})[method as keyof typeof ResearchContract.methods],
 		beforeInvoke: (event) => {
 			const invokeEvent = event as {

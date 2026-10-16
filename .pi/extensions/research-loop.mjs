@@ -11010,6 +11010,31 @@ var ConnectorToggleInput = typebox_exports.Object(
   },
   { additionalProperties: false }
 );
+var WriteInput = typebox_exports.Object(
+  {
+    adapterId: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    targetRef: typebox_exports.String({ minLength: 1, maxLength: 512 }),
+    payload: typebox_exports.Object(
+      {
+        title: typebox_exports.String({ minLength: 1, maxLength: 500 }),
+        doi: typebox_exports.Optional(typebox_exports.String({ maxLength: 256 })),
+        authors: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ maxLength: 200 }), { maxItems: 64 })),
+        abstract: typebox_exports.Optional(typebox_exports.String({ maxLength: 8e3 }))
+      },
+      { additionalProperties: false }
+    ),
+    action: typebox_exports.Union([typebox_exports.Literal("dry-run"), typebox_exports.Literal("prepare")])
+  },
+  { additionalProperties: false }
+);
+var WriteExecuteInput = typebox_exports.Object(
+  { planId: typebox_exports.String({ minLength: 1, maxLength: 128 }), approved: typebox_exports.Boolean() },
+  { additionalProperties: false }
+);
+var WritePlanInput = typebox_exports.Object(
+  { planId: typebox_exports.String({ minLength: 1, maxLength: 128 }) },
+  { additionalProperties: false }
+);
 var ResearchContract = defineDomain("research", {
   methods: {
     captureResource: { args: typebox_exports.Tuple([Input]), result: Result() },
@@ -11021,6 +11046,19 @@ var ResearchContract = defineDomain("research", {
     setConnectorEnabled: {
       args: typebox_exports.Tuple([ConnectorToggleInput]),
       result: Result()
+    },
+    listWriteAdapters: {
+      args: typebox_exports.Tuple([]),
+      result: typebox_exports.Object({
+        adapters: typebox_exports.Array(typebox_exports.Unsafe({ type: "object" }))
+      })
+    },
+    prepareWrite: { args: typebox_exports.Tuple([WriteInput]), result: Result() },
+    executeWrite: { args: typebox_exports.Tuple([WriteExecuteInput]), result: Result() },
+    revokeWrite: { args: typebox_exports.Tuple([WritePlanInput]), result: typebox_exports.Object({ revoked: typebox_exports.Boolean() }) },
+    listWriteAudit: {
+      args: typebox_exports.Tuple([]),
+      result: typebox_exports.Object({ items: typebox_exports.Array(typebox_exports.Unsafe({ type: "object" })) })
     }
   },
   events: {}

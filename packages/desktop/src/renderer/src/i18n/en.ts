@@ -656,6 +656,22 @@ export const en: Messages = {
 		unsupportedLink: "That link is outside the project materials",
 		truncated: "Content truncated",
 	},
+	researchWrite: {
+		title: "Research write adapters",
+		defaultTitle: "Research material",
+
+		hint: "Prepare a bounded write plan first. External writes always need a fresh approval.",
+		unavailable: "No write adapter is available",
+		authorized: "authorized host port",
+		dryRunOnly: "dry-run only (no authorized port)",
+		prepare: "Prepare write plan",
+		planReady: "Plan {id} is ready",
+		execute: "Confirm external write",
+		revoke: "Revoke plan",
+		confirm: "This will write to the external connector. Continue?",
+		executed: "External write completed and receipt recorded",
+	},
+
 	update: {
 		confirmRunning:
 			"{count} turn(s) are still running. Restarting to install the update will interrupt them. Restart anyway?",

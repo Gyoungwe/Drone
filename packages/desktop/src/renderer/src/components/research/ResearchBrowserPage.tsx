@@ -11,6 +11,7 @@ import { useSessionsStore } from "../../stores/sessions";
 import { SearchIcon } from "../icons";
 import { PreviewHost } from "../preview/PreviewHost";
 import { hasSourceTab } from "../preview/preview-registry";
+import { ResearchWritePanel } from "./ResearchWritePanel";
 import { filterResearchPaths, normalizeProjectLink } from "./research-browser";
 import "./research-browser.css";
 
@@ -283,6 +284,10 @@ export function ResearchBrowserPage() {
 							</ul>
 						)}
 					</section>
+					<ResearchWritePanel
+						targetRef={selectedCapture?.sourceReceipt.sourceRef ?? selectedPath}
+						payload={{ title: result?.name ?? selectedPath ?? t("researchWrite.defaultTitle") }}
+					/>
 					<label className="research-browser-search">
 						<SearchIcon size={14} />
 						<input
