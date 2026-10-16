@@ -65,7 +65,8 @@ export function createZoteroWriteAdapter(port?: ResearchWritePort): ResearchWrit
 		prepare(input) {
 			if (input.adapterId !== "zotero-write") throw new Error("Wrong write adapter");
 			const targetRef = input.targetRef.normalize("NFKC").trim();
-			if (!targetRef || targetRef.length > 512) throw new Error("Write target is required and must be <= 512 characters");
+			if (!targetRef || targetRef.length > 512)
+				throw new Error("Write target is required and must be <= 512 characters");
 			const payload = normalizePayload(input.payload);
 			const key = hash({ adapterId: input.adapterId, targetRef, payload, action: input.action });
 			return {
@@ -93,7 +94,11 @@ export function createZoteroWriteAdapter(port?: ResearchWritePort): ResearchWrit
 			}
 			if (!context.approved) throw new Error("Explicit user approval is required for external writes");
 			if (!port) throw new Error("Zotero write adapter is unavailable; configure an authorized host port");
-			const result = await port.write({ targetRef: plan.targetRef, payload: plan.payload, signal: context.signal });
+			const result = await port.write({
+				targetRef: plan.targetRef,
+				payload: plan.payload,
+				signal: context.signal,
+			});
 			if (!result.externalRef?.trim()) throw new Error("Write adapter returned no external reference");
 			return {
 				planId: plan.id,
