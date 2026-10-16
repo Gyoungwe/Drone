@@ -656,6 +656,20 @@ export const en: Messages = {
 		unsupportedLink: "That link is outside the project materials",
 		truncated: "Content truncated",
 	},
+\tresearchWrite: {
+\t\ttitle: "Research write adapters",
+\t\thint: "Prepare a bounded write plan first. External writes always need a fresh approval.",
+\t\tunavailable: "No write adapter is available",
+\t\tauthorized: "authorized host port",
+\t\tdryRunOnly: "dry-run only (no authorized port)",
+\t\tprepare: "Prepare write plan",
+\t\tplanReady: "Plan {id} is ready",
+\t\texecute: "Confirm external write",
+\t\trevoke: "Revoke plan",
+\t\tconfirm: "This will write to the external connector. Continue?",
+\t\texecuted: "External write completed and receipt recorded",
+\t},
+
 	update: {
 		confirmRunning:
 			"{count} turn(s) are still running. Restarting to install the update will interrupt them. Restart anyway?",
