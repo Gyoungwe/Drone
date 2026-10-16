@@ -46,4 +46,5 @@
 
 - 2026-10-16：P10 捕获 seam、项目文件来源回执、待审快照、审批/撤回和九个只读连接器（Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA、OpenAlex、DOI、ENA）已实现；PR #207 的 macOS/Windows 8 项 CI 全部通过并已合并。Protocols、机构登录、写入型适配器、跨平台人工验收、过期快照回归和正式签名发布仍未关闭。
 - 2026-10-16（验收复核）：生产桌面 `npm run build`、lint、typecheck、架构检查、研究技能包发布测试、扩展/runtime 生成物检查均通过；全量 `npm test` 在当前 macOS 沙箱有 47 个既有环境/知识发布 fixture 失败，`test:upgrade --fixtures-only` 的语义混合夹具因 `listen EPERM 127.0.0.1` 失败；pi-packages 暂无法在无网络沙箱中暂存（npm registry 连接被 EPERM 拒绝）。
-- 2026-10-16（v0.32.1 发布尝试）：PR #206 已合并到 `main`，Release #118 的 macOS/Windows validate 与 prepare 均通过并创建 `v0.32.1` 标签；三个签名构建因仓库未提供授权证书/notarization secrets 按 fail-closed 规则停止，未生成签名安装包、更新 feed 或安装/更新/回滚证据，P11 正式发布门槛保持未关闭。\n- 2026-10-16（签名门禁）：`check-release-signing.mjs`、macOS hardened runtime/entitlements、Windows Authenticode 验签和 GitHub Release workflow 预检已加入；真实证书、notarization、跨平台安装/更新/回滚仍需在有授权 secrets 的 GitHub runner 上执行。
+- 2026-10-16（v0.32.1 发布尝试）：PR #206 已合并到 `main`，Release #118 的 macOS/Windows validate 与 prepare 均通过并创建 `v0.32.1` 标签；三个签名构建因仓库未提供授权证书/notarization secrets 按 fail-closed 规则停止，未生成签名安装包、更新 feed 或安装/更新/回滚证据，P11 正式发布门槛保持未关闭。
+- 2026-10-16（签名门禁）：`check-release-signing.mjs`、macOS hardened runtime/entitlements、Windows Authenticode 验签和 GitHub Release workflow 预检已加入；真实证书、notarization、跨平台安装/更新/回滚仍需在有授权 secrets 的 GitHub runner 上执行。
