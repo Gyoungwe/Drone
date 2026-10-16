@@ -194,6 +194,14 @@ export {
 	requiresPaperEvidence,
 } from "./source-delivery";
 export {
+	createDefaultResearchWriteAdapters,
+	createZoteroWriteAdapter,
+	type ResearchWriteAdapter,
+	ResearchWriteAdapterRegistry,
+	type ResearchWriteExecutionContext,
+	type ResearchWritePort,
+} from "./write-connectors";
+export {
 	findZoteroItemsByIdentity,
 	isValidZoteroDoi,
 	isZoteroItemKey,
@@ -272,11 +280,3 @@ export {
 	zoteroLocalWriteConfig,
 	zoteroWebApiConfig,
 } from "./zotero-write-runtime";
-export {
-	createDefaultResearchWriteAdapters,
-	createZoteroWriteAdapter,
-	ResearchWriteAdapterRegistry,
-	type ResearchWriteAdapter,
-	type ResearchWriteExecutionContext,
-	type ResearchWritePort,
-} from "./write-connectors";
