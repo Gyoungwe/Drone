@@ -5,64 +5,64 @@ export type ResearchWriteAuditStatus = "prepared" | "executed" | "blocked" | "fa
 
 /** Bounded metadata only; credentials and opaque source bodies are never accepted. */
 export interface ResearchWritePayload {
-\treadonly title: string;
-\treadonly doi?: string;
-\treadonly authors?: readonly string[];
-\treadonly abstract?: string;
+	readonly title: string;
+	readonly doi?: string;
+	readonly authors?: readonly string[];
+	readonly abstract?: string;
 }
 
 export interface ResearchWriteRequest {
-\treadonly adapterId: string;
-\treadonly targetRef: string;
-\treadonly payload: ResearchWritePayload;
-\treadonly action: ResearchWriteAction;
+	readonly adapterId: string;
+	readonly targetRef: string;
+	readonly payload: ResearchWritePayload;
+	readonly action: ResearchWriteAction;
 }
 
 export interface ResearchWritePlan {
-\treadonly id: string;
-\treadonly adapterId: string;
-\treadonly targetRef: string;
-\treadonly payload: ResearchWritePayload;
-\treadonly action: ResearchWriteAction;
-\treadonly sideEffect: "none" | "external-write";
-\treadonly requiresExplicitApproval: true;
-\treadonly status: ResearchWritePlanStatus;
-\treadonly createdAt: string;
+	readonly id: string;
+	readonly adapterId: string;
+	readonly targetRef: string;
+	readonly payload: ResearchWritePayload;
+	readonly action: ResearchWriteAction;
+	readonly sideEffect: "none" | "external-write";
+	readonly requiresExplicitApproval: true;
+	readonly status: ResearchWritePlanStatus;
+	readonly createdAt: string;
 }
 
 export interface ResearchWriteExecuteRequest {
-\treadonly planId: string;
-\t/** A fresh user decision; this is never persisted as a standing permission. */
-\treadonly approved: boolean;
+	readonly planId: string;
+	/** A fresh user decision; this is never persisted as a standing permission. */
+	readonly approved: boolean;
 }
 
 export interface ResearchWriteReceipt {
-\treadonly planId: string;
-\treadonly adapterId: string;
-\treadonly status: "executed" | "failed" | "blocked";
-\treadonly at: string;
-\treadonly externalRef?: string;
-\treadonly readBack: "verified" | "unverified" | "not-applicable";
-\treadonly failureReason?: string;
+	readonly planId: string;
+	readonly adapterId: string;
+	readonly status: "executed" | "failed" | "blocked";
+	readonly at: string;
+	readonly externalRef?: string;
+	readonly readBack: "verified" | "unverified" | "not-applicable";
+	readonly failureReason?: string;
 }
 
 export interface ResearchWriteAuditRecord {
-\treadonly id: string;
-\treadonly planId: string;
-\treadonly adapterId: string;
-\treadonly targetRef: string;
-\treadonly payloadHash: string;
-\treadonly status: ResearchWriteAuditStatus;
-\treadonly approval: "explicit" | "missing";
-\treadonly at: string;
-\treadonly externalRef?: string;
-\treadonly failureReason?: string;
+	readonly id: string;
+	readonly planId: string;
+	readonly adapterId: string;
+	readonly targetRef: string;
+	readonly payloadHash: string;
+	readonly status: ResearchWriteAuditStatus;
+	readonly approval: "explicit" | "missing";
+	readonly at: string;
+	readonly externalRef?: string;
+	readonly failureReason?: string;
 }
 
 export interface ResearchWriteAdapterDescriptor {
-\treadonly id: string;
-\treadonly label: string;
-\treadonly enabled: boolean;
-\treadonly writeEnabled: boolean;
-\treadonly requiresExplicitApproval: true;
+	readonly id: string;
+	readonly label: string;
+	readonly enabled: boolean;
+	readonly writeEnabled: boolean;
+	readonly requiresExplicitApproval: true;
 }
