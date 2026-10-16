@@ -10726,6 +10726,7 @@ var ListInput = typebox_exports.Object(
 var SearchInput = typebox_exports.Object(
   {
     query: typebox_exports.String({ minLength: 1, maxLength: 512 }),
+    cwd: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 4096 })),
     connectorIds: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 64 }), { maxItems: 16 })),
     limit: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 50 }))
   },

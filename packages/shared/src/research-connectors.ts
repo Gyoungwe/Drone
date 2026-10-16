@@ -46,6 +46,8 @@ export interface ResearchConnectorFailure {
 
 export interface ResearchSearchRequest {
 	readonly query: string;
+	/** Optional project root used by the project-storage connector. */
+	readonly cwd?: string;
 	readonly connectorIds?: readonly string[];
 	readonly limit?: number;
 	readonly signal?: AbortSignal;

@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve, sep } from "node:path";
 import { ingestKnowledgeSnapshot, resolveKnowledgeContext } from "@drone/knowledge";
-import { type ResearchConnector, ResearchConnectorRegistry } from "@drone/research";
+import {
+	type ResearchConnector,
+	type ResearchConnectorContext,
+	ResearchConnectorRegistry,
+} from "@drone/research";
 import {
 	contractContentHash,
 	createKnowledgeSnapshot,
@@ -32,6 +36,8 @@ export interface ResearchResourceServiceOptions {
 	readonly store: JsonStore<CaptureLedger>;
 	readonly connectors?: ResearchConnectorRegistry;
 	readonly connectorSettings?: JsonStore<ResearchConnectorSettings>;
+	/** Host-owned ports/configuration used by optional connectors; never persisted. */
+	readonly connectorContext?: ResearchConnectorContext;
 }
 
 const TEXT_EXTENSIONS = new Set([
@@ -306,7 +312,10 @@ export class ResearchResourceService {
 				: [...input.connectorIds];
 		const disabled = requested.filter((id) => byId.get(id)?.enabled === false);
 		const searchable = requested.filter((id) => byId.get(id)?.enabled !== false);
-		const result = await this.connectors.search({ ...input, connectorIds: searchable });
+		const result = await this.connectors.search(
+			{ ...input, connectorIds: searchable },
+			{ ...this.options.connectorContext, cwd: input.cwd ?? this.options.connectorContext?.cwd },
+		);
 		const disabledFailures: ResearchConnectorFailure[] = disabled.map((connectorId) => ({
 			connectorId,
 			message: "Research connector is disabled",

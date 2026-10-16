@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { stat } from "node:fs/promises";
+import { extname, join } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
 import type { ExperienceStorePort } from "@drone/knowledge";
 import type {
@@ -33,6 +34,7 @@ import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
+import { walkProjectFiles } from "./project/files";
 import { canonicalProjectId } from "./project-id";
 import { createDroneRuntime } from "./runtime";
 import { AnalysisEvidenceService, type EvidenceReplayRunner } from "./services/analysis-evidence";
@@ -293,6 +295,47 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			storageId: "agent-research-connectors",
 			defaultValue: emptyResearchConnectorSettings,
 		}),
+		connectorContext: {
+			config: {
+				zotero: {
+					apiKey: process.env.ZOTERO_API_KEY,
+					libraryId: process.env.ZOTERO_LIBRARY_ID || process.env.ZOTERO_USER_ID,
+					libraryType:
+						process.env.ZOTERO_LIBRARY_TYPE === "group" || process.env.ZOTERO_LIBRARY_TYPE === "groups"
+							? "groups"
+							: "users",
+				},
+				protocols: {
+					apiToken: process.env.PROTOCOLS_IO_API_TOKEN || process.env.PROTOCOLS_IO_API_KEY,
+				},
+				institutional: {
+					ezproxyTemplate: process.env.DRONE_EZPROXY_TEMPLATE,
+					resolverUrl: process.env.DRONE_INSTITUTIONAL_RESOLVER,
+				},
+			},
+			projectStorage: {
+				search: async ({ cwd, query, limit, signal }) => {
+					if (signal?.aborted) return [];
+					const needle = query.normalize("NFKC").toLocaleLowerCase();
+					const paths = (await walkProjectFiles(cwd))
+						.filter((path) => !path.endsWith("/") && path.toLocaleLowerCase().includes(needle))
+						.slice(0, limit);
+					const items = [];
+					for (const relativePath of paths) {
+						if (signal?.aborted) break;
+						const info = await stat(join(cwd, relativePath)).catch(() => null);
+						if (!info?.isFile()) continue;
+						items.push({
+							relativePath,
+							format: extname(relativePath).replace(/^\./, "") || "binary",
+							size: info.size,
+							modifiedAt: info.mtime.toISOString(),
+						});
+					}
+					return items;
+				},
+			},
+		},
 	});
 	const defaultProjectId = canonicalProjectId(
 		options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),

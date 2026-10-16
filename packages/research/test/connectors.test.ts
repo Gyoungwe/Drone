@@ -4,10 +4,14 @@ import {
 	createDoiConnector,
 	createEnaConnector,
 	createEuropePmcConnector,
+	createInstitutionalConnector,
 	createOpenAlexConnector,
+	createProjectStorageConnector,
+	createProtocolsConnector,
 	createPubmedConnector,
 	createSraConnector,
 	createZenodoConnector,
+	createZoteroConnector,
 	type ResearchConnector,
 	ResearchConnectorRegistry,
 } from "../src/connectors";
@@ -107,6 +111,69 @@ describe("research connectors", () => {
 		});
 		expect(ena[0]).toMatchObject({ id: "ena:ERR1", sourceType: "dataset" });
 		expect(ena[0]?.sourceReceipt).toMatchObject({ readOnly: true, sourceType: "dataset" });
+	});
+
+	it("reads Zotero citations through the configured read-only API", async () => {
+		let request = "";
+		const hits = await createZoteroConnector().search("bee brain", {
+			config: { zotero: { libraryId: "123", apiKey: "secret" } },
+			fetchImpl: async (input, init) => {
+				request = `${String(input)} ${String((init?.headers as Record<string, string>)?.["Zotero-API-Key"])}`;
+				return response([{ key: "ABCD", data: { title: "Bee paper", DOI: "10.1000/bee" } }]);
+			},
+		});
+		expect(request).toContain("users/123/items");
+		expect(request).toContain("secret");
+		expect(hits[0]).toMatchObject({
+			id: "zotero:ABCD",
+			sourceType: "citation",
+			locator: "https://doi.org/10.1000/bee",
+		});
+	});
+
+	it("normalizes authenticated protocols.io results", async () => {
+		const hits = await createProtocolsConnector().search("RNA extraction", {
+			config: { protocols: { apiToken: "token" } },
+			fetchImpl: async (input, init) => {
+				expect(String(input)).toContain("/api/v4/protocols?q=RNA%20extraction");
+				expect((init?.headers as Record<string, string>)?.authorization).toBe("Bearer token");
+				return response({
+					payload: { items: [{ uri: "abc123", title: "RNA extraction", description: "Steps" }] },
+				});
+			},
+		});
+		expect(hits[0]).toMatchObject({ id: "protocols:abc123", sourceType: "protocol" });
+		expect(hits[0]?.sourceReceipt.readOnly).toBe(true);
+	});
+
+	it("records institutional response metadata without copying page contents", async () => {
+		const hits = await createInstitutionalConnector().search("https://example.org/paper", {
+			fetchImpl: async () =>
+				new Response("private page", {
+					status: 200,
+					headers: { "content-type": "text/html", "content-length": "12" },
+				}),
+		});
+		expect(hits[0]?.sourceType).toBe("institutional");
+		expect(hits[0]?.summary).toContain("HTTP 200");
+		expect(hits[0]?.sourceReceipt.contentHash).toMatch(/^[a-f0-9]{64}$/);
+	});
+
+	it("uses the host project-storage port and preserves file provenance", async () => {
+		const hits = await createProjectStorageConnector().search("results", {
+			cwd: "/project",
+			projectStorage: {
+				search: async ({ cwd, query, limit }) => {
+					expect({ cwd, query, limit }).toEqual({ cwd: "/project", query: "results", limit: 10 });
+					return [{ relativePath: "results/table.csv", size: 12, modifiedAt: "2026-10-17T00:00:00.000Z" }];
+				},
+			},
+		});
+		expect(hits[0]).toMatchObject({
+			id: expect.stringContaining("project-storage:"),
+			locator: "results/table.csv",
+		});
+		expect(hits[0]?.sourceReceipt.sourceType).toBe("project-storage");
 	});
 
 	it("returns connector failures as retryable evidence gaps", async () => {

@@ -2,7 +2,7 @@
 import {
   contractContentHash,
   createKnowledgeSnapshot
-} from "./chunk-2W6HVJK4.mjs";
+} from "./chunk-C7SFQXXJ.mjs";
 import {
   projectIdentity
 } from "./chunk-CXEKIGAQ.mjs";
