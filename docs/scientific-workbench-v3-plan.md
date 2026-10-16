@@ -24,15 +24,15 @@
 
 知识沉淀不绑定 RNA-seq。统一对象链为 `ResearchCase → RunAttempt → Artifact/SourceReceipt → KnowledgeSnapshot/Experience`；连接器只负责发现或取得来源，不能绕过证据门禁写入结论。
 
-- [ ] 新增研究资料捕获合同：`cwd + relativePath + byteHash + format + sourceReceipt + scope + freshness + approval`；默认只保存元数据和可引用片段，禁止自动保存会话正文、凭据和未授权私有原文。
-- [ ] 在 backend/research 层提供 `captureResearchResource` 深模块，使用现有 `JsonStore`/knowledge service 原子写入 `SourceReceipt` 和待审 `KnowledgeSnapshot`；renderer 只调用 host API。
+- [x] 新增研究资料捕获合同：`cwd + relativePath + byteHash + format + sourceReceipt + scope + freshness + approval`；默认只保存元数据和可引用片段，禁止自动保存会话正文、凭据和未授权私有原文。已落地版本化 capture record、来源回执和待审快照。
+- [x] 在 backend/research 层提供 `captureResearchResource` 深模块，使用现有 `JsonStore` 原子写入 `SourceReceipt` 和待审 `KnowledgeSnapshot`；renderer 只调用 host API。已接入 `window.pi` 的 capture/approve/revoke/list 合同。
 - [ ] 连接器分层：搜索（Crossref/PubMed/Europe PMC/数据集目录）、文献与引用（Zotero/DOI）、数据与协议（ENA/SRA/Zenodo/OSF/Protocols）、机构资源（EZproxy/机构登录）和项目存储。每个适配器返回同一份来源回执、许可、访问时间、内容哈希和失败原因。
-- [ ] 连接器的网络、凭据、速率、缓存和重试策略留在 backend/research；知识库只接收通过来源、许可、完整性和用户审批的候选。
-- [ ] 验收：同一文件重复捕获幂等、文件变更生成新 revision、连接器失败可重试但不伪造证据、撤回/过期能阻止旧快照继续发布。
+- [x] 连接器的网络、凭据、速率、缓存和重试策略留在 backend/research；知识库只接收通过来源、许可、完整性和用户审批的候选。首批只读 Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA 已接入 registry，失败结果带 retryable 原因；Zotero/DOI、ENA、Protocols、机构登录和写入型适配器仍未接入。
+- [ ] 验收：同一文件重复捕获幂等、文件变更生成新 revision、连接器失败可重试但不伪造证据、撤回/过期能阻止旧快照继续发布。重复/变更/根目录/软链接/撤回已覆盖单元测试，跨平台和过期快照验收仍待完成。
 
 ## P11 · 发布与更新门槛
 
-- [ ] 在 `.local/docs/release.md` 恢复私有签名流程说明，并把签名身份、notarization、Windows 签名、更新 feed、回滚和跨平台验收写成可执行清单。
+- [x] 在 `.local/docs/release.md` 恢复私有签名流程说明，并把签名身份、notarization、Windows 签名、更新 feed、回滚和跨平台验收写成可执行清单；Release workflow 已增加证书预检和产物验签。
 - [ ] 只有 macOS notarized、Windows signed、自动更新成功且回滚成功的证据齐全后，才关闭正式发布门槛；未签名构建只能标为测试包。
 - [ ] 发布前仍执行 `npm run lint && npm run typecheck && npm test && npm run build && npm run check:arch`，再加 `npm run test:upgrade`、扩展/runtime 产物检查和研究资料浏览器回归。
 
@@ -42,3 +42,8 @@
 2. P10 接着加入捕获合同和 backend seam，再接第一批只读搜索/文献连接器。
 3. P11 与功能并行准备签名和更新证据，但不让未签名状态伪装成已发布版本。
 
+## 当前执行记录
+
+- 2026-10-16：P10 捕获 seam、项目文件来源回执、待审快照、审批/撤回和首批六个只读连接器（Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA）已实现；研究/后端定向测试通过。全量连接器目录、跨平台人工验收、过期快照回归和正式签名发布仍未关闭。
+- 2026-10-16（验收复核）：生产桌面 `npm run build`、lint、typecheck、架构检查、研究技能包发布测试、扩展/runtime 生成物检查均通过；全量 `npm test` 在当前 macOS 沙箱有 47 个既有环境/知识发布 fixture 失败，`test:upgrade --fixtures-only` 的语义混合夹具因 `listen EPERM 127.0.0.1` 失败；pi-packages 暂无法在无网络沙箱中暂存（npm registry 连接被 EPERM 拒绝）。
+- 2026-10-16（签名门禁）：`check-release-signing.mjs`、macOS hardened runtime/entitlements、Windows Authenticode 验签和 GitHub Release workflow 预检已加入；真实证书、notarization、跨平台安装/更新/回滚仍需在有授权 secrets 的 GitHub runner 上执行。

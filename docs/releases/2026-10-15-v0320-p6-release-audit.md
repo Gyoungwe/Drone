@@ -1,7 +1,7 @@
 # v0.32.0 P6 发布审阅与能力矩阵
 
-**对应计划**：Drone Scientific Workbench Upgrade Plan v2：Evidence-Gated Evolution Architecture  
-**批次**：P6 · 发布审阅：全量测试、架构检查、打包产物、许可证、技能锁定、升级夹具和远程 CI  
+**对应计划**：Drone Scientific Workbench Upgrade Plan v2：Evidence-Gated Evolution Architecture
+**批次**：P6 · 发布审阅：全量测试、架构检查、打包产物、许可证、技能锁定、升级夹具和远程 CI
 **审阅基线**：P5 UI/LAN 证据 PR #199 已合入 `main`（merge `2ca43994e5d2148050841ccb47fa8e3307959480`）；生成物修复 PR #201 已在远程 CI #610 全绿，等待合入。
 **结论**：P6 审阅材料已完成，生成物门禁已恢复；发布条件仍有明确未完成项。本文件不把本地 fixture、UI 截图或受控 smoke 提升为真实科研结论。
 
@@ -54,4 +54,3 @@ P4 的受控 RNA-seq smoke 只验证 fixture、attempt 隔离、输入/输出哈
 - 未经用户批准不得把知识、记忆或进化候选自动写入受保护 Wiki、执行计划或发布产物。
 
 P6 的输出是可复核的发布审阅和能力边界，未完成项必须在相应证据到位前保持打开。
-

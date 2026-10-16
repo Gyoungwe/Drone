@@ -217,6 +217,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
+			id: "agent-research-captures",
+			path: `${agentDir}/research/captures.json`,
+			owner: "research/resource-capture",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
 			id: "agent-model-prefs",
 			path: `${agentDir}/model-prefs.json`,
 			owner: "settings/model-prefs",

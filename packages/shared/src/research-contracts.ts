@@ -84,6 +84,20 @@ export interface KnowledgeFreshness {
 
 export interface KnowledgeSourceReceipt {
 	readonly sourceRef: string;
+	/** Optional project-relative path for locally captured material. */
+	readonly relativePath?: string;
+	/** Source category used by connector and capture provenance. */
+	readonly sourceType?:
+		| "project-file"
+		| "literature"
+		| "dataset"
+		| "protocol"
+		| "institutional"
+		| "connector";
+	readonly locator?: string;
+	readonly license?: string;
+	readonly accessedAt?: string;
+	readonly failureReason?: string;
 	readonly version?: string;
 	readonly summary?: string;
 	readonly contentHash: string;
@@ -108,6 +122,8 @@ export interface KnowledgeSnapshot extends VersionedResearchContract {
 	readonly assay?: string;
 	readonly environmentFingerprint?: string;
 	readonly sources: readonly KnowledgeSourceReceipt[];
+	/** Capture approval is explicit; legacy snapshots without this field remain reusable. */
+	readonly approval?: "pending" | "approved" | "rejected" | "revoked";
 	readonly reuseLevel: KnowledgeReuseLevel;
 	readonly evidenceGrade?: KnowledgeEvidenceGrade;
 	readonly evidenceLevel?: KnowledgeEvidenceGrade;

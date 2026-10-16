@@ -10705,6 +10705,51 @@ var PermissionsContract = defineDomain("permissions", {
   }
 });
 
+// packages/shared/src/host-api/research.ts
+var Input = typebox_exports.Object(
+  {
+    cwd: typebox_exports.String({ minLength: 1, maxLength: 4096 }),
+    relativePath: typebox_exports.String({ minLength: 1, maxLength: 4096 }),
+    scope: typebox_exports.Optional(typebox_exports.Union([typebox_exports.Literal("project"), typebox_exports.Literal("workspace")]))
+  },
+  { additionalProperties: false }
+);
+var IdInput = typebox_exports.Object(
+  { id: typebox_exports.String({ minLength: 1, maxLength: 256 }) },
+  { additionalProperties: false }
+);
+var ListInput = typebox_exports.Object(
+  { cwd: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 4096 })) },
+  { additionalProperties: false }
+);
+var SearchInput = typebox_exports.Object(
+  {
+    query: typebox_exports.String({ minLength: 1, maxLength: 512 }),
+    connectorIds: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1, maxLength: 64 }), { maxItems: 16 })),
+    limit: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 50 }))
+  },
+  { additionalProperties: false }
+);
+var Result = () => typebox_exports.Unsafe({ type: "object" });
+var ListResult = typebox_exports.Object({ items: typebox_exports.Array(typebox_exports.Unsafe({ type: "object" })) });
+var SearchResult = typebox_exports.Object({
+  query: typebox_exports.String(),
+  hits: typebox_exports.Array(typebox_exports.Unsafe({ type: "object" })),
+  failures: typebox_exports.Array(typebox_exports.Unsafe({ type: "object" })),
+  connectors: typebox_exports.Array(typebox_exports.String()),
+  complete: typebox_exports.Boolean()
+});
+var ResearchContract = defineDomain("research", {
+  methods: {
+    captureResource: { args: typebox_exports.Tuple([Input]), result: Result() },
+    approveCapture: { args: typebox_exports.Tuple([IdInput]), result: Result() },
+    revokeCapture: { args: typebox_exports.Tuple([IdInput]), result: Result() },
+    listCaptures: { args: typebox_exports.Union([typebox_exports.Tuple([]), typebox_exports.Tuple([ListInput])]), result: ListResult },
+    searchResources: { args: typebox_exports.Tuple([SearchInput]), result: SearchResult }
+  },
+  events: {}
+});
+
 // packages/shared/src/host-api/sessions.ts
 var Id2 = typebox_exports.String({ minLength: 1 });
 var CreateSessionOptionsSchema = typebox_exports.Object(

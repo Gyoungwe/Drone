@@ -2,7 +2,7 @@
 import {
   contractContentHash,
   createKnowledgeSnapshot
-} from "./chunk-SR4UEV6C.mjs";
+} from "./chunk-SRDFC2QO.mjs";
 import {
   projectIdentity
 } from "./chunk-CXEKIGAQ.mjs";
@@ -43,6 +43,15 @@ function validParentRef(value) {
 function validateKnowledgeSourceReceipt(receipt) {
   if (!receipt || typeof receipt !== "object") throw new Error("Invalid knowledge source receipt");
   if (!receipt.sourceRef || receipt.sourceRef.length > 4096) throw new Error("Invalid sourceRef");
+  if (receipt.relativePath !== void 0 && (!receipt.relativePath || receipt.relativePath.length > 4096))
+    throw new Error("Invalid source relativePath");
+  if (receipt.sourceType !== void 0 && !["project-file", "literature", "dataset", "protocol", "institutional", "connector"].includes(receipt.sourceType))
+    throw new Error("Invalid source type");
+  if (receipt.locator !== void 0 && receipt.locator.length > 4096) throw new Error("Invalid source locator");
+  if (receipt.license !== void 0 && receipt.license.length > 512) throw new Error("Invalid source license");
+  if (receipt.accessedAt !== void 0) asTime(receipt.accessedAt, "accessedAt");
+  if (receipt.failureReason !== void 0 && receipt.failureReason.length > 2e3)
+    throw new Error("Source failure reason is too long");
   if (!receipt.receiptRef || receipt.receiptRef.length > 512) throw new Error("Invalid receiptRef");
   if (!HASH.test(receipt.contentHash)) throw new Error("Source receipt contentHash must be SHA-256");
   asTime(receipt.readAt, "readAt");
@@ -179,6 +188,7 @@ function ingestKnowledgeSnapshot(input) {
     ...input.assay ? { assay: input.assay } : {},
     environmentFingerprint: input.environmentFingerprint,
     sources,
+    approval: input.approval ?? "approved",
     reuseLevel,
     evidenceGrade: grade,
     evidenceLevel: grade,
@@ -190,7 +200,8 @@ function ingestKnowledgeSnapshot(input) {
     evidenceCheckpointRefs,
     createdAt,
     ingestedAt,
-    parentRefs
+    parentRefs,
+    revision: input.revision
   });
 }
 function sameRef(a, b) {
@@ -208,6 +219,8 @@ function checkKnowledgeSnapshotReuse(snapshot, request) {
   );
   if (snapshot.projectId !== request.context.projectId || snapshot.workspaceId !== request.context.workspaceId)
     reasons.push("snapshot belongs to another project or workspace");
+  if (snapshot.approval === "pending") reasons.push("snapshot is awaiting user approval");
+  if (snapshot.approval === "rejected" || snapshot.approval === "revoked") reasons.push("snapshot approval was revoked");
   if (request.requiredLevel && knowledgeReuseLevelRank(snapshot.reuseLevel) < knowledgeReuseLevelRank(request.requiredLevel))
     reasons.push("snapshot evidence level is insufficient");
   if (request.assay && snapshot.assay !== request.assay) reasons.push("assay does not match");
@@ -224,7 +237,9 @@ function checkKnowledgeSnapshotReuse(snapshot, request) {
   if (freshness.some((item) => item.status === "unknown")) reasons.push("source freshness is unknown");
   let status = "reusable";
   if (reasons.length) {
-    if (freshness.some((item) => item.status === "stale" || item.status === "invalid")) status = "stale";
+    if (snapshot.approval === "pending") status = "pending-approval";
+    else if (snapshot.approval === "rejected" || snapshot.approval === "revoked") status = "revoked";
+    else if (freshness.some((item) => item.status === "stale" || item.status === "invalid")) status = "stale";
     else if (snapshot.projectId !== request.context.projectId || snapshot.workspaceId !== request.context.workspaceId) status = "context-mismatch";
     else if (request.requiredLevel && knowledgeReuseLevelRank(snapshot.reuseLevel) < knowledgeReuseLevelRank(request.requiredLevel)) status = "insufficient-evidence";
     else if (request.methodVersion && snapshot.methodVersion !== request.methodVersion) status = "method-mismatch";

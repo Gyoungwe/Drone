@@ -1,4 +1,4 @@
-import type { ResourcePreviewResult } from "@drone/shared";
+import type { ResearchCaptureRecord, ResourcePreviewResult } from "@drone/shared";
 import { isLocalResourceTarget, resourceFormat, splitResourceLink } from "@drone/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
@@ -38,6 +38,7 @@ export function ResearchBrowserPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
+	const [captures, setCaptures] = useState<ResearchCaptureRecord[]>([]);
 	const refreshGeneration = useRef(0);
 
 	const refresh = useCallback(async () => {
@@ -67,6 +68,25 @@ export function ResearchBrowserPage() {
 		} finally {
 			if (generation === refreshGeneration.current) setLoading(false);
 		}
+	}, [cwd]);
+
+	useEffect(() => {
+		if (!cwd) {
+			setCaptures([]);
+			return;
+		}
+		let cancelled = false;
+		void getPi()
+			.listCaptures({ cwd })
+			.then((next) => {
+				if (!cancelled) setCaptures(next.items);
+			})
+			.catch((cause) => {
+				if (!cancelled) setActionError(cause instanceof Error ? cause.message : String(cause));
+			});
+		return () => {
+			cancelled = true;
+		};
 	}, [cwd]);
 
 	useEffect(() => {
@@ -103,6 +123,35 @@ export function ResearchBrowserPage() {
 		void getPi()
 			.openResourceExternal(selectedPath, selectedCwd ?? cwd, true)
 			.catch((cause) => setActionError(cause instanceof Error ? cause.message : String(cause)));
+	};
+
+	const selectedCapture = selectedPath
+		? captures.filter((item) => item.relativePath === selectedPath).sort((a, b) => b.revision - a.revision)[0]
+		: undefined;
+
+	const captureCurrent = async () => {
+		if (!selectedPath || !cwd) return;
+		setActionError(null);
+		try {
+			const response = await getPi().captureResource({ cwd, relativePath: selectedPath, scope: "project" });
+			setCaptures((current) => [
+				...current.filter((item) => item.id !== response.record.id),
+				response.record,
+			]);
+		} catch (cause) {
+			setActionError(cause instanceof Error ? cause.message : String(cause));
+		}
+	};
+
+	const approveCurrent = async () => {
+		if (!selectedCapture) return;
+		setActionError(null);
+		try {
+			const next = await getPi().approveCapture({ id: selectedCapture.id });
+			setCaptures((current) => current.map((item) => (item.id === next.id ? next : item)));
+		} catch (cause) {
+			setActionError(cause instanceof Error ? cause.message : String(cause));
+		}
 	};
 
 	const navigate = (href: string) => {
@@ -145,6 +194,16 @@ export function ResearchBrowserPage() {
 					{selectedPath && (
 						<button type="button" className="research-browser-button" onClick={openExternal}>
 							{t("researchBrowser.openExternal")}
+						</button>
+					)}
+					{selectedPath && (
+						<button type="button" className="research-browser-button" onClick={() => void captureCurrent()}>
+							{t("researchBrowser.capture")}
+						</button>
+					)}
+					{selectedCapture?.approval === "pending" && (
+						<button type="button" className="research-browser-button" onClick={() => void approveCurrent()}>
+							{t("researchBrowser.approveCapture")}
 						</button>
 					)}
 				</div>
@@ -263,6 +322,9 @@ export function ResearchBrowserPage() {
 							<span>{result.mimeType}</span>
 							{result.encoding && <span>{result.encoding}</span>}
 							{result.truncated && <span>{t("researchBrowser.truncated")}</span>}
+							{selectedCapture && (
+								<span>{t(`researchBrowser.captureState.${selectedCapture.approval}`)}</span>
+							)}
 						</div>
 					)}
 				</section>

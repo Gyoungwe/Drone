@@ -158,12 +158,15 @@ jobs:
         include:
           - os: macos-latest
             platform: mac-arm64
+            artifact_zip: drone-mac-arm64.zip
             builder_args: --arm64
           - os: macos-latest
             platform: mac-x64
+            artifact_zip: drone-mac-x64.zip
             builder_args: --x64
           - os: windows-latest
             platform: windows
+            artifact_zip: ''
             builder_args: --x64
     runs-on: ${{ matrix.os }}
     env:
@@ -181,6 +184,48 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run stage:pi-packages
+      - name: Prepare macOS signing and notarization credentials
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        env:
+          DRONE_MACOS_CERTIFICATE_BASE64: ${{ secrets.DRONE_MACOS_CERTIFICATE_BASE64 }}
+          DRONE_MACOS_CERTIFICATE_PASSWORD: ${{ secrets.DRONE_MACOS_CERTIFICATE_PASSWORD }}
+          DRONE_APPLE_ID: ${{ secrets.DRONE_APPLE_ID }}
+          DRONE_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.DRONE_APPLE_APP_SPECIFIC_PASSWORD }}
+          DRONE_APPLE_TEAM_ID: ${{ secrets.DRONE_APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$DRONE_MACOS_CERTIFICATE_BASE64"
+          test -n "$DRONE_MACOS_CERTIFICATE_PASSWORD"
+          test -n "$DRONE_APPLE_ID"
+          test -n "$DRONE_APPLE_APP_SPECIFIC_PASSWORD"
+          test -n "$DRONE_APPLE_TEAM_ID"
+          node -e 'require("node:fs").writeFileSync(process.env.RUNNER_TEMP + "/drone-macos-signing.p12", Buffer.from(process.env.DRONE_MACOS_CERTIFICATE_BASE64, "base64"))'
+          {
+            echo "CSC_LINK=$RUNNER_TEMP/drone-macos-signing.p12"
+            echo "CSC_KEY_PASSWORD=$DRONE_MACOS_CERTIFICATE_PASSWORD"
+            echo "APPLE_ID=$DRONE_APPLE_ID"
+            echo "APPLE_APP_SPECIFIC_PASSWORD=$DRONE_APPLE_APP_SPECIFIC_PASSWORD"
+            echo "APPLE_TEAM_ID=$DRONE_APPLE_TEAM_ID"
+          } >> "$GITHUB_ENV"
+      - name: Prepare Windows signing credentials
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        env:
+          DRONE_WINDOWS_CERTIFICATE_BASE64: ${{ secrets.DRONE_WINDOWS_CERTIFICATE_BASE64 }}
+          DRONE_WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.DRONE_WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$DRONE_WINDOWS_CERTIFICATE_BASE64"
+          test -n "$DRONE_WINDOWS_CERTIFICATE_PASSWORD"
+          node -e 'require("node:fs").writeFileSync(process.env.RUNNER_TEMP + "/drone-windows-signing.pfx", Buffer.from(process.env.DRONE_WINDOWS_CERTIFICATE_BASE64, "base64"))'
+          {
+            echo "WIN_CSC_LINK=$RUNNER_TEMP/drone-windows-signing.pfx"
+            echo "WIN_CSC_KEY_PASSWORD=$DRONE_WINDOWS_CERTIFICATE_PASSWORD"
+          } >> "$GITHUB_ENV"
+      - name: Verify formal signing preflight
+        shell: bash
+        run: node scripts/check-release-signing.mjs --preflight --platform ${{ matrix.os == 'macos-latest' && 'mac' || 'windows' }}
       - name: Acquire pinned research skill packs
         shell: bash
         run: |
@@ -188,6 +233,22 @@ jobs:
           python scripts/sync-research-skills.py --sources nature scientific --check --for-release
           node scripts/check-research-packaging.cjs
       - run: npm run dist -w packages/desktop -- --publish never ${{ matrix.builder_args }}
+      - name: Verify notarized macOS artifact
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXTRACTED="$RUNNER_TEMP/drone-macos-app"
+          rm -rf "$EXTRACTED"
+          mkdir -p "$EXTRACTED"
+          ditto -x -k "packages/desktop/dist/${{ matrix.artifact_zip }}" "$EXTRACTED"
+          APP="$(find "$EXTRACTED" -type d -name '*.app' -print -quit)"
+          test -n "$APP"
+          node scripts/check-release-signing.mjs --verify --platform mac --app "$APP"
+      - name: Verify signed Windows artifact
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: node scripts/check-release-signing.mjs --verify --platform windows --artifact packages/desktop/dist/drone-windows-x64.exe
       - name: Verify bundled MCP runtime in packaged app
         run: node scripts/check-pi-packages.mjs --packaged packages/desktop/dist
       - name: Collect release assets

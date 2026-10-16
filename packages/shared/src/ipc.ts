@@ -9,6 +9,7 @@ import type { DiscoveryApi } from "./host-api/discovery";
 import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
+import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
@@ -106,6 +107,11 @@ export const IpcChannels = {
 	EvidenceExport: "evidence:exportEvidenceCapsule",
 	EvidenceImport: "evidence:importEvidenceCapsule",
 	EvidenceReplay: "evidence:replayEvidenceCheckpoint",
+	ResearchCapture: "research:captureResource",
+	ResearchApproveCapture: "research:approveCapture",
+	ResearchRevokeCapture: "research:revokeCapture",
+	ResearchListCaptures: "research:listCaptures",
+	ResearchSearch: "research:searchResources",
 	KnowledgeCloudStatus: "knowledge:cloudStatus",
 	KnowledgeCloudProbe: "knowledge:cloudProbe",
 	KnowledgeCloudInitialize: "knowledge:cloudInitialize",
@@ -407,7 +413,8 @@ export interface PiApi
 		DiscoveryApi,
 		DecisionsApi,
 		InquiryApi,
-		EvidenceApi {
+		EvidenceApi,
+		ResearchApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */

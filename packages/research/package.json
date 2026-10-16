@@ -37,7 +37,8 @@
 	},
 	"dependencies": {
 		"@drone/compute": "*",
-		"@drone/knowledge": "*"
+		"@drone/knowledge": "*",
+		"@drone/shared": "*"
 	},
 	"devDependencies": {
 		"@types/node": "^22.0.0",
