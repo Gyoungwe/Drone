@@ -40,7 +40,9 @@ export function normalizeProjectLink(
 	const normalizedHref = decoded.replaceAll("\\", "/");
 	if (/^(?:file:|[a-z]:[\\/]|\/)/i.test(normalizedHref)) return null;
 	const root = normalizeAbsolutePath(projectRoot).replace(/\/$/, "");
-	const target = normalizeAbsolutePath(`${filePreviewDirectory(currentFilePath)}/${normalizedHref}`);
+	const current = normalizeAbsolutePath(currentFilePath);
+	const base = current === root ? root : filePreviewDirectory(current);
+	const target = normalizeAbsolutePath(`${base}/${normalizedHref}`);
 	const comparisonRoot = /^[a-z]:/i.test(root) ? root.toLocaleLowerCase() : root;
 	const comparisonTarget = /^[a-z]:/i.test(target) ? target.toLocaleLowerCase() : target;
 	if (comparisonTarget !== comparisonRoot && !comparisonTarget.startsWith(`${comparisonRoot}/`)) return null;

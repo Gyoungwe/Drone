@@ -13,6 +13,7 @@ describe("research browser path filtering", () => {
 		expect(normalizeProjectLink("../data/result.csv", "/project/docs/readme.md", "/project")).toBe(
 			"data/result.csv",
 		);
+		expect(normalizeProjectLink("data/result.csv", "/project", "/project")).toBe("data/result.csv");
 		expect(normalizeProjectLink("../../.env", "/project/docs/readme.md", "/project")).toBeNull();
 	});
 });
