@@ -99,7 +99,10 @@ export class ResearchWriteService {
 \t\t}
 \t\tawait this.options.store.update((next) => {
 \t\t\tconst found = next.plans.find((item) => item.id === plan.id);
-\t\t\tif (found) found.status = "revoked";
+\t\t\tif (found) {
+					const index = next.plans.indexOf(found);
+					next.plans[index] = { ...found, status: "revoked" };
+				}
 \t\t\tnext.audit.push({
 \t\t\t\tid: auditId(plan.id, receipt.status),
 \t\t\t\tplanId: plan.id,
