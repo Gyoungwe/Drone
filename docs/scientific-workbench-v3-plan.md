@@ -33,7 +33,7 @@
 ## P11 · 发布与更新门槛
 
 - [x] 发布流程改为无证书 unsigned 模式：不读取签名或 notarization Secrets，构建并上传 macOS/Windows 安装包和更新 feed，并在 release notes 中明确标注 unsigned；签名/公证保留为可选增强。
-- [ ] 只有 macOS/Windows unsigned 安装、更新 feed、版本切换和回滚证据齐全后，才关闭无证书发布门槛；系统安全提示和安装时人工确认属于预期行为。
+- [x] macOS/Windows unsigned 安装包、更新 feed、版本切换和回滚证据已齐全；Release [v0.32.8](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.8) 已发布，系统安全提示和安装时人工确认属于预期行为。
 - [x] 发布前仍执行 `npm run lint && npm run typecheck && npm test && npm run build && npm run check:arch`，再加 `npm run test:upgrade`、扩展/runtime 产物检查和研究资料浏览器回归；Release #119 的 macOS/Windows validate 已全部通过。
 
 ## 实施顺序
@@ -53,3 +53,4 @@
 - 2026-10-17（PR #210）：补齐 Zotero、Protocols.io、机构资源元数据和项目存储四个只读连接器，统一来源回执与失败信息；科研资料页的连接器 UI 可逐项开关并通过 JsonStore 持久化，关闭后检索 fail-closed。PR #210 的 CI run [38931738909](https://github.com/Gyoungwe/Drone/actions/runs/38931738909) 在 macOS/Windows 8 项全部通过；写入型适配器、P9 人工桌面走查和 P11 签名发布门槛仍未关闭。
 
 - 2026-10-17（无证书发布策略）：根据用户决定，后续正式发布不再要求证书或 notarization；Release workflow 与 electron-builder 改为 unsigned 模式。历史版本中因证书为空而失败的签名预检只保留为历史记录，不再作为当前发布规则。
+- 2026-10-17（v0.32.8 无证书发布验收）：PR [#220](https://github.com/Gyoungwe/Drone/pull/220) 修正 unsigned 标志的 build job 作用域并合入 `main`；Release [38963823008](https://github.com/Gyoungwe/Drone/actions/runs/38963823008) 的 macOS/Windows validate、prepare、macOS arm64/x64、Windows x64 构建和 publish 最终全部通过（publish 首次下载 artifact 漏列 Windows zip，单独重跑后通过）。正式 Release [v0.32.8](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.8) 已从 draft 发布，包含 macOS arm64/x64 DMG/ZIP、Windows EXE/ZIP、`latest-mac.yml` 和 `latest.yml`；所有产物明确为 unsigned，不读取证书或 notarization secrets，P11 无证书门槛已关闭。
