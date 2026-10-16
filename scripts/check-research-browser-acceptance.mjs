@@ -46,7 +46,7 @@ async function main() {
     await mkdir(longDir, { recursive: true });
     await mkdir(join(root, "目录"), { recursive: true });
     await writeFile(join(chineseDir, "报告.md"), "# 脱敏报告\n");
-    await writeFile(join(longDir, `长文件名-${"z".repeat(120)}.csv`, "sample,value\nA,1\n");
+    await writeFile(join(longDir, `长文件名-${"z".repeat(120)}.csv`), "sample,value\nA,1\n");
     await writeFile(join(root, "数据.csv"), "sample,value\nA,1\n");
     await writeFile(join(root, "图像.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"4\" height=\"4\"/></svg>\n");
     await writeFile(join(root, "报告.pdf"), "%PDF-1.4\n");
