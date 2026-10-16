@@ -7,6 +7,14 @@ export type ResearchConnectorKind =
 	| "institutional"
 	| "project-storage";
 
+/** User-visible connector metadata and its persisted search availability. */
+export interface ResearchConnectorDescriptor {
+	readonly id: string;
+	readonly kind: ResearchConnectorKind;
+	readonly label: string;
+	readonly enabled: boolean;
+}
+
 export interface ResearchConnectorSourceReceipt {
 	readonly sourceRef: string;
 	readonly locator?: string;

@@ -7,7 +7,7 @@ import {
   revokeEvolutionCandidate,
   revokeKnowledgeReuse,
   supersedeEvolutionCandidate
-} from "./chunk-SRDFC2QO.mjs";
+} from "./chunk-2W6HVJK4.mjs";
 
 // packages/knowledge/src/evolution.ts
 var EvolutionIndex = class {

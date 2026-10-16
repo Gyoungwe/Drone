@@ -10969,7 +10969,8 @@ var Input = typebox_exports.Object(
   {
     cwd: typebox_exports.String({ minLength: 1, maxLength: 4096 }),
     relativePath: typebox_exports.String({ minLength: 1, maxLength: 4096 }),
-    scope: typebox_exports.Optional(typebox_exports.Union([typebox_exports.Literal("project"), typebox_exports.Literal("workspace")]))
+    scope: typebox_exports.Optional(typebox_exports.Union([typebox_exports.Literal("project"), typebox_exports.Literal("workspace")])),
+    expiresAt: typebox_exports.Optional(typebox_exports.String({ minLength: 20, maxLength: 64 }))
   },
   { additionalProperties: false }
 );
@@ -10998,13 +10999,28 @@ var SearchResult = typebox_exports.Object({
   connectors: typebox_exports.Array(typebox_exports.String()),
   complete: typebox_exports.Boolean()
 });
+var ConnectorListResult = typebox_exports.Object({
+  connectors: typebox_exports.Array(typebox_exports.Unsafe({ type: "object" }))
+});
+var ConnectorToggleInput = typebox_exports.Object(
+  {
+    id: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+    enabled: typebox_exports.Boolean()
+  },
+  { additionalProperties: false }
+);
 var ResearchContract = defineDomain("research", {
   methods: {
     captureResource: { args: typebox_exports.Tuple([Input]), result: Result() },
     approveCapture: { args: typebox_exports.Tuple([IdInput]), result: Result() },
     revokeCapture: { args: typebox_exports.Tuple([IdInput]), result: Result() },
     listCaptures: { args: typebox_exports.Union([typebox_exports.Tuple([]), typebox_exports.Tuple([ListInput])]), result: ListResult },
-    searchResources: { args: typebox_exports.Tuple([SearchInput]), result: SearchResult }
+    searchResources: { args: typebox_exports.Tuple([SearchInput]), result: SearchResult },
+    listConnectors: { args: typebox_exports.Tuple([]), result: ConnectorListResult },
+    setConnectorEnabled: {
+      args: typebox_exports.Tuple([ConnectorToggleInput]),
+      result: Result()
+    }
   },
   events: {}
 });

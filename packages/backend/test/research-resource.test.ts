@@ -2,6 +2,7 @@ import { mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkKnowledgeSnapshotReuse } from "@drone/knowledge";
+import { type ResearchConnector, ResearchConnectorRegistry } from "@drone/research";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";
 import {
@@ -90,5 +91,102 @@ describe("ResearchResourceService", () => {
 		expect(workspace.idempotent).toBe(false);
 		expect(workspace.record.id).not.toBe(project.record.id);
 		expect(workspace.record.scope).toBe("workspace");
+	});
+
+	it("blocks an approved capture after its source freshness expires", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-project-"));
+		await writeFile(join(root, "notes.md"), "A time-bounded note", "utf8");
+		const research = await service();
+		const captured = await research.capture({
+			cwd: root,
+			relativePath: "notes.md",
+			expiresAt: "2026-10-15T23:59:59.000Z",
+		});
+		const approved = await research.approve(captured.record.id);
+		const expired = checkKnowledgeSnapshotReuse(approved.snapshot, {
+			context: { projectId: approved.snapshot.projectId!, workspaceId: approved.snapshot.workspaceId! },
+			now: "2026-10-16T00:00:00.000Z",
+		});
+		expect(expired.reusable).toBe(false);
+		expect(expired.status).toBe("stale");
+		expect(expired.reasons).toContain("one or more source receipts are stale");
+
+		const revoked = await research.revoke(approved.id);
+		const revokedDecision = checkKnowledgeSnapshotReuse(revoked.snapshot, {
+			context: { projectId: revoked.snapshot.projectId!, workspaceId: revoked.snapshot.workspaceId! },
+			now: "2026-10-16T00:00:00.000Z",
+		});
+		expect(revokedDecision.reusable).toBe(false);
+		expect(revokedDecision.status).toBe("revoked");
+	});
+
+	it("refreshes an unchanged file after its receipt expires", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-project-"));
+		await writeFile(join(root, "notes.md"), "A time-bounded note", "utf8");
+		const research = await service();
+		const first = await research.capture({
+			cwd: root,
+			relativePath: "notes.md",
+			expiresAt: "2026-10-15T23:59:59.000Z",
+		});
+		const duplicate = await research.capture({
+			cwd: root,
+			relativePath: "notes.md",
+			expiresAt: "2026-10-17T23:59:59.000Z",
+		});
+		expect(duplicate.idempotent).toBe(false);
+		expect(duplicate.record.id).toBe(first.record.id);
+		expect(duplicate.record.revision).toBe(first.record.revision + 1);
+		expect(duplicate.record.approval).toBe("pending");
+		expect(duplicate.record.sourceReceipt.freshness?.expiresAt).toBe("2026-10-17T23:59:59.000Z");
+		expect((await research.list()).map((item) => item.id)).toEqual([first.record.id]);
+	});
+
+	it("persists connector toggles and blocks disabled searches", async () => {
+		const state = await mkdtemp(join(tmpdir(), "drone-research-connectors-"));
+		let calls = 0;
+		const connector: ResearchConnector = {
+			id: "fixture",
+			kind: "dataset",
+			label: "Fixture dataset",
+			search: async () => {
+				calls += 1;
+				return [];
+			},
+		};
+		const registry = new ResearchConnectorRegistry([connector]);
+		const settings = new JsonStore({
+			path: join(state, "connectors.json"),
+			storageId: "test-research-connectors",
+			defaultValue: () => ({ version: 1 as const, disabled: [] }),
+		});
+		const first = new ResearchResourceService({
+			store: new JsonStore({
+				path: join(state, "captures-a.json"),
+				storageId: "test-research-captures-a",
+				defaultValue: emptyCaptureLedger,
+			}),
+			connectors: registry,
+			connectorSettings: settings,
+		});
+		expect((await first.listConnectors())[0]).toMatchObject({ id: "fixture", enabled: true });
+		expect(await first.setConnectorEnabled("fixture", false)).toMatchObject({ enabled: false });
+
+		const second = new ResearchResourceService({
+			store: new JsonStore({
+				path: join(state, "captures-b.json"),
+				storageId: "test-research-captures-b",
+				defaultValue: emptyCaptureLedger,
+			}),
+			connectors: registry,
+			connectorSettings: settings,
+		});
+		expect((await second.listConnectors())[0]).toMatchObject({ id: "fixture", enabled: false });
+		const result = await second.search({ query: "dataset", connectorIds: ["fixture"] });
+		expect(result.complete).toBe(false);
+		expect(result.failures).toEqual([
+			expect.objectContaining({ connectorId: "fixture", message: "Research connector is disabled" }),
+		]);
+		expect(calls).toBe(0);
 	});
 });

@@ -1,6 +1,10 @@
 import { Type } from "typebox";
 import type { ResearchCaptureRecord, ResearchCaptureResult } from "../research-capture";
-import type { ResearchConnectorFailure, ResearchConnectorHit } from "../research-connectors";
+import type {
+	ResearchConnectorDescriptor,
+	ResearchConnectorFailure,
+	ResearchConnectorHit,
+} from "../research-connectors";
 import { defineDomain } from "./define";
 
 const Input = Type.Object(
@@ -8,6 +12,7 @@ const Input = Type.Object(
 		cwd: Type.String({ minLength: 1, maxLength: 4096 }),
 		relativePath: Type.String({ minLength: 1, maxLength: 4096 }),
 		scope: Type.Optional(Type.Union([Type.Literal("project"), Type.Literal("workspace")])),
+		expiresAt: Type.Optional(Type.String({ minLength: 20, maxLength: 64 })),
 	},
 	{ additionalProperties: false },
 );
@@ -37,6 +42,16 @@ const SearchResult = Type.Object({
 	connectors: Type.Array(Type.String()),
 	complete: Type.Boolean(),
 });
+const ConnectorListResult = Type.Object({
+	connectors: Type.Array(Type.Unsafe<ResearchConnectorDescriptor>({ type: "object" })),
+});
+const ConnectorToggleInput = Type.Object(
+	{
+		id: Type.String({ minLength: 1, maxLength: 64 }),
+		enabled: Type.Boolean(),
+	},
+	{ additionalProperties: false },
+);
 
 /** Host boundary for provenance-aware, read-only research capture and search. */
 export const ResearchContract = defineDomain("research", {
@@ -46,6 +61,11 @@ export const ResearchContract = defineDomain("research", {
 		revokeCapture: { args: Type.Tuple([IdInput]), result: Result<ResearchCaptureRecord>() },
 		listCaptures: { args: Type.Union([Type.Tuple([]), Type.Tuple([ListInput])]), result: ListResult },
 		searchResources: { args: Type.Tuple([SearchInput]), result: SearchResult },
+		listConnectors: { args: Type.Tuple([]), result: ConnectorListResult },
+		setConnectorEnabled: {
+			args: Type.Tuple([ConnectorToggleInput]),
+			result: Result<ResearchConnectorDescriptor>(),
+		},
 	},
 	events: {},
 });

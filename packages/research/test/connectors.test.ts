@@ -163,4 +163,23 @@ describe("research connectors", () => {
 		await new ResearchConnectorRegistry([connector]).search({ query: "x", limit: 50 });
 		expect(receivedLimit).toBe(50);
 	});
+
+	it("treats an explicit empty connector list as no-op", async () => {
+		let calls = 0;
+		const connector: ResearchConnector = {
+			id: "test-empty",
+			kind: "dataset",
+			label: "Empty",
+			search: async () => {
+				calls += 1;
+				return [];
+			},
+		};
+		const result = await new ResearchConnectorRegistry([connector]).search({ query: "x", connectorIds: [] });
+		expect(result.connectors).toEqual([]);
+		expect(result.hits).toEqual([]);
+		expect(result.failures).toEqual([]);
+		expect(result.complete).toBe(true);
+		expect(calls).toBe(0);
+	});
 });

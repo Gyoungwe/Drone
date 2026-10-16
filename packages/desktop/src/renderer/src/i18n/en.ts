@@ -635,6 +635,11 @@ export const en: Messages = {
 		openExternal: "Open externally",
 		capture: "Capture to knowledge",
 		approveCapture: "Approve capture",
+		connectors: "Research connectors",
+		connectorsHint: "Disabled connectors are skipped during research search",
+		connectorsLoading: "Loading connectors…",
+		connectorsEmpty: "No connectors are available",
+		connectorToggle: "Toggle connector: {name}",
 		captureState: {
 			pending: "Pending approval",
 			approved: "Captured",

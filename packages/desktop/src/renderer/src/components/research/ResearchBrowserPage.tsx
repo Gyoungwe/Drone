@@ -1,4 +1,8 @@
-import type { ResearchCaptureRecord, ResourcePreviewResult } from "@drone/shared";
+import type {
+	ResearchCaptureRecord,
+	ResearchConnectorDescriptor,
+	ResourcePreviewResult,
+} from "@drone/shared";
 import { isLocalResourceTarget, resourceFormat, splitResourceLink } from "@drone/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
@@ -39,6 +43,9 @@ export function ResearchBrowserPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
 	const [captures, setCaptures] = useState<ResearchCaptureRecord[]>([]);
+	const [connectors, setConnectors] = useState<ResearchConnectorDescriptor[]>([]);
+	const [connectorsLoading, setConnectorsLoading] = useState(false);
+	const [connectorSaving, setConnectorSaving] = useState<string | null>(null);
 	const refreshGeneration = useRef(0);
 
 	const refresh = useCallback(async () => {
@@ -71,6 +78,25 @@ export function ResearchBrowserPage() {
 	}, [cwd]);
 
 	useEffect(() => {
+		let cancelled = false;
+		setConnectorsLoading(true);
+		void getPi()
+			.listConnectors()
+			.then((next) => {
+				if (!cancelled) setConnectors([...next.connectors]);
+			})
+			.catch((cause) => {
+				if (!cancelled) setActionError(cause instanceof Error ? cause.message : String(cause));
+			})
+			.finally(() => {
+				if (!cancelled) setConnectorsLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	useEffect(() => {
 		if (!cwd) {
 			setCaptures([]);
 			return;
@@ -88,6 +114,19 @@ export function ResearchBrowserPage() {
 			cancelled = true;
 		};
 	}, [cwd]);
+
+	const toggleConnector = async (connector: ResearchConnectorDescriptor) => {
+		setConnectorSaving(connector.id);
+		setActionError(null);
+		try {
+			const next = await getPi().setConnectorEnabled({ id: connector.id, enabled: !connector.enabled });
+			setConnectors((current) => current.map((item) => (item.id === next.id ? next : item)));
+		} catch (cause) {
+			setActionError(cause instanceof Error ? cause.message : String(cause));
+		} finally {
+			setConnectorSaving(null);
+		}
+	};
 
 	useEffect(() => {
 		void refresh();
@@ -210,6 +249,40 @@ export function ResearchBrowserPage() {
 			</header>
 			<div className="research-browser-body">
 				<aside className="research-browser-files" aria-label={t("researchBrowser.fileList")}>
+					<section className="research-browser-connectors" aria-label={t("researchBrowser.connectors")}>
+						<div className="research-browser-connectors-head">
+							<strong>{t("researchBrowser.connectors")}</strong>
+							<span>
+								{connectors.filter((connector) => connector.enabled).length}/{connectors.length}
+							</span>
+						</div>
+						<p className="research-browser-connectors-hint">{t("researchBrowser.connectorsHint")}</p>
+						{connectorsLoading ? (
+							<p className="research-browser-connectors-empty">{t("researchBrowser.connectorsLoading")}</p>
+						) : connectors.length === 0 ? (
+							<p className="research-browser-connectors-empty">{t("researchBrowser.connectorsEmpty")}</p>
+						) : (
+							<ul className="research-browser-connectors-list">
+								{connectors.map((connector) => (
+									<li key={connector.id}>
+										<label className="research-browser-connector">
+											<input
+												type="checkbox"
+												checked={connector.enabled}
+												disabled={connectorSaving === connector.id}
+												aria-label={t("researchBrowser.connectorToggle", { name: connector.label })}
+												onChange={() => void toggleConnector(connector)}
+											/>
+											<span className="research-browser-connector-copy">
+												<strong>{connector.label}</strong>
+												<small>{connector.kind}</small>
+											</span>
+										</label>
+									</li>
+								))}
+							</ul>
+						)}
+					</section>
 					<label className="research-browser-search">
 						<SearchIcon size={14} />
 						<input

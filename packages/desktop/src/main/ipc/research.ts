@@ -19,6 +19,8 @@ export function registerResearchIpc(backend: BackendServices): void {
 				connectors: [...result.connectors],
 			};
 		},
+		listConnectors: async () => ({ connectors: [...(await backend.research.listConnectors())] }),
+		setConnectorEnabled: (input) => backend.research.setConnectorEnabled(input.id, input.enabled),
 	};
 	bindContract(ResearchContract, implementation, {
 		channelForMethod: (_contract, method) =>
@@ -28,6 +30,8 @@ export function registerResearchIpc(backend: BackendServices): void {
 				revokeCapture: IpcChannels.ResearchRevokeCapture,
 				listCaptures: IpcChannels.ResearchListCaptures,
 				searchResources: IpcChannels.ResearchSearch,
+				listConnectors: IpcChannels.ResearchListConnectors,
+				setConnectorEnabled: IpcChannels.ResearchSetConnectorEnabled,
 			})[method as keyof typeof ResearchContract.methods],
 		beforeInvoke: (event) => {
 			const invokeEvent = event as {

@@ -270,6 +270,8 @@ export { ProjectTrustService } from "./services/project-trust";
 export {
 	type CaptureLedger,
 	emptyCaptureLedger,
+	emptyResearchConnectorSettings,
+	type ResearchConnectorSettings,
 	ResearchResourceService,
 	type ResearchResourceServiceOptions,
 } from "./services/research-resource";
