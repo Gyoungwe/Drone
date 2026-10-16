@@ -7,6 +7,7 @@ import type {
 	ResearchSearchRequest,
 	ResearchSearchResponse,
 } from "@drone/shared";
+import { normalizeDoi } from "./literature-receipt";
 
 export interface ResearchConnectorContext {
 	readonly fetchImpl?: typeof fetch;
@@ -129,6 +130,81 @@ export function createCrossrefConnector(): ResearchConnector {
 					} satisfies ResearchConnectorHit,
 				];
 			});
+		},
+	};
+}
+
+/** OpenAlex provides a public, provider-neutral literature index without credentials. */
+export function createOpenAlexConnector(): ResearchConnector {
+	return {
+		id: "openalex",
+		kind: "literature",
+		label: "OpenAlex",
+		async search(query, options = {}) {
+			const limit = clampLimit(options.limit);
+			const url = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&per-page=${limit}`;
+			const { value } = await fetchJson(url, options);
+			const items = Array.isArray(value?.results) ? value.results : [];
+			return items.slice(0, limit).flatMap((item: any) => {
+				const id = text(item?.id).split("/").pop();
+				const title = text(item?.title);
+				if (!id || !title) return [];
+				const doi = normalizeDoi(item?.doi);
+				const locator = doi ? `https://doi.org/${doi}` : text(item?.id);
+				return [
+					{
+						id: `openalex:${id}`,
+						title,
+						summary:
+							text(item?.primary_location?.source?.display_name) ||
+							text(item?.publication_year) ||
+							"OpenAlex work record",
+						locator,
+						sourceType: "literature",
+						sourceReceipt: receipt({
+							sourceRef: `openalex:${id}`,
+							locator,
+							kind: "literature",
+							title,
+							payload: item,
+						}),
+					} satisfies ResearchConnectorHit,
+				];
+			});
+		},
+	};
+}
+
+/** Resolve an exact DOI through Crossref; non-DOI queries intentionally return no hits. */
+export function createDoiConnector(): ResearchConnector {
+	return {
+		id: "doi",
+		kind: "citation",
+		label: "DOI",
+		async search(query, options = {}) {
+			const doi = normalizeDoi(query);
+			if (!doi) return [];
+			const { value } = await fetchJson(`https://api.crossref.org/works/${encodeURIComponent(doi)}`, options);
+			const item = value?.message;
+			const title = text(item?.title?.[0]);
+			if (!title) return [];
+			const locator = `https://doi.org/${doi}`;
+			return [
+				{
+					id: `doi:${doi}`,
+					title,
+					summary: text(item?.abstract) || text(item?.["container-title"]?.[0]) || "DOI record",
+					locator,
+					sourceType: "citation",
+					sourceReceipt: receipt({
+						sourceRef: `doi:${doi}`,
+						locator,
+						kind: "citation",
+						title,
+						payload: item,
+					}),
+				} satisfies ResearchConnectorHit,
+			];
 		},
 	};
 }
@@ -318,10 +394,53 @@ export function createSraConnector(): ResearchConnector {
 	};
 }
 
+/** ENA Portal search exposes public accession metadata and does not acquire reads. */
+export function createEnaConnector(): ResearchConnector {
+	return {
+		id: "ena",
+		kind: "dataset",
+		label: "ENA",
+		async search(query, options = {}) {
+			const limit = clampLimit(options.limit);
+			const fields = "accession,study_accession,description,study_title";
+			const url =
+				`https://www.ebi.ac.uk/ena/portal/api/search?result=read_run&query=${encodeURIComponent(query)}` +
+				`&format=json&limit=${limit}&fields=${fields}`;
+			const { value } = await fetchJson(url, options);
+			const items = Array.isArray(value) ? value : [];
+			return items.slice(0, limit).flatMap((item: any) => {
+				const id = text(item?.accession);
+				if (!id) return [];
+				const title = text(item?.study_title) || `ENA run ${id}`;
+				const locator = `https://www.ebi.ac.uk/ena/browser/view/${id}`;
+				return [
+					{
+						id: `ena:${id}`,
+						title,
+						summary: text(item?.description) || text(item?.study_accession) || "ENA read-run record",
+						locator,
+						sourceType: "dataset",
+						sourceReceipt: receipt({
+							sourceRef: `ena:${id}`,
+							locator,
+							kind: "dataset",
+							title,
+							payload: item,
+						}),
+					} satisfies ResearchConnectorHit,
+				];
+			});
+		},
+	};
+}
+
 export function createDefaultResearchConnectors(): readonly ResearchConnector[] {
 	return [
 		createCrossrefConnector(),
+		createDoiConnector(),
 		createEuropePmcConnector(),
+		createEnaConnector(),
+		createOpenAlexConnector(),
 		createPubmedConnector(),
 		createZenodoConnector(),
 		createOsfConnector(),
