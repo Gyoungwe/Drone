@@ -9145,6 +9145,36 @@ var ComputeUsageSchema = typebox_exports.Object(
   },
   { additionalProperties: false }
 );
+var ComputeJobProcessSchema = typebox_exports.Object(
+  {
+    name: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+    label: typebox_exports.Optional(typebox_exports.String({ maxLength: 160 })),
+    total: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    completed: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    running: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    queued: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    failed: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    cached: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 }))
+  },
+  { additionalProperties: false }
+);
+var ComputeJobProgressSchema = typebox_exports.Object(
+  {
+    stage: typebox_exports.Optional(typebox_exports.String({ maxLength: 160 })),
+    completedTasks: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    totalTasks: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    runningTasks: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    queuedTasks: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    failedTasks: typebox_exports.Optional(typebox_exports.Integer({ minimum: 0 })),
+    processes: typebox_exports.Array(ComputeJobProcessSchema, { maxItems: 512 }),
+    tracePath: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+    timelinePath: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+    reportPath: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+    multiqcPath: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+    failureReason: typebox_exports.Optional(typebox_exports.String({ maxLength: 1e3 }))
+  },
+  { additionalProperties: false }
+);
 var ComputeJobSchema = typebox_exports.Object(
   {
     id: ComputeIdSchema,
@@ -9172,6 +9202,7 @@ var ComputeJobSchema = typebox_exports.Object(
       { additionalProperties: false }
     ),
     publicSummary: typebox_exports.Optional(typebox_exports.String({ maxLength: 1e3 })),
+    progress: typebox_exports.Optional(ComputeJobProgressSchema),
     artifacts: typebox_exports.Array(
       typebox_exports.Object(
         {
@@ -9944,6 +9975,8 @@ var AppContract = defineDomain("app", {
     checkForUpdates: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     downloadUpdate: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     installUpdate: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
+    updateResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
+    restartForResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     saveFileDialog: {
       args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()]),
       result: NullableString
@@ -10042,8 +10075,7 @@ var ComputeContract = defineDomain("compute", {
     getHealthSnapshot: { args: EmptyArgs, result: HealthSnapshotSchema },
     listJobs: {
       args: typebox_exports.Tuple([typebox_exports.Optional(JobFilterSchema)]),
-      result: typebox_exports.Array(ComputeJobSchema, { maxItems: 100 }),
-      access: "lan-read"
+      result: typebox_exports.Array(ComputeJobSchema, { maxItems: 100 })
     },
     getJob: { args: IdArgs, result: typebox_exports.Union([ComputeJobSchema, typebox_exports.Null()]) },
     submitJob: { args: typebox_exports.Tuple([ComputeJobInputSchema]), result: ComputeJobSchema },
@@ -10077,37 +10109,31 @@ var IdArgs2 = typebox_exports.Tuple([typebox_exports.String({ minLength: 1, maxL
 var LanguageArgs = typebox_exports.Tuple([DiscoveryKernelLanguageSchema]);
 var DiscoveryContract = defineDomain("discovery", {
   methods: {
-    getCapabilities: { args: LanguageArgs, result: DiscoveryCapabilitiesSchema, access: "lan-read" },
+    getCapabilities: { args: LanguageArgs, result: DiscoveryCapabilitiesSchema },
     listKernelSessions: {
       args: EmptyArgs2,
-      result: typebox_exports.Array(DiscoveryKernelSessionSchema, { maxItems: 256 }),
-      access: "lan-read"
+      result: typebox_exports.Array(DiscoveryKernelSessionSchema, { maxItems: 256 })
     },
     getKernelSession: {
       args: IdArgs2,
-      result: typebox_exports.Union([DiscoveryKernelSessionSchema, typebox_exports.Null()]),
-      access: "lan-read"
+      result: typebox_exports.Union([DiscoveryKernelSessionSchema, typebox_exports.Null()])
     },
     closeKernelSession: { args: IdArgs2, result: typebox_exports.Void() },
     listCriticReviews: {
       args: EmptyArgs2,
-      result: typebox_exports.Array(DiscoveryCriticReviewSchema, { maxItems: 256 }),
-      access: "lan-read"
+      result: typebox_exports.Array(DiscoveryCriticReviewSchema, { maxItems: 256 })
     },
     listMultipathAssessments: {
       args: EmptyArgs2,
-      result: typebox_exports.Array(DiscoveryMultipathAssessmentSchema, { maxItems: 256 }),
-      access: "lan-read"
+      result: typebox_exports.Array(DiscoveryMultipathAssessmentSchema, { maxItems: 256 })
     },
     listExplorationPlans: {
       args: EmptyArgs2,
-      result: typebox_exports.Array(DiscoveryExplorationPlanSchema, { maxItems: 256 }),
-      access: "lan-read"
+      result: typebox_exports.Array(DiscoveryExplorationPlanSchema, { maxItems: 256 })
     },
     listEvaluations: {
       args: EmptyArgs2,
-      result: typebox_exports.Array(DiscoveryEvaluationSchema, { maxItems: 256 }),
-      access: "lan-read"
+      result: typebox_exports.Array(DiscoveryEvaluationSchema, { maxItems: 256 })
     }
   },
   events: {}
@@ -10266,11 +10292,10 @@ var UiErrorSchema = typebox_exports.Object(
 );
 var InquiryContract = defineDomain("inquiry", {
   methods: {
-    listArtifacts: { args: ProjectArgs, result: ArrayResult(), access: "lan-read" },
+    listArtifacts: { args: ProjectArgs, result: ArrayResult() },
     artifactProvenance: {
       args: ArtifactIdArgs,
-      result: typebox_exports.Union([ObjectResult(), UiErrorSchema]),
-      access: "lan-read"
+      result: typebox_exports.Union([ObjectResult(), UiErrorSchema])
     },
     rerunArtifact: {
       args: ArtifactIdArgs,
@@ -10624,38 +10649,6 @@ var KnowledgeContract = defineDomain("knowledge", {
   },
   events: {
     event: ObjectPayload()
-  }
-});
-
-// packages/shared/src/host-api/lan.ts
-var LanStatusSchema = typebox_exports.Object(
-  {
-    enabled: typebox_exports.Boolean(),
-    port: typebox_exports.Union([typebox_exports.Integer({ minimum: 1 }), typebox_exports.Null()]),
-    urls: typebox_exports.Array(typebox_exports.String()),
-    qrDataUrl: typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]),
-    clients: typebox_exports.Integer({ minimum: 0 }),
-    remoteControl: typebox_exports.Boolean()
-  },
-  { additionalProperties: false }
-);
-var LanContract = defineDomain("lan", {
-  methods: {
-    getStatus: {
-      args: typebox_exports.Tuple([]),
-      result: typebox_exports.Unsafe(LanStatusSchema),
-      access: "lan-read"
-    },
-    setEnabled: {
-      args: typebox_exports.Tuple([typebox_exports.Boolean()]),
-      result: typebox_exports.Unsafe(LanStatusSchema),
-      access: "desktop"
-    },
-    setRemoteControl: {
-      args: typebox_exports.Tuple([typebox_exports.Boolean()]),
-      result: typebox_exports.Unsafe(LanStatusSchema),
-      access: "desktop"
-    }
   }
 });
 
