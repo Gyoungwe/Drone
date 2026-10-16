@@ -224,6 +224,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
+			id: "agent-research-connectors",
+			path: `${agentDir}/research/connectors.json`,
+			owner: "research/connector-settings",
+			schema: 1,
+			sensitivity: "config",
+		})
+		.register({
 			id: "agent-model-prefs",
 			path: `${agentDir}/model-prefs.json`,
 			owner: "settings/model-prefs",
