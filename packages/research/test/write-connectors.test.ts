@@ -42,7 +42,11 @@ describe("research write adapters", () => {
 		});
 		await expect(adapter.execute(plan, { approved: false })).rejects.toThrow("approval");
 		const receipt = await adapter.execute(plan, { approved: true });
-		expect(receipt).toMatchObject({ status: "executed", readBack: "verified", externalRef: "library:123/ITEM1" });
+		expect(receipt).toMatchObject({
+			status: "executed",
+			readBack: "verified",
+			externalRef: "library:123/ITEM1",
+		});
 		expect(writes).toBe(1);
 	});
 
