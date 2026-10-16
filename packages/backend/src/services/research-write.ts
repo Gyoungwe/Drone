@@ -100,9 +100,9 @@ export class ResearchWriteService {
 		await this.options.store.update((next) => {
 			const found = next.plans.find((item) => item.id === plan.id);
 			if (found) {
-					const index = next.plans.indexOf(found);
-					next.plans[index] = { ...found, status: "revoked" };
-				}
+				const index = next.plans.indexOf(found);
+				next.plans[index] = { ...found, status: "revoked" };
+			}
 			next.audit.push({
 				id: auditId(plan.id, receipt.status),
 				planId: plan.id,
