@@ -158,7 +158,10 @@ export class ResearchResourceService {
 			readAt: capturedAt,
 			accessedAt: capturedAt,
 			evidenceGrade: "contextual",
-			freshness: { checkedAt: capturedAt },
+			freshness: {
+				checkedAt: capturedAt,
+				...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
+			},
 		};
 		const snapshot = ingestKnowledgeSnapshot({
 			id: `knowledge-${key.slice(0, 24)}`,
