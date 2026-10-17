@@ -132,6 +132,7 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 				}
 				created = true;
 				creationEtag = put.headers.get("etag");
+				if (!creationEtag) throw new Error("WebDAV PUT response missing ETag");
 				const read = await request("GET");
 				const body = read.body.toString("utf8");
 				let readPayload: unknown;
@@ -147,11 +148,13 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 					typeof readPayload.title === "string"
 						? readPayload.title
 						: undefined;
-				creationEtag = read.headers.get("etag") ?? creationEtag;
+				const readEtag = read.headers.get("etag");
+				if (readEtag !== creationEtag) {
+					throw new Error("WebDAV readback ETag changed");
+				}
 				if (read.status < 200 || read.status >= 300 || readTitle !== payload.title) {
 					throw new Error(`WebDAV readback failed (${read.status})`);
 				}
-				if (!creationEtag) throw new Error("WebDAV readback missing ETag");
 				await deleteRemote(creationEtag);
 				const missing = await request("GET");
 				return {
