@@ -1,0 +1,312 @@
+{
+  "version": 1,
+  "description": "Static migration map for first-party tools registered through the native Pi registerTool surface.",
+  "tools": {
+    "channel_list": {
+      "source": "packages/backend/src/tools/channel-watch/tools.ts",
+      "registration": "dynamic-registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-core"
+    },
+    "channel_post": {
+      "source": "packages/backend/src/tools/channel-watch/tools.ts",
+      "registration": "dynamic-registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-core"
+    },
+    "channel_subscribe": {
+      "source": "packages/backend/src/tools/channel-watch/tools.ts",
+      "registration": "dynamic-registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-core"
+    },
+    "channel_unsubscribe": {
+      "source": "packages/backend/src/tools/channel-watch/tools.ts",
+      "registration": "dynamic-registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-core"
+    },
+    "research_archive_explainer": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_archive_source": {
+      "source": "packages/extensions/src/source-archive.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_archive_topic": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_check_answer": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_create_project": {
+      "source": "packages/extensions/src/obsidian-workbench.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_delegate_knowledge": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_deposit_knowledge": {
+      "source": "packages/extensions/src/obsidian-workbench.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_init_vault": {
+      "source": "packages/extensions/src/workspace-config.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_institutional_login": {
+      "source": "packages/extensions/src/institutional-access.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_institutional_status": {
+      "source": "packages/extensions/src/institutional-access.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_knowledge_status": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_loop": {
+      "source": "packages/extensions/src/research-loop.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_maintain_knowledge": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_methods": {
+      "source": "packages/extensions/src/source-archive.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_prepare_knowledge": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_propose_wiki_update": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_read_knowledge": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_reconcile_literature": {
+      "source": "packages/extensions/src/source-archive.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_record_run_manifest": {
+      "source": "packages/extensions/src/source-archive.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_restore_evidence": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_resume_topic": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_search_explainers": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_search_knowledge": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_setup_obsidian": {
+      "source": "packages/extensions/src/obsidian-workbench.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_setup_options": {
+      "source": "packages/extensions/src/obsidian-workbench.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_setup_zotero": {
+      "source": "packages/extensions/src/zotero-literature.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_source_status": {
+      "source": "packages/extensions/src/source-archive.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_subagent_policy": {
+      "source": "packages/extensions/src/subagent-research.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_summarize_run": {
+      "source": "packages/extensions/src/workspace-config.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_task_status": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_topics": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_update_topic": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_verify_literature": {
+      "source": "packages/extensions/src/source-archive.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_wiki_review_status": {
+      "source": "packages/extensions/src/internal/knowledge-extension.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_wikiskill_gate": {
+      "source": "packages/extensions/src/research-wikiskill.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_wikiskill_propose": {
+      "source": "packages/extensions/src/research-wikiskill.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_wikiskill_record": {
+      "source": "packages/extensions/src/research-wikiskill.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_wikiskill_status": {
+      "source": "packages/extensions/src/research-wikiskill.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_workspace_status": {
+      "source": "packages/extensions/src/workspace-config.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-knowledge"
+    },
+    "research_zotero_save": {
+      "source": "packages/extensions/src/zotero-literature.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_zotero_status": {
+      "source": "packages/extensions/src/zotero-literature.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_zotero_update": {
+      "source": "packages/extensions/src/zotero-literature.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "task_evidence_restore": {
+      "source": "packages/tasks/src/runtime/register.ts",
+      "registration": "task-helper",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-tasks"
+    },
+    "task_plan": {
+      "source": "packages/tasks/src/runtime/register.ts",
+      "registration": "task-helper",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-tasks"
+    },
+    "task_reconcile": {
+      "source": "packages/tasks/src/runtime/register.ts",
+      "registration": "task-helper",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-tasks"
+    },
+    "task_status": {
+      "source": "packages/tasks/src/runtime/register.ts",
+      "registration": "task-helper",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-tasks"
+    },
+    "task_wait": {
+      "source": "packages/tasks/src/runtime/register.ts",
+      "registration": "task-helper",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-tasks"
+    }
+  }
+}
