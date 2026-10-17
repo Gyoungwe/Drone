@@ -52,7 +52,9 @@ function webdavTargetUrl(baseUrl: string, targetRef: string): string {
 	}
 	const target = /^https?:\/\//i.test(targetRef)
 		? new URL(targetRef)
-		: new URL(targetRef.replace(/^\/+/, ""), `${base.origin}${basePath}`);
+		: targetRef.startsWith("/")
+			? new URL(targetRef, base.origin)
+			: new URL(targetRef, `${base.origin}${basePath}`);
 	if (target.origin !== base.origin) {
 		throw new Error("WebDAV write target must use the configured WebDAV origin");
 	}
