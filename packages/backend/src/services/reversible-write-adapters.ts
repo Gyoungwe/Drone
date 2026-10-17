@@ -7,6 +7,10 @@ import type {
 	ResearchWriteRequest,
 } from "@drone/shared";
 
+type DeletionAwareResearchWriteReceipt = ResearchWriteReceipt & {
+	readonly deleted?: "verified" | "unverified" | "not-applicable";
+};
+
 interface ReversibleWritePort {
 	write(input: {
 		readonly targetRef: string;
@@ -89,7 +93,7 @@ function createPortBackedAdapter(options: PortAdapterOptions): ReversibleResearc
 		async execute(
 			plan: ResearchWritePlan,
 			context: ResearchWriteExecutionContext,
-		): Promise<ResearchWriteReceipt> {
+		): Promise<DeletionAwareResearchWriteReceipt> {
 			if (plan.action !== "prepare") {
 				return {
 					planId: plan.id,
