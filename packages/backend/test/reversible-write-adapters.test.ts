@@ -64,13 +64,19 @@ describe("reversible research write adapters", () => {
 			adapterId: "protocols-bookmark-write",
 			targetRef: "10.1234/protocol-guid",
 		});
-		await expect(adapter.execute(plan, { approved: true })).rejects.toThrow("closure");
+		await expect(adapter.execute(plan, { approved: true })).resolves.toMatchObject({
+			status: "failed",
+			externalRef: "protocols:10.1234/protocol-guid",
+			readBack: "verified",
+			deleted: "unverified",
+		});
 	});
 
 	it("executes the backend WebDAV HTTP contract after an auth challenge", async () => {
 		const requests: Array<{ method: string; authorization: string | null }> = [];
 		let gets = 0;
 		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			void _request;
 			const method = init?.method ?? "GET";
 			const authorization = new Headers(init?.headers).get("authorization");
 			requests.push({ method, authorization });
@@ -116,13 +122,10 @@ describe("reversible research write adapters", () => {
 			void _request;
 			const method = init?.method ?? "GET";
 			methods.push(method);
-			if (method === "GET" && methods.length === 1) {
-				return { ok: false, status: 404, text: async () => "" } as Response;
-			}
-			if (method === "PUT") return { ok: true, status: 201, text: async () => "" } as Response;
-			if (method === "GET")
-				return { ok: true, status: 200, text: async () => '{"title":"other"}' } as Response;
-			return { ok: true, status: 204, text: async () => "" } as Response;
+			if (method === "GET" && methods.length === 1) return new Response("", { status: 404 });
+			if (method === "PUT") return new Response("", { status: 201 });
+			if (method === "GET") return new Response('{"title":"other"}', { status: 200 });
+			return new Response("", { status: 204 });
 		};
 		const port = createWebdavWritePort({
 			baseUrl: "http://dav.test:8080",
@@ -140,8 +143,8 @@ describe("reversible research write adapters", () => {
 		const existingFetch = async (request: string | URL, init?: RequestInit) => {
 			void request;
 			return init?.method === "GET"
-				? ({ ok: true, status: 200, text: async () => '{"title":"existing"}' } as Response)
-				: ({ ok: true, status: 201, text: async () => "" } as Response);
+				? new Response('{"title":"existing"}', { status: 200 })
+				: new Response("", { status: 201 });
 		};
 		const existingPort = createWebdavWritePort({
 			baseUrl: "http://dav.test:8080/dav/",
