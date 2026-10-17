@@ -49,9 +49,9 @@ function webdavTargetUrl(baseUrl: string, targetRef: string): string {
 	if (hasTraversalSegment(targetRef)) {
 		throw new Error("WebDAV write target cannot contain traversal segments");
 	}
-	const target = /^https?:\\/\\//i.test(targetRef)
+	const target = /^https?:\/\//i.test(targetRef)
 		? new URL(targetRef)
-		: new URL(targetRef.replace(/^\\/+/, ""), `${base.origin}${basePath}`);
+		: new URL(targetRef.replace(/^\/+/, ""), `${base.origin}${basePath}`);
 	if (target.origin !== base.origin) {
 		throw new Error("WebDAV write target must use the configured WebDAV origin");
 	}
