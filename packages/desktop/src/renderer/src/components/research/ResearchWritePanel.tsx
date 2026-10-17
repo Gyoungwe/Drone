@@ -93,7 +93,12 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 		setBusy(true);
 		setError(null);
 		try {
-			setReceipt((await getPi().executeWrite({ planId: plan.id, approved: true })) as DeletionAwareResearchWriteReceipt);
+			setReceipt(
+				(await getPi().executeWrite({
+					planId: plan.id,
+					approved: true,
+				})) as DeletionAwareResearchWriteReceipt,
+			);
 		} catch (cause) {
 			setError(cause instanceof Error ? cause.message : String(cause));
 		} finally {
