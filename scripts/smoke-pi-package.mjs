@@ -97,6 +97,22 @@ async function fixtureRun(packageRoot, label) {
 			join(vault, "Library", "Papers", "Fixture.md"),
 			"# Fixture knowledge\n\nThis package smoke note contains package-fixture-marker.\n",
 		),
+		writeFile(
+			join(project, ".pi", "research-workspace.json"),
+			`${JSON.stringify(
+				{
+					resultsRoot: "./results",
+					obsidianVault: "../Vault",
+					knowledgeProfile: "hybrid",
+					knowledgeDepositMode: "verified",
+					subagentMcpPolicy: "none",
+					maxConcurrentSubagents: 4,
+					timezone: "UTC",
+				},
+				null,
+				2,
+			)}\n`,
+		),
 	]);
 	const boundVault = await realpath(vault);
 	const binding = {
@@ -144,10 +160,89 @@ async function fixtureRun(packageRoot, label) {
 			searched?.details?.hits?.some((hit) => hit.text?.includes("package-fixture-marker")),
 			`fixture note was not searchable: ${JSON.stringify(searched?.details)}`,
 		);
+
+		// PR-4 native-Pi loop: local-first search, bounded snippets, bidirectional
+		// read receipts, and a repeated fixed question that can only be answered
+		// from the local fixture evidence.
+		const nativeSearch = await invoke(
+			configured.extension,
+			"knowledge_search",
+			{ query: "package-fixture-marker" },
+			ctx,
+		);
+		const trace = [{ type: "knowledge_search", source: nativeSearch.details.local.status }];
+		assert.equal(nativeSearch.details.local.status, "searched");
+		assert.equal(nativeSearch.details.answerRound, 1);
+		assert(nativeSearch.details.hits.length <= 6);
+		assert(nativeSearch.details.hits.every((hit) => (hit.text || "").length <= 300));
+		assert(nativeSearch.details.hits.some((hit) => hit.text.includes("package-fixture-marker")));
+		const notePath = "Library/Papers/Fixture.md";
+		const firstRead = await invoke(configured.extension, "knowledge_read", { path: notePath }, ctx);
+		trace.push({ type: "knowledge_read", status: firstRead.details.status });
+		assert.equal(firstRead.details.status, "read");
+		assert(Array.isArray(firstRead.details.links.outgoing));
+		assert(Array.isArray(firstRead.details.links.backlinks));
+		const secondRead = await invoke(configured.extension, "knowledge_read", { path: notePath }, ctx);
+		trace.push({ type: "knowledge_read", status: secondRead.details.status });
+		assert.equal(secondRead.details.status, "already-read");
+		assert.equal(secondRead.details.hash, firstRead.details.hash);
+		const secondAnswer = await invoke(
+			configured.extension,
+			"knowledge_answer_context",
+			{ question: "package-fixture-marker" },
+			ctx,
+		);
+		trace.push({ type: "knowledge_answer_context", source: secondAnswer.details.source });
+		assert.equal(secondAnswer.details.source, "local");
+		assert.equal(secondAnswer.details.answerable, true);
+		assert(secondAnswer.details.hits.some((hit) => hit.text.includes("package-fixture-marker")));
+		const deposits = [];
+		for (const [type, title] of [
+			["paper", "Fixture paper"],
+			["software", "Fixture software"],
+			["method", "Fixture method"],
+			["idea", "Fixture idea"],
+		]) {
+			const deposited = await invoke(
+				configured.extension,
+				"knowledge_deposit",
+				{
+					type,
+					title,
+					markdown: `Fixture ${type} body`,
+					source_links: ["https://example.org/drone-fixture-source"],
+				},
+				ctx,
+			);
+			assert.equal(deposited.details.type, type);
+			assert.equal(deposited.details.scientificallyVerified, false);
+			deposits.push(deposited.details.note);
+			trace.push({ type: "knowledge_deposit", category: type });
+		}
+		assert.deepEqual(
+			trace.map((event) => event.type),
+			[
+				"knowledge_search",
+				"knowledge_read",
+				"knowledge_read",
+				"knowledge_answer_context",
+				"knowledge_deposit",
+				"knowledge_deposit",
+				"knowledge_deposit",
+				"knowledge_deposit",
+			],
+		);
 		return {
 			unconfigured: status.details,
 			configured: configuredStatus.details.status,
 			fixtureHit: true,
+			nativeLoop: {
+				searchHits: nativeSearch.details.hits.length,
+				secondAnswerSource: secondAnswer.details.source,
+				duplicateRead: secondRead.details.status,
+				deposits,
+				trace,
+			},
 			skills: configured.skills.map((skill) => skill.name).filter((name) => name.startsWith("research-")),
 		};
 	} finally {

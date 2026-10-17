@@ -1,9 +1,9 @@
 {
 	"version": 1,
 	"generator": "scripts/build-pi-knowledge.mjs",
-	"inputsSha256": "abb6d9cc647b927b43d19827471d684dd43a31fd20a206663a090c727992db2c",
+	"inputsSha256": "36fb39fe0b9bb7ab5ebd567949d35800d02cafdb7f17a6a563ac6dae036046d9",
 	"outputs": {
-		"dist/index.mjs": "38aa7431d6b11a23300251760168b934c5130fe5700845f247b8fe14c266ccb4",
+		"dist/index.mjs": "ea4077c0f574e1e911090fdb14556e7f2444e66ef6752907ea48aa6c0c493436",
 		"lib/knowledge/runtime/worker.mjs": "c513d323bcd7827158c4463ca2a2661bd093dc2b2730d2bed48bfb05dd388f44"
 	},
 	"skills": [
