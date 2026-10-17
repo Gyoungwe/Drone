@@ -113,7 +113,8 @@ describe("SKILL-01 real invocation and disabled counter-evidence", () => {
 					mode: "real-pi-sdk-faux-provider",
 					skill: {
 						name: skill.name,
-						path: skill.path,
+						// Keep evidence portable and free of local absolute paths.
+						path: skill.path ? skill.path.replaceAll("\\", "/").split("/").slice(-2).join("/") : null,
 						disableModelInvocation: skill.disableModelInvocation,
 						visible: result.resources.capabilities.visibleSkills.includes("research-workflow"),
 					},
@@ -144,7 +145,7 @@ describe("SKILL-01 real invocation and disabled counter-evidence", () => {
 		await mkdir(join(root, "research-workflow"), { recursive: true });
 		await writeFile(
 			disabledSkill,
-			original.replace("alwaysWith: research", "disable-model-invocation: true"),
+			original.replace("alwaysWith: research", "alwaysWith: research\ndisable-model-invocation: true"),
 		);
 		const fixture = await makeSession(disabledSkill);
 		const result = await runPrompt(fixture, "请做一次科研证据检索并说明研究流程");
