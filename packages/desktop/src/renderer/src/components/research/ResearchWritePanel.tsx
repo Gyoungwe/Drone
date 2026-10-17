@@ -8,6 +8,13 @@ import { useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 
+type DeletionAwareAdapterDescriptor = ResearchWriteAdapterDescriptor & {
+	readonly supportsDelete?: boolean;
+};
+type DeletionAwareResearchWriteReceipt = ResearchWriteReceipt & {
+	readonly deleted?: "verified" | "unverified" | "not-applicable";
+};
+
 interface ResearchWritePanelProps {
 	readonly targetRef: string | null;
 	readonly payload: ResearchWritePayload;
@@ -19,10 +26,10 @@ interface ResearchWritePanelProps {
  */
 export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelProps) {
 	const t = useT();
-	const [adapters, setAdapters] = useState<ResearchWriteAdapterDescriptor[]>([]);
+	const [adapters, setAdapters] = useState<DeletionAwareAdapterDescriptor[]>([]);
 	const [selectedAdapterId, setSelectedAdapterId] = useState("");
 	const [plan, setPlan] = useState<ResearchWritePlan | null>(null);
-	const [receipt, setReceipt] = useState<ResearchWriteReceipt | null>(null);
+	const [receipt, setReceipt] = useState<DeletionAwareResearchWriteReceipt | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
@@ -32,7 +39,7 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 			.listWriteAdapters()
 			.then((next) => {
 				if (cancelled) return;
-				setAdapters([...next.adapters]);
+				setAdapters([...next.adapters] as DeletionAwareAdapterDescriptor[]);
 				setSelectedAdapterId((current) =>
 					current && next.adapters.some((adapter) => adapter.id === current)
 						? current
@@ -86,7 +93,7 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 		setBusy(true);
 		setError(null);
 		try {
-			setReceipt(await getPi().executeWrite({ planId: plan.id, approved: true }));
+			setReceipt((await getPi().executeWrite({ planId: plan.id, approved: true })) as DeletionAwareResearchWriteReceipt);
 		} catch (cause) {
 			setError(cause instanceof Error ? cause.message : String(cause));
 		} finally {
