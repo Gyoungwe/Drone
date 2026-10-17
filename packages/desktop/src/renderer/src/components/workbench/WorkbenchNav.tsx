@@ -1,13 +1,14 @@
 import { groupRunningFirst } from "@drone/shared";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { usePluginEntries } from "../../plugins/PluginRegions";
 import { UI_REGIONS } from "../../plugins/slots";
 import { useAskCountsStore } from "../../stores/ask-counts";
+import { selectHosts, useComputeStore } from "../../stores/compute";
 import { useKnowledgeStore } from "../../stores/knowledge";
-import { useProjectsStore } from "../../stores/projects";
+import { deriveProjects, useProjectsStore } from "../../stores/projects";
 import { useSessionsStore } from "../../stores/sessions";
-import { useSettingsStore } from "../../stores/settings";
+import { type SettingsCategory, useSettingsStore } from "../../stores/settings";
 import { useTranscriptStore } from "../../stores/transcript";
 import { type AppView, useUiStore } from "../../stores/ui";
 import {
@@ -19,32 +20,52 @@ import {
 	ProjectsIcon,
 	PuzzleIcon,
 	SubagentIcon,
+	TaskBoardIcon,
+	TestIcon,
 } from "../icons";
 import { SessionRow } from "../projects/SessionRow";
 
-type NavKey = AppView | "extensions";
+type PrimaryNavKey = "newTask" | "knowledge" | "skills" | "hosts";
+const SKILLS_SETTINGS_CATEGORIES: readonly string[] = ["skills", "mcp", "zotero", "extensions"];
+const HOST_SETTINGS_CATEGORIES: readonly string[] = ["compute", "workflows"];
 
-const VIEW_ITEMS: {
-	key: AppView;
+export function isPrimaryNavActive(
+	key: PrimaryNavKey,
+	state: { view: AppView; settingsOpen: boolean; settingsCategory: SettingsCategory },
+): boolean {
+	if (key === "newTask") return state.view === "chat" && !state.settingsOpen;
+	if (key === "knowledge") return state.view === "knowledge";
+	if (key === "skills")
+		return state.settingsOpen && SKILLS_SETTINGS_CATEGORIES.includes(state.settingsCategory);
+	return state.settingsOpen && HOST_SETTINGS_CATEGORIES.includes(state.settingsCategory);
+}
+
+const PRIMARY_ITEMS: ReadonlyArray<{
+	key: PrimaryNavKey;
 	icon: typeof ComposeIcon;
-	label: "chat" | "projects" | "knowledge";
-}[] = [
-	{ key: "chat", icon: ComposeIcon, label: "chat" },
-	{ key: "projects", icon: ProjectsIcon, label: "projects" },
+	label: PrimaryNavKey;
+}> = [
+	{ key: "newTask", icon: ComposeIcon, label: "newTask" },
 	{ key: "knowledge", icon: ObsidianIcon, label: "knowledge" },
+	{ key: "skills", icon: TaskBoardIcon, label: "skills" },
+	{ key: "hosts", icon: TestIcon, label: "hosts" },
 ];
 
 /**
- * 左侧导航栏（56px 图标栏）：导航即状态——高亮永远等于当前 view（读 store，不再自持 selected）。
- * 聊天 / 空间 / 知识库 是三个全屏视图（原「研究工作台」与知识库打开同一视图，已合并）；扩展 / 设置 / 帮助 走设置弹窗。
+ * 左侧研究工作台导航：一级入口保持稳定，项目和最近会话沿用真实会话数据。
+ * 旧的设置、扩展和帮助入口收进头像菜单，但仍使用现有 SettingsStore 兼容跳转。
  */
 const COLLAPSE_KEY = "drone.sidebar.collapsed";
 const RECENT_LIMIT = 8;
 
-/** 侧栏「进行中 / 最近」：跨项目，最近活动在前；运行中 / 等待输入置顶 */
+/** 侧栏「项目 / 最近」：数据来自真实历史会话；运行中 / 等待输入的会话排在最近分组顶部。 */
 function SidebarSessions() {
 	const t = useT();
 	const allSessions = useProjectsStore((s) => s.allSessions);
+	const addedProjects = useProjectsStore((s) => s.addedProjects);
+	const selectProject = useProjectsStore((s) => s.select);
+	const setView = useUiStore((s) => s.setView);
+	const closeKnowledge = useKnowledgeStore((s) => s.close);
 	const loaded = useProjectsStore((s) => s.loaded);
 	const load = useProjectsStore((s) => s.load);
 	useEffect(() => {
@@ -58,6 +79,7 @@ function SidebarSessions() {
 			.join("|"),
 	);
 	const askCounts = useAskCountsStore((s) => s.bySession);
+	const projects = useMemo(() => deriveProjects({ allSessions, addedProjects }), [allSessions, addedProjects]);
 	const { running, rest } = useMemo(() => {
 		const active = new Set(activeIds ? activeIds.split("|") : []);
 		const sorted = [...allSessions]
@@ -65,12 +87,37 @@ function SidebarSessions() {
 			.sort((a, b) => (b.modifiedAt ?? b.createdAt) - (a.modifiedAt ?? a.createdAt));
 		return groupRunningFirst(sorted, (m) => active.has(m.sessionId) || (askCounts[m.sessionId] ?? 0) > 0);
 	}, [allSessions, activeIds, askCounts]);
-	if (running.length === 0 && rest.length === 0) return null;
+	if (projects.length === 0 && running.length === 0 && rest.length === 0) return null;
 	return (
 		<div className="workbench-nav-sessions" data-testid="sidebar-sessions">
-			{running.length > 0 && (
+			{projects.length > 0 && (
 				<>
-					<h3 className="workbench-nav-group">{t("projects.running")}</h3>
+					<h3 className="workbench-nav-group">{t("workbench.nav.projectsGroup")}</h3>
+					<ul>
+						{projects.map((project) => (
+							<li key={project.cwd}>
+								<button
+									type="button"
+									className="workbench-nav-project"
+									title={project.cwd}
+									onClick={() => {
+										selectProject(project.cwd);
+										closeKnowledge();
+										setView("projects");
+									}}
+								>
+									<ProjectsIcon size={14} />
+									<span className="min-w-0 flex-1 truncate">{project.name}</span>
+									<span className="workbench-nav-project-count">{project.sessionCount}</span>
+								</button>
+							</li>
+						))}
+					</ul>
+				</>
+			)}
+			{(running.length > 0 || rest.length > 0) && (
+				<>
+					<h3 className="workbench-nav-group">{t("workbench.nav.recent")}</h3>
 					<ul>
 						{running.map((s) => (
 							<SessionRow
@@ -80,13 +127,6 @@ function SidebarSessions() {
 								live={(askCounts[s.sessionId] ?? 0) > 0 ? "awaiting" : "running"}
 							/>
 						))}
-					</ul>
-				</>
-			)}
-			{rest.length > 0 && (
-				<>
-					<h3 className="workbench-nav-group">{t("workbench.nav.recent")}</h3>
-					<ul>
 						{rest.slice(0, RECENT_LIMIT).map((s) => (
 							<SessionRow key={s.sessionId} session={s} showDir />
 						))}
@@ -99,6 +139,8 @@ function SidebarSessions() {
 
 export function WorkbenchNav() {
 	const t = useT();
+	const [accountOpen, setAccountOpen] = useState(false);
+	const accountRef = useRef<HTMLDivElement>(null);
 	const [collapsed, setCollapsed] = useState(() => {
 		try {
 			return localStorage.getItem(COLLAPSE_KEY) === "1";
@@ -119,14 +161,21 @@ export function WorkbenchNav() {
 	const setView = useUiStore((s) => s.setView);
 	const cwd = useSessionsStore((s) => s.cwd);
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
+	const createDraftSession = useSessionsStore((s) => s.createDraftSession);
 	const closeKnowledge = useKnowledgeStore((s) => s.close);
 	const openKnowledge = useKnowledgeStore((s) => s.open);
+	const settingsOpen = useSettingsStore((s) => s.open);
+	const settingsCategory = useSettingsStore((s) => s.category);
+	const hostCount = useComputeStore(selectHosts).length;
+	const skillAttentionCount = useSettingsStore((s) => s.skillDiagnostics.length);
 	// 插件贡献的全屏视图（rail.view 区域，挂钩 4）
 	const pluginViews = usePluginEntries(UI_REGIONS.RailView);
 
-	const select = (key: NavKey) => {
-		if (key === "extensions") {
-			useSettingsStore.getState().openWith("extensions");
+	const selectPrimary = (key: PrimaryNavKey) => {
+		if (key === "newTask") {
+			closeKnowledge();
+			setView("chat");
+			createDraftSession(cwd ?? undefined);
 			return;
 		}
 		if (key === "knowledge") {
@@ -134,8 +183,28 @@ export function WorkbenchNav() {
 			return;
 		}
 		closeKnowledge();
-		setView(key);
+		useSettingsStore.getState().openWith(key === "skills" ? "skills" : "compute");
 	};
+	const selectProjects = () => {
+		closeKnowledge();
+		setView("projects");
+	};
+
+	useEffect(() => {
+		if (!accountOpen) return;
+		const onPointerDown = (event: PointerEvent) => {
+			if (!accountRef.current?.contains(event.target as Node)) setAccountOpen(false);
+		};
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") setAccountOpen(false);
+		};
+		window.addEventListener("pointerdown", onPointerDown);
+		window.addEventListener("keydown", onKeyDown);
+		return () => {
+			window.removeEventListener("pointerdown", onPointerDown);
+			window.removeEventListener("keydown", onKeyDown);
+		};
+	}, [accountOpen]);
 
 	return (
 		<aside
@@ -154,19 +223,51 @@ export function WorkbenchNav() {
 				<PanelLeftIcon size={16} />
 			</button>
 			<nav className="workbench-nav-list" aria-label={t("workbench.nav.title")}>
-				{VIEW_ITEMS.map(({ key, icon: Icon, label }) => (
-					<button
-						key={key}
-						type="button"
-						className={`workbench-nav-item${view === key ? " is-active" : ""}`}
-						onClick={() => select(key)}
-						aria-current={view === key ? "page" : undefined}
-						title={t(`workbench.nav.${label}`)}
-					>
-						<Icon size={17} />
-						<span>{t(`workbench.nav.${label}`)}</span>
-					</button>
-				))}
+				{/* Space switcher remains the compatibility route to the full project page. */}
+				<button
+					type="button"
+					className={`workbench-nav-item${view === "projects" ? " is-active" : ""}`}
+					onClick={selectProjects}
+					aria-current={view === "projects" ? "page" : undefined}
+					title={t("workbench.nav.projects")}
+					aria-label={t("workbench.nav.projects")}
+				>
+					<ProjectsIcon size={17} />
+					<span>{t("workbench.nav.projects")}</span>
+				</button>
+				{PRIMARY_ITEMS.map(({ key, icon: Icon, label }) => {
+					const active = isPrimaryNavActive(key, { view, settingsOpen, settingsCategory });
+					return (
+						<button
+							key={key}
+							type="button"
+							className={`workbench-nav-item${active ? " is-active" : ""}`}
+							onClick={() => selectPrimary(key)}
+							aria-current={active ? "page" : undefined}
+							title={t(`workbench.nav.${label}`)}
+							aria-label={t(`workbench.nav.${label}`)}
+						>
+							<Icon size={17} />
+							<span>{t(`workbench.nav.${label}`)}</span>
+							{key === "skills" && skillAttentionCount > 0 && (
+								<span
+									className="workbench-nav-badge"
+									aria-label={t("workbench.nav.skillsAttention", { count: skillAttentionCount })}
+								>
+									{skillAttentionCount}
+								</span>
+							)}
+							{key === "hosts" && hostCount > 0 && (
+								<span
+									className="workbench-nav-count"
+									aria-label={t("workbench.nav.hostCount", { count: hostCount })}
+								>
+									{hostCount}
+								</span>
+							)}
+						</button>
+					);
+				})}
 				{pluginViews.map((entry) => (
 					<button
 						key={entry.id}
@@ -186,34 +287,69 @@ export function WorkbenchNav() {
 				))}
 			</nav>
 			{!collapsed && <SidebarSessions />}
-			<div className="workbench-nav-list mt-auto">
+			<div className="workbench-nav-account" ref={accountRef}>
 				<button
 					type="button"
-					className="workbench-nav-item"
-					onClick={() => select("extensions")}
-					title={t("workbench.nav.extensions")}
+					className={`workbench-nav-account-button${accountOpen ? " is-open" : ""}`}
+					onClick={() => setAccountOpen((open) => !open)}
+					aria-label={t("workbench.nav.account")}
+					aria-haspopup="menu"
+					aria-expanded={accountOpen}
+					title={t("workbench.nav.account")}
 				>
-					<SubagentIcon size={17} />
-					<span>{t("workbench.nav.extensions")}</span>
+					<span className="workbench-nav-avatar" aria-hidden="true">
+						D
+					</span>
+					<span>{t("workbench.nav.account")}</span>
 				</button>
-				<button
-					type="button"
-					className="workbench-nav-item"
-					onClick={() => useSettingsStore.getState().openWith("general")}
-					title={t("workbench.nav.settings")}
-				>
-					<GearIcon size={17} />
-					<span>{t("workbench.nav.settings")}</span>
-				</button>
-				<button
-					type="button"
-					className="workbench-nav-item"
-					onClick={() => useSettingsStore.getState().openWith("about")}
-					title={t("workbench.nav.help")}
-				>
-					<HelpIcon size={17} />
-					<span>{t("workbench.nav.help")}</span>
-				</button>
+				{accountOpen && (
+					<div className="workbench-nav-account-menu" role="menu">
+						<button
+							type="button"
+							role="menuitem"
+							onClick={() => {
+								setAccountOpen(false);
+								useSettingsStore.getState().openWith("general");
+							}}
+						>
+							<GearIcon size={15} />
+							{t("workbench.nav.settings")}
+						</button>
+						<button
+							type="button"
+							role="menuitem"
+							onClick={() => {
+								setAccountOpen(false);
+								useSettingsStore.getState().openWith("extensions");
+							}}
+						>
+							<SubagentIcon size={15} />
+							{t("workbench.nav.extensions")}
+						</button>
+						<button
+							type="button"
+							role="menuitem"
+							onClick={() => {
+								setAccountOpen(false);
+								useSettingsStore.getState().openWith("about");
+							}}
+						>
+							<HelpIcon size={15} />
+							{t("workbench.nav.help")}
+						</button>
+						<button
+							type="button"
+							role="menuitem"
+							onClick={() => {
+								setAccountOpen(false);
+								useSettingsStore.getState().openWith("about");
+							}}
+						>
+							<HelpIcon size={15} />
+							{t("settings.category.about")}
+						</button>
+					</div>
+				)}
 			</div>
 		</aside>
 	);

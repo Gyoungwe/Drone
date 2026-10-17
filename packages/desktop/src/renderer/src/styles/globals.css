@@ -3486,6 +3486,158 @@ code {
 	padding: var(--space-2);
 }
 
+/* Pluginized workbench navigation: projects and account actions remain real
+   shell affordances, while primary entries can expose live counts. */
+.workbench-nav-project {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: var(--space-2);
+	border-radius: var(--radius-md);
+	padding: var(--space-2);
+	text-align: left;
+	font-size: 12px;
+	color: var(--color-ink-2);
+	transition:
+		background-color var(--duration-fast) var(--ease-standard),
+		color var(--duration-fast) var(--ease-standard);
+}
+.workbench-nav-project:hover {
+	background: var(--highlight);
+	color: var(--color-ink);
+}
+.workbench-nav-project-count {
+	flex: none;
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+	color: var(--color-ink-faint);
+}
+.workbench-nav-badge,
+.workbench-nav-count {
+	position: absolute;
+	right: var(--space-2);
+	min-width: 18px;
+	border-radius: 999px;
+	padding: 0 5px;
+	font-size: 10px;
+	line-height: 18px;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+.workbench-nav-item > .workbench-nav-badge,
+.workbench-nav-item > .workbench-nav-count {
+	width: auto;
+	height: auto;
+	overflow: visible;
+	clip: auto;
+	white-space: nowrap;
+}
+.workbench-nav-badge {
+	background: var(--color-warn-bg, var(--color-hover));
+	color: var(--color-warn, var(--color-ink-2));
+}
+.workbench-nav-count {
+	background: var(--highlight);
+	color: var(--color-ink-dim);
+}
+.workbench-nav-account {
+	position: relative;
+	flex: none;
+	margin-top: var(--space-2);
+}
+.workbench-nav-account-button {
+	display: flex;
+	width: 36px;
+	height: 36px;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	border-radius: var(--radius-md);
+	color: var(--color-ink-dim);
+	transition:
+		background-color var(--duration-fast) var(--ease-standard),
+		color var(--duration-fast) var(--ease-standard);
+}
+.workbench-nav-account-button:hover,
+.workbench-nav-account-button.is-open {
+	background: var(--highlight);
+	color: var(--color-ink);
+}
+.workbench-nav-avatar {
+	display: inline-flex;
+	height: 24px;
+	width: 24px;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	background: var(--color-ink);
+	color: var(--color-surface);
+	font-size: 11px;
+	font-weight: 600;
+}
+.workbench-nav-account-button > span:last-child {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+.workbench-nav-account-menu {
+	position: absolute;
+	bottom: 0;
+	left: calc(100% + var(--space-2));
+	z-index: 30;
+	display: flex;
+	min-width: 176px;
+	flex-direction: column;
+	gap: 2px;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+	padding: var(--space-1);
+	box-shadow: var(--shadow-pop);
+}
+.workbench-nav-account-menu button {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: var(--space-2);
+	border-radius: var(--radius-sm);
+	padding: var(--space-2);
+	text-align: left;
+	font-size: 12px;
+	color: var(--color-ink-2);
+}
+.workbench-nav-account-menu button:hover,
+.workbench-nav-account-menu button:focus-visible {
+	background: var(--highlight);
+	color: var(--color-ink);
+}
+
+.workbench-nav.is-wide .workbench-nav-item {
+	position: relative;
+}
+.workbench-nav.is-wide .workbench-nav-account-button {
+	width: 100%;
+	justify-content: flex-start;
+	padding: 0 var(--space-2);
+	font-size: 13px;
+}
+.workbench-nav.is-wide .workbench-nav-account-button > span:last-child {
+	position: static;
+	width: auto;
+	height: auto;
+	overflow: visible;
+	clip: auto;
+	white-space: nowrap;
+}
+.workbench-nav.is-wide .workbench-nav-account-menu {
+	left: 0;
+	right: 0;
+	bottom: calc(100% + var(--space-1));
+}
+
 /* 设置导航：图标 + 中文 + 英文副标，左栏加宽 */
 .settings-dialog-shell nav {
 	width: 208px;
