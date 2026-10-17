@@ -93,7 +93,7 @@ describe("reversible research write adapters", () => {
 				return new Response("", { status: 404 });
 			}
 			if (method === "PUT") return new Response("", { status: 201 });
-			return new Response("", { status: 204 });
+			return new Response(null, { status: 204 });
 		};
 		const port = createWebdavWritePort({
 			baseUrl: "http://dav.test:8080",
@@ -124,7 +124,7 @@ describe("reversible research write adapters", () => {
 			if (method === "GET" && methods.length === 1) return new Response("", { status: 404 });
 			if (method === "PUT") return new Response("", { status: 201 });
 			if (method === "GET") return new Response('{"title":"other"}', { status: 200 });
-			return new Response("", { status: 204 });
+			return new Response(null, { status: 204 });
 		};
 		const port = createWebdavWritePort({
 			baseUrl: "http://dav.test:8080",
