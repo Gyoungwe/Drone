@@ -197,6 +197,27 @@ describe("reversible research write adapters", () => {
 		expect(deleteIfMatch).toBe('"v1"');
 	});
 
+	it("does not reconcile a definitive failed PUT", async () => {
+		const methods: string[] = [];
+		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			void _request;
+			const method = init?.method ?? "GET";
+			methods.push(method);
+			if (method === "GET") return new Response("", { status: 404 });
+			return new Response("", { status: 412 });
+		};
+		const port = createWebdavWritePort({
+			baseUrl: "http://dav.test:8080",
+			username: "user",
+			password: "password",
+			fetchImpl,
+		});
+		await expect(
+			port.write({ targetRef: "/acceptance/conflict.json", payload: input.payload }),
+		).rejects.toThrow("WebDAV PUT failed (412)");
+		expect(methods).toEqual(["GET", "PUT"]);
+	});
+
 	it("cleans up a created object when readback fails", async () => {
 		const methods: string[] = [];
 		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
