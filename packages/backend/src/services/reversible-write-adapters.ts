@@ -100,7 +100,7 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 				);
 			}
 			let created = false;
-			let putAttempted = false;
+			let putOutcomeUncertain = false;
 			let creationEtag: string | null = null;
 			const deleteRemote = async (
 				etag: string | null,
@@ -115,12 +115,18 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 			};
 			try {
 				if (signal?.aborted) throw new Error("WebDAV write aborted");
-				putAttempted = true;
-				const put = await request(
-					"PUT",
-					{ "Content-Type": "application/json; charset=utf-8", "If-None-Match": "*" },
-					JSON.stringify(payload),
-				);
+				let put: Awaited<ReturnType<typeof request>>;
+				try {
+					const response = await request(
+						"PUT",
+						{ "Content-Type": "application/json; charset=utf-8", "If-None-Match": "*" },
+						JSON.stringify(payload),
+					);
+					put = response;
+				} catch (error) {
+					putOutcomeUncertain = true;
+					throw error;
+				}
 				if (put.status < 200 || put.status >= 300) {
 					throw new Error(`WebDAV PUT failed (${put.status})`);
 				}
@@ -154,7 +160,7 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 					deleted: missing.status === 404,
 				};
 			} catch (error) {
-				if (created || putAttempted) {
+				if (created || putOutcomeUncertain) {
 					try {
 						if (!creationEtag) {
 							const reconciliation = await request("GET", undefined, undefined, null);
