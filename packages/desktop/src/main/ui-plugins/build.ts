@@ -76,7 +76,7 @@ export const { createPortal, flushSync } = D;`,
 const droneExternalsPlugin: Plugin = {
 	name: "drone-externals",
 	setup(build) {
-		build.onResolve({ filter: /^(react|react\/jsx-runtime|react-dom|@drone\/plugin-api)$/ }, (args) => ({
+		build.onResolve({ filter: /^(react|react\/jsx-runtime|react-dom|@gyoungwe\/plugin-api)$/ }, (args) => ({
 			path: args.path,
 			namespace: "drone-external",
 		}));
