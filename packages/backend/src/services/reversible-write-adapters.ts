@@ -155,7 +155,11 @@ export function createWebdavWritePortFromEnv(
 	const username = env.DRONE_WEBDAV_USERNAME?.trim();
 	const password = env.DRONE_WEBDAV_PASSWORD;
 	if (!baseUrl || !username || !password) return undefined;
-	return createWebdavWritePort({ baseUrl, username, password });
+	try {
+		return createWebdavWritePort({ baseUrl, username, password });
+	} catch {
+		return undefined;
+	}
 }
 
 interface PortAdapterOptions {
