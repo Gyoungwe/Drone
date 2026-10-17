@@ -186,14 +186,32 @@ async function fixtureRun(packageRoot, label) {
 		trace.push({ type: "knowledge_read", status: secondRead.details.status });
 		assert.equal(secondRead.details.status, "already-read");
 		assert.equal(secondRead.details.hash, firstRead.details.hash);
+		const firstAnswer = await invoke(
+			configured.extension,
+			"knowledge_answer_context",
+			{ question: "package-fixture-marker" },
+			ctx,
+		);
 		const secondAnswer = await invoke(
 			configured.extension,
 			"knowledge_answer_context",
 			{ question: "package-fixture-marker" },
 			ctx,
 		);
-		trace.push({ type: "knowledge_answer_context", source: secondAnswer.details.source });
+		trace.push({
+			type: "knowledge_answer_context",
+			source: firstAnswer.details.source,
+			round: firstAnswer.details.answerRound,
+		});
+		trace.push({
+			type: "knowledge_answer_context",
+			source: secondAnswer.details.source,
+			round: secondAnswer.details.answerRound,
+		});
+		assert.equal(firstAnswer.details.source, "local");
 		assert.equal(secondAnswer.details.source, "local");
+		assert.equal(firstAnswer.details.answerRound, 1);
+		assert.equal(secondAnswer.details.answerRound, 2);
 		assert.equal(secondAnswer.details.answerable, true);
 		assert(secondAnswer.details.hits.some((hit) => hit.text.includes("package-fixture-marker")));
 		const deposits = [];
@@ -225,6 +243,7 @@ async function fixtureRun(packageRoot, label) {
 				"knowledge_search",
 				"knowledge_read",
 				"knowledge_read",
+				"knowledge_answer_context",
 				"knowledge_answer_context",
 				"knowledge_deposit",
 				"knowledge_deposit",

@@ -12810,6 +12810,7 @@ var NATIVE_CONTEXT_TOOL = "knowledge_answer_context";
 var WEB_ACCESS_TOOL = "pi-web-access";
 var readReceipts = /* @__PURE__ */ new Map();
 var searchRounds = /* @__PURE__ */ new Map();
+var answerRounds = /* @__PURE__ */ new Map();
 var MAX_RECEIPTS = 128;
 function result2(details, compact = false) {
   return {
@@ -13014,8 +13015,12 @@ function registerNativeKnowledgeTools(pi) {
       if (!local) return result2({ question: query, answerable: false, source: "none", hits: [] });
       const found = await local.service.request("search", { query, project: local.project, limit: 6 });
       const hits = trimHits(found, 6);
+      const key = `${local.binding.vaultId || local.binding.vault}:${query}`;
+      const answerRound = (answerRounds.get(key) || 0) + 1;
+      answerRounds.set(key, answerRound);
       return result2({
         question: query,
+        answerRound,
         answerable: hits.length > 0,
         source: hits.length ? "local" : "none",
         revision: found?.revision ?? null,

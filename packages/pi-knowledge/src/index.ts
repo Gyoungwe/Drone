@@ -21,6 +21,7 @@ const WEB_ACCESS_TOOL = "pi-web-access";
 // acknowledged without putting Vault text in process state or traces.
 const readReceipts = new Map<string, string>();
 const searchRounds = new Map<string, number>();
+const answerRounds = new Map<string, number>();
 const MAX_RECEIPTS = 128;
 
 function result(details: any, compact = false) {
@@ -249,8 +250,12 @@ function registerNativeKnowledgeTools(pi: any) {
 			if (!local) return result({ question: query, answerable: false, source: "none", hits: [] });
 			const found = await local.service.request("search", { query, project: local.project, limit: 6 });
 			const hits = trimHits(found, 6);
+			const key = `${local.binding.vaultId || local.binding.vault}:${query}`;
+			const answerRound = (answerRounds.get(key) || 0) + 1;
+			answerRounds.set(key, answerRound);
 			return result({
 				question: query,
+				answerRound,
 				answerable: hits.length > 0,
 				source: hits.length ? "local" : "none",
 				revision: found?.revision ?? null,
