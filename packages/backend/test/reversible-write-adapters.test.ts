@@ -78,7 +78,7 @@ describe("reversible research write adapters", () => {
 				adapterId: "protocols-bookmark-write",
 				targetRef: "crossref:10.1234/protocol-guid",
 			}),
-		).not.toThrow();
+		).toThrow("DOI resolution");
 	});
 
 	it("rejects a Protocols.io write without deletion verification", async () => {
