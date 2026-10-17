@@ -104,3 +104,22 @@ jobs:
       - run: npm run stage:pi-packages
       - run: npm run check:pi-packages
       - run: npm run build
+
+  pi-package-smoke:
+    name: Native Pi knowledge package (fixture smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build pi-knowledge package
+        run: npm run build:pi-knowledge
+      - name: Check pi-knowledge package artifacts
+        run: npm run check:pi-knowledge
+      - name: Typecheck pi-knowledge package
+        run: npm run typecheck -w @drone/pi-knowledge
+      - name: "Fixture smoke (external Pi CLI: NOT_RUN)"
+        run: npm run smoke:pi-knowledge -- --fixture-only
