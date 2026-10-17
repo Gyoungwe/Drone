@@ -142,7 +142,7 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 					<p className="research-browser-connectors-hint">
 						{adapter.label} ·{" "}
 						{adapter.writeEnabled ? t("researchWrite.authorized") : t("researchWrite.dryRunOnly")}
-						{adapter.supportsDelete ? " · " + t("researchWrite.deleteClosure") : ""}
+						{adapter.supportsDelete ? ` · ${t("researchWrite.deleteClosure")}` : ""}
 					</p>
 					<button
 						type="button"
