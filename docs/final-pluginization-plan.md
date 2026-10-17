@@ -634,7 +634,7 @@ Claude Code adapter 必须通过同一套：
 | 2026-10-18 | WebDAV 临时对象闭环 | 使用 `KnowledgeWebDavService` 对 `http://10.126.126.1:8080/Drone-Knowledge` 完成真实 probe（ready/authenticated）、唯一对象 `Inbox/DRONE-WEBDAV-1792257377294.md` 写入、服务层回读哈希核对、HTTP 204 删除，以及删除后服务层回读 `not_found`；receipt hash `2b2695bfa41fe29f9477796e2413f5446b6eabfd3dafa8351c0268c72f151d27` | 真实凭据只在本次进程环境中使用，未写入仓库、日志或计划；Protocols.io 仍按只读策略，不进行 bookmark/写入 |
 | 2026-10-18 | MCP / CONN 隔离验收 | `packages/backend/test/mcp-connector-gates.test.ts` 通过：staged `pi-mcp-adapter` 的本地 stdio marker fixture 启用后真实返回 `DRONE-MCP-001`，关闭并重载后无可用工具；read-only `CapabilityResearchPorts` 对 `DRONE-CONN-01-UNIQUE` 回读 source ID/URL/调用记录，关闭后跳过传输，重启用可重试 | 证据为隔离本地 fixture，无外部写入；Protocols.io 继续只读；根门禁应通过 `npm run check:remaining-gates` 复跑 |
 | 2026-10-18 | MEM / REDLINE 隔离验收 | `mem-gate.test.mjs` 通过 `DRONE-MEM-001` 跨实例恢复、来源回读和 `stale/changed`；`redline-acceptance.test.mjs` 通过缺来源、stale、数字/方法漂移、重复数不足、断线和权限拒绝的 blocked/pause 与 sealed proof；提交 `e988d185`、`d7121a58` | 证据只写入 `/private/tmp`，不触碰正式 Vault、凭据或 session 正文；GUI 投影仍不作为构建产物降级判定 |
-| 2026-10-18 | 剩余门槛与全量门禁复跑 | `npm run check:remaining-gates`（MEM 1/1、REDLINE 4/4、MCP/CONN 2/2）、`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`check:plugin-api`、`check:pi-compat` 与 `check:desktop-artifact -- --strict` 全部通过；桌面产物 16/16、四视口 4/4、0 FAIL/NOT_RUN | 未执行 npm publish、外部 Protocols.io 写入或正式签名发行；这些仍需 npm scope、凭据或发布决策 |
+| 2026-10-18 | 剩余门槛与全量门禁复跑 | `npm run check:remaining-gates`（MEM 1/1、REDLINE 4/4、MCP/CONN 2/2）、`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`check:plugin-api`、`check:pi-compat` 与 `check:desktop-artifact -- --strict` 全部通过；桌面产物 16/16、四视口 4/4、0 FAIL/NOT_RUN | 未执行 npm publish 或外部 Protocols.io 写入；公开发布仍需 npm scope、凭据或发布决策。按计划不要求证书/正式签名 |
 
 
 ### 2026-10-18 收口补充
@@ -644,4 +644,4 @@ Claude Code adapter 必须通过同一套：
 - **插件生命周期**：`check:plugin-api --migration --lifecycle` 已完成本地 pack 的 `0.9.0 → 1.0.0 → 0.9.0 → uninstall`，并验证 `DroneHostPort` 声明。
 - **Pi 兼容**：锁定 `1.1.0` 与 latest `1.3.0` 均通过 pi-core/pi-knowledge/pi-research 加载；next 标签当前 `NOT_PUBLISHED`，不伪造通过。
 - **外部写入**：WebDAV 和 Zotero 临时 note 均完成授权→创建→回读→删除→再回读；Protocols.io 只读，不进行 bookmark/write。
-- **已关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均有隔离真实行为证据，Protocols.io 保持只读；analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。仍待决定 npm scope、公开发布、正式签名/发行。
+- **已关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均有隔离真实行为证据，Protocols.io 保持只读；analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。仍待决定 npm scope 与公开发布；证书/正式签名不属于本计划门槛。

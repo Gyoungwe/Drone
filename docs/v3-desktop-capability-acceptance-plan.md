@@ -384,4 +384,4 @@ revision / ETag / SHA-256：
 
 ## 13. 2026-10-18 剩余门槛复跑
 
-`npm run check:remaining-gates` 已集中复跑四条门槛：MEM-01 的 1 个跨实例夹具、REDLINE-01 的 4 个违规夹具、MCP-01 与 CONN-01 的 2 个 SDK/只读连接器夹具全部通过。随后复跑 `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`npm run check:plugin-api`、`npm run check:pi-compat` 和 `npm run check:desktop-artifact -- --strict`，均通过；桌面本机构建产物为 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。Protocols.io 仍保持只读，未执行外部写入；npm scope、公开发布和正式签名发行继续单独待决。
+`npm run check:remaining-gates` 已集中复跑四条门槛：MEM-01 的 1 个跨实例夹具、REDLINE-01 的 4 个违规夹具、MCP-01 与 CONN-01 的 2 个 SDK/只读连接器夹具全部通过。随后复跑 `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`npm run check:plugin-api`、`npm run check:pi-compat` 和 `npm run check:desktop-artifact -- --strict`，均通过；桌面本机构建产物为 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。Protocols.io 仍保持只读，未执行外部写入；npm scope 与公开发布继续单独待决，证书/正式签名不属于计划门槛。
