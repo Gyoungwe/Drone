@@ -254,7 +254,7 @@ export function createWebdavWriteAdapter(port?: ReversibleWritePort): Reversible
 			if (hasTraversalSegment(targetRef)) {
 				throw new Error("WebDAV write target cannot contain traversal segments");
 			}
-			if (!/^\\/(?:[^/]+\\/)*[^/]+$/.test(targetRef) && !/^https?:\\/\\//i.test(targetRef)) {
+			if (!/^\/(?:[^/]+\/)*[^/]+$/.test(targetRef) && !/^https?:\/\//i.test(targetRef)) {
 				throw new Error("WebDAV write target must be an absolute path or HTTP(S) URL");
 			}
 		}
