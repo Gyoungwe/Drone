@@ -35,8 +35,7 @@ export function isPrimaryNavActive(
 ): boolean {
 	if (key === "newTask") return state.view === "chat" && !state.settingsOpen;
 	if (key === "knowledge") return state.view === "knowledge";
-	if (key === "skills")
-		return state.settingsOpen && SKILLS_SETTINGS_CATEGORIES.includes(state.settingsCategory);
+	if (key === "skills") return state.view === "skills" || (state.settingsOpen && SKILLS_SETTINGS_CATEGORIES.includes(state.settingsCategory));
 	return state.settingsOpen && HOST_SETTINGS_CATEGORIES.includes(state.settingsCategory);
 }
 
@@ -186,7 +185,12 @@ export function WorkbenchNav() {
 			return;
 		}
 		closeKnowledge();
-		useSettingsStore.getState().openWith(key === "skills" ? "skills" : "compute");
+		if (key === "skills") {
+			useSettingsStore.getState().setOpen(false);
+			setView("skills");
+			return;
+		}
+		useSettingsStore.getState().openWith("compute");
 	};
 	const selectProjects = () => {
 		closeKnowledge();

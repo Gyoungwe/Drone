@@ -19,6 +19,7 @@ import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { Toaster } from "./components/Toaster";
 import { ExampleTaskDialog } from "./components/tasks/ExampleTaskDialog";
 import { ContextMenuHost } from "./components/ui/ContextMenu";
+import { SkillsConnectionsView } from "./components/workbench/SkillsConnectionsView";
 import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
 import { useDesktopCommands } from "./hooks/use-desktop-commands";
 import { useAttentionBadge, useAutoPreviewWrites } from "./hooks/use-run-attention";
@@ -162,6 +163,8 @@ export default function App() {
 						<div className="page-fade min-h-0 min-w-0 flex-1">
 							<KnowledgeView />
 						</div>
+					) : view === "skills" ? (
+						<SkillsConnectionsView />
 					) : pluginView ? (
 						<div className="page-fade min-h-0 min-w-0 flex-1">
 							<PluginEntryHost entry={pluginView} />
