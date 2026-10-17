@@ -102,10 +102,7 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 			let created = false;
 			let putOutcomeUncertain = false;
 			let creationEtag: string | null = null;
-			const deleteRemote = async (
-				etag: string | null,
-				requestSignal: AbortSignal | null | undefined = signal,
-			) => {
+			const deleteRemote = async (etag: string | null, requestSignal: AbortSignal | null | undefined = signal) => {
 				if (!etag) throw new Error("WebDAV DELETE requires a verified ETag");
 				const deleted = await request("DELETE", { "If-Match": etag }, undefined, requestSignal);
 				if (deleted.status >= 400 && deleted.status !== 404) {
