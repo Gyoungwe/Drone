@@ -341,75 +341,75 @@ describe("reversible research write adapters", () => {
 		).rejects.toThrow("traversal");
 	});
 
-\tit("executes the Protocols.io bookmark API closure with bearer auth", async () => {
-\t\tconst requests: Array<{ method: string; url: string; authorization: string | null }> = [];
-\t\tlet call = 0;
-\t\tconst fetchImpl = async (request: string | URL, init?: RequestInit) => {
-\t\t\tconst method = init?.method ?? "GET";
-\t\t\tconst headers = new Headers(init?.headers);
-\t\t\trequests.push({ method, url: String(request), authorization: headers.get("authorization") });
-\t\t\tcall += 1;
-\t\t\tif (call === 1 || call === 3 || call === 5) {
-\t\t\t\treturn new Response(JSON.stringify({ status_code: 0, protocol: { uri: "protocol-guid", title: "Demo" } }), {
-\t\t\t\t\tstatus: 200,
-\t\t\t\t\theaders: { "content-type": "application/json" },
-\t\t\t\t});
-\t\t\t}
-\t\t\treturn new Response(JSON.stringify({ status_code: 0 }), {
-\t\t\t\tstatus: call === 2 ? 200 : 200,
-\t\t\t\theaders: { "content-type": "application/json" },
-\t\t\t});
-\t\t};
-\t\tconst port = createProtocolsBookmarkWritePort({
-\t\t\tapiBaseUrl: "https://protocols.test/api/v3",
-\t\t\tapiToken: "temporary-token",
-\t\t\tfetchImpl,
-\t\t});
-\t\tawait expect(
-\t\t\tport.write({ targetRef: "protocols:protocol-guid", payload: input.payload }),
-\t\t).resolves.toEqual({
-\t\t\texternalRef: "https://www.protocols.io/view/protocol-guid",
-\t\t\treadBack: true,
-\t\t\tdeleted: true,
-\t\t});
-\t\texpect(requests.map(({ method }) => method)).toEqual(["GET", "POST", "GET", "DELETE", "GET"]);
-\t\texpect(requests.every(({ authorization }) => authorization === "Bearer temporary-token")).toBe(true);
-\t\texpect(requests[0]?.url).toBe("https://protocols.test/api/v3/protocols/protocol-guid");
-\t\texpect(requests[1]?.url).toBe("https://protocols.test/api/v3/protocols/protocol-guid/bookmarks");
-\t});
+	it("executes the Protocols.io bookmark API closure with bearer auth", async () => {
+		const requests: Array<{ method: string; url: string; authorization: string | null }> = [];
+		let call = 0;
+		const fetchImpl = async (request: string | URL, init?: RequestInit) => {
+			const method = init?.method ?? "GET";
+			const headers = new Headers(init?.headers);
+			requests.push({ method, url: String(request), authorization: headers.get("authorization") });
+			call += 1;
+			if (call === 1 || call === 3 || call === 5) {
+				return new Response(JSON.stringify({ status_code: 0, protocol: { uri: "protocol-guid", title: "Demo" } }), {
+					status: 200,
+					headers: { "content-type": "application/json" },
+				});
+			}
+			return new Response(JSON.stringify({ status_code: 0 }), {
+				status: call === 2 ? 200 : 200,
+				headers: { "content-type": "application/json" },
+			});
+		};
+		const port = createProtocolsBookmarkWritePort({
+			apiBaseUrl: "https://protocols.test/api/v3",
+			apiToken: "temporary-token",
+			fetchImpl,
+		});
+		await expect(
+			port.write({ targetRef: "protocols:protocol-guid", payload: input.payload }),
+		).resolves.toEqual({
+			externalRef: "https://www.protocols.io/view/protocol-guid",
+			readBack: true,
+			deleted: true,
+		});
+		expect(requests.map(({ method }) => method)).toEqual(["GET", "POST", "GET", "DELETE", "GET"]);
+		expect(requests.every(({ authorization }) => authorization === "Bearer temporary-token")).toBe(true);
+		expect(requests[0]?.url).toBe("https://protocols.test/api/v3/protocols/protocol-guid");
+		expect(requests[1]?.url).toBe("https://protocols.test/api/v3/protocols/protocol-guid/bookmarks");
+	});
 
-\tit("fails closed when Protocols.io environment is absent or malformed", () => {
-\t\texpect(createProtocolsBookmarkWritePortFromEnv({})).toBeUndefined();
-\t\texpect(
-\t\t\tcreateProtocolsBookmarkWritePortFromEnv({
-\t\t\t\tPROTOCOLS_IO_API_TOKEN: "temporary-token",
-\t\t\t\tPROTOCOLS_IO_API_BASE: "not a URL",
-\t\t\t}),
-\t\t).toBeUndefined();
-\t});
+	it("fails closed when Protocols.io environment is absent or malformed", () => {
+		expect(createProtocolsBookmarkWritePortFromEnv({})).toBeUndefined();
+		expect(
+			createProtocolsBookmarkWritePortFromEnv({
+				PROTOCOLS_IO_API_TOKEN: "temporary-token",
+				PROTOCOLS_IO_API_BASE: "not a URL",
+			}),
+		).toBeUndefined();
+	});
 
-\tit("does not delete a Protocols.io bookmark when POST outcome is uncertain", async () => {
-\t\tconst methods: string[] = [];
-\t\tconst fetchImpl = async (_request: string | URL, init?: RequestInit) => {
-\t\t\tvoid _request;
-\t\t\tconst method = init?.method ?? "GET";
-\t\t\tmethods.push(method);
-\t\t\tif (method === "GET") {
-\t\t\t\treturn new Response(JSON.stringify({ status_code: 0, protocol: { uri: "protocol-guid" } }), {
-\t\t\t\t\tstatus: 200,
-\t\t\t\t});
-\t\t\t}
-\t\t\tthrow new Error("connection closed after commit");
-\t\t};
-\t\tconst port = createProtocolsBookmarkWritePort({
-\t\t\tapiBaseUrl: "https://protocols.test/api/v3",
-\t\t\tapiToken: "temporary-token",
-\t\t\tfetchImpl,
-\t\t});
-\t\tawait expect(
-\t\t\tport.write({ targetRef: "protocol-guid", payload: input.payload }),
-\t\t).rejects.toThrow("connection closed after commit");
-\t\texpect(methods).toEqual(["GET", "POST"]);
-\t});
+	it("does not delete a Protocols.io bookmark when POST outcome is uncertain", async () => {
+		const methods: string[] = [];
+		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			void _request;
+			const method = init?.method ?? "GET";
+			methods.push(method);
+			if (method === "GET") {
+				return new Response(JSON.stringify({ status_code: 0, protocol: { uri: "protocol-guid" } }), {
+					status: 200,
+				});
+			}
+			throw new Error("connection closed after commit");
+		};
+		const port = createProtocolsBookmarkWritePort({
+			apiBaseUrl: "https://protocols.test/api/v3",
+			apiToken: "temporary-token",
+			fetchImpl,
+		});
+		await expect(
+			port.write({ targetRef: "protocol-guid", payload: input.payload }),
+		).rejects.toThrow("connection closed after commit");
+		expect(methods).toEqual(["GET", "POST"]);
+	});
 
 });
