@@ -41,6 +41,8 @@
 	--color-hover: var(--color-hover);
 	--color-border: var(--color-border);
 	--color-border-strong: var(--color-border-strong);
+	--color-border-muted: var(--color-border-muted);
+	--color-border-subtle: var(--color-border-subtle);
 	--color-bubble: var(--color-bubble);
 	--color-ink: var(--color-ink);
 	--color-ink-2: var(--color-ink-2);
@@ -53,7 +55,11 @@
 	--color-update: var(--color-update);
 	--color-on-update: var(--color-on-update);
 	--color-err: var(--color-err);
+	--color-err-bg: var(--color-err-bg);
+	--color-err-border: var(--color-err-border);
 	--color-warn: var(--color-warn);
+	--color-warn-bg: var(--color-warn-bg);
+	--color-warn-border: var(--color-warn-border);
 	--color-info: var(--color-info);
 	--color-ok: var(--color-ok);
 	--color-switch-off: var(--color-switch-off);
@@ -87,21 +93,24 @@
 	--space-11: 44px;
 	--space-12: 48px;
 
-	--color-canvas: oklch(100% 0 0);
+	/* UI-1: the outer shell is the same neutral paper used by the design handoff. */
+	--color-canvas: #fafafa;
 	--color-surface: #ffffff;
-	/* hover/选中底：中性锌灰，不带蓝调（slate 系 #f1f5f9 偏蓝，已弃） */
-	--color-hover: oklch(97% 0 0);
-	--color-border: oklch(93.5% 0 0);
-	--color-border-strong: oklch(88% 0 0);
+	/* UI-1: neutral gray scale from the plugin UI handoff. */
+	--color-hover: #f5f5f5;
+	--color-border: #e5e5e5;
+	--color-border-strong: #d4d4d4;
+	--color-border-muted: #ececec;
+	--color-border-subtle: #f0f0f0;
 	/* 用户气泡底色：原 border（zinc-200 #e4e4e7）的变浅版，中性灰不带冷调 */
-	--color-bubble: oklch(97% 0 0);
-	--color-ink: oklch(14.5% 0 0);
-	--color-ink-2: oklch(37.1% 0 0);
-	--color-ink-dim: oklch(55.6% 0 0);
-	--color-ink-faint: oklch(70.8% 0 0);
+	--color-bubble: #f2f2f2;
+	--color-ink: #0a0a0a;
+	--color-ink-2: #404040;
+	--color-ink-dim: #737373;
+	--color-ink-faint: #a3a3a3;
 	/* 工作中状态行文字基色：日间用浅一档灰（= ink-faint），给加深扫光让出对比空间
 	   （若用 ink-dim 本身偏深，扫光加深不明显） */
-	--color-ink-working: oklch(70.8% 0 0);
+	--color-ink-working: #737373;
 	--color-on-ink: #ffffff;
 	/* 科研风主色：冷静的蓝色，保证浅色背景上的控件层级清晰。 */
 	--color-accent: #2563eb;
@@ -123,8 +132,12 @@
 	--color-update: #e0f2fe;
 	--color-on-update: #0284c7;
 	/* 报错 severity token：仅供 graphics（glyph/图标）着色用（error-system spec：只限一枚 glyph）+ 文案色 */
-	--color-err: #d6352c;
-	--color-warn: #c2740a;
+	--color-err: #b42318;
+	--color-err-bg: #fef3f2;
+	--color-err-border: #f4b4ae;
+	--color-warn: #a3540a;
+	--color-warn-bg: #fff8ee;
+	--color-warn-border: #f1c48b;
 	--color-info: #a1a1aa;
 	/* 正常运转状态色（UI 插件状态点等）：与 severity 同类的 graphics 专用 token */
 	--color-ok: #059669;
@@ -141,9 +154,9 @@
 	--markdown-table-head-bg: var(--color-hover);
 	--markdown-link-decoration: color-mix(in oklab, var(--link) 35%, transparent);
 	--markdown-link-hover: var(--link);
-	--sidebar: oklch(98.5% 0 0);
+	--sidebar: #fafafa;
 	--chat-input: var(--color-surface);
-	--chat-status: oklch(97% 0 0);
+	--chat-status: #f2f2f2;
 	--chip-accent: oklch(48.8% 0.243 264.376);
 	--link: oklch(54.6% 0.245 262.881);
 	--ring: color-mix(in oklab, var(--color-accent) 45%, transparent);
@@ -177,7 +190,7 @@
 	--knowledge-shadow: 0 10px 28px rgba(35, 58, 78, 0.08);
 	--knowledge-shadow-soft: 0 3px 12px rgba(35, 58, 78, 0.07);
 	/* P15：ClawGo token —— 悬停 / 选中底、功能区三色（墨 / 纸 / 强调）、动效、滚动渐隐 */
-	--highlight: color-mix(in oklab, var(--color-ink) 5%, transparent);
+	--highlight: #ebebeb;
 	--route-ink: oklch(37% 0.09 250);
 	--route-paper: oklch(97% 0.015 250);
 	--route-accent: oklch(55% 0.16 250);
@@ -202,6 +215,8 @@
 	--color-hover: oklch(31% 0 0);
 	--color-border: oklch(100% 0 0 / 0.1);
 	--color-border-strong: oklch(100% 0 0 / 0.15);
+	--color-border-muted: oklch(100% 0 0 / 0.12);
+	--color-border-subtle: oklch(100% 0 0 / 0.08);
 	--color-bubble: oklch(37.1% 0 0);
 	--color-ink: oklch(98.5% 0 0);
 	--color-ink-2: oklch(87% 0 0);
@@ -220,7 +235,11 @@
 	--color-update: #0c4a6e;
 	--color-on-update: #7dd3fc;
 	--color-err: #f87171;
+	--color-err-bg: #450a0a;
+	--color-err-border: #7f1d1d;
 	--color-warn: #f0b84a;
+	--color-warn-bg: #422006;
+	--color-warn-border: #854d0e;
 	--color-info: #6e6e77;
 	--color-ok: #34d399;
 	--color-switch-off: oklch(37.1% 0 0);
@@ -2898,10 +2917,9 @@ code {
 	margin: var(--space-2);
 	border-radius: var(--radius-card);
 	background: var(--color-surface);
+	border: 1px solid var(--color-border);
 	overflow: hidden;
-	box-shadow:
-		0 0 0 1px var(--color-border),
-		0 1px 2px color-mix(in oklab, var(--color-ink) 4%, transparent);
+	box-shadow: var(--shadow-soft);
 }
 [data-theme="dark"] .main-float {
 	box-shadow: 0 0 0 1px var(--color-border);

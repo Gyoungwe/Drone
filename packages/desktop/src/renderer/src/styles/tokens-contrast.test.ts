@@ -15,8 +15,19 @@ function block(selector: string): Record<string, string> {
 
 function luminance(value: string): number {
 	const m = value.match(/^oklch\(([\d.]+)% 0 0\)$/);
-	if (!m?.[1]) throw new Error(`not a neutral oklch token: ${value}`);
-	return (Number(m[1]) / 100) ** 3;
+	if (m?.[1]) return (Number(m[1]) / 100) ** 3;
+	const hex = value.match(/^#([\da-f]{3}|[\da-f]{6})$/i)?.[1];
+	if (!hex) throw new Error(`not a supported neutral color token: ${value}`);
+	const digits = hex.length === 3 ? hex.split("").map((part) => part + part) : hex.match(/../g);
+	if (!digits) throw new Error(`invalid hex color token: ${value}`);
+	const channel = (part: string) => {
+		const srgb = Number.parseInt(part, 16) / 255;
+		return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+	};
+	const channels = digits.map(channel);
+	if (channels.length !== 3) throw new Error(`invalid hex color token: ${value}`);
+	const [r, g, b] = channels as [number, number, number];
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 function contrast(a: string, b: string): number {
