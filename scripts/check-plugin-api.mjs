@@ -219,42 +219,33 @@ function checkLocalLifecycle() {
 		);
 		runContractProbe(fixtureDir);
 
-		execNpm(
-			["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", currentTarball],
-			{
-				cwd: fixtureDir,
-				stdio: "pipe",
-				env,
-			},
-		);
+		execNpm(["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", currentTarball], {
+			cwd: fixtureDir,
+			stdio: "pipe",
+			env,
+		});
 		assert(
 			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === "1.0.0",
 			"current tarball did not upgrade to 1.0.0",
 		);
 		runContractProbe(fixtureDir);
 
-		execNpm(
-			["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", rollbackTarball],
-			{
-				cwd: fixtureDir,
-				stdio: "pipe",
-				env,
-			},
-		);
+		execNpm(["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", rollbackTarball], {
+			cwd: fixtureDir,
+			stdio: "pipe",
+			env,
+		});
 		assert(
 			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === "0.9.0",
 			"rollback tarball did not restore 0.9.0",
 		);
 		runContractProbe(fixtureDir);
 
-		execNpm(
-			["uninstall", "@gyoungwe/plugin-api", "--ignore-scripts", "--no-audit", "--no-fund"],
-			{
-				cwd: fixtureDir,
-				stdio: "pipe",
-				env,
-			},
-		);
+		execNpm(["uninstall", "@gyoungwe/plugin-api", "--ignore-scripts", "--no-audit", "--no-fund"], {
+			cwd: fixtureDir,
+			stdio: "pipe",
+			env,
+		});
 		assert(
 			!existsSync(join(fixtureDir, "node_modules", "@gyoungwe", "plugin-api")),
 			"npm uninstall left plugin-api installed",
