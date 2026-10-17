@@ -56,7 +56,7 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | 项目 | 当前状态 | 已有证据 | 缺失 / 下一步 |
 |---|---|---|---|
 | UI 插件宿主 | **已实现（基础）** | renderer registry/slot、main manager/build、manifest、热重载、错误边界、设置页 | 完成 `UI-01` 的真实启用→出现→关闭→重载验收 |
-| 知识与 topic 记忆 | **已实现（领域与自动化）** | knowledge/reuse、topic memory、stale/freshness 测试 | 完成 `MEM-01`，使用 `DRONE-MEM-001` 和源变更验证 |
+| 知识与 topic 记忆 | **MEM-01 隔离验收通过** | `packages/backend/test/mem-gate.test.mjs`：隔离 Vault 的 `memory-note.md` 写入 marker，新实例恢复 topic/来源/未解决问题，源变更后 stale/changed | 继续复跑根门禁；不触碰正式 Vault |
 | Skills | **已实现（目录与路由）** | Tools & Skills、skill router、资源校验和相关测试 | 完成 `SKILL-01`，保留真实 invocation 和禁用后的反证 |
 | MCP / 连接器 | **隔离真实调用已通过（适配器与 IPC；WebDAV/Zotero 写入闭环）** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 完成 marker tool call 和关闭重载；read-only `CapabilityResearchPorts` 完成唯一词 source receipt/调用记录与关闭跳过传输；WebDAV 与 Zotero 临时对象均完成真实创建→回读→删除 | 根门禁持续复跑；Protocols.io 保持只读 |
 | 外部写入闭环 | **WebDAV + Zotero 已通过；Protocols.io 只读** | 两个连接器均完成授权→创建→回读→删除→再回读，凭据未写入仓库 | 维持 Protocols.io 只读；若以后启用写入需另行授权 token |
@@ -76,7 +76,7 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | 编号 | 操作 | 通过证据 | 当前状态 | 下一步 |
 |---|---|---|---|---|
 | `UI-01` | 设置 → 高级 → UI 插件：启用插件，观察真实 slot/panel/headless 效果；关闭、重载、重启 | 槽位/面板真实变化、关闭后消失、配置持久化、插件错误可见 | 宿主基础已实现；未完成真实验收 | 使用内置插件完成桌面走查，保存截图和 plugin/load nonce |
-| `MEM-01` | `memory-note.md` 写入 `DRONE-MEM-001`；会话 A 总结并关闭；会话 B 选择 topic 继续；修改源后再次恢复 | 恢复标题/摘要/未解决问题/来源；Agent 能回答 marker；源变更显示 `stale/changed` | 领域与自动化已实现；未完成真实验收 | 在隔离 profile 执行跨会话、跨重启和 stale 复核 |
+| `MEM-01` | `memory-note.md` 写入 `DRONE-MEM-001`；会话 A 总结并关闭；会话 B 选择 topic 继续；修改源后再次恢复 | `mem-gate.test.mjs` 与 `/private/tmp/drone-mem-001-evidence.json`：恢复标题/摘要/未解决问题/来源，context 命中 marker，源变更显示 `stale/changed` | **PASS（隔离跨实例验收）** | 继续复跑根门禁；不触碰正式 Vault |
 | `SKILL-01` | 启用 `research-workflow` 或实际安装 skill，用 `/skill:<name>` 或研究问题触发；禁用后重试 | 真实 invocation、名称/参数、调用次数/最近使用、技能要求的结果结构；禁用后不可用 | 路由与目录已实现；未完成真实验收 | 将 invocation 证据与 Run Inspector 对齐 |
 | `MCP-01` | 启用本地 MCP 的 `echo_marker`，要求只返回 `DRONE-MCP-001`；关闭服务并重载后重试 | 连接状态、真实 tool call、唯一返回值、关闭后的 unavailable/blocked | **PASS（隔离真实 SDK fixture）**；启用→真实调用→关闭→重载已覆盖，关闭后 adapter 无 server/tool 或明确 disabled | 作为根门禁 `check:remaining-gates` 持续复跑 |
 | `CONN-01` | 启用连接器搜索唯一测试词，关闭后再次搜索 | source ID、URL、访问时间、调用记录；关闭后不再调用该连接器 | **PASS（只读 CapabilityResearchPorts fixture）**；唯一词 `DRONE-CONN-01-UNIQUE` 的 source receipt/URL/调用记录可回读，关闭后跳过传输，重新启用可重试 | 保持只读；外部写入不在本门槛范围 |
@@ -380,4 +380,4 @@ revision / ETag / SHA-256：
 - WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；Protocols.io 按计划保持只读。
 - `check:plugin-api --migration --lifecycle` 的本地 pack 安装→升级→回滚→卸载通过；Pi `1.1.0` 与 latest `1.3.0` 兼容矩阵通过，next 为 `NOT_PUBLISHED`。
 - 正式桌面门槛为本机构建产物：16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。交互式 Electron SIGABRT 不计为降级。
-- `MEM-01`、`MCP-01`、`CONN-01` 的真实行为仍保持 `NOT_RUN` 或 read-only；`REDLINE-01` 已通过 `npm run check:redline` 的隔离真实行为验收，不能用静态资源通过替代。
+- `MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均已通过隔离真实行为验收；Protocols.io 继续只读，不能把静态资源通过替代外部写入证据。

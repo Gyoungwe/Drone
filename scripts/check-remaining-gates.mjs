@@ -13,16 +13,30 @@ if (!existsSync(adapter)) {
 }
 
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-const result = spawnSync(
-	npm,
-	["run", "test:sdk", "-w", "@drone/backend", "--", "test/mcp-connector-gates.test.ts"],
-	{ cwd: root, stdio: "inherit" },
-);
-if (result.error) {
-	console.error(`[check:remaining-gates] failed to start npm: ${result.error.message}`);
-	process.exit(1);
+const commands = [
+	[
+		"unit",
+		[
+			"run",
+			"test",
+			"-w",
+			"@drone/backend",
+			"--",
+			"test/mem-gate.test.mjs",
+			"test/redline-acceptance.test.mjs",
+		],
+	],
+	["sdk", ["run", "test:sdk", "-w", "@drone/backend", "--", "test/mcp-connector-gates.test.ts"]],
+];
+for (const [label, args] of commands) {
+	console.error(`[check:remaining-gates] ${label}`);
+	const result = spawnSync(npm, args, { cwd: root, stdio: "inherit" });
+	if (result.error) {
+		console.error(`[check:remaining-gates] failed to start npm: ${result.error.message}`);
+		process.exit(1);
+	}
+	if (result.status !== 0) process.exit(result.status ?? 1);
 }
-if (result.status !== 0) process.exit(result.status ?? 1);
 
 // Keep the machine-readable summary small and free of paths, credentials, or session text.
 console.log(
@@ -31,7 +45,13 @@ console.log(
 		gates: {
 			"MCP-01": "local stdio marker enable/call/disable-reload",
 			"CONN-01": "read-only unique-term source receipt close/reopen",
+			"MEM-01": "isolated cross-instance marker restore and stale source",
+			"REDLINE-01": "publication/metacognitive/orchestration blocking fixtures",
 		},
-		testFile: "packages/backend/test/mcp-connector-gates.test.ts",
+		testFiles: [
+			"packages/backend/test/mem-gate.test.mjs",
+			"packages/backend/test/mcp-connector-gates.test.ts",
+			"packages/backend/test/redline-acceptance.test.mjs",
+		],
 	}),
 );

@@ -86,6 +86,9 @@ packages/
 | `scripts/smoke-evaporation-ui.mjs` | 蒸发设置二态 CDP 冒烟（dev 实例带 `--remote-debugging-port=9224` 运行后执行） |
 | `scripts/check-report-ui.mjs` | 隔离 Electron 验收：桌面长回答贴底、主动上翻、引用短标题/完整路径/点击、运行记录展开；不调用真实模型 |
 | `scripts/check-local-desktop-artifact.mjs` | 本机构建产物验收：不启动 Electron，核对 main/preload/renderer 产物、四视口路由标记、插件启停合同、skill/MCP/connector/memory/结果红线资源；`--strict` 另检查已 stage 的 MCP 资源 |
+| `scripts/check-remaining-gates.mjs` | 收口 `MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 的隔离跨实例/SDK/只读连接器/领域门禁验收；输出无凭据 JSON 摘要 |
+| `packages/backend/test/mem-gate.test.mjs` | `MEM-01` 隔离跨实例 topic memory：`DRONE-MEM-001`、来源回读、stale/changed |
+| `packages/backend/test/mcp-connector-gates.test.ts` | `MCP-01` 本地 stdio marker 的启用/真实调用/关闭重载，以及 `CONN-01` 只读唯一词 source receipt 与关闭重试 |
 | `packages/backend/test/redline-acceptance.test.mjs` / `npm run check:redline` | REDLINE-01 隔离验收：通过 publication/orchestration/metacognitive 门禁注入缺来源、stale source、数字/方法漂移、重复数不足、断线和权限拒绝；断言阻断原因、差异路径与 sealed audit proof |
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
 | `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵 |

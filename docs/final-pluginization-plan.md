@@ -472,7 +472,7 @@ Claude Code adapter 必须通过同一套：
 | 能力 | 当前状态 | 已有证据 | 缺口 / 下一步 |
 |---|---|---|---|
 | UI 插件宿主（slot/region、manifest、热重载、错误边界） | **已实现（宿主基础）** | `packages/desktop/src/renderer/src/plugins/`、`main/ui-plugins/`、`resources/ui-plugins/`、`check:plugin-api` | 用 `UI-01` 完成真实启用→出现→关闭→重载验收，并继续收窄 `@drone/plugin-api` |
-| 知识、topic 和记忆 | **部分完成（含原生 Pi fixture 闭环）** | `@drone/knowledge`、topic memory、stale/freshness 测试；`pi-knowledge` 已有本地优先检索、沉淀和二次问题 fixture trace | 用 `MEM-01` 在隔离桌面和真实 Pi 环境验证 `DRONE-MEM-001`、来源复读和 stale 阻断 |
+| 知识、topic 和记忆 | **MEM-01 隔离验收通过** | `packages/backend/test/mem-gate.test.mjs`：隔离 Vault 的 `memory-note.md` 写入 `DRONE-MEM-001`，新 memory 实例恢复 topic/来源/未解决问题，源修改后 `refreshSourceCheck` 返回 `stale/changed`；证据写入 `/private/tmp` | 继续保持原生 Pi/桌面共享同一 topic-memory 合同；真实用户 Vault 不参与验收 |
 | Skills | **已实现（目录与路由）** | Tools & Skills、skill router、资源校验和相关测试 | 用 `SKILL-01` 证明真实 invocation、调用计数和禁用后的行为变化 |
 | MCP / 研究连接器 | **隔离真实调用已通过；WebDAV/Zotero 写入闭环已验收** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 启动本地 stdio fixture，启用后真实 tool call 返回 `DRONE-MCP-001`，关闭并重载后无工具/无 marker；同一测试通过 read-only `CapabilityResearchPorts` 对唯一词 `DRONE-CONN-01-UNIQUE` 回读稳定 source ID/URL/调用记录，关闭后跳过传输、重新启用可重试；WebDAV 与 Zotero 均有真实临时对象回执；Protocols.io 保持只读 | 复跑 `check:remaining-gates` 并在根门禁中保留该证据；Protocols.io 不进行写入 |
 | 外部写入回读删除 | **WebDAV/Zotero 已通过；Protocols.io 只读** | WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；凭据仅在进程环境使用 | 保持 Protocols.io 只读；后续若启用写入，必须另行授权并保留同等回读证据 |
@@ -563,7 +563,7 @@ Claude Code adapter 必须通过同一套：
 | 编号 | 验收动作 | 必须留下的证据 | 当前状态 | 下一步 |
 |---|---|---|---|---|
 | `UI-01` | 启用 UI 插件，观察真实 slot/panel/headless 效果；关闭、重载和重启 | 槽位/面板变化、关闭后消失、持久化配置、插件错误状态 | 宿主已实现，真实验收未完成 | 执行桌面清单并记录截图、plugin name、load nonce |
-| `MEM-01` | 用 `memory-note.md` 写入 `DRONE-MEM-001`，新会话恢复 topic，修改源文件后再次恢复 | topic context、来源路径、重新读取回执、`stale/changed` 状态 | 领域与测试已实现，真实验收未完成 | 在隔离 profile 执行跨会话/重启验收 |
+| `MEM-01` | 用 `memory-note.md` 写入 `DRONE-MEM-001`，新会话恢复 topic，修改源文件后再次恢复 | `packages/backend/test/mem-gate.test.mjs`；topic context、来源路径、重新读取回执、`stale/changed` 状态和 `/private/tmp/drone-mem-001-evidence.json` | **PASS（隔离跨实例验收）** | 继续复跑根门禁；不触碰正式 Vault |
 | `SKILL-01` | 启用 `research-workflow` 或实际安装 skill，用 slash command/研究问题触发，再禁用重试 | skill invocation、名称/参数、调用次数/最近使用、结果结构、禁用后的不可用回执 | 路由与目录已实现，真实验收未完成 | 将 invocation 证据接入 Run Inspector 验收记录 |
 | `MCP-01` | 启用本地测试 MCP 的 `echo_marker`，要求返回唯一值 `DRONE-MCP-001`，关闭后重试 | 连接状态、真实 tool call、唯一返回值、关闭后的 unavailable/blocked | **PASS（隔离真实 SDK fixture）**；`mcp-connector-gates.test.ts` 覆盖启用→真实调用→关闭→重载，关闭后 adapter 无 server/tool 或明确 disabled | 作为根门禁 `check:remaining-gates` 持续复跑 |
 | `CONN-01` | 启用研究连接器搜索唯一测试词，再关闭后重复搜索 | 稳定 source ID、URL、访问时间、调用记录、关闭后的行为 | **PASS（只读 CapabilityResearchPorts fixture）**；唯一词 `DRONE-CONN-01-UNIQUE` 的 source receipt 和调用记录可回读，关闭后不发起传输，重新启用可重试 | 保持只读；外部服务写入不在本门槛范围 |
