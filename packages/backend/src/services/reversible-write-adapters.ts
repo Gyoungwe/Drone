@@ -1,8 +1,5 @@
 import { createHash } from "node:crypto";
-import type {
-	ResearchWriteAdapter,
-	ResearchWriteExecutionContext,
-} from "@drone/research";
+import type { ResearchWriteAdapter, ResearchWriteExecutionContext } from "@drone/research";
 import type {
 	ResearchWritePayload,
 	ResearchWritePlan,
