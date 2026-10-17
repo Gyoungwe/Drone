@@ -377,7 +377,7 @@ src/
 
 ## 本地文档（`.local/`，不入库，会定期清理——引用可能失效）
 
-- `.local/docs/release.md` — 打包/发版流程（CI、签名、网络备忘）
+- `.local/docs/release.md` — 打包/发版流程（CI、更新、回滚、网络备忘；无证书发布）
 - `.local/agent-work/spec/`、`plan/` — 临时设计规范/实施计划（按目录 ls 找，不逐文件索引；清理后引用即失效）
 - `.local/agent-work/channel/<主题>/` — 跨会话沟通频道（channel-watch 扩展监听，配套 skill channel-pickup/design-handoff）
 - `.local/design/` — 设计稿：`ux/error-system/`（报错卡定稿，项目设计语言基准）、`ux/lan_observer/`、`ux/turn_diff/`、`components/center-status-anim/`、`icons/` 等
