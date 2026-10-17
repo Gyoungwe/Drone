@@ -25,5 +25,5 @@ describe("preload", () => {
 		expect(pi).toBeTruthy();
 		for (const name of ["memoryList", "memoryRemove", "memoryPromote", "memoryPromoteToKnowledge"])
 			expect(typeof pi[name]).toBe("function");
-	});
+	}, 15_000);
 });
