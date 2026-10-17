@@ -350,10 +350,13 @@ describe("reversible research write adapters", () => {
 			requests.push({ method, url: String(request), authorization: headers.get("authorization") });
 			call += 1;
 			if (call === 1 || call === 3 || call === 5) {
-				return new Response(JSON.stringify({ status_code: 0, protocol: { uri: "protocol-guid", title: "Demo" } }), {
-					status: 200,
-					headers: { "content-type": "application/json" },
-				});
+				return new Response(
+					JSON.stringify({ status_code: 0, protocol: { uri: "protocol-guid", title: "Demo" } }),
+					{
+						status: 200,
+						headers: { "content-type": "application/json" },
+					},
+				);
 			}
 			return new Response(JSON.stringify({ status_code: 0 }), {
 				status: call === 2 ? 200 : 200,
@@ -406,10 +409,9 @@ describe("reversible research write adapters", () => {
 			apiToken: "temporary-token",
 			fetchImpl,
 		});
-		await expect(
-			port.write({ targetRef: "protocol-guid", payload: input.payload }),
-		).rejects.toThrow("connection closed after commit");
+		await expect(port.write({ targetRef: "protocol-guid", payload: input.payload })).rejects.toThrow(
+			"connection closed after commit",
+		);
 		expect(methods).toEqual(["GET", "POST"]);
 	});
-
 });
