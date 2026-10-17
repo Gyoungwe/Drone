@@ -407,6 +407,11 @@ describe("reversible research write adapters", () => {
 				PROTOCOLS_IO_API_BASE: "not a URL",
 			}),
 		).toBeUndefined();
+		expect(
+			createProtocolsBookmarkWritePortFromEnv({
+				PROTOCOLS_IO_API_TOKEN: "temporary-token",
+			}),
+		).toBeUndefined();
 	});
 
 	it("does not delete a Protocols.io bookmark when POST outcome is uncertain", async () => {
