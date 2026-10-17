@@ -387,7 +387,7 @@ export function createProtocolsBookmarkWritePort(
 					throw new Error(`Protocols.io final target check failed (${finalRead.response.status})`);
 				}
 				const finalBookmarkState = config.bookmarkStateProbe
-					? await config.bookmarkStateProbe(target, null)
+					? await config.bookmarkStateProbe(target, undefined)
 					: "unknown";
 				if (finalBookmarkState !== "absent") {
 					throw new Error("Protocols.io bookmark deletion could not be verified");
