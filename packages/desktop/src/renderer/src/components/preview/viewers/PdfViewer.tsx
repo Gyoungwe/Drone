@@ -1,4 +1,10 @@
-import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from "pdfjs-dist";
+import {
+	GlobalWorkerOptions,
+	getDocument,
+	type PDFDocumentProxy,
+	type PDFPageProxy,
+	type RenderTask,
+} from "pdfjs-dist";
 import PdfWorker from "pdfjs-dist/build/pdf.worker.mjs?worker";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../../i18n";
@@ -126,7 +132,12 @@ export function PdfViewer({ src }: PreviewRendererProps) {
 	}, [pdf, page]);
 
 	if (!src) return <div className="resource-empty">{t("resource.viewer.mediaTooLarge")}</div>;
-	if (loading) return <div className="resource-empty" role="status">{t("resource.loading")}</div>;
+	if (loading)
+		return (
+			<div className="resource-empty" role="status">
+				{t("resource.loading")}
+			</div>
+		);
 	if (error || !pdf)
 		return (
 			<div className="resource-empty" role="alert">
@@ -137,7 +148,11 @@ export function PdfViewer({ src }: PreviewRendererProps) {
 	return (
 		<div className="pdf-viewer" data-preview-kind="pdf">
 			<div className="pdf-viewer-toolbar" role="toolbar" aria-label="PDF">
-				<button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+				<button
+					type="button"
+					disabled={page <= 1}
+					onClick={() => setPage((current) => Math.max(1, current - 1))}
+				>
 					{t("resource.viewer.prevPage")}
 				</button>
 				<span aria-live="polite">{t("resource.viewer.pdfPage", { page, pages: pdf.numPages })}</span>
