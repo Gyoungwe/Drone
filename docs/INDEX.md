@@ -173,6 +173,10 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 `src/*.ts` 是可打包的扩展入口：当前 generated entries 包括 `institutional-access`、`knowledge-extension`、`research-loop`、`research-wikiloop`、`research-wikiskill`、`subagent-research`、`workspace-config`；`scripts/build-extensions.mjs` 将它们生成到 `.pi/extensions/`。manifest 顶层 `legacyOutputs` 明确保留 4 个跨 bundle 兼容入口：`obsidian-workbench.mjs`、`source-archive.mjs`、`subagent-mcp-readonly.mjs`、`zotero-literature.mjs`；`check:extensions --strict` 校验 generated entries 的源/产物哈希，并将这些声明的遗留产物排除在漂移失败之外。
 
+## packages/pi-knowledge — 原生 Pi 知识插件（PR-3）
+
+`packages/pi-knowledge/` 是第一个可独立安装的 Pi Package：`src/index.ts` 只组装现有知识扩展入口，`scripts/build-pi-knowledge.mjs` 将 `@drone/knowledge` 与扩展图打包到 `dist/index.mjs`，并把知识 worker 放在包内 `lib/knowledge/runtime/worker.mjs`。`skills/` 由内置 `research-vault`、`research-workflow`、`research-show-me` 构建同步；`scripts/smoke-pi-package.mjs` 覆盖未配置 Vault 的 `unconfigured` 回执、fixture 检索和安装/卸载路径。原生 Pi 的最低版本是 `1.1.0`；Pi 1.1.0 将本地 `.tgz` 视为原始扩展路径，因此 smoke 会如实记录该限制，并用解包后的 package directory 验证可加载路径，不把它误报为 tarball 安装通过。生成 dist 的 R8 自包含检查由 `scripts/check-architecture.mjs` 执行。
+
 ## packages/backend — pi SDK 适配层
 
 纯 Node，不依赖 Electron。唯一 import pi SDK 的包，运行时值导入收敛在 `session-engine/**`；`pi-backend.ts` 保留兼容门面。

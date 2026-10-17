@@ -9,7 +9,7 @@ import { existsSync } from "node:fs";
  * fixture; new findings fail the check while fixed findings are reported so the
  * baseline can shrink over time.
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import process from "node:process";
 
@@ -180,7 +180,47 @@ async function scan() {
 	}
 	const findings = [];
 	for (const file of files) scanFile(file, await readFile(file, "utf8"), findings);
+	await scanPluginDist(findings);
 	return findings.sort((a, b) => canonical(a).localeCompare(canonical(b)) || a.line - b.line);
+}
+
+/**
+ * R8: installable Pi packages must be self-contained. Their generated dist
+ * cannot import Electron, the Desktop/backend composition roots, or reach
+ * outside the package with a ../../ import. Source packages are checked by the
+ * normal rules above; this extra pass covers the emitted artifact that users
+ * actually install.
+ */
+async function scanPluginDist(findings) {
+	const packagesRoot = join(ROOT, "packages");
+	if (!existsSync(packagesRoot)) return;
+	for (const entry of await readdir(packagesRoot, { withFileTypes: true })) {
+		if (!entry.isDirectory() || !/^pi-/.test(entry.name)) continue;
+		const dist = join(packagesRoot, entry.name, "dist");
+		if (!existsSync(dist)) continue;
+		const files = await walk(dist, []);
+		for (const file of files) {
+			const text = await readFile(file, "utf8");
+			for (const match of text.matchAll(
+				/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(electron|@drone\/(?:backend|desktop))(?=["'])/g,
+			)) {
+				const offset = match.index ?? 0;
+				addFinding(findings, "R8", file, lineNumber(text, offset), `plugin dist host import ${match[1]}`);
+			}
+			for (const match of text.matchAll(
+				/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(\.\.\/\.\.)/g,
+			)) {
+				const offset = match.index ?? 0;
+				addFinding(
+					findings,
+					"R8",
+					file,
+					lineNumber(text, offset),
+					"plugin dist package-boundary ../../ import",
+				);
+			}
+		}
+	}
 }
 
 async function loadBaseline() {

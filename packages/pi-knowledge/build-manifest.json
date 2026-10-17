@@ -1,0 +1,14 @@
+{
+	"version": 1,
+	"generator": "scripts/build-pi-knowledge.mjs",
+	"inputsSha256": "51dec188863aa2e28d9579efb60071985e04d9a5aced36c4573cedc39db8c1a3",
+	"outputs": {
+		"dist/index.mjs": "38aa7431d6b11a23300251760168b934c5130fe5700845f247b8fe14c266ccb4",
+		"lib/knowledge/runtime/worker.mjs": "c513d323bcd7827158c4463ca2a2661bd093dc2b2730d2bed48bfb05dd388f44"
+	},
+	"skills": [
+		"skills/research-vault/SKILL.md",
+		"skills/research-workflow/SKILL.md",
+		"skills/research-show-me/SKILL.md"
+	]
+}
