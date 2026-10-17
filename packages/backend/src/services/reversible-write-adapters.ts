@@ -93,8 +93,10 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 				);
 			}
 			let created = false;
-			const deleteRemote = async () => {
-				const deleted = await request("DELETE");
+			let creationEtag: string | null = null;
+			const deleteRemote = async (etag: string | null) => {
+				if (!etag) throw new Error("WebDAV DELETE requires a verified ETag");
+				const deleted = await request("DELETE", { "If-Match": etag });
 				if (deleted.status >= 400 && deleted.status !== 404) {
 					throw new Error(`WebDAV DELETE failed (${deleted.status})`);
 				}
@@ -125,10 +127,12 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 					typeof readPayload.title === "string"
 						? readPayload.title
 						: undefined;
+				creationEtag = read.headers.get("etag") ?? put.headers.get("etag");
 				if (read.status < 200 || read.status >= 300 || readTitle !== payload.title) {
 					throw new Error(`WebDAV readback failed (${read.status})`);
 				}
-				await deleteRemote();
+				if (!creationEtag) throw new Error("WebDAV readback missing ETag");
+				await deleteRemote(creationEtag);
 				const missing = await request("GET");
 				return {
 					externalRef: url,
@@ -138,7 +142,7 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 			} catch (error) {
 				if (created) {
 					try {
-						await deleteRemote();
+						await deleteRemote(creationEtag);
 					} catch {
 						// Preserve the original failure; the caller still receives a failed closure.
 					}
