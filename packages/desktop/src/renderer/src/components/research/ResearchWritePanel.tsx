@@ -58,6 +58,7 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 	}, []);
 
 	useEffect(() => {
+		void writeInputKey;
 		setPlan(null);
 		setReceipt(null);
 		setError(null);
