@@ -157,6 +157,7 @@ export class ResearchWriteService {
 				at: receipt.at,
 				...(receipt.externalRef ? { externalRef: receipt.externalRef } : {}),
 				...(receipt.failureReason ? { failureReason: receipt.failureReason } : {}),
+				...(receipt.deleted ? { deleted: receipt.deleted } : {}),
 			});
 			next.audit = next.audit.slice(-500);
 		});
