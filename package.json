@@ -38,7 +38,7 @@
 		"check:native-pi": "node scripts/check-native-pi.mjs",
 		"build:pi-knowledge": "node scripts/build-pi-knowledge.mjs",
 		"check:pi-knowledge": "node scripts/build-pi-knowledge.mjs --check",
-		"smoke:pi-knowledge": "node scripts/smoke-pi-package.mjs packages/pi-knowledge"
+		"smoke:pi-knowledge": "node scripts/smoke-pi-package.mjs packages/pi-knowledge",
 		"build:research": "node scripts/build-research-runtime.mjs",
 		"check:extensions": "node scripts/check-extensions-build.mjs",
 		"generate:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs",
