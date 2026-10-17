@@ -72,6 +72,9 @@ function webdavTargetUrl(baseUrl: string, targetRef: string): string {
 export function createWebdavWritePort(config: WebdavWritePortConfig): ReversibleWritePort {
 	const fetchImpl = config.fetchImpl ?? fetch;
 	const base = new URL(config.baseUrl);
+	if (!/^https?:$/.test(base.protocol) || base.search || base.hash) {
+		throw new Error("WebDAV base URL must be an HTTP(S) URL without query or fragment");
+	}
 	const transport = new WebDavTransport({
 		endpoint: base.origin,
 		username: config.username,
