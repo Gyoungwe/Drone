@@ -237,7 +237,16 @@ function createPortBackedAdapter(options: PortAdapterOptions): ReversibleResearc
 			});
 			if (!result.externalRef?.trim()) throw new Error("Write adapter returned no external reference");
 			if (!result.readBack || !result.deleted) {
-				throw new Error(`${options.label} write did not verify create → readback → delete closure`);
+				return {
+					planId: plan.id,
+					adapterId: plan.adapterId,
+					status: "failed",
+					at: new Date().toISOString(),
+					externalRef: result.externalRef,
+					readBack: result.readBack ? "verified" : "unverified",
+					deleted: result.deleted ? "verified" : "unverified",
+					failureReason: `${options.label} write did not verify create → readback → delete closure`,
+				};
 			}
 			return {
 				planId: plan.id,
