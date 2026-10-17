@@ -1,11 +1,8 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+
 import type { KnowledgeCloudStatus, ZoteroStatus } from "@drone/shared";
-import {
-	cloudCapabilityStatus,
-	mcpCapabilityStatus,
-	zoteroCapabilityStatus,
-} from "./SkillsConnectionsView";
+import { describe, expect, it } from "vitest";
+import { cloudCapabilityStatus, mcpCapabilityStatus, zoteroCapabilityStatus } from "./SkillsConnectionsView";
 
 const cloud = (mode: KnowledgeCloudStatus["mode"]): KnowledgeCloudStatus => ({
 	configured: true,
