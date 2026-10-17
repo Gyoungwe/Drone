@@ -56,8 +56,8 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | 项目 | 当前状态 | 已有证据 | 缺失 / 下一步 |
 |---|---|---|---|
 | UI 插件宿主 | **UI-01 真实宿主验收通过** | `packages/desktop/src/main/ui-plugins/ui-acceptance.test.ts`：真实内置 bundle 经 `UiPluginManager` 构建/读取，renderer registry 出现、移除、重载 nonce 递增，配置跨 manager 重启保持；报告 `/private/tmp/drone-ui-skill-acceptance.json` | 交互式 Electron 仍受当前 shell 的 macOS `NSApplication` 启动阻塞；本机构建产物验收与宿主 lifecycle 已通过，GUI 截图不作为本次 gate |
-| 知识与 topic 记忆 | **MEM-01 隔离验收通过** | `packages/backend/test/mem-gate.test.mjs`：隔离 Vault 的 `memory-note.md` 写入 marker，新实例恢复 topic/来源/未解决问题，源变更后 stale/changed | 继续复跑根门禁；不触碰正式 Vault |
-| Skills | **SKILL-01 真实 SDK 验收通过** | `packages/backend/test/skill-acceptance-sdk.test.mjs`：真实 Pi SDK + offline faux provider 完成 `/skill:research-workflow` 展开、模型回合、visible skill 与 invocation 记录；自动禁用反证和 manual-only 语义证据写入 `/private/tmp/drone-skill-01*-evidence.json` | `disable-model-invocation` 只关闭自动选择；显式 `/skill:` 仍按 Pi 契约可用，计划与 UI 必须准确显示该语义 |
+| 知识与 topic 记忆 | **MEM-01 隔离验收通过** | `packages/backend/test/mem-gate.test.mjs`：隔离 Vault 的 `memory-note.md` 写入 marker，新实例恢复 topic/来源/未解决问题，源变更后 stale/changed；evidence 写入 Node `os.tmpdir()` | 继续复跑根门禁；不触碰正式 Vault |
+| Skills | **SKILL-01 真实 SDK 验收通过** | `packages/backend/test/skill-acceptance-sdk.test.mjs`：真实 Pi SDK + offline faux provider 完成 `/skill:research-workflow` 展开、模型回合、visible skill 与 invocation 记录；自动禁用反证和 manual-only 语义证据写入 Node `os.tmpdir()` | `disable-model-invocation` 只关闭自动选择；显式 `/skill:` 仍按 Pi 契约可用，计划与 UI 必须准确显示该语义 |
 | MCP / 连接器 | **隔离真实调用已通过（适配器与 IPC；WebDAV/Zotero 写入闭环）** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 完成 marker tool call 和关闭重载；read-only `CapabilityResearchPorts` 完成唯一词 source receipt/调用记录与关闭跳过传输；WebDAV 与 Zotero 临时对象均完成真实创建→回读→删除 | 根门禁持续复跑；Protocols.io 保持只读 |
 | 外部写入闭环 | **WebDAV + Zotero 已通过；Protocols.io 只读** | 两个连接器均完成授权→创建→回读→删除→再回读，凭据未写入仓库 | 维持 Protocols.io 只读；若以后启用写入需另行授权 token |
 | 结果红线与 evidence | **REDLINE-01 隔离验收通过** | 状态合同、publication/metacognitive/orchestration gate、`npm run check:redline` 的 4 类可重复 fixture 与 sealed proof | 交互式桌面截图可继续作为可选观察；本机构建产物和领域审计已闭合 |
@@ -76,8 +76,8 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | 编号 | 操作 | 通过证据 | 当前状态 | 下一步 |
 |---|---|---|---|---|
 | `UI-01` | 设置 → 高级 → UI 插件：启用插件，观察真实 slot/panel/headless 效果；关闭、重载、重启 | 槽位/面板真实变化、关闭后消失、配置持久化、插件错误可见 | **PASS（真实宿主 + renderer registry lifecycle）**；`ui-acceptance.test.ts` 与 `check:ui-skill-acceptance` 已通过 | 交互式 Electron 截图仍受当前 macOS shell `NSApplication` 阶段阻塞；不改变本机构建产物和宿主 gate 结论 |
-| `MEM-01` | `memory-note.md` 写入 `DRONE-MEM-001`；会话 A 总结并关闭；会话 B 选择 topic 继续；修改源后再次恢复 | `mem-gate.test.mjs` 与 `/private/tmp/drone-mem-001-evidence.json`：恢复标题/摘要/未解决问题/来源，context 命中 marker，源变更显示 `stale/changed` | **PASS（隔离跨实例验收）** | 继续复跑根门禁；不触碰正式 Vault |
-| `SKILL-01` | 启用 `research-workflow` 或实际安装 skill，用 `/skill:<name>` 或研究问题触发；禁用自动调用后重试 | 真实 invocation、名称/参数、调用次数/最近使用、技能要求的结果结构；自动禁用后不再被模型选择 | **PASS（真实 Pi SDK + faux provider）**；2/2 用例通过，证据 `/private/tmp/drone-skill-01-evidence.json` 与 `drone-skill-01-disabled-evidence.json` | `disable-model-invocation` 保留显式手动 `/skill:`，UI 需展示 manual-only 而非误报完全不可用 |
+| `MEM-01` | `memory-note.md` 写入 `DRONE-MEM-001`；会话 A 总结并关闭；会话 B 选择 topic 继续；修改源后再次恢复 | `mem-gate.test.mjs` 与 Node `os.tmpdir()` 下的 evidence JSON：恢复标题/摘要/未解决问题/来源，context 命中 marker，源变更显示 `stale/changed` | **PASS（隔离跨实例验收）** | 继续复跑根门禁；不触碰正式 Vault |
+| `SKILL-01` | 启用 `research-workflow` 或实际安装 skill，用 `/skill:<name>` 或研究问题触发；禁用自动调用后重试 | 真实 invocation、名称/参数、调用次数/最近使用、技能要求的结果结构；自动禁用后不再被模型选择 | **PASS（真实 Pi SDK + faux provider）**；2/2 用例通过，证据写入 Node `os.tmpdir()` | `disable-model-invocation` 保留显式手动 `/skill:`，UI 需展示 manual-only 而非误报完全不可用 |
 | `MCP-01` | 启用本地 MCP 的 `echo_marker`，要求只返回 `DRONE-MCP-001`；关闭服务并重载后重试 | 连接状态、真实 tool call、唯一返回值、关闭后的 unavailable/blocked | **PASS（隔离真实 SDK fixture）**；启用→真实调用→关闭→重载已覆盖，关闭后 adapter 无 server/tool 或明确 disabled | 作为根门禁 `check:remaining-gates` 持续复跑 |
 | `CONN-01` | 启用连接器搜索唯一测试词，关闭后再次搜索 | source ID、URL、访问时间、调用记录；关闭后不再调用该连接器 | **PASS（只读 CapabilityResearchPorts fixture）**；唯一词 `DRONE-CONN-01-UNIQUE` 的 source receipt/URL/调用记录可回读，关闭后跳过传输，重新启用可重试 | 保持只读；外部写入不在本门槛范围 |
 | `WRITE-01` | 对 Zotero/WebDAV 执行授权→写入→回读→删除→再回读 | 外部对象 ID、回读内容、删除确认、审计记录 | **PASS（WebDAV + Zotero）**；Protocols.io 只读 | 保留无凭据回执；Protocols.io 写入不在当前计划范围 |
@@ -364,7 +364,7 @@ revision / ETag / SHA-256：
 执行 `npm run check:ui-skill-acceptance -- --out /private/tmp/drone-ui-skill-acceptance.json`，两个门槛均通过：
 
 - `UI-01`：`packages/desktop/src/main/ui-plugins/ui-acceptance.test.ts` 使用随包 `ds-whale-maid`，由 `UiPluginManager` 在隔离 userData 中真实导出、构建并动态导入 `dist/index.js`；renderer registry 观察到 `app.overlay` contribution 出现，禁用后移除，重新启用后 `loadNonce` 从 1 增至 2，新的 manager 实例回读 `enabled/trusted/built` 配置。该证据证明宿主与 renderer lifecycle 已闭合，不把插件卡片的 enabled 字段单独当作通过。
-- `SKILL-01`：`packages/backend/test/skill-acceptance-sdk.test.mjs` 使用真实 Pi SDK `SessionService/PiBackend` 与 offline faux provider，执行 `/skill:research-workflow summarize the evidence boundary`，回读 canonical `<skill>` user message、visible skill、system prompt 和 provider call；第二用例验证 `disable-model-invocation: true` 后科研问题不会自动选择该技能且不产生 invocation。Pi 契约仍允许显式 `/skill:research-workflow manual check`，因此 UI 必须标为 `manual-only`，不能误报为完全不可用。证据分别写入 `/private/tmp/drone-skill-01-evidence.json` 与 `/private/tmp/drone-skill-01-disabled-evidence.json`。
+- `SKILL-01`：`packages/backend/test/skill-acceptance-sdk.test.mjs` 使用真实 Pi SDK `SessionService/PiBackend` 与 offline faux provider，执行 `/skill:research-workflow summarize the evidence boundary`，回读 canonical `<skill>` user message、visible skill、system prompt 和 provider call；第二用例验证 `disable-model-invocation: true` 后科研问题不会自动选择该技能且不产生 invocation。Pi 契约仍允许显式 `/skill:research-workflow manual check`，因此 UI 必须标为 `manual-only`，不能误报为完全不可用。SKILL-01 evidence 写入 Node `os.tmpdir()`，以保持 Windows/macOS/Linux 一致。
 - 报告不包含凭据、正式 Vault、session 正文或 `results/`；provider 网络被关闭，插件和技能均来自仓库/随包资源。
 
 当前 shell 的交互式 Electron 仍在 macOS `NSApplication init/RegisterApplication` 阶段 `SIGABRT`，因此没有新增 GUI 截图；这作为 GUI 环境观察 `BLOCKED` 单独记录，不改变上述 UI-01 宿主 lifecycle 或 SKILL-01 SDK 结论，也不改变本机构建产物的 `PASS`。

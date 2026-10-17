@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fauxAssistantMessage, fauxProvider, getCurrentSystemPrompt } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
@@ -8,8 +9,8 @@ import { PiBackend } from "../src/pi-backend";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 const firstPartySkill = join(repoRoot, ".pi/skills/research-workflow/SKILL.md");
-const evidencePath = "/private/tmp/drone-skill-01-evidence.json";
-const disabledEvidencePath = "/private/tmp/drone-skill-01-disabled-evidence.json";
+const evidencePath = join(tmpdir(), "drone-skill-01-evidence.json");
+const disabledEvidencePath = join(tmpdir(), "drone-skill-01-disabled-evidence.json");
 
 const sessions = [];
 const backends = [];
@@ -24,7 +25,7 @@ afterEach(async () => {
 });
 
 async function makeSession(skillPath) {
-	const root = await realpath(await mkdtemp(join("/tmp", "drone-skill-01-")));
+	const root = await realpath(await mkdtemp(join(tmpdir(), "drone-skill-01-")));
 	roots.push(root);
 	const cwd = join(root, "project");
 	const agentDir = join(root, "agent");
@@ -138,7 +139,7 @@ describe("SKILL-01 real invocation and disabled counter-evidence", () => {
 	});
 
 	it("proves a disabled skill is absent from automatic selection while preserving explicit manual-only semantics", async () => {
-		const root = await realpath(await mkdtemp(join("/tmp", "drone-skill-01-disabled-")));
+		const root = await realpath(await mkdtemp(join(tmpdir(), "drone-skill-01-disabled-")));
 		roots.push(root);
 		const disabledSkill = join(root, "research-workflow", "SKILL.md");
 		const original = await readFile(firstPartySkill, "utf8");

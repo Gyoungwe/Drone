@@ -77,7 +77,7 @@ describe("MEM-01 isolated cross-session acceptance", () => {
 			stale: freshness.stale,
 			status: freshness.status,
 		};
-		await writeFile("/private/tmp/drone-mem-001-evidence.json", `${JSON.stringify(evidence, null, 2)}\n`, {
+		await writeFile(join(tmpdir(), "drone-mem-001-evidence.json"), `${JSON.stringify(evidence, null, 2)}\n`, {
 			mode: 0o600,
 		});
 		expect(evidence.restored.contextContainsMarker).toBe(true);
