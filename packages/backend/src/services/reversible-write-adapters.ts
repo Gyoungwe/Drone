@@ -278,6 +278,11 @@ function protocolResponseOk(status: number, body: unknown): boolean {
 	return code === undefined || code === 0;
 }
 
+function protocolMutationOk(status: number, body: unknown): boolean {
+	if (!protocolResponseOk(status, body) || !body || typeof body !== "object") return false;
+	return (body as Record<string, unknown>).status_code === 0;
+}
+
 /**
  * Backend-owned Protocols.io bookmark port. The API exposes bookmark POST/DELETE
  * acknowledgements and protocol GET, but no user-bookmark read endpoint. We
@@ -360,7 +365,7 @@ export function createProtocolsBookmarkWritePort(
 			let bookmarked = false;
 			try {
 				const created = await request(bookmarkUrl, "POST");
-				if (!protocolResponseOk(created.response.status, created.body)) {
+				if (!protocolMutationOk(created.response.status, created.body)) {
 					throw new Error(`Protocols.io bookmark failed (${created.response.status})`);
 				}
 				bookmarked = true;
@@ -374,7 +379,7 @@ export function createProtocolsBookmarkWritePort(
 					throw new Error(`Protocols.io readback failed (${read.response.status})`);
 				}
 				const deleted = await request(bookmarkUrl, "DELETE", null);
-				if (!protocolResponseOk(deleted.response.status, deleted.body)) {
+				if (!protocolMutationOk(deleted.response.status, deleted.body)) {
 					throw new Error(`Protocols.io bookmark delete failed (${deleted.response.status})`);
 				}
 				const finalRead = await request(protocolUrl, "GET", null);
