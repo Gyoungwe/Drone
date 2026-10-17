@@ -156,13 +156,13 @@
 
 - [x] **P9-1 资料工作台**：新增 `research` 视图，复用 `listProjectFiles`、`previewFile`、`openResourceExternal` 与 `PreviewHost`，支持任意项目文件的检索、预览、源码查看和外部打开；未知二进制只展示元数据。
 - [x] **P9-2 捕获 seam**：在 backend/research 提供 `captureResearchResource`，以 `cwd + relativePath + byteHash + sourceReceipt + scope + freshness + approval` 生成待审 `KnowledgeSnapshot`；禁止会话正文、凭据和未授权原文自动进入知识库。
-- [ ] **P9-3 连接器合同**：统一合同已固定来源、许可（可选）、访问时间、内容哈希、只读标记与失败原因；Crossref/DOI/OpenAlex/PubMed/Europe PMC、Zenodo/OSF/NCBI SRA/ENA、Zotero、Protocols.io、机构访问和项目存储均已纳入默认连接器清单，并保留 UI 开关与禁用失败回执。Protocols.io 可逆端口和 WebDAV 可逆端口已合并；真实 Protocols.io 写入仍受用户书签状态探针与账号授权门槛约束，Zotero/机构等其他写入型适配器仍待 provider-specific 合同与真实回执。
-- [ ] **P9-4 验收**：空项目、中文/超长路径、压缩 FASTQ/VCF、BAM 等常见科研格式、无扩展名未知二进制、重复捕获、文件变更、连接器失败和撤回/过期快照均已有可解释状态与定向回归；跨平台 CI 已覆盖共享/后端/桌面构建，自动化证据作为唯一发布门槛。
+- [ ] **P9-3 连接器合同**：统一合同已固定来源、许可（可选）、访问时间、内容哈希、只读标记与失败原因；Crossref/DOI/OpenAlex/PubMed/Europe PMC、Zenodo/OSF/NCBI SRA/ENA、Zotero、Protocols.io（只读）、机构访问和项目存储均已纳入默认连接器清单，并保留 UI 开关与禁用失败回执。Protocols.io 写入端口保留为显式禁用的兼容 seam，不再作为计划门槛；WebDAV 可逆端口已完成真实验收。剩余缺口仅是 Zotero/机构等 provider-specific 写入合同与真实回执。
+- [x] **P9-4 验收**：空项目、中文/超长路径、压缩 FASTQ/VCF、BAM 等常见科研格式、无扩展名未知二进制、重复捕获、文件变更、连接器失败和撤回/过期快照均已有可解释状态与定向回归；跨平台 CI 已覆盖共享/后端/桌面构建，自动化证据作为唯一发布门槛。
 
-## P10 · 签名发布与更新证据
+## P10 · 发布与更新证据（无证书模式）
 
-- [x] **P10-1**：恢复 `.local/docs/release.md` 私有流程并记录签名身份、notarization、Windows 签名、更新 feed、回滚和跨平台验收；Release workflow 增加证书预检和产物验签。
-- [ ] **P10-2**：正式发布只有在 macOS notarized、Windows signed、自动更新与回滚证据齐全后关闭；adhoc/未签名构建明确标为测试包。
+- [x] **P10-1（策略调整）**：发布流程保留更新 feed、回滚和跨平台验收记录，但产品不要求签名身份、notarization、Windows 签名或证书预检；Release workflow 按无证书构建发布。
+- [ ] **P10-2**：正式发布不再等待 macOS notarization、Windows signing 或证书；自动更新 feed、安装后启动和回滚证据齐全后关闭。当前剩余的是跨平台安装/更新/回滚的真实证据，未签名构建按正式无证书分发模式记录。
 
 ---
 
@@ -245,5 +245,5 @@
 | 2026-10-03 | B5a–B5c | `@drone/inquiry` 四本账与 SQLite 持久化、backend `InquiryService` 组合根、B5b 元认知发布门禁、B5c 先验注册与最多三次自主修复已合并；全量 `npm test` 通过，根 typecheck、Biome、架构检查通过 | B5d–B5f、B7、B8 留待后续；研究状态的事件订阅、桌面/桌面只读面板和 host 投影仍需单独接入 |
 | 2026-10-03 | B1–B7 收尾 | B1/B2 真实 runner、ssh2/OpenSSH/ProxyJump、known_hosts 与 SFTP/终端/授权 IPC；B3 固定 nf-core/rnaseq 3.18.0 vertical slice、MultiQC/QC/provenance 与显式真实 smoke；B5a 事件宿主接入；B5d–B5f discovery 包；B7 数据/设计合同均已接入并通过本地测试。runner 协议、取消、断线未知态、幂等、产物校验和桌面资源打包路径均已覆盖 | Docker/Slurm fixture 需要本机 Docker daemon；真实 Windows/OTP/跳板机、外部 Slurm 与真实研究数据/基线需在相应环境提供后执行；B8 暂不实施 |
 | 2026-10-03 | 后续收尾 | `SessionService` 进一步拆为显式 `SessionHost` 组合根、API/设置/诊断委托、construction/control/events/messages/models/resources/settings-boundary/extensions 专责服务；门面约 400 行、专责服务均 ≤400 行。R5 既有 106 条已迁移到 typed package/extension adapters，架构基线清零；4 个 legacy extension outputs 已替换为正式 source entries，`check:extensions --strict` 无遗留。研究技能包增加锁定缓存、SHA/receipt 校验、原子恢复和离线 release gate；backend unit 约 26 秒、定向 unit+SDK 约 33 秒。 | `PiBackend` 兼容导出、`.pi/lib` 兼容运行时和 A5-1/2/3 的完整移除仍保留一个发布周期；真实 Windows/OTP/外部 Slurm 需正确的 SSH Host 别名和凭据环境后再做 smoke；B8 暂不实施 |
-| 2026-10-17 | P9-4 验收覆盖补齐 | ResearchResourceService 新增空项目、中文/超长路径、压缩 FASTQ/VCF、BAM 与无扩展名二进制覆盖；默认连接器清单回归验证 13 个入口唯一且可发现 | Protocols.io 真实写入仍缺账号 token 与可证明的书签状态探针；跨平台 CI 已完成，人工桌面走查不再作为门槛 |
-| 2026-10-17 | P9-3 连接器写入验收 | WebDAV 远程认证、临时对象 PUT 201 → DELETE 204 → 最终 GET 404 清理完成；服务端未返回 ETag，强 ETag 闭环门槛保持关闭。Protocols.io 可逆端口已合并：要求目标 protocol 对象、规范 URI、POST/DELETE `status_code=0`，并在写前/写后由状态探针证明未收藏；官方 API 未提供文档化用户书签状态读接口，因此环境变量端口保持 disabled，未执行真实收藏写入 | P9-3/P9-4 继续未完成；Protocols.io 需要可证明的书签状态探针与账号授权后再做真实临时 bookmark→回读→删除验收 |
+| 2026-10-17 | P9-4 验收覆盖补齐 | ResearchResourceService 新增空项目、中文/超长路径、压缩 FASTQ/VCF、BAM 与无扩展名二进制覆盖；默认连接器清单回归验证 13 个入口唯一且可发现；run 873 的 macOS/Windows 静态、单测、桌面工作区测试和构建全部通过 | P9-4 已关闭，自动化证据是唯一门槛 |
+| 2026-10-17 | P9-3 连接器写入验收 | WebDAV 远程认证、临时对象 PUT 201 → DELETE 204 → 最终 GET 404 清理完成；服务端未返回 ETag，强 ETag 闭环门槛保持关闭。Protocols.io 已按产品决策登记为只读，写入 seam 显式 disabled；公开协议读取已验证 | P9-3 仅剩 Zotero/机构等 provider-specific 写入合同与真实回执；Protocols.io 写入不再是计划门槛 |
