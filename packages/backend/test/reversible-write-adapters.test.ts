@@ -218,6 +218,37 @@ describe("reversible research write adapters", () => {
 		expect(methods).toEqual(["GET", "PUT"]);
 	});
 
+	it("refuses to delete after a readback ETag change", async () => {
+		const methods: string[] = [];
+		let deleteIfMatch: string | null = null;
+		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			void _request;
+			const method = init?.method ?? "GET";
+			methods.push(method);
+			if (method === "GET" && methods.length === 1) return new Response("", { status: 404 });
+			if (method === "PUT") return new Response("", { status: 201, headers: { ETag: '"v1"' } });
+			if (method === "GET") {
+				return new Response(JSON.stringify(input.payload), {
+					status: 200,
+					headers: { ETag: '"v2"' },
+				});
+			}
+			deleteIfMatch = new Headers(init?.headers).get("if-match");
+			return new Response("", { status: 412 });
+		};
+		const port = createWebdavWritePort({
+			baseUrl: "http://dav.test:8080",
+			username: "user",
+			password: "password",
+			fetchImpl,
+		});
+		await expect(
+			port.write({ targetRef: "/acceptance/etag-change.json", payload: input.payload }),
+		).rejects.toThrow("ETag changed");
+		expect(methods).toEqual(["GET", "PUT", "GET", "DELETE"]);
+		expect(deleteIfMatch).toBe('"v1"');
+	});
+
 	it("cleans up a created object when readback fails", async () => {
 		const methods: string[] = [];
 		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
@@ -225,7 +256,7 @@ describe("reversible research write adapters", () => {
 			const method = init?.method ?? "GET";
 			methods.push(method);
 			if (method === "GET" && methods.length === 1) return new Response("", { status: 404 });
-			if (method === "PUT") return new Response("", { status: 201 });
+			if (method === "PUT") return new Response("", { status: 201, headers: { ETag: '"v1"' } });
 			if (method === "GET") {
 				return new Response('{"title":"noteworthy"}', {
 					status: 200,
