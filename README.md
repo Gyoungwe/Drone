@@ -69,7 +69,7 @@ flowchart TB
     Extensions[Extension factories\npermission gate / evap / channel-watch / todo]
     Tools[Built-in tools\nwebfetch / show_image / todo / subagent]
     InstitutionalBE[institutional\nconfig + session + status\npersist:drone-institutional]
-    Knowledge[knowledge / lan / mcp / permissions / project]
+    Knowledge[knowledge / mcp / permissions / project]
   end
 
   subgraph Desktop["packages/desktop — Electron"]
@@ -97,7 +97,7 @@ flowchart TB
 
 - `ipc.ts`: `IpcChannels` constants + `PiApi` (full `window.pi` type). Adding a channel requires 4 sync points: `shared/ipc.ts` → `preload/index.ts` (via domain contracts) → `main/ipc/<domain>.ts` → backend method + `main/ipc/index.ts` event forwarding.
 - `session.ts`: `SessionMeta`, `SessionEvent` (Pi `AgentSessionEvent` ∪ Drone UI events like `subagent_mutex`, `model_wait`), `SessionMessage` (user/assistant with `entryId` for fork/recall, `image`, `subagent`), permission modes, trust.
-- `transcript/`: UI message state machine shared by desktop and lan-web — reducer, mapping, chat-rows grouping, turn-files aggregation, patch parsing, timing derivation.
+- `transcript/`: UI message state machine shared by desktop — reducer, mapping, chat-rows grouping, turn-files aggregation, patch parsing, timing derivation.
 - `institutional.ts` (new): `InstitutionalConfig` (ezproxyTemplate auto-saved, perTaskLimit, lastLoginAt), `InstitutionalStatus`, `InstitutionalTestResult`.
 - `permission-settings.ts`, `zotero.ts`, `example-tasks.ts`, `subagent.ts`, etc.
 
@@ -114,7 +114,7 @@ flowchart TB
 ### 3. `packages/desktop` — Electron app
 
 **main/**:
-- `index.ts`: app lifecycle, initLogging, `pi-bg://` protocol for custom backgrounds, renderer crash handler (auto-reload, incident snapshot), `new PiBackend()`, LAN observer, `UiPluginManager`, `registerIpc`, updater, `createWindow`. First 3 lines must import `pi-package-dir`, `dev-agent-dir`, `fix-path`.
+- `index.ts`: app lifecycle, initLogging, `pi-bg://` protocol for custom backgrounds, renderer crash handler (auto-reload, incident snapshot), `new PiBackend()`, `UiPluginManager`, `registerIpc`, updater, `createWindow`. First 3 lines must import `pi-package-dir`, `dev-agent-dir`, `fix-path`.
 - `institutional-access.ts`: re-exports backend window funcs (`openInstitutionalLoginWindow`), plus `testAccess` that tries ezproxy + institutional_session via `institutionalFetch`.
 - `ipc/`: per-domain handlers (sessions, settings, permissions, institutional, knowledge, etc.) — thin delegates to backend; `index.ts` composes them and forwards backend events to renderer.
 - `ui-plugins/`: esbuild builder (shims `window.DroneUI`), manager (scan, build, fs.watch hot-reload, seed builtin pets).
@@ -139,7 +139,7 @@ Loaded by Pi SDK via `ProjectResourceLoader` (two-phase trust).
 - `.pi/extensions/institutional-access.mjs` (new): registers `research_institutional_login` (opens persistent institutional window, auto-saves template) and `research_institutional_status`.
 - `.pi/extensions/source-archive.mjs`: `research_archive_source` tool definition (description mentions institutional statuses, never pirate mirrors).
 - `zotero-literature.mjs`, `workspace-config.mjs`, `obsidian-workbench.mjs`, `research-loop.mjs`, `knowledge/`, etc.
-- `skills/`: `research-loop`, `wikiloop`, academic packs (Nature, Scientific, Academic Research Skills CC BY-NC), `zotero-literature`.
+- `skills/`: `research-loop`, `wikiloop`, the bundled Nature and Scientific packs, optional user-installed packs, and `zotero-literature`.
 
 ### 5. Research workbench flow
 
@@ -159,7 +159,7 @@ task_plan → authorization card (contractHash) → one auth covers all mileston
 - **Trust**: project trust prompt, `workspaces.json` roots + allowed patterns.
 - **Context evaporation**: on by default, 4-level waterline, context hook, `replay-evaporation.mts` tuning.
 - **Subagents**: built-in scout + user/project agents, single/parallel cap 8/concurrency 4, isolated `AgentSession`, `sessions-subagents/` readOnly, `@` selector in composer.
-- **LAN observer**: `lan-web/` Vite single-file, QR code, token rotation, GET-only SSE.
+- **Research files**: project resources can be searched, previewed, opened externally and sent through the evidence capture flow.
 - **UI plugins**: slots `panel.artifacts.card`, `panel.task.milestone-evidence`, `panel.tab`, `rail.view`, regions `SettingsPanel`, etc.; esbuild rewrites react to `window.DroneUI` shim; hot-reload via fs.watch.
 
 ## Built on Pi
@@ -179,7 +179,6 @@ And for GUI lovers:
 - Context evaporation (on by default), unified error system with retry, solid workspace (fork, recall, todo, diff, slash menu, @-file completion)
 - Streaming markdown, image previews, `show_image` tool for agent-initiated display
 - Custom background with dimming, light/dark/system themes
-- LAN observer — watch read-only from phone/tablet via QR
 
 ## Institutional Access (new)
 
@@ -236,4 +235,4 @@ Bundles native knowledge service and research workflow, plus presentation fallba
 
 ### Third-party research skill packs
 
-Installers bundle three commit-pinned upstream skill packs, unmodified with license files: [Nature Skills](https://github.com/Yuan1z0825/nature-skills) (Apache-2.0), filtered subset of [Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills) (MIT) and [Academic Research Skills](https://github.com/Imbad0202/academic-research-skills) © Cheng-I Wu, licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Drone itself MIT and free; ARS pack noncommercial only, not covered by MIT. Details: [docs/research-skill-packs.md](docs/research-skill-packs.md).
+Installers bundle two commit-pinned upstream skill packs with their license files: [Nature Skills](https://github.com/Yuan1z0825/nature-skills) (Apache-2.0) and the reviewed subset of [Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills) (MIT). Academic Research Skills (ARS) is an optional, separately reviewed integration and is not downloaded or bundled by the default build. Details: [docs/research-skill-packs.md](docs/research-skill-packs.md).
