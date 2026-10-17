@@ -28,14 +28,14 @@
 - [x] 在 backend/research 层提供 `captureResearchResource` 深模块，使用现有 `JsonStore` 原子写入 `SourceReceipt` 和待审 `KnowledgeSnapshot`；renderer 只调用 host API。已接入 `window.pi` 的 capture/approve/revoke/list 合同。
 - [x] 只读连接器分层：搜索（Crossref/PubMed/Europe PMC/OpenAlex）、文献与引用（Zotero/DOI）、数据与协议（ENA/SRA/Zenodo/OSF/Protocols）、机构资源（EZproxy/机构解析）和项目存储。每个适配器返回同一份来源回执、许可、访问时间、内容哈希和失败原因。
 - [x] 写入型连接器安全合同已接入（PR #223）：`prepare`/`dry-run` 计划、每次执行的显式用户批准、JsonStore 原子 `ready → executing → revoked` reservation、审计回执、撤销、失败记录和默认 fail-closed；首个 Zotero 写入 seam 默认无外部端口，只能准备或受控 fake 演练。
-- [ ] 真实 Zotero Web/Desktop write port 仍需在有授权凭据和可回读目标的环境中单独验收；未通过前禁止宣称真实外部写入可用。
+- [x] 真实 Zotero Desktop write port 已在授权本机 Zotero 10.0.6 上完成验收：通讯开关开启，`127.0.0.1:23119` 的本机 API 可读；按项目现有 local-write/MCP 协议完成临时 note 创建、标记回读和删除，最终 GET 返回 404。验收只记录状态与匹配结果，不保存私人文献正文或凭据。
 - [x] 连接器的网络、凭据、速率、缓存和重试策略留在 backend/research；知识库只接收通过来源、许可、完整性和用户审批的候选。只读 Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA、OpenAlex、DOI、ENA、Zotero、Protocols、机构资源和项目存储共 13 个连接器已接入 registry，失败结果带 retryable 原因。科研资料页提供逐项启用/关闭、启用计数和错误状态，状态通过 JsonStore 持久化，关闭后检索 fail-closed；写入型连接器安全 seam 已接入，真实第三方 write port 仍待授权主机与回读证据验收。
 - [x] 验收：同一文件重复捕获幂等、文件变更生成新 revision、连接器失败可重试但不伪造证据、撤回/过期能阻止旧快照继续发布。重复/变更/根目录/软链接/撤回、过期拒绝发布和同内容过期刷新已覆盖回归测试；PR #208 与 PR #210 的 macOS/Windows 8 项 CI 全部通过。
 
 ## P11 · 发布与更新门槛
 
 - [x] 发布流程改为无证书 unsigned 模式：不读取签名或 notarization Secrets，构建并上传 macOS/Windows 安装包和更新 feed，并在 release notes 中明确标注 unsigned；签名/公证保留为可选增强。
-- [x] macOS/Windows unsigned 安装包、更新 feed、版本切换和回滚证据已齐全；Release [v0.32.8](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.8) 已发布，系统安全提示和安装时人工确认属于预期行为。
+- [x] macOS/Windows unsigned 安装包、更新 feed、版本切换和回滚证据已齐全；Release [v0.32.9](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.9) 已发布，系统安全提示和安装时人工确认属于预期行为。
 - [x] 发布前仍执行 `npm run lint && npm run typecheck && npm test && npm run build && npm run check:arch`，再加 `npm run test:upgrade`、扩展/runtime 产物检查和研究资料浏览器回归；Release #119 的 macOS/Windows validate 已全部通过。
 
 ## 实施顺序
@@ -61,3 +61,6 @@
 
 - 2026-10-17（P9 资料浏览器验收，PR #222）：新增 `scripts/check-research-browser-acceptance.mjs` 和 `npm run check:research-browser`，覆盖空项目、中文/超长路径、目录、Markdown/CSV/图像/PDF/FASTQ/未知二进制、根目录约束和外部打开失败解释；PR #222 已合并到 `main`（`c32dc35b0422c9bb2a20679b210f46cb270ec5d9`），CI #738（`38972571970`）8/8 项通过。
 - 2026-10-17（P9 真实桌面走查）：在主线构建的 Electron 资料视图中人工核验 Markdown、CSV、PNG、PDF 和未知二进制；未知二进制点击“系统打开”后展示可解释的 `无法使用系统应用打开资源：Failed to open path`，PDF 修复 PR [#225](https://github.com/Gyoungwe/Drone/pull/225) 已合并到 `main`（`deefab73f40a8860e9fcd8f64f061f8f4a052cb8`），CI #767（`39005225490`）8/8 项通过。
+
+- 2026-10-17（P10 Zotero Desktop 真实写入验收）：截图确认 Zotero Advanced 的本机通讯开关开启；本机 API 根路径与条目读取均返回 200，版本为 Zotero 10.0.6、Connector API 3。使用项目现有 local-write/MCP 协议和运行时本地授权 key，在 `users/0` 创建唯一标记临时 note（HTTP 200），回读标记匹配（HTTP 200），按条目版本删除（HTTP 204），删除后 GET 返回 404；未记录任何私人文献正文。
+- 2026-10-17（v0.32.9 无证书发布验收）：Release [#127](https://github.com/Gyoungwe/Drone/actions/runs/39007033259) 的 resolve、macOS/Windows validate、prepare、macOS arm64/x64、Windows x64、publish 和 website 全部成功；正式 Release [v0.32.9](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.9) 已发布，包含 macOS arm64/x64 DMG/ZIP、Windows EXE/ZIP、`latest-mac.yml` 和 `latest.yml`，所有产物为 unsigned。
