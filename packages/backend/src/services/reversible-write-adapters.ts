@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { WebDavTransport } from "../knowledge/webdav-transport";
 import type { ResearchWriteAdapter, ResearchWriteExecutionContext } from "@drone/research";
 import type {
 	ResearchWritePayload,
@@ -7,6 +6,7 @@ import type {
 	ResearchWriteReceipt,
 	ResearchWriteRequest,
 } from "@drone/shared";
+import { WebDavTransport } from "../knowledge/webdav-transport";
 
 type DeletionAwareResearchWriteReceipt = ResearchWriteReceipt & {
 	readonly deleted?: "verified" | "unverified" | "not-applicable";
