@@ -3,7 +3,7 @@ import { IpcChannels, KnowledgeContract } from "@drone/shared";
 import { BrowserWindow, shell } from "electron";
 import { bindContract, type ContractImplementation } from "./bind-contract";
 
-/** Deliberately desktop-only: approvals are not a model tool or an unauthenticated remote route. */
+/** Deliberately desktop-only: approvals are not a model tool or unauthenticated route. */
 export function registerKnowledgeIpc(
 	backendOrServices: SessionServicePort | BackendServices,
 	services?: Pick<BackendServices, "knowledge" | "knowledgeSession" | "zotero"> &

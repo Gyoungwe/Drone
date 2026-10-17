@@ -1,0 +1,49 @@
+name: Refresh built-in research skills
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-research-skills
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Refresh reviewed source pins
+        run: python scripts/update-research-skill-lock.py --write-lock
+      - name: Validate the refreshed source pins
+        run: python scripts/update-research-skill-lock.py
+      - name: Open update pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- packages/shared/src/research-skill-sources.json; then
+            echo "Research skill sources are current."
+            exit 0
+          fi
+          BRANCH="automation/research-skills-update"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BRANCH"
+          git add packages/shared/src/research-skill-sources.json
+          git commit -m "chore: refresh built-in research skill pins"
+          git push --force-with-lease origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "chore: refresh built-in research skill pins" \
+            --body "Refreshes the pinned Scientific Agent Skills and Nature Skills snapshots. The release workflow will re-acquire and verify both archives before packaging." \
+            || echo "An update pull request already exists."

@@ -60,7 +60,18 @@ describe("default compute adapter", () => {
 	it("projects B1 job state, budget and logs into the desktop contract", async () => {
 		const root = await mkdtemp(join(tmpdir(), "drone-compute-adapter-"));
 		const executor: ComputeExecutor = {
-			submit: async () => ({ status: "running", startedAt: Date.now() }),
+			submit: async () => ({
+				status: "running",
+				startedAt: Date.now(),
+				progress: {
+					stage: "HISAT2_ALIGN",
+					completedTasks: 2,
+					totalTasks: 3,
+					failedTasks: 0,
+					processes: [{ name: "HISAT2_ALIGN", completed: 2, total: 3 }],
+					multiqcPath: "/remote/results/multiqc_report.html",
+				},
+			}),
 			status: async () => ({ status: "running" }),
 			logs: async () => ({ events: [{ type: "stdout", text: "hello\\n" }], cursor: "1" }),
 			cancel: async () => ({ status: "cancelled" }),
@@ -90,6 +101,7 @@ describe("default compute adapter", () => {
 				hostId: "local",
 				state: "running",
 				budget: { coreHours: 2 / 30, wallMinutes: 2, diskBytes: 0 },
+				progress: expect.objectContaining({ stage: "HISAT2_ALIGN", completedTasks: 2, totalTasks: 3 }),
 			}),
 		]);
 		expect(await adapter.getLogs("job-1")).toMatchObject({

@@ -1,6 +1,8 @@
-import { join } from "node:path";
+import { stat } from "node:fs/promises";
+import { extname, join } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
 import type { ExperienceStorePort } from "@drone/knowledge";
+import { createDefaultResearchWriteAdapters, ResearchWriteAdapterRegistry } from "@drone/research";
 import type {
 	AskRequest,
 	AskResponse,
@@ -33,6 +35,7 @@ import type { KnowledgeUiServicePort } from "./knowledge/ui";
 import type { McpServicePort } from "./mcp/service";
 import { promoteObservation, promoteToKnowledge } from "./memory/promote";
 import { MemoryStore } from "./memory/store";
+import { walkProjectFiles } from "./project/files";
 import { canonicalProjectId } from "./project-id";
 import { createDroneRuntime } from "./runtime";
 import { AnalysisEvidenceService, type EvidenceReplayRunner } from "./services/analysis-evidence";
@@ -71,6 +74,18 @@ import { LocalExecutionRecorder } from "./services/local-execution";
 import type { PackageServicePort } from "./services/packages";
 import { PermissionSettingsService } from "./services/permissions";
 import type { ProjectTrustService } from "./services/project-trust";
+import {
+	emptyCaptureLedger,
+	emptyResearchConnectorSettings,
+	ResearchResourceService,
+} from "./services/research-resource";
+import { createEmptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
+import {
+	createProtocolsBookmarkWriteAdapter,
+	createProtocolsBookmarkWritePortFromEnv,
+	createWebdavWriteAdapter,
+	createWebdavWritePortFromEnv,
+} from "./services/reversible-write-adapters";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
@@ -94,7 +109,8 @@ import { applyStoredZoteroWebCredentials } from "./zotero/web-credentials";
  * façade removal an internal change.
  */
 /**
- * Host-facing session boundary.  This is deliberately structural: desktop and future hosts depend on the transport/session contract and lifecycle
+ * Host-facing session boundary. This is deliberately structural: desktop and
+ * future hosts depend on the transport/session contract and lifecycle
  * events, while the concrete PiBackend remains an internal composition-root
  * implementation.  Compatibility-only domain delegates are intentionally not
  * part of this port.
@@ -186,6 +202,10 @@ export interface BackendServices {
 	memory: MemoryServicePort;
 	/** Optional project research-state ledger; disabled unless inquiryDir is configured. */
 	inquiry: InquiryServicePort;
+	/** Provenance-aware project capture and read-only connector search. */
+	research: ResearchResourceService;
+	/** Explicitly authorized, auditable research write adapters. */
+	researchWrites: ResearchWriteService;
 	/** Project-scoped B5d–B5f discovery sessions, reviews and evaluations. */
 	discovery: DiscoveryServicePort;
 	/** Durable B7 dataset, public-fetch and RO-Crate registry. */
@@ -273,6 +293,71 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 					...(host.platform ? { platform: host.platform } : {}),
 					status: host.health.status,
 				})),
+	});
+	const researchWrites = new ResearchWriteService({
+		adapters: new ResearchWriteAdapterRegistry([
+			...createDefaultResearchWriteAdapters(),
+			createWebdavWriteAdapter(createWebdavWritePortFromEnv()),
+			createProtocolsBookmarkWriteAdapter(createProtocolsBookmarkWritePortFromEnv()),
+		]),
+		store: new JsonStore({
+			path: join(getAgentDir(), "research", "writes.json"),
+			storageId: "agent-research-writes",
+			defaultValue: createEmptyResearchWriteLedger,
+		}),
+	});
+	const research = new ResearchResourceService({
+		store: new JsonStore({
+			path: join(getAgentDir(), "research", "captures.json"),
+			storageId: "agent-research-captures",
+			defaultValue: emptyCaptureLedger,
+		}),
+		connectorSettings: new JsonStore({
+			path: join(getAgentDir(), "research", "connectors.json"),
+			storageId: "agent-research-connectors",
+			defaultValue: emptyResearchConnectorSettings,
+		}),
+		connectorContext: {
+			config: {
+				zotero: {
+					apiKey: process.env.ZOTERO_API_KEY,
+					libraryId: process.env.ZOTERO_LIBRARY_ID || process.env.ZOTERO_USER_ID,
+					libraryType:
+						process.env.ZOTERO_LIBRARY_TYPE === "group" || process.env.ZOTERO_LIBRARY_TYPE === "groups"
+							? "groups"
+							: "users",
+				},
+				protocols: {
+					apiToken: process.env.PROTOCOLS_IO_API_TOKEN || process.env.PROTOCOLS_IO_API_KEY,
+				},
+				institutional: {
+					ezproxyTemplate: process.env.DRONE_EZPROXY_TEMPLATE,
+					resolverUrl: process.env.DRONE_INSTITUTIONAL_RESOLVER,
+				},
+			},
+			projectStorage: {
+				search: async ({ cwd, query, limit, signal }) => {
+					if (signal?.aborted) return [];
+					const needle = query.normalize("NFKC").toLocaleLowerCase();
+					const paths = (await walkProjectFiles(cwd))
+						.filter((path) => !path.endsWith("/") && path.toLocaleLowerCase().includes(needle))
+						.slice(0, limit);
+					const items = [];
+					for (const relativePath of paths) {
+						if (signal?.aborted) break;
+						const info = await stat(join(cwd, relativePath)).catch(() => null);
+						if (!info?.isFile()) continue;
+						items.push({
+							relativePath,
+							format: extname(relativePath).replace(/^\./, "") || "binary",
+							size: info.size,
+							modifiedAt: info.mtime.toISOString(),
+						});
+					}
+					return items;
+				},
+			},
+		},
 	});
 	const defaultProjectId = canonicalProjectId(
 		options.inquiryProjectId ?? options.defaultCwd ?? process.cwd(),
@@ -520,6 +605,8 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		},
 		computeAdapter,
 		inquiry,
+		research,
+		researchWrites,
 		discovery,
 		dataDesign,
 		analysis,

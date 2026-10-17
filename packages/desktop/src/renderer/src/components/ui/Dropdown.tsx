@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDownIcon } from "../icons";
 
 /** 轻量下拉：trigger + 上弹面板，点击外部关闭 */
@@ -11,6 +11,7 @@ export function Dropdown({
 }) {
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
+	const menuId = useId();
 
 	useEffect(() => {
 		if (!open) return;
@@ -25,14 +26,22 @@ export function Dropdown({
 		<div ref={ref} className="drone-dropdown relative">
 			<button
 				type="button"
-				className="drone-dropdown__trigger flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-hover hover:text-ink"
+				className="drone-dropdown__trigger flex items-center gap-1 rounded-lg px-2 py-1 hover:bg-hover hover:text-ink"
+				aria-expanded={open}
+				aria-haspopup="menu"
+				aria-controls={menuId}
 				onClick={() => setOpen((v) => !v)}
 			>
 				{trigger}
 				<ChevronDownIcon />
 			</button>
 			{open && (
-				<div className="drone-dropdown__menu absolute bottom-full left-1/2 z-30 mb-1 max-h-64 w-56 -translate-x-1/2 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-pop">
+				<div
+					id={menuId}
+					role="menu"
+					aria-hidden={!open}
+					className="drone-dropdown__menu absolute bottom-full left-1/2 z-30 mb-1 max-h-64 w-56 -translate-x-1/2 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-pop"
+				>
 					{children(() => setOpen(false))}
 				</div>
 			)}

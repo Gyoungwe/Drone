@@ -144,6 +144,7 @@ export function KnowledgeGraph({
 	const [links, setLinks] = useState<KnowledgeNoteLinks | null>(null);
 	const [hovered, setHovered] = useState<string | null>(null);
 	const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, scale: 1 });
+	const rootRef = useRef<HTMLDivElement>(null);
 	const dragRef = useRef<{ x: number; y: number; camera: Camera } | null>(null);
 	const dragFrameRef = useRef<number | null>(null);
 	const pendingCameraRef = useRef<Camera | null>(null);
@@ -315,7 +316,21 @@ export function KnowledgeGraph({
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
 			const target = event.target as HTMLElement | null;
-			if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable) return;
+			if (
+				event.defaultPrevented ||
+				event.ctrlKey ||
+				event.metaKey ||
+				event.altKey ||
+				!rootRef.current?.contains(target)
+			)
+				return;
+			if (
+				target?.tagName === "INPUT" ||
+				target?.tagName === "TEXTAREA" ||
+				target?.tagName === "SELECT" ||
+				target?.isContentEditable
+			)
+				return;
 			if (event.key === "+" || event.key === "=") {
 				event.preventDefault();
 				zoomBy(1.14);
@@ -338,15 +353,30 @@ export function KnowledgeGraph({
 		return () => document.removeEventListener("keydown", onKeyDown);
 	}, [camera, points, selected]);
 
-	if (error) return <p className="rounded-lg border border-border p-3 text-xs text-err">{error}</p>;
-	if (!data || !graph) return <p className="text-[11px] text-ink-faint">{t("loading")}</p>;
+	if (error)
+		return (
+			<p className="knowledge-state-card knowledge-state-card--error rounded-lg border p-3 text-xs text-err">
+				{error}
+			</p>
+		);
+	if (!data || !graph)
+		return (
+			<p className="knowledge-state-card rounded-lg border p-3 text-[11px] text-ink-faint">{t("loading")}</p>
+		);
 	if (nodes.length === 0)
 		return (
-			<p className="rounded-lg border border-border p-4 text-[11px] text-ink-faint">{t("graphEmpty")}</p>
+			<p className="knowledge-state-card rounded-lg border p-4 text-[11px] text-ink-faint">
+				{t("graphEmpty")}
+			</p>
 		);
 
 	return (
-		<div data-testid="knowledge-graph" className="knowledge-observatory space-y-3">
+		<div
+			ref={rootRef}
+			data-testid="knowledge-graph"
+			className="knowledge-observatory space-y-3"
+			aria-describedby="knowledge-graph-summary knowledge-graph-keyboard-help"
+		>
 			<div className="knowledge-graph-toolbar flex flex-wrap items-center gap-2">
 				<Button size="sm" aria-pressed={view === "semantic"} onClick={() => setView("semantic")}>
 					{t("graphSemantic")}
@@ -395,7 +425,7 @@ export function KnowledgeGraph({
 				))}
 			</div>
 			<div className="flex flex-wrap gap-1 text-[11px] text-ink-faint">
-				<span className="rounded-full border border-border px-2 py-0.5">
+				<span id="knowledge-graph-summary" className="rounded-full border border-border px-2 py-0.5">
 					{t("graphSummary")
 						.replace("{nodes}", String(nodes.length))
 						.replace("{edges}", String(edges.length))
@@ -409,6 +439,9 @@ export function KnowledgeGraph({
 					{t("graphHealthDuplicates").replace("{count}", String(duplicates))}
 				</span>
 			</div>
+			<p id="knowledge-graph-keyboard-help" className="sr-only">
+				{t("graphKeyboardHelp")}
+			</p>
 			<div className="relative">
 				<div className="knowledge-observatory-canvas relative overflow-hidden rounded-xl">
 					<div className="knowledge-graph-canvas-tools absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-3">
@@ -460,6 +493,8 @@ export function KnowledgeGraph({
 						viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
 						className="knowledge-graph-svg h-[clamp(520px,68vh,760px)] w-full touch-none select-none"
 						aria-labelledby="knowledge-graph-title"
+						aria-describedby="knowledge-graph-summary knowledge-graph-keyboard-help"
+						aria-keyshortcuts="+ - 0 F Escape"
 						onWheel={onCanvasWheel}
 						onPointerDown={onCanvasPointerDown}
 						onPointerMove={onCanvasPointerMove}
@@ -571,7 +606,9 @@ export function KnowledgeGraph({
 										key={node.path}
 										role="button"
 										tabIndex={0}
-										aria-label={node.title}
+										aria-label={`${node.title} · ${node.path}`}
+										aria-pressed={selected === node.path}
+										aria-keyshortcuts="Enter Space"
 										opacity={on ? 1 : categoryOn ? 0.2 : 0.06}
 										style={{ cursor: "pointer" }}
 										onClick={() => setSelected(node.path)}
@@ -661,6 +698,9 @@ export function KnowledgeGraph({
 							})}
 						</g>
 					</svg>
+					<div className="sr-only" aria-live="polite" aria-atomic="true">
+						{selectedNode ? `${selectedNode.title} · ${selectedNode.path}` : ""}
+					</div>
 					<div className="knowledge-graph-legend absolute bottom-2 left-3 flex max-w-[calc(100%-24px)] flex-wrap gap-x-3 gap-y-1 rounded-md px-2 py-2 text-xs">
 						{([...new Set(nodes.map(categoryOf))] as GraphCategory[]).map((category) => (
 							<span key={`legend-${category}`}>

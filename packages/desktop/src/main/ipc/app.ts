@@ -11,11 +11,12 @@ import { ensureDailyDir } from "../daily";
 import { electronDesktopHost } from "../desktop-host";
 import { applyDesktopPrefs, currentDesktopPrefs } from "../desktop-prefs";
 import { getFigureAnnotations, saveFigureAnnotations } from "../figure-annotations";
-import { runFileAction } from "../file-actions";
-import { previewLocalFile, resolveResourcePath } from "../file-preview";
+import { ensureExternalOpenSucceeded, runFileAction } from "../file-actions";
+import { previewLocalFile, resolveConfinedResourcePath, resolveResourcePath } from "../file-preview";
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
 import { defaultHostEnvDeps, probeHostEnvironment } from "../host-env";
 import { issueHtmlPreviewUrl } from "../html-preview-protocol";
+import { restartForResearchSkills, updateResearchSkills } from "../research-skill-updater";
 import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
 import { checkForUpdates, downloadUpdate, installUpdate } from "../updater";
@@ -68,7 +69,7 @@ export function registerAppIpc(
 		openExternal: (url) => {
 			if (typeof url === "string" && /^https?:\/\//.test(url)) return shell.openExternal(url);
 		},
-		filePreview: (...args) => previewLocalFile(args[0], args[1]),
+		filePreview: (...args) => previewLocalFile(args[0], args[1], args[2]),
 		htmlPreviewUrl: (...args) => issueHtmlPreviewUrl(resolveResourcePath(args[0], args[1])),
 		getFigureAnnotations: (...args) => getFigureAnnotations(resolveResourcePath(args[0], args[1])),
 		saveFigureAnnotations: (target, cwd, annotations) =>
@@ -90,7 +91,7 @@ export function registerAppIpc(
 			return { path: target, name: basename(source), bytes: info.size };
 		},
 		resourceOpenExternal: async (...args) => {
-			const [target, cwd] = args;
+			const [target, cwd, confineToCwd] = args;
 			if (typeof target !== "string" || !target) return;
 			if (!isLocalResourceTarget(target)) {
 				if (!/^(?:https?|mailto|zotero|obsidian):/i.test(target))
@@ -98,7 +99,10 @@ export function registerAppIpc(
 				await shell.openExternal(target);
 				return;
 			}
-			await shell.openPath(resolveResourcePath(target, cwd));
+			const error = await shell.openPath(
+				confineToCwd ? await resolveConfinedResourcePath(target, cwd) : resolveResourcePath(target, cwd),
+			);
+			ensureExternalOpenSucceeded(error);
 		},
 		setAttentionBadge: async (count, overlay) => {
 			applyAttentionBadge(
@@ -165,6 +169,8 @@ export function registerAppIpc(
 		checkForUpdates: () => checkForUpdates(),
 		downloadUpdate: () => downloadUpdate(),
 		installUpdate: () => installUpdate(),
+		updateResearchSkills: () => updateResearchSkills(),
+		restartForResearchSkills: () => restartForResearchSkills(),
 		saveFileDialog: async (defaultName, content) => {
 			const window = BrowserWindow.getAllWindows()[0];
 			const options: Electron.SaveDialogOptions = {
@@ -228,6 +234,8 @@ export function registerAppIpc(
 				checkForUpdates: IpcChannels.UpdateCheck,
 				downloadUpdate: IpcChannels.UpdateDownload,
 				installUpdate: IpcChannels.UpdateInstall,
+				updateResearchSkills: IpcChannels.ResearchSkillUpdate,
+				restartForResearchSkills: IpcChannels.ResearchSkillRestart,
 				saveFileDialog: IpcChannels.FileSaveDialog,
 				pickPath: IpcChannels.FilePickPath,
 				pickDirectory: IpcChannels.ProjectPickDirectory,

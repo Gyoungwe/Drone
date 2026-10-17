@@ -76,7 +76,7 @@ function failClosedEvent(event: SessionEvent): SessionEvent | null {
 	return event;
 }
 
-/** Shared delivery boundary: desktop and trace consumers all receive the same projected event. */
+/** Shared delivery boundary: desktop and trace consumers receive the same projected event. */
 export function projectKnowledgeEvent(event: SessionEvent, runtime?: DroneRuntime): SessionEvent | null {
 	if (!process.env.DRONE_KNOWLEDGE_DIR) return event;
 	try {

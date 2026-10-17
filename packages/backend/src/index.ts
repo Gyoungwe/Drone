@@ -183,6 +183,12 @@ export {
 	type CapabilityValidationPort,
 } from "./services/capability-discovery";
 export {
+	type CausalityProjection,
+	type CausalityProjectionInput,
+	type CausalityProjectionRecord,
+	projectCausality,
+} from "./services/causality-projection";
+export {
 	artifactSha256,
 	type ComputeCollectOptions,
 	type ComputeCollectResult,
@@ -261,6 +267,20 @@ export {
 } from "./services/packages";
 export { PermissionSettingsService } from "./services/permissions";
 export { ProjectTrustService } from "./services/project-trust";
+export {
+	type CaptureLedger,
+	emptyCaptureLedger,
+	emptyResearchConnectorSettings,
+	type ResearchConnectorSettings,
+	ResearchResourceService,
+	type ResearchResourceServiceOptions,
+} from "./services/research-resource";
+export {
+	emptyResearchWriteLedger,
+	type ResearchWriteLedger,
+	ResearchWriteService,
+	type ResearchWriteServiceOptions,
+} from "./services/research-write";
 export { SessionLifecycleService, type SessionLifecycleServicePort } from "./services/session-lifecycle";
 export { SessionPermissionService, type SessionPermissionServicePort } from "./services/session-permissions";
 export { SubagentService, type SubagentServicePort } from "./services/subagents";

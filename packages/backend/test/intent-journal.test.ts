@@ -3,7 +3,9 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { createCausalEnvelope } from "@drone/shared";
 import { afterEach, describe, expect, it } from "vitest";
+import { createSessionCausalityContext } from "../src/session/intent-binding";
 import {
 	createIntentObserver,
 	hashArgs,
@@ -49,6 +51,23 @@ describe("replay policy", () => {
 });
 
 describe("tool intent journal", () => {
+	it("creates and clears one causal attempt per agent run", () => {
+		const context = createSessionCausalityContext();
+		expect(context.current()).toBeUndefined();
+		context.observe({ type: "agent_start" });
+		const first = context.current();
+		expect(first).toMatchObject({
+			eventId: expect.stringMatching(/^event:/),
+			runAttemptId: expect.stringMatching(/^run:/),
+		});
+		context.observe({ type: "tool_execution_start" });
+		expect(context.current()).toEqual(first);
+		context.observe({ type: "agent_end" });
+		expect(context.current()).toBeUndefined();
+		context.observe({ type: "agent_start" });
+		expect(context.current()?.runAttemptId).not.toBe(first?.runAttemptId);
+	});
+
 	it("hashes args independent of key order", () => {
 		expect(hashArgs({ a: 1, b: [1, { c: 2, d: 3 }] })).toBe(hashArgs({ b: [1, { d: 3, c: 2 }], a: 1 }));
 		expect(hashArgs({ a: 1 })).not.toBe(hashArgs({ a: 2 }));
@@ -71,6 +90,25 @@ describe("tool intent journal", () => {
 		expect(calls.get("c2")?.ended).toBe(false);
 		expect(calls.get("c2")?.start.args).toBeUndefined();
 		expect(calls.get("c2")?.start.argsHash).toBe(hashArgs({ command: "rm x" }));
+	});
+
+	it("chains intent records to one execution attempt", () => {
+		const file = join(tmp(), "lineage.jsonl");
+		const journal = new ToolIntentJournal(
+			intentJournalPath(file),
+			() => 42,
+			createCausalEnvelope({ eventId: "event:proposal", runAttemptId: "run:one" }),
+		);
+		journal.start({ toolCallId: "c1", toolName: "read", args: { path: "a" }, replay: "safe" });
+		journal.output("c1", "partial");
+		journal.end("c1", false);
+		const records = readIntentRecords(intentJournalPath(file));
+		const start = records.find((record) => record.kind === "start");
+		const output = records.find((record) => record.kind === "output");
+		const end = records.find((record) => record.kind === "end");
+		expect(start?.lineage).toMatchObject({ causationId: "event:proposal", runAttemptId: "run:one" });
+		expect(output?.lineage).toMatchObject({ causationId: start?.lineage?.eventId, runAttemptId: "run:one" });
+		expect(end?.lineage).toMatchObject({ causationId: output?.lineage?.eventId, runAttemptId: "run:one" });
 	});
 
 	it("tolerates a torn last line", () => {

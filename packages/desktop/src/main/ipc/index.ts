@@ -2,6 +2,7 @@ import type { BackendServices } from "@drone/backend";
 import type { AskRequest, PermissionRequest, PermissionResolved, TrustRequest } from "@drone/shared";
 import { IpcChannels } from "@drone/shared";
 import { BrowserWindow } from "electron";
+import { onResearchSkillUpdateState } from "../research-skill-updater";
 import type { UiPluginManager } from "../ui-plugins/manager";
 import { onUpdateState } from "../updater";
 import { registerAppIpc } from "./app";
@@ -16,6 +17,7 @@ import { registerMcpIpc } from "./mcp";
 import { registerMemoryIpc } from "./memory";
 import { registerPackagesIpc } from "./packages";
 import { registerPermissionSettingsIpc } from "./permissions";
+import { registerResearchIpc } from "./research";
 import { registerSessionsIpc } from "./sessions";
 import { registerSettingsIpc } from "./settings";
 import { registerSubagentsIpc } from "./subagents";
@@ -57,6 +59,7 @@ export function registerIpc(
 	registerInquiryIpc(backendServices, sendToRenderer);
 	registerUiPluginsIpc(uiPluginsManager);
 	registerMemoryIpc(backendServices);
+	registerResearchIpc(backendServices);
 	// 热重载 watcher：插件源码变更 → 重建 → 推 changed 事件（renderer 经 loader reloadPlugin 热替换）
 	uiPluginsManager.startWatcher((name) => {
 		sendToRenderer(IpcChannels.UiPluginsEvent, { kind: "changed", name });
@@ -71,6 +74,7 @@ export function registerIpc(
 	backendServices.sessions.onPermissionRequest((req: PermissionRequest) => {
 		sendToRenderer(IpcChannels.PermissionRequest, req);
 	});
+	// 权限裁决也回投渲染端，桌面卡片要同步撤掉
 	backendServices.sessions.onPermissionResolved((result: PermissionResolved) => {
 		sendToRenderer(IpcChannels.PermissionResolved, result);
 	});
@@ -85,5 +89,8 @@ export function registerIpc(
 	});
 	onUpdateState((state) => {
 		sendToRenderer(IpcChannels.UpdateEvent, state);
+	});
+	onResearchSkillUpdateState((state) => {
+		sendToRenderer(IpcChannels.ResearchSkillUpdateEvent, state);
 	});
 }

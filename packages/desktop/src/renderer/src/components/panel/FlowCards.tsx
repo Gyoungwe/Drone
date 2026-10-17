@@ -15,7 +15,7 @@ function DefaultArtifactsCard({ renderDefault }: SlotPropsMap[typeof UI_SLOTS.Ar
 }
 
 /**
- * 「产物」页签的通用回执卡（挂钩 3）：归档 / 入库 / 总结 / 文献 / Wiki 候选都走 `flow.cards[]`，
+ * 「文件」页签的通用回执卡（挂钩 3）：归档 / 入库 / 总结 / 文献 / Wiki 候选都走 `flow.cards[]`，
  * 由扩展在工具结果或 `drone.flowCards` 里贡献；这里只负责本地化状态记号与执行动作链接。
  * 每张卡经 `panel.artifacts.card` 槽位（挂钩 4），插件可按 kind 换成领域渲染。
  * 只展示宿主读回的事实，不代表科学结论已核验。

@@ -1,5 +1,5 @@
 /**
- * 工具调用的一行摘要（桌面 ToolCallCard 与共享适配器共用）。
+ * 工具调用的一行摘要（桌面 ToolCallCard 使用）。
  *
  * 目标：折叠态永远显示「人话」——命令、路径、URL、查询或目标，而不是原始 JSON。
  * 已知字段按优先级取值；未知工具（如 task_plan / capability_load）退化为

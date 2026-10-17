@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { installUpdateWithGuard } from "../../lib/install-update-app";
+import { restartForResearchSkillsWithGuard } from "../../lib/restart-research-skills";
+import { useResearchSkillUpdateStore } from "../../stores/research-skill-update";
 import { useUpdateStore } from "../../stores/update";
 import { WordmarkConstruct } from "../chat/WordmarkConstruct";
 
@@ -12,6 +14,7 @@ export function AboutPanel() {
 	const [info, setInfo] = useState<AppInfo | null>(null);
 	const [diagnosticsState, setDiagnosticsState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
 	const state = useUpdateStore((s) => s.state);
+	const skillState = useResearchSkillUpdateStore((s) => s.state);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -59,6 +62,22 @@ export function AboutPanel() {
 				: state?.phase === "available"
 					? t("update.download")
 					: t("update.checkForUpdates");
+	const skillStatusText =
+		skillState?.phase === "checking"
+			? t("update.skillsChecking")
+			: skillState?.phase === "downloading"
+				? t("update.skillsDownloading", { percent: skillState.percent })
+				: skillState?.phase === "available"
+					? t("update.skillsAvailable", { count: skillState.packs.length })
+					: skillState?.phase === "ready"
+						? t("update.skillsReady")
+						: skillState?.phase === "up-to-date"
+							? t("update.skillsUpToDate")
+							: skillState?.phase === "error"
+								? t("update.skillsFailed", { message: skillState.message })
+								: null;
+	const skillButtonLabel =
+		skillState?.phase === "ready" ? t("update.skillsRestart") : t("update.skillsUpdate");
 
 	const exportDiagnostics = async () => {
 		setDiagnosticsState("saving");
@@ -122,6 +141,20 @@ export function AboutPanel() {
 				{diagnosticsState === "failed" && (
 					<span className="text-xs text-danger">{t("settings.about.diagnosticsFailed")}</span>
 				)}
+			</div>
+			<div className="mt-5 flex items-center gap-2">
+				<button
+					type="button"
+					className="rounded-lg border border-border px-4 py-2 text-[13px] text-ink-2 transition-colors hover:border-border-strong hover:bg-hover hover:text-ink disabled:opacity-60"
+					disabled={skillState?.phase === "checking" || skillState?.phase === "downloading"}
+					onClick={() => {
+						if (skillState?.phase === "ready") void restartForResearchSkillsWithGuard();
+						else void getPi().updateResearchSkills();
+					}}
+				>
+					{skillButtonLabel}
+				</button>
+				{skillStatusText && <span className="text-[11px] text-ink-faint">{skillStatusText}</span>}
 			</div>
 			<p className="max-w-[280px] text-[11px] text-ink-faint">{t("settings.about.diagnosticsHint")}</p>
 			{statusText && <p className="mt-1 text-[11px] text-ink-faint">{statusText}</p>}

@@ -200,7 +200,7 @@ function finalizeStreaming(state: SessionTranscriptState): SessionTranscriptStat
 }
 
 /** Consume the authoritative public snapshot even when the host withholds all deltas.
- * Never read private provider state: this is the same checked event used by history and projections.
+ * Never read private provider state: this is the same checked event used by history.
  */
 /** P14 Stopped：给最后一条 assistant 消息打停止标记（内容不动）。 */
 function markLastAssistantStopped(state: SessionTranscriptState): SessionTranscriptState {

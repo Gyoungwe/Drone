@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 import { TEXT_PREVIEW_BYTES } from "@drone/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { previewLocalFile, resolveResourcePath } from "./file-preview";
+import { previewLocalFile, resolveConfinedResourcePath, resolveResourcePath } from "./file-preview";
 
 let root: string;
 beforeEach(async () => {
@@ -29,6 +29,18 @@ describe("local bounded file reads without Electron or scientific validation", (
 	it("resolves a relative encoded link from the file's own directory", async () => {
 		const path = await fixture("data space.csv", "a,b\n1,2");
 		expect((await previewLocalFile("./data%20space.csv", root)).path).toBe(path);
+	});
+	it("confines browser previews to the selected project root", async () => {
+		const outside = await mkdtemp(join(tmpdir(), "drone-resource-outside-"));
+		try {
+			await writeFile(join(outside, "secret.txt"), "private");
+			await expect(resolveConfinedResourcePath(join(outside, "secret.txt"), root)).rejects.toThrow(
+				"outside the project root",
+			);
+			await expect(previewLocalFile("../../etc/passwd", root, true)).rejects.toThrow();
+		} finally {
+			await rm(outside, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+		}
 	});
 	it("resolves a Windows path whose separators were percent-encoded by a Markdown producer", async () => {
 		const path = await fixture("encoded-separators.tsv", "sample\tvalue\nA\t1");

@@ -1,9 +1,5 @@
 // @ts-nocheck
 import {
-  embedTexts,
-  validateSemanticConfig
-} from "./chunk-OWE2DUY5.mjs";
-import {
   readSemanticSettings,
   saveSemanticSettings
 } from "./chunk-O536IQIE.mjs";
@@ -13,6 +9,10 @@ import {
 import {
   readReviewMode
 } from "./chunk-6LT3KQRY.mjs";
+import {
+  embedTexts,
+  validateSemanticConfig
+} from "./chunk-OWE2DUY5.mjs";
 import {
   canRead,
   validateNote

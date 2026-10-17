@@ -10,7 +10,7 @@ import { type SummarySegment, summarizeCategories } from "./meta-summary";
  *   - 运行中自动展开（用户能看到实时活动）；结束后默认收成一行摘要（N 阶段 · 工具分类汇总）；
  *   - 单独一条 metaGroup 且没有阶段说明时不包（它本身已经是一行）。
  *
- * 纯函数、零 React：桌面消息视图共用，保证两端过程呈现一致。
+ * 纯函数、零 React：桌面 MessageList 的过程呈现归约。
  */
 export interface ProcessSegment {
 	kind: "process";

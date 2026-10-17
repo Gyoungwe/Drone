@@ -2,6 +2,7 @@
 
 > 配套：[architecture-v2.md](architecture-v2.md)。本文面向执行者（人或编码 Agent，如 Codex / Claude Code）。
 > 每个任务都应该能在**一个 PR** 里完成；按顺序执行；完成一项勾选一项，并在文末执行日志里记一行。
+> 当前产品决定（2026-10-16）：LAN observer/remote-control 已移除；以下旧 LAN 条目保留为历史迁移记录，不再代表当前产品表面。
 
 ## 通用规则（每个 PR 都适用）
 
@@ -46,18 +47,16 @@
 ## A2 · Host API 契约
 
 - [x] **A2-1 契约框架**
-  - `shared/src/host-api/define.ts`：`defineDomain(name, { methods, events })`。method 包含 `args`（typebox Tuple）、`result`、`access`（`desktop` | `lan-read` | `lan-control`，默认 `desktop`）。提供 `channelOf(domain, method)`、类型推导工具 `ClientOf<Contract>`。
+  - `shared/src/host-api/define.ts`：`defineDomain(name, { methods, events })`。method 包含 `args`（typebox Tuple）、`result`、`access`（`desktop`，默认 `desktop`）。提供 `channelOf(domain, method)`、类型推导工具 `ClientOf<Contract>`。
   - `desktop/src/main/ipc/bind-contract.ts`：`bindContract(contract, impl)` → 用 `ipcMain.handle` 注册；入参 `Value.Check` 不通过时返回结构化的 `UiError`（code `invalid_arguments`，不回显敏感参数）；开发模式下还校验 result。
   - preload：`exposeContract(contract)` 生成 invoke 和 on* 订阅。
   - 验收：单测覆盖参数合法、参数非法、result 不符（开发模式）、事件订阅与退订四种情况。
 - [x] **A2-2 迁移 sessions 域**：`SessionsContract` 替代 `INVOKE_ROUTES` 里 sessions 部分和对应的 `registerInvokers` 调用；`PiApi` 里这部分类型改由契约推导。验收：renderer 无需改动调用点（方法名不变），通过 typecheck；`scripts/check-report-ui.mjs` 通过。
-- [x] **A2-3 迁移其余域**：settings、permissions、packages、app、ui-plugins、lan、knowledge、institutional、subagents，每个域一个提交。全部迁完后删除 `INVOKE_ROUTES`，`IpcChannels` 改由契约生成。验收：`grep -c "ipcMain.handle(" packages/desktop/src/main` 只剩 `bind-contract.ts` 以及少数有文档说明的例外。
+- [x] **A2-3 迁移其余域**：settings、permissions、packages、app、ui-plugins、knowledge、institutional、subagents，每个域一个提交。全部迁完后删除 `INVOKE_ROUTES`，`IpcChannels` 改由契约生成。验收：`grep -c "ipcMain.handle(" packages/desktop/src/main` 只剩 `bind-contract.ts` 以及少数有文档说明的例外。
   - [x] ui-plugins：配置、列表、读码、启停、槽位指派、重建、打开目录均通过 `UiPluginsContract` + `bindContract` 注册；保留既有通道名与 renderer 调用形状。
   - [x] institutional：状态、配置、登录窗口、URL 打开、会话清理、访问测试均通过 `InstitutionalContract` + `bindContract` 注册；保留既有通道名、返回形状与主 frame 安全校验。
   - [x] subagents：面板列表、派发、中止与运行记录均通过 `SubagentsContract` + `bindContract` 注册；保留既有 `subagents:*` 通道、renderer 调用形状，并为运行记录增加严格 TypeBox 校验。
-- [x] **A2-4 LAN 复用契约**：`lan/server.ts` 把 `access: "lan-read"` 的方法暴露为 GET，事件走现有 SSE（保留命名事件 `ping` 心跳，见 PITFALLS）；删除 `shared/lan.ts` 中和契约重复的类型。验收：`lan-server`、`lan-projector`、`lan-sanitize` 测试通过；LAN 仍然是 GET-only（加一条断言）。
-  - [x] 桌面端 `lan:getStatus`、`lan:setEnabled`、`lan:setRemoteControl` 已迁移到 `LanContract` + `bindContract`；`getStatus` 标记 `lan-read`，控制开关保持 desktop-only。
-  - [x] LAN HTTP 增加鉴权 `GET /api/status`，复用 `LanContract.getStatus` 的结果形状并在服务端执行运行时 schema 校验；`LanStatus` 从契约 `LanStatusSchema` 推导，SSE 保留现有命名 `ping` 心跳。
+- [x] **A2-4 桌面契约收口**：LAN observer 已移除（2026-10-16），删除 `shared/lan.ts`、`host-api/lan.ts`、backend `lan/`、main/preload/renderer 接线、HTTP/SSE 资源和对应测试；Host API 访问级别收敛为 `desktop`。
 - [x] **A2-5 插件 Host API 清单化**：`renderer/src/plugins/host-api.manifest.json` 为唯一生成来源，`host-api.manifest.ts` 提供 renderer 运行时导入；`packages/desktop/scripts/gen-plugin-api.mjs` 生成 `host-api.ts`、`env.d.ts`、main/ui-plugins/build.ts 的 SHIM、`resources/ui-plugins/drone-ui.d.ts` 标记区，保留投影文件中的宿主实现与其他声明。`--check` 与 `gen-plugin-api.test.ts` 防止名称、类型和生成结果漂移。
 
 ## A3 · 拆分 PiBackend
@@ -78,7 +77,7 @@
 ## A4 · EventPipeline
 
 - [x] **A4-1**：新建 `session-engine/event-pipeline.ts`，定义 `Stage` 接口（含 `failMode`），把 `emitEvent` 里的 slim、stream-guard、publication 投影、trace、fanout 改写成阶段列表。
-- [x] **A4-2**：desktop IPC、LAN、子代理面板、历史回放（`getSessionMessages`、`peek*`）统一从 fanout 或同一个 `projectSnapshot` 取数据。
+- [x] **A4-2**：desktop IPC、子代理面板、历史回放（`getSessionMessages`、`peek*`）统一从 fanout 或同一个 `projectSnapshot` 取数据。
 - [x] **A4-3 表驱动测试**：覆盖阶段顺序；publication 抛异常 → 失败关闭；trace 抛异常 → 放行并记日志；stream-guard 熔断 → 后续增量丢弃。验收：已有的 `event-slim`、`stream-guard*`、`knowledge-publication-*`、`trace` 测试不改就通过。
 
 ## A5 · 领域包 TS 化（风险最高，放在最后做）
@@ -142,6 +141,31 @@
 
 ---
 
+## C1 · RunAttempt / causation lineage
+
+设计和当前代码基线：[run-attempt-causality-design.md](superpowers/specs/2026-10-14-run-attempt-causality-design.md)。这一组任务以 v0.32.0 的 `VersionedRecord` / `parentRefs` / content hash 为基线，先做 additive lineage，再接入副作用和证据；不合并领域账本。
+
+- [x] **C1-1 契约**：新增 shared `CausalEnvelope`；研究合同、execution、ask、analysis provenance 增加可选 lineage；hash 排除 lineage；覆盖旧 schema 兼容和安全校验。
+- [x] **C1-2 attempt 根**：`AnalysisTaskController.prepareCompute` 创建 attempt 根和 binding lineage；analysis ledger 双读兼容，fork 不继承 execution binding。
+- [x] **C1-3 副作用回执**：`ExecutionReceipt`、`ComputeTaskBinding`、compute `JobSpec` / `SubmissionRecord` 和 direct scheduler 传播 lineage；unknown 只 reconcile。
+- [x] **C1-4 intent/evidence**：intent journal start-before-effect 带 envelope；checkpoint hash 排除 lineage；replay 新建 attempt，branch 不继承授权。
+- [x] **C1-5 只读投影**：提供按 attempt/event 的 backend/host 脱敏投影；只有实际需要跨进程展示时才扩展 IPC。
+- [x] **C1-6 收尾**：完成旧数据 partial/legacy 兼容、crash/restart/reconcile/retry/branch/hash/capsule 回归和完整 DoD；远程 CI 还需在包含生成物的统一提交上复核。
+
+## P9 · 研究资料浏览器与全科研场景知识闭环
+
+- [x] **P9-1 资料工作台**：新增 `research` 视图，复用 `listProjectFiles`、`previewFile`、`openResourceExternal` 与 `PreviewHost`，支持任意项目文件的检索、预览、源码查看和外部打开；未知二进制只展示元数据。
+- [x] **P9-2 捕获 seam**：在 backend/research 提供 `captureResearchResource`，以 `cwd + relativePath + byteHash + sourceReceipt + scope + freshness + approval` 生成待审 `KnowledgeSnapshot`；禁止会话正文、凭据和未授权原文自动进入知识库。
+- [x] **P9-3 连接器合同**：统一合同已固定来源、许可（可选）、访问时间、内容哈希、只读标记与失败原因；Crossref/DOI/OpenAlex/PubMed/Europe PMC、Zenodo/OSF/NCBI SRA/ENA、Zotero、Protocols.io（只读）、机构访问和项目存储均已纳入默认连接器清单，并保留 UI 开关与禁用失败回执。Protocols.io 写入 seam 按产品决策显式禁用，不再作为计划门槛；WebDAV 已完成真实可逆闭环。Zotero provider-specific 写入运行时、授权、回读与删除回读已有真实 Desktop local API 证据；机构访问保持只读，不再提出写入门槛。
+- [x] **P9-4 验收**：空项目、中文/超长路径、压缩 FASTQ/VCF、BAM 等常见科研格式、无扩展名未知二进制、重复捕获、文件变更、连接器失败和撤回/过期快照均已有可解释状态与定向回归；跨平台 CI 已覆盖共享/后端/桌面构建，自动化证据作为唯一发布门槛。
+
+## P10 · 发布与更新证据（无证书模式）
+
+- [x] **P10-1（策略调整）**：发布流程保留更新 feed、回滚和跨平台验收记录，但产品不要求签名身份、notarization、Windows 签名或证书预检；Release workflow 按无证书构建发布。
+- [x] **P10-2**：正式发布不等待 macOS notarization、Windows signing 或证书；v0.32.9 的 macOS arm64/x64 与 Windows x64 无证书安装包、更新 feed、版本切换与回滚证据已齐全，Release workflow 的 validate/build/publish/website 全部成功（run 39007033259）。
+
+---
+
 ## 执行日志
 
 | 日期 | 任务 | 结果 / 数字 | 遗留 |
@@ -149,11 +173,11 @@
 | 2026-09-30 | 基线 | typecheck 通过；backend 1,320 / desktop 528 / shared 102 测试通过；backend 测试 336 s | — |
 | 2026-10-01 | A1-3 | `.pi/lib/knowledge/**/*.mjs` 与 `.pi/lib/tasks/**/*.mjs` 共 42 个文件纳入 `checkJs`；`npm run check:pi` 通过；根 `typecheck` 已串接该检查 | — |
 | 2026-10-01 | A2-2 | 31 个 sessions IPC 方法统一由 `SessionsContract` + `bindContract` 注册；`PiApi` 会话方法由契约客户端类型推导；shared/desktop 定向契约与 IPC 测试通过 | `scripts/check-report-ui.mjs` 需要完整 Electron UI fixture；当前本机 fixture 在 React 初始化阶段失败，非 sessions IPC 错误 |
-| 2026-10-01 | A7-2 | `serializeDiagnosticsArchive` 生成无压缩 ZIP；shared 诊断包 2 项、desktop 保存桥 3 项定向测试通过；导出文件名为 `drone-diagnostics-YYYY-MM-DD.zip` | UI 截图需在桌面运行环境补做 |
+| 2026-10-01 | A7-2 | `serializeDiagnosticsArchive` 生成无压缩 ZIP；shared 诊断包 2 项、desktop 保存桥 3 项定向测试通过；导出文件名为 `drone-diagnostics-YYYY-MM-DD.zip` | 自动化回归已覆盖，发布无需额外人工截图 |
 | 2026-10-01 | A5-0 | `build:extensions` 生成 `.pi/extensions/.build-manifest.json`，记录 7 个 generated TS 入口与 MJS 产物哈希；`check:extensions --strict` 校验 generated entries 的缺失与漂移。manifest 顶层 `legacyOutputs` 声明 4 个兼容遗留（obsidian-workbench/source-archive/subagent-mcp-readonly/zotero-literature），不会被 strict 当作漂移失败 | A5-4 完成后再移除这 4 个 legacy outputs，并从 extraResources 移除 `.pi/lib` |
-| 2026-10-01 | A4 / A6 | EventPipeline 已移入 `session-engine/`；桌面 IPC、LAN 历史读取与会话回放统一复用持久化知识投影；运行时投影器、知识服务、UI 流和 specialist host 改用显式版本化事件桥接；`node scripts/check-architecture.mjs` 通过且 R4 无新增发现 | A5-1–4、A6-1–2 仍待完成；LAN 控制写端点保留兼容鉴权 |
+| 2026-10-01 | A4 / A6 | EventPipeline 已移入 `session-engine/`；桌面 IPC、LAN 历史读取与会话回放统一复用持久化知识投影；运行时投影器、知识服务、UI 流和 specialist host 改用显式版本化事件桥接；`node scripts/check-architecture.mjs` 通过且 R4 无新增发现 | A5-1–4、A6-1–2 仍待完成；LAN observer 已移除，不再保留控制写端点 |
 | 2026-10-01 | A0-3 | backend 测试按 unit/sdk 自动分层：unit 1252（11 skipped），sdk 99（2 skipped），总计 1351；`npm run test:unit` 通过（113 files，98.64s），`npm run test:sdk` 99 passed + 2 skipped（8.43s） | — |
-| 2026-10-01 | A0-4 / A2-3 | 删除 `.pi/lib/vault-mcp-proxy.mjs` 与旧 `register-invokers`/`INVOKE_ROUTES`；settings、permissions、packages、app、ui-plugins、lan、knowledge、institutional、subagents 全部由域契约 + `bindContract` 注册，preload 统一使用契约 client；旧配置识别保留为提示路径 | `IpcChannels` 仍是兼容通道名常量，尚未自动从契约生成 |
+| 2026-10-01 | A0-4 / A2-3 | 删除 `.pi/lib/vault-mcp-proxy.mjs` 与旧 `register-invokers`/`INVOKE_ROUTES`；settings、permissions、packages、app、ui-plugins、knowledge、institutional、subagents 全部由域契约 + `bindContract` 注册，preload 统一使用契约 client；旧配置识别保留为提示路径 | `IpcChannels` 仍是兼容通道名常量，尚未自动从契约生成 |
 | 2026-10-01 | A7-1 | `JsonStore` 强制 `storageId`，生产使用点登记到 `storage/registry.ts`；静态扫描测试覆盖 backend 与 desktop main 的 10 个生产构造点，cwd-independent | 其他非 JsonStore 落盘（会话、trace、审计、机构分区）仍待逐项登记 |
 | 2026-10-01 | A3 | `createBackend` 组合根显式暴露 runtime、sessionEngine、settings/models/login/mcp/packages/knowledge 服务；PiBackend 继续作为兼容门面，session 生命周期已由 SessionEngine 承接 | approvals、permissions/trust、subagents、zotero/institutional 等域仍待抽离，A3 总项未勾选 |
 | 2026-10-01 | A3-3 / A6 | 生产后端 Pi SDK 值导入统一经 `session-engine/sdk.ts`，架构检查 R1 生产基线清零；ZoteroService 已接入组合根；研究循环、Zotero、source archive 的运行时状态和串行队列改为 host runtime 注入与 scheduler；Zotero 验收器在 host runtime 广播后重放，保持一次任务授权语义 | PiBackend 门面及 approvals/permissions/trust/subagents/institutional 等域仍待拆出；其余 legacy 扩展 singleton 与 CLI runtime 注入仍待完成 |
@@ -197,10 +221,10 @@
 | 2026-10-01 | A1 / A5-4 | workspace-config 迁移后的所有返回分支补齐兼容配置字段，`.pi` checkJs 类型检查恢复通过；扩展构建 manifest 与生成哈希同步刷新，架构 ratchet 收敛到 144 条基线且 0 fixed | 基线剩余项主要是测试 fixture 与尚未迁移的 `.pi` 兼容入口 |
 | 2026-10-01 | 知识回合并发回归 | 修复宿主自动生成摘要/Wiki 后项目索引刷新与父会话下一次检索的时序冲突：当前回合证据只按票据、绑定和来源哈希校验；宿主维护的 `Projects/<project>/Index.md` 更新会刷新导航快照，人工维护的 Home/Wiki/Context 仍要求重新准备；`npm test` 全部通过（backend 1,372 passed + 13 skipped、desktop 555、knowledge 33、research 29、shared 130、tasks 31），升级 fixture、类型、`.pi` checkJs、Biome、扩展 strict、架构检查均通过 | A3-4 门面删除、A5-1/2/3/4 完整迁移、A6-1/2 全量宿主归属仍待继续 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge` 承载 `extension-helpers` 与 `task-feedback` 的强类型实现；新增工具结果信封、项目/主题/会话身份策略、观察到的任务回执与 PDF 二进制门禁；包内 40/40、backend `knowledge-publication-hooks` 40/40 与 `usage-feedback` 13/13 通过；`.pi/lib/knowledge/*.mjs` 保留自包含兼容入口供 CLI 运行时使用 | knowledge service、worker、specialist-host、maintenance 与其余 `.pi` 运行时入口仍待迁移；A5-1 总项保持未完成 |
-| 2026-10-01 | A3-4 增量 | `SessionServicePort` 收敛为纯会话/事件边界，域服务不再出现在会话端口；desktop main 的 IPC、心跳与 LAN 初始化均直接消费 `BackendServices`，IPC 模块的旧 PiBackend 形状仅保留为兼容适配路径；backend/desktop typecheck 与 7 个定向 IPC/组合根测试（25/25）通过 | `PiBackend` 仍是会话实现与兼容构造根；旧委托方法、LAN 后端结构端口及少数第三方适配入口仍待后续删除，A3-4 总项保持未完成 |
+| 2026-10-01 | A3-4 增量 | `SessionServicePort` 收敛为纯会话/事件边界，域服务不再出现在会话端口；desktop main 的 IPC 与心跳直接消费 `BackendServices`，IPC 模块的旧 PiBackend 形状仅保留为兼容适配路径；backend/desktop typecheck 与 7 个定向 IPC/组合根测试（25/25）通过 | `PiBackend` 仍是会话实现与兼容构造根；旧委托方法、LAN 后端结构端口及少数第三方适配入口仍待后续删除，A3-4 总项保持未完成 |
 | 2026-10-01 | A6-2 运行时归属增量 | provenance、Obsidian 写入、Knowledge UI 预览/维护/语义任务、tool-manifest/acceptance 事件桥接均改为 host `runtimeSlot`；Knowledge worker pool 和 specialist host 注册 runtime disposal，关闭宿主时释放 worker、清理排队任务；研究回执 journal 补齐 reconciliation 核心工具记账。Biome、`.pi` checkJs、backend 定向 85 项、runtime/acceptance node:test 8 项通过 | Knowledge worker 内部 activeRequests/flushes/dirty/inflight 属于独立 Worker 实例，尚未进一步抽象为跨线程 runtime slot；tool-manifest 的无 host 兼容声明镜像仍保留 process-local 读模型，不承载执行状态 |
 
-| 2026-10-01 | A3-4 完成 | 会话实现移到 `session-service.ts` 并命名为 `SessionService`；`pi-backend.ts` 仅保留 `PiBackend`/`PiBackendOptions` 兼容导出，组合根改用 `SessionService`，desktop/LAN/IPC 继续直接消费 `BackendServices`；backend/desktop typecheck、组合根与 SDK 回归通过，架构检查 141 baseline、0 fixed | 兼容别名保留一个发布周期；会话编排仍集中在 SessionService，后续可继续按 lifecycle/permission 子域拆分
+| 2026-10-01 | A3-4 完成 | 会话实现移到 `session-service.ts` 并命名为 `SessionService`；`pi-backend.ts` 仅保留 `PiBackend`/`PiBackendOptions` 兼容导出，组合根改用 `SessionService`，desktop/IPC 继续直接消费 `BackendServices`；backend/desktop typecheck、组合根与 SDK 回归通过，架构检查 141 baseline、0 fixed | 兼容别名保留一个发布周期；会话编排仍集中在 SessionService，后续可继续按 lifecycle/permission 子域拆分
 | 2026-10-01 | A7-1 增量 | `StorageRegistry.registerDiscoveredRoot` 为宿主发现的项目工作目录提供稳定、脱敏、幂等登记；SessionService 在 create/open session 时登记 `<cwd>/.local/agent-work`，重复会话不会产生重复条目；registry 6/6 通过 | 研究结果目录与知识库 Vault 仍由扩展配置动态发现，下一步需在 host 配置刷新时调用同一登记入口 |
 | 2026-10-01 | 全量验收（A3/A5/A6/A7 增量后） | `npm test` 全部通过：backend 1,372 passed + 13 skipped、desktop 556、extensions 16、knowledge 40、research 31、shared 130、tasks 31；`npm run typecheck`、`.pi` checkJs、build、upgrade fixtures、plugin API、extensions strict、架构检查（141 baseline、0 fixed）均通过 | 仍保留 5 个 `.pi/extensions` legacy 适配入口；A5-1/2/3 的运行时 worker、source archive 与剩余扩展仍按兼容层策略逐步迁移 |
 | 2026-10-01 | A5-2 增量 | `@drone/tasks` 新增 `authorization-policy` 纯策略入口：动作枚举/待决动作判定、授权请求去重键、ask_user 标题与授权卡正文投影；包测试 37/37、包 typecheck 与 Biome 检查通过；`.pi/lib/tasks/ask-authorization.mjs` 保持 CLI/扩展兼容实现 | backend、desktop 与组合根未改；授权 journal、binding 校验和 UI 仍由宿主运行时负责，A5-2 总项保持未完成 |
@@ -218,6 +242,9 @@
 | 2026-10-01 | 发布前最终回归 | `npm run build:tasks` 生成 17 个无 workspace 依赖的 tasks `.pi` 兼容产物；`npm run lint -- --error-on-warnings`、根 `npm run typecheck`、backend 1,373 passed + 13 skipped、desktop 556、extensions 16、knowledge 58、research 50、shared 130、tasks 49、`npm run build`、`npm run test:upgrade -- --fixtures-only`、`check:extensions --strict`、`check:plugin-api` 与架构检查（120 baseline、0 fixed）通过；`channel-watch-watcher` 定向 4/4 复跑通过 | A5 顶层仍保留 `.pi/lib` host adapters 与 4 个 legacy extension outputs；A5-1/2/3/4 的最终清理不在本批次强行删除 |
 | 2026-10-03 | CI 发布护栏 | desktop CI job 新增 knowledge 58、tasks 49、research 50 三个包级测试（共 157 项）；knowledge、tasks、research runtime builder 均支持临时目录构建后 `--check` 字节校验，tasks 兼容产物同步校验；清理 knowledge 目录中 20 个已无引用的旧 chunk；本地 lint、typecheck、build、架构/插件/扩展检查、升级 fixture 与三包测试全部通过 | PiBackend 继续保留兼容门面；backend 测试时长、120 条测试 `.pi` 相对路径架构基线及研究技能包下载依赖仍按后续任务处理 |
 | 2026-10-03 | A3-4 / 后续收敛 | `SessionPermissionService` 承接会话权限模式，`SessionLifecycleService` 承接会话枚举、关闭顺序与资源清理；channel-watch 测试注入短 debounce，backend unit 约 24 秒、unit+SDK 约 33 秒；可迁移 backend 测试改用 knowledge/research 包入口，架构基线由 120 降至 106；CI 增加离线研究包门禁，release 在获取 pinned skill packs 后显式运行真实 packaging check；全量 `npm test` 通过（backend 1,378 + 13 skipped、desktop 556、extensions 16、knowledge 58、research 50、shared 130、tasks 49） | `SessionService` 的 create/open/delete 仍与 project resources、extensions、filesystem 强耦合；剩余 106 条是 host/compatibility adapter 测试边界，未放宽架构规则；真实 research packs 仍由 release 同步步骤提供，Academic pack 需显式许可依据 |
-| 2026-10-03 | B5a–B5c | `@drone/inquiry` 四本账与 SQLite 持久化、backend `InquiryService` 组合根、B5b 元认知发布门禁、B5c 先验注册与最多三次自主修复已合并；全量 `npm test` 通过，根 typecheck、Biome、架构检查通过 | B5d–B5f、B7、B8 留待后续；研究状态的事件订阅、桌面/LAN 只读面板和 host 投影仍需单独接入 |
+| 2026-10-03 | B5a–B5c | `@drone/inquiry` 四本账与 SQLite 持久化、backend `InquiryService` 组合根、B5b 元认知发布门禁、B5c 先验注册与最多三次自主修复已合并；全量 `npm test` 通过，根 typecheck、Biome、架构检查通过 | B5d–B5f、B7、B8 留待后续；研究状态的事件订阅、桌面/桌面只读面板和 host 投影仍需单独接入 |
 | 2026-10-03 | B1–B7 收尾 | B1/B2 真实 runner、ssh2/OpenSSH/ProxyJump、known_hosts 与 SFTP/终端/授权 IPC；B3 固定 nf-core/rnaseq 3.18.0 vertical slice、MultiQC/QC/provenance 与显式真实 smoke；B5a 事件宿主接入；B5d–B5f discovery 包；B7 数据/设计合同均已接入并通过本地测试。runner 协议、取消、断线未知态、幂等、产物校验和桌面资源打包路径均已覆盖 | Docker/Slurm fixture 需要本机 Docker daemon；真实 Windows/OTP/跳板机、外部 Slurm 与真实研究数据/基线需在相应环境提供后执行；B8 暂不实施 |
 | 2026-10-03 | 后续收尾 | `SessionService` 进一步拆为显式 `SessionHost` 组合根、API/设置/诊断委托、construction/control/events/messages/models/resources/settings-boundary/extensions 专责服务；门面约 400 行、专责服务均 ≤400 行。R5 既有 106 条已迁移到 typed package/extension adapters，架构基线清零；4 个 legacy extension outputs 已替换为正式 source entries，`check:extensions --strict` 无遗留。研究技能包增加锁定缓存、SHA/receipt 校验、原子恢复和离线 release gate；backend unit 约 26 秒、定向 unit+SDK 约 33 秒。 | `PiBackend` 兼容导出、`.pi/lib` 兼容运行时和 A5-1/2/3 的完整移除仍保留一个发布周期；真实 Windows/OTP/外部 Slurm 需正确的 SSH Host 别名和凭据环境后再做 smoke；B8 暂不实施 |
+| 2026-10-17 | P9-4 验收覆盖补齐 | ResearchResourceService 新增空项目、中文/超长路径、压缩 FASTQ/VCF、BAM 与无扩展名二进制覆盖；默认连接器清单回归验证 13 个入口唯一且可发现；run 873 的 macOS/Windows 静态、单测、桌面工作区测试和构建全部通过 | P9-4 已关闭，自动化证据是唯一门槛 |
+| 2026-10-17 | P9-3 连接器写入验收 | WebDAV 远程认证、临时对象 PUT 201 → DELETE 204 → 最终 GET 404 清理完成；服务端未返回 ETag，强 ETag 闭环门槛保持关闭。Protocols.io 已按产品决策登记为只读，写入 seam 显式 disabled；公开协议读取已验证 | P9-3 仅剩 Zotero/机构等 provider-specific 写入合同与真实回执；Protocols.io 写入不再是计划门槛 |
+| 2026-10-17 | P9-3 / P10-2 缺口复核 | Zotero 本机临时 note 已完成创建→标记回读→按版本删除→最终 404；机构连接器保持只读；Protocols.io 保持只读；v0.32.9 无证书发布的 macOS/Windows validate、构建、更新 feed、版本切换与回滚证据已登记，Release run 39007033259 全部成功 | 连接器/发布门槛已关闭；下一阶段仅剩 A5-1～A5-4 的 `.pi/lib` 兼容运行时清理，B8 团队协作按用户决定继续暂缓 |

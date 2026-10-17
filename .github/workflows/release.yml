@@ -13,6 +13,11 @@ on:
     branches: [main]
     paths:
       - packages/desktop/package.json
+      - packages/desktop/electron-builder.yml
+      - scripts/verify-research-release.cjs
+      - scripts/sync-research-skills.py
+      - scripts/check-research-packaging.cjs
+      - .github/workflows/release.yml
 
 permissions:
   contents: write
@@ -158,12 +163,15 @@ jobs:
         include:
           - os: macos-latest
             platform: mac-arm64
+            artifact_zip: drone-mac-arm64.zip
             builder_args: --arm64
           - os: macos-latest
             platform: mac-x64
+            artifact_zip: drone-mac-x64.zip
             builder_args: --x64
           - os: windows-latest
             platform: windows
+            artifact_zip: ''
             builder_args: --x64
     runs-on: ${{ matrix.os }}
     env:
@@ -171,6 +179,7 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       # electron-vite OOMs at the default heap on macos-latest while bundling the Pi 1.1.0 runtime.
       NODE_OPTIONS: --max-old-space-size=8192
+      DRONE_RELEASE_UNSIGNED: "true"
     steps:
       - uses: actions/checkout@v6
         with:
@@ -185,10 +194,17 @@ jobs:
         shell: bash
         run: |
           python scripts/sync-research-skills.py --sources nature scientific
-          python scripts/sync-research-skills.py --sources academic --acknowledge-noncommercial
-          python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
+          python scripts/sync-research-skills.py --sources nature scientific --check
           node scripts/check-research-packaging.cjs
-      - run: npm run dist -w packages/desktop -- --publish never ${{ matrix.builder_args }}
+      - name: Build unsigned release artifacts
+        run: npm run dist -w packages/desktop -- --publish never ${{ matrix.builder_args }}
+      - name: Verify unsigned release mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$DRONE_RELEASE_UNSIGNED" = "true"
+          test -d packages/desktop/dist
+          echo "Unsigned release artifacts are intentional; OS trust prompts remain expected."
       - name: Verify bundled MCP runtime in packaged app
         run: node scripts/check-pi-packages.mjs --packaged packages/desktop/dist
       - name: Collect release assets

@@ -14,7 +14,7 @@ import { EvidencePane } from "./EvidencePane";
 import { FlowCards } from "./FlowCards";
 
 /**
- * 「产物」页签：知识流状态卡（原聊天区顶部横条 KnowledgeFlowCard，含阶段/产物/继续检查/管理）
+ * 「文件」页签：知识流状态卡（原聊天区顶部横条 KnowledgeFlowCard，含阶段/产物/继续检查/管理）
  * + 通用回执卡（归档 / 入库 / 总结 / 文献 / Wiki 候选，flow.cards）+ 任务产物链接 + 研究工作台 / 知识库 全屏视图入口。
  */
 export function ArtifactsPane({ sessionId }: { sessionId: string | null }) {

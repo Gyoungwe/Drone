@@ -33,7 +33,7 @@ export interface DomainContract<
 
 /**
  * Define a host API domain. The object is intentionally data-only so it can be
- * projected into the desktop IPC and plugin adapters.
+ * projected into Electron IPC and plugin adapters.
  */
 export function defineDomain<
 	const TName extends string,

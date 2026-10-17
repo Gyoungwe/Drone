@@ -5,6 +5,11 @@ import { type HostFileAction, validateNewFileName } from "@drone/shared";
 import { resolveResourcePath } from "./file-preview";
 
 /** 依赖注入：单测用假实现，生产用 Electron（见 ipc/app.ts）。 */
+/** Normalize Electron's empty-success / non-empty-error result for external open calls. */
+export function ensureExternalOpenSucceeded(error: string | undefined): void {
+	if (error) throw new Error(`无法使用系统应用打开资源：${error}`);
+}
+
 export interface FileActionHost {
 	platform: NodeJS.Platform;
 	showItemInFolder(path: string): void;
@@ -61,7 +66,7 @@ export async function runFileAction(
 			return null;
 		case "openDefault": {
 			const error = await host.openPath(path);
-			if (error) throw new Error(error);
+			ensureExternalOpenSucceeded(error);
 			return null;
 		}
 		case "openInEditor":

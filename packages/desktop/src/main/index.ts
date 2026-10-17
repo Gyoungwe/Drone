@@ -1,5 +1,6 @@
 import { researchBundlePaths } from "./research-bundle";
 import { researchSkillPackPaths } from "./research-skill-packs";
+import { configureResearchSkillUpdater, readResearchSkillPackInstall } from "./research-skill-updater";
 import { desktopSystemPrompt } from "./system-prompt";
 import "./pi-package-dir";
 import "./dev-agent-dir";
@@ -255,6 +256,7 @@ app.whenReady().then(async () => {
 	process.env.DRONE_RESEARCH_WORKBENCH_ROOT = app.isPackaged
 		? join(process.resourcesPath, "research-workbench")
 		: join(__dirname, "../../../../.pi");
+	configureResearchSkillUpdater(app.getPath("userData"));
 	// Bundled pi packages (MCP runtime pi-mcp-adapter), staged by scripts/stage-pi-packages.mjs.
 	const researchBundle = researchBundlePaths(
 		process.env.DRONE_RESEARCH_WORKBENCH_ROOT,
@@ -264,11 +266,12 @@ app.whenReady().then(async () => {
 	);
 	for (const warning of researchBundle.warnings) log.warn(warning);
 	if (researchBundle.mcpRuntimePath) log.info("MCP runtime bundled", researchBundle.mcpRuntimePath);
+	const installedResearchSkills = readResearchSkillPackInstall(app.getPath("userData"));
 	const researchSkillPacks = researchSkillPackPaths(
 		app.isPackaged
 			? join(process.resourcesPath, "research-skills")
 			: join(__dirname, "../../resources/research-skills"),
-		{ includeAcademic: true },
+		{ includeAcademic: false, ...installedResearchSkills },
 	);
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
 	backendServices = createBackend({

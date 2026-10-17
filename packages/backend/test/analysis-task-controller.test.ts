@@ -157,10 +157,22 @@ describe("NGS analysis task controller", () => {
 		const { controller, analysis, activate, compute, spec, job } = await setup();
 		const ready = await controller.prepareCompute("pasilla", spec, evidence);
 		expect(ready.readiness).toMatchObject({ ok: true, inferentialClaimsAllowed: false });
+		expect(ready.provenance?.lineage).toMatchObject({
+			runAttemptId: expect.stringMatching(/^run:/),
+			eventId: expect.stringMatching(/^event:/),
+		});
+		const binding = await analysis.getComputeBinding("pasilla");
+		expect(binding?.lineage).toEqual(ready.provenance?.lineage);
 		expect(ready.readiness?.warnings.join(" ")).toContain("n=1");
 		await controller.approveExecution("pasilla");
 		await controller.submitCompute("pasilla", spec);
 		expect(compute.submit).toHaveBeenCalledOnce();
+		const submitted = compute.submit.mock.calls[0]?.[0] as ComputePreflightJobSpec;
+		expect(submitted.lineage).toMatchObject({
+			runAttemptId: binding?.lineage?.runAttemptId,
+			causationId: binding?.lineage?.eventId,
+		});
+		expect(submitted.lineage?.eventId).not.toBe(binding?.lineage?.eventId);
 		expect((await controller.reconcile("pasilla")).stage).toBe("execution");
 		compute.status.mockResolvedValue({ ...job, status: "succeeded" });
 		expect((await controller.reconcile("pasilla")).stage).toBe("review");

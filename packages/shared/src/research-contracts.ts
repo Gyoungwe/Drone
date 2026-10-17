@@ -1,5 +1,15 @@
 import type { AnalysisContext } from "./analysis-orchestration";
+import { assertCausalEnvelope, type CausalEnvelope } from "./causality";
 import { sha256 } from "./contract-hash";
+import type {
+	ResearchCapabilityState,
+	ResearchClaimState,
+	ResearchEvidenceState,
+	ResearchFreshnessState,
+	ResearchReuseLevel,
+	ResearchValidationScope,
+} from "./research-status";
+import { assertResearchStatus, statusForValidationCapsule } from "./research-status";
 
 /**
  * Versioned records shared by the research, capability, decision and execution
@@ -30,6 +40,8 @@ export interface VersionedRecord {
 	readonly revision: number;
 	readonly contentHash: string;
 	readonly parentRefs: readonly ContractParentRef[];
+	/** Audit lineage; excluded from content hashes so it can be added compatibly. */
+	readonly lineage?: CausalEnvelope;
 	readonly migration?: ContractMigration;
 }
 
@@ -59,11 +71,7 @@ export interface ResearchCase extends VersionedResearchContract {
 	readonly updatedAt: string;
 }
 
-export type KnowledgeReuseLevel =
-	| "navigation-only"
-	| "evidence-eligible"
-	| "validated-capability"
-	| "reproduced-capability";
+export type KnowledgeReuseLevel = ResearchReuseLevel;
 
 /** A conservative evidence grade attached to a source read receipt. */
 export type KnowledgeEvidenceGrade = "navigation" | "contextual" | "primary" | "validated" | "reproduced";
@@ -76,6 +84,20 @@ export interface KnowledgeFreshness {
 
 export interface KnowledgeSourceReceipt {
 	readonly sourceRef: string;
+	/** Optional project-relative path for locally captured material. */
+	readonly relativePath?: string;
+	/** Source category used by connector and capture provenance. */
+	readonly sourceType?:
+		| "project-file"
+		| "literature"
+		| "dataset"
+		| "protocol"
+		| "institutional"
+		| "connector";
+	readonly locator?: string;
+	readonly license?: string;
+	readonly accessedAt?: string;
+	readonly failureReason?: string;
 	readonly version?: string;
 	readonly summary?: string;
 	readonly contentHash: string;
@@ -100,6 +122,8 @@ export interface KnowledgeSnapshot extends VersionedResearchContract {
 	readonly assay?: string;
 	readonly environmentFingerprint?: string;
 	readonly sources: readonly KnowledgeSourceReceipt[];
+	/** Capture approval is explicit; legacy snapshots without this field remain reusable. */
+	readonly approval?: "pending" | "approved" | "rejected" | "revoked";
 	readonly reuseLevel: KnowledgeReuseLevel;
 	readonly evidenceGrade?: KnowledgeEvidenceGrade;
 	readonly evidenceLevel?: KnowledgeEvidenceGrade;
@@ -236,6 +260,14 @@ export interface ValidationEvidenceCapsule extends VersionedResearchContract {
 	readonly gateRefs: readonly ContractParentRef[];
 	readonly sourceRefs: readonly ContractParentRef[];
 	readonly status: "validated" | "failed" | "incomplete";
+	/** Cross-package projection; legacy capsules may omit these fields. */
+	readonly evidenceState?: ResearchEvidenceState;
+	readonly claimState?: ResearchClaimState;
+	readonly capabilityState?: ResearchCapabilityState;
+	readonly reuseLevel?: ResearchReuseLevel;
+	readonly validationScope?: ResearchValidationScope;
+	readonly freshness?: ResearchFreshnessState;
+	readonly scientificallyVerified?: false;
 	readonly createdAt: string;
 }
 
@@ -399,6 +431,7 @@ export function computeResearchContractHash<T extends VersionedResearchContract>
 	const {
 		contentHash: _contentHash,
 		decisionHash: _decisionHash,
+		lineage: _lineage,
 		...body
 	} = value as T & {
 		decisionHash?: unknown;
@@ -472,6 +505,7 @@ export function assertResearchContract(value: VersionedResearchContract): void {
 	if (!Number.isSafeInteger(value.revision) || value.revision < 0) throw new Error("Invalid revision");
 	if (!/^[a-f0-9]{64}$/.test(value.contentHash)) throw new Error("Invalid contentHash");
 	if (!Array.isArray(value.parentRefs)) throw new Error("Invalid parentRefs");
+	if (value.lineage !== undefined) assertCausalEnvelope(value.lineage);
 	if (value.migration) {
 		if (
 			!Number.isSafeInteger(value.migration.fromSchemaVersion) ||
@@ -485,11 +519,31 @@ export function assertResearchContract(value: VersionedResearchContract): void {
 	}
 	if (value.contentHash !== computeResearchContractHash(value))
 		throw new Error("Contract contentHash mismatch");
+	if ((value as { kind?: unknown }).kind === "validation-evidence-capsule") {
+		const capsule = value as ValidationEvidenceCapsule;
+		const projection = statusForValidationCapsule({
+			status: capsule.status,
+			validationScope: capsule.validationScope,
+			freshness: capsule.freshness,
+		});
+		if (
+			(capsule.evidenceState !== undefined && capsule.evidenceState !== projection.evidenceState) ||
+			(capsule.claimState !== undefined && capsule.claimState !== projection.claimState) ||
+			(capsule.capabilityState !== undefined && capsule.capabilityState !== projection.capabilityState) ||
+			(capsule.reuseLevel !== undefined && capsule.reuseLevel !== projection.reuseLevel) ||
+			(capsule.validationScope !== undefined && capsule.validationScope !== projection.validationScope) ||
+			(capsule.freshness !== undefined && capsule.freshness !== projection.freshness) ||
+			(capsule.scientificallyVerified !== undefined && capsule.scientificallyVerified !== false)
+		)
+			throw new Error("Validation capsule status projection is inconsistent");
+		assertResearchStatus(projection);
+	}
 }
 
 export interface ContractVersionOptions {
 	readonly revision?: number;
 	readonly parentRefs?: readonly ContractParentRef[];
+	readonly lineage?: CausalEnvelope;
 	readonly migration?: ContractMigration;
 }
 
@@ -501,10 +555,11 @@ function base<T extends Record<string, unknown>>(
 		schemaVersion: RESEARCH_CONTRACT_SCHEMA_VERSION,
 		revision: options.revision ?? 0,
 		parentRefs: [...(options.parentRefs ?? [])],
+		...(options.lineage ? { lineage: options.lineage } : {}),
 		...(options.migration ? { migration: options.migration } : {}),
 	};
 	const record = JSON.parse(canonicalContractJson({ ...body, ...metadata })) as T & VersionedResearchContract;
-	const result = { ...record, contentHash: contractContentHash(record) };
+	const result = { ...record, contentHash: computeResearchContractHash(record) };
 	assertResearchContract(result);
 	return result;
 }
@@ -622,7 +677,36 @@ export function createCapabilityValidationGate(
 export function createValidationEvidenceCapsule(
 	input: Omit<ValidationEvidenceCapsule, keyof VersionedResearchContract | "kind"> & ContractVersionOptions,
 ): ValidationEvidenceCapsule {
-	return base({ ...input, kind: "validation-evidence-capsule" as const }, input) as ValidationEvidenceCapsule;
+	const projection = statusForValidationCapsule({
+		status: input.status,
+		validationScope: input.validationScope,
+		freshness: input.freshness,
+	});
+	if (
+		(input.evidenceState !== undefined && input.evidenceState !== projection.evidenceState) ||
+		(input.claimState !== undefined && input.claimState !== projection.claimState) ||
+		(input.capabilityState !== undefined && input.capabilityState !== projection.capabilityState) ||
+		(input.reuseLevel !== undefined && input.reuseLevel !== projection.reuseLevel) ||
+		(input.validationScope !== undefined && input.validationScope !== projection.validationScope) ||
+		(input.freshness !== undefined && input.freshness !== projection.freshness) ||
+		(input.scientificallyVerified !== undefined && input.scientificallyVerified !== false)
+	)
+		throw new Error("Validation capsule status projection is inconsistent");
+	assertResearchStatus(projection);
+	return base(
+		{
+			...input,
+			kind: "validation-evidence-capsule" as const,
+			evidenceState: projection.evidenceState,
+			claimState: projection.claimState,
+			capabilityState: projection.capabilityState,
+			reuseLevel: projection.reuseLevel,
+			validationScope: projection.validationScope,
+			freshness: projection.freshness,
+			scientificallyVerified: false as const,
+		},
+		input,
+	) as ValidationEvidenceCapsule;
 }
 
 export function createDecisionProposal(

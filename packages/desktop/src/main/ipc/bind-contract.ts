@@ -1,4 +1,4 @@
-import type { ArgsOf, DomainContract, HostApiAccess, HostApiMethod, ResultOf, UiError } from "@drone/shared";
+import type { ArgsOf, DomainContract, HostApiMethod, ResultOf, UiError } from "@drone/shared";
 import { channelOf } from "@drone/shared";
 import { ipcMain } from "electron";
 import { Check } from "typebox/value";
@@ -25,8 +25,6 @@ export interface BindContractOptions {
 	ipc?: Pick<typeof ipcMain, "handle" | "removeHandler">;
 	/** Validate result schemas even when NODE_ENV is production (for tests/host hardening). */
 	validateResult?: boolean;
-	/** Access policy is carried by the contract; this hook can restrict methods for a host. */
-	allowedAccess?: readonly HostApiAccess[];
 	/** Override the default `<domain>:<method>` channel during incremental migrations. */
 	channelForMethod?: (contract: DomainContract, method: string) => string;
 	/** Optional host-level guard evaluated with the raw IPC event before dispatch. */
@@ -57,14 +55,12 @@ export function bindContract<TContract extends DomainContract>(
 ): () => void {
 	const ipc = options.ipc ?? ipcMain;
 	const validateResult = options.validateResult ?? process.env.NODE_ENV !== "production";
-	const allowedAccess = options.allowedAccess;
 	const registeredChannels: string[] = [];
 
 	for (const [methodName, method] of Object.entries(contract.methods) as [
 		keyof TContract["methods"] & string,
 		HostApiMethod,
 	][]) {
-		if (allowedAccess && method.access && !allowedAccess.includes(method.access)) continue;
 		const channel = options.channelForMethod?.(contract, methodName) ?? channelOf(contract, methodName);
 		const implementationMethod = implementation[methodName];
 		if (typeof implementationMethod !== "function") {

@@ -15,14 +15,7 @@ import {
 } from "./chunk-XSFQUT2B.mjs";
 import {
   getKnowledgeService
-} from "./chunk-UXPVRBKA.mjs";
-import {
-  runNavigationMaintenance
-} from "./chunk-EJFIMVBU.mjs";
-import {
-  memoryNoteMarkdown,
-  memoryNoteSlug
-} from "./chunk-W4BONNYJ.mjs";
+} from "./chunk-DYPBIGMU.mjs";
 import {
   flowFor,
   invalidateKnowledgeUi
@@ -31,6 +24,13 @@ import {
   readReviewMode,
   saveReviewMode
 } from "./chunk-6LT3KQRY.mjs";
+import {
+  runNavigationMaintenance
+} from "./chunk-EJFIMVBU.mjs";
+import {
+  memoryNoteMarkdown,
+  memoryNoteSlug
+} from "./chunk-W4BONNYJ.mjs";
 import {
   safeNotePath
 } from "./chunk-AHEUR5VB.mjs";

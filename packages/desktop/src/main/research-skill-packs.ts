@@ -1,11 +1,16 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
-import { RESEARCH_SKILL_SOURCES } from "@drone/shared";
+import {
+	type BuiltinResearchSkillSource,
+	RESEARCH_SKILL_SOURCES,
+	type ResearchSkillSource,
+} from "@drone/shared";
 
 interface Receipt {
 	version: number;
 	commit: string;
+	archiveSha256?: string;
 	noncommercialAcknowledged?: boolean;
 	licenseAuthorization?: string;
 	layout?: string;
@@ -14,14 +19,23 @@ interface Receipt {
 }
 
 /** Only explicit SKILL.md entries are registered: no upstream extensions, hooks or config. */
-export function researchSkillPackPaths(root: string, options: { includeAcademic?: boolean } = {}) {
+export function researchSkillPackPaths(
+	root: string,
+	options: {
+		includeAcademic?: boolean;
+		sourceRoots?: Partial<Record<ResearchSkillSource, string>>;
+		sourcePins?: Partial<Record<BuiltinResearchSkillSource, { commit: string; archiveSha256: string }>>;
+	} = {},
+) {
 	const paths: string[] = [];
 	const warnings: string[] = [];
 	const promptPaths: string[] = [];
 	let academicPiRoot: string | undefined;
 	for (const source of RESEARCH_SKILL_SOURCES) {
-		if (source.id === "academic" && !options.includeAcademic) continue;
-		const directory = join(root, source.id);
+		const sourceId = source.id as ResearchSkillSource;
+		if (sourceId === "academic" && !options.includeAcademic) continue;
+		const directory = options.sourceRoots?.[sourceId] ?? join(root, sourceId);
+		const pin = sourceId === "academic" ? undefined : options.sourcePins?.[sourceId];
 		if (!existsSync(directory)) {
 			if (source.id !== "academic")
 				warnings.push(`Research skills ${source.id} missing; run npm run skills:sync.`);
@@ -31,9 +45,11 @@ export function researchSkillPackPaths(root: string, options: { includeAcademic?
 			const receipt = JSON.parse(readFileSync(join(directory, ".drone-pack.json"), "utf8")) as Receipt;
 			const selected = source.skills.filter((skill) => skill.bundled || source.id === "academic");
 			const expected = selected.map(({ name, path }) => ({ name, path }));
+			const expectedArchiveSha256 = pin?.archiveSha256 ?? source.archiveSha256;
 			if (
 				receipt.version !== 1 ||
-				receipt.commit !== source.commit ||
+				receipt.commit !== (pin?.commit ?? source.commit) ||
+				(expectedArchiveSha256 && receipt.archiveSha256 !== expectedArchiveSha256) ||
 				JSON.stringify(receipt.skills) !== JSON.stringify(expected) ||
 				(source.id === "academic" &&
 					(receipt.layout !== "pi-complete-v1" ||

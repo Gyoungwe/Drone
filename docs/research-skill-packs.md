@@ -1,5 +1,12 @@
 # Research skill packs: discovery is not activation
 
+Drone 的内置研究技能来源目前只有两个公开仓库：
+
+- [Nature Skills](https://github.com/Yuan1z0825/nature-skills)
+- [Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills)
+
+它们随发布包内置。每周的 GitHub Actions 会检查上游 `main`、更新固定 commit 与归档 SHA-256，并创建一个可审阅的更新 PR。已安装客户端也提供一键更新：只下载固定 commit 的归档，校验路径、清单、文件哈希和归档哈希，写入用户目录的版本化 overlay，最后在安全重启后启用。`npm run skills:update` 可在维护者本地执行同一更新检查。新增或删除技能会停在审阅门槛，不会静默改变内置清单。
+
 ## Architecture
 
 Keep the existing `CapabilityRuntime` / `CapabilityResourceLoader` boundary. This is **not** another agent, global mega-prompt, or a replacement for the first-party research workbench.
@@ -44,15 +51,15 @@ New independent turns reset the selected topics; `继续` / `continue` restores 
 
 | Source | Pinned commit | Indexed | Release profile |
 | --- | --- | ---: | ---: |
-| [Nature Skills](https://github.com/Yuan1z0825/nature-skills) | `2375e0abdf42158ef149256f2c64b1f759a0d274` | 20 | 20 |
-| [Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills) | `330c8e764435a731eff571e3efdda70b363d0792` | 166 | 148 |
-| [Academic Research Skills](https://github.com/Imbad0202/academic-research-skills) | `3c546bc08c56f79e0068f1ea4f0acedf5bf69b5e` | 4 | 4 (CC BY-NC 4.0, noncommercial distribution) |
+| [Nature Skills](https://github.com/Yuan1z0825/nature-skills) | 见 `research-skill-sources.json` | 20 | 20 |
+| [Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills) | 见 `research-skill-sources.json` | 166 | 148 |
+| Academic Research Skills（可选、非默认） | — | — | 不随默认发布包分发 |
 
 Nature has Apache-2.0 root licensing (some individual headers say MIT). Scientific has MIT root licensing, **but its individual skill metadata is mixed**. We conservatively exclude 18 entries from default redistribution: `biopython`, `bioservices`, `cobrapy`, `deepspot-m`, `docx`, `etetoolkit`, `glycoengineering`, `imaging-data-commons`, `matplotlib`, `pdf`, `phylogenetics`, `polars`, `pptx`, `primekg`, `rowan`, `sympy`, `what-if-oracle`, `xlsx`. These have copyleft, restrictive, unknown, URL-only or otherwise unresolved per-skill declarations. Some headers may describe the documented software rather than the documentation itself; exclusion is precautionary, not a legal determination. Enabling them for redistribution requires a separate license review and a reviewed lock change. Existing independently installed user skills are not uninstalled or relicensed.
 
-ARS upstream remains **CC BY-NC 4.0** (© Cheng-I Wu). Drone is distributed free of charge for noncommercial use, so the release profile includes the complete ARS pack under the license's own grant to reproduce and Share the material for NonCommercial purposes, with the original LICENSE/NOTICE, an unmodified hash-pinned tree and this attribution. This is a distribution configuration decision, not a change to the upstream license: every recipient receives ARS under the same CC BY-NC 4.0 terms and may not use it for commercial purposes, and Drone's MIT license does not cover it. Anyone redistributing Drone or its ARS resources for commercial advantage must remove the pack or obtain separate permission from the upstream author (recorded with `--acknowledge-commercial-permission`). This does not assert a license clearance for the external libraries, databases or assets described by any skill.
+Academic Research Skills/ARS remains an optional, separately reviewed integration. It is not downloaded, loaded or shipped by the default Drone build, so the two built-in packs do not require a user-supplied ARS path or license receipt.
 
-Original license files and directory structure are preserved. The Nature `nature-proposal-writer` directory declares the SDK name **`researchwrite`**; we keep that actual name instead of inventing a rename. Academic's four skills live at the repository root, not the `skills/` symlink facade. The importer now preserves the complete ordinary-file repository (2,737 files at this pin), including pi/, commands/, MODE_REGISTRY.md, shared agents, scripts and references. Only four redundant skills/* symlink facades are omitted for Windows portability. The host registers the four real skill entries, 16 original prompt templates, and one reviewed bridge. Claude hooks, other repository extensions and scripts are not automatically registered or executed.
+Original license files and directory structure are preserved. The Nature `nature-proposal-writer` directory declares the SDK name **`researchwrite`**; we keep that actual name instead of inventing a rename. Scientific's source lock records only the reviewed, redistributable entries; unresolved entries remain available for separate review rather than being silently bundled. Claude hooks, other repository extensions and scripts are not automatically registered or executed.
 
 ## Installation, validation and packaging
 
@@ -63,47 +70,31 @@ npm run skills:sync                 # default: nature + filtered scientific
 npm run skills:check                # offline: validate every acquired file hash
 ```
 
-The first acquisition downloads commit-pinned GitHub archives (Scientific's full archive is about 234 MB, despite the selected skill files being much smaller). A verified archive is retained in the gitignored `.local/research-skill-cache/` cache, keyed by source, commit and the lock's archive SHA-256, so a clean resource directory can be restored without downloading again. Pass `--offline --cache-dir <path>` to require a cache-only restore; a missing or corrupted entry is rejected and never replaced by an unverified network response. There are no runtime network fetches. Downloads have size bounds, locked SHA-256 checksums, path/type checks and staged publication; both cache and resource publication use temporary files and atomic renames. An existing changed/stale destination is **not overwritten**; move it aside explicitly before resync. The script never executes upstream code or reads credentials. Skill scripts remain inert until a separately authorized agent task requests execution.
+The first acquisition downloads commit-pinned GitHub archives (Scientific's full archive is about 234 MB, despite the selected skill files being much smaller). A verified archive is retained in the gitignored `.local/research-skill-cache/` cache, keyed by source, commit and the lock's archive SHA-256, so a clean resource directory can be restored without downloading again. Pass `--offline --cache-dir <path>` to require a cache-only restore; a missing or corrupted entry is rejected and never replaced by an unverified network response. The scheduled updater changes only the reviewed source lock; the release workflow and the installed-client updater both perform the same path/hash checks before activation. Downloads have size bounds, locked SHA-256 checksums, path/type checks and staged publication; both cache and user manifest publication use temporary files and versioned directories. The script never executes upstream code or reads credentials. Skill scripts remain inert until a separately authorized agent task requests execution.
 
-Generated sources live in `packages/desktop/resources/research-skills/`, intentionally gitignored. Keep the source lock, installer and routing code in Git rather than vendoring huge repositories. `npm run dist -w packages/desktop` verifies all three sources before building. The electron-builder `beforePack` hook repeats the fail-closed check, including when invoked directly. A fresh checkout — including the Release workflow — must acquire Nature/Scientific and explicitly install ARS with an acknowledged license basis; the Release workflow uses `--acknowledge-noncommercial`. Missing ARS, stale hashes, a receipt without an explicit license basis, redirected resources or unreceipted extra files fail the release check. Runtime missing/stale packs fail closed with a diagnostic warning; first-party skills remain available.
+Generated sources live in `packages/desktop/resources/research-skills/`, intentionally gitignored. Keep the source lock, updater, installer and routing code in Git rather than vendoring huge repositories. `npm run dist -w packages/desktop` verifies Nature and Scientific before building. The electron-builder `beforePack` hook repeats the fail-closed check, including when invoked directly. A fresh checkout — including the Release workflow — acquires and verifies both built-in sources. Missing packs, stale hashes, redirected resources or unreceipted extra files fail the release check. Runtime missing/stale packs fail closed with a diagnostic warning; first-party skills remain available.
 
-**ARS acquisition**, only under an applicable license basis. Noncommercial use under CC BY-NC 4.0 (this is also the release profile):
-
-```sh
-python scripts/sync-research-skills.py --sources academic --acknowledge-noncommercial
-python scripts/sync-research-skills.py --sources academic --acknowledge-noncommercial --check
-```
-
-If you hold a separate permission from the upstream author that covers commercial use or distribution, record that explicit attestation instead (this flag does not grant a license):
-
-```sh
-python scripts/sync-research-skills.py --sources academic --acknowledge-commercial-permission
-python scripts/sync-research-skills.py --sources academic --check
-```
-
-The development and packaged apps both register verified ARS resources. `electron-builder.yml` explicitly lists Nature, Scientific and Academic; full ARS paths, original LICENSE/NOTICE and the acquisition receipt are retained. Inclusion does not switch on every skill: session/task visibility and start/stop behavior are unchanged.
+ARS can still be acquired separately when a future integration explicitly supplies an applicable license basis, but it is outside the default built-in pack workflow.
 
 Release preflight (offline, no build or publish):
 
 ```sh
-python scripts/sync-research-skills.py --sources nature scientific academic --check --for-release
+python scripts/sync-research-skills.py --sources nature scientific --check --for-release
 ```
 
 To restore a previously acquired pack without network access, use the same lock and cache explicitly:
 
 ```sh
-python scripts/sync-research-skills.py --sources nature scientific academic --acknowledge-noncommercial --cache-dir .local/research-skill-cache --offline
+python scripts/sync-research-skills.py --sources nature scientific --cache-dir .local/research-skill-cache --offline
 ```
 
-The `--offline` path is a restore operation and still writes only a fully staged, receipt-bearing resource directory. It does not grant or infer a license; ARS still requires the explicit noncommercial acknowledgment or a separately held permission, and its receipt remains the release authority.
-
-The release check requires an explicit `licenseAuthorization` on the ARS receipt: `noncommercial` (the CC BY-NC 4.0 grant, used by the Release workflow) or `separate-permission` (a separately held agreement). A receipt records the distributor's basis; it is neither the license nor the agreement itself. Do not embed private license contracts or credentials in the resources. Neither this configuration nor the app's MIT license relicenses upstream ARS or its external dependencies.
+The `--offline` path is a restore operation and still writes only a fully staged, receipt-bearing resource directory. It never grants or infers a license. Do not embed private license contracts or credentials in the resources.
 
 After installation or changing source paths, reload/restart the development app at a convenient time. This work does not forcibly restart the current user session.
 
 ## Update and rollback
 
-To update a source, review upstream code/data and license changes, regenerate the source inventory and archive checksum for a specific commit, review task mappings and validate the importer/router/pack loader. The lock's `runtimeFiles` also pins the Pi executable wrapper, package manifests, mode registry and original command templates individually. The `bundled` flag is a reviewed redistribution decision, not an automatic inference made at runtime. Preserve local modified packs before replacing them. No background updater follows `main`.
+To update a source, the scheduled updater checks the upstream `main` commit and archive checksum, refuses changed skill inventories, and opens a review PR for unchanged inventories. The installed client performs the same check on demand, stages each updated source under `userData/research-skills/<source>-<commit>`, atomically replaces its manifest, and waits for a guarded restart before loading the new overlay. The lock's `bundled` flag is a reviewed redistribution decision, not an automatic inference at runtime. A failed check or download leaves the current verified pack active.
 
 To disable all acquired sources locally, move their directories outside `resources/research-skills` and restart/reload; no global `.agents/skills` files are touched. Reverting the integration code restores the previous broad category selector. Pre-existing and concurrent UI, resource-preview and SSH changes are unrelated and must not be reverted with this upgrade.
 
@@ -145,6 +136,6 @@ The two ARS integration suites explicitly skip when an authorized local ARS pack
 
 ### Resource-copy verification and consolidation proposal
 
-`python scripts/test-research-release.py` exercises release-gate failures without network access. `node scripts/check-research-packaging.cjs` uses electron-builder's actual resource matcher/copier in a temporary directory and verifies every copied source file against its receipt. Builder-util skips `.gitkeep` during directory traversal, so four exact ARS file mappings preserve these pinned placeholders. This check does not build, sign, publish or install the application.
+`python scripts/test-research-release.py` exercises release-gate failures without network access. `node scripts/check-research-packaging.cjs` uses electron-builder's actual resource matcher/copier in a temporary directory and verifies every copied source file against its receipt. This check does not build, sign, publish or install the application.
 
 See `research-skill-consolidation.md` and `research-skill-consolidation.csv` for the assessment of 197 source/project skills and the six-direction proposal. The consolidation is a proposal only: no skill body, original command name or source directory has been removed or rewritten.

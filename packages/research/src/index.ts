@@ -13,6 +13,30 @@ export {
 	validateClaimBindings,
 } from "./claim-bindings";
 export {
+	createCrossrefConnector,
+	createDefaultResearchConnectors,
+	createDoiConnector,
+	createEnaConnector,
+	createEuropePmcConnector,
+	createInstitutionalConnector,
+	createOpenAlexConnector,
+	createOsfConnector,
+	createProjectStorageConnector,
+	createProtocolsConnector,
+	createPubmedConnector,
+	createSraConnector,
+	createZenodoConnector,
+	createZoteroConnector,
+	type ResearchConnector,
+	type ResearchConnectorContext,
+	ResearchConnectorRegistry,
+	type ResearchInstitutionalConnectorConfig,
+	type ResearchProjectStorageItem,
+	type ResearchProjectStoragePort,
+	type ResearchProtocolsConnectorConfig,
+	type ResearchZoteroConnectorConfig,
+} from "./connectors";
+export {
 	assertEvidenceAnswerable,
 	createEvidenceGate,
 	EVIDENCE_STAGES,
@@ -169,6 +193,14 @@ export {
 	RESEARCH_ANSWER_GUIDANCE,
 	requiresPaperEvidence,
 } from "./source-delivery";
+export {
+	createDefaultResearchWriteAdapters,
+	createZoteroWriteAdapter,
+	type ResearchWriteAdapter,
+	ResearchWriteAdapterRegistry,
+	type ResearchWriteExecutionContext,
+	type ResearchWritePort,
+} from "./write-connectors";
 export {
 	findZoteroItemsByIdentity,
 	isValidZoteroDoi,

@@ -9,15 +9,7 @@ module.exports = async function verifyResearchRelease() {
 	});
 	execFileSync(
 		process.env.PYTHON || "python",
-		[
-			join(__dirname, "sync-research-skills.py"),
-			"--sources",
-			"nature",
-			"scientific",
-			"academic",
-			"--check",
-			"--for-release",
-		],
+		[join(__dirname, "sync-research-skills.py"), "--sources", "nature", "scientific", "--check"],
 		{ cwd: join(__dirname, ".."), stdio: "inherit" },
 	);
 };

@@ -178,11 +178,11 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 					{result.kind === "text" ? t("resource.viewer.textTruncated") : t("resource.viewer.mediaTruncated")}
 				</p>
 			)}
-			<div className="resource-body">
+			<div className="resource-body" aria-busy={!web && !externalProtocol && !result && !error}>
 				{web ? (
 					<iframe className="resource-frame" src={target.href} title={title} referrerPolicy="no-referrer" />
 				) : externalProtocol ? (
-					<div className="resource-empty">
+					<div className="resource-empty" role="alert">
 						<div>{t("resource.externalProtocol")}</div>
 						<button type="button" className="resource-primary" onClick={openExternal}>
 							{t("resource.openExternal")}
@@ -197,7 +197,9 @@ export function ResourceSidebar({ target }: { target: ResourcePreviewTarget }) {
 						</button>
 					</div>
 				) : !result ? (
-					<div className="resource-empty">{t("resource.loading")}</div>
+					<div className="resource-empty" role="status" aria-live="polite">
+						{t("resource.loading")}
+					</div>
 				) : (
 					<PreviewHost
 						result={result}

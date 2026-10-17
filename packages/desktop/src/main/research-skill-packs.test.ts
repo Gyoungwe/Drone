@@ -47,6 +47,7 @@ function fixture(id: string, acknowledgment = false) {
 	const receipt = {
 		version: 1,
 		commit: source.commit,
+		archiveSha256: source.archiveSha256,
 		skills,
 		files,
 		layout: "pi-complete-v1",
@@ -68,6 +69,23 @@ it("keeps restricted scientific skills out of the default bundle", () => {
 	const result = researchSkillPackPaths(root);
 	expect(result.paths).toHaveLength(148);
 	expect(result.paths.some((path) => /(?:what-if-oracle|deepspot-m|skills[/\\]docx)/.test(path))).toBe(false);
+});
+it("loads a user-installed pack only when its manifest pin matches the receipt", () => {
+	const { root, receipt } = fixture("nature");
+	const archiveSha256 = "a".repeat(64);
+	receipt.archiveSha256 = archiveSha256;
+	writeFileSync(join(root, "nature", ".drone-pack.json"), JSON.stringify(receipt));
+	const loaded = researchSkillPackPaths(root, {
+		sourceRoots: { nature: join(root, "nature") },
+		sourcePins: { nature: { commit: receipt.commit, archiveSha256 } },
+	});
+	expect(loaded.paths).toHaveLength(20);
+	expect(
+		researchSkillPackPaths(root, {
+			sourceRoots: { nature: join(root, "nature") },
+			sourcePins: { nature: { commit: receipt.commit, archiveSha256: "b".repeat(64) } },
+		}).paths,
+	).toEqual([]);
 });
 it("does not load a partly changed source", () => {
 	const { root, skills } = fixture("nature");
@@ -96,15 +114,14 @@ it("requires both explicit ARS inclusion and its license acknowledgment", () => 
 	expect(loaded.academicPiRoot).toBe(join(root, "academic"));
 	expect(researchSkillPackPaths(root).paths).toEqual([]);
 });
-it("packaging includes the complete ARS source and enforces release preflight", () => {
+it("packages only the two built-in research sources and enforces release preflight", () => {
 	const config = readFileSync(new URL("../../electron-builder.yml", import.meta.url), "utf8");
 	expect(config).toContain('from: "resources/research-skills/nature"');
 	expect(config).toContain('from: "resources/research-skills/scientific"');
-	expect(config).toContain('from: "resources/research-skills/academic"');
+	expect(config).not.toContain('from: "resources/research-skills/academic"');
 	expect(config).toContain('beforePack: "../../scripts/verify-research-release.cjs"');
 	const main = readFileSync(new URL("./index.ts", import.meta.url), "utf8");
-	expect(main).toContain("{ includeAcademic: true }");
-	expect(main).not.toContain("includeAcademic: !app.isPackaged");
+	expect(main).toContain("includeAcademic: false");
 });
 
 it("refuses a modified executable wrapper even if the receipt was changed", () => {

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { childCausalEnvelope } from "@drone/shared";
 import { JobStatusMachine, type JobStatusMachineOptions } from "../jobs";
 import type { RunnerClient } from "../runner";
 import type { JobSpec, JobStatus, SubmissionOutcome, SubmissionRecord } from "../types";
@@ -111,6 +113,9 @@ function recordFromStart(spec: JobSpec, value: unknown, now: string): Submission
 	return {
 		jobId: spec.jobId,
 		idempotencyKey: spec.idempotencyKey ?? spec.jobId,
+		...(spec.lineage
+			? { lineage: childCausalEnvelope(spec.lineage, { eventId: `event:${randomUUID()}` }) }
+			: {}),
 		...(remoteId ? { remoteId } : {}),
 		...(pid === undefined ? {} : { pid }),
 		...(processStartedAt ? { processStartedAt } : {}),

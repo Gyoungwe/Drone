@@ -1,3 +1,4 @@
+import type { CausalEnvelope } from "./causality";
 import { contractContentHash } from "./research-contracts";
 
 export type AskQuestionType = "single" | "multi" | "preview" | "text";
@@ -23,6 +24,7 @@ export interface AskOption {
 /** Renderer-safe projection of a generated decision proposal. No backend entities or credentials cross IPC. */
 export interface AskDecisionProposal {
 	proposalHash: string;
+	lineage?: CausalEnvelope;
 	contextHash?: string;
 	capabilityHash?: string;
 	workflowHash?: string;
@@ -80,6 +82,7 @@ export interface AskAnswer {
 
 export interface AskDecision {
 	proposalHash: string;
+	lineage?: CausalEnvelope;
 	choice?: string;
 	choices?: string[];
 	customText?: string;

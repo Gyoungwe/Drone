@@ -30,6 +30,66 @@ const Replay = Type.Object({
 	environmentMatched: Type.Boolean(),
 	completedAt: Type.String(),
 });
+const CapabilityEvidenceCard = Type.Object({
+	id: Id,
+	analysisId: Id,
+	capabilityId: Id,
+	requestRef: Type.Optional(Id),
+	versionRef: Type.Optional(Id),
+	/** Immutable execution snapshot; distinct from a validation evidence capsule. */
+	checkpointRef: Type.Optional(Hash),
+	evidenceCapsuleRef: Type.Optional(Hash),
+	evidenceState: Type.Union([
+		Type.Literal("observed"),
+		Type.Literal("reproduced"),
+		Type.Literal("verified"),
+		Type.Literal("partial"),
+		Type.Literal("stale"),
+		Type.Literal("unsupported"),
+		Type.Literal("unknown"),
+		Type.Literal("blocked"),
+	]),
+	claimState: Type.Union([
+		Type.Literal("supported"),
+		Type.Literal("mixed"),
+		Type.Literal("inferred"),
+		Type.Literal("hypothesis"),
+		Type.Literal("unsupported"),
+	]),
+	capabilityState: Type.Union([
+		Type.Literal("candidate"),
+		Type.Literal("recommended"),
+		Type.Literal("registered"),
+		Type.Literal("enabled"),
+		Type.Literal("retired"),
+	]),
+	reuseLevel: Type.Union([
+		Type.Literal("navigation-only"),
+		Type.Literal("evidence-eligible"),
+		Type.Literal("validated-capability"),
+		Type.Literal("reproduced-capability"),
+	]),
+	validationScope: Type.Optional(
+		Type.Union([
+			Type.Literal("fixture"),
+			Type.Literal("integration"),
+			Type.Literal("real-data"),
+			Type.Literal("scientific-review"),
+		]),
+	),
+	freshness: Type.Union([Type.Literal("fresh"), Type.Literal("stale"), Type.Literal("unknown")]),
+	scientificallyVerified: Type.Boolean(),
+	gates: Type.Array(
+		Type.Object({
+			id: Id,
+			status: Type.Union([Type.Literal("blocked"), Type.Literal("review"), Type.Literal("not-recorded")]),
+			detail: Type.String(),
+		}),
+	),
+	runRefs: Type.Array(Id),
+	artifactRefs: Type.Array(Type.Object({ path: Type.String(), sha256: Hash })),
+	receiptRefs: Type.Array(Id),
+});
 const Overview = Type.Object({
 	analyses: Type.Array(
 		Type.Object({
@@ -40,6 +100,7 @@ const Overview = Type.Object({
 			artifactCount: Type.Number(),
 		}),
 	),
+	capabilities: Type.Array(CapabilityEvidenceCard),
 	checkpoints: Type.Array(Checkpoint),
 	branches: Type.Array(Branch),
 	replays: Type.Array(Replay),
@@ -73,5 +134,6 @@ export const EvidenceContract = defineDomain("evidence", {
 });
 export type EvidenceApi = import("./define").ClientOf<typeof EvidenceContract>;
 export type EvidenceOverview = Static<typeof Overview>;
+export type CapabilityEvidenceCard = Static<typeof CapabilityEvidenceCard>;
 export type EvidenceCheckpointSummary = Static<typeof Checkpoint>;
 export type EvidenceBranchSummary = Static<typeof Branch>;

@@ -217,6 +217,20 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
+			id: "agent-research-captures",
+			path: `${agentDir}/research/captures.json`,
+			owner: "research/resource-capture",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "agent-research-connectors",
+			path: `${agentDir}/research/connectors.json`,
+			owner: "research/connector-settings",
+			schema: 1,
+			sensitivity: "config",
+		})
+		.register({
 			id: "agent-model-prefs",
 			path: `${agentDir}/model-prefs.json`,
 			owner: "settings/model-prefs",
@@ -367,6 +381,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			id: "agent-memory",
 			path: `${agentDir}/memory/memory.db`,
 			owner: "memory",
+			schema: 1,
+			sensitivity: "private",
+		})
+		.register({
+			id: "agent-research-writes",
+			path: `${agentDir}/research/writes.json`,
+			owner: "research/writes",
 			schema: 1,
 			sensitivity: "private",
 		})

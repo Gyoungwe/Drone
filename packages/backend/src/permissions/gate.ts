@@ -60,7 +60,7 @@ export class PermissionGate {
 		return { title: this.titles.get(requestId) ?? "", meta: this.pending.get(requestId)?.meta };
 	}
 
-	/** 全部未决请求的只读快照（面向只读观察者）。 */
+	/** 全部未决请求的只读快照。 */
 	listPending(): PermissionRequest[] {
 		return [...this.pending.entries()].map(([id, entry]) => ({
 			id,

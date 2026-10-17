@@ -19,7 +19,9 @@ export {
 } from "./bio-preview-format";
 export * from "./capabilities";
 export * from "./capability-discovery";
+export * from "./capability-governance";
 export * from "./capability-skills";
+export * from "./causality";
 export * from "./compute";
 export * from "./context-meta";
 export * from "./contracts";
@@ -33,6 +35,7 @@ export * from "./durable-doc";
 export * from "./error-codes";
 export * from "./errors";
 export * from "./evidence-labels";
+export * from "./evolution";
 export * from "./example-tasks";
 export * from "./execution";
 export * from "./file-actions";
@@ -60,7 +63,12 @@ export * from "./process-lanes";
 export * from "./progress-display";
 export * from "./project-id";
 export * from "./public-timeline";
+export * from "./research-capture";
+export * from "./research-connectors";
+export * from "./research-skill-update";
 export * from "./research-skills";
+export * from "./research-status";
+export * from "./research-writes";
 export {
 	isLocalResourceTarget,
 	localResourceHref,
@@ -97,6 +105,7 @@ export * from "./ui-plugins";
 export * from "./update";
 export * from "./update-guard";
 export * from "./usage-display";
+export * from "./v2-closure";
 export * from "./volume-preview";
 export * from "./workflow-catalog";
 export * from "./zotero";

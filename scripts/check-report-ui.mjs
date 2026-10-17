@@ -33,7 +33,7 @@ useUiPreferencesStore.setState({centerOrbEnabled:false});
 const source = 'Library/Papers/edger-a-bioconductor-package-for-differential-expression-analysi-ec996d3ae6a33ca7.md';
 const user = {kind:'user', id:'user', text:'构思昆虫翅发育基因的比较基因组分析流程', images:[], timestamp:1000};
 const body = Array.from({length:32}, (_,i) => '### 阶段 ' + (i+1) + '\\n\\n核对采样、基因注释与系统发育背景，说明假设与交付物。').join('\\n\\n');
-const answer = {kind:'assistant',id:'answer',text:body,thinking:'',tools:[],timestamp:2000};
+const answer = {kind:'assistant',id:'answer',text:body,thinking:'',tools:[{key:'report-tool',id:'report-tool',name:'report_fixture',args:'{}',output:'ok',state:'done',startedAt:1500,endedAt:1800}],timestamp:2000};
 let state = {...emptyTranscript(), messages:[user,answer], agentActive:true};
 const publish = () => {
  useTranscriptStore.setState({bySession:{'report-ui':{...state,pendingPermissions:[]}}});
@@ -71,6 +71,7 @@ const server = await createServer({
 		include: ["react", "react-dom/client", "react/jsx-runtime", "markstream-react", "zustand"],
 	},
 	resolve: {
+		dedupe: ["react", "react-dom"],
 		alias: { react: join(repo, "node_modules/react"), "react-dom": join(repo, "node_modules/react-dom") },
 	},
 });
@@ -93,6 +94,7 @@ app.whenReady().then(async()=>{
  const js=async code=>{try{return await win.webContents.executeJavaScript(code,true)}catch(error){console.error('Failed UI expression:',code,errors);throw error}};
  async function until(code){for(let i=0;i<100;i++){if(await js(code))return;await pause(80)}throw Error('UI timeout: '+code)}
  try{
+  {
    await win.loadURL('about:blank');
    await win.loadURL(${JSON.stringify(url)});
    await pause(2500);
@@ -113,10 +115,6 @@ app.whenReady().then(async()=>{
    assert(link.text.length<=41 && !link.text.includes('ec996d3ae6a33ca7'), 'short source title');
    assert.equal(link.title,await js('window.reportFixture.source'),'full path tooltip');
    assert.equal(decodeURIComponent(link.href.split('=')[1]),link.title,'exact target');
-   const inspector='[data-testid=run-inspector]';
-   await until('Boolean(document.querySelector('+JSON.stringify(inspector)+'))');
-   await js('document.querySelector('+JSON.stringify(inspector+' summary')+').click()');
-   assert(await js('document.querySelector('+JSON.stringify(inspector)+').open'),'inspector opens');
    await js('document.querySelector('+JSON.stringify(citation)+').click()');
    await until('window.reportFixture.opened()===window.reportFixture.source');
    await js('window.reportFixture.start()');
@@ -130,7 +128,8 @@ app.whenReady().then(async()=>{
    await js('window.reportFixture.finish()');
    await until('scrollNode.scrollHeight-scrollNode.clientHeight-scrollNode.scrollTop<4');
    writeFileSync(${JSON.stringify(root)}+'/desktop.png',(await win.webContents.capturePage()).toPNG());
-   results.push({surface:'desktop',shortTitle:link.text,tooltip:link.title,completionFollows:true,userScrollPreserved:true,linkClick:true,inspector:true});
+   results.push({surface:'desktop',shortTitle:link.text,tooltip:link.title,completionFollows:true,userScrollPreserved:true,linkClick:true});
+  }
   assert.equal(errors.length,0,errors.join('\\n'));
   writeFileSync(${JSON.stringify(join(root, "result.json"))},JSON.stringify({passed:true,results},null,2));
   console.log(JSON.stringify({passed:true,results,root:${JSON.stringify(root)}}));

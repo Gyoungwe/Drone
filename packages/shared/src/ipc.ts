@@ -9,6 +9,7 @@ import type { DiscoveryApi } from "./host-api/discovery";
 import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
+import type { ResearchApi } from "./host-api/research";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
@@ -23,6 +24,7 @@ import type {
 	PermissionSettingsSaveResult,
 	PermissionSettingsSnapshot,
 } from "./permission-settings";
+import type { ResearchSkillUpdateState } from "./research-skill-update";
 import type {
 	AppInfo,
 	ChannelWatchConfigInfo,
@@ -105,6 +107,18 @@ export const IpcChannels = {
 	EvidenceExport: "evidence:exportEvidenceCapsule",
 	EvidenceImport: "evidence:importEvidenceCapsule",
 	EvidenceReplay: "evidence:replayEvidenceCheckpoint",
+	ResearchCapture: "research:captureResource",
+	ResearchApproveCapture: "research:approveCapture",
+	ResearchRevokeCapture: "research:revokeCapture",
+	ResearchListCaptures: "research:listCaptures",
+	ResearchSearch: "research:searchResources",
+	ResearchListConnectors: "research:listConnectors",
+	ResearchSetConnectorEnabled: "research:setConnectorEnabled",
+	ResearchListWriteAdapters: "research:listWriteAdapters",
+	ResearchPrepareWrite: "research:prepareWrite",
+	ResearchExecuteWrite: "research:executeWrite",
+	ResearchRevokeWrite: "research:revokeWrite",
+	ResearchListWriteAudit: "research:listWriteAudit",
 	KnowledgeCloudStatus: "knowledge:cloudStatus",
 	KnowledgeCloudProbe: "knowledge:cloudProbe",
 	KnowledgeCloudInitialize: "knowledge:cloudInitialize",
@@ -348,6 +362,12 @@ export const IpcChannels = {
 	UpdateInstall: "update:install",
 	/** main → renderer 更新状态 */
 	UpdateEvent: "update:event",
+	/** 内置研究技能检查/下载状态 */
+	ResearchSkillUpdateEvent: "researchSkills:updateEvent",
+	/** 一键检查并下载内置研究技能更新 */
+	ResearchSkillUpdate: "researchSkills:update",
+	/** 重启以启用已下载的内置研究技能 */
+	ResearchSkillRestart: "researchSkills:restart",
 	/** main 原生菜单 → renderer 桌面命令（P5） */
 	DesktopCommand: "desktop:command",
 	/** UI 插件：读全局配置 */
@@ -371,6 +391,7 @@ export const IpcChannels = {
 	/** main → renderer 事件 */
 	Event: "pi:event",
 	PermissionRequest: "pi:permission-request",
+	/** main → renderer 权限请求已裁决（桌面端据此撤卡） */
 	PermissionResolved: "pi:permission-resolved",
 	/** main → renderer 项目信任请求（会话创建前） */
 	TrustRequest: "pi:trust-request",
@@ -399,7 +420,8 @@ export interface PiApi
 		DiscoveryApi,
 		DecisionsApi,
 		InquiryApi,
-		EvidenceApi {
+		EvidenceApi,
+		ResearchApi {
 	/** 运行平台（preload 同步注入，供 renderer 按平台分流 UI：如顶栏红绿灯/窗口按钮留白） */
 	readonly platform: "darwin" | "win32" | "linux" | (string & {});
 	/** 子智能体面板：会话可见的子智能体（含项目级 + 工具集 + MCP 访问 + 信任状态）与并发边界 */
@@ -423,7 +445,7 @@ export interface PiApi
 	/** 弹打开对话框选文件或文件夹（示例任务表单的路径输入）；用户取消返回 null，不读文件内容 */
 	pickPath(kind: "file" | "directory", defaultPath?: string): Promise<string | null>;
 	/** 读取本地文件供右侧资源栏预览；路径可相对 cwd。大文本会截断，大二进制只返回元数据。 */
-	previewFile(target: string, cwd?: string): Promise<ResourcePreviewResult>;
+	previewFile(target: string, cwd?: string, confineToCwd?: boolean): Promise<ResourcePreviewResult>;
 	/** 为本地 HTML 文件签发一次性 drone-html:// 地址：脚本可在无同源、无网络的沙箱里运行，只能读取该文件所在目录 */
 	htmlPreviewUrl(target: string, cwd?: string): Promise<string>;
 	/** 读取某个图像/HTML 图的标注 */
@@ -437,7 +459,7 @@ export interface PiApi
 	/** Copy a user-dropped file into the app-owned attachment directory. */
 	importDroppedFile(sourcePath: string, sessionId: string): Promise<ImportedAttachment>;
 	/** 使用系统默认应用打开资源：HTTP(S) 用浏览器，本地路径用系统文件关联。 */
-	openResourceExternal(target: string, cwd?: string): Promise<void>;
+	openResourceExternal(target: string, cwd?: string, confineToCwd?: boolean): Promise<void>;
 	/** 文件右键菜单宿主动作（P7）；返回新路径（download / rename）或 null */
 	fileAction(
 		action: HostFileAction,
@@ -598,6 +620,12 @@ export interface PiApi
 	installUpdate(): Promise<void>;
 	/** 订阅更新状态（checking/available/downloading/downloaded/error）；返回取消函数 */
 	onUpdateEvent(cb: (state: UpdateState) => void): () => void;
+	/** 更新内置 Nature/Scientific 技能包；下载完成后重启才生效 */
+	updateResearchSkills(): Promise<void>;
+	/** 重启应用以载入已安装的研究技能包 */
+	restartForResearchSkills(): Promise<void>;
+	/** 订阅内置研究技能更新状态 */
+	onResearchSkillUpdateEvent(cb: (state: ResearchSkillUpdateState) => void): () => void;
 	/** 原生菜单触发的桌面命令（P5） */
 	onDesktopCommand(cb: (command: DesktopCommand) => void): () => void;
 	/** 读 UI 插件全局配置（总开关/启用信任表/槽位指派） */

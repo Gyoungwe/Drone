@@ -54,7 +54,7 @@ export function FirstRunGuide() {
 
 	if (phase === "start") {
 		return (
-			<section className="w-full max-w-[620px] px-1 py-2" data-testid="first-run-guide">
+			<section className="first-run-guide w-full max-w-[620px] px-1 py-2" data-testid="first-run-guide">
 				<header className="flex items-start justify-between gap-3">
 					<div>
 						<h2 className="text-[13px] font-semibold text-ink">{t("firstRun.startTitle")}</h2>
@@ -72,7 +72,7 @@ export function FirstRunGuide() {
 					{example ? (
 						<button
 							type="button"
-							className="rounded-2xl bg-hover px-4 py-3 text-left transition-colors hover:bg-[var(--highlight)]"
+							className="first-run-card rounded-2xl bg-hover px-4 py-3 text-left transition-colors hover:bg-[var(--highlight)]"
 							onClick={() => choose(() => useExampleTaskStore.getState().open(example.id))}
 							data-testid="first-run-example"
 						>
@@ -85,7 +85,7 @@ export function FirstRunGuide() {
 					) : null}
 					<button
 						type="button"
-						className="rounded-2xl bg-hover px-4 py-3 text-left transition-colors hover:bg-[var(--highlight)]"
+						className="first-run-card rounded-2xl bg-hover px-4 py-3 text-left transition-colors hover:bg-[var(--highlight)]"
 						onClick={() => setPhase("setup")}
 						data-testid="first-run-setup"
 					>
@@ -101,7 +101,7 @@ export function FirstRunGuide() {
 
 	return (
 		<section
-			className="w-full max-w-[620px] rounded-xl border border-border bg-surface/90 p-3"
+			className="first-run-guide w-full max-w-[620px] rounded-xl border border-border bg-surface/90 p-3"
 			data-testid="first-run-guide"
 		>
 			<header className="flex items-start justify-between gap-3">
@@ -178,7 +178,7 @@ function GuideAction({
 }) {
 	return (
 		<div
-			className={`rounded-lg border px-3 py-2 ${done ? "border-ok/40 bg-ok/5" : "border-border"}`}
+			className={`first-run-card rounded-lg border px-3 py-2 ${done ? "border-ok/40 bg-ok/5" : "border-border"}`}
 			data-testid={dataTestId}
 			data-done={done ? "true" : undefined}
 		>

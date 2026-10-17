@@ -199,6 +199,8 @@ export const knowledgeZh = {
 	graphRelationLinks: "直接链接",
 	graphRelationDirectory: "目录/推断",
 	graphObservatoryLabel: "研究知识观测台 · 关系与来源",
+	graphKeyboardHelp:
+		"Tab 选择节点，Enter 或空格查看；+ 放大，− 缩小，0 重置，F 聚焦选中节点，Escape 关闭详情。",
 	graphZoomIn: "放大",
 	graphZoomOut: "缩小",
 	graphFit: "适应全部",
@@ -675,6 +677,8 @@ const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
 	graphRelationLinks: "Direct links",
 	graphRelationDirectory: "Directory / inferred",
 	graphObservatoryLabel: "Research observatory · relations & sources",
+	graphKeyboardHelp:
+		"Tab through nodes; Enter or Space selects. + zooms in, − zooms out, 0 resets, F focuses the selected node, Escape closes details.",
 	graphZoomIn: "Zoom in",
 	graphZoomOut: "Zoom out",
 	graphFit: "Fit all",

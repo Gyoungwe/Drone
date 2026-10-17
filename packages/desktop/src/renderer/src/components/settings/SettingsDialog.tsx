@@ -1,5 +1,5 @@
-import type { ComponentType } from "react";
-import { useMemo } from "react";
+import type { ComponentType, KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useI18nStore, useT } from "../../i18n";
 import { PluginBoundary } from "../../plugins/PluginBoundary";
 import { EMPTY_CONTRIBUTIONS } from "../../plugins/RegionHost";
@@ -82,7 +82,7 @@ function NavLabel({ id, label }: { id: string; label: string }) {
 			<Icon size={14} className="shrink-0 text-ink-dim" />
 			<span className="truncate">{label}</span>
 			{zh && meta && label !== meta.en && (
-				<span className="truncate text-[11px] text-ink-faint">{meta.en}</span>
+				<span className="settings-nav-en truncate text-[11px] text-ink-faint">{meta.en}</span>
 			)}
 		</span>
 	);
@@ -136,6 +136,46 @@ export function SettingsDialog() {
 	const setOpen = useSettingsStore((s) => s.setOpen);
 	const category = useSettingsStore((s) => s.category);
 	const setCategory = useSettingsStore((s) => s.setCategory);
+	const closeButtonRef = useRef<HTMLButtonElement>(null);
+	const dialogRef = useRef<HTMLDivElement>(null);
+	const previousFocusRef = useRef<HTMLElement | null>(null);
+	useEffect(() => {
+		if (!open) return;
+		previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		closeButtonRef.current?.focus();
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.defaultPrevented) return;
+			if (event.key === "Tab") {
+				const focusable = Array.from(
+					dialogRef.current?.querySelectorAll<HTMLElement>(
+						'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex="0"]',
+					) ?? [],
+				).filter(
+					(element) =>
+						element.getClientRects().length > 0 && !element.closest('[inert], [aria-hidden="true"]'),
+				);
+				const first = focusable[0],
+					last = focusable.at(-1);
+				if (event.shiftKey && document.activeElement === first) {
+					event.preventDefault();
+					last?.focus();
+				} else if (!event.shiftKey && document.activeElement === last) {
+					event.preventDefault();
+					first?.focus();
+				}
+			}
+			if (event.key === "Escape") {
+				event.preventDefault();
+				setOpen(false);
+			}
+		};
+		document.addEventListener("keydown", onKeyDown);
+		return () => {
+			document.removeEventListener("keydown", onKeyDown);
+			previousFocusRef.current?.focus();
+			previousFocusRef.current = null;
+		};
+	}, [open, setOpen]);
 
 	// settings.panel 贡献：动态分类（插件停用/卸载即消失）；稳定引用（空用模块级 EMPTY）
 	// 全局总开关关闭时隐藏插件分类（与 RegionHost 同一开关语义；当前正在看的分类回落 comingSoon 空态）
@@ -149,6 +189,17 @@ export function SettingsDialog() {
 		() => findPluginContribution(category, pluginCategories),
 		[category, pluginCategories],
 	);
+	const handleNavKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+		if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+		event.preventDefault();
+		const nav = event.currentTarget.closest("nav");
+		const items = nav ? Array.from(nav.querySelectorAll<HTMLButtonElement>("[data-settings-nav]")) : [];
+		const index = items.indexOf(event.currentTarget);
+		const delta = event.key === "ArrowUp" ? -1 : 1;
+		const next = items[(index + delta + items.length) % items.length];
+		next?.focus();
+		next?.click();
+	};
 
 	if (!open) return null;
 
@@ -160,14 +211,19 @@ export function SettingsDialog() {
 			className="settings-dialog-shell fixed inset-0 z-40 flex items-center justify-center bg-ink/20"
 			role="dialog"
 			aria-modal
+			aria-labelledby="settings-dialog-title"
 		>
 			<div
+				ref={dialogRef}
 				data-testid="settings-dialog"
-				className="settings-dialog flex h-[74vh] w-[min(900px,94vw)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-dialog"
+				className="settings-dialog flex h-[min(74vh,720px)] max-h-[calc(100dvh-24px)] w-[min(900px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-dialog"
 			>
 				<div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
-					<h2 className="text-[13px] font-semibold text-ink">{t("settings.title")}</h2>
+					<h2 id="settings-dialog-title" className="text-[13px] font-semibold text-ink">
+						{t("settings.title")}
+					</h2>
 					<button
+						ref={closeButtonRef}
 						type="button"
 						className="rounded-lg px-2 py-1 text-ink-faint transition-colors hover:bg-hover hover:text-ink-2"
 						onClick={() => setOpen(false)}
@@ -187,6 +243,11 @@ export function SettingsDialog() {
 									<button
 										key={id}
 										type="button"
+										id={`settings-nav-${id}`}
+										data-settings-nav="true"
+										aria-current={category === id ? "page" : undefined}
+										aria-controls="settings-dialog-panel"
+										onKeyDown={handleNavKeyDown}
 										className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
 											category === id
 												? "is-active bg-hover font-medium text-ink"
@@ -204,6 +265,11 @@ export function SettingsDialog() {
 							<button
 								key={id}
 								type="button"
+								id={`settings-nav-${id}`}
+								data-settings-nav="true"
+								aria-current={category === id ? "page" : undefined}
+								aria-controls="settings-dialog-panel"
+								onKeyDown={handleNavKeyDown}
 								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
 									category === id
 										? "is-active bg-hover font-medium text-ink"
@@ -221,6 +287,11 @@ export function SettingsDialog() {
 								<button
 									key={id}
 									type="button"
+									id={`settings-nav-${id}`}
+									data-settings-nav="true"
+									aria-current={category === id ? "page" : undefined}
+									aria-controls="settings-dialog-panel"
+									onKeyDown={handleNavKeyDown}
 									className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
 										category === id
 											? "is-active bg-hover font-medium text-ink"
@@ -233,7 +304,13 @@ export function SettingsDialog() {
 							);
 						})}
 					</nav>
-					<div className="settings-dialog-content min-w-0 flex-1 scroll-fade overflow-y-auto overflow-x-hidden px-3 py-2">
+					<section
+						id="settings-dialog-panel"
+						className="settings-dialog-content min-w-0 flex-1 scroll-fade overflow-y-auto overflow-x-hidden px-3 py-2"
+						aria-labelledby={
+							Panel || activePluginContribution ? `settings-nav-${category}` : "settings-dialog-title"
+						}
+					>
 						{Panel && (
 							<header className="mb-4 flex items-start justify-between gap-4 border-b border-border pb-3">
 								<div className="min-w-0">
@@ -262,7 +339,7 @@ export function SettingsDialog() {
 						) : (
 							<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.comingSoon")}</p>
 						)}
-					</div>
+					</section>
 				</div>
 			</div>
 		</div>

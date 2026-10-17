@@ -1,0 +1,76 @@
+# 科研工作台 v3 实施计划
+
+这份计划把 v2 的架构护栏落到面向全科研场景的产品闭环：研究资料可浏览、可审查、可带着来源回执进入知识库，连接器只在 backend/research seam 运行，任何结果都能回到项目、运行、产物和知识快照。
+
+## 已确认的基线
+
+- v0.32.0 整合 PR [#203](https://github.com/Gyoungwe/Drone/pull/203) 已合并到 `main`，合并提交为 `81024cccac2d7a5cf4a7c3f6ccb26807e0e68c7e`。
+- 合并前的 CI run [623](https://github.com/Gyoungwe/Drone/actions/runs/38868473828) 在 macOS/Windows 上的静态检查、单元测试、SDK 测试和桌面打包均通过。
+- LAN observer 已移除；当前产品依赖本地项目目录、已授权计算主机和显式的 SSH/连接器门控。
+- 现有 `listProjectFiles`、`previewFile`、`openResourceExternal` 和 `PreviewHost` 已覆盖文件遍历、文本/表格/图像/PDF/二进制回退；独立的 `research` 资料视图已落地，并在资料页提供捕获动作和连接器管理入口。
+- 发布采用无需证书的 unsigned 跨平台安装包；签名和 notarization 作为可选增强，不作为发布门槛。安装时保留 macOS Gatekeeper/Windows SmartScreen 提示，更新验收只承诺 feed、资产完整性、版本切换和回滚，不承诺系统静默信任。
+
+## P9 · 研究资料浏览器
+
+目标是提供一个科研化的“资料”工作台面：项目目录中的任意文件都能被检索、预览或交给系统打开，浏览本身不产生知识写入。
+
+- [x] 导航增加 `research` 视图；左侧显示项目文件树、搜索和文件类型/更新时间筛选，右侧复用 `PreviewHost`（首版已落地文件树、搜索、预览/源码、图像缩放和外部打开）。
+- [x] 文件动作只有四种：预览、以源码查看、系统外部打开、进入知识捕获确认；路径始终以项目 `cwd` 为根，不能越界或跟随未授权软链接（首版已完成预览/源码/外部打开和主机层项目根约束；捕获确认随 P10 实施）。
+- [x] 未知二进制显示大小、MIME、修改时间和哈希提示，并提供外部打开；不把二进制正文塞进会话或知识库。
+- [x] 视图通过已有 `window.pi` host API 工作，不在 renderer 引入 backend、Electron 或 Pi SDK；新增文案同时维护中英文。
+- [x] 验收：项目为空、中文路径、超长路径、目录、Markdown/CSV/图像/PDF/FASTQ/未知二进制和外部打开失败均有可解释状态（`npm run check:research-browser` 的确定性夹具已在 PR #222 覆盖这些状态；2026-10-17 在当前主线构建的真实桌面资料视图中走查了 Markdown、CSV、PNG、PDF 和未知二进制，PDF 由内置 PDF.js canvas 显示页码，未知二进制的“系统打开”失败显示 `Failed to open path`；FASTQ 由确定性夹具覆盖，文件预览/路径边界单元回归和 PR #222 CI #738 与 Release #127 的 macOS/Windows validate 已通过）。
+
+## P10 · 跨科研场景知识沉淀
+
+知识沉淀不绑定 RNA-seq。统一对象链为 `ResearchCase → RunAttempt → Artifact/SourceReceipt → KnowledgeSnapshot/Experience`；连接器只负责发现或取得来源，不能绕过证据门禁写入结论。
+
+- [x] 新增研究资料捕获合同：`cwd + relativePath + byteHash + format + sourceReceipt + scope + freshness + approval`；默认只保存元数据和可引用片段，禁止自动保存会话正文、凭据和未授权私有原文。已落地版本化 capture record、来源回执和待审快照。
+- [x] 在 backend/research 层提供 `captureResearchResource` 深模块，使用现有 `JsonStore` 原子写入 `SourceReceipt` 和待审 `KnowledgeSnapshot`；renderer 只调用 host API。已接入 `window.pi` 的 capture/approve/revoke/list 合同。
+- [x] 只读连接器分层：搜索（Crossref/PubMed/Europe PMC/OpenAlex）、文献与引用（Zotero/DOI）、数据与协议（ENA/SRA/Zenodo/OSF/Protocols）、机构资源（EZproxy/机构解析）和项目存储。每个适配器返回同一份来源回执、许可、访问时间、内容哈希和失败原因。
+- [x] 写入型连接器安全合同已接入（PR #223）：`prepare`/`dry-run` 计划、每次执行的显式用户批准、JsonStore 原子 `ready → executing → revoked` reservation、审计回执、撤销、失败记录和默认 fail-closed；首个 Zotero 写入 seam 已完成真实 Desktop local API 闭环验收，受控 fake 仍用于无外部端口测试，其他写入型连接器继续保持 fail-closed。
+- [x] 真实 Zotero Desktop write port 已在授权本机 Zotero 10.0.6 上完成验收：通讯开关开启，`127.0.0.1:23119` 的本机 API 可读；按项目现有 local-write/MCP 协议完成临时 note 创建、标记回读和删除，最终 GET 返回 404。验收只记录状态与匹配结果，不保存私人文献正文或凭据。
+- [x] 连接器的网络、凭据、速率、缓存和重试策略留在 backend/research；知识库只接收通过来源、许可、完整性和用户审批的候选。只读 Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA、OpenAlex、DOI、ENA、Zotero、Protocols、机构资源和项目存储共 13 个连接器已接入 registry，失败结果带 retryable 原因。科研资料页提供逐项启用/关闭、启用计数和错误状态，状态通过 JsonStore 持久化，关闭后检索 fail-closed；首个真实第三方 write port（Zotero Desktop）已完成授权主机闭环；其余写入型连接器仍保持 fail-closed，需各自授权主机与回读证据后再开放。
+- [x] 验收：同一文件重复捕获幂等、文件变更生成新 revision、连接器失败可重试但不伪造证据、撤回/过期能阻止旧快照继续发布。重复/变更/根目录/软链接/撤回、过期拒绝发布和同内容过期刷新已覆盖回归测试；PR #208 与 PR #210 的 macOS/Windows 8 项 CI 全部通过。
+
+### P10.1 · 可逆第三方写入连接器（本阶段）
+
+- [x] 扩展写入连接器注册表：WebDAV 文件和 Protocols.io bookmark 均进入统一的 `prepare → explicit approval → create → readback → delete → absence readback` 合同；默认无授权端口时保持 fail-closed。
+- [x] 写入计划、回执和审计账本记录删除验证状态；科研资料页支持逐项选择写入连接器，并显示是否要求删除闭环。
+- [ ] 真实 WebDAV 主机闭环：需要用户提供已授权的临时目录/URL，并在运行环境设置 `DRONE_WEBDAV_BASE_URL`、`DRONE_WEBDAV_USERNAME`、`DRONE_WEBDAV_PASSWORD`；验收后删除唯一标记文件并确认 404/不存在。
+- [ ] 真实 Protocols.io bookmark 闭环：需要用户提供可写 token 和可撤销的临时公开协议 URI，验收后删除 bookmark 并确认读取为空。
+- [ ] 其他第三方资源 API（Zenodo/OSF/GitHub 等）只有在确认其创建、回读和删除语义后再加入；不能把只读搜索连接器伪装成写入连接器。
+
+## P11 · 发布与更新门槛
+
+- [x] 发布流程改为无证书 unsigned 模式：不读取签名或 notarization Secrets，构建并上传 macOS/Windows 安装包和更新 feed，并在 release notes 中明确标注 unsigned；签名/公证保留为可选增强。
+- [x] macOS/Windows unsigned 安装包、更新 feed、版本切换和回滚证据已齐全；Release [v0.32.9](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.9) 已发布，系统安全提示和安装时人工确认属于预期行为。
+- [x] 发布前仍执行 `npm run lint && npm run typecheck && npm test && npm run build && npm run check:arch`，再加 `npm run test:upgrade`、扩展/runtime 产物检查和研究资料浏览器回归；Release #127 的 macOS/Windows validate 已全部通过。
+
+## 实施顺序
+
+1. P9 先落地，复用现有文件/预览 host API，降低新 IPC 数量。
+2. P10 接着加入捕获合同和 backend seam，再接第一批只读搜索/文献连接器。
+3. P11 与功能并行准备 unsigned 安装、更新 feed、版本切换和回滚证据；发布标题和说明必须明确标注 unsigned，不把系统信任状态描述成已验证。
+
+## 当前执行记录
+
+- 2026-10-16：P10 捕获 seam、项目文件来源回执、待审快照、审批/撤回、九个只读连接器（Crossref、PubMed、Europe PMC、Zenodo、OSF、NCBI SRA、OpenAlex、DOI、ENA）及连接器 UI 开关已实现；PR #207 的 macOS/Windows 8 项 CI 全部通过并已合并。
+- 2026-10-16（验收复核）：生产桌面 `npm run build`、lint、typecheck、架构检查、研究技能包发布测试、扩展/runtime 生成物检查均通过；全量 `npm test` 在当前 macOS 沙箱有 47 个既有环境/知识发布 fixture 失败，`test:upgrade --fixtures-only` 的语义混合夹具因 `listen EPERM 127.0.0.1` 失败；pi-packages 暂无法在无网络沙箱中暂存（npm registry 连接被 EPERM 拒绝）。
+- 2026-10-16（v0.32.1 发布尝试）：PR #206 已合并到 `main`，Release #118 的 macOS/Windows validate 与 prepare 均通过并创建 `v0.32.1` 标签；三个签名构建因仓库未提供授权证书/notarization secrets 按 fail-closed 规则停止，未生成签名安装包、更新 feed 或安装/更新/回滚证据，P11 正式发布门槛保持未关闭。
+- 2026-10-16（签名门禁）：`check-release-signing.mjs`、macOS hardened runtime/entitlements、Windows Authenticode 验签和 GitHub Release workflow 预检已加入；真实证书、notarization、跨平台安装/更新/回滚仍需在有授权 secrets 的 GitHub runner 上执行。
+- 2026-10-16（PR #208）：连接器列表/启停 IPC、JsonStore 持久化、科研资料页双语开关和过期捕获刷新已完成；评审指出的同内容过期快照无法续期问题已修复，PR #208 已以 squash 合并（`bcbf5b894eb48109507af6e85dc646642cecbae9`）。run [682](https://github.com/Gyoungwe/Drone/actions/runs/38920773631) 的 macOS/Windows 8 项 CI 全部通过。连接器分层剩余 Zotero、Protocols、机构登录和写入适配器；P9 手工边界验收与 P11 正式签名安装包、自动更新、回滚证据仍未关闭。
+- 2026-10-16（v0.32.2 发布验收）：PR #209 已合并，`main` 已更新到 v0.32.2。Release [#119](https://github.com/Gyoungwe/Drone/actions/runs/38924137138) 的 resolve、macOS/Windows validate 和 prepare 全部通过；macOS x64/arm64 与 Windows 构建在签名预检处因 `DRONE_MACOS_CERTIFICATE_*`、`DRONE_APPLE_*`、`DRONE_WINDOWS_CERTIFICATE_*` secrets 为空而 fail-closed，publish/website 被跳过且无安装包、更新 feed、安装/更新/回滚证据。P11 正式发布门槛保持未关闭。
+- 2026-10-17（PR #210）：补齐 Zotero、Protocols.io、机构资源元数据和项目存储四个只读连接器，统一来源回执与失败信息；科研资料页的连接器 UI 可逐项开关并通过 JsonStore 持久化，关闭后检索 fail-closed。PR #210 的 CI run [38931738909](https://github.com/Gyoungwe/Drone/actions/runs/38931738909) 在 macOS/Windows 8 项全部通过；写入型适配器、P9 人工桌面走查和 P11 签名发布门槛仍未关闭。
+
+- 2026-10-17（无证书发布策略）：根据用户决定，后续正式发布不再要求证书或 notarization；Release workflow 与 electron-builder 改为 unsigned 模式。历史版本中因证书为空而失败的签名预检只保留为历史记录，不再作为当前发布规则。
+- 2026-10-17（P10 只读授权核查）：本机 Zotero 10 桌面可打开，但 `127.0.0.1:23119` 没有监听端口，当前没有可验证的授权 Web/Desktop write port 或回读目标；因此真实 Zotero 写入门槛继续保持未关闭，资料页仍 fail-closed。
+- 2026-10-17（P10 写入连接器安全 seam，PR #223）：新增跨层写入合同、Zotero prepare/dry-run/execute 适配器、JsonStore 计划/审计 ledger、撤销和 fail-closed 失败记录；桌面资料页显示写入计划/授权状态，默认无外部端口，真实第三方写入留待授权主机和回读证据。PR #223 已合并到 `main`（`601bde719e0bdb27d4fe2ae073de846d093dad41`），CI #761（`38978077971`）8/8 项通过。
+- 2026-10-17（v0.32.8 无证书发布验收）：PR [#220](https://github.com/Gyoungwe/Drone/pull/220) 修正 unsigned 标志的 build job 作用域并合入 `main`；Release [38963823008](https://github.com/Gyoungwe/Drone/actions/runs/38963823008) 的 macOS/Windows validate、prepare、macOS arm64/x64、Windows x64 构建和 publish 最终全部通过（publish 首次下载 artifact 漏列 Windows zip，单独重跑后通过）。正式 Release [v0.32.8](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.8) 已从 draft 发布，包含 macOS arm64/x64 DMG/ZIP、Windows EXE/ZIP、`latest-mac.yml` 和 `latest.yml`；所有产物明确为 unsigned，不读取证书或 notarization secrets，P11 无证书门槛已关闭。
+
+- 2026-10-17（P9 资料浏览器验收，PR #222）：新增 `scripts/check-research-browser-acceptance.mjs` 和 `npm run check:research-browser`，覆盖空项目、中文/超长路径、目录、Markdown/CSV/图像/PDF/FASTQ/未知二进制、根目录约束和外部打开失败解释；PR #222 已合并到 `main`（`c32dc35b0422c9bb2a20679b210f46cb270ec5d9`），CI #738（`38972571970`）8/8 项通过。
+- 2026-10-17（P9 真实桌面走查）：在主线构建的 Electron 资料视图中人工核验 Markdown、CSV、PNG、PDF 和未知二进制；未知二进制点击“系统打开”后展示可解释的 `无法使用系统应用打开资源：Failed to open path`，PDF 修复 PR [#225](https://github.com/Gyoungwe/Drone/pull/225) 已合并到 `main`（`deefab73f40a8860e9fcd8f64f061f8f4a052cb8`），CI #767（`39005225490`）8/8 项通过。
+
+- 2026-10-17（P10 Zotero Desktop 真实写入验收）：截图确认 Zotero Advanced 的本机通讯开关开启；本机 API 根路径与条目读取均返回 200，版本为 Zotero 10.0.6、Connector API 3。使用项目现有 local-write/MCP 协议和运行时本地授权 key，在 `users/0` 创建唯一标记临时 note（HTTP 200），回读标记匹配（HTTP 200），按条目版本删除（HTTP 204），删除后 GET 返回 404；未记录任何私人文献正文。
+- 2026-10-17（v0.32.9 无证书发布验收）：Release [#127](https://github.com/Gyoungwe/Drone/actions/runs/39007033259) 的 resolve、macOS/Windows validate、prepare、macOS arm64/x64、Windows x64、publish 和 website 全部成功；正式 Release [v0.32.9](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.9) 已发布，包含 macOS arm64/x64 DMG/ZIP、Windows EXE/ZIP、`latest-mac.yml` 和 `latest.yml`，所有产物为 unsigned。
+- 2026-10-17（P10 可逆写入连接器）：新增 WebDAV 文件与 Protocols.io bookmark 两个 fail-closed 写入适配器；WebDAV backend port 已支持 `PUT → GET/title match → DELETE → GET/404`，统一要求显式授权、创建后回读、删除和删除后缺失回读；受控端口测试通过，真实外部闭环等待各自授权主机/令牌，不把测试夹具写成真实验收。
+- 2026-10-17（计划复核）：P9、P10、P11 的勾选项均已有实现、测试或发布证据；`main` 合并提交 `ba15aacbe216265f0dbbe79bfe219375523b1e6f` 的 CI run [#774](https://github.com/Gyoungwe/Drone/actions/runs/39010100618) 已全部通过。本次复核补正文档与实现不一致处，不新增未验证的科学结论或发布声明。

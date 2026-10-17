@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { JsonStore } from "../src/json-store";
-import { AnalysisEvidenceService, type FrozenFile } from "../src/services/analysis-evidence";
+import { AnalysisEvidenceService, checkpointId, type FrozenFile } from "../src/services/analysis-evidence";
 import { AnalysisOrchestrationService, emptyAnalysisLedger } from "../src/services/analysis-orchestration";
 import { StorageRegistry } from "../src/storage/registry";
 
@@ -85,6 +85,27 @@ describe("analysis evidence checkpoints", () => {
 		}
 	});
 
+	it("keeps checkpoint identity stable when lineage is added", () => {
+		const analysis = {
+			id: "run-1",
+			provenance: {
+				adapter: { id: "assembly", version: "1.0.0" },
+				lineage: { schemaVersion: 1, eventId: "event:root", runAttemptId: "run:one" },
+			},
+		} as never;
+		const body = {
+			schemaVersion: 1 as const,
+			analysis,
+			files: [],
+			createdAt: "2026-10-14T00:00:00.000Z",
+		};
+		const withoutLineage = {
+			...body,
+			analysis: { ...analysis, provenance: { ...analysis.provenance, lineage: undefined } },
+		};
+		expect(checkpointId(body)).toBe(checkpointId(withoutLineage));
+	});
+
 	it("exports and replays a capsule with exact output and environment checks", async () => {
 		const { root, evidence, source, frozen } = await setup();
 		try {
@@ -119,6 +140,8 @@ describe("analysis evidence checkpoints", () => {
 				environmentMatched: true,
 				outputChecks: [{ path: "result.txt", matched: true }],
 			});
+			expect(receipt.lineage?.runAttemptId).toMatch(/^run:/);
+			expect(receipt.lineage?.causationId).toBeUndefined();
 			expect(await evidence.replayReceipts(checkpoint.id)).toHaveLength(1);
 		} finally {
 			await rm(root, { recursive: true, force: true });

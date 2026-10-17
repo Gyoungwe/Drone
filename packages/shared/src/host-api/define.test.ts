@@ -18,4 +18,15 @@ describe("host-api definitions", () => {
 	it("derives callable clients", async () => {
 		expect(await typedClient.ping("ok")).toBe(2);
 	});
+	it("defaults every method to the desktop host", () => {
+		const domain = defineDomain("demo", {
+			methods: {
+				read: { args: Type.Tuple([]), result: Type.String() },
+				write: { args: Type.Tuple([]), result: Type.String() },
+				local: { args: Type.Tuple([]), result: Type.String() },
+			},
+		});
+		expect(domain.methods.read.access).toBe("desktop");
+		expect(domain.methods.write.access).toBe("desktop");
+	});
 });
