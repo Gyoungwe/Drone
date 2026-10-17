@@ -9,7 +9,15 @@
  * state.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -84,10 +92,179 @@ function checkDist() {
 	}
 }
 
+function checkHostPortContract() {
+	const declarations = readFileSync(join(PACKAGE_DIR, "dist", "index.d.ts"), "utf8");
+	assert(/\binterface DroneHostPort\s*\{/u.test(declarations), "dist/index.d.ts must expose DroneHostPort");
+	for (const method of [
+		"capabilities",
+		"readSource",
+		"searchKnowledge",
+		"persistRun",
+		"runCompute",
+		"requestAuthorization",
+	]) {
+		assert(new RegExp(`\\b${method}\\s*\\(`, "u").test(declarations), `DroneHostPort is missing ${method}()`);
+	}
+}
+
 function checkPackageOnly() {
 	checkPackageManifest();
 	checkPackageSource();
 	checkDist();
+	checkHostPortContract();
+}
+
+function npmPack(packageDir, destination, env) {
+	const output = execFileSync("npm", ["pack", "--silent", packageDir, "--pack-destination", destination], {
+		cwd: ROOT,
+		encoding: "utf8",
+		env,
+	})
+		.trim()
+		.split(/\r?\n/u)
+		.at(-1);
+	assert(output, `npm pack produced no tarball for ${packageDir}`);
+	return join(destination, output);
+}
+
+function installedVersion(fixture, packageName) {
+	const path = join(fixture, "node_modules", ...packageName.split("/"), "package.json");
+	assert(existsSync(path), `${packageName} is not installed in the fixture`);
+	return readJson(path).version;
+}
+
+function writeContractProbe(fixture) {
+	writeFileSync(
+		join(fixture, "contract-probe.mjs"),
+		`import assert from "node:assert/strict";
+import { PLUGIN_API_VERSION, RESULT_CONTRACT, negotiateCapabilities } from "@drone/plugin-api";
+assert.equal(PLUGIN_API_VERSION, 1);
+assert.equal(RESULT_CONTRACT, "drone-result/v3");
+const result = negotiateCapabilities(
+  { pluginApi: 1, hosts: ["native-pi"], capabilities: ["requestAuthorization"] },
+  { host: "native-pi", hostVersion: "1.1.0", pluginApiVersion: 1, capabilities: ["requestAuthorization"] },
+);
+assert.equal(result.status, "compatible");
+console.log(JSON.stringify({ status: result.status, pluginApi: PLUGIN_API_VERSION, resultContract: RESULT_CONTRACT }));
+`,
+	);
+}
+
+function runContractProbe(fixture) {
+	const output = execFileSync("node", ["contract-probe.mjs"], {
+		cwd: fixture,
+		encoding: "utf8",
+		stdio: ["ignore", "pipe", "pipe"],
+	});
+	assert(
+		output.includes('"status":"compatible"'),
+		"DroneHostPort contract probe did not negotiate compatible",
+	);
+}
+
+function createRollbackTarball(currentTarball, destination, env) {
+	const unpack = mkdtempSync(join(destination, "plugin-api-rollback-src-"));
+	execFileSync("tar", ["-xzf", currentTarball, "-C", unpack, "--strip-components=1"], {
+		stdio: "pipe",
+	});
+	const manifestPath = join(unpack, "package.json");
+	const manifest = readJson(manifestPath);
+	manifest.version = "0.9.0";
+	writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+	return npmPack(unpack, destination, env);
+}
+
+/**
+ * Exercise the package lifecycle entirely from local tarballs. The sequence
+ * intentionally upgrades and then rolls back the same fixture, so a passing
+ * result proves that a failed upgrade can be recovered without touching the
+ * user's global npm or Pi state.
+ */
+function checkLocalLifecycle() {
+	const temp = mkdtempSync(join(tmpdir(), "drone-plugin-api-lifecycle-"));
+	try {
+		const env = {
+			...process.env,
+			npm_config_cache: join(temp, "npm-cache"),
+			npm_config_logs: join(temp, "npm-logs"),
+		};
+		const currentTarball = npmPack(PACKAGE_DIR, temp, env);
+		const rollbackTarball = createRollbackTarball(currentTarball, temp, env);
+		const fixture = join(temp, "fixture");
+		const fixtureManifest = {
+			name: "drone-plugin-api-lifecycle-fixture",
+			private: true,
+			version: "0.0.0",
+			type: "module",
+			dependencies: { "@drone/plugin-api": `file:../${rollbackTarball.split("/").at(-1)}` },
+		};
+		const fixtureDir = fixture;
+		mkdirSync(fixtureDir, { recursive: true });
+		writeFileSync(join(fixtureDir, "package.json"), `${JSON.stringify(fixtureManifest, null, 2)}\n`);
+		execFileSync("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund"], {
+			cwd: fixtureDir,
+			stdio: "pipe",
+			env,
+		});
+		writeContractProbe(fixtureDir);
+		assert(
+			installedVersion(fixtureDir, "@drone/plugin-api") === "0.9.0",
+			"rollback tarball did not install at 0.9.0",
+		);
+		runContractProbe(fixtureDir);
+
+		execFileSync(
+			"npm",
+			["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", currentTarball],
+			{
+				cwd: fixtureDir,
+				stdio: "pipe",
+				env,
+			},
+		);
+		assert(
+			installedVersion(fixtureDir, "@drone/plugin-api") === "1.0.0",
+			"current tarball did not upgrade to 1.0.0",
+		);
+		runContractProbe(fixtureDir);
+
+		execFileSync(
+			"npm",
+			["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", rollbackTarball],
+			{
+				cwd: fixtureDir,
+				stdio: "pipe",
+				env,
+			},
+		);
+		assert(
+			installedVersion(fixtureDir, "@drone/plugin-api") === "0.9.0",
+			"rollback tarball did not restore 0.9.0",
+		);
+		runContractProbe(fixtureDir);
+
+		execFileSync("npm", ["uninstall", "@drone/plugin-api", "--ignore-scripts", "--no-audit", "--no-fund"], {
+			cwd: fixtureDir,
+			stdio: "pipe",
+			env,
+		});
+		assert(
+			!existsSync(join(fixtureDir, "node_modules", "@drone", "plugin-api")),
+			"npm uninstall left plugin-api installed",
+		);
+		console.log(
+			JSON.stringify({
+				status: "PASS",
+				mode: "local-pack-lifecycle",
+				install: "0.9.0",
+				upgrade: "1.0.0",
+				rollback: "0.9.0",
+				uninstall: "removed",
+			}),
+		);
+	} finally {
+		rmSync(temp, { recursive: true, force: true });
+	}
 }
 
 function findPluginRepo() {
@@ -177,6 +354,7 @@ function checkTarballInstall() {
 
 const packageOnly = process.argv.includes("--package-only");
 const migration = process.argv.includes("--migration") || !packageOnly;
+const lifecycle = process.argv.includes("--lifecycle");
 checkPackageOnly();
 if (migration) {
 	const tarball = checkTarballInstall();
@@ -189,3 +367,4 @@ if (migration) {
 } else {
 	console.log("plugin-api package gate passed");
 }
+if (lifecycle) checkLocalLifecycle();

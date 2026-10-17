@@ -19,28 +19,28 @@ export const DiscoveryContract = defineDomain("discovery", {
 		listKernelSessions: {
 			args: EmptyArgs,
 			result: Type.Array(DiscoveryKernelSessionSchema, { maxItems: 256 }),
-					},
+		},
 		getKernelSession: {
 			args: IdArgs,
 			result: Type.Union([DiscoveryKernelSessionSchema, Type.Null()]),
-					},
+		},
 		closeKernelSession: { args: IdArgs, result: Type.Void() },
 		listCriticReviews: {
 			args: EmptyArgs,
 			result: Type.Array(DiscoveryCriticReviewSchema, { maxItems: 256 }),
-					},
+		},
 		listMultipathAssessments: {
 			args: EmptyArgs,
 			result: Type.Array(DiscoveryMultipathAssessmentSchema, { maxItems: 256 }),
-					},
+		},
 		listExplorationPlans: {
 			args: EmptyArgs,
 			result: Type.Array(DiscoveryExplorationPlanSchema, { maxItems: 256 }),
-					},
+		},
 		listEvaluations: {
 			args: EmptyArgs,
 			result: Type.Array(DiscoveryEvaluationSchema, { maxItems: 256 }),
-					},
+		},
 	},
 	events: {},
 });

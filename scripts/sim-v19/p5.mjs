@@ -7,7 +7,6 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || "/tmp/drone-v19-sim/agent-dev";
 const PSEUDO_PROVIDER = "drone-sim-error";
 const PSEUDO_MODEL = "drone-sim-error-model";
-const APP_URL = process.env.DRONE_SIM_APP_URL || "http://localhost:5173/";
 
 function startErrorServer(status) {
 	let requests = 0;
@@ -76,16 +75,6 @@ async function refreshModelsInUi(page) {
 
 async function closeSettings(page) {
 	return page.clickSelector('[data-testid="settings-dialog"] button[aria-label]');
-}
-
-async function navigate(page, url) {
-	try {
-		await page.send("Page.navigate", { url });
-	} catch {
-		await page.eval(`(() => { location.assign(${JSON.stringify(url)}); return true; })()`);
-	}
-	await page.waitFor("document.readyState === 'complete'", 15_000);
-	await sleep(1_000);
 }
 
 async function runPseudoError(page, result, status) {

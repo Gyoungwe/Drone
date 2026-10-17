@@ -31,7 +31,7 @@ export const InquiryContract = defineDomain("inquiry", {
 		artifactProvenance: {
 			args: ArtifactIdArgs,
 			result: Type.Union([ObjectResult<InquiryArtifactProvenance>(), UiErrorSchema]),
-					},
+		},
 		rerunArtifact: {
 			args: ArtifactIdArgs,
 			result: Type.Union([ObjectResult<InquiryArtifactRerunResult>(), UiErrorSchema]),

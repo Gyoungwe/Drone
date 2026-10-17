@@ -177,7 +177,6 @@ async function sceneSettings() {
 	await sleep(600);
 	await frame("general");
 
-
 	// 关闭
 	await ev(
 		`(() => { const s = window.DroneUI.stores.useSettingsStore.getState(); s.setOpen(false); return true; })()`,
