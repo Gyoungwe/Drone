@@ -23,7 +23,7 @@ declare module "@drone/extensions/workspace-config" {
 	export default register;
 }
 declare module "@drone/extensions/obsidian-workbench" {
-	const register: (pi: unknown) => void;
+	const register: (pi: unknown, options?: { readOnly?: boolean }) => void;
 	export default register;
 }
 declare module "@drone/extensions/internal/obsidian-workbench" {
