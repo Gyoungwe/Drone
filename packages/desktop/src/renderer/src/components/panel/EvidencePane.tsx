@@ -3,7 +3,14 @@ import { useCallback, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 
-export function EvidencePane({ defaultRoot }: { defaultRoot: string | null }) {
+export function EvidencePane({
+	defaultRoot,
+	hideWhenEmpty = false,
+}: {
+	defaultRoot: string | null;
+	/** Overview only shows evidence once the host has returned a real record. */
+	hideWhenEmpty?: boolean;
+}) {
 	const t = useT();
 	const [overview, setOverview] = useState<EvidenceOverview | null>(null);
 	const [analysisId, setAnalysisId] = useState("");
@@ -22,6 +29,13 @@ export function EvidencePane({ defaultRoot }: { defaultRoot: string | null }) {
 		setSourceRoot(defaultRoot ?? "");
 		refresh();
 	}, [defaultRoot, refresh]);
+	const hasEvidence =
+		overview !== null &&
+		(overview.analyses.length > 0 ||
+			overview.checkpoints.length > 0 ||
+			overview.branches.length > 0 ||
+			overview.replays.length > 0);
+	if (hideWhenEmpty && !hasEvidence) return null;
 	async function freeze() {
 		setBusy(true);
 		setNotice(null);

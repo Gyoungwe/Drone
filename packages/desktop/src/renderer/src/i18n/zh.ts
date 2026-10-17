@@ -239,6 +239,12 @@ export const zh = {
 		},
 		processEmpty: "还没有运行记录。",
 		processDetails: "运行细节",
+		overview: {
+			usage: "上下文用量",
+			steps: "步骤",
+			details: "详细视图",
+			hideDetails: "收起详细视图",
+		},
 		processRoute: {
 			ariaLabel: "本轮处理进度",
 			title: "处理进度",

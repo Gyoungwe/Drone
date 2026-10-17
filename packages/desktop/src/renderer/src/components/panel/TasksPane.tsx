@@ -51,7 +51,7 @@ function TodoLine({ todo, spinnerPaused }: { todo: TodoItem; spinnerPaused: bool
 	);
 }
 
-function DecisionsSection({ projectId }: { projectId: string | null }) {
+export function DecisionsSection({ projectId }: { projectId: string | null }) {
 	const t = useT();
 	const [decisions, setDecisions] = useState<readonly DecisionRecord[]>([]);
 	const [busyId, setBusyId] = useState<string | null>(null);
@@ -224,7 +224,17 @@ export function TodoCard() {
  * 审批本身仍在输入框位置的 ApprovalDock 决策（一处一事），这里只给指向。
  * 空态给六方向示例卡（只读会话除外）：点击只打开示例对话框，任务仍由 task_plan + 授权卡建立。
  */
-export function TasksPane({ sessionId }: { sessionId: string | null }) {
+export function TasksPane({
+	sessionId,
+	embedded = false,
+	includeDecisions = true,
+}: {
+	sessionId: string | null;
+	/** OverviewPane owns the scroll container; keep this pane reusable in the files-era layout. */
+	embedded?: boolean;
+	/** Decisions are rendered after evidence in the overview ordering. */
+	includeDecisions?: boolean;
+}) {
 	const t = useT();
 	const todoCount = useTranscriptStore((s) => (sessionId ? (s.bySession[sessionId]?.todos.length ?? 0) : 0));
 	const pendingCount = useTranscriptStore((s) => selectTranscript(s, sessionId).pendingPermissions.length);
@@ -237,15 +247,15 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 	const empty = todoCount === 0 && !(view && view.tasks.length > 0);
 	const overview = runOverview(messages);
 
-	return (
-		<div className="context-pane">
+	const content = (
+		<>
 			{pendingCount > 0 && (
 				<div className="panel-card border-warn/40 bg-warn/5 text-[12px] text-warn">
 					{t("panel.approvalPending")}
 				</div>
 			)}
 			<Slot name={UI_SLOTS.TodoPanel} props={{}} fallback={TodoCard} />
-			<DecisionsSection projectId={projectId} />
+			{includeDecisions && <DecisionsSection projectId={projectId} />}
 			{view && view.tasks.length > 0 && (
 				<section className="panel-card">
 					<header className="flex items-center gap-2">
@@ -283,6 +293,7 @@ export function TasksPane({ sessionId }: { sessionId: string | null }) {
 				) : (
 					<ExampleTaskCards />
 				))}
-		</div>
+		</>
 	);
+	return embedded ? content : <div className="context-pane">{content}</div>;
 }

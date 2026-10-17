@@ -4,12 +4,13 @@ import { create } from "zustand";
 export type AppView = "chat" | "projects" | "knowledge" | `plugin:${string}`;
 
 /**
- * 右侧上下文面板页签：任务 / 过程 / 产物 常驻；子智能体、计算按需出现（ContextPanel 决定可见性）
+ * 右侧上下文面板页签：总览 / 文件 / 变更 常驻；子智能体、主机按需出现（ContextPanel 决定可见性）。
  * + 插件贡献的页签（panel.tab，挂钩 4）。文件变更并入「过程」页签（processView = "changes"）。
  */
 export type CorePanelTab = "tasks" | "process" | "artifacts" | "subagents" | "compute";
 export type PanelTab = CorePanelTab | `plugin:${string}`;
-export const PANEL_TABS: readonly CorePanelTab[] = ["tasks", "process", "artifacts", "subagents", "compute"];
+/** Stable persisted ids in the visual order from the plugin UI handoff. */
+export const PANEL_TABS: readonly CorePanelTab[] = ["tasks", "artifacts", "process", "subagents", "compute"];
 
 /** 常驻页签之外，子智能体 / 计算 只在需要时出现（调用方决定 show 条件） */
 export function visiblePanelTabs(show: { subagents: boolean; compute: boolean }): readonly CorePanelTab[] {

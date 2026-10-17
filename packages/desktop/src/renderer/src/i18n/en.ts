@@ -249,6 +249,12 @@ export const en: Messages = {
 		},
 		processEmpty: "No run records yet.",
 		processDetails: "Run details",
+		overview: {
+			usage: "Context usage",
+			steps: "Steps",
+			details: "Detailed view",
+			hideDetails: "Hide detailed view",
+		},
 		processRoute: {
 			ariaLabel: "Current turn progress",
 			title: "Progress",

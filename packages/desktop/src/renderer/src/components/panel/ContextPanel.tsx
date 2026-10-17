@@ -15,17 +15,15 @@ import { useSessionStatus } from "../session/session-status";
 import { ArtifactsPane } from "./ArtifactsPane";
 import { ChangesPane } from "./ChangesPane";
 import { ComputePane } from "./ComputePane";
-import { ContextUsageMeter } from "./ContextUsageMeter";
+import { OverviewPane } from "./OverviewPane";
 import { ProcessPane } from "./ProcessPane";
-import { SubagentsPane } from "./SubagentsPane";
-import { TasksPane } from "./TasksPane";
 
 /** 面板宽度（CSS 变量同步 globals.css .context-panel） */
 export const CONTEXT_PANEL_WIDTH = 372;
 
 /**
- * 右侧上下文面板：任务 / 过程 / 产物 三个常驻页签（文件变更并入「过程」），子智能体仅在本会话有运行时出现，
- * 计算仅在已配置主机或有作业时出现；当前选中的页签总是可见。固定栏位、push 式收展（聊天列自然压缩），永远只有一个右栏。
+ * 右侧上下文面板：总览 / 文件 / 变更 三个常驻页签（旧 id 保留以兼容深链接），子智能体仅在本会话有运行时出现，
+ * 主机仅在已配置主机或有作业时出现；当前选中的页签总是可见。固定栏位、push 式收展（聊天列自然压缩），永远只有一个右栏。
  *
  * 展开规则（用户确认）：运行开始自动展开；运行结束回到空闲选择；空闲时的手动开关被记住。
  */
@@ -40,9 +38,6 @@ export function ContextPanel() {
 	const onRunEnd = useUiStore((s) => s.onRunEnd);
 	const visibleTabs = useVisibleTabs(activeSessionId, tab);
 	const agentActive = useTranscriptStore((s) => selectTranscript(s, activeSessionId).agentActive);
-	const hasRuns = useSubagentsStore((s) =>
-		activeSessionId ? Object.keys(s.runsBySession[activeSessionId] ?? {}).length > 0 : false,
-	);
 	// 插件页签（panel.tab 区域贡献，挂钩 4）：被禁用/卸载后若仍选中，回到「任务」
 	const pluginTabs = usePluginEntries(UI_REGIONS.PanelTab);
 	const pluginTab = pluginTabs.find((entry) => entry.id === tab);
@@ -79,22 +74,7 @@ export function ContextPanel() {
 					collapseLabel={t("panel.collapse")}
 				/>
 				<div className="context-panel-body">
-					<ContextUsageMeter sessionId={activeSessionId} />
-					{tab === "tasks" && (
-						<>
-							<TasksPane sessionId={activeSessionId} />
-							{hasRuns && (
-								<details className="mt-3 rounded-lg border border-border px-3 py-2">
-									<summary className="cursor-pointer text-[12px] font-medium text-ink-2">
-										{t("panel.tabs.subagents")}
-									</summary>
-									<div className="mt-2">
-										<SubagentsPane sessionId={activeSessionId} />
-									</div>
-								</details>
-							)}
-						</>
-					)}
+					{(tab === "tasks" || tab === "subagents") && <OverviewPane sessionId={activeSessionId} />}
 					{tab === "process" && <ProcessTab sessionId={activeSessionId} />}
 					{tab === "artifacts" && <ArtifactsPane sessionId={activeSessionId} />}
 					{tab === "compute" && <ComputePane />}
@@ -107,7 +87,7 @@ export function ContextPanel() {
 }
 
 /** 按需页签：子智能体 = 本会话有运行；计算 = 已配置主机或有作业；当前选中的页签（如 @ 派发跳转）总是保留 */
-function useVisibleTabs(sessionId: string | null, current: PanelTab): readonly CorePanelTab[] {
+function useVisibleTabs(_sessionId: string | null, current: PanelTab): readonly CorePanelTab[] {
 	const hasCompute = useComputeStore((s) => selectHosts(s).length > 0 || selectJobs(s).length > 0);
 	return useMemo(
 		() => visiblePanelTabs({ subagents: false, compute: hasCompute || current === "compute" }),
@@ -171,6 +151,12 @@ function useTabBadges(sessionId: string | null): TabBadges {
 	}, [todos, messages, flow, cwd, runsRecord]);
 }
 
+/** Old deep links keep their persisted ids while selecting the redesigned tab. */
+function tabForHeader(tab: PanelTab): PanelTab {
+	if (tab === "subagents") return "tasks";
+	return tab;
+}
+
 function PanelHeader({
 	sessionId,
 	tab,
@@ -208,8 +194,8 @@ function PanelHeader({
 						key={key}
 						type="button"
 						role="tab"
-						aria-selected={tab === key}
-						className={tab === key ? "on" : ""}
+						aria-selected={tabForHeader(tab) === key}
+						className={tabForHeader(tab) === key ? "on" : ""}
 						onClick={() => onTab(key)}
 					>
 						<span>{t(`panel.tabs.${key}`)}</span>

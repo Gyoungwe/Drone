@@ -59,18 +59,18 @@ it("focusing a diff section or a process turn lands on the matching process view
 	expect(useUiStore.getState().processFocus?.turnIndex).toBe(2);
 });
 
-it("shows tasks, process and artifacts by default; subagents and compute only on demand", () => {
-	expect(visiblePanelTabs({ subagents: false, compute: false })).toEqual(["tasks", "process", "artifacts"]);
+it("shows overview, files and changes by default; subagents and hosts only on demand", () => {
+	expect(visiblePanelTabs({ subagents: false, compute: false })).toEqual(["tasks", "artifacts", "process"]);
 	expect(visiblePanelTabs({ subagents: true, compute: false })).toEqual([
 		"tasks",
-		"process",
 		"artifacts",
+		"process",
 		"subagents",
 	]);
 	expect(visiblePanelTabs({ subagents: false, compute: true })).toEqual([
 		"tasks",
-		"process",
 		"artifacts",
+		"process",
 		"compute",
 	]);
 });

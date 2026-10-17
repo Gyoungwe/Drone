@@ -14,7 +14,13 @@ import { ProcessRouteSummary } from "./ProcessRouteSummary";
 import { ReviewerCard } from "./ReviewerCard";
 
 /** Public transcript receipts projected into six lanes, with historical turn navigation. */
-export function ProcessPane({ sessionId }: { sessionId: string | null }) {
+export function ProcessPane({
+	sessionId,
+	includeReview = true,
+}: {
+	sessionId: string | null;
+	includeReview?: boolean;
+}) {
 	const t = useT();
 	const transcript = useTranscriptStore((s) => selectTranscript(s, sessionId));
 	const messages = useMemo(() => {
@@ -87,7 +93,7 @@ export function ProcessPane({ sessionId }: { sessionId: string | null }) {
 				onOpenTask={() => openPanel("tasks")}
 				onOpenReconcile={() => openPanel("tasks")}
 			/>
-			{transcript.reviewerFindings.length ? (
+			{includeReview && transcript.reviewerFindings.length ? (
 				// 审稿发现默认折叠：只在有发现时出现一行摘要，展开才看卡片
 				<details className="reviewer-cards" aria-label={t("process.reviewerTitle")}>
 					<summary className="cursor-pointer text-[12px] text-ink-2">
