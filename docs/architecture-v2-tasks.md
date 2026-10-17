@@ -157,7 +157,7 @@
 - [x] **P9-1 资料工作台**：新增 `research` 视图，复用 `listProjectFiles`、`previewFile`、`openResourceExternal` 与 `PreviewHost`，支持任意项目文件的检索、预览、源码查看和外部打开；未知二进制只展示元数据。
 - [x] **P9-2 捕获 seam**：在 backend/research 提供 `captureResearchResource`，以 `cwd + relativePath + byteHash + sourceReceipt + scope + freshness + approval` 生成待审 `KnowledgeSnapshot`；禁止会话正文、凭据和未授权原文自动进入知识库。
 - [ ] **P9-3 连接器合同**：统一合同已固定来源、许可（可选）、访问时间、内容哈希、只读标记与失败原因；Crossref/DOI/OpenAlex/PubMed/Europe PMC、Zenodo/OSF/NCBI SRA/ENA、Zotero、Protocols.io、机构访问和项目存储均已纳入默认连接器清单，并保留 UI 开关与禁用失败回执。Protocols.io 可逆端口和 WebDAV 可逆端口已合并；真实 Protocols.io 写入仍受用户书签状态探针与账号授权门槛约束，Zotero/机构等其他写入型适配器仍待 provider-specific 合同与真实回执。
-- [ ] **P9-4 验收**：空项目、中文/超长路径、压缩 FASTQ/VCF、BAM 等常见科研格式、无扩展名未知二进制、重复捕获、文件变更、连接器失败和撤回/过期快照均已有可解释状态与定向回归；跨平台 CI 已覆盖共享/后端/桌面构建，真实桌面人工走查仍待完成。
+- [ ] **P9-4 验收**：空项目、中文/超长路径、压缩 FASTQ/VCF、BAM 等常见科研格式、无扩展名未知二进制、重复捕获、文件变更、连接器失败和撤回/过期快照均已有可解释状态与定向回归；跨平台 CI 已覆盖共享/后端/桌面构建，自动化证据作为唯一发布门槛。
 
 ## P10 · 签名发布与更新证据
 
