@@ -141,6 +141,31 @@ describe("reversible research write adapters", () => {
 		expect(requests.find(({ method }) => method === "DELETE")?.ifMatch).toBe('"v1"');
 	});
 
+	it("propagates cancellation to WebDAV requests", async () => {
+		const controller = new AbortController();
+		let receivedSignal: AbortSignal | undefined;
+		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			void _request;
+			receivedSignal = init?.signal;
+			controller.abort();
+			throw new Error("aborted");
+		};
+		const port = createWebdavWritePort({
+			baseUrl: "http://dav.test:8080",
+			username: "user",
+			password: "password",
+			fetchImpl,
+		});
+		await expect(
+			port.write({
+				targetRef: "/acceptance/cancel.json",
+				payload: input.payload,
+				signal: controller.signal,
+			}),
+		).rejects.toThrow("已取消");
+		expect(receivedSignal?.aborted).toBe(true);
+	});
+
 	it("cleans up a created object when readback fails", async () => {
 		const methods: string[] = [];
 		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
