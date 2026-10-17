@@ -105,9 +105,7 @@ function createPortBackedAdapter(options: PortAdapterOptions): ReversibleResearc
 			}
 			if (!context.approved) throw new Error("Explicit user approval is required for external writes");
 			if (!options.port) {
-				throw new Error(
-					`${options.label} write adapter is unavailable; configure an authorized host port`,
-				);
+				throw new Error(`${options.label} write adapter is unavailable; configure an authorized host port`);
 			}
 			const result = await options.port.write({
 				targetRef: plan.targetRef,
