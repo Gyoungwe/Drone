@@ -1,0 +1,46 @@
+{
+	"name": "@drone/research-suite",
+	"version": "0.1.0",
+	"description": "Bundled Drone native Pi research suite",
+	"keywords": [
+		"pi-package",
+		"research",
+		"evidence"
+	],
+	"license": "MIT",
+	"type": "module",
+	"main": "./package.json",
+	"files": [
+		"package.json",
+		"README.md",
+		"prompts"
+	],
+	"pi": {
+		"extensions": [
+			"./node_modules/@drone/pi-core/dist/index.mjs",
+			"./node_modules/@drone/pi-knowledge/dist/index.mjs",
+			"./node_modules/@drone/pi-research/dist/index.mjs"
+		],
+		"skills": [
+			"./node_modules/@drone/pi-core/skills/*",
+			"./node_modules/@drone/pi-knowledge/skills/*",
+			"./node_modules/@drone/pi-research/skills/*"
+		],
+		"prompts": [
+			"./prompts/*.md"
+		]
+	},
+	"dependencies": {
+		"@drone/pi-core": "0.1.0",
+		"@drone/pi-knowledge": "0.1.0",
+		"@drone/pi-research": "0.1.0"
+	},
+	"bundleDependencies": [
+		"@drone/pi-core",
+		"@drone/pi-knowledge",
+		"@drone/pi-research"
+	],
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": ">=1.1.0 <2.0.0"
+	}
+}

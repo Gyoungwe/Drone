@@ -186,6 +186,14 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 `packages/pi-core/` 是可独立安装的任务与回执插件：组装 `@drone/tasks` runtime，并提供 `ask_user`、`set_status`、`todo`、`deliver_files`、`memory_save` 五个可移植工具。工具实现、项目记忆持久化和路径规整均由该包拥有；`packages/backend/src/tools/` 与 `src/project/memory.ts` 仅保留兼容 facade，Desktop 继续注入既有 ask gate。原生 Pi 通过 `ctx.ui` 提供询问与授权，宿主差异收敛在 `PiCoreHostPort`（host/capabilities/requestAuthorization）。`scripts/build-pi-core.mjs` 生成自包含 dist 并拒绝 Electron/backend/Desktop 或越界导入，`scripts/smoke-pi-core.mjs` 和包内 registration test 覆盖安装前的工具清单与 native host adapter。
 
+## packages/pi-research — 原生 Pi 研究插件（PR-7）
+
+`packages/pi-research/` 提供可独立安装的最小研究闭环：`research_search_sources` 在工作区内对受限 Markdown/text 来源做可追溯检索，`research_read_source` 记录 hash 与范围回执，`research_deposit_research_note` 写入带 URI/hash 引用的候选笔记，`research_answer_sources` 要求至少两篇当前回读来源后才返回 `answerable` 证据包；`research_status` 输出会话计数。`src/index.ts` 还组装现有 `research_loop` 生命周期入口。`scripts/build-pi-research.mjs` 生成自包含 dist，禁止 Electron/backend/Desktop/越界 import；`scripts/smoke-pi-research.mjs` 在全新临时工作区执行两来源检索→两次读取→沉淀→带来源回答，并验证 tarball 解包加载。网络、Zotero、机构访问写入仍由宿主连接器负责，当前包不伪造远端结果。
+
+## packages/research-suite — 原生 Pi 聚合包（PR-7）
+
+`packages/research-suite/` 只负责将 `pi-core`、`pi-knowledge`、`pi-research` 的扩展、skills 和 prompt 通过 manifest 组合；`bundleDependencies` 明确声明三者。`scripts/check-research-suite.mjs` 会把三个已构建包放入干净 staging 目录后运行真实 `npm pack`，断言 tarball 内包含全部 bundled dependencies 和三个扩展路径，不发布 npm。
+
 ## packages/backend — pi SDK 适配层
 
 纯 Node，不依赖 Electron。唯一 import pi SDK 的包，运行时值导入收敛在 `session-engine/**`；`pi-backend.ts` 保留兼容门面。

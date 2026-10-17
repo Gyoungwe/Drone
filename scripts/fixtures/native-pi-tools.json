@@ -38,6 +38,12 @@
       "nativePiAvailable": true,
       "targetPackage": "pi-research"
     },
+    "research_answer_sources": {
+      "source": "packages/pi-research/src/evidence-loop.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
     "research_archive_topic": {
       "source": "packages/extensions/src/internal/knowledge-extension.ts",
       "registration": "registerTool",
@@ -61,6 +67,12 @@
       "registration": "registerTool",
       "nativePiAvailable": true,
       "targetPackage": "pi-knowledge"
+    },
+    "research_deposit_research_note": {
+      "source": "packages/pi-research/src/evidence-loop.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
     },
     "research_deposit_knowledge": {
       "source": "packages/extensions/src/obsidian-workbench.ts",
@@ -116,6 +128,12 @@
       "nativePiAvailable": true,
       "targetPackage": "pi-knowledge"
     },
+    "research_read_source": {
+      "source": "packages/pi-research/src/evidence-loop.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
     "research_propose_wiki_update": {
       "source": "packages/extensions/src/internal/knowledge-extension.ts",
       "registration": "registerTool",
@@ -158,6 +176,12 @@
       "nativePiAvailable": true,
       "targetPackage": "pi-knowledge"
     },
+    "research_search_sources": {
+      "source": "packages/pi-research/src/evidence-loop.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
     "research_search_knowledge": {
       "source": "packages/extensions/src/internal/knowledge-extension.ts",
       "registration": "registerTool",
@@ -184,6 +208,12 @@
     },
     "research_source_status": {
       "source": "packages/extensions/src/source-archive.ts",
+      "registration": "registerTool",
+      "nativePiAvailable": true,
+      "targetPackage": "pi-research"
+    },
+    "research_status": {
+      "source": "packages/pi-research/src/evidence-loop.ts",
       "registration": "registerTool",
       "nativePiAvailable": true,
       "targetPackage": "pi-research"
