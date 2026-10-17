@@ -77,7 +77,8 @@ function normalizePayload(payload: ResearchWritePayload): ResearchWritePayload {
 
 function normalizeTarget(value: string, label: string): string {
 	const targetRef = value.normalize("NFKC").trim();
-	if (!targetRef || targetRef.length > 512) throw new Error(`${label} write target is required and must be <= 512 characters`);
+	if (!targetRef || targetRef.length > 512)
+		throw new Error(`${label} write target is required and must be <= 512 characters`);
 	return targetRef;
 }
 
@@ -142,9 +143,7 @@ function createPortBackedAdapter(options: PortAdapterOptions): ResearchWriteAdap
 				at: new Date().toISOString(),
 				externalRef: result.externalRef,
 				readBack: result.readBack === true ? "verified" : "unverified",
-				...(options.supportsDelete
-					? { deleted: result.deleted === true ? "verified" : "unverified" }
-					: {}),
+				...(options.supportsDelete ? { deleted: result.deleted === true ? "verified" : "unverified" } : {}),
 			};
 		},
 	};
@@ -195,11 +194,7 @@ export function createProtocolsBookmarkWriteAdapter(
 }
 
 export function createDefaultResearchWriteAdapters(): readonly ResearchWriteAdapter[] {
-	return [
-		createProtocolsBookmarkWriteAdapter(),
-		createWebdavWriteAdapter(),
-		createZoteroWriteAdapter(),
-	];
+	return [createProtocolsBookmarkWriteAdapter(), createWebdavWriteAdapter(), createZoteroWriteAdapter()];
 }
 
 export class ResearchWriteAdapterRegistry {
