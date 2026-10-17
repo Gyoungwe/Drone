@@ -98,7 +98,15 @@ jobs:
       # green build cannot publish stale generated/runtime resources.
       - run: npm run check:arch
       - run: npm run test:arch
+      - name: Checkout bound plugin workspace
+        uses: actions/checkout@v6
+        with:
+          repository: Gyoungwe/drone-plugins
+          ref: main
+          path: drone-plugins
       - run: npm run check:plugin-api
+        env:
+          DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
       - run: npm run check:extensions
       - run: npm run check:knowledge-runtime
       - run: npm run check:tasks-runtime
