@@ -37,8 +37,8 @@ export interface ReversibleResearchWritePort extends ResearchWritePort {
 		readonly signal?: AbortSignal;
 	}): Promise<{
 		readonly externalRef: string;
-		readonly readBack: true;
-		readonly deleted: true;
+		readonly readBack: boolean;
+		readonly deleted: boolean;
 	}>;
 }
 
