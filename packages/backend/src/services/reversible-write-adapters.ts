@@ -228,18 +228,18 @@ function protocolsApiTarget(targetRef: string): string {
 			break;
 		}
 	}
-	if (!value || /[?#\\\\]/.test(value) || value.split("/").some((segment) => segment === "." || segment === "..")) {
+	if (!value || /[?#\\]/.test(value) || value.split("/").some((segment) => segment === "." || segment === "..")) {
 		throw new Error("Protocols.io target contains an invalid path");
 	}
 	return value;
 }
 
 function protocolsApiBase(value: string | undefined): string {
-	const base = new URL((value?.trim() || DEFAULT_PROTOCOLS_API_BASE).replace(/\\/+$/, ""));
+	const base = new URL((value?.trim() || DEFAULT_PROTOCOLS_API_BASE).replace(/\/+$/, ""));
 	if (!/^https?:$/.test(base.protocol) || base.search || base.hash) {
 		throw new Error("Protocols.io API base must be an HTTP(S) URL without query or fragment");
 	}
-	return base.toString().replace(/\\/$/, "");
+	return base.toString().replace(/\/$/, "");
 }
 
 function protocolIdentity(payload: unknown): unknown {
@@ -266,7 +266,7 @@ export function createProtocolsBookmarkWritePort(
 ): ReversibleWritePort {
 	const apiBase = protocolsApiBase(config.apiBaseUrl);
 	const token = config.apiToken.trim();
-	if (!token || /[\\r\\n]/.test(token)) throw new Error("Protocols.io API token is invalid");
+	if (!token || /[\r\n]/.test(token)) throw new Error("Protocols.io API token is invalid");
 	const fetchImpl = config.fetchImpl ?? fetch;
 	return {
 		async write({ targetRef, signal, payload }) {
