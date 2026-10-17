@@ -20,6 +20,7 @@ interface ResearchWritePanelProps {
 export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelProps) {
 	const t = useT();
 	const [adapters, setAdapters] = useState<ResearchWriteAdapterDescriptor[]>([]);
+	const [selectedAdapterId, setSelectedAdapterId] = useState("");
 	const [plan, setPlan] = useState<ResearchWritePlan | null>(null);
 	const [receipt, setReceipt] = useState<ResearchWriteReceipt | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,13 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 		void getPi()
 			.listWriteAdapters()
 			.then((next) => {
-				if (!cancelled) setAdapters([...next.adapters]);
+				if (cancelled) return;
+				setAdapters([...next.adapters]);
+				setSelectedAdapterId((current) =>
+					current && next.adapters.some((adapter) => adapter.id === current)
+						? current
+						: (next.adapters[0]?.id ?? ""),
+				);
 			})
 			.catch((cause) => {
 				if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
@@ -40,7 +47,18 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 		};
 	}, []);
 
-	const adapter = useMemo(() => adapters[0], [adapters]);
+	const adapter = useMemo(
+		() => adapters.find((candidate) => candidate.id === selectedAdapterId) ?? adapters[0],
+		[adapters, selectedAdapterId],
+	);
+
+	const selectAdapter = (id: string) => {
+		setSelectedAdapterId(id);
+		setPlan(null);
+		setReceipt(null);
+		setError(null);
+	};
+
 	const prepare = async () => {
 		if (!adapter || !targetRef) return;
 		setBusy(true);
@@ -105,9 +123,26 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 				<p className="research-browser-connectors-empty">{t("researchWrite.unavailable")}</p>
 			) : (
 				<>
+					{adapters.length > 1 && (
+						<label className="research-browser-write-adapter">
+							<span>{t("researchWrite.adapter")}</span>
+							<select
+								value={adapter.id}
+								onChange={(event) => selectAdapter(event.target.value)}
+								aria-label={t("researchWrite.adapter")}
+							>
+								{adapters.map((candidate) => (
+									<option key={candidate.id} value={candidate.id}>
+										{candidate.label}
+									</option>
+								))}
+							</select>
+						</label>
+					)}
 					<p className="research-browser-connectors-hint">
 						{adapter.label} ·{" "}
 						{adapter.writeEnabled ? t("researchWrite.authorized") : t("researchWrite.dryRunOnly")}
+						{adapter.supportsDelete ? " · " + t("researchWrite.deleteClosure") : ""}
 					</p>
 					<button
 						type="button"
@@ -145,6 +180,7 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 			{receipt && (
 				<p className="research-browser-connectors-hint">
 					{receipt.status === "executed" ? t("researchWrite.executed") : receipt.failureReason}
+					{receipt.deleted === "verified" ? " · " + t("researchWrite.deleted") : ""}
 				</p>
 			)}
 			{error && <p className="research-browser-error">{error}</p>}
