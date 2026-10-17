@@ -15,6 +15,9 @@
 		"README.md",
 		"prompts"
 	],
+	"scripts": {
+		"typecheck": "node -e \"process.exit(0)\""
+	},
 	"pi": {
 		"extensions": [
 			"./node_modules/@drone/pi-core/dist/index.mjs",

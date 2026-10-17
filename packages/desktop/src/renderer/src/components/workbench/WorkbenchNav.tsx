@@ -35,7 +35,11 @@ export function isPrimaryNavActive(
 ): boolean {
 	if (key === "newTask") return state.view === "chat" && !state.settingsOpen;
 	if (key === "knowledge") return state.view === "knowledge";
-	if (key === "skills") return state.view === "skills" || (state.settingsOpen && SKILLS_SETTINGS_CATEGORIES.includes(state.settingsCategory));
+	if (key === "skills")
+		return (
+			state.view === "skills" ||
+			(state.settingsOpen && SKILLS_SETTINGS_CATEGORIES.includes(state.settingsCategory))
+		);
 	return state.settingsOpen && HOST_SETTINGS_CATEGORIES.includes(state.settingsCategory);
 }
 

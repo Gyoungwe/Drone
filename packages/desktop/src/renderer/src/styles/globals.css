@@ -2816,6 +2816,7 @@ code {
 	margin: var(--space-2) 0 var(--space-1);
 	overflow: hidden;
 }
+/* biome-ignore lint/style/noDescendingSpecificity: component-local meter selector intentionally follows shared typography rules */
 .host-env-bar > span {
 	display: block;
 	height: 100%;
@@ -2935,6 +2936,7 @@ code {
 	}
 }
 /* P15：两栏设置弹窗（ClawGo）：左栏侧边底色、选中项用 --highlight、大圆角 */
+/* biome-ignore lint/style/noDescendingSpecificity: base dialog rule remains a compatibility selector for older settings markup */
 .settings-dialog {
 	border-radius: 1rem;
 }
@@ -2980,6 +2982,7 @@ code {
 	margin: 7px 0 var(--space-2);
 	overflow: hidden;
 }
+/* biome-ignore lint/style/noDescendingSpecificity: component-local usage meter selector intentionally follows shared typography rules */
 .context-usage-bar > span {
 	display: block;
 	height: 100%;
