@@ -2,6 +2,8 @@
 
 This is a planned, read-only resource discovery layer inspired by AIPOCH Open-Science's built-in connector catalog and its separation between scientific tools, connectors, and permissioned execution. It is not a LAN feature and it does not grant download, write, or execution permission.
 
+Write destinations are a separate, explicit surface. The current reversible adapters are WebDAV files and Protocols.io bookmarks; both require a host-supplied authorized port and must complete create → readback → delete → absence readback. Zotero item writes remain create/readback only in the product path, and the real temporary-note deletion check is a separate acceptance probe. Search connectors remain read-only and can never be promoted to write capability by configuration alone.
+
 ## Scope
 
 The first version should search literature, public datasets, workflows, and software metadata through provider-neutral results. Each result keeps its provider, stable identifier, title, URL, version or release, access/license information, observed time, and a source receipt. A search result is a lead until the host reads the source and records a receipt.

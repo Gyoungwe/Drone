@@ -10,6 +10,13 @@ import type {
 } from "@drone/shared";
 import type { JsonStore } from "../json-store";
 
+type DeletionAwareResearchWriteReceipt = ResearchWriteReceipt & {
+	readonly deleted?: "verified" | "unverified" | "not-applicable";
+};
+type DeletionAwareResearchWriteAuditRecord = ResearchWriteAuditRecord & {
+	readonly deleted?: "verified" | "unverified" | "not-applicable";
+};
+
 export interface ResearchWriteLedger {
 	version: 1;
 	plans: ResearchWritePlan[];
@@ -51,7 +58,14 @@ export class ResearchWriteService {
 	}
 
 	listAdapters(): readonly ResearchWriteAdapterDescriptor[] {
-		return this.adapters.descriptors();
+		return this.adapters.descriptors().map((descriptor) => {
+			const adapter = this.adapters.get(descriptor.id) as
+				| (ResearchWriteAdapter & { readonly supportsDelete?: boolean })
+				| undefined;
+			return adapter?.supportsDelete === true
+				? ({ ...descriptor, supportsDelete: true } as ResearchWriteAdapterDescriptor)
+				: descriptor;
+		});
 	}
 
 	async prepare(input: ResearchWriteRequest): Promise<ResearchWritePlan> {
@@ -157,7 +171,10 @@ export class ResearchWriteService {
 				at: receipt.at,
 				...(receipt.externalRef ? { externalRef: receipt.externalRef } : {}),
 				...(receipt.failureReason ? { failureReason: receipt.failureReason } : {}),
-			});
+				...((receipt as DeletionAwareResearchWriteReceipt).deleted
+					? { deleted: (receipt as DeletionAwareResearchWriteReceipt).deleted }
+					: {}),
+			} as DeletionAwareResearchWriteAuditRecord);
 			next.audit = next.audit.slice(-500);
 		});
 		return receipt;

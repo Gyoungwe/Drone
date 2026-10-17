@@ -4,9 +4,16 @@ import type {
 	ResearchWritePlan,
 	ResearchWriteReceipt,
 } from "@drone/shared";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
+
+type DeletionAwareAdapterDescriptor = ResearchWriteAdapterDescriptor & {
+	readonly supportsDelete?: boolean;
+};
+type DeletionAwareResearchWriteReceipt = ResearchWriteReceipt & {
+	readonly deleted?: "verified" | "unverified" | "not-applicable";
+};
 
 interface ResearchWritePanelProps {
 	readonly targetRef: string | null;
@@ -19,18 +26,29 @@ interface ResearchWritePanelProps {
  */
 export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelProps) {
 	const t = useT();
-	const [adapters, setAdapters] = useState<ResearchWriteAdapterDescriptor[]>([]);
+	const [adapters, setAdapters] = useState<DeletionAwareAdapterDescriptor[]>([]);
+	const [selectedAdapterId, setSelectedAdapterId] = useState("");
 	const [plan, setPlan] = useState<ResearchWritePlan | null>(null);
-	const [receipt, setReceipt] = useState<ResearchWriteReceipt | null>(null);
+	const [receipt, setReceipt] = useState<DeletionAwareResearchWriteReceipt | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const prepareGeneration = useRef(0);
+	const writeInputKey = useMemo(() => JSON.stringify({ targetRef, payload }), [targetRef, payload]);
 
 	useEffect(() => {
 		let cancelled = false;
 		void getPi()
 			.listWriteAdapters()
 			.then((next) => {
-				if (!cancelled) setAdapters([...next.adapters]);
+				if (cancelled) return;
+				setAdapters([...next.adapters] as DeletionAwareAdapterDescriptor[]);
+				const preferredAdapter =
+					next.adapters.find((candidate) => candidate.writeEnabled) ?? next.adapters[0];
+				setSelectedAdapterId((current) =>
+					current && next.adapters.some((adapter) => adapter.id === current)
+						? current
+						: (preferredAdapter?.id ?? ""),
+				);
 			})
 			.catch((cause) => {
 				if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
@@ -40,25 +58,49 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 		};
 	}, []);
 
-	const adapter = useMemo(() => adapters[0], [adapters]);
+	useEffect(() => {
+		void writeInputKey;
+		prepareGeneration.current += 1;
+		setBusy(false);
+		setPlan(null);
+		setReceipt(null);
+		setError(null);
+	}, [writeInputKey]);
+
+	const adapter = useMemo(
+		() => adapters.find((candidate) => candidate.id === selectedAdapterId) ?? adapters[0],
+		[adapters, selectedAdapterId],
+	);
+
+	const selectAdapter = (id: string) => {
+		prepareGeneration.current += 1;
+		setSelectedAdapterId(id);
+		setBusy(false);
+		setPlan(null);
+		setReceipt(null);
+		setError(null);
+	};
+
 	const prepare = async () => {
 		if (!adapter || !targetRef) return;
+		const generation = prepareGeneration.current;
 		setBusy(true);
 		setError(null);
 		setReceipt(null);
 		try {
-			setPlan(
-				await getPi().prepareWrite({
-					adapterId: adapter.id,
-					targetRef,
-					payload,
-					action: "prepare",
-				}),
-			);
+			const nextPlan = await getPi().prepareWrite({
+				adapterId: adapter.id,
+				targetRef,
+				payload,
+				action: "prepare",
+			});
+			if (prepareGeneration.current === generation) setPlan(nextPlan);
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : String(cause));
+			if (prepareGeneration.current === generation) {
+				setError(cause instanceof Error ? cause.message : String(cause));
+			}
 		} finally {
-			setBusy(false);
+			if (prepareGeneration.current === generation) setBusy(false);
 		}
 	};
 
@@ -68,7 +110,12 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 		setBusy(true);
 		setError(null);
 		try {
-			setReceipt(await getPi().executeWrite({ planId: plan.id, approved: true }));
+			setReceipt(
+				(await getPi().executeWrite({
+					planId: plan.id,
+					approved: true,
+				})) as DeletionAwareResearchWriteReceipt,
+			);
 		} catch (cause) {
 			setError(cause instanceof Error ? cause.message : String(cause));
 		} finally {
@@ -105,9 +152,26 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 				<p className="research-browser-connectors-empty">{t("researchWrite.unavailable")}</p>
 			) : (
 				<>
+					{adapters.length > 1 && (
+						<label className="research-browser-write-adapter">
+							<span>{t("researchWrite.adapter")}</span>
+							<select
+								value={adapter.id}
+								onChange={(event) => selectAdapter(event.target.value)}
+								aria-label={t("researchWrite.adapter")}
+							>
+								{adapters.map((candidate) => (
+									<option key={candidate.id} value={candidate.id}>
+										{candidate.label}
+									</option>
+								))}
+							</select>
+						</label>
+					)}
 					<p className="research-browser-connectors-hint">
 						{adapter.label} ·{" "}
 						{adapter.writeEnabled ? t("researchWrite.authorized") : t("researchWrite.dryRunOnly")}
+						{adapter.supportsDelete ? ` · ${t("researchWrite.deleteClosure")}` : ""}
 					</p>
 					<button
 						type="button"
@@ -145,6 +209,7 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 			{receipt && (
 				<p className="research-browser-connectors-hint">
 					{receipt.status === "executed" ? t("researchWrite.executed") : receipt.failureReason}
+					{receipt.deleted === "verified" ? ` · ${t("researchWrite.deleted")}` : ""}
 				</p>
 			)}
 			{error && <p className="research-browser-error">{error}</p>}

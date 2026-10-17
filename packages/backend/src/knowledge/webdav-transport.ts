@@ -178,7 +178,9 @@ export class WebDavTransport {
 		path: string,
 		headers: Record<string, string> = {},
 		body?: string,
+		signal?: AbortSignal,
 	): Promise<DavResponse> {
+		if (signal?.aborted) throw new KnowledgeWebDavError("offline", "WebDAV 请求已取消");
 		const password = this.options.password();
 		if (!password)
 			throw new KnowledgeWebDavError(
@@ -186,6 +188,8 @@ export class WebDavTransport {
 				"请在设置中输入 WebDAV 密码（或设置环境变量 DRONE_WEBDAV_PASSWORD）",
 			);
 		const controller = new AbortController();
+		const abortFromCaller = () => controller.abort();
+		signal?.addEventListener("abort", abortFromCaller, { once: true });
 		const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 10_000);
 		try {
 			const url = `${this.endpoint}/${path}`;
@@ -251,11 +255,14 @@ export class WebDavTransport {
 			if (error instanceof KnowledgeWebDavError) throw error;
 			throw new KnowledgeWebDavError(
 				"offline",
-				controller.signal.aborted
-					? "WebDAV 请求超时；写入结果可能尚未确认"
-					: "WebDAV 暂时不可达，请检查网络或服务地址",
+				signal?.aborted
+					? "WebDAV 请求已取消"
+					: controller.signal.aborted
+						? "WebDAV 请求超时；写入结果可能尚未确认"
+						: "WebDAV 暂时不可达，请检查网络或服务地址",
 			);
 		} finally {
+			signal?.removeEventListener("abort", abortFromCaller);
 			clearTimeout(timer);
 		}
 	}

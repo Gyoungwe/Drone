@@ -2,6 +2,7 @@ import { stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 import type { ControlledKernelRunner } from "@drone/discovery";
 import type { ExperienceStorePort } from "@drone/knowledge";
+import { createDefaultResearchWriteAdapters, ResearchWriteAdapterRegistry } from "@drone/research";
 import type {
 	AskRequest,
 	AskResponse,
@@ -79,6 +80,11 @@ import {
 	ResearchResourceService,
 } from "./services/research-resource";
 import { createEmptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
+import {
+	createProtocolsBookmarkWriteAdapter,
+	createWebdavWriteAdapter,
+	createWebdavWritePortFromEnv,
+} from "./services/reversible-write-adapters";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
 import type { SubagentServicePort } from "./services/subagents";
@@ -288,6 +294,11 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 				})),
 	});
 	const researchWrites = new ResearchWriteService({
+		adapters: new ResearchWriteAdapterRegistry([
+			...createDefaultResearchWriteAdapters(),
+			createWebdavWriteAdapter(createWebdavWritePortFromEnv()),
+			createProtocolsBookmarkWriteAdapter(),
+		]),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "writes.json"),
 			storageId: "agent-research-writes",

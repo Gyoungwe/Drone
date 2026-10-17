@@ -658,6 +658,9 @@ export const en: Messages = {
 	},
 	researchWrite: {
 		title: "Research write adapters",
+		adapter: "Write target",
+		deleteClosure: "create/readback/delete verified",
+		deleted: "temporary object deleted and verified",
 		defaultTitle: "Research material",
 
 		hint: "Prepare a bounded write plan first. External writes always need a fresh approval.",
