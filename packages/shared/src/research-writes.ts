@@ -49,8 +49,6 @@ export interface ResearchWriteReceipt {
 	readonly at: string;
 	readonly externalRef?: string;
 	readonly readBack: "verified" | "unverified" | "not-applicable";
-	/** Reversible connectors must verify that the temporary object was removed. */
-	readonly deleted?: "verified" | "unverified" | "not-applicable";
 	readonly failureReason?: string;
 }
 
@@ -65,7 +63,6 @@ export interface ResearchWriteAuditRecord {
 	readonly at: string;
 	readonly externalRef?: string;
 	readonly failureReason?: string;
-	readonly deleted?: "verified" | "unverified" | "not-applicable";
 }
 
 export interface ResearchWriteAdapterDescriptor {
@@ -74,6 +71,4 @@ export interface ResearchWriteAdapterDescriptor {
 	readonly enabled: boolean;
 	readonly writeEnabled: boolean;
 	readonly requiresExplicitApproval: true;
-	/** Whether the adapter requires create → readback → delete closure. */
-	readonly supportsDelete?: boolean;
 }
