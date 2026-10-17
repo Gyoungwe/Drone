@@ -23,6 +23,70 @@ interface ReversibleWritePort {
 	}>;
 }
 
+export interface WebdavWritePortConfig {
+	readonly baseUrl: string;
+	readonly username: string;
+	readonly password: string;
+	readonly fetchImpl?: typeof fetch;
+}
+
+function webdavTargetUrl(baseUrl: string, targetRef: string): string {
+	if (/^https?:\/\//i.test(targetRef)) return targetRef;
+	const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+	return new URL(targetRef.replace(/^\/+/, ""), normalizedBase).toString();
+}
+
+/**
+ * Backend-owned WebDAV port. Credentials never cross into the research package.
+ * The port proves PUT → GET/title match → DELETE → GET/404 before reporting success.
+ */
+export function createWebdavWritePort(config: WebdavWritePortConfig): ReversibleWritePort {
+	const fetchImpl = config.fetchImpl ?? fetch;
+	const authorization = `Basic ${Buffer.from(`${config.username}:${config.password}`).toString("base64")}`;
+	return {
+		async write({ targetRef, payload, signal }) {
+			const url = webdavTargetUrl(config.baseUrl, targetRef);
+			const headers = {
+				Authorization: authorization,
+				"Content-Type": "application/json; charset=utf-8",
+				Accept: "application/json, text/plain, */*",
+			};
+			const put = await fetchImpl(url, {
+				method: "PUT",
+				headers,
+				body: JSON.stringify(payload),
+				signal,
+			});
+			if (!put.ok) throw new Error(`WebDAV PUT failed (${put.status})`);
+			const read = await fetchImpl(url, { method: "GET", headers, signal });
+			const body = await read.text();
+			if (!read.ok || !body.includes(payload.title)) {
+				throw new Error(`WebDAV readback failed (${read.status})`);
+			}
+			const deleted = await fetchImpl(url, { method: "DELETE", headers, signal });
+			if (!deleted.ok && deleted.status !== 404) {
+				throw new Error(`WebDAV DELETE failed (${deleted.status})`);
+			}
+			const missing = await fetchImpl(url, { method: "GET", headers, signal });
+			return {
+				externalRef: url,
+				readBack: true,
+				deleted: missing.status === 404,
+			};
+		},
+	};
+}
+
+export function createWebdavWritePortFromEnv(
+	env: Record<string, string | undefined> = process.env,
+): ReversibleWritePort | undefined {
+	const baseUrl = env.DRONE_WEBDAV_BASE_URL?.trim();
+	const username = env.DRONE_WEBDAV_USERNAME?.trim();
+	const password = env.DRONE_WEBDAV_PASSWORD;
+	if (!baseUrl || !username || !password) return undefined;
+	return createWebdavWritePort({ baseUrl, username, password });
+}
+
 interface PortAdapterOptions {
 	readonly id: string;
 	readonly label: string;
