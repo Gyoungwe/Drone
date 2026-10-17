@@ -18,7 +18,7 @@ export interface PreviewHostProps {
 	source: FigureSource;
 }
 
-/** 统一预览宿主：按 previewKind 分发到已注册预览器，否则走内建 图片 / PDF / 文本 / 二进制 视图。 */
+/** 统一预览宿主：按 previewKind 分发到已注册预览器，否则走内建 图片 / 文本 / 二进制 视图。 */
 export function PreviewHost({
 	result,
 	src,
@@ -67,15 +67,6 @@ export function PreviewHost({
 					</FigureAnnotator>
 				)}
 			</div>
-		);
-	if (route.view === "pdf" && src)
-		return (
-			<iframe
-				className="resource-frame"
-				data-preview-kind="pdf"
-				src={`${src}#toolbar=1&navpanes=0&view=FitH`}
-				title={result.name}
-			/>
 		);
 	if (route.view === "text")
 		return (
