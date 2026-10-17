@@ -182,6 +182,10 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 
+## packages/pi-core — 原生 Pi 核心插件（PR-6）
+
+`packages/pi-core/` 是可独立安装的任务与回执插件：组装 `@drone/tasks` runtime，并提供 `ask_user`、`set_status`、`todo`、`deliver_files`、`memory_save` 五个可移植工具。工具实现、项目记忆持久化和路径规整均由该包拥有；`packages/backend/src/tools/` 与 `src/project/memory.ts` 仅保留兼容 facade，Desktop 继续注入既有 ask gate。原生 Pi 通过 `ctx.ui` 提供询问与授权，宿主差异收敛在 `PiCoreHostPort`（host/capabilities/requestAuthorization）。`scripts/build-pi-core.mjs` 生成自包含 dist 并拒绝 Electron/backend/Desktop 或越界导入，`scripts/smoke-pi-core.mjs` 和包内 registration test 覆盖安装前的工具清单与 native host adapter。
+
 ## packages/backend — pi SDK 适配层
 
 纯 Node，不依赖 Electron。唯一 import pi SDK 的包，运行时值导入收敛在 `session-engine/**`；`pi-backend.ts` 保留兼容门面。

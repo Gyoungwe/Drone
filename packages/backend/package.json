@@ -19,6 +19,7 @@
 		"@drone/discovery": "*",
 		"@drone/inquiry": "*",
 		"@drone/knowledge": "*",
+		"@drone/pi-core": "*",
 		"@drone/research": "*",
 		"@drone/shared": "*",
 		"@drone/tasks": "*",

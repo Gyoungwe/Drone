@@ -1,0 +1,54 @@
+{
+	"name": "@drone/pi-core",
+	"version": "0.1.0",
+	"description": "Portable task, authorization, status, delivery and memory tools for native Pi",
+	"keywords": [
+		"pi-package"
+	],
+	"license": "MIT",
+	"type": "module",
+	"main": "./dist/index.mjs",
+	"files": [
+		"dist",
+		"skills",
+		"package.json",
+		"README.md",
+		"build-manifest.json"
+	],
+	"pi": {
+		"extensions": [
+			"./dist/index.mjs"
+		],
+		"skills": [
+			"./skills/*"
+		]
+	},
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./dist/index.mjs",
+			"default": "./dist/index.mjs"
+		},
+		"./tools/*": "./src/tools/*.ts",
+		"./memory": "./src/memory.ts"
+	},
+	"scripts": {
+		"build": "node ../../scripts/build-pi-core.mjs",
+		"build:check": "node ../../scripts/build-pi-core.mjs --check",
+		"typecheck": "tsc --noEmit",
+		"test": "npm run build && node --test test/registration.test.mjs",
+		"check": "npm run typecheck && npm run build:check && node ../../scripts/smoke-pi-core.mjs && npm test"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": ">=1.1.0 <2.0.0"
+	},
+	"dependencies": {
+		"@drone/plugin-api": "*"
+	},
+	"devDependencies": {
+		"@drone/shared": "*",
+		"@drone/tasks": "*",
+		"typebox": "1.3.7",
+		"typescript": "^5.9.0"
+	}
+}
