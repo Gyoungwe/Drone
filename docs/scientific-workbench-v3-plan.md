@@ -18,7 +18,7 @@
 - [x] 文件动作只有四种：预览、以源码查看、系统外部打开、进入知识捕获确认；路径始终以项目 `cwd` 为根，不能越界或跟随未授权软链接（首版已完成预览/源码/外部打开和主机层项目根约束；捕获确认随 P10 实施）。
 - [x] 未知二进制显示大小、MIME、修改时间和哈希提示，并提供外部打开；不把二进制正文塞进会话或知识库。
 - [x] 视图通过已有 `window.pi` host API 工作，不在 renderer 引入 backend、Electron 或 Pi SDK；新增文案同时维护中英文。
-- [ ] 验收：项目为空、中文路径、超长路径、目录、Markdown/CSV/图像/PDF/FASTQ/未知二进制和外部打开失败均有可解释状态（`npm run check:research-browser` 的确定性夹具已在 PR #222 覆盖这些状态，文件预览/路径边界单元回归和 Release #119 的 macOS/Windows validate 已通过；仍缺少真实桌面人工走查及外部打开失败的手工证据）。
+- [x] 验收：项目为空、中文路径、超长路径、目录、Markdown/CSV/图像/PDF/FASTQ/未知二进制和外部打开失败均有可解释状态（`npm run check:research-browser` 的确定性夹具已在 PR #222 覆盖这些状态；2026-10-17 在当前主线构建的真实桌面资料视图中走查了 Markdown、CSV、PNG、PDF 和未知二进制，PDF 由内置 PDF.js canvas 显示页码，未知二进制的“系统打开”失败显示 `Failed to open path`；FASTQ 由确定性夹具覆盖，文件预览/路径边界单元回归和 Release #119 的 macOS/Windows validate 已通过）。
 
 ## P10 · 跨科研场景知识沉淀
 
@@ -55,6 +55,7 @@
 - 2026-10-17（PR #210）：补齐 Zotero、Protocols.io、机构资源元数据和项目存储四个只读连接器，统一来源回执与失败信息；科研资料页的连接器 UI 可逐项开关并通过 JsonStore 持久化，关闭后检索 fail-closed。PR #210 的 CI run [38931738909](https://github.com/Gyoungwe/Drone/actions/runs/38931738909) 在 macOS/Windows 8 项全部通过；写入型适配器、P9 人工桌面走查和 P11 签名发布门槛仍未关闭。
 
 - 2026-10-17（无证书发布策略）：根据用户决定，后续正式发布不再要求证书或 notarization；Release workflow 与 electron-builder 改为 unsigned 模式。历史版本中因证书为空而失败的签名预检只保留为历史记录，不再作为当前发布规则。
+- 2026-10-17（P10 只读授权核查）：本机 Zotero 10 桌面可打开，但 `127.0.0.1:23119` 没有监听端口，当前没有可验证的授权 Web/Desktop write port 或回读目标；因此真实 Zotero 写入门槛继续保持未关闭，资料页仍 fail-closed。
 - 2026-10-17（P10 写入连接器安全 seam，PR #223）：新增跨层写入合同、Zotero prepare/dry-run/execute 适配器、JsonStore 计划/审计 ledger、撤销和 fail-closed 失败记录；桌面资料页显示写入计划/授权状态，默认无外部端口，真实第三方写入留待授权主机和回读证据。PR #223 已合并到 `main`（`601bde719e0bdb27d4fe2ae073de846d093dad41`），CI #761（`38978077971`）8/8 项通过。
 - 2026-10-17（v0.32.8 无证书发布验收）：PR [#220](https://github.com/Gyoungwe/Drone/pull/220) 修正 unsigned 标志的 build job 作用域并合入 `main`；Release [38963823008](https://github.com/Gyoungwe/Drone/actions/runs/38963823008) 的 macOS/Windows validate、prepare、macOS arm64/x64、Windows x64 构建和 publish 最终全部通过（publish 首次下载 artifact 漏列 Windows zip，单独重跑后通过）。正式 Release [v0.32.8](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.8) 已从 draft 发布，包含 macOS arm64/x64 DMG/ZIP、Windows EXE/ZIP、`latest-mac.yml` 和 `latest.yml`；所有产物明确为 unsigned，不读取证书或 notarization secrets，P11 无证书门槛已关闭。
 
