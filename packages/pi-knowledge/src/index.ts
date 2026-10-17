@@ -1,8 +1,6 @@
 // The package entry deliberately composes the existing extension factories. The
 // knowledge domain stays in @drone/knowledge and is bundled by the package build;
 // this entry only provides the native-Pi registration boundary.
-// @ts-nocheck
-
 import { existsSync } from "node:fs";
 import registerObsidianWorkbench from "@drone/extensions/obsidian-workbench";
 import registerWorkspaceConfig from "@drone/extensions/workspace-config";
@@ -12,7 +10,7 @@ import { getKnowledgeService } from "@drone/knowledge/service";
 
 const STATUS_TOOL = "knowledge_status";
 
-function result(details) {
+function result(details: any) {
 	return {
 		content: [{ type: "text", text: JSON.stringify(details, null, 2) }],
 		details,
@@ -24,7 +22,7 @@ function result(details) {
  * knowledge is unavailable, rather than an empty successful index. The full
  * existing extension remains responsible for the configured read/write tools.
  */
-function registerPackageStatus(pi) {
+function registerPackageStatus(pi: any) {
 	pi.registerTool({
 		name: STATUS_TOOL,
 		label: "Knowledge status",
@@ -32,7 +30,7 @@ function registerPackageStatus(pi) {
 		description:
 			"Report whether the application knowledge Vault is configured. When unconfigured, use /drone-init before claiming local knowledge was searched or saved.",
 		parameters: { type: "object", properties: {} },
-		async execute(_id, _params, _signal, _update, ctx) {
+		async execute(_id: any, _params: any, _signal: any, _update: any, ctx: any) {
 			const directory = knowledgeDirectory();
 			if (!directory) return result({ status: "unconfigured", next: "/drone-init" });
 			const binding = await readKnowledgeBinding();
@@ -52,7 +50,7 @@ function registerPackageStatus(pi) {
 	// /obsidian-setup command and its consent/UI semantics.
 	pi.registerCommand?.("drone-init", {
 		description: "Initialize the Drone knowledge Vault",
-		handler: async (_args, ctx) => {
+		handler: async (_args: any, ctx: any) => {
 			if (typeof pi.sendUserMessage === "function") {
 				await pi.sendUserMessage("/obsidian-setup", { deliverAs: "followUp" });
 			} else {
@@ -62,7 +60,7 @@ function registerPackageStatus(pi) {
 	});
 }
 
-export default function registerPiKnowledge(pi) {
+export default function registerPiKnowledge(pi: any) {
 	registerPackageStatus(pi);
 	registerWorkspaceConfig(pi);
 	registerObsidianWorkbench(pi);

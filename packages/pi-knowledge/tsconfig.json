@@ -4,8 +4,15 @@
 		"noEmit": true,
 		"allowJs": false,
 		"strict": true,
-		"noCheck": true,
-		"types": ["node"]
+		"types": ["node"],
+		"baseUrl": ".",
+		"paths": {
+			"@drone/knowledge/config": ["types/host-shims.d.ts"],
+			"@drone/knowledge/service": ["types/host-shims.d.ts"],
+			"@drone/knowledge/extension-helpers": ["types/host-shims.d.ts"],
+			"@drone/extensions/workspace-config": ["types/host-shims.d.ts"],
+			"@drone/extensions/obsidian-workbench": ["types/host-shims.d.ts"]
+		}
 	},
-	"include": ["src/**/*.ts"]
+	"include": ["src/**/*.ts", "types/**/*.d.ts"]
 }
