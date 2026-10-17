@@ -338,4 +338,4 @@ v2 的领域分层保持不变，新增的产品入口落在 desktop renderer �
 
 产品层的知识对象不再绑定某个 assay：`ResearchCase → RunAttempt → Artifact/SourceReceipt → KnowledgeSnapshot/Experience` 覆盖分析、实验、文献、数据集、协议和方法复用。默认捕获元数据和可引用片段，自动排除会话正文、凭据、未授权私有原文和未知二进制正文。
 
-LAN observer 已删除，不再作为工作台入口或验收面。正式签名与跨平台更新仍是发布门槛；当前 CI 只能证明源码、测试和打包构建可重复，不能证明签名身份、notarization、更新 feed 和回滚。
+LAN observer 已删除，不再作为工作台入口或验收面。产品采用无证书发布；当前 CI 已证明源码、测试和打包构建可重复，自动更新 feed、安装后启动和回滚仍按独立发布证据验收。
