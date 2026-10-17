@@ -12,41 +12,18 @@ export interface ResearchWriteExecutionContext {
 	readonly signal?: AbortSignal;
 }
 
-/**
- * Host ports own authentication and the provider-specific create/read/delete
- * sequence. The research package receives only bounded metadata and the
- * redacted outcome; credentials never cross this seam.
- */
 export interface ResearchWritePort {
 	write(input: {
 		readonly targetRef: string;
 		readonly payload: ResearchWritePayload;
 		readonly signal?: AbortSignal;
-	}): Promise<{
-		readonly externalRef: string;
-		readonly readBack?: boolean;
-		/** True only after the temporary provider object has been deleted and re-read as absent. */
-		readonly deleted?: boolean;
-	}>;
-}
-
-export interface ReversibleResearchWritePort extends ResearchWritePort {
-	write(input: {
-		readonly targetRef: string;
-		readonly payload: ResearchWritePayload;
-		readonly signal?: AbortSignal;
-	}): Promise<{
-		readonly externalRef: string;
-		readonly readBack: boolean;
-		readonly deleted: boolean;
-	}>;
+	}): Promise<{ readonly externalRef: string; readonly readBack?: boolean }>;
 }
 
 export interface ResearchWriteAdapter {
 	readonly id: string;
 	readonly label: string;
 	readonly writeEnabled: boolean;
-	readonly supportsDelete: boolean;
 	prepare(input: ResearchWriteRequest): ResearchWritePlan;
 	execute(plan: ResearchWritePlan, context: ResearchWriteExecutionContext): Promise<ResearchWriteReceipt>;
 }
@@ -75,36 +52,26 @@ function normalizePayload(payload: ResearchWritePayload): ResearchWritePayload {
 	};
 }
 
-function normalizeTarget(value: string, label: string): string {
-	const targetRef = value.normalize("NFKC").trim();
-	if (!targetRef || targetRef.length > 512)
-		throw new Error(`${label} write target is required and must be <= 512 characters`);
-	return targetRef;
-}
-
-interface PortAdapterOptions {
-	readonly id: string;
-	readonly label: string;
-	readonly port?: ResearchWritePort;
-	readonly supportsDelete: boolean;
-	readonly validateTarget?: (targetRef: string) => void;
-}
-
-function createPortBackedAdapter(options: PortAdapterOptions): ResearchWriteAdapter {
+/**
+ * Zotero-compatible write seam. Preparation is always safe; actual writes require
+ * a host supplied port and a fresh explicit approval. The default adapter has no
+ * port, so execute fails closed and can only be exercised with a controlled fake.
+ */
+export function createZoteroWriteAdapter(port?: ResearchWritePort): ResearchWriteAdapter {
 	return {
-		id: options.id,
-		label: options.label,
-		writeEnabled: Boolean(options.port),
-		supportsDelete: options.supportsDelete,
+		id: "zotero-write",
+		label: "Zotero (write)",
+		writeEnabled: Boolean(port),
 		prepare(input) {
-			if (input.adapterId !== options.id) throw new Error(`Wrong write adapter: expected ${options.id}`);
-			const targetRef = normalizeTarget(input.targetRef, options.label);
-			options.validateTarget?.(targetRef);
+			if (input.adapterId !== "zotero-write") throw new Error("Wrong write adapter");
+			const targetRef = input.targetRef.normalize("NFKC").trim();
+			if (!targetRef || targetRef.length > 512)
+				throw new Error("Write target is required and must be <= 512 characters");
 			const payload = normalizePayload(input.payload);
 			const key = hash({ adapterId: input.adapterId, targetRef, payload, action: input.action });
 			return {
 				id: `research-write-${key.slice(0, 32)}`,
-				adapterId: options.id,
+				adapterId: "zotero-write",
 				targetRef,
 				payload,
 				action: input.action,
@@ -126,16 +93,13 @@ function createPortBackedAdapter(options: PortAdapterOptions): ResearchWriteAdap
 				};
 			}
 			if (!context.approved) throw new Error("Explicit user approval is required for external writes");
-			if (!options.port)
-				throw new Error(`${options.label} write adapter is unavailable; configure an authorized host port`);
-			const result = await options.port.write({
+			if (!port) throw new Error("Zotero write adapter is unavailable; configure an authorized host port");
+			const result = await port.write({
 				targetRef: plan.targetRef,
 				payload: plan.payload,
 				signal: context.signal,
 			});
 			if (!result.externalRef?.trim()) throw new Error("Write adapter returned no external reference");
-			if (options.supportsDelete && result.deleted !== true)
-				throw new Error(`${options.label} write did not verify create → readback → delete closure`);
 			return {
 				planId: plan.id,
 				adapterId: plan.adapterId,
@@ -143,58 +107,13 @@ function createPortBackedAdapter(options: PortAdapterOptions): ResearchWriteAdap
 				at: new Date().toISOString(),
 				externalRef: result.externalRef,
 				readBack: result.readBack === true ? "verified" : "unverified",
-				...(options.supportsDelete ? { deleted: result.deleted === true ? "verified" : "unverified" } : {}),
 			};
 		},
 	};
 }
 
-/**
- * Zotero item writes intentionally remain create/readback only in the product
- * path. The separate local acceptance uses a temporary note and explicit
- * deletion; this adapter never deletes an existing literature item.
- */
-export function createZoteroWriteAdapter(port?: ResearchWritePort): ResearchWriteAdapter {
-	return createPortBackedAdapter({
-		id: "zotero-write",
-		label: "Zotero (write)",
-		port,
-		supportsDelete: false,
-	});
-}
-
-/** WebDAV note/file writes require a host port that performs PUT → GET → DELETE. */
-export function createWebdavWriteAdapter(port?: ReversibleResearchWritePort): ResearchWriteAdapter {
-	return createPortBackedAdapter({
-		id: "webdav-write",
-		label: "WebDAV (reversible write)",
-		port,
-		supportsDelete: true,
-		validateTarget(targetRef) {
-			if (!/^\/(?:[^/]+\/)*[^/]+$/.test(targetRef) && !/^https:\/\//i.test(targetRef))
-				throw new Error("WebDAV write target must be an absolute path or HTTPS URL");
-		},
-	});
-}
-
-/** Protocols.io bookmark writes use POST bookmark → GET/readback → DELETE bookmark. */
-export function createProtocolsBookmarkWriteAdapter(
-	port?: ReversibleResearchWritePort,
-): ResearchWriteAdapter {
-	return createPortBackedAdapter({
-		id: "protocols-bookmark-write",
-		label: "Protocols.io bookmark (reversible write)",
-		port,
-		supportsDelete: true,
-		validateTarget(targetRef) {
-			if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{2,511}$/.test(targetRef))
-				throw new Error("Protocols.io target must be a protocol URI, DOI, or GUID");
-		},
-	});
-}
-
 export function createDefaultResearchWriteAdapters(): readonly ResearchWriteAdapter[] {
-	return [createProtocolsBookmarkWriteAdapter(), createWebdavWriteAdapter(), createZoteroWriteAdapter()];
+	return [createZoteroWriteAdapter()];
 }
 
 export class ResearchWriteAdapterRegistry {
@@ -221,7 +140,6 @@ export class ResearchWriteAdapterRegistry {
 			enabled: true,
 			writeEnabled: adapter.writeEnabled,
 			requiresExplicitApproval: true,
-			supportsDelete: adapter.supportsDelete,
 		}));
 	}
 
