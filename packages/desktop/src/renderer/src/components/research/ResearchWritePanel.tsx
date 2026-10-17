@@ -32,6 +32,7 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 	const [receipt, setReceipt] = useState<DeletionAwareResearchWriteReceipt | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const writeInputKey = useMemo(() => JSON.stringify({ targetRef, payload }), [targetRef, payload]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -55,6 +56,12 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 			cancelled = true;
 		};
 	}, []);
+
+	useEffect(() => {
+		setPlan(null);
+		setReceipt(null);
+		setError(null);
+	}, [writeInputKey]);
 
 	const adapter = useMemo(
 		() => adapters.find((candidate) => candidate.id === selectedAdapterId) ?? adapters[0],
