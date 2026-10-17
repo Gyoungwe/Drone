@@ -112,6 +112,7 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 					throw new Error(`WebDAV PUT failed (${put.status})`);
 				}
 				created = true;
+				creationEtag = put.headers.get("etag");
 				const read = await request("GET");
 				const body = read.body.toString("utf8");
 				let readPayload: unknown;
@@ -127,7 +128,7 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 					typeof readPayload.title === "string"
 						? readPayload.title
 						: undefined;
-				creationEtag = read.headers.get("etag") ?? put.headers.get("etag");
+				creationEtag = read.headers.get("etag") ?? creationEtag;
 				if (read.status < 200 || read.status >= 300 || readTitle !== payload.title) {
 					throw new Error(`WebDAV readback failed (${read.status})`);
 				}
