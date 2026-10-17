@@ -4,7 +4,7 @@ import { compareHostVersions, negotiateCapabilities } from "../dist/index.js";
 
 const host = {
 	host: "drone-desktop",
-	hostVersion: "0.32.0",
+	hostVersion: "0.33.0",
 	pluginApiVersion: 1,
 	piApiVersion: 1,
 	capabilities: ["readSource", "searchKnowledge"],

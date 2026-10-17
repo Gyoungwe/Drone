@@ -595,6 +595,7 @@ Claude Code adapter 必须通过同一套：
 | 日期 | PR | 结果 / 数字 | 偏离与遗留 |
 |---|---|---|---|
 | 2026-10-17 | 评审 | 决议写入文首；§3.8 / §3.9 / §3.10 / §9 改写 | 设计稿已完成（4 个画面 + 侧栏） |
+| 2026-10-18 | main 合并与 v0.33.0 发布候选 | 当前分支已快进合并到 `main`；修复 workspace 绝对链接、刷新 Pi/knowledge/research manifest；`npm test`、`npm run build`、`lint`、`typecheck`、`check:arch`、UI/SKILL、MCP/CONN/MEM/REDLINE、升级、研究资源、扩展、任务 runtime、Pi 包及桌面 16/16 全部通过；发布说明写入 `docs/releases/v0.33.0.md` | GitHub 发布流水线仍需 academic skill pack 的 CC-BY-NC-4.0 非商业授权记录；Nature/Scientific 已验收；无证书策略已生效 |
 | 2026-10-17 | 仓库绑定 / 并行启动 | 已绑定本地 `../drone-plugins` 与 GitHub `Gyoungwe/drone-plugins`，`main` 同步于 `f21a4a3`；已创建 `native-pi-map`、`pi-knowledge-pr3`、`plugin-ui-shell` 三个隔离 worktree 并行推进 PR-2、PR-3、UI-1 | `@drone` npm scope 仍按 D8 在 PR-5 前确认；设计稿已放入 `docs/design/plugin-ui/Drone 插件化界面.html` |
 | 2026-10-17 | PR-2 | 已完成 `check-native-pi`：扫描 51 个工具注册并校验目标包映射；4 项脚本单测通过；独立提交 `7be11363`（`codex/native-pi-map`） | 完整根级 lint/typecheck/test/build 尚待集成 worktree 复跑 |
 | 2026-10-17 | PR-3 | 已完成 `@drone/pi-knowledge` 包、bundle/check/smoke、R8 产物检查和 3 个知识 skill；领域与 fixture 检查通过；严格包级 typecheck 收敛在独立提交 `ec0ca0b8`（`codex/pi-knowledge-pr3`） | Pi 1.1.0 对 `.tgz` 直接安装仍为 `PARTIAL`；目录安装路径完成真实 fixture/卸载验收 |
