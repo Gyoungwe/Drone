@@ -69,7 +69,7 @@ flowchart TB
     Extensions[Extension factories\npermission gate / evap / channel-watch / todo]
     Tools[Built-in tools\nwebfetch / show_image / todo / subagent]
     InstitutionalBE[institutional\nconfig + session + status\npersist:drone-institutional]
-    Knowledge[knowledge / lan / mcp / permissions / project]
+    Knowledge[knowledge / mcp / permissions / project]
   end
 
   subgraph Desktop["packages/desktop — Electron"]
@@ -97,7 +97,7 @@ flowchart TB
 
 - `ipc.ts`: `IpcChannels` constants + `PiApi` (full `window.pi` type). Adding a channel requires 4 sync points: `shared/ipc.ts` → `preload/index.ts` (via domain contracts) → `main/ipc/<domain>.ts` → backend method + `main/ipc/index.ts` event forwarding.
 - `session.ts`: `SessionMeta`, `SessionEvent` (Pi `AgentSessionEvent` ∪ Drone UI events like `subagent_mutex`, `model_wait`), `SessionMessage` (user/assistant with `entryId` for fork/recall, `image`, `subagent`), permission modes, trust.
-- `transcript/`: UI message state machine shared by desktop and lan-web — reducer, mapping, chat-rows grouping, turn-files aggregation, patch parsing, timing derivation.
+- `transcript/`: UI message state machine shared by the desktop renderer — reducer, mapping, chat-rows grouping, turn-files aggregation, patch parsing, timing derivation.
 - `institutional.ts` (new): `InstitutionalConfig` (ezproxyTemplate auto-saved, perTaskLimit, lastLoginAt), `InstitutionalStatus`, `InstitutionalTestResult`.
 - `permission-settings.ts`, `zotero.ts`, `example-tasks.ts`, `subagent.ts`, etc.
 
@@ -109,12 +109,12 @@ flowchart TB
   - `config.ts`: loads `~/.pi/agent/institutional.json` via `JsonStore`, `buildProxiedUrl` (supports `%s` and `?url=`), `inferEzproxyTemplateFromUrl` / `detectAndSaveTemplateFromUrl` auto-infers template from navigated URL like `.../login?url=https://www.nature.com/...` → `.../login?url=%s` and saves without manual input.
   - `session.ts`: Electron `session.fromPartition('persist:drone-institutional')`, `net.fetch` with session, cookie count, `openInstitutionalLoginWindow` / `openInstitutionalUrlInWindow` with `did-navigate` auto-detect.
   - `status.ts`: `getInstitutionalStatus` (config + cookiesCount + loggedIn heuristic).
-- `permissions/`, `project/`, `session/`, `settings/`, `tools/`, `lan/`, `knowledge/`, `zotero/`, `mcp/`.
+- `permissions/`, `project/`, `session/`, `settings/`, `tools/`, `knowledge/`, `zotero/`, `mcp/`.
 
 ### 3. `packages/desktop` — Electron app
 
 **main/**:
-- `index.ts`: app lifecycle, initLogging, `pi-bg://` protocol for custom backgrounds, renderer crash handler (auto-reload, incident snapshot), `new PiBackend()`, LAN observer, `UiPluginManager`, `registerIpc`, updater, `createWindow`. First 3 lines must import `pi-package-dir`, `dev-agent-dir`, `fix-path`.
+- `index.ts`: app lifecycle, initLogging, `pi-bg://` protocol for custom backgrounds, renderer crash handler (auto-reload, incident snapshot), `new PiBackend()`, `UiPluginManager`, `registerIpc`, updater, `createWindow`. First 3 lines must import `pi-package-dir`, `dev-agent-dir`, `fix-path`.
 - `institutional-access.ts`: re-exports backend window funcs (`openInstitutionalLoginWindow`), plus `testAccess` that tries ezproxy + institutional_session via `institutionalFetch`.
 - `ipc/`: per-domain handlers (sessions, settings, permissions, institutional, knowledge, etc.) — thin delegates to backend; `index.ts` composes them and forwards backend events to renderer.
 - `ui-plugins/`: esbuild builder (shims `window.DroneUI`), manager (scan, build, fs.watch hot-reload, seed builtin pets).
@@ -159,7 +159,6 @@ task_plan → authorization card (contractHash) → one auth covers all mileston
 - **Trust**: project trust prompt, `workspaces.json` roots + allowed patterns.
 - **Context evaporation**: on by default, 4-level waterline, context hook, `replay-evaporation.mts` tuning.
 - **Subagents**: built-in scout + user/project agents, single/parallel cap 8/concurrency 4, isolated `AgentSession`, `sessions-subagents/` readOnly, `@` selector in composer.
-- **LAN observer**: `lan-web/` Vite single-file, QR code, token rotation, GET-only SSE.
 - **UI plugins**: slots `panel.artifacts.card`, `panel.task.milestone-evidence`, `panel.tab`, `rail.view`, regions `SettingsPanel`, etc.; esbuild rewrites react to `window.DroneUI` shim; hot-reload via fs.watch.
 
 ## Built on Pi
@@ -179,7 +178,6 @@ And for GUI lovers:
 - Context evaporation (on by default), unified error system with retry, solid workspace (fork, recall, todo, diff, slash menu, @-file completion)
 - Streaming markdown, image previews, `show_image` tool for agent-initiated display
 - Custom background with dimming, light/dark/system themes
-- LAN observer — watch read-only from phone/tablet via QR
 
 ## Institutional Access (new)
 

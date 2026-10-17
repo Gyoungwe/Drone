@@ -7,7 +7,7 @@
 ## 硬约束（改代码前必知）
 
 - renderer 绝不 import pi 包，只经 `window.pi`（preload）通信
-- Pi SDK 运行时值导入统一收敛在 `packages/backend/src/session-engine/**`（钉 0.84.3）；`pi-backend.ts` 仍是兼容门面
+- Pi SDK 运行时值导入统一收敛在 `packages/backend/src/session-engine/**`（钉 1.1.0）；`pi-backend.ts` 仍是兼容门面
 - 新增 IPC 四处同步：`shared/src/ipc.ts` → `desktop/src/preload/index.ts` → `main/ipc/`（按域选文件）→ backend；事件转发在 `main/ipc/index.ts`
 - preload 必须保持 CJS（sandbox 限制，见 PITFALLS）
 - 新增 UI 文案：`i18n/zh.ts` + `en.ts` 双字典都要加
@@ -25,6 +25,7 @@
 - Wisp/OpenScience 的官方源码快照、功能研究和迁移建议见 [open-science-wisp-adapter-research.md](open-science-wisp-adapter-research.md)。
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
+插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。
 
 `.pi/tsconfig.json` 开启 `allowJs` + `checkJs`；当前覆盖兼容入口与任务/知识运行时，生成的 `.pi/lib/knowledge/runtime/**/*.mjs` 明确排除在检查图之外（源代码由领域包 typecheck 覆盖），根 `npm run typecheck` 会串接 `npm run check:pi`。
 
@@ -84,6 +85,9 @@ packages/
 | `scripts/smoke-subagent.mts` | subagent 冒烟 |
 | `scripts/smoke-evaporation-ui.mjs` | 蒸发设置二态 CDP 冒烟（dev 实例带 `--remote-debugging-port=9224` 运行后执行） |
 | `scripts/check-report-ui.mjs` | 隔离 Electron 验收：桌面长回答贴底、主动上翻、引用短标题/完整路径/点击、运行记录展开；不调用真实模型 |
+| `scripts/check-local-desktop-artifact.mjs` | 本机构建产物验收：不启动 Electron，核对 main/preload/renderer 产物、四视口路由标记、插件启停合同、skill/MCP/connector/memory/结果红线资源；`--strict` 另检查已 stage 的 MCP 资源 |
+| `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
+| `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵 |
 | `scripts/smoke-channel-watch.mts` | channel-watch 机制冒烟 V1–V6 |
 | `scripts/replay-trace.mts` | 事件 trace 离线重放（`--last` 自动找最新；排查 UI 状态问题首选） |
 | `scripts/replay-evaporation.mts` | 上下文蒸发离线 replay 调参（误杀率/体积曲线；`--core` 与线上实现同构对比；默认数据指 `.local/replay-data/sessions` 副本，指向正式 `~/.pi/agent` 会直接 abort） |
@@ -204,7 +208,6 @@ src/
 ├── json-store.ts       统一 JSON 持久化原语
 ├── slash-commands.ts   斜杠命令清单（纯函数）
 ├── log.ts              结构化日志
-├── lan/                局域网观察：config / projector / server（+ audit / sanitize）
 ├── session/            registry / naming / messages / trace+traces / event-slim+stream-guard / rates / ui-context
 ├── permissions/        index(barrel) / bash-chain / pattern / config / settings / tmp-zone / gate / extension / audit
 ├── project/            trust / trust-loader / workspace-store / files
@@ -340,7 +343,7 @@ src/
 | `composer/` | **Composer**（装配层 ~330 行，键盘事件分发）+ 三 hook：`use-composer-send`（ensureSession 懒创建/followUp 排队/停止先 clearQueue/发送失败草稿回填）、`use-slash-menu`（命令拉取+胶囊回填+导航）、`use-at-completion`（@ token 探测/续钻/胶囊弹回 + 消息开头的子智能体候选）+ 展示件 QueueBar/ImageTray/AttachmentChip/**SubagentChip**（@ 子智能体胶囊：Enter 直接派发）/**QuoteChip**（选中引用胶囊）/SendErrorBar + **ModelPicker** / **ThinkingPicker**（按模型 thinkingLevels 过滤+clamp）/ **PermissionPicker**（会话权限模式 chip：默认/完全访问）/ **SlashMenu** / **AtMenu**（子智能体组 + 文件组）/ **ContextRing** + 会话累计用量 `SessionUsageFooter`（移入会话输入区）+ 纯函数 `slash-filter`/`at-files`/`at-subagents`（S9：候选条件 / 过滤 / 合并 / 任务拼装）/`send-error`/`quote`（各有测试） |
 | `session/` | **SessionTabBar** + SessionTab/TabPill（状态收拢到头像图标；dnd-kit 拖拽排序，DragOverlay ghost + 轴锁定；拖拽期间退出 drag-region）/ **SessionRail**（左侧会话轨道：细线变形胶囊 + dock 波浪；开关在设置-外观）/ **ApprovalDock**（权限审批：async respond 成功才移除面板，失败保留重试）/ **TrustDialog**（项目信任两选项）/ **UpdateButton**（顶栏更新按钮）/ `session-status`（顶栏与轨道共用的状态/标题纯逻辑） |
 | `workbench/SkillsConnectionsView.tsx` | 技能与连接全屏页：按真实 skills/MCP/WebDAV/Zotero/机构访问/UI 插件状态展示能力，开关直接调用现有 IPC；状态页不把开关当在线证明 |
-| `settings/` | **SettingsDialog**（PANELS 注册表；分类 = 静态 + 「高级」分组〔知识库维护 / 局域网观察 / UI 插件 / 工作流总览 / SSH 主机〔ComputePane 主机登记，同一份登记表供 `ssh` / `ssh_hosts` 工具使用〕〕+ 插件 settings.panel 贡献动态拼接）/ **GeneralPanel**（语言/上下文管理二态/channel-watch 开关）/ **PermissionsPanel**（编辑全局 permissions.json：工作区边界 / 工具规则 + bash 模式表 **PatternTable**（↑↓✕、自保护行锁定表尾）+ 试算 / 高级（审计尾部、文件位置、恢复默认、放弃/保存）；纯编辑模型 `permissions-model.ts`，`PermissionsEditor` 按 props 渲染可单测）/ **AppearancePanel**（主题三段/背景图/轨道/中央动画；UI 插件管理移到 高级 › UI 插件）/ **SkillsPanel**（Tools & Skills：完整 Skill catalog + 默认折叠的 lazy capability/tool schema footprint/最近调用；工作流总览 **WorkflowOverviewPanel** 在 高级 › 工作流总览） / **McpPanel**（MCP 服务器状态/启停 + 「推荐接入」一键添加预设：shared `MCP_PRESETS`〔Playwright 浏览器控制〕→ IPC `mcp:addPreset` → backend `McpService.addPreset` 写用户级 mcp.json）/ **ExtensionsPanel** + `extensions/`（目录浏览/安装/卸载，subagent 包安装两段式确认）/ **UiPluginsSection**（高级 › UI 插件：总开关/插件卡/槽位指派） / **LanObserverPanel** / **AboutPanel** / `providers/`（ProvidersPanel + ProviderRow 操作全图标化 / LoginDialog（交互登录对话框：OAuth + api_key 交互流）/ CustomProviderForm + ModelRowsEditor（逐模型行编辑器）/ BuiltinProviderEditForm（内置端点覆写）/ SubagentPanel（子代理模型偏好）+ `model-rows` 纯函数） |
+| `settings/` | **SettingsDialog**（PANELS 注册表；分类 = 静态 + 「高级」分组〔知识库维护 / UI 插件 / 工作流总览 / SSH 主机〔ComputePane 主机登记，同一份登记表供 `ssh` / `ssh_hosts` 工具使用〕〕+ 插件 settings.panel 贡献动态拼接）/ **GeneralPanel**（语言/上下文管理二态/channel-watch 开关）/ **PermissionsPanel**（编辑全局 permissions.json：工作区边界 / 工具规则 + bash 模式表 **PatternTable**（↑↓✕、自保护行锁定表尾）+ 试算 / 高级（审计尾部、文件位置、恢复默认、放弃/保存）；纯编辑模型 `permissions-model.ts`，`PermissionsEditor` 按 props 渲染可单测）/ **AppearancePanel**（主题三段/背景图/轨道/中央动画；UI 插件管理移到 高级 › UI 插件）/ **SkillsPanel**（Tools & Skills：完整 Skill catalog + 默认折叠的 lazy capability/tool schema footprint/最近调用；工作流总览 **WorkflowOverviewPanel** 在 高级 › 工作流总览） / **McpPanel**（MCP 服务器状态/启停 + 「推荐接入」一键添加预设：shared `MCP_PRESETS`〔Playwright 浏览器控制〕→ IPC `mcp:addPreset` → backend `McpService.addPreset` 写用户级 mcp.json）/ **ExtensionsPanel** + `extensions/`（目录浏览/安装/卸载，subagent 包安装两段式确认）/ **UiPluginsSection**（高级 › UI 插件：总开关/插件卡/槽位指派） / **AboutPanel** / `providers/`（ProvidersPanel + ProviderRow 操作全图标化 / LoginDialog（交互登录对话框：OAuth + api_key 交互流）/ CustomProviderForm + ModelRowsEditor（逐模型行编辑器）/ BuiltinProviderEditForm（内置端点覆写）/ SubagentPanel（子代理模型偏好）+ `model-rows` 纯函数） |
 | `projects/` | ProjectPage / SearchBar（日常选中时占位词取「日常」）/ ProjectSidebar（内置「日常」空间钉顶条目：canvas 底 + 细边框 + 咖啡 glyph，无删除钮）/ SessionPanel（新会话 = createDraftSession）/ SessionRow（hover 出诊断复制/删除）/ `date-groups` / ProjectBranchPicker（仅 draft 态渲染——真实会话项目绑死不可改；日常 draft 隐藏分支选择器，chip 显示「日常」）/ `diagnostics`（buildDiagnosticsText 纯文本） |
 | `ui/` | Button（ghost/primary × sm/md × danger）/ Dropdown / Switch（统一受控开关，支持 indeterminate）/ **Tooltip**（自定义悬浮提示，新增提示一律用它不用原生 title；右缘元素传 `align="end"` 防幻影横向滚动条） |
 | `ui/ActionSurface.tsx` + `ui/dialog-stack.ts` | 统一右侧交互面（Ask / Trust / 示例任务 / Wiki 审核）：顶部色条区分 accent/warn/danger，`height="fit"` 卡片或整高抽屉；焦点陷阱 + 关闭后恢复焦点；全局单栈只显示最上层（下层 `inert`），Esc 只交给栈顶 `onEscape`（未提供则吞掉，防止误关下层） |

@@ -69,7 +69,7 @@ flowchart TB
     Extensions[扩展工厂\npermission gate / evap / channel-watch / todo]
     Tools[内置工具\nwebfetch / show_image / todo / subagent]
     InstitutionalBE[institutional\nconfig + session + status\npersist:drone-institutional]
-    Knowledge[knowledge / lan / mcp / permissions / project]
+    Knowledge[knowledge / mcp / permissions / project]
   end
 
   subgraph Desktop["packages/desktop — Electron"]
@@ -97,7 +97,7 @@ flowchart TB
 
 - `ipc.ts`：`IpcChannels` 常量 + `PiApi`（`window.pi` 完整类型）。新增通道需四处同步：`shared/ipc.ts` → `preload/index.ts`（各域契约）→ `main/ipc/<domain>.ts` → backend 方法 + `main/ipc/index.ts` 事件转发。
 - `session.ts`：`SessionMeta`、`SessionEvent`（Pi 原生 + Drone 自有如 `subagent_mutex`、`model_wait`）、`SessionMessage`（带 `entryId` 供 fork/撤回，`image`、`subagent`）。
-- `transcript/`：桌面与 lan-web 共用的 UI 消息状态机 — reducer、mapping、chat-rows 分组、turn-files 聚合、patch 解析、计时派生。
+- `transcript/`：桌面 renderer 使用的 UI 消息状态机 — reducer、mapping、chat-rows 分组、turn-files 聚合、patch 解析、计时派生。
 - `institutional.ts`（新增）：`InstitutionalConfig`（ezproxyTemplate 自动保存、perTaskLimit、lastLoginAt）、`InstitutionalStatus`。
 - `permission-settings.ts`、`zotero.ts`、`example-tasks.ts`、`subagent.ts` 等。
 
@@ -109,12 +109,12 @@ flowchart TB
   - `config.ts`：读 `~/.pi/agent/institutional.json`，`buildProxiedUrl`（支持 `%s` 与 `?url=`），`inferEzproxyTemplateFromUrl` / `detectAndSaveTemplateFromUrl` 自动从导航 URL 如 `.../login?url=https://www.nature.com/...` 推断模板 `.../login?url=%s` 并保存，无需手动。
   - `session.ts`：Electron `session.fromPartition('persist:drone-institutional')`、`net.fetch` 带会话、Cookie 计数、`openInstitutionalLoginWindow` / `openInstitutionalUrlInWindow`（`did-navigate` 时自动识别模板）。
   - `status.ts`：`getInstitutionalStatus`（配置 + Cookie 数 + 是否已登录）。
-- `permissions/`、`project/`、`session/`、`settings/`、`tools/`、`lan/`、`knowledge/`、`zotero/`、`mcp/`。
+- `permissions/`、`project/`、`session/`、`settings/`、`tools/`、`knowledge/`、`zotero/`、`mcp/`。
 
 ### 3. `packages/desktop` — Electron 应用
 
 **main/**：
-- `index.ts`：生命周期、日志、`pi-bg://` 协议、崩溃钩子（自动 reload、incident snapshot）、`new PiBackend()`、LAN、`UiPluginManager`、`registerIpc`、updater、建窗。首三行必须 import `pi-package-dir`、`dev-agent-dir`、`fix-path`。
+- `index.ts`：生命周期、日志、`pi-bg://` 协议、崩溃钩子（自动 reload、incident snapshot）、`new PiBackend()`、`UiPluginManager`、`registerIpc`、updater、建窗。首三行必须 import `pi-package-dir`、`dev-agent-dir`、`fix-path`。
 - `institutional-access.ts`：复用 backend 窗口函数，`testAccess` 经 ezproxy + institutional_session 尝试。
 - `ipc/`：按域拆分（sessions、settings、permissions、institutional、knowledge 等），薄委托 backend；`index.ts` 拼装并转发事件。
 - `ui-plugins/`：esbuild 构建器（`window.DroneUI` shim）、manager（扫描、构建、fs.watch 热重载、内置桌宠）。
@@ -159,7 +159,6 @@ task_plan → 授权卡（contractHash）→ 一次授权覆盖全部里程碑�
 - **信任**：项目信任弹窗，`workspaces.json` roots + allowed 记忆。
 - **上下文蒸发**：默认开启，四级水位线，context 钩子，`replay-evaporation.mts` 调参。
 - **子代理**：内置 scout + 用户/项目 agent 定义，single/parallel cap 8/并发 4，隔离 `AgentSession`，`sessions-subagents/` 只读，输入框 `@` 选择器。
-- **局域网观察**：`lan-web/` Vite 单文件，扫码只读，token 轮换，GET-only SSE。
 - **UI 插件**：槽位 `panel.artifacts.card`、`panel.task.milestone-evidence`、`panel.tab`、`rail.view`，区域 `SettingsPanel` 等；esbuild 重写 react 到 `window.DroneUI` shim；热重载。
 
 ## 基于 Pi 构建
@@ -179,7 +178,6 @@ Drone 把官方 Pi SDK 跑在 Electron 主进程里。**不是 fork，也不是�
 - 上下文蒸发（默认开启）、统一报错系统（错误卡一键重试）、扎实工作台（分叉、撤回、todo、diff、斜杠菜单、@ 文件补全）
 - 流式 Markdown、图片预览、`show_image` 工具让 agent 主动发图
 - 自定义背景与遮罩、浅色/深色/跟随系统主题
-- 局域网观察 — 手机/平板扫码只读查看
 
 ## 机构访问（新增）
 

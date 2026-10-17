@@ -16,7 +16,7 @@
 
 - **R1**：Pi SDK 运行时 import 只能位于 backend 会话引擎或已登记的迁移白名单；其他层只能使用类型 import。
 - **R2**：knowledge、tasks、research 领域包不得依赖 Electron、Pi SDK、backend 或 desktop。
-- **R3**：renderer 与 lan-web 的跨包依赖只能指向 `@drone/shared`；它们不得依赖 backend、Electron 或 Pi SDK。
+- **R3**：renderer 的跨包依赖只能指向 `@drone/shared`；不得依赖 backend、Electron 或 Pi SDK。
 - **R4**：禁止新增 `Symbol.for("drone.*")` 全局桥；迁移期基线只能减少。
 - **R5**：禁止通过相对路径穿越包边界访问 `.pi/` 运行时文件。
 - **R6**：领域包依赖方向保持单向：tasks 可使用 knowledge 的公开类型，research 可使用 knowledge；反向依赖禁止。
