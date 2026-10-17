@@ -112,12 +112,12 @@ describe("reversible research write adapters", () => {
 				if (gets === 3) {
 					return new Response('{"title":"Temporary acceptance note"}', {
 						status: 200,
-						headers: { ETag: "\"v1\"" },
+						headers: { ETag: '"v1"' },
 					});
 				}
 				return new Response("", { status: 404 });
 			}
-			if (method === "PUT") return new Response("", { status: 201, headers: { ETag: "\"v1\"" } });
+			if (method === "PUT") return new Response("", { status: 201, headers: { ETag: '"v1"' } });
 			return new Response(null, { status: 204 });
 		};
 		const port = createWebdavWritePort({
@@ -138,7 +138,7 @@ describe("reversible research write adapters", () => {
 		expect(requests.map(({ method }) => method)).toEqual(["GET", "GET", "PUT", "GET", "DELETE", "GET"]);
 		expect(requests[0]?.authorization).toBeNull();
 		expect(requests.slice(1).every(({ authorization }) => authorization?.startsWith("Basic "))).toBe(true);
-		expect(requests.find(({ method }) => method === "DELETE")?.ifMatch).toBe("\"v1\"");
+		expect(requests.find(({ method }) => method === "DELETE")?.ifMatch).toBe('"v1"');
 	});
 
 	it("cleans up a created object when readback fails", async () => {
@@ -152,7 +152,7 @@ describe("reversible research write adapters", () => {
 			if (method === "GET") {
 				return new Response('{"title":"noteworthy"}', {
 					status: 200,
-					headers: { ETag: "\"v1\"" },
+					headers: { ETag: '"v1"' },
 				});
 			}
 			return new Response(null, { status: 204 });
