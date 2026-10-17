@@ -367,6 +367,7 @@ describe("reversible research write adapters", () => {
 			apiBaseUrl: "https://protocols.test/api/v3",
 			apiToken: "temporary-token",
 			fetchImpl,
+			bookmarkStateProbe: async () => "absent",
 		});
 		await expect(
 			port.write({ targetRef: "protocols:protocol-guid", payload: input.payload }),
@@ -379,6 +380,23 @@ describe("reversible research write adapters", () => {
 		expect(requests.every(({ authorization }) => authorization === "Bearer temporary-token")).toBe(true);
 		expect(requests[0]?.url).toBe("https://protocols.test/api/v3/protocols/protocol-guid");
 		expect(requests[1]?.url).toBe("https://protocols.test/api/v3/protocols/protocol-guid/bookmarks");
+	});
+
+	it("fails closed when bookmark absence cannot be proven", async () => {
+		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			void init;
+			return new Response(JSON.stringify({ status_code: 0, protocol: { uri: "protocol-guid" } }), {
+				status: 200,
+			});
+		};
+		const port = createProtocolsBookmarkWritePort({
+			apiBaseUrl: "https://protocols.test/api/v3",
+			apiToken: "temporary-token",
+			fetchImpl,
+		});
+		await expect(port.write({ targetRef: "protocol-guid", payload: input.payload })).rejects.toThrow(
+			"bookmark-state probe",
+		);
 	});
 
 	it("fails closed when Protocols.io environment is absent or malformed", () => {
@@ -408,6 +426,7 @@ describe("reversible research write adapters", () => {
 			apiBaseUrl: "https://protocols.test/api/v3",
 			apiToken: "temporary-token",
 			fetchImpl,
+			bookmarkStateProbe: async () => "absent",
 		});
 		await expect(port.write({ targetRef: "protocol-guid", payload: input.payload })).rejects.toThrow(
 			"connection closed after commit",
