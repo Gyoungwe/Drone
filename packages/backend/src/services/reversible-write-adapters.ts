@@ -30,10 +30,35 @@ export interface WebdavWritePortConfig {
 	readonly fetchImpl?: typeof fetch;
 }
 
+function hasTraversalSegment(value: string): boolean {
+	let decoded = value;
+	try {
+		decoded = decodeURIComponent(value);
+	} catch {
+		return true;
+	}
+	return decoded.split(/[\\/]/).some((segment) => segment === "." || segment === "..");
+}
+
 function webdavTargetUrl(baseUrl: string, targetRef: string): string {
-	if (/^https?:\/\//i.test(targetRef)) return targetRef;
-	const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-	return new URL(targetRef.replace(/^\/+/, ""), normalizedBase).toString();
+	const base = new URL(baseUrl);
+	if (!/^https?:$/.test(base.protocol) || base.search || base.hash) {
+		throw new Error("WebDAV base URL must be an HTTP(S) URL without query or fragment");
+	}
+	const basePath = base.pathname.endsWith("/") ? base.pathname : `${base.pathname}/`;
+	if (hasTraversalSegment(targetRef)) {
+		throw new Error("WebDAV write target cannot contain traversal segments");
+	}
+	const target = /^https?:\\/\\//i.test(targetRef)
+		? new URL(targetRef)
+		: new URL(targetRef.replace(/^\\/+/, ""), `${base.origin}${basePath}`);
+	if (target.origin !== base.origin) {
+		throw new Error("WebDAV write target must use the configured WebDAV origin");
+	}
+	if (!target.pathname.startsWith(basePath) || target.search || target.hash) {
+		throw new Error("WebDAV write target must stay within the configured base path");
+	}
+	return target.toString();
 }
 
 /**
@@ -51,28 +76,54 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 				"Content-Type": "application/json; charset=utf-8",
 				Accept: "application/json, text/plain, */*",
 			};
-			const put = await fetchImpl(url, {
-				method: "PUT",
-				headers,
-				body: JSON.stringify(payload),
-				signal,
-			});
-			if (!put.ok) throw new Error(`WebDAV PUT failed (${put.status})`);
-			const read = await fetchImpl(url, { method: "GET", headers, signal });
-			const body = await read.text();
-			if (!read.ok || !body.includes(payload.title)) {
-				throw new Error(`WebDAV readback failed (${read.status})`);
+			const requestInit = { headers, signal, redirect: "error" as const };
+			const existing = await fetchImpl(url, { ...requestInit, method: "GET" });
+			if (existing.status !== 404) {
+				throw new Error(
+					existing.ok
+						? "WebDAV write target already exists"
+						: `WebDAV target preflight failed (${existing.status})`,
+				);
 			}
-			const deleted = await fetchImpl(url, { method: "DELETE", headers, signal });
-			if (!deleted.ok && deleted.status !== 404) {
-				throw new Error(`WebDAV DELETE failed (${deleted.status})`);
-			}
-			const missing = await fetchImpl(url, { method: "GET", headers, signal });
-			return {
-				externalRef: url,
-				readBack: true,
-				deleted: missing.status === 404,
+			let created = false;
+			const deleteRemote = async () => {
+				const deleted = await fetchImpl(url, { ...requestInit, method: "DELETE" });
+				if (!deleted.ok && deleted.status !== 404) {
+					throw new Error(`WebDAV DELETE failed (${deleted.status})`);
+				}
+				return deleted;
 			};
+			try {
+				const put = await fetchImpl(url, {
+					...requestInit,
+					method: "PUT",
+					headers: { ...headers, "If-None-Match": "*" },
+					body: JSON.stringify(payload),
+				});
+				if (!put.ok) throw new Error(`WebDAV PUT failed (${put.status})`);
+				created = true;
+				const read = await fetchImpl(url, { ...requestInit, method: "GET" });
+				const body = await read.text();
+				if (!read.ok || !body.includes(payload.title)) {
+					throw new Error(`WebDAV readback failed (${read.status})`);
+				}
+				await deleteRemote();
+				const missing = await fetchImpl(url, { ...requestInit, method: "GET" });
+				return {
+					externalRef: url,
+					readBack: true,
+					deleted: missing.status === 404,
+				};
+			} catch (error) {
+				if (created) {
+					try {
+						await deleteRemote();
+					} catch {
+						// Preserve the original failure; the caller still receives a failed closure.
+					}
+				}
+				throw error;
+			}
 		},
 	};
 }
