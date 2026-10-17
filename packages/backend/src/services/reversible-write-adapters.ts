@@ -31,6 +31,16 @@ export interface WebdavWritePortConfig {
 	readonly fetchImpl?: typeof fetch;
 }
 
+export interface ProtocolsBookmarkWritePortConfig {
+	readonly apiBaseUrl?: string;
+	readonly apiToken: string;
+	readonly fetchImpl?: typeof fetch;
+	readonly bookmarkStateProbe?: (
+		targetRef: string,
+		signal?: AbortSignal,
+	) => Promise<"absent" | "present" | "unknown">;
+}
+
 function hasTraversalSegment(value: string): boolean {
 	let decoded = value;
 	try {
@@ -210,6 +220,212 @@ export function createWebdavWritePortFromEnv(
 	}
 }
 
+const DEFAULT_PROTOCOLS_API_BASE = "https://www.protocols.io/api/v3";
+const PROTOCOLS_REQUEST_TIMEOUT_MS = 15_000;
+
+function protocolsApiTarget(targetRef: string): string {
+	let value = targetRef.normalize("NFKC").trim();
+	if (/^(?:doi|crossref):/i.test(value)) {
+		throw new Error(
+			"Protocols.io bookmark writes require a protocol URI or GUID; DOI resolution is not configured",
+		);
+	}
+	if (value.toLowerCase().startsWith("protocols:")) {
+		value = value.slice("protocols:".length);
+	}
+	if (
+		!value ||
+		/[?#\\]/.test(value) ||
+		value.split("/").some((segment) => segment === "." || segment === "..")
+	) {
+		throw new Error("Protocols.io target contains an invalid path");
+	}
+	return value;
+}
+
+function protocolsApiBase(value: string | undefined): string {
+	const base = new URL((value?.trim() || DEFAULT_PROTOCOLS_API_BASE).replace(/\/+$/, ""));
+	if (!/^https?:$/.test(base.protocol) || base.search || base.hash) {
+		throw new Error("Protocols.io API base must be an HTTP(S) URL without query or fragment");
+	}
+	return base.toString().replace(/\/$/, "");
+}
+
+function protocolRecord(payload: unknown): Record<string, unknown> | undefined {
+	if (!payload || typeof payload !== "object") return undefined;
+	const value = payload as Record<string, unknown>;
+	const candidate =
+		value.protocol ??
+		(value.payload && typeof value.payload === "object"
+			? (value.payload as Record<string, unknown>).protocol
+			: undefined);
+	return candidate && typeof candidate === "object" ? (candidate as Record<string, unknown>) : undefined;
+}
+
+function protocolIdentity(payload: unknown): boolean {
+	return Boolean(protocolRecord(payload));
+}
+
+function protocolUri(payload: unknown): string | undefined {
+	const protocol = protocolRecord(payload);
+	const value = protocol?.uri ?? protocol?.protocol_uri ?? protocol?.id;
+	return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function protocolResponseOk(status: number, body: unknown): boolean {
+	if (status < 200 || status >= 300 || !body || typeof body !== "object") return false;
+	const code = (body as Record<string, unknown>).status_code;
+	return code === undefined || code === 0;
+}
+
+function protocolMutationOk(status: number, body: unknown): boolean {
+	if (!protocolResponseOk(status, body) || !body || typeof body !== "object") return false;
+	return (body as Record<string, unknown>).status_code === 0;
+}
+
+/**
+ * Backend-owned Protocols.io bookmark port. The API exposes bookmark POST/DELETE
+ * acknowledgements and protocol GET, but no user-bookmark read endpoint. We
+ * therefore verify the target before and after the mutation and require the
+ * documented status_code=0 on both mutation calls; the receipt remains explicit
+ * about this provider limitation.
+ */
+export function createProtocolsBookmarkWritePort(
+	config: ProtocolsBookmarkWritePortConfig,
+): ReversibleWritePort {
+	const apiBase = protocolsApiBase(config.apiBaseUrl);
+	const token = config.apiToken.trim();
+	if (!token || /[\r\n]/.test(token)) throw new Error("Protocols.io API token is invalid");
+	const fetchImpl = config.fetchImpl ?? fetch;
+	return {
+		async write({ targetRef, signal }) {
+			if (signal?.aborted) throw new Error("Protocols.io write aborted");
+			const target = protocolsApiTarget(targetRef);
+			const encoded = encodeURIComponent(target);
+			const protocolUrl = `${apiBase}/protocols/${encoded}`;
+			const bookmarkUrl = `${protocolUrl}/bookmarks`;
+			const request = async (
+				url: string,
+				method: "GET" | "POST" | "DELETE",
+				requestSignal: AbortSignal | null | undefined = signal,
+			) => {
+				if (requestSignal?.aborted) throw new Error("Protocols.io write aborted");
+				const controller = new AbortController();
+				const timer = setTimeout(() => controller.abort(), PROTOCOLS_REQUEST_TIMEOUT_MS);
+				const abort = () => controller.abort();
+				requestSignal?.addEventListener("abort", abort, { once: true });
+				try {
+					const response = await fetchImpl(url, {
+						method,
+						headers: {
+							accept: "application/json",
+							authorization: `Bearer ${token}`,
+						},
+						signal: controller.signal,
+					});
+					const text = await response.text();
+					let body: unknown;
+					try {
+						body = text ? (JSON.parse(text) as unknown) : undefined;
+					} catch {
+						body = undefined;
+					}
+					return { response, body };
+				} catch (error) {
+					if (requestSignal?.aborted || controller.signal.aborted) {
+						throw new Error("Protocols.io write was cancelled");
+					}
+					throw new Error(
+						error instanceof Error
+							? `Protocols.io request failed: ${error.message.slice(0, 240)}`
+							: "Protocols.io request failed",
+					);
+				} finally {
+					clearTimeout(timer);
+					requestSignal?.removeEventListener("abort", abort);
+				}
+			};
+			const initial = await request(protocolUrl, "GET");
+			const initialProtocolUri = protocolUri(initial.body);
+			if (
+				!protocolResponseOk(initial.response.status, initial.body) ||
+				!protocolIdentity(initial.body) ||
+				!initialProtocolUri
+			) {
+				throw new Error(`Protocols.io target preflight failed (${initial.response.status})`);
+			}
+			const bookmarkState = config.bookmarkStateProbe
+				? await config.bookmarkStateProbe(target, signal)
+				: "unknown";
+			if (bookmarkState !== "absent") {
+				throw new Error(
+					"Protocols.io write requires a bookmark-state probe proving the target is not already bookmarked",
+				);
+			}
+			let bookmarked = false;
+			try {
+				const created = await request(bookmarkUrl, "POST");
+				if (!protocolMutationOk(created.response.status, created.body)) {
+					throw new Error(`Protocols.io bookmark failed (${created.response.status})`);
+				}
+				bookmarked = true;
+				const read = await request(protocolUrl, "GET");
+				const readProtocolUri = protocolUri(read.body);
+				if (
+					!protocolResponseOk(read.response.status, read.body) ||
+					!protocolIdentity(read.body) ||
+					readProtocolUri !== initialProtocolUri
+				) {
+					throw new Error(`Protocols.io readback failed (${read.response.status})`);
+				}
+				const deleted = await request(bookmarkUrl, "DELETE", null);
+				if (!protocolMutationOk(deleted.response.status, deleted.body)) {
+					throw new Error(`Protocols.io bookmark delete failed (${deleted.response.status})`);
+				}
+				const finalRead = await request(protocolUrl, "GET", null);
+				const finalProtocolUri = protocolUri(finalRead.body);
+				if (
+					!protocolResponseOk(finalRead.response.status, finalRead.body) ||
+					!protocolIdentity(finalRead.body) ||
+					finalProtocolUri !== initialProtocolUri
+				) {
+					throw new Error(`Protocols.io final target check failed (${finalRead.response.status})`);
+				}
+				const finalBookmarkState = config.bookmarkStateProbe
+					? await config.bookmarkStateProbe(target, undefined)
+					: "unknown";
+				if (finalBookmarkState !== "absent") {
+					throw new Error("Protocols.io bookmark deletion could not be verified");
+				}
+				return {
+					externalRef: `https://www.protocols.io/view/${finalProtocolUri}`,
+					readBack: true,
+					deleted: true,
+				};
+			} catch (error) {
+				if (bookmarked) {
+					try {
+						await request(bookmarkUrl, "DELETE", null);
+					} catch {
+						// Preserve the original failure; callers must reconcile the bookmark manually.
+					}
+				}
+				throw error;
+			}
+		},
+	};
+}
+
+export function createProtocolsBookmarkWritePortFromEnv(
+	env: Record<string, string | undefined> = process.env,
+): ReversibleWritePort | undefined {
+	const apiToken = (env.PROTOCOLS_IO_API_TOKEN || env.PROTOCOLS_IO_API_KEY)?.trim();
+	if (!apiToken) return undefined;
+	// Protocols.io does not expose a documented user-bookmark state endpoint.
+	// Without an injected probe, an env-only port cannot satisfy the reversible contract.
+	return undefined;
+}
+
 interface PortAdapterOptions {
 	readonly id: string;
 	readonly label: string;
@@ -350,8 +566,13 @@ export function createProtocolsBookmarkWriteAdapter(
 		label: "Protocols.io bookmark (reversible write)",
 		port,
 		validateTarget(targetRef) {
-			if (!/^(?!https?:)(?:[a-z][a-z0-9-]{1,31}:)?[A-Za-z0-9][A-Za-z0-9._/-]{1,510}$/i.test(targetRef)) {
-				throw new Error("Protocols.io target must be a protocol URI, DOI, or GUID");
+			if (/^(?:doi|crossref):/i.test(targetRef)) {
+				throw new Error(
+					"Protocols.io bookmark writes require a protocol URI or GUID; DOI resolution is not configured",
+				);
+			}
+			if (!/^(?!https?:)(?:protocols:)?[A-Za-z0-9][A-Za-z0-9._/-]{1,510}$/i.test(targetRef)) {
+				throw new Error("Protocols.io target must be a protocol URI or GUID");
 			}
 		},
 	});
