@@ -12047,13 +12047,13 @@ async function startSetup(pi, args, ctx) {
     })();
   }, 0);
 }
-function obsidianWorkbench(pi) {
+function obsidianWorkbench(pi, options = {}) {
   if (process.env.PI_SUBAGENT_CHILD === "1") return;
   pi.events?.on?.("drone:acceptance-verifier/v1", (payload) => {
     if (payload?.version !== 1 || typeof payload.kind !== "string") return;
     registerAcceptanceVerifier(payload.kind, payload.definition || {});
   });
-  const knowledge = registerKnowledgeInterface(pi);
+  const knowledge = registerKnowledgeInterface(pi, { readOnly: options.readOnly === true });
   registerTool(pi, {
     name: "research_setup_options",
     label: "Obsidian MCP \xB7 research-vault setup options",
@@ -12071,10 +12071,10 @@ function obsidianWorkbench(pi) {
     async execute(_id, params, _signal, _update, ctx) {
       const current = await obsidianStatus(ctx.cwd);
       const context = await inspectObsidianSetup({ cwd: ctx.cwd, vault: params.path || current.vault });
-      const options = { ...researchSetupOptions2(), context, binding: OBSIDIAN_SETUP_BINDING };
+      const options2 = { ...researchSetupOptions2(), context, binding: OBSIDIAN_SETUP_BINDING };
       return {
-        content: [{ type: "text", text: JSON.stringify({ current, ...options }, null, 2) }],
-        details: { current, ...options }
+        content: [{ type: "text", text: JSON.stringify({ current, ...options2 }, null, 2) }],
+        details: { current, ...options2 }
       };
     }
   });
@@ -12104,9 +12104,9 @@ function obsidianWorkbench(pi) {
       if (!ctx.hasUI) throw new Error("Obsidian setup needs an interactive confirmation before writing");
       if (signal?.aborted) throw new Error("Obsidian setup aborted");
       const vault = resolveSetupVault(params.path, ctx.cwd);
-      const options = researchSetupOptions2();
-      const profile = options.profiles.find((item) => item.id === params.profile);
-      if (!profile || !options.depositModes.some((item) => item.id === params.deposit_mode) || !options.subagentMcpPolicies.some((item) => item.id === params.subagent_mcp))
+      const options2 = researchSetupOptions2();
+      const profile = options2.profiles.find((item) => item.id === params.profile);
+      if (!profile || !options2.depositModes.some((item) => item.id === params.deposit_mode) || !options2.subagentMcpPolicies.some((item) => item.id === params.subagent_mcp))
         throw new Error("Invalid setup options");
       const priorBinding = knowledgeDirectory() ? await readKnowledgeBinding({ fresh: true }) : null;
       const summary = [

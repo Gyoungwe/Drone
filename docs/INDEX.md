@@ -188,7 +188,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## packages/pi-knowledge — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`packages/pi-knowledge/` 是第一个可独立安装的 Pi Package：`src/index.ts` 只组装现有知识扩展入口，`scripts/build-pi-knowledge.mjs` 将 `@drone/knowledge` 与扩展图打包到 `dist/index.mjs`，并把知识 worker 放在包内 `lib/knowledge/runtime/worker.mjs`。`skills/` 由内置 `research-vault`、`research-workflow`、`research-show-me` 构建同步；`scripts/smoke-pi-package.mjs` 覆盖未配置 Vault 的 `unconfigured` 回执、fixture 检索和安装/卸载路径。原生 Pi 的最低版本是 `1.1.0`；Pi 1.1.0 将本地 `.tgz` 视为原始扩展路径，因此 smoke 会如实记录该限制，并用解包后的 package directory 验证可加载路径，不把它误报为 tarball 安装通过。生成 dist 的 R8 自包含检查由 `scripts/check-architecture.mjs` 执行。
+`packages/pi-knowledge/` 是第一个可独立安装的 Pi Package 的宿主兼容构建副本；源码权威版本已迁移到绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，当前 main `d5a3ea1`）。宿主副本的 `src/index.ts` 只组装现有知识扩展入口，`scripts/build-pi-knowledge.mjs` 将 `@drone/knowledge` 与扩展图打包到 `dist/index.mjs`，并把知识 worker 放在包内 `lib/knowledge/runtime/worker.mjs`。外部包已移除宿主源码/fallback，具备自己的 manifest、build/check 和安装 smoke；在 npm 首批发布完成后删除宿主兼容副本。`skills/` 由内置 `research-vault`、`research-workflow`、`research-show-me` 构建同步；`scripts/smoke-pi-package.mjs` 覆盖未配置 Vault 的 `unconfigured` 回执、fixture 检索和安装/卸载路径。原生 Pi 的最低版本是 `1.1.0`。生成 dist 的 R8 自包含检查由 `scripts/check-architecture.mjs` 执行。
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 
