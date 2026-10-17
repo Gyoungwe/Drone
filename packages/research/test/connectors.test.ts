@@ -35,8 +35,8 @@ describe("research connectors", () => {
 			"protocols",
 			"pubmed",
 			"sra",
-			"zotero",
 			"zenodo",
+			"zotero",
 		]);
 		expect(new Set(ids).size).toBe(ids.length);
 	});
