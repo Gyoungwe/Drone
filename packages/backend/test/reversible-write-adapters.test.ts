@@ -36,6 +36,21 @@ describe("reversible research write adapters", () => {
 		expect(calls).toEqual(["/acceptance/note.md"]);
 	});
 
+	it("accepts browser-relative WebDAV and Protocols.io references", () => {
+		const webdav = createWebdavWriteAdapter();
+		expect(() =>
+			webdav.prepare({ ...input, adapterId: "webdav-write", targetRef: "README.md" }),
+		).not.toThrow();
+		const protocols = createProtocolsBookmarkWriteAdapter();
+		expect(() =>
+			protocols.prepare({
+				...input,
+				adapterId: "protocols-bookmark-write",
+				targetRef: "protocols:protocol-guid",
+			}),
+		).not.toThrow();
+	});
+
 	it("rejects a Protocols.io write without deletion verification", async () => {
 		const adapter = createProtocolsBookmarkWriteAdapter({
 			write: async ({ targetRef }) => ({
@@ -52,20 +67,27 @@ describe("reversible research write adapters", () => {
 		await expect(adapter.execute(plan, { approved: true })).rejects.toThrow("closure");
 	});
 
-	it("executes the backend WebDAV HTTP contract in order", async () => {
-		const requests: Array<{ method: string; headers?: HeadersInit }> = [];
+	it("executes the backend WebDAV HTTP contract after an auth challenge", async () => {
+		const requests: Array<{ method: string; authorization: string | null }> = [];
 		let gets = 0;
-		const fetchImpl = async (request: string | URL, init?: RequestInit) => {
+		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
 			const method = init?.method ?? "GET";
-			requests.push({ method, headers: init?.headers });
-			if (method === "PUT") return { ok: true, status: 201, text: async () => "" } as Response;
-			if (method === "DELETE") return { ok: true, status: 204, text: async () => "" } as Response;
-			gets += 1;
-			return gets === 1
-				? ({ ok: false, status: 404, text: async () => "" } as Response)
-				: gets === 2
-					? ({ ok: true, status: 200, text: async () => '{"title":"Temporary acceptance note"}' } as Response)
-					: ({ ok: false, status: 404, text: async () => "" } as Response);
+			const authorization = new Headers(init?.headers).get("authorization");
+			requests.push({ method, authorization });
+			if (method === "GET") {
+				gets += 1;
+				if (gets === 1 && !authorization) {
+					return new Response("", {
+						status: 401,
+						headers: { "WWW-Authenticate": 'Basic realm="dav"' },
+					});
+				}
+				if (gets === 2) return new Response("", { status: 404 });
+				if (gets === 3) return new Response('{"title":"Temporary acceptance note"}', { status: 200 });
+				return new Response("", { status: 404 });
+			}
+			if (method === "PUT") return new Response("", { status: 201 });
+			return new Response("", { status: 204 });
 		};
 		const port = createWebdavWritePort({
 			baseUrl: "http://dav.test:8080",
@@ -82,9 +104,11 @@ describe("reversible research write adapters", () => {
 			readBack: true,
 			deleted: true,
 		});
-		expect(requests.map(({ method }) => method)).toEqual(["GET", "PUT", "GET", "DELETE", "GET"]);
-		expect(requests[1]?.headers).toMatchObject({ "If-None-Match": "*" });
+		expect(requests.map(({ method }) => method)).toEqual(["GET", "GET", "PUT", "GET", "DELETE", "GET"]);
+		expect(requests[0]?.authorization).toBeNull();
+		expect(requests.slice(1).every(({ authorization }) => authorization?.startsWith("Basic "))).toBe(true);
 	});
+
 
 	it("cleans up a created object when readback fails", async () => {
 		const methods: string[] = [];
