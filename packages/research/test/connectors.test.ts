@@ -21,6 +21,26 @@ function response(value: unknown, status = 200): Response {
 }
 
 describe("research connectors", () => {
+	it("exposes one complete default connector inventory", () => {
+		const ids = new ResearchConnectorRegistry().list().map((connector) => connector.id);
+		expect(ids).toEqual([
+			"crossref",
+			"doi",
+			"ena",
+			"europe-pmc",
+			"institutional",
+			"openalex",
+			"osf",
+			"project-storage",
+			"protocols",
+			"pubmed",
+			"sra",
+			"zenodo",
+			"zotero",
+		]);
+		expect(new Set(ids).size).toBe(ids.length);
+	});
+
 	it("normalizes Crossref records into read-only source receipts", async () => {
 		const connector = createCrossrefConnector();
 		const hits = await connector.search("single cell", {

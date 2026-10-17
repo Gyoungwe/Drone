@@ -1,4 +1,4 @@
-import { mkdtemp, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkKnowledgeSnapshotReuse } from "@drone/knowledge";
@@ -48,6 +48,29 @@ describe("ResearchResourceService", () => {
 				context: { projectId: approved.snapshot.projectId!, workspaceId: approved.snapshot.workspaceId! },
 			}).reusable,
 		).toBe(true);
+	});
+
+	it("covers empty projects, Unicode and long paths, compressed scientific formats, and unknown binaries", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-research-project-"));
+		const research = await service();
+		expect(await research.list(root)).toEqual([]);
+
+		const longSegment = "x".repeat(180);
+		const directory = join(root, "中文研究", longSegment);
+		await mkdir(directory, { recursive: true });
+		const fixtures = [
+			["reads.fastq.gz", Buffer.from("@read1\\nACGT\\n+\\nIIII\\n")],
+			["variants.vcf.gz", Buffer.from("##fileformat=VCFv4.3\\n")],
+			["aligned.bam", Buffer.from([0x42, 0x41, 0x4d, 0x01])],
+			["mystery", Buffer.from([0x00, 0x01, 0x02, 0x03])],
+		] as const;
+		const captures = [];
+		for (const [name, bytes] of fixtures) {
+			await writeFile(join(directory, name), bytes);
+			captures.push(await research.capture({ cwd: root, relativePath: join("中文研究", longSegment, name) }));
+		}
+		expect(captures.map(({ record }) => record.format)).toEqual(["fastq", "vcf", "bam", "binary"]);
+		expect(captures.every(({ idempotent }) => !idempotent)).toBe(true);
 	});
 
 	it("creates a new revision when file bytes change and rejects root escape", async () => {
