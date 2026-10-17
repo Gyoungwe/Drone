@@ -81,5 +81,4 @@ describe("reversible research write adapters", () => {
 		});
 		expect(requests.map((request) => request.split(" ")[0])).toEqual(["PUT", "GET", "DELETE", "GET"]);
 	});
-
 });
