@@ -476,7 +476,7 @@ Claude Code adapter 必须通过同一套：
 | Skills | **已实现（目录与路由）** | Tools & Skills、skill router、资源校验和相关测试 | 用 `SKILL-01` 证明真实 invocation、调用计数和禁用后的行为变化 |
 | MCP / 研究连接器 | **已实现；WebDAV/Zotero 写入闭环已验收** | MCP 服务、Zotero、WebDAV、research adapters 和局部测试；WebDAV 与 Zotero 均有真实临时对象回执；Protocols.io 保持只读 | 继续完成 `MCP-01` / `CONN-01` 的隔离真实调用、关闭重试和唯一返回值验收；Protocols.io 不进行写入 |
 | 外部写入回读删除 | **WebDAV/Zotero 已通过；Protocols.io 只读** | WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；凭据仅在进程环境使用 | 保持 Protocols.io 只读；后续若启用写入，必须另行授权并保留同等回读证据 |
-| 结果红线、evidence、provenance | **已实现（领域门禁）** | shared/backend redline、evidence capsule、hash 和状态测试 | 在桌面端注入缺来源、篡改、断线、权限拒绝，证明 UI 与审计都阻断 |
+| 结果红线、evidence、provenance | **REDLINE-01 隔离验收通过** | `npm run check:redline`：4/4 fixture suites；publication / metacognitive / orchestration 门禁均返回 blocked 或 pause，sealed proof 含原因、差异路径和审计 ID | 构建产物已包含结果红线资源；交互式桌面截图仍是可选观察，不改变领域门禁结论 |
 | Pi 运行基线 | **兼容矩阵已通过（锁定/latest）；next 未发布** | `check:pi-compat`：锁定 `1.1.0`、latest `1.3.0` 均加载 pi-core/knowledge/research；next 如实记录 `NOT_PUBLISHED` | 发布前仍需确定 npm scope、canary 与公开发布策略 |
 | `DroneHostPort` 与通用插件能力协商 | **已实现（首版合同）** | `@drone/plugin-api`、HostPort、manifest capability check、`compatible/degraded/incompatible` 测试和迁移闸门已合入 `3f8af50c` | 完成所有插件迁移和真实宿主加载验收；npm scope/公开发布仍待决定 |
 | `@drone/pi-*` 公共包与 `@drone/research-suite` | **core/knowledge/research 首批已验证** | 四包均有 manifest/build/check/smoke；plugin lifecycle 已完成本地 pack 安装→升级→回滚→卸载；Pi 锁定/latest 矩阵通过 | analysis/evidence/connectors 仍按 v1.1 规划；npm scope 与公开发布待单独决策 |
@@ -568,7 +568,7 @@ Claude Code adapter 必须通过同一套：
 | `MCP-01` | 启用本地测试 MCP 的 `echo_marker`，要求返回唯一值 `DRONE-MCP-001`，关闭后重试 | 连接状态、真实 tool call、唯一返回值、关闭后的 unavailable/blocked | MCP 宿主已实现，专用 marker 验收未完成 | 加入隔离 MCP fixture 和桌面执行记录 |
 | `CONN-01` | 启用研究连接器搜索唯一测试词，再关闭后重复搜索 | 稳定 source ID、URL、访问时间、调用记录、关闭后的行为 | 适配器与 IPC 已实现，真实外部验收未完成 | 选择可用连接器，完成 read-only 真实验收 |
 | `WRITE-01` | 对 Zotero/WebDAV 执行授权→写入→回读→删除→再回读 | 外部对象 ID、回读内容、删除确认、审计记录 | **PASS（WebDAV + Zotero）**；Protocols.io 保持只读 | 保留无凭据回执；Protocols.io 只有在另行授权 token 后才增加写入验收 |
-| `REDLINE-01` | 注入缺来源、篡改、方法漂移、重复数不足、断线、权限拒绝和 stale source | UI 阻断状态、原因、证据差异、审计记录、修复/确认后的重新进入路径 | 领域门禁已实现，桌面注入未完成 | 为每类违规建立可重复 fixture 并逐项验收 |
+| `REDLINE-01` | 注入缺来源、篡改、方法漂移、重复数不足、断线、权限拒绝和 stale source | `npm run check:redline`；每类 fixture 均有阻断状态、原因、证据差异和 sealed 审计 ID | **PASS（隔离领域验收）** | 如需 GUI 走查，沿用同一 proof 投影；不作为本机构建产物降级判定 |
 
 详细的 C01–C15 操作步骤、状态记录模板和执行顺序见 [`v3-desktop-capability-acceptance-plan.md`](v3-desktop-capability-acceptance-plan.md)。最终发布必须同时满足：核心自动化门禁通过、红线清单有真实证据、所有未完成项明确标为 `BLOCKED` 或 `NOT_RUN`，不能把它们写成完成。
 
@@ -641,4 +641,4 @@ Claude Code adapter 必须通过同一套：
 - **插件生命周期**：`check:plugin-api --migration --lifecycle` 已完成本地 pack 的 `0.9.0 → 1.0.0 → 0.9.0 → uninstall`，并验证 `DroneHostPort` 声明。
 - **Pi 兼容**：锁定 `1.1.0` 与 latest `1.3.0` 均通过 pi-core/pi-knowledge/pi-research 加载；next 标签当前 `NOT_PUBLISHED`，不伪造通过。
 - **外部写入**：WebDAV 和 Zotero 临时 note 均完成授权→创建→回读→删除→再回读；Protocols.io 只读，不进行 bookmark/write。
-- **未关闭门槛**：`MEM-01`、`MCP-01`、`REDLINE-01`、`CONN-01` 真实行为仍按计划标记 `NOT_RUN` 或 read-only；analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。npm scope、公开发布、正式签名/发行仍需另行决策。
+- **未关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01` 真实行为仍按计划标记 `NOT_RUN` 或 read-only；`REDLINE-01` 已有 `npm run check:redline` 隔离真实行为证据。analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。npm scope、公开发布、正式签名/发行仍需另行决策。

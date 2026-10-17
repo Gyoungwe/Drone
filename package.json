@@ -22,6 +22,7 @@
 		"test": "npm run build:pi-core && npm run build:pi-research && npm run test --workspaces --if-present && node --test scripts/check-build-inputs.test.mjs scripts/academic-eval/score.test.mjs scripts/check-native-pi.test.mjs",
 		"test:unit": "npm run test:unit -w @drone/backend",
 		"test:sdk": "npm run test:sdk -w @drone/backend",
+		"check:redline": "npm run test -w @drone/backend -- test/redline-acceptance.test.mjs",
 		"dist": "npm run dist -w packages/desktop",
 		"lint": "biome check .",
 		"skills:sync": "python scripts/sync-research-skills.py",

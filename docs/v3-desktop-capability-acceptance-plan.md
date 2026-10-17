@@ -60,7 +60,7 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | Skills | **已实现（目录与路由）** | Tools & Skills、skill router、资源校验和相关测试 | 完成 `SKILL-01`，保留真实 invocation 和禁用后的反证 |
 | MCP / 连接器 | **已实现（适配器与 IPC；WebDAV/Zotero 写入闭环）** | MCP service、Zotero/WebDAV/research adapters；WebDAV 与 Zotero 临时对象均完成真实创建→回读→删除 | `MCP-01` / `CONN-01` 真实调用和关闭重试仍待；Protocols.io 保持只读 |
 | 外部写入闭环 | **WebDAV + Zotero 已通过；Protocols.io 只读** | 两个连接器均完成授权→创建→回读→删除→再回读，凭据未写入仓库 | 维持 Protocols.io 只读；若以后启用写入需另行授权 token |
-| 结果红线与 evidence | **已实现（领域门禁）** | 状态合同、publication gate、evidence capsule、hash 测试 | 完成 `REDLINE-01` 的桌面违规注入和审计核对 |
+| 结果红线与 evidence | **REDLINE-01 隔离验收通过** | 状态合同、publication/metacognitive/orchestration gate、`npm run check:redline` 的 4 类可重复 fixture 与 sealed proof | 交互式桌面截图可继续作为可选观察；本机构建产物和领域审计已闭合 |
 | Pi 基线 | **锁定/latest 兼容矩阵已通过** | Pi `1.1.0` 与 latest `1.3.0` 均加载三套原生插件；next 为 `NOT_PUBLISHED` | npm scope、canary 和公开发布仍待决策 |
 | 公共 `@drone/pi-*` 包 | **core/knowledge/research 首批已验证** | 四包 manifest/build/check/smoke 通过；本地 pack 生命周期安装→升级→回滚→卸载通过 | analysis/evidence/connectors 按 v1.1 规划；公开发布待 npm scope 决策 |
 | 宿主 / 插件仓库边界 | **骨架与合同已完成，公开发布未完成** | `../drone-plugins` 多包 workspace、manifest 检查、plugin-api migration gate、research-suite bundle gate | 决定 npm scope，迁移至少两个可公开分发插件并完成真实安装/卸载/回滚 |
@@ -81,7 +81,7 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | `MCP-01` | 启用本地 MCP 的 `echo_marker`，要求只返回 `DRONE-MCP-001`；关闭服务并重载后重试 | 连接状态、真实 tool call、唯一返回值、关闭后的 unavailable/blocked | MCP 宿主已实现；marker 验收未完成 | 固化隔离 MCP fixture，执行启用/关闭双轮 |
 | `CONN-01` | 启用连接器搜索唯一测试词，关闭后再次搜索 | source ID、URL、访问时间、调用记录；关闭后不再调用该连接器 | 适配器与 IPC 已实现；真实验收未完成 | 选择可用连接器完成 read-only 回执 |
 | `WRITE-01` | 对 Zotero/WebDAV 执行授权→写入→回读→删除→再回读 | 外部对象 ID、回读内容、删除确认、审计记录 | **PASS（WebDAV + Zotero）**；Protocols.io 只读 | 保留无凭据回执；Protocols.io 写入不在当前计划范围 |
-| `REDLINE-01` | 注入缺来源、数字篡改、方法漂移、重复数不足、断线、拒绝和 stale source | UI 阻断状态、原因、证据差异、审计记录、修复后的重新进入路径 | 领域门禁已实现；桌面注入未完成 | 为每类违规建立可重复 fixture 并逐项执行 |
+| `REDLINE-01` | 注入缺来源、数字篡改、方法漂移、重复数不足、断线、拒绝和 stale source | `npm run check:redline`；每类 fixture 均有阻断状态、原因、证据差异和 sealed 审计 ID | **PASS（隔离领域验收）** | 如需 GUI 走查，沿用同一 proof 投影；不作为本机构建产物降级判定 |
 
 ## 3.3 执行前清单
 
@@ -380,4 +380,4 @@ revision / ETag / SHA-256：
 - WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；Protocols.io 按计划保持只读。
 - `check:plugin-api --migration --lifecycle` 的本地 pack 安装→升级→回滚→卸载通过；Pi `1.1.0` 与 latest `1.3.0` 兼容矩阵通过，next 为 `NOT_PUBLISHED`。
 - 正式桌面门槛为本机构建产物：16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。交互式 Electron SIGABRT 不计为降级。
-- `MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 的真实行为仍保持 `NOT_RUN` 或 read-only，不能用静态资源通过替代。
+- `MEM-01`、`MCP-01`、`CONN-01` 的真实行为仍保持 `NOT_RUN` 或 read-only；`REDLINE-01` 已通过 `npm run check:redline` 的隔离真实行为验收，不能用静态资源通过替代。
