@@ -49,6 +49,13 @@ describe("reversible research write adapters", () => {
 				targetRef: "protocols:protocol-guid",
 			}),
 		).not.toThrow();
+		expect(() =>
+			protocols.prepare({
+				...input,
+				adapterId: "protocols-bookmark-write",
+				targetRef: "crossref:10.1234/protocol-guid",
+			}),
+		).not.toThrow();
 	});
 
 	it("rejects a Protocols.io write without deletion verification", async () => {
@@ -123,7 +130,7 @@ describe("reversible research write adapters", () => {
 			methods.push(method);
 			if (method === "GET" && methods.length === 1) return new Response("", { status: 404 });
 			if (method === "PUT") return new Response("", { status: 201 });
-			if (method === "GET") return new Response('{"title":"other"}', { status: 200 });
+			if (method === "GET") return new Response('{"title":"noteworthy"}', { status: 200 });
 			return new Response(null, { status: 204 });
 		};
 		const port = createWebdavWritePort({
