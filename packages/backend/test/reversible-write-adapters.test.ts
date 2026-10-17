@@ -19,6 +19,16 @@ describe("reversible research write adapters", () => {
 		await expect(adapter.execute(plan, { approved: true })).rejects.toThrow("unavailable");
 	});
 
+	it("rejects WebDAV base URLs with query or fragment", () => {
+		expect(() =>
+			createWebdavWritePort({
+				baseUrl: "https://dav.test/dav/?token=temporary",
+				username: "user",
+				password: "password",
+			}),
+		).toThrow("query or fragment");
+	});
+
 	it("fails closed on malformed optional WebDAV environment", () => {
 		expect(
 			createWebdavWritePortFromEnv({
