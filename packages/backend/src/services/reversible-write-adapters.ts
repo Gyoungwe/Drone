@@ -261,8 +261,8 @@ export function createWebdavWriteAdapter(port?: ReversibleWritePort): Reversible
 			if (hasTraversalSegment(targetRef)) {
 				throw new Error("WebDAV write target cannot contain traversal segments");
 			}
-			if (!/^\/(?:[^/]+\/)*[^/]+$/.test(targetRef) && !/^https?:\/\//i.test(targetRef)) {
-				throw new Error("WebDAV write target must be an absolute path or HTTP(S) URL");
+			if (!/^\/?(?:[^/?#]+\/)*[^/?#]+$/.test(targetRef) && !/^https?:\/\//i.test(targetRef)) {
+				throw new Error("WebDAV write target must be a path or HTTP(S) URL");
 			}
 		},
 	});
@@ -276,7 +276,7 @@ export function createProtocolsBookmarkWriteAdapter(
 		label: "Protocols.io bookmark (reversible write)",
 		port,
 		validateTarget(targetRef) {
-			if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{2,511}$/.test(targetRef)) {
+			if (!/^(?:protocols:)?[A-Za-z0-9][A-Za-z0-9._/-]{1,510}$/.test(targetRef)) {
 				throw new Error("Protocols.io target must be a protocol URI, DOI, or GUID");
 			}
 		},
