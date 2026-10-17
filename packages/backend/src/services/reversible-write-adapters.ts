@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { WebDavTransport } from "../knowledge/webdav-transport";
 import type { ResearchWriteAdapter, ResearchWriteExecutionContext } from "@drone/research";
 import type {
 	ResearchWritePayload,
@@ -63,52 +64,59 @@ function webdavTargetUrl(baseUrl: string, targetRef: string): string {
 
 /**
  * Backend-owned WebDAV port. Credentials never cross into the research package.
+ * The shared transport negotiates Basic/Digest only after a server challenge.
  * The port proves PUT → GET/title match → DELETE → GET/404 before reporting success.
  */
 export function createWebdavWritePort(config: WebdavWritePortConfig): ReversibleWritePort {
 	const fetchImpl = config.fetchImpl ?? fetch;
-	const authorization = `Basic ${Buffer.from(`${config.username}:${config.password}`).toString("base64")}`;
+	const base = new URL(config.baseUrl);
+	const transport = new WebDavTransport({
+		endpoint: base.origin,
+		username: config.username,
+		password: () => config.password,
+		fetch: fetchImpl,
+	});
 	return {
 		async write({ targetRef, payload, signal }) {
+			if (signal?.aborted) throw new Error("WebDAV write aborted");
 			const url = webdavTargetUrl(config.baseUrl, targetRef);
-			const headers = {
-				Authorization: authorization,
-				"Content-Type": "application/json; charset=utf-8",
-				Accept: "application/json, text/plain, */*",
-			};
-			const requestInit = { headers, signal, redirect: "error" as const };
-			const existing = await fetchImpl(url, { ...requestInit, method: "GET" });
+			const target = new URL(url);
+			const path = target.pathname.replace(/^\/+/, "");
+			const request = (method: string, headers?: Record<string, string>, body?: string) =>
+				transport.request(method, path, headers, body);
+			const existing = await request("GET");
 			if (existing.status !== 404) {
 				throw new Error(
-					existing.ok
+					existing.status >= 200 && existing.status < 300
 						? "WebDAV write target already exists"
-						: `WebDAV target preflight failed (${existing.status})`,
+						: "WebDAV target preflight failed (" + existing.status + ")",
 				);
 			}
 			let created = false;
 			const deleteRemote = async () => {
-				const deleted = await fetchImpl(url, { ...requestInit, method: "DELETE" });
-				if (!deleted.ok && deleted.status !== 404) {
-					throw new Error(`WebDAV DELETE failed (${deleted.status})`);
+				const deleted = await request("DELETE");
+				if (deleted.status >= 400 && deleted.status !== 404) {
+					throw new Error("WebDAV DELETE failed (" + deleted.status + ")");
 				}
 				return deleted;
 			};
 			try {
-				const put = await fetchImpl(url, {
-					...requestInit,
-					method: "PUT",
-					headers: { ...headers, "If-None-Match": "*" },
-					body: JSON.stringify(payload),
-				});
-				if (!put.ok) throw new Error(`WebDAV PUT failed (${put.status})`);
+				const put = await request(
+					"PUT",
+					{ "Content-Type": "application/json; charset=utf-8", "If-None-Match": "*" },
+					JSON.stringify(payload),
+				);
+				if (put.status < 200 || put.status >= 300) {
+					throw new Error("WebDAV PUT failed (" + put.status + ")");
+				}
 				created = true;
-				const read = await fetchImpl(url, { ...requestInit, method: "GET" });
-				const body = await read.text();
-				if (!read.ok || !body.includes(payload.title)) {
-					throw new Error(`WebDAV readback failed (${read.status})`);
+				const read = await request("GET");
+				const body = read.body.toString("utf8");
+				if (read.status < 200 || read.status >= 300 || !body.includes(payload.title)) {
+					throw new Error("WebDAV readback failed (" + read.status + ")");
 				}
 				await deleteRemote();
-				const missing = await fetchImpl(url, { ...requestInit, method: "GET" });
+				const missing = await request("GET");
 				return {
 					externalRef: url,
 					readBack: true,
@@ -127,7 +135,6 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 		},
 	};
 }
-
 export function createWebdavWritePortFromEnv(
 	env: Record<string, string | undefined> = process.env,
 ): ReversibleWritePort | undefined {
