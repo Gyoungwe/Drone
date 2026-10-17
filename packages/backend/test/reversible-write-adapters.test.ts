@@ -51,18 +51,21 @@ describe("reversible research write adapters", () => {
 		});
 		await expect(adapter.execute(plan, { approved: true })).rejects.toThrow("closure");
 	});
+
 	it("executes the backend WebDAV HTTP contract in order", async () => {
-		const requests: string[] = [];
-		let reads = 0;
-		const fetchImpl = async (input: string | URL, init?: RequestInit) => {
+		const requests: Array<{ method: string; headers?: HeadersInit }> = [];
+		let gets = 0;
+		const fetchImpl = async (request: string | URL, init?: RequestInit) => {
 			const method = init?.method ?? "GET";
-			requests.push(`${method} ${String(input)}`);
+			requests.push({ method, headers: init?.headers });
 			if (method === "PUT") return { ok: true, status: 201, text: async () => "" } as Response;
 			if (method === "DELETE") return { ok: true, status: 204, text: async () => "" } as Response;
-			reads += 1;
-			return reads === 1
-				? ({ ok: true, status: 200, text: async () => '{"title":"Temporary acceptance note"}' } as Response)
-				: ({ ok: false, status: 404, text: async () => "" } as Response);
+			gets += 1;
+			return gets === 1
+				? ({ ok: false, status: 404, text: async () => "" } as Response)
+				: gets === 2
+					? ({ ok: true, status: 200, text: async () => '{"title":"Temporary acceptance note"}' } as Response)
+					: ({ ok: false, status: 404, text: async () => "" } as Response);
 		};
 		const port = createWebdavWritePort({
 			baseUrl: "http://dav.test:8080",
@@ -79,6 +82,53 @@ describe("reversible research write adapters", () => {
 			readBack: true,
 			deleted: true,
 		});
-		expect(requests.map((request) => request.split(" ")[0])).toEqual(["PUT", "GET", "DELETE", "GET"]);
+		expect(requests.map(({ method }) => method)).toEqual(["GET", "PUT", "GET", "DELETE", "GET"]);
+		expect(requests[1]?.headers).toMatchObject({ "If-None-Match": "*" });
+	});
+
+	it("cleans up a created object when readback fails", async () => {
+		const methods: string[] = [];
+		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			const method = init?.method ?? "GET";
+			methods.push(method);
+			if (method === "GET" && methods.length === 1) {
+				return { ok: false, status: 404, text: async () => "" } as Response;
+			}
+			if (method === "PUT") return { ok: true, status: 201, text: async () => "" } as Response;
+			if (method === "GET") return { ok: true, status: 200, text: async () => '{"title":"other"}' } as Response;
+			return { ok: true, status: 204, text: async () => "" } as Response;
+		};
+		const port = createWebdavWritePort({
+			baseUrl: "http://dav.test:8080",
+			username: "user",
+			password: "password",
+			fetchImpl,
+		});
+		await expect(port.write({ targetRef: "/acceptance/failure.json", payload: input.payload })).rejects.toThrow(
+			"readback failed",
+		);
+		expect(methods).toEqual(["GET", "PUT", "GET", "DELETE"]);
+	});
+
+	it("refuses existing, cross-origin, and traversal targets", async () => {
+		const existingFetch = async (_request: string | URL, init?: RequestInit) =>
+			(init?.method === "GET"
+				? ({ ok: true, status: 200, text: async () => '{"title":"existing"}' } as Response)
+				: ({ ok: true, status: 201, text: async () => "" } as Response));
+		const existingPort = createWebdavWritePort({
+			baseUrl: "http://dav.test:8080/dav/",
+			username: "user",
+			password: "password",
+			fetchImpl: existingFetch,
+		});
+		await expect(
+			existingPort.write({ targetRef: "/dav/existing.json", payload: input.payload }),
+		).rejects.toThrow("already exists");
+		await expect(
+			existingPort.write({ targetRef: "https://other.test/escape.json", payload: input.payload }),
+		).rejects.toThrow("configured WebDAV origin");
+		await expect(
+			existingPort.write({ targetRef: "/../escape.json", payload: input.payload }),
+		).rejects.toThrow("traversal");
 	});
 });
