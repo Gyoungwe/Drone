@@ -24,6 +24,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKAGE_DIR = join(ROOT, "packages", "plugin-api");
+const NPM = process.platform === "win32" ? "npm.cmd" : "npm";
 const PLUGIN_REPO_CANDIDATES = [
 	process.env.DRONE_PLUGINS_DIR,
 	join(homedir(), "Documents", "ChatGPT", "drone-plugins"),
@@ -116,7 +117,7 @@ function checkPackageOnly() {
 }
 
 function npmPack(packageDir, destination, env) {
-	const output = execFileSync("npm", ["pack", "--silent", packageDir, "--pack-destination", destination], {
+	const output = execFileSync(NPM, ["pack", "--silent", packageDir, "--pack-destination", destination], {
 		cwd: ROOT,
 		encoding: "utf8",
 		env,
@@ -202,7 +203,7 @@ function checkLocalLifecycle() {
 		const fixtureDir = fixture;
 		mkdirSync(fixtureDir, { recursive: true });
 		writeFileSync(join(fixtureDir, "package.json"), `${JSON.stringify(fixtureManifest, null, 2)}\n`);
-		execFileSync("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund"], {
+		execFileSync(NPM, ["install", "--ignore-scripts", "--no-audit", "--no-fund"], {
 			cwd: fixtureDir,
 			stdio: "pipe",
 			env,
@@ -324,7 +325,7 @@ function checkTarballInstall() {
 	const temp = mkdtempSync(join(tmpdir(), "drone-plugin-api-gate-"));
 	try {
 		const env = { ...process.env, npm_config_cache: join(temp, "npm-cache") };
-		const tarball = execFileSync("npm", ["pack", "--silent", PACKAGE_DIR, "--pack-destination", temp], {
+		const tarball = execFileSync(NPM, ["pack", "--silent", PACKAGE_DIR, "--pack-destination", temp], {
 			cwd: ROOT,
 			encoding: "utf8",
 			env,
@@ -341,7 +342,7 @@ function checkTarballInstall() {
 			dependencies: { "@gyoungwe/plugin-api": `file:./${tarball}` },
 		};
 		writeFileSync(join(temp, "package.json"), `${JSON.stringify(fixture, null, 2)}\n`);
-		execFileSync("npm", ["install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"], {
+		execFileSync(NPM, ["install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"], {
 			cwd: temp,
 			stdio: "pipe",
 			env,
