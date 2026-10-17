@@ -19,7 +19,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -202,7 +202,7 @@ function checkLocalLifecycle() {
 			private: true,
 			version: "0.0.0",
 			type: "module",
-			dependencies: { "@gyoungwe/plugin-api": `file:../${rollbackTarball.split("/").at(-1)}` },
+			dependencies: { "@gyoungwe/plugin-api": `file:../${basename(rollbackTarball)}` },
 		};
 		const fixtureDir = fixture;
 		mkdirSync(fixtureDir, { recursive: true });
@@ -219,8 +219,7 @@ function checkLocalLifecycle() {
 		);
 		runContractProbe(fixtureDir);
 
-		execFileSync(
-			"npm",
+		execNpm(
 			["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", currentTarball],
 			{
 				cwd: fixtureDir,
@@ -234,8 +233,7 @@ function checkLocalLifecycle() {
 		);
 		runContractProbe(fixtureDir);
 
-		execFileSync(
-			"npm",
+		execNpm(
 			["install", "--save-exact", "--ignore-scripts", "--no-audit", "--no-fund", rollbackTarball],
 			{
 				cwd: fixtureDir,
@@ -249,8 +247,7 @@ function checkLocalLifecycle() {
 		);
 		runContractProbe(fixtureDir);
 
-		execFileSync(
-			"npm",
+		execNpm(
 			["uninstall", "@gyoungwe/plugin-api", "--ignore-scripts", "--no-audit", "--no-fund"],
 			{
 				cwd: fixtureDir,
@@ -259,7 +256,7 @@ function checkLocalLifecycle() {
 			},
 		);
 		assert(
-			!existsSync(join(fixtureDir, "node_modules", "@drone", "plugin-api")),
+			!existsSync(join(fixtureDir, "node_modules", "@gyoungwe", "plugin-api")),
 			"npm uninstall left plugin-api installed",
 		);
 		console.log(
