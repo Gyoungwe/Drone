@@ -4,7 +4,7 @@ import type {
 	ResearchWritePlan,
 	ResearchWriteReceipt,
 } from "@drone/shared";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
 
@@ -32,6 +32,7 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 	const [receipt, setReceipt] = useState<DeletionAwareResearchWriteReceipt | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const prepareGeneration = useRef(0);
 	const writeInputKey = useMemo(() => JSON.stringify({ targetRef, payload }), [targetRef, payload]);
 
 	useEffect(() => {
@@ -59,6 +60,8 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 
 	useEffect(() => {
 		void writeInputKey;
+		prepareGeneration.current += 1;
+		setBusy(false);
 		setPlan(null);
 		setReceipt(null);
 		setError(null);
@@ -70,7 +73,9 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 	);
 
 	const selectAdapter = (id: string) => {
+		prepareGeneration.current += 1;
 		setSelectedAdapterId(id);
+		setBusy(false);
 		setPlan(null);
 		setReceipt(null);
 		setError(null);
@@ -78,22 +83,24 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 
 	const prepare = async () => {
 		if (!adapter || !targetRef) return;
+		const generation = prepareGeneration.current;
 		setBusy(true);
 		setError(null);
 		setReceipt(null);
 		try {
-			setPlan(
-				await getPi().prepareWrite({
-					adapterId: adapter.id,
-					targetRef,
-					payload,
-					action: "prepare",
-				}),
-			);
+			const nextPlan = await getPi().prepareWrite({
+				adapterId: adapter.id,
+				targetRef,
+				payload,
+				action: "prepare",
+			});
+			if (prepareGeneration.current === generation) setPlan(nextPlan);
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : String(cause));
+			if (prepareGeneration.current === generation) {
+				setError(cause instanceof Error ? cause.message : String(cause));
+			}
 		} finally {
-			setBusy(false);
+			if (prepareGeneration.current === generation) setBusy(false);
 		}
 	};
 
