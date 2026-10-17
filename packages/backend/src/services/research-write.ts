@@ -13,6 +13,9 @@ import type { JsonStore } from "../json-store";
 type DeletionAwareResearchWriteReceipt = ResearchWriteReceipt & {
 	readonly deleted?: "verified" | "unverified" | "not-applicable";
 };
+type DeletionAwareResearchWriteAuditRecord = ResearchWriteAuditRecord & {
+	readonly deleted?: "verified" | "unverified" | "not-applicable";
+};
 
 export interface ResearchWriteLedger {
 	version: 1;
@@ -171,7 +174,7 @@ export class ResearchWriteService {
 				...((receipt as DeletionAwareResearchWriteReceipt).deleted
 					? { deleted: (receipt as DeletionAwareResearchWriteReceipt).deleted }
 					: {}),
-			} as DeletionAwareResearchWriteReceipt);
+			} as DeletionAwareResearchWriteAuditRecord);
 			next.audit = next.audit.slice(-500);
 		});
 		return receipt;
