@@ -169,6 +169,32 @@ describe("reversible research write adapters", () => {
 		expect(methods).toEqual(["GET", "PUT", "GET", "DELETE"]);
 	});
 
+	it("cleans up with the PUT ETag when readback throws", async () => {
+		const methods: string[] = [];
+		let deleteIfMatch: string | null = null;
+		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			void _request;
+			const method = init?.method ?? "GET";
+			methods.push(method);
+			if (method === "GET" && methods.length === 1) return new Response("", { status: 404 });
+			if (method === "PUT") return new Response("", { status: 201, headers: { ETag: '"v1"' } });
+			if (method === "GET") throw new Error("readback transport failed");
+			deleteIfMatch = new Headers(init?.headers).get("if-match");
+			return new Response(null, { status: 204 });
+		};
+		const port = createWebdavWritePort({
+			baseUrl: "http://dav.test:8080",
+			username: "user",
+			password: "password",
+			fetchImpl,
+		});
+		await expect(
+			port.write({ targetRef: "/acceptance/network.json", payload: input.payload }),
+		).rejects.toThrow("readback transport failed");
+		expect(methods).toEqual(["GET", "PUT", "GET", "DELETE"]);
+		expect(deleteIfMatch).toBe('"v1"');
+	});
+
 	it("refuses existing, cross-origin, and traversal targets", async () => {
 		const existingFetch = async (request: string | URL, init?: RequestInit) => {
 			void request;
