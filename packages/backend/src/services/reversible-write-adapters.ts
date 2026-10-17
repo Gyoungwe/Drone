@@ -86,10 +86,10 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 				method: string,
 				headers?: Record<string, string>,
 				body?: string,
-				requestSignal: AbortSignal | undefined = signal,
+				requestSignal: AbortSignal | null | undefined = signal,
 			) => {
 				if (requestSignal?.aborted) throw new Error("WebDAV write aborted");
-				return transport.request(method, path, headers, body, requestSignal);
+				return transport.request(method, path, headers, body, requestSignal ?? undefined);
 			};
 			const existing = await request("GET");
 			if (existing.status !== 404) {
@@ -100,8 +100,12 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 				);
 			}
 			let created = false;
+			let putAttempted = false;
 			let creationEtag: string | null = null;
-			const deleteRemote = async (etag: string | null, requestSignal: AbortSignal | undefined = signal) => {
+			const deleteRemote = async (
+				etag: string | null,
+				requestSignal: AbortSignal | null | undefined = signal,
+			) => {
 				if (!etag) throw new Error("WebDAV DELETE requires a verified ETag");
 				const deleted = await request("DELETE", { "If-Match": etag }, undefined, requestSignal);
 				if (deleted.status >= 400 && deleted.status !== 404) {
@@ -110,6 +114,8 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 				return deleted;
 			};
 			try {
+				if (signal?.aborted) throw new Error("WebDAV write aborted");
+				putAttempted = true;
 				const put = await request(
 					"PUT",
 					{ "Content-Type": "application/json; charset=utf-8", "If-None-Match": "*" },
@@ -148,9 +154,25 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 					deleted: missing.status === 404,
 				};
 			} catch (error) {
-				if (created) {
+				if (created || putAttempted) {
 					try {
-						await deleteRemote(creationEtag, undefined);
+						if (!creationEtag) {
+							const reconciliation = await request("GET", undefined, undefined, null);
+							let reconciledPayload: unknown;
+							try {
+								reconciledPayload = JSON.parse(reconciliation.body.toString("utf8")) as unknown;
+							} catch {
+								reconciledPayload = undefined;
+							}
+							if (
+								reconciliation.status >= 200 &&
+								reconciliation.status < 300 &&
+								JSON.stringify(reconciledPayload) === JSON.stringify(payload)
+							) {
+								creationEtag = reconciliation.headers.get("etag");
+							}
+						}
+						await deleteRemote(creationEtag, null);
 					} catch {
 						// Preserve the original failure; the caller still receives a failed closure.
 					}
