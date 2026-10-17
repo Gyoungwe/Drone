@@ -40,10 +40,11 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 			.then((next) => {
 				if (cancelled) return;
 				setAdapters([...next.adapters] as DeletionAwareAdapterDescriptor[]);
+				const preferredAdapter = next.adapters.find((candidate) => candidate.writeEnabled) ?? next.adapters[0];
 				setSelectedAdapterId((current) =>
 					current && next.adapters.some((adapter) => adapter.id === current)
 						? current
-						: (next.adapters[0]?.id ?? ""),
+						: (preferredAdapter?.id ?? ""),
 				);
 			})
 			.catch((cause) => {
