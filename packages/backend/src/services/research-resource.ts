@@ -52,11 +52,37 @@ const TEXT_EXTENSIONS = new Set([
 	".xml",
 	".fa",
 	".fasta",
+	".fna",
+	".faa",
+	".ffn",
+	".frn",
+	".fas",
 	".fastq",
 	".fq",
 	".bed",
+	".bedgraph",
 	".gff",
+	".gff3",
 	".gtf",
+	".vcf",
+	".sam",
+	".aln",
+	".clustal",
+	".clw",
+	".sto",
+	".stk",
+	".stockholm",
+	".phy",
+	".phylip",
+	".afa",
+	".msa",
+	".mfa",
+	".nwk",
+	".newick",
+	".tree",
+	".treefile",
+	".tre",
+	".contree",
 	".log",
 ]);
 
@@ -69,11 +95,16 @@ function hashBytes(value: Buffer): string {
 }
 
 function formatFor(path: string): string {
-	const ext = extname(path).toLowerCase();
+	const filename = path.replaceAll("\\", "/").split("/").pop() ?? path;
+	const lower = filename.toLowerCase();
+	const compression = [".gz", ".bgz", ".bz2", ".xz"].find((suffix) => lower.endsWith(suffix));
+	const logicalName = compression ? lower.slice(0, -compression.length) : lower;
+	const ext = extname(logicalName);
 	if (ext === ".pdf") return "pdf";
 	if ([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".tif", ".tiff"].includes(ext)) return "image";
 	if (TEXT_EXTENSIONS.has(ext)) return ext.slice(1) || "text";
-	return ext.slice(1) || "binary";
+	if (compression && ext) return ext.slice(1);
+	return ext.slice(1) || (compression ? compression.slice(1) : "binary");
 }
 
 function projectKey(
