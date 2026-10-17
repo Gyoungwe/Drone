@@ -89,7 +89,10 @@ function createPortBackedAdapter(options: PortAdapterOptions): ReversibleResearc
 				createdAt: new Date().toISOString(),
 			};
 		},
-		async execute(plan: ResearchWritePlan, context: ResearchWriteExecutionContext): Promise<ResearchWriteReceipt> {
+		async execute(
+			plan: ResearchWritePlan,
+			context: ResearchWriteExecutionContext,
+		): Promise<ResearchWriteReceipt> {
 			if (plan.action !== "prepare") {
 				return {
 					planId: plan.id,
