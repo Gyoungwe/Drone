@@ -416,14 +416,9 @@ export function createProtocolsBookmarkWritePortFromEnv(
 ): ReversibleWritePort | undefined {
 	const apiToken = (env.PROTOCOLS_IO_API_TOKEN || env.PROTOCOLS_IO_API_KEY)?.trim();
 	if (!apiToken) return undefined;
-	try {
-		return createProtocolsBookmarkWritePort({
-			apiBaseUrl: env.PROTOCOLS_IO_API_BASE,
-			apiToken,
-		});
-	} catch {
-		return undefined;
-	}
+	// Protocols.io does not expose a documented user-bookmark state endpoint.
+	// Without an injected probe, an env-only port cannot satisfy the reversible contract.
+	return undefined;
 }
 
 interface PortAdapterOptions {
