@@ -2,7 +2,7 @@
  * README demo GIF 帧拍摄：node scripts/shoot-demo-gif.mjs chat|settings
  * 前置：dev 带 --remote-debugging-port=9224 运行，浅色主题、无背景图、桌宠启用。
  * chat 场景：欢迎页打字 → 斜杠菜单 → 主会话滚动 → 展开工具卡 → 回底
- * settings 场景：项目页 → 打开设置 → providers 滚动 → 视觉 → 通用 → 局域网观察 → 关闭
+ * settings 场景：项目页 → 打开设置 → providers 滚动 → 视觉 → 通用 → 关闭
  */
 import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
