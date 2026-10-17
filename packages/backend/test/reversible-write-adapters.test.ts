@@ -304,8 +304,9 @@ describe("reversible research write adapters", () => {
 	});
 
 	it("refuses existing, cross-origin, and traversal targets", async () => {
+		const existingRequests: string[] = [];
 		const existingFetch = async (request: string | URL, init?: RequestInit) => {
-			void request;
+			existingRequests.push(String(request));
 			return init?.method === "GET"
 				? new Response('{"title":"existing"}', { status: 200 })
 				: new Response("", { status: 201 });
@@ -319,6 +320,7 @@ describe("reversible research write adapters", () => {
 		await expect(
 			existingPort.write({ targetRef: "/dav/existing.json", payload: input.payload }),
 		).rejects.toThrow("already exists");
+		expect(existingRequests[0]).toBe("http://dav.test:8080/dav/existing.json");
 		await expect(
 			existingPort.write({ targetRef: "https://other.test/escape.json", payload: input.payload }),
 		).rejects.toThrow("configured WebDAV origin");
