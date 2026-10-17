@@ -35,6 +35,10 @@ export interface ProtocolsBookmarkWritePortConfig {
 	readonly apiBaseUrl?: string;
 	readonly apiToken: string;
 	readonly fetchImpl?: typeof fetch;
+	readonly bookmarkStateProbe?: (
+		targetRef: string,
+		signal?: AbortSignal,
+	) => Promise<"absent" | "present" | "unknown">;
 }
 
 function hasTraversalSegment(value: string): boolean {
@@ -221,11 +225,13 @@ const PROTOCOLS_REQUEST_TIMEOUT_MS = 15_000;
 
 function protocolsApiTarget(targetRef: string): string {
 	let value = targetRef.normalize("NFKC").trim();
-	for (const prefix of ["protocols:", "doi:", "crossref:"]) {
-		if (value.toLowerCase().startsWith(prefix)) {
-			value = value.slice(prefix.length);
-			break;
-		}
+	if (/^(?:doi|crossref):/i.test(value)) {
+		throw new Error(
+			"Protocols.io bookmark writes require a protocol URI or GUID; DOI resolution is not configured",
+		);
+	}
+	if (value.toLowerCase().startsWith("protocols:")) {
+		value = value.slice("protocols:".length);
 	}
 	if (
 		!value ||
@@ -245,17 +251,25 @@ function protocolsApiBase(value: string | undefined): string {
 	return base.toString().replace(/\/$/, "");
 }
 
-function protocolIdentity(payload: unknown): unknown {
+function protocolRecord(payload: unknown): Record<string, unknown> | undefined {
 	if (!payload || typeof payload !== "object") return undefined;
 	const value = payload as Record<string, unknown>;
-	return (
+	const candidate =
 		value.protocol ??
 		(value.payload && typeof value.payload === "object"
 			? (value.payload as Record<string, unknown>).protocol
-			: undefined) ??
-		value.payload ??
-		value
-	);
+			: undefined);
+	return candidate && typeof candidate === "object" ? (candidate as Record<string, unknown>) : undefined;
+}
+
+function protocolIdentity(payload: unknown): boolean {
+	return Boolean(protocolRecord(payload));
+}
+
+function protocolUri(payload: unknown): string | undefined {
+	const protocol = protocolRecord(payload);
+	const value = protocol?.uri ?? protocol?.protocol_uri ?? protocol?.id;
+	return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function protocolResponseOk(status: number, body: unknown): boolean {
@@ -327,8 +341,21 @@ export function createProtocolsBookmarkWritePort(
 				}
 			};
 			const initial = await request(protocolUrl, "GET");
-			if (!protocolResponseOk(initial.response.status, initial.body) || !protocolIdentity(initial.body)) {
+			const initialProtocolUri = protocolUri(initial.body);
+			if (
+				!protocolResponseOk(initial.response.status, initial.body) ||
+				!protocolIdentity(initial.body) ||
+				!initialProtocolUri
+			) {
 				throw new Error(`Protocols.io target preflight failed (${initial.response.status})`);
+			}
+			const bookmarkState = config.bookmarkStateProbe
+				? await config.bookmarkStateProbe(target, signal)
+				: "unknown";
+			if (bookmarkState !== "absent") {
+				throw new Error(
+					"Protocols.io write requires a bookmark-state probe proving the target is not already bookmarked",
+				);
 			}
 			let bookmarked = false;
 			try {
@@ -338,7 +365,12 @@ export function createProtocolsBookmarkWritePort(
 				}
 				bookmarked = true;
 				const read = await request(protocolUrl, "GET");
-				if (!protocolResponseOk(read.response.status, read.body) || !protocolIdentity(read.body)) {
+				const readProtocolUri = protocolUri(read.body);
+				if (
+					!protocolResponseOk(read.response.status, read.body) ||
+					!protocolIdentity(read.body) ||
+					readProtocolUri !== initialProtocolUri
+				) {
 					throw new Error(`Protocols.io readback failed (${read.response.status})`);
 				}
 				const deleted = await request(bookmarkUrl, "DELETE", null);
@@ -346,14 +378,22 @@ export function createProtocolsBookmarkWritePort(
 					throw new Error(`Protocols.io bookmark delete failed (${deleted.response.status})`);
 				}
 				const finalRead = await request(protocolUrl, "GET", null);
+				const finalProtocolUri = protocolUri(finalRead.body);
 				if (
 					!protocolResponseOk(finalRead.response.status, finalRead.body) ||
-					!protocolIdentity(finalRead.body)
+					!protocolIdentity(finalRead.body) ||
+					finalProtocolUri !== initialProtocolUri
 				) {
 					throw new Error(`Protocols.io final target check failed (${finalRead.response.status})`);
 				}
+				const finalBookmarkState = config.bookmarkStateProbe
+					? await config.bookmarkStateProbe(target, null)
+					: "unknown";
+				if (finalBookmarkState !== "absent") {
+					throw new Error("Protocols.io bookmark deletion could not be verified");
+				}
 				return {
-					externalRef: `https://www.protocols.io/view/${target}`,
+					externalRef: `https://www.protocols.io/view/${finalProtocolUri}`,
 					readBack: true,
 					deleted: true,
 				};
@@ -526,8 +566,13 @@ export function createProtocolsBookmarkWriteAdapter(
 		label: "Protocols.io bookmark (reversible write)",
 		port,
 		validateTarget(targetRef) {
-			if (!/^(?!https?:)(?:[a-z][a-z0-9-]{1,31}:)?[A-Za-z0-9][A-Za-z0-9._/-]{1,510}$/i.test(targetRef)) {
-				throw new Error("Protocols.io target must be a protocol URI, DOI, or GUID");
+			if (/^(?:doi|crossref):/i.test(targetRef)) {
+				throw new Error(
+					"Protocols.io bookmark writes require a protocol URI or GUID; DOI resolution is not configured",
+				);
+			}
+			if (!/^(?!https?:)(?:protocols:)?[A-Za-z0-9][A-Za-z0-9._/-]{1,510}$/i.test(targetRef)) {
+				throw new Error("Protocols.io target must be a protocol URI or GUID");
 			}
 		},
 	});
