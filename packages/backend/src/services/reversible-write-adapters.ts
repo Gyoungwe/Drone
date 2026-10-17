@@ -82,8 +82,15 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 			const url = webdavTargetUrl(config.baseUrl, targetRef);
 			const target = new URL(url);
 			const path = target.pathname.replace(/^\/+/, "");
-			const request = (method: string, headers?: Record<string, string>, body?: string) =>
-				transport.request(method, path, headers, body);
+			const request = (
+				method: string,
+				headers?: Record<string, string>,
+				body?: string,
+				requestSignal: AbortSignal | undefined = signal,
+			) => {
+				if (requestSignal?.aborted) throw new Error("WebDAV write aborted");
+				return transport.request(method, path, headers, body, requestSignal);
+			};
 			const existing = await request("GET");
 			if (existing.status !== 404) {
 				throw new Error(
@@ -94,9 +101,12 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 			}
 			let created = false;
 			let creationEtag: string | null = null;
-			const deleteRemote = async (etag: string | null) => {
+			const deleteRemote = async (
+				etag: string | null,
+				requestSignal: AbortSignal | undefined = signal,
+			) => {
 				if (!etag) throw new Error("WebDAV DELETE requires a verified ETag");
-				const deleted = await request("DELETE", { "If-Match": etag });
+				const deleted = await request("DELETE", { "If-Match": etag }, undefined, requestSignal);
 				if (deleted.status >= 400 && deleted.status !== 404) {
 					throw new Error(`WebDAV DELETE failed (${deleted.status})`);
 				}
@@ -143,7 +153,7 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 			} catch (error) {
 				if (created) {
 					try {
-						await deleteRemote(creationEtag);
+						await deleteRemote(creationEtag, undefined);
 					} catch {
 						// Preserve the original failure; the caller still receives a failed closure.
 					}
