@@ -109,7 +109,7 @@ import {
   knowledgeReuseLevelRank,
   resolveKnowledgeContext,
   validateKnowledgeSourceReceipt
-} from "./chunks/chunk-GKXRSN5Y.mjs";
+} from "./chunks/chunk-5TGWSEZN.mjs";
 import {
   buildKnowledgeSearchExpression,
   splitKnowledgeChunks,
