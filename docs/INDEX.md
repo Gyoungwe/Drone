@@ -21,32 +21,16 @@
 - NGS review→delivery 闭环也由该控制器负责：收集并读取已校验产物，调用会话模型生成审查报告，持久化限制说明，并仅在审查通过后完成交付。
 - 分析适配器位于 `packages/backend/src/services/analysis-adapters/`：通用编排器只消费版本化的 adapter contract、readiness 与确定性结果检查；契约快照、工具合同和宿主执行上下文会进入 provenance。当前提供 bulk RNA-seq/DESeq2 和 assembly 适配器，并持久化 adapter、workflow、method 版本及 artifact lineage/reproducibility 状态。
 - 分析证据与不可变 checkpoint 位于 `packages/backend/src/services/analysis-evidence.ts`，通过 `shared/host-api/evidence.ts`、preload、main IPC 和 Artifacts 面板提供本地查看、分叉、导入/导出和重现回执；checkpoint 分支不会继承执行授权或 review。
-- RunAttempt / compute / intent / checkpoint 的脱敏因果链只读投影位于 `packages/backend/src/services/causality-projection.ts`，按显式 `eventId`、`causationId` 和 `runAttemptId` 聚合，不猜测旧记录关系。
 - checkpoint、分支工作区和可复现 evidence capsule 见 `packages/backend/src/services/analysis-evidence.ts`：冻结内容寻址字节，分支不继承执行审批，失败分支可在校验 checkpoint/context 后重试，replay 分开记录环境与输出匹配状态；capsule 支持 private/restricted/public 三档发布，导入会重新校验 manifest、字节哈希和 omission 清单，并拒绝凭据/私有状态路径与被省略的私有 blob。桌面端通过 `packages/shared/src/host-api/evidence.ts`、`packages/desktop/src/main/ipc/evidence.ts` 和产物面板 `packages/desktop/src/renderer/src/components/panel/EvidencePane.tsx` 提供冻结、分支、导入/导出、回放及复现结果查看。
 - Wisp/OpenScience 的官方源码快照、功能研究和迁移建议见 [open-science-wisp-adapter-research.md](open-science-wisp-adapter-research.md)。
-- ClawsGO Science CD-Search 在 Drone v0.32.0 基线上的复核、证据边界和后续研究计划见 [clawgo-science-v0320-follow-up-plan.md](clawgo-science-v0320-follow-up-plan.md)。
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
-
-面向全科研场景的 v3 研究资料浏览器、连接器分层、知识沉淀与签名发布门槛：见 [scientific-workbench-v3-plan.md](scientific-workbench-v3-plan.md)。
-
-P2 知识/记忆/进化复用契约与审批边界：见 [evolution-reuse-contract.md](evolution-reuse-contract.md)。
-
-P3 技能与工具治理 manifest、来源、许可证、权限和提交门禁：见 [capability-governance.md](capability-governance.md)。v2 闭环契约（能力矩阵、跨对象证据晋级、进化候选物化与治理审计）见 [v2-closure-contracts.md](v2-closure-contracts.md)。
-
-v0.32.0 UI、RunAttempt 因果链与 ClawsGO Science 的统一交付顺序、验收门禁和合并护栏：见 [统一交付计划](superpowers/plans/2026-10-14-v0320-unified-delivery-plan.md)。
-
-ClawsGO Science CD-Search 的证据边界、核验摘要和后续门控任务：见 [ClawsGO Science 后续研究计划](clawgo-science-v0320-follow-up-plan.md)。
-
-RunAttempt、ExecutionReceipt、proposal/decision、intent journal 与 checkpoint 的统一因果链设计及 C1-1 至 C1-6 迁移计划：见 [run-attempt-causality-design.md](superpowers/specs/2026-10-14-run-attempt-causality-design.md)。
 
 `.pi/tsconfig.json` 开启 `allowJs` + `checkJs`；当前覆盖兼容入口与任务/知识运行时，生成的 `.pi/lib/knowledge/runtime/**/*.mjs` 明确排除在检查图之外（源代码由领域包 typecheck 覆盖），根 `npm run typecheck` 会串接 `npm run check:pi`。
 
 任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
 
 研究技能包的锁定来源、许可记录、缓存与离线恢复：见 [research-skill-packs.md](research-skill-packs.md)。
-
-OpenScience-inspired resource search connector layering, receipts and acquisition gates: see [resource-search-connectors.md](resource-search-connectors.md).
 
 云端知识库、科研化产品语言与知识库自动维护的升级方案：见 [knowledge-cloud-research-upgrade.md](knowledge-cloud-research-upgrade.md)。
 
@@ -55,14 +39,8 @@ WebDAV 云端知识库第一阶段实现、读写边界、同步/冲突和离线
 PR #113 与 1–6 的整合证据、生成物修复和未决风险：见 [PR113 整合审查](superpowers/reports/2026-10-11-pr113-integration-review.md) 与 [PR113 逐项审查](superpowers/reports/2026-10-11-pr113-review.md)。
 
 客户端控件、事件、IPC 行为和科研风格 UI 升级基线：见 [核心客户端 UI 盘点](ui-audit/2026-10-11-core-client-ui-inventory.md)、[设置/知识/WebDAV/研究 UI 盘点](ui-audit/2026-10-11-settings-knowledge-ui-inventory.md)、[白色科研风格覆盖矩阵](ui-audit/2026-10-11-white-ui-coverage.md)、[术语审计](ui-audit/2026-10-11-terminology-audit.md)、[术语改写表](ui-audit/2026-10-11-terminology-map.md) 与 [发布治理和 UI 升级计划](superpowers/plans/2026-10-11-release-governance-and-ui-upgrade.md)。
-- v0.32.0 后的 P0/P1 UI 行为收口见 [客户端 UI 全面整改调查与实施计划](superpowers/specs/2026-10-14-client-ui-overhaul-investigation-design.md)：ContextPanel tabs、设置 dialog、共享控件反馈、窄屏布局与 100 项列表上限已同步实现。
-- v0.32.0 P5 桌面 UI 证据矩阵见 [2026-10-15-v0320-p5-evidence-matrix.md](ui-audit/2026-10-15-v0320-p5-evidence-matrix.md)，LAN observer 已按产品决定移除，不再作为验收项。
-
-v0.32.0 P6 发布审阅、能力矩阵、许可证/技能锁定和未完成项见 [P6 发布审阅与能力矩阵](releases/2026-10-15-v0320-p6-release-audit.md)。
 
 v0.26.1 的验证命令、生成物检查、资产清单和“先验证再建标签”顺序见 [发布门禁清单](releases/v0.26.1-gate-manifest.json) 与 [验证记录](releases/v0.26.1-validation.md)。
-
-v0.32.0 因果链、UI A/B 证据和剩余环境门禁的最新复核见 [follow-up validation](releases/2026-10-15-v0320-follow-up-validation.md)。
 
 Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭代记录](superpowers/reports/2026-10-04-drone-five-round-iteration.md) 与 [状态链修复设计](superpowers/specs/2026-10-04-drone-state-chain-fixes-design.md)。
 
@@ -74,7 +52,7 @@ Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭
 
 科研模拟测试脱敏夹具与大文件规范：见 [research-test-fixtures.md](research-test-fixtures.md)（服务器真实大文件勘查登记、脱敏样本 SHA-256 校验清单、动态大文件合成器与机构登录用例阻塞标记）。
 
-Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx electron-vite dev --remote-debugging-port=9224`；根目录 `npm run dev -- --remote-debugging-port=9224` 的参数不会穿过嵌套的 workspace 脚本。首次启动前直接运行根目录的 `npm run dev`。验证 `http://127.0.0.1:9224/json` 返回页面列表后再运行 CDP 冒烟脚本；普通开发仍用根目录 `npm run dev`。
+Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx electron-vite dev --remote-debugging-port=9224`；根目录 `npm run dev -- --remote-debugging-port=9224` 的参数不会穿过嵌套的 workspace 脚本。首次启动前运行根目录的 `npm run build:lan-web -w packages/desktop`。验证 `http://127.0.0.1:9224/json` 返回页面列表后再运行 CDP 冒烟脚本；普通开发仍用根目录 `npm run dev`。
 
 ## 总览
 
@@ -101,8 +79,7 @@ packages/
 | `scripts/smoke-error-events.mts` | 报错系统冒烟：本地 HTTP 伪造 provider（401/429）驱动 PiBackend，零凭证离线 |
 | `scripts/smoke-subagent.mts` | subagent 冒烟 |
 | `scripts/smoke-evaporation-ui.mjs` | 蒸发设置二态 CDP 冒烟（dev 实例带 `--remote-debugging-port=9224` 运行后执行） |
-| `scripts/check-report-ui.mjs` | 隔离 Electron 验收：桌面长回答贴底、主动上翻、引用短标题/完整路径/点击；不调用真实模型 |
-| `scripts/check-research-browser-acceptance.mjs` | P9 科研资料浏览器确定性夹具验收：空项目、中文/长路径、目录与文本/表格/图像/PDF/FASTQ/未知二进制、路径越界和外部打开失败回执 |
+| `scripts/check-report-ui.mjs` | 隔离 Electron 验收：桌面/LAN 长回答贴底、主动上翻、引用短标题/完整路径/点击、运行记录展开；不调用真实模型 |
 | `scripts/smoke-channel-watch.mts` | channel-watch 机制冒烟 V1–V6 |
 | `scripts/replay-trace.mts` | 事件 trace 离线重放（`--last` 自动找最新；排查 UI 状态问题首选） |
 | `scripts/replay-evaporation.mts` | 上下文蒸发离线 replay 调参（误杀率/体积曲线；`--core` 与线上实现同构对比；默认数据指 `.local/replay-data/sessions` 副本，指向正式 `~/.pi/agent` 会直接 abort） |
@@ -116,8 +93,6 @@ packages/
 | `scripts/test-compute-docker.sh`、`scripts/compute-fixtures/` | 可选 Docker SSHD + 单节点 Slurm 集成 fixture；需用户启动 Docker daemon，不用于生产 runner；细节见 [compute.md](compute.md) |
 | `scripts/b3-pipeline/` | 显式 opt-in 的真实 nf-core/rnaseq 3.18.0 test-profile smoke 与 digest-backed provenance；缺 Nextflow/OCI digest 时拒绝提交 |
 | `docs/real-rnaseq-execution-plan.md` | 从本地 fixture 到真实 RNA-seq 结果的输入、设计、运行、QC、绘图和写作门禁；禁止把演示产物当科研结论 |
-| `docs/releases/2026-10-15-real-rnaseq-evidence.md` | 用户授权远程主机上的单样本真实 RNA-seq 原生工具链证据回执；记录输入/产物哈希与未关闭的 Nextflow、科学审查门槛 |
-| `docs/releases/2026-10-16-nfcore-rnaseq-three-sample-evidence.md` | 远程 nf-core/rnaseq 3.18.0 三样本成功回执；记录 trace/timeline/MultiQC/provenance、Qualimap 限制与 transcript-level 计数边界 |
 
 依赖补丁：`patches/` + patch-package（root devDep + postinstall）。目前一处 `thinking-orbs+0.3.1.patch`（移除 IntersectionObserver+visibilitychange 门控，Win11 恢复事件丢失会冻住 rAF）。改法：手改 `node_modules/thinking-orbs/dist/index.{es.js,cjs}` 两份 → `npx patch-package thinking-orbs`；升级该包前重评补丁是否仍需要。
 
@@ -129,15 +104,16 @@ packages/
 
 | 文件 | 关键导出 | 职责 |
 |---|---|---|
-| `src/ipc.ts` | `IpcChannels`、`PiApi` | 通道名常量 + `window.pi` 完整类型（sessions/settings/packages/app/ui-plugins/login/compute 全域通道 + 同步属性 `platform`） |
-| `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`ComputeContract`、`DiscoveryContract`、`DecisionsContract`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract`、`ResearchContract` | TypeBox Host API 域契约；供 desktop bindContract 与适配器复用；`ComputeContract` 覆盖主机登记、健康、作业日志、终端和引导状态，远端副作用由 backend adapter 继续做授权门控；`DiscoveryContract` 提供 B5d–B5f 内核会话、批评、多路径、探索计划和评测的桌面只读投影；`DecisionsContract` 提供项目决策账本的列表、撤销和人工确认；`KnowledgeContract` 覆盖知识库管理、审核、语义索引、研究运行路线与 Zotero 状态；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录；`ResearchContract` 覆盖项目资料捕获、来源搜索、连接器启停和显式写入计划/审计 |
+| `src/ipc.ts` | `IpcChannels`、`PiApi` | 通道名常量 + `window.pi` 完整类型（sessions/settings/packages/app/ui-plugins/lan/login/compute 全域通道 + 同步属性 `platform`） |
+| `src/host-api/` | `defineDomain`、`SessionsContract`、`AppContract`、`PermissionsContract`、`PackagesContract`、`KnowledgeContract`、`LanContract`、`ComputeContract`、`DiscoveryContract`、`DecisionsContract`、`LanStatus`、`InstitutionalContract`、`SubagentsContract`、`UiPluginsContract` | TypeBox Host API 域契约；供 desktop bindContract 与适配器复用；`ComputeContract` 覆盖主机登记、健康、作业日志、终端和引导状态，远端副作用由 backend adapter 继续做授权门控；`DiscoveryContract` 提供 B5d–B5f 内核会话、批评、多路径、探索计划和评测的只读投影，关闭会话保留 desktop 权限；`DecisionsContract` 提供项目决策账本的列表、撤销和人工确认；`KnowledgeContract` 覆盖知识库管理、审核、语义索引、研究运行路线与 Zotero 状态；`LanContract.getStatus` 标记为 `lan-read`，`LanStatus` 从 `LanStatusSchema` 推导，控制开关与机构访问保留 desktop 权限；`SubagentsContract` 覆盖会话内子智能体列表、派发、中止与运行记录 |
 | `src/contracts.ts` + `src/research-contracts.ts` | `VersionedRecord`、`ResearchCase`、`KnowledgeSnapshot`、`CapabilityRequest/Version`、`DecisionProposal/Decision`、`RunAttempt` | P0 统一版本合同、SHA-256 内容校验和旧 AnalysisContext/PlanProposal/EvidenceCheckpoint 的无副作用迁移；未来 schema fail closed，RunAttempt 从 unknown 恢复必须显式回到 queued，迁移不会继承执行授权；`contract-hash.ts` 保持浏览器可用 |
 | `src/compute.ts` | `ComputeHost`、`ComputeAuthorization`、`ComputeBudget`、`checkComputeAuthorization` | 远程主机/作业/终端/引导共享 schema，以及任务计算范围、路径和预算的 fail-closed 检查；B1 runner 通过稳定 adapter 接入 |
 | `src/session.ts` | `SessionMeta`、`SessionStats`、`AvailableModel`（可选 `thinkingLevels`/`imageInput`，缺省 fail-open）、`SessionEvent`、`SessionMessage`、`UiState`、`PermissionRequest`、`PermissionMode`（default/fullAccess）、`TrustRequest`、`LoadedResources` 等 | 会话/事件跨进程类型。`SessionEvent` = pi `AgentSessionEvent` ∪ Drone 自有 UI 事件（`subagent_mutex`/`stream_guard_tripped`/`model_wait`/`subagent_run`，不进 trace）；`SessionMessage` union：user/assistant（均带 `entryId` 供 fork/撤回；user 专属 `skill`/`sourceText`）+ `role:"image"`（show_image 回放）+ `role:"subagent"` |
-| `src/transcript/` | `reduceEvent`、`messagesToUIMessages`、`buildChatRows`、`deriveTurnChanges`、`deriveTurnTimings` | **UI 消息状态机（桌面使用）**：`types`（UIMessage/StreamingState 等）、`helpers`（事件载荷解析）、`reducer`（pi 事件 → UI 状态）、`mapping`（历史回放）、`parse-patch`（unified diff 结构化解析）、`turn-files`（按轮聚合文件变更）、`turn-timings`（按轮计时派生 + runEndedAt 定格）、`chat-rows`（行序列分组 + 轮末行定位规则）、`meta-summary`（工具语义分类统计） |
+| `src/transcript/` | `reduceEvent`、`messagesToUIMessages`、`buildChatRows`、`deriveTurnChanges`、`deriveTurnTimings` | **UI 消息状态机（桌面与 lan-web 共用同一份）**：`types`（UIMessage/StreamingState 等）、`helpers`（事件载荷解析）、`reducer`（pi 事件 → UI 状态）、`mapping`（历史回放）、`parse-patch`（unified diff 结构化解析）、`turn-files`（按轮聚合文件变更）、`turn-timings`（按轮计时派生 + runEndedAt 定格）、`chat-rows`（行序列分组 + 轮末行定位规则）、`meta-summary`（工具语义分类统计） |
 | `src/process-lanes/` | `deriveProcessEvents`、`deriveProcessLaneState`、`deriveProcessLaneTurns`、`estimateProcessLayout`、`PROCESS_DEMO_STEPS` | 公开 transcript 事件到六泳道位置的纯归约器与布局投影；状态只消费可见回执，不读取私有思维或写入任务、研究、引用账本 |
-| `src/errors.ts` | `UiError`、`classifyLlmError`、`buildLlmUiError`、`buildStreamGuardUiError`、`DETAIL_MAX_LENGTH` | 统一报错信封：错误卡数据源（live reducer / 历史回放 mapping / Composer 内联）；`classifyLlmError` 按 401/429/context/网络模式分类，误判只影响标题措辞 |
+| `src/errors.ts` | `UiError`、`classifyLlmError`、`buildLlmUiError`、`buildStreamGuardUiError`、`DETAIL_MAX_LENGTH` | 统一报错信封：错误卡数据源（live reducer / 历史回放 mapping / Composer 内联 / LAN 共用）；`classifyLlmError` 按 401/429/context/网络模式分类，误判只影响标题措辞 |
 | `src/ui-plugins.ts` | `UiPluginManifest`、`UiPluginInfo`、`UiPluginsConfig`、`KNOWN_UI_SLOTS`、`KNOWN_UI_REGIONS`、`UI_PLUGIN_ANCHORS` | UI 插件跨进程类型：manifest（slots/contributions/headless 三选一）/ 扫描合成信息 / 持久化配置 / 事件载荷；`KNOWN_*` 供 main 校验，与 renderer `plugins/slots.ts` 对齐（registry.test.ts 断言） |
+| `src/lan.ts` | `LanObserverConfig`、`LanSessionBrief/View`、`LanSseFrame` | 局域网观察页跨进程/HTTP 投影契约；状态类型由 `host-api/lan.ts` 的 `LanStatusSchema` 单一来源导出 |
 | `src/packages.ts` | `CatalogPackage*`、`NPM_NOT_FOUND_SENTINEL`、`isSubagentPackage` | pi.dev 社区包目录类型（设置页扩展面板用；`isSubagentPackage` 启发式仅供安装警示，非安全边界） |
 | `src/settings.ts` | `ProviderInfo`、`CustomProviderInput`、`KNOWN_APIS`、`LoginAuthPrompt/LoginEventPayload` 等 | provider 设置类型（含订阅登录 OAuth 镜像） |
 | `src/subagent.ts` | `SubagentRunData`、`extractSubagentRuns`、`isSubagentToolName`、`SubagentPanelRun`/`SubagentPanelAgent`/`SubagentDispatchInput`、`SUBAGENT_DISPATCH/RESULT_CUSTOM_TYPE`、`subagentRunDataFromPanelRun` | 子代理结果提取（结构检测不依赖工具名；single/parallel/management 三形态），backend 历史映射与 renderer 共用；面板派发（会话内专属调用）的运行记录 / 快照 / 派发输入 / 会话文件记录解析，见 [subagents-panel.md](subagents-panel.md) |
@@ -158,7 +134,7 @@ packages/
 | Human management | `knowledge/ui-service.mjs` + desktop knowledge IPC/preload + `SemanticManagement.tsx` / `TopicManagement.tsx` | opt-in semantic settings/index batches and project-scoped topic browsing/archive/resume |
 | Knowledge loop | `extensions/src/internal/knowledge-extension.ts`（`LOCAL_FIRST_GUIDANCE` 每轮引导：本地优先 → 联网 → `research_deposit_knowledge` 按 paper/software/method/idea 沉淀 → 带来源回答）+ `knowledge/src/wiki-review.ts`（`autoApplyWikiProposal`：自动审核模式下新页面 / Agent 生成过的页面直接写入，人工改过的页面仍待审核） | 知识闭环；Library 新增 `Ideas` 类型（三处 profile 定义同步：`vault-profiles.ts` / `vault.ts` / `vault-layout.ts`） |
 | Knowledge reuse lifecycle | `knowledge/src/reuse.ts` | 将真实来源 receipt 聚合成带 project/workspace、证据等级、Analysis/Evidence checkpoint 引用的 `KnowledgeSnapshot`；按 freshness、方法/参考/输入 manifest 与上下文门禁复用，并通过可注入存储端口维护可复用索引 |
-| Observability | `shared/src/transcript/run-inspector.ts` + Desktop `RunInspector` | retrieval counts/fallbacks, public specialist stop reasons, actual read paths; no private chain-of-thought |
+| Observability | `shared/src/transcript/run-inspector.ts` + Desktop/LAN `RunInspector` | retrieval counts/fallbacks, public specialist stop reasons, actual read paths; no private chain-of-thought |
 | Release gates | `scripts/{benchmark-semantic,stress-knowledge,check-upgrade-release,check-packaged-desktop}.mjs` | synthetic stress, production-pipeline benchmark, consolidated gate, isolated packaged-app smoke |
 
 ## packages/knowledge — 知识领域包（迁移中）
@@ -173,7 +149,7 @@ packages/
 
 ## packages/research — 研究来源领域包（迁移中）
 
-`@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/connectors.ts`（Crossref、PubMed、Europe PMC、OpenAlex、DOI、Zenodo、OSF、NCBI SRA、ENA、Zotero、Protocols.io、机构访问和项目存储的只读来源回执适配器）、`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`run-summary.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`zotero-library.ts`（`ZOTERO_LIBRARY_TYPE` 单复数归一：注入 pyzotero 认的 `user`/`group`，URL 用 `users`/`groups`）、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。 `src/write-connectors.ts` 提供跨科研场景的写入适配器安全合同（prepare/dry-run/execute、显式批准、回读、失败关闭），默认 Zotero 适配器没有外部写入端口，真实端口由宿主显式注入。`run-provenance.ts` 另提供 `readMethodsFacts` / `saveMethodsSection`：扩展工具 `research_methods`（`extensions/src/source-archive.ts`）先取运行记录事实（输入/输出/脚本哈希、声明的版本与参数、执行回执计数、缺口），模型据此起草 Methods，`save` 经 `ctx.ui.select` 让用户确认后才原子写入 `<run>/METHODS.md`。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。 `research-run-ui.ts` 投影公开的运行元数据、实际事件路线、来源完整性、结构化主张、证据缺口和复现状态；桌面端嵌入现有 KnowledgePanel，不新增顶层页面。设计约束和验收标准见 `docs/research-workbench-v2.md`。
+`@drone/research` 承载文献证据回执、来源交付和执行可复现性的 canonical runtime：`src/source-archive.ts`、`receipt-journal.ts`、`research-loop.ts`、`run-summary.ts`、`zotero-setup-runtime.ts`、`zotero-reconcile-runtime.ts`、`zotero-write-runtime.ts`、`zotero-library.ts`（`ZOTERO_LIBRARY_TYPE` 单复数归一：注入 pyzotero 认的 `user`/`group`，URL 用 `users`/`groups`）、`institutional-access.ts`、`run-provenance.ts` 与各项 policy。`run-provenance.ts` 另提供 `readMethodsFacts` / `saveMethodsSection`：扩展工具 `research_methods`（`extensions/src/source-archive.ts`）先取运行记录事实（输入/输出/脚本哈希、声明的版本与参数、执行回执计数、缺口），模型据此起草 Methods，`save` 经 `ctx.ui.select` 让用户确认后才原子写入 `<run>/METHODS.md`。根 `scripts/build-research-runtime.mjs` 生成 `.pi/lib` 的宿主适配产物；这些 `.pi/lib` 入口负责 workspace、文件系统、Electron/Pi 端口和旧 CLI 调用形状，领域逻辑留在包内。 `research-run-ui.ts` 投影公开的运行元数据、实际事件路线、来源完整性、结构化主张、证据缺口和复现状态；桌面端嵌入现有 KnowledgePanel，不新增顶层页面。设计约束和验收标准见 `docs/research-workbench-v2.md`。
 
 知识项目身份：`@drone/knowledge/project-identity` 是唯一解析器（日常空间会话选择 `/project` → 工作区 `knowledgeProjectId` → 目录派生 `<目录名>-<sha10>`，无 `research-workbench` 回落）；`research_loop`、`research_deposit_knowledge`、`research_summarize_run`、来源 / 讲解归档、知识检索范围与 WikiSkill 共用。规则与旧笔记迁移见 [knowledge-project-identity.md](knowledge-project-identity.md)。
 
@@ -207,6 +183,7 @@ src/
 ├── json-store.ts       统一 JSON 持久化原语
 ├── slash-commands.ts   斜杠命令清单（纯函数）
 ├── log.ts              结构化日志
+├── lan/                局域网观察：config / projector / server（+ audit / sanitize）
 ├── session/            registry / naming / messages / trace+traces / event-slim+stream-guard / rates / ui-context
 ├── permissions/        index(barrel) / bash-chain / pattern / config / settings / tmp-zone / gate / extension / audit
 ├── project/            trust / trust-loader / workspace-store / files
@@ -237,7 +214,7 @@ src/
 | `src/session/rates.ts` | `EventRateTracker` | 每会话事件速率统计（60s 滑窗），心跳/崩溃快照数据源；prune 防泄漏 |
 | `src/session/naming.ts` | `autoNameSession` | 首条用户消息 message_start 即取首行做标题（skill 命令先还原 `/skill:name` 投影，有测试） |
 | `src/session/ui-context.ts` | `makeUiContext` | `ExtensionUIContext` 桥接：confirm → PermissionGate，其余 no-op；**theme 必须是真实 `Theme` 类实例**（假对象会让 pi-mcp-adapter 等扩展 `theme.fg()` 抛错、MCP 服务器全连不上）；SDK 接口变化时在此补新成员 |
-| `src/permissions/gate.ts` | `PermissionGate` | 权限确认队列：allow/deny/allowAlways/allowDir + kind/suggestDir 元数据；respond 前供 PiBackend 持久化；listPending 供桌面审批面板 |
+| `src/permissions/gate.ts` | `PermissionGate` | 权限确认队列：allow/deny/allowAlways/allowDir + kind/suggestDir 元数据；respond 前供 PiBackend 持久化；listPending 供 LAN 只读快照 |
 | `src/permissions/index.ts`（+ bash-chain/pattern/config/tmp-zone） | `evaluateBashCommand` 等 | 逐工具权限规则引擎：allow/ask/deny × 通配模式；bash 命令链取最严段；自保护（permissions/workspaces/auth/trust 四文件）；tmp-zone = 临时区判定 + rm 豁免（纯函数）。已知天花板：xargs/find -exec/python -c 不覆盖 |
 | `src/permissions/settings.ts`（+ config.ts 的 `parseConfig`/`serializeConfig`/`validateConfig`） | `readPermissionSettings`、`writePermissionSettings`、`resetPermissionSettings`、`probePermission`、`readPermissionAuditTail` | 设置 → 权限 面板后端：快照（路径/原文/默认合并视图/mtime）、整表校验（动作枚举 / 纯数字键 / 自保护四模式存在、非 allow 且未被其后 allow 覆盖）、mtime 冲突检查 + tmp+rename 原子写（留 `.bak`，`enabled` 保留文件原值）、规则试算（同一求值链，只跑规则不模拟边界）。写后 `createPermissionConfigLoader` 下一次 tool_call 重读 = 保存即生效 |
 | `src/permissions/extension.ts` | `makePermissionGateExtension` | 权限门控内置扩展（tool_call 钩子 + 确认通道 + 会话权限模式分支）。求值链：① deny 直接 block → ② 临时区 → ③ 多根边界（projectRoot ∪ workspaces roots）读写分离（读默认放行/写默认确认）→ ④ 项目记忆 allowed[] → ⑤ ask；`getMode` 每次调用实时读，fullAccess 档下 ①⑤ 降级为审计 + 放行（spec permission-mode） |
@@ -268,12 +245,12 @@ src/
 | `src/services/session-{construction,control,events,messages,models,resources,settings-boundary,extensions}.ts` | 会话专责服务 | 分别承载 create/open、prompt/abort/fork、事件管线、消息映射、模型偏好、资源/MCP、权限设置边界和扩展构造；单文件保持在 400 行以内 |
 | `src/services/project-trust.ts` | `ProjectTrustService` | 组合项目 `trust.json` 存储与交互式 `TrustGate` 生命周期；通过 `BackendServices.projectTrust` 暴露，`PiBackend` 的资源加载与旧 `respondTrust` 继续委托 |
 | `src/services/institutional.ts` | `InstitutionalService` | 机构访问配置、登录窗口、URL 安全打开、会话清理与访问测试；通过 `BackendServices.institutional` 暴露 |
-| `src/services/research-write.ts` | `ResearchWriteService` | 受控写入计划与 JsonStore 审计 ledger；每次外部执行要求显式批准，撤销/失败均 fail-closed；通过 `BackendServices.researchWrites` 与 Research IPC 暴露 |
 | `src/services/subagents.ts` | `SubagentService` | 子代理面板发现、派发、中止与运行记录；通过 `BackendServices.subagents` 暴露 |
 | `src/services/compute-adapter.ts` | `ComputeHostAdapter`、`ComputeServiceAdapter`、`createComputeServiceAdapter` | B2 远程计算 host-facing adapter；默认投影 B1 的持久化主机、作业、日志和健康状态，runner/终端缺失时明确 unavailable，并在远端副作用前执行授权 |
 | `src/mcp/service.ts` | `McpService` | MCP 配置、状态读取和重载边界；通过 `BackendServices.mcp` 暴露 |
 | `src/packages/admin.ts` | `PackageAdmin`（兼容别名） | 旧包管理入口的兼容 re-export；新代码使用 `services/packages.ts` |
 | `src/packages/catalog.ts` | `fetchPackageCatalog` | pi.dev 目录抓取：无 JSON API，解析 SSR HTML 的 `<article data-package-card>` |
+| `src/lan/` | `LanObserverServer`、`seedView`/`applyEvent` | 局域网只读观察：userData 配置 + token 轮换、纯会话投影、GET-only HTTP+SSE（timingSafeEqual、5 客户端上限、合帧） |
 
 **可观测性**：每会话事件 trace + 关键操作日志（create/open/close/prompt/abort/compact）；main 进程还监听 renderer 崩溃/unresponsive/console。排查 UI 状态问题：`npx tsx scripts/replay-trace.mts --last` 确定性复现。
 
@@ -285,7 +262,7 @@ src/
 
 | 文件 | 职责 |
 |---|---|
-| `src/main/index.ts` | app 生命周期 + 装配：initLogging / `pi-bg://` 协议 / renderer 崩溃钩子 / `createBackend()` 组合根 / `new UiPluginManager()` / registerIpc / updater / 建窗。**首三行必须 import `./pi-package-dir` + `./dev-agent-dir` + `./fix-path`**；render-process-gone 自动 reload（30s 内 ≥3 次停手弹窗，崩溃时输出 incident snapshot）；before-quit 逐项 dispose |
+| `src/main/index.ts` | app 生命周期 + 装配：initLogging / `pi-bg://` 协议 / renderer 崩溃钩子 / `createBackend()` 组合根 / LAN / `new UiPluginManager()` / registerIpc / updater / 建窗。**首三行必须 import `./pi-package-dir` + `./dev-agent-dir` + `./fix-path`**；render-process-gone 自动 reload（30s 内 ≥3 次停手弹窗，崩溃时输出 incident snapshot）；before-quit 逐项 dispose |
 | `src/main/console-dedup.ts` | renderer console 错误签名去重（首条全量/重复计数/阈值与周期汇总），纯函数可单测 |
 | `src/main/fix-path.ts` | GUI 启动 PATH 修复：Finder/Dock 启动 PATH 无 Homebrew，spawn npm 会 ENOENT；同步追加常见 bin 目录 + 异步 `$SHELL -ilc` 合并（须在 spawn 任何子进程前 import） |
 | `src/main/pi-package-dir.ts` | 打包态 `PI_PACKAGE_DIR = resources/pi-package`（SDK `getPackageDir()` 最优先读它，不缓存）：pi 官方 docs/examples 经 extraResources 装入 |
@@ -299,6 +276,7 @@ src/
 | `src/main/ui-plugins/config.ts` | `ui-plugins.json` 读写（normalize 白名单；assignments 指向失效插件保留） |
 | `src/main/ui-plugins/build.ts` | 插件 esbuild 构建器：`loadEsbuild` 懒加载 + `ESBUILD_BINARY_PATH` 指向 asar.unpacked 真实二进制（打包态坑，升级 esbuild 前重评）；react 系四个 specifier 重写到 `window.DroneUI` shim（**与 renderer host-api.ts、resources/drone-ui.d.ts 逐名一致**）；图片/音频资产 dataurl 内联（CSP img-src / media-src 均放行 data:） |
 | `src/main/ui-plugins/manager.ts` | UiPluginManager：scanAll（manifest 校验 + 单插件 try 不阻断启动）/ ensureBuilt / fs.watch 300ms 防抖热重载 / seedBuiltinPlugins（resources builtin/ → 用户目录，版本戳幂等）/ seedDocs（SPEC.md + symlink `~/.drone/ui-plugins`）/ filterContributions（校验 region/anchor） |
+| `src/main/lan.ts`（+ `lan-icon.ts`、`ipc/lan.ts`） | LAN observer 接线；观察页 = `src/lan-web/` 独立 vite 单文件产物，`?raw` 内联进 main bundle（**dev 下重 build lan-web 后需重启 dev 实例**，产物不在 electron-vite watch 集） |
 | `src/main/git.ts` | git 分支查询/切换三通道 |
 | `src/main/update-policy.ts` / `updater.ts` | 更新决策纯函数（不 import electron 可单测）/ electron-updater 封装：发现新版只提示，点击才下载，下载完点「重启」安装；mac adhoc = manual 模式跳 release 页；定时静默检查只查不下载；autoUpdater 用 createRequire 取（CJS 导出） |
 
@@ -337,13 +315,12 @@ src/
 | `diff/` | **DiffSidebar**（右侧变更侧栏：按轮分组 unified diff + 内嵌 BranchRow git 分支行；开关在 SessionTabBar）+ DiffFileCard |
 | `panel/ProcessPane.tsx` + `ProcessLaneView.tsx` | 六泳道过程页与历史轮次选择；只投影公开 transcript 回执，节点内保留运行明细，门卡动作只打开任务面板 |
 | `panel/ContextPanel.tsx` | 右栏：任务 / 过程（内含「过程 · 变更」切换，原「变更」页签并入，`stores/ui.ts` `processView`）/ 产物 常驻；子智能体（本会话有运行）与计算（已配置主机或有作业）按需出现（`visiblePanelTabs`）；决策账本（TasksPane）与审稿卡默认折叠，有待确认项才展开 |
-| `research/ResearchBrowserPage.tsx` + `ResearchWritePanel.tsx` | 科研资料浏览器（项目文件树、预览/源码/外部打开/捕获）与写入连接器安全卡（prepare/dry-run、显式确认、撤销、回执/失败状态）；均经 `window.pi` ResearchContract 调用 |
 | `knowledge/KnowledgeView.tsx` + `KnowledgeHome.tsx` | 左栏唯一「知识库」入口（原「研究」入口已合并）的全屏视图：Vault 状态 + 搜索（`KnowledgeSearch.tsx` → IPC `knowledge:search` → `ui-service.searchKnowledge`，只读）+ 最近沉淀（`wikiHistory`）+ 待处理修改（WikiReviewPanel）；绑定、索引、语义、主题、审核模式等维护功能（KnowledgePanel）在 设置 › 高级 › 知识库维护 |
 | 知识双向链接与知识网络 | worker `noteLinks`（出链 + 反链；只写笔记名的 `[[x]]` 按文件名唯一匹配）与 `graph`（旧 `nodes/edges` 字段保持兼容，并附语义关系/镜像/健康元数据；按索引 revision 缓存 `view/limit/mergeMirrors` 快照）→ ui-service `knowledgeNoteLinks` / `knowledgeGraph` → IPC `knowledge:noteLinks` / `knowledge:graph`；`knowledge/src/semantic-model.ts` 负责稳定清洗、镜像合并、关系分类、社区与布局；`knowledge/src/graph-cache.ts` 负责 revision 边界缓存；UI `KnowledgeLinks.tsx`、`KnowledgeGraph.tsx`（主页直接展示，语义/全部文件、聚焦/星云/浏览、节点信息卡；拖拽更新按 animation frame 合并）+ 纯布局回退 `graph-layout.ts`；入库自动关联 `knowledge/src/related-notes.ts`（`research_deposit_knowledge` 写入前检索相关笔记，正文末尾追加「相关笔记」双链） |
 | 每日发现（新旧对照） | 领域：`knowledge/src/daily-discovery.ts`（扫描上次运行后更新的笔记、想法笔记正文）+ `daily-discovery-prompt.ts`（提示词与解析，只由 backend 引用，避免进入扩展类型图）；ui-service `dailyDiscoveryContext` / `saveDiscoveryIdea`；宿主 `backend/src/services/daily-discovery.ts`（`DailyDiscoveryService`：默认开、每小时检查满 24 小时才跑、JsonStore `agent-daily-discovery`、模型 = 最近会话模型或首个已配置 provider）；IPC `knowledge:dailyDiscovery*`；UI `knowledge/DailyIdeas.tsx`（知识库主页「新想法」：开关、现在运行、存为想法 / 忽略） |
 | `composer/` | **Composer**（装配层 ~330 行，键盘事件分发）+ 三 hook：`use-composer-send`（ensureSession 懒创建/followUp 排队/停止先 clearQueue/发送失败草稿回填）、`use-slash-menu`（命令拉取+胶囊回填+导航）、`use-at-completion`（@ token 探测/续钻/胶囊弹回 + 消息开头的子智能体候选）+ 展示件 QueueBar/ImageTray/AttachmentChip/**SubagentChip**（@ 子智能体胶囊：Enter 直接派发）/**QuoteChip**（选中引用胶囊）/SendErrorBar + **ModelPicker** / **ThinkingPicker**（按模型 thinkingLevels 过滤+clamp）/ **PermissionPicker**（会话权限模式 chip：默认/完全访问）/ **SlashMenu** / **AtMenu**（子智能体组 + 文件组）/ **ContextRing** + 会话累计用量 `SessionUsageFooter`（移入会话输入区）+ 纯函数 `slash-filter`/`at-files`/`at-subagents`（S9：候选条件 / 过滤 / 合并 / 任务拼装）/`send-error`/`quote`（各有测试） |
 | `session/` | **SessionTabBar** + SessionTab/TabPill（状态收拢到头像图标；dnd-kit 拖拽排序，DragOverlay ghost + 轴锁定；拖拽期间退出 drag-region）/ **SessionRail**（左侧会话轨道：细线变形胶囊 + dock 波浪；开关在设置-外观）/ **ApprovalDock**（权限审批：async respond 成功才移除面板，失败保留重试）/ **TrustDialog**（项目信任两选项）/ **UpdateButton**（顶栏更新按钮）/ `session-status`（顶栏与轨道共用的状态/标题纯逻辑） |
-| `settings/` | **SettingsDialog**（PANELS 注册表；分类 = 静态 + 「高级」分组〔知识库维护 / UI 插件 / 工作流总览 / SSH 主机〔ComputePane 主机登记，同一份登记表供 `ssh` / `ssh_hosts` 工具使用〕〕+ 插件 settings.panel 贡献动态拼接）/ **GeneralPanel**（语言/上下文管理二态/channel-watch 开关）/ **PermissionsPanel**（编辑全局 permissions.json：工作区边界 / 工具规则 + bash 模式表 **PatternTable**（↑↓✕、自保护行锁定表尾）+ 试算 / 高级（审计尾部、文件位置、恢复默认、放弃/保存）；纯编辑模型 `permissions-model.ts`，`PermissionsEditor` 按 props 渲染可单测）/ **AppearancePanel**（主题三段/背景图/轨道/中央动画；UI 插件管理移到 高级 › UI 插件）/ **SkillsPanel**（Tools & Skills：完整 Skill catalog + 默认折叠的 lazy capability/tool schema footprint/最近调用；工作流总览 **WorkflowOverviewPanel** 在 高级 › 工作流总览） / **McpPanel**（MCP 服务器状态/启停 + 「推荐接入」一键添加预设：shared `MCP_PRESETS`〔Playwright 浏览器控制〕→ IPC `mcp:addPreset` → backend `McpService.addPreset` 写用户级 mcp.json）/ **ExtensionsPanel** + `extensions/`（目录浏览/安装/卸载，subagent 包安装两段式确认）/ **UiPluginsSection**（高级 › UI 插件：总开关/插件卡/槽位指派） / **AboutPanel** / `providers/`（ProvidersPanel + ProviderRow 操作全图标化 / LoginDialog（交互登录对话框：OAuth + api_key 交互流）/ CustomProviderForm + ModelRowsEditor（逐模型行编辑器）/ BuiltinProviderEditForm（内置端点覆写）/ SubagentPanel（子代理模型偏好）+ `model-rows` 纯函数） |
+| `settings/` | **SettingsDialog**（PANELS 注册表；分类 = 静态 + 「高级」分组〔知识库维护 / 局域网观察 / UI 插件 / 工作流总览 / SSH 主机〔ComputePane 主机登记，同一份登记表供 `ssh` / `ssh_hosts` 工具使用〕〕+ 插件 settings.panel 贡献动态拼接）/ **GeneralPanel**（语言/上下文管理二态/channel-watch 开关）/ **PermissionsPanel**（编辑全局 permissions.json：工作区边界 / 工具规则 + bash 模式表 **PatternTable**（↑↓✕、自保护行锁定表尾）+ 试算 / 高级（审计尾部、文件位置、恢复默认、放弃/保存）；纯编辑模型 `permissions-model.ts`，`PermissionsEditor` 按 props 渲染可单测）/ **AppearancePanel**（主题三段/背景图/轨道/中央动画；UI 插件管理移到 高级 › UI 插件）/ **SkillsPanel**（Tools & Skills：完整 Skill catalog + 默认折叠的 lazy capability/tool schema footprint/最近调用；工作流总览 **WorkflowOverviewPanel** 在 高级 › 工作流总览） / **McpPanel**（MCP 服务器状态/启停 + 「推荐接入」一键添加预设：shared `MCP_PRESETS`〔Playwright 浏览器控制〕→ IPC `mcp:addPreset` → backend `McpService.addPreset` 写用户级 mcp.json）/ **ExtensionsPanel** + `extensions/`（目录浏览/安装/卸载，subagent 包安装两段式确认）/ **UiPluginsSection**（高级 › UI 插件：总开关/插件卡/槽位指派） / **LanObserverPanel** / **AboutPanel** / `providers/`（ProvidersPanel + ProviderRow 操作全图标化 / LoginDialog（交互登录对话框：OAuth + api_key 交互流）/ CustomProviderForm + ModelRowsEditor（逐模型行编辑器）/ BuiltinProviderEditForm（内置端点覆写）/ SubagentPanel（子代理模型偏好）+ `model-rows` 纯函数） |
 | `projects/` | ProjectPage / SearchBar（日常选中时占位词取「日常」）/ ProjectSidebar（内置「日常」空间钉顶条目：canvas 底 + 细边框 + 咖啡 glyph，无删除钮）/ SessionPanel（新会话 = createDraftSession）/ SessionRow（hover 出诊断复制/删除）/ `date-groups` / ProjectBranchPicker（仅 draft 态渲染——真实会话项目绑死不可改；日常 draft 隐藏分支选择器，chip 显示「日常」）/ `diagnostics`（buildDiagnosticsText 纯文本） |
 | `ui/` | Button（ghost/primary × sm/md × danger）/ Dropdown / Switch（统一受控开关，支持 indeterminate）/ **Tooltip**（自定义悬浮提示，新增提示一律用它不用原生 title；右缘元素传 `align="end"` 防幻影横向滚动条） |
 | `ui/ActionSurface.tsx` + `ui/dialog-stack.ts` | 统一右侧交互面（Ask / Trust / 示例任务 / Wiki 审核）：顶部色条区分 accent/warn/danger，`height="fit"` 卡片或整高抽屉；焦点陷阱 + 关闭后恢复焦点；全局单栈只显示最上层（下层 `inert`），Esc 只交给栈顶 `onEscape`（未提供则吞掉，防止误关下层） |
@@ -363,7 +340,7 @@ src/
 | 模型快速切换 | `composer/ModelPicker.tsx` + `stores/sessions.ts`（models/currentModel/setCurrentModel） |
 | 思考深度切换 | `composer/ThinkingPicker.tsx` + `stores/sessions.ts` + `lib/thinking.ts`（clamp 共用；后端 SDK 内再 clamp 兜底） |
 | 文件与图片附件（选图/粘贴/拖拽/预览/门控） | `composer/Composer.tsx`（images state + Ctrl+V + 拖拽项目内引用/项目外导入 + imageInput 门控 fail-open）+ `composer/AttachmentChip.tsx`（@ 文件胶囊）+ `chat/MessageItem.tsx`（历史缩略图）+ `chat/ImagePreview.tsx`（全屏预览三处共用）；项目外拖拽导入走 shared `AppContract.importDroppedFile` → preload → `main/ipc/app.ts` 会话附件目录；事件流提取在 shared reducer，历史回放在 backend `toSessionMessages` |
-| 结果查看器（侧栏资源预览） | main `desktop/src/main/file-preview.ts`（`previewLocalFile`：kind + 128 KiB 文本前缀 / gzip 解压 / 图片·PDF base64）；IPC `file:preview`；文件类型注册表（扩展名 → mime / text / language / previewKind，P1）`shared/src/file-types.ts`；格式映射 + 表格/序列解析 `shared/src/resource-preview-format.ts`；树（Newick）与多序列比对（Clustal/Stockholm/PHYLIP/比对 FASTA）解析 `shared/src/bio-preview-format.ts`；UI `diff/ResourceSidebar.tsx` → `preview/PreviewHost.tsx`（按 previewKind 分发，`preview/preview-registry.ts` 注册预览器 + 纯函数路由，P2）→ `ResourceTextPreview.tsx`（表格、序列、HTML 隔离 iframe、JSON、代码）+ `ResourceBioViewers.tsx`（`TreeReader` SVG 系统发育图、`AlignmentReader` 分窗着色 + 保守度）；交互 HTML = main `html-preview-protocol.ts`（`drone-html://<token>/` 只服务用户显式打开的 HTML 所在目录，响应 CSP 禁网；iframe `sandbox="allow-scripts"` 无同源）+ IPC `file:htmlPreviewUrl`；图标注 = `diff/FigureAnnotator.tsx`（图片 / HTML 图上点击落点写说明，「发送给 Agent」整理成文字插入输入框）+ main `figure-annotations.ts`（JsonStore `desktop-figure-annotations`，按绝对路径存 userData）+ IPC `figure:annotationsGet/Save`；入口 = 聊天 Markdown 链接 / 任务产物 chip / 卡片路径 → `stores/ui.ts` `openResourcePreview` |
+| 结果查看器（侧栏资源预览） | main `desktop/src/main/file-preview.ts`（`previewLocalFile`：kind + 128 KiB 文本前缀 / gzip 解压 / 图片·PDF base64）；IPC `file:preview`；文件类型注册表（扩展名 → mime / text / language / previewKind，P1）`shared/src/file-types.ts`；格式映射 + 表格/序列解析 `shared/src/resource-preview-format.ts`；树（Newick）与多序列比对（Clustal/Stockholm/PHYLIP/比对 FASTA）解析 `shared/src/bio-preview-format.ts`；UI `diff/ResourceSidebar.tsx` → `preview/PreviewHost.tsx`（按 previewKind 分发，`preview/preview-registry.ts` 注册预览器 + 纯函数路由，P2）→ `preview/viewers/PdfViewer.tsx`（PDF.js worker + canvas，避免 Chromium data URL viewer）+ `ResourceTextPreview.tsx`（表格、序列、HTML 隔离 iframe、JSON、代码）+ `ResourceBioViewers.tsx`（`TreeReader` SVG 系统发育图、`AlignmentReader` 分窗着色 + 保守度）；交互 HTML = main `html-preview-protocol.ts`（`drone-html://<token>/` 只服务用户显式打开的 HTML 所在目录，响应 CSP 禁网；iframe `sandbox="allow-scripts"` 无同源）+ IPC `file:htmlPreviewUrl`；图标注 = `diff/FigureAnnotator.tsx`（图片 / HTML 图上点击落点写说明，「发送给 Agent」整理成文字插入输入框）+ main `figure-annotations.ts`（JsonStore `desktop-figure-annotations`，按绝对路径存 userData）+ IPC `figure:annotationsGet/Save`；入口 = 聊天 Markdown 链接 / 任务产物 chip / 卡片路径 → `stores/ui.ts` `openResourcePreview` |
 | show_image 发图 | 工具本体 `backend/src/tools/show-image.ts`；实时 = shared reducer（pendingImages 缓冲，turn_end 固化排 assistant 之后）；历史 = `toSessionMessages` 的 `role:"image"`；渲染 = MessageItem image 分支（缩略图按数量分档） |
 | subagent 独立行 | 工具 `backend/src/tools/subagent/`；提取 shared `src/subagent.ts`（extractSubagentRuns，结构检测不依赖工具名）；互斥通知 `subagent_mutex` → reducer system 消息（dedup by extensionPath）；渲染 `chat/SubagentRunCard.tsx` |
 | 子智能体面板（右栏「子智能体」页签：可用 / 派发 / 本会话运行） | backend `tools/subagent/panel.ts`（`SubagentPanelService`）+ `pi-backend.ts`（`listSessionSubagents/dispatchSubagents/abortSubagentRun/listSubagentRuns`）；IPC `subagents:*`（`main/ipc/subagents.ts`）；事件 `subagent_run`（reducer 原地更新派发行 + `stores/subagents.ts`）；UI `panel/SubagentsPane.tsx` + `subagents-form.ts`、`chat/SubagentAvatar.tsx`（djb2 定色 + data-state 表情）、`chat/SubagentResultCard.tsx`、审批坞来源胶囊；输入框 `@` 选择器 `composer/at-subagents.ts` + `AtMenu.tsx` + `SubagentChip.tsx`（消息开头 `@name 任务` + Enter = 面板单任务派发；草稿 `drafts.subagent`）；文档 [subagents-panel.md](subagents-panel.md)；冒烟 `scripts/check-subagents-ui.mjs` |
@@ -374,7 +351,7 @@ src/
 | 上下文用量圆环 | `composer/ContextRing.tsx` + `hooks/use-context-usage.ts`（事件驱动刷新，与插件 host API 共用）→ IPC getContextUsage → SDK `session.getContextUsage()`（percent null 或无消息不渲染；<60% 灰 / 60-85% 琥珀 / >85% 红） |
 | 会话用量与输出速率 | `chat/UsageSettlement.tsx` 的 `SessionUsageSummary` 在输入框上下文环悬浮提示里显示会话累计 token（`SessionUsageFooter` 保留完整明细卡）；`chat/TurnFooter.tsx` 在每轮完成后显示输出 tok/s；累计卡位于 Composer 输入区上方，明细仍可展开 |
 | 审核卡片 | `shared/task-workbench.ts` 的 `tasksForTranscript` 仅投影 pending review；`chat/MessageItem.tsx` 与 `chat/TaskRow.tsx` 在对应回答内渲染验收动作，普通任务状态仍由右侧任务页签承载 |
-| 每轮计时行 + 文件变更 chip + diff 侧栏 | 计时 shared `transcript/turn-timings.ts`（deriveTurnTimings；分量 = reducer 盖戳的 `UIToolCall.endedAt` + `runEndedAt` 定格 + 历史回放透传 toolResult timestamp）；变更 shared `transcript/turn-files.ts`（deriveTurnChanges）+ `chat-rows.ts`（行定位：每轮必有计时行）；渲染 `chat/TurnDiffChip.tsx`（timer 恒在首位）+ `diff/DiffSidebar.tsx`（含 BranchRow）；开关 = SessionTabBar 的 DiffIcon 按钮 + `stores/ui.ts` diffSidebarOpen |
+| 每轮计时行 + 文件变更 chip + diff 侧栏 | 计时 shared `transcript/turn-timings.ts`（deriveTurnTimings；分量 = reducer 盖戳的 `UIToolCall.endedAt` + `runEndedAt` 定格 + 历史回放透传 toolResult timestamp）；变更 shared `transcript/turn-files.ts`（deriveTurnChanges）+ `chat-rows.ts`（行定位：每轮必有计时行，lan-web 不传 timings 保持旧行为）；渲染 `chat/TurnDiffChip.tsx`（timer 恒在首位）+ `diff/DiffSidebar.tsx`（含 BranchRow）；开关 = SessionTabBar 的 DiffIcon 按钮 + `stores/ui.ts` diffSidebarOpen |
 | 顶栏 tab / 拖拽排序 | `session/SessionTabBar.tsx`（dnd-kit，DragOverlay ghost 拾起时实测宽度沿用原胶囊 + 轴锁定 + drag-region 退出）+ `stores/sessions.ts` reorderSessions（draft 无 sessionFile 只参与内存序） |
 | 左侧会话轨道 | `session/SessionRail.tsx` + `stores/ui-preferences.ts`（开关持久化）+ `session-status.ts`（状态逻辑与顶栏共用）；逐帧截图 `scripts/shoot-rail.mjs` |
 | 权限审批面板 | `backend/src/permissions/gate.ts`（队列）+ `session/ApprovalDock.tsx`（快捷键 Enter/A/D/Esc；await 成功才移除） |
@@ -392,6 +369,7 @@ src/
 | provider 设置 / 交互登录（OAuth + api_key） | backend `settings/settings.ts` + `login.ts` + shared `settings.ts`（类型）+ IPC `settings:login*`；UI `settings/providers/`（表单/登录对话框）+ `stores/provider-login.ts` + `stores/settings.ts` |
 | 子代理模型/Thinking 偏好 | backend `settings/model-prefs.ts`；UI `settings/providers/SubagentPanel.tsx`（protected knowledge roles 同页，显式不可用时 fail-closed） |
 | 自动更新 | `main/updater.ts` + `update-policy.ts` + shared `update.ts`；UI `session/UpdateButton.tsx`（顶栏）+ `settings/AboutPanel.tsx`（手动检查） |
+| 局域网观察页 | 契约 shared `lan.ts` + `host-api/lan.ts` → backend `lan/`（`GET /api/status` 投影 `LanContract.getStatus`，SSE 保留 `ping` 心跳）→ main `lan.ts` + `ipc/lan.ts`（`LanContract` + `bindContract`）→ preload → 设置 `LanObserverPanel.tsx`；浏览器页面 = `desktop/src/lan-web/`（独立 vite 单文件，`?raw` 内联；观察投影仍 GET-only） |
 | 主题 / 背景图 / Markdown 代码块主题 | `stores/theme.ts` + `styles/globals.css`（双套 token）；main `background.ts` + `pi-bg://` 协议（CSP img-src 含 pi-bg:）；UI `settings/AppearancePanel.tsx`；代码块主题走 `Markdown.tsx` 的 isDark + 显式双主题 |
 | Toast | `stores/toasts.ts` + globals.css `.toast` 样式段 |
 | UI 插件（槽位/区域/面板/无头/热重载） | 运行时 `renderer/src/plugins/`（registry：headless activate/cleanup 生命周期）；构建/扫描 `main/ui-plugins/`（build/manager/config）；IPC `main/ipc/ui-plugins.ts`；类型 shared `ui-plugins.ts`；规范与内置插件 `desktop/resources/ui-plugins/`（SPEC.md / drone-ui.d.ts / skills / examples / builtin/，含 voice-alerts 语音提醒） |
