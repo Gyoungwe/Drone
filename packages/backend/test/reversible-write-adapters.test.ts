@@ -166,6 +166,37 @@ describe("reversible research write adapters", () => {
 		expect(receivedSignal?.aborted).toBe(true);
 	});
 
+	it("reconciles a PUT that fails after the server commits", async () => {
+		const methods: string[] = [];
+		let deleteIfMatch: string | null = null;
+		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			void _request;
+			const method = init?.method ?? "GET";
+			methods.push(method);
+			if (method === "GET" && methods.length === 1) return new Response("", { status: 404 });
+			if (method === "PUT") throw new Error("response lost after commit");
+			if (method === "GET") {
+				return new Response(JSON.stringify(input.payload), {
+					status: 200,
+					headers: { ETag: '"v1"' },
+				});
+			}
+			deleteIfMatch = new Headers(init?.headers).get("if-match");
+			return new Response(null, { status: 204 });
+		};
+		const port = createWebdavWritePort({
+			baseUrl: "http://dav.test:8080",
+			username: "user",
+			password: "password",
+			fetchImpl,
+		});
+		await expect(
+			port.write({ targetRef: "/acceptance/uncertain.json", payload: input.payload }),
+		).rejects.toThrow("暂时不可达");
+		expect(methods).toEqual(["GET", "PUT", "GET", "DELETE"]);
+		expect(deleteIfMatch).toBe('"v1"');
+	});
+
 	it("cleans up a created object when readback fails", async () => {
 		const methods: string[] = [];
 		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
