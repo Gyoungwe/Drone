@@ -112,7 +112,20 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 				created = true;
 				const read = await request("GET");
 				const body = read.body.toString("utf8");
-				if (read.status < 200 || read.status >= 300 || !body.includes(payload.title)) {
+				let readPayload: unknown;
+				try {
+					readPayload = JSON.parse(body) as unknown;
+				} catch {
+					readPayload = undefined;
+				}
+				const readTitle =
+					typeof readPayload === "object" &&
+					readPayload !== null &&
+					"title" in readPayload &&
+					typeof readPayload.title === "string"
+						? readPayload.title
+						: undefined;
+				if (read.status < 200 || read.status >= 300 || readTitle !== payload.title) {
 					throw new Error(`WebDAV readback failed (${read.status})`);
 				}
 				await deleteRemote();
@@ -285,7 +298,7 @@ export function createProtocolsBookmarkWriteAdapter(
 		label: "Protocols.io bookmark (reversible write)",
 		port,
 		validateTarget(targetRef) {
-			if (!/^(?:protocols:)?[A-Za-z0-9][A-Za-z0-9._/-]{1,510}$/.test(targetRef)) {
+			if (!/^(?!https?:)(?:[a-z][a-z0-9-]{1,31}:)?[A-Za-z0-9][A-Za-z0-9._/-]{1,510}$/i.test(targetRef)) {
 				throw new Error("Protocols.io target must be a protocol URI, DOI, or GUID");
 			}
 		},
