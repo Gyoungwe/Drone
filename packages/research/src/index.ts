@@ -195,11 +195,14 @@ export {
 } from "./source-delivery";
 export {
 	createDefaultResearchWriteAdapters,
+	createProtocolsBookmarkWriteAdapter,
+	createWebdavWriteAdapter,
 	createZoteroWriteAdapter,
 	type ResearchWriteAdapter,
 	ResearchWriteAdapterRegistry,
 	type ResearchWriteExecutionContext,
 	type ResearchWritePort,
+	type ReversibleResearchWritePort,
 } from "./write-connectors";
 export {
 	findZoteroItemsByIdentity,
