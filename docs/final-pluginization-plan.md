@@ -474,7 +474,7 @@ Claude Code adapter 必须通过同一套：
 | UI 插件宿主（slot/region、manifest、热重载、错误边界） | **已实现（宿主基础）** | `packages/desktop/src/renderer/src/plugins/`、`main/ui-plugins/`、`resources/ui-plugins/`、`check:plugin-api` | 用 `UI-01` 完成真实启用→出现→关闭→重载验收，并继续收窄 `@drone/plugin-api` |
 | 知识、topic 和记忆 | **部分完成（含原生 Pi fixture 闭环）** | `@drone/knowledge`、topic memory、stale/freshness 测试；`pi-knowledge` 已有本地优先检索、沉淀和二次问题 fixture trace | 用 `MEM-01` 在隔离桌面和真实 Pi 环境验证 `DRONE-MEM-001`、来源复读和 stale 阻断 |
 | Skills | **已实现（目录与路由）** | Tools & Skills、skill router、资源校验和相关测试 | 用 `SKILL-01` 证明真实 invocation、调用计数和禁用后的行为变化 |
-| MCP / 研究连接器 | **已实现；WebDAV/Zotero 写入闭环已验收** | MCP 服务、Zotero、WebDAV、research adapters 和局部测试；WebDAV 与 Zotero 均有真实临时对象回执；Protocols.io 保持只读 | 继续完成 `MCP-01` / `CONN-01` 的隔离真实调用、关闭重试和唯一返回值验收；Protocols.io 不进行写入 |
+| MCP / 研究连接器 | **隔离真实调用已通过；WebDAV/Zotero 写入闭环已验收** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 启动本地 stdio fixture，启用后真实 tool call 返回 `DRONE-MCP-001`，关闭并重载后无工具/无 marker；同一测试通过 read-only `CapabilityResearchPorts` 对唯一词 `DRONE-CONN-01-UNIQUE` 回读稳定 source ID/URL/调用记录，关闭后跳过传输、重新启用可重试；WebDAV 与 Zotero 均有真实临时对象回执；Protocols.io 保持只读 | 复跑 `check:remaining-gates` 并在根门禁中保留该证据；Protocols.io 不进行写入 |
 | 外部写入回读删除 | **WebDAV/Zotero 已通过；Protocols.io 只读** | WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；凭据仅在进程环境使用 | 保持 Protocols.io 只读；后续若启用写入，必须另行授权并保留同等回读证据 |
 | 结果红线、evidence、provenance | **REDLINE-01 隔离验收通过** | `npm run check:redline`：4/4 fixture suites；publication / metacognitive / orchestration 门禁均返回 blocked 或 pause，sealed proof 含原因、差异路径和审计 ID | 构建产物已包含结果红线资源；交互式桌面截图仍是可选观察，不改变领域门禁结论 |
 | Pi 运行基线 | **兼容矩阵已通过（锁定/latest）；next 未发布** | `check:pi-compat`：锁定 `1.1.0`、latest `1.3.0` 均加载 pi-core/knowledge/research；next 如实记录 `NOT_PUBLISHED` | 发布前仍需确定 npm scope、canary 与公开发布策略 |
@@ -565,8 +565,8 @@ Claude Code adapter 必须通过同一套：
 | `UI-01` | 启用 UI 插件，观察真实 slot/panel/headless 效果；关闭、重载和重启 | 槽位/面板变化、关闭后消失、持久化配置、插件错误状态 | 宿主已实现，真实验收未完成 | 执行桌面清单并记录截图、plugin name、load nonce |
 | `MEM-01` | 用 `memory-note.md` 写入 `DRONE-MEM-001`，新会话恢复 topic，修改源文件后再次恢复 | topic context、来源路径、重新读取回执、`stale/changed` 状态 | 领域与测试已实现，真实验收未完成 | 在隔离 profile 执行跨会话/重启验收 |
 | `SKILL-01` | 启用 `research-workflow` 或实际安装 skill，用 slash command/研究问题触发，再禁用重试 | skill invocation、名称/参数、调用次数/最近使用、结果结构、禁用后的不可用回执 | 路由与目录已实现，真实验收未完成 | 将 invocation 证据接入 Run Inspector 验收记录 |
-| `MCP-01` | 启用本地测试 MCP 的 `echo_marker`，要求返回唯一值 `DRONE-MCP-001`，关闭后重试 | 连接状态、真实 tool call、唯一返回值、关闭后的 unavailable/blocked | MCP 宿主已实现，专用 marker 验收未完成 | 加入隔离 MCP fixture 和桌面执行记录 |
-| `CONN-01` | 启用研究连接器搜索唯一测试词，再关闭后重复搜索 | 稳定 source ID、URL、访问时间、调用记录、关闭后的行为 | 适配器与 IPC 已实现，真实外部验收未完成 | 选择可用连接器，完成 read-only 真实验收 |
+| `MCP-01` | 启用本地测试 MCP 的 `echo_marker`，要求返回唯一值 `DRONE-MCP-001`，关闭后重试 | 连接状态、真实 tool call、唯一返回值、关闭后的 unavailable/blocked | **PASS（隔离真实 SDK fixture）**；`mcp-connector-gates.test.ts` 覆盖启用→真实调用→关闭→重载，关闭后 adapter 无 server/tool 或明确 disabled | 作为根门禁 `check:remaining-gates` 持续复跑 |
+| `CONN-01` | 启用研究连接器搜索唯一测试词，再关闭后重复搜索 | 稳定 source ID、URL、访问时间、调用记录、关闭后的行为 | **PASS（只读 CapabilityResearchPorts fixture）**；唯一词 `DRONE-CONN-01-UNIQUE` 的 source receipt 和调用记录可回读，关闭后不发起传输，重新启用可重试 | 保持只读；外部服务写入不在本门槛范围 |
 | `WRITE-01` | 对 Zotero/WebDAV 执行授权→写入→回读→删除→再回读 | 外部对象 ID、回读内容、删除确认、审计记录 | **PASS（WebDAV + Zotero）**；Protocols.io 保持只读 | 保留无凭据回执；Protocols.io 只有在另行授权 token 后才增加写入验收 |
 | `REDLINE-01` | 注入缺来源、篡改、方法漂移、重复数不足、断线、权限拒绝和 stale source | `npm run check:redline`；每类 fixture 均有阻断状态、原因、证据差异和 sealed 审计 ID | **PASS（隔离领域验收）** | 如需 GUI 走查，沿用同一 proof 投影；不作为本机构建产物降级判定 |
 
@@ -583,7 +583,7 @@ Claude Code adapter 必须通过同一套：
 - 插件通过稳定 API 和结果合同与宿主通信。
 - Pi 更新有兼容矩阵、canary、回滚和明确的版本策略。
 - skill、MCP、connector 的界面状态与实际行为一致。
-- `MCP-01`、`MEM-01`、`REDLINE-01` 有真实证据；其余红线项如实标注状态，未完成项不得标记为通过。
+- `MCP-01`、`MEM-01`、`REDLINE-01` 有真实证据；`CONN-01` 以只读隔离连接器证据验收；其余红线项如实标注状态，未完成项不得标记为通过。
 - 结果红线在 Pi 和 Desktop 中一致。
 - 记忆、topic、证据和 provenance 能跨重启恢复。
 - 外部写入、远程执行、删除和发布均有授权与回读。
@@ -632,6 +632,7 @@ Claude Code adapter 必须通过同一套：
 | 2026-10-18 | 根级全量测试复跑 | 使用真实 HOME、独立 `PI_CODING_AGENT_DIR` 并允许本地监听的环境完成 `npm test`：所有 workspace 合计通过（backend 220 files / 1854 tests，desktop 147 files / 774 tests，extensions/inquiry/knowledge/tasks/research/shared 等均通过；native Pi、plugin-api、pi-core、pi-research smoke 也通过），退出码 0 | 使用临时 HOME 时权限测试会把“家目录下相对 rm”误判为临时区，产生环境假失败；该隔离方式不再作为项目失败记录。真实桌面、Pi latest/next 矩阵、外部连接器副作用验收仍待完成 |
 | 2026-10-18 | 升级 fixture 与集成 build | 在可写的等价集成 checkout `06ff916f` 完成 `npm run build`；在允许 loopback 的环境完成 `npm run test:upgrade`，`orchestration-stress`、`hybrid-fixture`、`packaged-resources` 3/3 通过，退出码 0 | 受限 shell 下 `test:upgrade` 的 hybrid fixture 会因禁止绑定 `127.0.0.1` 假失败；已用允许本地监听的验收环境复跑通过。管理 worktree 直接生成 dist 仍受当前文件沙箱保护，未改动代码 |
 | 2026-10-18 | WebDAV 临时对象闭环 | 使用 `KnowledgeWebDavService` 对 `http://10.126.126.1:8080/Drone-Knowledge` 完成真实 probe（ready/authenticated）、唯一对象 `Inbox/DRONE-WEBDAV-1792257377294.md` 写入、服务层回读哈希核对、HTTP 204 删除，以及删除后服务层回读 `not_found`；receipt hash `2b2695bfa41fe29f9477796e2413f5446b6eabfd3dafa8351c0268c72f151d27` | 真实凭据只在本次进程环境中使用，未写入仓库、日志或计划；Protocols.io 仍按只读策略，不进行 bookmark/写入 |
+| 2026-10-18 | MCP / CONN 隔离验收 | `packages/backend/test/mcp-connector-gates.test.ts` 通过：staged `pi-mcp-adapter` 的本地 stdio marker fixture 启用后真实返回 `DRONE-MCP-001`，关闭并重载后无可用工具；read-only `CapabilityResearchPorts` 对 `DRONE-CONN-01-UNIQUE` 回读 source ID/URL/调用记录，关闭后跳过传输，重启用可重试 | 证据为隔离本地 fixture，无外部写入；Protocols.io 继续只读；根门禁应通过 `npm run check:remaining-gates` 复跑 |
 
 
 ### 2026-10-18 收口补充
@@ -641,4 +642,4 @@ Claude Code adapter 必须通过同一套：
 - **插件生命周期**：`check:plugin-api --migration --lifecycle` 已完成本地 pack 的 `0.9.0 → 1.0.0 → 0.9.0 → uninstall`，并验证 `DroneHostPort` 声明。
 - **Pi 兼容**：锁定 `1.1.0` 与 latest `1.3.0` 均通过 pi-core/pi-knowledge/pi-research 加载；next 标签当前 `NOT_PUBLISHED`，不伪造通过。
 - **外部写入**：WebDAV 和 Zotero 临时 note 均完成授权→创建→回读→删除→再回读；Protocols.io 只读，不进行 bookmark/write。
-- **未关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01` 真实行为仍按计划标记 `NOT_RUN` 或 read-only；`REDLINE-01` 已有 `npm run check:redline` 隔离真实行为证据。analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。npm scope、公开发布、正式签名/发行仍需另行决策。
+- **已关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均有隔离真实行为证据，Protocols.io 保持只读；analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。仍待决定 npm scope、公开发布、正式签名/发行。

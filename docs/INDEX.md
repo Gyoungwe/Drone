@@ -143,7 +143,7 @@ packages/
 | Knowledge loop | `extensions/src/internal/knowledge-extension.ts`（`LOCAL_FIRST_GUIDANCE` 每轮引导：本地优先 → 联网 → `research_deposit_knowledge` 按 paper/software/method/idea 沉淀 → 带来源回答）+ `knowledge/src/wiki-review.ts`（`autoApplyWikiProposal`：自动审核模式下新页面 / Agent 生成过的页面直接写入，人工改过的页面仍待审核） | 知识闭环；Library 新增 `Ideas` 类型（三处 profile 定义同步：`vault-profiles.ts` / `vault.ts` / `vault-layout.ts`） |
 | Knowledge reuse lifecycle | `knowledge/src/reuse.ts` | 将真实来源 receipt 聚合成带 project/workspace、证据等级、Analysis/Evidence checkpoint 引用的 `KnowledgeSnapshot`；按 freshness、方法/参考/输入 manifest 与上下文门禁复用，并通过可注入存储端口维护可复用索引 |
 | Observability | `shared/src/transcript/run-inspector.ts` + Desktop `RunInspector` | retrieval counts/fallbacks, public specialist stop reasons, actual read paths; no private chain-of-thought |
-| Release gates | `scripts/{benchmark-semantic,stress-knowledge,check-upgrade-release,check-packaged-desktop}.mjs` | synthetic stress, production-pipeline benchmark, consolidated gate, isolated packaged-app smoke |
+| Release gates | `scripts/{benchmark-semantic,stress-knowledge,check-upgrade-release,check-packaged-desktop,check-remaining-gates}.mjs` + `packages/backend/test/mcp-connector-gates.test.ts` | synthetic stress, production-pipeline benchmark, consolidated gate, isolated packaged-app smoke, MCP marker and read-only connector close/reopen acceptance |
 
 ## packages/knowledge — 知识领域包（迁移中）
 
