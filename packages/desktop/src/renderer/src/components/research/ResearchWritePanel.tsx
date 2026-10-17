@@ -180,7 +180,7 @@ export function ResearchWritePanel({ targetRef, payload }: ResearchWritePanelPro
 			{receipt && (
 				<p className="research-browser-connectors-hint">
 					{receipt.status === "executed" ? t("researchWrite.executed") : receipt.failureReason}
-					{receipt.deleted === "verified" ? " · " + t("researchWrite.deleted") : ""}
+					{receipt.deleted === "verified" ? ` · ${t("researchWrite.deleted")}` : ""}
 				</p>
 			)}
 			{error && <p className="research-browser-error">{error}</p>}
