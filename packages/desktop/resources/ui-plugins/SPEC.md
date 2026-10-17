@@ -85,7 +85,7 @@ interface KnowledgeFlowCard {
 
 ```ts
 import { useState, memo } from "react";                 // react（含 react/jsx-runtime，JSX 自动使用）
-import { Button, useT } from "@drone/plugin-api";      // 宿主 API（见 §4）
+import { Button, useT } from "@gyoungwe/plugin-api";      // 宿主 API（见 §4）
 import idleUrl from "./assets/idle.png";                // 插件目录内图片资产（见下）
 ```
 
@@ -104,7 +104,7 @@ import idleUrl from "./assets/idle.png";                // 插件目录内图片
 - ❌ 禁止直接访问 `window.pi` 做任何 IPC 调用（信任模型边界，插件只准用 `window.DroneUI` 暴露的能力）；
 - ✅ 允许 `window.DroneUI` 的 hooks 取宿主 store 数据（如 todo 面板替换）。
 
-## 4. `@drone/plugin-api` 导出清单
+## 4. `@gyoungwe/plugin-api` 导出清单
 
 ```ts
 export const version;                       // 宿主 API 版本（1）
@@ -234,7 +234,7 @@ Slot 是「替换组件」，Contribution 是「加挂组件」，Headless 是�
 入口导出 `activate(): (() => void) | void`：插件加载（含热重载重载）时调用；返回的清理函数在**禁用/卸载/热重载替换**时调用（无返回值则无清理）：
 
 ```ts
-import { stores } from "@drone/plugin-api";
+import { stores } from "@gyoungwe/plugin-api";
 
 export function activate() {
 	// 命令式访问宿主 store（无头插件没有组件，不用 hook）

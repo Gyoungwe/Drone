@@ -52,7 +52,7 @@
 		"build:research": "node scripts/build-research-runtime.mjs",
 		"check:extensions": "node scripts/check-extensions-build.mjs",
 		"generate:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs",
-		"check:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs --check && npm run check -w @drone/plugin-api && node scripts/check-plugin-api.mjs --migration --lifecycle",
+		"check:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs --check && npm run check -w @gyoungwe/plugin-api && node scripts/check-plugin-api.mjs --migration --lifecycle",
 		"build:tasks": "npm run build:runtime -w @drone/tasks && node scripts/build-task-runtime.mjs",
 		"build:knowledge": "node scripts/build-knowledge-runtime.mjs",
 		"check:knowledge-runtime": "node scripts/build-knowledge-runtime.mjs --check",

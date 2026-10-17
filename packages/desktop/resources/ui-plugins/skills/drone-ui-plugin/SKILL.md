@@ -14,7 +14,7 @@ description: Drone 桌面端 UI 插件（槽位组件替换）。用户说「改
 
    ```
    <name>/plugin.json      # name 必须与目录名一致；droneUi:1；slots 声明覆盖的槽位
-   <name>/src/index.tsx    # 入口（memo 包裹 + 语义 token + 只 import react / @drone/plugin-api / 相对路径图片资产）
+   <name>/src/index.tsx    # 入口（memo 包裹 + 语义 token + 只 import react / @gyoungwe/plugin-api / 相对路径图片资产）
    ```
 
    直接抄 `~/.drone/ui-plugins/_examples/terminal-tool-card/` 改最快。
@@ -24,7 +24,7 @@ description: Drone 桌面端 UI 插件（槽位组件替换）。用户说「改
 
 ## 硬约束（违反必返工）
 
-- 只准 import `react` / `@drone/plugin-api`，其他 npm 包一律禁止（构建直接失败）；
+- 只准 import `react` / `@gyoungwe/plugin-api`，其他 npm 包一律禁止（构建直接失败）；
 - 图片资产例外：相对路径导入 `.png/.webp/.gif/.jpg` → 构建器内联为 data URL（SPEC §3，桌宠立绘用；先缩到显示尺寸 2x 再导入）；
 - 禁 Node API、禁 fetch、禁 localStorage、禁 `window.pi`（插件只能碰 `window.DroneUI`）；
 - 样式一律语义 token（`bg-surface`/`text-ink`/`border-border`/…），**禁写死 zinc/white**，深浅主题都要验证；

@@ -1,5 +1,5 @@
 {
-	"name": "@drone/research-suite",
+	"name": "@gyoungwe/research-suite",
 	"version": "0.1.0",
 	"description": "Bundled Drone native Pi research suite",
 	"keywords": [
@@ -8,6 +8,14 @@
 		"evidence"
 	],
 	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Gyoungwe/Drone.git",
+		"directory": "packages/research-suite"
+	},
 	"type": "module",
 	"main": "./package.json",
 	"files": [
@@ -20,28 +28,28 @@
 	},
 	"pi": {
 		"extensions": [
-			"./node_modules/@drone/pi-core/dist/index.mjs",
-			"./node_modules/@drone/pi-knowledge/dist/index.mjs",
-			"./node_modules/@drone/pi-research/dist/index.mjs"
+			"./node_modules/@gyoungwe/pi-core/dist/index.mjs",
+			"./node_modules/@gyoungwe/pi-knowledge/dist/index.mjs",
+			"./node_modules/@gyoungwe/pi-research/dist/index.mjs"
 		],
 		"skills": [
-			"./node_modules/@drone/pi-core/skills/*",
-			"./node_modules/@drone/pi-knowledge/skills/*",
-			"./node_modules/@drone/pi-research/skills/*"
+			"./node_modules/@gyoungwe/pi-core/skills/*",
+			"./node_modules/@gyoungwe/pi-knowledge/skills/*",
+			"./node_modules/@gyoungwe/pi-research/skills/*"
 		],
 		"prompts": [
 			"./prompts/*.md"
 		]
 	},
 	"dependencies": {
-		"@drone/pi-core": "0.1.0",
-		"@drone/pi-knowledge": "0.1.0",
-		"@drone/pi-research": "0.1.0"
+		"@gyoungwe/pi-core": "0.1.0",
+		"@gyoungwe/pi-knowledge": "0.1.0",
+		"@gyoungwe/pi-research": "0.1.0"
 	},
 	"bundleDependencies": [
-		"@drone/pi-core",
-		"@drone/pi-knowledge",
-		"@drone/pi-research"
+		"@gyoungwe/pi-core",
+		"@gyoungwe/pi-knowledge",
+		"@gyoungwe/pi-research"
 	],
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": ">=1.1.0 <2.0.0"

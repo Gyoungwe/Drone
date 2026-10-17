@@ -1,8 +1,16 @@
 {
-	"name": "@drone/plugin-api",
+	"name": "@gyoungwe/plugin-api",
 	"version": "1.0.0",
 	"description": "Stable host contracts for Drone capability plugins",
 	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Gyoungwe/Drone.git",
+		"directory": "packages/plugin-api"
+	},
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",

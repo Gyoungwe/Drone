@@ -61,11 +61,11 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | MCP / 连接器 | **隔离真实调用已通过（适配器与 IPC；WebDAV/Zotero 写入闭环）** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 完成 marker tool call 和关闭重载；read-only `CapabilityResearchPorts` 完成唯一词 source receipt/调用记录与关闭跳过传输；WebDAV 与 Zotero 临时对象均完成真实创建→回读→删除 | 根门禁持续复跑；Protocols.io 保持只读 |
 | 外部写入闭环 | **WebDAV + Zotero 已通过；Protocols.io 只读** | 两个连接器均完成授权→创建→回读→删除→再回读，凭据未写入仓库 | 维持 Protocols.io 只读；若以后启用写入需另行授权 token |
 | 结果红线与 evidence | **REDLINE-01 隔离验收通过** | 状态合同、publication/metacognitive/orchestration gate、`npm run check:redline` 的 4 类可重复 fixture 与 sealed proof | 交互式桌面截图可继续作为可选观察；本机构建产物和领域审计已闭合 |
-| Pi 基线 | **锁定/latest 兼容矩阵已通过** | Pi `1.1.0` 与 latest `1.3.0` 均加载三套原生插件；next 为 `NOT_PUBLISHED` | npm scope、canary 和公开发布仍待决策 |
-| 公共 `@drone/pi-*` 包 | **core/knowledge/research 首批已验证** | 四包 manifest/build/check/smoke 通过；本地 pack 生命周期安装→升级→回滚→卸载通过 | analysis/evidence/connectors 按 v1.1 规划；公开发布待 npm scope 决策 |
+| Pi 基线 | **锁定/latest 单包兼容矩阵已通过** | Pi `1.1.0` 与 latest `1.3.0` 的 `pi-core`、`pi-knowledge`、`pi-research` 六个单包 cell 全部真实模型调用 PASS；next 为 `NOT_PUBLISHED`；三包同时加载如实记录为 `BLOCKED_TOOL_CONFLICT` | 解决重复 `task_*` 工具注册的 ownership 后，才可宣称聚合包同进程加载通过；npm scope、canary 和公开发布仍待决策 |
+| 公共 `@gyoungwe/pi-*` 包 | **core/knowledge/research 首批已验证** | 四包 manifest/build/check/smoke 通过；本地 pack 生命周期安装→升级→回滚→卸载通过；scope 已确定为 `@gyoungwe` | analysis/evidence/connectors 按 v1.1 规划；npm publish 待本机登录 |
 | 宿主 / 插件仓库边界 | **骨架与合同已完成，公开发布未完成** | `../drone-plugins` 多包 workspace、manifest 检查、plugin-api migration gate、research-suite bundle gate | 决定 npm scope，迁移至少两个可公开分发插件并完成真实安装/卸载/回滚 |
 | 菜单信息架构 | **UI-1～UI-7 已实现，真实视觉验收未完成** | 新任务/知识库/技能与连接/主机、项目/最近和右栏数据投影已集成 | 完成四视口截图和 loading/empty/error/disabled 状态走查 |
-| `DroneHostPort` 与通用能力协商 | **首版已实现** | `@drone/plugin-api`、HostPort、manifest capability check、兼容性测试和迁移闸门 | 完成所有插件迁移与真实宿主加载验收 |
+| `DroneHostPort` 与通用能力协商 | **首版已实现** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、兼容性测试和迁移闸门 | 完成所有插件迁移与真实宿主加载验收 |
 | LAN 最终移除 | **已完成** | LAN 源码、生成运行时、入口、manifest、测试和索引均已清理（`8d4ad219`、`9af99382`、`c99432d0`） | 不再列入验收矩阵或发布承诺 |
 | 真实桌面发布候选 | **本机构建产物验收已通过** | `check:desktop-artifact --strict` 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`；artifact SHA-256 `662b97f5d4d8b03330aa8663ff4b2308956ad2c0b910e35b6d4eba54bc2a214c` | 交互式 Electron 在当前 shell 的 NSApplication 阶段 SIGABRT；按当前口径不作为构建产物门槛 |
 
@@ -395,3 +395,7 @@ revision / ETag / SHA-256：
 ## 14. 2026-10-18 剩余门槛复跑
 
 `npm run check:remaining-gates` 已集中复跑四条门槛：MEM-01 的 1 个跨实例夹具、REDLINE-01 的 4 个违规夹具、MCP-01 与 CONN-01 的 2 个 SDK/只读连接器夹具全部通过。随后复跑 `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`npm run check:plugin-api`、`npm run check:pi-compat` 和 `npm run check:desktop-artifact -- --strict`，均通过；桌面本机构建产物为 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。Protocols.io 仍保持只读，未执行外部写入；npm scope 与公开发布继续单独待决，证书/正式签名不属于计划门槛。
+
+## 15. 2026-10-18 Pi 真实模型兼容矩阵
+
+证据文件：`/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json`。在独立 `HOME` / `PI_CODING_AGENT_DIR`、`--no-session` 和 offline credential copy 环境中，Pi `1.1.0` 与 npm latest `1.3.0` 分别对 `pi-core`、`pi-knowledge`、`pi-research` 完成真实模型调用；六个单包 cell 全部 `PASS`，`rc=0`、`finalTextChars=32`、JSONL parse errors 为 0。三包同时加载因重复注册 `task_status`、`task_plan`、`task_wait`、`task_reconcile`、`task_evidence_restore` 被 Pi 拒绝，状态为 `BLOCKED_TOOL_CONFLICT`，stderr SHA-256 为 `ff7542098df2604b71fd04281b3bacdbf226ac9b668ec1a3005be38f9bfa95e4`。该阻断属于聚合加载的工具注册 ownership 问题，不降低六个单包矩阵的通过结论；在解决前不得宣称 `research-suite` 三包同进程加载通过。

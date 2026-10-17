@@ -1,5 +1,5 @@
 {
-	"name": "@drone/pi-research",
+	"name": "@gyoungwe/pi-research",
 	"version": "0.1.0",
 	"description": "Evidence-gated research retrieval, reading, deposition and source-grounded answer tools for native Pi",
 	"keywords": [
@@ -8,6 +8,14 @@
 		"evidence"
 	],
 	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Gyoungwe/Drone.git",
+		"directory": "packages/pi-research"
+	},
 	"type": "module",
 	"main": "./dist/index.mjs",
 	"files": [

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Offline external-install fixture for @drone/pi-research. It creates two
+// Offline external-install fixture for @gyoungwe/pi-research. It creates two
 // source records in a temporary workspace, exercises search -> two reads ->
 // deposit -> source-grounded answer, and removes the fixture afterwards.
 import assert from "node:assert/strict";

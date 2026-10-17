@@ -1,4 +1,4 @@
-# @drone/pi-knowledge
+# @gyoungwe/pi-knowledge
 
 The first native Pi package in Drone. It exposes the existing knowledge/Vault
 extension through one installable Pi entry point and bundles the `@drone/knowledge`

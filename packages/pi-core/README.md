@@ -1,4 +1,4 @@
-# @drone/pi-core
+# @gyoungwe/pi-core
 
 Portable Pi extension for Drone's task ledger and user-facing core tools:
 `ask_user`, `set_status`, `todo`, `deliver_files`, and `memory_save`.

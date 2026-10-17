@@ -340,6 +340,6 @@ function registerPackageStatus(pi: any) {
 export default function registerPiKnowledge(pi: any) {
 	registerPackageStatus(pi);
 	registerWorkspaceConfig(pi);
-	registerObsidianWorkbench(pi);
+	registerObsidianWorkbench(pi, { readOnly: true });
 	registerNativeKnowledgeTools(pi);
 }

@@ -8,7 +8,7 @@
 > 4. **一级导航**：新任务 · 知识库 · 技能与连接 · 主机，再加上「项目」「最近」两个分组。"运行"和"证据"不做一级入口，放进右栏。
 > 5. **收敛闸门**：发版硬性要求只有 `MCP-01`、`MEM-01`、`REDLINE-01` 三条；兼容矩阵只测 Pi `1.1.0`（锁定版本，同时也是最低版本）和 `latest`（每周 CI）；能力协商 v1 只区分 `compatible` 和 `incompatible` 两种结果。
 > 6. **数据位置不变**：原生 Pi 的运行数据沿用现有 `.pi/` 下的位置和 Vault，不新增 `.drone/` 目录，也不改变已落盘文件的格式。
-> 7. **npm scope 待定**：`@drone` 是否归我们所有还没有核实。P4 之前必须注册 npm org，或者改用 `@gyoungwe/`。下文的包名以 `@drone/` 作为占位。
+> 7. **npm scope 已确定**：公开包统一使用 `@gyoungwe/`。首批发布顺序为 `plugin-api` → `pi-core` / `pi-knowledge` / `pi-research` → `research-suite`；发布动作只受 npm 登录状态阻塞。
 >
 > 执行顺序以 §9「实施阶段（执行版）」为准。
 
@@ -19,7 +19,7 @@ Drone 的最终交付形态是：**原生 Pi 作为运行时，Drone 能力通�
 用户安装一个聚合包即可体验核心能力：
 
 ```sh
-pi install npm:@drone/research-suite@0.1.0
+pi install npm:@gyoungwe/research-suite@0.1.0
 pi
 ```
 
@@ -42,7 +42,7 @@ LAN 已从最终方案中删除，不再保留 LAN adapter、LAN 页面、LAN �
 
 ## 3. 插件分层
 
-### 3.1 `@drone/pi-core`
+### 3.1 `@gyoungwe/pi-core`
 
 原生 Pi 必装插件，负责：
 
@@ -56,29 +56,29 @@ LAN 已从最终方案中删除，不再保留 LAN adapter、LAN 页面、LAN �
 
 该插件只能依赖 Pi Extension API、Node 标准库和 Drone 公共合同，不能 import Electron、renderer 或 Desktop backend。
 
-### 3.2 `@drone/pi-knowledge`
+### 3.2 `@gyoungwe/pi-knowledge`
 
 负责本地知识库、FTS/语义检索、topic memory、跨会话连续性、知识沉淀、review、stale 检查和 publication gate。
 
 没有绑定 Vault 时返回 `unconfigured`，不能伪装成知识库已启用。
 
-### 3.3 `@drone/pi-research`
+### 3.3 `@gyoungwe/pi-research`
 
 负责研究规划、文献搜索和读取、来源回执、引用绑定、research run、source archive 和 Show Me 的文本降级结果。
 
-### 3.4 `@drone/pi-analysis`
+### 3.4 `@gyoungwe/pi-analysis`
 
 负责 `AnalysisAdapter`、`Registry`、未知流程识别、候选 adapter/workflow、fixture/静态/科学验证、计算编排、review→delivery 和 discovery 评测。
 
 编译成功、命令生成成功和计划生成成功都不能被报告为执行成功。
 
-### 3.5 `@drone/pi-evidence`
+### 3.5 `@gyoungwe/pi-evidence`
 
 负责 artifact manifest、provenance、checkpoint、branch、evidence capsule、replay/import、SHA-256、workflow digest 和 container digest。
 
 原生 Pi 使用文本和 JSON 回执；Desktop 只负责图形化查看，不重新实现证据逻辑。
 
-### 3.6 `@drone/pi-connectors`
+### 3.6 `@gyoungwe/pi-connectors`
 
 连接器作为可选插件独立分发：
 
@@ -91,39 +91,39 @@ LAN 已从最终方案中删除，不再保留 LAN adapter、LAN 页面、LAN �
 
 每个连接器必须声明权限、网络范围、凭据来源、是否读写、外部副作用、宿主要求和回读/删除验收流程。
 
-### 3.7 `@drone/desktop-ui-pack`
+### 3.7 `@gyoungwe/desktop-ui-pack`
 
 仅面向 Drone Desktop，负责 Run Inspector、过程视图、Knowledge Graph、Evidence/Artifacts、Compute、连接器和设置面板。
 
-它只能依赖 `@drone/plugin-api`。卸载该插件后，原生 Pi 的核心能力仍然可用。
+它只能依赖 `@gyoungwe/plugin-api`。卸载该插件后，原生 Pi 的核心能力仍然可用。
 
-### 3.8 `@drone/research-suite`
+### 3.8 `@gyoungwe/research-suite`
 
 聚合包不承载领域实现。**Pi 不会自动加载依赖包里的资源**：依赖只会被安装，供代码 import。作为依赖的 Pi 包必须打进 tarball（`bundleDependencies`），并在 `pi` 清单里用 `node_modules/...` 路径逐个引用。Pi 宿主包（`@earendil-works/pi-*`）只能写在 `peerDependencies` 里，否则会出现重复实例。
 
 ```json
 {
-  "name": "@drone/research-suite",
+  "name": "@gyoungwe/research-suite",
   "keywords": ["pi-package"],
   "pi": {
     "extensions": [
-      "./node_modules/@drone/pi-core/dist/index.mjs",
-      "./node_modules/@drone/pi-knowledge/dist/index.mjs",
-      "./node_modules/@drone/pi-research/dist/index.mjs"
+      "./node_modules/@gyoungwe/pi-core/dist/index.mjs",
+      "./node_modules/@gyoungwe/pi-knowledge/dist/index.mjs",
+      "./node_modules/@gyoungwe/pi-research/dist/index.mjs"
     ],
     "skills": [
-      "./node_modules/@drone/pi-core/skills/*",
-      "./node_modules/@drone/pi-knowledge/skills/*",
-      "./node_modules/@drone/pi-research/skills/*"
+      "./node_modules/@gyoungwe/pi-core/skills/*",
+      "./node_modules/@gyoungwe/pi-knowledge/skills/*",
+      "./node_modules/@gyoungwe/pi-research/skills/*"
     ],
     "prompts": ["./prompts/*.md"]
   },
   "dependencies": {
-    "@drone/pi-core": "0.1.0",
-    "@drone/pi-knowledge": "0.1.0",
-    "@drone/pi-research": "0.1.0"
+    "@gyoungwe/pi-core": "0.1.0",
+    "@gyoungwe/pi-knowledge": "0.1.0",
+    "@gyoungwe/pi-research": "0.1.0"
   },
-  "bundleDependencies": ["@drone/pi-core", "@drone/pi-knowledge", "@drone/pi-research"],
+  "bundleDependencies": ["@gyoungwe/pi-core", "@gyoungwe/pi-knowledge", "@gyoungwe/pi-research"],
   "peerDependencies": { "@earendil-works/pi-coding-agent": ">=1.1.0 <2.0.0" }
 }
 ```
@@ -169,8 +169,8 @@ drone-plugins/         # 已绑定的 ../drone-plugins（Gyoungwe/drone-plugins�
 仓库归属规则：
 
 - `drone` 只发布宿主、公开合同和宿主适配器；不能把 backend 私有实现当作插件 API。
-- `drone-plugins` 只能依赖已发布的 `@drone/plugin-api`、结果/证据合同和 Pi 的 `peerDependencies`；禁止依赖 Drone 源码相对路径、Electron 或 backend 私有模块。
-- UI 插件只能使用 `@drone/plugin-api` 和公开 UI 类型；核心聊天、权限、安全、会话状态和设置壳仍属于宿主。
+- `drone-plugins` 只能依赖已发布的 `@gyoungwe/plugin-api`、结果/证据合同和 Pi 的 `peerDependencies`；禁止依赖 Drone 源码相对路径、Electron 或 backend 私有模块。
+- UI 插件只能使用 `@gyoungwe/plugin-api` 和公开 UI 类型；核心聊天、权限、安全、会话状态和设置壳仍属于宿主。
 - 插件仓库先保持一个 workspace，不为每个插件单独建 Git 仓库；只有在团队边界和发布节奏确实分离后再拆分。
 - 插件 manifest 必须声明 `pluginApi`、`minHostVersion`、支持的宿主、能力、权限和结果合同版本。
 
@@ -179,7 +179,7 @@ drone-plugins/         # 已绑定的 ../drone-plugins（Gyoungwe/drone-plugins�
 1. **外部安装闸门**：插件在当前仓库的 `packages/pi-<name>/` 里，用 `npm pack` 后在临时 HOME 执行 `pi install` 的方式完成安装、调用、卸载 smoke（放进 CI）。要证明它不依赖任何源码相对路径，也不 import `@drone/backend`、`@drone/desktop` 或 electron。
 2. **迁移闸门**：`pi-knowledge` 通过外部安装闸门和 `MEM-01` 之后，就新建 `drone-plugins` 仓库，把它迁过去（用 `git subtree split` 保留历史）。后续的包逐个通过闸门 1 后再迁移。
 
-插件仓库依赖宿主仓库发布的两个包：`@drone/plugin-api`（类型和 HostPort 接口）和 `@drone/result-contract`（结果状态、红线、回执 schema）。在这两个包正式发布到 npm 之前，`drone-plugins` 用 `npm pack` 出的 tarball 或 git 依赖锁定具体 commit，**不允许用相对路径引用 drone 仓库**。
+插件仓库依赖宿主仓库发布的两个包：`@gyoungwe/plugin-api`（类型和 HostPort 接口）和 `@gyoungwe/result-contract`（结果状态、红线、回执 schema）。在这两个包正式发布到 npm 之前，`drone-plugins` 用 `npm pack` 出的 tarball 或 git 依赖锁定具体 commit，**不允许用相对路径引用 drone 仓库**。
 
 发布顺序：宿主先发布 `plugin-api`，插件仓库再跑 CI（Pi `1.1.0` + `latest`），之后发 canary，在原生 Pi 里跑一次真实知识闭环任务，最后才更新 `research-suite`。
 
@@ -351,7 +351,7 @@ Pi 升级不能直接改变 Drone 结果语义。
 6. 用原生 Pi 完成真实研究任务。
 7. 用 Desktop 完成同一任务，比较 run ID、结果状态和证据。
 8. 发布 canary 插件。
-9. canary 稳定后更新 `@drone/research-suite`。
+9. canary 稳定后更新 `@gyoungwe/research-suite`。
 
 ### 6.6 版本升级规则
 
@@ -477,10 +477,10 @@ Claude Code adapter 必须通过同一套：
 | MCP / 研究连接器 | **隔离真实调用已通过；WebDAV/Zotero 写入闭环已验收** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 启动本地 stdio fixture，启用后真实 tool call 返回 `DRONE-MCP-001`，关闭并重载后无工具/无 marker；同一测试通过 read-only `CapabilityResearchPorts` 对唯一词 `DRONE-CONN-01-UNIQUE` 回读稳定 source ID/URL/调用记录，关闭后跳过传输、重新启用可重试；WebDAV 与 Zotero 均有真实临时对象回执；Protocols.io 保持只读 | 复跑 `check:remaining-gates` 并在根门禁中保留该证据；Protocols.io 不进行写入 |
 | 外部写入回读删除 | **WebDAV/Zotero 已通过；Protocols.io 只读** | WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；凭据仅在进程环境使用 | 保持 Protocols.io 只读；后续若启用写入，必须另行授权并保留同等回读证据 |
 | 结果红线、evidence、provenance | **REDLINE-01 隔离验收通过** | `npm run check:redline`：4/4 fixture suites；publication / metacognitive / orchestration 门禁均返回 blocked 或 pause，sealed proof 含原因、差异路径和审计 ID | 构建产物已包含结果红线资源；交互式桌面截图仍是可选观察，不改变领域门禁结论 |
-| Pi 运行基线 | **兼容矩阵已通过（锁定/latest）；next 未发布** | `check:pi-compat`：锁定 `1.1.0`、latest `1.3.0` 均加载 pi-core/knowledge/research；next 如实记录 `NOT_PUBLISHED` | 发布前仍需确定 npm scope、canary 与公开发布策略 |
-| `DroneHostPort` 与通用插件能力协商 | **已实现（首版合同）** | `@drone/plugin-api`、HostPort、manifest capability check、`compatible/degraded/incompatible` 测试和迁移闸门已合入 `3f8af50c` | 完成所有插件迁移和真实宿主加载验收；npm scope/公开发布仍待决定 |
-| `@drone/pi-*` 公共包与 `@drone/research-suite` | **core/knowledge/research 首批已验证** | 四包均有 manifest/build/check/smoke；plugin lifecycle 已完成本地 pack 安装→升级→回滚→卸载；Pi 锁定/latest 矩阵通过 | analysis/evidence/connectors 仍按 v1.1 规划；npm scope 与公开发布待单独决策 |
-| 宿主仓库 / 插件仓库边界 | **骨架、合同与本地生命周期已通过** | [本地 ../drone-plugins](../drone-plugins) 与 GitHub `Gyoungwe/drone-plugins` 已同步；`check:plugin-api --migration --lifecycle` 通过安装→升级→回滚→卸载 | 决定 npm scope，公开发布和外部仓库最终迁移仍待单独授权 |
+| Pi 运行基线 | **真实 CLI 矩阵通过（锁定/latest）；next 未发布** | `/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json`：Pi `1.1.0` 与 latest `1.3.0` 对 `pi-core`、`pi-knowledge`、`pi-research` 的 6 个单包及 2 个组合真实模型任务均 PASS；next 如实记录 `NOT_PUBLISHED` | 保留组合加载证据并纳入 CI；最新 Pi 仍按每周矩阵复跑 |
+| `DroneHostPort` 与通用插件能力协商 | **已实现（首版合同）** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、`compatible/degraded/incompatible` 测试和迁移闸门已合入 `3f8af50c` | 公开 npm 发布待 npm 登录；其余插件按 v1.1 排期 |
+| `@gyoungwe/pi-*` 公共包与 `@gyoungwe/research-suite` | **core/knowledge/research 首批已验证，公开包已准备** | 四包均有 manifest/build/check/smoke；`publishConfig.access=public`、repository 元数据和本地 pack 生命周期已补齐；Pi 锁定/latest 单包与组合矩阵通过 | npm publish 仍需本机 `npm login`；analysis/evidence/connectors 仍按 v1.1 规划 |
+| 宿主仓库 / 插件仓库边界 | **迁移闸门正在收口** | [本地 ../drone-plugins](../drone-plugins) 与 GitHub `Gyoungwe/drone-plugins` 已绑定；pi-knowledge 已由 subtree 迁移到外部分支，正在补齐 `@gyoungwe` 包名、自包含构建/manifest/smoke | 外部分支通过安装闸门后合并插件仓库 main；再删除宿主 `packages/pi-knowledge` 并让 Desktop 只从已安装包加载 |
 | Desktop UI Pack 独立分发 | **构建产物验收已通过；交互式 GUI 不作为本门槛** | `check:desktop-artifact --strict` 通过 16/16；Home、Knowledge、Skills/Connections、Hosts/Right panel 四视口合同均通过；artifact SHA-256 `662b97f5d4d8b03330aa8663ff4b2308956ad2c0b910e35b6d4eba54bc2a214c` | 交互式 Electron 在当前 macOS shell 的 NSApplication 阶段 SIGABRT，保留为环境观察；不阻断本地构建产物验收 |
 | 菜单信息架构收敛 | **UI-1～UI-7 已实现；四视口构建合同通过** | 本地桌面 artifact checker 通过四视口静态合同与资源完整性检查 | loading/empty/error/disabled 的交互式 GUI 走查继续作为可选后续，不计为构建产物失败 |
 | LAN 最终方案移除 | **已完成** | 提交 `8d4ad219` 删除 LAN adapter/UI/IPC/manifest/test；`9af99382` 刷新生成运行时；`c99432d0` 清除旧 demo 注释；源码/生成运行时/索引扫描均无 LAN 残留 | 仅历史变更记录保留背景，不再进入产品能力或验收矩阵 |
@@ -509,7 +509,7 @@ Claude Code adapter 必须通过同一套：
 
 **PR-3 · `pi-knowledge` 包（第一个插件）**
 - 新建 `packages/pi-knowledge/`：
-  - `package.json`：`name` 用占位 scope；`keywords: ["pi-package"]`；`pi.extensions: ["./dist/index.mjs"]`；`pi.skills: ["./skills/*"]`；`peerDependencies` 写 `@earendil-works/pi-coding-agent >=1.1.0 <2.0.0`；`@drone/knowledge` 打包进 dist（esbuild bundle），**不作为运行时依赖**。
+  - `package.json`：`name` 使用已确定的 `@gyoungwe/` scope；`keywords: ["pi-package"]`；`pi.extensions: ["./dist/index.mjs"]`；`pi.skills: ["./skills/*"]`；`peerDependencies` 写 `@earendil-works/pi-coding-agent >=1.1.0 <2.0.0`；`@drone/knowledge` 打包进 dist（esbuild bundle），**不作为运行时依赖**。
   - `src/index.ts`：从 `packages/extensions/src/knowledge-extension.ts`、`obsidian-workbench.ts`、`workspace-config.ts` 组装入口。复用现有源码，不复制。
   - `skills/`：从 `packages/desktop/resources/skills` 里挑出知识相关的 skill，复制过来（构建脚本复制，不用软链接）。
   - 没有绑定 Vault 时，所有知识工具返回 `unconfigured`，并给出 `/drone-init` 的提示。
@@ -527,7 +527,7 @@ Claude Code adapter 必须通过同一套：
 - 宿主仓库新增并发布 `packages/plugin-api`（只放类型：HostPort、结果状态、回执 schema）。在发布到 npm 之前，先用 tarball 或 git 依赖锁定 commit。
 - 用 `git subtree split -P packages/pi-knowledge` 迁到已绑定的 `../drone-plugins/pi-knowledge`，迁移时保留包名和 manifest；不要再创建第二个插件仓库。
 - `../drone-plugins` 的 CI：lint、typecheck、单测、`smoke-pi-package`，Pi 版本矩阵为 `1.1.0` 和 `latest`。
-- 宿主仓库删除 `packages/pi-knowledge`。Desktop 改为通过安装后的包加载（或者继续用内联工厂加载 `@drone/knowledge`，二选一，把选择记进决策记录）。
+- 宿主仓库在外部安装闸门通过后删除 `packages/pi-knowledge`；Desktop 采用已确认的“通过 Pi 设置加载已安装插件包”路径，不再保留内联知识插件工厂。`@drone/knowledge` 继续作为宿主领域实现，只通过已安装包的公开运行时边界使用。
 
 **PR-6 · `pi-core`**
 - 把 `ask_user`、`set_status`、`todo`、`deliver_files`、`memory_save` 从 `packages/backend/src/tools` 迁成 Pi 扩展，和任务运行时（`@drone/tasks` 的 register）一起组成 `pi-core`。
@@ -596,9 +596,9 @@ Claude Code adapter 必须通过同一套：
 |---|---|---|---|
 | 2026-10-17 | 评审 | 决议写入文首；§3.8 / §3.9 / §3.10 / §9 改写 | 设计稿已完成（4 个画面 + 侧栏） |
 | 2026-10-18 | main 合并与 v0.33.0 发布候选 | 当前分支已合并 `origin/main`；修复 workspace 绝对链接、刷新 Pi/knowledge/research manifest；`npm test`、`npm run build`、`lint`、`typecheck`、`check:arch`、UI/SKILL、MCP/CONN/MEM/REDLINE、升级、研究资源、扩展、任务 runtime、Pi 包及桌面 16/16 全部通过；发布说明写入 `docs/releases/v0.33.0.md` | 发布流水线已改为只打包 Nature/Scientific skill pack，并显式使用无证书构建；academic pack 保留在开发侧，不再作为发布门槛；无证书策略已生效 |
-| 2026-10-17 | 仓库绑定 / 并行启动 | 已绑定本地 `../drone-plugins` 与 GitHub `Gyoungwe/drone-plugins`，`main` 同步于 `f21a4a3`；已创建 `native-pi-map`、`pi-knowledge-pr3`、`plugin-ui-shell` 三个隔离 worktree 并行推进 PR-2、PR-3、UI-1 | `@drone` npm scope 仍按 D8 在 PR-5 前确认；设计稿已放入 `docs/design/plugin-ui/Drone 插件化界面.html` |
+| 2026-10-17 | 仓库绑定 / 并行启动 | 已绑定本地 `../drone-plugins` 与 GitHub `Gyoungwe/drone-plugins`，`main` 同步于 `f21a4a3`；已创建 `native-pi-map`、`pi-knowledge-pr3`、`plugin-ui-shell` 三个隔离 worktree 并行推进 PR-2、PR-3、UI-1 | npm scope 已确定为 `@gyoungwe`；设计稿已放入 `docs/design/plugin-ui/Drone 插件化界面.html` |
 | 2026-10-17 | PR-2 | 已完成 `check-native-pi`：扫描 51 个工具注册并校验目标包映射；4 项脚本单测通过；独立提交 `7be11363`（`codex/native-pi-map`） | 完整根级 lint/typecheck/test/build 尚待集成 worktree 复跑 |
-| 2026-10-17 | PR-3 | 已完成 `@drone/pi-knowledge` 包、bundle/check/smoke、R8 产物检查和 3 个知识 skill；领域与 fixture 检查通过；严格包级 typecheck 收敛在独立提交 `ec0ca0b8`（`codex/pi-knowledge-pr3`） | Pi 1.1.0 对 `.tgz` 直接安装仍为 `PARTIAL`；目录安装路径完成真实 fixture/卸载验收 |
+| 2026-10-17 | PR-3 | 已完成 `@gyoungwe/pi-knowledge` 包、bundle/check/smoke、R8 产物检查和 3 个知识 skill；领域与 fixture 检查通过；严格包级 typecheck 收敛在独立提交 `ec0ca0b8`（`codex/pi-knowledge-pr3`） | Pi 1.1.0 对 `.tgz` 直接安装仍为 `PARTIAL`；目录安装路径完成真实 fixture/卸载验收 |
 | 2026-10-17 | UI-1 | 已完成中性 token、状态 token、主区浮卡外壳和十六进制对比度测试；独立提交 `f54f5eb4`（`codex/plugin-ui-shell`） | 尚未做真实桌面启动、截图与设计稿视觉对照 |
 | 2026-10-17 | 集成检查 | 在 `codex/native-pi-map` 集成分支完成 PR-2、UI-1、PR-3、UI-2、PR-4、UI-3 和 CI；最终 UI-3 集成提交 `5519ed64`，overview 1/1、context-panel 5/5、WorkbenchNav 2/2、desktop typecheck、`check:arch`、`check:native-pi`（51 registrations）、`check:pi-knowledge` 全部通过 | 根仓库完整 lint/typecheck/test/build、真实桌面截图和真实 Pi CLI 矩阵尚未做 |
 | 2026-10-17 | PR-3 CI | 新增 `.github/workflows/ci.yml` 的 `pi-package-smoke` job，执行 build/check、严格包级 typecheck 与 fixture smoke；提交 `7ba23257` | CI 明确把真实 Pi CLI external smoke 标为 `NOT_RUN`，不能替代真实 Pi 1.1.0 / latest 矩阵 |
@@ -616,15 +616,15 @@ Claude Code adapter 必须通过同一套：
 | 2026-10-17 | UI-6 | 已完成知识库页最小实现，补丁 `/private/tmp/ui6-knowledge-page.patch`：真实 Vault/项目上下文、快捷搜索、分类过滤、最近沉淀、review pending、健康指标未知态、按需图谱和 Vault 入口；新增纯投影 model 与 2 个测试 | diff check 与 KnowledgeHome 2 tests 通过；worktree typecheck 因缺依赖 `NOT_RUN`，真实截图尚未做，待集成分支复跑 |
 | 2026-10-17 | UI-7 | 已完成最小首页交付，补丁 `/private/tmp/ui-home-page.patch`：真实 projects/allSessions/transcript/knowledge overview/compute hosts/model 状态，项目与最近会话列表、连接/主机状态和中英文文案；新增 3 个测试 | Biome、diff check、定向 3/3 tests 通过；desktop typecheck 与真实截图待集成分支复跑 |
 | 2026-10-17 | UI-6/7 集成 | 最终提交 `37fbc175`，集成知识库页、首页及此前 UI-4/5；KnowledgeHome 2、knowledge-graph 6、HomeCards 3、Assistant UI-4 2、SkillsConnections 3，共 16/16，desktop typecheck、`check:arch`、`check:native-pi`、`check:pi-knowledge`、Biome、diff check 通过 | 根仓库完整门禁、真实桌面截图、Pi CLI 矩阵和外部连接器真实验收仍待执行 |
-| 2026-10-17 | PR-5 准备启动 | 基于 `37fbc175` 新建 `plugin-api-migration` worktree，开始实现公开 `packages/plugin-api` 合同和迁移闸门；暂不发布 npm、不删除宿主 `pi-knowledge` | npm scope（`@drone` 或 `@gyoungwe`）仍需在正式发布前由用户决定 |
-| 2026-10-18 | PR-5 准备完成 | 最终提交 `ea70a7ff9e89e51764f38888974755d5ec930ce7`：新增 `@drone/plugin-api` 类型合同、4 个能力协商测试、`check:plugin-api`、package tarball/路径依赖/HEAD 迁移闸门、root lock workspace symlink，并同步索引与架构文档；package test 4/4、build/typecheck、migration gate、`check:arch`、Biome、diff check 通过 | 需在集成分支复跑；npm scope 仍未决定，未发布 npm、未删除 `packages/pi-knowledge` |
-| 2026-10-18 | PR-5 宿主合同集成 | 集成提交 `3f8af50c`，`npm run check:plugin-api` 完整通过（API projection、typecheck/build/package gate、tarball install、drone-plugins HEAD `f21a4a3` / 3 manifests）；plugin-api test 4/4，UI 回归 16/16，desktop typecheck、`check:arch`、`check:native-pi`、`check:pi-knowledge` 通过 | 根级 typecheck 仍被仓库既有 pi-knowledge/extensions/tasks 类型错误阻断；npm scope 未定，未发布/未删除宿主包 |
+| 2026-10-17 | PR-5 准备启动 | 基于 `37fbc175` 新建 `plugin-api-migration` worktree，开始实现公开 `packages/plugin-api` 合同和迁移闸门；暂不发布 npm、不删除宿主 `pi-knowledge` | npm scope 已由用户确认使用 `@gyoungwe`，待 npm 登录后发布 |
+| 2026-10-18 | PR-5 准备完成 | 最终提交 `ea70a7ff9e89e51764f38888974755d5ec930ce7`：新增 `@gyoungwe/plugin-api` 类型合同、4 个能力协商测试、`check:plugin-api`、package tarball/路径依赖/HEAD 迁移闸门、root lock workspace symlink，并同步索引与架构文档；package test 4/4、build/typecheck、migration gate、`check:arch`、Biome、diff check 通过 | 需在集成分支复跑；npm scope 已确定为 `@gyoungwe`；未登录 npm，尚未发布，也未删除 `packages/pi-knowledge` |
+| 2026-10-18 | PR-5 宿主合同集成 | 集成提交 `3f8af50c`，`npm run check:plugin-api` 完整通过（API projection、typecheck/build/package gate、tarball install、drone-plugins HEAD `f21a4a3` / 3 manifests）；plugin-api test 4/4，UI 回归 16/16，desktop typecheck、`check:arch`、`check:native-pi`、`check:pi-knowledge` 通过 | 根级 typecheck 仍被仓库既有 pi-knowledge/extensions/tasks 类型错误阻断；npm scope 已确定为 `@gyoungwe`；未登录 npm，未发布/未删除宿主包 |
 | 2026-10-18 | PR-6 启动 | 基于 `3f8af50c` 新建 `pi-core-extraction` worktree，开始抽取原生 Pi 核心工具与 HostPort 适配；保留现有 Desktop 工具路径和用户数据 | 仍需验证授权/回执、外部安装 smoke 与 Pi 真实 CLI 矩阵 |
 | 2026-10-18 | PR-6 | 已完成 `pi-core`，最终提交 `b6f91891`：原生 `ctx.ui` HostPort、ask_user/set_status/todo/deliver_files/memory_save、tasks runtime、backend 兼容 facade、build/check/smoke；并将 `build:pi-core` 前置到根 build/test，独立 npm test 先构建 dist；pi-core 2 tests、既有工具 27/27、backend typecheck、Biome、`check:arch`、`check:native-pi`、diff check 通过 | 根级 tasks source typecheck 仍有既有错误；未发布 npm，真实 Pi CLI smoke 尚未执行 |
 | 2026-10-18 | PR-6 集成 | 集成提交 `82500ced`，基于 `3f8af50c`；pi-core 构建、注册测试 2/2、backend typecheck、原生映射/架构检查、Biome 与 diff check 通过。构建后 `build-manifest.json` 的 4 行漂移确认来自复用主工作区 `node_modules` 造成的 esbuild 绝对路径 hash，已丢弃，集成 worktree 保持 clean | 根级完整门禁、真实 Pi CLI 1.1.0/latest 矩阵、桌面截图与外部安装仍未完成；下一步进入 PR-7 `pi-research` + `research-suite` |
 | 2026-10-18 | PR-6 集成全量复跑 | 在临时依赖目录复跑：`npm run build` 通过；backend 221 files/1855 tests、desktop 146 files/772 tests 通过，另有 2 个既有 spacing-grid 测试失败；`npm run typecheck` 的约 78 个错误集中在既有 pi-knowledge/extensions/tasks 聚合；lint 为既有 CSS 降序与历史脚本/UI-5 格式问题；`check:arch`、`check:native-pi` 51、`check:plugin-api`、`check:pi-core`、`smoke:pi-core`、`check:pi-knowledge` 通过，清理后 worktree clean | 这些失败均未由 PR-6 引入，需后续独立清理；真实 Pi CLI 1.1.0/latest 与桌面视觉证据仍未完成 |
 | 2026-10-18 | UI spacing 收口 | 在 `82500ced` 后依次集成 `3ce789e3`、`dd633de5`、`42cbf757`：修复 UI-5 格式问题、UI-4/6/7 新增组件的 half-step spacing，以及 `.meta-step-row` 的 6px CSS；spacing-grid 2/2、相关 UI 17/17、desktop typecheck、Biome、diff check 通过；集成 worktree clean | lint 仍有 3 个 globals.css descending-specificity 基线 warning；pi-knowledge/extensions/tasks 聚合 typecheck 仍待单独迁移收口 |
-| 2026-10-18 | PR-7 | 独立 checkout 最终提交 `03086d69`：新增 `@drone/pi-research`（检索→两篇来源回读→沉淀→来源回答、research_status、skill、自包含 dist）与 `@drone/research-suite`（pi-core/knowledge/research bundleDependencies）；`check-native-pi` 纳入 `packages/pi-research/src`，注册映射扩展到 56 项；build/check、pi-research typecheck、direct/tarball smoke、suite 临时 npm pack 闸门、check:arch、native Pi tests 4/4 全通过 | 尚待在集成 worktree 合入并复跑；真实 Pi CLI 1.1.0/latest 矩阵和 npm 发布仍未执行，scope 仍为 `@drone` 占位 |
+| 2026-10-18 | PR-7 | 独立 checkout 最终提交 `03086d69`：新增 `@gyoungwe/pi-research`（检索→两篇来源回读→沉淀→来源回答、research_status、skill、自包含 dist）与 `@gyoungwe/research-suite`（pi-core/knowledge/research bundleDependencies）；`check-native-pi` 纳入 `packages/pi-research/src`，注册映射扩展到 56 项；build/check、pi-research typecheck、direct/tarball smoke、suite 临时 npm pack 闸门、check:arch、native Pi tests 4/4 全通过 | 尚待在集成 worktree 合入并复跑；真实 Pi CLI 1.1.0/latest 矩阵和 npm 发布仍未执行，scope 已改为 `@gyoungwe` |
 | 2026-10-18 | PR-7 集成 | 等价整理提交 `cbaf9e4b` 已合入 UI spacing 收口后的集成分支；pi-research typecheck/build/check、direct+tarball smoke、research-suite 3 包 bundle 闸门、56 registrations、native Pi tests 4/4、`check:arch`、diff check 全通过，生成物清理后 worktree clean | 真实 Pi CLI 1.1.0/latest 矩阵、桌面视觉验收、npm 发布与外部 connector 写入验收仍未完成 |
 | 2026-10-18 | 根门禁收口 | 独立 checkout 的修复提交 `06ff916f`：pi-knowledge path shim、research-suite 必要 no-op typecheck、3 个 CSS specificity 忽略说明、Biome 格式化；`npm run lint`、根 `npm run typecheck`、`check:arch`、`check:native-pi` 56、native Pi tests 4/4、plugin-api/pi-knowledge 定向检查通过 | 全量 `npm test` 仍受隔离 shell 的既有 backend 9 个测试文件/60 项影响（knowledge publication/usage-feedback、localhost/7331 EPERM 等），不由本修复引入；需在允许本地监听的环境复跑 |
 | 2026-10-18 | 根门禁收口集成 | 等价集成提交 `f21bd2cc` 已合入 `cbaf9e4b`；`npm run lint`、`npm run typecheck`、`check:arch`、`check:native-pi` 56、native checker 4/4、desktop targeted 10/10、spacing-grid 2/2、desktop typecheck、Biome、diff check 全通过，worktree clean | 全量 `npm test` 仍受隔离 shell 的既有 backend 9 个测试文件/60 项影响（localhost/7331 EPERM、channel-watch、knowledge publication/usage-feedback）；须在允许本地监听的环境复跑 |
@@ -635,9 +635,11 @@ Claude Code adapter 必须通过同一套：
 | 2026-10-18 | WebDAV 临时对象闭环 | 使用 `KnowledgeWebDavService` 对 `http://10.126.126.1:8080/Drone-Knowledge` 完成真实 probe（ready/authenticated）、唯一对象 `Inbox/DRONE-WEBDAV-1792257377294.md` 写入、服务层回读哈希核对、HTTP 204 删除，以及删除后服务层回读 `not_found`；receipt hash `2b2695bfa41fe29f9477796e2413f5446b6eabfd3dafa8351c0268c72f151d27` | 真实凭据只在本次进程环境中使用，未写入仓库、日志或计划；Protocols.io 仍按只读策略，不进行 bookmark/写入 |
 | 2026-10-18 | MCP / CONN 隔离验收 | `packages/backend/test/mcp-connector-gates.test.ts` 通过：staged `pi-mcp-adapter` 的本地 stdio marker fixture 启用后真实返回 `DRONE-MCP-001`，关闭并重载后无可用工具；read-only `CapabilityResearchPorts` 对 `DRONE-CONN-01-UNIQUE` 回读 source ID/URL/调用记录，关闭后跳过传输，重启用可重试 | 证据为隔离本地 fixture，无外部写入；Protocols.io 继续只读；根门禁应通过 `npm run check:remaining-gates` 复跑 |
 | 2026-10-18 | MEM / REDLINE 隔离验收 | `mem-gate.test.mjs` 通过 `DRONE-MEM-001` 跨实例恢复、来源回读和 `stale/changed`；`redline-acceptance.test.mjs` 通过缺来源、stale、数字/方法漂移、重复数不足、断线和权限拒绝的 blocked/pause 与 sealed proof；提交 `e988d185`、`d7121a58` | 证据只写入 `/private/tmp`，不触碰正式 Vault、凭据或 session 正文；GUI 投影仍不作为构建产物降级判定 |
-| 2026-10-18 | 剩余门槛与全量门禁复跑 | `npm run check:remaining-gates`（MEM 1/1、REDLINE 4/4、MCP/CONN 2/2）、`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`check:plugin-api`、`check:pi-compat` 与 `check:desktop-artifact -- --strict` 全部通过；桌面产物 16/16、四视口 4/4、0 FAIL/NOT_RUN | 未执行 npm publish 或外部 Protocols.io 写入；公开发布仍需 npm scope、凭据或发布决策。按计划不要求证书/正式签名 |
+| 2026-10-18 | 剩余门槛与全量门禁复跑 | `npm run check:remaining-gates`（MEM 1/1、REDLINE 4/4、MCP/CONN 2/2）、`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`check:plugin-api`、`check:pi-compat` 与 `check:desktop-artifact -- --strict` 全部通过；桌面产物 16/16、四视口 4/4、0 FAIL/NOT_RUN | 未执行 npm publish 或外部 Protocols.io 写入；公开发布仍需本机 npm 登录；Protocols.io 保持只读。按计划不要求证书/正式签名 |
 | 2026-10-18 | UI-01 / SKILL-01 真实宿主验收 | `npm run check:ui-skill-acceptance -- --out /private/tmp/drone-ui-skill-acceptance.json` 通过：UI-01 真实内置插件 bundle 构建→registry 出现→禁用移除→重载 nonce 1→2→manager 重启回读配置；SKILL-01 真实 Pi SDK + faux provider 2/2，通过 canonical slash invocation、visible skill、provider call 和自动禁用反证；证据 `/private/tmp/drone-skill-01-evidence.json`、`/private/tmp/drone-skill-01-disabled-evidence.json` | 交互式 Electron 仍受当前 shell 的 macOS `NSApplication` SIGABRT 阻塞，无新增 GUI 截图；GUI 观察与宿主/SDK gate 分开记录。`disable-model-invocation` 的显式 slash manual-only 语义已同步到 UI/计划 |
-| 2026-10-18 | main 合并与 v0.33.0 发布候选收口 | 合并提交 `c8195156` 已推送 `main`；修复 CI 中缺少绑定插件仓库的提交 `a378b3c1`、刷新 knowledge/research runtime manifest 的提交 `b4052d42` 已推送；`v0.33.0` 标签已指向 `b4052d42`，Release run `39059425930` 已启动 | 等待跨平台 Release 验收完成；发布后仍需记录 Release URL/资产校验和，并决定 npm scope 后再做公开 npm 发布与插件源码迁移 |
+| 2026-10-18 | main 合并与 v0.33.0 发布候选收口 | 合并提交 `c8195156` 已推送 `main`；修复 CI 中缺少绑定插件仓库的提交 `a378b3c1`、刷新 knowledge/research runtime manifest 的提交 `b4052d42` 已推送；`v0.33.0` 标签已指向 `b4052d42`，Release run `39059425930` 曾因 Windows URL pathname bug 失败（macOS 已通过） | 已修复 `fileURLToPath` 跨平台根目录问题，需在修复提交上重新 dispatch；Release 无证书策略保留 |
+| 2026-10-18 | scope / 真实 Pi 矩阵 / 组合加载收口 | 公开包 scope 已由用户确认统一为 `@gyoungwe`；plugin-api、pi-core、pi-knowledge、pi-research、research-suite 已加入 public publishConfig/repository 元数据；Pi `1.1.0` 与 latest `1.3.0` 的 6 个单包和 2 个组合真实模型任务均 PASS，证据 `/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json`；pi-knowledge 已改为只读 task-runtime，由 pi-core 负责任务工具所有权 | npm publish 仍需本机 `npm login`；pi-knowledge 外部仓库分支正在完成自包含构建/manifest/smoke，之后删除宿主包；Protocols.io 继续只读 |
+| 2026-10-18 | Pi 真实模型兼容矩阵 | `/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json`：Pi `1.1.0` 与 latest `1.3.0` 的 pi-core/pi-knowledge/pi-research 六个单包 cell 全部真实模型调用 `PASS`；三包同时加载因重复 `task_*` 注册为 `BLOCKED_TOOL_CONFLICT` | 需解决工具注册 ownership 后再宣称聚合包同进程加载通过；单包矩阵证据不受影响 |
 
 
 ### 2026-10-18 收口补充
@@ -646,8 +648,8 @@ Claude Code adapter 必须通过同一套：
 - **桌面验收口径**：正式门槛是本机构建产物验收。`npm run build && npm run stage:pi-packages && npm run check:desktop-artifact -- --strict` 通过 16/16，四视口 4/4，0 `FAIL`、0 `NOT_RUN`，产物快照 SHA-256 为 `662b97f5d4d8b03330aa8663ff4b2308956ad2c0b910e35b6d4eba54bc2a214c`。交互式 Electron 启动因当前 shell 的 macOS `NSApplication init/RegisterApplication` SIGABRT 未建立 CDP，不改变上述构建产物结论。
 - **插件生命周期**：`check:plugin-api --migration --lifecycle` 已完成本地 pack 的 `0.9.0 → 1.0.0 → 0.9.0 → uninstall`，并验证 `DroneHostPort` 声明。
 - **UI-01 / SKILL-01**：`npm run check:ui-skill-acceptance` 通过；UI-01 由真实内置 `ds-whale-maid` bundle + `UiPluginManager` + renderer registry 完成出现/移除/重载/持久化闭环，SKILL-01 由真实 Pi SDK + offline faux provider 完成 `/skill:research-workflow` invocation 与 `disable-model-invocation` 自动选择反证。显式 `/skill:` 仍为 manual-only，不能标记为完全禁用。
-- **Pi 兼容**：锁定 `1.1.0` 与 latest `1.3.0` 均通过 pi-core/pi-knowledge/pi-research 加载；next 标签当前 `NOT_PUBLISHED`，不伪造通过。
+- **Pi 兼容**：锁定 `1.1.0` 与 latest `1.3.0` 的 pi-core/pi-knowledge/pi-research 单包真实模型矩阵均通过；三包同时加载因重复注册 `task_status/task_plan/task_wait/task_reconcile/task_evidence_restore` 记录为 `BLOCKED_TOOL_CONFLICT`，不得伪造为聚合加载通过；next 标签当前 `NOT_PUBLISHED`。
 - **外部写入**：WebDAV 和 Zotero 临时 note 均完成授权→创建→回读→删除→再回读；Protocols.io 只读，不进行 bookmark/write。
-- **已关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均有隔离真实行为证据，Protocols.io 保持只读；analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。仍待决定 npm scope 与公开发布；证书/正式签名不属于本计划门槛。
-- **发布后顺序**：先确认跨平台 Release 成功并记录无证书资产与校验和；再在干净 HOME 中补做 Pi `1.1.0`/`latest` 的真实 CLI 任务矩阵；随后确定 npm scope，发布 `@drone/plugin-api` 与首批包，按 subtree + 外部安装闸门把 `pi-knowledge` 迁入 `drone-plugins`；最后再推进 v1.1 的 `pi-analysis`、`pi-evidence`、`pi-connectors` 和完整 `desktop-ui-pack`。
+- **已关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均有隔离真实行为证据，Protocols.io 保持只读；真实 Pi `1.1.0`/latest 单包与组合矩阵通过；analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。npm scope 已确定为 `@gyoungwe`；证书/正式签名不属于本计划门槛。
+- **发布后顺序**：先在修复提交上重新验收 v0.33.0 无证书跨平台资产并记录 Release URL/校验和；再完成 npm 登录后按 `plugin-api` → `pi-core` / `pi-knowledge` / `pi-research` → `research-suite` 发布；完成外部 `pi-knowledge` 安装闸门后删除宿主包并让 Desktop 仅加载已安装插件；最后再推进 v1.1 的 `pi-analysis`、`pi-evidence`、`pi-connectors` 和完整 `desktop-ui-pack`。
 - **明确不阻塞发布**：Protocols.io 继续只读；交互式 Electron 截图受当前 shell 的 macOS `NSApplication` 启动限制，但构建产物 16/16 已通过，截图不改变本版本验收结论。

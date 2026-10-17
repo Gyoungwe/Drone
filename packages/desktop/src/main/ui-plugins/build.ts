@@ -64,12 +64,12 @@ export const { jsx, jsxs, Fragment } = J;`,
 const D = window.DroneUI.ReactDOM;
 export default D;
 export const { createPortal, flushSync } = D;`,
-	// @drone/plugin-api：由 renderer/plugins/host-api.manifest.json 生成
-	"@drone/plugin-api": PLUGIN_API_SHIM,
+	// @gyoungwe/plugin-api：由 renderer/plugins/host-api.manifest.json 生成
+	"@gyoungwe/plugin-api": PLUGIN_API_SHIM,
 };
 
 /**
- * externals 重写：react / react/jsx-runtime / react-dom / @drone/plugin-api
+ * externals 重写：react / react/jsx-runtime / react-dom / @gyoungwe/plugin-api
  * 重定向到 drone-external namespace，onLoad 返回从 window.DroneUI 再导出的 shim。
  * 产物里不允许出现任何裸导入符（sandbox renderer 无 import map、无 node_modules 解析）。
  */

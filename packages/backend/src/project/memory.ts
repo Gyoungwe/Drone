@@ -1,2 +1,2 @@
-/** Compatibility facade: project memory persistence is owned by @drone/pi-core. */
-export * from "@drone/pi-core/memory";
+/** Compatibility facade: project memory persistence is owned by @gyoungwe/pi-core. */
+export * from "@gyoungwe/pi-core/memory";

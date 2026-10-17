@@ -1,4 +1,4 @@
-import { useSessionsStore, useTranscriptStore } from "@drone/plugin-api";
+import { useSessionsStore, useTranscriptStore } from "@gyoungwe/plugin-api";
 import { memo } from "react";
 
 /**

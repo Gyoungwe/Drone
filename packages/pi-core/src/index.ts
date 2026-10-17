@@ -1,6 +1,6 @@
-import type { DroneHostPort, HostCapabilities } from "@drone/plugin-api";
 import type { AskQuestion, AskRequest, AskResponse } from "@drone/shared";
 import { registerTaskRuntime } from "@drone/tasks/runtime";
+import type { DroneHostPort, HostCapabilities } from "@gyoungwe/plugin-api";
 import { type AskUserToolDeps, makeAskUserTool } from "./tools/ask-user";
 import { makeDeliverFilesTool } from "./tools/deliver-files";
 import { makeMemorySaveTool } from "./tools/memory-save";

@@ -119,7 +119,7 @@ registerAcceptanceVerifier("zotero_item", {
 （`pluginTabId`），由 `plugins/PluginRegions.tsx` 的 `usePluginEntries(region)` / `PluginEntryHost` 承载；
 `stores/ui.ts` 的 `AppView` / `PanelTab` 接受 `plugin:${string}`。
 
-`window.DroneUI` / `@drone/plugin-api` 新增：`helpers.openResourceExternal` / `openExternal`、
+`window.DroneUI` / `@gyoungwe/plugin-api` 新增：`helpers.openResourceExternal` / `openExternal`、
 `stores.useKnowledgeStore`、`i18n.registerMessages(namespace, { zh, en }) → unregister`（插件自带文案）。
 完整说明见 `packages/desktop/resources/ui-plugins/SPEC.md` 与 `drone-ui.d.ts`。
 

@@ -1,2 +1,2 @@
-/** Compatibility facade: the portable implementation lives in @drone/pi-core. */
-export * from "@drone/pi-core/tools/memory-save";
+/** Compatibility facade: the portable implementation lives in @gyoungwe/pi-core. */
+export * from "@gyoungwe/pi-core/tools/memory-save";

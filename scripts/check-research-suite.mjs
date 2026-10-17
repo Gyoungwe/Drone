@@ -11,22 +11,22 @@ const root = resolve(import.meta.dirname, "..");
 const packageRoot = join(root, "packages/research-suite");
 const exec = promisify(execFile);
 const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
-assert.equal(manifest.name, "@drone/research-suite");
+assert.equal(manifest.name, "@gyoungwe/research-suite");
 assert.deepEqual(manifest.bundleDependencies, [
-	"@drone/pi-core",
-	"@drone/pi-knowledge",
-	"@drone/pi-research",
+	"@gyoungwe/pi-core",
+	"@gyoungwe/pi-knowledge",
+	"@gyoungwe/pi-research",
 ]);
 assert.deepEqual(Object.keys(manifest.dependencies).sort(), [
-	"@drone/pi-core",
-	"@drone/pi-knowledge",
-	"@drone/pi-research",
+	"@gyoungwe/pi-core",
+	"@gyoungwe/pi-knowledge",
+	"@gyoungwe/pi-research",
 ]);
 assert.equal(manifest.peerDependencies["@earendil-works/pi-coding-agent"], ">=1.1.0 <2.0.0");
 assert.deepEqual(manifest.pi.extensions, [
-	"./node_modules/@drone/pi-core/dist/index.mjs",
-	"./node_modules/@drone/pi-knowledge/dist/index.mjs",
-	"./node_modules/@drone/pi-research/dist/index.mjs",
+	"./node_modules/@gyoungwe/pi-core/dist/index.mjs",
+	"./node_modules/@gyoungwe/pi-knowledge/dist/index.mjs",
+	"./node_modules/@gyoungwe/pi-research/dist/index.mjs",
 ]);
 for (const path of ["README.md", "prompts/research-suite.md"]) await stat(join(packageRoot, path));
 for (const packageName of ["pi-core", "pi-knowledge", "pi-research"]) {
@@ -72,7 +72,7 @@ try {
 		await readFile(join(packageRoot, "prompts/research-suite.md")),
 	);
 	for (const [packageName, tarball] of packageTarballs) {
-		const target = join(stagedPackage, "node_modules/@drone", packageName);
+		const target = join(stagedPackage, "node_modules/@gyoungwe", packageName);
 		await mkdir(target, { recursive: true });
 		await exec("tar", ["-xzf", tarball, "-C", target, "--strip-components=1"]);
 	}
@@ -87,7 +87,7 @@ try {
 		).stdout,
 	);
 	const bundled = new Set(packedSuite[0]?.bundled || []);
-	for (const packageName of ["@drone/pi-core", "@drone/pi-knowledge", "@drone/pi-research"])
+	for (const packageName of ["@gyoungwe/pi-core", "@gyoungwe/pi-knowledge", "@gyoungwe/pi-research"])
 		assert(bundled.has(packageName), `research-suite tarball omitted bundled dependency ${packageName}`);
 	console.log(`research-suite manifest gate passed (3 bundled packages, ${bundled.size} bundled entries)`);
 } finally {

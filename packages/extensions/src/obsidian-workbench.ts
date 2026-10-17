@@ -103,7 +103,7 @@ async function startSetup(pi, args, ctx) {
 	}, 0);
 }
 
-export default function obsidianWorkbench(pi) {
+export default function obsidianWorkbench(pi, options: { readOnly?: boolean } = {}) {
 	if (process.env.PI_SUBAGENT_CHILD === "1") return;
 	// Each published extension entry is bundled independently. Replay acceptance
 	// declarations into this entry's live task-plan schema so a later Zotero/Wiki
@@ -112,7 +112,7 @@ export default function obsidianWorkbench(pi) {
 		if (payload?.version !== 1 || typeof payload.kind !== "string") return;
 		registerAcceptanceVerifier(payload.kind, payload.definition || {});
 	});
-	const knowledge = registerKnowledgeInterface(pi);
+	const knowledge = registerKnowledgeInterface(pi, { readOnly: options.readOnly === true });
 
 	registerTool(pi, {
 		name: "research_setup_options",

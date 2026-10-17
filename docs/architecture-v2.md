@@ -154,7 +154,7 @@ packages/
 .pi/             构建产物 + 技能：extensions/*.mjs 由 @drone/extensions 打包生成（给 CLI 用，保持路径不变）
 ```
 
-`@drone/plugin-api` 是宿主与可独立发布插件之间的最小稳定边界。它不依赖
+`@gyoungwe/plugin-api` 是宿主与可独立发布插件之间的最小稳定边界。它不依赖
 Electron、Pi SDK 或 Drone 实现包，只提供 `DroneHostPort`、Host capability
 negotiation、`drone-result/v3` 状态以及来源/运行/计算/授权回执类型。v1 只允许
 `compatible` 和 `incompatible` 两种加载结果；宿主不得用半加载或隐式降级替代

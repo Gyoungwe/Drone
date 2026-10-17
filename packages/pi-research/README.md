@@ -1,4 +1,4 @@
-# @drone/pi-research
+# @gyoungwe/pi-research
 
 Native Pi package for a bounded, evidence-gated research loop.
 

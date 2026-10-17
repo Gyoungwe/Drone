@@ -63,9 +63,9 @@ declare module "react-dom" {
 	export default ReactDOM;
 }
 
-/* ---------- @drone/plugin-api（虚拟模块，构建时重写到 window.DroneUI） ---------- */
+/* ---------- @gyoungwe/plugin-api（虚拟模块，构建时重写到 window.DroneUI） ---------- */
 
-declare module "@drone/plugin-api" {
+declare module "@gyoungwe/plugin-api" {
 	export const version: number;
 
 	/** 槽位 props 契约（与 SPEC §2 表一致） */

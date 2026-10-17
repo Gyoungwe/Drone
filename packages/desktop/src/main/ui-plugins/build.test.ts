@@ -23,7 +23,7 @@ describe("ui-plugins build", () => {
 	it("引用 react 的 tsx 构建成功，产物无裸导入（已重写为 window.DroneUI shim）", async () => {
 		const dir = await makePlugin(`
 import { useState } from "react";
-import { Button, useT } from "@drone/plugin-api";
+import { Button, useT } from "@gyoungwe/plugin-api";
 
 export function ToolCallCard({ tool }: { tool: { name: string } }) {
 	const [n, setN] = useState(0);
@@ -37,7 +37,7 @@ export function ToolCallCard({ tool }: { tool: { name: string } }) {
 		// 产物是自包含 ESM：无 require、无任何裸 import（react/plugin-api 已被重写成 shim）
 		expect(out).not.toContain("require(");
 		expect(out).not.toContain('from "react"');
-		expect(out).not.toContain('from "@drone/plugin-api"');
+		expect(out).not.toContain('from "@gyoungwe/plugin-api"');
 		// shim 确实以 window.DroneUI 为源；JSX 经 automatic runtime → 被重写的 jsx-runtime
 		expect(out).toContain("window.DroneUI");
 		expect(out).toContain("window.DroneUI.jsxRuntime");

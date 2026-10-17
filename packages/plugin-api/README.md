@@ -1,4 +1,4 @@
-# @drone/plugin-api
+# @gyoungwe/plugin-api
 
 Stable, host-independent TypeScript contracts for Drone capability plugins.
 The package contains no Electron, backend, Pi SDK, filesystem, or network

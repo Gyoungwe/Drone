@@ -20,8 +20,9 @@ import {
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(dirname(new URL(import.meta.url).pathname), "..");
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKAGE_DIR = join(ROOT, "packages", "plugin-api");
 const PLUGIN_REPO_CANDIDATES = [
 	process.env.DRONE_PLUGINS_DIR,
@@ -49,7 +50,7 @@ function packageJson() {
 
 function checkPackageManifest() {
 	const manifest = packageJson();
-	assert(manifest.name === "@drone/plugin-api", `unexpected package name: ${manifest.name}`);
+	assert(manifest.name === "@gyoungwe/plugin-api", `unexpected package name: ${manifest.name}`);
 	assert(
 		manifest.version === "1.0.0",
 		`public API package must stay at 1.0.0 during v1: ${manifest.version}`,
@@ -137,7 +138,7 @@ function writeContractProbe(fixture) {
 	writeFileSync(
 		join(fixture, "contract-probe.mjs"),
 		`import assert from "node:assert/strict";
-import { PLUGIN_API_VERSION, RESULT_CONTRACT, negotiateCapabilities } from "@drone/plugin-api";
+import { PLUGIN_API_VERSION, RESULT_CONTRACT, negotiateCapabilities } from "@gyoungwe/plugin-api";
 assert.equal(PLUGIN_API_VERSION, 1);
 assert.equal(RESULT_CONTRACT, "drone-result/v3");
 const result = negotiateCapabilities(
@@ -196,7 +197,7 @@ function checkLocalLifecycle() {
 			private: true,
 			version: "0.0.0",
 			type: "module",
-			dependencies: { "@drone/plugin-api": `file:../${rollbackTarball.split("/").at(-1)}` },
+			dependencies: { "@gyoungwe/plugin-api": `file:../${rollbackTarball.split("/").at(-1)}` },
 		};
 		const fixtureDir = fixture;
 		mkdirSync(fixtureDir, { recursive: true });
@@ -208,7 +209,7 @@ function checkLocalLifecycle() {
 		});
 		writeContractProbe(fixtureDir);
 		assert(
-			installedVersion(fixtureDir, "@drone/plugin-api") === "0.9.0",
+			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === "0.9.0",
 			"rollback tarball did not install at 0.9.0",
 		);
 		runContractProbe(fixtureDir);
@@ -223,7 +224,7 @@ function checkLocalLifecycle() {
 			},
 		);
 		assert(
-			installedVersion(fixtureDir, "@drone/plugin-api") === "1.0.0",
+			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === "1.0.0",
 			"current tarball did not upgrade to 1.0.0",
 		);
 		runContractProbe(fixtureDir);
@@ -238,16 +239,20 @@ function checkLocalLifecycle() {
 			},
 		);
 		assert(
-			installedVersion(fixtureDir, "@drone/plugin-api") === "0.9.0",
+			installedVersion(fixtureDir, "@gyoungwe/plugin-api") === "0.9.0",
 			"rollback tarball did not restore 0.9.0",
 		);
 		runContractProbe(fixtureDir);
 
-		execFileSync("npm", ["uninstall", "@drone/plugin-api", "--ignore-scripts", "--no-audit", "--no-fund"], {
-			cwd: fixtureDir,
-			stdio: "pipe",
-			env,
-		});
+		execFileSync(
+			"npm",
+			["uninstall", "@gyoungwe/plugin-api", "--ignore-scripts", "--no-audit", "--no-fund"],
+			{
+				cwd: fixtureDir,
+				stdio: "pipe",
+				env,
+			},
+		);
 		assert(
 			!existsSync(join(fixtureDir, "node_modules", "@drone", "plugin-api")),
 			"npm uninstall left plugin-api installed",
@@ -333,7 +338,7 @@ function checkTarballInstall() {
 			private: true,
 			version: "0.0.0",
 			type: "module",
-			dependencies: { "@drone/plugin-api": `file:./${tarball}` },
+			dependencies: { "@gyoungwe/plugin-api": `file:./${tarball}` },
 		};
 		writeFileSync(join(temp, "package.json"), `${JSON.stringify(fixture, null, 2)}\n`);
 		execFileSync("npm", ["install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"], {
@@ -343,8 +348,8 @@ function checkTarballInstall() {
 		});
 		const lock = readJson(join(temp, "package-lock.json"));
 		assert(
-			lock.packages?.["node_modules/@drone/plugin-api"],
-			"tarball fixture did not resolve @drone/plugin-api",
+			lock.packages?.["node_modules/@gyoungwe/plugin-api"],
+			"tarball fixture did not resolve @gyoungwe/plugin-api",
 		);
 		return tarball;
 	} finally {

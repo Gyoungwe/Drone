@@ -6,7 +6,7 @@
 		"types": ["node"],
 		"baseUrl": ".",
 		"paths": {
-			"@drone/plugin-api": ["../plugin-api/src/index.ts"],
+			"@gyoungwe/plugin-api": ["../plugin-api/src/index.ts"],
 			"@drone/tasks/runtime": ["types/tasks-runtime.d.ts"]
 		}
 	},
