@@ -89,14 +89,14 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 				throw new Error(
 					existing.status >= 200 && existing.status < 300
 						? "WebDAV write target already exists"
-						: "WebDAV target preflight failed (" + existing.status + ")",
+						: `WebDAV target preflight failed (${existing.status})`,
 				);
 			}
 			let created = false;
 			const deleteRemote = async () => {
 				const deleted = await request("DELETE");
 				if (deleted.status >= 400 && deleted.status !== 404) {
-					throw new Error("WebDAV DELETE failed (" + deleted.status + ")");
+					throw new Error(`WebDAV DELETE failed (${deleted.status})`);
 				}
 				return deleted;
 			};
@@ -107,13 +107,13 @@ export function createWebdavWritePort(config: WebdavWritePortConfig): Reversible
 					JSON.stringify(payload),
 				);
 				if (put.status < 200 || put.status >= 300) {
-					throw new Error("WebDAV PUT failed (" + put.status + ")");
+					throw new Error(`WebDAV PUT failed (${put.status})`);
 				}
 				created = true;
 				const read = await request("GET");
 				const body = read.body.toString("utf8");
 				if (read.status < 200 || read.status >= 300 || !body.includes(payload.title)) {
-					throw new Error("WebDAV readback failed (" + read.status + ")");
+					throw new Error(`WebDAV readback failed (${read.status})`);
 				}
 				await deleteRemote();
 				const missing = await request("GET");
