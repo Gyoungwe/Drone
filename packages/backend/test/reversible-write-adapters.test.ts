@@ -115,7 +115,6 @@ describe("reversible research write adapters", () => {
 		expect(requests.slice(1).every(({ authorization }) => authorization?.startsWith("Basic "))).toBe(true);
 	});
 
-
 	it("cleans up a created object when readback fails", async () => {
 		const methods: string[] = [];
 		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
