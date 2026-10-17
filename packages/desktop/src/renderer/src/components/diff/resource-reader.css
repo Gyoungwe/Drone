@@ -43,6 +43,46 @@
 	color: var(--color-ink);
 	font-weight: 600;
 }
+.pdf-viewer {
+	min-height: 100%;
+	padding: var(--space-3);
+}
+.pdf-viewer-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-3);
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	padding: var(--space-2);
+	background: color-mix(in srgb, var(--color-canvas) 92%, transparent);
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	font-size: 11px;
+}
+.pdf-viewer-toolbar button {
+	padding: var(--space-1) var(--space-2);
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	color: var(--color-ink-dim);
+}
+.pdf-viewer-toolbar button:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+.pdf-page {
+	display: flex;
+	justify-content: center;
+	padding: var(--space-4) 0;
+}
+.pdf-page canvas {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	background: white;
+	box-shadow: 0 1px 4px color-mix(in srgb, #000 18%, transparent);
+}
 .resource-data-tools button:disabled {
 	opacity: 0.35;
 	cursor: default;
