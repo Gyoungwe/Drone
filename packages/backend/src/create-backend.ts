@@ -83,6 +83,7 @@ import { createEmptyResearchWriteLedger, ResearchWriteService } from "./services
 import {
 	createProtocolsBookmarkWriteAdapter,
 	createWebdavWriteAdapter,
+	createWebdavWritePortFromEnv,
 } from "./services/reversible-write-adapters";
 import type { SessionLifecycleServicePort } from "./services/session-lifecycle";
 import type { SessionPermissionServicePort } from "./services/session-permissions";
@@ -295,7 +296,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 	const researchWrites = new ResearchWriteService({
 		adapters: new ResearchWriteAdapterRegistry([
 			...createDefaultResearchWriteAdapters(),
-			createWebdavWriteAdapter(),
+			createWebdavWriteAdapter(createWebdavWritePortFromEnv()),
 			createProtocolsBookmarkWriteAdapter(),
 		]),
 		store: new JsonStore({
