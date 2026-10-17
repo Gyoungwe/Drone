@@ -82,6 +82,7 @@ import {
 import { createEmptyResearchWriteLedger, ResearchWriteService } from "./services/research-write";
 import {
 	createProtocolsBookmarkWriteAdapter,
+	createProtocolsBookmarkWritePortFromEnv,
 	createWebdavWriteAdapter,
 	createWebdavWritePortFromEnv,
 } from "./services/reversible-write-adapters";
@@ -297,7 +298,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		adapters: new ResearchWriteAdapterRegistry([
 			...createDefaultResearchWriteAdapters(),
 			createWebdavWriteAdapter(createWebdavWritePortFromEnv()),
-			createProtocolsBookmarkWriteAdapter(),
+			createProtocolsBookmarkWriteAdapter(createProtocolsBookmarkWritePortFromEnv()),
 		]),
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "writes.json"),
