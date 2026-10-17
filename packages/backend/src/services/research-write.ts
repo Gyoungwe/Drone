@@ -51,7 +51,12 @@ export class ResearchWriteService {
 	}
 
 	listAdapters(): readonly ResearchWriteAdapterDescriptor[] {
-		return this.adapters.descriptors();
+		return this.adapters.descriptors().map((descriptor) => {
+			const adapter = this.adapters.get(descriptor.id) as
+				| (ResearchWriteAdapter & { readonly supportsDelete?: boolean })
+				| undefined;
+			return adapter?.supportsDelete === true ? { ...descriptor, supportsDelete: true } : descriptor;
+		});
 	}
 
 	async prepare(input: ResearchWriteRequest): Promise<ResearchWritePlan> {
