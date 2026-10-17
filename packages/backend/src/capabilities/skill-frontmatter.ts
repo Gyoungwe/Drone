@@ -15,6 +15,8 @@ import { parseFrontmatter } from "../session-engine/sdk";
 export interface SkillLike {
 	name: string;
 	filePath?: string;
+	/** Pi frontmatter: explicit commands remain available, automatic model selection is disabled. */
+	disableModelInvocation?: boolean;
 	/** 进程内声明；存在时优先于 SKILL.md（包括空数组 = 明确不常驻）。 */
 	alwaysWith?: unknown;
 }

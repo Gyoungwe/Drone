@@ -149,6 +149,9 @@ function skillMatches(
 ): boolean {
 	const name = skill.name;
 	if (forced.has(name)) return true;
+	// Pi's disable-model-invocation contract applies to pinned/alwaysWith skills too:
+	// they remain discoverable for explicit /skill commands, but never auto-enter the prompt.
+	if (skill.disableModelInvocation) return false;
 	const pinned = skillAlwaysWith(skill);
 	if (pinned.size) {
 		for (const id of pinned) if (capabilities.has(id)) return true;
