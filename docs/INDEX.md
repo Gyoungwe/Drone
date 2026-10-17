@@ -86,9 +86,11 @@ packages/
 | `scripts/smoke-evaporation-ui.mjs` | 蒸发设置二态 CDP 冒烟（dev 实例带 `--remote-debugging-port=9224` 运行后执行） |
 | `scripts/check-report-ui.mjs` | 隔离 Electron 验收：桌面长回答贴底、主动上翻、引用短标题/完整路径/点击、运行记录展开；不调用真实模型 |
 | `scripts/check-local-desktop-artifact.mjs` | 本机构建产物验收：不启动 Electron，核对 main/preload/renderer 产物、四视口路由标记、插件启停合同、skill/MCP/connector/memory/结果红线资源；`--strict` 另检查已 stage 的 MCP 资源 |
+| `scripts/check-ui-skill-acceptance.mjs` | UI-01 与 SKILL-01 的隔离真实宿主验收：构建并执行内置 UI 插件 bundle，验证 renderer contribution/禁用/重载/持久化；用 pinned Pi SDK + offline faux provider 验证真实 `/skill:` invocation 与禁用反证；输出无凭据 JSON 摘要 |
 | `scripts/check-remaining-gates.mjs` | 收口 `MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 的隔离跨实例/SDK/只读连接器/领域门禁验收；输出无凭据 JSON 摘要 |
 | `packages/backend/test/mem-gate.test.mjs` | `MEM-01` 隔离跨实例 topic memory：`DRONE-MEM-001`、来源回读、stale/changed |
 | `packages/backend/test/mcp-connector-gates.test.ts` | `MCP-01` 本地 stdio marker 的启用/真实调用/关闭重载，以及 `CONN-01` 只读唯一词 source receipt 与关闭重试 |
+| `packages/backend/test/skill-acceptance-sdk.test.mjs` | `SKILL-01` 真实 Pi SDK + offline faux provider 的 `/skill:research-workflow` invocation、visible skill、provider call 和 `disable-model-invocation` 自动选择反证；显式 slash 的 manual-only 语义 |
 | `packages/backend/test/redline-acceptance.test.mjs` / `npm run check:redline` | REDLINE-01 隔离验收：通过 publication/orchestration/metacognitive 门禁注入缺来源、stale source、数字/方法漂移、重复数不足、断线和权限拒绝；断言阻断原因、差异路径与 sealed audit proof |
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
 | `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵 |
@@ -146,7 +148,7 @@ packages/
 | Knowledge loop | `extensions/src/internal/knowledge-extension.ts`（`LOCAL_FIRST_GUIDANCE` 每轮引导：本地优先 → 联网 → `research_deposit_knowledge` 按 paper/software/method/idea 沉淀 → 带来源回答）+ `knowledge/src/wiki-review.ts`（`autoApplyWikiProposal`：自动审核模式下新页面 / Agent 生成过的页面直接写入，人工改过的页面仍待审核） | 知识闭环；Library 新增 `Ideas` 类型（三处 profile 定义同步：`vault-profiles.ts` / `vault.ts` / `vault-layout.ts`） |
 | Knowledge reuse lifecycle | `knowledge/src/reuse.ts` | 将真实来源 receipt 聚合成带 project/workspace、证据等级、Analysis/Evidence checkpoint 引用的 `KnowledgeSnapshot`；按 freshness、方法/参考/输入 manifest 与上下文门禁复用，并通过可注入存储端口维护可复用索引 |
 | Observability | `shared/src/transcript/run-inspector.ts` + Desktop `RunInspector` | retrieval counts/fallbacks, public specialist stop reasons, actual read paths; no private chain-of-thought |
-| Release gates | `scripts/{benchmark-semantic,stress-knowledge,check-upgrade-release,check-packaged-desktop,check-remaining-gates}.mjs` + `packages/backend/test/mcp-connector-gates.test.ts` | synthetic stress, production-pipeline benchmark, consolidated gate, isolated packaged-app smoke, MCP marker and read-only connector close/reopen acceptance |
+| Release gates | `scripts/{benchmark-semantic,stress-knowledge,check-upgrade-release,check-packaged-desktop,check-ui-skill-acceptance,check-remaining-gates}.mjs` + `packages/backend/test/mcp-connector-gates.test.ts` | synthetic stress, production-pipeline benchmark, consolidated gate, isolated packaged-app smoke, UI/skill real-host acceptance, MCP marker and read-only connector close/reopen acceptance |
 
 ## packages/knowledge — 知识领域包（迁移中）
 

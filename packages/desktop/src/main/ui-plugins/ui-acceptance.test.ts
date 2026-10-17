@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import React from "react";
-import * as ReactDOM from "react-dom";
 import * as jsxRuntime from "react/jsx-runtime";
+import * as ReactDOM from "react-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const electronState = vi.hoisted(() => ({ userData: "" }));
@@ -18,9 +18,9 @@ vi.mock("electron", () => ({
 	shell: { openPath: vi.fn() },
 }));
 
-import { UiPluginManager } from "./manager";
 import { useUiPluginRegistry } from "../../renderer/src/plugins/registry";
 import { UI_REGIONS } from "../../renderer/src/plugins/slots";
+import { UiPluginManager } from "./manager";
 
 const STORE = Object.assign(() => undefined, {
 	getState: () => ({ sessions: [], activeSessionId: undefined, bySession: {} }),
@@ -97,9 +97,7 @@ describe("UI-01 real plugin lifecycle", () => {
 		expect(first.manifest.contributions?.[0]).toMatchObject({ region: UI_REGIONS.AppOverlay, id: "pet" });
 
 		const firstModule = await importBundle(join(manager.pluginDirOf(name) as string, "dist/index.js"), 1);
-		const firstApplied = useUiPluginRegistry
-			.getState()
-			.applyPlugin(first.manifest, firstModule, []);
+		const firstApplied = useUiPluginRegistry.getState().applyPlugin(first.manifest, firstModule, []);
 		expect(firstApplied).toEqual({ ok: true, missing: [] });
 		expect(useUiPluginRegistry.getState().contributions[UI_REGIONS.AppOverlay]).toHaveLength(1);
 		expect(useUiPluginRegistry.getState().loadNonces[name]).toBe(1);
@@ -114,9 +112,7 @@ describe("UI-01 real plugin lifecycle", () => {
 		expect("manifest" in second).toBe(true);
 		if (!("manifest" in second)) throw new Error(second.error);
 		const secondModule = await importBundle(join(manager.pluginDirOf(name) as string, "dist/index.js"), 2);
-		const secondApplied = useUiPluginRegistry
-			.getState()
-			.applyPlugin(second.manifest, secondModule, []);
+		const secondApplied = useUiPluginRegistry.getState().applyPlugin(second.manifest, secondModule, []);
 		expect(secondApplied).toEqual({ ok: true, missing: [] });
 		expect(useUiPluginRegistry.getState().contributions[UI_REGIONS.AppOverlay]).toHaveLength(1);
 		expect(useUiPluginRegistry.getState().loadNonces[name]).toBe(2);

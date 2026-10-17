@@ -2,9 +2,9 @@
 
 ## 1. 目的和范围
 
-本计划把 v3 的实现与自动化验证，转换为按能力执行的真实桌面端验收。验收对象是打包后的 Drone Electron 客户端及其真实 backend、IPC、preload、UI 插件、skill、MCP、连接器、知识库和任务运行链路；它是 [`final-pluginization-plan.md`](final-pluginization-plan.md) 的发布验收清单。
+本计划把 v3 的实现与自动化验证，转换为按能力执行的真实桌面端与宿主链路验收。验收对象是打包后的 Drone Electron 客户端及其真实 backend、IPC、preload、UI 插件、skill、MCP、连接器、知识库和任务运行链路；它是 [`final-pluginization-plan.md`](final-pluginization-plan.md) 的发布验收清单。GUI shell 无法启动时，必须把宿主/SDK 的真实行为证据与交互式截图状态分开记录，不能用静态按钮替代行为证据。
 
-本计划不把“按钮存在”“状态标签显示成功”或“单元测试通过”当作能力完成。每项能力必须完成一次真实桌面操作，得到可观察返回，并留下可以追溯的任务、运行、版本、hash、外部对象或审计证据。
+本计划不把“按钮存在”“状态标签显示成功”或“单元测试通过”当作能力完成。每项能力必须完成一次真实桌面或真实宿主/SDK 操作，得到可观察返回，并留下可以追溯的任务、运行、版本、hash、外部对象或审计证据；交互式截图另记为 GUI 观察证据。
 
 本计划同时继承 v3 的**结果红线**：系统可以报告观察到的事实、运行状态和限制，但不能把缺少证据、未经复核或无法确认的结果包装成已验证科学结论。插件验收还必须证明“配置改变后真实行为改变”，不能只验收页面。
 
@@ -55,9 +55,9 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 
 | 项目 | 当前状态 | 已有证据 | 缺失 / 下一步 |
 |---|---|---|---|
-| UI 插件宿主 | **已实现（基础）** | renderer registry/slot、main manager/build、manifest、热重载、错误边界、设置页 | 完成 `UI-01` 的真实启用→出现→关闭→重载验收 |
+| UI 插件宿主 | **UI-01 真实宿主验收通过** | `packages/desktop/src/main/ui-plugins/ui-acceptance.test.ts`：真实内置 bundle 经 `UiPluginManager` 构建/读取，renderer registry 出现、移除、重载 nonce 递增，配置跨 manager 重启保持；报告 `/private/tmp/drone-ui-skill-acceptance.json` | 交互式 Electron 仍受当前 shell 的 macOS `NSApplication` 启动阻塞；本机构建产物验收与宿主 lifecycle 已通过，GUI 截图不作为本次 gate |
 | 知识与 topic 记忆 | **MEM-01 隔离验收通过** | `packages/backend/test/mem-gate.test.mjs`：隔离 Vault 的 `memory-note.md` 写入 marker，新实例恢复 topic/来源/未解决问题，源变更后 stale/changed | 继续复跑根门禁；不触碰正式 Vault |
-| Skills | **已实现（目录与路由）** | Tools & Skills、skill router、资源校验和相关测试 | 完成 `SKILL-01`，保留真实 invocation 和禁用后的反证 |
+| Skills | **SKILL-01 真实 SDK 验收通过** | `packages/backend/test/skill-acceptance-sdk.test.mjs`：真实 Pi SDK + offline faux provider 完成 `/skill:research-workflow` 展开、模型回合、visible skill 与 invocation 记录；自动禁用反证和 manual-only 语义证据写入 `/private/tmp/drone-skill-01*-evidence.json` | `disable-model-invocation` 只关闭自动选择；显式 `/skill:` 仍按 Pi 契约可用，计划与 UI 必须准确显示该语义 |
 | MCP / 连接器 | **隔离真实调用已通过（适配器与 IPC；WebDAV/Zotero 写入闭环）** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 完成 marker tool call 和关闭重载；read-only `CapabilityResearchPorts` 完成唯一词 source receipt/调用记录与关闭跳过传输；WebDAV 与 Zotero 临时对象均完成真实创建→回读→删除 | 根门禁持续复跑；Protocols.io 保持只读 |
 | 外部写入闭环 | **WebDAV + Zotero 已通过；Protocols.io 只读** | 两个连接器均完成授权→创建→回读→删除→再回读，凭据未写入仓库 | 维持 Protocols.io 只读；若以后启用写入需另行授权 token |
 | 结果红线与 evidence | **REDLINE-01 隔离验收通过** | 状态合同、publication/metacognitive/orchestration gate、`npm run check:redline` 的 4 类可重复 fixture 与 sealed proof | 交互式桌面截图可继续作为可选观察；本机构建产物和领域审计已闭合 |
@@ -75,9 +75,9 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 
 | 编号 | 操作 | 通过证据 | 当前状态 | 下一步 |
 |---|---|---|---|---|
-| `UI-01` | 设置 → 高级 → UI 插件：启用插件，观察真实 slot/panel/headless 效果；关闭、重载、重启 | 槽位/面板真实变化、关闭后消失、配置持久化、插件错误可见 | 宿主基础已实现；未完成真实验收 | 使用内置插件完成桌面走查，保存截图和 plugin/load nonce |
+| `UI-01` | 设置 → 高级 → UI 插件：启用插件，观察真实 slot/panel/headless 效果；关闭、重载、重启 | 槽位/面板真实变化、关闭后消失、配置持久化、插件错误可见 | **PASS（真实宿主 + renderer registry lifecycle）**；`ui-acceptance.test.ts` 与 `check:ui-skill-acceptance` 已通过 | 交互式 Electron 截图仍受当前 macOS shell `NSApplication` 阶段阻塞；不改变本机构建产物和宿主 gate 结论 |
 | `MEM-01` | `memory-note.md` 写入 `DRONE-MEM-001`；会话 A 总结并关闭；会话 B 选择 topic 继续；修改源后再次恢复 | `mem-gate.test.mjs` 与 `/private/tmp/drone-mem-001-evidence.json`：恢复标题/摘要/未解决问题/来源，context 命中 marker，源变更显示 `stale/changed` | **PASS（隔离跨实例验收）** | 继续复跑根门禁；不触碰正式 Vault |
-| `SKILL-01` | 启用 `research-workflow` 或实际安装 skill，用 `/skill:<name>` 或研究问题触发；禁用后重试 | 真实 invocation、名称/参数、调用次数/最近使用、技能要求的结果结构；禁用后不可用 | 路由与目录已实现；未完成真实验收 | 将 invocation 证据与 Run Inspector 对齐 |
+| `SKILL-01` | 启用 `research-workflow` 或实际安装 skill，用 `/skill:<name>` 或研究问题触发；禁用自动调用后重试 | 真实 invocation、名称/参数、调用次数/最近使用、技能要求的结果结构；自动禁用后不再被模型选择 | **PASS（真实 Pi SDK + faux provider）**；2/2 用例通过，证据 `/private/tmp/drone-skill-01-evidence.json` 与 `drone-skill-01-disabled-evidence.json` | `disable-model-invocation` 保留显式手动 `/skill:`，UI 需展示 manual-only 而非误报完全不可用 |
 | `MCP-01` | 启用本地 MCP 的 `echo_marker`，要求只返回 `DRONE-MCP-001`；关闭服务并重载后重试 | 连接状态、真实 tool call、唯一返回值、关闭后的 unavailable/blocked | **PASS（隔离真实 SDK fixture）**；启用→真实调用→关闭→重载已覆盖，关闭后 adapter 无 server/tool 或明确 disabled | 作为根门禁 `check:remaining-gates` 持续复跑 |
 | `CONN-01` | 启用连接器搜索唯一测试词，关闭后再次搜索 | source ID、URL、访问时间、调用记录；关闭后不再调用该连接器 | **PASS（只读 CapabilityResearchPorts fixture）**；唯一词 `DRONE-CONN-01-UNIQUE` 的 source receipt/URL/调用记录可回读，关闭后跳过传输，重新启用可重试 | 保持只读；外部写入不在本门槛范围 |
 | `WRITE-01` | 对 Zotero/WebDAV 执行授权→写入→回读→删除→再回读 | 外部对象 ID、回读内容、删除确认、审计记录 | **PASS（WebDAV + Zotero）**；Protocols.io 只读 | 保留无凭据回执；Protocols.io 写入不在当前计划范围 |
@@ -359,13 +359,23 @@ revision / ETag / SHA-256：
 - 端到端用户路径通过。
 - 验收报告明确区分实现完成、本地自动化通过、真实桌面通过和公开发布状态。
 
-## 10. 2026-10-18 本机构建产物验收记录
+## 10. 2026-10-18 UI-01 / SKILL-01 真实宿主验收记录
+
+执行 `npm run check:ui-skill-acceptance -- --out /private/tmp/drone-ui-skill-acceptance.json`，两个门槛均通过：
+
+- `UI-01`：`packages/desktop/src/main/ui-plugins/ui-acceptance.test.ts` 使用随包 `ds-whale-maid`，由 `UiPluginManager` 在隔离 userData 中真实导出、构建并动态导入 `dist/index.js`；renderer registry 观察到 `app.overlay` contribution 出现，禁用后移除，重新启用后 `loadNonce` 从 1 增至 2，新的 manager 实例回读 `enabled/trusted/built` 配置。该证据证明宿主与 renderer lifecycle 已闭合，不把插件卡片的 enabled 字段单独当作通过。
+- `SKILL-01`：`packages/backend/test/skill-acceptance-sdk.test.mjs` 使用真实 Pi SDK `SessionService/PiBackend` 与 offline faux provider，执行 `/skill:research-workflow summarize the evidence boundary`，回读 canonical `<skill>` user message、visible skill、system prompt 和 provider call；第二用例验证 `disable-model-invocation: true` 后科研问题不会自动选择该技能且不产生 invocation。Pi 契约仍允许显式 `/skill:research-workflow manual check`，因此 UI 必须标为 `manual-only`，不能误报为完全不可用。证据分别写入 `/private/tmp/drone-skill-01-evidence.json` 与 `/private/tmp/drone-skill-01-disabled-evidence.json`。
+- 报告不包含凭据、正式 Vault、session 正文或 `results/`；provider 网络被关闭，插件和技能均来自仓库/随包资源。
+
+当前 shell 的交互式 Electron 仍在 macOS `NSApplication init/RegisterApplication` 阶段 `SIGABRT`，因此没有新增 GUI 截图；这作为 GUI 环境观察 `BLOCKED` 单独记录，不改变上述 UI-01 宿主 lifecycle 或 SKILL-01 SDK 结论，也不改变本机构建产物的 `PASS`。
+
+## 11. 2026-10-18 本机构建产物验收记录
 
 正式桌面验收口径为本机构建产物，不把交互式 Electron 启动称为降级。候选分支执行 `npm run build && npm run stage:pi-packages && npm run check:desktop-artifact -- --strict --out /private/tmp/drone-local-desktop-artifact-final.json`：16/16 检查通过，Home、Knowledge、Skills/Connections、Hosts/Right panel 四视口合同 4/4 通过，`FAIL=0`、`NOT_RUN=0`；产物快照 SHA-256 为 `662b97f5d4d8b03330aa8663ff4b2308956ad2c0b910e35b6d4eba54bc2a214c`。检查覆盖 main/preload/renderer、CSP/entry、UI 插件启停合同、skill/MCP/connector/memory/结果红线资源和已 stage 的 MCP 资源。
 
 交互式 Electron 仍在当前 shell 的 macOS `NSApplication init/RegisterApplication` 阶段 `SIGABRT`，没有建立 CDP；这只记录为可选的 GUI 环境观察，不改变构建产物 `PASS`，也不阻断本计划的本机构建验收。
 
-## 11. 2026-10-18 WebDAV 写入闭环记录
+## 12. 2026-10-18 WebDAV 写入闭环记录
 
 在允许访问内网目标的隔离进程中，通过 Drone 的 `KnowledgeWebDavService` 对
 `http://10.126.126.1:8080/Drone-Knowledge` 完成真实验收：probe 返回
@@ -374,7 +384,7 @@ revision / ETag / SHA-256：
 `2b2695bfa41fe29f9477796e2413f5446b6eabfd3dafa8351c0268c72f151d27`。凭据只存在于进程环境，没有写入仓库、日志或验收文档；Protocols.io 继续保持只读策略。
 
 
-## 12. 2026-10-18 收口补充
+## 13. 2026-10-18 收口补充
 
 - LAN 清理已完成，源码、生成运行时、入口、manifest、测试与索引均无残留。
 - WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；Protocols.io 按计划保持只读。
@@ -382,6 +392,6 @@ revision / ETag / SHA-256：
 - 正式桌面门槛为本机构建产物：16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。交互式 Electron SIGABRT 不计为降级。
 - `MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均已通过隔离真实行为验收；Protocols.io 继续只读，不能把静态资源通过替代外部写入证据。
 
-## 13. 2026-10-18 剩余门槛复跑
+## 14. 2026-10-18 剩余门槛复跑
 
 `npm run check:remaining-gates` 已集中复跑四条门槛：MEM-01 的 1 个跨实例夹具、REDLINE-01 的 4 个违规夹具、MCP-01 与 CONN-01 的 2 个 SDK/只读连接器夹具全部通过。随后复跑 `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`npm run check:plugin-api`、`npm run check:pi-compat` 和 `npm run check:desktop-artifact -- --strict`，均通过；桌面本机构建产物为 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。Protocols.io 仍保持只读，未执行外部写入；npm scope 与公开发布继续单独待决，证书/正式签名不属于计划门槛。

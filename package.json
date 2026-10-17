@@ -61,6 +61,7 @@
 		"test:compute:docker": "sh scripts/test-compute-docker.sh",
 		"test:compute:rnaseq": "sh scripts/b3-pipeline/run-rnaseq-smoke.sh",
 		"check:desktop-artifact": "node scripts/check-local-desktop-artifact.mjs",
+		"check:ui-skill-acceptance": "node scripts/check-ui-skill-acceptance.mjs",
 		"check:remaining-gates": "node scripts/check-remaining-gates.mjs"
 	},
 	"engines": {
