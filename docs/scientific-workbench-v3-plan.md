@@ -72,4 +72,5 @@
 
 - 2026-10-17（P10 Zotero Desktop 真实写入验收）：截图确认 Zotero Advanced 的本机通讯开关开启；本机 API 根路径与条目读取均返回 200，版本为 Zotero 10.0.6、Connector API 3。使用项目现有 local-write/MCP 协议和运行时本地授权 key，在 `users/0` 创建唯一标记临时 note（HTTP 200），回读标记匹配（HTTP 200），按条目版本删除（HTTP 204），删除后 GET 返回 404；未记录任何私人文献正文。
 - 2026-10-17（v0.32.9 无证书发布验收）：Release [#127](https://github.com/Gyoungwe/Drone/actions/runs/39007033259) 的 resolve、macOS/Windows validate、prepare、macOS arm64/x64、Windows x64、publish 和 website 全部成功；正式 Release [v0.32.9](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.9) 已发布，包含 macOS arm64/x64 DMG/ZIP、Windows EXE/ZIP、`latest-mac.yml` 和 `latest.yml`，所有产物为 unsigned。
-- 2026-10-17（P10 可逆写入连接器）：新增 WebDAV 文件与 Protocols.io bookmark 两个 fail-closed 写入适配器，统一要求显式授权、创建后回读、删除和删除后缺失回读；受控端口测试通过，真实外部闭环等待各自授权主机/令牌，不把测试夹具写成真实验收。\n- 2026-10-17（计划复核）：P9、P10、P11 的勾选项均已有实现、测试或发布证据；`main` 合并提交 `ba15aacbe216265f0dbbe79bfe219375523b1e6f` 的 CI run [#774](https://github.com/Gyoungwe/Drone/actions/runs/39010100618) 已全部通过。本次复核补正文档与实现不一致处，不新增未验证的科学结论或发布声明。
+- 2026-10-17（P10 可逆写入连接器）：新增 WebDAV 文件与 Protocols.io bookmark 两个 fail-closed 写入适配器，统一要求显式授权、创建后回读、删除和删除后缺失回读；受控端口测试通过，真实外部闭环等待各自授权主机/令牌，不把测试夹具写成真实验收。
+- 2026-10-17（计划复核）：P9、P10、P11 的勾选项均已有实现、测试或发布证据；`main` 合并提交 `ba15aacbe216265f0dbbe79bfe219375523b1e6f` 的 CI run [#774](https://github.com/Gyoungwe/Drone/actions/runs/39010100618) 已全部通过。本次复核补正文档与实现不一致处，不新增未验证的科学结论或发布声明。
