@@ -3,6 +3,7 @@ import {
 	createProtocolsBookmarkWriteAdapter,
 	createWebdavWriteAdapter,
 	createWebdavWritePort,
+	createWebdavWritePortFromEnv,
 } from "../src/services/reversible-write-adapters";
 
 const input = {
@@ -16,6 +17,16 @@ describe("reversible research write adapters", () => {
 		const plan = adapter.prepare({ ...input, adapterId: "webdav-write", targetRef: "/acceptance/note.md" });
 		expect(adapter.writeEnabled).toBe(false);
 		await expect(adapter.execute(plan, { approved: true })).rejects.toThrow("unavailable");
+	});
+
+	it("fails closed on malformed optional WebDAV environment", () => {
+		expect(
+			createWebdavWritePortFromEnv({
+				DRONE_WEBDAV_BASE_URL: "not a URL",
+				DRONE_WEBDAV_USERNAME: "user",
+				DRONE_WEBDAV_PASSWORD: "password",
+			}),
+		).toBeUndefined();
 	});
 
 	it("records a verified create/readback/delete closure for WebDAV", async () => {
