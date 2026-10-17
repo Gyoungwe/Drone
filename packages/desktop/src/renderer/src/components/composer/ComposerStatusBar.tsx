@@ -3,6 +3,7 @@ import { useT } from "../../i18n";
 import { shortenPath } from "../../lib/short-path";
 import { useSessionsStore } from "../../stores/sessions";
 import { selectTranscript, useTranscriptStore } from "../../stores/transcript";
+import { RunStatusStrip } from "./RunStatusStrip";
 
 /** 输入框上方「主机 · 项目 · 目录」状态条（P18），新会话载入了观察记忆时附「已载入 N 条记忆」。 */
 export function ComposerStatusView({
@@ -37,7 +38,7 @@ export function ComposerStatusView({
 	);
 }
 
-export function ComposerStatusBar() {
+export function ComposerStatusBar({ pendingAsks = 0 }: { pendingAsks?: number }) {
 	const t = useT();
 	const cwd = useSessionsStore((s) => s.cwd);
 	const sessionId = useSessionsStore((s) => s.activeSessionId);
@@ -59,11 +60,14 @@ export function ComposerStatusBar() {
 	if (!cwd) return null;
 	const project = cwd.replaceAll("\\", "/").split("/").filter(Boolean).pop() ?? cwd;
 	return (
-		<ComposerStatusView
-			host={t("composer.status.local")}
-			project={project}
-			dir={shortenPath(cwd)}
-			memory={loaded > 0 ? t("composer.status.memoryLoaded", { count: loaded }) : null}
-		/>
+		<div className="composer-status-line" data-testid="composer-status-line">
+			<ComposerStatusView
+				host={t("composer.status.local")}
+				project={project}
+				dir={shortenPath(cwd)}
+				memory={loaded > 0 ? t("composer.status.memoryLoaded", { count: loaded }) : null}
+			/>
+			<RunStatusStrip sessionId={sessionId} pendingAsks={pendingAsks} embedded />
+		</div>
 	);
 }

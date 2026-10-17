@@ -146,6 +146,21 @@ export function MessageList() {
 		() => deriveTurnTimings(transcript.messages, transcript.runEndedAt),
 		[transcript.messages, transcript.runEndedAt],
 	);
+	const turnTimingByMessageId = useMemo(() => {
+		const map = new Map<string, (typeof turnTimings)[number]>();
+		let turnIndex = -1;
+		for (const message of transcript.messages) {
+			if (message.kind === "user") {
+				turnIndex += 1;
+				continue;
+			}
+			if (message.kind === "assistant") {
+				const timing = turnTimings[turnIndex];
+				if (timing) map.set(message.id, timing);
+			}
+		}
+		return map;
+	}, [transcript.messages, turnTimings]);
 	const turnBaselineRef = useRef({ sid: activeSessionId, count: 0 });
 	if (turnBaselineRef.current.sid !== activeSessionId) {
 		turnBaselineRef.current = { sid: activeSessionId, count: turnTimings.length };
@@ -240,6 +255,13 @@ export function MessageList() {
 				showTaskCard={row.taskPlacement === "show"}
 				streaming={row.streaming}
 				sessionId={activeSessionId}
+				turnTiming={
+					row.message.kind === "assistant"
+						? row.streaming
+							? turnTimings[turnTimings.length - 1]
+							: turnTimingByMessageId.get(row.message.id)
+						: undefined
+				}
 			/>
 		);
 	};

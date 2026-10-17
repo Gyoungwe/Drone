@@ -1,8 +1,9 @@
-import { tasksForDecision } from "@drone/shared";
+import { type TurnTiming, tasksForDecision } from "@drone/shared";
 import { memo, useState } from "react";
 import { useT } from "../../i18n";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
+import { useAgentModeStore } from "../../stores/agent-mode";
 import type { UIMessage } from "../../stores/transcript";
 import { useAgentActive } from "../session/session-status";
 import { AssistantMessage } from "./AssistantMessage";
@@ -22,6 +23,7 @@ export const MessageItem = memo(function MessageItem({
 	showActions = true,
 	showTaskCard = false,
 	sessionId = null,
+	turnTiming,
 }: {
 	message: UIMessage;
 	streaming?: boolean;
@@ -33,10 +35,13 @@ export const MessageItem = memo(function MessageItem({
 	showTaskCard?: boolean;
 	/** 当前会话（错误卡重试/压缩动作需要） */
 	sessionId?: string | null;
+	/** 轮次起止，由 MessageList 从真实 transcript 时间戳派生。 */
+	turnTiming?: TurnTiming;
 }) {
 	const t = useT();
 	const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 	const agentActive = useAgentActive(sessionId ?? null);
+	const mode = useAgentModeStore((state) => (sessionId ? (state.bySession[sessionId] ?? "lead") : "lead"));
 
 	if (message.kind === "user") {
 		return <UserMessage message={message} />;
@@ -112,7 +117,9 @@ export const MessageItem = memo(function MessageItem({
 							agentActive={agentActive}
 						/>
 					))}
-				{message.text && <AssistantMessage text={message.text} thinking="" tools={[]} />}
+				{message.text && (
+					<AssistantMessage text={message.text} thinking="" tools={[]} mode={mode} turnTiming={turnTiming} />
+				)}
 			</div>
 		);
 	}
@@ -125,6 +132,8 @@ export const MessageItem = memo(function MessageItem({
 				tools={message.tools}
 				streaming={streaming}
 				metaInGroup={metaInGroup}
+				mode={mode}
+				turnTiming={turnTiming}
 			/>
 			{/* 操作行（仅轮次最后一段正文）：复制正文 + 从此处分叉；agent 回复结束后出现 */}
 			{!streaming && message.text && showActions && (

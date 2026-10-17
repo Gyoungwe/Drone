@@ -3,6 +3,7 @@ import { Fragment, memo, useEffect, useMemo, useState } from "react";
 import type { OrbState } from "thinking-orbs";
 import { ThinkingOrb } from "thinking-orbs";
 import { useI18nStore, useT } from "../../i18n";
+import { formatDuration } from "../../lib/format";
 import { Slot } from "../../plugins/Slot";
 import { UI_SLOTS } from "../../plugins/slots";
 import { ExpandArrowIcon } from "../icons";
@@ -42,7 +43,10 @@ function ThinkingRow({
 	const label = useThinkingTimer(startedAt, endedAt) ?? t("message.thinking");
 	return (
 		<details className="group/dets drawer-details">
-			<summary className="group/row flex cursor-pointer items-center gap-2 py-0.5 select-none [&::-webkit-details-marker]:hidden">
+			<summary
+				className="meta-step-row group/row flex cursor-pointer items-center gap-2 py-0.5 select-none [&::-webkit-details-marker]:hidden"
+				data-state={startedAt != null && endedAt == null ? "running" : "done"}
+			>
 				<span className="shrink-0 text-[13px] font-semibold text-ink-faint transition-colors group-hover/row:text-ink">
 					<span data-testid="thinking-label" className="tabular-nums">
 						{label}
@@ -139,6 +143,27 @@ export const MetaGroup = memo(function MetaGroup({
 			<Slot key={tool.key} name={UI_SLOTS.ToolCallCard} props={{ tool }} fallback={ToolCallCard} />
 		)),
 	]);
+	const stepCount = count;
+	const stepTiming = useMemo(() => {
+		let startedAt: number | undefined;
+		let endedAt: number | undefined;
+		for (const item of items) {
+			if (item.thinkingStartedAt != null && (startedAt == null || item.thinkingStartedAt < startedAt)) {
+				startedAt = item.thinkingStartedAt;
+			}
+			if (item.thinkingEndedAt != null && (endedAt == null || item.thinkingEndedAt > endedAt)) {
+				endedAt = item.thinkingEndedAt;
+			}
+			for (const tool of item.tools) {
+				if (tool.startedAt != null && (startedAt == null || tool.startedAt < startedAt))
+					startedAt = tool.startedAt;
+				if (tool.endedAt != null && (endedAt == null || tool.endedAt > endedAt)) endedAt = tool.endedAt;
+			}
+		}
+		return startedAt != null && endedAt != null && endedAt >= startedAt
+			? formatDuration(endedAt - startedAt)
+			: null;
+	}, [items]);
 	// orb 状态（名字是包的渲染器名，与我们的语义不同名）：
 	// tool 运行中 → connecting（星座连线 + 信号跑边）
 	// 纯 thinking → working（粒子轨道，转速更快）
@@ -236,7 +261,12 @@ export const MetaGroup = memo(function MetaGroup({
 						)}
 					</div>
 				</summary>
-				<div className="flex flex-col gap-2 py-1">{rows}</div>
+				<div className="meta-run-summary" data-testid="meta-run-summary">
+					{stepTiming
+						? t("message.runSummary", { duration: stepTiming, count: stepCount })
+						: t("message.stepsSummary", { count: stepCount })}
+				</div>
+				<div className="meta-step-list flex flex-col gap-2 py-1">{rows}</div>
 			</details>
 		</div>
 	);

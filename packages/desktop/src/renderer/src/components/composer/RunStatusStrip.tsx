@@ -11,12 +11,14 @@ export function RunStatusView({
 	runningSteps,
 	thinking,
 	zh,
+	embedded = false,
 }: {
 	state: RunState;
 	planLabel: string | null;
 	runningSteps: number;
 	thinking: { live: string | null; frozen: string | null };
 	zh: boolean;
+	embedded?: boolean;
 }) {
 	let main: string | null = null;
 	let shimmer = false;
@@ -31,7 +33,7 @@ export function RunStatusView({
 	if (!main && !planLabel && !thinking.frozen) return null;
 	return (
 		<div
-			className={`run-status run-status--${state.toLowerCase()}`}
+			className={`run-status run-status--${state.toLowerCase()}${embedded ? " run-status--embedded" : ""}`}
 			data-testid="run-status"
 			data-state={state}
 		>
@@ -45,9 +47,12 @@ export function RunStatusView({
 export function RunStatusStrip({
 	sessionId,
 	pendingAsks,
+	embedded = false,
 }: {
 	sessionId: string | null;
 	pendingAsks: number;
+	/** Render inside the composer status line without adding another full-width row. */
+	embedded?: boolean;
 }) {
 	const entry = useTranscriptStore((s) => selectTranscript(s, sessionId));
 	const zh = useI18nStore((s) => s.language) === "zh";
@@ -84,6 +89,7 @@ export function RunStatusStrip({
 				frozen,
 			}}
 			zh={zh}
+			embedded={embedded}
 		/>
 	);
 }

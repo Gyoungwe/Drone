@@ -599,7 +599,8 @@ export const en: Messages = {
 	skillsConnections: {
 		eyebrow: "Workbench capabilities",
 		title: "Skills & connections",
-		description: "Inspect skills, MCP, connectors and installed plugins for the current host. Status comes from real probes, not switch positions.",
+		description:
+			"Inspect skills, MCP, connectors and installed plugins for the current host. Status comes from real probes, not switch positions.",
 		checkAll: "Check all",
 		add: "Add",
 		filters: "Capability type",
@@ -819,6 +820,7 @@ export const en: Messages = {
 		thinking: "Thinking",
 		assistant: "Assistant",
 		stepsSummary: "{count} steps",
+		runSummary: "Ran {duration} · {count} steps",
 		working: "Working",
 		thinkingLabel: "Thinking",
 		worked: "Worked",

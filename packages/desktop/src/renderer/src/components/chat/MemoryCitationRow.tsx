@@ -5,9 +5,9 @@ export function MemoryCitationRow({ ids, label }: { ids: number[]; label: string
 			className="flex flex-wrap items-center gap-2 text-[11px] text-ink-faint"
 			data-testid="memory-citations"
 		>
-			<span>{label}</span>
+			<span className="citation-evidence-label">{label}</span>
 			{ids.map((id) => (
-				<span key={id} className="rounded border border-border px-1 py-px font-mono text-[11px] text-ink-dim">
+				<span key={id} className="citation-chip rounded border px-2 py-px font-mono text-[11px]">
 					m:{id}
 				</span>
 			))}

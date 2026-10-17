@@ -3113,6 +3113,13 @@ code {
 	font-size: 12px;
 	color: var(--color-ink-dim);
 }
+.run-status--embedded {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin: 0;
+	padding: 0 0 var(--space-1);
+	max-width: none;
+}
 .run-status-main {
 	color: var(--color-ink-2);
 }
@@ -3162,6 +3169,22 @@ code {
 	color: var(--color-ink-faint);
 	min-width: 0;
 }
+.composer-status-line {
+	display: flex;
+	align-items: flex-end;
+	gap: var(--space-3);
+	max-width: 760px;
+	margin: 0 auto;
+	min-width: 0;
+}
+.composer-status-line > .composer-status {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin: 0;
+}
+.composer-status-line > .run-status {
+	padding-right: var(--space-4);
+}
 .composer-status-host,
 .composer-status-project {
 	color: var(--color-ink-dim);
@@ -3177,6 +3200,66 @@ code {
 	color: var(--color-ink-dim);
 	white-space: nowrap;
 	flex-shrink: 0;
+}
+
+/* UI-4：步骤摘要与时间线。真实 tool/thinking 条目仍由 MetaGroup 渲染，
+   这里只提供视觉层级，不生成虚构的运行状态。 */
+.assistant-run-summary,
+.meta-run-summary {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	font-size: 11px;
+	color: var(--color-ink-faint);
+	font-variant-numeric: tabular-nums;
+}
+.citation-chip {
+	border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
+	background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+	color: color-mix(in srgb, var(--color-accent) 72%, var(--color-ink));
+}
+.citation-evidence-label {
+	color: var(--color-warn);
+}
+.user-message-bubble {
+	background: var(--color-bubble);
+	border-radius: 16px;
+}
+.assistant-run-summary {
+	padding-left: 28px;
+}
+.meta-run-summary {
+	padding: 0 0 var(--space-1) 28px;
+}
+.meta-step-list {
+	position: relative;
+	margin-left: 8px;
+	border-left: 1px solid var(--color-border);
+	padding-left: 12px;
+}
+.meta-step-row {
+	position: relative;
+}
+.meta-step-row::before {
+	position: absolute;
+	left: -17px;
+	top: 50%;
+	width: 6px;
+	height: 6px;
+	border-radius: 9999px;
+	background: var(--color-border-strong);
+	content: "";
+	transform: translateY(-50%);
+}
+.meta-step-row[data-state="running"] {
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--color-hover) 72%, transparent);
+	padding-inline: 6px;
+	margin-inline: -6px;
+}
+.meta-step-row[data-state="running"]::before {
+	background: var(--color-accent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
 /* P14 Stopped / 侧栏进行中 */

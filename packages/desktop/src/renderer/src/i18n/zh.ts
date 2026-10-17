@@ -792,6 +792,7 @@ export const zh = {
 		thinking: "思考过程",
 		assistant: "助手",
 		stepsSummary: "{count} 步",
+		runSummary: "运行 {duration} · {count} 步",
 		working: "处理中",
 		thinkingLabel: "思考中",
 		worked: "已完成",

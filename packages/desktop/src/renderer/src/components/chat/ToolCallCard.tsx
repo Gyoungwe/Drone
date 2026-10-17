@@ -58,7 +58,8 @@ export function ToolCallCard({ tool }: { tool: UIToolCall }) {
 		<details className="group/dets drawer-details">
 			<summary
 				ref={rowRef}
-				className="group/row flex cursor-pointer items-center gap-2 py-0.5 select-none [&::-webkit-details-marker]:hidden"
+				className="meta-step-row group/row flex cursor-pointer items-center gap-2 py-0.5 select-none [&::-webkit-details-marker]:hidden"
+				data-state={tool.state}
 			>
 				<span className={nameClass}>{displayName(tool.name)}</span>
 				{summary && (

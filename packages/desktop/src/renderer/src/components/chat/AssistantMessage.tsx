@@ -1,4 +1,7 @@
+import type { TurnTiming } from "@drone/shared";
 import { useT } from "../../i18n";
+import { formatDuration } from "../../lib/format";
+import type { AgentModeId } from "../../stores/agent-mode";
 import { useSessionsStore } from "../../stores/sessions";
 import type { UIToolCall } from "../../stores/transcript";
 import { Markdown } from "./Markdown";
@@ -13,6 +16,8 @@ export function AssistantMessage({
 	tools,
 	streaming,
 	metaInGroup = false,
+	mode = "lead",
+	turnTiming,
 }: {
 	text: string;
 	thinking: string;
@@ -20,12 +25,23 @@ export function AssistantMessage({
 	streaming?: boolean;
 	/** 思考/工具已并入上方合并组（MessageList 合并模式），不再自行包裹 */
 	metaInGroup?: boolean;
+	/** Current run mode, sourced from the session mode store (never inferred from copy). */
+	mode?: AgentModeId;
+	/** Real turn timing derived from transcript boundaries. */
+	turnTiming?: TurnTiming;
 }) {
 	const t = useT();
 	const model = useSessionsStore((s) => s.currentModel);
 	const cited = streaming ? [] : memoryCitations(text, tools);
 	const items: MetaItem[] = [];
 	if (!metaInGroup && (thinking || tools.length > 0)) items.push({ thinking, tools });
+	const runSummary =
+		turnTiming?.endedAt !== undefined
+			? t("message.runSummary", {
+					duration: formatDuration(turnTiming.endedAt - turnTiming.startedAt),
+					count: tools.length + (thinking ? 1 : 0),
+				})
+			: t("message.stepsSummary", { count: tools.length + (thinking ? 1 : 0) });
 
 	return (
 		<div className="flex flex-col gap-2">
@@ -38,10 +54,15 @@ export function AssistantMessage({
 				</span>
 				<span className="font-medium text-ink-2">{model?.modelId ?? t("message.assistant")}</span>
 				<span aria-hidden="true">·</span>
-				<span className="tabular-nums">
-					{t("message.stepsSummary", { count: tools.length + (thinking ? 1 : 0) })}
+				<span className="rounded-full bg-hover px-2 py-0.5 text-[10px] text-ink-dim">
+					{t(`composer.mode.${mode}`)}
 				</span>
 			</div>
+			{(turnTiming || tools.length > 0 || thinking) && (
+				<div className="assistant-run-summary" data-testid="assistant-run-summary">
+					<span className="tabular-nums">{runSummary}</span>
+				</div>
+			)}
 			{items.length > 0 && <MetaGroup items={items} working={Boolean(streaming) && !text} />}
 			{text && <Markdown text={text} streaming={streaming} />}
 			{cited.length > 0 && (
