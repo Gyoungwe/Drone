@@ -216,7 +216,6 @@ export function createWebdavWritePortFromEnv(
 	}
 }
 
-
 const DEFAULT_PROTOCOLS_API_BASE = "https://www.protocols.io/api/v3";
 const PROTOCOLS_REQUEST_TIMEOUT_MS = 15_000;
 
@@ -228,7 +227,11 @@ function protocolsApiTarget(targetRef: string): string {
 			break;
 		}
 	}
-	if (!value || /[?#\\]/.test(value) || value.split("/").some((segment) => segment === "." || segment === "..")) {
+	if (
+		!value ||
+		/[?#\\]/.test(value) ||
+		value.split("/").some((segment) => segment === "." || segment === "..")
+	) {
 		throw new Error("Protocols.io target contains an invalid path");
 	}
 	return value;
@@ -245,7 +248,14 @@ function protocolsApiBase(value: string | undefined): string {
 function protocolIdentity(payload: unknown): unknown {
 	if (!payload || typeof payload !== "object") return undefined;
 	const value = payload as Record<string, unknown>;
-	return value.protocol ?? (value.payload && typeof value.payload === "object" ? (value.payload as Record<string, unknown>).protocol : undefined) ?? value.payload ?? value;
+	return (
+		value.protocol ??
+		(value.payload && typeof value.payload === "object"
+			? (value.payload as Record<string, unknown>).protocol
+			: undefined) ??
+		value.payload ??
+		value
+	);
 }
 
 function protocolResponseOk(status: number, body: unknown): boolean {
@@ -275,7 +285,11 @@ export function createProtocolsBookmarkWritePort(
 			const encoded = encodeURIComponent(target);
 			const protocolUrl = `${apiBase}/protocols/${encoded}`;
 			const bookmarkUrl = `${protocolUrl}/bookmarks`;
-			const request = async (url: string, method: "GET" | "POST" | "DELETE", requestSignal: AbortSignal | null | undefined = signal) => {
+			const request = async (
+				url: string,
+				method: "GET" | "POST" | "DELETE",
+				requestSignal: AbortSignal | null | undefined = signal,
+			) => {
 				if (requestSignal?.aborted) throw new Error("Protocols.io write aborted");
 				const controller = new AbortController();
 				const timer = setTimeout(() => controller.abort(), PROTOCOLS_REQUEST_TIMEOUT_MS);
@@ -303,7 +317,9 @@ export function createProtocolsBookmarkWritePort(
 						throw new Error("Protocols.io write was cancelled");
 					}
 					throw new Error(
-						error instanceof Error ? `Protocols.io request failed: ${error.message.slice(0, 240)}` : "Protocols.io request failed",
+						error instanceof Error
+							? `Protocols.io request failed: ${error.message.slice(0, 240)}`
+							: "Protocols.io request failed",
 					);
 				} finally {
 					clearTimeout(timer);
@@ -330,7 +346,10 @@ export function createProtocolsBookmarkWritePort(
 					throw new Error(`Protocols.io bookmark delete failed (${deleted.response.status})`);
 				}
 				const finalRead = await request(protocolUrl, "GET", null);
-				if (!protocolResponseOk(finalRead.response.status, finalRead.body) || !protocolIdentity(finalRead.body)) {
+				if (
+					!protocolResponseOk(finalRead.response.status, finalRead.body) ||
+					!protocolIdentity(finalRead.body)
+				) {
 					throw new Error(`Protocols.io final target check failed (${finalRead.response.status})`);
 				}
 				return {
