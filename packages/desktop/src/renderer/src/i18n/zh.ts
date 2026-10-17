@@ -637,6 +637,9 @@ export const zh = {
 	},
 	researchWrite: {
 		title: "科研写入连接器",
+		adapter: "写入目标",
+		deleteClosure: "创建/回读/删除闭环",
+		deleted: "临时对象已删除并回读确认",
 		defaultTitle: "研究资料",
 
 		hint: "先生成受限写入计划；外部写入每次都需要新的明确确认。",
