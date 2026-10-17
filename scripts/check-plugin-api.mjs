@@ -1,0 +1,191 @@
+#!/usr/bin/env node
+/**
+ * PR-5 public-contract and migration gate.
+ *
+ * The check intentionally uses only Node built-ins. It validates the package
+ * boundary, installs the packed tarball into a throwaway fixture, and inspects
+ * the separately bound drone-plugins workspace for source-repository paths.
+ * It never writes to the plugin repository or to a user's package manager
+ * state.
+ */
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+
+const ROOT = resolve(dirname(new URL(import.meta.url).pathname), "..");
+const PACKAGE_DIR = join(ROOT, "packages", "plugin-api");
+const PLUGIN_REPO_CANDIDATES = [
+	process.env.DRONE_PLUGINS_DIR,
+	join(homedir(), "Documents", "ChatGPT", "drone-plugins"),
+	resolve(ROOT, "../drone-plugins"),
+].filter(Boolean);
+
+function readJson(path) {
+	return JSON.parse(readFileSync(path, "utf8"));
+}
+
+function fail(message) {
+	throw new Error(`[check:plugin-api] ${message}`);
+}
+
+function assert(condition, message) {
+	if (!condition) fail(message);
+}
+
+function packageJson() {
+	const path = join(PACKAGE_DIR, "package.json");
+	assert(existsSync(path), "packages/plugin-api/package.json is missing");
+	return readJson(path);
+}
+
+function checkPackageManifest() {
+	const manifest = packageJson();
+	assert(manifest.name === "@drone/plugin-api", `unexpected package name: ${manifest.name}`);
+	assert(
+		manifest.version === "1.0.0",
+		`public API package must stay at 1.0.0 during v1: ${manifest.version}`,
+	);
+	assert(!manifest.private, "public plugin-api package must not be private");
+	assert(manifest.types === "./dist/index.d.ts", "types must point at dist/index.d.ts");
+	assert(
+		manifest.exports?.["."]?.types === "./dist/index.d.ts",
+		"exports.types must point at dist/index.d.ts",
+	);
+	assert(!manifest.dependencies && !manifest.devDependencies, "plugin-api must remain dependency-free");
+}
+
+function checkPackageSource() {
+	const source = readFileSync(join(PACKAGE_DIR, "src", "index.ts"), "utf8");
+	for (const specifier of ["electron", "@earendil-works/pi-", "@drone/backend", "@drone/desktop"]) {
+		assert(
+			!source.includes(specifier),
+			`public contract imports forbidden implementation dependency: ${specifier}`,
+		);
+	}
+}
+
+function checkDist() {
+	const dist = join(PACKAGE_DIR, "dist");
+	assert(existsSync(join(dist, "index.d.ts")), "build output is missing dist/index.d.ts");
+	assert(existsSync(join(dist, "index.js")), "build output is missing dist/index.js");
+	for (const name of readdirSync(dist)) {
+		const path = join(dist, name);
+		if (!name.endsWith(".js") && !name.endsWith(".d.ts")) continue;
+		const output = readFileSync(path, "utf8");
+		for (const pattern of [
+			/from ["']electron["']/u,
+			/@earendil-works\/pi-/u,
+			/@drone\/(?:backend|desktop)/u,
+			/(?:from|import\s*\()["']\.\.\/\.\./u,
+		]) {
+			assert(!pattern.test(output), `forbidden dependency in ${name}: ${pattern}`);
+		}
+	}
+}
+
+function checkPackageOnly() {
+	checkPackageManifest();
+	checkPackageSource();
+	checkDist();
+}
+
+function findPluginRepo() {
+	return PLUGIN_REPO_CANDIDATES.find((candidate) => candidate && existsSync(join(candidate, "package.json")));
+}
+
+function walkPackageJson(dir, out = []) {
+	if (!existsSync(dir)) return out;
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		if (entry.name === "node_modules" || entry.name === ".git") continue;
+		const path = join(dir, entry.name);
+		if (entry.isDirectory()) walkPackageJson(path, out);
+		else if (entry.name === "package.json") out.push(path);
+	}
+	return out;
+}
+
+function checkDependencyValue(value, path) {
+	if (typeof value !== "string") return;
+	assert(!/^file:/u.test(value), `${path} uses a file: dependency (${value})`);
+	assert(!/^workspace:/u.test(value), `${path} uses a workspace: dependency (${value})`);
+	assert(!value.startsWith("/") && !value.startsWith("~/"), `${path} uses an absolute dependency (${value})`);
+	assert(!/(^|\/)\.\.?\//u.test(value), `${path} uses a relative dependency (${value})`);
+}
+
+function checkPluginWorkspace(repo) {
+	const rootManifestPath = join(repo, "package.json");
+	const rootManifest = readJson(rootManifestPath);
+	assert(
+		Array.isArray(rootManifest.workspaces) && rootManifest.workspaces.includes("packages/*"),
+		"drone-plugins must remain one workspace",
+	);
+	for (const path of walkPackageJson(repo)) {
+		const manifest = readJson(path);
+		for (const section of [
+			"dependencies",
+			"devDependencies",
+			"optionalDependencies",
+			"peerDependencies",
+			"overrides",
+		]) {
+			for (const [name, value] of Object.entries(manifest[section] ?? {}))
+				checkDependencyValue(value, `${path}:${section}.${name}`);
+		}
+	}
+	const head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+	assert(/^[0-9a-f]{7,40}$/u.test(head), `unable to resolve drone-plugins HEAD: ${head}`);
+	return { repo, head, packageJsonFiles: walkPackageJson(repo).length };
+}
+
+function checkTarballInstall() {
+	const temp = mkdtempSync(join(tmpdir(), "drone-plugin-api-gate-"));
+	try {
+		const env = { ...process.env, npm_config_cache: join(temp, "npm-cache") };
+		const tarball = execFileSync("npm", ["pack", "--silent", PACKAGE_DIR, "--pack-destination", temp], {
+			cwd: ROOT,
+			encoding: "utf8",
+			env,
+		})
+			.trim()
+			.split(/\r?\n/)
+			.at(-1);
+		assert(tarball, "npm pack did not produce a tarball name");
+		const fixture = {
+			name: "drone-plugin-api-install-fixture",
+			private: true,
+			version: "0.0.0",
+			type: "module",
+			dependencies: { "@drone/plugin-api": `file:./${tarball}` },
+		};
+		writeFileSync(join(temp, "package.json"), `${JSON.stringify(fixture, null, 2)}\n`);
+		execFileSync("npm", ["install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"], {
+			cwd: temp,
+			stdio: "pipe",
+			env,
+		});
+		const lock = readJson(join(temp, "package-lock.json"));
+		assert(
+			lock.packages?.["node_modules/@drone/plugin-api"],
+			"tarball fixture did not resolve @drone/plugin-api",
+		);
+		return tarball;
+	} finally {
+		rmSync(temp, { recursive: true, force: true });
+	}
+}
+
+const packageOnly = process.argv.includes("--package-only");
+const migration = process.argv.includes("--migration") || !packageOnly;
+checkPackageOnly();
+if (migration) {
+	const tarball = checkTarballInstall();
+	const repo = findPluginRepo();
+	assert(repo, "bound drone-plugins repository not found; set DRONE_PLUGINS_DIR for CI");
+	const plugin = checkPluginWorkspace(repo);
+	console.log(
+		`plugin-api package gate passed; tarball=${tarball}; pluginRepo=${plugin.repo}; head=${plugin.head}; manifests=${plugin.packageJsonFiles}`,
+	);
+} else {
+	console.log("plugin-api package gate passed");
+}

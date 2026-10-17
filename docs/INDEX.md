@@ -28,6 +28,8 @@
 
 `.pi/tsconfig.json` 开启 `allowJs` + `checkJs`；当前覆盖兼容入口与任务/知识运行时，生成的 `.pi/lib/knowledge/runtime/**/*.mjs` 明确排除在检查图之外（源代码由领域包 typecheck 覆盖），根 `npm run typecheck` 会串接 `npm run check:pi`。
 
+插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@drone/plugin-api` 包，只暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型。`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
+
 任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
 
 研究技能包的锁定来源、许可记录、缓存与离线恢复：见 [research-skill-packs.md](research-skill-packs.md)。
@@ -61,6 +63,7 @@ npm workspaces monorepo，9 个包：
 ```
 packages/
 ├── shared/     IPC 契约层（纯类型 + 通道常量，三方共享）
+├── plugin-api/ 插件公开合同（HostPort、能力协商、结果/回执类型）
 ├── backend/    纯 Node；pi SDK 适配层
 ├── knowledge/  知识领域纯函数与 claim 合约（TS 包，迁移中）
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）

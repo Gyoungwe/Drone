@@ -1,0 +1,23 @@
+{
+	"name": "@drone/plugin-api",
+	"version": "1.0.0",
+	"description": "Stable host contracts for Drone capability plugins",
+	"license": "MIT",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"files": ["dist", "README.md", "package.json"],
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"check": "npm run typecheck && npm run build && node ../../scripts/check-plugin-api.mjs --package-only",
+		"test": "npm run check && node --test test/index.test.mjs"
+	}
+}

@@ -143,6 +143,7 @@ flowchart TB
 ```
 packages/
   shared/        契约与纯函数（新增 host-api/）                 依赖：无
+  plugin-api/    对外插件合同（HostPort、能力协商、结果回执）    依赖：无
   knowledge/     @drone/knowledge  ← .pi/lib/knowledge/*       依赖：shared
   tasks/         @drone/tasks      ← .pi/lib/tasks/*            依赖：shared
   research/      @drone/research   ← .pi/lib/{source-archive,open-access,zotero-*,institutional-access,literature-*,…}
@@ -152,6 +153,13 @@ packages/
   desktop/       @drone/desktop                                 依赖：backend、shared（renderer 只依赖 shared）
 .pi/             构建产物 + 技能：extensions/*.mjs 由 @drone/extensions 打包生成（给 CLI 用，保持路径不变）
 ```
+
+`@drone/plugin-api` 是宿主与可独立发布插件之间的最小稳定边界。它不依赖
+Electron、Pi SDK 或 Drone 实现包，只提供 `DroneHostPort`、Host capability
+negotiation、`drone-result/v3` 状态以及来源/运行/计算/授权回执类型。v1 只允许
+`compatible` 和 `incompatible` 两种加载结果；宿主不得用半加载或隐式降级替代
+不兼容提示。发布前，`drone-plugins` 通过宿主 `npm pack` tarball 或固定 git
+commit 验证，禁止 `file:`、`workspace:` 或指向 Drone 源码的相对依赖。
 
 **依赖规则**（由 `scripts/check-architecture.mjs` 在 CI 里强制检查）：
 
