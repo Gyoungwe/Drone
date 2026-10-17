@@ -422,7 +422,7 @@ function ConnectionState({
 				: t("home.environment.configure");
 	const tone = value === null ? "text-ink-faint" : value ? "text-ok" : "text-warn";
 	return (
-		<li className="flex items-center gap-2 rounded-lg bg-hover/60 px-2 py-1.5">
+		<li className="flex items-center gap-2 rounded-lg bg-hover/60 px-2 py-2">
 			<span
 				className={`h-2 w-2 shrink-0 rounded-full ${value === null ? "bg-ink-faint" : value ? "bg-ok" : "bg-warn"}`}
 				aria-hidden="true"

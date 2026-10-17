@@ -303,7 +303,7 @@ export function SkillsConnectionsView() {
 							type="button"
 							role="tab"
 							aria-selected={filter === key}
-							className={`rounded-full px-3 py-1.5 text-xs ${filter === key ? "bg-highlight font-medium text-ink" : "text-ink-dim hover:bg-hover"}`}
+							className={`rounded-full px-3 py-2 text-xs ${filter === key ? "bg-highlight font-medium text-ink" : "text-ink-dim hover:bg-hover"}`}
 							onClick={() => setFilter(key)}
 						>
 							{t(`skillsConnections.filter.${key}` as never)}
@@ -311,7 +311,7 @@ export function SkillsConnectionsView() {
 					))}
 					<button
 						type="button"
-						className={`ml-auto rounded-full border px-3 py-1.5 text-xs ${attentionOnly ? "border-warn text-warn" : "border-border text-ink-dim"}`}
+						className={`ml-auto rounded-full border px-3 py-2 text-xs ${attentionOnly ? "border-warn text-warn" : "border-border text-ink-dim"}`}
 						onClick={() => setAttentionOnly((value) => !value)}
 					>
 						{t("skillsConnections.attention", { count: attentionCount })}
@@ -397,7 +397,7 @@ export function SkillsConnectionsView() {
 									) : (
 										<button
 											type="button"
-											className="rounded-full border border-border px-3 py-1.5 text-xs text-ink-2 hover:bg-hover"
+											className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
 											onClick={() =>
 												openSettings(row.action as "skills" | "mcp" | "zotero" | "knowledge" | "extensions")
 											}

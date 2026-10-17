@@ -199,7 +199,7 @@ export function KnowledgeHome({
 														.open({ cwd, sessionId, tab: "reviews", note: item.path, noteRevision: revision })
 												}
 											>
-												<span className="rounded-md bg-hover px-1.5 py-1 text-center text-[11px] text-ink-dim">
+												<span className="rounded-md bg-hover px-2 py-1 text-center text-[11px] text-ink-dim">
 													{categoryLabel(t, kind)}
 												</span>
 												<span className="min-w-0">

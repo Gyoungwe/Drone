@@ -101,7 +101,7 @@ export function KnowledgeSearch({
 					className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none"
 					disabled={!bindingRevision}
 				/>
-				<kbd className="rounded-md bg-hover px-1.5 py-0.5 text-[11px] text-ink-dim">
+				<kbd className="rounded-md bg-hover px-2 py-0.5 text-[11px] text-ink-dim">
 					{t("homeSearchShortcut")}
 				</kbd>
 				<Button size="sm" type="submit" disabled={busy || !query.trim() || !bindingRevision}>
@@ -118,7 +118,7 @@ export function KnowledgeSearch({
 							role="tab"
 							aria-selected={activeCategory === category}
 							onClick={() => onCategoryChange(category)}
-							className={`rounded-full px-3 py-1.5 text-xs ${activeCategory === category ? "bg-hover font-medium text-ink" : "text-ink-dim hover:bg-hover"}`}
+							className={`rounded-full px-3 py-2 text-xs ${activeCategory === category ? "bg-hover font-medium text-ink" : "text-ink-dim hover:bg-hover"}`}
 						>
 							{t(CATEGORY_KEYS[category] as any)} {count == null ? t("homeCountUnknown") : count}
 						</button>
