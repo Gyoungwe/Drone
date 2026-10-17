@@ -269,7 +269,7 @@ export function createProtocolsBookmarkWritePort(
 	if (!token || /[\r\n]/.test(token)) throw new Error("Protocols.io API token is invalid");
 	const fetchImpl = config.fetchImpl ?? fetch;
 	return {
-		async write({ targetRef, signal, payload }) {
+		async write({ targetRef, signal }) {
 			if (signal?.aborted) throw new Error("Protocols.io write aborted");
 			const target = protocolsApiTarget(targetRef);
 			const encoded = encodeURIComponent(target);
