@@ -3254,8 +3254,8 @@ code {
 .meta-step-row[data-state="running"] {
 	border-radius: var(--radius-sm);
 	background: color-mix(in srgb, var(--color-hover) 72%, transparent);
-	padding-inline: 6px;
-	margin-inline: -6px;
+	padding-inline: 8px;
+	margin-inline: -8px;
 }
 .meta-step-row[data-state="running"]::before {
 	background: var(--color-accent);
