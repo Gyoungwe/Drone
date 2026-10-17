@@ -36,7 +36,7 @@
 
 - [x] 扩展写入连接器注册表：WebDAV 文件和 Protocols.io bookmark 均进入统一的 `prepare → explicit approval → create → readback → delete → absence readback` 合同；默认无授权端口时保持 fail-closed。
 - [x] 写入计划、回执和审计账本记录删除验证状态；科研资料页支持逐项选择写入连接器，并显示是否要求删除闭环。
-- [ ] 真实 WebDAV 主机闭环：需要用户提供已授权的临时目录/凭据，验收后删除唯一标记文件并确认 404/不存在。
+- [ ] 真实 WebDAV 主机闭环：需要用户提供已授权的临时目录/URL，并在运行环境设置 `DRONE_WEBDAV_BASE_URL`、`DRONE_WEBDAV_USERNAME`、`DRONE_WEBDAV_PASSWORD`；验收后删除唯一标记文件并确认 404/不存在。
 - [ ] 真实 Protocols.io bookmark 闭环：需要用户提供可写 token 和可撤销的临时公开协议 URI，验收后删除 bookmark 并确认读取为空。
 - [ ] 其他第三方资源 API（Zenodo/OSF/GitHub 等）只有在确认其创建、回读和删除语义后再加入；不能把只读搜索连接器伪装成写入连接器。
 
@@ -72,5 +72,5 @@
 
 - 2026-10-17（P10 Zotero Desktop 真实写入验收）：截图确认 Zotero Advanced 的本机通讯开关开启；本机 API 根路径与条目读取均返回 200，版本为 Zotero 10.0.6、Connector API 3。使用项目现有 local-write/MCP 协议和运行时本地授权 key，在 `users/0` 创建唯一标记临时 note（HTTP 200），回读标记匹配（HTTP 200），按条目版本删除（HTTP 204），删除后 GET 返回 404；未记录任何私人文献正文。
 - 2026-10-17（v0.32.9 无证书发布验收）：Release [#127](https://github.com/Gyoungwe/Drone/actions/runs/39007033259) 的 resolve、macOS/Windows validate、prepare、macOS arm64/x64、Windows x64、publish 和 website 全部成功；正式 Release [v0.32.9](https://github.com/Gyoungwe/Drone/releases/tag/v0.32.9) 已发布，包含 macOS arm64/x64 DMG/ZIP、Windows EXE/ZIP、`latest-mac.yml` 和 `latest.yml`，所有产物为 unsigned。
-- 2026-10-17（P10 可逆写入连接器）：新增 WebDAV 文件与 Protocols.io bookmark 两个 fail-closed 写入适配器，统一要求显式授权、创建后回读、删除和删除后缺失回读；受控端口测试通过，真实外部闭环等待各自授权主机/令牌，不把测试夹具写成真实验收。
+- 2026-10-17（P10 可逆写入连接器）：新增 WebDAV 文件与 Protocols.io bookmark 两个 fail-closed 写入适配器；WebDAV backend port 已支持 `PUT → GET/title match → DELETE → GET/404`，统一要求显式授权、创建后回读、删除和删除后缺失回读；受控端口测试通过，真实外部闭环等待各自授权主机/令牌，不把测试夹具写成真实验收。
 - 2026-10-17（计划复核）：P9、P10、P11 的勾选项均已有实现、测试或发布证据；`main` 合并提交 `ba15aacbe216265f0dbbe79bfe219375523b1e6f` 的 CI run [#774](https://github.com/Gyoungwe/Drone/actions/runs/39010100618) 已全部通过。本次复核补正文档与实现不一致处，不新增未验证的科学结论或发布声明。
