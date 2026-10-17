@@ -637,6 +637,7 @@ Claude Code adapter 必须通过同一套：
 | 2026-10-18 | MEM / REDLINE 隔离验收 | `mem-gate.test.mjs` 通过 `DRONE-MEM-001` 跨实例恢复、来源回读和 `stale/changed`；`redline-acceptance.test.mjs` 通过缺来源、stale、数字/方法漂移、重复数不足、断线和权限拒绝的 blocked/pause 与 sealed proof；提交 `e988d185`、`d7121a58` | 证据只写入 `/private/tmp`，不触碰正式 Vault、凭据或 session 正文；GUI 投影仍不作为构建产物降级判定 |
 | 2026-10-18 | 剩余门槛与全量门禁复跑 | `npm run check:remaining-gates`（MEM 1/1、REDLINE 4/4、MCP/CONN 2/2）、`npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`check:plugin-api`、`check:pi-compat` 与 `check:desktop-artifact -- --strict` 全部通过；桌面产物 16/16、四视口 4/4、0 FAIL/NOT_RUN | 未执行 npm publish 或外部 Protocols.io 写入；公开发布仍需 npm scope、凭据或发布决策。按计划不要求证书/正式签名 |
 | 2026-10-18 | UI-01 / SKILL-01 真实宿主验收 | `npm run check:ui-skill-acceptance -- --out /private/tmp/drone-ui-skill-acceptance.json` 通过：UI-01 真实内置插件 bundle 构建→registry 出现→禁用移除→重载 nonce 1→2→manager 重启回读配置；SKILL-01 真实 Pi SDK + faux provider 2/2，通过 canonical slash invocation、visible skill、provider call 和自动禁用反证；证据 `/private/tmp/drone-skill-01-evidence.json`、`/private/tmp/drone-skill-01-disabled-evidence.json` | 交互式 Electron 仍受当前 shell 的 macOS `NSApplication` SIGABRT 阻塞，无新增 GUI 截图；GUI 观察与宿主/SDK gate 分开记录。`disable-model-invocation` 的显式 slash manual-only 语义已同步到 UI/计划 |
+| 2026-10-18 | main 合并与 v0.33.0 发布候选收口 | 合并提交 `c8195156` 已推送 `main`；修复 CI 中缺少绑定插件仓库的提交 `a378b3c1`、刷新 knowledge/research runtime manifest 的提交 `b4052d42` 已推送；`v0.33.0` 标签已指向 `b4052d42`，Release run `39059425930` 已启动 | 等待跨平台 Release 验收完成；发布后仍需记录 Release URL/资产校验和，并决定 npm scope 后再做公开 npm 发布与插件源码迁移 |
 
 
 ### 2026-10-18 收口补充
@@ -648,3 +649,5 @@ Claude Code adapter 必须通过同一套：
 - **Pi 兼容**：锁定 `1.1.0` 与 latest `1.3.0` 均通过 pi-core/pi-knowledge/pi-research 加载；next 标签当前 `NOT_PUBLISHED`，不伪造通过。
 - **外部写入**：WebDAV 和 Zotero 临时 note 均完成授权→创建→回读→删除→再回读；Protocols.io 只读，不进行 bookmark/write。
 - **已关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均有隔离真实行为证据，Protocols.io 保持只读；analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。仍待决定 npm scope 与公开发布；证书/正式签名不属于本计划门槛。
+- **发布后顺序**：先确认跨平台 Release 成功并记录无证书资产与校验和；再在干净 HOME 中补做 Pi `1.1.0`/`latest` 的真实 CLI 任务矩阵；随后确定 npm scope，发布 `@drone/plugin-api` 与首批包，按 subtree + 外部安装闸门把 `pi-knowledge` 迁入 `drone-plugins`；最后再推进 v1.1 的 `pi-analysis`、`pi-evidence`、`pi-connectors` 和完整 `desktop-ui-pack`。
+- **明确不阻塞发布**：Protocols.io 继续只读；交互式 Electron 截图受当前 shell 的 macOS `NSApplication` 启动限制，但构建产物 16/16 已通过，截图不改变本版本验收结论。
