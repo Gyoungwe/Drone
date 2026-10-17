@@ -190,7 +190,7 @@ describe("reversible research write adapters", () => {
 		});
 		await expect(
 			port.write({ targetRef: "/acceptance/network.json", payload: input.payload }),
-		).rejects.toThrow("readback transport failed");
+		).rejects.toThrow("暂时不可达");
 		expect(methods).toEqual(["GET", "PUT", "GET", "DELETE"]);
 		expect(deleteIfMatch).toBe('"v1"');
 	});
