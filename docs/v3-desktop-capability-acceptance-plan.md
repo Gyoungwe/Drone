@@ -399,3 +399,7 @@ revision / ETag / SHA-256：
 ## 15. 2026-10-18 Pi 真实模型兼容矩阵
 
 证据文件：`/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json`。在独立 `HOME` / `PI_CODING_AGENT_DIR`、`--no-session` 和 offline credential copy 环境中，Pi `1.1.0` 与 npm latest `1.3.0` 分别对 `pi-core`、`pi-knowledge`、`pi-research` 完成真实模型调用；六个单包 cell、两个组合 cell，以及临时 `research-suite` 安装→发现→模型调用→卸载全部 `PASS`，`rc=0`、`finalTextChars=32`、JSONL parse errors 为 0。工具 ownership 已由 pi-core 统一，未再出现 `task_*` 冲突；next 为 `NOT_PUBLISHED`。证据只保留状态、计数和哈希，不含凭据或会话正文。
+
+## 16. 2026-10-18 v0.33.0 无证书跨平台发布
+
+正式 Release run [`39066841689`](https://github.com/Gyoungwe/Drone/actions/runs/39066841689) 在 macOS arm64/x64 与 Windows x64 上完成 validate、Nature/Scientific skill pack 校验、unsigned Electron build、MCP 资源校验和资产上传；三平台 job 均成功，Release [`v0.33.0`](https://github.com/Gyoungwe/Drone/releases/tag/v0.33.0) 已从 draft 发布为正式版本。资产包含 `drone-mac-arm64.dmg/.zip`、`drone-mac-x64.dmg/.zip`、`drone-windows-x64.exe/.zip`、对应 blockmap 以及 `latest.yml` / `latest-mac.yml`。本版本不要求证书或正式签名；操作系统信任提示仍按无证书策略保留。
