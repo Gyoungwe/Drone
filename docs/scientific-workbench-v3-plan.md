@@ -18,7 +18,7 @@
 - [x] 文件动作只有四种：预览、以源码查看、系统外部打开、进入知识捕获确认；路径始终以项目 `cwd` 为根，不能越界或跟随未授权软链接（首版已完成预览/源码/外部打开和主机层项目根约束；捕获确认随 P10 实施）。
 - [x] 未知二进制显示大小、MIME、修改时间和哈希提示，并提供外部打开；不把二进制正文塞进会话或知识库。
 - [x] 视图通过已有 `window.pi` host API 工作，不在 renderer 引入 backend、Electron 或 Pi SDK；新增文案同时维护中英文。
-- [x] 验收：项目为空、中文路径、超长路径、目录、Markdown/CSV/图像/PDF/FASTQ/未知二进制和外部打开失败均有可解释状态（`npm run check:research-browser` 的确定性夹具已在 PR #222 覆盖这些状态；2026-10-17 在当前主线构建的真实桌面资料视图中走查了 Markdown、CSV、PNG、PDF 和未知二进制，PDF 由内置 PDF.js canvas 显示页码，未知二进制的“系统打开”失败显示 `Failed to open path`；FASTQ 由确定性夹具覆盖，文件预览/路径边界单元回归和 Release #119 的 macOS/Windows validate 已通过）。
+- [x] 验收：项目为空、中文路径、超长路径、目录、Markdown/CSV/图像/PDF/FASTQ/未知二进制和外部打开失败均有可解释状态（`npm run check:research-browser` 的确定性夹具已在 PR #222 覆盖这些状态；2026-10-17 在当前主线构建的真实桌面资料视图中走查了 Markdown、CSV、PNG、PDF 和未知二进制，PDF 由内置 PDF.js canvas 显示页码，未知二进制的“系统打开”失败显示 `Failed to open path`；FASTQ 由确定性夹具覆盖，文件预览/路径边界单元回归和 PR #222 CI #738 与 Release #127 的 macOS/Windows validate 已通过）。
 
 ## P10 · 跨科研场景知识沉淀
 
