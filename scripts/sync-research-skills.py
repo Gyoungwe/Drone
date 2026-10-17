@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Acquire pinned upstream skill DATA; never run upstream installers, hooks or scripts.
-Python 3.10+. Default packs: Nature + license-filtered Scientific. ARS acquisition requires an explicit license
-acknowledgment (the CC BY-NC 4.0 NonCommercial grant, or a separately held permission); the release profile includes all three.
+Python 3.10+. Default and release packs: Nature + license-filtered Scientific. Academic Research Skills (ARS)
+acquisition remains development-only and requires an explicit license acknowledgment.
 """
 import argparse
 import hashlib
@@ -258,10 +258,10 @@ def main():
     parser.add_argument('--cache-dir', type=Path, default=CACHE, help=f'Pinned archive cache directory (default: {CACHE})')
     parser.add_argument('--offline', action='store_true', help='Restore from an existing verified archive cache; refuse network access and missing entries')
     parser.add_argument('--check', action='store_true', help='Offline checksum validation; no downloads or writes')
-    parser.add_argument('--for-release', action='store_true', help='Verify all release sources; ARS must carry an explicit license basis (noncommercial or separate-permission). This does not grant rights.')
+    parser.add_argument('--for-release', action='store_true', help='Verify the Nature + Scientific release sources; academic is development-only. This does not grant rights.')
     args = parser.parse_args()
-    if args.for_release and (not args.check or set(args.sources) != {'nature', 'scientific', 'academic'}):
-        parser.error('--for-release requires --check --sources nature scientific academic')
+    if args.for_release and (not args.check or set(args.sources) != {'nature', 'scientific'}):
+        parser.error('--for-release requires --check --sources nature scientific')
     lock = json.loads(LOCK.read_text(encoding='utf-8'))
     for source in lock['sources']:
         if source['id'] not in args.sources:
