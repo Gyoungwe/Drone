@@ -79,7 +79,10 @@ function SidebarSessions() {
 			.join("|"),
 	);
 	const askCounts = useAskCountsStore((s) => s.bySession);
-	const projects = useMemo(() => deriveProjects({ allSessions, addedProjects }), [allSessions, addedProjects]);
+	const projects = useMemo(
+		() => deriveProjects({ allSessions, addedProjects }),
+		[allSessions, addedProjects],
+	);
 	const { running, rest } = useMemo(() => {
 		const active = new Set(activeIds ? activeIds.split("|") : []);
 		const sorted = [...allSessions]
@@ -250,18 +253,12 @@ export function WorkbenchNav() {
 							<Icon size={17} />
 							<span>{t(`workbench.nav.${label}`)}</span>
 							{key === "skills" && skillAttentionCount > 0 && (
-								<span
-									className="workbench-nav-badge"
-									aria-label={t("workbench.nav.skillsAttention", { count: skillAttentionCount })}
-								>
+								<span className="workbench-nav-badge" aria-hidden="true">
 									{skillAttentionCount}
 								</span>
 							)}
 							{key === "hosts" && hostCount > 0 && (
-								<span
-									className="workbench-nav-count"
-									aria-label={t("workbench.nav.hostCount", { count: hostCount })}
-								>
+								<span className="workbench-nav-count" aria-hidden="true">
 									{hostCount}
 								</span>
 							)}
