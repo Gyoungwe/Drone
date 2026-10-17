@@ -69,7 +69,7 @@ flowchart TB
     Extensions[扩展工厂\npermission gate / evap / channel-watch / todo]
     Tools[内置工具\nwebfetch / show_image / todo / subagent]
     InstitutionalBE[institutional\nconfig + session + status\npersist:drone-institutional]
-    Knowledge[knowledge / lan / mcp / permissions / project]
+    Knowledge[knowledge / mcp / permissions / project]
   end
 
   subgraph Desktop["packages/desktop — Electron"]
@@ -97,7 +97,7 @@ flowchart TB
 
 - `ipc.ts`：`IpcChannels` 常量 + `PiApi`（`window.pi` 完整类型）。新增通道需四处同步：`shared/ipc.ts` → `preload/index.ts`（各域契约）→ `main/ipc/<domain>.ts` → backend 方法 + `main/ipc/index.ts` 事件转发。
 - `session.ts`：`SessionMeta`、`SessionEvent`（Pi 原生 + Drone 自有如 `subagent_mutex`、`model_wait`）、`SessionMessage`（带 `entryId` 供 fork/撤回，`image`、`subagent`）。
-- `transcript/`：桌面与 lan-web 共用的 UI 消息状态机 — reducer、mapping、chat-rows 分组、turn-files 聚合、patch 解析、计时派生。
+- `transcript/`：桌面共用的 UI 消息状态机 — reducer、mapping、chat-rows 分组、turn-files 聚合、patch 解析、计时派生。
 - `institutional.ts`（新增）：`InstitutionalConfig`（ezproxyTemplate 自动保存、perTaskLimit、lastLoginAt）、`InstitutionalStatus`。
 - `permission-settings.ts`、`zotero.ts`、`example-tasks.ts`、`subagent.ts` 等。
 
@@ -114,7 +114,7 @@ flowchart TB
 ### 3. `packages/desktop` — Electron 应用
 
 **main/**：
-- `index.ts`：生命周期、日志、`pi-bg://` 协议、崩溃钩子（自动 reload、incident snapshot）、`new PiBackend()`、LAN、`UiPluginManager`、`registerIpc`、updater、建窗。首三行必须 import `pi-package-dir`、`dev-agent-dir`、`fix-path`。
+- `index.ts`：生命周期、日志、`pi-bg://` 协议、崩溃钩子（自动 reload、incident snapshot）、`new PiBackend()`、`UiPluginManager`、`registerIpc`、updater、建窗。首三行必须 import `pi-package-dir`、`dev-agent-dir`、`fix-path`。
 - `institutional-access.ts`：复用 backend 窗口函数，`testAccess` 经 ezproxy + institutional_session 尝试。
 - `ipc/`：按域拆分（sessions、settings、permissions、institutional、knowledge 等），薄委托 backend；`index.ts` 拼装并转发事件。
 - `ui-plugins/`：esbuild 构建器（`window.DroneUI` shim）、manager（扫描、构建、fs.watch 热重载、内置桌宠）。
@@ -139,7 +139,7 @@ flowchart TB
 - `.pi/extensions/institutional-access.mjs`（新增）：注册 `research_institutional_login`（打开持久机构窗口，自动保存模板）与 `research_institutional_status`。
 - `.pi/extensions/source-archive.mjs`：`research_archive_source` 工具定义（说明新状态，绝不走盗版）。
 - `zotero-literature.mjs`、`workspace-config.mjs`、`obsidian-workbench.mjs`、`research-loop.mjs`、`knowledge/` 等。
-- `skills/`：`research-loop`、`wikiloop`、学术技能包（Nature、Scientific、Academic Research Skills CC BY-NC）、`zotero-literature`。
+- `skills/`：`research-loop`、`wikiloop`、内置 Nature 与 Scientific 技能包、可选的用户技能包，以及 `zotero-literature`。
 
 ### 5. 研究工作台流程
 
@@ -159,7 +159,7 @@ task_plan → 授权卡（contractHash）→ 一次授权覆盖全部里程碑�
 - **信任**：项目信任弹窗，`workspaces.json` roots + allowed 记忆。
 - **上下文蒸发**：默认开启，四级水位线，context 钩子，`replay-evaporation.mts` 调参。
 - **子代理**：内置 scout + 用户/项目 agent 定义，single/parallel cap 8/并发 4，隔离 `AgentSession`，`sessions-subagents/` 只读，输入框 `@` 选择器。
-- **局域网观察**：`lan-web/` Vite 单文件，扫码只读，token 轮换，GET-only SSE。
+- **科研资料**：项目资源支持搜索、预览、系统外部打开，并可进入证据捕获流程。
 - **UI 插件**：槽位 `panel.artifacts.card`、`panel.task.milestone-evidence`、`panel.tab`、`rail.view`，区域 `SettingsPanel` 等；esbuild 重写 react 到 `window.DroneUI` shim；热重载。
 
 ## 基于 Pi 构建
@@ -236,4 +236,4 @@ Drone 是社区项目，与 Pi 团队（earendil-works）无关。
 
 ### 第三方研究技能包
 
-安装包内捆绑三个 commit-pinned 上游技能包，原样带许可证：[Nature Skills](https://github.com/Yuan1z0825/nature-skills)（Apache-2.0）、[Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills) 子集（MIT）与 [Academic Research Skills](https://github.com/Imbad0202/academic-research-skills) © Cheng-I Wu，[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)。Drone 本身 MIT 且免费分发；ARS 包仅限非商业使用，不在 MIT 范围内。详情见 [docs/research-skill-packs.md](docs/research-skill-packs.md)。
+安装包内捆绑两个 commit-pinned 上游技能包及其许可证：[Nature Skills](https://github.com/Yuan1z0825/nature-skills)（Apache-2.0）与经过审查的 [Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills) 子集（MIT）。Academic Research Skills（ARS）是可选、需单独审查的集成，默认构建不会下载或捆绑。详情见 [docs/research-skill-packs.md](docs/research-skill-packs.md)。
