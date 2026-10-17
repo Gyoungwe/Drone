@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	createProtocolsBookmarkWriteAdapter,
 	createWebdavWriteAdapter,
+	createWebdavWritePort,
 } from "../src/services/reversible-write-adapters";
 
 const input = {
@@ -50,4 +51,35 @@ describe("reversible research write adapters", () => {
 		});
 		await expect(adapter.execute(plan, { approved: true })).rejects.toThrow("closure");
 	});
+	it("executes the backend WebDAV HTTP contract in order", async () => {
+		const requests: string[] = [];
+		let reads = 0;
+		const fetchImpl = async (input: string | URL, init?: RequestInit) => {
+			const method = init?.method ?? "GET";
+			requests.push(`${method} ${String(input)}`);
+			if (method === "PUT") return { ok: true, status: 201, text: async () => "" } as Response;
+			if (method === "DELETE") return { ok: true, status: 204, text: async () => "" } as Response;
+			reads += 1;
+			return reads === 1
+				? ({ ok: true, status: 200, text: async () => '{"title":"Temporary acceptance note"}' } as Response)
+				: ({ ok: false, status: 404, text: async () => "" } as Response);
+		};
+		const port = createWebdavWritePort({
+			baseUrl: "http://dav.test:8080",
+			username: "user",
+			password: "password",
+			fetchImpl,
+		});
+		const result = await port.write({
+			targetRef: "/acceptance/note.json",
+			payload: input.payload,
+		});
+		expect(result).toEqual({
+			externalRef: "http://dav.test:8080/acceptance/note.json",
+			readBack: true,
+			deleted: true,
+		});
+		expect(requests.map((request) => request.split(" ")[0])).toEqual(["PUT", "GET", "DELETE", "GET"]);
+	});
+
 });
