@@ -1,7 +1,7 @@
 import type { Static, TSchema } from "typebox";
 
 /** Transport visibility for a host API method. */
-export type HostApiAccess = "desktop" | "lan-read" | "lan-control";
+export type HostApiAccess = "desktop";
 
 /** A method's runtime schemas and transport policy. */
 export interface HostApiMethod<TArgs extends TSchema = TSchema, TResult extends TSchema = TSchema> {
@@ -33,7 +33,7 @@ export interface DomainContract<
 
 /**
  * Define a host API domain. The object is intentionally data-only so it can be
- * projected into Electron IPC, LAN HTTP/SSE, and plugin adapters.
+ * projected into the desktop IPC and plugin adapters.
  */
 export function defineDomain<
 	const TName extends string,
@@ -63,22 +63,6 @@ export function channelOf<const TName extends string, const TMethod extends stri
 ): `${TName}:${TMethod}` {
 	const name = typeof domain === "string" ? domain : domain.name;
 	return `${name}:${method}` as `${TName}:${TMethod}`;
-}
-
-/**
- * Return methods visible to a particular transport.
- *
- * Contracts are runtime data as well as a source of TypeScript types. Keeping
- * this selector beside `defineDomain` lets adapters derive their allow-list
- * from the same access labels used by the desktop binder.
- */
-export function methodsWithAccess<TContract extends DomainContract>(
-	contract: TContract,
-	access: HostApiAccess,
-): Array<keyof TContract["methods"] & string> {
-	return (Object.entries(contract.methods) as [keyof TContract["methods"] & string, HostApiMethod][])
-		.filter(([, method]) => method.access === access)
-		.map(([methodName]) => methodName);
 }
 
 type MethodArgs<TMethod> =

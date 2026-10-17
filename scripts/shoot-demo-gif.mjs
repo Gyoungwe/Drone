@@ -177,12 +177,6 @@ async function sceneSettings() {
 	await sleep(600);
 	await frame("general");
 
-	// 局域网观察
-	await ev(
-		`(() => { const s = window.DroneUI.stores.useSettingsStore.getState(); s.setCategory('lan'); return true; })()`,
-	);
-	await sleep(600);
-	await frame("lan");
 
 	// 关闭
 	await ev(

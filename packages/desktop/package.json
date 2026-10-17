@@ -13,9 +13,7 @@
 	"scripts": {
 		"test:preload": "vitest run src/preload/preload-load.test.ts",
 		"dev": "electron-vite dev",
-		"predev": "npm run build:lan-web",
-		"build:lan-web": "vite build --config src/lan-web/vite.config.ts",
-		"build": "npm run build:lan-web && electron-vite build",
+		"build": "electron-vite build",
 		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
 		"test": "vitest run",
 		"dist": "node ../../scripts/stage-pi-packages.mjs && python ../../scripts/sync-research-skills.py --sources nature scientific academic --check --for-release && npm run build && electron-builder",
@@ -45,7 +43,6 @@
 		"mermaid": "^11.17.2",
 		"monaco-editor": "^0.55.1",
 		"pdfjs-dist": "6.3.289",
-		"qrcode": "^1.5.4",
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",
 		"shiki": "4.4.3",
@@ -59,7 +56,6 @@
 		"@tailwindcss/vite": "^4.3.3",
 		"@testing-library/dom": "^10.4.2",
 		"@testing-library/react": "^16.3.3",
-		"@types/qrcode": "^1.5.6",
 		"@types/react": "^19.2.0",
 		"@types/react-dom": "^19.2.0",
 		"@vitejs/plugin-react": "^5.1.1",
@@ -70,7 +66,6 @@
 		"tailwindcss": "^4.3.3",
 		"typescript": "^5.9.0",
 		"vite": "^7.0.0",
-		"vite-plugin-singlefile": "^2.3.3",
 		"vitest": "^3.2.0"
 	},
 	"homepage": "https://github.com/Gyoungwe/Drone#readme"

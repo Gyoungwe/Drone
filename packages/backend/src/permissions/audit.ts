@@ -4,7 +4,7 @@ import { join } from "node:path";
 /**
  * 权限模式审计日志（spec permission-mode D3）：fullAccess 档下「default 档本会被 ask/deny」
  * 的调用留痕，append-only JSONL。超 1MB 截断头部保留尾部 512KB（tmp+rename 原子替换）。
- * 高危命中频率 = 人工可审计量级，同步 IO 即可；写失败 catch 不阻塞工具调用（仿 lan/audit.ts）。
+ * 高危命中频率 = 人工可审计量级，同步 IO 即可；写失败 catch 不阻塞工具调用（复用统一审计格式）。
  */
 const MAX_BYTES = 1024 * 1024;
 const KEEP_TAIL_BYTES = 512 * 1024;

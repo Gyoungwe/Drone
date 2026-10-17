@@ -1108,7 +1108,6 @@ export const en: Messages = {
 			zotero: "Connect Zotero and sync research sources.",
 			extensions: "Browse, install, and remove extensions.",
 			knowledge: "Maintain the knowledge index and graph.",
-			lan: "Review LAN observer status.",
 			uiPlugins: "Manage UI plugins and slot overrides.",
 			workflows: "Review workflows and run state.",
 			compute: "Manage remote compute devices.",
@@ -1124,7 +1123,6 @@ export const en: Messages = {
 			skills: "Tools & Skills",
 			mcp: "MCP Plugins",
 			extensions: "Extensions",
-			lan: "LAN Observer",
 			uiPlugins: "UI Plugins",
 			workflows: "Workflow overview",
 			compute: "SSH devices",
@@ -1278,25 +1276,6 @@ export const en: Messages = {
 		centerOrb: "Enlarged status animation",
 		centerOrbHint:
 			"After you send, shows an enlarged status animation below the latest message (in its own space, never over the conversation text) until the turn's first visible output (thinking, a tool card, a subagent or text) appears; it then collapses. Only controls the centered animation — the small orb before the Working/Thinking row always stays.",
-		lan: {
-			title: "LAN Observer",
-			hint: "View live agent progress from your phone on a trusted local network. When remote control is off, the observer page is read-only. Off by default; the access token rotates every time it is enabled.",
-			port: "Listening port: {port}",
-			clients: "{count} connected device(s)",
-			copy: "Copy",
-			copied: "Copied",
-			qrAlt: "Observer page QR code",
-			noAddress: "No reachable local-network IPv4 address was found.",
-			remoteControl: "Allow remote control",
-			remoteControlHint:
-				'When enabled, the phone can send messages, abort runs, and answer permission prompts ("allow once"/"deny" only; persistent trust settings are never changed). All remote actions are recorded in an audit log.',
-			securityTitle: "Security notice",
-			securityContent:
-				"The observer can show conversation output, tool calls, and task content, which may include code or sensitive data.",
-			securityTrusted: "Enable and share the link only on trusted local networks.",
-			securityForward: "Do not forward this port or expose it to the public internet.",
-			securityFirewall: "A macOS “allow incoming connections” firewall prompt on first use is normal.",
-		},
 		about: {
 			version: "Version",
 			poweredBy: "Built on Pi Coding Agent",

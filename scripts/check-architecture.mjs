@@ -64,7 +64,7 @@ function isRuntimeImport(line, text, offset) {
 function scanFile(file, text, findings) {
 	const rel = displayPath(file);
 	const lines = text.split("\n");
-	const isRenderer = /^packages\/desktop\/src\/(renderer|lan-web)\//.test(rel);
+	const isRenderer = /^packages\/desktop\/src\/renderer\//.test(rel);
 	const isTest = /(?:^|\/)(?:test|tests)\//.test(rel) || /\.(?:test|spec)\.[^.]+$/.test(rel);
 	const domain = rel.match(/^packages\/(knowledge|tasks|research)\//)?.[1];
 	const inquiry = rel.startsWith("packages/inquiry/");
@@ -95,7 +95,7 @@ function scanFile(file, text, findings) {
 		}
 	}
 
-	// R3: renderer/LAN may only cross package boundaries through shared.
+	// R3: renderer may only cross package boundaries through shared.
 	if (isRenderer) {
 		const forbidden =
 			/(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["'])(@drone\/(?!shared(?:["'/])|desktop(?:["'/]))[^"']+|electron|@earendil-works\/pi-[^"']+)(?=["'])/g;

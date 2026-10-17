@@ -8,7 +8,6 @@ import type { ComputeApi } from "./host-api/compute";
 import type { DiscoveryApi } from "./host-api/discovery";
 import type { EvidenceApi } from "./host-api/evidence";
 import type { InquiryApi } from "./host-api/inquiry";
-import type { LanStatus } from "./host-api/lan";
 import type { MemoryListItem, MemoryProjectStatus } from "./host-api/memory";
 import type { SessionsApi } from "./host-api/sessions";
 import type { HostEnvironment } from "./host-env";
@@ -288,11 +287,6 @@ export const IpcChannels = {
 	SettingsLoginRespond: "settings:loginRespond",
 	/** main → renderer 登录流程事件（event/prompt/prompt-cancel） */
 	SettingsLoginEvent: "settings:loginEvent",
-	/** 局域网观察页（默认关闭、只读服务）。 */
-	LanGetStatus: "lan:getStatus",
-	LanSetEnabled: "lan:setEnabled",
-	/** 局域网远程控制二级开关（M2；默认关闭，开观察 ≠ 开控制）。 */
-	LanSetRemoteControl: "lan:setRemoteControl",
 	MemoryGetStatus: "memory:getStatus",
 	MemorySetEnabled: "memory:setEnabled",
 	MemoryClear: "memory:clear",
@@ -377,7 +371,6 @@ export const IpcChannels = {
 	/** main → renderer 事件 */
 	Event: "pi:event",
 	PermissionRequest: "pi:permission-request",
-	/** main → renderer 权限请求已裁决（含 LAN 远程应答；桌面端据此撤卡） */
 	PermissionResolved: "pi:permission-resolved",
 	/** main → renderer 项目信任请求（会话创建前） */
 	TrustRequest: "pi:trust-request",
@@ -525,12 +518,6 @@ export interface PiApi
 	respondProviderLogin(loginId: string, promptId: string, value: string): Promise<void>;
 	/** 订阅登录流程事件（event/prompt/prompt-cancel，按 loginId 归属）；返回取消函数 */
 	onProviderLoginEvent(cb: (payload: LoginEventPayload) => void): () => void;
-	/** 读取局域网观察服务状态（URL/二维码只在启用并监听后提供）。 */
-	lanGetStatus(): Promise<LanStatus>;
-	/** 启用或停止局域网只读观察服务；启用时轮换访问 token。 */
-	lanSetEnabled(enabled: boolean): Promise<LanStatus>;
-	/** 设置远程控制开关（独立于观察开关；未开观察时允许配置但不生效）。 */
-	lanSetRemoteControl(enabled: boolean): Promise<LanStatus>;
 	/** 读取项目（cwd）观察记忆状态。 */
 	memoryGetStatus(cwd: string): Promise<MemoryProjectStatus>;
 	/** 开关项目观察记忆的捕获与注入。 */

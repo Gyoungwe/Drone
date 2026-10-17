@@ -8,7 +8,6 @@ import {
 	InstitutionalContract,
 	IpcChannels,
 	KnowledgeContract,
-	LanContract,
 	McpContract,
 	MemoryContract,
 	PackagesContract,
@@ -214,18 +213,6 @@ const institutionalClient = exposeContract(InstitutionalContract, {
 			method,
 		),
 });
-const lanClient = exposeContract(LanContract, {
-	ipc: ipcRenderer,
-	channelForMethod: (_contract, method) =>
-		channelFrom(
-			{
-				getStatus: IpcChannels.LanGetStatus,
-				setEnabled: IpcChannels.LanSetEnabled,
-				setRemoteControl: IpcChannels.LanSetRemoteControl,
-			},
-			method,
-		),
-});
 const memoryClient = exposeContract(MemoryContract, {
 	ipc: ipcRenderer,
 	channelForMethod: (_contract, method) =>
@@ -421,9 +408,6 @@ const invokeApi = {
 	openInstitutionalUrl: invoke(institutionalClient, "openUrl"),
 	clearInstitutionalSession: invoke(institutionalClient, "clear"),
 	testInstitutionalAccess: invoke(institutionalClient, "testAccess"),
-	lanGetStatus: invoke(lanClient, "getStatus"),
-	lanSetEnabled: invoke(lanClient, "setEnabled"),
-	lanSetRemoteControl: invoke(lanClient, "setRemoteControl"),
 	memoryGetStatus: invoke(memoryClient, "getStatus"),
 	memorySetEnabled: invoke(memoryClient, "setEnabled"),
 	memoryClear: invoke(memoryClient, "clear"),

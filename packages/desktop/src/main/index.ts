@@ -20,7 +20,6 @@ import { electronDesktopHost, launchedHidden } from "./desktop-host";
 import { applyDesktopPrefs } from "./desktop-prefs";
 import { HTML_PREVIEW_PROTOCOL, handleHtmlPreviewRequest } from "./html-preview-protocol";
 import { registerIpc, sendToRenderer } from "./ipc";
-import { initLanObserver, type LanObserverHandle } from "./lan";
 import { migrateLegacyUserDir } from "./legacy-migration";
 import { buildMenuTemplate, DESKTOP_COMMAND_CHANNEL } from "./menu";
 import { UiPluginManager, uiPluginsResourcesDir } from "./ui-plugins/manager";
@@ -31,7 +30,6 @@ import { applyChromeTheme, createWindow, resolveTheme } from "./window";
 const log = createLogger("main");
 let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
-let lanObserver: LanObserverHandle | undefined;
 let latestIncidentSnapshot: ReturnType<typeof buildIncidentSnapshot> | undefined;
 
 /** renderer 加载自定义背景图的协议（pi-bg://background/<文件名>，只读 userData/backgrounds/） */
@@ -166,7 +164,7 @@ app.whenReady().then(async () => {
 	// 阈值/周期汇总；60s flush 定时器在 backend 初始化后统一启动（unref）
 	const consoleDedup = createConsoleDeduper();
 	// 0.5.2 白屏事故（2026-08-27 04:39）：流式 IPC 洪水下 renderer 被 SIGTERM 杀死，
-	// 主进程/会话健在（LAN 页仍在跑）但窗口永久空白。AppErrorBoundary 只能接 React 层异常，
+	// 主进程/会话健在但窗口永久空白。AppErrorBoundary 只能接 React 层异常，
 	// 进程级死亡必须在这里兜底 reload；短窗高频崩溃则停手转人工（防崩溃循环反复闪屏）
 	const RELOAD_WINDOW_MS = 30_000;
 	const MAX_AUTO_RELOADS = 3;
@@ -318,14 +316,9 @@ app.whenReady().then(async () => {
 		for (const summary of consoleDedup.flush()) crashLog.error(...consoleDedupLogLine(summary));
 	}, HEARTBEAT_INTERVAL_MS);
 	consoleFlush.unref();
-	lanObserver = await initLanObserver(
-		backendServices,
-		join(app.getPath("userData"), "lan-observer.json"),
-		join(app.getPath("userData"), "lan-audit.jsonl"),
-	);
 	uiPluginsManager = new UiPluginManager();
 	await uiPluginsManager.init();
-	registerIpc(backendServices, uiPluginsManager, lanObserver, () => latestIncidentSnapshot);
+	registerIpc(backendServices, uiPluginsManager, () => latestIncidentSnapshot);
 	await initUpdater();
 	scheduleAutoUpdateCheck();
 	const uiState = await loadUiState();
@@ -344,7 +337,6 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-	void lanObserver?.stop();
 	backendServices?.dispose();
 	uiPluginsManager?.disposeWatcher();
 });

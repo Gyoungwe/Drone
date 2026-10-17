@@ -104,7 +104,7 @@ function exportedHtmlSessionData(html) {
 	if (!match?.[1]) throw new Error("HTML export is missing embedded session data");
 	return JSON.parse(Buffer.from(match[1], "base64").toString("utf8"));
 }
-describe("same checked result across stream, history, LAN polling and exports", () => {
+describe("same checked result across stream, history and exports", () => {
 	it("host-materializes a current-turn search and citation before the first public answer is sealed", async () => {
 		await run([reply("HOST_MATERIALIZED_ANSWER")]);
 		expect(faux.state.callCount).toBe(1);
@@ -310,7 +310,7 @@ describe("live-run edges and provider protocol compatibility", () => {
 		expect(queued.knowledgePublication.turnId).not.toBe(first.knowledgePublication.turnId);
 	});
 	it("backend prompt acknowledgement and event delivery expose the same sealed current-turn proof", async () => {
-		const prompt = "A normal desktop or LAN research question.";
+		const prompt = "A normal desktop research question.";
 		faux.setResponses([reply("IPC_PATH_CURRENT_PROOF")]);
 		await expect(backend.prompt(sid, prompt)).resolves.toEqual({ kind: "agent" });
 		await vi.waitFor(() => expect(events.some((e) => e.type === "agent_settled")).toBe(true));

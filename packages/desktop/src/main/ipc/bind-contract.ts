@@ -25,7 +25,7 @@ export interface BindContractOptions {
 	ipc?: Pick<typeof ipcMain, "handle" | "removeHandler">;
 	/** Validate result schemas even when NODE_ENV is production (for tests/host hardening). */
 	validateResult?: boolean;
-	/** Access policy is carried by the contract; this hook can disable LAN-only methods for a host. */
+	/** Access policy is carried by the contract; this hook can restrict methods for a host. */
 	allowedAccess?: readonly HostApiAccess[];
 	/** Override the default `<domain>:<method>` channel during incremental migrations. */
 	channelForMethod?: (contract: DomainContract, method: string) => string;

@@ -51,16 +51,6 @@ export {
 	type KnowledgeWebDavOptions,
 	KnowledgeWebDavService,
 } from "./knowledge/webdav";
-export { LanConfigService } from "./lan/config";
-export {
-	applyEvent as applyLanEvent,
-	applyPermissionRequest as applyLanPermissionRequest,
-	applyPermissionResolved as applyLanPermissionResolved,
-	type LanPendingPermission,
-	type LanSessionRuntime,
-	seedView as seedLanView,
-} from "./lan/projector";
-export { type LanObserverBackend, LanObserverServer, type LanObserverServerOptions } from "./lan/server";
 export { createLogger, initLogging, type Logger } from "./log";
 export { McpService, type McpServiceOptions, type McpServicePort } from "./mcp/service";
 export { fetchPackageCatalog, parseCatalogHtml } from "./packages/catalog";

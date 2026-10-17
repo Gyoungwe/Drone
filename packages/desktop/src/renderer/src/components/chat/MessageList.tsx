@@ -138,7 +138,7 @@ export function MessageList() {
 
 	// 轮次数据：文件变更 + 计时。进场动画只给「本会话查看期间新出现的最后一轮」播：基线在切会话/
 	// 历史重建时对齐，不随渲染更新（防 turn_end 紧随的二次渲染摘掉动画类）；行定位/上提规则全部在
-	// shared buildChatRows 内完成（opts 传入，与 lan-web 同一分组大脑）
+	// shared buildChatRows 内完成（opts 传入，与 shared 分组逻辑一致）
 	const turnUsages = useMemo(() => deriveTurnUsage(transcript.messages), [transcript.messages]);
 	const turnInspectors = useMemo(() => deriveRunInspectors(transcript.messages), [transcript.messages]);
 	const turnChanges = useMemo(() => deriveTurnChanges(transcript.messages), [transcript.messages]);
@@ -170,7 +170,7 @@ export function MessageList() {
 			? (turnTimings[turnTimings.length - 1]?.turnIndex ?? null)
 			: null;
 
-	// 行序列由 shared buildChatRows 产出（与 lan-web 同一分组大脑）；此处只做行模型 → JSX 映射。
+	// 行序列由 shared buildChatRows 产出（与 shared 分组逻辑一致）；此处只做行模型 → JSX 映射。
 	// useMemo：滚动/跟随等本组件局部 state 翻转不重跑（历史长会话单次 ~60µs+）；transcript 每
 	// 次变更（合流后 ≤ 1 次/帧）重跑一次是预期成本；turnChanges/turnTimings/enteringTurn 是轮末行输入
 	const rows = useMemo(

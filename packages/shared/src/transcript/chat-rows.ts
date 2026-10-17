@@ -4,7 +4,7 @@ import type { TurnTiming } from "./turn-timings";
 import type { ActivityEntry, SessionTranscriptState, SubagentRunUi, UIMessage, UIToolCall } from "./types";
 
 /**
- * 聊天行构建（transcript → 渲染行序列）：桌面 MessageList 与 lan-web ChatView 共享的
+ * 聊天行构建（transcript → 渲染行序列）：桌面消息视图共享的
  * 「分组大脑」。纯函数、零 React/DOM——两端各自把行模型映射成自己的渲染壳。
  *
  * 合并规则：assistant 消息的思考/工具并入折叠组，正文（text）是边界——正文出现时组关闭、
@@ -54,7 +54,7 @@ export type ChatRow =
 			key: string;
 			/** 轮末文件变更（有变更才有；timer 行可无 diff） */
 			changes?: TurnChanges;
-			/** 轮次计时（桌面路径必有；lan-web 不传则行只在有 changes 时出现） */
+			/** 轮次计时（桌面路径必有；缺省不传则行只在有 changes 时出现） */
 			timing?: TurnTiming;
 			/** 最后一轮且 agent 运行中（桌面包装层样式用；timer 跳动信号） */
 			running: boolean;
@@ -128,7 +128,7 @@ function committedMetaItem(message: Extract<UIMessage, { kind: "assistant" }>): 
 }
 
 export interface TurnDiffRowsOptions {
-	/** 每轮文件变更（桌面 deriveTurnChanges 产出；不传 = 无 timer 时行退化为有变更才出现，lan-web 路径） */
+	/** 每轮文件变更（桌面 deriveTurnChanges 产出；不传 = 无 timer 时行退化为有变更才出现，旧调用路径） */
 	turnChanges?: TurnChanges[];
 	/** 每轮计时（桌面 deriveTurnTimings 产出；不传 = 不产 timer 行） */
 	turnTimings?: TurnTiming[];
@@ -263,7 +263,7 @@ export function buildChatRows(
 	// 轮末行（桌面路径）：位置式插入——turn i 的行插到第 i+1 条 user 行之前，最后一轮追加到行序列末尾。
 	// （不锚消息行：轮末 assistant 无正文时会被吸进折叠组，没有独立行可锚。streaming 中的轮次工具未固化
 	// 进 messages，天然不满足「turn_end 后才出现」）传了 turnTimings 则每轮必产行（计时恒显，diff 条件渲染）；
-	// 只传 turnChanges（lan-web 老路径）则保持原行为：有文件变更才产行。
+	// 只传 turnChanges（旧调用路径）则保持原行为：有文件变更才产行。
 	const { turnChanges, turnTimings, enteringTurn } = opts ?? {};
 	const changeByTurn = turnChanges ? new Map(turnChanges.map((tc) => [tc.turnIndex, tc])) : null;
 	const timingByTurn = turnTimings ? new Map(turnTimings.map((tt) => [tt.turnIndex, tt])) : null;

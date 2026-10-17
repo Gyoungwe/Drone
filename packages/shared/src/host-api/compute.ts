@@ -94,14 +94,11 @@ export const ComputeContract = defineDomain("compute", {
 		saveHost: { args: Type.Tuple([ComputeHostInputSchema]), result: ComputeHostSchema },
 		removeHost: { args: IdArgs, result: Type.Void() },
 		probeHost: { args: IdArgs, result: ComputeHostSchema },
-		// LAN has no compute projection yet; keep these desktop-only until the
-		// authenticated observer exposes the same schemas through its GET routes.
 		getHealthSnapshot: { args: EmptyArgs, result: HealthSnapshotSchema },
 		listJobs: {
 			args: Type.Tuple([Type.Optional(JobFilterSchema)]),
 			result: Type.Array(ComputeJobSchema, { maxItems: 100 }),
-			access: "lan-read",
-		},
+					},
 		getJob: { args: IdArgs, result: Type.Union([ComputeJobSchema, Type.Null()]) },
 		submitJob: { args: Type.Tuple([ComputeJobInputSchema]), result: ComputeJobSchema },
 		getLogs: { args: LogArgsSchema, result: ComputeLogChunkSchema },
