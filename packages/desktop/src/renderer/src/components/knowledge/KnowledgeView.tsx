@@ -45,11 +45,7 @@ export function KnowledgeView() {
 	if (!dialog) return null;
 	return (
 		<section className="knowledge-view" aria-label={t("title")}>
-			<header className="knowledge-view-head">
-				<p className="text-[13px] font-medium text-ink">
-					{t("title")}
-					<span className="ml-2 text-[11px] font-normal text-ink-faint">Obsidian</span>
-				</p>
+			<header className="knowledge-view-head justify-end">
 				<button
 					type="button"
 					className="knowledge-view-close"
