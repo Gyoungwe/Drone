@@ -103,7 +103,7 @@ flowchart TB
 
 ### 2. `packages/backend` — Pi SDK adapter, pure Node
 
-- `pi-backend.ts` is the **only** file importing `@earendil-works/pi-coding-agent` (pinned 0.84.3). Facade for session lifecycle: create/open/close/delete/prompt (followUp queue, preflight receipt), abort/fork/recall/compact, model listing, permission mode map (memory, injected via closure into extensions), event/permission/trust distribution (`respondPermission` first gate.respond then persist).
+- `packages/backend/src/session-engine/**` is the only runtime import boundary for `@earendil-works/pi-coding-agent` (Pi baseline 1.1.0); `pi-backend.ts` remains the compatibility facade for session lifecycle: create/open/close/delete/prompt (followUp queue, preflight receipt), abort/fork/recall/compact, model listing, permission mode map (memory, injected via closure into extensions), event/permission/trust distribution (`respondPermission` first gate.respond then persist).
 - `json-store.ts`: unified JSON persistence (tmp+rename atomic, corruption tri-state).
 - `institutional/`: 
   - `config.ts`: loads `~/.pi/agent/institutional.json` via `JsonStore`, `buildProxiedUrl` (supports `%s` and `?url=`), `inferEzproxyTemplateFromUrl` / `detectAndSaveTemplateFromUrl` auto-infers template from navigated URL like `.../login?url=https://www.nature.com/...` → `.../login?url=%s` and saves without manual input.

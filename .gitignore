@@ -11,6 +11,8 @@ dist/
 dist-electron/
 out/
 *.tsbuildinfo
+.integration-v0320/
+skills-lock.json
 
 # 日志
 *.log

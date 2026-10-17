@@ -36,8 +36,8 @@ function latestOpenAICodexModel(models: AvailableModel[]): AvailableModel | unde
 /**
  * Choose the initial model after a provider/catalog refresh.
  *
- * Pi 1.0.0 appends GPT-6.1 Sol to the Codex catalog, while the old catalog
- * starts with GPT-5.3 Codex Spark. Keep an explicit user choice intact, but
+ * The current Pi catalog appends GPT-6.1 Sol to the Codex catalog, while an
+ * older catalog starts with GPT-5.3 Codex Spark. Keep an explicit user choice intact, but
  * migrate that known automatic default and prefer the newest Codex model for
  * a newly authenticated account.
  */

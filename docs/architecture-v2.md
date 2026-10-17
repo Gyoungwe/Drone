@@ -34,7 +34,7 @@ Drone 的产品语义已经相当成熟，但代码结构还停在"一个 TS 宿
 
 现有设计里做对了、要保留的东西：
 
-- Pi SDK 运行时值导入收敛到会话引擎边界（`session-engine/sdk.ts`，钉 0.84.3）；`PiBackend` 保留兼容门面
+- Pi SDK 运行时值导入收敛到会话引擎边界（`session-engine/sdk.ts`，当前基线钉 1.1.0）；`PiBackend` 保留兼容门面
 - renderer 不碰 SDK
 - `INVOKE_ROUTES` 已经收敛了一部分 IPC 样板
 - 五个扩展挂钩（`docs/extension-hooks.md`）已经去掉了硬编码的工具/技能表

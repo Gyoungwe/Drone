@@ -33,7 +33,7 @@ describe("PreviewHost routing", () => {
 	it.each([
 		[base({ kind: "image", name: "a.png" }), true, "image"],
 		[base({ kind: "image", name: "a.png" }), false, "too-large"],
-		[base({ kind: "pdf", name: "a.pdf" }), true, "pdf"],
+		[base({ kind: "pdf", name: "a.pdf" }), true, "registered"],
 		[base({ kind: "text", name: "a.csv", text: "a,b" }), false, "text"],
 		[base({ kind: "binary", name: "a.zip" }), false, "binary"],
 	])("routes %#", (result, hasSrc, view) => {
@@ -77,5 +77,21 @@ describe("PreviewHost routing", () => {
 			}),
 		);
 		expect(html).toContain("resource.binaryHint");
+	});
+	it("uses the PDF.js viewer instead of Chromium's PDF iframe", () => {
+		const html = renderToStaticMarkup(
+			createElement(PreviewHost, {
+				result: base({ kind: "pdf", name: "a.pdf", mimeType: "application/pdf" }),
+				src: "data:application/pdf;base64,JVBERi0xLjQK",
+				mode: "preview",
+				zoom: 1,
+				imageError: false,
+				onImageError: () => {},
+				onNavigate: () => {},
+				source: { href: "/tmp/a.pdf" },
+			}),
+		);
+		expect(html).not.toContain("<iframe");
+		expect(html).toContain("resource.loading");
 	});
 });

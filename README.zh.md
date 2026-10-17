@@ -103,7 +103,7 @@ flowchart TB
 
 ### 2. `packages/backend` — Pi SDK 适配层，纯 Node
 
-- `pi-backend.ts` 是**唯一** import Pi SDK 的文件（钉 0.84.3）。门面：create/open/close/delete/prompt（followUp 排队、preflight 回执）、abort/fork/recall/compact、模型列表、权限模式 map（内存态，经闭包注入扩展）、事件与权限·信任分发（`respondPermission` 先放行再持久化）。
+- `packages/backend/src/session-engine/**` 是 Pi SDK 运行时 import 的唯一边界（当前基线为 1.1.0）；`pi-backend.ts` 仍是兼容门面：create/open/close/delete/prompt（followUp 排队、preflight 回执）、abort/fork/recall/compact、模型列表、权限模式 map（内存态，经闭包注入扩展）、事件与权限·信任分发（`respondPermission` 先放行再持久化）。
 - `json-store.ts`：统一 JSON 持久化（tmp+rename 原子写、损坏三态）。
 - `institutional/`：
   - `config.ts`：读 `~/.pi/agent/institutional.json`，`buildProxiedUrl`（支持 `%s` 与 `?url=`），`inferEzproxyTemplateFromUrl` / `detectAndSaveTemplateFromUrl` 自动从导航 URL 如 `.../login?url=https://www.nature.com/...` 推断模板 `.../login?url=%s` 并保存，无需手动。

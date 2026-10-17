@@ -951,6 +951,7 @@ export const en: Messages = {
 			noRecords: "No records to show in this excerpt.",
 			prevPage: "Previous",
 			nextPage: "Next",
+			pdfPage: "Page {page} of {pages}",
 			seqSummary: "{kind} · {count} records in this excerpt (not whole-file statistics)",
 			seqFootnote:
 				"Up to 600 characters per sequence; colours are for reading only — no alignment, QC or biological judgement.",

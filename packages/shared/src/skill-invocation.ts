@@ -10,7 +10,7 @@ export interface SkillInvocation {
 export type SkillInvocationDisplay = Pick<SkillInvocation, "name" | "args">;
 
 /**
- * Parses only the SDK 0.84 `_expandSkillCommand()` producer format. The references line
+ * Parses only the legacy SDK `_expandSkillCommand()` producer format. The references line
  * deliberately distinguishes real expanded skills from the SDK helper's broader XML grammar.
  */
 export function parseExpandedSkillInvocation(text: string): SkillInvocation | null {

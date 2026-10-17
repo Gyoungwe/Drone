@@ -41,7 +41,7 @@
 			"package": "pi-mcp-adapter",
 			"version": "5.1.0",
 			"role": "mcp-runtime",
-			"purpose": "MCP runtime: reads mcp.json, starts servers and exposes the mcp proxy tool. Shipped in resources/pi-packages; first release whose peer range accepts pi-ai ^1.0.0"
+			"purpose": "MCP runtime: reads mcp.json, starts servers and exposes the mcp proxy tool. Shipped in resources/pi-packages; compatible with Drone's Pi 1.1.0 runtime baseline"
 		}
 	]
 }

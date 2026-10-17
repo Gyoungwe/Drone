@@ -62,7 +62,7 @@ export interface McpStatusEvent {
 
 /** Bundled MCP runtime: the desktop installer ships this exact pi package (see packages/desktop/pi-packages). */
 export const MCP_RUNTIME_PACKAGE = "pi-mcp-adapter";
-/** pi-mcp-adapter 5.1.0 is the first release whose peer range accepts @earendil-works/pi-ai ^1.0.0 (Drone ships pi 1.0.0). */
+/** pi-mcp-adapter 5.1.0 is compatible with Drone's Pi 1.1.0 runtime baseline. */
 export const MCP_RUNTIME_VERSION = "5.1.0";
 
 const SERVER_STATUSES: ReadonlySet<string> = new Set<McpServerRuntimeStatus>([

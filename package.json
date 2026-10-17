@@ -24,6 +24,7 @@
 		"test:sdk": "npm run test:sdk -w @drone/backend",
 		"check:redline": "npm run test -w @drone/backend -- test/redline-acceptance.test.mjs",
 		"dist": "npm run dist -w packages/desktop",
+		"check:desktop-artifact": "node scripts/check-local-desktop-artifact.mjs",
 		"lint": "biome check .",
 		"skills:sync": "python scripts/sync-research-skills.py",
 		"skills:check": "python scripts/sync-research-skills.py --check",
