@@ -89,13 +89,15 @@ describe("reversible research write adapters", () => {
 	it("cleans up a created object when readback fails", async () => {
 		const methods: string[] = [];
 		const fetchImpl = async (_request: string | URL, init?: RequestInit) => {
+			void _request;
 			const method = init?.method ?? "GET";
 			methods.push(method);
 			if (method === "GET" && methods.length === 1) {
 				return { ok: false, status: 404, text: async () => "" } as Response;
 			}
 			if (method === "PUT") return { ok: true, status: 201, text: async () => "" } as Response;
-			if (method === "GET") return { ok: true, status: 200, text: async () => '{"title":"other"}' } as Response;
+			if (method === "GET")
+				return { ok: true, status: 200, text: async () => '{"title":"other"}' } as Response;
 			return { ok: true, status: 204, text: async () => "" } as Response;
 		};
 		const port = createWebdavWritePort({
@@ -104,17 +106,19 @@ describe("reversible research write adapters", () => {
 			password: "password",
 			fetchImpl,
 		});
-		await expect(port.write({ targetRef: "/acceptance/failure.json", payload: input.payload })).rejects.toThrow(
-			"readback failed",
-		);
+		await expect(
+			port.write({ targetRef: "/acceptance/failure.json", payload: input.payload }),
+		).rejects.toThrow("readback failed");
 		expect(methods).toEqual(["GET", "PUT", "GET", "DELETE"]);
 	});
 
 	it("refuses existing, cross-origin, and traversal targets", async () => {
-		const existingFetch = async (_request: string | URL, init?: RequestInit) =>
-			(init?.method === "GET"
+		const existingFetch = async (request: string | URL, init?: RequestInit) => {
+			void request;
+			return init?.method === "GET"
 				? ({ ok: true, status: 200, text: async () => '{"title":"existing"}' } as Response)
-				: ({ ok: true, status: 201, text: async () => "" } as Response));
+				: ({ ok: true, status: 201, text: async () => "" } as Response);
+		};
 		const existingPort = createWebdavWritePort({
 			baseUrl: "http://dav.test:8080/dav/",
 			username: "user",
