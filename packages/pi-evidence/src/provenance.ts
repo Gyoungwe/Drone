@@ -40,7 +40,9 @@ export function validateProvenance(value: EvidenceProvenance): void {
 			(ref) =>
 				typeof ref !== "string" ||
 				!ref.trim() ||
-				ref.startsWith("/") || ref.startsWith("~") || /^[A-Za-z]:[\\/]/.test(ref) ||
+				ref.startsWith("/") ||
+				ref.startsWith("~") ||
+				/^[A-Za-z]:[\\/]/.test(ref) ||
 				/(?:^|[/\\])(?:\.pi|\.drone|\.git|\.ssh|auth\.json|credentials?)(?:[/\\]|$)/iu.test(ref),
 		)
 	)
