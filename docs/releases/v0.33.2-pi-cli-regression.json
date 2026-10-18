@@ -1,0 +1,42 @@
+{
+	"kind": "real-pi-cli-regression",
+	"generatedAt": "2026-10-19",
+	"package": {
+		"name": "@gyoungwe/research-suite",
+		"version": "0.1.5",
+		"tarball": "https://registry.npmjs.org/@gyoungwe/research-suite/-/research-suite-0.1.5.tgz",
+		"shasum": "3c82af7563b6539e19cbbdb5bd11cc4bfc2d486b",
+		"integrity": "sha512-N4Zq6KFRVfgUs59Dl3+tkHGRYT1XCh6vBeBaOLoDbUzveXOJ5EE3fhrrn+x28+780XqCmhbb+rdJA+ZMq6hCpQ==",
+		"piCore": "@gyoungwe/pi-core@0.1.3"
+	},
+	"contract": {
+		"cleanHomePerCell": true,
+		"realInstall": true,
+		"commands": [
+			"pi -p --no-session /task-status",
+			"pi -p --no-session /drone-doctor",
+			"pi -p --no-session /drone-example"
+		],
+		"legacyNegativeCase": "@gyoungwe/research-suite@0.1.1 must fail with conflicts or non-zero exit"
+	},
+	"matrix": [
+		{
+			"requested": "1.1.0",
+			"resolved": "1.1.0",
+			"positive": "PASS",
+			"legacy": "EXPECTED_FAILURE",
+			"legacyEvidence": "stderr contains conflicts and exit code 1"
+		},
+		{
+			"requested": "latest",
+			"resolved": "1.3.0",
+			"positive": "PASS",
+			"legacy": "EXPECTED_FAILURE",
+			"legacyEvidence": "stderr contains conflicts and exit code 1"
+		}
+	],
+	"sourceEvidence": [
+		"/tmp/drone-pi-cli-regression-0.1.5.json",
+		"/tmp/drone-pi-cli-regression-0.1.5-latest.json"
+	]
+}

@@ -54,7 +54,7 @@ v0.33.0 无证书跨平台资产、发布 run 和 SHA-256 清单见 [发布说�
 v0.33.1 公开插件宿主收口与无证书补丁发布说明见 [发布说明](releases/v0.33.1.md)。
 v0.33.2 知识库 worker 修复、onboarding 状态和主线指标见 [发布说明](releases/v0.33.2.md)；离线主线评估证据见 [`docs/evals/mainline-2026-10-19.json`](evals/mainline-2026-10-19.json)，本机 arm64/x64 正式资源验收见 [`v0.33.2-knowledge-package.json`](releases/v0.33.2-knowledge-package.json)。
 
-首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`pi-core@0.1.1`、`research-suite@0.1.3` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
+首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
 
 v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
@@ -232,7 +232,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## `@gyoungwe/research-suite` — 外部原生 Pi 聚合包（PR-7）
 
-源码权威位置是绑定的 `../drone-plugins/packages/research-suite/`；宿主仓库不再保留该包、workspace lock 条目或聚合包专属检查脚本。当前公开版本为 `@gyoungwe/research-suite@0.1.3`，捆绑 `plugin-api/pi-core/pi-knowledge/pi-research`；旧 `0.1.1` 已标记“与 pi-core 冲突，无法启动”。插件仓库负责 manifest、`bundleDependencies`、tarball、安装 smoke 和 Pi CLI 回归；宿主只通过已发布包的兼容矩阵和公开插件宿主检查验证加载结果。`/drone-doctor` 和 `/drone-example` 由 `pi-core@0.1.1` 提供，真实矩阵证据见 [v1.1 onboarding commands](releases/v1.1-onboarding-commands.json)。
+源码权威位置是绑定的 `../drone-plugins/packages/research-suite/`；宿主仓库不再保留该包、workspace lock 条目或聚合包专属检查脚本。当前公开版本为 `@gyoungwe/research-suite@0.1.5`，捆绑 `plugin-api/pi-core/pi-knowledge/pi-research`；旧 `0.1.1` 已标记“与 pi-core 冲突，无法启动”。插件仓库负责 manifest、`bundleDependencies`、tarball、安装 smoke 和 Pi CLI 回归；宿主只通过已发布包的兼容矩阵和公开插件宿主检查验证加载结果。`/drone-doctor` 和 `/drone-example` 由 `pi-core@0.1.3` 提供，真实矩阵证据见 [v0.33.2 Pi CLI](releases/v0.33.2-pi-cli-regression.json)。
 
 ## packages/backend — pi SDK 适配层
 
