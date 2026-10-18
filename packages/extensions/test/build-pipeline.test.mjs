@@ -20,6 +20,9 @@ test("extension build manifest verifies generated output and detects drift", asy
 
 	const manifest = JSON.parse(await readFile(join(outputDir, ".build-manifest.json"), "utf8"));
 	assert.equal(manifest.entries["subagent-research"].status, "generated");
+	const knowledgeBundle = await readFile(join(outputDir, "knowledge-extension.mjs"), "utf8");
+	assert.doesNotMatch(knowledgeBundle, /\.pi\/lib\/knowledge\/runtime\/worker\.mjs/);
+	assert.match(knowledgeBundle, /\.\.\/lib\/knowledge\/runtime\/worker\.mjs/);
 	await appendFile(join(outputDir, "subagent-research.mjs"), "\n// intentional drift\n");
 
 	await assert.rejects(

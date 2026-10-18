@@ -1,7 +1,4 @@
 import { Worker } from "node:worker_threads";
-import { existsSync } from "node:fs";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname, resolve } from "node:path";
 import { configureKnowledgeRuntime, configureKnowledgeWorker } from "@drone/knowledge/runtime-host";
 import { runRuntimeExclusive, runtimeSlot } from "@drone/tasks/runtime-bridge";
 import { flowCardBuilder, toolMeta } from "@drone/tasks/tool-manifest-runtime";
@@ -27,12 +24,11 @@ export function configureKnowledgeExtensionRuntime(): void {
 		emitProcessEvent: (event, payload) => (process as any).emit(event, payload),
 	});
 	configureKnowledgeWorker((_url, options) => {
-		// Built extension entries resolve their sibling runtime. Source tests use
-		// the checked-in generated worker owned by this extensions package.
+		// Both the generated `.pi/extensions` entry and the published
+		// `pi-knowledge/dist` entry keep the worker one package-relative hop away.
+		// Do not fall back to the host's `.pi/lib` compatibility tree: that would
+		// make the production knowledge path depend on a legacy resource.
 		const sibling = new URL("../lib/knowledge/runtime/worker.mjs", import.meta.url);
-		const workerUrl = sibling.protocol === "file:" && !existsSync(fileURLToPath(sibling))
-			? pathToFileURL(resolve(dirname(fileURLToPath(import.meta.url)), "../../../../.pi/lib/knowledge/runtime/worker.mjs"))
-			: sibling;
-		return new Worker(workerUrl, options as any);
+		return new Worker(sibling, options as any);
 	});
 }
