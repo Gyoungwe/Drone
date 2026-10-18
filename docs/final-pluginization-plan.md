@@ -68,7 +68,7 @@ LAN 已从最终方案中删除，不再保留 LAN adapter、LAN 页面、LAN �
 
 ### 3.4 `@gyoungwe/pi-analysis`
 
-负责 `AnalysisAdapter`、`Registry`、未知流程识别、候选 adapter/workflow、fixture/静态/科学验证、计算编排、review→delivery 和 discovery 评测。
+负责无宿主副作用的 `AnalysisAdapter`、`Registry`、未知流程识别、候选 adapter/workflow、fixture/静态/科学验证和 review→delivery 合同；计算提交、执行、授权、持久化和 discovery 评测仍由宿主组合根负责。
 
 编译成功、命令生成成功和计划生成成功都不能被报告为执行成功。
 
@@ -479,6 +479,7 @@ Claude Code adapter 必须通过同一套：
 | 结果红线、evidence、provenance | **REDLINE-01 隔离验收通过** | `npm run check:redline`：4/4 fixture suites；publication / metacognitive / orchestration 门禁均返回 blocked 或 pause，sealed proof 含原因、差异路径和审计 ID | 构建产物已包含结果红线资源；交互式桌面截图仍是可选观察，不改变领域门禁结论 |
 | Pi 运行基线 | **真实 CLI 矩阵与已安装 suite 发现通过（锁定/latest）；next 未发布** | `/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json` 绑定运行时提交 `f2c814d8`：Pi `1.1.0` 与 latest `1.3.0` 对 `pi-core`、`pi-knowledge`、`pi-research` 的 6 个单包、2 个组合、临时 `research-suite` 安装→发现→模型调用→卸载均 PASS；next 如实记录 `NOT_PUBLISHED` | 组合加载证据已保留；最新 Pi 仍按每周矩阵复跑 |
 | `DroneHostPort` 与通用插件能力协商 | **已实现（首版合同）** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、`compatible/degraded/incompatible` 测试、迁移闸门和 `@gyoungwe/plugin-api@1.0.0` 公开包均已通过 | 其余插件按 v1.1 排期 |
+| `@gyoungwe/pi-analysis` | **V1.1-A 宿主临时包已实现，外部迁移未完成** | `packages/pi-analysis` 提供自包含 `analysis_list_adapters` / `analysis_assess_readiness`、bulk RNA-seq/assembly adapter、确定性 snapshot hash、host-neutral contract；backend analysis-adapters 仅保留兼容 facade；包内 typecheck/build/registration smoke、plugin-api analysis contract test、`check:native-pi` 58 registrations 已通过 | 仍需迁移到 `../drone-plugins`、公开 tarball、Pi 1.1.0/latest 真实发现矩阵、计划→执行→审查→交付宿主 proof；未宣称 V1.1-A 完成 |
 | `@gyoungwe/pi-*` 公共包与 `@gyoungwe/research-suite` | **首批五包已公开发布** | `@gyoungwe/plugin-api@1.0.0`、`pi-core@0.1.0`、`pi-knowledge@0.1.0`、`pi-research@0.1.0`、`research-suite@0.1.1` 均已提交 npm；公开 registry tarball 与干净安装均验证三个 bundled dependency，版本、完整性和 shasum 见 [`v0.33.0-npm-packages.json`](releases/v0.33.0-npm-packages.json)；Pi 锁定/latest 单包、组合与已安装 suite 发现矩阵通过 | analysis/evidence/connectors 仍按 v1.1 规划 |
 | 宿主仓库 / 插件仓库边界 | **pi-knowledge 外部迁移和公开发布闸门已关闭** | [本地 ../drone-plugins](../drone-plugins) 与 GitHub `Gyoungwe/drone-plugins` 的 `main` 为 `5002590`；外部包自包含、无宿主 fallback，`npm run check`、`smoke:install` 通过并验证 34 tools 与 `unconfigured` 回执；宿主 `packages/pi-knowledge` 兼容副本已删除，根仓库从已安装 npm 包做 fixture smoke | Desktop/Pi 仅从已安装的 `@gyoungwe/pi-knowledge` 加载；后续按 v1.1 推进其余插件拆分 |
 | Desktop UI Pack 独立分发 | **构建产物验收已通过；交互式 GUI 不作为本门槛** | `check:desktop-artifact --strict` 通过 16/16；Home、Knowledge、Skills/Connections、Hosts/Right panel 四视口合同均通过；当前 main `b4b15427` 产物 SHA-256 `7aad377f5f3ec87d42eb1a48358bcd81c0de0165016d1649cd192f8c5b19de46` | 交互式 Electron 在当前 macOS shell 的 NSApplication 阶段 SIGABRT，保留为环境观察；不阻断本地构建产物验收 |
@@ -667,6 +668,7 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 | 2026-10-18 | `research-suite` 公开 tarball 修复 | registry 验证发现 `research-suite@0.1.0` 未携带三个 bundled dependency；外部仓库元数据修复提交 `a4eb3a6`、manifest 对齐提交 `5002590`，已发布 `@gyoungwe/research-suite@0.1.1`，公开 tarball 和全新临时目录安装均 PASS，证据见 [`v0.33.0-npm-packages.json`](releases/v0.33.0-npm-packages.json) | `desktop-ui-pack` 仍是 v1.1 的独立 UI 包；analysis/evidence/connectors 继续按计划推进，Protocols.io 保持只读 |
 | 2026-10-18 | v0.33.0 正式无证书发布 | main `961cd43a`；Release run [39066841689](https://github.com/Gyoungwe/Drone/actions/runs/39066841689) 的 macOS arm64/x64 与 Windows x64 validate、unsigned build、MCP 资源校验、资产上传全部成功；[v0.33.0 Release](https://github.com/Gyoungwe/Drone/releases/tag/v0.33.0) 已发布，包含 3 个安装包、3 个 zip、4 个 blockmap 和 2 个更新清单；SHA-256 见 [`v0.33.0-assets.sha256`](releases/v0.33.0-assets.sha256) | npm 首批包已发布；按 v1.1 推进 analysis/evidence/connectors 和完整 desktop-ui-pack |
 | 2026-10-18 | Windows 跨平台验收修复 | `scripts/check-plugin-api.mjs` 生命周期闸门改用跨平台 tarball basename、npm 执行器和 Biome 格式；MEM-01/SKILL-01 证据与临时 fixture 改用 Node `os.tmpdir()`，避免 Windows 将 POSIX `/tmp` 解析为 `\\tmp` | macOS validate 已通过；等待修复后的 Release 同时完成 Windows validate 与无证书构建资产 |
+| 2026-10-18 | V1.1-A `pi-analysis` 启动实现 | 新增 `packages/pi-analysis` 宿主临时包：公开 analysis contract、确定性 adapter snapshot、bulk RNA-seq/assembly readiness/review、`analysis_list_adapters` 与 `analysis_assess_readiness`；backend 原分析适配器改为兼容 facade；根 build/test 脚本、native Pi fixture、Pi 兼容矩阵与索引已登记。包级 typecheck/build/registration smoke、`npm run check -w @gyoungwe/pi-analysis`（含 pack→干净 prefix→真实 Pi loader 安装 smoke）、plugin-api contract test、backend typecheck、`check:native-pi` 58 registrations、Pi 1.1.0/latest 4 包发现矩阵已通过 | 仍需按 V1.1-A 顺序迁移至 `../drone-plugins`、公开 registry tarball、宿主计划→执行→审查→交付 proof；因此 V1.1-A 保持进行中 |
 
 
 ### 2026-10-18 收口补充

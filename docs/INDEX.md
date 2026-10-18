@@ -30,7 +30,7 @@
 
 `.pi/tsconfig.json` 开启 `allowJs` + `checkJs`；当前覆盖兼容入口与任务/知识运行时，生成的 `.pi/lib/knowledge/runtime/**/*.mjs` 明确排除在检查图之外（源代码由领域包 typecheck 覆盖），根 `npm run typecheck` 会串接 `npm run check:pi`。
 
-插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，只暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型。`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
+插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，只暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型，以及 host-neutral analysis contract。`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
 
 任务级一次授权与自动续作：见 [task-authorization.md](task-authorization.md)（可写目录、总预算、取消与校验边界）。
 
@@ -64,12 +64,16 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，9 个包：
+npm workspaces monorepo，15 个 workspace 包：
 
 ```
 packages/
 ├── shared/     IPC 契约层（纯类型 + 通道常量，三方共享）
-├── plugin-api/ 插件公开合同（HostPort、能力协商、结果/回执类型）
+├── plugin-api/ 插件公开合同（HostPort、能力协商、结果/回执类型、analysis contract）
+├── pi-analysis/ 原生 Pi 分析适配器与 readiness 门禁（宿主兼容 facade）
+├── pi-core/     原生 Pi 核心任务与回执插件
+├── pi-research/ 原生 Pi 研究来源插件
+├── research-suite/ 原生 Pi 研究聚合包
 ├── backend/    纯 Node；pi SDK 适配层
 ├── knowledge/  知识领域纯函数与 claim 合约（TS 包，迁移中）
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
@@ -98,7 +102,8 @@ packages/
 | `packages/backend/test/skill-acceptance-sdk.test.mjs` | `SKILL-01` 真实 Pi SDK + offline faux provider 的 `/skill:research-workflow` invocation、visible skill、provider call 和 `disable-model-invocation` 自动选择反证；显式 slash 的 manual-only 语义 |
 | `packages/backend/test/redline-acceptance.test.mjs` / `npm run check:redline` | REDLINE-01 隔离验收：通过 publication/orchestration/metacognitive 门禁注入缺来源、stale source、数字/方法漂移、重复数不足、断线和权限拒绝；断言阻断原因、差异路径与 sealed audit proof |
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
-| `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵 |
+| `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含 pi-analysis） |
+| `scripts/smoke-pi-analysis.mjs` | `pi-analysis` npm pack → 干净 prefix 安装 → 真实 Pi resource loader 发现与工具清单 smoke |
 | `scripts/smoke-channel-watch.mts` | channel-watch 机制冒烟 V1–V6 |
 | `scripts/replay-trace.mts` | 事件 trace 离线重放（`--last` 自动找最新；排查 UI 状态问题首选） |
 | `scripts/replay-evaporation.mts` | 上下文蒸发离线 replay 调参（误杀率/体积曲线；`--core` 与线上实现同构对比；默认数据指 `.local/replay-data/sessions` 副本，指向正式 `~/.pi/agent` 会直接 abort） |
@@ -199,6 +204,10 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 ## packages/pi-core — 原生 Pi 核心插件（PR-6）
 
 `packages/pi-core/` 是可独立安装的任务与回执插件：组装 `@drone/tasks` runtime，并提供 `ask_user`、`set_status`、`todo`、`deliver_files`、`memory_save` 五个可移植工具。工具实现、项目记忆持久化和路径规整均由该包拥有；`packages/backend/src/tools/` 与 `src/project/memory.ts` 仅保留兼容 facade，Desktop 继续注入既有 ask gate。原生 Pi 通过 `ctx.ui` 提供询问与授权，宿主差异收敛在 `PiCoreHostPort`（host/capabilities/requestAuthorization）。`scripts/build-pi-core.mjs` 生成自包含 dist 并拒绝 Electron/backend/Desktop 或越界导入，`scripts/smoke-pi-core.mjs` 和包内 registration test 覆盖安装前的工具清单与 native host adapter。
+
+## packages/pi-analysis — 原生 Pi 分析插件（V1.1-A 进行中）
+
+`packages/pi-analysis/` 承载无宿主副作用的 `AnalysisAdapter`、`AnalysisAdapterRegistry`、bulk RNA-seq 与 assembly readiness/review 合同，并注册 `analysis_list_adapters` 与 `analysis_assess_readiness`。它只依赖 `@gyoungwe/plugin-api`、Pi Extension API 和 Node 标准库；执行、授权、持久化、产物采集仍由 backend 组合根负责。`scripts/build-pi-analysis.mjs` 生成自包含 dist 并检查 Electron/backend/跨包相对导入；`npm run check:pi-analysis`、包内 registration smoke、`check:native-pi` 与 `check:pi-compat` 覆盖当前宿主临时分包边界。外部 `drone-plugins` 迁移、公开 tarball、完整 Pi 矩阵和宿主计划→执行→审查→交付 proof 在 V1.1-A 完成前仍未宣称通过。
 
 ## packages/pi-research — 原生 Pi 研究插件（PR-7）
 

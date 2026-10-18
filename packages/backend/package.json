@@ -20,6 +20,7 @@
 		"@drone/inquiry": "*",
 		"@drone/knowledge": "*",
 		"@gyoungwe/pi-core": "*",
+		"@gyoungwe/pi-analysis": "*",
 		"@drone/research": "*",
 		"@drone/shared": "*",
 		"@drone/tasks": "*",

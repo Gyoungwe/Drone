@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "drone-pi-analysis",
+	"version": "0.1.0",
+	"pi": {
+		"apiVersion": 1,
+		"minHostVersion": "1.1.0",
+		"testedHosts": ["1.1.0", "latest"]
+	},
+	"drone": {
+		"pluginApi": 1,
+		"resultContract": "drone-result/v3"
+	},
+	"entrypoints": {
+		"extension": "./dist/index.mjs"
+	},
+	"capabilities": ["analysis", "planning", "files"],
+	"hosts": ["native-pi", "drone-desktop"],
+	"permissions": {
+		"filesystem": ["workspace-read"],
+		"network": [],
+		"subprocess": [],
+		"externalWrites": false
+	}
+}

@@ -22,6 +22,7 @@ export type AnalysisGateCode =
 	| "missing-data"
 	| "missing-biological-replicates"
 	| "reference-mismatch"
+	| "unsupported-method"
 	| "compute-authorization-required"
 	| "destructive-operation-requires-review"
 	| "publication-requires-review";
