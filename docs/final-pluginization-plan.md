@@ -481,11 +481,11 @@ Claude Code adapter 必须通过同一套：
 | `DroneHostPort` 与通用插件能力协商 | **已实现（首版合同）** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、`compatible/degraded/incompatible` 测试、迁移闸门和 `@gyoungwe/plugin-api@1.0.0` 公开包均已通过 | 其余插件按 v1.1 排期 |
 | `@gyoungwe/pi-*` 公共包与 `@gyoungwe/research-suite` | **首批五包已公开发布** | `@gyoungwe/plugin-api@1.0.0`、`pi-core@0.1.0`、`pi-knowledge@0.1.0`、`pi-research@0.1.0`、`research-suite@0.1.1` 均已提交 npm；公开 registry tarball 与干净安装均验证三个 bundled dependency，版本、完整性和 shasum 见 [`v0.33.0-npm-packages.json`](releases/v0.33.0-npm-packages.json)；Pi 锁定/latest 单包、组合与已安装 suite 发现矩阵通过 | analysis/evidence/connectors 仍按 v1.1 规划 |
 | 宿主仓库 / 插件仓库边界 | **pi-knowledge 外部迁移和公开发布闸门已关闭** | [本地 ../drone-plugins](../drone-plugins) 与 GitHub `Gyoungwe/drone-plugins` 的 `main` 为 `5002590`；外部包自包含、无宿主 fallback，`npm run check`、`smoke:install` 通过并验证 34 tools 与 `unconfigured` 回执；宿主 `packages/pi-knowledge` 兼容副本已删除，根仓库从已安装 npm 包做 fixture smoke | Desktop/Pi 仅从已安装的 `@gyoungwe/pi-knowledge` 加载；后续按 v1.1 推进其余插件拆分 |
-| Desktop UI Pack 独立分发 | **构建产物验收已通过；交互式 GUI 不作为本门槛** | `check:desktop-artifact --strict` 通过 16/16；Home、Knowledge、Skills/Connections、Hosts/Right panel 四视口合同均通过；当前 main `27face36` 产物 SHA-256 `95c92d025d91d130911e2f6d7af4d021f81271205b88385566336defedd8beae` | 交互式 Electron 在当前 macOS shell 的 NSApplication 阶段 SIGABRT，保留为环境观察；不阻断本地构建产物验收 |
+| Desktop UI Pack 独立分发 | **构建产物验收已通过；交互式 GUI 不作为本门槛** | `check:desktop-artifact --strict` 通过 16/16；Home、Knowledge、Skills/Connections、Hosts/Right panel 四视口合同均通过；当前 main `b4b15427` 产物 SHA-256 `7aad377f5f3ec87d42eb1a48358bcd81c0de0165016d1649cd192f8c5b19de46` | 交互式 Electron 在当前 macOS shell 的 NSApplication 阶段 SIGABRT，保留为环境观察；不阻断本地构建产物验收 |
 | 菜单信息架构收敛 | **UI-1～UI-7 已实现；四视口构建合同通过** | 本地桌面 artifact checker 通过四视口静态合同与资源完整性检查 | loading/empty/error/disabled 的交互式 GUI 走查继续作为可选后续，不计为构建产物失败 |
 | LAN 最终方案移除 | **已完成** | 提交 `8d4ad219` 删除 LAN adapter/UI/IPC/manifest/test；`9af99382` 刷新生成运行时；`c99432d0` 清除旧 demo 注释；源码/生成运行时/索引扫描均无 LAN 残留 | 仅历史变更记录保留背景，不再进入产品能力或验收矩阵 |
 | 仅 Desktop 可用的工具 | **部分完成** | `pi-core` 已迁移 ask_user/set_status/todo/deliver_files/memory_save 与 tasks runtime；Desktop 工具路径保留兼容 facade | 继续迁移 analysis/evidence/connectors，明确剩余 Desktop-only 能力 |
-| 真实桌面发布验收 | **本机构建产物验收已通过** | `27face36` 的 `check:desktop-artifact --strict`：16/16 检查、4/4 视口、0 `NOT_RUN`、0 `FAIL`；构建产物快照 SHA-256 `95c92d025d91d130911e2f6d7af4d021f81271205b88385566336defedd8beae` | 交互式 Electron 启动受当前 shell 的 macOS NSApplication SIGABRT 阻塞；按当前决议不把它称为降级，也不阻断本地构建产物通过 |
+| 真实桌面发布验收 | **本机构建产物验收已通过** | `b4b15427` 的 `check:desktop-artifact --strict`：16/16 检查、4/4 视口、0 `NOT_RUN`、0 `FAIL`；构建产物快照 SHA-256 `7aad377f5f3ec87d42eb1a48358bcd81c0de0165016d1649cd192f8c5b19de46` | 交互式 Electron 启动受当前 shell 的 macOS NSApplication SIGABRT 阻塞；按当前决议不把它称为降级，也不阻断本地构建产物通过 |
 
 ### 9.1 实施阶段（执行版，2026-10-17）
 
@@ -650,7 +650,7 @@ Claude Code adapter 必须通过同一套：
 ### 2026-10-18 收口补充
 
 - **LAN**：源码、生成运行时、桌面入口、IPC、manifest、测试和索引已清理；历史日志只保留变更背景。
-- **桌面验收口径**：正式门槛是本机构建产物验收。main `27face36` 的 `npm run build && npm run stage:pi-packages && npm run check:desktop-artifact -- --strict` 通过 16/16，四视口 4/4，0 `FAIL`、0 `NOT_RUN`，产物快照 SHA-256 为 `95c92d025d91d130911e2f6d7af4d021f81271205b88385566336defedd8beae`。交互式 Electron 启动因当前 shell 的 macOS `NSApplication init/RegisterApplication` SIGABRT 未建立 CDP，不改变上述构建产物结论。
+- **桌面验收口径**：正式门槛是本机构建产物验收。main `b4b15427` 的 `npm run build && npm run stage:pi-packages && npm run check:desktop-artifact -- --strict` 通过 16/16，四视口 4/4，0 `FAIL`、0 `NOT_RUN`，产物快照 SHA-256 为 `7aad377f5f3ec87d42eb1a48358bcd81c0de0165016d1649cd192f8c5b19de46`。交互式 Electron 启动因当前 shell 的 macOS `NSApplication init/RegisterApplication` SIGABRT 未建立 CDP，不改变上述构建产物结论。
 - **插件生命周期**：`check:plugin-api --migration --lifecycle` 已完成本地 pack 的 `0.9.0 → 1.0.0 → 0.9.0 → uninstall`，并验证 `DroneHostPort` 声明。
 - **UI-01 / SKILL-01**：`npm run check:ui-skill-acceptance` 通过；UI-01 由真实内置 `ds-whale-maid` bundle + `UiPluginManager` + renderer registry 完成出现/移除/重载/持久化闭环，SKILL-01 由真实 Pi SDK + offline faux provider 完成 `/skill:research-workflow` invocation 与 `disable-model-invocation` 自动选择反证。显式 `/skill:` 仍为 manual-only，不能标记为完全禁用。
 - **Pi 兼容**：锁定 `1.1.0` 与 latest `1.3.0` 的 pi-core/pi-knowledge/pi-research 单包、组合加载和临时 research-suite 安装→发现→真实模型调用→卸载均通过；工具 ownership 已由 pi-core 统一，未再出现 `task_*` 冲突；next 标签当前 `NOT_PUBLISHED`。证据只保留状态、计数和哈希，不含凭据或会话正文。

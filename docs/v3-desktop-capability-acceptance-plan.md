@@ -67,7 +67,7 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | 菜单信息架构 | **UI-1～UI-7 已实现，真实视觉验收未完成** | 新任务/知识库/技能与连接/主机、项目/最近和右栏数据投影已集成 | 完成四视口截图和 loading/empty/error/disabled 状态走查 |
 | `DroneHostPort` 与通用能力协商 | **首版已实现** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、兼容性测试和迁移闸门 | 完成所有插件迁移与真实宿主加载验收 |
 | LAN 最终移除 | **已完成** | LAN 源码、生成运行时、入口、manifest、测试和索引均已清理（`8d4ad219`、`9af99382`、`c99432d0`） | 不再列入验收矩阵或发布承诺 |
-| 真实桌面发布候选 | **本机构建产物验收已通过** | `check:desktop-artifact --strict` 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`；artifact SHA-256 `662b97f5d4d8b03330aa8663ff4b2308956ad2c0b910e35b6d4eba54bc2a214c` | 交互式 Electron 在当前 shell 的 NSApplication 阶段 SIGABRT；按当前口径不作为构建产物门槛 |
+| 真实桌面发布候选 | **本机构建产物验收已通过** | `check:desktop-artifact --strict` 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`；main `b4b15427` 的 artifact SHA-256 `7aad377f5f3ec87d42eb1a48358bcd81c0de0165016d1649cd192f8c5b19de46` | 交互式 Electron 在当前 shell 的 NSApplication 阶段 SIGABRT；按当前口径不作为构建产物门槛 |
 
 ## 3.2 插件化红线快速清单
 
@@ -371,7 +371,7 @@ revision / ETag / SHA-256：
 
 ## 11. 2026-10-18 本机构建产物验收记录
 
-正式桌面验收口径为本机构建产物，不把交互式 Electron 启动称为降级。候选分支执行 `npm run build && npm run stage:pi-packages && npm run check:desktop-artifact -- --strict --out /private/tmp/drone-local-desktop-artifact-final.json`：16/16 检查通过，Home、Knowledge、Skills/Connections、Hosts/Right panel 四视口合同 4/4 通过，`FAIL=0`、`NOT_RUN=0`；产物快照 SHA-256 为 `662b97f5d4d8b03330aa8663ff4b2308956ad2c0b910e35b6d4eba54bc2a214c`。检查覆盖 main/preload/renderer、CSP/entry、UI 插件启停合同、skill/MCP/connector/memory/结果红线资源和已 stage 的 MCP 资源。
+正式桌面验收口径为本机构建产物，不把交互式 Electron 启动称为降级。main `b4b15427` 执行 `npm run build && npm run stage:pi-packages && npm run check:desktop-artifact -- --strict`：16/16 检查通过，Home、Knowledge、Skills/Connections、Hosts/Right panel 四视口合同 4/4 通过，`FAIL=0`、`NOT_RUN=0`；产物快照 SHA-256 为 `7aad377f5f3ec87d42eb1a48358bcd81c0de0165016d1649cd192f8c5b19de46`。检查覆盖 main/preload/renderer、CSP/entry、UI 插件启停合同、skill/MCP/connector/memory/结果红线资源和已 stage 的 MCP 资源。
 
 交互式 Electron 仍在当前 shell 的 macOS `NSApplication init/RegisterApplication` 阶段 `SIGABRT`，没有建立 CDP；这只记录为可选的 GUI 环境观察，不改变构建产物 `PASS`，也不阻断本计划的本机构建验收。
 
