@@ -61,10 +61,10 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | MCP / 连接器 | **隔离真实调用已通过（适配器与 IPC；WebDAV/Zotero 写入闭环）** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 完成 marker tool call 和关闭重载；read-only `CapabilityResearchPorts` 完成唯一词 source receipt/调用记录与关闭跳过传输；WebDAV 与 Zotero 临时对象均完成真实创建→回读→删除 | 根门禁持续复跑；Protocols.io 保持只读 |
 | 外部写入闭环 | **WebDAV + Zotero 已通过；Protocols.io 只读** | 两个连接器均完成授权→创建→回读→删除→再回读，凭据未写入仓库 | 维持 Protocols.io 只读；若以后启用写入需另行授权 token |
 | 结果红线与 evidence | **REDLINE-01 隔离验收通过** | 状态合同、publication/metacognitive/orchestration gate、`npm run check:redline` 的 4 类可重复 fixture 与 sealed proof | 交互式桌面截图可继续作为可选观察；本机构建产物和领域审计已闭合 |
-| Pi 基线 | **锁定/latest 单包、组合与已安装 suite 发现矩阵已通过** | Pi `1.1.0` 与 latest `1.3.0` 的 `pi-core`、`pi-knowledge`、`pi-research` 六个单包 cell、两个组合 cell，以及临时 `research-suite` 安装→发现→真实模型调用→卸载均 PASS；next 为 `NOT_PUBLISHED`；工具 ownership 已由 pi-core 统一 | `@gyoungwe` 首批包已公开发布；latest 矩阵按周复跑，证据只保留状态、计数和哈希 |
+| Pi 基线 | **单包通过；组合加载与已安装 suite 发现 FAIL（task_* 工具冲突）** | Pi `1.1.0` 与 latest `1.3.0` 的六个单包 cell PASS；两个组合 cell 与临时 `research-suite` 安装→发现→真实模型调用→卸载因重复 `task_*` 工具注册冲突判为 FAIL；next 为 `NOT_PUBLISHED` | 需在插件仓库统一 `task_*` 工具 ownership 后重跑组合矩阵；证据只保留状态、计数和哈希 |
 | 公共 `@gyoungwe/pi-*` 包 | **core/knowledge/research 首批已公开发布** | `plugin-api@1.0.0`、`pi-core@0.1.0`、`pi-knowledge@0.1.0`、`pi-research@0.1.0`、`research-suite@0.1.1` 已发布；公开 registry tarball 与干净安装均验证三个 bundled dependency，证据见 `docs/releases/v0.33.0-npm-packages.json`；本地 pack 生命周期安装→升级→回滚→卸载通过 | analysis/evidence/connectors 按 v1.1 规划 |
 | 宿主 / 插件仓库边界 | **骨架、合同、公开发布和 pi-knowledge 删除已完成** | `../drone-plugins` 多包 workspace、manifest 检查、plugin-api migration gate、research-suite bundle gate；宿主不再保留 `packages/pi-knowledge` 兼容副本 | Desktop/Pi 只从已安装 npm 包加载；继续推进 v1.1 插件拆分 |
-| 菜单信息架构 | **UI-1～UI-7 已实现，真实视觉验收未完成** | 新任务/知识库/技能与连接/主机、项目/最近和右栏数据投影已集成 | 完成四视口截图和 loading/empty/error/disabled 状态走查 |
+| 菜单信息架构 | **UI-1～UI-7 已实现；与设计稿的视觉对照 NOT_RUN** | 新任务/知识库/技能与连接/主机、项目/最近和右栏数据投影已集成；尚未完成真实桌面截图 | 在可启动 GUI 会话中补做四视口截图和 loading/empty/error/disabled 状态走查 |
 | `DroneHostPort` 与通用能力协商 | **首版已实现** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、兼容性测试和迁移闸门 | 完成所有插件迁移与真实宿主加载验收 |
 | LAN 最终移除 | **已完成** | LAN 源码、生成运行时、入口、manifest、测试和索引均已清理（`8d4ad219`、`9af99382`、`c99432d0`） | 不再列入验收矩阵或发布承诺 |
 | 真实桌面发布候选 | **本机构建产物验收已通过** | `check:desktop-artifact --strict` 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`；main `b4b15427` 的 artifact SHA-256 `7aad377f5f3ec87d42eb1a48358bcd81c0de0165016d1649cd192f8c5b19de46` | 交互式 Electron 在当前 shell 的 NSApplication 阶段 SIGABRT；按当前口径不作为构建产物门槛 |
@@ -398,7 +398,7 @@ revision / ETag / SHA-256：
 
 ## 15. 2026-10-18 Pi 真实模型兼容矩阵
 
-证据文件：`/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json`。在独立 `HOME` / `PI_CODING_AGENT_DIR`、`--no-session` 和 offline credential copy 环境中，Pi `1.1.0` 与 npm latest `1.3.0` 分别对 `pi-core`、`pi-knowledge`、`pi-research` 完成真实模型调用；六个单包 cell、两个组合 cell，以及临时 `research-suite` 安装→发现→模型调用→卸载全部 `PASS`，`rc=0`、`finalTextChars=32`、JSONL parse errors 为 0。工具 ownership 已由 pi-core 统一，未再出现 `task_*` 冲突；next 为 `NOT_PUBLISHED`。证据只保留状态、计数和哈希，不含凭据或会话正文。
+证据文件：`/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json`。独立 `HOME` / `PI_CODING_AGENT_DIR` 与 offline credential copy 中，Pi `1.1.0` 与 npm latest `1.3.0` 的六个单包 cell PASS；两个组合 cell 与临时 `research-suite` 安装→发现→模型调用→卸载因重复 `task_*` 工具注册冲突为 **FAIL**，不能以旧组合 PASS 记录作为验收；next 为 `NOT_PUBLISHED`。证据只保留状态、计数和哈希，不含凭据或会话正文。
 
 ## 16. 2026-10-18 v0.33.0 无证书跨平台发布
 
