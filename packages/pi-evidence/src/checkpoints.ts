@@ -39,6 +39,8 @@ export interface FrozenEvidenceFile {
 	readonly kind: EvidenceArtifactRole;
 }
 
+export type FrozenFile = FrozenEvidenceFile;
+
 export interface EvidenceLineage {
 	readonly eventId: string;
 	readonly runAttemptId?: string;

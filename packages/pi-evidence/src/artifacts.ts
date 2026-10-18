@@ -24,6 +24,10 @@ export interface EvidenceArtifactManifest {
 	readonly totalBytes?: number;
 }
 
+/** Compatibility names used by the host evidence service during migration. */
+export type ArtifactManifest = EvidenceArtifactManifest;
+export type ArtifactRecord = EvidenceArtifact;
+
 export interface ArtifactManifestInputEntry {
 	readonly artifactId?: string;
 	readonly versionId?: string;
@@ -186,6 +190,23 @@ export function assertValidArtifactManifest(
 export function artifactManifestDigest(manifest: EvidenceArtifactManifest): string {
 	const normalized = assertValidArtifactManifest(manifest, { requireIdentity: false });
 	return digestJson(normalized);
+}
+
+export const isSafeArtifactPath = isSafeEvidencePath;
+
+export function artifactManifestBytes(manifest: EvidenceArtifactManifest): number {
+	return manifest.entries.reduce((total, entry) => total + entry.bytes, 0);
+}
+
+export function withinArtifactLimit(manifest: EvidenceArtifactManifest, maxBytes: number): boolean {
+	return Number.isFinite(maxBytes) && maxBytes >= 0 && artifactManifestBytes(manifest) <= maxBytes;
+}
+
+export function validateArtifactEntry(
+	entry: ArtifactManifestInputEntry,
+): ArtifactVerification["reason"] | undefined {
+	const result = validateArtifactManifest([entry]);
+	return result[0]?.ok ? undefined : (result[0]?.reason ?? "checksum-mismatch");
 }
 
 export function artifactDigest(bytes: string | Uint8Array): string {

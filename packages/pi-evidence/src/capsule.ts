@@ -3,6 +3,7 @@ import { type EvidenceCheckpoint, validateCheckpoint } from "./checkpoints";
 import { canonicalJson, digestJson, isSha256, sha256Hex } from "./digest";
 
 export type EvidenceAudience = EvidenceAccessLevel;
+export const CAPSULE_LIMIT = EVIDENCE_CAPSULE_LIMIT;
 
 export interface EvidenceCapsulePublication {
 	readonly audience: EvidenceAudience;
