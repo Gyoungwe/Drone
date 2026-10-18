@@ -16266,8 +16266,10 @@ function bindRuntime(pi) {
     };
   }
   const receive = (payload) => {
-    if (payload?.version !== RUNTIME_BRIDGE_VERSION) return;
-    const runtime = payload?.runtime;
+    if (!payload || typeof payload !== "object") return;
+    const event = payload;
+    if (event.version !== RUNTIME_BRIDGE_VERSION) return;
+    const runtime = event.runtime;
     if (!runtime || typeof runtime !== "object" || !runtime.scheduler) return;
     const previous = hostRuntimes.get(pi);
     if (previous && previous !== runtime) adoptRuntimeState(previous, runtime);
@@ -16333,13 +16335,14 @@ function adoptRuntimeState(previous, runtime) {
   }
 }
 function runtimeForHost(pi) {
-  return hostRuntimes.get(pi) || currentRuntime();
+  return hostRuntimes.get(pi) ?? currentRuntime();
 }
 function withHostRuntime(pi, operation) {
   return withRuntime(runtimeForHost(pi), operation);
 }
 function currentRuntime() {
-  if (contexts.getStore()) return contexts.getStore();
+  const scoped = contexts.getStore();
+  if (scoped) return scoped;
   if (installedRuntime) return installedRuntime;
   if (!standaloneRuntime) standaloneRuntime = createStandaloneRuntime();
   return standaloneRuntime;
@@ -16379,10 +16382,7 @@ function runtimeSlot(domain, slot, create) {
       }
     }
   );
-  return (
-    /** @type {T} */
-    proxy
-  );
+  return proxy;
 }
 function runRuntimeExclusive(namespace, key, operation) {
   return currentRuntime().scheduler.run(`${namespace}:${key}`, operation);

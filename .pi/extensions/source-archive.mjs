@@ -216,7 +216,7 @@ function configureKnowledgeRuntime(host = {}) {
 function runtimeSlot2(domain, key, factory) {
   let hostProxy;
   let provider;
-  const resolve14 = () => {
+  const resolve15 = () => {
     if (hostSlotProvider) {
       if (provider !== hostSlotProvider) {
         provider = hostSlotProvider;
@@ -230,14 +230,14 @@ function runtimeSlot2(domain, key, factory) {
   };
   return new Proxy({}, {
     get: (_target, property) => {
-      const state3 = resolve14();
+      const state3 = resolve15();
       const value = Reflect.get(state3, property);
       return typeof value === "function" ? value.bind(state3) : value;
     },
-    set: (_target, property, value) => Reflect.set(resolve14(), property, value),
-    ownKeys: () => Reflect.ownKeys(resolve14()),
+    set: (_target, property, value) => Reflect.set(resolve15(), property, value),
+    ownKeys: () => Reflect.ownKeys(resolve15()),
     getOwnPropertyDescriptor: (_target, property) => {
-      const descriptor = Reflect.getOwnPropertyDescriptor(resolve14(), property);
+      const descriptor = Reflect.getOwnPropertyDescriptor(resolve15(), property);
       return descriptor ? { ...descriptor, configurable: true } : void 0;
     }
   });
@@ -269,8 +269,8 @@ var init_runtime_host = __esm({
     defaultRunRuntimeExclusive = async (_namespace, key, work) => {
       const previous = locks.get(key) ?? Promise.resolve();
       let release;
-      const current = new Promise((resolve14) => {
-        release = resolve14;
+      const current = new Promise((resolve15) => {
+        release = resolve15;
       });
       locks.set(key, previous.then(() => current));
       await previous;
@@ -586,7 +586,7 @@ async function withSpecialistSlot(signal, work, options = {}) {
   );
   if (state2.active >= concurrency) {
     if (state2.queue.length >= queueLimit) throw new Error("Knowledge specialist queue is full");
-    await new Promise((resolve14, reject) => {
+    await new Promise((resolve15, reject) => {
       let settled = false;
       const item = {
         resolve: () => {
@@ -594,7 +594,7 @@ async function withSpecialistSlot(signal, work, options = {}) {
           settled = true;
           signal?.removeEventListener("abort", abort);
           clearTimeout(timer);
-          resolve14();
+          resolve15();
         },
         reject: () => {
           if (settled) return;
@@ -16122,8 +16122,8 @@ var KeyedScheduler = class {
     if (this.#disposed) throw new Error("Runtime scheduler has been disposed");
     const previous = this.#tails.get(key) || Promise.resolve();
     let unlock;
-    const gate = new Promise((resolve14) => {
-      unlock = resolve14;
+    const gate = new Promise((resolve15) => {
+      unlock = resolve15;
     });
     const tail = previous.then(() => gate);
     this.#tails.set(key, tail);
@@ -16219,8 +16219,10 @@ function bindRuntime(pi) {
     };
   }
   const receive = (payload) => {
-    if (payload?.version !== RUNTIME_BRIDGE_VERSION) return;
-    const runtime = payload?.runtime;
+    if (!payload || typeof payload !== "object") return;
+    const event = payload;
+    if (event.version !== RUNTIME_BRIDGE_VERSION) return;
+    const runtime = event.runtime;
     if (!runtime || typeof runtime !== "object" || !runtime.scheduler) return;
     const previous = hostRuntimes.get(pi);
     if (previous && previous !== runtime) adoptRuntimeState(previous, runtime);
@@ -16286,13 +16288,14 @@ function adoptRuntimeState(previous, runtime) {
   }
 }
 function runtimeForHost(pi) {
-  return hostRuntimes.get(pi) || currentRuntime();
+  return hostRuntimes.get(pi) ?? currentRuntime();
 }
 function withHostRuntime(pi, operation) {
   return withRuntime(runtimeForHost(pi), operation);
 }
 function currentRuntime() {
-  if (contexts.getStore()) return contexts.getStore();
+  const scoped = contexts.getStore();
+  if (scoped) return scoped;
   if (installedRuntime) return installedRuntime;
   if (!standaloneRuntime) standaloneRuntime = createStandaloneRuntime();
   return standaloneRuntime;
@@ -16335,10 +16338,7 @@ function runtimeSlot(domain, slot, create) {
       }
     }
   );
-  return (
-    /** @type {T} */
-    proxy
-  );
+  return proxy;
 }
 function runRuntimeExclusive(namespace, key, operation) {
   return currentRuntime().scheduler.run(`${namespace}:${key}`, operation);
@@ -16447,7 +16447,7 @@ var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for 
 // packages/extensions/src/internal/research-host.ts
 import { randomUUID as randomUUID10 } from "node:crypto";
 import { readFile as readFile12, realpath as realpath9, rename as rename9, writeFile as writeFile10 } from "node:fs/promises";
-import { isAbsolute as isAbsolute12, join as join16, relative as relative11, resolve as resolve13, sep as sep10 } from "node:path";
+import { isAbsolute as isAbsolute12, join as join16, relative as relative11, resolve as resolve14, sep as sep10 } from "node:path";
 
 // packages/research/src/literature-operations.ts
 import { createHash as createHash6, randomUUID as randomUUID3 } from "node:crypto";
@@ -17407,8 +17407,8 @@ function createResearchLoop(ports) {
 // packages/extensions/src/internal/obsidian-workbench.ts
 import { createHash as createHash10, randomUUID as randomUUID9 } from "node:crypto";
 import { access as access4, mkdir as mkdir7, readdir as readdir3, readFile as readFile10, realpath as realpath8, rename as rename8, stat as stat4, writeFile as writeFile8 } from "node:fs/promises";
-import { basename as basename5, dirname as dirname6, isAbsolute as isAbsolute11, join as join14, relative as relative10, resolve as resolve12, sep as sep9 } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { basename as basename5, dirname as dirname7, isAbsolute as isAbsolute11, join as join14, relative as relative10, resolve as resolve13, sep as sep9 } from "node:path";
+import { fileURLToPath as fileURLToPath2, pathToFileURL as pathToFileURL2 } from "node:url";
 
 // packages/extensions/src/workspace-config.ts
 import { access as access3, mkdir as mkdir4, readFile as readFile7, realpath as realpath6, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
@@ -17573,6 +17573,9 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
 // packages/extensions/src/internal/knowledge-runtime.ts
 init_runtime_host();
 import { Worker } from "node:worker_threads";
+import { existsSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { dirname as dirname4, resolve as resolve9 } from "node:path";
 var configured = false;
 function configureKnowledgeExtensionRuntime() {
   if (configured) return;
@@ -17586,14 +17589,23 @@ function configureKnowledgeExtensionRuntime() {
   });
   configureKnowledgeWorker((_url, options) => {
     const sibling = new URL("../lib/knowledge/runtime/worker.mjs", import.meta.url);
-    return new Worker(sibling, options);
+    if (sibling.protocol === "file:" && existsSync(fileURLToPath(sibling)))
+      return new Worker(sibling, options);
+    if (import.meta.url.includes("/packages/extensions/src/")) {
+      const segments = ["..", "..", "..", "..", ".pi", "lib", "knowledge", "runtime", "worker.mjs"];
+      const sourceWorker = pathToFileURL(
+        resolve9(dirname4(fileURLToPath(import.meta.url)), segments.join("/"))
+      );
+      return new Worker(sourceWorker, options);
+    }
+    throw new Error("Knowledge worker resource is missing from the packaged extension");
   });
 }
 
 // packages/extensions/src/internal/obsidian-setup.ts
 import { readdir, realpath as realpath7, stat as stat3 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
-import { basename as basename4, isAbsolute as isAbsolute8, join as join7, resolve as resolve9 } from "node:path";
+import { basename as basename4, isAbsolute as isAbsolute8, join as join7, resolve as resolve10 } from "node:path";
 var OBSIDIAN_SETUP_BINDING = Object.freeze({
   command: "obsidian-setup",
   skill: "research-vault",
@@ -17609,17 +17621,17 @@ function resolveSetupVault(value, _cwd) {
   const text3 = value.trim();
   const expanded = text3 === "~" ? homedir2() : /^~[/\\]/.test(text3) ? join7(homedir2(), text3.slice(2)) : text3;
   if (isAbsolute8(expanded))
-    return resolve9(expanded);
+    return resolve10(expanded);
   const natural = text3.match(/(?:在)?(?:我的)?文档(?:文件夹)?(?:下面|下|中)?(?:创建|新建)?(?:一个)?(?:叫|名为|名称为)\s*[“"']?([^”"']+?)[”"']?(?:的目录|文件夹)?\s*$/i);
   if (natural?.[1]?.trim())
-    return resolve9(join7(homedir2(), "Documents", natural[1].trim()));
+    return resolve10(join7(homedir2(), "Documents", natural[1].trim()));
   const english = text3.match(/(?:create|make)\s+(?:a\s+)?(?:folder|directory)\s+(?:named|called)\s+["']?([^"']+?)["']?\s*$/i);
   if (english?.[1]?.trim())
-    return resolve9(join7(homedir2(), "Documents", english[1].trim()));
+    return resolve10(join7(homedir2(), "Documents", english[1].trim()));
   throw new Error("Please provide an absolute Vault path (or ~/...), or say to create a folder under Documents");
 }
 async function inspectSetupDirectory(path, { maxEntries = 120, maxDepth = 2 } = {}) {
-  const requested = resolve9(path);
+  const requested = resolve10(path);
   let root;
   try {
     root = await realpath7(requested);
@@ -17680,7 +17692,7 @@ async function inspectObsidianSetup({ cwd, vault = null }) {
 init_runtime_host();
 
 // packages/knowledge/src/ui-service.ts
-import { dirname as dirname5, isAbsolute as isAbsolute10, join as join13, relative as relative9, resolve as resolve11 } from "node:path";
+import { dirname as dirname6, isAbsolute as isAbsolute10, join as join13, relative as relative9, resolve as resolve12 } from "node:path";
 init_runtime_host();
 init_runtime_host();
 init_runtime_host();
@@ -17775,7 +17787,7 @@ init_config();
 init_files();
 init_review_policy();
 import { createHash as createHash9, randomUUID as randomUUID7 } from "node:crypto";
-import { join as join11, relative as relative8, resolve as resolve10, sep as sep8 } from "node:path";
+import { join as join11, relative as relative8, resolve as resolve11, sep as sep8 } from "node:path";
 
 // packages/knowledge/src/semantic-provider.ts
 import { URL as URL2 } from "node:url";
@@ -18000,7 +18012,7 @@ var semanticLimits = Object.freeze({ MAX_BATCH, MAX_CHARS, MAX_RESPONSE });
 init_config();
 import { randomUUID as randomUUID6 } from "node:crypto";
 import { lstat as lstat2, mkdir as mkdir5, readdir as readdir2, readFile as readFile8, rename as rename6, unlink, writeFile as writeFile6 } from "node:fs/promises";
-import { dirname as dirname4, join as join10 } from "node:path";
+import { dirname as dirname5, join as join10 } from "node:path";
 var MAX_FILE_BYTES = 256 * 1024;
 var ENV_NAME2 = /^[A-Z_][A-Z0-9_]{0,127}$/;
 var SETTINGS_KEYS = /* @__PURE__ */ new Set([
@@ -18134,13 +18146,13 @@ async function assertDirectory(path) {
     if (!stat5.isDirectory() || stat5.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
   }
   let ancestor = path;
-  for (let depth = 0; depth < 8 && ancestor !== dirname4(ancestor); depth++) {
+  for (let depth = 0; depth < 8 && ancestor !== dirname5(ancestor); depth++) {
     try {
       if ((await lstat2(ancestor)).isSymbolicLink()) throw new Error("Semantic settings ancestor is unsafe");
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
-    ancestor = dirname4(ancestor);
+    ancestor = dirname5(ancestor);
   }
 }
 async function assertFile(path) {
@@ -18186,7 +18198,7 @@ function defaultSettings(state3, path) {
   return { version: 1, revision: 0, ...validateSemanticConfig2({}), updatedAt };
 }
 async function readUnlocked(state3, path) {
-  await assertDirectory(dirname4(path));
+  await assertDirectory(dirname5(path));
   await assertFile(path);
   try {
     const raw = await readFile8(path, { encoding: "utf8", flag: "r" });
@@ -18210,7 +18222,7 @@ function createSemanticSettingsApi(state3 = createSemanticSettingsState()) {
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== current.revision)
         throw new Error("Semantic settings revision is stale");
       const value = normalize({ version: 1, ...input }, current.revision + 1);
-      const dir = dirname4(path);
+      const dir = dirname5(path);
       await assertDirectory(dir);
       for (const entry of await readdir2(dir))
         if (/^semantic\.[a-f0-9-]+\.tmp$/.test(entry)) await unlink(join10(dir, entry)).catch(() => {
@@ -18393,7 +18405,7 @@ var KnowledgeService = class {
       ];
       const ticket = randomUUID7();
       this.tickets.set(ticket, {
-        cwd: resolve10(cwd),
+        cwd: resolve11(cwd),
         project,
         queryHash: createHash9("sha256").update(query).digest("hex"),
         query,
@@ -18426,7 +18438,7 @@ var KnowledgeService = class {
     await withKnowledgeBinding(this.binding, async () => {
     });
     const state3 = this.tickets.get(ticket);
-    if (!state3 || state3.cwd !== resolve10(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
+    if (!state3 || state3.cwd !== resolve11(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
       throw new Error("Read current navigation with research_prepare_knowledge first");
     for (const page of state3.navigation) {
       const latest = await this.request("read", {
@@ -18901,7 +18913,7 @@ var KnowledgeService = class {
     await withKnowledgeBinding(this.binding, async () => {
     });
     const state3 = this.tickets.get(ticket);
-    if (!state3 || state3.cwd !== resolve10(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
+    if (!state3 || state3.cwd !== resolve11(cwd) || Date.now() - state3.createdAt > 60 * 60 * 1e3)
       throw new Error("Read current navigation with research_prepare_knowledge first");
     const cap = Math.max(1, Math.min(12, Number(limit) || 12));
     const sources = [];
@@ -18918,7 +18930,7 @@ var KnowledgeService = class {
   /** A delivery receipt confirms a generated link, not that its text is evidence. Host-only API. */
   async deliveryReceipt(ticket, cwd, absolutePath) {
     const state3 = await this.check(ticket, cwd);
-    const path = relative8(this.binding.vault, resolve10(absolutePath)).split(sep8).join("/");
+    const path = relative8(this.binding.vault, resolve11(absolutePath)).split(sep8).join("/");
     validateNote(path);
     if (!canRead(path, state3.project) || !(path.startsWith("Library/Explainers/") || path.startsWith(`Projects/${state3.project}/Runs/`)))
       throw new Error("Not an allowed presentation/run delivery");
@@ -19050,9 +19062,9 @@ var KnowledgeService = class {
     if (this.closePromise) return this.closePromise;
     this.closing = true;
     this.closePromise = (async () => {
-      const exited = new Promise((resolve14) => {
-        if (this.worker.threadId === -1) resolve14();
-        else this.worker.once("exit", resolve14);
+      const exited = new Promise((resolve15) => {
+        if (this.worker.threadId === -1) resolve15();
+        else this.worker.once("exit", resolve15);
       });
       try {
         if (!this.closed) await this.request("close");
@@ -19152,7 +19164,7 @@ var runtimeState = runtimeSlot2("knowledge", "uiService", () => ({
 function pathCwd(cwd) {
   if (cwd !== null && cwd !== void 0 && (typeof cwd !== "string" || !isAbsolute10(cwd)))
     throw new Error("Workspace must be an absolute path");
-  return cwd ? resolve11(cwd) : null;
+  return cwd ? resolve12(cwd) : null;
 }
 function consumeKnowledgeReviewPreview(cwd, token) {
   const entry = runtimeState.previews.get(token);
@@ -19403,7 +19415,7 @@ ${original.slice(review)}`;
   }
   if (updated === original)
     return;
-  await mkdir7(dirname6(file), { recursive: true });
+  await mkdir7(dirname7(file), { recursive: true });
   const temporary = `${file}.${randomUUID9()}.tmp`;
   await writeFile8(temporary, updated, "utf8");
   await rename8(temporary, file);
@@ -19521,7 +19533,7 @@ async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) {
 
 ${online}${doi ? ` | ${doi}` : ""}
 
-[Original file](${pathToFileURL(entry.path).href})
+[Original file](${pathToFileURL2(entry.path).href})
 
 ## Provenance
 
@@ -19548,7 +19560,7 @@ source_idempotency_key: ${entry.idempotency_key || "unknown"}
 # ${title}`, body);
     await writeManagedIndex(projectNote, `# ${title}`, `[[Library/${category}/${slug}]]
 
-[Run files](${pathToFileURL(runDir).href})`);
+[Run files](${pathToFileURL2(runDir).href})`);
     return {
       obsidian_note: note,
       project_note: projectNote,
@@ -19572,7 +19584,7 @@ async function publishExplainer({ cwd = process.cwd(), project, topicId, title, 
     throw new Error("Explainer title is required");
   if (typeof artifactPath !== "string" || !artifactPath.trim())
     throw new Error("Explainer result_file is required");
-  const root = await canonical(config.resultsRoot), artifact = await realpath8(resolve12(cwd, artifactPath));
+  const root = await canonical(config.resultsRoot), artifact = await realpath8(resolve13(cwd, artifactPath));
   if (!contains(root, artifact))
     throw new Error("Explainer file must stay inside the configured results root");
   const info = await stat4(artifact);
@@ -19586,7 +19598,7 @@ async function publishExplainer({ cwd = process.cwd(), project, topicId, title, 
   return updateVault(cwd, async (vault) => {
     const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest.slice(0, 12)}${ext}`;
     const attachment = await vaultPath(vault, ...attachmentRel.split("/"));
-    await mkdir7(dirname6(attachment), { recursive: true });
+    await mkdir7(dirname7(attachment), { recursive: true });
     try {
       await writeFile8(attachment, bytes, { flag: "wx" });
     } catch (error) {
@@ -19658,9 +19670,9 @@ async function canonical(file) {
   try {
     return await realpath8(file);
   } catch (error) {
-    if (error.code !== "ENOENT" || dirname6(file) === file)
+    if (error.code !== "ENOENT" || dirname7(file) === file)
       throw error;
-    return join14(await canonical(dirname6(file)), basename5(file));
+    return join14(await canonical(dirname7(file)), basename5(file));
   }
 }
 function contains(root, child) {
@@ -19700,7 +19712,7 @@ import { createRequire } from "node:module";
 // packages/research/src/institutional-access.ts
 import { mkdir as mkdir8, readFile as readFile11, writeFile as writeFile9 } from "node:fs/promises";
 import { homedir as homedir3 } from "node:os";
-import { dirname as dirname7, join as join15 } from "node:path";
+import { dirname as dirname8, join as join15 } from "node:path";
 
 // packages/research/src/institutional-proxy.ts
 function buildProxiedUrl(originalUrl, template) {
@@ -19862,7 +19874,7 @@ var contained = (root, target) => {
 async function resolveRunJournal(cwd, runDir) {
   const config = await loadWorkspaceConfig(cwd);
   const root = await realpath9(config.resultsRoot);
-  const run = await realpath9(resolve13(cwd, runDir || ""));
+  const run = await realpath9(resolve14(cwd, runDir || ""));
   const parts = relative11(root, run).split(sep10);
   if (!contained(root, run) || parts.length !== 2 || !parts[1].startsWith("run-"))
     throw new Error("Operation log must be inside a research run");
@@ -19924,8 +19936,8 @@ var KeyedScheduler2 = class {
     if (this.disposed) throw new Error("Extension runtime scheduler has been disposed");
     const previous = this.tails.get(key) ?? Promise.resolve();
     let unlock;
-    const gate = new Promise((resolve14) => {
-      unlock = resolve14;
+    const gate = new Promise((resolve15) => {
+      unlock = resolve15;
     });
     const tail = previous.then(() => gate);
     this.tails.set(key, tail);
