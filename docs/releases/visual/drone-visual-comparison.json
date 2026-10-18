@@ -1,5 +1,5 @@
 {
-	"generatedAt": "2026-10-18T14:19:14.207Z",
+	"generatedAt": "2026-10-18T14:24:36.392Z",
 	"method": "Chrome headless built renderer with deterministic read-only window.pi stub",
 	"reference": "docs/design/plugin-ui/Drone 插件化界面.html",
 	"designAnchors": ["首页 · 新任务", "技能与连接 · 能力状态", "知识库", "共享侧栏组件"],
@@ -46,7 +46,7 @@
 			"rootChildren": 1,
 			"currentNav": "知识库",
 			"image": "docs/releases/visual/drone-knowledge.png",
-			"sha256": "16af4f68804ef3e6d6ed1e900b3b45048fbe532d1c41608d0e98d889b1501d90",
+			"sha256": "616e2b69e44086d604b63c7992ef8966f9c6502bcbdfee53efebac565642d5fa",
 			"errors": [],
 			"bodySample": "项目\n新任务\n知识库\n技能与连接\n主机\nD\n账户菜单\n知识库\n\n关联后才能搜索和查看知识条目。\n\n打开网络图\n在知识库中新建\n⌕\n搜索\n⌘K\n搜索\n全部 —\n文献 —\n软件 —\n方法 —\n想法 —\n\n尚未关联知识库，无法检索。",
 			"appReady": "true",

@@ -61,13 +61,13 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | MCP / 连接器 | **隔离真实调用已通过（适配器与 IPC；WebDAV/Zotero 写入闭环）** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 完成 marker tool call 和关闭重载；read-only `CapabilityResearchPorts` 完成唯一词 source receipt/调用记录与关闭跳过传输；WebDAV 与 Zotero 临时对象均完成真实创建→回读→删除 | 根门禁持续复跑；Protocols.io 保持只读 |
 | 外部写入闭环 | **WebDAV + Zotero 已通过；Protocols.io 只读** | 两个连接器均完成授权→创建→回读→删除→再回读，凭据未写入仓库 | 维持 Protocols.io 只读；若以后启用写入需另行授权 token |
 | 结果红线与 evidence | **REDLINE-01 隔离验收通过** | 状态合同、publication/metacognitive/orchestration gate、`npm run check:redline` 的 4 类可重复 fixture 与 sealed proof | 交互式桌面截图可继续作为可选观察；本机构建产物和领域审计已闭合 |
-| Pi 基线 | **research-suite 新版真实 CLI 通过；旧版冲突负例明确失败** | `drone-plugins` main `e5b9e41` 的真实 CLI 回归在 Pi `1.1.0`/latest（1.3.0）独立 HOME 中执行 `pi install` 和 `pi -p --no-session /task-status`：`research-suite@0.1.2` 两版 PASS；已弃用 `0.1.1` 两版均 stderr 含 `conflicts`、退出 1，标记 EXPECTED_FAILURE。历史组合 FAIL 记录保留在执行日志 | push/PR CI 持续运行 `scripts/pi-cli-regression.mjs`；证据见 `docs/releases/v1.1-pi-knowledge-research-suite.json` |
-| 公共 `@gyoungwe/pi-*` 包 | **core/knowledge/research 修复版已公开发布** | `plugin-api@1.0.0`、`pi-core@0.1.0`、`pi-knowledge@0.1.1`、`pi-research@0.1.0`、`research-suite@0.1.2` 已发布；research-suite tarball 捆绑四个依赖，公开 registry metadata/shasum/integrity、干净克隆 build/check 和真实 CLI 回归通过；`research-suite@0.1.1` 已按“与 pi-core 冲突，无法启动”弃用 | analysis/evidence/connectors 按 v1.1 规划 |
-| 宿主 / 插件仓库边界 | **骨架、合同、公开发布和 pi-knowledge 删除已完成** | `../drone-plugins` 多包 workspace、manifest 检查、plugin-api migration gate、research-suite bundle gate；宿主不再保留 `packages/pi-knowledge` 兼容副本 | Desktop/Pi 只从已安装 npm 包加载；继续推进 v1.1 插件拆分 |
-| 菜单信息架构 | **UI-1～UI-7 已实现；与设计稿的视觉对照 NOT_RUN** | 新任务/知识库/技能与连接/主机、项目/最近和右栏数据投影已集成；尚未完成真实桌面截图 | 在可启动 GUI 会话中补做四视口截图和 loading/empty/error/disabled 状态走查 |
-| `DroneHostPort` 与通用能力协商 | **首版已实现** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、兼容性测试和迁移闸门 | 完成所有插件迁移与真实宿主加载验收 |
+| Pi 基线 | **research-suite 新版真实 CLI 通过；旧版冲突负例明确失败** | `drone-plugins` main `8389116` 的真实 CLI 回归在 Pi `1.1.0`/latest（1.3.0）独立 HOME 中执行 `pi install`、`/task-status`、`/drone-doctor` 和 `/drone-example`：`research-suite@0.1.3` 两版 PASS；已弃用 `0.1.1` 两版均 stderr 含 `conflicts`、退出 1，标记 EXPECTED_FAILURE。历史组合 FAIL 记录保留在执行日志 | push/PR CI 持续运行 `scripts/pi-cli-regression.mjs`；证据见 `docs/releases/v1.1-onboarding-commands.json` |
+| 公共 `@gyoungwe/pi-*` 包 | **v1.1 五节点均已公开发布并通过宿主门禁** | `plugin-api@1.0.0`、`pi-core@0.1.1`、`pi-knowledge@0.1.1`、`pi-research@0.1.0`、`pi-analysis@0.1.0`、`pi-evidence@0.1.0`、`pi-connectors@0.1.0`、`desktop-ui-pack@0.1.0`、`research-suite@0.1.3` 均有 registry tarball、完整性、干净安装/加载和对应宿主检查；`research-suite@0.1.1` 已按“与 pi-core 冲突，无法启动”弃用 | 继续由 `drone-plugins` CI 维护；不把历史 `NOT_RUN`/FAIL 记录改写成当前状态 |
+| 宿主 / 插件仓库边界 | **骨架、合同、公开发布和宿主安装闭环已完成** | `../drone-plugins` 多包 workspace 当前 `main=8389116`；manifest 检查、plugin-api migration gate、research-suite bundle gate、六包 clean install 与 Pi loader 均通过；宿主不再保留 `packages/pi-knowledge`、evidence、connectors、research-suite 临时副本 | Desktop/Pi 只从已安装 npm 包加载；A5-1～A5-4 兼容层清理是后续非发布阻塞项 |
+| 菜单信息架构 | **UI-1～UI-7 已实现；四视口视觉对照 PASS** | Chrome headless built renderer 对新任务、知识库、技能与连接、主机四视图完成 1440×900/1280×800 截图；4/4 PASS，报告见 `releases/visual/drone-visual-comparison.json` | 交互式 Electron 仍受当前 shell 的 NSApplication 启动限制；不把可选 GUI 观察当作构建门槛 |
+| `DroneHostPort` 与通用能力协商 | **v1.1 插件迁移与真实宿主加载已通过** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、兼容性测试、迁移闸门和所有 v1.1 包的 clean prefix/loader/宿主检查均通过 | A5-1～A5-4 继续处理 `.pi/lib` 兼容适配；不改变已发布包边界 |
 | LAN 最终移除 | **已完成** | LAN 源码、生成运行时、入口、manifest、测试和索引均已清理（`8d4ad219`、`9af99382`、`c99432d0`） | 不再列入验收矩阵或发布承诺 |
-| 真实桌面发布候选 | **本机构建产物验收已通过** | `check:desktop-artifact --strict` 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`；main `b4b15427` 的 artifact SHA-256 `7aad377f5f3ec87d42eb1a48358bcd81c0de0165016d1649cd192f8c5b19de46` | 交互式 Electron 在当前 shell 的 NSApplication 阶段 SIGABRT；按当前口径不作为构建产物门槛 |
+| 真实桌面发布候选 | **本机构建产物验收已通过** | `check:desktop-artifact --strict` 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`；main `a620a40e` 的 artifact SHA-256 `c5b43fcca159667365b9b662f793873f6df879c85fb13f7941bff83088ff69ce` | 交互式 Electron 在当前 shell 的 NSApplication 阶段 SIGABRT；按当前口径不作为构建产物门槛 |
 
 ## 3.2 插件化红线快速清单
 
@@ -388,18 +388,24 @@ revision / ETag / SHA-256：
 
 - LAN 清理已完成，源码、生成运行时、入口、manifest、测试与索引均无残留。
 - WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；Protocols.io 按计划保持只读。
-- `check:plugin-api --migration --lifecycle` 的本地 pack 安装→升级→回滚→卸载通过；`research-suite@0.1.2` 的 Pi `1.1.0` 与 latest `1.3.0` 真实 CLI 矩阵通过，旧版冲突负例为 EXPECTED_FAILURE。
+- `check:plugin-api --migration --lifecycle` 的本地 pack 安装→升级→回滚→卸载通过；`research-suite@0.1.3` 的 Pi `1.1.0` 与 latest `1.3.0` 真实 CLI 矩阵通过；并覆盖 `/drone-doctor` 与 `/drone-example`，旧版冲突负例为 EXPECTED_FAILURE。
 - 正式桌面门槛为本机构建产物：16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。交互式 Electron SIGABRT 不计为降级。
 - `MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均已通过隔离真实行为验收；Protocols.io 继续只读，不能把静态资源通过替代外部写入证据。
 
 ## 14. 2026-10-18 剩余门槛复跑
 
-`npm run check:remaining-gates` 已集中复跑四条门槛：MEM-01 的 1 个跨实例夹具、REDLINE-01 的 4 个违规夹具、MCP-01 与 CONN-01 的 2 个 SDK/只读连接器夹具全部通过。随后复跑 `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`npm run check:plugin-api`、`npm run check:pi-compat` 和 `npm run check:desktop-artifact -- --strict`，均通过；桌面本机构建产物为 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。Protocols.io 仍保持只读，未执行外部写入；npm scope 与公开发布继续单独待决，证书/正式签名不属于计划门槛。
+`npm run check:remaining-gates` 已集中复跑四条门槛：MEM-01 的 1 个跨实例夹具、REDLINE-01 的 4 个违规夹具、MCP-01 与 CONN-01 的 2 个 SDK/只读连接器夹具全部通过。随后复跑 `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、`npm run test:upgrade`、`npm run check:plugin-api`、`npm run check:pi-compat` 和 `npm run check:desktop-artifact -- --strict`，均通过；桌面本机构建产物为 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`。Protocols.io 仍保持只读，未执行外部写入；npm scope 与公开发布已完成，证书/正式签名不属于计划门槛。
 
 ## 15. 2026-10-18 Pi 真实模型兼容矩阵
 
-历史证据文件 `/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json` 中的组合 FAIL 仍保留作问题定位；当前证据见 `docs/releases/v1.1-pi-knowledge-research-suite.json` 和 `/private/tmp/drone-pi-cli-regression-final.json`。后者使用独立 `HOME` / `PI_CODING_AGENT_DIR`，真实安装公开 tarball 后执行 `pi -p --no-session /task-status`，不通过 DefaultResourceLoader 代替；新包两版 PASS，旧包两版以 `conflicts`/退出 1 为 EXPECTED_FAILURE，不含凭据或会话正文。
+历史证据文件 `/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json` 中的组合 FAIL 仍保留作问题定位；当前证据见 `docs/releases/v1.1-onboarding-commands.json`。该证据使用独立 `HOME` / `PI_CODING_AGENT_DIR`，真实安装公开 tarball 后执行 `pi -p --no-session /task-status`、`/drone-doctor` 和 `/drone-example`，不通过 DefaultResourceLoader 代替；新包两版 PASS，旧包两版以 `conflicts`/退出 1 为 EXPECTED_FAILURE，不含凭据或会话正文。
 
 ## 16. 2026-10-18 v0.33.0 无证书跨平台发布
 
 正式 Release run [`39066841689`](https://github.com/Gyoungwe/Drone/actions/runs/39066841689) 在 macOS arm64/x64 与 Windows x64 上完成 validate、Nature/Scientific skill pack 校验、unsigned Electron build、MCP 资源校验和资产上传；三平台 job 均成功，Release [`v0.33.0`](https://github.com/Gyoungwe/Drone/releases/tag/v0.33.0) 已从 draft 发布为正式版本。资产包含 `drone-mac-arm64.dmg/.zip`、`drone-mac-x64.dmg/.zip`、`drone-windows-x64.exe/.zip`、对应 blockmap 以及 `latest.yml` / `latest-mac.yml`。本版本不要求证书或正式签名；操作系统信任提示仍按无证书策略保留。
+
+## 17. 2026-10-18 最新计划核对
+
+本轮对照 `final-pluginization-plan.md`、`architecture-v2-tasks.md`、两个仓库 `main` 和公开 registry 后，现行 v1.1 发布门槛没有未关闭项：`MEM-01`、`SKILL-01`、`MCP-01`、`CONN-01`、`WRITE-01`、`REDLINE-01`、UI-01、Pi 1.1.0/latest、五个 v1.1 包、`/drone-doctor`、`/drone-example`、四视口视觉对照和本机构建产物均有 PASS 证据。`drone-plugins` 当前 `main=8389116`，Drone 当前 `main=a620a40e`。
+
+仍保留的计划项是 architecture-v2 的 A5-1～A5-4：`.pi/lib` 兼容运行时、worker/宿主适配和 legacy extension outputs 尚未完全移除。它们是明确的后续架构清理项，不是当前 v1.1 或无证书发布阻塞门槛；Protocols.io 继续只读，交互式 Electron 截图仍仅记录为环境观察。
