@@ -1,0 +1,33 @@
+{
+  "package": "@gyoungwe/pi-analysis",
+  "version": "0.1.0",
+  "sourceRepository": "Gyoungwe/drone-plugins",
+  "sourceBranch": "codex/pi-analysis-migration",
+  "sourceCommit": "baf9b3b",
+  "packageCommit": "2168576fa002e28ece1fd4a08e9390b8e00a65d2",
+  "manifest": {
+    "id": "drone-pi-analysis",
+    "entrypoint": "./dist/index.mjs",
+    "hosts": ["native-pi", "drone-desktop"]
+  },
+  "localTarball": {
+    "filename": "gyoungwe-pi-analysis-0.1.0.tgz",
+    "shasum": "144df91bdd85c5a781ffcab5f94eaa5dd1ac1437",
+    "integrity": "sha512-9uy6I/9MmQQWG4SNgFhM1Q2/VoCB5IC5Nf0XAvn9IhzepQyUzEUzeYf6HwgzaBcCzHMW+owez2EYEjfxqPzuhA==",
+    "entryCount": 10,
+    "cleanInstall": "PASS",
+    "piResourceLoaderDiscovery": "PASS",
+    "tools": ["analysis_list_adapters", "analysis_assess_readiness"]
+  },
+  "publicRegistry": {
+    "publish": "BLOCKED",
+    "publishAttempt": "npm EOTP: security-key/one-time authentication required",
+    "registryLookup": "NOT_RUN_AFTER_PUBLISH",
+    "publicTarball": "NOT_RUN"
+  },
+  "hostClosure": {
+    "installedPackageLoad": "NOT_RUN",
+    "planExecuteReviewDelivery": "NOT_RUN"
+  },
+  "credentials": false
+}
