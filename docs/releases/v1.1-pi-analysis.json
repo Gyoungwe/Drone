@@ -1,46 +1,47 @@
 {
-  "package": "@gyoungwe/pi-analysis",
-  "version": "0.1.0",
-  "sourceRepository": "Gyoungwe/drone-plugins",
-  "sourceBranch": "codex/pi-analysis-migration",
-  "sourceCommit": "baf9b3b",
-  "packageCommit": "2168576fa002e28ece1fd4a08e9390b8e00a65d2",
-  "manifest": {
-    "id": "drone-pi-analysis",
-    "entrypoint": "./dist/index.mjs",
-    "hosts": ["native-pi", "drone-desktop"]
-  },
-  "localTarball": {
-    "filename": "gyoungwe-pi-analysis-0.1.0.tgz",
-    "shasum": "144df91bdd85c5a781ffcab5f94eaa5dd1ac1437",
-    "integrity": "sha512-9uy6I/9MmQQWG4SNgFhM1Q2/VoCB5IC5Nf0XAvn9IhzepQyUzEUzeYf6HwgzaBcCzHMW+owez2EYEjfxqPzuhA==",
-    "entryCount": 10,
-    "cleanInstall": "PASS",
-    "piResourceLoaderDiscovery": "PASS",
-    "tools": ["analysis_list_adapters", "analysis_assess_readiness"]
-  },
-  "publicRegistry": {
-    "publish": "PASS",
-    "publishAttempt": "npm publish completed after npm security-key verification",
-    "registryLookup": {
-      "version": "0.1.0",
-      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-analysis/-/pi-analysis-0.1.0.tgz",
-      "shasum": "144df91bdd85c5a781ffcab5f94eaa5dd1ac1437",
-      "integrity": "sha512-9uy6I/9MmQQWG4SNgFhM1Q2/VoCB5IC5Nf0XAvn9IhzepQyUzEUzeYf6HwgzaBcCzHMW+owez2EYEjfxqPzuhA=="
-    },
-    "publicTarball": "PASS",
-    "cleanPrefixInstall": "PASS"
-  },
-  "hostClosure": {
-    "installedPackageLoad": "PASS",
-    "planExecuteReviewDelivery": "PASS",
-    "backendDependency": "@gyoungwe/pi-analysis@0.1.0",
-    "localSourceRemoved": "PASS",
-    "proofs": [
-      "npm run check:pi-compat -- --targets locked,latest",
-      "npm test --workspace @drone/backend -- test/analysis-task-controller.test.ts",
-      "npm run check:native-pi"
-    ]
-  },
-  "credentials": false
+	"package": "@gyoungwe/pi-analysis",
+	"version": "0.1.0",
+	"sourceRepository": "Gyoungwe/drone-plugins",
+	"sourceBranch": "codex/pi-analysis-migration",
+	"sourceCommit": "baf9b3b",
+	"packageCommit": "2168576fa002e28ece1fd4a08e9390b8e00a65d2",
+	"manifest": {
+		"id": "drone-pi-analysis",
+		"entrypoint": "./dist/index.mjs",
+		"hosts": ["native-pi", "drone-desktop"]
+	},
+	"localTarball": {
+		"filename": "gyoungwe-pi-analysis-0.1.0.tgz",
+		"shasum": "144df91bdd85c5a781ffcab5f94eaa5dd1ac1437",
+		"integrity": "sha512-9uy6I/9MmQQWG4SNgFhM1Q2/VoCB5IC5Nf0XAvn9IhzepQyUzEUzeYf6HwgzaBcCzHMW+owez2EYEjfxqPzuhA==",
+		"entryCount": 10,
+		"cleanInstall": "PASS",
+		"piResourceLoaderDiscovery": "PASS",
+		"tools": ["analysis_list_adapters", "analysis_assess_readiness"]
+	},
+	"publicRegistry": {
+		"publish": "PASS",
+		"publishAttempt": "npm publish completed after npm security-key verification",
+		"registryLookup": {
+			"version": "0.1.0",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-analysis/-/pi-analysis-0.1.0.tgz",
+			"shasum": "144df91bdd85c5a781ffcab5f94eaa5dd1ac1437",
+			"integrity": "sha512-9uy6I/9MmQQWG4SNgFhM1Q2/VoCB5IC5Nf0XAvn9IhzepQyUzEUzeYf6HwgzaBcCzHMW+owez2EYEjfxqPzuhA=="
+		},
+		"publicTarball": "PASS",
+		"cleanPrefixInstall": "PASS"
+	},
+	"hostClosure": {
+		"rootCommit": "4262252e",
+		"installedPackageLoad": "PASS",
+		"planExecuteReviewDelivery": "PASS",
+		"backendDependency": "@gyoungwe/pi-analysis@0.1.0",
+		"localSourceRemoved": "PASS",
+		"proofs": [
+			"npm run check:pi-compat -- --targets locked,latest",
+			"npm test --workspace @drone/backend -- test/analysis-task-controller.test.ts",
+			"npm run check:native-pi"
+		]
+	},
+	"credentials": false
 }
