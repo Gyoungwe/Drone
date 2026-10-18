@@ -211,7 +211,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## packages/pi-analysis — 原生 Pi 分析插件（V1.1-A 进行中）
 
-`packages/pi-analysis/` 承载无宿主副作用的 `AnalysisAdapter`、`AnalysisAdapterRegistry`、bulk RNA-seq 与 assembly readiness/review 合同，并注册 `analysis_list_adapters` 与 `analysis_assess_readiness`。它只依赖 `@gyoungwe/plugin-api`、Pi Extension API 和 Node 标准库；执行、授权、持久化、产物采集仍由 backend 组合根负责。`scripts/build-pi-analysis.mjs` 生成自包含 dist 并检查 Electron/backend/跨包相对导入；`npm run check:pi-analysis`、包内 registration smoke、`check:native-pi` 与 `check:pi-compat` 覆盖当前宿主临时分包边界。外部 `drone-plugins` 迁移、公开 tarball、完整 Pi 矩阵和宿主计划→执行→审查→交付 proof 在 V1.1-A 完成前仍未宣称通过。
+`packages/pi-analysis/` 承载无宿主副作用的 `AnalysisAdapter`、`AnalysisAdapterRegistry`、bulk RNA-seq 与 assembly readiness/review 合同，并注册 `analysis_list_adapters` 与 `analysis_assess_readiness`。它只依赖 `@gyoungwe/plugin-api`、Pi Extension API 和 Node 标准库；执行、授权、持久化、产物采集仍由 backend 组合根负责。当前 canonical 外部包已在 `../drone-plugins` 分支 `codex/pi-analysis-migration`（提交 `2168576`），Drone 内保留兼容 facade 与迁移期检查；外部 clean check 通过，但公开 registry tarball、安装后宿主闭环和计划→执行→审查→交付 proof 仍未宣称通过。
 
 ## packages/pi-evidence — 原生 Pi 证据插件（V1.1-E 进行中）
 
