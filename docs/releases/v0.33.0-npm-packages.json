@@ -1,0 +1,53 @@
+{
+	"generatedAt": "2026-10-18",
+	"registry": "https://registry.npmjs.org",
+	"scope": "@gyoungwe",
+	"packages": [
+		{
+			"name": "@gyoungwe/plugin-api",
+			"version": "1.0.0",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/plugin-api/-/plugin-api-1.0.0.tgz",
+			"integrity": "sha512-mFDNceFgFFgE4Xxy3/iJ8Z+u/4+6hj9LnVdFwt2ahOZ46YOa0mnGo2+Sq6lDxEDWj9akjhTlXyuUPgnxZTlHlw==",
+			"shasum": "10b87071000be1dd5a979c96ea33c81e482bf758"
+		},
+		{
+			"name": "@gyoungwe/pi-core",
+			"version": "0.1.0",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-core/-/pi-core-0.1.0.tgz",
+			"integrity": "sha512-Ijhvn3O2ykDlfAClph/GpL7hR/i1D3GZYQyt9BUv5s77VvKb6Y1lVBJhsrbUj2fINvoizx5O0Um1DUM4SOJ49Q==",
+			"shasum": "c69d33f3d4ffc48c1926988cf30ddaace18de50d"
+		},
+		{
+			"name": "@gyoungwe/pi-knowledge",
+			"version": "0.1.0",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-knowledge/-/pi-knowledge-0.1.0.tgz",
+			"integrity": "sha512-jELFDnTGb0iC2iUGtinrZ54gehTVZi++usxybRuHXAzcRFIWgilXTL6+qZeucFwIU/RgV7tw5Sd25zYy20P7NA==",
+			"shasum": "562d624fc36e2333bde1632b0b06d2cc1e267a60"
+		},
+		{
+			"name": "@gyoungwe/pi-research",
+			"version": "0.1.0",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/pi-research/-/pi-research-0.1.0.tgz",
+			"integrity": "sha512-No+mnaFsppHrciazuspkcMqKv76Oqh7eg5A7abtpJjEkXwg0Isyis90RzUXEqRS035L9GUiPvhxhZK6JAoTKSA==",
+			"shasum": "ac3c20d6a601b76be1ba39abf87267f391c0d490"
+		},
+		{
+			"name": "@gyoungwe/research-suite",
+			"version": "0.1.1",
+			"tarball": "https://registry.npmjs.org/@gyoungwe/research-suite/-/research-suite-0.1.1.tgz",
+			"integrity": "sha512-hL71sTzZr/Z3GqsOVRC779pXfTweIAIrDqiCSgyOon5s5m7+Spncx647bPvriKJS7cvBVv4YCHqrL5BAFcIsZQ==",
+			"shasum": "98ad9c83ad8e0c2a93fdefddbbbf5d2f19bf85ba"
+		}
+	],
+	"verification": {
+		"registryMetadata": "PASS",
+		"researchSuitePublicTarball": "PASS",
+		"researchSuiteCleanInstall": "PASS",
+		"researchSuiteBundledDependencies": [
+			"@gyoungwe/pi-core",
+			"@gyoungwe/pi-knowledge",
+			"@gyoungwe/pi-research"
+		],
+		"notes": "research-suite@0.1.1 supersedes 0.1.0 after public-tarball verification found the first aggregate missing its bundled dependencies."
+	}
+}

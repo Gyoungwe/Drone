@@ -9,6 +9,11 @@ import { promisify } from "node:util";
 
 const root = resolve(import.meta.dirname, "..");
 const packageRoot = join(root, "packages/research-suite");
+const packageDirs = {
+	"pi-core": join(root, "packages/pi-core"),
+	"pi-knowledge": join(root, "node_modules/@gyoungwe/pi-knowledge"),
+	"pi-research": join(root, "packages/pi-research"),
+};
 const exec = promisify(execFile);
 const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
 assert.equal(manifest.name, "@gyoungwe/research-suite");
@@ -28,9 +33,11 @@ assert.deepEqual(manifest.pi.extensions, [
 	"./node_modules/@gyoungwe/pi-knowledge/dist/index.mjs",
 	"./node_modules/@gyoungwe/pi-research/dist/index.mjs",
 ]);
-for (const path of ["README.md", "prompts/research-suite.md"]) await stat(join(packageRoot, path));
+for (const path of ["README.md", "plugin.manifest.json", "prompts/research-suite.md"]) {
+	await stat(join(packageRoot, path));
+}
 for (const packageName of ["pi-core", "pi-knowledge", "pi-research"]) {
-	const packageDir = join(root, "packages", packageName);
+	const packageDir = packageDirs[packageName];
 	await stat(join(packageDir, "dist/index.mjs"));
 	await stat(join(packageDir, "package.json"));
 }
@@ -54,11 +61,10 @@ try {
 		await mkdir(destination, { recursive: true });
 		const packed = JSON.parse(
 			(
-				await exec(
-					"npm",
-					["pack", `./packages/${packageName}`, "--json", "--pack-destination", destination],
-					{ cwd: root, env: npmEnv },
-				)
+				await exec("npm", ["pack", packageDirs[packageName], "--json", "--pack-destination", destination], {
+					cwd: root,
+					env: npmEnv,
+				})
 			).stdout,
 		);
 		packageTarballs.set(packageName, join(destination, packed[0].filename));
@@ -67,6 +73,10 @@ try {
 	await mkdir(join(stagedPackage, "prompts"), { recursive: true });
 	await writeFile(join(stagedPackage, "package.json"), await readFile(join(packageRoot, "package.json")));
 	await writeFile(join(stagedPackage, "README.md"), await readFile(join(packageRoot, "README.md")));
+	await writeFile(
+		join(stagedPackage, "plugin.manifest.json"),
+		await readFile(join(packageRoot, "plugin.manifest.json")),
+	);
 	await writeFile(
 		join(stagedPackage, "prompts/research-suite.md"),
 		await readFile(join(packageRoot, "prompts/research-suite.md")),

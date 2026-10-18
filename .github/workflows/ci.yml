@@ -115,11 +115,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Build pi-knowledge package
-        run: npm run build:pi-knowledge
-      - name: Check pi-knowledge package artifacts
-        run: npm run check:pi-knowledge
-      - name: Typecheck pi-knowledge package
-        run: npm run typecheck -w @gyoungwe/pi-knowledge
       - name: "Fixture smoke (external Pi CLI: NOT_RUN)"
         run: npm run smoke:pi-knowledge -- --fixture-only

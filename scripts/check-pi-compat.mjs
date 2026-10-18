@@ -29,6 +29,11 @@ const LOCKED_HOST_FAMILY = [
 	"pi-tui",
 ];
 const PLUGIN_PACKAGES = ["pi-core", "pi-knowledge", "pi-research"];
+const PLUGIN_DIST = {
+	"pi-core": resolve(ROOT, "packages/pi-core/dist/index.mjs"),
+	"pi-knowledge": resolve(ROOT, "node_modules/@gyoungwe/pi-knowledge/dist/index.mjs"),
+	"pi-research": resolve(ROOT, "packages/pi-research/dist/index.mjs"),
+};
 
 function fail(message) {
 	throw new Error(`[check:pi-compat] ${message}`);
@@ -170,7 +175,7 @@ function checkTarget(target, version, required) {
 		}
 		const packages = [];
 		for (const packageName of PLUGIN_PACKAGES) {
-			const extensionPath = resolve(ROOT, `packages/${packageName}/dist/index.mjs`);
+			const extensionPath = PLUGIN_DIST[packageName];
 			assert(
 				existsSync(extensionPath),
 				`${packageName} dist/index.mjs is missing; build packages before the matrix`,

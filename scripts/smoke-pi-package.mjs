@@ -16,8 +16,10 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const packageDir = resolve(process.argv[2] || "packages/pi-knowledge");
-const fixtureOnly = process.argv.includes("--fixture-only");
+const smokeArgs = process.argv.slice(2);
+const packageArg = smokeArgs.find((arg) => !arg.startsWith("--"));
+const packageDir = resolve(packageArg || "node_modules/@gyoungwe/pi-knowledge");
+const fixtureOnly = smokeArgs.includes("--fixture-only");
 const packageJson = JSON.parse(await readFile(join(packageDir, "package.json"), "utf8"));
 
 function versionParts(value) {

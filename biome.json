@@ -161,22 +161,6 @@
 			"linter": {
 				"enabled": false
 			}
-		},
-		{
-			"includes": ["packages/pi-knowledge/lib/knowledge/runtime/**/*.mjs"],
-			"formatter": {
-				"enabled": false
-			},
-			"linter": {
-				"enabled": false
-			},
-			"assist": {
-				"actions": {
-					"source": {
-						"organizeImports": "off"
-					}
-				}
-			}
 		}
 	],
 	"assist": {
