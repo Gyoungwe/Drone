@@ -34,7 +34,8 @@ test("extension build manifest verifies generated output and detects drift", asy
 	assert.match(researchLoopBundle, /packages\/research\/src\/receipt-journal\.ts/);
 	assert.match(researchLoopBundle, /packages\/research\/src\/source-archive\.ts/);
 	assert.match(zoteroBundle, /packages\/research\/src\/zotero-(?:write|reconcile|setup)-runtime\.ts/);
-	for (const bundle of researchBundles) assert.doesNotMatch(bundle, /\.pi\/lib\/(?:research|source-archive|zotero)/);
+	for (const bundle of researchBundles)
+		assert.doesNotMatch(bundle, /\.pi\/lib\/(?:research|source-archive|zotero)/);
 	await appendFile(join(outputDir, "subagent-research.mjs"), "\n// intentional drift\n");
 
 	await assert.rejects(
