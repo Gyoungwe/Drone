@@ -75,13 +75,22 @@ function packageVersion(): { version: string; source: string } {
 function snapshot(pi: any): { tools: string[]; commands: string[] } {
 	const tools: string[] =
 		typeof pi?.getAllTools === "function"
-			? pi.getAllTools().map((tool: { name?: unknown }) => String(tool?.name || "")).filter(Boolean)
+			? pi
+					.getAllTools()
+					.map((tool: { name?: unknown }) => String(tool?.name || ""))
+					.filter(Boolean)
 			: typeof pi?.getActiveTools === "function"
-				? pi.getActiveTools().map((name: unknown) => String(name)).filter(Boolean)
+				? pi
+						.getActiveTools()
+						.map((name: unknown) => String(name))
+						.filter(Boolean)
 				: [];
 	const commands: string[] =
 		typeof pi?.getCommands === "function"
-			? pi.getCommands().map((command: { name?: unknown }) => String(command?.name || "")).filter(Boolean)
+			? pi
+					.getCommands()
+					.map((command: { name?: unknown }) => String(command?.name || ""))
+					.filter(Boolean)
 			: [];
 	return { tools: [...new Set(tools)].sort(), commands: [...new Set(commands)].sort() };
 }
@@ -92,8 +101,13 @@ export function buildDoctorReport(
 ): DoctorReport {
 	const current = snapshot(pi);
 	const missingTools = CORE_TOOLS.filter((name) => !current.tools.includes(name));
-	const missingCommands = ["drone-doctor", "drone-example"].filter((name) => !current.commands.includes(name));
-	const resolved = options.hostVersion === undefined ? packageVersion() : { version: options.hostVersion, source: "host-contract" };
+	const missingCommands = ["drone-doctor", "drone-example"].filter(
+		(name) => !current.commands.includes(name),
+	);
+	const resolved =
+		options.hostVersion === undefined
+			? packageVersion()
+			: { version: options.hostVersion, source: "host-contract" };
 	const hostKind = options.hostKind || "native-pi";
 	const checks: DoctorReport["checks"] = [
 		{
@@ -105,13 +119,17 @@ export function buildDoctorReport(
 		{
 			id: "drone-commands",
 			status: missingCommands.length ? "blocked" : "pass",
-			detail: missingCommands.length ? "Drone onboarding commands are missing" : "doctor and example commands are registered",
+			detail: missingCommands.length
+				? "Drone onboarding commands are missing"
+				: "doctor and example commands are registered",
 			...(missingCommands.length ? { missing: missingCommands } : {}),
 		},
 		{
 			id: "pi-host-version",
 			status: resolved.version ? "pass" : "unknown",
-			detail: resolved.version ? `resolved Pi host ${resolved.version}` : "Pi host version is not exposed by this host",
+			detail: resolved.version
+				? `resolved Pi host ${resolved.version}`
+				: "Pi host version is not exposed by this host",
 		},
 	];
 	const blocked = checks.some((check) => check.status === "blocked");
@@ -128,11 +146,21 @@ export function buildDoctorReport(
 	};
 }
 
-export function buildExampleReport(pi: any, mode: ExampleReport["mode"] = "preview", question?: string): ExampleReport {
+export function buildExampleReport(
+	pi: any,
+	mode: ExampleReport["mode"] = "preview",
+	question?: string,
+): ExampleReport {
 	const current = snapshot(pi);
 	const missingTools = EXAMPLE_TOOLS.filter((name) => !current.tools.includes(name));
 	const hasQuestion = Boolean(question?.trim());
-	const status: ExampleReport["status"] = missingTools.length ? "blocked" : mode === "run" && hasQuestion ? "started" : hasQuestion ? "ready" : "needs-data";
+	const status: ExampleReport["status"] = missingTools.length
+		? "blocked"
+		: mode === "run" && hasQuestion
+			? "started"
+			: hasQuestion
+				? "ready"
+				: "needs-data";
 	return {
 		schemaVersion: DRONE_COMMAND_SCHEMA_VERSION,
 		command: "drone-example",
@@ -160,7 +188,10 @@ function emitReport(report: DoctorReport | ExampleReport, ctx: ExtensionCommandC
 }
 
 /** Register the stable onboarding commands used by native Pi and Desktop. */
-export function registerDroneCommands(pi: ExtensionAPI, options: { hostKind?: DoctorReport["host"]["kind"] } = {}): void {
+export function registerDroneCommands(
+	pi: ExtensionAPI,
+	options: { hostKind?: DoctorReport["host"]["kind"] } = {},
+): void {
 	pi.registerCommand("drone-doctor", {
 		description: "Check the resolved Pi host, core tools and Drone command contract",
 		handler: async (_args, ctx) => emitReport(buildDoctorReport(pi, options), ctx),
