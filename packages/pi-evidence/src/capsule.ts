@@ -104,7 +104,18 @@ export function createEvidenceCapsule(
 
 export function serializeCapsule(capsule: EvidenceCapsule): string {
 	validateCapsule(capsule);
-	return canonicalJson(capsule);
+	return canonicalJson(canonicalCapsule(capsule));
+}
+
+function canonicalCapsule(capsule: EvidenceCapsule): EvidenceCapsule {
+	if (!capsule.publication) return capsule;
+	return {
+		...capsule,
+		publication: {
+			...capsule.publication,
+			omittedPaths: [...capsule.publication.omittedPaths].sort(),
+		},
+	};
 }
 
 export function parseCapsule(serialized: string): EvidenceCapsule {
@@ -126,7 +137,8 @@ export function validateCapsuleImport(serialized: string | EvidenceCapsule): Evi
 }
 
 export function capsuleDigest(capsule: EvidenceCapsule): string {
-	return digestJson(capsule);
+	validateCapsule(capsule);
+	return digestJson(canonicalCapsule(capsule));
 }
 
 export function capsuleBytes(capsule: EvidenceCapsule): Uint8Array {
