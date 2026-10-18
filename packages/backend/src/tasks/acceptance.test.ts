@@ -5,6 +5,7 @@ import {
 	ACCEPTANCE_VERIFIER_REQUEST_EVENT,
 	bindAcceptanceVerifierEvents,
 } from "./acceptance";
+import { readAcceptanceVerifier } from "./package-runtime";
 
 function eventBus() {
 	const listeners = new Map<string, ((payload: unknown) => void)[]>();
@@ -22,7 +23,7 @@ function eventBus() {
 }
 
 describe("acceptance verifier event bridge", () => {
-	it("requests a replay and stores only version-one registrations in the runtime", async () => {
+	it("requests a replay and stores version-one registrations in the package runtime", async () => {
 		const runtime = createDroneRuntime();
 		const events = eventBus();
 		bindAcceptanceVerifierEvents(events, runtime);
@@ -37,9 +38,12 @@ describe("acceptance verifier event bridge", () => {
 			kind: "wiki_review",
 			definition: { evidenceKind: "wiki-applied" },
 		});
-		expect([...(runtime.tasks.acceptance?.verifiers?.entries() ?? [])]).toEqual([
-			["wiki_review", { evidenceKind: "wiki-applied" }],
-		]);
+		const verifier = readAcceptanceVerifier(runtime, "wiki_review") as { kind?: string; evidenceKind?: string };
+		expect(verifier).toMatchObject({
+			kind: "wiki_review",
+			evidenceKind: "wiki-applied",
+		});
+		expect(runtime.tasks.acceptance?.verifiers?.get("wiki_review")).toBe(verifier);
 		await runtime.dispose();
 	});
 });

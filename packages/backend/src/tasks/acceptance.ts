@@ -1,4 +1,5 @@
 import type { DroneRuntime } from "@drone/shared";
+import { registerAcceptanceVerifierInRuntime } from "./package-runtime";
 
 /** Versioned event names shared with the first-party .pi acceptance registry. */
 export const ACCEPTANCE_VERIFIER_EVENT = "drone:acceptance-verifier/v1" as const;
@@ -12,24 +13,24 @@ export interface VersionedEventBus {
 type Registration = {
 	version: 1;
 	kind: string;
-	definition: unknown;
+	definition: Record<string, unknown>;
 };
 
 function acceptRegistration(runtime: DroneRuntime, payload: unknown): void {
 	if (!payload || typeof payload !== "object") return;
 	const registration = payload as Partial<Registration>;
-	if (registration.version !== 1 || typeof registration.kind !== "string" || !registration.kind) return;
-	let acceptance = runtime.tasks.acceptance;
-	if (!acceptance) {
-		acceptance = { verifiers: new Map() };
-		runtime.tasks.acceptance = acceptance;
-	}
-	let verifiers = acceptance.verifiers;
-	if (!verifiers) {
-		verifiers = new Map();
-		acceptance.verifiers = verifiers;
-	}
-	verifiers.set(registration.kind, registration.definition);
+	if (
+		registration.version !== 1 ||
+		typeof registration.kind !== "string" ||
+		!registration.kind ||
+		!registration.definition ||
+		typeof registration.definition !== "object"
+	)
+		return;
+	// The package runtime owns the verifier registry. Scope registration to the
+	// host runtime so backend collection and first-party .pi extensions resolve
+	// the same per-host registry instead of maintaining a second raw Map.
+	registerAcceptanceVerifierInRuntime(runtime, registration.kind, registration.definition);
 }
 
 /**
