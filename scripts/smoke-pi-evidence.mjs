@@ -52,6 +52,23 @@ try {
 	]);
 	assert.equal(tools.size, 3);
 	assert([...tools.values()].every((tool) => tool.drone?.readOnly === true));
+	const result = await tools.get("evidence_validate_manifest").execute("smoke", {
+		manifest: {
+			version: 1,
+			entries: [
+				{
+					artifactId: "smoke",
+					versionId: "smoke-v1",
+					path: "smoke.txt",
+					bytes: 5,
+					sha256: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+					role: "input",
+					parentVersionIds: [],
+				},
+			],
+		},
+	});
+	assert.equal(result.details.valid, true);
 	console.log(`pi-evidence clean tarball install smoke passed (${tools.size} read-only tools)`);
 } finally {
 	rmSync(temp, { recursive: true, force: true });
