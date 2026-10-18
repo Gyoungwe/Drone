@@ -65,8 +65,8 @@
 			"output": "source-archive.mjs",
 			"status": "generated",
 			"sourceSha256": "ed5551afdde35a360f78bfeb3be7a06891cf0268de5559ab509873ce6f45622d",
-			"inputsSha256": "9fbd20c186c701939425b8362d5dbf0f1809ea501b08dd2f859eed085d327661",
-			"outputSha256": "351627ab0e87d62a8f37f5706500a768d3ed33d628cdf56290c4c12db13ed6e1"
+			"inputsSha256": "8f9b35ecd907095f8e8a6e4ab5a5846076bf180c50da69d26b8412cbae2ecd82",
+			"outputSha256": "bd84fa037ec8b9e7da6c684e805e17f99b5434f399fdd70cea0c1db9c5bbb74b"
 		},
 		"subagent-mcp-readonly": {
 			"source": "subagent-mcp-readonly.ts",

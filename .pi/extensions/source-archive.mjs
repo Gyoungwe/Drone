@@ -17670,10 +17670,10 @@ async function inspectSetupDirectory(path, { maxEntries = 120, maxDepth = 2 } = 
   };
 }
 async function inspectObsidianSetup({ cwd, vault = null }) {
-  const workspace = await inspectSetupDirectory(cwd);
-  if (!workspace.exists)
+  const workspace2 = await inspectSetupDirectory(cwd);
+  if (!workspace2.exists)
     throw new Error(`Project directory does not exist: ${cwd}`);
-  return { workspace, vault: vault ? await inspectSetupDirectory(resolveSetupVault(vault, cwd)) : null };
+  return { workspace: workspace2, vault: vault ? await inspectSetupDirectory(resolveSetupVault(vault, cwd)) : null };
 }
 
 // packages/extensions/src/internal/obsidian-workbench.ts
@@ -19843,14 +19843,17 @@ function exclusive(key, work) {
     if (exclusiveTails.get(key) === current) exclusiveTails.delete(key);
   });
 }
+async function workspace(cwd) {
+  return await loadWorkspaceConfig(cwd);
+}
 var archivePorts = {
-  workspace: async (cwd) => await loadWorkspaceConfig(cwd),
-  publishSourceNote,
+  workspace,
+  publishSourceNote: (input) => publishSourceNote(input),
   exclusive,
-  loadInstitutionalConfig,
+  loadInstitutionalConfig: async () => ({ ...await loadInstitutionalConfig() }),
   isElectronAvailable,
   institutionalFetch,
-  buildProxiedUrl
+  buildProxiedUrl: (url, template) => buildProxiedUrl(url, template) || ""
 };
 var contained = (root, target) => {
   const rel = relative11(root, target);
@@ -19887,21 +19890,23 @@ async function writeJournal(file, journal) {
 `);
   await rename9(temporary, file);
 }
-var operations = createLiteratureOperations({
+var literaturePorts = {
   resolveRunJournal,
   readJournal,
   writeJournal,
   exclusive: (file, work) => exclusive(file, work),
-  verify: verifyLiteratureReceipt
-});
+  verify: async (input) => await verifyLiteratureReceipt(input)
+};
+var operations = createLiteratureOperations(literaturePorts);
 var reconcileLiteratureOperation = operations.reconcileLiteratureOperation;
 var recordZoteroWrite = operations.recordZoteroWrite;
-var loop = createResearchLoop({
-  workspace: async (cwd) => await loadWorkspaceConfig(cwd),
+var loopPorts = {
+  workspace,
   verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input),
   exclusive,
   sourceStatus: async ({ cwd, run_dir, verify }) => sourceStatus({ cwd, run_dir, verify }, archivePorts)
-});
+};
+var loop = createResearchLoop(loopPorts);
 
 // packages/extensions/src/internal/runtime.ts
 import { AsyncLocalStorage as AsyncLocalStorage3 } from "node:async_hooks";
