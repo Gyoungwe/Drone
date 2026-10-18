@@ -1,5 +1,8 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { Worker } from "node:worker_threads";
+import { configureKnowledgeWorker } from "@drone/knowledge/runtime-host";
 import * as knowledgeUiService from "@drone/knowledge/ui-service";
 import * as knowledgeUiState from "@drone/knowledge/ui-state";
 import * as knowledgeWikiModelReview from "@drone/knowledge/wiki-model-review";
@@ -8,6 +11,32 @@ import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
 import { KnowledgeWebDavService } from "./webdav";
 
 type Handler = (event: KnowledgeUiEvent) => void;
+
+/**
+ * Backend UI calls can construct KnowledgeService before a Pi extension is
+ * loaded. Install the same generated worker seam used by the extension entry
+ * so review and graph IPC work in both development and packaged hosts.
+ */
+export function configureBackendKnowledgeWorker(): void {
+	configureKnowledgeWorker((_url, options) => {
+		const workerPath = resolveBackendKnowledgeWorkerPath();
+		return new Worker(pathToFileURL(workerPath), options as any);
+	});
+}
+
+export function resolveBackendKnowledgeWorkerPath(root = process.env.DRONE_RESEARCH_WORKBENCH_ROOT): string {
+	const workbenchRoot = root ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
+	const workerPath = join(workbenchRoot, "extensions", "knowledge-worker.mjs");
+	if (!existsSync(workerPath))
+		throw new Error(`Knowledge worker resource is missing from the host: ${workerPath}`);
+	return workerPath;
+}
+
+// Session/UI services are imported before the host loads its extension list.
+// Configure lazily through the path above; the environment root is resolved
+// when the first worker is created, after Electron has selected dev/packaged
+// resources.
+configureBackendKnowledgeWorker();
 
 /** Host-facing knowledge management boundary; keeps IPC adapters independent of implementation state. */
 export interface KnowledgeUiServicePort {

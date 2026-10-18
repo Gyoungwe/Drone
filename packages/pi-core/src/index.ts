@@ -148,6 +148,7 @@ export {
 	DRONE_COMMAND_SCHEMA_VERSION,
 	PI_CORE_PACKAGE_VERSION,
 	PI_HOST_RANGE,
+	parseExampleArgs,
 	registerDroneCommands,
 } from "./drone-commands";
 export { forgetMemory, memoryIndexPrompt, writeMemory } from "./memory";

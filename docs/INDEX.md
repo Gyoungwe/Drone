@@ -28,6 +28,7 @@
 A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收敛摘要](a5-impact-summary.md)。
 本轮 A5 生产切片的提交、验收与剩余兼容层见 [A5 迁移验收记录](releases/a5-migration-2026-10-18.json)。
 插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。双仓库维护、架构红线和 npm 发版执行规约见 [drone-maintenance skill](../.agents/skills/drone-maintenance/SKILL.md)。
+两份计划的旧执行日志已按 30 行上限归档到 [`docs/archive/`](archive/)。
 插件化前端交接、宿主/插件仓库边界和 UI 验收顺序见 [pluginization-ui-handoff.md](pluginization-ui-handoff.md)；设计稿源文件见 [Drone 插件化界面.html](design/plugin-ui/Drone%20插件化界面.html)，构建产物四视图视觉对照由 [`scripts/check-visual-design-comparison.mjs`](../scripts/check-visual-design-comparison.mjs) 生成 [视觉证据](releases/visual/drone-visual-comparison.json)；资源搜索连接器设计见 [resource-search-connectors.md](resource-search-connectors.md)；科研工作台 v3 规划见 [scientific-workbench-v3-plan.md](scientific-workbench-v3-plan.md)。
 
 `.pi/tsconfig.json` 对生成的 `.pi/extensions/*.mjs` 保持可检查的资源边界；知识、任务、研究运行时由领域包 TypeScript 源码和 checked-in package-owned artifacts 负责，根 `npm run typecheck` 会串接 `npm run check:pi`。`.pi/lib` 兼容树已删除。
@@ -51,8 +52,9 @@ v0.26.1 的验证命令、生成物检查、资产清单和“先验证再建标
 v0.33.0 无证书跨平台资产、发布 run 和 SHA-256 清单见 [发布说明](releases/v0.33.0.md) 与 [资产校验清单](releases/v0.33.0-assets.sha256)。
 
 v0.33.1 公开插件宿主收口与无证书补丁发布说明见 [发布说明](releases/v0.33.1.md)。
+v0.33.2 知识库 worker 修复、onboarding 状态和主线指标见 [发布说明](releases/v0.33.2.md)；离线主线评估证据见 [`docs/evals/mainline-2026-10-19.json`](evals/mainline-2026-10-19.json)，本机 arm64/x64 正式资源验收见 [`v0.33.2-knowledge-package.json`](releases/v0.33.2-knowledge-package.json)。
 
-首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`pi-core@0.1.1`、`research-suite@0.1.3` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
+首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
 
 v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
@@ -103,6 +105,7 @@ packages/
 | `scripts/check-local-desktop-artifact.mjs` | 本机构建产物验收：不启动 Electron，核对 main/preload/renderer 产物、四视口路由标记、插件启停合同、skill/MCP/connector/memory/结果红线资源；`--strict` 另检查已 stage 的 MCP 资源 |
 | `scripts/check-ui-skill-acceptance.mjs` | UI-01 与 SKILL-01 的隔离真实宿主验收：构建并执行内置 UI 插件 bundle，验证 renderer contribution/禁用/重载/持久化；用 pinned Pi SDK + offline faux provider 验证真实 `/skill:` invocation 与禁用反证；输出无凭据 JSON 摘要 |
 | `scripts/check-remaining-gates.mjs` | 收口 `MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 的隔离跨实例/SDK/只读连接器/领域门禁验收；输出无凭据 JSON 摘要 |
+| `scripts/eval-mainline.mjs` / `fixtures/mainline-questions.json` | 固定 20 题×两轮的本地回答率评估；使用离线 faux provider，统计本地命中、联网次数、引用可解析率和耗时，写入 `docs/evals/mainline-<日期>.json` |
 | `packages/backend/test/mem-gate.test.mjs` | `MEM-01` 隔离跨实例 topic memory：`DRONE-MEM-001`、来源回读、stale/changed |
 | `packages/backend/test/mcp-connector-gates.test.ts` | `MCP-01` 本地 stdio marker 的启用/真实调用/关闭重载，以及 `CONN-01` 只读唯一词 source receipt 与关闭重试 |
 | `packages/backend/test/skill-acceptance-sdk.test.mjs` | `SKILL-01` 真实 Pi SDK + offline faux provider 的 `/skill:research-workflow` invocation、visible skill、provider call 和 `disable-model-invocation` 自动选择反证；显式 slash 的 manual-only 语义 |
@@ -229,7 +232,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## `@gyoungwe/research-suite` — 外部原生 Pi 聚合包（PR-7）
 
-源码权威位置是绑定的 `../drone-plugins/packages/research-suite/`；宿主仓库不再保留该包、workspace lock 条目或聚合包专属检查脚本。当前公开版本为 `@gyoungwe/research-suite@0.1.3`，捆绑 `plugin-api/pi-core/pi-knowledge/pi-research`；旧 `0.1.1` 已标记“与 pi-core 冲突，无法启动”。插件仓库负责 manifest、`bundleDependencies`、tarball、安装 smoke 和 Pi CLI 回归；宿主只通过已发布包的兼容矩阵和公开插件宿主检查验证加载结果。`/drone-doctor` 和 `/drone-example` 由 `pi-core@0.1.1` 提供，真实矩阵证据见 [v1.1 onboarding commands](releases/v1.1-onboarding-commands.json)。
+源码权威位置是绑定的 `../drone-plugins/packages/research-suite/`；宿主仓库不再保留该包、workspace lock 条目或聚合包专属检查脚本。当前公开版本为 `@gyoungwe/research-suite@0.1.5`，捆绑 `plugin-api/pi-core/pi-knowledge/pi-research`；旧 `0.1.1` 已标记“与 pi-core 冲突，无法启动”。插件仓库负责 manifest、`bundleDependencies`、tarball、安装 smoke 和 Pi CLI 回归；宿主只通过已发布包的兼容矩阵和公开插件宿主检查验证加载结果。`/drone-doctor` 和 `/drone-example` 由 `pi-core@0.1.3` 提供，真实矩阵证据见 [v0.33.2 Pi CLI](releases/v0.33.2-pi-cli-regression.json)。
 
 ## packages/backend — pi SDK 适配层
 

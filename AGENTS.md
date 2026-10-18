@@ -40,3 +40,9 @@ npm run build
 ## 完成标准
 
 提交前应运行与改动相关的检查；完整 PR 的完成标准是 `npm run lint && npm run typecheck && npm test && npm run build && npm run check:arch` 全部通过。纯结构改动与行为改动分开提交，文件职责或位置变化同步更新 `docs/INDEX.md`，新坑记录到 `docs/PITFALLS.md`。
+
+## 计划与验收红线
+
+- 计划中标为“暂缓”或“按用户要求暂不实施”的条目不得修改，也不得为其新增基础代码；当前 B8 云端协作属于此类条目。
+- 执行日志超过 30 行时，先将旧记录归档到 `docs/archive/`，正文只保留最近 30 行并附归档链接。
+- 只有真实启动的会话或真实安装包提供的证据才能标记为 PASS；仅 loader 单独加载、fixture 或开发版截图不得作为最终 PASS。

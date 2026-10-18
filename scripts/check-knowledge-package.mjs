@@ -1,6 +1,7 @@
 // Offline resource/runtime smoke; run with Node or ELECTRON_RUN_AS_NODE=1 Electron.
 
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -21,8 +22,16 @@ try {
 		: config.extraResources.filter((item) => item.to.startsWith("research-workbench/"))) {
 		await cp(resolve("packages/desktop", item.from), join(root, item.to), { recursive: true });
 	}
-	const resources = suppliedResources || join(root, "research-workbench"),
-		manifest = JSON.parse(await readFile(join(resources, "extensions/workbench-manifest.json"), "utf8")),
+	const resources = suppliedResources || join(root, "research-workbench");
+	assert(
+		existsSync(join(resources, "extensions/knowledge-worker.mjs")),
+		"Packaged research-workbench is missing extensions/knowledge-worker.mjs",
+	);
+	assert(
+		existsSync(join(resources, "extensions/.knowledge-worker-manifest.json")),
+		"Packaged research-workbench is missing the knowledge worker manifest",
+	);
+	const manifest = JSON.parse(await readFile(join(resources, "extensions/workbench-manifest.json"), "utf8")),
 		a = join(root, "A"),
 		b = join(root, "B"),
 		agentDir = join(root, "agent");
