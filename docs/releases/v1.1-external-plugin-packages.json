@@ -1,0 +1,60 @@
+{
+	"sourceRepository": "Gyoungwe/drone-plugins",
+	"sourceBranch": "codex/pi-analysis-migration",
+	"sourceCommit": "222936c",
+	"checks": {
+		"command": "npm run check",
+		"status": "PASS",
+		"smokeInstall": "PASS",
+		"packages": [
+			"@gyoungwe/pi-knowledge",
+			"@gyoungwe/pi-analysis",
+			"@gyoungwe/pi-evidence",
+			"@gyoungwe/pi-connectors",
+			"@gyoungwe/desktop-ui-pack",
+			"@gyoungwe/research-suite"
+		],
+		"piEvidenceTools": ["evidence_validate_manifest", "evidence_validate_capsule", "evidence_verify_replay"],
+		"piConnectorTools": ["connector_list", "connector_get"],
+		"desktopUiPlugin": "drone-research-ui"
+	},
+	"localTarballs": {
+		"@gyoungwe/pi-evidence": {
+			"version": "0.1.0",
+			"filename": "gyoungwe-pi-evidence-0.1.0.tgz",
+			"shasum": "4826a8f5663be2af382cecc227254a547d5f44af",
+			"integrity": "sha512-/yZEXNPnXvx2AH6jmJFaomj4mpOvTSF+I8GaDZXXk+T2farPjRD+PPUgMV2rQy0DiZ8wDsQy08l8O800a8I5Cw==",
+			"cleanInstall": "PASS",
+			"piResourceLoaderDiscovery": "PASS"
+		},
+		"@gyoungwe/pi-connectors": {
+			"version": "0.1.0",
+			"filename": "gyoungwe-pi-connectors-0.1.0.tgz",
+			"shasum": "1629eb468f607f7be969d347cd03aff2dc0d03e3",
+			"integrity": "sha512-mly3eufpCDzpUtQ4eew93pgvqI4bgRVFuGspnHQ2BppoSJiV6q3PqrDVhK3atVa/WNHYgfJsP+jvfSjBuvmM+A==",
+			"cleanInstall": "PASS",
+			"piResourceLoaderDiscovery": "PASS"
+		},
+		"@gyoungwe/desktop-ui-pack": {
+			"version": "0.1.0",
+			"filename": "gyoungwe-desktop-ui-pack-0.1.0.tgz",
+			"shasum": "73e79d49b0678a0379fbdb7f1ec4d7ebb2b455e5",
+			"integrity": "sha512-YIrwxhDCjU9yAe+f+ip1yOND43ma737EjvhB7qe9NqMVn2xTKYSX+CTtqFq0qSeOEkyYNZVI38nz29WI+Njdtw==",
+			"cleanInstall": "PASS",
+			"desktopManagerLifecycle": "PASS"
+		}
+	},
+	"publicRegistry": {
+		"@gyoungwe/pi-evidence": "BLOCKED_EOTP",
+		"@gyoungwe/pi-connectors": "NOT_RUN_AFTER_EOTP",
+		"@gyoungwe/desktop-ui-pack": "NOT_RUN_AFTER_EOTP",
+		"reason": "npm publish requires a one-time authenticator code; the account is configured for auth-and-writes security-key 2FA, but this non-interactive CLI cannot complete the authenticator challenge",
+		"noCredentialCopied": true
+	},
+	"hostMigration": {
+		"piEvidence": "WAITING_FOR_PUBLIC_REGISTRY_GATE",
+		"piConnectors": "WAITING_FOR_PUBLIC_REGISTRY_GATE",
+		"desktopUiPack": "INSTALLED_PACKAGE_LIFECYCLE_TEST_PASS",
+		"rootLocalSourcesRetained": true
+	}
+}
