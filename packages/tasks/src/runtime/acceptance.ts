@@ -35,6 +35,9 @@ const stringField = { type: "string", minLength: 1, maxLength: 512 };
 
 import { runtimeSlot, withRuntime } from "./runtime-bridge";
 
+type AcceptanceVerifierLike = { kind: string; fields?: readonly string[]; [key: string]: any };
+type RuntimeEventPayload = { version?: unknown; runtime?: Parameters<typeof withRuntime>[0] };
+
 /** Versioned event bridge used when an extension graph is loaded before its host runtime. */
 export const ACCEPTANCE_VERIFIER_EVENT = "drone:acceptance-verifier/v1";
 export const ACCEPTANCE_VERIFIER_REQUEST_EVENT = "drone:acceptance-verifier/request/v1";
@@ -109,16 +112,16 @@ function registrationOf(verifier: any): any {
 export function bindAcceptanceVerifierEvents(pi: any) {
 	if (!pi?.events?.on || eventBridges.has(pi)) return () => {};
 	eventBridges.add(pi);
-	const publish = (verifier) => {
+	const publish = (verifier: AcceptanceVerifierLike) => {
 		void pi.events.emit?.(ACCEPTANCE_VERIFIER_EVENT, registrationOf(verifier));
 	};
 	const replay = () => {
 		for (const verifier of acceptanceVerifiers()) publish(verifier);
 	};
-	const onRequest = (payload) => {
+	const onRequest = (payload: { version?: unknown }) => {
 		if (payload?.version === 1) replay();
 	};
-	const onRuntime = (payload) => {
+	const onRuntime = (payload: RuntimeEventPayload) => {
 		if (payload?.version !== 1 || !payload.runtime || typeof payload.runtime !== "object") return;
 		const verifiers = acceptanceVerifiers().map(registrationOf);
 		if (!payload.runtime.scheduler) return;

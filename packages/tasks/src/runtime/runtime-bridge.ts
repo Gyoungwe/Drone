@@ -1,4 +1,18 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { DroneRuntime, Logger, RuntimeDisposable } from "@drone/shared";
+
+type RuntimeLike = {
+	scheduler: DroneRuntime["scheduler"];
+	dispose(): Promise<void>;
+	registerDisposable?: (resource: RuntimeDisposable) => () => void;
+	[key: string]: any;
+};
+type RuntimeHost = {
+	events?: {
+		on?: (name: string, handler: (payload: unknown) => void) => unknown;
+		emit?: (name: string, payload?: unknown) => unknown;
+	};
+};
 
 /**
  * Runtime bridge for first-party .pi modules.
@@ -8,24 +22,24 @@ import { AsyncLocalStorage } from "node:async_hooks";
  * slot is resolved from an injected or standalone runtime; there is no
  * process-global Symbol bridge that can accidentally share mutable state.
  */
-const contexts = new AsyncLocalStorage();
-let installedRuntime = null;
-let standaloneRuntime = null;
-const runtimeBindings = new WeakSet();
+const contexts = new AsyncLocalStorage<RuntimeLike>();
+let installedRuntime: RuntimeLike | null = null;
+let standaloneRuntime: RuntimeLike | null = null;
+const runtimeBindings = new WeakSet<object>();
 // A host may load several independent Pi extension graphs in one process. Keep
 // the runtime binding keyed by that host object instead of putting mutable
 // extension state in a process-global singleton.
-const hostRuntimes = new WeakMap();
+const hostRuntimes = new WeakMap<object, RuntimeLike>();
 
 class KeyedScheduler {
 	#tails = new Map();
 	#disposed = false;
 
-	async acquire(key) {
+	async acquire(key: string): Promise<() => void> {
 		if (this.#disposed) throw new Error("Runtime scheduler has been disposed");
 		const previous = this.#tails.get(key) || Promise.resolve();
-		let unlock: ((value?: unknown) => void) | undefined;
-		const gate = new Promise((resolve) => {
+		let unlock!: () => void;
+		const gate = new Promise<void>((resolve) => {
 			unlock = resolve;
 		});
 		const tail = previous.then(() => gate);
@@ -40,7 +54,7 @@ class KeyedScheduler {
 		};
 	}
 
-	async run(key, task) {
+	async run<T>(key: string, task: () => T | Promise<T>): Promise<T> {
 		const release = await this.acquire(key);
 		try {
 			return await task();
@@ -57,11 +71,11 @@ class KeyedScheduler {
 }
 
 /** Construct the CLI-compatible runtime used when no desktop host is present. */
-export function createStandaloneRuntime(log = {}) {
-	const disposables = new Set();
+export function createStandaloneRuntime(log: Logger = {}): RuntimeLike {
+	const disposables = new Set<RuntimeDisposable>();
 	let disposed = false;
 	let disposal: Promise<void> | undefined;
-	const registerDisposable = (resource) => {
+	const registerDisposable = (resource: RuntimeDisposable | null | undefined) => {
 		if (!resource || (typeof resource.dispose !== "function" && typeof resource.close !== "function"))
 			return () => {};
 		if (disposed) {
@@ -71,7 +85,7 @@ export function createStandaloneRuntime(log = {}) {
 		disposables.add(resource);
 		return () => disposables.delete(resource);
 	};
-	const runtime = {
+	const runtime: RuntimeLike = {
 		knowledge: {},
 		tasks: {},
 		tools: { tools: new Map(), families: new Map() },
@@ -85,7 +99,7 @@ export function createStandaloneRuntime(log = {}) {
 				const resources = [...disposables];
 				disposables.clear();
 				await Promise.allSettled(
-					resources.map((resource: any) => {
+					resources.map((resource) => {
 						try {
 							return resource.dispose?.() ?? resource.close?.();
 						} catch (error) {
@@ -102,7 +116,7 @@ export function createStandaloneRuntime(log = {}) {
 }
 
 /** Install a host runtime for subsequently loaded/registered first-party modules. */
-export function setRuntime(runtime) {
+export function setRuntime(runtime: RuntimeLike): () => void {
 	if (!runtime || typeof runtime !== "object" || !runtime.scheduler)
 		throw new TypeError("A DroneRuntime with a scheduler is required");
 	const previous = installedRuntime;
@@ -113,7 +127,7 @@ export function setRuntime(runtime) {
 }
 
 /** Scope a single operation to a runtime without changing process-global state. */
-export function withRuntime(runtime, operation) {
+export function withRuntime<T>(runtime: RuntimeLike, operation: () => T): T {
 	if (!runtime || typeof runtime !== "object" || !runtime.scheduler)
 		throw new TypeError("A DroneRuntime with a scheduler is required");
 	return contexts.run(runtime, operation);
@@ -125,7 +139,7 @@ export function withRuntime(runtime, operation) {
  * subscribe here and request the versioned announcement once. The returned
  * cleanup function is intentionally small and can be used by extension tests.
  */
-export function bindRuntime(pi) {
+export function bindRuntime(pi: RuntimeHost | null | undefined): () => void {
 	if (!pi || (typeof pi !== "object" && typeof pi !== "function")) return () => {};
 	if (runtimeBindings.has(pi)) return () => {};
 	runtimeBindings.add(pi);
@@ -149,9 +163,11 @@ export function bindRuntime(pi) {
 			void fallback.dispose();
 		};
 	}
-	const receive = (payload) => {
-		if (payload?.version !== RUNTIME_BRIDGE_VERSION) return;
-		const runtime = payload?.runtime;
+	const receive = (payload: unknown) => {
+		if (!payload || typeof payload !== "object") return;
+		const event = payload as { version?: unknown; runtime?: RuntimeLike };
+		if (event.version !== RUNTIME_BRIDGE_VERSION) return;
+		const runtime = event.runtime;
 		if (!runtime || typeof runtime !== "object" || !runtime.scheduler) return;
 		const previous = hostRuntimes.get(pi);
 		if (previous && previous !== runtime) adoptRuntimeState(previous, runtime);
@@ -172,7 +188,7 @@ export function bindRuntime(pi) {
 }
 
 /** Transfer extension-owned slots when a desktop host announces its runtime late. */
-function adoptRuntimeState(previous, runtime) {
+function adoptRuntimeState(previous: RuntimeLike, runtime: RuntimeLike): void {
 	const sourceTools = previous?.tools?.manifest;
 	if (sourceTools) {
 		if (!runtime.tools) runtime.tools = {};
@@ -222,18 +238,19 @@ function adoptRuntimeState(previous, runtime) {
 }
 
 /** Return the host-bound runtime, with the standalone runtime as CLI fallback. */
-export function runtimeForHost(pi) {
-	return hostRuntimes.get(pi) || currentRuntime();
+export function runtimeForHost(pi: object): RuntimeLike {
+	return hostRuntimes.get(pi) ?? currentRuntime();
 }
 
 /** Run a dynamic extension callback in the runtime owned by its Pi host. */
-export function withHostRuntime(pi, operation) {
+export function withHostRuntime<T>(pi: object, operation: () => T): T {
 	return withRuntime(runtimeForHost(pi), operation);
 }
 
 /** Return the runtime currently active for the calling async context. */
-export function currentRuntime() {
-	if (contexts.getStore()) return contexts.getStore();
+export function currentRuntime(): RuntimeLike {
+	const scoped = contexts.getStore();
+	if (scoped) return scoped;
 	if (installedRuntime) return installedRuntime;
 	if (!standaloneRuntime) standaloneRuntime = createStandaloneRuntime();
 	return standaloneRuntime;
@@ -244,9 +261,9 @@ export function hasRuntimeContext() {
 	return Boolean(contexts.getStore() || installedRuntime);
 }
 
-function resolveSlot(domain, slot, create) {
+function resolveSlot<T>(domain: string, slot: string, create: () => T): T {
 	const runtime = currentRuntime();
-	let group = runtime[domain];
+	let group = runtime[domain] as Record<string, any> | undefined;
 	if (!group) {
 		group = {};
 		runtime[domain] = group;
@@ -269,33 +286,37 @@ function resolveSlot(domain, slot, create) {
  * @param {() => T} create
  * @returns {T}
  */
-export function runtimeSlot(domain, slot, create) {
+export function runtimeSlot<T extends object>(domain: string, slot: string, create: () => T): T {
 	if (typeof create !== "function") throw new TypeError("runtimeSlot requires a factory");
 	const proxy = new Proxy(
 		{},
 		{
-			get(_target, property) {
-				const value = resolveSlot(domain, slot, create)[property];
+			get(_target, property: string | symbol) {
+				const value = resolveSlot(domain, slot, create)[property as keyof T];
 				return typeof value === "function" ? value.bind(resolveSlot(domain, slot, create)) : value;
 			},
-			set(_target, property, value) {
-				resolveSlot(domain, slot, create)[property] = value;
+			set(_target, property: string | symbol, value: unknown) {
+				(resolveSlot(domain, slot, create) as Record<string | symbol, unknown>)[property] = value;
 				return true;
 			},
 			ownKeys() {
 				return Reflect.ownKeys(resolveSlot(domain, slot, create));
 			},
-			getOwnPropertyDescriptor(_target, property) {
+			getOwnPropertyDescriptor(_target, property: string | symbol) {
 				const descriptor = Object.getOwnPropertyDescriptor(resolveSlot(domain, slot, create), property);
 				return descriptor ? { ...descriptor, configurable: true } : undefined;
 			},
 		},
 	);
-	return /** @type {T} */ (proxy);
+	return proxy as T;
 }
 
 /** Serialize a keyed operation through the injected runtime scheduler. */
-export function runRuntimeExclusive(namespace, key, operation) {
+export function runRuntimeExclusive<T>(
+	namespace: string,
+	key: string,
+	operation: () => T | Promise<T>,
+): Promise<T> {
 	return currentRuntime().scheduler.run(`${namespace}:${key}`, operation);
 }
 
