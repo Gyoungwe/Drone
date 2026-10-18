@@ -20,15 +20,15 @@ A5 的目标是把知识、任务、研究三类核心能力从无类型的 `.pi
 
 | 子目标 | 要收敛的边界 | 使用者能间接感受到的提升 | 当前状态 |
 | --- | --- | --- | --- |
-| **A5-1 knowledge** | Vault 文件安全、布局、检索、topic memory、Wiki/review、worker 和 specialist host | 知识沉淀更稳定；路径、软链接、哈希、来源新鲜度和 worker 失败更容易得到明确错误；跨会话复用更一致 | 核心 TS service/worker/runtime 和大量策略已存在；`.pi/lib/knowledge/*` 仍承担跨 bundle 兼容适配，尚未完成最终切换 |
-| **A5-2 tasks** | 一次授权、task workbench、进度、失败反馈、验收器、PDF worker 和 runtime bridge | 授权语义、进度卡、失败原因和继续执行行为一致；Pi 与 Desktop 不再各自维护一套 task runtime | `@drone/tasks` 已承载主要策略、runtime、验收器和 PDF 边界；`.pi/lib/tasks/*` 仍保留宿主/SDK 兼容边界 |
-| **A5-3 research** | 来源归档、开放获取、Zotero、机构访问、literature operations、provenance 和 receipt journal | 文献来源、版本、引用和写入回执更可追溯；更容易把同一研究流程接到 Pi、Desktop 和未来连接器 | `@drone/research` 已承载主要 runtime 和策略；`.pi/lib` 仍保留 source archive、Zotero/institutional 和 CLI/宿主适配入口 |
+| **A5-1 knowledge** | Vault 文件安全、布局、检索、topic memory、Wiki/review、worker 和 specialist host | 知识沉淀更稳定；路径、软链接、哈希、来源新鲜度和 worker 失败更容易得到明确错误；跨会话复用更一致 | 生产扩展已不再回退到 `.pi/lib/knowledge/runtime/worker.mjs`；`.pi/lib/knowledge/*` 仍保留构建、benchmark 和兼容资源入口，最终清理未完成 |
+| **A5-2 tasks** | 一次授权、task workbench、进度、失败反馈、验收器、PDF worker 和 runtime bridge | 授权语义、进度卡、失败原因和继续执行行为一致；Pi 与 Desktop 不再各自维护一套 task runtime | backend 验收注册已归 `@drone/tasks` package registry，Desktop 静态打包 tasks runtime；`.pi/lib/tasks/*` 仍保留无 workspace 依赖的兼容图 |
+| **A5-3 research** | 来源归档、开放获取、Zotero、机构访问、literature operations、provenance 和 receipt journal | 文献来源、版本、引用和写入回执更可追溯；更容易把同一研究流程接到 Pi、Desktop 和未来连接器 | research host ports 已使用领域包类型合同，生成扩展禁止旧 `.pi/lib` research fallback；CLI/宿主兼容入口仍保留 |
 | **A5-4 extensions** | `.pi/extensions` 的入口、参数映射、Pi 注册和构建产物 | 安装、升级和跨平台打包更少依赖相对路径；扩展失败时更容易隔离，核心宿主有稳定回退 | TypeScript 源入口和自包含构建已完成；最终要等 A5-1/2/3 完成后移除 `.pi/lib` extraResources 和最后的兼容产物 |
 
 ## 当前完成度怎么理解
 
 - **A5-0 已完成**：扩展构建管线、生成 manifest 和产物漂移检查已经存在。
-- **A5-1～A5-3 已完成大部分领域迁移**：核心逻辑已经在 TypeScript 包里，剩下的是把生产调用和宿主适配从 `.pi/lib` 切干净，而不是重新实现知识、任务或研究功能。
+- **A5-1～A5-3 已完成大部分领域迁移**：核心逻辑已经在 TypeScript 包里；本轮又关闭了 knowledge worker、tasks acceptance registry、research host ports 三个生产边界，剩下的是清理 CLI/打包兼容入口，而不是重新实现知识、任务或研究功能。
 - **A5-4 已完成主要源码迁移**：剩余工作取决于前三项的兼容入口能否删除，随后才能从 Desktop 资源中移除 `.pi/lib`。
 - **现有 v1.1 发布门槛不依赖 A5 完成**：公开插件、Pi 1.1.0/latest、桌面构建产物、视觉对照和连接器门禁已经关闭。A5 是发布后的架构收敛工作。
 

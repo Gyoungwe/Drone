@@ -1,0 +1,44 @@
+{
+	"date": "2026-10-18",
+	"hostRepository": "Gyoungwe/Drone",
+	"hostCommit": "2db6074c3cfa22584112b983422c474ad3088618",
+	"pluginApi": "unchanged",
+	"migrationCommits": {
+		"a5-1-knowledge": "aaff82a2",
+		"a5-2-tasks": ["8f17c7b2", "2db6074c"],
+		"a5-3-research": "4ad8281d",
+		"generated-extension-refresh": "22425ba0"
+	},
+	"productionCutovers": {
+		"knowledgeWorker": "PASS: production extension path has no .pi/lib/knowledge/runtime/worker.mjs fallback",
+		"tasksAcceptanceRegistry": "PASS: backend event bridge uses the @drone/tasks registry inside the host runtime scope",
+		"researchHostPorts": "PASS: source archive, literature, loop and receipt ports use typed @drone/research contracts",
+		"desktopTasksBundle": "PASS: static @drone/tasks imports are bundled by electron-vite before @drone packages are excluded from extraResources"
+	},
+	"checks": {
+		"knowledgeTypecheck": "PASS",
+		"knowledgeTests": "307 passed",
+		"tasksTypecheck": "PASS",
+		"tasksTests": "58 passed",
+		"researchTypecheck": "PASS",
+		"researchTests": "93 passed",
+		"extensionsTypecheck": "PASS",
+		"extensionsTests": "18 passed",
+		"backendAcceptanceTest": "1 passed",
+		"backendTypecheck": "PASS",
+		"knowledgeRuntimeCheck": "PASS",
+		"tasksRuntimeCheck": "PASS",
+		"researchRuntimeCheck": "PASS",
+		"extensionsStrictCheck": "PASS",
+		"architectureCheck": "PASS",
+		"nativePiCheck": "PASS",
+		"desktopBuild": "PASS"
+	},
+	"remaining": {
+		"a5-1": "Remove the remaining CLI/build/benchmark compatibility resource paths after production callers are migrated.",
+		"a5-2": "Remove the self-contained .pi/lib/tasks compatibility graph after Pi and packaged Desktop no longer need it.",
+		"a5-3": "Remove remaining .pi/lib source archive, Zotero, institutional and receipt host adapters after CLI/package callers are migrated.",
+		"a5-4": "Remove .pi/lib from electron-builder extraResources and rerun CLI, Desktop artifact and unsigned packaging smoke."
+	},
+	"releaseBlocking": false
+}
