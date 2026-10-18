@@ -38,7 +38,10 @@ describe("acceptance verifier event bridge", () => {
 			kind: "wiki_review",
 			definition: { evidenceKind: "wiki-applied" },
 		});
-		const verifier = readAcceptanceVerifier(runtime, "wiki_review") as { kind?: string; evidenceKind?: string };
+		const verifier = readAcceptanceVerifier(runtime, "wiki_review") as {
+			kind?: string;
+			evidenceKind?: string;
+		};
 		expect(verifier).toMatchObject({
 			kind: "wiki_review",
 			evidenceKind: "wiki-applied",

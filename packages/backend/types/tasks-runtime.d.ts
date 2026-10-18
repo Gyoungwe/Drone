@@ -8,5 +8,3 @@ declare module "@drone/tasks/acceptance" {
 declare module "@drone/tasks/runtime-bridge" {
 	export function withRuntime<T>(runtime: DroneRuntime, operation: () => T): T;
 }
-
-export {};
