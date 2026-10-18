@@ -70,7 +70,7 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，14 个 workspace 包：
+npm workspaces monorepo，13 个 workspace 包：
 
 ```
 packages/
@@ -78,7 +78,6 @@ packages/
 ├── plugin-api/ 插件公开合同（HostPort、能力协商、结果/回执类型、analysis contract）
 ├── pi-core/     原生 Pi 核心任务与回执插件
 ├── pi-research/ 原生 Pi 研究来源插件
-├── research-suite/ 原生 Pi 研究聚合包
 ├── backend/    纯 Node；pi SDK 适配层
 ├── knowledge/  知识领域纯函数与 claim 合约（TS 包，迁移中）
 ├── tasks/      任务领域纯函数与失败反馈合约（TS 包，迁移中）
@@ -226,9 +225,9 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 `packages/pi-research/` 提供可独立安装的最小研究闭环：`research_search_sources` 在工作区内对受限 Markdown/text 来源做可追溯检索，`research_read_source` 记录 hash 与范围回执，`research_deposit_research_note` 写入带 URI/hash 引用的候选笔记，`research_answer_sources` 要求至少两篇当前回读来源后才返回 `answerable` 证据包；`research_status` 输出会话计数。`src/index.ts` 还组装现有 `research_loop` 生命周期入口。`scripts/build-pi-research.mjs` 生成自包含 dist，禁止 Electron/backend/Desktop/越界 import；`scripts/smoke-pi-research.mjs` 在全新临时工作区执行两来源检索→两次读取→沉淀→带来源回答，并验证 tarball 解包加载。网络、Zotero、机构访问写入仍由宿主连接器负责，当前包不伪造远端结果。
 
-## packages/research-suite — 原生 Pi 聚合包（PR-7）
+## `@gyoungwe/research-suite` — 外部原生 Pi 聚合包（PR-7）
 
-`packages/research-suite/` 只负责将 `pi-core`、`pi-knowledge`、`pi-research` 的扩展、skills 和 prompt 通过 manifest 组合；`bundleDependencies` 明确声明三者。`scripts/check-research-suite.mjs` 会把三个已构建包放入干净 staging 目录后运行真实 `npm pack`，断言 tarball 内包含全部 bundled dependencies 和三个扩展路径，不发布 npm。
+源码权威位置是绑定的 `../drone-plugins/packages/research-suite/`；宿主仓库不再保留该包、workspace lock 条目或聚合包专属检查脚本。插件仓库负责 manifest、`bundleDependencies`、tarball 与安装 smoke；宿主只通过已发布包的兼容矩阵和公开插件宿主检查验证加载结果。安装后命令是否可用以实际注册和 smoke 证据为准，计划中的 `/drone-doctor` 与 `/drone-example` 尚未有成熟实现，详见 [插件化计划 §7](final-pluginization-plan.md#7-安装和首次使用)。
 
 ## packages/backend — pi SDK 适配层
 

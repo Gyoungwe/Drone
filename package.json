@@ -47,7 +47,6 @@
 		"check:pi-research": "node scripts/build-pi-research.mjs --check",
 		"check:public-plugin-host": "node scripts/check-public-plugin-host.mjs",
 		"smoke:pi-research": "node scripts/smoke-pi-research.mjs",
-		"check:research-suite": "node scripts/check-research-suite.mjs",
 		"build:research": "node scripts/build-research-runtime.mjs",
 		"check:extensions": "node scripts/check-extensions-build.mjs",
 		"generate:plugin-api": "node packages/desktop/scripts/gen-plugin-api.mjs",

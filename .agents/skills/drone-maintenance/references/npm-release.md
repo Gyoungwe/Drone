@@ -46,15 +46,18 @@ npm ci
 npm run check
 ```
 
-For a package whose source is still in Drone, run the root package build/check and stage a clean release directory. For `research-suite`, use the host gate because it stages real tarballs and checks the public release shape:
+For a package whose source is still in Drone, run the root package build/check and stage a clean release directory. `research-suite` is owned by the bound `drone-plugins` workspace; run its package workspace check there and use the host compatibility/public-plugin checks only to verify consumption:
 
 ```sh
+cd ../drone-plugins
+npm ci
+npm run check
+
 cd ../Drone
 npm ci
-npm run build
 npm run check:plugin-api
 npm run check:pi-compat -- --targets locked,latest
-npm run check:research-suite
+npm run check:public-plugin-host
 ```
 
 Publish from the clean package directory or tarball selected by the package owner:
