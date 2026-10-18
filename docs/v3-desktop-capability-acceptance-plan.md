@@ -406,6 +406,6 @@ revision / ETag / SHA-256：
 
 ## 17. 2026-10-18 最新计划核对
 
-本轮对照 `final-pluginization-plan.md`、`architecture-v2-tasks.md`、两个仓库 `main` 和公开 registry 后，现行 v1.1 发布门槛没有未关闭项：`MEM-01`、`SKILL-01`、`MCP-01`、`CONN-01`、`WRITE-01`、`REDLINE-01`、UI-01、Pi 1.1.0/latest、五个 v1.1 包、`/drone-doctor`、`/drone-example`、四视口视觉对照和本机构建产物均有 PASS 证据。`drone-plugins` 当前 `main=8389116`，Drone 当前 `main=fcb30d30`。
+本轮对照 `final-pluginization-plan.md`、`architecture-v2-tasks.md`、两个仓库 `main` 和公开 registry 后，现行 v1.1 发布门槛没有未关闭项：`MEM-01`、`SKILL-01`、`MCP-01`、`CONN-01`、`WRITE-01`、`REDLINE-01`、UI-01、Pi 1.1.0/latest、五个 v1.1 包、`/drone-doctor`、`/drone-example`、四视口视觉对照和本机构建产物均有 PASS 证据。`drone-plugins` 当前 `main=8389116`，Drone 当前 `main` 已与 `origin/main` 同步（代码验收基线 `a620a40e`）。
 
 仍保留的计划项是 architecture-v2 的 A5-1～A5-4：`.pi/lib` 兼容运行时、worker/宿主适配和 legacy extension outputs 尚未完全移除。它们是明确的后续架构清理项，不是当前 v1.1 或无证书发布阻塞门槛；Protocols.io 继续只读，交互式 Electron 截图仍仅记录为环境观察。
