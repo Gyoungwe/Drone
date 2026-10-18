@@ -1,13 +1,14 @@
 {
 	"date": "2026-10-18",
 	"hostRepository": "Gyoungwe/Drone",
-	"hostCommit": "2db6074c3cfa22584112b983422c474ad3088618",
+	"hostCommit": "876f0a07",
 	"pluginApi": "unchanged",
 	"migrationCommits": {
 		"a5-1-knowledge": "aaff82a2",
-		"a5-2-tasks": ["8f17c7b2", "2db6074c"],
+		"a5-2-tasks": ["8f17c7b2", "2db6074c", "3336199f"],
 		"a5-3-research": "4ad8281d",
-		"generated-extension-refresh": "22425ba0"
+		"generated-extension-refresh": ["22425ba0", "fd5fa895"],
+		"generated-package-manifests": "876f0a07"
 	},
 	"productionCutovers": {
 		"knowledgeWorker": "PASS: production extension path has no .pi/lib/knowledge/runtime/worker.mjs fallback",
@@ -32,7 +33,11 @@
 		"extensionsStrictCheck": "PASS",
 		"architectureCheck": "PASS",
 		"nativePiCheck": "PASS",
-		"desktopBuild": "PASS"
+		"desktopBuild": "PASS",
+		"rootLint": "PASS with one pre-existing max-size warning for docs/design/plugin-ui/Drone 插件化界面.html",
+		"rootTypecheck": "PASS",
+		"rootTests": "PASS: all workspace tests, including backend 226 files/1872 tests plus 13 skipped, desktop 149 files/766 tests, knowledge 307, tasks 58, research 93 and shared 329",
+		"rootBuild": "PASS"
 	},
 	"remaining": {
 		"a5-1": "Remove the remaining CLI/build/benchmark compatibility resource paths after production callers are migrated.",
