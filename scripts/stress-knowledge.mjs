@@ -1,4 +1,4 @@
-import { createSpecialistBudget, decideSpecialistRun } from "../.pi/lib/knowledge/orchestration-policy.mjs";
+import { createSpecialistBudget, decideSpecialistRun } from "../.pi/extensions/knowledge-extension.mjs";
 
 const turns = Number(process.argv[2] || 50);
 const budget = createSpecialistBudget({ maxRunsPerTurn: 4, maxRunsPerSession: 20, maxToolOperations: 80 });

@@ -2,3 +2,8 @@ export {
 	registerKnowledgeInterface,
 	registerWikiReviewAcceptance,
 } from "./internal/knowledge-extension";
+
+// Keep the deterministic policy benchmark on the same generated entry as the
+// production knowledge extension. The policy itself remains owned by the
+// domain package; this export only avoids a legacy `.pi/lib/knowledge` import.
+export { createSpecialistBudget, decideSpecialistRun } from "@drone/knowledge/orchestration-policy";

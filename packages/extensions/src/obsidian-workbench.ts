@@ -30,6 +30,31 @@ import { appendRelatedLinks, findRelatedNotes } from "@drone/knowledge/related-n
 import { registerAcceptanceVerifier } from "@drone/tasks/acceptance";
 import { registerTool } from "@drone/tasks/tool-manifest-runtime";
 
+// These named exports are used by offline knowledge benchmarks and packaging
+// smoke tests. Keeping them on the generated entry exercises the same
+// @drone/knowledge runtime graph as the production extension instead of
+// importing the deleted `.pi/lib/knowledge` adapters.
+export {
+	configureObsidian,
+	createObsidianProject,
+	depositKnowledge,
+	obsidianStatus,
+	researchSetupOptions,
+} from "@drone/extensions/internal/obsidian-workbench";
+export { readKnowledgeBinding } from "@drone/knowledge/config";
+export { embedTexts } from "@drone/knowledge/semantic-provider";
+export { closeKnowledgeServices, getKnowledgeService, KnowledgeService } from "@drone/knowledge/service";
+export { stageWikiProposal } from "@drone/knowledge/wiki-review";
+export {
+	beginKnowledgeFlow,
+	noteKnowledgeRead,
+	noteKnowledgeSearch,
+	noteKnowledgeSpecialist,
+	publicationKnowledgeFlow,
+	requestWikiReviewUi,
+	updateKnowledgeFlow,
+} from "@drone/knowledge/ui-state";
+
 /** MCP 代理工具 research-obsidian_*（含子代理只读通道）的状态条 / 动作文案。 */
 const OBSIDIAN_FAMILY = {
 	match: "research-obsidian",

@@ -5,8 +5,11 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { arch, platform, tmpdir } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
-import { closeKnowledgeServices, getKnowledgeService } from "../.pi/lib/knowledge/service.mjs";
-import { configureObsidian } from "../.pi/lib/obsidian-workbench.mjs";
+import {
+	closeKnowledgeServices,
+	configureObsidian,
+	getKnowledgeService,
+} from "../.pi/extensions/obsidian-workbench.mjs";
 
 const sizes = process.argv.slice(2).map(Number);
 if (!sizes.length) sizes.push(1000, 10000);

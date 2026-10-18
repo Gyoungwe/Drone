@@ -44,8 +44,11 @@ try {
 	process.env.DRONE_KNOWLEDGE_DIR = join(root, "app");
 	process.env.DRONE_RESEARCH_WORKBENCH_ROOT = resources;
 	delete process.env.PI_RESEARCH_DESKTOP_CONFIG;
-	const workbench = await import(pathToFileURL(join(resources, "lib/obsidian-workbench.mjs")));
-	serviceModule = await import(pathToFileURL(join(resources, "lib/knowledge/service.mjs")));
+	// Knowledge production code is bundled in the generated extension graph.
+	// The old `.pi/lib/knowledge` compatibility tree is intentionally absent
+	// from packaged resources, so the smoke must exercise the shipped entry.
+	const workbench = await import(pathToFileURL(join(resources, "extensions/obsidian-workbench.mjs")));
+	serviceModule = workbench;
 	const binding = await workbench.configureObsidian({ cwd: a, vault: join(root, "Vault") });
 	await writeFile(join(binding.vault, "Library/Papers/fixture.md"), "# Fixture\npackagedmarker 自切\n");
 	const loader = new DefaultResourceLoader({

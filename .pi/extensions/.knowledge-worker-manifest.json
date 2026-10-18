@@ -1,0 +1,9 @@
+{
+	"version": 1,
+	"generator": "scripts/build-knowledge-runtime.mjs",
+	"output": "knowledge-worker.mjs",
+	"source": "packages/extensions/src/knowledge-worker.ts",
+	"inputsSha256": "3c047c9f5bb421a9004018b1a5954b4ff9f8ef7e40a5340d7bc2065affc4f048",
+	"knowledgeSourceSha256": "74987a11b95b9ae283da9b5d8b660998e95b535a044b25107a2a9c0f582cfffe",
+	"outputSha256": "c513d323bcd7827158c4463ca2a2661bd093dc2b2730d2bed48bfb05dd388f44"
+}

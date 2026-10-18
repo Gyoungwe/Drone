@@ -6,108 +6,94 @@ import { build } from "esbuild";
 
 const root = resolve(import.meta.dirname, "..");
 const sourceDir = resolve(root, "packages/knowledge/src");
-const expectedDir = resolve(root, ".pi/lib/knowledge/runtime");
+const workerSource = resolve(root, "packages/extensions/src/knowledge-worker.ts");
+const expectedOutput = resolve(root, ".pi/extensions/knowledge-worker.mjs");
+const expectedManifest = resolve(root, ".pi/extensions/.knowledge-worker-manifest.json");
 const check = process.argv.includes("--check");
-const outDir = check ? await mkdtemp(resolve(tmpdir(), "drone-knowledge-runtime-check-")) : expectedDir;
-const sourceNames = (await readdir(sourceDir))
-	.filter((name) => name.endsWith(".ts") && name !== "worker.ts")
-	.sort();
-const entryPoints = sourceNames.map((name) => resolve(sourceDir, name));
-const inputsHash = async (metafiles) => {
-	const inputs = new Set();
-	for (const metafile of metafiles)
-		for (const input of Object.keys(metafile?.inputs || {})) inputs.add(input);
+const temporaryRoot = check ? await mkdtemp(resolve(tmpdir(), "drone-knowledge-worker-check-")) : null;
+const output = temporaryRoot ? resolve(temporaryRoot, "knowledge-worker.mjs") : expectedOutput;
+
+async function sourceFiles() {
+	return (await readdir(sourceDir)).filter((name) => name.endsWith(".ts")).sort();
+}
+
+async function sourceHash() {
 	const hash = createHash("sha256");
-	for (const input of [...inputs].sort()) {
-		const path = resolve(root, input);
-		hash.update(relative(root, path).replaceAll("\\", "/"));
+	for (const name of await sourceFiles()) {
+		const path = resolve(sourceDir, name);
+		hash.update(`packages/knowledge/src/${name}`);
 		hash.update("\0");
 		hash.update(await readFile(path));
 		hash.update("\0");
 	}
 	return hash.digest("hex");
-};
+}
 
-const snapshot = async (directory) => {
-	const files = new Map();
-	const walk = async (current, prefix = "") => {
-		for (const entry of await readdir(current, { withFileTypes: true })) {
-			const name = prefix ? `${prefix}/${entry.name}` : entry.name;
-			const path = resolve(current, entry.name);
-			if (entry.isDirectory()) await walk(path, name);
-			else if (entry.isFile()) files.set(name, await readFile(path));
-		}
+async function buildWorker(outfile) {
+	const result = await build({
+		entryPoints: [workerSource],
+		outfile,
+		bundle: true,
+		format: "esm",
+		platform: "node",
+		packages: "bundle",
+		sourcemap: false,
+		logLevel: "silent",
+		metafile: true,
+	});
+	let contents = await readFile(outfile, "utf8");
+	if (!contents.startsWith("// @ts-nocheck")) {
+		contents = `// @ts-nocheck\n${contents}`;
+		await writeFile(outfile, contents, "utf8");
+	}
+	const inputHash = createHash("sha256");
+	for (const input of Object.keys(result.metafile?.inputs || {}).sort()) {
+		const path = resolve(root, input);
+		inputHash.update(relative(root, path).replaceAll("\\", "/"));
+		inputHash.update("\0");
+		inputHash.update(await readFile(path));
+		inputHash.update("\0");
+	}
+	return {
+		contents,
+		inputsSha256: inputHash.digest("hex"),
+		outputSha256: createHash("sha256").update(contents).digest("hex"),
+		knowledgeSourceSha256: await sourceHash(),
 	};
-	await walk(directory);
-	return files;
-};
+}
 
 try {
-	if (!check) await rm(outDir, { recursive: true, force: true });
-	await mkdir(outDir, { recursive: true });
-	const entryBuild = await build({
-		entryPoints,
-		outdir: outDir,
-		bundle: true,
-		splitting: true,
-		format: "esm",
-		platform: "node",
-		outExtension: { ".js": ".mjs" },
-		chunkNames: "chunks/[name]-[hash]",
-		sourcemap: false,
-		logLevel: "silent",
-		metafile: true,
-	});
-	const workerBuild = await build({
-		entryPoints: [resolve(sourceDir, "worker.ts")],
-		outfile: resolve(outDir, "worker.mjs"),
-		bundle: true,
-		format: "esm",
-		platform: "node",
-		sourcemap: false,
-		logLevel: "silent",
-		metafile: true,
-	});
-	const outputs = (await readdir(outDir)).filter((name) => name.endsWith(".mjs")).sort();
-	const generatedFiles = (await readdir(outDir, { recursive: true })).filter((name) => name.endsWith(".mjs"));
-	const entries = {};
-	const allInputsSha256 = await inputsHash([entryBuild.metafile, workerBuild.metafile]);
-	for (const name of generatedFiles) {
-		// Bundled ESM artifacts are checked through the legacy .pi compatibility
-		// wrappers. Keep the generated bundle itself out of checkJs inference:
-		// source typing is enforced by the package TypeScript build instead.
-		const outputPath = resolve(outDir, name);
-		const output = await readFile(outputPath, "utf8");
-		if (!output.startsWith("// @ts-nocheck")) {
-			await writeFile(outputPath, `// @ts-nocheck\n${output}`);
-		}
-		if (!outputs.includes(name)) continue;
-		const source = name.replace(/\.mjs$/, ".ts");
-		entries[name] = {
-			source: `packages/knowledge/src/${source}`,
-			sha256: createHash("sha256")
-				.update(await readFile(outputPath))
-				.digest("hex"),
-			inputsSha256: allInputsSha256,
-		};
-	}
-	await writeFile(
-		resolve(outDir, ".build-manifest.json"),
-		`${JSON.stringify({ version: 1, generator: "scripts/build-knowledge-runtime.mjs", inputsSha256: allInputsSha256, entries }, null, "\t")}\n`,
-	);
-
+	if (temporaryRoot) await mkdir(temporaryRoot, { recursive: true });
+	else await mkdir(resolve(root, ".pi/extensions"), { recursive: true });
+	const built = await buildWorker(output);
+	const manifest = {
+		version: 1,
+		generator: "scripts/build-knowledge-runtime.mjs",
+		output: "knowledge-worker.mjs",
+		source: "packages/extensions/src/knowledge-worker.ts",
+		inputsSha256: built.inputsSha256,
+		knowledgeSourceSha256: built.knowledgeSourceSha256,
+		outputSha256: built.outputSha256,
+	};
 	if (check) {
-		const [actual, expected] = await Promise.all([snapshot(outDir), snapshot(expectedDir)]);
-		const mismatches = new Set([...actual.keys(), ...expected.keys()]);
-		const stale = [...mismatches].filter(
-			(name) => !actual.has(name) || !expected.has(name) || !actual.get(name).equals(expected.get(name)),
-		);
-		if (stale.length > 0)
-			throw new Error(`knowledge runtime artifacts are stale: ${stale.slice(0, 20).join(", ")}`);
-		console.log("knowledge runtime artifacts are up to date");
+		let expected;
+		try {
+			expected = JSON.parse(await readFile(expectedManifest, "utf8"));
+		} catch (error) {
+			throw new Error(`missing ${relative(root, expectedManifest)}; run npm run build:knowledge`, { cause: error });
+		}
+		const actual = await readFile(expectedOutput).catch(() => null);
+		if (!actual || !actual.equals(Buffer.from(built.contents)))
+			throw new Error("knowledge worker artifact is stale: .pi/extensions/knowledge-worker.mjs");
+		for (const [key, value] of Object.entries(manifest)) {
+			if (expected[key] !== value)
+				throw new Error(`knowledge worker manifest is stale: ${key}`);
+		}
+		console.log("knowledge worker artifacts are up to date");
 	} else {
-		console.log(`built ${outputs.length} knowledge entries in ${relative(root, outDir)} (worker isolated)`);
+		await writeFile(expectedManifest, `${JSON.stringify(manifest, null, "\t")}\n`, "utf8");
+		console.log(`built knowledge worker in ${relative(root, expectedOutput)}`);
 	}
 } finally {
-	if (check) await rm(outDir, { recursive: true, force: true });
+	if (temporaryRoot) await rm(temporaryRoot, { recursive: true, force: true });
 }

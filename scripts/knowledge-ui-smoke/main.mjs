@@ -14,7 +14,7 @@ process.env.DRONE_RESEARCH_WORKBENCH_ROOT = join(repo, ".pi");
 delete process.env.PI_RESEARCH_DESKTOP_CONFIG;
 app.setPath("userData", join(root, "electron-profile"));
 app.setName("Drone Knowledge UI Fixture");
-const runtime = async (name) => import(pathToFileURL(join(repo, ".pi/lib", `${name}.mjs`)).href);
+const runtime = async () => import(pathToFileURL(join(repo, ".pi/extensions/obsidian-workbench.mjs")).href);
 let window, services;
 const checks = [],
 	errors = [],
@@ -24,10 +24,12 @@ const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 async function run() {
 	try {
 		console.log("Electron ready; preparing isolated knowledge fixtures");
-		const work = await runtime("obsidian-workbench");
-		services = await runtime("knowledge/service");
-		const review = await runtime("knowledge/wiki-review");
-		const state = await runtime("knowledge/ui-state");
+		const work = await runtime();
+		// The generated workbench entry re-exports the domain service, Wiki review
+		// and UI state seams used by this offline fixture.
+		services = work;
+		const review = work;
+		const state = work;
 		const cwd = join(root, "project"),
 			vault = join(root, "Research Vault");
 		await mkdir(cwd);

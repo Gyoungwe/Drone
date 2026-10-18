@@ -331,7 +331,7 @@ var init_runtime_host = __esm({
 import { createHash as createHash2 } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat as lstat2, open, realpath as realpath5 } from "node:fs/promises";
-import { isAbsolute as isAbsolute5, join as join6, relative as relative3, sep as sep3 } from "node:path";
+import { isAbsolute as isAbsolute5, join as join7, relative as relative3, sep as sep3 } from "node:path";
 function allowedSegment(name) {
   return !!name && !name.startsWith(".") && !OMIT.has(name) && !/^(?:secrets?|credentials?|id_rsa|id_ed25519)(?:[.\-_]|$)/i.test(name);
 }
@@ -358,7 +358,7 @@ async function safeNotePath(vault, path) {
   validateNote(path);
   let full = vault;
   for (const part of path.split("/")) {
-    full = join6(full, part);
+    full = join7(full, part);
     if ((await lstat2(full)).isSymbolicLink()) throw new Error("Knowledge reads do not follow symlinks");
   }
   const actual = await realpath5(full);
@@ -436,7 +436,7 @@ var init_files = __esm({
 
 // packages/knowledge/src/review-policy.ts
 import { readFileSync } from "node:fs";
-import { join as join8 } from "node:path";
+import { join as join9 } from "node:path";
 function errorCode2(error2) {
   return error2 && typeof error2 === "object" && "code" in error2 ? error2.code : void 0;
 }
@@ -445,7 +445,7 @@ function readReviewMode() {
   const root = knowledgeDirectory();
   if (!root) return "automatic";
   try {
-    const value = JSON.parse(readFileSync(join8(root, "review-policy.json"), "utf8"));
+    const value = JSON.parse(readFileSync(join9(root, "review-policy.json"), "utf8"));
     const mode = value && typeof value === "object" && "mode" in value ? value.mode : void 0;
     return mode === "automatic" ? "automatic" : "strict";
   } catch (error2) {
@@ -764,7 +764,7 @@ __export(specialist_host_exports, {
 });
 import { randomUUID as randomUUID8 } from "node:crypto";
 import { mkdir as mkdir7, readFile as readFile6, rename as rename7, unlink as unlink4, writeFile as writeFile7 } from "node:fs/promises";
-import { join as join11 } from "node:path";
+import { join as join12 } from "node:path";
 function registerKnowledgeSpecialistHost(id, run) {
   if (!id || typeof run !== "function") throw new Error("A specialist host requires a session identity");
   if (state2.disposed) throw new Error("Knowledge specialist runtime has been disposed");
@@ -784,7 +784,7 @@ async function specialistSettings() {
   if (!dir) return { mode: "off", revision: 0, ...SPECIALIST_LIMITS };
   let data = { mode: "automatic", revision: 0 };
   try {
-    data = JSON.parse(await readFile6(join11(dir, "specialists.json"), "utf8"));
+    data = JSON.parse(await readFile6(join12(dir, "specialists.json"), "utf8"));
   } catch (e) {
     if (e.code !== "ENOENT") throw new Error("Knowledge specialist settings cannot be read");
   }
@@ -878,12 +878,12 @@ async function setSpecialistSettings({ mode, revision, bindingRevision, ...reque
         data[key] = Math.min(data[key] ?? SPECIALIST_LIMITS[key], SPECIALIST_LIMITS[key]);
       data.mode = mode;
       data.revision = revision + 1;
-      const dir = knowledgeDirectory(), temp = join11(dir, `specialists.${randomUUID8()}.tmp`);
+      const dir = knowledgeDirectory(), temp = join12(dir, `specialists.${randomUUID8()}.tmp`);
       await mkdir7(dir, { recursive: true, mode: 448 });
       try {
         await writeFile7(temp, `${JSON.stringify(data)}
 `, { flag: "wx", mode: 384 });
-        await rename7(temp, join11(dir, "specialists.json"));
+        await rename7(temp, join12(dir, "specialists.json"));
       } finally {
         await unlink4(temp).catch((e) => {
           if (e.code !== "ENOENT") throw e;
@@ -1011,12 +1011,12 @@ var init_specialist_host = __esm({
 // packages/knowledge/src/wiki-review.ts
 import { createHash as createHash6, randomUUID as randomUUID9 } from "node:crypto";
 import { link as link3, lstat as lstat5, mkdir as mkdir8, readdir as readdir4, readFile as readFile7, rename as rename8, unlink as unlink5, writeFile as writeFile8 } from "node:fs/promises";
-import { basename as basename5, dirname as dirname7, join as join12 } from "node:path";
+import { basename as basename5, dirname as dirname6, join as join13 } from "node:path";
 async function exclusive(key, operation) {
   return runRuntimeExclusive("wiki-review", key, operation);
 }
 function rootFor(service) {
-  return join12(knowledgeDirectory(), service.binding.vaultId, "wiki-review");
+  return join13(knowledgeDirectory(), service.binding.vaultId, "wiki-review");
 }
 function checkId(id) {
   if (typeof id !== "string" || !/^[0-9a-f-]{36}$/.test(id)) throw new Error("Invalid Wiki proposal id");
@@ -1048,8 +1048,8 @@ function immutableHash(p) {
   );
 }
 async function atomicJson(path, value) {
-  await mkdir8(dirname7(path), { recursive: true, mode: 448 });
-  const temp = join12(dirname7(path), `.${randomUUID9()}.tmp`);
+  await mkdir8(dirname6(path), { recursive: true, mode: 448 });
+  const temp = join13(dirname6(path), `.${randomUUID9()}.tmp`);
   try {
     await writeFile8(temp, `${JSON.stringify(value, null, 2)}
 `, { flag: "wx", mode: 384 });
@@ -1103,10 +1103,10 @@ async function loadProposal(service, id, project) {
   const root = rootFor(service);
   let text3;
   try {
-    text3 = await readFile7(join12(root, "pending", `${id}.json`), "utf8");
+    text3 = await readFile7(join13(root, "pending", `${id}.json`), "utf8");
   } catch (error2) {
     if (error2.code !== "ENOENT") throw error2;
-    text3 = await readFile7(join12(root, "reviewed", `${id}.json`), "utf8");
+    text3 = await readFile7(join13(root, "reviewed", `${id}.json`), "utf8");
   }
   if (Buffer.byteLength(text3) > 256 * 1024) throw new Error("Wiki proposal exceeds its storage budget");
   const p = JSON.parse(text3);
@@ -1194,11 +1194,11 @@ ${refs}`
       throw new Error("Wiki proposal exceeds the bounded review storage size");
     const root = rootFor(service);
     await exclusive(root, async () => {
-      const directory = join12(root, "pending");
+      const directory = join13(root, "pending");
       await mkdir8(directory, { recursive: true, mode: 448 });
       if ((await readdir4(directory)).filter((name) => name.endsWith(".json")).length >= MAX_PENDING)
         throw new Error("Pending Wiki review limit reached; review existing candidates first");
-      await atomicJson(join12(directory, `${proposal.id}.json`), proposal);
+      await atomicJson(join13(directory, `${proposal.id}.json`), proposal);
     });
     invalidateKnowledgeUi();
     return {
@@ -1271,7 +1271,7 @@ Accumulated research round: ${rationale.trim()}`.slice(0, 1e3),
         throw new Error("Merged Wiki proposal exceeds the bounded review storage size");
       await exclusive(
         rootFor(service),
-        () => atomicJson(join12(rootFor(service), "pending", `${p.id}.json`), updated)
+        () => atomicJson(join13(rootFor(service), "pending", `${p.id}.json`), updated)
       );
       invalidateKnowledgeUi();
       return {
@@ -1338,7 +1338,7 @@ async function listWikiProposals(service, project) {
   return withKnowledgeBinding(service.binding, async () => {
     let names;
     try {
-      names = await readdir4(join12(rootFor(service), "pending"));
+      names = await readdir4(join13(rootFor(service), "pending"));
     } catch (error2) {
       if (error2.code === "ENOENT") return { items: [], problems: [] };
       throw error2;
@@ -1346,7 +1346,7 @@ async function listWikiProposals(service, project) {
     const items = [], problems = [];
     for (const name of names.filter((name2) => /^[0-9a-f-]{36}\.json$/.test(name2)).sort().slice(0, MAX_PENDING)) {
       try {
-        const p = JSON.parse(await readFile7(join12(rootFor(service), "pending", name), "utf8"));
+        const p = JSON.parse(await readFile7(join13(rootFor(service), "pending", name), "utf8"));
         if (p.project !== project) continue;
         if (immutableHash(p) !== p.proposalHash) throw new Error("Wiki proposal content changed");
         items.push({
@@ -1368,7 +1368,7 @@ async function listWikiProposals(service, project) {
 async function ensureParent(vault, path) {
   let full = vault;
   for (const part of path.split("/").slice(0, -1)) {
-    full = join12(full, part);
+    full = join13(full, part);
     try {
       await mkdir8(full);
     } catch (error2) {
@@ -1398,8 +1398,8 @@ async function finish(service, p, status, review = { actor: "human" }) {
     humanReviewed: review.actor === "human",
     scientificallyVerified: false
   };
-  await atomicJson(join12(rootFor(service), "reviewed", `${p.id}.json`), updated);
-  await unlink5(join12(rootFor(service), "pending", `${p.id}.json`)).catch((error2) => {
+  await atomicJson(join13(rootFor(service), "reviewed", `${p.id}.json`), updated);
+  await unlink5(join13(rootFor(service), "pending", `${p.id}.json`)).catch((error2) => {
     if (error2.code !== "ENOENT") throw error2;
   });
   invalidateKnowledgeUi();
@@ -1439,7 +1439,7 @@ async function decideWikiProposal(service, id, project, expectedHash, decision, 
             throw new Error("Wiki changed after preview; no user edits were overwritten");
           await verifySources(service, p);
           await ensureParent(service.binding.vault, p.path);
-          const full = join12(service.binding.vault, p.path), temp = join12(dirname7(full), `.${basename5(full)}.${randomUUID9()}.tmp`);
+          const full = join13(service.binding.vault, p.path), temp = join13(dirname6(full), `.${basename5(full)}.${randomUUID9()}.tmp`);
           const mode = current ? (await lstat5(full)).mode & 511 : 384;
           try {
             await writeFile8(temp, p.after, { flag: "wx", mode });
@@ -1504,7 +1504,7 @@ async function wikiHistory(service, project) {
   return withKnowledgeBinding(service.binding, async () => {
     let names;
     try {
-      names = await readdir4(join12(rootFor(service), "reviewed"));
+      names = await readdir4(join13(rootFor(service), "reviewed"));
     } catch (error2) {
       if (error2.code === "ENOENT") return [];
       throw error2;
@@ -1669,7 +1669,7 @@ var init_claim_conflicts = __esm({
 // packages/knowledge/src/topic-memory.ts
 import { createHash as createHash14, randomUUID as randomUUID18 } from "node:crypto";
 import { lstat as lstat11, mkdir as mkdir11, readFile as readFile12, realpath as realpath15, rename as rename10, unlink as unlink6, writeFile as writeFile11 } from "node:fs/promises";
-import { dirname as dirname10, isAbsolute as isAbsolute15, join as join16, relative as relative15, resolve as resolve19, sep as sep13 } from "node:path";
+import { dirname as dirname9, isAbsolute as isAbsolute15, join as join17, relative as relative15, resolve as resolve19, sep as sep13 } from "node:path";
 function projectKey(project) {
   const value = text2(project, 120);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) throw new Error("Invalid knowledge project");
@@ -1678,20 +1678,20 @@ function projectKey(project) {
 function memoryPath(directory, vaultId, project) {
   if (!isAbsolute15(directory) || !/^[a-f0-9]{24}$/.test(vaultId))
     throw new Error("Invalid topic memory binding");
-  return join16(resolve19(directory), vaultId, "topic-memory", `${projectKey(project)}.json`);
+  return join17(resolve19(directory), vaultId, "topic-memory", `${projectKey(project)}.json`);
 }
 async function ensureWithin(root, target) {
   const lexicalRoot = resolve19(root);
   const actualRoot = await realpath15(root).catch(() => lexicalRoot);
-  const lexicalParent = resolve19(dirname10(target));
-  const rebased = lexicalParent.startsWith(lexicalRoot) ? join16(actualRoot, lexicalParent.slice(lexicalRoot.length)) : lexicalParent;
+  const lexicalParent = resolve19(dirname9(target));
+  const rebased = lexicalParent.startsWith(lexicalRoot) ? join17(actualRoot, lexicalParent.slice(lexicalRoot.length)) : lexicalParent;
   const parent = await realpath15(rebased).catch(() => rebased);
   const rel = relative15(actualRoot, parent);
   if (isAbsolute15(rel) || rel === ".." || rel.startsWith(`..${sep13}`))
     throw new Error("Topic memory path escapes knowledge directory");
   let cursor = actualRoot;
   for (const part of relative15(actualRoot, rebased).split(sep13).filter(Boolean)) {
-    cursor = join16(cursor, part);
+    cursor = join17(cursor, part);
     try {
       if ((await lstat11(cursor)).isSymbolicLink())
         throw new Error("Topic memory path cannot traverse symlinks");
@@ -1855,8 +1855,8 @@ async function readDocument(path, vaultId, project) {
   }
 }
 async function atomicWrite(path, value) {
-  await mkdir11(dirname10(path), { recursive: true, mode: 448 });
-  const temp = join16(dirname10(path), `.${randomUUID18()}.tmp`);
+  await mkdir11(dirname9(path), { recursive: true, mode: 448 });
+  const temp = join17(dirname9(path), `.${randomUUID18()}.tmp`);
   try {
     await writeFile11(temp, `${JSON.stringify(value, null, 2)}
 `, { flag: "wx", mode: 384 });
@@ -2376,7 +2376,7 @@ ${JSON.stringify({ binding: OBSIDIAN_SETUP_BINDING, context, current, userPrefer
 // packages/extensions/src/internal/obsidian-workbench.ts
 import { createHash as createHash7, randomUUID as randomUUID11 } from "node:crypto";
 import { access as access2, mkdir as mkdir9, readdir as readdir5, readFile as readFile8, realpath as realpath8, rename as rename9, stat as stat4, writeFile as writeFile9 } from "node:fs/promises";
-import { basename as basename6, dirname as dirname9, isAbsolute as isAbsolute9, join as join14, relative as relative8, resolve as resolve11, sep as sep7 } from "node:path";
+import { basename as basename6, dirname as dirname8, isAbsolute as isAbsolute9, join as join15, relative as relative8, resolve as resolve11, sep as sep7 } from "node:path";
 import { fileURLToPath as fileURLToPath3, pathToFileURL as pathToFileURL3 } from "node:url";
 
 // packages/extensions/src/workspace-config.ts
@@ -2829,7 +2829,7 @@ init_runtime_host();
 import { Worker } from "node:worker_threads";
 import { existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname as dirname3, resolve as resolve6 } from "node:path";
+import { join as join6, resolve as resolve6 } from "node:path";
 
 // packages/tasks/src/runtime-compiled/runtime-bridge.mjs
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
@@ -3200,15 +3200,21 @@ function configureKnowledgeExtensionRuntime() {
     emitProcessEvent: (event, payload) => process.emit(event, payload)
   });
   configureKnowledgeWorker((_url, options) => {
-    const sibling = new URL("../lib/knowledge/runtime/worker.mjs", import.meta.url);
-    if (sibling.protocol === "file:" && existsSync(fileURLToPath(sibling)))
-      return new Worker(sibling, options);
-    if (import.meta.url.includes("/packages/extensions/src/")) {
-      const segments = ["..", "..", "..", "..", ".pi", "lib", "knowledge", "runtime", "worker.mjs"];
-      const sourceWorker = pathToFileURL(
-        resolve6(dirname3(fileURLToPath(import.meta.url)), segments.join("/"))
-      );
-      return new Worker(sourceWorker, options);
+    const bundled = new URL("knowledge-worker.mjs", import.meta.url);
+    if (bundled.protocol === "file:" && existsSync(fileURLToPath(bundled)))
+      return new Worker(bundled, options);
+    const packageWorker = new URL("../lib/knowledge/runtime/worker.mjs", import.meta.url);
+    if (packageWorker.protocol === "file:" && existsSync(fileURLToPath(packageWorker)))
+      return new Worker(packageWorker, options);
+    const developmentRoots = [
+      process.env.DRONE_RESEARCH_WORKBENCH_ROOT,
+      resolve6(process.cwd(), ".pi", "extensions"),
+      resolve6(process.cwd(), "..", ".pi", "extensions"),
+      resolve6(process.cwd(), "..", "..", ".pi", "extensions")
+    ].filter(Boolean);
+    for (const root of developmentRoots) {
+      const sourceWorker = pathToFileURL(join6(root, "knowledge-worker.mjs"));
+      if (existsSync(fileURLToPath(sourceWorker))) return new Worker(sourceWorker, options);
     }
     throw new Error("Knowledge worker resource is missing from the packaged extension");
   });
@@ -3218,7 +3224,7 @@ function configureKnowledgeExtensionRuntime() {
 init_runtime_host();
 
 // packages/knowledge/src/ui-service.ts
-import { dirname as dirname8, isAbsolute as isAbsolute8, join as join13, relative as relative7, resolve as resolve10 } from "node:path";
+import { dirname as dirname7, isAbsolute as isAbsolute8, join as join14, relative as relative7, resolve as resolve10 } from "node:path";
 init_runtime_host();
 init_runtime_host();
 init_runtime_host();
@@ -3242,13 +3248,13 @@ init_files();
 // packages/knowledge/src/maintenance.ts
 import { createHash as createHash4, randomUUID as randomUUID4 } from "node:crypto";
 import { mkdir as mkdir5, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
-import { dirname as dirname5 } from "node:path";
+import { dirname as dirname4 } from "node:path";
 
 // packages/knowledge/src/layout.ts
 import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
 init_files();
 import { link as link2, lstat as lstat3, mkdir as mkdir4, open as open2, realpath as realpath6, rename as rename4, unlink as unlink2, writeFile as writeFile4 } from "node:fs/promises";
-import { basename as basename4, dirname as dirname4, isAbsolute as isAbsolute6, join as join7, relative as relative4, resolve as resolve7, sep as sep4 } from "node:path";
+import { basename as basename4, dirname as dirname3, isAbsolute as isAbsolute6, join as join8, relative as relative4, resolve as resolve7, sep as sep4 } from "node:path";
 var MANAGED_START2 = "<!-- pi-agent:managed:start -->";
 var MANAGED_END2 = "<!-- pi-agent:managed:end -->";
 var PROJECT_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -3261,8 +3267,8 @@ async function canonicalPath2(path) {
   try {
     return await realpath6(path);
   } catch (error2) {
-    if (error2.code !== "ENOENT" || dirname4(path) === path) throw error2;
-    return join7(await canonicalPath2(dirname4(path)), basename4(path));
+    if (error2.code !== "ENOENT" || dirname3(path) === path) throw error2;
+    return join8(await canonicalPath2(dirname3(path)), basename4(path));
   }
 }
 async function containedVaultFile(root, path) {
@@ -3273,7 +3279,7 @@ async function containedVaultFile(root, path) {
   return target;
 }
 async function createVaultFileOnly(path, content) {
-  await mkdir4(dirname4(path), { recursive: true });
+  await mkdir4(dirname3(path), { recursive: true });
   const temporary = `${path}.${randomUUID3()}.tmp`;
   await writeFile4(temporary, content, { encoding: "utf8", flag: "wx" });
   try {
@@ -3323,7 +3329,7 @@ ${block}
     if ((await readNoteFile(vault, path)).hash !== hash(original))
       throw new Error("Human navigation changed; update was not applied");
   }
-  await mkdir4(dirname4(full), { recursive: true });
+  await mkdir4(dirname3(full), { recursive: true });
   if (original === null) {
     await writeFile4(full, updated, { encoding: "utf8", flag: "wx" });
   } else {
@@ -3421,7 +3427,7 @@ ${block}
   if (updated === original) return { path, changed: false };
   if (original !== null && (await readNoteFile(vault, path)).hash !== hash2(original))
     throw new Error("Human navigation changed; update was not applied");
-  await mkdir5(dirname5(full), { recursive: true });
+  await mkdir5(dirname4(full), { recursive: true });
   if (original === null) {
     await writeFile5(full, updated, { flag: "wx" });
     return { path, changed: true };
@@ -3531,7 +3537,7 @@ init_config();
 init_files();
 init_review_policy();
 import { createHash as createHash5, randomUUID as randomUUID7 } from "node:crypto";
-import { join as join10, relative as relative5, resolve as resolve8, sep as sep5 } from "node:path";
+import { join as join11, relative as relative5, resolve as resolve8, sep as sep5 } from "node:path";
 
 // packages/knowledge/src/semantic-provider.ts
 import { URL as URL2 } from "node:url";
@@ -3756,7 +3762,7 @@ var semanticLimits = Object.freeze({ MAX_BATCH, MAX_CHARS, MAX_RESPONSE });
 init_config();
 import { randomUUID as randomUUID5 } from "node:crypto";
 import { lstat as lstat4, mkdir as mkdir6, readdir as readdir3, readFile as readFile5, rename as rename6, unlink as unlink3, writeFile as writeFile6 } from "node:fs/promises";
-import { dirname as dirname6, join as join9 } from "node:path";
+import { dirname as dirname5, join as join10 } from "node:path";
 var MAX_FILE_BYTES = 256 * 1024;
 var ENV_NAME2 = /^[A-Z_][A-Z0-9_]{0,127}$/;
 var SETTINGS_KEYS = /* @__PURE__ */ new Set([
@@ -3877,7 +3883,7 @@ function pathFor(vaultId) {
   if (!/^[a-f0-9]{24}$/.test(vaultId || "")) throw new Error("Invalid Vault binding");
   const directory = knowledgeDirectory();
   if (!directory) throw new Error("Application knowledge directory is not configured");
-  return join9(directory, vaultId, "semantic.json");
+  return join10(directory, vaultId, "semantic.json");
 }
 async function assertDirectory(path) {
   try {
@@ -3890,13 +3896,13 @@ async function assertDirectory(path) {
     if (!stat6.isDirectory() || stat6.isSymbolicLink()) throw new Error("Semantic settings path is unsafe");
   }
   let ancestor = path;
-  for (let depth = 0; depth < 8 && ancestor !== dirname6(ancestor); depth++) {
+  for (let depth = 0; depth < 8 && ancestor !== dirname5(ancestor); depth++) {
     try {
       if ((await lstat4(ancestor)).isSymbolicLink()) throw new Error("Semantic settings ancestor is unsafe");
     } catch (error2) {
       if (error2.code !== "ENOENT") throw error2;
     }
-    ancestor = dirname6(ancestor);
+    ancestor = dirname5(ancestor);
   }
 }
 async function assertFile(path) {
@@ -3942,7 +3948,7 @@ function defaultSettings(state4, path) {
   return { version: 1, revision: 0, ...validateSemanticConfig2({}), updatedAt };
 }
 async function readUnlocked(state4, path) {
-  await assertDirectory(dirname6(path));
+  await assertDirectory(dirname5(path));
   await assertFile(path);
   try {
     const raw = await readFile5(path, { encoding: "utf8", flag: "r" });
@@ -3966,12 +3972,12 @@ function createSemanticSettingsApi(state4 = createSemanticSettingsState()) {
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== current.revision)
         throw new Error("Semantic settings revision is stale");
       const value = normalize({ version: 1, ...input }, current.revision + 1);
-      const dir = dirname6(path);
+      const dir = dirname5(path);
       await assertDirectory(dir);
       for (const entry of await readdir3(dir))
-        if (/^semantic\.[a-f0-9-]+\.tmp$/.test(entry)) await unlink3(join9(dir, entry)).catch(() => {
+        if (/^semantic\.[a-f0-9-]+\.tmp$/.test(entry)) await unlink3(join10(dir, entry)).catch(() => {
         });
-      const temp = join9(dir, `semantic.${randomUUID5()}.tmp`);
+      const temp = join10(dir, `semantic.${randomUUID5()}.tmp`);
       try {
         await writeFile6(temp, `${JSON.stringify(value, null, 2)}
 `, { mode: 384, flag: "wx" });
@@ -4065,7 +4071,7 @@ var KnowledgeService = class {
     this.closing = false;
     this.closePromise = null;
     this.worker = createKnowledgeWorker(new URL("./worker.mjs", import.meta.url), {
-      workerData: { vault: binding.vault, database: join10(directory, binding.vaultId, "index.sqlite") },
+      workerData: { vault: binding.vault, database: join11(directory, binding.vaultId, "index.sqlite") },
       execArgv: process.execArgv.filter(
         (arg) => !arg.startsWith("--input-type") && !arg.startsWith("--test")
       )
@@ -4840,7 +4846,7 @@ async function getKnowledgeService(binding = null) {
   binding ||= await readKnowledgeBinding();
   const directory = knowledgeDirectory();
   if (!binding || !directory) throw new Error("No application knowledge Vault is bound");
-  const key = join10(directory, binding.vaultId, "index.sqlite");
+  const key = join11(directory, binding.vaultId, "index.sqlite");
   let service = pool.get(key);
   if (service && !service.closed && service.binding?.revision !== binding.revision) {
     pool.delete(key);
@@ -4876,6 +4882,11 @@ async function notifyKnowledgeChange(path) {
   } catch (error2) {
     return { indexed: false, saved: true, error: error2.message, maintenance: "reconcile-required" };
   }
+}
+async function closeKnowledgeServices() {
+  const services = [...pool.values()];
+  pool.clear();
+  await Promise.all(services.map((service) => service.close()));
 }
 
 // packages/knowledge/src/source-links.ts
@@ -5221,7 +5232,7 @@ async function configuredVault(cwd) {
   return canonical(obsidianVault);
 }
 async function vaultPath(vault, ...parts) {
-  const file = join14(vault, ...parts);
+  const file = join15(vault, ...parts);
   if (!contains(vault, await canonical(file)))
     throw new Error("Project path must stay inside the configured vault");
   return file;
@@ -5274,7 +5285,7 @@ ${original.slice(review)}`;
   }
   if (updated === original)
     return;
-  await mkdir9(dirname9(file), { recursive: true });
+  await mkdir9(dirname8(file), { recursive: true });
   const temporary = `${file}.${randomUUID11()}.tmp`;
   await writeFile9(temporary, updated, "utf8");
   await rename9(temporary, file);
@@ -5293,7 +5304,7 @@ async function childEntries(directory) {
 async function noteLinks(vault, directory) {
   const links = [];
   for (const entry of await childEntries(directory)) {
-    const file = join14(directory, entry.name);
+    const file = join15(directory, entry.name);
     if (entry.isDirectory())
       links.push(...await noteLinks(vault, file));
     else if (entry.isFile() && entry.name.endsWith(".md")) {
@@ -5410,7 +5421,7 @@ async function publishExplainer2({ cwd = process.cwd(), project, topicId, title,
   return updateVault(cwd, async (vault) => {
     const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest4.slice(0, 12)}${ext}`;
     const attachment = await vaultPath(vault, ...attachmentRel.split("/"));
-    await mkdir9(dirname9(attachment), { recursive: true });
+    await mkdir9(dirname8(attachment), { recursive: true });
     try {
       await writeFile9(attachment, bytes, { flag: "wx" });
     } catch (error2) {
@@ -5496,7 +5507,7 @@ async function createObsidianProject({ cwd = process.cwd(), project, title = pro
             await mkdir9(target, { recursive: true });
             await copyDefaults(next);
           } else if (entry.isFile() && entry.name.endsWith(".md")) {
-            await createOnly2(target, renderProjectTemplate(await readFile8(join14(source, entry.name), "utf8"), project, title.trim(), ""));
+            await createOnly2(target, renderProjectTemplate(await readFile8(join15(source, entry.name), "utf8"), project, title.trim(), ""));
           }
         }
       };
@@ -5521,14 +5532,14 @@ async function readJson(file) {
   }
 }
 async function atomicJson2(file, data) {
-  await mkdir9(dirname9(file), { recursive: true });
+  await mkdir9(dirname8(file), { recursive: true });
   const temp = `${file}.${randomUUID11()}.tmp`;
   await writeFile9(temp, `${JSON.stringify(data, null, 2)}
 `, "utf8");
   await rename9(temp, file);
 }
 async function createOnly2(file, content) {
-  await mkdir9(dirname9(file), { recursive: true });
+  await mkdir9(dirname8(file), { recursive: true });
   try {
     await writeFile9(file, content, { encoding: "utf8", flag: "wx" });
   } catch (error2) {
@@ -5540,9 +5551,9 @@ async function canonical(file) {
   try {
     return await realpath8(file);
   } catch (error2) {
-    if (error2.code !== "ENOENT" || dirname9(file) === file)
+    if (error2.code !== "ENOENT" || dirname8(file) === file)
       throw error2;
-    return join14(await canonical(dirname9(file)), basename6(file));
+    return join15(await canonical(dirname8(file)), basename6(file));
   }
 }
 function contains(root, child) {
@@ -5648,7 +5659,7 @@ async function depositKnowledge({ cwd = process.cwd(), project, type, title, mar
   return updateVault(cwd, async (vault) => {
     if (!knowledgeDirectory())
       await initializeVault(vault, project, config.knowledgeProfile);
-    const relativeNote = scope === "shared" ? join14("Wiki", `${slug2}.md`) : scope === "library" ? join14("Library", folder, `${slug2}.md`) : join14("Projects", project, folder, `${slug2}.md`);
+    const relativeNote = scope === "shared" ? join15("Wiki", `${slug2}.md`) : scope === "library" ? join15("Library", folder, `${slug2}.md`) : join15("Projects", project, folder, `${slug2}.md`);
     const note = await vaultPath(vault, relativeNote);
     const normalizedSources = await normalizeSourceLinks(depositSources, {
       cwd,
@@ -5711,7 +5722,7 @@ async function obsidianStatus(cwd) {
         profile: binding.profile,
         depositMode: binding.depositMode,
         subagentMcpPolicy: binding.subagentPolicy,
-        home: join14(binding.vault, "Home.md"),
+        home: join15(binding.vault, "Home.md"),
         connectionVerified: false
       };
     }
@@ -5726,11 +5737,11 @@ async function obsidianStatus(cwd) {
         server: SERVER_NAME
       };
     try {
-      await access2(join14(vault, ".obsidian"));
+      await access2(join15(vault, ".obsidian"));
     } catch {
       return { state: "missing-vault", vault };
     }
-    const mcp = await readJson(join14(cwd, ".mcp.json"));
+    const mcp = await readJson(join15(cwd, ".mcp.json"));
     const server = mcp.mcpServers?.[SERVER_NAME];
     if (!server || server.disabled || server.args?.at(-1) !== vault)
       return { state: "missing-mcp", vault };
@@ -5741,7 +5752,7 @@ async function obsidianStatus(cwd) {
     } catch {
       return { state: "missing-server", vault };
     }
-    const home = join14(vault, "Home.md");
+    const home = join15(vault, "Home.md");
     return {
       state: "ready",
       vault,
@@ -5775,15 +5786,15 @@ async function resolveObsidianRuntime({ cwd, server, existing, installationRoot 
     candidates.push(runtimeFromConfig(existing, cwd));
     if (process.env.PI_OBSIDIAN_MCP_SERVER)
       candidates.push({ path: resolve11(process.env.PI_OBSIDIAN_MCP_SERVER) });
-    candidates.push({ path: join14(cwd, ".pi/npm/node_modules/@bitbonsai/mcpvault/dist/server.js") });
+    candidates.push({ path: join15(cwd, ".pi/npm/node_modules/@bitbonsai/mcpvault/dist/server.js") });
     if (resolve11(installationRoot) !== resolve11(cwd)) {
-      const installed = await readJson(join14(installationRoot, ".mcp.json"));
+      const installed = await readJson(join15(installationRoot, ".mcp.json"));
       candidates.push(runtimeFromConfig(installed.mcpServers?.[SERVER_NAME], installationRoot));
     }
     candidates.push({
-      path: join14(installationRoot, ".pi/npm/node_modules/@bitbonsai/mcpvault/dist/server.js")
+      path: join15(installationRoot, ".pi/npm/node_modules/@bitbonsai/mcpvault/dist/server.js")
     });
-    candidates.push({ path: join14(installationRoot, "node_modules/@bitbonsai/mcpvault/dist/server.js") });
+    candidates.push({ path: join15(installationRoot, "node_modules/@bitbonsai/mcpvault/dist/server.js") });
   }
   for (const candidate of candidates.filter(Boolean)) {
     try {
@@ -5840,7 +5851,7 @@ async function configureObsidian({ cwd, vault, project = null, server, profile =
       rawMcpUnchanged: true
     };
   }
-  const mcpPath = join14(cwd, ".mcp.json");
+  const mcpPath = join15(cwd, ".mcp.json");
   const mcp = await readJson(mcpPath);
   if (mcp.mcpServers && (typeof mcp.mcpServers !== "object" || Array.isArray(mcp.mcpServers)))
     throw new Error("Invalid JSON mcpServers");
@@ -5883,7 +5894,7 @@ async function configureObsidian({ cwd, vault, project = null, server, profile =
 var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for factual research claims, not unrelated citations for ordinary chat. For substantial tasks, do bounded read-only preparation and consolidate scope, assumptions, needed permissions and deliverables into one task_plan for one user authorization. After authorization, carry out routine steps and recoverable checks within that scope without repeatedly asking whether to continue. Respect prior decisions, especially declined installs. New risks or scope, missing credentials and genuinely unavailable user data still require a specific request; never infer consent. At completion, explain what changed, link actual outputs or show key figures, separate execution from validation, and give one next step only if needed. Keep internal counters and tool logs out of the main answer.";
 
 // packages/extensions/src/internal/knowledge-extension.ts
-import { join as join17, resolve as resolve20 } from "node:path";
+import { join as join18, resolve as resolve20 } from "node:path";
 
 // packages/research/src/source-delivery.ts
 function requiresPaperEvidence2(prompt) {
@@ -9628,7 +9639,7 @@ init_runtime_host();
 init_config();
 import { randomUUID as randomUUID16 } from "node:crypto";
 import { lstat as lstat8, mkdir as mkdir10, realpath as realpath13, writeFile as writeFile10 } from "node:fs/promises";
-import { isAbsolute as isAbsolute14, join as join15, relative as relative13, resolve as resolve17, sep as sep11 } from "node:path";
+import { isAbsolute as isAbsolute14, join as join16, relative as relative13, resolve as resolve17, sep as sep11 } from "node:path";
 var contained = (root, path) => {
   const rel = relative13(root, path);
   return !isAbsolute14(rel) && rel !== ".." && !rel.startsWith(`..${sep11}`);
@@ -9648,10 +9659,10 @@ async function saveSpecialistExplainer(c, ctx, { runDir, topicId, answer }) {
   if (answer.status !== "completed") return answer;
   const html = validateSpecialistHtml(answer.data.html), config = await loadWorkspaceConfig2(ctx.cwd);
   const root = await realpath13(config.resultsRoot), run = await realpath13(resolve17(ctx.cwd, runDir || ""));
-  if (!contained(root, run) || relative13(root, run).split(sep11).length !== 2 || !run.split(sep11).at(-1).startsWith("run-") || !(await lstat8(join15(run, "metadata.json"))).isFile())
+  if (!contained(root, run) || relative13(root, run).split(sep11).length !== 2 || !run.split(sep11).at(-1).startsWith("run-") || !(await lstat8(join16(run, "metadata.json"))).isFile())
     throw new Error("Explainer destination must be an existing research run");
   return withKnowledgeBinding(c.binding, async () => {
-    const artifactPath = join15(run, `show-me-${randomUUID16()}.html`);
+    const artifactPath = join16(run, `show-me-${randomUUID16()}.html`);
     const sources = await c.service.evidenceReceipts(c.ticket, ctx.cwd, answer.data.source_paths);
     await mkdir10(run, { recursive: true });
     await writeFile10(artifactPath, html, { flag: "wx", mode: 384 });
@@ -10878,7 +10889,7 @@ Topic memory receipt: ${JSON.stringify({ classification: memoryReceipt.classific
         });
         if (answer.status === "completed") {
           try {
-            const runDir = join17(event.result.details.run, "..");
+            const runDir = join18(event.result.details.run, "..");
             const archived = await saveSpecialistExplainer(current, ctx, {
               runDir,
               topicId: explainerTopicId(
@@ -11990,6 +12001,9 @@ ${fresh.map((path) => `- [[${path.replace(/\.md$/, "")}]]`).join("\n")}
 }
 
 // packages/extensions/src/obsidian-workbench.ts
+init_config();
+init_wiki_review();
+init_ui_state();
 var OBSIDIAN_FAMILY = {
   match: "research-obsidian",
   label: "Obsidian",
@@ -12363,5 +12377,23 @@ ${preparation.guidance || ""}`
   });
 }
 export {
-  obsidianWorkbench as default
+  KnowledgeService,
+  beginKnowledgeFlow,
+  closeKnowledgeServices,
+  configureObsidian,
+  createObsidianProject,
+  obsidianWorkbench as default,
+  depositKnowledge,
+  embedTexts,
+  getKnowledgeService,
+  noteKnowledgeRead,
+  noteKnowledgeSearch,
+  noteKnowledgeSpecialist,
+  obsidianStatus,
+  publicationKnowledgeFlow,
+  readKnowledgeBinding,
+  requestWikiReviewUi,
+  researchSetupOptions2 as researchSetupOptions,
+  stageWikiProposal,
+  updateKnowledgeFlow
 };

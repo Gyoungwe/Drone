@@ -4,10 +4,13 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readKnowledgeBinding } from "../.pi/lib/knowledge/config.mjs";
-import { embedTexts } from "../.pi/lib/knowledge/semantic-provider.mjs";
-import { closeKnowledgeServices, KnowledgeService } from "../.pi/lib/knowledge/service.mjs";
-import { configureObsidian } from "../.pi/lib/obsidian-workbench.mjs";
+import { readKnowledgeBinding } from "../.pi/extensions/obsidian-workbench.mjs";
+import { embedTexts } from "../.pi/extensions/obsidian-workbench.mjs";
+import {
+	closeKnowledgeServices,
+	KnowledgeService,
+	configureObsidian,
+} from "../.pi/extensions/obsidian-workbench.mjs";
 
 const fixture = JSON.parse(
 	await readFile(new URL("./fixtures/semantic-benchmark.json", import.meta.url), "utf8"),
