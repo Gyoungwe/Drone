@@ -50,7 +50,7 @@ v0.33.0 无证书跨平台资产、发布 run 和 SHA-256 清单见 [发布说�
 
 v0.33.1 公开插件宿主收口与无证书补丁发布说明见 [发布说明](releases/v0.33.1.md)。
 
-首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)。
+首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`research-suite@0.1.2` 的 task ownership 修复、弃用和真实 Pi CLI 回归见 [v1.1 Pi knowledge/research suite 证据](releases/v1.1-pi-knowledge-research-suite.json)。
 
 v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
@@ -201,7 +201,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，main `5002590`），宿主仓库不再保留兼容副本或构建脚本。已发布的 `@gyoungwe/pi-knowledge@0.1.0` 自包含 manifest、dist、knowledge worker 和 skills；外部仓库负责 build/check/smoke，根仓库的 `scripts/smoke-pi-package.mjs` 从已安装 npm 包验证未配置 Vault 的 `unconfigured` 回执、fixture 检索和安装/卸载路径。原生 Pi 的最低版本是 `1.1.0`；生成 dist 的 R8 自包含检查由插件仓库和 `scripts/check-architecture.mjs` 共同执行。
+`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，main `e5b9e41`），宿主仓库不再保留兼容副本或构建脚本。已发布的 `@gyoungwe/pi-knowledge@0.1.1` 自包含 manifest、dist、knowledge worker 和 skills，且不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。外部仓库负责 build/check/smoke，根仓库的 `scripts/smoke-pi-package.mjs` 从已安装 npm 包验证未配置 Vault 的 `unconfigured` 回执、fixture 检索和安装/卸载路径。原生 Pi 的最低版本是 `1.1.0`；生成 dist 的 R8 自包含检查由插件仓库和 `scripts/check-architecture.mjs` 共同执行。
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 
