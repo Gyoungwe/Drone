@@ -9,7 +9,7 @@
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { WebSocket } from "ws";
@@ -24,8 +24,22 @@ const profile = await mkdtemp(join(tmpdir(), "drone-visual-profile-"));
 const views = [
 	{ id: "new-task", label: "新任务", width: 1440, height: 900, designBoard: "首页 · 新任务", nav: "新任务" },
 	{ id: "knowledge", label: "知识库", width: 1440, height: 900, designBoard: "知识库", nav: "知识库" },
-	{ id: "skills", label: "技能与连接", width: 1280, height: 800, designBoard: "技能与连接 · 能力状态", nav: "技能与连接" },
-	{ id: "hosts", label: "主机", width: 1280, height: 800, designBoard: "共享侧栏组件（共享 shell 对照）", nav: "主机" },
+	{
+		id: "skills",
+		label: "技能与连接",
+		width: 1280,
+		height: 800,
+		designBoard: "技能与连接 · 能力状态",
+		nav: "技能与连接",
+	},
+	{
+		id: "hosts",
+		label: "主机",
+		width: 1280,
+		height: 800,
+		designBoard: "共享侧栏组件（共享 shell 对照）",
+		nav: "主机",
+	},
 ];
 
 function sleep(ms) {
@@ -105,10 +119,20 @@ const hostStub = `
 const server = spawn("python3", ["-m", "http.server", String(serverPort), "--directory", rendererRoot], {
 	stdio: "ignore",
 });
-const browser = spawn(chrome, [
-	"--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--hide-scrollbars",
-	`--remote-debugging-port=${serverPort + 1}`, `--user-data-dir=${profile}`, "about:blank",
-], { stdio: "ignore" });
+const browser = spawn(
+	chrome,
+	[
+		"--headless=new",
+		"--no-sandbox",
+		"--disable-gpu",
+		"--disable-dev-shm-usage",
+		"--hide-scrollbars",
+		`--remote-debugging-port=${serverPort + 1}`,
+		`--user-data-dir=${profile}`,
+		"about:blank",
+	],
+	{ stdio: "ignore" },
+);
 
 try {
 	await waitFor(`http://127.0.0.1:${serverPort}/index.html`);
@@ -131,11 +155,12 @@ try {
 		if (message.error) request.reject(new Error(message.error.message));
 		else request.resolve(message.result);
 	});
-	const send = (method, params = {}) => new Promise((resolveSend, rejectSend) => {
-		const requestId = ++id;
-		pending.set(requestId, { resolve: resolveSend, reject: rejectSend });
-		socket.send(JSON.stringify({ id: requestId, method, params }));
-	});
+	const send = (method, params = {}) =>
+		new Promise((resolveSend, rejectSend) => {
+			const requestId = ++id;
+			pending.set(requestId, { resolve: resolveSend, reject: rejectSend });
+			socket.send(JSON.stringify({ id: requestId, method, params }));
+		});
 	async function waitForRenderer(label) {
 		for (let attempt = 0; attempt < 120; attempt += 1) {
 			const result = await send("Runtime.evaluate", {
@@ -143,9 +168,20 @@ try {
 				returnByValue: true,
 			});
 			const state = JSON.parse(result.result?.value || "{}");
-			const visual = await send("Runtime.evaluate", { expression: "JSON.stringify({ splash: Boolean(document.querySelector('#splash')), opacity: Number.parseFloat(getComputedStyle(document.querySelector('#root')).opacity || '0') })", returnByValue: true });
+			const visual = await send("Runtime.evaluate", {
+				expression:
+					"JSON.stringify({ splash: Boolean(document.querySelector('#splash')), opacity: Number.parseFloat(getComputedStyle(document.querySelector('#root')).opacity || '0') })",
+				returnByValue: true,
+			});
 			const visualState = JSON.parse(visual.result?.value || "{}");
-			if (state.hasRoot && state.text !== "Drone" && state.text.includes(label) && !visualState.splash && visualState.opacity >= 0.99) return;
+			if (
+				state.hasRoot &&
+				state.text !== "Drone" &&
+				state.text.includes(label) &&
+				!visualState.splash &&
+				visualState.opacity >= 0.99
+			)
+				return;
 			await sleep(100);
 		}
 		throw new Error(`renderer did not settle on ${label}`);
@@ -155,36 +191,67 @@ try {
 	await send("Page.addScriptToEvaluateOnNewDocument", { source: hostStub });
 	await mkdir(outputRoot, { recursive: true });
 	const design = await readFile(join(repoRoot, "docs/design/plugin-ui/Drone 插件化界面.html"), "utf8");
-	const designAnchors = ["首页 · 新任务", "技能与连接 · 能力状态", "知识库", "共享侧栏组件"].filter((anchor) => design.includes(anchor));
+	const designAnchors = ["首页 · 新任务", "技能与连接 · 能力状态", "知识库", "共享侧栏组件"].filter(
+		(anchor) => design.includes(anchor),
+	);
 	const results = [];
 	for (const view of views) {
-		await send("Emulation.setDeviceMetricsOverride", { width: view.width, height: view.height, deviceScaleFactor: 1, mobile: false });
+		await send("Emulation.setDeviceMetricsOverride", {
+			width: view.width,
+			height: view.height,
+			deviceScaleFactor: 1,
+			mobile: false,
+		});
 		await send("Page.navigate", { url: `http://127.0.0.1:${serverPort}/index.html?visual=${view.id}` });
 		await waitForRenderer("新任务");
 		if (view.id !== "new-task") {
-			await send("Runtime.evaluate", { expression: `(() => { const button = Array.from(document.querySelectorAll('button')).find((node) => node.getAttribute('aria-label') === ${JSON.stringify(view.nav)}); if (!button) throw new Error('navigation button missing: ' + ${JSON.stringify(view.nav)}); button.click(); })()` });
+			await send("Runtime.evaluate", {
+				expression: `(() => { const button = Array.from(document.querySelectorAll('button')).find((node) => node.getAttribute('aria-label') === ${JSON.stringify(view.nav)}); if (!button) throw new Error('navigation button missing: ' + ${JSON.stringify(view.nav)}); button.click(); })()`,
+			});
 			await waitForRenderer(view.nav);
 		}
 		await sleep(300);
-		const state = await send("Runtime.evaluate", { expression: `JSON.stringify({ body: document.body.innerText.slice(0, 1200), rootChildren: document.querySelector('#root')?.children.length || 0, errorBoundary: document.body.innerText.includes('界面出现异常'), errors: window.__droneVisualErrors || [], current: document.querySelector('[aria-current="page"]')?.getAttribute('aria-label') || null, appReady: document.documentElement.dataset.appReady || null, splash: Boolean(document.querySelector('#splash')), rootStyle: getComputedStyle(document.querySelector('#root')).cssText, rootBox: document.querySelector('#root')?.getBoundingClientRect().toJSON() })`, returnByValue: true });
+		const state = await send("Runtime.evaluate", {
+			expression: `JSON.stringify({ body: document.body.innerText.slice(0, 1200), rootChildren: document.querySelector('#root')?.children.length || 0, errorBoundary: document.body.innerText.includes('界面出现异常'), errors: window.__droneVisualErrors || [], current: document.querySelector('[aria-current="page"]')?.getAttribute('aria-label') || null, appReady: document.documentElement.dataset.appReady || null, splash: Boolean(document.querySelector('#splash')), rootStyle: getComputedStyle(document.querySelector('#root')).cssText, rootBox: document.querySelector('#root')?.getBoundingClientRect().toJSON() })`,
+			returnByValue: true,
+		});
 		const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
 		const image = Buffer.from(screenshot.data, "base64");
 		const imagePath = join(outputRoot, `drone-${view.id}.png`);
 		await writeFile(imagePath, image);
 		const parsed = JSON.parse(state.result?.value || "{}");
 		results.push({
-			id: view.id, label: view.label, viewport: { width: view.width, height: view.height }, designBoard: view.designBoard,
-			status: parsed.rootChildren > 0 && !parsed.errorBoundary && parsed.errors.length === 0 && parsed.current === view.nav ? "PASS" : "FAIL",
-			rootChildren: parsed.rootChildren, currentNav: parsed.current, image: imagePath.replace(`${repoRoot}/`, ""),
-			sha256: checksum(image), errors: parsed.errors, bodySample: parsed.body,
-			appReady: parsed.appReady, splash: parsed.splash, rootBox: parsed.rootBox,
+			id: view.id,
+			label: view.label,
+			viewport: { width: view.width, height: view.height },
+			designBoard: view.designBoard,
+			status:
+				parsed.rootChildren > 0 &&
+				!parsed.errorBoundary &&
+				parsed.errors.length === 0 &&
+				parsed.current === view.nav
+					? "PASS"
+					: "FAIL",
+			rootChildren: parsed.rootChildren,
+			currentNav: parsed.current,
+			image: imagePath.replace(`${repoRoot}/`, ""),
+			sha256: checksum(image),
+			errors: parsed.errors,
+			bodySample: parsed.body,
+			appReady: parsed.appReady,
+			splash: parsed.splash,
+			rootBox: parsed.rootBox,
 		});
 	}
 	const report = {
-		generatedAt: new Date().toISOString(), method: "Chrome headless built renderer with deterministic read-only window.pi stub",
-		reference: "docs/design/plugin-ui/Drone 插件化界面.html", designAnchors,
-		comparison: "shared shell, token/typography, navigation hierarchy, content density and viewport contract; hosts has no dedicated board and uses the shared shell board",
-		status: results.every((result) => result.status === "PASS") && designAnchors.length === 4 ? "PASS" : "FAIL",
+		generatedAt: new Date().toISOString(),
+		method: "Chrome headless built renderer with deterministic read-only window.pi stub",
+		reference: "docs/design/plugin-ui/Drone 插件化界面.html",
+		designAnchors,
+		comparison:
+			"shared shell, token/typography, navigation hierarchy, content density and viewport contract; hosts has no dedicated board and uses the shared shell board",
+		status:
+			results.every((result) => result.status === "PASS") && designAnchors.length === 4 ? "PASS" : "FAIL",
 		views: results,
 	};
 	await writeFile(join(outputRoot, "drone-visual-comparison.json"), `${JSON.stringify(report, null, 2)}\n`);
