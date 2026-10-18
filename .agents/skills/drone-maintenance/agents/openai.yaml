@@ -1,0 +1,4 @@
+interface:
+  display_name: "Drone maintenance"
+  short_description: "Maintain Drone plugins and releases"
+  default_prompt: "Use $drone-maintenance to maintain the Drone dual-repository project or publish its npm packages."

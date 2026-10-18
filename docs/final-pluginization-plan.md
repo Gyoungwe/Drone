@@ -10,7 +10,7 @@
 > 6. **数据位置不变**：原生 Pi 的运行数据沿用现有 `.pi/` 下的位置和 Vault，不新增 `.drone/` 目录，也不改变已落盘文件的格式。
 > 7. **npm scope 已确定**：公开包统一使用 `@gyoungwe/`。首批发布顺序为 `plugin-api` → `pi-core` / `pi-knowledge` / `pi-research` → `research-suite`；发布动作只受 npm 登录状态阻塞。
 >
-> 执行顺序以 §9「实施阶段（执行版）」为准。
+> 历史 PR 执行清单见 §9.1；当前剩余 v1.1 的目标、顺序和完成判定见 §9.2。
 
 ## 1. 目标
 
@@ -544,6 +544,28 @@ Claude Code adapter 必须通过同一套：
 
 **后续（v1.1 起）**：`pi-connectors` 拆分、`desktop-ui-pack` 独立分发、`pi-analysis` / `pi-evidence`、Claude Code 适配器。
 
+### 9.2 v1.1 收口目标（执行版，2026-10-18）
+
+**目标**：按顺序完成剩余插件化边界并发布可验证的 v1.1 包，使原生 Pi 和 Desktop 都能通过稳定合同加载已安装能力；每个包都留下源归属、权限/资源清单、安装 smoke、Pi 兼容矩阵、公开 tarball 和宿主回归证据。双仓库维护、红线和 npm 发布操作以仓库内 [`drone-maintenance` skill](../.agents/skills/drone-maintenance/SKILL.md) 为唯一执行规约。
+
+| 顺序 | 目标 | 交付与门槛 | 完成判定 |
+| --- | --- | --- | --- |
+| V1.1-A | `@gyoungwe/pi-analysis` | 把 AnalysisAdapter/Registry、未知流程识别、workflow/科学验证与 review→delivery 合同放到插件边界；计算执行仍由宿主组合根适配 | 包级 build/check、锁定/latest Pi 矩阵、安装/卸载 smoke、分析计划→执行→审查→交付 proof、`check:arch` |
+| V1.1-E | `@gyoungwe/pi-evidence` | 搬迁 artifact manifest、provenance、checkpoint/branch、evidence capsule、replay/import 和 digest 校验；不复制宿主持久化 | 自包含包、capsule 导入/导出与 replay proof、REDLINE proof、锁定/latest 矩阵、宿主加载检查 |
+| V1.1-C | `@gyoungwe/pi-connectors` | 组合 Zotero、WebDAV、generic MCP、institutional、搜索/浏览器连接器；manifest 明确权限、网络范围、读写和外部副作用，UI 开关与真实调用一致 | 权限审计、只读连接器门禁；只有另行授权的写入才做写入→回读→删除→回读；凭据隔离 smoke |
+| V1.1-UI | `@gyoungwe/desktop-ui-pack` | 将 Desktop UI contribution 作为独立可安装包发布，依赖 `@gyoungwe/plugin-api`，保留宿主组合根和四视口合同 | 干净安装、renderer 出现/禁用/重载持久化、`check:desktop-artifact -- --strict` 16/16 |
+| V1.1-S | `research-suite` 刷新 | 仅在单包全部通过后加入 v1.1 依赖；以真实 tarball staging 验证 bundled dependencies | 公开 tarball 内容、干净安装、Pi 1.1.0/latest 发现和最小模型任务 |
+
+**执行规则**：每个边界一个 `codex/*` 分支/PR，前一个包合入并记录公开/安装证据后再启动下一个；宿主修复与插件源代码尽量分开提交。每个集成节点运行完整根门禁：
+
+```sh
+npm run lint && npm run typecheck && npm test && npm run build && npm run check:arch
+```
+
+按变更追加 `npm run check:remaining-gates`、`npm run check:plugin-api`、`npm run check:pi-compat -- --targets locked,latest`、`npm run check:research-suite` 和 `npm run check:desktop-artifact -- --strict`。Protocols.io 保持只读；无证书桌面构建仍以本机构建产物门禁为准。
+
+**目标完成条件**：五个 v1.1 节点都有公开 tarball 验证；Desktop 只通过 host API 加载已安装包且无隐藏宿主 fallback；suite 能干净安装并发现全部资源；计划与索引记录两个仓库 head、版本、证据路径以及剩余 `BLOCKED`/`NOT_RUN`；没有新的架构红线或未审查的外部写入。
+
 ## 10. 插件化与桌面验收红线
 
 ### 10.1 总判定规则
@@ -657,4 +679,5 @@ Claude Code adapter 必须通过同一套：
 - **外部写入**：WebDAV 和 Zotero 临时 note 均完成授权→创建→回读→删除→再回读；Protocols.io 只读，不进行 bookmark/write。
 - **已关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均有隔离真实行为证据，Protocols.io 保持只读；真实 Pi `1.1.0`/latest 单包与组合矩阵通过；analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。npm scope 已确定为 `@gyoungwe`；证书/正式签名不属于本计划门槛。
 - **发布后顺序**：v0.33.0 无证书跨平台资产与首批 npm 包均已正式发布；宿主 `packages/pi-knowledge` 兼容副本已删除，Desktop/Pi 仅从已安装插件包加载；下一步推进 v1.1 的 `pi-analysis`、`pi-evidence`、`pi-connectors` 和完整 `desktop-ui-pack`。
+- **维护规约**：双仓库归属、同步顺序、R1–R7 与发布红线、npm 安全密钥 2FA、公开 tarball/干净安装验收和缺陷版本回滚已整理为 [`.agents/skills/drone-maintenance`](../.agents/skills/drone-maintenance/SKILL.md)；当前 v1.1 五节点目标见 §9.2。
 - **明确不阻塞发布**：Protocols.io 继续只读；交互式 Electron 截图受当前 shell 的 macOS `NSApplication` 启动限制，但构建产物 16/16 已通过，截图不改变本版本验收结论。
