@@ -113,6 +113,8 @@ jobs:
       - run: npm run check:research-runtime
       - run: npm run test:research-packaging
       - run: npm test
+        env:
+          DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
       - run: npm run test:upgrade
       # The desktop job in main CI also verifies the staged MCP tree and a
       # production renderer/main build. stage:pi-packages above is idempotent;

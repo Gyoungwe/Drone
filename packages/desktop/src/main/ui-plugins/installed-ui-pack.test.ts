@@ -91,7 +91,10 @@ describe("installed desktop-ui-pack discovery", () => {
 		});
 		const packageUiSource = join(
 			process.env.DRONE_PUBLIC_UI_PACKAGE_DIR ||
-				resolve(process.cwd(), "../../../drone-plugins/packages/desktop-ui-pack"),
+				join(
+					process.env.DRONE_PLUGINS_DIR || resolve(process.cwd(), "../../../drone-plugins"),
+					"packages/desktop-ui-pack",
+				),
 			"ui",
 		);
 		const packageUi = join(root, "agent", "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "ui");

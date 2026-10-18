@@ -84,12 +84,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Checkout bound plugin workspace
+        uses: actions/checkout@v6
+        with:
+          repository: Gyoungwe/drone-plugins
+          ref: main
+          path: drone-plugins
       # Backend is covered by the parallel unit/sdk jobs. Keep the other
       # workspace suites and the root upgrade/build gates in this job.
       - name: Preload real-load (required)
         run: npm run test:preload
       - run: npm test -w @drone/shared
       - run: npm test -w @drone/desktop
+        env:
+          DRONE_PLUGINS_DIR: ${{ github.workspace }}/drone-plugins
       - run: npm test -w @drone/extensions
       - run: npm test -w @drone/knowledge
       - run: npm test -w @drone/tasks
