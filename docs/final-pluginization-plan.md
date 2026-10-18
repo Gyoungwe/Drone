@@ -693,3 +693,5 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 - **发布后顺序**：v0.33.0 无证书跨平台资产、首批 npm 包和 v1.1 三个插件包均已正式发布；宿主 `packages/pi-knowledge`、evidence、connectors 兼容副本已删除，Desktop/Pi 仅从已安装插件包加载；后续只在 `drone-plugins` 维护插件，按连接器逐项推进真实外部服务验收。
 - **维护规约**：双仓库归属、同步顺序、R1–R7 与发布红线、npm 安全密钥 2FA、公开 tarball/干净安装验收和缺陷版本回滚已整理为 [`.agents/skills/drone-maintenance`](../.agents/skills/drone-maintenance/SKILL.md)；无人值守发布优先使用 `drone-plugins/.github/workflows/publish.yml` 的 npm Trusted Publishing（OIDC），不把长期 token 放进仓库或对话；当前 v1.1 五节点目标见 §9.2。
 - **明确不阻塞发布**：Protocols.io 继续只读；交互式 Electron 截图受当前 shell 的 macOS `NSApplication` 启动限制，但构建产物 16/16 已通过，截图不改变本版本验收结论。
+
+| 2026-10-18 | v0.33.1 补丁发布候选 | 基于 `Drone` main 的公开插件宿主收口提交，版本更新为 `0.33.1`；宿主完整门禁、`drone-plugins` `npm run check`、公开 registry 插件宿主、UI/SKILL、Pi 1.1.0/latest、升级 fixture 与桌面 16/16 均通过；发布说明写入 `docs/releases/v0.33.1.md` | 待 GitHub Actions 完成 Windows/macOS 无证书资产构建与发布；Protocols.io 继续只读 |

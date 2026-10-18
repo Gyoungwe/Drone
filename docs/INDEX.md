@@ -48,6 +48,8 @@ v0.26.1 的验证命令、生成物检查、资产清单和“先验证再建标
 
 v0.33.0 无证书跨平台资产、发布 run 和 SHA-256 清单见 [发布说明](releases/v0.33.0.md) 与 [资产校验清单](releases/v0.33.0-assets.sha256)。
 
+v0.33.1 公开插件宿主收口与无证书补丁发布说明见 [发布说明](releases/v0.33.1.md)。
+
 首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)。
 
 v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
