@@ -227,7 +227,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## `@gyoungwe/research-suite` — 外部原生 Pi 聚合包（PR-7）
 
-源码权威位置是绑定的 `../drone-plugins/packages/research-suite/`；宿主仓库不再保留该包、workspace lock 条目或聚合包专属检查脚本。插件仓库负责 manifest、`bundleDependencies`、tarball 与安装 smoke；宿主只通过已发布包的兼容矩阵和公开插件宿主检查验证加载结果。安装后命令是否可用以实际注册和 smoke 证据为准，计划中的 `/drone-doctor` 与 `/drone-example` 尚未有成熟实现，详见 [插件化计划 §7](final-pluginization-plan.md#7-安装和首次使用)。
+源码权威位置是绑定的 `../drone-plugins/packages/research-suite/`；宿主仓库不再保留该包、workspace lock 条目或聚合包专属检查脚本。当前公开版本为 `@gyoungwe/research-suite@0.1.2`，捆绑 `plugin-api/pi-core/pi-knowledge/pi-research`；旧 `0.1.1` 已标记“与 pi-core 冲突，无法启动”。插件仓库负责 manifest、`bundleDependencies`、tarball、安装 smoke 和 Pi CLI 回归；宿主只通过已发布包的兼容矩阵和公开插件宿主检查验证加载结果。计划中的 `/drone-doctor` 与 `/drone-example` 尚未有成熟实现，详见 [插件化计划 §7](final-pluginization-plan.md#7-安装和首次使用)。
 
 ## packages/backend — pi SDK 适配层
 
