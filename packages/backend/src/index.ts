@@ -188,7 +188,6 @@ export {
 	type CausalityProjectionRecord,
 	projectCausality,
 } from "./services/causality-projection";
-export { CollaborationService, type CollaborationServicePort } from "./services/collaboration";
 export {
 	artifactSha256,
 	type ComputeCollectOptions,

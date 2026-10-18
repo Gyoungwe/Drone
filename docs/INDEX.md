@@ -27,7 +27,7 @@
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收敛摘要](a5-impact-summary.md)。
 本轮 A5 生产切片的提交、验收与剩余兼容层见 [A5 迁移验收记录](releases/a5-migration-2026-10-18.json)。
-插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。B8-1 与 Electron 交互式尝试的机器可读记录见 [b8-electron-2026-10-19.json](releases/b8-electron-2026-10-19.json)。双仓库维护、架构红线和 npm 发版执行规约见 [drone-maintenance skill](../.agents/skills/drone-maintenance/SKILL.md)。
+插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。双仓库维护、架构红线和 npm 发版执行规约见 [drone-maintenance skill](../.agents/skills/drone-maintenance/SKILL.md)。
 插件化前端交接、宿主/插件仓库边界和 UI 验收顺序见 [pluginization-ui-handoff.md](pluginization-ui-handoff.md)；设计稿源文件见 [Drone 插件化界面.html](design/plugin-ui/Drone%20插件化界面.html)，构建产物四视图视觉对照由 [`scripts/check-visual-design-comparison.mjs`](../scripts/check-visual-design-comparison.mjs) 生成 [视觉证据](releases/visual/drone-visual-comparison.json)；资源搜索连接器设计见 [resource-search-connectors.md](resource-search-connectors.md)；科研工作台 v3 规划见 [scientific-workbench-v3-plan.md](scientific-workbench-v3-plan.md)。
 
 `.pi/tsconfig.json` 对生成的 `.pi/extensions/*.mjs` 保持可检查的资源边界；知识、任务、研究运行时由领域包 TypeScript 源码和 checked-in package-owned artifacts 负责，根 `npm run typecheck` 会串接 `npm run check:pi`。`.pi/lib` 兼容树已删除。
@@ -72,7 +72,7 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，14 个 workspace 包：
+npm workspaces monorepo，13 个 workspace 包：
 
 ```
 packages/
@@ -86,7 +86,6 @@ packages/
 ├── research/   文献回执与来源交付合约（TS 包，迁移中）
 ├── compute/    远程计算与声明式工作流领域包（TS 包，B3 垂直切片）
 ├── inquiry/    研究状态层领域包（TS 包，B5a 五本账与工作区合同）
-├── collaboration/ 本地优先协作领域合同（B8-1 角色、CAS 冲突与审计）
 ├── discovery/  研究发现领域包（TS 包，B5d–B5f 内核、批评、多路径与评测）
 ├── extensions/ 扩展入口的构建源（迁移中）
 └── desktop/    Electron 应用（main / preload / renderer）
@@ -192,10 +191,6 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 ## packages/inquiry — 研究状态层领域包（B5a）
 
 `@drone/inquiry` 只依赖 `@drone/shared`，遵守 R8。`src/models.ts` 定义产物、发现、问题/假设、分析尝试、Agent 决策与异步重跑账本；`src/lineage.ts` 校验安全路径、checksum、引用和血缘环；`src/provenance.ts` 提供最多 20 层父链的无正文来源投影；`src/reproducibility.ts` 提供代码指纹 + run-provenance 三态纯判定；`src/storage.ts` 提供宿主可注入的账本存储接口，并附带排序稳定、原子写入的文件适配器与 Node 22 `SqliteInquiryStorage`，schema v2 将旧 v1 与早期重跑记录迁移并保留读取兼容；`src/workspace.ts` 提供 `runs/` 冻结后只移动的晋升计划、索引页和只读清理 dry-run；`src/service.ts` 汇总宿主调用，撤销决策只标记账本与下游产物待复核，不触发外部写操作，并提供授权异步重跑。backend 的 `services/inquiry.ts` 通过 `canonicalProjectId` 将真实工作区 realpath 作为桌面项目账本键，按项目懒创建隔离 SQLite，并通过宿主注入的 compute/task/扩展成功回执登记已校验的 artifact/attempt/decision、串行化事件写入并提供项目只读快照；旧单账本由 StorageRegistry 以只读 preserve 条目登记。shared `host-api/inquiry.ts` → desktop `main/ipc/inquiry.ts` → preload → `ArtifactsPane` 提供来源展开、三态徽标和重跑入口，Electron IPC 的 decisions.list/revoke/confirm 与任务面板复用该只读投影。
-
-## packages/collaboration — 本地优先协作领域合同（B8-1）
-
-`@drone/collaboration` 保持无网络、无 Electron、无 Pi SDK 的纯领域合同：成员角色与生命周期、`roleAllows` 权限矩阵、文档 revision 元数据、CAS 写入、冲突双版本保留/显式 reviewer 解决和 append-only 审计事件。它只处理内容哈希，不接收文档正文或凭据。`packages/backend/src/services/collaboration.ts` 以登记的 `JsonStore` 将工作区状态原子写入 `agentDir/collaboration/workspace.json`，并明确暴露 `transport: "local-only"`；`npm run check:collaboration` 覆盖领域与 backend 的持久化回归。云端镜像、多设备 outbox、组织 ACL 和 SSO 属于 B8-2，待部署决策后另立 transport adapter。
 
 ## packages/discovery — 研究发现领域包（B5d–B5f）
 

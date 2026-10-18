@@ -64,7 +64,6 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | Pi 基线 | **research-suite 新版真实 CLI 通过；旧版冲突负例明确失败** | `drone-plugins` main `8389116` 的真实 CLI 回归在 Pi `1.1.0`/latest（1.3.0）独立 HOME 中执行 `pi install`、`/task-status`、`/drone-doctor` 和 `/drone-example`：`research-suite@0.1.3` 两版 PASS；已弃用 `0.1.1` 两版均 stderr 含 `conflicts`、退出 1，标记 EXPECTED_FAILURE。历史组合 FAIL 记录保留在执行日志 | push/PR CI 持续运行 `scripts/pi-cli-regression.mjs`；证据见 `docs/releases/v1.1-onboarding-commands.json` |
 | 公共 `@gyoungwe/pi-*` 包 | **v1.1 五节点均已公开发布并通过宿主门禁** | `plugin-api@1.0.0`、`pi-core@0.1.1`、`pi-knowledge@0.1.1`、`pi-research@0.1.0`、`pi-analysis@0.1.0`、`pi-evidence@0.1.0`、`pi-connectors@0.1.0`、`desktop-ui-pack@0.1.0`、`research-suite@0.1.3` 均有 registry tarball、完整性、干净安装/加载和对应宿主检查；`research-suite@0.1.1` 已按“与 pi-core 冲突，无法启动”弃用 | 继续由 `drone-plugins` CI 维护；不把历史 `NOT_RUN`/FAIL 记录改写成当前状态 |
 | 宿主 / 插件仓库边界 | **骨架、合同、公开发布和宿主安装闭环已完成** | `../drone-plugins` 多包 workspace 当前 `main=8389116`；manifest 检查、plugin-api migration gate、research-suite bundle gate、六包 clean install 与 Pi loader 均通过；宿主不再保留 `packages/pi-knowledge`、evidence、connectors、research-suite 临时副本 | Desktop/Pi 只从已安装 npm 包加载；A5-1～A5-4 兼容层清理已完成，后续能力继续只进入领域包和 `drone-plugins` |
-| B8 本地优先协作 | **B8-1 PASS（local-only）** | `npm run check:collaboration`：`@drone/collaboration` 角色/成员/CAS/冲突/审计 2/2，backend `CollaborationService` JsonStore 持久化 1/1；不写正文、不调用网络，StorageRegistry 登记 `agent-collaboration-workspace` | B8-2 云端镜像、多设备同步、SSO/ACL 和离线 outbox 仍待部署与数据治理决策；不把本地基础当作云端协作 |
 | 菜单信息架构 | **UI-1～UI-7 已实现；四视口视觉对照 PASS** | Chrome headless built renderer 对新任务、知识库、技能与连接、主机四视图完成 1440×900/1280×800 截图；4/4 PASS，报告见 `releases/visual/drone-visual-comparison.json` | 交互式 Electron 仍受当前 shell 的 NSApplication 启动限制；不把可选 GUI 观察当作构建门槛 |
 | `DroneHostPort` 与通用能力协商 | **v1.1 插件迁移与真实宿主加载已通过** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、兼容性测试、迁移闸门和所有 v1.1 包的 clean prefix/loader/宿主检查均通过 | A5-1～A5-4 已完成；不改变已发布包边界 |
 | LAN 最终移除 | **已完成** | LAN 源码、生成运行时、入口、manifest、测试和索引均已清理（`8d4ad219`、`9af99382`、`c99432d0`） | 不再列入验收矩阵或发布承诺 |
@@ -83,7 +82,6 @@ v3 的本地自动化验证仍然是必要门槛，但不能替代下面的桌�
 | `CONN-01` | 启用连接器搜索唯一测试词，关闭后再次搜索 | source ID、URL、访问时间、调用记录；关闭后不再调用该连接器 | **PASS（只读 CapabilityResearchPorts fixture）**；唯一词 `DRONE-CONN-01-UNIQUE` 的 source receipt/URL/调用记录可回读，关闭后跳过传输，重新启用可重试 | 保持只读；外部写入不在本门槛范围 |
 | `WRITE-01` | 对 Zotero/WebDAV 执行授权→写入→回读→删除→再回读 | 外部对象 ID、回读内容、删除确认、审计记录 | **PASS（WebDAV + Zotero）**；Protocols.io 只读 | 保留无凭据回执；Protocols.io 写入不在当前计划范围 |
 | `REDLINE-01` | 注入缺来源、数字篡改、方法漂移、重复数不足、断线、拒绝和 stale source | `npm run check:redline`；每类 fixture 均有阻断状态、原因、证据差异和 sealed 审计 ID | **PASS（隔离领域验收）** | 如需 GUI 走查，沿用同一 proof 投影；不作为本机构建产物降级判定 |
-| `COLLAB-01` | 创建本地工作区，邀请/接受成员，进行两次正常写入和一次 stale CAS，再由 owner/reviewer 解决冲突 | 成员角色、revision 元数据、双方 revision、冲突状态、解决事件和 audit 顺序；无正文、凭据或网络调用 | **PASS（B8-1 local-only）**；`packages/collaboration/test/collaboration.test.ts` + `packages/backend/test/collaboration.test.ts` | 云端 transport、跨设备同步、组织 ACL 暂不运行，等待 B8-2 部署决策 |
 
 ## 3.3 执行前清单
 
@@ -417,10 +415,3 @@ revision / ETag / SHA-256：
 本轮使用 Drone `main=260995a0` 与 `drone-plugins main=8389116` 重新核对计划并复跑关键门禁：`check:remaining-gates`、`check:plugin-api --migration --lifecycle`、Pi `1.1.0`/latest（`1.3.0`）兼容矩阵、`test:upgrade -- --fixtures-only`、插件仓库 `npm run check` 和 `check:desktop-artifact -- --strict` 全部通过。桌面产物为 16/16、四视口 4/4、0 `FAIL`、0 `NOT_RUN`，最新 SHA-256 为 `9db8e47ec4c039415ca6dc66a1ccd78dd7ca2f7e3f9a1bb78fafa5cac30244e7`。
 
 当前没有未关闭的 v1.1 或 A5 门槛。Protocols.io 继续只读；交互式 Electron 的 macOS `NSApplication` SIGABRT 仍是环境观察，不改变本机构建产物和宿主 lifecycle 结论。
-
-## 19. 2026-10-19 B8 与 Electron 交互式验收补充
-
-- **B8-1**：`npm run check:collaboration` 通过（领域合同 2/2、backend JsonStore 闭环 1/1）。能力范围是本地优先协作：角色权限、成员生命周期、revision CAS、冲突双版本保留/显式解决和 append-only audit；transport 明确为 `local-only`，文档正文和凭据不进入 ledger。
-- **B8-2**：云端只读镜像、跨设备同步、离线 outbox、空间 ACL 和 SSO 仍为待决策项。根据 `docs/knowledge-cloud-research-upgrade.md` 的部署事实要求，当前不创建假云端服务、不把本地测试写成跨设备支持。
-- **Electron**：本轮在隔离 dev userData/agentDir 中成功启动 Electron 43.3.0，`127.0.0.1:9224/json` 建立 page target；通过 CDP 实际点击“信任”并进入“技能与连接”“知识库”“主机”页面，生成三张截图（`/private/tmp/drone-desktop-acceptance-20261019-{skills,knowledge,hosts}.png`）。Home、Skills/Connections、Hosts 导航返回正常；进入 Knowledge 页面调用 reviews/graph 时，开发版未注入 `configureKnowledgeWorker`，backend 返回 `Knowledge worker host is not configured for .../out/main/worker.mjs`，因此本轮完整交互验收状态为 **BLOCKED（dev worker seam）**，不是 NSApplication 崩溃。正式桌面门槛仍是已通过的本机构建产物 16/16 与四视口 4/4，不把 GUI 环境限制称为降级。
-- **Protocols.io**：没有调用 bookmark/write/delete；继续保持只读，现有公开协议读取证据不变。

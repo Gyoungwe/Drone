@@ -63,8 +63,7 @@
 		"check:remaining-gates": "node scripts/check-remaining-gates.mjs",
 		"skills:update": "python scripts/update-research-skill-lock.py --write-lock",
 		"check:ui-evidence": "node scripts/check-ui-evidence.mjs",
-		"check:research-browser": "node scripts/check-research-browser-acceptance.mjs",
-		"check:collaboration": "npm run test:unit -w @drone/backend -- collaboration.test.ts && npm test -w @drone/collaboration"
+		"check:research-browser": "node scripts/check-research-browser-acceptance.mjs"
 	},
 	"engines": {
 		"node": ">=22.19"

@@ -392,13 +392,6 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 			sensitivity: "private",
 		})
 		.register({
-			id: "agent-collaboration-workspace",
-			path: `${agentDir}/collaboration/workspace.json`,
-			owner: "collaboration/workspace",
-			schema: 1,
-			sensitivity: "private",
-		})
-		.register({
 			id: "agent-sessions",
 			path: `${agentDir}/sessions`,
 			owner: "session-engine/sdk",
