@@ -1,0 +1,237 @@
+{
+  "generatedAt": "2026-10-18",
+  "registry": "https://registry.npmjs.org",
+  "sourceRepositories": {
+    "host": {
+      "repository": "Gyoungwe/Drone",
+      "implementationCommit": "9b17cebc"
+    },
+    "plugins": {
+      "repository": "Gyoungwe/drone-plugins",
+      "implementationCommit": "8389116"
+    }
+  },
+  "cleanClone": {
+    "repository": "Gyoungwe/drone-plugins",
+    "commands": [
+      "npm ci --ignore-scripts",
+      "npm run build",
+      "npm run check"
+    ],
+    "status": "PASS",
+    "publishDryRun": "PASS",
+    "workflowYaml": "PASS"
+  },
+  "packages": {
+    "@gyoungwe/pi-core": {
+      "version": "0.1.1",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-core/-/pi-core-0.1.1.tgz",
+      "shasum": "dc83ea1f6fa128134aebc946e87f23cd261d4114",
+      "integrity": "sha512-KjAqBm44oe5j4hmAm8anPseDCLJ3M0Yb7F6LBp7gBAjWTbPM6FkMtnQY/cCHiyqUFIF8AVF6rnT+nn9EPx5MTw==",
+      "commands": [
+        "/drone-doctor",
+        "/drone-example"
+      ]
+    },
+    "@gyoungwe/research-suite": {
+      "version": "0.1.3",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/research-suite/-/research-suite-0.1.3.tgz",
+      "shasum": "a2526bcb8a003915a293161f2f4e5f48d91ba069",
+      "integrity": "sha512-shS8KcZxX9351kifjGGbTcZPO5kdkS2cV4+fxvYF7tC34xqFoWX2KP3wRo9q96p7tIQFrVfX+2UeCZqGqTcJ0g==",
+      "bundledDependencies": [
+        "@gyoungwe/plugin-api",
+        "@gyoungwe/pi-core",
+        "@gyoungwe/pi-knowledge",
+        "@gyoungwe/pi-research"
+      ]
+    }
+  },
+  "piCliRegression": {
+    "command": "pi -p --no-session",
+    "versions": [
+      "1.1.0",
+      "latest"
+    ],
+    "latestResolved": "1.3.0",
+    "positive": {
+      "label": "positive",
+      "source": "@gyoungwe/research-suite@0.1.3",
+      "expected": "pass",
+      "status": "PASS",
+      "package": {
+        "name": "@gyoungwe/research-suite",
+        "version": "0.1.3",
+        "shasum": "a2526bcb8a003915a293161f2f4e5f48d91ba069",
+        "integrity": "sha512-shS8KcZxX9351kifjGGbTcZPO5kdkS2cV4+fxvYF7tC34xqFoWX2KP3wRo9q96p7tIQFrVfX+2UeCZqGqTcJ0g==",
+        "bundled": [
+          "@gyoungwe/plugin-api",
+          "@gyoungwe/pi-core",
+          "@gyoungwe/pi-knowledge",
+          "@gyoungwe/pi-research"
+        ]
+      },
+      "pi": [
+        {
+          "requested": "1.1.0",
+          "resolved": "1.1.0",
+          "status": "PASS",
+          "failed": false,
+          "commands": [
+            {
+              "command": [
+                "pi",
+                "-p",
+                "--no-session",
+                "/task-status"
+              ],
+              "exitCode": 0,
+              "conflicts": false,
+              "timedOut": false
+            },
+            {
+              "command": [
+                "pi",
+                "-p",
+                "--no-session",
+                "/drone-doctor"
+              ],
+              "exitCode": 0,
+              "conflicts": false,
+              "timedOut": false
+            },
+            {
+              "command": [
+                "pi",
+                "-p",
+                "--no-session",
+                "/drone-example"
+              ],
+              "exitCode": 0,
+              "conflicts": false,
+              "timedOut": false
+            }
+          ]
+        },
+        {
+          "requested": "latest",
+          "resolved": "1.3.0",
+          "status": "PASS",
+          "failed": false,
+          "commands": [
+            {
+              "command": [
+                "pi",
+                "-p",
+                "--no-session",
+                "/task-status"
+              ],
+              "exitCode": 0,
+              "conflicts": false,
+              "timedOut": false
+            },
+            {
+              "command": [
+                "pi",
+                "-p",
+                "--no-session",
+                "/drone-doctor"
+              ],
+              "exitCode": 0,
+              "conflicts": false,
+              "timedOut": false
+            },
+            {
+              "command": [
+                "pi",
+                "-p",
+                "--no-session",
+                "/drone-example"
+              ],
+              "exitCode": 0,
+              "conflicts": false,
+              "timedOut": false
+            }
+          ]
+        }
+      ]
+    },
+    "legacy": {
+      "label": "legacy",
+      "source": "@gyoungwe/research-suite@0.1.1",
+      "expected": "fail",
+      "status": "EXPECTED_FAILURE",
+      "package": {
+        "name": "@gyoungwe/research-suite",
+        "version": "0.1.1",
+        "shasum": "98ad9c83ad8e0c2a93fdefddbbbf5d2f19bf85ba",
+        "integrity": "sha512-hL71sTzZr/Z3GqsOVRC779pXfTweIAIrDqiCSgyOon5s5m7+Spncx647bPvriKJS7cvBVv4YCHqrL5BAFcIsZQ==",
+        "bundled": [
+          "@gyoungwe/plugin-api",
+          "@gyoungwe/pi-core",
+          "@gyoungwe/pi-knowledge",
+          "@gyoungwe/pi-research"
+        ]
+      },
+      "pi": [
+        {
+          "requested": "1.1.0",
+          "resolved": "1.1.0",
+          "status": "FAIL",
+          "failed": true,
+          "commands": [
+            {
+              "command": [
+                "pi",
+                "-p",
+                "--no-session",
+                "/task-status"
+              ],
+              "exitCode": 1,
+              "conflicts": true,
+              "timedOut": false
+            }
+          ]
+        },
+        {
+          "requested": "latest",
+          "resolved": "1.3.0",
+          "status": "FAIL",
+          "failed": true,
+          "commands": [
+            {
+              "command": [
+                "pi",
+                "-p",
+                "--no-session",
+                "/task-status"
+              ],
+              "exitCode": 1,
+              "conflicts": true,
+              "timedOut": false
+            }
+          ]
+        }
+      ]
+    },
+    "cleanHomePerCell": true,
+    "loaderOnlyTest": false
+  },
+  "visualComparison": {
+    "script": "scripts/check-visual-design-comparison.mjs",
+    "evidence": "releases/visual/drone-visual-comparison.json",
+    "status": "PASS",
+    "views": [
+      "new-task 1440x900",
+      "knowledge 1440x900",
+      "skills 1280x800",
+      "hosts 1280x800"
+    ],
+    "method": "Chrome headless built renderer with deterministic read-only window.pi stub",
+    "note": "hosts has no dedicated board in the design file; shared shell board used and recorded in visual evidence"
+  },
+  "safety": {
+    "protocolsIo": "read-only",
+    "externalWrites": "none",
+    "credentialsRecorded": false
+  }
+}

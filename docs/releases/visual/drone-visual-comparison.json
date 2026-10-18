@@ -1,0 +1,127 @@
+{
+  "generatedAt": "2026-10-18T14:11:50.321Z",
+  "method": "Chrome headless built renderer with deterministic read-only window.pi stub",
+  "reference": "docs/design/plugin-ui/Drone 插件化界面.html",
+  "designAnchors": [
+    "首页 · 新任务",
+    "技能与连接 · 能力状态",
+    "知识库",
+    "共享侧栏组件"
+  ],
+  "comparison": "shared shell, token/typography, navigation hierarchy, content density and viewport contract; hosts has no dedicated board and uses the shared shell board",
+  "status": "PASS",
+  "views": [
+    {
+      "id": "new-task",
+      "label": "新任务",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "designBoard": "首页 · 新任务",
+      "status": "PASS",
+      "rootChildren": 1,
+      "currentNav": "新任务",
+      "image": "docs/releases/visual/drone-new-task.png",
+      "sha256": "6fb79e8d7d049eb1ed177d9f1ab06aa6ea6012f07acf5b709e25d4018b5d669b",
+      "errors": [],
+      "bodySample": "项目\n新任务\n知识库\n技能与连接\n主机\nD\n账户菜单\n晚上好\n\n从文献到结论，Drone 帮你检索、阅读、分析并沉淀到知识库。\n\n研究\n从文献到结论\n去配置当前需要的连接\n先看一个完整示例 →\n知识库\n搜索与最近沉淀\n笔记 — · 本周沉淀 0 · 待处理 —\n去配置当前需要的连接\n接力\n继续上一个任务\n没有未完成任务\n项目\n查看全部\n\n还没有可显示的项目；开始一个新任务后会出现在这里。\n\n最近会话\n真实历史记录\n\n还没有最近会话。\n\n工作环境\n打开技能与连接\n连接状态\n模型\n需配置\n知识库\n需配置\nZotero\n需配置\n计算主机\n需配置\n主机状态\n\n尚未配置计算主机\n\n还没有可用模型。点这里打开设置，配置 Provider 后再发送。\n选择模型\n·\n主从\n·\n中\nP\n选择项目目录\n/\n⎇ 无 Git\n空闲\n总览\n文件\n变更\n还没有任务 —— 从一个示例开始\n\n每个方向一个示例：填好输入后只发出一条首条消息，Agent 用 task_plan 建立任务，经你授权后才开始执行。\n\n规划\n从研究问题到可判别假设\n把一个研究问题澄清为若干竞争假设，列出能区分它们的证据，并给出实验设计草案。\n文献\n主题文献检索与精读证据卡\n围绕一个主题做有边界的检索，精读 2–3 篇并写成证据卡；如需要，再把文献放入 Zotero。\n分析\n数据质量检查到统计检验\n先检查一份数据的质量与结构，再按研究问题制定分析计划并执行检验，最后一起确认结果解读。\n写作\n起草一个章节并做证据受限审校\n只写所请求的章节，基于已有素材起草，再按证据边界审校，改动由你确认。\n交付\n真实数据图到汇报幻灯片\n用真实结果数据画出带不确定性的图，再组织成汇报幻灯片，并做一次交付检查。\n工程\n盘点资源并写交接文档\n只盘点当前项目可用的计算资源，写出 spec / plan / HANDOFF，并确认没有安装、付费或外发。\n尚未选择模型",
+      "appReady": "true",
+      "splash": false,
+      "rootBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900,
+        "top": 0,
+        "right": 1440,
+        "bottom": 900,
+        "left": 0
+      }
+    },
+    {
+      "id": "knowledge",
+      "label": "知识库",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "designBoard": "知识库",
+      "status": "PASS",
+      "rootChildren": 1,
+      "currentNav": "知识库",
+      "image": "docs/releases/visual/drone-knowledge.png",
+      "sha256": "3d86d47eef5f614eb0198fbc9dcb9c1574892d87f3a6bb340c21bc06be87846a",
+      "errors": [],
+      "bodySample": "项目\n新任务\n知识库\n技能与连接\n主机\nD\n账户菜单\n知识库\n\n关联后才能搜索和查看知识条目。\n\n打开网络图\n在知识库中新建\n⌕\n搜索\n⌘K\n搜索\n全部 —\n文献 —\n软件 —\n方法 —\n想法 —\n\n尚未关联知识库，无法检索。",
+      "appReady": "true",
+      "splash": false,
+      "rootBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900,
+        "top": 0,
+        "right": 1440,
+        "bottom": 900,
+        "left": 0
+      }
+    },
+    {
+      "id": "skills",
+      "label": "技能与连接",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "designBoard": "技能与连接 · 能力状态",
+      "status": "PASS",
+      "rootChildren": 1,
+      "currentNav": "技能与连接",
+      "image": "docs/releases/visual/drone-skills.png",
+      "sha256": "140367d306a618dc57d1ff6daf5826d0efb532d71e1a92f57b22b05869c0d3ce",
+      "errors": [],
+      "bodySample": "项目\n新任务\n知识库\n技能与连接\n主机\nD\n账户菜单\n\n工作台能力\n\n技能与连接\n\n查看当前宿主可用的技能、MCP、连接器和已安装插件。状态来自真实探测，不把开关当作在线证明。\n\n检查全部\n+ 添加\n全部\n插件\n连接器\nMCP\n技能\n只看需要处理的 · 3\n\nWebDAV 知识库\n\n云端知识库连接；同步仍需逐项确认。\n\n范围\n\n只读\n\n需要配置\n配置\n\nZotero\n\nZotero 本机与文献库连接\n\n范围\n\n只读\n\n需要配置\n配置\n\n机构访问\n\n机构登录尚未完成\n\n范围\n\n只读\n\n需要配置\n配置",
+      "appReady": "true",
+      "splash": false,
+      "rootBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1280,
+        "height": 800,
+        "top": 0,
+        "right": 1280,
+        "bottom": 800,
+        "left": 0
+      }
+    },
+    {
+      "id": "hosts",
+      "label": "主机",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "designBoard": "共享侧栏组件（共享 shell 对照）",
+      "status": "PASS",
+      "rootChildren": 1,
+      "currentNav": "主机",
+      "image": "docs/releases/visual/drone-hosts.png",
+      "sha256": "7ddf140185589d18916a64449cbb018de53243517e1a9127720c58a93a3b7332",
+      "errors": [],
+      "bodySample": "项目\n新任务\n知识库\n技能与连接\n主机\nD\n账户菜单\n晚上好\n\n从文献到结论，Drone 帮你检索、阅读、分析并沉淀到知识库。\n\n研究\n从文献到结论\n去配置当前需要的连接\n先看一个完整示例 →\n知识库\n搜索与最近沉淀\n笔记 — · 本周沉淀 0 · 待处理 —\n去配置当前需要的连接\n接力\n继续上一个任务\n没有未完成任务\n项目\n查看全部\n\n还没有可显示的项目；开始一个新任务后会出现在这里。\n\n最近会话\n真实历史记录\n\n还没有最近会话。\n\n工作环境\n打开技能与连接\n连接状态\n模型\n需配置\n知识库\n需配置\nZotero\n需配置\n计算主机\n需配置\n主机状态\n\n尚未配置计算主机\n\n还没有可用模型。点这里打开设置，配置 Provider 后再发送。\n选择模型\n·\n主从\n·\n中\nP\n选择项目目录\n/\n⎇ 无 Git\n空闲\n总览\n文件\n变更\n还没有任务 —— 从一个示例开始\n\n每个方向一个示例：填好输入后只发出一条首条消息，Agent 用 task_plan 建立任务，经你授权后才开始执行。\n\n规划\n从研究问题到可判别假设\n把一个研究问题澄清为若干竞争假设，列出能区分它们的证据，并给出实验设计草案。\n文献\n主题文献检索与精读证据卡\n围绕一个主题做有边界的检索，精读 2–3 篇并写成证据卡；如需要，再把文献放入 Zotero。\n分析\n数据质量检查到统计检验\n先检查一份数据的质量与结构，再按研究问题制定分析计划并执行检验，最后一起确认结果解读。\n写作\n起草一个章节并做证据受限审校\n只写所请求的章节，基于已有素材起草，再按证据边界审校，改动由你确认。\n交付\n真实数据图到汇报幻灯片\n用真实结果数据画出带不确定性的图，再组织成汇报幻灯片，并做一次交付检查。\n工程\n盘点资源并写交接文档\n只盘点当前项目可用的计算资源，写出 spec / plan / HANDOFF，并确认没有安装、付费或外发。\n尚未选择模型\n设置\n✕\n\n身份\n\n模型\nModels\n权限\nPermissions\n\n能力\n\n工具与技能\nSkills\nMCP 插件\nMCP\n扩展\nExtensions\n\n资源\n\nZotero\n\n通用\n\n通用\nGeneral\n外观\nAppearance\n关于\nAbout\n\n高级\n\n知识库维护\nKnowledge\nUI 插件\nUI Plugins\n工作流总览\nWorkflows\nSSH 主机\nSSH Hosts\nSSH 主机\n\n管理远程计算设备。\n\n远程计算\n\n登记已授权的 SSH 设备，检查连接，并分阶段准备可复现运行。\n\n刷新\n本机环境\n\nlocal\n\n重新探测\nCPU\n—\n8 核 · Apple Silicon\n内存\n0%\n0 B / 0 B\n磁盘\n—\n—\n系统\nmacOS\n内核\nDarwin\n架构\narm64\nPython 包数\n—\nnpm 全局包数\n—\n远程设备与健康状态\n\n先检查环境，",
+      "appReady": "true",
+      "splash": false,
+      "rootBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1280,
+        "height": 800,
+        "top": 0,
+        "right": 1280,
+        "bottom": 800,
+        "left": 0
+      }
+    }
+  ]
+}
