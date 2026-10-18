@@ -1,8 +1,8 @@
 {
 	"version": 1,
 	"generator": "scripts/build-pi-core.mjs",
-	"inputsSha256": "de6fabddabb2c24748d325d3484d0c76bfde8ede915da8225d7f4d47927f282c",
+	"inputsSha256": "75181c8f16b3dd08adbb8656b00b498a516d5512b9823d9ffcb39687b3e411be",
 	"outputs": {
-		"dist/index.mjs": "6c3bdc2006cf6e329f10492c943a32fb50f1ddc8d32175fbcd99605df5fde1bb"
+		"dist/index.mjs": "90d45b033657af0c61f7659d6ef76ef6d15d73d486c42c35e718d94ab10d5562"
 	}
 }
