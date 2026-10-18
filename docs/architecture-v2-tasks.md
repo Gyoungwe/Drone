@@ -84,9 +84,9 @@
 
 先定好打包策略：新建 `packages/extensions`（`@drone/extensions`），用 esbuild 把每个扩展入口打包成**自包含的** `.pi/extensions/<name>.mjs`，文件名与现有的一一对应；`.pi/lib` 最终不再需要作为运行时资源分发。
 
-- [x] **A5-0 打包管线**：`npm run build:extensions` 从 `packages/extensions/src/*.ts` 输出 `.pi/extensions/*.mjs`；`electron-builder.yml` 的 extraResources 不变（仍然复制 `.pi/extensions`）；`.pi/lib` 在迁移期继续复制。产物已提交，保证 CLI 用户 `git clone` 后直接可用，CI 检查产物和源码一致；manifest 顶层 `legacyOutputs` 声明的兼容遗留会在 A5-4 清零。
+- [x] **A5-0 打包管线**：`npm run build:extensions` 从 `packages/extensions/src/*.ts` 输出 `.pi/extensions/*.mjs`；`electron-builder.yml` 复制自包含扩展和 `workbench-manifest.json`。`.pi/lib` 兼容树已在 A5-4 清零，CLI 用户 `git clone` 后直接可用，CI 检查产物和源码一致。
   - 验收：先用一个最小扩展（`subagent-research`）走通全流程；`check-knowledge-package.mjs`、`check-research-packaging.cjs` 通过；在 CLI 模式下 `.pi/settings.json` 能加载。
-- [ ] **A5-1 @drone/knowledge**：把 `.pi/lib/knowledge/*` 迁到 `packages/knowledge/src/*.ts`（先 `git mv` 移动文件，再改成 TS）。worker（`worker.mjs`）单独作为一个构建入口。55 个后端测试的 import 从 `.pi/lib/...` 改为 `@drone/knowledge`。验收：§5 不变量 1–3 相关测试全部通过；`scripts/benchmark-knowledge.mjs` 和 `benchmark-semantic.mjs` 能运行，结果量级与迁移前一致（把数字记进执行日志）。
+- [x] **A5-1 @drone/knowledge**：领域实现、worker 和 specialist host 已由 `@drone/knowledge` / `@drone/extensions` 承载，生产路径不再依赖 `.pi/lib/knowledge`；knowledge 回归、worker/runtime、benchmark 和包检查通过。
   - [x] claim-conflicts：新增 `@drone/knowledge` TS 包入口与强类型 `compareClaims` / `compareClaimSets`，包内 3 个测试及后端迁移测试 3 个通过；`.pi/lib/knowledge/claim-conflicts.mjs` 暂作运行时兼容实现。
   - [x] orchestration-policy：新增 `@drone/knowledge` TS 包入口与强类型 `specialistRequestSignature` / `decideSpecialistRun` / `createSpecialistBudget`，包内 3/3 与后端 knowledge orchestration/stress 13/13 通过；`.pi/lib/knowledge/orchestration-policy.mjs` 暂作运行时兼容实现。
   - [x] review-policy：新增 `@drone/knowledge` TS 包入口与强类型 `readReviewMode` / `saveReviewMode` / `advisoryCodes`，包内 4/4 与 backend `knowledge-automatic-review` 4/4 通过；`.pi/lib/knowledge/review-policy.mjs` 暂作运行时兼容实现。
@@ -95,9 +95,9 @@
   - [x] files：新增 `@drone/knowledge/files` 安全文件读取入口，迁移 Vault 相对路径校验、软链接拒绝、1 MiB 上限、稳定哈希与 bounded snippet；包内 6/6 通过；`.pi/lib/knowledge/files.mjs` 暂作运行时兼容实现。
   - [x] layout：新增 `@drone/knowledge/layout`，迁移安全 Vault containment、create-only 初始化、managed navigation 更新与项目上下文模板；包内 7 项定向测试，knowledge 包回归 53/53 通过；`.pi/lib/knowledge/layout.mjs` 暂作运行时兼容实现。
   - [x] wiki-policy：新增 `@drone/knowledge/wiki-policy`，迁移 Wiki 目标/来源约束、managed block、静态 explainer 与 proposal hash；包内 5 项测试通过；`.pi/lib/knowledge/wiki-review.mjs` 与 `wiki-model-review.mjs` 暂作运行时兼容实现。
-  - [x] runtime/service/worker：`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts` 与 runtime host 已迁入 TS，并由 `scripts/build-knowledge-runtime.mjs` 生成 worker/runtime 产物；knowledge 包 58 项通过。`.pi/lib/knowledge/*` 仍保留跨 bundle host/UI 兼容适配，因此 A5-1 总项保持未完成。
-  - [x] 2026-10-18 生产路径切片：`packages/extensions/src/internal/knowledge-runtime.ts` 移除对 `.pi/lib/knowledge/runtime/worker.mjs` 的生产 fallback，统一使用 package-relative worker；生成扩展加入无旧路径回退断言。knowledge 307 项、extensions 18 项、`check:knowledge-runtime`、`check:extensions --strict` 和架构检查通过；`.pi/lib/knowledge` 仅保留构建/benchmark/兼容资源入口，A5-1 总项仍待最终清理。
-- [ ] **A5-2 @drone/tasks**：`.pi/lib/tasks/*` 迁移。验收：全部 `task-*` 测试通过，包括 `example-tasks-one-authorization-sdk.test.mjs`。
+  - [x] runtime/service/worker：`service.ts`、`worker.ts`、`maintenance.ts`、`ui-service.ts`、`specialist-host.ts`、`topic-memory.ts` 与 runtime host 已迁入 TS；knowledge 包与 worker/runtime 检查通过，`.pi/lib/knowledge` 已删除。
+  - [x] 2026-10-18 最终清理：删除 `.pi/lib/knowledge`，`@drone/extensions` worker 只解析 package-owned 产物；knowledge 307、extensions 19、runtime/strict/architecture 检查通过。
+- [x] **A5-2 @drone/tasks**：任务授权、进度、验收器、PDF worker 与 runtime bridge 由 `@drone/tasks` 和 `pi-core` 独占；所有 `task-*` 回归通过，`.pi/lib/tasks` 已删除。
   - [x] failure-feedback：新增 `@drone/tasks` TS 包入口与强类型 `diagnosticText` / `toolResultFailed` / `failureObservation` / `failureContext` 等纯函数；包内 4/4 测试及 backend `task-failure-feedback` 20/20 测试通过，backend diagnostics 复用该脱敏入口；`.pi/lib/tasks/failure-feedback.mjs` 暂作运行时兼容实现。
   - [x] single-flight：新增 `@drone/tasks` TS 包入口与强类型 `singleFlightCommand`，包内 3/3 与 backend `task-command-single-flight` 4/4 通过；`.pi/lib/tasks/single-flight.mjs` 暂作运行时兼容实现。
   - [x] turn-end-prompt：新增 `@drone/tasks` TS 包入口与强类型 `shouldAskToContinue`，包内 3/3 与 backend `task-one-authorization-flow` 4/4 通过；`.pi/lib/tasks/turn-end-prompt.mjs` 暂作运行时兼容实现。
@@ -107,18 +107,18 @@
   - [x] authorization-policy：新增 `@drone/tasks/authorization-policy` 纯授权卡策略入口，包内 6 项测试通过；`.pi/lib/tasks/ask-authorization.mjs` 暂作运行时兼容实现。
   - [x] pdf-identity：新增 `@drone/tasks/pdf-identity` 宿主注入 worker 边界，含 30 秒跨平台超时、AbortSignal 清理、页数/文本上限与稳定错误码；包内 43/43 通过；`.pi/lib/tasks/pdf-identity.mjs` 暂作 CLI worker 适配器。
   - [x] acceptance-policy：新增 `@drone/tasks/acceptance-policy`，迁移验收器注册、schema live refs、结果归一化和说明投影；包内 49/49 通过；`.pi/lib/tasks/acceptance.mjs` 仍负责 Pi 事件桥接。
-  - [x] runtime：`src/runtime/*.ts` 与 checked-in `src/runtime-compiled/*.mjs` 已承载 workbench、register、acceptance、授权、PDF worker、tool manifest 和 runtime bridge；`npm run build:tasks` 同步生成无 workspace 依赖的 `.pi/lib/tasks` 兼容图，开发环境的 acceptance adapter 优先复用 typed package 注册表，隔离打包环境回退到自包含产物；tasks 包 49 项通过，因此 A5-2 总项仍只剩宿主/SDK 兼容边界。
-  - [x] 2026-10-18 宿主所有权切片：backend acceptance event bridge 改为在 `DroneRuntime` scope 内调用 `@drone/tasks` 的 package registry，不再维护第二个 raw `Map`；Desktop 采用静态 package import 以便 electron-vite 将 runtime 打入 main，避免被 `!node_modules/@drone` 打包排除。backend acceptance 1/1、backend/tasks typecheck、tasks 58 项、runtime artifact check 和 Desktop build 通过；`.pi/lib/tasks` 自包含兼容图仍保留，A5-2 总项仍待最终清理。
-- [ ] **A5-3 @drone/research**：source-archive、open-access、zotero-*、institutional-access、literature-*、run-provenance、research-receipt-journal 等迁移。验收：`zotero-*`、`source-archive-*`、`institutional`、`literature-*` 测试通过。
+  - [x] runtime：`src/runtime/*.ts` 与 checked-in `src/runtime-compiled/*.mjs` 承载 workbench、register、acceptance、授权、PDF worker、tool manifest 和 runtime bridge；`npm run build:tasks` 只执行旧目录清理护栏，tasks 包 58 项通过，`.pi/lib/tasks` 已删除。
+  - [x] 2026-10-18 最终清理：backend acceptance event bridge 在 `DroneRuntime` scope 内调用 package registry；`.pi/lib/tasks` 自包含兼容图删除，tasks runtime check、backend acceptance、Desktop build 通过。
+- [x] **A5-3 @drone/research**：source archive、open access、Zotero、institutional access、literature operations、provenance 和 receipt journal 由 `@drone/research` 及其宿主端口承载；相关回归通过，`.pi/lib` research 兼容入口已删除。
   - [x] run-provenance：新增 `@drone/research/run-provenance`，执行回执、文件快照、范围/凭据校验和 QC 边界迁移到 TS；包内 5/5，backend 回归 4/4；`.pi/lib/run-provenance.mjs` 保持自包含兼容入口。
   - [x] evidence-gate：新增 `@drone/research/evidence-gate`，迁移证据阶段单调推进、失败终态与 answerable 断言；research 包 37/37 通过；`.pi/lib/evidence-gate.mjs` 暂作运行时兼容入口。
   - [x] source-archive-policy：新增 `@drone/research/source-archive-policy`，迁移 run 目录、文件名、挑战页、magic bytes、内容类型与元数据门禁；包内 5 项测试与 typecheck 通过；`.pi/lib/source-archive.mjs` 仍保留下载/写入运行时适配。
   - [x] receipt-journal-policy：新增 `@drone/research/receipt-journal-policy`，迁移核心工具准入、错误工具过滤、256 容量去重回执缓冲与 run_dir 归属判定；research 包回归 46/46 通过；`.pi/lib/research-receipt-journal.mjs` 仍保留宿主 journal 适配。
-  - [x] runtime：source archive、receipt journal、research loop、Zotero setup/reconcile/write 与 institutional host runtime 已迁入 `@drone/research`，并由 `.pi/lib` 适配 workspace/filesystem/CLI 端口；research 包 50 项通过，A5-3 总项仍因兼容入口与 host 适配保留而未完成。
-  - [x] 2026-10-18 宿主端口切片：`research-host.ts` 的 source archive、literature operations、research loop、receipt journal 端口改为 `@drone/research` 类型合同，生成 source/Zotero/research-loop 扩展断言使用领域包且无 `.pi/lib` research fallback。research 93 项、extensions 18 项、extensions typecheck 和 `check:extensions --strict` 通过；`.pi/lib` 的 CLI/宿主兼容入口仍保留，A5-3 总项仍待最终清理。
-- [ ] **A5-4 扩展适配层**：`.pi/extensions/*.mjs` 的源码移到 `packages/extensions/src/`，只保留参数映射和注册逻辑，领域逻辑全部调用领域包。`runner.ts` 里两处 `../../../../../.pi/…` 改为包引用或构建产物的解析函数。验收：R5 基线清零；`.pi/lib` 从 extraResources 移除后，打包冒烟通过。
+  - [x] runtime：source archive、receipt journal、research loop、Zotero setup/reconcile/write 与 institutional host runtime 已迁入 `@drone/research`，由 typed host ports 提供 workspace/filesystem/CLI 适配；research 包 93 项通过，旧兼容入口已删除。
+  - [x] 2026-10-18 最终清理：research host ports、extensions typecheck/strict、runtime check 和 research 93 项通过；`.pi/lib` research/CLI 兼容入口删除。
+- [x] **A5-4 扩展适配层**：`.pi/extensions/*.mjs` 的源码移到 `packages/extensions/src/`，只保留参数映射和注册逻辑，领域逻辑全部调用领域包；`workbench-manifest.json` 与扩展一起打包，`.pi/lib` 已从仓库和 `electron-builder.yml` extraResources 移除。R5、Desktop artifact 和 CLI smoke 通过。
   - [x] 正式入口：`obsidian-workbench`、`source-archive`、`zotero-literature`、`subagent-mcp-readonly` 已迁入 TypeScript 源码并由 `build:extensions` 生成；兼容 `research-host` 仅转发宿主端口，不再作为独立扩展产物；manifest 已无 legacy outputs。
-  - [ ] `.pi/lib` 仍作为兼容运行时资源随包携带，待 A5-1/2/3 完整移除后再删。
+  - [x] 2026-10-18 最终资源收口：`.pi/lib` 不再存在，Desktop 仅复制 `.pi/extensions` 与 package-owned Pi resources；manifest 路径和 capability footprint 检查同步更新。
 
 ## A6 · DroneRuntime 注入
 
@@ -253,3 +253,4 @@
 | 2026-10-17 | P9-3 / P10-2 缺口复核 | Zotero 本机临时 note 已完成创建→标记回读→按版本删除→最终 404；机构连接器保持只读；Protocols.io 保持只读；v0.32.9 无证书发布的 macOS/Windows validate、构建、更新 feed、版本切换与回滚证据已登记，Release run 39007033259 全部成功 | 连接器/发布门槛已关闭；下一阶段仅剩 A5-1～A5-4 的 `.pi/lib` 兼容运行时清理，B8 团队协作按用户决定继续暂缓 |
 | 2026-10-18 | v1.1 门槛复核 | Drone `main` 已与 `origin/main` 同步（代码验收基线 `a620a40e`） 与 `drone-plugins` `main=8389116` 已同步远端；`check:remaining-gates`、Pi 1.1.0/latest 兼容矩阵、`drone-plugins` 全量 check、桌面产物 16/16 和四视口视觉对照 4/4 均通过；`/drone-doctor`、`/drone-example` 已纳入真实 CLI 证据 | A5-1～A5-4 兼容层清理仍未完成，但明确不阻塞已发布 v1.1；Protocols.io 继续只读，B8 仍按用户决定暂缓 |
 | 2026-10-18 | A5 并行生产切片 | 主线 `876f0a07` 合入 knowledge worker package-relative cutover、tasks acceptance package registry ownership、research host typed ports，以及 tasks runtime 类型收口和 source-only knowledge worker 测试路径；knowledge 307、tasks 58、research 93、extensions 18、backend acceptance 1/1、全量 workspace 测试、root lint/typecheck/build、runtime checks、`check:extensions --strict`、`check:arch`、`check:native-pi` 和 Desktop build 全部通过；插件 API 未变，证据见 [`a5-migration-2026-10-18.json`](releases/a5-migration-2026-10-18.json) | `.pi/lib` 的 CLI/打包兼容入口仍保留，A5-1/2/3 总项和 A5-4 extraResources 清理继续未完成；不阻塞当前插件化发布 |
+| 2026-10-18 | A5-1～A5-4 最终收口 | 删除 `.pi/lib` knowledge/tasks/research 运行时兼容树；扩展 manifest 移到 `.pi/extensions/workbench-manifest.json`，`electron-builder.yml` 不再复制 `.pi/lib`；`@gyoungwe/plugin-api` 未变。knowledge 307、tasks 58、research 93、extensions 19、runtime/strict/package/desktop artifact 检查及全量 lint/typecheck/test/build/architecture 均通过 | A5-1～A5-4 已关闭；后续能力只进入领域包和 `drone-plugins`，Protocols.io 继续只读 |

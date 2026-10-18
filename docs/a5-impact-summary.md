@@ -20,16 +20,16 @@ A5 的目标是把知识、任务、研究三类核心能力从无类型的 `.pi
 
 | 子目标 | 要收敛的边界 | 使用者能间接感受到的提升 | 当前状态 |
 | --- | --- | --- | --- |
-| **A5-1 knowledge** | Vault 文件安全、布局、检索、topic memory、Wiki/review、worker 和 specialist host | 知识沉淀更稳定；路径、软链接、哈希、来源新鲜度和 worker 失败更容易得到明确错误；跨会话复用更一致 | 生产扩展已不再回退到 `.pi/lib/knowledge/runtime/worker.mjs`；`.pi/lib/knowledge/*` 仍保留构建、benchmark 和兼容资源入口，最终清理未完成 |
-| **A5-2 tasks** | 一次授权、task workbench、进度、失败反馈、验收器、PDF worker 和 runtime bridge | 授权语义、进度卡、失败原因和继续执行行为一致；Pi 与 Desktop 不再各自维护一套 task runtime | backend 验收注册已归 `@drone/tasks` package registry，Desktop 静态打包 tasks runtime；`.pi/lib/tasks/*` 仍保留无 workspace 依赖的兼容图 |
-| **A5-3 research** | 来源归档、开放获取、Zotero、机构访问、literature operations、provenance 和 receipt journal | 文献来源、版本、引用和写入回执更可追溯；更容易把同一研究流程接到 Pi、Desktop 和未来连接器 | research host ports 已使用领域包类型合同，生成扩展禁止旧 `.pi/lib` research fallback；CLI/宿主兼容入口仍保留 |
-| **A5-4 extensions** | `.pi/extensions` 的入口、参数映射、Pi 注册和构建产物 | 安装、升级和跨平台打包更少依赖相对路径；扩展失败时更容易隔离，核心宿主有稳定回退 | TypeScript 源入口和自包含构建已完成；最终要等 A5-1/2/3 完成后移除 `.pi/lib` extraResources 和最后的兼容产物 |
+| **A5-1 knowledge** | Vault 文件安全、布局、检索、topic memory、Wiki/review、worker 和 specialist host | 知识沉淀更稳定；路径、软链接、哈希、来源新鲜度和 worker 失败更容易得到明确错误；跨会话复用更一致 | **已完成**：生产扩展与 worker 只使用 `@drone/knowledge` / package-owned 产物，`.pi/lib/knowledge` 已删除 |
+| **A5-2 tasks** | 一次授权、task workbench、进度、失败反馈、验收器、PDF worker 和 runtime bridge | 授权语义、进度卡、失败原因和继续执行行为一致；Pi 与 Desktop 不再各自维护一套 task runtime | **已完成**：`@drone/tasks` 与 `pi-core` 独占 task runtime，`.pi/lib/tasks` 已删除 |
+| **A5-3 research** | 来源归档、开放获取、Zotero、机构访问、literature operations、provenance 和 receipt journal | 文献来源、版本、引用和写入回执更可追溯；更容易把同一研究流程接到 Pi、Desktop 和未来连接器 | **已完成**：research host ports 使用领域包类型合同，旧 CLI/宿主兼容入口已删除 |
+| **A5-4 extensions** | `.pi/extensions` 的入口、参数映射、Pi 注册和构建产物 | 安装、升级和跨平台打包更少依赖相对路径；扩展失败时更容易隔离，核心宿主有稳定回退 | **已完成**：TypeScript 源入口、自包含构建、manifest 资源路径和 Desktop extraResources 已统一，`.pi/lib` 不再打包 |
 
 ## 当前完成度怎么理解
 
 - **A5-0 已完成**：扩展构建管线、生成 manifest 和产物漂移检查已经存在。
-- **A5-1～A5-3 已完成大部分领域迁移**：核心逻辑已经在 TypeScript 包里；本轮又关闭了 knowledge worker、tasks acceptance registry、research host ports 三个生产边界，剩下的是清理 CLI/打包兼容入口，而不是重新实现知识、任务或研究功能。
-- **A5-4 已完成主要源码迁移**：剩余工作取决于前三项的兼容入口能否删除，随后才能从 Desktop 资源中移除 `.pi/lib`。
+- **A5-1～A5-3 已完成**：核心逻辑、worker、host ports 和运行时均归属 TypeScript 领域包，旧 CLI/打包兼容入口已删除。
+- **A5-4 已完成**：扩展源码、生成 manifest、Desktop 资源路径和 CLI/Pi 产物均通过同一套 package-owned 运行时。
 - **现有 v1.1 发布门槛不依赖 A5 完成**：公开插件、Pi 1.1.0/latest、桌面构建产物、视觉对照和连接器门禁已经关闭。A5 是发布后的架构收敛工作。
 
 ## 建议顺序
@@ -37,10 +37,10 @@ A5 的目标是把知识、任务、研究三类核心能力从无类型的 `.pi
 1. **A5-1 knowledge**：先迁移生产 import 和 worker/host 生命周期，保留一个可回滚的兼容开关；用 knowledge 回归、跨实例 memory、语义 benchmark 和桌面构建验收。
 2. **A5-2 tasks**：再迁移 task SDK 测试和授权/验收器的宿主边界；重点验证一次授权、失败反馈、取消和 Pi CLI。
 3. **A5-3 research**：迁移 source archive、Zotero/institutional 适配和 receipt journal；重点验证来源 hash、写入回执和只读/写入权限不漂移。
-4. **A5-4 cleanup**：删除不再被生产路径使用的 `.pi/lib` 兼容入口，移除 `extraResources` 中的 `.pi/lib`，重跑 CLI、Desktop、公开插件和无证书打包 smoke。
+4. **A5-4 cleanup**：已删除不再被生产路径使用的 `.pi/lib` 兼容入口，移除 `extraResources` 中的 `.pi/lib`，并重跑 CLI、Desktop、公开插件和无证书打包 smoke。
 
 每一步都应保持领域包与宿主修复分开提交，并通过 `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`、`npm run check:arch`、相关包 smoke 和桌面产物检查。迁移期间不能改用户数据格式，也不能把兼容入口的删除和行为变化放在同一个不可回滚提交里。
 
 ## 是否现在做
 
-如果目标是继续扩展插件生态、减少 Pi/Desktop 分叉并降低长期维护成本，A5 值得完成；如果目标只是维护当前 v1.1 发布版本，A5 可以按上述顺序排入后续版本，不会影响已经通过的发布门槛。当前计划保留 A5-1～A5-4，但不把它们误报为已完成。
+A5-1～A5-4 已完成。它们是发布后的架构收敛项，但不改变已发布插件的 API 和安装边界；后续只需在领域包和 `drone-plugins` 中维护新能力。

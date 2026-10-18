@@ -1,6 +1,5 @@
 // The extension is bundled into a standalone JavaScript entry point. Its
-// implementation deliberately owns the Wiki search/write policy instead of
-// reaching back into .pi/lib at runtime.
+// implementation deliberately owns the Wiki search/write policy.
 // @ts-nocheck
 import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, readdir, readFile, realpath, rename, writeFile } from "node:fs/promises";

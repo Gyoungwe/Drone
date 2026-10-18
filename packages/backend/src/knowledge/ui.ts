@@ -1,5 +1,8 @@
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import * as knowledgeUiService from "@drone/knowledge/ui-service";
+import * as knowledgeUiState from "@drone/knowledge/ui-state";
+import * as knowledgeWikiModelReview from "@drone/knowledge/wiki-model-review";
 import { getResearchRun, listResearchRuns } from "@drone/research/research-run-ui";
 import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
 import { KnowledgeWebDavService } from "./webdav";
@@ -119,11 +122,6 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			process.env.DRONE_RESEARCH_WORKBENCH_ROOT ?? fileURLToPath(new URL("../../../../.pi", import.meta.url))
 		);
 	}
-	private async module(name: string) {
-		return import(
-			/* @vite-ignore */ pathToFileURL(join(this.root(), "lib", "knowledge", `${name}.mjs`)).href
-		);
-	}
 	private async workspaceConfig(cwd: string) {
 		const mod = await import(
 			/* @vite-ignore */ pathToFileURL(join(this.root(), "extensions", "workspace-config.mjs")).href
@@ -133,10 +131,10 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	async connect(): Promise<void> {
 		if (!process.env.DRONE_KNOWLEDGE_DIR || this.unsubscribe || this.disposed) return;
 		if (!this.loading)
-			this.loading = this.module("ui-state")
-				.then((mod) => {
+			this.loading = Promise.resolve()
+				.then(() => {
 					if (!this.disposed)
-						this.unsubscribe = mod.subscribeKnowledgeUi((event: KnowledgeUiEvent) => {
+						this.unsubscribe = knowledgeUiState.subscribeKnowledgeUi((event: KnowledgeUiEvent) => {
 							for (const listener of this.listeners) {
 								try {
 									listener(event);
@@ -158,13 +156,13 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	}
 	async notify(text: string, severity = "info", sessionId: string | null = null): Promise<void> {
 		await this.connect();
-		const mod = await this.module("ui-state");
-		mod.notifyKnowledgeUi(text, severity, sessionId);
+		knowledgeUiState.notifyKnowledgeUi(text, severity, sessionId ?? undefined);
 	}
-	private async call(name: string, input: unknown) {
+	private async call(name: string, input: unknown): Promise<any> {
 		await this.connect();
-		const mod = await this.module("ui-service");
-		return mod[name](input);
+		const fn = (knowledgeUiService as unknown as Record<string, (value: unknown) => unknown>)[name];
+		if (!fn) throw new Error(`Unknown knowledge UI operation: ${name}`);
+		return fn(input);
 	}
 	specialistSettings(
 		input: Parameters<KnowledgeApi["setKnowledgeSpecialistSettings"]>[0],
@@ -175,8 +173,10 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 		input: Parameters<KnowledgeApi["reviewKnowledgeWithModel"]>[0],
 		options: unknown,
 	): ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]> {
-		const mod = await this.module("wiki-model-review");
-		return mod.reviewWikiWithModel(input, options);
+		return (await knowledgeWikiModelReview.reviewWikiWithModel(
+			input,
+			options as Parameters<typeof knowledgeWikiModelReview.reviewWikiWithModel>[1],
+		)) as Awaited<ReturnType<KnowledgeApi["reviewKnowledgeWithModel"]>>;
 	}
 	overview(
 		input: Parameters<KnowledgeApi["getKnowledgeOverview"]>[0],

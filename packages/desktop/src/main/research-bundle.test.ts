@@ -15,10 +15,10 @@ it("loads the same first-party extensions and skills in all desktop projects", (
 });
 it("refuses escaping or invalid manifest paths", () => {
 	const root = mkdtempSync(join(tmpdir(), "drone-manifest-"));
-	mkdirSync(join(root, "lib"));
+	mkdirSync(join(root, "extensions"));
 	try {
 		writeFileSync(
-			join(root, "lib/workbench-manifest.json"),
+			join(root, "extensions/workbench-manifest.json"),
 			JSON.stringify({ version: 1, extensions: ["../../private.mjs"], skills: [] }),
 		);
 		expect(() => researchBundlePaths(root)).toThrow("Invalid");

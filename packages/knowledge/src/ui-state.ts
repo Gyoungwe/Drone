@@ -142,7 +142,7 @@ export function requestWikiReviewUi(ctx, id = "") {
 	emitKnowledgeUi({ kind: "open-review", sessionId: sid, id: String(id || "") });
 	return state.listeners.size > 0;
 }
-export function notifyKnowledgeUi(text, severity = "info", id = null) {
+export function notifyKnowledgeUi(text, severity = "info", id: string | null = null) {
 	if (typeof text !== "string" || !text.trim()) return;
 	emitKnowledgeUi({
 		kind: "notice",

@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+import { registerAnswerPublication } from "@drone/knowledge/publication";
 import {
 	type HarnessWorkerAttempt,
 	PROTECTED_KNOWLEDGE_AGENTS,
@@ -439,17 +440,8 @@ async function runSubagentInSlot(deps: RunSubagentDeps, input: RunSubagentInput)
 		childExtensionFactories.push(readonlyMcp.makeSubagentReadonlyMcp(input.cwd) as never);
 	} else if (process.env.DRONE_KNOWLEDGE_DIR) {
 		// Children without Vault permission return labeled material, not a checked parent answer.
-		const modulePath = join(researchWorkbenchRoot(), "lib", "knowledge", "publication.mjs");
-		const publication = (await import(pathToFileURL(modulePath).href)) as {
-			registerAnswerPublication: (
-				pi: unknown,
-				options: { getCurrent: () => null; evidenceOnly: boolean },
-			) => { begin(required: boolean): void };
-		};
 		childExtensionFactories.push(((pi: unknown) =>
-			publication
-				.registerAnswerPublication(pi, { getCurrent: () => null, evidenceOnly: true })
-				.begin(false)) as never);
+			registerAnswerPublication(pi, { getCurrent: () => null, evidenceOnly: true }).begin(false)) as never);
 	}
 	const resourceLoader = new DefaultResourceLoader({
 		cwd: input.cwd,

@@ -22,7 +22,7 @@ export interface ResearchBundlePaths {
  * (`<resources>/pi-packages/node_modules` when packaged, `packages/desktop/pi-packages/node_modules` in dev).
  */
 export function researchBundlePaths(root: string, packagesRoot?: string): ResearchBundlePaths {
-	const manifest = JSON.parse(readFileSync(join(root, "lib/workbench-manifest.json"), "utf8")) as {
+	const manifest = JSON.parse(readFileSync(join(root, "extensions/workbench-manifest.json"), "utf8")) as {
 		version: number;
 		extensions: string[];
 		skills: string[];

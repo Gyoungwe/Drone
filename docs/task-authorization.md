@@ -32,10 +32,10 @@ Hard limits, missing credentials, absent necessary user data and unrecoverable e
 
 ## Code map
 
-- `.pi/lib/tasks/consent.mjs`: contract hash and canonical directory proposals.
-- `.pi/lib/tasks/workbench.mjs`: revision-checked consent, bounded progress, continuation and automatic-handoff reservations.
+- `packages/tasks/src/consent.ts` and the generated task package runtime: contract hash and canonical directory proposals.
+- `packages/tasks/src/workbench.ts`: revision-checked consent, bounded progress, continuation and automatic-handoff reservations.
 - `packages/backend/test/example-tasks-one-authorization-sdk.test.mjs`: real-SDK simulation of the six example tasks (plus the Zotero branch) asserting exactly one authorization card and zero further interruptions.
-- `.pi/lib/tasks/register.mjs` and `ask-authorization.mjs`: native authorization dialog, cancellable SDK handoff and permission-adapter bridge.
+- `packages/tasks/src/runtime/register.ts` and `packages/tasks/src/authorization-policy.ts`: native authorization dialog, cancellable SDK handoff and permission-adapter bridge.
 - `backend/src/permissions/task-consent.ts`: canonical target checks for scoped ordinary writes; called only after existing deny evaluation.
 - `backend/src/permissions/gate.ts`: `allowRun` answer (run-scoped blanket approval for the remaining confirms; cleared on `agent_end` by `PiBackend.emitEvent`).
 - `.pi/skills/research-workflow/SKILL.md` § Interruption budget: front-load all user decisions into one message; decide mid-task with defaults and report them under 我替你决定的.

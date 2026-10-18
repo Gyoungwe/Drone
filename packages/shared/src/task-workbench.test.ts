@@ -1,5 +1,3 @@
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
 	TASK_REASON_TEXT,
@@ -265,8 +263,8 @@ describe("task decision card", () => {
 
 describe("task reason contract", () => {
 	it("keeps the shared reason text aligned with the CLI workbench", async () => {
-		const cliPath = resolve(process.cwd(), "../../.pi/lib/tasks/workbench.mjs");
-		const cli = await import(pathToFileURL(cliPath).href);
+		// @ts-expect-error The checked-in runtime artifact is JavaScript; package source owns its declarations.
+		const cli = await import("../../tasks/src/runtime-compiled/workbench.mjs");
 		expect(TASK_REASON_TEXT).toEqual(cli.REASON_TEXT);
 	});
 });

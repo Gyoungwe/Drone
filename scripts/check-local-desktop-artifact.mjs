@@ -262,7 +262,7 @@ async function run() {
 		{ pluginNames, sourcePaths: pluginSourcePaths, markers: pluginMarkers.concat(pluginCompiledMarkers) },
 	);
 
-	const workbenchManifestPath = ".pi/lib/workbench-manifest.json";
+	const workbenchManifestPath = ".pi/extensions/workbench-manifest.json";
 	const workbenchManifest = JSON.parse(await readText(sourcePath(repoRoot, workbenchManifestPath)));
 	const skillPaths = [
 		"packages/desktop/resources/skills/channel-pickup/SKILL.md",

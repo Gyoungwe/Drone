@@ -32,8 +32,7 @@ import { registerTool } from "@drone/tasks/tool-manifest-runtime";
 
 // These named exports are used by offline knowledge benchmarks and packaging
 // smoke tests. Keeping them on the generated entry exercises the same
-// @drone/knowledge runtime graph as the production extension instead of
-// importing the deleted `.pi/lib/knowledge` adapters.
+// @drone/knowledge runtime graph as the production extension.
 export {
 	configureObsidian,
 	createObsidianProject,
@@ -44,7 +43,6 @@ export {
 export { readKnowledgeBinding } from "@drone/knowledge/config";
 export { embedTexts } from "@drone/knowledge/semantic-provider";
 export { closeKnowledgeServices, getKnowledgeService, KnowledgeService } from "@drone/knowledge/service";
-export { stageWikiProposal } from "@drone/knowledge/wiki-review";
 export {
 	beginKnowledgeFlow,
 	noteKnowledgeRead,
@@ -54,6 +52,7 @@ export {
 	requestWikiReviewUi,
 	updateKnowledgeFlow,
 } from "@drone/knowledge/ui-state";
+export { stageWikiProposal } from "@drone/knowledge/wiki-review";
 
 /** MCP 代理工具 research-obsidian_*（含子代理只读通道）的状态条 / 动作文案。 */
 const OBSIDIAN_FAMILY = {

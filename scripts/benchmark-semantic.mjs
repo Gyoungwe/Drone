@@ -4,12 +4,12 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readKnowledgeBinding } from "../.pi/extensions/obsidian-workbench.mjs";
-import { embedTexts } from "../.pi/extensions/obsidian-workbench.mjs";
 import {
 	closeKnowledgeServices,
-	KnowledgeService,
 	configureObsidian,
+	embedTexts,
+	KnowledgeService,
+	readKnowledgeBinding,
 } from "../.pi/extensions/obsidian-workbench.mjs";
 
 const fixture = JSON.parse(

@@ -4,7 +4,7 @@
  * 扩展用 `defineTool({...definition, drone: {...}})` 一次声明工具元数据（只读 / 能力 / 只读恢复 /
  * 子代理排除 / 状态条文案 / 回执日志 / 回执卡构造器），再经 `registerTools(pi, [...])` 注册。
  * 宿主后端通过 `session.getToolDefinition(name).drone` 读同一份声明；本模块的进程级登记表
- * 供 .pi/lib 内部（任务工作台、回执日志、KnowledgeFlow）查询。清单保存在
+ * 供任务工作台、回执日志、KnowledgeFlow 查询。清单保存在
  * DroneRuntime 的 tools 槽位中，避免跨 host 的 process-global bridge。
  */
 

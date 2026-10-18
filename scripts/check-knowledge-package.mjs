@@ -22,7 +22,7 @@ try {
 		await cp(resolve("packages/desktop", item.from), join(root, item.to), { recursive: true });
 	}
 	const resources = suppliedResources || join(root, "research-workbench"),
-		manifest = JSON.parse(await readFile(join(resources, "lib/workbench-manifest.json"), "utf8")),
+		manifest = JSON.parse(await readFile(join(resources, "extensions/workbench-manifest.json"), "utf8")),
 		a = join(root, "A"),
 		b = join(root, "B"),
 		agentDir = join(root, "agent");

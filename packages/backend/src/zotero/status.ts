@@ -8,8 +8,8 @@ import { getAgentDir } from "../session-engine/sdk";
 
 /**
  * Zotero 接入状态（Zotero 面板用）。刻意在后端 TS 里独立实现少量探测逻辑，
- * 不从 `.pi/lib/zotero-setup.mjs` 动态 import——与全仓约定一致（main/backend 只经 SDK 扩展机制加载 .mjs）。
- * 常量（server 名/本机 API/文档/下载/桌面路径）与 zotero-setup.mjs 保持一致，改动很少。
+ * 后端不动态 import 生成扩展；与全仓约定一致（main/backend 只经 SDK 扩展机制加载 .mjs）。
+ * 常量（server 名/本机 API/文档/下载/桌面路径）与 Zotero 扩展保持一致，改动很少。
  */
 const LOCAL_API = ZOTERO_SETUP_BINDING.localApi;
 const DOCS_URL = ZOTERO_SETUP_BINDING.docs;

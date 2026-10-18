@@ -6,7 +6,7 @@ import { CAPABILITY_IDS, type CapabilityId } from "./capabilities";
  * 不再在核心代码里维护按工具名硬编码的集合与正则。
  *
  * 后端通过 `session.getToolDefinition(name).drone` 读取（pi 原样保存注册对象）；
- * 运行时 .mjs 侧通过 `.pi/lib/tool-manifest.mjs` 的进程级登记表读取。
+ * 运行时 .mjs 侧通过生成扩展中的进程级登记表读取。
  */
 export interface ToolActivity {
 	/** 宿主状态条文案，例如「正在检索 Zotero 文献库…」 */

@@ -79,8 +79,7 @@ flowchart TB
   end
 
   subgraph PiExt[".pi — Pi 扩展与技能（由 Pi SDK 加载）"]
-    Lib[.pi/lib\nsource-archive / open-access / institutional-access / zotero / knowledge / workbench]
-    Ext[.pi/extensions\nsource-archive / institutional-access / zotero-literature / workspace-config]
+    Ext[.pi/extensions\n自包含生成扩展 / workbench manifest]
     Skills[skills\nresearch-loop / wikiloop / academic / zotero-literature]
   end
 
@@ -88,7 +87,6 @@ flowchart TB
   PiBackend -- buildExtensionFactories --> Extensions
   PiBackend -- buildCustomTools --> Tools
   PiBackend -- 加载 --> PiExt
-  Lib -- 被 --> Ext
   InstitutionalBE -- net.fetch session --> Main
   Main -- BrowserWindow 分区 --> InstitutionalBE
 ```
@@ -134,11 +132,9 @@ flowchart TB
 
 由 Pi SDK 经 `ProjectResourceLoader` 两阶段信任加载。
 
-- `.pi/lib/source-archive.mjs`：`archiveSource` — 校验 `run_dir`，尝试给定 URL，然后合法 OA 链（`open-access.mjs`：Europe PMC → PMC S3 → Europe PMC render → Unpaywall → OpenAlex → Semantic Scholar → Crossref），然后**机构通道**（已配置 + Electron 可用 + 未超每任务上限）：经 `buildProxiedUrl` 构造代理 URL，`institutionalFetch` 尝试，检测登录页，持久化 `open_access.source='institutional'`。返回 `no_open_access` / `institutional_auth_required` / `institutional_limit_reached` / `browser_required`。
-- `.pi/lib/institutional-access.mjs`：backend institutional 的 JS 镜像（含自动推断）。
-- `.pi/extensions/institutional-access.mjs`（新增）：注册 `research_institutional_login`（打开持久机构窗口，自动保存模板）与 `research_institutional_status`。
-- `.pi/extensions/source-archive.mjs`：`research_archive_source` 工具定义（说明新状态，绝不走盗版）。
-- `zotero-literature.mjs`、`workspace-config.mjs`、`obsidian-workbench.mjs`、`research-loop.mjs`、`knowledge/` 等。
+- `.pi/extensions/*.mjs`：由 `packages/extensions/src/` 生成的自包含入口，只负责注册工具和参数映射，并调用类型化的 `@drone/knowledge`、`@drone/tasks`、`@drone/research`。
+- `.pi/extensions/workbench-manifest.json`：Desktop 与包 smoke 检查共用的生成扩展/技能清单。
+- `packages/pi-core`、`packages/pi-knowledge`、`packages/pi-research`：运行时归属明确；旧 `.pi/lib` 兼容树已不再随仓库或安装包分发。
 - `skills/`：`research-loop`、`wikiloop`、学术技能包（Nature、Scientific、Academic Research Skills CC BY-NC）、`zotero-literature`。
 
 ### 5. 研究工作台流程

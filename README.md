@@ -79,8 +79,7 @@ flowchart TB
   end
 
   subgraph PiExt[".pi — Pi extensions & skills (loaded by Pi SDK)"]
-    Lib[.pi/lib\nsource-archive / open-access / institutional-access / zotero / knowledge / workbench]
-    Ext[.pi/extensions\nsource-archive / institutional-access / zotero-literature / workspace-config / ...]
+    Ext[.pi/extensions\nself-contained generated extensions / workbench manifest]
     Skills[skills\nresearch-loop / wikiloop / academic / zotero-literature / ...]
   end
 
@@ -88,7 +87,6 @@ flowchart TB
   PiBackend -- buildExtensionFactories --> Extensions
   PiBackend -- buildCustomTools --> Tools
   PiBackend -- loads --> PiExt
-  Lib -- used by --> Ext
   InstitutionalBE -- net.fetch session --> Main
   Main -- BrowserWindow partition --> InstitutionalBE
 ```
@@ -134,11 +132,9 @@ flowchart TB
 
 Loaded by Pi SDK via `ProjectResourceLoader` (two-phase trust).
 
-- `.pi/lib/source-archive.mjs`: `archiveSource` — validates `run_dir` inside results root, tries given URL, then legitimate OA chain (`open-access.mjs`: Europe PMC → PMC Article Datasets S3 → Europe PMC render → Unpaywall → OpenAlex → Semantic Scholar → Crossref), then **institutional** (if configured + Electron available + under per-task limit): builds proxied URLs via `buildProxiedUrl`, tries `institutionalFetch`, detects login pages, persists with `open_access.source='institutional'`. Returns `no_open_access` / `institutional_auth_required` / `institutional_limit_reached` / `browser_required`.
-- `.pi/lib/institutional-access.mjs`: JS mirror of backend institutional (config load, buildProxiedUrl, inferTemplate, institutionalFetch via Electron).
-- `.pi/extensions/institutional-access.mjs` (new): registers `research_institutional_login` (opens persistent institutional window, auto-saves template) and `research_institutional_status`.
-- `.pi/extensions/source-archive.mjs`: `research_archive_source` tool definition (description mentions institutional statuses, never pirate mirrors).
-- `zotero-literature.mjs`, `workspace-config.mjs`, `obsidian-workbench.mjs`, `research-loop.mjs`, `knowledge/`, etc.
+- `.pi/extensions/*.mjs`: self-contained generated entries from `packages/extensions/src/`; they register tools and call the typed `@drone/knowledge`, `@drone/tasks`, and `@drone/research` packages.
+- `.pi/extensions/workbench-manifest.json`: generated extension/skill manifest used by Desktop and package smoke checks.
+- `packages/pi-core`, `packages/pi-knowledge`, `packages/pi-research`: package-owned runtime contracts; the old `.pi/lib` compatibility tree is no longer shipped.
 - `skills/`: `research-loop`, `wikiloop`, academic packs (Nature, Scientific, Academic Research Skills CC BY-NC), `zotero-literature`.
 
 ### 5. Research workbench flow

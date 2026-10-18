@@ -3,7 +3,7 @@
  *
  * The extension keeps the session-specific sealing state and validation orchestration;
  * this module owns only deterministic notices, failure classification and advisory copy.
- * `.pi/lib/knowledge/publication-policy.mjs` is the dependency-free packaged adapter.
+ * The dependency-free packaged adapter is built from this package entrypoint.
  */
 
 export type PublicationFailureCode =

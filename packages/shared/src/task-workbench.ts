@@ -245,7 +245,7 @@ export const TASK_STATE_LABELS: Record<TaskState, string> = {
 	cancelled: "已取消",
 	archived: "已归档",
 };
-/** Human-readable explanation with a next step for host reason codes; unknown codes fall back to the code. Mirrors `.pi/lib/tasks/workbench.mjs` REASON_TEXT. */
+/** Human-readable explanation with a next step for host reason codes; unknown codes fall back to the code. Mirrors the package-owned task workbench runtime. */
 export const TASK_REASON_TEXT: Record<string, string> = {
 	"task-authorization-required": "计划已经准备好，等你点头。确认一次，后面就自动做完，不再反复打扰。",
 	"automatic-recovery": "刚才中断了一下，已经从上次保存的地方接着做，不用你操作。",

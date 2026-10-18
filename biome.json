@@ -79,38 +79,6 @@
 			}
 		},
 		{
-			"includes": [".pi/lib/knowledge/runtime/**/*.mjs"],
-			"formatter": {
-				"enabled": false
-			},
-			"linter": {
-				"enabled": false
-			},
-			"assist": {
-				"actions": {
-					"source": {
-						"organizeImports": "off"
-					}
-				}
-			}
-		},
-		{
-			"includes": [".pi/lib/**/*.mjs"],
-			"formatter": {
-				"enabled": false
-			},
-			"linter": {
-				"enabled": false
-			},
-			"assist": {
-				"actions": {
-					"source": {
-						"organizeImports": "off"
-					}
-				}
-			}
-		},
-		{
 			"includes": [
 				"packages/knowledge/src/**/*.ts",
 				"packages/extensions/src/internal/**/*.ts",

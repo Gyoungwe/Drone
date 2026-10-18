@@ -1,4 +1,4 @@
-// Self-contained research WikiSkill policy extension; no production dependency on .pi/lib.
+// Self-contained research WikiSkill policy extension.
 // @ts-nocheck
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";

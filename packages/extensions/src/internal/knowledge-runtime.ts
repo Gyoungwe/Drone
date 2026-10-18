@@ -38,7 +38,7 @@ export function configureKnowledgeExtensionRuntime(): void {
 			return new Worker(packageWorker, options as any);
 		// Vitest and direct source imports execute this module from packages/extensions/src.
 		// Use the committed generated worker for those tests without reaching into
-		// the deleted `.pi/lib/knowledge` compatibility tree.
+		// the removed legacy compatibility tree.
 		const developmentRoots = [
 			process.env.DRONE_RESEARCH_WORKBENCH_ROOT,
 			resolve(process.cwd(), ".pi", "extensions"),

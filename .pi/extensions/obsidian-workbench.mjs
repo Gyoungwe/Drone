@@ -12002,8 +12002,8 @@ ${fresh.map((path) => `- [[${path.replace(/\.md$/, "")}]]`).join("\n")}
 
 // packages/extensions/src/obsidian-workbench.ts
 init_config();
-init_wiki_review();
 init_ui_state();
+init_wiki_review();
 var OBSIDIAN_FAMILY = {
   match: "research-obsidian",
   label: "Obsidian",

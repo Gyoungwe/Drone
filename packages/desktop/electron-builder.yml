@@ -60,7 +60,7 @@ extraResources:
   # Never package local settings, sessions, downloaded papers, credentials or the user skill directory.
   - from: "../../.pi/extensions"
     to: "research-workbench/extensions"
-    filter: ["*.mjs"]
+    filter: ["*.mjs", "workbench-manifest.json", ".knowledge-worker-manifest.json"]
   - from: "../../.pi/skills/research-vault"
     to: "research-workbench/skills/research-vault"
   - from: "../../.pi/skills/research-workflow"
@@ -71,8 +71,6 @@ extraResources:
     to: "research-workbench/skills/zotero-literature"
   - from: "../../.pi/skills/bio-environment"
     to: "research-workbench/skills/bio-environment"
-  - from: "../../.pi/lib"
-    to: "research-workbench/lib"
 mac:
   category: public.app-category.developer-tools
   # Releases intentionally remain unsigned. Signing and notarization are optional

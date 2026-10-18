@@ -85,10 +85,9 @@ for (const entry of entries) {
 			logLevel: "silent",
 			metafile: true,
 		});
-		// Bundled extension artifacts are compatibility resources consumed by
-		// the checkJs project through legacy .pi/lib imports. Their source is
-		// checked by @drone/extensions; do not re-infer the bundled JS as a
-		// second, incomplete type graph.
+		// Bundled extension artifacts are generated resources consumed by Pi.
+		// Their source is checked by @drone/extensions; do not re-infer the
+		// bundled JS as a second, incomplete type graph.
 		const bundled = await readFile(output, "utf8");
 		if (!bundled.startsWith("// @ts-nocheck")) {
 			await writeFile(output, `// @ts-nocheck\n${bundled}`, "utf8");

@@ -25,7 +25,7 @@ beforeEach(async () => {
 	runtime.registerNativeProvider(faux.provider);
 	vi.spyOn(runtime, "hasConfiguredAuth").mockReturnValue(true);
 	const workbench = resolve(import.meta.dirname, "../../..", ".pi");
-	const manifest = JSON.parse(await readFile(join(workbench, "lib/workbench-manifest.json"), "utf8"));
+	const manifest = JSON.parse(await readFile(join(workbench, "extensions/workbench-manifest.json"), "utf8"));
 	backend = new PiBackend({
 		projectTrust: false,
 		permissionGates: false,

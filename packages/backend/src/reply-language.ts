@@ -2,7 +2,7 @@
  * Reply language of the desktop UI (zh/en), pushed from the renderer over IPC (UiStateSave).
  *
  * The value is mirrored into `process.env.DRONE_REPLY_LANGUAGE` so first-party runtimes that are
- * compiled into separate Pi extension graphs (packages/tasks runtime-compiled, .pi/lib) read the same
+ * compiled into separate Pi extension graphs (packages/tasks runtime-compiled) read the same
  * value without importing the backend.
  */
 export type ReplyLanguage = "zh" | "en";

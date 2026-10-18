@@ -80,14 +80,15 @@ try {
 		try {
 			expected = JSON.parse(await readFile(expectedManifest, "utf8"));
 		} catch (error) {
-			throw new Error(`missing ${relative(root, expectedManifest)}; run npm run build:knowledge`, { cause: error });
+			throw new Error(`missing ${relative(root, expectedManifest)}; run npm run build:knowledge`, {
+				cause: error,
+			});
 		}
 		const actual = await readFile(expectedOutput).catch(() => null);
-		if (!actual || !actual.equals(Buffer.from(built.contents)))
+		if (!actual?.equals(Buffer.from(built.contents)))
 			throw new Error("knowledge worker artifact is stale: .pi/extensions/knowledge-worker.mjs");
 		for (const [key, value] of Object.entries(manifest)) {
-			if (expected[key] !== value)
-				throw new Error(`knowledge worker manifest is stale: ${key}`);
+			if (expected[key] !== value) throw new Error(`knowledge worker manifest is stale: ${key}`);
 		}
 		console.log("knowledge worker artifacts are up to date");
 	} else {

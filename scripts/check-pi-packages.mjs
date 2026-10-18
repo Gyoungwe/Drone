@@ -30,7 +30,7 @@ function builderMapping() {
 		/join\(process\.resourcesPath, "pi-packages", "node_modules"\)/,
 		"main must resolve the shipped path",
 	);
-	const manifest = JSON.parse(readFileSync(join(root, ".pi/lib/workbench-manifest.json"), "utf8"));
+	const manifest = JSON.parse(readFileSync(join(root, ".pi/extensions/workbench-manifest.json"), "utf8"));
 	const declared = manifest.bundledPackages?.find((item) => item.package === RUNTIME);
 	const pinned = JSON.parse(readFileSync(join(PI_PACKAGES_DIR, "package.json"), "utf8")).dependencies[
 		RUNTIME

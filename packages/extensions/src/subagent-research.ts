@@ -57,7 +57,7 @@ const DEFAULT_WORKSPACE_CONFIG: WorkspaceConfig = Object.freeze({
  *
  * This adapter intentionally owns no knowledge or research-domain state. It
  * reads the host's JSON configuration directly so the packaged extension is
- * self-contained and does not reach back into `.pi/lib` at runtime.
+ * self-contained and does not reach back into host compatibility directories at runtime.
  */
 async function loadWorkspacePolicy(cwd: string): Promise<WorkspaceConfig> {
 	const projectRoot = resolve(cwd);
