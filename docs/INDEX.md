@@ -64,13 +64,14 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，16 个 workspace 包：
+npm workspaces monorepo，17 个 workspace 包：
 
 ```
 packages/
 ├── shared/     IPC 契约层（纯类型 + 通道常量，三方共享）
 ├── plugin-api/ 插件公开合同（HostPort、能力协商、结果/回执类型、analysis contract）
 ├── pi-analysis/ 原生 Pi 分析适配器与 readiness 门禁（宿主兼容 facade）
+├── pi-connectors/ 原生 Pi 连接器声明、权限与回执插件
 ├── pi-evidence/ 原生 Pi 证据、provenance 与 replay 校验插件
 ├── pi-core/     原生 Pi 核心任务与回执插件
 ├── pi-research/ 原生 Pi 研究来源插件
@@ -106,6 +107,7 @@ packages/
 | `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含 pi-analysis） |
 | `scripts/smoke-pi-analysis.mjs` | `pi-analysis` npm pack → 干净 prefix 安装 → 真实 Pi resource loader 发现与工具清单 smoke |
 | `scripts/build-pi-evidence.mjs` / `scripts/smoke-pi-evidence.mjs` | `pi-evidence` 自包含构建、依赖清单检查与干净 tarball 安装/只读注册 smoke |
+| `scripts/build-pi-connectors.mjs` / `scripts/smoke-pi-connectors.mjs` | `pi-connectors` 自包含构建、权限/回执检查、clean tarball 安装→Pi resource loader 发现→卸载 smoke；不调用真实连接器 I/O |
 | `scripts/smoke-channel-watch.mts` | channel-watch 机制冒烟 V1–V6 |
 | `scripts/replay-trace.mts` | 事件 trace 离线重放（`--last` 自动找最新；排查 UI 状态问题首选） |
 | `scripts/replay-evaporation.mts` | 上下文蒸发离线 replay 调参（误杀率/体积曲线；`--core` 与线上实现同构对比；默认数据指 `.local/replay-data/sessions` 副本，指向正式 `~/.pi/agent` 会直接 abort） |
@@ -214,6 +216,10 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 ## packages/pi-evidence — 原生 Pi 证据插件（V1.1-E 进行中）
 
 `packages/pi-evidence/` 只包含可迁移的 artifact manifest、provenance/digest、checkpoint/branch、evidence capsule 与 replay/import 合同。`evidence_validate_manifest`、`evidence_validate_capsule` 和 `evidence_verify_replay` 均为只读注册；包不读取文件、不写 ledger、不创建 workspace、不执行 workflow，也不继承执行授权。宿主 composition root 负责字节采集、持久化、分支工作区和 replay runner。`scripts/build-pi-evidence.mjs` 生成自包含 dist 并拒绝 Electron/backend/Pi SDK、`node:fs` 和越界导入；`npm run check:pi-evidence` 与 `scripts/smoke-pi-evidence.mjs` 覆盖包级 typecheck/build、注册测试和 clean tarball install。外部 `drone-plugins` 迁移、公开 tarball、Pi 1.1.0/latest 矩阵、REDLINE proof 与宿主加载检查尚未执行，均不标记为 PASS。
+
+## packages/pi-connectors — 原生 Pi 连接器插件（V1.1-C 进行中）
+
+`packages/pi-connectors/` 只承载 host-neutral connector contracts、权限/网络/凭据声明、确定性 registry、操作规划和 `drone-connector-receipt/v1` 回执链。内置 Zotero、WebDAV、generic MCP、institutional、search、browser 六个描述符，均把远端写入/删除声明为 false；institutional/browser 仅把浏览器导航列为显式 side effect。`connector_list` 与 `connector_get` 只返回声明元数据，不访问网络、凭据或文件。`scripts/build-pi-connectors.mjs` 生成自包含 `dist/index.mjs` 并做宿主导入/跨包边界检查，`scripts/smoke-pi-connectors.mjs` 覆盖 clean tarball 安装、Pi resource loader 发现、工具清单和卸载。实际网络、凭据、写入、回读与删除仍由宿主组合根通过 `ConnectorExecutionPort` 实现；当前未宣称真实外部服务通过。
 
 ## packages/pi-research — 原生 Pi 研究插件（PR-7）
 
