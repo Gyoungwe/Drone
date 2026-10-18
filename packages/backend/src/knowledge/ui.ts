@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { getResearchRun, listResearchRuns } from "@drone/research/research-run-ui";
 import type { KnowledgeApi, KnowledgeUiEvent } from "@drone/shared";
 import { KnowledgeWebDavService } from "./webdav";
 
@@ -123,9 +124,6 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 			/* @vite-ignore */ pathToFileURL(join(this.root(), "lib", "knowledge", `${name}.mjs`)).href
 		);
 	}
-	private async researchModule(name: string) {
-		return import(/* @vite-ignore */ pathToFileURL(join(this.root(), "lib", `${name}.mjs`)).href);
-	}
 	private async workspaceConfig(cwd: string) {
 		const mod = await import(
 			/* @vite-ignore */ pathToFileURL(join(this.root(), "extensions", "workspace-config.mjs")).href
@@ -190,16 +188,14 @@ export class KnowledgeUiService implements KnowledgeUiServicePort {
 	): ReturnType<KnowledgeApi["getResearchRuns"]> {
 		const cwd = input?.cwd || process.cwd();
 		const config = await this.workspaceConfig(cwd);
-		const mod = await this.researchModule("research-run-ui");
-		return mod.listResearchRuns({ ...input, resultsRoot: config.resultsRoot });
+		return listResearchRuns({ ...input, resultsRoot: config.resultsRoot });
 	}
 	async researchRun(
 		input: Parameters<KnowledgeApi["getResearchRun"]>[0],
 	): ReturnType<KnowledgeApi["getResearchRun"]> {
 		const cwd = input?.cwd || process.cwd();
 		const config = await this.workspaceConfig(cwd);
-		const mod = await this.researchModule("research-run-ui");
-		return mod.getResearchRun({ ...input, resultsRoot: config.resultsRoot, vaultRoot: config.obsidianVault });
+		return getResearchRun({ ...input, resultsRoot: config.resultsRoot, vaultRoot: config.obsidianVault });
 	}
 	setupPreview(
 		input: Parameters<KnowledgeApi["previewKnowledgeSetup"]>[0],

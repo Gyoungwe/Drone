@@ -1,5 +1,5 @@
 {
 	"version": 1,
 	"generator": "scripts/build-research-runtime.mjs",
-	"inputsSha256": "13bbe8a55926d8df1aae26ec1f731755727a108394528dd0ad9a2935ff04ba9a"
+	"inputsSha256": "53b65de85d16073d334f5ee9cda9482bd96933cd40133d8f649738175bfa1819"
 }
