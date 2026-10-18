@@ -1,7 +1,7 @@
 {
 	"date": "2026-10-18",
 	"hostRepository": "Gyoungwe/Drone",
-	"hostCommit": "pending-a5-4-final",
+	"hostCommit": "1e0e9183",
 	"pluginApi": "unchanged",
 	"migrationCommits": {
 		"a5-1-knowledge": "aaff82a2",
@@ -9,7 +9,7 @@
 		"a5-3-research": "4ad8281d",
 		"generated-extension-refresh": ["22425ba0", "fd5fa895"],
 		"generated-package-manifests": "876f0a07",
-		"a5-4-final-cleanup": "pending-a5-4-final"
+		"a5-4-final-cleanup": "1e0e9183"
 	},
 	"productionCutovers": {
 		"knowledgeWorker": "PASS: production extension path has no .pi/lib/knowledge/runtime/worker.mjs fallback",
@@ -26,7 +26,7 @@
 		"researchTypecheck": "PASS",
 		"researchTests": "93 passed",
 		"extensionsTypecheck": "PASS",
-		"extensionsTests": "18 passed",
+		"extensionsTests": "19 passed",
 		"backendAcceptanceTest": "1 passed",
 		"backendTypecheck": "PASS",
 		"knowledgeRuntimeCheck": "PASS",
