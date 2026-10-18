@@ -88,7 +88,22 @@ def atomic_json(path, value, mode=0o600):
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temporary, str(path))
+        replace_error = None
+        for attempt in range(8):
+            try:
+                os.replace(temporary, str(path))
+                replace_error = None
+                break
+            except PermissionError as error:
+                replace_error = error
+                if not WINDOWS or attempt == 7:
+                    raise
+                # Windows can briefly keep the previous status file open while
+                # a concurrent status request is reading it.  Retry the atomic
+                # replacement instead of leaving a transient missing status.
+                time.sleep(0.01 * (attempt + 1))
+        if replace_error is not None:
+            raise replace_error
     finally:
         try:
             os.unlink(temporary)
@@ -711,7 +726,16 @@ def slurm_state(directory, value):
 
 def status(job_id):
     directory = ensure_prepared(job_id)
-    value = read_json(status_path(directory), None)
+    value = None
+    for attempt in range(50):
+        value = read_json(status_path(directory), None)
+        if isinstance(value, dict):
+            break
+        if attempt < 49:
+            # The request process and the detached worker can publish their
+            # first status records concurrently on Windows.  Give an atomic
+            # replace a short window to complete before declaring corruption.
+            time.sleep(0.01)
     if not isinstance(value, dict):
         raise RunnerError("corrupt-status", "status.json is missing or invalid")
     if value.get("schedulerJobId") and scheduler_kind() == "slurm":
@@ -863,6 +887,8 @@ def collect(job_id, payload):
 def cancel(job_id):
     directory = ensure_prepared(job_id)
     value = read_json(status_path(directory), {})
+    if not isinstance(value, dict):
+        raise RunnerError("corrupt-status", "status.json is missing or invalid", True)
     if value.get("state") in ("succeeded", "failed", "cancelled"):
         return value
     scheduler_id = value.get("schedulerJobId")
