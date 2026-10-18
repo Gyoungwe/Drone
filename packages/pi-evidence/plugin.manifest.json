@@ -15,7 +15,7 @@
 	"capabilities": ["evidence", "provenance", "replay", "files"],
 	"hosts": ["native-pi", "drone-desktop"],
 	"permissions": {
-		"filesystem": ["none"],
+		"filesystem": [],
 		"network": [],
 		"subprocess": [],
 		"externalWrites": false
