@@ -13,6 +13,18 @@ git -C ../drone-plugins status --short --branch
 
 The npm account must use the configured security-key 2FA. Do not paste a password, OTP, access token, or browser callback URL into chat, files, CI logs, or shell history. If npm requests browser/security-key authentication, complete it on the local machine and resume the same command.
 
+## Preferred unattended publishing
+
+Use npm Trusted Publishing with GitHub Actions for a repeatable release. Configure a trusted publisher for each package in the npm package settings, using:
+
+- repository: `Gyoungwe/drone-plugins`;
+- workflow file: `.github/workflows/publish.yml`;
+- the package's existing `repository` directory.
+
+The workflow must keep `id-token: write`, use Node `>=22.14` and npm `>=11.5.1`, run the complete package gate, and invoke `npm publish --provenance`. It contains no npm secret; npm authenticates the GitHub-hosted runner with a short-lived OIDC identity. The current workflow is committed in `drone-plugins` as `93576c4` and is manual-only so a tag or ordinary push cannot publish accidentally. See [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/).
+
+If OIDC cannot be enabled, a narrowly scoped granular access token with package write access and `bypass-2fa` can be used only as a temporary fallback. Store it in the local secret manager or CI secret, never in chat or a repository. npm documents that direct publishing with bypass-2FA tokens is being deprecated, so prefer OIDC or stage-only publishing for the long term. See [npm access tokens](https://docs.npmjs.com/about-access-tokens/).
+
 ## Package order and versioning
 
 The first public order is:
