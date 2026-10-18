@@ -32,6 +32,7 @@ const EXAMPLE_PROFILES: Record<
 		requiredTools: readonly string[];
 		missingToolsNext: string;
 		missingDataNext: string;
+		requiresContainer?: boolean;
 	}
 > = {
 	knowledge: {
@@ -50,6 +51,7 @@ const EXAMPLE_PROFILES: Record<
 	},
 	analysis: {
 		title: "Analysis readiness example",
+		requiresContainer: true,
 		steps: [
 			"list compatible analysis adapters",
 			"assess input readiness",
@@ -87,7 +89,7 @@ export interface ExampleReport {
 	schemaVersion: typeof DRONE_COMMAND_SCHEMA_VERSION;
 	command: "drone-example";
 	example: ExampleKind;
-	status: "unconfigured" | "needs-data" | "blocked" | "ready" | "started";
+	status: "unconfigured" | "needs-data" | "needs-container" | "blocked" | "ready" | "started";
 	mode: "preview" | "run";
 	title: string;
 	steps: string[];
@@ -216,7 +218,11 @@ export function buildExampleReport(
 	pi: any,
 	mode: ExampleReport["mode"] = "preview",
 	question?: string,
-	options: { example?: ExampleKind; knowledgeStatus?: KnowledgeStatus } = {},
+	options: {
+		example?: ExampleKind;
+		knowledgeStatus?: KnowledgeStatus;
+		containerAvailable?: boolean;
+	} = {},
 ): ExampleReport {
 	const example = options.example ?? "research";
 	const profile = EXAMPLE_PROFILES[example];
@@ -227,17 +233,21 @@ export function buildExampleReport(
 		example === "knowledge"
 			? (options.knowledgeStatus ?? (process.env.DRONE_KNOWLEDGE_DIR?.trim() ? "unknown" : "unconfigured"))
 			: undefined;
+	const containerAvailable = options.containerAvailable ?? Boolean(process.env.DRONE_CONTAINER_RUNTIME?.trim());
+	const missingContainer = Boolean(profile.requiresContainer && !containerAvailable);
 	const status: ExampleReport["status"] = missingTools.length
 		? "blocked"
 		: knowledgeStatus === "unconfigured"
 			? "unconfigured"
 			: knowledgeStatus === "unknown"
 				? "needs-data"
-				: mode === "run" && hasQuestion
-					? "started"
-					: hasQuestion
-						? "ready"
-						: "needs-data";
+				: missingContainer
+					? "needs-container"
+					: mode === "run" && hasQuestion
+						? "started"
+						: hasQuestion
+							? "ready"
+							: "needs-data";
 	return {
 		schemaVersion: DRONE_COMMAND_SCHEMA_VERSION,
 		command: "drone-example",
@@ -250,7 +260,9 @@ export function buildExampleReport(
 		missingTools: [...missingTools],
 		next: missingTools.length
 			? profile.missingToolsNext
-			: knowledgeStatus === "unconfigured"
+			: missingContainer
+				? "登记并启用一个容器运行时后重试 /drone-example analysis"
+				: knowledgeStatus === "unconfigured"
 				? "先运行 /drone-init 绑定本地 Vault，再重试 /drone-example knowledge"
 				: knowledgeStatus === "unknown"
 					? "无法确认本地 Vault 状态；先运行 /drone-init 或检查知识库插件后重试"
@@ -314,7 +326,7 @@ function emitReport(report: DoctorReport | ExampleReport, ctx: ExtensionCommandC
 	else
 		ctx.ui.notify(
 			message,
-			report.status === "blocked" || report.status === "unconfigured" || report.status === "incompatible"
+			report.status === "blocked" || report.status === "unconfigured" || report.status === "needs-container" || report.status === "incompatible"
 				? "warning"
 				: "info",
 		);

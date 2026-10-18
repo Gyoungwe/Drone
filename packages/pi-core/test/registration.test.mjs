@@ -121,6 +121,14 @@ test("drone-doctor resolves the installed Pi host and reports blocked dependenci
 		"Analysis readiness example",
 	);
 	assert.equal(
+		buildExampleReport(fakePi, "preview", "assess inputs", { example: "analysis" }).status,
+		"needs-container",
+	);
+	assert.equal(
+		buildExampleReport(fakePi, "preview", "assess inputs", { example: "analysis", containerAvailable: true }).status,
+		"ready",
+	);
+	assert.equal(
 		buildExampleReport(fakePi, "preview", undefined, { example: "evidence" }).title,
 		"Evidence validation example",
 	);
