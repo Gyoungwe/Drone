@@ -690,5 +690,5 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 - **外部写入**：WebDAV 和 Zotero 临时 note 均完成授权→创建→回读→删除→再回读；Protocols.io 只读，不进行 bookmark/write。
 - **已关闭门槛**：`MEM-01`、`MCP-01`、`CONN-01`、`REDLINE-01` 均有隔离真实行为证据，Protocols.io 保持只读；真实 Pi `1.1.0`/latest 单包与组合矩阵通过；analysis/evidence/connectors 分包按 v1.1 规划，不提前假设已完成。npm scope 已确定为 `@gyoungwe`；证书/正式签名不属于本计划门槛。
 - **发布后顺序**：v0.33.0 无证书跨平台资产与首批 npm 包均已正式发布；宿主 `packages/pi-knowledge` 兼容副本已删除，Desktop/Pi 仅从已安装插件包加载；下一步推进 v1.1 的 `pi-analysis`、`pi-evidence`、`pi-connectors` 和完整 `desktop-ui-pack`。
-- **维护规约**：双仓库归属、同步顺序、R1–R7 与发布红线、npm 安全密钥 2FA、公开 tarball/干净安装验收和缺陷版本回滚已整理为 [`.agents/skills/drone-maintenance`](../.agents/skills/drone-maintenance/SKILL.md)；当前 v1.1 五节点目标见 §9.2。
+- **维护规约**：双仓库归属、同步顺序、R1–R7 与发布红线、npm 安全密钥 2FA、公开 tarball/干净安装验收和缺陷版本回滚已整理为 [`.agents/skills/drone-maintenance`](../.agents/skills/drone-maintenance/SKILL.md)；无人值守发布优先使用 `drone-plugins/.github/workflows/publish.yml` 的 npm Trusted Publishing（OIDC），不把长期 token 放进仓库或对话；当前 v1.1 五节点目标见 §9.2。
 - **明确不阻塞发布**：Protocols.io 继续只读；交互式 Electron 截图受当前 shell 的 macOS `NSApplication` 启动限制，但构建产物 16/16 已通过，截图不改变本版本验收结论。
