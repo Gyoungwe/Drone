@@ -89,11 +89,17 @@ describe("installed desktop-ui-pack discovery", () => {
 			value: fileURLToPath(new URL("../../../resources", import.meta.url)),
 			writable: true,
 		});
-		const packageUiSource = join(resolve(process.cwd(), "../../../drone-plugins/packages/desktop-ui-pack"), "ui");
+		const packageUiSource = join(
+			resolve(process.cwd(), "../../../drone-plugins/packages/desktop-ui-pack"),
+			"ui",
+		);
 		const packageUi = join(root, "agent", "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "ui");
 		await mkdir(join(packageUi, "src"), { recursive: true });
 		await writeFile(join(packageUi, "plugin.json"), await readFile(join(packageUiSource, "plugin.json")));
-		await writeFile(join(packageUi, "src", "index.ts"), await readFile(join(packageUiSource, "src", "index.ts")));
+		await writeFile(
+			join(packageUi, "src", "index.ts"),
+			await readFile(join(packageUiSource, "src", "index.ts")),
+		);
 		const manifest = JSON.parse(await readFile(join(packageUi, "plugin.json"), "utf8"));
 		expect(manifest.name).toBe("drone-research-ui");
 
