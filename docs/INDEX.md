@@ -64,13 +64,14 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，15 个 workspace 包：
+npm workspaces monorepo，16 个 workspace 包：
 
 ```
 packages/
 ├── shared/     IPC 契约层（纯类型 + 通道常量，三方共享）
 ├── plugin-api/ 插件公开合同（HostPort、能力协商、结果/回执类型、analysis contract）
 ├── pi-analysis/ 原生 Pi 分析适配器与 readiness 门禁（宿主兼容 facade）
+├── pi-evidence/ 原生 Pi 证据、provenance 与 replay 校验插件
 ├── pi-core/     原生 Pi 核心任务与回执插件
 ├── pi-research/ 原生 Pi 研究来源插件
 ├── research-suite/ 原生 Pi 研究聚合包
@@ -104,6 +105,7 @@ packages/
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
 | `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含 pi-analysis） |
 | `scripts/smoke-pi-analysis.mjs` | `pi-analysis` npm pack → 干净 prefix 安装 → 真实 Pi resource loader 发现与工具清单 smoke |
+| `scripts/build-pi-evidence.mjs` / `scripts/smoke-pi-evidence.mjs` | `pi-evidence` 自包含构建、依赖清单检查与干净 tarball 安装/只读注册 smoke |
 | `scripts/smoke-channel-watch.mts` | channel-watch 机制冒烟 V1–V6 |
 | `scripts/replay-trace.mts` | 事件 trace 离线重放（`--last` 自动找最新；排查 UI 状态问题首选） |
 | `scripts/replay-evaporation.mts` | 上下文蒸发离线 replay 调参（误杀率/体积曲线；`--core` 与线上实现同构对比；默认数据指 `.local/replay-data/sessions` 副本，指向正式 `~/.pi/agent` 会直接 abort） |
@@ -208,6 +210,10 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 ## packages/pi-analysis — 原生 Pi 分析插件（V1.1-A 进行中）
 
 `packages/pi-analysis/` 承载无宿主副作用的 `AnalysisAdapter`、`AnalysisAdapterRegistry`、bulk RNA-seq 与 assembly readiness/review 合同，并注册 `analysis_list_adapters` 与 `analysis_assess_readiness`。它只依赖 `@gyoungwe/plugin-api`、Pi Extension API 和 Node 标准库；执行、授权、持久化、产物采集仍由 backend 组合根负责。`scripts/build-pi-analysis.mjs` 生成自包含 dist 并检查 Electron/backend/跨包相对导入；`npm run check:pi-analysis`、包内 registration smoke、`check:native-pi` 与 `check:pi-compat` 覆盖当前宿主临时分包边界。外部 `drone-plugins` 迁移、公开 tarball、完整 Pi 矩阵和宿主计划→执行→审查→交付 proof 在 V1.1-A 完成前仍未宣称通过。
+
+## packages/pi-evidence — 原生 Pi 证据插件（V1.1-E 进行中）
+
+`packages/pi-evidence/` 只包含可迁移的 artifact manifest、provenance/digest、checkpoint/branch、evidence capsule 与 replay/import 合同。`evidence_validate_manifest`、`evidence_validate_capsule` 和 `evidence_verify_replay` 均为只读注册；包不读取文件、不写 ledger、不创建 workspace、不执行 workflow，也不继承执行授权。宿主 composition root 负责字节采集、持久化、分支工作区和 replay runner。`scripts/build-pi-evidence.mjs` 生成自包含 dist 并拒绝 Electron/backend/Pi SDK、`node:fs` 和越界导入；`npm run check:pi-evidence` 与 `scripts/smoke-pi-evidence.mjs` 覆盖包级 typecheck/build、注册测试和 clean tarball install。外部 `drone-plugins` 迁移、公开 tarball、Pi 1.1.0/latest 矩阵、REDLINE proof 与宿主加载检查尚未执行，均不标记为 PASS。
 
 ## packages/pi-research — 原生 Pi 研究插件（PR-7）
 

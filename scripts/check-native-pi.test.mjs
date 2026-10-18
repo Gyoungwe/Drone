@@ -28,6 +28,7 @@ test("native Pi scan maps direct, task-helper, and factory registrations", () =>
 		),
 	);
 	assert.ok(records.some((record) => record.name === "research_zotero_update"));
+	assert.ok(records.some((record) => record.name === "evidence_validate_manifest"));
 });
 
 test("checked-in fixture covers every discovered registration", () => {
@@ -39,6 +40,7 @@ test("checked-in fixture covers every discovered registration", () => {
 	assert.deepEqual([...new Set(mapped.map((entry) => entry.targetPackage))].sort(), [
 		"pi-analysis",
 		"pi-core",
+		"pi-evidence",
 		"pi-knowledge",
 		"pi-research",
 		"pi-tasks",
