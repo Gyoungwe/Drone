@@ -52,7 +52,7 @@ v0.33.0 无证书跨平台资产、发布 run 和 SHA-256 清单见 [发布说�
 
 v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
-v1.1 外部插件仓库的 `pi-evidence`、`pi-connectors`、`desktop-ui-pack` clean tarball、六包组合 smoke、宿主 UI 生命周期及 npm 发布阻塞记录见 [v1.1 外部插件包证据](releases/v1.1-external-plugin-packages.json)。
+v1.1 外部插件仓库的 `pi-evidence`、`pi-connectors`、`desktop-ui-pack` registry tarball、Pi loader 和 Desktop 宿主生命周期验收见 [v1.1 外部插件包证据](releases/v1.1-external-plugin-packages.json)。
 
 Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭代记录](superpowers/reports/2026-10-04-drone-five-round-iteration.md) 与 [状态链修复设计](superpowers/specs/2026-10-04-drone-state-chain-fixes-design.md)。
 
@@ -68,14 +68,12 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，16 个 workspace 包：
+npm workspaces monorepo，14 个 workspace 包：
 
 ```
 packages/
 ├── shared/     IPC 契约层（纯类型 + 通道常量，三方共享）
 ├── plugin-api/ 插件公开合同（HostPort、能力协商、结果/回执类型、analysis contract）
-├── pi-connectors/ 原生 Pi 连接器声明、权限与回执插件
-├── pi-evidence/ 原生 Pi 证据、provenance 与 replay 校验插件
 ├── pi-core/     原生 Pi 核心任务与回执插件
 ├── pi-research/ 原生 Pi 研究来源插件
 ├── research-suite/ 原生 Pi 研究聚合包
@@ -107,9 +105,8 @@ packages/
 | `packages/backend/test/skill-acceptance-sdk.test.mjs` | `SKILL-01` 真实 Pi SDK + offline faux provider 的 `/skill:research-workflow` invocation、visible skill、provider call 和 `disable-model-invocation` 自动选择反证；显式 slash 的 manual-only 语义 |
 | `packages/backend/test/redline-acceptance.test.mjs` / `npm run check:redline` | REDLINE-01 隔离验收：通过 publication/orchestration/metacognitive 门禁注入缺来源、stale source、数字/方法漂移、重复数不足、断线和权限拒绝；断言阻断原因、差异路径与 sealed audit proof |
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
-| `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含已安装的 pi-analysis） |
-| `scripts/build-pi-evidence.mjs` / `scripts/smoke-pi-evidence.mjs` | `pi-evidence` 自包含构建、依赖清单检查与干净 tarball 安装/只读注册 smoke |
-| `scripts/build-pi-connectors.mjs` / `scripts/smoke-pi-connectors.mjs` | `pi-connectors` 自包含构建、权限/回执检查、clean tarball 安装→Pi resource loader 发现→卸载 smoke；不调用真实连接器 I/O |
+| `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含已安装的 pi-analysis、pi-evidence、pi-connectors） |
+| `scripts/check-public-plugin-host.mjs` | 从 npm registry 安装三个公开插件包到干净 prefix，验证 Pi loader、工具清单和 Desktop UI 生命周期；不调用模型或真实连接器 I/O |
 | `scripts/smoke-channel-watch.mts` | channel-watch 机制冒烟 V1–V6 |
 | `scripts/replay-trace.mts` | 事件 trace 离线重放（`--last` 自动找最新；排查 UI 状态问题首选） |
 | `scripts/replay-evaporation.mts` | 上下文蒸发离线 replay 调参（误杀率/体积曲线；`--core` 与线上实现同构对比；默认数据指 `.local/replay-data/sessions` 副本，指向正式 `~/.pi/agent` 会直接 abort） |
@@ -215,13 +212,13 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 `../drone-plugins` 的 `codex/pi-analysis-migration`（提交 `baf9b3b`，包提交 `2168576`）是 `@gyoungwe/pi-analysis@0.1.0` 的源码权威位置。Drone backend 以精确版本依赖公共 npm 包，`packages/backend/src/services/analysis-adapters/` 保留兼容 facade；本地临时源码和构建脚本已删除。公开 registry tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
-## packages/pi-evidence — 原生 Pi 证据插件（V1.1-E 进行中）
+## `@gyoungwe/pi-evidence` — 原生 Pi 证据插件（V1.1-E 已完成公开宿主门禁）
 
-`packages/pi-evidence/` 只包含可迁移的 artifact manifest、provenance/digest、checkpoint/branch、evidence capsule 与 replay/import 合同。`evidence_validate_manifest`、`evidence_validate_capsule` 和 `evidence_verify_replay` 均为只读注册；包不读取文件、不写 ledger、不创建 workspace、不执行 workflow，也不继承执行授权。宿主 composition root 负责字节采集、持久化、分支工作区和 replay runner。`scripts/build-pi-evidence.mjs` 生成自包含 dist 并拒绝 Electron/backend/Pi SDK、`node:fs` 和越界导入；`npm run check:pi-evidence` 与 `scripts/smoke-pi-evidence.mjs` 覆盖包级 typecheck/build、注册测试和 clean tarball install。外部 `drone-plugins` 迁移、公开 tarball、Pi 1.1.0/latest 矩阵、REDLINE proof 与宿主加载检查尚未执行，均不标记为 PASS。
+源码权威位置是绑定的 `../drone-plugins/packages/pi-evidence/`。公开 `0.1.0` tarball 的 shasum/integrity、干净 prefix 安装、3 个只读工具注册和 Pi 1.1.0 loader 发现均通过；宿主验收由 `scripts/check-public-plugin-host.mjs` 执行。宿主 composition root 仍负责字节采集、持久化、分支工作区和 replay runner；真实文件写入和科研结论门禁不由该包承担。
 
-## packages/pi-connectors — 原生 Pi 连接器插件（V1.1-C 进行中）
+## `@gyoungwe/pi-connectors` — 原生 Pi 连接器插件（V1.1-C 公开宿主门禁已完成）
 
-`packages/pi-connectors/` 只承载 host-neutral connector contracts、权限/网络/凭据声明、确定性 registry、操作规划和 `drone-connector-receipt/v1` 回执链。内置 Zotero、WebDAV、generic MCP、institutional、search、browser 六个描述符，均把远端写入/删除声明为 false；institutional/browser 仅把浏览器导航列为显式 side effect。`connector_list` 与 `connector_get` 只返回声明元数据，不访问网络、凭据或文件。`scripts/build-pi-connectors.mjs` 生成自包含 `dist/index.mjs` 并做宿主导入/跨包边界检查，`scripts/smoke-pi-connectors.mjs` 覆盖 clean tarball 安装、Pi resource loader 发现、工具清单和卸载。实际网络、凭据、写入、回读与删除仍由宿主组合根通过 `ConnectorExecutionPort` 实现；当前未宣称真实外部服务通过。
+源码权威位置是绑定的 `../drone-plugins/packages/pi-connectors/`。公开 `0.1.0` tarball 的 shasum/integrity、六类只读 connector descriptor、2 个元数据工具、干净安装和 Pi 资源加载均通过。实际网络、凭据、写入、回读与删除仍由宿主组合根通过 `ConnectorExecutionPort` 实现；Protocols.io 继续保持只读，真实外部服务 I/O 不在本次门禁中宣称通过。
 
 ## packages/pi-research — 原生 Pi 研究插件（PR-7）
 

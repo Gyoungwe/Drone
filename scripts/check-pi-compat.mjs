@@ -28,13 +28,21 @@ const LOCKED_HOST_FAMILY = [
 	"pi-telemetry",
 	"pi-tui",
 ];
-const PLUGIN_PACKAGES = ["pi-core", "pi-knowledge", "pi-research", "pi-analysis", "pi-evidence"];
+const PLUGIN_PACKAGES = [
+	"pi-core",
+	"pi-knowledge",
+	"pi-research",
+	"pi-analysis",
+	"pi-evidence",
+	"pi-connectors",
+];
 const PLUGIN_DIST = {
 	"pi-core": resolve(ROOT, "packages/pi-core/dist/index.mjs"),
 	"pi-knowledge": resolve(ROOT, "node_modules/@gyoungwe/pi-knowledge/dist/index.mjs"),
 	"pi-research": resolve(ROOT, "packages/pi-research/dist/index.mjs"),
 	"pi-analysis": resolve(ROOT, "node_modules/@gyoungwe/pi-analysis/dist/index.mjs"),
-	"pi-evidence": resolve(ROOT, "packages/pi-evidence/dist/index.mjs"),
+	"pi-evidence": resolve(ROOT, "node_modules/@gyoungwe/pi-evidence/dist/index.mjs"),
+	"pi-connectors": resolve(ROOT, "node_modules/@gyoungwe/pi-connectors/dist/index.mjs"),
 };
 
 function fail(message) {

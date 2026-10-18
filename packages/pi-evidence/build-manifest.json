@@ -1,8 +1,0 @@
-{
-	"version": 1,
-	"generator": "scripts/build-pi-evidence.mjs",
-	"inputsSha256": "5e05417c29f996b0105ff8c00898308809e7a11486785b25395f6e5f764598ba",
-	"outputs": {
-		"dist/index.mjs": "bb674688be17018a8d03c0e31b1f6b69557918b5b4dd58463310418320388f6d"
-	}
-}

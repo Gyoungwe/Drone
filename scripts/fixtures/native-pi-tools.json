@@ -2,36 +2,6 @@
   "version": 1,
   "description": "Static migration map for first-party tools registered through the native Pi registerTool surface.",
   "tools": {
-	"evidence_validate_capsule": {
-	  "source": "packages/pi-evidence/src/index.ts",
-	  "registration": "registerTool",
-	  "nativePiAvailable": true,
-	  "targetPackage": "pi-evidence"
-	},
-	"evidence_validate_manifest": {
-	  "source": "packages/pi-evidence/src/index.ts",
-	  "registration": "registerTool",
-	  "nativePiAvailable": true,
-	  "targetPackage": "pi-evidence"
-	},
-	"evidence_verify_replay": {
-	  "source": "packages/pi-evidence/src/index.ts",
-	  "registration": "registerTool",
-	  "nativePiAvailable": true,
-	  "targetPackage": "pi-evidence"
-	},
-	"connector_get": {
-	  "source": "packages/pi-connectors/src/index.ts",
-	  "registration": "registerTool",
-	  "nativePiAvailable": true,
-	  "targetPackage": "pi-connectors"
-	},
-	"connector_list": {
-	  "source": "packages/pi-connectors/src/index.ts",
-	  "registration": "registerTool",
-	  "nativePiAvailable": true,
-	  "targetPackage": "pi-connectors"
-	},
     "channel_list": {
       "source": "packages/backend/src/tools/channel-watch/tools.ts",
       "registration": "dynamic-registerTool",
