@@ -233,7 +233,8 @@ export function buildExampleReport(
 		example === "knowledge"
 			? (options.knowledgeStatus ?? (process.env.DRONE_KNOWLEDGE_DIR?.trim() ? "unknown" : "unconfigured"))
 			: undefined;
-	const containerAvailable = options.containerAvailable ?? Boolean(process.env.DRONE_CONTAINER_RUNTIME?.trim());
+	const containerAvailable =
+		options.containerAvailable ?? Boolean(process.env.DRONE_CONTAINER_RUNTIME?.trim());
 	const missingContainer = Boolean(profile.requiresContainer && !containerAvailable);
 	const status: ExampleReport["status"] = missingTools.length
 		? "blocked"
@@ -263,14 +264,14 @@ export function buildExampleReport(
 			: missingContainer
 				? "登记并启用一个容器运行时后重试 /drone-example analysis"
 				: knowledgeStatus === "unconfigured"
-				? "先运行 /drone-init 绑定本地 Vault，再重试 /drone-example knowledge"
-				: knowledgeStatus === "unknown"
-					? "无法确认本地 Vault 状态；先运行 /drone-init 或检查知识库插件后重试"
-					: hasQuestion
-						? mode === "run"
-							? `${profile.title} 已排队；等待真实回执`
-							: `运行 /drone-example ${example} --run <问题> 开始只读示例`
-						: profile.missingDataNext,
+					? "先运行 /drone-init 绑定本地 Vault，再重试 /drone-example knowledge"
+					: knowledgeStatus === "unknown"
+						? "无法确认本地 Vault 状态；先运行 /drone-init 或检查知识库插件后重试"
+						: hasQuestion
+							? mode === "run"
+								? `${profile.title} 已排队；等待真实回执`
+								: `运行 /drone-example ${example} --run <问题> 开始只读示例`
+							: profile.missingDataNext,
 		...(hasQuestion ? { question: question?.trim() } : {}),
 	};
 }
@@ -326,7 +327,10 @@ function emitReport(report: DoctorReport | ExampleReport, ctx: ExtensionCommandC
 	else
 		ctx.ui.notify(
 			message,
-			report.status === "blocked" || report.status === "unconfigured" || report.status === "needs-container" || report.status === "incompatible"
+			report.status === "blocked" ||
+				report.status === "unconfigured" ||
+				report.status === "needs-container" ||
+				report.status === "incompatible"
 				? "warning"
 				: "info",
 		);
