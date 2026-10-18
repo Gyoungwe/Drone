@@ -45,5 +45,26 @@
 		"desktopArtifactStrict": "PASS: 16/16"
 	},
 	"remaining": {},
-	"releaseBlocking": false
+	"releaseBlocking": false,
+	"verification": {
+		"verifiedAt": "2026-10-18",
+		"hostHead": "260995a0",
+		"pluginRepoHead": "8389116",
+		"remainingGates": "PASS",
+		"pluginApiLifecycle": "PASS",
+		"piCompat": {
+			"locked": "1.1.0",
+			"latest": "1.3.0",
+			"status": "PASS"
+		},
+		"upgradeFixtures": "PASS",
+		"pluginRepoCheck": "PASS",
+		"desktopArtifact": {
+			"status": "PASS",
+			"checks": "16/16",
+			"viewports": "4/4",
+			"sha256": "9db8e47ec4c039415ca6dc66a1ccd78dd7ca2f7e3f9a1bb78fafa5cac30244e7"
+		},
+		"protocolsIo": "read-only"
+	}
 }
