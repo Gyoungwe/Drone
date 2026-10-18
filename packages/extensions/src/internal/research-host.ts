@@ -12,14 +12,25 @@ import { randomUUID } from "node:crypto";
 import { readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { verifyLiteratureReceipt } from "@drone/research/literature-receipt";
-import { createLiteratureOperations } from "@drone/research/literature-operations";
-import { createResearchReceiptJournal as createTypedJournal } from "@drone/research/receipt-journal";
-import { createResearchLoop } from "@drone/research/research-loop";
+import {
+	createLiteratureOperations,
+	type LiteratureOperationJournal,
+	type LiteratureOperationPorts,
+} from "@drone/research/literature-operations";
+import {
+	createResearchReceiptJournal as createTypedJournal,
+	type ResearchJournalPorts,
+} from "@drone/research/receipt-journal";
+import { createResearchLoop, type ResearchLoopPorts } from "@drone/research/research-loop";
 import { observeExecutionReceipt } from "@drone/research/run-provenance";
 import {
 	archiveSource as archiveTyped,
+	type SourceArchivePorts,
+	type SourceArchiveWorkspace,
 	sourceStatus as sourceStatusTyped,
 } from "@drone/research/source-archive";
+import type { LiteratureReceiptOptions } from "@drone/research/literature-receipt";
+import type { ResearchLoopWorkspace } from "@drone/research/research-loop";
 import { toolMeta } from "@drone/tasks/tool-manifest-runtime";
 import { publishSourceNote } from "./obsidian-workbench";
 import { loadWorkspaceConfig } from "../workspace-config";
@@ -40,14 +51,20 @@ function exclusive<T>(key: string, work: () => Promise<T>): Promise<T> {
 	});
 }
 
-export const archivePorts: any = {
-	workspace: async (cwd: string) => (await loadWorkspaceConfig(cwd)) as any,
-	publishSourceNote,
+type ResearchWorkspace = SourceArchiveWorkspace & ResearchLoopWorkspace;
+
+async function workspace(cwd: string): Promise<ResearchWorkspace> {
+	return (await loadWorkspaceConfig(cwd)) as ResearchWorkspace;
+}
+
+export const archivePorts: SourceArchivePorts = {
+	workspace,
+	publishSourceNote: (input) => publishSourceNote(input),
 	exclusive,
-	loadInstitutionalConfig,
+	loadInstitutionalConfig: async () => ({ ...(await loadInstitutionalConfig()) }),
 	isElectronAvailable,
 	institutionalFetch,
-	buildProxiedUrl,
+	buildProxiedUrl: (url, template) => buildProxiedUrl(url, template) || "",
 };
 
 const contained = (root: string, target: string) => {
@@ -68,7 +85,7 @@ async function resolveRunJournal(cwd: string, runDir: string) {
 		revision: Number(config.knowledgeBindingRevision || 0),
 	};
 }
-async function readJournal(file: string) {
+async function readJournal(file: string): Promise<LiteratureOperationJournal> {
 	try {
 		const value = JSON.parse(await readFile(file, "utf8"));
 		if (value?.version !== 1 || !value.operations || typeof value.operations !== "object")
@@ -79,28 +96,32 @@ async function readJournal(file: string) {
 		return { version: 1, operations: {} };
 	}
 }
-async function writeJournal(file: string, journal: any) {
+async function writeJournal(file: string, journal: LiteratureOperationJournal): Promise<void> {
 	const temporary = `${file}.${randomUUID()}.tmp`;
 	await writeFile(temporary, `${JSON.stringify(journal, null, 2)}\n`);
 	await rename(temporary, file);
 }
-const operations = createLiteratureOperations({
+const literaturePorts: LiteratureOperationPorts = {
 	resolveRunJournal,
 	readJournal,
 	writeJournal,
 	exclusive: (file, work) => exclusive(file, work),
-	verify: verifyLiteratureReceipt as any,
-});
+	verify: async (input) =>
+		(await verifyLiteratureReceipt(input)) as unknown as Awaited<ReturnType<typeof verifyLiteratureReceipt>> &
+			Record<string, unknown>,
+};
+const operations = createLiteratureOperations(literaturePorts);
 export const reconcileLiteratureOperation = operations.reconcileLiteratureOperation;
 export const recordZoteroWrite = operations.recordZoteroWrite;
 
-const loop = createResearchLoop({
-	workspace: async (cwd) => (await loadWorkspaceConfig(cwd)) as any,
-	verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input as any),
+const loopPorts: ResearchLoopPorts = {
+	workspace,
+	verifyLiteratureReceipt: (input) => verifyLiteratureReceipt(input as unknown as LiteratureReceiptOptions),
 	exclusive,
 	sourceStatus: async ({ cwd, run_dir, verify }) =>
 		sourceStatusTyped({ cwd, run_dir, verify }, archivePorts),
-});
+};
+const loop = createResearchLoop(loopPorts);
 export const startResearchRun = (...args: any[]) => loop.startResearchRun(...args);
 export const updateResearchLoop = (...args: any[]) => loop.updateResearchLoop(...args);
 export const completeResearchGate = (...args: any[]) => loop.completeResearchGate(...args);
@@ -116,18 +137,19 @@ export function createResearchReceiptJournal(
 	cwd: string,
 	{ sessionId = null }: { sessionId?: string | null } = {},
 ) {
+	const journalPorts: ResearchJournalPorts = {
+		workspace,
+		status: async (workspaceCwd, runDir) => updateResearchLoop({ cwd: workspaceCwd, runDir, action: "status" }),
+		flush: async (workspaceCwd, runDir) => flushResearchReceipts({ cwd: workspaceCwd, runDir }),
+		reset: (workspaceCwd, runDir) => resetResearchReceipts({ cwd: workspaceCwd, runDir }),
+		observeExecution: (event) =>
+			observeExecutionReceipt(event as unknown as Parameters<typeof observeExecutionReceipt>[0]),
+		observeResearch: (event) => observeResearchReceipt(event as any),
+		isJournalTool: (name) => toolMeta(name)?.journal === true,
+		owners,
+	};
 	return createTypedJournal(cwd, {
 		sessionId,
-		ports: {
-			workspace: async (workspaceCwd) => (await loadWorkspaceConfig(workspaceCwd)) as any,
-			status: async (workspaceCwd, runDir) =>
-				updateResearchLoop({ cwd: workspaceCwd, runDir, action: "status" }),
-			flush: async (workspaceCwd, runDir) => flushResearchReceipts({ cwd: workspaceCwd, runDir }),
-			reset: (workspaceCwd, runDir) => resetResearchReceipts({ cwd: workspaceCwd, runDir }),
-			observeExecution: (event) => observeExecutionReceipt(event as any),
-			observeResearch: (event) => observeResearchReceipt(event as any),
-			isJournalTool: (name) => toolMeta(name)?.journal === true,
-			owners,
-		},
+		ports: journalPorts,
 	});
 }
