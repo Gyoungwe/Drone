@@ -25,6 +25,7 @@
 - Wisp/OpenScience 的官方源码快照、功能研究和迁移建议见 [open-science-wisp-adapter-research.md](open-science-wisp-adapter-research.md)。
 
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
+A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收敛摘要](a5-impact-summary.md)。
 插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。双仓库维护、架构红线和 npm 发版执行规约见 [drone-maintenance skill](../.agents/skills/drone-maintenance/SKILL.md)。
 插件化前端交接、宿主/插件仓库边界和 UI 验收顺序见 [pluginization-ui-handoff.md](pluginization-ui-handoff.md)；设计稿源文件见 [Drone 插件化界面.html](design/plugin-ui/Drone%20插件化界面.html)，构建产物四视图视觉对照由 [`scripts/check-visual-design-comparison.mjs`](../scripts/check-visual-design-comparison.mjs) 生成 [视觉证据](releases/visual/drone-visual-comparison.json)；资源搜索连接器设计见 [resource-search-connectors.md](resource-search-connectors.md)；科研工作台 v3 规划见 [scientific-workbench-v3-plan.md](scientific-workbench-v3-plan.md)。
 

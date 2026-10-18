@@ -566,6 +566,8 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 
 **目标完成条件**：五个 v1.1 节点都有公开 tarball 验证；Desktop 只通过 host API 加载已安装包且无隐藏宿主 fallback；suite 能干净安装并发现全部资源；计划与索引记录两个仓库 head、版本、证据路径以及剩余 `BLOCKED`/`NOT_RUN`；没有新的架构红线或未审查的外部写入。
 
+> A5-1～A5-4 的用户收益、当前完成度和迁移顺序见 [A5 领域包收敛摘要](a5-impact-summary.md)。这些是发布后的架构收敛项，不改变已通过的 v1.1 门槛。
+
 ## 10. 插件化与桌面验收红线
 
 ### 10.1 总判定规则
