@@ -34,7 +34,7 @@ const zotero = (overrides: Partial<ZoteroStatus> = {}): ZoteroStatus => ({
 describe("SkillsConnectionsView capability state", () => {
 	it("maps MCP runtime evidence to user-facing states", () => {
 		expect(mcpCapabilityStatus("connected", true)).toBe("running");
-		expect(mcpCapabilityStatus("failed", true)).toBe("stale");
+		expect(mcpCapabilityStatus("failed", true)).toBe("error");
 		expect(mcpCapabilityStatus("needs-auth", true)).toBe("permission");
 		expect(mcpCapabilityStatus("connected", false)).toBe("disabled");
 		expect(mcpCapabilityStatus("not-connected", true)).toBe("configure");

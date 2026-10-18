@@ -23,6 +23,7 @@ export type CapabilityStatus =
 	| "disabled"
 	| "permission"
 	| "stale"
+	| "error"
 	| "incompatible";
 export type CapabilityFilter = "all" | "plugin" | "connector" | "mcp" | "skill";
 
@@ -34,7 +35,7 @@ export function mcpCapabilityStatus(
 	if (status === "connected") return "running";
 	if (status === "cached") return "available";
 	if (status === "needs-auth" || status === "blocked") return "permission";
-	if (status === "failed") return "stale";
+	if (status === "failed") return "error";
 	return "configure";
 }
 
@@ -58,7 +59,7 @@ export function zoteroCapabilityStatus(status: ZoteroStatus | null): CapabilityS
 export function statusTone(status: CapabilityStatus): string {
 	if (status === "running" || status === "available") return "text-ok";
 	if (status === "configure" || status === "permission" || status === "stale") return "text-warn";
-	if (status === "incompatible") return "text-err";
+	if (status === "error" || status === "incompatible") return "text-err";
 	return "text-ink-faint";
 }
 
@@ -364,7 +365,7 @@ export function SkillsConnectionsView() {
 								</div>
 								<div className={`flex items-center gap-2 text-xs font-medium ${statusTone(row.status)}`}>
 									<span
-										className={`h-2 w-2 rounded-full ${row.status === "running" ? "animate-pulse bg-ok" : row.status === "available" ? "bg-ok" : row.status === "incompatible" ? "bg-err" : row.status === "disabled" ? "bg-ink-faint" : "bg-warn"}`}
+										className={`h-2 w-2 rounded-full ${row.status === "running" ? "animate-pulse bg-ok" : row.status === "available" ? "bg-ok" : row.status === "error" || row.status === "incompatible" ? "bg-err" : row.status === "disabled" ? "bg-ink-faint" : "bg-warn"}`}
 									/>
 									{statusLabel(row.status)}
 								</div>
@@ -404,7 +405,9 @@ export function SkillsConnectionsView() {
 										>
 											{row.status === "configure"
 												? t("skillsConnections.configure")
-												: t("skillsConnections.view")}
+												: row.status === "error"
+													? t("skillsConnections.viewReason")
+													: t("skillsConnections.view")}
 										</button>
 									)}
 								</div>

@@ -1,0 +1,80 @@
+{
+	"schema": 1,
+	"kind": "drone-v0332-packaged-knowledge-evidence",
+	"version": "0.33.2",
+	"generatedAt": "2026-10-18T17:10:34.060Z",
+	"artifacts": {
+		"macArm64": {
+			"resources": "packages/desktop/dist/mac-arm64/Drone.app/Contents/Resources/research-workbench",
+			"check": {
+				"passed": true,
+				"node": "v22.23.0",
+				"electron": null,
+				"packagedResources": true,
+				"actualBundle": true,
+				"unrelatedProject": true,
+				"sqliteWorker": true,
+				"readonlyChild": true,
+				"coreToolCount": 45,
+				"requiredCoreTools": [
+					"research_prepare_knowledge",
+					"research_read_knowledge",
+					"research_search_knowledge",
+					"research_check_answer",
+					"research_task_status",
+					"research_archive_source",
+					"research_source_status",
+					"research_verify_literature",
+					"research_loop",
+					"research_summarize_run",
+					"research_archive_explainer",
+					"research_propose_wiki_update",
+					"research_topics",
+					"research_resume_topic",
+					"research_update_topic",
+					"research_archive_topic"
+				],
+				"bundledSkills": ["research-vault", "research-workflow", "research-show-me", "zotero-literature"],
+				"noAmbientSkills": true,
+				"noPrivateConfig": true,
+				"rawMcpConnected": false
+			}
+		},
+		"macX64": {
+			"resources": "packages/desktop/dist/mac/Drone.app/Contents/Resources/research-workbench",
+			"check": {
+				"passed": true,
+				"node": "v22.23.0",
+				"electron": null,
+				"packagedResources": true,
+				"actualBundle": true,
+				"unrelatedProject": true,
+				"sqliteWorker": true,
+				"readonlyChild": true,
+				"coreToolCount": 45,
+				"requiredCoreTools": [
+					"research_prepare_knowledge",
+					"research_read_knowledge",
+					"research_search_knowledge",
+					"research_check_answer",
+					"research_task_status",
+					"research_archive_source",
+					"research_source_status",
+					"research_verify_literature",
+					"research_loop",
+					"research_summarize_run",
+					"research_archive_explainer",
+					"research_propose_wiki_update",
+					"research_topics",
+					"research_resume_topic",
+					"research_update_topic",
+					"research_archive_topic"
+				],
+				"bundledSkills": ["research-vault", "research-workflow", "research-show-me", "zotero-literature"],
+				"noAmbientSkills": true,
+				"noPrivateConfig": true,
+				"rawMcpConnected": false
+			}
+		}
+	}
+}

@@ -1,0 +1,428 @@
+{
+	"schema": 1,
+	"kind": "drone-mainline-questions",
+	"roundsPerQuestion": 2,
+	"description": "固定的本地知识主线问题集。每题在同一主题下连续提问两轮，供离线 faux provider 回归使用。",
+	"questions": [
+		{
+			"id": "ML-01",
+			"topic": "local-first-retrieval",
+			"localSource": {
+				"path": "Library/Mainline/ml-01.md",
+				"title": "本地优先检索",
+				"text": "知识回答先查询已绑定 Vault 的本地索引；只有本地证据不足时才考虑联网，联网调用必须出现在 trace 中。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "知识回答的本地优先顺序是什么？",
+					"expectedLocalSource": "Library/Mainline/ml-01.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "再说明一次本地优先检索何时允许联网。",
+					"expectedLocalSource": "Library/Mainline/ml-01.md"
+				}
+			]
+		},
+		{
+			"id": "ML-02",
+			"topic": "citation-resolution",
+			"localSource": {
+				"path": "Library/Mainline/ml-02.md",
+				"title": "引用解析",
+				"text": "回答中的引用路径 Library/Mainline/ml-02.md 必须能在当前 Vault 中解析到同路径文件，解析失败不能算作可追溯回答。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "什么条件下本地回答的引用算可解析？",
+					"expectedLocalSource": "Library/Mainline/ml-02.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "引用路径解析失败时主线指标如何处理？",
+					"expectedLocalSource": "Library/Mainline/ml-02.md"
+				}
+			]
+		},
+		{
+			"id": "ML-03",
+			"topic": "knowledge-graph",
+			"localSource": {
+				"path": "Library/Mainline/ml-03.md",
+				"title": "知识图谱链接",
+				"text": "知识图谱以笔记中的链接和反向链接扩展检索上下文；扩展只读，不改变原始笔记。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "知识图谱如何扩展本地检索结果？",
+					"expectedLocalSource": "Library/Mainline/ml-03.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "图谱扩展会不会修改原始知识笔记？",
+					"expectedLocalSource": "Library/Mainline/ml-03.md"
+				}
+			]
+		},
+		{
+			"id": "ML-04",
+			"topic": "stale-source",
+			"localSource": {
+				"path": "Library/Mainline/ml-04.md",
+				"title": "过期来源",
+				"text": "来源文件的内容或 hash 改变后，知识库应标记 stale/changed，并要求刷新来源检查，不能静默沿用旧证据。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "来源文件被修改后知识库应显示什么状态？",
+					"expectedLocalSource": "Library/Mainline/ml-04.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "为什么不能静默使用已经变更的来源？",
+					"expectedLocalSource": "Library/Mainline/ml-04.md"
+				}
+			]
+		},
+		{
+			"id": "ML-05",
+			"topic": "topic-memory",
+			"localSource": {
+				"path": "Library/Mainline/ml-05.md",
+				"title": "主题记忆",
+				"text": "主题记忆保存主题、来源和未解决问题；新会话从隔离的 memory-note 恢复这些字段，不读取其他 Vault。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "主题记忆需要保存哪些字段？",
+					"expectedLocalSource": "Library/Mainline/ml-05.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "新会话恢复主题记忆时如何保证 Vault 隔离？",
+					"expectedLocalSource": "Library/Mainline/ml-05.md"
+				}
+			]
+		},
+		{
+			"id": "ML-06",
+			"topic": "source-receipt",
+			"localSource": {
+				"path": "Library/Mainline/ml-06.md",
+				"title": "来源回执",
+				"text": "来源回执记录 source id、路径、摘要和读取时间；回执只描述实际读取到的来源，不得凭空生成。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "来源回执至少应该记录什么？",
+					"expectedLocalSource": "Library/Mainline/ml-06.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "来源回执为什么必须对应实际读取内容？",
+					"expectedLocalSource": "Library/Mainline/ml-06.md"
+				}
+			]
+		},
+		{
+			"id": "ML-07",
+			"topic": "research-provenance",
+			"localSource": {
+				"path": "Library/Mainline/ml-07.md",
+				"title": "研究运行 provenance",
+				"text": "研究运行 provenance 连接输入、方法、环境、结果和 trace；缺少关键输入时必须保留 unknown，而不是补造版本。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "研究运行 provenance 要连接哪些对象？",
+					"expectedLocalSource": "Library/Mainline/ml-07.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "provenance 缺少环境版本时应该记录什么？",
+					"expectedLocalSource": "Library/Mainline/ml-07.md"
+				}
+			]
+		},
+		{
+			"id": "ML-08",
+			"topic": "zotero-read",
+			"localSource": {
+				"path": "Library/Mainline/ml-08.md",
+				"title": "Zotero 只读连接",
+				"text": "Zotero 连接默认只读，返回稳定的条目 identity、标题和来源链接；没有另行授权时不执行写入。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "Zotero 连接默认允许哪些操作？",
+					"expectedLocalSource": "Library/Mainline/ml-08.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "没有写入授权时如何处理 Zotero 条目？",
+					"expectedLocalSource": "Library/Mainline/ml-08.md"
+				}
+			]
+		},
+		{
+			"id": "ML-09",
+			"topic": "webdav-receipt",
+			"localSource": {
+				"path": "Library/Mainline/ml-09.md",
+				"title": "WebDAV 回读",
+				"text": "WebDAV 写入验收必须完成创建、回读、删除和再次回读；每一步都应有外部对象回执。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "WebDAV 写入闭环需要哪些步骤？",
+					"expectedLocalSource": "Library/Mainline/ml-09.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "为什么删除后还要再次回读 WebDAV 对象？",
+					"expectedLocalSource": "Library/Mainline/ml-09.md"
+				}
+			]
+		},
+		{
+			"id": "ML-10",
+			"topic": "institutional-access",
+			"localSource": {
+				"path": "Library/Mainline/ml-10.md",
+				"title": "机构访问边界",
+				"text": "机构访问只在用户已配置并明确授权的域名范围内使用；凭据留在平台存储，不写入 trace、报告或研究结果。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "机构访问的域名和凭据边界是什么？",
+					"expectedLocalSource": "Library/Mainline/ml-10.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "凭据为什么不能进入 trace 或研究报告？",
+					"expectedLocalSource": "Library/Mainline/ml-10.md"
+				}
+			]
+		},
+		{
+			"id": "ML-11",
+			"topic": "evidence-gate",
+			"localSource": {
+				"path": "Library/Mainline/ml-11.md",
+				"title": "证据门禁",
+				"text": "证据门禁在交付前检查输入、来源、digest 和回放信息；缺证据时返回 blocked 或 pause，不宣称完成。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "证据门禁在交付前检查什么？",
+					"expectedLocalSource": "Library/Mainline/ml-11.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "关键证据缺失时交付应该使用什么状态？",
+					"expectedLocalSource": "Library/Mainline/ml-11.md"
+				}
+			]
+		},
+		{
+			"id": "ML-12",
+			"topic": "claim-binding",
+			"localSource": {
+				"path": "Library/Mainline/ml-12.md",
+				"title": "声明绑定",
+				"text": "声明绑定把回答中的结论映射到来源片段和证据等级；没有绑定来源的数字不能被标为已验证。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "回答中的声明如何绑定到证据？",
+					"expectedLocalSource": "Library/Mainline/ml-12.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "没有来源绑定的数字可以标为已验证吗？",
+					"expectedLocalSource": "Library/Mainline/ml-12.md"
+				}
+			]
+		},
+		{
+			"id": "ML-13",
+			"topic": "research-loop",
+			"localSource": {
+				"path": "Library/Mainline/ml-13.md",
+				"title": "研究循环",
+				"text": "研究循环按检索、阅读、综合、沉淀和交付推进，每个阶段把可追溯来源继续传递到下一阶段。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "研究循环包含哪些主要阶段？",
+					"expectedLocalSource": "Library/Mainline/ml-13.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "研究循环如何把来源传递到交付？",
+					"expectedLocalSource": "Library/Mainline/ml-13.md"
+				}
+			]
+		},
+		{
+			"id": "ML-14",
+			"topic": "publication-review",
+			"localSource": {
+				"path": "Library/Mainline/ml-14.md",
+				"title": "发布审阅",
+				"text": "发布审阅检查 citation-without-receipt、untraceable-number 和 figure-code-mismatch；高风险发现会阻断发布。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "发布审阅会检查哪几类常见问题？",
+					"expectedLocalSource": "Library/Mainline/ml-14.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "高风险审阅发现对发布有什么影响？",
+					"expectedLocalSource": "Library/Mainline/ml-14.md"
+				}
+			]
+		},
+		{
+			"id": "ML-15",
+			"topic": "semantic-search",
+			"localSource": {
+				"path": "Library/Mainline/ml-15.md",
+				"title": "语义检索",
+				"text": "语义检索是可选的本地候选排序能力；provider 为 none 时仍可使用词法检索，远端 embedding 必须显式同意。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "没有语义 provider 时本地检索还能工作吗？",
+					"expectedLocalSource": "Library/Mainline/ml-15.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "远端 embedding 启用前需要什么条件？",
+					"expectedLocalSource": "Library/Mainline/ml-15.md"
+				}
+			]
+		},
+		{
+			"id": "ML-16",
+			"topic": "knowledge-status",
+			"localSource": {
+				"path": "Library/Mainline/ml-16.md",
+				"title": "知识库状态",
+				"text": "knowledge_status 在 revision 未变化时返回稳定的摘要行；状态查询不应触发联网或修改知识库。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "revision 未变化时 knowledge_status 应返回什么？",
+					"expectedLocalSource": "Library/Mainline/ml-16.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "状态查询会触发联网或修改笔记吗？",
+					"expectedLocalSource": "Library/Mainline/ml-16.md"
+				}
+			]
+		},
+		{
+			"id": "ML-17",
+			"topic": "task-feedback",
+			"localSource": {
+				"path": "Library/Mainline/ml-17.md",
+				"title": "任务反馈",
+				"text": "任务反馈把接受条件、已完成步骤和待处理项写回任务上下文；反馈状态必须来自真实执行结果。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "任务反馈应该包含哪些内容？",
+					"expectedLocalSource": "Library/Mainline/ml-17.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "反馈状态为什么必须来自真实执行结果？",
+					"expectedLocalSource": "Library/Mainline/ml-17.md"
+				}
+			]
+		},
+		{
+			"id": "ML-18",
+			"topic": "related-notes",
+			"localSource": {
+				"path": "Library/Mainline/ml-18.md",
+				"title": "相关笔记",
+				"text": "相关笔记结果保留稳定路径、匹配原因和相似度来源；只读推荐不会自动改写笔记。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "相关笔记结果需要保留哪些信息？",
+					"expectedLocalSource": "Library/Mainline/ml-18.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "只读相关笔记推荐会自动改写内容吗？",
+					"expectedLocalSource": "Library/Mainline/ml-18.md"
+				}
+			]
+		},
+		{
+			"id": "ML-19",
+			"topic": "source-archive",
+			"localSource": {
+				"path": "Library/Mainline/ml-19.md",
+				"title": "来源归档",
+				"text": "来源归档保存原始内容、来源 URL、抓取时间和 digest；同一 digest 的重复归档应复用已有对象。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "来源归档需要保存哪些 provenance 字段？",
+					"expectedLocalSource": "Library/Mainline/ml-19.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "相同 digest 的来源重复归档时应该怎样？",
+					"expectedLocalSource": "Library/Mainline/ml-19.md"
+				}
+			]
+		},
+		{
+			"id": "ML-20",
+			"topic": "run-summary",
+			"localSource": {
+				"path": "Library/Mainline/ml-20.md",
+				"title": "运行摘要",
+				"text": "运行摘要列出状态、耗时、工具调用、来源和未解决问题；未知字段保持 unknown，摘要不能掩盖失败。"
+			},
+			"rounds": [
+				{
+					"id": "round-1",
+					"prompt": "运行摘要应该列出哪些运行信息？",
+					"expectedLocalSource": "Library/Mainline/ml-20.md"
+				},
+				{
+					"id": "round-2",
+					"prompt": "运行摘要如何表达未知字段和失败？",
+					"expectedLocalSource": "Library/Mainline/ml-20.md"
+				}
+			]
+		}
+	]
+}

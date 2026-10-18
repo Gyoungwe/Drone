@@ -1,7 +1,7 @@
 {
 	"name": "drone",
 	"private": true,
-	"version": "0.33.1",
+	"version": "0.33.2",
 	"description": "Desktop GUI for the Pi coding agent, built with Electron",
 	"license": "MIT",
 	"author": "Jaxton07",
@@ -63,7 +63,9 @@
 		"check:remaining-gates": "node scripts/check-remaining-gates.mjs",
 		"skills:update": "python scripts/update-research-skill-lock.py --write-lock",
 		"check:ui-evidence": "node scripts/check-ui-evidence.mjs",
-		"check:research-browser": "node scripts/check-research-browser-acceptance.mjs"
+		"check:research-browser": "node scripts/check-research-browser-acceptance.mjs",
+		"eval:mainline": "node scripts/eval-mainline.mjs",
+		"test:mainline": "node --test scripts/eval-mainline.test.mjs"
 	},
 	"engines": {
 		"node": ">=22.19"

@@ -1,0 +1,2154 @@
+{
+	"schema": 1,
+	"kind": "drone-mainline-eval",
+	"mode": "offline-faux-provider",
+	"fixture": "fixtures/mainline-questions.json",
+	"generatedAt": "2026-10-18T17:02:39.211Z",
+	"provider": {
+		"id": "drone-mainline-offline",
+		"model": "faux-1",
+		"calls": 80
+	},
+	"metrics": {
+		"questions": 20,
+		"rounds": 40,
+		"localHits": 40,
+		"localAnswers": 40,
+		"localHitRate": 1,
+		"localAnswerRate": 1,
+		"networkCalls": 0,
+		"networkToolCalls": 0,
+		"citations": 40,
+		"citationsResolved": 40,
+		"citationResolvableRate": 1,
+		"elapsedMs": 9.144499999999994,
+		"latencyMs": {
+			"mean": 0.21342290000000047,
+			"p50": 0.09683300000000372,
+			"p95": 0.5874999999999773,
+			"max": 2.0802910000000168
+		}
+	},
+	"rounds": [
+		{
+			"questionId": "ML-01",
+			"roundId": "round-1",
+			"prompt": "知识回答的本地优先顺序是什么？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-01.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 2.0802910000000168,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-01",
+					"roundId": "round-1",
+					"prompt": "知识回答的本地优先顺序是什么？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "知识回答的本地优先顺序是什么？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-01.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-01.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-01",
+			"roundId": "round-2",
+			"prompt": "再说明一次本地优先检索何时允许联网。",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-01.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.5313330000000178,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-01",
+					"roundId": "round-2",
+					"prompt": "再说明一次本地优先检索何时允许联网。"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "再说明一次本地优先检索何时允许联网。",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-01.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-01.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-02",
+			"roundId": "round-1",
+			"prompt": "什么条件下本地回答的引用算可解析？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-02.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.4911250000000109,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-02",
+					"roundId": "round-1",
+					"prompt": "什么条件下本地回答的引用算可解析？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "什么条件下本地回答的引用算可解析？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-02.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-02.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-02",
+			"roundId": "round-2",
+			"prompt": "引用路径解析失败时主线指标如何处理？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-02.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.26345799999998576,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-02",
+					"roundId": "round-2",
+					"prompt": "引用路径解析失败时主线指标如何处理？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "引用路径解析失败时主线指标如何处理？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-02.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-02.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-03",
+			"roundId": "round-1",
+			"prompt": "知识图谱如何扩展本地检索结果？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-03.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.5874999999999773,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-03",
+					"roundId": "round-1",
+					"prompt": "知识图谱如何扩展本地检索结果？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "知识图谱如何扩展本地检索结果？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-03.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-03.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-03",
+			"roundId": "round-2",
+			"prompt": "图谱扩展会不会修改原始知识笔记？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-03.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.3003750000000025,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-03",
+					"roundId": "round-2",
+					"prompt": "图谱扩展会不会修改原始知识笔记？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "图谱扩展会不会修改原始知识笔记？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-03.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-03.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-04",
+			"roundId": "round-1",
+			"prompt": "来源文件被修改后知识库应显示什么状态？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-04.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.14658299999999258,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-04",
+					"roundId": "round-1",
+					"prompt": "来源文件被修改后知识库应显示什么状态？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "来源文件被修改后知识库应显示什么状态？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-04.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-04.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-04",
+			"roundId": "round-2",
+			"prompt": "为什么不能静默使用已经变更的来源？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-04.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.12695899999999938,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-04",
+					"roundId": "round-2",
+					"prompt": "为什么不能静默使用已经变更的来源？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "为什么不能静默使用已经变更的来源？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-04.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-04.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-05",
+			"roundId": "round-1",
+			"prompt": "主题记忆需要保存哪些字段？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-05.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.15716699999998696,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-05",
+					"roundId": "round-1",
+					"prompt": "主题记忆需要保存哪些字段？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "主题记忆需要保存哪些字段？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-05.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-05.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-05",
+			"roundId": "round-2",
+			"prompt": "新会话恢复主题记忆时如何保证 Vault 隔离？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-05.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.13824999999999932,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-05",
+					"roundId": "round-2",
+					"prompt": "新会话恢复主题记忆时如何保证 Vault 隔离？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "新会话恢复主题记忆时如何保证 Vault 隔离？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-05.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-05.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-06",
+			"roundId": "round-1",
+			"prompt": "来源回执至少应该记录什么？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-06.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.10562500000000341,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-06",
+					"roundId": "round-1",
+					"prompt": "来源回执至少应该记录什么？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "来源回执至少应该记录什么？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-06.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-06.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-06",
+			"roundId": "round-2",
+			"prompt": "来源回执为什么必须对应实际读取内容？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-06.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.10224999999999795,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-06",
+					"roundId": "round-2",
+					"prompt": "来源回执为什么必须对应实际读取内容？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "来源回执为什么必须对应实际读取内容？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-06.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-06.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-07",
+			"roundId": "round-1",
+			"prompt": "研究运行 provenance 要连接哪些对象？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-07.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.10212500000000091,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-07",
+					"roundId": "round-1",
+					"prompt": "研究运行 provenance 要连接哪些对象？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "研究运行 provenance 要连接哪些对象？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-07.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-07.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-07",
+			"roundId": "round-2",
+			"prompt": "provenance 缺少环境版本时应该记录什么？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-07.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.10562500000000341,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-07",
+					"roundId": "round-2",
+					"prompt": "provenance 缺少环境版本时应该记录什么？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "provenance 缺少环境版本时应该记录什么？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-07.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-07.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-08",
+			"roundId": "round-1",
+			"prompt": "Zotero 连接默认允许哪些操作？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-08.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.09329199999999105,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-08",
+					"roundId": "round-1",
+					"prompt": "Zotero 连接默认允许哪些操作？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "Zotero 连接默认允许哪些操作？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-08.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-08.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-08",
+			"roundId": "round-2",
+			"prompt": "没有写入授权时如何处理 Zotero 条目？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-08.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.10304099999999039,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-08",
+					"roundId": "round-2",
+					"prompt": "没有写入授权时如何处理 Zotero 条目？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "没有写入授权时如何处理 Zotero 条目？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-08.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-08.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-09",
+			"roundId": "round-1",
+			"prompt": "WebDAV 写入闭环需要哪些步骤？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-09.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.08683400000001029,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-09",
+					"roundId": "round-1",
+					"prompt": "WebDAV 写入闭环需要哪些步骤？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "WebDAV 写入闭环需要哪些步骤？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-09.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-09.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-09",
+			"roundId": "round-2",
+			"prompt": "为什么删除后还要再次回读 WebDAV 对象？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-09.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.10116700000000378,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-09",
+					"roundId": "round-2",
+					"prompt": "为什么删除后还要再次回读 WebDAV 对象？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "为什么删除后还要再次回读 WebDAV 对象？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-09.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-09.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-10",
+			"roundId": "round-1",
+			"prompt": "机构访问的域名和凭据边界是什么？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-10.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.09616600000001085,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-10",
+					"roundId": "round-1",
+					"prompt": "机构访问的域名和凭据边界是什么？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "机构访问的域名和凭据边界是什么？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-10.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-10.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-10",
+			"roundId": "round-2",
+			"prompt": "凭据为什么不能进入 trace 或研究报告？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-10.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.09670800000000668,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-10",
+					"roundId": "round-2",
+					"prompt": "凭据为什么不能进入 trace 或研究报告？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "凭据为什么不能进入 trace 或研究报告？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-10.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-10.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-11",
+			"roundId": "round-1",
+			"prompt": "证据门禁在交付前检查什么？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-11.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.912083000000024,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-11",
+					"roundId": "round-1",
+					"prompt": "证据门禁在交付前检查什么？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "证据门禁在交付前检查什么？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-11.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-11.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-11",
+			"roundId": "round-2",
+			"prompt": "关键证据缺失时交付应该使用什么状态？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-11.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.15316699999999628,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-11",
+					"roundId": "round-2",
+					"prompt": "关键证据缺失时交付应该使用什么状态？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "关键证据缺失时交付应该使用什么状态？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-11.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-11.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-12",
+			"roundId": "round-1",
+			"prompt": "回答中的声明如何绑定到证据？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-12.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.08795799999998621,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-12",
+					"roundId": "round-1",
+					"prompt": "回答中的声明如何绑定到证据？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "回答中的声明如何绑定到证据？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-12.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-12.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-12",
+			"roundId": "round-2",
+			"prompt": "没有来源绑定的数字可以标为已验证吗？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-12.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.10675000000000523,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-12",
+					"roundId": "round-2",
+					"prompt": "没有来源绑定的数字可以标为已验证吗？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "没有来源绑定的数字可以标为已验证吗？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-12.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-12.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-13",
+			"roundId": "round-1",
+			"prompt": "研究循环包含哪些主要阶段？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-13.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.09683300000000372,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-13",
+					"roundId": "round-1",
+					"prompt": "研究循环包含哪些主要阶段？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "研究循环包含哪些主要阶段？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-13.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-13.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-13",
+			"roundId": "round-2",
+			"prompt": "研究循环如何把来源传递到交付？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-13.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.09358399999999278,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-13",
+					"roundId": "round-2",
+					"prompt": "研究循环如何把来源传递到交付？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "研究循环如何把来源传递到交付？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-13.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-13.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-14",
+			"roundId": "round-1",
+			"prompt": "发布审阅会检查哪几类常见问题？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-14.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.09616699999997991,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-14",
+					"roundId": "round-1",
+					"prompt": "发布审阅会检查哪几类常见问题？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "发布审阅会检查哪几类常见问题？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-14.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-14.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-14",
+			"roundId": "round-2",
+			"prompt": "高风险审阅发现对发布有什么影响？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-14.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.0962080000000185,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-14",
+					"roundId": "round-2",
+					"prompt": "高风险审阅发现对发布有什么影响？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "高风险审阅发现对发布有什么影响？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-14.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-14.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-15",
+			"roundId": "round-1",
+			"prompt": "没有语义 provider 时本地检索还能工作吗？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-15.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.11387500000000728,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-15",
+					"roundId": "round-1",
+					"prompt": "没有语义 provider 时本地检索还能工作吗？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "没有语义 provider 时本地检索还能工作吗？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-15.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-15.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-15",
+			"roundId": "round-2",
+			"prompt": "远端 embedding 启用前需要什么条件？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-15.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.09187500000001592,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-15",
+					"roundId": "round-2",
+					"prompt": "远端 embedding 启用前需要什么条件？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "远端 embedding 启用前需要什么条件？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-15.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-15.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-16",
+			"roundId": "round-1",
+			"prompt": "revision 未变化时 knowledge_status 应返回什么？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-16.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.0922920000000147,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-16",
+					"roundId": "round-1",
+					"prompt": "revision 未变化时 knowledge_status 应返回什么？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "revision 未变化时 knowledge_status 应返回什么？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-16.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-16.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-16",
+			"roundId": "round-2",
+			"prompt": "状态查询会触发联网或修改笔记吗？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-16.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.08654200000000856,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-16",
+					"roundId": "round-2",
+					"prompt": "状态查询会触发联网或修改笔记吗？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "状态查询会触发联网或修改笔记吗？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-16.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-16.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-17",
+			"roundId": "round-1",
+			"prompt": "任务反馈应该包含哪些内容？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-17.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.08712499999998613,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-17",
+					"roundId": "round-1",
+					"prompt": "任务反馈应该包含哪些内容？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "任务反馈应该包含哪些内容？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-17.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-17.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-17",
+			"roundId": "round-2",
+			"prompt": "反馈状态为什么必须来自真实执行结果？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-17.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.08458400000000665,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-17",
+					"roundId": "round-2",
+					"prompt": "反馈状态为什么必须来自真实执行结果？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "反馈状态为什么必须来自真实执行结果？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-17.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-17.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-18",
+			"roundId": "round-1",
+			"prompt": "相关笔记结果需要保留哪些信息？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-18.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.083500000000015,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-18",
+					"roundId": "round-1",
+					"prompt": "相关笔记结果需要保留哪些信息？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "相关笔记结果需要保留哪些信息？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-18.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-18.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-18",
+			"roundId": "round-2",
+			"prompt": "只读相关笔记推荐会自动改写内容吗？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-18.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.09029099999997925,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-18",
+					"roundId": "round-2",
+					"prompt": "只读相关笔记推荐会自动改写内容吗？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "只读相关笔记推荐会自动改写内容吗？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-18.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-18.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-19",
+			"roundId": "round-1",
+			"prompt": "来源归档需要保存哪些 provenance 字段？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-19.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.08391599999998789,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-19",
+					"roundId": "round-1",
+					"prompt": "来源归档需要保存哪些 provenance 字段？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "来源归档需要保存哪些 provenance 字段？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-19.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-19.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-19",
+			"roundId": "round-2",
+			"prompt": "相同 digest 的来源重复归档时应该怎样？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-19.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.0881249999999909,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-19",
+					"roundId": "round-2",
+					"prompt": "相同 digest 的来源重复归档时应该怎样？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "相同 digest 的来源重复归档时应该怎样？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-19.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-19.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-20",
+			"roundId": "round-1",
+			"prompt": "运行摘要应该列出哪些运行信息？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-20.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.08204200000000128,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-20",
+					"roundId": "round-1",
+					"prompt": "运行摘要应该列出哪些运行信息？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "运行摘要应该列出哪些运行信息？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-20.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-20.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		},
+		{
+			"questionId": "ML-20",
+			"roundId": "round-2",
+			"prompt": "运行摘要如何表达未知字段和失败？",
+			"localHit": true,
+			"localAnswer": true,
+			"networkCalls": 0,
+			"citations": [
+				{
+					"path": "Library/Mainline/ml-20.md",
+					"resolved": true
+				}
+			],
+			"citationsResolved": 1,
+			"elapsedMs": 0.09412499999999113,
+			"providerCalls": 2,
+			"trace": [
+				{
+					"type": "turn_start",
+					"questionId": "ML-20",
+					"roundId": "round-2",
+					"prompt": "运行摘要如何表达未知字段和失败？"
+				},
+				{
+					"type": "tool_call",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"arguments": {
+						"query": "运行摘要如何表达未知字段和失败？",
+						"limit": 1
+					}
+				},
+				{
+					"type": "tool_result",
+					"toolName": "knowledge_search",
+					"scope": "local",
+					"hit": true,
+					"path": "Library/Mainline/ml-20.md"
+				},
+				{
+					"type": "assistant_end",
+					"stopReason": "stop",
+					"localAnswer": true,
+					"networkCalls": 0,
+					"citations": [
+						{
+							"path": "Library/Mainline/ml-20.md",
+							"resolved": true
+						}
+					]
+				}
+			]
+		}
+	]
+}
