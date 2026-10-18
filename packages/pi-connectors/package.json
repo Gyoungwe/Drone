@@ -1,0 +1,55 @@
+{
+	"name": "@gyoungwe/pi-connectors",
+	"version": "0.1.0",
+	"description": "Host-neutral, read-only connector declarations and provenance receipts for native Pi",
+	"keywords": [
+		"pi-package",
+		"connectors",
+		"research",
+		"provenance"
+	],
+	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Gyoungwe/Drone.git",
+		"directory": "packages/pi-connectors"
+	},
+	"type": "module",
+	"main": "./dist/index.mjs",
+	"files": [
+		"dist",
+		"src",
+		"package.json",
+		"README.md",
+		"build-manifest.json",
+		"plugin.manifest.json"
+	],
+	"pi": {
+		"extensions": [
+			"./dist/index.mjs"
+		]
+	},
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./dist/index.mjs",
+			"default": "./dist/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "node ../../scripts/build-pi-connectors.mjs",
+		"build:check": "node ../../scripts/build-pi-connectors.mjs --check",
+		"typecheck": "tsc --noEmit",
+		"test": "npm run build && node --test test/registration.test.mjs",
+		"check": "npm run typecheck && npm run build:check && npm test && node ../../scripts/smoke-pi-connectors.mjs"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": ">=1.1.0 <2.0.0"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.0"
+	}
+}

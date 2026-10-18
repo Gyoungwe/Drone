@@ -70,6 +70,11 @@ export interface EvidenceBranch {
 function checkpointBody(value: Omit<EvidenceCheckpoint, "id">): Omit<EvidenceCheckpoint, "id"> {
 	const { lineage: _lineage, analysis, ...rest } = value;
 	const { provenance, ...analysisRest } = analysis;
+	const checkpointProvenance = provenance
+		? (({ lineage: _lineage, ...withoutLineage }) => withoutLineage)(
+				provenance as EvidenceProvenance & { readonly lineage?: unknown },
+			)
+		: undefined;
 	const contentAnalysis: EvidenceAnalysisSnapshot = {
 		version: analysisRest.version,
 		id: analysisRest.id,
@@ -80,7 +85,7 @@ function checkpointBody(value: Omit<EvidenceCheckpoint, "id">): Omit<EvidenceChe
 		...(analysisRest.status ? { status: analysisRest.status } : {}),
 		...(analysisRest.capabilities ? { capabilities: [...analysisRest.capabilities] } : {}),
 		...(analysisRest.adapter ? { adapter: { ...analysisRest.adapter } } : {}),
-		...(provenance ? { provenance } : {}),
+		...(checkpointProvenance ? { provenance: checkpointProvenance } : {}),
 		...(analysisRest.review
 			? { review: { ...analysisRest.review, limitations: [...analysisRest.review.limitations] } }
 			: {}),

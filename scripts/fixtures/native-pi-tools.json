@@ -14,23 +14,17 @@
 	  "nativePiAvailable": true,
 	  "targetPackage": "pi-analysis"
 	},
-	"evidence_validate_capsule": {
-	  "source": "packages/pi-evidence/src/index.ts",
+	"connector_get": {
+	  "source": "packages/pi-connectors/src/index.ts",
 	  "registration": "registerTool",
 	  "nativePiAvailable": true,
-	  "targetPackage": "pi-evidence"
+	  "targetPackage": "pi-connectors"
 	},
-	"evidence_validate_manifest": {
-	  "source": "packages/pi-evidence/src/index.ts",
+	"connector_list": {
+	  "source": "packages/pi-connectors/src/index.ts",
 	  "registration": "registerTool",
 	  "nativePiAvailable": true,
-	  "targetPackage": "pi-evidence"
-	},
-	"evidence_verify_replay": {
-	  "source": "packages/pi-evidence/src/index.ts",
-	  "registration": "registerTool",
-	  "nativePiAvailable": true,
-	  "targetPackage": "pi-evidence"
+	  "targetPackage": "pi-connectors"
 	},
     "channel_list": {
       "source": "packages/backend/src/tools/channel-watch/tools.ts",
