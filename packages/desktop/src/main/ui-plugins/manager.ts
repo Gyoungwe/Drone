@@ -37,6 +37,16 @@ function pluginsDir(): string {
 	return join(app.getPath("userData"), "ui-plugins");
 }
 
+/**
+ * Pi's user package manager keeps npm packages under <agentDir>/npm/node_modules.
+ * The Desktop UI pack is discovered from that managed install root so the
+ * host consumes the installed package rather than a copied source fallback.
+ */
+function installedUiPackageDir(): string {
+	const agentDir = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
+	return join(agentDir, "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "ui");
+}
+
 /** 内置插件源码目录（随包分发，packaged 态在 .app 内只读）；init 时导出到用户插件目录 */
 function builtinPluginsDir(): string {
 	return join(uiPluginsResourcesDir(), "builtin");
@@ -276,6 +286,7 @@ async function newestMtime(dir: string): Promise<number | null> {
 }
 
 export class UiPluginManager {
+	private readonly installedPackageDir: string;
 	/** name → 扫描信息（scanAll 合成；buildError 是内存态，保留在 Map 里跨扫描存活） */
 	private infos = new Map<string, UiPluginInfo>();
 	/** name → 插件目录绝对路径（白名单：readCode/openDir 只接受扫描到的合法名） */
@@ -288,6 +299,10 @@ export class UiPluginManager {
 	private watchers: FSWatcher[] = [];
 	/** 插件名 → 防抖重建定时器（连续保存只重建一次） */
 	private rebuildTimers = new Map<string, NodeJS.Timeout>();
+
+	constructor(options?: { installedPackageDir?: string }) {
+		this.installedPackageDir = options?.installedPackageDir ?? installedUiPackageDir();
+	}
 
 	/** 确保插件根目录存在、分发规范文档与内置插件、加载配置 + 首次扫描 */
 	async init(): Promise<void> {
@@ -364,6 +379,28 @@ export class UiPluginManager {
 				};
 				this.infos.set(name, info);
 				out.push(info);
+			}
+		}
+		// An installed desktop-ui-pack contributes through the same manifest/build
+		// path as a user plugin. A user directory wins on name collision so an
+		// explicit local override remains possible; package removal disappears on
+		// the next scan without leaving a stale copied plugin behind.
+		const installedManifest = await readManifest(this.installedPackageDir);
+		const installedName = installedManifest?.name;
+		if (
+			typeof installedName === "string" &&
+			NAME_RE.test(installedName) &&
+			!seen.has(installedName) &&
+			!validateManifest(installedName, installedManifest ?? {})
+		) {
+			try {
+				seen.add(installedName);
+				this.dirNames.set(installedName, this.installedPackageDir);
+				const info = await this.scanOne(installedName, this.installedPackageDir);
+				this.infos.set(installedName, info);
+				out.push(info);
+			} catch (err) {
+				log.error("installed desktop-ui-pack scan failed", err);
 			}
 		}
 		// 清理幽灵条目：目录已删除/改名的插件从两个 Map 移除（否则面板显示已删除插件直到重启）

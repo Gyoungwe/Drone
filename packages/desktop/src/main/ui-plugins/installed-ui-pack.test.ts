@@ -1,0 +1,82 @@
+// @vitest-environment node
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const electronState = vi.hoisted(() => ({ userData: "" }));
+vi.mock("electron", () => ({
+	app: {
+		isPackaged: true,
+		getVersion: () => "ui-pack-acceptance",
+		getPath: (name: string) => (name === "userData" ? electronState.userData : electronState.userData),
+	},
+	shell: { openPath: vi.fn() },
+}));
+
+import { UiPluginManager } from "./manager";
+
+describe("installed desktop-ui-pack discovery", () => {
+	let root = "";
+	const originalResourcesPath = Object.getOwnPropertyDescriptor(process, "resourcesPath");
+
+	afterEach(async () => {
+		if (root) await rm(root, { recursive: true, force: true });
+		if (originalResourcesPath) Object.defineProperty(process, "resourcesPath", originalResourcesPath);
+		else Reflect.deleteProperty(process, "resourcesPath");
+	});
+
+	it("loads the installed package through the normal UI plugin lifecycle", async () => {
+		root = await mkdtemp(join(tmpdir(), "drone-ui-pack-"));
+		electronState.userData = join(root, "user-data");
+		Object.defineProperty(process, "resourcesPath", {
+			configurable: true,
+			enumerable: originalResourcesPath?.enumerable ?? false,
+			value: fileURLToPath(new URL("../../../resources", import.meta.url)),
+			writable: true,
+		});
+		const packageUi = join(root, "agent", "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "ui");
+		await mkdir(join(packageUi, "src"), { recursive: true });
+		await writeFile(
+			join(packageUi, "plugin.json"),
+			JSON.stringify({
+				name: "drone-research-ui",
+				version: "0.1.0",
+				droneUi: 1,
+				main: "src/index.tsx",
+				contributions: [
+					{ id: "status", region: "panel.tab", export: "ResearchStatusPanel", title: "Research" },
+				],
+			}),
+		);
+		await writeFile(
+			join(packageUi, "src/index.tsx"),
+			"export function ResearchStatusPanel() { return null; }\n",
+		);
+
+		const manager = new UiPluginManager({ installedPackageDir: packageUi });
+		await manager.init();
+		expect(manager.info("drone-research-ui")).toMatchObject({
+			name: "drone-research-ui",
+			version: "0.1.0",
+			builtin: undefined,
+			built: false,
+			enabled: false,
+		});
+
+		await manager.updateConfig({
+			enabled: true,
+			plugins: { "drone-research-ui": { enabled: true, trusted: true } },
+		});
+		const code = await manager.readCode("drone-research-ui");
+		expect("manifest" in code).toBe(true);
+		if (!("manifest" in code)) throw new Error(code.error);
+		expect(code.manifest.contributions?.[0]).toMatchObject({ id: "status", region: "panel.tab" });
+		expect(code.code).toContain("ResearchStatusPanel");
+
+		await rm(packageUi, { recursive: true, force: true });
+		await manager.scanAll();
+		expect(manager.info("drone-research-ui")).toBeNull();
+	});
+});
