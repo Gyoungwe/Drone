@@ -16,7 +16,6 @@ export const DEFAULT_FIXTURE = path.join(SCRIPT_DIR, "fixtures", "native-pi-tool
 
 const SOURCE_ROOTS = [
 	"packages/extensions/src",
-	"packages/pi-analysis/src",
 	"packages/pi-evidence/src",
 	"packages/pi-connectors/src",
 	"packages/pi-research/src",

@@ -20,14 +20,27 @@
     "tools": ["analysis_list_adapters", "analysis_assess_readiness"]
   },
   "publicRegistry": {
-    "publish": "BLOCKED",
-    "publishAttempt": "npm EOTP: security-key/one-time authentication required",
-    "registryLookup": "NOT_RUN_AFTER_PUBLISH",
-    "publicTarball": "NOT_RUN"
+    "publish": "PASS",
+    "publishAttempt": "npm publish completed after npm security-key verification",
+    "registryLookup": {
+      "version": "0.1.0",
+      "tarball": "https://registry.npmjs.org/@gyoungwe/pi-analysis/-/pi-analysis-0.1.0.tgz",
+      "shasum": "144df91bdd85c5a781ffcab5f94eaa5dd1ac1437",
+      "integrity": "sha512-9uy6I/9MmQQWG4SNgFhM1Q2/VoCB5IC5Nf0XAvn9IhzepQyUzEUzeYf6HwgzaBcCzHMW+owez2EYEjfxqPzuhA=="
+    },
+    "publicTarball": "PASS",
+    "cleanPrefixInstall": "PASS"
   },
   "hostClosure": {
-    "installedPackageLoad": "NOT_RUN",
-    "planExecuteReviewDelivery": "NOT_RUN"
+    "installedPackageLoad": "PASS",
+    "planExecuteReviewDelivery": "PASS",
+    "backendDependency": "@gyoungwe/pi-analysis@0.1.0",
+    "localSourceRemoved": "PASS",
+    "proofs": [
+      "npm run check:pi-compat -- --targets locked,latest",
+      "npm test --workspace @drone/backend -- test/analysis-task-controller.test.ts",
+      "npm run check:native-pi"
+    ]
   },
   "credentials": false
 }

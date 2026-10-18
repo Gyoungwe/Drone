@@ -50,7 +50,7 @@ v0.33.0 无证书跨平台资产、发布 run 和 SHA-256 清单见 [发布说�
 
 首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)。
 
-v1.1 `pi-analysis` 外部迁移、local tarball 和尚未完成的公开 registry/宿主门禁见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
+v1.1 `pi-analysis` 的公开 registry tarball、安装后 Pi loader 和宿主 plan→execute→review→delivery 闭环见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
 Drone 状态链五轮测试原始证据、报告和实现留痕：见 [五轮迭代记录](superpowers/reports/2026-10-04-drone-five-round-iteration.md) 与 [状态链修复设计](superpowers/specs/2026-10-04-drone-state-chain-fixes-design.md)。
 
@@ -66,13 +66,12 @@ Windows PowerShell 调试桌面 dev：在 `packages/desktop` 中运行 `npx elec
 
 ## 总览
 
-npm workspaces monorepo，17 个 workspace 包：
+npm workspaces monorepo，16 个 workspace 包：
 
 ```
 packages/
 ├── shared/     IPC 契约层（纯类型 + 通道常量，三方共享）
 ├── plugin-api/ 插件公开合同（HostPort、能力协商、结果/回执类型、analysis contract）
-├── pi-analysis/ 原生 Pi 分析适配器与 readiness 门禁（宿主兼容 facade）
 ├── pi-connectors/ 原生 Pi 连接器声明、权限与回执插件
 ├── pi-evidence/ 原生 Pi 证据、provenance 与 replay 校验插件
 ├── pi-core/     原生 Pi 核心任务与回执插件
@@ -106,8 +105,7 @@ packages/
 | `packages/backend/test/skill-acceptance-sdk.test.mjs` | `SKILL-01` 真实 Pi SDK + offline faux provider 的 `/skill:research-workflow` invocation、visible skill、provider call 和 `disable-model-invocation` 自动选择反证；显式 slash 的 manual-only 语义 |
 | `packages/backend/test/redline-acceptance.test.mjs` / `npm run check:redline` | REDLINE-01 隔离验收：通过 publication/orchestration/metacognitive 门禁注入缺来源、stale source、数字/方法漂移、重复数不足、断线和权限拒绝；断言阻断原因、差异路径与 sealed audit proof |
 | `scripts/check-plugin-api.mjs` | 宿主 DroneHostPort 合同和本地 npm pack 安装→升级→回滚→卸载生命周期验收 |
-| `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含 pi-analysis） |
-| `scripts/smoke-pi-analysis.mjs` | `pi-analysis` npm pack → 干净 prefix 安装 → 真实 Pi resource loader 发现与工具清单 smoke |
+| `scripts/check-pi-compat.mjs` | Pi 1.1.0 锁定全套依赖、latest 与 next 标签的隔离兼容矩阵（含已安装的 pi-analysis） |
 | `scripts/build-pi-evidence.mjs` / `scripts/smoke-pi-evidence.mjs` | `pi-evidence` 自包含构建、依赖清单检查与干净 tarball 安装/只读注册 smoke |
 | `scripts/build-pi-connectors.mjs` / `scripts/smoke-pi-connectors.mjs` | `pi-connectors` 自包含构建、权限/回执检查、clean tarball 安装→Pi resource loader 发现→卸载 smoke；不调用真实连接器 I/O |
 | `scripts/smoke-channel-watch.mts` | channel-watch 机制冒烟 V1–V6 |
@@ -211,9 +209,9 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 `packages/pi-core/` 是可独立安装的任务与回执插件：组装 `@drone/tasks` runtime，并提供 `ask_user`、`set_status`、`todo`、`deliver_files`、`memory_save` 五个可移植工具。工具实现、项目记忆持久化和路径规整均由该包拥有；`packages/backend/src/tools/` 与 `src/project/memory.ts` 仅保留兼容 facade，Desktop 继续注入既有 ask gate。原生 Pi 通过 `ctx.ui` 提供询问与授权，宿主差异收敛在 `PiCoreHostPort`（host/capabilities/requestAuthorization）。`scripts/build-pi-core.mjs` 生成自包含 dist 并拒绝 Electron/backend/Desktop 或越界导入，`scripts/smoke-pi-core.mjs` 和包内 registration test 覆盖安装前的工具清单与 native host adapter。
 
-## packages/pi-analysis — 原生 Pi 分析插件（V1.1-A 进行中）
+## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 
-`packages/pi-analysis/` 承载无宿主副作用的 `AnalysisAdapter`、`AnalysisAdapterRegistry`、bulk RNA-seq 与 assembly readiness/review 合同，并注册 `analysis_list_adapters` 与 `analysis_assess_readiness`。它只依赖 `@gyoungwe/plugin-api`、Pi Extension API 和 Node 标准库；执行、授权、持久化、产物采集仍由 backend 组合根负责。当前 canonical 外部包已在 `../drone-plugins` 分支 `codex/pi-analysis-migration`（提交 `2168576`），Drone 内保留兼容 facade 与迁移期检查；外部 clean check 通过，但公开 registry tarball、安装后宿主闭环和计划→执行→审查→交付 proof 仍未宣称通过。
+`../drone-plugins` 的 `codex/pi-analysis-migration`（提交 `baf9b3b`，包提交 `2168576`）是 `@gyoungwe/pi-analysis@0.1.0` 的源码权威位置。Drone backend 以精确版本依赖公共 npm 包，`packages/backend/src/services/analysis-adapters/` 保留兼容 facade；本地临时源码和构建脚本已删除。公开 registry tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
 ## packages/pi-evidence — 原生 Pi 证据插件（V1.1-E 进行中）
 

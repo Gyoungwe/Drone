@@ -2,18 +2,6 @@
   "version": 1,
   "description": "Static migration map for first-party tools registered through the native Pi registerTool surface.",
   "tools": {
-	"analysis_assess_readiness": {
-	  "source": "packages/pi-analysis/src/index.ts",
-	  "registration": "registerTool",
-	  "nativePiAvailable": true,
-	  "targetPackage": "pi-analysis"
-	},
-	"analysis_list_adapters": {
-	  "source": "packages/pi-analysis/src/index.ts",
-	  "registration": "registerTool",
-	  "nativePiAvailable": true,
-	  "targetPackage": "pi-analysis"
-	},
 	"evidence_validate_capsule": {
 	  "source": "packages/pi-evidence/src/index.ts",
 	  "registration": "registerTool",

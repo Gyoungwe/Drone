@@ -38,7 +38,6 @@ test("checked-in fixture covers every discovered registration", () => {
 	assert.equal(mapped.length, records.length);
 	assert.ok(mapped.every((entry) => entry.nativePiAvailable === true));
 	assert.deepEqual([...new Set(mapped.map((entry) => entry.targetPackage))].sort(), [
-		"pi-analysis",
 		"pi-connectors",
 		"pi-core",
 		"pi-evidence",

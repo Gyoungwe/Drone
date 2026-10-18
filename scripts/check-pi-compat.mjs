@@ -33,7 +33,7 @@ const PLUGIN_DIST = {
 	"pi-core": resolve(ROOT, "packages/pi-core/dist/index.mjs"),
 	"pi-knowledge": resolve(ROOT, "node_modules/@gyoungwe/pi-knowledge/dist/index.mjs"),
 	"pi-research": resolve(ROOT, "packages/pi-research/dist/index.mjs"),
-	"pi-analysis": resolve(ROOT, "packages/pi-analysis/dist/index.mjs"),
+	"pi-analysis": resolve(ROOT, "node_modules/@gyoungwe/pi-analysis/dist/index.mjs"),
 	"pi-evidence": resolve(ROOT, "packages/pi-evidence/dist/index.mjs"),
 };
 
