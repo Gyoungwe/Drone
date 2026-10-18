@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const bundle = await readFile(resolve(root, "packages/pi-core/dist/index.mjs"), "utf8");
-const expected = ["ask_user", "set_status", "todo", "deliver_files", "memory_save", "task_plan"];
+const expected = ["ask_user", "set_status", "todo", "deliver_files", "memory_save", "task_plan", "drone-doctor", "drone-example"];
 for (const name of expected) {
 	if (!bundle.includes(JSON.stringify(name))) throw new Error(`pi-core smoke: missing ${name}`);
 }

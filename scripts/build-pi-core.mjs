@@ -27,7 +27,7 @@ async function checkOutput() {
 	]) {
 		if (pattern.test(output)) throw new Error(`pi-core bundle contains forbidden import: ${pattern}`);
 	}
-	for (const name of ["ask_user", "set_status", "todo", "deliver_files", "memory_save", "task_plan"])
+	for (const name of ["ask_user", "set_status", "todo", "deliver_files", "memory_save", "task_plan", "drone-doctor", "drone-example"])
 		if (!output.includes(JSON.stringify(name))) throw new Error(`pi-core bundle is missing ${name}`);
 }
 

@@ -6,6 +6,7 @@ import { makeDeliverFilesTool } from "./tools/deliver-files";
 import { makeMemorySaveTool } from "./tools/memory-save";
 import { makeStatusTool } from "./tools/status";
 import { makeTodoTool } from "./tools/todo";
+import { registerDroneCommands } from "./drone-commands";
 
 /** The deliberately small host seam used by pi-core. */
 export type PiCoreHostPort = Pick<DroneHostPort, "host" | "capabilities" | "requestAuthorization">;
@@ -123,6 +124,7 @@ export function registerPiCore(pi: any, options: PiCoreRegistrationOptions = {})
 	});
 
 	registerTaskRuntime(pi);
+	registerDroneCommands(pi, { hostKind: options.host?.host === "drone-desktop" ? "drone-desktop" : "native-pi" });
 	const ask =
 		options.ask ||
 		((request, signal, context) =>
@@ -144,5 +146,13 @@ export { deliverFilesParams, makeDeliverFilesTool } from "./tools/deliver-files"
 export { MEMORY_SAVE_TOOL, makeMemorySaveTool } from "./tools/memory-save";
 export { makeStatusTool } from "./tools/status";
 export { formatTodoList, makeTodoTool, normalizeTodos } from "./tools/todo";
+export {
+	buildDoctorReport,
+	buildExampleReport,
+	DRONE_COMMAND_SCHEMA_VERSION,
+	PI_CORE_PACKAGE_VERSION,
+	PI_HOST_RANGE,
+	registerDroneCommands,
+} from "./drone-commands";
 
 export default registerPiCore;

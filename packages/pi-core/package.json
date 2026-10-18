@@ -1,6 +1,6 @@
 {
 	"name": "@gyoungwe/pi-core",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Portable task, authorization, status, delivery and memory tools for native Pi",
 	"keywords": [
 		"pi-package"
