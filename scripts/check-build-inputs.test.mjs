@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { appendFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -54,3 +55,15 @@ test("knowledge, tasks and research checks detect dependency drift", async () =>
 		runNode("scripts/build-research-runtime.mjs", ["--check"]),
 	);
 });
+
+test("research run UI uses the typed package instead of a deleted runtime artifact", async () => {
+	const backendUi = await readFile(join(root, "packages/backend/src/knowledge/ui.ts"), "utf8");
+	assert.match(backendUi, /@drone\/research\/research-run-ui/);
+	assert.doesNotMatch(backendUi, /researchModule\(["']research-run-ui/);
+	assert.equal(existsSync(join(root, ".pi/lib/research-run-ui.mjs")), false);
+	assert.equal(existsSync(join(root, ".pi/lib/research-run-summary.mjs")), false);
+
+	const runtimeBuilder = await readFile(join(root, "scripts/build-research-runtime.mjs"), "utf8");
+	assert.doesNotMatch(runtimeBuilder, /research-run-(?:ui|summary)/);
+});
+

@@ -29,6 +29,7 @@
 		"./claim-bindings": "./src/claim-bindings.ts",
 		"./source-archive": "./src/source-archive.ts",
 		"./research-loop": "./src/research-loop.ts",
+		"./research-run-ui": "./src/research-run-ui.ts",
 		"./run-summary": "./src/run-summary.ts",
 		"./write-connectors": "./src/write-connectors.ts"
 	},
