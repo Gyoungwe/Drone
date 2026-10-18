@@ -23,9 +23,24 @@ const entries = (await readdir(sourceDir))
 	.filter((name) => name.endsWith(".mjs") && name !== "runtime-bridge.mjs")
 	.sort();
 const manifest = await readFile(resolve(sourceDir, ".build-manifest.json"), "utf8");
+const generatedNames = new Set([
+	...entries,
+	"acceptance-packaged.mjs",
+	"acceptance.mjs",
+	".build-manifest.json",
+]);
 
 try {
 	await mkdir(outputDir, { recursive: true });
+	if (!check) {
+		// A previous compatibility build may have left removed runtime entries in
+		// the checked-in resource tree. Only generated module artifacts belong to
+		// this directory, so prune stale modules before writing the new graph.
+		for (const name of await readdir(outputDir)) {
+			if (name.endsWith(".mjs") && !generatedNames.has(name))
+				await rm(resolve(outputDir, name), { force: true });
+		}
+	}
 	for (const name of entries) {
 		let contents = await readFile(resolve(sourceDir, name), "utf8");
 		contents = contents.replaceAll('from "./runtime-bridge.mjs"', 'from "../runtime-bridge.mjs"');
@@ -74,8 +89,8 @@ export const {
 	await writeFile(resolve(outputDir, ".build-manifest.json"), manifest);
 
 	if (check) {
-		const stale = [];
-		for (const name of [...entries, "acceptance-packaged.mjs", "acceptance.mjs", ".build-manifest.json"]) {
+		const stale = (await readdir(expectedDir)).filter((name) => !generatedNames.has(name));
+		for (const name of generatedNames) {
 			const actual = await readFile(resolve(outputDir, name));
 			const expected = await readFile(resolve(expectedDir, name));
 			if (!actual.equals(expected)) stale.push(name);
