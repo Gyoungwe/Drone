@@ -3,6 +3,6 @@
 	"generator": "scripts/build-pi-evidence.mjs",
 	"inputsSha256": "d789c68b05f48ae651bfcd4a717b044ef0cdb6cb03a9cb60be0d83c80e52781e",
 	"outputs": {
-		"dist/index.mjs": "ccaab289b85cf752d608ef1462ec1363cd5bbbd48b721a082afc002573ce6b2d"
+		"dist/index.mjs": "0f17b0b80cc875f5a099f26f1f32e8c74f9701acd44fbd60334c636c3aaeaa0a"
 	}
 }

@@ -89,7 +89,8 @@ function checkpointBody(value: Omit<EvidenceCheckpoint, "id">): Omit<EvidenceChe
 			: {}),
 		...(analysisRest.events ? { events: analysisRest.events.map((event) => ({ ...event })) } : {}),
 	};
-	return { ...rest, analysis: contentAnalysis as EvidenceAnalysisSnapshot };
+	const files = [...value.files].sort((left, right) => left.artifact.path.localeCompare(right.artifact.path));
+	return { ...rest, files, analysis: contentAnalysis as EvidenceAnalysisSnapshot };
 }
 
 export function checkpointId(value: Omit<EvidenceCheckpoint, "id">): string {
@@ -149,7 +150,11 @@ export function validateCheckpoint(checkpoint: EvidenceCheckpoint): void {
 export function createCheckpoint(
 	input: Omit<EvidenceCheckpoint, "id" | "schemaVersion">,
 ): EvidenceCheckpoint {
-	const body: Omit<EvidenceCheckpoint, "id"> = { schemaVersion: 1, ...input, files: [...input.files] };
+	const body: Omit<EvidenceCheckpoint, "id"> = {
+		schemaVersion: 1,
+		...input,
+		files: [...input.files].sort((left, right) => left.artifact.path.localeCompare(right.artifact.path)),
+	};
 	const checkpoint: EvidenceCheckpoint = { ...body, id: checkpointId(body) };
 	validateCheckpoint(checkpoint);
 	return checkpoint;

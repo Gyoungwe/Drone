@@ -35,7 +35,15 @@ export function validateProvenance(value: EvidenceProvenance): void {
 	] as const) {
 		if (digest !== undefined && !isSha256(digest)) throw new Error(`Invalid ${label}`);
 	}
-	if (value.sourceRefs?.some((ref) => typeof ref !== "string" || !ref.trim()))
+	if (
+		value.sourceRefs?.some(
+			(ref) =>
+				typeof ref !== "string" ||
+				!ref.trim() ||
+				ref.startsWith("/") || ref.startsWith("~") || /^[A-Za-z]:[\\/]/.test(ref) ||
+				/(?:^|[/\\])(?:\.pi|\.drone|\.git|\.ssh|auth\.json|credentials?)(?:[/\\]|$)/iu.test(ref),
+		)
+	)
 		throw new Error("Invalid provenance source reference");
 }
 

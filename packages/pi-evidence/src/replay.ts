@@ -46,7 +46,12 @@ export function verifyReplay(
 	input: { readonly environmentFingerprint?: string; readonly outputs: readonly ReplayOutput[] },
 ): ReplayVerification {
 	validateCheckpoint(checkpoint);
-	for (const output of input.outputs) validateOutput(output);
+	const seenOutputs = new Set<string>();
+	for (const output of input.outputs) {
+		validateOutput(output);
+		if (seenOutputs.has(output.path)) throw new Error(`Duplicate replay output: ${output.path}`);
+		seenOutputs.add(output.path);
+	}
 	const expected = outputFiles(checkpoint);
 	const actualByPath = new Map(input.outputs.map((output) => [output.path, output]));
 	const checks = expected.map((artifact) => {
@@ -104,8 +109,12 @@ export function validateReplayReceipt(receipt: EvidenceReplayReceipt): void {
 			(!receipt.environmentMatched || receipt.outputChecks.some((check) => !check.matched)))
 	)
 		throw new Error("Invalid replay receipt");
-	for (const check of receipt.outputChecks)
-		if (!isSafeEvidencePath(check.path)) throw new Error("Invalid replay output check path");
+	const seenPaths = new Set<string>();
+	for (const check of receipt.outputChecks) {
+		if (!isSafeEvidencePath(check.path) || seenPaths.has(check.path))
+			throw new Error("Invalid replay output check path");
+		seenPaths.add(check.path);
+	}
 }
 
 export const replayProof = verifyReplay;

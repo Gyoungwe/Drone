@@ -202,6 +202,8 @@ export function artifactFromBytes(input: {
 	readonly parentVersionIds?: readonly string[];
 	readonly producedByJobId?: string;
 }): EvidenceArtifact {
+	if (!input.artifactId || !input.versionId || !isSafeEvidencePath(input.path))
+		throw new Error("Artifact identity or path is invalid");
 	const bytes = typeof input.bytes === "string" ? new TextEncoder().encode(input.bytes) : input.bytes;
 	return {
 		artifactId: input.artifactId,
