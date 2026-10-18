@@ -47,6 +47,7 @@ import {
 	AnalysisTaskController,
 } from "./services/analysis-task-controller";
 import type { ApprovalService } from "./services/approvals";
+import { CollaborationService, type CollaborationServicePort } from "./services/collaboration";
 import { type ComputeExecutor, ComputeService, type ComputeServicePort } from "./services/compute";
 import {
 	type ComputeHostAdapter,
@@ -210,6 +211,8 @@ export interface BackendServices {
 	discovery: DiscoveryServicePort;
 	/** Durable B7 dataset, public-fetch and RO-Crate registry. */
 	dataDesign: ComputeDataDesignServicePort;
+	/** Local-first collaboration ledger; external cloud transport is intentionally absent. */
+	collaboration: CollaborationServicePort;
 	/** Durable NGS analysis lifecycle and scientific readiness gates. */
 	analysis: AnalysisOrchestrationService;
 	analysisEvidence: AnalysisEvidenceService;
@@ -306,6 +309,15 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			defaultValue: createEmptyResearchWriteLedger,
 		}),
 	});
+	if (!sessions.getStorageRegistry().get("agent-collaboration-workspace"))
+		sessions.getStorageRegistry().register({
+			id: "agent-collaboration-workspace",
+			path: join(getAgentDir(), "collaboration", "workspace.json"),
+			owner: "collaboration/workspace",
+			schema: 1,
+			sensitivity: "private",
+		});
+	const collaboration = new CollaborationService({ agentDir: getAgentDir() });
 	const research = new ResearchResourceService({
 		store: new JsonStore({
 			path: join(getAgentDir(), "research", "captures.json"),
@@ -609,6 +621,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 		researchWrites,
 		discovery,
 		dataDesign,
+		collaboration,
 		analysis,
 		analysisEvidence,
 		analysisTasks: (sessionId) => {
@@ -677,6 +690,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			void computeAdapter.dispose?.();
 			inquiry.dispose();
 			discovery.dispose();
+			collaboration.dispose();
 			void runtime.dispose();
 		},
 	};

@@ -140,7 +140,8 @@
 - [x] **B5c 工作流编排与有限修复**：`WorkflowSpec` 先验与模块注册门禁、编译/type-check/preview、失败与负结果检索、最多三次声明式自主修复；重复失败阻断，并记录“我替你决定的”变更。
 - [x] **B5d–B5f**：`@drone/discovery` 提供容器能力门控的 KernelSession、runs-only 导出、探索预算/先验与竞争解释、独立只读 critic、多路径稳健性记录，以及带数据集版本和基线的 BixBench/重新发现/不一致拦截/混杂发现/线索命中/核验耗时/重复失败评测；缺外部数据返回 `needs-data`，执行器失败返回 `blocked`。
 - [x] **B7**：`@drone/compute` 与 `@drone/shared` 提供内容寻址数据集、样本表与设计矩阵校验、受控公共数据抓取、分析计划/功效与最小可检测效应、偏离复核和确定性 RO-Crate 清单；校验失败在提交前阻断并保留可追溯记录。
-- [ ] **B8**：团队协作能力，按用户要求暂不实施。
+- [x] **B8-1**：本地优先团队协作基础：新增 `@drone/collaboration` 领域合同与 backend `CollaborationService`，提供成员角色/邀请/撤销、revision CAS、双版本冲突保留、reviewer/owner 冲突解决和 append-only audit；仅持久化 revision 元数据与内容哈希，不写入正文、凭据或网络。`check:collaboration` 通过。
+- [ ] **B8-2**：云端镜像、多设备同步、空间 ACL、离线 outbox 与部署级 SSO/备份。仍需确认部署形态、数据区域、保留期和组织身份系统；未把本地基础误报为云端协作完成。
 
 ---
 
@@ -255,3 +256,4 @@
 | 2026-10-18 | A5 并行生产切片 | 主线 `876f0a07` 合入 knowledge worker package-relative cutover、tasks acceptance package registry ownership、research host typed ports，以及 tasks runtime 类型收口和 source-only knowledge worker 测试路径；knowledge 307、tasks 58、research 93、extensions 18、backend acceptance 1/1、全量 workspace 测试、root lint/typecheck/build、runtime checks、`check:extensions --strict`、`check:arch`、`check:native-pi` 和 Desktop build 全部通过；插件 API 未变，证据见 [`a5-migration-2026-10-18.json`](releases/a5-migration-2026-10-18.json) | `.pi/lib` 的 CLI/打包兼容入口仍保留，A5-1/2/3 总项和 A5-4 extraResources 清理继续未完成；不阻塞当前插件化发布 |
 | 2026-10-18 | A5-1～A5-4 最终收口 | 删除 `.pi/lib` knowledge/tasks/research 运行时兼容树；扩展 manifest 移到 `.pi/extensions/workbench-manifest.json`，`electron-builder.yml` 不再复制 `.pi/lib`；`@gyoungwe/plugin-api` 未变。knowledge 307、tasks 58、research 93、extensions 19、runtime/strict/package/desktop artifact 检查及全量 lint/typecheck/test/build/architecture 均通过 | A5-1～A5-4 已关闭；后续能力只进入领域包和 `drone-plugins`，Protocols.io 继续只读 |
 | 2026-10-18 | 计划复核与门禁复跑 | Drone `main=260995a0`、`drone-plugins main=8389116` 均与远端一致；`check:remaining-gates`、plugin-api migration/lifecycle、Pi 1.1.0/latest、升级 fixtures、插件仓库全量 check 和 Desktop artifact 16/16 均通过；最新桌面产物 SHA-256 为 `9db8e47ec4c039415ca6dc66a1ccd78dd7ca2f7e3f9a1bb78fafa5cac30244e7` | 未发现未关闭的 v1.1 或 A5 门槛；Protocols.io 继续只读，交互式 Electron SIGABRT 仅作环境观察 |
+| 2026-10-19 | B8-1 本地优先协作基础 | 新增 `packages/collaboration` 纯领域合同与 `packages/backend/src/services/collaboration.ts`；成员权限、邀请/接受/撤销、revision CAS 冲突保留、reviewer 冲突解决、append-only audit 和 `JsonStore` 原子持久化均由 `npm run check:collaboration`（领域 2/2、backend 1/1）通过；StorageRegistry 已登记 `agent-collaboration-workspace` | B8-2 云端镜像/多设备同步/SSO 尚未实施，等待部署与数据治理决策；Protocols.io 继续只读；Electron 交互式验收另记为环境观察 |

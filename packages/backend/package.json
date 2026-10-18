@@ -15,6 +15,7 @@
 		"test:sdk": "vitest run --project sdk"
 	},
 	"dependencies": {
+		"@drone/collaboration": "*",
 		"@drone/compute": "*",
 		"@drone/discovery": "*",
 		"@drone/inquiry": "*",
