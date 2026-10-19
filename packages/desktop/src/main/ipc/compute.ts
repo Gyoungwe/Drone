@@ -32,6 +32,7 @@ export function registerComputeIpc(
 	};
 	const implementation: ContractImplementation<typeof ComputeContract> = {
 		listHosts: () => compute.listHosts(),
+		listSshConfig: () => compute.listSshConfig?.() ?? Promise.resolve([]),
 		getHost: (id) => compute.getHost(id),
 		saveHost: (input) => compute.saveHost(input),
 		removeHost: (id) => compute.removeHost(id),
@@ -71,6 +72,7 @@ export function registerComputeIpc(
 		channelForMethod: (_contract, method) =>
 			({
 				listHosts: IpcChannels.ComputeListHosts,
+				listSshConfig: IpcChannels.ComputeListSshConfig,
 				getHost: IpcChannels.ComputeGetHost,
 				saveHost: IpcChannels.ComputeSaveHost,
 				removeHost: IpcChannels.ComputeRemoveHost,

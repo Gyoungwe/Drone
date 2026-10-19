@@ -8725,6 +8725,18 @@ var ComputeHostInputSchema = typebox_exports.Object(
   },
   { additionalProperties: false }
 );
+var ComputeSshConfigHostSchema = typebox_exports.Object(
+  {
+    alias: typebox_exports.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9._-]+$" }),
+    hostname: typebox_exports.Optional(typebox_exports.String({ maxLength: 512 })),
+    port: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 65535 })),
+    user: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 })),
+    identityFiles: typebox_exports.Array(typebox_exports.String({ maxLength: 1024 }), { maxItems: 8 }),
+    proxyJump: typebox_exports.Optional(typebox_exports.String({ maxLength: 512 })),
+    source: typebox_exports.Literal("ssh-config")
+  },
+  { additionalProperties: false }
+);
 var ComputeBudgetSchema = typebox_exports.Object(
   {
     /** Total CPU core-hours allowed for this task. */
@@ -9824,6 +9836,7 @@ var OnboardingStepArgs = typebox_exports.Tuple([
 var ComputeContract = defineDomain("compute", {
   methods: {
     listHosts: { args: EmptyArgs, result: typebox_exports.Array(ComputeHostSchema, { maxItems: 256 }) },
+    listSshConfig: { args: EmptyArgs, result: typebox_exports.Array(ComputeSshConfigHostSchema, { maxItems: 256 }) },
     getHost: { args: IdArgs, result: typebox_exports.Union([ComputeHostSchema, typebox_exports.Null()]) },
     saveHost: { args: typebox_exports.Tuple([ComputeHostInputSchema]), result: ComputeHostSchema },
     removeHost: { args: IdArgs, result: typebox_exports.Void() },
@@ -10606,6 +10619,10 @@ var PackagesContract = defineDomain("packages", {
       result: typebox_exports.Unsafe(CatalogSearchResultSchema)
     },
     installPackage: {
+      args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
+      result: typebox_exports.Void()
+    },
+    updatePackage: {
       args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
       result: typebox_exports.Void()
     },

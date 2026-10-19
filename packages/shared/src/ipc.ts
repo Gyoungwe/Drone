@@ -158,6 +158,7 @@ export const IpcChannels = {
 	KnowledgeTopicArchive: "knowledge:topicArchive",
 	/** 远程计算：主机、健康、作业、终端与引导（由 ComputeContract 投影） */
 	ComputeListHosts: "compute:listHosts",
+	ComputeListSshConfig: "compute:listSshConfig",
 	ComputeGetHost: "compute:getHost",
 	ComputeSaveHost: "compute:saveHost",
 	ComputeRemoveHost: "compute:removeHost",

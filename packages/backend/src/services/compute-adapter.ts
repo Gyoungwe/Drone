@@ -12,6 +12,7 @@ import type {
 	ComputeLogChunk,
 	ComputeOnboardingStatus,
 	ComputeOnboardingStep,
+	ComputeSshConfigHost,
 	ComputeTerminal,
 	ComputeJobInput as ComputeUiJobInput,
 } from "@drone/shared";
@@ -48,12 +49,15 @@ export interface ComputeHostAdapterOptions {
 	agentDir?: string;
 	/** The host/session approval boundary. It must reject when no task approval exists. */
 	authorizeRemoteOperation?: (operation: ComputeRemoteOperation) => Promise<void>;
+	/** Read-only projection of the local user's OpenSSH host aliases. */
+	listSshConfig?: () => Promise<ComputeSshConfigHost[]>;
 }
 
 export interface ComputeHostAdapter {
 	init?(): Promise<void>;
 	dispose?(): Promise<void> | void;
 	listHosts(): Promise<ComputeHost[]>;
+	listSshConfig?(): Promise<ComputeSshConfigHost[]>;
 	getHost(id: ComputeId): Promise<ComputeHost | null>;
 	saveHost(input: ComputeHostInput): Promise<ComputeHost>;
 	removeHost(id: ComputeId): Promise<void>;
@@ -322,6 +326,7 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 	private readonly terminalClosedHandlers = new Set<(event: { terminalId: ComputeId }) => void>();
 	private readonly approved = new Set<string>();
 	private readonly authorize?: (operation: ComputeRemoteOperation) => Promise<void>;
+	private readonly sshConfig?: () => Promise<ComputeSshConfigHost[]>;
 	private unsubscribeService?: () => void;
 	private initPromise?: Promise<void>;
 	private initialized = false;
@@ -330,6 +335,7 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 	constructor(options: ComputeHostAdapterOptions) {
 		this.service = options.service;
 		this.authorize = options.authorizeRemoteOperation;
+		this.sshConfig = options.listSshConfig;
 		const agentDir = options.agentDir ?? getAgentDir();
 		const path = join(agentDir, "compute", "desktop-hosts.json");
 		if (options.storage && !options.storage.get(HOST_METADATA_STORAGE_ID))
@@ -390,6 +396,11 @@ export class ComputeServiceAdapter implements ComputeHostAdapter {
 		const profiles = await this.service.listHosts();
 		await this.syncMetadata(profiles);
 		return profiles.map((profile) => this.projectHost(profile));
+	}
+
+	async listSshConfig(): Promise<ComputeSshConfigHost[]> {
+		if (!this.sshConfig) return [];
+		return (await this.sshConfig()).map((entry) => structuredClone(entry));
 	}
 
 	async getHost(id: ComputeId): Promise<ComputeHost | null> {
@@ -917,6 +928,7 @@ export function createUnavailableComputeService(): ComputeHostAdapter {
 		init: async () => {},
 		dispose: async () => {},
 		listHosts: async () => [...hosts.values()].map(cloneHost),
+		listSshConfig: async () => [],
 		getHost: async (id) => {
 			const host = hosts.get(id);
 			return host ? cloneHost(host) : null;

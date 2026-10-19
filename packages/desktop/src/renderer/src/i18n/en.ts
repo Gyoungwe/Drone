@@ -538,6 +538,20 @@ export const en: Messages = {
 			platformLabel: "platform",
 			workspaceRootLabel: "workspace",
 			latencyLabel: "latency",
+			sshConfigTitle: "Choose from local SSH config",
+			sshConfigHint:
+				"Read host aliases and connection parameters from ~/.ssh/config; private key contents are never read. Choose one to add it as a research compute host.",
+			sshConfigRead: "Read SSH config",
+			sshConfigReading: "Reading…",
+			sshConfigEmpty: "No selectable Host aliases were found; expand manual registration below if needed.",
+			sshConfigPrivateKeyHint: "OpenSSH uses the key when it connects",
+			sshConfigIdentityCount: "{count} identity paths configured",
+			sshConfigDefaultIdentity: "Use the OpenSSH default identity",
+			sshConfigAdd: "Add host",
+			sshConfigAdded: "Added",
+			manualHostTitle: "Manual registration or advanced settings",
+			manualHostHint:
+				"Use this only when SSH config does not cover the host; remote operations still require approval. Never enter private key contents here.",
 			addHostTitle: "Register an SSH device",
 			addHostHint:
 				"Connection details stay in the approved compute profile; private keys are never entered here.",

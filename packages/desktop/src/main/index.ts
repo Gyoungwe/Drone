@@ -1,6 +1,7 @@
 import { researchBundlePaths } from "./research-bundle";
 import { researchSkillPackPaths } from "./research-skill-packs";
 import { configureResearchSkillUpdater, readResearchSkillPackInstall } from "./research-skill-updater";
+import { readSshConfigHosts } from "./ssh-config";
 import { desktopSystemPrompt } from "./system-prompt";
 import "./pi-package-dir";
 import "./dev-agent-dir";
@@ -285,6 +286,7 @@ app.whenReady().then(async () => {
 	backendServices = createBackend({
 		userDataDir: app.getPath("userData"),
 		computeAuthorizeRemoteOperation: authorizeComputeOperation,
+		computeSshConfig: () => readSshConfigHosts(),
 		// Use one ledger per canonical workspace. The old single ledger remains
 		// mounted read-only so an upgrade never rewrites unknown future schemas.
 		projectsDir: join(app.getPath("userData"), "inquiry-projects"),

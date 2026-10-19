@@ -33,6 +33,8 @@ A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收
 
 “技能与连接”页 v2 的 Pi 官方市场、Drone 插件仓库、连接器、MCP、Skill 和手动 Skill 仓库更新设计见 [skills-connections-ui-v2-plan.md](skills-connections-ui-v2-plan.md)。
 
+主机页的 SSH 配置发现、主机选择器和科研计算卡片设计见 [host-picker-ui-plan.md](host-picker-ui-plan.md)；实现位于 `packages/desktop/src/main/ssh-config.ts`、`packages/shared/src/host-api/compute.ts` 和 `packages/desktop/src/renderer/src/components/panel/ComputePane.tsx`。
+
 `.pi/tsconfig.json` 对生成的 `.pi/extensions/*.mjs` 保持可检查的资源边界；知识、任务、研究运行时由领域包 TypeScript 源码和 checked-in package-owned artifacts 负责，根 `npm run typecheck` 会串接 `npm run check:pi`。`.pi/lib` 兼容树已删除。
 
 2026-10-19 实机验收问题、截图编号与下一轮修复状态见 [real-device-acceptance-20261019](real-device-acceptance-20261019/README.md)。

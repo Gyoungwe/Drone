@@ -26,6 +26,7 @@ const host = {
 describe("ComputeContract", () => {
 	it("keeps stable desktop channels and access labels", () => {
 		expect(channelOf(ComputeContract, "listHosts")).toBe("compute:listHosts");
+		expect(channelOf(ComputeContract, "listSshConfig")).toBe("compute:listSshConfig");
 		expect(channelOf(ComputeContract, "healthChanged")).toBe("compute:healthChanged");
 		expect(ComputeContract.methods.getHealthSnapshot.access).toBe("desktop");
 		expect(ComputeContract.methods.openTerminal.access).toBe("desktop");

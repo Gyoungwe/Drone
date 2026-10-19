@@ -292,6 +292,7 @@ const computeClient = exposeContract(ComputeContract, {
 		channelFrom(
 			{
 				listHosts: IpcChannels.ComputeListHosts,
+				listSshConfig: IpcChannels.ComputeListSshConfig,
 				getHost: IpcChannels.ComputeGetHost,
 				saveHost: IpcChannels.ComputeSaveHost,
 				removeHost: IpcChannels.ComputeRemoveHost,

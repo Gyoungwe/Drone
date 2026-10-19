@@ -104,6 +104,25 @@ export const ComputeHostInputSchema = Type.Object(
 );
 export type ComputeHostInput = Static<typeof ComputeHostInputSchema>;
 
+/**
+ * Public metadata discovered from the user's OpenSSH config.  This is a
+ * selectable host index, never a credential store: private key contents are
+ * not read and only the configured identity paths are exposed.
+ */
+export const ComputeSshConfigHostSchema = Type.Object(
+	{
+		alias: Type.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9._-]+$" }),
+		hostname: Type.Optional(Type.String({ maxLength: 512 })),
+		port: Type.Optional(Type.Integer({ minimum: 1, maximum: 65535 })),
+		user: Type.Optional(Type.String({ maxLength: 128 })),
+		identityFiles: Type.Array(Type.String({ maxLength: 1024 }), { maxItems: 8 }),
+		proxyJump: Type.Optional(Type.String({ maxLength: 512 })),
+		source: Type.Literal("ssh-config"),
+	},
+	{ additionalProperties: false },
+);
+export type ComputeSshConfigHost = Static<typeof ComputeSshConfigHostSchema>;
+
 export const ComputeBudgetSchema = Type.Object(
 	{
 		/** Total CPU core-hours allowed for this task. */
