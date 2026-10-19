@@ -115,7 +115,8 @@ B8 云端协作继续按计划暂缓，Protocols.io 继续只读。Windows 构�
 |---|---|---|
 | P1-2 / P1-3 / P1-4 | **代码已修；行为仍需真实知识闭环** | 正式包 smoke 已通过 preload/知识 IPC；仍需真实安装包写入后回读最近沉淀、显示本地回答率、对本回合 DOI 证据不误报 |
 | P1-5 | **提示策略已修，待真实会话** | 在正式包中用简单事实问题走检索→回答→有界沉淀，确认不创建任务计划和额外写入授权 |
-| P1-7 / P1-8 | **P1-7 代码已修待 v0.33.4 重装回读；P1-8 正式包已见最近列表** | 新包需回读 pi-core/pi-knowledge/pi-research/desktop-ui-pack 版本与状态；新建、历史打开和分叉后“最近”即时更新 |
+| P1-7 | **PASS（v0.33.4 正式包）** | Skills/Connections 的市场与已安装插件区真实显示 `pi-core`、`pi-knowledge`、`pi-research`、`pi-analysis`、`pi-evidence`、`pi-connectors`、`desktop-ui-pack`、`research-suite` 的版本/说明和宿主状态；证据见 `v0.33.4-p4-ui-acceptance.json` |
+| P1-8 | **PARTIAL** | 正式包已看到最近列表，但新建、历史打开和分叉后三种刷新路径尚未全部在同一次安装包会话中回读 |
 | 市场生命周期 | **PARTIAL** | v0.33.4 正式包已回读官方/Drone 目录、版本和说明，以及 UI 插件启停；官方 extension 安装、Drone 包更新/卸载的完整真实回读尚未完成 |
 | Skill 仓库管理 | **PARTIAL** | 内置 Nature/Scientific/Academic 来源映射和手动检查入口已回读；“添加任意 Git URL/本地目录、许可依据、卸载来源”和手动应用/回滚仍未实现或验收 |
 | 热插拔 worker / 回滚 | **NOT_RUN** | UI 插件重载已通过；worker 排空、失败回滚、生命周期事件和 Pi 下一会话版本提示没有真实安装包证据 |
