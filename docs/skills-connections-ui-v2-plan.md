@@ -1,8 +1,10 @@
 # 技能与连接页 v2：Pi 市场、Drone 插件与能力生命周期
 
-状态：已确认设计，待分阶段实现。
+状态：设计已确认；P0～P3 代码切片已完成，P4 正式安装包验收待执行。
 
 本计划承接 [`final-pluginization-plan.md`](final-pluginization-plan.md) 的插件化边界和 [`plugin-hot-reload-plan.md`](plugin-hot-reload-plan.md) 的分层重载规则。它只重做 Desktop 的“技能与连接”页信息架构，不改变 `@gyoungwe/plugin-api`、Pi package manifest 或已有结果/证据合同。
+
+当前实现已落在 `codex/plugin-hot-reload-plan`：Pi 官方目录只进入 extension 结果；Drone 包按标准 `package.json.pi` 与可选 `ui/plugin.json` 映射；页面不再有“全部”栏目；连接器目录和启停使用现有 Research contract；Skill 仓库改为 URL/分支和显式手动检查。正式安装包中的四栏视觉和真实插件安装/卸载/重载证据仍需在 P4 补齐。
 
 ## 1. 目标与明确决议
 
