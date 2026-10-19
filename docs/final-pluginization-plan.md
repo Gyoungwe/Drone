@@ -19,7 +19,7 @@ Drone 的最终交付形态是：**原生 Pi 作为运行时，Drone 能力通�
 用户安装一个聚合包即可体验核心能力：
 
 ```sh
-pi install npm:@gyoungwe/research-suite@0.1.3
+pi install npm:@gyoungwe/research-suite@0.1.5
 pi
 ```
 
@@ -184,6 +184,8 @@ drone-plugins/         # 已绑定的 ../drone-plugins（Gyoungwe/drone-plugins�
 发布顺序：宿主先发布 `plugin-api`，插件仓库再跑 CI（Pi `1.1.0` + `latest`），之后发 canary，在原生 Pi 里跑一次真实知识闭环任务，最后才更新 `research-suite`。
 
 ### 3.10 前端：重新设计与信息架构（2026-10-17 改写）
+
+“技能与连接”页的后续收口以 [skills-connections-ui-v2-plan.md](skills-connections-ui-v2-plan.md) 为准：页面只保留插件、连接器、MCP、Skill 四个栏目，插件栏同时接入 Pi 官方市场与 Drone 插件仓库，Skill 仓库单列并改为手动更新。
 
 前端以 Claude 出的设计稿为准（设计稿：https://claude.ai/artifact/RLTGyvjkAHsf8HN8bwDwek ，包含 运行中、首页、技能与连接、知识库 四个画面和一个共享侧栏组件）。视觉 token 沿用 `drone-clawsgo-ui-parity-plan.md` 的 U1：中性灰阶，强调色只用于 @ 引用、运行指示点和焦点环。本节只规定结构，像素级细节看设计稿。
 
@@ -397,7 +399,7 @@ Pi 升级不能直接改变 Drone 结果语义。
 
 `/drone-init` 只完成配置和无副作用检查，不自动写入 Zotero、WebDAV 或远程主机。
 
-`/drone-doctor` 由 `@gyoungwe/pi-core@0.1.1` 注册，返回 schema v1 JSON；检查核心工具、两个 onboarding 命令和 Pi host 版本。状态为 `pass`、`blocked` 或 `unknown`，不会写入外部服务。
+`/drone-doctor` 由 `@gyoungwe/pi-core@0.1.3` 注册，返回 schema v1 JSON；检查核心工具、两个 onboarding 命令和 Pi host 版本。状态为 `pass`、`blocked` 或 `unknown`，不会写入外部服务。
 
 `/drone-example [knowledge|research|analysis|evidence]` 按参数选择知识库、研究、分析准备度或证据核验示例，省略参数时默认为 `research`；它返回 profile-specific 的 `unconfigured`、`needs-data`、`blocked` 或 `ready`。没有绑定 Vault、缺数据或缺容器时不得返回 `ready`。只有 `/drone-example <profile> --run <问题>` 才排队只读示例回合，状态为 `started`，不隐式写入 Zotero、WebDAV、远程主机或用户 Vault。
 
@@ -479,14 +481,14 @@ Claude Code adapter 必须通过同一套：
 | MCP / 研究连接器 | **隔离真实调用已通过；WebDAV/Zotero 写入闭环已验收** | `packages/backend/test/mcp-connector-gates.test.ts` 以 staged `pi-mcp-adapter` 启动本地 stdio fixture，启用后真实 tool call 返回 `DRONE-MCP-001`，关闭并重载后无工具/无 marker；同一测试通过 read-only `CapabilityResearchPorts` 对唯一词 `DRONE-CONN-01-UNIQUE` 回读稳定 source ID/URL/调用记录，关闭后跳过传输、重新启用可重试；WebDAV 与 Zotero 均有真实临时对象回执；Protocols.io 保持只读 | 复跑 `check:remaining-gates` 并在根门禁中保留该证据；Protocols.io 不进行写入 |
 | 外部写入回读删除 | **WebDAV/Zotero 已通过；Protocols.io 只读** | WebDAV 与 Zotero 均完成授权→创建→回读→删除→再回读；凭据仅在进程环境使用 | 保持 Protocols.io 只读；后续若启用写入，必须另行授权并保留同等回读证据 |
 | 结果红线、evidence、provenance | **REDLINE-01 隔离验收通过** | `npm run check:redline`：4/4 fixture suites；publication / metacognitive / orchestration 门禁均返回 blocked 或 pause，sealed proof 含原因、差异路径和审计 ID | 构建产物已包含结果红线资源；交互式桌面截图仍是可选观察，不改变领域门禁结论 |
-| Pi 运行基线 | **suite 与 onboarding commands 真实 CLI 回归通过；旧版冲突负例保留** | `drone-plugins` `8389116` 的 `scripts/pi-cli-regression.mjs` 在独立 HOME 中对 Pi `1.1.0`/latest（实际解析 `1.3.0`）执行真实 `pi install` 与 `/task-status`、`/drone-doctor`、`/drone-example`；`research-suite@0.1.3` 两个版本 PASS；已弃用 `0.1.1` 两个版本均以 stderr `conflicts` 和退出码 1 失败，状态为 EXPECTED_FAILURE；证据见 [`v1.1-onboarding-commands.json`](releases/v1.1-onboarding-commands.json) | CI 每次 push/PR 重跑锁定/latest；旧冲突负例继续保留 |
+| Pi 运行基线 | **suite 与 onboarding commands 真实 CLI 回归通过；旧版冲突负例保留** | `drone-plugins` `5cd915e` 的 `scripts/pi-cli-regression.mjs` 在独立 HOME 中对 Pi `1.1.0`/latest（实际解析 `1.3.0`）执行真实 `pi install` 与 `/task-status`、`/drone-doctor`、`/drone-example`；`research-suite@0.1.5` 两个版本 PASS；已弃用 `0.1.1` 两个版本均以 stderr `conflicts` 和 exit 1 失败，状态为 EXPECTED_FAILURE；证据见 [`v0.33.2-pi-cli-regression.json`](releases/v0.33.2-pi-cli-regression.json) | CI 每次 push/PR 重跑锁定/latest；旧冲突负例继续保留 |
 | `DroneHostPort` 与通用插件能力协商 | **v1.1 插件迁移与宿主加载已通过** | `@gyoungwe/plugin-api`、HostPort、manifest capability check、`compatible/degraded/incompatible` 测试、迁移闸门和所有 v1.1 包的 clean prefix/loader/宿主检查均已通过 | A5-1～A5-4 已完成兼容层收敛，继续保持已发布包边界 |
-| `@gyoungwe/pi-analysis` | **V1.1-A 门槛已关闭** | `drone-plugins` 当前 `main=8389116`（实现提交 `baf9b3b`，包提交 `2168576`）提供自包含 `dist/index.mjs`/声明/manifest；`@gyoungwe/pi-analysis@0.1.0` 已公开发布，registry metadata、shasum/integrity、全新 prefix 安装和 Pi loader 发现均 PASS；backend 以精确版本加载公共包，兼容 facade 保留；计划→执行→审查→交付 focused proof 与 Pi 1.1.0/latest 矩阵通过 | 持续维护由 `drone-plugins` 负责；本仓库不再保留 pi-analysis 源码或构建脚本 |
-| `@gyoungwe/pi-evidence` | **V1.1-E 公开 registry 与宿主门槛已关闭** | `drone-plugins` main `8389116`（实现提交 `93576c4`）提供自包含 artifact/provenance/replay 包；`@gyoungwe/pi-evidence@0.1.0` registry tarball 的 shasum `4826a8f5663be2af382cecc227254a547d5f44af`、integrity 与公开元数据一致；全新 prefix 安装、3 个只读工具调用、Pi 1.1.0 loader 和宿主 clean prefix 均 PASS；宿主临时源码已删除 | 持续在 `drone-plugins` 维护；真实文件写入、replay runner 和科研结论门禁仍由宿主组合根负责 |
-| `@gyoungwe/pi-connectors` | **V1.1-C 公开 registry 与宿主门槛已关闭** | `drone-plugins` main `8389116`（实现提交 `93576c4`）提供六类只读 connector descriptor、权限声明、回执链和 2 个元数据工具；`@gyoungwe/pi-connectors@0.1.0` registry tarball 的 shasum `1629eb468f607f7be969d347cd03aff2dc0d03e3`、integrity 与公开元数据一致；全新 prefix 安装、Pi loader、6 个 descriptor 和宿主 clean prefix 均 PASS；宿主临时源码已删除 | 真实网络/凭据/写入/回读/删除仍按连接器逐项授权；Protocols.io 保持只读 |
-| `@gyoungwe/pi-*` 公共包与 `@gyoungwe/research-suite` | **task ownership、onboarding commands 及 suite 兼容门槛已关闭** | `@gyoungwe/pi-knowledge@0.1.1` 已移除 task runtime 注册并删除重复 `research-workflow` skill；`@gyoungwe/pi-core@0.1.1` 注册 `/drone-doctor`、`/drone-example`；`@gyoungwe/research-suite@0.1.3` 捆绑 plugin-api/pi-core/pi-knowledge/pi-research，公开 tarball、shasum/integrity、干净克隆 check 和真实 Pi CLI 矩阵均通过；旧 `research-suite@0.1.1` 已执行弃用标记“与 pi-core 冲突，无法启动”，完整证据见 [`v1.1-onboarding-commands.json`](releases/v1.1-onboarding-commands.json) | 由 `drone-plugins` CI 在 Pi `1.1.0`/latest 上持续回归 |
-| 宿主仓库 / 插件仓库边界 | **pi-knowledge、pi-analysis、pi-evidence、pi-connectors 外部迁移和公开发布闸门已关闭** | [本地 ../drone-plugins](../drone-plugins) `main=8389116`；外部包自包含、无宿主 fallback，干净克隆 `npm ci → npm run build → npm run check`、`publish.yml` 顺序 dry-run、公开 tarball、Pi CLI 和宿主 clean prefix 通过；宿主临时 evidence/connectors/research-suite 源码已删除，根锁文件固定 registry 包 | Desktop/Pi 仅从已安装 npm 包加载；后续只在 `drone-plugins` 维护这些插件 |
-| Desktop UI Pack 独立分发 | **V1.1-UI 公开 registry 与宿主安装生命周期已关闭** | `drone-plugins` main `8389116`（实现提交 `93576c4`）的 `@gyoungwe/desktop-ui-pack@0.1.0` registry tarball shasum `73e79d49b0678a0379fbdb7f1ec4d7ebb2b455e5`、integrity 与公开元数据一致；宿主从公开 tarball 安装后由 `UiPluginManager` 发现、启用、读取并完成测试；构建产物验收仍为 16/16 | 公开包继续独立发布；交互式 Electron 截图仍不作为本门槛 |
+| `@gyoungwe/pi-analysis` | **V1.1-A 门槛已关闭** | `drone-plugins` 当前 `main=5cd915e`（包实现提交 `2168576`）提供自包含 `dist/index.mjs`/声明/manifest；`@gyoungwe/pi-analysis@0.1.0` 已公开发布，registry metadata、shasum/integrity、全新 prefix 安装和 Pi loader 发现均 PASS；backend 以精确版本加载公共包，兼容 facade 保留；计划→执行→审查→交付 focused proof 与 Pi 1.1.0/latest 矩阵通过 | 持续维护由 `drone-plugins` 负责；本仓库不再保留 pi-analysis 源码或构建脚本 |
+| `@gyoungwe/pi-evidence` | **V1.1-E 公开 registry 与宿主门槛已关闭** | `drone-plugins` main `5cd915e`（实现提交 `222936c`）提供自包含 artifact/provenance/replay 包；`@gyoungwe/pi-evidence@0.1.0` registry tarball 的 shasum `4826a8f5663be2af382cecc227254a547d5f44af`、integrity 与公开元数据一致；全新 prefix 安装、3 个只读工具调用、Pi 1.1.0 loader 和宿主 clean prefix 均 PASS；宿主临时源码已删除 | 持续在 `drone-plugins` 维护；真实文件写入、replay runner 和科研结论门禁仍由宿主组合根负责 |
+| `@gyoungwe/pi-connectors` | **V1.1-C 公开 registry 与宿主门槛已关闭** | `drone-plugins` main `5cd915e`（实现提交 `222936c`）提供六类只读 connector descriptor、权限声明、回执链和 2 个元数据工具；`@gyoungwe/pi-connectors@0.1.0` registry tarball 的 shasum `1629eb468f607f7be969d347cd03aff2dc0d03e3`、integrity 与公开元数据一致；全新 prefix 安装、Pi loader、6 个 descriptor 和宿主 clean prefix 均 PASS；宿主临时源码已删除 | 真实网络/凭据/写入/回读/删除仍按连接器逐项授权；Protocols.io 保持只读 |
+| `@gyoungwe/pi-*` 公共包与 `@gyoungwe/research-suite` | **task ownership、onboarding commands 及 suite 兼容门槛已关闭** | `@gyoungwe/pi-knowledge@0.1.1` 已移除 task runtime 注册并删除重复 `research-workflow` skill；`@gyoungwe/pi-core@0.1.3` 注册 `/drone-doctor`、`/drone-example`；`@gyoungwe/research-suite@0.1.5` 捆绑 plugin-api/pi-core/pi-knowledge/pi-research，公开 tarball、shasum/integrity、干净克隆 check 和真实 Pi CLI 矩阵均通过；旧 `research-suite@0.1.1` 已执行弃用标记“与 pi-core 冲突，无法启动”，完整证据见 [`v0.33.2-pi-cli-regression.json`](releases/v0.33.2-pi-cli-regression.json) | 由 `drone-plugins` CI 在 Pi `1.1.0`/latest 上持续回归 |
+| 宿主仓库 / 插件仓库边界 | **pi-knowledge、pi-analysis、pi-evidence、pi-connectors 外部迁移和公开发布闸门已关闭** | [本地 ../drone-plugins](../drone-plugins) `main=5cd915e`；外部包自包含、无宿主 fallback，干净克隆 `npm ci → npm run build → npm run check`、`publish.yml` 顺序 dry-run、公开 tarball、Pi CLI 和宿主 clean prefix 通过；宿主临时 evidence/connectors/research-suite 源码已删除，根锁文件固定 registry 包 | Desktop/Pi 仅从已安装 npm 包加载；后续只在 `drone-plugins` 维护这些插件 |
+| Desktop UI Pack 独立分发 | **V1.1-UI 公开 registry 与宿主安装生命周期已关闭** | `drone-plugins` main `5cd915e`（实现提交 `baf9b3b`）的 `@gyoungwe/desktop-ui-pack@0.1.0` registry tarball shasum `73e79d49b0678a0379fbdb7f1ec4d7ebb2b455e5`、integrity 与公开元数据一致；宿主从公开 tarball 安装后由 `UiPluginManager` 发现、启用、读取并完成测试；构建产物验收仍为 16/16 | 公开包继续独立发布；交互式 Electron 截图仍不作为本门槛 |
 | 菜单信息架构收敛 | **UI-1～UI-7 已实现；四视口构建与视觉对照通过** | `scripts/check-visual-design-comparison.mjs` 用 Chrome headless 渲染 built renderer，四个视图均无错误、导航态正确、viewport 合同通过；截图和 SHA-256 见 [`releases/visual/drone-visual-comparison.json`](releases/visual/drone-visual-comparison.json)。hosts 没有独立设计板，按共享 shell 板对照并在证据中明确 | 交互式 Electron 仍受当前 shell 的 macOS NSApplication 启动限制；本次视觉门槛使用构建产物，不把环境限制写成失败 |
 | LAN 最终方案移除 | **已完成** | 提交 `8d4ad219` 删除 LAN adapter/UI/IPC/manifest/test；`9af99382` 刷新生成运行时；`c99432d0` 清除旧 demo 注释；源码/生成运行时/索引扫描均无 LAN 残留 | 仅历史变更记录保留背景，不再进入产品能力或验收矩阵 |
 | 仅 Desktop 可用的工具 | **领域包与宿主边界已收敛** | `pi-core` 已迁移 ask_user/set_status/todo/deliver_files/memory_save 与 tasks runtime；analysis/evidence/connectors 已以公开 Pi 包交付；A5-1～A5-4 已删除 `.pi/lib` 兼容树并统一扩展 manifest/资源路径 | 后续新增能力继续进入领域包和 `drone-plugins`，不回退到 `.pi/lib` |

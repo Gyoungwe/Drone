@@ -149,7 +149,7 @@ async function run() {
 			width: 1440,
 			height: 900,
 			sources: ["packages/desktop/src/renderer/src/components/chat/HomeCards.tsx"],
-			markers: ["home-cards", "home-workspace-summary"],
+			markers: ["home-cards"],
 		},
 		{
 			id: "knowledge",

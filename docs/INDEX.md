@@ -31,6 +31,8 @@ A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收
 两份计划的旧执行日志已按 30 行上限归档到 [`docs/archive/`](archive/)。
 插件化前端交接、宿主/插件仓库边界和 UI 验收顺序见 [pluginization-ui-handoff.md](pluginization-ui-handoff.md)；设计稿源文件见 [Drone 插件化界面.html](design/plugin-ui/Drone%20插件化界面.html)，构建产物四视图视觉对照由 [`scripts/check-visual-design-comparison.mjs`](../scripts/check-visual-design-comparison.mjs) 生成 [视觉证据](releases/visual/drone-visual-comparison.json)；资源搜索连接器设计见 [resource-search-connectors.md](resource-search-connectors.md)；科研工作台 v3 规划见 [scientific-workbench-v3-plan.md](scientific-workbench-v3-plan.md)。
 
+“技能与连接”页 v2 的 Pi 官方市场、Drone 插件仓库、连接器、MCP、Skill 和手动 Skill 仓库更新设计见 [skills-connections-ui-v2-plan.md](skills-connections-ui-v2-plan.md)。
+
 `.pi/tsconfig.json` 对生成的 `.pi/extensions/*.mjs` 保持可检查的资源边界；知识、任务、研究运行时由领域包 TypeScript 源码和 checked-in package-owned artifacts 负责，根 `npm run typecheck` 会串接 `npm run check:pi`。`.pi/lib` 兼容树已删除。
 
 2026-10-19 实机验收问题、截图编号与下一轮修复状态见 [real-device-acceptance-20261019](real-device-acceptance-20261019/README.md)。
@@ -210,7 +212,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，main `8389116`），宿主仓库不再保留兼容副本或构建脚本。已发布的 `@gyoungwe/pi-knowledge@0.1.1` 自包含 manifest、dist、knowledge worker 和 skills，且不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。外部仓库负责 build/check/smoke，根仓库的 `scripts/smoke-pi-package.mjs` 从已安装 npm 包验证未配置 Vault 的 `unconfigured` 回执、fixture 检索和安装/卸载路径。原生 Pi 的最低版本是 `1.1.0`；生成 dist 的 R8 自包含检查由插件仓库和 `scripts/check-architecture.mjs` 共同执行。
+`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，main `5cd915e`），宿主仓库不再保留兼容副本或构建脚本。已发布的 `@gyoungwe/pi-knowledge@0.1.1` 自包含 manifest、dist、knowledge worker 和 skills，且不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。外部仓库负责 build/check/smoke，根仓库的 `scripts/smoke-pi-package.mjs` 从已安装 npm 包验证未配置 Vault 的 `unconfigured` 回执、fixture 检索和安装/卸载路径。原生 Pi 的最低版本是 `1.1.0`；生成 dist 的 R8 自包含检查由插件仓库和 `scripts/check-architecture.mjs` 共同执行。
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 
@@ -220,7 +222,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 
-`../drone-plugins` 的 `main`（提交 `8389116`，包实现沿用 `baf9b3b`）是 `@gyoungwe/pi-analysis@0.1.0` 的源码权威位置。Drone backend 以精确版本依赖公共 npm 包，`packages/backend/src/services/analysis-adapters/` 保留兼容 facade；本地临时源码和构建脚本已删除。公开 registry tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
+`../drone-plugins` 的 `main`（提交 `5cd915e`，包实现提交 `2168576`）是 `@gyoungwe/pi-analysis@0.1.0` 的源码权威位置。Drone backend 以精确版本依赖公共 npm 包，`packages/backend/src/services/analysis-adapters/` 保留兼容 facade；本地临时源码和构建脚本已删除。公开 registry tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
 ## `@gyoungwe/pi-evidence` — 原生 Pi 证据插件（V1.1-E 已完成公开宿主门禁）
 
