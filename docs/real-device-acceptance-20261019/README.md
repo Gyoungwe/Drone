@@ -101,6 +101,7 @@ B8 云端协作继续按计划暂缓，Protocols.io 继续只读。Windows 构�
 | 市场栏 | **PASS** | Pi 官方 extension 目录、Drone 插件仓库、MCP 官方参考仓库、社区 MCP 目录和 Skill 开源仓库入口均可见 |
 | Drone 插件元数据 | **PASS** | 未安装状态也显示 `@gyoungwe/*` registry 版本和描述 |
 | 连接器描述与开关 | **PASS** | 真实包显示每个连接器的用途描述；Crossref 实测关闭→恢复 |
+| SSH 主机选择器 | **PASS** | 最新 unsigned macOS arm64 包读取本机 `~/.ssh/config`，展示 8 个可选 Host 别名，并将 `drone-gaoxuze-c` 加入主机卡片；没有读取私钥正文 |
 | Skill 手动检查 | **PASS** | 用户点击检查后真实发现 2 个研究技能包更新 |
 | UI 插件热重载 | **PASS** | desktop-ui-pack 实测停用→启用，Research status contribution 回读仍在 |
 | MCP 真实运行状态 | **NOT_RUN** | 隔离正式包未配置 MCP server，界面如实显示无能力；没有把空配置标成 PASS |

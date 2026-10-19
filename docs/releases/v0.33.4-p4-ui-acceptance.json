@@ -37,6 +37,11 @@
 			"detail": "Crossref was disabled and re-enabled in the real package; the row changed between 已禁用 and 可用."
 		},
 		{
+			"id": "ssh-config-host-picker",
+			"status": "PASS",
+			"detail": "The latest unsigned macOS arm64 package read only ~/.ssh/config metadata, showed eight selectable Host aliases, and added drone-gaoxuze-c to the approved host cards without opening private key contents."
+		},
+		{
 			"id": "skill-manual-check",
 			"status": "PASS",
 			"detail": "Explicit Skill repository check completed against the packaged client and reported two available pack updates."

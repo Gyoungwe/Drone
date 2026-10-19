@@ -22,4 +22,4 @@
 
 - 已实现 `ComputeContract.listSshConfig`、主进程 OpenSSH 配置解析、preload/main/backend 接线、选择器卡片和折叠式手动表单。
 - 解析器、Host API 和 backend projection 的定向测试已通过。
-- 正式安装包中的主机选择器验收尚未运行；下一次 macOS 构建应覆盖“发现→加入→检查环境”真实安装包路径。
+- 最新 unsigned macOS arm64 安装包已完成“发现→加入”真实回读：从本机配置发现 8 个 Host 别名，并将 `drone-gaoxuze-c` 加入主机卡片；远程探测仍需单独审批，因此本次不把连通性标为 PASS。
