@@ -126,7 +126,9 @@ jobs:
       - run: npm run build
 
   prepare:
-    needs: [resolve, validate]
+    # Do not create a tag or draft release until both static validation and
+    # the actual platform installers have passed their pre-upload checks.
+    needs: [resolve, validate, build]
     env:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
     runs-on: ubuntu-latest

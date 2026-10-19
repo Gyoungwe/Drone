@@ -228,7 +228,7 @@ async function checkWindowsPayload(appPath, source) {
 async function extractWindowsZip(zipPath, workingRoot) {
 	const extracted = join(workingRoot, `${basename(zipPath)}-extracted`);
 	const ps =
-		"$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force";
+		"$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath $env:DRONE_RELEASE_ZIP -DestinationPath $env:DRONE_RELEASE_DEST -Force";
 	await run("powershell.exe", [
 		"-NoProfile",
 		"-NonInteractive",
@@ -236,9 +236,13 @@ async function extractWindowsZip(zipPath, workingRoot) {
 		"Bypass",
 		"-Command",
 		ps,
-		zipPath,
-		extracted,
-	]);
+	], {
+		env: {
+			...process.env,
+			DRONE_RELEASE_ZIP: zipPath,
+			DRONE_RELEASE_DEST: extracted,
+		},
+	});
 	await checkWindowsPayload(extracted, `zip:${basename(zipPath)}`);
 	addCheck("windows-zip", "PASS", "ZIP extracted with Expand-Archive and app payload inspected", {
 		asset: basename(zipPath),
@@ -249,7 +253,7 @@ async function checkWindowsInstaller(exePath, workingRoot) {
 	const target = join(workingRoot, "installed");
 	const ps = [
 		"$ErrorActionPreference='Stop';",
-		"$exe=$args[0]; $target=$args[1];",
+		"$exe=$env:DRONE_RELEASE_EXE; $target=$env:DRONE_RELEASE_DEST;",
 		"$p=Start-Process -FilePath $exe -ArgumentList @('/S', ('/D=' + $target)) -Wait -PassThru;",
 		"if ($p.ExitCode -ne 0) { throw ('installer exit code ' + $p.ExitCode) }",
 	].join(" ");
@@ -260,9 +264,13 @@ async function checkWindowsInstaller(exePath, workingRoot) {
 		"Bypass",
 		"-Command",
 		ps,
-		exePath,
-		target,
-	]);
+	], {
+		env: {
+			...process.env,
+			DRONE_RELEASE_EXE: exePath,
+			DRONE_RELEASE_DEST: target,
+		},
+	});
 	await checkWindowsPayload(target, `installer:${basename(exePath)}`);
 	addCheck("windows-installer", "PASS", "NSIS installer ran silently and installed a runnable payload", {
 		asset: basename(exePath),
