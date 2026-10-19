@@ -74,7 +74,7 @@ P0-1 → P1-5（轻量问答路径，直接省 token）→ P1-2、P1-3、P1-4（
 | P1-6 Vault 设置与切换 | **PASS** | 新安装的 `/Applications/Drone.app` 真实界面显示“切换或创建知识库”、应用级共享与 Projects 分区说明；启动流程只保留一张写入确认卡，入口和文案已更新 |
 | P2-9 首页视觉层级 | **PASS** | 新安装包真实首页显示浅色中性三张入口卡，移除项目/最近/环境重复摘要，右栏默认收起；新任务位于项目之前 |
 | P2-17 Zotero 开关语义 | **PASS** | 新安装包真实“技能与连接”显示 Zotero 为“运行中”，设置页开关仅在注册且本机 API 可达时为启用；不可达分支显示“已注册但不可用”并锁定开关 |
-| P0 正式安装包 | **PASS** | v0.33.3 无证书 arm64/x64 DMG/ZIP 均通过版本、payload、framework symlink、`Drone --version` 检查；arm64 干净目录安装后真实启动并保持进程存活，x64 在本机 Rosetta 下启动通过 |
+| P0 正式安装包 | **PASS** | v0.33.3 无证书 arm64/x64 DMG/ZIP 均通过本机版本、payload、framework symlink、`Drone --version` 和真实启动检查；Release workflow `39222533359` 又从已发布 Release 回下载 macOS DMG/ZIP、blockmap、`latest-mac.yml` 并重复校验通过 |
 
 B8 云端协作继续按计划暂缓，Protocols.io 继续只读。Windows 构建/上传/回下载按本轮范围标记为 `OUT_OF_SCOPE`；签名检查按无证书策略为 `NOT_RUN`，不构成失败。
 
