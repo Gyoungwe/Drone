@@ -8,8 +8,14 @@ import { CatalogRow, npmSourceToName } from "./rows";
 
 const CATALOG_TYPES: ("" | CatalogPackageType)[] = ["", "extension", "skill", "prompt", "theme"];
 
-/** 浏览社区：pi.dev 目录搜索 + 安装 */
-export function BrowseSection() {
+/** Browse the pi.dev catalog. The plugin page opts into the official extension-only view. */
+export function BrowseSection({
+	extensionsOnly = false,
+	excludePackageNames = [],
+}: {
+	extensionsOnly?: boolean;
+	excludePackageNames?: readonly string[];
+}) {
 	const t = useT();
 	const query = useCatalogStore((s) => s.catalogQuery);
 	const type = useCatalogStore((s) => s.catalogType);
@@ -33,14 +39,23 @@ export function BrowseSection() {
 		return map;
 	}, [configuredPackages]);
 
-	// 已配置包列表只需拉一次（安装成功后 store 会自刷）；目录首载（防抖搜索只在输入时触发）
+	// The plugin page is intentionally extension-only. Reusing CatalogStore keeps
+	// the existing install/uninstall boundary while preventing skills/prompts/themes
+	// from leaking into the plugin list.
 	useEffect(() => {
 		const s = useCatalogStore.getState();
+		if (extensionsOnly && s.catalogType !== "extension") {
+			s.setCatalogType("extension");
+			return;
+		}
 		if (s.configuredPackages === null) void s.refreshConfiguredPackages();
 		if (s.catalogPage === 0 && !s.catalogLoading) void s.searchCatalog(false);
-	}, []);
+	}, [extensionsOnly]);
 
-	const remaining = total - packages.length;
+	const visiblePackages = packages.filter(
+		(pkg) => (!extensionsOnly || pkg.types.includes("extension")) && !excludePackageNames.includes(pkg.name),
+	);
+	const remaining = Math.max(0, total - visiblePackages.length);
 
 	return (
 		<div>
@@ -53,20 +68,22 @@ export function BrowseSection() {
 					onChange={(e) => setCatalogQuery(e.target.value)}
 				/>
 			</div>
-			<div className="mt-2 flex flex-wrap gap-1">
-				{CATALOG_TYPES.map((id) => (
-					<button
-						key={id || "all"}
-						type="button"
-						className={`rounded-full px-3 py-1 text-xs transition-colors ${
-							type === id ? "bg-ink font-medium text-on-ink" : "bg-hover text-ink-dim hover:text-ink"
-						}`}
-						onClick={() => setCatalogType(id)}
-					>
-						{t(`settings.extensions.type.${id || "all"}`)}
-					</button>
-				))}
-			</div>
+			{!extensionsOnly && (
+				<div className="mt-2 flex flex-wrap gap-1">
+					{CATALOG_TYPES.map((id) => (
+						<button
+							key={id || "all"}
+							type="button"
+							className={`rounded-full px-3 py-1 text-xs transition-colors ${
+								type === id ? "bg-ink font-medium text-on-ink" : "bg-hover text-ink-dim hover:text-ink"
+							}`}
+							onClick={() => setCatalogType(id)}
+						>
+							{t(`settings.extensions.type.${id || "all"}`)}
+						</button>
+					))}
+				</div>
+			)}
 			{loading ? (
 				<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.extensions.loading")}</p>
 			) : error ? (
@@ -77,12 +94,12 @@ export function BrowseSection() {
 						{t("settings.extensions.retry")}
 					</Button>
 				</div>
-			) : packages.length === 0 ? (
+			) : visiblePackages.length === 0 ? (
 				<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.extensions.noResults")}</p>
 			) : (
 				<>
 					<ul className="mt-1 divide-y divide-border">
-						{packages.map((pkg) => (
+						{visiblePackages.map((pkg) => (
 							<CatalogRow key={pkg.name} pkg={pkg} configured={configuredByPackage.get(pkg.name) ?? null} />
 						))}
 					</ul>

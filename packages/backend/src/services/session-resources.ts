@@ -3,11 +3,14 @@ import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import {
+	type DronePackageManifest,
+	dronePluginSource,
 	type HostPluginPackage,
 	type LoadedResources,
 	type McpStatus,
 	type McpStatus as McpStatusType,
 	normalizeMcpStatus,
+	type PiPackageManifest,
 	RESEARCH_SKILL_SOURCES,
 	researchSkillProfile,
 	type SlashCommandInfo,
@@ -46,13 +49,15 @@ export class SessionResourceService {
 	/**
 	 * Resolve the upstream identity of a skill without trusting the loader's
 	 * short `local`/`auto` labels.  Built-in research packs are mapped from the
-	 * committed lock; ordinary Pi packages fall back to their package metadata.
+	 * source catalog; ordinary Pi packages fall back to their package metadata.
+	 * Integrity pins stay inside the pack loader and updater and are not exposed
+	 * as product provenance.
 	 */
 	private skillRepository(
 		name: string,
 		filePath: string,
 		source: string,
-	): { repository: string; commit?: string; path?: string } | undefined {
+	): { repository: string; path?: string } | undefined {
 		const normalizedPath = filePath.replaceAll("\\", "/");
 		const profile = researchSkillProfile(name);
 		const sourceEntry = profile
@@ -68,7 +73,6 @@ export class SessionResourceService {
 			const locked = profile ?? sourceEntry.skills.find((skill) => normalizedPath.endsWith(`/${skill.path}`));
 			return {
 				repository: `https://github.com/${sourceEntry.repository}`,
-				commit: sourceEntry.commit,
 				...(locked?.path ? { path: locked.path } : {}),
 			};
 		}
@@ -117,7 +121,11 @@ export class SessionResourceService {
 			{ name: "@gyoungwe/pi-core", version: "0.1.3", host: "desktop" as const },
 			{ name: "@gyoungwe/pi-knowledge", version: "0.1.1", host: "pi" as const },
 			{ name: "@gyoungwe/pi-research", version: "0.1.0", host: "pi" as const },
+			{ name: "@gyoungwe/pi-analysis", version: "0.1.0", host: "pi" as const },
+			{ name: "@gyoungwe/pi-evidence", version: "0.1.0", host: "pi" as const },
+			{ name: "@gyoungwe/pi-connectors", version: "0.1.0", host: "pi" as const },
 			{ name: "@gyoungwe/desktop-ui-pack", version: "0.1.0", host: "desktop" as const },
+			{ name: "@gyoungwe/research-suite", version: "0.1.5", host: "pi" as const },
 		];
 		return entries.map((entry) => {
 			const packageJson =
@@ -125,12 +133,43 @@ export class SessionResourceService {
 					? join(agentDir, "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "package.json")
 					: this.packageJsonPath(require, entry.name);
 			const version = packageJson ? this.readPackageVersion(packageJson) : entry.version;
+			const packageData = packageJson ? this.readPackage(packageJson) : undefined;
+			const manifestData = packageJson ? this.readManifest(dirname(packageJson)) : undefined;
+			const source = packageData ? dronePluginSource(packageData, manifestData) : undefined;
 			return {
 				...entry,
 				version,
 				status: packageJson ? "available" : "unavailable",
+				source: source ? "drone" : "unknown",
+				...(source
+					? {
+							packageKind: source.packageKind,
+							description: source.description,
+							capabilities: [...source.capabilities],
+							piApiVersion: source.piApiVersion,
+							pluginApi: source.pluginApi,
+							minHostVersion: source.minHostVersion,
+							hosts: [...source.hosts],
+						}
+					: {}),
 			};
 		});
+	}
+
+	private readPackage(path: string): PiPackageManifest | undefined {
+		try {
+			return JSON.parse(readFileSync(path, "utf8")) as PiPackageManifest;
+		} catch {
+			return undefined;
+		}
+	}
+
+	private readManifest(root: string): DronePackageManifest | undefined {
+		try {
+			return JSON.parse(readFileSync(join(root, "plugin.manifest.json"), "utf8")) as DronePackageManifest;
+		} catch {
+			return undefined;
+		}
 	}
 
 	private packageJsonPath(require: NodeRequire, name: string): string | null {
@@ -211,7 +250,6 @@ export class SessionResourceService {
 					...(upstream
 						? {
 								repository: upstream.repository,
-								...(upstream.commit ? { repositoryCommit: upstream.commit } : {}),
 								...(upstream.path ? { repositoryPath: upstream.path } : {}),
 							}
 						: {}),

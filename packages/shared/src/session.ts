@@ -370,6 +370,15 @@ export interface HostPluginPackage {
 	version: string;
 	host: "desktop" | "pi";
 	status: "available" | "configure" | "unavailable";
+	/** Package source and manifest projection used by the plugin source page. */
+	source?: "drone" | "builtin" | "unknown";
+	packageKind?: "pi" | "desktop-ui";
+	description?: string;
+	capabilities?: string[];
+	piApiVersion?: number;
+	pluginApi?: number;
+	minHostVersion?: string;
+	hosts?: string[];
 }
 
 /** 资源加载诊断（collision 冲突/warning/error） */

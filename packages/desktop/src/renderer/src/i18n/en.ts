@@ -708,6 +708,22 @@ export const en: Messages = {
 			error: "Unavailable",
 			incompatible: "Host incompatible",
 		},
+		piMarket: "Pi official plugin market",
+		piMarketHint:
+			"Browse official Pi extension packages. Skills, prompts and themes stay in their own surfaces.",
+		droneRegistry: "Drone plugin registry",
+		droneRegistryHint:
+			"Drone packages use the standard npm package.json + Pi manifest and share one install state.",
+		installedPlugins: "Installed plugins",
+		installedPluginsHint:
+			"Pi capability packages and optional Desktop UI contributions currently visible to this host.",
+		noInstalledPlugins: "No installed plugin packages",
+		installed: "Installed",
+		notInstalled: "Not installed",
+		install: "Install",
+		installing: "Installing…",
+		uninstall: "Uninstall",
+		removing: "Removing…",
 	},
 	researchBrowser: {
 		eyebrow: "Research materials",
