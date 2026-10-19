@@ -1,6 +1,6 @@
 # 插件构建与宿主热插拔计划
 
-状态：设计阶段，基于 v0.33.2 的双仓库边界；不改变现有插件 API，不启动 B8 云端协作。
+状态：实施中（2026-10-20 审计）；不改变现有插件 API，不启动 B8 云端协作。H1/H2 与 UI 层 H3 已有实现/包级证据，worker 排空、失败回滚、生命周期事件和下一会话显示仍未关闭。
 
 ## 目标
 
@@ -60,3 +60,14 @@
 ## 完成定义
 
 只有 H1–H6 的证据都来自真实安装包、真实宿主会话或真实 worker 生命周期，才关闭“插件热插拔”门槛。实现顺序按 H1 → H2 → H3 → H4 → H5 → H6，每阶段单独记录回执和回滚路径；任何层无法安全重载时，界面必须显示实际生效时机（下一会话或重启应用）。
+
+## 2026-10-20 现状矩阵
+
+| 阶段 | 状态 | 证据 | 缺口 |
+| --- | --- | --- | --- |
+| H1 产物与安装边界 | **PASS（包级）** | `check:plugin-api`、公开 registry tarball、干净 prefix 安装/卸载和 Desktop 发现检查通过。 | 仍需在正式包里回读安装记录的 integrity/来源字段。 |
+| H2 能力注册与兼容性 | **PASS（包级）** | manifest、Pi/Host 兼容矩阵和 Drone package metadata 已通过；不兼容状态不会进入工具加载。 | 失败安装的正式包 UI 回读尚未补齐。 |
+| H3 分层管理器 | **PARTIAL** | UI plugin manager 真实启用/禁用/重载；Pi 包可由宿主安装并触发非流式会话 reload。 | worker 生命周期和“当前/下一会话版本”没有统一状态模型；当前 reload 行为与本计划的下一会话语义冲突。 |
+| H4 失败恢复与回滚 | **NOT_RUN** | 仅有 UI manifest/build 失败时保留旧产物的单测/代码路径。 | 没有真实坏包或 worker 初始化失败的 staging→回滚→错误回执安装包证据。 |
+| H5 可观测性 | **PARTIAL** | 页面显示版本、来源、能力、状态和失败文本。 | `staged/verified/drained/reloaded/rolled_back` 事件尚未进入统一 trace/详情抽屉。 |
+| H6 发布与持续验收 | **PARTIAL** | `drone-plugins` push/PR CI、registry tarball、Pi 1.1.0/latest 和 macOS 包门禁已通过。 | 官方/Drone 包完整更新/卸载、MCP 真实 server、worker 回滚和深色对照仍未完成；因此整体热插拔门槛不能标 PASS。 |

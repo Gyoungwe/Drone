@@ -89,12 +89,12 @@ const hostStub = `
     listModels: () => ok([]), listAllSessions: () => ok([]), listSessions: () => ok([]),
     loadTabs: () => ok(null), loadUiState: () => ok({}), saveUiState: () => ok(), getModelPrefs: () => ok({}),
     listProviders: () => ok([]), listSubagents: () => ok([]), getLoadedResources: () => ok({}),
-    listHosts: () => ok([]), getHealthSnapshot: () => ok(null), listJobs: () => ok([]), getOnboardingStatus: () => ok([]),
+    listHosts: () => ok([]), listSshConfig: () => ok([]), getHealthSnapshot: () => ok(null), listJobs: () => ok([]), getOnboardingStatus: () => ok([]),
     getKnowledgeOverview: () => ok(emptyOverview), getKnowledgeReviews: () => ok({ items: [], total: 0 }),
     getKnowledgeGraph: () => ok({ nodes: [], edges: [] }), getKnowledgeStatus: () => ok({ status: 'unconfigured' }),
     getKnowledgeCloudStatus: () => ok({ mode: 'unconfigured' }),
     listConnectors: () => ok([]), listWriteAdapters: () => ok([]), listMcpServers: () => ok([]),
-    listSkills: () => ok([]), listConfiguredPackages: () => ok([]),
+    listSkills: () => ok([]), searchCatalog: () => ok({ packages: [], total: 0, page: 1, pageSize: 50 }), listConfiguredPackages: () => ok([]),
     uiPluginsGetConfig: () => ok({ enabled: true, plugins: {}, assignments: {} }), uiPluginsList: () => ok([]),
     uiPluginsReadCode: () => ok({ code: '', manifest: null }),
     getEvidenceOverview: () => ok(emptyOverview), getPermissionMode: () => ok('default'), getContextUsage: () => ok(null),
@@ -258,10 +258,11 @@ try {
 			results.every((result) => result.status === "PASS") && designAnchors.length === 4 ? "PASS" : "FAIL",
 		views: results,
 	};
-	await writeFile(
-		join(outputRoot, `drone-visual-comparison${outputSuffix}.json`),
-		`${JSON.stringify(report, null, 2)}\n`,
+	const serializedReport = JSON.stringify(report, null, "\t").replace(
+		/\t"designAnchors": \[\n(?:\t\t.*\n)+\t\]/u,
+		`\t"designAnchors": [${report.designAnchors.map((anchor) => JSON.stringify(anchor)).join(", ")}]`,
 	);
+	await writeFile(join(outputRoot, `drone-visual-comparison${outputSuffix}.json`), `${serializedReport}\n`);
 	console.log(JSON.stringify(report, null, 2));
 	if (report.status !== "PASS") process.exitCode = 1;
 	socket.close();

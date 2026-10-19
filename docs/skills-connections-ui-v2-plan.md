@@ -1,6 +1,6 @@
 # 技能与连接页 v2：Pi 市场、Drone 插件与能力生命周期
 
-状态：设计已确认；P0～P4 macOS 正式安装包验收完成。市场栏、连接器描述和 Drone registry 元数据已在正式包回读；MCP 因隔离包无配置保持 NOT_RUN，深色前后视觉对照仍未运行。
+状态：设计已确认；P0～P3 和 P4 的已实现部分已在 macOS 正式包回读。市场栏、连接器描述、Drone registry 元数据、sticky 导航、SSH 选择器和 UI 插件重载均有证据；官方/Drone 包完整安装更新卸载、任意 Skill 仓库添加/应用、MCP 真实配置和深色前后视觉对照仍未完成。
 
 本计划承接 [`final-pluginization-plan.md`](final-pluginization-plan.md) 的插件化边界和 [`plugin-hot-reload-plan.md`](plugin-hot-reload-plan.md) 的分层重载规则。它只重做 Desktop 的“技能与连接”页信息架构，不改变 `@gyoungwe/plugin-api`、Pi package manifest 或已有结果/证据合同。
 
@@ -167,6 +167,16 @@ Skill 仓库                                      [添加仓库]
 - 真实安装包验证：官方市场安装一个 extension、Drone 包安装/禁用/更新、UI plugin 重载、MCP 错误显示、连接器开关、Skill 仓库手动更新。
 - 浅色/深色正式安装包截图对照；更新 README、计划和发布说明。
 - 市场栏与 MCP/连接器/技能同级；市场导航在长列表滚动时保持 sticky；连接器条目显示用途描述；Drone 包在未安装时也显示 registry 版本和描述。
+
+### 8.1 2026-10-20 实施审计
+
+| 阶段 | 状态 | 已有证据 | 未关闭项 |
+| --- | --- | --- | --- |
+| P0–P2 | **PASS（实现/正式包回读）** | 四栏合同、市场来源合并、连接器描述/开关和 MCP 错误状态代码均已落地；v0.33.4 安装包回读市场、sticky 导航和连接器开关。 | MCP 仍因无配置为 `NOT_RUN`，没有真实外部 server 的错误/恢复回读。 |
+| P3 | **PARTIAL** | 内置研究技能来源映射、GitHub/Atom 检查、staging、完整性校验、失败恢复和手动检查入口已通过。 | 尚无“添加任意 Git URL/本地目录 + 分支/路径/许可依据 + 卸载来源”的持久化 IPC/UI；手动更新的真实应用/回滚尚未在正式包完成。 |
+| P4 | **PARTIAL** | UI plugin 运行中启停/重载、市场元数据、四栏和 SSH 选择器已有正式包证据；浅色四视图通过。 | 官方 extension 安装、Drone 包更新/卸载、worker 排空/失败回滚、Pi 下一会话提示、MCP 真实运行和深色前后截图仍未闭合。 |
+
+实现边界因此保持不变：不把内置来源卡片误报为通用 Skill 仓库管理，不把静态预览或 loader-only 结果标为最终 PASS，也不把 B8 或 Protocols.io 写入拉回当前范围。
 
 ## 9. 验收红线
 

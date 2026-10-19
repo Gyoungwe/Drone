@@ -575,6 +575,22 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 
 **目标完成条件**：五个 v1.1 节点都有公开 tarball 验证；Desktop 只通过 host API 加载已安装包且无隐藏宿主 fallback；suite 能干净安装并发现全部资源；计划与索引记录两个仓库 head、版本、证据路径以及剩余 `BLOCKED`/`NOT_RUN`；没有新的架构红线或未审查的外部写入。
 
+### 9.3 2026-10-20 计划缺口复核
+
+两份计划和本轮口头布置逐项复核后的状态如下：
+
+| 项目 | 当前判定 | 证据或缺口 |
+| --- | --- | --- |
+| 架构 v2 A0–A7、P9、P10、A5-1～A5-4 | **完成** | `docs/architecture-v2-tasks.md` 只有 B8 保留为未勾选的暂缓项；其余任务均有实现和门禁记录。 |
+| 市场独立栏目、官方/社区 MCP 与 Skill 入口、Drone 包版本/说明、左侧 sticky 导航 | **已实现；浏览验收通过** | v0.33.4 安装包的 `v0.33.4-p4-ui-acceptance.json` 已回读四栏、市场卡片、八个 Drone 包元数据和长列表滚动后的导航。官方 extension 安装与 Drone 包更新/卸载的完整真实回读仍未覆盖。 |
+| 技能来源映射与内置包手动检查 | **已实现；范围有限** | `research-skill-sources.json` 和 updater 已显示真实 GitHub 仓库并支持用户点击检查/应用；当前只覆盖内置 Nature/Scientific/Academic 来源，没有“添加任意 Git URL/本地目录、许可依据、卸载来源”的 UI/IPC 闭环。 |
+| 主机 SSH 配置选择器 | **完成（macOS 正式包）** | 正式包发现 8 个 Host 别名并加入 `drone-gaoxuze-c`；只读元数据，不读取私钥正文。远程连通性仍需单独授权，不把发现误报为健康检查。 |
+| 分层热插拔 | **部分完成** | UI 插件运行中启停/重载和 Pi 包 registry/宿主加载已通过；worker `prepareUnload → drain → dispose → load → healthCheck`、失败自动回滚、生命周期事件与 Pi “下一会话版本”展示尚无真实宿主证据。当前 `PackageService` 会重载非流式会话，和计划的下一会话语义需要后续拆分决策。 |
+| 真实知识闭环与主线实机门槛 | **仍未闭合** | P1-2/3/4、P1-5 仍需正式包真实知识写入→回读和轻路径会话；V4 MCP 因无配置为 `BLOCKED`，V5 原生 Pi 为 `NOT_RUN`。 |
+| 视觉对照与版本发布 | **浅色通过，深色未运行** | 浅色四视图静态回归和正式包回读均有证据；深色前后截图仍为 `NOT_RUN`。当前分支已有 v0.33.4 构建产物，但尚无 `v0.33.4` tag/远端 Release，不应把本地候选称为已发布版本。 |
+
+上述未闭合项属于 backlog 或环境门槛，不改变已通过的 `MCP-01`、`MEM-01`、`REDLINE-01`，也不触碰暂缓的 B8、只读的 Protocols.io 和无证书发布策略。
+
 > A5-1～A5-4 的用户收益、当前完成度和迁移顺序见 [A5 领域包收敛摘要](a5-impact-summary.md)。这些是发布后的架构收敛项，不改变已通过的 v1.1 门槛。
 
 ## 10. 插件化与桌面验收红线
@@ -625,9 +641,8 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 
 ## 执行日志
 
-> Older execution entries are archived in [final-pluginization-plan-log-2026-10-19.md](archive/final-pluginization-plan-log-2026-10-19.md).
+> Older execution entries are archived in [final-pluginization-plan-log-2026-10-19.md](archive/final-pluginization-plan-log-2026-10-19.md) and [final-pluginization-plan-log-2026-10-20.md](archive/final-pluginization-plan-log-2026-10-20.md).
 
-| 2026-10-18 | 首批 npm 插件包公开发布 | `@gyoungwe/plugin-api@1.0.0`、`pi-core@0.1.0`、`pi-knowledge@0.1.0`、`pi-research@0.1.0`、`research-suite@0.1.0` 已提交 npm；安全密钥 2FA 已完成发布认证 | 首次聚合包发布后，继续做公开 tarball 验证 |
 | 2026-10-18 | `research-suite` 公开 tarball 修复 | registry 验证发现 `research-suite@0.1.0` 未携带三个 bundled dependency；外部仓库元数据修复提交 `a4eb3a6`、manifest 对齐提交 `5002590`，已发布 `@gyoungwe/research-suite@0.1.1`，公开 tarball 和全新临时目录安装均 PASS，证据见 [`v0.33.0-npm-packages.json`](releases/v0.33.0-npm-packages.json) | `desktop-ui-pack` 仍是 v1.1 的独立 UI 包；analysis/evidence/connectors 继续按计划推进，Protocols.io 保持只读 |
 | 2026-10-18 | v0.33.0 正式无证书发布 | main `961cd43a`；Release run [39066841689](https://github.com/Gyoungwe/Drone/actions/runs/39066841689) 的 macOS arm64/x64 与 Windows x64 validate、unsigned build、MCP 资源校验、资产上传全部成功；[v0.33.0 Release](https://github.com/Gyoungwe/Drone/releases/tag/v0.33.0) 已发布，包含 3 个安装包、3 个 zip、4 个 blockmap 和 2 个更新清单；SHA-256 见 [`v0.33.0-assets.sha256`](releases/v0.33.0-assets.sha256) | npm 首批包已发布；按 v1.1 推进 analysis/evidence/connectors 和完整 desktop-ui-pack |
 | 2026-10-18 | Windows 跨平台验收修复 | `scripts/check-plugin-api.mjs` 生命周期闸门改用跨平台 tarball basename、npm 执行器和 Biome 格式；MEM-01/SKILL-01 证据与临时 fixture 改用 Node `os.tmpdir()`，避免 Windows 将 POSIX `/tmp` 解析为 `\\tmp` | macOS validate 已通过；等待修复后的 Release 同时完成 Windows validate 与无证书构建资产 |
@@ -657,3 +672,4 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 | 2026-10-19 | v0.33.3 macOS-only Release 上传后验收 | workflow [`39222533359`](https://github.com/Gyoungwe/Drone/actions/runs/39222533359) 的 macOS validate、双架构 build、publish、post-upload-verify、finalize 和 website 全部成功；从已发布 [`v0.33.3`](https://github.com/Gyoungwe/Drone/releases/tag/v0.33.3) 回下载 arm64/x64 DMG/ZIP、blockmap 与 `latest-mac.yml`，再次运行 `check-release-artifacts` 通过，Release 已公开 | Windows 不参与本版本门禁；证书按无证书策略为 `NOT_RUN`，B8 与 Protocols.io 写入继续暂缓/只读 |
 | 2026-10-19 | 实机报告剩余项与 CO-1～CO-4 对照 | `docs/real-device-acceptance-20261019/README.md` 已补充 CO-1～CO-4 的改前/改后证据边界和未关闭门槛；CO-1/CO-3 代码完成待 v0.33.4 正式包，CO-2 的来源分组、去重、插件列表、MCP error 和会话级整组启用/禁用已完成，回归测试覆盖显式技能不可用；静态 renderer 视觉预览不计最终 PASS | P1-2/3/4/7/8、P1-5、V6 仍待 v0.33.4 正式包或真实会话；V4 MCP 为 BLOCKED，V5 原生 Pi 为 NOT_RUN；B8 和 Protocols.io 写入继续暂缓/只读 |
 | 2026-10-19 | 技能仓库来源与更新入口收口 | 修正技能页不再把 `local`/`auto` 当作仓库来源：科研技能通过锁定目录映射到 `Yuan1z0825/nature-skills`、`K-Dense-AI/scientific-agent-skills` 等 GitHub 仓库，并可打开精确 commit/path；技能与连接页新增仓库级来源卡片，显示锁定 commit、加载/内置计数和自动检查/仅目录状态；更新检查在 GitHub API 403/429 时回退到公开 Atom feed；正式包宿主资源清单补列 pi-core、pi-knowledge、pi-research、desktop-ui-pack 的版本与状态 | v0.33.4 正式安装包真实回读来源卡片、GitHub 仓库链接、更新入口和宿主插件清单通过；B8 与 Protocols.io 写入继续暂缓/只读 |
+| 2026-10-20 | 计划缺口复核与浅色视觉回归修复 | `npm run check:remaining-gates`、`npm run check:plugin-api` 通过；`check-visual-design-comparison.mjs` 修正旧 host stub 缺少 `listSshConfig/searchCatalog` 的兼容性并恢复四视图 4/4 PASS；主机选择器对可选发现结果增加数组护栏 | 记录 P3/P4 的任意 Skill 仓库、完整市场生命周期、worker 回滚、MCP/原生 Pi/深色对照和 v0.33.4 远端 Release 仍未闭合；B8/Protocols.io/无证书策略不变 |

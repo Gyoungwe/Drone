@@ -325,7 +325,11 @@ export function ComputePane() {
 	const discoverSshHosts = useCallback(async () => {
 		setSshConfigLoading(true);
 		try {
-			setSshConfigHosts(await getPi().listSshConfig());
+			const discovered = await getPi().listSshConfig();
+			// Older/read-only host stubs may not expose this optional discovery
+			// projection yet. Keep the picker empty instead of breaking the Hosts
+			// route while the rest of the compute contract remains usable.
+			setSshConfigHosts(Array.isArray(discovered) ? discovered : []);
 		} catch (reason) {
 			useComputeStore.setState({ error: reason instanceof Error ? reason.message : String(reason) });
 		} finally {
