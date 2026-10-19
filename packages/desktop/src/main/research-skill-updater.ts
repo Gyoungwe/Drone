@@ -31,25 +31,25 @@ const HASH_RE = /^[0-9a-f]{64}$/u;
 type PackPin = { commit: string; archiveSha256: string };
 type Manifest = { version: 1; packs: Partial<Record<BuiltinResearchSkillSource, PackPin>> };
 type Listener = (state: ResearchSkillUpdateState) => void;
+type UpdateCandidate = ResearchSkillUpdatePack & { currentCommit: string; latestCommit: string };
+type StagedPack = { pin: PackPin; target: string; created: boolean };
 
 let config: { userDataDir: string } | null = null;
 const listeners = new Set<Listener>();
-let available: ResearchSkillUpdatePack[] = [];
+let available: UpdateCandidate[] = [];
 
 export function configureResearchSkillUpdater(userDataDir: string): void {
 	config = { userDataDir };
 }
 
 /**
- * Keep the installed client aware of upstream changes without silently
- * replacing a user's active skill pack.  The check only emits `available`;
- * applying a verified overlay still requires the guarded update action and
- * restart shown in the Skills & Connections page.
+ * Compatibility shim for integrations that imported the old scheduler.
+ * Research skill repositories are now checked only after an explicit user
+ * action through `checkResearchSkillUpdates`; this function intentionally
+ * does not create timers.
  */
 export function scheduleResearchSkillUpdateCheck(): void {
-	if (!config || !app.isPackaged) return;
-	setTimeout(() => void checkResearchSkillUpdates(), 10_000);
-	setInterval(() => void checkResearchSkillUpdates(), 2 * 60 * 60 * 1000);
+	return;
 }
 
 export function onResearchSkillUpdateState(cb: Listener): void {
@@ -58,6 +58,15 @@ export function onResearchSkillUpdateState(cb: Listener): void {
 
 function emit(state: ResearchSkillUpdateState): void {
 	for (const listener of listeners) listener(state);
+}
+
+function publicPack(candidate: UpdateCandidate): ResearchSkillUpdatePack {
+	const entry = source(candidate.id);
+	return { id: candidate.id, repository: entry.repository };
+}
+
+function publicPacks(candidates: readonly UpdateCandidate[]): ResearchSkillUpdatePack[] {
+	return candidates.map(publicPack);
 }
 
 function source(id: BuiltinResearchSkillSource) {
@@ -162,21 +171,32 @@ function currentCommit(
 export async function checkResearchSkillUpdates(): Promise<void> {
 	if (!config) return;
 	emit({ phase: "checking" });
+	const checkedAt = new Date().toISOString();
 	try {
 		const pins = currentPins(config.userDataDir);
-		const packs: ResearchSkillUpdatePack[] = [];
+		const packs: UpdateCandidate[] = [];
 		for (const id of BUILTIN_IDS) {
 			const latestCommit = await githubCommit(id);
 			const current = currentCommit(id, pins);
-			if (latestCommit !== current) packs.push({ id, currentCommit: current, latestCommit });
+			if (latestCommit !== current)
+				packs.push({
+					id,
+					repository: source(id).repository,
+					currentCommit: current,
+					latestCommit,
+				});
 		}
 		available = packs;
-		emit(packs.length ? { phase: "available", packs } : { phase: "up-to-date" });
+		emit(
+			packs.length
+				? { phase: "available", packs: publicPacks(packs), checkedAt }
+				: { phase: "up-to-date", checkedAt },
+		);
 	} catch (error) {
 		available = [];
 		const message = error instanceof Error ? error.message : String(error);
 		log.warn("research skill update check failed", message);
-		emit({ phase: "error", message });
+		emit({ phase: "error", message, checkedAt });
 	}
 }
 
@@ -334,31 +354,57 @@ async function writeManifest(
 	await fs.mkdir(root, { recursive: true });
 	const temporary = join(root, `.manifest-${randomUUID()}.tmp`);
 	const target = join(root, "manifest.json");
-	await fs.writeFile(temporary, `${JSON.stringify({ version: 1, packs }, null, 2)}\n`, "utf8");
 	try {
+		await fs.writeFile(temporary, `${JSON.stringify({ version: 1, packs }, null, 2)}\n`, "utf8");
 		await fs.rename(temporary, target);
 	} catch (error) {
-		// Windows does not replace an existing file with rename; the manifest is
-		// only a pointer to already staged immutable directories, so this brief
-		// replacement remains fail-closed if the process is interrupted.
-		if (
-			!(
-				"EEXIST" === (error as NodeJS.ErrnoException).code ||
-				"EPERM" === (error as NodeJS.ErrnoException).code
-			)
-		)
-			throw error;
-		await fs.rm(target, { force: true });
-		await fs.rename(temporary, target);
+		// Windows does not replace an existing file with rename. Keep the old
+		// pointer until the new one is ready, and restore it if the second rename
+		// fails. The active pack therefore remains usable across an interrupted
+		// update or a full disk error.
+		const code = (error as NodeJS.ErrnoException).code;
+		if (code !== "EEXIST" && code !== "EPERM") throw error;
+		const backup = join(root, `.manifest-${randomUUID()}.bak`);
+		let backedUp = false;
+		try {
+			try {
+				await fs.rename(target, backup);
+				backedUp = true;
+			} catch (renameError) {
+				if ((renameError as NodeJS.ErrnoException).code !== "ENOENT") throw renameError;
+				// Another process removed the old pointer. A direct rename is still
+				// atomic and preserves the fail-closed empty-install semantics.
+				await fs.rename(temporary, target);
+				return;
+			}
+			try {
+				await fs.rename(temporary, target);
+			} catch (replaceError) {
+				if (backedUp && !existsSync(target)) await fs.rename(backup, target).catch(() => undefined);
+				throw replaceError;
+			}
+			if (backedUp)
+				await fs.rm(backup, { force: true }).catch((cleanupError) => {
+					// The new manifest is already active. A leftover backup is safe and
+					// can be removed on the next update; do not report a false rollback.
+					log.warn("research skill manifest backup cleanup failed", cleanupError);
+				});
+		} catch (replaceError) {
+			if (backedUp && existsSync(backup) && !existsSync(target))
+				await fs.rename(backup, target).catch(() => undefined);
+			throw replaceError;
+		}
+	} finally {
+		await fs.rm(temporary, { force: true });
 	}
 }
 
 async function stagePack(
 	id: BuiltinResearchSkillSource,
-	update: ResearchSkillUpdatePack,
+	update: UpdateCandidate,
 	index: number,
 	total: number,
-): Promise<PackPin> {
+): Promise<StagedPack> {
 	if (!config) throw new Error("Research skill updater is not configured");
 	const root = installRoot(config.userDataDir);
 	await fs.mkdir(root, { recursive: true });
@@ -369,7 +415,7 @@ async function stagePack(
 		const downloaded = await downloadArchive(id, update.latestCommit, archive, (percent) =>
 			emit({
 				phase: "downloading",
-				packs: available,
+				packs: publicPacks(available),
 				percent: Math.round(((index + percent / 100) / total) * 100),
 			}),
 		);
@@ -397,8 +443,13 @@ async function stagePack(
 			)}\n`,
 		);
 		const target = join(root, `${id}-${update.latestCommit}`);
-		if (!existsSync(target)) await fs.rename(stage, target);
-		return { commit: update.latestCommit, archiveSha256: downloaded.sha256 };
+		const created = !existsSync(target);
+		if (created) await fs.rename(stage, target);
+		return {
+			pin: { commit: update.latestCommit, archiveSha256: downloaded.sha256 },
+			target,
+			created,
+		};
 	} finally {
 		rmSync(stage, { recursive: true, force: true });
 		rmSync(archive, { force: true });
@@ -411,19 +462,31 @@ export async function updateResearchSkills(): Promise<void> {
 		await checkResearchSkillUpdates();
 		if (!available.length) return;
 	}
+	const candidates = [...available];
+	const staged: StagedPack[] = [];
 	try {
 		const pins = { ...currentPins(config.userDataDir) };
-		for (let index = 0; index < available.length; index++) {
-			const update = available[index];
+		for (let index = 0; index < candidates.length; index++) {
+			const update = candidates[index];
 			if (!update) continue;
-			pins[update.id] = await stagePack(update.id, update, index, available.length);
+			const result = await stagePack(update.id, update, index, candidates.length);
+			staged.push(result);
+			pins[update.id] = result.pin;
 		}
 		await writeManifest(config.userDataDir, pins);
-		emit({ phase: "ready", packs: available });
+		emit({ phase: "ready", packs: publicPacks(candidates) });
 	} catch (error) {
+		// A failed download, extraction or manifest swap must leave the previous
+		// manifest and pack active. Remove only directories created by this
+		// attempt; pre-existing verified overlays are never touched.
+		await Promise.all(
+			staged
+				.filter((pack) => pack.created)
+				.map((pack) => fs.rm(pack.target, { recursive: true, force: true })),
+		);
 		const message = error instanceof Error ? error.message : String(error);
 		log.error("research skill update failed", message);
-		emit({ phase: "error", message });
+		emit({ phase: "error", message, checkedAt: new Date().toISOString() });
 	}
 }
 

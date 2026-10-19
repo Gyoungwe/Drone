@@ -8,6 +8,8 @@ describe("AppContract", () => {
 		expect(channelOf(AppContract, "getInfo")).toBe("app:getInfo");
 		expect(channelOf(AppContract, "getDiagnostics")).toBe("app:getDiagnostics");
 		expect(channelOf(AppContract, "getDailyDir")).toBe("app:getDailyDir");
+		expect(channelOf(AppContract, "checkResearchSkills")).toBe("app:checkResearchSkills");
+		expect(Check(AppContract.methods.checkResearchSkills.args, [])).toBe(true);
 		expect(Check(AppContract.methods.getInfo.args, [])).toBe(true);
 		expect(Check(AppContract.methods.getInfo.args, ["unexpected"])).toBe(false);
 		expect(

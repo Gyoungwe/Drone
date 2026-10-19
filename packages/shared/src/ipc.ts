@@ -365,6 +365,8 @@ export const IpcChannels = {
 	UpdateEvent: "update:event",
 	/** 内置研究技能检查/下载状态 */
 	ResearchSkillUpdateEvent: "researchSkills:updateEvent",
+	/** 用户显式检查内置研究技能仓库更新（不会在启动/定时自动触发） */
+	ResearchSkillCheck: "researchSkills:check",
 	/** 一键检查并下载内置研究技能更新 */
 	ResearchSkillUpdate: "researchSkills:update",
 	/** 重启以启用已下载的内置研究技能 */
@@ -621,6 +623,8 @@ export interface PiApi
 	installUpdate(): Promise<void>;
 	/** 订阅更新状态（checking/available/downloading/downloaded/error）；返回取消函数 */
 	onUpdateEvent(cb: (state: UpdateState) => void): () => void;
+	/** 用户显式检查内置 Nature/Scientific 技能包更新；状态经事件推送 */
+	checkResearchSkills(): Promise<void>;
 	/** 更新内置 Nature/Scientific 技能包；下载完成后重启才生效 */
 	updateResearchSkills(): Promise<void>;
 	/** 重启应用以载入已安装的研究技能包 */

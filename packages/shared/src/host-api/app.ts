@@ -136,6 +136,7 @@ export const AppContract = defineDomain("app", {
 		checkForUpdates: { args: Type.Tuple([]), result: Type.Void() },
 		downloadUpdate: { args: Type.Tuple([]), result: Type.Void() },
 		installUpdate: { args: Type.Tuple([]), result: Type.Void() },
+		checkResearchSkills: { args: Type.Tuple([]), result: Type.Void() },
 		updateResearchSkills: { args: Type.Tuple([]), result: Type.Void() },
 		restartForResearchSkills: { args: Type.Tuple([]), result: Type.Void() },
 		saveFileDialog: {

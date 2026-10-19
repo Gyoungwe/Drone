@@ -58,3 +58,23 @@ it("falls back to the public commit feed when GitHub API rate limits the desktop
 	expect(states.at(-1)).toBe("up-to-date");
 	expect(fetch).toHaveBeenCalledTimes(4);
 });
+
+it("keeps commit identities inside the integrity gate", async () => {
+	const root = mkdtempSync(join(tmpdir(), "research-skill-update-public-state-"));
+	roots.push(root);
+	configureResearchSkillUpdater(root);
+	const fetch = vi.fn(async (_url: string) => ({
+		ok: true,
+		status: 200,
+		json: async () => ({ sha: "f".repeat(40) }),
+	}));
+	vi.stubGlobal("fetch", fetch);
+	let latest: Record<string, unknown> | undefined;
+	onResearchSkillUpdateState((state) => {
+		if (state.phase === "available") latest = state.packs[0] as unknown as Record<string, unknown>;
+	});
+	await checkResearchSkillUpdates();
+	expect(latest).toMatchObject({ id: "nature", repository: "Yuan1z0825/nature-skills" });
+	expect(latest).not.toHaveProperty("currentCommit");
+	expect(latest).not.toHaveProperty("latestCommit");
+});

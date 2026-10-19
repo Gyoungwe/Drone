@@ -1,10 +1,6 @@
 import { researchBundlePaths } from "./research-bundle";
 import { researchSkillPackPaths } from "./research-skill-packs";
-import {
-	configureResearchSkillUpdater,
-	readResearchSkillPackInstall,
-	scheduleResearchSkillUpdateCheck,
-} from "./research-skill-updater";
+import { configureResearchSkillUpdater, readResearchSkillPackInstall } from "./research-skill-updater";
 import { desktopSystemPrompt } from "./system-prompt";
 import "./pi-package-dir";
 import "./dev-agent-dir";
@@ -269,7 +265,6 @@ app.whenReady().then(async () => {
 		? join(process.resourcesPath, "research-workbench")
 		: join(__dirname, "../../../../.pi");
 	configureResearchSkillUpdater(app.getPath("userData"));
-	scheduleResearchSkillUpdateCheck();
 	// Bundled pi packages (MCP runtime pi-mcp-adapter), staged by scripts/stage-pi-packages.mjs.
 	const researchBundle = researchBundlePaths(
 		process.env.DRONE_RESEARCH_WORKBENCH_ROOT,

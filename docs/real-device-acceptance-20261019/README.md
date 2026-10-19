@@ -87,7 +87,7 @@ B8 云端协作继续按计划暂缓，Protocols.io 继续只读。Windows 构�
 | 修改单 | 改动 | 当前状态 | 证据与剩余门槛 |
 |---|---|---|---|
 | CO-1 精简 Zotero | 内置本机 API/Web API 写入路径；状态压成一行；按版本选择写入方式；机构访问移到连接器抽屉；历史 Zotero MCP 条目仍由用户配置保留 | **正式包界面 PASS；写入闭环沿用既有 Zotero 临时 note 验收** | `ZoteroPanel.tsx`、`zotero-copy.ts`、`backend/src/zotero/status.ts`；v0.33.4 实机回读显示“本机写入已授权 / 运行中”，没有把 MCP 的 0 工具误报为启用 |
-| CO-2 技能/插件/MCP 按来源分组 | 技能按仓库映射或 loader 来源分组；同名技能去重并展开来源；Pi 能力包出现在插件分类；MCP failed 显示错误状态；整组开关通过会话 IPC 更新技能可见性；科研技能显示 GitHub 仓库并可打开锁定 commit/path；页面提供仓库级来源卡片和内置研究技能更新入口 | **正式包 PASS** | v0.33.4 安装包真实回读显示 Nature、Scientific、Academic 三个 GitHub 仓库卡片、锁定 commit、加载/内置计数及“支持自动检查/仅目录”标识；Pi 能力包也在插件列表中。`SkillsConnectionsView.tsx`、`CapabilityRuntime`、`setSkillNamesEnabled`、`research-skill-sources.json` |
+| CO-2 技能/插件/MCP 按来源分组 | 技能按仓库映射或 loader 来源分组；同名技能去重并展开来源；Pi 能力包出现在插件分类；MCP failed 显示错误状态；整组开关通过会话 IPC 更新技能可见性；科研技能显示 GitHub 仓库、分支和路径；页面提供仓库级来源卡片和用户手动检查/更新入口 | **正式包 PASS** | v0.33.4 安装包真实回读显示 Nature、Scientific、Academic 三个 GitHub 仓库卡片、加载/内置计数和手动检查/更新入口；完整性校验、staging、原子清单切换和失败回滚仍由 updater 负责，产品不展示内部锁定 commit。`SkillsConnectionsView.tsx`、`CapabilityRuntime`、`setSkillNamesEnabled`、`research-skill-sources.json` |
 | CO-3 设置入口统一 | 设置弹窗只保留通用、外观、模型、权限、关于；能力进入技能与连接右抽屉；Vault/WebDAV/维护进入知识库设置；主机进入主机页 | **正式包界面 PASS** | `SettingsDialog.tsx`、`KnowledgeView.tsx`、`KnowledgePanel.tsx`、`WorkbenchNav.tsx`；v0.33.4 CUA 回读设置只显示五项，账户菜单只保留设置/帮助/关于 |
 | CO-4 文档与视觉对照 | 计划 §3.10 已补页面/设置边界和来源分组规则；执行日志已归档到不超过 30 行 | **文档完成；视觉最终验收未运行** | 改前截图为 `screenshots/00–20`；构建预览为 `docs/releases/visual/drone-*.png`；需正式包浅色/深色 1440×900 前后对照 |
 
@@ -106,4 +106,4 @@ B8 云端协作继续按计划暂缓，Protocols.io 继续只读。Windows 构�
 
 ## 技能来源与更新验收说明
 
-改前界面把 Pi loader 的 `local`、`auto` 直接当作来源，无法回答“这个技能来自哪个仓库、锁定了哪个版本”。v0.33.4 将内置科研技能名映射到 `packages/shared/src/research-skill-sources.json`：界面显示上游 GitHub 仓库，仓库卡片显示锁定 commit、加载数和内置数，技能项可打开精确 commit/path；未进入锁定目录的本地技能仍显示其真实 loader 来源。更新检查在启动后和定时任务中运行，GitHub API 受 403/429 限流时回退到公开 Atom commit feed；更新按钮复用归档哈希/文件哈希校验、版本化 overlay 和安全重启，不会静默替换清单。v0.33.4 正式包已回读来源卡片和宿主插件清单；仅静态 renderer 预览不算最终证据。
+改前界面把 Pi loader 的 `local`、`auto` 直接当作来源，无法回答“这个技能来自哪个仓库”。v0.33.4 将内置科研技能名映射到 `packages/shared/src/research-skill-sources.json`：界面显示上游 GitHub 仓库、分支和路径，仓库卡片显示加载数和内置数；未进入目录映射的本地技能仍显示其真实 loader 来源。更新检查只在用户点击后运行，GitHub API 受 403/429 限流时回退到公开 Atom commit feed；更新按钮复用归档哈希/文件哈希校验、版本化 staging、原子清单切换和安全重启，不会静默替换清单，失败时恢复当前版本。v0.33.4 正式包已回读来源卡片和宿主插件清单；仅静态 renderer 预览不算最终证据。
