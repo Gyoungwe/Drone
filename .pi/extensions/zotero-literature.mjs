@@ -9968,6 +9968,7 @@ var AppContract = defineDomain("app", {
     checkForUpdates: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     downloadUpdate: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     installUpdate: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
+    checkResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     updateResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     restartForResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     saveFileDialog: {
@@ -10402,9 +10403,10 @@ var SpecialistSettingsInput = typebox_exports.Object(
 );
 var ZoteroStatusSchema = typebox_exports.Object(
   {
-    registered: typebox_exports.Boolean(),
-    enabled: typebox_exports.Boolean(),
+    registered: typebox_exports.Optional(typebox_exports.Boolean()),
+    enabled: typebox_exports.Optional(typebox_exports.Boolean()),
     command: typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]),
+    version: typebox_exports.Optional(typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()])),
     localApiReachable: typebox_exports.Boolean(),
     desktopDetected: typebox_exports.Boolean(),
     desktopPath: typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]),
@@ -11164,6 +11166,10 @@ var SessionsContract = defineDomain("sessions", {
         { added: typebox_exports.Array(typebox_exports.String()), removed: typebox_exports.Array(typebox_exports.String()) },
         { additionalProperties: false }
       )
+    },
+    setSkillNamesEnabled: {
+      args: typebox_exports.Tuple([Id2, typebox_exports.Array(typebox_exports.String()), typebox_exports.Boolean()]),
+      result: typebox_exports.Object({ disabled: typebox_exports.Array(typebox_exports.String()) }, { additionalProperties: false })
     },
     compact: {
       args: typebox_exports.Union([typebox_exports.Tuple([Id2]), typebox_exports.Tuple([Id2, typebox_exports.String()])]),
