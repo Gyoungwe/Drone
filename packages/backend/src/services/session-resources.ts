@@ -166,7 +166,19 @@ export class SessionResourceService {
 
 	private readManifest(root: string): DronePackageManifest | undefined {
 		try {
-			return JSON.parse(readFileSync(join(root, "plugin.manifest.json"), "utf8")) as DronePackageManifest;
+			const manifestPath = existsSync(join(root, "plugin.manifest.json"))
+				? join(root, "plugin.manifest.json")
+				: join(root, "ui", "plugin.json");
+			const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+			if (manifestPath.endsWith(`${join("ui", "plugin.json")}`)) {
+				return {
+					version: typeof parsed.version === "string" ? parsed.version : undefined,
+					entrypoints: { ui: "./ui/plugin.json" },
+					capabilities: ["ui"],
+					hosts: ["drone-desktop"],
+				};
+			}
+			return parsed as DronePackageManifest;
 		} catch {
 			return undefined;
 		}

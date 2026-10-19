@@ -3,6 +3,7 @@
 import type { KnowledgeCloudStatus, ZoteroStatus } from "@drone/shared";
 import { describe, expect, it } from "vitest";
 import {
+	capabilitySectionKind,
 	cloudCapabilityStatus,
 	mcpCapabilityStatus,
 	skillSource,
@@ -59,11 +60,19 @@ describe("SkillsConnectionsView capability state", () => {
 		expect(zoteroCapabilityStatus(null)).toBe("configure");
 	});
 
-	it("resolves bundled research skills to their pinned GitHub source", () => {
+	it("resolves bundled research skills to their GitHub source without a product commit pin", () => {
 		const resolved = skillSource("nature-citation", "local", "user");
 		expect(resolved.key).toContain("github:Yuan1z0825/nature-skills");
 		expect(resolved.repository?.url).toBe("https://github.com/Yuan1z0825/nature-skills");
 		expect(resolved.profile?.path).toBe("skills/nature-citation/SKILL.md");
+		expect(resolved.repository).not.toHaveProperty("commit");
+	});
+
+	it("keeps the page sections separate and has no mixed all view", () => {
+		expect(capabilitySectionKind("plugins")).toBeNull();
+		expect(capabilitySectionKind("skills")).toBeNull();
+		expect(capabilitySectionKind("connectors")).toBe("connector");
+		expect(capabilitySectionKind("mcp")).toBe("mcp");
 	});
 
 	it("leaves non-catalogue skills on the loader source", () => {

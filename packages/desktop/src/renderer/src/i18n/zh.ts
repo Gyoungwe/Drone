@@ -650,12 +650,16 @@ export const zh = {
 		moreSources: "另有 {count} 个来源",
 		sourceRepositories: "技能仓库来源",
 		sourceRepositoriesHint:
-			"每个内置技能都绑定到公开 GitHub 仓库、仓库内路径和锁定提交；客户端会后台检查更新，应用更新仍需确认并重启。",
+			"仓库显示公开地址和分支。只有用户手动检查并确认后才会应用更新，应用后仍需安全重启。",
 		sourceCommit: "锁定提交 {commit}",
 		sourceSkillCounts: "已加载 {loaded} · 内置 {bundled}",
 		openRepository: "打开仓库",
 		autoUpdateSource: "支持自动检查",
 		catalogSource: "仅目录",
+		manualUpdateSource: "手动更新",
+		manualUpdateHint: "需要时手动检查这个仓库",
+		connectorCatalog: "科研连接器",
+		connectorCatalogHint: "直接启用或停用只读搜索连接器，不改动 MCP 配置。",
 		sourceName: {
 			nature: "Nature Skills",
 			scientific: "Scientific Agent Skills",

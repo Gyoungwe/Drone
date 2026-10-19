@@ -5,6 +5,7 @@ import { useCatalogStore } from "../../stores/catalog";
 import { useSettingsStore } from "../../stores/settings";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
 import { BrowseSection } from "../settings/extensions/BrowseSection";
+import { Switch } from "../ui/Switch";
 
 function packageEntry(packageName: string, host?: HostPluginPackage): PiPluginSourceEntry {
 	return {
@@ -50,6 +51,7 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 	const t = useT();
 	const configured = useCatalogStore((state) => state.configuredPackages) ?? [];
 	const uiPlugins = useUiPluginsStore((state) => state.plugins);
+	const setPluginEnabled = useUiPluginsStore((state) => state.setPluginEnabled);
 	const install = useCatalogStore((state) => state.installCatalogPackage);
 	const remove = useCatalogStore((state) => state.removeConfiguredPackage);
 	const installing = useCatalogStore((state) => state.installingNames[entry.packageName] === true);
@@ -59,6 +61,10 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 		),
 	);
 	const current = packageState(entry, configured, host, uiPlugins);
+	const uiPlugin =
+		entry.packageName === "@gyoungwe/desktop-ui-pack"
+			? uiPlugins.find((item) => item.name === "drone-research-ui")
+			: undefined;
 	return (
 		<li className="rounded-xl border border-border px-3 py-3">
 			<div className="flex items-start gap-3">
@@ -83,7 +89,14 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 					<span className={`text-[11px] ${current.installed ? "text-ok" : "text-ink-faint"}`}>
 						{current.installed ? t("skillsConnections.installed") : t("skillsConnections.notInstalled")}
 					</span>
-					{current.installed && current.configured && !current.builtin ? (
+					{uiPlugin ? (
+						<Switch
+							checked={uiPlugin.enabled}
+							disabled={Boolean(uiPlugin.invalidReason || uiPlugin.buildError)}
+							onCheckedChange={(enabled) => void setPluginEnabled(uiPlugin.name, enabled)}
+							aria-label={uiPlugin.enabled ? t("skillsConnections.disable") : t("skillsConnections.enable")}
+						/>
+					) : current.installed && current.configured && !current.builtin ? (
 						<button
 							type="button"
 							className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
@@ -97,7 +110,7 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 					) : !current.installed ? (
 						<button
 							type="button"
-							className="rounded-full bg-ink px-2.5 py-1 text-[11px] text-canvas hover:opacity-90 disabled:opacity-60"
+							className="rounded-full bg-ink px-2 py-1 text-[11px] text-canvas hover:opacity-90 disabled:opacity-60"
 							disabled={installing}
 							onClick={() => void install(entry.packageName)}
 						>
@@ -156,7 +169,7 @@ export function PluginSourcesSection() {
 			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
 				<h2 className="text-sm font-medium text-ink">{t("skillsConnections.installedPlugins")}</h2>
 				<p className="mt-1 text-xs text-ink-dim">{t("skillsConnections.installedPluginsHint")}</p>
-				{configured?.length || uiPlugins.length ? (
+				{configured?.length || hostPlugins.length || uiPlugins.length ? (
 					<ul className="mt-3 divide-y divide-border text-xs">
 						{configured?.map((item) => (
 							<li
@@ -165,6 +178,16 @@ export function PluginSourcesSection() {
 							>
 								<span className="truncate text-ink-2">{item.source}</span>
 								<span className="shrink-0 text-[11px] text-ink-faint">{item.scope}</span>
+							</li>
+						))}
+						{hostPlugins.map((plugin) => (
+							<li key={`host:${plugin.name}`} className="flex items-center justify-between gap-3 py-2">
+								<span className="truncate text-ink-2">{plugin.name}</span>
+								<span
+									className={`shrink-0 text-[11px] ${plugin.status === "available" ? "text-ok" : "text-warn"}`}
+								>
+									{plugin.version} · {plugin.status}
+								</span>
 							</li>
 						))}
 						{uiPlugins.map((plugin) => (

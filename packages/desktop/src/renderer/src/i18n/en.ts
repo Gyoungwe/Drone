@@ -667,12 +667,16 @@ export const en: Messages = {
 		moreSources: "{count} other source(s)",
 		sourceRepositories: "Skill repositories",
 		sourceRepositoriesHint:
-			"Every built-in skill is tied to a public GitHub repository, an in-repository path, and a pinned commit. The client checks for updates in the background; applying one still requires confirmation and a restart.",
+			"Repositories show their public URL and branch. Check and apply updates manually; applying one still requires confirmation and a restart.",
 		sourceCommit: "Pinned commit {commit}",
 		sourceSkillCounts: "loaded {loaded} · bundled {bundled}",
 		openRepository: "Open repository",
 		autoUpdateSource: "Auto-check enabled",
 		catalogSource: "Catalog only",
+		manualUpdateSource: "Manual update",
+		manualUpdateHint: "Check manually when you want to refresh this repository",
+		connectorCatalog: "Research connectors",
+		connectorCatalogHint: "Enable or disable read-only search connectors without changing MCP configuration.",
 		sourceName: {
 			nature: "Nature Skills",
 			scientific: "Scientific Agent Skills",
