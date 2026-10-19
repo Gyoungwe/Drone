@@ -222,6 +222,7 @@ jobs:
           restore-keys: |
             eb-${{ runner.os }}-${{ matrix.platform }}-
       - run: npm ci --prefer-offline --no-audit --no-fund
+      - run: npm run stage:pi-packages
       - name: Acquire pinned research skill packs
         shell: bash
         run: |
