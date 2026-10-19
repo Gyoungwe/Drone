@@ -7,6 +7,7 @@ describe("PackagesContract", () => {
 	it("keeps legacy package channels and call shapes", () => {
 		expect(channelOf(PackagesContract, "searchCatalog")).toBe("packages:searchCatalog");
 		expect(channelOf(PackagesContract, "installPackage")).toBe("packages:installPackage");
+		expect(channelOf(PackagesContract, "updatePackage")).toBe("packages:updatePackage");
 		expect(Check(PackagesContract.methods.searchCatalog.args, ["agent"])).toBe(true);
 		expect(Check(PackagesContract.methods.searchCatalog.args, ["agent", undefined, 2])).toBe(true);
 		expect(Check(PackagesContract.methods.searchCatalog.args, ["agent", "extension", 2])).toBe(true);
@@ -14,6 +15,8 @@ describe("PackagesContract", () => {
 		expect(Check(PackagesContract.methods.searchCatalog.args, ["agent", "invalid"])).toBe(false);
 		expect(Check(PackagesContract.methods.installPackage.args, ["@scope/pkg"])).toBe(true);
 		expect(Check(PackagesContract.methods.installPackage.args, [""])).toBe(false);
+		expect(Check(PackagesContract.methods.updatePackage.args, ["@scope/pkg"])).toBe(true);
+		expect(Check(PackagesContract.methods.updatePackage.args, [""])).toBe(false);
 		expect(Check(PackagesContract.methods.removePackage.args, ["npm:pkg", "user"])).toBe(true);
 		expect(Check(PackagesContract.methods.removePackage.args, ["npm:pkg", "workspace"])).toBe(false);
 		expect(Check(PackagesContract.methods.listConfiguredPackages.args, [])).toBe(true);

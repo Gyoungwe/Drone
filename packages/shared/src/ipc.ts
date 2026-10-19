@@ -256,6 +256,7 @@ export const IpcChannels = {
 	/** pi.dev 社区包目录（设置页扩展面板浏览/安装用） */
 	PackagesSearchCatalog: "packages:searchCatalog",
 	PackagesInstall: "packages:install",
+	PackagesUpdate: "packages:update",
 	PackagesRemove: "packages:remove",
 	PackagesListConfigured: "packages:listConfigured",
 	FileSaveDialog: "file:saveDialog",
@@ -439,6 +440,8 @@ export interface PiApi
 	searchCatalog(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
 	/** 安装社区包（npm:<name>，用户级）；成功后热重载非流式活跃会话 */
 	installPackage(name: string): Promise<void>;
+	/** 更新已配置社区包到 registry 最新版本；成功后热重载非流式活跃会话 */
+	updatePackage(name: string): Promise<void>;
 	/** 卸载已配置的包（按 source + scope 移除并持久化）；成功后热重载非流式活跃会话 */
 	removePackage(source: string, scope: "user" | "project"): Promise<void>;
 	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */

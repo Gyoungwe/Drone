@@ -2,6 +2,7 @@ import type { CatalogPackage, CatalogPackageType, ConfiguredPackageInfo } from "
 import { create } from "zustand";
 import { getPi } from "../api";
 import { useSettingsStore } from "./settings";
+import { useUiPluginsStore } from "./ui-plugins";
 
 interface CatalogStore {
 	/** 扩展面板分段：浏览社区 / 已加载（进 store 保「切面板往返不丢 tab」） */
@@ -19,6 +20,8 @@ interface CatalogStore {
 	catalogSeq: number;
 	/** 安装中的包名集合 */
 	installingNames: Record<string, true>;
+	/** 更新中的包名集合 */
+	updatingNames: Record<string, true>;
 	/** 按包名的安装错误 */
 	installErrors: Record<string, string>;
 	/** 卸载中的 source 集合 */
@@ -34,6 +37,8 @@ interface CatalogStore {
 	searchCatalog: (append?: boolean) => Promise<void>;
 	/** 安装社区包（用户级），成功后刷新已配置列表与已加载资源 */
 	installCatalogPackage: (name: string) => Promise<void>;
+	/** 更新已安装社区包到 registry 最新版本 */
+	updateCatalogPackage: (name: string) => Promise<void>;
 	/** 卸载已配置的包，成功后刷新已配置列表与已加载资源 */
 	removeConfiguredPackage: (source: string, scope: "user" | "project") => Promise<void>;
 	refreshConfiguredPackages: () => Promise<void>;
@@ -59,6 +64,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 		catalogError: null,
 		catalogSeq: 0,
 		installingNames: {},
+		updatingNames: {},
 		installErrors: {},
 		removingSources: {},
 		removeErrors: {},
@@ -116,6 +122,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 				await get().refreshConfiguredPackages();
 				// backend 已对非流式会话做 session.reload()，刷新已加载资源列表让「已加载」页同步
 				void useSettingsStore.getState().refresh();
+				void useUiPluginsStore.getState().loadAll();
 			} catch (error) {
 				set((state) => ({
 					installErrors: {
@@ -128,6 +135,22 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 					const installingNames = { ...state.installingNames };
 					delete installingNames[name];
 					return { installingNames };
+				});
+			}
+		},
+
+		updateCatalogPackage: async (name) => {
+			set((state) => ({ updatingNames: { ...state.updatingNames, [name]: true } }));
+			try {
+				await getPi().updatePackage(name);
+				await get().refreshConfiguredPackages();
+				void useSettingsStore.getState().refresh();
+				void useUiPluginsStore.getState().loadAll();
+			} finally {
+				set((state) => {
+					const updatingNames = { ...state.updatingNames };
+					delete updatingNames[name];
+					return { updatingNames };
 				});
 			}
 		},
@@ -152,6 +175,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 				await get().refreshConfiguredPackages();
 				// backend 已对非流式会话做 session.reload()，刷新已加载资源列表让「已加载」页同步
 				void useSettingsStore.getState().refresh();
+				void useUiPluginsStore.getState().loadAll();
 			} catch (error) {
 				set((state) => ({
 					removeErrors: {

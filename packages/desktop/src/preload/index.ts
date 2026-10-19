@@ -217,6 +217,7 @@ const packagesClient = exposeContract(PackagesContract, {
 			{
 				searchCatalog: IpcChannels.PackagesSearchCatalog,
 				installPackage: IpcChannels.PackagesInstall,
+				updatePackage: IpcChannels.PackagesUpdate,
 				removePackage: IpcChannels.PackagesRemove,
 				listConfiguredPackages: IpcChannels.PackagesListConfigured,
 			},
@@ -437,6 +438,7 @@ const invokeApi = {
 	listSubagentRuns: invoke(subagentsClient, "runs"),
 	searchCatalog: invoke(packagesClient, "searchCatalog"),
 	installPackage: invoke(packagesClient, "installPackage"),
+	updatePackage: invoke(packagesClient, "updatePackage"),
 	removePackage: invoke(packagesClient, "removePackage"),
 	listConfiguredPackages: invoke(packagesClient, "listConfiguredPackages"),
 	getInstitutionalStatus: invoke(institutionalClient, "getStatus"),

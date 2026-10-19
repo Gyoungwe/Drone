@@ -6,12 +6,14 @@ import { bindContract, type ContractImplementation } from "./bind-contract";
 export function registerPackagesIpc(
 	backendOrServices: BackendServices | SessionServicePort,
 	services?: Pick<BackendServices, "packages">,
+	onPackagesChanged?: () => Promise<void> | void,
 ): void {
 	const backend = "sessions" in backendOrServices ? backendOrServices.sessions : backendOrServices;
 	const hostServices = services ?? ("sessions" in backendOrServices ? backendOrServices : undefined);
 	const legacy = backend as SessionServicePort & {
 		searchPackages?: BackendServices["packages"]["searchPackages"];
 		installPackage?: BackendServices["packages"]["installPackage"];
+		updatePackage?: BackendServices["packages"]["updatePackage"];
 		removePackage?: BackendServices["packages"]["removePackage"];
 		listConfiguredPackages?: BackendServices["packages"]["listConfiguredPackages"];
 	};
@@ -21,11 +23,13 @@ export function registerPackagesIpc(
 			? (backend as SessionServicePort & Pick<BackendServices, "packages">).packages
 			: legacy.searchPackages &&
 					legacy.installPackage &&
+					legacy.updatePackage &&
 					legacy.removePackage &&
 					legacy.listConfiguredPackages
 				? {
 						searchPackages: legacy.searchPackages.bind(backend),
 						installPackage: legacy.installPackage.bind(backend),
+						updatePackage: legacy.updatePackage.bind(backend),
 						removePackage: legacy.removePackage.bind(backend),
 						listConfiguredPackages: legacy.listConfiguredPackages.bind(backend),
 					}
@@ -36,8 +40,18 @@ export function registerPackagesIpc(
 			const [query, type, page] = args;
 			return packages.searchPackages(query, type, page);
 		},
-		installPackage: (name) => packages.installPackage(name),
-		removePackage: (source, scope) => packages.removePackage(source, scope),
+		installPackage: async (name) => {
+			await packages.installPackage(name);
+			await onPackagesChanged?.();
+		},
+		updatePackage: async (name) => {
+			await packages.updatePackage(name);
+			await onPackagesChanged?.();
+		},
+		removePackage: async (source, scope) => {
+			await packages.removePackage(source, scope);
+			await onPackagesChanged?.();
+		},
 		listConfiguredPackages: () => packages.listConfiguredPackages(),
 	};
 	bindContract(PackagesContract, implementation, {
@@ -45,6 +59,7 @@ export function registerPackagesIpc(
 			({
 				searchCatalog: IpcChannels.PackagesSearchCatalog,
 				installPackage: IpcChannels.PackagesInstall,
+				updatePackage: IpcChannels.PackagesUpdate,
 				removePackage: IpcChannels.PackagesRemove,
 				listConfiguredPackages: IpcChannels.PackagesListConfigured,
 			})[method as keyof typeof PackagesContract.methods],

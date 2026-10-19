@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const piMock = vi.hoisted(() => ({
 	searchCatalog: vi.fn(),
 	listConfiguredPackages: vi.fn(),
+	updatePackage: vi.fn(),
 }));
 vi.mock("../api", () => ({ getPi: () => piMock }));
 
@@ -22,6 +23,7 @@ function resetStore() {
 		catalogError: null,
 		catalogSeq: 0,
 		installingNames: {},
+		updatingNames: {},
 		installErrors: {},
 		removingSources: {},
 		removeErrors: {},

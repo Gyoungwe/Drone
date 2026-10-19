@@ -89,7 +89,24 @@ B8 云端协作继续按计划暂缓，Protocols.io 继续只读。Windows 构�
 | CO-1 精简 Zotero | 内置本机 API/Web API 写入路径；状态压成一行；按版本选择写入方式；机构访问移到连接器抽屉；历史 Zotero MCP 条目仍由用户配置保留 | **正式包界面 PASS；写入闭环沿用既有 Zotero 临时 note 验收** | `ZoteroPanel.tsx`、`zotero-copy.ts`、`backend/src/zotero/status.ts`；v0.33.4 实机回读显示“本机写入已授权 / 运行中”，没有把 MCP 的 0 工具误报为启用 |
 | CO-2 技能/插件/MCP 按来源分组 | 技能按仓库映射或 loader 来源分组；同名技能去重并展开来源；Pi 能力包出现在插件分类；MCP failed 显示错误状态；整组开关通过会话 IPC 更新技能可见性；科研技能显示 GitHub 仓库、分支和路径；页面提供仓库级来源卡片和用户手动检查/更新入口 | **正式包 PASS** | v0.33.4 安装包真实回读显示 Nature、Scientific、Academic 三个 GitHub 仓库卡片、加载/内置计数和手动检查/更新入口；完整性校验、staging、原子清单切换和失败回滚仍由 updater 负责，产品不展示内部锁定 commit。`SkillsConnectionsView.tsx`、`CapabilityRuntime`、`setSkillNamesEnabled`、`research-skill-sources.json` |
 | CO-3 设置入口统一 | 设置弹窗只保留通用、外观、模型、权限、关于；能力进入技能与连接右抽屉；Vault/WebDAV/维护进入知识库设置；主机进入主机页 | **正式包界面 PASS** | `SettingsDialog.tsx`、`KnowledgeView.tsx`、`KnowledgePanel.tsx`、`WorkbenchNav.tsx`；v0.33.4 CUA 回读设置只显示五项，账户菜单只保留设置/帮助/关于 |
-| CO-4 文档与视觉对照 | 计划 §3.10 已补页面/设置边界和来源分组规则；执行日志已归档到不超过 30 行 | **文档完成；视觉最终验收未运行** | 改前截图为 `screenshots/00–20`；构建预览为 `docs/releases/visual/drone-*.png`；需正式包浅色/深色 1440×900 前后对照 |
+| CO-4 文档与视觉对照 | 计划 §3.10 已补页面/设置边界和来源分组规则；执行日志已归档到不超过 30 行 | **浅色正式包四视图 PASS；深色前后对照 NOT_RUN** | 改前截图为 `screenshots/00–20`；正式包 CUA 证据和门禁摘要见 `v0.33.4-p4-ui-acceptance.json`；静态预览仍仅作开发参考 |
+
+## 2026-10-20 P4 市场栏与正式包验收
+
+本轮正式构建仍按无证书 macOS arm64/x64 范围执行。完整证据见 [`v0.33.4-p4-ui-acceptance.json`](../releases/v0.33.4-p4-ui-acceptance.json)。
+
+| P4 门槛 | 状态 | 正式包证据 |
+|---|---|---|
+| 四栏真实视觉 | **PASS** | 同一安装包真实回读“新任务 / 知识库 / 技能与连接 / 主机”；技能与连接内为“市场 / 连接器 / MCP / 技能”四栏 |
+| 市场栏 | **PASS** | Pi 官方 extension 目录、Drone 插件仓库、MCP 官方参考仓库、社区 MCP 目录和 Skill 开源仓库入口均可见 |
+| Drone 插件元数据 | **PASS** | 未安装状态也显示 `@gyoungwe/*` registry 版本和描述 |
+| 连接器描述与开关 | **PASS** | 真实包显示每个连接器的用途描述；Crossref 实测关闭→恢复 |
+| Skill 手动检查 | **PASS** | 用户点击检查后真实发现 2 个研究技能包更新 |
+| UI 插件热重载 | **PASS** | desktop-ui-pack 实测停用→启用，Research status contribution 回读仍在 |
+| MCP 真实运行状态 | **NOT_RUN** | 隔离正式包未配置 MCP server，界面如实显示无能力；没有把空配置标成 PASS |
+| 构建后安装包检查 | **PASS** | macOS arm64/x64 DMG/ZIP、payload、framework、启动探针和严格静态资源检查均通过 |
+
+本轮仍不改变 B8 暂缓、Protocols.io 只读、无证书和 macOS-only 发布范围。视觉回读以正式包 CUA 证据为准，静态 renderer 预览不替代实机证据。
 
 ## 仍未关闭的实机门槛
 
@@ -100,7 +117,7 @@ B8 云端协作继续按计划暂缓，Protocols.io 继续只读。Windows 构�
 | P1-7 / P1-8 | **P1-7 代码已修待 v0.33.4 重装回读；P1-8 正式包已见最近列表** | 新包需回读 pi-core/pi-knowledge/pi-research/desktop-ui-pack 版本与状态；新建、历史打开和分叉后“最近”即时更新 |
 | V4 MCP | **BLOCKED** | 需要用户配置可调用的 MCP；当前 Zotero MCP 仍为 0 工具，不能伪造 PASS |
 | V5 原生 Pi | **NOT_RUN** | 需要原生 Pi 完成一次与 Desktop 对等的真实闭环；现有 CLI/loader 证据不代替完整会话 |
-| V6 CO-1～CO-4 视觉对照 | **NOT_RUN** | 需要正式安装包的浅色/深色 1440×900 改后截图；静态 renderer 预览仅作开发参考 |
+| V6 CO-1～CO-4 视觉对照 | **部分完成** | 正式包浅色四视图已真实回读；深色前后对照仍未运行，不能标记完整 PASS |
 
 除上述门槛外，B8 云端协作仍按计划暂缓，Protocols.io 仍保持只读；两者不在本轮补做范围内。
 

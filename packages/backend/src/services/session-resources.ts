@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import {
+	DRONE_PLUGIN_METADATA,
 	type DronePackageManifest,
 	dronePluginSource,
 	type HostPluginPackage,
@@ -118,21 +119,32 @@ export class SessionResourceService {
 		const require = createRequire(import.meta.url);
 		const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
 		const entries = [
-			{ name: "@gyoungwe/pi-core", version: "0.1.3", host: "desktop" as const },
-			{ name: "@gyoungwe/pi-knowledge", version: "0.1.1", host: "pi" as const },
-			{ name: "@gyoungwe/pi-research", version: "0.1.0", host: "pi" as const },
-			{ name: "@gyoungwe/pi-analysis", version: "0.1.0", host: "pi" as const },
-			{ name: "@gyoungwe/pi-evidence", version: "0.1.0", host: "pi" as const },
-			{ name: "@gyoungwe/pi-connectors", version: "0.1.0", host: "pi" as const },
-			{ name: "@gyoungwe/desktop-ui-pack", version: "0.1.0", host: "desktop" as const },
-			{ name: "@gyoungwe/research-suite", version: "0.1.5", host: "pi" as const },
+			{ name: "@gyoungwe/pi-core", host: "desktop" as const },
+			{ name: "@gyoungwe/pi-knowledge", host: "pi" as const },
+			{ name: "@gyoungwe/pi-research", host: "pi" as const },
+			{ name: "@gyoungwe/pi-analysis", host: "pi" as const },
+			{ name: "@gyoungwe/pi-evidence", host: "pi" as const },
+			{ name: "@gyoungwe/pi-connectors", host: "pi" as const },
+			{ name: "@gyoungwe/desktop-ui-pack", host: "desktop" as const },
+			{ name: "@gyoungwe/research-suite", host: "pi" as const },
 		];
 		return entries.map((entry) => {
+			const metadata = DRONE_PLUGIN_METADATA[entry.name as keyof typeof DRONE_PLUGIN_METADATA];
 			const packageJson =
 				entry.name === "@gyoungwe/desktop-ui-pack"
-					? join(agentDir, "npm", "node_modules", "@gyoungwe", "desktop-ui-pack", "package.json")
+					? (() => {
+							const candidate = join(
+								agentDir,
+								"npm",
+								"node_modules",
+								"@gyoungwe",
+								"desktop-ui-pack",
+								"package.json",
+							);
+							return existsSync(candidate) ? candidate : null;
+						})()
 					: this.packageJsonPath(require, entry.name);
-			const version = packageJson ? this.readPackageVersion(packageJson) : entry.version;
+			const version = packageJson ? this.readPackageVersion(packageJson) : metadata.version;
 			const packageData = packageJson ? this.readPackage(packageJson) : undefined;
 			const manifestData = packageJson ? this.readManifest(dirname(packageJson)) : undefined;
 			const source = packageData ? dronePluginSource(packageData, manifestData) : undefined;
@@ -140,6 +152,9 @@ export class SessionResourceService {
 				...entry,
 				version,
 				status: packageJson ? "available" : "unavailable",
+				description: metadata.description,
+				...(metadata.packageKind ? { packageKind: metadata.packageKind } : {}),
+				...(metadata.capabilities ? { capabilities: [...metadata.capabilities] } : {}),
 				source: source ? "drone" : "unknown",
 				...(source
 					? {

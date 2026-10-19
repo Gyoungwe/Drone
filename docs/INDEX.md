@@ -58,7 +58,7 @@ v0.33.0 无证书跨平台资产、发布 run 和 SHA-256 清单见 [发布说�
 v0.33.1 公开插件宿主收口与无证书补丁发布说明见 [发布说明](releases/v0.33.1.md)。
 v0.33.2 知识库 worker 修复、onboarding 状态和主线指标见 [发布说明](releases/v0.33.2.md)；离线主线评估证据见 [`docs/evals/mainline-2026-10-19.json`](evals/mainline-2026-10-19.json)，本机 arm64/x64 正式资源验收见 [`v0.33.2-knowledge-package.json`](releases/v0.33.2-knowledge-package.json)。
 v0.33.3 发布候选的构建后/上传后安装包验收设计与本机 unsigned DMG/ZIP 证据见 [发布说明](releases/v0.33.3.md) 与 [资产验收证据](releases/v0.33.3-asset-validation.json)。
-v0.33.4 技能仓库来源卡片、GitHub 限流回退更新检查和 macOS 安装包验收见 [发布说明](releases/v0.33.4.md) 与 [资产验收证据](releases/v0.33.4-asset-validation.json)。
+v0.33.4 技能仓库来源卡片、GitHub 限流回退更新检查、市场栏和 macOS 安装包验收见 [发布说明](releases/v0.33.4.md)、[资产验收证据](releases/v0.33.4-asset-validation.json) 与 [P4 UI 验收证据](releases/v0.33.4-p4-ui-acceptance.json)。
 
 首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
 

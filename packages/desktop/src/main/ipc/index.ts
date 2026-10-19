@@ -53,7 +53,7 @@ export function registerIpc(
 	registerDiscoveryIpc(backendServices);
 	registerEvidenceIpc(backendServices.analysisEvidence);
 	registerDecisionsIpc(backendServices);
-	registerPackagesIpc(backendServices);
+	registerPackagesIpc(backendServices, undefined, () => uiPluginsManager.scanAll().then(() => undefined));
 	registerAppIpc(backendServices.diagnostics, getIncidentSnapshot);
 	registerInstitutionalIpc(backendServices);
 	registerInquiryIpc(backendServices, sendToRenderer);

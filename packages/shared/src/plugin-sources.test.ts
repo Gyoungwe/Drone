@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { dronePluginSource, mergePiPluginSources, piMarketPluginSource } from "./plugin-sources";
+import {
+	DRONE_PLUGIN_METADATA,
+	DRONE_PLUGIN_PACKAGE_NAMES,
+	dronePluginSource,
+	MARKET_RESOURCE_LINKS,
+	mergePiPluginSources,
+	piMarketPluginSource,
+} from "./plugin-sources";
 
 describe("plugin source adapters", () => {
 	it("keeps the official market extension-only", () => {
@@ -66,5 +73,14 @@ describe("plugin source adapters", () => {
 			piExtensions: ["<pi.dev extension>", "./dist/index.mjs"],
 			capabilities: ["connectors"],
 		});
+	});
+
+	it("keeps the market metadata complete before Drone packages are installed", () => {
+		for (const name of DRONE_PLUGIN_PACKAGE_NAMES) {
+			expect(DRONE_PLUGIN_METADATA[name].version).toMatch(/^\d+\.\d+\.\d+$/u);
+			expect(DRONE_PLUGIN_METADATA[name].description.length).toBeGreaterThan(0);
+		}
+		expect(MARKET_RESOURCE_LINKS.some((entry) => entry.kind === "mcp-official")).toBe(true);
+		expect(MARKET_RESOURCE_LINKS.some((entry) => entry.kind === "mcp-community")).toBe(true);
 	});
 });

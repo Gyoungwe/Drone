@@ -69,7 +69,7 @@ describe("SkillsConnectionsView capability state", () => {
 	});
 
 	it("keeps the page sections separate and has no mixed all view", () => {
-		expect(capabilitySectionKind("plugins")).toBeNull();
+		expect(capabilitySectionKind("market")).toBeNull();
 		expect(capabilitySectionKind("skills")).toBeNull();
 		expect(capabilitySectionKind("connectors")).toBe("connector");
 		expect(capabilitySectionKind("mcp")).toBe("mcp");

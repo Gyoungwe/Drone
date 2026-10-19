@@ -1,10 +1,10 @@
 # 技能与连接页 v2：Pi 市场、Drone 插件与能力生命周期
 
-状态：设计已确认；P0～P3 代码切片已完成，P4 正式安装包验收待执行。
+状态：设计已确认；P0～P4 macOS 正式安装包验收完成。市场栏、连接器描述和 Drone registry 元数据已在正式包回读；MCP 因隔离包无配置保持 NOT_RUN，深色前后视觉对照仍未运行。
 
 本计划承接 [`final-pluginization-plan.md`](final-pluginization-plan.md) 的插件化边界和 [`plugin-hot-reload-plan.md`](plugin-hot-reload-plan.md) 的分层重载规则。它只重做 Desktop 的“技能与连接”页信息架构，不改变 `@gyoungwe/plugin-api`、Pi package manifest 或已有结果/证据合同。
 
-当前实现已落在 `codex/plugin-hot-reload-plan`：Pi 官方目录只进入 extension 结果；Drone 包按标准 `package.json.pi` 与可选 `ui/plugin.json` 映射；页面不再有“全部”栏目；连接器目录和启停使用现有 Research contract；Skill 仓库改为 URL/分支和显式手动检查。正式安装包中的四栏视觉和真实插件安装/卸载/重载证据仍需在 P4 补齐。
+当前实现已落在 `codex/plugin-hot-reload-plan`：Pi 官方目录只进入 extension 结果；Drone 包按标准 `package.json.pi` 与可选 `ui/plugin.json` 映射；页面固定为“市场 / 连接器 / MCP / 技能”四栏，不再有“全部”栏目；连接器目录和启停使用现有 Research contract；Skill 仓库改为 URL/分支和显式手动检查。市场栏另外提供 MCP 官方参考仓库、社区 MCP 目录和科研 Skill 开源仓库的发现入口，安装、权限与更新仍在各自栏目执行。
 
 ## 1. 目标与明确决议
 
@@ -12,7 +12,7 @@
 
 页面固定为四个本页栏目：
 
-1. **插件**：Pi 官方插件市场、Drone 插件仓库、已安装插件。
+1. **市场**：Pi 官方插件市场、Drone 插件仓库、已安装插件，以及 MCP/Skill 开源资源发现入口。
 2. **连接器**：`pi-connectors` 及其可选连接器 descriptor、权限和回执。
 3. **MCP**：用户配置的 MCP server、`pi-mcp-adapter` 运行状态和预设。
 4. **Skill**：已加载 skill、来源分组、启用状态，以及独立的 Skill 仓库纵向列表。
@@ -31,7 +31,7 @@ Pi 官方市场和 Drone 插件仓库使用同一套 Pi 官方 package/extension
 技能与连接                                      [刷新] [添加]
 能力来源和运行状态
 ┌──────────────┬─────────────────────────────────────────────┐
-│ 插件         │ 当前栏目标题 + 状态摘要                     │
+│ 市场         │ 当前栏目标题 + 状态摘要                     │
 │ 连接器       │ 单一类型列表                                 │
 │ MCP          │                                               │
 │ Skill        │                                               │
@@ -46,11 +46,11 @@ Pi 官方市场和 Drone 插件仓库使用同一套 Pi 官方 package/extension
 
 每个可操作条目必须有键盘焦点、明确的 aria-label、禁用态和加载态。开关只表达启用状态，安装、更新、卸载、重载和授权使用明确的按钮。危险操作采用二次确认，并在完成后刷新状态和生命周期回执。
 
-## 3. 插件栏目
+## 3. 市场栏目
 
-### 3.1 三个纵向区块
+### 3.1 市场的纵向区块
 
-插件栏目只显示插件包，不显示 skill repository、单个 skill、MCP server 或连接器 descriptor。
+市场栏目只负责发现和管理插件包，不显示单个 skill、MCP server 或连接器 descriptor；MCP/Skill 开源资源卡片只提供公开仓库发现链接，不替代各自栏目的安装和状态合同。
 
 1. **Pi 官方插件市场**
    - 复用现有 `PackagesContract`、`PackageService`、`CatalogStore` 和 `pi.dev/packages` 目录。
@@ -64,12 +64,16 @@ Pi 官方市场和 Drone 插件仓库使用同一套 Pi 官方 package/extension
    - 每行显示包名、Pi extension/skill/UI contribution 能力摘要、版本、兼容的 Pi/Host API、安装状态和更新状态。
    - 同一个 npm 包在官方市场和 Drone 仓库同时出现时合并为一行，保留两个来源徽标和一个安装状态，避免重复安装。
 
-3. **已安装插件**
+3. **MCP/Skill 开源资源目录**
+   - 官方 MCP 参考服务器使用 `modelcontextprotocol/servers`；社区 MCP 目录使用经过审核的公开列表；Skill 入口复用 Nature、Scientific Agent 和 Open Science 等公开仓库。
+   - 这些卡片只打开公开仓库，不把第三方 MCP 或 Skill 自动装入用户配置；实际安装仍由 MCP/技能栏的权限与手动更新流程控制。
+
+4. **已安装插件**
    - 汇总真实 `settings.json` package 记录、Pi loaded extensions 和 `UiPluginManager` 的 UI packages。
    - 显示“Pi 能力插件”与“Desktop UI 插件”类型标签；插件内部携带的 skill 只在 Skill 栏显示。
    - 内置插件可禁用但不可卸载；用户安装插件支持更新和卸载。
 
-### 3.2 插件热插拔操作
+### 3.2 市场插件热插拔操作
 
 - 安装：先写入隔离 staging 目录，校验标准 package manifest、依赖、integrity 和 Host/Pi 兼容性，再原子切换。
 - 启用/禁用：UI 插件可立即重载 contribution registry；Pi extension/skill 包在会话边界或下一次会话生效，并显示当前版本与下一会话版本。
@@ -139,10 +143,10 @@ Skill 仓库                                      [添加仓库]
 - 让 Pi 官方市场只返回 extension 类型；增加 Drone package source adapter 和去重规则。
 - 测试来源合并、安装状态匹配、失败状态和权限字段。
 
-### P1：页面壳与插件栏目
+### P1：页面壳与市场栏目
 
 - 删除 `all` filter 和混合 `CapabilityRow` 渲染；建立四栏本页导航和统一详情抽屉。
-- 将现有 `BrowseSection`/`LoadedSection` 合并到插件栏目，保留 pi.dev 搜索和卸载语义。
+- 将现有 `BrowseSection`/`LoadedSection` 合并到市场栏目，保留 pi.dev 搜索和卸载语义。
 - 接入 Drone 仓库列表、官方市场来源徽标和插件生命周期动作。
 
 ### P2：连接器与 MCP
@@ -162,6 +166,7 @@ Skill 仓库                                      [添加仓库]
 - UI plugin 运行中重载；Pi package/skill/connector 以会话边界或下一会话生效。
 - 真实安装包验证：官方市场安装一个 extension、Drone 包安装/禁用/更新、UI plugin 重载、MCP 错误显示、连接器开关、Skill 仓库手动更新。
 - 浅色/深色正式安装包截图对照；更新 README、计划和发布说明。
+- 市场栏与 MCP/连接器/技能同级；市场导航在长列表滚动时保持 sticky；连接器条目显示用途描述；Drone 包在未安装时也显示 registry 版本和描述。
 
 ## 9. 验收红线
 

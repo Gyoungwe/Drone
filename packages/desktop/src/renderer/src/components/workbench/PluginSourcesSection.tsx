@@ -1,5 +1,12 @@
-import { DRONE_PLUGIN_PACKAGE_NAMES, type HostPluginPackage, type PiPluginSourceEntry } from "@drone/shared";
+import {
+	DRONE_PLUGIN_METADATA,
+	DRONE_PLUGIN_PACKAGE_NAMES,
+	type HostPluginPackage,
+	MARKET_RESOURCE_LINKS,
+	type PiPluginSourceEntry,
+} from "@drone/shared";
 import { useMemo } from "react";
+import { getPi } from "../../api";
 import { useT } from "../../i18n";
 import { useCatalogStore } from "../../stores/catalog";
 import { useSettingsStore } from "../../stores/settings";
@@ -8,13 +15,17 @@ import { BrowseSection } from "../settings/extensions/BrowseSection";
 import { Switch } from "../ui/Switch";
 
 function packageEntry(packageName: string, host?: HostPluginPackage): PiPluginSourceEntry {
+	const metadata = DRONE_PLUGIN_METADATA[packageName as keyof typeof DRONE_PLUGIN_METADATA];
 	return {
 		packageName,
-		version: host?.version,
-		description: host?.description,
+		version: host?.version ?? metadata?.version,
+		description: host?.description ?? metadata?.description,
 		sources: ["drone"],
-		packageKind: host?.packageKind ?? (packageName === "@gyoungwe/desktop-ui-pack" ? "desktop-ui" : "pi"),
-		capabilities: host?.capabilities ?? [],
+		packageKind:
+			host?.packageKind ??
+			metadata?.packageKind ??
+			(packageName === "@gyoungwe/desktop-ui-pack" ? "desktop-ui" : "pi"),
+		capabilities: host?.capabilities ?? metadata?.capabilities ?? [],
 		piExtensions: [],
 		piSkills: [],
 		piPrompts: [],
@@ -53,8 +64,10 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 	const uiPlugins = useUiPluginsStore((state) => state.plugins);
 	const setPluginEnabled = useUiPluginsStore((state) => state.setPluginEnabled);
 	const install = useCatalogStore((state) => state.installCatalogPackage);
+	const update = useCatalogStore((state) => state.updateCatalogPackage);
 	const remove = useCatalogStore((state) => state.removeConfiguredPackage);
 	const installing = useCatalogStore((state) => state.installingNames[entry.packageName] === true);
+	const updating = useCatalogStore((state) => state.updatingNames[entry.packageName] === true);
 	const removing = useCatalogStore((state) =>
 		Object.keys(state.removingSources).some(
 			(source) => source === `npm:${entry.packageName}` || source.startsWith(`npm:${entry.packageName}@`),
@@ -97,16 +110,26 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 							aria-label={uiPlugin.enabled ? t("skillsConnections.disable") : t("skillsConnections.enable")}
 						/>
 					) : current.installed && current.configured && !current.builtin ? (
-						<button
-							type="button"
-							className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
-							disabled={removing}
-							onClick={() => {
-								if (current.configured) void remove(current.configured.source, current.configured.scope);
-							}}
-						>
-							{removing ? t("skillsConnections.removing") : t("skillsConnections.uninstall")}
-						</button>
+						<>
+							<button
+								type="button"
+								className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
+								disabled={updating || removing}
+								onClick={() => void update(entry.packageName)}
+							>
+								{updating ? t("skillsConnections.updating") : t("skillsConnections.update")}
+							</button>
+							<button
+								type="button"
+								className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
+								disabled={removing}
+								onClick={() => {
+									if (current.configured) void remove(current.configured.source, current.configured.scope);
+								}}
+							>
+								{removing ? t("skillsConnections.removing") : t("skillsConnections.uninstall")}
+							</button>
+						</>
 					) : !current.installed ? (
 						<button
 							type="button"
@@ -152,6 +175,35 @@ export function PluginSourcesSection() {
 				<div className="mt-3">
 					<BrowseSection extensionsOnly excludePackageNames={packageNames} />
 				</div>
+			</section>
+			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
+				<h2 className="text-sm font-medium text-ink">{t("skillsConnections.marketResources")}</h2>
+				<p className="mt-1 text-xs leading-relaxed text-ink-dim">
+					{t("skillsConnections.marketResourcesHint")}
+				</p>
+				<ul className="mt-3 grid gap-2 md:grid-cols-2">
+					{MARKET_RESOURCE_LINKS.map((resource) => (
+						<li key={resource.id} className="rounded-xl border border-border px-3 py-3">
+							<div className="flex items-start justify-between gap-2">
+								<div className="min-w-0">
+									<p className="truncate text-xs font-medium text-ink">{resource.name}</p>
+									<p className="mt-1 truncate text-[11px] text-ink-faint">github.com/{resource.repository}</p>
+								</div>
+								<span className="shrink-0 rounded-full bg-hover px-2 py-1 text-[10px] text-ink-faint">
+									{t(`skillsConnections.marketResourceKind.${resource.kind}` as never)}
+								</span>
+							</div>
+							<p className="mt-2 text-[11px] leading-relaxed text-ink-dim">{resource.description}</p>
+							<button
+								type="button"
+								className="mt-2 text-[11px] text-accent hover:underline"
+								onClick={() => void getPi().openExternal(resource.url)}
+							>
+								{t("skillsConnections.openRepository")}
+							</button>
+						</li>
+					))}
+				</ul>
 			</section>
 			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
 				<h2 className="text-sm font-medium text-ink">{t("skillsConnections.droneRegistry")}</h2>

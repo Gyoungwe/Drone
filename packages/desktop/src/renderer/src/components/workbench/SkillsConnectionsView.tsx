@@ -48,7 +48,7 @@ export type CapabilityStatus =
 	| "stale"
 	| "error"
 	| "incompatible";
-export type CapabilitySection = "plugins" | "connectors" | "mcp" | "skills";
+export type CapabilitySection = "market" | "connectors" | "mcp" | "skills";
 
 export function mcpCapabilityStatus(
 	status: McpServerRuntimeStatus | null,
@@ -111,6 +111,33 @@ function sourceLabel(source: string, scope: string, t: (key: any) => string): st
 	return source;
 }
 
+const CONNECTOR_DESCRIPTION_KEYS: Record<string, string> = {
+	crossref: "crossref",
+	doi: "doi",
+	"europe-pmc": "europePmc",
+	ena: "ena",
+	openalex: "openalex",
+	pubmed: "pubmed",
+	zenodo: "zenodo",
+	osf: "osf",
+	sra: "sra",
+	zotero: "zotero",
+	protocols: "protocols",
+	institutional: "institutional",
+	"project-storage": "projectStorage",
+};
+
+function connectorDescription(
+	id: string,
+	kind: ResearchConnectorDescriptor["kind"],
+	t: (key: any, params?: Record<string, string | number>) => string,
+): string {
+	const key = CONNECTOR_DESCRIPTION_KEYS[id];
+	return key
+		? t(`skillsConnections.connectorDescription.${key}`)
+		: t("skillsConnections.connectorDescription.generic", { kind });
+}
+
 export function skillSource(
 	skillName: string,
 	source: string,
@@ -151,7 +178,7 @@ function IconForKind({ kind }: { kind: CapabilityRow["kind"] }) {
 	return <TaskBoardIcon size={17} />;
 }
 
-/** Plugins and skills have dedicated sections instead of mixed capability rows. */
+/** Market and skills have dedicated sections instead of mixed capability rows. */
 export function capabilitySectionKind(section: CapabilitySection): CapabilityRow["kind"] | null {
 	if (section === "connectors") return "connector";
 	if (section === "mcp") return "mcp";
@@ -180,7 +207,7 @@ export function SkillsConnectionsView() {
 	const [institutional, setInstitutional] = useState<InstitutionalStatus | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [section, setSection] = useState<CapabilitySection>("plugins");
+	const [section, setSection] = useState<CapabilitySection>("market");
 	const [pendingMcp, setPendingMcp] = useState<string | null>(null);
 	const [pendingSkillGroup, setPendingSkillGroup] = useState<string | null>(null);
 	const [disabledSkillNames, setDisabledSkillNames] = useState<Set<string>>(() => new Set());
@@ -441,12 +468,12 @@ export function SkillsConnectionsView() {
 
 				<div className="mt-8 grid gap-4 md:grid-cols-[170px_minmax(0,1fr)]">
 					<nav
-						className="rounded-2xl border border-border bg-surface p-2"
+						className="sticky top-4 z-10 max-h-[calc(100vh-2rem)] self-start overflow-y-auto rounded-2xl border border-border bg-surface p-2"
 						aria-label={t("skillsConnections.filters")}
 					>
 						{(
 							[
-								["plugins", "plugin"],
+								["market", "market"],
 								["connectors", "connector"],
 								["mcp", "mcp"],
 								["skills", "skill"],
@@ -464,7 +491,7 @@ export function SkillsConnectionsView() {
 						))}
 					</nav>
 					<main className="min-w-0">
-						{section === "plugins" ? <PluginSourcesSection /> : null}
+						{section === "market" ? <PluginSourcesSection /> : null}
 						{section === "skills" ? (
 							<>
 								<div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3">
@@ -608,6 +635,9 @@ export function SkillsConnectionsView() {
 													<p className="truncate text-xs font-medium text-ink">{connector.label}</p>
 													<p className="mt-1 text-[11px] text-ink-faint">
 														{connector.kind} · {connector.id}
+													</p>
+													<p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-ink-dim">
+														{connectorDescription(connector.id, connector.kind, t)}
 													</p>
 												</div>
 												<span className={`text-[11px] ${connector.enabled ? "text-ok" : "text-ink-faint"}`}>

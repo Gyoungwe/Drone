@@ -18,10 +18,10 @@ let esbuildPromise: Promise<typeof import("esbuild")> | null = null;
 /** internal：导出仅供 build-env.test.ts 验证 env 现场恢复 */
 export function loadEsbuild(): Promise<typeof import("esbuild")> {
 	if (!esbuildPromise) {
-		const bin = process.platform === "win32" ? "esbuild.exe" : "esbuild";
 		const unpacked = join(
 			process.resourcesPath ?? "",
-			`app.asar.unpacked/node_modules/@esbuild/${process.platform}-${process.arch}/bin/${bin}`,
+			"app.asar.unpacked/node_modules/esbuild/bin",
+			process.platform === "win32" ? "esbuild.exe" : "esbuild",
 		);
 		const patched = existsSync(unpacked);
 		const prev = process.env.ESBUILD_BINARY_PATH;

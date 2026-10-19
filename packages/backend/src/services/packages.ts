@@ -24,6 +24,7 @@ export function isNpmSpawnEnoent(err: unknown): boolean {
 export interface PackageManager {
 	listConfiguredPackages(): ReadonlyArray<{ source: string; scope: "user" | "project" }>;
 	installAndPersist(source: string): Promise<void>;
+	update?(source?: string): Promise<void>;
 	removeAndPersist(source: string, options?: { local?: boolean }): Promise<boolean>;
 }
 
@@ -58,6 +59,7 @@ export interface PackageServicePort {
 	searchPackages(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
 	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
 	installPackage(name: string): Promise<void>;
+	updatePackage(name: string): Promise<void>;
 	removePackage(source: string, scope: "user" | "project"): Promise<void>;
 }
 
@@ -102,6 +104,22 @@ export class PackageService implements PackageServicePort {
 			rethrowPackageError(err);
 		}
 		log.info("package installed", name);
+		await this.reloadSessions();
+	}
+
+	/** 更新已配置 npm 包；Pi 的 DefaultPackageManager 保留完整的版本/锁定语义。 */
+	async updatePackage(name: string): Promise<void> {
+		if (!/^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i.test(name)) {
+			throw new Error(`Invalid package name: ${name}`);
+		}
+		const manager = this.getPackageManager();
+		if (typeof manager.update !== "function") throw new Error("Package updates are unavailable in this host");
+		try {
+			await manager.update(`npm:${name}`);
+		} catch (err) {
+			rethrowPackageError(err);
+		}
+		log.info("package updated", name);
 		await this.reloadSessions();
 	}
 
