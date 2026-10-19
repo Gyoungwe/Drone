@@ -75,8 +75,10 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=8192
     strategy:
       fail-fast: false
+      # Current release acceptance scope is macOS only. Windows remains a
+      # future optional build and is intentionally outside the release gate.
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -177,7 +179,7 @@ jobs:
     if: needs.resolve.outputs.release == 'true'
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 1
       matrix:
         include:
           - os: macos-latest
@@ -186,12 +188,6 @@ jobs:
             acceptance_arch: both
             validation_name: validation-mac
             builder_args: ''
-          - os: windows-latest
-            platform: windows
-            acceptance_platform: windows
-            acceptance_arch: x64
-            validation_name: validation-windows
-            builder_args: --x64
     runs-on: ${{ matrix.os }}
     env:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
@@ -259,7 +255,6 @@ jobs:
             NAME="$(basename "$FILE")"
             case "${{ matrix.platform }}:$NAME" in
               mac:drone-mac-arm64.dmg|mac:drone-mac-arm64.dmg.blockmap|mac:drone-mac-arm64.zip|mac:drone-mac-arm64.zip.blockmap|mac:drone-mac-x64.dmg|mac:drone-mac-x64.dmg.blockmap|mac:drone-mac-x64.zip|mac:drone-mac-x64.zip.blockmap|mac:latest-mac.yml) ;;
-              windows:drone-windows-x64.exe|windows:drone-windows-x64.exe.blockmap|windows:drone-windows-x64.zip|windows:drone-windows-x64.zip.blockmap|windows:latest.yml) ;;
               *) echo "Unexpected release file: $NAME" >&2; exit 1 ;;
             esac
           done
@@ -272,6 +267,7 @@ jobs:
             --platform "${{ matrix.acceptance_platform }}" \
             --arch "${{ matrix.acceptance_arch }}" \
             --version "${RELEASE_TAG#v}" \
+            --allow-unsigned \
             --report release-validation.json
       - uses: actions/upload-artifact@v4
         with:
@@ -304,8 +300,7 @@ jobs:
           ls -l release-assets
           for REQUIRED in \
             drone-mac-arm64.dmg drone-mac-x64.dmg drone-mac-arm64.zip drone-mac-x64.zip \
-            drone-windows-x64.exe drone-windows-x64.zip \
-            latest.yml latest-mac.yml; do
+            latest-mac.yml; do
             [ -f "release-assets/$REQUIRED" ] || { echo "Missing required release asset: $REQUIRED" >&2; exit 1; }
           done
       - name: Upload assets to draft release (sequential, with retry)
@@ -341,8 +336,11 @@ jobs:
             grep -Fxq "$NAME" <<<"$ASSETS" || { echo "Asset not on release: $NAME" >&2; exit 1; }
           done
           LOCAL_NAMES="$(find release-assets -maxdepth 1 -type f -printf '%f\n' | sort)"
-          REMOTE_NAMES="$(printf '%s\n' "$ASSETS" | sed '/^$/d' | sort)"
-          diff -u <(printf '%s\n' "$LOCAL_NAMES") <(printf '%s\n' "$REMOTE_NAMES")
+          # Older v0.33.3 runs may have left Windows assets on the existing
+          # release. Compare only the current macOS acceptance set; those
+          # legacy assets are outside this release gate.
+          REMOTE_MAC_NAMES="$(printf '%s\n' "$ASSETS" | grep -E '^(drone-mac-(arm64|x64)\.(dmg|zip)(\.blockmap)?|latest-mac\.yml)$' | sort)"
+          diff -u <(printf '%s\n' "$LOCAL_NAMES") <(printf '%s\n' "$REMOTE_MAC_NAMES")
 
   post-upload-verify:
     needs: [resolve, publish]
@@ -354,10 +352,6 @@ jobs:
             platform: mac
             arch: both
             validation_name: validation-mac
-          - os: windows-latest
-            platform: windows
-            arch: x64
-            validation_name: validation-windows
     runs-on: ${{ matrix.os }}
     env:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
@@ -379,25 +373,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p downloaded-assets
-          if [ "${{ matrix.platform }}" = "mac" ]; then
-            gh release download "$RELEASE_TAG" \
-              -R "${{ github.repository }}" \
-              --pattern "drone-mac-*.dmg" \
-              --pattern "drone-mac-*.zip" \
-              --pattern "drone-mac-*.dmg.blockmap" \
-              --pattern "drone-mac-*.zip.blockmap" \
-              --pattern "latest-mac.yml" \
-              --dir downloaded-assets
-          else
-            gh release download "$RELEASE_TAG" \
-              -R "${{ github.repository }}" \
-              --pattern "drone-windows-x64.exe" \
-              --pattern "drone-windows-x64.zip" \
-              --pattern "drone-windows-x64.exe.blockmap" \
-              --pattern "drone-windows-x64.zip.blockmap" \
-              --pattern "latest.yml" \
-              --dir downloaded-assets
-          fi
+          gh release download "$RELEASE_TAG" \
+            -R "${{ github.repository }}" \
+            --pattern "drone-mac-*.dmg" \
+            --pattern "drone-mac-*.zip" \
+            --pattern "drone-mac-*.dmg.blockmap" \
+            --pattern "drone-mac-*.zip.blockmap" \
+            --pattern "latest-mac.yml" \
+            --dir downloaded-assets
       - name: Validate downloaded release assets
         shell: bash
         run: |
@@ -407,6 +390,7 @@ jobs:
             --platform "${{ matrix.platform }}" \
             --arch "${{ matrix.arch }}" \
             --version "${RELEASE_TAG#v}" \
+            --allow-unsigned \
             --expected-report expected-validation/release-validation.json \
             --report post-upload-validation.json
 
