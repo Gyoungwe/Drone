@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
 import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
 import * as ui from "@drone/knowledge/ui-service";
@@ -71,7 +71,8 @@ describe("real human-facing knowledge APIs", () => {
 			markdown: "A note written during this turn.",
 		});
 		const overview = await ui.knowledgeOverview({ cwd });
-		expect(overview.recentNotes.some((item) => item.path === saved.note.slice(vault.length + 1))).toBe(true);
+		const savedPath = relative(vault, saved.note).split(sep).join("/");
+		expect(overview.recentNotes.some((item) => item.path === savedPath)).toBe(true);
 		expect(overview.index.categoryCounts.method).toBeGreaterThan(0);
 	});
 	it("folder/template preview is read-only and reports a missing target", async () => {
