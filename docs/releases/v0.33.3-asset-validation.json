@@ -1,0 +1,68 @@
+{
+	"schema": 1,
+	"kind": "drone-v0333-release-asset-validation",
+	"version": "0.33.3",
+	"generatedAt": "2026-10-19T03:06:44+08:00",
+	"build": {
+		"mode": "unsigned",
+		"electronBuilder": "26.15.3",
+		"node": "22",
+		"command": "CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist -w packages/desktop -- --publish never --arm64",
+		"note": "local arm64 invocation emitted both configured macOS architectures; each target was checked independently; the release workflow now invokes one macOS build job for both targets"
+	},
+	"workflowOptimization": {
+		"macBuildJobs": 1,
+		"validationAndBuildParallel": true,
+		"electronAndBuilderCache": true,
+		"assetAllowlist": true,
+		"exactPostUploadManifest": true
+	},
+	"artifacts": {
+		"macArm64": {
+			"status": "PASS",
+			"checks": [
+				"ditto ZIP extraction",
+				"hdiutil read-only DMG attach",
+				"version 0.33.3",
+				"Contents/Resources/app.asar"
+			],
+			"files": {
+				"drone-mac-arm64.dmg": {
+					"bytes": 332119988,
+					"sha256": "a6e8a753144a26680833b6b402dd18e7d94a35ae1109bdad361e876ef1fce129"
+				},
+				"drone-mac-arm64.zip": {
+					"bytes": 335875600,
+					"sha256": "41a46b04ed7f2a95b916c9ccc5ff18abbf11d8d23b9482275c944aafc56358f3"
+				}
+			}
+		},
+		"macX64": {
+			"status": "PASS",
+			"checks": [
+				"ditto ZIP extraction",
+				"hdiutil read-only DMG attach",
+				"version 0.33.3",
+				"Contents/Resources/app.asar"
+			],
+			"files": {
+				"drone-mac-x64.dmg": {
+					"bytes": 334162383,
+					"sha256": "db3f0b5df03c650ecf08352192b90ee36c0b23e4b15c971cbe70404df687dacf"
+				},
+				"drone-mac-x64.zip": {
+					"bytes": 337999905,
+					"sha256": "bb8b3452bf4260386b924f20a248844b6facbe792bfbd58da67133accdb085ee"
+				}
+			}
+		},
+		"windowsX64": {
+			"status": "NOT_RUN",
+			"reason": "requires the GitHub Windows runner"
+		}
+	},
+	"postUpload": {
+		"status": "NOT_RUN",
+		"reason": "v0.33.3 has not been uploaded by the revised Release workflow"
+	}
+}

@@ -86,7 +86,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+          cache-dependency-path: |
+            package-lock.json
+            packages/desktop/pi-packages/package-lock.json
+      - run: npm ci --prefer-offline --no-audit --no-fund
       - run: npm run stage:pi-packages
       # 发版前必跑：用假 electron 真实加载 preload（v0.29.0 白屏回归），失败即阻断发布
       - name: Preload real-load (required)
@@ -165,23 +168,27 @@ jobs:
           fi
 
   build:
-    needs: [resolve, prepare]
+    # Building does not require the draft release or the tag: it can build the
+    # immutable candidate commit while validation and draft preparation run.
+    # publish still waits for both prepare and build below.
+    needs: [resolve]
+    if: needs.resolve.outputs.release == 'true'
     strategy:
       fail-fast: false
       max-parallel: 3
       matrix:
         include:
           - os: macos-latest
-            platform: mac-arm64
-            artifact_zip: drone-mac-arm64.zip
-            builder_args: --arm64
-          - os: macos-latest
-            platform: mac-x64
-            artifact_zip: drone-mac-x64.zip
-            builder_args: --x64
+            platform: mac
+            acceptance_platform: mac
+            acceptance_arch: both
+            validation_name: validation-mac
+            builder_args: ''
           - os: windows-latest
             platform: windows
-            artifact_zip: ''
+            acceptance_platform: windows
+            acceptance_arch: x64
+            validation_name: validation-windows
             builder_args: --x64
     runs-on: ${{ matrix.os }}
     env:
@@ -193,13 +200,28 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.resolve.outputs.ref }}
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run stage:pi-packages
+          cache-dependency-path: |
+            package-lock.json
+            packages/desktop/pi-packages/package-lock.json
+      - name: Cache electron-builder downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+            ~/AppData/Local/electron/cache
+            ~/AppData/Local/electron-builder/Cache
+          key: eb-${{ runner.os }}-${{ matrix.platform }}-${{ hashFiles('package-lock.json', 'packages/desktop/package.json', 'packages/desktop/pi-packages/package-lock.json') }}
+          restore-keys: |
+            eb-${{ runner.os }}-${{ matrix.platform }}-
+      - run: npm ci --prefer-offline --no-audit --no-fund
       - name: Acquire pinned research skill packs
         shell: bash
         run: |
@@ -226,6 +248,28 @@ jobs:
             -exec cp {} release-assets/ \;
           if [ -z "$(ls -A release-assets)" ]; then echo "No release assets were produced." >&2; exit 1; fi
           ls -l release-assets
+      - name: Reject unexpected release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          for FILE in release-assets/*; do
+            NAME="$(basename "$FILE")"
+            case "${{ matrix.platform }}:$NAME" in
+              mac:drone-mac-arm64.dmg|mac:drone-mac-arm64.dmg.blockmap|mac:drone-mac-arm64.zip|mac:drone-mac-arm64.zip.blockmap|mac:drone-mac-x64.dmg|mac:drone-mac-x64.dmg.blockmap|mac:drone-mac-x64.zip|mac:drone-mac-x64.zip.blockmap|mac:latest-mac.yml) ;;
+              windows:drone-windows-x64.exe|windows:drone-windows-x64.exe.blockmap|windows:drone-windows-x64.zip|windows:drone-windows-x64.zip.blockmap|windows:latest.yml) ;;
+              *) echo "Unexpected release file: $NAME" >&2; exit 1 ;;
+            esac
+          done
+      - name: Validate installer packages before upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-release-artifacts.mjs \
+            --dir release-assets \
+            --platform "${{ matrix.acceptance_platform }}" \
+            --arch "${{ matrix.acceptance_arch }}" \
+            --version "${RELEASE_TAG#v}" \
+            --report release-validation.json
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.platform }}
@@ -233,9 +277,15 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.validation_name }}
+          path: release-validation.json
+          if-no-files-found: error
+          retention-days: 7
 
   publish:
-    needs: [resolve, build]
+    needs: [resolve, prepare, build]
     env:
       RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
     runs-on: ubuntu-latest
@@ -276,7 +326,7 @@ jobs:
               ATTEMPT=$((ATTEMPT + 1))
             done
           done
-      - name: Verify uploaded assets and publish draft
+      - name: Verify uploaded asset names and keep release as draft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -287,10 +337,89 @@ jobs:
             NAME="$(basename "$LOCAL")"
             grep -Fxq "$NAME" <<<"$ASSETS" || { echo "Asset not on release: $NAME" >&2; exit 1; }
           done
-          gh release edit "$TAG" -R "${{ github.repository }}" --draft=false
+          LOCAL_NAMES="$(find release-assets -maxdepth 1 -type f -printf '%f\n' | sort)"
+          REMOTE_NAMES="$(printf '%s\n' "$ASSETS" | sed '/^$/d' | sort)"
+          diff -u <(printf '%s\n' "$LOCAL_NAMES") <(printf '%s\n' "$REMOTE_NAMES")
+
+  post-upload-verify:
+    needs: [resolve, publish]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            arch: both
+            validation_name: validation-mac
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            validation_name: validation-windows
+    runs-on: ${{ matrix.os }}
+    env:
+      RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.validation_name }}
+          path: expected-validation
+      - name: Download uploaded assets from draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloaded-assets
+          if [ "${{ matrix.platform }}" = "mac" ]; then
+            gh release download "$RELEASE_TAG" \
+              -R "${{ github.repository }}" \
+              --pattern "drone-mac-*.dmg" \
+              --pattern "drone-mac-*.zip" \
+              --pattern "drone-mac-*.dmg.blockmap" \
+              --pattern "drone-mac-*.zip.blockmap" \
+              --pattern "latest-mac.yml" \
+              --dir downloaded-assets
+          else
+            gh release download "$RELEASE_TAG" \
+              -R "${{ github.repository }}" \
+              --pattern "drone-windows-x64.exe" \
+              --pattern "drone-windows-x64.zip" \
+              --pattern "drone-windows-x64.exe.blockmap" \
+              --pattern "drone-windows-x64.zip.blockmap" \
+              --pattern "latest.yml" \
+              --dir downloaded-assets
+          fi
+      - name: Validate downloaded release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-release-artifacts.mjs \
+            --dir downloaded-assets \
+            --platform "${{ matrix.platform }}" \
+            --arch "${{ matrix.arch }}" \
+            --version "${RELEASE_TAG#v}" \
+            --expected-report expected-validation/release-validation.json \
+            --report post-upload-validation.json
+
+  finalize:
+    needs: [resolve, post-upload-verify]
+    env:
+      RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish verified draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$RELEASE_TAG" -R "${{ github.repository }}" --draft=false
 
   website:
-    needs: publish
+    needs: finalize
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Cloudflare Pages deploy hook

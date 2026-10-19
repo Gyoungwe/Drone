@@ -1,7 +1,7 @@
 {
 	"name": "drone",
 	"private": true,
-	"version": "0.33.2",
+	"version": "0.33.3",
 	"description": "Desktop GUI for the Pi coding agent, built with Electron",
 	"license": "MIT",
 	"author": "Jaxton07",
@@ -25,6 +25,7 @@
 		"check:redline": "npm run test -w @drone/backend -- test/redline-acceptance.test.mjs",
 		"dist": "npm run dist -w packages/desktop",
 		"check:desktop-artifact": "node scripts/check-local-desktop-artifact.mjs",
+		"check:release-artifacts": "node scripts/check-release-artifacts.mjs",
 		"lint": "biome check .",
 		"skills:sync": "python scripts/sync-research-skills.py",
 		"skills:check": "python scripts/sync-research-skills.py --check",

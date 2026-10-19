@@ -40,3 +40,30 @@ Updated: 2026-09-12
 - Do not weaken publication gates, Wiki version checks, project trust, or model-review consent to make tests pass.
 - Keep model review distinct from scientific verification and human review.
 - Every completed checklist item must have a reproducible validation note before it is checked off.
+
+## v0.33.3 follow-up gate
+
+The v0.33.2 audit showed that resource checks and asset-name checks could pass
+while a public macOS installer remained malformed. The release workflow now
+has two separate package gates:
+
+- **Build gate:** each runner opens the artifacts it built. macOS uses native
+  `ditto` ZIP extraction and read-only `hdiutil` DMG attachment; Windows
+  expands the ZIP and runs the NSIS installer silently, then checks the app
+  payload and `app.asar`.
+- **Upload gate:** macOS and Windows runners download the assets back from the
+  GitHub draft release, compare size/SHA-256 to the build manifest, and repeat
+  the platform package checks. Only the `finalize` job can remove `draft`.
+
+The unsigned policy remains unchanged. A local or static resource check cannot
+close either package gate; evidence must come from the actual installer files.
+
+### v0.33.3 timing and metadata follow-up
+
+The package build now runs from the immutable candidate commit in parallel
+with the full validation matrix. The macOS runner produces arm64 and x64 in a
+single Electron Builder invocation, so `latest-mac.yml` has one producer and
+cannot be silently overwritten when artifacts are merged. Electron runtime
+and builder caches are keyed by platform and package locks. Each build rejects
+unexpected files, and the post-upload manifest comparison is exact in both
+directions, covering installers, blockmaps, and updater metadata.
