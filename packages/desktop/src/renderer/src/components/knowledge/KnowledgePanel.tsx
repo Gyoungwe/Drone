@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
+import { WorkflowOverviewPanel } from "../settings/WorkflowOverview";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { launchKnowledgeSetup, reportKnowledgeError, useKnowledgeOverview } from "./hooks";
@@ -20,7 +21,7 @@ export function KnowledgePanel({
 	context?: {
 		cwd: string | null;
 		sessionId: string | null;
-		tab?: "overview" | "reviews" | "maintenance" | "semantic" | "topics";
+		tab?: "overview" | "settings" | "reviews" | "maintenance" | "semantic" | "topics";
 		id?: string;
 	};
 	/** 嵌入全屏视图（KnowledgeView 自带标题栏）时不再重复渲染标题，只保留刷新按钮 */
@@ -32,7 +33,7 @@ export function KnowledgePanel({
 		sessionId = context ? context.sessionId : activeSession,
 		t = useKnowledgeText();
 	const { data, error, loading, refresh } = useKnowledgeOverview(cwd, sessionId);
-	const [tab, setTab] = useState<"overview" | "reviews" | "maintenance" | "semantic" | "topics">(
+	const [tab, setTab] = useState<"overview" | "settings" | "reviews" | "maintenance" | "semantic" | "topics">(
 		context?.tab || "overview",
 	);
 	const [path, setPath] = useState(""),
@@ -99,7 +100,7 @@ export function KnowledgePanel({
 				role="tablist"
 				aria-label={t("title")}
 			>
-				{(["overview", "reviews", "maintenance", "semantic", "topics"] as const).map((item) => (
+				{(["overview", "settings", "reviews", "maintenance", "semantic", "topics"] as const).map((item) => (
 					<button
 						key={item}
 						type="button"
@@ -122,6 +123,27 @@ export function KnowledgePanel({
 				<p role="status" className="text-xs">
 					{t("loading")}
 				</p>
+			)}
+			{tab === "settings" && (
+				<div className="space-y-4">
+					<KnowledgeCloudSection cwd={cwd} bindingRevision={binding?.revision} />
+					<section className="rounded-xl border border-border p-4">
+						<h3 className="text-xs font-semibold">{t("vault")}</h3>
+						<p className="mt-1 break-all font-mono text-xs">{binding?.vault || t("notBound")}</p>
+						<p className="mt-1 text-[11px] text-ink-faint">{t("scopeValue")}</p>
+						<div className="mt-3 flex flex-wrap gap-1">
+							<Button size="sm" disabled={!cwd} onClick={() => setup(binding?.vault)}>
+								{binding ? t("adjust") : t("setup")}
+							</Button>
+							<Button size="sm" disabled={busy} onClick={() => void folders()}>
+								{t("selectFolder")}
+							</Button>
+						</div>
+						<p className="mt-2 text-xs text-ink-dim">{t("globalSwitch")}</p>
+					</section>
+					{binding && <KnowledgeMaintenance cwd={cwd} revision={binding.revision} index={index} />}
+					<WorkflowOverviewPanel />
+				</div>
 			)}
 			{tab === "overview" && (
 				<div className="space-y-4">

@@ -15,6 +15,7 @@ const methodNames = [
 	"setModel",
 	"setThinkingLevel",
 	"setAgentMode",
+	"setSkillNamesEnabled",
 	"compact",
 	"getStats",
 	"getContextUsage",

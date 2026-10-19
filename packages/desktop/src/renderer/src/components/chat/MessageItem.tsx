@@ -24,6 +24,7 @@ export const MessageItem = memo(function MessageItem({
 	showTaskCard = false,
 	sessionId = null,
 	turnTiming,
+	turnStepCount,
 }: {
 	message: UIMessage;
 	streaming?: boolean;
@@ -37,6 +38,8 @@ export const MessageItem = memo(function MessageItem({
 	sessionId?: string | null;
 	/** 轮次起止，由 MessageList 从真实 transcript 时间戳派生。 */
 	turnTiming?: TurnTiming;
+	/** 轮次内真实工具步数；工具可能被合并到正文前的 MetaGroup。 */
+	turnStepCount?: number;
 }) {
 	const t = useT();
 	const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -118,7 +121,14 @@ export const MessageItem = memo(function MessageItem({
 						/>
 					))}
 				{message.text && (
-					<AssistantMessage text={message.text} thinking="" tools={[]} mode={mode} turnTiming={turnTiming} />
+					<AssistantMessage
+						text={message.text}
+						thinking=""
+						tools={[]}
+						mode={mode}
+						turnTiming={turnTiming}
+						turnStepCount={turnStepCount}
+					/>
 				)}
 			</div>
 		);
@@ -134,6 +144,7 @@ export const MessageItem = memo(function MessageItem({
 				metaInGroup={metaInGroup}
 				mode={mode}
 				turnTiming={turnTiming}
+				turnStepCount={turnStepCount}
 			/>
 			{/* 操作行（仅轮次最后一段正文）：复制正文 + 从此处分叉；agent 回复结束后出现 */}
 			{!streaming && message.text && showActions && (

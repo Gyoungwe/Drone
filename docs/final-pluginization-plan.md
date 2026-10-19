@@ -197,12 +197,16 @@ drone-plugins/         # 已绑定的 ../drone-plugins（Gyoungwe/drone-plugins�
 主机            本机 · SSH 主机 · 计算作业
 ──── 项目 ────
 ──── 最近 ────  （运行中的任务带绿点）
-[头像菜单：设置 · 扩展（UI 插件）· 帮助 · 关于]
+[头像菜单：设置 · 帮助 · 关于]
 ```
 
 - "研究"不单独做入口。研究就是在「新任务」里发起的任务，首页三张卡（研究 / 知识库 / 接力）是它的快捷入口。
 - 不设"运行"和"证据"一级入口。它们放进右栏：页签为 **总览 / 文件 / 变更 / 主机**。总览从上到下依次是：用量 → 步骤 → 交付物 → 子智能体 → 证据（有内容时才出现）→ 审稿 / 决策（有待处理项时才出现）。
 - 插件不能新增一级导航。插件只能贡献 `panel.tab`、`rail.view`、`context.action`、`command` 和现有的 slot。只有提供完整、持久工作区的插件，才能申请 `nav.item`，并且需要宿主白名单批准。
+
+**页面与设置的边界（CO-3）**：页面管理能力和数据，设置弹窗只管理通用、外观、模型、权限、关于五类偏好。技能、MCP、扩展、UI 插件、Zotero、机构访问在「技能与连接」页的右侧抽屉中管理；主机登记在「主机」页；Vault、WebDAV、维护和工作流总览在「知识库 → 知识库设置」中管理。旧设置深链接保留一个版本，并转换为页面/抽屉跳转。
+
+**来源分组（CO-2）**：技能列表使用宿主已有的 `sourceInfo.source`，按 npm Drone 插件、个人、项目和内置来源折叠展示；跨来源同名技能只显示一行，并展开列出其他来源和当前 Pi 加载顺序中的生效来源。对于内置科研技能，`packages/shared/src/research-skill-sources.json` 是唯一的仓库映射，界面显示 GitHub 仓库并可打开锁定 commit/path；`local`、`auto` 等 loader 标签只能作为未知技能的回退显示，不能冒充仓库来源。分组开关通过 `setSkillNamesEnabled` 会话契约逐项更新运行时可见性，当前窗口后续新会话继承该内存状态；显式调用被禁用技能也返回不可用。它不引入新的持久化配置格式。技能与连接页同时提供“更新内置研究技能”入口，复用 commit/hash 校验、版本化 overlay 和安全重启流程；更新不会静默替换当前清单。
 
 **能力状态的统一表达**（在「技能与连接」里显示，任务里引用这些能力时也用同一套）
 
@@ -621,11 +625,6 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 
 > Older execution entries are archived in [final-pluginization-plan-log-2026-10-19.md](archive/final-pluginization-plan-log-2026-10-19.md).
 
-| 2026-10-18 | UI-01 / SKILL-01 真实宿主验收 | `npm run check:ui-skill-acceptance -- --out /private/tmp/drone-ui-skill-acceptance.json` 通过：UI-01 真实内置插件 bundle 构建→registry 出现→禁用移除→重载 nonce 1→2→manager 重启回读配置；SKILL-01 真实 Pi SDK + faux provider 2/2，通过 canonical slash invocation、visible skill、provider call 和自动禁用反证；SKILL-01 evidence 写入 Node `os.tmpdir()` | 交互式 Electron 仍受当前 shell 的 macOS `NSApplication` SIGABRT 阻塞，无新增 GUI 截图；GUI 观察与宿主/SDK gate 分开记录。`disable-model-invocation` 的显式 slash manual-only 语义已同步到 UI/计划 |
-| 2026-10-18 | main 合并与 v0.33.0 发布候选收口 | 合并提交 `c8195156` 已推送 `main`；修复 CI 中缺少绑定插件仓库的提交 `a378b3c1`、刷新 knowledge/research runtime manifest 的提交 `b4052d42` 已推送；`v0.33.0` 标签已指向 `b4052d42`，Release run `39059425930` 曾因 Windows URL pathname bug 失败（macOS 已通过） | 已修复 `fileURLToPath` 跨平台根目录问题，需在修复提交上重新 dispatch；Release 无证书策略保留 |
-| 2026-10-18 | scope / 真实 Pi 矩阵 / 组合加载收口 | 公开包 scope 已由用户确认统一为 `@gyoungwe`；plugin-api、pi-core、pi-knowledge、pi-research、research-suite 已加入 public publishConfig/repository 元数据；当时旧 suite 组合加载因重复 `task_*` 工具注册为 **FAIL**，执行日志保留该历史失败；随后 `pi-knowledge@0.1.1` 已移除 task runtime，由 pi-core 独占 | 历史 FAIL 不删除；由新的真实 CLI 回归记录最终状态 |
-| 2026-10-18 | Pi 真实模型兼容矩阵 | `/private/tmp/drone-pi-real-matrix-ksVolq/pi-real-matrix-evidence.json`：Pi `1.1.0` 与 latest 的 6 个单包 cell PASS；两个组合 cell 与临时 research-suite 安装→发现→模型调用→卸载 **FAIL**，原因是重复 `task_*` 工具注册冲突 | 组合加载不能标记为通过；需在插件仓库统一 `task_*` 工具 ownership 后重跑，next 仍为 `NOT_PUBLISHED` |
-| 2026-10-18 | 外部插件仓库迁移收口 | 外部 `drone-plugins` `main=d5a3ea1`；`@gyoungwe/pi-knowledge` 已自包含并补齐公开发布元数据；`npm run check`、`smoke:install` 通过（34 tools、`knowledge_status=unconfigured`）；宿主 `packages/pi-knowledge` 兼容副本已从 Drone 删除 | Desktop/Pi 仅从已安装 npm 包加载；后续按 v1.1 推进其余插件拆分 |
 | 2026-10-18 | 首批 npm 插件包公开发布 | `@gyoungwe/plugin-api@1.0.0`、`pi-core@0.1.0`、`pi-knowledge@0.1.0`、`pi-research@0.1.0`、`research-suite@0.1.0` 已提交 npm；安全密钥 2FA 已完成发布认证 | 首次聚合包发布后，继续做公开 tarball 验证 |
 | 2026-10-18 | `research-suite` 公开 tarball 修复 | registry 验证发现 `research-suite@0.1.0` 未携带三个 bundled dependency；外部仓库元数据修复提交 `a4eb3a6`、manifest 对齐提交 `5002590`，已发布 `@gyoungwe/research-suite@0.1.1`，公开 tarball 和全新临时目录安装均 PASS，证据见 [`v0.33.0-npm-packages.json`](releases/v0.33.0-npm-packages.json) | `desktop-ui-pack` 仍是 v1.1 的独立 UI 包；analysis/evidence/connectors 继续按计划推进，Protocols.io 保持只读 |
 | 2026-10-18 | v0.33.0 正式无证书发布 | main `961cd43a`；Release run [39066841689](https://github.com/Gyoungwe/Drone/actions/runs/39066841689) 的 macOS arm64/x64 与 Windows x64 validate、unsigned build、MCP 资源校验、资产上传全部成功；[v0.33.0 Release](https://github.com/Gyoungwe/Drone/releases/tag/v0.33.0) 已发布，包含 3 个安装包、3 个 zip、4 个 blockmap 和 2 个更新清单；SHA-256 见 [`v0.33.0-assets.sha256`](releases/v0.33.0-assets.sha256) | npm 首批包已发布；按 v1.1 推进 analysis/evidence/connectors 和完整 desktop-ui-pack |
@@ -654,3 +653,5 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 | 2026-10-19 | 实机报告 P1-6 / P2-9 / P2-17 与正式安装包收口 | P1-6 改为单次写入确认卡，Vault 入口明确为“切换或创建知识库”，范围文案明确为应用级共享 + Projects 分区；P2-9 首页移除重复项目/最近/环境摘要，入口卡统一浅色中性风格并默认收起右栏；P2-17 Zotero 只有注册且本机 API 可达时才显示启用，否则显示“已注册但不可用”并锁定开关。v0.33.3 无证书 arm64/x64 DMG/ZIP 在本机真实挂载、干净目录安装、framework symlink、`Drone --version` 和进程存活检查均通过；正式包启动由 CUA 现场回读 | macOS 签名按计划为 `NOT_RUN`；Windows 上传后回下载仍由 release workflow 执行，B8 与 Protocols.io 写入保持暂缓/只读 |
 | 2026-10-19 | 发布验收范围降级为 macOS-only | 用户确认本版本只要求 macOS 正式安装包验收；`.github/workflows/release.yml` 的 validate/build/post-upload-verify 矩阵已收敛为 macOS，publish 只检查 macOS 资产；v0.33.3 arm64/x64 DMG/ZIP 的本机挂载、干净目录安装、`Drone --version` 和真实进程启动证据保持 PASS；Windows 构建、上传和回下载在 `docs/releases/v0.33.3-asset-validation.json` 标记为 `OUT_OF_SCOPE` | 不恢复 Windows 门禁，除非另有版本决议；macOS 签名按无证书策略为 `NOT_RUN`，B8 与 Protocols.io 写入继续暂缓/只读 |
 | 2026-10-19 | v0.33.3 macOS-only Release 上传后验收 | workflow [`39222533359`](https://github.com/Gyoungwe/Drone/actions/runs/39222533359) 的 macOS validate、双架构 build、publish、post-upload-verify、finalize 和 website 全部成功；从已发布 [`v0.33.3`](https://github.com/Gyoungwe/Drone/releases/tag/v0.33.3) 回下载 arm64/x64 DMG/ZIP、blockmap 与 `latest-mac.yml`，再次运行 `check-release-artifacts` 通过，Release 已公开 | Windows 不参与本版本门禁；证书按无证书策略为 `NOT_RUN`，B8 与 Protocols.io 写入继续暂缓/只读 |
+| 2026-10-19 | 实机报告剩余项与 CO-1～CO-4 对照 | `docs/real-device-acceptance-20261019/README.md` 已补充 CO-1～CO-4 的改前/改后证据边界和未关闭门槛；CO-1/CO-3 代码完成待 v0.33.4 正式包，CO-2 的来源分组、去重、插件列表、MCP error 和会话级整组启用/禁用已完成，回归测试覆盖显式技能不可用；静态 renderer 视觉预览不计最终 PASS | P1-2/3/4/7/8、P1-5、V6 仍待 v0.33.4 正式包或真实会话；V4 MCP 为 BLOCKED，V5 原生 Pi 为 NOT_RUN；B8 和 Protocols.io 写入继续暂缓/只读 |
+| 2026-10-19 | 技能仓库来源与更新入口收口 | 修正技能页不再把 `local`/`auto` 当作仓库来源：科研技能通过锁定目录映射到 `Yuan1z0825/nature-skills`、`K-Dense-AI/scientific-agent-skills` 等 GitHub 仓库，并可打开精确 commit/path；技能与连接页新增仓库级来源卡片，显示锁定 commit、加载/内置计数和自动检查/仅目录状态；更新检查在 GitHub API 403/429 时回退到公开 Atom feed；正式包宿主资源清单补列 pi-core、pi-knowledge、pi-research、desktop-ui-pack 的版本与状态 | v0.33.4 正式安装包真实回读来源卡片、GitHub 仓库链接、更新入口和宿主插件清单通过；B8 与 Protocols.io 写入继续暂缓/只读 |

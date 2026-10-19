@@ -7,6 +7,7 @@ import { MessageList } from "./components/chat/MessageList";
 import { ComposerStatusBar } from "./components/composer/ComposerStatusBar";
 import { KnowledgeUiRoot } from "./components/knowledge/KnowledgeUiRoot";
 import { KnowledgeView } from "./components/knowledge/KnowledgeView";
+import { ComputePane } from "./components/panel/ComputePane";
 import { ContextPanel } from "./components/panel/ContextPanel";
 import { ProjectPage } from "./components/projects/ProjectPage";
 import { ResearchBrowserPage } from "./components/research/ResearchBrowserPage";
@@ -171,6 +172,12 @@ export default function App() {
 						</div>
 					) : view === "skills" ? (
 						<SkillsConnectionsView />
+					) : view === "hosts" ? (
+						<div className="page-fade min-h-0 min-w-0 flex-1 overflow-y-auto bg-canvas px-6 py-8">
+							<div className="mx-auto max-w-5xl">
+								<ComputePane />
+							</div>
+						</div>
 					) : pluginView ? (
 						<div className="page-fade min-h-0 min-w-0 flex-1">
 							<PluginEntryHost entry={pluginView} />

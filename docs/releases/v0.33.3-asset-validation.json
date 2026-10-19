@@ -81,15 +81,51 @@
 			"macOS-only finalize gate passed"
 		],
 		"assets": [
-			{"name": "drone-mac-arm64.dmg", "bytes": 331949442, "sha256": "aff857068f7bb84cb854c209109db29ece25bc0d61343f9ae500ca1095af7f85"},
-			{"name": "drone-mac-arm64.dmg.blockmap", "bytes": 347329, "sha256": "5694fcd82f7309cf19c4da4d4f23514dc8651b91c69023171a245f76807d3ea5"},
-			{"name": "drone-mac-arm64.zip", "bytes": 335729919, "sha256": "a8b089e220f4fc532bcf3b1de97180e0a9f34d7b3f50c166715018c2966b0c17"},
-			{"name": "drone-mac-arm64.zip.blockmap", "bytes": 344400, "sha256": "decfe8ac68085b45148d79a30a130de00e15c5f609cd5ac2dd5319f8089de400"},
-			{"name": "drone-mac-x64.dmg", "bytes": 334037098, "sha256": "42461b576a0c370669fa55ce500efb41732fc72c072dedd42b50b0c09c5274b2"},
-			{"name": "drone-mac-x64.dmg.blockmap", "bytes": 349731, "sha256": "9cf5dd7f13d87469d93553cb8ad21c055a1078c3b497533046ce00d528eab3c3"},
-			{"name": "drone-mac-x64.zip", "bytes": 337855601, "sha256": "f883950861baffd73a1a3070e73e99a2f278de714d0e5e846f97c58f4ebdf112"},
-			{"name": "drone-mac-x64.zip.blockmap", "bytes": 345907, "sha256": "351df30c62cf327f21ede105d47fbebf508756b82a8ff72be15afc27e9560c4b"},
-			{"name": "latest-mac.yml", "bytes": 780, "sha256": "f6834616754e3aa2b3c0fb60d3a76b4747718214de933dac40e5ef1d8d45977c"}
+			{
+				"name": "drone-mac-arm64.dmg",
+				"bytes": 331949442,
+				"sha256": "aff857068f7bb84cb854c209109db29ece25bc0d61343f9ae500ca1095af7f85"
+			},
+			{
+				"name": "drone-mac-arm64.dmg.blockmap",
+				"bytes": 347329,
+				"sha256": "5694fcd82f7309cf19c4da4d4f23514dc8651b91c69023171a245f76807d3ea5"
+			},
+			{
+				"name": "drone-mac-arm64.zip",
+				"bytes": 335729919,
+				"sha256": "a8b089e220f4fc532bcf3b1de97180e0a9f34d7b3f50c166715018c2966b0c17"
+			},
+			{
+				"name": "drone-mac-arm64.zip.blockmap",
+				"bytes": 344400,
+				"sha256": "decfe8ac68085b45148d79a30a130de00e15c5f609cd5ac2dd5319f8089de400"
+			},
+			{
+				"name": "drone-mac-x64.dmg",
+				"bytes": 334037098,
+				"sha256": "42461b576a0c370669fa55ce500efb41732fc72c072dedd42b50b0c09c5274b2"
+			},
+			{
+				"name": "drone-mac-x64.dmg.blockmap",
+				"bytes": 349731,
+				"sha256": "9cf5dd7f13d87469d93553cb8ad21c055a1078c3b497533046ce00d528eab3c3"
+			},
+			{
+				"name": "drone-mac-x64.zip",
+				"bytes": 337855601,
+				"sha256": "f883950861baffd73a1a3070e73e99a2f278de714d0e5e846f97c58f4ebdf112"
+			},
+			{
+				"name": "drone-mac-x64.zip.blockmap",
+				"bytes": 345907,
+				"sha256": "351df30c62cf327f21ede105d47fbebf508756b82a8ff72be15afc27e9560c4b"
+			},
+			{
+				"name": "latest-mac.yml",
+				"bytes": 780,
+				"sha256": "f6834616754e3aa2b3c0fb60d3a76b4747718214de933dac40e5ef1d8d45977c"
+			}
 		]
 	}
 }

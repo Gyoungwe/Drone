@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { useUiStore } from "../../stores/ui";
@@ -6,11 +6,12 @@ import { CloseIcon } from "../icons";
 import { useKnowledgeText } from "./copy";
 import { KnowledgeHome } from "./KnowledgeHome";
 import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
+import { KnowledgePanel } from "./KnowledgePanel";
 
 /**
  * 知识库全屏视图（替代原 z-60 弹窗；原「研究工作台」入口已并入）：占据主区整列，Esc / × 回到聊天。
  * 内容是 KnowledgeHome（Vault 状态 + 最近沉淀 + 待处理修改），打开单篇笔记时是 KnowledgeNoteViewer。
- * 维护类功能（绑定、索引、语义、主题、审核模式）在 设置 › 高级 › 知识库维护。
+ * 维护类功能（绑定、索引、语义、主题、审核模式）在「知识库 › 知识库设置」。
  *
  * 通过左侧导航直接进入而 store 里还没有上下文时，用当前会话/目录补一份（刷新后也能打开）。
  */
@@ -22,6 +23,10 @@ export function KnowledgeView() {
 	const cwd = useSessionsStore((s) => s.cwd);
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
 	const setView = useUiStore((s) => s.setView);
+	const requestedTab = useUiStore((s) => s.knowledgeTab);
+	const setRequestedTab = useUiStore((s) => s.setKnowledgeTab);
+	const [tab, setTab] = useState<"home" | "settings">(requestedTab);
+	useEffect(() => setTab(requestedTab), [requestedTab]);
 
 	useEffect(() => {
 		if (dialog) return;
@@ -61,12 +66,49 @@ export function KnowledgeView() {
 			</header>
 			<div className="knowledge-view-body">
 				<div className="mx-auto w-full max-w-[1440px]">
+					{!dialog.note && (
+						<div
+							className="mb-4 flex gap-2 border-b border-border pb-2"
+							role="tablist"
+							aria-label={t("title")}
+						>
+							<button
+								type="button"
+								role="tab"
+								aria-selected={tab === "home"}
+								className={`rounded-lg px-3 py-2 text-xs ${tab === "home" ? "bg-hover font-semibold" : "text-ink-dim"}`}
+								onClick={() => {
+									setTab("home");
+									setRequestedTab("home");
+								}}
+							>
+								{t("overview")}
+							</button>
+							<button
+								type="button"
+								role="tab"
+								aria-selected={tab === "settings"}
+								className={`rounded-lg px-3 py-2 text-xs ${tab === "settings" ? "bg-hover font-semibold" : "text-ink-dim"}`}
+								onClick={() => {
+									setTab("settings");
+									setRequestedTab("settings");
+								}}
+							>
+								{t("knowledgeSettings")}
+							</button>
+						</div>
+					)}
 					{dialog.note && dialog.noteRevision ? (
 						<KnowledgeNoteViewer
 							cwd={dialog.cwd}
 							path={dialog.note}
 							revision={dialog.noteRevision}
 							onClose={close}
+						/>
+					) : tab === "settings" ? (
+						<KnowledgePanel
+							context={{ cwd: dialog.cwd, sessionId: dialog.sessionId, tab: "settings" }}
+							headless
 						/>
 					) : (
 						<KnowledgeHome cwd={dialog.cwd} sessionId={dialog.sessionId} reviewId={dialog.id} />

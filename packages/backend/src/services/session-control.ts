@@ -171,6 +171,19 @@ export class SessionControlService {
 		};
 	}
 
+	async setSkillNamesEnabled(
+		sessionId: string,
+		names: string[],
+		enabled: boolean,
+	): Promise<{ disabled: string[] }> {
+		const entry = this.host.requireSession(sessionId);
+		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");
+		const runtime = this.host.capabilityRuntimes.get(sessionId);
+		if (!runtime) return { disabled: [] };
+		runtime.setSkillNamesEnabled(names, enabled);
+		return { disabled: runtime.disabledSkillNames() };
+	}
+
 	async setThinkingLevel(sessionId: string, level: string): Promise<void> {
 		const entry = this.host.requireSession(sessionId);
 		if (entry.readOnly) throw new Error("Session is read-only (subagent transcript)");

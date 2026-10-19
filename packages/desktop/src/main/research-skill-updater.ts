@@ -40,6 +40,18 @@ export function configureResearchSkillUpdater(userDataDir: string): void {
 	config = { userDataDir };
 }
 
+/**
+ * Keep the installed client aware of upstream changes without silently
+ * replacing a user's active skill pack.  The check only emits `available`;
+ * applying a verified overlay still requires the guarded update action and
+ * restart shown in the Skills & Connections page.
+ */
+export function scheduleResearchSkillUpdateCheck(): void {
+	if (!config || !app.isPackaged) return;
+	setTimeout(() => void checkResearchSkillUpdates(), 10_000);
+	setInterval(() => void checkResearchSkillUpdates(), 2 * 60 * 60 * 1000);
+}
+
 export function onResearchSkillUpdateState(cb: Listener): void {
 	listeners.add(cb);
 }
@@ -115,11 +127,25 @@ async function githubCommit(id: BuiltinResearchSkillSource): Promise<string> {
 		headers: { Accept: "application/vnd.github+json", "User-Agent": "Drone-research-skills/1" },
 		signal: AbortSignal.timeout(30_000),
 	});
-	if (!response.ok) throw new Error(`${id}: GitHub check failed (${response.status})`);
-	const value = (await response.json()) as { sha?: unknown };
-	if (typeof value.sha !== "string" || !COMMIT_RE.test(value.sha))
-		throw new Error(`${id}: invalid upstream commit`);
-	return value.sha;
+	if (response.ok) {
+		const value = (await response.json()) as { sha?: unknown };
+		if (typeof value.sha !== "string" || !COMMIT_RE.test(value.sha))
+			throw new Error(`${id}: invalid upstream commit`);
+		return value.sha;
+	}
+	// GitHub's unauthenticated API is rate limited on shared desktop IPs. The
+	// public Atom feed exposes the same commit identity without requiring a
+	// token, so a rate-limit response should not turn a healthy update check red.
+	if (response.status !== 403 && response.status !== 429)
+		throw new Error(`${id}: GitHub check failed (${response.status})`);
+	const feed = await fetch(`https://github.com/${entry.repository}/commits/main.atom`, {
+		headers: { Accept: "application/atom+xml", "User-Agent": "Drone-research-skills/1" },
+		signal: AbortSignal.timeout(30_000),
+	});
+	if (!feed.ok) throw new Error(`${id}: GitHub check failed (${response.status}/${feed.status})`);
+	const match = (await feed.text()).match(/Commit\/([0-9a-f]{40})/iu)?.[1];
+	if (!match) throw new Error(`${id}: invalid upstream commit feed`);
+	return match;
 }
 
 function currentPins(userDataDir: string): Partial<Record<BuiltinResearchSkillSource, PackPin>> {

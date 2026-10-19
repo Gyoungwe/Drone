@@ -200,6 +200,9 @@ export const useSessionsStore = create<SessionsStore>((set, get) => ({
 			}));
 			useTranscriptStore.getState().resetSession(meta.sessionId);
 			persistTabs(get());
+			// The workbench sidebar reads the disk-backed history from ProjectsStore;
+			// refresh it after a newly created session so “最近” updates immediately.
+			void import("./projects").then(({ useProjectsStore }) => useProjectsStore.getState().load());
 		} catch (error) {
 			// 失败时 draft tab 保留，用户重试即可；toast 提示（非会话内容，不残留）
 			console.error("创建会话失败", error);
@@ -328,6 +331,7 @@ export const useSessionsStore = create<SessionsStore>((set, get) => ({
 			// 否则会在点击卡片时把 agent_start 建立的进度视图重置为静态历史。
 			await loadSessionBundle(meta.sessionId, { skipHistoryIfLive: true });
 			persistTabs(get());
+			void import("./projects").then(({ useProjectsStore }) => useProjectsStore.getState().load());
 		} catch (error) {
 			console.error("打开会话失败", error);
 			pushToast("warning", "toast.sessionOpenFailed", errText(error));
@@ -346,6 +350,7 @@ export const useSessionsStore = create<SessionsStore>((set, get) => ({
 			}));
 			await loadSessionBundle(meta.sessionId);
 			persistTabs(get());
+			void import("./projects").then(({ useProjectsStore }) => useProjectsStore.getState().load());
 			return meta.sessionId;
 		} catch (error) {
 			console.error("分叉会话失败", error);

@@ -5,7 +5,9 @@ Drone 的内置研究技能来源目前只有两个公开仓库：
 - [Nature Skills](https://github.com/Yuan1z0825/nature-skills)
 - [Scientific Agent Skills](https://github.com/K-Dense-AI/scientific-agent-skills)
 
-它们随发布包内置。每周的 GitHub Actions 会检查上游 `main`、更新固定 commit 与归档 SHA-256，并创建一个可审阅的更新 PR。已安装客户端也提供一键更新：只下载固定 commit 的归档，校验路径、清单、文件哈希和归档哈希，写入用户目录的版本化 overlay，最后在安全重启后启用。`npm run skills:update` 可在维护者本地执行同一更新检查。新增或删除技能会停在审阅门槛，不会静默改变内置清单。
+它们随发布包内置。每周的 GitHub Actions 会检查上游 `main`、更新固定 commit 与归档 SHA-256，并创建一个可审阅的更新 PR。已安装客户端启动后会自动检查一次、之后每两小时检查一次；发现更新会在「技能与连接」显示。应用更新仍需用户点击确认：客户端只下载固定 commit 的归档，校验路径、清单、文件哈希和归档哈希，写入用户目录的版本化 overlay，最后在安全重启后启用，不会静默替换正在使用的技能。`npm run skills:update` 可在维护者本地执行同一更新检查。新增或删除技能会停在审阅门槛，不会静默改变内置清单。
+
+桌面端的「技能与连接」页同时显示每个内置科研技能对应的 GitHub 仓库和锁定 commit/path，并在页面顶部显示仓库级来源卡片、内置技能数和当前加载数；仓库卡片可直接打开上游地址，并标出“支持自动检查”或“仅目录”。Pi loader 返回的 `local`、`auto` 等运行时标签只用于没有目录映射的本地技能，不能作为上游仓库身份。
 
 ## Architecture
 
@@ -94,7 +96,7 @@ After installation or changing source paths, reload/restart the development app 
 
 ## Update and rollback
 
-To update a source, the scheduled updater checks the upstream `main` commit and archive checksum, refuses changed skill inventories, and opens a review PR for unchanged inventories. The installed client performs the same check on demand, stages each updated source under `userData/research-skills/<source>-<commit>`, atomically replaces its manifest, and waits for a guarded restart before loading the new overlay. The lock's `bundled` flag is a reviewed redistribution decision, not an automatic inference at runtime. A failed check or download leaves the current verified pack active.
+To update a source, the scheduled updater checks the upstream `main` commit and archive checksum, refuses changed skill inventories, and opens a review PR for unchanged inventories. The installed client performs the same check on demand and at startup, stages each updated source under `userData/research-skills/<source>-<commit>`, atomically replaces its manifest, and waits for a guarded restart before loading the new overlay. GitHub API rate limits (403/429) fall back to the repository's public commit Atom feed; a failed API and feed check or download leaves the current verified pack active. The lock's `bundled` flag is a reviewed redistribution decision, not an automatic inference at runtime.
 
 To disable all acquired sources locally, move their directories outside `resources/research-skills` and restart/reload; no global `.agents/skills` files are touched. Reverting the integration code restores the previous broad category selector. Pre-existing and concurrent UI, resource-preview and SSH changes are unrelated and must not be reverted with this upgrade.
 

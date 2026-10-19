@@ -266,7 +266,10 @@ var init_runtime_host = __esm({
       throw new Error(`Knowledge worker host is not configured for ${url.href}`);
     };
     requiresPaperEvidence = (query) => /paper|literature|article|文献|论文/i.test(query);
-    hasPaperCitation = (sources) => Array.isArray(sources) && sources.some((source) => /(?:^|\/)Library\/Papers\//.test(String(source?.path ?? "")));
+    hasPaperCitation = (sources) => Array.isArray(sources) && sources.some((source) => {
+      const value = source;
+      return Array.isArray(value?.paperDois) && value.paperDois.some((doi) => /^10\.\d{4,9}\//i.test(String(doi)));
+    });
     deliveryContract = (prompt, options) => deliveryLookup(prompt, options);
     workspaceConfigLoader = async () => {
       throw new Error("Workspace config host is not configured");
@@ -474,6 +477,8 @@ function beginKnowledgeFlow(ctx, binding) {
     reads: [],
     search: null,
     publication: null,
+    localAnswer: false,
+    localAnswerRate: { ...state.localAnswerStats },
     cards: []
   };
   state.flows.delete(id);
@@ -517,9 +522,23 @@ function noteKnowledgeRead(ctx, page) {
 function publicationKnowledgeFlow(ctx, proof) {
   const id = sessionId(ctx);
   if (!state.flows.has(id)) return;
+  const current = state.flows.get(id);
+  const completed = ["released", "no-hits"].includes(proof.status);
+  if (completed && !current.localAnswerRecorded) {
+    const answered = Boolean(current.search && current.search.hits > 0);
+    state.localAnswerStats = {
+      answered: state.localAnswerStats.answered + (answered ? 1 : 0),
+      total: state.localAnswerStats.total + 1,
+      rate: (state.localAnswerStats.answered + (answered ? 1 : 0)) / (state.localAnswerStats.total + 1),
+      updatedAt: Date.now()
+    };
+    current.localAnswerRecorded = true;
+  }
   const phase = proof.status === "setup-complete" ? "setup-complete" : proof.status === "released" ? "released" : proof.status === "no-hits" ? "no-hits" : proof.status === "blocked" ? "blocked" : proof.status === "evidence-only" ? "evidence-only" : proof.status === "unconfigured" ? "unconfigured" : "checking";
   updateKnowledgeFlow(ctx, {
     phase,
+    localAnswer: completed && current.search?.hits > 0,
+    localAnswerRate: { ...state.localAnswerStats },
     publication: {
       status: proof.status,
       warnings: Array.isArray(proof.warnings) ? proof.warnings.slice(0, 6) : [],
@@ -697,7 +716,12 @@ var init_ui_state = __esm({
     init_runtime_host();
     init_runtime_host();
     init_flow_cards();
-    state = runtimeSlot("knowledge", "ui", () => ({ listeners: /* @__PURE__ */ new Set(), flows: /* @__PURE__ */ new Map(), seq: 0 }));
+    state = runtimeSlot("knowledge", "ui", () => ({
+      listeners: /* @__PURE__ */ new Set(),
+      flows: /* @__PURE__ */ new Map(),
+      seq: 0,
+      localAnswerStats: { answered: 0, total: 0, rate: null, updatedAt: null }
+    }));
     UI_EVENT = "drone:knowledge-ui/v1";
     uiModule = {};
     process.on(UI_EVENT, (payload) => {

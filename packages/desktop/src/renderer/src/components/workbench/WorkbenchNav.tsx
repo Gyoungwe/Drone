@@ -19,7 +19,6 @@ import {
 	PanelLeftIcon,
 	ProjectsIcon,
 	PuzzleIcon,
-	SubagentIcon,
 	TaskBoardIcon,
 	TestIcon,
 } from "../icons";
@@ -40,7 +39,10 @@ export function isPrimaryNavActive(
 			state.view === "skills" ||
 			(state.settingsOpen && SKILLS_SETTINGS_CATEGORIES.includes(state.settingsCategory))
 		);
-	return state.settingsOpen && HOST_SETTINGS_CATEGORIES.includes(state.settingsCategory);
+	return (
+		state.view === "hosts" ||
+		(state.settingsOpen && HOST_SETTINGS_CATEGORIES.includes(state.settingsCategory))
+	);
 }
 
 const PRIMARY_ITEMS: ReadonlyArray<{
@@ -56,7 +58,7 @@ const PRIMARY_ITEMS: ReadonlyArray<{
 
 /**
  * 左侧研究工作台导航：一级入口保持稳定，项目和最近会话沿用真实会话数据。
- * 旧的设置、扩展和帮助入口收进头像菜单，但仍使用现有 SettingsStore 兼容跳转。
+ * 旧的设置和帮助入口收进头像菜单，但仍使用现有 SettingsStore 兼容跳转。
  */
 const COLLAPSE_KEY = "drone.sidebar.collapsed";
 const RECENT_LIMIT = 8;
@@ -185,6 +187,7 @@ export function WorkbenchNav() {
 			return;
 		}
 		if (key === "knowledge") {
+			useUiStore.getState().setKnowledgeTab("home");
 			openKnowledge({ cwd, sessionId: activeSessionId, tab: "reviews" });
 			return;
 		}
@@ -194,7 +197,7 @@ export function WorkbenchNav() {
 			setView("skills");
 			return;
 		}
-		useSettingsStore.getState().openWith("compute");
+		useUiStore.getState().setView("hosts");
 	};
 	const selectProjects = () => {
 		closeKnowledge();
@@ -234,18 +237,6 @@ export function WorkbenchNav() {
 				<PanelLeftIcon size={16} />
 			</button>
 			<nav className="workbench-nav-list" aria-label={t("workbench.nav.title")}>
-				{/* Space switcher remains the compatibility route to the full project page. */}
-				<button
-					type="button"
-					className={`workbench-nav-item${view === "projects" ? " is-active" : ""}`}
-					onClick={selectProjects}
-					aria-current={view === "projects" ? "page" : undefined}
-					title={t("workbench.nav.projects")}
-					aria-label={t("workbench.nav.projects")}
-				>
-					<ProjectsIcon size={17} />
-					<span>{t("workbench.nav.projects")}</span>
-				</button>
 				{PRIMARY_ITEMS.map(({ key, icon: Icon, label }) => {
 					const active = isPrimaryNavActive(key, { view, settingsOpen, settingsCategory });
 					return (
@@ -273,6 +264,18 @@ export function WorkbenchNav() {
 						</button>
 					);
 				})}
+				{/* Space switcher remains the compatibility route to the full project page. */}
+				<button
+					type="button"
+					className={`workbench-nav-item${view === "projects" ? " is-active" : ""}`}
+					onClick={selectProjects}
+					aria-current={view === "projects" ? "page" : undefined}
+					title={t("workbench.nav.projects")}
+					aria-label={t("workbench.nav.projects")}
+				>
+					<ProjectsIcon size={17} />
+					<span>{t("workbench.nav.projects")}</span>
+				</button>
 				{pluginViews.map((entry) => (
 					<button
 						key={entry.id}
@@ -319,17 +322,6 @@ export function WorkbenchNav() {
 						>
 							<GearIcon size={15} />
 							{t("workbench.nav.settings")}
-						</button>
-						<button
-							type="button"
-							role="menuitem"
-							onClick={() => {
-								setAccountOpen(false);
-								useSettingsStore.getState().openWith("extensions");
-							}}
-						>
-							<SubagentIcon size={15} />
-							{t("workbench.nav.extensions")}
 						</button>
 						<button
 							type="button"

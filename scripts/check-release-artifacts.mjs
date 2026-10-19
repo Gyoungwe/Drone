@@ -8,10 +8,10 @@
  * after downloading assets back from the GitHub draft release.
  */
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -36,6 +36,7 @@ const arch = arg("--arch");
 const expectedVersion = arg("--version");
 const reportPath = arg("--report");
 const expectedReportPath = arg("--expected-report");
+const allowUnsigned = process.env.DRONE_RELEASE_UNSIGNED === "true" || args.includes("--allow-unsigned");
 
 if (
 	!assetRoot ||
@@ -143,6 +144,42 @@ async function run(command, commandArgs, options = {}) {
 	}
 }
 
+/**
+ * Electron's binary can keep the inherited stdio handles open after printing
+ * its version. Probe startup with detached stdio and terminate the probe after
+ * a bounded interval; a fast non-zero exit remains a real failure.
+ */
+async function macVersionProbe(command, commandArgs, timeoutMs) {
+	return await new Promise((resolve, reject) => {
+		const child = spawn(command, commandArgs, { stdio: "ignore" });
+		let settled = false;
+		let timedOut = false;
+		const timer = setTimeout(() => {
+			timedOut = true;
+			child.kill("SIGTERM");
+			setTimeout(() => {
+				if (!settled) {
+					settled = true;
+					resolve(true);
+				}
+			}, 1_000);
+		}, timeoutMs);
+		child.once("error", (error) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timer);
+			reject(error);
+		});
+		child.once("close", (code, signal) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timer);
+			if (code === 0 || timedOut) resolve(timedOut);
+			else reject(new Error(`probe exited with code ${code ?? "null"} (${signal ?? "no signal"})`));
+		});
+	});
+}
+
 async function findFile(root, fileName) {
 	if (!(await exists(root))) return undefined;
 	for (const entry of await readdir(root, { withFileTypes: true })) {
@@ -157,6 +194,7 @@ async function findFile(root, fileName) {
 }
 
 async function checkMacApp(appPath, source) {
+	if (!appPath) return;
 	const asarPath = join(appPath, "Contents", "Resources", "app.asar");
 	const infoPath = join(appPath, "Contents", "Info.plist");
 	if (!(await exists(asarPath))) addCheck("mac-app-payload", "FAIL", `missing app.asar in ${source}`);
@@ -178,11 +216,71 @@ async function checkMacApp(appPath, source) {
 		path: asarPath,
 		bytes: (await stat(asarPath)).size,
 	});
+	const framework = join(appPath, "Contents", "Frameworks", "Electron Framework.framework");
+	if (!(await exists(framework))) {
+		addCheck("mac-framework", "FAIL", `Electron Framework.framework missing in ${source}`);
+		return;
+	}
+	const frameworkLinks = [
+		["Versions/Current", true],
+		["Electron Framework", true],
+		["Resources", true],
+	];
+	for (const [relativePath] of frameworkLinks) {
+		const linkPath = join(framework, relativePath);
+		try {
+			const info = await lstat(linkPath);
+			if (!info.isSymbolicLink()) throw new Error("is not a symlink");
+			await readlink(linkPath);
+		} catch (error) {
+			addCheck(
+				"mac-framework",
+				"FAIL",
+				`${relativePath} symlink missing or invalid in ${source}: ${error.message}`,
+			);
+		}
+	}
+	const frameworkBinary = join(framework, "Versions", "A", "Electron Framework");
+	if (!(await exists(frameworkBinary)))
+		addCheck("mac-framework", "FAIL", `framework binary missing in ${source}`);
+	addCheck("mac-framework", "PASS", "Electron Framework.framework contains the expected versioned symlinks", {
+		source,
+		framework,
+	});
+	if (allowUnsigned) {
+		addCheck(
+			"mac-codesign",
+			"NOT_RUN",
+			"release is intentionally unsigned; codesign verification is not applicable",
+			{
+				source,
+			},
+		);
+	} else {
+		await run("/usr/bin/codesign", ["--verify", "--deep", "--strict", appPath]);
+		addCheck("mac-codesign", "PASS", "codesign --verify --deep --strict passed", { source });
+	}
+	const binary = join(appPath, "Contents", "MacOS", "Drone");
+	if (!(await exists(binary))) addCheck("mac-launch", "FAIL", `application binary missing in ${source}`);
+	else {
+		const targetArch = source.match(/mac-(arm64|x64)\./u)?.[1] ?? arch;
+		const launchCommand = process.arch === "arm64" && targetArch === "x64" ? "/usr/bin/arch" : binary;
+		const launchArgs = launchCommand === binary ? ["--version"] : ["-x86_64", binary, "--version"];
+		const forcedStop = await macVersionProbe(launchCommand, launchArgs, 20_000);
+		addCheck(
+			"mac-launch",
+			"PASS",
+			forcedStop
+				? "Contents/MacOS/Drone started successfully; Electron probe was terminated after the bounded startup window"
+				: "Contents/MacOS/Drone --version exited successfully",
+			{ source },
+		);
+	}
 }
 
 async function extractMacZip(zipPath, workingRoot) {
 	const extracted = join(workingRoot, `${basename(zipPath)}-extracted`);
-	await run("/usr/bin/ditto", ["-x", "-k", zipPath, extracted]);
+	await run("/usr/bin/ditto", ["-x", "-k", zipPath, extracted], { timeout: 30_000 });
 	const appPath = await findFile(extracted, "Drone.app");
 	if (!appPath)
 		addCheck("mac-zip-payload", "FAIL", `Drone.app missing after extracting ${basename(zipPath)}`);
@@ -192,8 +290,25 @@ async function extractMacZip(zipPath, workingRoot) {
 	});
 }
 
+async function detachMacVolume(mount) {
+	try {
+		await run("/usr/bin/hdiutil", ["detach", mount, "-quiet"]);
+	} catch (error) {
+		// Electron's --version probe can briefly keep a framework handle open.
+		// Prefer a normal detach, then fall back to force only for cleanup so a
+		// valid payload is not reported as failed because of a stale mount.
+		try {
+			await run("/usr/bin/hdiutil", ["detach", mount, "-force", "-quiet"]);
+		} catch {
+			throw error;
+		}
+	}
+}
+
 async function mountMacDmg(dmgPath, _workingRoot) {
-	const { stdout } = await run("/usr/bin/hdiutil", ["attach", "-readonly", "-nobrowse", dmgPath]);
+	const { stdout } = await run("/usr/bin/hdiutil", ["attach", "-readonly", "-nobrowse", dmgPath], {
+		timeout: 30_000,
+	});
 	const mount = stdout
 		.split(/\r?\n/)
 		.map((line) => line.match(/(\/Volumes\/.+?)\s*$/u)?.[1])
@@ -209,7 +324,7 @@ async function mountMacDmg(dmgPath, _workingRoot) {
 			mount,
 		});
 	} finally {
-		await run("/usr/bin/hdiutil", ["detach", mount, "-quiet"]);
+		await detachMacVolume(mount);
 	}
 }
 

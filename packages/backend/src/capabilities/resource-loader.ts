@@ -3,14 +3,27 @@ import type { ResourceLoader } from "@earendil-works/pi-coding-agent";
 /** Mutable per-session skill visibility. Full skill files stay registered for explicit /skill:* use. */
 export class SkillVisibility {
 	private names = new Set<string>();
+	private disabledNames = new Set<string>();
 	set(names: Iterable<string>): void {
 		this.names = new Set(names);
 	}
+	setEnabled(names: Iterable<string>, enabled: boolean): void {
+		for (const name of names) {
+			if (enabled) this.disabledNames.delete(name);
+			else this.disabledNames.add(name);
+		}
+	}
+	isDisabled(name: string): boolean {
+		return this.disabledNames.has(name);
+	}
+	disabled(): string[] {
+		return [...this.disabledNames].sort();
+	}
 	has(name: string): boolean {
-		return this.names.has(name);
+		return this.names.has(name) && !this.disabledNames.has(name);
 	}
 	list(): string[] {
-		return [...this.names].sort();
+		return [...this.names].filter((name) => !this.disabledNames.has(name)).sort();
 	}
 }
 
@@ -24,6 +37,11 @@ export class CapabilityResourceLoader implements ResourceLoader {
 		private readonly visibility: SkillVisibility,
 	) {}
 	getAllSkills(): ReturnType<ResourceLoader["getSkills"]> {
+		const result = this.inner.getSkills();
+		return { ...result, skills: result.skills.filter((skill) => !this.visibility.isDisabled(skill.name)) };
+	}
+	/** Full inventory for the settings surface; disabled skills remain visible there. */
+	getAllSkillsIncludingDisabled(): ReturnType<ResourceLoader["getSkills"]> {
 		return this.inner.getSkills();
 	}
 	getExtensions(): ReturnType<ResourceLoader["getExtensions"]> {

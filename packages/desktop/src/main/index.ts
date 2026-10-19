@@ -1,6 +1,10 @@
 import { researchBundlePaths } from "./research-bundle";
 import { researchSkillPackPaths } from "./research-skill-packs";
-import { configureResearchSkillUpdater, readResearchSkillPackInstall } from "./research-skill-updater";
+import {
+	configureResearchSkillUpdater,
+	readResearchSkillPackInstall,
+	scheduleResearchSkillUpdateCheck,
+} from "./research-skill-updater";
 import { desktopSystemPrompt } from "./system-prompt";
 import "./pi-package-dir";
 import "./dev-agent-dir";
@@ -29,6 +33,9 @@ import { initUpdater, scheduleAutoUpdateCheck } from "./updater";
 import { applyChromeTheme, createWindow, resolveTheme } from "./window";
 
 const log = createLogger("main");
+// Electron derives the native macOS About label from the package name unless
+// the product name is set explicitly.  Keep the user-facing app name stable.
+app.setName("Drone");
 let backendServices: BackendServices | undefined;
 let uiPluginsManager: UiPluginManager;
 let latestIncidentSnapshot: ReturnType<typeof buildIncidentSnapshot> | undefined;
@@ -143,6 +150,11 @@ else
 nativeTheme.on("updated", () => applyChromeTheme(nativeTheme.themeSource));
 
 app.whenReady().then(async () => {
+	if (process.argv.includes("--version")) {
+		console.log(app.getVersion());
+		app.exit(0);
+		return;
+	}
 	initLogging(join(app.getPath("userData"), "logs"));
 	log.info("app ready", { version: app.getVersion(), userData: app.getPath("userData") });
 
@@ -257,6 +269,7 @@ app.whenReady().then(async () => {
 		? join(process.resourcesPath, "research-workbench")
 		: join(__dirname, "../../../../.pi");
 	configureResearchSkillUpdater(app.getPath("userData"));
+	scheduleResearchSkillUpdateCheck();
 	// Bundled pi packages (MCP runtime pi-mcp-adapter), staged by scripts/stage-pi-packages.mjs.
 	const researchBundle = researchBundlePaths(
 		process.env.DRONE_RESEARCH_WORKBENCH_ROOT,

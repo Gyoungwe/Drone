@@ -406,12 +406,26 @@ function status() {
 		pendingChanges: dirty.size,
 		jobs: Number(db.prepare("SELECT count(*) count FROM jobs").get().count),
 		problems: db.prepare("SELECT * FROM problems ORDER BY path LIMIT 20").all(),
+		categoryCounts: categoryCounts(),
 		stats: { ...stats },
 		semantic: {
 			vectors: Number(db.prepare("SELECT count(*) count FROM semantic_chunks").get().count),
 			paths: Number(db.prepare("SELECT count(DISTINCT path) count FROM semantic_chunks").get().count),
 		},
 	};
+}
+function categoryCounts() {
+	const counts = { paper: 0, software: 0, method: 0, idea: 0, other: 0 };
+	for (const row of db.prepare("SELECT path,body,kind FROM notes WHERE kind IN ('note','wiki')").all()) {
+		const type = String(parseFrontmatter(row.body)?.data?.type || "").toLowerCase();
+		const value = `${type}/${String(row.path).toLowerCase()}`;
+		if (/paper|literature|文献|论文/.test(value)) counts.paper++;
+		else if (/software|tool|软件/.test(value)) counts.software++;
+		else if (/method|protocol|方法/.test(value)) counts.method++;
+		else if (/idea|hypothes|想法|假设/.test(value)) counts.idea++;
+		else counts.other++;
+	}
+	return counts;
 }
 function semanticStatus(fingerprint = null, project = null) {
 	if (!fingerprint) return { vectors: 0, paths: 0, coverage: "unconfigured" };
@@ -429,6 +443,27 @@ function pending(project, limit = 20, kind = null) {
 			"SELECT * FROM jobs WHERE (scope='shared' OR scope=?) AND (? IS NULL OR kind=?) ORDER BY updated DESC LIMIT ?",
 		)
 		.all(project || "", kind, kind, limit);
+}
+async function recentNotes(project, limit = 8) {
+	// A deposit writes the Vault file before the watcher callback arrives.  Flush
+	// that bounded dirty batch here so the human-facing overview never shows an
+	// empty list while status already reports the new note count.
+	await flushDirty();
+	const scope = project || "";
+	const rows = db
+		.prepare(
+			"SELECT path,title,kind,signature FROM notes WHERE (scope='shared' OR scope=?) AND kind IN ('note','wiki')",
+		)
+		.all(scope);
+	return rows
+		.map((row) => ({
+			path: row.path,
+			title: row.title,
+			kind: row.kind,
+			updatedAt: Number.parseFloat(String(row.signature).split(":", 1)[0]) || 0,
+		}))
+		.sort((left, right) => right.updatedAt - left.updatedAt || left.path.localeCompare(right.path))
+		.slice(0, Math.max(1, Math.min(24, Math.floor(limit || 8))));
 }
 async function read(path, project, options = {}) {
 	if (!canRead(validateNote(path), project)) throw new Error("Note is outside shared/current-project scope");
@@ -1050,6 +1085,7 @@ async function dispatch(op, args) {
 			.all(scope, limit, offset);
 		return { items, total, offset, nextOffset: offset + items.length < total ? offset + items.length : null };
 	}
+	if (op === "recentNotes") return { items: await recentNotes(args.project, args.limit), revision };
 	if (op === "jobs") return { ...status(), items: pending(args.project, 100, args.kind || null) };
 	if (op === "completeJob") {
 		db.prepare("DELETE FROM jobs WHERE key=? AND revision=?").run(args.key, args.revision);

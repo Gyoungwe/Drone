@@ -130,7 +130,11 @@ export function configureKnowledgeEvidence(host: {
 }
 let requiresPaperEvidence = (query: string) => /paper|literature|article|文献|论文/i.test(query);
 let hasPaperCitation = (sources: unknown[]) =>
-	Array.isArray(sources) && sources.some((source) => /(?:^|\/)Library\/Papers\//.test(String((source as { path?: unknown })?.path ?? "")));
+	Array.isArray(sources) &&
+		sources.some((source) => {
+			const value = source as { paperDois?: unknown };
+			return Array.isArray(value?.paperDois) && value.paperDois.some((doi) => /^10\.\d{4,9}\//i.test(String(doi)));
+		});
 export { requiresPaperEvidence, hasPaperCitation };
 
 export const deliveryContract: DeliveryContract = (prompt, options) => deliveryLookup(prompt, options);

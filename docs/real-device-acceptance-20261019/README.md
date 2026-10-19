@@ -1,6 +1,6 @@
 # Drone 实机验收报告 · 2026-10-19
 
-- 设备：用户 MacBook（arm64，macOS 27.2），**正式安装版 Drone 0.33.3**（截图 00）
+- 设备：用户 MacBook（arm64，macOS 27.2），**正式安装版 Drone 0.33.4**（截图 00 为 0.33.3 改前证据）
 - 模型：Gemini 3.8 Flash（Antigravity），使用用户本机已配置的 API
 - 测试 Vault：`/Users/gaoyangwei/Drone-TestVault-1019`（测试后保留未删）；测试结束已切回 `ObsidianResearchVault`（截图 19）
 - 执行者：Claude，通过电脑操作完成；截图都在 `screenshots/` 目录下
@@ -79,3 +79,31 @@ P0-1 → P1-5（轻量问答路径，直接省 token）→ P1-2、P1-3、P1-4（
 B8 云端协作继续按计划暂缓，Protocols.io 继续只读。Windows 构建/上传/回下载按本轮范围标记为 `OUT_OF_SCOPE`；签名检查按无证书策略为 `NOT_RUN`，不构成失败。
 
 本轮离线回归：knowledge 307/307、backend knowledge UI + literature 32/32、desktop 定向 16/16；完整 `npm test` 通过（backend 227/1877、desktop 149/766、knowledge 32/307 及其余 workspace），`npm run lint`、`npm run typecheck`、`npm run build`、`npm run check:arch` 均通过。Lint 仅保留设计稿 HTML 超过 1 MiB 的既有 warning；这些结果不能替代正式安装包实机验收。
+
+## 修改单 CO-1～CO-4 当前收口
+
+本节记录修改单相对于本报告截图的收口状态。截图 00–20 是改前证据；`docs/releases/visual/` 下的文件是构建 renderer 的静态预览，不能替代正式安装包截图，因此没有把它们标成最终 PASS。
+
+| 修改单 | 改动 | 当前状态 | 证据与剩余门槛 |
+|---|---|---|---|
+| CO-1 精简 Zotero | 内置本机 API/Web API 写入路径；状态压成一行；按版本选择写入方式；机构访问移到连接器抽屉；历史 Zotero MCP 条目仍由用户配置保留 | **正式包界面 PASS；写入闭环沿用既有 Zotero 临时 note 验收** | `ZoteroPanel.tsx`、`zotero-copy.ts`、`backend/src/zotero/status.ts`；v0.33.4 实机回读显示“本机写入已授权 / 运行中”，没有把 MCP 的 0 工具误报为启用 |
+| CO-2 技能/插件/MCP 按来源分组 | 技能按仓库映射或 loader 来源分组；同名技能去重并展开来源；Pi 能力包出现在插件分类；MCP failed 显示错误状态；整组开关通过会话 IPC 更新技能可见性；科研技能显示 GitHub 仓库并可打开锁定 commit/path；页面提供仓库级来源卡片和内置研究技能更新入口 | **正式包 PASS** | v0.33.4 安装包真实回读显示 Nature、Scientific、Academic 三个 GitHub 仓库卡片、锁定 commit、加载/内置计数及“支持自动检查/仅目录”标识；Pi 能力包也在插件列表中。`SkillsConnectionsView.tsx`、`CapabilityRuntime`、`setSkillNamesEnabled`、`research-skill-sources.json` |
+| CO-3 设置入口统一 | 设置弹窗只保留通用、外观、模型、权限、关于；能力进入技能与连接右抽屉；Vault/WebDAV/维护进入知识库设置；主机进入主机页 | **正式包界面 PASS** | `SettingsDialog.tsx`、`KnowledgeView.tsx`、`KnowledgePanel.tsx`、`WorkbenchNav.tsx`；v0.33.4 CUA 回读设置只显示五项，账户菜单只保留设置/帮助/关于 |
+| CO-4 文档与视觉对照 | 计划 §3.10 已补页面/设置边界和来源分组规则；执行日志已归档到不超过 30 行 | **文档完成；视觉最终验收未运行** | 改前截图为 `screenshots/00–20`；构建预览为 `docs/releases/visual/drone-*.png`；需正式包浅色/深色 1440×900 前后对照 |
+
+## 仍未关闭的实机门槛
+
+| 门槛 | 状态 | 关闭条件 |
+|---|---|---|
+| P1-2 / P1-3 / P1-4 | **代码已修；行为仍需真实知识闭环** | 正式包 smoke 已通过 preload/知识 IPC；仍需真实安装包写入后回读最近沉淀、显示本地回答率、对本回合 DOI 证据不误报 |
+| P1-5 | **提示策略已修，待真实会话** | 在正式包中用简单事实问题走检索→回答→有界沉淀，确认不创建任务计划和额外写入授权 |
+| P1-7 / P1-8 | **P1-7 代码已修待 v0.33.4 重装回读；P1-8 正式包已见最近列表** | 新包需回读 pi-core/pi-knowledge/pi-research/desktop-ui-pack 版本与状态；新建、历史打开和分叉后“最近”即时更新 |
+| V4 MCP | **BLOCKED** | 需要用户配置可调用的 MCP；当前 Zotero MCP 仍为 0 工具，不能伪造 PASS |
+| V5 原生 Pi | **NOT_RUN** | 需要原生 Pi 完成一次与 Desktop 对等的真实闭环；现有 CLI/loader 证据不代替完整会话 |
+| V6 CO-1～CO-4 视觉对照 | **NOT_RUN** | 需要正式安装包的浅色/深色 1440×900 改后截图；静态 renderer 预览仅作开发参考 |
+
+除上述门槛外，B8 云端协作仍按计划暂缓，Protocols.io 仍保持只读；两者不在本轮补做范围内。
+
+## 技能来源与更新验收说明
+
+改前界面把 Pi loader 的 `local`、`auto` 直接当作来源，无法回答“这个技能来自哪个仓库、锁定了哪个版本”。v0.33.4 将内置科研技能名映射到 `packages/shared/src/research-skill-sources.json`：界面显示上游 GitHub 仓库，仓库卡片显示锁定 commit、加载数和内置数，技能项可打开精确 commit/path；未进入锁定目录的本地技能仍显示其真实 loader 来源。更新检查在启动后和定时任务中运行，GitHub API 受 403/429 限流时回退到公开 Atom commit feed；更新按钮复用归档哈希/文件哈希校验、版本化 overlay 和安全重启，不会静默替换清单。v0.33.4 正式包已回读来源卡片和宿主插件清单；仅静态 renderer 预览不算最终证据。

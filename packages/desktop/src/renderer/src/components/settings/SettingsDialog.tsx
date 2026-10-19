@@ -38,22 +38,15 @@ import { WorkflowOverviewPanel } from "./WorkflowOverview";
 
 const STATIC_CATEGORIES = [
 	"general",
-	"permissions",
 	"appearance",
 	"models",
-	"skills",
-	"mcp",
-	"zotero",
-	"extensions",
+	"permissions",
 	"about",
 ] as const satisfies readonly SettingsCategory[];
 
-/** U7：主分类按「身份 / 能力 / 资源 / 通用」分组（组名小灰字）；顺序即导航顺序 */
+/** 设置弹窗只保留偏好类主分类；能力和数据入口由页面与右侧抽屉承载。 */
 const NAV_GROUPS: ReadonlyArray<{ id: string; items: readonly (typeof STATIC_CATEGORIES)[number][] }> = [
-	{ id: "identity", items: ["models", "permissions"] },
-	{ id: "capability", items: ["skills", "mcp", "extensions"] },
-	{ id: "resource", items: ["zotero"] },
-	{ id: "general", items: ["general", "appearance", "about"] },
+	{ id: "general", items: ["general", "appearance", "models", "permissions", "about"] },
 ];
 
 /** 导航项图标 + 英文副标（中文界面下显示，ClawsGO 式「中文 English」） */
@@ -87,14 +80,6 @@ function NavLabel({ id, label }: { id: string; label: string }) {
 		</span>
 	);
 }
-
-/** 「高级」分组：治理与维护类功能保留，但不出现在主流程分类里 */
-const ADVANCED_CATEGORIES = [
-	"knowledge",
-	"uiPlugins",
-	"workflows",
-	"compute",
-] as const satisfies readonly SettingsCategory[];
 
 /** 面板注册表：新增分类 = 写一个面板组件 + 在这里登记（未登记显示 coming soon） */
 const PANELS: Partial<Record<SettingsCategory, ComponentType>> = {
@@ -260,26 +245,7 @@ export function SettingsDialog() {
 								))}
 							</div>
 						))}
-						<p className="mb-0.5 mt-3 px-2 text-[11px] text-ink-faint">{t("settings.category.advanced")}</p>
-						{ADVANCED_CATEGORIES.map((id) => (
-							<button
-								key={id}
-								type="button"
-								id={`settings-nav-${id}`}
-								data-settings-nav="true"
-								aria-current={category === id ? "page" : undefined}
-								aria-controls="settings-dialog-panel"
-								onKeyDown={handleNavKeyDown}
-								className={`settings-nav-item mb-0.5 w-full rounded-md px-2 py-2 text-left text-[12px] transition-colors ${
-									category === id
-										? "is-active bg-hover font-medium text-ink"
-										: "text-ink-dim hover:bg-hover hover:text-ink"
-								}`}
-								onClick={() => setCategory(id)}
-							>
-								<NavLabel id={id} label={t(`settings.category.${id}`)} />
-							</button>
-						))}
+
 						{/* 插件自带设置页分类：标题取 contribution.title（插件自定义字符串，不走宿主 i18n） */}
 						{pluginCategories.map((c) => {
 							const id = pluginCategoryId(c.pluginName, c.id);

@@ -293,7 +293,10 @@ var init_runtime_host = __esm({
       throw new Error(`Knowledge worker host is not configured for ${url.href}`);
     };
     requiresPaperEvidence = (query) => /paper|literature|article|文献|论文/i.test(query);
-    hasPaperCitation = (sources) => Array.isArray(sources) && sources.some((source) => /(?:^|\/)Library\/Papers\//.test(String(source?.path ?? "")));
+    hasPaperCitation = (sources) => Array.isArray(sources) && sources.some((source) => {
+      const value = source;
+      return Array.isArray(value?.paperDois) && value.paperDois.some((doi) => /^10\.\d{4,9}\//i.test(String(doi)));
+    });
     workspaceConfigLoader = async () => {
       throw new Error("Workspace config host is not configured");
     };
@@ -412,7 +415,12 @@ var init_ui_state = __esm({
     init_runtime_host();
     init_runtime_host();
     init_flow_cards();
-    state = runtimeSlot2("knowledge", "ui", () => ({ listeners: /* @__PURE__ */ new Set(), flows: /* @__PURE__ */ new Map(), seq: 0 }));
+    state = runtimeSlot2("knowledge", "ui", () => ({
+      listeners: /* @__PURE__ */ new Set(),
+      flows: /* @__PURE__ */ new Map(),
+      seq: 0,
+      localAnswerStats: { answered: 0, total: 0, rate: null, updatedAt: null }
+    }));
     UI_EVENT = "drone:knowledge-ui/v1";
     uiModule = {};
     process.on(UI_EVENT, (payload) => {
@@ -16442,7 +16450,7 @@ function flowCardBuilder(name) {
 }
 
 // packages/extensions/src/internal/reply-focus.ts
-var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for factual research claims, not unrelated citations for ordinary chat. For substantial tasks, do bounded read-only preparation and consolidate scope, assumptions, needed permissions and deliverables into one task_plan for one user authorization. After authorization, carry out routine steps and recoverable checks within that scope without repeatedly asking whether to continue. Respect prior decisions, especially declined installs. New risks or scope, missing credentials and genuinely unavailable user data still require a specific request; never infer consent. At completion, explain what changed, link actual outputs or show key figures, separate execution from validation, and give one next step only if needed. Keep internal counters and tool logs out of the main answer.";
+var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for factual research claims, not unrelated citations for ordinary chat. For a simple factual question that can be answered from existing local knowledge, take the light path: retrieve, answer, and auto-deposit a bounded note when appropriate; do not create a task_plan or ask for write authorization just to answer. For substantial tasks, do bounded read-only preparation and consolidate scope, assumptions, needed permissions and deliverables into one task_plan for one user authorization. After authorization, carry out routine steps and recoverable checks within that scope without repeatedly asking whether to continue. Respect prior decisions, especially declined installs. New risks or scope, missing credentials and genuinely unavailable user data still require a specific request; never infer consent. At completion, explain what changed, link actual outputs or show key figures, separate execution from validation, and give one next step only if needed. Keep internal counters and tool logs out of the main answer.";
 
 // packages/extensions/src/internal/research-host.ts
 import { randomUUID as randomUUID10 } from "node:crypto";

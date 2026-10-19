@@ -544,6 +544,7 @@ const SESSION_CHANNELS: Record<string, string> = {
 	setModel: IpcChannels.SessionSetModel,
 	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
 	setAgentMode: IpcChannels.SessionSetAgentMode,
+	setSkillNamesEnabled: IpcChannels.SessionSetSkillNamesEnabled,
 	compact: IpcChannels.SessionCompact,
 	getStats: IpcChannels.SessionStats,
 	getContextUsage: IpcChannels.SessionGetContextUsage,

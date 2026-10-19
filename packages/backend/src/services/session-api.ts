@@ -167,6 +167,13 @@ export class SessionServiceApi extends SessionSettingsApi {
 	): Promise<{ added: string[]; removed: string[] }> {
 		return this.host.control.setAgentMode(sessionId, mode);
 	}
+	async setSkillNamesEnabled(
+		sessionId: string,
+		names: string[],
+		enabled: boolean,
+	): Promise<{ disabled: string[] }> {
+		return this.host.control.setSkillNamesEnabled(sessionId, names, enabled);
+	}
 
 	async setThinkingLevel(sessionId: string, level: string): Promise<void> {
 		return this.host.control.setThinkingLevel(sessionId, level);

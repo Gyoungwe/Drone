@@ -36,3 +36,25 @@ it("checks the two built-in sources against their pinned current commits", async
 	expect(states.at(-1)).toBe("up-to-date");
 	expect(fetch).toHaveBeenCalledTimes(2);
 });
+
+it("falls back to the public commit feed when GitHub API rate limits the desktop", async () => {
+	const root = mkdtempSync(join(tmpdir(), "research-skill-update-feed-"));
+	roots.push(root);
+	configureResearchSkillUpdater(root);
+	const sourceCommit = new Map(RESEARCH_SKILL_SOURCES.map((source) => [source.id, source.commit]));
+	const fetch = vi.fn(async (url: string) => {
+		if (url.includes("api.github.com")) return { ok: false, status: 403 };
+		const sha = url.includes("nature-skills") ? sourceCommit.get("nature") : sourceCommit.get("scientific");
+		return {
+			ok: true,
+			status: 200,
+			text: async () => `<entry><id>tag:github.com,2008:Grit::Commit/${sha}</id></entry>`,
+		};
+	});
+	vi.stubGlobal("fetch", fetch);
+	const states: string[] = [];
+	onResearchSkillUpdateState((state) => states.push(state.phase));
+	await checkResearchSkillUpdates();
+	expect(states.at(-1)).toBe("up-to-date");
+	expect(fetch).toHaveBeenCalledTimes(4);
+});

@@ -36,6 +36,7 @@ export function ContextPanel() {
 	const setPanelOpen = useUiStore((s) => s.setPanelOpen);
 	const onRunStart = useUiStore((s) => s.onRunStart);
 	const onRunEnd = useUiStore((s) => s.onRunEnd);
+	const clearResourcePreview = useUiStore((s) => s.clearResourcePreview);
 	const visibleTabs = useVisibleTabs(activeSessionId, tab);
 	const agentActive = useTranscriptStore((s) => selectTranscript(s, activeSessionId).agentActive);
 	// 插件页签（panel.tab 区域贡献，挂钩 4）：被禁用/卸载后若仍选中，回到「任务」
@@ -53,10 +54,13 @@ export function ContextPanel() {
 	useEffect(() => {
 		const prev = activeRef.current;
 		activeRef.current = { sid: activeSessionId, active: agentActive };
-		if (prev.sid !== activeSessionId) return;
+		if (prev.sid !== activeSessionId) {
+			clearResourcePreview();
+			return;
+		}
 		if (!prev.active && agentActive) onRunStart();
 		else if (prev.active && !agentActive) onRunEnd();
-	}, [activeSessionId, agentActive, onRunStart, onRunEnd]);
+	}, [activeSessionId, agentActive, clearResourcePreview, onRunStart, onRunEnd]);
 
 	return (
 		<aside

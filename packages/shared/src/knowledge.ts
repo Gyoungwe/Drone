@@ -123,6 +123,9 @@ export interface KnowledgeFlow {
 		paths?: string[];
 		scientificallyVerified: false;
 	} | null;
+	/** Runtime-observed local retrieval answer metric for the current host process. */
+	localAnswer?: boolean;
+	localAnswerRate?: KnowledgeAnswerMetric | null;
 	/**
 	 * 门控四阶段进度（导航/Wiki/检索/发布），由后端 flow 生产端从权威 flow 数据单点派生。
 	 * 渲染端只读展示、不再自行重算，避免与后端判定漂移。旧 flow 可能缺省。
@@ -166,10 +169,33 @@ export interface KnowledgeIndexStatus {
 	watching: boolean;
 	lastReconciledAt: string | null;
 	problems: { path: string; message: string }[];
+	/** Counts are computed from the full indexed set, independently of the bounded graph projection. */
+	categoryCounts?: {
+		paper: number;
+		software: number;
+		method: number;
+		idea: number;
+		other: number;
+	};
+}
+export interface KnowledgeRecentNote {
+	path: string;
+	title: string;
+	kind: "note" | "wiki";
+	/** File mtime observed by the index; this is a display hint, not a provenance receipt. */
+	updatedAt: number;
+}
+export interface KnowledgeAnswerMetric {
+	answered: number;
+	total: number;
+	rate: number | null;
+	updatedAt: number | null;
 }
 export interface KnowledgeOverview {
 	reviewMode?: "automatic" | "strict";
 	wikiHistory?: { id: string; path: string; afterHash: string; reviewedAt: number; reviewMethod: string }[];
+	recentNotes?: KnowledgeRecentNote[];
+	localAnswerRate?: KnowledgeAnswerMetric | null;
 	specialistSettings?: KnowledgeSpecialistSettings;
 	specialistSettingsError?: string;
 	enabled: boolean;

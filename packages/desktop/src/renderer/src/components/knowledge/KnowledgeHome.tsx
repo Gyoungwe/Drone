@@ -1,6 +1,7 @@
 import type { KnowledgeGraph as GraphData, KnowledgePage, WikiReviewItem } from "@drone/shared";
 import { useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
+import { useI18nStore } from "../../i18n";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
@@ -99,12 +100,21 @@ export function KnowledgeHome({
 		if (reviewId && cwd) useKnowledgeStore.getState().openReview({ cwd, sessionId, id: reviewId });
 	}, [cwd, reviewId, sessionId]);
 
-	const recent = (data?.wikiHistory ?? []).slice(0, RECENT_LIMIT);
+	const recent = (data?.recentNotes ?? []).slice(0, RECENT_LIMIT);
 	const counts = useMemo(
-		() => deriveKnowledgeCategoryCounts(graph, data?.index?.noteCount),
-		[graph, data?.index?.noteCount],
+		() =>
+			data?.index?.categoryCounts
+				? {
+						all: data.index.noteCount,
+						paper: data.index.categoryCounts.paper,
+						software: data.index.categoryCounts.software,
+						method: data.index.categoryCounts.method,
+						idea: data.index.categoryCounts.idea,
+					}
+				: deriveKnowledgeCategoryCounts(graph, data?.index?.noteCount),
+		[graph, data?.index?.noteCount, data?.index?.categoryCounts],
 	);
-	const latest = recent[0]?.reviewedAt;
+	const latest = recent[0]?.updatedAt;
 	const manage = () => useSettingsStore.getState().openWith("knowledge");
 	const openReview = (id: string) => {
 		if (cwd) useKnowledgeStore.getState().openReview({ cwd, sessionId, id });
@@ -113,7 +123,7 @@ export function KnowledgeHome({
 		if (binding)
 			void getPi().openKnowledgeTarget({ cwd, revision: binding.revision }).catch(reportKnowledgeError);
 	};
-	const language = document.documentElement.lang || "zh";
+	const language = useI18nStore((state) => state.language);
 
 	return (
 		<div className="knowledge-home mx-auto w-full max-w-[1440px] text-ink" data-testid="knowledge-home">
@@ -189,7 +199,7 @@ export function KnowledgeHome({
 								{recent.map((item) => {
 									const kind = classifyKnowledgePath(item.path);
 									return (
-										<li key={item.id}>
+										<li key={item.path}>
 											<button
 												type="button"
 												className="grid w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 text-left hover:bg-hover"
@@ -207,11 +217,11 @@ export function KnowledgeHome({
 														{item.path.split(/[\\/]/u).pop() || item.path}
 													</span>
 													<span className="mt-1 block truncate text-[11px] text-ink-dim">
-														{t("homeRecentSource")} · {item.reviewMethod || t("homeRecentSourceSaved")}
+														{item.kind === "wiki" ? t("homeRecentTypeUnknown") : t("homeRecentSourceSaved")}
 													</span>
 												</span>
 												<span className="whitespace-nowrap text-[11px] text-ink-faint">
-													{relativeTime(item.reviewedAt, language)}
+													{relativeTime(item.updatedAt, language)}
 												</span>
 											</button>
 										</li>
@@ -263,7 +273,11 @@ export function KnowledgeHome({
 							<dl className="space-y-2 text-xs text-ink-2">
 								<div className="flex items-center justify-between gap-3">
 									<dt>{t("homeHealthLocalAnswers")}</dt>
-									<dd className="font-mono text-ink-faint">{t("homeHealthUnavailable")}</dd>
+									<dd className="font-mono text-ink-faint">
+										{data?.localAnswerRate?.rate == null
+											? t("homeHealthUnavailable")
+											: `${Math.round(data.localAnswerRate.rate * 100)}% (${data.localAnswerRate.answered}/${data.localAnswerRate.total})`}
+									</dd>
 								</div>
 								<div className="flex items-center justify-between gap-3">
 									<dt>{t("homeHealthIndexed")}</dt>

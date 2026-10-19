@@ -327,6 +327,12 @@ export interface LoadedSkill {
 	source: string;
 	/** SKILL.md 文件路径 */
 	path: string;
+	/** 可验证的上游仓库身份；没有锁定映射的本地技能不填写。 */
+	repository?: string;
+	/** 上游仓库的锁定提交（内置研究技能才有）。 */
+	repositoryCommit?: string;
+	/** 上游仓库内的相对 SKILL.md 路径。 */
+	repositoryPath?: string;
 	/** 是否禁用模型自动调用（仅手动触发） */
 	disableModelInvocation: boolean;
 }
@@ -354,6 +360,18 @@ export interface LoadedExtension {
 	shortcutsCount: number;
 }
 
+/**
+ * First-party Pi packages owned by the host.  These are separate from the
+ * session's `.pi/extensions` rows: a package can contribute a bundled
+ * extension without exposing its npm package identity through Pi's loader.
+ */
+export interface HostPluginPackage {
+	name: string;
+	version: string;
+	host: "desktop" | "pi";
+	status: "available" | "configure" | "unavailable";
+}
+
 /** 资源加载诊断（collision 冲突/warning/error） */
 export interface ResourceDiagnosticInfo {
 	type: "warning" | "error" | "collision";
@@ -367,6 +385,7 @@ export interface LoadedResources {
 	skillDiagnostics: ResourceDiagnosticInfo[];
 	extensions: LoadedExtension[];
 	extensionErrors: { path: string; error: string }[];
+	hostPlugins?: HostPluginPackage[];
 	/** 当前会话模型实际可见的按需能力/工具/skill 与 schema footprint；关闭 lazyCapabilities 时省略。 */
 	capabilities?: CapabilityState;
 }

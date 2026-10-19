@@ -3,6 +3,7 @@ import type {
 	ContextManagerMode,
 	CustomProviderInput,
 	CustomProviderUpdateInput,
+	HostPluginPackage,
 	LoadedExtension,
 	LoadedSkill,
 	ModelPrefs,
@@ -15,6 +16,7 @@ import { create } from "zustand";
 import { getPi } from "../api";
 import { optimisticUpdate } from "../lib/optimistic";
 import { isDraftSessionId, useSessionsStore } from "./sessions";
+import { useUiStore } from "./ui";
 
 export type SettingsCategory =
 	| "general"
@@ -57,6 +59,8 @@ interface SettingsStore {
 	capabilities: CapabilityState | null;
 	/** 当前活跃会话已加载的扩展（null = 未加载/无会话） */
 	extensions: LoadedExtension[] | null;
+	/** Host-owned Pi packages visible in the Plugins category. */
+	hostPlugins: HostPluginPackage[] | null;
 	extensionErrors: { path: string; error: string }[];
 	/** providerId → 测试结果（"testing" 表示进行中） */
 	testResults: Record<string, ProviderTestResult | "testing">;
@@ -110,6 +114,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 		skillDiagnostics: [],
 		capabilities: null,
 		extensions: null,
+		hostPlugins: null,
 		extensionErrors: [],
 		testResults: {},
 		error: null,
@@ -120,6 +125,29 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 		},
 
 		openWith: (category) => {
+			const capabilityDrawer =
+				category === "skills" ||
+				category === "mcp" ||
+				category === "extensions" ||
+				category === "uiPlugins" ||
+				category === "zotero" ||
+				category === "knowledge"
+					? category
+					: category === "workflows"
+						? "knowledge"
+						: null;
+			if (capabilityDrawer) {
+				useUiStore.getState().setCapabilityDrawer(capabilityDrawer);
+				useUiStore.getState().setKnowledgeTab(capabilityDrawer === "knowledge" ? "settings" : "home");
+				useUiStore.getState().setView(capabilityDrawer === "knowledge" ? "knowledge" : "skills");
+				set({ open: false, testResults: {}, error: null });
+				return;
+			}
+			if (category === "compute") {
+				useUiStore.getState().setView("hosts");
+				set({ open: false, testResults: {}, error: null });
+				return;
+			}
 			set((state) => ({ category: category ?? state.category, open: true, testResults: {}, error: null }));
 			void get().refresh();
 		},
@@ -162,6 +190,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 							skillDiagnostics: resources.skillDiagnostics,
 							capabilities: resources.capabilities ?? null,
 							extensions: resources.extensions,
+							hostPlugins: resources.hostPlugins ?? [],
 							extensionErrors: resources.extensionErrors,
 						});
 					}
@@ -171,6 +200,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 						skillDiagnostics: [],
 						capabilities: null,
 						extensions: null,
+						hostPlugins: null,
 						extensionErrors: [],
 					});
 				}
