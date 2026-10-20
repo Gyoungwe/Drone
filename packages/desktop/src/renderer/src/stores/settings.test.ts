@@ -7,13 +7,19 @@ const piMock = vi.hoisted(() => ({
 	getPermissionConfig: vi.fn(() => Promise.resolve({ enabled: true })),
 	getChannelWatchConfig: vi.fn(() => Promise.resolve({ enabled: true })),
 	listProviders: vi.fn(() => Promise.resolve({ providers: [] })),
+	getModelPrefs: vi.fn(() => Promise.resolve({})),
 	listSubagents: vi.fn(() => Promise.resolve([])),
+	listSlashCommandsForCwd: vi.fn(() =>
+		Promise.resolve([
+			{ name: "skill:research-vault", description: "Vault", source: "skill", supported: true },
+		]),
+	),
 	getContextManagerConfig: vi.fn(() => Promise.resolve({ mode: "evaporation" })),
 	setContextManagerMode: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("../api", () => ({ getPi: () => piMock }));
 
-import { useSettingsStore } from "./settings";
+import { skillsFromSlashCommands, useSettingsStore } from "./settings";
 
 function resetStore() {
 	useSettingsStore.setState({
@@ -29,6 +35,22 @@ beforeEach(() => {
 });
 
 describe("settings store：contextManagerMode（乐观更新 + 失败回滚）", () => {
+	it("projects the draft slash-command catalog into visible skills", () => {
+		expect(
+			skillsFromSlashCommands([
+				{ name: "skill:research-vault", description: "Vault", source: "skill", supported: true },
+				{ name: "skill:research-vault", description: "duplicate", source: "skill", supported: true },
+				{ name: "compact", description: "builtin", source: "builtin", supported: true },
+			]),
+		).toMatchObject([{ name: "research-vault", description: "Vault", scope: "user", source: "builtin" }]);
+	});
+
+	it("loads skills for an empty workspace without requiring a real session", async () => {
+		await useSettingsStore.getState().refresh();
+		expect(piMock.listSlashCommandsForCwd).toHaveBeenCalledWith(undefined);
+		expect(useSettingsStore.getState().skills).toMatchObject([{ name: "research-vault" }]);
+	});
+
 	it("独立加载：getContextManagerConfig 结果进 store", async () => {
 		piMock.getContextManagerConfig.mockResolvedValue({ mode: "evaporation" as ContextManagerMode });
 		await useSettingsStore.getState().refresh();

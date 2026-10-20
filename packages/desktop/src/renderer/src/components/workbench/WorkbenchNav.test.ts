@@ -1,8 +1,12 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { isPrimaryNavActive } from "./WorkbenchNav";
+import { isPrimaryNavActive, WORKBENCH_NAV_ORDER } from "./WorkbenchNav";
 
 describe("pluginized workbench navigation", () => {
+	it("keeps the four primary entries before the project and recent groups", () => {
+		expect(WORKBENCH_NAV_ORDER).toEqual(["newTask", "knowledge", "skills", "hosts"]);
+	});
+
 	it("keeps the four primary entries aligned with their real destination", () => {
 		expect(
 			isPrimaryNavActive("newTask", { view: "chat", settingsOpen: false, settingsCategory: "models" }),

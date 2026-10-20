@@ -17,6 +17,13 @@ export const DRONE_PLUGIN_PACKAGE_NAMES = [
 	"@gyoungwe/research-suite",
 ] as const;
 
+/** Packages whose capabilities are part of the Drone host rather than an optional install. */
+export const DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES = [
+	"@gyoungwe/pi-core",
+	"@gyoungwe/pi-knowledge",
+	"@gyoungwe/pi-research",
+] as const;
+
 /** Registry metadata shown before a package is installed. Keep this in the host contract so
  * the market never falls back to a blank version/description when the session has no resources. */
 export const DRONE_PLUGIN_METADATA: Readonly<
@@ -25,6 +32,7 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 		{
 			readonly version: string;
 			readonly description: string;
+			readonly builtIn?: boolean;
 			readonly packageKind?: PiPluginPackageKind;
 			readonly capabilities?: readonly string[];
 		}
@@ -33,17 +41,20 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 	"@gyoungwe/pi-core": {
 		version: "0.1.3",
 		description: "Portable task, authorization, status, delivery and memory tools for native Pi",
+		builtIn: true,
 		capabilities: ["tasks", "authorization", "memory"],
 	},
 	"@gyoungwe/pi-knowledge": {
 		version: "0.1.1",
 		description: "Knowledge and Vault tools for native Pi hosts",
+		builtIn: true,
 		capabilities: ["knowledge", "vault"],
 	},
 	"@gyoungwe/pi-research": {
 		version: "0.1.0",
 		description:
 			"Evidence-gated research retrieval, reading, deposition and source-grounded answer tools for native Pi",
+		builtIn: true,
 		capabilities: ["research", "evidence"],
 	},
 	"@gyoungwe/pi-analysis": {

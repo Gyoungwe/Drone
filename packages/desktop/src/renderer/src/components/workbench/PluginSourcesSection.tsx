@@ -1,4 +1,5 @@
 import {
+	DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES,
 	DRONE_PLUGIN_METADATA,
 	DRONE_PLUGIN_PACKAGE_NAMES,
 	type HostPluginPackage,
@@ -37,6 +38,18 @@ function packageEntry(packageName: string, host?: HostPluginPackage): PiPluginSo
 	};
 }
 
+function isBuiltinDronePackage(packageName: string): boolean {
+	return DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES.includes(
+		packageName as (typeof DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES)[number],
+	);
+}
+
+function configuredPackageName(source: string): string {
+	const value = source.replace(/^npm:/u, "");
+	const match = value.match(/^(@[^/]+\/[^@]+|[^@]+)(?:@.+)?$/u);
+	return match?.[1] ?? value;
+}
+
 function packageState(
 	entry: PiPluginSourceEntry,
 	configured: readonly { source: string; scope: "user" | "project" }[],
@@ -52,8 +65,10 @@ function packageState(
 			? uiPlugins.find((item) => item.name === "drone-research-ui")
 			: undefined;
 	return {
-		installed: Boolean(configuredItem || host?.status === "available" || ui),
-		builtin: ui?.builtin === true,
+		installed: Boolean(
+			isBuiltinDronePackage(entry.packageName) || configuredItem || host?.status === "available" || ui,
+		),
+		builtin: isBuiltinDronePackage(entry.packageName) || ui?.builtin === true,
 		configured: configuredItem,
 	};
 }
@@ -100,7 +115,11 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
 					<span className={`text-[11px] ${current.installed ? "text-ok" : "text-ink-faint"}`}>
-						{current.installed ? t("skillsConnections.installed") : t("skillsConnections.notInstalled")}
+						{current.builtin && (!uiPlugin || uiPlugin.enabled)
+							? t("skillsConnections.builtinEnabled")
+							: current.installed
+								? t("skillsConnections.installed")
+								: t("skillsConnections.notInstalled")}
 					</span>
 					{uiPlugin ? (
 						<Switch
@@ -162,6 +181,25 @@ export function PluginSourcesSection() {
 		[hostPlugins],
 	);
 	const packageNames = useMemo(() => entries.map((entry) => entry.packageName), [entries]);
+	const builtinEntries = useMemo(
+		() => entries.filter((entry) => isBuiltinDronePackage(entry.packageName)),
+		[entries],
+	);
+	const builtinNames = useMemo(
+		() => new Set(builtinEntries.map((entry) => entry.packageName)),
+		[builtinEntries],
+	);
+	const configuredEntries = useMemo(
+		() =>
+			(configured ?? []).filter((item) => {
+				return !builtinNames.has(configuredPackageName(item.source));
+			}),
+		[builtinNames, configured],
+	);
+	const hostEntries = useMemo(
+		() => hostPlugins.filter((plugin) => !builtinNames.has(plugin.name)),
+		[builtinNames, hostPlugins],
+	);
 	return (
 		<div className="space-y-5" data-testid="plugin-sources-section">
 			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
@@ -221,9 +259,18 @@ export function PluginSourcesSection() {
 			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
 				<h2 className="text-sm font-medium text-ink">{t("skillsConnections.installedPlugins")}</h2>
 				<p className="mt-1 text-xs text-ink-dim">{t("skillsConnections.installedPluginsHint")}</p>
-				{configured?.length || hostPlugins.length || uiPlugins.length ? (
+				{builtinEntries.length || configuredEntries.length || hostEntries.length || uiPlugins.length ? (
 					<ul className="mt-3 divide-y divide-border text-xs">
-						{configured?.map((item) => (
+						{builtinEntries.map((entry) => (
+							<li
+								key={`builtin:${entry.packageName}`}
+								className="flex items-center justify-between gap-3 py-2"
+							>
+								<span className="truncate text-ink-2">{entry.packageName}</span>
+								<span className="shrink-0 text-[11px] text-ok">{t("skillsConnections.builtinEnabled")}</span>
+							</li>
+						))}
+						{configuredEntries.map((item) => (
 							<li
 								key={`${item.source}:${item.scope}`}
 								className="flex items-center justify-between gap-3 py-2"
@@ -232,7 +279,7 @@ export function PluginSourcesSection() {
 								<span className="shrink-0 text-[11px] text-ink-faint">{item.scope}</span>
 							</li>
 						))}
-						{hostPlugins.map((plugin) => (
+						{hostEntries.map((plugin) => (
 							<li key={`host:${plugin.name}`} className="flex items-center justify-between gap-3 py-2">
 								<span className="truncate text-ink-2">{plugin.name}</span>
 								<span

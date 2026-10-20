@@ -7,7 +7,6 @@ import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { reportKnowledgeError, useKnowledgeOverview } from "./hooks";
-import { KnowledgeGraph } from "./KnowledgeGraph";
 import { type KnowledgeCategory, KnowledgeSearch } from "./KnowledgeSearch";
 import {
 	classifyKnowledgePath,
@@ -60,7 +59,6 @@ export function KnowledgeHome({
 	const knowledgeRevision = useKnowledgeStore((state) => state.revision);
 	const binding = data?.binding;
 	const [category, setCategory] = useState<KnowledgeCategory>("all");
-	const [graphOpen, setGraphOpen] = useState(false);
 	const [graph, setGraph] = useState<GraphData | null>(null);
 	const [reviews, setReviews] = useState<KnowledgePage<WikiReviewItem> | null>(null);
 	const [reviewError, setReviewError] = useState<string | null>(null);
@@ -139,14 +137,6 @@ export function KnowledgeHome({
 					</p>
 				</div>
 				<div className="flex shrink-0 gap-2">
-					<Button
-						size="sm"
-						variant="secondary"
-						disabled={!binding}
-						onClick={() => setGraphOpen((value) => !value)}
-					>
-						{graphOpen ? t("homeCloseGraph") : t("homeOpenGraph")}
-					</Button>
 					<Button size="sm" variant="primary" disabled={!binding} onClick={openVault}>
 						{t("homeNewNote")}
 					</Button>
@@ -295,19 +285,6 @@ export function KnowledgeHome({
 						</section>
 					</aside>
 				</div>
-			)}
-
-			{binding && graphOpen && (
-				<section
-					className="mt-6 rounded-2xl border border-border bg-surface p-4"
-					aria-label={t("graphTitle")}
-				>
-					<KnowledgeGraph
-						cwd={cwd}
-						revision={revision}
-						indexKey={`${data?.index?.noteCount ?? 0}:${data?.index?.lastReconciledAt ?? ""}`}
-					/>
-				</section>
 			)}
 		</div>
 	);

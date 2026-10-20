@@ -18,15 +18,15 @@
 			"status": "PASS",
 			"detail": "Drone.app contains Contents/Resources/app.asar",
 			"source": "zip:drone-mac-arm64.zip",
-			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-6kHyJE/drone-mac-arm64.zip-extracted/Drone.app/Contents/Resources/app.asar",
-			"bytes": 527917558
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-95hcHz/drone-mac-arm64.zip-extracted/Drone.app/Contents/Resources/app.asar",
+			"bytes": 527976820
 		},
 		{
 			"id": "mac-framework",
 			"status": "PASS",
 			"detail": "Electron Framework.framework contains the expected versioned symlinks",
 			"source": "zip:drone-mac-arm64.zip",
-			"framework": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-6kHyJE/drone-mac-arm64.zip-extracted/Drone.app/Contents/Frameworks/Electron Framework.framework"
+			"framework": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-95hcHz/drone-mac-arm64.zip-extracted/Drone.app/Contents/Frameworks/Electron Framework.framework"
 		},
 		{
 			"id": "mac-codesign",
@@ -58,7 +58,7 @@
 			"detail": "Drone.app contains Contents/Resources/app.asar",
 			"source": "dmg:drone-mac-arm64.dmg",
 			"path": "/Volumes/Drone 0.33.4-arm64/Drone.app/Contents/Resources/app.asar",
-			"bytes": 527917558
+			"bytes": 527976820
 		},
 		{
 			"id": "mac-framework",
@@ -97,15 +97,15 @@
 			"status": "PASS",
 			"detail": "Drone.app contains Contents/Resources/app.asar",
 			"source": "zip:drone-mac-x64.zip",
-			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-6kHyJE/drone-mac-x64.zip-extracted/Drone.app/Contents/Resources/app.asar",
-			"bytes": 527917558
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-95hcHz/drone-mac-x64.zip-extracted/Drone.app/Contents/Resources/app.asar",
+			"bytes": 527976820
 		},
 		{
 			"id": "mac-framework",
 			"status": "PASS",
 			"detail": "Electron Framework.framework contains the expected versioned symlinks",
 			"source": "zip:drone-mac-x64.zip",
-			"framework": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-6kHyJE/drone-mac-x64.zip-extracted/Drone.app/Contents/Frameworks/Electron Framework.framework"
+			"framework": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-95hcHz/drone-mac-x64.zip-extracted/Drone.app/Contents/Frameworks/Electron Framework.framework"
 		},
 		{
 			"id": "mac-codesign",
@@ -137,7 +137,7 @@
 			"detail": "Drone.app contains Contents/Resources/app.asar",
 			"source": "dmg:drone-mac-x64.dmg",
 			"path": "/Volumes/Drone 0.33.4/Drone.app/Contents/Resources/app.asar",
-			"bytes": 527917558
+			"bytes": 527976820
 		},
 		{
 			"id": "mac-framework",
@@ -155,7 +155,7 @@
 		{
 			"id": "mac-launch",
 			"status": "PASS",
-			"detail": "Contents/MacOS/Drone started successfully; Electron probe was terminated after the bounded startup window",
+			"detail": "Contents/MacOS/Drone --version exited successfully",
 			"source": "dmg:drone-mac-x64.dmg"
 		},
 		{
@@ -166,7 +166,7 @@
 			"mount": "/Volumes/Drone 0.33.4"
 		}
 	],
-	"startedAt": "2026-10-19T15:41:43.821Z",
+	"startedAt": "2026-10-19T20:57:00.565Z",
 	"assets": [
 		"builder-debug.yml",
 		"drone-mac-arm64.dmg",
@@ -187,50 +187,50 @@
 		},
 		{
 			"name": "drone-mac-arm64.dmg",
-			"bytes": 332085569,
-			"sha256": "80e64841893da0d0981a36161cdc4768d733e6961eab71f8a7f49812c4aab2dc"
+			"bytes": 332093358,
+			"sha256": "ac280425648cf1728d4258337064b229b2d0299178de6dee2c780b642718d602"
 		},
 		{
 			"name": "drone-mac-arm64.dmg.blockmap",
-			"bytes": 347550,
-			"sha256": "171e9fd381df8aca1c0591f2056de94fc0453b0002ab4314cb5666d2d9a9a80e"
+			"bytes": 346345,
+			"sha256": "53001ecf316aa875dea2cef7e23e2a7b2d32f220b0a1c181cd1d1dc75407b9d8"
 		},
 		{
 			"name": "drone-mac-arm64.zip",
-			"bytes": 335884444,
-			"sha256": "5466735dcfb85b29b325a0af5fd1770d79d031724ce1436d3865005f32f6c6c9"
+			"bytes": 335894142,
+			"sha256": "927193d2c92d3a040da944fff81aa55d2ebdb1e9dce8a1e27d844431ba2bfaf4"
 		},
 		{
 			"name": "drone-mac-arm64.zip.blockmap",
-			"bytes": 343489,
-			"sha256": "63cdfada16710f4a05c5d69da5db87ef81feb4ddb9c7591fa4ea8a7e740b67cc"
+			"bytes": 343062,
+			"sha256": "f7c9a4890f905802244873a9d5ed5cda255dfb96bc9442c18e3a058cd73f7d6b"
 		},
 		{
 			"name": "drone-mac-x64.dmg",
-			"bytes": 334194133,
-			"sha256": "5fd2fd58e42421e07f3d6d9a0ad22879a0f1695f1e6ba3641f1e25d49e2ef851"
+			"bytes": 334183081,
+			"sha256": "72fa83f0ded98b9a2800378bfb2f1dc6442d29d00d2a2265368a334811be607a"
 		},
 		{
 			"name": "drone-mac-x64.dmg.blockmap",
-			"bytes": 348780,
-			"sha256": "7204e2eba5c95985fee73d6a6650721570a2148cc581492a09fcf5f6f20527e3"
+			"bytes": 349482,
+			"sha256": "158af6f246ab32f24180e782601b0210b4b673b72deb34f7ee8666b653f858f6"
 		},
 		{
 			"name": "drone-mac-x64.zip",
-			"bytes": 338010057,
-			"sha256": "bfba8ec410b3dc872d9af6400d63037f0199617848a63e0ee6ef6e28ae65a716"
+			"bytes": 338019654,
+			"sha256": "c13a430aa3344ceff012c0d7e4167da13405a9eb803e1abffc81dfb6dc160461"
 		},
 		{
 			"name": "drone-mac-x64.zip.blockmap",
-			"bytes": 346361,
-			"sha256": "f5248549a05cb8a8a8ffbbedb2b6a3fa5c6aae39fe3dd286672a0a751aae736a"
+			"bytes": 344620,
+			"sha256": "b6b1bef8d21c4ca04a42fb9753859795a7c8d1cb58b6cda3b6bc5350ce352104"
 		},
 		{
 			"name": "latest-mac.yml",
 			"bytes": 780,
-			"sha256": "e3e732a446aa7952c121df6bb6c97e1a72e551543e6938c304719892dd0ee3d2"
+			"sha256": "06a7d3d9227cbd942a5cab8fe7cd06daef7ce6776d2f2991796717f90e9f78e9"
 		}
 	],
-	"finishedAt": "2026-10-19T15:42:57.478Z",
+	"finishedAt": "2026-10-19T20:57:47.653Z",
 	"status": "PASS"
 }

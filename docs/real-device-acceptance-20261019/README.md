@@ -109,6 +109,21 @@ B8 云端协作继续按计划暂缓，Protocols.io 继续只读。Windows 构�
 
 本轮仍不改变 B8 暂缓、Protocols.io 只读、无证书和 macOS-only 发布范围。视觉回读以正式包 CUA 证据为准，静态 renderer 预览不替代实机证据。
 
+## 2026-10-20 修改单验收返修
+
+代码返修已覆盖 `change-order-verification/README.md` 的 7 项问题；正式安装包验收须在合入 main 后重建 v0.33.4，再将下面的代码状态升级为实机证据：
+
+| 问题 | 代码状态 | 定向证据 | 正式包状态 |
+|---|---|---|---|
+| 技能页空配置一直 loading | **PASS** | draft/no-session 通过 `listSlashCommandsForCwd` 投影 LoadedSkill，带 5 秒超时和空态；settings 回归通过 | 待 v0.33.4 安装包回读 |
+| Drone 内置插件显示未安装 | **PASS** | `pi-core`、`pi-knowledge`、`pi-research` 标记为内置，市场行和已安装列表显示“内置 · 已启用”，无安装按钮 | 待 v0.33.4 安装包回读 |
+| Zotero/WebDAV 重复 | **PASS** | WebDAV 移出能力页；Zotero descriptor 与状态合并为唯一行，读开关与写入抽屉分离 | 待 v0.33.4 安装包回读 |
+| Zotero `{version}` 占位符 | **PASS** | `formatZoteroText` 插值回归覆盖 `10.0.6` | 待 v0.33.4 安装包回读 |
+| 知识库页签/网络图空状态 | **PASS** | 单层“总览 / 网络图 / 审阅 / 设置”；未绑定时显示原因、关联已有/新建和开发版隔离提示 | 待 v0.33.4 安装包回读 |
+| 侧栏项目/最近分组 | **PASS** | 一级入口保持四项；项目、最近分组在无数据时也显示空态，真实会话排序逻辑保留 | 待 v0.33.4 安装包回读 |
+
+CO-2 的来源仓库“添加任意 Git URL/本地目录”以及热插拔 worker 回滚仍是计划 backlog，本修改单未扩大范围。B8、Protocols.io 和无证书策略不变。
+
 ## 仍未关闭的实机门槛
 
 | 门槛 | 状态 | 关闭条件 |

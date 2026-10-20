@@ -10,6 +10,11 @@ export type AppView =
 	| "hosts"
 	| `plugin:${string}`;
 
+/** Knowledge view tabs are owned by the full-screen page (there is no nested tab bar). */
+export type KnowledgeTab = "overview" | "network" | "reviews" | "settings";
+/** Compatibility input for callers that still use the pre-v2 `home` id. */
+export type KnowledgeTabInput = KnowledgeTab | "home";
+
 /** Capability pages own their configuration drawers; settings keeps only preferences. */
 export type CapabilityDrawer =
 	| "skills"
@@ -85,8 +90,8 @@ interface UiStore {
 	setView: (view: AppView) => void;
 	capabilityDrawer: CapabilityDrawer | null;
 	setCapabilityDrawer: (drawer: CapabilityDrawer | null) => void;
-	knowledgeTab: "home" | "settings";
-	setKnowledgeTab: (tab: "home" | "settings") => void;
+	knowledgeTab: KnowledgeTab;
+	setKnowledgeTab: (tab: KnowledgeTabInput) => void;
 
 	/**
 	 * 右侧上下文面板（固定三栏，取消悬浮层）。
@@ -135,8 +140,9 @@ export const useUiStore = create<UiStore>((set, get) => ({
 	setView: (view) => set({ view }),
 	capabilityDrawer: null,
 	setCapabilityDrawer: (capabilityDrawer) => set({ capabilityDrawer }),
-	knowledgeTab: "home",
-	setKnowledgeTab: (knowledgeTab) => set({ knowledgeTab }),
+	knowledgeTab: "overview",
+	setKnowledgeTab: (knowledgeTab) =>
+		set({ knowledgeTab: knowledgeTab === "home" ? "overview" : knowledgeTab }),
 
 	panelOpen: storedIdleOpen !== "0",
 	idleOpen: storedIdleOpen !== "0",

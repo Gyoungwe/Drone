@@ -166,8 +166,15 @@ export const zoteroEn: Record<keyof typeof zoteroZh, string> = {
 		"Tip: if your university uses WebVPN (e.g. https://webvpn.xxx.edu.cn/https/443/www.nature.com/...), just log in — no template is needed; the persistent cookies are used directly. EZproxy is saved automatically so you do not need to log in again.",
 };
 
+export function formatZoteroText(template: string, params: Record<string, string | number> = {}): string {
+	return template.replace(/\{([a-zA-Z0-9_]+)\}/gu, (placeholder, key: string) =>
+		Object.hasOwn(params, key) ? String(params[key]) : placeholder,
+	);
+}
+
 export function useZoteroText() {
 	const language = useI18nStore((s) => s.language);
 	const dictionary = language === "zh" ? zoteroZh : zoteroEn;
-	return (key: keyof typeof zoteroZh) => dictionary[key];
+	return (key: keyof typeof zoteroZh, params?: Record<string, string | number>) =>
+		formatZoteroText(dictionary[key], params);
 }

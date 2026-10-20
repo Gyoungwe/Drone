@@ -10,6 +10,7 @@ import type {
 	ProviderInfo,
 	ProviderTestResult,
 	ResourceDiagnosticInfo,
+	SlashCommandInfo,
 	SubagentInfo,
 } from "@drone/shared";
 import { create } from "zustand";
@@ -34,6 +35,39 @@ export type SettingsCategory =
 	| "about"
 	// 插件自带设置页分类（settings.panel 贡献动态拼接，id = plugin:<pluginName>:<contributionId>）
 	| `plugin:${string}`;
+
+/**
+ * Draft tabs do not have a backend session yet, but the resource loader can still
+ * enumerate the user and bundled skills for their cwd. Keep the settings surface
+ * useful in that state by projecting the existing slash-command catalog into the
+ * LoadedSkill shape used by the renderer.
+ */
+export function skillsFromSlashCommands(commands: readonly SlashCommandInfo[]): LoadedSkill[] {
+	const seen = new Set<string>();
+	return commands.flatMap((command) => {
+		if (command.source !== "skill" || !command.name.startsWith("skill:")) return [];
+		const name = command.name.slice("skill:".length);
+		if (!name || seen.has(name)) return [];
+		seen.add(name);
+		return [
+			{
+				name,
+				description: command.description,
+				scope: "user",
+				source: "builtin",
+				path: `<loader:${name}>`,
+				disableModelInvocation: false,
+			},
+		];
+	});
+}
+
+function withResourceTimeout<T>(promise: Promise<T>, timeoutMs = 5_000): Promise<T> {
+	return new Promise<T>((resolve, reject) => {
+		const timer = setTimeout(() => reject(new Error("Timed out while loading skills")), timeoutMs);
+		promise.then(resolve, reject).finally(() => clearTimeout(timer));
+	});
+}
 
 interface SettingsStore {
 	open: boolean;
@@ -179,7 +213,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 					getPi().listSubagents(),
 				]);
 				set({ providers, modelPrefs, subagents, loading: false, error: null });
-				// 已加载资源按当前活跃会话（其项目）展示；无会话或 draft（未真正创建）时为 null（面板显示空态）
+				// 已加载资源按当前活跃会话（其项目）展示；draft/无会话则通过 cwd
+				// 清单接口投影用户级与内置技能，避免首个会话前技能页为空。
 				const activeSessionId = useSessionsStore.getState().activeSessionId;
 				if (activeSessionId && !isDraftSessionId(activeSessionId)) {
 					const resources = await getPi().getLoadedResources(activeSessionId);
@@ -195,14 +230,49 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 						});
 					}
 				} else {
-					set({
-						skills: null,
-						skillDiagnostics: [],
-						capabilities: null,
-						extensions: null,
-						hostPlugins: null,
-						extensionErrors: [],
-					});
+					// A draft/no-session tab still has a cwd and can enumerate the same
+					// user + bundled skill catalog through the existing cwd endpoint.
+					// This keeps the Skills page useful before the first message creates
+					// a real backend session (and avoids an endless loading state).
+					const resourceCwd = useSessionsStore.getState().cwd;
+					try {
+						const commands = await withResourceTimeout(
+							getPi().listSlashCommandsForCwd(resourceCwd ?? undefined),
+						);
+						const currentSessionId = useSessionsStore.getState().activeSessionId;
+						if (
+							currentSessionId === activeSessionId &&
+							useSessionsStore.getState().cwd === resourceCwd &&
+							(!currentSessionId || isDraftSessionId(currentSessionId))
+						) {
+							set({
+								skills: skillsFromSlashCommands(commands),
+								skillDiagnostics: [],
+								capabilities: null,
+								extensions: [],
+								hostPlugins: null,
+								extensionErrors: [],
+							});
+						}
+					} catch {
+						// Resource discovery is best effort in an empty/draft tab. The
+						// rest of settings remains usable when a loader is unavailable.
+						const currentSessionId = useSessionsStore.getState().activeSessionId;
+						if (
+							currentSessionId === activeSessionId &&
+							useSessionsStore.getState().cwd === resourceCwd &&
+							(!currentSessionId || isDraftSessionId(currentSessionId))
+						) {
+							set({
+								skills: [],
+								skillDiagnostics: [],
+								capabilities: null,
+								extensions: [],
+								hostPlugins: null,
+								extensionErrors: [],
+							});
+						}
+					}
 				}
 			} catch (error) {
 				set({ loading: false, error: error instanceof Error ? error.message : String(error) });

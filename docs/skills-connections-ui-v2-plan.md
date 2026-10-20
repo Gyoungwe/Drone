@@ -1,6 +1,6 @@
 # 技能与连接页 v2：Pi 市场、Drone 插件与能力生命周期
 
-状态：设计已确认；P0～P3 和 P4 的已实现部分已在 macOS 正式包回读。市场栏、连接器描述、Drone registry 元数据、sticky 导航、SSH 选择器和 UI 插件重载均有证据；官方/Drone 包完整安装更新卸载、任意 Skill 仓库添加/应用、MCP 真实配置和深色前后视觉对照仍未完成。
+状态：设计已确认；P0～P3 和 P4 的已实现部分已在 macOS 正式包回读。市场栏、连接器描述、Drone registry 元数据、sticky 导航、SSH 选择器和 UI 插件重载均有证据；本轮返修已补齐空配置 Skill 投影、内置插件状态、Zotero/WebDAV 去重、知识库单层页签/网络图空状态和项目/最近空态。官方/Drone 包完整安装更新卸载、任意 Skill 仓库添加/应用、MCP 真实配置和深色前后视觉对照仍未完成。
 
 本计划承接 [`final-pluginization-plan.md`](final-pluginization-plan.md) 的插件化边界和 [`plugin-hot-reload-plan.md`](plugin-hot-reload-plan.md) 的分层重载规则。它只重做 Desktop 的“技能与连接”页信息架构，不改变 `@gyoungwe/plugin-api`、Pi package manifest 或已有结果/证据合同。
 

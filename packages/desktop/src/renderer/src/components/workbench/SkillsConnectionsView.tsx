@@ -72,7 +72,8 @@ export function cloudCapabilityStatus(status: KnowledgeCloudStatus | null): Capa
 	return "configure";
 }
 
-export function zoteroCapabilityStatus(status: ZoteroStatus | null): CapabilityStatus {
+export function zoteroCapabilityStatus(status: ZoteroStatus | null, enabled = true): CapabilityStatus {
+	if (!enabled) return "disabled";
 	if (!status) return "configure";
 	if (status.localApiReachable) return "running";
 	return status.desktopDetected ? "stale" : "configure";
@@ -94,6 +95,7 @@ interface CapabilityRow {
 	status: CapabilityStatus;
 	version?: string;
 	action?: string;
+	connectorId?: string;
 	source?: string;
 }
 
@@ -185,6 +187,13 @@ export function capabilitySectionKind(section: CapabilitySection): CapabilityRow
 	return null;
 }
 
+/** Zotero is rendered in the status row so its read toggle and write drawer stay together. */
+export function connectorCatalogEntries(
+	connectors: readonly ResearchConnectorDescriptor[],
+): ResearchConnectorDescriptor[] {
+	return connectors.filter((connector) => connector.id !== "zotero");
+}
+
 export function SkillsConnectionsView() {
 	const t = useT();
 	const cwd = useSessionsStore((state) => state.cwd);
@@ -200,7 +209,6 @@ export function SkillsConnectionsView() {
 	const [connectors, setConnectors] = useState<ResearchConnectorDescriptor[]>([]);
 	const [connectorLoading, setConnectorLoading] = useState(false);
 	const [connectorPending, setConnectorPending] = useState<string | null>(null);
-	const [cloud, setCloud] = useState<KnowledgeCloudStatus | null>(null);
 	const [zotero, setZotero] = useState<ZoteroStatus | null>(null);
 	const [zoteroWeb, setZoteroWeb] = useState<ZoteroWebApiStatus | null>(null);
 	const [zoteroLocal, setZoteroLocal] = useState<ZoteroLocalWriteStatus | null>(null);
@@ -233,24 +241,13 @@ export function SkillsConnectionsView() {
 			refreshSettings(),
 			loadPlugins(),
 			getPi().getMcpStatus(cwd ?? undefined),
-			getPi().getKnowledgeCloudStatus(),
 			getPi().getZoteroStatus(),
 			getPi().getZoteroWebApi(),
 			getPi().getZoteroLocalWrite(),
 			getPi().getInstitutionalStatus(),
 		]);
-		const [
-			settingsResult,
-			,
-			mcpResult,
-			cloudResult,
-			zoteroResult,
-			webResult,
-			localResult,
-			institutionalResult,
-		] = results;
+		const [settingsResult, , mcpResult, zoteroResult, webResult, localResult, institutionalResult] = results;
 		if (mcpResult.status === "fulfilled") setMcp(mcpResult.value);
-		if (cloudResult.status === "fulfilled") setCloud(cloudResult.value);
 		if (zoteroResult.status === "fulfilled") setZotero(zoteroResult.value);
 		if (webResult.status === "fulfilled") setZoteroWeb(webResult.value);
 		if (localResult.status === "fulfilled") setZoteroLocal(localResult.value);
@@ -303,18 +300,10 @@ export function SkillsConnectionsView() {
 				action: server.name,
 			});
 		}
-		if (cloud) {
-			next.push({
-				id: "connector:webdav",
-				kind: "connector",
-				name: t("skillsConnections.webdav"),
-				description: cloud.message ?? t("skillsConnections.webdavDescription"),
-				scope: cloud.endpoint || t("skillsConnections.readOnlyScope"),
-				status: cloudCapabilityStatus(cloud),
-				action: "knowledge",
-			});
-		}
-		if (zotero) {
+		const zoteroConnector = connectors.find((connector) => connector.id === "zotero");
+		if (zotero || zoteroConnector) {
+			// The `connector:webdav` route is intentionally owned by Knowledge settings;
+			// this page keeps only the Zotero read switch and its write drawer together.
 			const detail = zoteroWeb?.configured
 				? t("skillsConnections.zoteroWebConfigured")
 				: zoteroLocal?.authorized
@@ -325,11 +314,10 @@ export function SkillsConnectionsView() {
 				kind: "connector",
 				name: "Zotero",
 				description: detail,
-				scope: zotero.localApiReachable
-					? t("skillsConnections.readWriteScope")
-					: t("skillsConnections.readOnlyScope"),
-				status: zoteroCapabilityStatus(zotero),
+				scope: t("skillsConnections.readOnlyScope"),
+				status: zoteroCapabilityStatus(zotero, zoteroConnector?.enabled ?? true),
 				action: "zotero",
+				connectorId: zoteroConnector?.id,
 			});
 		}
 		if (institutional) {
@@ -350,13 +338,14 @@ export function SkillsConnectionsView() {
 			});
 		}
 		return next;
-	}, [cloud, institutional, mcp, t, zotero, zoteroLocal, zoteroWeb]);
+	}, [connectors, institutional, mcp, t, zotero, zoteroLocal, zoteroWeb]);
 
 	const visibleRows = useMemo(() => {
 		const kind = capabilitySectionKind(section);
 		if (!kind) return [];
 		return rows.filter((row) => row.kind === kind);
 	}, [rows, section]);
+	const catalogConnectors = useMemo(() => connectorCatalogEntries(connectors), [connectors]);
 	const skillGroups = useMemo(() => {
 		type GroupedSkill = {
 			skill: NonNullable<typeof settingsSkills>[number];
@@ -506,7 +495,10 @@ export function SkillsConnectionsView() {
 														? t("update.skillsUpToDate")
 														: skillUpdateState?.phase === "error"
 															? t("update.skillsFailed", { message: skillUpdateState.message })
-															: t("update.skillsChecking")}
+															: skillUpdateState?.phase === "checking" ||
+																	skillUpdateState?.phase === "downloading"
+																? t("update.skillsChecking")
+																: t("update.skillsNotChecked")}
 										</p>
 									</div>
 									<div className="flex shrink-0 gap-2">
@@ -625,11 +617,11 @@ export function SkillsConnectionsView() {
 								</div>
 								{connectorLoading ? (
 									<p className="py-8 text-center text-xs text-ink-faint">{t("skillsConnections.loading")}</p>
-								) : connectors.length === 0 ? (
+								) : catalogConnectors.length === 0 ? (
 									<p className="py-8 text-center text-xs text-ink-faint">{t("skillsConnections.empty")}</p>
 								) : (
 									<ul className="mt-3 divide-y divide-border">
-										{connectors.map((connector) => (
+										{catalogConnectors.map((connector) => (
 											<li key={connector.id} className="flex items-center gap-3 py-3">
 												<div className="min-w-0 flex-1">
 													<p className="truncate text-xs font-medium text-ink">{connector.label}</p>
@@ -670,6 +662,9 @@ export function SkillsConnectionsView() {
 								{visibleRows.map((row) => {
 									const server =
 										row.kind === "mcp" ? mcp?.servers.find((item) => item.name === row.action) : undefined;
+									const connector = row.connectorId
+										? connectors.find((item) => item.id === row.connectorId)
+										: undefined;
 									return (
 										<div
 											key={row.id}
@@ -706,7 +701,27 @@ export function SkillsConnectionsView() {
 												{statusLabel(row.status)}
 											</div>
 											<div className="flex justify-end">
-												{server ? (
+												{connector ? (
+													<div className="flex items-center gap-2">
+														<Switch
+															checked={connector.enabled}
+															disabled={connectorPending === connector.id}
+															onCheckedChange={() => void toggleConnector(connector)}
+															aria-label={
+																connector.enabled
+																	? t("skillsConnections.disable")
+																	: t("skillsConnections.enable")
+															}
+														/>
+														<button
+															type="button"
+															className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
+															onClick={() => openSettings(row.action as DrawerKind)}
+														>
+															{t("skillsConnections.view")}
+														</button>
+													</div>
+												) : server ? (
 													<Switch
 														checked={!server.disabled}
 														disabled={pendingMcp === server.name}

@@ -67,9 +67,7 @@ export function ZoteroPanel() {
 							<span className="text-ink-faint">·</span>
 							<span>{status.localApiReachable ? t("localApiOk") : t("localApiNo")}</span>
 							{status.version ? (
-								<span className="text-ink-faint">
-									· {t("version")} {status.version}
-								</span>
+								<span className="text-ink-faint">· {t("version", { version: status.version })}</span>
 							) : null}
 							<span className="text-ink-faint">·</span>
 							<span>{localPreferred ? t("writeModeLocal") : t("writeModeWeb")}</span>

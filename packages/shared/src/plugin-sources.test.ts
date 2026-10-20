@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES,
 	DRONE_PLUGIN_METADATA,
 	DRONE_PLUGIN_PACKAGE_NAMES,
 	dronePluginSource,
@@ -82,5 +83,12 @@ describe("plugin source adapters", () => {
 		}
 		expect(MARKET_RESOURCE_LINKS.some((entry) => entry.kind === "mcp-official")).toBe(true);
 		expect(MARKET_RESOURCE_LINKS.some((entry) => entry.kind === "mcp-community")).toBe(true);
+		expect(DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES).toEqual([
+			"@gyoungwe/pi-core",
+			"@gyoungwe/pi-knowledge",
+			"@gyoungwe/pi-research",
+		]);
+		for (const name of DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES)
+			expect(DRONE_PLUGIN_METADATA[name].builtIn).toBe(true);
 	});
 });

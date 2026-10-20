@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
 	capabilitySectionKind,
 	cloudCapabilityStatus,
+	connectorCatalogEntries,
 	mcpCapabilityStatus,
 	skillSource,
 	zoteroCapabilityStatus,
@@ -55,6 +56,7 @@ describe("SkillsConnectionsView capability state", () => {
 
 	it("uses the built-in Zotero probe instead of MCP registration state", () => {
 		expect(zoteroCapabilityStatus(zotero({ localApiReachable: true }))).toBe("running");
+		expect(zoteroCapabilityStatus(zotero({ localApiReachable: true }), false)).toBe("disabled");
 		expect(zoteroCapabilityStatus(zotero())).toBe("stale");
 		expect(zoteroCapabilityStatus(zotero({ desktopDetected: false }))).toBe("configure");
 		expect(zoteroCapabilityStatus(null)).toBe("configure");
@@ -73,6 +75,14 @@ describe("SkillsConnectionsView capability state", () => {
 		expect(capabilitySectionKind("skills")).toBeNull();
 		expect(capabilitySectionKind("connectors")).toBe("connector");
 		expect(capabilitySectionKind("mcp")).toBe("mcp");
+	});
+
+	it("keeps Zotero in its combined status row instead of duplicating the catalog entry", () => {
+		const descriptors = [
+			{ id: "zotero", kind: "citation", label: "Zotero", enabled: true },
+			{ id: "crossref", kind: "literature", label: "Crossref", enabled: true },
+		] as const;
+		expect(connectorCatalogEntries(descriptors)).toEqual([descriptors[1]]);
 	});
 
 	it("leaves non-catalogue skills on the loader source", () => {

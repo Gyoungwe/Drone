@@ -56,6 +56,10 @@ const PRIMARY_ITEMS: ReadonlyArray<{
 	{ key: "hosts", icon: TestIcon, label: "hosts" },
 ];
 
+export const WORKBENCH_NAV_ORDER: readonly PrimaryNavKey[] = Object.freeze(
+	PRIMARY_ITEMS.map(({ key }) => key),
+);
+
 /**
  * 左侧研究工作台导航：一级入口保持稳定，项目和最近会话沿用真实会话数据。
  * 旧的设置和帮助入口收进头像菜单，但仍使用现有 SettingsStore 兼容跳转。
@@ -95,38 +99,41 @@ function SidebarSessions() {
 			.sort((a, b) => (b.modifiedAt ?? b.createdAt) - (a.modifiedAt ?? a.createdAt));
 		return groupRunningFirst(sorted, (m) => active.has(m.sessionId) || (askCounts[m.sessionId] ?? 0) > 0);
 	}, [allSessions, activeIds, askCounts]);
-	if (projects.length === 0 && running.length === 0 && rest.length === 0) return null;
 	return (
 		<div className="workbench-nav-sessions" data-testid="sidebar-sessions">
-			{projects.length > 0 && (
-				<>
-					<h3 className="workbench-nav-group">{t("workbench.nav.projectsGroup")}</h3>
-					<ul>
-						{projects.map((project) => (
-							<li key={project.cwd}>
-								<button
-									type="button"
-									className="workbench-nav-project"
-									title={project.cwd}
-									onClick={() => {
-										selectProject(project.cwd);
-										closeKnowledge();
-										setView("projects");
-									}}
-								>
-									<ProjectsIcon size={14} />
-									<span className="min-w-0 flex-1 truncate">{project.name}</span>
-									<span className="workbench-nav-project-count">{project.sessionCount}</span>
-								</button>
-							</li>
-						))}
-					</ul>
-				</>
-			)}
-			{(running.length > 0 || rest.length > 0) && (
-				<>
-					<h3 className="workbench-nav-group">{t("workbench.nav.recent")}</h3>
-					<ul>
+			<h3 className="workbench-nav-group">{t("workbench.nav.projectsGroup")}</h3>
+			<ul>
+				{projects.length > 0 ? (
+					projects.map((project) => (
+						<li key={project.cwd}>
+							<button
+								type="button"
+								className="workbench-nav-project"
+								title={project.cwd}
+								onClick={() => {
+									selectProject(project.cwd);
+									closeKnowledge();
+									setView("projects");
+								}}
+							>
+								<ProjectsIcon size={14} />
+								<span className="min-w-0 flex-1 truncate">{project.name}</span>
+								<span className="workbench-nav-project-count">{project.sessionCount}</span>
+							</button>
+						</li>
+					))
+				) : (
+					<li>
+						<p className="px-2 py-2 text-[11px] leading-relaxed text-ink-faint">
+							{t("workbench.nav.projectsEmpty")}
+						</p>
+					</li>
+				)}
+			</ul>
+			<h3 className="workbench-nav-group">{t("workbench.nav.recent")}</h3>
+			<ul>
+				{running.length > 0 || rest.length > 0 ? (
+					<>
 						{running.map((s) => (
 							<SessionRow
 								key={s.sessionId}
@@ -138,9 +145,15 @@ function SidebarSessions() {
 						{rest.slice(0, RECENT_LIMIT).map((s) => (
 							<SessionRow key={s.sessionId} session={s} showDir />
 						))}
-					</ul>
-				</>
-			)}
+					</>
+				) : (
+					<li>
+						<p className="px-2 py-2 text-[11px] leading-relaxed text-ink-faint">
+							{t("workbench.nav.recentEmpty")}
+						</p>
+					</li>
+				)}
+			</ul>
 		</div>
 	);
 }
@@ -264,7 +277,7 @@ export function WorkbenchNav() {
 						</button>
 					);
 				})}
-				{/* Space switcher remains the compatibility route to the full project page. */}
+				{/* Project page remains a compatibility route; project and recent data live in the groups below. */}
 				<button
 					type="button"
 					className={`workbench-nav-item${view === "projects" ? " is-active" : ""}`}
