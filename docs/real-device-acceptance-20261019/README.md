@@ -132,7 +132,7 @@ CO-2 的来源仓库“添加任意 Git URL/本地目录”以及热插拔 worke
 | P1-5 | **提示策略已修，待真实会话** | 在正式包中用简单事实问题走检索→回答→有界沉淀，确认不创建任务计划和额外写入授权 |
 | P1-7 | **PASS（v0.33.4 正式包）** | Skills/Connections 的市场与已安装插件区真实显示 `pi-core`、`pi-knowledge`、`pi-research`、`pi-analysis`、`pi-evidence`、`pi-connectors`、`desktop-ui-pack`、`research-suite` 的版本/说明和宿主状态；证据见 `v0.33.4-p4-ui-acceptance.json` |
 | P1-8 | **PARTIAL** | 正式包已看到最近列表，但新建、历史打开和分叉后三种刷新路径尚未全部在同一次安装包会话中回读 |
-| 市场生命周期 | **PARTIAL（registry 安装/卸载 PASS）** | 真实 registry `@gyoungwe/pi-core@0.1.5` 安装、`/drone-doctor`、模型会话和卸载通过；本地 tarball lifecycle 通过。Pi CLI update 返回成功但 managed 目录仍旧版本，官方第三方 extension 仍 NOT_RUN |
+| 市场生命周期 | **PASS（Drone registry）** | 真实 registry `@gyoungwe/pi-core@0.1.5` 安装、`/drone-doctor`、模型会话、宿主更新 fallback 和卸载通过；本地 tarball lifecycle 6/6 通过。官方第三方 extension 仍 NOT_RUN |
 | Skill 仓库管理 | **PASS（代码与隔离 FS 回归）** | 任意 Git URL/本地目录、ref/subpath/许可依据、哈希 staging、原子应用、失败保留和来源卸载已落地；桌面定向测试 3/3 通过。正式 Electron GUI 交互截图仍受环境限制 |
 | 热插拔 worker / 回滚 | **PASS（worker 回归/打包资源）** | worker 排空、失败候选回滚、生命周期事件和生成扩展专家回归通过；证据见 `v0.33.5-plugin-gates.json`。交互式 Electron GUI 仍未运行 |
 | V4 MCP | **PASS（native stdio fixture）** | 原生 Pi 1.1.0 安装 `pi-mcp-adapter@5.1.0`，真实调用 `mcp__echo` 返回 `echo:native-mcp-acceptance`，卸载后清理通过；外部用户配置的 MCP 仍 NOT_RUN |

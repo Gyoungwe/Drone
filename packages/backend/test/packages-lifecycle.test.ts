@@ -1,3 +1,6 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
 	type PackageManager,
@@ -110,5 +113,27 @@ describe("PackageService lifecycle receipts", () => {
 
 		expect(receipt.scope).toBe("project");
 		expect(manager.update).toHaveBeenCalledWith("npm:fixture-extension");
+	});
+
+	it("reinstalls the unpinned source when an exact Pi version pin does not change", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-package-update-"));
+		const installed = join(root, "node_modules", "fixture-extension");
+		await mkdir(installed, { recursive: true });
+		await writeFile(join(installed, "package.json"), JSON.stringify({ version: "1.0.0" }));
+		const manager = managerFixture([{ source: "npm:fixture-extension@1.0.0", scope: "user" }]) as ReturnType<
+			typeof managerFixture
+		> & { getInstalledPath: ReturnType<typeof vi.fn> };
+		manager.getInstalledPath = vi.fn(() => installed);
+		manager.installAndPersist.mockImplementation(async () => {
+			await writeFile(join(installed, "package.json"), JSON.stringify({ version: "1.1.0" }));
+		});
+		const { service } = harness({ manager });
+
+		const receipt = await service.updatePackage("fixture-extension");
+
+		expect(receipt.previousVersion).toBe("1.0.0");
+		expect(receipt.version).toBe("1.1.0");
+		expect(manager.installAndPersist).toHaveBeenCalledWith("npm:fixture-extension");
+		await rm(root, { recursive: true, force: true });
 	});
 });

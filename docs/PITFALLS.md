@@ -275,4 +275,4 @@ git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保
 
 ## 2026-10-20：Pi 包更新回执不等于版本替换
 
-`pi update npm:<name>` 可以返回成功，但在 Pi 1.1.0 的独立 HOME 中，managed package 目录仍可能保留旧 `package.json` 版本。市场验收必须同时读取安装目录版本；只有版本真的变化才能标记更新 PASS。若宿主领域源码改变，先运行 `npm run build:extensions -- --force`，再运行 `npm run check:extensions`，否则生成扩展的依赖时间戳会让检查失败。
+`pi update npm:<name>` 可以返回成功，但在 Pi 1.1.0 的独立 HOME 中，managed package 目录仍可能保留旧 `package.json` 版本。市场验收必须同时读取安装目录版本；Drone `PackageService` 检测到版本未变时会用 unpinned source 重装，再把真实版本写入生命周期回执。若宿主领域源码改变，先运行 `npm run build:extensions -- --force`，再运行 `npm run check:extensions`，否则生成扩展的依赖时间戳会让检查失败。

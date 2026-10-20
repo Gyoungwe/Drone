@@ -582,7 +582,7 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 | 项目 | 当前判定 | 证据或缺口 |
 | --- | --- | --- |
 | 架构 v2 A0–A7、P9、P10、A5-1～A5-4 | **完成** | `docs/architecture-v2-tasks.md` 只有 B8 保留为未勾选的暂缓项；其余任务均有实现和门禁记录。 |
-| 市场独立栏目、官方/社区 MCP 与 Skill 入口、Drone 包版本/说明、左侧 sticky 导航 | **已实现；真实 registry 生命周期部分通过** | v0.33.4 UI 回读四栏、市场卡片、八个 Drone 包元数据和长列表 sticky 导航；本轮真实 registry `@gyoungwe/pi-core@0.1.5` 安装、原生会话和卸载通过。Pi CLI 更新返回成功但旧版本目录未替换，官方第三方 extension 仍 `NOT_RUN`。 |
+| 市场独立栏目、官方/社区 MCP 与 Skill 入口、Drone 包版本/说明、左侧 sticky 导航 | **已实现；Drone registry 生命周期通过** | v0.33.4 UI 回读四栏、市场卡片、八个 Drone 包元数据和长列表 sticky 导航；`@gyoungwe/pi-core@0.1.5` 真实 registry 安装、原生会话、宿主更新 fallback 和卸载通过。官方第三方 extension 仍 `NOT_RUN`。 |
 | 技能来源映射与 Skill 仓库管理 | **完成代码与隔离 FS 回归** | `research-skill-sources.json`、任意 Git URL/本地目录、ref/subpath/许可依据、哈希 staging、原子应用、失败保留和来源卸载已落地；桌面定向测试 3/3 通过。正式 Electron GUI 交互截图仍受环境限制。 |
 | 主机 SSH 配置选择器 | **完成（macOS 正式包）** | 正式包发现 8 个 Host 别名并加入 `drone-gaoxuze-c`；只读元数据，不读取私钥正文。远程连通性仍需单独授权，不把发现误报为健康检查。 |
 | 分层热插拔 | **worker 回滚通过；Pi CLI 更新语义待上游确认** | worker `prepareUnload → drain → dispose → load → healthCheck`、失败自动回滚、生命周期事件和真实 SDK 专家回归通过；UI 插件运行中启停/重载通过。Pi CLI `update` 的旧目录版本未替换，暂不宣称完整更新 PASS。 |

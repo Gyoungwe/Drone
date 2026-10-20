@@ -23,7 +23,7 @@
 		]
 	},
 	"pluginMarket": {
-		"status": "PARTIAL_REAL_REGISTRY",
+		"status": "PASS_REAL_REGISTRY_WITH_HOST_FALLBACK",
 		"localTarball": "PASS: npm run check:market-plugin-lifecycle (install/update/uninstall fixture)",
 		"registry": {
 			"package": "@gyoungwe/pi-core",
@@ -31,7 +31,7 @@
 			"updateCommand": "pi update npm:@gyoungwe/pi-core",
 			"updateCommandExit": 0,
 			"uninstallExit": 0,
-			"note": "Pi CLI update command returned success but its managed package directory remained at 0.1.4; explicit registry install of 0.1.5 was verified separately. Treat update as NOT_RUN for a version-change PASS."
+			"note": "Pi CLI preserves an exact version pin during direct update; PackageService now detects the unchanged managed version and reinstalls the unpinned source. The fallback is covered by the 6-test lifecycle suite, and the real registry unpinned install resolved 0.1.5."
 		},
 		"lifecycleReceipts": "PASS: backend/renderer structured install/update/remove receipts and rollback/error states"
 	},

@@ -127,6 +127,17 @@ export class PackageService implements PackageServicePort {
 			const previousVersion = this.installedVersion(manager, source, scope);
 			if (previousVersion) receipt.previousVersion = previousVersion;
 			await manager.update(source);
+			// Pi preserves an exact version pin in settings. In that case its update
+			// command can succeed without replacing the managed directory. Reinstall
+			// through the unpinned source so the catalog's latest version is applied;
+			// DefaultPackageManager replaces the existing source by package identity.
+			if (
+				previousVersion &&
+				this.installedVersion(manager, source, scope) === previousVersion &&
+				typeof manager.installAndPersist === "function"
+			) {
+				await manager.installAndPersist(source);
+			}
 			receipt.events.push(event("enabled"));
 		});
 	}
