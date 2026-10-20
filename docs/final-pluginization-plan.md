@@ -586,7 +586,7 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 | 技能来源映射与 Skill 仓库管理 | **完成代码与隔离 FS 回归** | `research-skill-sources.json`、任意 Git URL/本地目录、ref/subpath/许可依据、哈希 staging、原子应用、失败保留和来源卸载已落地；桌面定向测试 3/3 通过。正式 Electron GUI 交互截图仍受环境限制。 |
 | 主机 SSH 配置选择器 | **完成（macOS 正式包）** | 正式包发现 8 个 Host 别名并加入 `drone-gaoxuze-c`；只读元数据，不读取私钥正文。远程连通性仍需单独授权，不把发现误报为健康检查。 |
 | 分层热插拔 | **worker 回滚与宿主更新 fallback 通过** | worker `prepareUnload → drain → dispose → load → healthCheck`、失败自动回滚、生命周期事件和真实 SDK 专家回归通过；UI 插件运行中启停/重载通过；宿主检测 Pi exact pin 未替换后改用 unpinned source 重装，生命周期测试 6/6。 |
-| 真实知识闭环与主线实机门槛 | **MCP/原生 Pi 已通过，外部配置仍有边界** | 原生 Pi 1.1.0 真实 registry 包 `/drone-doctor`、模型会话和卸载 PASS；native stdio MCP `mcp__echo` 返回唯一值并卸载 PASS。外部用户 MCP、正式 Electron GUI 和 P1 知识写入闭环仍 `NOT_RUN/BLOCKED`。 |
+| 真实知识闭环与主线实机门槛 | **MCP/原生 Pi/arm64 本机构建已通过，外部配置仍有边界** | 原生 Pi 1.1.0 真实 registry 包 `/drone-doctor`、模型会话和卸载 PASS；native stdio MCP `mcp__echo` 返回唯一值并卸载 PASS；arm64 本机构建 `Drone.app` 已由 CUA 打开并回读主机页。外部用户 MCP、完整四页人工走查和 P1 知识写入闭环仍 `NOT_RUN/BLOCKED`。 |
 | 视觉对照与版本发布 | **深色构建渲染通过** | `docs/releases/visual/drone-visual-comparison-dark.json` 四视图 PASS；这是 built renderer 的 headless 证据，交互式 Electron 截图仍受环境限制。完整门禁证据见 [`v0.33.5-plugin-gates.json`](releases/v0.33.5-plugin-gates.json)。 |
 
 上述未闭合项属于 backlog 或环境门槛，不改变已通过的 `MCP-01`、`MEM-01`、`REDLINE-01`，也不触碰暂缓的 B8、只读的 Protocols.io 和无证书发布策略。
@@ -611,7 +611,7 @@ npm run lint && npm run typecheck && npm test && npm run build && npm run check:
 
 | 编号 | 验收动作 | 必须留下的证据 | 当前状态 | 下一步 |
 |---|---|---|---|---|
-| `UI-01` | 启用 UI 插件，观察真实 slot/panel/headless 效果；关闭、重载和重启 | 槽位/面板变化、关闭后消失、持久化配置、插件错误状态 | **PASS（真实宿主 + renderer registry lifecycle）**；内置 `ds-whale-maid` 1/1 用例通过，贡献出现→移除→重载 nonce 1→2，重启 manager 回读配置 | 当前 shell 的 Electron GUI 启动仍为 `BLOCKED`（NSApplication SIGABRT）；不把 GUI 截图缺失写成宿主行为失败 |
+| `UI-01` | 启用 UI 插件，观察真实 slot/panel/headless 效果；关闭、重载和重启 | 槽位/面板变化、关闭后消失、持久化配置、插件错误状态 | **PASS（真实宿主 + renderer registry lifecycle）**；内置 `ds-whale-maid` 1/1 用例通过，贡献出现→移除→重载 nonce 1→2，重启 manager 回读配置；arm64 本机构建窗口由 CUA 打开并回读 | 完整四页人工走查尚未重复；不把缺少全套人工截图写成宿主行为失败 |
 | `MEM-01` | 用 `memory-note.md` 写入 `DRONE-MEM-001`，新会话恢复 topic，修改源文件后再次恢复 | `packages/backend/test/mem-gate.test.mjs`；topic context、来源路径、重新读取回执、`stale/changed` 状态和 Node `os.tmpdir()` 下的 evidence JSON | **PASS（隔离跨实例验收）** | 继续复跑根门禁；不触碰正式 Vault |
 | `SKILL-01` | 启用 `research-workflow` 或实际安装 skill，用 slash command/研究问题触发，再禁用自动调用后重试 | skill invocation、名称/参数、调用次数/最近使用、结果结构、自动禁用后的反证 | **PASS（真实 Pi SDK + faux provider）**；2/2 用例通过，证据写入 Node `os.tmpdir()` | `disable-model-invocation` 保留显式手动 `/skill:`；UI/Run Inspector 不得把 manual-only 误报为完全不可用 |
 | `MCP-01` | 启用本地测试 MCP 的 `echo_marker`，要求返回唯一值 `DRONE-MCP-001`，关闭后重试 | 连接状态、真实 tool call、唯一返回值、关闭后的 unavailable/blocked | **PASS（隔离真实 SDK fixture）**；`mcp-connector-gates.test.ts` 覆盖启用→真实调用→关闭→重载，关闭后 adapter 无 server/tool 或明确 disabled | 作为根门禁 `check:remaining-gates` 持续复跑 |
