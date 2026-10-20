@@ -6,7 +6,7 @@ import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSettingsStore } from "../../stores/settings";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
-import { reportKnowledgeError, useKnowledgeOverview } from "./hooks";
+import { useKnowledgeOverview } from "./hooks";
 import { type KnowledgeCategory, KnowledgeSearch } from "./KnowledgeSearch";
 import {
 	classifyKnowledgePath,
@@ -16,6 +16,26 @@ import {
 
 const RECENT_LIMIT = 8;
 const REVIEW_LIMIT = 4;
+
+/** Same palette as the knowledge network legend, so a type reads the same everywhere. */
+const CATEGORY_DOT: Record<KnowledgeLeafCategory, string> = {
+	paper: "#3b6fd8",
+	method: "#1f8a7a",
+	software: "#c9822b",
+	idea: "#8a63d2",
+	other: "#a3a3a3",
+};
+
+function recentTitle(item: { path: string; title?: string }): string {
+	const file = item.path.split(/[\\/]/u).pop() || item.path;
+	const title = item.title?.trim();
+	return title && title !== file && title !== file.replace(/\.md$/u, "") ? title : file.replace(/\.md$/u, "");
+}
+
+function recentFolder(path: string): string {
+	const parts = path.split(/[\\/]/u);
+	return parts.length > 1 ? parts.slice(0, -1).join(" / ") : "";
+}
 
 function categoryLabel(t: (key: any) => string, category: KnowledgeLeafCategory): string {
 	return t(
@@ -36,12 +56,6 @@ function relativeTime(value: number, language: string): string {
 		dateStyle: "medium",
 		timeStyle: "short",
 	}).format(date);
-}
-
-function vaultName(path: string | undefined): string {
-	if (!path) return "";
-	const clean = path.replace(/[\\/]$/, "");
-	return clean.slice(Math.max(clean.lastIndexOf("/"), clean.lastIndexOf("\\")) + 1) || path;
 }
 
 /** Knowledge-base home: only renders observations returned by the host contracts. */
@@ -112,38 +126,15 @@ export function KnowledgeHome({
 				: deriveKnowledgeCategoryCounts(graph, data?.index?.noteCount),
 		[graph, data?.index?.noteCount, data?.index?.categoryCounts],
 	);
-	const latest = recent[0]?.updatedAt;
 	const manage = () => useSettingsStore.getState().openWith("knowledge");
 	const openReview = (id: string) => {
 		if (cwd) useKnowledgeStore.getState().openReview({ cwd, sessionId, id });
-	};
-	const openVault = () => {
-		if (binding)
-			void getPi().openKnowledgeTarget({ cwd, revision: binding.revision }).catch(reportKnowledgeError);
 	};
 	const language = useI18nStore((state) => state.language);
 
 	return (
 		<div className="knowledge-home mx-auto w-full max-w-[1440px] text-ink" data-testid="knowledge-home">
-			<header className="flex flex-wrap items-start gap-3 px-1 pb-1">
-				<div className="min-w-0 flex-1">
-					<h1 className="text-xl font-semibold tracking-[-0.02em]">{t("title")}</h1>
-					<p className="mt-1 text-xs text-ink-dim">
-						{binding
-							? `${vaultName(binding.vault)} · ${data?.index?.noteCount ?? t("homeCountUnknown")} ${t("homeVaultNotes")}`
-							: t("homeBindingHint")}
-						{binding ? ` · ${t("homeProjectContext")}: ${data?.project || t("homeProjectUnknown")}` : ""}
-						{latest ? ` · ${t("homeLastDeposit")} ${relativeTime(latest, language)}` : ""}
-					</p>
-				</div>
-				<div className="flex shrink-0 gap-2">
-					<Button size="sm" variant="primary" disabled={!binding} onClick={openVault}>
-						{t("homeNewNote")}
-					</Button>
-				</div>
-			</header>
-
-			<section className="mt-4 border-0 bg-transparent shadow-none" aria-label={t("homeSearch")}>
+			<section className="border-0 bg-transparent shadow-none" aria-label={t("homeSearch")}>
 				<KnowledgeSearch
 					cwd={cwd}
 					sessionId={sessionId}
@@ -185,32 +176,42 @@ export function KnowledgeHome({
 								{t("homeRecentEmpty")}
 							</p>
 						) : (
-							<ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+							<ul className="divide-y divide-border rounded-2xl border border-border bg-surface">
 								{recent.map((item) => {
 									const kind = classifyKnowledgePath(item.path);
 									return (
 										<li key={item.path}>
 											<button
 												type="button"
-												className="grid w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 text-left hover:bg-hover"
+												className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left hover:bg-hover"
 												onClick={() =>
 													useKnowledgeStore
 														.getState()
 														.open({ cwd, sessionId, tab: "reviews", note: item.path, noteRevision: revision })
 												}
 											>
-												<span className="rounded-md bg-hover px-2 py-1 text-center text-[11px] text-ink-dim">
-													{categoryLabel(t, kind)}
-												</span>
 												<span className="min-w-0">
-													<span className="block truncate text-xs font-medium" title={item.path}>
-														{item.path.split(/[\\/]/u).pop() || item.path}
+													<span className="block truncate text-[13px] font-medium" title={item.path}>
+														{recentTitle(item)}
 													</span>
-													<span className="mt-1 block truncate text-[11px] text-ink-dim">
-														{item.kind === "wiki" ? t("homeRecentTypeUnknown") : t("homeRecentSourceSaved")}
+													<span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-ink-dim">
+														<span
+															aria-hidden="true"
+															className="h-2 w-2 shrink-0 rounded-full"
+															style={{ backgroundColor: CATEGORY_DOT[kind] }}
+														/>
+														<span className="shrink-0">
+															{item.kind === "wiki" ? "Wiki" : categoryLabel(t, kind)}
+														</span>
+														{recentFolder(item.path) ? (
+															<span className="truncate text-ink-faint">· {recentFolder(item.path)}</span>
+														) : null}
 													</span>
 												</span>
-												<span className="whitespace-nowrap text-[11px] text-ink-faint">
+												<span
+													className="whitespace-nowrap text-xs text-ink-faint"
+													title={new Date(item.updatedAt).toLocaleString()}
+												>
 													{relativeTime(item.updatedAt, language)}
 												</span>
 											</button>

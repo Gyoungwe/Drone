@@ -210,9 +210,6 @@ async function run() {
 	}
 
 	const manifests = [
-		"packages/desktop/resources/ui-plugins/builtin/ds-whale-maid-q/plugin.json",
-		"packages/desktop/resources/ui-plugins/builtin/ds-whale-maid/plugin.json",
-		"packages/desktop/resources/ui-plugins/builtin/voice-alerts/plugin.json",
 		"packages/desktop/resources/ui-plugins/examples/overlay-pet/plugin.json",
 		"packages/desktop/resources/ui-plugins/examples/terminal-tool-card/plugin.json",
 		"packages/desktop/resources/ui-plugins/examples/token-meter/plugin.json",

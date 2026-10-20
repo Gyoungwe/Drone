@@ -229,6 +229,7 @@ export const AppContract = defineDomain("app", {
 			result: NullableString,
 		},
 		pickDirectory: { args: Type.Tuple([]), result: NullableString },
+		formalKnowledgeVault: { args: Type.Tuple([]), result: NullableString },
 		getGitBranch: { args: Type.Tuple([Type.String()]), result: NullableString },
 		listGitBranches: { args: Type.Tuple([Type.String()]), result: GitBranchesSchema },
 		checkoutBranch: { args: Type.Tuple([Type.String(), Type.String()]), result: Type.String() },

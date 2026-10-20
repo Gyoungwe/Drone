@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type HostEnvDeps, probeHostEnvironment } from "./host-env";
+import { type HostEnvDeps, parseVmStatAvailableBytes, probeHostEnvironment } from "./host-env";
 
 function deps(platform: string, outputs: Record<string, string | null>): HostEnvDeps & { calls: string[] } {
 	const calls: string[] = [];
@@ -59,5 +59,26 @@ describe("probeHostEnvironment (P10)", () => {
 		expect(env.disk).toBeNull();
 		expect(env.pythonPackages).toBeNull();
 		expect(env.tools.every((t) => t.version === null)).toBe(true);
+	});
+});
+
+describe("parseVmStatAvailableBytes", () => {
+	it("counts free, inactive, speculative and purgeable pages as available", () => {
+		const output = [
+			"Mach Virtual Memory Statistics: (page size of 16384 bytes)",
+			"Pages free:                                3000.",
+			"Pages active:                            900000.",
+			"Pages inactive:                          500000.",
+			"Pages speculative:                        20000.",
+			"Pages throttled:                              0.",
+			"Pages wired down:                        300000.",
+			"Pages purgeable:                          10000.",
+		].join("\n");
+		expect(parseVmStatAvailableBytes(output)).toBe((3000 + 500000 + 20000 + 10000) * 16384);
+	});
+
+	it("returns null for unrecognised output", () => {
+		expect(parseVmStatAvailableBytes("command not found")).toBeNull();
+		expect(parseVmStatAvailableBytes("Mach Virtual Memory Statistics: (page size of 4096 bytes)")).toBeNull();
 	});
 });

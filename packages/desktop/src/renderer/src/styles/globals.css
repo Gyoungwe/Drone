@@ -507,7 +507,11 @@ body,
 #root {
 	height: 100%;
 	margin: 0;
-	overflow: hidden;
+	/* clip (not hidden): focusing a deep control must not scroll the whole app frame, sidebar included. */
+	overflow: clip;
+}
+.app-frame {
+	overflow: clip;
 }
 
 body {
@@ -2870,6 +2874,18 @@ code {
 	opacity: 0.7;
 	transition: width 150ms ease;
 }
+/* Usage thresholds (HostEnvironmentCard meterTone): 70%+ amber, 90%+ red. */
+.host-env-meter--warn .host-env-bar > span {
+	background: var(--color-warn);
+	opacity: 1;
+}
+.host-env-meter--danger .host-env-bar > span {
+	background: var(--color-err);
+	opacity: 1;
+}
+.host-env-meter--danger .host-env-meter-head > span:last-child {
+	color: var(--color-err);
+}
 .host-env-meter-detail {
 	color: var(--color-muted, #6b6b6b);
 	white-space: nowrap;
@@ -3521,7 +3537,8 @@ code {
 	padding: var(--space-4) var(--space-6) var(--space-2);
 }
 .knowledge-view-body {
-	padding: var(--space-3) var(--space-6) var(--space-10);
+	/* Same frame as PageShell (px-8 pt-8 pb-12) so first-level pages line up. */
+	padding: 2rem 2rem 3rem;
 	background: var(--knowledge-canvas);
 }
 .knowledge-home > section:first-child {
@@ -4309,4 +4326,13 @@ code {
 	[data-theme="dark"] [data-testid="run-inspector"] {
 		transition: none;
 	}
+}
+
+/* Sidebar session list: thin scrollbar that only shows while hovering, so the sidebar edge stays clean. */
+.workbench-nav-sessions {
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+}
+.workbench-nav-sessions:hover {
+	scrollbar-color: var(--color-border) transparent;
 }

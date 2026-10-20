@@ -81,6 +81,7 @@ describe("SkillsConnectionsView capability state", () => {
 		const descriptors = [
 			{ id: "zotero", kind: "citation", label: "Zotero", enabled: true },
 			{ id: "crossref", kind: "literature", label: "Crossref", enabled: true },
+			{ id: "institutional", kind: "institutional", label: "Institutional access", enabled: true },
 		] as const;
 		expect(connectorCatalogEntries(descriptors)).toEqual([descriptors[1]]);
 	});

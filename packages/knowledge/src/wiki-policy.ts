@@ -120,8 +120,29 @@ export function managedParts(text: string): ManagedParts {
 	return { start, end, body: start < 0 ? "" : text.slice(start + MANAGED_START.length, end).trim() };
 }
 
+/**
+ * Agent drafts often arrive as a whole page: wrapped in a ```markdown fence, with their own frontmatter and
+ * `# Title`. The page already has both outside the managed block, so inserting them verbatim duplicates the
+ * header (seen in vaults written before 2026-10). Strip a wrapping fence, a leading frontmatter block and a
+ * leading H1 that repeats the page title (or any leading H1 when no title is known).
+ */
+export function stripManagedHeader(body: string, pageTitle?: string): string {
+	let text = String(body).replace(/^\uFEFF/u, "").trim();
+	const fenced = text.match(/^```(?:markdown|md)?[ \t]*\n([\s\S]*?)\n```\s*$/iu);
+	if (fenced?.[1] !== undefined) text = fenced[1].trim();
+	text = text.replace(/^---[ \t]*\n[\s\S]*?\n---[ \t]*(?:\n|$)/u, "").trim();
+	const heading = text.match(/^#[ \t]+([^\n]+)(?:\n+|$)/u);
+	if (heading?.[1] !== undefined) {
+		const found = heading[1].trim();
+		const expected = pageTitle?.trim();
+		if (!expected || found === expected || expected.startsWith(found) || found.startsWith(expected))
+			text = text.slice(heading[0].length).trim();
+	}
+	return text;
+}
+
 export function proposedWikiText(original: string | null, title: string, body: string): string {
-	const block = `${MANAGED_START}\n${body.trim()}\n${MANAGED_END}`;
+	const block = `${MANAGED_START}\n${stripManagedHeader(body, title)}\n${MANAGED_END}`;
 	if (original === null)
 		return `---\ntype: wiki\nstatus: unverified\n---\n\n# ${title}\n\n${block}\n\n## Human review\n\n`;
 	const { start, end } = managedParts(original);

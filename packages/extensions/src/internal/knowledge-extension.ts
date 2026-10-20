@@ -217,6 +217,21 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 	const knowledgeTool = (name) =>
 		/^research_/.test(String(name || "")) && !OPERATIONAL_RESEARCH_TOOLS.has(String(name));
 	let turnKnowledgeRequested = false;
+	// Promote an ordinary-looking turn only when it names an existing Wiki topic.
+	// Bounded so a cold worker never delays the turn; any failure keeps plain chat.
+	const probeNamedTopic = async (ctx, binding, prompt) => {
+		if (!binding || !String(prompt || "").trim()) return null;
+		try {
+			const service = await getKnowledgeService(binding);
+			const project = await currentProject(ctx.cwd, ctx);
+			return await Promise.race([
+				service.probeTopic({ query: prompt, project }),
+				new Promise((resolveProbe) => setTimeout(() => resolveProbe(null), 600)),
+			]);
+		} catch {
+			return null;
+		}
+	};
 	let turnBinding = null;
 	const promoteKnowledgeTurn = (ctx) => {
 		if (turnKnowledgeRequested) return;
@@ -1378,6 +1393,8 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 		try {
 			const binding = await readKnowledgeBinding();
 			turnBinding = binding;
+			if (binding && !turnKnowledgeRequested && (await probeNamedTopic(ctx, binding, query)))
+				turnKnowledgeRequested = true;
 			publication.begin(!!binding && turnKnowledgeRequested);
 			toolBudget.reset();
 			if (binding && turnKnowledgeRequested) {
@@ -1497,6 +1514,8 @@ export function registerKnowledgeInterface(pi, { readOnly = false, runtime = nul
 			try {
 				const binding = await readKnowledgeBinding();
 				turnBinding = binding;
+				if (binding && !turnKnowledgeRequested && (await probeNamedTopic(ctx, binding, event.prompt)))
+					turnKnowledgeRequested = true;
 				publication.begin(!!binding && turnKnowledgeRequested);
 				toolBudget.reset();
 				if (!binding || !turnKnowledgeRequested)

@@ -28,6 +28,31 @@ type PrimaryNavKey = "newTask" | "knowledge" | "skills" | "hosts";
 const SKILLS_SETTINGS_CATEGORIES: readonly string[] = ["skills", "mcp", "zotero", "extensions"];
 const HOST_SETTINGS_CATEGORIES: readonly string[] = ["compute", "workflows"];
 
+/**
+ * Sidebar labels: the folder name, "根目录" for "/", and `parent/name` when two projects share a name
+ * (two "workspace" rows are otherwise indistinguishable).
+ */
+export function projectDisplayNames(
+	projects: readonly { cwd: string; name: string }[],
+	rootLabel: string,
+): Map<string, string> {
+	const base = (project: { cwd: string; name: string }) => {
+		const trimmed = project.cwd.replace(/[\\/]+$/u, "");
+		return trimmed === "" ? rootLabel : project.name || trimmed.split(/[\\/]/u).pop() || rootLabel;
+	};
+	const counts = new Map<string, number>();
+	for (const project of projects) counts.set(base(project), (counts.get(base(project)) ?? 0) + 1);
+	return new Map(
+		projects.map((project) => {
+			const name = base(project);
+			if ((counts.get(name) ?? 0) < 2) return [project.cwd, name];
+			const parts = project.cwd.replace(/[\\/]+$/u, "").split(/[\\/]/u);
+			const parent = parts.length >= 2 ? parts[parts.length - 2] : "";
+			return [project.cwd, parent ? `${parent}/${name}` : name];
+		}),
+	);
+}
+
 export function isPrimaryNavActive(
 	key: PrimaryNavKey,
 	state: { view: AppView; settingsOpen: boolean; settingsCategory: SettingsCategory },
@@ -99,9 +124,26 @@ function SidebarSessions() {
 			.sort((a, b) => (b.modifiedAt ?? b.createdAt) - (a.modifiedAt ?? a.createdAt));
 		return groupRunningFirst(sorted, (m) => active.has(m.sessionId) || (askCounts[m.sessionId] ?? 0) > 0);
 	}, [allSessions, activeIds, askCounts]);
+	const projectLabels = useMemo(
+		() => projectDisplayNames(projects, t("workbench.nav.rootProject")),
+		[projects, t],
+	);
 	return (
 		<div className="workbench-nav-sessions" data-testid="sidebar-sessions">
-			<h3 className="workbench-nav-group">{t("workbench.nav.projectsGroup")}</h3>
+			<div className="flex items-center justify-between pr-2">
+				<h3 className="workbench-nav-group">{t("workbench.nav.projectsGroup")}</h3>
+				{/* The projects page is reached from its group header instead of a duplicate nav item. */}
+				<button
+					type="button"
+					className="rounded px-1.5 text-[11px] text-ink-faint hover:bg-hover hover:text-ink"
+					onClick={() => {
+						closeKnowledge();
+						setView("projects");
+					}}
+				>
+					{t("workbench.nav.projectsAll")}
+				</button>
+			</div>
 			<ul>
 				{projects.length > 0 ? (
 					projects.map((project) => (
@@ -117,7 +159,9 @@ function SidebarSessions() {
 								}}
 							>
 								<ProjectsIcon size={14} />
-								<span className="min-w-0 flex-1 truncate">{project.name}</span>
+								<span className="min-w-0 flex-1 truncate">
+									{projectLabels.get(project.cwd) ?? project.name}
+								</span>
 								<span className="workbench-nav-project-count">{project.sessionCount}</span>
 							</button>
 						</li>
@@ -212,11 +256,6 @@ export function WorkbenchNav() {
 		}
 		useUiStore.getState().setView("hosts");
 	};
-	const selectProjects = () => {
-		closeKnowledge();
-		setView("projects");
-	};
-
 	useEffect(() => {
 		if (!accountOpen) return;
 		const onPointerDown = (event: PointerEvent) => {
@@ -277,18 +316,6 @@ export function WorkbenchNav() {
 						</button>
 					);
 				})}
-				{/* Project page remains a compatibility route; project and recent data live in the groups below. */}
-				<button
-					type="button"
-					className={`workbench-nav-item${view === "projects" ? " is-active" : ""}`}
-					onClick={selectProjects}
-					aria-current={view === "projects" ? "page" : undefined}
-					title={t("workbench.nav.projects")}
-					aria-label={t("workbench.nav.projects")}
-				>
-					<ProjectsIcon size={17} />
-					<span>{t("workbench.nav.projects")}</span>
-				</button>
 				{pluginViews.map((entry) => (
 					<button
 						key={entry.id}

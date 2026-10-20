@@ -178,10 +178,7 @@ export function KnowledgeCloudSection({
 					{modeLabel(status.mode, t)}
 				</span>
 			</div>
-			<p className="rounded-lg border border-border bg-hover px-3 py-2 text-xs leading-relaxed text-ink-dim">
-				{t("cloudManualSyncNotice")}
-			</p>
-			<p className="text-xs leading-relaxed text-ink-dim">{t("cloudHint")}</p>
+			<p className="text-xs leading-relaxed text-ink-dim">{t("cloudManualSyncNotice")}</p>
 			<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
 				<dt className="text-ink-dim">{t("cloudEndpoint")}</dt>
 				<dd className="break-all font-mono">{status.endpoint}</dd>
@@ -222,12 +219,25 @@ export function KnowledgeCloudSection({
 			</form>
 			{status.passwordSource === "saved" && <p className="text-xs text-ink-dim">{t("cloudPasswordSaved")}</p>}
 			{status.passwordSource === "env" && <p className="text-xs text-ink-dim">{t("cloudPasswordEnv")}</p>}
-			{status.message && <p className="break-words text-xs text-ink-dim">{status.message}</p>}
-			{status.warnings.map((warning) => (
-				<p key={warning} className="break-words text-xs text-warn">
-					{warning}
-				</p>
-			))}
+			{/* One amber line instead of several differently coloured warnings; details stay one click away. */}
+			<details className="rounded-lg bg-hover px-3 py-2 text-xs">
+				<summary
+					className={`cursor-pointer select-none ${status.warnings.length ? "text-warn" : "text-ink-dim"}`}
+				>
+					{status.warnings.length
+						? t("cloudNotesWarning").replace("{count}", String(status.warnings.length))
+						: t("cloudNotesTitle")}
+				</summary>
+				<ul className="mt-2 space-y-1.5 leading-relaxed text-ink-dim">
+					<li>{t("cloudHint")}</li>
+					{status.message ? <li className="break-words">{status.message}</li> : null}
+					{status.warnings.map((warning) => (
+						<li key={warning} className="break-words">
+							{warning}
+						</li>
+					))}
+				</ul>
+			</details>
 			<div className="flex flex-wrap gap-2">
 				<Button size="sm" disabled={busy !== null} onClick={() => void run("probe")}>
 					{busy === "probe" ? t("loading") : t("cloudProbe")}

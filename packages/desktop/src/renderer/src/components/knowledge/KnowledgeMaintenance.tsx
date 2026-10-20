@@ -1,11 +1,13 @@
 import type { KnowledgeIndexStatus, KnowledgeJob, KnowledgePage } from "@drone/shared";
 import { useEffect, useState } from "react";
 import { getPi } from "../../api";
+import { COMPOSER_FOCUS_EVENT, useDraftStore } from "../../stores/drafts";
 import { useKnowledgeStore } from "../../stores/knowledge";
+import { useSessionsStore } from "../../stores/sessions";
+import { useUiStore } from "../../stores/ui";
 import { Button } from "../ui/Button";
 import { StatePanel } from "../ui/StatePanel";
 import { useKnowledgeText } from "./copy";
-import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
 export function KnowledgeMaintenance({
 	cwd,
 	revision,
@@ -16,23 +18,22 @@ export function KnowledgeMaintenance({
 	index: KnowledgeIndexStatus | null | undefined;
 }) {
 	const t = useKnowledgeText(),
-		_nonce = useKnowledgeStore((s) => s.revision);
+		nonce = useKnowledgeStore((s) => s.revision);
 	const [offset, setOffset] = useState(0),
 		[page, setPage] = useState<KnowledgePage<KnowledgeJob> | null>(null),
 		[busy, setBusy] = useState(false),
 		[loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null),
 		[message, setMessage] = useState<string | null>(null),
-		[confirm, setConfirm] = useState(false),
-		[path, setPath] = useState<string | null>(null);
+		[confirm, setConfirm] = useState(false);
 	useEffect(() => {
 		setOffset(0);
 		setPage(null);
 		setMessage(null);
 		setError(null);
 		setConfirm(false);
-		setPath(null);
 	}, []);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: nonce reloads the job list after a maintenance action
 	useEffect(() => {
 		let live = true;
 		setLoading(true);
@@ -52,7 +53,24 @@ export function KnowledgeMaintenance({
 		return () => {
 			live = false;
 		};
-	}, [cwd, revision, offset]);
+	}, [cwd, revision, offset, nonce]);
+	/**
+	 * A review task has no in-place fix: hand it to a new task with a prefilled request (not sent) so the
+	 * agent re-reads the sources and proposes changes into the Wiki review queue.
+	 */
+	function handOff(notePath: string) {
+		useSessionsStore.getState().createDraftSession(cwd ?? undefined);
+		const id = useSessionsStore.getState().activeSessionId;
+		if (!id) return;
+		useDraftStore.getState().updateDraft(id, (entry) => ({
+			...entry,
+			text: t("handOffPrompt").replace("{path}", notePath),
+		}));
+		useKnowledgeStore.getState().close();
+		useUiStore.getState().setView("chat");
+		window.dispatchEvent(new Event(COMPOSER_FOCUS_EVENT));
+	}
+
 	async function run(action: "reconcile" | "refresh-navigation") {
 		if (busy) return;
 		setBusy(true);
@@ -157,9 +175,24 @@ export function KnowledgeMaintenance({
 									<p className="mt-1 text-[11px] text-ink-faint">{t("manualReview")}</p>
 								)}
 							</div>
-							<Button size="sm" onClick={() => setPath(item.path)}>
-								{t("openSource")}
-							</Button>
+							<div className="flex shrink-0 gap-1">
+								{item.kind !== "navigation" ? (
+									<Button size="sm" variant="primary" onClick={() => handOff(item.path)}>
+										{t("handOff")}
+									</Button>
+								) : null}
+								{/* Open the note in the full note view; an inline viewer under a 48-row list was off screen. */}
+								<Button
+									size="sm"
+									onClick={() =>
+										useKnowledgeStore
+											.getState()
+											.open({ cwd, sessionId: null, tab: "reviews", note: item.path, noteRevision: revision })
+									}
+								>
+									{t("openSource")}
+								</Button>
+							</div>
 						</div>
 					))}
 				</div>
@@ -177,9 +210,6 @@ export function KnowledgeMaintenance({
 					</Button>
 				</div>
 			</section>
-			{path && (
-				<KnowledgeNoteViewer cwd={cwd} revision={revision} path={path} onClose={() => setPath(null)} />
-			)}
 		</div>
 	);
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { GRAPH_HEIGHT, GRAPH_WIDTH, layoutGraph, placeGraphLabels } from "./graph-layout";
+import {
+	declutterLayout,
+	GRAPH_HEIGHT,
+	GRAPH_WIDTH,
+	layoutGraph,
+	mergeIncrementalLayout,
+	placeGraphLabels,
+} from "./graph-layout";
 
 describe("knowledge graph layout", () => {
 	it("is deterministic, keeps nodes inside the canvas and pulls linked nodes closer", () => {
@@ -106,5 +113,82 @@ describe("knowledge graph layout", () => {
 			expect(point.y).toBeGreaterThanOrEqual(12);
 			expect(point.y).toBeLessThanOrEqual(GRAPH_HEIGHT - 12);
 		}
+	});
+});
+
+describe("incremental knowledge graph layout", () => {
+	const node = (path: string) => ({ path, title: path, kind: "note", degree: 1 }) as never;
+	it("keeps existing nodes still and places a new node near its neighbours", () => {
+		const previous = new Map([
+			["a", { x: 100, y: 100, vx: 0, vy: 0 }],
+			["b", { x: 300, y: 200, vx: 0, vy: 0 }],
+		]);
+		const base = new Map([
+			["a", { x: 500, y: 50, vx: 0, vy: 0 }],
+			["b", { x: 20, y: 400, vx: 0, vy: 0 }],
+			["c", { x: 700, y: 430, vx: 0, vy: 0 }],
+		]);
+		const merged = mergeIncrementalLayout(previous, base, {
+			nodes: [node("a"), node("b"), node("c")],
+			edges: [
+				{ source: "c", target: "a" },
+				{ source: "c", target: "b" },
+			] as never,
+		});
+		expect(merged.get("a")).toMatchObject({ x: 100, y: 100 });
+		expect(merged.get("b")).toMatchObject({ x: 300, y: 200 });
+		const c = merged.get("c");
+		expect(c).toBeDefined();
+		expect(Math.hypot((c?.x ?? 0) - 200, (c?.y ?? 0) - 150)).toBeLessThan(60);
+		for (const other of ["a", "b"]) {
+			const p = merged.get(other);
+			expect(Math.hypot((c?.x ?? 0) - (p?.x ?? 0), (c?.y ?? 0) - (p?.y ?? 0))).toBeGreaterThanOrEqual(21.9);
+		}
+	});
+
+	it("returns the base layout on first render and drops removed nodes", () => {
+		const base = new Map([["a", { x: 1, y: 2, vx: 0, vy: 0 }]]);
+		expect(mergeIncrementalLayout(null, base, { nodes: [node("a")], edges: [] })).toBe(base);
+		const previous = new Map([
+			["a", { x: 5, y: 5, vx: 0, vy: 0 }],
+			["gone", { x: 9, y: 9, vx: 0, vy: 0 }],
+		]);
+		const merged = mergeIncrementalLayout(previous, base, { nodes: [node("a")], edges: [] });
+		expect([...merged.keys()]).toEqual(["a"]);
+	});
+});
+
+describe("declutterLayout", () => {
+	it("separates a pile of overlapping nodes while keeping them near their anchor", () => {
+		const base = new Map(
+			Array.from({ length: 30 }, (_, index) => [`n${index}`, { x: 360 + (index % 3), y: 220, vx: 0, vy: 0 }]),
+		);
+		const degrees = new Map([...base.keys()].map((path) => [path, 1]));
+		const spread = declutterLayout(base, degrees);
+		const points = [...spread.values()];
+		let closest = Number.POSITIVE_INFINITY;
+		for (let i = 0; i < points.length; i++)
+			for (let j = i + 1; j < points.length; j++) {
+				const a = points[i];
+				const b = points[j];
+				if (a && b) closest = Math.min(closest, Math.hypot(a.x - b.x, a.y - b.y));
+			}
+		// two radius-6.5 nodes + 6px gap = 19px; allow a little slack for the iteration cap
+		expect(closest).toBeGreaterThan(16);
+		for (const point of points) {
+			expect(Math.hypot(point.x - 360, point.y - 220)).toBeLessThan(140);
+			expect(point.x).toBeGreaterThanOrEqual(14);
+			expect(point.y).toBeLessThanOrEqual(GRAPH_HEIGHT - 14);
+		}
+	});
+
+	it("leaves an already spread layout untouched", () => {
+		const base = new Map([
+			["a", { x: 100, y: 100, vx: 0, vy: 0 }],
+			["b", { x: 300, y: 300, vx: 0, vy: 0 }],
+		]);
+		const spread = declutterLayout(base, new Map());
+		expect(spread.get("a")).toMatchObject({ x: 100, y: 100 });
+		expect(spread.get("b")).toMatchObject({ x: 300, y: 300 });
 	});
 });

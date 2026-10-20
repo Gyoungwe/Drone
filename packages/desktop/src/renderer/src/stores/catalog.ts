@@ -52,6 +52,10 @@ interface CatalogStore {
 	/** 卸载已配置的包，成功后刷新已配置列表与已加载资源 */
 	removeConfiguredPackage: (source: string, scope: "user" | "project") => Promise<void>;
 	refreshConfiguredPackages: () => Promise<void>;
+	/** npm 上的最新版本（null = 查不到/离线；缺键 = 尚未检查） */
+	latestVersions: Record<string, string | null>;
+	checkingLatest: boolean;
+	checkLatestVersions: (names: string[]) => Promise<void>;
 }
 
 export const useCatalogStore = create<CatalogStore>((set, get) => {
@@ -199,6 +203,21 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 					delete updatingNames[name];
 					return { updatingNames };
 				});
+			}
+		},
+
+		latestVersions: {},
+		checkingLatest: false,
+		checkLatestVersions: async (names) => {
+			if (!names.length || typeof getPi().latestPackageVersions !== "function") return;
+			set({ checkingLatest: true });
+			try {
+				const found = await getPi().latestPackageVersions(names);
+				set((state) => ({ latestVersions: { ...state.latestVersions, ...found } }));
+			} catch {
+				// Offline or host without the method: rows fall back to the plain "installed" state.
+			} finally {
+				set({ checkingLatest: false });
 			}
 		},
 

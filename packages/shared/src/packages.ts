@@ -93,3 +93,20 @@ export interface PackageLifecycleReceipt {
 	reloadedSessionIds?: string[];
 	deferredSessionIds?: string[];
 }
+
+/** Numeric semver comparison (pre-release tags sort before the release). */
+export function compareVersions(a: string, b: string): number {
+	const parse = (value: string) => {
+		const [core = "", pre] = value.replace(/^v/u, "").split("-", 2);
+		return { parts: core.split(".").map((part) => Number.parseInt(part, 10) || 0), pre };
+	};
+	const left = parse(a);
+	const right = parse(b);
+	for (let index = 0; index < 3; index++) {
+		const diff = (left.parts[index] ?? 0) - (right.parts[index] ?? 0);
+		if (diff !== 0) return Math.sign(diff);
+	}
+	if (left.pre && !right.pre) return -1;
+	if (!left.pre && right.pre) return 1;
+	return 0;
+}

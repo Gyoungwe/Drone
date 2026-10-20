@@ -18,7 +18,7 @@ import { type FirstRunStatus, probeFirstRunStatus } from "./first-run-status";
 function CardIllustration({ kind }: { kind: "research" | "knowledge" | "relay" }) {
 	if (kind === "research")
 		return (
-			<svg aria-hidden="true" viewBox="0 0 88 42" className="h-10 w-20 opacity-80">
+			<svg aria-hidden="true" viewBox="0 0 88 42" className="h-10 w-20 opacity-45">
 				<path d="M4 34 23 22l14 7 18-19 29 8" fill="none" stroke="currentColor" strokeWidth="2" />
 				{[
 					[4, 34],
@@ -33,13 +33,13 @@ function CardIllustration({ kind }: { kind: "research" | "knowledge" | "relay" }
 		);
 	if (kind === "knowledge")
 		return (
-			<svg aria-hidden="true" viewBox="0 0 88 42" className="h-10 w-20 opacity-80">
+			<svg aria-hidden="true" viewBox="0 0 88 42" className="h-10 w-20 opacity-45">
 				<path d="M17 9h43l11 7v21H17z" fill="none" stroke="currentColor" strokeWidth="2" />
 				<path d="M60 9v8h11M27 20h31M27 27h23" fill="none" stroke="currentColor" strokeWidth="2" />
 			</svg>
 		);
 	return (
-		<svg aria-hidden="true" viewBox="0 0 88 42" className="h-10 w-20 opacity-80">
+		<svg aria-hidden="true" viewBox="0 0 88 42" className="h-10 w-20 opacity-45">
 			<path
 				d="M16 21a15 15 0 0 1 25-11l5 5M72 21a15 15 0 0 1-25 11l-5-5"
 				fill="none"
@@ -188,7 +188,7 @@ export function HomeCards() {
 		},
 		{
 			key: "relay" as const,
-			tone: "border border-border bg-hover text-ink shadow-[0_12px_30px_-24px_rgba(15,23,42,0.45)]",
+			tone: "border border-border bg-surface text-ink shadow-[0_12px_30px_-24px_rgba(15,23,42,0.45)]",
 			disabled: !recent,
 			onClick: () => recent && void useProjectsStore.getState().openSession(recent),
 			metric: unfinished
@@ -218,7 +218,7 @@ export function HomeCards() {
 								<CardIllustration kind={card.key} />
 							</span>
 							<span className="text-[12px] opacity-75">{t(`home.cards.${card.key}.hint`)}</span>
-							{card.metric && <span className="mt-2 text-[11px] font-medium opacity-90">{card.metric}</span>}
+							{card.metric && <span className="mt-2 text-xs font-medium opacity-90">{card.metric}</span>}
 						</button>
 						{(card.key === "research" || card.key === "knowledge") && setupCard(card.key) ? (
 							<button

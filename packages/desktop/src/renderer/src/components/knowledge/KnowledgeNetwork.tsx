@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useI18nStore } from "../../i18n";
 import { relativeTime } from "../../lib/relative-time";
@@ -16,7 +16,21 @@ export function KnowledgeNetwork({ cwd, sessionId }: { cwd: string | null; sessi
 	const binding = data?.binding;
 	const revision = binding?.revision ?? 0;
 	const indexKey = `${data?.index?.noteCount ?? 0}:${data?.index?.lastReconciledAt ?? ""}`;
-	const isDevelopment = import.meta.env.DEV;
+	const [formalVault, setFormalVault] = useState<string | null>(null);
+	const isDevelopment = import.meta.env.DEV || formalVault !== null;
+	useEffect(() => {
+		if (binding) return;
+		let live = true;
+		void getPi()
+			.formalKnowledgeVault()
+			.then(
+				(path) => live && setFormalVault(path),
+				() => live && setFormalVault(null),
+			);
+		return () => {
+			live = false;
+		};
+	}, [binding]);
 
 	async function startSetup(path?: string) {
 		if (!cwd) return;
@@ -75,6 +89,9 @@ export function KnowledgeNetwork({ cwd, sessionId }: { cwd: string | null; sessi
 					{isDevelopment && (
 						<p className="mt-3 rounded-lg bg-hover p-3 text-xs leading-relaxed text-ink-dim">
 							{t("networkDevHint")}
+							{formalVault && (
+								<span className="mt-1 block font-mono text-[11px] text-ink-faint">{formalVault}</span>
+							)}
 						</p>
 					)}
 					{!cwd && <p className="mt-3 text-xs text-warn">{t("selectProject")}</p>}
@@ -90,12 +107,13 @@ export function KnowledgeNetwork({ cwd, sessionId }: { cwd: string | null; sessi
 						<Button size="sm" disabled={!cwd || !data?.enabled || busy} onClick={() => void startSetup()}>
 							{t("networkCreate")}
 						</Button>
-						{isDevelopment && (
+						{formalVault && (
 							<Button
 								size="sm"
 								variant="secondary"
+								title={formalVault}
 								disabled={!cwd || !data?.enabled || busy}
-								onClick={() => void connectExisting()}
+								onClick={() => void startSetup(formalVault)}
 							>
 								{t("networkUseFormal")}
 							</Button>

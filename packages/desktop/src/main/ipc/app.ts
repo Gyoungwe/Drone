@@ -13,6 +13,7 @@ import { applyDesktopPrefs, currentDesktopPrefs } from "../desktop-prefs";
 import { getFigureAnnotations, saveFigureAnnotations } from "../figure-annotations";
 import { ensureExternalOpenSucceeded, runFileAction } from "../file-actions";
 import { previewLocalFile, resolveConfinedResourcePath, resolveResourcePath } from "../file-preview";
+import { formalKnowledgeVault } from "../formal-knowledge";
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
 import { defaultHostEnvDeps, probeHostEnvironment } from "../host-env";
 import { issueHtmlPreviewUrl } from "../html-preview-protocol";
@@ -222,6 +223,8 @@ export function registerAppIpc(
 				: await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
 			return result.canceled ? null : (result.filePaths[0] ?? null);
 		},
+		formalKnowledgeVault: () =>
+			formalKnowledgeVault({ isPackaged: app.isPackaged, userData: app.getPath("userData") }),
 		getGitBranch: (cwd) => getGitBranch(cwd),
 		listGitBranches: (cwd) => listGitBranches(cwd),
 		checkoutBranch: (cwd, branch) => checkoutBranch(cwd, branch),
@@ -262,6 +265,7 @@ export function registerAppIpc(
 				saveFileDialog: IpcChannels.FileSaveDialog,
 				pickPath: IpcChannels.FilePickPath,
 				pickDirectory: IpcChannels.ProjectPickDirectory,
+				formalKnowledgeVault: IpcChannels.KnowledgeFormalVault,
 				getGitBranch: IpcChannels.ProjectGetGitBranch,
 				listGitBranches: IpcChannels.ProjectListGitBranches,
 				checkoutBranch: IpcChannels.ProjectCheckoutBranch,

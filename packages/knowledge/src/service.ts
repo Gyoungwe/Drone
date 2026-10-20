@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { mentionedWikiTitle } from "./topic-probe";
 import { expandWithGraph, GRAPH_RETRIEVAL_DEFAULTS } from "./graph-retrieval";
 import { createHash, randomUUID } from "node:crypto";
 import { join, relative, resolve, sep } from "node:path";
@@ -483,6 +484,18 @@ export class KnowledgeService {
 	 * 语义命中排前，词法补齐；1.5s 截止，语义失败只退回词法。只读，不需要会话 ticket。
 	 * @param {{ query: string, project?: string, limit?: number }} options
 	 */
+	/** Cheap lexical probe: the Wiki page whose title the question names, or null. */
+	async probeTopic({ query, project = "" }) {
+		const text = String(query || "").slice(0, 200);
+		if (!text.trim()) return null;
+		return withKnowledgeBinding(this.binding, async () => {
+			const result = await this.request("search", { query: text, wikiOnly: true, project, limit: 6 });
+			const hits = (result?.hits || []).filter((hit) => hit.kind === "wiki");
+			const titles = hits.map((hit) => hit.title || String(hit.path || "").split("/").pop());
+			const title = mentionedWikiTitle(text, titles);
+			return title ? hits[titles.indexOf(title)]?.path || null : null;
+		});
+	}
 	async relatedForMemory({ query, project = "", limit = 4 }) {
 		const text = String(query || "").slice(0, 2000);
 		if (!text.trim()) return [];

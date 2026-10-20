@@ -219,3 +219,130 @@ export function placeGraphLabels(
 	}
 	return result;
 }
+
+/**
+ * Live refresh keeps the picture still: nodes that were already on screen keep their
+ * previous position, new nodes start at the centroid of their already-placed neighbours
+ * (falling back to the fresh base layout), and only the new nodes are relaxed away from
+ * overlaps. Without a previous layout the base layout is returned unchanged.
+ */
+export function mergeIncrementalLayout(
+	previous: Map<string, Point> | null,
+	base: Map<string, Point>,
+	data: Pick<GraphData, "nodes" | "edges">,
+	minDistance = 22,
+): Map<string, Point> {
+	if (!previous || previous.size === 0) return base;
+	const merged = new Map<string, Point>();
+	const fresh: string[] = [];
+	for (const node of data.nodes) {
+		const old = previous.get(node.path);
+		if (old) merged.set(node.path, { ...old, vx: 0, vy: 0 });
+		else fresh.push(node.path);
+	}
+	if (fresh.length === 0) return merged;
+	const neighbours = new Map<string, string[]>();
+	for (const edge of data.edges) {
+		if (!neighbours.has(edge.source)) neighbours.set(edge.source, []);
+		if (!neighbours.has(edge.target)) neighbours.set(edge.target, []);
+		neighbours.get(edge.source)?.push(edge.target);
+		neighbours.get(edge.target)?.push(edge.source);
+	}
+	for (const [index, path] of fresh.entries()) {
+		const anchors = (neighbours.get(path) ?? [])
+			.map((other) => merged.get(other))
+			.filter((point): point is Point => Boolean(point));
+		const fallback = base.get(path) ?? { x: GRAPH_WIDTH / 2, y: GRAPH_HEIGHT / 2, vx: 0, vy: 0 };
+		const angle = (index + 1) * 2.399963; // golden angle keeps siblings apart deterministically
+		const point =
+			anchors.length > 0
+				? {
+						x: anchors.reduce((sum, p) => sum + p.x, 0) / anchors.length + Math.cos(angle) * minDistance,
+						y: anchors.reduce((sum, p) => sum + p.y, 0) / anchors.length + Math.sin(angle) * minDistance,
+					}
+				: { x: fallback.x, y: fallback.y };
+		merged.set(path, { x: point.x, y: point.y, vx: 0, vy: 0 });
+	}
+	// Local relaxation: only fresh nodes move, existing nodes act as fixed obstacles.
+	for (let step = 0; step < 40; step++) {
+		for (const path of fresh) {
+			const point = merged.get(path);
+			if (!point) continue;
+			for (const [other, obstacle] of merged) {
+				if (other === path) continue;
+				const dx = point.x - obstacle.x;
+				const dy = point.y - obstacle.y;
+				const distance = Math.hypot(dx, dy) || 0.01;
+				if (distance >= minDistance) continue;
+				const push = (minDistance - distance) / 2;
+				point.x += (dx / distance) * push;
+				point.y += (dy / distance) * push;
+			}
+			point.x = Math.min(GRAPH_WIDTH - 12, Math.max(12, point.x));
+			point.y = Math.min(GRAPH_HEIGHT - 12, Math.max(12, point.y));
+		}
+	}
+	return merged;
+}
+
+/** Node radius used by the knowledge network renderer (diameter = 10 + min(links, 7) × 3). */
+export function graphNodeRadius(degree: number): number {
+	return (10 + Math.min(Math.max(degree, 0), 7) * 3) / 2;
+}
+
+/**
+ * Collision pass on top of a base layout: keeps every node near where the base layout put it (so topic
+ * clusters stay recognisable) but pushes overlapping nodes apart until each pair is at least
+ * r1 + r2 + gap apart. The worker's sector layout fans same-category notes out from one anchor, which
+ * piles a paper-heavy Vault into a single blob; this spreads that blob without reshuffling the graph.
+ */
+export function declutterLayout(
+	base: Map<string, Point>,
+	degrees: Map<string, number>,
+	{ gap = 6, iterations = 120 }: { gap?: number; iterations?: number } = {},
+): Map<string, Point> {
+	const entries = [...base.entries()].map(([path, point]) => ({
+		path,
+		x: point.x,
+		y: point.y,
+		r: graphNodeRadius(degrees.get(path) ?? 0),
+	}));
+	const margin = 14;
+	for (let step = 0; step < iterations; step++) {
+		let moved = false;
+		for (let i = 0; i < entries.length; i++) {
+			const a = entries[i];
+			if (!a) continue;
+			for (let j = i + 1; j < entries.length; j++) {
+				const b = entries[j];
+				if (!b) continue;
+				let dx = b.x - a.x;
+				let dy = b.y - a.y;
+				let distance = Math.hypot(dx, dy);
+				const min = a.r + b.r + gap;
+				if (distance >= min) continue;
+				if (distance < 0.01) {
+					// Deterministic nudge for exactly overlapping nodes.
+					const angle = ((i * 7919 + j * 104729) % 360) * (Math.PI / 180);
+					dx = Math.cos(angle);
+					dy = Math.sin(angle);
+					distance = 1;
+				}
+				const push = (min - distance) / 2;
+				const ux = dx / distance;
+				const uy = dy / distance;
+				a.x -= ux * push;
+				a.y -= uy * push;
+				b.x += ux * push;
+				b.y += uy * push;
+				moved = true;
+			}
+		}
+		for (const entry of entries) {
+			entry.x = Math.min(GRAPH_WIDTH - margin, Math.max(margin, entry.x));
+			entry.y = Math.min(GRAPH_HEIGHT - margin, Math.max(margin, entry.y));
+		}
+		if (!moved) break;
+	}
+	return new Map(entries.map((entry) => [entry.path, { x: entry.x, y: entry.y, vx: 0, vy: 0 }]));
+}

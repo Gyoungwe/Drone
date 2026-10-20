@@ -118,7 +118,7 @@ export function KnowledgeSearch({
 							role="tab"
 							aria-selected={activeCategory === category}
 							onClick={() => onCategoryChange(category)}
-							className={`rounded-full px-3 py-2 text-xs ${activeCategory === category ? "bg-hover font-medium text-ink" : "text-ink-dim hover:bg-hover"}`}
+							className={`rounded-full px-3 py-2 text-xs ${activeCategory === category ? "bg-hover font-medium text-ink" : count === 0 ? "text-ink-faint opacity-60 hover:bg-hover" : "text-ink-dim hover:bg-hover"}`}
 						>
 							{t(CATEGORY_KEYS[category] as any)} {count == null ? t("homeCountUnknown") : count}
 						</button>

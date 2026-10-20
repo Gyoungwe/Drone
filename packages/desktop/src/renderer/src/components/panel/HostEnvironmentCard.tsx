@@ -2,15 +2,24 @@ import { formatBytes, type HostEnvironment, usagePercent } from "@drone/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "../../i18n";
 
+/** 70%+ amber, 90%+ red: a full disk should look urgent, not like every other bar. */
+export function meterTone(percent: number | null): "" | "warn" | "danger" {
+	if (percent == null) return "";
+	if (percent >= 90) return "danger";
+	if (percent >= 70) return "warn";
+	return "";
+}
+
 function Meter({ label, percent, detail }: { label: string; percent: number | null; detail: string }) {
+	const tone = meterTone(percent);
 	return (
-		<div className="host-env-meter">
+		<div className={`host-env-meter${tone ? ` host-env-meter--${tone}` : ""}`}>
 			<div className="host-env-meter-head">
 				<span>{label}</span>
 				<span className="font-mono">{percent == null ? "—" : `${percent}%`}</span>
 			</div>
 			<div className="host-env-bar">
-				<span style={{ width: `${percent ?? 0}%` }} />
+				<span style={{ width: `${Math.min(100, percent ?? 0)}%` }} />
 			</div>
 			<div className="host-env-meter-detail">{detail}</div>
 		</div>
@@ -32,11 +41,13 @@ export function HostEnvironmentView({
 	loading,
 	error,
 	onRefresh,
+	hideProbe = false,
 }: {
 	env: HostEnvironment | null;
 	loading: boolean;
 	error?: string | null;
 	onRefresh: () => void;
+	hideProbe?: boolean;
 }) {
 	const t = useT();
 	const status: HostEnvironmentStatus = loading
@@ -79,11 +90,13 @@ export function HostEnvironmentView({
 					</span>
 				</summary>
 				<div className="mt-2">
-					<div className="mb-2 flex justify-end">
-						<button type="button" className="panel-action" onClick={onRefresh} disabled={loading}>
-							{loading ? t("panel.hostEnv.probing") : t("panel.hostEnv.probe")}
-						</button>
-					</div>
+					{hideProbe ? null : (
+						<div className="mb-2 flex justify-end">
+							<button type="button" className="panel-action" onClick={onRefresh} disabled={loading}>
+								{loading ? t("panel.hostEnv.probing") : t("panel.hostEnv.probe")}
+							</button>
+						</div>
+					)}
 					{error && (
 						<p className="mb-2 rounded-md border border-err/30 bg-err/5 px-2 py-1 text-xs text-err">
 							{error}
@@ -128,7 +141,14 @@ export function HostEnvironmentView({
 	);
 }
 
-export function HostEnvironmentCard() {
+export function HostEnvironmentCard({
+	refreshSignal = 0,
+	hideProbe = false,
+}: {
+	/** Increment to re-probe from a page-level refresh button. */
+	refreshSignal?: number;
+	hideProbe?: boolean;
+} = {}) {
 	const [env, setEnv] = useState<HostEnvironment | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -149,8 +169,17 @@ export function HostEnvironmentCard() {
 			)
 			.finally(() => setLoading(false));
 	}, []);
-	useEffect(() => refresh(), [refresh]);
-	return <HostEnvironmentView env={env} error={error} loading={loading} onRefresh={refresh} />;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshSignal is the page-level re-probe trigger
+	useEffect(() => refresh(), [refresh, refreshSignal]);
+	return (
+		<HostEnvironmentView
+			env={env}
+			error={error}
+			loading={loading}
+			onRefresh={refresh}
+			hideProbe={hideProbe}
+		/>
+	);
 }
 
 /** 主机 · 设置：只读权限展示（不提供编辑，编辑仍走登记表单）。 */

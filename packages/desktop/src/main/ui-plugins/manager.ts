@@ -64,7 +64,25 @@ function builtinSeedStampPath(): string {
  * 边界语义：手动删除某内置目录 → 本版本内不再回来（尊重删除），下次升级重新导出；
  * 直接改内置副本 → 升级时被覆盖（注释与 SPEC 都写明：魔改请把目录改名另存，面板「打开目录」可达）。
  */
+/**
+ * Built-in plugins that no longer ship (2026-10-20: whale-maid ×2 and voice alerts were removed from the
+ * product). Their earlier seeded copies live in the user plugin folder, so delete them on startup;
+ * this runs before the version-stamp shortcut because the app version may not change.
+ */
+export const RETIRED_BUILTIN_PLUGINS = ["ds-whale-maid", "ds-whale-maid-q", "voice-alerts"] as const;
+
+async function retireBuiltinPlugins(): Promise<void> {
+	for (const name of RETIRED_BUILTIN_PLUGINS) {
+		const dir = join(pluginsDir(), name);
+		if (!existsSync(dir)) continue;
+		await rm(dir, { recursive: true, force: true }).catch((err) =>
+			log.error("retire builtin plugin failed", name, err),
+		);
+	}
+}
+
 async function seedBuiltinPlugins(): Promise<void> {
+	await retireBuiltinPlugins();
 	const stampPath = builtinSeedStampPath();
 	const version = app.getVersion();
 	const stamp = await readFile(stampPath, "utf-8")

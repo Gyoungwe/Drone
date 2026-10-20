@@ -15,14 +15,20 @@ export function EmptyState() {
 	const greeting = hour < 5 || hour >= 18 ? "evening" : hour < 12 ? "morning" : "afternoon";
 
 	return (
-		<div className="flex h-full min-h-0 flex-col items-center justify-start gap-8 overflow-y-auto px-8 py-10 pb-[8vh]">
-			<div className="text-center" data-testid="home-greeting">
-				<h1 className="font-serif-sc text-[28px] text-ink">{t(`home.greeting.${greeting}`)}</h1>
-				<p className="mt-2 text-[13px] text-ink-faint">{t("home.intro")}</p>
+		<div className="flex h-full min-h-0 flex-col items-center overflow-y-auto px-8 py-10">
+			{/* my-auto centres the whole group vertically and still scrolls when the window is short. */}
+			<div className="my-auto flex w-full flex-col items-center gap-8 pb-[4vh]">
+				<div className="text-center" data-testid="home-greeting">
+					<h1 className="font-serif-sc text-[28px] text-ink">{t(`home.greeting.${greeting}`)}</h1>
+					<p className="mt-2 text-[13px] text-ink-faint">{t("home.intro")}</p>
+				</div>
+				{/* The project picker belongs to the composer, so it sits directly under it. */}
+				<div className="flex w-full flex-col items-center gap-2">
+					<Composer centered />
+					<ProjectBranchPicker />
+				</div>
+				<HomeCards />
 			</div>
-			<HomeCards />
-			<Composer centered />
-			<ProjectBranchPicker />
 		</div>
 	);
 }

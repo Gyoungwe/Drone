@@ -11,7 +11,7 @@ import type {
 	ZoteroStatus,
 	ZoteroWebApiStatus,
 } from "@drone/shared";
-import { RESEARCH_SKILL_SOURCES, researchSkillProfile } from "@drone/shared";
+import { MARKET_RESOURCE_LINKS, RESEARCH_SKILL_SOURCES, researchSkillProfile } from "@drone/shared";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { getPi } from "../../api";
 import { useT } from "../../i18n";
@@ -22,6 +22,7 @@ import { useSettingsStore } from "../../stores/settings";
 import { type CapabilityDrawer, useUiStore } from "../../stores/ui";
 import { useUiPluginsStore } from "../../stores/ui-plugins";
 import { ListIcon, RefreshIcon, TaskBoardIcon, ZoteroIcon } from "../icons";
+import { PageHeader, PageShell } from "../ui/PageHeader";
 import { Switch } from "../ui/Switch";
 import { PluginSourcesSection } from "./PluginSourcesSection";
 
@@ -104,7 +105,11 @@ interface CapabilityRow {
 type DrawerKind = CapabilityDrawer;
 
 function sourceLabel(source: string, scope: string, t: (key: any) => string): string {
-	if (source.startsWith("github:")) return source.slice("github:".length);
+	if (source.startsWith("github:")) {
+		const repository = source.slice("github:".length);
+		const known = RESEARCH_SKILL_SOURCES.find((entry) => entry.repository === repository);
+		return known ? t(`skillsConnections.sourceName.${known.id}`) : repository;
+	}
 	if (source.startsWith("npm:@gyoungwe/"))
 		return `${source.slice("npm:".length)}（${t("skillsConnections.dronePlugin")}）`;
 	if (scope === "project")
@@ -112,6 +117,8 @@ function sourceLabel(source: string, scope: string, t: (key: any) => string): st
 	if (source.includes(".agents/skills"))
 		return `${t("skillsConnections.personalSource")} · ${source.split(/[\\/]/u).pop() || source}`;
 	if (source === "builtin" || source.startsWith("inline:")) return t("skillsConnections.builtinSource");
+	if (source === "auto") return t("skillsConnections.autoSource");
+	if (source === "local") return t("skillsConnections.localSource");
 	return source;
 }
 
@@ -130,6 +137,25 @@ const CONNECTOR_DESCRIPTION_KEYS: Record<string, string> = {
 	institutional: "institutional",
 	"project-storage": "projectStorage",
 };
+
+const CONNECTOR_KINDS = [
+	"literature",
+	"citation",
+	"dataset",
+	"protocol",
+	"project-storage",
+	"institutional",
+] as const;
+
+/** Chinese/English category for a connector instead of the raw `kind · id` engineering line. */
+function connectorKindLabel(
+	kind: ResearchConnectorDescriptor["kind"],
+	t: (key: any, params?: Record<string, string | number>) => string,
+): string {
+	return (CONNECTOR_KINDS as readonly string[]).includes(kind)
+		? t(`skillsConnections.connectorKind.${kind}`)
+		: String(kind);
+}
 
 function connectorDescription(
 	id: string,
@@ -193,7 +219,8 @@ export function capabilitySectionKind(section: CapabilitySection): CapabilityRow
 export function connectorCatalogEntries(
 	connectors: readonly ResearchConnectorDescriptor[],
 ): ResearchConnectorDescriptor[] {
-	return connectors.filter((connector) => connector.id !== "zotero");
+	// Zotero and institutional access each keep one combined row (switch + configure drawer).
+	return connectors.filter((connector) => connector.id !== "zotero" && connector.id !== "institutional");
 }
 
 export function SkillsConnectionsView() {
@@ -201,7 +228,6 @@ export function SkillsConnectionsView() {
 	const cwd = useSessionsStore((state) => state.cwd);
 	const activeSessionId = useSessionsStore((state) => state.activeSessionId);
 	const settingsSkills = useSettingsStore((state) => state.skills);
-	const settingsExtensions = useSettingsStore((state) => state.extensions);
 	const diagnostics = useSettingsStore((state) => state.skillDiagnostics);
 	const refreshSettings = useSettingsStore((state) => state.refresh);
 	const loadPlugins = useUiPluginsStore((state) => state.loadAll);
@@ -343,6 +369,7 @@ export function SkillsConnectionsView() {
 				connectorId: zoteroConnector?.id,
 			});
 		}
+		const institutionalConnector = connectors.find((connector) => connector.id === "institutional");
 		if (institutional) {
 			next.push({
 				id: "connector:institutional",
@@ -352,12 +379,16 @@ export function SkillsConnectionsView() {
 					? t("skillsConnections.institutionalLoggedIn")
 					: t("skillsConnections.institutionalDescription"),
 				scope: institutional.config.institutionName ?? t("skillsConnections.readOnlyScope"),
-				status: institutional.loggedIn
-					? "available"
-					: institutional.config.configured
-						? "permission"
-						: "configure",
+				status:
+					institutionalConnector && !institutionalConnector.enabled
+						? "disabled"
+						: institutional.loggedIn
+							? "available"
+							: institutional.config.configured
+								? "permission"
+								: "configure",
 				action: "institutional",
+				connectorId: institutionalConnector?.id,
 			});
 		}
 		return next;
@@ -528,24 +559,12 @@ export function SkillsConnectionsView() {
 	};
 
 	return (
-		<div
-			className="page-fade min-h-0 min-w-0 flex-1 overflow-y-auto bg-canvas px-6 py-8"
-			data-testid="skills-connections-view"
-		>
-			<div className="mx-auto max-w-5xl">
-				<header className="flex flex-wrap items-start justify-between gap-4">
-					<div>
-						<p className="text-xs uppercase tracking-[0.16em] text-ink-faint">
-							{t("skillsConnections.eyebrow")}
-						</p>
-						<h1 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-ink">
-							{t("skillsConnections.title")}
-						</h1>
-						<p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-dim">
-							{t("skillsConnections.description")}
-						</p>
-					</div>
-					<div className="flex shrink-0 gap-2">
+		<PageShell testId="skills-connections-view">
+			<PageHeader
+				title={t("skillsConnections.title")}
+				description={t("skillsConnections.description")}
+				actions={
+					<>
 						<button
 							type="button"
 							className="flex items-center gap-2 rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
@@ -562,9 +581,10 @@ export function SkillsConnectionsView() {
 						>
 							+ {t("skillsConnections.add")}
 						</button>
-					</div>
-				</header>
-
+					</>
+				}
+			/>
+			<div>
 				<div className="mt-8 grid gap-4 md:grid-cols-[170px_minmax(0,1fr)]">
 					<nav
 						className="sticky top-4 z-10 max-h-[calc(100vh-2rem)] self-start overflow-y-auto rounded-2xl border border-border bg-surface p-2"
@@ -592,11 +612,16 @@ export function SkillsConnectionsView() {
 					<main className="min-w-0">
 						{section === "market" ? <PluginSourcesSection /> : null}
 						{section === "skills" ? (
-							<>
-								<div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3">
-									<div className="min-w-0 text-xs text-ink-dim">
-										<p className="font-medium text-ink">{t("update.skillsUpdate")}</p>
-										<p className="mt-1 truncate">
+							<section
+								className="rounded-2xl border border-border bg-surface"
+								data-testid="research-skill-sources"
+							>
+								<div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-3 pt-4">
+									<div className="min-w-0">
+										<h2 className="text-sm font-semibold text-ink">
+											{t("skillsConnections.skillsCardTitle")}
+										</h2>
+										<p className="mt-1 truncate text-xs text-ink-dim">
 											{skillUpdateState?.phase === "available"
 												? t("update.skillsAvailable", { count: skillUpdateState.packs.length })
 												: skillUpdateState?.phase === "ready"
@@ -605,226 +630,318 @@ export function SkillsConnectionsView() {
 														? t("update.skillsUpToDate")
 														: skillUpdateState?.phase === "error"
 															? t("update.skillsFailed", { message: skillUpdateState.message })
-															: skillUpdateState?.phase === "checking" ||
-																	skillUpdateState?.phase === "downloading"
+															: skillUpdateBusy
 																? t("update.skillsChecking")
 																: t("update.skillsNotChecked")}
 										</p>
 									</div>
-									<div className="flex shrink-0 gap-2">
+									<div className="flex shrink-0 flex-wrap gap-2">
 										<button
 											type="button"
 											className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover disabled:opacity-60"
 											disabled={skillUpdateBusy}
 											onClick={() => void checkResearchSkills()}
 										>
-											{skillUpdateBusy ? t("update.skillsChecking") : t("skillsConnections.checkAll")}
+											{skillUpdateBusy ? t("update.skillsChecking") : t("skillsConnections.checkUpdates")}
 										</button>
+										{["available", "ready"].includes(skillUpdateState?.phase ?? "") ? (
+											<button
+												type="button"
+												className="rounded-full bg-ink px-3 py-2 text-xs text-canvas hover:opacity-90 disabled:opacity-50"
+												disabled={skillUpdateBusy}
+												onClick={() =>
+													void (skillUpdateState?.phase === "ready"
+														? restartForResearchSkillsWithGuard()
+														: getPi().updateResearchSkills())
+												}
+											>
+												{skillUpdateLabel}
+											</button>
+										) : null}
 										<button
 											type="button"
-											className="rounded-full bg-ink px-3 py-2 text-xs text-canvas hover:opacity-90 disabled:opacity-50"
-											disabled={
-												skillUpdateBusy || !["available", "ready"].includes(skillUpdateState?.phase ?? "")
-											}
-											onClick={() =>
-												void (skillUpdateState?.phase === "ready"
-													? restartForResearchSkillsWithGuard()
-													: getPi().updateResearchSkills())
-											}
-										>
-											{skillUpdateBusy ? t("update.skillsChecking") : skillUpdateLabel}
-										</button>
-									</div>
-									{skillUpdateBusy ? (
-										<div
-											className="mt-3"
-											role="progressbar"
-											aria-valuemin={0}
-											aria-valuemax={100}
-											aria-valuenow={
-												skillUpdateState?.phase === "downloading" ? skillUpdateState.percent : undefined
-											}
-										>
-											<div className="h-1.5 overflow-hidden rounded-full bg-hover">
-												<div
-													className={`h-full rounded-full bg-accent ${skillUpdateState?.phase === "downloading" ? "transition-[width]" : "w-1/3 animate-pulse"}`}
-													style={
-														skillUpdateState?.phase === "downloading"
-															? { width: `${skillUpdateState.percent}%` }
-															: undefined
-													}
-												/>
-											</div>
-											<p className="mt-1 text-[11px] text-ink-faint">
-												{skillUpdateState?.phase === "downloading"
-													? t("update.skillsDownloading", { percent: skillUpdateState.percent })
-													: t("update.skillsChecking")}
-											</p>
-										</div>
-									) : null}
-								</div>
-								<section
-									className="mt-4 rounded-2xl border border-border bg-surface px-4 py-4"
-									data-testid="research-skill-sources"
-								>
-									<div className="flex flex-wrap items-baseline justify-between gap-2">
-										<div>
-											<h2 className="text-sm font-medium text-ink">
-												{t("skillsConnections.sourceRepositories")}
-											</h2>
-											<p className="mt-1 text-xs leading-relaxed text-ink-dim">
-												{t("skillsConnections.sourceRepositoriesHint")}
-											</p>
-										</div>
-									</div>
-									<div className="mt-3 space-y-2">
-										{researchSourceCards.map((source) => {
-											const sourceHasUpdate =
-												skillUpdateState?.phase === "available" &&
-												skillUpdateState.packs.some((pack) => pack.id === source.id);
-											return (
-												<div key={source.id} className="rounded-xl border border-border px-3 py-3">
-													<div className="flex flex-wrap items-start justify-between gap-3">
-														<div className="min-w-0">
-															<p className="truncate text-xs font-medium text-ink">
-																{t(`skillsConnections.sourceName.${source.id}` as never)}
-															</p>
-															<p className="mt-1 truncate text-[11px] text-ink-faint">
-																github.com/{source.repository} · main
-															</p>
-														</div>
-														<span
-															className={`shrink-0 rounded-full px-2 py-1 text-[10px] ${source.managed ? "bg-highlight text-ink-2" : "bg-hover text-ink-faint"}`}
-														>
-															{source.managed
-																? t("skillsConnections.manualUpdateSource")
-																: t("skillsConnections.catalogSource")}
-														</span>
-													</div>
-													<p className="mt-2 text-[11px] text-ink-faint">
-														{t("skillsConnections.sourceSkillCounts", {
-															loaded: source.loaded,
-															bundled: source.bundled,
-														})}
-													</p>
-													<div className="mt-2 flex flex-wrap items-center gap-3">
-														<button
-															type="button"
-															className="text-[11px] text-accent hover:underline"
-															onClick={() =>
-																void getPi().openExternal(`https://github.com/${source.repository}`)
-															}
-														>
-															{t("skillsConnections.openRepository")}
-														</button>
-														{source.managed ? (
-															<span className="text-[11px] text-ink-faint">
-																{sourceHasUpdate
-																	? t("update.skillsAvailable", { count: 1 })
-																	: t("skillsConnections.manualUpdateHint")}
-															</span>
-														) : null}
-													</div>
-												</div>
-											);
-										})}
-									</div>
-								</section>
-								<section
-									className="mt-4 rounded-2xl border border-border bg-surface px-4 py-4"
-									data-testid="custom-skill-repositories"
-								>
-									<div className="flex flex-wrap items-baseline justify-between gap-3">
-										<div>
-											<h2 className="text-sm font-medium text-ink">
-												{t("skillsConnections.customRepositories")}
-											</h2>
-											<p className="mt-1 text-xs leading-relaxed text-ink-dim">
-												{t("skillsConnections.customRepositoriesHint")}
-											</p>
-										</div>
-										<button
-											type="button"
-											className="rounded-full bg-ink px-3 py-2 text-xs text-canvas hover:opacity-90"
+											className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
 											onClick={() => setRepositoryDialog(true)}
 										>
 											+ {t("skillsConnections.addRepository")}
 										</button>
 									</div>
-									{skillRepositories.length === 0 ? (
-										<p className="py-6 text-center text-xs text-ink-faint">
-											{t("skillsConnections.noCustomRepositories")}
-										</p>
-									) : (
-										<ul className="mt-3 divide-y divide-border">
-											{skillRepositories.map((repository) => (
-												<li key={repository.id} className="py-3">
-													<div className="flex flex-wrap items-start justify-between gap-3">
-														<div className="min-w-0 flex-1">
-															<p className="truncate text-xs font-medium text-ink">{repository.name}</p>
-															<p className="mt-1 truncate text-[11px] text-ink-faint">
-																{repository.kind === "git" ? "Git" : t("skillsConnections.localSource")} ·{" "}
-																{repository.source}
-																{repository.ref ? ` · ${repository.ref}` : ""}
-															</p>
-															<p className="mt-1 text-[11px] text-ink-faint">
-																{t("skillsConnections.repositoryMeta", {
-																	count: repository.skillCount,
-																	license: repository.license,
-																})}
-															</p>
-															{repository.lastError ? (
-																<p className="mt-1 line-clamp-2 text-[11px] text-danger">
-																	{repository.lastError}
-																</p>
-															) : null}
-														</div>
+								</div>
+								{skillUpdateBusy ? (
+									<div
+										className="px-5 pb-3"
+										role="progressbar"
+										aria-valuemin={0}
+										aria-valuemax={100}
+										aria-valuenow={
+											skillUpdateState?.phase === "downloading" ? skillUpdateState.percent : undefined
+										}
+									>
+										<div className="h-1.5 overflow-hidden rounded-full bg-hover">
+											<div
+												className={`h-full rounded-full bg-accent ${skillUpdateState?.phase === "downloading" ? "transition-[width]" : "w-1/3 animate-pulse"}`}
+												style={
+													skillUpdateState?.phase === "downloading"
+														? { width: `${skillUpdateState.percent}%` }
+														: undefined
+												}
+											/>
+										</div>
+									</div>
+								) : null}
+								<ul
+									className="divide-y divide-border border-t border-border"
+									data-testid="skill-source-groups"
+								>
+									{skillGroups.map((group) => {
+										const research = researchSourceCards.find(
+											(source) => group.source === `github:${source.repository}`,
+										);
+										const repositoryUrl = group.source.startsWith("github:")
+											? `https://github.com/${group.source.slice("github:".length)}`
+											: null;
+										const groupOn = group.skills.some(({ skill }) => !disabledSkillNames.has(skill.name));
+										const hasUpdate =
+											research &&
+											skillUpdateState?.phase === "available" &&
+											skillUpdateState.packs.some((pack) => pack.id === research.id);
+										return (
+											<li key={group.source}>
+												<details className="group/source">
+													<summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3 [&::-webkit-details-marker]:hidden">
 														<span
-															className={`rounded-full px-2 py-1 text-[10px] ${repository.status === "ready" ? "bg-highlight text-ink-2" : repository.status === "update-available" ? "bg-warn/10 text-warn" : "bg-danger/10 text-danger"}`}
+															aria-hidden="true"
+															className="text-ink-faint transition-transform group-open/source:rotate-90"
 														>
-															{repository.status === "ready"
-																? t("skillsConnections.repositoryReady")
-																: repository.status === "update-available"
-																	? t("skillsConnections.repositoryUpdateAvailable")
-																	: t("skillsConnections.repositoryError")}
+															›
 														</span>
-													</div>
-													<div className="mt-2 flex flex-wrap items-center gap-2">
-														<button
-															type="button"
-															className="rounded-full border border-border px-3 py-2 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-50"
-															disabled={repositoryBusy === repository.id}
-															onClick={() => void checkSkillRepository(repository)}
-														>
-															{repositoryBusy === repository.id
-																? t("skillsConnections.repositoryWorking")
-																: t("skillsConnections.repositoryCheck")}
-														</button>
-														<button
-															type="button"
-															className="rounded-full bg-ink px-3 py-2 text-[11px] text-canvas hover:opacity-90 disabled:opacity-50"
-															disabled={
-																repositoryBusy === repository.id || repository.status !== "update-available"
+														<span className="min-w-0 flex-1">
+															<span className="block truncate text-sm font-medium text-ink">
+																{sourceLabel(group.source, group.scope, t)}
+															</span>
+															<span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-faint">
+																<span>
+																	{group.skills.length} {t("skillsConnections.skillsCount")}
+																</span>
+																{repositoryUrl ? (
+																	<button
+																		type="button"
+																		className="text-accent hover:underline"
+																		onClick={(event) => {
+																			event.preventDefault();
+																			void getPi().openExternal(repositoryUrl);
+																		}}
+																	>
+																		{t("skillsConnections.openRepository")}
+																	</button>
+																) : null}
+																{hasUpdate ? (
+																	<span className="text-warn">
+																		{t("update.skillsAvailable", { count: 1 })}
+																	</span>
+																) : null}
+															</span>
+														</span>
+														<Switch
+															checked={groupOn}
+															disabled={pendingSkillGroup === group.source}
+															onCheckedChange={(enabled) =>
+																void setSkillGroupEnabled(
+																	group.source,
+																	group.skills.map(({ skill }) => skill.name),
+																	enabled,
+																)
 															}
-															onClick={() => void updateSkillRepository(repository)}
+															aria-label={
+																groupOn
+																	? t("skillsConnections.disableGroup")
+																	: t("skillsConnections.enableGroup")
+															}
+														/>
+													</summary>
+													<ul className="divide-y divide-border border-t border-border bg-canvas">
+														{group.skills.map(({ skill, sources }) => {
+															const on = !disabledSkillNames.has(skill.name);
+															return (
+																<li key={skill.name} className="flex items-center gap-3 py-2.5 pl-10 pr-5">
+																	<span className="min-w-0 flex-1">
+																		<span className="block truncate text-[13px] text-ink">{skill.name}</span>
+																		{skill.description ? (
+																			<span className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-dim">
+																				{skill.description}
+																			</span>
+																		) : null}
+																		<span className="mt-0.5 block truncate text-[11px] text-ink-faint">
+																			/skill:{skill.name}
+																			{skill.repository
+																				? ""
+																				: ` · ${t("skillsConnections.repositoryUnknown")}`}
+																			{sources.length > 1
+																				? ` · ${t("skillsConnections.moreSources", { count: sources.length - 1 })}`
+																				: ""}
+																		</span>
+																	</span>
+																	{skill.disableModelInvocation && on ? (
+																		<span className="text-xs text-warn">
+																			{t("skillsConnections.manualOnly")}
+																		</span>
+																	) : null}
+																	<Switch
+																		checked={on}
+																		disabled={pendingSkillGroup === `skill:${skill.name}`}
+																		onCheckedChange={(enabled) =>
+																			void setSkillGroupEnabled(`skill:${skill.name}`, [skill.name], enabled)
+																		}
+																		aria-label={
+																			on ? t("skillsConnections.disable") : t("skillsConnections.enable")
+																		}
+																	/>
+																</li>
+															);
+														})}
+													</ul>
+												</details>
+											</li>
+										);
+									})}
+									{researchSourceCards
+										.filter(
+											(source) =>
+												!skillGroups.some((group) => group.source === `github:${source.repository}`),
+										)
+										.map((source) => (
+											<li key={source.id}>
+												<details className="group/source">
+													<summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3 [&::-webkit-details-marker]:hidden">
+														<span
+															aria-hidden="true"
+															className="text-ink-faint transition-transform group-open/source:rotate-90"
 														>
-															{t("skillsConnections.repositoryApply")}
-														</button>
-														<button
-															type="button"
-															className="rounded-full border border-danger/30 px-3 py-2 text-[11px] text-danger hover:bg-danger/5 disabled:opacity-50"
-															disabled={repositoryBusy === repository.id}
-															onClick={() => void removeSkillRepository(repository)}
-														>
-															{t("skillsConnections.repositoryRemove")}
-														</button>
-													</div>
+															›
+														</span>
+														<span className="min-w-0 flex-1">
+															<span className="block truncate text-sm font-medium text-ink">
+																{t(`skillsConnections.sourceName.${source.id}` as never)}
+															</span>
+															<span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-faint">
+																<span>
+																	{source.bundled} {t("skillsConnections.skillsCount")}
+																</span>
+																<button
+																	type="button"
+																	className="text-accent hover:underline"
+																	onClick={(event) => {
+																		event.preventDefault();
+																		void getPi().openExternal(`https://github.com/${source.repository}`);
+																	}}
+																>
+																	{t("skillsConnections.openRepository")}
+																</button>
+																<span>{t("skillsConnections.catalogOnlyNotLoaded")}</span>
+															</span>
+														</span>
+														<span className="w-[42px] shrink-0 text-right text-xs text-ink-faint">
+															{t("skillsConnections.notLoaded")}
+														</span>
+													</summary>
+													<ul className="divide-y divide-border border-t border-border bg-canvas">
+														{source.skills.map((skill) => (
+															<li key={skill.name} className="flex items-center gap-3 py-2.5 pl-10 pr-5">
+																<span className="min-w-0 flex-1">
+																	<span className="block truncate text-[13px] text-ink">{skill.name}</span>
+																	<span className="mt-0.5 block truncate text-[11px] text-ink-faint">
+																		{skill.path} · {skill.license}
+																	</span>
+																</span>
+																<span className="text-xs text-ink-faint">
+																	{t("skillsConnections.notLoaded")}
+																</span>
+															</li>
+														))}
+													</ul>
+												</details>
+											</li>
+										))}
+									{skillRepositories.map((repository) => (
+										<li key={repository.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+											<span className="min-w-0 flex-1">
+												<span className="block truncate text-sm font-medium text-ink">{repository.name}</span>
+												<span className="mt-0.5 block truncate text-xs text-ink-faint">
+													{repository.kind === "git" ? "Git" : t("skillsConnections.localSource")} ·{" "}
+													{repository.source}
+													{repository.ref ? ` · ${repository.ref}` : ""} ·{" "}
+													{t("skillsConnections.repositoryMeta", {
+														count: repository.skillCount,
+														license: repository.license,
+													})}
+												</span>
+												{repository.lastError ? (
+													<span className="mt-0.5 block truncate text-xs text-danger">
+														{repository.lastError}
+													</span>
+												) : null}
+											</span>
+											<button
+												type="button"
+												className="rounded-full border border-border px-3 py-1.5 text-xs text-ink-2 hover:bg-hover disabled:opacity-50"
+												disabled={repositoryBusy === repository.id}
+												onClick={() => void checkSkillRepository(repository)}
+											>
+												{repositoryBusy === repository.id
+													? t("skillsConnections.repositoryWorking")
+													: t("skillsConnections.repositoryCheck")}
+											</button>
+											{repository.status === "update-available" ? (
+												<button
+													type="button"
+													className="rounded-full bg-ink px-3 py-1.5 text-xs text-canvas hover:opacity-90 disabled:opacity-50"
+													disabled={repositoryBusy === repository.id}
+													onClick={() => void updateSkillRepository(repository)}
+												>
+													{t("skillsConnections.repositoryApply")}
+												</button>
+											) : null}
+											<button
+												type="button"
+												className="rounded-full border border-danger/30 px-3 py-1.5 text-xs text-danger hover:bg-danger/5 disabled:opacity-50"
+												disabled={repositoryBusy === repository.id}
+												onClick={() => void removeSkillRepository(repository)}
+											>
+												{t("skillsConnections.repositoryRemove")}
+											</button>
+										</li>
+									))}
+								</ul>
+								{diagnostics.length > 0 ? (
+									<details className="border-t border-border px-5 py-3 text-xs">
+										<summary className="cursor-pointer select-none text-warn">
+											{t("skillsConnections.diagnostics", { count: diagnostics.length })}
+										</summary>
+										<ul className="mt-2 space-y-2">
+											{diagnostics.map((diagnostic) => (
+												<li
+													key={`${diagnostic.type}:${diagnostic.path ?? ""}:${diagnostic.message}`}
+													className="rounded-lg bg-hover px-3 py-2 leading-relaxed"
+												>
+													<span
+														className={
+															diagnostic.type === "error" ? "font-medium text-err" : "font-medium text-warn"
+														}
+													>
+														{t(`skillsConnections.diagnosticType.${diagnostic.type}` as never)}
+													</span>{" "}
+													<span className="text-ink-2">{diagnostic.message}</span>
+													{diagnostic.path ? (
+														<span className="mt-0.5 block break-all font-mono text-[11px] text-ink-faint">
+															{diagnostic.path}
+														</span>
+													) : null}
 												</li>
 											))}
 										</ul>
-									)}
-								</section>
-							</>
+									</details>
+								) : null}
+							</section>
 						) : null}
 
 						{error && (
@@ -834,7 +951,7 @@ export function SkillsConnectionsView() {
 						)}
 						{section === "connectors" ? (
 							<section
-								className="mt-4 rounded-2xl border border-border bg-surface px-4 py-4"
+								className="rounded-2xl border border-border bg-surface px-4 py-4"
 								data-testid="connector-catalog"
 							>
 								<div className="flex items-baseline justify-between gap-3">
@@ -844,7 +961,6 @@ export function SkillsConnectionsView() {
 										</h2>
 										<p className="mt-1 text-xs text-ink-dim">{t("skillsConnections.connectorCatalogHint")}</p>
 									</div>
-									<span className="text-[11px] text-ink-faint">pi-connectors</span>
 								</div>
 								{connectorLoading ? (
 									<p className="py-8 text-center text-xs text-ink-faint">{t("skillsConnections.loading")}</p>
@@ -853,245 +969,315 @@ export function SkillsConnectionsView() {
 								) : (
 									<ul className="mt-3 divide-y divide-border">
 										{catalogConnectors.map((connector) => (
-											<li key={connector.id} className="flex items-center gap-3 py-3">
-												<div className="min-w-0 flex-1">
-													<p className="truncate text-xs font-medium text-ink">{connector.label}</p>
-													<p className="mt-1 text-[11px] text-ink-faint">
-														{connector.kind} · {connector.id}
-													</p>
-													<p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-ink-dim">
+											<li
+												key={connector.id}
+												className="grid items-center gap-3 py-3 md:grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_120px_136px]"
+											>
+												<div className="min-w-0">
+													<p className="truncate text-sm font-medium text-ink">{connector.label}</p>
+													<p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-dim">
 														{connectorDescription(connector.id, connector.kind, t)}
 													</p>
 												</div>
-												<span className={`text-[11px] ${connector.enabled ? "text-ok" : "text-ink-faint"}`}>
-													{connector.enabled
-														? t("skillsConnections.available")
-														: t("skillsConnections.disabled")}
+												<p className="text-xs text-ink-faint">{connectorKindLabel(connector.kind, t)}</p>
+												<span className="text-xs text-ink-faint">
+													{connector.enabled ? "" : t("skillsConnections.disabled")}
 												</span>
-												<Switch
-													checked={connector.enabled}
-													disabled={connectorPending === connector.id}
-													onCheckedChange={() => void toggleConnector(connector)}
-													aria-label={
-														connector.enabled ? t("skillsConnections.disable") : t("skillsConnections.enable")
-													}
-												/>
+												<span className="flex justify-end">
+													<Switch
+														checked={connector.enabled}
+														disabled={connectorPending === connector.id}
+														onCheckedChange={() => void toggleConnector(connector)}
+														aria-label={
+															connector.enabled
+																? t("skillsConnections.disable")
+																: t("skillsConnections.enable")
+														}
+													/>
+												</span>
 											</li>
 										))}
 									</ul>
 								)}
-							</section>
-						) : null}
-						{(section === "connectors" || section === "mcp") && loading && rows.length === 0 ? (
-							<p className="py-16 text-center text-sm text-ink-faint">{t("skillsConnections.loading")}</p>
-						) : null}
-						{(section === "connectors" || section === "mcp") && !loading && visibleRows.length === 0 ? (
-							<p className="py-16 text-center text-sm text-ink-faint">{t("skillsConnections.empty")}</p>
-						) : null}
-						{section === "connectors" || section === "mcp" ? (
-							<div className="mt-4 divide-y divide-border rounded-2xl border border-border bg-surface">
-								{visibleRows.map((row) => {
-									const server =
-										row.kind === "mcp" ? mcp?.servers.find((item) => item.name === row.action) : undefined;
-									const connector = row.connectorId
-										? connectors.find((item) => item.id === row.connectorId)
-										: undefined;
-									return (
-										<div
-											key={row.id}
-											className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_120px_auto] md:items-center"
-										>
-											<div className="flex min-w-0 items-start gap-3">
-												<span className="mt-0.5 text-ink-dim">
-													<IconForKind kind={row.kind} />
-												</span>
-												<div className="min-w-0">
-													<p className="truncate text-sm font-medium text-ink">
-														{row.name}
-														{row.version ? (
-															<span className="ml-2 text-xs font-normal text-ink-faint">v{row.version}</span>
-														) : null}
-													</p>
-													<p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-dim">
-														{row.description}
-													</p>
+								{/* Zotero and institutional access live in the same card as the other connectors. */}
+								<div className="-mx-4 mt-1 divide-y divide-border border-t border-border">
+									{visibleRows.map((row) => {
+										const server =
+											row.kind === "mcp" ? mcp?.servers.find((item) => item.name === row.action) : undefined;
+										const connector = row.connectorId
+											? connectors.find((item) => item.id === row.connectorId)
+											: undefined;
+										return (
+											<div
+												key={row.id}
+												className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_120px_136px] md:items-center"
+											>
+												<div className="flex min-w-0 items-start gap-3">
+													<span className="mt-0.5 text-ink-dim">
+														<IconForKind kind={row.kind} />
+													</span>
+													<div className="min-w-0">
+														<p className="truncate text-sm font-medium text-ink">
+															{row.name}
+															{row.version ? (
+																<span className="ml-2 text-xs font-normal text-ink-faint">
+																	v{row.version}
+																</span>
+															) : null}
+														</p>
+														<p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-dim">
+															{row.description}
+														</p>
+													</div>
 												</div>
-											</div>
-											<div className="text-xs text-ink-faint">
-												<p>{t("skillsConnections.scope")}</p>
-												<p className="mt-1 truncate text-ink-2" title={row.scope}>
+												<p className="truncate text-xs text-ink-faint" title={row.scope}>
 													{row.scope}
 												</p>
-											</div>
-											<div
-												className={`flex items-center gap-2 text-xs font-medium ${statusTone(row.status)}`}
-											>
-												<span
-													className={`h-2 w-2 rounded-full ${row.status === "running" ? "animate-pulse bg-ok" : row.status === "available" ? "bg-ok" : row.status === "error" || row.status === "incompatible" ? "bg-err" : row.status === "disabled" ? "bg-ink-faint" : "bg-warn"}`}
-												/>
-												{statusLabel(row.status)}
-											</div>
-											<div className="flex justify-end">
-												{connector ? (
-													<div className="flex items-center gap-2">
-														<Switch
-															checked={connector.enabled}
-															disabled={connectorPending === connector.id}
-															onCheckedChange={() => void toggleConnector(connector)}
-															aria-label={
-																connector.enabled
-																	? t("skillsConnections.disable")
-																	: t("skillsConnections.enable")
-															}
+												{row.status === "available" ? (
+													<div />
+												) : (
+													<div
+														className={`flex items-center gap-2 text-xs font-medium ${statusTone(row.status)}`}
+													>
+														<span
+															className={`h-2 w-2 rounded-full ${row.status === "running" ? "animate-pulse bg-ok" : row.status === "error" || row.status === "incompatible" ? "bg-err" : row.status === "disabled" ? "bg-ink-faint" : "bg-warn"}`}
 														/>
+														{statusLabel(row.status)}
+													</div>
+												)}
+												<div className="flex justify-end">
+													{connector ? (
+														<div className="flex items-center gap-2">
+															<Switch
+																checked={connector.enabled}
+																disabled={connectorPending === connector.id}
+																onCheckedChange={() => void toggleConnector(connector)}
+																aria-label={
+																	connector.enabled
+																		? t("skillsConnections.disable")
+																		: t("skillsConnections.enable")
+																}
+															/>
+															<button
+																type="button"
+																className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
+																onClick={() => openSettings(row.action as DrawerKind)}
+															>
+																{row.status === "configure" || row.status === "permission"
+																	? t("skillsConnections.configure")
+																	: t("skillsConnections.view")}
+															</button>
+														</div>
+													) : server ? (
+														<div className="flex items-center gap-2">
+															<Switch
+																checked={!server.disabled}
+																disabled={pendingMcp === server.name}
+																onCheckedChange={(enabled) => {
+																	setPendingMcp(server.name);
+																	void getPi()
+																		.setMcpServerEnabled(server.name, enabled, cwd ?? undefined)
+																		.then(() => getPi().getMcpStatus(cwd ?? undefined))
+																		.then(setMcp)
+																		.catch((reason) =>
+																			setError(reason instanceof Error ? reason.message : String(reason)),
+																		)
+																		.finally(() => setPendingMcp(null));
+																}}
+																aria-label={
+																	server.disabled
+																		? t("skillsConnections.enable")
+																		: t("skillsConnections.disable")
+																}
+															/>
+															<button
+																type="button"
+																className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
+																onClick={() => openSettings("mcp")}
+															>
+																{row.status === "configure"
+																	? t("skillsConnections.configure")
+																	: t("skillsConnections.view")}
+															</button>
+														</div>
+													) : (
 														<button
 															type="button"
 															className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
 															onClick={() => openSettings(row.action as DrawerKind)}
 														>
-															{t("skillsConnections.view")}
+															{row.status === "configure"
+																? t("skillsConnections.configure")
+																: row.status === "error"
+																	? t("skillsConnections.viewReason")
+																	: t("skillsConnections.view")}
 														</button>
+													)}
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							</section>
+						) : null}
+						{section === "mcp" && loading && rows.length === 0 ? (
+							<p className="py-16 text-center text-sm text-ink-faint">{t("skillsConnections.loading")}</p>
+						) : null}
+						{section === "mcp" ? (
+							<section className="rounded-2xl border border-border bg-surface" data-testid="mcp-servers">
+								<div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-3 pt-4">
+									<div className="min-w-0">
+										<h2 className="text-sm font-semibold text-ink">{t("skillsConnections.mcpCardTitle")}</h2>
+										<p className="mt-1 text-xs text-ink-dim">{t("skillsConnections.mcpCardHint")}</p>
+									</div>
+									<button
+										type="button"
+										className="rounded-full bg-ink px-3 py-2 text-xs text-canvas hover:opacity-90"
+										onClick={() => openSettings("mcp")}
+									>
+										+ {t("skillsConnections.addMcp")}
+									</button>
+								</div>
+								<div className="divide-y divide-border border-t border-border">
+									{visibleRows.map((row) => {
+										const server =
+											row.kind === "mcp" ? mcp?.servers.find((item) => item.name === row.action) : undefined;
+										const connector = row.connectorId
+											? connectors.find((item) => item.id === row.connectorId)
+											: undefined;
+										return (
+											<div
+												key={row.id}
+												className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,2fr)_minmax(140px,1fr)_120px_136px] md:items-center"
+											>
+												<div className="flex min-w-0 items-start gap-3">
+													<span className="mt-0.5 text-ink-dim">
+														<IconForKind kind={row.kind} />
+													</span>
+													<div className="min-w-0">
+														<p className="truncate text-sm font-medium text-ink">
+															{row.name}
+															{row.version ? (
+																<span className="ml-2 text-xs font-normal text-ink-faint">
+																	v{row.version}
+																</span>
+															) : null}
+														</p>
+														<p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-dim">
+															{row.description}
+														</p>
 													</div>
-												) : server ? (
-													<div className="flex items-center gap-2">
-														<Switch
-															checked={!server.disabled}
-															disabled={pendingMcp === server.name}
-															onCheckedChange={(enabled) => {
-																setPendingMcp(server.name);
-																void getPi()
-																	.setMcpServerEnabled(server.name, enabled, cwd ?? undefined)
-																	.then(() => getPi().getMcpStatus(cwd ?? undefined))
-																	.then(setMcp)
-																	.catch((reason) =>
-																		setError(reason instanceof Error ? reason.message : String(reason)),
-																	)
-																	.finally(() => setPendingMcp(null));
-															}}
-															aria-label={
-																server.disabled
-																	? t("skillsConnections.enable")
-																	: t("skillsConnections.disable")
-															}
+												</div>
+												<p className="truncate text-xs text-ink-faint" title={row.scope}>
+													{row.scope}
+												</p>
+												{row.status === "available" ? (
+													<div />
+												) : (
+													<div
+														className={`flex items-center gap-2 text-xs font-medium ${statusTone(row.status)}`}
+													>
+														<span
+															className={`h-2 w-2 rounded-full ${row.status === "running" ? "animate-pulse bg-ok" : row.status === "error" || row.status === "incompatible" ? "bg-err" : row.status === "disabled" ? "bg-ink-faint" : "bg-warn"}`}
 														/>
+														{statusLabel(row.status)}
+													</div>
+												)}
+												<div className="flex justify-end">
+													{connector ? (
+														<div className="flex items-center gap-2">
+															<Switch
+																checked={connector.enabled}
+																disabled={connectorPending === connector.id}
+																onCheckedChange={() => void toggleConnector(connector)}
+																aria-label={
+																	connector.enabled
+																		? t("skillsConnections.disable")
+																		: t("skillsConnections.enable")
+																}
+															/>
+															<button
+																type="button"
+																className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
+																onClick={() => openSettings(row.action as DrawerKind)}
+															>
+																{row.status === "configure" || row.status === "permission"
+																	? t("skillsConnections.configure")
+																	: t("skillsConnections.view")}
+															</button>
+														</div>
+													) : server ? (
+														<div className="flex items-center gap-2">
+															<Switch
+																checked={!server.disabled}
+																disabled={pendingMcp === server.name}
+																onCheckedChange={(enabled) => {
+																	setPendingMcp(server.name);
+																	void getPi()
+																		.setMcpServerEnabled(server.name, enabled, cwd ?? undefined)
+																		.then(() => getPi().getMcpStatus(cwd ?? undefined))
+																		.then(setMcp)
+																		.catch((reason) =>
+																			setError(reason instanceof Error ? reason.message : String(reason)),
+																		)
+																		.finally(() => setPendingMcp(null));
+																}}
+																aria-label={
+																	server.disabled
+																		? t("skillsConnections.enable")
+																		: t("skillsConnections.disable")
+																}
+															/>
+															<button
+																type="button"
+																className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
+																onClick={() => openSettings("mcp")}
+															>
+																{row.status === "configure"
+																	? t("skillsConnections.configure")
+																	: t("skillsConnections.view")}
+															</button>
+														</div>
+													) : (
 														<button
 															type="button"
 															className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
-															onClick={() => openSettings("mcp")}
+															onClick={() => openSettings(row.action as DrawerKind)}
 														>
 															{row.status === "configure"
 																? t("skillsConnections.configure")
-																: t("skillsConnections.view")}
+																: row.status === "error"
+																	? t("skillsConnections.viewReason")
+																	: t("skillsConnections.view")}
 														</button>
-													</div>
-												) : (
-													<button
-														type="button"
-														className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
-														onClick={() => openSettings(row.action as DrawerKind)}
-													>
-														{row.status === "configure"
-															? t("skillsConnections.configure")
-															: row.status === "error"
-																? t("skillsConnections.viewReason")
-																: t("skillsConnections.view")}
-													</button>
-												)}
-											</div>
-										</div>
-									);
-								})}
-							</div>
-						) : null}
-						{skillGroups.length > 0 && section === "skills" && (
-							<div className="mt-4 space-y-2" data-testid="skill-source-groups">
-								{skillGroups.map((group) => (
-									<details
-										key={group.source}
-										className="rounded-2xl border border-border bg-surface"
-										open={group.skills.some(({ skill }) => skill.disableModelInvocation)}
-									>
-										<summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm font-medium text-ink">
-											<span className="min-w-0 flex-1 truncate">
-												{sourceLabel(group.source, group.scope, t)}
-											</span>
-											<span className="text-xs text-ink-faint">
-												{group.skills.length} {t("skillsConnections.skillsCount")}
-											</span>
-											<Switch
-												checked={group.skills.some(({ skill }) => !disabledSkillNames.has(skill.name))}
-												disabled={pendingSkillGroup === group.source}
-												onCheckedChange={(enabled) =>
-													void setSkillGroupEnabled(
-														group.source,
-														group.skills.map(({ skill }) => skill.name),
-														enabled,
-													)
-												}
-												aria-label={
-													group.skills.some(({ skill }) => !disabledSkillNames.has(skill.name))
-														? t("skillsConnections.disableGroup")
-														: t("skillsConnections.enableGroup")
-												}
-											/>
-										</summary>
-										<ul className="divide-y divide-border border-t border-border px-4">
-											{group.skills.map(({ skill, sources, repository }) => (
-												<li key={skill.name} className="flex items-center gap-3 py-3 text-xs">
-													<span className="min-w-0 flex-1">
-														<span className="block font-medium text-ink">{skill.name}</span>
-														<span className="mt-1 block truncate text-ink-faint">
-															/skill:{skill.name} ·{" "}
-															{skill.repository
-																? t("skillsConnections.repositorySource")
-																: `${t("skillsConnections.repositoryUnknown")} · loader: ${skill.source}`}
-														</span>
-														{repository ? (
-															<button
-																type="button"
-																className="mt-1 block max-w-full truncate text-left text-[11px] text-accent hover:underline"
-																onClick={() =>
-																	void getPi().openExternal(
-																		repository.path
-																			? `${repository.url}/tree/main/${repository.path}`
-																			: repository.url,
-																	)
-																}
-															>
-																{repository.url.replace("https://github.com/", "github.com/")}
-															</button>
-														) : null}
-														{sources.length > 1 && (
-															<details className="mt-1 text-[11px] text-ink-faint">
-																<summary className="cursor-pointer">
-																	{t("skillsConnections.moreSources", { count: sources.length - 1 })}
-																</summary>
-																<ul className="mt-1 space-y-0.5 pl-3">
-																	{sources.map((source) => (
-																		<li key={source}>{source}</li>
-																	))}
-																</ul>
-															</details>
-														)}
-													</span>
-													{disabledSkillNames.has(skill.name) ? (
-														<span className="text-ink-faint">{t("skillsConnections.disabled")}</span>
-													) : skill.disableModelInvocation ? (
-														<span className="text-warn">{t("skillsConnections.manualOnly")}</span>
-													) : (
-														<span className="text-ok">{t("skillsConnections.available")}</span>
 													)}
-												</li>
-											))}
-										</ul>
-									</details>
-								))}
-							</div>
-						)}
-						{settingsExtensions && diagnostics.length > 0 ? (
-							<p className="mt-3 text-xs text-warn">
-								{t("skillsConnections.diagnostics", { count: diagnostics.length })}
-							</p>
+												</div>
+											</div>
+										);
+									})}
+									{!loading && visibleRows.length === 0 ? (
+										<p className="px-5 py-8 text-center text-xs text-ink-faint">
+											{t("skillsConnections.noMcp")}
+										</p>
+									) : null}
+								</div>
+								<div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border px-5 py-3 text-xs text-ink-faint">
+									<span>{t("skillsConnections.mcpDirectories")}</span>
+									{MARKET_RESOURCE_LINKS.filter((resource) => resource.kind.startsWith("mcp")).map(
+										(resource) => (
+											<button
+												key={resource.id}
+												type="button"
+												className="text-accent hover:underline"
+												title={resource.description}
+												onClick={() => void getPi().openExternal(resource.url)}
+											>
+												{resource.name}
+											</button>
+										),
+									)}
+								</div>
+							</section>
 						) : null}
 					</main>
 				</div>
@@ -1250,6 +1436,6 @@ export function SkillsConnectionsView() {
 					</Suspense>
 				</aside>
 			)}
-		</div>
+		</PageShell>
 	);
 }

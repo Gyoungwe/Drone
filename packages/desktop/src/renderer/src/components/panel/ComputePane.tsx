@@ -3,6 +3,7 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { type MessageKey, useT } from "../../i18n";
 import { selectHosts, selectJobs, selectOnboarding, useComputeStore } from "../../stores/compute";
+import { PageHeader } from "../ui/PageHeader";
 import { HostEnvironmentCard, HostPermissions } from "./HostEnvironmentCard";
 
 function statusTone(status: string): string {
@@ -308,7 +309,8 @@ function JobRow({
 }
 
 /** Read-only host/job health plus the approved-host SSH terminal entry point. */
-export function ComputePane() {
+export function ComputePane({ page = false }: { page?: boolean } = {}) {
+	const [probeSignal, setProbeSignal] = useState(0);
 	const t = useT();
 	const hosts = useComputeStore(selectHosts);
 	const jobs = useComputeStore(selectJobs);
@@ -429,23 +431,43 @@ export function ComputePane() {
 	};
 	const remoteStatus = aggregateHostStatus(hosts);
 
+	const refreshAll = () => {
+		setProbeSignal((value) => value + 1);
+		void Promise.all([refresh(), refreshJobs(), refreshOnboarding()]);
+	};
+
 	return (
-		<div className="context-pane bg-surface" data-testid="compute-pane">
-			<div className="mb-3 flex items-start justify-between gap-2 border-b border-border pb-3">
+		<div className={page ? "" : "context-pane bg-surface"} data-testid="compute-pane">
+			{page ? (
+				<PageHeader
+					title={t("panel.compute.pageTitle")}
+					description={t("panel.compute.pageSubtitle")}
+					actions={
+						<button
+							type="button"
+							className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
+							onClick={refreshAll}
+						>
+							{t("panel.compute.refresh")}
+						</button>
+					}
+				/>
+			) : null}
+			<div
+				className={
+					page ? "hidden" : "mb-3 flex items-start justify-between gap-2 border-b border-border pb-3"
+				}
+			>
 				<div>
 					<h3 className="text-[14px] font-medium tracking-tight text-ink">{t("panel.compute.title")}</h3>
 					<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{t("panel.compute.subtitle")}</p>
 				</div>
-				<button
-					type="button"
-					className="panel-action"
-					onClick={() => void Promise.all([refresh(), refreshJobs(), refreshOnboarding()])}
-				>
+				<button type="button" className="panel-action" onClick={refreshAll}>
 					{t("panel.compute.refresh")}
 				</button>
 			</div>
 			{error && <p className="panel-empty text-err">{error}</p>}
-			<HostEnvironmentCard />
+			<HostEnvironmentCard refreshSignal={probeSignal} hideProbe={page} />
 			<section className="mb-4" data-testid="remote-host-section">
 				<details className="panel-card" open>
 					<summary className="flex cursor-pointer list-none items-start justify-between gap-2 rounded-lg py-1 text-left [&::-webkit-details-marker]:hidden">

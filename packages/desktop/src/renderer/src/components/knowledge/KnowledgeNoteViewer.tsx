@@ -6,6 +6,7 @@ import { Markdown } from "../chat/Markdown";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { KnowledgeLinks } from "./KnowledgeLinks";
+import { noteDisplayText } from "./note-display";
 export function KnowledgeNoteViewer({
 	cwd,
 	revision,
@@ -87,7 +88,7 @@ export function KnowledgeNoteViewer({
 								{legacyEvidenceNotice(note.text)}
 							</p>
 						)}
-						<Markdown text={note.displayText || note.text} />
+						<Markdown text={noteDisplayText(note.displayText || note.text)} />
 					</div>
 				</>
 			)}

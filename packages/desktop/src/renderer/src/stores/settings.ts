@@ -168,7 +168,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 				category === "knowledge"
 					? category
 					: category === "workflows"
-						? "knowledge"
+						? "skills"
 						: null;
 			if (capabilityDrawer) {
 				useUiStore.getState().setCapabilityDrawer(capabilityDrawer);

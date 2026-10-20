@@ -7,6 +7,7 @@ import { knowledgeDirectory, withKnowledgeBinding } from "./config";
 import { canRead, readNoteFile, validateNote } from "./files";
 import { readReviewMode } from "./review-policy";
 import { invalidateKnowledgeUi } from "./ui-state";
+import { stripManagedHeader } from "./wiki-policy";
 
 const AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
 const START = "<!-- pi-agent:managed:start -->",
@@ -85,10 +86,8 @@ function managedParts(text) {
 	return { start, end, body: start < 0 ? "" : text.slice(start + START.length, end).trim() };
 }
 function normalizeCandidate(markdown) {
-	return String(markdown)
-		.replace(/^\uFEFF?\s*---\s*\n[\s\S]*?\n---\s*\n?/i, "")
-		.replace(/^\s*#\s+[^\n]+\n+/, "")
-		.trim();
+	// Same rule as wiki-policy stripManagedHeader (also unwraps a ```markdown fence); no title → drop any leading H1.
+	return stripManagedHeader(markdown);
 }
 function proposedText(original, title, body) {
 	const block = `${START}\n${body.trim()}\n${END}`;
@@ -278,7 +277,7 @@ export async function mergeWikiProposal(
 			const prior = managedParts(p.after)
 				.body.replace(/\n\n## Sources\n[\s\S]*$/, "")
 				.trim();
-			const update = `## Research update · ${new Date().toISOString()}\n\n${markdown.trim()}`;
+			const update = `## Research update · ${new Date().toISOString()}\n\n${normalizeCandidate(markdown)}`;
 			const merged = [prior, update].filter(Boolean).join("\n\n");
 			if (merged.length > 22000)
 				throw new Error("Pending topic synthesis is too large; review it before adding another round");

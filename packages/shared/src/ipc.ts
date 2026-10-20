@@ -271,6 +271,7 @@ export const IpcChannels = {
 	PackagesUpdate: "packages:update",
 	PackagesRemove: "packages:remove",
 	PackagesListConfigured: "packages:listConfigured",
+	PackagesLatestVersions: "packages:latestVersions",
 	FileSaveDialog: "file:saveDialog",
 	FilePickPath: "file:pickPath",
 	FilePreview: "file:preview",
@@ -348,6 +349,8 @@ export const IpcChannels = {
 	/** 项目信任前置决策（添加项目/切换 draft cwd 时调用，未决则弹窗） */
 	ProjectEnsureTrust: "project:ensureTrust",
 	ProjectPickDirectory: "project:pickDirectory",
+	/** 开发版隔离配置时只读取正式版知识库关联的 Vault 路径 */
+	KnowledgeFormalVault: "knowledge:formalVault",
 	ProjectGetGitBranch: "project:getGitBranch",
 	ProjectListGitBranches: "project:listGitBranches",
 	ProjectCheckoutBranch: "project:checkoutBranch",
@@ -468,6 +471,8 @@ export interface PiApi
 	removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt>;
 	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
 	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
+	/** 查询 npm 上的最新版本（离线或失败返回 null）。 */
+	latestPackageVersions(names: string[]): Promise<Record<string, string | null>>;
 	/** 弹保存对话框并写文件；用户取消返回 null，成功返回写入路径 */
 	saveFileDialog(defaultName: string, content: string): Promise<string | null>;
 	/** 弹打开对话框选文件或文件夹（示例任务表单的路径输入）；用户取消返回 null，不读文件内容 */
@@ -616,6 +621,8 @@ export interface PiApi
 	/** 项目信任前置决策（选目录/切 draft cwd 时调用；未决弹窗，结果落 trust.json） */
 	ensureProjectTrust(cwd: string): Promise<boolean>;
 	pickDirectory(): Promise<string | null>;
+	/** 开发版隔离配置时返回正式版知识库 Vault；正式版或无关联返回 null */
+	formalKnowledgeVault(): Promise<string | null>;
 	/** @ 补全数据源：项目文件相对路径列表（目录带尾 /，TTL 缓存） */
 	listProjectFiles(cwd?: string): Promise<string[]>;
 	getGitBranch(cwd: string): Promise<string | null>;

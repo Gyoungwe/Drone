@@ -1,13 +1,12 @@
 import {
+	compareVersions,
 	DRONE_BUILTIN_PLUGIN_PACKAGE_NAMES,
 	DRONE_PLUGIN_METADATA,
 	DRONE_PLUGIN_PACKAGE_NAMES,
 	type HostPluginPackage,
-	MARKET_RESOURCE_LINKS,
 	type PiPluginSourceEntry,
 } from "@drone/shared";
-import { useMemo } from "react";
-import { getPi } from "../../api";
+import { useEffect, useMemo } from "react";
 import { useT } from "../../i18n";
 import { useCatalogStore } from "../../stores/catalog";
 import { useSettingsStore } from "../../stores/settings";
@@ -93,6 +92,11 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 	const update = useCatalogStore((state) => state.updateCatalogPackage);
 	const remove = useCatalogStore((state) => state.removeConfiguredPackage);
 	const current = packageState(entry, configured, host, uiPlugins);
+	const latest = useCatalogStore((state) => state.latestVersions[entry.packageName]) ?? null;
+	const installedVersion = host?.version ?? entry.version ?? "?";
+	const hasUpdate = Boolean(
+		current.installed && latest && installedVersion !== "?" && compareVersions(latest, installedVersion) > 0,
+	);
 	const installing = useCatalogStore((state) => state.installingNames[entry.packageName] === true);
 	const updating = useCatalogStore((state) => state.updatingNames[entry.packageName] === true);
 	const installError = useCatalogStore((state) => state.installErrors[entry.packageName]);
@@ -113,14 +117,11 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 			? uiPlugins.find((item) => item.name === "drone-research-ui")
 			: undefined;
 	return (
-		<li className="rounded-xl border border-border px-3 py-3">
+		<li className="py-3">
 			<div className="flex items-start gap-3">
 				<div className="min-w-0 flex-1">
 					<div className="flex flex-wrap items-center gap-2">
-						<strong className="truncate text-xs text-ink">{entry.packageName}</strong>
-						<span className="rounded-full bg-highlight px-2 py-0.5 text-[10px] text-ink-2">
-							{t("skillsConnections.dronePlugin")}
-						</span>
+						<strong className="truncate text-sm font-medium text-ink">{entry.packageName}</strong>
 						{entry.uiContribution && (
 							<span className="rounded-full bg-hover px-2 py-0.5 text-[10px] text-ink-faint">Desktop UI</span>
 						)}
@@ -181,12 +182,19 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 					)}
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
-					<span className={`text-[11px] ${current.installed ? "text-ok" : "text-ink-faint"}`}>
+					<span
+						className={`text-xs ${hasUpdate ? "text-warn" : current.installed ? "text-ok" : "text-ink-faint"}`}
+						title={latest ? t("skillsConnections.latestVersion", { version: latest }) : undefined}
+					>
 						{current.builtin && (!uiPlugin || uiPlugin.enabled)
 							? t("skillsConnections.builtinEnabled")
-							: current.installed
-								? t("skillsConnections.installed")
-								: t("skillsConnections.notInstalled")}
+							: !current.installed
+								? t("skillsConnections.notInstalled")
+								: hasUpdate
+									? t("skillsConnections.updateAvailable", { version: latest ?? "" })
+									: latest
+										? t("skillsConnections.upToDate", { version: installedVersion })
+										: `${t("skillsConnections.installed")} · v${installedVersion}`}
 					</span>
 					{uiPlugin ? (
 						<Switch
@@ -197,40 +205,27 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 						/>
 					) : (
 						<>
-							<Switch
-								checked={current.installed}
-								disabled={current.builtin || installing || updating || removing}
-								onCheckedChange={(enabled) => {
-									if (enabled) void install(entry.packageName);
-									else if (current.configured)
-										void remove(current.configured.source, current.configured.scope);
-								}}
-								aria-label={
-									current.installed ? t("skillsConnections.disable") : t("skillsConnections.enable")
-								}
-							/>
-							{current.installed && current.configured && !current.builtin ? (
-								<>
-									<button
-										type="button"
-										className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
-										disabled={updating || removing}
-										onClick={() => void update(entry.packageName)}
-									>
-										{updating ? t("skillsConnections.updating") : t("skillsConnections.update")}
-									</button>
-									<button
-										type="button"
-										className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
-										disabled={removing}
-										onClick={() => {
-											if (current.configured)
-												void remove(current.configured.source, current.configured.scope);
-										}}
-									>
-										{removing ? t("skillsConnections.removing") : t("skillsConnections.uninstall")}
-									</button>
-								</>
+							{current.installed ? (
+								<Switch
+									checked
+									disabled={current.builtin || installing || updating || removing}
+									onCheckedChange={(enabled) => {
+										if (!enabled && current.configured)
+											void remove(current.configured.source, current.configured.scope);
+									}}
+									aria-label={t("skillsConnections.disable")}
+								/>
+							) : null}
+							{/* Update only when the registry has a newer version; the switch already uninstalls. */}
+							{current.installed && !current.builtin && (hasUpdate || updating) ? (
+								<button
+									type="button"
+									className="rounded-full bg-ink px-2 py-1 text-xs text-canvas hover:opacity-90 disabled:opacity-60"
+									disabled={updating || removing}
+									onClick={() => void update(entry.packageName)}
+								>
+									{updating ? t("skillsConnections.updating") : t("skillsConnections.update")}
+								</button>
 							) : !current.installed ? (
 								<button
 									type="button"
@@ -254,6 +249,8 @@ export function PluginSourcesSection() {
 	const configured = useCatalogStore((state) => state.configuredPackages);
 	const hostPlugins = useSettingsStore((state) => state.hostPlugins) ?? [];
 	const uiPlugins = useUiPluginsStore((state) => state.plugins);
+	const setPluginEnabled = useUiPluginsStore((state) => state.setPluginEnabled);
+	const checkLatestVersions = useCatalogStore((state) => state.checkLatestVersions);
 	const entries = useMemo(
 		() =>
 			DRONE_PLUGIN_PACKAGE_NAMES.map((name) =>
@@ -269,23 +266,118 @@ export function PluginSourcesSection() {
 		() => entries.filter((entry) => isBuiltinDronePackage(entry.packageName)),
 		[entries],
 	);
-	const builtinNames = useMemo(
-		() => new Set(builtinEntries.map((entry) => entry.packageName)),
-		[builtinEntries],
-	);
+	const droneNames = useMemo(() => new Set<string>(DRONE_PLUGIN_PACKAGE_NAMES), []);
 	const configuredEntries = useMemo(
 		() =>
 			(configured ?? []).filter((item) => {
-				return !builtinNames.has(configuredPackageName(item.source));
+				return !droneNames.has(configuredPackageName(item.source));
 			}),
-		[builtinNames, configured],
+		[droneNames, configured],
 	);
 	const hostEntries = useMemo(
-		() => hostPlugins.filter((plugin) => !builtinNames.has(plugin.name)),
-		[builtinNames, hostPlugins],
+		// Non-Drone packages the host actually loaded (Drone packages have their own rows above).
+		() =>
+			hostPlugins.filter(
+				(plugin) =>
+					!droneNames.has(plugin.name) &&
+					plugin.status !== "unavailable" &&
+					!(configured ?? []).some((item) => configuredPackageName(item.source) === plugin.name),
+			),
+		[configured, droneNames, hostPlugins],
 	);
+	const optionalEntries = useMemo(() => {
+		const optional = entries.filter((entry) => !isBuiltinDronePackage(entry.packageName));
+		const installed = (entry: PiPluginSourceEntry) =>
+			packageState(
+				entry,
+				configured ?? [],
+				hostPlugins.find((item) => item.name === entry.packageName),
+				uiPlugins,
+			).installed;
+		// Installed first, then the ones that can still be added.
+		return [...optional.filter(installed), ...optional.filter((entry) => !installed(entry))];
+	}, [configured, entries, hostPlugins, uiPlugins]);
+	// Ask npm once per set of installed packages so rows can say "up to date" vs "update available".
+	const installedNames = useMemo(
+		() =>
+			[
+				...optionalEntries.map((entry) => entry.packageName),
+				...(configured ?? []).map((item) => configuredPackageName(item.source)),
+				...hostPlugins.filter((plugin) => plugin.status !== "unavailable").map((plugin) => plugin.name),
+			]
+				.filter((name, index, all) => all.indexOf(name) === index && !isBuiltinDronePackage(name))
+				.sort()
+				.join("|"),
+		[configured, hostPlugins, optionalEntries],
+	);
+	useEffect(() => {
+		if (installedNames) void checkLatestVersions(installedNames.split("|"));
+	}, [checkLatestVersions, installedNames]);
 	return (
 		<div className="space-y-5" data-testid="plugin-sources-section">
+			{/* One card for every plugin the user has or can add from Drone; the community market below is a
+			    separate kind of thing (a catalogue to browse). */}
+			<section className="rounded-2xl border border-border bg-surface px-4 py-4" data-testid="plugins-card">
+				<h2 className="text-sm font-semibold text-ink">{t("skillsConnections.pluginsCardTitle")}</h2>
+				<p className="mt-1 text-xs text-ink-dim">{t("skillsConnections.pluginsCardHint")}</p>
+				<ul className="mt-2 divide-y divide-border">
+					{builtinEntries.map((entry) => (
+						<li key={`builtin:${entry.packageName}`} className="flex items-start gap-3 py-3">
+							<div className="min-w-0 flex-1">
+								<p className="truncate text-sm font-medium text-ink">{entry.packageName}</p>
+								{entry.description ? (
+									<p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-dim">
+										{entry.description}
+									</p>
+								) : null}
+							</div>
+							<span className="shrink-0 text-xs text-ok">{t("skillsConnections.builtinEnabled")}</span>
+						</li>
+					))}
+					{optionalEntries.map((entry) => (
+						<DronePackageRow
+							key={entry.packageName}
+							entry={entry}
+							host={hostPlugins.find((item) => item.name === entry.packageName)}
+						/>
+					))}
+					{configuredEntries.map((item) => (
+						<li key={`${item.source}:${item.scope}`} className="flex items-center gap-3 py-3">
+							<p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
+								{configuredPackageName(item.source)}
+							</p>
+							<span className="shrink-0 text-xs text-ink-faint">
+								{t("skillsConnections.installed")} · {item.scope}
+							</span>
+						</li>
+					))}
+					{hostEntries.map((plugin) => (
+						<li key={`host:${plugin.name}`} className="flex items-center gap-3 py-3">
+							<p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{plugin.name}</p>
+							<span className={`shrink-0 text-xs ${plugin.status === "available" ? "text-ok" : "text-warn"}`}>
+								{plugin.version} ·{" "}
+								{plugin.status === "available"
+									? t("skillsConnections.pluginStatusAvailable")
+									: t("skillsConnections.pluginStatusConfigure")}
+							</span>
+						</li>
+					))}
+					{uiPlugins.map((plugin) => (
+						<li key={`ui:${plugin.name}`} className="flex items-center gap-3 py-3">
+							<div className="min-w-0 flex-1">
+								<p className="truncate text-sm font-medium text-ink">{plugin.displayName ?? plugin.name}</p>
+								<p className="mt-1 text-xs text-ink-faint">Desktop UI</p>
+							</div>
+							<Switch
+								checked={plugin.enabled}
+								disabled={Boolean(plugin.invalidReason || plugin.buildError)}
+								onCheckedChange={(enabled) => void setPluginEnabled(plugin.name, enabled)}
+								aria-label={plugin.enabled ? t("skillsConnections.disable") : t("skillsConnections.enable")}
+							/>
+						</li>
+					))}
+				</ul>
+			</section>
 			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
 				<div className="flex flex-wrap items-baseline justify-between gap-2">
 					<div>
@@ -297,92 +389,6 @@ export function PluginSourcesSection() {
 				<div className="mt-3">
 					<BrowseSection extensionsOnly excludePackageNames={packageNames} />
 				</div>
-			</section>
-			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
-				<h2 className="text-sm font-medium text-ink">{t("skillsConnections.marketResources")}</h2>
-				<p className="mt-1 text-xs leading-relaxed text-ink-dim">
-					{t("skillsConnections.marketResourcesHint")}
-				</p>
-				<ul className="mt-3 grid gap-2 md:grid-cols-2">
-					{MARKET_RESOURCE_LINKS.map((resource) => (
-						<li key={resource.id} className="rounded-xl border border-border px-3 py-3">
-							<div className="flex items-start justify-between gap-2">
-								<div className="min-w-0">
-									<p className="truncate text-xs font-medium text-ink">{resource.name}</p>
-									<p className="mt-1 truncate text-[11px] text-ink-faint">github.com/{resource.repository}</p>
-								</div>
-								<span className="shrink-0 rounded-full bg-hover px-2 py-1 text-[10px] text-ink-faint">
-									{t(`skillsConnections.marketResourceKind.${resource.kind}` as never)}
-								</span>
-							</div>
-							<p className="mt-2 text-[11px] leading-relaxed text-ink-dim">{resource.description}</p>
-							<button
-								type="button"
-								className="mt-2 text-[11px] text-accent hover:underline"
-								onClick={() => void getPi().openExternal(resource.url)}
-							>
-								{t("skillsConnections.openRepository")}
-							</button>
-						</li>
-					))}
-				</ul>
-			</section>
-			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
-				<h2 className="text-sm font-medium text-ink">{t("skillsConnections.droneRegistry")}</h2>
-				<p className="mt-1 text-xs text-ink-dim">{t("skillsConnections.droneRegistryHint")}</p>
-				<ul className="mt-3 space-y-2">
-					{entries.map((entry) => (
-						<DronePackageRow
-							key={entry.packageName}
-							entry={entry}
-							host={hostPlugins.find((item) => item.name === entry.packageName)}
-						/>
-					))}
-				</ul>
-			</section>
-			<section className="rounded-2xl border border-border bg-surface px-4 py-4">
-				<h2 className="text-sm font-medium text-ink">{t("skillsConnections.installedPlugins")}</h2>
-				<p className="mt-1 text-xs text-ink-dim">{t("skillsConnections.installedPluginsHint")}</p>
-				{builtinEntries.length || configuredEntries.length || hostEntries.length || uiPlugins.length ? (
-					<ul className="mt-3 divide-y divide-border text-xs">
-						{builtinEntries.map((entry) => (
-							<li
-								key={`builtin:${entry.packageName}`}
-								className="flex items-center justify-between gap-3 py-2"
-							>
-								<span className="truncate text-ink-2">{entry.packageName}</span>
-								<span className="shrink-0 text-[11px] text-ok">{t("skillsConnections.builtinEnabled")}</span>
-							</li>
-						))}
-						{configuredEntries.map((item) => (
-							<li
-								key={`${item.source}:${item.scope}`}
-								className="flex items-center justify-between gap-3 py-2"
-							>
-								<span className="truncate text-ink-2">{item.source}</span>
-								<span className="shrink-0 text-[11px] text-ink-faint">{item.scope}</span>
-							</li>
-						))}
-						{hostEntries.map((plugin) => (
-							<li key={`host:${plugin.name}`} className="flex items-center justify-between gap-3 py-2">
-								<span className="truncate text-ink-2">{plugin.name}</span>
-								<span
-									className={`shrink-0 text-[11px] ${plugin.status === "available" ? "text-ok" : "text-warn"}`}
-								>
-									{plugin.version} · {plugin.status}
-								</span>
-							</li>
-						))}
-						{uiPlugins.map((plugin) => (
-							<li key={`ui:${plugin.name}`} className="flex items-center justify-between gap-3 py-2">
-								<span className="truncate text-ink-2">{plugin.displayName ?? plugin.name}</span>
-								<span className="shrink-0 text-[11px] text-ink-faint">Desktop UI</span>
-							</li>
-						))}
-					</ul>
-				) : (
-					<p className="mt-3 text-xs text-ink-faint">{t("skillsConnections.noInstalledPlugins")}</p>
-				)}
 			</section>
 		</div>
 	);

@@ -123,6 +123,11 @@ export const PackagesContract = defineDomain("packages", {
 			args: SearchCatalogArgsSchema,
 			result: Type.Unsafe<CatalogSearchResult>(CatalogSearchResultSchema),
 		},
+		/** Latest published npm version per package name (null when unknown/offline). */
+		latestPackageVersions: {
+			args: Type.Tuple([Type.Array(Type.String({ minLength: 1 }), { maxItems: 50 })]),
+			result: Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()])),
+		},
 		installPackage: {
 			args: Type.Tuple([Type.String({ minLength: 1 })]),
 			result: Type.Unsafe<PackageLifecycleReceipt>(PackageLifecycleReceiptSchema),

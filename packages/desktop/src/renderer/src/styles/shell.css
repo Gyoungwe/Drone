@@ -587,7 +587,8 @@
    hierarchy comes from quiet borders, generous spacing and one accent color
    rather than dark floating panels. */
 .knowledge-view-body > div {
-	max-width: 1480px;
+	/* Same content width as PageShell (max-w-5xl). */
+	max-width: 64rem;
 }
 .knowledge-home,
 .knowledge-panel {
@@ -637,11 +638,6 @@
 	background: var(--knowledge-surface);
 	box-shadow: var(--knowledge-shadow);
 	padding: var(--space-4);
-}
-.knowledge-cloud-section > p:first-of-type {
-	border-color: color-mix(in srgb, var(--knowledge-accent) 28%, var(--knowledge-border));
-	background: var(--knowledge-accent-soft);
-	color: var(--knowledge-ink-muted);
 }
 .knowledge-cloud-section input,
 .knowledge-cloud-section select {
@@ -1404,4 +1400,52 @@
 }
 .empty-state [data-testid="home-greeting"] {
 	text-wrap: balance;
+}
+
+/* 知识网络实时刷新：只有新节点脉冲；“实时更新”可暂停（暂停期间事件排队）。 */
+.knowledge-observatory-canvas .knowledge-graph-node-aura {
+	animation: none;
+}
+.knowledge-observatory-canvas .knowledge-graph-node-aura--fresh {
+	animation: knowledge-graph-fresh 0.7s ease-in-out 3;
+}
+.knowledge-graph-live-toggle {
+	border: 1px solid var(--knowledge-border);
+	background: color-mix(in srgb, var(--knowledge-surface) 92%, transparent);
+	color: var(--knowledge-ink);
+	pointer-events: auto;
+}
+.knowledge-graph-live-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 999px;
+	background: #059669;
+	animation: knowledge-graph-live-blink 2s ease-in-out infinite;
+}
+.knowledge-graph-live-dot--paused {
+	background: var(--knowledge-ink-muted);
+	animation: none;
+}
+@keyframes knowledge-graph-live-blink {
+	50% {
+		opacity: 0.35;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.knowledge-observatory-canvas .knowledge-graph-node-aura--fresh,
+	.knowledge-graph-selection-halo,
+	.knowledge-graph-live-dot {
+		animation: none;
+	}
+}
+
+/* Network tab inside the shared 64rem page width: stack the live-changes panel under the canvas
+   whenever the content area is too narrow for both, so the graph keeps its full width. */
+[data-testid="knowledge-network"] {
+	container-type: inline-size;
+}
+@container (max-width: 1000px) {
+	.knowledge-network-layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }

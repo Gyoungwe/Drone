@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
-import { WorkflowOverviewPanel } from "../settings/WorkflowOverview";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { launchKnowledgeSetup, reportKnowledgeError, useKnowledgeOverview } from "./hooks";
@@ -59,6 +58,16 @@ export function KnowledgePanel({
 				: index?.coverage === "partial"
 					? t("coveragePartial")
 					: t("coverageUninitialized");
+	/** Settings tab: pick another folder and go straight into the (confirmed) setup flow for it. */
+	async function switchFolder() {
+		setActionError(null);
+		try {
+			const selected = await getPi().pickDirectory();
+			if (selected) setup(selected);
+		} catch (e) {
+			setActionError(String((e as Error).message || e));
+		}
+	}
 	async function folders() {
 		setActionError(null);
 		try {
@@ -95,7 +104,7 @@ export function KnowledgePanel({
 					</div>
 				)}
 				<Button size="sm" disabled={loading || busy} onClick={() => void refresh()}>
-					{t("refresh")}
+					{loading ? t("loading") : t("refresh")}
 				</Button>
 			</header>
 			{!hideTabs && (
@@ -137,17 +146,34 @@ export function KnowledgePanel({
 						<p className="mt-1 text-[11px] text-ink-faint">{t("scopeValue")}</p>
 						<div className="mt-3 flex flex-wrap gap-1">
 							<Button size="sm" disabled={!cwd} onClick={() => setup(binding?.vault)}>
-								{binding ? t("adjust") : t("setup")}
+								{binding ? t("adjustCurrent") : t("setup")}
 							</Button>
-							<Button size="sm" disabled={busy} onClick={() => void folders()}>
-								{t("selectFolder")}
+							<Button size="sm" disabled={busy || !cwd} onClick={() => void switchFolder()}>
+								{t("switchFolder")}
 							</Button>
 						</div>
 						<p className="mt-2 text-xs text-ink-dim">{t("globalSwitch")}</p>
 					</section>
 					<KnowledgeCloudSection cwd={cwd} bindingRevision={binding?.revision} />
 					{binding && <KnowledgeMaintenance cwd={cwd} revision={binding.revision} index={index} />}
-					<WorkflowOverviewPanel />
+					{/* Similar-content search and topic memory were only reachable through the old panel tabs,
+					    which the knowledge page hides; keep them on the settings tab as collapsible sections. */}
+					{binding && (
+						<details className="rounded-xl border border-border p-4" data-testid="knowledge-semantic-section">
+							<summary className="cursor-pointer select-none text-xs font-semibold">{t("semantic")}</summary>
+							<div className="mt-3">
+								<SemanticManagement cwd={cwd} bindingRevision={binding.revision} />
+							</div>
+						</details>
+					)}
+					{binding && (
+						<details className="rounded-xl border border-border p-4" data-testid="knowledge-topics-section">
+							<summary className="cursor-pointer select-none text-xs font-semibold">{t("topics")}</summary>
+							<div className="mt-3">
+								<TopicManagement cwd={cwd} bindingRevision={binding.revision} sessionId={sessionId} />
+							</div>
+						</details>
+					)}
 				</div>
 			)}
 			{tab === "overview" && (

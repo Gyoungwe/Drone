@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { getPi } from "../../api";
 import { useKnowledgeStore } from "../../stores/knowledge";
 import { useSessionsStore } from "../../stores/sessions";
 import { type KnowledgeTab, useUiStore } from "../../stores/ui";
-import { CloseIcon } from "../icons";
+import { Button } from "../ui/Button";
+import { PageHeader } from "../ui/PageHeader";
 import { useKnowledgeText } from "./copy";
+import { reportKnowledgeError, useKnowledgeOverview } from "./hooks";
 import { KnowledgeHome } from "./KnowledgeHome";
 import { KnowledgeNetwork } from "./KnowledgeNetwork";
 import { KnowledgeNoteViewer } from "./KnowledgeNoteViewer";
@@ -23,7 +26,6 @@ export function KnowledgeView() {
 	const open = useKnowledgeStore((s) => s.open);
 	const cwd = useSessionsStore((s) => s.cwd);
 	const activeSessionId = useSessionsStore((s) => s.activeSessionId);
-	const setView = useUiStore((s) => s.setView);
 	const requestedTab = useUiStore((s) => s.knowledgeTab);
 	const setRequestedTab = useUiStore((s) => s.setKnowledgeTab);
 	const [tab, setTab] = useState<KnowledgeTab>(requestedTab);
@@ -52,60 +54,74 @@ export function KnowledgeView() {
 		return () => document.removeEventListener("keydown", onKey);
 	}, [close]);
 
+	const overview = useKnowledgeOverview(dialog?.cwd ?? null, dialog?.sessionId ?? null).data;
+	const binding = overview?.binding;
+
 	if (!dialog) return null;
+	const vault = binding?.vault?.replace(/[\\/]$/u, "") ?? "";
+	const vaultLabel = vault.slice(Math.max(vault.lastIndexOf("/"), vault.lastIndexOf("\\")) + 1) || vault;
+	const description = binding
+		? `${vaultLabel} · ${overview?.index?.noteCount ?? t("homeCountUnknown")} ${t("homeVaultNotes")}${
+				overview?.project ? ` · ${t("homeProjectContext")}: ${overview.project}` : ""
+			}`
+		: t("homeBindingHint");
 	return (
 		<section className="knowledge-view" aria-label={t("title")}>
-			<header className="knowledge-view-head justify-end">
-				<button
-					type="button"
-					className="knowledge-view-close"
-					onClick={() => {
-						close();
-						setView("chat");
-					}}
-					aria-label={t("close")}
-					title={t("close")}
-				>
-					<CloseIcon />
-				</button>
-			</header>
 			<div className="knowledge-view-body">
-				<div className="mx-auto w-full max-w-[1440px]">
+				<div className="mx-auto w-full max-w-5xl">
 					{!dialog.note && (
-						<div
-							className="mb-4 flex gap-2 border-b border-border pb-2"
-							role="tablist"
-							aria-label={t("title")}
-						>
-							{(["overview", "network", "reviews", "settings"] as const).map((item) => (
-								<button
-									key={item}
-									type="button"
-									role="tab"
-									aria-selected={tab === item}
-									className={`rounded-lg px-3 py-2 text-xs ${tab === item ? "bg-hover font-semibold" : "text-ink-dim"}`}
-									onClick={() => selectTab(item)}
+						<PageHeader
+							title={t("title")}
+							description={description}
+							actions={
+								<Button
+									size="sm"
+									variant="primary"
+									disabled={!binding}
+									onClick={() => {
+										if (binding)
+											void getPi()
+												.openKnowledgeTarget({ cwd: dialog.cwd, revision: binding.revision })
+												.catch(reportKnowledgeError);
+									}}
 								>
-									{t(
-										(
-											{
-												overview: "overviewTab",
-												network: "networkTab",
-												reviews: "reviewTab",
-												settings: "settingsTab",
-											} as const
-										)[item],
-									)}
-								</button>
-							))}
-						</div>
+									{t("homeNewNote")}
+								</Button>
+							}
+							tabs={
+								<div className="flex gap-1" role="tablist" aria-label={t("title")}>
+									{(["overview", "network", "reviews", "settings"] as const).map((item) => (
+										<button
+											key={item}
+											type="button"
+											role="tab"
+											aria-selected={tab === item}
+											className={`-mb-px border-b-2 px-3 py-2 text-[13px] ${tab === item ? "border-ink font-semibold text-ink" : "border-transparent text-ink-dim hover:text-ink"}`}
+											onClick={() => selectTab(item)}
+										>
+											{t(
+												(
+													{
+														overview: "overviewTab",
+														network: "networkTab",
+														reviews: "reviewTab",
+														settings: "settingsTab",
+													} as const
+												)[item],
+											)}
+										</button>
+									))}
+								</div>
+							}
+						/>
 					)}
 					{dialog.note && dialog.noteRevision ? (
 						<KnowledgeNoteViewer
 							cwd={dialog.cwd}
 							path={dialog.note}
 							revision={dialog.noteRevision}
-							onClose={close}
+							// Closing a note returns to the tab it was opened from, not out of the knowledge page.
+							onClose={() => open({ cwd: dialog.cwd, sessionId: dialog.sessionId, tab: "reviews" })}
 						/>
 					) : tab === "network" ? (
 						<KnowledgeNetwork cwd={dialog.cwd} sessionId={dialog.sessionId} />

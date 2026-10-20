@@ -20,6 +20,7 @@ import { SettingsDialog } from "./components/settings/SettingsDialog";
 import { Toaster } from "./components/Toaster";
 import { ExampleTaskDialog } from "./components/tasks/ExampleTaskDialog";
 import { ContextMenuHost } from "./components/ui/ContextMenu";
+import { PageShell } from "./components/ui/PageHeader";
 import { SkillsConnectionsView } from "./components/workbench/SkillsConnectionsView";
 import { WorkbenchNav } from "./components/workbench/WorkbenchNav";
 import { useDesktopCommands } from "./hooks/use-desktop-commands";
@@ -167,17 +168,15 @@ export default function App() {
 							<ResearchBrowserPage />
 						</div>
 					) : view === "knowledge" ? (
-						<div className="page-fade min-h-0 min-w-0 flex-1">
+						<div className="page-fade flex min-h-0 min-w-0 flex-1 flex-col">
 							<KnowledgeView />
 						</div>
 					) : view === "skills" ? (
 						<SkillsConnectionsView />
 					) : view === "hosts" ? (
-						<div className="page-fade min-h-0 min-w-0 flex-1 overflow-y-auto bg-canvas px-6 py-8">
-							<div className="mx-auto max-w-5xl">
-								<ComputePane />
-							</div>
-						</div>
+						<PageShell testId="hosts-view">
+							<ComputePane page />
+						</PageShell>
 					) : pluginView ? (
 						<div className="page-fade min-h-0 min-w-0 flex-1">
 							<PluginEntryHost entry={pluginView} />

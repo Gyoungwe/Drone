@@ -1,5 +1,8 @@
 // @ts-nocheck
 import { randomUUID } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { knowledgeDirectory } from "./config";
 import { emitProcessEvent } from "./runtime-host";
 import { runtimeSlot } from "./runtime-host";
 import { flowCardBuilder, toolMeta } from "./runtime-host";
@@ -51,8 +54,54 @@ export function flowFor(id) {
 	const flow = state.flows.get(id);
 	return flow ? structuredClone(flow) : null;
 }
-/** Process-lifetime aggregate used by the knowledge overview when no session is selected. */
+// The local-answer metric outlives a restart: it is small host-observed telemetry
+// kept next to the app's knowledge state (never inside the user's Vault).
+const metricsFile = () => {
+	try {
+		const dir = knowledgeDirectory();
+		return dir ? join(dir, "answer-metrics.json") : null;
+	} catch {
+		return null;
+	}
+};
+function loadAnswerStats() {
+	if (state.localAnswerStatsLoaded) return;
+	state.localAnswerStatsLoaded = true;
+	const file = metricsFile();
+	if (!file) return;
+	try {
+		const saved = JSON.parse(readFileSync(file, "utf8"));
+		const answered = Math.max(0, Math.floor(Number(saved?.answered) || 0));
+		const total = Math.max(answered, Math.floor(Number(saved?.total) || 0));
+		if (total > state.localAnswerStats.total)
+			state.localAnswerStats = {
+				answered,
+				total,
+				rate: total ? answered / total : null,
+				updatedAt: Number(saved?.updatedAt) || null,
+			};
+	} catch {
+		/* missing or unreadable metrics start from zero */
+	}
+}
+function saveAnswerStats() {
+	const file = metricsFile();
+	if (!file) return;
+	try {
+		mkdirSync(join(file, ".."), { recursive: true });
+		const tmp = `${file}.${process.pid}.tmp`;
+		writeFileSync(tmp, JSON.stringify(state.localAnswerStats));
+		renameSync(tmp, file);
+	} catch {
+		/* telemetry must never fail a turn */
+	}
+}
+/** Aggregate used by the knowledge overview when no session is selected. */
 export function knowledgeAnswerRate() {
+	// The extension and backend may load separate module copies; the file is the
+	// shared record, and the larger total always wins.
+	state.localAnswerStatsLoaded = false;
+	loadAnswerStats();
 	return structuredClone(state.localAnswerStats);
 }
 export function beginKnowledgeFlow(ctx, binding) {
@@ -128,6 +177,7 @@ export function publicationKnowledgeFlow(ctx, proof) {
 	// answer. Count each turn once; the metric is deliberately bounded to the
 	// current host process and never inferred from model text.
 	if (completed && !current.localAnswerRecorded) {
+		loadAnswerStats();
 		const answered = Boolean(current.search && current.search.hits > 0);
 		state.localAnswerStats = {
 			answered: state.localAnswerStats.answered + (answered ? 1 : 0),
@@ -136,6 +186,7 @@ export function publicationKnowledgeFlow(ctx, proof) {
 			updatedAt: Date.now(),
 		};
 		current.localAnswerRecorded = true;
+		saveAnswerStats();
 	}
 	const phase =
 		proof.status === "setup-complete"

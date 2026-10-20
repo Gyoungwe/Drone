@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -71,20 +71,32 @@ describe("UI-01 real plugin lifecycle", () => {
 	it("enables a shipped plugin, observes its real contribution, disables it, then reloads it", async () => {
 		root = await mkdtemp(join(tmpdir(), "drone-ui-01-"));
 		electronState.userData = root;
+		// Drone no longer ships built-in UI plugins (whale-maid / voice-alerts were removed), so stage the
+		// bundled overlay-pet example as the shipped plugin in a temporary resources tree.
+		const resources = join(root, "resources");
+		const shipped = fileURLToPath(new URL("../../../resources/ui-plugins", import.meta.url));
+		await cp(shipped, join(resources, "ui-plugins"), { recursive: true });
+		await cp(
+			join(shipped, "examples", "overlay-pet"),
+			join(resources, "ui-plugins", "builtin", "overlay-pet"),
+			{
+				recursive: true,
+			},
+		);
 		// The manager intentionally exercises the packaged resource path. Resolve it
 		// from this test file so the acceptance remains valid from the repository root
 		// and from an individual workspace invocation.
 		Object.defineProperty(process, "resourcesPath", {
 			configurable: true,
 			enumerable: originalResourcesPath?.enumerable ?? false,
-			value: fileURLToPath(new URL("../../../resources", import.meta.url)),
+			value: resources,
 			writable: true,
 		});
 		installHostShim();
 
 		const manager = new UiPluginManager();
 		await manager.init();
-		const name = "ds-whale-maid";
+		const name = "overlay-pet";
 		const initial = manager.info(name);
 		expect(initial).toMatchObject({ name, builtin: true, enabled: false, trusted: false, built: false });
 
