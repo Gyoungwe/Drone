@@ -17,17 +17,35 @@ function Meter({ label, percent, detail }: { label: string; percent: number | nu
 	);
 }
 
+type HostEnvironmentStatus = "unknown" | "checking" | "healthy" | "offline";
+
+function statusTone(status: HostEnvironmentStatus): string {
+	if (status === "healthy") return "text-ok";
+	if (status === "checking") return "text-warn";
+	if (status === "offline") return "text-err";
+	return "text-ink-dim";
+}
+
 /** 本机环境（P10）：概览 + 环境探测。只读，数据来自 main 侧固定命令。 */
 export function HostEnvironmentView({
 	env,
 	loading,
+	error,
 	onRefresh,
 }: {
 	env: HostEnvironment | null;
 	loading: boolean;
+	error?: string | null;
 	onRefresh: () => void;
 }) {
 	const t = useT();
+	const status: HostEnvironmentStatus = loading
+		? "checking"
+		: env
+			? "healthy"
+			: error
+				? "offline"
+				: "unknown";
 	const rows: Array<[string, string]> = env
 		? [
 				[t("panel.hostEnv.os"), env.os],
@@ -43,64 +61,96 @@ export function HostEnvironmentView({
 		: [];
 	return (
 		<section className="mb-4 host-env" data-testid="host-env">
-			<div className="mb-2 flex items-end justify-between gap-2">
-				<div>
-					<h4 className="text-[12px] font-medium text-ink">{t("panel.hostEnv.title")}</h4>
-					<p className="mt-0.5 text-[11px] text-ink-faint">{env ? env.hostname : t("panel.hostEnv.hint")}</p>
-				</div>
-				<button type="button" className="panel-action" onClick={onRefresh} disabled={loading}>
-					{loading ? t("panel.hostEnv.probing") : t("panel.hostEnv.probe")}
-				</button>
-			</div>
-			{env && (
-				<>
-					<div className="host-env-meters">
-						<Meter
-							label="CPU"
-							percent={env.cpu.loadPercent}
-							detail={`${env.cpu.cores} ${t("panel.hostEnv.cores")} · ${env.cpu.model}`}
-						/>
-						<Meter
-							label={t("panel.hostEnv.memory")}
-							percent={usagePercent(env.memory.totalBytes, env.memory.freeBytes)}
-							detail={`${formatBytes(env.memory.totalBytes - env.memory.freeBytes)} / ${formatBytes(env.memory.totalBytes)}`}
-						/>
-						<Meter
-							label={t("panel.hostEnv.disk")}
-							percent={env.disk ? usagePercent(env.disk.totalBytes, env.disk.freeBytes) : null}
-							detail={
-								env.disk
-									? `${formatBytes(env.disk.freeBytes)} ${t("panel.hostEnv.free")} / ${formatBytes(env.disk.totalBytes)}`
-									: "—"
-							}
-						/>
+			<details className="panel-card" open data-testid="local-host-section">
+				<summary className="flex cursor-pointer list-none items-start justify-between gap-2 rounded-lg py-1 text-left [&::-webkit-details-marker]:hidden">
+					<div className="min-w-0">
+						<h4 className="text-[12px] font-medium text-ink">{t("panel.hostEnv.title")}</h4>
+						<p className="mt-0.5 truncate text-[11px] text-ink-faint">
+							{env
+								? `${env.hostname} · ${t(`panel.hostEnv.status.${status}`)}`
+								: `${t("panel.hostEnv.hint")} · ${t(`panel.hostEnv.status.${status}`)}`}
+						</p>
 					</div>
-					<dl className="host-env-table">
-						{rows.map(([k, v]) => (
-							<div key={k}>
-								<dt>{k}</dt>
-								<dd className="font-mono">{v}</dd>
+					<span
+						className={`shrink-0 rounded-full border border-border px-2 py-0.5 text-xs ${statusTone(status)}`}
+						role="status"
+					>
+						{t(`panel.hostEnv.status.${status}`)}
+					</span>
+				</summary>
+				<div className="mt-2">
+					<div className="mb-2 flex justify-end">
+						<button type="button" className="panel-action" onClick={onRefresh} disabled={loading}>
+							{loading ? t("panel.hostEnv.probing") : t("panel.hostEnv.probe")}
+						</button>
+					</div>
+					{error && (
+						<p className="mb-2 rounded-md border border-err/30 bg-err/5 px-2 py-1 text-xs text-err">
+							{error}
+						</p>
+					)}
+					{env && (
+						<>
+							<div className="host-env-meters">
+								<Meter
+									label="CPU"
+									percent={env.cpu.loadPercent}
+									detail={`${env.cpu.cores} ${t("panel.hostEnv.cores")} · ${env.cpu.model}`}
+								/>
+								<Meter
+									label={t("panel.hostEnv.memory")}
+									percent={usagePercent(env.memory.totalBytes, env.memory.freeBytes)}
+									detail={`${formatBytes(env.memory.totalBytes - env.memory.freeBytes)} / ${formatBytes(env.memory.totalBytes)}`}
+								/>
+								<Meter
+									label={t("panel.hostEnv.disk")}
+									percent={env.disk ? usagePercent(env.disk.totalBytes, env.disk.freeBytes) : null}
+									detail={
+										env.disk
+											? `${formatBytes(env.disk.freeBytes)} ${t("panel.hostEnv.free")} / ${formatBytes(env.disk.totalBytes)}`
+											: "—"
+									}
+								/>
 							</div>
-						))}
-					</dl>
-				</>
-			)}
+							<dl className="host-env-table">
+								{rows.map(([k, v]) => (
+									<div key={k}>
+										<dt>{k}</dt>
+										<dd className="font-mono">{v}</dd>
+									</div>
+								))}
+							</dl>
+						</>
+					)}
+				</div>
+			</details>
 		</section>
 	);
 }
 
 export function HostEnvironmentCard() {
 	const [env, setEnv] = useState<HostEnvironment | null>(null);
+	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const refresh = useCallback(() => {
 		setLoading(true);
+		setError(null);
 		window.pi
 			.hostEnvironment()
-			.then(setEnv, () => setEnv(null))
+			.then(
+				(next) => {
+					setEnv(next);
+					setError(null);
+				},
+				(reason) => {
+					setEnv(null);
+					setError(reason instanceof Error ? reason.message : String(reason));
+				},
+			)
 			.finally(() => setLoading(false));
 	}, []);
 	useEffect(() => refresh(), [refresh]);
-	return <HostEnvironmentView env={env} loading={loading} onRefresh={refresh} />;
+	return <HostEnvironmentView env={env} error={error} loading={loading} onRefresh={refresh} />;
 }
 
 /** 主机 · 设置：只读权限展示（不提供编辑，编辑仍走登记表单）。 */

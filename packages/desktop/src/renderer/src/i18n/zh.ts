@@ -116,6 +116,8 @@ export const zh = {
 		manage: "管理知识库",
 		noMatch: "没有匹配的技能",
 		details: "查看说明与来源",
+		repository: "来源仓库",
+		repositoryUnknown: "来源仓库未登记（本地或未映射）",
 		all: "全部分类",
 		group: {
 			knowledge: "知识库",
@@ -477,6 +479,12 @@ export const zh = {
 			memory: "内存",
 			disk: "磁盘",
 			free: "可用",
+			status: {
+				unknown: "未检查",
+				checking: "检查中",
+				healthy: "本机可用",
+				offline: "探测失败",
+			},
 			permissions: "设置 · 权限（只读）",
 			auth: "认证状态",
 			managed: "托管",
@@ -667,6 +675,8 @@ export const zh = {
 		sourceRepositoriesHint:
 			"仓库显示公开地址和分支。只有用户手动检查并确认后才会应用更新，应用后仍需安全重启。",
 		sourceCommit: "锁定提交 {commit}",
+		repositorySource: "GitHub 来源",
+		repositoryUnknown: "来源仓库未登记",
 		sourceSkillCounts: "已加载 {loaded} · 内置 {bundled}",
 		openRepository: "打开仓库",
 		autoUpdateSource: "支持自动检查",

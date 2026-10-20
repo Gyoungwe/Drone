@@ -117,6 +117,17 @@ function Stat({ label }: { label: string }) {
 	return <span className="text-[11px] text-ink-faint">{label}</span>;
 }
 
+function OperationProgress({ label }: { label: string }) {
+	return (
+		<div className="mt-2 flex items-center gap-2" role="progressbar" aria-label={label}>
+			<div className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-full bg-hover">
+				<div className="h-full w-1/2 animate-pulse rounded-full bg-accent" />
+			</div>
+			<span className="text-[10px] text-ink-faint">{label}</span>
+		</div>
+	);
+}
+
 export function ExtensionRow({
 	extension,
 	configured,
@@ -252,6 +263,11 @@ export function CatalogRow({
 								: t("settings.extensions.effectiveCurrent")}
 						</p>
 					)}
+				{installing || updating ? (
+					<OperationProgress
+						label={installing ? t("settings.extensions.installing") : t("settings.extensions.updating")}
+					/>
+				) : null}
 			</div>
 			<div className="shrink-0 pt-0.5">
 				{configured ? (

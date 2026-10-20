@@ -126,6 +126,8 @@ export const en: Messages = {
 		manage: "Manage knowledge",
 		noMatch: "No matching skills",
 		details: "Description and source",
+		repository: "Source repository",
+		repositoryUnknown: "Source repository not recorded (local or unmapped)",
 		all: "All categories",
 		group: {
 			knowledge: "Knowledge",
@@ -492,6 +494,12 @@ export const en: Messages = {
 			memory: "Memory",
 			disk: "Disk",
 			free: "free",
+			status: {
+				unknown: "Not checked",
+				checking: "Checking",
+				healthy: "Available",
+				offline: "Probe failed",
+			},
 			permissions: "Settings · permissions (read-only)",
 			auth: "Auth state",
 			managed: "Managed",
@@ -692,6 +700,8 @@ export const en: Messages = {
 		sourceRepositoriesHint:
 			"Repositories show their public URL and branch. Check and apply updates manually; applying one still requires confirmation and a restart.",
 		sourceCommit: "Pinned commit {commit}",
+		repositorySource: "GitHub source",
+		repositoryUnknown: "Source repository not recorded",
 		sourceSkillCounts: "loaded {loaded} · bundled {bundled}",
 		openRepository: "Open repository",
 		autoUpdateSource: "Auto-check enabled",

@@ -11,6 +11,7 @@ import {
 	workflowProfile,
 } from "@drone/shared";
 import { useMemo, useState } from "react";
+import { getPi } from "../../api";
 import { useI18nStore, useT } from "../../i18n";
 import { useSettingsStore } from "../../stores/settings";
 import { StatePanel } from "../ui/StatePanel";
@@ -35,6 +36,7 @@ function SkillRow({ skill }: { skill: LoadedSkill }) {
 	const t = useT(),
 		language = useI18nStore((s) => s.language);
 	const title = skillDisplayName(skill.name, language);
+	const repository = skill.repository;
 	return (
 		<li className="py-3">
 			<div className="flex items-center gap-2">
@@ -52,9 +54,27 @@ function SkillRow({ skill }: { skill: LoadedSkill }) {
 					{t("skillsCatalog.details")}
 				</summary>
 				<p className="mt-1 whitespace-pre-wrap leading-relaxed">{skill.description}</p>
-				<p className="mt-2 break-all font-mono text-[11px] text-ink-faint">
-					{skill.source} · {skill.path}
-				</p>
+				<div className="mt-2 space-y-1 text-[11px] text-ink-faint">
+					<p className="break-all font-mono">
+						{skill.source} · {skill.path}
+					</p>
+					{repository ? (
+						<button
+							type="button"
+							className="block max-w-full truncate text-left text-accent hover:underline"
+							onClick={() =>
+								void getPi().openExternal(
+									skill.repositoryPath ? `${repository}/tree/main/${skill.repositoryPath}` : repository,
+								)
+							}
+							title={repository}
+						>
+							{t("skillsCatalog.repository")}: {repository.replace("https://github.com/", "github.com/")}
+						</button>
+					) : (
+						<p>{t("skillsCatalog.repositoryUnknown")}</p>
+					)}
+				</div>
 			</details>
 		</li>
 	);

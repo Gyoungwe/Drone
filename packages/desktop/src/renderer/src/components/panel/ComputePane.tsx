@@ -7,13 +7,24 @@ import { HostEnvironmentCard, HostPermissions } from "./HostEnvironmentCard";
 
 function statusTone(status: string): string {
 	if (status === "healthy" || status === "succeeded" || status === "ready") return "text-ok";
-	if (status === "checking" || status === "running" || status === "queued") return "text-warn";
+	if (status === "checking" || status === "running" || status === "queued" || status === "degraded")
+		return "text-warn";
 	if (status === "offline" || status === "failed" || status === "blocked") return "text-err";
 	return "text-ink-dim";
 }
 
 function statusLabel(t: (key: MessageKey) => string, status: string): string {
 	return t(`panel.compute.status.${status}` as MessageKey);
+}
+
+function aggregateHostStatus(hosts: ComputeHost[]): string {
+	if (!hosts.length) return "unknown";
+	const statuses = hosts.map((host) => host.health.status);
+	if (statuses.some((status) => status === "offline")) return "offline";
+	if (statuses.some((status) => status === "blocked")) return "blocked";
+	if (statuses.some((status) => status === "checking")) return "checking";
+	if (statuses.some((status) => status === "degraded" || status === "unknown")) return "degraded";
+	return "healthy";
 }
 
 interface HostFormState {
@@ -68,8 +79,12 @@ function HostRow({
 					<span className="mt-0.5 block truncate font-mono text-[11px] text-ink-faint">{host.alias}</span>
 				</div>
 				<span
-					className={`rounded-full border border-border px-2 py-0.5 text-xs ${statusTone(host.health.status)}`}
+					className={`flex shrink-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs ${statusTone(host.health.status)}`}
+					role="status"
 				>
+					<span
+						className={`h-1.5 w-1.5 rounded-full ${host.health.status === "healthy" ? "bg-ok" : host.health.status === "checking" ? "bg-warn" : host.health.status === "offline" || host.health.status === "blocked" ? "bg-err" : "bg-ink-faint"}`}
+					/>
 					{statusLabel(t, host.health.status)}
 				</span>
 			</div>
@@ -412,6 +427,7 @@ export function ComputePane() {
 			useComputeStore.setState({ error: reason instanceof Error ? reason.message : String(reason) });
 		}
 	};
+	const remoteStatus = aggregateHostStatus(hosts);
 
 	return (
 		<div className="context-pane bg-surface" data-testid="compute-pane">
@@ -430,188 +446,208 @@ export function ComputePane() {
 			</div>
 			{error && <p className="panel-empty text-err">{error}</p>}
 			<HostEnvironmentCard />
-			<section className="mb-4">
-				<div className="mb-2 flex items-end justify-between gap-2">
-					<div>
-						<h4 className="text-[12px] font-medium text-ink">{t("panel.compute.hosts")}</h4>
-						<p className="mt-0.5 text-[11px] text-ink-faint">{t("panel.compute.hostsHint")}</p>
-					</div>
-					<span className="font-mono text-[11px] text-ink-faint">
-						{health
-							? `${t("panel.compute.updated")} ${new Date(health.checkedAt).toLocaleTimeString()}`
-							: "—"}
-					</span>
-				</div>
-				{hosts.length ? (
-					<ul className="space-y-3">
-						{hosts.map((host) => (
-							<HostRow
-								key={host.id}
-								host={host}
-								onCheckEnvironment={() => void checkEnvironment(host)}
-								onPreviewPlan={() => setPreviewHostId(host.id)}
-								onConfirmRun={() => void confirmAndRun(host)}
-								onOpenTerminal={() => void startTerminal(host)}
-								onRemove={() => void removeHost(host.id)}
-								checked={checkedHostIds.has(host.id)}
-								previewing={previewHostId === host.id}
-							/>
-						))}
-					</ul>
-				) : (
-					<p className="panel-empty">{t("panel.compute.noHosts")}</p>
-				)}
-				<div className="panel-card mt-3 grid gap-3 border-accent/30 bg-accent/5">
-					<div className="flex items-start justify-between gap-3">
-						<div>
-							<h4 className="text-[12px] font-medium text-ink">{t("panel.compute.sshConfigTitle")}</h4>
-							<p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">
-								{t("panel.compute.sshConfigHint")}
+			<section className="mb-4" data-testid="remote-host-section">
+				<details className="panel-card" open>
+					<summary className="flex cursor-pointer list-none items-start justify-between gap-2 rounded-lg py-1 text-left [&::-webkit-details-marker]:hidden">
+						<div className="min-w-0">
+							<h4 className="text-[12px] font-medium text-ink">{t("panel.compute.hosts")}</h4>
+							<p className="mt-0.5 text-[11px] text-ink-faint">
+								{t("panel.compute.hostsHint")} · {statusLabel(t, remoteStatus)}
 							</p>
 						</div>
-						<button
-							type="button"
-							className="panel-action shrink-0"
-							onClick={() => void discoverSshHosts()}
-							disabled={sshConfigLoading}
+						<span
+							className={`shrink-0 rounded-full border border-border px-2 py-0.5 text-xs ${statusTone(remoteStatus)}`}
+							role="status"
 						>
-							{sshConfigLoading ? t("panel.compute.sshConfigReading") : t("panel.compute.sshConfigRead")}
-						</button>
-					</div>
-					<div className="flex items-center justify-between gap-2 text-[10px] text-ink-faint">
-						<span className="font-mono">~/.ssh/config</span>
-						<span>{t("panel.compute.sshConfigPrivateKeyHint")}</span>
-					</div>
-					{sshConfigHosts.length ? (
-						<ul className="grid gap-2">
-							{sshConfigHosts.map((entry) => {
-								const configured = hosts.some((host) => host.alias === entry.alias);
-								return (
-									<li
-										key={entry.alias}
-										className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-surface px-3 py-2"
-									>
-										<div className="min-w-0">
-											<strong className="block truncate text-[12px] font-medium text-ink">
-												{entry.alias}
-											</strong>
-											<span className="mt-0.5 block truncate font-mono text-[10px] text-ink-dim">
-												{entry.user ? `${entry.user}@` : ""}
-												{entry.hostname || entry.alias}
-												{entry.port ? `:${entry.port}` : ""}
-											</span>
-											<span className="mt-0.5 block truncate text-[10px] text-ink-faint">
-												{entry.identityFiles.length
-													? t("panel.compute.sshConfigIdentityCount", { count: entry.identityFiles.length })
-													: t("panel.compute.sshConfigDefaultIdentity")}
-											</span>
-										</div>
-										<button
-											type="button"
-											className="panel-action shrink-0"
-											disabled={configured}
-											onClick={() => void addSshConfigHost(entry)}
-										>
-											{configured ? t("panel.compute.sshConfigAdded") : t("panel.compute.sshConfigAdd")}
-										</button>
-									</li>
-								);
-							})}
-						</ul>
-					) : (
-						<p className="text-[11px] text-ink-faint">
-							{sshConfigLoading ? t("panel.compute.sshConfigReading") : t("panel.compute.sshConfigEmpty")}
-						</p>
-					)}
-				</div>
-				<details className="panel-card mt-3 border-dashed bg-canvas/60">
-					<summary className="cursor-pointer text-[12px] font-medium text-ink">
-						{t("panel.compute.manualHostTitle")}
+							{statusLabel(t, remoteStatus)}
+						</span>
 					</summary>
-					<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
-						{t("panel.compute.manualHostHint")}
-					</p>
-					<form className="mt-3 grid gap-3" onSubmit={(event) => void addHost(event)}>
-						<div className="grid grid-cols-2 gap-2">
-							<input
-								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-								value={hostForm.alias}
-								onChange={(event) => setHostForm((form) => ({ ...form, alias: event.target.value }))}
-								placeholder={t("panel.compute.alias")}
-								aria-label={t("panel.compute.alias")}
-							/>
-							<input
-								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-								value={hostForm.displayName}
-								onChange={(event) => setHostForm((form) => ({ ...form, displayName: event.target.value }))}
-								placeholder={t("panel.compute.displayName")}
-								aria-label={t("panel.compute.displayName")}
-							/>
+					<div className="mt-2">
+						<div className="mb-2 flex justify-end font-mono text-[11px] text-ink-faint">
+							{health
+								? `${t("panel.compute.updated")} ${new Date(health.checkedAt).toLocaleTimeString()}`
+								: "—"}
 						</div>
-						<div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
-							<input
-								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-								value={hostForm.endpoint}
-								onChange={(event) => setHostForm((form) => ({ ...form, endpoint: event.target.value }))}
-								placeholder={t("panel.compute.endpoint")}
-								aria-label={t("panel.compute.endpoint")}
-							/>
-							<input
-								type="number"
-								min={1}
-								max={65535}
-								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-								value={hostForm.port}
-								onChange={(event) => setHostForm((form) => ({ ...form, port: event.target.value }))}
-								placeholder={t("panel.compute.port")}
-								aria-label={t("panel.compute.port")}
-							/>
+						{hosts.length ? (
+							<ul className="space-y-3">
+								{hosts.map((host) => (
+									<HostRow
+										key={host.id}
+										host={host}
+										onCheckEnvironment={() => void checkEnvironment(host)}
+										onPreviewPlan={() => setPreviewHostId(host.id)}
+										onConfirmRun={() => void confirmAndRun(host)}
+										onOpenTerminal={() => void startTerminal(host)}
+										onRemove={() => void removeHost(host.id)}
+										checked={checkedHostIds.has(host.id)}
+										previewing={previewHostId === host.id}
+									/>
+								))}
+							</ul>
+						) : (
+							<p className="panel-empty">{t("panel.compute.noHosts")}</p>
+						)}
+						<div className="panel-card mt-3 grid gap-3 border-accent/30 bg-accent/5">
+							<div className="flex items-start justify-between gap-3">
+								<div>
+									<h4 className="text-[12px] font-medium text-ink">{t("panel.compute.sshConfigTitle")}</h4>
+									<p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">
+										{t("panel.compute.sshConfigHint")}
+									</p>
+								</div>
+								<button
+									type="button"
+									className="panel-action shrink-0"
+									onClick={() => void discoverSshHosts()}
+									disabled={sshConfigLoading}
+								>
+									{sshConfigLoading ? t("panel.compute.sshConfigReading") : t("panel.compute.sshConfigRead")}
+								</button>
+							</div>
+							<div className="flex items-center justify-between gap-2 text-[10px] text-ink-faint">
+								<span className="font-mono">~/.ssh/config</span>
+								<span>{t("panel.compute.sshConfigPrivateKeyHint")}</span>
+							</div>
+							{sshConfigHosts.length ? (
+								<ul className="grid gap-2">
+									{sshConfigHosts.map((entry) => {
+										const configured = hosts.some((host) => host.alias === entry.alias);
+										return (
+											<li
+												key={entry.alias}
+												className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-surface px-3 py-2"
+											>
+												<div className="min-w-0">
+													<strong className="block truncate text-[12px] font-medium text-ink">
+														{entry.alias}
+													</strong>
+													<span className="mt-0.5 block truncate font-mono text-[10px] text-ink-dim">
+														{entry.user ? `${entry.user}@` : ""}
+														{entry.hostname || entry.alias}
+														{entry.port ? `:${entry.port}` : ""}
+													</span>
+													<span className="mt-0.5 block truncate text-[10px] text-ink-faint">
+														{entry.identityFiles.length
+															? t("panel.compute.sshConfigIdentityCount", {
+																	count: entry.identityFiles.length,
+																})
+															: t("panel.compute.sshConfigDefaultIdentity")}
+													</span>
+												</div>
+												<button
+													type="button"
+													className="panel-action shrink-0"
+													disabled={configured}
+													onClick={() => void addSshConfigHost(entry)}
+												>
+													{configured ? t("panel.compute.sshConfigAdded") : t("panel.compute.sshConfigAdd")}
+												</button>
+											</li>
+										);
+									})}
+								</ul>
+							) : (
+								<p className="text-[11px] text-ink-faint">
+									{sshConfigLoading ? t("panel.compute.sshConfigReading") : t("panel.compute.sshConfigEmpty")}
+								</p>
+							)}
 						</div>
-						<div className="grid grid-cols-2 gap-2">
-							<input
-								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-								value={hostForm.user}
-								onChange={(event) => setHostForm((form) => ({ ...form, user: event.target.value }))}
-								placeholder={t("panel.compute.user")}
-								aria-label={t("panel.compute.user")}
-							/>
-							<input
-								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-								value={hostForm.workspaceRoot}
-								onChange={(event) => setHostForm((form) => ({ ...form, workspaceRoot: event.target.value }))}
-								placeholder={t("panel.compute.workspaceRoot")}
-								aria-label={t("panel.compute.workspaceRoot")}
-							/>
-						</div>
-						<div className="grid gap-2">
-							<input
-								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-								value={hostForm.identityFile}
-								onChange={(event) => setHostForm((form) => ({ ...form, identityFile: event.target.value }))}
-								placeholder={t("panel.compute.identityFile")}
-								aria-label={t("panel.compute.identityFile")}
-							/>
-							<input
-								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
-								value={hostForm.jumpHosts}
-								onChange={(event) => setHostForm((form) => ({ ...form, jumpHosts: event.target.value }))}
-								placeholder={t("panel.compute.jumpHosts")}
-								aria-label={t("panel.compute.jumpHosts")}
-							/>
-							<input
-								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
-								value={hostForm.hostKeyFingerprint}
-								onChange={(event) =>
-									setHostForm((form) => ({ ...form, hostKeyFingerprint: event.target.value }))
-								}
-								placeholder={t("panel.compute.hostKeyFingerprint")}
-								aria-label={t("panel.compute.hostKeyFingerprint")}
-							/>
-						</div>
-						<button type="submit" className="panel-action">
-							{t("panel.compute.addHost")}
-						</button>
-					</form>
+						<details className="panel-card mt-3 border-dashed bg-canvas/60">
+							<summary className="cursor-pointer text-[12px] font-medium text-ink">
+								{t("panel.compute.manualHostTitle")}
+							</summary>
+							<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
+								{t("panel.compute.manualHostHint")}
+							</p>
+							<form className="mt-3 grid gap-3" onSubmit={(event) => void addHost(event)}>
+								<div className="grid grid-cols-2 gap-2">
+									<input
+										className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+										value={hostForm.alias}
+										onChange={(event) => setHostForm((form) => ({ ...form, alias: event.target.value }))}
+										placeholder={t("panel.compute.alias")}
+										aria-label={t("panel.compute.alias")}
+									/>
+									<input
+										className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+										value={hostForm.displayName}
+										onChange={(event) =>
+											setHostForm((form) => ({ ...form, displayName: event.target.value }))
+										}
+										placeholder={t("panel.compute.displayName")}
+										aria-label={t("panel.compute.displayName")}
+									/>
+								</div>
+								<div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
+									<input
+										className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+										value={hostForm.endpoint}
+										onChange={(event) => setHostForm((form) => ({ ...form, endpoint: event.target.value }))}
+										placeholder={t("panel.compute.endpoint")}
+										aria-label={t("panel.compute.endpoint")}
+									/>
+									<input
+										type="number"
+										min={1}
+										max={65535}
+										className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+										value={hostForm.port}
+										onChange={(event) => setHostForm((form) => ({ ...form, port: event.target.value }))}
+										placeholder={t("panel.compute.port")}
+										aria-label={t("panel.compute.port")}
+									/>
+								</div>
+								<div className="grid grid-cols-2 gap-2">
+									<input
+										className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+										value={hostForm.user}
+										onChange={(event) => setHostForm((form) => ({ ...form, user: event.target.value }))}
+										placeholder={t("panel.compute.user")}
+										aria-label={t("panel.compute.user")}
+									/>
+									<input
+										className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+										value={hostForm.workspaceRoot}
+										onChange={(event) =>
+											setHostForm((form) => ({ ...form, workspaceRoot: event.target.value }))
+										}
+										placeholder={t("panel.compute.workspaceRoot")}
+										aria-label={t("panel.compute.workspaceRoot")}
+									/>
+								</div>
+								<div className="grid gap-2">
+									<input
+										className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+										value={hostForm.identityFile}
+										onChange={(event) =>
+											setHostForm((form) => ({ ...form, identityFile: event.target.value }))
+										}
+										placeholder={t("panel.compute.identityFile")}
+										aria-label={t("panel.compute.identityFile")}
+									/>
+									<input
+										className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
+										value={hostForm.jumpHosts}
+										onChange={(event) => setHostForm((form) => ({ ...form, jumpHosts: event.target.value }))}
+										placeholder={t("panel.compute.jumpHosts")}
+										aria-label={t("panel.compute.jumpHosts")}
+									/>
+									<input
+										className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
+										value={hostForm.hostKeyFingerprint}
+										onChange={(event) =>
+											setHostForm((form) => ({ ...form, hostKeyFingerprint: event.target.value }))
+										}
+										placeholder={t("panel.compute.hostKeyFingerprint")}
+										aria-label={t("panel.compute.hostKeyFingerprint")}
+									/>
+								</div>
+								<button type="submit" className="panel-action">
+									{t("panel.compute.addHost")}
+								</button>
+							</form>
+						</details>
+					</div>
 				</details>
 			</section>
 			<section className="mb-3">

@@ -44,6 +44,17 @@ function isBuiltinDronePackage(packageName: string): boolean {
 	);
 }
 
+function OperationProgress({ label }: { label: string }) {
+	return (
+		<div className="mt-2 flex items-center gap-2" role="progressbar" aria-label={label}>
+			<div className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-full bg-hover">
+				<div className="h-full w-1/2 animate-pulse rounded-full bg-accent" />
+			</div>
+			<span className="text-[10px] text-ink-faint">{label}</span>
+		</div>
+	);
+}
+
 function configuredPackageName(source: string): string {
 	const value = source.replace(/^npm:/u, "");
 	const match = value.match(/^(@[^/]+\/[^@]+|[^@]+)(?:@.+)?$/u);
@@ -157,6 +168,17 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 							{t("skillsConnections.lifecycleError", { message: host.lastLifecycleError })}
 						</p>
 					)}
+					{(installing || updating || removing) && (
+						<OperationProgress
+							label={
+								installing
+									? t("skillsConnections.installing")
+									: updating
+										? t("skillsConnections.updating")
+										: t("skillsConnections.removing")
+							}
+						/>
+					)}
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
 					<span className={`text-[11px] ${current.installed ? "text-ok" : "text-ink-faint"}`}>
@@ -173,37 +195,54 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 							onCheckedChange={(enabled) => void setPluginEnabled(uiPlugin.name, enabled)}
 							aria-label={uiPlugin.enabled ? t("skillsConnections.disable") : t("skillsConnections.enable")}
 						/>
-					) : current.installed && current.configured && !current.builtin ? (
+					) : (
 						<>
-							<button
-								type="button"
-								className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
-								disabled={updating || removing}
-								onClick={() => void update(entry.packageName)}
-							>
-								{updating ? t("skillsConnections.updating") : t("skillsConnections.update")}
-							</button>
-							<button
-								type="button"
-								className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
-								disabled={removing}
-								onClick={() => {
-									if (current.configured) void remove(current.configured.source, current.configured.scope);
+							<Switch
+								checked={current.installed}
+								disabled={current.builtin || installing || updating || removing}
+								onCheckedChange={(enabled) => {
+									if (enabled) void install(entry.packageName);
+									else if (current.configured)
+										void remove(current.configured.source, current.configured.scope);
 								}}
-							>
-								{removing ? t("skillsConnections.removing") : t("skillsConnections.uninstall")}
-							</button>
+								aria-label={
+									current.installed ? t("skillsConnections.disable") : t("skillsConnections.enable")
+								}
+							/>
+							{current.installed && current.configured && !current.builtin ? (
+								<>
+									<button
+										type="button"
+										className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
+										disabled={updating || removing}
+										onClick={() => void update(entry.packageName)}
+									>
+										{updating ? t("skillsConnections.updating") : t("skillsConnections.update")}
+									</button>
+									<button
+										type="button"
+										className="rounded-full border border-border px-2 py-1 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-60"
+										disabled={removing}
+										onClick={() => {
+											if (current.configured)
+												void remove(current.configured.source, current.configured.scope);
+										}}
+									>
+										{removing ? t("skillsConnections.removing") : t("skillsConnections.uninstall")}
+									</button>
+								</>
+							) : !current.installed ? (
+								<button
+									type="button"
+									className="rounded-full bg-ink px-2 py-1 text-[11px] text-canvas hover:opacity-90 disabled:opacity-60"
+									disabled={installing}
+									onClick={() => void install(entry.packageName)}
+								>
+									{installing ? t("skillsConnections.installing") : t("skillsConnections.install")}
+								</button>
+							) : null}
 						</>
-					) : !current.installed ? (
-						<button
-							type="button"
-							className="rounded-full bg-ink px-2 py-1 text-[11px] text-canvas hover:opacity-90 disabled:opacity-60"
-							disabled={installing}
-							onClick={() => void install(entry.packageName)}
-						>
-							{installing ? t("skillsConnections.installing") : t("skillsConnections.install")}
-						</button>
-					) : null}
+					)}
 				</div>
 			</div>
 		</li>

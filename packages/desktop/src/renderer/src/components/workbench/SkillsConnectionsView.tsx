@@ -635,6 +635,33 @@ export function SkillsConnectionsView() {
 											{skillUpdateBusy ? t("update.skillsChecking") : skillUpdateLabel}
 										</button>
 									</div>
+									{skillUpdateBusy ? (
+										<div
+											className="mt-3"
+											role="progressbar"
+											aria-valuemin={0}
+											aria-valuemax={100}
+											aria-valuenow={
+												skillUpdateState?.phase === "downloading" ? skillUpdateState.percent : undefined
+											}
+										>
+											<div className="h-1.5 overflow-hidden rounded-full bg-hover">
+												<div
+													className={`h-full rounded-full bg-accent ${skillUpdateState?.phase === "downloading" ? "transition-[width]" : "w-1/3 animate-pulse"}`}
+													style={
+														skillUpdateState?.phase === "downloading"
+															? { width: `${skillUpdateState.percent}%` }
+															: undefined
+													}
+												/>
+											</div>
+											<p className="mt-1 text-[11px] text-ink-faint">
+												{skillUpdateState?.phase === "downloading"
+													? t("update.skillsDownloading", { percent: skillUpdateState.percent })
+													: t("update.skillsChecking")}
+											</p>
+										</div>
+									) : null}
 								</div>
 								<section
 									className="mt-4 rounded-2xl border border-border bg-surface px-4 py-4"
@@ -926,21 +953,37 @@ export function SkillsConnectionsView() {
 														</button>
 													</div>
 												) : server ? (
-													<Switch
-														checked={!server.disabled}
-														disabled={pendingMcp === server.name}
-														onCheckedChange={(enabled) => {
-															setPendingMcp(server.name);
-															void getPi()
-																.setMcpServerEnabled(server.name, enabled, cwd ?? undefined)
-																.then(() => getPi().getMcpStatus(cwd ?? undefined))
-																.then(setMcp)
-																.finally(() => setPendingMcp(null));
-														}}
-														aria-label={
-															server.disabled ? t("skillsConnections.enable") : t("skillsConnections.disable")
-														}
-													/>
+													<div className="flex items-center gap-2">
+														<Switch
+															checked={!server.disabled}
+															disabled={pendingMcp === server.name}
+															onCheckedChange={(enabled) => {
+																setPendingMcp(server.name);
+																void getPi()
+																	.setMcpServerEnabled(server.name, enabled, cwd ?? undefined)
+																	.then(() => getPi().getMcpStatus(cwd ?? undefined))
+																	.then(setMcp)
+																	.catch((reason) =>
+																		setError(reason instanceof Error ? reason.message : String(reason)),
+																	)
+																	.finally(() => setPendingMcp(null));
+															}}
+															aria-label={
+																server.disabled
+																	? t("skillsConnections.enable")
+																	: t("skillsConnections.disable")
+															}
+														/>
+														<button
+															type="button"
+															className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
+															onClick={() => openSettings("mcp")}
+														>
+															{row.status === "configure"
+																? t("skillsConnections.configure")
+																: t("skillsConnections.view")}
+														</button>
+													</div>
 												) : (
 													<button
 														type="button"
@@ -999,7 +1042,9 @@ export function SkillsConnectionsView() {
 														<span className="block font-medium text-ink">{skill.name}</span>
 														<span className="mt-1 block truncate text-ink-faint">
 															/skill:{skill.name} ·{" "}
-															{skill.repository ? "GitHub source" : `loader: ${skill.source}`}
+															{skill.repository
+																? t("skillsConnections.repositorySource")
+																: `${t("skillsConnections.repositoryUnknown")} · loader: ${skill.source}`}
 														</span>
 														{repository ? (
 															<button
