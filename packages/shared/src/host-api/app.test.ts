@@ -12,6 +12,15 @@ describe("AppContract", () => {
 		expect(Check(AppContract.methods.checkResearchSkills.args, [])).toBe(true);
 		expect(Check(AppContract.methods.getInfo.args, [])).toBe(true);
 		expect(Check(AppContract.methods.getInfo.args, ["unexpected"])).toBe(false);
+		expect(channelOf(AppContract, "addSkillRepository")).toBe("app:addSkillRepository");
+		expect(
+			Check(AppContract.methods.addSkillRepository.args, [
+				{ kind: "local", source: "/tmp/skills", license: "MIT" },
+			]),
+		).toBe(true);
+		expect(
+			Check(AppContract.methods.addSkillRepository.args, [{ kind: "local", source: "", license: "MIT" }]),
+		).toBe(false);
 		expect(
 			Check(AppContract.methods.getInfo.result, {
 				name: "Drone",

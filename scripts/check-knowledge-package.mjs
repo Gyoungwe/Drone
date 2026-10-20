@@ -1,6 +1,7 @@
 // Offline resource/runtime smoke; run with Node or ELECTRON_RUN_AS_NODE=1 Electron.
 
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -30,6 +31,17 @@ try {
 	assert(
 		existsSync(join(resources, "extensions/.knowledge-worker-manifest.json")),
 		"Packaged research-workbench is missing the knowledge worker manifest",
+	);
+	const workerPath = join(resources, "extensions/knowledge-worker.mjs");
+	const workerManifest = JSON.parse(
+		await readFile(join(resources, "extensions/.knowledge-worker-manifest.json"), "utf8"),
+	);
+	assert.equal(
+		createHash("sha256")
+			.update(await readFile(workerPath))
+			.digest("hex"),
+		workerManifest.outputSha256,
+		"Packaged knowledge worker bytes do not match the build manifest",
 	);
 	const manifest = JSON.parse(await readFile(join(resources, "extensions/workbench-manifest.json"), "utf8")),
 		a = join(root, "A"),
@@ -93,6 +105,10 @@ try {
 	await child.makeSubagentReadonlyMcp(b)({ registerTool: (tool) => tools.push(tool.name), on: () => {} });
 	assert(tools.includes("research_search_knowledge"));
 	assert(!tools.includes("research_maintain_knowledge"));
+	const lifecycleEvents = [];
+	const lifecycleEventName = "drone:knowledge-worker-lifecycle/v1";
+	const onLifecycle = (event) => lifecycleEvents.push(event);
+	process.on(lifecycleEventName, onLifecycle);
 	const service = await serviceModule.getKnowledgeService();
 	const prepared = await service.prepare({ cwd: b, project: "project-b", query: "packagedmarker" });
 	await service.request("reconcile");
@@ -111,6 +127,11 @@ try {
 		true,
 		`incomplete search: ${JSON.stringify({ complete: result.complete, coverage: result.coverage, problems: result.problems })}`,
 	);
+	assert(
+		lifecycleEvents.some((event) => event?.stage === "verified"),
+		"Packaged knowledge worker did not report a verified lifecycle event",
+	);
+	process.off(lifecycleEventName, onLifecycle);
 	console.log(
 		JSON.stringify({
 			passed: true,
@@ -127,6 +148,8 @@ try {
 			noAmbientSkills: true,
 			noPrivateConfig: true,
 			rawMcpConnected: false,
+			workerLifecycle: lifecycleEvents.map((event) => event.stage),
+			workerIntegrity: workerManifest.outputSha256,
 		}),
 	);
 } finally {

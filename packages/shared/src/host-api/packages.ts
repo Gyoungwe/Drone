@@ -4,6 +4,7 @@ import type {
 	CatalogPackageType,
 	CatalogSearchResult,
 	ConfiguredPackageInfo,
+	PackageLifecycleReceipt,
 } from "../packages";
 import { defineDomain } from "./define";
 
@@ -56,6 +57,63 @@ const ConfiguredPackageInfoSchema = Type.Object(
 	{ additionalProperties: false },
 );
 
+const PackageLifecycleEventSchema = Type.Object(
+	{
+		type: Type.Union([
+			Type.Literal("staged"),
+			Type.Literal("verified"),
+			Type.Literal("enabled"),
+			Type.Literal("disabled"),
+			Type.Literal("drained"),
+			Type.Literal("reloaded"),
+			Type.Literal("reload_deferred"),
+			Type.Literal("rolled_back"),
+			Type.Literal("failed"),
+		]),
+		at: Type.Number({ minimum: 0 }),
+		sessionId: Type.Optional(Type.String({ minLength: 1 })),
+		detail: Type.Optional(Type.String()),
+	},
+	{ additionalProperties: false },
+);
+
+const PackageLifecycleErrorSchema = Type.Object(
+	{
+		code: Type.Union([
+			Type.Literal("invalid-source"),
+			Type.Literal("builtin"),
+			Type.Literal("not-installed"),
+			Type.Literal("unavailable"),
+			Type.Literal("operation-failed"),
+		]),
+		message: Type.String({ minLength: 1 }),
+		retryable: Type.Boolean(),
+	},
+	{ additionalProperties: false },
+);
+
+const PackageLifecycleReceiptSchema = Type.Object(
+	{
+		operation: Type.Union([Type.Literal("install"), Type.Literal("update"), Type.Literal("remove")]),
+		packageName: Type.String({ minLength: 1 }),
+		source: Type.String({ minLength: 1 }),
+		scope: Type.Union([Type.Literal("user"), Type.Literal("project")]),
+		status: Type.Union([Type.Literal("succeeded"), Type.Literal("failed")]),
+		effect: Type.Union([
+			Type.Literal("current-session"),
+			Type.Literal("next-session"),
+			Type.Literal("app-restart"),
+		]),
+		version: Type.Optional(Type.String({ minLength: 1 })),
+		previousVersion: Type.Optional(Type.String({ minLength: 1 })),
+		events: Type.Array(PackageLifecycleEventSchema),
+		error: Type.Optional(PackageLifecycleErrorSchema),
+		reloadedSessionIds: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+		deferredSessionIds: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+	},
+	{ additionalProperties: false },
+);
+
 /** Host API contract for pi.dev community package discovery and management. */
 export const PackagesContract = defineDomain("packages", {
 	methods: {
@@ -67,18 +125,18 @@ export const PackagesContract = defineDomain("packages", {
 		},
 		installPackage: {
 			args: Type.Tuple([Type.String({ minLength: 1 })]),
-			result: Type.Void(),
+			result: Type.Unsafe<PackageLifecycleReceipt>(PackageLifecycleReceiptSchema),
 		},
 		updatePackage: {
 			args: Type.Tuple([Type.String({ minLength: 1 })]),
-			result: Type.Void(),
+			result: Type.Unsafe<PackageLifecycleReceipt>(PackageLifecycleReceiptSchema),
 		},
 		removePackage: {
 			args: Type.Tuple([
 				Type.String({ minLength: 1 }),
 				Type.Union([Type.Literal("user"), Type.Literal("project")]),
 			]),
-			result: Type.Void(),
+			result: Type.Unsafe<PackageLifecycleReceipt>(PackageLifecycleReceiptSchema),
 		},
 		listConfiguredPackages: {
 			args: Type.Tuple([]),

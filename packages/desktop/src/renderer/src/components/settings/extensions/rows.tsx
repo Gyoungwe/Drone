@@ -186,7 +186,15 @@ export function CatalogRow({
 	const t = useT();
 	const installing = useCatalogStore((s) => s.installingNames[pkg.name] === true);
 	const installError = useCatalogStore((s) => s.installErrors[pkg.name]);
+	const updating = useCatalogStore((s) => s.updatingNames[pkg.name] === true);
+	const updateError = useCatalogStore((s) => s.updateErrors[pkg.name]);
+	const lifecycle = useCatalogStore((s) => s.lifecycleReceipts[pkg.name]);
+	const sourceLifecycle = useCatalogStore((s) =>
+		configured ? s.lifecycleReceipts[configured.source] : undefined,
+	);
+	const removeError = useCatalogStore((s) => (configured ? s.removeErrors[configured.source] : undefined));
 	const installCatalogPackage = useCatalogStore((s) => s.installCatalogPackage);
+	const updateCatalogPackage = useCatalogStore((s) => s.updateCatalogPackage);
 	// subagent 包安装前警示：两段式确认（与 UninstallButton 同模式，不用 window.confirm）
 	const [warnConfirming, setWarnConfirming] = useState(false);
 	const warnTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -226,10 +234,36 @@ export function CatalogRow({
 							: installError}
 					</p>
 				)}
+				{updateError && (
+					<p className="mt-1 text-xs text-err">
+						{t("settings.extensions.updateFailed")}: {updateError}
+					</p>
+				)}
+				{removeError && (
+					<p className="mt-1 text-xs text-err">
+						{t("settings.extensions.removeFailed")}: {removeError}
+					</p>
+				)}
+				{(lifecycle ?? sourceLifecycle)?.status === "succeeded" &&
+					(lifecycle ?? sourceLifecycle)?.effect !== "app-restart" && (
+						<p className="mt-1 text-[11px] text-ok">
+							{(lifecycle ?? sourceLifecycle)?.effect === "next-session"
+								? t("settings.extensions.effectiveNext")
+								: t("settings.extensions.effectiveCurrent")}
+						</p>
+					)}
 			</div>
 			<div className="shrink-0 pt-0.5">
 				{configured ? (
 					<div className="flex items-center gap-0.5">
+						<Button
+							variant="secondary"
+							size="sm"
+							disabled={updating}
+							onClick={() => void updateCatalogPackage(pkg.name)}
+						>
+							{updating ? t("settings.extensions.updating") : t("settings.extensions.update")}
+						</Button>
 						<span className="inline-flex items-center gap-1 px-2 py-1 text-[12px] text-ink-faint">
 							<CheckIcon size={11} />
 							{t("settings.extensions.installed")}

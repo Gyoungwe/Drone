@@ -1,8 +1,15 @@
-import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
-import { configureKnowledgeWorker } from "@drone/knowledge/runtime-host";
+import {
+	configureKnowledgeRuntime,
+	configureKnowledgeWorker,
+	KNOWLEDGE_WORKER_LIFECYCLE_EVENT,
+	type KnowledgeWorkerLifecycleEvent,
+	type KnowledgeWorkerMetadata,
+} from "@drone/knowledge/runtime-host";
 import * as knowledgeUiService from "@drone/knowledge/ui-service";
 import * as knowledgeUiState from "@drone/knowledge/ui-state";
 import * as knowledgeWikiModelReview from "@drone/knowledge/wiki-model-review";
@@ -12,16 +19,102 @@ import { KnowledgeWebDavService } from "./webdav";
 
 type Handler = (event: KnowledgeUiEvent) => void;
 
+export interface KnowledgeWorkerLifecycleSnapshot {
+	readonly currentVersion: string | null;
+	readonly nextSessionVersion: string | null;
+	readonly state: "unconfigured" | "staged" | "verified" | "enabled" | "disabled" | "rolled_back";
+	readonly source?: string;
+	readonly integrity?: string;
+	readonly lastError?: string;
+	readonly events: readonly KnowledgeWorkerLifecycleEvent[];
+}
+
+const workerLifecycle: {
+	currentVersion: string | null;
+	nextSessionVersion: string | null;
+	state: KnowledgeWorkerLifecycleSnapshot["state"];
+	source?: string;
+	integrity?: string;
+	lastError?: string;
+	events: KnowledgeWorkerLifecycleEvent[];
+} = {
+	currentVersion: null,
+	nextSessionVersion: null,
+	state: "unconfigured",
+	events: [],
+};
+
+process.on(KNOWLEDGE_WORKER_LIFECYCLE_EVENT, (value: unknown) => {
+	if (!value || typeof value !== "object") return;
+	const event = value as Partial<KnowledgeWorkerLifecycleEvent>;
+	if (typeof event.stage !== "string" || typeof event.version !== "string" || typeof event.at !== "string")
+		return;
+	const bounded: KnowledgeWorkerLifecycleEvent = {
+		stage: event.stage as KnowledgeWorkerLifecycleEvent["stage"],
+		version: event.version.slice(0, 200),
+		...(typeof event.previousVersion === "string"
+			? { previousVersion: event.previousVersion.slice(0, 200) }
+			: {}),
+		...(typeof event.source === "string" ? { source: event.source.slice(0, 1000) } : {}),
+		...(typeof event.integrity === "string" ? { integrity: event.integrity.slice(0, 200) } : {}),
+		...(typeof event.reason === "string" ? { reason: event.reason.slice(0, 400) } : {}),
+		...(typeof event.pendingRequests === "number" ? { pendingRequests: event.pendingRequests } : {}),
+		at: event.at,
+	};
+	workerLifecycle.events = [...workerLifecycle.events, bounded].slice(-32);
+	workerLifecycle.state =
+		bounded.stage === "reloaded" ? "enabled" : bounded.stage === "drained" ? "disabled" : bounded.stage;
+	if (
+		bounded.stage === "staged" &&
+		workerLifecycle.currentVersion &&
+		bounded.version !== workerLifecycle.currentVersion
+	)
+		workerLifecycle.nextSessionVersion = bounded.version;
+	if (["enabled", "reloaded", "verified"].includes(bounded.stage)) {
+		workerLifecycle.currentVersion = bounded.version;
+		workerLifecycle.nextSessionVersion = null;
+	}
+	if (bounded.stage === "rolled_back") {
+		workerLifecycle.lastError = bounded.reason;
+		workerLifecycle.nextSessionVersion = null;
+	}
+	if (bounded.source) workerLifecycle.source = bounded.source;
+	if (bounded.integrity) workerLifecycle.integrity = bounded.integrity;
+});
+
+export function getKnowledgeWorkerLifecycle(): KnowledgeWorkerLifecycleSnapshot {
+	return {
+		currentVersion: workerLifecycle.currentVersion,
+		nextSessionVersion: workerLifecycle.nextSessionVersion,
+		state: workerLifecycle.state,
+		...(workerLifecycle.source ? { source: workerLifecycle.source } : {}),
+		...(workerLifecycle.integrity ? { integrity: workerLifecycle.integrity } : {}),
+		...(workerLifecycle.lastError ? { lastError: workerLifecycle.lastError } : {}),
+		events: workerLifecycle.events.map((event) => ({ ...event })),
+	};
+}
+
 /**
  * Backend UI calls can construct KnowledgeService before a Pi extension is
  * loaded. Install the same generated worker seam used by the extension entry
  * so review and graph IPC work in both development and packaged hosts.
  */
 export function configureBackendKnowledgeWorker(): void {
-	configureKnowledgeWorker((_url, options) => {
-		const workerPath = resolveBackendKnowledgeWorkerPath();
-		return new Worker(pathToFileURL(workerPath), options as any);
-	});
+	configureKnowledgeRuntime({ emitProcessEvent: (event, payload) => (process as any).emit(event, payload) });
+	configureKnowledgeWorker(
+		(_url, options) => {
+			const resource = resolveBackendKnowledgeWorkerResource();
+			const workerData =
+				options && typeof options === "object" && options.workerData && typeof options.workerData === "object"
+					? options.workerData
+					: {};
+			return new Worker(pathToFileURL(resource.path), {
+				...options,
+				workerData: { ...workerData, workerResource: resource.metadata },
+			} as any);
+		},
+		() => resolveBackendKnowledgeWorkerResource().metadata,
+	);
 }
 
 export function resolveBackendKnowledgeWorkerPath(root = process.env.DRONE_RESEARCH_WORKBENCH_ROOT): string {
@@ -30,6 +123,46 @@ export function resolveBackendKnowledgeWorkerPath(root = process.env.DRONE_RESEA
 	if (!existsSync(workerPath))
 		throw new Error(`Knowledge worker resource is missing from the host: ${workerPath}`);
 	return workerPath;
+}
+
+export interface BackendKnowledgeWorkerResource {
+	readonly path: string;
+	readonly manifestPath: string;
+	readonly metadata: KnowledgeWorkerMetadata;
+}
+
+/**
+ * Resolve and verify the generated worker and its checked-in build manifest.
+ * A file that merely exists is insufficient: packaged resources can be stale
+ * or partially copied, so the host refuses to start a worker whose bytes do
+ * not match the manifest hash.
+ */
+export function resolveBackendKnowledgeWorkerResource(
+	root = process.env.DRONE_RESEARCH_WORKBENCH_ROOT,
+): BackendKnowledgeWorkerResource {
+	const workbenchRoot = root ?? fileURLToPath(new URL("../../../../.pi", import.meta.url));
+	const path = join(workbenchRoot, "extensions", "knowledge-worker.mjs");
+	const manifestPath = join(workbenchRoot, "extensions", ".knowledge-worker-manifest.json");
+	if (!existsSync(path)) throw new Error(`Knowledge worker resource is missing from the host: ${path}`);
+	if (!existsSync(manifestPath))
+		throw new Error(`Knowledge worker manifest is missing from the host: ${manifestPath}`);
+	let manifest: Record<string, unknown>;
+	try {
+		manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+	} catch (error) {
+		throw new Error(`Knowledge worker manifest is invalid: ${manifestPath}`, { cause: error });
+	}
+	const expected = typeof manifest.outputSha256 === "string" ? manifest.outputSha256 : "";
+	if (!/^[a-f0-9]{64}$/u.test(expected))
+		throw new Error(`Knowledge worker manifest has no valid output hash: ${manifestPath}`);
+	const actual = createHash("sha256").update(readFileSync(path)).digest("hex");
+	if (actual !== expected) throw new Error(`Knowledge worker resource hash mismatch: ${path}`);
+	const version = `${typeof manifest.version === "number" || typeof manifest.version === "string" ? manifest.version : "1"}:${expected.slice(0, 16)}`;
+	return {
+		path,
+		manifestPath,
+		metadata: { version, source: path, integrity: expected },
+	};
 }
 
 // Session/UI services are imported before the host loads its extension list.

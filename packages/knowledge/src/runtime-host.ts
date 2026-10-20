@@ -112,14 +112,82 @@ export function flowCardBuilder(_toolName: string): unknown {
 }
 
 export type KnowledgeWorkerFactory = (url: URL, options: Record<string, unknown>) => unknown;
+export interface KnowledgeWorkerMetadata {
+	/** Human-readable worker artifact version (usually a build manifest hash). */
+	readonly version: string;
+	/** Absolute or package-relative resource path, when the host can disclose it. */
+	readonly source?: string;
+	/** SHA-256 of the exact worker bytes, when available. */
+	readonly integrity?: string;
+}
+export type KnowledgeWorkerMetadataProvider = () => KnowledgeWorkerMetadata;
 let workerFactory: KnowledgeWorkerFactory = (url, options) => {
 	throw new Error(`Knowledge worker host is not configured for ${url.href}`);
 };
-export function configureKnowledgeWorker(factory: KnowledgeWorkerFactory): void {
+let workerMetadataProvider: KnowledgeWorkerMetadataProvider = () => ({ version: "unknown" });
+/**
+ * Install the worker factory used by the domain service.  Hosts may also
+ * provide a lazy metadata reader: packaged hosts select their resource root
+ * after this module is imported, so resolving the manifest eagerly would
+ * accidentally pin the development path.
+ */
+export function configureKnowledgeWorker(
+	factory: KnowledgeWorkerFactory,
+	metadata?: KnowledgeWorkerMetadataProvider,
+): void {
+	if (typeof factory !== "function") throw new TypeError("Knowledge worker host must provide a factory");
 	workerFactory = factory;
+	if (metadata) workerMetadataProvider = metadata;
 }
 export function createKnowledgeWorker(url: URL, options: Record<string, unknown>): unknown {
 	return workerFactory(url, options);
+}
+export function knowledgeWorkerMetadata(): KnowledgeWorkerMetadata {
+	try {
+		const value = workerMetadataProvider();
+		if (!value || typeof value.version !== "string" || !value.version) return { version: "unknown" };
+		return {
+			version: value.version.slice(0, 200),
+			...(typeof value.source === "string" ? { source: value.source.slice(0, 1000) } : {}),
+			...(typeof value.integrity === "string" ? { integrity: value.integrity.slice(0, 200) } : {}),
+		};
+	} catch {
+		// Metadata is diagnostic only. A host must still fail closed when the
+		// factory cannot load its resource; do not let a broken manifest reader
+		// turn a valid worker into an unhandled startup exception here.
+		return { version: "unknown" };
+	}
+}
+
+export const KNOWLEDGE_WORKER_LIFECYCLE_EVENT = "drone:knowledge-worker-lifecycle/v1";
+export type KnowledgeWorkerLifecycleStage =
+	| "staged"
+	| "verified"
+	| "enabled"
+	| "disabled"
+	| "drained"
+	| "reloaded"
+	| "rolled_back";
+export interface KnowledgeWorkerLifecycleEvent {
+	readonly stage: KnowledgeWorkerLifecycleStage;
+	readonly version: string;
+	readonly previousVersion?: string;
+	readonly source?: string;
+	readonly integrity?: string;
+	readonly reason?: string;
+	readonly pendingRequests?: number;
+	readonly at: string;
+}
+/** Emit bounded, metadata-only lifecycle evidence through the host seam. */
+export function emitKnowledgeWorkerLifecycle(
+	stage: KnowledgeWorkerLifecycleStage,
+	partial: Omit<KnowledgeWorkerLifecycleEvent, "stage" | "at">,
+): void {
+	emitProcessEvent(KNOWLEDGE_WORKER_LIFECYCLE_EVENT, {
+		stage,
+		...partial,
+		at: new Date().toISOString(),
+	});
 }
 export function configureKnowledgeEvidence(host: {
 	requiresPaperEvidence?: (query: string) => boolean;

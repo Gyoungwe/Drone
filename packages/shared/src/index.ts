@@ -93,6 +93,7 @@ export * from "./session";
 export * from "./settings";
 export * from "./skill-catalog";
 export * from "./skill-invocation";
+export * from "./skill-repository";
 export * from "./subagent";
 export * from "./task-status";
 export * from "./task-workbench";

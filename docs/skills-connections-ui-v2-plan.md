@@ -1,6 +1,6 @@
 # 技能与连接页 v2：Pi 市场、Drone 插件与能力生命周期
 
-状态：设计已确认；P0～P3 和 P4 的已实现部分已在 macOS 正式包回读。市场栏、连接器描述、Drone registry 元数据、sticky 导航、SSH 选择器和 UI 插件重载均有证据；本轮返修已补齐空配置 Skill 投影、内置插件状态、Zotero/WebDAV 去重、知识库单层页签/网络图空状态和项目/最近空态。官方/Drone 包完整安装更新卸载、任意 Skill 仓库添加/应用、MCP 真实配置和深色前后视觉对照仍未完成。
+状态：设计已确认；P0～P3 和 P4 的代码门槛已完成，真实证据已补齐到 Skill 仓库管理、worker 回滚、原生 Pi/MCP 和深色构建渲染对照。市场栏已用真实 registry 包完成安装/卸载与生命周期回执验收；Pi CLI 的“更新后版本替换”仍待上游 CLI 行为稳定后再升级为完整 PASS。外部用户自定义 MCP 和交互式 Electron GUI 仍按红线标记为 NOT_RUN/BLOCKED，不用静态结果冒充通过。
 
 本计划承接 [`final-pluginization-plan.md`](final-pluginization-plan.md) 的插件化边界和 [`plugin-hot-reload-plan.md`](plugin-hot-reload-plan.md) 的分层重载规则。它只重做 Desktop 的“技能与连接”页信息架构，不改变 `@gyoungwe/plugin-api`、Pi package manifest 或已有结果/证据合同。
 
@@ -172,9 +172,11 @@ Skill 仓库                                      [添加仓库]
 
 | 阶段 | 状态 | 已有证据 | 未关闭项 |
 | --- | --- | --- | --- |
-| P0–P2 | **PASS（实现/正式包回读）** | 四栏合同、市场来源合并、连接器描述/开关和 MCP 错误状态代码均已落地；v0.33.4 安装包回读市场、sticky 导航和连接器开关。 | MCP 仍因无配置为 `NOT_RUN`，没有真实外部 server 的错误/恢复回读。 |
-| P3 | **PARTIAL** | 内置研究技能来源映射、GitHub/Atom 检查、staging、完整性校验、失败恢复和手动检查入口已通过。 | 尚无“添加任意 Git URL/本地目录 + 分支/路径/许可依据 + 卸载来源”的持久化 IPC/UI；手动更新的真实应用/回滚尚未在正式包完成。 |
-| P4 | **PARTIAL** | UI plugin 运行中启停/重载、市场元数据、四栏和 SSH 选择器已有正式包证据；浅色四视图通过。 | 官方 extension 安装、Drone 包更新/卸载、worker 排空/失败回滚、Pi 下一会话提示、MCP 真实运行和深色前后截图仍未闭合。 |
+| P0–P2 | **PASS（实现/真实宿主回读）** | 四栏合同、市场来源合并、连接器描述/开关和 MCP 错误状态代码均已落地；真实 native Pi + stdio MCP fixture 完成启用→tool call→卸载回读。 | 外部用户自定义 MCP 的错误/恢复仍为 `NOT_RUN`，不影响本地 MCP 门禁。 |
+| P3 | **PASS（代码与隔离 FS 回归）** | 任意 Git URL/本地目录、ref/subpath/许可依据、哈希 staging、原子应用、失败保留、来源卸载的 IPC/UI 与 3/3 定向回归已完成；失败时当前版本保持不变。 | 正式 Electron GUI 的交互式截图仍受环境限制；真实远端仓库凭据写入不在本轮验收范围。 |
+| P4 | **PARTIAL（真实 Pi/MCP/worker，GUI 视觉为构建产物）** | UI plugin 生命周期、worker 排空/失败回滚、registry 包安装/卸载、原生 Pi 1.1.0 `/drone-doctor` 与模型会话、native MCP tool call、深色四视图均有证据。 | Pi CLI `update` 返回成功但版本替换仍需上游行为稳定；官方第三方 extension 和交互式 Electron GUI 保持 `NOT_RUN/BLOCKED`。 |
+
+本轮市场生命周期门禁增加了 `npm run check:market-plugin-lifecycle`：它在临时目录中用真实 `npm pack` tarball 完成安装→更新→卸载并输出无凭据回执；另用真实 registry 的 `@gyoungwe/pi-core@0.1.5` 完成安装、`/drone-doctor`、模型会话和卸载。Pi CLI 的更新命令已回读成功，但当前 managed package 目录仍保留旧版本，因此版本替换暂不标记 PASS；官方第三方 extension 仍为 `NOT_RUN`。
 
 实现边界因此保持不变：不把内置来源卡片误报为通用 Skill 仓库管理，不把静态预览或 loader-only 结果标为最终 PASS，也不把 B8 或 Protocols.io 写入拉回当前范围。
 

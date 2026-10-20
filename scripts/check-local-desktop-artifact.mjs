@@ -264,6 +264,35 @@ async function run() {
 
 	const workbenchManifestPath = ".pi/extensions/workbench-manifest.json";
 	const workbenchManifest = JSON.parse(await readText(sourcePath(repoRoot, workbenchManifestPath)));
+	const knowledgeWorkerPath = sourcePath(repoRoot, ".pi/extensions/knowledge-worker.mjs");
+	const knowledgeWorkerManifestPath = sourcePath(repoRoot, ".pi/extensions/.knowledge-worker-manifest.json");
+	let knowledgeWorkerOk = false;
+	let knowledgeWorkerEvidence = {};
+	try {
+		const [workerBytes, workerManifest] = await Promise.all([
+			readFile(knowledgeWorkerPath),
+			readText(knowledgeWorkerManifestPath).then(JSON.parse),
+		]);
+		const actualHash = createHash("sha256").update(workerBytes).digest("hex");
+		knowledgeWorkerOk =
+			actualHash === workerManifest.outputSha256 && compiledText.includes("knowledge-worker.mjs");
+		knowledgeWorkerEvidence = {
+			paths: [".pi/extensions/knowledge-worker.mjs", ".pi/extensions/.knowledge-worker-manifest.json"],
+			outputSha256: workerManifest.outputSha256,
+			actualSha256: actualHash,
+			compiledResourceMarker: compiledText.includes("knowledge-worker.mjs"),
+		};
+	} catch (error) {
+		knowledgeWorkerEvidence = { error: String(error?.message || error) };
+	}
+	addCheck(
+		"knowledge-worker-resource",
+		knowledgeWorkerOk ? "PASS" : "FAIL",
+		knowledgeWorkerOk
+			? "generated knowledge worker and hash manifest are present and referenced by the desktop build"
+			: "generated knowledge worker resource, manifest or desktop reference is missing",
+		knowledgeWorkerEvidence,
+	);
 	const skillPaths = [
 		"packages/desktop/resources/skills/channel-pickup/SKILL.md",
 		"packages/desktop/resources/skills/design-handoff/SKILL.md",

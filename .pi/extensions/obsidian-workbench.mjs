@@ -253,11 +253,33 @@ function toolMeta(_toolName) {
 function flowCardBuilder(_toolName) {
   return cardBuilderLookup(_toolName);
 }
-function configureKnowledgeWorker(factory) {
+function configureKnowledgeWorker(factory, metadata) {
+  if (typeof factory !== "function") throw new TypeError("Knowledge worker host must provide a factory");
   workerFactory = factory;
+  if (metadata) workerMetadataProvider = metadata;
 }
 function createKnowledgeWorker(url, options) {
   return workerFactory(url, options);
+}
+function knowledgeWorkerMetadata() {
+  try {
+    const value = workerMetadataProvider();
+    if (!value || typeof value.version !== "string" || !value.version) return { version: "unknown" };
+    return {
+      version: value.version.slice(0, 200),
+      ...typeof value.source === "string" ? { source: value.source.slice(0, 1e3) } : {},
+      ...typeof value.integrity === "string" ? { integrity: value.integrity.slice(0, 200) } : {}
+    };
+  } catch {
+    return { version: "unknown" };
+  }
+}
+function emitKnowledgeWorkerLifecycle(stage, partial) {
+  emitProcessEvent(KNOWLEDGE_WORKER_LIFECYCLE_EVENT, {
+    stage,
+    ...partial,
+    at: (/* @__PURE__ */ new Date()).toISOString()
+  });
 }
 function configureKnowledgeHost(host = {}) {
   if (host.loadWorkspaceConfig) workspaceConfigLoader = host.loadWorkspaceConfig;
@@ -272,7 +294,7 @@ function configureKnowledgeSetup(host = {}) {
   if (host.resolveSetupVault) setupVaultResolver = host.resolveSetupVault;
   if (host.researchSetupOptions) setupOptionsReader = host.researchSetupOptions;
 }
-var locks, defaultRunRuntimeExclusive, runtimeExclusive, processEvent, metadataLookup, cardBuilderLookup, deliveryLookup, hostSlotProvider, runRuntimeExclusive, emitProcessEvent, slots, workerFactory, requiresPaperEvidence, hasPaperCitation, deliveryContract, workspaceConfigLoader, explainerPublisher, reviewPreviewConsumer, specialistSettingsReader, loadWorkspaceConfig2, publishExplainer, layoutDefinition, obsidianSetupInspector, setupDirectoryInspector, setupVaultResolver, setupOptionsReader, LAYOUT2;
+var locks, defaultRunRuntimeExclusive, runtimeExclusive, processEvent, metadataLookup, cardBuilderLookup, deliveryLookup, hostSlotProvider, runRuntimeExclusive, emitProcessEvent, slots, workerFactory, workerMetadataProvider, KNOWLEDGE_WORKER_LIFECYCLE_EVENT, requiresPaperEvidence, hasPaperCitation, deliveryContract, workspaceConfigLoader, explainerPublisher, reviewPreviewConsumer, specialistSettingsReader, loadWorkspaceConfig2, publishExplainer, layoutDefinition, obsidianSetupInspector, setupDirectoryInspector, setupVaultResolver, setupOptionsReader, LAYOUT2;
 var init_runtime_host = __esm({
   "packages/knowledge/src/runtime-host.ts"() {
     "use strict";
@@ -303,6 +325,8 @@ var init_runtime_host = __esm({
     workerFactory = (url, options) => {
       throw new Error(`Knowledge worker host is not configured for ${url.href}`);
     };
+    workerMetadataProvider = () => ({ version: "unknown" });
+    KNOWLEDGE_WORKER_LIFECYCLE_EVENT = "drone:knowledge-worker-lifecycle/v1";
     requiresPaperEvidence = (query) => /paper|literature|article|文献|论文/i.test(query);
     hasPaperCitation = (sources) => Array.isArray(sources) && sources.some((source) => {
       const value = source;
@@ -331,7 +355,7 @@ var init_runtime_host = __esm({
 });
 
 // packages/knowledge/src/files.ts
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat as lstat2, open, realpath as realpath5 } from "node:fs/promises";
 import { isAbsolute as isAbsolute5, join as join7, relative as relative3, sep as sep3 } from "node:path";
@@ -404,7 +428,7 @@ async function readNoteFile(vault, path) {
     return {
       path,
       text: bytes.toString("utf8"),
-      hash: createHash2("sha256").update(bytes).digest("hex"),
+      hash: createHash3("sha256").update(bytes).digest("hex"),
       signature: fileVersion(after),
       bytes: offset
     };
@@ -438,7 +462,7 @@ var init_files = __esm({
 });
 
 // packages/knowledge/src/review-policy.ts
-import { readFileSync } from "node:fs";
+import { readFileSync as readFileSync2 } from "node:fs";
 import { join as join9 } from "node:path";
 function errorCode2(error2) {
   return error2 && typeof error2 === "object" && "code" in error2 ? error2.code : void 0;
@@ -448,7 +472,7 @@ function readReviewMode() {
   const root = knowledgeDirectory();
   if (!root) return "automatic";
   try {
-    const value = JSON.parse(readFileSync(join9(root, "review-policy.json"), "utf8"));
+    const value = JSON.parse(readFileSync2(join9(root, "review-policy.json"), "utf8"));
     const mode = value && typeof value === "object" && "mode" in value ? value.mode : void 0;
     return mode === "automatic" ? "automatic" : "strict";
   } catch (error2) {
@@ -1033,7 +1057,7 @@ var init_specialist_host = __esm({
 });
 
 // packages/knowledge/src/wiki-review.ts
-import { createHash as createHash6, randomUUID as randomUUID9 } from "node:crypto";
+import { createHash as createHash7, randomUUID as randomUUID9 } from "node:crypto";
 import { link as link3, lstat as lstat5, mkdir as mkdir8, readdir as readdir4, readFile as readFile7, rename as rename8, unlink as unlink5, writeFile as writeFile8 } from "node:fs/promises";
 import { basename as basename5, dirname as dirname6, join as join13 } from "node:path";
 async function exclusive(key, operation) {
@@ -1583,7 +1607,7 @@ var init_wiki_review = __esm({
     AUTOMATIC_AUTHORITY = Symbol("host-automatic-wiki");
     START2 = "<!-- pi-agent:managed:start -->";
     END2 = "<!-- pi-agent:managed:end -->";
-    digest = (text3) => createHash6("sha256").update(text3).digest("hex");
+    digest = (text3) => createHash7("sha256").update(text3).digest("hex");
     MAX_PENDING = 100;
     MAX_AGE = 24 * 60 * 60 * 1e3;
     RENAME_RETRY_CODES = /* @__PURE__ */ new Set(["EPERM", "EACCES", "EBUSY"]);
@@ -1691,7 +1715,7 @@ var init_claim_conflicts = __esm({
 });
 
 // packages/knowledge/src/topic-memory.ts
-import { createHash as createHash14, randomUUID as randomUUID18 } from "node:crypto";
+import { createHash as createHash15, randomUUID as randomUUID18 } from "node:crypto";
 import { lstat as lstat11, mkdir as mkdir11, readFile as readFile12, realpath as realpath15, rename as rename10, unlink as unlink6, writeFile as writeFile11 } from "node:fs/promises";
 import { dirname as dirname9, isAbsolute as isAbsolute15, join as join17, relative as relative15, resolve as resolve19, sep as sep13 } from "node:path";
 function projectKey(project) {
@@ -2271,7 +2295,7 @@ var init_topic_memory = __esm({
       maxConflicts: 32,
       maxFileBytes: 512 * 1024
     });
-    digest3 = (value) => createHash14("sha256").update(String(value)).digest("hex");
+    digest3 = (value) => createHash15("sha256").update(String(value)).digest("hex");
     text2 = (value, limit) => String(value ?? "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, limit);
     slug = (value) => text2(value, 160).toLowerCase().replace(/[^a-z0-9\u0080-\uffff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "topic";
   }
@@ -2399,7 +2423,7 @@ ${JSON.stringify({ binding: OBSIDIAN_SETUP_BINDING, context, current, userPrefer
 }
 
 // packages/extensions/src/internal/obsidian-workbench.ts
-import { createHash as createHash7, randomUUID as randomUUID11 } from "node:crypto";
+import { createHash as createHash8, randomUUID as randomUUID11 } from "node:crypto";
 import { access as access2, mkdir as mkdir9, readdir as readdir5, readFile as readFile8, realpath as realpath8, rename as rename9, stat as stat4, writeFile as writeFile9 } from "node:fs/promises";
 import { basename as basename6, dirname as dirname8, isAbsolute as isAbsolute9, join as join15, relative as relative8, resolve as resolve11, sep as sep7 } from "node:path";
 import { fileURLToPath as fileURLToPath3, pathToFileURL as pathToFileURL3 } from "node:url";
@@ -2852,7 +2876,8 @@ async function saveWorkspaceConfig(cwd = process.cwd(), patch = {}) {
 // packages/extensions/src/internal/knowledge-runtime.ts
 init_runtime_host();
 import { Worker } from "node:worker_threads";
-import { existsSync } from "node:fs";
+import { createHash as createHash2 } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { join as join6, resolve as resolve6 } from "node:path";
 
@@ -3242,7 +3267,28 @@ function configureKnowledgeExtensionRuntime() {
       if (existsSync(fileURLToPath(sourceWorker))) return new Worker(sourceWorker, options);
     }
     throw new Error("Knowledge worker resource is missing from the packaged extension");
-  });
+  }, () => extensionWorkerMetadata());
+}
+function extensionWorkerMetadata() {
+  const worker = new URL("knowledge-worker.mjs", import.meta.url);
+  if (worker.protocol !== "file:" || !existsSync(fileURLToPath(worker))) return { version: "unknown" };
+  const workerPath = fileURLToPath(worker);
+  const manifestPath = join6(resolve6(workerPath, ".."), ".knowledge-worker-manifest.json");
+  if (!existsSync(manifestPath)) return { version: "unknown", source: workerPath };
+  try {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const integrity = typeof manifest.outputSha256 === "string" ? manifest.outputSha256 : "";
+    const actual = createHash2("sha256").update(readFileSync(workerPath)).digest("hex");
+    if (!/^[a-f0-9]{64}$/u.test(integrity) || actual !== integrity)
+      throw new Error("knowledge worker manifest hash mismatch");
+    return {
+      version: `${typeof manifest.version === "number" || typeof manifest.version === "string" ? manifest.version : "1"}:${integrity.slice(0, 16)}`,
+      source: workerPath,
+      integrity
+    };
+  } catch (error2) {
+    throw new Error(`Knowledge worker manifest is invalid: ${manifestPath}`, { cause: error2 });
+  }
 }
 
 // packages/extensions/src/internal/obsidian-workbench.ts
@@ -3271,12 +3317,12 @@ var DAILY_DISCOVERY_LIMITS = {
 init_files();
 
 // packages/knowledge/src/maintenance.ts
-import { createHash as createHash4, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
 import { mkdir as mkdir5, rename as rename5, writeFile as writeFile5 } from "node:fs/promises";
 import { dirname as dirname4 } from "node:path";
 
 // packages/knowledge/src/layout.ts
-import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
 init_files();
 import { link as link2, lstat as lstat3, mkdir as mkdir4, open as open2, realpath as realpath6, rename as rename4, unlink as unlink2, writeFile as writeFile4 } from "node:fs/promises";
 import { basename as basename4, dirname as dirname3, isAbsolute as isAbsolute6, join as join8, relative as relative4, resolve as resolve7, sep as sep4 } from "node:path";
@@ -3326,7 +3372,7 @@ function navigationBase(heading) {
 ## Human review
 `;
 }
-var hash = (text3) => createHash3("sha256").update(text3).digest("hex");
+var hash = (text3) => createHash4("sha256").update(text3).digest("hex");
 async function updateVaultNavigation(vault, path, heading, body, containedFile2 = containedVaultFile) {
   if (!NAVIGATION_TARGETS.has(path) && !/^Projects\/[a-z0-9-]+\/Index\.md$/.test(path))
     throw new Error("Not an allowed navigation target");
@@ -3425,7 +3471,7 @@ project: ${JSON.stringify(project)}
 init_files();
 var START = "<!-- pi-agent:managed:start -->";
 var END = "<!-- pi-agent:managed:end -->";
-var hash2 = (text3) => createHash4("sha256").update(text3).digest("hex");
+var hash2 = (text3) => createHash5("sha256").update(text3).digest("hex");
 async function updateNavigation(vault, path, heading, body) {
   if (!["Home.md", "Wiki/Index.md", "Library/Index.md"].includes(path) && !/^Projects\/[a-z0-9-]+\/Index\.md$/.test(path))
     throw new Error("Not an allowed navigation target");
@@ -3561,7 +3607,7 @@ init_runtime_host();
 init_config();
 init_files();
 init_review_policy();
-import { createHash as createHash5, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash6, randomUUID as randomUUID7 } from "node:crypto";
 import { join as join11, relative as relative5, resolve as resolve8, sep as sep5 } from "node:path";
 
 // packages/knowledge/src/semantic-provider.ts
@@ -4023,10 +4069,13 @@ var saveSemanticSettings = (vaultId, input, expectedRevision) => defaultApi.save
 init_ui_state();
 var pool = runtimeSlot("knowledge", "workerPool", () => {
   const services = /* @__PURE__ */ new Map();
+  const transitions = /* @__PURE__ */ new Map();
   return Object.assign(services, {
+    transitions,
     async dispose() {
       const allocated = [...services.values()];
       services.clear();
+      transitions.clear();
       await Promise.allSettled(allocated.map((service) => service.close()));
     }
   });
@@ -4068,7 +4117,7 @@ function providerConfig(settings) {
   };
 }
 function fingerprintFor(settings) {
-  return createHash5("sha256").update(`${settings.provider}\0${settings.baseUrl}\0${settings.model}\0${settings.chunkChars || 1200}`).digest("hex");
+  return createHash6("sha256").update(`${settings.provider}\0${settings.baseUrl}\0${settings.model}\0${settings.chunkChars || 1200}`).digest("hex");
 }
 function awaitSemanticDeadline(operation, controller) {
   let onAbort;
@@ -4091,27 +4140,77 @@ var KnowledgeService = class {
     this.semanticCandidateProvider = typeof options.semanticCandidateProvider === "function" ? options.semanticCandidateProvider : null;
     this.tickets = /* @__PURE__ */ new Map();
     this.pending = /* @__PURE__ */ new Map();
+    this.inFlightRequests = 0;
     this.next = 0;
     this.closed = false;
     this.closing = false;
     this.closePromise = null;
-    this.worker = createKnowledgeWorker(new URL("./worker.mjs", import.meta.url), {
-      workerData: { vault: binding.vault, database: join11(directory, binding.vaultId, "index.sqlite") },
+    this.workerMetadata = knowledgeWorkerMetadata();
+    this.workerVersion = typeof options.workerVersion === "string" && options.workerVersion ? options.workerVersion.slice(0, 200) : this.workerMetadata.version;
+    this.lifecycle = "staged";
+    let readyResolve;
+    let readyReject;
+    this.readyPromise = new Promise((resolve21, reject) => {
+      readyResolve = resolve21;
+      readyReject = reject;
+    });
+    this.readyPromise.catch(() => {
+    });
+    this.ready = false;
+    const workerOptions = {
+      workerData: {
+        vault: binding.vault,
+        database: join11(directory, binding.vaultId, "index.sqlite"),
+        workerVersion: this.workerVersion
+      },
       execArgv: process.execArgv.filter(
         (arg) => !arg.startsWith("--input-type") && !arg.startsWith("--test")
       )
-    });
-    const fail = (error2) => {
+    };
+    try {
+      this.worker = createKnowledgeWorker(new URL("./worker.mjs", import.meta.url), workerOptions);
+    } catch (error2) {
       this.closed = true;
+      this.lifecycle = "rolled_back";
+      readyReject(error2);
+      emitKnowledgeWorkerLifecycle("rolled_back", {
+        version: this.workerVersion,
+        source: this.workerMetadata.source,
+        integrity: this.workerMetadata.integrity,
+        reason: String(error2?.message || error2).slice(0, 400)
+      });
+      throw error2;
+    }
+    const fail = (error2) => {
+      if (!this.ready) readyReject(error2);
+      this.closed = true;
+      this.lifecycle = "rolled_back";
       for (const item of this.pending.values()) {
         clearTimeout(item.timer);
         item.reject(error2);
       }
       this.pending.clear();
       this.worker.unref();
+      emitKnowledgeWorkerLifecycle("rolled_back", {
+        version: this.workerVersion,
+        source: this.workerMetadata.source,
+        integrity: this.workerMetadata.integrity,
+        reason: String(error2?.message || error2).slice(0, 400)
+      });
     };
     this.worker.on("message", (message) => {
-      if (message.ready) return;
+      if (message.ready) {
+        this.ready = true;
+        this.lifecycle = "verified";
+        readyResolve({ version: this.workerVersion });
+        emitKnowledgeWorkerLifecycle("verified", {
+          version: this.workerVersion,
+          source: this.workerMetadata.source,
+          integrity: this.workerMetadata.integrity
+        });
+        if (!this.pending.size) this.worker.unref();
+        return;
+      }
       if (message.uiChanged) {
         invalidateKnowledgeUi();
         return;
@@ -4128,24 +4227,45 @@ var KnowledgeService = class {
     this.worker.on("exit", (code) => {
       if (!this.closed) fail(new Error(`Knowledge worker exited (${code})`));
     });
-    this.worker.unref();
+    emitKnowledgeWorkerLifecycle("staged", {
+      version: this.workerVersion,
+      source: this.workerMetadata.source,
+      integrity: this.workerMetadata.integrity
+    });
+  }
+  async waitUntilReady() {
+    if (this.ready) return { version: this.workerVersion };
+    if (this.closed) throw new Error("Knowledge worker failed to initialize");
+    return this.readyPromise;
+  }
+  async healthCheck() {
+    await this.waitUntilReady();
+    return this.request("status");
   }
   request(op, args = {}) {
     if (this.closed || this.closing && op !== "close")
       return Promise.reject(new Error("Knowledge service is closed"));
-    const id = ++this.next;
-    this.worker.ref();
-    return new Promise((resolvePromise, reject) => {
-      const timer = setTimeout(
-        () => {
-          this.pending.delete(id);
-          if (!this.pending.size) this.worker.unref();
-          reject(new Error(`Knowledge ${op} timed out; it was not reported as a successful empty result`));
-        },
-        op === "reconcile" ? 12e4 : 2e4
-      );
-      this.pending.set(id, { resolve: resolvePromise, reject, timer });
-      this.worker.postMessage({ id, op, args });
+    const post = () => {
+      if (this.closed) return Promise.reject(new Error("Knowledge service is closed"));
+      const id = ++this.next;
+      this.worker.ref();
+      return new Promise((resolvePromise, reject) => {
+        const timer = setTimeout(
+          () => {
+            this.pending.delete(id);
+            if (!this.pending.size) this.worker.unref();
+            reject(new Error(`Knowledge ${op} timed out; it was not reported as a successful empty result`));
+          },
+          op === "reconcile" ? 12e4 : 2e4
+        );
+        this.pending.set(id, { resolve: resolvePromise, reject, timer });
+        this.worker.postMessage({ id, op, args });
+      });
+    };
+    if (op === "close") return post();
+    this.inFlightRequests += 1;
+    return this.waitUntilReady().then(post).finally(() => {
+      this.inFlightRequests = Math.max(0, this.inFlightRequests - 1);
     });
   }
   async prepare({ cwd, project, query = "" }) {
@@ -4182,7 +4302,7 @@ var KnowledgeService = class {
       this.tickets.set(ticket, {
         cwd: resolve8(cwd),
         project,
-        queryHash: createHash5("sha256").update(query).digest("hex"),
+        queryHash: createHash6("sha256").update(query).digest("hex"),
         query,
         navigation,
         linkedWiki: [...linkedWiki],
@@ -4255,7 +4375,7 @@ var KnowledgeService = class {
         hash: page.hash,
         startLine: page.startLine,
         endLine: page.endLine,
-        excerptHash: createHash5("sha256").update(page.text).digest("hex")
+        excerptHash: createHash6("sha256").update(page.text).digest("hex")
       };
       state4.reads.delete(path);
       state4.reads.set(path, receipt);
@@ -4836,12 +4956,24 @@ var KnowledgeService = class {
   close() {
     if (this.closePromise) return this.closePromise;
     this.closing = true;
+    this.lifecycle = "disabled";
+    emitKnowledgeWorkerLifecycle("disabled", {
+      version: this.workerVersion,
+      previousVersion: this.workerVersion,
+      source: this.workerMetadata.source,
+      integrity: this.workerMetadata.integrity,
+      pendingRequests: this.pending.size
+    });
     this.closePromise = (async () => {
       const exited = new Promise((resolve21) => {
         if (this.worker.threadId === -1) resolve21();
         else this.worker.once("exit", resolve21);
       });
       try {
+        if (!this.closed) await this.waitUntilReady().catch(() => {
+        });
+        while (!this.closed && (this.pending.size || this.inFlightRequests))
+          await new Promise((resolve21) => setTimeout(resolve21, 10));
         if (!this.closed) await this.request("close");
       } catch {
         await this.worker.terminate();
@@ -4862,9 +4994,25 @@ var KnowledgeService = class {
         } finally {
           clearTimeout(fallback);
         }
+        emitKnowledgeWorkerLifecycle("drained", {
+          version: this.workerVersion,
+          source: this.workerMetadata.source,
+          integrity: this.workerMetadata.integrity
+        });
       }
     })();
     return this.closePromise;
+  }
+  prepareUnload() {
+    if (this.closing || this.closed) return { pendingRequests: this.pending.size, version: this.workerVersion };
+    this.closing = true;
+    return { pendingRequests: this.pending.size, version: this.workerVersion };
+  }
+  drain() {
+    return this.close();
+  }
+  dispose() {
+    return this.close();
   }
 };
 async function getKnowledgeService(binding = null) {
@@ -4872,28 +5020,68 @@ async function getKnowledgeService(binding = null) {
   const directory = knowledgeDirectory();
   if (!binding || !directory) throw new Error("No application knowledge Vault is bound");
   const key = join11(directory, binding.vaultId, "index.sqlite");
-  let service = pool.get(key);
-  if (service && !service.closed && service.binding?.revision !== binding.revision) {
-    pool.delete(key);
-    await service.close();
-    service = null;
-  }
-  if (!service || service.closed) {
-    emitProcessEvent(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
-    service = pool.get(key);
-  }
-  if (!service || service.closed) {
-    service = new KnowledgeService(binding, directory);
-    pool.set(key, service);
-    emitProcessEvent(SERVICE_EVENT, { action: "register", key, service, origin: serviceModule });
-    const idle = [...pool].filter(([other, value]) => other !== key && value.pending.size === 0);
-    while (pool.size > 3 && idle.length) {
-      const [other, value] = idle.shift();
-      pool.delete(other);
-      await value.close();
+  const transitions = pool.transitions || /* @__PURE__ */ new Map();
+  pool.transitions = transitions;
+  const transition = transitions.get(key) || (async () => {
+    let service = pool.get(key);
+    if (!service || service.closed) {
+      emitProcessEvent(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
+      service = pool.get(key);
     }
+    const needsReplacement = !service || service.closed || service.binding?.revision !== binding.revision || (() => {
+      const hostVersion = knowledgeWorkerMetadata().version;
+      return hostVersion !== "unknown" && service?.workerVersion !== "unknown" && service?.workerVersion !== hostVersion;
+    })();
+    if (!needsReplacement) return service;
+    let candidate;
+    try {
+      candidate = new KnowledgeService(binding, directory);
+      await candidate.healthCheck();
+      candidate.lifecycle = "enabled";
+      emitKnowledgeWorkerLifecycle("enabled", {
+        version: candidate.workerVersion,
+        previousVersion: service?.workerVersion,
+        source: candidate.workerMetadata.source,
+        integrity: candidate.workerMetadata.integrity
+      });
+      pool.set(key, candidate);
+      emitProcessEvent(SERVICE_EVENT, { action: "register", key, service: candidate, origin: serviceModule });
+      if (service && !service.closed) {
+        await service.drain();
+        emitKnowledgeWorkerLifecycle("reloaded", {
+          version: candidate.workerVersion,
+          previousVersion: service.workerVersion,
+          source: candidate.workerMetadata.source,
+          integrity: candidate.workerMetadata.integrity
+        });
+      }
+      const idle = [...pool].filter(([other, value]) => other !== key && value.pending.size === 0);
+      while (pool.size > 3 && idle.length) {
+        const [other, value] = idle.shift();
+        pool.delete(other);
+        await value.close();
+      }
+      return candidate;
+    } catch (error2) {
+      if (candidate && !candidate.closed) await candidate.close().catch(() => {
+      });
+      emitKnowledgeWorkerLifecycle("rolled_back", {
+        version: candidate?.workerVersion || knowledgeWorkerMetadata().version,
+        previousVersion: service?.workerVersion,
+        source: candidate?.workerMetadata?.source,
+        integrity: candidate?.workerMetadata?.integrity,
+        reason: String(error2?.message || error2).slice(0, 400)
+      });
+      if (service && !service.closed) throw error2;
+      throw error2;
+    }
+  })();
+  transitions.set(key, transition);
+  try {
+    return await transition;
+  } finally {
+    if (transitions.get(key) === transition) transitions.delete(key);
   }
-  return service;
 }
 async function notifyKnowledgeChange(path) {
   const binding = await readKnowledgeBinding();
@@ -5441,7 +5629,7 @@ async function publishExplainer2({ cwd = process.cwd(), project, topicId, title,
   const ext = /\.md$/i.test(artifact) ? ".md" : /\.html?$/i.test(artifact) ? ".html" : null;
   if (!ext)
     throw new Error("Explainer must be HTML or Markdown");
-  const bytes = await readFile8(artifact), digest4 = createHash7("sha256").update(bytes).digest("hex");
+  const bytes = await readFile8(artifact), digest4 = createHash8("sha256").update(bytes).digest("hex");
   const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
   return updateVault(cwd, async (vault) => {
     const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest4.slice(0, 12)}${ext}`;
@@ -5616,7 +5804,7 @@ function knowledgeSlug(title) {
   if (!normalized || normalized.length > 200 || hasControlCharacter(normalized))
     throw new Error("Knowledge title must be a single non-empty line");
   const ascii = normalized.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72);
-  return ascii || `note-${createHash7("sha256").update(normalized).digest("hex").slice(0, 16)}`;
+  return ascii || `note-${createHash8("sha256").update(normalized).digest("hex").slice(0, 16)}`;
 }
 function zoteroItemKey(value) {
   const key = String(value || "").trim();
@@ -6126,17 +6314,17 @@ function describeAcceptance(acceptance, verifier = acceptanceVerifier(acceptance
 }
 
 // packages/tasks/src/runtime-compiled/runtime.mjs
-import { createHash as createHash11, randomUUID as randomUUID14 } from "node:crypto";
+import { createHash as createHash12, randomUUID as randomUUID14 } from "node:crypto";
 import { lstat as lstat7, readFile as readFile10, realpath as realpath12 } from "node:fs/promises";
 import { isAbsolute as isAbsolute13, relative as relative12, resolve as resolve16, sep as sep10 } from "node:path";
 
 // packages/tasks/src/runtime-compiled/register.mjs
-import { createHash as createHash10, randomUUID as randomUUID13 } from "node:crypto";
+import { createHash as createHash11, randomUUID as randomUUID13 } from "node:crypto";
 import { realpath as realpath11 } from "node:fs/promises";
 import { isAbsolute as isAbsolute12, relative as relative11, resolve as resolve15, sep as sep9 } from "node:path";
 
 // packages/tasks/src/runtime-compiled/consent.mjs
-import { createHash as createHash8 } from "node:crypto";
+import { createHash as createHash9 } from "node:crypto";
 import { realpath as realpath9, stat as stat5 } from "node:fs/promises";
 import { homedir as homedir3 } from "node:os";
 import { isAbsolute as isAbsolute10, parse, relative as relative9, resolve as resolve12 } from "node:path";
@@ -6153,7 +6341,7 @@ function contractHash(task) {
   contract.push(
     task.milestones.map(({ id, title, dependsOn, acceptance }) => ({ id, title, dependsOn, acceptance }))
   );
-  return createHash8("sha256").update(JSON.stringify(contract)).digest("hex");
+  return createHash9("sha256").update(JSON.stringify(contract)).digest("hex");
 }
 function hasTaskConsent(task, maxCalls) {
   const c = task?.executionConsent;
@@ -6267,7 +6455,7 @@ import { readFile as readFile9 } from "node:fs/promises";
 import { resolve as resolve14 } from "node:path";
 
 // packages/tasks/src/runtime-compiled/workbench.mjs
-import { createHash as createHash9, randomUUID as randomUUID12 } from "node:crypto";
+import { createHash as createHash10, randomUUID as randomUUID12 } from "node:crypto";
 import { lstat as lstat6, open as open3, realpath as realpath10 } from "node:fs/promises";
 import { isAbsolute as isAbsolute11, relative as relative10, resolve as resolve13, sep as sep8 } from "node:path";
 
@@ -6481,7 +6669,7 @@ var LIMITS = Object.freeze({
   fileBytes: 8 * 1024 * 1024
 });
 var clean = (value, max = 180) => String(value ?? "").replace(/(?:bearer\s+|(?:api[_-]?key|token|password|secret)\s*[=:]\s*)[^\s,;]+/gi, "[redacted]").split("").map((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127 || "<>".includes(c) ? " " : c).join("").slice(0, max);
-var hash3 = (value) => createHash9("sha256").update(value).digest("hex");
+var hash3 = (value) => createHash10("sha256").update(value).digest("hex");
 var ARTIFACT_ROOT_KINDS = Object.freeze(["workspace", "vault", "research-run"]);
 var clone = (value) => structuredClone(value);
 var controls = /* @__PURE__ */ new Set([
@@ -7918,7 +8106,7 @@ function registerWorkbench(pi, options = {}) {
   const attach = (ctx, force = false) => {
     context = ctx;
     activeSessionId = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || void 0;
-    const scope = createHash10("sha256").update(`${ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated"}\0${resolve15(ctx.cwd)}`).digest("hex");
+    const scope = createHash11("sha256").update(`${ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated"}\0${resolve15(ctx.cwd)}`).digest("hex");
     journal.attach(scope, ctx.sessionManager?.getBranch?.() || [], force);
     evidence.attach(scope, journal.snapshot()?.id, ctx.sessionManager?.getBranch?.() || [], force);
   };
@@ -8546,7 +8734,7 @@ function createTaskJournal({ persist = () => {
             receipt.artifact = {
               path: safe(rel, 512),
               bytes: bytes.length,
-              sha256: createHash11("sha256").update(bytes).digest("hex")
+              sha256: createHash12("sha256").update(bytes).digest("hex")
             };
             receipt.state = "file-observed";
           }
@@ -8626,7 +8814,7 @@ function registerTaskRuntime(pi, options = {}) {
   const journal = createTaskJournal({ persist: (snapshot) => pi.appendEntry?.(TASK_ENTRY, snapshot) });
   const attach = (ctx, force = false) => {
     const id = ctx.sessionManager?.getSessionId?.() || ctx.sessionId || "isolated";
-    const scope = createHash11("sha256").update(`${id}\0${resolve16(ctx.cwd)}`).digest("hex");
+    const scope = createHash12("sha256").update(`${id}\0${resolve16(ctx.cwd)}`).digest("hex");
     journal.attach(scope, ctx.sessionManager?.getBranch?.() || [], force);
   };
   pi.on("session_start", (_event, ctx) => attach(ctx, true));
@@ -8734,7 +8922,7 @@ init_flow_cards();
 // packages/knowledge/src/publication.ts
 init_runtime_host();
 init_runtime_host();
-import { createHash as createHash12, randomUUID as randomUUID15 } from "node:crypto";
+import { createHash as createHash13, randomUUID as randomUUID15 } from "node:crypto";
 
 // packages/knowledge/src/publication-policy.ts
 var publicationNotices = {
@@ -9095,7 +9283,7 @@ var state3 = runtimeSlot(
   })
 );
 var FIELD2 = "knowledgePublication";
-var hash4 = (content) => createHash12("sha256").update(JSON.stringify(content ?? [])).digest("hex");
+var hash4 = (content) => createHash13("sha256").update(JSON.stringify(content ?? [])).digest("hex");
 function sanitizeError(text3) {
   return diagnosticText(text3, 4096).trim();
 }
@@ -9717,9 +9905,9 @@ import { randomUUID as randomUUID17 } from "node:crypto";
 import { lstat as lstat9, readFile as readFile11 } from "node:fs/promises";
 
 // packages/knowledge/src/orchestration-policy.ts
-import { createHash as createHash13 } from "node:crypto";
+import { createHash as createHash14 } from "node:crypto";
 var clean2 = (value, limit = 120) => [...String(value || "")].map((char) => char.charCodeAt(0) < 32 ? " " : char).join("").trim().slice(0, limit);
-var digest2 = (value) => createHash13("sha256").update(String(value || "")).digest("hex").slice(0, 24);
+var digest2 = (value) => createHash14("sha256").update(String(value || "")).digest("hex").slice(0, 24);
 function specialistRequestSignature({
   role,
   task = "",

@@ -38,3 +38,58 @@ export interface ConfiguredPackageInfo {
 	source: string;
 	scope: "user" | "project";
 }
+
+/** A package operation's effective boundary. Pi resources are session-scoped;
+ * the desktop host may reload an idle session, while a streaming session waits
+ * for its next boundary. */
+export type PackageLifecycleEffect = "current-session" | "next-session" | "app-restart";
+
+export type PackageLifecycleOperation = "install" | "update" | "remove";
+
+export type PackageLifecycleStatus = "succeeded" | "failed";
+
+/** Stable lifecycle phases used by the market UI and acceptance receipts. */
+export type PackageLifecycleEventType =
+	| "staged"
+	| "verified"
+	| "enabled"
+	| "disabled"
+	| "drained"
+	| "reloaded"
+	| "reload_deferred"
+	| "rolled_back"
+	| "failed";
+
+export interface PackageLifecycleEvent {
+	type: PackageLifecycleEventType;
+	at: number;
+	/** Session id is included only for session-boundary events. */
+	sessionId?: string;
+	detail?: string;
+}
+
+export interface PackageLifecycleError {
+	/** Machine-readable code suitable for UI copy and acceptance checks. */
+	code: "invalid-source" | "builtin" | "not-installed" | "unavailable" | "operation-failed";
+	message: string;
+	/** Whether retrying the same operation may succeed without changing input. */
+	retryable: boolean;
+}
+
+/** Structured result returned by package install/update/remove IPC methods. */
+export interface PackageLifecycleReceipt {
+	operation: PackageLifecycleOperation;
+	packageName: string;
+	source: string;
+	scope: "user" | "project";
+	status: PackageLifecycleStatus;
+	effect: PackageLifecycleEffect;
+	/** Observed package version when the host can read the staged install. */
+	version?: string;
+	previousVersion?: string;
+	events: PackageLifecycleEvent[];
+	error?: PackageLifecycleError;
+	/** Session ids reloaded or intentionally deferred at the boundary. */
+	reloadedSessionIds?: string[];
+	deferredSessionIds?: string[];
+}

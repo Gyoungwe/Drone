@@ -9893,6 +9893,61 @@ var GitBranchesSchema = typebox_exports.Object(
   { additionalProperties: false }
 );
 var NullableString = typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]);
+var SkillRepositoryAddInputSchema = typebox_exports.Unsafe(
+  typebox_exports.Object(
+    {
+      kind: typebox_exports.Union([typebox_exports.Literal("git"), typebox_exports.Literal("local")]),
+      source: typebox_exports.String({ minLength: 1, maxLength: 4096 }),
+      ref: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 256 })),
+      subpath: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+      license: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+      licenseEvidence: typebox_exports.Optional(typebox_exports.String({ maxLength: 4096 })),
+      name: typebox_exports.Optional(typebox_exports.String({ maxLength: 256 }))
+    },
+    { additionalProperties: false }
+  )
+);
+var SkillRepositoryRecordSchema = typebox_exports.Unsafe(
+  typebox_exports.Object(
+    {
+      id: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+      name: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+      kind: typebox_exports.Union([typebox_exports.Literal("git"), typebox_exports.Literal("local")]),
+      source: typebox_exports.String({ minLength: 1, maxLength: 4096 }),
+      ref: typebox_exports.Optional(typebox_exports.String({ maxLength: 256 })),
+      subpath: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+      license: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+      licenseEvidence: typebox_exports.Optional(typebox_exports.String({ maxLength: 4096 })),
+      status: typebox_exports.Union([typebox_exports.Literal("ready"), typebox_exports.Literal("update-available"), typebox_exports.Literal("error")]),
+      skillCount: typebox_exports.Integer({ minimum: 0, maximum: 1e3 }),
+      lastCheckedAt: typebox_exports.Optional(typebox_exports.String({ maxLength: 64 })),
+      lastAppliedAt: typebox_exports.Optional(typebox_exports.String({ maxLength: 64 })),
+      lastError: typebox_exports.Optional(typebox_exports.String({ maxLength: 2e3 })),
+      updateAvailable: typebox_exports.Optional(typebox_exports.Boolean())
+    },
+    { additionalProperties: false }
+  )
+);
+var SkillRepositoryListSchema = typebox_exports.Array(SkillRepositoryRecordSchema, { maxItems: 100 });
+var SkillRepositoryCheckResultSchema = typebox_exports.Unsafe(
+  typebox_exports.Object(
+    {
+      repository: SkillRepositoryRecordSchema,
+      changedFiles: typebox_exports.Array(typebox_exports.String({ maxLength: 1024 }), { maxItems: 1e3 })
+    },
+    { additionalProperties: false }
+  )
+);
+var SkillRepositoryUpdateResultSchema = typebox_exports.Unsafe(
+  typebox_exports.Object(
+    {
+      repository: SkillRepositoryRecordSchema,
+      changedFiles: typebox_exports.Array(typebox_exports.String({ maxLength: 1024 }), { maxItems: 1e3 }),
+      restartedRequired: typebox_exports.Literal(true)
+    },
+    { additionalProperties: false }
+  )
+);
 var AppContract = defineDomain("app", {
   methods: {
     getInfo: {
@@ -9983,6 +10038,23 @@ var AppContract = defineDomain("app", {
     checkResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     updateResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     restartForResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
+    listSkillRepositories: { args: typebox_exports.Tuple([]), result: SkillRepositoryListSchema },
+    addSkillRepository: {
+      args: typebox_exports.Tuple([SkillRepositoryAddInputSchema]),
+      result: SkillRepositoryRecordSchema
+    },
+    checkSkillRepository: {
+      args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1, maxLength: 64 })]),
+      result: SkillRepositoryCheckResultSchema
+    },
+    updateSkillRepository: {
+      args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1, maxLength: 64 })]),
+      result: SkillRepositoryUpdateResultSchema
+    },
+    removeSkillRepository: {
+      args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1, maxLength: 64 })]),
+      result: typebox_exports.Void()
+    },
     saveFileDialog: {
       args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()]),
       result: NullableString
@@ -10846,6 +10918,60 @@ var ConfiguredPackageInfoSchema = typebox_exports.Object(
   },
   { additionalProperties: false }
 );
+var PackageLifecycleEventSchema = typebox_exports.Object(
+  {
+    type: typebox_exports.Union([
+      typebox_exports.Literal("staged"),
+      typebox_exports.Literal("verified"),
+      typebox_exports.Literal("enabled"),
+      typebox_exports.Literal("disabled"),
+      typebox_exports.Literal("drained"),
+      typebox_exports.Literal("reloaded"),
+      typebox_exports.Literal("reload_deferred"),
+      typebox_exports.Literal("rolled_back"),
+      typebox_exports.Literal("failed")
+    ]),
+    at: typebox_exports.Number({ minimum: 0 }),
+    sessionId: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    detail: typebox_exports.Optional(typebox_exports.String())
+  },
+  { additionalProperties: false }
+);
+var PackageLifecycleErrorSchema = typebox_exports.Object(
+  {
+    code: typebox_exports.Union([
+      typebox_exports.Literal("invalid-source"),
+      typebox_exports.Literal("builtin"),
+      typebox_exports.Literal("not-installed"),
+      typebox_exports.Literal("unavailable"),
+      typebox_exports.Literal("operation-failed")
+    ]),
+    message: typebox_exports.String({ minLength: 1 }),
+    retryable: typebox_exports.Boolean()
+  },
+  { additionalProperties: false }
+);
+var PackageLifecycleReceiptSchema = typebox_exports.Object(
+  {
+    operation: typebox_exports.Union([typebox_exports.Literal("install"), typebox_exports.Literal("update"), typebox_exports.Literal("remove")]),
+    packageName: typebox_exports.String({ minLength: 1 }),
+    source: typebox_exports.String({ minLength: 1 }),
+    scope: typebox_exports.Union([typebox_exports.Literal("user"), typebox_exports.Literal("project")]),
+    status: typebox_exports.Union([typebox_exports.Literal("succeeded"), typebox_exports.Literal("failed")]),
+    effect: typebox_exports.Union([
+      typebox_exports.Literal("current-session"),
+      typebox_exports.Literal("next-session"),
+      typebox_exports.Literal("app-restart")
+    ]),
+    version: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    previousVersion: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    events: typebox_exports.Array(PackageLifecycleEventSchema),
+    error: typebox_exports.Optional(PackageLifecycleErrorSchema),
+    reloadedSessionIds: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1 }))),
+    deferredSessionIds: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1 })))
+  },
+  { additionalProperties: false }
+);
 var PackagesContract = defineDomain("packages", {
   methods: {
     searchCatalog: {
@@ -10856,18 +10982,18 @@ var PackagesContract = defineDomain("packages", {
     },
     installPackage: {
       args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
-      result: typebox_exports.Void()
+      result: typebox_exports.Unsafe(PackageLifecycleReceiptSchema)
     },
     updatePackage: {
       args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
-      result: typebox_exports.Void()
+      result: typebox_exports.Unsafe(PackageLifecycleReceiptSchema)
     },
     removePackage: {
       args: typebox_exports.Tuple([
         typebox_exports.String({ minLength: 1 }),
         typebox_exports.Union([typebox_exports.Literal("user"), typebox_exports.Literal("project")])
       ]),
-      result: typebox_exports.Void()
+      result: typebox_exports.Unsafe(PackageLifecycleReceiptSchema)
     },
     listConfiguredPackages: {
       args: typebox_exports.Tuple([]),

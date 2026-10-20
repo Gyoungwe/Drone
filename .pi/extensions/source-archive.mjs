@@ -242,11 +242,33 @@ function runtimeSlot2(domain, key, factory) {
     }
   });
 }
-function configureKnowledgeWorker(factory) {
+function configureKnowledgeWorker(factory, metadata) {
+  if (typeof factory !== "function") throw new TypeError("Knowledge worker host must provide a factory");
   workerFactory = factory;
+  if (metadata) workerMetadataProvider = metadata;
 }
 function createKnowledgeWorker(url, options) {
   return workerFactory(url, options);
+}
+function knowledgeWorkerMetadata() {
+  try {
+    const value = workerMetadataProvider();
+    if (!value || typeof value.version !== "string" || !value.version) return { version: "unknown" };
+    return {
+      version: value.version.slice(0, 200),
+      ...typeof value.source === "string" ? { source: value.source.slice(0, 1e3) } : {},
+      ...typeof value.integrity === "string" ? { integrity: value.integrity.slice(0, 200) } : {}
+    };
+  } catch {
+    return { version: "unknown" };
+  }
+}
+function emitKnowledgeWorkerLifecycle(stage, partial) {
+  emitProcessEvent2(KNOWLEDGE_WORKER_LIFECYCLE_EVENT, {
+    stage,
+    ...partial,
+    at: (/* @__PURE__ */ new Date()).toISOString()
+  });
 }
 function configureKnowledgeHost(host = {}) {
   if (host.loadWorkspaceConfig) workspaceConfigLoader = host.loadWorkspaceConfig;
@@ -261,7 +283,7 @@ function configureKnowledgeSetup(host = {}) {
   if (host.resolveSetupVault) setupVaultResolver = host.resolveSetupVault;
   if (host.researchSetupOptions) setupOptionsReader = host.researchSetupOptions;
 }
-var locks, defaultRunRuntimeExclusive, runtimeExclusive, processEvent, metadataLookup, cardBuilderLookup, deliveryLookup, hostSlotProvider, runRuntimeExclusive2, emitProcessEvent2, slots, workerFactory, requiresPaperEvidence, hasPaperCitation, workspaceConfigLoader, explainerPublisher, reviewPreviewConsumer, specialistSettingsReader, layoutDefinition, obsidianSetupInspector, setupDirectoryInspector, setupVaultResolver, setupOptionsReader, LAYOUT;
+var locks, defaultRunRuntimeExclusive, runtimeExclusive, processEvent, metadataLookup, cardBuilderLookup, deliveryLookup, hostSlotProvider, runRuntimeExclusive2, emitProcessEvent2, slots, workerFactory, workerMetadataProvider, KNOWLEDGE_WORKER_LIFECYCLE_EVENT, requiresPaperEvidence, hasPaperCitation, workspaceConfigLoader, explainerPublisher, reviewPreviewConsumer, specialistSettingsReader, layoutDefinition, obsidianSetupInspector, setupDirectoryInspector, setupVaultResolver, setupOptionsReader, LAYOUT;
 var init_runtime_host = __esm({
   "packages/knowledge/src/runtime-host.ts"() {
     "use strict";
@@ -292,6 +314,8 @@ var init_runtime_host = __esm({
     workerFactory = (url, options) => {
       throw new Error(`Knowledge worker host is not configured for ${url.href}`);
     };
+    workerMetadataProvider = () => ({ version: "unknown" });
+    KNOWLEDGE_WORKER_LIFECYCLE_EVENT = "drone:knowledge-worker-lifecycle/v1";
     requiresPaperEvidence = (query) => /paper|literature|article|文献|论文/i.test(query);
     hasPaperCitation = (sources) => Array.isArray(sources) && sources.some((source) => {
       const value = source;
@@ -360,7 +384,7 @@ var init_files = __esm({
 });
 
 // packages/knowledge/src/review-policy.ts
-import { readFileSync } from "node:fs";
+import { readFileSync as readFileSync2 } from "node:fs";
 import { join as join10 } from "node:path";
 function errorCode2(error) {
   return error && typeof error === "object" && "code" in error ? error.code : void 0;
@@ -370,7 +394,7 @@ function readReviewMode() {
   const root = knowledgeDirectory();
   if (!root) return "automatic";
   try {
-    const value = JSON.parse(readFileSync(join10(root, "review-policy.json"), "utf8"));
+    const value = JSON.parse(readFileSync2(join10(root, "review-policy.json"), "utf8"));
     const mode = value && typeof value === "object" && "mode" in value ? value.mode : void 0;
     return mode === "automatic" ? "automatic" : "strict";
   } catch (error) {
@@ -9657,6 +9681,61 @@ var GitBranchesSchema = typebox_exports.Object(
   { additionalProperties: false }
 );
 var NullableString = typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]);
+var SkillRepositoryAddInputSchema = typebox_exports.Unsafe(
+  typebox_exports.Object(
+    {
+      kind: typebox_exports.Union([typebox_exports.Literal("git"), typebox_exports.Literal("local")]),
+      source: typebox_exports.String({ minLength: 1, maxLength: 4096 }),
+      ref: typebox_exports.Optional(typebox_exports.String({ minLength: 1, maxLength: 256 })),
+      subpath: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+      license: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+      licenseEvidence: typebox_exports.Optional(typebox_exports.String({ maxLength: 4096 })),
+      name: typebox_exports.Optional(typebox_exports.String({ maxLength: 256 }))
+    },
+    { additionalProperties: false }
+  )
+);
+var SkillRepositoryRecordSchema = typebox_exports.Unsafe(
+  typebox_exports.Object(
+    {
+      id: typebox_exports.String({ minLength: 1, maxLength: 64 }),
+      name: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+      kind: typebox_exports.Union([typebox_exports.Literal("git"), typebox_exports.Literal("local")]),
+      source: typebox_exports.String({ minLength: 1, maxLength: 4096 }),
+      ref: typebox_exports.Optional(typebox_exports.String({ maxLength: 256 })),
+      subpath: typebox_exports.Optional(typebox_exports.String({ maxLength: 1024 })),
+      license: typebox_exports.String({ minLength: 1, maxLength: 256 }),
+      licenseEvidence: typebox_exports.Optional(typebox_exports.String({ maxLength: 4096 })),
+      status: typebox_exports.Union([typebox_exports.Literal("ready"), typebox_exports.Literal("update-available"), typebox_exports.Literal("error")]),
+      skillCount: typebox_exports.Integer({ minimum: 0, maximum: 1e3 }),
+      lastCheckedAt: typebox_exports.Optional(typebox_exports.String({ maxLength: 64 })),
+      lastAppliedAt: typebox_exports.Optional(typebox_exports.String({ maxLength: 64 })),
+      lastError: typebox_exports.Optional(typebox_exports.String({ maxLength: 2e3 })),
+      updateAvailable: typebox_exports.Optional(typebox_exports.Boolean())
+    },
+    { additionalProperties: false }
+  )
+);
+var SkillRepositoryListSchema = typebox_exports.Array(SkillRepositoryRecordSchema, { maxItems: 100 });
+var SkillRepositoryCheckResultSchema = typebox_exports.Unsafe(
+  typebox_exports.Object(
+    {
+      repository: SkillRepositoryRecordSchema,
+      changedFiles: typebox_exports.Array(typebox_exports.String({ maxLength: 1024 }), { maxItems: 1e3 })
+    },
+    { additionalProperties: false }
+  )
+);
+var SkillRepositoryUpdateResultSchema = typebox_exports.Unsafe(
+  typebox_exports.Object(
+    {
+      repository: SkillRepositoryRecordSchema,
+      changedFiles: typebox_exports.Array(typebox_exports.String({ maxLength: 1024 }), { maxItems: 1e3 }),
+      restartedRequired: typebox_exports.Literal(true)
+    },
+    { additionalProperties: false }
+  )
+);
 var AppContract = defineDomain("app", {
   methods: {
     getInfo: {
@@ -9747,6 +9826,23 @@ var AppContract = defineDomain("app", {
     checkResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     updateResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     restartForResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
+    listSkillRepositories: { args: typebox_exports.Tuple([]), result: SkillRepositoryListSchema },
+    addSkillRepository: {
+      args: typebox_exports.Tuple([SkillRepositoryAddInputSchema]),
+      result: SkillRepositoryRecordSchema
+    },
+    checkSkillRepository: {
+      args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1, maxLength: 64 })]),
+      result: SkillRepositoryCheckResultSchema
+    },
+    updateSkillRepository: {
+      args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1, maxLength: 64 })]),
+      result: SkillRepositoryUpdateResultSchema
+    },
+    removeSkillRepository: {
+      args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1, maxLength: 64 })]),
+      result: typebox_exports.Void()
+    },
     saveFileDialog: {
       args: typebox_exports.Tuple([typebox_exports.String(), typebox_exports.String()]),
       result: NullableString
@@ -10610,6 +10706,60 @@ var ConfiguredPackageInfoSchema = typebox_exports.Object(
   },
   { additionalProperties: false }
 );
+var PackageLifecycleEventSchema = typebox_exports.Object(
+  {
+    type: typebox_exports.Union([
+      typebox_exports.Literal("staged"),
+      typebox_exports.Literal("verified"),
+      typebox_exports.Literal("enabled"),
+      typebox_exports.Literal("disabled"),
+      typebox_exports.Literal("drained"),
+      typebox_exports.Literal("reloaded"),
+      typebox_exports.Literal("reload_deferred"),
+      typebox_exports.Literal("rolled_back"),
+      typebox_exports.Literal("failed")
+    ]),
+    at: typebox_exports.Number({ minimum: 0 }),
+    sessionId: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    detail: typebox_exports.Optional(typebox_exports.String())
+  },
+  { additionalProperties: false }
+);
+var PackageLifecycleErrorSchema = typebox_exports.Object(
+  {
+    code: typebox_exports.Union([
+      typebox_exports.Literal("invalid-source"),
+      typebox_exports.Literal("builtin"),
+      typebox_exports.Literal("not-installed"),
+      typebox_exports.Literal("unavailable"),
+      typebox_exports.Literal("operation-failed")
+    ]),
+    message: typebox_exports.String({ minLength: 1 }),
+    retryable: typebox_exports.Boolean()
+  },
+  { additionalProperties: false }
+);
+var PackageLifecycleReceiptSchema = typebox_exports.Object(
+  {
+    operation: typebox_exports.Union([typebox_exports.Literal("install"), typebox_exports.Literal("update"), typebox_exports.Literal("remove")]),
+    packageName: typebox_exports.String({ minLength: 1 }),
+    source: typebox_exports.String({ minLength: 1 }),
+    scope: typebox_exports.Union([typebox_exports.Literal("user"), typebox_exports.Literal("project")]),
+    status: typebox_exports.Union([typebox_exports.Literal("succeeded"), typebox_exports.Literal("failed")]),
+    effect: typebox_exports.Union([
+      typebox_exports.Literal("current-session"),
+      typebox_exports.Literal("next-session"),
+      typebox_exports.Literal("app-restart")
+    ]),
+    version: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    previousVersion: typebox_exports.Optional(typebox_exports.String({ minLength: 1 })),
+    events: typebox_exports.Array(PackageLifecycleEventSchema),
+    error: typebox_exports.Optional(PackageLifecycleErrorSchema),
+    reloadedSessionIds: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1 }))),
+    deferredSessionIds: typebox_exports.Optional(typebox_exports.Array(typebox_exports.String({ minLength: 1 })))
+  },
+  { additionalProperties: false }
+);
 var PackagesContract = defineDomain("packages", {
   methods: {
     searchCatalog: {
@@ -10620,18 +10770,18 @@ var PackagesContract = defineDomain("packages", {
     },
     installPackage: {
       args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
-      result: typebox_exports.Void()
+      result: typebox_exports.Unsafe(PackageLifecycleReceiptSchema)
     },
     updatePackage: {
       args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
-      result: typebox_exports.Void()
+      result: typebox_exports.Unsafe(PackageLifecycleReceiptSchema)
     },
     removePackage: {
       args: typebox_exports.Tuple([
         typebox_exports.String({ minLength: 1 }),
         typebox_exports.Union([typebox_exports.Literal("user"), typebox_exports.Literal("project")])
       ]),
-      result: typebox_exports.Void()
+      result: typebox_exports.Unsafe(PackageLifecycleReceiptSchema)
     },
     listConfiguredPackages: {
       args: typebox_exports.Tuple([]),
@@ -17436,7 +17586,7 @@ function createResearchLoop(ports) {
 }
 
 // packages/extensions/src/internal/obsidian-workbench.ts
-import { createHash as createHash10, randomUUID as randomUUID9 } from "node:crypto";
+import { createHash as createHash11, randomUUID as randomUUID9 } from "node:crypto";
 import { access as access4, mkdir as mkdir7, readdir as readdir3, readFile as readFile10, realpath as realpath8, rename as rename8, stat as stat4, writeFile as writeFile8 } from "node:fs/promises";
 import { basename as basename5, dirname as dirname6, isAbsolute as isAbsolute11, join as join15, relative as relative10, resolve as resolve13, sep as sep9 } from "node:path";
 import { fileURLToPath as fileURLToPath2, pathToFileURL as pathToFileURL2 } from "node:url";
@@ -17604,7 +17754,8 @@ async function loadWorkspaceConfig(cwd = process.cwd()) {
 // packages/extensions/src/internal/knowledge-runtime.ts
 init_runtime_host();
 import { Worker } from "node:worker_threads";
-import { existsSync } from "node:fs";
+import { createHash as createHash9 } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { join as join7, resolve as resolve9 } from "node:path";
 var configured = false;
@@ -17636,7 +17787,28 @@ function configureKnowledgeExtensionRuntime() {
       if (existsSync(fileURLToPath(sourceWorker))) return new Worker(sourceWorker, options);
     }
     throw new Error("Knowledge worker resource is missing from the packaged extension");
-  });
+  }, () => extensionWorkerMetadata());
+}
+function extensionWorkerMetadata() {
+  const worker = new URL("knowledge-worker.mjs", import.meta.url);
+  if (worker.protocol !== "file:" || !existsSync(fileURLToPath(worker))) return { version: "unknown" };
+  const workerPath = fileURLToPath(worker);
+  const manifestPath = join7(resolve9(workerPath, ".."), ".knowledge-worker-manifest.json");
+  if (!existsSync(manifestPath)) return { version: "unknown", source: workerPath };
+  try {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const integrity = typeof manifest.outputSha256 === "string" ? manifest.outputSha256 : "";
+    const actual = createHash9("sha256").update(readFileSync(workerPath)).digest("hex");
+    if (!/^[a-f0-9]{64}$/u.test(integrity) || actual !== integrity)
+      throw new Error("knowledge worker manifest hash mismatch");
+    return {
+      version: `${typeof manifest.version === "number" || typeof manifest.version === "string" ? manifest.version : "1"}:${integrity.slice(0, 16)}`,
+      source: workerPath,
+      integrity
+    };
+  } catch (error) {
+    throw new Error(`Knowledge worker manifest is invalid: ${manifestPath}`, { cause: error });
+  }
 }
 
 // packages/extensions/src/internal/obsidian-setup.ts
@@ -17823,7 +17995,7 @@ init_runtime_host();
 init_config();
 init_files();
 init_review_policy();
-import { createHash as createHash9, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash10, randomUUID as randomUUID7 } from "node:crypto";
 import { join as join12, relative as relative8, resolve as resolve11, sep as sep8 } from "node:path";
 
 // packages/knowledge/src/semantic-provider.ts
@@ -18285,10 +18457,13 @@ var saveSemanticSettings = (vaultId, input, expectedRevision) => defaultApi.save
 init_ui_state();
 var pool = runtimeSlot2("knowledge", "workerPool", () => {
   const services = /* @__PURE__ */ new Map();
+  const transitions = /* @__PURE__ */ new Map();
   return Object.assign(services, {
+    transitions,
     async dispose() {
       const allocated = [...services.values()];
       services.clear();
+      transitions.clear();
       await Promise.allSettled(allocated.map((service) => service.close()));
     }
   });
@@ -18330,7 +18505,7 @@ function providerConfig(settings2) {
   };
 }
 function fingerprintFor(settings2) {
-  return createHash9("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
+  return createHash10("sha256").update(`${settings2.provider}\0${settings2.baseUrl}\0${settings2.model}\0${settings2.chunkChars || 1200}`).digest("hex");
 }
 function awaitSemanticDeadline(operation, controller) {
   let onAbort;
@@ -18353,27 +18528,77 @@ var KnowledgeService = class {
     this.semanticCandidateProvider = typeof options.semanticCandidateProvider === "function" ? options.semanticCandidateProvider : null;
     this.tickets = /* @__PURE__ */ new Map();
     this.pending = /* @__PURE__ */ new Map();
+    this.inFlightRequests = 0;
     this.next = 0;
     this.closed = false;
     this.closing = false;
     this.closePromise = null;
-    this.worker = createKnowledgeWorker(new URL("./worker.mjs", import.meta.url), {
-      workerData: { vault: binding.vault, database: join12(directory, binding.vaultId, "index.sqlite") },
+    this.workerMetadata = knowledgeWorkerMetadata();
+    this.workerVersion = typeof options.workerVersion === "string" && options.workerVersion ? options.workerVersion.slice(0, 200) : this.workerMetadata.version;
+    this.lifecycle = "staged";
+    let readyResolve;
+    let readyReject;
+    this.readyPromise = new Promise((resolve15, reject) => {
+      readyResolve = resolve15;
+      readyReject = reject;
+    });
+    this.readyPromise.catch(() => {
+    });
+    this.ready = false;
+    const workerOptions = {
+      workerData: {
+        vault: binding.vault,
+        database: join12(directory, binding.vaultId, "index.sqlite"),
+        workerVersion: this.workerVersion
+      },
       execArgv: process.execArgv.filter(
         (arg) => !arg.startsWith("--input-type") && !arg.startsWith("--test")
       )
-    });
-    const fail = (error) => {
+    };
+    try {
+      this.worker = createKnowledgeWorker(new URL("./worker.mjs", import.meta.url), workerOptions);
+    } catch (error) {
       this.closed = true;
+      this.lifecycle = "rolled_back";
+      readyReject(error);
+      emitKnowledgeWorkerLifecycle("rolled_back", {
+        version: this.workerVersion,
+        source: this.workerMetadata.source,
+        integrity: this.workerMetadata.integrity,
+        reason: String(error?.message || error).slice(0, 400)
+      });
+      throw error;
+    }
+    const fail = (error) => {
+      if (!this.ready) readyReject(error);
+      this.closed = true;
+      this.lifecycle = "rolled_back";
       for (const item of this.pending.values()) {
         clearTimeout(item.timer);
         item.reject(error);
       }
       this.pending.clear();
       this.worker.unref();
+      emitKnowledgeWorkerLifecycle("rolled_back", {
+        version: this.workerVersion,
+        source: this.workerMetadata.source,
+        integrity: this.workerMetadata.integrity,
+        reason: String(error?.message || error).slice(0, 400)
+      });
     };
     this.worker.on("message", (message) => {
-      if (message.ready) return;
+      if (message.ready) {
+        this.ready = true;
+        this.lifecycle = "verified";
+        readyResolve({ version: this.workerVersion });
+        emitKnowledgeWorkerLifecycle("verified", {
+          version: this.workerVersion,
+          source: this.workerMetadata.source,
+          integrity: this.workerMetadata.integrity
+        });
+        if (!this.pending.size) this.worker.unref();
+        return;
+      }
       if (message.uiChanged) {
         invalidateKnowledgeUi();
         return;
@@ -18390,24 +18615,45 @@ var KnowledgeService = class {
     this.worker.on("exit", (code) => {
       if (!this.closed) fail(new Error(`Knowledge worker exited (${code})`));
     });
-    this.worker.unref();
+    emitKnowledgeWorkerLifecycle("staged", {
+      version: this.workerVersion,
+      source: this.workerMetadata.source,
+      integrity: this.workerMetadata.integrity
+    });
+  }
+  async waitUntilReady() {
+    if (this.ready) return { version: this.workerVersion };
+    if (this.closed) throw new Error("Knowledge worker failed to initialize");
+    return this.readyPromise;
+  }
+  async healthCheck() {
+    await this.waitUntilReady();
+    return this.request("status");
   }
   request(op, args = {}) {
     if (this.closed || this.closing && op !== "close")
       return Promise.reject(new Error("Knowledge service is closed"));
-    const id = ++this.next;
-    this.worker.ref();
-    return new Promise((resolvePromise, reject) => {
-      const timer = setTimeout(
-        () => {
-          this.pending.delete(id);
-          if (!this.pending.size) this.worker.unref();
-          reject(new Error(`Knowledge ${op} timed out; it was not reported as a successful empty result`));
-        },
-        op === "reconcile" ? 12e4 : 2e4
-      );
-      this.pending.set(id, { resolve: resolvePromise, reject, timer });
-      this.worker.postMessage({ id, op, args });
+    const post = () => {
+      if (this.closed) return Promise.reject(new Error("Knowledge service is closed"));
+      const id = ++this.next;
+      this.worker.ref();
+      return new Promise((resolvePromise, reject) => {
+        const timer = setTimeout(
+          () => {
+            this.pending.delete(id);
+            if (!this.pending.size) this.worker.unref();
+            reject(new Error(`Knowledge ${op} timed out; it was not reported as a successful empty result`));
+          },
+          op === "reconcile" ? 12e4 : 2e4
+        );
+        this.pending.set(id, { resolve: resolvePromise, reject, timer });
+        this.worker.postMessage({ id, op, args });
+      });
+    };
+    if (op === "close") return post();
+    this.inFlightRequests += 1;
+    return this.waitUntilReady().then(post).finally(() => {
+      this.inFlightRequests = Math.max(0, this.inFlightRequests - 1);
     });
   }
   async prepare({ cwd, project, query = "" }) {
@@ -18444,7 +18690,7 @@ var KnowledgeService = class {
       this.tickets.set(ticket, {
         cwd: resolve11(cwd),
         project,
-        queryHash: createHash9("sha256").update(query).digest("hex"),
+        queryHash: createHash10("sha256").update(query).digest("hex"),
         query,
         navigation,
         linkedWiki: [...linkedWiki],
@@ -18517,7 +18763,7 @@ var KnowledgeService = class {
         hash: page.hash,
         startLine: page.startLine,
         endLine: page.endLine,
-        excerptHash: createHash9("sha256").update(page.text).digest("hex")
+        excerptHash: createHash10("sha256").update(page.text).digest("hex")
       };
       state3.reads.delete(path);
       state3.reads.set(path, receipt);
@@ -19098,12 +19344,24 @@ var KnowledgeService = class {
   close() {
     if (this.closePromise) return this.closePromise;
     this.closing = true;
+    this.lifecycle = "disabled";
+    emitKnowledgeWorkerLifecycle("disabled", {
+      version: this.workerVersion,
+      previousVersion: this.workerVersion,
+      source: this.workerMetadata.source,
+      integrity: this.workerMetadata.integrity,
+      pendingRequests: this.pending.size
+    });
     this.closePromise = (async () => {
       const exited = new Promise((resolve15) => {
         if (this.worker.threadId === -1) resolve15();
         else this.worker.once("exit", resolve15);
       });
       try {
+        if (!this.closed) await this.waitUntilReady().catch(() => {
+        });
+        while (!this.closed && (this.pending.size || this.inFlightRequests))
+          await new Promise((resolve15) => setTimeout(resolve15, 10));
         if (!this.closed) await this.request("close");
       } catch {
         await this.worker.terminate();
@@ -19124,9 +19382,25 @@ var KnowledgeService = class {
         } finally {
           clearTimeout(fallback);
         }
+        emitKnowledgeWorkerLifecycle("drained", {
+          version: this.workerVersion,
+          source: this.workerMetadata.source,
+          integrity: this.workerMetadata.integrity
+        });
       }
     })();
     return this.closePromise;
+  }
+  prepareUnload() {
+    if (this.closing || this.closed) return { pendingRequests: this.pending.size, version: this.workerVersion };
+    this.closing = true;
+    return { pendingRequests: this.pending.size, version: this.workerVersion };
+  }
+  drain() {
+    return this.close();
+  }
+  dispose() {
+    return this.close();
   }
 };
 async function getKnowledgeService(binding = null) {
@@ -19134,28 +19408,68 @@ async function getKnowledgeService(binding = null) {
   const directory = knowledgeDirectory();
   if (!binding || !directory) throw new Error("No application knowledge Vault is bound");
   const key = join12(directory, binding.vaultId, "index.sqlite");
-  let service = pool.get(key);
-  if (service && !service.closed && service.binding?.revision !== binding.revision) {
-    pool.delete(key);
-    await service.close();
-    service = null;
-  }
-  if (!service || service.closed) {
-    emitProcessEvent2(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
-    service = pool.get(key);
-  }
-  if (!service || service.closed) {
-    service = new KnowledgeService(binding, directory);
-    pool.set(key, service);
-    emitProcessEvent2(SERVICE_EVENT, { action: "register", key, service, origin: serviceModule });
-    const idle = [...pool].filter(([other, value]) => other !== key && value.pending.size === 0);
-    while (pool.size > 3 && idle.length) {
-      const [other, value] = idle.shift();
-      pool.delete(other);
-      await value.close();
+  const transitions = pool.transitions || /* @__PURE__ */ new Map();
+  pool.transitions = transitions;
+  const transition = transitions.get(key) || (async () => {
+    let service = pool.get(key);
+    if (!service || service.closed) {
+      emitProcessEvent2(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
+      service = pool.get(key);
     }
+    const needsReplacement = !service || service.closed || service.binding?.revision !== binding.revision || (() => {
+      const hostVersion = knowledgeWorkerMetadata().version;
+      return hostVersion !== "unknown" && service?.workerVersion !== "unknown" && service?.workerVersion !== hostVersion;
+    })();
+    if (!needsReplacement) return service;
+    let candidate;
+    try {
+      candidate = new KnowledgeService(binding, directory);
+      await candidate.healthCheck();
+      candidate.lifecycle = "enabled";
+      emitKnowledgeWorkerLifecycle("enabled", {
+        version: candidate.workerVersion,
+        previousVersion: service?.workerVersion,
+        source: candidate.workerMetadata.source,
+        integrity: candidate.workerMetadata.integrity
+      });
+      pool.set(key, candidate);
+      emitProcessEvent2(SERVICE_EVENT, { action: "register", key, service: candidate, origin: serviceModule });
+      if (service && !service.closed) {
+        await service.drain();
+        emitKnowledgeWorkerLifecycle("reloaded", {
+          version: candidate.workerVersion,
+          previousVersion: service.workerVersion,
+          source: candidate.workerMetadata.source,
+          integrity: candidate.workerMetadata.integrity
+        });
+      }
+      const idle = [...pool].filter(([other, value]) => other !== key && value.pending.size === 0);
+      while (pool.size > 3 && idle.length) {
+        const [other, value] = idle.shift();
+        pool.delete(other);
+        await value.close();
+      }
+      return candidate;
+    } catch (error) {
+      if (candidate && !candidate.closed) await candidate.close().catch(() => {
+      });
+      emitKnowledgeWorkerLifecycle("rolled_back", {
+        version: candidate?.workerVersion || knowledgeWorkerMetadata().version,
+        previousVersion: service?.workerVersion,
+        source: candidate?.workerMetadata?.source,
+        integrity: candidate?.workerMetadata?.integrity,
+        reason: String(error?.message || error).slice(0, 400)
+      });
+      if (service && !service.closed) throw error;
+      throw error;
+    }
+  })();
+  transitions.set(key, transition);
+  try {
+    return await transition;
+  } finally {
+    if (transitions.get(key) === transition) transitions.delete(key);
   }
-  return service;
 }
 async function notifyKnowledgeChange(path) {
   const binding = await readKnowledgeBinding();
@@ -19544,7 +19858,7 @@ async function publishSourceNote({ cwd = process.cwd(), runDir, entry }) {
     throw new Error("Only verified downloads can be indexed");
   if (!contains(await canonical(config.resultsRoot), await canonical(runDir)) || !contains(await canonical(runDir), await canonical(entry.path)))
     throw new Error("Source must remain inside its research run");
-  if (createHash10("sha256").update(await readFile10(entry.path)).digest("hex") !== entry.sha256)
+  if (createHash11("sha256").update(await readFile10(entry.path)).digest("hex") !== entry.sha256)
     throw new Error("Source hash changed before indexing");
   const metadata = await readJson2(join15(runDir, "metadata.json"));
   const project = validateProject(runProject(metadata.project, await resolveWorkspaceProject({ cwd })));
@@ -19630,7 +19944,7 @@ async function publishExplainer({ cwd = process.cwd(), project, topicId, title, 
   const ext = /\.md$/i.test(artifact) ? ".md" : /\.html?$/i.test(artifact) ? ".html" : null;
   if (!ext)
     throw new Error("Explainer must be HTML or Markdown");
-  const bytes = await readFile10(artifact), digest = createHash10("sha256").update(bytes).digest("hex");
+  const bytes = await readFile10(artifact), digest = createHash11("sha256").update(bytes).digest("hex");
   const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
   return updateVault(cwd, async (vault) => {
     const attachmentRel = `Attachments/Explainers/${topicId}/${stamp}-${digest.slice(0, 12)}${ext}`;

@@ -1,0 +1,114 @@
+import { describe, expect, it, vi } from "vitest";
+import {
+	type PackageManager,
+	type PackageManagerProgressEvent,
+	PackageService,
+} from "../src/services/packages";
+import { SessionRegistry } from "../src/session/registry";
+
+function harness(options: { manager: PackageManager; streaming?: boolean }) {
+	const registry = new SessionRegistry();
+	const reload = vi.fn(async () => {});
+	registry.add({
+		session: { sessionId: "session-1", isStreaming: options.streaming === true, reload } as never,
+		cwd: "/tmp/drone-package-lifecycle",
+		unsubscribe: vi.fn(),
+	});
+	const service = new PackageService({
+		registry,
+		packageManagerFactory: () => options.manager,
+	});
+	return { service, reload };
+}
+
+function managerFixture(configured: Array<{ source: string; scope: "user" | "project" }> = []) {
+	let progress: ((event: PackageManagerProgressEvent) => void) | undefined;
+	return {
+		configured,
+		installed: [] as string[],
+		installAndPersist: vi.fn(async (source: string) => {
+			progress?.({ type: "start", action: "install", source, message: "staging" });
+			progress?.({ type: "complete", action: "install", source, message: "verified" });
+		}),
+		update: vi.fn(async (source: string) => {
+			progress?.({ type: "start", action: "update", source });
+			progress?.({ type: "complete", action: "update", source });
+		}),
+		removeAndPersist: vi.fn(async (source: string) => {
+			progress?.({ type: "start", action: "remove", source });
+			progress?.({ type: "complete", action: "remove", source });
+			return true;
+		}),
+		listConfiguredPackages: vi.fn(() => configured),
+		setProgressCallback: vi.fn((callback: ((event: PackageManagerProgressEvent) => void) | undefined) => {
+			progress = callback;
+		}),
+	} satisfies PackageManager & { configured: typeof configured; installed: string[] };
+}
+
+describe("PackageService lifecycle receipts", () => {
+	it("records staging, verification and current-session reload for install", async () => {
+		const manager = managerFixture();
+		const { service, reload } = harness({ manager });
+
+		const receipt = await service.installPackage("example-extension");
+
+		expect(receipt).toMatchObject({
+			operation: "install",
+			packageName: "example-extension",
+			source: "npm:example-extension",
+			status: "succeeded",
+			effect: "current-session",
+		});
+		expect(receipt.events.map((event) => event.type)).toEqual(["staged", "verified", "enabled", "reloaded"]);
+		expect(reload).toHaveBeenCalledOnce();
+	});
+
+	it("reports a streaming session as next-session instead of claiming a reload", async () => {
+		const manager = managerFixture();
+		const { service, reload } = harness({ manager, streaming: true });
+
+		const receipt = await service.installPackage("example-extension");
+
+		expect(receipt.effect).toBe("next-session");
+		expect(receipt.deferredSessionIds).toEqual(["session-1"]);
+		expect(receipt.events.at(-1)?.type).toBe("reload_deferred");
+		expect(reload).not.toHaveBeenCalled();
+	});
+
+	it("returns an npm-not-found error receipt without throwing", async () => {
+		const manager = managerFixture();
+		manager.installAndPersist.mockRejectedValue(new Error("spawn npm ENOENT"));
+		const { service } = harness({ manager });
+
+		const receipt = await service.installPackage("example-extension");
+
+		expect(receipt.status).toBe("failed");
+		expect(receipt.error).toMatchObject({ code: "unavailable", retryable: true });
+		expect(receipt.error?.message).toContain("DRONE_NPM_NOT_FOUND");
+		expect(receipt.events.at(-1)?.type).toBe("failed");
+	});
+
+	it("protects built-in Drone packages from update and removal", async () => {
+		const manager = managerFixture([{ source: "npm:@gyoungwe/pi-core", scope: "user" }]);
+		const { service } = harness({ manager });
+
+		const update = await service.updatePackage("@gyoungwe/pi-core");
+		const remove = await service.removePackage("npm:@gyoungwe/pi-core", "user");
+
+		expect(update.error?.code).toBe("builtin");
+		expect(remove.error?.code).toBe("builtin");
+		expect(manager.update).not.toHaveBeenCalled();
+		expect(manager.removeAndPersist).not.toHaveBeenCalled();
+	});
+
+	it("updates project-scoped packages and returns the selected scope", async () => {
+		const manager = managerFixture([{ source: "npm:fixture-extension", scope: "project" }]);
+		const { service } = harness({ manager });
+
+		const receipt = await service.updatePackage("fixture-extension");
+
+		expect(receipt.scope).toBe("project");
+		expect(manager.update).toHaveBeenCalledWith("npm:fixture-extension");
+	});
+});

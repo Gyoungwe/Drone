@@ -15,15 +15,25 @@ vi.mock("electron", () => ({
 import { IpcChannels } from "@drone/shared";
 import { registerPackagesIpc } from "./packages";
 
+const receipt = (operation: "install" | "update" | "remove") => ({
+	operation,
+	packageName: "@gyoungwe/desktop-ui-pack",
+	source: "npm:@gyoungwe/desktop-ui-pack",
+	scope: "user" as const,
+	status: "succeeded" as const,
+	effect: "current-session" as const,
+	events: [],
+});
+
 describe("registerPackagesIpc", () => {
 	beforeEach(() => mocks.handlers.clear());
 
 	it("routes package operations through the explicit host service", async () => {
 		const service = {
 			searchPackages: vi.fn(async () => ({ packages: [], total: 0, page: 1, pageSize: 50 })),
-			installPackage: vi.fn(async () => {}),
-			updatePackage: vi.fn(async () => {}),
-			removePackage: vi.fn(async () => {}),
+			installPackage: vi.fn(async () => receipt("install")),
+			updatePackage: vi.fn(async () => receipt("update")),
+			removePackage: vi.fn(async () => receipt("remove")),
 			listConfiguredPackages: vi.fn(async () => []),
 		};
 		registerPackagesIpc({ sessions: {}, packages: service } as unknown as Parameters<
@@ -38,9 +48,9 @@ describe("registerPackagesIpc", () => {
 	it("refreshes the UI plugin manager after package changes", async () => {
 		const service = {
 			searchPackages: vi.fn(async () => ({ packages: [], total: 0, page: 1, pageSize: 50 })),
-			installPackage: vi.fn(async () => {}),
-			updatePackage: vi.fn(async () => {}),
-			removePackage: vi.fn(async () => {}),
+			installPackage: vi.fn(async () => receipt("install")),
+			updatePackage: vi.fn(async () => receipt("update")),
+			removePackage: vi.fn(async () => receipt("remove")),
 			listConfiguredPackages: vi.fn(async () => []),
 		};
 		const changed = vi.fn();

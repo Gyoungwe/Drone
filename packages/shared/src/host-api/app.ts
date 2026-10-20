@@ -3,6 +3,12 @@ import type { DiagnosticsSnapshot } from "../diagnostics";
 import type { HostEnvironment } from "../host-env";
 import type { FigureAnnotation, ImportedAttachment, ResourcePreviewResult } from "../ipc";
 import type { AppInfo, SavedTabs, UiState } from "../session";
+import type {
+	SkillRepositoryAddInput,
+	SkillRepositoryCheckResult,
+	SkillRepositoryRecord,
+	SkillRepositoryUpdateResult,
+} from "../skill-repository";
 import { defineDomain } from "./define";
 
 const AppInfoSchema = Type.Object(
@@ -47,6 +53,61 @@ const GitBranchesSchema = Type.Object(
 	{ additionalProperties: false },
 );
 const NullableString = Type.Union([Type.String(), Type.Null()]);
+const SkillRepositoryAddInputSchema = Type.Unsafe<SkillRepositoryAddInput>(
+	Type.Object(
+		{
+			kind: Type.Union([Type.Literal("git"), Type.Literal("local")]),
+			source: Type.String({ minLength: 1, maxLength: 4096 }),
+			ref: Type.Optional(Type.String({ minLength: 1, maxLength: 256 })),
+			subpath: Type.Optional(Type.String({ maxLength: 1024 })),
+			license: Type.String({ minLength: 1, maxLength: 256 }),
+			licenseEvidence: Type.Optional(Type.String({ maxLength: 4096 })),
+			name: Type.Optional(Type.String({ maxLength: 256 })),
+		},
+		{ additionalProperties: false },
+	),
+);
+const SkillRepositoryRecordSchema = Type.Unsafe<SkillRepositoryRecord>(
+	Type.Object(
+		{
+			id: Type.String({ minLength: 1, maxLength: 64 }),
+			name: Type.String({ minLength: 1, maxLength: 256 }),
+			kind: Type.Union([Type.Literal("git"), Type.Literal("local")]),
+			source: Type.String({ minLength: 1, maxLength: 4096 }),
+			ref: Type.Optional(Type.String({ maxLength: 256 })),
+			subpath: Type.Optional(Type.String({ maxLength: 1024 })),
+			license: Type.String({ minLength: 1, maxLength: 256 }),
+			licenseEvidence: Type.Optional(Type.String({ maxLength: 4096 })),
+			status: Type.Union([Type.Literal("ready"), Type.Literal("update-available"), Type.Literal("error")]),
+			skillCount: Type.Integer({ minimum: 0, maximum: 1000 }),
+			lastCheckedAt: Type.Optional(Type.String({ maxLength: 64 })),
+			lastAppliedAt: Type.Optional(Type.String({ maxLength: 64 })),
+			lastError: Type.Optional(Type.String({ maxLength: 2000 })),
+			updateAvailable: Type.Optional(Type.Boolean()),
+		},
+		{ additionalProperties: false },
+	),
+);
+const SkillRepositoryListSchema = Type.Array(SkillRepositoryRecordSchema, { maxItems: 100 });
+const SkillRepositoryCheckResultSchema = Type.Unsafe<SkillRepositoryCheckResult>(
+	Type.Object(
+		{
+			repository: SkillRepositoryRecordSchema,
+			changedFiles: Type.Array(Type.String({ maxLength: 1024 }), { maxItems: 1000 }),
+		},
+		{ additionalProperties: false },
+	),
+);
+const SkillRepositoryUpdateResultSchema = Type.Unsafe<SkillRepositoryUpdateResult>(
+	Type.Object(
+		{
+			repository: SkillRepositoryRecordSchema,
+			changedFiles: Type.Array(Type.String({ maxLength: 1024 }), { maxItems: 1000 }),
+			restartedRequired: Type.Literal(true),
+		},
+		{ additionalProperties: false },
+	),
+);
 
 /** Host API contract for application metadata and diagnostics. */
 export const AppContract = defineDomain("app", {
@@ -139,6 +200,23 @@ export const AppContract = defineDomain("app", {
 		checkResearchSkills: { args: Type.Tuple([]), result: Type.Void() },
 		updateResearchSkills: { args: Type.Tuple([]), result: Type.Void() },
 		restartForResearchSkills: { args: Type.Tuple([]), result: Type.Void() },
+		listSkillRepositories: { args: Type.Tuple([]), result: SkillRepositoryListSchema },
+		addSkillRepository: {
+			args: Type.Tuple([SkillRepositoryAddInputSchema]),
+			result: SkillRepositoryRecordSchema,
+		},
+		checkSkillRepository: {
+			args: Type.Tuple([Type.String({ minLength: 1, maxLength: 64 })]),
+			result: SkillRepositoryCheckResultSchema,
+		},
+		updateSkillRepository: {
+			args: Type.Tuple([Type.String({ minLength: 1, maxLength: 64 })]),
+			result: SkillRepositoryUpdateResultSchema,
+		},
+		removeSkillRepository: {
+			args: Type.Tuple([Type.String({ minLength: 1, maxLength: 64 })]),
+			result: Type.Void(),
+		},
 		saveFileDialog: {
 			args: Type.Tuple([Type.String(), Type.String()]),
 			result: NullableString,

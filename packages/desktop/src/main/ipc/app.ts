@@ -21,6 +21,13 @@ import {
 	restartForResearchSkills,
 	updateResearchSkills,
 } from "../research-skill-updater";
+import {
+	addSkillRepository,
+	checkSkillRepository,
+	listSkillRepositories,
+	removeSkillRepository,
+	updateSkillRepository,
+} from "../skill-repositories";
 import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
 import { checkForUpdates, downloadUpdate, installUpdate } from "../updater";
@@ -176,6 +183,11 @@ export function registerAppIpc(
 		checkResearchSkills: () => checkResearchSkillUpdates(),
 		updateResearchSkills: () => updateResearchSkills(),
 		restartForResearchSkills: () => restartForResearchSkills(),
+		listSkillRepositories: () => listSkillRepositories(),
+		addSkillRepository: (input) => addSkillRepository(input),
+		checkSkillRepository: (id) => checkSkillRepository(id),
+		updateSkillRepository: (id) => updateSkillRepository(id),
+		removeSkillRepository: (id) => removeSkillRepository(id),
 		saveFileDialog: async (defaultName, content) => {
 			const window = BrowserWindow.getAllWindows()[0];
 			const options: Electron.SaveDialogOptions = {
@@ -242,6 +254,11 @@ export function registerAppIpc(
 				checkResearchSkills: IpcChannels.ResearchSkillCheck,
 				updateResearchSkills: IpcChannels.ResearchSkillUpdate,
 				restartForResearchSkills: IpcChannels.ResearchSkillRestart,
+				listSkillRepositories: IpcChannels.SkillRepositoryList,
+				addSkillRepository: IpcChannels.SkillRepositoryAdd,
+				checkSkillRepository: IpcChannels.SkillRepositoryCheck,
+				updateSkillRepository: IpcChannels.SkillRepositoryUpdate,
+				removeSkillRepository: IpcChannels.SkillRepositoryRemove,
 				saveFileDialog: IpcChannels.FileSaveDialog,
 				pickPath: IpcChannels.FilePickPath,
 				pickDirectory: IpcChannels.ProjectPickDirectory,

@@ -132,12 +132,12 @@ CO-2 的来源仓库“添加任意 Git URL/本地目录”以及热插拔 worke
 | P1-5 | **提示策略已修，待真实会话** | 在正式包中用简单事实问题走检索→回答→有界沉淀，确认不创建任务计划和额外写入授权 |
 | P1-7 | **PASS（v0.33.4 正式包）** | Skills/Connections 的市场与已安装插件区真实显示 `pi-core`、`pi-knowledge`、`pi-research`、`pi-analysis`、`pi-evidence`、`pi-connectors`、`desktop-ui-pack`、`research-suite` 的版本/说明和宿主状态；证据见 `v0.33.4-p4-ui-acceptance.json` |
 | P1-8 | **PARTIAL** | 正式包已看到最近列表，但新建、历史打开和分叉后三种刷新路径尚未全部在同一次安装包会话中回读 |
-| 市场生命周期 | **PARTIAL** | v0.33.4 正式包已回读官方/Drone 目录、版本和说明，以及 UI 插件启停；官方 extension 安装、Drone 包更新/卸载的完整真实回读尚未完成 |
-| Skill 仓库管理 | **PARTIAL** | 内置 Nature/Scientific/Academic 来源映射和手动检查入口已回读；“添加任意 Git URL/本地目录、许可依据、卸载来源”和手动应用/回滚仍未实现或验收 |
-| 热插拔 worker / 回滚 | **NOT_RUN** | UI 插件重载已通过；worker 排空、失败回滚、生命周期事件和 Pi 下一会话版本提示没有真实安装包证据 |
-| V4 MCP | **BLOCKED** | 需要用户配置可调用的 MCP；当前 Zotero MCP 仍为 0 工具，不能伪造 PASS |
-| V5 原生 Pi | **NOT_RUN** | 需要原生 Pi 完成一次与 Desktop 对等的真实闭环；现有 CLI/loader 证据不代替完整会话 |
-| V6 CO-1～CO-4 视觉对照 | **部分完成** | 正式包浅色四视图已真实回读；深色前后对照仍未运行，不能标记完整 PASS |
+| 市场生命周期 | **PARTIAL（registry 安装/卸载 PASS）** | 真实 registry `@gyoungwe/pi-core@0.1.5` 安装、`/drone-doctor`、模型会话和卸载通过；本地 tarball lifecycle 通过。Pi CLI update 返回成功但 managed 目录仍旧版本，官方第三方 extension 仍 NOT_RUN |
+| Skill 仓库管理 | **PASS（代码与隔离 FS 回归）** | 任意 Git URL/本地目录、ref/subpath/许可依据、哈希 staging、原子应用、失败保留和来源卸载已落地；桌面定向测试 3/3 通过。正式 Electron GUI 交互截图仍受环境限制 |
+| 热插拔 worker / 回滚 | **PASS（worker 回归/打包资源）** | worker 排空、失败候选回滚、生命周期事件和生成扩展专家回归通过；证据见 `v0.33.5-plugin-gates.json`。交互式 Electron GUI 仍未运行 |
+| V4 MCP | **PASS（native stdio fixture）** | 原生 Pi 1.1.0 安装 `pi-mcp-adapter@5.1.0`，真实调用 `mcp__echo` 返回 `echo:native-mcp-acceptance`，卸载后清理通过；外部用户配置的 MCP 仍 NOT_RUN |
+| V5 原生 Pi | **PASS** | 真实 registry `@gyoungwe/pi-core@0.1.5` 在 Pi 1.1.0 独立 HOME 中安装；`/drone-doctor` 解析宿主 1.1.0 并 PASS，真实模型会话返回 `NATIVE_PI_REGISTRY_OK`，卸载通过 |
+| V6 CO-1～CO-4 视觉对照 | **PASS（built renderer）** | 深色四视图 headless 对照 `drone-visual-comparison-dark.json` 4/4 PASS；交互式 Electron 截图仍受环境限制，不把它写成 GUI 实机 PASS |
 
 除上述门槛外，B8 云端协作仍按计划暂缓，Protocols.io 仍保持只读；两者不在本轮补做范围内。
 

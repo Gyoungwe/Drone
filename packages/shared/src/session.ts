@@ -370,6 +370,13 @@ export interface HostPluginPackage {
 	version: string;
 	host: "desktop" | "pi";
 	status: "available" | "configure" | "unavailable";
+	/** Runtime version currently serving this host capability, when it differs from package metadata. */
+	currentVersion?: string | null;
+	/** Version staged for the next safe session/worker boundary. */
+	nextSessionVersion?: string | null;
+	/** Last bounded worker/package lifecycle state. */
+	lifecycleState?: "unconfigured" | "staged" | "verified" | "enabled" | "disabled" | "rolled_back";
+	lastLifecycleError?: string;
 	/** Package source and manifest projection used by the plugin source page. */
 	source?: "drone" | "builtin" | "unknown";
 	packageKind?: "pi" | "desktop-ui";

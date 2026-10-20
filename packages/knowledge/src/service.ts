@@ -3,7 +3,12 @@ import { expandWithGraph, GRAPH_RETRIEVAL_DEFAULTS } from "./graph-retrieval";
 import { createHash, randomUUID } from "node:crypto";
 import { join, relative, resolve, sep } from "node:path";
 import { Worker } from "node:worker_threads";
-import { createKnowledgeWorker, emitProcessEvent } from "./runtime-host";
+import {
+	createKnowledgeWorker,
+	emitKnowledgeWorkerLifecycle,
+	emitProcessEvent,
+	knowledgeWorkerMetadata,
+} from "./runtime-host";
 import { runRuntimeExclusive, runtimeSlot } from "./runtime-host";
 import { hasPaperCitation, requiresPaperEvidence } from "./runtime-host";
 import { knowledgeDirectory, readKnowledgeBinding, withKnowledgeBinding } from "./config";
@@ -15,10 +20,13 @@ import { invalidateKnowledgeUi } from "./ui-state";
 
 const pool = runtimeSlot("knowledge", "workerPool", () => {
 	const services = new Map();
+	const transitions = new Map();
 	return Object.assign(services, {
+		transitions,
 		async dispose() {
 			const allocated = [...services.values()];
 			services.clear();
+			transitions.clear();
 			await Promise.allSettled(allocated.map((service) => service.close()));
 		},
 	});
@@ -91,27 +99,82 @@ export class KnowledgeService {
 			typeof options.semanticCandidateProvider === "function" ? options.semanticCandidateProvider : null;
 		this.tickets = new Map();
 		this.pending = new Map();
+		this.inFlightRequests = 0;
 		this.next = 0;
 		this.closed = false;
 		this.closing = false;
 		this.closePromise = null;
-		this.worker = createKnowledgeWorker(new URL("./worker.mjs", import.meta.url), {
-			workerData: { vault: binding.vault, database: join(directory, binding.vaultId, "index.sqlite") },
+		this.workerMetadata = knowledgeWorkerMetadata();
+		this.workerVersion =
+			typeof options.workerVersion === "string" && options.workerVersion
+				? options.workerVersion.slice(0, 200)
+				: this.workerMetadata.version;
+		this.lifecycle = "staged";
+		let readyResolve;
+		let readyReject;
+		this.readyPromise = new Promise((resolve, reject) => {
+			readyResolve = resolve;
+			readyReject = reject;
+		});
+		// A service may be staged by a host health-check and then discarded. Keep
+		// the rejected handshake observed so a failed candidate cannot surface as
+		// an unhandled rejection in a caller that only inspects lifecycle events.
+		this.readyPromise.catch(() => {});
+		this.ready = false;
+		const workerOptions = {
+			workerData: {
+				vault: binding.vault,
+				database: join(directory, binding.vaultId, "index.sqlite"),
+				workerVersion: this.workerVersion,
+			},
 			execArgv: process.execArgv.filter(
 				(arg) => !arg.startsWith("--input-type") && !arg.startsWith("--test"),
 			),
-		});
-		const fail = (error) => {
+		};
+		try {
+			this.worker = createKnowledgeWorker(new URL("./worker.mjs", import.meta.url), workerOptions);
+		} catch (error) {
 			this.closed = true;
+			this.lifecycle = "rolled_back";
+			readyReject(error);
+			emitKnowledgeWorkerLifecycle("rolled_back", {
+				version: this.workerVersion,
+				source: this.workerMetadata.source,
+				integrity: this.workerMetadata.integrity,
+				reason: String(error?.message || error).slice(0, 400),
+			});
+			throw error;
+		}
+		const fail = (error) => {
+			if (!this.ready) readyReject(error);
+			this.closed = true;
+			this.lifecycle = "rolled_back";
 			for (const item of this.pending.values()) {
 				clearTimeout(item.timer);
 				item.reject(error);
 			}
 			this.pending.clear();
 			this.worker.unref();
+			emitKnowledgeWorkerLifecycle("rolled_back", {
+				version: this.workerVersion,
+				source: this.workerMetadata.source,
+				integrity: this.workerMetadata.integrity,
+				reason: String(error?.message || error).slice(0, 400),
+			});
 		};
 		this.worker.on("message", (message) => {
-			if (message.ready) return;
+			if (message.ready) {
+				this.ready = true;
+				this.lifecycle = "verified";
+				readyResolve({ version: this.workerVersion });
+				emitKnowledgeWorkerLifecycle("verified", {
+					version: this.workerVersion,
+					source: this.workerMetadata.source,
+					integrity: this.workerMetadata.integrity,
+				});
+				if (!this.pending.size) this.worker.unref();
+				return;
+			}
 			if (message.uiChanged) {
 				invalidateKnowledgeUi();
 				return;
@@ -128,24 +191,49 @@ export class KnowledgeService {
 		this.worker.on("exit", (code) => {
 			if (!this.closed) fail(new Error(`Knowledge worker exited (${code})`));
 		});
-		this.worker.unref();
+		emitKnowledgeWorkerLifecycle("staged", {
+			version: this.workerVersion,
+			source: this.workerMetadata.source,
+			integrity: this.workerMetadata.integrity,
+		});
+		// Keep the worker referenced until its ready handshake. Once verified,
+		// idle workers are unref'ed and only active requests keep the process alive.
+	}
+	async waitUntilReady() {
+		if (this.ready) return { version: this.workerVersion };
+		if (this.closed) throw new Error("Knowledge worker failed to initialize");
+		return this.readyPromise;
+	}
+	async healthCheck() {
+		await this.waitUntilReady();
+		return this.request("status");
 	}
 	request(op, args = {}) {
 		if (this.closed || (this.closing && op !== "close"))
 			return Promise.reject(new Error("Knowledge service is closed"));
-		const id = ++this.next;
-		this.worker.ref();
-		return new Promise((resolvePromise, reject) => {
-			const timer = setTimeout(
-				() => {
-					this.pending.delete(id);
-					if (!this.pending.size) this.worker.unref();
-					reject(new Error(`Knowledge ${op} timed out; it was not reported as a successful empty result`));
-				},
-				op === "reconcile" ? 120000 : 20000,
-			);
-			this.pending.set(id, { resolve: resolvePromise, reject, timer });
-			this.worker.postMessage({ id, op, args });
+		const post = () => {
+			if (this.closed) return Promise.reject(new Error("Knowledge service is closed"));
+			const id = ++this.next;
+			this.worker.ref();
+			return new Promise((resolvePromise, reject) => {
+				const timer = setTimeout(
+					() => {
+						this.pending.delete(id);
+						if (!this.pending.size) this.worker.unref();
+						reject(new Error(`Knowledge ${op} timed out; it was not reported as a successful empty result`));
+					},
+					op === "reconcile" ? 120000 : 20000,
+				);
+				this.pending.set(id, { resolve: resolvePromise, reject, timer });
+				this.worker.postMessage({ id, op, args });
+			});
+		};
+		// Count requests before waiting for the ready handshake so close() cannot
+		// overtake an accepted operation that has not posted its worker message yet.
+		if (op === "close") return post();
+		this.inFlightRequests += 1;
+		return this.waitUntilReady().then(post).finally(() => {
+			this.inFlightRequests = Math.max(0, this.inFlightRequests - 1);
 		});
 	}
 	async prepare({ cwd, project, query = "" }) {
@@ -926,12 +1014,28 @@ export class KnowledgeService {
 	close() {
 		if (this.closePromise) return this.closePromise;
 		this.closing = true;
+		this.lifecycle = "disabled";
+		emitKnowledgeWorkerLifecycle("disabled", {
+			version: this.workerVersion,
+			previousVersion: this.workerVersion,
+			source: this.workerMetadata.source,
+			integrity: this.workerMetadata.integrity,
+			pendingRequests: this.pending.size,
+		});
 		this.closePromise = (async () => {
 			const exited = new Promise((resolve) => {
 				if (this.worker.threadId === -1) resolve();
 				else this.worker.once("exit", resolve);
 			});
 			try {
+				// Let requests accepted just before close() finish their ready
+				// handshake and enqueue before we begin waiting for the queue to drain.
+				if (!this.closed) await this.waitUntilReady().catch(() => {});
+				// Drain requests already accepted before close() was called. A close
+				// message sent ahead of them lets the worker exit first and turns an
+				// in-flight reconcile into a misleading "worker is closing" error.
+				while (!this.closed && (this.pending.size || this.inFlightRequests))
+					await new Promise((resolve) => setTimeout(resolve, 10));
 				if (!this.closed) await this.request("close");
 			} catch {
 				// Failed workers still need to be joined so their file handles are released.
@@ -953,9 +1057,25 @@ export class KnowledgeService {
 				} finally {
 					clearTimeout(fallback);
 				}
+				emitKnowledgeWorkerLifecycle("drained", {
+					version: this.workerVersion,
+					source: this.workerMetadata.source,
+					integrity: this.workerMetadata.integrity,
+				});
 			}
 		})();
 		return this.closePromise;
+	}
+	prepareUnload() {
+		if (this.closing || this.closed) return { pendingRequests: this.pending.size, version: this.workerVersion };
+		this.closing = true;
+		return { pendingRequests: this.pending.size, version: this.workerVersion };
+	}
+	drain() {
+		return this.close();
+	}
+	dispose() {
+		return this.close();
 	}
 }
 export async function getKnowledgeService(binding = null) {
@@ -964,30 +1084,75 @@ export async function getKnowledgeService(binding = null) {
 	if (!binding || !directory) throw new Error("No application knowledge Vault is bound");
 	// One worker per index database: two workers on the same SQLite file race on FTS rowids.
 	const key = join(directory, binding.vaultId, "index.sqlite");
-	let service = pool.get(key);
-	if (service && !service.closed && service.binding?.revision !== binding.revision) {
-		// A rebound Vault reuses the same database; retire the old worker before starting a new one.
-		pool.delete(key);
-		await service.close();
-		service = null;
-	}
-	if (!service || service.closed) {
-		emitProcessEvent(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
-		service = pool.get(key);
-	}
-	if (!service || service.closed) {
-		service = new KnowledgeService(binding, directory);
-		pool.set(key, service);
-		emitProcessEvent(SERVICE_EVENT, { action: "register", key, service, origin: serviceModule });
-		// Old in-flight writers keep their pinned Vault; never redirect them into a newly bound Vault.
-		const idle = [...pool].filter(([other, value]) => other !== key && value.pending.size === 0);
-		while (pool.size > 3 && idle.length) {
-			const [other, value] = idle.shift();
-			pool.delete(other);
-			await value.close();
+	const transitions = pool.transitions || new Map();
+	pool.transitions = transitions;
+	const transition = transitions.get(key) || (async () => {
+		let service = pool.get(key);
+		if (!service || service.closed) {
+			emitProcessEvent(SERVICE_EVENT, { action: "request", key, origin: serviceModule });
+			service = pool.get(key);
 		}
+		// A rebound Vault reuses the same database. Stage and health-check the
+		// replacement before retiring the old worker, so an unavailable packaged
+		// resource never destroys a usable service.
+		const needsReplacement =
+			!service ||
+			service.closed ||
+			service.binding?.revision !== binding.revision ||
+			(() => {
+				const hostVersion = knowledgeWorkerMetadata().version;
+				return hostVersion !== "unknown" && service?.workerVersion !== "unknown" && service?.workerVersion !== hostVersion;
+			})();
+		if (!needsReplacement) return service;
+		let candidate;
+		try {
+			candidate = new KnowledgeService(binding, directory);
+			await candidate.healthCheck();
+			candidate.lifecycle = "enabled";
+			emitKnowledgeWorkerLifecycle("enabled", {
+				version: candidate.workerVersion,
+				previousVersion: service?.workerVersion,
+				source: candidate.workerMetadata.source,
+				integrity: candidate.workerMetadata.integrity,
+			});
+			pool.set(key, candidate);
+			emitProcessEvent(SERVICE_EVENT, { action: "register", key, service: candidate, origin: serviceModule });
+			if (service && !service.closed) {
+				await service.drain();
+				emitKnowledgeWorkerLifecycle("reloaded", {
+					version: candidate.workerVersion,
+					previousVersion: service.workerVersion,
+					source: candidate.workerMetadata.source,
+					integrity: candidate.workerMetadata.integrity,
+				});
+			}
+			// Old in-flight writers keep their pinned Vault; never redirect them into a newly bound Vault.
+			const idle = [...pool].filter(([other, value]) => other !== key && value.pending.size === 0);
+			while (pool.size > 3 && idle.length) {
+				const [other, value] = idle.shift();
+				pool.delete(other);
+				await value.close();
+			}
+			return candidate;
+		} catch (error) {
+			if (candidate && !candidate.closed) await candidate.close().catch(() => {});
+			emitKnowledgeWorkerLifecycle("rolled_back", {
+				version: candidate?.workerVersion || knowledgeWorkerMetadata().version,
+				previousVersion: service?.workerVersion,
+				source: candidate?.workerMetadata?.source,
+				integrity: candidate?.workerMetadata?.integrity,
+				reason: String(error?.message || error).slice(0, 400),
+			});
+			if (service && !service.closed) throw error;
+			throw error;
+		}
+	})();
+	transitions.set(key, transition);
+	try {
+		return await transition;
+	} finally {
+		if (transitions.get(key) === transition) transitions.delete(key);
 	}
-	return service;
 }
 export async function notifyKnowledgeChange(path) {
 	const binding = await readKnowledgeBinding();

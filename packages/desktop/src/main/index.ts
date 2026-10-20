@@ -1,6 +1,7 @@
 import { researchBundlePaths } from "./research-bundle";
 import { researchSkillPackPaths } from "./research-skill-packs";
 import { configureResearchSkillUpdater, readResearchSkillPackInstall } from "./research-skill-updater";
+import { configureSkillRepositoryManager } from "./skill-repositories";
 import { readSshConfigHosts } from "./ssh-config";
 import { desktopSystemPrompt } from "./system-prompt";
 import "./pi-package-dir";
@@ -266,6 +267,7 @@ app.whenReady().then(async () => {
 		? join(process.resourcesPath, "research-workbench")
 		: join(__dirname, "../../../../.pi");
 	configureResearchSkillUpdater(app.getPath("userData"));
+	configureSkillRepositoryManager(app.getPath("userData"));
 	// Bundled pi packages (MCP runtime pi-mcp-adapter), staged by scripts/stage-pi-packages.mjs.
 	const researchBundle = researchBundlePaths(
 		process.env.DRONE_RESEARCH_WORKBENCH_ROOT,
@@ -276,11 +278,16 @@ app.whenReady().then(async () => {
 	for (const warning of researchBundle.warnings) log.warn(warning);
 	if (researchBundle.mcpRuntimePath) log.info("MCP runtime bundled", researchBundle.mcpRuntimePath);
 	const installedResearchSkills = readResearchSkillPackInstall(app.getPath("userData"));
+	for (const warning of installedResearchSkills.warnings) log.warn(warning);
 	const researchSkillPacks = researchSkillPackPaths(
 		app.isPackaged
 			? join(process.resourcesPath, "research-skills")
 			: join(__dirname, "../../resources/research-skills"),
-		{ includeAcademic: false, ...installedResearchSkills },
+		{
+			includeAcademic: false,
+			sourceRoots: installedResearchSkills.sourceRoots,
+			sourcePins: installedResearchSkills.sourcePins,
+		},
 	);
 	for (const warning of researchSkillPacks.warnings) log.warn(warning);
 	backendServices = createBackend({
@@ -300,6 +307,7 @@ app.whenReady().then(async () => {
 				app.isPackaged ? join(process.resourcesPath, "skills") : join(__dirname, "../../resources/skills"),
 				...researchBundle.additionalSkillPaths,
 				...researchSkillPacks.paths,
+				...installedResearchSkills.additionalSkillPaths,
 			],
 			additionalExtensionPaths: researchBundle.additionalExtensionPaths,
 			additionalPromptTemplatePaths: researchSkillPacks.promptPaths,

@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 
 /** Public command/report contract used by native Pi and the Desktop command palette. */
 export const DRONE_COMMAND_SCHEMA_VERSION = 1 as const;
-export const PI_CORE_PACKAGE_VERSION = "0.1.3" as const;
+export const PI_CORE_PACKAGE_VERSION = "0.1.5" as const;
 export const PI_HOST_RANGE = ">=1.1.0 <2.0.0" as const;
 
 const CORE_TOOLS = [
@@ -102,6 +103,39 @@ export interface ExampleReport {
 function packageVersion(): { version: string; source: string } {
 	const configured = process.env.PI_VERSION?.trim();
 	if (configured) return { version: configured, source: "PI_VERSION" };
+	const readPackageFrom = (entry: string): { version: string; source: string } | undefined => {
+		let current = entry;
+		try {
+			current = dirname(current);
+		} catch {
+			return undefined;
+		}
+		for (let depth = 0; depth < 8; depth += 1) {
+			const packagePath = join(current, "package.json");
+			try {
+				const metadata = JSON.parse(readFileSync(packagePath, "utf8"));
+				if (
+					metadata?.name === "@earendil-works/pi-coding-agent" &&
+					typeof metadata.version === "string" &&
+					metadata.version.length > 0
+				)
+					return { version: metadata.version, source: "resolved-package" };
+			} catch {
+				// Walk up through bundled CLI/extension paths until the host package root.
+			}
+			const parent = dirname(current);
+			if (parent === current) break;
+			current = parent;
+		}
+		return undefined;
+	};
+	const candidates = [fileURLToPath(import.meta.url), process.argv[1], process.cwd()].filter(
+		(entry): entry is string => typeof entry === "string" && entry.length > 0,
+	);
+	for (const candidate of candidates) {
+		const resolved = readPackageFrom(candidate);
+		if (resolved) return resolved;
+	}
 	try {
 		const require = createRequire(import.meta.url);
 		// The Pi package intentionally exposes ESM entrypoints without a CommonJS
@@ -111,7 +145,11 @@ function packageVersion(): { version: string; source: string } {
 			const packagePath = join(base, "@earendil-works/pi-coding-agent", "package.json");
 			try {
 				const metadata = JSON.parse(readFileSync(packagePath, "utf8"));
-				if (typeof metadata.version === "string" && metadata.version.length > 0)
+				if (
+					metadata.name === "@earendil-works/pi-coding-agent" &&
+					typeof metadata.version === "string" &&
+					metadata.version.length > 0
+				)
 					return { version: metadata.version, source: "resolved-package" };
 			} catch {
 				// Try the next Node module search path.

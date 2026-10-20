@@ -43,7 +43,7 @@ describe("StorageRegistry", () => {
 				sites.push(file);
 			}
 		}
-		expect(sites).toHaveLength(31);
+		expect(sites).toHaveLength(32);
 	});
 
 	it("rejects duplicate entries and inventories file state", async () => {
@@ -87,6 +87,10 @@ describe("StorageRegistry", () => {
 		expect(entries.get("desktop-ui-plugins")).toMatchObject({
 			path: "/tmp/drone-user-data/ui-plugins",
 			owner: "desktop/ui-plugins",
+		});
+		expect(entries.get("desktop-research-skill-repositories")).toMatchObject({
+			path: "/tmp/drone-user-data/research-skills/repositories.json",
+			owner: "desktop/research-skill-repositories",
 		});
 		expect(entries.get("agent-mcp")).toMatchObject({
 			path: "/tmp/drone-agent/mcp.json",

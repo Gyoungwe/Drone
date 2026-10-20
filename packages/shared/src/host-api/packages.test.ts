@@ -51,4 +51,28 @@ describe("PackagesContract", () => {
 			}),
 		).toBe(false);
 	});
+
+	it("validates structured lifecycle receipts", () => {
+		const receipt = {
+			operation: "install",
+			packageName: "example-extension",
+			source: "npm:example-extension",
+			scope: "user",
+			status: "succeeded",
+			effect: "next-session",
+			events: [
+				{ type: "staged", at: 1 },
+				{ type: "verified", at: 2 },
+				{ type: "reload_deferred", at: 3, sessionId: "session-1" },
+			],
+			deferredSessionIds: ["session-1"],
+		};
+		expect(Check(PackagesContract.methods.installPackage.result, receipt)).toBe(true);
+		expect(
+			Check(PackagesContract.methods.installPackage.result, {
+				...receipt,
+				error: { code: "unknown", message: "bad", retryable: false },
+			}),
+		).toBe(false);
+	});
 });

@@ -4,6 +4,6 @@
 	"output": "knowledge-worker.mjs",
 	"source": "packages/extensions/src/knowledge-worker.ts",
 	"inputsSha256": "059771c2d5aedc415556d55f8e36f0d4763776a2795acaf11ad65970d09f8c1b",
-	"knowledgeSourceSha256": "1491115a3c05f33f704efa184bb48bff04f43237b9af69c03e11d2374c2c22f3",
+	"knowledgeSourceSha256": "ddebd9b724273179dab711219775aa94e1ca30b96d24e42ad50332342ef38750",
 	"outputSha256": "2e43eb26e985e9327d1cd288c5c790f4333cb696e4b7e18c35193b241e60196c"
 }

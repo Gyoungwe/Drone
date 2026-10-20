@@ -15,7 +15,12 @@ import type { HostEnvironment } from "./host-env";
 import type { InstitutionalSaveInput, InstitutionalStatus, InstitutionalTestResult } from "./institutional";
 import type { KnowledgeApi } from "./knowledge";
 import type { McpConfigSnapshot, McpPreset, McpStatus, McpStatusEvent } from "./mcp";
-import type { CatalogPackageType, CatalogSearchResult, ConfiguredPackageInfo } from "./packages";
+import type {
+	CatalogPackageType,
+	CatalogSearchResult,
+	ConfiguredPackageInfo,
+	PackageLifecycleReceipt,
+} from "./packages";
 import type {
 	PermissionAuditTailEntry,
 	PermissionProbeInput,
@@ -53,6 +58,12 @@ import type {
 	ProviderTestResult,
 	SubagentInfo,
 } from "./settings";
+import type {
+	SkillRepositoryAddInput,
+	SkillRepositoryCheckResult,
+	SkillRepositoryRecord,
+	SkillRepositoryUpdateResult,
+} from "./skill-repository";
 import type {
 	SubagentDispatchInput,
 	SubagentDispatchReceipt,
@@ -373,6 +384,16 @@ export const IpcChannels = {
 	ResearchSkillUpdate: "researchSkills:update",
 	/** 重启以启用已下载的内置研究技能 */
 	ResearchSkillRestart: "researchSkills:restart",
+	/** Skill 仓库管理：列出用户添加的来源 */
+	SkillRepositoryList: "skillRepositories:list",
+	/** Skill 仓库管理：添加 Git URL 或本地目录 */
+	SkillRepositoryAdd: "skillRepositories:add",
+	/** Skill 仓库管理：手动检查单个来源 */
+	SkillRepositoryCheck: "skillRepositories:check",
+	/** Skill 仓库管理：暂存并应用单个来源更新 */
+	SkillRepositoryUpdate: "skillRepositories:update",
+	/** Skill 仓库管理：移除来源配置与已安装技能快照 */
+	SkillRepositoryRemove: "skillRepositories:remove",
 	/** main 原生菜单 → renderer 桌面命令（P5） */
 	DesktopCommand: "desktop:command",
 	/** UI 插件：读全局配置 */
@@ -439,12 +460,12 @@ export interface PiApi
 	listSubagentRuns(sessionId: string): Promise<SubagentPanelRun[]>;
 	/** 搜索 pi.dev 社区包目录（服务端模糊匹配名称/描述/作者，50 条/页） */
 	searchCatalog(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
-	/** 安装社区包（npm:<name>，用户级）；成功后热重载非流式活跃会话 */
-	installPackage(name: string): Promise<void>;
-	/** 更新已配置社区包到 registry 最新版本；成功后热重载非流式活跃会话 */
-	updatePackage(name: string): Promise<void>;
-	/** 卸载已配置的包（按 source + scope 移除并持久化）；成功后热重载非流式活跃会话 */
-	removePackage(source: string, scope: "user" | "project"): Promise<void>;
+	/** 安装社区包（npm:<name>，用户级）；返回可审计的生命周期回执 */
+	installPackage(name: string): Promise<PackageLifecycleReceipt>;
+	/** 更新已配置社区包到 registry 最新版本；返回可审计的生命周期回执 */
+	updatePackage(name: string): Promise<PackageLifecycleReceipt>;
+	/** 卸载已配置的包（按 source + scope 移除并持久化）；返回可审计的生命周期回执 */
+	removePackage(source: string, scope: "user" | "project"): Promise<PackageLifecycleReceipt>;
 	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
 	listConfiguredPackages(): Promise<ConfiguredPackageInfo[]>;
 	/** 弹保存对话框并写文件；用户取消返回 null，成功返回写入路径 */
@@ -635,6 +656,16 @@ export interface PiApi
 	restartForResearchSkills(): Promise<void>;
 	/** 订阅内置研究技能更新状态 */
 	onResearchSkillUpdateEvent(cb: (state: ResearchSkillUpdateState) => void): () => void;
+	/** 列出用户添加的 Skill 仓库（仅来源元数据，不含文件正文） */
+	listSkillRepositories(): Promise<SkillRepositoryRecord[]>;
+	/** 添加并校验 Git URL 或本地目录；返回已暂存来源，重启后载入 */
+	addSkillRepository(input: SkillRepositoryAddInput): Promise<SkillRepositoryRecord>;
+	/** 手动检查单个 Skill 仓库，返回变更文件列表 */
+	checkSkillRepository(id: string): Promise<SkillRepositoryCheckResult>;
+	/** 暂存并原子应用单个 Skill 仓库更新，下一会话/重启生效 */
+	updateSkillRepository(id: string): Promise<SkillRepositoryUpdateResult>;
+	/** 卸载 Skill 仓库来源；不触碰知识库或会话内容 */
+	removeSkillRepository(id: string): Promise<void>;
 	/** 原生菜单触发的桌面命令（P5） */
 	onDesktopCommand(cb: (command: DesktopCommand) => void): () => void;
 	/** 读 UI 插件全局配置（总开关/启用信任表/槽位指派） */

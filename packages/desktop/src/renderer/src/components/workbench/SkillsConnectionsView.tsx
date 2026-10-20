@@ -5,6 +5,8 @@ import type {
 	McpServerRuntimeStatus,
 	McpStatus,
 	ResearchConnectorDescriptor,
+	SkillRepositoryAddInput,
+	SkillRepositoryRecord,
 	ZoteroLocalWriteStatus,
 	ZoteroStatus,
 	ZoteroWebApiStatus,
@@ -220,6 +222,14 @@ export function SkillsConnectionsView() {
 	const [pendingSkillGroup, setPendingSkillGroup] = useState<string | null>(null);
 	const [disabledSkillNames, setDisabledSkillNames] = useState<Set<string>>(() => new Set());
 	const [drawer, setDrawer] = useState<DrawerKind | null>(null);
+	const [skillRepositories, setSkillRepositories] = useState<SkillRepositoryRecord[]>([]);
+	const [repositoryDialog, setRepositoryDialog] = useState(false);
+	const [repositoryBusy, setRepositoryBusy] = useState<string | null>(null);
+	const [repositoryDraft, setRepositoryDraft] = useState<SkillRepositoryAddInput>({
+		kind: "git",
+		source: "",
+		license: "",
+	});
 	const skillUpdateState = useResearchSkillUpdateStore((state) => state.state);
 	const checkResearchSkills = useResearchSkillUpdateStore((state) => state.check);
 	useEffect(() => {
@@ -245,13 +255,26 @@ export function SkillsConnectionsView() {
 			getPi().getZoteroWebApi(),
 			getPi().getZoteroLocalWrite(),
 			getPi().getInstitutionalStatus(),
+			typeof getPi().listSkillRepositories === "function"
+				? getPi().listSkillRepositories()
+				: Promise.resolve([]),
 		]);
-		const [settingsResult, , mcpResult, zoteroResult, webResult, localResult, institutionalResult] = results;
+		const [
+			settingsResult,
+			,
+			mcpResult,
+			zoteroResult,
+			webResult,
+			localResult,
+			institutionalResult,
+			repositoriesResult,
+		] = results;
 		if (mcpResult.status === "fulfilled") setMcp(mcpResult.value);
 		if (zoteroResult.status === "fulfilled") setZotero(zoteroResult.value);
 		if (webResult.status === "fulfilled") setZoteroWeb(webResult.value);
 		if (localResult.status === "fulfilled") setZoteroLocal(localResult.value);
 		if (institutionalResult.status === "fulfilled") setInstitutional(institutionalResult.value);
+		if (repositoriesResult?.status === "fulfilled") setSkillRepositories(repositoriesResult.value);
 		const failed = results.find((result) => result.status === "rejected");
 		if (failed?.status === "rejected" && settingsResult.status === "rejected")
 			setError(failed.reason instanceof Error ? failed.reason.message : String(failed.reason));
@@ -401,6 +424,93 @@ export function SkillsConnectionsView() {
 	const skillUpdateBusy = skillUpdateState?.phase === "checking" || skillUpdateState?.phase === "downloading";
 	const skillUpdateLabel =
 		skillUpdateState?.phase === "ready" ? t("update.skillsRestart") : t("update.skillsUpdate");
+	const refreshSkillRepositories = useCallback(async () => {
+		if (typeof getPi().listSkillRepositories !== "function") return;
+		try {
+			setSkillRepositories(await getPi().listSkillRepositories());
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : String(reason));
+		}
+	}, []);
+	useEffect(() => {
+		if (section === "skills") void refreshSkillRepositories();
+	}, [refreshSkillRepositories, section]);
+	const updateRepositoryInState = (repository: SkillRepositoryRecord) =>
+		setSkillRepositories((current) =>
+			current.some((item) => item.id === repository.id)
+				? current.map((item) => (item.id === repository.id ? repository : item))
+				: [...current, repository],
+		);
+	const checkSkillRepository = async (repository: SkillRepositoryRecord) => {
+		setRepositoryBusy(repository.id);
+		setError(null);
+		try {
+			const result = await getPi().checkSkillRepository(repository.id);
+			updateRepositoryInState(result.repository);
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : String(reason));
+		} finally {
+			setRepositoryBusy(null);
+		}
+	};
+	const updateSkillRepository = async (repository: SkillRepositoryRecord) => {
+		if (repository.status !== "update-available") {
+			await checkSkillRepository(repository);
+			return;
+		}
+		const shouldApply = window.confirm(
+			t("skillsConnections.repositoryApplyConfirm", { name: repository.name }),
+		);
+		if (!shouldApply) return;
+		setRepositoryBusy(repository.id);
+		setError(null);
+		try {
+			const result = await getPi().updateSkillRepository(repository.id);
+			updateRepositoryInState(result.repository);
+			await restartForResearchSkillsWithGuard();
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : String(reason));
+		} finally {
+			setRepositoryBusy(null);
+		}
+	};
+	const removeSkillRepository = async (repository: SkillRepositoryRecord) => {
+		if (!window.confirm(t("skillsConnections.repositoryRemoveConfirm", { name: repository.name }))) return;
+		setRepositoryBusy(repository.id);
+		setError(null);
+		try {
+			await getPi().removeSkillRepository(repository.id);
+			setSkillRepositories((current) => current.filter((item) => item.id !== repository.id));
+			await restartForResearchSkillsWithGuard();
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : String(reason));
+		} finally {
+			setRepositoryBusy(null);
+		}
+	};
+	const submitSkillRepository = async () => {
+		setError(null);
+		if (!repositoryDraft.source.trim() || !repositoryDraft.license.trim()) {
+			setError(t("skillsConnections.repositoryRequired"));
+			return;
+		}
+		setRepositoryBusy("new");
+		try {
+			const repository = await getPi().addSkillRepository({
+				...repositoryDraft,
+				source: repositoryDraft.source.trim(),
+				license: repositoryDraft.license.trim(),
+			});
+			updateRepositoryInState(repository);
+			setRepositoryDialog(false);
+			setRepositoryDraft({ kind: "git", source: "", license: "" });
+			await restartForResearchSkillsWithGuard();
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : String(reason));
+		} finally {
+			setRepositoryBusy(null);
+		}
+	};
 	const setSkillGroupEnabled = async (source: string, names: string[], enabled: boolean) => {
 		if (!activeSessionId || isDraftSessionId(activeSessionId)) {
 			setError(t("skillsConnections.noSession"));
@@ -592,6 +702,100 @@ export function SkillsConnectionsView() {
 											);
 										})}
 									</div>
+								</section>
+								<section
+									className="mt-4 rounded-2xl border border-border bg-surface px-4 py-4"
+									data-testid="custom-skill-repositories"
+								>
+									<div className="flex flex-wrap items-baseline justify-between gap-3">
+										<div>
+											<h2 className="text-sm font-medium text-ink">
+												{t("skillsConnections.customRepositories")}
+											</h2>
+											<p className="mt-1 text-xs leading-relaxed text-ink-dim">
+												{t("skillsConnections.customRepositoriesHint")}
+											</p>
+										</div>
+										<button
+											type="button"
+											className="rounded-full bg-ink px-3 py-2 text-xs text-canvas hover:opacity-90"
+											onClick={() => setRepositoryDialog(true)}
+										>
+											+ {t("skillsConnections.addRepository")}
+										</button>
+									</div>
+									{skillRepositories.length === 0 ? (
+										<p className="py-6 text-center text-xs text-ink-faint">
+											{t("skillsConnections.noCustomRepositories")}
+										</p>
+									) : (
+										<ul className="mt-3 divide-y divide-border">
+											{skillRepositories.map((repository) => (
+												<li key={repository.id} className="py-3">
+													<div className="flex flex-wrap items-start justify-between gap-3">
+														<div className="min-w-0 flex-1">
+															<p className="truncate text-xs font-medium text-ink">{repository.name}</p>
+															<p className="mt-1 truncate text-[11px] text-ink-faint">
+																{repository.kind === "git" ? "Git" : t("skillsConnections.localSource")} ·{" "}
+																{repository.source}
+																{repository.ref ? ` · ${repository.ref}` : ""}
+															</p>
+															<p className="mt-1 text-[11px] text-ink-faint">
+																{t("skillsConnections.repositoryMeta", {
+																	count: repository.skillCount,
+																	license: repository.license,
+																})}
+															</p>
+															{repository.lastError ? (
+																<p className="mt-1 line-clamp-2 text-[11px] text-danger">
+																	{repository.lastError}
+																</p>
+															) : null}
+														</div>
+														<span
+															className={`rounded-full px-2 py-1 text-[10px] ${repository.status === "ready" ? "bg-highlight text-ink-2" : repository.status === "update-available" ? "bg-warn/10 text-warn" : "bg-danger/10 text-danger"}`}
+														>
+															{repository.status === "ready"
+																? t("skillsConnections.repositoryReady")
+																: repository.status === "update-available"
+																	? t("skillsConnections.repositoryUpdateAvailable")
+																	: t("skillsConnections.repositoryError")}
+														</span>
+													</div>
+													<div className="mt-2 flex flex-wrap items-center gap-2">
+														<button
+															type="button"
+															className="rounded-full border border-border px-3 py-2 text-[11px] text-ink-2 hover:bg-hover disabled:opacity-50"
+															disabled={repositoryBusy === repository.id}
+															onClick={() => void checkSkillRepository(repository)}
+														>
+															{repositoryBusy === repository.id
+																? t("skillsConnections.repositoryWorking")
+																: t("skillsConnections.repositoryCheck")}
+														</button>
+														<button
+															type="button"
+															className="rounded-full bg-ink px-3 py-2 text-[11px] text-canvas hover:opacity-90 disabled:opacity-50"
+															disabled={
+																repositoryBusy === repository.id || repository.status !== "update-available"
+															}
+															onClick={() => void updateSkillRepository(repository)}
+														>
+															{t("skillsConnections.repositoryApply")}
+														</button>
+														<button
+															type="button"
+															className="rounded-full border border-danger/30 px-3 py-2 text-[11px] text-danger hover:bg-danger/5 disabled:opacity-50"
+															disabled={repositoryBusy === repository.id}
+															onClick={() => void removeSkillRepository(repository)}
+														>
+															{t("skillsConnections.repositoryRemove")}
+														</button>
+													</div>
+												</li>
+											))}
+										</ul>
+									)}
 								</section>
 							</>
 						) : null}
@@ -847,6 +1051,133 @@ export function SkillsConnectionsView() {
 					</main>
 				</div>
 			</div>
+			{repositoryDialog && (
+				<div
+					className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4"
+					role="presentation"
+				>
+					<div
+						className="w-full max-w-lg rounded-2xl border border-border bg-surface p-5 shadow-2xl"
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="skill-repository-dialog-title"
+					>
+						<div className="flex items-center justify-between gap-3">
+							<h2 id="skill-repository-dialog-title" className="text-sm font-semibold text-ink">
+								{t("skillsConnections.addRepository")}
+							</h2>
+							<button
+								type="button"
+								className="rounded-lg px-2 py-1 text-ink-faint hover:bg-hover"
+								onClick={() => setRepositoryDialog(false)}
+								aria-label={t("common.close")}
+							>
+								✕
+							</button>
+						</div>
+						<div className="mt-4 space-y-3">
+							<div className="flex gap-2">
+								{(["git", "local"] as const).map((kind) => (
+									<button
+										key={kind}
+										type="button"
+										className={`rounded-full border px-3 py-2 text-xs ${repositoryDraft.kind === kind ? "border-ink bg-ink text-canvas" : "border-border text-ink-2 hover:bg-hover"}`}
+										onClick={() => setRepositoryDraft((draft) => ({ ...draft, kind }))}
+									>
+										{kind === "git" ? "Git URL" : t("skillsConnections.localSource")}
+									</button>
+								))}
+							</div>
+							<label className="block text-xs text-ink-dim">
+								<span>
+									{repositoryDraft.kind === "git" ? "Git URL" : t("skillsConnections.localDirectory")}
+								</span>
+								<div className="mt-1 flex gap-2">
+									<input
+										className="min-w-0 flex-1 rounded-lg border border-border bg-canvas px-3 py-2 text-xs text-ink outline-none focus:border-ink"
+										value={repositoryDraft.source}
+										onChange={(event) =>
+											setRepositoryDraft((draft) => ({ ...draft, source: event.target.value }))
+										}
+										placeholder={
+											repositoryDraft.kind === "git" ? "https://github.com/org/repo.git" : "/path/to/skills"
+										}
+									/>
+									{repositoryDraft.kind === "local" ? (
+										<button
+											type="button"
+											className="rounded-lg border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
+											onClick={async () => {
+												const path = await getPi().pickPath("directory");
+												if (path) setRepositoryDraft((draft) => ({ ...draft, source: path }));
+											}}
+										>
+											{t("skillsConnections.browse")}
+										</button>
+									) : null}
+								</div>
+							</label>
+							{repositoryDraft.kind === "git" ? (
+								<label className="block text-xs text-ink-dim">
+									<span>{t("skillsConnections.repositoryRef")}</span>
+									<input
+										className="mt-1 w-full rounded-lg border border-border bg-canvas px-3 py-2 text-xs text-ink outline-none focus:border-ink"
+										value={repositoryDraft.ref ?? ""}
+										onChange={(event) =>
+											setRepositoryDraft((draft) => ({ ...draft, ref: event.target.value || undefined }))
+										}
+										placeholder="main"
+									/>
+								</label>
+							) : null}
+							<label className="block text-xs text-ink-dim">
+								<span>{t("skillsConnections.repositoryLicense")}</span>
+								<input
+									className="mt-1 w-full rounded-lg border border-border bg-canvas px-3 py-2 text-xs text-ink outline-none focus:border-ink"
+									value={repositoryDraft.license}
+									onChange={(event) =>
+										setRepositoryDraft((draft) => ({ ...draft, license: event.target.value }))
+									}
+									placeholder="MIT / Apache-2.0 / permission granted"
+								/>
+							</label>
+							<label className="block text-xs text-ink-dim">
+								<span>{t("skillsConnections.repositoryEvidence")}</span>
+								<input
+									className="mt-1 w-full rounded-lg border border-border bg-canvas px-3 py-2 text-xs text-ink outline-none focus:border-ink"
+									value={repositoryDraft.licenseEvidence ?? ""}
+									onChange={(event) =>
+										setRepositoryDraft((draft) => ({
+											...draft,
+											licenseEvidence: event.target.value || undefined,
+										}))
+									}
+									placeholder="LICENSE or permission URL"
+								/>
+							</label>
+						</div>
+						<div className="mt-5 flex justify-end gap-2">
+							<button
+								type="button"
+								className="rounded-full border border-border px-3 py-2 text-xs text-ink-2 hover:bg-hover"
+								onClick={() => setRepositoryDialog(false)}
+							>
+								{t("common.cancel")}
+							</button>
+							<button
+								type="button"
+								className="rounded-full bg-ink px-4 py-2 text-xs text-canvas hover:opacity-90 disabled:opacity-50"
+								disabled={repositoryBusy === "new"}
+								onClick={() => void submitSkillRepository()}
+							>
+								{repositoryBusy === "new"
+									? t("skillsConnections.repositoryWorking")
+									: t("skillsConnections.repositoryAdd")}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 			{drawer && (
 				<aside
 					className="fixed inset-y-0 right-0 z-30 w-[min(520px,92vw)] overflow-y-auto border-l border-border bg-surface p-5 shadow-2xl"

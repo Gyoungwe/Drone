@@ -41,16 +41,19 @@ export function registerPackagesIpc(
 			return packages.searchPackages(query, type, page);
 		},
 		installPackage: async (name) => {
-			await packages.installPackage(name);
-			await onPackagesChanged?.();
+			const receipt = await packages.installPackage(name);
+			if (receipt.status === "succeeded") await onPackagesChanged?.();
+			return receipt;
 		},
 		updatePackage: async (name) => {
-			await packages.updatePackage(name);
-			await onPackagesChanged?.();
+			const receipt = await packages.updatePackage(name);
+			if (receipt.status === "succeeded") await onPackagesChanged?.();
+			return receipt;
 		},
 		removePackage: async (source, scope) => {
-			await packages.removePackage(source, scope);
-			await onPackagesChanged?.();
+			const receipt = await packages.removePackage(source, scope);
+			if (receipt.status === "succeeded") await onPackagesChanged?.();
+			return receipt;
 		},
 		listConfiguredPackages: () => packages.listConfiguredPackages(),
 	};

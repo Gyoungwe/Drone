@@ -20,6 +20,7 @@ import {
 	type ResearchSkillUpdateState,
 } from "@drone/shared";
 import { app } from "electron";
+import { readSkillRepositoryInstall } from "./skill-repositories";
 
 const log = createLogger("research-skill-updater");
 const MAX_ARCHIVE_BYTES = 350 * 1024 * 1024;
@@ -95,13 +96,17 @@ function readManifest(userDataDir: string): Manifest | null {
 export function readResearchSkillPackInstall(userDataDir: string): {
 	sourceRoots: Partial<Record<ResearchSkillSource, string>>;
 	sourcePins: Partial<Record<ResearchSkillSource, PackPin>>;
+	additionalSkillPaths: string[];
+	warnings: string[];
 } {
 	const sourceRoots: Partial<Record<ResearchSkillSource, string>> = {};
 	const sourcePins: Partial<Record<ResearchSkillSource, PackPin>> = {};
+	const custom = readSkillRepositoryInstall(userDataDir);
+	const warnings = [...custom.warnings];
 	const manifest = readManifest(userDataDir);
-	if (!manifest) return { sourceRoots, sourcePins };
+	if (!manifest) return { sourceRoots, sourcePins, additionalSkillPaths: custom.paths, warnings };
 	const root = realpathOrNull(installRoot(userDataDir));
-	if (!root) return { sourceRoots, sourcePins };
+	if (!root) return { sourceRoots, sourcePins, additionalSkillPaths: custom.paths, warnings };
 	for (const id of BUILTIN_IDS) {
 		const pin = manifest.packs[id];
 		if (!pin || !COMMIT_RE.test(pin.commit) || !HASH_RE.test(pin.archiveSha256)) continue;
@@ -111,7 +116,7 @@ export function readResearchSkillPackInstall(userDataDir: string): {
 		sourceRoots[id] = realDirectory;
 		sourcePins[id] = pin;
 	}
-	return { sourceRoots, sourcePins };
+	return { sourceRoots, sourcePins, additionalSkillPaths: custom.paths, warnings };
 }
 
 function realpathOrNull(path: string): string | null {

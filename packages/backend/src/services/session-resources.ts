@@ -21,6 +21,7 @@ type McpHandler = (cwd: string, status: McpStatusType) => void;
 
 import { allSkillsFromLoader } from "../capabilities/resource-loader";
 import type { CapabilityRuntime } from "../capabilities/runtime";
+import { getKnowledgeWorkerLifecycle } from "../knowledge/ui";
 import { describeMcpStatusChange, type McpService } from "./../mcp/service";
 import type { ProjectResourceLoader } from "../project/trust-loader";
 import type { RegisteredSession, SessionRegistry } from "../session/registry";
@@ -128,6 +129,7 @@ export class SessionResourceService {
 			{ name: "@gyoungwe/desktop-ui-pack", host: "desktop" as const },
 			{ name: "@gyoungwe/research-suite", host: "pi" as const },
 		];
+		const knowledgeLifecycle = getKnowledgeWorkerLifecycle();
 		return entries.map((entry) => {
 			const metadata = DRONE_PLUGIN_METADATA[entry.name as keyof typeof DRONE_PLUGIN_METADATA];
 			const packageJson =
@@ -148,10 +150,19 @@ export class SessionResourceService {
 			const packageData = packageJson ? this.readPackage(packageJson) : undefined;
 			const manifestData = packageJson ? this.readManifest(dirname(packageJson)) : undefined;
 			const source = packageData ? dronePluginSource(packageData, manifestData) : undefined;
+			const lifecycle = entry.name === "@gyoungwe/pi-knowledge" ? knowledgeLifecycle : undefined;
 			return {
 				...entry,
 				version,
 				status: packageJson ? "available" : "unavailable",
+				...(lifecycle
+					? {
+							currentVersion: lifecycle.currentVersion,
+							nextSessionVersion: lifecycle.nextSessionVersion,
+							lifecycleState: lifecycle.state,
+							...(lifecycle.lastError ? { lastLifecycleError: lifecycle.lastError } : {}),
+						}
+					: {}),
 				description: metadata.description,
 				...(metadata.packageKind ? { packageKind: metadata.packageKind } : {}),
 				...(metadata.capabilities ? { capabilities: [...metadata.capabilities] } : {}),

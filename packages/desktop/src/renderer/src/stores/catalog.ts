@@ -1,4 +1,10 @@
-import type { CatalogPackage, CatalogPackageType, ConfiguredPackageInfo } from "@drone/shared";
+import type {
+	CatalogPackage,
+	CatalogPackageType,
+	ConfiguredPackageInfo,
+	PackageLifecycleOperation,
+	PackageLifecycleReceipt,
+} from "@drone/shared";
 import { create } from "zustand";
 import { getPi } from "../api";
 import { useSettingsStore } from "./settings";
@@ -24,10 +30,14 @@ interface CatalogStore {
 	updatingNames: Record<string, true>;
 	/** 按包名的安装错误 */
 	installErrors: Record<string, string>;
+	/** 按包名的更新错误 */
+	updateErrors: Record<string, string>;
 	/** 卸载中的 source 集合 */
 	removingSources: Record<string, true>;
 	/** 按 source 的卸载错误 */
 	removeErrors: Record<string, string>;
+	/** 最近一次生命周期回执；页面用它显示当前/下一会话生效边界。 */
+	lifecycleReceipts: Record<string, PackageLifecycleReceipt>;
 	/** settings.json 已配置的包（null = 未加载；「已安装」态匹配/卸载用） */
 	configuredPackages: ConfiguredPackageInfo[] | null;
 	setExtensionsTab: (tab: "browse" | "loaded") => void;
@@ -66,8 +76,10 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 		installingNames: {},
 		updatingNames: {},
 		installErrors: {},
+		updateErrors: {},
 		removingSources: {},
 		removeErrors: {},
+		lifecycleReceipts: {},
 		configuredPackages: null,
 
 		setExtensionsTab: (extensionsTab) => set({ extensionsTab }),
@@ -118,16 +130,28 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 				return { installingNames: { ...state.installingNames, [name]: true }, installErrors };
 			});
 			try {
-				await getPi().installPackage(name);
+				const receipt = await getPi().installPackage(name);
+				set((state) => ({ lifecycleReceipts: { ...state.lifecycleReceipts, [name]: receipt } }));
+				if (receipt.status === "failed") {
+					set((state) => ({
+						installErrors: {
+							...state.installErrors,
+							[name]: receipt.error?.message ?? "Package installation failed",
+						},
+					}));
+					return;
+				}
 				await get().refreshConfiguredPackages();
 				// backend 已对非流式会话做 session.reload()，刷新已加载资源列表让「已加载」页同步
 				void useSettingsStore.getState().refresh();
 				void useUiPluginsStore.getState().loadAll();
 			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
 				set((state) => ({
-					installErrors: {
-						...state.installErrors,
-						[name]: error instanceof Error ? error.message : String(error),
+					installErrors: { ...state.installErrors, [name]: message },
+					lifecycleReceipts: {
+						...state.lifecycleReceipts,
+						[name]: failedReceipt("install", name, `npm:${name}`, "user", message),
 					},
 				}));
 			} finally {
@@ -140,12 +164,35 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 		},
 
 		updateCatalogPackage: async (name) => {
-			set((state) => ({ updatingNames: { ...state.updatingNames, [name]: true } }));
+			set((state) => {
+				const updateErrors = { ...state.updateErrors };
+				delete updateErrors[name];
+				return { updatingNames: { ...state.updatingNames, [name]: true }, updateErrors };
+			});
 			try {
-				await getPi().updatePackage(name);
+				const receipt = await getPi().updatePackage(name);
+				set((state) => ({ lifecycleReceipts: { ...state.lifecycleReceipts, [name]: receipt } }));
+				if (receipt.status === "failed") {
+					set((state) => ({
+						updateErrors: {
+							...state.updateErrors,
+							[name]: receipt.error?.message ?? "Package update failed",
+						},
+					}));
+					return;
+				}
 				await get().refreshConfiguredPackages();
 				void useSettingsStore.getState().refresh();
 				void useUiPluginsStore.getState().loadAll();
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				set((state) => ({
+					updateErrors: { ...state.updateErrors, [name]: message },
+					lifecycleReceipts: {
+						...state.lifecycleReceipts,
+						[name]: failedReceipt("update", name, `npm:${name}`, "user", message),
+					},
+				}));
 			} finally {
 				set((state) => {
 					const updatingNames = { ...state.updatingNames };
@@ -171,16 +218,28 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 				return { removingSources: { ...state.removingSources, [source]: true }, removeErrors };
 			});
 			try {
-				await getPi().removePackage(source, scope);
+				const receipt = await getPi().removePackage(source, scope);
+				set((state) => ({ lifecycleReceipts: { ...state.lifecycleReceipts, [source]: receipt } }));
+				if (receipt.status === "failed") {
+					set((state) => ({
+						removeErrors: {
+							...state.removeErrors,
+							[source]: receipt.error?.message ?? "Package removal failed",
+						},
+					}));
+					return;
+				}
 				await get().refreshConfiguredPackages();
 				// backend 已对非流式会话做 session.reload()，刷新已加载资源列表让「已加载」页同步
 				void useSettingsStore.getState().refresh();
 				void useUiPluginsStore.getState().loadAll();
 			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
 				set((state) => ({
-					removeErrors: {
-						...state.removeErrors,
-						[source]: error instanceof Error ? error.message : String(error),
+					removeErrors: { ...state.removeErrors, [source]: message },
+					lifecycleReceipts: {
+						...state.lifecycleReceipts,
+						[source]: failedReceipt("remove", source.replace(/^npm:/u, ""), source, scope, message),
 					},
 				}));
 			} finally {
@@ -193,3 +252,22 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 		},
 	};
 });
+
+function failedReceipt(
+	operation: PackageLifecycleOperation,
+	packageName: string,
+	source: string,
+	scope: "user" | "project",
+	message: string,
+): PackageLifecycleReceipt {
+	return {
+		operation,
+		packageName,
+		source,
+		scope,
+		status: "failed",
+		effect: "current-session",
+		events: [{ type: "failed", at: Date.now(), detail: message.slice(0, 1000) }],
+		error: { code: "operation-failed", message: message.slice(0, 1000), retryable: true },
+	};
+}

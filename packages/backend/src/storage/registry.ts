@@ -549,6 +549,13 @@ export function createDefaultStorageRegistry(options: DefaultStorageRegistryOpti
 				owner: "desktop/ui-plugins",
 				schema: 1,
 				sensitivity: "private",
+			})
+			.register({
+				id: "desktop-research-skill-repositories",
+				path: `${userDataDir}/research-skills/repositories.json`,
+				owner: "desktop/research-skill-repositories",
+				schema: 1,
+				sensitivity: "config",
 			});
 	}
 	return registry;

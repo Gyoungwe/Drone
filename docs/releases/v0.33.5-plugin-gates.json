@@ -1,0 +1,93 @@
+{
+	"version": "v0.33.5-gates",
+	"generatedAt": "2026-10-20T14:05:00+08:00",
+	"policy": {
+		"b8": "paused",
+		"protocolsIo": "read-only",
+		"signing": "out-of-scope; unsigned policy",
+		"passRule": "real native session or real installed package evidence only"
+	},
+	"skillRepositories": {
+		"status": "IMPLEMENTED_TESTED",
+		"evidence": [
+			"packages/desktop/src/main/skill-repositories.test.ts: 3/3",
+			"npm test -w @drone/desktop -- --run src/main/skill-repositories.test.ts"
+		],
+		"capabilities": [
+			"HTTPS/SSH Git or absolute local directory",
+			"ref/subpath/license basis",
+			"hash-checked staging",
+			"atomic apply",
+			"failure retention",
+			"source-only uninstall"
+		]
+	},
+	"pluginMarket": {
+		"status": "PARTIAL_REAL_REGISTRY",
+		"localTarball": "PASS: npm run check:market-plugin-lifecycle (install/update/uninstall fixture)",
+		"registry": {
+			"package": "@gyoungwe/pi-core",
+			"installVersion": "0.1.4",
+			"updateCommand": "pi update npm:@gyoungwe/pi-core",
+			"updateCommandExit": 0,
+			"uninstallExit": 0,
+			"note": "Pi CLI update command returned success but its managed package directory remained at 0.1.4; explicit registry install of 0.1.5 was verified separately. Treat update as NOT_RUN for a version-change PASS."
+		},
+		"lifecycleReceipts": "PASS: backend/renderer structured install/update/remove receipts and rollback/error states"
+	},
+	"workerRollback": {
+		"status": "PASS_PACKAGED_AND_REGRESSION",
+		"evidence": [
+			"test/knowledge-worker-lifecycle.test.mjs: 3/3",
+			"test/knowledge-lifecycle.test.mjs: 2/2",
+			"test/knowledge-specialists-sdk.test.mjs: 1/1 after generated extension rebuild",
+			"scripts/check-knowledge-package.mjs: PASS with worker manifest SHA-256"
+		],
+		"behavior": [
+			"candidate health check",
+			"atomic swap",
+			"drain before close",
+			"failed candidate rollback",
+			"lifecycle events"
+		]
+	},
+	"nativePi": {
+		"status": "PASS",
+		"registryPackage": "@gyoungwe/pi-core@0.1.5",
+		"registry": "https://registry.npmjs.org",
+		"host": "@earendil-works/pi-coding-agent@1.1.0",
+		"doctor": {
+			"status": "pass",
+			"hostVersion": "1.1.0",
+			"hostVersionSource": "resolved-package",
+			"pluginVersion": "0.1.5"
+		},
+		"realPrompt": "NATIVE_PI_REGISTRY_OK",
+		"uninstall": "PASS",
+		"secretHandling": "API key supplied only through process environment; no credential written to evidence"
+	},
+	"mcp": {
+		"status": "PASS_LOCAL_NATIVE",
+		"adapter": "pi-mcp-adapter@5.1.0",
+		"server": "echo fixture over stdio",
+		"realTool": "mcp__echo",
+		"result": "echo:native-mcp-acceptance",
+		"realPrompt": "MCP_NATIVE_OK",
+		"uninstall": "PASS",
+		"boundary": "external user-configured MCP remains NOT_RUN"
+	},
+	"darkVisual": {
+		"status": "PASS_BUILT_RENDERER",
+		"report": "docs/releases/visual/drone-visual-comparison-dark.json",
+		"views": ["new-task", "knowledge", "skills", "hosts"],
+		"method": "Chrome headless with deterministic dark theme",
+		"boundary": "built renderer comparison; interactive Electron GUI remains environment-blocked"
+	},
+	"checks": {
+		"targetedTests": "PASS",
+		"checkRemainingGates": "PASS",
+		"checkArchitecture": "PASS",
+		"darkVisual": "PASS",
+		"fullTestSuite": "PASS; a prior parallel run had one channel-watch timing flake and the isolated rerun passed"
+	}
+}

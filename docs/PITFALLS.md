@@ -272,3 +272,7 @@ git remote 走 SSH（本机直连 github.com:443 不通）。`main` 有分支保
 ## 2026-10-12：路线摘要与临时目录测试
 
 路线摘要的 `findIndex` 在全部节点已处理时返回 -1，应选择末节点而非回到第一步；路线节点状态仅是路由快照，不等于实际任务执行已完成。流程 `textPair` 的英文默认值是中文，新增固定文案必须显式填写英文。权限元数据测试不能假定 checkout 不在 `/tmp`；该测试只对自身 fixture 注入非临时区分类，其余临时区行为仍由真实分类测试覆盖。
+
+## 2026-10-20：Pi 包更新回执不等于版本替换
+
+`pi update npm:<name>` 可以返回成功，但在 Pi 1.1.0 的独立 HOME 中，managed package 目录仍可能保留旧 `package.json` 版本。市场验收必须同时读取安装目录版本；只有版本真的变化才能标记更新 PASS。若宿主领域源码改变，先运行 `npm run build:extensions -- --force`，再运行 `npm run check:extensions`，否则生成扩展的依赖时间戳会让检查失败。

@@ -25,8 +25,10 @@ function resetStore() {
 		installingNames: {},
 		updatingNames: {},
 		installErrors: {},
+		updateErrors: {},
 		removingSources: {},
 		removeErrors: {},
+		lifecycleReceipts: {},
 		configuredPackages: null,
 	});
 }

@@ -81,14 +81,22 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 	const install = useCatalogStore((state) => state.installCatalogPackage);
 	const update = useCatalogStore((state) => state.updateCatalogPackage);
 	const remove = useCatalogStore((state) => state.removeConfiguredPackage);
+	const current = packageState(entry, configured, host, uiPlugins);
 	const installing = useCatalogStore((state) => state.installingNames[entry.packageName] === true);
 	const updating = useCatalogStore((state) => state.updatingNames[entry.packageName] === true);
+	const installError = useCatalogStore((state) => state.installErrors[entry.packageName]);
+	const updateError = useCatalogStore((state) => state.updateErrors[entry.packageName]);
 	const removing = useCatalogStore((state) =>
 		Object.keys(state.removingSources).some(
 			(source) => source === `npm:${entry.packageName}` || source.startsWith(`npm:${entry.packageName}@`),
 		),
 	);
-	const current = packageState(entry, configured, host, uiPlugins);
+	const removeError = useCatalogStore((state) =>
+		current.configured ? state.removeErrors[current.configured.source] : undefined,
+	);
+	const lifecycle = useCatalogStore(
+		(state) => state.lifecycleReceipts[current.configured?.source ?? entry.packageName],
+	);
 	const uiPlugin =
 		entry.packageName === "@gyoungwe/desktop-ui-pack"
 			? uiPlugins.find((item) => item.name === "drone-research-ui")
@@ -112,6 +120,43 @@ function DronePackageRow({ entry, host }: { entry: PiPluginSourceEntry; host?: H
 					<p className="mt-1 text-[11px] text-ink-faint">
 						v{entry.version ?? "?"} · {entry.capabilities.join(" · ") || "Pi package"}
 					</p>
+					{installError && (
+						<p className="mt-1 text-[11px] text-err">
+							{t("skillsConnections.operationFailed")}: {installError}
+						</p>
+					)}
+					{updateError && (
+						<p className="mt-1 text-[11px] text-err">
+							{t("skillsConnections.operationFailed")}: {updateError}
+						</p>
+					)}
+					{removeError && (
+						<p className="mt-1 text-[11px] text-err">
+							{t("skillsConnections.operationFailed")}: {removeError}
+						</p>
+					)}
+					{lifecycle?.status === "succeeded" && (
+						<p className="mt-1 text-[11px] text-ok">
+							{lifecycle.effect === "next-session"
+								? t("skillsConnections.effectiveNext")
+								: t("skillsConnections.effectiveCurrent")}
+						</p>
+					)}
+					{host?.currentVersion && host.currentVersion !== entry.version && (
+						<p className="mt-1 text-[11px] text-ink-faint">
+							{t("skillsConnections.currentSessionVersion", { version: host.currentVersion })}
+						</p>
+					)}
+					{host?.nextSessionVersion && (
+						<p className="mt-1 text-[11px] text-warn">
+							{t("skillsConnections.nextSessionVersion", { version: host.nextSessionVersion })}
+						</p>
+					)}
+					{host?.lastLifecycleError && (
+						<p className="mt-1 truncate text-[11px] text-danger" title={host.lastLifecycleError}>
+							{t("skillsConnections.lifecycleError", { message: host.lastLifecycleError })}
+						</p>
+					)}
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
 					<span className={`text-[11px] ${current.installed ? "text-ok" : "text-ink-faint"}`}>

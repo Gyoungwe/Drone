@@ -39,7 +39,7 @@ export const DRONE_PLUGIN_METADATA: Readonly<
 	>
 > = {
 	"@gyoungwe/pi-core": {
-		version: "0.1.3",
+		version: "0.1.5",
 		description: "Portable task, authorization, status, delivery and memory tools for native Pi",
 		builtIn: true,
 		capabilities: ["tasks", "authorization", "memory"],
