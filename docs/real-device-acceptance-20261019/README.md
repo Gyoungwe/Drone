@@ -16,8 +16,8 @@
 | V2 知识闭环：第二次新会话本地回答 | **PASS**：18 秒、3 次工具调用，全部是本地知识工具 | 13–14 |
 | V3 知识库页：审阅与网络图 | PASS：网络图正常加载，开发版的 worker 报错没有再出现 | 03–04 |
 | V3 知识库页：数据联动 | FAIL：新沉淀的笔记不显示，本地回答率显示"—" | 15 |
-| V4 MCP 开关 | **BLOCKED**：唯一的 MCP（Zotero）需要配置，探测到 0 个工具，没有可调用对象 | 17 |
-| V5 原生 Pi | NOT_RUN（本轮只测桌面端） | — |
+| V4 MCP 开关 | **PASS（native stdio fixture）**；Zotero 外部配置仍需凭据 | `v0.33.5-plugin-gates.json` |
+| V5 原生 Pi | **PASS**：Pi 1.1.0 真实 registry 包、`/drone-doctor`、模型会话和卸载 | `v0.33.5-plugin-gates.json` |
 | V6 与设计稿对照 | 部分符合，偏差见 P2 | 02、06a、09a |
 
 ## P0（发布阻断）
