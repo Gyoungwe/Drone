@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { getPi } from "../../api";
+import { useI18nStore } from "../../i18n";
+import { relativeTime } from "../../lib/relative-time";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { launchKnowledgeSetup, reportKnowledgeError, useKnowledgeOverview } from "./hooks";
@@ -8,6 +10,7 @@ import { KnowledgeGraph } from "./KnowledgeGraph";
 /** Full-screen knowledge network tab, including an actionable unbound state. */
 export function KnowledgeNetwork({ cwd, sessionId }: { cwd: string | null; sessionId: string | null }) {
 	const t = useKnowledgeText();
+	const language = useI18nStore((state) => state.language);
 	const { data, error, loading } = useKnowledgeOverview(cwd, sessionId);
 	const [busy, setBusy] = useState(false);
 	const binding = data?.binding;
@@ -105,7 +108,36 @@ export function KnowledgeNetwork({ cwd, sessionId }: { cwd: string | null; sessi
 
 	return (
 		<section data-testid="knowledge-network" aria-label={t("network")}>
-			<KnowledgeGraph cwd={cwd} revision={revision} indexKey={indexKey} />
+			<div className="knowledge-network-layout">
+				<KnowledgeGraph cwd={cwd} revision={revision} indexKey={indexKey} />
+				<aside className="knowledge-network-changes" aria-label={t("networkChanges")}>
+					<div className="knowledge-network-changes-head">
+						<h2>{t("networkChanges")}</h2>
+						<span className="knowledge-live-indicator">
+							<i aria-hidden="true" />
+							{t("networkLive")}
+						</span>
+					</div>
+					{data?.recentNotes?.length ? (
+						<ul className="knowledge-network-changes-list">
+							{data.recentNotes.slice(0, 8).map((note) => (
+								<li key={note.path} className="knowledge-network-change">
+									<span className="knowledge-network-change-title" title={note.title}>
+										{note.title}
+									</span>
+									<span className="knowledge-network-change-source" title={note.path}>
+										{t("networkChangeSource")
+											.replace("{time}", relativeTime(note.updatedAt, language))
+											.replace("{source}", note.path)}
+									</span>
+								</li>
+							))}
+						</ul>
+					) : (
+						<p className="knowledge-network-changes-empty">{t("networkChangesEmpty")}</p>
+					)}
+				</aside>
+			</div>
 		</section>
 	);
 }

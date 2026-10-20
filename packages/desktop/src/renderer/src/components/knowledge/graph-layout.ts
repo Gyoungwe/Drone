@@ -17,6 +17,13 @@ export interface LabelPlacement {
 	width: number;
 }
 
+export interface LabelAvoidZone {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+}
+
 const FORCE_LAYOUT_NODE_LIMIT = 800;
 
 function boundedGridLayout(data: Pick<GraphData, "nodes">): Map<string, Point> {
@@ -122,10 +129,11 @@ export function placeGraphLabels(
 	points: Map<string, Point>,
 	labelled: Set<string>,
 	selected?: string | null,
-	options: { uniformOrientation?: boolean } = {},
+	options: { uniformOrientation?: boolean; avoidZones?: readonly LabelAvoidZone[] } = {},
 ): Map<string, LabelPlacement> {
 	const placed: Array<{ x: number; y: number; width: number; height: number }> = [];
 	const result = new Map<string, LabelPlacement>();
+	const avoidZones = options.avoidZones ?? [];
 	const nodes = [...data.nodes]
 		.filter((node) => labelled.has(node.path) || node.path === selected)
 		.sort((a, b) =>
@@ -156,8 +164,16 @@ export function placeGraphLabels(
 			: [
 					{ x: point.x + radius, y: point.y - 15, anchor: "start" as const },
 					{ x: point.x + radius, y: point.y + 5, anchor: "start" as const },
+					{ x: point.x + radius, y: point.y - 42, anchor: "start" as const },
+					{ x: point.x + radius, y: point.y + 30, anchor: "start" as const },
+					{ x: point.x + radius, y: point.y - 80, anchor: "start" as const },
+					{ x: point.x + radius, y: point.y + 60, anchor: "start" as const },
 					{ x: point.x - radius - width, y: point.y - 15, anchor: "end" as const },
 					{ x: point.x - radius - width, y: point.y + 5, anchor: "end" as const },
+					{ x: point.x - radius - width, y: point.y - 42, anchor: "end" as const },
+					{ x: point.x - radius - width, y: point.y + 30, anchor: "end" as const },
+					{ x: point.x - radius - width, y: point.y - 80, anchor: "end" as const },
+					{ x: point.x - radius - width, y: point.y + 60, anchor: "end" as const },
 					{ x: point.x - width / 2, y: point.y - 24, anchor: "start" as const },
 					{ x: point.x - width / 2, y: point.y + 14, anchor: "start" as const },
 				];
@@ -171,13 +187,17 @@ export function placeGraphLabels(
 				height: 14,
 			};
 			const collisions = placed.reduce((count, other) => count + (overlap(box, other) ? 1 : 0), 0);
+			const overlayCollisions = avoidZones.reduce((count, zone) => count + (overlap(box, zone) ? 1 : 0), 0);
 			const edgePenalty =
 				Math.max(0, -box.x) +
 				Math.max(0, box.x + width - GRAPH_WIDTH) +
 				Math.max(0, -box.y) +
 				Math.max(0, box.y + box.height - GRAPH_HEIGHT);
 			const score =
-				collisions * 1000 + edgePenalty * 10 + Math.hypot(candidate.x - point.x, candidate.y - point.y);
+				collisions * 1000 +
+				overlayCollisions * 2500 +
+				edgePenalty * 10 +
+				Math.hypot(candidate.x - point.x, candidate.y - point.y);
 			if (score < bestScore) {
 				best = candidate;
 				bestScore = score;

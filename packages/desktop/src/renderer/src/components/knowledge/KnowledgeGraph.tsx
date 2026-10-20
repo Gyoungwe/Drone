@@ -144,10 +144,13 @@ export function KnowledgeGraph({
 	const [links, setLinks] = useState<KnowledgeNoteLinks | null>(null);
 	const [hovered, setHovered] = useState<string | null>(null);
 	const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, scale: 1 });
+	const [freshPaths, setFreshPaths] = useState<Set<string>>(() => new Set());
 	const rootRef = useRef<HTMLDivElement>(null);
 	const dragRef = useRef<{ x: number; y: number; camera: Camera } | null>(null);
 	const dragFrameRef = useRef<number | null>(null);
 	const pendingCameraRef = useRef<Camera | null>(null);
+	const previousGraphRef = useRef<Map<string, { title: string; degree: number }> | null>(null);
+	const graphSignatureRef = useRef<string | null>(null);
 	useEffect(
 		() => () => {
 			if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
@@ -211,20 +214,55 @@ export function KnowledgeGraph({
 		() =>
 			new Set(
 				[...nodes]
-					.sort((a, b) => b.degree - a.degree || a.path.localeCompare(b.path))
-					.slice(0, 6)
+					.filter((node) => nodes.length <= 500 && node.degree >= 2)
+					.concat(
+						nodes.length > 500
+							? [...nodes].sort((a, b) => b.degree - a.degree || a.path.localeCompare(b.path)).slice(0, 12)
+							: [],
+					)
 					.concat(nodes.filter((node) => node.isMain || (node.sharedWith?.length ?? 0) > 1))
+					.concat(selected ? nodes.filter((node) => node.path === selected) : [])
 					.map((node) => node.path),
 			),
-		[nodes],
+		[nodes, selected],
 	);
 	const labels = useMemo(
 		() =>
 			data
-				? placeGraphLabels({ nodes }, points, labelled, selected, { uniformOrientation: true })
+				? placeGraphLabels({ nodes }, points, labelled, selected, {
+						avoidZones: [
+							// The controls are absolutely positioned over the SVG's bottom-right corner.
+							{ x: WIDTH - 224, y: HEIGHT - 72, width: 224, height: 72 },
+							// The legend occupies the lower-left corner of the canvas.
+							{ x: 0, y: HEIGHT - 82, width: 270, height: 82 },
+						],
+					})
 				: new Map<string, LabelPlacement>(),
 		[data, nodes, points, labelled, selected],
 	);
+	useEffect(() => {
+		if (!data) return;
+		const current = new Map(nodes.map((node) => [node.path, { title: node.title, degree: node.degree }]));
+		const graphSignature = `${view}:${mergeMirrors}:${[...current]
+			.map(([path, value]) => `${path}:${value.title}:${value.degree}`)
+			.join("|")}`;
+		const previous = previousGraphRef.current;
+		const previousSignature = graphSignatureRef.current;
+		previousGraphRef.current = current;
+		graphSignatureRef.current = graphSignature;
+		if (previous && previousSignature !== graphSignature) {
+			const changed = new Set<string>();
+			for (const [path, value] of current) {
+				const old = previous.get(path);
+				if (!old || old.title !== value.title || old.degree !== value.degree) changed.add(path);
+			}
+			if (changed.size > 0) {
+				setFreshPaths(changed);
+				const timer = window.setTimeout(() => setFreshPaths(new Set()), 3200);
+				return () => window.clearTimeout(timer);
+			}
+		}
+	}, [data, mergeMirrors, nodes, view]);
 	const neighbours = useMemo(() => {
 		const map = new Map<string, Set<string>>();
 		for (const edge of edges) {
@@ -462,11 +500,11 @@ export function KnowledgeGraph({
 			</p>
 			<div className="relative">
 				<div className="knowledge-observatory-canvas relative overflow-hidden rounded-xl">
-					<div className="knowledge-graph-canvas-tools absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-3">
+					<div className="knowledge-graph-canvas-tools absolute inset-3 z-10">
 						<span className="knowledge-graph-observatory-label rounded-lg px-3 py-2 text-xs">
 							{t("graphObservatoryLabel")}
 						</span>
-						<div className="knowledge-graph-controls flex items-center gap-1 rounded-lg p-1">
+						<div className="knowledge-graph-controls absolute bottom-0 right-0 flex items-center gap-1 rounded-lg p-1">
 							<button
 								type="button"
 								className="knowledge-graph-zoom-button"
@@ -585,23 +623,24 @@ export function KnowledgeGraph({
 											nodeByPath.get(edge.target) ?? ({ kind: "note" } as GraphData["nodes"][number]),
 										) === categoryFilter;
 									const on = categoryOn && (!active || (active.has(edge.source) && active.has(edge.target)));
+									const fresh = freshPaths.has(edge.source) || freshPaths.has(edge.target);
 									return (
 										<line
 											key={`${edge.source}|${edge.target}|${edge.type}`}
-											className={
-												on && focusPath
-													? "knowledge-graph-edge knowledge-graph-edge--active"
-													: "knowledge-graph-edge"
-											}
+											className={`knowledge-graph-edge${on && focusPath ? " knowledge-graph-edge--active" : ""}${fresh ? " knowledge-graph-edge--fresh" : ""}`}
 											x1={a.x}
 											y1={a.y}
 											x2={b.x}
 											y2={b.y}
 											stroke={
-												edge.type === "directory" ? "var(--knowledge-directory)" : "var(--knowledge-edge)"
+												fresh
+													? "var(--color-ok)"
+													: edge.type === "directory"
+														? "var(--knowledge-directory)"
+														: "var(--knowledge-edge)"
 											}
 											strokeOpacity={on ? (edge.type === "directory" ? 0.6 : 0.5) : categoryOn ? 0.08 : 0.025}
-											strokeWidth={edge.type === "directory" ? 1 : 1.4}
+											strokeWidth={fresh ? 2 : edge.type === "directory" ? 1 : 1.4}
 											strokeDasharray={edge.type === "directory" ? "4 4" : undefined}
 										/>
 									);
@@ -612,11 +651,10 @@ export function KnowledgeGraph({
 								if (!point) return null;
 								const categoryOn = !categoryFilter || categoryOf(node) === categoryFilter;
 								const on = categoryOn && (!active || active.has(node.path));
+								const fresh = freshPaths.has(node.path);
 								const radius = 4 + Math.min(9, Math.sqrt(node.degree) * 1.7) + (node.isMain ? 3 : 0);
 								const placement = labels.get(node.path);
-								const showLabel = Boolean(
-									placement && (camera.scale >= 1.05 || selected === node.path || hovered === node.path),
-								);
+								const showLabel = Boolean(placement);
 								const showMetadata = camera.scale >= 1.15 || selected === node.path || hovered === node.path;
 								return (
 									// biome-ignore lint/a11y/useSemanticElements: SVG nodes do not support native button elements
@@ -655,11 +693,11 @@ export function KnowledgeGraph({
 											/>
 										)}
 										<circle
-											className="knowledge-graph-node-aura"
+											className={`knowledge-graph-node-aura${fresh ? " knowledge-graph-node-aura--fresh" : ""}`}
 											cx={point.x}
 											cy={point.y}
 											r={radius + 5}
-											fill={nodeColor(node)}
+											fill={fresh ? "var(--color-ok)" : nodeColor(node)}
 											fillOpacity=".1"
 										/>
 										{node.isMain && (
@@ -690,26 +728,39 @@ export function KnowledgeGraph({
 											cx={point.x}
 											cy={point.y}
 											r={radius}
-											fill={nodeColor(node)}
+											fill={fresh ? "var(--color-ok)" : nodeColor(node)}
 											stroke="var(--knowledge-surface)"
 											strokeWidth="2"
 										/>
 										{showLabel && placement && (
-											<text
-												x={placement.x}
-												y={placement.y}
-												textAnchor={placement.anchor}
-												fontSize="10"
-												fill="var(--knowledge-ink)"
-											>
-												<tspan>{labelText(node)}</tspan>
-												{showMetadata && (
-													<tspan x={placement.x} dy="12" fontSize="8" fill="var(--knowledge-ink-muted)">
-														{t("graphLinks").replace("{count}", String(node.degree))} ·{" "}
-														{categoryLabels[categoryOf(node)]}
-													</tspan>
-												)}
-											</text>
+											<>
+												<rect
+													x={placement.anchor === "end" ? placement.x - placement.width - 4 : placement.x - 4}
+													y={placement.y - 11}
+													width={placement.width + 8}
+													height={showMetadata ? 27 : 16}
+													rx="4"
+													fill="var(--knowledge-surface)"
+													fillOpacity=".82"
+													stroke="var(--knowledge-border)"
+													strokeOpacity=".7"
+												/>
+												<text
+													x={placement.x}
+													y={placement.y}
+													textAnchor={placement.anchor}
+													fontSize="10"
+													fill="var(--knowledge-ink)"
+												>
+													<tspan>{labelText(node)}</tspan>
+													{showMetadata && (
+														<tspan x={placement.x} dy="12" fontSize="8" fill="var(--knowledge-ink-muted)">
+															{t("graphLinks").replace("{count}", String(node.degree))} ·{" "}
+															{categoryLabels[categoryOf(node)]}
+														</tspan>
+													)}
+												</text>
+											</>
 										)}
 									</g>
 								);

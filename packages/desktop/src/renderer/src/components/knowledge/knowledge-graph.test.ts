@@ -47,6 +47,47 @@ describe("knowledge graph layout", () => {
 		}
 	});
 
+	it("steers labels away from the legend and zoom controls", () => {
+		const data = {
+			nodes: [
+				{ path: "legend", title: "A label near the legend", kind: "note", degree: 5 },
+				{ path: "zoom", title: "A label near zoom", kind: "note", degree: 4 },
+			],
+		};
+		const points = new Map([
+			["legend", { x: 30, y: GRAPH_HEIGHT - 30, vx: 0, vy: 0 }],
+			["zoom", { x: GRAPH_WIDTH - 30, y: GRAPH_HEIGHT - 30, vx: 0, vy: 0 }],
+		]);
+		const placements = placeGraphLabels(
+			data,
+			points,
+			new Set(data.nodes.map((node) => node.path)),
+			undefined,
+			{
+				avoidZones: [
+					{ x: 0, y: GRAPH_HEIGHT - 82, width: 270, height: 82 },
+					{ x: GRAPH_WIDTH - 224, y: GRAPH_HEIGHT - 72, width: 224, height: 72 },
+				],
+			},
+		);
+		const boxFor = (path: string) => {
+			const placement = placements.get(path);
+			if (!placement) throw new Error(`missing placement for ${path}`);
+			return {
+				x: placement.anchor === "end" ? placement.x - placement.width - 4 : placement.x - 4,
+				y: placement.y - 11,
+				width: placement.width + 8,
+				height: 16,
+			};
+		};
+		const overlaps = (a: ReturnType<typeof boxFor>, b: ReturnType<typeof boxFor>) =>
+			a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+		const legend = { x: 0, y: GRAPH_HEIGHT - 82, width: 270, height: 82 };
+		const zoom = { x: GRAPH_WIDTH - 224, y: GRAPH_HEIGHT - 72, width: 224, height: 72 };
+		expect(overlaps(boxFor("legend"), legend)).toBe(false);
+		expect(overlaps(boxFor("zoom"), zoom)).toBe(false);
+	});
+
 	it.each([1000, 2000, 5000, 10000])("keeps a large fallback graph bounded (%i nodes)", (count) => {
 		const data = {
 			nodes: Array.from({ length: count }, (_, index) => ({
