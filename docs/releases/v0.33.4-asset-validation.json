@@ -5,7 +5,7 @@
 	"platform": "mac",
 	"arch": "both",
 	"expectedVersion": "0.33.4",
-	"assetRoot": "/Users/gaoyangwei/Documents/ChatGPT/Drone/packages/desktop/dist",
+	"assetRoot": "/tmp/drone-v0334-release.LVtuVn",
 	"checks": [
 		{
 			"id": "mac-app-version",
@@ -18,15 +18,15 @@
 			"status": "PASS",
 			"detail": "Drone.app contains Contents/Resources/app.asar",
 			"source": "zip:drone-mac-arm64.zip",
-			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-95hcHz/drone-mac-arm64.zip-extracted/Drone.app/Contents/Resources/app.asar",
-			"bytes": 527976820
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-6vSyRS/drone-mac-arm64.zip-extracted/Drone.app/Contents/Resources/app.asar",
+			"bytes": 527196191
 		},
 		{
 			"id": "mac-framework",
 			"status": "PASS",
 			"detail": "Electron Framework.framework contains the expected versioned symlinks",
 			"source": "zip:drone-mac-arm64.zip",
-			"framework": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-95hcHz/drone-mac-arm64.zip-extracted/Drone.app/Contents/Frameworks/Electron Framework.framework"
+			"framework": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-6vSyRS/drone-mac-arm64.zip-extracted/Drone.app/Contents/Frameworks/Electron Framework.framework"
 		},
 		{
 			"id": "mac-codesign",
@@ -58,7 +58,7 @@
 			"detail": "Drone.app contains Contents/Resources/app.asar",
 			"source": "dmg:drone-mac-arm64.dmg",
 			"path": "/Volumes/Drone 0.33.4-arm64/Drone.app/Contents/Resources/app.asar",
-			"bytes": 527976820
+			"bytes": 527196191
 		},
 		{
 			"id": "mac-framework",
@@ -97,15 +97,15 @@
 			"status": "PASS",
 			"detail": "Drone.app contains Contents/Resources/app.asar",
 			"source": "zip:drone-mac-x64.zip",
-			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-95hcHz/drone-mac-x64.zip-extracted/Drone.app/Contents/Resources/app.asar",
-			"bytes": 527976820
+			"path": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-6vSyRS/drone-mac-x64.zip-extracted/Drone.app/Contents/Resources/app.asar",
+			"bytes": 527196191
 		},
 		{
 			"id": "mac-framework",
 			"status": "PASS",
 			"detail": "Electron Framework.framework contains the expected versioned symlinks",
 			"source": "zip:drone-mac-x64.zip",
-			"framework": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-95hcHz/drone-mac-x64.zip-extracted/Drone.app/Contents/Frameworks/Electron Framework.framework"
+			"framework": "/var/folders/t2/rdsflks91vv8cyq176h324hc0000gn/T/drone-release-acceptance-6vSyRS/drone-mac-x64.zip-extracted/Drone.app/Contents/Frameworks/Electron Framework.framework"
 		},
 		{
 			"id": "mac-codesign",
@@ -137,7 +137,7 @@
 			"detail": "Drone.app contains Contents/Resources/app.asar",
 			"source": "dmg:drone-mac-x64.dmg",
 			"path": "/Volumes/Drone 0.33.4/Drone.app/Contents/Resources/app.asar",
-			"bytes": 527976820
+			"bytes": 527196191
 		},
 		{
 			"id": "mac-framework",
@@ -155,7 +155,7 @@
 		{
 			"id": "mac-launch",
 			"status": "PASS",
-			"detail": "Contents/MacOS/Drone --version exited successfully",
+			"detail": "Contents/MacOS/Drone started successfully; Electron probe was terminated after the bounded startup window",
 			"source": "dmg:drone-mac-x64.dmg"
 		},
 		{
@@ -166,9 +166,8 @@
 			"mount": "/Volumes/Drone 0.33.4"
 		}
 	],
-	"startedAt": "2026-10-19T20:57:00.565Z",
+	"startedAt": "2026-10-20T04:45:40.266Z",
 	"assets": [
-		"builder-debug.yml",
 		"drone-mac-arm64.dmg",
 		"drone-mac-arm64.dmg.blockmap",
 		"drone-mac-arm64.zip",
@@ -181,56 +180,51 @@
 	],
 	"assetManifest": [
 		{
-			"name": "builder-debug.yml",
-			"bytes": 1792,
-			"sha256": "a41a104109334d16ae0b27f3b549baf85e40ce3b67cc4aee104d3a905d03851e"
-		},
-		{
 			"name": "drone-mac-arm64.dmg",
-			"bytes": 332093358,
-			"sha256": "ac280425648cf1728d4258337064b229b2d0299178de6dee2c780b642718d602"
+			"bytes": 331958889,
+			"sha256": "3a52d557411132163ff76abcdd3c6066c655a17c0b784ffdf1ab5e82cb2c2af5"
 		},
 		{
 			"name": "drone-mac-arm64.dmg.blockmap",
-			"bytes": 346345,
-			"sha256": "53001ecf316aa875dea2cef7e23e2a7b2d32f220b0a1c181cd1d1dc75407b9d8"
+			"bytes": 346536,
+			"sha256": "ad8b78e7dd3bd49f737030c5ebbf48e3ae131d4c4988c9295c5a2b5a47608b5d"
 		},
 		{
 			"name": "drone-mac-arm64.zip",
-			"bytes": 335894142,
-			"sha256": "927193d2c92d3a040da944fff81aa55d2ebdb1e9dce8a1e27d844431ba2bfaf4"
+			"bytes": 335749255,
+			"sha256": "bf6147ea5cedb3c40920d7216b0059e81546ca5e5216f2c47bb7d6c304fb5c6c"
 		},
 		{
 			"name": "drone-mac-arm64.zip.blockmap",
-			"bytes": 343062,
-			"sha256": "f7c9a4890f905802244873a9d5ed5cda255dfb96bc9442c18e3a058cd73f7d6b"
+			"bytes": 344501,
+			"sha256": "44ae16c75a0a80737ca7a0e57ede124ce67c77cf3d8859a401360e9b32c6a4d1"
 		},
 		{
 			"name": "drone-mac-x64.dmg",
-			"bytes": 334183081,
-			"sha256": "72fa83f0ded98b9a2800378bfb2f1dc6442d29d00d2a2265368a334811be607a"
+			"bytes": 334049385,
+			"sha256": "2e49a1241a141100862e987d8029e060b0c9dd2160dfad49f04ba6c9c093c31f"
 		},
 		{
 			"name": "drone-mac-x64.dmg.blockmap",
-			"bytes": 349482,
-			"sha256": "158af6f246ab32f24180e782601b0210b4b673b72deb34f7ee8666b653f858f6"
+			"bytes": 347624,
+			"sha256": "4a661c378664d3c03f7a9d7b40d5242e10cc905cc8966772694884009298cbb1"
 		},
 		{
 			"name": "drone-mac-x64.zip",
-			"bytes": 338019654,
-			"sha256": "c13a430aa3344ceff012c0d7e4167da13405a9eb803e1abffc81dfb6dc160461"
+			"bytes": 337874934,
+			"sha256": "13d9aa97153a2e96c8625958d9925c297d5ddd5dda7f4dc5e15a8e16f55bab24"
 		},
 		{
 			"name": "drone-mac-x64.zip.blockmap",
-			"bytes": 344620,
-			"sha256": "b6b1bef8d21c4ca04a42fb9753859795a7c8d1cb58b6cda3b6bc5350ce352104"
+			"bytes": 345375,
+			"sha256": "f1f3216726a54cdb0aa9469d3a6997c4c8c545a79e91d9503fa6e70c21915120"
 		},
 		{
 			"name": "latest-mac.yml",
 			"bytes": 780,
-			"sha256": "06a7d3d9227cbd942a5cab8fe7cd06daef7ce6776d2f2991796717f90e9f78e9"
+			"sha256": "e5682275a7115432d01b8b6f5f733103f14ed84d78f20c257b5e865fc4803d28"
 		}
 	],
-	"finishedAt": "2026-10-19T20:57:47.653Z",
+	"finishedAt": "2026-10-20T04:46:58.478Z",
 	"status": "PASS"
 }
