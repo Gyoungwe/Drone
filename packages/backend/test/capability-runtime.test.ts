@@ -205,6 +205,24 @@ describe("lazy capability runtime", () => {
 		expect(loader.getAllSkills().skills).toHaveLength(4);
 	});
 
+	it("disables a skill group for the session and makes explicit invocation unavailable", () => {
+		const visibility = new SkillVisibility();
+		const loader = new CapabilityResourceLoader(makeLoader(), visibility);
+		const session = makeSession(loader);
+		const runtime = new CapabilityRuntime(visibility);
+		runtime.bind(session as any);
+		runtime.prepareForPrompt("请检索科研文献", false);
+		expect(loader.getAllSkills().skills.map((skill: any) => skill.name)).toContain("research-workflow");
+
+		runtime.setSkillNamesEnabled(["research-workflow"], false);
+		expect(runtime.disabledSkillNames()).toEqual(["research-workflow"]);
+		expect(loader.getSkills().skills.map((skill: any) => skill.name)).not.toContain("research-workflow");
+		expect(loader.getAllSkills().skills.map((skill: any) => skill.name)).not.toContain("research-workflow");
+
+		runtime.setSkillNamesEnabled(["research-workflow"], true);
+		expect(loader.getAllSkills().skills.map((skill: any) => skill.name)).toContain("research-workflow");
+	});
+
 	it("selects capabilities in the SDK input hook before skill expansion and adds direct queued SDK input", async () => {
 		const visibility = new SkillVisibility();
 		const loader = new CapabilityResourceLoader(makeLoader(), visibility);

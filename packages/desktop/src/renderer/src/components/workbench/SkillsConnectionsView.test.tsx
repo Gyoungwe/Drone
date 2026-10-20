@@ -2,7 +2,14 @@
 
 import type { KnowledgeCloudStatus, ZoteroStatus } from "@drone/shared";
 import { describe, expect, it } from "vitest";
-import { cloudCapabilityStatus, mcpCapabilityStatus, zoteroCapabilityStatus } from "./SkillsConnectionsView";
+import {
+	capabilitySectionKind,
+	cloudCapabilityStatus,
+	connectorCatalogEntries,
+	mcpCapabilityStatus,
+	skillSource,
+	zoteroCapabilityStatus,
+} from "./SkillsConnectionsView";
 
 const cloud = (mode: KnowledgeCloudStatus["mode"]): KnowledgeCloudStatus => ({
 	configured: true,
@@ -47,10 +54,38 @@ describe("SkillsConnectionsView capability state", () => {
 		expect(cloudCapabilityStatus(null)).toBe("configure");
 	});
 
-	it("does not claim Zotero is available from registration alone", () => {
+	it("uses the built-in Zotero probe instead of MCP registration state", () => {
 		expect(zoteroCapabilityStatus(zotero({ localApiReachable: true }))).toBe("running");
+		expect(zoteroCapabilityStatus(zotero({ localApiReachable: true }), false)).toBe("disabled");
 		expect(zoteroCapabilityStatus(zotero())).toBe("stale");
-		expect(zoteroCapabilityStatus(zotero({ enabled: false }))).toBe("configure");
+		expect(zoteroCapabilityStatus(zotero({ desktopDetected: false }))).toBe("configure");
 		expect(zoteroCapabilityStatus(null)).toBe("configure");
+	});
+
+	it("resolves bundled research skills to their GitHub source without a product commit pin", () => {
+		const resolved = skillSource("nature-citation", "local", "user");
+		expect(resolved.key).toContain("github:Yuan1z0825/nature-skills");
+		expect(resolved.repository?.url).toBe("https://github.com/Yuan1z0825/nature-skills");
+		expect(resolved.profile?.path).toBe("skills/nature-citation/SKILL.md");
+		expect(resolved.repository).not.toHaveProperty("commit");
+	});
+
+	it("keeps the page sections separate and has no mixed all view", () => {
+		expect(capabilitySectionKind("market")).toBeNull();
+		expect(capabilitySectionKind("skills")).toBeNull();
+		expect(capabilitySectionKind("connectors")).toBe("connector");
+		expect(capabilitySectionKind("mcp")).toBe("mcp");
+	});
+
+	it("keeps Zotero in its combined status row instead of duplicating the catalog entry", () => {
+		const descriptors = [
+			{ id: "zotero", kind: "citation", label: "Zotero", enabled: true },
+			{ id: "crossref", kind: "literature", label: "Crossref", enabled: true },
+		] as const;
+		expect(connectorCatalogEntries(descriptors)).toEqual([descriptors[1]]);
+	});
+
+	it("leaves non-catalogue skills on the loader source", () => {
+		expect(skillSource("my-local-skill", "local", "user").key).toBe("local");
 	});
 });

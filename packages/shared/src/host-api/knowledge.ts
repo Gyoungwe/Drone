@@ -74,9 +74,10 @@ const SpecialistSettingsInput = Type.Object(
 
 const ZoteroStatusSchema = Type.Object(
 	{
-		registered: Type.Boolean(),
-		enabled: Type.Boolean(),
+		registered: Type.Optional(Type.Boolean()),
+		enabled: Type.Optional(Type.Boolean()),
 		command: Type.Union([Type.String(), Type.Null()]),
+		version: Type.Optional(Type.Union([Type.String(), Type.Null()])),
 		localApiReachable: Type.Boolean(),
 		desktopDetected: Type.Boolean(),
 		desktopPath: Type.Union([Type.String(), Type.Null()]),

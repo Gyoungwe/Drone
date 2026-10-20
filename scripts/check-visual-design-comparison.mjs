@@ -19,6 +19,8 @@ const rendererRoot = join(repoRoot, "packages/desktop/out/renderer");
 const outputRoot = join(repoRoot, "docs/releases/visual");
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const serverPort = Number.parseInt(process.env.VISUAL_SERVER_PORT || "8765", 10);
+const visualTheme = process.env.VISUAL_THEME === "dark" ? "dark" : "light";
+const outputSuffix = visualTheme === "dark" ? "-dark" : "";
 const profile = await mkdtemp(join(tmpdir(), "drone-visual-profile-"));
 
 const views = [
@@ -87,12 +89,12 @@ const hostStub = `
     listModels: () => ok([]), listAllSessions: () => ok([]), listSessions: () => ok([]),
     loadTabs: () => ok(null), loadUiState: () => ok({}), saveUiState: () => ok(), getModelPrefs: () => ok({}),
     listProviders: () => ok([]), listSubagents: () => ok([]), getLoadedResources: () => ok({}),
-    listHosts: () => ok([]), getHealthSnapshot: () => ok(null), listJobs: () => ok([]), getOnboardingStatus: () => ok([]),
+    listHosts: () => ok([]), listSshConfig: () => ok([]), getHealthSnapshot: () => ok(null), listJobs: () => ok([]), getOnboardingStatus: () => ok([]),
     getKnowledgeOverview: () => ok(emptyOverview), getKnowledgeReviews: () => ok({ items: [], total: 0 }),
     getKnowledgeGraph: () => ok({ nodes: [], edges: [] }), getKnowledgeStatus: () => ok({ status: 'unconfigured' }),
     getKnowledgeCloudStatus: () => ok({ mode: 'unconfigured' }),
     listConnectors: () => ok([]), listWriteAdapters: () => ok([]), listMcpServers: () => ok([]),
-    listSkills: () => ok([]), listConfiguredPackages: () => ok([]),
+    listSkills: () => ok([]), searchCatalog: () => ok({ packages: [], total: 0, page: 1, pageSize: 50 }), listConfiguredPackages: () => ok([]),
     uiPluginsGetConfig: () => ok({ enabled: true, plugins: {}, assignments: {} }), uiPluginsList: () => ok([]),
     uiPluginsReadCode: () => ok({ code: '', manifest: null }),
     getEvidenceOverview: () => ok(emptyOverview), getPermissionMode: () => ok('default'), getContextUsage: () => ok(null),
@@ -112,7 +114,7 @@ const hostStub = `
     if (String(key).startsWith('on')) return () => unsubscribe;
     return () => ok(undefined);
   }});
-  if (!window.matchMedia) window.matchMedia = () => ({ matches: false, media: '', addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return false; } });
+  if (!window.matchMedia || ${JSON.stringify(visualTheme)} === 'dark') window.matchMedia = () => ({ matches: ${visualTheme === "dark"}, media: '(prefers-color-scheme: dark)', addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return false; } });
   if (!window.ResizeObserver) window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
 })();`;
 
@@ -202,7 +204,9 @@ try {
 			deviceScaleFactor: 1,
 			mobile: false,
 		});
-		await send("Page.navigate", { url: `http://127.0.0.1:${serverPort}/index.html?visual=${view.id}` });
+		await send("Page.navigate", {
+			url: `http://127.0.0.1:${serverPort}/index.html?visual=${view.id}&theme=${visualTheme}`,
+		});
 		await waitForRenderer("新任务");
 		if (view.id !== "new-task") {
 			await send("Runtime.evaluate", {
@@ -217,7 +221,7 @@ try {
 		});
 		const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
 		const image = Buffer.from(screenshot.data, "base64");
-		const imagePath = join(outputRoot, `drone-${view.id}.png`);
+		const imagePath = join(outputRoot, `drone-${view.id}${outputSuffix}.png`);
 		await writeFile(imagePath, image);
 		const parsed = JSON.parse(state.result?.value || "{}");
 		results.push({
@@ -245,7 +249,7 @@ try {
 	}
 	const report = {
 		generatedAt: new Date().toISOString(),
-		method: "Chrome headless built renderer with deterministic read-only window.pi stub",
+		method: `Chrome headless built renderer (${visualTheme} theme) with deterministic read-only window.pi stub`,
 		reference: "docs/design/plugin-ui/Drone 插件化界面.html",
 		designAnchors,
 		comparison:
@@ -254,7 +258,11 @@ try {
 			results.every((result) => result.status === "PASS") && designAnchors.length === 4 ? "PASS" : "FAIL",
 		views: results,
 	};
-	await writeFile(join(outputRoot, "drone-visual-comparison.json"), `${JSON.stringify(report, null, 2)}\n`);
+	const serializedReport = JSON.stringify(report, null, "\t").replace(
+		/\t"designAnchors": \[\n(?:\t\t.*\n)+\t\]/u,
+		`\t"designAnchors": [${report.designAnchors.map((anchor) => JSON.stringify(anchor)).join(", ")}]`,
+	);
+	await writeFile(join(outputRoot, `drone-visual-comparison${outputSuffix}.json`), `${serializedReport}\n`);
 	console.log(JSON.stringify(report, null, 2));
 	if (report.status !== "PASS") process.exitCode = 1;
 	socket.close();

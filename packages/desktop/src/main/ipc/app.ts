@@ -16,7 +16,11 @@ import { previewLocalFile, resolveConfinedResourcePath, resolveResourcePath } fr
 import { checkoutBranch, getGitBranch, listGitBranches } from "../git";
 import { defaultHostEnvDeps, probeHostEnvironment } from "../host-env";
 import { issueHtmlPreviewUrl } from "../html-preview-protocol";
-import { restartForResearchSkills, updateResearchSkills } from "../research-skill-updater";
+import {
+	checkResearchSkillUpdates,
+	restartForResearchSkills,
+	updateResearchSkills,
+} from "../research-skill-updater";
 import { loadTabs, saveTabs } from "../tabs";
 import { loadUiState, saveUiState } from "../ui-state";
 import { checkForUpdates, downloadUpdate, installUpdate } from "../updater";
@@ -169,6 +173,7 @@ export function registerAppIpc(
 		checkForUpdates: () => checkForUpdates(),
 		downloadUpdate: () => downloadUpdate(),
 		installUpdate: () => installUpdate(),
+		checkResearchSkills: () => checkResearchSkillUpdates(),
 		updateResearchSkills: () => updateResearchSkills(),
 		restartForResearchSkills: () => restartForResearchSkills(),
 		saveFileDialog: async (defaultName, content) => {
@@ -234,6 +239,7 @@ export function registerAppIpc(
 				checkForUpdates: IpcChannels.UpdateCheck,
 				downloadUpdate: IpcChannels.UpdateDownload,
 				installUpdate: IpcChannels.UpdateInstall,
+				checkResearchSkills: IpcChannels.ResearchSkillCheck,
 				updateResearchSkills: IpcChannels.ResearchSkillUpdate,
 				restartForResearchSkills: IpcChannels.ResearchSkillRestart,
 				saveFileDialog: IpcChannels.FileSaveDialog,

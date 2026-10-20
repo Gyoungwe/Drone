@@ -1,5 +1,5 @@
-import type { ComputeHost, ComputeJob } from "@drone/shared";
-import { type FormEvent, useState } from "react";
+import type { ComputeHost, ComputeJob, ComputeSshConfigHost } from "@drone/shared";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { type MessageKey, useT } from "../../i18n";
 import { selectHosts, selectJobs, selectOnboarding, useComputeStore } from "../../stores/compute";
@@ -317,9 +317,28 @@ export function ComputePane() {
 	const [terminalInput, setTerminalInput] = useState("");
 	const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 	const [hostForm, setHostForm] = useState<HostFormState>(EMPTY_HOST_FORM);
+	const [sshConfigHosts, setSshConfigHosts] = useState<ComputeSshConfigHost[]>([]);
+	const [sshConfigLoading, setSshConfigLoading] = useState(false);
 	const [checkedHostIds, setCheckedHostIds] = useState<Set<string>>(() => new Set());
 	const [previewHostId, setPreviewHostId] = useState<string | null>(null);
 	const terminal = useComputeStore((state) => (terminalId ? state.terminals[terminalId] : undefined));
+	const discoverSshHosts = useCallback(async () => {
+		setSshConfigLoading(true);
+		try {
+			const discovered = await getPi().listSshConfig();
+			// Older/read-only host stubs may not expose this optional discovery
+			// projection yet. Keep the picker empty instead of breaking the Hosts
+			// route while the rest of the compute contract remains usable.
+			setSshConfigHosts(Array.isArray(discovered) ? discovered : []);
+		} catch (reason) {
+			useComputeStore.setState({ error: reason instanceof Error ? reason.message : String(reason) });
+		} finally {
+			setSshConfigLoading(false);
+		}
+	}, []);
+	useEffect(() => {
+		void discoverSshHosts();
+	}, [discoverSshHosts]);
 	const openMultiqc = (path: string) => {
 		void getPi()
 			.openResourceExternal(path)
@@ -373,6 +392,26 @@ export function ComputePane() {
 		});
 		setHostForm(EMPTY_HOST_FORM);
 	};
+	const addSshConfigHost = async (entry: ComputeSshConfigHost) => {
+		try {
+			const jumpHosts = (entry.proxyJump ?? "")
+				.split(",")
+				.map((item) => item.trim())
+				.filter((item) => /^[A-Za-z0-9._-]+$/.test(item));
+			await saveHost({
+				alias: entry.alias,
+				displayName: entry.alias,
+				kind: "ssh",
+				...(entry.hostname ? { endpoint: entry.hostname } : {}),
+				...(entry.port ? { port: entry.port } : {}),
+				...(entry.user ? { user: entry.user } : {}),
+				...(entry.identityFiles[0] ? { identityFile: entry.identityFiles[0] } : {}),
+				...(jumpHosts.length ? { jumpHosts } : {}),
+			});
+		} catch (reason) {
+			useComputeStore.setState({ error: reason instanceof Error ? reason.message : String(reason) });
+		}
+	};
 
 	return (
 		<div className="context-pane bg-surface" data-testid="compute-pane">
@@ -422,96 +461,158 @@ export function ComputePane() {
 				) : (
 					<p className="panel-empty">{t("panel.compute.noHosts")}</p>
 				)}
-				<form
-					className="panel-card mt-3 grid gap-3 border-dashed bg-canvas/60"
-					onSubmit={(event) => void addHost(event)}
-				>
-					<div>
-						<h4 className="text-[12px] font-medium text-ink">{t("panel.compute.addHostTitle")}</h4>
-						<p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">
-							{t("panel.compute.addHostHint")}
+				<div className="panel-card mt-3 grid gap-3 border-accent/30 bg-accent/5">
+					<div className="flex items-start justify-between gap-3">
+						<div>
+							<h4 className="text-[12px] font-medium text-ink">{t("panel.compute.sshConfigTitle")}</h4>
+							<p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">
+								{t("panel.compute.sshConfigHint")}
+							</p>
+						</div>
+						<button
+							type="button"
+							className="panel-action shrink-0"
+							onClick={() => void discoverSshHosts()}
+							disabled={sshConfigLoading}
+						>
+							{sshConfigLoading ? t("panel.compute.sshConfigReading") : t("panel.compute.sshConfigRead")}
+						</button>
+					</div>
+					<div className="flex items-center justify-between gap-2 text-[10px] text-ink-faint">
+						<span className="font-mono">~/.ssh/config</span>
+						<span>{t("panel.compute.sshConfigPrivateKeyHint")}</span>
+					</div>
+					{sshConfigHosts.length ? (
+						<ul className="grid gap-2">
+							{sshConfigHosts.map((entry) => {
+								const configured = hosts.some((host) => host.alias === entry.alias);
+								return (
+									<li
+										key={entry.alias}
+										className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-surface px-3 py-2"
+									>
+										<div className="min-w-0">
+											<strong className="block truncate text-[12px] font-medium text-ink">
+												{entry.alias}
+											</strong>
+											<span className="mt-0.5 block truncate font-mono text-[10px] text-ink-dim">
+												{entry.user ? `${entry.user}@` : ""}
+												{entry.hostname || entry.alias}
+												{entry.port ? `:${entry.port}` : ""}
+											</span>
+											<span className="mt-0.5 block truncate text-[10px] text-ink-faint">
+												{entry.identityFiles.length
+													? t("panel.compute.sshConfigIdentityCount", { count: entry.identityFiles.length })
+													: t("panel.compute.sshConfigDefaultIdentity")}
+											</span>
+										</div>
+										<button
+											type="button"
+											className="panel-action shrink-0"
+											disabled={configured}
+											onClick={() => void addSshConfigHost(entry)}
+										>
+											{configured ? t("panel.compute.sshConfigAdded") : t("panel.compute.sshConfigAdd")}
+										</button>
+									</li>
+								);
+							})}
+						</ul>
+					) : (
+						<p className="text-[11px] text-ink-faint">
+							{sshConfigLoading ? t("panel.compute.sshConfigReading") : t("panel.compute.sshConfigEmpty")}
 						</p>
-					</div>
-					<div className="grid grid-cols-2 gap-2">
-						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-							value={hostForm.alias}
-							onChange={(event) => setHostForm((form) => ({ ...form, alias: event.target.value }))}
-							placeholder={t("panel.compute.alias")}
-							aria-label={t("panel.compute.alias")}
-						/>
-						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-							value={hostForm.displayName}
-							onChange={(event) => setHostForm((form) => ({ ...form, displayName: event.target.value }))}
-							placeholder={t("panel.compute.displayName")}
-							aria-label={t("panel.compute.displayName")}
-						/>
-					</div>
-					<div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
-						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-							value={hostForm.endpoint}
-							onChange={(event) => setHostForm((form) => ({ ...form, endpoint: event.target.value }))}
-							placeholder={t("panel.compute.endpoint")}
-							aria-label={t("panel.compute.endpoint")}
-						/>
-						<input
-							type="number"
-							min={1}
-							max={65535}
-							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-							value={hostForm.port}
-							onChange={(event) => setHostForm((form) => ({ ...form, port: event.target.value }))}
-							placeholder={t("panel.compute.port")}
-							aria-label={t("panel.compute.port")}
-						/>
-					</div>
-					<div className="grid grid-cols-2 gap-2">
-						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-							value={hostForm.user}
-							onChange={(event) => setHostForm((form) => ({ ...form, user: event.target.value }))}
-							placeholder={t("panel.compute.user")}
-							aria-label={t("panel.compute.user")}
-						/>
-						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-							value={hostForm.workspaceRoot}
-							onChange={(event) => setHostForm((form) => ({ ...form, workspaceRoot: event.target.value }))}
-							placeholder={t("panel.compute.workspaceRoot")}
-							aria-label={t("panel.compute.workspaceRoot")}
-						/>
-					</div>
-					<div className="grid gap-2">
-						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
-							value={hostForm.identityFile}
-							onChange={(event) => setHostForm((form) => ({ ...form, identityFile: event.target.value }))}
-							placeholder={t("panel.compute.identityFile")}
-							aria-label={t("panel.compute.identityFile")}
-						/>
-						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
-							value={hostForm.jumpHosts}
-							onChange={(event) => setHostForm((form) => ({ ...form, jumpHosts: event.target.value }))}
-							placeholder={t("panel.compute.jumpHosts")}
-							aria-label={t("panel.compute.jumpHosts")}
-						/>
-						<input
-							className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
-							value={hostForm.hostKeyFingerprint}
-							onChange={(event) =>
-								setHostForm((form) => ({ ...form, hostKeyFingerprint: event.target.value }))
-							}
-							placeholder={t("panel.compute.hostKeyFingerprint")}
-							aria-label={t("panel.compute.hostKeyFingerprint")}
-						/>
-					</div>
-					<button type="submit" className="panel-action">
-						{t("panel.compute.addHost")}
-					</button>
-				</form>
+					)}
+				</div>
+				<details className="panel-card mt-3 border-dashed bg-canvas/60">
+					<summary className="cursor-pointer text-[12px] font-medium text-ink">
+						{t("panel.compute.manualHostTitle")}
+					</summary>
+					<p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
+						{t("panel.compute.manualHostHint")}
+					</p>
+					<form className="mt-3 grid gap-3" onSubmit={(event) => void addHost(event)}>
+						<div className="grid grid-cols-2 gap-2">
+							<input
+								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+								value={hostForm.alias}
+								onChange={(event) => setHostForm((form) => ({ ...form, alias: event.target.value }))}
+								placeholder={t("panel.compute.alias")}
+								aria-label={t("panel.compute.alias")}
+							/>
+							<input
+								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+								value={hostForm.displayName}
+								onChange={(event) => setHostForm((form) => ({ ...form, displayName: event.target.value }))}
+								placeholder={t("panel.compute.displayName")}
+								aria-label={t("panel.compute.displayName")}
+							/>
+						</div>
+						<div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
+							<input
+								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+								value={hostForm.endpoint}
+								onChange={(event) => setHostForm((form) => ({ ...form, endpoint: event.target.value }))}
+								placeholder={t("panel.compute.endpoint")}
+								aria-label={t("panel.compute.endpoint")}
+							/>
+							<input
+								type="number"
+								min={1}
+								max={65535}
+								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+								value={hostForm.port}
+								onChange={(event) => setHostForm((form) => ({ ...form, port: event.target.value }))}
+								placeholder={t("panel.compute.port")}
+								aria-label={t("panel.compute.port")}
+							/>
+						</div>
+						<div className="grid grid-cols-2 gap-2">
+							<input
+								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+								value={hostForm.user}
+								onChange={(event) => setHostForm((form) => ({ ...form, user: event.target.value }))}
+								placeholder={t("panel.compute.user")}
+								aria-label={t("panel.compute.user")}
+							/>
+							<input
+								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+								value={hostForm.workspaceRoot}
+								onChange={(event) => setHostForm((form) => ({ ...form, workspaceRoot: event.target.value }))}
+								placeholder={t("panel.compute.workspaceRoot")}
+								aria-label={t("panel.compute.workspaceRoot")}
+							/>
+						</div>
+						<div className="grid gap-2">
+							<input
+								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint focus:border-accent"
+								value={hostForm.identityFile}
+								onChange={(event) => setHostForm((form) => ({ ...form, identityFile: event.target.value }))}
+								placeholder={t("panel.compute.identityFile")}
+								aria-label={t("panel.compute.identityFile")}
+							/>
+							<input
+								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
+								value={hostForm.jumpHosts}
+								onChange={(event) => setHostForm((form) => ({ ...form, jumpHosts: event.target.value }))}
+								placeholder={t("panel.compute.jumpHosts")}
+								aria-label={t("panel.compute.jumpHosts")}
+							/>
+							<input
+								className="min-w-0 rounded-md border border-border bg-surface px-3 py-2 text-[11px] text-ink outline-none placeholder:text-ink-faint"
+								value={hostForm.hostKeyFingerprint}
+								onChange={(event) =>
+									setHostForm((form) => ({ ...form, hostKeyFingerprint: event.target.value }))
+								}
+								placeholder={t("panel.compute.hostKeyFingerprint")}
+								aria-label={t("panel.compute.hostKeyFingerprint")}
+							/>
+						</div>
+						<button type="submit" className="panel-action">
+							{t("panel.compute.addHost")}
+						</button>
+					</form>
+				</details>
 			</section>
 			<section className="mb-3">
 				<div className="mb-1 text-xs text-ink-dim">{t("panel.compute.jobs")}</div>

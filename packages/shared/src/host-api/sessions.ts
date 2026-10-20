@@ -149,6 +149,10 @@ export const SessionsContract = defineDomain("sessions", {
 				{ additionalProperties: false },
 			),
 		},
+		setSkillNamesEnabled: {
+			args: Type.Tuple([Id, Type.Array(Type.String()), Type.Boolean()]),
+			result: Type.Object({ disabled: Type.Array(Type.String()) }, { additionalProperties: false }),
+		},
 		compact: {
 			args: Type.Union([Type.Tuple([Id]), Type.Tuple([Id, Type.String()])]),
 			result: Type.Void(),
@@ -249,6 +253,7 @@ export type SessionsSchemaTypes = {
 	setModel: [sessionId: string, provider: string, modelId: string];
 	setThinkingLevel: [sessionId: string, level: string];
 	setAgentMode: [sessionId: string, mode: "single" | "lead" | "swarm"];
+	setSkillNamesEnabled: [sessionId: string, names: string[], enabled: boolean];
 	compact: [sessionId: string] | [sessionId: string, customInstructions: string];
 	getStats: [sessionId: string];
 	getContextUsage: [sessionId: string];

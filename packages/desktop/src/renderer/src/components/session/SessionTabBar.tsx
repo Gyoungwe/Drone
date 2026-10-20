@@ -132,7 +132,7 @@ function TabPill({
 				...(ghost ? { width: ghostWidth ?? 208 } : null),
 				...(hidden ? { opacity: 0 } : null),
 			}}
-			className={`no-drag tab-pill group relative flex ${ghost ? "" : "w-full"} cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+			className={`no-drag tab-pill group relative flex shrink-0 ${ghost ? "" : "min-w-[160px] max-w-[260px]"} cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm ${
 				isActive ? "bg-bubble text-ink" : "text-ink-dim hover:bg-hover hover:text-ink"
 			} ${ghost ? "tab-dragging" : ""}`}
 			onClick={ghost ? undefined : buttonProps?.onClick}

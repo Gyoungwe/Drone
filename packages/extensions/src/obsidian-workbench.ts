@@ -210,7 +210,7 @@ export default function obsidianWorkbench(pi, options: { readOnly?: boolean } = 
 				`知识沉淀：${params.deposit_mode}`,
 				`子智能体 MCP：${params.subagent_mcp}`,
 				knowledgeDirectory()
-					? "作用范围：整个 Drone。所有项目与新会话使用此知识库；导航内容将提供给当前选择的模型。仅当前项目标识留在项目配置中。"
+					? "绑定范围：应用级共享 Vault。所有项目与新会话可检索共享 Library；项目专属内容写入对应 Projects/<project> 分区，当前项目标识仅保存在项目配置中。"
 					: "将创建缺失的目录/模板并更新当前项目的 .pi/research-workspace.json 与 .mcp.json。",
 				"不搬迁/删除已有笔记；索引仅更新 pi-agent 托管区块。",
 			].join("\n");

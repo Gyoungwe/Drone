@@ -59,6 +59,7 @@ const appClient = exposeContract(AppContract, {
 				checkForUpdates: IpcChannels.UpdateCheck,
 				downloadUpdate: IpcChannels.UpdateDownload,
 				installUpdate: IpcChannels.UpdateInstall,
+				checkResearchSkills: IpcChannels.ResearchSkillCheck,
 				updateResearchSkills: IpcChannels.ResearchSkillUpdate,
 				restartForResearchSkills: IpcChannels.ResearchSkillRestart,
 				saveFileDialog: IpcChannels.FileSaveDialog,
@@ -216,6 +217,7 @@ const packagesClient = exposeContract(PackagesContract, {
 			{
 				searchCatalog: IpcChannels.PackagesSearchCatalog,
 				installPackage: IpcChannels.PackagesInstall,
+				updatePackage: IpcChannels.PackagesUpdate,
 				removePackage: IpcChannels.PackagesRemove,
 				listConfiguredPackages: IpcChannels.PackagesListConfigured,
 			},
@@ -290,6 +292,7 @@ const computeClient = exposeContract(ComputeContract, {
 		channelFrom(
 			{
 				listHosts: IpcChannels.ComputeListHosts,
+				listSshConfig: IpcChannels.ComputeListSshConfig,
 				getHost: IpcChannels.ComputeGetHost,
 				saveHost: IpcChannels.ComputeSaveHost,
 				removeHost: IpcChannels.ComputeRemoveHost,
@@ -436,6 +439,7 @@ const invokeApi = {
 	listSubagentRuns: invoke(subagentsClient, "runs"),
 	searchCatalog: invoke(packagesClient, "searchCatalog"),
 	installPackage: invoke(packagesClient, "installPackage"),
+	updatePackage: invoke(packagesClient, "updatePackage"),
 	removePackage: invoke(packagesClient, "removePackage"),
 	listConfiguredPackages: invoke(packagesClient, "listConfiguredPackages"),
 	getInstitutionalStatus: invoke(institutionalClient, "getStatus"),
@@ -522,6 +526,7 @@ const invokeApi = {
 	checkForUpdates: invoke(appClient, "checkForUpdates"),
 	downloadUpdate: invoke(appClient, "downloadUpdate"),
 	installUpdate: invoke(appClient, "installUpdate"),
+	checkResearchSkills: invoke(appClient, "checkResearchSkills"),
 	updateResearchSkills: invoke(appClient, "updateResearchSkills"),
 	restartForResearchSkills: invoke(appClient, "restartForResearchSkills"),
 	pickDirectory: invoke(appClient, "pickDirectory"),
@@ -544,6 +549,7 @@ const SESSION_CHANNELS: Record<string, string> = {
 	setModel: IpcChannels.SessionSetModel,
 	setThinkingLevel: IpcChannels.SessionSetThinkingLevel,
 	setAgentMode: IpcChannels.SessionSetAgentMode,
+	setSkillNamesEnabled: IpcChannels.SessionSetSkillNamesEnabled,
 	compact: IpcChannels.SessionCompact,
 	getStats: IpcChannels.SessionStats,
 	getContextUsage: IpcChannels.SessionGetContextUsage,

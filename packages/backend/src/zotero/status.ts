@@ -36,12 +36,12 @@ async function readZoteroMcp(): Promise<{ registered: boolean; enabled: boolean;
 }
 
 /** 探测 Zotero 本机 API（桌面端需打开「允许本机其他应用通信」） */
-async function probeLocalApi(): Promise<boolean> {
+async function probeLocalApi(): Promise<{ reachable: boolean; version: string | null }> {
 	try {
-		await fetch(LOCAL_API, { method: "GET", signal: AbortSignal.timeout(800) });
-		return true;
+		const response = await fetch(LOCAL_API, { method: "GET", signal: AbortSignal.timeout(800) });
+		return { reachable: true, version: response.headers.get("x-zotero-version") };
 	} catch {
-		return false;
+		return { reachable: false, version: null };
 	}
 }
 
@@ -66,13 +66,14 @@ function zoteroDesktopPath(): string | null {
 }
 
 export async function getZoteroStatus(): Promise<ZoteroStatus> {
-	const [mcp, localApiReachable] = await Promise.all([readZoteroMcp(), probeLocalApi()]);
+	const [mcp, localApi] = await Promise.all([readZoteroMcp(), probeLocalApi()]);
 	const desktopPath = zoteroDesktopPath();
 	return {
 		registered: mcp.registered,
 		enabled: mcp.enabled,
 		command: mcp.command,
-		localApiReachable,
+		localApiReachable: localApi.reachable,
+		version: localApi.version,
 		desktopDetected: Boolean(desktopPath),
 		desktopPath,
 		docsUrl: DOCS_URL,

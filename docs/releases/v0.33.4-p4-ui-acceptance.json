@@ -1,0 +1,76 @@
+{
+	"schema": 1,
+	"kind": "drone-p4-ui-acceptance",
+	"mode": "real-installed-package",
+	"packageVersion": "0.33.4",
+	"packageArtifacts": "packages/desktop/dist/drone-mac-{arm64,x64}.{dmg,zip}",
+	"unsigned": true,
+	"checks": [
+		{
+			"id": "four-viewports",
+			"status": "PASS",
+			"detail": "Real macOS package opened and showed New task, Knowledge, Skills & connections, and Hosts routes."
+		},
+		{
+			"id": "market-section",
+			"status": "PASS",
+			"detail": "The Skills & connections page has a first-class Market tab with the Pi official extension catalog, Drone registry, and open-source MCP/Skill resource cards."
+		},
+		{
+			"id": "drone-package-metadata",
+			"status": "PASS",
+			"detail": "All eight @gyoungwe entries showed registry version and description before installation."
+		},
+		{
+			"id": "market-sticky-navigation",
+			"status": "PASS",
+			"detail": "After scrolling the long official extension list, the Market/Connectors/MCP/Skills navigator remained visible in the real package."
+		},
+		{
+			"id": "connector-descriptions",
+			"status": "PASS",
+			"detail": "Connector rows showed localized purpose descriptions and their real availability/toggle state."
+		},
+		{
+			"id": "connector-toggle",
+			"status": "PASS",
+			"detail": "Crossref was disabled and re-enabled in the real package; the row changed between 已禁用 and 可用."
+		},
+		{
+			"id": "ssh-config-host-picker",
+			"status": "PASS",
+			"detail": "The latest unsigned macOS arm64 package read only ~/.ssh/config metadata, showed eight selectable Host aliases, and added drone-gaoxuze-c to the approved host cards without opening private key contents."
+		},
+		{
+			"id": "skill-manual-check",
+			"status": "PASS",
+			"detail": "Explicit Skill repository check completed against the packaged client and reported two available pack updates."
+		},
+		{
+			"id": "ui-plugin-hot-reload",
+			"status": "PASS",
+			"detail": "Installed desktop-ui-pack contribution was disabled and enabled again in the real package; Research status contribution remained observable after reload."
+		},
+		{
+			"id": "mcp-real-status",
+			"status": "NOT_RUN",
+			"detail": "The isolated package had no configured MCP server, so the UI correctly showed no MCP capability instead of claiming an online result."
+		},
+		{
+			"id": "static-artifacts",
+			"status": "PASS",
+			"detail": "check-release-artifacts and check-local-desktop-artifact --strict passed for macOS arm64/x64."
+		},
+		{
+			"id": "codesign",
+			"status": "NOT_RUN",
+			"detail": "Unsigned release policy; no certificate is available."
+		},
+		{
+			"id": "windows",
+			"status": "OUT_OF_SCOPE",
+			"detail": "This acceptance remains macOS-only by the current release scope."
+		}
+	],
+	"status": "PASS_WITH_MCP_NOT_RUN"
+}

@@ -69,6 +69,10 @@ export const PackagesContract = defineDomain("packages", {
 			args: Type.Tuple([Type.String({ minLength: 1 })]),
 			result: Type.Void(),
 		},
+		updatePackage: {
+			args: Type.Tuple([Type.String({ minLength: 1 })]),
+			result: Type.Void(),
+		},
 		removePackage: {
 			args: Type.Tuple([
 				Type.String({ minLength: 1 }),
@@ -87,6 +91,7 @@ export const PackagesContract = defineDomain("packages", {
 export type PackagesSchemaTypes = {
 	searchCatalog: [query: string, type?: CatalogPackageType | "", page?: number];
 	installPackage: [name: string];
+	updatePackage: [name: string];
 	removePackage: [source: string, scope: "user" | "project"];
 	listConfiguredPackages: [];
 };

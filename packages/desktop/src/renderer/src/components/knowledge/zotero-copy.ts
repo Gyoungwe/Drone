@@ -7,30 +7,19 @@ export const zoteroZh = {
 	refresh: "刷新",
 	loading: "加载中…",
 	statusTitle: "接入状态",
-	registered: "已注册 MCP",
-	notRegistered: "未注册 MCP",
-	enabledState: "已启用（生效）",
-	disabledState: "已注册但未启用",
+	statusLine: "Zotero 桌面端 · 本机 API · 写入方式",
 	localApiOk: "本机 API 可达",
 	localApiNo: "本机 API 不可达",
-	desktopOk: "检测到 Zotero 桌面端",
-	desktopNo: "未检测到 Zotero 桌面端",
-	enableLabel: "启用 Zotero MCP",
-	enableHintNeedSetup: "请先完成下方「一键接入」注册 MCP，再启用。",
-	reloadHint: "MCP 开关变更将在下一次会话重载/重启后对工具生效。",
-	toggleFailed: "切换失败，请重试。",
-	setupTitle: "从零接入",
-	setupHint: "安装 zotero-mcp-server 并注册可选 MCP（默认关闭）。安装流程与确认会在当前会话中进行。",
-	setupSteps: "准备：安装 Zotero 桌面端 → 打开「允许本机其他应用通信」→ 接入 CLI。",
-	setupButton: "一键接入 / 安装",
-	setupNoCwd: "请先选择一个项目或打开会话，再接入。",
-	openApp: "打开 Zotero",
-	openDocs: "zotero-mcp 文档",
-	download: "下载 Zotero",
+	desktopMissing: "未检测到 Zotero 桌面端",
+	version: "版本 {version}",
+	writeModeLocal: "本机写入（Zotero 10+）",
+	writeModeWeb: "网页 API（Zotero 9 及以下）",
+	advancedLegacy: "旧版 Zotero / 高级写入方式",
 	crossTitle: "与知识库的关系",
 	crossHint:
 		"Zotero 只是来源上游；命中的文献要整理为 Obsidian 的 Library/Papers 笔记后才可被引用。先建 Vault。",
 	gotoObsidian: "打开 Obsidian 知识库",
+	statusUnavailable: "本机 API 不可达，请启动 Zotero 后刷新。",
 	localTitle: "本机写入（Zotero 10+，推荐）",
 	localHint:
 		"在 Zotero 里授权一次，Agent 就能在本机把已有条目归入分类、挂 PDF，不需要网页 API 密钥，PDF 不占 Zotero 云存储。每次修改仍会先征求你的同意。",
@@ -99,32 +88,19 @@ export const zoteroEn: Record<keyof typeof zoteroZh, string> = {
 	refresh: "Refresh",
 	loading: "Loading…",
 	statusTitle: "Connection status",
-	registered: "MCP registered",
-	notRegistered: "MCP not registered",
-	enabledState: "Enabled (active)",
-	disabledState: "Registered but not enabled",
+	statusLine: "Zotero desktop · local API · write mode",
 	localApiOk: "Local API reachable",
 	localApiNo: "Local API unreachable",
-	desktopOk: "Zotero desktop detected",
-	desktopNo: "Zotero desktop not detected",
-	enableLabel: "Enable Zotero MCP",
-	enableHintNeedSetup: "Run “Connect / install” below to register the MCP first, then enable.",
-	reloadHint: "MCP toggle takes effect for tools after the next session reload/restart.",
-	toggleFailed: "Toggle failed, please retry.",
-	setupTitle: "Connect from zero",
-	setupHint:
-		"Installs zotero-mcp-server and registers the optional MCP (disabled by default). Install and confirmation happen in the current session.",
-	setupSteps:
-		"Preparation: install Zotero desktop → enable “Allow other applications to communicate” → connect the CLI.",
-	setupButton: "Connect / install",
-	setupNoCwd: "Select a project or open a session before connecting.",
-	openApp: "Open Zotero",
-	openDocs: "zotero-mcp docs",
-	download: "Download Zotero",
+	desktopMissing: "Zotero desktop was not detected",
+	version: "Version {version}",
+	writeModeLocal: "Local writes (Zotero 10+)",
+	writeModeWeb: "Web API (Zotero 9 and older)",
+	advancedLegacy: "Older Zotero / advanced write mode",
 	crossTitle: "Relationship to the knowledge base",
 	crossHint:
 		"Zotero is only the source upstream; hits must be deposited as Obsidian Library/Papers notes before they can be cited. Set up the Vault first.",
 	gotoObsidian: "Open Obsidian knowledge",
+	statusUnavailable: "The local API is unreachable. Start Zotero and refresh.",
 	localTitle: "Local writes (Zotero 10+, recommended)",
 	localHint:
 		"Authorize once in Zotero and the agent can file existing items into collections and attach PDFs on this computer — no Web API key, and PDFs do not use Zotero storage. It still asks you before each change.",
@@ -190,8 +166,15 @@ export const zoteroEn: Record<keyof typeof zoteroZh, string> = {
 		"Tip: if your university uses WebVPN (e.g. https://webvpn.xxx.edu.cn/https/443/www.nature.com/...), just log in — no template is needed; the persistent cookies are used directly. EZproxy is saved automatically so you do not need to log in again.",
 };
 
+export function formatZoteroText(template: string, params: Record<string, string | number> = {}): string {
+	return template.replace(/\{([a-zA-Z0-9_]+)\}/gu, (placeholder, key: string) =>
+		Object.hasOwn(params, key) ? String(params[key]) : placeholder,
+	);
+}
+
 export function useZoteroText() {
 	const language = useI18nStore((s) => s.language);
 	const dictionary = language === "zh" ? zoteroZh : zoteroEn;
-	return (key: keyof typeof zoteroZh) => dictionary[key];
+	return (key: keyof typeof zoteroZh, params?: Record<string, string | number>) =>
+		formatZoteroText(dictionary[key], params);
 }

@@ -14,12 +14,12 @@ import { useSettingsStore } from "../../stores/settings";
 export function WorkflowOverviewPanel() {
 	const t = useT();
 	const skills = useSettingsStore((s) => s.skills);
-	const setCategory = useSettingsStore((s) => s.setCategory);
+	const openWith = useSettingsStore((s) => s.openWith);
 	if (skills === null)
 		return (
 			<p className="py-8 text-center text-[13px] text-ink-faint">{t("settings.skills.emptyNoSession")}</p>
 		);
-	return <WorkflowOverview skills={skills} onInspect={() => setCategory("skills")} />;
+	return <WorkflowOverview skills={skills} onInspect={() => openWith("skills")} />;
 }
 
 /** A browse view only. Expanding a direction never activates skills or executes a workflow. */

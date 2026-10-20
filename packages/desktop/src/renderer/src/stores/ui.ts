@@ -1,7 +1,29 @@
 import { create } from "zustand";
 
 /** 主区视图：聊天 / 空间（项目）/ 知识库（全屏视图，不再是弹窗）/ 插件贡献的全屏视图（rail.view，挂钩 4） */
-export type AppView = "chat" | "projects" | "research" | "knowledge" | "skills" | `plugin:${string}`;
+export type AppView =
+	| "chat"
+	| "projects"
+	| "research"
+	| "knowledge"
+	| "skills"
+	| "hosts"
+	| `plugin:${string}`;
+
+/** Knowledge view tabs are owned by the full-screen page (there is no nested tab bar). */
+export type KnowledgeTab = "overview" | "network" | "reviews" | "settings";
+/** Compatibility input for callers that still use the pre-v2 `home` id. */
+export type KnowledgeTabInput = KnowledgeTab | "home";
+
+/** Capability pages own their configuration drawers; settings keeps only preferences. */
+export type CapabilityDrawer =
+	| "skills"
+	| "mcp"
+	| "extensions"
+	| "uiPlugins"
+	| "zotero"
+	| "institutional"
+	| "knowledge";
 
 /**
  * 右侧上下文面板页签：总览 / 文件 / 变更 常驻；子智能体、主机按需出现（ContextPanel 决定可见性）。
@@ -66,6 +88,10 @@ function isPanelTab(value: string | null): value is PanelTab {
 interface UiStore {
 	view: AppView;
 	setView: (view: AppView) => void;
+	capabilityDrawer: CapabilityDrawer | null;
+	setCapabilityDrawer: (drawer: CapabilityDrawer | null) => void;
+	knowledgeTab: KnowledgeTab;
+	setKnowledgeTab: (tab: KnowledgeTabInput) => void;
 
 	/**
 	 * 右侧上下文面板（固定三栏，取消悬浮层）。
@@ -112,6 +138,11 @@ const storedTab = readStorage(STORAGE_TAB);
 export const useUiStore = create<UiStore>((set, get) => ({
 	view: "chat",
 	setView: (view) => set({ view }),
+	capabilityDrawer: null,
+	setCapabilityDrawer: (capabilityDrawer) => set({ capabilityDrawer }),
+	knowledgeTab: "overview",
+	setKnowledgeTab: (knowledgeTab) =>
+		set({ knowledgeTab: knowledgeTab === "home" ? "overview" : knowledgeTab }),
 
 	panelOpen: storedIdleOpen !== "0",
 	idleOpen: storedIdleOpen !== "0",
@@ -135,7 +166,9 @@ export const useUiStore = create<UiStore>((set, get) => ({
 		writeStorage(STORAGE_TAB, tab);
 		set({ panelOpen: true, panelTab: tab });
 	},
-	onRunStart: () => set({ panelOpen: true }),
+	// A new run always opens the actionable overview.  Keeping a previous host
+	// or file tab here made the right rail look stale while the agent was busy.
+	onRunStart: () => set({ panelOpen: true, panelTab: "tasks", resourcePreview: null }),
 	onRunEnd: () => set((state) => ({ panelOpen: state.idleOpen })),
 
 	resourcePreview: null,

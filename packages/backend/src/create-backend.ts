@@ -7,6 +7,7 @@ import type {
 	AskRequest,
 	AskResponse,
 	ComputeHost,
+	ComputeSshConfigHost,
 	ContextManagerMode,
 	DroneRuntime,
 	LoginEventPayload,
@@ -233,6 +234,8 @@ export interface BackendOptions extends SessionServiceOptions {
 	computeAgentDir?: string;
 	/** Approval callback for runner and remote-read operations. Omitted means fail closed. */
 	computeAuthorizeRemoteOperation?: (operation: ComputeRemoteOperation) => Promise<void>;
+	/** Read-only local OpenSSH host inventory for the desktop host picker. */
+	computeSshConfig?: () => Promise<ComputeSshConfigHost[]>;
 	/** Optional host-side preflight hook for additional task contract checks. */
 	computePreflight?: (
 		spec: import("./services/compute-preflight").ComputePreflightJobSpec,
@@ -464,6 +467,7 @@ export function createBackend(options: BackendOptions = {}): BackendServices {
 			...(options.computeAuthorizeRemoteOperation
 				? { authorizeRemoteOperation: options.computeAuthorizeRemoteOperation }
 				: {}),
+			...(options.computeSshConfig ? { listSshConfig: options.computeSshConfig } : {}),
 		});
 	listComputeHosts = () => computeAdapter.listHosts();
 	const detachInquiryComputeEvents = inquiry.attachEventSource({

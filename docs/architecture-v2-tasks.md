@@ -171,10 +171,8 @@
 
 ## 执行日志
 
-> Older execution entries are archived in [architecture-v2-tasks-log-2026-10-19.md](archive/architecture-v2-tasks-log-2026-10-19.md).
+> Older execution entries are archived in [architecture-v2-tasks-log-2026-10-19.md](archive/architecture-v2-tasks-log-2026-10-19.md) and [architecture-v2-tasks-log-2026-10-20.md](archive/architecture-v2-tasks-log-2026-10-20.md).
 
-| 2026-10-01 | A3-4 完成 | 会话实现移到 `session-service.ts` 并命名为 `SessionService`；`pi-backend.ts` 仅保留 `PiBackend`/`PiBackendOptions` 兼容导出，组合根改用 `SessionService`，desktop/IPC 继续直接消费 `BackendServices`；backend/desktop typecheck、组合根与 SDK 回归通过，架构检查 141 baseline、0 fixed | 兼容别名保留一个发布周期；会话编排仍集中在 SessionService，后续可继续按 lifecycle/permission 子域拆分
-| 2026-10-01 | A7-1 增量 | `StorageRegistry.registerDiscoveredRoot` 为宿主发现的项目工作目录提供稳定、脱敏、幂等登记；SessionService 在 create/open session 时登记 `<cwd>/.local/agent-work`，重复会话不会产生重复条目；registry 6/6 通过 | 研究结果目录与知识库 Vault 仍由扩展配置动态发现，下一步需在 host 配置刷新时调用同一登记入口 |
 | 2026-10-01 | 全量验收（A3/A5/A6/A7 增量后） | `npm test` 全部通过：backend 1,372 passed + 13 skipped、desktop 556、extensions 16、knowledge 40、research 31、shared 130、tasks 31；`npm run typecheck`、`.pi` checkJs、build、upgrade fixtures、plugin API、extensions strict、架构检查（141 baseline、0 fixed）均通过 | 仍保留 5 个 `.pi/extensions` legacy 适配入口；A5-1/2/3 的运行时 worker、source archive 与剩余扩展仍按兼容层策略逐步迁移 |
 | 2026-10-01 | A5-2 增量 | `@drone/tasks` 新增 `authorization-policy` 纯策略入口：动作枚举/待决动作判定、授权请求去重键、ask_user 标题与授权卡正文投影；包测试 37/37、包 typecheck 与 Biome 检查通过；`.pi/lib/tasks/ask-authorization.mjs` 保持 CLI/扩展兼容实现 | backend、desktop 与组合根未改；授权 journal、binding 校验和 UI 仍由宿主运行时负责，A5-2 总项保持未完成 |
 | 2026-10-01 | A5-1 增量 | `@drone/knowledge/semantic-provider` 承载语义 provider 配置验证、请求边界、凭据注入与 bounded vector 响应校验；backend `knowledge-semantic` 10/10 改用包入口，knowledge typecheck/40 tests 通过 | `.pi/lib/knowledge/semantic-provider.mjs` 保留 CLI 自包含适配；service/worker 与 extension runtime 仍待整体迁移
@@ -203,3 +201,5 @@
 | 2026-10-18 | 计划复核与门禁复跑 | Drone `main=260995a0`、`drone-plugins main=8389116` 均与远端一致；`check:remaining-gates`、plugin-api migration/lifecycle、Pi 1.1.0/latest、升级 fixtures、插件仓库全量 check 和 Desktop artifact 16/16 均通过；最新桌面产物 SHA-256 为 `9db8e47ec4c039415ca6dc66a1ccd78dd7ca2f7e3f9a1bb78fafa5cac30244e7` | 未发现未关闭的 v1.1 或 A5 门槛；Protocols.io 继续只读，交互式 Electron SIGABRT 仅作环境观察 |
 | 2026-10-19 | 交接规则、知识 worker 与主线评估 | `AGENTS.md` 增加暂缓条目、日志归档和真实 PASS 三条红线；计划日志均压到最近 30 行；backend worker host seam、打包资源检查和 v0.33.1 缺陷复现完成；onboarding 三项修复与 `eval:mainline` 20×2 离线证据加入；根 lint/typecheck/test/build/check:arch 均通过 | v0.33.2 正式安装包和发布 tag 尚待完成；B8 仍暂缓 |
 | 2026-10-19 | v0.33.2 真实插件宿主回归 | pi-core 0.1.3 / research-suite 0.1.5 公开 registry tarball 已回读；Pi 1.1.0/latest 真实安装、三条 onboarding 命令及旧冲突负例均完成；证据见 `docs/releases/v0.33.2-pi-cli-regression.json` | v0.33.2 release tag 待 Drone PR 合并后生成；B8 仍暂缓，Protocols.io 保持只读 |
+| 2026-10-19 | v0.33.3 安装包验收门禁与发布提速 | Release workflow 新增构建后原生 DMG/ZIP/NSIS 检查、上传后从 draft 回下载并对 installers/blockmaps/update metadata 做双向 SHA-256 清单比对，只有 `finalize` 才能公开 release；macOS 两架构合并为单次构建，构建与完整验证并行，Electron/Builder 缓存和资产白名单已加入；GitHub run `39191569111` 的 macOS/Windows 构建、上传、draft 回下载、Windows ZIP/NSIS 安装和最终 release 均通过；Windows 参数传递与 prepare 依赖门禁问题已修复，证据见 `docs/releases/v0.33.3-asset-validation.json` 与 Release run | v0.33.3 已发布且无证书门禁关闭；B8 仍暂缓，Protocols.io 保持只读 |
+| 2026-10-20 | 架构与插件计划缺口复核 | A0–A7、P9、P10 以及 A5-1～A5-4 的任务勾选和门禁记录均已核对；唯一未勾选项仍是按用户要求暂缓的 B8；根 `check:remaining-gates`、`check:plugin-api` 和浅色四视图回归均通过 | 插件热插拔 worker 排空/失败回滚/生命周期事件、任意 Skill 仓库管理、市场完整安装更新卸载、MCP 真实配置、原生 Pi 对等会话、深色对照和 v0.33.4 远端 Release 仍属后续门槛 |

@@ -5,7 +5,12 @@ import { runtimeSlot } from "./runtime-host";
 import { flowCardBuilder, toolMeta } from "./runtime-host";
 import { failureCard, flowCard } from "./flow-cards";
 
-const state = runtimeSlot("knowledge", "ui", () => ({ listeners: new Set(), flows: new Map(), seq: 0 }));
+const state = runtimeSlot("knowledge", "ui", () => ({
+	listeners: new Set(),
+	flows: new Map(),
+	seq: 0,
+	localAnswerStats: { answered: 0, total: 0, rate: null, updatedAt: null },
+}));
 // Dynamic Pi extensions and the bundled backend can load this module through
 // different ESM loaders.  Forward UI facts through a versioned process event so
 // both copies observe the same flow without a global Symbol registry.
@@ -46,6 +51,10 @@ export function flowFor(id) {
 	const flow = state.flows.get(id);
 	return flow ? structuredClone(flow) : null;
 }
+/** Process-lifetime aggregate used by the knowledge overview when no session is selected. */
+export function knowledgeAnswerRate() {
+	return structuredClone(state.localAnswerStats);
+}
 export function beginKnowledgeFlow(ctx, binding) {
 	const id = sessionId(ctx);
 	if (!id) return;
@@ -62,6 +71,8 @@ export function beginKnowledgeFlow(ctx, binding) {
 		reads: [],
 		search: null,
 		publication: null,
+		localAnswer: false,
+		localAnswerRate: { ...state.localAnswerStats },
 		cards: [],
 	};
 	state.flows.delete(id);
@@ -111,6 +122,21 @@ export function noteKnowledgeRead(ctx, page) {
 export function publicationKnowledgeFlow(ctx, proof) {
 	const id = sessionId(ctx);
 	if (!state.flows.has(id)) return;
+	const current = state.flows.get(id);
+	const completed = ["released", "no-hits"].includes(proof.status);
+	// A released answer with a current knowledge search is a host-observed local
+	// answer. Count each turn once; the metric is deliberately bounded to the
+	// current host process and never inferred from model text.
+	if (completed && !current.localAnswerRecorded) {
+		const answered = Boolean(current.search && current.search.hits > 0);
+		state.localAnswerStats = {
+			answered: state.localAnswerStats.answered + (answered ? 1 : 0),
+			total: state.localAnswerStats.total + 1,
+			rate: (state.localAnswerStats.answered + (answered ? 1 : 0)) / (state.localAnswerStats.total + 1),
+			updatedAt: Date.now(),
+		};
+		current.localAnswerRecorded = true;
+	}
 	const phase =
 		proof.status === "setup-complete"
 			? "setup-complete"
@@ -127,6 +153,8 @@ export function publicationKnowledgeFlow(ctx, proof) {
 								: "checking";
 	updateKnowledgeFlow(ctx, {
 		phase,
+		localAnswer: completed && current.search?.hits > 0,
+		localAnswerRate: { ...state.localAnswerStats },
 		publication: {
 			status: proof.status,
 			warnings: Array.isArray(proof.warnings) ? proof.warnings.slice(0, 6) : [],

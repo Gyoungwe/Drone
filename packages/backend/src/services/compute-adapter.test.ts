@@ -18,6 +18,35 @@ describe("default compute adapter", () => {
 		expect(await service.getHost(host.id)).toBeNull();
 	});
 
+	it("projects read-only SSH config metadata without touching key contents", async () => {
+		const root = await mkdtemp(join(tmpdir(), "drone-compute-ssh-config-"));
+		const service = new ComputeService({ storage: new StorageRegistry(), agentDir: root });
+		const adapter = createComputeServiceAdapter({
+			service,
+			agentDir: root,
+			listSshConfig: async () => [
+				{
+					alias: "hpc-a",
+					hostname: "hpc.example",
+					user: "alice",
+					identityFiles: ["~/.ssh/id_ed25519"],
+					source: "ssh-config",
+				},
+			],
+		});
+		expect(await adapter.listSshConfig?.()).toEqual([
+			{
+				alias: "hpc-a",
+				hostname: "hpc.example",
+				user: "alice",
+				identityFiles: ["~/.ssh/id_ed25519"],
+				source: "ssh-config",
+			},
+		]);
+		await adapter.dispose?.();
+		await service.dispose();
+	});
+
 	it("reports onboarding and health without claiming an unprobed host is online", async () => {
 		const service = createUnavailableComputeService();
 		const host = await service.saveHost({ alias: "cluster-b", displayName: "Cluster B", kind: "ssh" });

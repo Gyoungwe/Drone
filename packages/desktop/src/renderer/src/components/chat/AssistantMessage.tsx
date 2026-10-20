@@ -18,6 +18,7 @@ export function AssistantMessage({
 	metaInGroup = false,
 	mode = "lead",
 	turnTiming,
+	turnStepCount,
 }: {
 	text: string;
 	thinking: string;
@@ -29,6 +30,8 @@ export function AssistantMessage({
 	mode?: AgentModeId;
 	/** Real turn timing derived from transcript boundaries. */
 	turnTiming?: TurnTiming;
+	/** Total tool steps observed in this turn, including tools rendered in a neighbouring meta group. */
+	turnStepCount?: number;
 }) {
 	const t = useT();
 	const model = useSessionsStore((s) => s.currentModel);
@@ -39,9 +42,9 @@ export function AssistantMessage({
 		turnTiming?.endedAt !== undefined
 			? t("message.runSummary", {
 					duration: formatDuration(turnTiming.endedAt - turnTiming.startedAt),
-					count: tools.length + (thinking ? 1 : 0),
+					count: turnStepCount ?? tools.length + (thinking ? 1 : 0),
 				})
-			: t("message.stepsSummary", { count: tools.length + (thinking ? 1 : 0) });
+			: t("message.stepsSummary", { count: turnStepCount ?? tools.length + (thinking ? 1 : 0) });
 
 	return (
 		<div className="flex flex-col gap-2">

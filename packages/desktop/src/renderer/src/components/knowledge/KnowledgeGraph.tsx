@@ -377,6 +377,24 @@ export function KnowledgeGraph({
 			className="knowledge-observatory space-y-3"
 			aria-describedby="knowledge-graph-summary knowledge-graph-keyboard-help"
 		>
+			<header className="knowledge-network-header" data-testid="knowledge-network-header">
+				<div className="min-w-0">
+					<p className="knowledge-network-eyebrow">{t("graphNebula")}</p>
+					<h3 className="knowledge-network-title">{t("graphTitle")}</h3>
+					<p className="knowledge-network-hint">{t("graphNebulaHint")}</p>
+				</div>
+				<div className="knowledge-network-stats">
+					<span>
+						<strong>{nodes.length}</strong> {t("graphLegendNote")}
+					</span>
+					<span>
+						<strong>{edges.length}</strong> {t("graphLinks").replace("{count}", "")}
+					</span>
+					<span>
+						<strong>{isolated}</strong> {t("graphHealthIsolated").replace("{count}", "")}
+					</span>
+				</div>
+			</header>
 			<div className="knowledge-graph-toolbar flex flex-wrap items-center gap-2">
 				<Button size="sm" aria-pressed={view === "semantic"} onClick={() => setView("semantic")}>
 					{t("graphSemantic")}

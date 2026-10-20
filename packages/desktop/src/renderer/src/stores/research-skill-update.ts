@@ -4,9 +4,14 @@ import { getPi } from "../api";
 
 interface ResearchSkillUpdateStore {
 	state: ResearchSkillUpdateState | null;
+	/** Explicit user action; no startup/timer check is performed by the store. */
+	check: () => Promise<void>;
 }
 
-export const useResearchSkillUpdateStore = create<ResearchSkillUpdateStore>()(() => ({ state: null }));
+export const useResearchSkillUpdateStore = create<ResearchSkillUpdateStore>()(() => ({
+	state: null,
+	check: () => getPi().checkResearchSkills(),
+}));
 
 let subscribed = false;
 

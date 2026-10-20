@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	type ArtifactRecord,
 	decisionRecord,
@@ -19,6 +19,14 @@ import {
 	type WorkspaceRun,
 	workspaceLayout,
 } from "../src";
+
+// Legacy SQLite fixtures spawn a child Node process on Windows. Native process
+// startup and file I/O can exceed Vitest's 5 s default on hosted runners even
+// though the test itself is bounded and deterministic.
+vi.setConfig({
+	testTimeout: process.platform === "win32" ? 30_000 : 5_000,
+	hookTimeout: process.platform === "win32" ? 30_000 : 10_000,
+});
 
 // node:sqlite on Windows keeps the file lock until the creating process exits,
 // even after DatabaseSync.close(). Seed legacy files in a child so the parent

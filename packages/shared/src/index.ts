@@ -59,6 +59,7 @@ export * from "./notebook-preview";
 export * from "./npy-preview";
 export * from "./packages";
 export * from "./permission-settings";
+export * from "./plugin-sources";
 export * from "./process-lanes";
 export * from "./progress-display";
 export * from "./project-id";

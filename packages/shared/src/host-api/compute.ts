@@ -8,6 +8,7 @@ import {
 	ComputeJobSchema,
 	ComputeLogChunkSchema,
 	ComputeOnboardingStatusSchema,
+	ComputeSshConfigHostSchema,
 	ComputeTerminalSchema,
 } from "../compute";
 import { defineDomain } from "./define";
@@ -90,6 +91,7 @@ const OnboardingStepArgs = Type.Tuple([
 export const ComputeContract = defineDomain("compute", {
 	methods: {
 		listHosts: { args: EmptyArgs, result: Type.Array(ComputeHostSchema, { maxItems: 256 }) },
+		listSshConfig: { args: EmptyArgs, result: Type.Array(ComputeSshConfigHostSchema, { maxItems: 256 }) },
 		getHost: { args: IdArgs, result: Type.Union([ComputeHostSchema, Type.Null()]) },
 		saveHost: { args: Type.Tuple([ComputeHostInputSchema]), result: ComputeHostSchema },
 		removeHost: { args: IdArgs, result: Type.Void() },

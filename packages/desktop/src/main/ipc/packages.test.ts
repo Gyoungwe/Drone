@@ -22,6 +22,7 @@ describe("registerPackagesIpc", () => {
 		const service = {
 			searchPackages: vi.fn(async () => ({ packages: [], total: 0, page: 1, pageSize: 50 })),
 			installPackage: vi.fn(async () => {}),
+			updatePackage: vi.fn(async () => {}),
 			removePackage: vi.fn(async () => {}),
 			listConfiguredPackages: vi.fn(async () => []),
 		};
@@ -32,5 +33,25 @@ describe("registerPackagesIpc", () => {
 		const list = mocks.handlers.get(IpcChannels.PackagesListConfigured)!;
 		expect(await list({})).toEqual([]);
 		expect(service.listConfiguredPackages).toHaveBeenCalledOnce();
+	});
+
+	it("refreshes the UI plugin manager after package changes", async () => {
+		const service = {
+			searchPackages: vi.fn(async () => ({ packages: [], total: 0, page: 1, pageSize: 50 })),
+			installPackage: vi.fn(async () => {}),
+			updatePackage: vi.fn(async () => {}),
+			removePackage: vi.fn(async () => {}),
+			listConfiguredPackages: vi.fn(async () => []),
+		};
+		const changed = vi.fn();
+		registerPackagesIpc(
+			{ sessions: {}, packages: service } as unknown as Parameters<typeof registerPackagesIpc>[0],
+			undefined,
+			changed,
+		);
+		await mocks.handlers.get(IpcChannels.PackagesInstall)!({}, "@gyoungwe/desktop-ui-pack");
+		await mocks.handlers.get(IpcChannels.PackagesUpdate)!({}, "@gyoungwe/desktop-ui-pack");
+		await mocks.handlers.get(IpcChannels.PackagesRemove)!({}, "npm:@gyoungwe/desktop-ui-pack", "user");
+		expect(changed).toHaveBeenCalledTimes(3);
 	});
 });

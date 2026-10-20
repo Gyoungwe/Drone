@@ -19,7 +19,6 @@ import {
 	PanelLeftIcon,
 	ProjectsIcon,
 	PuzzleIcon,
-	SubagentIcon,
 	TaskBoardIcon,
 	TestIcon,
 } from "../icons";
@@ -40,7 +39,10 @@ export function isPrimaryNavActive(
 			state.view === "skills" ||
 			(state.settingsOpen && SKILLS_SETTINGS_CATEGORIES.includes(state.settingsCategory))
 		);
-	return state.settingsOpen && HOST_SETTINGS_CATEGORIES.includes(state.settingsCategory);
+	return (
+		state.view === "hosts" ||
+		(state.settingsOpen && HOST_SETTINGS_CATEGORIES.includes(state.settingsCategory))
+	);
 }
 
 const PRIMARY_ITEMS: ReadonlyArray<{
@@ -54,9 +56,13 @@ const PRIMARY_ITEMS: ReadonlyArray<{
 	{ key: "hosts", icon: TestIcon, label: "hosts" },
 ];
 
+export const WORKBENCH_NAV_ORDER: readonly PrimaryNavKey[] = Object.freeze(
+	PRIMARY_ITEMS.map(({ key }) => key),
+);
+
 /**
  * 左侧研究工作台导航：一级入口保持稳定，项目和最近会话沿用真实会话数据。
- * 旧的设置、扩展和帮助入口收进头像菜单，但仍使用现有 SettingsStore 兼容跳转。
+ * 旧的设置和帮助入口收进头像菜单，但仍使用现有 SettingsStore 兼容跳转。
  */
 const COLLAPSE_KEY = "drone.sidebar.collapsed";
 const RECENT_LIMIT = 8;
@@ -93,38 +99,41 @@ function SidebarSessions() {
 			.sort((a, b) => (b.modifiedAt ?? b.createdAt) - (a.modifiedAt ?? a.createdAt));
 		return groupRunningFirst(sorted, (m) => active.has(m.sessionId) || (askCounts[m.sessionId] ?? 0) > 0);
 	}, [allSessions, activeIds, askCounts]);
-	if (projects.length === 0 && running.length === 0 && rest.length === 0) return null;
 	return (
 		<div className="workbench-nav-sessions" data-testid="sidebar-sessions">
-			{projects.length > 0 && (
-				<>
-					<h3 className="workbench-nav-group">{t("workbench.nav.projectsGroup")}</h3>
-					<ul>
-						{projects.map((project) => (
-							<li key={project.cwd}>
-								<button
-									type="button"
-									className="workbench-nav-project"
-									title={project.cwd}
-									onClick={() => {
-										selectProject(project.cwd);
-										closeKnowledge();
-										setView("projects");
-									}}
-								>
-									<ProjectsIcon size={14} />
-									<span className="min-w-0 flex-1 truncate">{project.name}</span>
-									<span className="workbench-nav-project-count">{project.sessionCount}</span>
-								</button>
-							</li>
-						))}
-					</ul>
-				</>
-			)}
-			{(running.length > 0 || rest.length > 0) && (
-				<>
-					<h3 className="workbench-nav-group">{t("workbench.nav.recent")}</h3>
-					<ul>
+			<h3 className="workbench-nav-group">{t("workbench.nav.projectsGroup")}</h3>
+			<ul>
+				{projects.length > 0 ? (
+					projects.map((project) => (
+						<li key={project.cwd}>
+							<button
+								type="button"
+								className="workbench-nav-project"
+								title={project.cwd}
+								onClick={() => {
+									selectProject(project.cwd);
+									closeKnowledge();
+									setView("projects");
+								}}
+							>
+								<ProjectsIcon size={14} />
+								<span className="min-w-0 flex-1 truncate">{project.name}</span>
+								<span className="workbench-nav-project-count">{project.sessionCount}</span>
+							</button>
+						</li>
+					))
+				) : (
+					<li>
+						<p className="px-2 py-2 text-[11px] leading-relaxed text-ink-faint">
+							{t("workbench.nav.projectsEmpty")}
+						</p>
+					</li>
+				)}
+			</ul>
+			<h3 className="workbench-nav-group">{t("workbench.nav.recent")}</h3>
+			<ul>
+				{running.length > 0 || rest.length > 0 ? (
+					<>
 						{running.map((s) => (
 							<SessionRow
 								key={s.sessionId}
@@ -136,9 +145,15 @@ function SidebarSessions() {
 						{rest.slice(0, RECENT_LIMIT).map((s) => (
 							<SessionRow key={s.sessionId} session={s} showDir />
 						))}
-					</ul>
-				</>
-			)}
+					</>
+				) : (
+					<li>
+						<p className="px-2 py-2 text-[11px] leading-relaxed text-ink-faint">
+							{t("workbench.nav.recentEmpty")}
+						</p>
+					</li>
+				)}
+			</ul>
 		</div>
 	);
 }
@@ -185,6 +200,7 @@ export function WorkbenchNav() {
 			return;
 		}
 		if (key === "knowledge") {
+			useUiStore.getState().setKnowledgeTab("home");
 			openKnowledge({ cwd, sessionId: activeSessionId, tab: "reviews" });
 			return;
 		}
@@ -194,7 +210,7 @@ export function WorkbenchNav() {
 			setView("skills");
 			return;
 		}
-		useSettingsStore.getState().openWith("compute");
+		useUiStore.getState().setView("hosts");
 	};
 	const selectProjects = () => {
 		closeKnowledge();
@@ -234,18 +250,6 @@ export function WorkbenchNav() {
 				<PanelLeftIcon size={16} />
 			</button>
 			<nav className="workbench-nav-list" aria-label={t("workbench.nav.title")}>
-				{/* Space switcher remains the compatibility route to the full project page. */}
-				<button
-					type="button"
-					className={`workbench-nav-item${view === "projects" ? " is-active" : ""}`}
-					onClick={selectProjects}
-					aria-current={view === "projects" ? "page" : undefined}
-					title={t("workbench.nav.projects")}
-					aria-label={t("workbench.nav.projects")}
-				>
-					<ProjectsIcon size={17} />
-					<span>{t("workbench.nav.projects")}</span>
-				</button>
 				{PRIMARY_ITEMS.map(({ key, icon: Icon, label }) => {
 					const active = isPrimaryNavActive(key, { view, settingsOpen, settingsCategory });
 					return (
@@ -273,6 +277,18 @@ export function WorkbenchNav() {
 						</button>
 					);
 				})}
+				{/* Project page remains a compatibility route; project and recent data live in the groups below. */}
+				<button
+					type="button"
+					className={`workbench-nav-item${view === "projects" ? " is-active" : ""}`}
+					onClick={selectProjects}
+					aria-current={view === "projects" ? "page" : undefined}
+					title={t("workbench.nav.projects")}
+					aria-label={t("workbench.nav.projects")}
+				>
+					<ProjectsIcon size={17} />
+					<span>{t("workbench.nav.projects")}</span>
+				</button>
 				{pluginViews.map((entry) => (
 					<button
 						key={entry.id}
@@ -319,17 +335,6 @@ export function WorkbenchNav() {
 						>
 							<GearIcon size={15} />
 							{t("workbench.nav.settings")}
-						</button>
-						<button
-							type="button"
-							role="menuitem"
-							onClick={() => {
-								setAccountOpen(false);
-								useSettingsStore.getState().openWith("extensions");
-							}}
-						>
-							<SubagentIcon size={15} />
-							{t("workbench.nav.extensions")}
 						</button>
 						<button
 							type="button"

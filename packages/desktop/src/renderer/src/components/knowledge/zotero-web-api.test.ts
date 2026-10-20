@@ -6,8 +6,14 @@ vi.mock("../../i18n", () => ({
 }));
 
 import { isZoteroWebApiStatus } from "./ZoteroWebApiSection";
+import { formatZoteroText } from "./zotero-copy";
 
 describe("Zotero Web API settings result", () => {
+	it("interpolates the version label before rendering the status line", () => {
+		expect(formatZoteroText("版本 {version}", { version: "10.0.6" })).toBe("版本 10.0.6");
+		expect(formatZoteroText("Version {version}", { version: "10.0.6" })).not.toContain("{version}");
+	});
+
 	it("accepts a status and rejects the host contract's validation envelope", () => {
 		expect(
 			isZoteroWebApiStatus({

@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { configureObsidian, depositKnowledge } from "@drone/extensions/internal/obsidian-workbench";
 import { closeKnowledgeServices, getKnowledgeService } from "@drone/knowledge/service";
 import * as ui from "@drone/knowledge/ui-service";
@@ -61,6 +61,19 @@ describe("real human-facing knowledge APIs", () => {
 		expect(value.project).toBe("project-a");
 		expect(value.index.noteCount).toBeGreaterThan(0);
 		expect(after.stats.reconciliations).toBe(before.stats.reconciliations);
+	});
+	it("overview includes a note deposited immediately before the watcher tick", async () => {
+		const saved = await depositKnowledge({
+			cwd,
+			project: "project-a",
+			type: "method",
+			title: "Fresh method note",
+			markdown: "A note written during this turn.",
+		});
+		const overview = await ui.knowledgeOverview({ cwd });
+		const savedPath = relative(vault, saved.note).split(sep).join("/");
+		expect(overview.recentNotes.some((item) => item.path === savedPath)).toBe(true);
+		expect(overview.index.categoryCounts.method).toBeGreaterThan(0);
 	});
 	it("folder/template preview is read-only and reports a missing target", async () => {
 		const path = join(root, "New Vault"),
@@ -220,6 +233,17 @@ describe("host-owned step events", () => {
 		const value = flowFor("snapshot-test");
 		value.phase = "released";
 		expect(flowFor("snapshot-test").phase).toBe("unconfigured");
+	});
+	it("local answer metrics remain visible without selecting the originating session", () => {
+		const ctx = { sessionId: "local-answer-metric" };
+		beginKnowledgeFlow(ctx, { vaultId: "fixture", revision: 1, vault });
+		updateKnowledgeFlow(ctx, {
+			search: { query: "Topic", wikiOnly: false, hits: 1, complete: true, coverage: "ready", revision: 1 },
+		});
+		publicationKnowledgeFlow(ctx, { status: "released" });
+		const value = flowFor("local-answer-metric");
+		expect(value.localAnswer).toBe(true);
+		expect(value.localAnswerRate.total).toBeGreaterThan(0);
 	});
 });
 

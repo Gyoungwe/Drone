@@ -112,7 +112,7 @@ export function KnowledgeFlowCard({ sessionId }: { sessionId: string | null }) {
 	];
 	const activeStage = stages.findIndex(([, done]) => !done);
 	function manage(tab: "overview" | "reviews" | "maintenance" = "overview") {
-		// 索引与维护在 设置 › 高级 › 知识库维护；其余打开知识库视图
+		// 索引与维护在「知识库 › 知识库设置」；其余打开知识库视图
 		if (tab === "maintenance") useSettingsStore.getState().openWith("knowledge");
 		else useKnowledgeStore.getState().open({ cwd, sessionId, tab });
 	}

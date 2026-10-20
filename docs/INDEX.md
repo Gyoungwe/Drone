@@ -27,11 +27,17 @@
 架构升级规划（v2，提案）：见 [architecture-v2.md](architecture-v2.md) 与任务拆解 [architecture-v2-tasks.md](architecture-v2-tasks.md)。
 A5-1～A5-4 的收益、当前完成度和建议执行顺序见 [A5 领域包收敛摘要](a5-impact-summary.md)。
 本轮 A5 生产切片的提交、验收与剩余兼容层见 [A5 迁移验收记录](releases/a5-migration-2026-10-18.json)。
-插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。双仓库维护、架构红线和 npm 发版执行规约见 [drone-maintenance skill](../.agents/skills/drone-maintenance/SKILL.md)。
+插件化执行计划与当前门槛见 [final-pluginization-plan.md](final-pluginization-plan.md)；本机构建产物和能力验收清单见 [v3-desktop-capability-acceptance-plan.md](v3-desktop-capability-acceptance-plan.md)。插件仓库构建、分层热插拔、会话边界重载与回滚的下一阶段设计见 [plugin-hot-reload-plan.md](plugin-hot-reload-plan.md)。双仓库维护、架构红线和 npm 发版执行规约见 [drone-maintenance skill](../.agents/skills/drone-maintenance/SKILL.md)。
 两份计划的旧执行日志已按 30 行上限归档到 [`docs/archive/`](archive/)。
 插件化前端交接、宿主/插件仓库边界和 UI 验收顺序见 [pluginization-ui-handoff.md](pluginization-ui-handoff.md)；设计稿源文件见 [Drone 插件化界面.html](design/plugin-ui/Drone%20插件化界面.html)，构建产物四视图视觉对照由 [`scripts/check-visual-design-comparison.mjs`](../scripts/check-visual-design-comparison.mjs) 生成 [视觉证据](releases/visual/drone-visual-comparison.json)；资源搜索连接器设计见 [resource-search-connectors.md](resource-search-connectors.md)；科研工作台 v3 规划见 [scientific-workbench-v3-plan.md](scientific-workbench-v3-plan.md)。
 
+“技能与连接”页 v2 的 Pi 官方市场、Drone 插件仓库、连接器、MCP、Skill 和手动 Skill 仓库更新设计见 [skills-connections-ui-v2-plan.md](skills-connections-ui-v2-plan.md)。
+
+主机页的 SSH 配置发现、主机选择器和科研计算卡片设计见 [host-picker-ui-plan.md](host-picker-ui-plan.md)；实现位于 `packages/desktop/src/main/ssh-config.ts`、`packages/shared/src/host-api/compute.ts` 和 `packages/desktop/src/renderer/src/components/panel/ComputePane.tsx`。
+
 `.pi/tsconfig.json` 对生成的 `.pi/extensions/*.mjs` 保持可检查的资源边界；知识、任务、研究运行时由领域包 TypeScript 源码和 checked-in package-owned artifacts 负责，根 `npm run typecheck` 会串接 `npm run check:pi`。`.pi/lib` 兼容树已删除。
+
+2026-10-19 实机验收问题、截图编号与下一轮修复状态见 [real-device-acceptance-20261019](real-device-acceptance-20261019/README.md)。
 
 插件公开合同见 `packages/plugin-api/`：它是依赖零实现的 `@gyoungwe/plugin-api` 包，只暴露 `DroneHostPort`、能力协商、`drone-result/v3` 结果状态和回执类型，以及 host-neutral analysis contract。`npm run check:plugin-api` 会同时检查生成的 UI 插件 API、包产物、临时 tarball 安装，以及已绑定 `../drone-plugins` workspace 是否引用 Drone 源码相对路径。
 
@@ -53,6 +59,8 @@ v0.33.0 无证书跨平台资产、发布 run 和 SHA-256 清单见 [发布说�
 
 v0.33.1 公开插件宿主收口与无证书补丁发布说明见 [发布说明](releases/v0.33.1.md)。
 v0.33.2 知识库 worker 修复、onboarding 状态和主线指标见 [发布说明](releases/v0.33.2.md)；离线主线评估证据见 [`docs/evals/mainline-2026-10-19.json`](evals/mainline-2026-10-19.json)，本机 arm64/x64 正式资源验收见 [`v0.33.2-knowledge-package.json`](releases/v0.33.2-knowledge-package.json)。
+v0.33.3 发布候选的构建后/上传后安装包验收设计与本机 unsigned DMG/ZIP 证据见 [发布说明](releases/v0.33.3.md) 与 [资产验收证据](releases/v0.33.3-asset-validation.json)。
+v0.33.4 技能仓库来源卡片、GitHub 限流回退更新检查、市场栏和 macOS 安装包验收见 [发布说明](releases/v0.33.4.md)、[资产验收证据](releases/v0.33.4-asset-validation.json) 与 [P4 UI 验收证据](releases/v0.33.4-p4-ui-acceptance.json)。
 
 首批 `@gyoungwe` npm 包的版本、tarball、完整性和干净安装验收见 [npm 发布证据](releases/v0.33.0-npm-packages.json)；`pi-knowledge@0.1.1`、`pi-core@0.1.3`、`research-suite@0.1.5` 的 task ownership、onboarding commands、弃用和真实 Pi CLI 回归见 [v0.33.2 Pi CLI 证据](releases/v0.33.2-pi-cli-regression.json)。历史 `0.1.1` 冲突证据仍保留在 [v1.1 onboarding commands 证据](releases/v1.1-onboarding-commands.json)。
 
@@ -206,7 +214,7 @@ B7 的数据集、样本表、分析计划、功效/MDE、公共数据校验和�
 
 ## 外部 `pi-knowledge` 包 — 原生 Pi 知识插件（PR-3 / PR-4）
 
-`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，main `8389116`），宿主仓库不再保留兼容副本或构建脚本。已发布的 `@gyoungwe/pi-knowledge@0.1.1` 自包含 manifest、dist、knowledge worker 和 skills，且不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。外部仓库负责 build/check/smoke，根仓库的 `scripts/smoke-pi-package.mjs` 从已安装 npm 包验证未配置 Vault 的 `unconfigured` 回执、fixture 检索和安装/卸载路径。原生 Pi 的最低版本是 `1.1.0`；生成 dist 的 R8 自包含检查由插件仓库和 `scripts/check-architecture.mjs` 共同执行。
+`pi-knowledge` 的源码权威版本位于绑定的 `../drone-plugins/packages/pi-knowledge/`（GitHub `Gyoungwe/drone-plugins`，main `5cd915e`），宿主仓库不再保留兼容副本或构建脚本。已发布的 `@gyoungwe/pi-knowledge@0.1.1` 自包含 manifest、dist、knowledge worker 和 skills，且不注册 task runtime；task 工具由 `@gyoungwe/pi-core` 独占。外部仓库负责 build/check/smoke，根仓库的 `scripts/smoke-pi-package.mjs` 从已安装 npm 包验证未配置 Vault 的 `unconfigured` 回执、fixture 检索和安装/卸载路径。原生 Pi 的最低版本是 `1.1.0`；生成 dist 的 R8 自包含检查由插件仓库和 `scripts/check-architecture.mjs` 共同执行。
 
 PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_deposit` 与 `knowledge_answer_context`：本地 Vault 检索优先，命中不足时只报告 `pi-web-access` 能力并提示保留真实来源；读取回执含出链/反链且同路径同哈希重读返回 `already-read`；搜索默认 6 条、片段最多 300 字；沉淀复用现有 `depositKnowledge` 合同并覆盖 paper/software/method/idea 四类；`knowledge_status` 返回稳定的一行 revision 摘要。验证夹具位于 `scripts/smoke-pi-package.mjs`，不写入真实用户 Vault。
 
@@ -216,7 +224,7 @@ PR-4 在同一入口注册 `knowledge_search`、`knowledge_read`、`knowledge_de
 
 ## `@gyoungwe/pi-analysis` — 原生 Pi 分析插件（V1.1-A 已完成）
 
-`../drone-plugins` 的 `main`（提交 `8389116`，包实现沿用 `baf9b3b`）是 `@gyoungwe/pi-analysis@0.1.0` 的源码权威位置。Drone backend 以精确版本依赖公共 npm 包，`packages/backend/src/services/analysis-adapters/` 保留兼容 facade；本地临时源码和构建脚本已删除。公开 registry tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
+`../drone-plugins` 的 `main`（提交 `5cd915e`，包实现提交 `2168576`）是 `@gyoungwe/pi-analysis@0.1.0` 的源码权威位置。Drone backend 以精确版本依赖公共 npm 包，`packages/backend/src/services/analysis-adapters/` 保留兼容 facade；本地临时源码和构建脚本已删除。公开 registry tarball、全新 prefix 安装、Pi 1.1.0/latest loader 发现和计划→执行→审查→交付 proof 见 [v1.1 pi-analysis 证据](releases/v1.1-pi-analysis.json)。
 
 ## `@gyoungwe/pi-evidence` — 原生 Pi 证据插件（V1.1-E 已完成公开宿主门禁）
 
@@ -374,8 +382,8 @@ src/
 | `diff/` | **DiffSidebar**（右侧变更侧栏：按轮分组 unified diff + 内嵌 BranchRow git 分支行；开关在 SessionTabBar）+ DiffFileCard |
 | `panel/ProcessPane.tsx` + `ProcessLaneView.tsx` | 六泳道过程页与历史轮次选择；只投影公开 transcript 回执，节点内保留运行明细，门卡动作只打开任务面板 |
 | `panel/ContextPanel.tsx` | 右栏：任务 / 过程（内含「过程 · 变更」切换，原「变更」页签并入，`stores/ui.ts` `processView`）/ 产物 常驻；子智能体（本会话有运行）与计算（已配置主机或有作业）按需出现（`visiblePanelTabs`）；决策账本（TasksPane）与审稿卡默认折叠，有待确认项才展开 |
-| `knowledge/KnowledgeView.tsx` + `KnowledgeHome.tsx` + `knowledge-home-model.ts` | 左栏唯一「知识库」入口（原「研究」入口已合并）的全屏视图：真实 Vault/项目上下文、⌘K 搜索与分类投影（`KnowledgeSearch.tsx` → IPC `knowledge:search` → `ui-service.searchKnowledge`，只读）、最近沉淀、真实待处理修改与健康指标；网络图按需展开。绑定、索引、语义、主题、审核模式等维护功能（KnowledgePanel）在 设置 › 高级 › 知识库维护 |
-| 知识双向链接与知识网络 | worker `noteLinks`（出链 + 反链；只写笔记名的 `[[x]]` 按文件名唯一匹配）与 `graph`（旧 `nodes/edges` 字段保持兼容，并附语义关系/镜像/健康元数据；按索引 revision 缓存 `view/limit/mergeMirrors` 快照）→ ui-service `knowledgeNoteLinks` / `knowledgeGraph` → IPC `knowledge:noteLinks` / `knowledge:graph`；`knowledge/src/semantic-model.ts` 负责稳定清洗、镜像合并、关系分类、社区与布局；`knowledge/src/graph-cache.ts` 负责 revision 边界缓存；UI `KnowledgeLinks.tsx`、`KnowledgeGraph.tsx`（主页直接展示，语义/全部文件、聚焦/星云/浏览、节点信息卡；拖拽更新按 animation frame 合并）+ 纯布局回退 `graph-layout.ts`；入库自动关联 `knowledge/src/related-notes.ts`（`research_deposit_knowledge` 写入前检索相关笔记，正文末尾追加「相关笔记」双链） |
+| `knowledge/KnowledgeView.tsx` + `KnowledgeHome.tsx` + `KnowledgeNetwork.tsx` + `knowledge-home-model.ts` | 左栏唯一「知识库」入口（原「研究」入口已合并）的全屏视图：单层「总览 / 网络图 / 审阅 / 设置」页签；总览提供真实 Vault/项目上下文、⌘K 搜索与分类投影（`KnowledgeSearch.tsx` → IPC `knowledge:search` → `ui-service.searchKnowledge`，只读）、最近沉淀、真实待处理修改与健康指标；网络图在未关联时提供可解释空状态和关联入口，已关联时显示知识网络；绑定、WebDAV、索引、语义、主题、审核模式等维护功能在设置页（`KnowledgePanel`） |
+| 知识双向链接与知识网络 | worker `noteLinks`（出链 + 反链；只写笔记名的 `[[x]]` 按文件名唯一匹配）与 `graph`（旧 `nodes/edges` 字段保持兼容，并附语义关系/镜像/健康元数据；按索引 revision 缓存 `view/limit/mergeMirrors` 快照）→ ui-service `knowledgeNoteLinks` / `knowledgeGraph` → IPC `knowledge:noteLinks` / `knowledge:graph`；`knowledge/src/semantic-model.ts` 负责稳定清洗、镜像合并、关系分类、社区与布局；`knowledge/src/graph-cache.ts` 负责 revision 边界缓存；UI `KnowledgeLinks.tsx`、`KnowledgeNetwork.tsx` + `KnowledgeGraph.tsx`（网络图页签，支持语义/全部文件、聚焦/星云/浏览、节点信息卡；拖拽更新按 animation frame 合并）+ 纯布局回退 `graph-layout.ts`；入库自动关联 `knowledge/src/related-notes.ts`（`research_deposit_knowledge` 写入前检索相关笔记，正文末尾追加「相关笔记」双链） |
 | 每日发现（新旧对照） | 领域：`knowledge/src/daily-discovery.ts`（扫描上次运行后更新的笔记、想法笔记正文）+ `daily-discovery-prompt.ts`（提示词与解析，只由 backend 引用，避免进入扩展类型图）；ui-service `dailyDiscoveryContext` / `saveDiscoveryIdea`；宿主 `backend/src/services/daily-discovery.ts`（`DailyDiscoveryService`：默认开、每小时检查满 24 小时才跑、JsonStore `agent-daily-discovery`、模型 = 最近会话模型或首个已配置 provider）；IPC `knowledge:dailyDiscovery*`；UI `knowledge/DailyIdeas.tsx`（知识库主页「新想法」：开关、现在运行、存为想法 / 忽略） |
 | `composer/` | **Composer**（装配层 ~330 行，键盘事件分发）+ 三 hook：`use-composer-send`（ensureSession 懒创建/followUp 排队/停止先 clearQueue/发送失败草稿回填）、`use-slash-menu`（命令拉取+胶囊回填+导航）、`use-at-completion`（@ token 探测/续钻/胶囊弹回 + 消息开头的子智能体候选）+ 展示件 QueueBar/ImageTray/AttachmentChip/**SubagentChip**（@ 子智能体胶囊：Enter 直接派发）/**QuoteChip**（选中引用胶囊）/SendErrorBar + **ModelPicker** / **ThinkingPicker**（按模型 thinkingLevels 过滤+clamp）/ **PermissionPicker**（会话权限模式 chip：默认/完全访问）/ **SlashMenu** / **AtMenu**（子智能体组 + 文件组）/ **ContextRing** + 会话累计用量 `SessionUsageFooter`（移入会话输入区）+ 纯函数 `slash-filter`/`at-files`/`at-subagents`（S9：候选条件 / 过滤 / 合并 / 任务拼装）/`send-error`/`quote`（各有测试） |
 | `session/` | **SessionTabBar** + SessionTab/TabPill（状态收拢到头像图标；dnd-kit 拖拽排序，DragOverlay ghost + 轴锁定；拖拽期间退出 drag-region）/ **SessionRail**（左侧会话轨道：细线变形胶囊 + dock 波浪；开关在设置-外观）/ **ApprovalDock**（权限审批：async respond 成功才移除面板，失败保留重试）/ **TrustDialog**（项目信任两选项）/ **UpdateButton**（顶栏更新按钮）/ `session-status`（顶栏与轨道共用的状态/标题纯逻辑） |

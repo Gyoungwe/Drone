@@ -262,6 +262,17 @@ export function MessageList() {
 							: turnTimingByMessageId.get(row.message.id)
 						: undefined
 				}
+				turnStepCount={
+					row.message.kind === "assistant"
+						? (() => {
+								const timing = row.streaming
+									? turnTimings[turnTimings.length - 1]
+									: turnTimingByMessageId.get(row.message.id);
+								const count = timing ? turnInspectors[timing.turnIndex]?.tools.length : 0;
+								return count ? count : undefined;
+							})()
+						: undefined
+				}
 			/>
 		);
 	};

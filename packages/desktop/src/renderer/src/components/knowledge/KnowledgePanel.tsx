@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getPi } from "../../api";
 import { useSessionsStore } from "../../stores/sessions";
 import { useSettingsStore } from "../../stores/settings";
+import { WorkflowOverviewPanel } from "../settings/WorkflowOverview";
 import { Button } from "../ui/Button";
 import { useKnowledgeText } from "./copy";
 import { launchKnowledgeSetup, reportKnowledgeError, useKnowledgeOverview } from "./hooks";
@@ -16,15 +17,18 @@ import { WikiReviewPanel } from "./WikiReviewPanel";
 export function KnowledgePanel({
 	context,
 	headless = false,
+	hideTabs = false,
 }: {
 	context?: {
 		cwd: string | null;
 		sessionId: string | null;
-		tab?: "overview" | "reviews" | "maintenance" | "semantic" | "topics";
+		tab?: "overview" | "settings" | "reviews" | "maintenance" | "semantic" | "topics";
 		id?: string;
 	};
 	/** 嵌入全屏视图（KnowledgeView 自带标题栏）时不再重复渲染标题，只保留刷新按钮 */
 	headless?: boolean;
+	/** Full-screen KnowledgeView owns the four top-level tabs. */
+	hideTabs?: boolean;
 }) {
 	const activeCwd = useSessionsStore((s) => s.cwd),
 		activeSession = useSessionsStore((s) => s.activeSessionId);
@@ -32,7 +36,7 @@ export function KnowledgePanel({
 		sessionId = context ? context.sessionId : activeSession,
 		t = useKnowledgeText();
 	const { data, error, loading, refresh } = useKnowledgeOverview(cwd, sessionId);
-	const [tab, setTab] = useState<"overview" | "reviews" | "maintenance" | "semantic" | "topics">(
+	const [tab, setTab] = useState<"overview" | "settings" | "reviews" | "maintenance" | "semantic" | "topics">(
 		context?.tab || "overview",
 	);
 	const [path, setPath] = useState(""),
@@ -94,25 +98,27 @@ export function KnowledgePanel({
 					{t("refresh")}
 				</Button>
 			</header>
-			<div
-				className="my-4 flex flex-wrap gap-1 border-b border-border pb-2"
-				role="tablist"
-				aria-label={t("title")}
-			>
-				{(["overview", "reviews", "maintenance", "semantic", "topics"] as const).map((item) => (
-					<button
-						key={item}
-						type="button"
-						role="tab"
-						aria-selected={tab === item}
-						disabled={item !== "overview" && !binding}
-						onClick={() => setTab(item)}
-						className={`rounded-lg px-3 py-2 text-xs disabled:opacity-40 ${tab === item ? "bg-hover font-semibold" : "text-ink-dim hover:bg-hover"}`}
-					>
-						{t(item)}
-					</button>
-				))}
-			</div>
+			{!hideTabs && (
+				<div
+					className="my-4 flex flex-wrap gap-1 border-b border-border pb-2"
+					role="tablist"
+					aria-label={t("title")}
+				>
+					{(["overview", "settings", "reviews", "maintenance", "semantic", "topics"] as const).map((item) => (
+						<button
+							key={item}
+							type="button"
+							role="tab"
+							aria-selected={tab === item}
+							disabled={item !== "overview" && !binding}
+							onClick={() => setTab(item)}
+							className={`rounded-lg px-3 py-2 text-xs disabled:opacity-40 ${tab === item ? "bg-hover font-semibold" : "text-ink-dim hover:bg-hover"}`}
+						>
+							{t(item)}
+						</button>
+					))}
+				</div>
+			)}
 			{error && (
 				<p role="alert" className="mb-3 break-words rounded-lg border border-border p-3 text-xs text-err">
 					{error}
@@ -122,6 +128,27 @@ export function KnowledgePanel({
 				<p role="status" className="text-xs">
 					{t("loading")}
 				</p>
+			)}
+			{tab === "settings" && (
+				<div className="space-y-4">
+					<section className="rounded-xl border border-border p-4">
+						<h3 className="text-xs font-semibold">{t("vault")}</h3>
+						<p className="mt-1 break-all font-mono text-xs">{binding?.vault || t("notBound")}</p>
+						<p className="mt-1 text-[11px] text-ink-faint">{t("scopeValue")}</p>
+						<div className="mt-3 flex flex-wrap gap-1">
+							<Button size="sm" disabled={!cwd} onClick={() => setup(binding?.vault)}>
+								{binding ? t("adjust") : t("setup")}
+							</Button>
+							<Button size="sm" disabled={busy} onClick={() => void folders()}>
+								{t("selectFolder")}
+							</Button>
+						</div>
+						<p className="mt-2 text-xs text-ink-dim">{t("globalSwitch")}</p>
+					</section>
+					<KnowledgeCloudSection cwd={cwd} bindingRevision={binding?.revision} />
+					{binding && <KnowledgeMaintenance cwd={cwd} revision={binding.revision} index={index} />}
+					<WorkflowOverviewPanel />
+				</div>
 			)}
 			{tab === "overview" && (
 				<div className="space-y-4">
@@ -421,6 +448,12 @@ export function KnowledgePanel({
 			)}
 			{tab === "reviews" && binding && (
 				<WikiReviewPanel cwd={cwd} revision={binding.revision} initialId={context?.id} />
+			)}
+			{tab === "reviews" && !binding && (
+				<section className="rounded-xl border border-dashed border-border p-5">
+					<h3 className="text-sm font-medium">{t("notBound")}</h3>
+					<p className="mt-2 text-xs leading-relaxed text-ink-dim">{t("notBoundHint")}</p>
+				</section>
 			)}
 			{tab === "maintenance" && binding && (
 				<KnowledgeMaintenance cwd={cwd} revision={binding.revision} index={index} />

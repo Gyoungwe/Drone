@@ -1,9 +1,19 @@
-import { resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import {
+	DRONE_PLUGIN_METADATA,
+	type DronePackageManifest,
+	dronePluginSource,
+	type HostPluginPackage,
 	type LoadedResources,
 	type McpStatus,
 	type McpStatus as McpStatusType,
 	normalizeMcpStatus,
+	type PiPackageManifest,
+	RESEARCH_SKILL_SOURCES,
+	researchSkillProfile,
 	type SlashCommandInfo,
 } from "@drone/shared";
 
@@ -36,6 +46,184 @@ export interface SessionResourceHost {
 export class SessionResourceService {
 	private readonly mcpHandlers = new Set<(cwd: string, status: McpStatus) => void>();
 	constructor(private readonly host: SessionResourceHost) {}
+
+	/**
+	 * Resolve the upstream identity of a skill without trusting the loader's
+	 * short `local`/`auto` labels.  Built-in research packs are mapped from the
+	 * source catalog; ordinary Pi packages fall back to their package metadata.
+	 * Integrity pins stay inside the pack loader and updater and are not exposed
+	 * as product provenance.
+	 */
+	private skillRepository(
+		name: string,
+		filePath: string,
+		source: string,
+	): { repository: string; path?: string } | undefined {
+		const normalizedPath = filePath.replaceAll("\\", "/");
+		const profile = researchSkillProfile(name);
+		const sourceEntry = profile
+			? RESEARCH_SKILL_SOURCES.find((entry) => entry.id === profile.source)
+			: RESEARCH_SKILL_SOURCES.find((entry) =>
+					entry.skills.some(
+						(skill) =>
+							normalizedPath.endsWith(`/${skill.path}`) ||
+							normalizedPath.endsWith(`/skills/${skill.name}/SKILL.md`),
+					),
+				);
+		if (sourceEntry) {
+			const locked = profile ?? sourceEntry.skills.find((skill) => normalizedPath.endsWith(`/${skill.path}`));
+			return {
+				repository: `https://github.com/${sourceEntry.repository}`,
+				...(locked?.path ? { path: locked.path } : {}),
+			};
+		}
+
+		const github = this.githubRepository(source);
+		if (github) return { repository: github };
+		let current = dirname(filePath);
+		for (let i = 0; i < 8; i++) {
+			const packageJson = join(current, "package.json");
+			if (existsSync(packageJson)) {
+				try {
+					const parsed = JSON.parse(readFileSync(packageJson, "utf8")) as {
+						repository?: string | { url?: string };
+					};
+					const repository =
+						typeof parsed.repository === "string" ? parsed.repository : parsed.repository?.url;
+					const normalized = repository ? this.githubRepository(repository) : undefined;
+					if (normalized) return { repository: normalized };
+				} catch {
+					// A malformed optional package manifest must not hide the skill.
+				}
+			}
+			const parent = dirname(current);
+			if (parent === current) break;
+			current = parent;
+		}
+		return undefined;
+	}
+
+	private githubRepository(value: string): string | undefined {
+		const match = value.trim().match(/(?:github\.com[/:])([^/]+\/[^/#]+)|^github:([^/]+\/[^/#]+)$/iu);
+		const repository = (match?.[1] ?? match?.[2])?.replace(/\.git$/u, "");
+		return repository ? `https://github.com/${repository}` : undefined;
+	}
+
+	/**
+	 * Pi's resource loader exposes the extension path, but not the package that
+	 * owns a bundled extension. Keep the host-owned package inventory explicit so
+	 * the desktop Plugins view can account for the capabilities shipped by Drone
+	 * and the optional installed UI pack.
+	 */
+	private hostPluginPackages(): HostPluginPackage[] {
+		const require = createRequire(import.meta.url);
+		const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
+		const entries = [
+			{ name: "@gyoungwe/pi-core", host: "desktop" as const },
+			{ name: "@gyoungwe/pi-knowledge", host: "pi" as const },
+			{ name: "@gyoungwe/pi-research", host: "pi" as const },
+			{ name: "@gyoungwe/pi-analysis", host: "pi" as const },
+			{ name: "@gyoungwe/pi-evidence", host: "pi" as const },
+			{ name: "@gyoungwe/pi-connectors", host: "pi" as const },
+			{ name: "@gyoungwe/desktop-ui-pack", host: "desktop" as const },
+			{ name: "@gyoungwe/research-suite", host: "pi" as const },
+		];
+		return entries.map((entry) => {
+			const metadata = DRONE_PLUGIN_METADATA[entry.name as keyof typeof DRONE_PLUGIN_METADATA];
+			const packageJson =
+				entry.name === "@gyoungwe/desktop-ui-pack"
+					? (() => {
+							const candidate = join(
+								agentDir,
+								"npm",
+								"node_modules",
+								"@gyoungwe",
+								"desktop-ui-pack",
+								"package.json",
+							);
+							return existsSync(candidate) ? candidate : null;
+						})()
+					: this.packageJsonPath(require, entry.name);
+			const version = packageJson ? this.readPackageVersion(packageJson) : metadata.version;
+			const packageData = packageJson ? this.readPackage(packageJson) : undefined;
+			const manifestData = packageJson ? this.readManifest(dirname(packageJson)) : undefined;
+			const source = packageData ? dronePluginSource(packageData, manifestData) : undefined;
+			return {
+				...entry,
+				version,
+				status: packageJson ? "available" : "unavailable",
+				description: metadata.description,
+				...(metadata.packageKind ? { packageKind: metadata.packageKind } : {}),
+				...(metadata.capabilities ? { capabilities: [...metadata.capabilities] } : {}),
+				source: source ? "drone" : "unknown",
+				...(source
+					? {
+							packageKind: source.packageKind,
+							description: source.description,
+							capabilities: [...source.capabilities],
+							piApiVersion: source.piApiVersion,
+							pluginApi: source.pluginApi,
+							minHostVersion: source.minHostVersion,
+							hosts: [...source.hosts],
+						}
+					: {}),
+			};
+		});
+	}
+
+	private readPackage(path: string): PiPackageManifest | undefined {
+		try {
+			return JSON.parse(readFileSync(path, "utf8")) as PiPackageManifest;
+		} catch {
+			return undefined;
+		}
+	}
+
+	private readManifest(root: string): DronePackageManifest | undefined {
+		try {
+			const manifestPath = existsSync(join(root, "plugin.manifest.json"))
+				? join(root, "plugin.manifest.json")
+				: join(root, "ui", "plugin.json");
+			const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+			if (manifestPath.endsWith(`${join("ui", "plugin.json")}`)) {
+				return {
+					version: typeof parsed.version === "string" ? parsed.version : undefined,
+					entrypoints: { ui: "./ui/plugin.json" },
+					capabilities: ["ui"],
+					hosts: ["drone-desktop"],
+				};
+			}
+			return parsed as DronePackageManifest;
+		} catch {
+			return undefined;
+		}
+	}
+
+	private packageJsonPath(require: NodeRequire, name: string): string | null {
+		try {
+			const resolved = require.resolve(name);
+			let current = dirname(resolved);
+			for (let i = 0; i < 5; i++) {
+				const candidate = join(current, "package.json");
+				if (existsSync(candidate)) return candidate;
+				const parent = dirname(current);
+				if (parent === current) break;
+				current = parent;
+			}
+		} catch {
+			// An optional package is still shown as unavailable below.
+		}
+		return null;
+	}
+
+	private readPackageVersion(path: string): string {
+		try {
+			const parsed = JSON.parse(readFileSync(path, "utf8")) as { version?: unknown };
+			return typeof parsed.version === "string" ? parsed.version : "unknown";
+		} catch {
+			return "unknown";
+		}
+	}
 
 	/** 列出斜杠命令：内置（标记 supported）+ prompt 模板 + skill + 扩展命令 */
 	async listSlashCommands(sessionId: string): Promise<SlashCommandInfo[]> {
@@ -71,17 +259,30 @@ export class SessionResourceService {
 	async getLoadedResources(sessionId: string): Promise<LoadedResources> {
 		const entry = this.host.requireSession(sessionId);
 		const session = entry.session;
-		const skillResult = allSkillsFromLoader(session.resourceLoader);
+		const loader = session.resourceLoader as typeof session.resourceLoader & {
+			getAllSkillsIncludingDisabled?: () => ReturnType<typeof session.resourceLoader.getSkills>;
+		};
+		const skillResult =
+			loader.getAllSkillsIncludingDisabled?.() ?? allSkillsFromLoader(session.resourceLoader);
 		const extResult = session.resourceLoader.getExtensions();
 		return {
-			skills: skillResult.skills.map((skill) => ({
-				name: skill.name,
-				description: skill.description,
-				scope: skill.sourceInfo.scope,
-				source: skill.sourceInfo.source,
-				path: skill.filePath,
-				disableModelInvocation: skill.disableModelInvocation,
-			})),
+			skills: skillResult.skills.map((skill) => {
+				const upstream = this.skillRepository(skill.name, skill.filePath, skill.sourceInfo.source);
+				return {
+					name: skill.name,
+					description: skill.description,
+					scope: skill.sourceInfo.scope,
+					source: skill.sourceInfo.source,
+					path: skill.filePath,
+					...(upstream
+						? {
+								repository: upstream.repository,
+								...(upstream.path ? { repositoryPath: upstream.path } : {}),
+							}
+						: {}),
+					disableModelInvocation: skill.disableModelInvocation,
+				};
+			}),
 			skillDiagnostics: skillResult.diagnostics.map((d) => ({
 				type: d.type,
 				message: d.message,
@@ -105,6 +306,7 @@ export class SessionResourceService {
 				shortcutsCount: ext.shortcuts.size,
 			})),
 			extensionErrors: extResult.errors,
+			hostPlugins: this.hostPluginPackages(),
 			...(this.host.capabilityRuntimes.get(sessionId)
 				? { capabilities: this.host.capabilityRuntimes.get(sessionId)?.state() }
 				: {}),

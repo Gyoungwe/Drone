@@ -158,6 +158,7 @@ export const IpcChannels = {
 	KnowledgeTopicArchive: "knowledge:topicArchive",
 	/** 远程计算：主机、健康、作业、终端与引导（由 ComputeContract 投影） */
 	ComputeListHosts: "compute:listHosts",
+	ComputeListSshConfig: "compute:listSshConfig",
 	ComputeGetHost: "compute:getHost",
 	ComputeSaveHost: "compute:saveHost",
 	ComputeRemoveHost: "compute:removeHost",
@@ -226,6 +227,7 @@ export const IpcChannels = {
 	SessionSetModel: "session:setModel",
 	SessionSetThinkingLevel: "session:setThinkingLevel",
 	SessionSetAgentMode: "session:setAgentMode",
+	SessionSetSkillNamesEnabled: "session:setSkillNamesEnabled",
 	SessionGetMessages: "session:getMessages",
 	/** 只读预览子智能体会话文件，不注册/打开顶栏会话 */
 	SessionPeekSubagentMessages: "session:peekSubagentMessages",
@@ -255,6 +257,7 @@ export const IpcChannels = {
 	/** pi.dev 社区包目录（设置页扩展面板浏览/安装用） */
 	PackagesSearchCatalog: "packages:searchCatalog",
 	PackagesInstall: "packages:install",
+	PackagesUpdate: "packages:update",
 	PackagesRemove: "packages:remove",
 	PackagesListConfigured: "packages:listConfigured",
 	FileSaveDialog: "file:saveDialog",
@@ -364,6 +367,8 @@ export const IpcChannels = {
 	UpdateEvent: "update:event",
 	/** 内置研究技能检查/下载状态 */
 	ResearchSkillUpdateEvent: "researchSkills:updateEvent",
+	/** 用户显式检查内置研究技能仓库更新（不会在启动/定时自动触发） */
+	ResearchSkillCheck: "researchSkills:check",
 	/** 一键检查并下载内置研究技能更新 */
 	ResearchSkillUpdate: "researchSkills:update",
 	/** 重启以启用已下载的内置研究技能 */
@@ -436,6 +441,8 @@ export interface PiApi
 	searchCatalog(query: string, type?: CatalogPackageType | "", page?: number): Promise<CatalogSearchResult>;
 	/** 安装社区包（npm:<name>，用户级）；成功后热重载非流式活跃会话 */
 	installPackage(name: string): Promise<void>;
+	/** 更新已配置社区包到 registry 最新版本；成功后热重载非流式活跃会话 */
+	updatePackage(name: string): Promise<void>;
 	/** 卸载已配置的包（按 source + scope 移除并持久化）；成功后热重载非流式活跃会话 */
 	removePackage(source: string, scope: "user" | "project"): Promise<void>;
 	/** 列出 settings.json 已配置的包（「已安装」态匹配用） */
@@ -620,6 +627,8 @@ export interface PiApi
 	installUpdate(): Promise<void>;
 	/** 订阅更新状态（checking/available/downloading/downloaded/error）；返回取消函数 */
 	onUpdateEvent(cb: (state: UpdateState) => void): () => void;
+	/** 用户显式检查内置 Nature/Scientific 技能包更新；状态经事件推送 */
+	checkResearchSkills(): Promise<void>;
 	/** 更新内置 Nature/Scientific 技能包；下载完成后重启才生效 */
 	updateResearchSkills(): Promise<void>;
 	/** 重启应用以载入已安装的研究技能包 */

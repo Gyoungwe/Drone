@@ -293,7 +293,10 @@ var init_runtime_host = __esm({
       throw new Error(`Knowledge worker host is not configured for ${url.href}`);
     };
     requiresPaperEvidence = (query) => /paper|literature|article|文献|论文/i.test(query);
-    hasPaperCitation = (sources) => Array.isArray(sources) && sources.some((source) => /(?:^|\/)Library\/Papers\//.test(String(source?.path ?? "")));
+    hasPaperCitation = (sources) => Array.isArray(sources) && sources.some((source) => {
+      const value = source;
+      return Array.isArray(value?.paperDois) && value.paperDois.some((doi) => /^10\.\d{4,9}\//i.test(String(doi)));
+    });
     workspaceConfigLoader = async () => {
       throw new Error("Workspace config host is not configured");
     };
@@ -412,7 +415,12 @@ var init_ui_state = __esm({
     init_runtime_host();
     init_runtime_host();
     init_flow_cards();
-    state = runtimeSlot2("knowledge", "ui", () => ({ listeners: /* @__PURE__ */ new Set(), flows: /* @__PURE__ */ new Map(), seq: 0 }));
+    state = runtimeSlot2("knowledge", "ui", () => ({
+      listeners: /* @__PURE__ */ new Set(),
+      flows: /* @__PURE__ */ new Map(),
+      seq: 0,
+      localAnswerStats: { answered: 0, total: 0, rate: null, updatedAt: null }
+    }));
     UI_EVENT = "drone:knowledge-ui/v1";
     uiModule = {};
     process.on(UI_EVENT, (payload) => {
@@ -8717,6 +8725,18 @@ var ComputeHostInputSchema = typebox_exports.Object(
   },
   { additionalProperties: false }
 );
+var ComputeSshConfigHostSchema = typebox_exports.Object(
+  {
+    alias: typebox_exports.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9._-]+$" }),
+    hostname: typebox_exports.Optional(typebox_exports.String({ maxLength: 512 })),
+    port: typebox_exports.Optional(typebox_exports.Integer({ minimum: 1, maximum: 65535 })),
+    user: typebox_exports.Optional(typebox_exports.String({ maxLength: 128 })),
+    identityFiles: typebox_exports.Array(typebox_exports.String({ maxLength: 1024 }), { maxItems: 8 }),
+    proxyJump: typebox_exports.Optional(typebox_exports.String({ maxLength: 512 })),
+    source: typebox_exports.Literal("ssh-config")
+  },
+  { additionalProperties: false }
+);
 var ComputeBudgetSchema = typebox_exports.Object(
   {
     /** Total CPU core-hours allowed for this task. */
@@ -9724,6 +9744,7 @@ var AppContract = defineDomain("app", {
     checkForUpdates: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     downloadUpdate: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     installUpdate: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
+    checkResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     updateResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     restartForResearchSkills: { args: typebox_exports.Tuple([]), result: typebox_exports.Void() },
     saveFileDialog: {
@@ -9815,6 +9836,7 @@ var OnboardingStepArgs = typebox_exports.Tuple([
 var ComputeContract = defineDomain("compute", {
   methods: {
     listHosts: { args: EmptyArgs, result: typebox_exports.Array(ComputeHostSchema, { maxItems: 256 }) },
+    listSshConfig: { args: EmptyArgs, result: typebox_exports.Array(ComputeSshConfigHostSchema, { maxItems: 256 }) },
     getHost: { args: IdArgs, result: typebox_exports.Union([ComputeHostSchema, typebox_exports.Null()]) },
     saveHost: { args: typebox_exports.Tuple([ComputeHostInputSchema]), result: ComputeHostSchema },
     removeHost: { args: IdArgs, result: typebox_exports.Void() },
@@ -10158,9 +10180,10 @@ var SpecialistSettingsInput = typebox_exports.Object(
 );
 var ZoteroStatusSchema = typebox_exports.Object(
   {
-    registered: typebox_exports.Boolean(),
-    enabled: typebox_exports.Boolean(),
+    registered: typebox_exports.Optional(typebox_exports.Boolean()),
+    enabled: typebox_exports.Optional(typebox_exports.Boolean()),
     command: typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]),
+    version: typebox_exports.Optional(typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()])),
     localApiReachable: typebox_exports.Boolean(),
     desktopDetected: typebox_exports.Boolean(),
     desktopPath: typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()]),
@@ -10599,6 +10622,10 @@ var PackagesContract = defineDomain("packages", {
       args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
       result: typebox_exports.Void()
     },
+    updatePackage: {
+      args: typebox_exports.Tuple([typebox_exports.String({ minLength: 1 })]),
+      result: typebox_exports.Void()
+    },
     removePackage: {
       args: typebox_exports.Tuple([
         typebox_exports.String({ minLength: 1 }),
@@ -10920,6 +10947,10 @@ var SessionsContract = defineDomain("sessions", {
         { added: typebox_exports.Array(typebox_exports.String()), removed: typebox_exports.Array(typebox_exports.String()) },
         { additionalProperties: false }
       )
+    },
+    setSkillNamesEnabled: {
+      args: typebox_exports.Tuple([Id2, typebox_exports.Array(typebox_exports.String()), typebox_exports.Boolean()]),
+      result: typebox_exports.Object({ disabled: typebox_exports.Array(typebox_exports.String()) }, { additionalProperties: false })
     },
     compact: {
       args: typebox_exports.Union([typebox_exports.Tuple([Id2]), typebox_exports.Tuple([Id2, typebox_exports.String()])]),
@@ -16442,7 +16473,7 @@ function flowCardBuilder(name) {
 }
 
 // packages/extensions/src/internal/reply-focus.ts
-var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for factual research claims, not unrelated citations for ordinary chat. For substantial tasks, do bounded read-only preparation and consolidate scope, assumptions, needed permissions and deliverables into one task_plan for one user authorization. After authorization, carry out routine steps and recoverable checks within that scope without repeatedly asking whether to continue. Respect prior decisions, especially declined installs. New risks or scope, missing credentials and genuinely unavailable user data still require a specific request; never infer consent. At completion, explain what changed, link actual outputs or show key figures, separate execution from validation, and give one next step only if needed. Keep internal counters and tool logs out of the main answer.";
+var USER_QUESTION_FOCUS = "Answer the user's current question. Use evidence for factual research claims, not unrelated citations for ordinary chat. For a simple factual question that can be answered from existing local knowledge, take the light path: retrieve, answer, and auto-deposit a bounded note when appropriate; do not create a task_plan or ask for write authorization just to answer. For substantial tasks, do bounded read-only preparation and consolidate scope, assumptions, needed permissions and deliverables into one task_plan for one user authorization. After authorization, carry out routine steps and recoverable checks within that scope without repeatedly asking whether to continue. Respect prior decisions, especially declined installs. New risks or scope, missing credentials and genuinely unavailable user data still require a specific request; never infer consent. At completion, explain what changed, link actual outputs or show key figures, separate execution from validation, and give one next step only if needed. Keep internal counters and tool logs out of the main answer.";
 
 // packages/extensions/src/internal/research-host.ts
 import { randomUUID as randomUUID10 } from "node:crypto";

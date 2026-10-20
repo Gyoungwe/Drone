@@ -256,6 +256,14 @@ export class CapabilityRuntime {
 		this.mode = mode;
 		return this.apply();
 	}
+	/** Toggle a source group without introducing a persisted settings format. */
+	setSkillNamesEnabled(names: Iterable<string>, enabled: boolean): CapabilityChange {
+		this.skillVisibility.setEnabled(names, enabled);
+		return this.apply();
+	}
+	disabledSkillNames(): string[] {
+		return this.skillVisibility.disabled();
+	}
 	setContextWindow(tokens: number | undefined): CapabilityChange {
 		this.contextWindow = tokens;
 		return this.apply();
